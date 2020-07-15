@@ -1,5 +1,5 @@
 from asyncio import AbstractEventLoop, Queue, run_coroutine_threadsafe
-from multiprocessing import ThreadPoolExecutor
+from concurrent.futures import ThreadPoolExecutor
 from traceback import format_exc
 from typing import Awaitable
 
@@ -29,7 +29,8 @@ class Main:
 
     @autocmd("TextChangedI")
     def comp1(self) -> None:
-        pass
+        nvim = self.nvim
+        nvim.funcs
 
     @autocmd("TextChangedP")
     def comp2(self) -> None:
