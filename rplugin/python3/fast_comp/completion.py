@@ -1,4 +1,5 @@
 from asyncio import gather, wait_for
+from dataclasses import dataclass
 from locale import strxfrm
 from math import inf
 from typing import AsyncIterator, Iterable, List, Sequence, Tuple
@@ -6,7 +7,21 @@ from typing import AsyncIterator, Iterable, List, Sequence, Tuple
 from pynvim import Nvim
 
 from .nvim import call
-from .types import Completion, Source, SourceFactory, SourceFeed, SourceSeed
+from .types import (
+    Source,
+    SourceCompletion,
+    SourceFactory,
+    SourceFeed,
+    SourceSeed,
+    VimCompletion,
+)
+
+
+@dataclass(frozen=True)
+class Step:
+    source: str
+    priority: int
+    comp: SourceCompletion
 
 
 async def gen_feed(nvim: Nvim) -> SourceFeed:
@@ -18,19 +33,13 @@ async def gen_feed(nvim: Nvim) -> SourceFeed:
     return await call(nvim, cont)
 
 
-async def step(source: Source, feed: SourceFeed) -> Sequence[Completion]:
+async def step(source: Source, feed: SourceFeed) -> Sequence[Step]:
     timeout = source.timeout or inf
-    results: List[Completion] = []
+    results: List[Step] = []
 
     async def cont() -> None:
-        wheel = source.step
-        async for comp in wheel(feed):
-            completion = Completion(
-                source=source.name,
-                priority=source.priority,
-                display=comp.display,
-                content=comp.content,
-            )
+        async for comp in source.step(feed):
+            completion = Step(source=source.name, priority=source.priority, comp=comp)
             results.append(completion)
 
     try:
@@ -41,13 +50,20 @@ async def step(source: Source, feed: SourceFeed) -> Sequence[Completion]:
         return results
 
 
-def rank(comp: Completion) -> Tuple[int, str, str]:
-    return comp.priority, strxfrm(comp.display), strxfrm(comp.source)
+def rank(annotated: Step) -> Tuple[int, str, str]:
+    text = annotated.comp.display or annotated.comp.text
+    return annotated.priority, strxfrm(text), strxfrm(annotated.source)
+
+
+def vimify(annotated: Step) -> VimCompletion:
+    comp = annotated.comp
+    ret = VimCompletion(word=comp.text, abbr=comp.display, menu=annotated.source)
+    return ret
 
 
 async def merge(
     nvim: Nvim, factories: Iterable[SourceFactory]
-) -> AsyncIterator[Sequence[Completion]]:
+) -> AsyncIterator[Sequence[VimCompletion]]:
     seed = SourceSeed(priority=1)
     sources = tuple(fact(nvim, seed) for fact in factories)
 
@@ -55,4 +71,4 @@ async def merge(
         feed = await gen_feed(nvim)
         comps = await gather(*(step(source, feed=feed) for source in sources))
         completions = sorted((c for co in comps for c in co), key=rank)
-        yield completions
+        yield tuple(map(vimify, completions))
