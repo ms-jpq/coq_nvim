@@ -12,12 +12,6 @@ class Settings:
 
 
 @dataclass(frozen=True)
-class SourceSeed:
-    priority: Optional[int]
-    bespoke: Any = None
-
-
-@dataclass(frozen=True)
 class SourceFeed:
     cwd: str
     cword: str
@@ -27,6 +21,18 @@ class SourceFeed:
 class SourceCompletion:
     text: str
     display: Optional[str]
+    preview: Optional[str]
+
+
+Source = Callable[[SourceFeed], AsyncIterator[SourceCompletion]]
+
+
+@dataclass(frozen=True)
+class SourceFactory:
+    name: str
+    priority: int
+    timeout: Optional[float]
+    manufacture = Callable[[Nvim, Any], Source]
 
 
 @dataclass(frozen=True)
@@ -41,14 +47,3 @@ class VimCompletion:
     dup: Optional[int] = None
     empty: Optional[int] = None
     user_data: Optional[Any] = None
-
-
-@dataclass(frozen=True)
-class Source:
-    name: str
-    priority: int
-    step: Callable[[Source, SourceFeed], AsyncIterator[SourceCompletion]]
-    timeout: Optional[float]
-
-
-SourceFactory = Callable[[Nvim, SourceSeed], Source]
