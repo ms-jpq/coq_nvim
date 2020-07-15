@@ -1,5 +1,6 @@
 from asyncio import Future
-from typing import Any, Awaitable, Callable, TypeVar
+from dataclasses import dataclass
+from typing import Any, Awaitable, Callable, Optional, Sequence, TypeVar
 
 from pynvim import Nvim
 
@@ -36,3 +37,26 @@ async def print(
             write("\n")
 
     await call(nvim, cont)
+
+
+@dataclass(frozen=True)
+class VimCompletion:
+    word: str
+    abbr: Optional[str] = None
+    menu: Optional[str] = None
+    info: Optional[str] = None
+    kind: Optional[str] = None
+    icase: Optional[int] = None
+    equal: Optional[int] = None
+    dup: Optional[int] = None
+    empty: Optional[int] = None
+    user_data: Optional[Any] = None
+
+
+def complete(nvim: Nvim, comp: Sequence[VimCompletion]) -> Callable[[], None]:
+    def cont() -> None:
+        window = nvim.api.get_current_win()
+        _, col = nvim.api.win_get_cursor(window)
+        nvim.funcs.complete(col, comp)
+
+    return cont

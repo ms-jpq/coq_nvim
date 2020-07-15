@@ -1,12 +1,13 @@
 from asyncio import gather, wait_for
 from dataclasses import dataclass
 from locale import strxfrm
-from typing import AsyncIterator, Awaitable, Iterable, List, Sequence, Tuple, cast
+from typing import AsyncIterator, Iterator, List, Sequence, Tuple, cast
 
 from pynvim import Nvim
 
 from .da import anext
-from .types import Factory, SourceCompletion, SourceFactory, VimCompletion
+from .nvim import VimCompletion
+from .types import Factory, SourceCompletion, SourceFactory
 
 
 @dataclass(frozen=True)
@@ -56,7 +57,7 @@ def vimify(annotated: Step) -> VimCompletion:
 
 
 async def merge(
-    nvim: Nvim, factories: Iterable[SourceFactory],
+    nvim: Nvim, factories: Iterator[SourceFactory],
 ) -> AsyncIterator[Sequence[VimCompletion]]:
     sources = tuple(manufacture(nvim, factory=factory) for factory in factories)
 

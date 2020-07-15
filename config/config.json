@@ -5,7 +5,7 @@
       "enabled": true,
       "main": "buffers.py",
       "priority": 1,
-      "short": "B",
+      "short_name": "B",
       "timeout": 20
     },
     "lsp": {
@@ -13,7 +13,7 @@
       "enabled": true,
       "main": "lsp.py",
       "priority": 6,
-      "short": "LSP",
+      "short_name": "LSP",
       "timeout": 1000
     },
     "paths": {
@@ -21,7 +21,7 @@
       "enabled": true,
       "main": "paths.py",
       "priority": 0,
-      "short": "F",
+      "short_name": "F",
       "timeout": 20
     }
   }

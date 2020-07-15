@@ -11,7 +11,8 @@ class SourceSpec:
     main: str
     enabled: bool
     priority: float
-    short: str
+    short_name: str
+    timeout: float
     config: Any
 
 
@@ -44,17 +45,3 @@ class SourceFactory:
     timeout: float
     seed: SourceSeed
     manufacture: Factory
-
-
-@dataclass(frozen=True)
-class VimCompletion:
-    word: str
-    abbr: Optional[str] = None
-    menu: Optional[str] = None
-    info: Optional[str] = None
-    kind: Optional[str] = None
-    icase: Optional[int] = None
-    equal: Optional[int] = None
-    dup: Optional[int] = None
-    empty: Optional[int] = None
-    user_data: Optional[Any] = None
