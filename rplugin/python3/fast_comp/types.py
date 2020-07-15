@@ -1,14 +1,20 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, AsyncIterator, Callable, Optional
+from typing import Any, AsyncIterator, Callable, Dict, Optional
 
 from pynvim import Nvim
 
 
 @dataclass(frozen=True)
+class SourceSeed:
+    priority: int = 0
+    bespoke: Optional[Any] = None
+
+
+@dataclass(frozen=True)
 class Settings:
-    pass
+    sources: Dict[str, SourceSeed]
 
 
 @dataclass(frozen=True)
@@ -31,7 +37,6 @@ Factory = Callable[[Nvim, Any], Source]
 @dataclass(frozen=True)
 class SourceFactory:
     name: str
-    priority: int
     timeout: Optional[float]
     manufacture: Factory
 

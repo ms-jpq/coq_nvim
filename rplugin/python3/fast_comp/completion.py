@@ -3,11 +3,9 @@ from dataclasses import dataclass
 from locale import strxfrm
 from math import inf
 from typing import (
-    Any,
     AsyncIterator,
     Awaitable,
     Callable,
-    Dict,
     Iterable,
     List,
     Sequence,
@@ -18,7 +16,15 @@ from typing import (
 from pynvim import Nvim
 
 from .nvim import call
-from .types import Factory, SourceCompletion, SourceFactory, SourceFeed, VimCompletion
+from .types import (
+    Factory,
+    Settings,
+    SourceCompletion,
+    SourceFactory,
+    SourceFeed,
+    SourceSeed,
+    VimCompletion,
+)
 
 
 @dataclass(frozen=True)
@@ -38,12 +44,12 @@ async def gen_feed(nvim: Nvim) -> SourceFeed:
 
 
 def manufacture(
-    nvim: Nvim, factory: SourceFactory, config: Dict[str, Any]
+    nvim: Nvim, factory: SourceFactory, settings: Settings
 ) -> Callable[[SourceFeed], Awaitable[Sequence[Step]]]:
-
     timeout = factory.timeout or inf
+    seed = settings.sources.get(factory.name, SourceSeed())
     fact = cast(Factory, factory.manufacture)
-    wheel = fact(nvim, config.get(factory.name))
+    wheel = fact(nvim, seed.bespoke)
 
     async def source(feed: SourceFeed) -> Sequence[Step]:
         results: List[Step] = []
@@ -51,7 +57,7 @@ def manufacture(
         async def cont() -> None:
             async for comp in wheel(feed):
                 completion = Step(
-                    source=factory.name, priority=factory.priority, comp=comp
+                    source=factory.name, priority=seed.priority, comp=comp
                 )
                 results.append(completion)
 
@@ -77,10 +83,10 @@ def vimify(annotated: Step) -> VimCompletion:
 
 
 async def merge(
-    nvim: Nvim, factories: Iterable[SourceFactory], config: Dict[str, Any],
+    nvim: Nvim, factories: Iterable[SourceFactory], settings: Settings,
 ) -> AsyncIterator[Sequence[VimCompletion]]:
     sources = tuple(
-        manufacture(nvim, factory=factory, config=config) for factory in factories
+        manufacture(nvim, factory=factory, settings=settings) for factory in factories
     )
 
     while True:
