@@ -12,12 +12,13 @@ from typing import (
     List,
     Sequence,
     Tuple,
+    cast,
 )
 
 from pynvim import Nvim
 
 from .nvim import call
-from .types import SourceCompletion, SourceFactory, SourceFeed, VimCompletion
+from .types import Factory, SourceCompletion, SourceFactory, SourceFeed, VimCompletion
 
 
 @dataclass(frozen=True)
@@ -41,7 +42,8 @@ def manufacture(
 ) -> Callable[[SourceFeed], Awaitable[Sequence[Step]]]:
 
     timeout = factory.timeout or inf
-    wheel = factory.manufacture(nvim, config.get(factory.name))
+    fact = cast(Factory, factory.manufacture)
+    wheel = fact(nvim, config.get(factory.name))
 
     async def source(feed: SourceFeed) -> Sequence[Step]:
         results: List[Step] = []

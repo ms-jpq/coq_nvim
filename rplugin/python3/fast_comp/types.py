@@ -25,6 +25,7 @@ class SourceCompletion:
 
 
 Source = Callable[[SourceFeed], AsyncIterator[SourceCompletion]]
+Factory = Callable[[Nvim, Any], Source]
 
 
 @dataclass(frozen=True)
@@ -32,7 +33,7 @@ class SourceFactory:
     name: str
     priority: int
     timeout: Optional[float]
-    manufacture = Callable[[Nvim, Any], Source]
+    manufacture: Factory
 
 
 @dataclass(frozen=True)
