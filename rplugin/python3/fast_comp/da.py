@@ -2,7 +2,7 @@ from importlib.util import module_from_spec, spec_from_file_location
 from json import load
 from os.path import basename, splitext
 from types import ModuleType
-from typing import Any, AsyncIterator, Awaitable, Callable, TypeVar, cast
+from typing import Any, AsyncIterator, Awaitable, TypeVar, cast
 
 T = TypeVar("T")
 

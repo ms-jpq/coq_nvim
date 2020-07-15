@@ -7,19 +7,13 @@ from pynvim import Nvim
 
 
 @dataclass(frozen=True)
-class SourceSeed:
-    bespoke: Optional[Any] = None
-
-
-@dataclass(frozen=True)
 class Settings:
     sources: Dict[str, SourceSeed]
 
 
 @dataclass(frozen=True)
-class SourceFeed:
-    cwd: str
-    cword: str
+class SourceSeed:
+    config: Optional[Any] = None
 
 
 @dataclass(frozen=True)
@@ -29,8 +23,8 @@ class SourceCompletion:
     preview: Optional[str] = None
 
 
-Source = Callable[[SourceFeed], AsyncIterator[SourceCompletion]]
-Factory = Callable[[Nvim, Any], AsyncIterator[Source]]
+Source = Callable[[], AsyncIterator[SourceCompletion]]
+Factory = Callable[[Nvim, SourceSeed], AsyncIterator[Source]]
 
 
 @dataclass(frozen=True)

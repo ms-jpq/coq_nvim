@@ -1,11 +1,13 @@
 from typing import AsyncIterator
 
-from ..types import Source, SourceCompletion, SourceFeed
+from pynvim import Nvim
+
+from ..types import Source, SourceCompletion, SourceSeed
 
 
-def main() -> AsyncIterator[Source]:
-    async def source(seed: SourceFeed) -> AsyncIterator[SourceCompletion]:
-        yield SourceCompletion(text="")
+async def main(nvim: Nvim, seed: SourceSeed) -> AsyncIterator[Source]:
+    async def source() -> AsyncIterator[SourceCompletion]:
+        yield SourceCompletion(text="lsp_stub")
 
     while True:
         yield source

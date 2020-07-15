@@ -1,15 +1,13 @@
-from itertools import count
 from typing import AsyncIterator
 
-from ..types import Source, SourceCompletion, SourceFeed
+from pynvim import Nvim
+
+from ..types import Source, SourceCompletion, SourceSeed
 
 
-def main() -> AsyncIterator[Source]:
-    it = count()
-
-    async def source(seed: SourceFeed) -> AsyncIterator[SourceCompletion]:
-        num = next(it)
-        yield SourceCompletion(text=str(num))
+async def main(nvim: Nvim, seed: SourceSeed) -> AsyncIterator[Source]:
+    async def source() -> AsyncIterator[SourceCompletion]:
+        yield SourceCompletion(text="paths_stub")
 
     while True:
         yield source

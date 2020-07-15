@@ -15,8 +15,7 @@ from typing import (
 from pynvim import Nvim
 
 from .da import anext
-from .nvim import call
-from .types import Factory, SourceCompletion, SourceFactory, SourceFeed, VimCompletion
+from .types import Factory, SourceCompletion, SourceFactory, VimCompletion
 
 
 @dataclass(frozen=True)
@@ -26,28 +25,19 @@ class Step:
     comp: SourceCompletion
 
 
-async def gen_feed(nvim: Nvim) -> SourceFeed:
-    def cont() -> SourceFeed:
-        cwd = nvim.funcs.getcwd()
-        cword = ""
-        return SourceFeed(cwd=cwd, cword=cword)
-
-    return await call(nvim, cont)
-
-
-def manufacture(
+async def manufacture(
     nvim: Nvim, factory: SourceFactory
-) -> Callable[[SourceFeed], Awaitable[Sequence[Step]]]:
+) -> AsyncIterator[Sequence[VimCompletion]]:
 
     fact = cast(Factory, factory.manufacture)
-    sources = fact(nvim, factory.seed)
+    sources = await fact(nvim, factory.seed)
 
-    async def source(feed: SourceFeed) -> Sequence[Step]:
+    async def source() -> Sequence[Step]:
         src = await anext(sources)
         results: List[Step] = []
 
         async def cont() -> None:
-            async for comp in src(feed):
+            async for comp in src():
                 completion = Step(
                     source=factory.name, priority=factory.priority, comp=comp
                 )
@@ -60,7 +50,8 @@ def manufacture(
         else:
             return results
 
-    return source
+    while True:
+        yield source()
 
 
 def rank(annotated: Step) -> Tuple[float, str, str]:
@@ -80,7 +71,6 @@ async def merge(
     sources = tuple(manufacture(nvim, factory=factory) for factory in factories)
 
     while True:
-        feed = await gen_feed(nvim)
-        comps = await gather(*(source(feed) for source in sources))
+        comps = await gather(*(source() for source in sources))
         completions = sorted((c for co in comps for c in co), key=rank)
         yield tuple(map(vimify, completions))
