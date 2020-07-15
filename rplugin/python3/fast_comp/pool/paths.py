@@ -10,4 +10,4 @@ async def main(nvim: Nvim, seed: SourceSeed) -> AsyncIterator[Source]:
         yield SourceCompletion(text="paths_stub")
 
     while True:
-        yield source
+        yield source()

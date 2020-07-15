@@ -5,21 +5,24 @@
       "enabled": true,
       "main": "buffers.py",
       "priority": 1,
-      "short": "B"
+      "short": "B",
+      "timeout": 20
     },
     "lsp": {
       "config": {},
       "enabled": true,
       "main": "lsp.py",
       "priority": 6,
-      "short": "LSP"
+      "short": "LSP",
+      "timeout": 1000
     },
     "paths": {
       "config": {},
       "enabled": true,
       "main": "paths.py",
       "priority": 0,
-      "short": "F"
+      "short": "F",
+      "timeout": 20
     }
   }
 }

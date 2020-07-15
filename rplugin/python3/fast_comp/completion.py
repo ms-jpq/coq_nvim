@@ -1,16 +1,7 @@
 from asyncio import gather, wait_for
 from dataclasses import dataclass
 from locale import strxfrm
-from typing import (
-    AsyncIterator,
-    Awaitable,
-    Callable,
-    Iterable,
-    List,
-    Sequence,
-    Tuple,
-    cast,
-)
+from typing import AsyncIterator, Awaitable, Iterable, List, Sequence, Tuple, cast
 
 from pynvim import Nvim
 
@@ -27,17 +18,16 @@ class Step:
 
 async def manufacture(
     nvim: Nvim, factory: SourceFactory
-) -> AsyncIterator[Sequence[VimCompletion]]:
-
+) -> AsyncIterator[Sequence[Step]]:
     fact = cast(Factory, factory.manufacture)
-    sources = await fact(nvim, factory.seed)
+    sources = fact(nvim, factory.seed)
 
     async def source() -> Sequence[Step]:
-        src = await anext(sources)
         results: List[Step] = []
 
         async def cont() -> None:
-            async for comp in src():
+            src = await anext(sources)
+            async for comp in src:
                 completion = Step(
                     source=factory.name, priority=factory.priority, comp=comp
                 )
@@ -51,7 +41,7 @@ async def manufacture(
             return results
 
     while True:
-        yield source()
+        yield await source()
 
 
 def rank(annotated: Step) -> Tuple[float, str, str]:
@@ -71,6 +61,6 @@ async def merge(
     sources = tuple(manufacture(nvim, factory=factory) for factory in factories)
 
     while True:
-        comps = await gather(*(source() for source in sources))
+        comps = await gather(*(anext(source) for source in sources))
         completions = sorted((c for co in comps for c in co), key=rank)
         yield tuple(map(vimify, completions))
