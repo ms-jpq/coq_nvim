@@ -43,6 +43,6 @@ class Main:
     def comp1(self) -> None:
         self._submit(self.comp())
 
-    @autocmd("TextChangedP")
-    def comp2(self) -> None:
-        self._submit(self.comp())
+    # @autocmd("TextChangedP")
+    # def comp2(self) -> None:
+    #     self._submit(self.comp())
