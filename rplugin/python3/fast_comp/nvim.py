@@ -1,6 +1,6 @@
 from asyncio import Future
-from dataclasses import dataclass
-from typing import Any, Awaitable, Callable, Optional, Sequence, TypeVar
+from dataclasses import asdict, dataclass
+from typing import Any, Awaitable, Callable, Dict, Optional, Sequence, TypeVar
 
 from pynvim import Nvim
 
@@ -53,10 +53,18 @@ class VimCompletion:
     user_data: Optional[Any] = None
 
 
+def serialize(comp: VimCompletion) -> Dict[str, Any]:
+    serialized = {k: v for k, v in asdict(comp).items() if v is not None}
+    return serialized
+
+
 def complete(nvim: Nvim, comp: Sequence[VimCompletion]) -> Callable[[], None]:
+    serialized = tuple(map(serialize, comp))
+
     def cont() -> None:
         window = nvim.api.get_current_win()
         _, col = nvim.api.win_get_cursor(window)
-        nvim.funcs.complete(col, comp)
+        nvim.funcs.complete(col, serialized)
+        nvim.api.out_write(str(serialized) + "\n")
 
     return cont

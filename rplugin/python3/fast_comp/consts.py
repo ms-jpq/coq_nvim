@@ -9,6 +9,6 @@ settings_json = join(__config__, "config.json")
 module_entry_point = "main"
 
 load_hierarchy = (
-    join(__base__, "rplugin", "python3", "fast_comp", "pool"),
+    join(__base__, "pool"),
     dirname(__base__),
 )
