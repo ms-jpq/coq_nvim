@@ -30,7 +30,7 @@ class SourceCompletion:
 
 
 Source = Callable[[SourceFeed], AsyncIterator[SourceCompletion]]
-Factory = Callable[[Nvim, Any], Source]
+Factory = Callable[[Nvim, Any], AsyncIterator[Source]]
 
 
 @dataclass(frozen=True)

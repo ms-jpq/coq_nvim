@@ -1,19 +1,19 @@
 {
-  "sources": {
-    "buffers": {
-      "bespoke": {},
-      "main": "buffers.py",
-      "priority": 1
-    },
-    "paths": {
+  "sources": [
+    {
       "bespoke": {},
       "main": "paths.py",
       "priority": 0
     },
-    "lsp": {
+    {
+      "bespoke": {},
+      "main": "buffers.py",
+      "priority": 1
+    },
+    {
       "bespoke": {},
       "main": "lsp.py",
       "priority": 6
     }
-  }
+  ]
 }

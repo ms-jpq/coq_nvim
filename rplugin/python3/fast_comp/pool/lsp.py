@@ -3,8 +3,9 @@ from typing import AsyncIterator
 from ..types import Source, SourceCompletion, SourceFeed
 
 
-def main() -> Source:
+def main() -> AsyncIterator[Source]:
     async def source(seed: SourceFeed) -> AsyncIterator[SourceCompletion]:
         yield SourceCompletion(text="")
 
-    return source
+    while True:
+        yield source

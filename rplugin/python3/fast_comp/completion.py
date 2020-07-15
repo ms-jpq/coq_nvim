@@ -14,6 +14,7 @@ from typing import (
 
 from pynvim import Nvim
 
+from .da import anext
 from .nvim import call
 from .types import Factory, SourceCompletion, SourceFactory, SourceFeed, VimCompletion
 
@@ -39,13 +40,14 @@ def manufacture(
 ) -> Callable[[SourceFeed], Awaitable[Sequence[Step]]]:
 
     fact = cast(Factory, factory.manufacture)
-    wheel = fact(nvim, factory.seed)
+    sources = fact(nvim, factory.seed)
 
     async def source(feed: SourceFeed) -> Sequence[Step]:
+        src = await anext(sources)
         results: List[Step] = []
 
         async def cont() -> None:
-            async for comp in wheel(feed):
+            async for comp in src(feed):
                 completion = Step(
                     source=factory.name, priority=factory.priority, comp=comp
                 )
