@@ -1,7 +1,6 @@
 from asyncio import gather, wait_for
 from dataclasses import dataclass
 from locale import strxfrm
-from math import inf
 from typing import (
     AsyncIterator,
     Awaitable,
@@ -16,21 +15,13 @@ from typing import (
 from pynvim import Nvim
 
 from .nvim import call
-from .types import (
-    Factory,
-    Settings,
-    SourceCompletion,
-    SourceFactory,
-    SourceFeed,
-    SourceSeed,
-    VimCompletion,
-)
+from .types import Factory, SourceCompletion, SourceFactory, SourceFeed, VimCompletion
 
 
 @dataclass(frozen=True)
 class Step:
     source: str
-    priority: int
+    priority: float
     comp: SourceCompletion
 
 
@@ -44,12 +35,11 @@ async def gen_feed(nvim: Nvim) -> SourceFeed:
 
 
 def manufacture(
-    nvim: Nvim, factory: SourceFactory, settings: Settings
+    nvim: Nvim, factory: SourceFactory
 ) -> Callable[[SourceFeed], Awaitable[Sequence[Step]]]:
-    timeout = factory.timeout or inf
-    seed = settings.sources.get(factory.name, SourceSeed())
+
     fact = cast(Factory, factory.manufacture)
-    wheel = fact(nvim, seed.bespoke)
+    wheel = fact(nvim, factory.seed)
 
     async def source(feed: SourceFeed) -> Sequence[Step]:
         results: List[Step] = []
@@ -57,12 +47,12 @@ def manufacture(
         async def cont() -> None:
             async for comp in wheel(feed):
                 completion = Step(
-                    source=factory.name, priority=seed.priority, comp=comp
+                    source=factory.name, priority=factory.priority, comp=comp
                 )
                 results.append(completion)
 
         try:
-            await wait_for(cont(), timeout)
+            await wait_for(cont(), factory.timeout)
         except TimeoutError:
             return results
         else:
@@ -71,7 +61,7 @@ def manufacture(
     return source
 
 
-def rank(annotated: Step) -> Tuple[int, str, str]:
+def rank(annotated: Step) -> Tuple[float, str, str]:
     text = annotated.comp.display or annotated.comp.text
     return annotated.priority, strxfrm(text), strxfrm(annotated.source)
 
@@ -83,11 +73,9 @@ def vimify(annotated: Step) -> VimCompletion:
 
 
 async def merge(
-    nvim: Nvim, factories: Iterable[SourceFactory], settings: Settings,
+    nvim: Nvim, factories: Iterable[SourceFactory],
 ) -> AsyncIterator[Sequence[VimCompletion]]:
-    sources = tuple(
-        manufacture(nvim, factory=factory, settings=settings) for factory in factories
-    )
+    sources = tuple(manufacture(nvim, factory=factory) for factory in factories)
 
     while True:
         feed = await gen_feed(nvim)

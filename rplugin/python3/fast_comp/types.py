@@ -8,7 +8,6 @@ from pynvim import Nvim
 
 @dataclass(frozen=True)
 class SourceSeed:
-    priority: int = 0
     bespoke: Optional[Any] = None
 
 
@@ -26,8 +25,8 @@ class SourceFeed:
 @dataclass(frozen=True)
 class SourceCompletion:
     text: str
-    display: Optional[str]
-    preview: Optional[str]
+    display: Optional[str] = None
+    preview: Optional[str] = None
 
 
 Source = Callable[[SourceFeed], AsyncIterator[SourceCompletion]]
@@ -37,7 +36,9 @@ Factory = Callable[[Nvim, Any], Source]
 @dataclass(frozen=True)
 class SourceFactory:
     name: str
-    timeout: Optional[float]
+    priority: float
+    timeout: float
+    seed: SourceSeed
     manufacture: Factory
 
 
