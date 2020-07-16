@@ -73,7 +73,7 @@ def vimify(annotated: Step) -> VimCompletion:
 async def merge(
     nvim: Nvim, factories: Iterator[SourceFactory],
 ) -> AsyncIterator[Sequence[VimCompletion]]:
-    sources = tuple(manufacture(nvim, factory=factory) for factory in factories)
+    sources = tuple(osha(nvim, factory=factory) for factory in factories)
 
     while True:
         comps = await gather(*(anext(source) for source in sources))
