@@ -76,5 +76,5 @@ class Main:
 
     @function("_FCtextchangedp")
     def text_changed_p(self, args: Sequence[Any]) -> None:
-        # self._submit(self.comp())
-        pass
+        async def put() -> None:
+            await self.ch.put(None)
