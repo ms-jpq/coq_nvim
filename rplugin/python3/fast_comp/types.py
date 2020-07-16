@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Any, AsyncIterator, Awaitable, Callable, Dict, Optional
+from typing import Any, AsyncIterator, Callable, Dict, Optional
 
 from pynvim import Nvim
 

@@ -16,11 +16,7 @@ class Main:
     def __init__(self, nvim: Nvim):
         self.nvim = nvim
         self.chan = ThreadPoolExecutor(max_workers=1)
-        self.ch: Queue = Queue(1)
-
-        self.settings = initial(user_config={})
-        factories = load_factories(settings=self.settings)
-        self.gen = merge(self.nvim, factories=factories)
+        self.ch: Queue = Queue()
 
         self._initialized = False
 
@@ -61,9 +57,14 @@ class Main:
         else:
             self._initialized = True
             self._submit(setup())
+            self._submit(forever(), wait=False)
 
     async def _ooda(self) -> None:
-        async for comp in schedule(chan=self.ch, gen=self.gen):
+        settings = initial(user_config={})
+        factories = load_factories(settings=settings)
+        gen = merge(self.nvim, factories=factories)
+
+        async for comp in schedule(chan=self.ch, gen=gen):
             await complete(self.nvim, comp=comp)
 
     @function("_FCtextchangedi")

@@ -1,5 +1,5 @@
 from asyncio import Future
-from typing import Awaitable, Callable, TypeVar
+from typing import Any, Awaitable, Callable, TypeVar
 
 from pynvim import Nvim
 
@@ -19,3 +19,16 @@ def call(nvim: Nvim, fn: Callable[[], T]) -> Awaitable[T]:
 
     nvim.async_call(cont)
     return fut
+
+
+async def print(
+    nvim: Nvim, message: Any, error: bool = False, flush: bool = True
+) -> None:
+    write = nvim.api.err_write if error else nvim.api.out_write
+
+    def cont() -> None:
+        write(str(message))
+        if flush:
+            write("\n")
+
+    await call(nvim, cont)
