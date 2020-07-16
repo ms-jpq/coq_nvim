@@ -1,13 +1,14 @@
 from asyncio import gather, wait_for
 from dataclasses import dataclass
 from locale import strxfrm
+from traceback import format_exc
 from typing import AsyncIterator, Iterator, List, Sequence, Tuple, cast
 
 from pynvim import Nvim
 
 from .da import anext
-from .nvim import VimCompletion
-from .types import Factory, SourceCompletion, SourceFactory
+from .nvim import VimCompletion, print
+from .types import Factory, Source, SourceCompletion, SourceFactory, SourceSeed
 
 
 @dataclass(frozen=True)
@@ -17,11 +18,31 @@ class Step:
     comp: SourceCompletion
 
 
+async def nil_source() -> AsyncIterator[Source]:
+    async def source() -> Source:
+        raise StopAsyncIteration()
+        yield SourceCompletion(text="")
+
+    while True:
+        yield source()
+
+
+async def gen_sources(
+    nvim: Nvim, factory: Factory, seed: SourceSeed
+) -> AsyncIterator[Source]:
+    try:
+        return await factory(nvim, seed)
+    except Exception as e:
+        stack = format_exc()
+        await print(nvim, f"{stack}{e}")
+        return nil_source()
+
+
 async def manufacture(
     nvim: Nvim, factory: SourceFactory
 ) -> AsyncIterator[Sequence[Step]]:
     fact = cast(Factory, factory.manufacture)
-    sources = fact(nvim, factory.seed)
+    sources = await gen_sources(nvim, factory=fact, seed=factory.seed)
 
     async def source() -> Sequence[Step]:
         results: List[Step] = []
@@ -42,7 +63,14 @@ async def manufacture(
             return results
 
     while True:
-        yield await source()
+        try:
+            yield await source()
+        except Exception as e:
+            stack = format_exc()
+            await print(nvim, f"{stack}{e}")
+            break
+    while True:
+        yield ()
 
 
 def rank(annotated: Step) -> Tuple[float, str, str]:

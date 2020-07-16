@@ -7,7 +7,7 @@ T = TypeVar("T")
 
 
 async def schedule(chan: Queue, gen: AsyncIterator[T]) -> AsyncIterator[T]:
-
     while True:
+        await chan.get()
         t = await anext(gen)
         yield t

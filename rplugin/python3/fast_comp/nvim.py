@@ -86,7 +86,7 @@ def serialize(comp: VimCompletion) -> Dict[str, Any]:
     return serialized
 
 
-def complete(nvim: Nvim, comp: Sequence[VimCompletion]) -> Callable[[], None]:
+async def complete(nvim: Nvim, comp: Sequence[VimCompletion]) -> None:
     serialized = tuple(map(serialize, comp))
 
     def cont() -> None:
@@ -95,4 +95,4 @@ def complete(nvim: Nvim, comp: Sequence[VimCompletion]) -> Callable[[], None]:
         nvim.funcs.complete(col, serialized)
         nvim.api.out_write(str(serialized) + "\n")
 
-    return cont
+    await call(nvim, cont)

@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Any, AsyncIterator, Callable, Dict, Optional
+from typing import Any, AsyncIterator, Awaitable, Callable, Dict, Optional
 
 from pynvim import Nvim
 
@@ -32,7 +32,7 @@ class SourceCompletion:
 
 
 Source = AsyncIterator[SourceCompletion]
-Factory = Callable[[Nvim, SourceSeed], AsyncIterator[Source]]
+Factory = Callable[[Nvim, SourceSeed], Awaitable[AsyncIterator[Source]]]
 
 
 @dataclass(frozen=True)

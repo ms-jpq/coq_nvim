@@ -6,7 +6,7 @@ from typing import Any, Awaitable, Sequence
 from pynvim import Nvim, command, function, plugin
 
 from .completion import merge
-from .nvim import autocmd, call, complete, print
+from .nvim import autocmd, complete, print
 from .scheduler import schedule
 from .settings import initial, load_factories
 
@@ -64,7 +64,7 @@ class Main:
 
     async def _ooda(self) -> None:
         async for comp in schedule(chan=self.ch, gen=self.gen):
-            await call(self.nvim, complete(self.nvim, comp=comp))
+            await complete(self.nvim, comp=comp)
 
     @function("_FCtextchangedi")
     def text_changed_i(self, args: Sequence[Any]) -> None:
