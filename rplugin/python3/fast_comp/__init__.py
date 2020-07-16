@@ -74,19 +74,17 @@ class Main:
     def text_changed_i(self, args: Sequence[Any]) -> None:
         nvim = self.nvim
 
-        def col() -> int:
+        def update() -> State:
             pum_open = nvim.funcs.pumvisible() != 0
             if pum_open:
-                return None
+                return self.state
             else:
                 window = nvim.api.get_current_win()
                 _, col = nvim.api.win_get_cursor(window)
-                return col
+                return State(col=col)
 
         async def put() -> None:
-            c = await call(nvim, col)
-            if c is not None:
-                self.state = State(col=c)
+            self.state = await call(nvim, update)
             await self.ch.put(None)
 
         self._submit(put())
@@ -94,7 +92,6 @@ class Main:
     @function("_FCtextchangedp")
     def text_changed_p(self, args: Sequence[Any]) -> None:
         async def put() -> None:
-            # await self.ch.put(None)
-            await print(self.nvim, "CHANGED - P")
+            await self.ch.put(None)
 
         self._submit(put())
