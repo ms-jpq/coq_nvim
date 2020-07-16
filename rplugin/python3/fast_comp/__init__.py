@@ -10,7 +10,13 @@ from .nvim import autocmd, complete, print
 from .scheduler import schedule
 from .settings import initial, load_factories
 from .state import initial as init_state
-from .state import render
+from .transitions import (
+    render,
+    t_char_inserted,
+    t_comp_done,
+    t_text_changed_i,
+    t_text_changed_p,
+)
 
 
 @plugin
@@ -39,7 +45,7 @@ class Main:
 
     def _run(self, fn: Any, *args: Any, **kwargs: Any) -> None:
         async def run() -> None:
-            self.state = fn(self.nvim, state=self.state, *args, **kwargs)
+            self.state = await fn(self.nvim, state=self.state, *args, **kwargs)
             if render(self.state):
                 await self.ch.put(None)
 
@@ -49,7 +55,11 @@ class Main:
     def initialize(self) -> None:
         async def setup() -> None:
             await autocmd(
-                self.nvim, events=("TextChangedI",), fn="_FCtextchanged",
+                self.nvim, events=("TextChangedI",), fn="_FCtextchangedi",
+            )
+
+            await autocmd(
+                self.nvim, events=("TextChangedP",), fn="_FCtextchangedp",
             )
 
             await autocmd(self.nvim, events=("InsertCharPre",), fn="_FCpreinsert_char")
@@ -80,14 +90,18 @@ class Main:
             c = col + 1
             await complete(self.nvim, col=c, comp=comp)
 
-    @function("_FCtextchanged")
-    def text_changed(self, args: Sequence[Any]) -> None:
-        pass
-
     @function("_FCpreinsert_char")
     def char_inserted(self, args: Sequence[Any]) -> None:
-        pass
+        self._run(t_char_inserted)
+
+    @function("_FCtextchangedi")
+    def text_changed_i(self, args: Sequence[Any]) -> None:
+        self._run(t_text_changed_i)
+
+    @function("_FCtextchangedp")
+    def text_changed_p(self, args: Sequence[Any]) -> None:
+        self._run(t_text_changed_p)
 
     @function("_FCcomp_done")
     def comp_done(self, args: Sequence[Any]) -> None:
-        pass
+        self._run(t_comp_done)

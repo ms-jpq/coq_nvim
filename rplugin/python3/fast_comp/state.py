@@ -36,7 +36,3 @@ def forward(
         char_received=or_else(char_received, state.char_received),
     )
     return state
-
-
-def render(state: State) -> bool:
-    return state.col is not None and state.char_received
