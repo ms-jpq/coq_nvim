@@ -93,6 +93,6 @@ async def complete(nvim: Nvim, comp: Sequence[VimCompletion]) -> None:
         window = nvim.api.get_current_win()
         _, col = nvim.api.win_get_cursor(window)
         nvim.funcs.complete(col, serialized)
-        nvim.api.out_write(str(serialized) + "\n")
 
     await call(nvim, cont)
+    await print(nvim, serialized)

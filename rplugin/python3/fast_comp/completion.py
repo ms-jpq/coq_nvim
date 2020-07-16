@@ -31,7 +31,7 @@ async def manufacture(
             src = await anext(sources)
             async for comp in src:
                 completion = Step(
-                    source=factory.name, priority=factory.priority, comp=comp
+                    source=factory.short_name, priority=factory.priority, comp=comp
                 )
                 results.append(completion)
 
@@ -53,7 +53,7 @@ async def osha(nvim: Nvim, factory: SourceFactory) -> AsyncIterator[Sequence[Ste
             yield step
     except Exception as e:
         stack = format_exc()
-        await print(nvim, f"{stack}{e}")
+        await print(nvim, f"{stack}{e}", error=True)
 
     while True:
         yield ()
@@ -66,7 +66,10 @@ def rank(annotated: Step) -> Tuple[float, str, str]:
 
 def vimify(annotated: Step) -> VimCompletion:
     comp = annotated.comp
-    ret = VimCompletion(word=comp.text, abbr=comp.display, menu=annotated.source)
+    short_name = f"[{annotated.source}]"
+    ret = VimCompletion(
+        word=comp.text, abbr=comp.display, menu=short_name, info=comp.preview
+    )
     return ret
 
 
