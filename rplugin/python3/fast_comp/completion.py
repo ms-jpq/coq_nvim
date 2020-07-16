@@ -8,7 +8,7 @@ from pynvim import Nvim
 
 from .da import anext
 from .nvim import VimCompletion, print
-from .types import Factory, Source, SourceCompletion, SourceFactory, SourceSeed
+from .types import Factory, SourceCompletion, SourceFactory
 
 
 @dataclass(frozen=True)
@@ -18,31 +18,11 @@ class Step:
     comp: SourceCompletion
 
 
-async def nil_source() -> AsyncIterator[Source]:
-    async def source() -> Source:
-        raise StopAsyncIteration()
-        yield SourceCompletion(text="")
-
-    while True:
-        yield source()
-
-
-async def gen_sources(
-    nvim: Nvim, factory: Factory, seed: SourceSeed
-) -> AsyncIterator[Source]:
-    try:
-        return await factory(nvim, seed)
-    except Exception as e:
-        stack = format_exc()
-        await print(nvim, f"{stack}{e}")
-        return nil_source()
-
-
 async def manufacture(
     nvim: Nvim, factory: SourceFactory
 ) -> AsyncIterator[Sequence[Step]]:
     fact = cast(Factory, factory.manufacture)
-    sources = await gen_sources(nvim, factory=fact, seed=factory.seed)
+    sources = fact(nvim, factory.seed)
 
     async def source() -> Sequence[Step]:
         results: List[Step] = []
@@ -63,12 +43,18 @@ async def manufacture(
             return results
 
     while True:
-        try:
-            yield await source()
-        except Exception as e:
-            stack = format_exc()
-            await print(nvim, f"{stack}{e}")
-            break
+        yield await source()
+
+
+async def osha(nvim: Nvim, factory: SourceFactory) -> AsyncIterator[Sequence[Step]]:
+    fact = manufacture(nvim, factory=factory)
+    try:
+        async for step in fact:
+            yield step
+    except Exception as e:
+        stack = format_exc()
+        await print(nvim, f"{stack}{e}")
+
     while True:
         yield ()
 
