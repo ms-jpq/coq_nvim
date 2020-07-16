@@ -1,7 +1,7 @@
 from asyncio import AbstractEventLoop, Queue, run_coroutine_threadsafe
 from concurrent.futures import ThreadPoolExecutor
 from traceback import format_exc
-from typing import Any, Awaitable, Sequence
+from typing import Any, Awaitable, Sequence, cast
 
 from pynvim import Nvim, command, function, plugin
 
@@ -10,7 +10,7 @@ from .nvim import autocmd, complete, print
 from .scheduler import schedule
 from .settings import initial, load_factories
 from .state import initial as init_state
-from .transitions import t_on_char, t_on_insert
+from .state import render
 
 
 @plugin
@@ -39,9 +39,8 @@ class Main:
 
     def _run(self, fn: Any, *args: Any, **kwargs: Any) -> None:
         async def run() -> None:
-            draw, new_state = await fn(self.nvim, state=self.state, *args, **kwargs)
-            self.state = new_state
-            if draw:
+            self.state = fn(self.nvim, state=self.state, *args, **kwargs)
+            if render(self.state):
                 await self.ch.put(None)
 
         self._submit(run())
@@ -50,12 +49,12 @@ class Main:
     def initialize(self) -> None:
         async def setup() -> None:
             await autocmd(
-                self.nvim,
-                events=("TextChangedI", "TextChangedP",),
-                fn="_FCtextchanged",
+                self.nvim, events=("TextChangedI",), fn="_FCtextchanged",
             )
 
             await autocmd(self.nvim, events=("InsertCharPre",), fn="_FCpreinsert_char")
+
+            await autocmd(self.nvim, events=("CompleteDone",), fn="_FCcomp_done")
 
         async def forever() -> None:
             while True:
@@ -77,13 +76,18 @@ class Main:
         gen = merge(self.nvim, factories=factories)
 
         async for comp in schedule(chan=self.ch, gen=gen):
-            c = self.state.col + 1
+            col = cast(int, self.state.col)
+            c = col + 1
             await complete(self.nvim, col=c, comp=comp)
 
     @function("_FCtextchanged")
-    def text_changed_i(self, args: Sequence[Any]) -> None:
-        self._run(t_on_insert)
+    def text_changed(self, args: Sequence[Any]) -> None:
+        pass
 
     @function("_FCpreinsert_char")
-    def text_changed_p(self, args: Sequence[Any]) -> None:
-        self._run(t_on_char)
+    def char_inserted(self, args: Sequence[Any]) -> None:
+        pass
+
+    @function("_FCcomp_done")
+    def comp_done(self, args: Sequence[Any]) -> None:
+        pass

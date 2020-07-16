@@ -49,4 +49,5 @@ class SourceFactory:
 
 @dataclass(frozen=True)
 class State:
-    col: int
+    col: Optional[int]
+    char_received: bool
