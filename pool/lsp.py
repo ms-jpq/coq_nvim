@@ -1,8 +1,7 @@
 from typing import AsyncIterator
 
-from pynvim import Nvim
-
 from pkgs.types import SourceCompletion, SourceSeed
+from pynvim import Nvim
 
 
 async def main(

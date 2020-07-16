@@ -1,5 +1,6 @@
 from asyncio import Future
 from dataclasses import asdict, dataclass
+from enum import Enum
 from typing import Any, Awaitable, Callable, Dict, Iterable, Optional, Sequence, TypeVar
 from uuid import uuid4
 
@@ -65,6 +66,14 @@ async def autocmd(
         nvim.api.command(group_end)
 
     await call(nvim, cont)
+
+
+class VimCompKind(Enum):
+    variable = "v"
+    function = "f"
+    member = "m"
+    typedef = "t"
+    define = "d"
 
 
 @dataclass(frozen=True)
