@@ -10,8 +10,7 @@ from .nvim import autocmd, complete, print
 from .scheduler import schedule
 from .settings import initial, load_factories
 from .state import initial as init_state
-from .state import redraw
-from .transitions import t_on_char, t_on_insert
+from .transitions import t_on_char, t_on_insert, redraw
 
 
 @plugin
@@ -42,7 +41,7 @@ class Main:
         async def run() -> None:
             new_state = await fn(self.nvim, state=self.state, *args, **kwargs)
             self.state = new_state
-            if redraw(new_state):
+            if await redraw(self.nvim, state=new_state):
                 await self.ch.put(None)
 
         self._submit(run())

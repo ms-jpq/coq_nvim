@@ -25,7 +25,7 @@ async def manufacture(
     sources = fact(nvim, factory.seed)
 
     async def source() -> Sequence[Step]:
-        results: List[Step] = []
+        acc: List[Step] = []
 
         async def cont() -> None:
             src = await anext(sources)
@@ -33,14 +33,16 @@ async def manufacture(
                 completion = Step(
                     source=factory.short_name, priority=factory.priority, comp=comp
                 )
-                results.append(completion)
+                acc.append(completion)
+                if len(acc) >= factory.limit:
+                    break
 
         try:
             await wait_for(cont(), factory.timeout)
         except TimeoutError:
-            return results
+            return acc
         else:
-            return results
+            return acc
 
     while True:
         yield await source()

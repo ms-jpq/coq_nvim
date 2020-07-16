@@ -12,7 +12,3 @@ def initial() -> State:
 def forward(state: State, *, col: Optional[int]) -> State:
     state = State(col=or_else(col, state.col))
     return state
-
-
-def redraw(state: State) -> bool:
-    pass

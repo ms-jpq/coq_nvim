@@ -7,6 +7,10 @@ from .state import forward
 from .types import State
 
 
+async def redraw(nvim: Nvim, state: State) -> bool:
+    pass
+
+
 async def t_on_insert(nvim: Nvim, state: State) -> State:
     def cont() -> Optional[int]:
         pum_open = nvim.funcs.pumvisible() != 0

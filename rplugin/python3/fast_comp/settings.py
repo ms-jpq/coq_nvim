@@ -1,4 +1,5 @@
 from inspect import getmembers, isfunction
+from math import inf
 from os.path import exists, join
 from typing import Any, Iterator
 
@@ -15,6 +16,7 @@ def load_source(config: Any) -> SourceSpec:
         short_name=config["short_name"],
         timeout=config["timeout"],
         config=config["config"],
+        limit=config["limit"] or inf,
     )
     return spec
 
@@ -40,6 +42,7 @@ def load_factories(settings: Settings) -> Iterator[SourceFactory]:
                             short_name=spec.short_name,
                             priority=spec.priority,
                             timeout=spec.timeout,
+                            limit=spec.limit,
                             seed=seed,
                             manufacture=func,
                         )

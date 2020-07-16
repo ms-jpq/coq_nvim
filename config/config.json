@@ -3,6 +3,7 @@
     "buffers": {
       "config": {},
       "enabled": true,
+      "limit": 10,
       "main": "buffers.py",
       "priority": 1,
       "short_name": "B",
@@ -11,6 +12,7 @@
     "lsp": {
       "config": {},
       "enabled": true,
+      "limit": null,
       "main": "lsp.py",
       "priority": 6,
       "short_name": "LSP",
@@ -19,6 +21,7 @@
     "paths": {
       "config": {},
       "enabled": true,
+      "limit": 10,
       "main": "paths.py",
       "priority": 0,
       "short_name": "F",

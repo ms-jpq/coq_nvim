@@ -11,6 +11,7 @@ class SourceSpec:
     priority: float
     short_name: str
     timeout: float
+    limit: float
     config: Any
 
 
@@ -41,6 +42,7 @@ class SourceFactory:
     short_name: str
     priority: float
     timeout: float
+    limit: float
     seed: SourceSeed
     manufacture: Factory
 
