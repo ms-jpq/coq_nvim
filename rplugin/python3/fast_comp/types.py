@@ -43,3 +43,8 @@ class SourceFactory:
     timeout: float
     seed: SourceSeed
     manufacture: Factory
+
+
+@dataclass(frozen=True)
+class State:
+    col: int

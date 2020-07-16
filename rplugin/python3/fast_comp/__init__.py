@@ -6,9 +6,10 @@ from typing import Any, Awaitable, Sequence
 from pynvim import Nvim, command, function, plugin
 
 from .completion import merge
-from .nvim import autocmd, complete, print
+from .nvim import autocmd, col, complete, print
 from .scheduler import schedule
 from .settings import initial, load_factories
+from .types import State
 
 
 @plugin
@@ -18,6 +19,7 @@ class Main:
         self.chan = ThreadPoolExecutor(max_workers=1)
         self.ch: Queue = Queue()
 
+        self.state = State(col=-1)
         self._initialized = False
 
     def _submit(self, co: Awaitable[None], wait: bool = True) -> None:
@@ -65,11 +67,14 @@ class Main:
         gen = merge(self.nvim, factories=factories)
 
         async for comp in schedule(chan=self.ch, gen=gen):
-            await complete(self.nvim, comp=comp)
+            c = self.state.col + 1
+            await complete(self.nvim, col=c, comp=comp)
 
     @function("_FCtextchangedi")
     def text_changed_i(self, args: Sequence[Any]) -> None:
         async def put() -> None:
+            c = await col(self.nvim)
+            self.state = State(col=c)
             await self.ch.put(None)
 
         self._submit(put())
@@ -78,3 +83,5 @@ class Main:
     def text_changed_p(self, args: Sequence[Any]) -> None:
         async def put() -> None:
             await self.ch.put(None)
+
+        self._submit(put())

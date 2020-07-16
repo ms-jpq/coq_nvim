@@ -95,13 +95,20 @@ def serialize(comp: VimCompletion) -> Dict[str, Any]:
     return serialized
 
 
-async def complete(nvim: Nvim, comp: Sequence[VimCompletion]) -> None:
+async def complete(nvim: Nvim, col: int, comp: Sequence[VimCompletion]) -> None:
     serialized = tuple(map(serialize, comp))
 
     def cont() -> None:
-        window = nvim.api.get_current_win()
-        _, col = nvim.api.win_get_cursor(window)
         nvim.funcs.complete(col, serialized)
 
     await call(nvim, cont)
     await print(nvim, serialized)
+
+
+async def col(nvim: Nvim) -> int:
+    def cont() -> int:
+        window = nvim.api.get_current_win()
+        _, col = nvim.api.win_get_cursor(window)
+        return col
+
+    return await call(nvim, cont)
