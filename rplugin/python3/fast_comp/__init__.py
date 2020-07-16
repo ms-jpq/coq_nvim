@@ -1,15 +1,17 @@
 from asyncio import AbstractEventLoop, Queue, run_coroutine_threadsafe
 from concurrent.futures import ThreadPoolExecutor
 from traceback import format_exc
-from typing import Any, Awaitable, Optional, Sequence
+from typing import Any, Awaitable, Sequence
 
 from pynvim import Nvim, command, function, plugin
 
 from .completion import merge
-from .nvim import autocmd, call, complete, print
+from .nvim import autocmd, complete, print
 from .scheduler import schedule
 from .settings import initial, load_factories
-from .types import State
+from .state import initial as init_state
+from .state import redraw
+from .transitions import t_on_char, t_on_insert
 
 
 @plugin
@@ -19,7 +21,7 @@ class Main:
         self.chan = ThreadPoolExecutor(max_workers=1)
         self.ch: Queue = Queue()
 
-        self.state = State(col=-1)
+        self.state = init_state()
         self._initialized = False
 
     def _submit(self, co: Awaitable[None], wait: bool = True) -> None:
@@ -36,16 +38,25 @@ class Main:
 
         self.chan.submit(run, self.nvim)
 
+    def _run(self, fn: Any, *args: Any, **kwargs: Any) -> None:
+        async def run() -> None:
+            new_state = await fn(self.nvim, state=self.state, *args, **kwargs)
+            self.state = new_state
+            if redraw(new_state):
+                await self.ch.put(None)
+
+        self._submit(run())
+
     @command("FCstart")
     def initialize(self) -> None:
         async def setup() -> None:
             await autocmd(
-                self.nvim, events=("TextChangedI",), fn="_FCtextchangedi",
+                self.nvim,
+                events=("TextChangedI", "TextChangedP",),
+                fn="_FCtextchanged",
             )
 
-            await autocmd(
-                self.nvim, events=("TextChangedP",), fn="_FCtextchangedp",
-            )
+            await autocmd(self.nvim, events=("InsertCharPre",), fn="_FCpreinsert_char")
 
         async def forever() -> None:
             while True:
@@ -70,28 +81,10 @@ class Main:
             c = self.state.col + 1
             await complete(self.nvim, col=c, comp=comp)
 
-    @function("_FCtextchangedi")
+    @function("_FCtextchanged")
     def text_changed_i(self, args: Sequence[Any]) -> None:
-        nvim = self.nvim
+        self._run(t_on_insert)
 
-        def update() -> State:
-            pum_open = nvim.funcs.pumvisible() != 0
-            if pum_open:
-                return self.state
-            else:
-                window = nvim.api.get_current_win()
-                _, col = nvim.api.win_get_cursor(window)
-                return State(col=col)
-
-        async def put() -> None:
-            self.state = await call(nvim, update)
-            await self.ch.put(None)
-
-        self._submit(put())
-
-    @function("_FCtextchangedp")
+    @function("_FCpreinsert_char")
     def text_changed_p(self, args: Sequence[Any]) -> None:
-        async def put() -> None:
-            await self.ch.put(None)
-
-        self._submit(put())
+        self._run(t_on_char)

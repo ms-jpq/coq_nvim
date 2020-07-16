@@ -4,7 +4,7 @@ from json import load
 from os.path import basename, dirname, splitext
 from sys import path as sys_path
 from types import ModuleType
-from typing import Any, AsyncIterator, Awaitable, TypeVar, cast
+from typing import Any, AsyncIterator, Awaitable, Optional, TypeVar, cast
 
 T = TypeVar("T")
 
@@ -31,6 +31,10 @@ def merge_all(ds1: Any, *dss: Any, replace: bool = False) -> Any:
     for ds2 in dss:
         res = merge(res, ds2, replace=replace)
     return res
+
+
+def or_else(thing: Optional[T], default: T) -> T:
+    return default if thing is None else thing
 
 
 def load_module(path: str) -> ModuleType:

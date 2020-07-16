@@ -9,6 +9,7 @@ async def main(
 ) -> AsyncIterator[AsyncIterator[SourceCompletion]]:
     async def source() -> AsyncIterator[SourceCompletion]:
         yield SourceCompletion(text="paths_stub")
+        yield SourceCompletion(text="paths_stub1")
 
     while True:
         yield source()
