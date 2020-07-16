@@ -103,12 +103,3 @@ async def complete(nvim: Nvim, col: int, comp: Sequence[VimCompletion]) -> None:
 
     await call(nvim, cont)
     await print(nvim, serialized)
-
-
-async def col(nvim: Nvim) -> int:
-    def cont() -> int:
-        window = nvim.api.get_current_win()
-        _, col = nvim.api.win_get_cursor(window)
-        return col
-
-    return await call(nvim, cont)

@@ -1,12 +1,12 @@
 from asyncio import AbstractEventLoop, Queue, run_coroutine_threadsafe
 from concurrent.futures import ThreadPoolExecutor
 from traceback import format_exc
-from typing import Any, Awaitable, Sequence
+from typing import Any, Awaitable, Optional, Sequence
 
 from pynvim import Nvim, command, function, plugin
 
 from .completion import merge
-from .nvim import autocmd, col, complete, print
+from .nvim import autocmd, call, complete, print
 from .scheduler import schedule
 from .settings import initial, load_factories
 from .types import State
@@ -72,9 +72,21 @@ class Main:
 
     @function("_FCtextchangedi")
     def text_changed_i(self, args: Sequence[Any]) -> None:
+        nvim = self.nvim
+
+        def col() -> int:
+            pum_open = nvim.funcs.pumvisible() != 0
+            if pum_open:
+                return None
+            else:
+                window = nvim.api.get_current_win()
+                _, col = nvim.api.win_get_cursor(window)
+                return col
+
         async def put() -> None:
-            c = await col(self.nvim)
-            self.state = State(col=c)
+            c = await call(nvim, col)
+            if c is not None:
+                self.state = State(col=c)
             await self.ch.put(None)
 
         self._submit(put())
@@ -82,6 +94,7 @@ class Main:
     @function("_FCtextchangedp")
     def text_changed_p(self, args: Sequence[Any]) -> None:
         async def put() -> None:
-            await self.ch.put(None)
+            # await self.ch.put(None)
+            await print(self.nvim, "CHANGED - P")
 
         self._submit(put())
