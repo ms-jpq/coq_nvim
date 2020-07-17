@@ -2,16 +2,7 @@ from asyncio import gather, wait
 from dataclasses import dataclass
 from locale import strxfrm
 from traceback import format_exc
-from typing import (
-    AsyncIterator,
-    Awaitable,
-    Callable,
-    Iterator,
-    List,
-    Sequence,
-    Tuple,
-    cast,
-)
+from typing import Awaitable, Callable, Iterator, List, Sequence, Tuple, cast
 
 from pynvim import Nvim
 

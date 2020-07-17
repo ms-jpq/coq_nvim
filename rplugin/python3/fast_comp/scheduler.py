@@ -1,8 +1,6 @@
-from asyncio import FIRST_COMPLETED, Queue, Task, as_completed, create_task, sleep, wait
+from asyncio import FIRST_COMPLETED, Queue, Task, create_task, gather, sleep, wait
 from math import inf
 from typing import Any, AsyncIterator, Awaitable, Callable, TypeVar
-
-from .da import anext
 
 T = TypeVar("T")
 
@@ -24,12 +22,11 @@ async def schedule(chan: Queue, gen: Callable[[], Awaitable[T]]) -> AsyncIterato
     async def wheel() -> AsyncIterator[T]:
         nonlocal prev
         done, pending = await wait((chan.get(), pp()), return_when=FIRST_COMPLETED)
-        for d in as_completed(done):
-            ret = await d
-            if ret == sig:
+        for d in await gather(*done):
+            if d == sig:
                 prev = create_task(gen())
             else:
-                yield ret
+                yield d
         for p in pending:
             p.cancel()
 
