@@ -46,7 +46,8 @@ async def manufacture(nvim: Nvim, factory: SourceFactory) -> StepFunction:
                 if len(acc) >= factory.limit:
                     break
 
-        _, pending = await wait((cont(),), timeout=factory.timeout)
+        done, pending = await wait((cont(),), timeout=factory.timeout)
+        await gather(*done)
         for p in pending:
             p.cancel()
         return acc
