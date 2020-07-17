@@ -100,11 +100,10 @@ async def osha(
         return factory.name, o_step, chan
 
 
-def rank(annotated: Step) -> Tuple[float, float, str, str]:
+def rank(annotated: Step) -> Tuple[float, str, str]:
     comp = annotated.comp
-    text = comp.display or comp.text
-    priority = comp.priority or 0
-    return annotated.priority, priority, strxfrm(text), strxfrm(annotated.source)
+    text = comp.sortby or comp.display or comp.text
+    return annotated.priority, strxfrm(text), strxfrm(annotated.source)
 
 
 def vimify(annotated: Step) -> VimCompletion:

@@ -1,6 +1,14 @@
 from asyncio import Queue
 from dataclasses import dataclass
-from typing import Any, AsyncIterator, Awaitable, Callable, Dict, Optional, Sequence
+from typing import (
+    Any,
+    AsyncIterator,
+    Awaitable,
+    Callable,
+    Dict,
+    Optional,
+    Sequence,
+)
 
 from pynvim import Nvim
 
@@ -48,7 +56,7 @@ class SourceFeed:
 @dataclass(frozen=True)
 class SourceCompletion:
     text: str
-    priority: Optional[int] = None
+    sortby: Optional[str] = None
     display: Optional[str] = None
     detail: Optional[str] = None
 

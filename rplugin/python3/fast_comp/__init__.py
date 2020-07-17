@@ -74,7 +74,7 @@ class Main:
                 await print(self.nvim, f"{stack}{e}", error=True)
 
         if self._initialized:
-            return
+            pass
         else:
             self._initialized = True
             self._submit(setup())

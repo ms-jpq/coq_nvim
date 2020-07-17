@@ -23,7 +23,7 @@ class SourceFeed:
 @dataclass(frozen=True)
 class SourceCompletion:
     text: str
-    priority: Optional[int] = None
+    sortby: Optional[str] = None
     display: Optional[str] = None
     detail: Optional[str] = None
 
