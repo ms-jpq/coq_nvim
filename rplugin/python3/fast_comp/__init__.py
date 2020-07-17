@@ -1,4 +1,10 @@
-from asyncio import AbstractEventLoop, Queue, create_task, run_coroutine_threadsafe
+from asyncio import (
+    AbstractEventLoop,
+    Queue,
+    create_task,
+    gather,
+    run_coroutine_threadsafe,
+)
 from concurrent.futures import ThreadPoolExecutor
 from traceback import format_exc
 from typing import Any, Awaitable, Sequence
@@ -23,7 +29,7 @@ class Main:
         self._initialized = False
         self.state = State(char_inserted=False)
 
-    def _submit(self, co: Awaitable[None]) -> None:
+    def _submit(self, co: Awaitable[None], wait: bool = True) -> None:
         loop: AbstractEventLoop = self.nvim.loop
 
         def run(nvim: Nvim) -> None:
@@ -56,13 +62,14 @@ class Main:
                 gen, listen = await merge(
                     self.nvim, chan=self.msg_ch, factories=factories
                 )
-                task = create_task(listen())
 
-                async for comp in schedule(chan=self.ch, gen=gen):
-                    await complete(self.nvim, comp=comp)
+                async def l1() -> None:
+                    async for comp in schedule(chan=self.ch, gen=gen):
+                        await complete(self.nvim, comp=comp)
+
+                await gather(listen(), l1())
 
             except Exception as e:
-                task.cancel()
                 stack = format_exc()
                 await print(self.nvim, f"{stack}{e}", error=True)
 
