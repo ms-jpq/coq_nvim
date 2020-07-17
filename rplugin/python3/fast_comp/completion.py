@@ -2,13 +2,22 @@ from asyncio import gather, wait_for
 from dataclasses import dataclass
 from locale import strxfrm
 from traceback import format_exc
-from typing import AsyncIterator, Iterator, List, Sequence, Tuple, cast
+from typing import (
+    AsyncIterator,
+    Awaitable,
+    Callable,
+    Iterator,
+    List,
+    Sequence,
+    Tuple,
+    cast,
+)
 
 from pynvim import Nvim
 
 from .da import anext
-from .nvim import VimCompletion, print
-from .types import Factory, SourceCompletion, SourceFactory
+from .nvim import VimCompletion, call, print
+from .types import Factory, Position, SourceCompletion, SourceFactory, SourceFeed
 
 
 @dataclass(frozen=True)
@@ -18,18 +27,30 @@ class Step:
     comp: SourceCompletion
 
 
-async def manufacture(
-    nvim: Nvim, factory: SourceFactory
-) -> AsyncIterator[Sequence[Step]]:
+StepFunction = Callable[[SourceFeed], Awaitable[Sequence[Step]]]
+
+
+async def gen_feed(nvim: Nvim) -> AsyncIterator[SourceFeed]:
+    def pos() -> Position:
+        window = nvim.api.get_current_win()
+        row, col = nvim.api.win_get_cursor(window)
+        return Position(row=row, col=col)
+
+    while True:
+        position = await call(nvim, pos)
+        yield SourceFeed(position=position)
+
+
+def manufacture(nvim: Nvim, factory: SourceFactory) -> StepFunction:
     fact = cast(Factory, factory.manufacture)
     sources = fact(nvim, factory.seed)
 
-    async def source() -> Sequence[Step]:
+    async def source(feed: SourceFeed) -> Sequence[Step]:
         acc: List[Step] = []
 
         async def cont() -> None:
             src = await anext(sources)
-            async for comp in src:
+            async for comp in src(feed):
                 completion = Step(
                     source=factory.short_name, priority=factory.priority, comp=comp
                 )
@@ -44,21 +65,30 @@ async def manufacture(
         else:
             return acc
 
-    while True:
-        yield await source()
+    return source
 
 
-async def osha(nvim: Nvim, factory: SourceFactory) -> AsyncIterator[Sequence[Step]]:
-    fact = manufacture(nvim, factory=factory)
+async def osha(nvim: Nvim, factory: SourceFactory) -> StepFunction:
+    async def nil_steps(_: SourceFeed) -> Sequence[Step]:
+        return ()
+
     try:
-        async for step in fact:
-            yield step
+        step_fn = manufacture(nvim, factory=factory)
     except Exception as e:
         stack = format_exc()
         await print(nvim, f"{stack}{e}", error=True)
+        return nil_steps
+    else:
 
-    while True:
-        yield ()
+        async def o_step(feed: SourceFeed) -> Sequence[Step]:
+            try:
+                return await step_fn(feed)
+            except Exception as e:
+                stack = format_exc()
+                await print(nvim, f"{stack}{e}", error=True)
+                return ()
+
+        return o_step
 
 
 def rank(annotated: Step) -> Tuple[float, float, str, str]:
@@ -79,10 +109,10 @@ def vimify(annotated: Step) -> VimCompletion:
 
 async def merge(
     nvim: Nvim, factories: Iterator[SourceFactory],
-) -> AsyncIterator[Sequence[VimCompletion]]:
-    sources = tuple(osha(nvim, factory=factory) for factory in factories)
+) -> AsyncIterator[Iterator[VimCompletion]]:
+    sources = await gather(*(osha(nvim, factory=factory) for factory in factories))
 
-    while True:
-        comps = await gather(*(anext(source) for source in sources))
+    async for feed in gen_feed(nvim):
+        comps = await gather(*(source(feed) for source in sources))
         completions = sorted((c for co in comps for c in co), key=rank)
-        yield tuple(map(vimify, completions))
+        yield map(vimify, completions)

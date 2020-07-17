@@ -1,7 +1,7 @@
 from asyncio import Future
 from dataclasses import asdict, dataclass
 from enum import Enum
-from typing import Any, Awaitable, Callable, Dict, Iterable, Optional, Sequence, TypeVar
+from typing import Any, Awaitable, Callable, Dict, Iterable, Iterator, Optional, TypeVar
 from uuid import uuid4
 
 from pynvim import Nvim
@@ -95,7 +95,7 @@ def serialize(comp: VimCompletion) -> Dict[str, Any]:
     return serialized
 
 
-async def complete(nvim: Nvim, comp: Sequence[VimCompletion]) -> None:
+async def complete(nvim: Nvim, comp: Iterator[VimCompletion]) -> None:
     serialized = tuple(map(serialize, comp))
 
     def cont() -> None:
