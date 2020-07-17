@@ -1,14 +1,6 @@
 from asyncio import Queue
 from dataclasses import dataclass
-from typing import (
-    Any,
-    AsyncIterator,
-    Awaitable,
-    Callable,
-    Dict,
-    Optional,
-    Sequence,
-)
+from typing import Any, AsyncIterator, Awaitable, Callable, Dict, Optional, Sequence
 
 from pynvim import Nvim
 
