@@ -139,6 +139,8 @@ async def merge(
             if ch:
                 await ch.put(notif.body)
             else:
-                await print(nvim, f"Notification to uknown source - {source}")
+                await print(
+                    nvim, f"Notification to uknown source - {source}", error=True
+                )
 
     return gen, listen
