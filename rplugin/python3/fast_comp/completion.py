@@ -62,7 +62,8 @@ async def osha(nvim: Nvim, factory: SourceFactory) -> StepFunction:
         step_fn = await manufacture(nvim, factory=factory)
     except Exception as e:
         stack = format_exc()
-        await print(nvim, f"{stack}{e}", error=True)
+        message = f"Error in source {factory.name}\n{stack}{e}"
+        await print(nvim, message, error=True)
         return nil_steps
     else:
 
@@ -71,7 +72,8 @@ async def osha(nvim: Nvim, factory: SourceFactory) -> StepFunction:
                 return await step_fn(feed)
             except Exception as e:
                 stack = format_exc()
-                await print(nvim, f"{stack}{e}", error=True)
+                message = f"Error in source {factory.name}\n{stack}{e}"
+                await print(nvim, message, error=True)
                 return ()
 
         return o_step
