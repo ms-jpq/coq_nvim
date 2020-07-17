@@ -1,9 +1,9 @@
 from asyncio import Queue
 from dataclasses import dataclass
 from itertools import count
-from typing import Any, AsyncIterator, Sequence
+from typing import Any, AsyncIterator, Optional, Sequence
 
-from pkgs.nvim import call, print
+from pkgs.nvim import call
 from pkgs.types import Source, SourceCompletion, SourceFeed, SourceSeed
 from pynvim import Nvim
 
@@ -16,6 +16,8 @@ class Row:
     insertText: str
     documentation: str
     detail: str
+    commitCharacters: Optional[Sequence[str]] = None
+    data: Optional[str] = None
 
 
 async def init_lua(nvim: Nvim) -> None:
