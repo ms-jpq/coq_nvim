@@ -1,0 +1,24 @@
+---
+name: CI
+
+on:
+  push:
+  schedule:
+    - cron: "0 0 * * *" # daily
+
+jobs:
+  docker:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Setup Python
+        uses: actions/setup-python@v2
+
+      - name: Pip Packages
+        run: pip install -U mypy pynvim
+
+      - name: Lint
+        run: ./lint.sh
