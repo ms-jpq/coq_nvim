@@ -1,28 +1,12 @@
-from typing import Any, Optional, TypeVar, Union, cast
+from typing import Optional, Union
 
+from .da import Nil, nil, or_else
 from .types import State
-
-T = TypeVar("T")
 
 
 def initial() -> State:
     state = State(col=None, char_received=False)
     return state
-
-
-class Nil:
-    def __eq__(self, o: Any) -> bool:
-        return type(o) == Nil
-
-
-nil = Nil()
-
-
-def or_else(val: Union[T, Nil], default: T) -> T:
-    if val == nil:
-        return default
-    else:
-        return cast(T, val)
 
 
 def forward(
