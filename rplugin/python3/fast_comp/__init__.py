@@ -1,7 +1,7 @@
 from asyncio import AbstractEventLoop, Queue, run_coroutine_threadsafe
 from concurrent.futures import ThreadPoolExecutor
 from traceback import format_exc
-from typing import Any, Awaitable, Sequence, cast
+from typing import Any, Awaitable, Sequence
 
 from pynvim import Nvim, command, function, plugin
 
@@ -9,14 +9,6 @@ from .completion import merge
 from .nvim import autocmd, complete, print
 from .scheduler import schedule
 from .settings import initial, load_factories
-from .state import initial as init_state
-from .transitions import (
-    render,
-    t_char_inserted,
-    t_comp_done,
-    t_text_changed_i,
-    t_text_changed_p,
-)
 
 
 @plugin
@@ -26,8 +18,8 @@ class Main:
         self.chan = ThreadPoolExecutor(max_workers=1)
         self.ch: Queue = Queue()
 
-        self.state = init_state()
         self._initialized = False
+        self._charinserted = False
 
     def _submit(self, co: Awaitable[None], wait: bool = True) -> None:
         loop: AbstractEventLoop = self.nvim.loop
@@ -43,14 +35,6 @@ class Main:
 
         self.chan.submit(run, self.nvim)
 
-    def _run(self, fn: Any, *args: Any, **kwargs: Any) -> None:
-        async def run() -> None:
-            self.state = await fn(self.nvim, state=self.state, *args, **kwargs)
-            if render(self.state):
-                await self.ch.put(None)
-
-        self._submit(run())
-
     @command("FCstart")
     def initialize(self) -> None:
         async def setup() -> None:
@@ -63,13 +47,6 @@ class Main:
             )
 
             await autocmd(self.nvim, events=("InsertCharPre",), fn="_FCpreinsert_char")
-
-            await autocmd(
-                self.nvim,
-                events=("CompleteDonePre",),
-                fn="_FCcomp_done",
-                arg_eval=("v:completed_item",),
-            )
 
         async def forever() -> None:
             while True:
@@ -93,23 +70,25 @@ class Main:
         gen = merge(self.nvim, factories=factories)
 
         async for comp in schedule(chan=self.ch, gen=gen):
-            col = cast(int, self.state.col)
-            c = col + 1
-            await complete(self.nvim, col=c, comp=comp)
+            await complete(self.nvim, comp=comp)
+
+    def next_comp(self) -> None:
+        async def cont() -> None:
+            await self.ch.put(None)
+
+        self._submit(cont())
 
     @function("_FCpreinsert_char")
     def char_inserted(self, args: Sequence[Any]) -> None:
-        self._run(t_char_inserted)
+        self._charinserted = True
 
     @function("_FCtextchangedi")
     def text_changed_i(self, args: Sequence[Any]) -> None:
-        self._run(t_text_changed_i)
+        self.next_comp()
+        self._charinserted = False
 
     @function("_FCtextchangedp")
     def text_changed_p(self, args: Sequence[Any]) -> None:
-        self._run(t_text_changed_p)
-
-    @function("_FCcomp_done")
-    def comp_done(self, args: Sequence[Any]) -> None:
-        select, *_ = args
-        self._run(t_comp_done, select=select)
+        if self._charinserted:
+            self.next_comp()
+        self.char_inserted = False

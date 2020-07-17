@@ -95,12 +95,15 @@ def serialize(comp: VimCompletion) -> Dict[str, Any]:
     return serialized
 
 
-async def complete(nvim: Nvim, col: int, comp: Sequence[VimCompletion]) -> None:
+async def complete(nvim: Nvim, comp: Sequence[VimCompletion]) -> None:
     serialized = tuple(map(serialize, comp))
 
     def cont() -> None:
-        mode = nvim.api.get_mode().mode
-        if mode == "i":
+        mode = nvim.api.get_mode().get("mode", "")
+        if "i" in mode:
+            window = nvim.api.get_current_win()
+            _, col = nvim.api.win_get_position(window)
+            col = col + 1
             nvim.funcs.complete(col, serialized)
 
     await call(nvim, cont)

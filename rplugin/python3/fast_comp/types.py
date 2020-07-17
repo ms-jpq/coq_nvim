@@ -45,9 +45,3 @@ class SourceFactory:
     limit: float
     seed: SourceSeed
     manufacture: Factory
-
-
-@dataclass(frozen=True)
-class State:
-    col: Optional[int]
-    done: bool
