@@ -9,6 +9,7 @@ from .completion import merge
 from .nvim import autocmd, complete, print
 from .scheduler import schedule, sig
 from .settings import initial, load_factories
+from .types import State
 
 
 @plugin
@@ -19,7 +20,7 @@ class Main:
         self.ch: Queue = Queue()
 
         self._initialized = False
-        self._charinserted = False
+        self.state = State(char_inserted=False)
 
     def _submit(self, co: Awaitable[None], wait: bool = True) -> None:
         loop: AbstractEventLoop = self.nvim.loop
@@ -81,19 +82,19 @@ class Main:
 
     @function("_FCpreinsert_char")
     def char_inserted(self, args: Sequence[Any]) -> None:
-        self._charinserted = True
+        self.state = State(char_inserted=True)
 
     @function("_FCtextchangedi")
     def text_changed_i(self, args: Sequence[Any]) -> None:
         try:
             self.next_comp()
         finally:
-            self._charinserted = False
+            self.state = State(char_inserted=False)
 
     @function("_FCtextchangedp")
     def text_changed_p(self, args: Sequence[Any]) -> None:
         try:
-            if self._charinserted:
+            if self.state.char_inserted:
                 self.next_comp()
         finally:
-            self.char_inserted = False
+            self.state = State(char_inserted=False)
