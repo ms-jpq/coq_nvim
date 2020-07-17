@@ -1,8 +1,8 @@
 from asyncio import Queue
 from itertools import count
-from typing import AsyncIterator
+from typing import Any, AsyncIterator, Sequence
 
-from pkgs.nvim import call
+from pkgs.nvim import call, print
 from pkgs.types import Source, SourceCompletion, SourceFeed, SourceSeed
 from pynvim import Nvim
 
@@ -14,11 +14,15 @@ async def init_lua(nvim: Nvim) -> None:
     await call(nvim, cont)
 
 
-async def ask(nvim: Nvim, uid: int) -> None:
+async def ask(nvim: Nvim, chan: Queue, uid: int) -> Sequence[Any]:
     def cont() -> None:
         nvim.api.exec_lua("fast_comp.list_comp_candidates(...)", (uid,))
 
     await call(nvim, cont)
+    while True:
+        rid, rows = await chan.get()
+        if rid == uid:
+            return rows
 
 
 async def main(nvim: Nvim, chan: Queue, seed: SourceSeed) -> Source:
@@ -27,8 +31,9 @@ async def main(nvim: Nvim, chan: Queue, seed: SourceSeed) -> Source:
 
     async def source(feed: SourceFeed) -> AsyncIterator[SourceCompletion]:
         uid = next(id_gen)
-        await ask(nvim, uid=uid)
-        for _ in range(5):
-            yield SourceCompletion(text="OK")
+        rows = await ask(nvim, chan=chan, uid=uid)
+        await print(nvim, rows)
+        for i in range(5):
+            yield SourceCompletion(text=f"OK - {i}")
 
     return source
