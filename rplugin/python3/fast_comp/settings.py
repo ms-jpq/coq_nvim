@@ -29,7 +29,7 @@ def initial(user_config: Any) -> Settings:
 
 
 def load_factories(settings: Settings) -> Iterator[SourceFactory]:
-    for name, spec in settings.sources.items():
+    for src_name, spec in settings.sources.items():
         for path in load_hierarchy:
             candidate = join(path, spec.main)
             if exists(candidate):
@@ -42,7 +42,7 @@ def load_factories(settings: Settings) -> Iterator[SourceFactory]:
                             config=spec.config, limit=limit, timeout=timeout
                         )
                         fact = SourceFactory(
-                            name=name,
+                            name=src_name,
                             short_name=spec.short_name,
                             priority=spec.priority or 0,
                             limit=limit,
