@@ -1,14 +1,12 @@
 from typing import AsyncIterator
 
-from pkgs.types import SourceCompletion, SourceSeed
+from pkgs.types import Source, SourceCompletion, SourceFeed, SourceSeed
 from pynvim import Nvim
 
 
-async def main(
-    nvim: Nvim, seed: SourceSeed
-) -> AsyncIterator[AsyncIterator[SourceCompletion]]:
-    async def source() -> AsyncIterator[SourceCompletion]:
+async def main(nvim: Nvim, seed: SourceSeed) -> AsyncIterator[Source]:
+    async def source(feed: SourceFeed) -> AsyncIterator[SourceCompletion]:
         yield SourceCompletion(text="")
 
     while True:
-        yield source()
+        yield source
