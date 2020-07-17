@@ -1,4 +1,4 @@
-from asyncio import gather, wait_for
+from asyncio import gather, wait
 from dataclasses import dataclass
 from locale import strxfrm
 from traceback import format_exc
@@ -58,12 +58,10 @@ def manufacture(nvim: Nvim, factory: SourceFactory) -> StepFunction:
                 if len(acc) >= factory.limit:
                     break
 
-        try:
-            await wait_for(cont(), factory.timeout)
-        except TimeoutError:
-            return acc
-        else:
-            return acc
+        _, pending = await wait((cont(),), factory.timeout)
+        for p in pending:
+            p.cancel()
+        return acc
 
     return source
 
