@@ -13,21 +13,21 @@ async def init_lua(nvim: Nvim) -> None:
     await call(nvim, cont)
 
 
-async def something(nvim: Nvim) -> None:
+async def ask(nvim: Nvim, uid: int) -> None:
     def cont() -> None:
-        nvim.api.exec_lua("fast_comp.list_comp_candidates()")
+        nvim.api.exec_lua("fast_comp.list_comp_candidates(...)", (uid,))
 
     await call(nvim, cont)
 
 
 async def main(nvim: Nvim, seed: SourceSeed) -> Source:
-
+    id_gen = count()
     await init_lua(nvim)
-    it = count()
 
     async def source(feed: SourceFeed) -> AsyncIterator[SourceCompletion]:
-        await something(nvim)
+        uid = next(id_gen)
+        await ask(nvim, uid=uid)
         for _ in range(5):
-            yield SourceCompletion(text=str(next(it)))
+            yield SourceCompletion(text="OK")
 
     return source
