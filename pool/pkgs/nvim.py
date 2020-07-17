@@ -15,7 +15,8 @@ def call(nvim: Nvim, fn: Callable[[], T]) -> Awaitable[T]:
         except Exception as e:
             fut.set_exception(e)
         else:
-            fut.set_result(ret)
+            if not fut.cancelled():
+                fut.set_result(ret)
 
     nvim.async_call(cont)
     return fut

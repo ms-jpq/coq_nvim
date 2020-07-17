@@ -6,7 +6,6 @@ from typing import Awaitable, Callable, Iterator, List, Sequence, Tuple, cast
 
 from pynvim import Nvim
 
-from .da import anext
 from .nvim import VimCompletion, call, print
 from .types import Factory, Position, SourceCompletion, SourceFactory, SourceFeed
 
