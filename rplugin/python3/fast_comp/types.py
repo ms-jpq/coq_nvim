@@ -7,12 +7,12 @@ from pynvim import Nvim
 @dataclass
 class SourceSpec:
     main: str
-    enabled: bool
-    priority: float
     short_name: str
-    timeout: float
-    limit: float
-    config: Any
+    enabled: bool
+    priority: Optional[float]
+    limit: Optional[float]
+    timeout: Optional[float]
+    config: Optional[Any]
 
 
 @dataclass(frozen=True)
@@ -22,17 +22,31 @@ class Settings:
 
 @dataclass(frozen=True)
 class SourceSeed:
+    limit: float
+    timeout: float
     config: Optional[Any] = None
+
+
+@dataclass(frozen=True)
+class Position:
+    row: int
+    col: int
+
+
+@dataclass(frozen=True)
+class SourceFeed:
+    position: Position
 
 
 @dataclass(frozen=True)
 class SourceCompletion:
     text: str
+    priority: Optional[int] = None
     display: Optional[str] = None
-    preview: Optional[str] = None
+    detail: Optional[str] = None
 
 
-Source = AsyncIterator[SourceCompletion]
+Source = Callable[[SourceFeed], AsyncIterator[SourceCompletion]]
 Factory = Callable[[Nvim, SourceSeed], AsyncIterator[Source]]
 
 

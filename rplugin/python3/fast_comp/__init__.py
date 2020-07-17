@@ -84,11 +84,15 @@ class Main:
 
     @function("_FCtextchangedi")
     def text_changed_i(self, args: Sequence[Any]) -> None:
-        self.next_comp()
-        self._charinserted = False
+        try:
+            self.next_comp()
+        finally:
+            self._charinserted = False
 
     @function("_FCtextchangedp")
     def text_changed_p(self, args: Sequence[Any]) -> None:
-        if self._charinserted:
-            self.next_comp()
-        self.char_inserted = False
+        try:
+            if self._charinserted:
+                self.next_comp()
+        finally:
+            self.char_inserted = False

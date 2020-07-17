@@ -11,12 +11,12 @@ from .types import Settings, SourceFactory, SourceSeed, SourceSpec
 def load_source(config: Any) -> SourceSpec:
     spec = SourceSpec(
         main=config["main"],
-        enabled=config["enabled"],
-        priority=config["priority"],
         short_name=config["short_name"],
-        timeout=config["timeout"],
-        config=config["config"],
-        limit=config["limit"] or inf,
+        enabled=config["enabled"],
+        priority=config.get("priority"),
+        limit=config.get("limit"),
+        timeout=config.get("timeout"),
+        config=config.get("config"),
     )
     return spec
 
@@ -36,13 +36,17 @@ def load_factories(settings: Settings) -> Iterator[SourceFactory]:
                 mod = load_module(candidate)
                 for name, func in getmembers(mod, isfunction):
                     if name == module_entry_point:
-                        seed = SourceSeed(config=spec.config)
+                        limit = spec.limit or inf
+                        timeout = spec.timeout or inf
+                        seed = SourceSeed(
+                            config=spec.config, limit=limit, timeout=timeout
+                        )
                         fact = SourceFactory(
                             name=name,
                             short_name=spec.short_name,
-                            priority=spec.priority,
-                            timeout=spec.timeout,
-                            limit=spec.limit,
+                            priority=spec.priority or 0,
+                            limit=limit,
+                            timeout=timeout,
                             seed=seed,
                             manufacture=func,
                         )

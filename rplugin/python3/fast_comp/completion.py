@@ -61,16 +61,18 @@ async def osha(nvim: Nvim, factory: SourceFactory) -> AsyncIterator[Sequence[Ste
         yield ()
 
 
-def rank(annotated: Step) -> Tuple[float, str, str]:
-    text = annotated.comp.display or annotated.comp.text
-    return annotated.priority, strxfrm(text), strxfrm(annotated.source)
+def rank(annotated: Step) -> Tuple[float, float, str, str]:
+    comp = annotated.comp
+    text = comp.display or comp.text
+    priority = comp.priority or 0
+    return annotated.priority, priority, strxfrm(text), strxfrm(annotated.source)
 
 
 def vimify(annotated: Step) -> VimCompletion:
     comp = annotated.comp
     short_name = f"[{annotated.source}]"
     ret = VimCompletion(
-        word=comp.text, abbr=comp.display, menu=short_name, info=comp.preview
+        equal=1, word=comp.text, abbr=comp.display, menu=short_name, info=comp.detail
     )
     return ret
 
