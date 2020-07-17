@@ -50,4 +50,4 @@ class SourceFactory:
 @dataclass(frozen=True)
 class State:
     col: Optional[int]
-    char_received: bool
+    done: bool

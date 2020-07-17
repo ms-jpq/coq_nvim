@@ -1,3 +1,5 @@
+from typing import Dict, Union
+
 from pynvim import Nvim
 
 from .da import nil
@@ -16,7 +18,7 @@ async def getcol(nvim: Nvim) -> int:
 
 
 def render(state: State) -> bool:
-    return state.col is not None and state.char_received
+    return state.col is not None and not state.done
 
 
 async def t_char_inserted(nvim: Nvim, state: State) -> State:
@@ -27,7 +29,7 @@ async def t_char_inserted(nvim: Nvim, state: State) -> State:
 async def t_text_changed_i(nvim: Nvim, state: State) -> State:
     await print(nvim, "TEXT CHANGED I")
     col = await getcol(nvim)
-    return forward(state, col=col)
+    return forward(state, col=col, done=False)
 
 
 async def t_text_changed_p(nvim: Nvim, state: State) -> State:
@@ -35,6 +37,9 @@ async def t_text_changed_p(nvim: Nvim, state: State) -> State:
     return forward(state)
 
 
-async def t_comp_done(nvim: Nvim, state: State) -> State:
-    await print(nvim, "COMP DONE")
-    return forward(state, col=nil)
+async def t_comp_done(
+    nvim: Nvim, state: State, select: Dict[str, Union[str, int]]
+) -> State:
+    done = len(select) != 0
+    await print(nvim, f"COMP DONE {select}, {done}")
+    return forward(state, col=nil, done=done)

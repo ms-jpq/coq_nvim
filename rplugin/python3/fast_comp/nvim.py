@@ -99,7 +99,9 @@ async def complete(nvim: Nvim, col: int, comp: Sequence[VimCompletion]) -> None:
     serialized = tuple(map(serialize, comp))
 
     def cont() -> None:
-        nvim.funcs.complete(col, serialized)
+        mode = nvim.api.get_mode().mode
+        if mode == "i":
+            nvim.funcs.complete(col, serialized)
 
     await call(nvim, cont)
-    await print(nvim, serialized)
+    # await print(nvim, serialized)

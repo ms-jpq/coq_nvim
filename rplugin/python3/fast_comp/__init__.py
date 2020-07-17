@@ -64,7 +64,12 @@ class Main:
 
             await autocmd(self.nvim, events=("InsertCharPre",), fn="_FCpreinsert_char")
 
-            await autocmd(self.nvim, events=("CompleteDone",), fn="_FCcomp_done")
+            await autocmd(
+                self.nvim,
+                events=("CompleteDonePre",),
+                fn="_FCcomp_done",
+                arg_eval=("v:completed_item",),
+            )
 
         async def forever() -> None:
             while True:
@@ -79,6 +84,8 @@ class Main:
             self._initialized = True
             self._submit(setup())
             self._submit(forever(), wait=False)
+
+        self._submit(print(self.nvim, "Fast Comp 🍎"))
 
     async def _ooda(self) -> None:
         settings = initial(user_config={})
@@ -104,4 +111,5 @@ class Main:
 
     @function("_FCcomp_done")
     def comp_done(self, args: Sequence[Any]) -> None:
-        self._run(t_comp_done)
+        select, *_ = args
+        self._run(t_comp_done, select=select)
