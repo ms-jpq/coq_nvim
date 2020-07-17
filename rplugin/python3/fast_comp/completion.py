@@ -110,7 +110,14 @@ def vimify(annotated: Step) -> VimCompletion:
     comp = annotated.comp
     short_name = f"[{annotated.source}]"
     ret = VimCompletion(
-        equal=1, word=comp.text, abbr=comp.label, menu=short_name, info=comp.doc
+        equal=1,
+        icase=1,
+        dup=1,
+        empty=1,
+        word=comp.text,
+        abbr=comp.label,
+        menu=short_name,
+        info=comp.doc,
     )
     return ret
 

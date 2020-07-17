@@ -1,6 +1,6 @@
 from asyncio import Queue
 from itertools import count
-from typing import Any, AsyncIterator, Dict, Optional, Sequence
+from typing import Any, AsyncIterator, Dict, Optional, Sequence, Union, cast
 
 from pkgs.nvim import call, print
 from pkgs.types import Position, Source, SourceCompletion, SourceFeed, SourceSeed
@@ -36,10 +36,26 @@ def parse_resp_to_rows(resp: Any) -> Sequence[Any]:
         return (resp,)
 
 
+def parse_documentation(doc: Union[str, Dict[str, Any], None]) -> Optional[str]:
+    if doc is None:
+        return None
+    elif type(doc) is str:
+        return cast(str, doc)
+    elif type(doc) is dict:
+        val = cast(Dict[str, Any], doc).get("value")
+        if type(val) is str:
+            return val
+        else:
+            return None
+    else:
+        return None
+
+
 def parse_row(row: Dict[str, Any]) -> SourceCompletion:
     text = row["insertText"]
     label = row["label"]
-    return SourceCompletion(text=text, label=label)
+    doc = parse_documentation(row.get("documentation"))
+    return SourceCompletion(text=text, label=label, doc=doc)
 
 
 async def main(nvim: Nvim, chan: Queue, seed: SourceSeed) -> Source:
