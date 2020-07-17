@@ -4,7 +4,7 @@ from itertools import count
 from typing import Any, AsyncIterator, Iterator, Optional, Sequence
 
 from pkgs.nvim import call, print
-from pkgs.types import Source, SourceCompletion, SourceFeed, SourceSeed
+from pkgs.types import Position, Source, SourceCompletion, SourceFeed, SourceSeed
 from pynvim import Nvim
 
 
@@ -33,9 +33,11 @@ async def init_lua(nvim: Nvim) -> None:
     await call(nvim, cont)
 
 
-async def ask(nvim: Nvim, chan: Queue, uid: int) -> Optional[Any]:
+async def ask(nvim: Nvim, chan: Queue, pos: Position, uid: int) -> Optional[Any]:
     def cont() -> None:
-        nvim.api.exec_lua("fast_comp.list_comp_candidates(...)", (uid,))
+        nvim.api.exec_lua(
+            "fast_comp.list_comp_candidates(...)", (uid, pos.row, pos.col)
+        )
 
     await call(nvim, cont)
     while True:
@@ -57,7 +59,7 @@ async def main(nvim: Nvim, chan: Queue, seed: SourceSeed) -> Source:
 
     async def source(feed: SourceFeed) -> AsyncIterator[SourceCompletion]:
         uid = next(id_gen)
-        resp = await ask(nvim, chan=chan, uid=uid)
+        resp = await ask(nvim, chan=chan, pos=feed.position, uid=uid)
         if not resp:
             return
         else:
