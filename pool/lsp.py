@@ -1,3 +1,4 @@
+from asyncio import Queue
 from itertools import count
 from typing import AsyncIterator
 
@@ -20,7 +21,7 @@ async def ask(nvim: Nvim, uid: int) -> None:
     await call(nvim, cont)
 
 
-async def main(nvim: Nvim, seed: SourceSeed) -> Source:
+async def main(nvim: Nvim, chan: Queue, seed: SourceSeed) -> Source:
     id_gen = count()
     await init_lua(nvim)
 

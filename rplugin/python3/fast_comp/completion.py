@@ -1,13 +1,30 @@
-from asyncio import gather, wait
+from asyncio import Queue, gather, wait
 from dataclasses import dataclass
 from locale import strxfrm
 from traceback import format_exc
-from typing import Awaitable, Callable, Iterator, List, Sequence, Tuple, cast
+from typing import (
+    Awaitable,
+    Callable,
+    Dict,
+    Iterator,
+    List,
+    Optional,
+    Sequence,
+    Tuple,
+    cast,
+)
 
 from pynvim import Nvim
 
 from .nvim import VimCompletion, call, print
-from .types import Factory, Position, SourceCompletion, SourceFactory, SourceFeed
+from .types import (
+    Factory,
+    Notification,
+    Position,
+    SourceCompletion,
+    SourceFactory,
+    SourceFeed,
+)
 
 
 @dataclass(frozen=True)
@@ -30,9 +47,10 @@ async def gen_feed(nvim: Nvim) -> SourceFeed:
     return SourceFeed(position=position)
 
 
-async def manufacture(nvim: Nvim, factory: SourceFactory) -> StepFunction:
+async def manufacture(nvim: Nvim, factory: SourceFactory) -> Tuple[StepFunction, Queue]:
+    chan: Queue = Queue()
     fact = cast(Factory, factory.manufacture)
-    src = await fact(nvim, factory.seed)
+    src = await fact(nvim, chan, factory.seed)
 
     async def source(feed: SourceFeed) -> Sequence[Step]:
         acc: List[Step] = []
@@ -52,20 +70,22 @@ async def manufacture(nvim: Nvim, factory: SourceFactory) -> StepFunction:
             p.cancel()
         return acc
 
-    return source
+    return source, chan
 
 
-async def osha(nvim: Nvim, factory: SourceFactory) -> StepFunction:
+async def osha(
+    nvim: Nvim, factory: SourceFactory
+) -> Tuple[str, StepFunction, Optional[Queue]]:
     async def nil_steps(_: SourceFeed) -> Sequence[Step]:
         return ()
 
     try:
-        step_fn = await manufacture(nvim, factory=factory)
+        step_fn, chan = await manufacture(nvim, factory=factory)
     except Exception as e:
         stack = format_exc()
         message = f"Error in source {factory.name}\n{stack}{e}"
         await print(nvim, message, error=True)
-        return nil_steps
+        return factory.name, nil_steps, None
     else:
 
         async def o_step(feed: SourceFeed) -> Sequence[Step]:
@@ -77,7 +97,7 @@ async def osha(nvim: Nvim, factory: SourceFactory) -> StepFunction:
                 await print(nvim, message, error=True)
                 return ()
 
-        return o_step
+        return factory.name, o_step, chan
 
 
 def rank(annotated: Step) -> Tuple[float, float, str, str]:
@@ -97,9 +117,13 @@ def vimify(annotated: Step) -> VimCompletion:
 
 
 async def merge(
-    nvim: Nvim, factories: Iterator[SourceFactory],
-) -> Callable[[], Awaitable[Iterator[VimCompletion]]]:
-    sources = await gather(*(osha(nvim, factory=factory) for factory in factories))
+    nvim: Nvim, chan: Queue, factories: Iterator[SourceFactory],
+) -> Tuple[
+    Callable[[], Awaitable[Iterator[VimCompletion]]], Callable[[], Awaitable[None]]
+]:
+    src_gen = await gather(*(osha(nvim, factory=factory) for factory in factories))
+    chans: Dict[str, Queue] = {name: chan for name, _, chan in src_gen}
+    sources = tuple(source for _, source, _ in src_gen)
 
     async def gen() -> Iterator[VimCompletion]:
         feed = await gen_feed(nvim)
@@ -107,4 +131,14 @@ async def merge(
         completions = sorted((c for co in comps for c in co), key=rank)
         return map(vimify, completions)
 
-    return gen
+    async def listen() -> None:
+        while True:
+            notif: Notification = await chan.get()
+            source = notif.source
+            ch = chans.get(source)
+            if ch:
+                await ch.put(notif.body)
+            else:
+                await print(nvim, f"Notification to uknown source - {source}")
+
+    return gen, listen

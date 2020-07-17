@@ -1,7 +1,14 @@
+from asyncio import Queue
 from dataclasses import dataclass
-from typing import Any, AsyncIterator, Awaitable, Callable, Dict, Optional
+from typing import Any, AsyncIterator, Awaitable, Callable, Dict, Optional, Sequence
 
 from pynvim import Nvim
+
+
+@dataclass
+class Notification:
+    source: str
+    body: Sequence[Any]
 
 
 @dataclass
@@ -47,7 +54,7 @@ class SourceCompletion:
 
 
 Source = Callable[[SourceFeed], AsyncIterator[SourceCompletion]]
-Factory = Callable[[Nvim, SourceSeed], Awaitable[Source]]
+Factory = Callable[[Nvim, Queue, SourceSeed], Awaitable[Source]]
 
 
 @dataclass(frozen=True)

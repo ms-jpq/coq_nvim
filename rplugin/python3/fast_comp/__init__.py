@@ -9,7 +9,7 @@ from .completion import merge
 from .nvim import autocmd, complete, print
 from .scheduler import schedule, sig
 from .settings import initial, load_factories
-from .types import State
+from .types import Notification, State
 
 
 @plugin
@@ -18,6 +18,7 @@ class Main:
         self.nvim = nvim
         self.chan = ThreadPoolExecutor(max_workers=1)
         self.ch: Queue = Queue()
+        self.msg_ch: Queue = Queue()
 
         self._initialized = False
         self.state = State(char_inserted=False)
@@ -48,34 +49,44 @@ class Main:
 
             await autocmd(self.nvim, events=("InsertCharPre",), fn="_FCpreinsert_char")
 
-        async def forever() -> None:
-            while True:
-                try:
-                    await self._ooda()
-                except Exception as e:
-                    stack = format_exc()
-                    await print(self.nvim, f"{stack}{e}", error=True)
+        async def ooda() -> None:
+            try:
+                settings = initial(user_config={})
+                factories = load_factories(settings=settings)
+                gen, listen = await merge(
+                    self.nvim, chan=self.msg_ch, factories=factories
+                )
+                task = create_task(listen())
+
+                async for comp in schedule(chan=self.ch, gen=gen):
+                    await complete(self.nvim, comp=comp)
+
+            except Exception as e:
+                task.cancel()
+                stack = format_exc()
+                await print(self.nvim, f"{stack}{e}", error=True)
 
         if self._initialized:
             return
         else:
             self._initialized = True
             self._submit(setup())
-            create_task(forever())
+            create_task(ooda())
 
         self._submit(print(self.nvim, "Fast Comp 🍎"))
-
-    async def _ooda(self) -> None:
-        settings = initial(user_config={})
-        factories = load_factories(settings=settings)
-        gen = await merge(self.nvim, factories=factories)
-
-        async for comp in schedule(chan=self.ch, gen=gen):
-            await complete(self.nvim, comp=comp)
 
     def next_comp(self) -> None:
         async def cont() -> None:
             await self.ch.put(sig)
+
+        self._submit(cont())
+
+    @function("_FCnotify")
+    def notify(self, args: Sequence[Any]) -> None:
+        async def cont() -> None:
+            source, *body = args
+            notif = Notification(source=source, body=body)
+            await self.msg_ch.put(notif)
 
         self._submit(cont())
 
