@@ -16,12 +16,15 @@ sig = Signal()
 async def schedule(chan: Queue, gen: Callable[[], Awaitable[T]]) -> AsyncIterator[T]:
     prev: Task = create_task(sleep(inf))
 
-    def pp() -> Task:
+    def t1() -> Task:
+        return chan.get()
+
+    def t2() -> Task:
         return prev
 
     async def wheel() -> AsyncIterator[T]:
         nonlocal prev
-        done, pending = await wait((chan.get(), pp()), return_when=FIRST_COMPLETED)
+        done, pending = await wait((t1(), t2()), return_when=FIRST_COMPLETED)
         for d in await gather(*done):
             if d == sig:
                 prev = create_task(gen())

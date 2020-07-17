@@ -31,15 +31,14 @@ async def gen_feed(nvim: Nvim) -> SourceFeed:
     return SourceFeed(position=position)
 
 
-def manufacture(nvim: Nvim, factory: SourceFactory) -> StepFunction:
+async def manufacture(nvim: Nvim, factory: SourceFactory) -> StepFunction:
     fact = cast(Factory, factory.manufacture)
-    sources = fact(nvim, factory.seed)
+    src = await fact(nvim, factory.seed)
 
     async def source(feed: SourceFeed) -> Sequence[Step]:
         acc: List[Step] = []
 
         async def cont() -> None:
-            src = await anext(sources)
             async for comp in src(feed):
                 completion = Step(
                     source=factory.short_name, priority=factory.priority, comp=comp
@@ -61,7 +60,7 @@ async def osha(nvim: Nvim, factory: SourceFactory) -> StepFunction:
         return ()
 
     try:
-        step_fn = manufacture(nvim, factory=factory)
+        step_fn = await manufacture(nvim, factory=factory)
     except Exception as e:
         stack = format_exc()
         await print(nvim, f"{stack}{e}", error=True)
