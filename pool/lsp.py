@@ -1,10 +1,21 @@
 from asyncio import Queue
+from dataclasses import dataclass
 from itertools import count
 from typing import Any, AsyncIterator, Sequence
 
 from pkgs.nvim import call, print
 from pkgs.types import Source, SourceCompletion, SourceFeed, SourceSeed
 from pynvim import Nvim
+
+
+@dataclass(frozen=True)
+class Row:
+    label: str
+    kind: int
+    sortText: str
+    insertText: str
+    documentation: str
+    detail: str
 
 
 async def init_lua(nvim: Nvim) -> None:
@@ -31,9 +42,14 @@ async def main(nvim: Nvim, chan: Queue, seed: SourceSeed) -> Source:
 
     async def source(feed: SourceFeed) -> AsyncIterator[SourceCompletion]:
         uid = next(id_gen)
-        rows = await ask(nvim, chan=chan, uid=uid)
-        await print(nvim, rows)
-        for i in range(5):
-            yield SourceCompletion(text=f"OK - {i}")
+        raw_rows = await ask(nvim, chan=chan, uid=uid)
+        for raw in raw_rows:
+            row = Row(**raw)
+            yield SourceCompletion(
+                text=row.insertText,
+                label=row.label,
+                sortby=row.sortText,
+                doc=row.documentation,
+            )
 
     return source
