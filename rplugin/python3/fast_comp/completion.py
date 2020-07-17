@@ -30,15 +30,14 @@ class Step:
 StepFunction = Callable[[SourceFeed], Awaitable[Sequence[Step]]]
 
 
-async def gen_feed(nvim: Nvim) -> AsyncIterator[SourceFeed]:
+async def gen_feed(nvim: Nvim) -> SourceFeed:
     def pos() -> Position:
         window = nvim.api.get_current_win()
         row, col = nvim.api.win_get_cursor(window)
         return Position(row=row, col=col)
 
-    while True:
-        position = await call(nvim, pos)
-        yield SourceFeed(position=position)
+    position = await call(nvim, pos)
+    return SourceFeed(position=position)
 
 
 def manufacture(nvim: Nvim, factory: SourceFactory) -> StepFunction:
@@ -58,7 +57,7 @@ def manufacture(nvim: Nvim, factory: SourceFactory) -> StepFunction:
                 if len(acc) >= factory.limit:
                     break
 
-        _, pending = await wait((cont(),), factory.timeout)
+        _, pending = await wait((cont(),), timeout=factory.timeout)
         for p in pending:
             p.cancel()
         return acc
@@ -107,10 +106,13 @@ def vimify(annotated: Step) -> VimCompletion:
 
 async def merge(
     nvim: Nvim, factories: Iterator[SourceFactory],
-) -> AsyncIterator[Iterator[VimCompletion]]:
+) -> Callable[[], Awaitable[Iterator[VimCompletion]]]:
     sources = await gather(*(osha(nvim, factory=factory) for factory in factories))
 
-    async for feed in gen_feed(nvim):
+    async def gen() -> Iterator[VimCompletion]:
+        feed = await gen_feed(nvim)
         comps = await gather(*(source(feed) for source in sources))
         completions = sorted((c for co in comps for c in co), key=rank)
-        yield map(vimify, completions)
+        return map(vimify, completions)
+
+    return gen

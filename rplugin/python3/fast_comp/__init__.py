@@ -7,7 +7,7 @@ from pynvim import Nvim, command, function, plugin
 
 from .completion import merge
 from .nvim import autocmd, complete, print
-from .scheduler import schedule
+from .scheduler import schedule, sig
 from .settings import initial, load_factories
 
 
@@ -31,7 +31,7 @@ class Main:
                     fut.result()
                 except Exception as e:
                     stack = format_exc()
-                    nvim.async_call(nvim.err_write, f"{stack}{e}\n")
+                    nvim.async_call(nvim.err_write, f"{stack}{e}")
 
         self.chan.submit(run, self.nvim)
 
@@ -53,7 +53,8 @@ class Main:
                 try:
                     await self._ooda()
                 except Exception as e:
-                    await print(self.nvim, e, error=True)
+                    stack = format_exc()
+                    await print(self.nvim, f"{stack}{e}", error=True)
 
         if self._initialized:
             return
@@ -67,14 +68,14 @@ class Main:
     async def _ooda(self) -> None:
         settings = initial(user_config={})
         factories = load_factories(settings=settings)
-        gen = merge(self.nvim, factories=factories)
+        gen = await merge(self.nvim, factories=factories)
 
         async for comp in schedule(chan=self.ch, gen=gen):
             await complete(self.nvim, comp=comp)
 
     def next_comp(self) -> None:
         async def cont() -> None:
-            await self.ch.put(None)
+            await self.ch.put(sig)
 
         self._submit(cont())
 
