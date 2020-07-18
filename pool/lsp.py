@@ -30,32 +30,47 @@ async def ask(nvim: Nvim, chan: Queue, pos: Position, uid: int) -> Optional[Any]
 def parse_resp_to_rows(resp: Any) -> Sequence[Any]:
     if resp is None:
         return ()
-    elif type(resp) == dict:
+    elif type(resp) is dict:
         return resp["items"]
+    elif type(resp) is list:
+        return resp
     else:
-        return (resp,)
+        raise ValueError(f"unknown LSP resp - {type(resp)}")
+
+
+def parse_text(row: Dict[str, Any]) -> str:
+    new_text = row.get("textEdit", {}).get("newText")
+    insert_txt = row.get("insertText")
+    if new_text is not None:
+        return new_text
+    elif insert_txt is not None:
+        return insert_txt
+    else:
+        return row["label"]
 
 
 def parse_documentation(doc: Union[str, Dict[str, Any], None]) -> Optional[str]:
+    tp = type(doc)
     if doc is None:
         return None
-    elif type(doc) is str:
+    elif tp is str:
         return cast(str, doc)
-    elif type(doc) is dict:
+    elif tp is dict:
         val = cast(Dict[str, Any], doc).get("value")
         if type(val) is str:
             return val
         else:
-            return None
+            raise ValueError(f"unknown LSP doc - {doc}")
     else:
-        return None
+        raise ValueError(f"unknown LSP doc - {doc}")
 
 
 def parse_row(row: Dict[str, Any]) -> SourceCompletion:
-    text = row["insertText"]
+    text = parse_text(row)
     label = row["label"]
+    sortby = row.get("sortText")
     doc = parse_documentation(row.get("documentation"))
-    return SourceCompletion(text=text, label=label, doc=doc)
+    return SourceCompletion(text=text, label=label, sortby=sortby, doc=doc)
 
 
 async def main(nvim: Nvim, chan: Queue, seed: SourceSeed) -> Source:
