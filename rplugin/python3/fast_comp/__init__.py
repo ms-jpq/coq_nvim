@@ -12,6 +12,7 @@ from typing import Any, Awaitable, Sequence
 from pynvim import Nvim, command, function, plugin
 
 from .completion import merge
+from .fuzzy import patch
 from .nvim import autocmd, complete, print
 from .scheduler import schedule, sig
 from .settings import initial, load_factories
@@ -56,6 +57,13 @@ class Main:
             )
 
             await autocmd(self.nvim, events=("InsertCharPre",), fn="_FCpreinsert_char")
+
+            await autocmd(
+                self.nvim,
+                events=("CompleteDonePre",),
+                fn="_FCpost_pum",
+                arg_eval=("v:completed_item",),
+            )
 
         async def ooda() -> None:
             try:
@@ -127,3 +135,8 @@ class Main:
                 self.next_comp()
         finally:
             self.state = forward(self.state, char_inserted=False)
+
+    @function("_FCpost_pum")
+    def post_pum(self, args: Sequence[Any]) -> None:
+        item, *_ = args
+        patch(self.nvim, comp=item)
