@@ -38,7 +38,7 @@ StepFunction = Callable[[SourceFeed], Awaitable[Sequence[Step]]]
 
 
 async def gen_feed(nvim: Nvim) -> SourceFeed:
-    def fed() -> Position:
+    def fed() -> SourceFeed:
         buffer = nvim.api.get_current_buf()
         filetype = nvim.api.buf_get_option(buffer, "filetype")
         window = nvim.api.get_current_win()

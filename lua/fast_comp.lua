@@ -1,10 +1,10 @@
 local api = vim.api
 local fn = vim.fn
 local lsp = vim.lsp
+local str_utfindex = vim.str_utfindex
 
 local cancel = nil
 
-local str_utfindex = vim.str_utfindex
 
 local function make_position_param(row, col)
   row = row - 1
