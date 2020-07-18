@@ -45,6 +45,7 @@ class SourceFeed:
     filetype: str
     position: Position
     line: str
+    prefix: str
 
 
 @dataclass(frozen=True)

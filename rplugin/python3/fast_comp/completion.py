@@ -37,6 +37,19 @@ class Step:
 StepFunction = Callable[[SourceFeed], Awaitable[Sequence[Step]]]
 
 
+def parse_prefix(line: str, col: int) -> str:
+    before = line[:col]
+    acc = []
+    for c in reversed(before):
+        if c.isalnum():
+            acc.append(c)
+        else:
+            break
+
+    prefix = "".join(reversed(acc))
+    return prefix
+
+
 async def gen_feed(nvim: Nvim) -> SourceFeed:
     def fed() -> SourceFeed:
         buffer = nvim.api.get_current_buf()
@@ -45,7 +58,10 @@ async def gen_feed(nvim: Nvim) -> SourceFeed:
         row, col = nvim.api.win_get_cursor(window)
         line = nvim.api.get_current_line()
         position = Position(row=row, col=col)
-        return SourceFeed(filetype=filetype, position=position, line=line)
+        prefix = parse_prefix(line, col)
+        return SourceFeed(
+            filetype=filetype, position=position, line=line, prefix=prefix
+        )
 
     feed = await call(nvim, fed)
     return feed
