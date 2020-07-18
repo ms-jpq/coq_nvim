@@ -4,24 +4,16 @@ from json import load
 from os.path import basename, dirname, splitext
 from sys import path as sys_path
 from types import ModuleType
-from typing import Any, TypeVar, Union, cast
+from typing import Any, Optional, TypeVar, cast
 
 T = TypeVar("T")
 
 
-class Nil:
-    def __eq__(self, o: Any) -> bool:
-        return type(o) == Nil
-
-
-nil = Nil()
-
-
-def or_else(val: Union[T, Nil], default: T) -> T:
-    if val == nil:
+def or_else(val: Optional[T], default: T) -> T:
+    if val is None:
         return default
     else:
-        return cast(T, val)
+        return val
 
 
 def merge(ds1: Any, ds2: Any, replace: bool = False) -> Any:

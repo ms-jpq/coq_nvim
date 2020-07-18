@@ -10,6 +10,7 @@ from typing import (
     List,
     Optional,
     Sequence,
+    Set,
     Tuple,
     cast,
 )
@@ -143,6 +144,14 @@ def vimify(annotated: Step) -> VimCompletion:
     return ret
 
 
+def uniquify(comp: Iterator[VimCompletion]) -> Iterator[VimCompletion]:
+    acc: Set[str] = set()
+    for c in comp:
+        if c.word not in acc:
+            acc.add(c.word)
+            yield c
+
+
 async def merge(
     nvim: Nvim, chan: Queue, factories: Iterator[SourceFactory],
 ) -> Tuple[
@@ -156,7 +165,7 @@ async def merge(
         feed = await gen_feed(nvim)
         comps = await gather(*(source(feed) for source in sources))
         completions = sorted((c for co in comps for c in co), key=rank)
-        return map(vimify, completions)
+        return uniquify(map(vimify, completions))
 
     async def listen() -> None:
         while True:

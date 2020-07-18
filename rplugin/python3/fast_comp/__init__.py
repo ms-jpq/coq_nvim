@@ -12,10 +12,12 @@ from typing import Any, Awaitable, Sequence
 from pynvim import Nvim, command, function, plugin
 
 from .completion import merge
-from .nvim import autocmd, complete, print
+from .nvim import autocmd, complete, cur_pos, print
 from .scheduler import schedule, sig
 from .settings import initial, load_factories
-from .types import Notification, State
+from .state import forward
+from .state import initial as initial_state
+from .types import Notification
 
 
 @plugin
@@ -27,7 +29,7 @@ class Main:
         self.msg_ch: Queue = Queue()
 
         self._initialized = False
-        self.state = State(char_inserted=False)
+        self.state = initial_state()
 
     def _submit(self, co: Awaitable[None], wait: bool = True) -> None:
         loop: AbstractEventLoop = self.nvim.loop
@@ -65,7 +67,8 @@ class Main:
 
                 async def l1() -> None:
                     async for comp in schedule(chan=self.ch, gen=gen):
-                        await complete(self.nvim, comp=comp)
+                        col = self.state.col
+                        await complete(self.nvim, col=col, comp=comp)
 
                 await gather(listen(), l1())
 
@@ -99,19 +102,24 @@ class Main:
 
     @function("_FCpreinsert_char")
     def char_inserted(self, args: Sequence[Any]) -> None:
-        self.state = State(char_inserted=True)
+        _, col = cur_pos(self.nvim)
+        self.state = forward(self.state, char_inserted=True)
 
     @function("_FCtextchangedi")
     def text_changed_i(self, args: Sequence[Any]) -> None:
         try:
+            _, col = cur_pos(self.nvim)
+            self.state = forward(self.state, char_inserted=False, col=col)
             self.next_comp()
         finally:
-            self.state = State(char_inserted=False)
+            self.state = forward(self.state, char_inserted=False)
 
     @function("_FCtextchangedp")
     def text_changed_p(self, args: Sequence[Any]) -> None:
         try:
             if self.state.char_inserted:
+                _, col = cur_pos(self.nvim)
+                self.state = forward(self.state, col=col)
                 self.next_comp()
         finally:
-            self.state = State(char_inserted=False)
+            self.state = forward(self.state, char_inserted=False)

@@ -1,7 +1,17 @@
 from asyncio import Future
 from dataclasses import asdict, dataclass
 from enum import Enum
-from typing import Any, Awaitable, Callable, Dict, Iterable, Iterator, Optional, TypeVar
+from typing import (
+    Any,
+    Awaitable,
+    Callable,
+    Dict,
+    Iterable,
+    Iterator,
+    Optional,
+    Tuple,
+    TypeVar,
+)
 from uuid import uuid4
 
 from pynvim import Nvim
@@ -93,16 +103,19 @@ def serialize(comp: VimCompletion) -> Dict[str, Any]:
     return serialized
 
 
-async def complete(nvim: Nvim, comp: Iterator[VimCompletion]) -> None:
+async def complete(nvim: Nvim, col: int, comp: Iterator[VimCompletion]) -> None:
     serialized = tuple(map(serialize, comp))
 
     def cont() -> None:
-        window = nvim.api.get_current_win()
-        _, col = nvim.api.win_get_cursor(window)
-        col = col + 1
         try:
-            nvim.funcs.complete(col, serialized)
+            nvim.funcs.complete(col + 1, serialized)
         except NvimError:
             pass
 
     await call(nvim, cont)
+
+
+def cur_pos(nvim: Nvim) -> Tuple[int, int]:
+    window = nvim.api.get_current_win()
+    row, col = nvim.api.win_get_cursor(window)
+    return row, col
