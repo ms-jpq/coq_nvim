@@ -51,7 +51,7 @@ class SourceFeed:
 @dataclass(frozen=True)
 class SourceCompletion:
     text: str
-    label: Optional[str] = None
+    label: str
     sortby: Optional[str] = None
     kind: Optional[str] = None
     doc: Optional[str] = None
