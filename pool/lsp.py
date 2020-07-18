@@ -1,6 +1,6 @@
 from asyncio import Queue
 from itertools import count
-from typing import Any, AsyncIterator, Dict, Optional, Sequence, Union, cast
+from typing import Any, AsyncIterator, Dict, Iterator, Optional, Sequence, Union, cast
 
 from pkgs.nvim import call
 from pkgs.types import Position, Source, SourceCompletion, SourceFeed, SourceSeed
@@ -65,12 +65,18 @@ def parse_documentation(doc: Union[str, Dict[str, Any], None]) -> Optional[str]:
         raise ValueError(f"unknown LSP doc - {doc}")
 
 
-def parse_row(row: Dict[str, Any]) -> SourceCompletion:
-    text = parse_text(row)
-    label = row["label"]
-    sortby = row.get("sortText")
-    doc = parse_documentation(row.get("documentation"))
-    return SourceCompletion(text=text, label=label, sortby=sortby, doc=doc)
+def parse_rows(
+    rows: Sequence[Dict[str, Any]], prefix: str
+) -> Iterator[SourceCompletion]:
+    pl = len(prefix)
+    for row in rows:
+        txt = parse_text(row)
+        if txt.startswith(prefix) and txt != prefix:
+            text = txt[pl:]
+            label = row["label"]
+            sortby = row.get("sortText")
+            doc = parse_documentation(row.get("documentation"))
+            yield SourceCompletion(text=text, label=label, sortby=sortby, doc=doc)
 
 
 async def main(nvim: Nvim, chan: Queue, seed: SourceSeed) -> Source:
@@ -81,7 +87,7 @@ async def main(nvim: Nvim, chan: Queue, seed: SourceSeed) -> Source:
         uid = next(id_gen)
         resp = await ask(nvim, chan=chan, pos=feed.position, uid=uid)
         rows = parse_resp_to_rows(resp)
-        for row in rows:
-            yield parse_row(row)
+        for row in parse_rows(rows, prefix=feed.prefix):
+            yield row
 
     return source
