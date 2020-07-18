@@ -108,14 +108,8 @@ async def complete(nvim: Nvim, col: int, comp: Iterator[VimCompletion]) -> None:
 
     def cont() -> None:
         try:
-            nvim.funcs.complete(col + 1, serialized)
+            nvim.funcs.complete(col, serialized)
         except NvimError:
             pass
 
     await call(nvim, cont)
-
-
-def cur_pos(nvim: Nvim) -> Tuple[int, int]:
-    window = nvim.api.get_current_win()
-    row, col = nvim.api.win_get_cursor(window)
-    return row, col

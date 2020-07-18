@@ -5,14 +5,9 @@ from .types import State
 
 
 def initial() -> State:
-    return State(char_inserted=False, col=-1)
+    return State(char_inserted=False)
 
 
-def forward(
-    state: State, *, char_inserted: Optional[bool] = None, col: Optional[int] = None
-) -> State:
-    new_state = State(
-        char_inserted=or_else(char_inserted, state.char_inserted),
-        col=or_else(col, state.col),
-    )
+def forward(state: State, *, char_inserted: Optional[bool] = None) -> State:
+    new_state = State(char_inserted=or_else(char_inserted, state.char_inserted),)
     return new_state

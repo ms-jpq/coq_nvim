@@ -155,17 +155,19 @@ def uniquify(comp: Iterator[VimCompletion]) -> Iterator[VimCompletion]:
 async def merge(
     nvim: Nvim, chan: Queue, factories: Iterator[SourceFactory],
 ) -> Tuple[
-    Callable[[], Awaitable[Iterator[VimCompletion]]], Callable[[], Awaitable[None]]
+    Callable[[], Awaitable[Tuple[int, Iterator[VimCompletion]]]],
+    Callable[[], Awaitable[None]],
 ]:
     src_gen = await gather(*(osha(nvim, factory=factory) for factory in factories))
     chans: Dict[str, Queue] = {name: chan for name, _, chan in src_gen}
     sources = tuple(source for _, source, _ in src_gen)
 
-    async def gen() -> Iterator[VimCompletion]:
+    async def gen() -> Tuple[int, Iterator[VimCompletion]]:
         feed = await gen_feed(nvim)
+        col = feed.position.col + 1
         comps = await gather(*(source(feed) for source in sources))
         completions = sorted((c for co in comps for c in co), key=rank)
-        return uniquify(map(vimify, completions))
+        return col, uniquify(map(vimify, completions))
 
     async def listen() -> None:
         while True:

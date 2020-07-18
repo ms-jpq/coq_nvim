@@ -12,7 +12,7 @@ from typing import Any, Awaitable, Sequence
 from pynvim import Nvim, command, function, plugin
 
 from .completion import merge
-from .nvim import autocmd, complete, cur_pos, print
+from .nvim import autocmd, complete, print
 from .scheduler import schedule, sig
 from .settings import initial, load_factories
 from .state import forward
@@ -66,8 +66,7 @@ class Main:
                 )
 
                 async def l1() -> None:
-                    async for comp in schedule(chan=self.ch, gen=gen):
-                        col = self.state.col
+                    async for col, comp in schedule(chan=self.ch, gen=gen):
                         await complete(self.nvim, col=col, comp=comp)
 
                 await gather(listen(), l1())
@@ -102,14 +101,12 @@ class Main:
 
     @function("_FCpreinsert_char")
     def char_inserted(self, args: Sequence[Any]) -> None:
-        _, col = cur_pos(self.nvim)
         self.state = forward(self.state, char_inserted=True)
 
     @function("_FCtextchangedi")
     def text_changed_i(self, args: Sequence[Any]) -> None:
         try:
-            _, col = cur_pos(self.nvim)
-            self.state = forward(self.state, char_inserted=False, col=col)
+            self.state = forward(self.state, char_inserted=False)
             self.next_comp()
         finally:
             self.state = forward(self.state, char_inserted=False)
@@ -118,8 +115,6 @@ class Main:
     def text_changed_p(self, args: Sequence[Any]) -> None:
         try:
             if self.state.char_inserted:
-                _, col = cur_pos(self.nvim)
-                self.state = forward(self.state, col=col)
                 self.next_comp()
         finally:
             self.state = forward(self.state, char_inserted=False)

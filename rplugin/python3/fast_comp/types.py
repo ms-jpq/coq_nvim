@@ -74,5 +74,4 @@ class SourceFactory:
 
 @dataclass(frozen=True)
 class State:
-    col: int
     char_inserted: bool
