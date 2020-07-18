@@ -123,7 +123,7 @@ async def osha(
 def rank(annotated: Step) -> Tuple[float, str, str]:
     comp = annotated.comp
     text = comp.sortby or comp.label or comp.text
-    return annotated.priority, strxfrm(text), strxfrm(annotated.source)
+    return annotated.priority * -1, strxfrm(text), strxfrm(annotated.source)
 
 
 def vimify(annotated: Step) -> VimCompletion:
