@@ -25,7 +25,7 @@
       "main": "paths.py",
       "priority": 0,
       "short_name": "F",
-      "timeout": 200
+      "timeout": 20
     }
   }
 }

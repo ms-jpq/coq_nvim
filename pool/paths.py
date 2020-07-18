@@ -1,6 +1,6 @@
 from asyncio import Queue, get_running_loop
 from os import listdir
-from os.path import dirname, isdir, sep
+from os.path import basename, dirname, isdir, sep
 from typing import AsyncIterator, Iterator, Sequence
 
 from pkgs.da import anext
@@ -16,30 +16,47 @@ def parse_path(root: str, parent: str = "") -> Iterator[str]:
         yield curr
 
 
-async def find_children(path: str) -> Sequence[str]:
+def list_dir(path: str) -> Sequence[str]:
+    try:
+        return listdir(path)
+    except PermissionError:
+        return ()
+
+
+async def find_children(path: str) -> Sequence[SourceCompletion]:
     loop = get_running_loop()
 
-    def cont() -> None:
+    def cont() -> Iterator[SourceCompletion]:
         parent = dirname(path)
+        partial_name = basename(path)
         if isdir(path):
-            return listdir(path)
+            end = "" if path.endswith(sep) else sep
+            for child in list_dir(path):
+                text = end + child
+                yield SourceCompletion(text=text, label=text)
         elif isdir(parent):
-            return listdir(parent)
+            partial_name = basename(path)
+            pl = len(partial_name)
+            for child in list_dir(parent):
+                if child.startswith(partial_name) and child != partial_name:
+                    text = child[pl:]
+                    yield SourceCompletion(text=text, label=child)
         else:
-            return ()
+            return
 
-    return await loop.run_in_executor(None, cont)
+    def co() -> Sequence[SourceCompletion]:
+        return tuple(cont())
+
+    return await loop.run_in_executor(None, co)
 
 
 async def main(nvim: Nvim, chan: Queue, seed: SourceSeed) -> Source:
     async def source(feed: SourceFeed) -> AsyncIterator[SourceCompletion]:
         col = feed.position.col
         before = feed.line[:col]
-        paths_coll = (await find_children(nvim, path) for path in parse_path(before))
-        paths = await anext(paths_coll, ())
-        for path in paths:
-            pl = len(path)
-            text = path[pl:]
-            yield SourceCompletion(text=text, label=path)
+        comp = (await find_children(path) for path in parse_path(before))
+        co = await anext(comp, ())
+        for c in co:
+            yield c
 
     return source
