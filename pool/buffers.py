@@ -14,23 +14,24 @@ def buf_gen(nvim: Nvim, filetype: str) -> Iterator[Buffer]:
             yield buf
 
 
-async def buffer_lines(nvim: Nvim, buf_gen: Iterator[Buffer]) -> Sequence[str]:
+async def buffer_chars(nvim: Nvim, buf_gen: Iterator[Buffer]) -> Sequence[str]:
     def cont() -> Sequence[str]:
-        lines = tuple(
-            line
+        chars = tuple(
+            char
             for buffer in buf_gen
             for line in nvim.api.buf_get_lines(buffer, 0, -1, True)
+            for char in line
         )
-        return lines
+        return chars
 
-    lines = await call(nvim, cont)
-    return lines
+    chars = await call(nvim, cont)
+    return chars
 
 
-def coalesce(lines: Sequence[str]) -> Iterator[str]:
+def coalesce(chars: Sequence[str]) -> Iterator[str]:
     acc: Set[str] = set()
     curr: List[str] = []
-    for char in lines:
+    for char in chars:
         if char.isalnum():
             curr.append(char)
         elif curr:
@@ -48,7 +49,7 @@ def coalesce(lines: Sequence[str]) -> Iterator[str]:
 
 async def main(nvim: Nvim, chan: Queue, seed: SourceSeed) -> Source:
     async def source(feed: SourceFeed) -> AsyncIterator[SourceCompletion]:
-        lines = await buffer_lines(nvim, buf_gen(nvim, filetype=feed.filetype))
+        lines = await buffer_chars(nvim, buf_gen(nvim, filetype=feed.filetype))
         for word in coalesce(lines):
             if word.startswith(feed.prefix):
                 yield SourceCompletion(text=word)
