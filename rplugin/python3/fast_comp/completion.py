@@ -50,13 +50,13 @@ def parse_prefix(line: str, col: int) -> Tuple[bool, str]:
         else:
             break
 
-    go = a and not a.isspace()
+    go = a != "" and not a.isspace()
     prefix = "".join(reversed(acc))
     return go, prefix
 
 
 async def gen_feed(nvim: Nvim) -> Tuple[bool, SourceFeed]:
-    def fed() -> SourceFeed:
+    def fed() -> Tuple[bool, SourceFeed]:
         buffer = nvim.api.get_current_buf()
         filetype = nvim.api.buf_get_option(buffer, "filetype")
         window = nvim.api.get_current_win()
