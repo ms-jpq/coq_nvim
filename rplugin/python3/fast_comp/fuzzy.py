@@ -11,19 +11,19 @@ def rank(annotated: Step) -> Tuple[float, str]:
     return annotated.priority * -1, text
 
 
-def vimify(feed: SourceFeed, annotated: Step) -> VimCompletion:
-    source = f"[{annotated.source}]"
-    comp = annotated.comp
+def vimify(prefix_len: int, step: Step) -> VimCompletion:
+    source = f"[{step.source}]"
+    comp = step.comp
     menu = f"{comp.kind} {source}" if comp.kind else source
-    pl = len(feed.prefix)
-    text = comp.text[pl:]
+    abbr = comp.label or comp.text
+    text = comp.text[prefix_len:]
     ret = VimCompletion(
         equal=1,
         icase=1,
         dup=1,
         empty=1,
         word=text,
-        abbr=comp.label,
+        abbr=abbr,
         menu=menu,
         info=comp.doc,
     )
@@ -31,15 +31,15 @@ def vimify(feed: SourceFeed, annotated: Step) -> VimCompletion:
 
 
 def fuzzer() -> Callable[[SourceFeed, Iterator[Step]], Iterator[VimCompletion]]:
-    acc: Set[str] = set()
-
     def fuzzy(feed: SourceFeed, steps: Iterator[Step]) -> Iterator[VimCompletion]:
+        acc: Set[str] = set()
         prefix = feed.prefix
-        for step in steps:
-            ret = vimify(feed, step)
-            if ret.word not in acc:
+        prefix_len = len(feed.prefix)
+        for step in sorted(steps, key=rank):
+            text = step.comp.text
+            ret = vimify(prefix_len, step=step)
+            if text not in acc and text.startswith(prefix) and text != prefix:
                 acc.add(ret.word)
-                if ret.word != prefix:
-                    yield ret
+                yield ret
 
     return fuzzy
