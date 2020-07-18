@@ -13,7 +13,7 @@ from typing import (
     cast,
 )
 
-from pkgs.nvim import call, print
+from pkgs.nvim import call
 from pkgs.types import Position, Source, SourceCompletion, SourceFeed, SourceSeed
 from pynvim import Nvim
 
@@ -29,10 +29,11 @@ async def init_lua(nvim: Nvim) -> Tuple[Dict[str, int], Dict[str, int]]:
 
 
 async def ask(nvim: Nvim, chan: Queue, pos: Position, uid: int) -> Optional[Any]:
+    row = pos.row - 1
+    col = pos.col
+
     def cont() -> None:
-        nvim.api.exec_lua(
-            "fast_comp.list_comp_candidates(...)", (uid, pos.row, pos.col)
-        )
+        nvim.api.exec_lua("fast_comp.list_comp_candidates(...)", (uid, row, col))
 
     await call(nvim, cont)
     while True:
@@ -74,7 +75,8 @@ def parse_documentation(doc: Union[str, Dict[str, Any], None]) -> Optional[str]:
         if type(val) is str:
             return val
         else:
-            raise ValueError(f"unknown LSP doc - {doc}")
+            # raise ValueError(f"unknown LSP doc - {doc}")
+            return None
     else:
         raise ValueError(f"unknown LSP doc - {doc}")
 

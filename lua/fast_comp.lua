@@ -1,17 +1,8 @@
 local api = vim.api
 local fn = vim.fn
 local lsp = vim.lsp
-local str_utfindex = vim.str_utfindex
 
 local cancel = nil
-
-
-local function make_position_param(row, col)
-  row = row - 1
-  local line = api.nvim_buf_get_lines(0, row, row+1, true)[1]
-  col = str_utfindex(line, col)
-  return { line = row; character = col; }
-end
 
 
 local list_comp_candidates = function (request_id, row, col)
@@ -23,7 +14,7 @@ local list_comp_candidates = function (request_id, row, col)
   if #lsp.buf_get_clients() == 0 then
     fn._FCnotify("lsp", request_id, nil)
   else
-    local position = make_position_param(row, col)
+    local position = {line = row, character = col}
     local text_doc = lsp.util.make_text_document_params()
     local params = {position = position, textDocument=text_doc}
 
