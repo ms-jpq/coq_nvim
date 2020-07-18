@@ -53,11 +53,8 @@ async def main(nvim: Nvim, chan: Queue, seed: SourceSeed) -> Source:
     async def source(feed: SourceFeed) -> AsyncIterator[SourceCompletion]:
         prefix = feed.prefix
         if prefix:
-            pl = len(prefix)
             lines = await buffer_chars(nvim, buf_gen(nvim, filetype=feed.filetype))
             for word in coalesce(lines):
-                if word.startswith(prefix) and word != prefix:
-                    text = word[pl:]
-                    yield SourceCompletion(text=text, label=word)
+                yield SourceCompletion(text=word)
 
     return source

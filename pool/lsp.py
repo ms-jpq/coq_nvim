@@ -85,18 +85,15 @@ def parse_rows(
     insert_kind_lookup: Dict[int, str],
     prefix: str,
 ) -> Iterator[SourceCompletion]:
-    pl = len(prefix)
     for row in rows:
-        txt = parse_text(row)
-        if txt.startswith(prefix) and txt != prefix:
-            text = txt[pl:]
-            label = row["label"]
-            sortby = row.get("sortText")
-            kind = entry_kind_lookup.get(cast(int, row.get("kind")), "Unknown")
-            doc = parse_documentation(row.get("documentation"))
-            yield SourceCompletion(
-                text=text, label=label, sortby=sortby, kind=kind, doc=doc
-            )
+        text = parse_text(row)
+        label = row.get("label")
+        sortby = row.get("sortText")
+        kind = entry_kind_lookup.get(cast(int, row.get("kind")), "Unknown")
+        doc = parse_documentation(row.get("documentation"))
+        yield SourceCompletion(
+            text=text, label=label, sortby=sortby, kind=kind, doc=doc
+        )
 
 
 async def main(nvim: Nvim, chan: Queue, seed: SourceSeed) -> Source:

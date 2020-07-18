@@ -1,6 +1,4 @@
 from asyncio import Queue, gather, wait
-from dataclasses import dataclass
-from locale import strxfrm
 from traceback import format_exc
 from typing import (
     Awaitable,
@@ -10,7 +8,6 @@ from typing import (
     List,
     Optional,
     Sequence,
-    Set,
     Tuple,
     cast,
 )
@@ -22,18 +19,11 @@ from .types import (
     Factory,
     Notification,
     Position,
-    SourceCompletion,
     SourceFactory,
     SourceFeed,
+    Step,
 )
-
-
-@dataclass(frozen=True)
-class Step:
-    source: str
-    priority: float
-    comp: SourceCompletion
-
+from .fuzzy import fuzzer
 
 StepFunction = Callable[[SourceFeed], Awaitable[Sequence[Step]]]
 
@@ -125,56 +115,26 @@ async def osha(
         return factory.name, o_step, chan
 
 
-def rank(annotated: Step) -> Tuple[float, str]:
-    comp = annotated.comp
-    text = strxfrm(comp.sortby or comp.label).lower()
-    return annotated.priority * -1, text
-
-
-def vimify(annotated: Step) -> VimCompletion:
-    source = f"[{annotated.source}]"
-    comp = annotated.comp
-    menu = f"{comp.kind} {source}" if comp.kind else source
-    ret = VimCompletion(
-        equal=1,
-        icase=1,
-        dup=1,
-        empty=1,
-        word=comp.text,
-        abbr=comp.label,
-        menu=menu,
-        info=comp.doc,
-    )
-    return ret
-
-
-def uniquify(comp: Iterator[VimCompletion]) -> Iterator[VimCompletion]:
-    acc: Set[str] = set()
-    for c in comp:
-        if c.word not in acc:
-            acc.add(c.word)
-            yield c
-
-
 async def merge(
     nvim: Nvim, chan: Queue, factories: Iterator[SourceFactory],
 ) -> Tuple[
-    Callable[[], Awaitable[Tuple[int, Iterator[VimCompletion]]]],
+    Callable[[], Awaitable[Tuple[Position, Iterator[VimCompletion]]]],
     Callable[[], Awaitable[None]],
 ]:
+    fuzzy = fuzzer()
     src_gen = await gather(*(osha(nvim, factory=factory) for factory in factories))
     chans: Dict[str, Queue] = {name: chan for name, _, chan in src_gen}
     sources = tuple(source for _, source, _ in src_gen)
 
-    async def gen() -> Tuple[int, Iterator[VimCompletion]]:
+    async def gen() -> Tuple[Position, Iterator[VimCompletion]]:
         go, feed = await gen_feed(nvim)
+        position = feed.position
         if go:
-            col = feed.position.col + 1
             comps = await gather(*(source(feed) for source in sources))
-            completions = sorted((c for co in comps for c in co), key=rank)
-            return col, uniquify(map(vimify, completions))
+            completions = (c for co in comps for c in co)
+            return position, fuzzy(feed, completions)
         else:
-            return -1, iter(())
+            return position, iter(())
 
     async def listen() -> None:
         while True:

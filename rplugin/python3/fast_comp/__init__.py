@@ -66,7 +66,8 @@ class Main:
                 )
 
                 async def l1() -> None:
-                    async for col, comp in schedule(chan=self.ch, gen=gen):
+                    async for pos, comp in schedule(chan=self.ch, gen=gen):
+                        col = pos.col - 1
                         await complete(self.nvim, col=col, comp=comp)
 
                 await gather(listen(), l1())

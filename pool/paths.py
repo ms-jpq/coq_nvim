@@ -30,22 +30,19 @@ def list_dir(path: str) -> Sequence[str]:
 
 async def find_children(path: str) -> Sequence[SourceCompletion]:
     loop = get_running_loop()
+    partial_name = basename(path)
 
     def cont() -> Iterator[SourceCompletion]:
         parent = dirname(path)
-        partial_name = basename(path)
         if isdir(path):
             end = "" if path.endswith(sep) else sep
             for child in list_dir(path):
                 text = end + child
                 yield SourceCompletion(text=text, label=text)
         elif isdir(parent):
-            partial_name = basename(path)
-            pl = len(partial_name)
             for child in list_dir(parent):
-                if child.startswith(partial_name) and child != partial_name:
-                    text = child[pl:]
-                    yield SourceCompletion(text=text, label=child)
+                if child.startswith(partial_name):
+                    yield SourceCompletion(text=child)
         else:
             return
 
