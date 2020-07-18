@@ -14,16 +14,9 @@ from typing import (
 
 from pynvim import Nvim
 
-from .nvim import VimCompletion, call, print
-from .types import (
-    Factory,
-    Notification,
-    Position,
-    SourceFactory,
-    SourceFeed,
-    Step,
-)
 from .fuzzy import fuzzer
+from .nvim import VimCompletion, call, print
+from .types import Factory, Notification, Position, SourceFactory, SourceFeed, Step
 
 StepFunction = Callable[[SourceFeed], Awaitable[Sequence[Step]]]
 
