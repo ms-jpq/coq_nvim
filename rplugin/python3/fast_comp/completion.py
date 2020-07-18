@@ -41,15 +41,16 @@ StepFunction = Callable[[SourceFeed], Awaitable[Sequence[Step]]]
 def parse_prefix(line: str, col: int) -> Tuple[bool, str]:
     before = line[:col]
     acc: List[str] = []
-    a = " "
+    a = ""
     for c in reversed(before):
+        if not a:
+            a = c
         if c.isalnum():
             acc.append(c)
         else:
-            a = c
             break
 
-    go = not a.isspace()
+    go = a and not a.isspace()
     prefix = "".join(reversed(acc))
     return go, prefix
 
@@ -63,6 +64,7 @@ async def gen_feed(nvim: Nvim) -> Tuple[bool, SourceFeed]:
         line = nvim.api.get_current_line()
         position = Position(row=row, col=col)
         go, prefix = parse_prefix(line, col)
+        nvim.api.out_write(str([go]) + "\n")
         return (
             go,
             SourceFeed(filetype=filetype, position=position, line=line, prefix=prefix),
