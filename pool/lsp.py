@@ -1,5 +1,4 @@
 from asyncio import Queue
-from collections import defaultdict
 from itertools import count
 from typing import (
     Any,
@@ -75,7 +74,6 @@ def parse_documentation(doc: Union[str, Dict[str, Any], None]) -> Optional[str]:
         if type(val) is str:
             return val
         else:
-            # raise ValueError(f"unknown LSP doc - {doc}")
             return None
     else:
         raise ValueError(f"unknown LSP doc - {doc}")
