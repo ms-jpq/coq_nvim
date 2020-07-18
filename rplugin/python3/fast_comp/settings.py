@@ -30,24 +30,25 @@ def initial(user_config: Any) -> Settings:
 
 def load_factories(settings: Settings) -> Iterator[SourceFactory]:
     for src_name, spec in settings.sources.items():
-        for path in load_hierarchy:
-            candidate = join(path, spec.main)
-            if exists(candidate):
-                mod = load_module(candidate)
-                for name, func in getmembers(mod, isfunction):
-                    if name == module_entry_point:
-                        limit = (spec.limit or inf) / 1000
-                        timeout = spec.timeout or inf
-                        seed = SourceSeed(
-                            config=spec.config, limit=limit, timeout=timeout
-                        )
-                        fact = SourceFactory(
-                            name=src_name,
-                            short_name=spec.short_name,
-                            priority=spec.priority or 0,
-                            limit=limit,
-                            timeout=timeout,
-                            seed=seed,
-                            manufacture=func,
-                        )
-                        yield fact
+        if spec.enabled:
+            for path in load_hierarchy:
+                candidate = join(path, spec.main)
+                if exists(candidate):
+                    mod = load_module(candidate)
+                    for name, func in getmembers(mod, isfunction):
+                        if name == module_entry_point:
+                            limit = (spec.limit or inf) / 1000
+                            timeout = spec.timeout or inf
+                            seed = SourceSeed(
+                                config=spec.config, limit=limit, timeout=timeout
+                            )
+                            fact = SourceFactory(
+                                name=src_name,
+                                short_name=spec.short_name,
+                                priority=spec.priority or 0,
+                                limit=limit,
+                                timeout=timeout,
+                                seed=seed,
+                                manufacture=func,
+                            )
+                            yield fact
