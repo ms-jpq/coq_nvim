@@ -2,7 +2,7 @@ from asyncio import Queue
 from itertools import count
 from typing import Any, AsyncIterator, Dict, Optional, Sequence, Union, cast
 
-from pkgs.nvim import call, print
+from pkgs.nvim import call
 from pkgs.types import Position, Source, SourceCompletion, SourceFeed, SourceSeed
 from pynvim import Nvim
 

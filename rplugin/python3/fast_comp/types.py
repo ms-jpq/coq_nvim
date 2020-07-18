@@ -42,7 +42,9 @@ class Position:
 
 @dataclass(frozen=True)
 class SourceFeed:
+    filetype: str
     position: Position
+    line: str
 
 
 @dataclass(frozen=True)
