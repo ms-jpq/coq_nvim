@@ -13,6 +13,11 @@ def parse_path(root: str, parent: str = "") -> Iterator[str]:
     if s == sep:
         curr = f"{s}{r}{parent}"
         yield from parse_path(l, parent=curr)
+        if sep not in l:
+            if l.endswith(".."):
+                yield ".." + curr
+            elif l.endswith("."):
+                yield "." + curr
         yield curr
 
 
