@@ -1,17 +1,31 @@
 from asyncio import Queue
+from collections import defaultdict
 from itertools import count
-from typing import Any, AsyncIterator, Dict, Iterator, Optional, Sequence, Union, cast
+from typing import (
+    Any,
+    AsyncIterator,
+    Dict,
+    Iterator,
+    Optional,
+    Sequence,
+    Tuple,
+    Union,
+    cast,
+)
 
-from pkgs.nvim import call
+from pkgs.nvim import call, print
 from pkgs.types import Position, Source, SourceCompletion, SourceFeed, SourceSeed
 from pynvim import Nvim
 
 
-async def init_lua(nvim: Nvim) -> None:
-    def cont() -> None:
+async def init_lua(nvim: Nvim) -> Tuple[Dict[str, int], Dict[str, int]]:
+    def cont() -> Tuple[Dict[str, int], Dict[str, int]]:
         nvim.api.exec_lua("fast_comp = require 'fast_comp'", ())
+        entry_kind = nvim.api.exec_lua("return fast_comp.list_entry_kind()", ())
+        insert_kind = nvim.api.exec_lua("return fast_comp.list_insert_kind()", ())
+        return entry_kind, insert_kind
 
-    await call(nvim, cont)
+    return await call(nvim, cont)
 
 
 async def ask(nvim: Nvim, chan: Queue, pos: Position, uid: int) -> Optional[Any]:
@@ -66,7 +80,10 @@ def parse_documentation(doc: Union[str, Dict[str, Any], None]) -> Optional[str]:
 
 
 def parse_rows(
-    rows: Sequence[Dict[str, Any]], prefix: str
+    rows: Sequence[Dict[str, Any]],
+    entry_kind_lookup: Dict[int, str],
+    insert_kind_lookup: Dict[int, str],
+    prefix: str,
 ) -> Iterator[SourceCompletion]:
     pl = len(prefix)
     for row in rows:
@@ -75,19 +92,29 @@ def parse_rows(
             text = txt[pl:]
             label = row["label"]
             sortby = row.get("sortText")
+            kind = entry_kind_lookup.get(row.get("kind"), "Unknown")
             doc = parse_documentation(row.get("documentation"))
-            yield SourceCompletion(text=text, label=label, sortby=sortby, doc=doc)
+            yield SourceCompletion(
+                text=text, label=label, sortby=sortby, kind=kind, doc=doc
+            )
 
 
 async def main(nvim: Nvim, chan: Queue, seed: SourceSeed) -> Source:
     id_gen = count()
-    await init_lua(nvim)
+    entry_kind, insert_kind = await init_lua(nvim)
+    entry_kind_lookup = {v: k for k, v in entry_kind.items()}
+    insert_kind_lookup = {v: k for k, v in insert_kind.items()}
 
     async def source(feed: SourceFeed) -> AsyncIterator[SourceCompletion]:
         uid = next(id_gen)
         resp = await ask(nvim, chan=chan, pos=feed.position, uid=uid)
         rows = parse_resp_to_rows(resp)
-        for row in parse_rows(rows, prefix=feed.prefix):
+        for row in parse_rows(
+            rows,
+            entry_kind_lookup=entry_kind_lookup,
+            insert_kind_lookup=insert_kind_lookup,
+            prefix=feed.prefix,
+        ):
             yield row
 
     return source
