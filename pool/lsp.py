@@ -92,7 +92,7 @@ def parse_rows(
             text = txt[pl:]
             label = row["label"]
             sortby = row.get("sortText")
-            kind = entry_kind_lookup.get(row.get("kind"), "Unknown")
+            kind = entry_kind_lookup.get(cast(int, row.get("kind")), "Unknown")
             doc = parse_documentation(row.get("documentation"))
             yield SourceCompletion(
                 text=text, label=label, sortby=sortby, kind=kind, doc=doc

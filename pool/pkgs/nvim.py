@@ -6,9 +6,6 @@ from pynvim import Nvim
 
 T = TypeVar("T")
 
-Buffer = Any
-Window = Any
-
 
 def call(nvim: Nvim, fn: Callable[[], T]) -> Awaitable[T]:
     fut: Future = Future()

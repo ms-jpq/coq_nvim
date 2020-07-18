@@ -5,10 +5,7 @@ from typing import Any, Awaitable, Callable, Dict, Iterable, Iterator, Optional,
 from uuid import uuid4
 
 from pynvim import Nvim
-
-Tabpage = Any
-Window = Any
-Buffer = Any
+from pynvim.api.common import NvimError
 
 T = TypeVar("T")
 
@@ -100,11 +97,12 @@ async def complete(nvim: Nvim, comp: Iterator[VimCompletion]) -> None:
     serialized = tuple(map(serialize, comp))
 
     def cont() -> None:
-        mode = nvim.api.get_mode().get("mode", "")
-        if "i" in mode:
-            window = nvim.api.get_current_win()
-            _, col = nvim.api.win_get_cursor(window)
-            col = col + 1
+        window = nvim.api.get_current_win()
+        _, col = nvim.api.win_get_cursor(window)
+        col = col + 1
+        try:
             nvim.funcs.complete(col, serialized)
+        except NvimError:
+            pass
 
     await call(nvim, cont)

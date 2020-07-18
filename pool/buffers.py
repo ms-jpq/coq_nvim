@@ -1,10 +1,11 @@
-from itertools import chain
 from asyncio import Queue
+from itertools import chain
 from typing import AsyncIterator, Iterator, List, Sequence, Set
 
-from pkgs.nvim import Buffer, call
+from pkgs.nvim import call
 from pkgs.types import Source, SourceCompletion, SourceFeed, SourceSeed
 from pynvim import Nvim
+from pynvim.api.buffer import Buffer
 
 
 def buf_gen(nvim: Nvim, filetype: str) -> Iterator[Buffer]:

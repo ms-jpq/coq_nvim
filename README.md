@@ -14,4 +14,12 @@ Comes with a amazing scheduler that works for many + slow sources.
 
 - Cancel culture (invalidate outdated completion candidates)
 
-- Hackable
+- Hackable (EASY extension protocol, dynamic json config)
+
+## Sources
+
+### LSP
+
+### Buffers
+
+### Paths
