@@ -127,8 +127,9 @@ def rank(annotated: Step) -> Tuple[float, str, str]:
 
 
 def vimify(annotated: Step) -> VimCompletion:
+    source = f"[{annotated.source}]"
     comp = annotated.comp
-    short_name = f"[{annotated.source}]"
+    menu = "f{comp.kind} {source}" if comp.kind else source
     ret = VimCompletion(
         equal=1,
         icase=1,
@@ -136,7 +137,7 @@ def vimify(annotated: Step) -> VimCompletion:
         empty=1,
         word=comp.text,
         abbr=comp.label,
-        menu=short_name,
+        menu=menu,
         info=comp.doc,
     )
     return ret

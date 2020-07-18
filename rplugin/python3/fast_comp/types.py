@@ -53,6 +53,7 @@ class SourceCompletion:
     text: str
     label: Optional[str] = None
     sortby: Optional[str] = None
+    kind: Optional[str] = None
     doc: Optional[str] = None
 
 
