@@ -37,8 +37,8 @@ def load_factories(settings: Settings) -> Iterator[SourceFactory]:
                     mod = load_module(candidate)
                     for name, func in getmembers(mod, isfunction):
                         if name == module_entry_point:
-                            limit = (spec.limit or inf) / 1000
-                            timeout = spec.timeout or inf
+                            limit = spec.limit or inf
+                            timeout = (spec.timeout or inf) / 1000
                             seed = SourceSeed(
                                 config=spec.config, limit=limit, timeout=timeout
                             )
