@@ -32,14 +32,14 @@ def vimify(prefix_len: int, step: Step) -> VimCompletion:
 
 def fuzzer() -> Callable[[SourceFeed, Iterator[Step]], Iterator[VimCompletion]]:
     def fuzzy(feed: SourceFeed, steps: Iterator[Step]) -> Iterator[VimCompletion]:
-        acc: Set[str] = set()
         prefix = feed.prefix
         prefix_len = len(feed.prefix)
+
+        seen: Set[str] = set()
         for step in sorted(steps, key=rank):
             text = step.comp.text
-            ret = vimify(prefix_len, step=step)
-            if text not in acc and text.startswith(prefix) and text != prefix:
-                acc.add(ret.word)
-                yield ret
+            if text not in seen and text.startswith(prefix) and text != prefix:
+                seen.add(text)
+                yield vimify(prefix_len, step=step)
 
     return fuzzy
