@@ -64,7 +64,6 @@ async def gen_feed(nvim: Nvim) -> Tuple[bool, SourceFeed]:
         line = nvim.api.get_current_line()
         position = Position(row=row, col=col)
         go, prefix = parse_prefix(line, col)
-        nvim.api.out_write(str([go]) + "\n")
         return (
             go,
             SourceFeed(filetype=filetype, position=position, line=line, prefix=prefix),
