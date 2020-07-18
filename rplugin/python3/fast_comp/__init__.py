@@ -90,6 +90,15 @@ class Main:
 
         self._submit(cont())
 
+    @function("FCmanual", sync=True)
+    def manual(self, args: Sequence[Any]) -> int:
+        find_start, base, *_ = args
+        if find_start == 1:
+            return -1
+        else:
+            self.next_comp()
+            return -2
+
     @function("_FCnotify")
     def notify(self, args: Sequence[Any]) -> None:
         async def cont() -> None:
