@@ -38,20 +38,23 @@ class Step:
 StepFunction = Callable[[SourceFeed], Awaitable[Sequence[Step]]]
 
 
-def parse_prefix(line: str, col: int) -> str:
+def parse_prefix(line: str, col: int) -> Tuple[bool, str]:
     before = line[:col]
-    acc = []
+    acc: List[str] = []
+    a = " "
     for c in reversed(before):
         if c.isalnum():
             acc.append(c)
         else:
+            a = c
             break
 
+    go = not a.isspace()
     prefix = "".join(reversed(acc))
-    return prefix
+    return go, prefix
 
 
-async def gen_feed(nvim: Nvim) -> SourceFeed:
+async def gen_feed(nvim: Nvim) -> Tuple[bool, SourceFeed]:
     def fed() -> SourceFeed:
         buffer = nvim.api.get_current_buf()
         filetype = nvim.api.buf_get_option(buffer, "filetype")
@@ -59,13 +62,13 @@ async def gen_feed(nvim: Nvim) -> SourceFeed:
         row, col = nvim.api.win_get_cursor(window)
         line = nvim.api.get_current_line()
         position = Position(row=row, col=col)
-        prefix = parse_prefix(line, col)
-        return SourceFeed(
-            filetype=filetype, position=position, line=line, prefix=prefix
+        go, prefix = parse_prefix(line, col)
+        return (
+            go,
+            SourceFeed(filetype=filetype, position=position, line=line, prefix=prefix),
         )
 
-    feed = await call(nvim, fed)
-    return feed
+    return await call(nvim, fed)
 
 
 async def manufacture(nvim: Nvim, factory: SourceFactory) -> Tuple[StepFunction, Queue]:
@@ -163,11 +166,14 @@ async def merge(
     sources = tuple(source for _, source, _ in src_gen)
 
     async def gen() -> Tuple[int, Iterator[VimCompletion]]:
-        feed = await gen_feed(nvim)
-        col = feed.position.col + 1
-        comps = await gather(*(source(feed) for source in sources))
-        completions = sorted((c for co in comps for c in co), key=rank)
-        return col, uniquify(map(vimify, completions))
+        go, feed = await gen_feed(nvim)
+        if go:
+            col = feed.position.col + 1
+            comps = await gather(*(source(feed) for source in sources))
+            completions = sorted((c for co in comps for c in co), key=rank)
+            return col, uniquify(map(vimify, completions))
+        else:
+            return -1, iter(())
 
     async def listen() -> None:
         while True:

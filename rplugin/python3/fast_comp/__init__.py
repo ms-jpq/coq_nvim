@@ -106,7 +106,6 @@ class Main:
     @function("_FCtextchangedi")
     def text_changed_i(self, args: Sequence[Any]) -> None:
         try:
-            self.state = forward(self.state, char_inserted=False)
             self.next_comp()
         finally:
             self.state = forward(self.state, char_inserted=False)
