@@ -1,3 +1,4 @@
+from itertools import chain
 from asyncio import Queue
 from typing import AsyncIterator, Iterator, List, Sequence, Set
 
@@ -20,7 +21,7 @@ async def buffer_chars(nvim: Nvim, buf_gen: Iterator[Buffer]) -> Sequence[str]:
             char
             for buffer in buf_gen
             for line in nvim.api.buf_get_lines(buffer, 0, -1, True)
-            for char in line
+            for char in chain(line, "\n")
         )
         return chars
 
