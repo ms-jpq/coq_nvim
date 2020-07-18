@@ -31,6 +31,10 @@ def gen_payload(feed: SourceFeed, text: str) -> Payload:
     return Payload(row=row, new_col=new_col, new_line=new_line)
 
 
+def fuzzy_criterion(prefix: str, candidate: str) -> bool:
+    return prefix.lower() in candidate.lower()
+
+
 def vimify(feed: SourceFeed, step: Step) -> VimCompletion:
     source = f"[{step.source}]"
     comp = step.comp
@@ -60,7 +64,7 @@ def patch(nvim: Nvim, comp: Dict[str, Any]) -> None:
     if type(data) == dict:
         try:
             payload = Payload(**cast(dict, data))
-        except ValueError:
+        except TypeError:
             pass
         else:
             row = payload.row
@@ -79,7 +83,7 @@ def fuzzer() -> Callable[[SourceFeed, Iterator[Step]], Iterator[VimCompletion]]:
         seen: Set[str] = set()
         for step in sorted(steps, key=rank):
             text = step.comp.text
-            if text not in seen and text.startswith(prefix) and text != prefix:
+            if text not in seen and text != prefix and fuzzy_criterion(prefix, text):
                 seen.add(text)
                 yield vimify(feed, step=step)
 
