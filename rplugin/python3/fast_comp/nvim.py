@@ -1,17 +1,7 @@
 from asyncio import Future
 from dataclasses import asdict, dataclass
 from enum import Enum
-from typing import (
-    Any,
-    Awaitable,
-    Callable,
-    Dict,
-    Iterable,
-    Iterator,
-    Optional,
-    Tuple,
-    TypeVar,
-)
+from typing import Any, Awaitable, Callable, Dict, Iterable, Iterator, Optional, TypeVar
 from uuid import uuid4
 
 from pynvim import Nvim
