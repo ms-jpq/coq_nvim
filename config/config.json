@@ -21,10 +21,19 @@
     "paths": {
       "config": {},
       "enabled": true,
-      "limit": 10,
+      "limit": 5,
       "main": "paths.py",
       "priority": 0,
       "short_name": "F",
+      "timeout": 50
+    },
+    "tree_sitter": {
+      "config": {},
+      "enabled": false,
+      "limit": 10,
+      "main": "tree_sitter.py",
+      "priority": 5,
+      "short_name": "TS",
       "timeout": 50
     }
   }
