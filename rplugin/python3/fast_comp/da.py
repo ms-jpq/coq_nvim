@@ -4,7 +4,7 @@ from json import load
 from os.path import basename, dirname, splitext
 from sys import path as sys_path
 from types import ModuleType
-from typing import Any, AsyncIterator, Awaitable, TypeVar, Union, cast
+from typing import Any, TypeVar, Union, cast
 
 T = TypeVar("T")
 
@@ -22,10 +22,6 @@ def or_else(val: Union[T, Nil], default: T) -> T:
         return default
     else:
         return cast(T, val)
-
-
-def anext(aiter: AsyncIterator[T]) -> Awaitable[T]:
-    return aiter.__anext__()
 
 
 def merge(ds1: Any, ds2: Any, replace: bool = False) -> Any:

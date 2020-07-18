@@ -28,8 +28,8 @@ local list_comp_candidates = function (request_id, row, col)
     local params = {position = position, textDocument=text_doc}
 
     _, cancel = lsp.buf_request(0, "textDocument/completion", params, function (err, _, ans)
-      assert(not err and ans, err)
-      fn._FCnotify("lsp", request_id, ans)
+      local ret = ans or nil
+      fn._FCnotify("lsp", request_id, ret)
     end)
   end
 end
