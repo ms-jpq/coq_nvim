@@ -1,11 +1,11 @@
 from dataclasses import asdict, dataclass
 from locale import strxfrm
-from typing import Any, Callable, Dict, Iterator, Set, Tuple, cast
+from typing import Any, Callable, Dict, Iterator, List, Sequence, Set, Union, cast
 
 from pynvim import Nvim
 
 from .nvim import VimCompletion
-from .types import Position, SourceFeed, Step
+from .types import Fuzziness, Position, SourceFeed, Step
 
 
 @dataclass(frozen=True)
@@ -15,10 +15,27 @@ class Payload:
     new_line: str
 
 
-def rank(annotated: Step) -> Tuple[float, str]:
-    comp = annotated.comp
+def fuzziness(prefix: str, text: str) -> Fuzziness:
+    normalized = text.lower()
+    acc: List[int] = []
+    idx = 0
+
+    for char in prefix:
+        idx = normalized.find(char, idx)
+        if idx == -1:
+            break
+        else:
+            acc.append(idx)
+
+    matches = len(acc)
+    rank = (matches * -1, sum(acc))
+    return Fuzziness(matches=matches, rank=rank)
+
+
+def rank(step: Step) -> Sequence[Union[float, int, str]]:
+    comp = step.comp
     text = strxfrm(comp.sortby or comp.label or comp.text).lower()
-    return annotated.priority * -1, text
+    return (*step.fuzz.rank, step.priority * -1, text)
 
 
 def gen_payload(feed: SourceFeed, text: str) -> Payload:
@@ -51,10 +68,6 @@ def vimify(feed: SourceFeed, step: Step) -> VimCompletion:
     return ret
 
 
-def fuzzy_criterion(prefix: str, candidate: str) -> bool:
-    return prefix in candidate
-
-
 def lru() -> Callable[[Position, Iterator[Step]], Iterator[VimCompletion]]:
     pass
 
@@ -79,16 +92,11 @@ def patch(nvim: Nvim, comp: Dict[str, Any]) -> None:
 def fuzzer() -> Callable[[SourceFeed, Iterator[Step]], Iterator[VimCompletion]]:
     def fuzzy(feed: SourceFeed, steps: Iterator[Step]) -> Iterator[VimCompletion]:
         prefix = feed.prefix
-        normal_prefix = prefix.lower()
 
         seen: Set[str] = set()
         for step in sorted(steps, key=rank):
             text = step.comp.text
-            if (
-                text not in seen
-                and text != prefix
-                and fuzzy_criterion(normal_prefix, step.normalized)
-            ):
+            if text not in seen and text != prefix and step.fuzz.matches:
                 seen.add(text)
                 yield vimify(feed, step=step)
 

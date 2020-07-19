@@ -1,6 +1,15 @@
 from asyncio import Queue
 from dataclasses import dataclass
-from typing import Any, AsyncIterator, Awaitable, Callable, Dict, Optional, Sequence
+from typing import (
+    Any,
+    AsyncIterator,
+    Awaitable,
+    Callable,
+    Dict,
+    Optional,
+    Sequence,
+    Union,
+)
 
 from pynvim import Nvim
 
@@ -73,11 +82,17 @@ class SourceFactory:
 
 
 @dataclass(frozen=True)
+class Fuzziness:
+    matches: int
+    rank: Sequence[Union[int, str]]
+
+
+@dataclass(frozen=True)
 class Step:
     source: str
     priority: float
-    normalized: str
     comp: SourceCompletion
+    fuzz: Fuzziness
 
 
 @dataclass(frozen=True)
