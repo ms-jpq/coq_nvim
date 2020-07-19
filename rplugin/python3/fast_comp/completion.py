@@ -31,22 +31,24 @@ StepFunction = Callable[[SourceFeed], Awaitable[Sequence[Step]]]
 
 
 def gen_prefix(line: str, col: int) -> Prefix:
+    def is_sym(char: str) -> bool:
+        return not char.isalnum() and not char.isspace()
+
     before = line[:col]
     it = reversed(before)
 
     r_alnums: List[str] = []
-    ahead = ""
+    r_syms: List[str] = []
     for c in it:
-        if not ahead:
-            ahead = c
         if c.isalnum():
             r_alnums.append(c)
         else:
+            if is_sym(c):
+                r_syms.append(c)
             break
 
-    r_syms: List[str] = []
     for c in it:
-        if not c.isalnum() and not c.isspace():
+        if is_sym(c):
             r_syms.append(c)
         else:
             break
