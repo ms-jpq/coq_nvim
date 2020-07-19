@@ -22,7 +22,7 @@ def fuzziness(prefix: str, normalized: str) -> Fuzziness:
     for char in prefix:
         new = normalized.find(char, idx)
         if new != -1:
-            idx = new
+            idx = new + 1
             matches.append(idx)
 
     rank = (len(matches) * -1, sum(matches))
