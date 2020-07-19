@@ -1,4 +1,7 @@
 {
+  "fuzzy": {
+    "min_match": 3
+  },
   "sources": {
     "buffers": {
       "config": {},

@@ -5,7 +5,7 @@ from typing import Any, Iterator
 
 from .consts import load_hierarchy, module_entry_point, settings_json
 from .da import load_json, load_module, merge
-from .types import Settings, SourceFactory, SourceSeed, SourceSpec
+from .types import FuzzyOptions, Settings, SourceFactory, SourceSeed, SourceSpec
 
 
 def load_source(config: Any) -> SourceSpec:
@@ -23,8 +23,10 @@ def load_source(config: Any) -> SourceSpec:
 
 def initial(user_config: Any) -> Settings:
     config = merge(load_json(settings_json), user_config)
+    fuzzy_o = config["fuzzy"]
+    fuzzy = FuzzyOptions(min_match=fuzzy_o["min_match"])
     sources = {name: load_source(conf) for name, conf in config["sources"].items()}
-    settings = Settings(sources=sources)
+    settings = Settings(fuzzy=fuzzy, sources=sources)
     return settings
 
 

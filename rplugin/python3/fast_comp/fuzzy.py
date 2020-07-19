@@ -5,7 +5,7 @@ from typing import Any, Callable, Dict, Iterator, List, Sequence, Set, Union, ca
 from pynvim import Nvim
 
 from .nvim import VimCompletion
-from .types import Fuzziness, Position, SourceFeed, Step
+from .types import Fuzziness, Position, Settings, SourceFeed, Step
 
 
 @dataclass(frozen=True)
@@ -15,8 +15,7 @@ class Payload:
     new_line: str
 
 
-def fuzziness(prefix: str, text: str) -> Fuzziness:
-    normalized = text.lower()
+def fuzziness(prefix: str, normalized: str) -> Fuzziness:
     matches: List[int] = []
     idx = 0
 
@@ -106,14 +105,22 @@ def patch(nvim: Nvim, comp: Dict[str, Any]) -> None:
             nvim.api.win_set_cursor(win, (row + 1, col))
 
 
-def fuzzer() -> Callable[[SourceFeed, Iterator[Step]], Iterator[VimCompletion]]:
+def fuzzer(
+    settings: Settings,
+) -> Callable[[SourceFeed, Iterator[Step]], Iterator[VimCompletion]]:
+    min_matches = settings.fuzzy.min_match
+
     def fuzzy(feed: SourceFeed, steps: Iterator[Step]) -> Iterator[VimCompletion]:
         prefix = feed.prefix
 
         seen: Set[str] = set()
         for step in sorted(steps, key=rank):
             text = step.comp.text
-            if text not in seen and text != prefix and step.fuzz.matches:
+            if (
+                text not in seen
+                and text != prefix
+                and len(step.fuzz.matches) >= min_matches
+            ):
                 seen.add(text)
                 yield vimify(feed, step=step)
 

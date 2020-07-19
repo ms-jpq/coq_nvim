@@ -70,7 +70,7 @@ class Main:
                 settings = initial(user_config={})
                 factories = load_factories(settings=settings)
                 gen, listen = await merge(
-                    self.nvim, chan=self.msg_ch, factories=factories
+                    self.nvim, chan=self.msg_ch, factories=factories, settings=settings
                 )
 
                 async def l1() -> None:

@@ -16,7 +16,15 @@ from pynvim import Nvim
 
 from .fuzzy import fuzzer, fuzziness
 from .nvim import VimCompletion, call, print
-from .types import Factory, Notification, Position, SourceFactory, SourceFeed, Step
+from .types import (
+    Factory,
+    Notification,
+    Position,
+    Settings,
+    SourceFactory,
+    SourceFeed,
+    Step,
+)
 
 StepFunction = Callable[[SourceFeed], Awaitable[Sequence[Step]]]
 
@@ -66,7 +74,8 @@ async def manufacture(nvim: Nvim, factory: SourceFactory) -> Tuple[StepFunction,
 
         async def cont() -> None:
             async for comp in src(feed):
-                fuzz = fuzziness(prefix, text=comp.text)
+                normalized = comp.text.lower()
+                fuzz = fuzziness(prefix, normalized=normalized)
                 completion = Step(
                     source=factory.short_name,
                     priority=factory.priority,
@@ -114,12 +123,12 @@ async def osha(
 
 
 async def merge(
-    nvim: Nvim, chan: Queue, factories: Iterator[SourceFactory],
+    nvim: Nvim, chan: Queue, factories: Iterator[SourceFactory], settings: Settings
 ) -> Tuple[
     Callable[[], Awaitable[Tuple[Position, Iterator[VimCompletion]]]],
     Callable[[], Awaitable[None]],
 ]:
-    fuzzy = fuzzer()
+    fuzzy = fuzzer(settings)
     src_gen = await gather(*(osha(nvim, factory=factory) for factory in factories))
     chans: Dict[str, Queue] = {name: chan for name, _, chan in src_gen}
     sources = tuple(source for _, source, _ in src_gen)

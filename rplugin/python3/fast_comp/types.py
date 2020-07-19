@@ -14,13 +14,18 @@ from typing import (
 from pynvim import Nvim
 
 
-@dataclass
+@dataclass(frozen=True)
 class Notification:
     source: str
     body: Sequence[Any]
 
 
-@dataclass
+@dataclass(frozen=True)
+class FuzzyOptions:
+    min_match: int
+
+
+@dataclass(frozen=True)
 class SourceSpec:
     main: str
     short_name: str
@@ -33,6 +38,7 @@ class SourceSpec:
 
 @dataclass(frozen=True)
 class Settings:
+    fuzzy: FuzzyOptions
     sources: Dict[str, SourceSpec]
 
 
