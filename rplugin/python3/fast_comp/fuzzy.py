@@ -113,7 +113,7 @@ def fuzzer(
     min_matches = settings.fuzzy.min_match
 
     def fuzzy(feed: SourceFeed, steps: Iterator[Step]) -> Iterator[VimCompletion]:
-        prefix = feed.prefix
+        prefix = feed.prefix.alnums
         seen: Set[str] = set()
 
         for step in sorted(steps, key=rank):
