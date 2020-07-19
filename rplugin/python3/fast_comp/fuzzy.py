@@ -31,10 +31,6 @@ def gen_payload(feed: SourceFeed, text: str) -> Payload:
     return Payload(row=row, new_col=new_col, new_line=new_line)
 
 
-def fuzzy_criterion(prefix: str, candidate: str) -> bool:
-    return prefix.lower() in candidate.lower()
-
-
 def vimify(feed: SourceFeed, step: Step) -> VimCompletion:
     source = f"[{step.source}]"
     comp = step.comp
@@ -53,6 +49,10 @@ def vimify(feed: SourceFeed, step: Step) -> VimCompletion:
         user_data=asdict(user_data),
     )
     return ret
+
+
+def fuzzy_criterion(prefix: str, candidate: str) -> bool:
+    return prefix.lower() in candidate.lower()
 
 
 def lru() -> Callable[[Position, Iterator[Step]], Iterator[VimCompletion]]:
