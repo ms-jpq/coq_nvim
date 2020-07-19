@@ -7,7 +7,7 @@ from typing import Any, Callable, Dict, Iterator, Sequence, Set, Union, cast
 from pynvim import Nvim
 
 from .nvim import VimCompletion
-from .types import Fuzziness, FuzzyOptions, SourceFeed, Step
+from .types import FuzzyOptions, SourceFeed, Step
 
 
 @dataclass(frozen=True)
@@ -17,7 +17,17 @@ class Payload:
     new_line: str
 
 
-def fuzziness(prefix: str, normalized: str) -> Fuzziness:
+@dataclass(frozen=True)
+class FuzzyStep:
+    step: Step
+    full_match: bool
+    matches: Set[int]
+    rank: Sequence[Union[int, str]]
+
+
+def fuzzify(feed: SourceFeed, step: Step) -> FuzzyStep:
+    prefix = feed.prefix.alnums
+    normalized = step.normalized
     matches: Set[int] = set()
     idx = 0
 
@@ -29,13 +39,13 @@ def fuzziness(prefix: str, normalized: str) -> Fuzziness:
 
     rank = (len(matches) * -1, sum(matches))
     full_match = normalized.startswith(prefix)
-    return Fuzziness(full_match=full_match, matches=matches, rank=rank)
+    return FuzzyStep(step=step, full_match=full_match, matches=matches, rank=rank)
 
 
-def rank(step: Step) -> Sequence[Union[float, int, str]]:
-    comp = step.comp
+def rank(fuzz: FuzzyStep) -> Sequence[Union[float, int, str]]:
+    comp = fuzz.step.comp
     text = strxfrm(comp.sortby or comp.label or comp.text).lower()
-    return (*step.fuzz.rank, step.priority * -1, text)
+    return (*fuzz.rank, fuzz.step.priority * -1, text)
 
 
 def gen_payload(feed: SourceFeed, text: str) -> Payload:
@@ -49,8 +59,9 @@ def gen_payload(feed: SourceFeed, text: str) -> Payload:
     return Payload(row=row, new_col=new_col, new_line=new_line)
 
 
-def context_gen(text: str, fuzz: Fuzziness) -> str:
+def context_gen(fuzz: FuzzyStep) -> str:
     match_set = fuzz.matches
+    text = fuzz.step.comp.text
 
     def gen() -> Iterator[str]:
         for idx, char in enumerate(text):
@@ -64,15 +75,12 @@ def context_gen(text: str, fuzz: Fuzziness) -> str:
     return "".join(gen())
 
 
-def vimify(feed: SourceFeed, step: Step) -> VimCompletion:
+def vimify(feed: SourceFeed, fuzz: FuzzyStep) -> VimCompletion:
+    step = fuzz.step
     source = f"[{step.source}]"
     comp = step.comp
     menu = f"{comp.kind} {source}" if comp.kind else source
-    abbr = (
-        (comp.label or comp.text)
-        if step.fuzz.full_match
-        else context_gen(comp.text, fuzz=step.fuzz)
-    )
+    abbr = (comp.label or comp.text) if fuzz.full_match else context_gen(fuzz)
     user_data = gen_payload(feed, text=comp.text)
     ret = VimCompletion(
         equal=1,
@@ -146,8 +154,9 @@ def fuzzer(
         seen: Set[str] = set()
         seen_by_source: Dict[str, int] = {}
 
-        fuzzy_steps = cache(feed, steps)
-        for step in sorted(fuzzy_steps, key=rank):
+        fuzzy_steps = (fuzzify(feed, step=step) for step in cache(feed, steps))
+        for fuzz in sorted(fuzzy_steps, key=rank):
+            step = fuzz.step
             source = step.source
             limit = limits.get(source, inf)
             seen_count = seen_by_source.get(source, 0)
@@ -155,13 +164,13 @@ def fuzzer(
             if seen_count <= limit:
 
                 text = step.comp.text
-                matches = len(step.fuzz.matches)
+                matches = len(fuzz.matches)
                 if (
                     text not in seen
                     and text != prefix
-                    and (step.fuzz.full_match or matches >= options.min_match)
+                    and (fuzz.full_match or matches >= options.min_match)
                 ):
                     seen.add(text)
-                    yield vimify(feed, step=step)
+                    yield vimify(feed, fuzz=fuzz)
 
     return fuzzy

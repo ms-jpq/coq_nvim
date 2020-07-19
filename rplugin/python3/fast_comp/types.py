@@ -98,18 +98,11 @@ class SourceFactory:
 
 
 @dataclass(frozen=True)
-class Fuzziness:
-    full_match: bool
-    matches: Set[int]
-    rank: Sequence[Union[int, str]]
-
-
-@dataclass(frozen=True)
 class Step:
     source: str
     priority: float
+    normalized: str
     comp: SourceCompletion
-    fuzz: Fuzziness
 
 
 @dataclass(frozen=True)

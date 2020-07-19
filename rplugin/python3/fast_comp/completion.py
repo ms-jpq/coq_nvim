@@ -14,7 +14,7 @@ from typing import (
 
 from pynvim import Nvim
 
-from .fuzzy import fuzzer, fuzziness
+from .fuzzy import fuzzer
 from .nvim import VimCompletion, call, print
 from .types import (
     Factory,
@@ -82,17 +82,15 @@ async def manufacture(nvim: Nvim, factory: SourceFactory) -> Tuple[StepFunction,
 
     async def source(feed: SourceFeed) -> Sequence[Step]:
         acc: List[Step] = []
-        prefix = feed.prefix.alnums.lower()
 
         async def cont() -> None:
             async for comp in src(feed):
                 normalized = comp.text.lower()
-                fuzz = fuzziness(prefix, normalized=normalized)
                 completion = Step(
                     source=factory.short_name,
                     priority=factory.priority,
+                    normalized=normalized,
                     comp=comp,
-                    fuzz=fuzz,
                 )
                 acc.append(completion)
 
