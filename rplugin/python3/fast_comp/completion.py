@@ -20,11 +20,11 @@ from .types import (
     Factory,
     Notification,
     Position,
+    Prefix,
     Settings,
     SourceFactory,
     SourceFeed,
     Step,
-    Prefix,
 )
 
 StepFunction = Callable[[SourceFeed], Awaitable[Sequence[Step]]]
@@ -34,24 +34,26 @@ def parse_prefix(line: str, col: int) -> Prefix:
     before = line[:col]
     it = reversed(before)
 
-    alnums: List[str] = []
+    r_alnums: List[str] = []
     ahead = ""
     for c in it:
         if not ahead:
             ahead = c
         if c.isalnum():
-            alnums.append(c)
+            r_alnums.append(c)
         else:
             break
 
-    syms: List[str] = []
+    r_syms: List[str] = []
     for c in it:
         if not c.isalnum() and not c.isspace():
-            syms.append(c)
+            r_syms.append(c)
         else:
             break
 
-    return Prefix(line=line, alnums="".join(alnums), syms="".join(syms))
+    alnums = "".join(reversed(r_alnums))
+    syms = "".join(reversed(r_syms))
+    return Prefix(line=line, alnums=alnums, syms=syms)
 
 
 async def gen_feed(nvim: Nvim) -> SourceFeed:
@@ -81,6 +83,7 @@ async def manufacture(nvim: Nvim, factory: SourceFactory) -> Tuple[StepFunction,
             async for comp in src(feed):
                 normalized = comp.text.lower()
                 fuzz = fuzziness(prefix, normalized=normalized)
+                await print(nvim, feed.prefix)
                 completion = Step(
                     source=factory.short_name,
                     priority=factory.priority,

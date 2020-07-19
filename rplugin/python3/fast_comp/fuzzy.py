@@ -69,7 +69,7 @@ def vimify(feed: SourceFeed, step: Step) -> VimCompletion:
     abbr = (
         (comp.label or comp.text)
         if step.fuzz.full_match
-        else context_gen(comp.text, step.fuzz)
+        else context_gen(comp.text, fuzz=step.fuzz)
     )
     user_data = gen_payload(feed, text=comp.text)
     ret = VimCompletion(
