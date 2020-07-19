@@ -56,11 +56,17 @@ class Position:
 
 
 @dataclass(frozen=True)
+class Prefix:
+    line: str
+    alnums: str
+    syms: str
+
+
+@dataclass(frozen=True)
 class SourceFeed:
     filetype: str
     position: Position
-    line: str
-    prefix: str
+    prefix: Prefix
 
 
 @dataclass(frozen=True)

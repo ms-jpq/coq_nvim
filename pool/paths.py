@@ -55,7 +55,7 @@ async def find_children(path: str) -> Sequence[SourceCompletion]:
 async def main(nvim: Nvim, chan: Queue, seed: SourceSeed) -> Source:
     async def source(feed: SourceFeed) -> AsyncIterator[SourceCompletion]:
         col = feed.position.col
-        before = feed.line[:col]
+        before = feed.prefix.line[:col]
         comp = (await find_children(path) for path in parse_path(before))
         co = await anext(comp, ())
         for c in co:

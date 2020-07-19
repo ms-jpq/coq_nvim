@@ -24,41 +24,46 @@ from .types import (
     SourceFactory,
     SourceFeed,
     Step,
+    Prefix,
 )
 
 StepFunction = Callable[[SourceFeed], Awaitable[Sequence[Step]]]
 
 
-def parse_prefix(line: str, col: int) -> Tuple[bool, str]:
+def parse_prefix(line: str, col: int) -> Prefix:
     before = line[:col]
-    acc: List[str] = []
-    a = ""
-    for c in reversed(before):
-        if not a:
-            a = c
+    it = reversed(before)
+
+    alnums: List[str] = []
+    ahead = ""
+    for c in it:
+        if not ahead:
+            ahead = c
         if c.isalnum():
-            acc.append(c)
+            alnums.append(c)
         else:
             break
 
-    go = a != "" and not a.isspace()
-    prefix = "".join(reversed(acc))
-    return go, prefix
+    syms: List[str] = []
+    for c in it:
+        if not c.isalnum() and not c.isspace():
+            syms.append(c)
+        else:
+            break
+
+    return Prefix(line=line, alnums="".join(alnums), syms="".join(syms))
 
 
-async def gen_feed(nvim: Nvim) -> Tuple[bool, SourceFeed]:
-    def fed() -> Tuple[bool, SourceFeed]:
+async def gen_feed(nvim: Nvim) -> SourceFeed:
+    def fed() -> SourceFeed:
         buffer = nvim.api.get_current_buf()
         filetype = nvim.api.buf_get_option(buffer, "filetype")
         window = nvim.api.get_current_win()
         row, col = nvim.api.win_get_cursor(window)
         line = nvim.api.get_current_line()
         position = Position(row=row, col=col)
-        go, prefix = parse_prefix(line, col)
-        return (
-            go,
-            SourceFeed(filetype=filetype, position=position, line=line, prefix=prefix),
-        )
+        prefix = parse_prefix(line, col)
+        return SourceFeed(filetype=filetype, position=position, prefix=prefix)
 
     return await call(nvim, fed)
 
@@ -70,7 +75,7 @@ async def manufacture(nvim: Nvim, factory: SourceFactory) -> Tuple[StepFunction,
 
     async def source(feed: SourceFeed) -> Sequence[Step]:
         acc: List[Step] = []
-        prefix = feed.prefix.lower()
+        prefix = feed.prefix.alnums.lower()
 
         async def cont() -> None:
             async for comp in src(feed):
@@ -134,14 +139,11 @@ async def merge(
     sources = tuple(source for _, source, _ in src_gen)
 
     async def gen() -> Tuple[Position, Iterator[VimCompletion]]:
-        go, feed = await gen_feed(nvim)
+        feed = await gen_feed(nvim)
         position = feed.position
-        if go:
-            comps = await gather(*(source(feed) for source in sources))
-            completions = (c for co in comps for c in co)
-            return position, fuzzy(feed, completions)
-        else:
-            return position, iter(())
+        comps = await gather(*(source(feed) for source in sources))
+        completions = (c for co in comps for c in co)
+        return position, fuzzy(feed, completions)
 
     async def listen() -> None:
         while True:

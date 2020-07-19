@@ -37,12 +37,13 @@ def rank(step: Step) -> Sequence[Union[float, int, str]]:
 
 
 def gen_payload(feed: SourceFeed, text: str) -> Payload:
+    line = feed.prefix.line
     row = feed.position.row - 1
     col = feed.position.col
-    begin = col - len(feed.prefix)
+    begin = col - len(feed.prefix.alnums)
     end = col
     new_col = begin + len(text)
-    new_line = feed.line[:begin] + text + feed.line[end:]
+    new_line = line[:begin] + text + line[end:]
     return Payload(row=row, new_col=new_col, new_line=new_line)
 
 

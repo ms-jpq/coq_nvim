@@ -51,8 +51,8 @@ def coalesce(chars: Sequence[str]) -> Iterator[str]:
 
 async def main(nvim: Nvim, chan: Queue, seed: SourceSeed) -> Source:
     async def source(feed: SourceFeed) -> AsyncIterator[SourceCompletion]:
-        prefix = feed.prefix
-        if prefix:
+        prefix_alnums = feed.prefix.alnums
+        if prefix_alnums:
             lines = await buffer_chars(nvim, buf_gen(nvim, filetype=feed.filetype))
             for word in coalesce(lines):
                 yield SourceCompletion(text=word)

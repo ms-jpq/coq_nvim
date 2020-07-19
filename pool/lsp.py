@@ -83,7 +83,6 @@ def parse_rows(
     rows: Sequence[Dict[str, Any]],
     entry_kind_lookup: Dict[int, str],
     insert_kind_lookup: Dict[int, str],
-    prefix: str,
 ) -> Iterator[SourceCompletion]:
     for row in rows:
         text = parse_text(row)
@@ -110,7 +109,6 @@ async def main(nvim: Nvim, chan: Queue, seed: SourceSeed) -> Source:
             rows,
             entry_kind_lookup=entry_kind_lookup,
             insert_kind_lookup=insert_kind_lookup,
-            prefix=feed.prefix,
         ):
             yield row
 
