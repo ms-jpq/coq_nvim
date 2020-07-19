@@ -61,13 +61,16 @@ def gen_prefix(line: str, col: int) -> Prefix:
 async def gen_feed(nvim: Nvim) -> SourceFeed:
     def fed() -> SourceFeed:
         buffer = nvim.api.get_current_buf()
+        filename = nvim.api.buf_get_name(buffer)
         filetype = nvim.api.buf_get_option(buffer, "filetype")
         window = nvim.api.get_current_win()
         row, col = nvim.api.win_get_cursor(window)
         line = nvim.api.get_current_line()
         position = Position(row=row, col=col)
         prefix = gen_prefix(line, col)
-        return SourceFeed(filetype=filetype, position=position, prefix=prefix)
+        return SourceFeed(
+            filename=filename, filetype=filetype, position=position, prefix=prefix
+        )
 
     return await call(nvim, fed)
 
@@ -149,7 +152,7 @@ async def merge(
         go = prefix.alnums or prefix.syms
         if go:
             comps = await gather(*(source(feed) for source in sources))
-            completions = (c for co in comps for c in co)
+            completions = tuple(c for co in comps for c in co)
             return position, fuzzy(feed, completions)
         else:
             return position, iter(())

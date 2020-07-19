@@ -1,3 +1,4 @@
+from collections import deque
 from dataclasses import asdict, dataclass
 from locale import strxfrm
 from typing import Any, Callable, Dict, Iterator, Sequence, Set, Union, cast
@@ -86,9 +87,28 @@ def vimify(feed: SourceFeed, step: Step) -> VimCompletion:
     return ret
 
 
-def lru() -> Callable[[Position, Iterator[Step]], Iterator[Step]]:
-    def cache(position: Position, steps: Iterator[Step]) -> Iterator[Step]:
-        return steps
+def make_cache() -> Callable[[SourceFeed, Sequence[Step]], Iterator[Step]]:
+    queue: deque = deque([])
+    # buf -> row -> col
+    bufs: Dict[str, Dict[int, Dict[int, Sequence[Step]]]] = {}
+
+    def cache(feed: SourceFeed, steps: Sequence[Step]) -> Iterator[Step]:
+        position = feed.position
+        queue.append((feed.filename, position))
+
+        if len(queue) > 10:
+            bufname, pos = queue.popleft()
+            bufs.get(bufname, {}).get(pos.row, {}).pop(pos.col, None)
+
+        rows = bufs.setdefault(feed.filename, {})
+        cols = rows.setdefault(position.row, {})
+        cols[position.col] = steps
+
+        def cont() -> Iterator[Step]:
+            for col in range(position.col - 10, position.col + 11):
+                yield from iter(cols.get(col, ()))
+
+        return cont()
 
     return cache
 
@@ -112,15 +132,15 @@ def patch(nvim: Nvim, comp: Dict[str, Any]) -> None:
 
 def fuzzer(
     settings: Settings,
-) -> Callable[[SourceFeed, Iterator[Step]], Iterator[VimCompletion]]:
+) -> Callable[[SourceFeed, Sequence[Step]], Iterator[VimCompletion]]:
     min_matches = settings.fuzzy.min_match
-    cache = lru()
+    cache = make_cache()
 
-    def fuzzy(feed: SourceFeed, steps: Iterator[Step]) -> Iterator[VimCompletion]:
+    def fuzzy(feed: SourceFeed, steps: Sequence[Step]) -> Iterator[VimCompletion]:
         prefix = feed.prefix.alnums
         seen: Set[str] = set()
 
-        fuzzy_steps = cache(feed.position, steps)
+        fuzzy_steps = cache(feed, steps)
         for step in sorted(fuzzy_steps, key=rank):
             text = step.comp.text
             matches = len(step.fuzz.matches)

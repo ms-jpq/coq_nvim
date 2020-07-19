@@ -24,6 +24,7 @@ class Prefix:
 
 @dataclass(frozen=True)
 class SourceFeed:
+    filename: str
     filetype: str
     position: Position
     prefix: Prefix
