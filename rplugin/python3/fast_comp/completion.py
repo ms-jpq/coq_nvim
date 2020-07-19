@@ -83,7 +83,6 @@ async def manufacture(nvim: Nvim, factory: SourceFactory) -> Tuple[StepFunction,
             async for comp in src(feed):
                 normalized = comp.text.lower()
                 fuzz = fuzziness(prefix, normalized=normalized)
-                await print(nvim, feed.prefix)
                 completion = Step(
                     source=factory.short_name,
                     priority=factory.priority,
