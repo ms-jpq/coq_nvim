@@ -24,7 +24,11 @@ def load_source(config: Any) -> SourceSpec:
 def initial(user_config: Any) -> Settings:
     config = merge(load_json(settings_json), user_config)
     fuzzy_o = config["fuzzy"]
-    fuzzy = FuzzyOptions(min_match=fuzzy_o["min_match"])
+    fuzzy = FuzzyOptions(
+        cache_size=fuzzy_o["cache_size"],
+        band_size=fuzzy_o["band_size"],
+        min_match=fuzzy_o["min_match"],
+    )
     sources = {name: load_source(conf) for name, conf in config["sources"].items()}
     settings = Settings(fuzzy=fuzzy, sources=sources)
     return settings

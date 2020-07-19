@@ -6,7 +6,7 @@ from typing import Any, Callable, Dict, Iterator, Sequence, Set, Union, cast
 from pynvim import Nvim
 
 from .nvim import VimCompletion
-from .types import Fuzziness, Position, Settings, SourceFeed, Step
+from .types import Fuzziness, FuzzyOptions, SourceFeed, Step
 
 
 @dataclass(frozen=True)
@@ -87,7 +87,10 @@ def vimify(feed: SourceFeed, step: Step) -> VimCompletion:
     return ret
 
 
-def make_cache() -> Callable[[SourceFeed, Sequence[Step]], Iterator[Step]]:
+def make_cache(
+    options: FuzzyOptions,
+) -> Callable[[SourceFeed, Sequence[Step]], Iterator[Step]]:
+    half_band_size = options.band_size // 2
     queue: deque = deque([])
     # buf -> row -> col
     bufs: Dict[str, Dict[int, Dict[int, Sequence[Step]]]] = {}
@@ -96,7 +99,7 @@ def make_cache() -> Callable[[SourceFeed, Sequence[Step]], Iterator[Step]]:
         position = feed.position
         queue.append((feed.filename, position))
 
-        if len(queue) > 10:
+        if len(queue) > options.cache_size:
             bufname, pos = queue.popleft()
             bufs.get(bufname, {}).get(pos.row, {}).pop(pos.col, None)
 
@@ -105,7 +108,9 @@ def make_cache() -> Callable[[SourceFeed, Sequence[Step]], Iterator[Step]]:
         cols[position.col] = steps
 
         def cont() -> Iterator[Step]:
-            for col in range(position.col - 10, position.col + 11):
+            for col in range(
+                position.col - half_band_size, position.col + 1 + half_band_size
+            ):
                 yield from iter(cols.get(col, ()))
 
         return cont()
@@ -131,10 +136,9 @@ def patch(nvim: Nvim, comp: Dict[str, Any]) -> None:
 
 
 def fuzzer(
-    settings: Settings,
+    options: FuzzyOptions,
 ) -> Callable[[SourceFeed, Sequence[Step]], Iterator[VimCompletion]]:
-    min_matches = settings.fuzzy.min_match
-    cache = make_cache()
+    cache = make_cache(options)
 
     def fuzzy(feed: SourceFeed, steps: Sequence[Step]) -> Iterator[VimCompletion]:
         prefix = feed.prefix.alnums
@@ -147,7 +151,7 @@ def fuzzer(
             if (
                 text not in seen
                 and text != prefix
-                and (step.fuzz.full_match or matches >= min_matches)
+                and (step.fuzz.full_match or matches >= options.min_match)
             ):
                 seen.add(text)
                 yield vimify(feed, step=step)

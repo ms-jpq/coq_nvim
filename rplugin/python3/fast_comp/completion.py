@@ -140,7 +140,7 @@ async def merge(
     Callable[[], Awaitable[Tuple[Position, Iterator[VimCompletion]]]],
     Callable[[], Awaitable[None]],
 ]:
-    fuzzy = fuzzer(settings)
+    fuzzy = fuzzer(settings.fuzzy)
     src_gen = await gather(*(osha(nvim, factory=factory) for factory in factories))
     chans: Dict[str, Queue] = {name: chan for name, _, chan in src_gen}
     sources = tuple(source for _, source, _ in src_gen)
