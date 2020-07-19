@@ -112,14 +112,15 @@ def fuzzer(
 
     def fuzzy(feed: SourceFeed, steps: Iterator[Step]) -> Iterator[VimCompletion]:
         prefix = feed.prefix
-
         seen: Set[str] = set()
+
         for step in sorted(steps, key=rank):
             text = step.comp.text
+            matches = len(step.fuzz.matches)
             if (
                 text not in seen
                 and text != prefix
-                and len(step.fuzz.matches) >= min_matches
+                and (matches >= len(prefix) or matches >= min_matches)
             ):
                 seen.add(text)
                 yield vimify(feed, step=step)
