@@ -137,7 +137,7 @@ def patch(nvim: Nvim, comp: Dict[str, Any]) -> None:
 
 
 def fuzzer(
-    options: FuzzyOptions, limits: Dict[str, int]
+    options: FuzzyOptions, limits: Dict[str, float]
 ) -> Callable[[SourceFeed, Sequence[Step]], Iterator[VimCompletion]]:
     cache = make_cache(options)
 
@@ -146,12 +146,13 @@ def fuzzer(
         seen: Set[str] = set()
         seen_by_source: Dict[str, int] = {}
 
-        fuzzy_steps = cache(feed, steps)
-        for step in sorted(fuzzy_steps, key=rank):
+        # fuzzy_steps = cache(feed, steps)
+        for step in sorted(steps, key=rank):
             source = step.source
+            limit = limits.get(source, inf)
             seen_count = seen_by_source.get(source, 0)
             seen_by_source[source] = seen_count + 1
-            if seen_count <= limits.get(source, inf):
+            if seen_count <= limit:
 
                 text = step.comp.text
                 matches = len(step.fuzz.matches)
