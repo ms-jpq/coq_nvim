@@ -52,7 +52,7 @@ def vimify(feed: SourceFeed, step: Step) -> VimCompletion:
 
 
 def fuzzy_criterion(prefix: str, candidate: str) -> bool:
-    return prefix.lower() in candidate.lower()
+    return prefix in candidate
 
 
 def lru() -> Callable[[Position, Iterator[Step]], Iterator[VimCompletion]]:
@@ -79,11 +79,16 @@ def patch(nvim: Nvim, comp: Dict[str, Any]) -> None:
 def fuzzer() -> Callable[[SourceFeed, Iterator[Step]], Iterator[VimCompletion]]:
     def fuzzy(feed: SourceFeed, steps: Iterator[Step]) -> Iterator[VimCompletion]:
         prefix = feed.prefix
+        normal_prefix = prefix.lower()
 
         seen: Set[str] = set()
         for step in sorted(steps, key=rank):
             text = step.comp.text
-            if text not in seen and text != prefix and fuzzy_criterion(prefix, text):
+            if (
+                text not in seen
+                and text != prefix
+                and fuzzy_criterion(normal_prefix, step.normalized)
+            ):
                 seen.add(text)
                 yield vimify(feed, step=step)
 

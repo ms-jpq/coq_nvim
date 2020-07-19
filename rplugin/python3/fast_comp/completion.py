@@ -65,8 +65,12 @@ async def manufacture(nvim: Nvim, factory: SourceFactory) -> Tuple[StepFunction,
 
         async def cont() -> None:
             async for comp in src(feed):
+                normalized = comp.text.lower()
                 completion = Step(
-                    source=factory.short_name, priority=factory.priority, comp=comp
+                    source=factory.short_name,
+                    priority=factory.priority,
+                    normalized=normalized,
+                    comp=comp,
                 )
                 acc.append(completion)
                 if len(acc) >= factory.limit:

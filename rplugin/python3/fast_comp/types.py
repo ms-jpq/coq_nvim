@@ -76,6 +76,7 @@ class SourceFactory:
 class Step:
     source: str
     priority: float
+    normalized: str
     comp: SourceCompletion
 
 
