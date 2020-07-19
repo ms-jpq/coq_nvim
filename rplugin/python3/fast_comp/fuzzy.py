@@ -22,11 +22,14 @@ def fuzziness(prefix: str, normalized: str) -> Fuzziness:
     for char in prefix:
         new = normalized.find(char, idx)
         if new != -1:
+            matches.append(new)
             idx = new + 1
-            matches.append(idx)
 
-    rank = (len(matches) * -1, sum(matches))
-    return Fuzziness(matches=matches, rank=rank)
+    lm = len(matches)
+    sm = sum(matches)
+    rank = (lm * -1, sm)
+    full_match = sm == sum(range(lm))
+    return Fuzziness(full_match=full_match, matches=matches, rank=rank)
 
 
 def rank(step: Step) -> Sequence[Union[float, int, str]]:
@@ -66,7 +69,7 @@ def vimify(feed: SourceFeed, step: Step) -> VimCompletion:
     menu = f"{comp.kind} {source}" if comp.kind else source
     abbr = (
         (comp.label or comp.text)
-        if len(step.fuzz.matches) == len(feed.prefix)
+        if step.fuzz.full_match
         else context_gen(comp.text, step.fuzz)
     )
     user_data = gen_payload(feed, text=comp.text)
@@ -120,7 +123,7 @@ def fuzzer(
             if (
                 text not in seen
                 and text != prefix
-                and (matches >= len(prefix) or matches >= min_matches)
+                and (step.fuzz.full_match or matches >= min_matches)
             ):
                 seen.add(text)
                 yield vimify(feed, step=step)

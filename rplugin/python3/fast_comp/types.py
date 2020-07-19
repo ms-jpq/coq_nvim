@@ -89,6 +89,7 @@ class SourceFactory:
 
 @dataclass(frozen=True)
 class Fuzziness:
+    full_match: bool
     matches: Sequence[int]
     rank: Sequence[Union[int, str]]
 
