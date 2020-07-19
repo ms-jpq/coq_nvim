@@ -17,18 +17,16 @@ class Payload:
 
 def fuzziness(prefix: str, text: str) -> Fuzziness:
     normalized = text.lower()
-    acc: List[int] = []
+    matches: List[int] = []
     idx = 0
 
     for char in prefix:
-        idx = normalized.find(char, idx)
-        if idx == -1:
-            break
-        else:
-            acc.append(idx)
+        new = normalized.find(char, idx)
+        if new != -1:
+            idx = new
+            matches.append(idx)
 
-    matches = len(acc)
-    rank = (matches * -1, sum(acc))
+    rank = (len(matches) * -1, sum(matches))
     return Fuzziness(matches=matches, rank=rank)
 
 
@@ -48,11 +46,29 @@ def gen_payload(feed: SourceFeed, text: str) -> Payload:
     return Payload(row=row, new_col=new_col, new_line=new_line)
 
 
+def context_gen(text: str, fuzz: Fuzziness) -> str:
+    match_set = {*fuzz.matches}
+
+    def gen() -> Iterator[str]:
+        for idx, char in enumerate(text):
+            if (idx - 1) not in match_set:
+                yield "["
+            yield char
+            if (idx + 1) not in match_set:
+                yield "]"
+
+    return "".join(gen())
+
+
 def vimify(feed: SourceFeed, step: Step) -> VimCompletion:
     source = f"[{step.source}]"
     comp = step.comp
     menu = f"{comp.kind} {source}" if comp.kind else source
-    abbr = comp.label or comp.text
+    abbr = (
+        (comp.label or comp.text)
+        if len(step.fuzz.matches) == len(feed.prefix)
+        else context_gen(comp.text, step.fuzz)
+    )
     user_data = gen_payload(feed, text=comp.text)
     ret = VimCompletion(
         equal=1,
