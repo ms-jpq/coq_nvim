@@ -95,8 +95,6 @@ async def manufacture(nvim: Nvim, factory: SourceFactory) -> Tuple[StepFunction,
                     fuzz=fuzz,
                 )
                 acc.append(completion)
-                if len(acc) >= factory.limit:
-                    break
 
         done, pending = await wait((cont(),), timeout=factory.timeout)
         await gather(*done)
@@ -140,7 +138,8 @@ async def merge(
     Callable[[], Awaitable[Tuple[Position, Iterator[VimCompletion]]]],
     Callable[[], Awaitable[None]],
 ]:
-    fuzzy = fuzzer(settings.fuzzy)
+    limits = {fact.name: fact.limit for fact in factories}
+    fuzzy = fuzzer(settings.fuzzy, limits=limits)
     src_gen = await gather(*(osha(nvim, factory=factory) for factory in factories))
     chans: Dict[str, Queue] = {name: chan for name, _, chan in src_gen}
     sources = tuple(source for _, source, _ in src_gen)

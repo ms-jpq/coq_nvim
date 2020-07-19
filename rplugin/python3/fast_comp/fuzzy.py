@@ -1,6 +1,7 @@
 from collections import deque
 from dataclasses import asdict, dataclass
 from locale import strxfrm
+from math import inf
 from typing import Any, Callable, Dict, Iterator, Sequence, Set, Union, cast
 
 from pynvim import Nvim
@@ -136,24 +137,30 @@ def patch(nvim: Nvim, comp: Dict[str, Any]) -> None:
 
 
 def fuzzer(
-    options: FuzzyOptions,
+    options: FuzzyOptions, limits: Dict[str, int]
 ) -> Callable[[SourceFeed, Sequence[Step]], Iterator[VimCompletion]]:
     cache = make_cache(options)
 
     def fuzzy(feed: SourceFeed, steps: Sequence[Step]) -> Iterator[VimCompletion]:
         prefix = feed.prefix.alnums
         seen: Set[str] = set()
+        seen_by_source: Dict[str, int] = {}
 
         fuzzy_steps = cache(feed, steps)
         for step in sorted(fuzzy_steps, key=rank):
-            text = step.comp.text
-            matches = len(step.fuzz.matches)
-            if (
-                text not in seen
-                and text != prefix
-                and (step.fuzz.full_match or matches >= options.min_match)
-            ):
-                seen.add(text)
-                yield vimify(feed, step=step)
+            source = step.source
+            seen_count = seen_by_source.get(source, 0)
+            seen_by_source[source] = seen_count + 1
+            if seen_count <= limits.get(source, inf):
+
+                text = step.comp.text
+                matches = len(step.fuzz.matches)
+                if (
+                    text not in seen
+                    and text != prefix
+                    and (step.fuzz.full_match or matches >= options.min_match)
+                ):
+                    seen.add(text)
+                    yield vimify(feed, step=step)
 
     return fuzzy
