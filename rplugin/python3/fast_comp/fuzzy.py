@@ -25,10 +25,8 @@ def fuzziness(prefix: str, normalized: str) -> Fuzziness:
             matches.append(new)
             idx = new + 1
 
-    lm = len(matches)
-    sm = sum(matches)
-    rank = (lm * -1, sm)
-    full_match = sm == sum(range(lm))
+    rank = (len(matches) * -1, sum(matches))
+    full_match = normalized.startswith(prefix)
     return Fuzziness(full_match=full_match, matches=matches, rank=rank)
 
 
