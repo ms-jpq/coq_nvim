@@ -51,10 +51,11 @@ def context_gen(text: str, fuzz: Fuzziness) -> str:
 
     def gen() -> Iterator[str]:
         for idx, char in enumerate(text):
-            if (idx - 1) not in match_set:
+            inclusive = idx in match_set
+            if inclusive and (idx - 1) not in match_set:
                 yield "["
             yield char
-            if (idx + 1) not in match_set:
+            if inclusive and (idx + 1) not in match_set:
                 yield "]"
 
     return "".join(gen())
