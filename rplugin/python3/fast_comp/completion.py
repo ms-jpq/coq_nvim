@@ -30,7 +30,7 @@ from .types import (
 StepFunction = Callable[[SourceFeed], Awaitable[Sequence[Step]]]
 
 
-def parse_prefix(line: str, col: int) -> Prefix:
+def gen_prefix(line: str, col: int) -> Prefix:
     before = line[:col]
     it = reversed(before)
 
@@ -64,7 +64,7 @@ async def gen_feed(nvim: Nvim) -> SourceFeed:
         row, col = nvim.api.win_get_cursor(window)
         line = nvim.api.get_current_line()
         position = Position(row=row, col=col)
-        prefix = parse_prefix(line, col)
+        prefix = gen_prefix(line, col)
         return SourceFeed(filetype=filetype, position=position, prefix=prefix)
 
     return await call(nvim, fed)
@@ -142,10 +142,15 @@ async def merge(
 
     async def gen() -> Tuple[Position, Iterator[VimCompletion]]:
         feed = await gen_feed(nvim)
+        prefix = feed.prefix
         position = feed.position
-        comps = await gather(*(source(feed) for source in sources))
-        completions = (c for co in comps for c in co)
-        return position, fuzzy(feed, completions)
+        go = prefix.alnums or prefix.syms
+        if go:
+            comps = await gather(*(source(feed) for source in sources))
+            completions = (c for co in comps for c in co)
+            return position, fuzzy(feed, completions)
+        else:
+            return position, iter(())
 
     async def listen() -> None:
         while True:
