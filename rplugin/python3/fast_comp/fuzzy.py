@@ -86,8 +86,11 @@ def vimify(feed: SourceFeed, step: Step) -> VimCompletion:
     return ret
 
 
-def lru() -> Callable[[Position, Iterator[Step]], Iterator[VimCompletion]]:
-    pass
+def lru() -> Callable[[Position, Iterator[Step]], Iterator[Step]]:
+    def cache(position: Position, steps: Iterator[Step]) -> Iterator[Step]:
+        return steps
+
+    return cache
 
 
 def patch(nvim: Nvim, comp: Dict[str, Any]) -> None:
@@ -111,12 +114,14 @@ def fuzzer(
     settings: Settings,
 ) -> Callable[[SourceFeed, Iterator[Step]], Iterator[VimCompletion]]:
     min_matches = settings.fuzzy.min_match
+    cache = lru()
 
     def fuzzy(feed: SourceFeed, steps: Iterator[Step]) -> Iterator[VimCompletion]:
         prefix = feed.prefix.alnums
         seen: Set[str] = set()
 
-        for step in sorted(steps, key=rank):
+        fuzzy_steps = cache(feed.position, steps)
+        for step in sorted(fuzzy_steps, key=rank):
             text = step.comp.text
             matches = len(step.fuzz.matches)
             if (
