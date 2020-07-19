@@ -8,6 +8,7 @@ from typing import (
     Dict,
     Optional,
     Sequence,
+    Set,
     Union,
 )
 
@@ -96,7 +97,7 @@ class SourceFactory:
 @dataclass(frozen=True)
 class Fuzziness:
     full_match: bool
-    matches: Sequence[int]
+    matches: Set[int]
     rank: Sequence[Union[int, str]]
 
 

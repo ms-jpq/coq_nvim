@@ -1,6 +1,6 @@
 from dataclasses import asdict, dataclass
 from locale import strxfrm
-from typing import Any, Callable, Dict, Iterator, List, Sequence, Set, Union, cast
+from typing import Any, Callable, Dict, Iterator, Sequence, Set, Union, cast
 
 from pynvim import Nvim
 
@@ -16,13 +16,13 @@ class Payload:
 
 
 def fuzziness(prefix: str, normalized: str) -> Fuzziness:
-    matches: List[int] = []
+    matches: Set[int] = set()
     idx = 0
 
     for char in prefix:
         new = normalized.find(char, idx)
         if new != -1:
-            matches.append(new)
+            matches.add(new)
             idx = new + 1
 
     rank = (len(matches) * -1, sum(matches))
@@ -48,7 +48,7 @@ def gen_payload(feed: SourceFeed, text: str) -> Payload:
 
 
 def context_gen(text: str, fuzz: Fuzziness) -> str:
-    match_set = {*fuzz.matches}
+    match_set = fuzz.matches
 
     def gen() -> Iterator[str]:
         for idx, char in enumerate(text):

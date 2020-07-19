@@ -1,8 +1,10 @@
-# Fast Comp
+# Fuzzy Completion
 
 The **BEST** async completion framework for Neovim
 
 Comes with a amazing scheduler that works for many + slow sources.
+
+Comes with VScode style fuzzy matches!
 
 ## Advanced Scheduler
 
@@ -15,6 +17,8 @@ Comes with a amazing scheduler that works for many + slow sources.
 - Cancel culture (invalidate outdated completion candidates)
 
 - Hackable (EASY extension protocol, dynamic json config)
+
+## Fuzzy Search
 
 ## Sources
 
