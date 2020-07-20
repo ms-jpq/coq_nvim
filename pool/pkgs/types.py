@@ -16,8 +16,10 @@ class Position:
 
 
 @dataclass(frozen=True)
-class Prefix:
+class Context:
     line: str
+    line_before: str
+    line_after: str
     alnums: str
     syms: str
 
@@ -27,7 +29,7 @@ class SourceFeed:
     filename: str
     filetype: str
     position: Position
-    prefix: Prefix
+    context: Context
 
 
 @dataclass(frozen=True)

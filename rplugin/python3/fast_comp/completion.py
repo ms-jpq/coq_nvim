@@ -22,7 +22,7 @@ from .types import (
     Factory,
     Notification,
     Position,
-    Prefix,
+    Context,
     Settings,
     SourceFactory,
     SourceFeed,
@@ -32,12 +32,13 @@ from .types import (
 StepFunction = Callable[[SourceFeed], Awaitable[Sequence[Step]]]
 
 
-def gen_prefix(line: str, col: int) -> Prefix:
+def gen_context(line: str, col: int) -> Context:
     def is_sym(char: str) -> bool:
         return not char.isalnum() and not char.isspace()
 
-    before = line[:col]
-    it = reversed(before)
+    line_before = line[:col]
+    line_after = line[col:]
+    it = reversed(line_before)
 
     r_alnums: List[str] = []
     r_syms: List[str] = []
@@ -57,7 +58,13 @@ def gen_prefix(line: str, col: int) -> Prefix:
 
     alnums = "".join(reversed(r_alnums))
     syms = "".join(reversed(r_syms))
-    return Prefix(line=line, alnums=alnums, syms=syms)
+    return Context(
+        line=line,
+        line_before=line_before,
+        line_after=line_after,
+        alnums=alnums,
+        syms=syms,
+    )
 
 
 async def gen_feed(nvim: Nvim) -> SourceFeed:
@@ -69,9 +76,9 @@ async def gen_feed(nvim: Nvim) -> SourceFeed:
         row, col = nvim.api.win_get_cursor(window)
         line = nvim.api.get_current_line()
         position = Position(row=row, col=col)
-        prefix = gen_prefix(line, col)
+        context = gen_context(line, col)
         return SourceFeed(
-            filename=filename, filetype=filetype, position=position, prefix=prefix
+            filename=filename, filetype=filetype, position=position, context=context
         )
 
     return await call(nvim, fed)
@@ -158,7 +165,7 @@ async def merge(
 
     async def gen(force: bool) -> Tuple[Position, Iterator[VimCompletion]]:
         feed = await gen_feed(nvim)
-        prefix = feed.prefix
+        prefix = feed.context
         position = feed.position
         go = prefix.alnums or prefix.syms
         if go or force:

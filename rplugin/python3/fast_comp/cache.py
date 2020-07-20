@@ -7,8 +7,13 @@ from .types import FuzzyOptions, SourceCompletion, SourceFeed, Step
 
 def shift_step(feed: SourceFeed, step: Step) -> Step:
     prev_comp = step.comp
-    f_row = feed.position.row
-    s_row = prev_comp.position.row
+
+    f_col = feed.position.col
+    s_col = prev_comp.position.col
+    col_diff = s_col - f_col
+
+    old_line = feed.context.line
+
     comp = SourceCompletion(
         position=prev_comp.position,
         old_prefix=prev_comp.old_prefix,
