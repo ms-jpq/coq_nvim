@@ -6,32 +6,31 @@ from .types import FuzzyOptions, SourceCompletion, SourceFeed, Step
 
 
 def shift_step(feed: SourceFeed, step: Step) -> Step:
-    prev_comp = step.comp
-    new_line = feed.context.line
+    comp = step.comp
+    old_prefix, old_suffix = comp.old_prefix, comp.old_suffix
+    old_col, new_col = comp.position.col, feed.position.col
 
-    old_col = prev_comp.position.col
-    old_pre = new_line[:old_col]
-    old_post = new_line[old_col:]
+    col_diff = new_col - old_col
+    n_o_prefix = " " * (len(old_prefix) + col_diff)
+    n_o_suffix = " " * (len(old_suffix) - col_diff)
 
-
-
-    comp = SourceCompletion(
-        position=prev_comp.position,
-        old_prefix=prev_comp.old_prefix,
-        new_prefix=prev_comp.new_prefix,
-        old_suffix=prev_comp.old_prefix,
-        new_suffix=prev_comp.new_prefix,
-        label=prev_comp.label,
-        sortby=prev_comp.sortby,
-        kind=prev_comp.kind,
-        doc=prev_comp.doc,
+    new_comp = SourceCompletion(
+        position=comp.position,
+        old_prefix=n_o_prefix,
+        new_prefix=comp.new_prefix,
+        old_suffix=n_o_suffix,
+        new_suffix=comp.new_prefix,
+        label=comp.label,
+        sortby=comp.sortby,
+        kind=comp.kind,
+        doc=comp.doc,
     )
     return Step(
         source=step.source,
         source_shortname=step.source_shortname,
         priority=step.priority,
         normalized=step.normalized,
-        comp=comp,
+        comp=new_comp,
     )
 
 
