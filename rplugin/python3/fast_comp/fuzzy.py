@@ -15,13 +15,18 @@ class FuzzyStep:
     rank: Sequence[Union[int, str]]
 
 
+def normalize(text: str) -> str:
+    return text.lower()
+
+
 def fuzzify(feed: SourceFeed, step: Step) -> FuzzyStep:
     original = feed.context.alnums
+    alnums = step.alnums
     normalized = step.normalized_alnums
     matches: Dict[int, str] = {}
     idx = 0
 
-    for o_char, char in zip(original, normalized):
+    for o_char, char in zip(alnums, normalized):
         m_idx = normalized.find(char, idx)
         if m_idx != -1:
             matches[m_idx] = o_char
@@ -41,7 +46,7 @@ def fuzzify(feed: SourceFeed, step: Step) -> FuzzyStep:
 
 def rank(fuzz: FuzzyStep) -> Sequence[Union[float, int, str]]:
     comp = fuzz.step.comp
-    text = strxfrm(comp.sortby or comp.label or fuzz.step.text).lower()
+    text = normalize(strxfrm(comp.sortby or comp.label or fuzz.step.text))
     return (*fuzz.rank, fuzz.step.priority * -1, text)
 
 

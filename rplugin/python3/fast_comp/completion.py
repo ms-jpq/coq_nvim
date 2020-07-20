@@ -16,7 +16,7 @@ from typing import (
 from pynvim import Nvim
 
 from .cache import make_cache
-from .fuzzy import fuzzer
+from .fuzzy import fuzzer, normalize
 from .nvim import VimCompletion, call, print
 from .types import (
     Factory,
@@ -30,6 +30,7 @@ from .types import (
 )
 
 StepFunction = Callable[[SourceFeed], Awaitable[Sequence[Step]]]
+
 
 
 def gen_context(line: str, col: int) -> Context:
@@ -81,6 +82,8 @@ def gen_context(line: str, col: int) -> Context:
     syms_after = "".join(r_syms)
     syms = syms_before + syms_after
 
+    normalized_alnums = normalize(alnums)
+
     return Context(
         line=line,
         line_before=line_before,
@@ -91,6 +94,7 @@ def gen_context(line: str, col: int) -> Context:
         syms=syms,
         syms_before=syms_before,
         syms_after=syms_after,
+        normalized_alnums=normalized_alnums,
     )
 
 
@@ -142,13 +146,15 @@ async def manufacture(nvim: Nvim, factory: SourceFactory) -> Tuple[StepFunction,
         async def cont() -> None:
             async for comp in src(feed):
                 text = comp.new_prefix + comp.new_suffix
-                normalized_alnums = p_alnums(comp.new_prefix, comp.new_suffix).lower()
+                alnums = p_alnums(comp.new_prefix, comp.new_suffix)
+                normalized_alnums = normalize(alnums)
                 completion = Step(
                     source=name,
                     source_shortname=factory.short_name,
                     priority=factory.priority,
-                    normalized_alnums=normalized_alnums,
                     text=text,
+                    alnums=alnums,
+                    normalized_alnums=normalized_alnums,
                     comp=comp,
                 )
                 acc.append(completion)

@@ -61,6 +61,7 @@ class Context:
     syms: str
     syms_before: str
     syms_after: str
+    normalized_alnums: str
 
 
 @dataclass(frozen=True)
@@ -105,6 +106,7 @@ class Step:
     source_shortname: str
     priority: float
     text: str
+    alnums: str
     normalized_alnums: str
     comp: SourceCompletion
 
