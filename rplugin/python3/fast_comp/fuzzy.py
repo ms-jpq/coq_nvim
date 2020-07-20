@@ -72,7 +72,8 @@ def context_gen(fuzz: FuzzyStep) -> str:
             if inclusive and (idx + 1) not in match_set:
                 yield "]"
 
-    return "".join(gen())
+    label = "".join(gen())
+    return f"{text}, {label}"
 
 
 def vimify(feed: SourceFeed, fuzz: FuzzyStep) -> VimCompletion:
