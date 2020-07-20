@@ -1,5 +1,5 @@
 from os import linesep
-from typing import Any, Dict, Iterable, Sequence, Tuple, cast
+from typing import Any, Dict, Sequence, Tuple, cast
 
 from pynvim import Nvim
 
@@ -18,16 +18,8 @@ def replace_lines(nvim: Nvim, payload: Payload) -> None:
     buf = nvim.api.get_current_buf()
     old_lines: Sequence[str] = nvim.api.buf_get_lines(buf, btm_idx, top_idx, True)
 
-    def find_idx() -> Iterable[int]:
-        for r, line_len in enumerate(map(len, old_lines)):
-            if r < old_lc:
-                yield line_len
-            else:
-                yield col
-                break
-
     def pre_post() -> Tuple[str, str]:
-        idx = sum(find_idx())
+        idx = sum(map(len, old_lines[:old_lc])) + col
         old = "".join(old_lines)
         pre = old[: idx - len(old_prefix)]
         post = old[idx + len(old_suffix) :]
