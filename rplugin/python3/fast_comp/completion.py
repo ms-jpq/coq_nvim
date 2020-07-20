@@ -136,7 +136,7 @@ async def osha(
 async def merge(
     nvim: Nvim, chan: Queue, factories: Iterator[SourceFactory], settings: Settings
 ) -> Tuple[
-    Callable[[], Awaitable[Tuple[Position, Iterator[VimCompletion]]]],
+    Callable[[bool], Awaitable[Tuple[Position, Iterator[VimCompletion]]]],
     Callable[[], Awaitable[None]],
 ]:
     facts = tuple(factories)
@@ -148,12 +148,12 @@ async def merge(
 
     push, retrieve = make_cache(settings.fuzzy)
 
-    async def gen() -> Tuple[Position, Iterator[VimCompletion]]:
+    async def gen(force: bool) -> Tuple[Position, Iterator[VimCompletion]]:
         feed = await gen_feed(nvim)
         prefix = feed.prefix
         position = feed.position
         go = prefix.alnums or prefix.syms
-        if go:
+        if go or force:
             cached, *comps = await gather(
                 retrieve(feed), *(source(feed) for source in sources)
             )

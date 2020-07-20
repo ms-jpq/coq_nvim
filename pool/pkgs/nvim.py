@@ -34,30 +34,3 @@ async def print(
             write("\n")
 
     await call(nvim, cont)
-
-
-async def autocmd(
-    nvim: Nvim,
-    *,
-    events: Iterable[str],
-    fn: str,
-    filters: Iterable[str] = ("*",),
-    modifiers: Iterable[str] = (),
-    arg_eval: Iterable[str] = (),
-) -> None:
-    _events = ",".join(events)
-    _filters = " ".join(filters)
-    _modifiers = " ".join(modifiers)
-    _args = ", ".join(arg_eval)
-    group = f"augroup {uuid4()}"
-    cls = "autocmd!"
-    cmd = f"autocmd {_events} {_filters} {_modifiers} call {fn}({_args})"
-    group_end = "augroup END"
-
-    def cont() -> None:
-        nvim.api.command(group)
-        nvim.api.command(cls)
-        nvim.api.command(cmd)
-        nvim.api.command(group_end)
-
-    await call(nvim, cont)

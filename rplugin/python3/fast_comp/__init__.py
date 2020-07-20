@@ -14,7 +14,7 @@ from pynvim import Nvim, command, function, plugin
 from .completion import merge
 from .fuzzy import patch
 from .nvim import autocmd, complete, print
-from .scheduler import schedule, sig
+from .scheduler import schedule, Signal
 from .settings import initial, load_factories
 from .state import forward
 from .state import initial as initial_state
@@ -93,9 +93,9 @@ class Main:
 
         self._submit(print(self.nvim, "Fast Comp 🍎"))
 
-    def next_comp(self) -> None:
+    def next_comp(self, force: bool) -> None:
         async def cont() -> None:
-            await self.ch.put(sig)
+            await self.ch.put(Signal(args=(force,)))
 
         self._submit(cont())
 
@@ -105,7 +105,7 @@ class Main:
         if find_start == 1:
             return -1
         else:
-            self.next_comp()
+            self.next_comp(force=True)
             return -2
 
     @function("_FCnotify")
@@ -124,7 +124,7 @@ class Main:
     @function("_FCtextchangedi")
     def text_changed_i(self, args: Sequence[Any]) -> None:
         try:
-            self.next_comp()
+            self.next_comp(force=False)
         finally:
             self.state = forward(self.state, char_inserted=False)
 
@@ -132,7 +132,7 @@ class Main:
     def text_changed_p(self, args: Sequence[Any]) -> None:
         try:
             if self.state.char_inserted:
-                self.next_comp()
+                self.next_comp(force=False)
         finally:
             self.state = forward(self.state, char_inserted=False)
 

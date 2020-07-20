@@ -16,6 +16,7 @@ def make_cache(
 
     # buf -> row -> col
     bufs: Dict[str, Dict[int, Dict[int, Sequence[Step]]]] = {}
+    # buf -> row -> col
 
     def push(feed: SourceFeed, steps: Sequence[Step]) -> None:
         position = feed.position
