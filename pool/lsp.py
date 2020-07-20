@@ -32,7 +32,7 @@ async def ask(nvim: Nvim, chan: Queue, pos: Position, uid: int) -> Optional[Any]
     col = pos.col
 
     def cont() -> None:
-        nvim.api.exec_lua("fast_comp.list_comp_candidates(...)", (uid, row, col))
+        nvim.api.exec_lua("fast_comp_lsp.list_comp_candidates(...)", (uid, row, col))
 
     await call(nvim, cont)
     while True:
