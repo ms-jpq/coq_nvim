@@ -1,7 +1,6 @@
 from collections import deque
 from dataclasses import asdict, dataclass
 from locale import strxfrm
-from math import inf
 from typing import Any, Callable, Dict, Iterator, Sequence, Set, Union, cast
 
 from pynvim import Nvim
@@ -159,19 +158,18 @@ def fuzzer(
         for fuzz in sorted(fuzzy_steps, key=rank):
             step = fuzz.step
             source = step.source
-            limit = limits.get(source, inf)
             seen_count = seen_by_source.get(source, 0) + 1
             seen_by_source[source] = seen_count
-            if seen_count <= limit:
+            text = step.comp.text
+            matches = len(fuzz.matches)
 
-                text = step.comp.text
-                matches = len(fuzz.matches)
-                if (
-                    text not in seen
-                    and text != prefix
-                    and (fuzz.full_match or matches >= options.min_match)
-                ):
-                    seen.add(text)
-                    yield vimify(feed, fuzz=fuzz)
+            if (
+                seen_count <= limits[source]
+                and text not in seen
+                and text != prefix
+                and (fuzz.full_match or matches >= options.min_match)
+            ):
+                seen.add(text)
+                yield vimify(feed, fuzz=fuzz)
 
     return fuzzy
