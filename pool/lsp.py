@@ -19,9 +19,9 @@ from pynvim import Nvim
 
 async def init_lua(nvim: Nvim) -> Tuple[Dict[str, int], Dict[str, int]]:
     def cont() -> Tuple[Dict[str, int], Dict[str, int]]:
-        nvim.api.exec_lua("fast_comp = require 'fast_comp'", ())
-        entry_kind = nvim.api.exec_lua("return fast_comp.list_entry_kind()", ())
-        insert_kind = nvim.api.exec_lua("return fast_comp.list_insert_kind()", ())
+        nvim.api.exec_lua("fast_comp_lsp = require 'fast_comp_lsp'", ())
+        entry_kind = nvim.api.exec_lua("return fast_comp_lsp.list_entry_kind()", ())
+        insert_kind = nvim.api.exec_lua("return fast_comp_lsp.list_insert_kind()", ())
         return entry_kind, insert_kind
 
     return await call(nvim, cont)
