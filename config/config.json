@@ -6,6 +6,7 @@
   "sources": {
     "buffers": {
       "config": {
+        "min_length": 3,
         "same_filetype": false
       },
       "enabled": true,

@@ -12,6 +12,7 @@ from pynvim.api.buffer import Buffer
 @dataclass(frozen=True)
 class Config:
     same_filetype: bool
+    min_length: int
 
 
 def buf_gen(nvim: Nvim, config: Config, filetype: str) -> Iterator[Buffer]:
@@ -39,17 +40,19 @@ async def buffer_chars(nvim: Nvim, buf_gen: Iterator[Buffer]) -> Sequence[str]:
     return chars
 
 
-def coalesce(chars: Sequence[str]) -> Iterator[str]:
+def coalesce(chars: Sequence[str], config: Config) -> Iterator[str]:
+    min_length = config.min_length
     acc: Set[str] = set()
     curr: List[str] = []
+
     for char in chars:
         if char.isalnum():
             curr.append(char)
         elif curr:
             word = "".join(curr)
-            if word not in acc:
+            if word not in acc and len(word) >= min_length:
+                acc.add(word)
                 yield word
-            acc.add(word)
             curr = []
 
     if curr:
@@ -66,7 +69,7 @@ async def main(nvim: Nvim, chan: Queue, seed: SourceSeed) -> Source:
         if prefix_alnums:
             b_gen = buf_gen(nvim, config=config, filetype=feed.filetype)
             lines = await buffer_chars(nvim, b_gen)
-            for word in coalesce(lines):
+            for word in coalesce(lines, config=config):
                 yield SourceCompletion(text=word)
 
     return source

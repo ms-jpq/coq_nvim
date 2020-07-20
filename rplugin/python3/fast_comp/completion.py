@@ -83,13 +83,15 @@ async def manufacture(nvim: Nvim, factory: SourceFactory) -> Tuple[StepFunction,
     src = await fact(nvim, chan, factory.seed)
 
     async def source(feed: SourceFeed) -> Sequence[Step]:
+        name = factory.name
+        timeout = factory.timeout
         acc: List[Step] = []
 
         async def cont() -> None:
             async for comp in src(feed):
                 normalized = comp.text.lower()
                 completion = Step(
-                    source=factory.name,
+                    source=name,
                     source_shortname=factory.short_name,
                     priority=factory.priority,
                     normalized=normalized,
@@ -97,10 +99,13 @@ async def manufacture(nvim: Nvim, factory: SourceFactory) -> Tuple[StepFunction,
                 )
                 acc.append(completion)
 
-        done, pending = await wait((cont(),), timeout=factory.timeout)
+        done, pending = await wait((cont(),), timeout=timeout)
         await gather(*done)
         for p in pending:
             p.cancel()
+        if pending:
+            msg = f"async completion source timed out - {name}, exceeded {timeout}ms"
+            await print(nvim, msg)
         return acc
 
     return source, chan
