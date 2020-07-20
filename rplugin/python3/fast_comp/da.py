@@ -1,8 +1,6 @@
-from importlib.machinery import SourceFileLoader
-from importlib.util import module_from_spec, spec_from_loader
+from importlib.util import module_from_spec, spec_from_file_location
 from json import load
-from os.path import basename, dirname, splitext
-from sys import path as sys_path
+from os.path import basename, splitext
 from types import ModuleType
 from typing import Any, Optional, TypeVar, cast
 
@@ -37,11 +35,8 @@ def merge_all(ds1: Any, *dss: Any, replace: bool = False) -> Any:
 
 
 def load_module(path: str) -> ModuleType:
-    parent = dirname(path)
     name, _ = splitext(basename(path))
-    if parent not in sys_path:
-        sys_path.append(parent)
-    spec = spec_from_loader(name, loader=SourceFileLoader(name, path))
+    spec = spec_from_file_location(name, path, submodule_search_locations=[])
     mod = module_from_spec(spec)
     cast(Any, spec.loader).exec_module(mod)
     return mod
