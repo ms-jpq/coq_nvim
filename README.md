@@ -6,6 +6,8 @@ Comes with a amazing scheduler that works for many + slow sources.
 
 Comes with VScode style fuzzy matches!
 
+## Fuzzy Search
+
 ## Advanced Scheduler
 
 - Concurrent! multi source completion
@@ -14,16 +16,32 @@ Comes with VScode style fuzzy matches!
 
 - Never blocks
 
-- Cancel culture (invalidate outdated completion candidates)
+- Cancel culture (fetch first, cancel later)
 
 - Hackable (EASY extension protocol, dynamic json config)
 
-## Fuzzy Search
+## Install
 
-## Sources
+Requires pyvim (as all python plugins do)
 
-### LSP
+```sh
+pip3 install pynvim
+```
 
-### Buffers
+Install the usual way, ie. [VimPlug](https://github.com/junegunn/vim-plug), [Vundle](https://github.com/VundleVim/Vundle.vim), etc
 
-### Paths
+```VimL
+Plug 'ms-jpq/fast-fm', {'branch': 'nvim', 'do': ':UpdateRemotePlugins'}
+```
+
+## Documentation
+
+### Builtin Sources
+
+#### LSP
+
+#### Buffers
+
+#### Paths
+
+### Configuration
