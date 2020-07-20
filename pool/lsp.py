@@ -1,13 +1,21 @@
 from asyncio import Queue
 from itertools import count
-from typing import (Any, AsyncIterator, Dict, Iterator, Optional, Sequence,
-                    Tuple, Union, cast)
+from typing import (
+    Any,
+    AsyncIterator,
+    Dict,
+    Iterator,
+    Optional,
+    Sequence,
+    Tuple,
+    Union,
+    cast,
+)
 
 from pynvim import Nvim
 
+from .pkgs.fc_types import Position, Source, SourceCompletion, SourceFeed, SourceSeed
 from .pkgs.nvim import call
-from .pkgs.types import (Position, Source, SourceCompletion, SourceFeed,
-                         SourceSeed)
 
 
 async def init_lua(nvim: Nvim) -> Tuple[Dict[str, int], Dict[str, int]]:
@@ -89,7 +97,11 @@ def parse_rows(
         yield SourceCompletion(
             position=position,
             old_prefix=old_prefix,
-            new_prefix=text, label=label, sortby=sortby, kind=kind, doc=doc
+            new_prefix=text,
+            label=label,
+            sortby=sortby,
+            kind=kind,
+            doc=doc,
         )
 
 

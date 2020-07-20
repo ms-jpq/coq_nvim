@@ -3,7 +3,7 @@ from typing import AsyncIterator
 
 from pynvim import Nvim
 
-from .pkgs.types import Source, SourceCompletion, SourceFeed, SourceSeed
+from .pkgs.fc_types import Source, SourceCompletion, SourceFeed, SourceSeed
 
 
 # TODO -- waiting on tree sitter to stabilize

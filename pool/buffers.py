@@ -7,8 +7,8 @@ from typing import AsyncIterator, Iterator, List, Sequence, Set
 from pynvim import Nvim
 from pynvim.api.buffer import Buffer
 
+from .pkgs.fc_types import Source, SourceCompletion, SourceFeed, SourceSeed
 from .pkgs.nvim import call
-from .pkgs.types import Source, SourceCompletion, SourceFeed, SourceSeed
 
 
 @dataclass(frozen=True)

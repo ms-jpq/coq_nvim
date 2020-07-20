@@ -2,6 +2,7 @@ from importlib.util import module_from_spec, spec_from_file_location
 from json import load
 from os.path import basename, splitext
 from sys import modules
+from types import ModuleType
 from typing import Any, Optional, TypeVar, cast
 
 T = TypeVar("T")
@@ -34,7 +35,7 @@ def merge_all(ds1: Any, *dss: Any, replace: bool = False) -> Any:
     return res
 
 
-def load_module(path: str) -> Any:
+def load_module(path: str) -> ModuleType:
     name, _ = splitext(basename(path))
     spec = spec_from_file_location(name, path, submodule_search_locations=[])
     mod = module_from_spec(spec)

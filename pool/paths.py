@@ -6,7 +6,7 @@ from typing import AsyncIterator, Iterator, Sequence
 from pynvim import Nvim
 
 from .pkgs.da import anext
-from .pkgs.types import Source, SourceCompletion, SourceFeed, SourceSeed
+from .pkgs.fc_types import Source, SourceCompletion, SourceFeed, SourceSeed
 
 
 def parse_path(root: str, parent: str = "") -> Iterator[str]:
