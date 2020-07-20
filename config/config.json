@@ -12,7 +12,7 @@
       "enabled": true,
       "limit": 5,
       "main": "buffers.py",
-      "priority": 1,
+      "priority": 0,
       "short_name": "B",
       "timeout": 50
     },
@@ -30,7 +30,7 @@
       "enabled": true,
       "limit": 3,
       "main": "paths.py",
-      "priority": 0,
+      "priority": 1,
       "short_name": "F",
       "timeout": 50
     },

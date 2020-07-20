@@ -30,7 +30,7 @@ def replace_lines(nvim: Nvim, payload: Payload) -> None:
         idx = sum(find_idx())
         old = "".join(old_lines)
         pre = old[: idx - len(old_prefix)]
-        post = old[idx + len(old_suffix) + 1 :]
+        post = old[idx + len(old_suffix) :]
         return pre, post
 
     pre, post = pre_post()
