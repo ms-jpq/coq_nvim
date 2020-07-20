@@ -132,6 +132,7 @@ def fuzzer(
             if (
                 seen_count <= limits[source]
                 and text not in seen
+                and len(text) >= len(prefix)
                 and text != prefix
                 and (fuzz.full_match or matches >= options.min_match)
             ):
