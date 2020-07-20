@@ -54,7 +54,7 @@ def replace_lines(nvim: Nvim, payload: Payload) -> None:
     nvim.api.out_write(msg + "\n")
 
 
-def patch(nvim: Nvim, comp: Dict[str, Any]) -> None:
+def apply_patch(nvim: Nvim, comp: Dict[str, Any]) -> None:
     data = comp.get("user_data")
     if type(data) == dict:
         try:

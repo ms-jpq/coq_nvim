@@ -1,12 +1,14 @@
 from asyncio import Queue
 from dataclasses import dataclass
 from itertools import chain
-from typing import AsyncIterator, Iterator, List, Sequence, Set
 from os import linesep
-from pkgs.nvim import call
-from pkgs.types import Source, SourceCompletion, SourceFeed, SourceSeed
+from typing import AsyncIterator, Iterator, List, Sequence, Set
+
 from pynvim import Nvim
 from pynvim.api.buffer import Buffer
+
+from .pkgs.nvim import call
+from .pkgs.types import Source, SourceCompletion, SourceFeed, SourceSeed
 
 
 @dataclass(frozen=True)

@@ -3,9 +3,10 @@ from os import listdir
 from os.path import basename, dirname, isdir, sep
 from typing import AsyncIterator, Iterator, Sequence
 
-from pkgs.da import anext
-from pkgs.types import Source, SourceCompletion, SourceFeed, SourceSeed
 from pynvim import Nvim
+
+from .pkgs.da import anext
+from .pkgs.types import Source, SourceCompletion, SourceFeed, SourceSeed
 
 
 def parse_path(root: str, parent: str = "") -> Iterator[str]:
@@ -63,10 +64,14 @@ async def find_children(path: str, feed: SourceFeed) -> Sequence[SourceCompletio
 
 async def main(nvim: Nvim, chan: Queue, seed: SourceSeed) -> Source:
     async def source(feed: SourceFeed) -> AsyncIterator[SourceCompletion]:
-        col = feed.position.col
         before = feed.context.line_before
-        comp = (await find_children(path, feed=feed) for path in parse_path(before))
-        co = await anext(comp, ())
+
+        async def next_children() -> AsyncIterator[Sequence[SourceCompletion]]:
+            for path in parse_path(before):
+                children = await find_children(path, feed=feed)
+                yield children
+
+        co = await anext(next_children(), ())
         for c in co:
             yield c
 

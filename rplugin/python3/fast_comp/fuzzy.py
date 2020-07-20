@@ -1,6 +1,6 @@
 from dataclasses import asdict, dataclass
 from locale import strxfrm
-from typing import Callable, Dict, Iterator, Sequence, Set, Union
+from typing import Any, Callable, Dict, Iterator, Sequence, Set, Union, cast
 
 from .nvim import VimCompletion
 from .types import FuzzyOptions, Payload, SourceCompletion, Step
@@ -107,7 +107,7 @@ def fuzzer(
         seen_by_source: Dict[str, int] = {}
 
         fuzzy_steps = (fuzzify(step=step) for step in steps)
-        for fuzz in sorted(fuzzy_steps, key=rank):
+        for fuzz in sorted(fuzzy_steps, key=cast(Callable[[FuzzyStep], Any], rank)):
             step = fuzz.step
             source = step.source
             seen_count = seen_by_source.get(source, 0) + 1

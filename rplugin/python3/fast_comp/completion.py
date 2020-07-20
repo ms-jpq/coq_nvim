@@ -158,7 +158,7 @@ async def merge(
     limits = {fact.name: fact.limit for fact in facts}
     fuzzy = fuzzer(settings.fuzzy, limits=limits)
     src_gen = await gather(*(osha(nvim, factory=factory) for factory in facts))
-    chans: Dict[str, Queue] = {name: chan for name, _, chan in src_gen}
+    chans: Dict[str, Optional[Queue]] = {name: chan for name, _, chan in src_gen}
     sources = tuple(source for _, source, _ in src_gen)
 
     push, retrieve = make_cache(settings.fuzzy)
@@ -186,7 +186,7 @@ async def merge(
             ch = chans.get(source)
             if ch:
                 await ch.put(notif.body)
-            else:
+            elif source in chans:
                 await print(
                     nvim, f"Notification to uknown source - {source}", error=True
                 )

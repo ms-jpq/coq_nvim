@@ -13,7 +13,7 @@ from pynvim import Nvim, command, function, plugin
 
 from .completion import merge
 from .nvim import autocmd, complete, print
-from .patch import patch
+from .patch import apply_patch
 from .scheduler import Signal, schedule
 from .settings import initial, load_factories
 from .state import forward
@@ -143,4 +143,4 @@ class Main:
     @function("_FCpost_pum")
     def post_pum(self, args: Sequence[Any]) -> None:
         item, *_ = args
-        patch(self.nvim, comp=item)
+        apply_patch(self.nvim, comp=item)
