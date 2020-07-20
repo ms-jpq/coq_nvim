@@ -1,5 +1,5 @@
 from os import linesep
-from typing import Any, Dict, Iterable, Sequence, cast
+from typing import Any, Dict, Iterable, Sequence, Tuple, cast
 
 from pynvim import Nvim
 
@@ -22,26 +22,27 @@ def replace_lines(nvim: Nvim, payload: Payload) -> None:
     buf = nvim.api.get_current_buf()
     old_lines: Sequence[str] = nvim.api.buf_get_lines(buf, btm_idx, top_idx, True)
 
-    def find_idx() -> Iterable[int]:
-        for r, line_len in enumerate(map(len, old_lines)):
-            if r < old_lc:
-                yield line_len
-            else:
-                yield col
-                break
+    def pre() -> str:
+        before = old_lines[:old_lc]
+        curr = old_lines[old_lc][: col - len(old_prefix)]
+        return "".join(before) + curr
 
-    idx = sum(find_idx())
+    def post() -> str:
+        curr = old_lines[old_lc][col + len(old_suffix) + 1 :]
+        after = old_lines[old_lc + 1 :]
+        return curr + "".join(after)
 
-    old = "".join(old_lines)
-    pre = old[: idx - len(old_prefix)]
-    post = old[idx + len(old_suffix) + 1 :]
-    before = pre + new_prefix
-    after = new_suffix + post
+    before = pre() + new_prefix
+    after = new_suffix + post()
     new_lines = (before + after).splitlines()
 
-    r_idx = before.rfind(linesep)
-    new_row = btm_idx + before.count(linesep) + 1
-    new_col = len(before) - (0 if r_idx == -1 else r_idx)
+    def pos() -> Tuple[int, int]:
+        idx = before.rfind(linesep)
+        row = btm_idx + before.count(linesep) + 1
+        col = len(before) - (0 if idx == -1 else idx)
+        return row, col
+
+    new_row, new_col = pos()
 
     nvim.api.buf_set_lines(buf, btm_idx, top_idx, True, new_lines)
     win = nvim.api.get_current_win()
