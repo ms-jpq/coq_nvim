@@ -20,26 +20,27 @@ class FuzzyStep:
     step: Step
     non_overlapping: bool
     full_match: bool
-    matches: Set[int]
+    matches: Dict[int, str]
     rank: Sequence[Union[int, str]]
 
 
 def fuzzify(feed: SourceFeed, step: Step) -> FuzzyStep:
-    prefix = feed.prefix.alnums
+    original = feed.prefix.alnums
+    normalized_prefix = original.lower()
     text = step.comp.text
     normalized = step.normalized
-    matches: Set[int] = set()
+    matches: Dict[int, str] = {}
     idx = 0
 
-    for char in prefix:
-        new = normalized.find(char, idx)
-        if new != -1:
-            matches.add(new)
-            idx = new + 1
+    for o_char, char in zip(original, normalized_prefix):
+        m_idx = normalized.find(char, idx)
+        if m_idx != -1:
+            matches[m_idx] = o_char
+            idx = m_idx + 1
 
     rank = (len(matches) * -1, sum(matches))
-    full_match = normalized.startswith(prefix)
-    non_overlapping = len(text) > len(prefix) and text != prefix
+    full_match = normalized.startswith(normalized_prefix)
+    non_overlapping = len(text) > len(normalized_prefix) and text != normalized_prefix
     return FuzzyStep(
         step=step,
         non_overlapping=non_overlapping,
@@ -77,7 +78,8 @@ def context_gen(fuzz: FuzzyStep) -> str:
             inclusive = idx in match_set
             if inclusive and (idx - 1) not in match_set:
                 yield "["
-            yield char
+            m_char = match_set[idx] if inclusive else char
+            yield m_char
             if inclusive and (idx + 1) not in match_set:
                 yield "]"
 
