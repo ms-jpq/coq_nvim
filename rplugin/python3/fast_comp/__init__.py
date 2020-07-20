@@ -14,7 +14,7 @@ from pynvim import Nvim, command, function, plugin
 from .completion import merge
 from .fuzzy import patch
 from .nvim import autocmd, complete, print
-from .scheduler import schedule, Signal
+from .scheduler import Signal, schedule
 from .settings import initial, load_factories
 from .state import forward
 from .state import initial as initial_state
@@ -100,7 +100,11 @@ class Main:
         self._submit(cont())
 
     @function("FCmanual", sync=True)
-    def manual(self, args: Sequence[Any]) -> int:
+    def manual(self, args: Sequence[Any]) -> None:
+        self.next_comp(force=True)
+
+    @function("FComnifunc", sync=True)
+    def omnifunc(self, args: Sequence[Any]) -> int:
         find_start, *_ = args
         if find_start == 1:
             return -1

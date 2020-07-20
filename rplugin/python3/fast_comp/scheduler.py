@@ -1,5 +1,5 @@
 from asyncio import FIRST_COMPLETED, Queue, Task, create_task, gather, sleep, wait
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from math import inf
 from typing import (
     Any,
@@ -18,7 +18,7 @@ T = TypeVar("T")
 @dataclass(frozen=True, eq=False)
 class Signal:
     args: Sequence[Any] = ()
-    kwargs: Dict[str, Any] = {}
+    kwargs: Dict[str, Any] = field(default_factory=dict)
 
 
 async def schedule(chan: Queue, gen: Callable[..., Awaitable[T]]) -> AsyncIterator[T]:
