@@ -87,7 +87,7 @@ def parse_rows(
     insert_kind_lookup: Dict[int, str],
 ) -> Iterator[SourceCompletion]:
     position = feed.position
-    old_prefix = feed.context.alnums
+    old_prefix = feed.context.alnums_before
     for row in rows:
         text = parse_text(row)
         label = row.get("label")

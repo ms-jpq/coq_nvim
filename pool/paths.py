@@ -31,7 +31,7 @@ def list_dir(path: str) -> Sequence[str]:
 
 async def find_children(path: str, feed: SourceFeed) -> Sequence[SourceCompletion]:
     position = feed.position
-    old_prefix = feed.context.alnums
+    old_prefix = feed.context.alnums_before
     loop = get_running_loop()
     partial_name = basename(path)
 

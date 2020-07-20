@@ -38,11 +38,28 @@ def gen_context(line: str, col: int) -> Context:
 
     line_before = line[:col]
     line_after = line[col:]
-    it = reversed(line_before)
 
+    lit = reversed(line_before)
+    l_alnums: List[str] = []
+    l_syms: List[str] = []
+    for c in lit:
+        if c.isalnum():
+            l_alnums.append(c)
+        else:
+            if is_sym(c):
+                l_syms.append(c)
+            break
+
+    for c in lit:
+        if is_sym(c):
+            l_syms.append(c)
+        else:
+            break
+
+    rit = iter(line_after)
     r_alnums: List[str] = []
     r_syms: List[str] = []
-    for c in it:
+    for c in rit:
         if c.isalnum():
             r_alnums.append(c)
         else:
@@ -50,20 +67,25 @@ def gen_context(line: str, col: int) -> Context:
                 r_syms.append(c)
             break
 
-    for c in it:
+    for c in rit:
         if is_sym(c):
             r_syms.append(c)
         else:
             break
 
-    alnums = "".join(reversed(r_alnums))
-    syms = "".join(reversed(r_syms))
+    alnums_before = "".join(reversed(l_alnums))
+    alnums_after = "".join(r_alnums)
+    syms_before = "".join(reversed(l_syms))
+    syms_after = "".join(r_syms)
+
     return Context(
         line=line,
         line_before=line_before,
         line_after=line_after,
-        alnums=alnums,
-        syms=syms,
+        alnums_before=alnums_before,
+        alnums_after=alnums_after,
+        syms_before=syms_before,
+        syms_after=syms_after,
     )
 
 
@@ -167,7 +189,7 @@ async def merge(
         feed = await gen_feed(nvim)
         prefix = feed.context
         position = feed.position
-        go = prefix.alnums or prefix.syms
+        go = prefix.alnums_before or prefix.syms_before
         if go or force:
             cached, *comps = await gather(
                 retrieve(feed), *(source(feed) for source in sources)

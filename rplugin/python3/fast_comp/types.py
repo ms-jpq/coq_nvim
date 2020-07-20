@@ -47,13 +47,18 @@ class Position:
     col: int
 
 
+# |...                            line                            ...|
+# |...        line_before          🐭          line_after         ...|
+# |...   <syms_before><alum_before>🐭<alnums_after><syms_after>   ...|
 @dataclass(frozen=True)
 class Context:
     line: str
     line_before: str
     line_after: str
-    alnums: str
-    syms: str
+    alnums_before: str
+    alnums_after: str
+    syms_before: str
+    syms_after: str
 
 
 @dataclass(frozen=True)

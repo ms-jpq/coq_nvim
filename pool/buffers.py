@@ -68,7 +68,7 @@ async def main(nvim: Nvim, chan: Queue, seed: SourceSeed) -> Source:
 
     async def source(feed: SourceFeed) -> AsyncIterator[SourceCompletion]:
         position = feed.position
-        old_prefix = feed.context.alnums
+        old_prefix = feed.context.alnums_before
         b_gen = buf_gen(nvim, config=config, filetype=feed.filetype)
         lines = await buffer_chars(nvim, b_gen)
         for word in coalesce(lines, config=config):
