@@ -75,15 +75,20 @@ def gen_context(line: str, col: int) -> Context:
 
     alnums_before = "".join(reversed(l_alnums))
     alnums_after = "".join(r_alnums)
+    alnums = alnums_before + alnums_after
+
     syms_before = "".join(reversed(l_syms))
     syms_after = "".join(r_syms)
+    syms = syms_before + syms_after
 
     return Context(
         line=line,
         line_before=line_before,
         line_after=line_after,
+        alnums=alnums,
         alnums_before=alnums_before,
         alnums_after=alnums_after,
+        syms=syms,
         syms_before=syms_before,
         syms_after=syms_after,
     )
@@ -106,6 +111,24 @@ async def gen_feed(nvim: Nvim) -> SourceFeed:
     return await call(nvim, fed)
 
 
+def p_alnums(prefix: str, suffix: str) -> str:
+    def p1() -> Iterator[str]:
+        for c in reversed(prefix):
+            if c.isalnum():
+                yield c
+            else:
+                break
+
+    def p2() -> Iterator[str]:
+        for c in suffix:
+            if c.isalnum():
+                yield c
+            else:
+                break
+
+    return "".join(chain(reversed(tuple(p1())), p2()))
+
+
 async def manufacture(nvim: Nvim, factory: SourceFactory) -> Tuple[StepFunction, Queue]:
     chan: Queue = Queue()
     fact = cast(Factory, factory.manufacture)
@@ -118,12 +141,14 @@ async def manufacture(nvim: Nvim, factory: SourceFactory) -> Tuple[StepFunction,
 
         async def cont() -> None:
             async for comp in src(feed):
-                normalized = comp.new_prefix.lower()
+                text = comp.new_prefix + comp.new_suffix
+                normalized_alnums = p_alnums(comp.new_prefix, comp.new_suffix).lower()
                 completion = Step(
                     source=name,
                     source_shortname=factory.short_name,
                     priority=factory.priority,
-                    normalized=normalized,
+                    normalized_alnums=normalized_alnums,
+                    text=text,
                     comp=comp,
                 )
                 acc.append(completion)
@@ -187,9 +212,8 @@ async def merge(
 
     async def gen(force: bool) -> Tuple[Position, Iterator[VimCompletion]]:
         feed = await gen_feed(nvim)
-        prefix = feed.context
         position = feed.position
-        go = prefix.alnums_before or prefix.syms_before
+        go = feed.context.line_before.isspace()
         if go or force:
             cached, *comps = await gather(
                 retrieve(feed), *(source(feed) for source in sources)
@@ -197,7 +221,7 @@ async def merge(
             steps: Sequence[Step] = tuple((c for co in comps for c in co))
             push(feed, steps)
             completions = chain(steps)
-            return position, fuzzy(completions)
+            return position, fuzzy(feed, completions)
         else:
             return position, iter(())
 

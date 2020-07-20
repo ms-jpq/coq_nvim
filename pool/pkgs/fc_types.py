@@ -20,8 +20,10 @@ class Context:
     line: str
     line_before: str
     line_after: str
+    alnums: str
     alnums_before: str
     alnums_after: str
+    syms: str
     syms_before: str
     syms_after: str
 

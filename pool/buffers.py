@@ -8,7 +8,7 @@ from pynvim import Nvim
 from pynvim.api.buffer import Buffer
 
 from .pkgs.fc_types import Source, SourceCompletion, SourceFeed, SourceSeed
-from .pkgs.nvim import call
+from .pkgs.nvim import call, print
 
 
 @dataclass(frozen=True)
