@@ -47,3 +47,5 @@ Plug 'ms-jpq/fast-completion', {'branch': 'nvim', 'do': ':UpdateRemotePlugins'}
 | Paths   | Fetches results from file paths        |
 
 ### Configuration
+
+Check out the [basic config](https://github.com/ms-jpq/fast-comp/blob/nvim/config/config.json) before you proceed.

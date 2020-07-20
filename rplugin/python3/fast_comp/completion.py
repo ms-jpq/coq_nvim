@@ -104,7 +104,8 @@ async def manufacture(nvim: Nvim, factory: SourceFactory) -> Tuple[StepFunction,
         for p in pending:
             p.cancel()
         if pending:
-            msg = f"async completion source timed out - {name}, exceeded {timeout}ms"
+            timeout_fmt = round(timeout * 1000)
+            msg = f"async completion source timed out - {name}, exceeded {timeout_fmt}ms"
             await print(nvim, msg)
         return acc
 
