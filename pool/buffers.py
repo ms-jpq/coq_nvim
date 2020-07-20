@@ -1,4 +1,5 @@
 from asyncio import Queue
+from dataclasses import dataclass
 from itertools import chain
 from typing import AsyncIterator, Iterator, List, Sequence, Set
 
@@ -8,11 +9,19 @@ from pynvim import Nvim
 from pynvim.api.buffer import Buffer
 
 
-def buf_gen(nvim: Nvim, filetype: str) -> Iterator[Buffer]:
+@dataclass(frozen=True)
+class Config:
+    same_filetype: bool
+
+
+def buf_gen(nvim: Nvim, config: Config, filetype: str) -> Iterator[Buffer]:
     buffers: Sequence[Buffer] = nvim.api.list_bufs()
     for buf in buffers:
-        ft = nvim.api.buf_get_option(buf, "filetype")
-        if ft == filetype:
+        if config.same_filetype:
+            ft = nvim.api.buf_get_option(buf, "filetype")
+            if ft == filetype:
+                yield buf
+        else:
             yield buf
 
 
@@ -50,10 +59,13 @@ def coalesce(chars: Sequence[str]) -> Iterator[str]:
 
 
 async def main(nvim: Nvim, chan: Queue, seed: SourceSeed) -> Source:
+    config = Config(**seed.config)
+
     async def source(feed: SourceFeed) -> AsyncIterator[SourceCompletion]:
         prefix_alnums = feed.prefix.alnums
         if prefix_alnums:
-            lines = await buffer_chars(nvim, buf_gen(nvim, filetype=feed.filetype))
+            b_gen = buf_gen(nvim, config=config, filetype=feed.filetype)
+            lines = await buffer_chars(nvim, b_gen)
             for word in coalesce(lines):
                 yield SourceCompletion(text=word)
 

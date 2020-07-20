@@ -6,7 +6,9 @@
   },
   "sources": {
     "buffers": {
-      "config": {},
+      "config": {
+        "same_filetype": false
+      },
       "enabled": true,
       "limit": 5,
       "main": "buffers.py",
