@@ -1,12 +1,12 @@
 from dataclasses import dataclass
-from typing import Any, AsyncIterator, Callable, Optional
+from typing import Any, AsyncIterator, Callable, Dict, Optional
 
 
 @dataclass(frozen=True)
 class SourceSeed:
     limit: float
     timeout: float
-    config: Optional[Any] = None
+    config: Dict[str, Any]
 
 
 @dataclass(frozen=True)

@@ -8,8 +8,6 @@ from typing import (
     Dict,
     Optional,
     Sequence,
-    Set,
-    Union,
 )
 
 from pynvim import Nvim
@@ -36,7 +34,7 @@ class SourceSpec:
     priority: Optional[float]
     limit: Optional[float]
     timeout: Optional[float]
-    config: Optional[Any]
+    config: Dict[str, Any]
 
 
 @dataclass(frozen=True)
