@@ -68,7 +68,9 @@ def gen_payload(feed: SourceFeed, text: str) -> Payload:
 
 def context_gen(fuzz: FuzzyStep) -> str:
     match_set = fuzz.matches
-    text = fuzz.step.comp.text
+    comp = fuzz.step.comp
+    text = comp.text
+    label = comp.label or text
 
     def gen() -> Iterator[str]:
         for idx, char in enumerate(text):
@@ -79,8 +81,8 @@ def context_gen(fuzz: FuzzyStep) -> str:
             if inclusive and (idx + 1) not in match_set:
                 yield "]"
 
-    label = "".join(gen())
-    return f"{text} <- {label}"
+    fuzzy_label = "".join(gen())
+    return f"{label} <- {fuzzy_label}"
 
 
 def vimify(feed: SourceFeed, fuzz: FuzzyStep) -> VimCompletion:
