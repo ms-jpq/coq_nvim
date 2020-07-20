@@ -25,7 +25,6 @@ def initial(user_config: Any) -> Settings:
     config = merge(load_json(settings_json), user_config)
     fuzzy_o = config["fuzzy"]
     fuzzy = FuzzyOptions(
-        cache_size=fuzzy_o["cache_size"],
         band_size=fuzzy_o["band_size"],
         min_match=fuzzy_o["min_match"],
     )

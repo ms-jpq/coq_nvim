@@ -1,7 +1,6 @@
 {
   "fuzzy": {
     "band_size": 10,
-    "cache_size": 10,
     "min_match": 3
   },
   "sources": {

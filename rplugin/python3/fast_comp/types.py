@@ -21,7 +21,6 @@ class Notification:
 
 @dataclass(frozen=True)
 class FuzzyOptions:
-    cache_size: int
     band_size: int
     min_match: int
 

@@ -22,7 +22,7 @@ def make_cache(
         position = feed.position
         queue.append((feed.filename, position))
 
-        if len(queue) > options.cache_size:
+        if len(queue) > options.band_size:
             bufname, pos = queue.popleft()
             bufs.get(bufname, {}).get(pos.row, {}).pop(pos.col, None)
 
