@@ -2,7 +2,7 @@ from asyncio import Queue
 from dataclasses import dataclass
 from itertools import chain
 from typing import AsyncIterator, Iterator, List, Sequence, Set
-
+from os import linesep
 from pkgs.nvim import call
 from pkgs.types import Source, SourceCompletion, SourceFeed, SourceSeed
 from pynvim import Nvim
@@ -32,7 +32,7 @@ async def buffer_chars(nvim: Nvim, buf_gen: Iterator[Buffer]) -> Sequence[str]:
             char
             for buffer in buf_gen
             for line in nvim.api.buf_get_lines(buffer, 0, -1, True)
-            for char in chain(line, "\n")
+            for char in chain(line, linesep)
         )
         return chars
 
@@ -65,10 +65,13 @@ async def main(nvim: Nvim, chan: Queue, seed: SourceSeed) -> Source:
     config = Config(**seed.config)
 
     async def source(feed: SourceFeed) -> AsyncIterator[SourceCompletion]:
+        position = feed.position
         old_prefix = feed.prefix.alnums
         b_gen = buf_gen(nvim, config=config, filetype=feed.filetype)
         lines = await buffer_chars(nvim, b_gen)
         for word in coalesce(lines, config=config):
-            yield SourceCompletion(old_prefix=old_prefix, new_prefix=word)
+            yield SourceCompletion(
+                position=position, old_prefix=old_prefix, new_prefix=word
+            )
 
     return source

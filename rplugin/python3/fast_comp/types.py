@@ -72,6 +72,7 @@ class SourceFeed:
 
 @dataclass(frozen=True)
 class SourceCompletion:
+    position: Position
     old_prefix: str
     new_prefix: str
     old_suffix: str = ""

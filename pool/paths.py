@@ -29,6 +29,7 @@ def list_dir(path: str) -> Sequence[str]:
 
 
 async def find_children(path: str, feed: SourceFeed) -> Sequence[SourceCompletion]:
+    position = feed.position
     old_prefix = feed.prefix.alnums
     loop = get_running_loop()
     partial_name = basename(path)
@@ -40,12 +41,17 @@ async def find_children(path: str, feed: SourceFeed) -> Sequence[SourceCompletio
             for child in list_dir(path):
                 text = end + child
                 yield SourceCompletion(
-                    old_prefix=old_prefix, new_prefix=text, label=text
+                    position=position,
+                    old_prefix=old_prefix,
+                    new_prefix=text,
+                    label=text,
                 )
         elif isdir(parent):
             for child in list_dir(parent):
                 if child.startswith(partial_name):
-                    yield SourceCompletion(old_prefix=old_prefix, new_prefix=child)
+                    yield SourceCompletion(
+                        position=position, old_prefix=old_prefix, new_prefix=child
+                    )
         else:
             return
 

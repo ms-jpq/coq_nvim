@@ -166,7 +166,7 @@ async def merge(
             steps: Sequence[Step] = tuple((c for co in comps for c in co))
             push(feed, steps)
             completions = chain(steps, cached)
-            return position, fuzzy(feed, completions)
+            return position, fuzzy(completions)
         else:
             return position, iter(())
 

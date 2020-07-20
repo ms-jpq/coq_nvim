@@ -3,6 +3,7 @@ from dataclasses import asdict, dataclass
 from enum import Enum
 from typing import Any, Awaitable, Callable, Dict, Iterable, Iterator, Optional, TypeVar
 from uuid import uuid4
+from os import linesep
 
 from pynvim import Nvim
 from pynvim.api.common import NvimError
@@ -34,7 +35,7 @@ async def print(
     def cont() -> None:
         write(str(message))
         if flush:
-            write("\n")
+            write(linesep)
 
     await call(nvim, cont)
 

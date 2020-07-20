@@ -85,6 +85,7 @@ def parse_rows(
     entry_kind_lookup: Dict[int, str],
     insert_kind_lookup: Dict[int, str],
 ) -> Iterator[SourceCompletion]:
+    position = feed.position
     old_prefix = feed.prefix.alnums
     for row in rows:
         text = parse_text(row)
@@ -93,6 +94,7 @@ def parse_rows(
         kind = entry_kind_lookup.get(cast(int, row.get("kind")), "Unknown")
         doc = parse_documentation(row.get("documentation"))
         yield SourceCompletion(
+            position=position,
             old_prefix=old_prefix,
             new_prefix=text, label=label, sortby=sortby, kind=kind, doc=doc
         )
