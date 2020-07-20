@@ -9,7 +9,6 @@ from .types import SourceFeed, FuzzyOptions, Payload, SourceCompletion, Step
 @dataclass(frozen=True)
 class FuzzyStep:
     step: Step
-    non_overlapping: bool
     full_match: bool
     matches: Dict[int, str]
     rank: Sequence[Union[int, str]]
@@ -20,28 +19,21 @@ def normalize(text: str) -> str:
 
 
 def fuzzify(feed: SourceFeed, step: Step) -> FuzzyStep:
-    original = feed.context.alnums
-    alnums = step.alnums
-    normalized = step.normalized_alnums
+    f_alnums = feed.context.alnums
+    fn_alnums = feed.context.normalized_alnums
+    sn_alnums = step.normalized_alnums
     matches: Dict[int, str] = {}
     idx = 0
 
-    for o_char, char in zip(alnums, normalized):
-        m_idx = normalized.find(char, idx)
+    for o_char, char in zip(f_alnums, fn_alnums):
+        m_idx = sn_alnums.find(char, idx)
         if m_idx != -1:
             matches[m_idx] = o_char
             idx = m_idx + 1
 
     rank = (len(matches) * -1, sum(matches))
-    full_match = normalized.startswith(original)
-    non_overlapping = True
-    return FuzzyStep(
-        step=step,
-        non_overlapping=non_overlapping,
-        full_match=full_match,
-        matches=matches,
-        rank=rank,
-    )
+    full_match = sn_alnums.startswith(fn_alnums)
+    return FuzzyStep(step=step, full_match=full_match, matches=matches, rank=rank)
 
 
 def rank(fuzz: FuzzyStep) -> Sequence[Union[float, int, str]]:
@@ -120,13 +112,11 @@ def fuzzer(
             seen_count = seen_by_source.get(source, 0) + 1
             seen_by_source[source] = seen_count
             text = step.text
-            matches = len(fuzz.matches)
 
             if (
                 seen_count <= limits[source]
                 and text not in seen
-                and fuzz.non_overlapping
-                and (fuzz.full_match or matches >= options.min_match)
+                and len(fuzz.matches) >= options.min_match
             ):
                 seen.add(text)
                 yield vimify(fuzz=fuzz)
