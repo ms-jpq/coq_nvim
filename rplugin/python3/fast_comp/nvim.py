@@ -1,9 +1,9 @@
 from asyncio import Future
 from dataclasses import asdict, dataclass
 from enum import Enum
+from os import linesep
 from typing import Any, Awaitable, Callable, Dict, Iterable, Iterator, Optional, TypeVar
 from uuid import uuid4
-from os import linesep
 
 from pynvim import Nvim
 from pynvim.api.common import NvimError
