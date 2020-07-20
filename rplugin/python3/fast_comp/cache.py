@@ -2,7 +2,31 @@ from collections import deque
 from itertools import chain
 from typing import Awaitable, Callable, Dict, Iterator, Sequence, Set, Tuple
 
-from .types import FuzzyOptions, SourceFeed, Step
+from .types import FuzzyOptions, SourceCompletion, SourceFeed, Step
+
+
+def shift_step(feed: SourceFeed, step: Step) -> Step:
+    prev_comp = step.comp
+    f_row = feed.position.row
+    s_row = prev_comp.position.row
+    comp = SourceCompletion(
+        position=prev_comp.position,
+        old_prefix=prev_comp.old_prefix,
+        new_prefix=prev_comp.new_prefix,
+        old_suffix=prev_comp.old_prefix,
+        new_suffix=prev_comp.new_prefix,
+        label=prev_comp.label,
+        sortby=prev_comp.sortby,
+        kind=prev_comp.kind,
+        doc=prev_comp.doc,
+    )
+    return Step(
+        source=step.source,
+        source_shortname=step.source_shortname,
+        priority=step.priority,
+        normalized=step.normalized,
+        comp=comp,
+    )
 
 
 def make_cache(
@@ -45,7 +69,7 @@ def make_cache(
                 for step in cols.get(c, ()):
                     if step not in seen:
                         seen.add(step)
-                        yield step
+                        yield shift_step(feed, step=step)
 
         return tuple(cont())
 
