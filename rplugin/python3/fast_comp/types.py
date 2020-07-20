@@ -100,6 +100,7 @@ class SourceFactory:
 @dataclass(frozen=True)
 class Step:
     source: str
+    source_shortname: str
     priority: float
     normalized: str
     comp: SourceCompletion

@@ -78,7 +78,7 @@ def context_gen(fuzz: FuzzyStep) -> str:
 
 def vimify(feed: SourceFeed, fuzz: FuzzyStep) -> VimCompletion:
     step = fuzz.step
-    source = f"[{step.source}]"
+    source = f"[{step.source_shortname}]"
     comp = step.comp
     menu = f"{comp.kind} {source}" if comp.kind else source
     abbr = (comp.label or comp.text) if fuzz.full_match else context_gen(fuzz)
@@ -160,8 +160,8 @@ def fuzzer(
             step = fuzz.step
             source = step.source
             limit = limits.get(source, inf)
-            seen_count = seen_by_source.get(source, 0)
-            seen_by_source[source] = seen_count + 1
+            seen_count = seen_by_source.get(source, 0) + 1
+            seen_by_source[source] = seen_count
             if seen_count <= limit:
 
                 text = step.comp.text
