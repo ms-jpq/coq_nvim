@@ -80,7 +80,7 @@ def context_gen(fuzz: FuzzyStep) -> str:
                 yield "]"
 
     label = "".join(gen())
-    return f"{text}, {label}"
+    return f"{text} <- {label}"
 
 
 def vimify(feed: SourceFeed, fuzz: FuzzyStep) -> VimCompletion:
