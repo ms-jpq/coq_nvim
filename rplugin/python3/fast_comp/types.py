@@ -1,14 +1,6 @@
 from asyncio import Queue
 from dataclasses import dataclass
-from typing import (
-    Any,
-    AsyncIterator,
-    Awaitable,
-    Callable,
-    Dict,
-    Optional,
-    Sequence,
-)
+from typing import Any, AsyncIterator, Awaitable, Callable, Dict, Optional, Sequence
 
 from pynvim import Nvim
 
@@ -105,6 +97,16 @@ class Step:
     priority: float
     normalized: str
     comp: SourceCompletion
+
+
+@dataclass(frozen=True)
+class Payload:
+    row: int
+    col: int
+    old_prefix: str
+    new_prefix: str
+    old_suffix: str
+    new_suffix: str
 
 
 @dataclass(frozen=True)

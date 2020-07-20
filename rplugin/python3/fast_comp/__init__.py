@@ -12,8 +12,8 @@ from typing import Any, Awaitable, Sequence
 from pynvim import Nvim, command, function, plugin
 
 from .completion import merge
-from .fuzzy import patch
 from .nvim import autocmd, complete, print
+from .patch import patch
 from .scheduler import Signal, schedule
 from .settings import initial, load_factories
 from .state import forward
