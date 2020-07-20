@@ -1,6 +1,6 @@
 from collections import deque
 from itertools import chain
-from typing import Awaitable, Callable, Dict, Iterator, Sequence, Tuple
+from typing import Awaitable, Callable, Dict, Iterator, Sequence, Tuple, Set
 
 from .types import FuzzyOptions, SourceFeed, Step
 
@@ -37,12 +37,16 @@ def make_cache(
         col = position.col
 
         def cont() -> Iterator[Step]:
+            seen: Set[str] = set()
             for c in chain(
                 range(col - half_band_size, col),
                 range(col + 1, col + half_band_size + 1),
             ):
                 for step in cols.get(c, ()):
-                    yield step
+                    text = step.text
+                    if text not in seen:
+                        seen.add(text)
+                        yield step
 
         return tuple(cont())
 
