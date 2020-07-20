@@ -28,7 +28,8 @@ def list_dir(path: str) -> Sequence[str]:
         return ()
 
 
-async def find_children(path: str) -> Sequence[SourceCompletion]:
+async def find_children(path: str, feed: SourceFeed) -> Sequence[SourceCompletion]:
+    old_prefix = feed.prefix.alnums
     loop = get_running_loop()
     partial_name = basename(path)
 
@@ -38,11 +39,13 @@ async def find_children(path: str) -> Sequence[SourceCompletion]:
             end = "" if path.endswith(sep) else sep
             for child in list_dir(path):
                 text = end + child
-                yield SourceCompletion(text=text, label=text)
+                yield SourceCompletion(
+                    old_prefix=old_prefix, new_prefix=text, label=text
+                )
         elif isdir(parent):
             for child in list_dir(parent):
                 if child.startswith(partial_name):
-                    yield SourceCompletion(text=child)
+                    yield SourceCompletion(old_prefix=old_prefix, new_prefix=child)
         else:
             return
 
@@ -56,7 +59,7 @@ async def main(nvim: Nvim, chan: Queue, seed: SourceSeed) -> Source:
     async def source(feed: SourceFeed) -> AsyncIterator[SourceCompletion]:
         col = feed.position.col
         before = feed.prefix.line[:col]
-        comp = (await find_children(path) for path in parse_path(before))
+        comp = (await find_children(path, feed=feed) for path in parse_path(before))
         co = await anext(comp, ())
         for c in co:
             yield c

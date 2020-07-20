@@ -72,7 +72,10 @@ class SourceFeed:
 
 @dataclass(frozen=True)
 class SourceCompletion:
-    text: str
+    old_prefix: str
+    new_prefix: str
+    old_suffix: str = ""
+    new_suffix: str = ""
     label: Optional[str] = None
     sortby: Optional[str] = None
     kind: Optional[str] = None

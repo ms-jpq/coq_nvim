@@ -89,7 +89,7 @@ async def manufacture(nvim: Nvim, factory: SourceFactory) -> Tuple[StepFunction,
 
         async def cont() -> None:
             async for comp in src(feed):
-                normalized = comp.text.lower()
+                normalized = comp.new_prefix.lower()
                 completion = Step(
                     source=name,
                     source_shortname=factory.short_name,

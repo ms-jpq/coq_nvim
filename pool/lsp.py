@@ -81,9 +81,11 @@ def parse_documentation(doc: Union[str, Dict[str, Any], None]) -> Optional[str]:
 
 def parse_rows(
     rows: Sequence[Dict[str, Any]],
+    feed: SourceFeed,
     entry_kind_lookup: Dict[int, str],
     insert_kind_lookup: Dict[int, str],
 ) -> Iterator[SourceCompletion]:
+    old_prefix = feed.prefix.alnums
     for row in rows:
         text = parse_text(row)
         label = row.get("label")
@@ -91,7 +93,8 @@ def parse_rows(
         kind = entry_kind_lookup.get(cast(int, row.get("kind")), "Unknown")
         doc = parse_documentation(row.get("documentation"))
         yield SourceCompletion(
-            text=text, label=label, sortby=sortby, kind=kind, doc=doc
+            old_prefix=old_prefix,
+            new_prefix=text, label=label, sortby=sortby, kind=kind, doc=doc
         )
 
 
@@ -107,6 +110,7 @@ async def main(nvim: Nvim, chan: Queue, seed: SourceSeed) -> Source:
         rows = parse_resp_to_rows(resp)
         for row in parse_rows(
             rows,
+            feed=feed,
             entry_kind_lookup=entry_kind_lookup,
             insert_kind_lookup=insert_kind_lookup,
         ):

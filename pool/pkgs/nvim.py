@@ -1,6 +1,5 @@
 from asyncio import Future
-from typing import Any, Awaitable, Callable, Iterable, TypeVar
-from uuid import uuid4
+from typing import Any, Awaitable, Callable, TypeVar
 
 from pynvim import Nvim
 

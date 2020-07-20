@@ -65,11 +65,10 @@ async def main(nvim: Nvim, chan: Queue, seed: SourceSeed) -> Source:
     config = Config(**seed.config)
 
     async def source(feed: SourceFeed) -> AsyncIterator[SourceCompletion]:
-        prefix_alnums = feed.prefix.alnums
-        if prefix_alnums:
-            b_gen = buf_gen(nvim, config=config, filetype=feed.filetype)
-            lines = await buffer_chars(nvim, b_gen)
-            for word in coalesce(lines, config=config):
-                yield SourceCompletion(text=word)
+        old_prefix = feed.prefix.alnums
+        b_gen = buf_gen(nvim, config=config, filetype=feed.filetype)
+        lines = await buffer_chars(nvim, b_gen)
+        for word in coalesce(lines, config=config):
+            yield SourceCompletion(old_prefix=old_prefix, new_prefix=word)
 
     return source

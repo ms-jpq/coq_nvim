@@ -5,7 +5,7 @@ from typing import Any, Callable, Dict, Iterator, Sequence, Set, Union, cast
 from pynvim import Nvim
 
 from .nvim import VimCompletion
-from .types import FuzzyOptions, SourceFeed, Step
+from .types import FuzzyOptions, SourceFeed, Step, SourceCompletion
 
 
 @dataclass(frozen=True)
@@ -27,7 +27,7 @@ class FuzzyStep:
 def fuzzify(feed: SourceFeed, step: Step) -> FuzzyStep:
     original = feed.prefix.alnums
     normalized_prefix = original.lower()
-    text = step.comp.text
+    text = step.comp.new_prefix
     normalized = step.normalized
     matches: Dict[int, str] = {}
     idx = 0
@@ -52,11 +52,12 @@ def fuzzify(feed: SourceFeed, step: Step) -> FuzzyStep:
 
 def rank(fuzz: FuzzyStep) -> Sequence[Union[float, int, str]]:
     comp = fuzz.step.comp
-    text = strxfrm(comp.sortby or comp.label or comp.text).lower()
+    text = strxfrm(comp.sortby or comp.label or comp.new_prefix).lower()
     return (*fuzz.rank, fuzz.step.priority * -1, text)
 
 
-def gen_payload(feed: SourceFeed, text: str) -> Payload:
+def gen_payload(feed: SourceFeed, comp: SourceCompletion) -> Payload:
+    text = comp.new_prefix
     line = feed.prefix.line
     row = feed.position.row - 1
     col = feed.position.col
@@ -70,7 +71,7 @@ def gen_payload(feed: SourceFeed, text: str) -> Payload:
 def context_gen(fuzz: FuzzyStep) -> str:
     match_set = fuzz.matches
     comp = fuzz.step.comp
-    text = comp.text
+    text = comp.new_prefix
     label = comp.label or text
 
     def gen() -> Iterator[str]:
@@ -92,8 +93,8 @@ def vimify(feed: SourceFeed, fuzz: FuzzyStep) -> VimCompletion:
     source = f"[{step.source_shortname}]"
     comp = step.comp
     menu = f"{comp.kind} {source}" if comp.kind else source
-    abbr = (comp.label or comp.text) if fuzz.full_match else context_gen(fuzz)
-    user_data = gen_payload(feed, text=comp.text)
+    abbr = (comp.label or comp.new_prefix) if fuzz.full_match else context_gen(fuzz)
+    user_data = gen_payload(feed, comp=comp)
     ret = VimCompletion(
         equal=1,
         icase=1,
@@ -138,7 +139,7 @@ def fuzzer(
             source = step.source
             seen_count = seen_by_source.get(source, 0) + 1
             seen_by_source[source] = seen_count
-            text = step.comp.text
+            text = step.comp.new_prefix
             matches = len(fuzz.matches)
 
             if (
