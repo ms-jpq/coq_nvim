@@ -1,5 +1,5 @@
 from os import linesep
-from typing import Any, Dict, Iterable, Sequence, Tuple, cast
+from typing import Any, Dict, Sequence, Tuple, cast
 
 from pynvim import Nvim
 
@@ -7,15 +7,11 @@ from .types import Payload
 
 
 def replace_lines(nvim: Nvim, payload: Payload) -> None:
-    row = payload.row - 1
-    col = payload.col
-    old_prefix = payload.old_prefix
-    new_prefix = payload.new_prefix
-    old_suffix = payload.old_suffix
-    new_suffix = payload.new_suffix
+    row, col = payload.row - 1, payload.col
+    old_prefix, new_prefix = payload.old_prefix, payload.new_prefix
+    old_suffix, new_suffix = payload.old_suffix, payload.new_suffix
 
-    old_lc = old_prefix.count(linesep)
-    new_lc = old_suffix.count(linesep)
+    old_lc, new_lc = old_prefix.count(linesep), old_suffix.count(linesep)
     btm_idx = row - old_lc
     top_idx = row + new_lc + 1
 
