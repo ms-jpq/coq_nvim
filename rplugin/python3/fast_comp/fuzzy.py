@@ -1,4 +1,3 @@
-from collections import deque
 from dataclasses import asdict, dataclass
 from locale import strxfrm
 from typing import Any, Callable, Dict, Iterator, Sequence, Set, Union, cast
@@ -96,37 +95,6 @@ def vimify(feed: SourceFeed, fuzz: FuzzyStep) -> VimCompletion:
     return ret
 
 
-def make_cache(
-    options: FuzzyOptions,
-) -> Callable[[SourceFeed, Sequence[Step]], Iterator[Step]]:
-    half_band_size = options.band_size // 2
-    queue: deque = deque([])
-    # buf -> row -> col
-    bufs: Dict[str, Dict[int, Dict[int, Sequence[Step]]]] = {}
-
-    def cache(feed: SourceFeed, steps: Sequence[Step]) -> Iterator[Step]:
-        position = feed.position
-        queue.append((feed.filename, position))
-
-        if len(queue) > options.cache_size:
-            bufname, pos = queue.popleft()
-            bufs.get(bufname, {}).get(pos.row, {}).pop(pos.col, None)
-
-        rows = bufs.setdefault(feed.filename, {})
-        cols = rows.setdefault(position.row, {})
-        cols[position.col] = steps
-
-        def cont() -> Iterator[Step]:
-            for col in range(
-                position.col - half_band_size, position.col + 1 + half_band_size
-            ):
-                yield from iter(cols.get(col, ()))
-
-        return cont()
-
-    return cache
-
-
 def patch(nvim: Nvim, comp: Dict[str, Any]) -> None:
     data = comp.get("user_data")
     if type(data) == dict:
@@ -146,15 +114,13 @@ def patch(nvim: Nvim, comp: Dict[str, Any]) -> None:
 
 def fuzzer(
     options: FuzzyOptions, limits: Dict[str, float]
-) -> Callable[[SourceFeed, Sequence[Step]], Iterator[VimCompletion]]:
-    cache = make_cache(options)
-
-    def fuzzy(feed: SourceFeed, steps: Sequence[Step]) -> Iterator[VimCompletion]:
+) -> Callable[[SourceFeed, Iterator[Step]], Iterator[VimCompletion]]:
+    def fuzzy(feed: SourceFeed, steps: Iterator[Step]) -> Iterator[VimCompletion]:
         prefix = feed.prefix.alnums
         seen: Set[str] = set()
         seen_by_source: Dict[str, int] = {}
 
-        fuzzy_steps = (fuzzify(feed, step=step) for step in cache(feed, steps))
+        fuzzy_steps = (fuzzify(feed, step=step) for step in steps)
         for fuzz in sorted(fuzzy_steps, key=rank):
             step = fuzz.step
             source = step.source

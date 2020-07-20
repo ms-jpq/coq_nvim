@@ -101,7 +101,7 @@ class Main:
 
     @function("FCmanual", sync=True)
     def manual(self, args: Sequence[Any]) -> int:
-        find_start, base, *_ = args
+        find_start, *_ = args
         if find_start == 1:
             return -1
         else:
