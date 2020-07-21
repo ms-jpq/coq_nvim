@@ -21,7 +21,7 @@ end
 
 local settings = function ()
 
-  -- dont smap suggestions tabline
+  -- dont spam suggestions tabline
   bindings.set("shortmess", "c", [[+=]])
 
   -- complete menu
