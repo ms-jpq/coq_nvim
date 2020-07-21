@@ -1,5 +1,6 @@
 from asyncio import Queue, as_completed, gather
 from dataclasses import dataclass
+from os import linesep
 from shutil import which
 from typing import AsyncIterator, Iterator, Sequence
 
@@ -7,6 +8,7 @@ from pynvim import Nvim
 
 from .pkgs.da import call
 from .pkgs.fc_types import Source, SourceCompletion, SourceFeed, SourceSeed
+from .pkgs.nvim import print
 from .pkgs.shared import coalesce
 
 
@@ -16,7 +18,6 @@ class TmuxError(Exception):
 
 @dataclass(frozen=True)
 class Config:
-    same_filetype: bool
     min_length: int
 
 
@@ -41,7 +42,7 @@ async def tmux_panes() -> Sequence[TmuxPane]:
         "tmux",
         "list-panes",
         "-a",
-        "-f",
+        "-F",
         "#{session_id} #{pane_id} #{pane_active} #{window_active}",
     )
 
@@ -107,6 +108,8 @@ async def main(nvim: Nvim, chan: Queue, seed: SourceSeed) -> Source:
                                 new_suffix="",
                             )
             except TmuxError as e:
-                await print(nvim, f"tmux completion failed - {e}")
+                await print(nvim, f"tmux completion failed:{linesep}{e}", error=True)
         else:
             pass
+
+    return source

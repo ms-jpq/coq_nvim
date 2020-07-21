@@ -35,7 +35,9 @@
       "timeout": 100
     },
     "tmux": {
-      "config": {},
+      "config": {
+        "min_length": 3
+      },
       "enabled": true,
       "limit": 5,
       "main": "tmux.py",
