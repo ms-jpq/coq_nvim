@@ -1,10 +1,43 @@
-from typing import Tuple
+from typing import Iterator, List, Sequence, Set, Tuple
 
 from .da import subsequences
 
 
 def normalize(text: str) -> str:
     return text.lower()
+
+
+def count_matches(cword: str, word: str) -> int:
+    normalized = normalize(word)
+    idx = 0
+    count = 0
+    for char in cword:
+        m_idx = normalized.find(char, idx)
+        if m_idx != -1:
+            count += 1
+            idx = m_idx + 1
+
+    return count
+
+
+def coalesce(chars: Sequence[str], cword: str, min_length: int) -> Iterator[str]:
+    acc: Set[str] = set()
+    curr: List[str] = []
+
+    for char in chars:
+        if char.isalnum():
+            curr.append(char)
+        elif curr:
+            word = "".join(curr)
+            if word not in acc and count_matches(cword, word=word) >= min_length:
+                acc.add(word)
+                yield word
+            curr = []
+
+    if curr:
+        word = "".join(curr)
+        if word not in acc:
+            yield word
 
 
 def parse_common_affix(
