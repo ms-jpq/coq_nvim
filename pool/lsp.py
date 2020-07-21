@@ -105,18 +105,20 @@ def parse_rows(
 
         old_prefix = old_prefix_s if has_syms else old_prefix_a
         old_suffix = old_suffix_s if has_syms else old_suffix_a
+        existing_text = old_prefix + old_suffix
 
-        yield SourceCompletion(
-            position=position,
-            old_prefix=old_prefix,
-            new_prefix=text,
-            old_suffix=old_suffix,
-            new_suffix="",
-            label=label,
-            sortby=sortby,
-            kind=kind,
-            doc=doc,
-        )
+        if text != existing_text:
+            yield SourceCompletion(
+                position=position,
+                old_prefix=old_prefix,
+                new_prefix=text,
+                old_suffix=old_suffix,
+                new_suffix="",
+                label=label,
+                sortby=sortby,
+                kind=kind,
+                doc=doc,
+            )
 
 
 async def main(nvim: Nvim, chan: Queue, seed: SourceSeed) -> Source:
