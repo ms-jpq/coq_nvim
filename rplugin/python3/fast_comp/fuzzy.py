@@ -42,17 +42,6 @@ def rank(fuzz: FuzzyStep) -> Sequence[Union[float, int, str]]:
     return (*fuzz.rank, fuzz.step.priority * -1, text)
 
 
-def gen_payload(comp: SourceCompletion) -> Payload:
-    return Payload(
-        row=comp.position.row,
-        col=comp.position.col,
-        old_prefix=comp.old_prefix,
-        new_prefix=comp.new_prefix,
-        old_suffix=comp.old_suffix,
-        new_suffix=comp.new_suffix,
-    )
-
-
 def context_gen(fuzz: FuzzyStep) -> str:
     match_set = fuzz.matches
     comp = fuzz.step.comp
@@ -71,6 +60,17 @@ def context_gen(fuzz: FuzzyStep) -> str:
 
     fuzzy_label = "".join(gen())
     return f"{label} <- {fuzzy_label}"
+
+
+def gen_payload(comp: SourceCompletion) -> Payload:
+    return Payload(
+        row=comp.position.row,
+        col=comp.position.col,
+        old_prefix=comp.old_prefix,
+        new_prefix=comp.new_prefix,
+        old_suffix=comp.old_suffix,
+        new_suffix=comp.new_suffix,
+    )
 
 
 def vimify(fuzz: FuzzyStep) -> VimCompletion:
@@ -101,6 +101,8 @@ def vimify(fuzz: FuzzyStep) -> VimCompletion:
 def fuzzer(
     options: FuzzyOptions, limits: Dict[str, float]
 ) -> Callable[[SourceFeed, Iterator[Step]], Iterator[VimCompletion]]:
+    min_match = options.min_match
+
     def fuzzy(feed: SourceFeed, steps: Iterator[Step]) -> Iterator[VimCompletion]:
         seen: Set[str] = set()
         seen_by_source: Dict[str, int] = {}
@@ -116,7 +118,7 @@ def fuzzer(
             if (
                 seen_count <= limits[source]
                 and text not in seen
-                and (fuzz.full_match or len(fuzz.matches) >= options.min_match)
+                and (fuzz.full_match or len(fuzz.matches) >= min_match)
             ):
                 seen.add(text)
                 yield vimify(fuzz=fuzz)
