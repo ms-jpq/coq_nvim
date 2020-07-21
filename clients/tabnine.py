@@ -157,8 +157,8 @@ async def encode_tabnine_request(nvim: Nvim, feed: SourceFeed) -> TabNineRequest
     lines = await buf_lines(nvim)
     lines_before = lines[:row]
     lines_after = lines[row:]
-    before = "".join(chain(lines_before, (context.line_before,)))
-    after = "".join(chain((context.line_after,), lines_after))
+    before = linesep.join(chain(lines_before, (context.line_before,)))
+    after = linesep.join(chain((context.line_after,), lines_after))
 
     l2 = TabNineRequestL2(before=before, after=after, filename=feed.filename)
     l1 = TabNineRequestL1(Autocomplete=l2)
