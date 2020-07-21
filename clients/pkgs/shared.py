@@ -1,4 +1,4 @@
-from typing import Iterator, List, Sequence, Set, Tuple
+from typing import Callable, Iterator, List, Sequence, Set, Tuple
 
 from .da import subsequences
 
@@ -20,24 +20,27 @@ def count_matches(cword: str, word: str) -> int:
     return count
 
 
-def coalesce(chars: Sequence[str], cword: str, min_length: int) -> Iterator[str]:
+def coalesce(cword: str, min_length: int) -> Callable[[Sequence[str]], Iterator[str]]:
     acc: Set[str] = set()
-    curr: List[str] = []
 
-    for char in chars:
-        if char.isalnum():
-            curr.append(char)
-        elif curr:
+    def parse(chars: Sequence[str]) -> Iterator[str]:
+        curr: List[str] = []
+        for char in chars:
+            if char.isalnum():
+                curr.append(char)
+            elif curr:
+                word = "".join(curr)
+                if word not in acc and count_matches(cword, word=word) >= min_length:
+                    acc.add(word)
+                    yield word
+                curr = []
+
+        if curr:
             word = "".join(curr)
-            if word not in acc and count_matches(cword, word=word) >= min_length:
-                acc.add(word)
+            if word not in acc:
                 yield word
-            curr = []
 
-    if curr:
-        word = "".join(curr)
-        if word not in acc:
-            yield word
+    return parse
 
 
 def parse_common_affix(

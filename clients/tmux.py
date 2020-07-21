@@ -8,12 +8,24 @@ from .pkgs.da import call
 from .pkgs.fc_types import Source, SourceCompletion, SourceFeed, SourceSeed
 
 
+class TmuxError(Exception):
+    pass
+
+
 @dataclass(frozen=True)
 class PaneInfo:
     session_id: str
     pane_id: str
     pane_active: bool
     window_active: bool
+
+
+async def tmux_session() -> str:
+    ret = await call("tmux", "display-message", "-p", "#{session_id}")
+    if ret.code != 0:
+        raise TmuxError(ret.err)
+    else:
+        return ret.out.strip()
 
 
 async def tmux_panes() -> Sequence[PaneInfo]:
@@ -37,9 +49,17 @@ async def tmux_panes() -> Sequence[PaneInfo]:
             yield info
 
     if ret.code != 0:
-        return ()
+        raise TmuxError(ret.err)
     else:
         return tuple(cont())
+
+
+async def tmux_pane_words(pane_id: str) -> str:
+    ret = await call("tmux", "capture-pane", "-p", "-t", pane_id)
+    if ret.code != 0:
+        raise TmuxError(ret.err)
+    else:
+        return ret.out
 
 
 async def context() -> None:
@@ -48,8 +68,6 @@ async def context() -> None:
 
 
 async def main(nvim: Nvim, chan: Queue, seed: SourceSeed) -> Source:
-    ctx = await context()
-
     async def source(feed: SourceFeed) -> AsyncIterator[SourceCompletion]:
         yield SourceCompletion(
             position=feed.position,
