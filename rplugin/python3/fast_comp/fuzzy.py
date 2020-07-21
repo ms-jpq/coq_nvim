@@ -21,7 +21,7 @@ def normalize(text: str) -> str:
 def fuzzify(feed: SourceFeed, step: Step) -> FuzzyStep:
     f_alnums = feed.context.alnums
     f_n_alnums = feed.context.normalized_alnums
-    s_n_alnums = step.normalized_alnums
+    s_n_alnums = step.normalized_text
     matches: Dict[int, str] = {}
     idx = 0
 

@@ -106,8 +106,7 @@ class Step:
     source_shortname: str
     priority: float
     text: str
-    alnums: str
-    normalized_alnums: str
+    normalized_text: str
     comp: SourceCompletion
 
 

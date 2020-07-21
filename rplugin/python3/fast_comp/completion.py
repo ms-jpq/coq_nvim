@@ -19,10 +19,10 @@ from .cache import make_cache
 from .fuzzy import fuzzer, normalize
 from .nvim import VimCompletion, call, print
 from .types import (
+    Context,
     Factory,
     Notification,
     Position,
-    Context,
     Settings,
     SourceFactory,
     SourceFeed,
@@ -114,24 +114,6 @@ async def gen_feed(nvim: Nvim) -> SourceFeed:
     return await call(nvim, fed)
 
 
-def p_alnums(prefix: str, suffix: str) -> str:
-    def p1() -> Iterator[str]:
-        for c in reversed(prefix):
-            if c.isalnum():
-                yield c
-            else:
-                break
-
-    def p2() -> Iterator[str]:
-        for c in suffix:
-            if c.isalnum():
-                yield c
-            else:
-                break
-
-    return "".join(chain(reversed(tuple(p1())), p2()))
-
-
 async def manufacture(nvim: Nvim, factory: SourceFactory) -> Tuple[StepFunction, Queue]:
     chan: Queue = Queue()
     fact = cast(Factory, factory.manufacture)
@@ -145,15 +127,13 @@ async def manufacture(nvim: Nvim, factory: SourceFactory) -> Tuple[StepFunction,
         async def cont() -> None:
             async for comp in src(feed):
                 text = comp.new_prefix + comp.new_suffix
-                alnums = p_alnums(comp.new_prefix, comp.new_suffix)
-                normalized_alnums = normalize(alnums)
+                normalized_text = normalize(text)
                 completion = Step(
                     source=name,
                     source_shortname=factory.short_name,
                     priority=factory.priority,
                     text=text,
-                    alnums=alnums,
-                    normalized_alnums=normalized_alnums,
+                    normalized_text=normalized_text,
                     comp=comp,
                 )
                 acc.append(completion)
