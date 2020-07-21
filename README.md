@@ -73,6 +73,16 @@ The newer dictionary will automatically be merged with the older one.
 | `source.<name>.config`     | custom config for each source                      |
 | `source.<name>.main`       | source location (for custom sources)               |
 
+### Recommended Settings
+
+There are some common settings recommended by most completion plugins. I put them in a package.
+
+Just require it in your `.vimrc` like so:
+
+```vimL
+lua require("fancy_completion_recommends").all()
+```
+
 ### Authoring Clients
 
 A client is really simple:

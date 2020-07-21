@@ -1,4 +1,4 @@
-local bindings = require "fancy_completion_std"
+local bindings = require "fancy_completion_bindings"
 
 
 local map_keys = function ()
@@ -26,6 +26,9 @@ local settings = function ()
 
   -- complete menu
   bindings.set("completeopt", "menuone,noinsert,noselect", [[+=]])
+
+  -- allow <c-x><c-u> to perform manual insertions in insertmode
+  bindings.set("completefunc", "FComnifunc")
 
 end
 
