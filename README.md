@@ -57,3 +57,28 @@ Plug 'ms-jpq/fancy-completion', {'branch': 'nvim', 'do': ':UpdateRemotePlugins'}
 ### Configuration
 
 Check out the [basic config](https://github.com/ms-jpq/fancy-completion/blob/nvim/config/config.json) before you proceed.
+
+
+### Authoring Clients
+
+A client is really simple:
+
+Some pseudocode:
+
+```
+Source = (Context) -> AsyncIterator<Completion>
+Factory = async (Nvim, Queue, ConfigInfo) -> Source
+```
+
+And each completion is
+
+```
+type completion:
+  position: (int, int)
+  old_prefix: str
+  old_suffix: str
+  new_prefix: str
+  new_suffix: str
+```
+
+where the prefix / suffix determine the cusor location.
