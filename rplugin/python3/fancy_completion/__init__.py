@@ -65,17 +65,20 @@ class Main:
                 arg_eval=("v:completed_item",),
             )
 
-        async def gen_user_config() -> Any:
+        async def gen_user_config() -> Sequence[Any]:
             def cont() -> Any:
                 user_config = self.nvim.vars.get("fancy_completion_settings", {})
-                return user_config
+                client_config = self.nvim.vars.get(
+                    "fancy_completion_settings_private", {}
+                )
+                return (client_config, user_config)
 
             return await call(self.nvim, cont)
 
         async def ooda() -> None:
             try:
-                user_config = await gen_user_config()
-                settings = initial(user_config=user_config)
+                configs = await gen_user_config()
+                settings = initial(configs=configs)
                 factories = load_factories(settings=settings)
                 gen, listen = await merge(
                     self.nvim, chan=self.msg_ch, factories=factories, settings=settings

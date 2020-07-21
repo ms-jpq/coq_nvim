@@ -1,10 +1,10 @@
 from inspect import getmembers, isfunction
 from math import inf
 from os.path import exists, join
-from typing import Any, Iterator
+from typing import Any, Iterator, Sequence
 
 from .consts import load_hierarchy, module_entry_point, settings_json
-from .da import load_json, load_module, merge
+from .da import load_json, load_module, merge_all
 from .types import FuzzyOptions, Settings, SourceFactory, SourceSeed, SourceSpec
 
 
@@ -21,8 +21,8 @@ def load_source(config: Any) -> SourceSpec:
     return spec
 
 
-def initial(user_config: Any) -> Settings:
-    config = merge(load_json(settings_json), user_config)
+def initial(configs: Sequence[Any]) -> Settings:
+    config = merge_all(load_json(settings_json), configs)
     fuzzy_o = config["fuzzy"]
     fuzzy = FuzzyOptions(
         band_size=fuzzy_o["band_size"], min_match=fuzzy_o["min_match"],
