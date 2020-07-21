@@ -38,7 +38,7 @@ def fuzzify(feed: SourceFeed, step: Step) -> FuzzyStep:
 
 def rank(fuzz: FuzzyStep) -> Sequence[Union[float, int, str]]:
     comp = fuzz.step.comp
-    text = normalize(strxfrm(comp.sortby or comp.label or fuzz.step.text))
+    text = comp.sortby or normalize(strxfrm(comp.label or fuzz.step.text))
     return (*fuzz.rank, fuzz.step.priority * -1, text)
 
 

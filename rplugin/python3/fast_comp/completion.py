@@ -32,7 +32,6 @@ from .types import (
 StepFunction = Callable[[SourceFeed], Awaitable[Sequence[Step]]]
 
 
-
 def gen_context(line: str, col: int) -> Context:
     def is_sym(char: str) -> bool:
         return not char.isalnum() and not char.isspace()
@@ -168,7 +167,7 @@ async def manufacture(nvim: Nvim, factory: SourceFactory) -> Tuple[StepFunction,
             msg = (
                 f"async completion source timed out - {name}, exceeded {timeout_fmt}ms"
             )
-            await print(nvim, msg)
+            await print(nvim, msg, error=True)
         return acc
 
     return source, chan
@@ -219,7 +218,7 @@ async def merge(
     async def gen(force: bool) -> Tuple[Position, Iterator[VimCompletion]]:
         feed = await gen_feed(nvim)
         position = feed.position
-        go = feed.context.line_before.isspace()
+        go = not feed.context.line_before.isspace()
         if go or force:
             cached, *comps = await gather(
                 retrieve(feed), *(source(feed) for source in sources)
