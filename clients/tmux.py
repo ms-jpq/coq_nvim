@@ -12,13 +12,13 @@ from .pkgs.nvim import print
 from .pkgs.shared import coalesce
 
 
-class TmuxError(Exception):
-    pass
-
-
 @dataclass(frozen=True)
 class Config:
     min_length: int
+
+
+class TmuxError(Exception):
+    pass
 
 
 @dataclass(frozen=True)
