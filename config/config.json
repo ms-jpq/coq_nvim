@@ -34,6 +34,15 @@
       "short_name": "F",
       "timeout": 100
     },
+    "tabnine": {
+      "config": {},
+      "enabled": true,
+      "limit": 5,
+      "main": "tabnine.py",
+      "priority": 5,
+      "short_name": "T9",
+      "timeout": 100
+    },
     "tree_sitter": {
       "config": {},
       "enabled": false,

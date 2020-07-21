@@ -1,6 +1,6 @@
 from asyncio import Queue, StreamReader, StreamWriter, create_subprocess_exec
 from asyncio.subprocess import DEVNULL, PIPE, Process
-from dataclasses import dataclass, field
+from dataclasses import asdict, dataclass, field
 from itertools import chain
 from json import dumps, loads
 from os import linesep
@@ -18,7 +18,7 @@ from typing import (
 )
 
 from pynvim import Nvim
-from pynvim.api.common import Buffer
+from pynvim.api.buffer import Buffer
 
 from .pkgs.fc_types import Source, SourceCompletion, SourceFeed, SourceSeed
 from .pkgs.nvim import call
@@ -117,7 +117,7 @@ def tabnine_subproc() -> Optional[
         stdin = cast(StreamWriter, p.stdin)
         stdout = cast(StreamReader, p.stdout)
 
-        stdin.write(dumps(req).encode())
+        stdin.write(dumps(asdict(req)).encode())
         stdin.write(SEP)
         data = await stdout.readuntil(SEP)
         json = data.decode()
@@ -139,16 +139,16 @@ async def buf_lines(nvim: Nvim) -> Sequence[str]:
     return await call(nvim, cont)
 
 
-async def encode_tabnine_request(nvim, feed: SourceFeed) -> TabNineRequest:
+async def encode_tabnine_request(nvim: Nvim, feed: SourceFeed) -> TabNineRequest:
     row = feed.position.row
     context = feed.context
     lines = await buf_lines(nvim)
     lines_before = lines[:row]
     lines_after = lines[row:]
     before = "".join(chain(lines_before, (context.line_before,)))
-    after = "".join(chain((context.lines_after,), lines_after))
+    after = "".join(chain((context.line_after,), lines_after))
 
-    l2 = TabNineRequestL2(before=before, after=after, filename=context.filename)
+    l2 = TabNineRequestL2(before=before, after=after, filename=feed.filename)
     l1 = TabNineRequestL1(Autocomplete=l2)
     req = TabNineRequest(request=l1)
     return req
