@@ -22,15 +22,15 @@ def parse_common_affix(
     )
 
     prefix = ""
-    for norm, lhs, rhs in pre_it:
+    for text, lhs, rhs in pre_it:
         if lhs == rhs:
-            prefix = "".join(norm)
+            prefix = "".join(text)
             break
 
     suffix = ""
-    for norm, lhs, rhs in post_it:
+    for text, lhs, rhs in post_it:
         if lhs == rhs:
-            suffix = "".join(norm)
+            suffix = "".join(text)
             break
 
     return prefix, suffix
