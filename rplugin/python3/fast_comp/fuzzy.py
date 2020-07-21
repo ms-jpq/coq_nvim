@@ -25,10 +25,10 @@ def fuzzify(feed: SourceFeed, step: Step) -> FuzzyStep:
     matches: Dict[int, str] = {}
     idx = 0
 
-    for o_char, char in zip(f_alnums, fn_alnums):
-        m_idx = sn_alnums.find(char, idx)
+    for char, n_char in zip(f_alnums, fn_alnums):
+        m_idx = sn_alnums.find(n_char, idx)
         if m_idx != -1:
-            matches[m_idx] = o_char
+            matches[m_idx] = char
             idx = m_idx + 1
 
     rank = (len(matches) * -1, sum(matches))
