@@ -40,17 +40,18 @@ Plug 'ms-jpq/fuzzy-completion', {'branch': 'nvim', 'do': ':UpdateRemotePlugins'}
 
 ### Builtin Sources
 
-| name    | source                                 |
-| ------- | -------------------------------------- |
-| LSP     | Fetches results from Neovim LSP client |
-| Buffers | Fetches results from open buffers      |
-| Paths   | Fetches results from file paths        |
+| name        | source                                                                  |
+| ----------- | ----------------------------------------------------------------------- |
+| LSP         | Fetches results from Neovim LSP client                                  |
+| Buffers     | Fetches results from open buffers                                       |
+| Paths       | Fetches results from file paths                                         |
+| Tree Sitter | Fetches results from syntax tree (still waiting on next Neovim release) |
 
 ### Plugin Sources
 
-| name    | source                                                   |
-| ------- | -------------------------------------------------------- |
-| TabNine | Fetches results from [TabNine](https://www.tabnine.com/) |
+| name                                                          | source                                                   |
+| ------------------------------------------------------------- | -------------------------------------------------------- |
+| [TabNine](https://github.com/ms-jpq/fuzzy-completion-clients) | Fetches results from [TabNine](https://www.tabnine.com/) |
 
 ### Configuration
 
