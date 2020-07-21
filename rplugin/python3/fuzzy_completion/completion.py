@@ -150,12 +150,10 @@ async def manufacture(nvim: Nvim, factory: SourceFactory) -> Tuple[StepFunction,
             p.cancel()
         if pending:
             timeout_fmt = round(timeout * 1000)
-            if not acc:
-                msg = f"async completion source timed out - {name}, exceeded {timeout_fmt}ms"
-                await print(nvim, msg, error=True)
-            else:
-                msg = f"async completion source partially timed out - {name}, exceeded {timeout_fmt}ms"
-                await print(nvim, msg)
+            msg = (
+                f"async completion source timed out - {name}, exceeded {timeout_fmt}ms"
+            )
+            await print(nvim, msg)
         return acc
 
     return source, chan
@@ -213,7 +211,7 @@ async def merge(
             )
             steps: Sequence[Step] = tuple((c for co in comps for c in co))
             push(feed, steps)
-            completions = chain(steps, cached)
+            completions = chain(steps)
             return position, fuzzy(feed, completions)
         else:
             return position, iter(())

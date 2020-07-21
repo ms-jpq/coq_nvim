@@ -41,7 +41,7 @@
       "main": "tabnine.py",
       "priority": 5,
       "short_name": "T9",
-      "timeout": 100
+      "timeout": 1000
     },
     "tree_sitter": {
       "config": {},
