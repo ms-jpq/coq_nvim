@@ -82,11 +82,7 @@ Some pseudocode:
 ```
 Source = (Context) -> AsyncIterator<Completion>
 Factory = async (Nvim, Queue, ConfigInfo) -> Source
-```
 
-And each completion is
-
-```
 type completion:
   position: (int, int)
   old_prefix: str
@@ -95,7 +91,11 @@ type completion:
   new_suffix: str
 ```
 
-where the prefix / suffix determine the cusor location, post completion.
+where `Nvim` is the nvim context from [`pynvim`](https://github.com/neovim/pynvim), and `Queue` is an `asyncio` channel available for RPC.
+
+See the builtin LSP source for RPC example.
+
+For completion results, the prefix / suffix determine the cusor location, post completion.
 
 Each client is loaded by specifying a `source.<name>.main` path relative to the parent directory of `fancy-completion`.
 
