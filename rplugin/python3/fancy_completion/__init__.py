@@ -99,7 +99,7 @@ class Main:
             self._submit(setup())
             create_task(ooda())
 
-        self._submit(print(self.nvim, "Fancy Completion 🍎"))
+        self._submit(print(self.nvim, "Fancy Completion ⭐️"))
 
     def next_comp(self, force: bool) -> None:
         async def cont() -> None:
