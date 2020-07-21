@@ -23,7 +23,7 @@
       "main": "lsp.py",
       "priority": 6,
       "short_name": "LSP",
-      "timeout": 1000
+      "timeout": 3000
     },
     "paths": {
       "config": {},

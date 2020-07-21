@@ -9,10 +9,10 @@ def is_stale(feed: SourceFeed, step: Step) -> bool:
     comp = step.comp
     col = comp.position.col
     line = feed.context.line
-    step_line_pre = line[:col]
-    step_line_post = line[col:]
-    return step_line_pre.endswith(comp.old_prefix) and step_line_post.starswith(
-        comp.old_old_suffix
+    s_line_pre = line[:col]
+    s_line_post = line[col:]
+    return s_line_pre.endswith(comp.old_prefix) and s_line_post.startswith(
+        comp.old_suffix
     )
 
 

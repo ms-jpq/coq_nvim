@@ -14,6 +14,7 @@ from typing import (
 
 from pynvim import Nvim
 
+from .pkgs.da import contains_syms
 from .pkgs.fc_types import Position, Source, SourceCompletion, SourceFeed, SourceSeed
 from .pkgs.nvim import call
 
@@ -87,14 +88,24 @@ def parse_rows(
     insert_kind_lookup: Dict[int, str],
 ) -> Iterator[SourceCompletion]:
     position = feed.position
-    old_prefix = feed.context.alnums_before
-    old_suffix = feed.context.alnums_after
+    context = feed.context
+    old_prefix_a = context.alnums_before
+    old_suffix_a = context.alnums_after
+
+    old_prefix_s = context.syms_before + context.alnums_before
+    old_suffix_s = context.alnums_after + context.syms_after
+
     for row in rows:
         text = parse_text(row)
+        has_syms = contains_syms(text)
         label = row.get("label")
         sortby = row.get("sortText")
         kind = entry_kind_lookup.get(cast(int, row.get("kind")), "Unknown")
         doc = parse_documentation(row.get("documentation"))
+
+        old_prefix = old_prefix_s if has_syms else old_prefix_a
+        old_suffix = old_suffix_s if has_syms else old_suffix_a
+
         yield SourceCompletion(
             position=position,
             old_prefix=old_prefix,
