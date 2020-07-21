@@ -1,6 +1,6 @@
 from asyncio import Queue, get_running_loop
 from os import listdir
-from os.path import basename, dirname, isdir, sep
+from os.path import dirname, isdir, sep
 from typing import AsyncIterator, Iterator, Sequence
 
 from pynvim import Nvim
@@ -34,7 +34,6 @@ async def find_children(path: str, feed: SourceFeed) -> Sequence[SourceCompletio
     old_prefix = feed.context.alnums_before
     old_suffix = feed.context.alnums_after
     loop = get_running_loop()
-    partial_name = basename(path)
 
     def cont() -> Iterator[SourceCompletion]:
         parent = dirname(path)
@@ -52,14 +51,13 @@ async def find_children(path: str, feed: SourceFeed) -> Sequence[SourceCompletio
                 )
         elif isdir(parent):
             for child in list_dir(parent):
-                if child.startswith(partial_name):
-                    yield SourceCompletion(
-                        position=position,
-                        old_prefix=old_prefix,
-                        new_prefix=child,
-                        old_suffix=old_suffix,
-                        new_suffix="",
-                    )
+                yield SourceCompletion(
+                    position=position,
+                    old_prefix=old_prefix,
+                    new_prefix=child,
+                    old_suffix=old_suffix,
+                    new_suffix="",
+                )
         else:
             return
 
