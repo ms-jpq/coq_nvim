@@ -67,7 +67,7 @@ class Main:
 
         async def gen_user_config() -> Any:
             def cont() -> Any:
-                user_config = self.nvim.vars.get("fuzzy_completion_settings", {})
+                user_config = self.nvim.vars.get("fancy_completion_settings", {})
                 return user_config
 
             return await call(self.nvim, cont)

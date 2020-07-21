@@ -21,12 +21,12 @@ from .pkgs.shared import normalize, parse_common_affix
 
 async def init_lua(nvim: Nvim) -> Tuple[Dict[str, int], Dict[str, int]]:
     def cont() -> Tuple[Dict[str, int], Dict[str, int]]:
-        nvim.api.exec_lua("fuzzy_completion_lsp = require 'fuzzy_completion_lsp'", ())
+        nvim.api.exec_lua("fancy_completion_lsp = require 'fancy_completion_lsp'", ())
         entry_kind = nvim.api.exec_lua(
-            "return fuzzy_completion_lsp.list_entry_kind()", ()
+            "return fancy_completion_lsp.list_entry_kind()", ()
         )
         insert_kind = nvim.api.exec_lua(
-            "return fuzzy_completion_lsp.list_insert_kind()", ()
+            "return fancy_completion_lsp.list_insert_kind()", ()
         )
         return entry_kind, insert_kind
 
@@ -39,7 +39,7 @@ async def ask(nvim: Nvim, chan: Queue, pos: Position, uid: int) -> Optional[Any]
 
     def cont() -> None:
         nvim.api.exec_lua(
-            "fuzzy_completion_lsp.list_comp_candidates(...)", (uid, row, col)
+            "fancy_completion_lsp.list_comp_candidates(...)", (uid, row, col)
         )
 
     await call(nvim, cont)

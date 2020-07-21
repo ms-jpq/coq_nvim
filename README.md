@@ -1,4 +1,4 @@
-# Fuzzy Completion
+# Fancy Completion
 
 The **BEST** async completion framework for Neovim
 
@@ -33,7 +33,7 @@ pip3 install pynvim
 Install the usual way, ie. [VimPlug](https://github.com/junegunn/vim-plug), [Vundle](https://github.com/VundleVim/Vundle.vim), etc
 
 ```VimL
-Plug 'ms-jpq/fuzzy-completion', {'branch': 'nvim', 'do': ':UpdateRemotePlugins'}
+Plug 'ms-jpq/fancy-completion', {'branch': 'nvim', 'do': ':UpdateRemotePlugins'}
 ```
 
 ## Documentation
@@ -42,18 +42,18 @@ Plug 'ms-jpq/fuzzy-completion', {'branch': 'nvim', 'do': ':UpdateRemotePlugins'}
 
 | name                                                                                       | source                                                                  |
 | ------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------- |
-| [LSP](https://github.com/ms-jpq/fuzzy-completion/blob/nvim/clients/lsp.py)                 | Fetches results from Neovim LSP client                                  |
-| [Tree Sitter](https://github.com/ms-jpq/fuzzy-completion/blob/nvim/clients/tree_sitter.py) | Fetches results from syntax tree (still waiting on next Neovim release) |
-| [Tmux](https://github.com/ms-jpq/fuzzy-completion/blob/nvim/clients/tmux.py)               | Fetches results from tmux panes                                         |
-| [Buffers](https://github.com/ms-jpq/fuzzy-completion/blob/nvim/clients/buffers.py)         | Fetches results from open buffers                                       |
-| [Paths](https://github.com/ms-jpq/fuzzy-completion/blob/nvim/clients/paths.py)             | Fetches results from file paths                                         |
+| [LSP](https://github.com/ms-jpq/fancy-completion/blob/nvim/clients/lsp.py)                 | Fetches results from Neovim LSP client                                  |
+| [Tree Sitter](https://github.com/ms-jpq/fancy-completion/blob/nvim/clients/tree_sitter.py) | Fetches results from syntax tree (still waiting on next Neovim release) |
+| [Tmux](https://github.com/ms-jpq/fancy-completion/blob/nvim/clients/tmux.py)               | Fetches results from tmux panes                                         |
+| [Buffers](https://github.com/ms-jpq/fancy-completion/blob/nvim/clients/buffers.py)         | Fetches results from open buffers                                       |
+| [Paths](https://github.com/ms-jpq/fancy-completion/blob/nvim/clients/paths.py)             | Fetches results from file paths                                         |
 
 ### Plugin Sources
 
 | name                                                          | source                                                            |
 | ------------------------------------------------------------- | ----------------------------------------------------------------- |
-| [TabNine](https://github.com/ms-jpq/fuzzy-completion-clients) | Fetches results from [TabNine](https://www.tabnine.com/) ML model |
+| [TabNine](https://github.com/ms-jpq/fancy-completion-clients) | Fetches results from [TabNine](https://www.tabnine.com/) ML model |
 
 ### Configuration
 
-Check out the [basic config](https://github.com/ms-jpq/fuzzy-completion/blob/nvim/config/config.json) before you proceed.
+Check out the [basic config](https://github.com/ms-jpq/fancy-completion/blob/nvim/config/config.json) before you proceed.
