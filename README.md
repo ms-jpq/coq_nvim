@@ -49,9 +49,9 @@ Plug 'ms-jpq/fuzzy-completion', {'branch': 'nvim', 'do': ':UpdateRemotePlugins'}
 
 ### Plugin Sources
 
-| name                                                          | source                                                   |
-| ------------------------------------------------------------- | -------------------------------------------------------- |
-| [TabNine](https://github.com/ms-jpq/fuzzy-completion-clients) | Fetches results from [TabNine](https://www.tabnine.com/) |
+| name                                                          | source                                                            |
+| ------------------------------------------------------------- | ----------------------------------------------------------------- |
+| [TabNine](https://github.com/ms-jpq/fuzzy-completion-clients) | Fetches results from [TabNine](https://www.tabnine.com/) ML model |
 
 ### Configuration
 
