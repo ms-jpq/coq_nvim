@@ -36,7 +36,7 @@ def coalesce(cword: str, min_length: int) -> Callable[[Sequence[str]], Iterator[
                 ):
                     acc.add(word)
                     yield word
-                curr = []
+                curr.clear()
 
         if curr:
             word = "".join(curr)

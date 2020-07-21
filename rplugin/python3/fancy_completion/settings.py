@@ -22,7 +22,7 @@ def load_source(config: Any) -> SourceSpec:
 
 
 def initial(configs: Sequence[Any]) -> Settings:
-    config = merge_all(load_json(settings_json), configs)
+    config = merge_all(load_json(settings_json), *configs)
     fuzzy_o = config["fuzzy"]
     fuzzy = FuzzyOptions(
         band_size=fuzzy_o["band_size"], min_match=fuzzy_o["min_match"],
