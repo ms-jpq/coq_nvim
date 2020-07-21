@@ -20,19 +20,19 @@ def normalize(text: str) -> str:
 
 def fuzzify(feed: SourceFeed, step: Step) -> FuzzyStep:
     f_alnums = feed.context.alnums
-    fn_alnums = feed.context.normalized_alnums
-    sn_alnums = step.normalized_alnums
+    f_n_alnums = feed.context.normalized_alnums
+    s_n_alnums = step.normalized_alnums
     matches: Dict[int, str] = {}
     idx = 0
 
-    for char, n_char in zip(f_alnums, fn_alnums):
-        m_idx = sn_alnums.find(n_char, idx)
+    for char, n_char in zip(f_alnums, f_n_alnums):
+        m_idx = s_n_alnums.find(n_char, idx)
         if m_idx != -1:
             matches[m_idx] = char
             idx = m_idx + 1
 
     rank = (len(matches) * -1, sum(matches))
-    full_match = sn_alnums.startswith(fn_alnums)
+    full_match = s_n_alnums.startswith(f_n_alnums)
     return FuzzyStep(step=step, full_match=full_match, matches=matches, rank=rank)
 
 
