@@ -15,7 +15,7 @@ from typing import (
 from pynvim import Nvim
 
 from .pkgs.fc_types import Position, Source, SourceCompletion, SourceFeed, SourceSeed
-from .pkgs.nvim import call
+from .pkgs.nvim import call, print
 from .pkgs.shared import parse_common_affix
 
 
@@ -89,6 +89,10 @@ def parse_rows(
 ) -> Iterator[SourceCompletion]:
     position = feed.position
     before, after = feed.context.line_before, feed.context.line_after
+    before_normalized, after_normalized = (
+        feed.context.line_before_normalized,
+        feed.context.line_after_normalized,
+    )
 
     for row in rows:
         text = parse_text(row)
@@ -97,7 +101,14 @@ def parse_rows(
         kind = entry_kind_lookup.get(cast(int, row.get("kind")), "Unknown")
         doc = parse_documentation(row.get("documentation"))
 
-        old_prefix, old_suffix = parse_common_affix(before, after, match=text)
+        match_normalized = text.lower()
+        old_prefix, old_suffix = parse_common_affix(
+            before=before,
+            after=after,
+            before_normalized=before_normalized,
+            after_normalized=after_normalized,
+            match_normalized=match_normalized,
+        )
 
         yield SourceCompletion(
             position=position,
@@ -128,6 +139,7 @@ async def main(nvim: Nvim, chan: Queue, seed: SourceSeed) -> Source:
             entry_kind_lookup=entry_kind_lookup,
             insert_kind_lookup=insert_kind_lookup,
         ):
+            await print(nvim, row)
             yield row
 
     return source

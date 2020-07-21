@@ -81,19 +81,25 @@ def gen_context(line: str, col: int) -> Context:
     syms_after = "".join(r_syms)
     syms = syms_before + syms_after
 
-    normalized_alnums = normalize(alnums)
+    line_normalized = normalize(line)
+    line_before_normalized = normalize(line_before)
+    line_after_normalized = normalize(line_after)
+    alnums_normalized = normalize(alnums)
 
     return Context(
         line=line,
+        line_normalized=line_normalized,
         line_before=line_before,
+        line_before_normalized=line_before_normalized,
         line_after=line_after,
+        line_after_normalized=line_after_normalized,
         alnums=alnums,
         alnums_before=alnums_before,
         alnums_after=alnums_after,
         syms=syms,
         syms_before=syms_before,
         syms_after=syms_after,
-        normalized_alnums=normalized_alnums,
+        alnums_normalized=alnums_normalized,
     )
 
 
@@ -133,7 +139,7 @@ async def manufacture(nvim: Nvim, factory: SourceFactory) -> Tuple[StepFunction,
                     source_shortname=factory.short_name,
                     priority=factory.priority,
                     text=text,
-                    normalized_text=normalized_text,
+                    text_normalized=normalized_text,
                     comp=comp,
                 )
                 acc.append(completion)

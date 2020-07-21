@@ -18,15 +18,20 @@ class Position:
 @dataclass(frozen=True)
 class Context:
     line: str
+    line_normalized: str
     line_before: str
+    line_before_normalized: str
     line_after: str
+    line_after_normalized: str
+
     alnums: str
+    alnums_normalized: str
     alnums_before: str
     alnums_after: str
+
     syms: str
     syms_before: str
     syms_after: str
-    normalized_alnums: str
 
 
 @dataclass(frozen=True)

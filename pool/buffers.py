@@ -8,7 +8,7 @@ from pynvim import Nvim
 from pynvim.api.buffer import Buffer
 
 from .pkgs.fc_types import Source, SourceCompletion, SourceFeed, SourceSeed
-from .pkgs.nvim import call, print
+from .pkgs.nvim import call
 
 
 @dataclass(frozen=True)
@@ -56,7 +56,7 @@ def count_matches(cword: str, word: str) -> int:
 
 
 def coalesce(chars: Sequence[str], feed: SourceFeed, config: Config) -> Iterator[str]:
-    cword = feed.context.normalized_alnums
+    cword = feed.context.alnums_normalized
     min_length = config.min_length
     acc: Set[str] = set()
     curr: List[str] = []

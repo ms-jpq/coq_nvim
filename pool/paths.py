@@ -78,8 +78,8 @@ async def main(nvim: Nvim, chan: Queue, seed: SourceSeed) -> Source:
                 children = await find_children(path, feed=feed)
                 yield children
 
-        co = await anext(next_children(), ())
-        for c in co:
+        co = await anext(next_children())
+        for c in (co or ()):
             yield c
 
     return source
