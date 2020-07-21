@@ -46,6 +46,12 @@ Plug 'ms-jpq/fast-completion', {'branch': 'nvim', 'do': ':UpdateRemotePlugins'}
 | Buffers | Fetches results from open buffers      |
 | Paths   | Fetches results from file paths        |
 
+### Plugin Sources
+
+| name    | source                                                   |
+| ------- | -------------------------------------------------------- |
+| TabNine | Fetches results from [TabNine](https://www.tabnine.com/) |
+
 ### Configuration
 
 Check out the [basic config](https://github.com/ms-jpq/fast-comp/blob/nvim/config/config.json) before you proceed.
