@@ -1,5 +1,21 @@
 local api = vim.api
 
+
+local set = function (opt, val, operator)
+  local p_statement = function ()
+    if not val then
+      return "set " .. opt
+    elseif not operator then
+      return "set " .. opt .. "=" .. val
+    else
+      return "set " .. opt .. operator ..  val
+    end
+  end
+
+  api.nvim_command(p_statement())
+end
+
+
 local map = function ()
   local base = {noremap = true, silent = true}
 
@@ -39,5 +55,6 @@ end
 
 
 return {
+  set = set,
   map = map,
 }
