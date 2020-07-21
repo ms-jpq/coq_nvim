@@ -41,6 +41,7 @@ def replace_lines(nvim: Nvim, payload: Payload) -> None:
     nvim.api.buf_set_lines(buf, btm_idx, top_idx, True, new_lines)
     win = nvim.api.get_current_win()
     nvim.api.win_set_cursor(win, (new_row, new_col))
+    nvim.api.buf_set_var(buf, "_buf_cursor_pos_", new_col)
 
 
 def apply_patch(nvim: Nvim, comp: Dict[str, Any]) -> None:
