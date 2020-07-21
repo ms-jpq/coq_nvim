@@ -8,11 +8,10 @@ def normalize(text: str) -> str:
 
 
 def count_matches(cword: str, word: str) -> int:
-    normalized = normalize(word)
     idx = 0
     count = 0
     for char in cword:
-        m_idx = normalized.find(char, idx)
+        m_idx = word.find(char, idx)
         if m_idx != -1:
             count += 1
             idx = m_idx + 1
@@ -30,7 +29,11 @@ def coalesce(cword: str, min_length: int) -> Callable[[Sequence[str]], Iterator[
                 curr.append(char)
             elif curr:
                 word = "".join(curr)
-                if word not in acc and count_matches(cword, word=word) >= min_length:
+                normalized = normalize(word)
+                if (
+                    normalized not in acc
+                    and count_matches(cword, word=normalized) >= min_length
+                ):
                     acc.add(word)
                     yield word
                 curr = []
