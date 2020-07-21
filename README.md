@@ -69,7 +69,7 @@ The newer dictionary will automatically be merged with the older one.
 | `source.<name>.priority`   | ranking of source AFTER fuzzy ranking              |
 | `source.<name>.limit`      | max results shown                                  |
 | `source.<name>.timeout`    | max wait time for source                           |
-| `source.<name>.short_name` | badge for source, ie. `[LSP]`                      |
+| `source.<name>.short_name` | badge for source, ie. `blah blah blah [LSP]`       |
 | `source.<name>.config`     | custom config for each source                      |
 | `source.<name>.main`       | source location (for custom sources)               |
 
