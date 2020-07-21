@@ -84,15 +84,19 @@ async def main(nvim: Nvim, chan: Queue, seed: SourceSeed) -> Source:
         position = feed.position
         old_prefix = feed.context.alnums_before
         old_suffix = feed.context.alnums_after
+        existing_text = old_prefix + old_suffix
+
         b_gen = buf_gen(nvim, config=config, filetype=feed.filetype)
         lines = await buffer_chars(nvim, b_gen)
+
         for word in coalesce(lines, feed=feed, config=config):
-            yield SourceCompletion(
-                position=position,
-                old_prefix=old_prefix,
-                new_prefix=word,
-                old_suffix=old_suffix,
-                new_suffix="",
-            )
+            if word != existing_text:
+                yield SourceCompletion(
+                    position=position,
+                    old_prefix=old_prefix,
+                    new_prefix=word,
+                    old_suffix=old_suffix,
+                    new_suffix="",
+                )
 
     return source
