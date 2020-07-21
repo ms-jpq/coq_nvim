@@ -12,7 +12,7 @@ from typing import Any, Awaitable, Sequence
 from pynvim import Nvim, command, function, plugin
 
 from .completion import merge
-from .nvim import autocmd, complete, print
+from .nvim import autocmd, call, complete, print
 from .patch import apply_patch
 from .scheduler import Signal, schedule
 from .settings import initial, load_factories
@@ -65,9 +65,17 @@ class Main:
                 arg_eval=("v:completed_item",),
             )
 
+        async def gen_user_config() -> Any:
+            def cont() -> Any:
+                user_config = self.nvim.vars.get("fuzzy_completion_settings", {})
+                return user_config
+
+            return await call(self.nvim, cont)
+
         async def ooda() -> None:
             try:
-                settings = initial(user_config={})
+                user_config = await gen_user_config()
+                settings = initial(user_config=user_config)
                 factories = load_factories(settings=settings)
                 gen, listen = await merge(
                     self.nvim, chan=self.msg_ch, factories=factories, settings=settings
