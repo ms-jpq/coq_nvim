@@ -50,7 +50,6 @@ async def main(nvim: Nvim, chan: Queue, seed: SourceSeed) -> Source:
         position = feed.position
         old_prefix = feed.context.alnums_before
         old_suffix = feed.context.alnums_after
-        existing_text = old_prefix + old_suffix
         cword = feed.context.alnums_normalized
         min_length = config.min_length
 
@@ -59,13 +58,12 @@ async def main(nvim: Nvim, chan: Queue, seed: SourceSeed) -> Source:
         chars = await buffer_chars(nvim, b_gen)
 
         for word in parse(chars):
-            if word != existing_text:
-                yield SourceCompletion(
-                    position=position,
-                    old_prefix=old_prefix,
-                    new_prefix=word,
-                    old_suffix=old_suffix,
-                    new_suffix="",
-                )
+            yield SourceCompletion(
+                position=position,
+                old_prefix=old_prefix,
+                new_prefix=word,
+                old_suffix=old_suffix,
+                new_suffix="",
+            )
 
     return source

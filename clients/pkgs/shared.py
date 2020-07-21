@@ -21,7 +21,7 @@ def count_matches(cword: str, word: str) -> int:
 
 
 def coalesce(cword: str, min_length: int) -> Callable[[Sequence[str]], Iterator[str]]:
-    acc: Set[str] = set()
+    acc: Set[str] = {cword}
 
     def parse(chars: Sequence[str]) -> Iterator[str]:
         curr: List[str] = []

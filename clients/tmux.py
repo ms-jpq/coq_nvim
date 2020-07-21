@@ -83,7 +83,6 @@ async def main(nvim: Nvim, chan: Queue, seed: SourceSeed) -> Source:
             position = feed.position
             old_prefix = feed.context.alnums_before
             old_suffix = feed.context.alnums_after
-            existing_text = old_prefix + old_suffix
             cword = feed.context.alnums_normalized
             min_length = config.min_length
 
@@ -99,14 +98,13 @@ async def main(nvim: Nvim, chan: Queue, seed: SourceSeed) -> Source:
                 for source in as_completed(sources):
                     text = await source
                     for word in parse(text):
-                        if word != existing_text:
-                            yield SourceCompletion(
-                                position=position,
-                                old_prefix=old_prefix,
-                                new_prefix=word,
-                                old_suffix=old_suffix,
-                                new_suffix="",
-                            )
+                        yield SourceCompletion(
+                            position=position,
+                            old_prefix=old_prefix,
+                            new_prefix=word,
+                            old_suffix=old_suffix,
+                            new_suffix="",
+                        )
             except TmuxError as e:
                 await print(nvim, f"tmux completion failed:{linesep}{e}", error=True)
         else:
