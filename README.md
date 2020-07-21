@@ -33,7 +33,7 @@ pip3 install pynvim
 Install the usual way, ie. [VimPlug](https://github.com/junegunn/vim-plug), [Vundle](https://github.com/VundleVim/Vundle.vim), etc
 
 ```VimL
-Plug 'ms-jpq/fast-completion', {'branch': 'nvim', 'do': ':UpdateRemotePlugins'}
+Plug 'ms-jpq/fuzzy-completion', {'branch': 'nvim', 'do': ':UpdateRemotePlugins'}
 ```
 
 ## Documentation
@@ -46,6 +46,12 @@ Plug 'ms-jpq/fast-completion', {'branch': 'nvim', 'do': ':UpdateRemotePlugins'}
 | Buffers | Fetches results from open buffers      |
 | Paths   | Fetches results from file paths        |
 
+### Plugin Sources
+
+| name    | source                                                   |
+| ------- | -------------------------------------------------------- |
+| TabNine | Fetches results from [TabNine](https://www.tabnine.com/) |
+
 ### Configuration
 
-Check out the [basic config](https://github.com/ms-jpq/fast-comp/blob/nvim/config/config.json) before you proceed.
+Check out the [basic config](https://github.com/ms-jpq/fuzzy-completion/blob/nvim/config/config.json) before you proceed.
