@@ -1,4 +1,12 @@
-from asyncio import Queue, StreamReader, StreamWriter, create_subprocess_exec
+from asyncio import (
+    Queue,
+    StreamReader,
+    StreamWriter,
+    Task,
+    create_subprocess_exec,
+    create_task,
+    sleep,
+)
 from asyncio.subprocess import DEVNULL, PIPE, Process
 from dataclasses import asdict, dataclass, field
 from itertools import chain
@@ -101,6 +109,7 @@ def tabnine_subproc() -> Optional[
     tab_nine_exe = "TabNine"
     SEP = linesep.encode()
     proc, stdin, stdout = None, None, None
+    task: Task = create_task(sleep(0))
 
     async def init() -> None:
         nonlocal proc, stdin, stdout
@@ -112,6 +121,7 @@ def tabnine_subproc() -> Optional[
             )
 
     async def request(req: TabNineRequest) -> Any:
+        nonlocal task
         await init()
         p = cast(Process, proc)
         stdin = cast(StreamWriter, p.stdin)
@@ -119,7 +129,9 @@ def tabnine_subproc() -> Optional[
 
         stdin.write(dumps(asdict(req)).encode())
         stdin.write(SEP)
-        data = await stdout.readuntil(SEP)
+        task.cancel()
+        task = create_task(stdout.readuntil(SEP))
+        data = await task
         json = data.decode()
         resp = loads(json)
         return decode_tabnine(resp)
