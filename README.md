@@ -91,7 +91,7 @@ Some pseudocode:
 
 ```
 Source = (Context) -> AsyncIterator<Completion>
-Factory = async (Nvim, Queue, ConfigInfo) -> Source
+Factory = async (Nvim, Chan, ConfigInfo) -> Source
 
 type completion:
   position: (int, int)
@@ -101,9 +101,11 @@ type completion:
   new_suffix: str
 ```
 
-where `Nvim` is the nvim context from [`pynvim`](https://github.com/neovim/pynvim), and `Queue` is an `asyncio` channel available for RPC.
+where `Nvim` is the nvim context from [`pynvim`](https://github.com/neovim/pynvim), and `Chan` is an `asyncio` channel available for RPC.
 
 See the builtin LSP source for RPC example.
+
+Each source is basically an async stream, which will receive a context around the cursor, and respond with a stream of results.
 
 For completion results, the prefix / suffix determine the cusor location, post completion.
 
