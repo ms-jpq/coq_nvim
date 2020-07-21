@@ -48,7 +48,7 @@ Plug 'ms-jpq/fancy-completion', {'branch': 'nvim', 'do': ':UpdateRemotePlugins'}
 | [Buffers](https://github.com/ms-jpq/fancy-completion/blob/nvim/clients/buffers.py)         | Fetches results from open buffers                                       |
 | [Paths](https://github.com/ms-jpq/fancy-completion/blob/nvim/clients/paths.py)             | Fetches results from file paths                                         |
 
-### Plugin Sources
+### External Sources
 
 | name                                                          | source                                                            |
 | ------------------------------------------------------------- | ----------------------------------------------------------------- |
@@ -101,4 +101,4 @@ Each client is loaded by specifying a `source.<name>.main` path relative to the 
 
 Each client is must have a `main` function that conforms to the types `Source` and `Factory` in the [spec file](https://github.com/ms-jpq/fancy-completion/blob/nvim/rplugin/python3/fancy_completion/types.py).
 
-See the Plugin source section for examples.
+See the External Sources section for examples.
