@@ -116,7 +116,7 @@ def fuzzer(
             if (
                 seen_count <= limits[source]
                 and text not in seen
-                and len(fuzz.matches) >= options.min_match
+                and (fuzz.full_match or len(fuzz.matches) >= options.min_match)
             ):
                 seen.add(text)
                 yield vimify(fuzz=fuzz)
