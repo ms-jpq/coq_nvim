@@ -143,9 +143,9 @@ async def manufacture(nvim: Nvim, factory: SourceFactory) -> Tuple[StepFunction,
                 acc.append(completion)
 
         done, pending = await wait((cont(),), timeout=timeout)
-        await gather(*done)
         for p in pending:
             p.cancel()
+        await gather(*done)
         if pending:
             timeout_fmt = round(timeout * 1000)
             msg = (

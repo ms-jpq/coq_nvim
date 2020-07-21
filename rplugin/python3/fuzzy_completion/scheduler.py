@@ -26,6 +26,8 @@ async def schedule(chan: Queue, gen: Callable[..., Awaitable[T]]) -> AsyncIterat
 
     while True:
         done, pending = await wait((chan.get(), prev), return_when=FIRST_COMPLETED)
+        for p in pending:
+            p.cancel()
         for d in await gather(*done):
             if type(d) is Signal:
                 sig = cast(Signal, d)
@@ -33,5 +35,3 @@ async def schedule(chan: Queue, gen: Callable[..., Awaitable[T]]) -> AsyncIterat
             else:
                 prev = create_task(sleep(inf))
                 yield d
-        for p in pending:
-            p.cancel()
