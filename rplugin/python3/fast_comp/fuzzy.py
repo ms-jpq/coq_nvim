@@ -3,7 +3,7 @@ from locale import strxfrm
 from typing import Any, Callable, Dict, Iterator, Sequence, Set, Union, cast
 
 from .nvim import VimCompletion
-from .types import SourceFeed, FuzzyOptions, Payload, SourceCompletion, Step
+from .types import FuzzyOptions, Payload, SourceCompletion, SourceFeed, Step
 
 
 @dataclass(frozen=True)
@@ -44,9 +44,8 @@ def rank(fuzz: FuzzyStep) -> Sequence[Union[float, int, str]]:
 
 def context_gen(fuzz: FuzzyStep) -> str:
     match_set = fuzz.matches
-    comp = fuzz.step.comp
     text = fuzz.step.text
-    label = comp.label or text
+    label = fuzz.step.comp.label or text
 
     def gen() -> Iterator[str]:
         for idx, char in enumerate(text):
