@@ -58,6 +58,9 @@ Plug 'ms-jpq/fancy-completion', {'branch': 'nvim', 'do': ':UpdateRemotePlugins'}
 
 Check out the [basic config](https://github.com/ms-jpq/fancy-completion/blob/nvim/config/config.json) before you proceed.
 
+To customize, you are to set `g:fancy_completion_settings` to a dictionary with the same format.
+
+The newer dictionary will automatically be merged with the older one.
 
 ### Authoring Clients
 
@@ -81,4 +84,4 @@ type completion:
   new_suffix: str
 ```
 
-where the prefix / suffix determine the cusor location.
+where the prefix / suffix determine the cusor location, post completion.
