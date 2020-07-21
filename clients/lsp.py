@@ -22,8 +22,12 @@ from .pkgs.shared import normalize, parse_common_affix
 async def init_lua(nvim: Nvim) -> Tuple[Dict[str, int], Dict[str, int]]:
     def cont() -> Tuple[Dict[str, int], Dict[str, int]]:
         nvim.api.exec_lua("fuzzy_completion_lsp = require 'fuzzy_completion_lsp'", ())
-        entry_kind = nvim.api.exec_lua("return fuzzy_completion_lsp.list_entry_kind()", ())
-        insert_kind = nvim.api.exec_lua("return fuzzy_completion_lsp.list_insert_kind()", ())
+        entry_kind = nvim.api.exec_lua(
+            "return fuzzy_completion_lsp.list_entry_kind()", ()
+        )
+        insert_kind = nvim.api.exec_lua(
+            "return fuzzy_completion_lsp.list_insert_kind()", ()
+        )
         return entry_kind, insert_kind
 
     return await call(nvim, cont)
@@ -34,7 +38,9 @@ async def ask(nvim: Nvim, chan: Queue, pos: Position, uid: int) -> Optional[Any]
     col = pos.col
 
     def cont() -> None:
-        nvim.api.exec_lua("fuzzy_completion_lsp.list_comp_candidates(...)", (uid, row, col))
+        nvim.api.exec_lua(
+            "fuzzy_completion_lsp.list_comp_candidates(...)", (uid, row, col)
+        )
 
     await call(nvim, cont)
     while True:
@@ -52,6 +58,10 @@ def parse_resp_to_rows(resp: Any) -> Sequence[Any]:
         return resp
     else:
         raise ValueError(f"unknown LSP resp - {type(resp)}")
+
+
+def parse_snippet(snippet: str) -> str:
+    pass
 
 
 def parse_text(row: Dict[str, Any]) -> str:

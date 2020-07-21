@@ -12,7 +12,7 @@
       "enabled": true,
       "limit": 5,
       "main": "buffers.py",
-      "priority": 0,
+      "priority": 1,
       "short_name": "B",
       "timeout": 100
     },
@@ -30,8 +30,17 @@
       "enabled": true,
       "limit": 3,
       "main": "paths.py",
-      "priority": 1,
+      "priority": 2,
       "short_name": "F",
+      "timeout": 100
+    },
+    "tmux": {
+      "config": {},
+      "enabled": true,
+      "limit": 5,
+      "main": "tmux.py",
+      "priority": 0,
+      "short_name": "TMUX",
       "timeout": 100
     },
     "tree_sitter": {
