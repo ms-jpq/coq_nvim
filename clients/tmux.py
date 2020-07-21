@@ -1,12 +1,55 @@
 from asyncio import Queue
-from typing import AsyncIterator
+from dataclasses import dataclass
+from typing import AsyncIterator, Iterator, Sequence
 
 from pynvim import Nvim
 
+from .pkgs.da import call
 from .pkgs.fc_types import Source, SourceCompletion, SourceFeed, SourceSeed
 
 
+@dataclass(frozen=True)
+class PaneInfo:
+    session_id: str
+    pane_id: str
+    pane_active: bool
+    window_active: bool
+
+
+async def tmux_panes() -> Sequence[PaneInfo]:
+    ret = await call(
+        "tmux",
+        "list-panes",
+        "-a",
+        "-f",
+        "#{session_id} #{pane_id} #{pane_active} #{window_active}",
+    )
+
+    def cont() -> Iterator[PaneInfo]:
+        for line in ret.out.splitlines():
+            session_id, pane_id, pane_active, window_active = line.split(" ")
+            info = PaneInfo(
+                session_id=session_id,
+                pane_id=pane_id,
+                pane_active=bool(int(pane_active)),
+                window_active=bool(int(window_active)),
+            )
+            yield info
+
+    if ret.code != 0:
+        return ()
+    else:
+        return tuple(cont())
+
+
+async def context() -> None:
+    # await call("tmux")
+    pass
+
+
 async def main(nvim: Nvim, chan: Queue, seed: SourceSeed) -> Source:
+    ctx = await context()
+
     async def source(feed: SourceFeed) -> AsyncIterator[SourceCompletion]:
         yield SourceCompletion(
             position=feed.position,
