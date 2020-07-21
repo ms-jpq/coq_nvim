@@ -19,6 +19,9 @@ local list_comp_candidates = function (request_id, row, col)
     local params = {position = position, textDocument=text_doc}
 
     _, cancel = lsp.buf_request(0, "textDocument/completion", params, function (err, _, ans)
+      if err then
+        api.nvim_err_writeln(err)
+      end
       local ret = ans or nil
       fn._FCnotify("lsp", request_id, ret)
     end)
