@@ -14,7 +14,7 @@
       "main": "buffers.py",
       "priority": 0,
       "short_name": "B",
-      "timeout": 50
+      "timeout": 100
     },
     "lsp": {
       "config": {},
@@ -32,7 +32,7 @@
       "main": "paths.py",
       "priority": 1,
       "short_name": "F",
-      "timeout": 50
+      "timeout": 100
     },
     "tree_sitter": {
       "config": {},
@@ -41,7 +41,7 @@
       "main": "tree_sitter.py",
       "priority": 5,
       "short_name": "TS",
-      "timeout": 50
+      "timeout": 100
     }
   }
 }

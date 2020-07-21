@@ -1,6 +1,7 @@
 from asyncio import Queue, StreamReader, StreamWriter, create_subprocess_exec
 from asyncio.subprocess import DEVNULL, PIPE, Process
 from dataclasses import dataclass, field
+from itertools import chain
 from json import dumps, loads
 from os import linesep
 from shutil import which
@@ -17,6 +18,7 @@ from typing import (
 )
 
 from pynvim import Nvim
+from pynvim.api.common import Buffer
 
 from .pkgs.fc_types import Source, SourceCompletion, SourceFeed, SourceSeed
 from .pkgs.nvim import call
@@ -128,8 +130,28 @@ def tabnine_subproc() -> Optional[
         return None
 
 
-def encode_tabnine_request() -> TabNineRequest:
-    pass
+async def buf_lines(nvim: Nvim) -> Sequence[str]:
+    def cont() -> Sequence[str]:
+        buf: Buffer = nvim.api.get_current_buf()
+        lines = nvim.api.buf_get_lines(buf, 0, -1, True)
+        return lines
+
+    return await call(nvim, cont)
+
+
+async def encode_tabnine_request(nvim, feed: SourceFeed) -> TabNineRequest:
+    row = feed.position.row
+    context = feed.context
+    lines = await buf_lines(nvim)
+    lines_before = lines[:row]
+    lines_after = lines[row:]
+    before = "".join(chain(lines_before, (context.line_before,)))
+    after = "".join(chain((context.lines_after,), lines_after))
+
+    l2 = TabNineRequestL2(before=before, after=after, filename=context.filename)
+    l1 = TabNineRequestL1(Autocomplete=l2)
+    req = TabNineRequest(request=l1)
+    return req
 
 
 def parse_rows(
@@ -161,7 +183,8 @@ async def main(nvim: Nvim, chan: Queue, seed: SourceSeed) -> Source:
         if not tabnine_inst:
             pass
         else:
-            resp = await tabnine_inst()
+            req = await encode_tabnine_request(nvim, feed=feed)
+            resp = await tabnine_inst(req)
             if resp:
                 for row in parse_rows(
                     resp, feed=feed, entry_kind_lookup=entry_kind_lookup
