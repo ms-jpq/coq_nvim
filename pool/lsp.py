@@ -88,6 +88,7 @@ def parse_rows(
 ) -> Iterator[SourceCompletion]:
     position = feed.position
     old_prefix = feed.context.alnums_before
+    old_suffix = feed.context.alnums_after
     for row in rows:
         text = parse_text(row)
         label = row.get("label")
@@ -98,6 +99,8 @@ def parse_rows(
             position=position,
             old_prefix=old_prefix,
             new_prefix=text,
+            old_suffix=old_suffix,
+            new_suffix="",
             label=label,
             sortby=sortby,
             kind=kind,

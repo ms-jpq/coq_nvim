@@ -42,7 +42,21 @@ async def buffer_chars(nvim: Nvim, buf_gen: Iterator[Buffer]) -> Sequence[str]:
     return chars
 
 
-def coalesce(chars: Sequence[str], config: Config) -> Iterator[str]:
+def count_matches(cword: str, word: str) -> int:
+    normalized = word.lower()
+    idx = 0
+    count = 0
+    for char in cword:
+        m_idx = normalized.find(char, idx)
+        if m_idx != -1:
+            count += 1
+            idx = m_idx + 1
+
+    return count
+
+
+def coalesce(chars: Sequence[str], feed: SourceFeed, config: Config) -> Iterator[str]:
+    cword = feed.context.normalized_alnums
     min_length = config.min_length
     acc: Set[str] = set()
     curr: List[str] = []
@@ -52,7 +66,7 @@ def coalesce(chars: Sequence[str], config: Config) -> Iterator[str]:
             curr.append(char)
         elif curr:
             word = "".join(curr)
-            if word not in acc and len(word) >= min_length:
+            if word not in acc and count_matches(cword, word=word) >= min_length:
                 acc.add(word)
                 yield word
             curr = []
@@ -69,11 +83,16 @@ async def main(nvim: Nvim, chan: Queue, seed: SourceSeed) -> Source:
     async def source(feed: SourceFeed) -> AsyncIterator[SourceCompletion]:
         position = feed.position
         old_prefix = feed.context.alnums_before
+        old_suffix = feed.context.alnums_after
         b_gen = buf_gen(nvim, config=config, filetype=feed.filetype)
         lines = await buffer_chars(nvim, b_gen)
-        for word in coalesce(lines, config=config):
+        for word in coalesce(lines, feed=feed, config=config):
             yield SourceCompletion(
-                position=position, old_prefix=old_prefix, new_prefix=word
+                position=position,
+                old_prefix=old_prefix,
+                new_prefix=word,
+                old_suffix=old_suffix,
+                new_suffix="",
             )
 
     return source
