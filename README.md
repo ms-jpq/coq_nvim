@@ -40,12 +40,12 @@ Plug 'ms-jpq/fuzzy-completion', {'branch': 'nvim', 'do': ':UpdateRemotePlugins'}
 
 ### Builtin Sources
 
-| name        | source                                                                  |
-| ----------- | ----------------------------------------------------------------------- |
-| LSP         | Fetches results from Neovim LSP client                                  |
-| Tree Sitter | Fetches results from syntax tree (still waiting on next Neovim release) |
-| Buffers     | Fetches results from open buffers                                       |
-| Paths       | Fetches results from file paths                                         |
+| name                                                                                       | source                                                                  |
+| ------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------- |
+| [LSP](https://github.com/ms-jpq/fuzzy-completion/blob/nvim/clients/lsp.py)                 | Fetches results from Neovim LSP client                                  |
+| [Tree Sitter](https://github.com/ms-jpq/fuzzy-completion/blob/nvim/clients/tree_sitter.py) | Fetches results from syntax tree (still waiting on next Neovim release) |
+| [Buffers](https://github.com/ms-jpq/fuzzy-completion/blob/nvim/clients/buffers.py)         | Fetches results from open buffers                                       |
+| [Paths](https://github.com/ms-jpq/fuzzy-completion/blob/nvim/clients/paths.py)             | Fetches results from file paths                                         |
 
 ### Plugin Sources
 
