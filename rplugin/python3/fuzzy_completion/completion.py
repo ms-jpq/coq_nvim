@@ -1,5 +1,4 @@
 from asyncio import Queue, gather, wait
-from itertools import chain
 from traceback import format_exc
 from typing import (
     Awaitable,
@@ -15,7 +14,6 @@ from typing import (
 
 from pynvim import Nvim
 
-from .cache import make_cache
 from .fuzzy import fuzzer, normalize
 from .nvim import VimCompletion, call, print
 from .types import (
@@ -199,20 +197,14 @@ async def merge(
     chans: Dict[str, Optional[Queue]] = {name: chan for name, _, chan in src_gen}
     sources = tuple(source for _, source, _ in src_gen)
 
-    push, retrieve = make_cache(settings.fuzzy)
-
     async def gen(force: bool) -> Tuple[Position, Iterator[VimCompletion]]:
         feed = await gen_feed(nvim)
         position = feed.position
         go = not feed.context.line_before.isspace()
         if go or force:
-            cached, *comps = await gather(
-                retrieve(feed), *(source(feed) for source in sources)
-            )
-            steps: Sequence[Step] = tuple((c for co in comps for c in co))
-            push(feed, steps)
-            completions = chain(steps)
-            return position, fuzzy(feed, completions)
+            comps = await gather(*(source(feed) for source in sources))
+            steps = (c for co in comps for c in co)
+            return position, fuzzy(feed, steps)
         else:
             return position, iter(())
 
