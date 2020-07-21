@@ -54,9 +54,9 @@ async def main(nvim: Nvim, chan: Queue, seed: SourceSeed) -> Source:
         cword = feed.context.alnums_normalized
         min_length = config.min_length
 
+        parse = coalesce(cword=cword, min_length=min_length)
         b_gen = buf_gen(nvim, config=config, filetype=feed.filetype)
         chars = await buffer_chars(nvim, b_gen)
-        parse = coalesce(cword=cword, min_length=min_length)
 
         for word in parse(chars):
             if word != existing_text:
