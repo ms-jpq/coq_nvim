@@ -42,9 +42,6 @@ def replace_lines(nvim: Nvim, payload: Payload) -> None:
     win = nvim.api.get_current_win()
     nvim.api.win_set_cursor(win, (new_row, new_col))
 
-    msg = f"{[pre]} - {[post]}"
-    nvim.api.out_write(msg + "\n")
-
 
 def apply_patch(nvim: Nvim, comp: Dict[str, Any]) -> None:
     data = comp.get("user_data")

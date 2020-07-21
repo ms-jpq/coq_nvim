@@ -3,6 +3,10 @@ from typing import Tuple
 from .da import subsequences
 
 
+def normalize(text: str) -> str:
+    return text.lower()
+
+
 def parse_common_affix(
     before: str,
     before_normalized: str,

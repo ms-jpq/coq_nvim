@@ -9,6 +9,7 @@ from pynvim.api.buffer import Buffer
 
 from .pkgs.fc_types import Source, SourceCompletion, SourceFeed, SourceSeed
 from .pkgs.nvim import call
+from .pkgs.shared import normalize
 
 
 @dataclass(frozen=True)
@@ -43,7 +44,7 @@ async def buffer_chars(nvim: Nvim, buf_gen: Iterator[Buffer]) -> Sequence[str]:
 
 
 def count_matches(cword: str, word: str) -> int:
-    normalized = word.lower()
+    normalized = normalize(word)
     idx = 0
     count = 0
     for char in cword:

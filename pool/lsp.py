@@ -15,8 +15,8 @@ from typing import (
 from pynvim import Nvim
 
 from .pkgs.fc_types import Position, Source, SourceCompletion, SourceFeed, SourceSeed
-from .pkgs.nvim import call, print
-from .pkgs.shared import parse_common_affix
+from .pkgs.nvim import call
+from .pkgs.shared import normalize, parse_common_affix
 
 
 async def init_lua(nvim: Nvim) -> Tuple[Dict[str, int], Dict[str, int]]:
@@ -101,7 +101,7 @@ def parse_rows(
         kind = entry_kind_lookup.get(cast(int, row.get("kind")), "Unknown")
         doc = parse_documentation(row.get("documentation"))
 
-        match_normalized = text.lower()
+        match_normalized = normalize(text)
         old_prefix, old_suffix = parse_common_affix(
             before=before,
             after=after,
@@ -110,17 +110,18 @@ def parse_rows(
             match_normalized=match_normalized,
         )
 
-        yield SourceCompletion(
-            position=position,
-            old_prefix=old_prefix,
-            new_prefix=text,
-            old_suffix=old_suffix,
-            new_suffix="",
-            label=label,
-            sortby=sortby,
-            kind=kind,
-            doc=doc,
-        )
+        if old_prefix + old_suffix != text:
+            yield SourceCompletion(
+                position=position,
+                old_prefix=old_prefix,
+                new_prefix=text,
+                old_suffix=old_suffix,
+                new_suffix="",
+                label=label,
+                sortby=sortby,
+                kind=kind,
+                doc=doc,
+            )
 
 
 async def main(nvim: Nvim, chan: Queue, seed: SourceSeed) -> Source:
@@ -139,7 +140,6 @@ async def main(nvim: Nvim, chan: Queue, seed: SourceSeed) -> Source:
             entry_kind_lookup=entry_kind_lookup,
             insert_kind_lookup=insert_kind_lookup,
         ):
-            await print(nvim, row)
             yield row
 
     return source
