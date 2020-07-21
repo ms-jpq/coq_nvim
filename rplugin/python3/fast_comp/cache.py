@@ -1,8 +1,19 @@
 from collections import deque
 from itertools import chain
-from typing import Awaitable, Callable, Dict, Iterator, Sequence, Tuple, Set
+from typing import Awaitable, Callable, Dict, Iterator, Sequence, Set, Tuple
 
 from .types import FuzzyOptions, SourceFeed, Step
+
+
+def is_stale(feed: SourceFeed, step: Step) -> bool:
+    comp = step.comp
+    col = comp.position.col
+    line = feed.context.line
+    step_line_pre = line[:col]
+    step_line_post = line[col:]
+    return step_line_pre.endswith(comp.old_prefix) and step_line_post.starswith(
+        comp.old_old_suffix
+    )
 
 
 def make_cache(
@@ -46,7 +57,9 @@ def make_cache(
                     text = step.text
                     if text not in seen:
                         seen.add(text)
-                        yield step
+                        stale = is_stale(feed, step=step)
+                        if not stale:
+                            yield step
 
         return tuple(cont())
 
