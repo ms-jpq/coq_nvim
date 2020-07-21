@@ -62,6 +62,17 @@ To customize, you are to set `g:fancy_completion_settings` to a dictionary with 
 
 The newer dictionary will automatically be merged with the older one.
 
+| keys                       | option                                             |
+| -------------------------- | -------------------------------------------------- |
+| `fuzzy.min_match`          | minimum # of chars matches required to show result |
+| `source.<name>.enabled`    | source enabled                                     |
+| `source.<name>.priority`   | ranking of source AFTER fuzzy ranking              |
+| `source.<name>.limit`      | max results shown                                  |
+| `source.<name>.timeout`    | max wait time for source                           |
+| `source.<name>.short_name` | badge for source, ie. `[LSP]`                      |
+| `source.<name>.config`     | custom config for each source                      |
+| `source.<name>.main`       | source location (for custom sources)               |
+
 ### Authoring Clients
 
 A client is really simple:
@@ -85,3 +96,9 @@ type completion:
 ```
 
 where the prefix / suffix determine the cusor location, post completion.
+
+Each client is loaded by specifying a `source.<name>.main` path relative to the parent directory of `fancy-completion`.
+
+Each client is must have a `main` function that conforms to the types `Source` and `Factory` in the [spec file](https://github.com/ms-jpq/fancy-completion/blob/nvim/rplugin/python3/fancy_completion/types.py).
+
+See the Plugin source section for examples.
