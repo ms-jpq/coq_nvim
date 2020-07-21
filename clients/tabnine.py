@@ -159,15 +159,13 @@ async def main(nvim: Nvim, chan: Queue, seed: SourceSeed) -> Source:
 
     async def source(feed: SourceFeed) -> AsyncIterator[SourceCompletion]:
         if not tabnine_inst:
-            return
+            pass
         else:
-            position = feed.position
-            yield SourceCompletion(
-                position=position,
-                old_prefix="",
-                new_prefix="",
-                old_suffix="",
-                new_suffix="",
-            )
+            resp = await tabnine_inst()
+            if resp:
+                for row in parse_rows(
+                    resp, feed=feed, entry_kind_lookup=entry_kind_lookup
+                ):
+                    yield row
 
     return source
