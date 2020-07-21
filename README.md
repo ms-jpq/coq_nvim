@@ -43,9 +43,9 @@ Plug 'ms-jpq/fuzzy-completion', {'branch': 'nvim', 'do': ':UpdateRemotePlugins'}
 | name        | source                                                                  |
 | ----------- | ----------------------------------------------------------------------- |
 | LSP         | Fetches results from Neovim LSP client                                  |
+| Tree Sitter | Fetches results from syntax tree (still waiting on next Neovim release) |
 | Buffers     | Fetches results from open buffers                                       |
 | Paths       | Fetches results from file paths                                         |
-| Tree Sitter | Fetches results from syntax tree (still waiting on next Neovim release) |
 
 ### Plugin Sources
 
