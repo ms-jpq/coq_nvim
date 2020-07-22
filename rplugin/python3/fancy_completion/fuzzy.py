@@ -37,7 +37,7 @@ def fuzzify(feed: SourceFeed, step: Step) -> FuzzyStep:
     pm_idx = inf
     prefix_matches = 0
     consecutive_matches = 0
-    for char, n_char in zip(f_alnums, f_n_alnums):
+    for i, (char, n_char) in enumerate(zip(f_alnums, f_n_alnums)):
         m_idx = s_n_alnums.find(n_char, idx)
         if m_idx != -1:
             if pm_idx == m_idx - 1:
@@ -45,7 +45,7 @@ def fuzzify(feed: SourceFeed, step: Step) -> FuzzyStep:
             pm_idx = m_idx
             matches[m_idx] = char
             idx = m_idx + 1
-        else:
+        if m_idx != i:
             prefix_broken = True
         if not prefix_broken:
             prefix_matches += 1
