@@ -9,6 +9,8 @@ def parse_inner(it: Iterator[str]) -> Iterator[str]:
     for char in it:
         if char == "\\":
             yield next(it, "")
+        elif char == "$":
+            yield from parse_dollar(it)
         elif char == "}":
             break
         elif printable:
