@@ -50,7 +50,7 @@ async def init_lua(nvim: Nvim) -> Tuple[Dict[int, str], Dict[int, str]]:
 
     entry_kind, insert_kind = await call(nvim, cont)
     elookup = defaultdict(lambda: "Unknown", ((v, k) for k, v in entry_kind.items()))
-    ilookup = {v: k for k, v in insert_kind.items()}
+    ilookup = defaultdict(lambda: None, ((v, k) for k, v in insert_kind.items()))
     return elookup, ilookup
 
 
@@ -81,8 +81,30 @@ def parse_resp_to_rows(resp: Any) -> Sequence[Any]:
         raise ValueError(f"unknown LSP resp - {type(resp)}")
 
 
-def parse_snippet(snippet: str) -> str:
-    pass
+def is_snippet(row: Dict[str, Any], insert_lookup: Dict[int, str]) -> bool:
+    fmt = row.get("insertTextFormat")
+    return insert_lookup[fmt] != "PlainText"
+
+
+def parse_snippet(text: str) -> str:
+    def cont() -> Iterator[str]:
+        dollar = False
+        bracket = False
+
+        for char in text:
+            if char == "$":
+                dollar = True
+            elif dollar:
+                dollar = False
+                if char == "{":
+                    bracket = True
+            elif bracket:
+                if char == "}":
+                    bracket = False
+            else:
+                yield char
+
+    return "".join(cont())
 
 
 def parse_text(row: Dict[str, Any]) -> str:
@@ -96,7 +118,9 @@ def parse_text(row: Dict[str, Any]) -> str:
         return row["label"]
 
 
-def row_parser(context: Context) -> Callable[[Dict[str, Any]], ParsedRow]:
+def row_parser(
+    context: Context, insert_lookup: Dict[int, str]
+) -> Callable[[Dict[str, Any]], ParsedRow]:
     before, after = context.line_before, context.line_after
     before_normalized, after_normalized = (
         context.line_before_normalized,
@@ -104,7 +128,11 @@ def row_parser(context: Context) -> Callable[[Dict[str, Any]], ParsedRow]:
     )
 
     def parse(row: Dict[str, Any]) -> ParsedRow:
+        require_parse = is_snippet(row, insert_lookup)
         text = parse_text(row)
+        if require_parse:
+            text = parse_snippet(text)
+
         match_normalized = normalize(text)
         old_prefix, old_suffix = parse_common_affix(
             before=before,
@@ -147,13 +175,13 @@ def parse_rows(
     insert_lookup: Dict[int, str],
 ) -> Iterator[SourceCompletion]:
     position = feed.position
-    parse = row_parser(context=feed.context)
+    parse = row_parser(context=feed.context, insert_lookup=insert_lookup)
 
     for row in rows:
         label = row.get("label")
         sortby = row.get("sortText")
         r_kind = row.get("kind")
-        kind = entry_lookup.get(r_kind) if r_kind else None
+        kind = entry_lookup[r_kind] if r_kind else None
         doc = parse_documentation(row.get("documentation"))
         parsed = parse(row)
 
