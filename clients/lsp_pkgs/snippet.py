@@ -4,7 +4,7 @@ from string import ascii_letters, digits
 from typing import Iterable, Iterator, List, Optional, Set, Tuple
 
 #
-# Parser for
+# O(n) single pass Parser for
 # https://github.com/microsoft/language-server-protocol/blob/master/snippetSyntax.md
 #
 
@@ -106,10 +106,7 @@ def parse_variable(begin: str, it: Iterator[str], naked: bool) -> Iterator[str]:
             else:
                 name = "".join(name_acc)
                 var = variable_substitution(name)
-                if var:
-                    yield var
-                else:
-                    yield name
+                yield var if var else name
                 yield from parse((char,), it, nested=False)
                 break
     else:
@@ -120,11 +117,11 @@ def parse_variable(begin: str, it: Iterator[str], naked: bool) -> Iterator[str]:
             elif char == "}":
                 v_type = VarType.simple
                 break
-            elif char == ":":
-                v_type = VarType.arbitrary
-                break
             elif char == "/":
                 v_type = VarType.decorated
+                break
+            elif char == ":":
+                v_type = VarType.arbitrary
                 break
             else:
                 err = make_parse_err(
@@ -135,13 +132,25 @@ def parse_variable(begin: str, it: Iterator[str], naked: bool) -> Iterator[str]:
         name = "".join(name_acc)
         var = variable_substitution(name)
         if v_type == VarType.simple:
-            pass
-        elif v_type == VarType.arbitrary:
-            pass
+            # '${' var }'
+            yield var if var else name
         elif v_type == VarType.decorated:
-            pass
+            # '${' var '/' regex '/' (format | text)+ '/' options '}'
+            yield var if var else name
+            for char in it:
+                if char == "\\":
+                    _ = parse_escape(char, it, escapable_chars=_escapable_chars)
+                elif char == "}":
+                    break
+        elif v_type == VarType.arbitrary:
+            # '${' var ':' any '}'
+            if var:
+                yield var
+            else:
+                yield from parse((), it, nested=True)
         else:
             assert False
+        yield from parse((), it, nested=False)
 
 
 def parse_inner_scope(begin: str, it: Iterator[str]) -> Iterator[str]:
