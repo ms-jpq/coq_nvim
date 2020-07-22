@@ -7,7 +7,9 @@ _var_chars = {*digits, *ascii_letters, "_"}
 def parse_inner(it: Iterator[str]) -> Iterator[str]:
     printable = False
     for char in it:
-        if char == "}":
+        if char == "\\":
+            yield next(it, "")
+        elif char == "}":
             break
         elif printable:
             yield char
@@ -19,6 +21,9 @@ def parse_dollar(it: Iterator[str]) -> Iterator:
     for char in it:
         if char in _var_chars:
             pass
+        elif char == "\\":
+            yield next(it, "")
+            break
         elif char == "$":
             yield from parse_dollar(it)
             break
@@ -36,7 +41,9 @@ def parse_snippet(text: str) -> Tuple[str, str]:
     def pre() -> Iterator[str]:
 
         for char in it:
-            if char == "$":
+            if char == "\\":
+                yield next(it, "")
+            elif char == "$":
                 yield from parse_dollar(it)
                 break
             else:
@@ -44,7 +51,9 @@ def parse_snippet(text: str) -> Tuple[str, str]:
 
     def post() -> Iterator[str]:
         for char in it:
-            if char == "$":
+            if char == "\\":
+                yield next(it, "")
+            elif char == "$":
                 yield from parse_dollar(it)
             else:
                 yield char
