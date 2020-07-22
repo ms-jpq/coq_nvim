@@ -3,7 +3,7 @@ from math import inf
 from typing import Any, Callable, Dict, Iterator, Sequence, Set, Union, cast
 
 from .nvim import VimCompletion
-from .types import Context, FuzzyOptions, Payload, SourceCompletion, Step
+from .types import Context, FuzzyOptions, Payload, Completion, Step
 
 
 @dataclass(frozen=True)
@@ -92,7 +92,7 @@ def context_gen(fuzz: FuzzyStep) -> str:
     return f"{label} <- {fuzzy_label}"
 
 
-def gen_payload(comp: SourceCompletion) -> Payload:
+def gen_payload(comp: Completion) -> Payload:
     return Payload(
         row=comp.position.row,
         col=comp.position.col,

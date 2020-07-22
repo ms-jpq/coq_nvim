@@ -82,7 +82,7 @@ class Context:
 
 
 @dataclass(frozen=True)
-class SourceCompletion:
+class Completion:
     position: Position
     old_prefix: str
     new_prefix: str
@@ -94,7 +94,7 @@ class SourceCompletion:
     doc: Optional[str] = None
 
 
-Source = Callable[[Context], AsyncIterator[SourceCompletion]]
+Source = Callable[[Context], AsyncIterator[Completion]]
 Factory = Callable[[Nvim, Queue, Seed], Awaitable[Source]]
 
 
@@ -114,7 +114,7 @@ class Step:
     source_shortname: str
     text: str
     text_normalized: str
-    comp: SourceCompletion
+    comp: Completion
 
 
 @dataclass(frozen=True)
