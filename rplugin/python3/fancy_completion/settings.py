@@ -13,7 +13,7 @@ def load_source(config: Any) -> SourceSpec:
         main=config["main"],
         short_name=config["short_name"],
         enabled=config["enabled"],
-        priority=config.get("priority"),
+        ranking_bias=config.get("ranking_bias"),
         limit=config.get("limit"),
         timeout=config.get("timeout"),
         config=config.get("config"),
@@ -43,13 +43,11 @@ def load_factories(settings: Settings) -> Iterator[SourceFactory]:
                         limit = spec.limit or inf
                         timeout = (spec.timeout or inf) / 1000
                         config = spec.config or {}
-                        seed = SourceSeed(
-                            config=config, limit=limit, timeout=timeout
-                        )
+                        seed = SourceSeed(config=config, limit=limit, timeout=timeout)
                         fact = SourceFactory(
                             name=src_name,
                             short_name=spec.short_name,
-                            priority=spec.priority or 0,
+                            ranking_bias=spec.ranking_bias or 1,
                             limit=limit,
                             timeout=timeout,
                             seed=seed,

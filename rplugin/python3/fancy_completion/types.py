@@ -31,9 +31,9 @@ class SourceSpec:
     main: str
     short_name: str
     enabled: bool
-    priority: Optional[float]
     limit: Optional[float]
     timeout: Optional[float]
+    ranking_bias: Optional[float]
     config: Dict[str, Any]
 
 
@@ -107,7 +107,7 @@ Factory = Callable[[Nvim, Queue, SourceSeed], Awaitable[Source]]
 class SourceFactory:
     name: str
     short_name: str
-    priority: float
+    ranking_bias: float
     timeout: float
     limit: float
     seed: SourceSeed
@@ -118,7 +118,7 @@ class SourceFactory:
 class Step:
     source: str
     source_shortname: str
-    priority: float
+    ranking_bias: float
     text: str
     text_normalized: str
     comp: SourceCompletion

@@ -1,5 +1,4 @@
 from dataclasses import asdict, dataclass
-from locale import strxfrm
 from math import inf
 from typing import Any, Callable, Dict, Iterator, Sequence, Set, Union, cast
 
@@ -12,8 +11,8 @@ class FuzzyMetric:
     prefix_matches: int
     consecutive_matches: int
     num_matches: int
-    density: float
     front_bias: float
+    density: float
 
 
 @dataclass(frozen=True)
@@ -36,21 +35,18 @@ def fuzzify(feed: SourceFeed, step: Step) -> FuzzyStep:
 
     idx = 0
     pm_idx = inf
-    prefix_identical = True
     prefix_matches = 0
     consecutive_matches = 0
     for char, n_char in zip(f_alnums, f_n_alnums):
         m_idx = s_n_alnums.find(n_char, idx)
         if m_idx != -1:
+            if pm_idx == inf:
+                prefix_matches += 1
             if pm_idx == m_idx - 1:
                 consecutive_matches += 1
             pm_idx = m_idx
             matches[m_idx] = char
             idx = m_idx + 1
-        else:
-            prefix_identical = False
-        if prefix_identical:
-            prefix_matches += 1
 
     target_len = len(s_n_alnums)
     num_matches = len(matches)
@@ -61,24 +57,20 @@ def fuzzify(feed: SourceFeed, step: Step) -> FuzzyStep:
         prefix_matches=prefix_matches,
         num_matches=num_matches,
         consecutive_matches=consecutive_matches,
-        density=density,
         front_bias=front_bias,
+        density=density,
     )
     return FuzzyStep(step=step, full_match=full_match, matches=matches, metric=metric)
 
 
 def rank(fuzz: FuzzyStep) -> Sequence[Union[float, int, str]]:
     metric = fuzz.metric
-    comp = fuzz.step.comp
-    text = comp.sortby or normalize(strxfrm(comp.label or fuzz.step.text))
     return (
-        metric.prefix_matches * -1,
-        metric.num_matches * -1,
-        metric.consecutive_matches * -1,
-        metric.density * -1,
+        metric.prefix_matches,
+        metric.num_matches,
+        metric.consecutive_matches,
         metric.front_bias,
-        fuzz.step.priority * -1,
-        text,
+        metric.density,
     )
 
 
@@ -116,7 +108,7 @@ def vimify(fuzz: FuzzyStep) -> VimCompletion:
     step = fuzz.step
     source = f"[{step.source_shortname}]"
     comp = step.comp
-    menu = f"{comp.kind} {source}" if comp.kind else source
+    menu = str(fuzz.metric)
     abbr = (
         (comp.label or (comp.new_prefix + comp.new_suffix))
         if fuzz.full_match

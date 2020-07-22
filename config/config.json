@@ -13,7 +13,7 @@
       "enabled": true,
       "limit": 3,
       "main": "buffers.py",
-      "priority": 1,
+      "ranking_bias": 1.0,
       "short_name": "B",
       "timeout": 100
     },
@@ -22,7 +22,7 @@
       "enabled": true,
       "limit": null,
       "main": "lsp.py",
-      "priority": 6,
+      "ranking_bias": 1.0,
       "short_name": "LSP",
       "timeout": 3000
     },
@@ -31,7 +31,7 @@
       "enabled": true,
       "limit": 3,
       "main": "paths.py",
-      "priority": 3,
+      "ranking_bias": 1.0,
       "short_name": "F",
       "timeout": 100
     },
@@ -43,7 +43,7 @@
       "enabled": true,
       "limit": 3,
       "main": "tmux.py",
-      "priority": 0,
+      "ranking_bias": 1.0,
       "short_name": "TMUX",
       "timeout": 100
     },
@@ -52,7 +52,7 @@
       "enabled": false,
       "limit": 3,
       "main": "tree_sitter.py",
-      "priority": 5,
+      "ranking_bias": 1.0,
       "short_name": "TS",
       "timeout": 100
     }

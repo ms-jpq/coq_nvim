@@ -62,16 +62,16 @@ To customize, you are to set `g:fancy_completion_settings` to a dictionary with 
 
 The newer dictionary will automatically be merged with the older one.
 
-| keys                       | option                                             |
-| -------------------------- | -------------------------------------------------- |
-| `fuzzy.min_match`          | minimum # of chars matches required to show result |
-| `source.<name>.enabled`    | source enabled                                     |
-| `source.<name>.priority`   | ranking of source AFTER fuzzy ranking              |
-| `source.<name>.limit`      | max results shown                                  |
-| `source.<name>.timeout`    | max wait time for source                           |
-| `source.<name>.short_name` | badge for source, ie. `blah blah blah [LSP]`       |
-| `source.<name>.config`     | custom config for each source                      |
-| `source.<name>.main`       | source location (for custom sources)               |
+| keys                         | option                                             |
+| ---------------------------- | -------------------------------------------------- |
+| `fuzzy.min_match`            | minimum # of chars matches required to show result |
+| `source.<name>.enabled`      | source enabled                                     |
+| `source.<name>.ranking_bias` | influences fuzzy ranking on continuous metrics     |
+| `source.<name>.limit`        | max results shown                                  |
+| `source.<name>.timeout`      | max wait time for source                           |
+| `source.<name>.short_name`   | badge for source, ie. `blah blah blah [LSP]`       |
+| `source.<name>.config`       | custom config for each source                      |
+| `source.<name>.main`         | source location (for custom sources)               |
 
 ### Recommended Settings
 
