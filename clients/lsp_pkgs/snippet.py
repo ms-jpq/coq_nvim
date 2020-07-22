@@ -1,5 +1,5 @@
 from string import ascii_letters, digits
-from typing import Iterable, Iterator, Set, Tuple
+from typing import Iterable, Iterator, Optional, Set, Tuple
 
 #
 # Parser for
@@ -65,11 +65,12 @@ def parse_place_holder(begin: str, it: Iterator[str]) -> Iterator[str]:
         elif char == "}":
             break
         else:
-            # This is wrong, needs to handle ANY
+            # TODO This is wrong, needs to handle ANY
             yield char
 
 
 # choice | placeholder
+# -- both starts with (int)
 def parse_cp(begin: str, it: Iterator[str]) -> Iterator[str]:
     assert begin in _int_chars
     for char in it:
@@ -88,8 +89,9 @@ def parse_cp(begin: str, it: Iterator[str]) -> Iterator[str]:
             raise err
 
 
-def variable_substitution(name: str) -> Iterator[str]:
-    yield name
+def variable_substitution(name: str) -> Optional[str]:
+    return ""
+
 
 
 # variable    ::= '$' var | '${' var }'
@@ -103,7 +105,12 @@ def parse_variable(begin: str, it: Iterator[str], naked: bool) -> Iterator[str]:
                 name_acc.append(char)
             else:
                 name = "".join(name_acc)
-                yield from variable_substitution(name)
+                var = variable_substitution(name)
+                if var:
+                    yield var
+                else:
+                    yield name
+                yield char
                 yield from parse(it)
                 break
     else:
@@ -111,7 +118,11 @@ def parse_variable(begin: str, it: Iterator[str], naked: bool) -> Iterator[str]:
         for char in it:
             if char == "}":
                 name = "".join(name_acc)
-                yield from variable_substitution(name)
+                var = variable_substitution(name)
+                if var:
+                    yield var
+                else:
+                    yield name
                 yield from parse(it)
                 break
             elif ignore_tail:
@@ -119,7 +130,12 @@ def parse_variable(begin: str, it: Iterator[str], naked: bool) -> Iterator[str]:
             elif char in _var_chars:
                 name_acc.append(char)
             elif char == ":":
-                pass
+                name = "".join(name_acc)
+                var = variable_substitution(name)
+                if var:
+                    yield var
+                else:
+                    yield ""
             elif char == "/":
                 # ignore format
                 ignore_tail = True
