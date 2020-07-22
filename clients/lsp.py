@@ -118,8 +118,6 @@ def parse_snippet(context: Context, text: str) -> Tuple[str, str]:
             elif bracket:
                 if char == "}":
                     bracket = False
-                else:
-                    yield char
             else:
                 yield char
 
@@ -142,12 +140,6 @@ def parse_text(row: Dict[str, Any]) -> str:
 def row_parser(
     context: Context, insert_lookup: Dict[int, str]
 ) -> Callable[[Dict[str, Any]], ParsedRow]:
-    before, after = context.line_before, context.line_after
-    before_normalized, after_normalized = (
-        context.line_before_normalized,
-        context.line_after_normalized,
-    )
-
     def parse(row: Dict[str, Any]) -> ParsedRow:
         require_parse = is_snippet(row, insert_lookup)
         text = parse_text(row)
@@ -156,11 +148,7 @@ def row_parser(
             snippet_text = new_prefix + new_suffix
             match_normalized = normalize(snippet_text)
             old_prefix, old_suffix = parse_common_affix(
-                before=before,
-                after=after,
-                before_normalized=before_normalized,
-                after_normalized=after_normalized,
-                match_normalized=match_normalized,
+                context, match_normalized=match_normalized,
             )
             parsed = ParsedRow(
                 old_prefix=old_prefix,
@@ -172,11 +160,7 @@ def row_parser(
         else:
             match_normalized = normalize(text)
             old_prefix, old_suffix = parse_common_affix(
-                before=before,
-                after=after,
-                before_normalized=before_normalized,
-                after_normalized=after_normalized,
-                match_normalized=match_normalized,
+                context, match_normalized=match_normalized,
             )
             parsed = ParsedRow(
                 old_prefix=old_prefix,

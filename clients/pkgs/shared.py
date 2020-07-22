@@ -1,6 +1,7 @@
 from typing import Callable, Iterator, List, Sequence, Set, Tuple
 
 from .da import subsequences
+from .fc_types import Context
 
 
 def normalize(text: str) -> str:
@@ -51,13 +52,13 @@ def coalesce(
     return parse
 
 
-def parse_common_affix(
-    before: str,
-    before_normalized: str,
-    after: str,
-    after_normalized: str,
-    match_normalized: str,
-) -> Tuple[str, str]:
+def parse_common_affix(context: Context, match_normalized: str,) -> Tuple[str, str]:
+    before, after = context.line_before, context.line_after
+    before_normalized, after_normalized = (
+        context.line_before_normalized,
+        context.line_after_normalized,
+    )
+
     pre_it = zip(
         subsequences(before, reverse=True),
         subsequences(before_normalized, reverse=True),
@@ -82,4 +83,7 @@ def parse_common_affix(
         if lhs == rhs:
             suffix = "".join(text)
 
-    return prefix, suffix
+    if not prefix and not suffix:
+        return context.alnums_before, context.alnums_after
+    else:
+        return prefix, suffix
