@@ -37,6 +37,7 @@ def coalesce(
                     normalized not in acc
                     and matches >= min_length
                     and matches <= max_length
+                    and normalized not in cword
                 ):
                     acc.add(normalized)
                     yield word
