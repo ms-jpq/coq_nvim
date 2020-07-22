@@ -19,6 +19,9 @@ def parse_dollar(it: Iterator[str]) -> Iterator:
     for char in it:
         if char in _var_chars:
             pass
+        elif char == "$":
+            yield from parse_dollar(it)
+            break
         elif char == "{":
             yield from parse_inner(it)
             break
