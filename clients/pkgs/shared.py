@@ -58,18 +58,21 @@ def parse_common_affix(
         subsequences(before_normalized, reverse=True),
         subsequences(match_normalized),
     )
+
+    prefix = ""
+    idx = -1
+    for i, (text, lhs, rhs) in enumerate(pre_it):
+        if lhs == rhs:
+            prefix = "".join(text)
+            idx = i
+
+    suffix = ""
+    rest = match_normalized[idx + 1 :]
     post_it = zip(
         subsequences(after),
         subsequences(after_normalized),
-        subsequences(match_normalized, reverse=True),
+        subsequences(rest, reverse=True),
     )
-
-    prefix = ""
-    for text, lhs, rhs in pre_it:
-        if lhs == rhs:
-            prefix = "".join(text)
-
-    suffix = ""
     for text, lhs, rhs in post_it:
         if lhs == rhs:
             suffix = "".join(text)
