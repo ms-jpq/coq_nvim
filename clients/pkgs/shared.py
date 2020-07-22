@@ -19,7 +19,9 @@ def count_matches(cword: str, word: str) -> int:
     return count
 
 
-def coalesce(cword: str, min_length: int) -> Callable[[Sequence[str]], Iterator[str]]:
+def coalesce(
+    cword: str, min_length: int, max_length: int
+) -> Callable[[Sequence[str]], Iterator[str]]:
     acc: Set[str] = {cword}
 
     def parse(chars: Sequence[str]) -> Iterator[str]:
@@ -30,9 +32,11 @@ def coalesce(cword: str, min_length: int) -> Callable[[Sequence[str]], Iterator[
             elif curr:
                 word = "".join(curr)
                 normalized = normalize(word)
+                matches = count_matches(cword, word=normalized)
                 if (
                     normalized not in acc
-                    and count_matches(cword, word=normalized) >= min_length
+                    and matches >= min_length
+                    and matches <= max_length
                 ):
                     acc.add(word)
                     yield word

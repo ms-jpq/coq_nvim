@@ -16,6 +16,7 @@ from .pkgs.shared import coalesce
 class Config:
     same_filetype: bool
     min_length: int
+    max_length: int
 
 
 def buf_gen(nvim: Nvim, config: Config, filetype: str) -> Iterator[Buffer]:
@@ -51,9 +52,10 @@ async def main(nvim: Nvim, chan: Queue, seed: SourceSeed) -> Source:
         old_prefix = feed.context.alnums_before
         old_suffix = feed.context.alnums_after
         cword = feed.context.alnums_normalized
-        min_length = config.min_length
 
-        parse = coalesce(cword=cword, min_length=min_length)
+        parse = coalesce(
+            cword=cword, min_length=config.min_length, max_length=config.max_length
+        )
         b_gen = buf_gen(nvim, config=config, filetype=feed.filetype)
         chars = await buffer_chars(nvim, b_gen)
 

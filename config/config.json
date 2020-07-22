@@ -6,6 +6,7 @@
   "sources": {
     "buffers": {
       "config": {
+        "max_length": 20,
         "min_length": 3,
         "same_filetype": false
       },
@@ -36,6 +37,7 @@
     },
     "tmux": {
       "config": {
+        "max_length": 20,
         "min_length": 3
       },
       "enabled": true,

@@ -15,6 +15,7 @@ from .pkgs.shared import coalesce
 @dataclass(frozen=True)
 class Config:
     min_length: int
+    max_length: int
 
 
 class TmuxError(Exception):
@@ -84,9 +85,10 @@ async def main(nvim: Nvim, chan: Queue, seed: SourceSeed) -> Source:
             old_prefix = feed.context.alnums_before
             old_suffix = feed.context.alnums_after
             cword = feed.context.alnums_normalized
-            min_length = config.min_length
 
-            parse = coalesce(cword=cword, min_length=min_length)
+            parse = coalesce(
+                cword=cword, min_length=config.min_length, max_length=config.max_length
+            )
             try:
                 session_id, panes = await gather(tmux_session(), tmux_panes())
                 sources = tuple(
