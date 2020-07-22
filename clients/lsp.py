@@ -21,7 +21,7 @@ from .pkgs.shared import normalize, parse_common_affix
 
 async def init_lua(nvim: Nvim) -> Tuple[Dict[str, int], Dict[str, int]]:
     def cont() -> Tuple[Dict[str, int], Dict[str, int]]:
-        nvim.api.exec_lua("fancy_completion_lsp = require 'fancy_completion_lsp'", ())
+        nvim.api.exec_lua("fancy_completion_lsp = require 'fancy-completion/lsp'", ())
         entry_kind = nvim.api.exec_lua(
             "return fancy_completion_lsp.list_entry_kind()", ()
         )

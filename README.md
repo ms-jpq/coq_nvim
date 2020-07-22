@@ -80,7 +80,7 @@ There are some common settings recommended by most completion plugins. I put the
 Just require it in your `.vimrc` like so:
 
 ```vimL
-lua require("fancy_completion_recommends").all()
+lua require("fancy-completion/recommends").all()
 ```
 
 ### Authoring Clients

@@ -1,4 +1,4 @@
-local bindings = require "fancy_completion_bindings"
+local bindings = require "fancy-completion/bindings"
 
 
 local map_keys = function ()
