@@ -1,4 +1,5 @@
 from asyncio import Queue, gather, wait
+from dataclasses import dataclass
 from os import linesep
 from traceback import format_exc
 from typing import (
@@ -9,6 +10,7 @@ from typing import (
     List,
     Optional,
     Sequence,
+    Set,
     Tuple,
     cast,
 )
@@ -27,6 +29,13 @@ from .types import (
     SourceFeed,
     Step,
 )
+
+
+@dataclass(frozen=True)
+class GenOptions:
+    sources: Set[str]
+    force: bool = False
+
 
 StepFunction = Callable[[SourceFeed], Awaitable[Sequence[Step]]]
 
@@ -149,8 +158,9 @@ async def manufacture(nvim: Nvim, factory: SourceFactory) -> Tuple[StepFunction,
         await gather(*done)
         if pending:
             timeout_fmt = round(timeout * 1000)
-            msg = f"{linesep}async completion source timed out - {name}, exceeded {timeout_fmt}ms"
-            await print(nvim, msg)
+            msg1 = f"{linesep}async completion source timed out - "
+            msg2 = f"{name}, exceeded {timeout_fmt}ms"
+            await print(nvim, msg1 + msg2)
         return acc
 
     return source, chan
@@ -186,7 +196,7 @@ async def osha(
 async def merge(
     nvim: Nvim, chan: Queue, factories: Iterator[SourceFactory], settings: Settings
 ) -> Tuple[
-    Callable[[bool], Awaitable[Tuple[Position, Iterator[VimCompletion]]]],
+    Callable[[GenOptions], Awaitable[Tuple[Position, Iterator[VimCompletion]]]],
     Callable[[], Awaitable[None]],
 ]:
     facts = tuple(factories)
@@ -194,14 +204,19 @@ async def merge(
     fuzzy = fuzzer(settings.fuzzy, limits=limits)
     src_gen = await gather(*(osha(nvim, factory=factory) for factory in facts))
     chans: Dict[str, Optional[Queue]] = {name: chan for name, _, chan in src_gen}
-    sources = tuple(source for _, source, _ in src_gen)
+    sources: Dict[str, StepFunction] = {name: source for name, source, _ in src_gen}
 
-    async def gen(force: bool) -> Tuple[Position, Iterator[VimCompletion]]:
+    async def gen(options: GenOptions) -> Tuple[Position, Iterator[VimCompletion]]:
         feed = await gen_feed(nvim)
         position = feed.position
         go = not feed.context.line_before.isspace()
-        if go or force:
-            comps = await gather(*(source(feed) for source in sources))
+        if go or options.force:
+            source_gen = (
+                source(feed)
+                for name, source in sources.items()
+                if name in options.sources
+            )
+            comps = await gather(*source_gen)
             steps = (c for co in comps for c in co)
             return position, fuzzy(feed, steps)
         else:

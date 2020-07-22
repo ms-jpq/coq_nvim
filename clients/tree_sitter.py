@@ -22,15 +22,12 @@ async def main(nvim: Nvim, chan: Queue, seed: SourceSeed) -> Source:
     await init_lua(nvim)
 
     async def source(feed: SourceFeed) -> AsyncIterator[SourceCompletion]:
-        if True:
-            pass
-        else:
-            yield SourceCompletion(
-                position=feed.position,
-                old_prefix="",
-                new_prefix="",
-                old_suffix="",
-                new_suffix="",
-            )
+        yield SourceCompletion(
+            position=feed.position,
+            old_prefix="",
+            new_prefix="",
+            old_suffix="",
+            new_suffix="",
+        )
 
     return source

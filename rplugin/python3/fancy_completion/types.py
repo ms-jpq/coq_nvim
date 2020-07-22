@@ -1,6 +1,15 @@
 from asyncio import Queue
 from dataclasses import dataclass
-from typing import Any, AsyncIterator, Awaitable, Callable, Dict, Optional, Sequence
+from typing import (
+    Any,
+    AsyncIterator,
+    Awaitable,
+    Callable,
+    Dict,
+    Optional,
+    Sequence,
+    Set,
+)
 
 from pynvim import Nvim
 
@@ -128,3 +137,4 @@ class Payload:
 @dataclass(frozen=True)
 class State:
     char_inserted: bool
+    sources: Set[str]

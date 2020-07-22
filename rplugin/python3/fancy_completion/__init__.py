@@ -11,7 +11,7 @@ from typing import Any, Awaitable, Sequence
 
 from pynvim import Nvim, command, function, plugin
 
-from .completion import merge
+from .completion import GenOptions, merge
 from .nvim import autocmd, call, complete, print
 from .patch import apply_patch
 from .scheduler import Signal, schedule
@@ -83,6 +83,10 @@ class Main:
                 gen, listen = await merge(
                     self.nvim, chan=self.msg_ch, factories=factories, settings=settings
                 )
+                sources = {
+                    name for name, source in settings.sources.items() if source.enabled
+                }
+                self.state = forward(self.state, sources=sources)
 
                 async def l1() -> None:
                     async for pos, comp in schedule(chan=self.ch, gen=gen):
@@ -104,15 +108,16 @@ class Main:
 
         self._submit(print(self.nvim, "Fancy Completion ⭐️"))
 
-    def next_comp(self, force: bool) -> None:
+    def next_comp(self, options: GenOptions) -> None:
         async def cont() -> None:
-            await self.ch.put(Signal(args=(force,)))
+            await self.ch.put(Signal(args=(options,)))
 
         self._submit(cont())
 
     @function("FCmanual", sync=True)
     def manual(self, args: Sequence[Any]) -> None:
-        self.next_comp(force=True)
+        sources = self.state.sources
+        self.next_comp(GenOptions(force=True, sources=sources))
 
     @function("FComnifunc", sync=True)
     def omnifunc(self, args: Sequence[Any]) -> int:
@@ -120,7 +125,8 @@ class Main:
         if find_start == 1:
             return -1
         else:
-            self.next_comp(force=True)
+            sources = self.state.sources
+            self.next_comp(GenOptions(force=True, sources=sources))
             return -2
 
     @function("_FCnotify")
@@ -139,7 +145,8 @@ class Main:
     @function("_FCtextchangedi")
     def text_changed_i(self, args: Sequence[Any]) -> None:
         try:
-            self.next_comp(force=False)
+            sources = self.state.sources
+            self.next_comp(GenOptions(force=False, sources=sources))
         finally:
             self.state = forward(self.state, char_inserted=False)
 
@@ -147,7 +154,8 @@ class Main:
     def text_changed_p(self, args: Sequence[Any]) -> None:
         try:
             if self.state.char_inserted:
-                self.next_comp(force=False)
+                sources = self.state.sources
+                self.next_comp(GenOptions(force=False, sources=sources))
         finally:
             self.state = forward(self.state, char_inserted=False)
 
