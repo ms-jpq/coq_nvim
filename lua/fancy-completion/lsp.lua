@@ -4,6 +4,7 @@ local lsp = vim.lsp
 
 local cancel = nil
 
+local linesep = "\n"
 
 local list_comp_candidates = function (request_id, row, col)
   if cancel then
@@ -20,7 +21,7 @@ local list_comp_candidates = function (request_id, row, col)
 
     _, cancel = lsp.buf_request(0, "textDocument/completion", params, function (err, _, ans)
       if err then
-        api.nvim_out_writeln("lsp error: " .. err .. "\n")
+        api.nvim_out_writeln("lsp error: " .. err .. linesep)
       end
       local ret = ans or nil
       fn._FCnotify("lsp", request_id, ret)
