@@ -18,11 +18,6 @@ def t_set_sources(state: State, settings: Settings, candidates: Sequence[str]) -
     return forward(state, sources=sources)
 
 
-def t_rm_sources(state: State, candidates: Sequence[str]) -> State:
-    sources = state.sources - {*candidates}
-    return forward(state, sources=sources)
-
-
 def t_toggle_sources(
     state: State, settings: Settings, candidates: Sequence[str]
 ) -> State:

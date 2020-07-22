@@ -20,7 +20,6 @@ from .settings import initial, load_factories
 from .state import initial as initial_state
 from .transitions import (
     t_char_inserted,
-    t_rm_sources,
     t_set_sources,
     t_text_changed,
     t_toggle_sources,
@@ -156,19 +155,14 @@ class Main:
         item, *_ = args
         apply_patch(self.nvim, comp=item)
 
-    @function("_FCset_sources")
+    @function("FCset_sources")
     def set_sources(self, args: Sequence[Any]) -> None:
         candidates, *_ = args
         self.state = t_set_sources(
             self.state, settings=self.settings, candidates=candidates
         )
 
-    @function("_FCrm_sources")
-    def rm_sources(self, args: Sequence[Any]) -> None:
-        candidates, *_ = args
-        self.state = t_rm_sources(self.state, candidates=candidates)
-
-    @function("_FCtoggle_sources")
+    @function("FCtoggle_sources")
     def toggle_sources(self, args: Sequence[Any]) -> None:
         candidates, *_ = args
         self.state = t_toggle_sources(
@@ -184,11 +178,6 @@ class Main:
     @command("FCSetSources", nargs="*")
     def c_set_sources(self, args: Sequence[Any]) -> None:
         self.set_sources((args,))
-        self._print_sources()
-
-    @command("FCRmSources", nargs="*")
-    def c_rm_sources(self, args: Sequence[Any]) -> None:
-        self.rm_sources((args,))
         self._print_sources()
 
     @command("FCToggleSources", nargs="*")

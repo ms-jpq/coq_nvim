@@ -83,6 +83,16 @@ Just require it in your `.vimrc` like so:
 lua require("fancy-completion/recommends").all()
 ```
 
+### Commands
+
+| command         | effect                                      |
+| --------------- | ------------------------------------------- |
+| FCStart         | Start fancy complete                        |
+| FCSetSources    | Enable only the sources in args             |
+| FCToggleSources | Toggle enable / disable the sources in args |
+
+### Functions
+
 ### Authoring Clients
 
 A client is really simple:
