@@ -13,7 +13,6 @@ def load_source(config: Any) -> SourceSpec:
         main=config["main"],
         short_name=config["short_name"],
         enabled=config["enabled"],
-        ranking_bias=config.get("ranking_bias"),
         limit=config.get("limit"),
         timeout=config.get("timeout"),
         config=config.get("config"),
@@ -24,9 +23,7 @@ def load_source(config: Any) -> SourceSpec:
 def initial(configs: Sequence[Any]) -> Settings:
     config = merge_all(load_json(settings_json), *configs)
     fuzzy_o = config["fuzzy"]
-    fuzzy = FuzzyOptions(
-        band_size=fuzzy_o["band_size"], min_match=fuzzy_o["min_match"],
-    )
+    fuzzy = FuzzyOptions(min_match=fuzzy_o["min_match"],)
     sources = {name: load_source(conf) for name, conf in config["sources"].items()}
     settings = Settings(fuzzy=fuzzy, sources=sources)
     return settings
@@ -47,7 +44,6 @@ def load_factories(settings: Settings) -> Iterator[SourceFactory]:
                         fact = SourceFactory(
                             name=src_name,
                             short_name=spec.short_name,
-                            ranking_bias=spec.ranking_bias or 1,
                             limit=limit,
                             timeout=timeout,
                             seed=seed,

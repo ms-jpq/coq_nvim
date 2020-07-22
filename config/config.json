@@ -1,7 +1,6 @@
 {
   "fuzzy": {
-    "band_size": 10,
-    "min_match": 3
+    "min_match":  1
   },
   "sources": {
     "buffers": {
@@ -13,7 +12,6 @@
       "enabled": true,
       "limit": 3,
       "main": "buffers.py",
-      "ranking_bias": 1.0,
       "short_name": "B",
       "timeout": 100
     },
@@ -22,7 +20,6 @@
       "enabled": true,
       "limit": null,
       "main": "lsp.py",
-      "ranking_bias": 1.0,
       "short_name": "LSP",
       "timeout": 3000
     },
@@ -31,7 +28,6 @@
       "enabled": true,
       "limit": 3,
       "main": "paths.py",
-      "ranking_bias": 1.0,
       "short_name": "F",
       "timeout": 100
     },
@@ -43,7 +39,6 @@
       "enabled": true,
       "limit": 3,
       "main": "tmux.py",
-      "ranking_bias": 1.0,
       "short_name": "TMUX",
       "timeout": 100
     },
@@ -52,7 +47,6 @@
       "enabled": false,
       "limit": 3,
       "main": "tree_sitter.py",
-      "ranking_bias": 1.0,
       "short_name": "TS",
       "timeout": 100
     }

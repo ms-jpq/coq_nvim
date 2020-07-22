@@ -22,7 +22,6 @@ class Notification:
 
 @dataclass(frozen=True)
 class FuzzyOptions:
-    band_size: int
     min_match: int
 
 
@@ -33,7 +32,6 @@ class SourceSpec:
     enabled: bool
     limit: Optional[float]
     timeout: Optional[float]
-    ranking_bias: Optional[float]
     config: Dict[str, Any]
 
 
@@ -107,7 +105,6 @@ Factory = Callable[[Nvim, Queue, SourceSeed], Awaitable[Source]]
 class SourceFactory:
     name: str
     short_name: str
-    ranking_bias: float
     timeout: float
     limit: float
     seed: SourceSeed
@@ -118,7 +115,6 @@ class SourceFactory:
 class Step:
     source: str
     source_shortname: str
-    ranking_bias: float
     text: str
     text_normalized: str
     comp: SourceCompletion

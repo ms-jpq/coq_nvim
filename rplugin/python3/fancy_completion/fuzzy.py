@@ -11,7 +11,6 @@ class FuzzyMetric:
     prefix_matches: int
     consecutive_matches: int
     num_matches: int
-    front_bias: float
     density: float
 
 
@@ -34,30 +33,31 @@ def fuzzify(feed: SourceFeed, step: Step) -> FuzzyStep:
     matches: Dict[int, str] = {}
 
     idx = 0
+    prefix_broken = False
     pm_idx = inf
     prefix_matches = 0
     consecutive_matches = 0
     for char, n_char in zip(f_alnums, f_n_alnums):
         m_idx = s_n_alnums.find(n_char, idx)
         if m_idx != -1:
-            if pm_idx == inf:
-                prefix_matches += 1
             if pm_idx == m_idx - 1:
                 consecutive_matches += 1
             pm_idx = m_idx
             matches[m_idx] = char
             idx = m_idx + 1
+        else:
+            prefix_broken = True
+        if not prefix_broken:
+            prefix_matches += 1
 
     target_len = len(s_n_alnums)
     num_matches = len(matches)
     density = num_matches / target_len
-    front_bias = sum(matches) / (target_len * (target_len + 1) / 2)
     full_match = prefix_matches == target_len
     metric = FuzzyMetric(
         prefix_matches=prefix_matches,
         num_matches=num_matches,
         consecutive_matches=consecutive_matches,
-        front_bias=front_bias,
         density=density,
     )
     return FuzzyStep(step=step, full_match=full_match, matches=matches, metric=metric)
@@ -69,7 +69,6 @@ def rank(fuzz: FuzzyStep) -> Sequence[Union[float, int, str]]:
         metric.prefix_matches,
         metric.num_matches,
         metric.consecutive_matches,
-        metric.front_bias,
         metric.density,
     )
 
@@ -139,7 +138,8 @@ def fuzzer(
         seen_by_source: Dict[str, int] = {}
 
         fuzzy_steps = (fuzzify(feed, step=step) for step in steps)
-        for fuzz in sorted(fuzzy_steps, key=cast(Callable[[FuzzyStep], Any], rank)):
+        sorted_steps = sorted(fuzzy_steps, key=cast(Callable[[FuzzyStep], Any], rank), reverse=True)
+        for fuzz in sorted_steps:
             step = fuzz.step
             source = step.source
             seen_count = seen_by_source.get(source, 0) + 1
