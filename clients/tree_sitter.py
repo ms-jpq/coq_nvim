@@ -19,7 +19,7 @@ async def init_lua(nvim: Nvim) -> None:
 
 # TODO -- waiting on tree sitter to stabilize
 async def main(nvim: Nvim, chan: Queue, seed: SourceSeed) -> Source:
-    await init_lua()
+    await init_lua(nvim)
 
     async def source(feed: SourceFeed) -> AsyncIterator[SourceCompletion]:
         yield SourceCompletion(
