@@ -1,6 +1,7 @@
+from enum import Enum, auto
 from itertools import chain
 from string import ascii_letters, digits
-from typing import Iterable, Iterator, Optional, Set, Tuple
+from typing import Iterable, Iterator, List, Optional, Set, Tuple
 
 #
 # Parser for
@@ -26,13 +27,11 @@ def make_parse_err(condition: str, expected: Iterable[str], actual: str) -> Pars
     return ParseError(msg)
 
 
-def parse_escape(
-    begin: str, it: Iterator[str], escapable_chars: Set[str]
-) -> Iterator[str]:
+def parse_escape(begin: str, it: Iterator[str], escapable_chars: Set[str]) -> str:
     assert begin == "\\"
     char = next(it, "")
     if char in escapable_chars:
-        yield char
+        return char
     else:
         err = make_parse_err(
             condition="after \\", expected=escapable_chars, actual=char
@@ -41,11 +40,11 @@ def parse_escape(
 
 
 # choice      ::= '${' int '|' text (',' text)* '|}'
-def parse_choice(begin: str, it: Iterator[str]) -> Iterator[str]:
+def half_parse_choice(begin: str, it: Iterator[str]) -> Iterator[str]:
     assert begin == "|"
     for char in it:
         if char == "\\":
-            yield from parse_escape(char, it, escapable_chars=_choice_escapable_chars)
+            yield parse_escape(char, it, escapable_chars=_choice_escapable_chars)
         elif char == "|":
             char = next(it, "")
             if char == "}":
@@ -58,30 +57,23 @@ def parse_choice(begin: str, it: Iterator[str]) -> Iterator[str]:
 
 
 # placeholder ::= '${' int ':' any '}'
-def parse_place_holder(begin: str, it: Iterator[str]) -> Iterator[str]:
+def half_parse_place_holder(begin: str, it: Iterator[str]) -> Iterator[str]:
     assert begin == ":"
-    for char in it:
-        if char == "\\":
-            yield from parse_escape(char, it, escapable_chars=_escapable_chars)
-        elif char == "}":
-            break
-        else:
-            yield from parse((char,), it, nested=True)
-            break
+    yield from parse((), it, nested=True)
 
 
 # choice | placeholder
 # -- both starts with (int)
-def parse_cp(begin: str, it: Iterator[str]) -> Iterator[str]:
+def parse_choices_n_placeholder(begin: str, it: Iterator[str]) -> Iterator[str]:
     assert begin in _int_chars
     for char in it:
         if char in _int_chars:
             pass
         elif char == "|":
-            yield from parse_choice(char, it)
+            yield from half_parse_choice(char, it)
             break
         elif char == ":":
-            yield from parse_place_holder(char, it)
+            yield from half_parse_place_holder(char, it)
             break
         else:
             err = make_parse_err(
@@ -94,13 +86,21 @@ def variable_substitution(name: str) -> Optional[str]:
     return ""
 
 
+class VarType(Enum):
+    naked = auto()  # '$' var
+    simple = auto()  # '${' var }'
+    arbitrary = auto()  # '${' var ':' any '}'
+    decorated = auto()  # '${' var '/' regex '/' (format | text)+ '/' options '}'
+
+
 # variable    ::= '$' var | '${' var }'
 #                | '${' var ':' any '}'
 #                | '${' var '/' regex '/' (format | text)+ '/' options '}'
 def parse_variable(begin: str, it: Iterator[str], naked: bool) -> Iterator[str]:
-    name_acc = [begin]
+    name_acc: List[str] = []
     if naked:
-        for char in it:
+        # variable    ::= '$' var
+        for char in chain((begin,), it):
             if char in _var_chars:
                 name_acc.append(char)
             else:
@@ -113,39 +113,42 @@ def parse_variable(begin: str, it: Iterator[str], naked: bool) -> Iterator[str]:
                 yield from parse((char,), it, nested=False)
                 break
     else:
-        ignore_tail = False
-        for char in it:
-            if char == "}":
-                name = "".join(name_acc)
-                var = variable_substitution(name)
-                if var:
-                    yield var
-                else:
-                    yield name
-                yield from parse((char,), it, nested=False)
-                break
-            elif ignore_tail:
-                pass
-            elif char in _var_chars:
+        v_type = VarType.naked
+        for char in chain((begin,), it):
+            if char in _var_chars:
                 name_acc.append(char)
+            elif char == "}":
+                v_type = VarType.simple
+                break
             elif char == ":":
-                name = "".join(name_acc)
-                var = variable_substitution(name)
-                if var:
-                    yield var
-                else:
-                    yield from parse((), it, nested=True)
-                    break
+                v_type = VarType.arbitrary
+                break
             elif char == "/":
-                # ignore format
-                ignore_tail = True
+                v_type = VarType.decorated
+                break
+            else:
+                err = make_parse_err(
+                    condition="parsing var", expected=("_", "a-z", "A-Z"), actual=char
+                )
+                raise err
+
+        name = "".join(name_acc)
+        var = variable_substitution(name)
+        if v_type == VarType.simple:
+            pass
+        elif v_type == VarType.arbitrary:
+            pass
+        elif v_type == VarType.decorated:
+            pass
+        else:
+            assert False
 
 
 def parse_inner_scope(begin: str, it: Iterator[str]) -> Iterator[str]:
     assert begin == "{"
     char = next(it, "")
     if char in _int_chars:
-        yield from parse_cp(char, it)
+        yield from parse_choices_n_placeholder(char, it)
     elif char in _var_begin_chars:
         yield from parse_variable(char, it, naked=False)
     else:
@@ -178,7 +181,7 @@ def parse_scope(begin: str, it: Iterator[str]) -> Iterator[str]:
 def parse(prev_chars: Iterable[str], it: Iterator, nested: bool) -> Iterator[str]:
     for char in chain(prev_chars, it):
         if char == "\\":
-            yield from parse_escape(char, it, escapable_chars=_escapable_chars)
+            yield parse_escape(char, it, escapable_chars=_escapable_chars)
         elif nested and char == "}":
             break
         elif char == "$":
