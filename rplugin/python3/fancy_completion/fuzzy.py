@@ -8,15 +8,20 @@ from .types import FuzzyOptions, Payload, SourceCompletion, SourceFeed, Step
 
 
 @dataclass(frozen=True)
-class FuzzyStep:
-    step: Step
-    full_match: bool
-    matches: Dict[int, str]
+class FuzzyMetric:
     prefix_matches: int
     consecutive_matches: int
     num_matches: int
     density: float
     front_bias: float
+
+
+@dataclass(frozen=True)
+class FuzzyStep:
+    step: Step
+    full_match: bool
+    matches: Dict[int, str]
+    metric: FuzzyMetric
 
 
 def normalize(text: str) -> str:
@@ -52,27 +57,26 @@ def fuzzify(feed: SourceFeed, step: Step) -> FuzzyStep:
     density = num_matches / target_len
     front_bias = sum(matches) / (target_len * (target_len + 1) / 2)
     full_match = prefix_matches == target_len
-    return FuzzyStep(
-        step=step,
-        full_match=full_match,
+    metric = FuzzyMetric(
         prefix_matches=prefix_matches,
-        matches=matches,
         num_matches=num_matches,
         consecutive_matches=consecutive_matches,
         density=density,
         front_bias=front_bias,
     )
+    return FuzzyStep(step=step, full_match=full_match, matches=matches, metric=metric)
 
 
 def rank(fuzz: FuzzyStep) -> Sequence[Union[float, int, str]]:
+    metric = fuzz.metric
     comp = fuzz.step.comp
     text = comp.sortby or normalize(strxfrm(comp.label or fuzz.step.text))
     return (
-        fuzz.prefix_matches * -1,
-        fuzz.num_matches * -1,
-        fuzz.consecutive_matches * -1,
-        fuzz.density * -1,
-        fuzz.front_bias,
+        metric.prefix_matches * -1,
+        metric.num_matches * -1,
+        metric.consecutive_matches * -1,
+        metric.density * -1,
+        metric.front_bias,
         fuzz.step.priority * -1,
         text,
     )
@@ -149,11 +153,12 @@ def fuzzer(
             seen_count = seen_by_source.get(source, 0) + 1
             seen_by_source[source] = seen_count
             text = step.text
+            num_matches = fuzz.metric.num_matches
 
             if (
                 seen_count <= limits[source]
                 and text not in seen
-                and (fuzz.full_match or len(fuzz.matches) >= min_match)
+                and (fuzz.full_match or num_matches >= min_match)
             ):
                 seen.add(text)
                 yield vimify(fuzz=fuzz)
