@@ -1,8 +1,11 @@
 from asyncio import Queue
+from collections import defaultdict
+from dataclasses import dataclass
 from itertools import count
 from typing import (
     Any,
     AsyncIterator,
+    Callable,
     Dict,
     Iterator,
     Optional,
@@ -14,12 +17,27 @@ from typing import (
 
 from pynvim import Nvim
 
-from .pkgs.fc_types import Position, Source, SourceCompletion, SourceFeed, SourceSeed
+from .pkgs.fc_types import (
+    Context,
+    Position,
+    Source,
+    SourceCompletion,
+    SourceFeed,
+    SourceSeed,
+)
 from .pkgs.nvim import call
 from .pkgs.shared import normalize, parse_common_affix
 
 
-async def init_lua(nvim: Nvim) -> Tuple[Dict[str, int], Dict[str, int]]:
+@dataclass(frozen=True)
+class ParsedRow:
+    old_prefix: str
+    new_prefix: str
+    old_suffix: str
+    new_suffix: str
+
+
+async def init_lua(nvim: Nvim) -> Tuple[Dict[int, str], Dict[int, str]]:
     def cont() -> Tuple[Dict[str, int], Dict[str, int]]:
         nvim.api.exec_lua("fancy_completion_lsp = require 'fancy-completion/lsp'", ())
         entry_kind = nvim.api.exec_lua(
@@ -30,7 +48,10 @@ async def init_lua(nvim: Nvim) -> Tuple[Dict[str, int], Dict[str, int]]:
         )
         return entry_kind, insert_kind
 
-    return await call(nvim, cont)
+    entry_kind, insert_kind = await call(nvim, cont)
+    elookup = defaultdict(lambda: "Unknown", ((v, k) for k, v in entry_kind.items()))
+    ilookup = {v: k for k, v in insert_kind.items()}
+    return elookup, ilookup
 
 
 async def ask(nvim: Nvim, chan: Queue, pos: Position, uid: int) -> Optional[Any]:
@@ -75,6 +96,34 @@ def parse_text(row: Dict[str, Any]) -> str:
         return row["label"]
 
 
+def row_parser(context: Context) -> Callable[[Dict[str, Any]], ParsedRow]:
+    before, after = context.line_before, context.line_after
+    before_normalized, after_normalized = (
+        context.line_before_normalized,
+        context.line_after_normalized,
+    )
+
+    def parse(row: Dict[str, Any]) -> ParsedRow:
+        text = parse_text(row)
+        match_normalized = normalize(text)
+        old_prefix, old_suffix = parse_common_affix(
+            before=before,
+            after=after,
+            before_normalized=before_normalized,
+            after_normalized=after_normalized,
+            match_normalized=match_normalized,
+        )
+        parsed = ParsedRow(
+            old_prefix=old_prefix,
+            new_prefix=text,
+            old_suffix=old_suffix,
+            new_suffix="",
+        )
+        return parsed
+
+    return parse
+
+
 def parse_documentation(doc: Union[str, Dict[str, Any], None]) -> Optional[str]:
     tp = type(doc)
     if doc is None:
@@ -94,62 +143,43 @@ def parse_documentation(doc: Union[str, Dict[str, Any], None]) -> Optional[str]:
 def parse_rows(
     rows: Sequence[Dict[str, Any]],
     feed: SourceFeed,
-    entry_kind_lookup: Dict[int, str],
-    insert_kind_lookup: Dict[int, str],
+    entry_lookup: Dict[int, str],
+    insert_lookup: Dict[int, str],
 ) -> Iterator[SourceCompletion]:
     position = feed.position
-    before, after = feed.context.line_before, feed.context.line_after
-    before_normalized, after_normalized = (
-        feed.context.line_before_normalized,
-        feed.context.line_after_normalized,
-    )
+    parse = row_parser(context=feed.context)
 
     for row in rows:
         label = row.get("label")
         sortby = row.get("sortText")
         r_kind = row.get("kind")
-        kind = entry_kind_lookup.get(r_kind, "Unknown") if r_kind else None
+        kind = entry_lookup.get(r_kind) if r_kind else None
         doc = parse_documentation(row.get("documentation"))
+        parsed = parse(row)
 
-        text = parse_text(row)
-        match_normalized = normalize(text)
-        old_prefix, old_suffix = parse_common_affix(
-            before=before,
-            after=after,
-            before_normalized=before_normalized,
-            after_normalized=after_normalized,
-            match_normalized=match_normalized,
+        yield SourceCompletion(
+            position=position,
+            old_prefix=parsed.old_prefix,
+            new_prefix=parsed.new_prefix,
+            old_suffix=parsed.old_suffix,
+            new_suffix=parsed.new_suffix,
+            label=label,
+            sortby=sortby,
+            kind=kind,
+            doc=doc,
         )
-
-        if old_prefix + old_suffix != text:
-            yield SourceCompletion(
-                position=position,
-                old_prefix=old_prefix,
-                new_prefix=text,
-                old_suffix=old_suffix,
-                new_suffix="",
-                label=label,
-                sortby=sortby,
-                kind=kind,
-                doc=doc,
-            )
 
 
 async def main(nvim: Nvim, chan: Queue, seed: SourceSeed) -> Source:
     id_gen = count()
     entry_kind, insert_kind = await init_lua(nvim)
-    entry_kind_lookup = {v: k for k, v in entry_kind.items()}
-    insert_kind_lookup = {v: k for k, v in insert_kind.items()}
 
     async def source(feed: SourceFeed) -> AsyncIterator[SourceCompletion]:
         uid = next(id_gen)
         resp = await ask(nvim, chan=chan, pos=feed.position, uid=uid)
         rows = parse_resp_to_rows(resp)
         for row in parse_rows(
-            rows,
-            feed=feed,
-            entry_kind_lookup=entry_kind_lookup,
-            insert_kind_lookup=insert_kind_lookup,
+            rows, feed=feed, entry_lookup=entry_kind, insert_lookup=insert_kind,
         ):
             yield row
 

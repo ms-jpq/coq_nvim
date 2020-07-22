@@ -1,4 +1,5 @@
 from asyncio import Queue, gather, wait
+from os import linesep
 from traceback import format_exc
 from typing import (
     Awaitable,
@@ -148,9 +149,7 @@ async def manufacture(nvim: Nvim, factory: SourceFactory) -> Tuple[StepFunction,
         await gather(*done)
         if pending:
             timeout_fmt = round(timeout * 1000)
-            msg = (
-                f"async completion source timed out - {name}, exceeded {timeout_fmt}ms"
-            )
+            msg = f"{linesep}async completion source timed out - {name}, exceeded {timeout_fmt}ms"
             await print(nvim, msg)
         return acc
 
