@@ -11,6 +11,8 @@ class FuzzyStep:
     step: Step
     full_match: bool
     matches: Dict[int, str]
+    prefix_matches: int
+    num_matches: int
     density: float
     front_bias: float
 
@@ -24,21 +26,31 @@ def fuzzify(feed: SourceFeed, step: Step) -> FuzzyStep:
     f_n_alnums = feed.context.alnums_normalized
     s_n_alnums = step.text_normalized
     matches: Dict[int, str] = {}
-    idx = 0
 
+    idx = 0
+    prefix_identical = True
+    prefix_matches = 0
     for char, n_char in zip(f_alnums, f_n_alnums):
         m_idx = s_n_alnums.find(n_char, idx)
         if m_idx != -1:
             matches[m_idx] = char
             idx = m_idx + 1
+        else:
+            prefix_identical = False
+        if prefix_identical:
+            prefix_matches += 1
 
-    density = len(matches) / len(s_n_alnums)
+    target_len = len(s_n_alnums)
+    num_matches = len(matches)
+    density = num_matches / target_len
     front_bias = sum(matches)
-    full_match = density == 1 or s_n_alnums.startswith(f_n_alnums)
+    full_match = prefix_matches == target_len
     return FuzzyStep(
         step=step,
         full_match=full_match,
+        prefix_matches=prefix_matches,
         matches=matches,
+        num_matches=num_matches,
         density=density,
         front_bias=front_bias,
     )
@@ -47,7 +59,14 @@ def fuzzify(feed: SourceFeed, step: Step) -> FuzzyStep:
 def rank(fuzz: FuzzyStep) -> Sequence[Union[float, int, str]]:
     comp = fuzz.step.comp
     text = comp.sortby or normalize(strxfrm(comp.label or fuzz.step.text))
-    return (fuzz.density * -1, fuzz.front_bias, fuzz.step.priority * -1, text)
+    return (
+        fuzz.prefix_matches * -1,
+        fuzz.num_matches * -1,
+        fuzz.density * -1,
+        fuzz.front_bias,
+        fuzz.step.priority * -1,
+        text,
+    )
 
 
 def context_gen(fuzz: FuzzyStep) -> str:
