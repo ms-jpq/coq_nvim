@@ -1,3 +1,4 @@
+from itertools import chain
 from string import ascii_letters, digits
 from typing import Iterable, Iterator, Optional, Set, Tuple
 
@@ -65,8 +66,8 @@ def parse_place_holder(begin: str, it: Iterator[str]) -> Iterator[str]:
         elif char == "}":
             break
         else:
-            # TODO This is wrong, needs to handle ANY
-            yield char
+            yield from parse((char,), it, nested=True)
+            break
 
 
 # choice | placeholder
@@ -93,7 +94,6 @@ def variable_substitution(name: str) -> Optional[str]:
     return ""
 
 
-
 # variable    ::= '$' var | '${' var }'
 #                | '${' var ':' any '}'
 #                | '${' var '/' regex '/' (format | text)+ '/' options '}'
@@ -110,8 +110,7 @@ def parse_variable(begin: str, it: Iterator[str], naked: bool) -> Iterator[str]:
                     yield var
                 else:
                     yield name
-                yield char
-                yield from parse(it)
+                yield from parse((char,), it, nested=False)
                 break
     else:
         ignore_tail = False
@@ -123,7 +122,7 @@ def parse_variable(begin: str, it: Iterator[str], naked: bool) -> Iterator[str]:
                     yield var
                 else:
                     yield name
-                yield from parse(it)
+                yield from parse((char,), it, nested=False)
                 break
             elif ignore_tail:
                 pass
@@ -135,7 +134,8 @@ def parse_variable(begin: str, it: Iterator[str], naked: bool) -> Iterator[str]:
                 if var:
                     yield var
                 else:
-                    yield ""
+                    yield from parse((), it, nested=True)
+                    break
             elif char == "/":
                 # ignore format
                 ignore_tail = True
@@ -160,12 +160,13 @@ def parse_scope(begin: str, it: Iterator[str]) -> Iterator[str]:
     char = next(it, "")
     if char == "{":
         yield from parse_inner_scope(char, it)
-    elif char in _int_chars:  # tabstop -- discard
+    elif char in _int_chars:
+        # tabstop     ::= '$' int | '${' int '}'
         for char in it:
             if char in _int_chars:
                 pass
             else:
-                yield from parse(it)
+                yield from parse((char,), it, nested=False)
                 break
     elif char in _var_begin_chars:
         yield from parse_variable(char, it, naked=True)
@@ -174,10 +175,12 @@ def parse_scope(begin: str, it: Iterator[str]) -> Iterator[str]:
         raise err
 
 
-def parse(it: Iterator) -> Iterator[str]:
-    for char in it:
+def parse(prev_chars: Iterable[str], it: Iterator, nested: bool) -> Iterator[str]:
+    for char in chain(prev_chars, it):
         if char == "\\":
             yield from parse_escape(char, it, escapable_chars=_escapable_chars)
+        elif nested and char == "}":
+            break
         elif char == "$":
             yield from parse_scope(char, it)
         else:
@@ -186,6 +189,6 @@ def parse(it: Iterator) -> Iterator[str]:
 
 def parse_snippet(text: str) -> Tuple[str, str]:
     it = iter(text)
-    new_prefix = "".join(parse(it))
+    new_prefix = "".join(parse((), it, nested=False))
     new_suffix = ""
     return new_prefix, new_suffix
