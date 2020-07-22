@@ -50,10 +50,9 @@ def fuzzify(feed: SourceFeed, step: Step) -> FuzzyStep:
         if not prefix_broken:
             prefix_matches += 1
 
-    target_len = len(s_n_alnums)
     num_matches = len(matches)
-    density = num_matches / target_len
-    full_match = prefix_matches == target_len
+    full_match = prefix_matches == len(f_alnums)
+    density = num_matches / len(s_n_alnums)
     metric = FuzzyMetric(
         prefix_matches=prefix_matches,
         num_matches=num_matches,
@@ -70,6 +69,7 @@ def rank(fuzz: FuzzyStep) -> Sequence[Union[float, int, str]]:
         metric.num_matches,
         metric.consecutive_matches,
         metric.density,
+        fuzz.step.text_normalized
     )
 
 
@@ -105,9 +105,9 @@ def gen_payload(comp: SourceCompletion) -> Payload:
 
 def vimify(fuzz: FuzzyStep) -> VimCompletion:
     step = fuzz.step
-    source = f"[{step.source_shortname}]"
     comp = step.comp
-    menu = str(fuzz.metric)
+    source = f"[{step.source_shortname}]"
+    menu = f"{comp.kind} {source}" if comp.kind else source
     abbr = (
         (comp.label or (comp.new_prefix + comp.new_suffix))
         if fuzz.full_match
