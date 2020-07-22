@@ -1,5 +1,5 @@
 from string import ascii_letters, digits
-from typing import Iterable, Iterator, Tuple
+from typing import Iterable, Iterator, Set, Tuple
 
 #
 # Parser for
@@ -12,6 +12,7 @@ class ParseError(Exception):
 
 
 _escapable_chars = {"\\", "$", "}"}
+_choice_escapable_chars = _escapable_chars | {",", "|"}
 _int_chars = {*digits}
 _var_begin_chars = {*ascii_letters}
 _var_chars = {*digits, *ascii_letters, "_"}
@@ -24,22 +25,27 @@ def make_parse_err(condition: str, expected: Iterable[str], actual: str) -> Pars
     return ParseError(msg)
 
 
-def parse_escape(begin: str, it: Iterator[str]) -> Iterator[str]:
+def parse_escape(
+    begin: str, it: Iterator[str], escapable_chars: Set[str]
+) -> Iterator[str]:
     assert begin == "\\"
     char = next(it, "")
-    if char in _escapable_chars:
+    if char in escapable_chars:
         yield char
     else:
         err = make_parse_err(
-            condition="after \\", expected=_escapable_chars, actual=char
+            condition="after \\", expected=escapable_chars, actual=char
         )
         raise err
 
 
+# choice      ::= '${' int '|' text (',' text)* '|}'
 def parse_choice(begin: str, it: Iterator[str]) -> Iterator[str]:
     assert begin == "|"
     for char in it:
-        if char == "|":
+        if char == "\\":
+            yield from parse_escape(char, it, escapable_chars=_choice_escapable_chars)
+        elif char == "|":
             char = next(it, "")
             if char == "}":
                 break
@@ -50,15 +56,20 @@ def parse_choice(begin: str, it: Iterator[str]) -> Iterator[str]:
             yield char
 
 
+# placeholder ::= '${' int ':' any '}'
 def parse_place_holder(begin: str, it: Iterator[str]) -> Iterator[str]:
     assert begin == ":"
     for char in it:
-        if char == "}":
+        if char == "\\":
+            yield from parse_escape(char, it, escapable_chars=_escapable_chars)
+        elif char == "}":
             break
         else:
+            # This is wrong, needs to handle ANY
             yield char
 
 
+# choice | placeholder
 def parse_cp(begin: str, it: Iterator[str]) -> Iterator[str]:
     assert begin in _int_chars
     for char in it:
@@ -81,6 +92,9 @@ def variable_substitution(name: str) -> Iterator[str]:
     yield name
 
 
+# variable    ::= '$' var | '${' var }'
+#                | '${' var ':' any '}'
+#                | '${' var '/' regex '/' (format | text)+ '/' options '}'
 def parse_variable(begin: str, it: Iterator[str], naked: bool) -> Iterator[str]:
     name_acc = [begin]
     if naked:
@@ -105,8 +119,9 @@ def parse_variable(begin: str, it: Iterator[str], naked: bool) -> Iterator[str]:
             elif char in _var_chars:
                 name_acc.append(char)
             elif char == ":":
-                ignore_tail = True
+                pass
             elif char == "/":
+                # ignore format
                 ignore_tail = True
 
 
@@ -146,7 +161,7 @@ def parse_scope(begin: str, it: Iterator[str]) -> Iterator[str]:
 def parse(it: Iterator) -> Iterator[str]:
     for char in it:
         if char == "\\":
-            yield from parse_escape(char, it)
+            yield from parse_escape(char, it, escapable_chars=_escapable_chars)
         elif char == "$":
             yield from parse_scope(char, it)
         else:
