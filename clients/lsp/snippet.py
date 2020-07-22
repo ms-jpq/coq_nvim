@@ -40,15 +40,9 @@ def parse_snippet(text: str) -> Tuple[str, str]:
                 yield char
 
     def post() -> Iterator[str]:
-        dollar = False
-
         for char in it:
             if char == "$":
-                dollar = True
-            elif dollar:
-                dollar = False
-                if char == "{":
-                    yield from parse_inner(it)
+                yield from parse_dollar(it)
             else:
                 yield char
 
