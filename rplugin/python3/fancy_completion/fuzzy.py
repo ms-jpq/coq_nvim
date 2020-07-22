@@ -1,5 +1,6 @@
 from dataclasses import asdict, dataclass
 from locale import strxfrm
+from math import inf
 from typing import Any, Callable, Dict, Iterator, Sequence, Set, Union, cast
 
 from .nvim import VimCompletion
@@ -12,6 +13,7 @@ class FuzzyStep:
     full_match: bool
     matches: Dict[int, str]
     prefix_matches: int
+    consecutive_matches: int
     num_matches: int
     density: float
     front_bias: float
@@ -28,11 +30,16 @@ def fuzzify(feed: SourceFeed, step: Step) -> FuzzyStep:
     matches: Dict[int, str] = {}
 
     idx = 0
+    pm_idx = inf
     prefix_identical = True
     prefix_matches = 0
+    consecutive_matches = 0
     for char, n_char in zip(f_alnums, f_n_alnums):
         m_idx = s_n_alnums.find(n_char, idx)
         if m_idx != -1:
+            if pm_idx == m_idx - 1:
+                consecutive_matches += 1
+            pm_idx = m_idx
             matches[m_idx] = char
             idx = m_idx + 1
         else:
@@ -43,7 +50,7 @@ def fuzzify(feed: SourceFeed, step: Step) -> FuzzyStep:
     target_len = len(s_n_alnums)
     num_matches = len(matches)
     density = num_matches / target_len
-    front_bias = sum(matches)
+    front_bias = sum(matches) / (target_len * (target_len + 1) / 2)
     full_match = prefix_matches == target_len
     return FuzzyStep(
         step=step,
@@ -51,6 +58,7 @@ def fuzzify(feed: SourceFeed, step: Step) -> FuzzyStep:
         prefix_matches=prefix_matches,
         matches=matches,
         num_matches=num_matches,
+        consecutive_matches=consecutive_matches,
         density=density,
         front_bias=front_bias,
     )
@@ -62,6 +70,7 @@ def rank(fuzz: FuzzyStep) -> Sequence[Union[float, int, str]]:
     return (
         fuzz.prefix_matches * -1,
         fuzz.num_matches * -1,
+        fuzz.consecutive_matches * -1,
         fuzz.density * -1,
         fuzz.front_bias,
         fuzz.step.priority * -1,
