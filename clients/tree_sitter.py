@@ -4,6 +4,17 @@ from typing import AsyncIterator
 from pynvim import Nvim
 
 from .pkgs.fc_types import Source, SourceCompletion, SourceFeed, SourceSeed
+from .pkgs.nvim import call
+
+
+async def init_lua(nvim: Nvim) -> None:
+    def cont() -> None:
+        nvim.api.exec_lua(
+            "fancy_completion_tree_sitter = require 'fancy-completion/tree_sitter'", ()
+        )
+        return
+
+    return await call(nvim, cont)
 
 
 # TODO -- waiting on tree sitter to stabilize
