@@ -7,7 +7,7 @@ from typing import AsyncIterator, Iterator, Sequence
 from pynvim import Nvim
 
 from .pkgs.da import call
-from .pkgs.fc_types import Source, SourceCompletion, SourceFeed, SourceSeed
+from .pkgs.fc_types import Source, Completion, Context, Seed
 from .pkgs.nvim import print
 from .pkgs.shared import coalesce
 
@@ -76,15 +76,15 @@ def is_active(session_id: str, pane: TmuxPane) -> bool:
     return session_id == pane.session_id and pane.pane_active and pane.window_active
 
 
-async def main(nvim: Nvim, chan: Queue, seed: SourceSeed) -> Source:
+async def main(nvim: Nvim, chan: Queue, seed: Seed) -> Source:
     config = Config(**seed.config)
 
-    async def source(feed: SourceFeed) -> AsyncIterator[SourceCompletion]:
+    async def source(context: Context) -> AsyncIterator[Completion]:
         if which("tmux"):
-            position = feed.position
-            old_prefix = feed.context.alnums_before
-            old_suffix = feed.context.alnums_after
-            n_cword = feed.context.alnums_normalized
+            position = context.position
+            old_prefix = context.alnums_before
+            old_suffix = context.alnums_after
+            n_cword = context.alnums_normalized
 
             parse = coalesce(
                 n_cword=n_cword,
@@ -102,7 +102,7 @@ async def main(nvim: Nvim, chan: Queue, seed: SourceSeed) -> Source:
                 for source in as_completed(sources):
                     text = await source
                     for word in parse(text):
-                        yield SourceCompletion(
+                        yield Completion(
                             position=position,
                             old_prefix=old_prefix,
                             new_prefix=word,

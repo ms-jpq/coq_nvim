@@ -3,7 +3,7 @@ from math import inf
 from typing import Any, Callable, Dict, Iterator, Sequence, Set, Union, cast
 
 from .nvim import VimCompletion
-from .types import FuzzyOptions, Payload, SourceCompletion, SourceFeed, Step
+from .types import Context, FuzzyOptions, Payload, SourceCompletion, Step
 
 
 @dataclass(frozen=True)
@@ -26,9 +26,9 @@ def normalize(text: str) -> str:
     return text.lower()
 
 
-def fuzzify(feed: SourceFeed, step: Step) -> FuzzyStep:
-    f_alnums = feed.context.alnums
-    f_n_alnums = feed.context.alnums_normalized
+def fuzzify(context: Context, step: Step) -> FuzzyStep:
+    f_alnums = context.alnums
+    f_n_alnums = context.alnums_normalized
     s_n_alnums = step.text_normalized
     matches: Dict[int, str] = {}
 
@@ -69,7 +69,7 @@ def rank(fuzz: FuzzyStep) -> Sequence[Union[float, int, str]]:
         metric.num_matches,
         metric.consecutive_matches,
         metric.density,
-        fuzz.step.text_normalized
+        fuzz.step.text_normalized,
     )
 
 
@@ -130,15 +130,17 @@ def vimify(fuzz: FuzzyStep) -> VimCompletion:
 
 def fuzzer(
     options: FuzzyOptions, limits: Dict[str, float]
-) -> Callable[[SourceFeed, Iterator[Step]], Iterator[VimCompletion]]:
+) -> Callable[[Context, Iterator[Step]], Iterator[VimCompletion]]:
     min_match = options.min_match
 
-    def fuzzy(feed: SourceFeed, steps: Iterator[Step]) -> Iterator[VimCompletion]:
+    def fuzzy(context: Context, steps: Iterator[Step]) -> Iterator[VimCompletion]:
         seen: Set[str] = set()
         seen_by_source: Dict[str, int] = {}
 
-        fuzzy_steps = (fuzzify(feed, step=step) for step in steps)
-        sorted_steps = sorted(fuzzy_steps, key=cast(Callable[[FuzzyStep], Any], rank), reverse=True)
+        fuzzy_steps = (fuzzify(context, step=step) for step in steps)
+        sorted_steps = sorted(
+            fuzzy_steps, key=cast(Callable[[FuzzyStep], Any], rank), reverse=True
+        )
         for fuzz in sorted_steps:
             step = fuzz.step
             source = step.source

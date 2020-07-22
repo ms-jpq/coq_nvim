@@ -6,7 +6,7 @@ from typing import AsyncIterator, Iterator, Sequence
 from pynvim import Nvim
 
 from .pkgs.da import anext
-from .pkgs.fc_types import Source, SourceCompletion, SourceFeed, SourceSeed
+from .pkgs.fc_types import Completion, Context, Seed, Source
 
 
 def parse_path(root: str, parent: str = "") -> Iterator[str]:
@@ -29,19 +29,19 @@ def list_dir(path: str) -> Sequence[str]:
         return ()
 
 
-async def find_children(path: str, feed: SourceFeed) -> Sequence[SourceCompletion]:
-    position = feed.position
-    old_prefix = feed.context.alnums_before
-    old_suffix = feed.context.alnums_after
+async def find_children(path: str, context: Context) -> Sequence[Completion]:
+    position = context.position
+    old_prefix = context.alnums_before
+    old_suffix = context.alnums_after
     loop = get_running_loop()
 
-    def cont() -> Iterator[SourceCompletion]:
+    def cont() -> Iterator[Completion]:
         parent = dirname(path)
         if isdir(path):
             end = "" if path.endswith(sep) else sep
             for child in list_dir(path):
                 text = end + child
-                yield SourceCompletion(
+                yield Completion(
                     position=position,
                     old_prefix=old_prefix,
                     new_prefix=text,
@@ -51,7 +51,7 @@ async def find_children(path: str, feed: SourceFeed) -> Sequence[SourceCompletio
                 )
         elif isdir(parent):
             for child in list_dir(parent):
-                yield SourceCompletion(
+                yield Completion(
                     position=position,
                     old_prefix=old_prefix,
                     new_prefix=child,
@@ -61,23 +61,23 @@ async def find_children(path: str, feed: SourceFeed) -> Sequence[SourceCompletio
         else:
             return
 
-    def co() -> Sequence[SourceCompletion]:
+    def co() -> Sequence[Completion]:
         return tuple(cont())
 
     return await loop.run_in_executor(None, co)
 
 
-async def main(nvim: Nvim, chan: Queue, seed: SourceSeed) -> Source:
-    async def source(feed: SourceFeed) -> AsyncIterator[SourceCompletion]:
-        before = feed.context.line_before
+async def main(nvim: Nvim, chan: Queue, seed: Seed) -> Source:
+    async def source(context: Context) -> AsyncIterator[Completion]:
+        before = context.line_before
 
-        async def next_children() -> AsyncIterator[Sequence[SourceCompletion]]:
+        async def next_children() -> AsyncIterator[Sequence[Completion]]:
             for path in parse_path(before):
-                children = await find_children(path, feed=feed)
+                children = await find_children(path, context=context)
                 yield children
 
         co = await anext(next_children())
-        for c in (co or ()):
+        for c in co or ():
             yield c
 
     return source

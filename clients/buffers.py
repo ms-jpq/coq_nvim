@@ -7,7 +7,7 @@ from typing import AsyncIterator, Iterator, Sequence
 from pynvim import Nvim
 from pynvim.api.buffer import Buffer
 
-from .pkgs.fc_types import Source, SourceCompletion, SourceFeed, SourceSeed
+from .pkgs.fc_types import Source, Completion, Context, Seed
 from .pkgs.nvim import call
 from .pkgs.shared import coalesce
 
@@ -44,23 +44,23 @@ async def buffer_chars(nvim: Nvim, buf_gen: Iterator[Buffer]) -> Sequence[str]:
     return chars
 
 
-async def main(nvim: Nvim, chan: Queue, seed: SourceSeed) -> Source:
+async def main(nvim: Nvim, chan: Queue, seed: Seed) -> Source:
     config = Config(**seed.config)
 
-    async def source(feed: SourceFeed) -> AsyncIterator[SourceCompletion]:
-        position = feed.position
-        old_prefix = feed.context.alnums_before
-        old_suffix = feed.context.alnums_after
-        n_cword = feed.context.alnums_normalized
+    async def source(context: Context) -> AsyncIterator[Completion]:
+        position = context.position
+        old_prefix = context.alnums_before
+        old_suffix = context.alnums_after
+        n_cword = context.alnums_normalized
 
         parse = coalesce(
             n_cword=n_cword, min_length=config.min_length, max_length=config.max_length
         )
-        b_gen = buf_gen(nvim, config=config, filetype=feed.filetype)
+        b_gen = buf_gen(nvim, config=config, filetype=context.filetype)
         chars = await buffer_chars(nvim, b_gen)
 
         for word in parse(chars):
-            yield SourceCompletion(
+            yield Completion(
                 position=position,
                 old_prefix=old_prefix,
                 new_prefix=word,

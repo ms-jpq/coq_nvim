@@ -5,7 +5,7 @@ from typing import Any, Iterator, Sequence
 
 from .consts import load_hierarchy, module_entry_point, settings_json
 from .da import load_json, load_module, merge_all
-from .types import FuzzyOptions, Settings, SourceFactory, SourceSeed, SourceSpec
+from .types import FuzzyOptions, Settings, SourceFactory, Seed, SourceSpec
 
 
 def load_source(config: Any) -> SourceSpec:
@@ -40,7 +40,7 @@ def load_factories(settings: Settings) -> Iterator[SourceFactory]:
                         limit = spec.limit or inf
                         timeout = (spec.timeout or inf) / 1000
                         config = spec.config or {}
-                        seed = SourceSeed(config=config, limit=limit, timeout=timeout)
+                        seed = Seed(config=config, limit=limit, timeout=timeout)
                         fact = SourceFactory(
                             name=src_name,
                             short_name=spec.short_name,

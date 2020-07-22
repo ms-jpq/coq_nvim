@@ -17,14 +17,13 @@ from typing import (
 
 from pynvim import Nvim
 
-from .lsp.snippet import parse_snippet
+from .lsp_pkgs.snippet import parse_snippet
 from .pkgs.fc_types import (
-    Context,
     Position,
     Source,
-    SourceCompletion,
-    SourceFeed,
-    SourceSeed,
+    Completion,
+    Context,
+    Seed,
 )
 from .pkgs.nvim import call
 from .pkgs.shared import normalize, parse_common_affix
@@ -152,12 +151,12 @@ def parse_documentation(doc: Union[str, Dict[str, Any], None]) -> Optional[str]:
 
 def parse_rows(
     rows: Sequence[Dict[str, Any]],
-    feed: SourceFeed,
+    context: Context,
     entry_lookup: Dict[int, str],
     insert_lookup: Dict[int, str],
-) -> Iterator[SourceCompletion]:
-    position = feed.position
-    parse = row_parser(context=feed.context, insert_lookup=insert_lookup)
+) -> Iterator[Completion]:
+    position = context.position
+    parse = row_parser(context=context, insert_lookup=insert_lookup)
 
     for row in rows:
         label = row.get("label")
@@ -167,7 +166,7 @@ def parse_rows(
         doc = parse_documentation(row.get("documentation"))
         parsed = parse(row)
 
-        yield SourceCompletion(
+        yield Completion(
             position=position,
             old_prefix=parsed.old_prefix,
             new_prefix=parsed.new_prefix,
@@ -180,16 +179,16 @@ def parse_rows(
         )
 
 
-async def main(nvim: Nvim, chan: Queue, seed: SourceSeed) -> Source:
+async def main(nvim: Nvim, chan: Queue, seed: Seed) -> Source:
     id_gen = count()
     entry_kind, insert_kind = await init_lua(nvim)
 
-    async def source(feed: SourceFeed) -> AsyncIterator[SourceCompletion]:
+    async def source(context: Context) -> AsyncIterator[Completion]:
         uid = next(id_gen)
-        resp = await ask(nvim, chan=chan, pos=feed.position, uid=uid)
+        resp = await ask(nvim, chan=chan, pos=context.position, uid=uid)
         rows = parse_resp_to_rows(resp)
         for row in parse_rows(
-            rows, feed=feed, entry_lookup=entry_kind, insert_lookup=insert_kind,
+            rows, context=context, entry_lookup=entry_kind, insert_lookup=insert_kind,
         ):
             yield row
 

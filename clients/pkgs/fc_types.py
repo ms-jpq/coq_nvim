@@ -3,7 +3,7 @@ from typing import Any, AsyncIterator, Callable, Dict, Optional
 
 
 @dataclass(frozen=True)
-class SourceSeed:
+class Seed:
     limit: float
     timeout: float
     config: Dict[str, Any]
@@ -17,6 +17,11 @@ class Position:
 
 @dataclass(frozen=True)
 class Context:
+    position: Position
+
+    filename: str
+    filetype: str
+
     line: str
     line_normalized: str
     line_before: str
@@ -35,15 +40,7 @@ class Context:
 
 
 @dataclass(frozen=True)
-class SourceFeed:
-    filename: str
-    filetype: str
-    position: Position
-    context: Context
-
-
-@dataclass(frozen=True)
-class SourceCompletion:
+class Completion:
     position: Position
     old_prefix: str
     new_prefix: str
@@ -55,4 +52,4 @@ class SourceCompletion:
     doc: Optional[str] = None
 
 
-Source = Callable[[SourceFeed], AsyncIterator[SourceCompletion]]
+Source = Callable[[Context], AsyncIterator[Completion]]

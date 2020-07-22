@@ -3,7 +3,7 @@ from typing import AsyncIterator
 
 from pynvim import Nvim
 
-from .pkgs.fc_types import Source, SourceCompletion, SourceFeed, SourceSeed
+from .pkgs.fc_types import Source, Completion, Context, Seed
 from .pkgs.nvim import call
 
 
@@ -18,12 +18,12 @@ async def init_lua(nvim: Nvim) -> None:
 
 
 # TODO -- waiting on tree sitter to stabilize
-async def main(nvim: Nvim, chan: Queue, seed: SourceSeed) -> Source:
+async def main(nvim: Nvim, chan: Queue, seed: Seed) -> Source:
     await init_lua(nvim)
 
-    async def source(feed: SourceFeed) -> AsyncIterator[SourceCompletion]:
-        yield SourceCompletion(
-            position=feed.position,
+    async def source(context: Context) -> AsyncIterator[Completion]:
+        yield Completion(
+            position=context.position,
             old_prefix="",
             new_prefix="",
             old_suffix="",

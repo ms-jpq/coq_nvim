@@ -26,7 +26,6 @@ from .types import (
     Position,
     Settings,
     SourceFactory,
-    SourceFeed,
     Step,
 )
 
@@ -37,13 +36,14 @@ class GenOptions:
     force: bool = False
 
 
-StepFunction = Callable[[SourceFeed], Awaitable[Sequence[Step]]]
+StepFunction = Callable[[Context], Awaitable[Sequence[Step]]]
 
 
-def gen_context(line: str, col: int) -> Context:
+def gen_ctx(filename: str, filetype: str, line: str, position: Position) -> Context:
     def is_sym(char: str) -> bool:
         return not char.isalnum() and not char.isspace()
 
+    col = position.col
     line_before = line[:col]
     line_after = line[col:]
 
@@ -95,6 +95,9 @@ def gen_context(line: str, col: int) -> Context:
     alnums_normalized = normalize(alnums)
 
     return Context(
+        position=position,
+        filename=filename,
+        filetype=filetype,
         line=line,
         line_normalized=line_normalized,
         line_before=line_before,
@@ -111,8 +114,8 @@ def gen_context(line: str, col: int) -> Context:
     )
 
 
-async def gen_feed(nvim: Nvim) -> SourceFeed:
-    def fed() -> SourceFeed:
+async def gen_context(nvim: Nvim) -> Context:
+    def fed() -> Tuple[str, str, str, Position]:
         buffer = nvim.api.get_current_buf()
         filename = nvim.api.buf_get_name(buffer)
         filetype = nvim.api.buf_get_option(buffer, "filetype")
@@ -120,12 +123,13 @@ async def gen_feed(nvim: Nvim) -> SourceFeed:
         row, col = nvim.api.win_get_cursor(window)
         line = nvim.api.get_current_line()
         position = Position(row=row, col=col)
-        context = gen_context(line, col)
-        return SourceFeed(
-            filename=filename, filetype=filetype, position=position, context=context
-        )
+        return filename, filetype, line, position
 
-    return await call(nvim, fed)
+    filename, filetype, line, position = await call(nvim, fed)
+    context = gen_ctx(
+        filename=filename, filetype=filetype, line=line, position=position
+    )
+    return context
 
 
 async def manufacture(nvim: Nvim, factory: SourceFactory) -> Tuple[StepFunction, Queue]:
@@ -133,13 +137,13 @@ async def manufacture(nvim: Nvim, factory: SourceFactory) -> Tuple[StepFunction,
     fact = cast(Factory, factory.manufacture)
     src = await fact(nvim, chan, factory.seed)
 
-    async def source(feed: SourceFeed) -> Sequence[Step]:
+    async def source(context: Context) -> Sequence[Step]:
         name = factory.name
         timeout = factory.timeout
         acc: List[Step] = []
 
         async def cont() -> None:
-            async for comp in src(feed):
+            async for comp in src(context):
                 text = comp.new_prefix + comp.new_suffix
                 normalized_text = normalize(text)
                 completion = Step(
@@ -168,7 +172,7 @@ async def manufacture(nvim: Nvim, factory: SourceFactory) -> Tuple[StepFunction,
 async def osha(
     nvim: Nvim, factory: SourceFactory
 ) -> Tuple[str, StepFunction, Optional[Queue]]:
-    async def nil_steps(_: SourceFeed) -> Sequence[Step]:
+    async def nil_steps(_: Context) -> Sequence[Step]:
         return ()
 
     try:
@@ -180,9 +184,9 @@ async def osha(
         return factory.name, nil_steps, None
     else:
 
-        async def o_step(feed: SourceFeed) -> Sequence[Step]:
+        async def o_step(context: Context) -> Sequence[Step]:
             try:
-                return await step_fn(feed)
+                return await step_fn(context)
             except Exception as e:
                 stack = format_exc()
                 message = f"Error in source {factory.name}{linesep}{stack}{e}"
@@ -206,18 +210,18 @@ async def merge(
     sources: Dict[str, StepFunction] = {name: source for name, source, _ in src_gen}
 
     async def gen(options: GenOptions) -> Tuple[Position, Iterator[VimCompletion]]:
-        feed = await gen_feed(nvim)
-        position = feed.position
-        go = not feed.context.line_before.isspace()
+        context = await gen_context(nvim)
+        position = context.position
+        go = not context.line_before.isspace()
         if go or options.force:
             source_gen = (
-                source(feed)
+                source(context)
                 for name, source in sources.items()
                 if name in options.sources
             )
             comps = await gather(*source_gen)
             steps = (c for co in comps for c in co)
-            return position, fuzzy(feed, steps)
+            return position, fuzzy(context, steps)
         else:
             return position, iter(())
 

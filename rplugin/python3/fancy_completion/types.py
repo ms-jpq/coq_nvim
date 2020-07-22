@@ -42,7 +42,7 @@ class Settings:
 
 
 @dataclass(frozen=True)
-class SourceSeed:
+class Seed:
     limit: float
     timeout: float
     config: Optional[Any] = None
@@ -59,6 +59,11 @@ class Position:
 # |...   <syms_before><alum_before>🐭<alnums_after><syms_after>   ...|
 @dataclass(frozen=True)
 class Context:
+    position: Position
+
+    filename: str
+    filetype: str
+
     line: str
     line_normalized: str
     line_before: str
@@ -77,14 +82,6 @@ class Context:
 
 
 @dataclass(frozen=True)
-class SourceFeed:
-    filename: str
-    filetype: str
-    position: Position
-    context: Context
-
-
-@dataclass(frozen=True)
 class SourceCompletion:
     position: Position
     old_prefix: str
@@ -97,8 +94,8 @@ class SourceCompletion:
     doc: Optional[str] = None
 
 
-Source = Callable[[SourceFeed], AsyncIterator[SourceCompletion]]
-Factory = Callable[[Nvim, Queue, SourceSeed], Awaitable[Source]]
+Source = Callable[[Context], AsyncIterator[SourceCompletion]]
+Factory = Callable[[Nvim, Queue, Seed], Awaitable[Source]]
 
 
 @dataclass(frozen=True)
@@ -107,7 +104,7 @@ class SourceFactory:
     short_name: str
     timeout: float
     limit: float
-    seed: SourceSeed
+    seed: Seed
     manufacture: Factory
 
 
