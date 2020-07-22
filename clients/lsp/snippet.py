@@ -1,13 +1,23 @@
 from typing import Iterator, Tuple
 
 
+def parse_inner(it: Iterator[str]) -> Iterator[str]:
+    printable = False
+    for char in it:
+        if char == "}":
+            break
+        elif printable:
+            yield char
+        elif char == ":":
+            printable = True
+
+
 def parse_snippet(text: str) -> Tuple[str, str]:
-    dollar = False
-    bracket = False
     it = iter(text)
+    dollar = False
 
     def pre() -> Iterator[str]:
-        nonlocal dollar, bracket
+        nonlocal dollar
 
         for char in it:
             if char == "$":
@@ -15,13 +25,13 @@ def parse_snippet(text: str) -> Tuple[str, str]:
             elif dollar:
                 dollar = False
                 if char == "{":
-                    bracket = True
+                    yield from parse_inner(it)
                     break
             else:
                 yield char
 
     def post() -> Iterator[str]:
-        nonlocal dollar, bracket
+        nonlocal dollar
 
         for char in it:
             if char == "$":
@@ -29,10 +39,7 @@ def parse_snippet(text: str) -> Tuple[str, str]:
             elif dollar:
                 dollar = False
                 if char == "{":
-                    bracket = True
-            elif bracket:
-                if char == "}":
-                    bracket = False
+                    yield from parse_inner(it)
             else:
                 yield char
 
