@@ -18,13 +18,7 @@ from typing import (
 from pynvim import Nvim
 
 from .lsp_pkgs.snippet import parse_snippet
-from .pkgs.fc_types import (
-    Position,
-    Source,
-    Completion,
-    Context,
-    Seed,
-)
+from .pkgs.fc_types import Completion, Context, Position, Seed, Source
 from .pkgs.nvim import call
 from .pkgs.shared import normalize, parse_common_affix
 
@@ -55,12 +49,9 @@ async def init_lua(nvim: Nvim) -> Tuple[Dict[int, str], Dict[int, str]]:
 
 
 async def ask(nvim: Nvim, chan: Queue, pos: Position, uid: int) -> Optional[Any]:
-    row = pos.row - 1
-    col = pos.col
-
     def cont() -> None:
         nvim.api.exec_lua(
-            "fancy_completion_lsp.list_comp_candidates(...)", (uid, row, col)
+            "fancy_completion_lsp.list_comp_candidates(...)", (uid, pos.row, pos.col)
         )
 
     await call(nvim, cont)

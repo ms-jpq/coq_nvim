@@ -7,7 +7,7 @@ from .types import Payload
 
 
 def replace_lines(nvim: Nvim, payload: Payload) -> None:
-    row, col = payload.row - 1, payload.col
+    row, col = payload.row, payload.col
     old_prefix, new_prefix = payload.old_prefix, payload.new_prefix
     old_suffix, new_suffix = payload.old_suffix, payload.new_suffix
 

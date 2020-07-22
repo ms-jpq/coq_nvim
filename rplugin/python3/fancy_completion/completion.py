@@ -122,6 +122,7 @@ async def gen_context(nvim: Nvim) -> Context:
         window = nvim.api.get_current_win()
         row, col = nvim.api.win_get_cursor(window)
         line = nvim.api.get_current_line()
+        row = row - 1
         position = Position(row=row, col=col)
         return filename, filetype, line, position
 
