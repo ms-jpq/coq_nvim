@@ -31,7 +31,7 @@ def fuzzify(feed: SourceFeed, step: Step) -> FuzzyStep:
             matches[m_idx] = char
             idx = m_idx + 1
 
-    match_density = len(matches) / len(f_n_alnums)
+    match_density = len(matches) / len(s_n_alnums)
     match_front_bias = sum(matches)
     rank = (match_density * -1, match_front_bias)
     full_match = s_n_alnums.startswith(f_n_alnums)
