@@ -108,7 +108,8 @@ def parse_rows(
         text = parse_text(row)
         label = row.get("label")
         sortby = row.get("sortText")
-        kind = entry_kind_lookup.get(cast(int, row.get("kind")))
+        r_kind = row.get("kind")
+        kind = entry_kind_lookup.get(r_kind, "Unknown") if r_kind else None
         doc = parse_documentation(row.get("documentation"))
 
         match_normalized = normalize(text)
