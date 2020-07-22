@@ -50,7 +50,7 @@ async def init_lua(nvim: Nvim) -> Tuple[Dict[int, str], Dict[int, str]]:
 
     entry_kind, insert_kind = await call(nvim, cont)
     elookup = defaultdict(lambda: "Unknown", ((v, k) for k, v in entry_kind.items()))
-    ilookup = {v: k for k, v in insert_kind.items()}
+    ilookup = defaultdict(lambda: "PlainText", ((v, k) for k, v in insert_kind.items()))
     return elookup, ilookup
 
 
@@ -83,7 +83,7 @@ def parse_resp_to_rows(resp: Any) -> Sequence[Any]:
 
 def is_snippet(row: Dict[str, Any], insert_lookup: Dict[int, str]) -> bool:
     fmt = row.get("insertTextFormat")
-    return insert_lookup.get(cast(int, fmt)) != "PlainText"
+    return insert_lookup[cast(int, fmt)] != "PlainText"
 
 
 def parse_snippet(context: Context, text: str) -> Tuple[str, str]:
@@ -118,6 +118,8 @@ def parse_snippet(context: Context, text: str) -> Tuple[str, str]:
             elif bracket:
                 if char == "}":
                     bracket = False
+                else:
+                    yield char
             else:
                 yield char
 
