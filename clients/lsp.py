@@ -86,12 +86,29 @@ def is_snippet(row: Dict[str, Any], insert_lookup: Dict[int, str]) -> bool:
     return insert_lookup[fmt] != "PlainText"
 
 
-def parse_snippet(text: str) -> str:
-    def cont() -> Iterator[str]:
-        dollar = False
-        bracket = False
+def parse_snippet(context: Context, text: str) -> ParsedRow:
+    dollar = False
+    bracket = False
+    it = iter(text)
 
-        for char in text:
+    def pre() -> Iterator[str]:
+        nonlocal dollar, bracket
+
+        for char in it:
+            if char == "$":
+                dollar = True
+            elif dollar:
+                dollar = False
+                if char == "{":
+                    bracket = True
+                    break
+            else:
+                yield char
+
+    def post() -> Iterator[str]:
+        nonlocal dollar, bracket
+
+        for char in it:
             if char == "$":
                 dollar = True
             elif dollar:
@@ -104,7 +121,18 @@ def parse_snippet(text: str) -> str:
             else:
                 yield char
 
-    return "".join(cont())
+    new_prefix = "".join(pre())
+    new_suffix = "".join(post())
+    old_prefix = ""
+    old_suffix = ""
+
+    parsed = ParsedRow(
+        old_prefix=old_prefix,
+        new_prefix=new_prefix,
+        old_suffix=old_suffix,
+        new_suffix=new_suffix,
+    )
+    return parsed
 
 
 def parse_text(row: Dict[str, Any]) -> str:
@@ -131,23 +159,23 @@ def row_parser(
         require_parse = is_snippet(row, insert_lookup)
         text = parse_text(row)
         if require_parse:
-            text = parse_snippet(text)
-
-        match_normalized = normalize(text)
-        old_prefix, old_suffix = parse_common_affix(
-            before=before,
-            after=after,
-            before_normalized=before_normalized,
-            after_normalized=after_normalized,
-            match_normalized=match_normalized,
-        )
-        parsed = ParsedRow(
-            old_prefix=old_prefix,
-            new_prefix=text,
-            old_suffix=old_suffix,
-            new_suffix="",
-        )
-        return parsed
+            return parse_snippet(context, text=text)
+        else:
+            match_normalized = normalize(text)
+            old_prefix, old_suffix = parse_common_affix(
+                before=before,
+                after=after,
+                before_normalized=before_normalized,
+                after_normalized=after_normalized,
+                match_normalized=match_normalized,
+            )
+            parsed = ParsedRow(
+                old_prefix=old_prefix,
+                new_prefix=text,
+                old_suffix=old_suffix,
+                new_suffix="",
+            )
+            return parsed
 
     return parse
 
