@@ -12,12 +12,17 @@ from typing import Any, Awaitable, Sequence
 from pynvim import Nvim, command, function, plugin
 
 from .completion import GenOptions, merge
-from .nvim import autocmd, call, complete, print
+from .nvim import autocmd, complete, print
 from .patch import apply_patch
 from .scheduler import Signal, schedule
 from .settings import initial, load_factories
-from .state import forward
 from .state import initial as initial_state
+from .transitions import (
+    t_char_inserted,
+    t_set_sources,
+    t_text_changed,
+    t_toggle_sources,
+)
 from .types import Notification
 
 
@@ -30,7 +35,11 @@ class Main:
         self.msg_ch: Queue = Queue()
 
         self._initialized = False
-        self.state = initial_state()
+        user_config = nvim.vars.get("fancy_completion_settings", {})
+        client_config = nvim.vars.get("fancy_completion_settings_private", {})
+        settings = initial(configs=(client_config, user_config))
+        self.settings = settings
+        self.state = initial_state(settings)
 
     def _submit(self, co: Awaitable[None], wait: bool = True) -> None:
         loop: AbstractEventLoop = self.nvim.loop
@@ -65,28 +74,13 @@ class Main:
                 arg_eval=("v:completed_item",),
             )
 
-        async def gen_user_config() -> Sequence[Any]:
-            def cont() -> Any:
-                user_config = self.nvim.vars.get("fancy_completion_settings", {})
-                client_config = self.nvim.vars.get(
-                    "fancy_completion_settings_private", {}
-                )
-                return (client_config, user_config)
-
-            return await call(self.nvim, cont)
-
         async def ooda() -> None:
+            settings = self.settings
             try:
-                configs = await gen_user_config()
-                settings = initial(configs=configs)
                 factories = load_factories(settings=settings)
                 gen, listen = await merge(
                     self.nvim, chan=self.msg_ch, factories=factories, settings=settings
                 )
-                sources = {
-                    name for name, source in settings.sources.items() if source.enabled
-                }
-                self.state = forward(self.state, sources=sources)
 
                 async def l1() -> None:
                     async for pos, comp in schedule(chan=self.ch, gen=gen):
@@ -114,21 +108,6 @@ class Main:
 
         self._submit(cont())
 
-    @function("FCmanual", sync=True)
-    def manual(self, args: Sequence[Any]) -> None:
-        sources = self.state.sources
-        self.next_comp(GenOptions(force=True, sources=sources))
-
-    @function("FComnifunc", sync=True)
-    def omnifunc(self, args: Sequence[Any]) -> int:
-        find_start, *_ = args
-        if find_start == 1:
-            return -1
-        else:
-            sources = self.state.sources
-            self.next_comp(GenOptions(force=True, sources=sources))
-            return -2
-
     @function("_FCnotify")
     def notify(self, args: Sequence[Any]) -> None:
         async def cont() -> None:
@@ -138,28 +117,53 @@ class Main:
 
         self._submit(cont())
 
+    @function("FCmanual", sync=True)
+    def manual(self, args: Sequence[Any]) -> None:
+        self.next_comp(GenOptions(force=False, sources=self.state.sources))
+
+    @function("FComnifunc", sync=True)
+    def omnifunc(self, args: Sequence[Any]) -> int:
+        find_start, *_ = args
+        if find_start == 1:
+            return -1
+        else:
+            self.next_comp(GenOptions(force=False, sources=self.state.sources))
+            return -2
+
     @function("_FCpreinsert_char")
     def char_inserted(self, args: Sequence[Any]) -> None:
-        self.state = forward(self.state, char_inserted=True)
+        self.state = t_char_inserted(self.state)
 
     @function("_FCtextchangedi")
     def text_changed_i(self, args: Sequence[Any]) -> None:
         try:
-            sources = self.state.sources
-            self.next_comp(GenOptions(force=False, sources=sources))
+            self.next_comp(GenOptions(force=False, sources=self.state.sources))
         finally:
-            self.state = forward(self.state, char_inserted=False)
+            self.state = t_text_changed(self.state)
 
     @function("_FCtextchangedp")
     def text_changed_p(self, args: Sequence[Any]) -> None:
         try:
             if self.state.char_inserted:
-                sources = self.state.sources
-                self.next_comp(GenOptions(force=False, sources=sources))
+                self.next_comp(GenOptions(force=False, sources=self.state.sources))
         finally:
-            self.state = forward(self.state, char_inserted=False)
+            self.state = t_text_changed(self.state)
 
     @function("_FCpost_pum")
     def post_pum(self, args: Sequence[Any]) -> None:
         item, *_ = args
         apply_patch(self.nvim, comp=item)
+
+    @function("_FCset_sources")
+    def toggle_sources(self, args: Sequence[Any]) -> None:
+        candidates, *_ = args
+        self.state = t_set_sources(
+            self.state, settings=self.settings, candidates=candidates
+        )
+
+    @function("_FCtoggle_sources")
+    def toggle_sources(self, args: Sequence[Any]) -> None:
+        candidates, *_ = args
+        self.state = t_toggle_sources(
+            self.state, settings=self.settings, candidates=candidates
+        )

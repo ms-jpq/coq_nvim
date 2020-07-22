@@ -1,11 +1,12 @@
 from typing import Optional, Set
 
 from .da import or_else
-from .types import State
+from .types import Settings, State
 
 
-def initial() -> State:
-    return State(char_inserted=False, sources=set())
+def initial(settings: Settings) -> State:
+    sources = {name for name, source in settings.sources.items() if source.enabled}
+    return State(char_inserted=False, sources=sources)
 
 
 def forward(
