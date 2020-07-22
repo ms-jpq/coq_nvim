@@ -38,7 +38,7 @@ def coalesce(
                     and matches >= min_length
                     and matches <= max_length
                 ):
-                    acc.add(word)
+                    acc.add(normalized)
                     yield word
                 curr.clear()
 
