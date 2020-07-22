@@ -17,6 +17,7 @@ from typing import (
 
 from pynvim import Nvim
 
+from .lsp.snippet import parse_snippet
 from .pkgs.fc_types import (
     Context,
     Position,
@@ -86,46 +87,6 @@ def is_snippet(row: Dict[str, Any], insert_lookup: Dict[int, str]) -> bool:
     return insert_lookup[cast(int, fmt)] != "PlainText"
 
 
-def parse_snippet(context: Context, text: str) -> Tuple[str, str]:
-    dollar = False
-    bracket = False
-    it = iter(text)
-
-    def pre() -> Iterator[str]:
-        nonlocal dollar, bracket
-
-        for char in it:
-            if char == "$":
-                dollar = True
-            elif dollar:
-                dollar = False
-                if char == "{":
-                    bracket = True
-                    break
-            else:
-                yield char
-
-    def post() -> Iterator[str]:
-        nonlocal dollar, bracket
-
-        for char in it:
-            if char == "$":
-                dollar = True
-            elif dollar:
-                dollar = False
-                if char == "{":
-                    bracket = True
-            elif bracket:
-                if char == "}":
-                    bracket = False
-            else:
-                yield char
-
-    new_prefix = "".join(pre())
-    new_suffix = "".join(post())
-    return new_prefix, new_suffix
-
-
 def parse_text(row: Dict[str, Any]) -> str:
     new_text = row.get("textEdit", {}).get("newText")
     insert_txt = row.get("insertText")
@@ -144,7 +105,7 @@ def row_parser(
         require_parse = is_snippet(row, insert_lookup)
         text = parse_text(row)
         if require_parse:
-            new_prefix, new_suffix = parse_snippet(context, text=text)
+            new_prefix, new_suffix = parse_snippet(text=text)
             snippet_text = new_prefix + new_suffix
             match_normalized = normalize(snippet_text)
             old_prefix, old_suffix = parse_common_affix(
