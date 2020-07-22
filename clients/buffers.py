@@ -51,10 +51,10 @@ async def main(nvim: Nvim, chan: Queue, seed: SourceSeed) -> Source:
         position = feed.position
         old_prefix = feed.context.alnums_before
         old_suffix = feed.context.alnums_after
-        cword = feed.context.alnums_normalized
+        n_cowrd = feed.context.alnums_normalized
 
         parse = coalesce(
-            cword=cword, min_length=config.min_length, max_length=config.max_length
+            n_cowrd=n_cowrd, min_length=config.min_length, max_length=config.max_length
         )
         b_gen = buf_gen(nvim, config=config, filetype=feed.filetype)
         chars = await buffer_chars(nvim, b_gen)
