@@ -34,8 +34,14 @@ def fuzzify(feed: SourceFeed, step: Step) -> FuzzyStep:
 
     density = len(matches) / len(s_n_alnums)
     front_bias = sum(matches)
-    full_match = s_n_alnums.startswith(f_n_alnums)
-    return FuzzyStep(step=step, full_match=full_match, matches=matches, density=density,front_bias=front_bias)
+    full_match = density == 1 or s_n_alnums.startswith(f_n_alnums)
+    return FuzzyStep(
+        step=step,
+        full_match=full_match,
+        matches=matches,
+        density=density,
+        front_bias=front_bias,
+    )
 
 
 def rank(fuzz: FuzzyStep) -> Sequence[Union[float, int, str]]:
