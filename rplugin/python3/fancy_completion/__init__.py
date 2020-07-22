@@ -6,6 +6,7 @@ from asyncio import (
     run_coroutine_threadsafe,
 )
 from concurrent.futures import ThreadPoolExecutor
+from locale import strxfrm
 from traceback import format_exc
 from typing import Any, Awaitable, Sequence
 
@@ -162,7 +163,7 @@ class Main:
             self.state, settings=self.settings, candidates=candidates
         )
 
-    @function("_FCset_sources")
+    @function("_FCrm_sources")
     def rm_sources(self, args: Sequence[Any]) -> None:
         candidates, *_ = args
         self.state = t_rm_sources(self.state, candidates=candidates)
@@ -173,3 +174,24 @@ class Main:
         self.state = t_toggle_sources(
             self.state, settings=self.settings, candidates=candidates
         )
+
+    def _print_sources(self) -> None:
+        sources = sorted(self.state.sources, key=strxfrm)
+        s_repr = ", ".join(sources)
+        msg = f"New sources - {s_repr}"
+        self._submit(print(self.nvim, msg))
+
+    @command("FCSetSources", nargs="*")
+    def c_set_sources(self, args: Sequence[Any]) -> None:
+        self.set_sources((args,))
+        self._print_sources()
+
+    @command("FCRmSources", nargs="*")
+    def c_rm_sources(self, args: Sequence[Any]) -> None:
+        self.rm_sources((args,))
+        self._print_sources()
+
+    @command("FCToggleSources", nargs="*")
+    def c_toggle_sources(self, args: Sequence[Any]) -> None:
+        self.toggle_sources((args,))
+        self._print_sources()
