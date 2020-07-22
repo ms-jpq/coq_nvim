@@ -11,7 +11,7 @@
         "same_filetype": false
       },
       "enabled": true,
-      "limit": 5,
+      "limit": 3,
       "main": "buffers.py",
       "priority": 1,
       "short_name": "B",
@@ -41,7 +41,7 @@
         "min_length": 3
       },
       "enabled": true,
-      "limit": 5,
+      "limit": 3,
       "main": "tmux.py",
       "priority": 0,
       "short_name": "TMUX",
@@ -50,7 +50,7 @@
     "tree_sitter": {
       "config": {},
       "enabled": false,
-      "limit": 5,
+      "limit": 3,
       "main": "tree_sitter.py",
       "priority": 5,
       "short_name": "TS",
