@@ -4,7 +4,7 @@ from string import ascii_letters, digits
 from typing import Iterable, Iterator, List, Optional, Set, Tuple
 
 #
-# O(n) single pass Parser for
+# O(n) single pass LSP Parser:
 # https://github.com/microsoft/language-server-protocol/blob/master/snippetSyntax.md
 #
 
@@ -42,16 +42,20 @@ def parse_escape(begin: str, it: Iterator[str], escapable_chars: Set[str]) -> st
 # choice      ::= '${' int '|' text (',' text)* '|}'
 def half_parse_choice(begin: str, it: Iterator[str]) -> Iterator[str]:
     assert begin == "|"
+    yield " "
     for char in it:
         if char == "\\":
             yield parse_escape(char, it, escapable_chars=_choice_escapable_chars)
         elif char == "|":
             char = next(it, "")
             if char == "}":
+                yield " "
                 break
             else:
                 err = make_parse_err(condition="after |", expected=("}",), actual=char)
                 raise err
+        elif char == ",":
+            yield " | "
         else:
             yield char
 
@@ -62,17 +66,21 @@ def half_parse_place_holder(begin: str, it: Iterator[str]) -> Iterator[str]:
     yield from parse((), it, nested=True)
 
 
-# choice | placeholder
-# -- both starts with (int)
-def parse_choices_n_placeholder(begin: str, it: Iterator[str]) -> Iterator[str]:
-    assert begin in _int_chars
-    for char in it:
+# tabstop | choice | placeholder
+# -- all starts with (int)
+def parse_tcp(begin: str, it: Iterator[str]) -> Iterator[str]:
+    for char in chain((begin,), it):
         if char in _int_chars:
             pass
+        elif char == "}":
+            # tabstop     ::= '$' int | '${' int '}'
+            break
         elif char == "|":
+            # choice      ::= '${' int '|' text (',' text)* '|}'
             yield from half_parse_choice(char, it)
             break
         elif char == ":":
+            # placeholder ::= '${' int ':' any '}'
             yield from half_parse_place_holder(char, it)
             break
         else:
@@ -110,7 +118,7 @@ def parse_variable(begin: str, it: Iterator[str], naked: bool) -> Iterator[str]:
                 yield from parse((char,), it, nested=False)
                 break
     else:
-        v_type = VarType.naked
+        v_type: Optional[VarType] = None
         for char in chain((begin,), it):
             if char in _var_chars:
                 name_acc.append(char)
@@ -157,7 +165,7 @@ def parse_inner_scope(begin: str, it: Iterator[str]) -> Iterator[str]:
     assert begin == "{"
     char = next(it, "")
     if char in _int_chars:
-        yield from parse_choices_n_placeholder(char, it)
+        yield from parse_tcp(char, it)
     elif char in _var_begin_chars:
         yield from parse_variable(char, it, naked=False)
     else:
@@ -187,7 +195,10 @@ def parse_scope(begin: str, it: Iterator[str]) -> Iterator[str]:
         raise err
 
 
-def parse(prev_chars: Iterable[str], it: Iterator, nested: bool) -> Iterator[str]:
+# any         ::= tabstop | placeholder | choice | variable | text
+def parse(
+    prev_chars: Iterable[str], it: Iterator, nested: bool, short_circuit: bool = False
+) -> Iterator[str]:
     for char in chain(prev_chars, it):
         if char == "\\":
             yield parse_escape(char, it, escapable_chars=_escapable_chars)
@@ -195,12 +206,14 @@ def parse(prev_chars: Iterable[str], it: Iterator, nested: bool) -> Iterator[str
             break
         elif char == "$":
             yield from parse_scope(char, it)
+            if short_circuit:
+                break
         else:
             yield char
 
 
 def parse_snippet(text: str) -> Tuple[str, str]:
     it = iter(text)
-    new_prefix = "".join(parse((), it, nested=False))
-    new_suffix = ""
+    new_prefix = "".join(parse((), it, nested=False, short_circuit=True))
+    new_suffix = "".join(parse((), it, nested=False))
     return new_prefix, new_suffix
