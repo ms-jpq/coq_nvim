@@ -68,12 +68,10 @@ def parse_common_affix(
     for text, lhs, rhs in pre_it:
         if lhs == rhs:
             prefix = "".join(text)
-            break
 
     suffix = ""
     for text, lhs, rhs in post_it:
         if lhs == rhs:
             suffix = "".join(text)
-            break
 
     return prefix, suffix
