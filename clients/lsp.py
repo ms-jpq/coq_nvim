@@ -141,13 +141,13 @@ def parse_documentation(doc: Union[str, Dict[str, Any], None]) -> Optional[str]:
 
 
 def parse_textedit(row: Dict[str, Any]) -> Sequence[Edit]:
-    edits = (row.get("textEdit", {}), *row.get("additionalTextEdits", ()))
+    edits = (row.get("textEdit"), *row.get("additionalTextEdits", ()))
 
     def cont() -> Iterator[Edit]:
         for edit in edits:
             if type(edit) is dict:
                 e = cast(Dict[str, Any], edit)
-                new_text = e["new_text"]
+                new_text = e["newText"]
                 begin_end = e["range"]
                 b = begin_end["start"]
                 e = begin_end["end"]
@@ -206,6 +206,8 @@ async def main(nvim: Nvim, chan: Queue, seed: Seed) -> Source:
                 entry_lookup=entry_kind,
                 insert_lookup=insert_kind,
             ):
+                if row.edits:
+                    raise Exception(row.edits)
                 yield row
         except ParseError as e:
             await print(nvim, e)

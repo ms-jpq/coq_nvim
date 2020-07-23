@@ -5,7 +5,7 @@ from pynvim import Nvim
 from pynvim.api.buffer import Buffer
 from pynvim.api.window import Window
 
-from .types import Payload, Edit
+from .types import Edit, Payload, Position
 
 
 def perform_edit(nvim: Nvim, buf: Buffer, edit: Edit) -> None:
@@ -20,6 +20,7 @@ def perform_edit(nvim: Nvim, buf: Buffer, edit: Edit) -> None:
 
 
 def replace_lines(nvim: Nvim, payload: Payload) -> None:
+    nvim.api.out_write(str(payload) + "\n")
     row, col = payload.position.row, payload.position.col
     old_prefix, new_prefix = payload.old_prefix, payload.new_prefix
     old_suffix, new_suffix = payload.old_suffix, payload.new_suffix
@@ -60,10 +61,19 @@ def replace_lines(nvim: Nvim, payload: Payload) -> None:
 
 def apply_patch(nvim: Nvim, comp: Dict[str, Any]) -> None:
     data = comp.get("user_data")
-    if type(data) == dict:
-        try:
-            payload = Payload(**cast(dict, data))
-        except TypeError:
-            pass
-        else:
-            replace_lines(nvim, payload=payload)
+    d = cast(dict, data)
+    try:
+        position = Position(**d["position"])
+        edits = tuple(
+            Edit(
+                begin=Position(row=edit["begin"]["row"], col=edit["begin"]["col"]),
+                end=Position(row=edit["end"]["row"], col=edit["end"]["col"]),
+                new_text=edit["new_text"],
+            )
+            for edit in d["edits"]
+        )
+        payload = Payload(**{**d, **dict(position=position, edits=edits)})
+    except (KeyError, TypeError):
+        pass
+    else:
+        replace_lines(nvim, payload=payload)
