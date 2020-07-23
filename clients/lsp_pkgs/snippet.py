@@ -1,9 +1,9 @@
-from collections import OrderedDict
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from itertools import chain
+from math import inf
 from os.path import basename, dirname, splitext
 from string import ascii_letters, digits
-from typing import Any, Dict, Iterable, Iterator, List, Optional, Sequence, Set, Tuple
+from typing import Any, Iterable, Iterator, List, Optional, Sequence, Set, Tuple, Union
 
 from ..pkgs.fc_types import Context
 
@@ -39,8 +39,10 @@ CharStream = Iterator[IChar]
 
 @dataclass(frozen=False)
 class ParseContext:
+    it: CharStream
     vals: Context
     depth: int = 0
+    ttl: Union[int, float] = inf
 
 
 class ParseError(Exception):
@@ -54,12 +56,12 @@ _var_begin_chars = {*ascii_letters}
 _var_chars = {*digits, *ascii_letters, "_"}
 
 
-def next_char(it: CharStream) -> IChar:
-    return next(it, (-1, ""))
+def next_char(context: ParseContext) -> IChar:
+    return next(context.it, (-1, ""))
 
 
-def pushback_chars(it: CharStream, *vals: IChar) -> CharStream:
-    return chain(iter(vals), it)
+def pushback_chars(context: ParseContext, *vals: IChar) -> None:
+    context.it = chain(iter(vals), context.it)
 
 
 def make_parse_err(
@@ -72,11 +74,11 @@ def make_parse_err(
     return ParseError(msg)
 
 
-def parse_escape(begin: IChar, it: CharStream, escapable_chars: Set[str]) -> str:
-    index, char = begin
+def parse_escape(context: ParseContext, *, escapable_chars: Set[str]) -> str:
+    index, char = next_char(context)
     assert char == "\\"
 
-    index, char = next_char(it)
+    index, char = next_char(context)
     if char in escapable_chars:
         return char
     else:
@@ -87,20 +89,17 @@ def parse_escape(begin: IChar, it: CharStream, escapable_chars: Set[str]) -> str
 
 
 # choice      ::= '${' int '|' text (',' text)* '|}'
-def half_parse_choice(
-    context: ParseContext, *, begin: IChar, it: CharStream
-) -> Iterator[str]:
-    index, char = begin
+def half_parse_choice(context: ParseContext) -> Iterator[str]:
+    index, char = next_char(context)
     assert char == "|"
 
     yield " "
-    for index, char in it:
+    for index, char in context.it:
         if char == "\\":
-            yield parse_escape(
-                (index, char), it=it, escapable_chars=_choice_escapable_chars
-            )
+            pushback_chars(context, (index, char))
+            yield parse_escape(context, escapable_chars=_choice_escapable_chars)
         elif char == "|":
-            index, char = next_char(it)
+            index, char = next_char(context)
             if char == "}":
                 yield " "
                 break
@@ -116,21 +115,19 @@ def half_parse_choice(
 
 
 # placeholder ::= '${' int ':' any '}'
-def half_parse_place_holder(
-    context: ParseContext, *, begin: IChar, it: CharStream
-) -> Iterator[str]:
-    _, char = begin
+def half_parse_place_holder(context: ParseContext) -> Iterator[str]:
+    _, char = next_char(context)
     assert char == ":"
+
     context.depth += 1
-    yield from parse(context, prev_chars=(), it=it)
+    yield from parse(context)
 
 
 # tabstop | choice | placeholder
 # -- all starts with (int)
-def parse_tcp(context: ParseContext, *, begin: IChar, it: CharStream) -> Iterator[str]:
-    it = pushback_chars(it, begin)
+def parse_tcp(context: ParseContext) -> Iterator[str]:
 
-    for index, char in it:
+    for index, char in context.it:
         if char in _int_chars:
             pass
         elif char == "}":
@@ -138,11 +135,13 @@ def parse_tcp(context: ParseContext, *, begin: IChar, it: CharStream) -> Iterato
             break
         elif char == "|":
             # choice      ::= '${' int '|' text (',' text)* '|}'
-            yield from half_parse_choice(context, begin=(index, char), it=it)
+            pushback_chars(context, (index, char))
+            yield from half_parse_choice(context)
             break
         elif char == ":":
             # placeholder ::= '${' int ':' any '}'
-            yield from half_parse_place_holder(context, begin=(index, char), it=it)
+            pushback_chars(context, (index, char))
+            yield from half_parse_place_holder(context)
             break
         else:
             err = make_parse_err(
@@ -187,35 +186,35 @@ def variable_decoration(
 
 
 # variable    ::= '$' var
-def parse_variable_naked(
-    context: ParseContext, *, begin: IChar, it: CharStream
-) -> Iterator[str]:
-    it = pushback_chars(it, begin)
+def parse_variable_naked(context: ParseContext) -> Iterator[str]:
+    index, char = next_char(context)
+    assert char == "$"
+
     name_acc: List[str] = []
 
-    for index, char in it:
+    for index, char in context.it:
         if char in _var_chars:
             name_acc.append(char)
         else:
             name = "".join(name_acc)
             var = variable_substitution(context, name=name)
             yield var if var else name
-            yield from parse(context, prev_chars=((index, char),), it=it)
+            pushback_chars(context, (index, char))
+            yield from parse(context)
             break
 
 
-def parsed_variable_decorated(
-    context: ParseContext, *, begin: IChar, it: CharStream, name: str
-) -> Iterator[str]:
-    index, char = begin
+def parsed_variable_decorated(context: ParseContext, name: str) -> Iterator[str]:
+    index, char = next_char(context)
     assert char == "/"
 
     var = variable_substitution(context, name=name)
 
-    for index, char in it:
+    for index, char in context.it:
         decoration: List[str] = []
         if char == "\\":
-            c = parse_escape((index, char), it, escapable_chars=_escapable_chars)
+            pushback_chars(context, (index, char))
+            c = parse_escape(context, escapable_chars=_escapable_chars)
             decoration.append(c)
         elif char == "}":
             yield variable_decoration(
@@ -229,13 +228,11 @@ def parsed_variable_decorated(
 # variable    ::= '$' var | '${' var }'
 #                | '${' var ':' any '}'
 #                | '${' var '/' regex '/' (format | text)+ '/' options '}'
-def parse_variable_nested(
-    context: ParseContext, *, begin: IChar, it: CharStream
-) -> Iterator[str]:
-    it = pushback_chars(it, begin)
+def parse_variable_nested(context: ParseContext) -> Iterator[str]:
+
     name_acc: List[str] = []
 
-    for index, char in it:
+    for index, char in context.it:
         if char in _var_chars:
             name_acc.append(char)
         elif char == "}":
@@ -246,9 +243,8 @@ def parse_variable_nested(
         elif char == "/":
             # '${' var '/' regex '/' (format | text)+ '/' options '}'
             name = "".join(name_acc)
-            yield from parsed_variable_decorated(
-                context, begin=(index, char), it=it, name=name
-            )
+            pushback_chars(context, (index, char))
+            yield from parsed_variable_decorated(context, name=name)
             break
         elif char == ":":
             # '${' var ':' any '}'
@@ -258,7 +254,7 @@ def parse_variable_nested(
                 yield var
             else:
                 context.depth += 1
-                yield from parse(context, prev_chars=(), it=it)
+                yield from parse(context)
             break
         else:
             err = make_parse_err(
@@ -271,19 +267,19 @@ def parse_variable_nested(
 
 
 # ${...}
-def parse_inner_scope(
-    context: ParseContext, *, begin: IChar, it: CharStream
-) -> Iterator[str]:
-    index, char = begin
+def parse_inner_scope(context: ParseContext) -> Iterator[str]:
+    index, char = next_char(context)
     assert char == "{"
 
-    index, char = next_char(it)
+    index, char = next_char(context)
     if char in _int_chars:
         # tabstop | placeholder | choice
-        yield from parse_tcp(context, begin=(index, char), it=it)
+        pushback_chars(context, (index, char))
+        yield from parse_tcp(context)
     elif char in _var_begin_chars:
         # variable
-        yield from parse_variable_nested(context, begin=(index, char), it=it)
+        pushback_chars(context, (index, char))
+        yield from parse_variable_nested(context)
     else:
         err = make_parse_err(
             index=index,
@@ -294,25 +290,26 @@ def parse_inner_scope(
         raise err
 
 
-def parse_scope(
-    context: ParseContext, *, begin: IChar, it: CharStream
-) -> Iterator[str]:
-    index, char = begin
+def parse_scope(context: ParseContext) -> Iterator[str]:
+    index, char = next_char(context)
     assert char == "$"
 
-    index, char = next_char(it)
+    index, char = next_char(context)
     if char == "{":
-        yield from parse_inner_scope(context, begin=(index, char), it=it)
+        pushback_chars(context, (index, char))
+        yield from parse_inner_scope(context)
     elif char in _int_chars:
         # tabstop     ::= '$' int
-        for index, char in it:
+        for index, char in context.it:
             if char in _int_chars:
                 pass
             else:
-                yield from parse(context, prev_chars=((index, char),), it=it)
+                pushback_chars(context, (index, char))
+                yield from parse(context)
                 break
     elif char in _var_begin_chars:
-        yield from parse_variable_naked(context, begin=(index, char), it=it)
+        pushback_chars(context, (index, char))
+        yield from parse_variable_naked(context)
     else:
         err = make_parse_err(
             index=index, condition="after $", expected=("{",), actual=char
@@ -321,30 +318,34 @@ def parse_scope(
 
 
 # any         ::= tabstop | placeholder | choice | variable | text
-def parse(
-    context: ParseContext, *, prev_chars: Iterable[IChar], it: CharStream,
-) -> Iterator[str]:
-    it = pushback_chars(it, *prev_chars)
+def parse(context: ParseContext) -> Iterator[str]:
+    if context.ttl <= 0:
+        return
+    else:
+        context.ttl -= 1
 
-    for index, char in it:
-        if char == "\\":
-            yield parse_escape((index, char), it, escapable_chars=_escapable_chars)
-        elif context.depth and char == "}":
-            context.depth -= 1
-        elif char == "$":
-            yield from parse_scope(context, begin=(index, char), it=it)
-        else:
-            yield char
+        for index, char in context.it:
+            if char == "\\":
+                pushback_chars(context, (index, char))
+                yield parse_escape(context, escapable_chars=_escapable_chars)
+            elif context.depth and char == "}":
+                context.depth -= 1
+            elif char == "$":
+                pushback_chars(context, (index, char))
+                yield from parse_scope(context)
+            else:
+                yield char
 
 
 def parse_snippet(ctx: Context, text: str) -> Tuple[str, str]:
     it = enumerate(text)
-    context = ParseContext(vals=ctx)
+    context = ParseContext(vals=ctx, it=it)
     try:
-        parsed = "".join(parse(context, prev_chars=(), it=it))
+        context.ttl = 1
+        new_prefix = "".join(parse(context))
+        context.ttl = inf
+        new_suffix = "".join(parse(context))
     except ParseError:
         return text, ""
     else:
-        new_prefix = parsed
-        new_suffix = ""
         return new_prefix, new_suffix
