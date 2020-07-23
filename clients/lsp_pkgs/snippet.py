@@ -73,7 +73,7 @@ def make_parse_err(
 
 
 def parse_escape(begin: IChar, it: CharStream, escapable_chars: Set[str]) -> str:
-    _, char = begin
+    index, char = begin
     assert char == "\\"
 
     index, char = next_char(it)
@@ -90,7 +90,7 @@ def parse_escape(begin: IChar, it: CharStream, escapable_chars: Set[str]) -> str
 def half_parse_choice(
     context: ParseContext, *, begin: IChar, it: CharStream
 ) -> Iterator[str]:
-    _, char = begin
+    index, char = begin
     assert char == "|"
 
     yield " "
@@ -347,5 +347,5 @@ def parse_snippet(ctx: Context, text: str) -> Tuple[str, str]:
         return text, ""
     else:
         new_prefix = parsed
-        new_suffix = parsed
+        new_suffix = ""
         return new_prefix, new_suffix
