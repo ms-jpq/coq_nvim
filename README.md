@@ -44,9 +44,9 @@ Plug 'ms-jpq/fancy-completion', {'branch': 'nvim', 'do': ':UpdateRemotePlugins'}
 | ------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------- |
 | [LSP](https://github.com/ms-jpq/fancy-completion/blob/nvim/clients/lsp.py)                 | Fetches results from Neovim LSP client                                  |
 | [Tree Sitter](https://github.com/ms-jpq/fancy-completion/blob/nvim/clients/tree_sitter.py) | Fetches results from syntax tree (still waiting on next Neovim release) |
-| [Tmux](https://github.com/ms-jpq/fancy-completion/blob/nvim/clients/tmux.py)               | Fetches results from tmux panes (cached)                                |
-| [Around](https://github.com/ms-jpq/fancy-completion/blob/nvim/clients/around.py)           | Fetches results from lines around cursor (non-cached)                   |
-| [Buffers](https://github.com/ms-jpq/fancy-completion/blob/nvim/clients/buffers.py)         | Fetches results from seen buffers  (cached)                             |
+| [Tmux](https://github.com/ms-jpq/fancy-completion/blob/nvim/clients/tmux.py)               | Fetches results from tmux panes (cached @ adjustable intervals)           |
+| [Around](https://github.com/ms-jpq/fancy-completion/blob/nvim/clients/around.py)           | Fetches results from lines around cursor                                |
+| [Buffers](https://github.com/ms-jpq/fancy-completion/blob/nvim/clients/buffers.py)         | Fetches results from seen buffers (cached @ adjustable intervals)         |
 | [Paths](https://github.com/ms-jpq/fancy-completion/blob/nvim/clients/paths.py)             | Fetches results from file paths                                         |
 
 ### External Sources

@@ -1,4 +1,5 @@
-from asyncio import Queue, as_completed, gather, sleep
+from asyncio import Queue, as_completed, gather
+from asyncio.locks import Event
 from dataclasses import dataclass
 from shutil import which
 from typing import AsyncIterator, Dict, Iterator, Sequence
@@ -8,6 +9,7 @@ from pynvim import Nvim
 from .pkgs.da import call
 from .pkgs.fc_types import Completion, Context, Seed, Source
 from .pkgs.nvim import print, run_forever
+from .pkgs.scheduler import schedule
 from .pkgs.shared import coalesce, find_matches, normalize
 
 
@@ -95,7 +97,7 @@ async def main(nvim: Nvim, chan: Queue, seed: Seed) -> Source:
     words: Dict[str, str] = {}
 
     async def background_update() -> None:
-        while True:
+        async for _ in schedule(Event(), min_time=0, max_time=config.polling_rate):
             words.clear()
             try:
                 async for word in tmux_words(
@@ -105,8 +107,6 @@ async def main(nvim: Nvim, chan: Queue, seed: Seed) -> Source:
                         words[word] = normalize(word)
             except TmuxError as e:
                 await print(nvim, e)
-
-            await sleep(config.polling_rate)
 
     async def source(context: Context) -> AsyncIterator[Completion]:
         position = context.position
