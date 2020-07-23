@@ -64,7 +64,7 @@ async def main(nvim: Nvim, chan: Queue, seed: Seed) -> Source:
         nvim,
         name="buffers",
         events=("TextChanged", "TextChangedI", "BufEnter"),
-        arg_eval=("expand('add', '<abuf>')",),
+        arg_eval=("'add'", "expand('<abuf>')",),
     )
 
     async def ooda() -> None:
