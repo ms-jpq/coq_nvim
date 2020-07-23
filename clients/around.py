@@ -2,7 +2,7 @@ from asyncio import Queue
 from dataclasses import dataclass
 from itertools import chain
 from os import linesep
-from typing import AsyncIterator, Iterator, Sequence
+from typing import AsyncIterator, Sequence
 
 from pynvim import Nvim
 from pynvim.api.buffer import Buffer
@@ -14,31 +14,15 @@ from .pkgs.shared import coalesce
 
 @dataclass(frozen=True)
 class Config:
-    same_filetype: bool
+    band_size: int
     min_length: int
     max_length: int
 
 
-def buf_gen(nvim: Nvim, config: Config, filetype: str) -> Iterator[Buffer]:
-    curr: Buffer = nvim.api.get_current_buf()
-    buffers: Sequence[Buffer] = nvim.api.list_bufs()
-    for buf in buffers:
-        if buf.number != curr.number:
-            if config.same_filetype:
-                ft = nvim.api.buf_get_option(buf, "filetype")
-                if ft == filetype:
-                    yield buf
-            else:
-                yield buf
-
-
-async def buffer_chars(nvim: Nvim, buf_gen: Iterator[Buffer]) -> Sequence[str]:
+async def buffer_chars(nvim: Nvim) -> Sequence[str]:
     def cont() -> Sequence[str]:
-        lines = tuple(
-            line
-            for buffer in buf_gen
-            for line in nvim.api.buf_get_lines(buffer, 0, -1, True)
-        )
+        buffer: Buffer = nvim.api.get_current_buf()
+        lines: Sequence[str] = nvim.api.buf_get_lines(buffer, 0, -1, True)
         return lines
 
     lines = await call(nvim, cont)
@@ -58,8 +42,7 @@ async def main(nvim: Nvim, chan: Queue, seed: Seed) -> Source:
         parse = coalesce(
             n_cword=n_cword, min_length=config.min_length, max_length=config.max_length
         )
-        b_gen = buf_gen(nvim, config=config, filetype=context.filetype)
-        chars = await buffer_chars(nvim, b_gen)
+        chars = await buffer_chars(nvim)
 
         for word in parse(chars):
             yield Completion(

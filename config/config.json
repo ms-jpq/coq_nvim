@@ -3,10 +3,22 @@
     "min_match": 1
   },
   "sources": {
+    "around": {
+      "config": {
+        "band_size": 20,
+        "max_length": 20,
+        "min_length": 2
+      },
+      "enabled": true,
+      "limit": 3,
+      "main": "around.py",
+      "short_name": "A",
+      "timeout": 100
+    },
     "buffers": {
       "config": {
         "max_length": 20,
-        "min_length": 3,
+        "min_length": 2,
         "same_filetype": false
       },
       "enabled": true,
@@ -34,7 +46,7 @@
     "tmux": {
       "config": {
         "max_length": 20,
-        "min_length": 3
+        "min_length": 2
       },
       "enabled": true,
       "limit": 3,
