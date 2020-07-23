@@ -268,7 +268,6 @@ def parse_variable_nested(
                 actual=char,
             )
             raise err
-    yield from parse(context, prev_chars=(), it=it)
 
 
 # ${...}
@@ -285,6 +284,7 @@ def parse_inner_scope(
     elif char in _var_begin_chars:
         # variable
         yield from parse_variable_nested(context, begin=(index, char), it=it)
+        yield from parse(context, prev_chars=(), it=it)
     else:
         err = make_parse_err(
             index=index,
