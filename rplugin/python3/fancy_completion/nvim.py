@@ -53,7 +53,7 @@ async def autocmd(
     _filters = " ".join(filters)
     _modifiers = " ".join(modifiers)
     _args = ", ".join(arg_eval)
-    group = f"augroup {uuid4()}"
+    group = f"augroup {uuid4().hex}"
     cls = "autocmd!"
     cmd = f"autocmd {_events} {_filters} {_modifiers} call {fn}({_args})"
     group_end = "augroup END"

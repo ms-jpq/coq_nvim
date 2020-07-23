@@ -21,7 +21,7 @@
       "limit": null,
       "main": "lsp.py",
       "short_name": "LSP",
-      "timeout": 3000
+      "timeout": 1000
     },
     "paths": {
       "config": {},
