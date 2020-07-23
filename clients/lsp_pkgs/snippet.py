@@ -9,6 +9,27 @@ from typing import Iterable, Iterator, List, Optional, Sequence, Set, Tuple
 #
 
 
+# """
+# any         ::= tabstop | placeholder | choice | variable | text
+# tabstop     ::= '$' int | '${' int '}'
+# placeholder ::= '${' int ':' any '}'
+# choice      ::= '${' int '|' text (',' text)* '|}'
+# variable    ::= '$' var | '${' var }'
+#                 | '${' var ':' any '}'
+#                 | '${' var '/' regex '/' (format | text)+ '/' options '}'
+# format      ::= '$' int | '${' int '}'
+#                 | '${' int ':' '/upcase' | '/downcase' | '/capitalize' '}'
+#                 | '${' int ':+' if '}'
+#                 | '${' int ':?' if ':' else '}'
+#                 | '${' int ':-' else '}' | '${' int ':' else '}'
+# regex       ::= JavaScript Regular Expression value (ctor-string)
+# options     ::= JavaScript Regular Expression option (ctor-options)
+# var         ::= [_a-zA-Z] [_a-zA-Z0-9]*
+# int         ::= [0-9]+
+# text        ::= .*
+# """
+
+
 class ParseError(Exception):
     pass
 
