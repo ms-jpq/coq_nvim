@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 from enum import Enum, auto
 from itertools import chain
 from string import ascii_letters, digits
@@ -28,6 +29,11 @@ from typing import Iterable, Iterator, List, Optional, Sequence, Set, Tuple
 # int         ::= [0-9]+
 # text        ::= .*
 # """
+
+
+@dataclass(frozen=False)
+class ParseContext:
+    depth: int = 0
 
 
 class ParseError(Exception):
@@ -62,7 +68,9 @@ def parse_escape(begin: str, it: Iterator[str], escapable_chars: Set[str]) -> st
 
 
 # choice      ::= '${' int '|' text (',' text)* '|}'
-def half_parse_choice(begin: str, it: Iterator[str]) -> Iterator[str]:
+def half_parse_choice(
+    context: ParseContext, *, begin: str, it: Iterator[str]
+) -> Iterator[str]:
     assert begin == "|"
 
     yield " "
@@ -84,14 +92,17 @@ def half_parse_choice(begin: str, it: Iterator[str]) -> Iterator[str]:
 
 
 # placeholder ::= '${' int ':' any '}'
-def half_parse_place_holder(begin: str, it: Iterator[str]) -> Iterator[str]:
+def half_parse_place_holder(
+    context: ParseContext, *, begin: str, it: Iterator[str]
+) -> Iterator[str]:
     assert begin == ":"
-    yield from parse((), it, nested=True)
+    context.depth += 1
+    yield from parse(context, prev_chars=(), it=it)
 
 
 # tabstop | choice | placeholder
 # -- all starts with (int)
-def parse_tcp(begin: str, it: Iterator[str]) -> Iterator[str]:
+def parse_tcp(context: ParseContext, *, begin: str, it: Iterator[str]) -> Iterator[str]:
     it = chain((begin,), it)
 
     for char in it:
@@ -102,11 +113,11 @@ def parse_tcp(begin: str, it: Iterator[str]) -> Iterator[str]:
             break
         elif char == "|":
             # choice      ::= '${' int '|' text (',' text)* '|}'
-            yield from half_parse_choice(char, it)
+            yield from half_parse_choice(context, begin=char, it=it)
             break
         elif char == ":":
             # placeholder ::= '${' int ':' any '}'
-            yield from half_parse_place_holder(char, it)
+            yield from half_parse_place_holder(context, begin=char, it=it)
             break
         else:
             err = make_parse_err(
@@ -115,11 +126,13 @@ def parse_tcp(begin: str, it: Iterator[str]) -> Iterator[str]:
             raise err
 
 
-def variable_substitution(name: str) -> Optional[str]:
+def variable_substitution(context: ParseContext, *, name: str) -> Optional[str]:
     return ""
 
 
-def variable_decoration(var: str, decoration: Sequence[str]) -> str:
+def variable_decoration(
+    context: ParseContext, *, var: str, decoration: Sequence[str]
+) -> str:
     return var
 
 
@@ -131,7 +144,9 @@ class VarType(Enum):
 
 
 # variable    ::= '$' var
-def parse_variable_naked(begin: str, it: Iterator[str]) -> Iterator[str]:
+def parse_variable_naked(
+    context: ParseContext, *, begin: str, it: Iterator[str]
+) -> Iterator[str]:
     it = chain((begin,), it)
     name_acc: List[str] = []
 
@@ -140,16 +155,18 @@ def parse_variable_naked(begin: str, it: Iterator[str]) -> Iterator[str]:
             name_acc.append(char)
         else:
             name = "".join(name_acc)
-            var = variable_substitution(name)
+            var = variable_substitution(context, name=name)
             yield var if var else name
-            yield from parse((char,), it, nested=False)
+            yield from parse(context, prev_chars=(char,), it=it)
             break
 
 
 # variable    ::= '$' var | '${' var }'
 #                | '${' var ':' any '}'
 #                | '${' var '/' regex '/' (format | text)+ '/' options '}'
-def parse_variable_nested(begin: str, it: Iterator[str]) -> Iterator[str]:
+def parse_variable_nested(
+    context: ParseContext, *, begin: str, it: Iterator[str]
+) -> Iterator[str]:
     it = chain((begin,), it)
     name_acc: List[str] = []
 
@@ -176,7 +193,7 @@ def parse_variable_nested(begin: str, it: Iterator[str]) -> Iterator[str]:
             raise err
 
     name = "".join(name_acc)
-    var = variable_substitution(name)
+    var = variable_substitution(context, name=name)
 
     if v_type == VarType.simple:
         # '${' var }'
@@ -189,7 +206,9 @@ def parse_variable_nested(begin: str, it: Iterator[str]) -> Iterator[str]:
                 c = parse_escape(char, it, escapable_chars=_escapable_chars)
                 decoration.append(c)
             elif char == "}":
-                yield variable_decoration(var, decoration) if var else name
+                yield variable_decoration(
+                    context=context, var=var, decoration=decoration
+                ) if var else name
                 break
             else:
                 decoration.append(char)
@@ -198,23 +217,26 @@ def parse_variable_nested(begin: str, it: Iterator[str]) -> Iterator[str]:
         if var:
             yield var
         else:
-            yield from parse((), it, nested=True)
+            context.depth += 1
+            yield from parse(context, prev_chars=(), it=it)
     else:
         assert False
-    yield from parse((), it, nested=False)
+    yield from parse(context, prev_chars=(), it=it)
 
 
 # ${...}
-def parse_inner_scope(begin: str, it: Iterator[str]) -> Iterator[str]:
+def parse_inner_scope(
+    context: ParseContext, *, begin: str, it: Iterator[str]
+) -> Iterator[str]:
     assert begin == "{"
 
     char = next(it, "")
     if char in _int_chars:
         # tabstop | placeholder | choice
-        yield from parse_tcp(char, it)
+        yield from parse_tcp(context, begin=char, it=it)
     elif char in _var_begin_chars:
         # variable
-        yield from parse_variable_nested(char, it)
+        yield from parse_variable_nested(context, begin=char, it=it)
     else:
         err = make_parse_err(
             condition="after {", expected=("_", "0-9", "a-z", "A-Z"), actual=char
@@ -222,22 +244,24 @@ def parse_inner_scope(begin: str, it: Iterator[str]) -> Iterator[str]:
         raise err
 
 
-def parse_scope(begin: str, it: Iterator[str]) -> Iterator[str]:
+def parse_scope(
+    context: ParseContext, *, begin: str, it: Iterator[str]
+) -> Iterator[str]:
     assert begin == "$"
 
     char = next(it, "")
     if char == "{":
-        yield from parse_inner_scope(char, it)
+        yield from parse_inner_scope(context, begin=char, it=it)
     elif char in _int_chars:
         # tabstop     ::= '$' int | '${' int '}'
         for char in it:
             if char in _int_chars:
                 pass
             else:
-                yield from parse((char,), it, nested=False)
+                yield from parse(context, prev_chars=(char,), it=it)
                 break
     elif char in _var_begin_chars:
-        yield from parse_variable_naked(char, it)
+        yield from parse_variable_naked(context, begin=char, it=it)
     else:
         err = make_parse_err(condition="after $", expected=("{",), actual=char)
         raise err
@@ -245,17 +269,22 @@ def parse_scope(begin: str, it: Iterator[str]) -> Iterator[str]:
 
 # any         ::= tabstop | placeholder | choice | variable | text
 def parse(
-    prev_chars: Iterable[str], it: Iterator, nested: bool, short_circuit: bool = False
+    context: ParseContext,
+    *,
+    prev_chars: Iterable[str],
+    it: Iterator,
+    short_circuit: bool = False,
 ) -> Iterator[str]:
     it = chain(prev_chars, it)
 
     for char in it:
         if char == "\\":
             yield parse_escape(char, it, escapable_chars=_escapable_chars)
-        elif nested and char == "}":
-            break
+        elif context.depth and char == "}":
+            context.depth -= 1
+            assert context.depth >= 0
         elif char == "$":
-            yield from parse_scope(char, it)
+            yield from parse_scope(context, begin=char, it=it)
             if short_circuit:
                 break
         else:
@@ -264,6 +293,7 @@ def parse(
 
 def parse_snippet(text: str) -> Tuple[str, str]:
     it = iter(text)
-    new_prefix = "".join(parse((), it, nested=False, short_circuit=True))
-    new_suffix = "".join(parse((), it, nested=False))
+    context = ParseContext()
+    new_prefix = "".join(parse(context, prev_chars=(), it=it, short_circuit=True))
+    new_suffix = "".join(parse(context, prev_chars=(), it=it))
     return new_prefix, new_suffix
