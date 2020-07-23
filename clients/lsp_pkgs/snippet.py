@@ -308,7 +308,6 @@ def parse(
             yield parse_escape(char, it, escapable_chars=_escapable_chars)
         elif context.depth and char == "}":
             context.depth -= 1
-            assert context.depth >= 0
         elif char == "$":
             yield from parse_scope(context, begin=char, it=it)
             if short_circuit:
@@ -320,6 +319,10 @@ def parse(
 def parse_snippet(ctx: Context, text: str) -> Tuple[str, str]:
     it = iter(text)
     context = ParseContext(vals=ctx)
-    new_prefix = "".join(parse(context, prev_chars=(), it=it, short_circuit=True))
-    new_suffix = "".join(parse(context, prev_chars=(), it=it))
-    return new_prefix, new_suffix
+    try:
+        new_prefix = "".join(parse(context, prev_chars=(), it=it, short_circuit=True))
+        new_suffix = "".join(parse(context, prev_chars=(), it=it))
+    except ParseError:
+        return text, ""
+    else:
+        return new_prefix, new_suffix
