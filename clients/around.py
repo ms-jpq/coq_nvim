@@ -25,7 +25,7 @@ async def buffer_chars(nvim: Nvim, band_size: int, pos: Position) -> Sequence[st
         line_count: int = nvim.api.buf_line_count(buffer)
         min_idx, max_idx = (
             max(0, pos.row - band_size),
-            min(line_count, pos.row + band_size),
+            min(line_count, pos.row + band_size + 1),
         )
         lines: Sequence[str] = nvim.api.buf_get_lines(buffer, min_idx, max_idx, True)
         return lines

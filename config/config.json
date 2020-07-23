@@ -25,7 +25,7 @@
       "limit": 3,
       "main": "buffers.py",
       "short_name": "B",
-      "timeout": 100
+      "timeout": 50
     },
     "lsp": {
       "config": {},
@@ -41,7 +41,7 @@
       "limit": 3,
       "main": "paths.py",
       "short_name": "F",
-      "timeout": 100
+      "timeout": 50
     },
     "tmux": {
       "config": {
@@ -53,7 +53,7 @@
       "limit": 3,
       "main": "tmux.py",
       "short_name": "TMUX",
-      "timeout": 100
+      "timeout": 50
     },
     "tree_sitter": {
       "config": {},
