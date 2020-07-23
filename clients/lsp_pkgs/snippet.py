@@ -1,7 +1,7 @@
 from enum import Enum, auto
 from itertools import chain
 from string import ascii_letters, digits
-from typing import Iterable, Iterator, List, Optional, Set, Tuple
+from typing import Iterable, Iterator, List, Optional, Sequence, Set, Tuple
 
 #
 # O(n) single pass LSP Parser:
@@ -98,6 +98,10 @@ def variable_substitution(name: str) -> Optional[str]:
     return ""
 
 
+def variable_decoration(var: str, decoration: Sequence[str]) -> str:
+    return var
+
+
 class VarType(Enum):
     naked = auto()  # '$' var
     simple = auto()  # '${' var }'
@@ -133,12 +137,15 @@ def parse_variable_nested(begin: str, it: Iterator[str]) -> Iterator[str]:
         if char in _var_chars:
             name_acc.append(char)
         elif char == "}":
+            # '${' var }'
             v_type = VarType.simple
             break
         elif char == "/":
+            # '${' var '/' regex '/' (format | text)+ '/' options '}'
             v_type = VarType.decorated
             break
         elif char == ":":
+            # '${' var ':' any '}'
             v_type = VarType.arbitrary
             break
         else:
@@ -149,17 +156,22 @@ def parse_variable_nested(begin: str, it: Iterator[str]) -> Iterator[str]:
 
     name = "".join(name_acc)
     var = variable_substitution(name)
+
     if v_type == VarType.simple:
         # '${' var }'
         yield var if var else name
     elif v_type == VarType.decorated:
         # '${' var '/' regex '/' (format | text)+ '/' options '}'
-        yield var if var else name
         for char in it:
+            decoration: List[str] = []
             if char == "\\":
-                _ = parse_escape(char, it, escapable_chars=_escapable_chars)
+                c = parse_escape(char, it, escapable_chars=_escapable_chars)
+                decoration.append(c)
             elif char == "}":
+                yield variable_decoration(var, decoration) if var else name
                 break
+            else:
+                decoration.append(char)
     elif v_type == VarType.arbitrary:
         # '${' var ':' any '}'
         if var:
