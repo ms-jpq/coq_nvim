@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 from itertools import chain, takewhile
+from os import linesep
 from os.path import basename, dirname, splitext
 from string import ascii_letters, digits
 from typing import Iterable, Iterator, List, Optional, Sequence, Set, Tuple
@@ -67,13 +68,14 @@ def pushback_chars(context: ParseContext, *vals: IChar) -> None:
 
 
 def make_parse_err(
-    index: int, condition: str, expected: Iterable[str], actual: str
+    text: str, index: int, condition: str, expected: Iterable[str], actual: str
 ) -> ParseError:
-    idx = "EOF" if index == -1 else index
+    band = 5
     char = f"'{actual}'" if actual else "EOF"
     enumerated = ", ".join(map(lambda c: f"'{c}'", expected))
-    msg = f"@{idx} - Unexpected char found {condition}. expected: {enumerated}. found: {char}"
-    return ParseError(msg)
+    msg = f"- Unexpected char found {condition}. expected: {enumerated}. found: {char}"
+    ctx = "" if index == -1 else f"{linesep}{text[index-band:index+band+1]}"
+    return ParseError(f"{msg}{ctx}")
 
 
 def parse_escape(context: ParseContext, *, escapable_chars: Set[str]) -> str:
@@ -85,7 +87,11 @@ def parse_escape(context: ParseContext, *, escapable_chars: Set[str]) -> str:
         return char
     else:
         err = make_parse_err(
-            index=index, condition="after \\", expected=escapable_chars, actual=char
+            text=context.text,
+            index=index,
+            condition="after \\",
+            expected=escapable_chars,
+            actual=char,
         )
         raise err
 
@@ -107,7 +113,11 @@ def half_parse_choice(context: ParseContext) -> Iterator[str]:
                 break
             else:
                 err = make_parse_err(
-                    index=index, condition="after |", expected=("}",), actual=char
+                    text=context.text,
+                    index=index,
+                    condition="after |",
+                    expected=("}",),
+                    actual=char,
                 )
                 raise err
         elif char == ",":
@@ -146,6 +156,7 @@ def parse_tcp(context: ParseContext) -> Iterator[str]:
             break
         else:
             err = make_parse_err(
+                text=context.text,
                 index=index,
                 condition="after |",
                 expected=("0-9", "|", ":"),
@@ -259,6 +270,7 @@ def parse_variable_nested(context: ParseContext) -> Iterator[str]:
             break
         else:
             err = make_parse_err(
+                text=context.text,
                 index=index,
                 condition="parsing var",
                 expected=("_", "a-z", "A-Z"),
@@ -283,6 +295,7 @@ def parse_inner_scope(context: ParseContext) -> Iterator[str]:
         yield from parse_variable_nested(context)
     else:
         err = make_parse_err(
+            text=context.text,
             index=index,
             condition="after {",
             expected=("_", "0-9", "a-z", "A-Z"),
@@ -313,7 +326,11 @@ def parse_scope(context: ParseContext) -> Iterator[str]:
         yield from parse_variable_naked(context)
     else:
         err = make_parse_err(
-            index=index, condition="after $", expected=("{",), actual=char
+            text=context.text,
+            index=index,
+            condition="after $",
+            expected=("{",),
+            actual=char,
         )
         raise err
 
@@ -338,11 +355,7 @@ def parse(context: ParseContext) -> Iterator[str]:
 
 def parse_snippet(ctx: Context, text: str) -> Tuple[str, str]:
     context = ParseContext(text=text, it=enumerate(text), vals=ctx)
-    try:
-        parsed = parse(context)
-        new_prefix = "".join(takewhile(lambda c: c != SPLIT_CHAR, parsed))
-        new_suffix = "".join(parsed)
-    except ParseError:
-        return text, ""
-    else:
-        return new_prefix, new_suffix
+    parsed = parse(context)
+    new_prefix = "".join(takewhile(lambda c: c != SPLIT_CHAR, parsed))
+    new_suffix = "".join(parsed)
+    return new_prefix, new_suffix
