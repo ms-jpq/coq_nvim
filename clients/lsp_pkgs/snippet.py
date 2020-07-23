@@ -1,8 +1,11 @@
 from dataclasses import dataclass
 from enum import Enum, auto
 from itertools import chain
+from os.path import basename, dirname, splitext
 from string import ascii_letters, digits
 from typing import Iterable, Iterator, List, Optional, Sequence, Set, Tuple
+
+from ..pkgs.fc_types import Context
 
 #
 # O(n) single pass LSP Parser:
@@ -33,6 +36,7 @@ from typing import Iterable, Iterator, List, Optional, Sequence, Set, Tuple
 
 @dataclass(frozen=False)
 class ParseContext:
+    vals: Context
     depth: int = 0
 
 
@@ -127,7 +131,29 @@ def parse_tcp(context: ParseContext, *, begin: str, it: Iterator[str]) -> Iterat
 
 
 def variable_substitution(context: ParseContext, *, name: str) -> Optional[str]:
-    return ""
+    ctx = context.vals
+    if name == "TM_SELECTED_TEXT":
+        return None
+    elif name == "TM_CURRENT_LINE":
+        return ctx.line
+    elif name == "TM_CURRENT_WORD":
+        return ctx.alnums
+    elif name == "TM_LINE_INDEX":
+        return str(ctx.position.row)
+    elif name == "TM_LINE_NUMBER":
+        return str(ctx.position.row + 1)
+    elif name == "TM_FILENAME":
+        fn = basename(ctx.filename)
+        return fn
+    elif name == "TM_FILENAME_BASE":
+        fn, _ = splitext(basename(ctx.filename))
+        return fn
+    elif name == "TM_DIRECTORY":
+        return dirname(ctx.filename)
+    elif name == "TM_FILEPATH":
+        return ctx.filename
+    else:
+        return None
 
 
 def variable_decoration(
@@ -291,9 +317,9 @@ def parse(
             yield char
 
 
-def parse_snippet(text: str) -> Tuple[str, str]:
+def parse_snippet(ctx: Context, text: str) -> Tuple[str, str]:
     it = iter(text)
-    context = ParseContext()
+    context = ParseContext(vals=ctx)
     new_prefix = "".join(parse(context, prev_chars=(), it=it, short_circuit=True))
     new_suffix = "".join(parse(context, prev_chars=(), it=it))
     return new_prefix, new_suffix

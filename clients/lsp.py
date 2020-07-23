@@ -95,7 +95,7 @@ def row_parser(
         require_parse = is_snippet(row, insert_lookup)
         text = parse_text(row)
         if require_parse:
-            new_prefix, new_suffix = parse_snippet(text=text)
+            new_prefix, new_suffix = parse_snippet(context, text=text)
             snippet_text = new_prefix + new_suffix
             match_normalized = normalize(snippet_text)
             old_prefix, old_suffix = parse_common_affix(
