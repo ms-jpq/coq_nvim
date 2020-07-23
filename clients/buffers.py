@@ -55,7 +55,7 @@ async def main(nvim: Nvim, chan: Queue, seed: Seed) -> Source:
 
     async def ooda() -> None:
         while True:
-            bufnr = await chan.get()
+            bufnr, *_ = await chan.get()
             bufnrs.add(bufnr)
 
     async def background_update() -> None:
