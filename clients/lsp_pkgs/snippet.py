@@ -29,6 +29,7 @@ def make_parse_err(condition: str, expected: Iterable[str], actual: str) -> Pars
 
 def parse_escape(begin: str, it: Iterator[str], escapable_chars: Set[str]) -> str:
     assert begin == "\\"
+
     char = next(it, "")
     if char in escapable_chars:
         return char
@@ -42,6 +43,7 @@ def parse_escape(begin: str, it: Iterator[str], escapable_chars: Set[str]) -> st
 # choice      ::= '${' int '|' text (',' text)* '|}'
 def half_parse_choice(begin: str, it: Iterator[str]) -> Iterator[str]:
     assert begin == "|"
+
     yield " "
     for char in it:
         if char == "\\":
@@ -69,7 +71,9 @@ def half_parse_place_holder(begin: str, it: Iterator[str]) -> Iterator[str]:
 # tabstop | choice | placeholder
 # -- all starts with (int)
 def parse_tcp(begin: str, it: Iterator[str]) -> Iterator[str]:
-    for char in chain((begin,), it):
+    it = chain((begin,), it)
+
+    for char in it:
         if char in _int_chars:
             pass
         elif char == "}":
@@ -105,10 +109,12 @@ class VarType(Enum):
 #                | '${' var ':' any '}'
 #                | '${' var '/' regex '/' (format | text)+ '/' options '}'
 def parse_variable(begin: str, it: Iterator[str], naked: bool) -> Iterator[str]:
+    it = chain((begin,), it)
     name_acc: List[str] = []
+
     if naked:
         # variable    ::= '$' var
-        for char in chain((begin,), it):
+        for char in it:
             if char in _var_chars:
                 name_acc.append(char)
             else:
@@ -119,7 +125,7 @@ def parse_variable(begin: str, it: Iterator[str], naked: bool) -> Iterator[str]:
                 break
     else:
         v_type: Optional[VarType] = None
-        for char in chain((begin,), it):
+        for char in it:
             if char in _var_chars:
                 name_acc.append(char)
             elif char == "}":
@@ -161,12 +167,16 @@ def parse_variable(begin: str, it: Iterator[str], naked: bool) -> Iterator[str]:
         yield from parse((), it, nested=False)
 
 
+# ${...}
 def parse_inner_scope(begin: str, it: Iterator[str]) -> Iterator[str]:
     assert begin == "{"
+
     char = next(it, "")
     if char in _int_chars:
+        # tabstop | placeholder | choice
         yield from parse_tcp(char, it)
     elif char in _var_begin_chars:
+        # variable
         yield from parse_variable(char, it, naked=False)
     else:
         err = make_parse_err(
@@ -177,6 +187,7 @@ def parse_inner_scope(begin: str, it: Iterator[str]) -> Iterator[str]:
 
 def parse_scope(begin: str, it: Iterator[str]) -> Iterator[str]:
     assert begin == "$"
+
     char = next(it, "")
     if char == "{":
         yield from parse_inner_scope(char, it)
@@ -199,7 +210,9 @@ def parse_scope(begin: str, it: Iterator[str]) -> Iterator[str]:
 def parse(
     prev_chars: Iterable[str], it: Iterator, nested: bool, short_circuit: bool = False
 ) -> Iterator[str]:
-    for char in chain(prev_chars, it):
+    it = chain(prev_chars, it)
+
+    for char in it:
         if char == "\\":
             yield parse_escape(char, it, escapable_chars=_escapable_chars)
         elif nested and char == "}":
