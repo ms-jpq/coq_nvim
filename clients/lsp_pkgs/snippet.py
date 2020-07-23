@@ -1,9 +1,8 @@
 from dataclasses import dataclass
-from itertools import chain
-from math import inf
+from itertools import chain, takewhile
 from os.path import basename, dirname, splitext
 from string import ascii_letters, digits
-from typing import Any, Iterable, Iterator, List, Optional, Sequence, Set, Tuple, Union
+from typing import Iterable, Iterator, List, Optional, Sequence, Set, Tuple
 
 from ..pkgs.fc_types import Context
 
@@ -36,13 +35,16 @@ from ..pkgs.fc_types import Context
 IChar = Tuple[int, str]
 CharStream = Iterator[IChar]
 
+SPLIT_CHAR = "\0"
+
 
 @dataclass(frozen=False)
 class ParseContext:
+    text: str
     it: CharStream
     vals: Context
     depth: int = 0
-    ttl: Union[int, float] = inf
+    has_split: bool = False
 
 
 class ParseError(Exception):
@@ -126,7 +128,6 @@ def half_parse_place_holder(context: ParseContext) -> Iterator[str]:
 # tabstop | choice | placeholder
 # -- all starts with (int)
 def parse_tcp(context: ParseContext) -> Iterator[str]:
-
     for index, char in context.it:
         if char in _int_chars:
             pass
@@ -204,7 +205,7 @@ def parse_variable_naked(context: ParseContext) -> Iterator[str]:
             break
 
 
-def parsed_variable_decorated(context: ParseContext, name: str) -> Iterator[str]:
+def parsed_variable_decorated(context: ParseContext, *, name: str) -> Iterator[str]:
     index, char = next_char(context)
     assert char == "/"
 
@@ -229,7 +230,6 @@ def parsed_variable_decorated(context: ParseContext, name: str) -> Iterator[str]
 #                | '${' var ':' any '}'
 #                | '${' var '/' regex '/' (format | text)+ '/' options '}'
 def parse_variable_nested(context: ParseContext) -> Iterator[str]:
-
     name_acc: List[str] = []
 
     for index, char in context.it:
@@ -319,32 +319,28 @@ def parse_scope(context: ParseContext) -> Iterator[str]:
 
 # any         ::= tabstop | placeholder | choice | variable | text
 def parse(context: ParseContext) -> Iterator[str]:
-    if context.ttl <= 0:
-        return
-    else:
-        context.ttl -= 1
-
-        for index, char in context.it:
-            if char == "\\":
-                pushback_chars(context, (index, char))
-                yield parse_escape(context, escapable_chars=_escapable_chars)
-            elif context.depth and char == "}":
-                context.depth -= 1
-            elif char == "$":
-                pushback_chars(context, (index, char))
-                yield from parse_scope(context)
-            else:
-                yield char
+    for index, char in context.it:
+        if char == "\\":
+            pushback_chars(context, (index, char))
+            yield parse_escape(context, escapable_chars=_escapable_chars)
+        elif context.depth and char == "}":
+            context.depth -= 1
+        elif char == "$":
+            if not context.has_split:
+                context.has_split = True
+                yield SPLIT_CHAR
+            pushback_chars(context, (index, char))
+            yield from parse_scope(context)
+        else:
+            yield char
 
 
 def parse_snippet(ctx: Context, text: str) -> Tuple[str, str]:
-    it = enumerate(text)
-    context = ParseContext(vals=ctx, it=it)
+    context = ParseContext(text=text, it=enumerate(text), vals=ctx)
     try:
-        context.ttl = 1
-        new_prefix = "".join(parse(context))
-        context.ttl = inf
-        new_suffix = "".join(parse(context))
+        parsed = parse(context)
+        new_prefix = "".join(takewhile(lambda c: c != SPLIT_CHAR, parsed))
+        new_suffix = "".join(parsed)
     except ParseError:
         return text, ""
     else:
