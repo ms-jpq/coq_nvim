@@ -7,7 +7,7 @@ from typing import AsyncIterator, Dict, Sequence
 from pynvim import Nvim
 from pynvim.api.buffer import Buffer
 
-from .pkgs.fc_types import Completion, Context, Seed, Source
+from .pkgs.fc_types import Completion, Context, Position, Seed, Source
 from .pkgs.nvim import call
 from .pkgs.shared import coalesce, find_matches, normalize
 
@@ -19,10 +19,15 @@ class Config:
     max_length: int
 
 
-async def buffer_chars(nvim: Nvim) -> Sequence[str]:
+async def buffer_chars(nvim: Nvim, band_size: int, pos: Position) -> Sequence[str]:
     def cont() -> Sequence[str]:
         buffer: Buffer = nvim.api.get_current_buf()
-        lines: Sequence[str] = nvim.api.buf_get_lines(buffer, 0, -1, True)
+        line_count: int = nvim.api.buf_line_count(buffer)
+        min_idx, max_idx = (
+            max(0, pos.row - band_size),
+            min(line_count, pos.row + band_size),
+        )
+        lines: Sequence[str] = nvim.api.buf_get_lines(buffer, min_idx, max_idx, True)
         return lines
 
     lines = await call(nvim, cont)
@@ -32,6 +37,7 @@ async def buffer_chars(nvim: Nvim) -> Sequence[str]:
 
 async def main(nvim: Nvim, chan: Queue, seed: Seed) -> Source:
     config = Config(**seed.config)
+    band_size = config.band_size
     min_length, max_length = config.min_length, config.max_length
 
     async def source(context: Context) -> AsyncIterator[Completion]:
@@ -39,7 +45,7 @@ async def main(nvim: Nvim, chan: Queue, seed: Seed) -> Source:
         old_prefix, old_suffix = context.alnums_before, context.alnums_after
         cword, ncword = context.alnums, context.alnums_normalized
 
-        chars = await buffer_chars(nvim)
+        chars = await buffer_chars(nvim, band_size=band_size, pos=position)
         words: Dict[str, str] = {}
         for word in coalesce(chars, min_length=min_length, max_length=max_length):
             if word not in words:
