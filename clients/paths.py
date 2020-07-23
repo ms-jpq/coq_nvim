@@ -31,8 +31,7 @@ def list_dir(path: str) -> Sequence[str]:
 
 async def find_children(path: str, context: Context) -> Sequence[Completion]:
     position = context.position
-    old_prefix = context.alnums_before
-    old_suffix = context.alnums_after
+    old_prefix, old_suffix = context.alnums_before, context.alnums_after
     loop = get_running_loop()
 
     def cont() -> Iterator[Completion]:

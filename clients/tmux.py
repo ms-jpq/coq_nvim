@@ -96,6 +96,7 @@ async def main(nvim: Nvim, chan: Queue, seed: Seed) -> Source:
 
     async def background_update() -> None:
         while True:
+            words.clear()
             try:
                 async for word in tmux_words(
                     min_length=min_length, max_length=max_length

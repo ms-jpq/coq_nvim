@@ -43,6 +43,7 @@ async def buffer_chars(nvim: Nvim, buf_gen: Iterator[Buffer]) -> Sequence[str]:
 async def main(nvim: Nvim, chan: Queue, seed: Seed) -> Source:
     config = Config(**seed.config)
     min_length, max_length = config.min_length, config.max_length
+
     bufnrs: Set[int] = set()
     words: Dict[str, str] = {}
 
