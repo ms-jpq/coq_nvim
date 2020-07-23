@@ -1,5 +1,5 @@
-from dataclasses import dataclass
-from typing import Any, AsyncIterator, Callable, Dict, Optional
+from dataclasses import dataclass, field
+from typing import Any, AsyncIterator, Callable, Dict, Optional, Sequence
 
 
 @dataclass(frozen=True)
@@ -40,6 +40,13 @@ class Context:
 
 
 @dataclass(frozen=True)
+class Edit:
+    begin: Position
+    end: Position
+    new_text: str
+
+
+@dataclass(frozen=True)
 class Completion:
     position: Position
     old_prefix: str
@@ -50,6 +57,7 @@ class Completion:
     sortby: Optional[str] = None
     kind: Optional[str] = None
     doc: Optional[str] = None
+    edits: Sequence[Edit] = field(default_factory=tuple)
 
 
 Source = Callable[[Context], AsyncIterator[Completion]]

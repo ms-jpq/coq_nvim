@@ -1,5 +1,5 @@
 from asyncio import Queue
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import (
     Any,
     AsyncIterator,
@@ -82,6 +82,13 @@ class Context:
 
 
 @dataclass(frozen=True)
+class Edit:
+    begin: Position
+    end: Position
+    new_text: str
+
+
+@dataclass(frozen=True)
 class Completion:
     position: Position
     old_prefix: str
@@ -92,6 +99,7 @@ class Completion:
     sortby: Optional[str] = None
     kind: Optional[str] = None
     doc: Optional[str] = None
+    edits: Sequence[Edit] = field(default_factory=tuple)
 
 
 Source = Callable[[Context], AsyncIterator[Completion]]
@@ -119,12 +127,12 @@ class Step:
 
 @dataclass(frozen=True)
 class Payload:
-    row: int
-    col: int
+    position: Position
     old_prefix: str
     new_prefix: str
     old_suffix: str
     new_suffix: str
+    edits: Sequence[Edit]
 
 
 @dataclass(frozen=True)

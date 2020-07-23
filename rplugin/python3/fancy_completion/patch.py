@@ -2,20 +2,36 @@ from os import linesep
 from typing import Any, Dict, Sequence, Tuple, cast
 
 from pynvim import Nvim
+from pynvim.api.buffer import Buffer
+from pynvim.api.window import Window
 
-from .types import Payload
+from .types import Payload, Edit
+
+
+def perform_edit(nvim: Nvim, buf: Buffer, edit: Edit) -> None:
+    b_row, b_col = edit.begin.row, edit.begin.col
+    e_row, e_col = edit.end.row, edit.end.col
+    btm_idx, top_idx = b_row, e_row + 1
+
+    old_lines: Sequence[str] = nvim.api.buf_get_lines(buf, btm_idx, top_idx, True)
+    btm_line, top_line = old_lines[0][:b_col], old_lines[-1][e_col + 1 :]
+    new_lines = "".join((btm_line, edit.new_text, top_line)).splitlines()
+    nvim.api.buf_set_lines(buf, btm_idx, top_idx, True, new_lines)
 
 
 def replace_lines(nvim: Nvim, payload: Payload) -> None:
-    row, col = payload.row, payload.col
+    row, col = payload.position.row, payload.position.col
     old_prefix, new_prefix = payload.old_prefix, payload.new_prefix
     old_suffix, new_suffix = payload.old_suffix, payload.new_suffix
 
     old_lc, new_lc = old_prefix.count(linesep), old_suffix.count(linesep)
-    btm_idx = row - old_lc
-    top_idx = row + new_lc + 1
+    btm_idx, top_idx = row - old_lc, row + new_lc + 1
 
-    buf = nvim.api.get_current_buf()
+    win: Window = nvim.api.get_current_win()
+    buf: Buffer = nvim.api.get_current_buf()
+    for edit in payload.edits:
+        perform_edit(nvim, buf=buf, edit=edit)
+
     old_lines: Sequence[str] = nvim.api.buf_get_lines(buf, btm_idx, top_idx, True)
 
     def pre_post() -> Tuple[str, str]:
@@ -37,9 +53,7 @@ def replace_lines(nvim: Nvim, payload: Payload) -> None:
         return row, col
 
     new_row, new_col = pos()
-
     nvim.api.buf_set_lines(buf, btm_idx, top_idx, True, new_lines)
-    win = nvim.api.get_current_win()
     nvim.api.win_set_cursor(win, (new_row, new_col))
     # nvim.api.buf_set_var(buf, "_buf_cursor_pos_", new_col)
 

@@ -94,12 +94,12 @@ def context_gen(fuzz: FuzzyStep) -> str:
 
 def gen_payload(comp: Completion) -> Payload:
     return Payload(
-        row=comp.position.row,
-        col=comp.position.col,
+        position=comp.position,
         old_prefix=comp.old_prefix,
         new_prefix=comp.new_prefix,
         old_suffix=comp.old_suffix,
         new_suffix=comp.new_suffix,
+        edits=comp.edits,
     )
 
 
