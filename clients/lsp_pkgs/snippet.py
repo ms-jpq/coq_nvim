@@ -284,7 +284,6 @@ def parse_inner_scope(
     elif char in _var_begin_chars:
         # variable
         yield from parse_variable_nested(context, begin=(index, char), it=it)
-        yield from parse(context, prev_chars=(), it=it)
     else:
         err = make_parse_err(
             index=index,
@@ -305,7 +304,7 @@ def parse_scope(
     if char == "{":
         yield from parse_inner_scope(context, begin=(index, char), it=it)
     elif char in _int_chars:
-        # tabstop     ::= '$' int | '${' int '}'
+        # tabstop     ::= '$' int
         for index, char in it:
             if char in _int_chars:
                 pass
