@@ -13,7 +13,7 @@ from typing import Any, Awaitable, Sequence
 from pynvim import Nvim, command, function, plugin
 
 from .completion import GenOptions, merge
-from .nvim import autocmd, complete, print
+from .nvim import autocmd, complete, print, run_forever
 from .patch import apply_patch
 from .scheduler import Signal, schedule
 from .settings import initial, load_factories
@@ -77,29 +77,24 @@ class Main:
 
         async def ooda() -> None:
             settings = self.settings
-            try:
-                factories = load_factories(settings=settings)
-                gen, listen = await merge(
-                    self.nvim, chan=self.msg_ch, factories=factories, settings=settings
-                )
+            factories = load_factories(settings=settings)
+            gen, listen = await merge(
+                self.nvim, chan=self.msg_ch, factories=factories, settings=settings
+            )
 
-                async def l1() -> None:
-                    async for pos, comp in schedule(chan=self.ch, gen=gen):
-                        col = pos.col + 1
-                        await complete(self.nvim, col=col, comp=comp)
+            async def l1() -> None:
+                async for pos, comp in schedule(chan=self.ch, gen=gen):
+                    col = pos.col + 1
+                    await complete(self.nvim, col=col, comp=comp)
 
-                await gather(listen(), l1())
-
-            except Exception as e:
-                stack = format_exc()
-                await print(self.nvim, f"{stack}{e}", error=True)
+            await gather(listen(), l1())
 
         if self._initialized:
             pass
         else:
             self._initialized = True
             self._submit(setup())
-            create_task(ooda())
+            run_forever(self.nvim, ooda)
 
         self._submit(print(self.nvim, "Fancy Completion ⭐️"))
 

@@ -1,7 +1,8 @@
-from asyncio import Future
+from asyncio import Future, Task, create_task, sleep
 from dataclasses import asdict, dataclass
 from enum import Enum
 from os import linesep
+from traceback import format_exc
 from typing import Any, Awaitable, Callable, Dict, Iterable, Iterator, Optional, TypeVar
 from uuid import uuid4
 
@@ -38,6 +39,24 @@ async def print(
             write(linesep)
 
     await call(nvim, cont)
+
+
+def run_forever(
+    nvim: Nvim,
+    thing: Callable[[], Awaitable[None]],
+    retries: int = 3,
+    timeout: float = 1.0,
+) -> Task:
+    async def loop() -> None:
+        for _ in range(retries):
+            try:
+                await thing()
+            except Exception as e:
+                stack = format_exc()
+                await print(nvim, f"{stack}{e}", error=True)
+                await sleep(timeout)
+
+    return create_task(loop())
 
 
 async def autocmd(

@@ -1,6 +1,9 @@
-from asyncio import Future
+from asyncio import Future, Task, create_task, sleep
 from os import linesep
-from typing import Any, Awaitable, Callable, TypeVar
+from traceback import format_exc
+from typing import Any, Awaitable, Callable, Iterable, TypeVar
+from uuid import uuid4
+
 from pynvim import Nvim
 
 T = TypeVar("T")
@@ -31,5 +34,50 @@ async def print(
         write(str(message))
         if flush:
             write(linesep)
+
+    await call(nvim, cont)
+
+
+def run_forever(
+    nvim: Nvim,
+    thing: Callable[[], Awaitable[None]],
+    retries: int = 3,
+    timeout: float = 1.0,
+) -> Task:
+    async def loop() -> None:
+        for _ in range(retries):
+            try:
+                await thing()
+            except Exception as e:
+                stack = format_exc()
+                await print(nvim, f"{stack}{e}", error=True)
+                await sleep(timeout)
+
+    return create_task(loop())
+
+
+async def autocmd(
+    nvim: Nvim,
+    *,
+    name: str,
+    events: Iterable[str],
+    filters: Iterable[str] = ("*",),
+    modifiers: Iterable[str] = (),
+    arg_eval: Iterable[str] = (),
+) -> None:
+    _events = ",".join(events)
+    _filters = " ".join(filters)
+    _modifiers = " ".join(modifiers)
+    _args = ", ".join(arg_eval)
+    group = f"augroup {uuid4().hex}"
+    cls = "autocmd!"
+    cmd = f"autocmd {_events} {_filters} {_modifiers} call _FCnotify({name}, {_args})"
+    group_end = "augroup END"
+
+    def cont() -> None:
+        nvim.api.command(group)
+        nvim.api.command(cls)
+        nvim.api.command(cmd)
+        nvim.api.command(group_end)
 
     await call(nvim, cont)
