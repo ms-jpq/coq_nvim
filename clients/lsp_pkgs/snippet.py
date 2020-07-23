@@ -239,6 +239,7 @@ def parse_variable_nested(context: ParseContext) -> Iterator[str]:
             # '${' var }'
             name = "".join(name_acc)
             var = variable_substitution(context, name=name)
+            yield var if var else name
             break
         elif char == "/":
             # '${' var '/' regex '/' (format | text)+ '/' options '}'
