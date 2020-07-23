@@ -213,7 +213,7 @@ async def merge(
     async def gen(options: GenOptions) -> Tuple[Position, Iterator[VimCompletion]]:
         context = await gen_context(nvim)
         position = context.position
-        go = not context.line_before.isspace()
+        go = context.line_before and not context.line_before.isspace()
         if go or options.force:
             source_gen = (
                 source(context)
