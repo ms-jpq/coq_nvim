@@ -71,7 +71,7 @@ async def autocmd(
     _args = ", ".join(arg_eval)
     group = f"augroup {uuid4().hex}"
     cls = "autocmd!"
-    cmd = f"autocmd {_events} {_filters} {_modifiers} call _FCnotify({name}, {_args})"
+    cmd = f"autocmd {_events} {_filters} {_modifiers} call _FCnotify('{name}', {_args})"
     group_end = "augroup END"
 
     def cont() -> None:

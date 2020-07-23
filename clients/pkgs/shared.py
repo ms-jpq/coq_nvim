@@ -1,4 +1,4 @@
-from typing import Callable, Iterator, List, Sequence, Set, Tuple
+from typing import Dict, Iterable, Iterator, List, Tuple
 
 from .da import subsequences
 from .fc_types import Context
@@ -20,36 +20,30 @@ def count_matches(cword: str, word: str, nword: str) -> int:
     return count
 
 
-def coalesce(
-    n_cword: str, min_length: int, max_length: int
-) -> Callable[[Sequence[str]], Iterator[str]]:
-    acc: Set[str] = {n_cword}
+def find_matches(cword: str, min_match: int, words: Dict[str, str]) -> Iterator[str]:
+    for word, nword in words.items():
+        matches = count_matches(cword, word=word, nword=nword)
+        if matches >= min_match:
+            yield word
 
-    def parse(chars: Sequence[str]) -> Iterator[str]:
-        curr: List[str] = []
-        for char in chars:
-            if char.isalnum():
-                curr.append(char)
-            elif curr:
-                word = "".join(curr)
-                normalized = normalize(word)
-                matches = count_matches(n_cword, word=word, nword=normalized)
-                if (
-                    normalized not in acc
-                    and matches >= min_length
-                    and matches <= max_length
-                    and normalized not in n_cword
-                ):
-                    acc.add(normalized)
-                    yield word
-                curr.clear()
 
-        if curr:
+def coalesce(chars: Iterable[str], min_length: int, max_length: int) -> Iterator[str]:
+    curr: List[str] = []
+    for char in chars:
+        if char.isalnum():
+            curr.append(char)
+        elif curr:
             word = "".join(curr)
-            if word not in acc:
+            curr.clear()
+            wl = len(word)
+            if wl >= min_length and wl >= max_length:
                 yield word
 
-    return parse
+    if curr:
+        word = "".join(curr)
+        wl = len(word)
+        if wl >= min_length and wl >= max_length:
+            yield word
 
 
 def parse_common_affix(context: Context, match_normalized: str,) -> Tuple[str, str]:

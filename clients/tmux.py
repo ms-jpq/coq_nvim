@@ -1,19 +1,19 @@
-from asyncio import Queue, as_completed, gather
+from asyncio import Queue, as_completed, gather, sleep
 from dataclasses import dataclass
-from os import linesep
 from shutil import which
-from typing import AsyncIterator, Iterator, Sequence
+from typing import AsyncIterator, Dict, Iterator, Sequence
 
 from pynvim import Nvim
 
 from .pkgs.da import call
-from .pkgs.fc_types import Source, Completion, Context, Seed
-from .pkgs.nvim import print
-from .pkgs.shared import coalesce
+from .pkgs.fc_types import Completion, Context, Seed, Source
+from .pkgs.nvim import print, run_forever
+from .pkgs.shared import coalesce, find_matches, normalize
 
 
 @dataclass(frozen=True)
 class Config:
+    polling_rate: float
     min_length: int
     max_length: int
 
@@ -76,42 +76,50 @@ def is_active(session_id: str, pane: TmuxPane) -> bool:
     return session_id == pane.session_id and pane.pane_active and pane.window_active
 
 
+async def tmux_words(min_length: int, max_length: int) -> AsyncIterator[str]:
+    if which("tmux"):
+        session_id, panes = await gather(tmux_session(), tmux_panes())
+        sources = tuple(
+            screenshot(pane) for pane in panes if not is_active(session_id, pane=pane)
+        )
+        for source in as_completed(sources):
+            text = await source
+            it = iter(text)
+            for word in coalesce(it, min_length=min_length, max_length=max_length):
+                yield word
+
+
 async def main(nvim: Nvim, chan: Queue, seed: Seed) -> Source:
     config = Config(**seed.config)
+    min_length, max_length = config.min_length, config.max_length
+    words: Dict[str, str] = {}
+
+    async def background_update() -> None:
+        while True:
+            try:
+                async for word in tmux_words(
+                    min_length=min_length, max_length=max_length
+                ):
+                    if word not in words:
+                        words[word] = normalize(word)
+            except TmuxError as e:
+                await print(nvim, e)
+
+            await sleep(config.polling_rate)
 
     async def source(context: Context) -> AsyncIterator[Completion]:
-        if which("tmux"):
-            position = context.position
-            old_prefix = context.alnums_before
-            old_suffix = context.alnums_after
-            n_cword = context.alnums_normalized
+        position = context.position
+        old_prefix, old_suffix = context.alnums_before, context.alnums_after
+        cword = context.alnums
 
-            parse = coalesce(
-                n_cword=n_cword,
-                min_length=config.min_length,
-                max_length=config.max_length,
+        for word in find_matches(cword, min_match=min_length, words=words):
+            yield Completion(
+                position=position,
+                old_prefix=old_prefix,
+                new_prefix=word,
+                old_suffix=old_suffix,
+                new_suffix="",
             )
-            try:
-                session_id, panes = await gather(tmux_session(), tmux_panes())
-                sources = tuple(
-                    screenshot(pane)
-                    for pane in panes
-                    if not is_active(session_id, pane=pane)
-                )
 
-                for source in as_completed(sources):
-                    text = await source
-                    for word in parse(text):
-                        yield Completion(
-                            position=position,
-                            old_prefix=old_prefix,
-                            new_prefix=word,
-                            old_suffix=old_suffix,
-                            new_suffix="",
-                        )
-            except TmuxError as e:
-                await print(nvim, f"tmux completion failed:{linesep}{e}", error=True)
-        else:
-            pass
-
+    run_forever(nvim, background_update)
     return source

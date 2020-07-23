@@ -1,35 +1,29 @@
-from asyncio import Queue
+from asyncio import Queue, sleep
 from dataclasses import dataclass
 from itertools import chain
 from os import linesep
-from typing import AsyncIterator, Iterator, Sequence
+from typing import AsyncIterator, Dict, Iterator, Sequence, Set
 
 from pynvim import Nvim
 from pynvim.api.buffer import Buffer
 
 from .pkgs.fc_types import Completion, Context, Seed, Source
-from .pkgs.nvim import call
-from .pkgs.shared import coalesce
+from .pkgs.nvim import autocmd, call, run_forever
+from .pkgs.shared import coalesce, find_matches, normalize
 
 
 @dataclass(frozen=True)
 class Config:
-    same_filetype: bool
+    polling_rate: float
     min_length: int
     max_length: int
 
 
-def buf_gen(nvim: Nvim, config: Config, filetype: str) -> Iterator[Buffer]:
-    curr: Buffer = nvim.api.get_current_buf()
+def buf_gen(nvim: Nvim, bufnrs: Set[int]) -> Iterator[Buffer]:
     buffers: Sequence[Buffer] = nvim.api.list_bufs()
     for buf in buffers:
-        if buf.number != curr.number:
-            if config.same_filetype:
-                ft = nvim.api.buf_get_option(buf, "filetype")
-                if ft == filetype:
-                    yield buf
-            else:
-                yield buf
+        if buf.number in bufnrs:
+            yield buf
 
 
 async def buffer_chars(nvim: Nvim, buf_gen: Iterator[Buffer]) -> Sequence[str]:
@@ -48,20 +42,39 @@ async def buffer_chars(nvim: Nvim, buf_gen: Iterator[Buffer]) -> Sequence[str]:
 
 async def main(nvim: Nvim, chan: Queue, seed: Seed) -> Source:
     config = Config(**seed.config)
+    min_length, max_length = config.min_length, config.max_length
+    bufnrs: Set[int] = set()
+    words: Dict[str, str] = {}
+
+    await autocmd(
+        nvim,
+        name="buffers",
+        events=("TextChanged", "TextChangedI", "BufEnter"),
+        arg_eval=("expand('<abuf>')",),
+    )
+
+    async def ooda() -> None:
+        while True:
+            bufnr = await chan.get()
+            bufnrs.add(bufnr)
+
+    async def background_update() -> None:
+        while True:
+            b_gen = buf_gen(nvim, bufnrs)
+            bufnrs.clear()
+            chars = await buffer_chars(nvim, b_gen)
+            for word in coalesce(chars, min_length=min_length, max_length=max_length):
+                if word not in words:
+                    words[word] = normalize(word)
+
+            await sleep(config.polling_rate)
 
     async def source(context: Context) -> AsyncIterator[Completion]:
         position = context.position
-        old_prefix = context.alnums_before
-        old_suffix = context.alnums_after
-        n_cword = context.alnums_normalized
+        old_prefix, old_suffix = context.alnums_before, context.alnums_after
+        cword = context.alnums
 
-        parse = coalesce(
-            n_cword=n_cword, min_length=config.min_length, max_length=config.max_length
-        )
-        b_gen = buf_gen(nvim, config=config, filetype=context.filetype)
-        chars = await buffer_chars(nvim, b_gen)
-
-        for word in parse(chars):
+        for word in find_matches(cword, min_match=min_length, words=words):
             yield Completion(
                 position=position,
                 old_prefix=old_prefix,
@@ -70,4 +83,6 @@ async def main(nvim: Nvim, chan: Queue, seed: Seed) -> Source:
                 new_suffix="",
             )
 
+    run_forever(nvim, ooda)
+    run_forever(nvim, background_update)
     return source

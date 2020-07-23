@@ -19,7 +19,7 @@
       "config": {
         "max_length": 20,
         "min_length": 2,
-        "same_filetype": false
+        "polling_rate": 1
       },
       "enabled": true,
       "limit": 3,
@@ -46,7 +46,8 @@
     "tmux": {
       "config": {
         "max_length": 20,
-        "min_length": 2
+        "min_length": 2,
+        "polling_rate": 1
       },
       "enabled": true,
       "limit": 3,
