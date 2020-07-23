@@ -38,6 +38,7 @@ from ..pkgs.fc_types import Context
 class ParseContext:
     vals: Context
     depth: int = 0
+    short_circuit: bool = False
 
 
 class ParseError(Exception):
@@ -299,7 +300,6 @@ def parse(
     *,
     prev_chars: Iterable[str],
     it: Iterator,
-    short_circuit: bool = False,
 ) -> Iterator[str]:
     it = chain(prev_chars, it)
 
@@ -310,8 +310,6 @@ def parse(
             context.depth -= 1
         elif char == "$":
             yield from parse_scope(context, begin=char, it=it)
-            if short_circuit:
-                break
         else:
             yield char
 
@@ -320,7 +318,7 @@ def parse_snippet(ctx: Context, text: str) -> Tuple[str, str]:
     it = iter(text)
     context = ParseContext(vals=ctx)
     try:
-        new_prefix = "".join(parse(context, prev_chars=(), it=it, short_circuit=True))
+        new_prefix = "".join(parse(context, prev_chars=(), it=it))
         new_suffix = "".join(parse(context, prev_chars=(), it=it))
     except ParseError:
         return text, ""
