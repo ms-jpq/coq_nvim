@@ -41,7 +41,6 @@ CharStream = Iterator[IChar]
 class ParseContext:
     vals: Context
     depth: int = 0
-    tags: Dict[str, Any] = field(default_factory=OrderedDict)
 
 
 class ParseError(Exception):
@@ -348,5 +347,5 @@ def parse_snippet(ctx: Context, text: str) -> Tuple[str, str]:
         return text, ""
     else:
         new_prefix = parsed
-        new_suffix = ""
+        new_suffix = parsed
         return new_prefix, new_suffix
