@@ -20,10 +20,10 @@ def count_matches(cword: str, word: str, nword: str) -> int:
     return count
 
 
-def find_matches(cword: str, min_match: int, words: Dict[str, str]) -> Iterator[str]:
+def find_matches(cword: str, ncword: str, min_match: int, words: Dict[str, str]) -> Iterator[str]:
     for word, nword in words.items():
         matches = count_matches(cword, word=word, nword=nword)
-        if matches >= min_match:
+        if matches >= min_match and nword not in ncword:
             yield word
 
 
@@ -36,7 +36,7 @@ def coalesce(chars: Iterable[str], min_length: int, max_length: int) -> Iterator
             word = "".join(curr)
             curr.clear()
             wl = len(word)
-            if wl >= min_length and wl >= max_length:
+            if wl >= min_length and wl <= max_length:
                 yield word
 
     if curr:

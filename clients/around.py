@@ -37,7 +37,7 @@ async def main(nvim: Nvim, chan: Queue, seed: Seed) -> Source:
     async def source(context: Context) -> AsyncIterator[Completion]:
         position = context.position
         old_prefix, old_suffix = context.alnums_before, context.alnums_after
-        cword = context.alnums
+        cword, ncword = context.alnums, context.alnums_normalized
 
         chars = await buffer_chars(nvim)
         words: Dict[str, str] = {}
@@ -45,7 +45,9 @@ async def main(nvim: Nvim, chan: Queue, seed: Seed) -> Source:
             if word not in words:
                 words[word] = normalize(word)
 
-        for word in find_matches(cword, min_match=min_length, words=words):
+        for word in find_matches(
+            cword, ncword=ncword, min_match=min_length, words=words
+        ):
             yield Completion(
                 position=position,
                 old_prefix=old_prefix,
