@@ -17,9 +17,9 @@ from typing import (
 
 from pynvim import Nvim
 
-from .lsp_pkgs.snippet import parse_snippet
+from .lsp_pkgs.snippet import ParseError, parse_snippet
 from .pkgs.fc_types import Completion, Context, Position, Seed, Source
-from .pkgs.nvim import call
+from .pkgs.nvim import call, print
 from .pkgs.shared import normalize, parse_common_affix
 
 
@@ -178,9 +178,15 @@ async def main(nvim: Nvim, chan: Queue, seed: Seed) -> Source:
         uid = next(id_gen)
         resp = await ask(nvim, chan=chan, pos=context.position, uid=uid)
         rows = parse_resp_to_rows(resp)
-        for row in parse_rows(
-            rows, context=context, entry_lookup=entry_kind, insert_lookup=insert_kind,
-        ):
-            yield row
+        try:
+            for row in parse_rows(
+                rows,
+                context=context,
+                entry_lookup=entry_kind,
+                insert_lookup=insert_kind,
+            ):
+                yield row
+        except ParseError as e:
+            await print(nvim, e)
 
     return source

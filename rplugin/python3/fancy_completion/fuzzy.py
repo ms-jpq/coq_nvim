@@ -27,8 +27,8 @@ def normalize(text: str) -> str:
 
 
 def fuzzify(context: Context, step: Step) -> FuzzyStep:
-    f_alnums = context.alnums
-    f_n_alnums = context.alnums_normalized
+    c_alnums = context.alnums
+    s_alnums = step.text
     s_n_alnums = step.text_normalized
     matches: Dict[int, str] = {}
 
@@ -37,8 +37,8 @@ def fuzzify(context: Context, step: Step) -> FuzzyStep:
     pm_idx = inf
     prefix_matches = 0
     consecutive_matches = 0
-    for i, (char, n_char) in enumerate(zip(f_alnums, f_n_alnums)):
-        m_idx = s_n_alnums.find(n_char, idx)
+    for i, char in enumerate(c_alnums):
+        m_idx = (s_alnums if char.isupper() else s_n_alnums).find(char, idx)
         if m_idx != -1:
             if pm_idx == m_idx - 1:
                 consecutive_matches += 1
@@ -51,7 +51,7 @@ def fuzzify(context: Context, step: Step) -> FuzzyStep:
             prefix_matches += 1
 
     num_matches = len(matches)
-    full_match = prefix_matches == len(f_alnums)
+    full_match = prefix_matches == len(c_alnums)
     density = num_matches / len(s_n_alnums)
     metric = FuzzyMetric(
         prefix_matches=prefix_matches,
