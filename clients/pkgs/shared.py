@@ -8,11 +8,11 @@ def normalize(text: str) -> str:
     return text.lower()
 
 
-def count_matches(cword: str, word: str) -> int:
+def count_matches(cword: str, word: str, nword: str) -> int:
     idx = 0
     count = 0
     for char in cword:
-        m_idx = word.find(char, idx)
+        m_idx = (word if char.isupper() else nword).find(char, idx)
         if m_idx != -1:
             count += 1
             idx = m_idx + 1
@@ -33,7 +33,7 @@ def coalesce(
             elif curr:
                 word = "".join(curr)
                 normalized = normalize(word)
-                matches = count_matches(n_cword, word=normalized)
+                matches = count_matches(n_cword, word=word, nword=normalized)
                 if (
                     normalized not in acc
                     and matches >= min_length
