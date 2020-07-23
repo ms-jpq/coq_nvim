@@ -105,66 +105,70 @@ class VarType(Enum):
     decorated = auto()  # '${' var '/' regex '/' (format | text)+ '/' options '}'
 
 
-# variable    ::= '$' var | '${' var }'
-#                | '${' var ':' any '}'
-#                | '${' var '/' regex '/' (format | text)+ '/' options '}'
-def parse_variable(begin: str, it: Iterator[str], naked: bool) -> Iterator[str]:
+# variable    ::= '$' var
+def parse_variable_naked(begin: str, it: Iterator[str]) -> Iterator[str]:
     it = chain((begin,), it)
     name_acc: List[str] = []
 
-    if naked:
-        # variable    ::= '$' var
-        for char in it:
-            if char in _var_chars:
-                name_acc.append(char)
-            else:
-                name = "".join(name_acc)
-                var = variable_substitution(name)
-                yield var if var else name
-                yield from parse((char,), it, nested=False)
-                break
-    else:
-        v_type: Optional[VarType] = None
-        for char in it:
-            if char in _var_chars:
-                name_acc.append(char)
-            elif char == "}":
-                v_type = VarType.simple
-                break
-            elif char == "/":
-                v_type = VarType.decorated
-                break
-            elif char == ":":
-                v_type = VarType.arbitrary
-                break
-            else:
-                err = make_parse_err(
-                    condition="parsing var", expected=("_", "a-z", "A-Z"), actual=char
-                )
-                raise err
-
-        name = "".join(name_acc)
-        var = variable_substitution(name)
-        if v_type == VarType.simple:
-            # '${' var }'
-            yield var if var else name
-        elif v_type == VarType.decorated:
-            # '${' var '/' regex '/' (format | text)+ '/' options '}'
-            yield var if var else name
-            for char in it:
-                if char == "\\":
-                    _ = parse_escape(char, it, escapable_chars=_escapable_chars)
-                elif char == "}":
-                    break
-        elif v_type == VarType.arbitrary:
-            # '${' var ':' any '}'
-            if var:
-                yield var
-            else:
-                yield from parse((), it, nested=True)
+    for char in it:
+        if char in _var_chars:
+            name_acc.append(char)
         else:
-            assert False
-        yield from parse((), it, nested=False)
+            name = "".join(name_acc)
+            var = variable_substitution(name)
+            yield var if var else name
+            yield from parse((char,), it, nested=False)
+            break
+
+
+# variable    ::= '$' var | '${' var }'
+#                | '${' var ':' any '}'
+#                | '${' var '/' regex '/' (format | text)+ '/' options '}'
+def parse_variable_nested(begin: str, it: Iterator[str]) -> Iterator[str]:
+    it = chain((begin,), it)
+    name_acc: List[str] = []
+
+    v_type: Optional[VarType] = None
+    for char in it:
+        if char in _var_chars:
+            name_acc.append(char)
+        elif char == "}":
+            v_type = VarType.simple
+            break
+        elif char == "/":
+            v_type = VarType.decorated
+            break
+        elif char == ":":
+            v_type = VarType.arbitrary
+            break
+        else:
+            err = make_parse_err(
+                condition="parsing var", expected=("_", "a-z", "A-Z"), actual=char
+            )
+            raise err
+
+    name = "".join(name_acc)
+    var = variable_substitution(name)
+    if v_type == VarType.simple:
+        # '${' var }'
+        yield var if var else name
+    elif v_type == VarType.decorated:
+        # '${' var '/' regex '/' (format | text)+ '/' options '}'
+        yield var if var else name
+        for char in it:
+            if char == "\\":
+                _ = parse_escape(char, it, escapable_chars=_escapable_chars)
+            elif char == "}":
+                break
+    elif v_type == VarType.arbitrary:
+        # '${' var ':' any '}'
+        if var:
+            yield var
+        else:
+            yield from parse((), it, nested=True)
+    else:
+        assert False
+    yield from parse((), it, nested=False)
 
 
 # ${...}
@@ -177,7 +181,7 @@ def parse_inner_scope(begin: str, it: Iterator[str]) -> Iterator[str]:
         yield from parse_tcp(char, it)
     elif char in _var_begin_chars:
         # variable
-        yield from parse_variable(char, it, naked=False)
+        yield from parse_variable_nested(char, it)
     else:
         err = make_parse_err(
             condition="after {", expected=("_", "0-9", "a-z", "A-Z"), actual=char
@@ -200,7 +204,7 @@ def parse_scope(begin: str, it: Iterator[str]) -> Iterator[str]:
                 yield from parse((char,), it, nested=False)
                 break
     elif char in _var_begin_chars:
-        yield from parse_variable(char, it, naked=True)
+        yield from parse_variable_naked(char, it)
     else:
         err = make_parse_err(condition="after $", expected=("{",), actual=char)
         raise err
