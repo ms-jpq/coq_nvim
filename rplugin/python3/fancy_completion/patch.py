@@ -63,9 +63,11 @@ def within_edit(pos: Position, edit: Optional[Edit]) -> bool:
         b_row, b_col = edit.begin.row, edit.begin.col
         e_row, e_col = edit.end.row, edit.end.col
 
-        if row == b_row:
+        if row == b_row and row == e_row:
+            return col >= b_col and col <= e_col
+        elif row == b_row:
             return col >= b_col
-        elif row == edit.end.row:
+        elif row == e_row:
             return col <= e_col
         else:
             return row > b_row and row < e_row
@@ -77,7 +79,7 @@ def rows_stream(rows: Sequence[str], starting: int) -> Iterator[Tuple[Position, 
     for r, row in enumerate(rows, starting):
         for c, char in enumerate(row):
             yield Position(row=r, col=c), char
-    yield Position(row=-1, col=-1), linesep
+        yield Position(row=-1, col=-1), linesep
 
 
 def perform_edits(
@@ -131,8 +133,6 @@ def replace_lines(nvim: Nvim, payload: Payload) -> None:
 
     nvim.api.out_write(str(payload) + "\n")
     nvim.api.out_write(str(edits) + "\n")
-
-    # nvim.api.out_write(str(new_lines) + "\n")
 
 
 def apply_patch(nvim: Nvim, comp: Dict[str, Any]) -> None:
