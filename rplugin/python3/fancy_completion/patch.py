@@ -1,5 +1,5 @@
 from os import linesep
-from typing import Any, Dict, Sequence, Tuple, cast
+from typing import Any, Dict, Iterator, List, Sequence, Tuple, cast
 
 from pynvim import Nvim
 from pynvim.api.buffer import Buffer
@@ -8,55 +8,121 @@ from pynvim.api.window import Window
 from .types import Edit, Payload, Position
 
 
-def perform_edit(nvim: Nvim, buf: Buffer, edit: Edit) -> None:
-    b_row, b_col = edit.begin.row, edit.begin.col
-    e_row, e_col = edit.end.row, edit.end.col
-    btm_idx, top_idx = b_row, e_row + 1
-
-    old_lines: Sequence[str] = nvim.api.buf_get_lines(buf, btm_idx, top_idx, True)
-    btm_line, top_line = old_lines[0][:b_col], old_lines[-1][e_col + 1 :]
-    new_lines = "".join((btm_line, edit.new_text, top_line)).splitlines()
-    nvim.api.buf_set_lines(buf, btm_idx, top_idx, True, new_lines)
-
-
-def replace_lines(nvim: Nvim, payload: Payload) -> None:
-    nvim.api.out_write(str(payload) + "\n")
+def calculate_edit(payload: Payload) -> Edit:
     row, col = payload.position.row, payload.position.col
     old_prefix, new_prefix = payload.old_prefix, payload.new_prefix
     old_suffix, new_suffix = payload.old_suffix, payload.new_suffix
 
-    old_lc, new_lc = old_prefix.count(linesep), old_suffix.count(linesep)
-    btm_idx, top_idx = row - old_lc, row + new_lc + 1
+    p0, p1, lhs, = old_prefix.rpartition(linesep)
+    rhs, s0, s1 = old_suffix.partition(linesep)
+
+    b_row = row - p0.count(linesep) - p1.count(linesep)
+    b_col = col - len(lhs)
+    e_row = row + s0.count(linesep) + s1.count(linesep)
+    e_col = col + len(rhs)
+
+    edit = Edit(
+        begin=Position(row=b_row, col=b_col),
+        end=Position(row=e_row, col=e_col),
+        new_text=new_prefix + new_suffix,
+    )
+    return edit
+
+
+def consolidate_edits(payload: Payload) -> Sequence[Edit]:
+    main_edit = calculate_edit(payload)
+    edits = (*payload.edits, main_edit)
+
+    def rank(edit: Edit) -> Tuple[int, int]:
+        return edit.begin.row, edit.begin.col
+
+    ranked = sorted(edits, key=rank)
+
+    def cont() -> Iterator[Edit]:
+        p_row, p_col = -1, -1
+        for edit in ranked:
+            b_row, b_col = edit.begin.row, edit.begin.col
+            e_row, e_col = edit.end.row, edit.end.col
+            if b_row >= p_row and b_col >= p_col and e_row >= b_row and e_col >= b_col:
+                p_row, p_col = e_row, e_col
+                yield edit
+
+    return tuple(cont())
+
+
+def calc_index(edits: Sequence[Edit]) -> Tuple[int, int]:
+    top_idx = min(e.begin.row for e in edits) + 1
+    btm_idx = max(e.end.row for e in edits)
+    return top_idx, btm_idx
+
+
+def within_edit(pos: Position, edit: Edit) -> bool:
+    row, col = pos.row, pos.col
+    b_row, b_col = edit.begin.row, edit.begin.col
+    e_row, e_col = edit.end.row, edit.end.col
+
+    if row == b_row:
+        return col >= b_col
+    elif row == edit.end.row:
+        return col <= e_col
+    else:
+        return row > b_row and row < e_row
+
+
+def rows_stream(rows: Sequence[str], starting: int) -> Iterator[Tuple[Position, str]]:
+    for r, row in enumerate(rows, starting):
+        for c, char in enumerate(row):
+            yield Position(row=r, col=c), char
+    yield Position(row=-1, col=-1), linesep
+
+
+def perform_edits(
+    stream: Iterator[Tuple[Position, str]], edits: Sequence[Edit]
+) -> Iterator[str]:
+    it = iter(edits)
+    edit = next(it, None)
+    for pos, char in stream:
+        if edit and within_edit(pos, edit):
+            yield from iter(edit.new_text)
+            edit = next(it, None)
+        else:
+            yield char
+
+
+def split_stream(stream: Iterator[str]) -> Sequence[str]:
+    def cont() -> Iterator[str]:
+        curr: List[str] = []
+        for char in stream:
+            if char == linesep:
+                yield "".join(curr)
+                curr.clear()
+            else:
+                curr.append(char)
+        if curr:
+            yield "".join(curr)
+
+    return tuple(cont())
+
+
+def replace_lines(nvim: Nvim, payload: Payload) -> None:
+    edits = consolidate_edits(payload)
+    top_idx, btm_idx = calc_index(edits)
 
     win: Window = nvim.api.get_current_win()
     buf: Buffer = nvim.api.get_current_buf()
-    for edit in payload.edits:
-        perform_edit(nvim, buf=buf, edit=edit)
-
     old_lines: Sequence[str] = nvim.api.buf_get_lines(buf, btm_idx, top_idx, True)
 
-    def pre_post() -> Tuple[str, str]:
-        idx = sum(map(len, old_lines[:old_lc])) + col
-        old = "".join(old_lines)
-        pre = old[: idx - len(old_prefix)]
-        post = old[idx + len(old_suffix) :]
-        return pre, post
+    rows = rows_stream(old_lines, starting=btm_idx)
+    stream = perform_edits(rows, edits=edits)
+    new_lines = split_stream(stream)
 
-    pre, post = pre_post()
-    before = pre + new_prefix
-    after = new_suffix + post
-    new_lines = (before + after).splitlines()
-
-    def pos() -> Tuple[int, int]:
-        idx = before.rfind(linesep)
-        row = btm_idx + before.count(linesep) + 1
-        col = len(before) - (0 if idx == -1 else idx)
-        return row, col
-
-    new_row, new_col = pos()
     nvim.api.buf_set_lines(buf, btm_idx, top_idx, True, new_lines)
-    nvim.api.win_set_cursor(win, (new_row, new_col))
-    # nvim.api.buf_set_var(buf, "_buf_cursor_pos_", new_col)
+    # nvim.api.win_set_cursor(win, (new_row, new_col))
+
+    nvim.api.out_write(str(payload) + "\n")
+    nvim.api.out_write(str(edits) + "\n")
+
+    # nvim.api.out_write(str(new_lines) + "\n")
 
 
 def apply_patch(nvim: Nvim, comp: Dict[str, Any]) -> None:

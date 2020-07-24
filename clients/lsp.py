@@ -206,8 +206,6 @@ async def main(nvim: Nvim, chan: Queue, seed: Seed) -> Source:
                 entry_lookup=entry_kind,
                 insert_lookup=insert_kind,
             ):
-                if row.edits:
-                    raise Exception(row.edits)
                 yield row
         except ParseError as e:
             await print(nvim, e)
