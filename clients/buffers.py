@@ -74,6 +74,7 @@ async def main(nvim: Nvim, chan: Queue, seed: Seed) -> Source:
                 bufnrs.add(bufnr)
             elif action == "clear":
                 words.clear()
+                ch.set()
 
     async def background_update() -> None:
         async for _ in schedule(ch, min_time=0.0, max_time=config.polling_rate):
