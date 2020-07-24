@@ -138,4 +138,5 @@ class Payload:
 @dataclass(frozen=True)
 class State:
     char_inserted: bool
+    comp_inserted: bool
     sources: Set[str]

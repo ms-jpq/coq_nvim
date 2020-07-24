@@ -20,6 +20,8 @@ from .settings import initial, load_factories
 from .state import initial as initial_state
 from .transitions import (
     t_char_inserted,
+    t_comp_inserted,
+    t_natural_insertable,
     t_set_sources,
     t_text_changed,
     t_toggle_sources,
@@ -86,6 +88,7 @@ class Main:
                 async for pos, comp in schedule(chan=self.ch, gen=gen):
                     col = pos.col + 1
                     await complete(self.nvim, col=col, comp=comp)
+                    self.state = t_comp_inserted(self.state)
 
             await gather(listen(), l1())
 
@@ -133,14 +136,15 @@ class Main:
     @function("_FCtextchangedi")
     def text_changed_i(self, args: Sequence[Any]) -> None:
         try:
-            self.next_comp(GenOptions(force=False, sources=self.state.sources))
+            if t_natural_insertable(self.state):
+                self.next_comp(GenOptions(force=False, sources=self.state.sources))
         finally:
             self.state = t_text_changed(self.state)
 
     @function("_FCtextchangedp")
     def text_changed_p(self, args: Sequence[Any]) -> None:
         try:
-            if self.state.char_inserted:
+            if t_natural_insertable(self.state):
                 self.next_comp(GenOptions(force=False, sources=self.state.sources))
         finally:
             self.state = t_text_changed(self.state)
