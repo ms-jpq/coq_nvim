@@ -30,25 +30,51 @@ def calculate_edit(payload: Payload) -> Edit:
     return edit
 
 
+def is_vaild(edit: Edit) -> bool:
+    begin, end = edit.begin, edit.end
+    if begin.row == end.row:
+        return begin.col <= end.col
+    else:
+        return begin.row < end.row
+
+
+def overlap(lhs: Edit, rhs: Edit) -> bool:
+    l_rows = {*range(lhs.begin.row, lhs.end.row + 1)}
+    r_rows = {*range(rhs.begin.row, rhs.end.row + 1)}
+    overlap = l_rows & r_rows
+    if overlap:
+        if len(overlap) == 1:
+            if lhs.begin.row in overlap and rhs.begin.row in overlap:
+                l_cols = {*range(lhs.begin.col, lhs.end.col + 1)}
+                r_cols = {*range(rhs.begin.col, rhs.end.col + 1)}
+                return len(l_cols & r_cols) > 0
+            elif lhs.end.row in overlap and rhs.begin.row in overlap:
+                return lhs.end.col < rhs.begin.col
+            elif rhs.end.row in overlap and lhs.begin.row in overlap:
+                return rhs.end.col < lhs.begin.col
+            else:
+                assert False
+        else:
+            return True
+    else:
+        return False
+
+
 def consolidate_edits(payload: Payload) -> Sequence[Edit]:
     main_edit = calculate_edit(payload)
-    edits = (*payload.edits, main_edit)
+    edits = chain((main_edit,), payload.edits)
 
-    def rank(edit: Edit) -> Tuple[int, int]:
-        return edit.begin.row, edit.begin.col
-
-    ranked = sorted(edits, key=rank)
+    def rank(edit: Edit) -> Tuple[int, int, int, int]:
+        return edit.begin.row, edit.begin.col, edit.end.row, edit.end.col
 
     def cont() -> Iterator[Edit]:
-        p_row, p_col = -1, -1
-        for edit in ranked:
-            b_row, b_col = edit.begin.row, edit.begin.col
-            e_row, e_col = edit.end.row, edit.end.col
-            if b_row >= p_row and b_col >= p_col and e_row >= b_row and e_col >= b_col:
-                p_row, p_col = e_row, e_col
+        seen: List[Edit] = []
+        for edit in edits:
+            if is_vaild(edit) and not any(overlap(edit, prev) for prev in seen):
+                seen.append(edit)
                 yield edit
 
-    return tuple(cont())
+    return sorted(cont(), key=rank)
 
 
 def calc_index(edits: Sequence[Edit]) -> Tuple[int, int]:
