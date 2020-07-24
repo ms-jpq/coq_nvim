@@ -1,9 +1,10 @@
 from dataclasses import asdict, dataclass
+from locale import strxfrm
 from math import inf
 from typing import Any, Callable, Dict, Iterator, Sequence, Set, Union, cast
 
 from .nvim import VimCompletion
-from .types import Context, FuzzyOptions, Payload, Completion, Step
+from .types import Completion, Context, FuzzyOptions, Payload, Step
 
 
 @dataclass(frozen=True)
@@ -64,12 +65,15 @@ def fuzzify(context: Context, step: Step) -> FuzzyStep:
 
 def rank(fuzz: FuzzyStep) -> Sequence[Union[float, int, str]]:
     metric = fuzz.metric
+    step = fuzz.step
+    comp = step.comp
+    text = comp.sortby or comp.label or strxfrm(step.text_normalized)
     return (
-        metric.prefix_matches,
-        metric.num_matches,
-        metric.consecutive_matches,
-        metric.density,
-        fuzz.step.text_normalized,
+        metric.prefix_matches * -1,
+        metric.num_matches * -1,
+        metric.consecutive_matches * -1,
+        metric.density * -1,
+        text,
     )
 
 
@@ -138,9 +142,7 @@ def fuzzer(
         seen_by_source: Dict[str, int] = {}
 
         fuzzy_steps = (fuzzify(context, step=step) for step in steps)
-        sorted_steps = sorted(
-            fuzzy_steps, key=cast(Callable[[FuzzyStep], Any], rank), reverse=True
-        )
+        sorted_steps = sorted(fuzzy_steps, key=cast(Callable[[FuzzyStep], Any], rank))
         for fuzz in sorted_steps:
             step = fuzz.step
             source = step.source
