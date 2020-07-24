@@ -9,7 +9,7 @@ from pynvim.api.window import Window
 from .types import Edit, Payload, Position
 
 
-def calculate_edit(payload: Payload) -> Edit:
+def calculate_edit(payload: Payload) -> Tuple[Edit, Edit]:
     row, col = payload.position.row, payload.position.col
     old_prefix, new_prefix = payload.old_prefix, payload.new_prefix
     old_suffix, new_suffix = payload.old_suffix, payload.new_suffix
@@ -20,14 +20,19 @@ def calculate_edit(payload: Payload) -> Edit:
     b_row = row - p0.count(linesep) - p1.count(linesep)
     b_col = col - len(lhs)
     e_row = row + s0.count(linesep) + s1.count(linesep)
-    e_col = col + len(rhs)
+    e_col = col + len(rhs) - 1
 
-    edit = Edit(
+    l_edit = Edit(
         begin=Position(row=b_row, col=b_col),
-        end=Position(row=e_row, col=e_col),
-        new_text=new_prefix + new_suffix,
+        end=Position(row=row, col=col),
+        new_text=new_prefix,
     )
-    return edit
+    r_edit = Edit(
+        begin=Position(row=row, col=col),
+        end=Position(row=e_row, col=e_col),
+        new_text=new_suffix,
+    )
+    return l_edit, r_edit
 
 
 def is_vaild(edit: Edit) -> bool:
@@ -49,9 +54,9 @@ def overlap(lhs: Edit, rhs: Edit) -> bool:
                 r_cols = {*range(rhs.begin.col, rhs.end.col + 1)}
                 return len(l_cols & r_cols) > 0
             elif lhs.end.row in overlap and rhs.begin.row in overlap:
-                return lhs.end.col < rhs.begin.col
+                return lhs.end.col >= rhs.begin.col
             elif rhs.end.row in overlap and lhs.begin.row in overlap:
-                return rhs.end.col < lhs.begin.col
+                return rhs.end.col >= lhs.begin.col
             else:
                 assert False
         else:
@@ -60,12 +65,13 @@ def overlap(lhs: Edit, rhs: Edit) -> bool:
         return False
 
 
-def consolidate_edits(payload: Payload) -> Sequence[Edit]:
-    main_edit = calculate_edit(payload)
-    edits = chain((main_edit,), payload.edits)
+def rank(edit: Edit) -> Tuple[int, int]:
+    return edit.begin.row, edit.begin.col
 
-    def rank(edit: Edit) -> Tuple[int, int, int, int]:
-        return edit.begin.row, edit.begin.col, edit.end.row, edit.end.col
+
+def consolidate_edits(payload: Payload) -> Sequence[Edit]:
+    main = calculate_edit(payload)
+    edits = chain(main, payload.edits)
 
     def cont() -> Iterator[Edit]:
         seen: List[Edit] = []
@@ -144,21 +150,22 @@ def split_stream(stream: Iterator[str]) -> Sequence[str]:
 
 def replace_lines(nvim: Nvim, payload: Payload) -> None:
     edits = consolidate_edits(payload)
-    top_idx, btm_idx = calc_index(edits)
+    if edits:
+        top_idx, btm_idx = calc_index(edits)
 
-    win: Window = nvim.api.get_current_win()
-    buf: Buffer = nvim.api.get_current_buf()
-    old_lines: Sequence[str] = nvim.api.buf_get_lines(buf, btm_idx, top_idx, True)
+        win: Window = nvim.api.get_current_win()
+        buf: Buffer = nvim.api.get_current_buf()
+        old_lines: Sequence[str] = nvim.api.buf_get_lines(buf, btm_idx, top_idx, True)
 
-    rows = rows_stream(old_lines, starting=btm_idx)
-    stream = perform_edits(rows, edits=iter(edits))
-    new_lines = split_stream(stream)
+        rows = rows_stream(old_lines, starting=btm_idx)
+        stream = perform_edits(rows, edits=iter(edits))
+        new_lines = split_stream(stream)
 
-    nvim.api.buf_set_lines(buf, btm_idx, top_idx, True, new_lines)
-    # nvim.api.win_set_cursor(win, (new_row, new_col))
+        nvim.api.buf_set_lines(buf, btm_idx, top_idx, True, new_lines)
+        # nvim.api.win_set_cursor(win, (new_row, new_col))
 
-    nvim.api.out_write(str(payload) + "\n")
-    nvim.api.out_write(str(edits) + "\n")
+        nvim.api.out_write(str(payload) + "\n")
+        nvim.api.out_write(str(edits) + "\n")
 
 
 def apply_patch(nvim: Nvim, comp: Dict[str, Any]) -> None:
