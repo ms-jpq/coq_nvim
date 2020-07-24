@@ -1,5 +1,6 @@
+from itertools import chain
 from os import linesep
-from typing import Any, Dict, Iterator, List, Sequence, Tuple, cast
+from typing import Any, Dict, Iterator, List, Optional, Sequence, Tuple, cast
 
 from pynvim import Nvim
 from pynvim.api.buffer import Buffer
@@ -56,17 +57,20 @@ def calc_index(edits: Sequence[Edit]) -> Tuple[int, int]:
     return top_idx, btm_idx
 
 
-def within_edit(pos: Position, edit: Edit) -> bool:
-    row, col = pos.row, pos.col
-    b_row, b_col = edit.begin.row, edit.begin.col
-    e_row, e_col = edit.end.row, edit.end.col
+def within_edit(pos: Position, edit: Optional[Edit]) -> bool:
+    if edit:
+        row, col = pos.row, pos.col
+        b_row, b_col = edit.begin.row, edit.begin.col
+        e_row, e_col = edit.end.row, edit.end.col
 
-    if row == b_row:
-        return col >= b_col
-    elif row == edit.end.row:
-        return col <= e_col
+        if row == b_row:
+            return col >= b_col
+        elif row == edit.end.row:
+            return col <= e_col
+        else:
+            return row > b_row and row < e_row
     else:
-        return row > b_row and row < e_row
+        return False
 
 
 def rows_stream(rows: Sequence[str], starting: int) -> Iterator[Tuple[Position, str]]:
@@ -77,14 +81,20 @@ def rows_stream(rows: Sequence[str], starting: int) -> Iterator[Tuple[Position, 
 
 
 def perform_edits(
-    stream: Iterator[Tuple[Position, str]], edits: Sequence[Edit]
+    stream: Iterator[Tuple[Position, str]], edits: Iterator[Edit]
 ) -> Iterator[str]:
-    it = iter(edits)
-    edit = next(it, None)
+    edit = next(edits, None)
     for pos, char in stream:
-        if edit and within_edit(pos, edit):
+        if within_edit(pos, edit):
             yield from iter(edit.new_text)
-            edit = next(it, None)
+            for pos, char in stream:
+                if within_edit(pos, edit):
+                    pass
+                else:
+                    new_stream = chain(((pos, char),), stream)
+                    yield from perform_edits(new_stream, edits)
+                    break
+            break
         else:
             yield char
 
@@ -113,7 +123,7 @@ def replace_lines(nvim: Nvim, payload: Payload) -> None:
     old_lines: Sequence[str] = nvim.api.buf_get_lines(buf, btm_idx, top_idx, True)
 
     rows = rows_stream(old_lines, starting=btm_idx)
-    stream = perform_edits(rows, edits=edits)
+    stream = perform_edits(rows, edits=iter(edits))
     new_lines = split_stream(stream)
 
     nvim.api.buf_set_lines(buf, btm_idx, top_idx, True, new_lines)
