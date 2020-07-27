@@ -53,9 +53,9 @@ def calculate_replacement(
         if b_row == e_row:
             return e_col - b_col
         else:
-            lo = row_lens[b_row] - b_col
+            lo = (row_lens[b_row] - 1) - b_col
             mi = sum(row_lens[r] for r in range(b_row + 1, e_row))
-            hi = e_col - 1
+            hi = e_col
             return lo + mi + hi
 
     length = r_len()
