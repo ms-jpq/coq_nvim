@@ -21,9 +21,6 @@ end
 
 local settings = function ()
 
-  -- dont spam suggestions tabline
-  bindings.set("shortmess", "c", [[+=]])
-
   -- complete menu options
   bindings.set("completeopt", "menu", [[-=]])
   bindings.set("completeopt", "menuone,noinsert,noselect", [[+=]])
