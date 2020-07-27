@@ -1,4 +1,5 @@
-from itertools import chain
+from dataclasses import dataclass
+from itertools import chain, count
 from os import linesep
 from typing import Any, Dict, Iterator, List, Optional, Sequence, Tuple, cast
 
@@ -9,128 +10,88 @@ from pynvim.api.window import Window
 from .types import Edit, Payload, Position
 
 
-def calculate_edit(payload: Payload) -> Tuple[Edit, Edit]:
+@dataclass(frozen=True)
+class Replacement:
+    begin: int
+    length: int
+    cursor: bool = False
+
+
+def rows_to_fetch(payload: Payload) -> Tuple[int, int]:
+    row = payload.position.row
+    edits = payload.edits
+    old_lc, new_lc = (
+        payload.old_prefix.count(linesep),
+        payload.old_suffix.count(linesep),
+    )
+    main_btm, main_top = row - old_lc, row + new_lc
+    btm_idx = min(main_btm, *(e.begin.row for e in edits))
+    top_idx = max(main_top, *(e.end.row for e in edits))
+    return btm_idx, top_idx
+
+
+def row_lengths(rows: Sequence[str], start: int) -> Dict[int, int]:
+    ret = {idx: len(row) + 1 for idx, row in enumerate(rows, start)}
+    return ret
+
+
+def calculate_replacement(
+    row_lens: Dict[int, int], start: int, edit: Edit
+) -> Replacement:
+    b_row, e_row = edit.begin.row, edit.end.row
+    b_col, e_col = edit.begin.col, edit.end.col
+
+    lower = sum(row_lens[r] for r in range(start, b_row)) + b_col
+    begin = row_lens[b_row] - b_col - 1
+    middle = sum(row_lens[r] for r in range(b_row + 1, e_row))
+    end = e_col
+    length = begin + middle + end
+
+    replacement = Replacement(begin=lower, length=length)
+    return replacement
+
+
+def calculate_main_replacements(
+    row_lens: Dict[int, int], start: int, payload: Payload
+) -> Tuple[Replacement, Replacement]:
     row, col = payload.position.row, payload.position.col
-    old_prefix, new_prefix = payload.old_prefix, payload.new_prefix
-    old_suffix, new_suffix = payload.old_suffix, payload.new_suffix
 
-    p0, p1, lhs, = old_prefix.rpartition(linesep)
-    rhs, s0, s1 = old_suffix.partition(linesep)
+    begin1 = sum(row_lens[r] for r in range(start, row)) + col
+    length1 = len(payload.old_prefix)
+    begin2 = begin1 + length1
+    length2 = len(payload.old_suffix)
 
-    b_row = row - p0.count(linesep) - p1.count(linesep)
-    b_col = col - len(lhs)
-    e_row = row + s0.count(linesep) + s1.count(linesep)
-    e_col = col + len(rhs) - 1
+    replacement1 = Replacement(begin=begin1, length=length1)
+    replacement2 = Replacement(begin=begin2, length=length2, cursor=True)
+    return replacement1, replacement2
 
-    l_edit = Edit(
-        begin=Position(row=b_row, col=b_col),
-        end=Position(row=row, col=col),
-        new_text=new_prefix,
+
+def consolidate_replacements(
+    row_lens: Dict[int, int], start: int, payload: Payload
+) -> Sequence[Replacement]:
+    main_replacements = calculate_main_replacements(
+        row_lens, start=start, payload=payload
     )
-    r_edit = Edit(
-        begin=Position(row=row, col=col),
-        end=Position(row=e_row, col=e_col),
-        new_text=new_suffix,
+    auxiliary_replacements = (
+        calculate_replacement(row_lens, start=start, edit=edit)
+        for edit in payload.edits
     )
-    return l_edit, r_edit
+    return (*main_replacements, *auxiliary_replacements)
 
 
-def is_vaild(edit: Edit) -> bool:
-    begin, end = edit.begin, edit.end
-    if begin.row == end.row:
-        return begin.col <= end.col
-    else:
-        return begin.row < end.row
-
-
-def overlap(lhs: Edit, rhs: Edit) -> bool:
-    l_rows = {*range(lhs.begin.row, lhs.end.row + 1)}
-    r_rows = {*range(rhs.begin.row, rhs.end.row + 1)}
-    overlap = l_rows & r_rows
-    if overlap:
-        if len(overlap) == 1:
-            if lhs.begin.row in overlap and rhs.begin.row in overlap:
-                l_cols = {*range(lhs.begin.col, lhs.end.col + 1)}
-                r_cols = {*range(rhs.begin.col, rhs.end.col + 1)}
-                return len(l_cols & r_cols) > 0
-            elif lhs.end.row in overlap and rhs.begin.row in overlap:
-                return lhs.end.col >= rhs.begin.col
-            elif rhs.end.row in overlap and lhs.begin.row in overlap:
-                return rhs.end.col >= lhs.begin.col
-            else:
-                assert False
-        else:
-            return True
-    else:
-        return False
-
-
-def rank(edit: Edit) -> Tuple[int, int]:
-    return edit.begin.row, edit.begin.col
-
-
-def consolidate_edits(payload: Payload) -> Sequence[Edit]:
-    main = calculate_edit(payload)
-    edits = chain(main, payload.edits)
-
-    def cont() -> Iterator[Edit]:
-        seen: List[Edit] = []
-        for edit in edits:
-            if is_vaild(edit) and not any(overlap(edit, prev) for prev in seen):
-                seen.append(edit)
-                yield edit
-
-    return sorted(cont(), key=rank)
-
-
-def calc_index(edits: Sequence[Edit]) -> Tuple[int, int]:
-    top_idx = min(e.begin.row for e in edits) + 1
-    btm_idx = max(e.end.row for e in edits)
-    return top_idx, btm_idx
-
-
-def within_edit(pos: Position, edit: Optional[Edit]) -> bool:
-    if edit:
-        row, col = pos.row, pos.col
-        b_row, b_col = edit.begin.row, edit.begin.col
-        e_row, e_col = edit.end.row, edit.end.col
-
-        if row == b_row and row == e_row:
-            return col >= b_col and col <= e_col
-        elif row == b_row:
-            return col >= b_col
-        elif row == e_row:
-            return col <= e_col
-        else:
-            return row > b_row and row < e_row
-    else:
-        return False
-
-
-def rows_stream(rows: Sequence[str], starting: int) -> Iterator[Tuple[Position, str]]:
-    for r, row in enumerate(rows, starting):
-        for c, char in enumerate(row):
-            yield Position(row=r, col=c), char
-        yield Position(row=-1, col=-1), linesep
+def stream_lines(rows: Sequence[str]) -> Iterator[Tuple[int, str]]:
+    it = count()
+    for row in rows:
+        for char in row:
+            yield next(it), char
+        yield next(it), linesep
 
 
 def perform_edits(
-    stream: Iterator[Tuple[Position, str]], edits: Iterator[Edit]
+    stream: Iterator[Tuple[int, str]], replacements: Iterator[Replacement]
 ) -> Iterator[str]:
-    edit = next(edits, None)
-    for pos, char in stream:
-        if within_edit(pos, edit):
-            yield from iter(edit.new_text)
-            for pos, char in stream:
-                if within_edit(pos, edit):
-                    pass
-                else:
-                    new_stream = chain(((pos, char),), stream)
-                    yield from perform_edits(new_stream, edits)
-                    break
-            break
-        else:
-            yield char
+    for idx, char in stream:
+        yield char
 
 
 def split_stream(stream: Iterator[str]) -> Sequence[str]:
@@ -149,23 +110,20 @@ def split_stream(stream: Iterator[str]) -> Sequence[str]:
 
 
 def replace_lines(nvim: Nvim, payload: Payload) -> None:
-    edits = consolidate_edits(payload)
-    if edits:
-        top_idx, btm_idx = calc_index(edits)
+    btm_idx, top_idx = rows_to_fetch(payload)
+    win: Window = nvim.api.get_current_win()
+    buf: Buffer = nvim.api.get_current_buf()
+    old_lines: Sequence[str] = nvim.api.buf_get_lines(buf, btm_idx, top_idx, True)
 
-        win: Window = nvim.api.get_current_win()
-        buf: Buffer = nvim.api.get_current_buf()
-        old_lines: Sequence[str] = nvim.api.buf_get_lines(buf, btm_idx, top_idx, True)
+    row_lens = row_lengths(old_lines, start=btm_idx)
+    # stream = perform_edits(rows, edits=iter(edits))
+    # new_lines = split_stream(stream)
 
-        rows = rows_stream(old_lines, starting=btm_idx)
-        stream = perform_edits(rows, edits=iter(edits))
-        new_lines = split_stream(stream)
+    # nvim.api.buf_set_lines(buf, btm_idx, top_idx, True, new_lines)
+    # nvim.api.win_set_cursor(win, (new_row, new_col))
 
-        nvim.api.buf_set_lines(buf, btm_idx, top_idx, True, new_lines)
-        # nvim.api.win_set_cursor(win, (new_row, new_col))
-
-        nvim.api.out_write(str(payload) + "\n")
-        nvim.api.out_write(str(edits) + "\n")
+    nvim.api.out_write(str(payload) + "\n")
+    nvim.api.out_write(str(old_lines) + "\n")
 
 
 def apply_patch(nvim: Nvim, comp: Dict[str, Any]) -> None:

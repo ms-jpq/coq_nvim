@@ -81,6 +81,7 @@ class Context:
     syms_after: str
 
 
+# end exclusve
 @dataclass(frozen=True)
 class Edit:
     begin: Position
