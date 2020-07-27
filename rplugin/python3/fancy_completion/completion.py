@@ -17,7 +17,7 @@ from typing import (
 
 from pynvim import Nvim
 
-from .fuzzy import fuzzer, normalize
+from .fuzzy import fuzzer, is_sym, normalize
 from .nvim import VimCompletion, call, print
 from .types import (
     Context,
@@ -40,9 +40,6 @@ StepFunction = Callable[[Context], Awaitable[Sequence[Step]]]
 
 
 def gen_ctx(filename: str, filetype: str, line: str, position: Position) -> Context:
-    def is_sym(char: str) -> bool:
-        return not char.isalnum() and not char.isspace()
-
     col = position.col
     line_before = line[:col]
     line_after = line[col:]

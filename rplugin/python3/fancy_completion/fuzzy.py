@@ -27,6 +27,10 @@ def normalize(text: str) -> str:
     return text.lower()
 
 
+def is_sym(char: str) -> bool:
+    return not char.isalnum() and not char.isspace()
+
+
 def fuzzify(context: Context, step: Step) -> FuzzyStep:
     c_alnums = context.alnums
     s_alnums = step.text
