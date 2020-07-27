@@ -67,13 +67,22 @@ The newer dictionary will automatically be merged with the older one.
 | -------------------------- | -------------------------------------------------- |
 | `fuzzy.min_match`          | minimum # of chars matches required to show result |
 | `cache.band_size`          | cache "band" around cursor                         |
-| `cache.limit`              | max resutls shown from cache                       |
+| `cache.limit`              | max results shown from cache                       |
 | `source.<name>.enabled`    | source enabled                                     |
 | `source.<name>.limit`      | max results shown                                  |
 | `source.<name>.timeout`    | max wait time for source                           |
+| `source.<name>.rank`       | sorting priority for source                        |
 | `source.<name>.short_name` | badge for source, ie. `blah blah blah [LSP]`       |
 | `source.<name>.config`     | custom config for each source                      |
 | `source.<name>.main`       | source location (for custom sources)               |
+
+### Commands
+
+| command         | effect                                      |
+| --------------- | ------------------------------------------- |
+| FCStart         | Start fancy complete                        |
+| FCSetSources    | Enable only the sources in args             |
+| FCToggleSources | Toggle enable / disable the sources in args |
 
 ### Recommended Settings
 
@@ -84,16 +93,6 @@ Just require it in your `.vimrc` like so:
 ```vimL
 lua require("fancy-completion/recommends").all()
 ```
-
-### Commands
-
-| command         | effect                                      |
-| --------------- | ------------------------------------------- |
-| FCStart         | Start fancy complete                        |
-| FCSetSources    | Enable only the sources in args             |
-| FCToggleSources | Toggle enable / disable the sources in args |
-
-### Functions
 
 ### Authoring Clients
 
