@@ -23,6 +23,9 @@ from ..shared.nvim import call, print
 from ..shared.parse import normalize, parse_common_affix
 
 
+NAME = "lsp"
+
+
 @dataclass(frozen=True)
 class ParsedRow:
     old_prefix: str

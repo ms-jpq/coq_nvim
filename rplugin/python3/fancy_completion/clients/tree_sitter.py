@@ -7,6 +7,9 @@ from ..shared.types import Source, Completion, Context, Seed
 from .pkgs.nvim import call
 
 
+NAME = "tree_sitter"
+
+
 async def init_lua(nvim: Nvim) -> None:
     def cont() -> None:
         nvim.api.exec_lua(

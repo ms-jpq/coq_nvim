@@ -13,6 +13,9 @@ from ..shared.nvim import print, run_forever
 from .pkgs.scheduler import schedule
 
 
+NAME = "tmux"
+
+
 @dataclass(frozen=True)
 class Config:
     polling_rate: float

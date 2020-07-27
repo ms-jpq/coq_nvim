@@ -53,9 +53,9 @@ def calculate_replacement(
         if b_row == e_row:
             return e_col - b_col
         else:
-            lo = row_lens[b_row] - b_col - 1
+            lo = row_lens[b_row] - b_col
             mi = sum(row_lens[r] for r in range(b_row + 1, e_row))
-            hi = e_col
+            hi = e_col - 1
             return lo + mi + hi
 
     length = r_len()
@@ -175,7 +175,7 @@ def replace_lines(nvim: Nvim, payload: Payload) -> None:
     nvim.api.buf_set_lines(buf, btm_idx, top_idx, True, new_lines)
     nvim.api.win_set_cursor(win, (pos.row + 1, pos.col))
 
-    nvim.api.out_write(f"{payload}{linesep}")
+    # nvim.api.out_write(f"{payload}{linesep}")
 
 
 def apply_patch(nvim: Nvim, comp: Dict[str, Any]) -> None:

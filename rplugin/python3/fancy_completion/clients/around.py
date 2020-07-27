@@ -12,6 +12,9 @@ from ..shared.types import Completion, Context, Position, Seed, Source
 from .pkgs.nvim import call
 
 
+NAME = "around"
+
+
 @dataclass(frozen=True)
 class Config:
     band_size: int

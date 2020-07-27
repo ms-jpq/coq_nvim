@@ -16,6 +16,9 @@ from .pkgs.nvim import autocmd
 from .pkgs.scheduler import schedule
 
 
+NAME = "buffers"
+
+
 @dataclass(frozen=True)
 class Config:
     polling_rate: float

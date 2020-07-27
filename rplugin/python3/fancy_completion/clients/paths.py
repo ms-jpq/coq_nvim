@@ -9,6 +9,9 @@ from ..shared.da import anext
 from ..shared.types import Completion, Context, Seed, Source
 
 
+NAME = "paths"
+
+
 def parse_path(root: str, parent: str = "") -> Iterator[str]:
     l, s, r = root.rpartition(sep)
     if s == sep:
