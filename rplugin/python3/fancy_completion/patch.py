@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from itertools import chain, count
 from os import linesep
-from typing import Any, Dict, Iterator, List, Sequence, Tuple, cast
+from typing import Any, Dict, Iterator, List, Optional, Sequence, Tuple, Union, cast
 
 from pynvim import Nvim
 from pynvim.api.buffer import Buffer
@@ -64,10 +64,10 @@ def calculate_main_replacements(
     length2 = len(payload.old_suffix)
     begin2 = col
 
-    replacement1 = Replacement(begin=begin1, length=length1, text=payload.new_prefix)
-    replacement2 = Replacement(
-        begin=begin2, length=length2, text=payload.new_suffix, cursor=True
+    replacement1 = Replacement(
+        begin=begin1, length=length1, text=payload.new_prefix, cursor=True
     )
+    replacement2 = Replacement(begin=begin2, length=length2, text=payload.new_suffix)
     return replacement1, replacement2
 
 
@@ -112,11 +112,13 @@ def stream_lines(rows: Sequence[str]) -> Iterator[Tuple[int, str]]:
 
 def perform_edits(
     stream: Iterator[Tuple[int, str]], replacements: Iterator[Replacement]
-) -> Iterator[str]:
+) -> Iterator[Union[str, Tuple[()]]]:
     replacement = next(replacements, None)
     for idx, char in stream:
         if replacement and idx == replacement.begin:
             yield replacement.text
+            if replacement.cursor:
+                yield ()
             for _ in zip(stream, range(replacement.length)):
                 pass
             replacement = next(replacements, None)
@@ -124,19 +126,33 @@ def perform_edits(
             yield char
 
 
-def split_stream(stream: Iterator[str]) -> Sequence[str]:
+def split_stream(
+    stream: Iterator[Union[str, Tuple[()]]], start: int
+) -> Tuple[Sequence[str], Position]:
+    position: Optional[Position] = None
+
     def cont() -> Iterator[str]:
+        nonlocal position
         curr: List[str] = []
+        r_it, c_it = count(start), count()
+        r, c = next(r_it), next(c_it)
+
         for char in stream:
-            if char == linesep:
+            if char == ():
+                position = Position(row=r, col=c)
+            elif char == linesep:
                 yield "".join(curr)
                 curr.clear()
+                r = next(r_it)
+                c_it = count()
+                c = 0
             else:
-                curr.append(char)
+                c = next(c_it)
+                curr.append(cast(str, char))
         if curr:
             yield "".join(curr)
 
-    return tuple(cont())
+    return tuple(cont()), cast(Position, position)
 
 
 def replace_lines(nvim: Nvim, payload: Payload) -> None:
@@ -151,15 +167,15 @@ def replace_lines(nvim: Nvim, payload: Payload) -> None:
     replacements = consolidate_replacements(row_lens, start=btm_idx, payload=payload)
     stream = stream_lines(old_lines)
     text_stream = perform_edits(stream, replacements=iter(replacements))
-    new_lines = split_stream(text_stream)
+    new_lines, pos = split_stream(text_stream, start=btm_idx)
 
     nvim.api.buf_set_lines(buf, btm_idx, top_idx, True, new_lines)
-    # nvim.api.win_set_cursor(win, (new_row, new_col))
+    # nvim.api.win_set_cursor(win, (pos.row + 1, pos.col))
 
     nvim.api.out_write(str(payload) + "\n")
     nvim.api.out_write(str(old_lines) + "\n")
     nvim.api.out_write(str(replacements) + "\n")
-    nvim.api.out_write(str(new_lines) + "\n")
+    nvim.api.out_write(str(pos) + "\n")
 
 
 def apply_patch(nvim: Nvim, comp: Dict[str, Any]) -> None:
