@@ -3,9 +3,10 @@ from math import inf
 from os.path import exists, join
 from typing import Any, Iterator, Sequence
 
-from .consts import load_hierarchy, module_entry_point, settings_json
 from ..shared.da import load_json, load_module, merge_all
-from ..shared.types import FuzzyOptions, Settings, SourceFactory, Seed, SourceSpec
+from ..shared.types import Seed
+from .consts import load_hierarchy, module_entry_point, settings_json
+from .types import FuzzyOptions, Settings, SourceFactory, SourceSpec
 
 
 def load_source(config: Any) -> SourceSpec:

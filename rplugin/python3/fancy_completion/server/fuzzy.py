@@ -4,7 +4,8 @@ from math import inf
 from typing import Any, Callable, Dict, Iterator, Sequence, Set, Union, cast
 
 from .nvim import VimCompletion
-from ..shared.types import Completion, Context, FuzzyOptions, Payload, Step
+from ..shared.types import Completion, Context
+from .types import FuzzyOptions, Payload, Step
 
 
 @dataclass(frozen=True)
@@ -21,14 +22,6 @@ class FuzzyStep:
     full_match: bool
     matches: Dict[int, str]
     metric: FuzzyMetric
-
-
-def normalize(text: str) -> str:
-    return text.lower()
-
-
-def is_sym(char: str) -> bool:
-    return not char.isalnum() and not char.isspace()
 
 
 def fuzzify(context: Context, step: Step) -> FuzzyStep:

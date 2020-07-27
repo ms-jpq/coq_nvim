@@ -18,7 +18,7 @@ from typing import (
 from pynvim import Nvim
 
 from .lsp_pkgs.snippet import ParseError, parse_snippet
-from .pkgs.fc_types import Completion, Context, LEdit, Position, Seed, Source
+from ..shared.types import Completion, Context, LEdit, Position, Seed, Source
 from .pkgs.nvim import call, print
 from .pkgs.shared import normalize, parse_common_affix
 

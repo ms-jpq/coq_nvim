@@ -5,8 +5,8 @@ from typing import AsyncIterator, Iterator, Sequence
 
 from pynvim import Nvim
 
-from .pkgs.da import anext
-from .pkgs.fc_types import Completion, Context, Seed, Source
+from ..shared.da import anext
+from ..shared.types import Completion, Context, Seed, Source
 
 
 def parse_path(root: str, parent: str = "") -> Iterator[str]:

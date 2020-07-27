@@ -6,8 +6,8 @@ from typing import AsyncIterator, Dict, Iterator, Sequence
 
 from pynvim import Nvim
 
-from .pkgs.da import call
-from .pkgs.fc_types import Completion, Context, Seed, Source
+from ..shared.da import call
+from ..shared.types import Completion, Context, Seed, Source
 from .pkgs.nvim import print, run_forever
 from .pkgs.scheduler import schedule
 from .pkgs.shared import coalesce, find_matches, normalize

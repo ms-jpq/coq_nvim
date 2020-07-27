@@ -1,7 +1,7 @@
 from typing import Sequence
 
 from .state import forward
-from ..shared.types import Settings, State
+from .types import Settings, State
 
 
 def t_natural_insertable(state: State) -> bool:

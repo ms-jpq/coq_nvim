@@ -1,7 +1,7 @@
 from typing import Dict, Iterable, Iterator, List, Tuple
 
-from .da import subsequences
-from .fc_types import Context
+from ...shared.da import subsequences
+from ...shared.types import Context
 
 
 def normalize(text: str) -> str:

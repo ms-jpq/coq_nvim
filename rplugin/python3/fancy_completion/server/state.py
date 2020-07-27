@@ -1,7 +1,7 @@
 from typing import Optional, Set
 
 from ..shared.da import or_else
-from ..shared.types import Settings, State
+from .types import Settings, State
 
 
 def initial(settings: Settings) -> State:

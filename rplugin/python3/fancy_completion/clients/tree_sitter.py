@@ -3,7 +3,7 @@ from typing import AsyncIterator
 
 from pynvim import Nvim
 
-from .pkgs.fc_types import Source, Completion, Context, Seed
+from ..shared.types import Source, Completion, Context, Seed
 from .pkgs.nvim import call
 
 
