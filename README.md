@@ -40,14 +40,14 @@ Plug 'ms-jpq/fancy-completion', {'branch': 'nvim', 'do': ':UpdateRemotePlugins'}
 
 ### Builtin Sources
 
-| name                                                                                       | source                                                                  |
-| ------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------- |
-| [LSP](https://github.com/ms-jpq/fancy-completion/blob/nvim/clients/lsp.py)                 | Fetches results from Neovim LSP client                                  |
-| [Tree Sitter](https://github.com/ms-jpq/fancy-completion/blob/nvim/clients/tree_sitter.py) | Fetches results from syntax tree (still waiting on next Neovim release) |
-| [Tmux](https://github.com/ms-jpq/fancy-completion/blob/nvim/clients/tmux.py)               | Fetches results from tmux panes (cached @ adjustable intervals)           |
-| [Around](https://github.com/ms-jpq/fancy-completion/blob/nvim/clients/around.py)           | Fetches results from lines around cursor                                |
-| [Buffers](https://github.com/ms-jpq/fancy-completion/blob/nvim/clients/buffers.py)         | Fetches results from seen buffers (cached @ adjustable intervals)         |
-| [Paths](https://github.com/ms-jpq/fancy-completion/blob/nvim/clients/paths.py)             | Fetches results from file paths                                         |
+| name                                                                                                                        | source                                                                  |
+| --------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------- |
+| [LSP](https://github.com/ms-jpq/fancy-completion/blob/nvim/rplugin/python3/fancy_completion/clients/lsp.py)                 | Fetches results from Neovim LSP client                                  |
+| [Tree Sitter](https://github.com/ms-jpq/fancy-completion/blob/nvim/rplugin/python3/fancy_completion/clients/tree_sitter.py) | Fetches results from syntax tree (still waiting on next Neovim release) |
+| [Tmux](https://github.com/ms-jpq/fancy-completion/blob/nvim/rplugin/python3/fancy_completion/clients/tmux.py)               | Fetches results from tmux panes (cached @ adjustable intervals)         |
+| [Around](https://github.com/ms-jpq/fancy-completion/blob/nvim/rplugin/python3/fancy_completion/clients/around.py)           | Fetches results from lines around cursor                                |
+| [Buffers](https://github.com/ms-jpq/fancy-completion/blob/nvim/rplugin/python3/fancy_completion/clients/buffers.py)         | Fetches results from seen buffers (cached @ adjustable intervals)       |
+| [Paths](https://github.com/ms-jpq/fancy-completion/blob/nvim/rplugin/python3/fancy_completion/clients/paths.py)             | Fetches results from file paths                                         |
 
 ### External Sources
 
@@ -66,6 +66,8 @@ The newer dictionary will automatically be merged with the older one.
 | keys                       | option                                             |
 | -------------------------- | -------------------------------------------------- |
 | `fuzzy.min_match`          | minimum # of chars matches required to show result |
+| `cache.band_size`          | cache "band" around cursor                         |
+| `cache.limit`              | max resutls shown from cache                       |
 | `source.<name>.enabled`    | source enabled                                     |
 | `source.<name>.limit`      | max results shown                                  |
 | `source.<name>.timeout`    | max wait time for source                           |
@@ -121,6 +123,6 @@ For completion results, the prefix / suffix determine the cusor location, post c
 
 Each client is loaded by specifying a `source.<name>.main` path relative to the parent directory of `fancy-completion`.
 
-Each client is must have a `main` function that conforms to the types `Source` and `Factory` in the [spec file](https://github.com/ms-jpq/fancy-completion/blob/nvim/rplugin/python3/fancy_completion/types.py).
+Each client is must have a `main` function that conforms to the types `Source` and `Factory` in the [spec file](https://github.com/ms-jpq/fancy-completion/blob/nvim/rplugin/python3/fancy_completion/shared/types.py).
 
 See the External Sources section for examples.

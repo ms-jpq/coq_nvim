@@ -2,9 +2,9 @@ from asyncio import gather, wait
 from collections import deque
 from typing import Awaitable, Callable, Dict, List, Sequence, Set, Tuple
 
-from ..shared.parse import parse_common_affix
+from ..shared.parse import count_matches, parse_common_affix
 from ..shared.types import Completion, Context
-from .types import CacheOptions, Step
+from .types import CacheOptions, FuzzyOptions, Step
 
 
 def recalculate(context: Context, options: CacheOptions, step: Step) -> Step:
@@ -29,7 +29,7 @@ def recalculate(context: Context, options: CacheOptions, step: Step) -> Step:
 
 
 def make_cache(
-    options: CacheOptions,
+    fuzzy: FuzzyOptions, options: CacheOptions,
 ) -> Tuple[
     Callable[[Context, Sequence[Step]], None],
     Callable[[Context, float], Awaitable[Sequence[Step]]],
@@ -58,6 +58,7 @@ def make_cache(
         rows = bufs.get(context.filename, {})
         cols = rows.get(position.row, {})
         col = position.col
+        cword, ncword = context.alnums, context.alnums_normalized
 
         acc: List[Step] = []
 
@@ -67,10 +68,13 @@ def make_cache(
             for c in range(col - half_band_size, col + half_band_size + 1):
                 for step in cols.get(c, ()):
                     text = step.text
+                    nword = step.text_normalized
                     if text not in seen:
-                        seen.add(text)
-                        new_step = recalculate(context, options=options, step=step)
-                        acc.append(new_step)
+                        matches = count_matches(cword, word=text, nword=nword)
+                        if matches >= fuzzy.min_match and nword not in ncword:
+                            seen.add(text)
+                            new_step = recalculate(context, options=options, step=step)
+                            acc.append(new_step)
 
         done, pending = await wait((cont(),), timeout=timeout)
         for p in pending:

@@ -207,7 +207,7 @@ async def merge(
     src_gen = await gather(*(osha(nvim, factory=factory) for factory in facts))
     chans: Dict[str, Optional[Queue]] = {name: chan for name, _, chan in src_gen}
     sources: Dict[str, StepFunction] = {name: source for name, source, _ in src_gen}
-    push, pull = make_cache(cache_opt)
+    push, pull = make_cache(settings.fuzzy, options=cache_opt)
 
     async def gen(options: GenOptions) -> Tuple[Position, Iterator[VimCompletion]]:
         context = await gen_context(nvim)

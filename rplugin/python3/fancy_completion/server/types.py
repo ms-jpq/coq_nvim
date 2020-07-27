@@ -19,7 +19,7 @@ class FuzzyOptions:
 class CacheOptions:
     short_name: str
     band_size: int
-    limit: int
+    limit: float
     source_name: str = "cache"
 
 
