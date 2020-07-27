@@ -144,6 +144,7 @@ async def manufacture(nvim: Nvim, factory: SourceFactory) -> Tuple[StepFunction,
                 step = Step(
                     source=name,
                     source_shortname=factory.short_name,
+                    rank=factory.rank,
                     text=text,
                     text_normalized=normalized_text,
                     comp=comp,

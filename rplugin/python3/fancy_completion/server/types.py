@@ -30,6 +30,7 @@ class SourceSpec:
     enabled: bool
     limit: Optional[float]
     timeout: Optional[float]
+    rank: Optional[int]
     config: Dict[str, Any]
 
 
@@ -46,6 +47,7 @@ class SourceFactory:
     short_name: str
     timeout: float
     limit: float
+    rank: float
     seed: Seed
     manufacture: Factory
 
@@ -53,6 +55,7 @@ class SourceFactory:
 @dataclass(frozen=True)
 class Step:
     source: str
+    rank: float
     source_shortname: str
     text: str
     text_normalized: str

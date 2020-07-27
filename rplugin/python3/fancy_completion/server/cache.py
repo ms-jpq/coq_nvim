@@ -21,6 +21,7 @@ def recalculate(context: Context, options: CacheOptions, step: Step) -> Step:
     new_step = Step(
         source=options.source_name,
         source_shortname=options.short_name,
+        rank=step.rank,
         text=step.text,
         text_normalized=step.text_normalized,
         comp=comp,

@@ -69,6 +69,7 @@ def rank(fuzz: FuzzyStep) -> Sequence[Union[float, int, str]]:
         metric.prefix_matches * -1,
         metric.num_matches * -1,
         metric.consecutive_matches * -1,
+        step.rank * -1,
         metric.density * -1,
         text,
     )

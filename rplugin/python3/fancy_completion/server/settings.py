@@ -17,6 +17,7 @@ def load_source(config: Any) -> SourceSpec:
         enabled=config["enabled"],
         limit=config.get("limit"),
         timeout=config.get("timeout"),
+        rank=config.get("rank"),
         config=config.get("config"),
     )
     return spec
@@ -53,6 +54,7 @@ def assemble(
 ) -> SourceFactory:
     limit = spec.limit or inf
     timeout = (spec.timeout or inf) / 1000
+    rank = spec.rank or 100
     config = spec.config or {}
     seed = Seed(min_match=min_match, limit=limit, timeout=timeout, config=config)
     fact = SourceFactory(
@@ -60,6 +62,7 @@ def assemble(
         short_name=spec.short_name,
         limit=limit,
         timeout=timeout,
+        rank=rank,
         seed=seed,
         manufacture=main,
     )
