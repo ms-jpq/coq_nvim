@@ -197,13 +197,17 @@ async def merge(
     Callable[[GenOptions], Awaitable[Tuple[Position, Iterator[VimCompletion]]]],
     Callable[[], Awaitable[None]],
 ]:
+    cache_opt = settings.cache
     facts = tuple(factories)
-    limits = {fact.name: fact.limit for fact in facts}
+    limits = {
+        **{fact.name: fact.limit for fact in facts},
+        cache_opt.source_name: cache_opt.limit,
+    }
     fuzzy = fuzzer(settings.fuzzy, limits=limits)
     src_gen = await gather(*(osha(nvim, factory=factory) for factory in facts))
     chans: Dict[str, Optional[Queue]] = {name: chan for name, _, chan in src_gen}
     sources: Dict[str, StepFunction] = {name: source for name, source, _ in src_gen}
-    push, pull = make_cache(settings.cache)
+    push, pull = make_cache(cache_opt)
 
     async def gen(options: GenOptions) -> Tuple[Position, Iterator[VimCompletion]]:
         context = await gen_context(nvim)
