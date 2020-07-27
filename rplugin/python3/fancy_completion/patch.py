@@ -9,13 +9,15 @@ from pynvim.api.window import Window
 
 from .types import LEdit, Payload, Position
 
+IText = Union[str, Tuple[()]]
+TextStream = Sequence[IText]
+
 
 @dataclass(frozen=True)
 class Replacement:
     begin: int
     length: int
-    text: str
-    cursor: bool = False
+    text: TextStream
 
 
 # 0 based
@@ -54,21 +56,18 @@ def calculate_replacement(
     return replacement
 
 
-def calculate_main_replacements(
+def calculate_main_replacement(
     row_lens: Dict[int, int], start: int, payload: Payload
-) -> Tuple[Replacement, Replacement]:
+) -> Replacement:
     row, col = payload.position.row, payload.position.col
 
-    length1 = len(payload.old_prefix)
-    begin1 = sum(row_lens[r] for r in range(start, row)) + col - length1
-    length2 = len(payload.old_suffix)
-    begin2 = col
+    len_pre = len(payload.old_prefix)
+    begin = sum(row_lens[r] for r in range(start, row)) + col - len_pre
+    length = len_pre + len(payload.old_suffix)
+    text = (*payload.new_prefix, (), *payload.new_suffix)
 
-    replacement1 = Replacement(
-        begin=begin1, length=length1, text=payload.new_prefix, cursor=True
-    )
-    replacement2 = Replacement(begin=begin2, length=length2, text=payload.new_suffix)
-    return replacement1, replacement2
+    replacement = Replacement(begin=begin, length=length, text=text)
+    return replacement
 
 
 def overlap(r1: Replacement, r2: Replacement) -> bool:
@@ -76,25 +75,22 @@ def overlap(r1: Replacement, r2: Replacement) -> bool:
     return bool(range(max(r1.begin, r2.begin), min(r1_end, r2_end) + 1))
 
 
-def rank(replacement: Replacement) -> Tuple[int, int, str]:
+def rank(replacement: Replacement) -> Tuple[int, int, TextStream]:
     return replacement.begin, replacement.length, replacement.text
 
 
 def consolidate_replacements(
     row_lens: Dict[int, int], start: int, payload: Payload
 ) -> Sequence[Replacement]:
-    main_replacements = calculate_main_replacements(
-        row_lens, start=start, payload=payload
-    )
+    main = calculate_main_replacement(row_lens, start=start, payload=payload)
     auxiliary_replacements = (
         calculate_replacement(row_lens, start=start, edit=edit)
         for edit in payload.ledits
     )
 
     def cont() -> Iterator[Replacement]:
-        seen: List[Replacement] = [*main_replacements]
-        yield from iter(main_replacements)
-        for r in sorted(auxiliary_replacements, key=rank):
+        seen: List[Replacement] = []
+        for r in chain((main,), sorted(auxiliary_replacements, key=rank)):
             if not any(overlap(r, s) for s in seen):
                 seen.append(r)
                 yield r
@@ -112,14 +108,12 @@ def stream_lines(rows: Sequence[str]) -> Iterator[Tuple[int, str]]:
 
 def perform_edits(
     stream: Iterator[Tuple[int, str]], replacements: Iterator[Replacement]
-) -> Iterator[Union[str, Tuple[()]]]:
+) -> Iterator[IText]:
     replacement = next(replacements, None)
     for idx, char in stream:
         if replacement and idx == replacement.begin:
             yield from iter(replacement.text)
-            if replacement.cursor:
-                yield ()
-            for _ in zip(stream, range(replacement.length)):
+            for _ in zip(stream, range(replacement.length - 1)):
                 pass
             replacement = next(replacements, None)
         else:
