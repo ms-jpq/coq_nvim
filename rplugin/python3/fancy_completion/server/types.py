@@ -16,6 +16,14 @@ class FuzzyOptions:
 
 
 @dataclass(frozen=True)
+class CacheOptions:
+    short_name: str
+    band_size: int
+    limit: int
+    source_name: str = "cache"
+
+
+@dataclass(frozen=True)
 class SourceSpec:
     main: str
     short_name: str
@@ -28,6 +36,7 @@ class SourceSpec:
 @dataclass(frozen=True)
 class Settings:
     fuzzy: FuzzyOptions
+    cache: CacheOptions
     sources: Dict[str, SourceSpec]
 
 

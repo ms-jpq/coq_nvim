@@ -22,7 +22,6 @@ NAME = "buffers"
 @dataclass(frozen=True)
 class Config:
     polling_rate: float
-    min_length: int
     max_length: int
 
 
@@ -59,7 +58,7 @@ async def buffer_chars(nvim: Nvim, buf_gen: Iterator[Buffer]) -> Sequence[str]:
 async def main(nvim: Nvim, chan: Queue, seed: Seed) -> Source:
     config = Config(**seed.config)
     ch = Event()
-    min_length, max_length = config.min_length, config.max_length
+    min_length, max_length = seed.min_match, config.max_length
 
     bufnrs: Set[int] = set()
     words: Dict[str, str] = {}
@@ -85,7 +84,7 @@ async def main(nvim: Nvim, chan: Queue, seed: Seed) -> Source:
             b_gen = buf_gen(nvim, bufnrs)
             bufnrs.clear()
             chars = await buffer_chars(nvim, b_gen)
-            for word in coalesce(chars, min_length=min_length, max_length=max_length):
+            for word in coalesce(chars, max_length=max_length):
                 if word not in words:
                     words[word] = normalize(word)
 

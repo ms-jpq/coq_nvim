@@ -19,7 +19,6 @@ NAME = "tmux"
 @dataclass(frozen=True)
 class Config:
     polling_rate: float
-    min_length: int
     max_length: int
 
 
@@ -81,7 +80,7 @@ def is_active(session_id: str, pane: TmuxPane) -> bool:
     return session_id == pane.session_id and pane.pane_active and pane.window_active
 
 
-async def tmux_words(min_length: int, max_length: int) -> AsyncIterator[str]:
+async def tmux_words(max_length: int) -> AsyncIterator[str]:
     if which("tmux"):
         session_id, panes = await gather(tmux_session(), tmux_panes())
         sources = tuple(
@@ -90,22 +89,20 @@ async def tmux_words(min_length: int, max_length: int) -> AsyncIterator[str]:
         for source in as_completed(sources):
             text = await source
             it = iter(text)
-            for word in coalesce(it, min_length=min_length, max_length=max_length):
+            for word in coalesce(it, max_length=max_length):
                 yield word
 
 
 async def main(nvim: Nvim, chan: Queue, seed: Seed) -> Source:
     config = Config(**seed.config)
-    min_length, max_length = config.min_length, config.max_length
+    min_length, max_length = seed.min_match, config.max_length
     words: Dict[str, str] = {}
 
     async def background_update() -> None:
         async for _ in schedule(Event(), min_time=0, max_time=config.polling_rate):
             words.clear()
             try:
-                async for word in tmux_words(
-                    min_length=min_length, max_length=max_length
-                ):
+                async for word in tmux_words(max_length=max_length):
                     if word not in words:
                         words[word] = normalize(word)
             except TmuxError as e:

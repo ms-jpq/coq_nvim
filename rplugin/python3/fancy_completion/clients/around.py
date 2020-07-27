@@ -18,7 +18,6 @@ NAME = "around"
 @dataclass(frozen=True)
 class Config:
     band_size: int
-    min_length: int
     max_length: int
 
 
@@ -41,7 +40,7 @@ async def buffer_chars(nvim: Nvim, band_size: int, pos: Position) -> Sequence[st
 async def main(nvim: Nvim, chan: Queue, seed: Seed) -> Source:
     config = Config(**seed.config)
     band_size = config.band_size
-    min_length, max_length = config.min_length, config.max_length
+    min_length, max_length = seed.min_match, config.max_length
 
     async def source(context: Context) -> AsyncIterator[Completion]:
         position = context.position
@@ -50,7 +49,7 @@ async def main(nvim: Nvim, chan: Queue, seed: Seed) -> Source:
 
         chars = await buffer_chars(nvim, band_size=band_size, pos=position)
         words: Dict[str, str] = {}
-        for word in coalesce(chars, min_length=min_length, max_length=max_length):
+        for word in coalesce(chars, max_length=max_length):
             if word not in words:
                 words[word] = normalize(word)
 

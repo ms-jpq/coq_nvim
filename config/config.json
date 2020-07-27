@@ -1,4 +1,9 @@
 {
+  "cache": {
+    "band_size": 20,
+    "limit": 3,
+    "short_name": "CACHE"
+  },
   "fuzzy": {
     "min_match": 1
   },
@@ -6,8 +11,7 @@
     "around": {
       "config": {
         "band_size": 20,
-        "max_length": 20,
-        "min_length": 2
+        "max_length": 20
       },
       "enabled": true,
       "limit": 3,
@@ -18,7 +22,6 @@
     "buffers": {
       "config": {
         "max_length": 20,
-        "min_length": 2,
         "polling_rate": 1
       },
       "enabled": true,
@@ -46,7 +49,6 @@
     "tmux": {
       "config": {
         "max_length": 20,
-        "min_length": 2,
         "polling_rate": 1
       },
       "enabled": true,

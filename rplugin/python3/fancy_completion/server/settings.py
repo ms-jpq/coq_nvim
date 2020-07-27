@@ -7,7 +7,7 @@ from ..clients import around, buffers, lsp, paths, tmux, tree_sitter
 from ..shared.da import load_json, load_module, merge_all
 from ..shared.types import Factory, Seed
 from .consts import load_hierarchy, module_entry_point, settings_json
-from .types import FuzzyOptions, Settings, SourceFactory, SourceSpec
+from .types import CacheOptions, FuzzyOptions, Settings, SourceFactory, SourceSpec
 
 
 def load_source(config: Any) -> SourceSpec:
@@ -25,9 +25,15 @@ def load_source(config: Any) -> SourceSpec:
 def initial(configs: Sequence[Any]) -> Settings:
     config = merge_all(load_json(settings_json), *configs)
     fuzzy_o = config["fuzzy"]
-    fuzzy = FuzzyOptions(min_match=fuzzy_o["min_match"],)
+    cache_o = config["cache"]
+    fuzzy = FuzzyOptions(min_match=fuzzy_o["min_match"])
+    cache = CacheOptions(
+        short_name=cache_o["short_name"],
+        band_size=cache_o["band_size"],
+        limit=cache_o["limit"],
+    )
     sources = {name: load_source(conf) for name, conf in config["sources"].items()}
-    settings = Settings(fuzzy=fuzzy, sources=sources)
+    settings = Settings(fuzzy=fuzzy, cache=cache, sources=sources)
     return settings
 
 
@@ -42,11 +48,13 @@ def load_external(spec: SourceSpec) -> Optional[Factory]:
     return None
 
 
-def assemble(spec: SourceSpec, name: str, main: Factory) -> SourceFactory:
+def assemble(
+    spec: SourceSpec, name: str, main: Factory, min_match: int
+) -> SourceFactory:
     limit = spec.limit or inf
     timeout = (spec.timeout or inf) / 1000
     config = spec.config or {}
-    seed = Seed(config=config, limit=limit, timeout=timeout)
+    seed = Seed(min_match=min_match, limit=limit, timeout=timeout, config=config)
     fact = SourceFactory(
         name=name,
         short_name=spec.short_name,
@@ -59,6 +67,7 @@ def assemble(spec: SourceSpec, name: str, main: Factory) -> SourceFactory:
 
 
 def load_factories(settings: Settings) -> Iterator[SourceFactory]:
+    min_match = settings.fuzzy.min_match
     intrinsic = {
         around.NAME: around.main,
         buffers.NAME: buffers.main,
@@ -67,12 +76,13 @@ def load_factories(settings: Settings) -> Iterator[SourceFactory]:
         tmux.NAME: tmux.main,
         tree_sitter.NAME: tree_sitter.main,
     }
+
     for name, main in intrinsic.items():
         spec = settings.sources[name]
-        yield assemble(spec, name=name, main=main)
+        yield assemble(spec, name=name, main=main, min_match=min_match)
 
     for name, spec in settings.sources.items():
         if name not in intrinsic:
             main = load_external(spec)
             if main:
-                yield assemble(spec, name=name, main=main)
+                yield assemble(spec, name=name, main=main, min_match=min_match)

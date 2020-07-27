@@ -7,6 +7,7 @@ from pynvim import Nvim
 
 @dataclass(frozen=True)
 class Seed:
+    min_match: int
     limit: float
     timeout: float
     config: Optional[Any] = None

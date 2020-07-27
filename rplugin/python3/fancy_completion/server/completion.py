@@ -1,5 +1,6 @@
 from asyncio import Queue, gather, wait
 from dataclasses import dataclass
+from itertools import chain
 from os import linesep
 from traceback import format_exc
 from typing import (
@@ -20,6 +21,7 @@ from pynvim import Nvim
 from ..shared.nvim import call, print
 from ..shared.parse import is_sym, normalize
 from ..shared.types import Context, Factory, Position
+from .cache import make_cache
 from .fuzzy import fuzzer
 from .nvim import VimCompletion
 from .types import Notification, Settings, SourceFactory, Step
@@ -139,14 +141,14 @@ async def manufacture(nvim: Nvim, factory: SourceFactory) -> Tuple[StepFunction,
             async for comp in src(context):
                 text = comp.new_prefix + comp.new_suffix
                 normalized_text = normalize(text)
-                completion = Step(
+                step = Step(
                     source=name,
                     source_shortname=factory.short_name,
                     text=text,
                     text_normalized=normalized_text,
                     comp=comp,
                 )
-                acc.append(completion)
+                acc.append(step)
 
         done, pending = await wait((cont(),), timeout=timeout)
         for p in pending:
@@ -201,6 +203,7 @@ async def merge(
     src_gen = await gather(*(osha(nvim, factory=factory) for factory in facts))
     chans: Dict[str, Optional[Queue]] = {name: chan for name, _, chan in src_gen}
     sources: Dict[str, StepFunction] = {name: source for name, source, _ in src_gen}
+    push, pull = make_cache(settings.cache)
 
     async def gen(options: GenOptions) -> Tuple[Position, Iterator[VimCompletion]]:
         context = await gen_context(nvim)
@@ -212,9 +215,14 @@ async def merge(
                 for name, source in sources.items()
                 if name in options.sources
             )
-            comps = await gather(*source_gen)
-            steps = (c for co in comps for c in co)
-            return position, fuzzy(context, steps)
+            max_wait = min(
+                fact.timeout for fact in facts if fact.name in options.sources
+            )
+            cached, *comps = await gather(pull(context, max_wait), *source_gen)
+            steps = tuple(c for co in comps for c in co)
+            push(context, steps)
+            all_steps = chain(steps, cached)
+            return position, fuzzy(context, all_steps)
         else:
             return position, iter(())
 

@@ -33,7 +33,7 @@ def find_matches(
             yield word
 
 
-def coalesce(chars: Iterable[str], min_length: int, max_length: int) -> Iterator[str]:
+def coalesce(chars: Iterable[str], max_length: int) -> Iterator[str]:
     curr: List[str] = []
     for char in chars:
         if char.isalnum():
@@ -42,13 +42,13 @@ def coalesce(chars: Iterable[str], min_length: int, max_length: int) -> Iterator
             word = "".join(curr)
             curr.clear()
             wl = len(word)
-            if wl >= min_length and wl <= max_length:
+            if wl <= max_length:
                 yield word
 
     if curr:
         word = "".join(curr)
         wl = len(word)
-        if wl >= min_length and wl >= max_length:
+        if wl >= max_length:
             yield word
 
 
