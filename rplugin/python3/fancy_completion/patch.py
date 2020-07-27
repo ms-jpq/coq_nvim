@@ -113,8 +113,8 @@ def perform_edits(
     for idx, char in stream:
         if replacement and idx == replacement.begin:
             yield from iter(replacement.text)
-            for _ in zip(stream, range(replacement.length - 1)):
-                pass
+            for _ in range(replacement.length - 1):
+                next(stream, None)
             replacement = next(replacements, None)
         else:
             yield char
@@ -167,9 +167,7 @@ def replace_lines(nvim: Nvim, payload: Payload) -> None:
     nvim.api.win_set_cursor(win, (pos.row + 1, pos.col))
 
     nvim.api.out_write(str(payload) + "\n")
-    nvim.api.out_write(str(old_lines) + "\n")
     nvim.api.out_write(str(replacements) + "\n")
-    nvim.api.out_write(str(pos) + "\n")
 
 
 def apply_patch(nvim: Nvim, comp: Dict[str, Any]) -> None:
