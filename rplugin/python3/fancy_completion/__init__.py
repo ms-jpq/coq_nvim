@@ -1,10 +1,4 @@
-from asyncio import (
-    AbstractEventLoop,
-    Queue,
-    create_task,
-    gather,
-    run_coroutine_threadsafe,
-)
+from asyncio import AbstractEventLoop, Queue, gather, run_coroutine_threadsafe
 from concurrent.futures import ThreadPoolExecutor
 from locale import strxfrm
 from traceback import format_exc

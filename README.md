@@ -6,7 +6,7 @@ The **BEST** async completion framework for Neovim
 
 Async completion on every keystroke.
 
-Fuzzy search all the results.
+Fuzzy search through nearby results.
 
 ![preview.png](https://raw.githubusercontent.com/ms-jpq/fast-comp/nvim/preview/screenshot.png)
 
