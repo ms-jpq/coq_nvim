@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from itertools import chain, count
 from os import linesep
-from typing import Any, Dict, Iterator, List, Optional, Sequence, Tuple, cast
+from typing import Any, Dict, Iterator, List, Sequence, Tuple, cast
 
 from pynvim import Nvim
 from pynvim.api.buffer import Buffer
@@ -14,6 +14,7 @@ from .types import Edit, Payload, Position
 class Replacement:
     begin: int
     length: int
+    text: str
     cursor: bool = False
 
 
@@ -47,8 +48,9 @@ def calculate_replacement(
     middle = sum(row_lens[r] for r in range(b_row + 1, e_row))
     end = e_col
     length = begin + middle + end
+    text = edit.new_text
 
-    replacement = Replacement(begin=lower, length=length)
+    replacement = Replacement(begin=lower, length=length, text=text)
     return replacement
 
 
@@ -57,14 +59,25 @@ def calculate_main_replacements(
 ) -> Tuple[Replacement, Replacement]:
     row, col = payload.position.row, payload.position.col
 
-    begin1 = sum(row_lens[r] for r in range(start, row)) + col
     length1 = len(payload.old_prefix)
-    begin2 = begin1 + length1
+    begin1 = sum(row_lens[r] for r in range(start, row)) + col - length1
     length2 = len(payload.old_suffix)
+    begin2 = col
 
-    replacement1 = Replacement(begin=begin1, length=length1)
-    replacement2 = Replacement(begin=begin2, length=length2, cursor=True)
+    replacement1 = Replacement(begin=begin1, length=length1, text=payload.new_prefix)
+    replacement2 = Replacement(
+        begin=begin2, length=length2, text=payload.new_suffix, cursor=True
+    )
     return replacement1, replacement2
+
+
+def overlap(r1: Replacement, r2: Replacement) -> bool:
+    r1_end, r2_end = r1.begin + r1.length, r2.begin + r2.length
+    return bool(range(max(r1.begin, r2.begin), min(r1_end, r2_end) + 1))
+
+
+def rank(replacement: Replacement) -> Tuple[int, int, str]:
+    return replacement.begin, replacement.length, replacement.text
 
 
 def consolidate_replacements(
@@ -77,7 +90,16 @@ def consolidate_replacements(
         calculate_replacement(row_lens, start=start, edit=edit)
         for edit in payload.edits
     )
-    return (*main_replacements, *auxiliary_replacements)
+
+    def cont() -> Iterator[Replacement]:
+        seen: List[Replacement] = [*main_replacements]
+        yield from iter(main_replacements)
+        for r in sorted(auxiliary_replacements, key=rank):
+            if not any(overlap(r, s) for s in seen):
+                seen.append(r)
+                yield r
+
+    return sorted(cont(), key=rank)
 
 
 def stream_lines(rows: Sequence[str]) -> Iterator[Tuple[int, str]]:
@@ -91,8 +113,15 @@ def stream_lines(rows: Sequence[str]) -> Iterator[Tuple[int, str]]:
 def perform_edits(
     stream: Iterator[Tuple[int, str]], replacements: Iterator[Replacement]
 ) -> Iterator[str]:
+    replacement = next(replacements, None)
     for idx, char in stream:
-        yield char
+        if replacement and idx == replacement.begin:
+            yield replacement.text
+            for _ in zip(stream, range(replacement.length)):
+                pass
+            replacement = next(replacements, None)
+        else:
+            yield char
 
 
 def split_stream(stream: Iterator[str]) -> Sequence[str]:
@@ -112,21 +141,25 @@ def split_stream(stream: Iterator[str]) -> Sequence[str]:
 
 def replace_lines(nvim: Nvim, payload: Payload) -> None:
     btm_idx, top_idx = rows_to_fetch(payload)
+    top_idx = top_idx + 1
+
     win: Window = nvim.api.get_current_win()
     buf: Buffer = nvim.api.get_current_buf()
-    old_lines: Sequence[str] = nvim.api.buf_get_lines(buf, btm_idx, top_idx + 1, True)
+    old_lines: Sequence[str] = nvim.api.buf_get_lines(buf, btm_idx, top_idx, True)
 
     row_lens = row_lengths(old_lines, start=btm_idx)
     replacements = consolidate_replacements(row_lens, start=btm_idx, payload=payload)
-    # stream = perform_edits(rows, edits=iter(edits))
-    # new_lines = split_stream(stream)
+    stream = stream_lines(old_lines)
+    text_stream = perform_edits(stream, replacements=iter(replacements))
+    new_lines = split_stream(text_stream)
 
-    # nvim.api.buf_set_lines(buf, btm_idx, top_idx, True, new_lines)
+    nvim.api.buf_set_lines(buf, btm_idx, top_idx, True, new_lines)
     # nvim.api.win_set_cursor(win, (new_row, new_col))
 
     nvim.api.out_write(str(payload) + "\n")
     nvim.api.out_write(str(old_lines) + "\n")
     nvim.api.out_write(str(replacements) + "\n")
+    nvim.api.out_write(str(new_lines) + "\n")
 
 
 def apply_patch(nvim: Nvim, comp: Dict[str, Any]) -> None:
