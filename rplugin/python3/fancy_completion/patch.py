@@ -17,6 +17,7 @@ class Replacement:
     cursor: bool = False
 
 
+# 0 based
 def rows_to_fetch(payload: Payload) -> Tuple[int, int]:
     row = payload.position.row
     edits = payload.edits
@@ -25,8 +26,8 @@ def rows_to_fetch(payload: Payload) -> Tuple[int, int]:
         payload.old_suffix.count(linesep),
     )
     main_btm, main_top = row - old_lc, row + new_lc
-    btm_idx = min(main_btm, *(e.begin.row for e in edits))
-    top_idx = max(main_top, *(e.end.row for e in edits))
+    btm_idx = min(chain((e.begin.row for e in edits), (main_btm,)))
+    top_idx = max(chain((e.end.row for e in edits), (main_top,)))
     return btm_idx, top_idx
 
 
@@ -113,9 +114,10 @@ def replace_lines(nvim: Nvim, payload: Payload) -> None:
     btm_idx, top_idx = rows_to_fetch(payload)
     win: Window = nvim.api.get_current_win()
     buf: Buffer = nvim.api.get_current_buf()
-    old_lines: Sequence[str] = nvim.api.buf_get_lines(buf, btm_idx, top_idx, True)
+    old_lines: Sequence[str] = nvim.api.buf_get_lines(buf, btm_idx, top_idx + 1, True)
 
     row_lens = row_lengths(old_lines, start=btm_idx)
+    replacements = consolidate_replacements(row_lens, start=btm_idx, payload=payload)
     # stream = perform_edits(rows, edits=iter(edits))
     # new_lines = split_stream(stream)
 
@@ -124,6 +126,7 @@ def replace_lines(nvim: Nvim, payload: Payload) -> None:
 
     nvim.api.out_write(str(payload) + "\n")
     nvim.api.out_write(str(old_lines) + "\n")
+    nvim.api.out_write(str(replacements) + "\n")
 
 
 def apply_patch(nvim: Nvim, comp: Dict[str, Any]) -> None:
