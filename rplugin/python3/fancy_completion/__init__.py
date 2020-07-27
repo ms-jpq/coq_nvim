@@ -12,13 +12,13 @@ from typing import Any, Awaitable, Sequence
 
 from pynvim import Nvim, command, function, plugin
 
-from .completion import GenOptions, merge
-from .nvim import autocmd, complete, print, run_forever
-from .patch import apply_patch
-from .scheduler import Signal, schedule
-from .settings import initial, load_factories
-from .state import initial as initial_state
-from .transitions import (
+from .server.completion import GenOptions, merge
+from .server.nvim import autocmd, complete, print, run_forever
+from .server.patch import apply_patch
+from .server.scheduler import Signal, schedule
+from .server.settings import initial, load_factories
+from .server.state import initial as initial_state
+from .server.transitions import (
     t_char_inserted,
     t_comp_inserted,
     t_natural_insertable,
@@ -26,7 +26,7 @@ from .transitions import (
     t_text_changed,
     t_toggle_sources,
 )
-from .types import Notification
+from .shared.types import Notification
 
 
 @plugin

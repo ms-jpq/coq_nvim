@@ -7,7 +7,7 @@ from pynvim import Nvim
 from pynvim.api.buffer import Buffer
 from pynvim.api.window import Window
 
-from .types import LEdit, Payload, Position
+from ..shared.types import LEdit, Payload, Position
 
 IText = Union[str, Tuple[()]]
 TextStream = Sequence[IText]

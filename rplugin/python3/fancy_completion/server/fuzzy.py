@@ -4,7 +4,7 @@ from math import inf
 from typing import Any, Callable, Dict, Iterator, Sequence, Set, Union, cast
 
 from .nvim import VimCompletion
-from .types import Completion, Context, FuzzyOptions, Payload, Step
+from ..shared.types import Completion, Context, FuzzyOptions, Payload, Step
 
 
 @dataclass(frozen=True)

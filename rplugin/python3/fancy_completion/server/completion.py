@@ -19,7 +19,7 @@ from pynvim import Nvim
 
 from .fuzzy import fuzzer, is_sym, normalize
 from .nvim import VimCompletion, call, print
-from .types import (
+from ..shared.types import (
     Context,
     Factory,
     Notification,
