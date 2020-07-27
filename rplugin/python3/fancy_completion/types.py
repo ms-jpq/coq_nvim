@@ -133,7 +133,7 @@ class Payload:
     new_prefix: str
     old_suffix: str
     new_suffix: str
-    edits: Sequence[LEdit]
+    ledits: Sequence[LEdit]
 
 
 @dataclass(frozen=True)

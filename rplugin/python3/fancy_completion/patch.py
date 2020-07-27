@@ -21,7 +21,7 @@ class Replacement:
 # 0 based
 def rows_to_fetch(payload: Payload) -> Tuple[int, int]:
     row = payload.position.row
-    edits = payload.edits
+    edits = payload.ledits
     old_lc, new_lc = (
         payload.old_prefix.count(linesep),
         payload.old_suffix.count(linesep),
@@ -88,7 +88,7 @@ def consolidate_replacements(
     )
     auxiliary_replacements = (
         calculate_replacement(row_lens, start=start, edit=edit)
-        for edit in payload.edits
+        for edit in payload.ledits
     )
 
     def cont() -> Iterator[Replacement]:
@@ -191,7 +191,7 @@ def apply_patch(nvim: Nvim, comp: Dict[str, Any]) -> None:
             )
             for edit in d["ledits"]
         )
-        payload = Payload(**{**d, **dict(position=position, edits=edits)})
+        payload = Payload(**{**d, **dict(position=position, ledits=edits)})
     except (KeyError, TypeError):
         pass
     else:

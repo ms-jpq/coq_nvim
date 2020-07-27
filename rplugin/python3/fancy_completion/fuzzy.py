@@ -103,7 +103,7 @@ def gen_payload(comp: Completion) -> Payload:
         new_prefix=comp.new_prefix,
         old_suffix=comp.old_suffix,
         new_suffix=comp.new_suffix,
-        edits=comp.ledits,
+        ledits=comp.ledits,
     )
 
 
