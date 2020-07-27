@@ -20,7 +20,9 @@ def count_matches(cword: str, word: str, nword: str) -> int:
     return count
 
 
-def find_matches(cword: str, ncword: str, min_match: int, words: Dict[str, str]) -> Iterator[str]:
+def find_matches(
+    cword: str, ncword: str, min_match: int, words: Dict[str, str]
+) -> Iterator[str]:
     for word, nword in words.items():
         matches = count_matches(cword, word=word, nword=nword)
         if matches >= min_match and nword not in ncword:
@@ -59,14 +61,14 @@ def parse_common_affix(context: Context, match_normalized: str,) -> Tuple[str, s
         subsequences(match_normalized),
     )
 
-    prefix = ""
+    prefix = context.alnums_before
     idx = -1
     for i, (text, lhs, rhs) in enumerate(pre_it):
         if lhs == rhs:
             prefix = "".join(text)
             idx = i
 
-    suffix = ""
+    suffix = context.alnums_after
     rest = match_normalized[idx + 1 :]
     post_it = zip(
         subsequences(after),
@@ -77,7 +79,4 @@ def parse_common_affix(context: Context, match_normalized: str,) -> Tuple[str, s
         if lhs == rhs:
             suffix = "".join(text)
 
-    if not prefix and not suffix:
-        return context.alnums_before, context.alnums_after
-    else:
-        return prefix, suffix
+    return prefix, suffix
