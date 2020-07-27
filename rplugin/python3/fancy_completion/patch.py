@@ -45,14 +45,21 @@ def calculate_replacement(
     b_row, e_row = edit.begin.row, edit.end.row
     b_col, e_col = edit.begin.col, edit.end.col
 
-    lower = sum(row_lens[r] for r in range(start, b_row)) + b_col
-    begin = row_lens[b_row] - b_col - 1
-    middle = sum(row_lens[r] for r in range(b_row + 1, e_row))
-    end = e_col
-    length = begin + middle + end
-    text = edit.new_text
+    begin = sum(row_lens[r] for r in range(start, b_row)) + b_col
 
-    replacement = Replacement(begin=lower, length=length, text=text)
+    def r_len() -> int:
+        if b_row == e_row:
+            return e_col - b_col
+        else:
+            lo = row_lens[b_row] - b_col - 1
+            mi = sum(row_lens[r] for r in range(b_row + 1, e_row))
+            hi = e_col
+            return lo + mi + hi
+
+    length = r_len()
+
+    text = tuple(edit.new_text)
+    replacement = Replacement(begin=begin, length=length, text=text)
     return replacement
 
 
@@ -166,8 +173,7 @@ def replace_lines(nvim: Nvim, payload: Payload) -> None:
     nvim.api.buf_set_lines(buf, btm_idx, top_idx, True, new_lines)
     nvim.api.win_set_cursor(win, (pos.row + 1, pos.col))
 
-    nvim.api.out_write(str(payload) + "\n")
-    nvim.api.out_write(str(replacements) + "\n")
+    nvim.api.out_write(f"{payload}{linesep}")
 
 
 def apply_patch(nvim: Nvim, comp: Dict[str, Any]) -> None:
