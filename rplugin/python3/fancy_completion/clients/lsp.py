@@ -19,8 +19,8 @@ from pynvim import Nvim
 
 from .lsp_pkgs.snippet import ParseError, parse_snippet
 from ..shared.types import Completion, Context, LEdit, Position, Seed, Source
-from .pkgs.nvim import call, print
-from .pkgs.shared import normalize, parse_common_affix
+from ..shared.nvim import call, print
+from ..shared.parse import normalize, parse_common_affix
 
 
 @dataclass(frozen=True)

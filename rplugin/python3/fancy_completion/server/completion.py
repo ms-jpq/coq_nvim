@@ -17,10 +17,11 @@ from typing import (
 
 from pynvim import Nvim
 
+from ..shared.nvim import call, print
 from ..shared.parse import is_sym, normalize
 from ..shared.types import Context, Factory, Position
 from .fuzzy import fuzzer
-from .nvim import VimCompletion, call, print
+from .nvim import VimCompletion
 from .types import Notification, Settings, SourceFactory, Step
 
 

@@ -13,7 +13,7 @@ from typing import Any, Awaitable, Sequence
 from pynvim import Nvim, command, function, plugin
 
 from .server.completion import GenOptions, merge
-from .server.nvim import autocmd, complete, print, run_forever
+from .server.nvim import autocmd, complete
 from .server.patch import apply_patch
 from .server.scheduler import Signal, schedule
 from .server.settings import initial, load_factories
@@ -26,7 +26,8 @@ from .server.transitions import (
     t_text_changed,
     t_toggle_sources,
 )
-from .shared.types import Notification
+from .server.types import Notification
+from .shared.nvim import print, run_forever
 
 
 @plugin

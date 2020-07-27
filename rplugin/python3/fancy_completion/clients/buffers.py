@@ -9,10 +9,11 @@ from pynvim import Nvim
 from pynvim.api.buffer import Buffer
 from pynvim.api.common import NvimError
 
+from ..shared.nvim import call, run_forever
+from ..shared.parse import coalesce, find_matches, normalize
 from ..shared.types import Completion, Context, Seed, Source
-from .pkgs.nvim import autocmd, call, run_forever
+from .pkgs.nvim import autocmd
 from .pkgs.scheduler import schedule
-from .pkgs.shared import coalesce, find_matches, normalize
 
 
 @dataclass(frozen=True)

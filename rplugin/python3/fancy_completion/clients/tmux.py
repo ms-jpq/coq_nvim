@@ -7,10 +7,10 @@ from typing import AsyncIterator, Dict, Iterator, Sequence
 from pynvim import Nvim
 
 from ..shared.da import call
+from ..shared.parse import coalesce, find_matches, normalize
 from ..shared.types import Completion, Context, Seed, Source
-from .pkgs.nvim import print, run_forever
+from ..shared.nvim import print, run_forever
 from .pkgs.scheduler import schedule
-from .pkgs.shared import coalesce, find_matches, normalize
 
 
 @dataclass(frozen=True)
