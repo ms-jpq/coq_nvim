@@ -18,7 +18,7 @@ from typing import (
 from pynvim import Nvim
 
 from .lsp_pkgs.snippet import ParseError, parse_snippet
-from .pkgs.fc_types import Completion, Context, Edit, Position, Seed, Source
+from .pkgs.fc_types import Completion, Context, LEdit, Position, Seed, Source
 from .pkgs.nvim import call, print
 from .pkgs.shared import normalize, parse_common_affix
 
@@ -140,10 +140,10 @@ def parse_documentation(doc: Union[str, Dict[str, Any], None]) -> Optional[str]:
         raise ValueError(f"unknown LSP doc - {doc}")
 
 
-def parse_textedit(row: Dict[str, Any]) -> Sequence[Edit]:
+def parse_textedit(row: Dict[str, Any]) -> Sequence[LEdit]:
     edits = (row.get("textEdit"), *row.get("additionalTextEdits", ()))
 
-    def cont() -> Iterator[Edit]:
+    def cont() -> Iterator[LEdit]:
         for edit in edits:
             if type(edit) is dict:
                 e = cast(Dict[str, Any], edit)
@@ -153,7 +153,7 @@ def parse_textedit(row: Dict[str, Any]) -> Sequence[Edit]:
                 e = begin_end["end"]
                 begin = Position(row=b["line"], col=b["character"])
                 end = Position(row=e["line"], col=e["character"])
-                yield Edit(begin=begin, end=end, new_text=new_text)
+                yield LEdit(begin=begin, end=end, new_text=new_text)
 
     return tuple(cont())
 
@@ -187,7 +187,7 @@ def parse_rows(
             sortby=sortby,
             kind=kind,
             doc=doc,
-            edits=edits,
+            ledits=edits,
         )
 
 

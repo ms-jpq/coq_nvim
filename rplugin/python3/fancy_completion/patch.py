@@ -7,7 +7,7 @@ from pynvim import Nvim
 from pynvim.api.buffer import Buffer
 from pynvim.api.window import Window
 
-from .types import Edit, Payload, Position
+from .types import LEdit, Payload, Position
 
 
 @dataclass(frozen=True)
@@ -38,7 +38,7 @@ def row_lengths(rows: Sequence[str], start: int) -> Dict[int, int]:
 
 
 def calculate_replacement(
-    row_lens: Dict[int, int], start: int, edit: Edit
+    row_lens: Dict[int, int], start: int, edit: LEdit
 ) -> Replacement:
     b_row, e_row = edit.begin.row, edit.end.row
     b_col, e_col = edit.begin.col, edit.end.col
@@ -184,12 +184,12 @@ def apply_patch(nvim: Nvim, comp: Dict[str, Any]) -> None:
     try:
         position = Position(**d["position"])
         edits = tuple(
-            Edit(
+            LEdit(
                 begin=Position(row=edit["begin"]["row"], col=edit["begin"]["col"]),
                 end=Position(row=edit["end"]["row"], col=edit["end"]["col"]),
                 new_text=edit["new_text"],
             )
-            for edit in d["edits"]
+            for edit in d["ledits"]
         )
         payload = Payload(**{**d, **dict(position=position, edits=edits)})
     except (KeyError, TypeError):

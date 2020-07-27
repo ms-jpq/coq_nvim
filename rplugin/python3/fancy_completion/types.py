@@ -83,7 +83,7 @@ class Context:
 
 # end exclusve
 @dataclass(frozen=True)
-class Edit:
+class LEdit:
     begin: Position
     end: Position
     new_text: str
@@ -100,7 +100,7 @@ class Completion:
     sortby: Optional[str] = None
     kind: Optional[str] = None
     doc: Optional[str] = None
-    edits: Sequence[Edit] = field(default_factory=tuple)
+    ledits: Sequence[LEdit] = field(default_factory=tuple)
 
 
 Source = Callable[[Context], AsyncIterator[Completion]]
@@ -133,7 +133,7 @@ class Payload:
     new_prefix: str
     old_suffix: str
     new_suffix: str
-    edits: Sequence[Edit]
+    edits: Sequence[LEdit]
 
 
 @dataclass(frozen=True)
