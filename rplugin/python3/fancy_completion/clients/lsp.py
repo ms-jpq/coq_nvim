@@ -17,11 +17,10 @@ from typing import (
 
 from pynvim import Nvim
 
-from .lsp_pkgs.snippet import ParseError, parse_snippet
-from ..shared.types import Completion, Context, LEdit, Position, Seed, Source
 from ..shared.nvim import call, print
 from ..shared.parse import normalize, parse_common_affix
-
+from ..shared.types import Completion, Context, LEdit, Position, Seed, Source
+from .lsp_pkgs.snippet import ParseError, parse_snippet
 
 NAME = "lsp"
 
@@ -199,6 +198,7 @@ async def main(nvim: Nvim, chan: Queue, seed: Seed) -> Source:
     entry_kind, insert_kind = await init_lua(nvim)
 
     async def source(context: Context) -> AsyncIterator[Completion]:
+        cword = context.alnums
         uid = next(id_gen)
         resp = await ask(nvim, chan=chan, pos=context.position, uid=uid)
         rows = parse_resp_to_rows(resp)
@@ -209,7 +209,8 @@ async def main(nvim: Nvim, chan: Queue, seed: Seed) -> Source:
                 entry_lookup=entry_kind,
                 insert_lookup=insert_kind,
             ):
-                yield row
+                if row != cword:
+                    yield row
         except ParseError as e:
             await print(nvim, e)
 
