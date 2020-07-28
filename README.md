@@ -102,7 +102,7 @@ Some pseudocode:
 
 ```
 Source = (Context) -> AsyncIterator<Completion>
-Factory = async (Nvim, Chan, ConfigInfo) -> Source
+Factory = async (Nvim, Chan, Seed) -> Source
 
 type Completion:
   position: (int, int)
