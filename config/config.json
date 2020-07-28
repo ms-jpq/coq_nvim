@@ -2,7 +2,7 @@
   "cache": {
     "band_size": 20,
     "limit": 3,
-    "short_name": "CACHE"
+    "short_name": "C"
   },
   "fuzzy": {
     "min_match": 1
@@ -38,7 +38,7 @@
       "limit": null,
       "main": "lsp.py",
       "rank": 200,
-      "short_name": "LSP",
+      "short_name": "L",
       "timeout": 1000
     },
     "paths": {
