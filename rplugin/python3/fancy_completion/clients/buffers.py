@@ -15,7 +15,6 @@ from ..shared.types import Completion, Context, Seed, Source
 from .pkgs.nvim import autocmd
 from .pkgs.scheduler import schedule
 
-
 NAME = "buffers"
 
 

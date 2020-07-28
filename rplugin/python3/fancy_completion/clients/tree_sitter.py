@@ -3,9 +3,8 @@ from typing import AsyncIterator
 
 from pynvim import Nvim
 
-from ..shared.types import Source, Completion, Context, Seed
+from ..shared.types import Completion, Context, Seed, Source
 from .pkgs.nvim import call
-
 
 NAME = "tree_sitter"
 

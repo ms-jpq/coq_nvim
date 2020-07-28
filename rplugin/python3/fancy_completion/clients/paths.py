@@ -8,7 +8,6 @@ from pynvim import Nvim
 from ..shared.da import anext
 from ..shared.types import Completion, Context, Seed, Source
 
-
 NAME = "paths"
 
 

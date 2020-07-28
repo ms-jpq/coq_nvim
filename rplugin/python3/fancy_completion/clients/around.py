@@ -11,7 +11,6 @@ from ..shared.parse import coalesce, find_matches, normalize
 from ..shared.types import Completion, Context, Position, Seed, Source
 from .pkgs.nvim import call
 
-
 NAME = "around"
 
 
