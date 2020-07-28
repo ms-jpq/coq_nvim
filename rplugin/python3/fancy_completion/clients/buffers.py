@@ -12,7 +12,7 @@ from pynvim.api.common import NvimError
 from ..shared.nvim import call, run_forever
 from ..shared.parse import coalesce, find_matches, normalize
 from ..shared.types import Completion, Context, Seed, Source
-from .pkgs.nvim import autocmd
+from .pkgs.nvim import autocmd, current_buf
 from .pkgs.scheduler import schedule
 
 NAME = "buffers"
@@ -66,14 +66,15 @@ async def main(nvim: Nvim, chan: Queue, seed: Seed) -> Source:
         nvim,
         name="buffers",
         events=("TextChanged", "TextChangedI", "BufEnter"),
-        arg_eval=("'add'", "expand('<abuf>')",),
+        arg_eval=("'add'",),
     )
 
     async def ooda() -> None:
         while True:
-            action, bufnr = await chan.get()
+            action, *_ = await chan.get()
             if action == "add":
-                bufnrs.add(int(bufnr))
+                bufnr = await current_buf(nvim)
+                bufnrs.add(bufnr)
             elif action == "clear":
                 words.clear()
                 ch.set()
