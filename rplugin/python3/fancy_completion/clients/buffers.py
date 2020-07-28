@@ -25,8 +25,8 @@ class Config:
 
 
 def buf_gen(nvim: Nvim, bufnrs: Set[int]) -> Iterator[Buffer]:
+    seen: Set[str] = set()
     if bufnrs:
-        seen: Set[str] = set()
         buffers: Sequence[Buffer] = nvim.api.list_bufs()
         for buf in buffers:
             if buf.number in bufnrs:
@@ -73,7 +73,7 @@ async def main(nvim: Nvim, chan: Queue, seed: Seed) -> Source:
         while True:
             action, bufnr = await chan.get()
             if action == "add":
-                bufnrs.add(bufnr)
+                bufnrs.add(int(bufnr))
             elif action == "clear":
                 words.clear()
                 ch.set()
@@ -81,8 +81,8 @@ async def main(nvim: Nvim, chan: Queue, seed: Seed) -> Source:
     async def background_update() -> None:
         async for _ in schedule(ch, min_time=0.0, max_time=config.polling_rate):
             b_gen = buf_gen(nvim, bufnrs)
-            bufnrs.clear()
             chars = await buffer_chars(nvim, b_gen)
+            bufnrs.clear()
             for word in coalesce(chars, max_length=max_length):
                 if word not in words:
                     words[word] = normalize(word)
