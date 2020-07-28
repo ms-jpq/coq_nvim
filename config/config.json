@@ -59,7 +59,7 @@
       "limit": 3,
       "main": "tmux.py",
       "rank": 50,
-      "short_name": "TMUX",
+      "short_name": "T",
       "timeout": 50
     },
     "tree_sitter": {
