@@ -55,6 +55,10 @@ class Main:
     @command("FCstart")
     def initialize(self) -> None:
         async def setup() -> None:
+            await autocmd(self.nvim, events=("InsertEnter",), fn="_FCinsert_enter")
+
+            await autocmd(self.nvim, events=("InsertCharPre",), fn="_FCpreinsert_char")
+
             await autocmd(
                 self.nvim, events=("TextChangedI",), fn="_FCtextchangedi",
             )
@@ -62,8 +66,6 @@ class Main:
             await autocmd(
                 self.nvim, events=("TextChangedP",), fn="_FCtextchangedp",
             )
-
-            await autocmd(self.nvim, events=("InsertCharPre",), fn="_FCpreinsert_char")
 
             await autocmd(
                 self.nvim,
@@ -113,7 +115,7 @@ class Main:
 
     @function("FCmanual", sync=True)
     def manual(self, args: Sequence[Any]) -> None:
-        self.next_comp(GenOptions(force=False, sources=self.state.sources))
+        self.next_comp(GenOptions(force=True, sources=self.state.sources))
 
     @function("FComnifunc", sync=True)
     def omnifunc(self, args: Sequence[Any]) -> int:
@@ -121,8 +123,12 @@ class Main:
         if find_start == 1:
             return -1
         else:
-            self.next_comp(GenOptions(force=False, sources=self.state.sources))
+            self.next_comp(GenOptions(force=True, sources=self.state.sources))
             return -2
+
+    @function("_FCinsert_enter")
+    def insert_enter(self, args: Sequence[Any]) -> None:
+        self.next_comp(GenOptions(sources=self.state.sources))
 
     @function("_FCpreinsert_char")
     def char_inserted(self, args: Sequence[Any]) -> None:
@@ -132,7 +138,7 @@ class Main:
     def text_changed_i(self, args: Sequence[Any]) -> None:
         try:
             if t_natural_insertable(self.state):
-                self.next_comp(GenOptions(force=False, sources=self.state.sources))
+                self.next_comp(GenOptions(sources=self.state.sources))
         finally:
             self.state = t_text_changed(self.state)
 
@@ -140,7 +146,7 @@ class Main:
     def text_changed_p(self, args: Sequence[Any]) -> None:
         try:
             if t_natural_insertable(self.state):
-                self.next_comp(GenOptions(force=False, sources=self.state.sources))
+                self.next_comp(GenOptions(sources=self.state.sources))
         finally:
             self.state = t_text_changed(self.state)
 
