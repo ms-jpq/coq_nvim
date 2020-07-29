@@ -39,7 +39,7 @@ async def print(
     write = nvim.api.err_write if error else nvim.api.out_write
 
     def cont() -> None:
-        msg = str(message) + linesep if flush else ""
+        msg = str(message) + (linesep if flush else "")
         write(msg)
 
     await call(nvim, cont)
