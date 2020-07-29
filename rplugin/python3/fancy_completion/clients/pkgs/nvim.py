@@ -1,11 +1,11 @@
-from itertools import repeat
+from os import linesep
 from typing import Iterable
 from uuid import uuid4
 
 from pynvim import Nvim
 from pynvim.api.buffer import Buffer
 
-from ...shared.nvim import atomic, call
+from ...shared.nvim import call
 
 
 async def autocmd(
@@ -27,8 +27,8 @@ async def autocmd(
     group_end = "augroup END"
 
     def cont() -> None:
-        commands = zip(repeat("command"), ((group,), (cls,), (cmd,), (group_end,)))
-        atomic(nvim, *commands)
+        commands = linesep.join((group, cls, cmd, group_end))
+        nvim.api.exec(commands, False)
 
     await call(nvim, cont)
 
