@@ -1,6 +1,6 @@
-from os.path import dirname, join
+from os.path import dirname, join, realpath
 
-__base__ = dirname(dirname(dirname(dirname(dirname(__file__)))))
+__base__ = dirname(dirname(dirname(dirname(dirname(realpath(__file__))))))
 __config__ = join(__base__, "config")
 
 
