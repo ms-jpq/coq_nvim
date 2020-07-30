@@ -52,7 +52,7 @@ async def init_lua(nvim: Nvim) -> Tuple[Dict[int, str], Dict[int, str]]:
 
 async def ask(nvim: Nvim, chan: Queue, context: Context, uid: int) -> Optional[Any]:
     row = context.position.row
-    col = len(context.line_before.encode("utf-16"))
+    col = context.position.col
 
     def cont() -> None:
         nvim.api.exec_lua(
