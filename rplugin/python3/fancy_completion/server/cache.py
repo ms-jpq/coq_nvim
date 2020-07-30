@@ -30,12 +30,12 @@ def recalculate(context: Context, options: CacheOptions, step: Step) -> Step:
 
 
 def make_cache(
-    fuzzy: MatchOptions, options: CacheOptions,
+    match_opt: MatchOptions, cache_opt: CacheOptions,
 ) -> Tuple[
     Callable[[Context, Sequence[Step]], None],
     Callable[[Context, float], Awaitable[Sequence[Step]]],
 ]:
-    half_band_size = options.band_size // 2
+    half_band_size = cache_opt.band_size // 2
     queue: deque = deque([])
 
     # buf -> row -> col
@@ -46,7 +46,7 @@ def make_cache(
         position = context.position
         queue.append((context.filename, position))
 
-        if len(queue) > options.band_size:
+        if len(queue) > cache_opt.band_size:
             bufname, pos = queue.popleft()
             bufs.get(bufname, {}).get(pos.row, {}).pop(pos.col, None)
 
@@ -72,9 +72,9 @@ def make_cache(
                     nword = step.text_normalized
                     if text not in seen:
                         matches = count_matches(cword, word=text, nword=nword)
-                        if matches >= fuzzy.min_match and nword not in ncword:
+                        if matches >= match_opt.min_match and nword not in ncword:
                             seen.add(text)
-                            new_step = recalculate(context, options=options, step=step)
+                            new_step = recalculate(context, options=cache_opt, step=step)
                             acc.append(new_step)
 
         done, pending = await wait((cont(),), timeout=timeout)

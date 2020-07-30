@@ -31,7 +31,7 @@ class SourceSpec:
 
 @dataclass(frozen=True)
 class Settings:
-    fuzzy: MatchOptions
+    match: MatchOptions
     cache: CacheOptions
     sources: Dict[str, SourceSpec]
 

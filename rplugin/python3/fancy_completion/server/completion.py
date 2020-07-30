@@ -208,19 +208,19 @@ async def merge(
     Callable[[GenOptions], Awaitable[Tuple[Position, Iterator[VimCompletion]]]],
     Callable[[], Awaitable[None]],
 ]:
-    fuzzy_opt = settings.fuzzy
+    match_opt = settings.match
     cache_opt = settings.cache
-    unifying_chars = fuzzy_opt.unifying_chars
+    unifying_chars = match_opt.unifying_chars
     facts = tuple(factories)
     limits = {
         **{fact.name: fact.limit for fact in facts},
         cache_opt.source_name: cache_opt.limit,
     }
-    fuzzy = fuzzer(fuzzy_opt, limits=limits)
+    fuzzy = fuzzer(match_opt, limits=limits)
     src_gen = await gather(*(osha(nvim, factory=factory) for factory in facts))
     chans: Dict[str, Optional[Queue]] = {name: chan for name, _, chan in src_gen}
     sources: Dict[str, StepFunction] = {name: source for name, source, _ in src_gen}
-    push, pull = make_cache(fuzzy_opt, options=cache_opt)
+    push, pull = make_cache(match_opt=match_opt, cache_opt=cache_opt)
 
     async def gen(options: GenOptions) -> Tuple[Position, Iterator[VimCompletion]]:
         context = await gen_context(nvim, unifying_chars=unifying_chars)
