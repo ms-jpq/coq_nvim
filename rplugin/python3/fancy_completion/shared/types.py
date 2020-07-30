@@ -22,8 +22,7 @@ class MatchOptions:
 
 @dataclass(frozen=True)
 class Seed:
-    min_match: int
-    unifying_chars: Set[str]
+    match: MatchOptions
     limit: float
     timeout: float
     config: Dict[str, Any]

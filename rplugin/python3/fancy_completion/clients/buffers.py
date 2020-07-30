@@ -58,9 +58,9 @@ async def main(nvim: Nvim, chan: Queue, seed: Seed) -> Source:
     config = Config(**seed.config)
     ch = Event()
     min_length, max_length, unifying_chars = (
-        seed.min_match,
+        seed.match.min_match,
         config.max_length,
-        seed.unifying_chars,
+        seed.match.unifying_chars,
     )
 
     bufnrs: Set[int] = set()

@@ -40,9 +40,9 @@ async def main(nvim: Nvim, chan: Queue, seed: Seed) -> Source:
     config = Config(**seed.config)
     band_size = config.band_size
     min_length, max_length, unifying_chars = (
-        seed.min_match,
+        seed.match.min_match,
         config.max_length,
-        seed.unifying_chars,
+        seed.match.unifying_chars,
     )
 
     async def source(context: Context) -> AsyncIterator[Completion]:

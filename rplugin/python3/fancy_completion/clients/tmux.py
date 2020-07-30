@@ -97,10 +97,11 @@ async def tmux_words(max_length: int, unifying_chars: Set[str]) -> AsyncIterator
 async def main(nvim: Nvim, chan: Queue, seed: Seed) -> Source:
     config = Config(**seed.config)
     min_length, max_length, unifying_chars = (
-        seed.min_match,
+        seed.match.min_match,
         config.max_length,
-        seed.unifying_chars,
+        seed.match.unifying_chars,
     )
+
     words: Dict[str, str] = {}
 
     async def background_update() -> None:
