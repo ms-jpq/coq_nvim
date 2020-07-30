@@ -15,6 +15,12 @@ from pynvim import Nvim
 
 
 @dataclass(frozen=True)
+class MatchOptions:
+    min_match: int
+    unifying_chars: Set[str]
+
+
+@dataclass(frozen=True)
 class Seed:
     min_match: int
     unifying_chars: Set[str]

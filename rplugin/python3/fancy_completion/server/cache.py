@@ -4,7 +4,7 @@ from typing import Awaitable, Callable, Dict, List, Sequence, Set, Tuple
 
 from ..shared.parse import count_matches, parse_common_affix
 from ..shared.types import Completion, Context
-from .types import CacheOptions, FuzzyOptions, Step
+from .types import CacheOptions, MatchOptions, Step
 
 
 def recalculate(context: Context, options: CacheOptions, step: Step) -> Step:
@@ -30,7 +30,7 @@ def recalculate(context: Context, options: CacheOptions, step: Step) -> Step:
 
 
 def make_cache(
-    fuzzy: FuzzyOptions, options: CacheOptions,
+    fuzzy: MatchOptions, options: CacheOptions,
 ) -> Tuple[
     Callable[[Context, Sequence[Step]], None],
     Callable[[Context, float], Awaitable[Sequence[Step]]],

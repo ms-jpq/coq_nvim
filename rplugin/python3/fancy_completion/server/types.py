@@ -1,19 +1,13 @@
 from dataclasses import dataclass
 from typing import Any, Dict, Optional, Sequence, Set
 
-from ..shared.types import Completion, Factory, LEdit, Position, Seed
+from ..shared.types import Completion, Factory, LEdit, MatchOptions, Position, Seed
 
 
 @dataclass(frozen=True)
 class Notification:
     source: str
     body: Sequence[Any]
-
-
-@dataclass(frozen=True)
-class FuzzyOptions:
-    min_match: int
-    unifying_chars: Set[str]
 
 
 @dataclass(frozen=True)
@@ -37,7 +31,7 @@ class SourceSpec:
 
 @dataclass(frozen=True)
 class Settings:
-    fuzzy: FuzzyOptions
+    fuzzy: MatchOptions
     cache: CacheOptions
     sources: Dict[str, SourceSpec]
 

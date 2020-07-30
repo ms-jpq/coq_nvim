@@ -5,7 +5,7 @@ from typing import Any, Callable, Dict, Iterator, Sequence, Set, Union, cast
 
 from .nvim import VimCompletion
 from ..shared.types import Completion, Context
-from .types import FuzzyOptions, Payload, Step
+from .types import MatchOptions, Payload, Step
 
 
 @dataclass(frozen=True)
@@ -131,7 +131,7 @@ def vimify(fuzz: FuzzyStep) -> VimCompletion:
 
 
 def fuzzer(
-    options: FuzzyOptions, limits: Dict[str, float]
+    options: MatchOptions, limits: Dict[str, float]
 ) -> Callable[[Context, Iterator[Step]], Iterator[VimCompletion]]:
     min_match = options.min_match
 

@@ -7,7 +7,7 @@ from ..clients import around, buffers, lsp, paths, tmux, tree_sitter
 from ..shared.da import load_json, load_module, merge_all
 from ..shared.types import Factory, Seed
 from .consts import load_hierarchy, module_entry_point, settings_json
-from .types import CacheOptions, FuzzyOptions, Settings, SourceFactory, SourceSpec
+from .types import CacheOptions, MatchOptions, Settings, SourceFactory, SourceSpec
 
 
 def load_source(config: Any) -> SourceSpec:
@@ -27,7 +27,7 @@ def initial(configs: Sequence[Any]) -> Settings:
     config = merge_all(load_json(settings_json), *configs)
     fuzzy_o = config["fuzzy"]
     cache_o = config["cache"]
-    fuzzy = FuzzyOptions(
+    fuzzy = MatchOptions(
         min_match=fuzzy_o["min_match"], unifying_chars={*fuzzy_o["unifying_chars"]}
     )
     cache = CacheOptions(
@@ -52,7 +52,7 @@ def load_external(spec: SourceSpec) -> Optional[Factory]:
 
 
 def assemble(
-    spec: SourceSpec, name: str, main: Factory, fuzzy: FuzzyOptions,
+    spec: SourceSpec, name: str, main: Factory, fuzzy: MatchOptions,
 ) -> SourceFactory:
     limit = spec.limit or inf
     timeout = (spec.timeout or inf) / 1000
