@@ -50,10 +50,13 @@ async def init_lua(nvim: Nvim) -> Tuple[Dict[int, str], Dict[int, str]]:
     return elookup, ilookup
 
 
-async def ask(nvim: Nvim, chan: Queue, pos: Position, uid: int) -> Optional[Any]:
+async def ask(nvim: Nvim, chan: Queue, context: Context, uid: int) -> Optional[Any]:
+    row = context.position.row
+    col = len(context.line_before.encode("utf-16"))
+
     def cont() -> None:
         nvim.api.exec_lua(
-            "fancy_completion_lsp.list_comp_candidates(...)", (uid, pos.row, pos.col)
+            "fancy_completion_lsp.list_comp_candidates(...)", (uid, row, col)
         )
 
     await call(nvim, cont)
@@ -200,7 +203,7 @@ async def main(nvim: Nvim, chan: Queue, seed: Seed) -> Source:
     async def source(context: Context) -> AsyncIterator[Completion]:
         cword = context.alnums
         uid = next(id_gen)
-        resp = await ask(nvim, chan=chan, pos=context.position, uid=uid)
+        resp = await ask(nvim, chan=chan, context=context, uid=uid)
         rows = parse_resp_to_rows(resp)
         try:
             for row in parse_rows(
