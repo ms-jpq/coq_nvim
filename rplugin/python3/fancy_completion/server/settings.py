@@ -59,8 +59,7 @@ def assemble(
     rank = spec.rank or 100
     config = spec.config or {}
     seed = Seed(
-        min_match=match.min_match,
-        unifying_chars=match.unifying_chars,
+        match=match,
         limit=limit,
         timeout=timeout,
         config=config,
