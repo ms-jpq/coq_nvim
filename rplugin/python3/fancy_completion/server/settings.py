@@ -27,7 +27,9 @@ def initial(configs: Sequence[Any]) -> Settings:
     config = merge_all(load_json(settings_json), *configs)
     fuzzy_o = config["fuzzy"]
     cache_o = config["cache"]
-    fuzzy = FuzzyOptions(min_match=fuzzy_o["min_match"])
+    fuzzy = FuzzyOptions(
+        min_match=fuzzy_o["min_match"], unifying_chars={*fuzzy_o["unifying_chars"]}
+    )
     cache = CacheOptions(
         short_name=cache_o["short_name"],
         band_size=cache_o["band_size"],
@@ -50,13 +52,19 @@ def load_external(spec: SourceSpec) -> Optional[Factory]:
 
 
 def assemble(
-    spec: SourceSpec, name: str, main: Factory, min_match: int
+    spec: SourceSpec, name: str, main: Factory, fuzzy: FuzzyOptions,
 ) -> SourceFactory:
     limit = spec.limit or inf
     timeout = (spec.timeout or inf) / 1000
     rank = spec.rank or 100
     config = spec.config or {}
-    seed = Seed(min_match=min_match, limit=limit, timeout=timeout, config=config)
+    seed = Seed(
+        min_match=fuzzy.min_match,
+        unifying_chars=fuzzy.unifying_chars,
+        limit=limit,
+        timeout=timeout,
+        config=config,
+    )
     fact = SourceFactory(
         name=name,
         short_name=spec.short_name,
@@ -70,7 +78,6 @@ def assemble(
 
 
 def load_factories(settings: Settings) -> Iterator[SourceFactory]:
-    min_match = settings.fuzzy.min_match
     intrinsic = {
         around.NAME: around.main,
         buffers.NAME: buffers.main,
@@ -82,10 +89,10 @@ def load_factories(settings: Settings) -> Iterator[SourceFactory]:
 
     for name, main in intrinsic.items():
         spec = settings.sources[name]
-        yield assemble(spec, name=name, main=main, min_match=min_match)
+        yield assemble(spec, name=name, main=main, fuzzy=settings.fuzzy)
 
     for name, spec in settings.sources.items():
         if name not in intrinsic:
             main = load_external(spec)
             if main:
-                yield assemble(spec, name=name, main=main, min_match=min_match)
+                yield assemble(spec, name=name, main=main, fuzzy=settings.fuzzy)

@@ -13,6 +13,7 @@ class Notification:
 @dataclass(frozen=True)
 class FuzzyOptions:
     min_match: int
+    unifying_chars: Set[str]
 
 
 @dataclass(frozen=True)

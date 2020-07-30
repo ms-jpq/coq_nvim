@@ -1,6 +1,15 @@
 from asyncio import Queue
 from dataclasses import dataclass, field
-from typing import Any, AsyncIterator, Awaitable, Callable, Dict, Optional, Sequence
+from typing import (
+    Any,
+    AsyncIterator,
+    Awaitable,
+    Callable,
+    Dict,
+    Optional,
+    Sequence,
+    Set,
+)
 
 from pynvim import Nvim
 
@@ -8,6 +17,7 @@ from pynvim import Nvim
 @dataclass(frozen=True)
 class Seed:
     min_match: int
+    unifying_chars: Set[str]
     limit: float
     timeout: float
     config: Dict[str, Any]

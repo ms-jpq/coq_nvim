@@ -19,7 +19,7 @@ from typing import (
 from pynvim import Nvim
 
 from ..shared.nvim import call, print
-from ..shared.parse import is_sym, normalize
+from ..shared.parse import is_sym, is_word, normalize
 from ..shared.types import Context, Factory, Position
 from .cache import make_cache
 from .fuzzy import fuzzer
@@ -36,7 +36,13 @@ class GenOptions:
 StepFunction = Callable[[Context], Awaitable[Sequence[Step]]]
 
 
-def gen_ctx(filename: str, filetype: str, line: str, position: Position) -> Context:
+def gen_ctx(
+    filename: str,
+    filetype: str,
+    line: str,
+    position: Position,
+    unifying_chars: Set[str],
+) -> Context:
     col = position.col
     line_before = line[:col]
     line_after = line[col:]
@@ -45,7 +51,7 @@ def gen_ctx(filename: str, filetype: str, line: str, position: Position) -> Cont
     l_alnums: List[str] = []
     l_syms: List[str] = []
     for c in lit:
-        if c.isalnum():
+        if is_word(c, unifying_chars=unifying_chars):
             l_alnums.append(c)
         else:
             if is_sym(c):
@@ -62,7 +68,7 @@ def gen_ctx(filename: str, filetype: str, line: str, position: Position) -> Cont
     r_alnums: List[str] = []
     r_syms: List[str] = []
     for c in rit:
-        if c.isalnum():
+        if is_word(c, unifying_chars=unifying_chars):
             r_alnums.append(c)
         else:
             if is_sym(c):
@@ -108,7 +114,7 @@ def gen_ctx(filename: str, filetype: str, line: str, position: Position) -> Cont
     )
 
 
-async def gen_context(nvim: Nvim) -> Context:
+async def gen_context(nvim: Nvim, unifying_chars: Set[str]) -> Context:
     def fed() -> Tuple[str, str, str, Position]:
         buffer = nvim.api.get_current_buf()
         filename = nvim.api.buf_get_name(buffer)
@@ -122,7 +128,11 @@ async def gen_context(nvim: Nvim) -> Context:
 
     filename, filetype, line, position = await call(nvim, fed)
     context = gen_ctx(
-        filename=filename, filetype=filetype, line=line, position=position
+        filename=filename,
+        filetype=filetype,
+        line=line,
+        position=position,
+        unifying_chars=unifying_chars,
     )
     return context
 
@@ -157,7 +167,7 @@ async def manufacture(nvim: Nvim, factory: SourceFactory) -> Tuple[StepFunction,
         await gather(*done)
         if pending:
             timeout_fmt = round(timeout * 1000)
-            msg1 = f"⚠️  Completion source timed out - "
+            msg1 = "⚠️  Completion source timed out - "
             msg2 = f"{name}, exceeded {timeout_fmt}ms{linesep}"
             await print(nvim, msg1 + msg2)
         return acc
@@ -198,20 +208,22 @@ async def merge(
     Callable[[GenOptions], Awaitable[Tuple[Position, Iterator[VimCompletion]]]],
     Callable[[], Awaitable[None]],
 ]:
+    fuzzy_opt = settings.fuzzy
     cache_opt = settings.cache
+    unifying_chars = fuzzy_opt.unifying_chars
     facts = tuple(factories)
     limits = {
         **{fact.name: fact.limit for fact in facts},
         cache_opt.source_name: cache_opt.limit,
     }
-    fuzzy = fuzzer(settings.fuzzy, limits=limits)
+    fuzzy = fuzzer(fuzzy_opt, limits=limits)
     src_gen = await gather(*(osha(nvim, factory=factory) for factory in facts))
     chans: Dict[str, Optional[Queue]] = {name: chan for name, _, chan in src_gen}
     sources: Dict[str, StepFunction] = {name: source for name, source, _ in src_gen}
-    push, pull = make_cache(settings.fuzzy, options=cache_opt)
+    push, pull = make_cache(fuzzy_opt, options=cache_opt)
 
     async def gen(options: GenOptions) -> Tuple[Position, Iterator[VimCompletion]]:
-        context = await gen_context(nvim)
+        context = await gen_context(nvim, unifying_chars=unifying_chars)
         position = context.position
         go = context.line_before and not context.line_before.isspace()
         if go or options.force:

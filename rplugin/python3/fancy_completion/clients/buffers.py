@@ -57,7 +57,11 @@ async def buffer_chars(nvim: Nvim, buf_gen: Iterator[Buffer]) -> Sequence[str]:
 async def main(nvim: Nvim, chan: Queue, seed: Seed) -> Source:
     config = Config(**seed.config)
     ch = Event()
-    min_length, max_length = seed.min_match, config.max_length
+    min_length, max_length, unifying_chars = (
+        seed.min_match,
+        config.max_length,
+        seed.unifying_chars,
+    )
 
     bufnrs: Set[int] = set()
     words: Dict[str, str] = {}
@@ -84,7 +88,9 @@ async def main(nvim: Nvim, chan: Queue, seed: Seed) -> Source:
             b_gen = buf_gen(nvim, bufnrs)
             chars = await buffer_chars(nvim, b_gen)
             bufnrs.clear()
-            for word in coalesce(chars, max_length=max_length):
+            for word in coalesce(
+                chars, max_length=max_length, unifying_chars=unifying_chars
+            ):
                 if word not in words:
                     words[word] = normalize(word)
 

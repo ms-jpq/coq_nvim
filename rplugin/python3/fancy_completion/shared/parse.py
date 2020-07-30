@@ -1,4 +1,4 @@
-from typing import Dict, Iterable, Iterator, List, Tuple
+from typing import Dict, Iterable, Iterator, List, Set, Tuple
 
 from .da import subsequences
 from .types import Context
@@ -6,6 +6,10 @@ from .types import Context
 
 def normalize(text: str) -> str:
     return text.lower()
+
+
+def is_word(char: str, unifying_chars: Set[str]) -> bool:
+    return char in unifying_chars or char.isalnum()
 
 
 def is_sym(char: str) -> bool:
@@ -33,10 +37,12 @@ def find_matches(
             yield word
 
 
-def coalesce(chars: Iterable[str], max_length: int) -> Iterator[str]:
+def coalesce(
+    chars: Iterable[str], max_length: int, unifying_chars: Set[str]
+) -> Iterator[str]:
     curr: List[str] = []
     for char in chars:
-        if char.isalnum():
+        if is_word(char, unifying_chars=unifying_chars):
             curr.append(char)
         elif curr:
             word = "".join(curr)

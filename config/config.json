@@ -5,7 +5,8 @@
     "short_name": "C"
   },
   "fuzzy": {
-    "min_match": 1
+    "min_match": 1,
+    "unifying_chars": ["_", "-"]
   },
   "sources": {
     "around": {
