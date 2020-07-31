@@ -88,7 +88,9 @@ def gen_ctx(
             break
 
     alnums_before = "".join(reversed(l_alnums))
+    alnums_before_normalized = normalize(alnums_before)
     alnums_after = "".join(r_alnums)
+    alnums_after_normalized = normalize(alnums_after)
     alnums = alnums_before + alnums_after
 
     syms_before = "".join(reversed(l_syms))
@@ -112,7 +114,9 @@ def gen_ctx(
         line_after_normalized=line_after_normalized,
         alnums=alnums,
         alnums_before=alnums_before,
+        alnums_before_normalized=alnums_before_normalized,
         alnums_after=alnums_after,
+        alnums_after_normalized=alnums_after_normalized,
         syms=syms,
         syms_before=syms_before,
         syms_after=syms_after,

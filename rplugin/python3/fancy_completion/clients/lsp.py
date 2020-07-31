@@ -104,7 +104,7 @@ def row_parser(
             snippet_text = new_prefix + new_suffix
             match_normalized = normalize(snippet_text)
             old_prefix, old_suffix = parse_common_affix(
-                context, match_normalized=match_normalized,
+                context, match_normalized=match_normalized, use_line=True,
             )
             parsed = ParsedRow(
                 old_prefix=old_prefix,
@@ -116,7 +116,7 @@ def row_parser(
         else:
             match_normalized = normalize(text)
             old_prefix, old_suffix = parse_common_affix(
-                context, match_normalized=match_normalized,
+                context, match_normalized=match_normalized, use_line=False,
             )
             parsed = ParsedRow(
                 old_prefix=old_prefix,

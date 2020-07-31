@@ -54,7 +54,9 @@ class Context:
     alnums: str
     alnums_normalized: str
     alnums_before: str
+    alnums_before_normalized: str
     alnums_after: str
+    alnums_after_normalized: str
 
     syms: str
     syms_before: str

@@ -62,7 +62,7 @@ async def main(nvim: Nvim, chan: Queue, seed: Seed) -> Source:
         ):
             match_normalized = words[word]
             old_prefix, old_suffix = parse_common_affix(
-                context, match_normalized=match_normalized,
+                context, match_normalized=match_normalized, use_line=False,
             )
             yield Completion(
                 position=position,

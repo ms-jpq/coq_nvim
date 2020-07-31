@@ -58,11 +58,18 @@ def coalesce(
             yield word
 
 
-def parse_common_affix(context: Context, match_normalized: str,) -> Tuple[str, str]:
-    before, after = context.line_before, context.line_after
+def parse_common_affix(
+    context: Context, match_normalized: str, use_line: bool
+) -> Tuple[str, str]:
+    before, after = (
+        (context.line_before, context.line_after)
+        if use_line
+        else (context.alnums_before, context.alnums_after)
+    )
     before_normalized, after_normalized = (
-        context.line_before_normalized,
-        context.line_after_normalized,
+        (context.line_before_normalized, context.line_after_normalized,)
+        if use_line
+        else (context.alnums_before_normalized, context.alnums_after_normalized)
     )
 
     pre_it = zip(
