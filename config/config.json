@@ -40,7 +40,7 @@
       "main": "lsp.py",
       "rank": 200,
       "short_name": "L",
-      "timeout": 1000
+      "timeout": 500
     },
     "paths": {
       "config": {},
