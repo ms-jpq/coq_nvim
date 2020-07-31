@@ -240,7 +240,7 @@ async def merge(
                 if name in options.sources
             )
             max_wait = min(
-                fact.timeout for fact in facts if fact.name in options.sources
+                *(fact.timeout for fact in facts if fact.name in options.sources), 0
             )
             cached, *comps = await gather(pull(context, max_wait), *source_gen)
             steps = tuple(c for co in comps for c in co)

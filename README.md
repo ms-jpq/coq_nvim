@@ -65,13 +65,14 @@ The newer dictionary will automatically be merged with the older one.
 
 | keys                       | option                                             |
 | -------------------------- | -------------------------------------------------- |
-| `fuzzy.min_match`          | minimum # of chars matches required to show result |
+| `match.min_match`          | minimum # of chars matches required to show result |
+| `match.unifying_chars`     | what symbols also count as part of words           |
 | `cache.band_size`          | cache "band" around cursor                         |
 | `cache.limit`              | max results shown from cache                       |
 | `source.<name>.enabled`    | source enabled                                     |
 | `source.<name>.limit`      | max results shown                                  |
 | `source.<name>.timeout`    | max wait time for source                           |
-| `source.<name>.rank`       | sorting priority for source                        |
+| `source.<name>.rank`       | sorting priority for source (after fuzzing)        |
 | `source.<name>.short_name` | badge for source, ie. `blah blah blah [LSP]`       |
 | `source.<name>.config`     | custom config for each source                      |
 | `source.<name>.main`       | source location (for custom sources)               |
@@ -86,13 +87,17 @@ The newer dictionary will automatically be merged with the older one.
 
 ### Recommended Settings
 
-There are some common settings recommended by most completion plugins. I put them in a package.
+There are some [common settings recommended](https://github.com/ms-jpq/fancy-completion/blob/nvim/lua/fancy-completion/recommends.lua) by most completion plugins. I put them in a package.
 
 Just require it in your `.vimrc` like so:
 
 ```vimL
 lua require("fancy-completion/recommends").all()
 ```
+
+### Timeouts
+
+The default timeout for `LSP` source is very low on purpose (LSP server response is highly server dependent, some are very fast, others are outrageously slow). Update it to a higher value if required.
 
 ### Authoring Clients
 
