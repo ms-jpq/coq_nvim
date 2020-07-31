@@ -1,6 +1,7 @@
 from asyncio import Queue, gather, wait
 from dataclasses import dataclass
 from itertools import chain
+from math import inf
 from os import linesep
 from traceback import format_exc
 from typing import (
@@ -33,7 +34,12 @@ class GenOptions:
     force: bool = False
 
 
-StepFunction = Callable[[Context], Awaitable[Sequence[Step]]]
+@dataclass(frozen=True)
+class StepContext:
+    force: bool
+
+
+StepFunction = Callable[[Context, StepContext], Awaitable[Sequence[Step]]]
 
 
 def gen_ctx(
@@ -142,9 +148,9 @@ async def manufacture(nvim: Nvim, factory: SourceFactory) -> Tuple[StepFunction,
     fact = cast(Factory, factory.manufacture)
     src = await fact(nvim, chan, factory.seed)
 
-    async def source(context: Context) -> Sequence[Step]:
+    async def source(context: Context, s_context: StepContext) -> Sequence[Step]:
         name = factory.name
-        timeout = factory.timeout
+        timeout = inf if s_context.force else factory.timeout
         acc: List[Step] = []
 
         async def cont() -> None:
@@ -178,7 +184,7 @@ async def manufacture(nvim: Nvim, factory: SourceFactory) -> Tuple[StepFunction,
 async def osha(
     nvim: Nvim, factory: SourceFactory
 ) -> Tuple[str, StepFunction, Optional[Queue]]:
-    async def nil_steps(_: Context) -> Sequence[Step]:
+    async def nil_steps(_: Context, __: StepContext) -> Sequence[Step]:
         return ()
 
     try:
@@ -190,9 +196,9 @@ async def osha(
         return factory.name, nil_steps, None
     else:
 
-        async def o_step(context: Context) -> Sequence[Step]:
+        async def o_step(context: Context, s_context: StepContext) -> Sequence[Step]:
             try:
-                return await step_fn(context)
+                return await step_fn(context, s_context)
             except Exception as e:
                 stack = format_exc()
                 message = f"Error in source {factory.name}{linesep}{stack}{e}"
@@ -224,11 +230,12 @@ async def merge(
 
     async def gen(options: GenOptions) -> Tuple[Position, Iterator[VimCompletion]]:
         context = await gen_context(nvim, unifying_chars=unifying_chars)
+        s_context = StepContext(force=options.force)
         position = context.position
         go = context.line_before and not context.line_before.isspace()
         if go or options.force:
             source_gen = (
-                source(context)
+                source(context, s_context)
                 for name, source in sources.items()
                 if name in options.sources
             )
