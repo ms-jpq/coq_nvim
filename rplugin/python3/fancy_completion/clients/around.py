@@ -7,7 +7,7 @@ from typing import AsyncIterator, Dict, Sequence
 from pynvim import Nvim
 from pynvim.api.buffer import Buffer
 
-from ..shared.parse import coalesce, find_matches, normalize
+from ..shared.parse import coalesce, find_matches, normalize, parse_common_affix
 from ..shared.types import Completion, Context, Position, Seed, Source
 from .pkgs.nvim import call
 
@@ -47,7 +47,6 @@ async def main(nvim: Nvim, chan: Queue, seed: Seed) -> Source:
 
     async def source(context: Context) -> AsyncIterator[Completion]:
         position = context.position
-        old_prefix, old_suffix = context.alnums_before, context.alnums_after
         cword, ncword = context.alnums, context.alnums_normalized
 
         chars = await buffer_chars(nvim, band_size=band_size, pos=position)
@@ -61,6 +60,10 @@ async def main(nvim: Nvim, chan: Queue, seed: Seed) -> Source:
         for word in find_matches(
             cword, ncword=ncword, min_match=min_length, words=words
         ):
+            match_normalized = words[word]
+            old_prefix, old_suffix = parse_common_affix(
+                context, match_normalized=match_normalized,
+            )
             yield Completion(
                 position=position,
                 old_prefix=old_prefix,
