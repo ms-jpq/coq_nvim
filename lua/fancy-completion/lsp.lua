@@ -2,17 +2,15 @@ local api = vim.api
 local fn = vim.fn
 local lsp = vim.lsp
 
-local cancel = nil
+local cancel = function () end
 local req_id = nil
 
 local linesep = "\n"
 
 local list_comp_candidates = function (request_id, row, col)
   req_id = request_id
-  if cancel then
-    cancel()
-    cancel = nil
-  end
+  cancel()
+  cancel = function () end
 
   if #lsp.buf_get_clients() == 0 then
     fn._FCnotify("lsp", request_id, nil)
