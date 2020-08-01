@@ -19,7 +19,7 @@
       "main": "around.py",
       "rank": 100,
       "short_name": "A",
-      "timeout": 100
+      "timeout": 200
     },
     "buffers": {
       "config": {
@@ -31,7 +31,7 @@
       "main": "buffers.py",
       "rank": 80,
       "short_name": "B",
-      "timeout": 50
+      "timeout": 100
     },
     "lsp": {
       "config": {},
@@ -49,7 +49,7 @@
       "main": "paths.py",
       "rank": 120,
       "short_name": "F",
-      "timeout": 50
+      "timeout": 100
     },
     "tmux": {
       "config": {
@@ -61,7 +61,7 @@
       "main": "tmux.py",
       "rank": 50,
       "short_name": "T",
-      "timeout": 50
+      "timeout": 100
     },
     "tree_sitter": {
       "config": {},
