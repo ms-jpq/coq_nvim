@@ -3,10 +3,12 @@ local fn = vim.fn
 local lsp = vim.lsp
 
 local cancel = nil
+local req_id = nil
 
 local linesep = "\n"
 
 local list_comp_candidates = function (request_id, row, col)
+  req_id = request_id
   if cancel then
     cancel()
     cancel = nil
@@ -23,8 +25,10 @@ local list_comp_candidates = function (request_id, row, col)
       if err then
         api.nvim_out_writeln("lsp error: " .. err .. linesep)
       end
-      local ret = ans or nil
-      fn._FCnotify("lsp", request_id, ret)
+      if request_id == req_id then
+        local ret = ans or nil
+        fn._FCnotify("lsp", request_id, ret)
+      end
     end)
   end
 end
