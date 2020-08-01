@@ -9,7 +9,7 @@ from .types import CacheOptions, MatchOptions, Step
 
 def recalculate(context: Context, options: CacheOptions, step: Step) -> Step:
     old_prefix, old_suffix = parse_common_affix(
-        context, match_normalized=step.text_normalized
+        context, match_normalized=step.text_normalized, use_line=False
     )
     comp = Completion(
         position=context.position,
@@ -74,7 +74,9 @@ def make_cache(
                         matches = count_matches(cword, word=text, nword=nword)
                         if matches >= match_opt.min_match and nword not in ncword:
                             seen.add(text)
-                            new_step = recalculate(context, options=cache_opt, step=step)
+                            new_step = recalculate(
+                                context, options=cache_opt, step=step
+                            )
                             acc.append(new_step)
 
         done, pending = await wait((cont(),), timeout=timeout)
