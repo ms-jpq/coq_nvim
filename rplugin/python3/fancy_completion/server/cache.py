@@ -8,7 +8,8 @@ from .types import CacheOptions, MatchOptions, Step
 
 
 def recalculate(context: Context, options: CacheOptions, step: Step) -> Step:
-    old_prefix, old_suffix = parse_common_affix(
+    old_prefix = context.alnums_before
+    _, old_suffix = parse_common_affix(
         context, match_normalized=step.text_normalized, use_line=False
     )
     comp = Completion(

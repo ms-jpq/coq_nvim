@@ -47,6 +47,7 @@ async def main(nvim: Nvim, chan: Queue, seed: Seed) -> Source:
 
     async def source(context: Context) -> AsyncIterator[Completion]:
         position = context.position
+        old_prefix = context.alnums_before
         cword, ncword = context.alnums, context.alnums_normalized
 
         chars = await buffer_chars(nvim, band_size=band_size, pos=position)
@@ -61,7 +62,7 @@ async def main(nvim: Nvim, chan: Queue, seed: Seed) -> Source:
             cword, ncword=ncword, min_match=min_length, words=words
         ):
             match_normalized = words[word]
-            old_prefix, old_suffix = parse_common_affix(
+            _, old_suffix = parse_common_affix(
                 context, match_normalized=match_normalized, use_line=False,
             )
             yield Completion(
