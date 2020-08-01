@@ -1,5 +1,8 @@
 # Fancy Completion
 
+
+**WORK IN PROGRESS**
+
 The **BEST** async completion framework for Neovim
 
 ## VScode Style Fuzzy Search
