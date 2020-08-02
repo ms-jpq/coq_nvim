@@ -72,6 +72,12 @@ class LEdit:
 
 
 @dataclass(frozen=True)
+class Snippet:
+    kind: str
+    content: str
+
+
+@dataclass(frozen=True)
 class Completion:
     position: Position
     old_prefix: str

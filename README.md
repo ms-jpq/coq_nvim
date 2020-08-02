@@ -40,8 +40,8 @@ Plug 'ms-jpq/nap', {'branch': 'nap', 'do': ':UpdateRemotePlugins'}
 
 ### Builtin Sources
 
-| name                                                                                                                        | source                                                             |
-| --------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
+| name                                                                                             | source                                                             |
+| ------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------ |
 | [LSP](https://github.com/ms-jpq/nap/blob/nap/rplugin/python3/nap/clients/lsp.py)                 | Fetches results from Neovim LSP client                             |
 | [Tree Sitter](https://github.com/ms-jpq/nap/blob/nap/rplugin/python3/nap/clients/tree_sitter.py) | Fetches results from syntax tree (still waiting on more stability) |
 | [Tmux](https://github.com/ms-jpq/nap/blob/nap/rplugin/python3/nap/clients/tmux.py)               | Fetches results from tmux panes (cached @ adjustable intervals)    |
@@ -51,8 +51,8 @@ Plug 'ms-jpq/nap', {'branch': 'nap', 'do': ':UpdateRemotePlugins'}
 
 ### External Sources
 
-| name                                                          | source                                                            |
-| ------------------------------------------------------------- | ----------------------------------------------------------------- |
+| name                                             | source                                                            |
+| ------------------------------------------------ | ----------------------------------------------------------------- |
 | [TabNine](https://github.com/ms-jpq/nap-clients) | Fetches results from [TabNine](https://www.tabnine.com/) ML model |
 
 ### Configuration
@@ -79,11 +79,9 @@ The newer dictionary will automatically be merged with the older one.
 
 ### Commands
 
-| command         | effect                                      |
-| --------------- | ------------------------------------------- |
-| FCStart         | Start fancy complete                        |
-| FCSetSources    | Enable only the sources in args             |
-| FCToggleSources | Toggle enable / disable the sources in args |
+| command  | effect           |
+| -------- | ---------------- |
+| NAPstart | Start completion |
 
 ### Recommended Settings
 
