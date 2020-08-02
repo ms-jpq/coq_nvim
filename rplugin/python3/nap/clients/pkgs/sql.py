@@ -3,7 +3,7 @@ from __future__ import annotations
 from asyncio import get_running_loop
 from concurrent.futures import ThreadPoolExecutor
 from sqlite3 import Connection, Cursor, Row, connect
-from typing import Any, Callable, Iterable, Optional, TypeVar
+from typing import Any, Callable, Iterable, Optional, Sequence, TypeVar
 
 T = TypeVar("T")
 
@@ -44,6 +44,9 @@ class CURSOR:
     async def fetch_one(self) -> Row:
         return await self.chan.run(self.cursor.fetchone)
 
+    async def fetch_all(self) -> Sequence[Row]:
+        return await self.chan.run(self.cursor.fetchall)
+
 
 class CONN:
     def __init__(
@@ -65,6 +68,15 @@ class CONN:
     async def execute(self, sql: str, params: Iterable[Any] = ()) -> CURSOR:
         def cont() -> CURSOR:
             cursor = self.conn.execute(sql, params)
+            return CURSOR(chan=self.chan, cursor=cursor)
+
+        return await self.chan.run(cont)
+
+    async def execute_many(
+        self, sql: str, params: Iterable[Iterable[Any]] = ()
+    ) -> CURSOR:
+        def cont() -> CURSOR:
+            cursor = self.conn.executemany(sql, params)
             return CURSOR(chan=self.chan, cursor=cursor)
 
         return await self.chan.run(cont)
