@@ -21,9 +21,7 @@ from .server.transitions import (
     t_char_inserted,
     t_comp_inserted,
     t_natural_insertable,
-    t_set_sources,
     t_text_changed,
-    t_toggle_sources,
 )
 from .server.types import Notification
 from .shared.nvim import print, run_forever
@@ -44,7 +42,7 @@ class Main:
         self.settings = settings
         self.state = initial_state(settings)
         self._init = create_task(self.initialize())
-        run_forever(self.ooda())
+        run_forever(nvim, self.ooda())
 
     def _submit(self, co: Awaitable[None], wait: bool = True) -> None:
         loop: AbstractEventLoop = self.nvim.loop
