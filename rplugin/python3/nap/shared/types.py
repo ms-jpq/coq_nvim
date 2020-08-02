@@ -97,10 +97,15 @@ Factory = Callable[[Nvim, Queue, Seed], Awaitable[Source]]
 
 
 @dataclass(frozen=True)
+class SnippetSeed:
+    config: Dict[str, Any]
+
+
+@dataclass(frozen=True)
 class SnippetContext:
     position: Position
     snippet: Snippet
 
 
 SnippetEngine = Callable[[SnippetContext], Awaitable[None]]
-SnippetEngineFactory = Callable[[Nvim], Awaitable[SnippetEngine]]
+SnippetEngineFactory = Callable[[Nvim, SnippetSeed], Awaitable[SnippetEngine]]

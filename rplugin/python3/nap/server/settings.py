@@ -1,15 +1,16 @@
 from inspect import getmembers, isfunction
 from math import inf
 from os.path import exists, join
-from typing import Any, Dict, Iterator, Optional, Sequence
+from typing import Any, Callable, Dict, Iterator, Optional, Sequence
 
 from ..clients import around, buffers, lsp, paths, tmux, tree_sitter
 from ..shared.da import load_json, load_module, merge_all
-from ..shared.types import Factory, Seed, SnippetEngineFactory
+from ..shared.types import Factory, Seed, SnippetEngineFactory, SnippetSeed
 from ..snippets import lsp as lsp_snippet
 from .consts import load_hierarchy, module_entry_point, settings_json
 from .types import (
     CacheOptions,
+    EngineFactory,
     MatchOptions,
     Settings,
     SnippetEngineSpec,
@@ -63,9 +64,9 @@ def initial(configs: Sequence[Any]) -> Settings:
     return settings
 
 
-def load_external(spec: SourceSpec) -> Optional[Factory]:
+def load_external(main_name: str) -> Optional[Callable[..., Any]]:
     for path in load_hierarchy:
-        candidate = join(path, spec.main)
+        candidate = join(path, main_name)
         if exists(candidate):
             mod = load_module(candidate)
             for member_name, func in getmembers(mod, isfunction):
@@ -110,12 +111,32 @@ def load_factories(settings: Settings) -> Iterator[SourceFactory]:
 
     for name, spec in settings.sources.items():
         if name not in intrinsic:
-            main = load_external(spec)
+            spec = settings.sources[name]
+            main = load_external(spec.main)
             if main:
                 yield assemble(spec, name=name, main=main, match=settings.match)
 
 
-def load_engines(settings: Settings) -> Iterator[SnippetEngineFactory]:
+def build(
+    spec: SnippetEngineSpec, name: str, main: SnippetEngineFactory
+) -> EngineFactory:
+    seed = SnippetSeed(config=spec.config)
+    fact = EngineFactory(name=name, seed=seed, manufacture=main)
+    return fact
+
+
+def load_engines(settings: Settings) -> Iterator[EngineFactory]:
     intrinsic = {
         lsp_snippet.main.NAME: lsp.main.main,
     }
+
+    for name, main in intrinsic.items():
+        spec = settings.snippet_engines[name]
+        yield build(spec, name=name, main=main)
+
+    for name, spec in settings.snippet_engines.items():
+        if name not in intrinsic:
+            spec = settings.snippet_engines[name]
+            main = load_external(spec.main)
+            if main:
+                yield build(spec, name=name, main=main)

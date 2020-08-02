@@ -7,7 +7,7 @@ from pynvim import Nvim
 from pynvim.api.buffer import Buffer
 from pynvim.api.window import Window
 
-from ..shared.types import LEdit, Position
+from ..shared.types import LEdit, Position, Snippet
 from .types import Payload
 
 IText = Union[str, Tuple[()]]
@@ -190,8 +190,14 @@ def apply_patch(nvim: Nvim, comp: Dict[str, Any]) -> None:
             )
             for edit in d["ledits"]
         )
-        payload = Payload(**{**d, **dict(position=position, ledits=edits)})
+        snippet = Snippet(**snip) if (snip := d.get("snippet")) else None
+        payload = Payload(
+            **{**d, **dict(position=position, ledits=edits, snippet=snippet)}
+        )
     except (KeyError, TypeError):
         pass
     else:
-        replace_lines(nvim, payload=payload)
+        if payload.snippet:
+            pass
+        else:
+            replace_lines(nvim, payload=payload)

@@ -9,6 +9,8 @@ from ..shared.types import (
     Position,
     Seed,
     Snippet,
+    SnippetSeed,
+    SnippetEngineFactory
 )
 
 
@@ -72,6 +74,13 @@ class Step:
     text: str
     text_normalized: str
     comp: Completion
+
+
+@dataclass(frozen=True)
+class EngineFactory:
+    name: str
+    seed: SnippetSeed
+    manufacture: SnippetEngineFactory
 
 
 @dataclass(frozen=True)
