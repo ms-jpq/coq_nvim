@@ -60,9 +60,10 @@ async def ask(nvim: Nvim, chan: Queue, context: Context, uid: int) -> Optional[A
         )
 
     await call(nvim, cont)
-    rid, resp = await chan.get()
-    assert rid == uid
-    return resp
+    while True:
+        rid, resp = await chan.get()
+        if rid == uid:
+            return resp
 
 
 def parse_resp_to_rows(resp: Any) -> Sequence[Any]:

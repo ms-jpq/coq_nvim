@@ -3,20 +3,16 @@ local fn = vim.fn
 local lsp = vim.lsp
 
 local cancel = function () end
-local req_id = nil
 
 local linesep = "\n"
 
 
 local notify = function (request_id, ret)
-  if request_id == req_id then
-    fn._FCnotify("lsp", request_id, ret)
-  end
+  fn._FCnotify("lsp", request_id, ret)
 end
 
 
 local list_comp_candidates = function (request_id, row, col)
-  req_id = request_id
   cancel()
   cancel = function () end
 
