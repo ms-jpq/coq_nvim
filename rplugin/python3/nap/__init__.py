@@ -33,8 +33,8 @@ class Main:
         self.msg_ch: Queue = Queue()
 
         self._initialized = False
-        user_config = nvim.vars.get("fancy_completion_settings", {})
-        client_config = nvim.vars.get("fancy_completion_settings_private", {})
+        user_config = nvim.vars.get("nap_settings", {})
+        client_config = nvim.vars.get("nap_settings_private", {})
         settings = initial(configs=(client_config, user_config))
         self.settings = settings
         self.state = initial_state(settings)
@@ -52,25 +52,25 @@ class Main:
 
         self.chan.submit(run, self.nvim)
 
-    @command("FCstart")
+    @command("NAPstart")
     def initialize(self) -> None:
         async def setup() -> None:
-            await autocmd(self.nvim, events=("InsertEnter",), fn="_FCinsert_enter")
+            await autocmd(self.nvim, events=("InsertEnter",), fn="_NAPinsert_enter")
 
-            await autocmd(self.nvim, events=("InsertCharPre",), fn="_FCpreinsert_char")
+            await autocmd(self.nvim, events=("InsertCharPre",), fn="_NAPpreinsert_char")
 
             await autocmd(
-                self.nvim, events=("TextChangedI",), fn="_FCtextchangedi",
+                self.nvim, events=("TextChangedI",), fn="_NAPtextchangedi",
             )
 
             await autocmd(
-                self.nvim, events=("TextChangedP",), fn="_FCtextchangedp",
+                self.nvim, events=("TextChangedP",), fn="_NAPtextchangedp",
             )
 
             await autocmd(
                 self.nvim,
                 events=("CompleteDonePre",),
-                fn="_FCpost_pum",
+                fn="_NAPpost_pum",
                 arg_eval=("v:completed_item",),
             )
 
@@ -96,7 +96,7 @@ class Main:
             self._submit(setup())
             run_forever(self.nvim, ooda)
 
-        self._submit(print(self.nvim, "Fancy Completion ⭐️"))
+        self._submit(print(self.nvim, "NAP ⭐️"))
 
     def next_comp(self, options: GenOptions) -> None:
         async def cont() -> None:
@@ -104,7 +104,7 @@ class Main:
 
         self._submit(cont())
 
-    @function("_FCnotify")
+    @function("_NAPnotify")
     def notify(self, args: Sequence[Any]) -> None:
         async def cont() -> None:
             source, *body = args
@@ -113,11 +113,11 @@ class Main:
 
         self._submit(cont())
 
-    @function("FCmanual", sync=True)
+    @function("NAPmanual", sync=True)
     def manual(self, args: Sequence[Any]) -> None:
         self.next_comp(GenOptions(force=True, sources=self.state.sources))
 
-    @function("FComnifunc", sync=True)
+    @function("NAPomnifunc", sync=True)
     def omnifunc(self, args: Sequence[Any]) -> int:
         find_start, *_ = args
         if find_start == 1:
@@ -126,15 +126,15 @@ class Main:
             self.next_comp(GenOptions(force=True, sources=self.state.sources))
             return -2
 
-    @function("_FCinsert_enter")
+    @function("_NAPinsert_enter")
     def insert_enter(self, args: Sequence[Any]) -> None:
         self.next_comp(GenOptions(sources=self.state.sources))
 
-    @function("_FCpreinsert_char")
+    @function("_NAPpreinsert_char")
     def char_inserted(self, args: Sequence[Any]) -> None:
         self.state = t_char_inserted(self.state)
 
-    @function("_FCtextchangedi")
+    @function("_NAPtextchangedi")
     def text_changed_i(self, args: Sequence[Any]) -> None:
         try:
             if t_natural_insertable(self.state):
@@ -142,7 +142,7 @@ class Main:
         finally:
             self.state = t_text_changed(self.state)
 
-    @function("_FCtextchangedp")
+    @function("_NAPtextchangedp")
     def text_changed_p(self, args: Sequence[Any]) -> None:
         try:
             if t_natural_insertable(self.state):
@@ -150,37 +150,7 @@ class Main:
         finally:
             self.state = t_text_changed(self.state)
 
-    @function("_FCpost_pum")
+    @function("_NAPpost_pum")
     def post_pum(self, args: Sequence[Any]) -> None:
         item, *_ = args
         apply_patch(self.nvim, comp=item)
-
-    @function("FCset_sources")
-    def set_sources(self, args: Sequence[Any]) -> None:
-        candidates, *_ = args
-        self.state = t_set_sources(
-            self.state, settings=self.settings, candidates=candidates
-        )
-
-    @function("FCtoggle_sources")
-    def toggle_sources(self, args: Sequence[Any]) -> None:
-        candidates, *_ = args
-        self.state = t_toggle_sources(
-            self.state, settings=self.settings, candidates=candidates
-        )
-
-    def _print_sources(self) -> None:
-        sources = sorted(self.state.sources, key=strxfrm)
-        s_repr = ", ".join(sources)
-        msg = f"New sources - {s_repr}"
-        self._submit(print(self.nvim, msg))
-
-    @command("FCSetSources", nargs="*")
-    def c_set_sources(self, args: Sequence[Any]) -> None:
-        self.set_sources((args,))
-        self._print_sources()
-
-    @command("FCToggleSources", nargs="*")
-    def c_toggle_sources(self, args: Sequence[Any]) -> None:
-        self.toggle_sources((args,))
-        self._print_sources()

@@ -40,12 +40,12 @@ class ParsedRow:
 
 async def init_lua(nvim: Nvim) -> Tuple[Dict[int, str], Dict[int, str]]:
     def cont() -> Tuple[Dict[str, int], Dict[str, int]]:
-        nvim.api.exec_lua("fancy_completion_lsp = require 'fancy-completion/lsp'", ())
+        nvim.api.exec_lua("nap_lsp = require 'nap/lsp'", ())
         entry_kind = nvim.api.exec_lua(
-            "return fancy_completion_lsp.list_entry_kind()", ()
+            "return nap_lsp.list_entry_kind()", ()
         )
         insert_kind = nvim.api.exec_lua(
-            "return fancy_completion_lsp.list_insert_kind()", ()
+            "return nap_lsp.list_insert_kind()", ()
         )
         return entry_kind, insert_kind
 
@@ -64,7 +64,7 @@ async def ask(
 
     def cont() -> None:
         nvim.api.exec_lua(
-            "fancy_completion_lsp.list_comp_candidates(...)",
+            "nap_lsp.list_comp_candidates(...)",
             (uid, enable_cancel, row, col),
         )
 

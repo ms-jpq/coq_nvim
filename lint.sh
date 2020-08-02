@@ -6,7 +6,7 @@ set -o pipefail
 
 cd "$(dirname "$0")" || exit 1
 
-cd "rplugin/python3/fancy_completion" || exit 1
+cd "rplugin/python3/nap" || exit 1
 
 FILES=(
   *.py

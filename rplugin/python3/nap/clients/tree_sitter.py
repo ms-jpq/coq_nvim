@@ -12,7 +12,7 @@ NAME = "tree_sitter"
 async def init_lua(nvim: Nvim) -> None:
     def cont() -> None:
         nvim.api.exec_lua(
-            "fancy_completion_tree_sitter = require 'fancy-completion/tree_sitter'", ()
+            "nap_tree_sitter = require 'nap/tree_sitter'", ()
         )
         return
 
