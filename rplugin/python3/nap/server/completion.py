@@ -151,8 +151,7 @@ async def manufacture(
     nvim: Nvim, name: str, factory: SourceFactory
 ) -> Tuple[StepFunction, Queue]:
     chan: Queue = Queue()
-    fact = cast(Factory, factory.manufacture)
-    src = await fact(nvim, chan, factory.seed)
+    src = await factory.manufacture(nvim, chan, factory.seed)
 
     async def source(context: Context, s_context: StepContext) -> Sequence[Step]:
         timeout = inf if s_context.force else factory.timeout
