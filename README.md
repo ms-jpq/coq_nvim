@@ -42,22 +42,22 @@ Plug 'ms-jpq/nap', {'branch': 'nap', 'do': ':UpdateRemotePlugins'}
 
 | name                                                                                                                        | source                                                             |
 | --------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
-| [LSP](https://github.com/ms-jpq/fancy-completion/blob/nvim/rplugin/python3/nap/clients/lsp.py)                 | Fetches results from Neovim LSP client                             |
-| [Tree Sitter](https://github.com/ms-jpq/fancy-completion/blob/nvim/rplugin/python3/nap/clients/tree_sitter.py) | Fetches results from syntax tree (still waiting on more stability) |
-| [Tmux](https://github.com/ms-jpq/fancy-completion/blob/nvim/rplugin/python3/nap/clients/tmux.py)               | Fetches results from tmux panes (cached @ adjustable intervals)    |
-| [Around](https://github.com/ms-jpq/fancy-completion/blob/nvim/rplugin/python3/nap/clients/around.py)           | Fetches results from lines around cursor                           |
-| [Buffers](https://github.com/ms-jpq/fancy-completion/blob/nvim/rplugin/python3/nap/clients/buffers.py)         | Fetches results from seen buffers (cached @ adjustable intervals)  |
-| [Paths](https://github.com/ms-jpq/fancy-completion/blob/nvim/rplugin/python3/nap/clients/paths.py)             | Fetches results from file paths                                    |
+| [LSP](https://github.com/ms-jpq/nap/blob/nap/rplugin/python3/nap/clients/lsp.py)                 | Fetches results from Neovim LSP client                             |
+| [Tree Sitter](https://github.com/ms-jpq/nap/blob/nap/rplugin/python3/nap/clients/tree_sitter.py) | Fetches results from syntax tree (still waiting on more stability) |
+| [Tmux](https://github.com/ms-jpq/nap/blob/nap/rplugin/python3/nap/clients/tmux.py)               | Fetches results from tmux panes (cached @ adjustable intervals)    |
+| [Around](https://github.com/ms-jpq/nap/blob/nap/rplugin/python3/nap/clients/around.py)           | Fetches results from lines around cursor                           |
+| [Buffers](https://github.com/ms-jpq/nap/blob/nap/rplugin/python3/nap/clients/buffers.py)         | Fetches results from seen buffers (cached @ adjustable intervals)  |
+| [Paths](https://github.com/ms-jpq/nap/blob/nap/rplugin/python3/nap/clients/paths.py)             | Fetches results from file paths                                    |
 
 ### External Sources
 
 | name                                                          | source                                                            |
 | ------------------------------------------------------------- | ----------------------------------------------------------------- |
-| [TabNine](https://github.com/ms-jpq/fancy-completion-clients) | Fetches results from [TabNine](https://www.tabnine.com/) ML model |
+| [TabNine](https://github.com/ms-jpq/nap-clients) | Fetches results from [TabNine](https://www.tabnine.com/) ML model |
 
 ### Configuration
 
-Check out the [basic config](https://github.com/ms-jpq/fancy-completion/blob/nvim/config/config.json) before you proceed.
+Check out the [basic config](https://github.com/ms-jpq/nap/blob/nap/config/config.json) before you proceed.
 
 To customize, you are to set `g:nap_settings` to a dictionary with the same format.
 
@@ -87,12 +87,12 @@ The newer dictionary will automatically be merged with the older one.
 
 ### Recommended Settings
 
-There are some [common settings recommended](https://github.com/ms-jpq/fancy-completion/blob/nvim/lua/fancy-completion/recommends.lua) by most completion plugins. I put them in a package.
+There are some [common settings recommended](https://github.com/ms-jpq/nap/blob/nap/lua/nap/recommends.lua) by most completion plugins. I put them in a package.
 
 Just require it in your `.vimrc` like so:
 
 ```vimL
-lua require("fancy-completion/recommends").all()
+lua require("nap/recommends").all()
 ```
 
 ### Timeouts
@@ -125,8 +125,8 @@ Each source is basically an async stream, which will receive a context around th
 
 For completion results, the prefix / suffix determine the cusor location, post completion.
 
-Each client is loaded by specifying a `source.<name>.main` path relative to the parent directory of `fancy-completion`.
+Each client is loaded by specifying a `source.<name>.main` path relative to the parent directory of `nap`.
 
-Each client is must have a `main` function that conforms to the types `Source` and `Factory` in the [spec file](https://github.com/ms-jpq/fancy-completion/blob/nvim/rplugin/python3/nap/shared/types.py).
+Each client is must have a `main` function that conforms to the types `Source` and `Factory` in the [spec file](https://github.com/ms-jpq/nap/blob/nap/rplugin/python3/nap/shared/types.py).
 
 See the External Sources section for examples.
