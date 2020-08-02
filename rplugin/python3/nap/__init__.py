@@ -15,7 +15,8 @@ from .server.completion import GenOptions, merge
 from .server.nvim import autocmd, complete
 from .server.patch import apply_patch
 from .server.scheduler import Signal, schedule
-from .server.settings import initial, load_factories
+from .server.settings import initial
+from .server.snippet import gen_engine
 from .server.state import initial as initial_state
 from .server.transitions import (
     t_char_inserted,
@@ -42,6 +43,7 @@ class Main:
         self.settings = settings
         self.state = initial_state(settings)
         self._init = create_task(self.initialize())
+        self.engine = create_task(gen_engine(nvim, settings=settings))
         run_forever(nvim, self.ooda)
 
     def _submit(self, co: Awaitable[None], wait: bool = True) -> None:
@@ -79,9 +81,8 @@ class Main:
 
     async def ooda(self) -> None:
         settings = self.settings
-        factories = load_factories(settings=settings)
         gen, listen = await merge(
-            self.nvim, chan=self.msg_ch, factories=factories, settings=settings
+            self.nvim, chan=self.msg_ch, settings=settings
         )
 
         async def l1() -> None:
@@ -117,7 +118,7 @@ class Main:
 
     @function("NAPmanual", sync=True)
     def manual(self, args: Sequence[Any]) -> None:
-        self.next_comp(GenOptions(force=True, sources=self.state.sources))
+        self.next_comp(GenOptions(force=True))
 
     @function("NAPomnifunc", sync=True)
     def omnifunc(self, args: Sequence[Any]) -> int:
@@ -125,7 +126,7 @@ class Main:
         if find_start == 1:
             return -1
         else:
-            self.next_comp(GenOptions(force=True, sources=self.state.sources))
+            self.next_comp(GenOptions(force=True))
             return -2
 
     @function("_NAPinsert_enter")
@@ -140,7 +141,7 @@ class Main:
     def text_changed_i(self, args: Sequence[Any]) -> None:
         try:
             if t_natural_insertable(self.state):
-                self.next_comp(GenOptions(sources=self.state.sources))
+                self.next_comp(GenOptions())
         finally:
             self.state = t_text_changed(self.state)
 
@@ -148,11 +149,16 @@ class Main:
     def text_changed_p(self, args: Sequence[Any]) -> None:
         try:
             if t_natural_insertable(self.state):
-                self.next_comp(GenOptions(sources=self.state.sources))
+                self.next_comp(GenOptions())
         finally:
             self.state = t_text_changed(self.state)
 
     @function("_NAPpost_pum")
     def post_pum(self, args: Sequence[Any]) -> None:
         item, *_ = args
-        apply_patch(self.nvim, comp=item)
+
+        async def cont() -> None:
+            engine = await self.engine
+            apply_patch(self.nvim, engine=engine, comp=item)
+
+        self._submit(cont())

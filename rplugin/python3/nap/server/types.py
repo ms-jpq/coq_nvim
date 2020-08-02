@@ -57,7 +57,6 @@ class Settings:
 
 @dataclass(frozen=True)
 class SourceFactory:
-    name: str
     short_name: str
     timeout: float
     limit: float
@@ -78,7 +77,6 @@ class Step:
 
 @dataclass(frozen=True)
 class EngineFactory:
-    name: str
     seed: SnippetSeed
     manufacture: SnippetEngineFactory
 
@@ -98,4 +96,3 @@ class Payload:
 class State:
     char_inserted: bool
     comp_inserted: bool
-    sources: Set[str]

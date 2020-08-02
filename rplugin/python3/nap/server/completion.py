@@ -25,12 +25,12 @@ from ..shared.types import Context, Factory, Position
 from .cache import make_cache
 from .fuzzy import fuzzer
 from .nvim import VimCompletion
+from .settings import load_factories
 from .types import Notification, Settings, SourceFactory, Step
 
 
 @dataclass(frozen=True)
 class GenOptions:
-    sources: Set[str]
     force: bool = False
 
 
@@ -147,13 +147,14 @@ async def gen_context(nvim: Nvim, unifying_chars: Set[str]) -> Context:
     return context
 
 
-async def manufacture(nvim: Nvim, factory: SourceFactory) -> Tuple[StepFunction, Queue]:
+async def manufacture(
+    nvim: Nvim, name: str, factory: SourceFactory
+) -> Tuple[StepFunction, Queue]:
     chan: Queue = Queue()
     fact = cast(Factory, factory.manufacture)
     src = await fact(nvim, chan, factory.seed)
 
     async def source(context: Context, s_context: StepContext) -> Sequence[Step]:
-        name = factory.name
         timeout = inf if s_context.force else factory.timeout
         acc: List[Step] = []
 
@@ -213,7 +214,7 @@ async def osha(
 
 
 async def merge(
-    nvim: Nvim, chan: Queue, factories: Iterator[SourceFactory], settings: Settings
+    nvim: Nvim, chan: Queue, settings: Settings
 ) -> Tuple[
     Callable[[GenOptions], Awaitable[Tuple[Position, Iterator[VimCompletion]]]],
     Callable[[], Awaitable[None]],
@@ -221,9 +222,9 @@ async def merge(
     match_opt = settings.match
     cache_opt = settings.cache
     unifying_chars = match_opt.unifying_chars
-    facts = tuple(factories)
+    facts = load_factories(settings=settings)
     limits = {
-        **{fact.name: fact.limit for fact in facts},
+        **{name: fact.limit for name, fact in facts.items()},
         cache_opt.source_name: cache_opt.limit,
     }
     fuzzy = fuzzer(match_opt, limits=limits)
@@ -243,9 +244,7 @@ async def merge(
                 for name, source in sources.items()
                 if name in options.sources
             )
-            max_wait = min(
-                *(fact.timeout for fact in facts if fact.name in options.sources), 0
-            )
+            max_wait = min(*(fact.timeout for fact in facts), 0)
             cached, *comps = await gather(pull(context, max_wait), *source_gen)
             steps = tuple(c for co in comps for c in co)
             push(context, steps)

@@ -1,7 +1,7 @@
 from inspect import getmembers, isfunction
 from math import inf
 from os.path import exists, join
-from typing import Any, Callable, Dict, Iterator, Optional, Sequence
+from typing import Any, Callable, Dict, Iterator, Optional, Sequence, Tuple
 
 from ..clients import around, buffers, lsp, paths, tmux, tree_sitter
 from ..shared.da import load_json, load_module, merge_all
@@ -75,16 +75,13 @@ def load_external(main_name: str) -> Optional[Callable[..., Any]]:
     return None
 
 
-def assemble(
-    spec: SourceSpec, name: str, main: Factory, match: MatchOptions,
-) -> SourceFactory:
+def assemble(spec: SourceSpec, main: Factory, match: MatchOptions,) -> SourceFactory:
     limit = spec.limit or inf
     timeout = (spec.timeout or inf) / 1000
     rank = spec.rank or 100
     config = spec.config
     seed = Seed(match=match, limit=limit, timeout=timeout, config=config,)
     fact = SourceFactory(
-        name=name,
         short_name=spec.short_name,
         limit=limit,
         timeout=timeout,
@@ -95,48 +92,54 @@ def assemble(
     return fact
 
 
-def load_factories(settings: Settings) -> Iterator[SourceFactory]:
-    intrinsic = {
-        around.NAME: around.main,
-        buffers.NAME: buffers.main,
-        lsp.NAME: lsp.main,
-        paths.NAME: paths.main,
-        tmux.NAME: tmux.main,
-        tree_sitter.NAME: tree_sitter.main,
-    }
+def load_factories(settings: Settings) -> Dict[str, SourceFactory]:
+    def cont() -> Iterator[Tuple[str, SourceFactory]]:
+        intrinsic = {
+            around.NAME: around.main,
+            buffers.NAME: buffers.main,
+            lsp.NAME: lsp.main,
+            paths.NAME: paths.main,
+            tmux.NAME: tmux.main,
+            tree_sitter.NAME: tree_sitter.main,
+        }
 
-    for name, main in intrinsic.items():
-        spec = settings.sources[name]
-        yield assemble(spec, name=name, main=main, match=settings.match)
-
-    for name, spec in settings.sources.items():
-        if name not in intrinsic:
+        for name, main in intrinsic.items():
             spec = settings.sources[name]
-            main = load_external(spec.main)
-            if main:
-                yield assemble(spec, name=name, main=main, match=settings.match)
+            yield name, assemble(spec, main=main, match=settings.match)
+
+        for name, spec in settings.sources.items():
+            if name not in intrinsic:
+                spec = settings.sources[name]
+                main = load_external(spec.main)
+                if main:
+                    yield name, assemble(spec, main=main, match=settings.match)
+
+    return {n: f for n, f in cont()}
 
 
 def build(
-    spec: SnippetEngineSpec, name: str, main: SnippetEngineFactory
+    spec: SnippetEngineSpec, main: SnippetEngineFactory
 ) -> EngineFactory:
     seed = SnippetSeed(config=spec.config)
-    fact = EngineFactory(name=name, seed=seed, manufacture=main)
+    fact = EngineFactory(seed=seed, manufacture=main)
     return fact
 
 
-def load_engines(settings: Settings) -> Iterator[EngineFactory]:
-    intrinsic = {
-        lsp_snippet.main.NAME: lsp.main.main,
-    }
+def load_engines(settings: Settings) -> Dict[str, SnippetEngineFactory]:
+    def cont() -> Iterator[Tuple[str, EngineFactory]]:
+        intrinsic = {
+            lsp_snippet.main.NAME: lsp.main.main,
+        }
 
-    for name, main in intrinsic.items():
-        spec = settings.snippet_engines[name]
-        yield build(spec, name=name, main=main)
-
-    for name, spec in settings.snippet_engines.items():
-        if name not in intrinsic:
+        for name, main in intrinsic.items():
             spec = settings.snippet_engines[name]
-            main = load_external(spec.main)
-            if main:
-                yield build(spec, name=name, main=main)
+            yield name, build(spec, main=main)
+
+        for name, spec in settings.snippet_engines.items():
+            if name not in intrinsic:
+                spec = settings.snippet_engines[name]
+                main = load_external(spec.main)
+                if main:
+                    yield name, build(spec, main=main)
+
+    return {n: f for n, f in cont()}
