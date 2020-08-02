@@ -3,6 +3,7 @@ local fn = vim.fn
 local lsp = vim.lsp
 
 local linesep = "\n"
+local cancel = function () end
 
 
 local notify = function (request_id, ret)
@@ -10,15 +11,19 @@ local notify = function (request_id, ret)
 end
 
 
-local list_comp_candidates = function (request_id, row, col)
+local list_comp_candidates = function (request_id, enable_cancel, row, col)
+  if enable_cancel then
+    cancel()
+  end
+
   if #lsp.buf_get_clients() == 0 then
     notify(request_id, nil)
+    cancel = function () end
   else
     local position = {line = row, character = col}
     local text_doc = lsp.util.make_text_document_params()
     local params = {position = position, textDocument=text_doc}
 
-    -- no cancel! doesn't work with some LSPs
     _, cancel = lsp.buf_request(0, "textDocument/completion", params, function (err, _, ret)
       if err then
         api.nvim_out_writeln("lsp error: " .. err .. linesep)

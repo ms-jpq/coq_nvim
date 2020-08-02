@@ -34,7 +34,9 @@
       "timeout": 100
     },
     "lsp": {
-      "config": {},
+      "config": {
+        "enable_cancel": false
+      },
       "enabled": true,
       "limit": null,
       "main": "lsp.py",

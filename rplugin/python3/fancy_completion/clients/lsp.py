@@ -26,6 +26,11 @@ NAME = "lsp"
 
 
 @dataclass(frozen=True)
+class Config:
+    enable_cancel: bool
+
+
+@dataclass(frozen=True)
 class ParsedRow:
     old_prefix: str
     new_prefix: str
@@ -50,13 +55,17 @@ async def init_lua(nvim: Nvim) -> Tuple[Dict[int, str], Dict[int, str]]:
     return elookup, ilookup
 
 
-async def ask(nvim: Nvim, chan: Queue, context: Context, uid: int) -> Optional[Any]:
+async def ask(
+    nvim: Nvim, chan: Queue, context: Context, config: Config, uid: int
+) -> Optional[Any]:
+    enable_cancel = config.enable_cancel
     row = context.position.row
     col = context.position.col
 
     def cont() -> None:
         nvim.api.exec_lua(
-            "fancy_completion_lsp.list_comp_candidates(...)", (uid, row, col)
+            "fancy_completion_lsp.list_comp_candidates(...)",
+            (uid, enable_cancel, row, col),
         )
 
     await call(nvim, cont)
@@ -197,13 +206,15 @@ def parse_rows(
 
 
 async def main(nvim: Nvim, chan: Queue, seed: Seed) -> Source:
+    config = Config(**seed.config)
+
     id_gen = count()
     entry_kind, insert_kind = await init_lua(nvim)
 
     async def source(context: Context) -> AsyncIterator[Completion]:
         cword = context.alnums
         uid = next(id_gen)
-        resp = await ask(nvim, chan=chan, context=context, uid=uid)
+        resp = await ask(nvim, chan=chan, context=context, config=config, uid=uid)
         rows = parse_resp_to_rows(resp)
         try:
             for row in parse_rows(
