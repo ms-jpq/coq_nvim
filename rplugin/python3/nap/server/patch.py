@@ -191,7 +191,8 @@ async def apply_patch(nvim: Nvim, engine: SnippetEngine, comp: Dict[str, Any]) -
             )
             for edit in d["ledits"]
         )
-        snippet = Snippet(**snip) if (snip := d.get("snippet")) else None
+        snip = d.get("snippet")
+        snippet = Snippet(**snip) if snip else None
         payload = Payload(
             **{**d, **dict(position=position, ledits=edits, snippet=snippet)}
         )

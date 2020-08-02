@@ -50,7 +50,8 @@ def fuzzify(context: Context, step: Step) -> FuzzyStep:
 
     num_matches = len(matches)
     full_match = prefix_matches == len(c_alnums)
-    density = num_matches / snl if (snl := len(s_n_alnums)) else inf
+    snl = len(s_n_alnums)
+    density = num_matches / snl if snl else inf
     metric = FuzzyMetric(
         prefix_matches=prefix_matches,
         num_matches=num_matches,
