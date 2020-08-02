@@ -140,7 +140,7 @@ def parse_rows(
         require_parse = is_snippet(row, insert_lookup)
 
         if require_parse:
-            snippet = Snippet(kind="lsp", content=text)
+            snippet = Snippet(kind="lsp", content=text, match=text)
             yield Completion(
                 position=position,
                 old_prefix="",

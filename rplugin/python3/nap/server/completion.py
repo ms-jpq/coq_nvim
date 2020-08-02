@@ -159,7 +159,11 @@ async def manufacture(
 
         async def cont() -> None:
             async for comp in src(context):
-                text = comp.new_prefix + comp.new_suffix
+                text = (
+                    comp.snippet.match
+                    if comp.snippet
+                    else comp.new_prefix + comp.new_suffix
+                )
                 normalized_text = normalize(text)
                 step = Step(
                     source=name,

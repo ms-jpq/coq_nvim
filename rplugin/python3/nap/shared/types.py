@@ -75,6 +75,7 @@ class LEdit:
 class Snippet:
     kind: str
     content: str
+    match: str
 
 
 @dataclass(frozen=True)
