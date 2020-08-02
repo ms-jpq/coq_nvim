@@ -94,3 +94,13 @@ class Completion:
 
 Source = Callable[[Context], AsyncIterator[Completion]]
 Factory = Callable[[Nvim, Queue, Seed], Awaitable[Source]]
+
+
+@dataclass(frozen=True)
+class SnippetContext:
+    position: Position
+    snippet: Snippet
+
+
+SnippetSource = Callable[[SnippetContext], Awaitable[None]]
+SnippetFactory = Callable[[Nvim], Awaitable[SnippetSource]]
