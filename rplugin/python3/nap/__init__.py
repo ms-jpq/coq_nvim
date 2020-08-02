@@ -30,7 +30,7 @@ from .shared.nvim import print, run_forever
 
 @plugin
 class Main:
-    def __init__(self, nvim: Nvim):
+    def __init__(self, nvim: Nvim) -> None:
         self.nvim = nvim
         self.chan = ThreadPoolExecutor(max_workers=1)
         self.ch: Queue = Queue()

@@ -1,4 +1,4 @@
-from asyncio import create_subprocess_exec
+from asyncio import create_subprocess_exec, get_running_loop
 from asyncio.subprocess import PIPE
 from dataclasses import dataclass
 from importlib.util import module_from_spec, spec_from_file_location
@@ -9,6 +9,16 @@ from types import ModuleType
 from typing import Any, AsyncIterator, Iterator, Optional, Sequence, TypeVar, cast
 
 T = TypeVar("T")
+
+
+async def slurp(path: str) -> str:
+    loop = get_running_loop()
+
+    def cont() -> str:
+        with open(path) as fd:
+            return fd.read()
+
+    return await loop.run_in_executor(None, cont)
 
 
 def or_else(val: Optional[T], default: T) -> T:

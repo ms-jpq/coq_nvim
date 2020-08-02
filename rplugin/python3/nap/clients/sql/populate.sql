@@ -1,1 +1,1 @@
-INSERT INTO words VALUES ?
+INSERT INTO words VALUES (?)
