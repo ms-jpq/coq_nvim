@@ -11,6 +11,8 @@
   "snippet_engines": {
     "simple_lsp": {
       "config": {},
+      "enabled": true,
+      "kind": "lsp",
       "main": "lsp_snippet.py"
     }
   },

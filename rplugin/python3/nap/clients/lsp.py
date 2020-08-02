@@ -20,7 +20,7 @@ from pynvim import Nvim
 from ..shared.nvim import call, print
 from ..shared.parse import normalize, parse_common_affix
 from ..shared.types import Completion, Context, LEdit, Position, Seed, Source
-from .lsp_pkgs.snippet import ParseError, parse_snippet
+from ..snippets.lsp import ParseError, parse_snippet
 
 NAME = "lsp"
 
@@ -41,12 +41,8 @@ class ParsedRow:
 async def init_lua(nvim: Nvim) -> Tuple[Dict[int, str], Dict[int, str]]:
     def cont() -> Tuple[Dict[str, int], Dict[str, int]]:
         nvim.api.exec_lua("nap_lsp = require 'nap/lsp'", ())
-        entry_kind = nvim.api.exec_lua(
-            "return nap_lsp.list_entry_kind()", ()
-        )
-        insert_kind = nvim.api.exec_lua(
-            "return nap_lsp.list_insert_kind()", ()
-        )
+        entry_kind = nvim.api.exec_lua("return nap_lsp.list_entry_kind()", ())
+        insert_kind = nvim.api.exec_lua("return nap_lsp.list_insert_kind()", ())
         return entry_kind, insert_kind
 
     entry_kind, insert_kind = await call(nvim, cont)
@@ -64,8 +60,7 @@ async def ask(
 
     def cont() -> None:
         nvim.api.exec_lua(
-            "nap_lsp.list_comp_candidates(...)",
-            (uid, enable_cancel, row, col),
+            "nap_lsp.list_comp_candidates(...)", (uid, enable_cancel, row, col),
         )
 
     await call(nvim, cont)
