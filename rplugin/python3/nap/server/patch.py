@@ -10,7 +10,6 @@ from pynvim.api.window import Window
 from ..shared.types import LEdit, Position
 from .types import Payload
 
-
 IText = Union[str, Tuple[()]]
 TextStream = Sequence[IText]
 
