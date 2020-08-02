@@ -41,6 +41,15 @@
       "short_name": "B",
       "timeout": 100
     },
+    "dictionary": {
+      "config": {},
+      "enabled": true,
+      "limit": 3,
+      "main": "dictionary.py",
+      "rank": 50,
+      "short_name": "D",
+      "timeout": 100
+    },
     "lsp": {
       "config": {
         "enable_cancel": false
