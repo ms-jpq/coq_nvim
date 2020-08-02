@@ -13,7 +13,7 @@
       "config": {},
       "enabled": true,
       "kind": "lsp",
-      "main": "lsp_snippet.py"
+      "main": "lsp/main.py"
     }
   },
   "sources": {
@@ -50,7 +50,7 @@
       "main": "lsp.py",
       "rank": 200,
       "short_name": "L",
-      "timeout": 1
+      "timeout": 0
     },
     "paths": {
       "config": {},

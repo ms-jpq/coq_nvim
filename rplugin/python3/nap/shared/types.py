@@ -102,5 +102,5 @@ class SnippetContext:
     snippet: Snippet
 
 
-SnippetSource = Callable[[SnippetContext], Awaitable[None]]
-SnippetFactory = Callable[[Nvim], Awaitable[SnippetSource]]
+SnippetEngine = Callable[[SnippetContext], Awaitable[None]]
+SnippetEngineFactory = Callable[[Nvim], Awaitable[SnippetEngine]]

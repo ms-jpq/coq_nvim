@@ -1,24 +1,42 @@
 from inspect import getmembers, isfunction
 from math import inf
 from os.path import exists, join
-from typing import Any, Iterator, Optional, Sequence
+from typing import Any, Dict, Iterator, Optional, Sequence
 
 from ..clients import around, buffers, lsp, paths, tmux, tree_sitter
 from ..shared.da import load_json, load_module, merge_all
-from ..shared.types import Factory, Seed
+from ..shared.types import Factory, Seed, SnippetEngineFactory
+from ..snippets import lsp as lsp_snippet
 from .consts import load_hierarchy, module_entry_point, settings_json
-from .types import CacheOptions, MatchOptions, Settings, SourceFactory, SourceSpec
+from .types import (
+    CacheOptions,
+    MatchOptions,
+    Settings,
+    SnippetEngineSpec,
+    SourceFactory,
+    SourceSpec,
+)
 
 
-def load_source(config: Any) -> SourceSpec:
+def load_source(config: Dict[str, Any]) -> SourceSpec:
     spec = SourceSpec(
         main=config["main"],
-        short_name=config["short_name"],
         enabled=config["enabled"],
+        short_name=config["short_name"],
         limit=config.get("limit"),
         timeout=config.get("timeout"),
         rank=config.get("rank"),
-        config=config.get("config"),
+        config=config.get("config") or {},
+    )
+    return spec
+
+
+def load_engine(config: Dict[str, Any]) -> SnippetEngineSpec:
+    spec = SnippetEngineSpec(
+        main=config["main"],
+        enabled=config["enabled"],
+        kind=config["kind"],
+        config=config.get("config") or {},
     )
     return spec
 
@@ -36,7 +54,12 @@ def initial(configs: Sequence[Any]) -> Settings:
         limit=cache_o["limit"],
     )
     sources = {name: load_source(conf) for name, conf in config["sources"].items()}
-    settings = Settings(match=match, cache=cache, sources=sources)
+    snippet_engines = {
+        name: load_engine(conf) for name, conf in config["snippet_engines"].items()
+    }
+    settings = Settings(
+        match=match, cache=cache, sources=sources, snippet_engines=snippet_engines
+    )
     return settings
 
 
@@ -57,7 +80,7 @@ def assemble(
     limit = spec.limit or inf
     timeout = (spec.timeout or inf) / 1000
     rank = spec.rank or 100
-    config = spec.config or {}
+    config = spec.config
     seed = Seed(match=match, limit=limit, timeout=timeout, config=config,)
     fact = SourceFactory(
         name=name,
@@ -90,3 +113,9 @@ def load_factories(settings: Settings) -> Iterator[SourceFactory]:
             main = load_external(spec)
             if main:
                 yield assemble(spec, name=name, main=main, match=settings.match)
+
+
+def load_engines(settings: Settings) -> Iterator[SnippetEngineFactory]:
+    intrinsic = {
+        lsp_snippet.main.NAME: lsp.main.main,
+    }

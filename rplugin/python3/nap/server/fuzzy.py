@@ -3,8 +3,8 @@ from locale import strxfrm
 from math import inf
 from typing import Any, Callable, Dict, Iterator, Sequence, Set, Union, cast
 
-from .nvim import VimCompletion
 from ..shared.types import Completion, Context
+from .nvim import VimCompletion
 from .types import MatchOptions, Payload, Step
 
 
@@ -50,7 +50,7 @@ def fuzzify(context: Context, step: Step) -> FuzzyStep:
 
     num_matches = len(matches)
     full_match = prefix_matches == len(c_alnums)
-    density = num_matches / len(s_n_alnums)
+    density = num_matches / snl if (snl := len(s_n_alnums)) else inf
     metric = FuzzyMetric(
         prefix_matches=prefix_matches,
         num_matches=num_matches,
@@ -102,6 +102,7 @@ def gen_payload(comp: Completion) -> Payload:
         old_suffix=comp.old_suffix,
         new_suffix=comp.new_suffix,
         ledits=comp.ledits,
+        snippet=comp.snippet,
     )
 
 

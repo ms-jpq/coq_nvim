@@ -1,7 +1,15 @@
 from dataclasses import dataclass
 from typing import Any, Dict, Optional, Sequence, Set
 
-from ..shared.types import Completion, Factory, LEdit, MatchOptions, Position, Seed
+from ..shared.types import (
+    Completion,
+    Factory,
+    LEdit,
+    MatchOptions,
+    Position,
+    Seed,
+    Snippet,
+)
 
 
 @dataclass(frozen=True)
@@ -21,11 +29,19 @@ class CacheOptions:
 @dataclass(frozen=True)
 class SourceSpec:
     main: str
-    short_name: str
     enabled: bool
+    short_name: str
     limit: Optional[float]
     timeout: Optional[float]
     rank: Optional[int]
+    config: Dict[str, Any]
+
+
+@dataclass(frozen=True)
+class SnippetEngineSpec:
+    main: str
+    enabled: str
+    kind: str
     config: Dict[str, Any]
 
 
@@ -34,6 +50,7 @@ class Settings:
     match: MatchOptions
     cache: CacheOptions
     sources: Dict[str, SourceSpec]
+    snippet_engines: Dict[str, SnippetEngineSpec]
 
 
 @dataclass(frozen=True)
@@ -65,6 +82,7 @@ class Payload:
     old_suffix: str
     new_suffix: str
     ledits: Sequence[LEdit]
+    snippet: Optional[Snippet]
 
 
 @dataclass(frozen=True)
