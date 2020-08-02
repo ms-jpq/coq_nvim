@@ -24,7 +24,7 @@ def load_source(config: Any) -> SourceSpec:
 
 
 def initial(configs: Sequence[Any]) -> Settings:
-    config = merge_all(load_json(settings_json), *configs)
+    config = merge_all(load_json(settings_json), *configs, replace=True)
     fuzzy_o = config["fuzzy"]
     cache_o = config["cache"]
     match = MatchOptions(
@@ -58,12 +58,7 @@ def assemble(
     timeout = (spec.timeout or inf) / 1000
     rank = spec.rank or 100
     config = spec.config or {}
-    seed = Seed(
-        match=match,
-        limit=limit,
-        timeout=timeout,
-        config=config,
-    )
+    seed = Seed(match=match, limit=limit, timeout=timeout, config=config,)
     fact = SourceFactory(
         name=name,
         short_name=spec.short_name,
