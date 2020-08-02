@@ -1,5 +1,6 @@
 from asyncio import Queue
 from dataclasses import dataclass
+from sqlite3 import connect
 from typing import AsyncIterator
 
 from pynvim import Nvim
@@ -15,6 +16,8 @@ class Config:
 
 
 async def main(nvim: Nvim, chan: Queue, seed: Seed) -> Source:
+    db = connect(":memory:", check_same_thread=False, isolation_level=None)
+
     async def source(context: Context) -> AsyncIterator[Completion]:
         yield Completion(
             position=context.position,
