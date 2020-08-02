@@ -125,10 +125,10 @@ def build(
     return fact
 
 
-def load_engines(settings: Settings) -> Dict[str, SnippetEngineFactory]:
+def load_engines(settings: Settings) -> Dict[str, EngineFactory]:
     def cont() -> Iterator[Tuple[str, EngineFactory]]:
         intrinsic = {
-            lsp_snippet.NAME: lsp.main,
+            lsp_snippet.NAME: lsp_snippet.main,
         }
 
         for name, main in intrinsic.items():
