@@ -181,6 +181,7 @@ def replace_lines(nvim: Nvim, payload: Payload) -> None:
 async def apply_patch(nvim: Nvim, engine: SnippetEngine, comp: Dict[str, Any]) -> None:
     data = comp.get("user_data")
     d = cast(dict, data)
+
     try:
         position = Position(**d["position"])
         edits = tuple(
