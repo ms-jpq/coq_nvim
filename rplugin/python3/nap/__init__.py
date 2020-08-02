@@ -81,9 +81,7 @@ class Main:
 
     async def ooda(self) -> None:
         settings = self.settings
-        gen, listen = await merge(
-            self.nvim, chan=self.msg_ch, settings=settings
-        )
+        gen, listen = await merge(self.nvim, chan=self.msg_ch, settings=settings)
 
         async def l1() -> None:
             async for pos, comp in schedule(chan=self.ch, gen=gen):

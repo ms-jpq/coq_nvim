@@ -6,7 +6,7 @@ from typing import Any, Callable, Dict, Iterator, Optional, Sequence, Tuple
 from ..clients import around, buffers, lsp, paths, tmux, tree_sitter
 from ..shared.da import load_json, load_module, merge_all
 from ..shared.types import Factory, Seed, SnippetEngineFactory, SnippetSeed
-from ..snippets import lsp as lsp_snippet
+from ..snippets.lsp import main as lsp_snippet
 from .consts import load_hierarchy, module_entry_point, settings_json
 from .types import (
     CacheOptions,
@@ -128,18 +128,18 @@ def build(
 def load_engines(settings: Settings) -> Dict[str, SnippetEngineFactory]:
     def cont() -> Iterator[Tuple[str, EngineFactory]]:
         intrinsic = {
-            lsp_snippet.main.NAME: lsp.main.main,
+            lsp_snippet.NAME: lsp.main,
         }
 
         for name, main in intrinsic.items():
             spec = settings.snippet_engines[name]
-            yield name, build(spec, main=main)
+            yield spec.kind, build(spec, main=main)
 
         for name, spec in settings.snippet_engines.items():
             if name not in intrinsic:
                 spec = settings.snippet_engines[name]
                 main = load_external(spec.main)
                 if main:
-                    yield name, build(spec, main=main)
+                    yield spec.kind, build(spec, main=main)
 
     return {n: f for n, f in cont()}

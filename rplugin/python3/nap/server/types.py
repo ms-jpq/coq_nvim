@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Any, Dict, Optional, Sequence, Set
+from typing import Any, Dict, Optional, Sequence
 
 from ..shared.types import (
     Completion,
