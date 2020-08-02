@@ -42,7 +42,7 @@ class Main:
         self.settings = settings
         self.state = initial_state(settings)
         self._init = create_task(self.initialize())
-        run_forever(nvim, self.ooda())
+        run_forever(nvim, self.ooda)
 
     def _submit(self, co: Awaitable[None], wait: bool = True) -> None:
         loop: AbstractEventLoop = self.nvim.loop
