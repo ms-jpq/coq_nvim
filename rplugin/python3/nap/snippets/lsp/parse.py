@@ -5,7 +5,16 @@ from os.path import basename, dirname, splitext
 from string import ascii_letters, digits
 from typing import Iterable, Iterator, List, Optional, Sequence, Set, Tuple
 
-from ..shared.types import Context
+from ...shared.types import Position
+
+
+@dataclass(frozen=True)
+class Context:
+    filename: str
+    position: Position
+    cword: str
+    line: str
+
 
 #
 # O(n) single pass LSP Parser:
@@ -172,7 +181,7 @@ def variable_substitution(context: ParseContext, *, name: str) -> Optional[str]:
     elif name == "TM_CURRENT_LINE":
         return ctx.line
     elif name == "TM_CURRENT_WORD":
-        return ctx.alnums
+        return ctx.cword
     elif name == "TM_LINE_INDEX":
         return str(ctx.position.row)
     elif name == "TM_LINE_NUMBER":

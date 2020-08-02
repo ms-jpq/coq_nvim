@@ -42,6 +42,6 @@ async def gen_engine(nvim: Nvim, settings: Settings) -> SnippetEngine:
             await engine(context)
         else:
             message = f"No snippet engine found for - {kind}"
-            await print(message, error=True)
+            await print(nvim, message, error=True)
 
     return engine
