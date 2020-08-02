@@ -49,13 +49,11 @@ class CURSOR:
 
 
 class CONN:
-    def __init__(
-        self, database: str = ":memory:", isolation_level: Optional[str] = None
-    ) -> None:
+    def __init__(self, database: str = ":memory:") -> None:
         self.chan = AsyncExecutor()
 
         def cont() -> Connection:
-            return connect(database, isolation_level=isolation_level)
+            return connect(database)
 
         self.conn = self.chan.submit(cont)
 
@@ -64,6 +62,9 @@ class CONN:
 
     async def __aexit__(self, *_: Any) -> None:
         await self.chan.run(self.conn.close)
+
+    async def commit(self) -> None:
+        return await self.chan.run(self.conn.commit)
 
     async def execute(self, sql: str, params: Iterable[Any] = ()) -> CURSOR:
         def cont() -> CURSOR:
