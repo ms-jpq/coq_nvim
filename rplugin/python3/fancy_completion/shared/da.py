@@ -55,7 +55,7 @@ def load_module(path: str) -> ModuleType:
 
 
 def load_json(path: str) -> Any:
-    with open(path) as fd:
+    with open(path, encoding="utf8") as fd:
         return load(fd)
 
 
