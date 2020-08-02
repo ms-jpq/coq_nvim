@@ -1,6 +1,11 @@
-from asyncio import AbstractEventLoop, Queue, gather, run_coroutine_threadsafe
+from asyncio import (
+    AbstractEventLoop,
+    Queue,
+    create_task,
+    gather,
+    run_coroutine_threadsafe,
+)
 from concurrent.futures import ThreadPoolExecutor
-from locale import strxfrm
 from traceback import format_exc
 from typing import Any, Awaitable, Sequence
 
@@ -38,6 +43,8 @@ class Main:
         settings = initial(configs=(client_config, user_config))
         self.settings = settings
         self.state = initial_state(settings)
+        self._init = create_task(self.initialize())
+        run_forever(self.ooda())
 
     def _submit(self, co: Awaitable[None], wait: bool = True) -> None:
         loop: AbstractEventLoop = self.nvim.loop
@@ -52,55 +59,52 @@ class Main:
 
         self.chan.submit(run, self.nvim)
 
-    @command("NAPstart")
-    def initialize(self) -> None:
-        async def setup() -> None:
-            await autocmd(self.nvim, events=("InsertEnter",), fn="_NAPinsert_enter")
+    async def initialize(self) -> None:
+        await autocmd(self.nvim, events=("InsertEnter",), fn="_NAPinsert_enter")
 
-            await autocmd(self.nvim, events=("InsertCharPre",), fn="_NAPpreinsert_char")
+        await autocmd(self.nvim, events=("InsertCharPre",), fn="_NAPpreinsert_char")
 
-            await autocmd(
-                self.nvim, events=("TextChangedI",), fn="_NAPtextchangedi",
-            )
+        await autocmd(
+            self.nvim, events=("TextChangedI",), fn="_NAPtextchangedi",
+        )
 
-            await autocmd(
-                self.nvim, events=("TextChangedP",), fn="_NAPtextchangedp",
-            )
+        await autocmd(
+            self.nvim, events=("TextChangedP",), fn="_NAPtextchangedp",
+        )
 
-            await autocmd(
-                self.nvim,
-                events=("CompleteDonePre",),
-                fn="_NAPpost_pum",
-                arg_eval=("v:completed_item",),
-            )
+        await autocmd(
+            self.nvim,
+            events=("CompleteDonePre",),
+            fn="_NAPpost_pum",
+            arg_eval=("v:completed_item",),
+        )
 
-        async def ooda() -> None:
-            settings = self.settings
-            factories = load_factories(settings=settings)
-            gen, listen = await merge(
-                self.nvim, chan=self.msg_ch, factories=factories, settings=settings
-            )
+    async def ooda(self) -> None:
+        settings = self.settings
+        factories = load_factories(settings=settings)
+        gen, listen = await merge(
+            self.nvim, chan=self.msg_ch, factories=factories, settings=settings
+        )
 
-            async def l1() -> None:
-                async for pos, comp in schedule(chan=self.ch, gen=gen):
-                    col = pos.col + 1
-                    await complete(self.nvim, col=col, comp=comp)
-                    self.state = t_comp_inserted(self.state)
+        async def l1() -> None:
+            async for pos, comp in schedule(chan=self.ch, gen=gen):
+                col = pos.col + 1
+                await complete(self.nvim, col=col, comp=comp)
+                self.state = t_comp_inserted(self.state)
 
-            await gather(listen(), l1())
-
-        if self._initialized:
-            pass
-        else:
-            self._initialized = True
-            self._submit(setup())
-            run_forever(self.nvim, ooda)
-
-        self._submit(print(self.nvim, "NAP ⭐️"))
+        await gather(listen(), l1())
 
     def next_comp(self, options: GenOptions) -> None:
         async def cont() -> None:
             await self.ch.put(Signal(args=(options,)))
+
+        self._submit(cont())
+
+    @command("NAPstart")
+    def start(self) -> None:
+        async def cont() -> None:
+            await self._init
+            await print(self.nvim, "NAP ⭐️")
 
         self._submit(cont())
 
