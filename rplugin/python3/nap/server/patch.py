@@ -7,7 +7,8 @@ from pynvim import Nvim
 from pynvim.api.buffer import Buffer
 from pynvim.api.window import Window
 
-from ..shared.types import LEdit, Position, Snippet
+from ..shared.nvim import call
+from ..shared.types import LEdit, Position, Snippet, SnippetContext, SnippetEngine
 from .types import Payload
 
 IText = Union[str, Tuple[()]]
@@ -177,7 +178,7 @@ def replace_lines(nvim: Nvim, payload: Payload) -> None:
     # nvim.api.out_write(f"{payload}{linesep}")
 
 
-def apply_patch(nvim: Nvim, comp: Dict[str, Any]) -> None:
+async def apply_patch(nvim: Nvim, engine: SnippetEngine, comp: Dict[str, Any]) -> None:
     data = comp.get("user_data")
     d = cast(dict, data)
     try:
@@ -197,7 +198,12 @@ def apply_patch(nvim: Nvim, comp: Dict[str, Any]) -> None:
     except (KeyError, TypeError):
         pass
     else:
-        if payload.snippet:
-            pass
+        if snippet:
+            context = SnippetContext(position=position, snippet=snippet)
+            await engine(context)
         else:
-            replace_lines(nvim, payload=payload)
+
+            def cont() -> None:
+                replace_lines(nvim, payload=payload)
+
+            await call(nvim, cont)

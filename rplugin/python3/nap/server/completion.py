@@ -243,8 +243,7 @@ async def merge(
         go = context.line_before and not context.line_before.isspace()
         if go or options.force:
             source_gen = (
-                source(context, s_context)
-                for name, source in sources.items()
+                source(context, s_context) for name, source in sources.items()
             )
             max_wait = min(*(fact.timeout for fact in facts.values()), 0)
             cached, *comps = await gather(pull(context, max_wait), *source_gen)

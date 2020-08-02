@@ -131,7 +131,7 @@ class Main:
 
     @function("_NAPinsert_enter")
     def insert_enter(self, args: Sequence[Any]) -> None:
-        self.next_comp(GenOptions(sources=self.state.sources))
+        self.next_comp(GenOptions())
 
     @function("_NAPpreinsert_char")
     def char_inserted(self, args: Sequence[Any]) -> None:
@@ -159,6 +159,6 @@ class Main:
 
         async def cont() -> None:
             engine = await self.engine
-            apply_patch(self.nvim, engine=engine, comp=item)
+            await apply_patch(self.nvim, engine=engine, comp=item)
 
         self._submit(cont())
