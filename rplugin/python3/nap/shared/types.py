@@ -89,6 +89,7 @@ class Completion:
     kind: Optional[str] = None
     doc: Optional[str] = None
     ledits: Sequence[LEdit] = field(default_factory=tuple)
+    snippet: Optional[Snippet] = None
 
 
 Source = Callable[[Context], AsyncIterator[Completion]]
