@@ -4,9 +4,15 @@
     "limit": 3,
     "short_name": "C"
   },
-  "fuzzy": {
+  "match": {
     "min_match": 1,
     "unifying_chars": ["_", "-"]
+  },
+  "snippet_engines": {
+    "simple_lsp": {
+      "config": {},
+      "main": "lsp_snippet.py"
+    }
   },
   "sources": {
     "around": {

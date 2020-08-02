@@ -25,10 +25,10 @@ def load_source(config: Any) -> SourceSpec:
 
 def initial(configs: Sequence[Any]) -> Settings:
     config = merge_all(load_json(settings_json), *configs, replace=True)
-    fuzzy_o = config["fuzzy"]
+    match_o = config["match"]
     cache_o = config["cache"]
     match = MatchOptions(
-        min_match=fuzzy_o["min_match"], unifying_chars={*fuzzy_o["unifying_chars"]}
+        min_match=match_o["min_match"], unifying_chars={*match_o["unifying_chars"]}
     )
     cache = CacheOptions(
         short_name=cache_o["short_name"],
