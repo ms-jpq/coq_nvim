@@ -1,5 +1,5 @@
 from asyncio import Queue
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from os import remove
 from os.path import exists, getmtime, join
 from typing import Any, AsyncIterator, Dict, Iterator, Sequence, Tuple
@@ -8,6 +8,7 @@ from pynvim import Nvim
 
 from ..shared.consts import __artifacts__
 from ..shared.da import dump_json, load_json, slurp
+from ..shared.nvim import print
 from ..shared.parse import parse_common_affix
 from ..shared.sql import AConnection
 from ..shared.types import Completion, Context, Seed, Source
@@ -16,7 +17,7 @@ NAME = "dictionary"
 
 __info__ = join(__artifacts__, "dictionary_info.json")
 __db__ = join(__artifacts__, "dictionary.db")
-__db_ver__ = (0, 1)
+__db_ver__ = [0, 1]
 
 
 @dataclass(frozen=True)
@@ -43,18 +44,20 @@ def read_config(config: Dict[str, Any]) -> Config:
     return Config(min_match=min_match, sources=sources)
 
 
-def db_ver(config: Config) -> None:
+def db_ver(config: Config) -> bool:
     source_age = {
         source.path: round(getmtime(source.path)) for source in config.sources
     }
     conf = DBConfig(version=__db_ver__, source_age=source_age)
     json = load_json(__info__)
+    dump_json(__info__, asdict(conf))
     if type(json) is dict:
         disk_conf = DBConfig(**json)
         if disk_conf != conf:
             if exists(__db__):
                 remove(__db__)
-    dump_json(__info__, conf)
+                return True
+    return False
 
 
 def read_sources(sources: Sequence[DictionarySpec]) -> Iterator[str]:
@@ -121,9 +124,13 @@ def parse_cword(word: str) -> str:
 async def main(nvim: Nvim, chan: Queue, seed: Seed) -> Source:
     config = read_config(seed.config)
     min_matches = config.min_match
+    requires_init = db_ver(config)
     conn = AConnection(__db__)
-    await init(conn)
-    await populate(conn, words=read_sources(config.sources))
+    if requires_init:
+        await print(nvim, "⏳..⌛️")
+        await init(conn)
+        await populate(conn, words=read_sources(config.sources))
+        await print(nvim, "✅")
 
     async def source(context: Context) -> AsyncIterator[Completion]:
         cword = parse_cword(context.alnums_before)
