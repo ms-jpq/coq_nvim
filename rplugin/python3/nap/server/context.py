@@ -1,10 +1,12 @@
-from typing import List, Set, Tuple
+from typing import Any, Dict, List, Set, Tuple
 
 from pynvim import Nvim
 
+from ..shared.consts import buf_var_name
 from ..shared.nvim import call
 from ..shared.parse import is_sym, is_word, normalize
 from ..shared.types import Context, MatchOptions, Position
+from .types import BufferContext
 
 
 def gen_ctx(
@@ -89,19 +91,24 @@ def gen_ctx(
     )
 
 
-async def gen_context(nvim: Nvim, options: MatchOptions) -> Context:
-    def fed() -> Tuple[str, str, str, Position]:
+def gen_buf_ctx(buf_var: Dict[str, Any]) -> BufferContext:
+    return BufferContext()
+
+
+async def gen_context(nvim: Nvim, options: MatchOptions) -> Tuple[Context, BufferContext]:
+    def fed() -> Tuple[str, str, str, Position, Dict[str, Any]]:
         buffer = nvim.api.get_current_buf()
         filename = nvim.api.buf_get_name(buffer)
         filetype = nvim.api.buf_get_option(buffer, "filetype")
         window = nvim.api.get_current_win()
         row, col = nvim.api.win_get_cursor(window)
         line = nvim.api.get_current_line()
+        buf_var = nvim.api.get_buf_var(buffer, buf_var_name) or {}
         row = row - 1
         position = Position(row=row, col=col)
-        return filename, filetype, line, position
+        return filename, filetype, line, position, buf_var
 
-    filename, filetype, line, position = await call(nvim, fed)
+    filename, filetype, line, position, buf_var = await call(nvim, fed)
     context = gen_ctx(
         filename=filename,
         filetype=filetype,
@@ -109,4 +116,5 @@ async def gen_context(nvim: Nvim, options: MatchOptions) -> Context:
         position=position,
         unifying_chars=options.unifying_chars,
     )
-    return context
+    buffer_context = gen_buf_ctx(buf_var)
+    return context, buffer_context

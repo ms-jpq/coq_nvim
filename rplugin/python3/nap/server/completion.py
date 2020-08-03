@@ -125,30 +125,42 @@ async def merge(
 ]:
     match_opt, cache_opt = settings.match, settings.cache
     factories = load_factories(settings=settings)
-
-    push, pull = make_cache(match_opt=match_opt, cache_opt=cache_opt)
-
     src_gen = await gather(
         *(osha(nvim, name=name, factory=factory) for name, factory in factories.items())
     )
-    chans: Dict[str, Optional[Queue]] = {name: chan for name, _, chan in src_gen}
+    push, pull = make_cache(match_opt=match_opt, cache_opt=cache_opt)
+
     sources: Dict[str, StepFunction] = {name: source for name, source, _ in src_gen}
 
     async def gen(options: GenOptions) -> Tuple[Position, Iterator[VimCompletion]]:
-        context = await gen_context(nvim, options=match_opt)
+        s_context = StepContext(force=options.force)
+        context, buf_context = await gen_context(nvim, options=match_opt)
+        position = context.position
+
+        def is_enabled(source_name: str) -> bool:
+            return (
+                source_name not in buf_context.sources
+                or buf_context.sources[source_name].enabled != False
+            )
+
         limits = {
-            **{name: fact.limit for name, fact in factories.items()},
+            **{
+                name: fact.limit for name, fact in factories.items() if is_enabled(name)
+            },
             cache_opt.source_name: cache_opt.limit,
         }
-        s_context = StepContext(force=options.force)
+        max_wait = max(
+            *(fact.timeout for name, fact in factories.items() if is_enabled(name)), 0,
+        )
 
-        position = context.position
         go = context.line_before and not context.line_before.isspace()
         if go or options.force:
 
             async def gen() -> AsyncIterator[FuzzyStep]:
                 source_gen = tuple(
-                    source(context, s_context) for name, source in sources.items()
+                    source(context, s_context)
+                    for name, source in sources.items()
+                    if is_enabled(name)
                 )
                 for steps in as_completed(source_gen):
                     for step in await steps:
@@ -157,7 +169,6 @@ async def merge(
             async def cont() -> Sequence[FuzzyStep]:
                 return [step async for step in gen()]
 
-            max_wait = min(*(fact.timeout for fact in factories.values()), 0)
             cached, steps = await gather(pull(context, max_wait), cont())
             push(context, steps)
             all_steps = chain(steps, cached)
@@ -165,6 +176,8 @@ async def merge(
             return position, fuzzy(all_steps, options=match_opt, limits=limits)
         else:
             return position, iter(())
+
+    chans: Dict[str, Optional[Queue]] = {name: chan for name, _, chan in src_gen}
 
     async def listen() -> None:
         while True:

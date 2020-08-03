@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any, Dict, Optional, Sequence
 
 from ..shared.types import (
@@ -9,8 +9,8 @@ from ..shared.types import (
     Position,
     Seed,
     Snippet,
+    SnippetEngineFactory,
     SnippetSeed,
-    SnippetEngineFactory
 )
 
 
@@ -66,6 +66,23 @@ class SourceFactory:
 
 
 @dataclass(frozen=True)
+class EngineFactory:
+    seed: SnippetSeed
+    manufacture: SnippetEngineFactory
+
+
+@dataclass(frozen=True)
+class BufferSourceSpec:
+    enabled: Optional[bool]
+    timeout: Optional[float]
+
+
+@dataclass(frozen=True)
+class BufferContext:
+    sources: Dict[str, BufferSourceSpec] = field(default_factory=dict)
+
+
+@dataclass(frozen=True)
 class Step:
     source: str
     rank: float
@@ -73,12 +90,6 @@ class Step:
     text: str
     text_normalized: str
     comp: Completion
-
-
-@dataclass(frozen=True)
-class EngineFactory:
-    seed: SnippetSeed
-    manufacture: SnippetEngineFactory
 
 
 @dataclass(frozen=True)

@@ -10,3 +10,5 @@ settings_json = join(__config__, "config.json")
 module_entry_point = "main"
 
 load_hierarchy = (dirname(__base__),)
+
+buf_var_name = "buf_nap"
