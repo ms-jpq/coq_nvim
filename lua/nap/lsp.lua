@@ -24,11 +24,7 @@ local list_comp_candidates = function (request_id, enable_cancel, row, col)
     local text_doc = lsp.util.make_text_document_params()
     local params = {position = position, textDocument=text_doc}
 
-    _, cancel = lsp.buf_request(0, "textDocument/completion", params, function (err, _, ret)
-      if err then
-        local e = table.concat(err, linesep)
-        api.nvim_err_writeln("lsp error: " .. e .. linesep)
-      end
+    _, cancel = lsp.buf_request(0, "textDocument/completion", params, function (_, _, ret)
       notify(request_id, ret)
     end)
   end

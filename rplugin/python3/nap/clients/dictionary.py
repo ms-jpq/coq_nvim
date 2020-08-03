@@ -25,12 +25,14 @@ class DictionarySpec:
 
 @dataclass(frozen=True)
 class Config:
+    min_match: int
     sources: Sequence[DictionarySpec]
 
 
 def read_config(config: Dict[str, Dict[str, str]]) -> Config:
+    min_match = config["min_match"]
     sources = tuple(DictionarySpec(**src) for src in config["sources"])
-    return Config(sources=sources)
+    return Config(min_match=min_match, sources=sources)
 
 
 async def read_sources(sources: Sequence[DictionarySpec]) -> AsyncIterator[str]:
@@ -44,28 +46,26 @@ async def read_sources(sources: Sequence[DictionarySpec]) -> AsyncIterator[str]:
 
 
 _INIT = """
-CREATE VIRTUAL TABLE words USING fts4(
+CREATE VIRTUAL TABLE IF NOT EXISTS words USING fts4(
   word TEXT NOT NULL UNIQUE,
   nword TEXT NOT NULL
 )
 """
 
-_DEINIT = """
-DROP TABLE words IF EXISTS
-"""
 
 _POPULATE = """
 INSERT OR IGNORE INTO words(word, nword) VALUES (?, ?)
 """
 
 _QUERY = """
-SELECT word FROM words WHERE nword MATCH ?
+SELECT word
+FROM words
+WHERE
+    nword MATCH ? and word <> ? AND length(word) >= ?
 """
 
 
 async def init(conn: AConnection) -> None:
-    # async with await conn.execute(_DEINIT):
-    #     pass
     async with await conn.execute(_INIT):
         pass
 
@@ -82,9 +82,11 @@ async def populate(conn: AConnection, words: AsyncIterator[str]) -> None:
     await conn.commit()
 
 
-async def query(conn: AConnection, ncword: str) -> AsyncIterator[str]:
+async def query(
+    conn: AConnection, cword: str, ncword: str, min_matches: int
+) -> AsyncIterator[str]:
     query = f"{ncword}*"
-    async with await conn.execute(_QUERY, (query,)) as cursor:
+    async with await conn.execute(_QUERY, (query, cword, min_matches)) as cursor:
         async for row in cursor:
             yield row[0]
 
@@ -103,13 +105,16 @@ def parse_cword(word: str) -> Tuple[str, str]:
 
 async def main(nvim: Nvim, chan: Queue, seed: Seed) -> Source:
     config = read_config(seed.config)
+    min_matches = config.min_match
     conn = AConnection()
     await init(conn)
     await populate(conn, words=read_sources(config.sources))
 
     async def source(context: Context) -> AsyncIterator[Completion]:
         cword, ncword = parse_cword(context.alnums_before)
-        async for word in query(conn, ncword=ncword):
+        async for word in query(
+            conn, cword=cword, ncword=ncword, min_matches=min_matches
+        ):
             _, old_suffix = parse_common_affix(
                 context, match_normalized=ncword, use_line=False,
             )

@@ -44,6 +44,7 @@
     },
     "dictionary": {
       "config": {
+        "min_match": 3,
         "sources": [
           {
             "path": "/usr/share/dict/words",
