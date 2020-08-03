@@ -22,7 +22,7 @@ def fuzzify(context: Context, step: Step, options: MatchOptions) -> FuzzyStep:
     metric = gen_metric(
         cword, match=match, match_normalized=match_normalized, options=options,
     )
-    full_match = len(metric.matches) == len(match)
+    full_match = metric.num_matches == len(match)
     return FuzzyStep(step=step, full_match=full_match, metric=metric)
 
 
@@ -97,31 +97,25 @@ def vimify(fuzz: FuzzyStep) -> VimCompletion:
     return ret
 
 
-def fuzzer(
-    options: MatchOptions, limits: Dict[str, float]
-) -> Callable[[Context, Iterator[Step]], Iterator[VimCompletion]]:
-    min_match = options.min_match
+def fuzzy(
+    steps: Iterator[FuzzyStep], options: MatchOptions, limits: Dict[str, float]
+) -> Iterator[VimCompletion]:
+    seen: Set[str] = set()
+    seen_by_source: Dict[str, int] = {}
 
-    def fuzzy(context: Context, steps: Iterator[Step]) -> Iterator[VimCompletion]:
-        seen: Set[str] = set()
-        seen_by_source: Dict[str, int] = {}
+    sorted_steps = sorted(steps, key=cast(Callable[[FuzzyStep], Any], rank))
+    for fuzz in sorted_steps:
+        step = fuzz.step
+        source = step.source
+        seen_count = seen_by_source.get(source, 0) + 1
+        seen_by_source[source] = seen_count
+        text = step.text
+        num_matches = fuzz.metric.num_matches
 
-        fuzzy_steps = (fuzzify(context, step=step, options=options) for step in steps)
-        sorted_steps = sorted(fuzzy_steps, key=cast(Callable[[FuzzyStep], Any], rank))
-        for fuzz in sorted_steps:
-            step = fuzz.step
-            source = step.source
-            seen_count = seen_by_source.get(source, 0) + 1
-            seen_by_source[source] = seen_count
-            text = step.text
-            num_matches = fuzz.metric.num_matches
-
-            if (
-                seen_count <= limits[source]
-                and text not in seen
-                and (fuzz.full_match or num_matches >= min_match)
-            ):
-                seen.add(text)
-                yield vimify(fuzz=fuzz)
-
-    return fuzzy
+        if (
+            seen_count <= limits[source]
+            and text not in seen
+            and (fuzz.full_match or num_matches >= options.min_match)
+        ):
+            seen.add(text)
+            yield vimify(fuzz=fuzz)

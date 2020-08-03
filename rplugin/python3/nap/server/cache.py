@@ -5,6 +5,7 @@ from typing import Awaitable, Callable, Dict, List, Sequence, Set, Tuple
 from ..shared.match import gen_metric
 from ..shared.parse import parse_common_affix
 from ..shared.types import Completion, Context
+from .fuzzy import FuzzyStep
 from .types import CacheOptions, MatchOptions, Step
 
 
@@ -34,8 +35,8 @@ def recalculate(context: Context, options: CacheOptions, step: Step) -> Step:
 def make_cache(
     match_opt: MatchOptions, cache_opt: CacheOptions,
 ) -> Tuple[
-    Callable[[Context, Sequence[Step]], None],
-    Callable[[Context, float], Awaitable[Sequence[Step]]],
+    Callable[[Context, Sequence[FuzzyStep]], None],
+    Callable[[Context, float], Awaitable[Sequence[FuzzyStep]]],
 ]:
     half_band_size = cache_opt.band_size // 2
     queue: deque = deque([])
@@ -44,7 +45,7 @@ def make_cache(
     bufs: Dict[str, Dict[int, Dict[int, Sequence[Step]]]] = {}
     # buf -> row -> col
 
-    def push(context: Context, steps: Sequence[Step]) -> None:
+    def push(context: Context, steps: Sequence[FuzzyStep]) -> None:
         position = context.position
         queue.append((context.filename, position))
 
@@ -54,16 +55,16 @@ def make_cache(
 
         rows = bufs.setdefault(context.filename, {})
         cols = rows.setdefault(position.row, {})
-        cols[position.col] = steps
+        cols[position.col] = tuple(step.step for step in steps)
 
-    async def pull(context: Context, timeout: float) -> Sequence[Step]:
+    async def pull(context: Context, timeout: float) -> Sequence[FuzzyStep]:
         position = context.position
         rows = bufs.get(context.filename, {})
         cols = rows.get(position.row, {})
         col = position.col
         cword, ncword = context.alnums, context.alnums_normalized
 
-        acc: List[Step] = []
+        acc: List[FuzzyStep] = []
 
         async def cont() -> None:
             seen: Set[str] = set()
@@ -76,12 +77,18 @@ def make_cache(
                         metric = gen_metric(
                             cword, match=text, match_normalized=nword, options=match_opt
                         )
+
                         if metric.num_matches >= match_opt.min_match:
                             seen.add(text)
                             new_step = recalculate(
                                 context, options=cache_opt, step=step
                             )
-                            acc.append(new_step)
+                            fuzzystep = FuzzyStep(
+                                step=new_step,
+                                full_match=metric.num_matches == len(nword),
+                                metric=metric,
+                            )
+                            acc.append(fuzzystep)
 
         done, pending = await wait((cont(),), timeout=timeout)
         for p in pending:

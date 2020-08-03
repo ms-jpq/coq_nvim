@@ -4,7 +4,7 @@ from pynvim import Nvim
 
 from ..shared.nvim import call
 from ..shared.parse import is_sym, is_word, normalize
-from ..shared.types import Context, Position
+from ..shared.types import Context, MatchOptions, Position
 
 
 def gen_ctx(
@@ -89,7 +89,7 @@ def gen_ctx(
     )
 
 
-async def gen_context(nvim: Nvim, unifying_chars: Set[str]) -> Context:
+async def gen_context(nvim: Nvim, options: MatchOptions) -> Context:
     def fed() -> Tuple[str, str, str, Position]:
         buffer = nvim.api.get_current_buf()
         filename = nvim.api.buf_get_name(buffer)
@@ -107,6 +107,6 @@ async def gen_context(nvim: Nvim, unifying_chars: Set[str]) -> Context:
         filetype=filetype,
         line=line,
         position=position,
-        unifying_chars=unifying_chars,
+        unifying_chars=options.unifying_chars,
     )
     return context

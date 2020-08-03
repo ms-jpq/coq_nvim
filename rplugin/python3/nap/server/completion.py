@@ -1,10 +1,20 @@
-from asyncio import Queue, gather, wait
+from asyncio import Queue, gather, wait, as_completed
 from dataclasses import dataclass
 from itertools import chain
 from math import inf
 from os import linesep
 from traceback import format_exc
-from typing import Awaitable, Callable, Dict, Iterator, List, Optional, Sequence, Tuple
+from typing import (
+    Awaitable,
+    Callable,
+    Dict,
+    Iterator,
+    List,
+    Optional,
+    Sequence,
+    Tuple,
+    AsyncIterator,
+)
 
 from pynvim import Nvim
 
@@ -13,7 +23,7 @@ from ..shared.parse import normalize
 from ..shared.types import Context, Position
 from .cache import make_cache
 from .context import gen_context
-from .fuzzy import fuzzer
+from .fuzzy import FuzzyStep, fuzzy, fuzzify
 from .nvim import VimCompletion
 from .settings import load_factories
 from .types import Notification, Settings, SourceFactory, Step
@@ -113,16 +123,9 @@ async def merge(
     Callable[[GenOptions], Awaitable[Tuple[Position, Iterator[VimCompletion]]]],
     Callable[[], Awaitable[None]],
 ]:
-    match_opt = settings.match
-    cache_opt = settings.cache
-    unifying_chars = match_opt.unifying_chars
-
+    match_opt, cache_opt = settings.match, settings.cache
     factories = load_factories(settings=settings)
-    limits = {
-        **{name: fact.limit for name, fact in factories.items()},
-        cache_opt.source_name: cache_opt.limit,
-    }
-    fuzzy = fuzzer(match_opt, limits=limits)
+
     push, pull = make_cache(match_opt=match_opt, cache_opt=cache_opt)
 
     src_gen = await gather(
@@ -132,22 +135,34 @@ async def merge(
     sources: Dict[str, StepFunction] = {name: source for name, source, _ in src_gen}
 
     async def gen(options: GenOptions) -> Tuple[Position, Iterator[VimCompletion]]:
-        context = await gen_context(nvim, unifying_chars=unifying_chars)
+        context = await gen_context(nvim, options=match_opt)
+        limits = {
+            **{name: fact.limit for name, fact in factories.items()},
+            cache_opt.source_name: cache_opt.limit,
+        }
         s_context = StepContext(force=options.force)
+
         position = context.position
         go = context.line_before and not context.line_before.isspace()
         if go or options.force:
-            source_gen = (
-                source(context, s_context) for name, source in sources.items()
-            )
+
+            async def gen() -> AsyncIterator[FuzzyStep]:
+                source_gen = tuple(
+                    source(context, s_context) for name, source in sources.items()
+                )
+                for steps in as_completed(source_gen):
+                    for step in await steps:
+                        yield fuzzify(context, step=step, options=match_opt)
+
+            async def cont() -> Sequence[FuzzyStep]:
+                return [step async for step in gen()]
 
             max_wait = min(*(fact.timeout for fact in factories.values()), 0)
-            cached, *comps = await gather(pull(context, max_wait), *source_gen)
-            steps = tuple(c for co in comps for c in co)
+            cached, steps = await gather(pull(context, max_wait), cont())
             push(context, steps)
             all_steps = chain(steps, cached)
 
-            return position, fuzzy(context, all_steps)
+            return position, fuzzy(all_steps, options=match_opt, limits=limits)
         else:
             return position, iter(())
 
