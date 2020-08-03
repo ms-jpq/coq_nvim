@@ -42,23 +42,6 @@
       "short_name": "B",
       "timeout": 100
     },
-    "dictionary": {
-      "config": {
-        "min_match": 3,
-        "sources": [
-          {
-            "path": "/usr/share/dict/words",
-            "sep": "\n"
-          }
-        ]
-      },
-      "enabled": true,
-      "limit": 3,
-      "main": "dictionary.py",
-      "rank": 50,
-      "short_name": "D",
-      "timeout": 100
-    },
     "lsp": {
       "config": {
         "enable_cancel": false

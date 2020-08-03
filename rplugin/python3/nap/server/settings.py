@@ -3,7 +3,7 @@ from math import inf
 from os.path import exists, join
 from typing import Any, Callable, Dict, Iterator, Optional, Sequence, Tuple
 
-from ..clients import around, buffers, dictionary, lsp, paths, tmux, tree_sitter
+from ..clients import around, buffers, lsp, paths, tmux, tree_sitter
 from ..shared.consts import load_hierarchy, module_entry_point, settings_json
 from ..shared.da import load_json, load_module, merge_all
 from ..shared.types import Factory, Seed, SnippetEngineFactory, SnippetSeed
@@ -100,7 +100,6 @@ def load_factories(settings: Settings) -> Dict[str, SourceFactory]:
         intrinsic = {
             around.NAME: around.main,
             buffers.NAME: buffers.main,
-            dictionary.NAME: dictionary.main,
             lsp.NAME: lsp.main,
             paths.NAME: paths.main,
             tmux.NAME: tmux.main,
