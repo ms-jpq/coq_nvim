@@ -3,7 +3,7 @@ from __future__ import annotations
 from asyncio import get_running_loop
 from concurrent.futures import ThreadPoolExecutor
 from sqlite3 import Connection, Cursor, Row, connect
-from typing import Any, Callable, Iterable, Optional, Sequence, TypeVar
+from typing import Any, Callable, Iterable, Iterator, Sequence, TypeVar
 
 T = TypeVar("T")
 
@@ -20,18 +20,18 @@ class AsyncExecutor:
         return self.chan.submit(cont).result()
 
 
-class CURSOR:
+class ACursor:
     def __init__(self, chan: AsyncExecutor, cursor: Cursor) -> None:
         self.chan = chan
         self.cursor = cursor
 
-    async def __aenter__(self) -> CURSOR:
+    async def __aenter__(self) -> ACursor:
         return self
 
     async def __aexit__(self, *_: Any) -> None:
         await self.chan.run(self.cursor.close)
 
-    def __aiter__(self) -> CURSOR:
+    def __aiter__(self) -> ACursor:
         return self
 
     async def __anext__(self) -> Row:
@@ -48,7 +48,7 @@ class CURSOR:
         return await self.chan.run(self.cursor.fetchall)
 
 
-class CONN:
+class AConnection:
     def __init__(self, database: str = ":memory:") -> None:
         self.chan = AsyncExecutor()
 
@@ -57,27 +57,47 @@ class CONN:
 
         self.conn = self.chan.submit(cont)
 
-    async def __aenter__(self) -> CONN:
+    async def __aenter__(self) -> AConnection:
         return self
 
     async def __aexit__(self, *_: Any) -> None:
         await self.chan.run(self.conn.close)
 
+    async def create_function(
+        self, name: str, num_params: int, func: Callable[..., Any], deterministic: bool
+    ) -> None:
+        def cont() -> None:
+            self.conn.create_function(
+                name, num_params=num_params, func=func, deterministic=deterministic
+            )
+
+        await self.chan.run(cont)
+
     async def commit(self) -> None:
         return await self.chan.run(self.conn.commit)
 
-    async def execute(self, sql: str, params: Iterable[Any] = ()) -> CURSOR:
-        def cont() -> CURSOR:
+    async def execute(self, sql: str, params: Iterable[Any] = ()) -> ACursor:
+        def cont() -> ACursor:
             cursor = self.conn.execute(sql, params)
-            return CURSOR(chan=self.chan, cursor=cursor)
+            return ACursor(chan=self.chan, cursor=cursor)
 
         return await self.chan.run(cont)
 
     async def execute_many(
         self, sql: str, params: Iterable[Iterable[Any]] = ()
-    ) -> CURSOR:
-        def cont() -> CURSOR:
+    ) -> ACursor:
+        def cont() -> ACursor:
             cursor = self.conn.executemany(sql, params)
-            return CURSOR(chan=self.chan, cursor=cursor)
+            return ACursor(chan=self.chan, cursor=cursor)
 
         return await self.chan.run(cont)
+
+
+def _and(conds: Iterator[str]) -> str:
+    cond = " AND ".join(conds) or "1<>1"
+    return f"({cond})"
+
+
+def _or(conds: Iterator[str]) -> str:
+    cond = " OR ".join(conds) or "1=1"
+    return f"({cond})"
