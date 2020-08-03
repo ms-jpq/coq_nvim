@@ -7,7 +7,7 @@ from ..shared.nvim import call
 from ..shared.parse import is_sym, is_word, normalize
 from ..shared.types import Context, MatchOptions, Position
 from .nvim import buf_get_var
-from .types import BufferContext
+from .types import BufferContext, BufferSourceSpec
 
 
 def gen_ctx(
@@ -93,7 +93,9 @@ def gen_ctx(
 
 
 def gen_buf_ctx(buf_var: Dict[str, Any]) -> BufferContext:
-    return BufferContext()
+    src = buf_var.get("sources") or {}
+    sources = {key: BufferSourceSpec(**val) for key, val in src.items()}
+    return BufferContext(sources=sources)
 
 
 async def gen_context(

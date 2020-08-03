@@ -1,10 +1,11 @@
-from asyncio import Queue, gather, wait, as_completed
+from asyncio import Queue, as_completed, gather, wait
 from dataclasses import dataclass
 from itertools import chain
 from math import inf
 from os import linesep
 from traceback import format_exc
 from typing import (
+    AsyncIterator,
     Awaitable,
     Callable,
     Dict,
@@ -13,7 +14,6 @@ from typing import (
     Optional,
     Sequence,
     Tuple,
-    AsyncIterator,
 )
 
 from pynvim import Nvim
@@ -23,7 +23,7 @@ from ..shared.parse import normalize
 from ..shared.types import Context, Position
 from .cache import make_cache
 from .context import gen_context
-from .fuzzy import FuzzyStep, fuzzy, fuzzify
+from .fuzzy import FuzzyStep, fuzzify, fuzzy
 from .nvim import VimCompletion
 from .settings import load_factories
 from .types import Notification, Settings, SourceFactory, Step
@@ -130,6 +130,9 @@ async def merge(
     )
     push, pull = make_cache(match_opt=match_opt, cache_opt=cache_opt)
 
+    f_enabled: Dict[str, bool] = {
+        name: factory.enabled for name, factory in factories.items()
+    }
     sources: Dict[str, StepFunction] = {name: source for name, source, _ in src_gen}
 
     async def gen(options: GenOptions) -> Tuple[Position, Iterator[VimCompletion]]:
@@ -138,10 +141,13 @@ async def merge(
         position = context.position
 
         def is_enabled(source_name: str) -> bool:
-            return (
-                source_name not in buf_context.sources
-                or buf_context.sources[source_name].enabled != False
-            )
+            if source_name in buf_context.sources:
+                spec = buf_context.sources.get(source_name)
+                if spec is not None:
+                    enabled = spec.enabled
+                    if enabled is not None:
+                        return enabled
+            return f_enabled[source_name]
 
         limits = {
             **{

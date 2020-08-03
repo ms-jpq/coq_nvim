@@ -57,6 +57,7 @@ class Settings:
 
 @dataclass(frozen=True)
 class SourceFactory:
+    enabled: bool
     short_name: str
     timeout: float
     limit: float

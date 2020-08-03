@@ -84,6 +84,7 @@ def assemble(spec: SourceSpec, main: Factory, match: MatchOptions,) -> SourceFac
     config = spec.config
     seed = Seed(match=match, limit=limit, timeout=timeout, config=config,)
     fact = SourceFactory(
+        enabled=spec.enabled,
         short_name=spec.short_name,
         limit=limit,
         timeout=timeout,
