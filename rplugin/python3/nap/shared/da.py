@@ -1,9 +1,10 @@
-from asyncio import create_subprocess_exec, get_running_loop
+from asyncio import create_subprocess_exec
 from asyncio.subprocess import PIPE
 from dataclasses import dataclass
 from importlib.util import module_from_spec, spec_from_file_location
-from json import load
-from os.path import basename, splitext
+from json import dump, load
+from os import makedirs
+from os.path import basename, dirname, exists, splitext
 from sys import modules
 from types import ModuleType
 from typing import Any, AsyncIterator, Iterator, Optional, Sequence, TypeVar, cast
@@ -11,14 +12,9 @@ from typing import Any, AsyncIterator, Iterator, Optional, Sequence, TypeVar, ca
 T = TypeVar("T")
 
 
-async def slurp(path: str) -> str:
-    loop = get_running_loop()
-
-    def cont() -> str:
-        with open(path) as fd:
-            return fd.read()
-
-    return await loop.run_in_executor(None, cont)
+def slurp(path: str) -> str:
+    with open(path) as fd:
+        return fd.read()
 
 
 def or_else(val: Optional[T], default: T) -> T:
@@ -64,9 +60,19 @@ def load_module(path: str) -> ModuleType:
     return mod
 
 
-def load_json(path: str) -> Any:
-    with open(path, encoding="utf8") as fd:
-        return load(fd)
+def load_json(path: str) -> Optional[Any]:
+    if exists(path):
+        with open(path, encoding="utf8") as fd:
+            return load(fd)
+    else:
+        return None
+
+
+def dump_json(path: str, json: Any) -> None:
+    parent = dirname(path)
+    makedirs(parent, exist_ok=True)
+    with open(path, "w") as fd:
+        return dump(json, fd, ensure_ascii=False, indent=2)
 
 
 @dataclass(frozen=True)
