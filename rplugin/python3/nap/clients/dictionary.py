@@ -57,11 +57,13 @@ _POPULATE = """
 INSERT OR IGNORE INTO words(word, nword) VALUES (?, ?)
 """
 
+
 _QUERY = """
 SELECT word
 FROM words
 WHERE
-    nword MATCH ? and word <> ? AND length(word) >= ?
+    nword MATCH ?
+    AND word <> ?
 """
 
 
@@ -85,10 +87,11 @@ async def populate(conn: AConnection, words: AsyncIterator[str]) -> None:
 async def query(
     conn: AConnection, cword: str, ncword: str, min_matches: int
 ) -> AsyncIterator[str]:
-    query = f"{ncword}*"
-    async with await conn.execute(_QUERY, (query, cword, min_matches)) as cursor:
-        async for row in cursor:
-            yield row[0]
+    if len(cword) >= min_matches:
+        query = f"{ncword}*"
+        async with await conn.execute(_QUERY, (query, cword)) as cursor:
+            async for row in cursor:
+                yield row[0]
 
 
 def parse_cword(word: str) -> Tuple[str, str]:
