@@ -59,13 +59,13 @@ INSERT OR IGNORE INTO words(word, nword) VALUES (?, ?)
 """
 
 _QUERY = """
-SELECT word FROM words WHERE nword MATCH ?*
+SELECT word FROM words WHERE nword MATCH ?
 """
 
 
 async def init(conn: AConnection) -> None:
-    async with await conn.execute(_DEINIT):
-        pass
+    # async with await conn.execute(_DEINIT):
+    #     pass
     async with await conn.execute(_INIT):
         pass
 
@@ -83,7 +83,8 @@ async def populate(conn: AConnection, words: AsyncIterator[str]) -> None:
 
 
 async def query(conn: AConnection, ncword: str) -> AsyncIterator[str]:
-    async with await conn.execute(_QUERY, (ncword)) as cursor:
+    query = f"{ncword}*"
+    async with await conn.execute(_QUERY, (query,)) as cursor:
         async for row in cursor:
             yield row[0]
 
@@ -102,7 +103,7 @@ def parse_cword(word: str) -> Tuple[str, str]:
 
 async def main(nvim: Nvim, chan: Queue, seed: Seed) -> Source:
     config = read_config(seed.config)
-    conn = await AConnection()
+    conn = AConnection()
     await init(conn)
     await populate(conn, words=read_sources(config.sources))
 
