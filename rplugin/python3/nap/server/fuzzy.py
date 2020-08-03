@@ -2,8 +2,8 @@ from dataclasses import asdict, dataclass
 from locale import strxfrm
 from typing import Any, Callable, Dict, Iterator, Sequence, Set, Union, cast
 
+from ..shared.match import Metric, gen_metric
 from ..shared.types import Completion, Context
-from .match import Metric, gen_metric
 from .nvim import VimCompletion
 from .types import MatchOptions, Payload, Step
 
