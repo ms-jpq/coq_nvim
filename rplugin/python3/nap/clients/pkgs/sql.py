@@ -5,7 +5,7 @@ from ...shared.sql import AConnection
 
 _INIT = """
 CREATE TABLE words (
-  word TEXT NOT NULL PRIMARY KEY,
+  word TEXT NOT NULL UNIQUE,
   nword TEXT NOT NULL
 )
 """
