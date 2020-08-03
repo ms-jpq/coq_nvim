@@ -68,7 +68,7 @@ class AConnection:
     ) -> None:
         def cont() -> None:
             self.conn.create_function(
-                name, num_params=num_params, func=func, deterministic=deterministic
+                name, num_params, func=func, deterministic=deterministic
             )
 
         await self.chan.run(cont)
