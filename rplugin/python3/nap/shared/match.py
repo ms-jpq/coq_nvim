@@ -1,6 +1,8 @@
 from dataclasses import dataclass
 from math import inf
-from typing import Dict
+from typing import Dict, Iterator
+
+from .types import MatchOptions
 
 
 @dataclass(frozen=True)
@@ -12,7 +14,9 @@ class Metric:
     matches: Dict[int, str]
 
 
-def gen_metric(cword: str, match: str, match_normalized: str, transpose_band: int) -> Metric:
+def gen_metric(
+    cword: str, match: str, match_normalized: str, options: MatchOptions
+) -> Metric:
     matches: Dict[int, str] = {}
 
     idx = 0
@@ -22,7 +26,7 @@ def gen_metric(cword: str, match: str, match_normalized: str, transpose_band: in
     consecutive_matches = 0
     for i, char in enumerate(cword):
         target = match if char.isupper() else match_normalized
-        m_idx = target.find(char, idx, idx + transpose_band)
+        m_idx = target.find(char, idx, idx + options.transpose_band)
         if m_idx != -1:
             if pm_idx == m_idx - 1:
                 consecutive_matches += 1
@@ -45,3 +49,19 @@ def gen_metric(cword: str, match: str, match_normalized: str, transpose_band: in
     )
 
     return metric
+
+
+def find_matches(
+    cword: str,
+    ncword: str,
+    min_match: int,
+    words: Dict[str, str],
+    options: MatchOptions,
+) -> Iterator[str]:
+    for match, match_normalized in words.items():
+        if match_normalized not in ncword:
+            metric = gen_metric(
+                cword, match=match, match_normalized=match_normalized, options=options
+            )
+            if metric.num_matches >= min_match:
+                yield match

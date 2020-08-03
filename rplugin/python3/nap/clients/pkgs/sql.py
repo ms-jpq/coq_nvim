@@ -1,6 +1,6 @@
 from typing import AsyncIterator, Iterator, Tuple
 
-from ...shared.parse import count_matches, normalize
+from ...shared.parse import normalize
 from ...shared.sql import AConnection
 
 _INIT = """
@@ -26,9 +26,6 @@ SELECT word FROM words WHERE count_matches(?, word, nword) >= ?
 async def init(conn: AConnection) -> None:
     async with await conn.execute(_INIT):
         pass
-    await conn.create_function(
-        "count_matches", num_params=3, func=count_matches, deterministic=True
-    )
 
 
 async def reinit(conn: AConnection) -> None:

@@ -16,27 +16,6 @@ def is_sym(char: str) -> bool:
     return not char.isalnum() and not char.isspace()
 
 
-def count_matches(cword: str, word: str, nword: str) -> int:
-    idx = 0
-    count = 0
-    for char in cword:
-        m_idx = (word if char.isupper() else nword).find(char, idx)
-        if m_idx != -1:
-            count += 1
-            idx = m_idx + 1
-
-    return count
-
-
-def find_matches(
-    cword: str, ncword: str, min_match: int, words: Dict[str, str]
-) -> Iterator[str]:
-    for word, nword in words.items():
-        matches = count_matches(cword, word=word, nword=nword)
-        if matches >= min_match and nword not in ncword:
-            yield word
-
-
 def coalesce(
     chars: Iterable[str], max_length: int, unifying_chars: Set[str]
 ) -> Iterator[str]:

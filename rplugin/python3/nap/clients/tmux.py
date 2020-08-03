@@ -7,8 +7,9 @@ from typing import AsyncIterator, Dict, Iterator, Sequence, Set
 from pynvim import Nvim
 
 from ..shared.da import call
+from ..shared.match import find_matches
 from ..shared.nvim import print, run_forever
-from ..shared.parse import coalesce, find_matches, normalize, parse_common_affix
+from ..shared.parse import coalesce, normalize, parse_common_affix
 from ..shared.types import Completion, Context, Seed, Source
 from .pkgs.scheduler import schedule
 
@@ -122,7 +123,7 @@ async def main(nvim: Nvim, chan: Queue, seed: Seed) -> Source:
         cword, ncword = context.alnums, context.alnums_normalized
 
         for word in find_matches(
-            cword, ncword=ncword, min_match=min_length, words=words
+            cword, ncword=ncword, min_match=min_length, words=words, options=seed.match
         ):
             match_normalized = words[word]
             _, old_suffix = parse_common_affix(
