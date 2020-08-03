@@ -2,7 +2,8 @@ from asyncio import gather, wait
 from collections import deque
 from typing import Awaitable, Callable, Dict, List, Sequence, Set, Tuple
 
-from ..shared.parse import count_matches, parse_common_affix
+from ..shared.match import gen_metric
+from ..shared.parse import parse_common_affix
 from ..shared.types import Completion, Context
 from .types import CacheOptions, MatchOptions, Step
 
@@ -71,9 +72,11 @@ def make_cache(
                 for step in cols.get(c, ()):
                     text = step.text
                     nword = step.text_normalized
-                    if text not in seen:
-                        matches = count_matches(cword, word=text, nword=nword)
-                        if matches >= match_opt.min_match and nword not in ncword:
+                    if text not in seen and nword not in ncword:
+                        metric = gen_metric(
+                            cword, match=text, match_normalized=nword, options=match_opt
+                        )
+                        if metric.num_matches >= match_opt.min_match:
                             seen.add(text)
                             new_step = recalculate(
                                 context, options=cache_opt, step=step
