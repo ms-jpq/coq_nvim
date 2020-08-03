@@ -5,6 +5,7 @@ from typing import Any, Dict, Iterable, Iterator, Optional
 from uuid import uuid4
 
 from pynvim import Nvim
+from pynvim.api.buffer import Buffer
 from pynvim.api.common import NvimError
 
 from ..shared.nvim import call
@@ -33,6 +34,13 @@ async def autocmd(
         nvim.api.exec(commands, False)
 
     await call(nvim, cont)
+
+
+def buf_get_var(nvim: Nvim, buffer: Buffer, name: str) -> Optional[Any]:
+    try:
+        return nvim.api.buf_get_var(buffer, name)
+    except NvimError:
+        return None
 
 
 class VimCompKind(Enum):
