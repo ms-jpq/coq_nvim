@@ -1,64 +1,32 @@
 from dataclasses import asdict, dataclass
 from locale import strxfrm
-from math import inf
 from typing import Any, Callable, Dict, Iterator, Sequence, Set, Union, cast
 
 from ..shared.types import Completion, Context
+from .match import Metric, gen_metric
 from .nvim import VimCompletion
 from .types import MatchOptions, Payload, Step
-
-
-@dataclass(frozen=True)
-class FuzzyMetric:
-    prefix_matches: int
-    consecutive_matches: int
-    num_matches: int
-    density: float
 
 
 @dataclass(frozen=True)
 class FuzzyStep:
     step: Step
     full_match: bool
-    matches: Dict[int, str]
-    metric: FuzzyMetric
+    metric: Metric
 
 
-def fuzzify(context: Context, step: Step) -> FuzzyStep:
-    c_alnums = context.alnums
-    s_alnums = step.text
-    s_n_alnums = step.text_normalized
-    matches: Dict[int, str] = {}
+def fuzzify(context: Context, step: Step, options: MatchOptions) -> FuzzyStep:
+    cword = context.alnums
+    match, match_normalized = step.text, step.text_normalized
 
-    idx = 0
-    prefix_broken = False
-    pm_idx = inf
-    prefix_matches = 0
-    consecutive_matches = 0
-    for i, char in enumerate(c_alnums):
-        m_idx = (s_alnums if char.isupper() else s_n_alnums).find(char, idx)
-        if m_idx != -1:
-            if pm_idx == m_idx - 1:
-                consecutive_matches += 1
-            pm_idx = m_idx
-            matches[m_idx] = char
-            idx = m_idx + 1
-        if m_idx != i:
-            prefix_broken = True
-        if not prefix_broken:
-            prefix_matches += 1
-
-    num_matches = len(matches)
-    full_match = prefix_matches == len(c_alnums)
-    snl = len(s_n_alnums)
-    density = num_matches / snl if snl else inf
-    metric = FuzzyMetric(
-        prefix_matches=prefix_matches,
-        num_matches=num_matches,
-        consecutive_matches=consecutive_matches,
-        density=density,
+    metric = gen_metric(
+        cword,
+        match=match,
+        match_normalized=match_normalized,
+        transpose_band=options.transpose_band,
     )
-    return FuzzyStep(step=step, full_match=full_match, matches=matches, metric=metric)
+    full_match = len(metric.matches) == len(match)
+    return FuzzyStep(step=step, full_match=full_match, metric=metric)
 
 
 def rank(fuzz: FuzzyStep) -> Sequence[Union[float, int, str]]:
@@ -77,7 +45,7 @@ def rank(fuzz: FuzzyStep) -> Sequence[Union[float, int, str]]:
 
 
 def context_gen(fuzz: FuzzyStep) -> str:
-    match_set = fuzz.matches
+    match_set = fuzz.metric.matches
     text = fuzz.step.text
     label = fuzz.step.comp.label or text
 
@@ -141,7 +109,7 @@ def fuzzer(
         seen: Set[str] = set()
         seen_by_source: Dict[str, int] = {}
 
-        fuzzy_steps = (fuzzify(context, step=step) for step in steps)
+        fuzzy_steps = (fuzzify(context, step=step, options=options) for step in steps)
         sorted_steps = sorted(fuzzy_steps, key=cast(Callable[[FuzzyStep], Any], rank))
         for fuzz in sorted_steps:
             step = fuzz.step

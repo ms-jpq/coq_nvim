@@ -47,7 +47,9 @@ def initial(configs: Sequence[Any]) -> Settings:
     match_o = config["match"]
     cache_o = config["cache"]
     match = MatchOptions(
-        min_match=match_o["min_match"], unifying_chars={*match_o["unifying_chars"]}
+        min_match=match_o["min_match"],
+        transpose_band=match_o["transpose_band"],
+        unifying_chars={*match_o["unifying_chars"]},
     )
     cache = CacheOptions(
         short_name=cache_o["short_name"],
@@ -117,9 +119,7 @@ def load_factories(settings: Settings) -> Dict[str, SourceFactory]:
     return {n: f for n, f in cont()}
 
 
-def build(
-    spec: SnippetEngineSpec, main: SnippetEngineFactory
-) -> EngineFactory:
+def build(spec: SnippetEngineSpec, main: SnippetEngineFactory) -> EngineFactory:
     seed = SnippetSeed(config=spec.config)
     fact = EngineFactory(seed=seed, manufacture=main)
     return fact

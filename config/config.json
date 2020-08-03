@@ -6,6 +6,7 @@
   },
   "match": {
     "min_match": 1,
+    "transpose_band": 3,
     "unifying_chars": ["_", "-"]
   },
   "snippet_engines": {

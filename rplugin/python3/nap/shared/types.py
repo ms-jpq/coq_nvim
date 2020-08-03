@@ -17,6 +17,7 @@ from pynvim import Nvim
 @dataclass(frozen=True)
 class MatchOptions:
     min_match: int
+    transpose_band: int
     unifying_chars: Set[str]
 
 
