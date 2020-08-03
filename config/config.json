@@ -43,7 +43,14 @@
       "timeout": 100
     },
     "dictionary": {
-      "config": {},
+      "config": {
+        "sources": [
+          {
+            "path": "/usr/share/dict/words",
+            "sep": "\n"
+          }
+        ]
+      },
       "enabled": true,
       "limit": 3,
       "main": "dictionary.py",
