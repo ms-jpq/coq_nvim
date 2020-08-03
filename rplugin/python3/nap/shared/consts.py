@@ -12,4 +12,6 @@ module_entry_point = "main"
 
 load_hierarchy = (dirname(__base__),)
 
+conf_var_name = "nap_settings"
+conf_var_name_private = "nap_settings_private"
 buf_var_name = "buf_nap"

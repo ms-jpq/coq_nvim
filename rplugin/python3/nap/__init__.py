@@ -11,6 +11,7 @@ from typing import Any, Awaitable, Sequence
 
 from pynvim import Nvim, command, function, plugin
 
+from .shared.consts import conf_var_name, conf_var_name_private
 from .server.completion import GenOptions, merge
 from .server.nvim import autocmd, complete
 from .server.patch import apply_patch
@@ -37,8 +38,8 @@ class Main:
         self.msg_ch: Queue = Queue()
 
         self._initialized = False
-        user_config = nvim.vars.get("nap_settings", {})
-        client_config = nvim.vars.get("nap_settings_private", {})
+        user_config = nvim.vars.get(conf_var_name, {})
+        client_config = nvim.vars.get(conf_var_name_private, {})
         settings = initial(configs=(client_config, user_config))
         self.settings = settings
         self.state = initial_state(settings)
