@@ -77,7 +77,7 @@ def load_external(main_name: str) -> Optional[Callable[..., Any]]:
     return None
 
 
-def assemble(spec: SourceSpec, main: Factory, match: MatchOptions,) -> SourceFactory:
+def assemble(spec: SourceSpec, main: Factory, match: MatchOptions) -> SourceFactory:
     limit = spec.limit or inf
     timeout = (spec.timeout or inf) / 1000
     rank = spec.rank or 100
@@ -120,8 +120,10 @@ def load_factories(settings: Settings) -> Dict[str, SourceFactory]:
     return {n: f for n, f in cont()}
 
 
-def build(spec: SnippetEngineSpec, main: SnippetEngineFactory) -> EngineFactory:
-    seed = SnippetSeed(config=spec.config)
+def build(
+    spec: SnippetEngineSpec, main: SnippetEngineFactory, match: MatchOptions
+) -> EngineFactory:
+    seed = SnippetSeed(config=spec.config, match=match)
     fact = EngineFactory(seed=seed, manufacture=main)
     return fact
 
@@ -134,13 +136,13 @@ def load_engines(settings: Settings) -> Dict[str, EngineFactory]:
 
         for name, main in intrinsic.items():
             spec = settings.snippet_engines[name]
-            yield spec.kind, build(spec, main=main)
+            yield spec.kind, build(spec, main=main, match=settings.match)
 
         for name, spec in settings.snippet_engines.items():
             if name not in intrinsic:
                 spec = settings.snippet_engines[name]
                 main = load_external(spec.main)
                 if main:
-                    yield spec.kind, build(spec, main=main)
+                    yield spec.kind, build(spec, main=main, match=settings.match)
 
     return {n: f for n, f in cont()}
