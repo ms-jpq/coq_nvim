@@ -3,9 +3,9 @@ from typing import Any, Dict, cast
 from pynvim import Nvim
 
 from ..shared.nvim import call
-from ..shared.patch import replace_lines
 from ..shared.types import LEdit, Position, Snippet, SnippetContext, SnippetEngine
-from .edit import Payload
+from .edit import replace_lines
+from .types import Payload
 
 
 async def apply_patch(nvim: Nvim, engine: SnippetEngine, comp: Dict[str, Any]) -> None:
