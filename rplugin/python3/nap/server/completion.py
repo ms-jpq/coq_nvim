@@ -137,7 +137,7 @@ async def merge(
 
     async def gen(options: GenOptions) -> Tuple[Position, Iterator[VimCompletion]]:
         s_context = StepContext(force=options.force)
-        context, buf_context = await gen_context(nvim, options=match_opt)
+        context, buf_context = await gen_context(nvim, options=match_opt, pos=None)
         position = context.position
 
         def is_enabled(source_name: str) -> bool:

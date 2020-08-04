@@ -13,7 +13,7 @@ NAME = "simple_lsp"
 
 async def main(nvim: Nvim, seed: SnippetSeed) -> SnippetEngine:
     async def apply(context: SnippetContext) -> None:
-        ctx, _ = await gen_context(nvim, options=seed.match)
+        ctx, _ = await gen_context(nvim, options=seed.match, pos=context.position)
         new_prefix, new_suffix = parse_snippet(ctx, context.snippet.content)
         match_normalized = new_prefix + new_suffix
         old_prefix, old_suffix = parse_common_affix(
