@@ -99,6 +99,7 @@ Factory = Callable[[Nvim, Queue, Seed], Awaitable[Source]]
 
 @dataclass(frozen=True)
 class SnippetSeed:
+    match: MatchOptions
     config: Dict[str, Any]
 
 
