@@ -30,7 +30,7 @@ def rank(fuzz: FuzzyStep) -> Sequence[Union[float, int, str]]:
     metric = fuzz.metric
     step = fuzz.step
     comp = step.comp
-    text = comp.sortby or comp.label or strxfrm(step.text_normalized)
+    text = (comp.sortby or comp.label or strxfrm(step.text_normalized)).lower()
     return (
         metric.prefix_matches * -1,
         metric.num_matches * -1,
