@@ -5,7 +5,7 @@ from pynvim import Nvim
 from ..shared.nvim import call
 from ..shared.patch import replace_lines
 from ..shared.types import LEdit, Position, Snippet, SnippetContext, SnippetEngine
-from .types import Payload
+from .edit import Payload
 
 
 async def apply_patch(nvim: Nvim, engine: SnippetEngine, comp: Dict[str, Any]) -> None:
