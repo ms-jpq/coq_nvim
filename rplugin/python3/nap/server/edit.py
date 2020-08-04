@@ -130,7 +130,7 @@ def perform_edits(
 
 def split_stream(
     stream: Iterator[Union[str, Tuple[()]]], start: int
-) -> Tuple[Sequence[str], Position]:
+) -> Tuple[Sequence[str], Optional[Position]]:
     position: Optional[Position] = None
 
     def cont() -> Iterator[str]:
@@ -154,7 +154,7 @@ def split_stream(
         if curr:
             yield "".join(curr)
 
-    return tuple(cont()), cast(Position, position)
+    return tuple(cont()), position
 
 
 def replace_lines(nvim: Nvim, payload: Payload) -> None:
@@ -172,6 +172,7 @@ def replace_lines(nvim: Nvim, payload: Payload) -> None:
     new_lines, pos = split_stream(text_stream, start=btm_idx)
 
     nvim.api.buf_set_lines(buf, btm_idx, top_idx, True, new_lines)
-    nvim.api.win_set_cursor(win, (pos.row + 1, pos.col))
+    if pos:
+        nvim.api.win_set_cursor(win, (pos.row + 1, pos.col))
 
     # nvim.api.out_write(f"{payload}{linesep}")
