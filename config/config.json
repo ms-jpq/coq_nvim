@@ -2,6 +2,7 @@
   "cache": {
     "band_size": 20,
     "limit": 3,
+    "min_match": 1,
     "short_name": "C"
   },
   "match": {

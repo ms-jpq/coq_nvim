@@ -78,15 +78,16 @@ def make_cache(
                         metric = gen_metric(
                             cword, match=text, match_normalized=nword, options=match_opt
                         )
-                        new_step = recalculate(
-                            context, options=cache_opt, step=step
-                        )
-                        fuzzystep = FuzzyStep(
-                            step=new_step,
-                            full_match=metric.num_matches == len(nword),
-                            metric=metric,
-                        )
-                        acc.append(fuzzystep)
+                        if metric.num_matches >= cache_opt.min_match:
+                            new_step = recalculate(
+                                context, options=cache_opt, step=step
+                            )
+                            fuzzystep = FuzzyStep(
+                                step=new_step,
+                                full_match=metric.num_matches == len(nword),
+                                metric=metric,
+                            )
+                            acc.append(fuzzystep)
 
         done, pending = await wait((cont(),), timeout=timeout)
         for p in pending:

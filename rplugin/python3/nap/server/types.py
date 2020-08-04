@@ -23,6 +23,7 @@ class Notification:
 @dataclass(frozen=True)
 class CacheOptions:
     short_name: str
+    min_match: int
     band_size: int
     limit: float
     source_name: str = "cache"

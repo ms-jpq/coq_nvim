@@ -52,6 +52,7 @@ def initial(configs: Sequence[Any]) -> Settings:
     )
     cache = CacheOptions(
         short_name=cache_o["short_name"],
+        min_match=cache_o["min_match"],
         band_size=cache_o["band_size"],
         limit=cache_o["limit"],
     )
