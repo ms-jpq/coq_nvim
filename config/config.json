@@ -5,7 +5,6 @@
     "short_name": "C"
   },
   "match": {
-    "min_match": 1,
     "transpose_band": 3,
     "unifying_chars": ["_", "-"]
   },
@@ -21,7 +20,8 @@
     "around": {
       "config": {
         "band_size": 20,
-        "max_length": 20
+        "max_length": 20,
+        "min_length": 2
       },
       "enabled": true,
       "limit": 3,
@@ -33,6 +33,7 @@
     "buffers": {
       "config": {
         "max_length": 20,
+        "min_length": 2,
         "polling_rate": 1
       },
       "enabled": true,
@@ -65,6 +66,7 @@
     "tmux": {
       "config": {
         "max_length": 20,
+        "min_length": 2,
         "polling_rate": 1
       },
       "enabled": true,

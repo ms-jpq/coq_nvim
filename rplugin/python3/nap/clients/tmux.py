@@ -19,6 +19,7 @@ NAME = "tmux"
 @dataclass(frozen=True)
 class Config:
     polling_rate: float
+    min_length: int
     max_length: int
 
 
@@ -98,7 +99,7 @@ async def tmux_words(max_length: int, unifying_chars: Set[str]) -> AsyncIterator
 async def main(nvim: Nvim, chan: Queue, seed: Seed) -> Source:
     config = Config(**seed.config)
     min_length, max_length, unifying_chars = (
-        seed.match.min_match,
+        config.min_length,
         config.max_length,
         seed.match.unifying_chars,
     )

@@ -47,7 +47,6 @@ def initial(configs: Sequence[Any]) -> Settings:
     match_o = config["match"]
     cache_o = config["cache"]
     match = MatchOptions(
-        min_match=match_o["min_match"],
         transpose_band=match_o["transpose_band"],
         unifying_chars={*match_o["unifying_chars"]},
     )

@@ -22,6 +22,7 @@ NAME = "buffers"
 @dataclass(frozen=True)
 class Config:
     polling_rate: float
+    min_length: int
     max_length: int
 
 
@@ -59,7 +60,7 @@ async def main(nvim: Nvim, chan: Queue, seed: Seed) -> Source:
     config = Config(**seed.config)
     ch = Event()
     min_length, max_length, unifying_chars = (
-        seed.match.min_match,
+        config.min_length,
         config.max_length,
         seed.match.unifying_chars,
     )

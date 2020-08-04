@@ -110,12 +110,7 @@ def fuzzy(
         seen_count = seen_by_source.get(source, 0) + 1
         seen_by_source[source] = seen_count
         text = step.text
-        num_matches = fuzz.metric.num_matches
 
-        if (
-            seen_count <= limits[source]
-            and text not in seen
-            and (fuzz.full_match or num_matches >= options.min_match)
-        ):
+        if seen_count <= limits[source] and text not in seen:
             seen.add(text)
             yield vimify(fuzz=fuzz)

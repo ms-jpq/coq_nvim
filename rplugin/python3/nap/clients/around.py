@@ -18,6 +18,7 @@ NAME = "around"
 @dataclass(frozen=True)
 class Config:
     band_size: int
+    min_length: int
     max_length: int
 
 
@@ -41,7 +42,7 @@ async def main(nvim: Nvim, chan: Queue, seed: Seed) -> Source:
     config = Config(**seed.config)
     band_size = config.band_size
     min_length, max_length, unifying_chars = (
-        seed.match.min_match,
+        config.min_length,
         config.max_length,
         seed.match.unifying_chars,
     )
