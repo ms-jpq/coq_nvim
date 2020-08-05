@@ -47,7 +47,7 @@ class Main:
         self.engine = create_task(gen_engine(nvim, settings=settings))
         run_forever(nvim, self.ooda)
 
-    def _submit(self, co: Awaitable[None], wait: bool = True) -> None:
+    def _submit(self, co: Awaitable[None]) -> None:
         loop: AbstractEventLoop = self.nvim.loop
 
         def run(nvim: Nvim) -> None:
