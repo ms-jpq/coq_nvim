@@ -121,9 +121,11 @@ def perform_edits(
     for idx, char in stream:
         if replacement and idx == replacement.begin:
             yield from iter(replacement.text)
-            yield char
-            for _ in range(replacement.length - 1):
-                next(stream, None)
+            if replacement.length:
+                for _ in range(replacement.length - 1):
+                    next(stream, None)
+            else:
+                yield char
             replacement = next(replacements, None)
         else:
             yield char
