@@ -77,7 +77,7 @@ def make_cache(
                         seen.add(text)
                         metric = gen_metric(
                             cword,
-                            nc_word=ncword,
+                            ncword=ncword,
                             match=text,
                             n_match=nword,
                             options=match_opt,
