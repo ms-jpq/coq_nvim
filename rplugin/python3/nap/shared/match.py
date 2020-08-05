@@ -22,20 +22,30 @@ def gen_metric_secondary(ncword: str, n_match: str) -> Metric:
     num_matches = 0
     consecutive_matches = 0
 
+    for ai, bi, size in m.get_matching_blocks():
+        num_matches += size
+        if size >= 2:
+            consecutive_matches += size - 1
+        if ai == 0:
+            prefix_matches = size
+        for i in range(bi, size):
+            matches[i] = bi
+
+    density = m.ratio()
     metric = Metric(
         prefix_matches=prefix_matches,
         num_matches=num_matches,
         consecutive_matches=consecutive_matches,
-        density=m.ratio(),
+        density=density,
         matches=matches,
     )
-
     return metric
 
 
 def gen_metric(
     cword: str, ncword: str, match: str, n_match: str, options: MatchOptions
 ) -> Metric:
+    transband = options.transpose_band
     matches: Dict[int, str] = {}
 
     idx = 0
@@ -43,21 +53,24 @@ def gen_metric(
     pm_idx = inf
     prefix_matches = 0
     consecutive_matches = 0
+    num_matches = 0
     for i, char in enumerate(cword):
+        if i > transband and not num_matches:
+            return gen_metric_secondary(ncword, n_match=n_match)
         target = match if char.isupper() else n_match
-        m_idx = target.find(char, idx, idx + options.transpose_band)
+        m_idx = target.find(char, idx, idx + transband)
         if m_idx != -1:
             if pm_idx == m_idx - 1:
                 consecutive_matches += 1
-            pm_idx = m_idx
+            num_matches += 1
             matches[m_idx] = char
+            pm_idx = m_idx
             idx = m_idx + 1
         if m_idx != i:
             prefix_broken = True
         if not prefix_broken:
             prefix_matches += 1
 
-    num_matches = len(matches)
     density = num_matches / len(match) if match else 0
     metric = Metric(
         prefix_matches=prefix_matches,
@@ -66,7 +79,6 @@ def gen_metric(
         density=density,
         matches=matches,
     )
-
     return metric
 
 
