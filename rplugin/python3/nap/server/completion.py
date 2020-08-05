@@ -85,7 +85,7 @@ async def manufacture(
 
 
 async def osha(
-    nvim: Nvim, name: str, factory: SourceFactory
+    nvim: Nvim, name: str, factory: SourceFactory, retries: int
 ) -> Tuple[str, StepFunction, Optional[Queue]]:
     async def nil_steps(_: Context, __: StepContext) -> Sequence[Step]:
         return ()
@@ -98,21 +98,23 @@ async def osha(
         await print(nvim, message, error=True)
         return name, nil_steps, None
     else:
-        errored = False
+        errored = 0
 
         async def o_step(context: Context, s_context: StepContext) -> Sequence[Step]:
             nonlocal errored
             try:
-                if errored:
+                if errored >= retries:
                     return ()
                 else:
                     return await step_fn(context, s_context)
             except Exception as e:
-                errored = True
+                errored += 1
                 stack = format_exc()
                 message = f"Error in source {name}{linesep}{stack}{e}"
                 await print(nvim, message, error=True)
                 return ()
+            else:
+                errored = 0
 
         return name, o_step, chan
 
@@ -123,10 +125,14 @@ async def merge(
     Callable[[GenOptions], Awaitable[Tuple[Position, Iterator[VimCompletion]]]],
     Callable[[], Awaitable[None]],
 ]:
+    retries = 3
     match_opt, cache_opt = settings.match, settings.cache
     factories = load_factories(settings=settings)
     src_gen = await gather(
-        *(osha(nvim, name=name, factory=factory) for name, factory in factories.items())
+        *(
+            osha(nvim, name=name, factory=factory, retries=retries)
+            for name, factory in factories.items()
+        )
     )
     push, pull = make_cache(match_opt=match_opt, cache_opt=cache_opt)
 
