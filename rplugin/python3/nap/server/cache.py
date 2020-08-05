@@ -76,7 +76,11 @@ def make_cache(
                     if text not in seen and nword not in ncword:
                         seen.add(text)
                         metric = gen_metric(
-                            cword, match=text, match_normalized=nword, options=match_opt
+                            cword,
+                            nc_word=ncword,
+                            match=text,
+                            n_match=nword,
+                            options=match_opt,
                         )
                         if metric.num_matches >= cache_opt.min_match:
                             new_step = recalculate(

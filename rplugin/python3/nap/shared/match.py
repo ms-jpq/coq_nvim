@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from difflib import SequenceMatcher
 from math import inf
 from typing import Dict, Iterator
 
@@ -14,8 +15,26 @@ class Metric:
     matches: Dict[int, str]
 
 
+def gen_metric_secondary(ncword: str, n_match: str) -> Metric:
+    m = SequenceMatcher(a=ncword, b=n_match)
+    matches: Dict[int, str] = {}
+    prefix_matches = 0
+    num_matches = 0
+    consecutive_matches = 0
+
+    metric = Metric(
+        prefix_matches=prefix_matches,
+        num_matches=num_matches,
+        consecutive_matches=consecutive_matches,
+        density=m.ratio(),
+        matches=matches,
+    )
+
+    return metric
+
+
 def gen_metric(
-    cword: str, match: str, match_normalized: str, options: MatchOptions
+    cword: str, ncword: str, match: str, n_match: str, options: MatchOptions
 ) -> Metric:
     matches: Dict[int, str] = {}
 
@@ -25,7 +44,7 @@ def gen_metric(
     prefix_matches = 0
     consecutive_matches = 0
     for i, char in enumerate(cword):
-        target = match if char.isupper() else match_normalized
+        target = match if char.isupper() else n_match
         m_idx = target.find(char, idx, idx + options.transpose_band)
         if m_idx != -1:
             if pm_idx == m_idx - 1:
@@ -58,10 +77,10 @@ def find_matches(
     words: Dict[str, str],
     options: MatchOptions,
 ) -> Iterator[str]:
-    for match, match_normalized in words.items():
-        if match_normalized not in ncword:
+    for match, n_match in words.items():
+        if n_match not in ncword:
             metric = gen_metric(
-                cword, match=match, match_normalized=match_normalized, options=options
+                cword, ncword=ncword, match=match, n_match=n_match, options=options
             )
             if metric.num_matches >= min_match:
                 yield match

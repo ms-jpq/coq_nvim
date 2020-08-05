@@ -16,11 +16,11 @@ class FuzzyStep:
 
 
 def fuzzify(context: Context, step: Step, options: MatchOptions) -> FuzzyStep:
-    cword = context.alnums
-    match, match_normalized = step.text, step.text_normalized
+    cword, ncword = context.alnums, context.alnums_normalized
+    match, n_match = step.text, step.text_normalized
 
     metric = gen_metric(
-        cword, match=match, match_normalized=match_normalized, options=options,
+        cword, ncword=ncword, match=match, n_match=n_match, options=options,
     )
     full_match = metric.num_matches == len(match)
     return FuzzyStep(step=step, full_match=full_match, metric=metric)
