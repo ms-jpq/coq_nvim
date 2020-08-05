@@ -29,7 +29,7 @@ def gen_metric_secondary(ncword: str, n_match: str) -> Metric:
         if ai == 0:
             prefix_matches = size
         for i in range(bi, size):
-            matches[i] = bi
+            matches[i] = n_match[bi]
 
     density = m.ratio()
     metric = Metric(
