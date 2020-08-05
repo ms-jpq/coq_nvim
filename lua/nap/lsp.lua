@@ -14,11 +14,11 @@ end
 local list_comp_candidates = function (request_id, enable_cancel, row, col)
   if enable_cancel then
     cancel()
+    cancel = function () end
   end
 
   if #lsp.buf_get_clients() == 0 then
     notify(request_id, nil)
-    cancel = function () end
   else
     local position = {line = row, character = col}
     local text_doc = lsp.util.make_text_document_params()
