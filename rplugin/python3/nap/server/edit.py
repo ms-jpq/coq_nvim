@@ -121,6 +121,7 @@ def perform_edits(
     for idx, char in stream:
         if replacement and idx == replacement.begin:
             yield from iter(replacement.text)
+            yield char
             for _ in range(replacement.length - 1):
                 next(stream, None)
             replacement = next(replacements, None)
@@ -175,4 +176,5 @@ def replace_lines(nvim: Nvim, payload: Payload) -> None:
     if pos:
         nvim.api.win_set_cursor(win, (pos.row + 1, pos.col))
 
-    # nvim.api.out_write(f"{payload}{linesep}")
+    nvim.api.out_write(f"{payload}{linesep}")
+    nvim.api.out_write(f"{replacements}{linesep}")
