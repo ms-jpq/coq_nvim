@@ -1,7 +1,7 @@
 from asyncio import Queue, get_running_loop
 from itertools import accumulate
 from os import listdir
-from os.path import dirname, isdir, sep
+from os.path import dirname, isdir, join, realpath, sep
 from pathlib import Path
 from typing import AsyncIterator, Iterator, Sequence
 
@@ -47,21 +47,30 @@ def parse_paths(root: str) -> Iterator[str]:
     return reversed(tuple(accumulate(cont(root), func=combine)))
 
 
+def list_dir(path: str) -> Iterator[str]:
+    for p in listdir(path):
+        if isdir(join(path, p)):
+            yield p + sep
+        else:
+            yield p
+
+
 async def find_children(paths: Iterator[str]) -> Sequence[str]:
     loop = get_running_loop()
 
     def cont() -> Iterator[str]:
         for path in paths:
-            parent = dirname(path)
+            rp = realpath(path)
+            parent = dirname(rp)
             try:
                 if isdir(path):
                     end = "" if path.endswith(sep) or path.endswith(".") else sep
-                    for child in listdir(path):
+                    for child in list_dir(rp):
                         text = end + child
                         yield text
                     break
                 elif isdir(parent):
-                    yield from listdir(parent)
+                    yield from list_dir(parent)
                     break
             except PermissionError:
                 pass
