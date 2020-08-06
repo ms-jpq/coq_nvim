@@ -13,6 +13,7 @@ class Metric:
     num_matches: int
     density: float
     matches: Dict[int, str]
+    full_match: bool
 
 
 def gen_metric_secondary(ncword: str, n_match: str) -> Metric:
@@ -32,12 +33,14 @@ def gen_metric_secondary(ncword: str, n_match: str) -> Metric:
             matches[i] = n_match[bi]
 
     density = m.ratio()
+    full_match = num_matches == len(ncword)
     metric = Metric(
         prefix_matches=prefix_matches,
         num_matches=num_matches,
         consecutive_matches=consecutive_matches,
         density=density,
         matches=matches,
+        full_match=full_match,
     )
     return metric
 
@@ -72,12 +75,14 @@ def gen_metric(
             prefix_matches += 1
 
     density = num_matches / len(match) if match else 0
+    full_match = num_matches == len(ncword)
     metric = Metric(
         prefix_matches=prefix_matches,
         num_matches=num_matches,
         consecutive_matches=consecutive_matches,
         density=density,
         matches=matches,
+        full_match=full_match,
     )
     return metric
 

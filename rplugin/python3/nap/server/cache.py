@@ -88,7 +88,6 @@ def make_cache(
                             )
                             fuzzystep = FuzzyStep(
                                 step=new_step,
-                                full_match=metric.num_matches == len(nword),
                                 metric=metric,
                             )
                             acc.append(fuzzystep)

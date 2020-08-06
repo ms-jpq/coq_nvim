@@ -11,7 +11,6 @@ from .types import MatchOptions, Payload, Step
 @dataclass(frozen=True)
 class FuzzyStep:
     step: Step
-    full_match: bool
     metric: Metric
 
 
@@ -22,8 +21,7 @@ def fuzzify(context: Context, step: Step, options: MatchOptions) -> FuzzyStep:
     metric = gen_metric(
         cword, ncword=ncword, match=match, n_match=n_match, options=options,
     )
-    full_match = metric.num_matches == len(match)
-    return FuzzyStep(step=step, full_match=full_match, metric=metric)
+    return FuzzyStep(step=step, metric=metric)
 
 
 def rank(fuzz: FuzzyStep) -> Sequence[Union[float, int, str]]:
@@ -79,7 +77,7 @@ def vimify(fuzz: FuzzyStep) -> VimCompletion:
     menu = f"{comp.kind} {source}" if comp.kind else source
     abbr = (
         (comp.label or (comp.new_prefix + comp.new_suffix))
-        if fuzz.full_match
+        if fuzz.metric.full_match
         else context_gen(fuzz)
     )
     user_data = gen_payload(comp=comp)
