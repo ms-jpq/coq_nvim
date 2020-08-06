@@ -1,5 +1,6 @@
 from asyncio import FIRST_COMPLETED, Queue, Task, create_task, gather, sleep, wait
 from dataclasses import dataclass, field
+from itertools import count
 from math import inf
 from typing import (
     Any,
@@ -8,6 +9,7 @@ from typing import (
     Callable,
     Dict,
     Sequence,
+    Tuple,
     TypeVar,
     cast,
 )
@@ -22,6 +24,7 @@ class Signal:
 
 
 async def schedule(chan: Queue, gen: Callable[..., Awaitable[T]]) -> AsyncIterator[T]:
+    it, curr = count(), -1
     prev: Task = create_task(sleep(inf))
 
     while True:
@@ -31,7 +34,15 @@ async def schedule(chan: Queue, gen: Callable[..., Awaitable[T]]) -> AsyncIterat
         for d in await gather(*done):
             if type(d) is Signal:
                 sig = cast(Signal, d)
-                prev = create_task(gen(*sig.args, **sig.kwargs))
+                curr = i = next(it)
+
+                async def d_gen(*args: Any, **kwargs: Any) -> Tuple[int, T]:
+                    ret = await gen(*args, **kwargs)
+                    return i, ret
+
+                prev = create_task(d_gen(*sig.args, **sig.kwargs))
             else:
                 prev = create_task(sleep(inf))
-                yield d
+                c, ret = d
+                if c == curr:
+                    yield ret
