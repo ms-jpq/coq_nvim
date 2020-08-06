@@ -46,7 +46,7 @@
     },
     "lsp": {
       "config": {
-        "enable_cancel": false
+        "enable_cancel": true
       },
       "enabled": false,
       "limit": null,

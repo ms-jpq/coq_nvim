@@ -9,8 +9,8 @@ from pynvim import Nvim
 from pynvim.api.buffer import Buffer
 from pynvim.api.common import NvimError
 
-from ..shared.nvim import call, run_forever
 from ..shared.match import find_matches
+from ..shared.nvim import call, run_forever
 from ..shared.parse import coalesce, normalize, parse_common_affix
 from ..shared.types import Completion, Context, Seed, Source
 from .pkgs.nvim import autocmd, current_buf
