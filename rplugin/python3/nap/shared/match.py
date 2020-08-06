@@ -16,8 +16,12 @@ class Metric:
     full_match: bool
 
 
+def isjunk(s: str) -> bool:
+    return s.isspace()
+
+
 def gen_metric_secondary(ncword: str, n_match: str) -> Metric:
-    m = SequenceMatcher(a=ncword, b=n_match)
+    m = SequenceMatcher(a=ncword, b=n_match, autojunk=True, isjunk=isjunk)
     matches: Dict[int, str] = {}
     prefix_matches = 0
     num_matches = 0
@@ -30,10 +34,10 @@ def gen_metric_secondary(ncword: str, n_match: str) -> Metric:
         if ai == 0:
             prefix_matches = size
         for i in range(bi, size):
-            matches[i] = n_match[bi]
+            matches[i] = n_match[i]
 
-    density = m.ratio()
-    full_match = num_matches == len(ncword)
+    density = num_matches / len(n_match) if n_match else 0
+    full_match = prefix_matches == len(ncword)
     metric = Metric(
         prefix_matches=prefix_matches,
         num_matches=num_matches,
@@ -48,6 +52,7 @@ def gen_metric_secondary(ncword: str, n_match: str) -> Metric:
 def gen_metric(
     cword: str, ncword: str, match: str, n_match: str, options: MatchOptions
 ) -> Metric:
+    return gen_metric_secondary(ncword, n_match=n_match)
     transband = options.transpose_band
     matches: Dict[int, str] = {}
 
@@ -75,7 +80,7 @@ def gen_metric(
             prefix_matches += 1
 
     density = num_matches / len(match) if match else 0
-    full_match = num_matches == len(ncword)
+    full_match = prefix_matches == len(ncword)
     metric = Metric(
         prefix_matches=prefix_matches,
         num_matches=num_matches,
