@@ -1,6 +1,7 @@
 from typing import Any, Dict, cast
 
 from pynvim import Nvim
+from pynvim.api.window import Window
 
 from ..shared.nvim import call
 from ..shared.types import LEdit, Position, Snippet, SnippetContext, SnippetEngine
@@ -36,6 +37,10 @@ async def apply_patch(nvim: Nvim, engine: SnippetEngine, comp: Dict[str, Any]) -
         else:
 
             def cont() -> None:
-                replace_lines(nvim, payload=payload)
+                prow, pcol = payload.position.row, payload.position.col
+                win: Window = nvim.api.get_current_win()
+                row, col = nvim.api.win_get_cursor(win)
+                if row == prow + 1 and col == pcol:
+                    replace_lines(nvim, payload=payload)
 
             await call(nvim, cont)
