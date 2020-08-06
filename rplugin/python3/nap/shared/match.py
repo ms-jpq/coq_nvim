@@ -33,7 +33,7 @@ def gen_metric_secondary(ncword: str, n_match: str) -> Metric:
             consecutive_matches += size - 1
         if ai == bi == 0:
             prefix_matches = size
-        for i in range(bi, size):
+        for i in range(bi, bi + size):
             matches[i] = n_match[i]
 
     density = num_matches / len(n_match) if n_match else 0
