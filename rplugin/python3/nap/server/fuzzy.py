@@ -76,13 +76,14 @@ def gen_payload(comp: Completion) -> Payload:
 
 
 def vimify(fuzz: FuzzyStep) -> VimCompletion:
+    metric = fuzz.metric
     step = fuzz.step
     comp = step.comp
     source = f"[{step.source_shortname}]"
     menu = f"{comp.kind} {source}" if comp.kind else source
     abbr = (
         (comp.label or (comp.new_prefix + comp.new_suffix))
-        if fuzz.metric.full_match
+        if metric.full_match or not metric.num_matches
         else context_gen(fuzz)
     )
     user_data = gen_payload(comp=comp)

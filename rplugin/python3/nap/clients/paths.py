@@ -1,8 +1,9 @@
 from asyncio import Queue, get_running_loop
+from itertools import accumulate
 from os import listdir
 from os.path import dirname, isdir, sep
-from typing import AsyncIterator, Iterator, Sequence
 from pathlib import Path
+from typing import AsyncIterator, Iterator, Sequence
 
 from pynvim import Nvim
 
@@ -11,59 +12,62 @@ from ..shared.types import Completion, Context, Seed, Source
 NAME = "paths"
 
 
-def parse_path(root: str, parent: str = "") -> str:
-    def cont() -> Iterator[str]:
-        l, s, r = root.rpartition(sep)
-        if s == sep:
-            curr = f"{s}{r}{parent}"
-            yield from parse_path(l, parent=curr)
-            if sep not in l:
-                if l.endswith(".."):
-                    yield ".." + curr
-                elif l.endswith("."):
-                    yield "." + curr
-                elif l.endswith("~"):
-                    yield str(Path.home()) + curr
-            yield curr
+def parse_paths(root: str) -> Iterator[str]:
+    home = str(Path.home())
 
-    return "".join(cont())
+    def cont(root: str) -> Iterator[str]:
+        lhs, s, rhs = root.rpartition(sep)
+        if s:
+            yield f"{sep}{rhs}"
+            yield from cont(lhs)
+        else:
+            if rhs.endswith("~"):
+                yield home
+            elif rhs.endswith(".."):
+                yield ".."
+            elif rhs.endswith("."):
+                yield "."
 
+    def combine(a: str, b: str) -> str:
+        return b + a
 
-def list_dir(path: str) -> Sequence[str]:
-    try:
-        return listdir(path)
-    except PermissionError:
-        return ()
+    return reversed(tuple(accumulate(cont(root), func=combine)))
 
 
-async def find_children(path: str, context: Context) -> Sequence[Completion]:
+async def find_children(paths: Iterator[str], context: Context) -> Sequence[Completion]:
     position = context.position
     old_prefix, old_suffix = context.alnums_before, context.alnums_after
     loop = get_running_loop()
 
     def cont() -> Iterator[Completion]:
-        parent = dirname(path)
-        if isdir(path):
-            end = "" if path.endswith(sep) else sep
-            for child in list_dir(path):
-                text = end + child
-                yield Completion(
-                    position=position,
-                    old_prefix=old_prefix,
-                    new_prefix=text,
-                    old_suffix=old_suffix,
-                    new_suffix="",
-                    label=text,
-                )
-        elif isdir(parent):
-            for child in list_dir(parent):
-                yield Completion(
-                    position=position,
-                    old_prefix=old_prefix,
-                    new_prefix=child,
-                    old_suffix=old_suffix,
-                    new_suffix="",
-                )
+        for path in paths:
+            parent = dirname(path)
+            try:
+                if isdir(path):
+                    end = "" if path.endswith(sep) else sep
+                    for child in listdir(path):
+                        text = end + child
+                        yield Completion(
+                            position=position,
+                            old_prefix=old_prefix,
+                            new_prefix=text,
+                            old_suffix=old_suffix,
+                            new_suffix="",
+                            label=text,
+                        )
+                    break
+                elif isdir(parent):
+                    for child in listdir(parent):
+                        yield Completion(
+                            position=position,
+                            old_prefix=old_prefix,
+                            new_prefix=child,
+                            old_suffix=old_suffix,
+                            new_suffix="",
+                        )
+                    break
+            except PermissionError:
+                pass
 
     def co() -> Sequence[Completion]:
         return tuple(cont())
@@ -74,8 +78,8 @@ async def find_children(path: str, context: Context) -> Sequence[Completion]:
 async def main(nvim: Nvim, chan: Queue, seed: Seed) -> Source:
     async def source(context: Context) -> AsyncIterator[Completion]:
         before = context.line_before
-        path = parse_path(before)
-        for child in await find_children(path, context):
+        paths = parse_paths(before)
+        for child in await find_children(paths, context):
             yield child
 
     return source
