@@ -102,7 +102,12 @@ async def main(nvim: Nvim, chan: Queue, seed: Seed) -> Source:
         cword, ncword = context.alnums, context.alnums_normalized
 
         for word in find_matches(
-            cword, ncword=ncword, min_match=min_length, words=words, options=seed.match
+            cword,
+            ncword=ncword,
+            min_match=min_length,
+            words=words,
+            options=seed.match,
+            use_secondary=False,
         ):
             match_normalized = words[word]
             _, old_suffix = parse_common_affix(

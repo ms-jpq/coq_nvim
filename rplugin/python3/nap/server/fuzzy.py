@@ -19,7 +19,12 @@ def fuzzify(context: Context, step: Step, options: MatchOptions) -> FuzzyStep:
     match, n_match = step.text, step.text_normalized
 
     metric = gen_metric(
-        cword, ncword=ncword, match=match, n_match=n_match, options=options,
+        cword,
+        ncword=ncword,
+        match=match,
+        n_match=n_match,
+        options=options,
+        use_secondary=True,
     )
     return FuzzyStep(step=step, metric=metric)
 

@@ -2,6 +2,7 @@ from asyncio import Queue, get_running_loop
 from os import listdir
 from os.path import dirname, isdir, sep
 from typing import AsyncIterator, Iterator, Sequence
+from pathlib import Path
 
 from pynvim import Nvim
 
@@ -21,6 +22,8 @@ def parse_path(root: str, parent: str = "") -> Iterator[str]:
                 yield ".." + curr
             elif l.endswith("."):
                 yield "." + curr
+            elif l.endswith("~"):
+                yield str(Path.home()) + curr
         yield curr
 
 

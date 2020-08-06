@@ -81,6 +81,7 @@ def make_cache(
                             match=text,
                             n_match=nword,
                             options=match_opt,
+                            use_secondary=True
                         )
                         if metric.num_matches >= cache_opt.min_match:
                             new_step = recalculate(

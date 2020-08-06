@@ -54,9 +54,13 @@ def gen_metric_secondary(ncword: str, n_match: str) -> Metric:
 
 
 def gen_metric(
-    cword: str, ncword: str, match: str, n_match: str, options: MatchOptions
+    cword: str,
+    ncword: str,
+    match: str,
+    n_match: str,
+    options: MatchOptions,
+    use_secondary: bool,
 ) -> Metric:
-    return gen_metric_secondary(ncword, n_match=n_match)
     transband = options.transpose_band
     matches: Dict[int, str] = {}
 
@@ -67,7 +71,7 @@ def gen_metric(
     consecutive_matches = 0
     num_matches = 0
     for i, char in enumerate(cword):
-        if i > transband and not num_matches:
+        if use_secondary and i > transband and not num_matches:
             return gen_metric_secondary(ncword, n_match=n_match)
         target = match if char.isupper() else n_match
         m_idx = target.find(char, idx, idx + transband)
@@ -102,11 +106,17 @@ def find_matches(
     min_match: int,
     words: Dict[str, str],
     options: MatchOptions,
+    use_secondary: bool,
 ) -> Iterator[str]:
     for match, n_match in words.items():
         if n_match not in ncword:
             metric = gen_metric(
-                cword, ncword=ncword, match=match, n_match=n_match, options=options
+                cword,
+                ncword=ncword,
+                match=match,
+                n_match=n_match,
+                options=options,
+                use_secondary=use_secondary,
             )
             if metric.num_matches >= min_match:
                 yield match
