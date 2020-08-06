@@ -7,6 +7,8 @@ from typing import AsyncIterator, Iterator, Sequence
 
 from pynvim import Nvim
 
+from ..shared.match import gen_metric
+from ..shared.parse import normalize
 from ..shared.types import Completion, Context, Seed, Source
 
 NAME = "paths"
@@ -45,42 +47,26 @@ def parse_paths(root: str) -> Iterator[str]:
     return reversed(tuple(accumulate(cont(root), func=combine)))
 
 
-async def find_children(paths: Iterator[str], context: Context) -> Sequence[Completion]:
-    position = context.position
-    old_prefix, old_suffix = context.alnums_before, context.alnums_after
+async def find_children(paths: Iterator[str]) -> Sequence[str]:
     loop = get_running_loop()
 
-    def cont() -> Iterator[Completion]:
+    def cont() -> Iterator[str]:
         for path in paths:
             parent = dirname(path)
             try:
                 if isdir(path):
-                    end = "" if path.endswith(sep) else sep
+                    end = "" if path.endswith(sep) or path.endswith(".") else sep
                     for child in listdir(path):
                         text = end + child
-                        yield Completion(
-                            position=position,
-                            old_prefix=old_prefix,
-                            new_prefix=text,
-                            old_suffix=old_suffix,
-                            new_suffix="",
-                            label=text,
-                        )
+                        yield text
                     break
                 elif isdir(parent):
-                    for child in listdir(parent):
-                        yield Completion(
-                            position=position,
-                            old_prefix=old_prefix,
-                            new_prefix=child,
-                            old_suffix=old_suffix,
-                            new_suffix="",
-                        )
+                    yield from listdir(parent)
                     break
             except PermissionError:
                 pass
 
-    def co() -> Sequence[Completion]:
+    def co() -> Sequence[str]:
         return tuple(cont())
 
     return await loop.run_in_executor(None, co)
@@ -88,9 +74,28 @@ async def find_children(paths: Iterator[str], context: Context) -> Sequence[Comp
 
 async def main(nvim: Nvim, chan: Queue, seed: Seed) -> Source:
     async def source(context: Context) -> AsyncIterator[Completion]:
+        position = context.position
         before = context.line_before
+        _, _, old_prefix = before.rpartition(sep)
         paths = parse_paths(before)
-        for child in await find_children(paths, context):
-            yield child
+
+        for child in await find_children(paths):
+            metric = gen_metric(
+                old_prefix,
+                ncword=normalize(old_prefix),
+                match=child,
+                n_match=normalize(child),
+                options=seed.match,
+                use_secondary=False,
+            )
+            if not old_prefix or metric.num_matches:
+                yield Completion(
+                    position=position,
+                    old_prefix=old_prefix,
+                    new_prefix=child,
+                    old_suffix="",
+                    new_suffix="",
+                    label="",
+                )
 
     return source
