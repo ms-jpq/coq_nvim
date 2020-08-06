@@ -127,4 +127,4 @@ async def gen_context(
 
 
 def goahead(context: Context) -> bool:
-    return context.line_before and not context.line_before.isspace()
+    return context.line_before != "" and not context.line_before.isspace()
