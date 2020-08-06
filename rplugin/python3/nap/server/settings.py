@@ -61,7 +61,11 @@ def initial(configs: Sequence[Any]) -> Settings:
         name: load_engine(conf) for name, conf in config["snippet_engines"].items()
     }
     settings = Settings(
-        match=match, cache=cache, sources=sources, snippet_engines=snippet_engines
+        retries=config["retries"],
+        match=match,
+        cache=cache,
+        sources=sources,
+        snippet_engines=snippet_engines,
     )
     return settings
 

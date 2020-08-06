@@ -9,6 +9,7 @@
     "transpose_band": 3,
     "unifying_chars": ["_", "-"]
   },
+  "retries": 3,
   "snippet_engines": {
     "simple_lsp": {
       "config": {},

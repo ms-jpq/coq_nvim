@@ -13,6 +13,7 @@ from typing import (
     List,
     Optional,
     Sequence,
+    Set,
     Tuple,
 )
 
@@ -26,7 +27,7 @@ from .context import gen_context, goahead
 from .fuzzy import FuzzyStep, fuzzify, fuzzy
 from .nvim import VimCompletion
 from .settings import load_factories
-from .types import Notification, Settings, SourceFactory, Step
+from .types import BufferContext, Notification, Settings, SourceFactory, Step
 
 
 @dataclass(frozen=True)
@@ -119,51 +120,54 @@ async def osha(
         return name, o_step, chan
 
 
+def buffer_opts(
+    factories: Dict[str, SourceFactory], buf_context: BufferContext
+) -> Tuple[Set[str], Dict[str, float], float]:
+    def is_enabled(name: str, factory: SourceFactory) -> bool:
+        if name in buf_context.sources:
+            spec = buf_context.sources.get(name)
+            if spec is not None:
+                enabled = spec.enabled
+                if enabled is not None:
+                    return enabled
+        return factory.enabled
+
+    enabled: Set[str] = {
+        name for name, factory in factories.items() if is_enabled(name, factory=factory)
+    }
+
+    limits = {
+        **{name: fact.limit for name, fact in factories.items() if name in enabled},
+    }
+    max_wait = max(
+        *(fact.timeout for name, fact in factories.items() if name in enabled), 0,
+    )
+
+    return enabled, limits, max_wait
+
+
 async def merge(
     nvim: Nvim, chan: Queue, settings: Settings
 ) -> Tuple[
     Callable[[GenOptions], Awaitable[Tuple[Position, Iterator[VimCompletion]]]],
     Callable[[], Awaitable[None]],
 ]:
-    retries = 3
     match_opt, cache_opt = settings.match, settings.cache
     factories = load_factories(settings=settings)
     src_gen = await gather(
         *(
-            osha(nvim, name=name, factory=factory, retries=retries)
+            osha(nvim, name=name, factory=factory, retries=settings.retries)
             for name, factory in factories.items()
         )
     )
-    push, pull = make_cache(match_opt=match_opt, cache_opt=cache_opt)
-
-    f_enabled: Dict[str, bool] = {
-        name: factory.enabled for name, factory in factories.items()
-    }
     sources: Dict[str, StepFunction] = {name: source for name, source, _ in src_gen}
+    push, pull = make_cache(match_opt=match_opt, cache_opt=cache_opt)
 
     async def gen(options: GenOptions) -> Tuple[Position, Iterator[VimCompletion]]:
         s_context = StepContext(force=options.force)
         context, buf_context = await gen_context(nvim, options=match_opt, pos=None)
         position = context.position
-
-        def is_enabled(source_name: str) -> bool:
-            if source_name in buf_context.sources:
-                spec = buf_context.sources.get(source_name)
-                if spec is not None:
-                    enabled = spec.enabled
-                    if enabled is not None:
-                        return enabled
-            return f_enabled[source_name]
-
-        limits = {
-            **{
-                name: fact.limit for name, fact in factories.items() if is_enabled(name)
-            },
-            cache_opt.source_name: cache_opt.limit,
-        }
-        max_wait = max(
-            *(fact.timeout for name, fact in factories.items() if is_enabled(name)), 0,
-        )
+        enabled, limits, max_wait = buffer_opts(factories, buf_context=buf_context)
 
         if goahead(context) or options.force:
 
@@ -171,7 +175,7 @@ async def merge(
                 source_gen = tuple(
                     source(context, s_context)
                     for name, source in sources.items()
-                    if is_enabled(name)
+                    if name in enabled
                 )
                 for steps in as_completed(source_gen):
                     for step in await steps:

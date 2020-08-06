@@ -50,6 +50,7 @@ class SnippetEngineSpec:
 
 @dataclass(frozen=True)
 class Settings:
+    retries: int
     match: MatchOptions
     cache: CacheOptions
     sources: Dict[str, SourceSpec]
