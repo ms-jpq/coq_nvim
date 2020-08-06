@@ -12,6 +12,17 @@ from ..shared.types import Completion, Context, Seed, Source
 NAME = "paths"
 
 
+def parse_dots(path: str) -> str:
+    def cont() -> Iterator[str]:
+        for c in reversed(path):
+            if c == ".":
+                yield c
+            else:
+                break
+
+    return "".join(cont())
+
+
 def parse_paths(root: str) -> Iterator[str]:
     home = str(Path.home())
 
@@ -23,10 +34,10 @@ def parse_paths(root: str) -> Iterator[str]:
         else:
             if rhs.endswith("~"):
                 yield home
-            elif rhs.endswith(".."):
-                yield ".."
-            elif rhs.endswith("."):
-                yield "."
+            else:
+                dots = parse_dots(rhs)
+                if dots:
+                    yield dots
 
     def combine(a: str, b: str) -> str:
         return b + a
