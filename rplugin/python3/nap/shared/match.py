@@ -29,12 +29,16 @@ def gen_metric_secondary(ncword: str, n_match: str) -> Metric:
 
     for ai, bi, size in m.get_matching_blocks():
         num_matches += size
-        if size >= 2:
-            consecutive_matches += size - 1
         if ai == bi == 0:
             prefix_matches = size
         for i in range(bi, bi + size):
             matches[i] = n_match[i]
+
+    pm_idx = inf
+    for i in sorted(matches):
+        if pm_idx == i - 1:
+            consecutive_matches += 1
+        pm_idx = i
 
     density = num_matches / len(n_match) if n_match else 0
     full_match = prefix_matches == len(ncword)
