@@ -42,5 +42,8 @@ async def apply_patch(nvim: Nvim, engine: SnippetEngine, comp: Dict[str, Any]) -
                 row, col = nvim.api.win_get_cursor(win)
                 if row == prow + 1 and col == pcol:
                     replace_lines(nvim, payload=payload)
+                    return None
+                else:
+                    return None
 
             await call(nvim, cont)
