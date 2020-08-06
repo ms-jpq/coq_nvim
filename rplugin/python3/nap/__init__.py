@@ -11,7 +11,6 @@ from typing import Any, Awaitable, Sequence
 
 from pynvim import Nvim, command, function, plugin
 
-from .shared.consts import conf_var_name, conf_var_name_private
 from .server.completion import GenOptions, merge
 from .server.nvim import autocmd, complete
 from .server.patch import apply_patch
@@ -26,6 +25,7 @@ from .server.transitions import (
     t_text_changed,
 )
 from .server.types import Notification
+from .shared.consts import conf_var_name, conf_var_name_private
 from .shared.nvim import print, run_forever
 
 
@@ -63,7 +63,7 @@ class Main:
     async def initialize(self) -> None:
         await autocmd(self.nvim, events=("InsertEnter",), fn="_NAPinsert_enter")
 
-        await autocmd(self.nvim, events=("InsertCharPre",), fn="_NAPpreinsert_char")
+        # await autocmd(self.nvim, events=("InsertCharPre",), fn="_NAPpreinsert_char")
 
         await autocmd(
             self.nvim, events=("TextChangedI",), fn="_NAPtextchangedi",
@@ -88,7 +88,6 @@ class Main:
             async for pos, comp in schedule(chan=self.ch, gen=gen):
                 col = pos.col + 1
                 await complete(self.nvim, col=col, comp=comp)
-                self.state = t_comp_inserted(self.state)
 
         await gather(listen(), l1())
 
@@ -158,6 +157,8 @@ class Main:
 
         async def cont() -> None:
             engine = await self.engine
-            await apply_patch(self.nvim, engine=engine, comp=item)
+            applied = await apply_patch(self.nvim, engine=engine, comp=item)
+            if applied:
+                self.state = t_comp_inserted(self.state)
 
         self._submit(cont())

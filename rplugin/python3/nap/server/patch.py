@@ -9,7 +9,7 @@ from .edit import replace_lines
 from .types import Payload
 
 
-async def apply_patch(nvim: Nvim, engine: SnippetEngine, comp: Dict[str, Any]) -> None:
+async def apply_patch(nvim: Nvim, engine: SnippetEngine, comp: Dict[str, Any]) -> bool:
     data = comp.get("user_data")
     d = cast(dict, data)
 
@@ -29,21 +29,29 @@ async def apply_patch(nvim: Nvim, engine: SnippetEngine, comp: Dict[str, Any]) -
             **{**d, **dict(position=position, ledits=edits, snippet=snippet)}
         )
     except (KeyError, TypeError):
-        pass
+        return False
     else:
-        if snippet:
-            context = SnippetContext(position=position, snippet=snippet)
-            await engine(context)
-        else:
 
-            def cont() -> None:
-                prow, pcol = payload.position.row, payload.position.col
-                win: Window = nvim.api.get_current_win()
-                row, col = nvim.api.win_get_cursor(win)
-                if row == prow + 1 and col == pcol:
+        def gogo() -> bool:
+            prow, pcol = payload.position.row, payload.position.col
+            win: Window = nvim.api.get_current_win()
+            row, col = nvim.api.win_get_cursor(win)
+            if row == prow + 1 and col == pcol:
+                return True
+            else:
+                return False
+
+        go = await call(nvim, gogo)
+        if go:
+            if snippet:
+                context = SnippetContext(position=position, snippet=snippet)
+                await engine(context)
+            else:
+
+                def cont() -> None:
                     replace_lines(nvim, payload=payload)
-                    return None
-                else:
-                    return None
 
-            await call(nvim, cont)
+                await call(nvim, cont)
+            return True
+        else:
+            return False
