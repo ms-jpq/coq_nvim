@@ -31,7 +31,7 @@ def gen_metric_secondary(ncword: str, n_match: str) -> Metric:
         num_matches += size
         if size >= 2:
             consecutive_matches += size - 1
-        if ai == 0:
+        if ai == bi == 0:
             prefix_matches = size
         for i in range(bi, size):
             matches[i] = n_match[i]
