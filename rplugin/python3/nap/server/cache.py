@@ -22,8 +22,8 @@ def recalculate(context: Context, options: CacheOptions, step: Step) -> Step:
         new_suffix=step.comp.new_suffix,
     )
     new_step = Step(
-        source=options.source_name,
-        source_shortname=options.short_name,
+        source=step.source,
+        source_shortname=step.source_shortname,
         rank=step.rank,
         text=step.text,
         text_normalized=step.text_normalized,
@@ -86,10 +86,7 @@ def make_cache(
                             new_step = recalculate(
                                 context, options=cache_opt, step=step
                             )
-                            fuzzystep = FuzzyStep(
-                                step=new_step,
-                                metric=metric,
-                            )
+                            fuzzystep = FuzzyStep(step=new_step, metric=metric,)
                             acc.append(fuzzystep)
 
         done, pending = await wait((cont(),), timeout=timeout)

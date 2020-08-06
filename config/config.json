@@ -1,9 +1,7 @@
 {
   "cache": {
     "band_size": 20,
-    "limit": 3,
-    "min_match": 1,
-    "short_name": "C"
+    "min_match": 2
   },
   "match": {
     "transpose_band": 3,
