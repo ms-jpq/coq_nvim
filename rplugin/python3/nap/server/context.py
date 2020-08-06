@@ -124,3 +124,7 @@ async def gen_context(
     )
     buffer_context = gen_buf_ctx(buf_var)
     return context, buffer_context
+
+
+def goahead(context: Context) -> bool:
+    return context.line_before and not context.line_before.isspace()

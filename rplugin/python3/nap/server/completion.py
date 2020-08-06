@@ -22,7 +22,7 @@ from ..shared.nvim import print
 from ..shared.parse import normalize
 from ..shared.types import Context, Position
 from .cache import make_cache
-from .context import gen_context
+from .context import gen_context, goahead
 from .fuzzy import FuzzyStep, fuzzify, fuzzy
 from .nvim import VimCompletion
 from .settings import load_factories
@@ -165,8 +165,7 @@ async def merge(
             *(fact.timeout for name, fact in factories.items() if is_enabled(name)), 0,
         )
 
-        go = context.line_before and not context.line_before.isspace()
-        if go or options.force:
+        if goahead(context) or options.force:
 
             async def gen() -> AsyncIterator[FuzzyStep]:
                 source_gen = tuple(

@@ -63,7 +63,7 @@ class Main:
     async def initialize(self) -> None:
         await autocmd(self.nvim, events=("InsertEnter",), fn="_NAPinsert_enter")
 
-        # await autocmd(self.nvim, events=("InsertCharPre",), fn="_NAPpreinsert_char")
+        await autocmd(self.nvim, events=("InsertCharPre",), fn="_NAPpreinsert_char")
 
         await autocmd(
             self.nvim, events=("TextChangedI",), fn="_NAPtextchangedi",
