@@ -179,5 +179,5 @@ def replace_lines(nvim: Nvim, payload: Payload) -> None:
     if pos:
         nvim.api.win_set_cursor(win, (pos.row + 1, pos.col))
 
-    message = "f{payload}{linesep}{replacements}"
-    log.warn("%s", message)
+    message = f"{payload}{linesep}{replacements}"
+    log.debug("%s", message)

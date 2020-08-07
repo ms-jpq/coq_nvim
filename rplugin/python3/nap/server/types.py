@@ -49,6 +49,7 @@ class SnippetEngineSpec:
 @dataclass(frozen=True)
 class Settings:
     retries: int
+    logging_level: str
     match: MatchOptions
     cache: CacheOptions
     sources: Dict[str, SourceSpec]

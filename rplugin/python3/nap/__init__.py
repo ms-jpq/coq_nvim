@@ -25,7 +25,7 @@ from .server.transitions import (
 )
 from .server.types import Notification
 from .shared.consts import conf_var_name, conf_var_name_private
-from .shared.logging import log
+from .shared.logging import log, setup
 from .shared.nvim import print, run_forever
 
 
@@ -43,6 +43,7 @@ class Main:
         settings = initial(configs=(client_config, user_config))
         self.settings = settings
         self.state = initial_state(settings)
+        setup(nvim, settings.logging_level)
         self._init = create_task(self.initialize())
         self.engine = create_task(gen_engine(nvim, settings=settings))
         run_forever(nvim, self.ooda)

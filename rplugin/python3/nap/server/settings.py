@@ -51,8 +51,7 @@ def initial(configs: Sequence[Any]) -> Settings:
         unifying_chars={*match_o["unifying_chars"]},
     )
     cache = CacheOptions(
-        min_match=cache_o["min_match"],
-        band_size=cache_o["band_size"],
+        min_match=cache_o["min_match"], band_size=cache_o["band_size"],
     )
     sources = {name: load_source(conf) for name, conf in config["sources"].items()}
     snippet_engines = {
@@ -64,6 +63,7 @@ def initial(configs: Sequence[Any]) -> Settings:
         cache=cache,
         sources=sources,
         snippet_engines=snippet_engines,
+        logging_level=config["logging_level"],
     )
     return settings
 
