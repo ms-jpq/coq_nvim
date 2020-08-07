@@ -7,7 +7,6 @@ from ..clients import around, buffers, lsp, paths, tmux, tree_sitter
 from ..shared.consts import load_hierarchy, module_entry_point, settings_json
 from ..shared.da import load_json, load_module, merge_all
 from ..shared.types import Factory, Seed, SnippetEngineFactory, SnippetSeed
-from ..snippets.lsp import main as lsp_snippet
 from .types import (
     CacheOptions,
     EngineFactory,
@@ -132,9 +131,7 @@ def build(
 
 def load_engines(settings: Settings) -> Dict[str, EngineFactory]:
     def cont() -> Iterator[Tuple[str, EngineFactory]]:
-        intrinsic = {
-            lsp_snippet.NAME: lsp_snippet.main,
-        }
+        intrinsic = {}
 
         for name, main in intrinsic.items():
             spec = settings.snippet_engines[name]

@@ -28,6 +28,7 @@ from ..shared.types import (
     Snippet,
     Source,
 )
+from ..snippets.lsp_snippet import parse_snippet
 
 NAME = "lsp"
 
@@ -149,19 +150,25 @@ def parse_rows(
         require_parse = is_snippet(row, insert_lookup)
 
         if require_parse:
-            snippet = Snippet(kind="lsp", content=text, match=text)
+            new_prefix, new_suffix = parse_snippet(context, text=text)
+            match = new_prefix + new_suffix
+            match_normalized = normalize(match)
+            old_prefix, old_suffix = parse_common_affix(
+                context, match_normalized=match_normalized, use_line=True,
+            )
+            snippet = Snippet(kind="lsp", content=text, match=match)
             yield Completion(
                 position=position,
-                old_prefix="",
-                new_prefix="",
-                old_suffix="",
-                new_suffix="",
+                old_prefix=old_prefix,
+                new_prefix=new_prefix,
+                old_suffix=old_suffix,
+                new_suffix=new_suffix,
                 label=label,
                 sortby=sortby,
                 kind=kind,
                 doc=doc,
                 ledits=edits,
-                snippet=snippet,
+                snippet=None,
             )
         else:
             match_normalized = normalize(text)

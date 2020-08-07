@@ -5,7 +5,7 @@ from os.path import basename, dirname, splitext
 from string import ascii_letters, digits
 from typing import Iterable, Iterator, List, Optional, Sequence, Set, Tuple
 
-from ...shared.types import Context
+from ..shared.types import Context
 
 #
 # O(n) single pass LSP Parser:
