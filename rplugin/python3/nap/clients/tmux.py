@@ -7,9 +7,9 @@ from typing import AsyncIterator, Dict, Iterator, Sequence, Set
 
 from ..shared.da import call
 from ..shared.match import find_matches
-from ..shared.nvim import run_forever
 from ..shared.parse import coalesce, normalize, parse_common_affix
 from ..shared.types import Comm, Completion, Context, Seed, Source
+from .pkgs.nvim import run_forever
 from .pkgs.scheduler import schedule
 
 NAME = "tmux"
@@ -96,7 +96,7 @@ async def tmux_words(max_length: int, unifying_chars: Set[str]) -> AsyncIterator
 
 
 async def main(comm: Comm, seed: Seed) -> Source:
-    nvim, log = comm.nvim,comm.log
+    nvim, log = comm.nvim, comm.log
     config = Config(**seed.config)
     min_length, max_length, unifying_chars = (
         config.min_length,
@@ -144,5 +144,5 @@ async def main(comm: Comm, seed: Seed) -> Source:
                 new_suffix="",
             )
 
-    run_forever(nvim, background_update)
+    run_forever(nvim, log=log, thing=background_update)
     return source

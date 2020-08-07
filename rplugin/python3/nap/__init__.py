@@ -12,7 +12,7 @@ from pynvim import Nvim, command, function, plugin
 
 from .server.completion import GenOptions, merge
 from .server.logging import log, setup
-from .server.nvim import autocmd, complete
+from .server.nvim import autocmd, complete, run_forever
 from .server.patch import apply_patch
 from .server.scheduler import Signal, schedule
 from .server.settings import initial
@@ -26,7 +26,7 @@ from .server.transitions import (
 )
 from .server.types import Notification
 from .shared.consts import conf_var_name, conf_var_name_private
-from .shared.nvim import print, run_forever
+from .shared.nvim import print
 
 
 @plugin
@@ -46,7 +46,7 @@ class Main:
         setup(nvim, settings.logging_level)
         self._init = create_task(self.initialize())
         self.engine = create_task(gen_engine(nvim, settings=settings))
-        run_forever(nvim, self.ooda)
+        run_forever(nvim, log=log, thing=self.ooda)
 
     def _submit(self, co: Awaitable[None]) -> None:
         loop: AbstractEventLoop = self.nvim.loop

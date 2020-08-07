@@ -9,10 +9,10 @@ from pynvim.api.buffer import Buffer
 from pynvim.api.common import NvimError
 
 from ..shared.match import find_matches
-from ..shared.nvim import call, run_forever
+from ..shared.nvim import call
 from ..shared.parse import coalesce, normalize, parse_common_affix
 from ..shared.types import Comm, Completion, Context, Seed, Source
-from .pkgs.nvim import autocmd, current_buf
+from .pkgs.nvim import autocmd, current_buf, run_forever
 from .pkgs.scheduler import schedule
 
 NAME = "buffers"
@@ -56,7 +56,7 @@ async def buffer_chars(nvim: Nvim, buf_gen: Iterator[Buffer]) -> Sequence[str]:
 
 
 async def main(comm: Comm, seed: Seed) -> Source:
-    nvim, chan = comm.nvim, comm.chan
+    nvim, log, chan = comm.nvim, comm.log, comm.chan
     config = Config(**seed.config)
     ch = Event()
     min_length, max_length, unifying_chars = (
@@ -121,6 +121,6 @@ async def main(comm: Comm, seed: Seed) -> Source:
                 new_suffix="",
             )
 
-    run_forever(nvim, ooda)
-    run_forever(nvim, background_update)
+    run_forever(nvim, log=log, thing=ooda)
+    run_forever(nvim, log=log, thing=background_update)
     return source
