@@ -196,12 +196,8 @@ async def merge(
     async def listen() -> None:
         while True:
             notif: Notification = await chan.get()
-            source = notif.source
-            ch = chans.get(source)
+            ch = chans.get(notif.source)
             if ch:
                 await ch.put(notif.body)
-            elif source in chans:
-                message = f"Notification to uknown source - {source}"
-                log.error("%s", message)
 
     return gen, listen

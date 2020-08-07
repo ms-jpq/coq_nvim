@@ -98,7 +98,7 @@ def assemble(spec: SourceSpec, main: Factory, match: MatchOptions) -> SourceFact
 
 def load_factories(settings: Settings) -> Dict[str, SourceFactory]:
     def cont() -> Iterator[Tuple[str, SourceFactory]]:
-        intrinsic = {
+        intrinsic: Dict[str, Factory] = {
             around.NAME: around.main,
             buffers.NAME: buffers.main,
             lsp.NAME: lsp.main,
@@ -131,7 +131,7 @@ def build(
 
 def load_engines(settings: Settings) -> Dict[str, EngineFactory]:
     def cont() -> Iterator[Tuple[str, EngineFactory]]:
-        intrinsic = {}
+        intrinsic: Dict[str, SnippetEngineFactory] = {}
 
         for name, main in intrinsic.items():
             spec = settings.snippet_engines[name]

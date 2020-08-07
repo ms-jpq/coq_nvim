@@ -1,4 +1,4 @@
-from typing import Any, Dict, cast
+from typing import Any, Callable, Dict, cast
 
 from pynvim import Nvim
 from pynvim.api.window import Window
@@ -9,7 +9,12 @@ from .edit import replace_lines
 from .types import Payload
 
 
-async def apply_patch(nvim: Nvim, engine: SnippetEngine, comp: Dict[str, Any]) -> bool:
+async def apply_patch(
+    nvim: Nvim,
+    engine: SnippetEngine,
+    engine_available: Callable[[Snippet], bool],
+    comp: Dict[str, Any],
+) -> bool:
     data = comp.get("user_data")
     d = cast(dict, data)
 
@@ -43,7 +48,7 @@ async def apply_patch(nvim: Nvim, engine: SnippetEngine, comp: Dict[str, Any]) -
 
         go = await call(nvim, gogo)
         if go:
-            if snippet:
+            if snippet and engine_available(snippet):
                 context = SnippetContext(position=position, snippet=snippet)
                 await engine(context)
             else:

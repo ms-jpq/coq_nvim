@@ -9,14 +9,7 @@
     "unifying_chars": ["_", "-"]
   },
   "retries": 3,
-  "snippet_engines": {
-    "simple_lsp": {
-      "config": {},
-      "enabled": true,
-      "kind": "lsp",
-      "main": "lsp/main.py"
-    }
-  },
+  "snippet_engines": {},
   "sources": {
     "around": {
       "config": {

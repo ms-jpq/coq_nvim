@@ -35,6 +35,7 @@ class Main:
         self.nvim = nvim
         self.chan = ThreadPoolExecutor(max_workers=1)
         self.ch: Queue = Queue()
+        self.reply_ch: Queue = Queue()
         self.msg_ch: Queue = Queue()
 
         self._initialized = False
@@ -45,7 +46,6 @@ class Main:
         self.state = initial_state(settings)
         setup(nvim, settings.logging_level)
         self._init = create_task(self.initialize())
-        self.engine = create_task(gen_engine(nvim, settings=settings))
         run_forever(nvim, log=log, thing=self.ooda)
 
     def _submit(self, co: Awaitable[None]) -> None:
@@ -81,15 +81,30 @@ class Main:
         )
 
     async def ooda(self) -> None:
-        settings = self.settings
-        gen, listen = await merge(self.nvim, chan=self.msg_ch, settings=settings)
+        nvim, msg_ch, settings = self.nvim, self.msg_ch, self.settings
+        gen_c, listen_c = await merge(nvim, chan=msg_ch, settings=settings)
+        engine, listen_s, engine_available = await gen_engine(
+            nvim, chan=msg_ch, settings=settings
+        )
 
         async def l1() -> None:
-            async for pos, comp in schedule(chan=self.ch, gen=gen):
+            async for pos, comp in schedule(chan=self.ch, gen=gen_c):
                 col = pos.col + 1
                 await complete(self.nvim, col=col, comp=comp)
 
-        await gather(listen(), l1())
+        async def l2() -> None:
+            while True:
+                comp = await self.reply_ch.get()
+                applied = await apply_patch(
+                    self.nvim,
+                    engine=engine,
+                    engine_available=engine_available,
+                    comp=comp,
+                )
+                if applied:
+                    self.state = t_comp_inserted(self.state)
+
+        await gather(listen_c(), listen_s(), l1(), l2())
 
     def next_comp(self, options: GenOptions) -> None:
         async def cont() -> None:
@@ -153,12 +168,9 @@ class Main:
 
     @function("_NAPpost_pum")
     def post_pum(self, args: Sequence[Any]) -> None:
-        item, *_ = args
+        comp, *_ = args
 
         async def cont() -> None:
-            engine = await self.engine
-            applied = await apply_patch(self.nvim, engine=engine, comp=item)
-            if applied:
-                self.state = t_comp_inserted(self.state)
+            await self.reply_ch.put(comp)
 
         self._submit(cont())

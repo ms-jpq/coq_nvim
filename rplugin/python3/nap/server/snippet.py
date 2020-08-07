@@ -1,38 +1,42 @@
 from asyncio import Queue, gather
 from os import linesep
-from typing import Optional, Tuple
+from typing import Awaitable, Callable, Optional, Tuple
 
 from pynvim import Nvim
 
 from ..shared.types import Comm, SnippetContext, SnippetEngine
 from .logging import log
 from .settings import load_engines
-from .types import EngineFactory, Settings
+from .types import EngineFactory, Notification, Settings, Snippet
 
 
 async def osha(
     nvim: Nvim, kind: str, factory: EngineFactory
-) -> Tuple[str, Optional[SnippetEngine]]:
+) -> Tuple[str, Queue, Optional[SnippetEngine]]:
     manufacture = factory.manufacture
-    comm = Comm(nvim=nvim, chan=Queue(), log=log)
+    chan: Queue = Queue()
+    comm = Comm(nvim=nvim, chan=chan, log=log)
 
     try:
         engine = await manufacture(comm, factory.seed)
     except Exception as e:
         message = f"Error in snippet engine {kind}{linesep}{e}"
         log.exception("%s", message)
-        return kind, None
+        return kind, chan, None
     else:
-        return kind, engine
+        return kind, chan, engine
 
 
-async def gen_engine(nvim: Nvim, settings: Settings) -> SnippetEngine:
+async def gen_engine(
+    nvim: Nvim, chan: Queue, settings: Settings
+) -> Tuple[SnippetEngine, Callable[[], Awaitable[None]], Callable[[Snippet], bool]]:
 
     factories = load_engines(settings)
     engine_src = await gather(
         *(osha(nvim, kind=kind, factory=factory) for kind, factory in factories.items())
     )
-    engines = {kind: engine for kind, engine in engine_src}
+    engines = {kind: engine for kind, _, engine in engine_src if engine}
+    chans = {kind: chan for kind, chan, engine in engine_src if engine}
 
     async def engine(context: SnippetContext) -> None:
         kind = context.snippet.kind
@@ -43,4 +47,14 @@ async def gen_engine(nvim: Nvim, settings: Settings) -> SnippetEngine:
             message = f"No snippet engine found for - {kind}"
             log.error("%s", message)
 
-    return engine
+    def available(snippet: Snippet) -> bool:
+        return snippet.kind in engines
+
+    async def listen() -> None:
+        while True:
+            notif: Notification = await chan.get()
+            ch = chans.get(notif.source)
+            if ch:
+                await ch.put(notif.body)
+
+    return engine, listen, available
