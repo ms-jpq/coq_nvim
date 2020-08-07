@@ -3,7 +3,7 @@ from .types import State
 
 
 def t_natural_insertable(state: State) -> bool:
-    return not state.comp_inserted
+    return state.char_inserted and not state.comp_inserted
 
 
 def t_char_inserted(state: State) -> State:
