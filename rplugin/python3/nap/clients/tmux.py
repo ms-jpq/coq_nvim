@@ -7,9 +7,9 @@ from typing import AsyncIterator, Dict, Iterator, Sequence, Set
 
 from ..shared.da import call
 from ..shared.match import find_matches
+from ..shared.nvim import run_forever
 from ..shared.parse import coalesce, normalize, parse_common_affix
 from ..shared.types import Comm, Completion, Context, Seed, Source
-from .pkgs.nvim import run_forever
 from .pkgs.scheduler import schedule
 
 NAME = "tmux"
