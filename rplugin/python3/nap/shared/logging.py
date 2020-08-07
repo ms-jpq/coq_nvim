@@ -20,7 +20,9 @@ from .consts import __log_file__, LOGGER_NAME
 
 
 LOG_FMT = """
---  {name}    {levelname}    {asctime}
+--  {name}
+level:    {levelname}
+time:     {asctime}
 module:   {module}
 line:     {lineno}
 function: {funcName}
