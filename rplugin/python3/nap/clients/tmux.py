@@ -1,18 +1,16 @@
-from asyncio import Queue, as_completed, gather
+from asyncio import as_completed, gather
 from asyncio.locks import Event
 from dataclasses import dataclass
 from os import linesep
 from shutil import which
 from typing import AsyncIterator, Dict, Iterator, Sequence, Set
 
-from pynvim import Nvim
-
 from ..shared.da import call
 from ..shared.logging import log
 from ..shared.match import find_matches
 from ..shared.nvim import run_forever
 from ..shared.parse import coalesce, normalize, parse_common_affix
-from ..shared.types import Completion, Context, Seed, Source
+from ..shared.types import Comm, Completion, Context, Seed, Source
 from .pkgs.scheduler import schedule
 
 NAME = "tmux"
@@ -98,7 +96,7 @@ async def tmux_words(max_length: int, unifying_chars: Set[str]) -> AsyncIterator
                 yield word
 
 
-async def main(nvim: Nvim, chan: Queue, seed: Seed) -> Source:
+async def main(comm: Comm, seed: Seed) -> Source:
     config = Config(**seed.config)
     min_length, max_length, unifying_chars = (
         config.min_length,
@@ -146,5 +144,5 @@ async def main(nvim: Nvim, chan: Queue, seed: Seed) -> Source:
                 new_suffix="",
             )
 
-    run_forever(nvim, background_update)
+    run_forever(comm.nvim, background_update)
     return source

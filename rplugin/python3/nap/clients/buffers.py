@@ -1,4 +1,3 @@
-from asyncio import Queue
 from asyncio.locks import Event
 from dataclasses import dataclass
 from itertools import chain
@@ -12,7 +11,7 @@ from pynvim.api.common import NvimError
 from ..shared.match import find_matches
 from ..shared.nvim import call, run_forever
 from ..shared.parse import coalesce, normalize, parse_common_affix
-from ..shared.types import Completion, Context, Seed, Source
+from ..shared.types import Comm, Completion, Context, Seed, Source
 from .pkgs.nvim import autocmd, current_buf
 from .pkgs.scheduler import schedule
 
@@ -56,7 +55,8 @@ async def buffer_chars(nvim: Nvim, buf_gen: Iterator[Buffer]) -> Sequence[str]:
         return chars
 
 
-async def main(nvim: Nvim, chan: Queue, seed: Seed) -> Source:
+async def main(comm: Comm, seed: Seed) -> Source:
+    nvim, chan = comm.nvim, comm.chan
     config = Config(**seed.config)
     ch = Event()
     min_length, max_length, unifying_chars = (

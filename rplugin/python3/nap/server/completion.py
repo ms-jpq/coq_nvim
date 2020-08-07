@@ -21,7 +21,7 @@ from pynvim import Nvim
 from ..shared.logging import log
 from ..shared.nvim import print
 from ..shared.parse import normalize
-from ..shared.types import Context, Position
+from ..shared.types import Comm, Context, Position
 from .cache import make_cache
 from .context import gen_context, goahead
 from .fuzzy import FuzzyStep, fuzzify, fuzzy
@@ -47,7 +47,8 @@ async def manufacture(
     nvim: Nvim, name: str, factory: SourceFactory
 ) -> Tuple[StepFunction, Queue]:
     chan: Queue = Queue()
-    src = await factory.manufacture(nvim, chan, factory.seed)
+    comm = Comm(nvim=nvim, log=log, chan=chan)
+    src = await factory.manufacture(comm, factory.seed)
 
     async def source(context: Context, s_context: StepContext) -> Sequence[Step]:
         timeout = inf if s_context.force else factory.timeout

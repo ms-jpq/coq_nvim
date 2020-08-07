@@ -1,4 +1,3 @@
-from asyncio import Queue
 from dataclasses import dataclass
 from itertools import chain
 from os import linesep
@@ -9,7 +8,7 @@ from pynvim.api.buffer import Buffer
 
 from ..shared.match import find_matches
 from ..shared.parse import coalesce, normalize, parse_common_affix
-from ..shared.types import Completion, Context, Position, Seed, Source
+from ..shared.types import Comm, Completion, Context, Position, Seed, Source
 from .pkgs.nvim import call
 
 NAME = "around"
@@ -38,7 +37,7 @@ async def buffer_chars(nvim: Nvim, band_size: int, pos: Position) -> Sequence[st
     return chars
 
 
-async def main(nvim: Nvim, chan: Queue, seed: Seed) -> Source:
+async def main(comm: Comm, seed: Seed) -> Source:
     config = Config(**seed.config)
     band_size = config.band_size
     min_length, max_length, unifying_chars = (
@@ -52,7 +51,7 @@ async def main(nvim: Nvim, chan: Queue, seed: Seed) -> Source:
         old_prefix = context.alnums_before
         cword, ncword = context.alnums, context.alnums_normalized
 
-        chars = await buffer_chars(nvim, band_size=band_size, pos=position)
+        chars = await buffer_chars(comm.nvim, band_size=band_size, pos=position)
         words: Dict[str, str] = {}
         for word in coalesce(
             chars, max_length=max_length, unifying_chars=unifying_chars

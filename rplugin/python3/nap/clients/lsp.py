@@ -18,7 +18,16 @@ from pynvim import Nvim
 
 from ..shared.nvim import call
 from ..shared.parse import normalize, parse_common_affix
-from ..shared.types import Completion, Context, LEdit, Position, Seed, Snippet, Source
+from ..shared.types import (
+    Comm,
+    Completion,
+    Context,
+    LEdit,
+    Position,
+    Seed,
+    Snippet,
+    Source,
+)
 
 NAME = "lsp"
 
@@ -174,7 +183,8 @@ def parse_rows(
             )
 
 
-async def main(nvim: Nvim, chan: Queue, seed: Seed) -> Source:
+async def main(comm: Comm, seed: Seed) -> Source:
+    nvim, chan = comm.nvim, comm.chan
     config = Config(**seed.config)
 
     id_gen = count()

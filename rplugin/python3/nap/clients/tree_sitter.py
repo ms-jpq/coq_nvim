@@ -1,9 +1,8 @@
-from asyncio import Queue
 from typing import AsyncIterator
 
 from pynvim import Nvim
 
-from ..shared.types import Completion, Context, Seed, Source
+from ..shared.types import Comm, Completion, Context, Seed, Source
 from .pkgs.nvim import call
 
 NAME = "tree_sitter"
@@ -18,8 +17,8 @@ async def init_lua(nvim: Nvim) -> None:
 
 
 # TODO -- waiting on tree sitter to stabilize
-async def main(nvim: Nvim, chan: Queue, seed: Seed) -> Source:
-    await init_lua(nvim)
+async def main(comm: Comm, seed: Seed) -> Source:
+    await init_lua(comm.nvim)
 
     async def source(context: Context) -> AsyncIterator[Completion]:
         yield Completion(

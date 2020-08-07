@@ -1,15 +1,13 @@
-from asyncio import Queue, get_running_loop
+from asyncio import get_running_loop
 from itertools import accumulate
 from os import listdir
 from os.path import dirname, isdir, join, realpath, sep
 from pathlib import Path
 from typing import AsyncIterator, Iterator, Sequence
 
-from pynvim import Nvim
-
 from ..shared.match import gen_metric
 from ..shared.parse import normalize
-from ..shared.types import Completion, Context, Seed, Source
+from ..shared.types import Comm, Completion, Context, Seed, Source
 
 NAME = "paths"
 
@@ -81,7 +79,7 @@ async def find_children(paths: Iterator[str]) -> Sequence[str]:
     return await loop.run_in_executor(None, co)
 
 
-async def main(nvim: Nvim, chan: Queue, seed: Seed) -> Source:
+async def main(comm: Comm, seed: Seed) -> Source:
     async def source(context: Context) -> AsyncIterator[Completion]:
         position = context.position
         before = context.line_before
