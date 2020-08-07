@@ -1,14 +1,16 @@
 from asyncio import Queue, as_completed, gather
 from asyncio.locks import Event
 from dataclasses import dataclass
+from os import linesep
 from shutil import which
 from typing import AsyncIterator, Dict, Iterator, Sequence, Set
 
 from pynvim import Nvim
 
 from ..shared.da import call
+from ..shared.logging import log
 from ..shared.match import find_matches
-from ..shared.nvim import print, run_forever
+from ..shared.nvim import run_forever
 from ..shared.parse import coalesce, normalize, parse_common_affix
 from ..shared.types import Completion, Context, Seed, Source
 from .pkgs.scheduler import schedule
@@ -116,7 +118,8 @@ async def main(nvim: Nvim, chan: Queue, seed: Seed) -> Source:
                     if word not in words:
                         words[word] = normalize(word)
             except TmuxError as e:
-                await print(nvim, e)
+                message = f"failed to fetch tmux{linesep}{e}"
+                log.warn("%s", message)
 
     async def source(context: Context) -> AsyncIterator[Completion]:
         position = context.position

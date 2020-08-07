@@ -1,10 +1,10 @@
 from asyncio import gather
 from os import linesep
-from traceback import format_exc
 from typing import Optional, Tuple
 
 from pynvim import Nvim
 
+from ..shared.logging import log
 from ..shared.nvim import print
 from ..shared.types import SnippetContext, SnippetEngine
 from .settings import load_engines
@@ -19,9 +19,8 @@ async def osha(
     try:
         engine = await manufacture(nvim, factory.seed)
     except Exception as e:
-        stack = format_exc()
-        message = f"Error in snippet engine {kind}{linesep}{stack}{e}"
-        await print(nvim, message, error=True)
+        message = f"Error in snippet engine {kind}{linesep}{e}"
+        log.exception("%s", message)
         return kind, None
     else:
         return kind, engine
@@ -42,6 +41,6 @@ async def gen_engine(nvim: Nvim, settings: Settings) -> SnippetEngine:
             await engine(context)
         else:
             message = f"No snippet engine found for - {kind}"
-            await print(nvim, message, error=True)
+            log.error("%s", message)
 
     return engine

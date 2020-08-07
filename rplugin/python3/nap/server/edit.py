@@ -7,6 +7,7 @@ from pynvim import Nvim
 from pynvim.api.buffer import Buffer
 from pynvim.api.window import Window
 
+from ..shared.logging import log
 from ..shared.types import LEdit, Position
 from .types import Payload
 
@@ -178,5 +179,5 @@ def replace_lines(nvim: Nvim, payload: Payload) -> None:
     if pos:
         nvim.api.win_set_cursor(win, (pos.row + 1, pos.col))
 
-    nvim.api.out_write(f"{payload}{linesep}")
-    nvim.api.out_write(f"{replacements}{linesep}")
+    message = "f{payload}{linesep}{replacements}"
+    log.warn("%s", message)

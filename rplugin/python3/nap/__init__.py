@@ -6,7 +6,6 @@ from asyncio import (
     run_coroutine_threadsafe,
 )
 from concurrent.futures import ThreadPoolExecutor
-from traceback import format_exc
 from typing import Any, Awaitable, Sequence
 
 from pynvim import Nvim, command, function, plugin
@@ -26,6 +25,7 @@ from .server.transitions import (
 )
 from .server.types import Notification
 from .shared.consts import conf_var_name, conf_var_name_private
+from .shared.logging import log
 from .shared.nvim import print, run_forever
 
 
@@ -55,8 +55,7 @@ class Main:
             try:
                 fut.result()
             except Exception as e:
-                stack = format_exc()
-                nvim.async_call(nvim.err_write, f"{stack}{e}")
+                log.exception("%s", str(e))
 
         self.chan.submit(run, self.nvim)
 

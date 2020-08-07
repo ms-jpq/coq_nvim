@@ -3,7 +3,6 @@ from dataclasses import dataclass
 from itertools import chain
 from math import inf
 from os import linesep
-from traceback import format_exc
 from typing import (
     AsyncIterator,
     Awaitable,
@@ -19,6 +18,7 @@ from typing import (
 
 from pynvim import Nvim
 
+from ..shared.logging import log
 from ..shared.nvim import print
 from ..shared.parse import normalize
 from ..shared.types import Context, Position
@@ -94,9 +94,8 @@ async def osha(
     try:
         step_fn, chan = await manufacture(nvim, name=name, factory=factory)
     except Exception as e:
-        stack = format_exc()
-        message = f"Error in source {name}{linesep}{stack}{e}"
-        await print(nvim, message, error=True)
+        message = f"Error in source {name}{linesep}{e}"
+        log.exception("%s", message)
         return name, nil_steps, None
     else:
         errored = 0
@@ -110,9 +109,8 @@ async def osha(
                     return await step_fn(context, s_context)
             except Exception as e:
                 errored += 1
-                stack = format_exc()
-                message = f"Error in source {name}{linesep}{stack}{e}"
-                await print(nvim, message, error=True)
+                message = f"Error in source {name}{linesep}{e}"
+                log.exception("%s", message)
                 return ()
             else:
                 errored = 0
@@ -202,8 +200,7 @@ async def merge(
             if ch:
                 await ch.put(notif.body)
             elif source in chans:
-                await print(
-                    nvim, f"Notification to uknown source - {source}", error=True
-                )
+                message = f"Notification to uknown source - {source}"
+                log.error("%s", message)
 
     return gen, listen
