@@ -12,7 +12,7 @@ from pynvim import Nvim, command, function, plugin
 
 from .server.completion import GenOptions, merge
 from .server.logging import log, setup
-from .server.nvim import autocmd, complete, run_forever
+from .server.nvim import autocmd, complete
 from .server.patch import apply_patch
 from .server.scheduler import Signal, schedule
 from .server.settings import initial
@@ -26,7 +26,7 @@ from .server.transitions import (
 )
 from .server.types import Notification
 from .shared.consts import conf_var_name, conf_var_name_private
-from .shared.nvim import print
+from .shared.nvim import print, run_forever
 
 
 @plugin

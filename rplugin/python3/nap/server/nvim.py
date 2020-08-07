@@ -1,8 +1,7 @@
-from asyncio import Task, create_task, sleep
 from dataclasses import asdict, dataclass
 from enum import Enum
 from os import linesep
-from typing import Any, Awaitable, Callable, Dict, Iterable, Iterator, Optional
+from typing import Any, Dict, Iterable, Iterator, Optional
 from uuid import uuid4
 
 from pynvim import Nvim
@@ -10,24 +9,6 @@ from pynvim.api.buffer import Buffer
 from pynvim.api.common import NvimError
 
 from ..shared.nvim import call
-from .logging import log
-
-
-def run_forever(
-    nvim: Nvim,
-    thing: Callable[[], Awaitable[None]],
-    retries: int = 3,
-    timeout: float = 1.0,
-) -> Task:
-    async def loop() -> None:
-        for _ in range(retries):
-            try:
-                await thing()
-            except Exception as e:
-                log.exception("%s", str(e))
-                await sleep(timeout)
-
-    return create_task(loop())
 
 
 async def autocmd(
