@@ -5,13 +5,14 @@ from ...server.edit import replace_lines
 from ...server.types import Payload
 from ...shared.nvim import call
 from ...shared.parse import parse_common_affix
-from ...shared.types import SnippetContext, SnippetEngine, SnippetSeed
+from ...shared.types import Comm, SnippetContext, SnippetEngine, SnippetSeed
 from .parse import parse_snippet
 
 NAME = "simple_lsp"
 
 
-async def main(nvim: Nvim, seed: SnippetSeed) -> SnippetEngine:
+async def main(comm: Comm, seed: SnippetSeed) -> SnippetEngine:
+    nvim = comm.nvim
     async def apply(context: SnippetContext) -> None:
         ctx, _ = await gen_context(nvim, options=seed.match, pos=context.position)
         new_prefix, new_suffix = parse_snippet(ctx, context.snippet.content)

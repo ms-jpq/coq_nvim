@@ -1,10 +1,10 @@
-from asyncio import gather
+from asyncio import Queue, gather
 from os import linesep
 from typing import Optional, Tuple
 
 from pynvim import Nvim
 
-from ..shared.types import SnippetContext, SnippetEngine
+from ..shared.types import Comm, SnippetContext, SnippetEngine
 from .logging import log
 from .settings import load_engines
 from .types import EngineFactory, Settings
@@ -14,9 +14,10 @@ async def osha(
     nvim: Nvim, kind: str, factory: EngineFactory
 ) -> Tuple[str, Optional[SnippetEngine]]:
     manufacture = factory.manufacture
+    comm = Comm(nvim=nvim, chan=Queue(), log=log)
 
     try:
-        engine = await manufacture(nvim, factory.seed)
+        engine = await manufacture(comm, factory.seed)
     except Exception as e:
         message = f"Error in snippet engine {kind}{linesep}{e}"
         log.exception("%s", message)

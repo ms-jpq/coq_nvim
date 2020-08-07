@@ -172,7 +172,7 @@ def variable_substitution(context: ParseContext, *, name: str) -> Optional[str]:
     elif name == "TM_CURRENT_LINE":
         return ctx.line
     elif name == "TM_CURRENT_WORD":
-        return ctx.cword
+        return ctx.alnums
     elif name == "TM_LINE_INDEX":
         return str(ctx.position.row)
     elif name == "TM_LINE_NUMBER":
