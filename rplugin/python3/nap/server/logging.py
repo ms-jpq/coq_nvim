@@ -16,7 +16,7 @@ from typing import Dict
 
 from pynvim import Nvim
 
-from .consts import __log_file__, LOGGER_NAME
+from ..shared.consts import __log_file__, LOGGER_NAME
 
 
 LOG_FMT = """

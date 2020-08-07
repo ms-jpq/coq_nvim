@@ -7,7 +7,7 @@ from pynvim import Nvim
 from pynvim.api.buffer import Buffer
 from pynvim.api.window import Window
 
-from ..shared.logging import log
+from .logging import log
 from ..shared.types import LEdit, Position
 from .types import Payload
 

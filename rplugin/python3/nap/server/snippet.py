@@ -4,9 +4,8 @@ from typing import Optional, Tuple
 
 from pynvim import Nvim
 
-from ..shared.logging import log
-from ..shared.nvim import print
 from ..shared.types import SnippetContext, SnippetEngine
+from .logging import log
 from .settings import load_engines
 from .types import EngineFactory, Settings
 

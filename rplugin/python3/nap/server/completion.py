@@ -18,7 +18,7 @@ from typing import (
 
 from pynvim import Nvim
 
-from ..shared.logging import log
+from .logging import log
 from ..shared.nvim import print
 from ..shared.parse import normalize
 from ..shared.types import Comm, Context, Position
