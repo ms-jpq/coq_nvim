@@ -9,14 +9,17 @@ def schedule(
     futs: Dict[int, Future] = {}
 
     async def background_update() -> None:
-        nonlocal futs
         while True:
             rid, resp = await chan.get()
             log.debug("%s", f"rid = {rid}")
             fut = futs.pop(rid, None)
             if fut and not fut.cancelled():
                 fut.set_result(resp)
-            futs = {k: v for k, v in futs.items() if k > rid}
+            keys = tuple(k for k in futs if k < rid)
+            for key in keys:
+                fut = futs.pop(key, None)
+                if fut and not fut.cancelled():
+                    fut.cancel()
 
     def register(key: int, fut: Future) -> None:
         futs[key] = fut
