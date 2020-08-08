@@ -2,6 +2,7 @@ from asyncio import Queue
 from collections import defaultdict
 from dataclasses import dataclass
 from itertools import count
+from logging import Logger
 from typing import (
     Any,
     AsyncIterator,
@@ -53,7 +54,7 @@ async def init_lua(nvim: Nvim) -> Tuple[Dict[int, str], Dict[int, str]]:
 
 
 async def ask(
-    nvim: Nvim, chan: Queue, context: Context, config: Config, uid: int
+    nvim: Nvim, log: Logger, chan: Queue, context: Context, config: Config, uid: int
 ) -> Optional[Any]:
     enable_cancel = config.enable_cancel
     row = context.position.row
@@ -66,9 +67,9 @@ async def ask(
 
     await call(nvim, cont)
     while True:
-        rid, resp = await chan.get()
-        if rid == uid:
-            return resp
+        rid, pos, resp = await chan.get()
+        log.debug("%s", f"request: {uid}, reply: {rid}")
+        return resp
 
 
 def parse_resp_to_rows(resp: Any) -> Sequence[Any]:
@@ -192,7 +193,7 @@ def parse_rows(
 
 
 async def main(comm: Comm, seed: Seed) -> Source:
-    nvim, chan = comm.nvim, comm.chan
+    nvim, log, chan = comm.nvim, comm.log, comm.chan
     config = Config(**seed.config)
 
     id_gen = count()
@@ -200,7 +201,9 @@ async def main(comm: Comm, seed: Seed) -> Source:
 
     async def source(context: Context) -> AsyncIterator[Completion]:
         uid = next(id_gen)
-        resp = await ask(nvim, chan=chan, context=context, config=config, uid=uid)
+        resp = await ask(
+            nvim, log=log, chan=chan, context=context, config=config, uid=uid
+        )
         rows = parse_resp_to_rows(resp)
         for row in parse_rows(
             rows, context=context, entry_lookup=entry_kind, insert_lookup=insert_kind,
