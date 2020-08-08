@@ -189,20 +189,17 @@ async def main(comm: Comm, seed: Seed) -> Source:
     id_gen = count()
     entry_kind, insert_kind = await init_lua(nvim)
     evnt = Event()
-    uid = next(id_gen)
     rid, resp = -1, None
 
     async def background_update() -> None:
         nonlocal rid, resp
         while True:
             _rid, _resp = await chan.get()
-            if _rid >= uid:
+            if _rid > rid:
                 rid, resp = _rid, _resp
                 evnt.set()
 
     async def source(context: Context) -> AsyncIterator[Completion]:
-        nonlocal uid
-        evnt.clear()
         uid = next(id_gen)
         await ask(nvim, context=context, uid=uid)
         while True:
@@ -214,6 +211,7 @@ async def main(comm: Comm, seed: Seed) -> Source:
                 break
             else:
                 pass
+            evnt.clear()
 
         rows = parse_resp_to_rows(resp)
         for row in parse_rows(
