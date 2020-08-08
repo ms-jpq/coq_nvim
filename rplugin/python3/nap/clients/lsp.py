@@ -1,4 +1,4 @@
-from asyncio import Event
+from asyncio.futures import Future
 from collections import defaultdict
 from dataclasses import dataclass
 from itertools import count
@@ -29,6 +29,7 @@ from ..shared.types import (
     Source,
 )
 from ..snippets.lsp_snippet import parse_snippet
+from .pkgs.comm_scheduler import schedule
 
 NAME = "lsp"
 SNIPPET_TYPE = "lsp_snippet"
@@ -185,34 +186,20 @@ def parse_rows(
 
 
 async def main(comm: Comm, seed: Seed) -> Source:
-    nvim, log, chan = comm.nvim, comm.log, comm.chan
+    nvim, log = (
+        comm.nvim,
+        comm.log,
+    )
     id_gen = count()
+    background_update, register = schedule(comm.chan, log=log)
     entry_kind, insert_kind = await init_lua(nvim)
-    evnt = Event()
-    rid, resp = -1, None
-
-    async def background_update() -> None:
-        nonlocal rid, resp
-        while True:
-            _rid, _resp = await chan.get()
-            if _rid > rid:
-                rid, resp = _rid, _resp
-                evnt.set()
 
     async def source(context: Context) -> AsyncIterator[Completion]:
         uid = next(id_gen)
+        fut: Future = Future()
+        register(uid, fut)
         await ask(nvim, context=context, uid=uid)
-        while True:
-            await evnt.wait()
-            log.debug("%s", f"{uid}: {rid}")
-            if rid > uid:
-                return
-            elif rid == uid:
-                break
-            else:
-                pass
-            evnt.clear()
-
+        resp = await fut
         rows = parse_resp_to_rows(resp)
         for row in parse_rows(
             rows, context=context, entry_lookup=entry_kind, insert_lookup=insert_kind,
