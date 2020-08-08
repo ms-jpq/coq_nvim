@@ -15,7 +15,7 @@
       "config": {
         "band_size": 20,
         "max_length": 20,
-        "min_length": 2
+        "min_length": 1
       },
       "enabled": true,
       "limit": 3,
@@ -27,7 +27,7 @@
     "buffers": {
       "config": {
         "max_length": 20,
-        "min_length": 2,
+        "min_length": 1,
         "polling_rate": 1
       },
       "enabled": true,
@@ -58,7 +58,7 @@
     "tmux": {
       "config": {
         "max_length": 20,
-        "min_length": 2,
+        "min_length": 1,
         "polling_rate": 1
       },
       "enabled": true,
