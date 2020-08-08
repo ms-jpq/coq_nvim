@@ -1,6 +1,6 @@
 from asyncio import Future, Queue
 from logging import Logger
-from typing import Awaitable, Callable, Dict, Tuple
+from typing import Awaitable, Callable, Tuple
 
 
 def schedule(
@@ -12,8 +12,7 @@ def schedule(
     async def background_update() -> None:
         while True:
             rid, resp = await chan.get()
-            log.debug("%s", f"reveived: rid: {rid}")
-            if not c_fut.done():
+            if rid >= cid and not c_fut.done():
                 c_fut.set_result(resp)
 
     def register(uid: int, fut: Future) -> None:
@@ -22,6 +21,7 @@ def schedule(
             cid = uid
             c_fut.cancel()
             c_fut = fut
-        log.debug("%s", f"registered: uid: {uid}")
+        else:
+            fut.cancel()
 
     return background_update, register
