@@ -11,8 +11,6 @@ from ..shared.types import Comm, Completion, Context, Seed, Source
 
 NAME = "paths"
 
-__banned__ = {".", ".."}
-
 
 def parse_dots(path: str) -> str:
     def cont() -> Iterator[str]:
@@ -46,7 +44,8 @@ def parse_paths(root: str) -> Iterator[str]:
 
     it = reversed(tuple(accumulate(cont(root), func=combine)))
     for p in it:
-        if p not in __banned__:
+        dots = parse_dots(p)
+        if p != dots:
             yield p
 
 
