@@ -6,22 +6,22 @@ from typing import Awaitable, Callable, Dict, Tuple
 def schedule(
     chan: Queue, log: Logger
 ) -> Tuple[Callable[[], Awaitable[None]], Callable[[int, Future], None]]:
-    futs: Dict[int, Future] = {}
+    cid = -1
+    c_fut: Future = Future()
 
     async def background_update() -> None:
         while True:
             rid, resp = await chan.get()
-            log.debug("%s", f"rid = {rid}")
-            fut = futs.pop(rid, None)
-            if fut and not fut.cancelled():
-                fut.set_result(resp)
-            keys = tuple(k for k in futs if k < rid)
-            for key in keys:
-                fut = futs.pop(key, None)
-                if fut and not fut.cancelled():
-                    fut.cancel()
+            log.debug("%s", f"reveived: rid: {rid}")
+            if not c_fut.done():
+                c_fut.set_result(resp)
 
-    def register(key: int, fut: Future) -> None:
-        futs[key] = fut
+    def register(uid: int, fut: Future) -> None:
+        nonlocal cid, c_fut
+        if uid > cid:
+            cid = uid
+            c_fut.cancel()
+            c_fut = fut
+        log.debug("%s", f"registered: uid: {uid}")
 
     return background_update, register
