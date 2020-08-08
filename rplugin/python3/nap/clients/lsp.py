@@ -37,7 +37,7 @@ SNIPPET_TYPE = "lsp_snippet"
 
 @dataclass(frozen=True)
 class Config:
-    enable_cancel: bool
+    pass
 
 
 async def init_lua(nvim: Nvim) -> Tuple[Dict[int, str], Dict[int, str]]:
@@ -56,13 +56,12 @@ async def init_lua(nvim: Nvim) -> Tuple[Dict[int, str], Dict[int, str]]:
 async def ask(
     nvim: Nvim, log: Logger, chan: Queue, context: Context, config: Config, uid: int
 ) -> Optional[Any]:
-    enable_cancel = config.enable_cancel
     row = context.position.row
     col = context.position.col
 
     def cont() -> None:
         nvim.api.exec_lua(
-            "nap_lsp.list_comp_candidates(...)", (uid, enable_cancel, row, col),
+            "nap_lsp.list_comp_candidates(...)", (uid, row, col),
         )
 
     await call(nvim, cont)

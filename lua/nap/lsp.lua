@@ -11,11 +11,9 @@ local notify = function (request_id, pos, ret)
 end
 
 
-local list_comp_candidates = function (request_id, enable_cancel, row, col)
-  if enable_cancel then
-    cancel()
-    cancel = function () end
-  end
+local list_comp_candidates = function (request_id, row, col)
+  cancel()
+  cancel = function () end
 
   if #lsp.buf_get_clients() == 0 then
     notify(request_id, nil)
