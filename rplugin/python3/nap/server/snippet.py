@@ -1,6 +1,6 @@
 from asyncio import Queue, gather
 from os import linesep
-from typing import Awaitable, Callable, Optional, Tuple
+from typing import Dict, Callable, Optional, Tuple
 
 from pynvim import Nvim
 
@@ -28,8 +28,8 @@ async def osha(
 
 
 async def gen_engine(
-    nvim: Nvim, chan: Queue, settings: Settings
-) -> Tuple[SnippetEngine, Callable[[], Awaitable[None]], Callable[[Snippet], bool]]:
+    nvim: Nvim, settings: Settings
+) -> Tuple[SnippetEngine, Dict[str, Queue], Callable[[Snippet], bool]]:
 
     factories = load_engines(settings)
     engine_src = await gather(
@@ -50,11 +50,4 @@ async def gen_engine(
     def available(snippet: Snippet) -> bool:
         return snippet.kind in engines
 
-    async def listen() -> None:
-        while True:
-            notif: Notification = await chan.get()
-            ch = chans.get(notif.source)
-            if ch:
-                await ch.put(notif.body)
-
-    return engine, listen, available
+    return engine, chans, available

@@ -82,10 +82,16 @@ class Main:
 
     async def ooda(self) -> None:
         nvim, msg_ch, settings = self.nvim, self.msg_ch, self.settings
-        gen_c, listen_c = await merge(nvim, chan=msg_ch, settings=settings)
-        engine, listen_s, engine_available = await gen_engine(
-            nvim, chan=msg_ch, settings=settings
-        )
+        gen_c, chans_1 = await merge(nvim, settings=settings)
+        engine, chans_2, engine_available = await gen_engine(nvim, settings=settings)
+
+        async def l0() -> None:
+            chans = {**chans_2, **chans_1}
+            while True:
+                notif: Notification = await msg_ch.get()
+                ch = chans.get(notif.source)
+                if ch:
+                    await ch.put(notif.body)
 
         async def l1() -> None:
             async for pos, comp in schedule(chan=self.ch, gen=gen_c):
@@ -104,7 +110,7 @@ class Main:
                 if applied:
                     self.state = t_comp_inserted(self.state)
 
-        await gather(listen_c(), listen_s(), l1(), l2())
+        await gather(l0(), l1(), l2())
 
     def next_comp(self, options: GenOptions) -> None:
         async def cont() -> None:

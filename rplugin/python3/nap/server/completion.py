@@ -146,10 +146,10 @@ def buffer_opts(
 
 
 async def merge(
-    nvim: Nvim, chan: Queue, settings: Settings
+    nvim: Nvim, settings: Settings
 ) -> Tuple[
     Callable[[GenOptions], Awaitable[Tuple[Position, Iterator[VimCompletion]]]],
-    Callable[[], Awaitable[None]],
+    Dict[str, Queue],
 ]:
     match_opt, cache_opt = settings.match, settings.cache
     factories = load_factories(settings=settings)
@@ -191,13 +191,5 @@ async def merge(
         else:
             return position, iter(())
 
-    chans: Dict[str, Optional[Queue]] = {name: chan for name, _, chan in src_gen}
-
-    async def listen() -> None:
-        while True:
-            notif: Notification = await chan.get()
-            ch = chans.get(notif.source)
-            if ch:
-                await ch.put(notif.body)
-
-    return gen, listen
+    chans: Dict[str, Queue] = {name: chan for name, _, chan in src_gen if chan}
+    return gen, chans
