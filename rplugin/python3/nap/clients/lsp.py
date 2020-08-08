@@ -1,8 +1,7 @@
-from asyncio import Queue
+from asyncio import Event
 from collections import defaultdict
 from dataclasses import dataclass
 from itertools import count
-from logging import Logger
 from typing import (
     Any,
     AsyncIterator,
@@ -17,7 +16,7 @@ from typing import (
 
 from pynvim import Nvim
 
-from ..shared.nvim import call
+from ..shared.nvim import call, run_forever
 from ..shared.parse import normalize, parse_common_affix
 from ..shared.types import (
     Comm,
@@ -53,9 +52,7 @@ async def init_lua(nvim: Nvim) -> Tuple[Dict[int, str], Dict[int, str]]:
     return elookup, ilookup
 
 
-async def ask(
-    nvim: Nvim, log: Logger, chan: Queue, context: Context, config: Config, uid: int
-) -> Optional[Any]:
+async def ask(nvim: Nvim, context: Context, uid: int) -> None:
     row = context.position.row
     col = context.position.col
 
@@ -65,15 +62,6 @@ async def ask(
         )
 
     await call(nvim, cont)
-    while True:
-        rid, resp = await chan.get()
-        if rid == uid:
-            return resp
-        else:
-            log.debug("%s", f"request: {uid}, reply: {rid}")
-            if rid > uid:
-                await chan.put((rid, resp))
-                return None
 
 
 def parse_resp_to_rows(resp: Any) -> Sequence[Any]:
@@ -198,20 +186,40 @@ def parse_rows(
 
 async def main(comm: Comm, seed: Seed) -> Source:
     nvim, log, chan = comm.nvim, comm.log, comm.chan
-    config = Config(**seed.config)
-
     id_gen = count()
     entry_kind, insert_kind = await init_lua(nvim)
+    evnt = Event()
+    uid = next(id_gen)
+    rid, resp = -1, None
+
+    async def background_update() -> None:
+        nonlocal rid, resp
+        while True:
+            _rid, _resp = await chan.get()
+            if _rid >= uid:
+                rid, resp = _rid, _resp
+                evnt.set()
 
     async def source(context: Context) -> AsyncIterator[Completion]:
+        nonlocal uid
+        evnt.clear()
         uid = next(id_gen)
-        resp = await ask(
-            nvim, log=log, chan=chan, context=context, config=config, uid=uid
-        )
+        await ask(nvim, context=context, uid=uid)
+        while True:
+            await evnt.wait()
+            log.debug("%s", f"{uid}: {rid}")
+            if rid > uid:
+                return
+            elif rid == uid:
+                break
+            else:
+                pass
+
         rows = parse_resp_to_rows(resp)
         for row in parse_rows(
             rows, context=context, entry_lookup=entry_kind, insert_lookup=insert_kind,
         ):
             yield row
 
+    run_forever(nvim, log=log, thing=background_update)
     return source
