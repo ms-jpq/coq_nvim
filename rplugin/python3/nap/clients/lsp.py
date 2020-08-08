@@ -66,9 +66,14 @@ async def ask(
 
     await call(nvim, cont)
     while True:
-        rid, pos, resp = await chan.get()
-        log.debug("%s", f"request: {uid}, reply: {rid}")
-        return resp
+        rid, resp = await chan.get()
+        if rid == uid:
+            return resp
+        else:
+            log.debug("%s", f"request: {uid}, reply: {rid}")
+            if rid > uid:
+                await chan.put((rid, resp))
+                return None
 
 
 def parse_resp_to_rows(resp: Any) -> Sequence[Any]:
