@@ -1,9 +1,20 @@
 from dataclasses import dataclass
-from itertools import chain, takewhile
+from itertools import chain
 from os import linesep
 from os.path import basename, dirname, splitext
 from string import ascii_letters, digits
-from typing import Iterable, Iterator, List, Optional, Sequence, Set, Tuple
+from typing import (
+    Dict,
+    Iterable,
+    Iterator,
+    List,
+    Optional,
+    Sequence,
+    Set,
+    Tuple,
+    Union,
+    cast,
+)
 
 from ..shared.types import Context
 
@@ -35,8 +46,7 @@ from ..shared.types import Context
 
 IChar = Tuple[int, str]
 CharStream = Iterator[IChar]
-
-SPLIT_CHAR = "\0"
+OutStream = Iterator[Union[str, Tuple[int]]]
 
 
 @dataclass(frozen=False)
@@ -97,7 +107,7 @@ def parse_escape(context: ParseContext, *, escapable_chars: Set[str]) -> str:
 
 
 # choice      ::= '${' int '|' text (',' text)* '|}'
-def half_parse_choice(context: ParseContext) -> Iterator[str]:
+def half_parse_choice(context: ParseContext) -> OutStream:
     index, char = next_char(context)
     assert char == "|"
 
@@ -127,7 +137,7 @@ def half_parse_choice(context: ParseContext) -> Iterator[str]:
 
 
 # placeholder ::= '${' int ':' any '}'
-def half_parse_place_holder(context: ParseContext) -> Iterator[str]:
+def half_parse_place_holder(context: ParseContext) -> OutStream:
     _, char = next_char(context)
     assert char == ":"
 
@@ -137,68 +147,76 @@ def half_parse_place_holder(context: ParseContext) -> Iterator[str]:
 
 # tabstop | choice | placeholder
 # -- all starts with (int)
-def parse_tcp(context: ParseContext) -> Iterator[str]:
+def parse_tcp(context: ParseContext) -> OutStream:
+    idx: List[str] = []
+
     for index, char in context.it:
         if char in _int_chars:
-            pass
-        elif char == "}":
-            # tabstop     ::= '$' int | '${' int '}'
-            break
-        elif char == "|":
-            # choice      ::= '${' int '|' text (',' text)* '|}'
-            pushback_chars(context, (index, char))
-            yield from half_parse_choice(context)
-            break
-        elif char == ":":
-            # placeholder ::= '${' int ':' any '}'
-            pushback_chars(context, (index, char))
-            yield from half_parse_place_holder(context)
-            break
+            idx.append(char)
         else:
-            err = make_parse_err(
-                text=context.text,
-                index=index,
-                condition="after |",
-                expected=("0-9", "|", ":"),
-                actual=char,
-            )
-            raise err
+            num = int("".join(idx))
+            yield (num,)
+            if char == "}":
+                # tabstop     ::= '$' int | '${' int '}'
+                break
+            elif char == "|":
+                # choice      ::= '${' int '|' text (',' text)* '|}'
+                pushback_chars(context, (index, char))
+                yield from half_parse_choice(context)
+                break
+            elif char == ":":
+                # placeholder ::= '${' int ':' any '}'
+                pushback_chars(context, (index, char))
+                yield from half_parse_place_holder(context)
+                break
+            else:
+                err = make_parse_err(
+                    text=context.text,
+                    index=index,
+                    condition="after |",
+                    expected=("0-9", "|", ":"),
+                    actual=char,
+                )
+                raise err
 
 
 def variable_substitution(context: ParseContext, *, name: str) -> Optional[str]:
     ctx = context.vals
+
     if name == "TM_SELECTED_TEXT":
         return None
+
     elif name == "TM_CURRENT_LINE":
         return ctx.line
+
     elif name == "TM_CURRENT_WORD":
         return ctx.alnums
+
     elif name == "TM_LINE_INDEX":
         return str(ctx.position.row)
+
     elif name == "TM_LINE_NUMBER":
         return str(ctx.position.row + 1)
+
     elif name == "TM_FILENAME":
-        fn = basename(ctx.filename)
-        return fn
+        return basename(ctx.filename)
+
     elif name == "TM_FILENAME_BASE":
         fn, _ = splitext(basename(ctx.filename))
         return fn
+
     elif name == "TM_DIRECTORY":
         return dirname(ctx.filename)
+
     elif name == "TM_FILEPATH":
         return ctx.filename
+
     else:
         return None
 
 
-def variable_decoration(
-    context: ParseContext, *, var: str, decoration: Sequence[str]
-) -> str:
-    return var
-
-
 # variable    ::= '$' var
-def parse_variable_naked(context: ParseContext) -> Iterator[str]:
+def parse_variable_naked(context: ParseContext) -> OutStream:
     index, char = next_char(context)
     assert char == "$"
 
@@ -216,14 +234,22 @@ def parse_variable_naked(context: ParseContext) -> Iterator[str]:
             break
 
 
-def parsed_variable_decorated(context: ParseContext, *, name: str) -> Iterator[str]:
+# /' regex '/' (format | text)+ '/'
+def variable_decoration(
+    context: ParseContext, *, var: str, decoration: Sequence[str]
+) -> str:
+    return var
+
+
+# | '${' var '/' regex '/' (format | text)+ '/' options '}'
+def parsed_variable_decorated(context: ParseContext, *, name: str) -> OutStream:
     index, char = next_char(context)
     assert char == "/"
 
     var = variable_substitution(context, name=name)
 
     for index, char in context.it:
-        decoration: List[str] = []
+        decoration = [char]
         if char == "\\":
             pushback_chars(context, (index, char))
             c = parse_escape(context, escapable_chars=_escapable_chars)
@@ -240,7 +266,7 @@ def parsed_variable_decorated(context: ParseContext, *, name: str) -> Iterator[s
 # variable    ::= '$' var | '${' var }'
 #                | '${' var ':' any '}'
 #                | '${' var '/' regex '/' (format | text)+ '/' options '}'
-def parse_variable_nested(context: ParseContext) -> Iterator[str]:
+def parse_variable_nested(context: ParseContext) -> OutStream:
     name_acc: List[str] = []
 
     for index, char in context.it:
@@ -280,7 +306,7 @@ def parse_variable_nested(context: ParseContext) -> Iterator[str]:
 
 
 # ${...}
-def parse_inner_scope(context: ParseContext) -> Iterator[str]:
+def parse_inner_scope(context: ParseContext) -> OutStream:
     index, char = next_char(context)
     assert char == "{"
 
@@ -304,7 +330,8 @@ def parse_inner_scope(context: ParseContext) -> Iterator[str]:
         raise err
 
 
-def parse_scope(context: ParseContext) -> Iterator[str]:
+# $...
+def parse_scope(context: ParseContext) -> OutStream:
     index, char = next_char(context)
     assert char == "$"
 
@@ -336,7 +363,7 @@ def parse_scope(context: ParseContext) -> Iterator[str]:
 
 
 # any         ::= tabstop | placeholder | choice | variable | text
-def parse(context: ParseContext) -> Iterator[str]:
+def parse(context: ParseContext) -> OutStream:
     for index, char in context.it:
         if char == "\\":
             pushback_chars(context, (index, char))
@@ -344,9 +371,6 @@ def parse(context: ParseContext) -> Iterator[str]:
         elif context.depth and char == "}":
             context.depth -= 1
         elif char == "$":
-            if not context.has_split:
-                context.has_split = True
-                yield SPLIT_CHAR
             pushback_chars(context, (index, char))
             yield from parse_scope(context)
         else:
@@ -355,7 +379,20 @@ def parse(context: ParseContext) -> Iterator[str]:
 
 def parse_snippet(ctx: Context, text: str) -> Tuple[str, str]:
     context = ParseContext(text=text, it=enumerate(text), vals=ctx)
-    parsed = parse(context)
-    new_prefix = "".join(takewhile(lambda c: c != SPLIT_CHAR, parsed))
-    new_suffix = "".join(parsed)
+    location: Dict[int, int] = {}
+
+    def cont() -> Iterator[str]:
+        i = 0
+        for x in parse(context):
+            if type(x) is tuple:
+                place, *_ = cast(Tuple[int], x)
+                location[i] = place
+            else:
+                yield cast(str, x)
+                i += len(x)
+
+    text = "".join(cont())
+    smol_idx = min(location) if location else len(text)
+    new_prefix = text[:smol_idx]
+    new_suffix = text[smol_idx:]
     return new_prefix, new_suffix
