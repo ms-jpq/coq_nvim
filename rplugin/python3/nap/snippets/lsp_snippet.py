@@ -387,13 +387,13 @@ def parse_snippet(ctx: Context, text: str) -> Tuple[str, str]:
         for x in parse(context):
             if type(x) is tuple:
                 place, *_ = cast(Tuple[int], x)
-                location[i] = place
+                location[place] = i
             else:
                 yield cast(str, x)
                 i += len(x)
 
     text = "".join(cont())
-    smol_idx = min(location) if location else len(text)
+    smol_idx = location[min((location))] if location else len(text)
     new_prefix = text[:smol_idx]
     new_suffix = text[smol_idx:]
     return new_prefix, new_suffix
