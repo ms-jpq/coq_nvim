@@ -18,16 +18,16 @@ from typing import (
 
 from pynvim import Nvim
 
-from .logging import log
 from ..shared.nvim import print
 from ..shared.parse import normalize
 from ..shared.types import Comm, Context, Position
 from .cache import make_cache
 from .context import gen_context, goahead
 from .fuzzy import FuzzyStep, fuzzify, fuzzy
+from .logging import log
 from .nvim import VimCompletion
 from .settings import load_factories
-from .types import BufferContext, Notification, Settings, SourceFactory, Step
+from .types import BufferContext, Settings, SourceFactory, Step
 
 
 @dataclass(frozen=True)
@@ -95,7 +95,7 @@ async def osha(
     try:
         step_fn, chan = await manufacture(nvim, name=name, factory=factory)
     except Exception as e:
-        message = f"Error in source {name}{linesep}{e}"
+        message = f"Error in source {name}:{linesep}{e}"
         log.exception("%s", message)
         return name, nil_steps, None
     else:
@@ -110,7 +110,7 @@ async def osha(
                     return await step_fn(context, s_context)
             except Exception as e:
                 errored += 1
-                message = f"Error in source {name}{linesep}{e}"
+                message = f"Error in source {name}:{linesep}{e}"
                 log.exception("%s", message)
                 return ()
             else:
