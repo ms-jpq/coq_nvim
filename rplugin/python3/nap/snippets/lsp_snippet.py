@@ -148,14 +148,13 @@ def half_parse_place_holder(context: ParseContext) -> OutStream:
 # tabstop | choice | placeholder
 # -- all starts with (int)
 def parse_tcp(context: ParseContext) -> OutStream:
-    idx: List[str] = []
+    idx_acc: List[str] = []
 
     for index, char in context.it:
         if char in _int_chars:
-            idx.append(char)
+            idx_acc.append(char)
         else:
-            num = int("".join(idx))
-            yield (num,)
+            yield (int("".join(idx_acc)),)
             if char == "}":
                 # tabstop     ::= '$' int | '${' int '}'
                 break
@@ -340,11 +339,13 @@ def parse_scope(context: ParseContext) -> OutStream:
         pushback_chars(context, (index, char))
         yield from parse_inner_scope(context)
     elif char in _int_chars:
+        idx_acc: List[str] = [char]
         # tabstop     ::= '$' int
         for index, char in context.it:
             if char in _int_chars:
-                pass
+                idx_acc.append(char)
             else:
+                yield (int("".join(idx_acc)),)
                 pushback_chars(context, (index, char))
                 yield from parse(context)
                 break
