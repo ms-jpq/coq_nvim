@@ -1,27 +1,27 @@
 from asyncio import Future, Queue
+from itertools import count
 from logging import Logger
 from typing import Awaitable, Callable, Tuple
 
 
 def schedule(
     chan: Queue, log: Logger
-) -> Tuple[Callable[[], Awaitable[None]], Callable[[int, Future], None]]:
-    cid = -1
-    c_fut: Future = Future()
+) -> Tuple[Callable[[], Awaitable[None]], Callable[[], Tuple[int, Future]]]:
+    it = count()
+    uid = next(it)
+    fut: Future = Future()
 
     async def background_update() -> None:
         while True:
             rid, resp = await chan.get()
-            if rid >= cid and not c_fut.done():
-                c_fut.set_result(resp)
+            if rid >= uid and not fut.done():
+                fut.set_result(resp)
 
-    def register(uid: int, fut: Future) -> None:
-        nonlocal cid, c_fut
-        if uid > cid:
-            cid = uid
-            c_fut.cancel()
-            c_fut = fut
-        else:
-            fut.cancel()
+    def require() -> Tuple[int, Future]:
+        nonlocal uid, fut
+        uid = next(it)
+        fut.cancel()
+        fut = Future()
+        return uid, fut
 
-    return background_update, register
+    return background_update, require

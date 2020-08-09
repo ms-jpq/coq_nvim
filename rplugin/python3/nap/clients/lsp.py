@@ -190,14 +190,11 @@ async def main(comm: Comm, seed: Seed) -> Source:
         comm.nvim,
         comm.log,
     )
-    id_gen = count()
-    background_update, register = schedule(comm.chan, log=log)
+    background_update, require = schedule(comm.chan, log=log)
     entry_kind, insert_kind = await init_lua(nvim)
 
     async def source(context: Context) -> AsyncIterator[Completion]:
-        uid = next(id_gen)
-        fut: Future = Future()
-        register(uid, fut)
+        uid, fut = require()
         await ask(nvim, context=context, uid=uid)
         resp = await fut
         rows = parse_resp_to_rows(resp)
