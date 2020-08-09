@@ -14,6 +14,7 @@ def schedule(
     async def background_update() -> None:
         while True:
             rid, resp = await chan.get()
+            log.debug("%s", f"{uid}: {rid}")
             if rid >= uid and not fut.done():
                 fut.set_result(resp)
 
