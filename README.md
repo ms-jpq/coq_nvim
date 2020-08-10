@@ -1,8 +1,8 @@
-# Neovim Async comPletion
+# NARC - Nvim Async Reactive Complete
 
 **WORK IN PROGRESS**
 
-The **BEST** async completion framework for Neovim
+## Built around Fuzzy Searching
 
 ## VScode Style Fuzzy Search
 
@@ -10,7 +10,7 @@ Async completion on every keystroke.
 
 Fuzzy search through **nearby** results.
 
-![preview.png](https://raw.githubusercontent.com/ms-jpq/fast-comp/nvim/preview/screenshot.png)
+![preview.png](https://raw.githubusercontent.com/ms-jpq/nacr/narc/preview/screenshot.png)
 
 ## Advanced Scheduler
 
@@ -42,12 +42,12 @@ Plug 'ms-jpq/nap', {'branch': 'nap', 'do': ':UpdateRemotePlugins'}
 
 | name                                                                                             | source                                                             |
 | ------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------ |
-| [LSP](https://github.com/ms-jpq/nap/blob/nap/rplugin/python3/nap/clients/lsp.py)                 | Fetches results from Neovim LSP client                             |
-| [Tree Sitter](https://github.com/ms-jpq/nap/blob/nap/rplugin/python3/nap/clients/tree_sitter.py) | Fetches results from syntax tree (still waiting on more stability) |
-| [Tmux](https://github.com/ms-jpq/nap/blob/nap/rplugin/python3/nap/clients/tmux.py)               | Fetches results from tmux panes (cached @ adjustable intervals)    |
-| [Around](https://github.com/ms-jpq/nap/blob/nap/rplugin/python3/nap/clients/around.py)           | Fetches results from lines around cursor                           |
-| [Buffers](https://github.com/ms-jpq/nap/blob/nap/rplugin/python3/nap/clients/buffers.py)         | Fetches results from seen buffers (cached @ adjustable intervals)  |
-| [Paths](https://github.com/ms-jpq/nap/blob/nap/rplugin/python3/nap/clients/paths.py)             | Fetches results from file paths                                    |
+| [LSP](https://github.com/ms-jpq/narc/blob/narc/rplugin/python3/narc/clients/lsp.py)                 | Fetches results from Neovim LSP client                             |
+| [Tree Sitter](https://github.com/ms-jpq/narc/blob/narc/rplugin/python3/narc/clients/tree_sitter.py) | Fetches results from syntax tree (still waiting on more stability) |
+| [Tmux](https://github.com/ms-jpq/narc/blob/narc/rplugin/python3/narc/clients/tmux.py)               | Fetches results from tmux panes (cached @ adjustable intervals)    |
+| [Around](https://github.com/ms-jpq/narc/blob/narc/rplugin/python3/narc/clients/around.py)           | Fetches results from lines around cursor                           |
+| [Buffers](https://github.com/ms-jpq/narc/blob/narc/rplugin/python3/narc/clients/buffers.py)         | Fetches results from seen buffers (cached @ adjustable intervals)  |
+| [Paths](https://github.com/ms-jpq/narc/blob/narc/rplugin/python3/narc/clients/paths.py)             | Fetches results from file paths                                    |
 
 ### External Sources
 
@@ -58,7 +58,7 @@ Plug 'ms-jpq/nap', {'branch': 'nap', 'do': ':UpdateRemotePlugins'}
 
 ### Configuration
 
-Check out the [basic config](https://github.com/ms-jpq/nap/blob/nap/config/config.json) before you proceed.
+Check out the [basic config](https://github.com/ms-jpq/narc/blob/narc/config/config.json) before you proceed.
 
 To customize, you are to set `g:nap_settings` to a dictionary with the same format.
 
@@ -86,7 +86,7 @@ The newer dictionary will automatically be merged with the older one.
 
 ### Recommended Settings
 
-There are some [common settings recommended](https://github.com/ms-jpq/nap/blob/nap/lua/nap/recommends.lua) by most completion plugins. I put them in a package.
+There are some [common settings recommended](https://github.com/ms-jpq/narc/blob/narc/lua/nap/recommends.lua) by most completion plugins. I put them in a package.
 
 Just require it in your `.vimrc` like so:
 
@@ -126,6 +126,6 @@ For completion results, the prefix / suffix determine the cusor location, post c
 
 Each client is loaded by specifying a `source.<name>.main` path relative to the parent directory of `nap`.
 
-Each client is must have a `main` function that conforms to the types `Source` and `Factory` in the [spec file](https://github.com/ms-jpq/nap/blob/nap/rplugin/python3/nap/shared/types.py).
+Each client is must have a `main` function that conforms to the types `Source` and `Factory` in the [spec file](https://github.com/ms-jpq/narc/blob/narc/rplugin/python3/narc/shared/types.py).
 
 See the External Sources section for examples.
