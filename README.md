@@ -98,34 +98,4 @@ lua require("narc/recommends").all()
 
 The default timeout for `LSP` source is very low on purpose (LSP server response is highly server dependent, some are very fast, others are outrageously slow). Update it to a higher value if required.
 
-### Authoring Clients
 
-A client is really simple:
-
-Some pseudocode:
-
-```
-Source = (Context) -> AsyncIterator<Completion>
-Factory = async (Nvim, Chan, Seed) -> Source
-
-type Completion:
-  position: (int, int)
-  old_prefix: str
-  old_suffix: str
-  new_prefix: str
-  new_suffix: str
-```
-
-where `Nvim` is the nvim context from [`pynvim`](https://github.com/neovim/pynvim), and `Chan` is an `asyncio` channel available for RPC.
-
-See the builtin LSP source for RPC example.
-
-Each source is basically an async stream, which will receive a context around the cursor, and respond with a stream of results.
-
-For completion results, the prefix / suffix determine the cusor location, post completion.
-
-Each client is loaded by specifying a `source.<name>.main` path relative to the parent directory of `narc`.
-
-Each client is must have a `main` function that conforms to the types `Source` and `Factory` in the [spec file](https://github.com/ms-jpq/narc/blob/narc/rplugin/python3/narc/shared/types.py).
-
-See the External Sources section for examples.
