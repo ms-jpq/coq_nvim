@@ -96,8 +96,10 @@ lua require("narc/recommends").all()
 
 Setting `completefunc` or `omnifunc` to `NARComnifunc` will allow you to force completions with `<c-x><c-u>` or `<c-x><c-o>`, respectively.
 
-This will override `source.<name>.limit` and wait for slow sources without timing out.
+Doing so will ignore timeouts on all sources and allow you to wait for them indefinitely.
 
 ### Timeouts
 
-The default timeout for `LSP` source is 100ms. This is very low on purpose (LSP response time is highly server dependent, some are very fast, others are outrageously slow). Update it to a higher value if required.
+By default, all sources have 100ms timeout. This might not be sufficient for slower LSP servers.
+
+Update to a higher value as needed.
