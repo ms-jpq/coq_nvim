@@ -41,7 +41,7 @@ async def apply_patch(
             prow, pcol = payload.position.row, payload.position.col
             win: Window = nvim.api.get_current_win()
             row, col = nvim.api.win_get_cursor(win)
-            if row == prow + 1 and col == pcol:
+            if prow + 1 == row and pcol == col:
                 return True
             else:
                 return False
