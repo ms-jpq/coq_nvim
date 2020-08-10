@@ -51,9 +51,10 @@ Plug 'ms-jpq/nap', {'branch': 'nap', 'do': ':UpdateRemotePlugins'}
 
 ### External Sources
 
-| name                                             | source                                                            |
-| ------------------------------------------------ | ----------------------------------------------------------------- |
-| [TabNine](https://github.com/ms-jpq/nap-clients) | Fetches results from [TabNine](https://www.tabnine.com/) ML model |
+| name                                               | source                                                            |
+| -------------------------------------------------- | ----------------------------------------------------------------- |
+| [TabNine](https://github.com/ms-jpq/nap-t9)        | Fetches results from [TabNine](https://www.tabnine.com/) ML model |
+| [Snippets](https://github.com/ms-jpq/nap-snippets) | Snippets support for [LSP](), [Ultisnip](), [Neosnippet]()        |
 
 ### Configuration
 
