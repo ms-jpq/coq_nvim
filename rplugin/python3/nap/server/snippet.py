@@ -1,13 +1,13 @@
 from asyncio import Queue, gather
 from os import linesep
-from typing import Dict, Callable, Optional, Tuple
+from typing import Callable, Dict, Optional, Tuple
 
 from pynvim import Nvim
 
 from ..shared.types import Comm, SnippetContext, SnippetEngine
 from .logging import log
 from .settings import load_engines
-from .types import EngineFactory, Notification, Settings, Snippet
+from .types import EngineFactory, Settings, Snippet
 
 
 async def osha(
