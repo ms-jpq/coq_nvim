@@ -1,7 +1,5 @@
-from asyncio.futures import Future
 from collections import defaultdict
 from dataclasses import dataclass
-from itertools import count
 from typing import (
     Any,
     AsyncIterator,
