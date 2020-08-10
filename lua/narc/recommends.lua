@@ -16,6 +16,10 @@ local map_keys = function ()
   bindings.map.insert("<tab>",   "pumvisible() ? '<c-n>' : '<tab>'", {expr = true})
   bindings.map.insert("<s-tab>", "pumvisible() ? '<c-p>' : '<bs>'",  {expr = true})
 
+  -- use <c-space> to force completion
+  bindings.map.nv("<c-space>")
+  bindings.map.insert("<c-space>", "<c-x><c-u>")
+
 end
 
 

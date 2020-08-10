@@ -15,4 +15,4 @@ load_hierarchy = (dirname(__base__),)
 LOGGER_NAME = "NARC"
 conf_var_name = "narc_settings"
 conf_var_name_private = "narc_settings_private"
-buf_var_name = "buf_narc"
+buf_var_name = "buflocal_narc"

@@ -135,10 +135,6 @@ class Main:
 
         self._submit(cont())
 
-    @function("NARCmanual", sync=True)
-    def manual(self, args: Sequence[Any]) -> None:
-        self.next_comp(GenOptions(force=True))
-
     @function("NARComnifunc", sync=True)
     def omnifunc(self, args: Sequence[Any]) -> int:
         find_start, *_ = args

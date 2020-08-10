@@ -40,8 +40,8 @@ Plug 'ms-jpq/narc', {'branch': 'narc', 'do': ':UpdateRemotePlugins'}
 
 ### Builtin Sources
 
-| name                                                                                             | source                                                             |
-| ------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------ |
+| name                                                                                                | source                                                             |
+| --------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
 | [LSP](https://github.com/ms-jpq/narc/blob/narc/rplugin/python3/narc/clients/lsp.py)                 | Fetches results from Neovim LSP client                             |
 | [Tree Sitter](https://github.com/ms-jpq/narc/blob/narc/rplugin/python3/narc/clients/tree_sitter.py) | Fetches results from syntax tree (still waiting on more stability) |
 | [Tmux](https://github.com/ms-jpq/narc/blob/narc/rplugin/python3/narc/clients/tmux.py)               | Fetches results from tmux panes (cached @ adjustable intervals)    |
@@ -51,8 +51,8 @@ Plug 'ms-jpq/narc', {'branch': 'narc', 'do': ':UpdateRemotePlugins'}
 
 ### External Sources
 
-| name                                               | source                                                            |
-| -------------------------------------------------- | ----------------------------------------------------------------- |
+| name                                                | source                                                            |
+| --------------------------------------------------- | ----------------------------------------------------------------- |
 | [TabNine](https://github.com/ms-jpq/narc-t9)        | Fetches results from [TabNine](https://www.tabnine.com/) ML model |
 | [Snippets](https://github.com/ms-jpq/narc-snippets) | Snippets support for [LSP](), [Ultisnip](), [Neosnippet]()        |
 
@@ -64,24 +64,24 @@ To customize, you are to set `g:narc_settings` to a dictionary with the same for
 
 The newer dictionary will automatically be merged with the older one.
 
-| keys                       | option                                             |
-| -------------------------- | -------------------------------------------------- |
-| `match.min_match`          | minimum # of chars matches required to show result |
-| `match.unifying_chars`     | what symbols also count as part of words           |
-| `cache.band_size`          | cache "band" around cursor                         |
-| `cache.limit`              | max results shown from cache                       |
-| `source.<name>.enabled`    | source enabled                                     |
-| `source.<name>.limit`      | max results shown                                  |
-| `source.<name>.timeout`    | max wait time for source                           |
-| `source.<name>.rank`       | sorting priority for source (after fuzzing)        |
-| `source.<name>.short_name` | badge for source, ie. `blah blah blah [LSP]`       |
-| `source.<name>.config`     | custom config for each source                      |
-| `source.<name>.main`       | source location (for custom sources)               |
+| keys                       | option                                            |
+| -------------------------- | ------------------------------------------------- |
+| `match.transpose_band`     | max # of transpose position for fuzzy algorithm   |
+| `match.unifying_chars`     | what symbols also count as part of words          |
+| `cache.band_size`          | cache "band" around cursor                        |
+| `cache.min_match`          | min number of char matches to retrieve from cache |
+| `source.<name>.enabled`    | source enabled                                    |
+| `source.<name>.limit`      | max results shown from source                     |
+| `source.<name>.timeout`    | max wait time for source                          |
+| `source.<name>.rank`       | sorting priority for source (after fuzzing)       |
+| `source.<name>.short_name` | badge for source                                  |
+| `source.<name>.config`     | custom config for each source                     |
+| `source.<name>.main`       | source location (for custom sources)              |
 
 ### Commands
 
-| command  | effect           |
-| -------- | ---------------- |
+| command   | effect           |
+| --------- | ---------------- |
 | NARCstart | Start completion |
 
 ### Recommended Settings
@@ -94,8 +94,10 @@ Just require it in your `.vimrc` like so:
 lua require("narc/recommends").all()
 ```
 
+Setting `completefunc` or `omnifunc` to `NARComnifunc` will allow you to force completions with `<c-x><c-u>` or `<c-x><c-o>`, respectively.
+
+This will override `source.<name>.limit` and wait for slow sources without timing out.
+
 ### Timeouts
 
-The default timeout for `LSP` source is very low on purpose (LSP server response is highly server dependent, some are very fast, others are outrageously slow). Update it to a higher value if required.
-
-
+The default timeout for `LSP` source is 100ms. This is very low on purpose (LSP response time is highly server dependent, some are very fast, others are outrageously slow). Update it to a higher value if required.

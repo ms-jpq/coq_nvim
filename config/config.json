@@ -22,7 +22,7 @@
       "main": "around.py",
       "rank": 100,
       "short_name": "A",
-      "timeout": 200
+      "timeout": 100
     },
     "buffers": {
       "config": {
@@ -44,7 +44,7 @@
       "main": "lsp.py",
       "rank": 200,
       "short_name": "L",
-      "timeout": 200
+      "timeout": 100
     },
     "paths": {
       "config": {},
