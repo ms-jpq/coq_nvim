@@ -1,4 +1,4 @@
-local bindings = require "nap/bindings"
+local bindings = require "narc/bindings"
 
 
 local map_keys = function ()

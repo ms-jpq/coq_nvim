@@ -10,7 +10,7 @@ NAME = "tree_sitter"
 
 async def init_lua(nvim: Nvim) -> None:
     def cont() -> None:
-        nvim.api.exec_lua("nap_tree_sitter = require 'nap/tree_sitter'", ())
+        nvim.api.exec_lua("narc_tree_sitter = require 'narc/tree_sitter'", ())
         return
 
     return await call(nvim, cont)

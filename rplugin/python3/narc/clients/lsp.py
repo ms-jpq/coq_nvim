@@ -42,9 +42,9 @@ class Config:
 
 async def init_lua(nvim: Nvim) -> Tuple[Dict[int, str], Dict[int, str]]:
     def cont() -> Tuple[Dict[str, int], Dict[str, int]]:
-        nvim.api.exec_lua("nap_lsp = require 'nap/lsp'", ())
-        entry_kind = nvim.api.exec_lua("return nap_lsp.list_entry_kind()", ())
-        insert_kind = nvim.api.exec_lua("return nap_lsp.list_insert_kind()", ())
+        nvim.api.exec_lua("narc_lsp = require 'narc/lsp'", ())
+        entry_kind = nvim.api.exec_lua("return narc_lsp.list_entry_kind()", ())
+        insert_kind = nvim.api.exec_lua("return narc_lsp.list_insert_kind()", ())
         return entry_kind, insert_kind
 
     entry_kind, insert_kind = await call(nvim, cont)
@@ -59,7 +59,7 @@ async def ask(nvim: Nvim, context: Context, uid: int) -> None:
 
     def cont() -> None:
         nvim.api.exec_lua(
-            "nap_lsp.list_comp_candidates(...)", (uid, row, col),
+            "narc_lsp.list_comp_candidates(...)", (uid, row, col),
         )
 
     await call(nvim, cont)

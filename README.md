@@ -33,7 +33,7 @@ pip3 install pynvim
 Install the usual way, ie. [VimPlug](https://github.com/junegunn/vim-plug), [Vundle](https://github.com/VundleVim/Vundle.vim), etc
 
 ```VimL
-Plug 'ms-jpq/nap', {'branch': 'nap', 'do': ':UpdateRemotePlugins'}
+Plug 'ms-jpq/narc', {'branch': 'narc', 'do': ':UpdateRemotePlugins'}
 ```
 
 ## Documentation
@@ -53,14 +53,14 @@ Plug 'ms-jpq/nap', {'branch': 'nap', 'do': ':UpdateRemotePlugins'}
 
 | name                                               | source                                                            |
 | -------------------------------------------------- | ----------------------------------------------------------------- |
-| [TabNine](https://github.com/ms-jpq/nap-t9)        | Fetches results from [TabNine](https://www.tabnine.com/) ML model |
-| [Snippets](https://github.com/ms-jpq/nap-snippets) | Snippets support for [LSP](), [Ultisnip](), [Neosnippet]()        |
+| [TabNine](https://github.com/ms-jpq/narc-t9)        | Fetches results from [TabNine](https://www.tabnine.com/) ML model |
+| [Snippets](https://github.com/ms-jpq/narc-snippets) | Snippets support for [LSP](), [Ultisnip](), [Neosnippet]()        |
 
 ### Configuration
 
 Check out the [basic config](https://github.com/ms-jpq/narc/blob/narc/config/config.json) before you proceed.
 
-To customize, you are to set `g:nap_settings` to a dictionary with the same format.
+To customize, you are to set `g:narc_settings` to a dictionary with the same format.
 
 The newer dictionary will automatically be merged with the older one.
 
@@ -86,12 +86,12 @@ The newer dictionary will automatically be merged with the older one.
 
 ### Recommended Settings
 
-There are some [common settings recommended](https://github.com/ms-jpq/narc/blob/narc/lua/nap/recommends.lua) by most completion plugins. I put them in a package.
+There are some [common settings recommended](https://github.com/ms-jpq/narc/blob/narc/lua/narc/recommends.lua) by most completion plugins. I put them in a package.
 
 Just require it in your `.vimrc` like so:
 
 ```vimL
-lua require("nap/recommends").all()
+lua require("narc/recommends").all()
 ```
 
 ### Timeouts
@@ -124,7 +124,7 @@ Each source is basically an async stream, which will receive a context around th
 
 For completion results, the prefix / suffix determine the cusor location, post completion.
 
-Each client is loaded by specifying a `source.<name>.main` path relative to the parent directory of `nap`.
+Each client is loaded by specifying a `source.<name>.main` path relative to the parent directory of `narc`.
 
 Each client is must have a `main` function that conforms to the types `Source` and `Factory` in the [spec file](https://github.com/ms-jpq/narc/blob/narc/rplugin/python3/narc/shared/types.py).
 
