@@ -26,7 +26,7 @@ local settings = function ()
   bindings.set("completeopt", "menuone,noinsert,noselect", [[+=]])
 
   -- allow <c-x><c-u> to perform manual insertions in insertmode
-  bindings.set("completefunc", "NAPomnifunc")
+  bindings.set("completefunc", "NARComnifunc")
 
 end
 

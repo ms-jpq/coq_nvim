@@ -82,7 +82,7 @@ The newer dictionary will automatically be merged with the older one.
 
 | command  | effect           |
 | -------- | ---------------- |
-| NAPstart | Start completion |
+| NARCstart | Start completion |
 
 ### Recommended Settings
 
