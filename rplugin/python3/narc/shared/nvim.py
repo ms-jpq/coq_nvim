@@ -57,7 +57,7 @@ def run_forever(
             try:
                 await thing()
             except Exception as e:
-                log.exception("%s", str(e))
+                log.exception("%s", e)
                 await sleep(timeout)
 
     return create_task(loop())

@@ -56,7 +56,7 @@ class Main:
             try:
                 fut.result()
             except Exception as e:
-                log.exception("%s", str(e))
+                log.exception("%s", e)
 
         self.chan.submit(run, self.nvim)
 
