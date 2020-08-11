@@ -149,7 +149,7 @@ def parse_rows(
             old_prefix, old_suffix = parse_common_affix(
                 context, match_normalized=match_normalized, use_line=True,
             )
-            snippet = Snippet(kind=SNIPPET_TYPE, content=text, match=match)
+            snippet = Snippet(kind=SNIPPET_TYPE, match=match, label=label, content=text)
             yield Completion(
                 position=position,
                 old_prefix=old_prefix,

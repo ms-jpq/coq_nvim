@@ -83,6 +83,7 @@ class LEdit:
 class Snippet:
     kind: str
     match: str
+    label: str
     content: str
 
 
