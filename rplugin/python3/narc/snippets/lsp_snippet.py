@@ -55,7 +55,6 @@ class ParseContext:
     it: CharStream
     vals: Context
     depth: int = 0
-    has_split: bool = False
 
 
 class ParseError(Exception):
