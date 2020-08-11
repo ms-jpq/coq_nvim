@@ -27,7 +27,7 @@ from .fuzzy import FuzzyStep, fuzzify, fuzzy
 from .logging import log
 from .nvim import VimCompletion
 from .settings import load_factories
-from .types import BufferContext, Settings, SourceFactory, Step
+from .types import BufferContext, Completion, Settings, SourceFactory, Step
 
 
 @dataclass(frozen=True)
@@ -43,6 +43,24 @@ class StepContext:
 StepFunction = Callable[[Context, StepContext], Awaitable[Sequence[Step]]]
 
 
+def parse_step(comp: Completion, name: str, short_name: str, rank: float) -> Step:
+    text = (
+        comp.snippet.match
+        if comp.snippet
+        else (comp.medit.new_prefix + comp.medit.new_suffix if comp.medit else "")
+    )
+    normalized_text = normalize(text)
+    step = Step(
+        source=name,
+        source_shortname=short_name,
+        rank=rank,
+        text=text,
+        text_normalized=normalized_text,
+        comp=comp,
+    )
+    return step
+
+
 async def manufacture(
     nvim: Nvim, name: str, factory: SourceFactory
 ) -> Tuple[StepFunction, Queue]:
@@ -56,19 +74,8 @@ async def manufacture(
 
         async def cont() -> None:
             async for comp in src(context):
-                text = (
-                    comp.snippet.match
-                    if comp.snippet
-                    else comp.new_prefix + comp.new_suffix
-                )
-                normalized_text = normalize(text)
-                step = Step(
-                    source=name,
-                    source_shortname=factory.short_name,
-                    rank=factory.rank,
-                    text=text,
-                    text_normalized=normalized_text,
-                    comp=comp,
+                step = parse_step(
+                    comp, name=name, short_name=factory.short_name, rank=factory.rank
                 )
                 acc.append(step)
 

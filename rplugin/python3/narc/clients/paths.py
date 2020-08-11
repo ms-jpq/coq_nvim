@@ -7,7 +7,7 @@ from typing import AsyncIterator, Iterator, Sequence
 
 from ..shared.match import gen_metric
 from ..shared.parse import normalize
-from ..shared.types import Comm, Completion, Context, Seed, Source
+from ..shared.types import Comm, Completion, Context, MEdit, Seed, Source
 
 NAME = "paths"
 
@@ -100,13 +100,12 @@ async def main(comm: Comm, seed: Seed) -> Source:
                 use_secondary=False,
             )
             if not old_prefix or metric.num_matches:
-                yield Completion(
-                    position=position,
+                medit = MEdit(
                     old_prefix=old_prefix,
                     new_prefix=child,
                     old_suffix="",
                     new_suffix="",
-                    label="",
                 )
+                yield Completion(position=position, medit=medit)
 
     return source

@@ -82,7 +82,7 @@ def vimify(fuzz: FuzzyStep) -> VimCompletion:
     source = f"[{step.source_shortname}]"
     menu = f"{comp.kind} {source}" if comp.kind else source
     abbr = (
-        (comp.label or (comp.new_prefix + comp.new_suffix))
+        (comp.label or step.text)
         if metric.full_match or not metric.num_matches
         else context_gen(fuzz)
     )

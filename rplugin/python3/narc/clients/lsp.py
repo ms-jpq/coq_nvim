@@ -21,6 +21,7 @@ from ..shared.types import (
     Completion,
     Context,
     LEdit,
+    MEdit,
     Position,
     Seed,
     Snippet,
@@ -149,17 +150,20 @@ def parse_rows(
             old_prefix, old_suffix = parse_common_affix(
                 context, match_normalized=match_normalized, use_line=True,
             )
-            snippet = Snippet(kind=SNIPPET_TYPE, match=match, label=label, content=text)
-            yield Completion(
-                position=position,
+            snippet = Snippet(kind=SNIPPET_TYPE, match=match, content=text)
+            medit = MEdit(
                 old_prefix=old_prefix,
                 new_prefix=new_prefix,
                 old_suffix=old_suffix,
                 new_suffix=new_suffix,
+            )
+            yield Completion(
+                position=position,
                 label=label,
                 sortby=sortby,
                 kind=kind,
                 doc=doc,
+                medit=medit,
                 ledits=edits,
                 snippet=snippet,
             )
@@ -169,16 +173,19 @@ def parse_rows(
                 context, match_normalized=match_normalized, use_line=False,
             )
 
-            yield Completion(
-                position=position,
+            medit = MEdit(
                 old_prefix=old_prefix,
                 new_prefix=text,
                 old_suffix=old_suffix,
                 new_suffix="",
+            )
+            yield Completion(
+                position=position,
                 label=label,
                 sortby=sortby,
                 kind=kind,
                 doc=doc,
+                medit=medit,
                 ledits=edits,
             )
 

@@ -8,7 +8,7 @@ from pynvim.api.buffer import Buffer
 
 from ..shared.match import find_matches
 from ..shared.parse import coalesce, normalize, parse_common_affix
-from ..shared.types import Comm, Completion, Context, Position, Seed, Source
+from ..shared.types import Comm, Completion, Context, MEdit, Position, Seed, Source
 from .pkgs.nvim import call
 
 NAME = "around"
@@ -71,12 +71,12 @@ async def main(comm: Comm, seed: Seed) -> Source:
             _, old_suffix = parse_common_affix(
                 context, match_normalized=match_normalized, use_line=False,
             )
-            yield Completion(
-                position=position,
+            medit = MEdit(
                 old_prefix=old_prefix,
                 new_prefix=word,
                 old_suffix=old_suffix,
                 new_suffix="",
             )
+            yield Completion(position=position, medit=medit)
 
     return source

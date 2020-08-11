@@ -9,7 +9,7 @@ from ..shared.da import call
 from ..shared.match import find_matches
 from ..shared.nvim import run_forever
 from ..shared.parse import coalesce, normalize, parse_common_affix
-from ..shared.types import Comm, Completion, Context, Seed, Source
+from ..shared.types import Comm, Completion, Context, MEdit, Seed, Source
 from .pkgs.scheduler import schedule
 
 NAME = "tmux"
@@ -136,13 +136,14 @@ async def main(comm: Comm, seed: Seed) -> Source:
             _, old_suffix = parse_common_affix(
                 context, match_normalized=match_normalized, use_line=False,
             )
-            yield Completion(
-                position=position,
+
+            medit = MEdit(
                 old_prefix=old_prefix,
                 new_prefix=word,
                 old_suffix=old_suffix,
                 new_suffix="",
             )
+            yield Completion(position=position, medit=medit)
 
     run_forever(nvim, log=log, thing=background_update)
     return source

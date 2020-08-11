@@ -2,7 +2,7 @@ from typing import AsyncIterator
 
 from pynvim import Nvim
 
-from ..shared.types import Comm, Completion, Context, Seed, Source
+from ..shared.types import Comm, Completion, Context, MEdit, Seed, Source
 from .pkgs.nvim import call
 
 NAME = "tree_sitter"
@@ -21,12 +21,7 @@ async def main(comm: Comm, seed: Seed) -> Source:
     await init_lua(comm.nvim)
 
     async def source(context: Context) -> AsyncIterator[Completion]:
-        yield Completion(
-            position=context.position,
-            old_prefix="",
-            new_prefix="",
-            old_suffix="",
-            new_suffix="",
-        )
+        medit = MEdit(old_prefix="", new_prefix="", old_suffix="", new_suffix="",)
+        yield Completion(position=context.position, medit=medit)
 
     return source
