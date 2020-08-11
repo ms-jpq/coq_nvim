@@ -54,7 +54,7 @@ Plug 'ms-jpq/narc', {'branch': 'narc', 'do': ':UpdateRemotePlugins'}
 | name                                                | source                                                            |
 | --------------------------------------------------- | ----------------------------------------------------------------- |
 | [TabNine](https://github.com/ms-jpq/narc-t9)        | Fetches results from [TabNine](https://www.tabnine.com/) ML model |
-| [Snippets](https://github.com/ms-jpq/narc-snippets) | Snippets support for [LSP](), [Ultisnip](), [Neosnippet]()        |
+| [Snippets](https://github.com/ms-jpq/narc-snippets) | Snippets support for [LSP](https://github.com/microsoft/language-server-protocol/blob/master/snippetSyntax.md), [Ultisnip](https://github.com/sirver/UltiSnips), [Snipmate](https://github.com/honza/vim-snippets)        |
 
 ### Configuration
 
