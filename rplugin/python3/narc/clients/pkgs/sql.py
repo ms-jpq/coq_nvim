@@ -1,19 +1,18 @@
 from typing import AsyncIterator, Iterable, Iterator, Tuple
 
-from ...shared.parse import normalize
 from ...shared.sql import SQL_TYPES, AConnection
 
 _INIT = """
 DROP TABLE IF EXISTS words;
 
-CREATE VIRTUAL TABLE IF NOT EXISTS words USING fts4(
-  word  TEXT NOT NULL UNIQUE,
-  nword TEXT NOT NULL
+CREATE VIRTUAL TABLE IF NOT EXISTS words USING fts5(
+  word,
+  nword
 );
 """
 
 _POPULATE = """
-INSERT OR IGNORE INTO words (word, nword) VALUES (?, ?)
+INSERT OR IGNORE INTO words (word, nword) VALUES (?, lower(?))
 """
 
 _QUERY = """
@@ -29,7 +28,7 @@ async def init(conn: AConnection) -> None:
 async def populate(conn: AConnection, words: Iterator[str]) -> None:
     def cont() -> Iterator[Iterable[SQL_TYPES]]:
         for word in words:
-            yield word, normalize(word)
+            yield word, word
 
     async with await conn.execute_many(_POPULATE, cont()):
         pass
