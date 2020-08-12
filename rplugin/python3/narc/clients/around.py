@@ -19,7 +19,7 @@ NAME = "around"
 @dataclass(frozen=True)
 class Config:
     band_size: int
-    min_length: int
+    prefix_matches: int
     max_length: int
 
 
@@ -42,8 +42,8 @@ async def buffer_chars(nvim: Nvim, band_size: int, pos: Position) -> Sequence[st
 async def main(comm: Comm, seed: Seed) -> Source:
     config = Config(**seed.config)
     band_size = config.band_size
-    min_length, max_length, unifying_chars = (
-        config.min_length,
+    prefix_matches, max_length, unifying_chars = (
+        config.prefix_matches,
         config.max_length,
         seed.match.unifying_chars,
     )
@@ -53,16 +53,14 @@ async def main(comm: Comm, seed: Seed) -> Source:
     async def source(context: Context) -> AsyncIterator[Completion]:
         position = context.position
         old_prefix = context.alnums_before
-        ncword = context.alnums_normalized
+        ncword = context.alnums_normalized[:prefix_matches]
 
         chars, _ = await gather(
             buffer_chars(comm.nvim, band_size=band_size, pos=position), init(conn)
         )
         words = coalesce(chars, max_length=max_length, unifying_chars=unifying_chars)
-        await populate(conn, words)
-        async for word, match_normalized in query(
-            conn, ncword=ncword, min_match=min_length
-        ):
+        await populate(conn, words=words)
+        async for word, match_normalized in query(conn, ncword=ncword):
             _, old_suffix = parse_common_affix(
                 context, match_normalized=match_normalized, use_line=False,
             )

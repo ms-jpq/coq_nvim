@@ -4,7 +4,7 @@ from ...shared.parse import normalize
 from ...shared.sql import AConnection
 
 _INIT = """
-CREATE TABLE IF NOT EXISTS words (
+CREATE VIRTUAL TABLE IF NOT EXISTS words USING fts4(
   word TEXT NOT NULL UNIQUE,
   nword TEXT NOT NULL
 )
@@ -19,7 +19,7 @@ INSERT OR IGNORE INTO words(word, nword) VALUES (?, ?)
 """
 
 _QUERY = """
-SELECT word FROM words WHERE count_matches(?, word, nword) >= ?
+SELECT word, nword FROM words WHERE nword match ? and ncword <> ?
 """
 
 
@@ -35,14 +35,13 @@ async def populate(conn: AConnection, words: Iterator[str]) -> None:
         for word in words:
             yield word, normalize(word)
 
-    async with await conn.execute_many(_POPULATE, tuple(cont())):
+    async with await conn.execute_many(_POPULATE, cont()):
         pass
     await conn.commit()
 
 
-async def query(
-    conn: AConnection, ncword: str, min_match: int
-) -> AsyncIterator[Tuple[str, str]]:
-    async with await conn.execute(_QUERY, (ncword, min_match)) as cursor:
+async def query(conn: AConnection, ncword: str) -> AsyncIterator[Tuple[str, str]]:
+    match = f"{ncword}*"
+    async with await conn.execute(_QUERY, (match, ncword)) as cursor:
         async for row in cursor:
             yield row

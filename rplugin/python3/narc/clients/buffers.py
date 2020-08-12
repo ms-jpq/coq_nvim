@@ -22,7 +22,7 @@ NAME = "buffers"
 @dataclass(frozen=True)
 class Config:
     polling_rate: float
-    min_length: int
+    prefix_matches: int
     max_length: int
 
 
@@ -60,8 +60,8 @@ async def main(comm: Comm, seed: Seed) -> Source:
     nvim, log, chan = comm.nvim, comm.log, comm.chan
     config = Config(**seed.config)
     ch = Event()
-    min_length, max_length, unifying_chars = (
-        config.min_length,
+    prefix_matches, max_length, unifying_chars = (
+        config.prefix_matches,
         config.max_length,
         seed.match.unifying_chars,
     )
@@ -100,11 +100,9 @@ async def main(comm: Comm, seed: Seed) -> Source:
     async def source(context: Context) -> AsyncIterator[Completion]:
         position = context.position
         old_prefix = context.alnums_before
-        ncword = context.alnums_normalized
+        ncword = context.alnums_normalized[:prefix_matches]
 
-        async for word, match_normalized in query(
-            conn, ncword=ncword, min_match=min_length
-        ):
+        async for word, match_normalized in query(conn, ncword=ncword):
             _, old_suffix = parse_common_affix(
                 context, match_normalized=match_normalized, use_line=False,
             )
