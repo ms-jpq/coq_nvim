@@ -13,7 +13,7 @@ CREATE VIRTUAL TABLE IF NOT EXISTS words USING fts4(
 """
 
 _POPULATE = """
-INSERT OR IGNORE INTO words(word, nword) VALUES (?, ?)
+INSERT OR IGNORE INTO words (word, nword) VALUES (?, ?)
 """
 
 _QUERY = """
