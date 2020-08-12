@@ -1,4 +1,4 @@
-from asyncio.locks import Event
+from asyncio.locks import Event, Lock
 from dataclasses import dataclass
 from itertools import chain
 from os import linesep
@@ -67,8 +67,9 @@ async def main(comm: Comm, seed: Seed) -> Source:
     )
 
     bufnrs: Set[int] = set()
-    conn = AConnection()
-    await init(conn)
+    conn, lock = AConnection(), Lock()
+    async with lock:
+        await init(conn)
 
     await autocmd(
         nvim,
@@ -84,7 +85,8 @@ async def main(comm: Comm, seed: Seed) -> Source:
                 bufnr = await current_buf(nvim)
                 bufnrs.add(bufnr)
             elif action == "clear":
-                await init(conn)
+                async with lock:
+                    await init(conn)
                 ch.set()
 
     async def background_update() -> None:
@@ -95,24 +97,25 @@ async def main(comm: Comm, seed: Seed) -> Source:
             words = coalesce(
                 chars, max_length=max_length, unifying_chars=unifying_chars
             )
-            await populate(conn, words)
+            async with lock:
+                await populate(conn, words)
 
     async def source(context: Context) -> AsyncIterator[Completion]:
         position = context.position
-        old_prefix = context.alnums_before
         ncword = context.alnums_normalized[:prefix_matches]
 
-        async for word, match_normalized in prefix_query(conn, ncword=ncword):
-            _, old_suffix = parse_common_affix(
-                context, match_normalized=match_normalized, use_line=False,
-            )
-            medit = MEdit(
-                old_prefix=old_prefix,
-                new_prefix=word,
-                old_suffix=old_suffix,
-                new_suffix="",
-            )
-            yield Completion(position=position, medit=medit)
+        async with lock:
+            async for word, match_normalized in prefix_query(conn, ncword=ncword):
+                old_prefix, old_suffix = parse_common_affix(
+                    context, match_normalized=match_normalized, use_line=False,
+                )
+                medit = MEdit(
+                    old_prefix=old_prefix,
+                    new_prefix=word,
+                    old_suffix=old_suffix,
+                    new_suffix="",
+                )
+                yield Completion(position=position, medit=medit)
 
     run_forever(nvim, log=log, thing=ooda)
     run_forever(nvim, log=log, thing=background_update)

@@ -1,4 +1,4 @@
-from asyncio import gather
+from asyncio import Lock, gather
 from dataclasses import dataclass
 from itertools import chain
 from os import linesep
@@ -48,28 +48,32 @@ async def main(comm: Comm, seed: Seed) -> Source:
         seed.match.unifying_chars,
     )
 
-    conn = AConnection()
+    conn, lock = AConnection(), Lock()
+
+    async def reinit() -> None:
+        async with lock:
+            await init(conn)
 
     async def source(context: Context) -> AsyncIterator[Completion]:
         position = context.position
-        old_prefix = context.alnums_before
         ncword = context.alnums_normalized[:prefix_matches]
 
         chars, _ = await gather(
-            buffer_chars(comm.nvim, band_size=band_size, pos=position), init(conn)
+            buffer_chars(comm.nvim, band_size=band_size, pos=position), reinit()
         )
         words = coalesce(chars, max_length=max_length, unifying_chars=unifying_chars)
-        await populate(conn, words=words)
-        async for word, match_normalized in prefix_query(conn, ncword=ncword):
-            _, old_suffix = parse_common_affix(
-                context, match_normalized=match_normalized, use_line=False,
-            )
-            medit = MEdit(
-                old_prefix=old_prefix,
-                new_prefix=word,
-                old_suffix=old_suffix,
-                new_suffix="",
-            )
-            yield Completion(position=position, medit=medit)
+        async with lock:
+            await populate(conn, words=words)
+            async for word, match_normalized in prefix_query(conn, ncword=ncword):
+                old_prefix, old_suffix = parse_common_affix(
+                    context, match_normalized=match_normalized, use_line=False,
+                )
+                medit = MEdit(
+                    old_prefix=old_prefix,
+                    new_prefix=word,
+                    old_suffix=old_suffix,
+                    new_suffix="",
+                )
+                yield Completion(position=position, medit=medit)
 
     return source

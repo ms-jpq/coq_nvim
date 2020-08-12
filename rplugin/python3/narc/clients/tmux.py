@@ -1,4 +1,4 @@
-from asyncio import as_completed, gather
+from asyncio import Lock, as_completed, gather
 from asyncio.locks import Event
 from dataclasses import dataclass
 from os import linesep
@@ -105,38 +105,41 @@ async def main(comm: Comm, seed: Seed) -> Source:
         seed.match.unifying_chars,
     )
 
-    conn = AConnection()
-    await init(conn)
+    conn, lock = AConnection(), Lock()
+    async with lock:
+        await init(conn)
 
     async def background_update() -> None:
         async for _ in schedule(Event(), min_time=0, max_time=config.polling_rate):
-            await init(conn)
+            async with lock:
+                await init(conn)
             try:
                 async for words in tmux_words(
                     max_length=max_length, unifying_chars=unifying_chars
                 ):
-                    await populate(conn, words=words)
+                    async with lock:
+                        await populate(conn, words=words)
             except TmuxError as e:
                 message = f"failed to fetch tmux{linesep}{e}"
                 log.warn("%s", message)
 
     async def source(context: Context) -> AsyncIterator[Completion]:
         position = context.position
-        old_prefix = context.alnums_before
         ncword = context.alnums_normalized[:prefix_matches]
 
-        async for word, match_normalized in prefix_query(conn, ncword=ncword):
-            _, old_suffix = parse_common_affix(
-                context, match_normalized=match_normalized, use_line=False,
-            )
+        async with lock:
+            async for word, match_normalized in prefix_query(conn, ncword=ncword):
+                old_prefix, old_suffix = parse_common_affix(
+                    context, match_normalized=match_normalized, use_line=False,
+                )
 
-            medit = MEdit(
-                old_prefix=old_prefix,
-                new_prefix=word,
-                old_suffix=old_suffix,
-                new_suffix="",
-            )
-            yield Completion(position=position, medit=medit)
+                medit = MEdit(
+                    old_prefix=old_prefix,
+                    new_prefix=word,
+                    old_suffix=old_suffix,
+                    new_suffix="",
+                )
+                yield Completion(position=position, medit=medit)
 
     run_forever(nvim, log=log, thing=background_update)
     return source
