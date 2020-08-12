@@ -5,9 +5,11 @@ from collections.abc import AsyncIterable
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import AbstractAsyncContextManager
 from sqlite3 import Connection, Cursor, Row, connect
-from typing import Any, Callable, Iterable, Sequence, TypeVar
+from typing import Any, Callable, Iterable, Sequence, TypeVar, Union
 
 T = TypeVar("T")
+
+SQL_TYPES = Union[int, float, str, bytes, None]
 
 
 class AsyncExecutor:
@@ -69,7 +71,7 @@ class AConnection(AbstractAsyncContextManager):
     async def commit(self) -> None:
         return await self.chan.run(self.conn.commit)
 
-    async def execute(self, sql: str, params: Iterable[Any] = ()) -> ACursor:
+    async def execute(self, sql: str, params: Iterable[SQL_TYPES] = ()) -> ACursor:
         def cont() -> ACursor:
             cursor = self.conn.execute(sql, params)
             return ACursor(chan=self.chan, cursor=cursor)
@@ -77,7 +79,7 @@ class AConnection(AbstractAsyncContextManager):
         return await self.chan.run(cont)
 
     async def execute_many(
-        self, sql: str, params: Iterable[Iterable[Any]] = ()
+        self, sql: str, params: Iterable[Iterable[SQL_TYPES]] = ()
     ) -> ACursor:
         def cont() -> ACursor:
             cursor = self.conn.executemany(sql, params)
