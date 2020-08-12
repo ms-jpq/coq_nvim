@@ -3,14 +3,15 @@ from asyncio.locks import Event
 from dataclasses import dataclass
 from os import linesep
 from shutil import which
-from typing import AsyncIterator, Dict, Iterator, Sequence, Set
+from typing import AsyncIterator, Iterator, Sequence, Set
 
-from ..server.match import find_matches
 from ..shared.da import call
 from ..shared.nvim import run_forever
-from ..shared.parse import coalesce, normalize, parse_common_affix
+from ..shared.parse import coalesce, parse_common_affix
+from ..shared.sql import AConnection
 from ..shared.types import Comm, Completion, Context, MEdit, Seed, Source
 from .pkgs.scheduler import schedule
+from .pkgs.sql import init, populate, query
 
 NAME = "tmux"
 
@@ -80,7 +81,9 @@ def is_active(session_id: str, pane: TmuxPane) -> bool:
     return session_id == pane.session_id and pane.pane_active and pane.window_active
 
 
-async def tmux_words(max_length: int, unifying_chars: Set[str]) -> AsyncIterator[str]:
+async def tmux_words(
+    max_length: int, unifying_chars: Set[str]
+) -> AsyncIterator[Iterator[str]]:
     if which("tmux"):
         session_id, panes = await gather(tmux_session(), tmux_panes())
         sources = tuple(
@@ -89,10 +92,8 @@ async def tmux_words(max_length: int, unifying_chars: Set[str]) -> AsyncIterator
         for source in as_completed(sources):
             text = await source
             it = iter(text)
-            for word in coalesce(
-                it, max_length=max_length, unifying_chars=unifying_chars
-            ):
-                yield word
+            words = coalesce(it, max_length=max_length, unifying_chars=unifying_chars)
+            yield words
 
 
 async def main(comm: Comm, seed: Seed) -> Source:
@@ -104,17 +105,17 @@ async def main(comm: Comm, seed: Seed) -> Source:
         seed.match.unifying_chars,
     )
 
-    words: Dict[str, str] = {}
+    conn = AConnection()
+    await init(conn)
 
     async def background_update() -> None:
         async for _ in schedule(Event(), min_time=0, max_time=config.polling_rate):
-            words.clear()
+            await init(conn)
             try:
-                async for word in tmux_words(
+                async for words in tmux_words(
                     max_length=max_length, unifying_chars=unifying_chars
                 ):
-                    if word not in words:
-                        words[word] = normalize(word)
+                    await populate(conn, words=words)
             except TmuxError as e:
                 message = f"failed to fetch tmux{linesep}{e}"
                 log.warn("%s", message)
@@ -122,17 +123,11 @@ async def main(comm: Comm, seed: Seed) -> Source:
     async def source(context: Context) -> AsyncIterator[Completion]:
         position = context.position
         old_prefix = context.alnums_before
-        cword, ncword = context.alnums, context.alnums_normalized
+        ncword = context.alnums_normalized
 
-        for word in find_matches(
-            cword,
-            ncword=ncword,
-            min_match=min_length,
-            words=words,
-            options=seed.match,
-            use_secondary=False,
+        async for word, match_normalized in query(
+            conn, ncword=ncword, min_match=min_length
         ):
-            match_normalized = words[word]
             _, old_suffix = parse_common_affix(
                 context, match_normalized=match_normalized, use_line=False,
             )

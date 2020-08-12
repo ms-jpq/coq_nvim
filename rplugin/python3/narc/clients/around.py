@@ -1,15 +1,17 @@
+from asyncio import gather
 from dataclasses import dataclass
 from itertools import chain
 from os import linesep
-from typing import AsyncIterator, Dict, Sequence
+from typing import AsyncIterator, Sequence
 
 from pynvim import Nvim
 from pynvim.api.buffer import Buffer
 
-from ..server.match import find_matches
-from ..shared.parse import coalesce, normalize, parse_common_affix
+from ..shared.parse import coalesce, parse_common_affix
+from ..shared.sql import AConnection
 from ..shared.types import Comm, Completion, Context, MEdit, Position, Seed, Source
 from .pkgs.nvim import call
+from .pkgs.sql import init, populate, query
 
 NAME = "around"
 
@@ -46,28 +48,21 @@ async def main(comm: Comm, seed: Seed) -> Source:
         seed.match.unifying_chars,
     )
 
+    conn = AConnection()
+
     async def source(context: Context) -> AsyncIterator[Completion]:
         position = context.position
         old_prefix = context.alnums_before
-        cword, ncword = context.alnums, context.alnums_normalized
+        ncword = context.alnums_normalized
 
-        chars = await buffer_chars(comm.nvim, band_size=band_size, pos=position)
-        words: Dict[str, str] = {}
-        for word in coalesce(
-            chars, max_length=max_length, unifying_chars=unifying_chars
+        chars, _ = await gather(
+            buffer_chars(comm.nvim, band_size=band_size, pos=position), init(conn)
+        )
+        words = coalesce(chars, max_length=max_length, unifying_chars=unifying_chars)
+        await populate(conn, words)
+        async for word, match_normalized in query(
+            conn, ncword=ncword, min_match=min_length
         ):
-            if word not in words:
-                words[word] = normalize(word)
-
-        for word in find_matches(
-            cword,
-            ncword=ncword,
-            min_match=min_length,
-            words=words,
-            options=seed.match,
-            use_secondary=False,
-        ):
-            match_normalized = words[word]
             _, old_suffix = parse_common_affix(
                 context, match_normalized=match_normalized, use_line=False,
             )

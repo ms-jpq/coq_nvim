@@ -108,25 +108,3 @@ def gen_metric(
         full_match=full_match,
     )
     return metric
-
-
-def find_matches(
-    cword: str,
-    ncword: str,
-    min_match: int,
-    words: Dict[str, str],
-    options: MatchOptions,
-    use_secondary: bool,
-) -> Iterator[str]:
-    for match, n_match in words.items():
-        if n_match not in ncword:
-            metric = gen_metric(
-                cword,
-                ncword=ncword,
-                match=match,
-                n_match=n_match,
-                options=options,
-                use_secondary=use_secondary,
-            )
-            if metric.num_matches >= min_match:
-                yield match
