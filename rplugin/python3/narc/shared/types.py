@@ -104,6 +104,7 @@ class Completion:
     medit: Optional[MEdit] = None
     ledits: Sequence[LEdit] = field(default_factory=tuple)
     snippet: Optional[Snippet] = None
+    unique: bool = True
 
 
 Source = Callable[[Context], AsyncIterator[Completion]]
