@@ -101,11 +101,12 @@ async def main(comm: Comm, seed: Seed) -> Source:
                 await populate(conn, words)
 
     async def source(context: Context) -> AsyncIterator[Completion]:
-        position = context.position
-        ncword = context.alnums_normalized[:prefix_matches]
+        position, ncword = context.position, context.alnums_normalized
 
         async with lock:
-            async for word, match_normalized in prefix_query(conn, ncword=ncword):
+            async for word, match_normalized in prefix_query(
+                conn, ncword=ncword, prefix_matches=prefix_matches
+            ):
                 old_prefix, old_suffix = parse_common_affix(
                     context, match_normalized=match_normalized, use_line=False,
                 )

@@ -19,7 +19,7 @@ INSERT OR IGNORE INTO words(word, nword) VALUES (?, ?)
 """
 
 _QUERY = """
-SELECT word, nword FROM words WHERE nword match ? and ncword <> ?
+SELECT word, nword FROM words WHERE nword match ? and nword <> ?
 """
 
 
@@ -41,9 +41,9 @@ async def populate(conn: AConnection, words: Iterator[str]) -> None:
 
 
 async def prefix_query(
-    conn: AConnection, ncword: str
+    conn: AConnection, ncword: str, prefix_matches: int
 ) -> AsyncIterator[Tuple[str, str]]:
-    match = f"{ncword}*"
+    match = f"{ncword[:prefix_matches]}*"
     async with await conn.execute(_QUERY, (match, ncword)) as cursor:
         async for row in cursor:
             yield row
