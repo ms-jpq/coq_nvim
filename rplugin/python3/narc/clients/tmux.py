@@ -11,7 +11,7 @@ from ..shared.parse import coalesce, parse_common_affix
 from ..shared.sql import AConnection
 from ..shared.types import Comm, Completion, Context, MEdit, Seed, Source
 from .pkgs.scheduler import schedule
-from .pkgs.sql import init, populate, query
+from .pkgs.sql import init, populate, prefix_query
 
 NAME = "tmux"
 
@@ -125,7 +125,7 @@ async def main(comm: Comm, seed: Seed) -> Source:
         old_prefix = context.alnums_before
         ncword = context.alnums_normalized[:prefix_matches]
 
-        async for word, match_normalized in query(conn, ncword=ncword):
+        async for word, match_normalized in prefix_query(conn, ncword=ncword):
             _, old_suffix = parse_common_affix(
                 context, match_normalized=match_normalized, use_line=False,
             )

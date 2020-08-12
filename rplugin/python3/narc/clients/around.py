@@ -11,7 +11,7 @@ from ..shared.parse import coalesce, parse_common_affix
 from ..shared.sql import AConnection
 from ..shared.types import Comm, Completion, Context, MEdit, Position, Seed, Source
 from .pkgs.nvim import call
-from .pkgs.sql import init, populate, query
+from .pkgs.sql import init, populate, prefix_query
 
 NAME = "around"
 
@@ -60,7 +60,7 @@ async def main(comm: Comm, seed: Seed) -> Source:
         )
         words = coalesce(chars, max_length=max_length, unifying_chars=unifying_chars)
         await populate(conn, words=words)
-        async for word, match_normalized in query(conn, ncword=ncword):
+        async for word, match_normalized in prefix_query(conn, ncword=ncword):
             _, old_suffix = parse_common_affix(
                 context, match_normalized=match_normalized, use_line=False,
             )
