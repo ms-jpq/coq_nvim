@@ -59,15 +59,12 @@ class AConnection(AbstractAsyncContextManager):
     async def __aexit__(self, *_: Any) -> None:
         await self.chan.run(self.conn.close)
 
-    async def create_function(
-        self, name: str, num_params: int, func: Callable[..., Any], deterministic: bool
-    ) -> None:
-        def cont() -> None:
-            self.conn.create_function(
-                name, num_params, func=func, deterministic=deterministic
-            )
+    async def execute_script(self, script: str) -> ACursor:
+        def cont() -> ACursor:
+            cursor = self.conn.executescript(script)
+            return cursor
 
-        await self.chan.run(cont)
+        return await self.chan.run(cont)
 
     async def commit(self) -> None:
         return await self.chan.run(self.conn.commit)
