@@ -24,10 +24,9 @@ class Replacement:
 
 # 0 based
 def rows_to_fetch(payload: Payload) -> Optional[Tuple[int, int]]:
-    row = payload.position.row
-    medit, edits = payload.medit, payload.ledits
-
     def cont() -> Iterator[Tuple[int, int]]:
+        row = payload.position.row
+        medit, edits = payload.medit, payload.ledits
         if medit:
             old_lc, new_lc = (
                 medit.old_prefix.count(linesep),
