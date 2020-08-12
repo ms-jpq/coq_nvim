@@ -5,8 +5,6 @@ from os.path import dirname, isdir, join, realpath, sep
 from pathlib import Path
 from typing import AsyncIterator, Iterator, Sequence
 
-from ..shared.match import gen_metric
-from ..shared.parse import normalize
 from ..shared.types import Comm, Completion, Context, MEdit, Seed, Source
 
 NAME = "paths"
@@ -90,16 +88,9 @@ async def main(comm: Comm, seed: Seed) -> Source:
         _, _, old_prefix = before.rpartition(sep)
         paths = parse_paths(before)
 
+        prefix_char = next(iter(old_prefix), "")
         for child in await find_children(paths):
-            metric = gen_metric(
-                old_prefix,
-                ncword=normalize(old_prefix),
-                match=child,
-                n_match=normalize(child),
-                options=seed.match,
-                use_secondary=False,
-            )
-            if not old_prefix or metric.num_matches:
+            if child.startswith(prefix_char):
                 medit = MEdit(
                     old_prefix=old_prefix,
                     new_prefix=child,

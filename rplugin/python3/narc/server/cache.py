@@ -2,10 +2,10 @@ from asyncio import gather, wait
 from collections import deque
 from typing import Awaitable, Callable, Dict, List, Optional, Sequence, Set, Tuple
 
-from ..shared.match import gen_metric
 from ..shared.parse import parse_common_affix
 from ..shared.types import Completion, Context, MEdit
 from .fuzzy import FuzzyStep
+from .match import gen_metric
 from .types import CacheOptions, MatchOptions, Step
 
 

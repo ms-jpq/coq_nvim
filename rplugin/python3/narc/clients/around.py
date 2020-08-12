@@ -6,7 +6,7 @@ from typing import AsyncIterator, Dict, Sequence
 from pynvim import Nvim
 from pynvim.api.buffer import Buffer
 
-from ..shared.match import find_matches
+from ..server.match import find_matches
 from ..shared.parse import coalesce, normalize, parse_common_affix
 from ..shared.types import Comm, Completion, Context, MEdit, Position, Seed, Source
 from .pkgs.nvim import call

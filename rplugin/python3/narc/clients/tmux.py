@@ -5,8 +5,8 @@ from os import linesep
 from shutil import which
 from typing import AsyncIterator, Dict, Iterator, Sequence, Set
 
+from ..server.match import find_matches
 from ..shared.da import call
-from ..shared.match import find_matches
 from ..shared.nvim import run_forever
 from ..shared.parse import coalesce, normalize, parse_common_affix
 from ..shared.types import Comm, Completion, Context, MEdit, Seed, Source
