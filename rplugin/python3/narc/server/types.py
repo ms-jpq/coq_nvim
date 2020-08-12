@@ -6,6 +6,7 @@ from ..shared.types import (
     Factory,
     LEdit,
     MatchOptions,
+    MEdit,
     Position,
     Seed,
     Snippet,
@@ -97,10 +98,7 @@ class Step:
 @dataclass(frozen=True)
 class Payload:
     position: Position
-    old_prefix: str
-    new_prefix: str
-    old_suffix: str
-    new_suffix: str
+    medit: Optional[MEdit]
     ledits: Sequence[LEdit]
     snippet: Optional[Snippet]
 

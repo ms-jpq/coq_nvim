@@ -4,7 +4,7 @@ from pynvim import Nvim
 from pynvim.api.window import Window
 
 from ..shared.nvim import call
-from ..shared.types import LEdit, Position, Snippet, SnippetContext, SnippetEngine
+from ..shared.types import LEdit, MEdit, Position, Snippet, SnippetContext, SnippetEngine
 from .edit import replace_lines
 from .types import Payload
 
@@ -20,6 +20,8 @@ async def apply_patch(
 
     try:
         position = Position(**d["position"])
+        me = d.get("medit")
+        medit = MEdit(**me) if me else None
         edits = tuple(
             LEdit(
                 begin=Position(row=edit["begin"]["row"], col=edit["begin"]["col"]),
@@ -31,7 +33,7 @@ async def apply_patch(
         snip = d.get("snippet")
         snippet = Snippet(**snip) if snip else None
         payload = Payload(
-            **{**d, **dict(position=position, ledits=edits, snippet=snippet)}
+            **{**d, **dict(position=position, medit=medit, ledits=edits, snippet=snippet)}
         )
     except (KeyError, TypeError):
         return False

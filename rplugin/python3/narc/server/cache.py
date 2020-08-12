@@ -1,35 +1,38 @@
 from asyncio import gather, wait
 from collections import deque
-from typing import Awaitable, Callable, Dict, List, Sequence, Set, Tuple
+from typing import Awaitable, Callable, Dict, List, Optional, Sequence, Set, Tuple
 
 from ..shared.match import gen_metric
 from ..shared.parse import parse_common_affix
-from ..shared.types import Completion, Context
+from ..shared.types import Completion, Context, MEdit
 from .fuzzy import FuzzyStep
 from .types import CacheOptions, MatchOptions, Step
 
 
-def recalculate(context: Context, options: CacheOptions, step: Step) -> Step:
-    old_prefix = context.alnums_before
-    _, old_suffix = parse_common_affix(
-        context, match_normalized=step.text_normalized, use_line=False
-    )
-    comp = Completion(
-        position=context.position,
-        old_prefix=old_prefix,
-        new_prefix=step.comp.new_prefix,
-        old_suffix=old_suffix,
-        new_suffix=step.comp.new_suffix,
-    )
-    new_step = Step(
-        source=step.source,
-        source_shortname=step.source_shortname,
-        rank=step.rank,
-        text=step.text,
-        text_normalized=step.text_normalized,
-        comp=comp,
-    )
-    return new_step
+def recalculate(context: Context, options: CacheOptions, step: Step) -> Optional[Step]:
+    me = step.comp.medit
+    if me:
+        old_prefix, old_suffix = parse_common_affix(
+            context, match_normalized=step.text_normalized, use_line=False
+        )
+        medit = MEdit(
+            old_prefix=old_prefix,
+            new_prefix=me.new_prefix,
+            old_suffix=old_suffix,
+            new_suffix=me.new_suffix,
+        )
+        comp = Completion(position=context.position, medit=medit)
+        new_step = Step(
+            source=step.source,
+            source_shortname=step.source_shortname,
+            rank=step.rank,
+            text=step.text,
+            text_normalized=step.text_normalized,
+            comp=comp,
+        )
+        return new_step
+    else:
+        return None
 
 
 def make_cache(
@@ -81,14 +84,15 @@ def make_cache(
                             match=text,
                             n_match=nword,
                             options=match_opt,
-                            use_secondary=True
+                            use_secondary=True,
                         )
                         if metric.num_matches >= cache_opt.min_match:
                             new_step = recalculate(
                                 context, options=cache_opt, step=step
                             )
-                            fuzzystep = FuzzyStep(step=new_step, metric=metric,)
-                            acc.append(fuzzystep)
+                            if new_step:
+                                fuzzystep = FuzzyStep(step=new_step, metric=metric,)
+                                acc.append(fuzzystep)
 
         done, pending = await wait((cont(),), timeout=timeout)
         for p in pending:
