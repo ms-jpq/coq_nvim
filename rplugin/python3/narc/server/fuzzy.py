@@ -81,7 +81,7 @@ def vimify(fuzz: FuzzyStep) -> VimCompletion:
     menu = f"{comp.kind} {source}" if comp.kind else source
     abbr = (
         (comp.label or step.text)
-        if metric.full_match or not metric.num_matches
+        if comp.snippet or metric.full_match or not metric.num_matches
         else context_gen(fuzz)
     )
     user_data = gen_payload(comp=comp)
