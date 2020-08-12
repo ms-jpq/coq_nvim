@@ -1,7 +1,7 @@
-from typing import AsyncIterator, Iterator, Tuple
+from typing import AsyncIterator, Iterable, Iterator, Tuple
 
 from ...shared.parse import normalize
-from ...shared.sql import AConnection
+from ...shared.sql import SQL_TYPES, AConnection
 
 _INIT = """
 DROP TABLE IF EXISTS words;
@@ -27,7 +27,7 @@ async def init(conn: AConnection) -> None:
 
 
 async def populate(conn: AConnection, words: Iterator[str]) -> None:
-    def cont() -> Iterator[Tuple[str, str]]:
+    def cont() -> Iterator[Iterable[SQL_TYPES]]:
         for word in words:
             yield word, normalize(word)
 
