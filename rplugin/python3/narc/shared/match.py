@@ -7,6 +7,16 @@ from .types import MatchOptions
 
 
 @dataclass(frozen=True)
+class MetricSeed:
+    cword: str
+    ncword: str
+    match: str
+    n_match: str
+    options: MatchOptions
+    use_secondary: bool
+
+
+@dataclass(frozen=True)
 class Metric:
     prefix_matches: int
     consecutive_matches: int
