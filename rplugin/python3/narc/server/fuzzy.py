@@ -60,7 +60,8 @@ def context_gen(fuzz: FuzzyStep) -> str:
                 yield "]"
 
     fuzzy_label = "".join(gen())
-    return f"{label} <- {fuzzy_label}"
+    full_label = f"{label} <- {fuzzy_label}"
+    return full_label
 
 
 def gen_payload(comp: Completion) -> Payload:
