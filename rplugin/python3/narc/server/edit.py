@@ -200,7 +200,8 @@ def replace_lines(nvim: Nvim, payload: Payload) -> None:
         else:
             log.warn("%s", "No cursor position found")
 
-        message = f"{payload}{linesep}{replacements}"
-        log.debug("%s", message)
     else:
         log.warn("%s", "No edits found")
+
+    message = f"{payload}{linesep}{replacements}"
+    log.debug("%s", message)
