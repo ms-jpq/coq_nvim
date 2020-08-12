@@ -4,14 +4,12 @@ from ...shared.parse import normalize
 from ...shared.sql import AConnection
 
 _INIT = """
+DROP TABLE IF EXISTS words;
+
 CREATE VIRTUAL TABLE IF NOT EXISTS words USING fts4(
   word  TEXT NOT NULL UNIQUE,
   nword TEXT NOT NULL
-)
-"""
-
-_DEINIT = """
-DROP TABLE IF EXISTS words
+);
 """
 
 _POPULATE = """
@@ -24,9 +22,7 @@ SELECT word, nword FROM words WHERE nword match ? and nword <> ?
 
 
 async def init(conn: AConnection) -> None:
-    async with await conn.execute(_DEINIT):
-        pass
-    async with await conn.execute(_INIT):
+    async with await conn.execute_script(_INIT):
         pass
 
 

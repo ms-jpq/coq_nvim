@@ -62,7 +62,7 @@ class AConnection(AbstractAsyncContextManager):
     async def execute_script(self, script: str) -> ACursor:
         def cont() -> ACursor:
             cursor = self.conn.executescript(script)
-            return cursor
+            return ACursor(chan=self.chan, cursor=cursor)
 
         return await self.chan.run(cont)
 
