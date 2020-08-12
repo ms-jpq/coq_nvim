@@ -108,11 +108,14 @@ def fuzzy(
     sorted_steps = sorted(steps, key=cast(Callable[[FuzzyStep], Any], rank))
     for fuzz in sorted_steps:
         step = fuzz.step
+        unique = step.comp.unique
         source = step.source
         seen_count = seen_by_source.get(source, 0) + 1
         seen_by_source[source] = seen_count
         text = step.text
 
-        if seen_count <= limits[source] and text not in seen:
-            seen.add(text)
-            yield vimify(fuzz=fuzz)
+        if seen_count <= limits[source]:
+            if not unique or text not in seen:
+                if unique:
+                    seen.add(text)
+                yield vimify(fuzz=fuzz)
