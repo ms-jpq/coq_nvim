@@ -5,7 +5,7 @@ from ...shared.sql import AConnection
 
 _INIT = """
 CREATE VIRTUAL TABLE IF NOT EXISTS words USING fts4(
-  word TEXT NOT NULL UNIQUE,
+  word  TEXT NOT NULL UNIQUE,
   nword TEXT NOT NULL
 )
 """
