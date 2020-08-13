@@ -55,11 +55,6 @@ async def prefix_query(
 
     if escaped:
         match = f'"{escaped}"*'
-        try:
-            async with await conn.execute(_QUERY, (match, ncword)) as cursor:
-                async for row in cursor:
-                    yield row
-        except OperationalError as e:
-            log.exception("%s", e)
-            log.critical("%s", match)
-            raise
+        async with await conn.execute(_QUERY, (match, ncword)) as cursor:
+            async for row in cursor:
+                yield row
