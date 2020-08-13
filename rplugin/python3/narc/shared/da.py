@@ -1,13 +1,23 @@
-from asyncio import create_subprocess_exec
+from asyncio import create_subprocess_exec, get_event_loop
 from asyncio.subprocess import PIPE
 from dataclasses import dataclass
+from functools import partial
 from importlib.util import module_from_spec, spec_from_file_location
 from json import dump, load
 from os import makedirs
 from os.path import basename, dirname, exists, splitext
 from sys import modules
 from types import ModuleType
-from typing import Any, AsyncIterator, Iterator, Optional, Sequence, TypeVar, cast
+from typing import (
+    Any,
+    AsyncIterator,
+    Callable,
+    Iterator,
+    Optional,
+    Sequence,
+    TypeVar,
+    cast,
+)
 
 T = TypeVar("T")
 
@@ -29,6 +39,12 @@ async def anext(aiter: AsyncIterator[T], default: Optional[T] = None) -> Optiona
         return await aiter.__anext__()
     except StopAsyncIteration:
         return default
+
+
+async def run_in_executor(f: Callable[..., T], *args: Any, **kwargs: Any) -> T:
+    loop = get_event_loop()
+    cont = partial(f, *args, **kwargs)
+    return await loop.run_in_executor(None, cont)
 
 
 def merge(ds1: Any, ds2: Any, replace: bool = False) -> Any:
