@@ -1,10 +1,10 @@
-from asyncio import get_running_loop
 from itertools import accumulate
 from os import listdir
 from os.path import dirname, isdir, join, realpath, sep
 from pathlib import Path
 from typing import AsyncIterator, Iterator, Sequence
 
+from ..shared.da import run_in_executor
 from ..shared.types import Comm, Completion, Context, MEdit, Seed, Source
 
 NAME = "paths"
@@ -56,8 +56,6 @@ def list_dir(path: str) -> Iterator[str]:
 
 
 async def find_children(paths: Iterator[str]) -> Sequence[str]:
-    loop = get_running_loop()
-
     def cont() -> Iterator[str]:
         for path in paths:
             rp = realpath(path)
@@ -78,7 +76,7 @@ async def find_children(paths: Iterator[str]) -> Sequence[str]:
     def co() -> Sequence[str]:
         return tuple(cont())
 
-    return await loop.run_in_executor(None, co)
+    return await run_in_executor(None, co)
 
 
 async def main(comm: Comm, seed: Seed) -> Source:

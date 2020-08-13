@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from asyncio import get_running_loop
 from collections.abc import AsyncIterable
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import AbstractAsyncContextManager
@@ -18,6 +17,8 @@ from typing import (
     Union,
 )
 
+from .da import run_in_executor
+
 T = TypeVar("T")
 
 SQL_TYPES = Union[int, float, str, bytes, None]
@@ -25,11 +26,10 @@ SQL_TYPES = Union[int, float, str, bytes, None]
 
 class AsyncExecutor:
     def __init__(self) -> None:
-        self.loop = get_running_loop()
         self.chan = ThreadPoolExecutor(max_workers=1)
 
     async def run(self, cont: Callable[[], T]) -> T:
-        return await self.loop.run_in_executor(self.chan, cont)
+        return await run_in_executor(self.chan, cont)
 
     def submit(self, cont: Callable[[], T]) -> T:
         return self.chan.submit(cont).result()
