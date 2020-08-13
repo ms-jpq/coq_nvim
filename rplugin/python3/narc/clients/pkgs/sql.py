@@ -1,3 +1,5 @@
+from logging import Logger
+from sqlite3 import OperationalError
 from typing import AsyncIterator, Iterable, Iterator, Tuple
 
 from ...shared.sql import SQL_TYPES, AConnection
@@ -36,11 +38,15 @@ async def populate(conn: AConnection, words: Iterator[str]) -> None:
 
 
 async def prefix_query(
-    conn: AConnection, ncword: str, prefix_matches: int
+    conn: AConnection, log: Logger, ncword: str, prefix_matches: int
 ) -> AsyncIterator[Tuple[str, str]]:
     smol = ncword[:prefix_matches]
     if smol:
         match = f"{smol}*"
-        async with await conn.execute(_QUERY, (match, ncword)) as cursor:
-            async for row in cursor:
-                yield row
+        try:
+            async with await conn.execute(_QUERY, (match, ncword)) as cursor:
+                async for row in cursor:
+                    yield row
+        except OperationalError as e:
+            log.exception("%s", e)
+            log.critical("%s", f"{match}: {match} {ncword}")

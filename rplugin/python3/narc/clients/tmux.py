@@ -128,7 +128,7 @@ async def main(comm: Comm, seed: Seed) -> Source:
 
         async with lock:
             async for word, match_normalized in prefix_query(
-                conn, ncword=ncword, prefix_matches=prefix_matches
+                conn, log=log, ncword=ncword, prefix_matches=prefix_matches
             ):
                 old_prefix, old_suffix = parse_common_affix(
                     context, match_normalized=match_normalized, use_line=False,
