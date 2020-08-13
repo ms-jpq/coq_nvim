@@ -4,8 +4,8 @@ from typing import AsyncIterator, Iterable, Iterator, Tuple
 
 from ...shared.sql import SQL_TYPES, AConnection, sql_escape
 
-ESCAPE_CHAR = "!"
-MATCH_ESCAPE = {"-", "*"}
+ESCAPE_CHAR = "-"
+MATCH_ESCAPE = {"-"}
 
 
 _INIT = """
@@ -26,7 +26,7 @@ _QUERY = """
 SELECT word, nword
 FROM words
 WHERE
-    nword MATCH ? ESCAPE '!'
+    nword MATCH ?
     AND
     nword <> ?
 """
@@ -54,7 +54,7 @@ async def prefix_query(
     escaped = sql_escape(smol, nono=MATCH_ESCAPE, escape=ESCAPE_CHAR)
 
     if escaped:
-        match = f"{escaped}*"
+        match = f'"{escaped}"*'
         try:
             async with await conn.execute(_QUERY, (match, ncword)) as cursor:
                 async for row in cursor:
