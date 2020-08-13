@@ -1,5 +1,3 @@
-from logging import Logger
-from sqlite3 import OperationalError
 from typing import AsyncIterator, Iterable, Iterator, Tuple
 
 from ...shared.sql import SQL_TYPES, AConnection, sql_escape
