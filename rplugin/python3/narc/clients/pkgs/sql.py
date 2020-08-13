@@ -48,7 +48,7 @@ async def populate(conn: AConnection, words: Iterator[str]) -> None:
 
 
 async def prefix_query(
-    conn: AConnection, log: Logger, ncword: str, prefix_matches: int
+    conn: AConnection, ncword: str, prefix_matches: int
 ) -> AsyncIterator[Tuple[str, str]]:
     smol = ncword[:prefix_matches]
     escaped = sql_escape(smol, nono=MATCH_ESCAPE, escape=ESCAPE_CHAR)

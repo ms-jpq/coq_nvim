@@ -40,7 +40,6 @@ async def buffer_chars(nvim: Nvim, band_size: int, pos: Position) -> Sequence[st
 
 
 async def main(comm: Comm, seed: Seed) -> Source:
-    log = comm.log
     config = Config(**seed.config)
     band_size = config.band_size
     prefix_matches, max_length, unifying_chars = (
@@ -65,7 +64,7 @@ async def main(comm: Comm, seed: Seed) -> Source:
         async with lock:
             await populate(conn, words=words)
             async for word, match_normalized in prefix_query(
-                conn, log=log, ncword=ncword, prefix_matches=prefix_matches
+                conn, ncword=ncword, prefix_matches=prefix_matches
             ):
                 old_prefix, old_suffix = parse_common_affix(
                     context, match_normalized=match_normalized, use_line=False,
