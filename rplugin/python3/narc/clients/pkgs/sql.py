@@ -2,7 +2,7 @@ from typing import AsyncIterator, Iterable, Iterator, Tuple
 
 from ...shared.sql import SQL_TYPES, AConnection, sql_escape
 
-ESCAPE_CHAR = "-"
+ESCAPE_CHAR = '"'
 MATCH_ESCAPE = {} | {ESCAPE_CHAR}
 
 
