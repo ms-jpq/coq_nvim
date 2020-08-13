@@ -2,7 +2,11 @@ from logging import Logger
 from sqlite3 import OperationalError
 from typing import AsyncIterator, Iterable, Iterator, Tuple
 
-from ...shared.sql import SQL_TYPES, AConnection
+from ...shared.sql import SQL_TYPES, AConnection, sql_escape
+
+ESCAPE_CHAR = "!"
+MATCH_ESCAPE = {"-", "*"}
+
 
 _INIT = """
 DROP TABLE IF EXISTS words;
@@ -18,7 +22,7 @@ INSERT OR IGNORE INTO words (word, nword) VALUES (?, lower(?))
 """
 
 _QUERY = """
-SELECT word, nword FROM words WHERE nword match ? and nword <> ?
+SELECT word, nword FROM words WHERE nword match ? and nword <> ? ESCAPE '!'
 """
 
 
@@ -41,8 +45,9 @@ async def prefix_query(
     conn: AConnection, log: Logger, ncword: str, prefix_matches: int
 ) -> AsyncIterator[Tuple[str, str]]:
     smol = ncword[:prefix_matches]
+    escaped = sql_escape(smol, nono=MATCH_ESCAPE, escape=ESCAPE_CHAR)
     if smol:
-        match = f"{smol}*"
+        match = f"{escaped}*"
         try:
             async with await conn.execute(_QUERY, (match, ncword)) as cursor:
                 async for row in cursor:
