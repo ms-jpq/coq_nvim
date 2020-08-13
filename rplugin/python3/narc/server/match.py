@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from difflib import SequenceMatcher
 from math import inf
-from typing import Dict, Iterator
+from typing import Dict
 
 from .types import MatchOptions
 
