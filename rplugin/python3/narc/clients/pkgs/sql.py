@@ -18,11 +18,17 @@ CREATE VIRTUAL TABLE IF NOT EXISTS words USING fts5(
 """
 
 _POPULATE = """
-INSERT OR IGNORE INTO words (word, nword) VALUES (?, lower(?))
+INSERT OR IGNORE INTO words (word, nword)
+VALUES (?, lower(?))
 """
 
 _QUERY = """
-SELECT word, nword FROM words WHERE nword match ? and nword <> ? ESCAPE '!'
+SELECT word, nword
+FROM words
+WHERE
+    nword MATCH ? ESCAPE '!'
+    AND
+    nword <> ?
 """
 
 
@@ -46,7 +52,8 @@ async def prefix_query(
 ) -> AsyncIterator[Tuple[str, str]]:
     smol = ncword[:prefix_matches]
     escaped = sql_escape(smol, nono=MATCH_ESCAPE, escape=ESCAPE_CHAR)
-    if smol:
+
+    if escaped:
         match = f"{escaped}*"
         try:
             async with await conn.execute(_QUERY, (match, ncword)) as cursor:
@@ -54,4 +61,5 @@ async def prefix_query(
                     yield row
         except OperationalError as e:
             log.exception("%s", e)
-            log.critical("%s", f"{match}: {match} {ncword}")
+            log.critical("%s", match)
+            raise
