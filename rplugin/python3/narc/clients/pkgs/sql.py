@@ -38,7 +38,9 @@ async def populate(conn: AConnection, words: Iterator[str]) -> None:
 async def prefix_query(
     conn: AConnection, ncword: str, prefix_matches: int
 ) -> AsyncIterator[Tuple[str, str]]:
-    match = f"{ncword[:prefix_matches]}*"
-    async with await conn.execute(_QUERY, (match, ncword)) as cursor:
-        async for row in cursor:
-            yield row
+    smol = ncword[:prefix_matches]
+    if smol:
+        match = f"{smol}*"
+        async with await conn.execute(_QUERY, (match, ncword)) as cursor:
+            async for row in cursor:
+                yield row
