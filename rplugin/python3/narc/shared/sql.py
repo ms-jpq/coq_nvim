@@ -5,7 +5,18 @@ from collections.abc import AsyncIterable
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import AbstractAsyncContextManager
 from sqlite3 import Connection, Cursor, Row, connect
-from typing import Any, Callable, Iterable, Iterator, Sequence, Set, TypeVar, Union
+from typing import (
+    Any,
+    AsyncIterator,
+    Callable,
+    Iterable,
+    Iterator,
+    Optional,
+    Sequence,
+    Set,
+    TypeVar,
+    Union,
+)
 
 T = TypeVar("T")
 
@@ -67,6 +78,20 @@ class AConnection(AbstractAsyncContextManager):
             return ACursor(chan=self.chan, cursor=cursor)
 
         return await self.chan.run(cont)
+
+    async def iter_dump(self) -> AsyncIterator:
+        def co() -> Iterator[str]:
+            return self.conn.iterdump()
+
+        it = await self.chan.run(co)
+
+        def cont() -> Optional[str]:
+            return next(it, None)
+
+        line = await self.chan.run(cont)
+        while line is not None:
+            yield line
+            line = await self.chan.run(cont)
 
     async def execute_script(self, script: str) -> ACursor:
         def cont() -> ACursor:
