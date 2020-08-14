@@ -112,6 +112,7 @@ class Completion:
     ledits: Sequence[LEdit] = field(default_factory=tuple)
     snippet: Optional[Snippet] = None
     unique: bool = True
+    match_syms: bool = False
 
 
 Source = Callable[[Context], AsyncIterator[Completion]]
