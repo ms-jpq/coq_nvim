@@ -70,6 +70,13 @@ class Context:
     syms_before: str
     syms_after: str
 
+    alnum_syms: str
+    alnum_syms_normalized: str
+    alnum_syms_before: str
+    alnum_syms_before_normalized: str
+    alnum_syms_after: str
+    alnum_syms_after_normalized: str
+
 
 @dataclass(frozen=True)
 class MEdit:

@@ -57,9 +57,12 @@ def gen_ctx(
 
     alnums_before = "".join(reversed(l_alnums))
     alnums_before_normalized = normalize(alnums_before)
+
     alnums_after = "".join(r_alnums)
     alnums_after_normalized = normalize(alnums_after)
+
     alnums = alnums_before + alnums_after
+    alnums_normalized = alnums_before_normalized + alnums_after_normalized
 
     syms_before = "".join(reversed(l_syms))
     syms_after = "".join(r_syms)
@@ -68,7 +71,15 @@ def gen_ctx(
     line_normalized = normalize(line)
     line_before_normalized = normalize(line_before)
     line_after_normalized = normalize(line_after)
-    alnums_normalized = normalize(alnums)
+
+    alnum_syms = syms_before + alnums + syms_after
+    alnum_syms_normalized = syms_before + alnums_normalized + syms_after
+
+    alnum_syms_before = syms_before + alnums_before
+    alnum_syms_before_normalized = syms_before + alnums_before_normalized
+
+    alnum_syms_after = alnums_after + syms_after
+    alnum_syms_after_normalized = alnums_after_normalized + syms_after
 
     return Context(
         position=position,
@@ -81,6 +92,7 @@ def gen_ctx(
         line_after=line_after,
         line_after_normalized=line_after_normalized,
         alnums=alnums,
+        alnums_normalized=alnums_normalized,
         alnums_before=alnums_before,
         alnums_before_normalized=alnums_before_normalized,
         alnums_after=alnums_after,
@@ -88,7 +100,12 @@ def gen_ctx(
         syms=syms,
         syms_before=syms_before,
         syms_after=syms_after,
-        alnums_normalized=alnums_normalized,
+        alnum_syms=alnum_syms,
+        alnum_syms_normalized=alnum_syms_normalized,
+        alnum_syms_before=alnum_syms_before,
+        alnum_syms_before_normalized=alnum_syms_before_normalized,
+        alnum_syms_after=alnum_syms_after,
+        alnum_syms_after_normalized=alnum_syms_after_normalized,
     )
 
 
