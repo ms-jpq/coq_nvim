@@ -31,7 +31,7 @@ class AsyncExecutor:
     async def run(self, cont: Callable[[], T]) -> T:
         return await run_in_executor(self._chan, cont)
 
-    def submit(self, cont: Callable[[], T]) -> T:
+    def run_sync(self, cont: Callable[[], T]) -> T:
         return self._chan.submit(cont).result()
 
 
@@ -85,7 +85,7 @@ class AConnection(AbstractAsyncContextManager):
         def cont() -> Connection:
             return connect(database)
 
-        self._conn = self._chan.submit(cont)
+        self._conn = self._chan.run_sync(cont)
 
     async def __aexit__(self, *_: Any) -> None:
         await self._chan.run(self._conn.close)
