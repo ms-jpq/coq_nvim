@@ -3,6 +3,9 @@
     "band_size": 20,
     "min_match": 2
   },
+  "display": {
+    "pum_max_len": 66
+  },
   "logging_level": "WARNING",
   "match": {
     "transpose_band": 3,

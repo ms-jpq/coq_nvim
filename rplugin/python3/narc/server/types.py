@@ -22,6 +22,11 @@ class Notification:
 
 
 @dataclass(frozen=True)
+class DisplayOptions:
+    pum_max_len: int
+
+
+@dataclass(frozen=True)
 class CacheOptions:
     min_match: int
     band_size: int
@@ -51,6 +56,7 @@ class SnippetEngineSpec:
 class Settings:
     retries: int
     logging_level: str
+    display: DisplayOptions
     match: MatchOptions
     cache: CacheOptions
     sources: Dict[str, SourceSpec]

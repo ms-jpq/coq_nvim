@@ -1,11 +1,12 @@
 from dataclasses import asdict, dataclass
 from locale import strxfrm
+from textwrap import shorten
 from typing import Any, Callable, Dict, Iterator, Sequence, Set, Union, cast
 
 from ..shared.types import Completion, Context
 from .match import gen_metric_wrap
 from .nvim import VimCompletion
-from .types import MatchOptions, Metric, Payload, Step
+from .types import DisplayOptions, MatchOptions, Metric, Payload, Step
 
 
 @dataclass(frozen=True)
@@ -63,17 +64,19 @@ def gen_payload(comp: Completion) -> Payload:
     )
 
 
-def vimify(fuzz: FuzzyStep) -> VimCompletion:
+def vimify(fuzz: FuzzyStep, pum_max_len: int) -> VimCompletion:
     metric = fuzz.metric
     step = fuzz.step
     comp = step.comp
     source = f"[{step.source_shortname}]"
     menu = f"{comp.kind} {source}" if comp.kind else source
-    abbr = (
+    long_abbr = (
         (comp.label or step.text)
         if comp.snippet or metric.full_match or not metric.num_matches
         else context_gen(fuzz)
     )
+    max_width = pum_max_len - len(menu)
+    abbr = shorten(long_abbr, width=max_width)
     user_data = gen_payload(comp=comp)
     ret = VimCompletion(
         equal=1,
@@ -90,7 +93,10 @@ def vimify(fuzz: FuzzyStep) -> VimCompletion:
 
 
 def fuzzy(
-    steps: Iterator[FuzzyStep], options: MatchOptions, limits: Dict[str, float]
+    steps: Iterator[FuzzyStep],
+    display: DisplayOptions,
+    options: MatchOptions,
+    limits: Dict[str, float],
 ) -> Iterator[VimCompletion]:
     seen: Set[str] = set()
     seen_by_source: Dict[str, int] = {}
@@ -108,4 +114,4 @@ def fuzzy(
             if not unique or text not in seen:
                 if unique:
                     seen.add(text)
-                yield vimify(fuzz=fuzz)
+                yield vimify(fuzz, pum_max_len=display.pum_max_len)

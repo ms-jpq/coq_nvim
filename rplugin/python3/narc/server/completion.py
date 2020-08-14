@@ -158,7 +158,7 @@ async def merge(
     Callable[[GenOptions], Awaitable[Tuple[Position, Iterator[VimCompletion]]]],
     Dict[str, Queue],
 ]:
-    match_opt, cache_opt = settings.match, settings.cache
+    display_opt, match_opt, cache_opt = settings.display, settings.match, settings.cache
     factories = load_factories(settings=settings)
     src_gen = await gather(
         *(
@@ -194,7 +194,10 @@ async def merge(
             push(context, steps)
             all_steps = chain(steps, cached)
 
-            return position, fuzzy(all_steps, options=match_opt, limits=limits)
+            return (
+                position,
+                fuzzy(all_steps, display=display_opt, options=match_opt, limits=limits),
+            )
         else:
             return position, iter(())
 

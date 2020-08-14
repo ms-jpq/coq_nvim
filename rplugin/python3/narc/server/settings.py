@@ -9,6 +9,7 @@ from ..shared.da import load_json, load_module, merge_all
 from ..shared.types import Factory, Seed, SnippetEngineFactory, SnippetSeed
 from .types import (
     CacheOptions,
+    DisplayOptions,
     EngineFactory,
     MatchOptions,
     Settings,
@@ -43,8 +44,10 @@ def load_engine(config: Dict[str, Any]) -> SnippetEngineSpec:
 
 def initial(configs: Sequence[Any]) -> Settings:
     config = merge_all(load_json(settings_json), *configs, replace=True)
+    display_o = config["display"]
     match_o = config["match"]
     cache_o = config["cache"]
+    display = DisplayOptions(pum_max_len=display_o["pum_max_len"])
     match = MatchOptions(
         transpose_band=match_o["transpose_band"],
         unifying_chars={*match_o["unifying_chars"]},
@@ -58,6 +61,7 @@ def initial(configs: Sequence[Any]) -> Settings:
     }
     settings = Settings(
         retries=config["retries"],
+        display=display,
         match=match,
         cache=cache,
         sources=sources,
