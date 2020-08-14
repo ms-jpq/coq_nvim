@@ -5,7 +5,7 @@ from typing import Awaitable, Callable, Dict, List, Optional, Sequence, Set, Tup
 from ..shared.parse import parse_common_affix
 from ..shared.types import Completion, Context, MEdit
 from .fuzzy import FuzzyStep
-from .match import gen_metric
+from .match import gen_metric_wrap
 from .types import CacheOptions, MatchOptions, Step
 
 
@@ -65,7 +65,7 @@ def make_cache(
         rows = bufs.get(context.filename, {})
         cols = rows.get(position.row, {})
         col = position.col
-        cword, ncword = context.alnums, context.alnums_normalized
+        ncword = context.alnums_normalized
 
         acc: List[FuzzyStep] = []
 
@@ -78,13 +78,8 @@ def make_cache(
                     nword = step.text_normalized
                     if text not in seen and nword not in ncword:
                         seen.add(text)
-                        metric = gen_metric(
-                            cword,
-                            ncword=ncword,
-                            match=text,
-                            n_match=nword,
-                            options=match_opt,
-                            use_secondary=True,
+                        metric = gen_metric_wrap(
+                            context, step=step, options=match_opt, use_secondary=True
                         )
                         if metric.num_matches >= cache_opt.min_match:
                             new_step = recalculate(

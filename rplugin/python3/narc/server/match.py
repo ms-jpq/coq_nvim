@@ -1,29 +1,9 @@
-from dataclasses import dataclass
 from difflib import SequenceMatcher
 from math import inf
 from typing import Dict
 
-from .types import MatchOptions
-
-
-@dataclass(frozen=True)
-class MetricSeed:
-    cword: str
-    ncword: str
-    match: str
-    n_match: str
-    options: MatchOptions
-    use_secondary: bool
-
-
-@dataclass(frozen=True)
-class Metric:
-    prefix_matches: int
-    consecutive_matches: int
-    num_matches: int
-    density: float
-    matches: Dict[int, str]
-    full_match: bool
+from ..shared.types import Context, MatchOptions
+from .types import Metric, Step
 
 
 def isjunk(s: str) -> bool:
@@ -106,5 +86,26 @@ def gen_metric(
         density=density,
         matches=matches,
         full_match=full_match,
+    )
+    return metric
+
+
+def gen_metric_wrap(
+    context: Context, step: Step, options: MatchOptions, use_secondary: bool
+) -> Metric:
+    cword, ncword = (
+        (context.alnum_syms, context.alnum_syms_normalized)
+        if step.comp.match_syms
+        else (context.alnums, context.alnums_normalized)
+    )
+    match, n_match = step.text, step.text_normalized
+
+    metric = gen_metric(
+        cword,
+        ncword=ncword,
+        match=match,
+        n_match=n_match,
+        options=options,
+        use_secondary=use_secondary,
     )
     return metric

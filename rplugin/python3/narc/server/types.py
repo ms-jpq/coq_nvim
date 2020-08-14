@@ -96,6 +96,16 @@ class Step:
 
 
 @dataclass(frozen=True)
+class Metric:
+    prefix_matches: int
+    consecutive_matches: int
+    num_matches: int
+    density: float
+    matches: Dict[int, str]
+    full_match: bool
+
+
+@dataclass(frozen=True)
 class Payload:
     position: Position
     medit: Optional[MEdit]

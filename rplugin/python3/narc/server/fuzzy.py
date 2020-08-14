@@ -3,9 +3,9 @@ from locale import strxfrm
 from typing import Any, Callable, Dict, Iterator, Sequence, Set, Union, cast
 
 from ..shared.types import Completion, Context
-from .match import Metric, gen_metric
+from .match import gen_metric_wrap
 from .nvim import VimCompletion
-from .types import MatchOptions, Payload, Step
+from .types import MatchOptions, Metric, Payload, Step
 
 
 @dataclass(frozen=True)
@@ -15,17 +15,7 @@ class FuzzyStep:
 
 
 def fuzzify(context: Context, step: Step, options: MatchOptions) -> FuzzyStep:
-    cword, ncword = context.alnums, context.alnums_normalized
-    match, n_match = step.text, step.text_normalized
-
-    metric = gen_metric(
-        cword,
-        ncword=ncword,
-        match=match,
-        n_match=n_match,
-        options=options,
-        use_secondary=True,
-    )
+    metric = gen_metric_wrap(context, step=step, options=options, use_secondary=True)
     return FuzzyStep(step=step, metric=metric)
 
 
