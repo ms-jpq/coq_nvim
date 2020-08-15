@@ -1,4 +1,5 @@
 from dataclasses import asdict, dataclass
+from itertools import repeat
 from locale import strxfrm
 from os import linesep
 from typing import Any, Callable, Dict, Iterator, Sequence, Set, Union, cast
@@ -68,9 +69,10 @@ def shorten(text: str, tabsize: int, max_width: int, ellipsis: str) -> str:
     def expand_ws() -> Iterator[str]:
         for c in text:
             if c == linesep:
-                yield " "
+                yield "\\"
+                yield "n"
             elif c == "\t":
-                yield tabsize * " "
+                yield from repeat(" ", tabsize)
             else:
                 yield " "
 
