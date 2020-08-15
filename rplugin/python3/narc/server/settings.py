@@ -47,7 +47,11 @@ def initial(configs: Sequence[Any]) -> Settings:
     display_o = config["display"]
     match_o = config["match"]
     cache_o = config["cache"]
-    display = DisplayOptions(pum_max_len=display_o["pum_max_len"])
+    display = DisplayOptions(
+        ellipsis=display_o["ellipsis"],
+        tabsize=display_o["tabsize"],
+        pum_max_len=display_o["pum_max_len"],
+    )
     match = MatchOptions(
         transpose_band=match_o["transpose_band"],
         unifying_chars={*match_o["unifying_chars"]},

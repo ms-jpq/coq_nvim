@@ -4,7 +4,9 @@
     "min_match": 2
   },
   "display": {
-    "pum_max_len": 66
+    "ellipsis": "…",
+    "pum_max_len": 66,
+    "tabsize": 2
   },
   "logging_level": "WARNING",
   "match": {

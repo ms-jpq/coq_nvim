@@ -1,6 +1,6 @@
 from dataclasses import asdict, dataclass
 from locale import strxfrm
-from textwrap import shorten
+from os import linesep
 from typing import Any, Callable, Dict, Iterator, Sequence, Set, Union, cast
 
 from ..shared.types import Completion, Context
@@ -64,7 +64,27 @@ def gen_payload(comp: Completion) -> Payload:
     )
 
 
-def vimify(fuzz: FuzzyStep, pum_max_len: int) -> VimCompletion:
+def shorten(text: str, tabsize: int, max_width: int, ellipsis: str) -> str:
+    def expand_ws() -> Iterator[str]:
+        for c in text:
+            if c == linesep:
+                yield " "
+            elif c == "\t":
+                yield tabsize * " "
+            else:
+                yield " "
+
+    def cont() -> Iterator[str]:
+        for i, c in enumerate(expand_ws(), 1):
+            if i < max_width:
+                yield c
+            else:
+                yield ellipsis
+
+    return "".join(cont())
+
+
+def vimify(fuzz: FuzzyStep, display: DisplayOptions) -> VimCompletion:
     metric = fuzz.metric
     step = fuzz.step
     comp = step.comp
@@ -75,8 +95,13 @@ def vimify(fuzz: FuzzyStep, pum_max_len: int) -> VimCompletion:
         if comp.snippet or metric.full_match or not metric.num_matches
         else context_gen(fuzz)
     )
-    max_width = pum_max_len - len(menu)
-    abbr = shorten(long_abbr, width=max_width)
+    max_width = display.pum_max_len - len(menu)
+    abbr = shorten(
+        long_abbr,
+        tabsize=display.tabsize,
+        max_width=max_width,
+        ellipsis=display.ellipsis,
+    )
     user_data = gen_payload(comp=comp)
     ret = VimCompletion(
         equal=1,
@@ -114,4 +139,4 @@ def fuzzy(
             if not unique or text not in seen:
                 if unique:
                     seen.add(text)
-                yield vimify(fuzz, pum_max_len=display.pum_max_len)
+                yield vimify(fuzz, display=display)

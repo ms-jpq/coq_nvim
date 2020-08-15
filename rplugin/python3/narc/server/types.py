@@ -23,6 +23,8 @@ class Notification:
 
 @dataclass(frozen=True)
 class DisplayOptions:
+    ellipsis: str
+    tabsize: int
     pum_max_len: int
 
 
