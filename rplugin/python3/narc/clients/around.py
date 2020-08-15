@@ -51,8 +51,7 @@ async def main(comm: Comm, seed: Seed) -> Source:
     conn = AConnection()
 
     async def reinit() -> None:
-        async with conn.lock:
-            await init(conn)
+        await init(conn)
 
     async def source(context: Context) -> AsyncIterator[Completion]:
         position, ncword = context.position, context.alnums_normalized
@@ -61,20 +60,19 @@ async def main(comm: Comm, seed: Seed) -> Source:
             buffer_chars(comm.nvim, band_size=band_size, pos=position), reinit()
         )
         words = coalesce(chars, max_length=max_length, unifying_chars=unifying_chars)
-        async with conn.lock:
-            await populate(conn, words=words)
-            async for word, match_normalized in prefix_query(
-                conn, ncword=ncword, prefix_matches=prefix_matches
-            ):
-                old_prefix, old_suffix = parse_common_affix(
-                    context, match_normalized=match_normalized, use_line=False,
-                )
-                medit = MEdit(
-                    old_prefix=old_prefix,
-                    new_prefix=word,
-                    old_suffix=old_suffix,
-                    new_suffix="",
-                )
-                yield Completion(position=position, medit=medit)
+        await populate(conn, words=words)
+        async for word, match_normalized in prefix_query(
+            conn, ncword=ncword, prefix_matches=prefix_matches
+        ):
+            old_prefix, old_suffix = parse_common_affix(
+                context, match_normalized=match_normalized, use_line=False,
+            )
+            medit = MEdit(
+                old_prefix=old_prefix,
+                new_prefix=word,
+                old_suffix=old_suffix,
+                new_suffix="",
+            )
+            yield Completion(position=position, medit=medit)
 
     return source

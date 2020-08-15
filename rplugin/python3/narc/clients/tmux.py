@@ -106,19 +106,16 @@ async def main(comm: Comm, seed: Seed) -> Source:
     )
 
     conn = AConnection()
-    async with conn.lock:
-        await init(conn)
+    await init(conn)
 
     async def background_update() -> None:
         async for _ in schedule(Event(), min_time=0, max_time=config.polling_rate):
-            async with conn.lock:
-                await init(conn)
+            await init(conn)
             try:
                 async for words in tmux_words(
                     max_length=max_length, unifying_chars=unifying_chars
                 ):
-                    async with conn.lock:
-                        await populate(conn, words=words)
+                    await populate(conn, words=words)
             except TmuxError as e:
                 message = f"failed to fetch tmux{linesep}{e}"
                 log.warn("%s", message)
@@ -126,21 +123,20 @@ async def main(comm: Comm, seed: Seed) -> Source:
     async def source(context: Context) -> AsyncIterator[Completion]:
         position, ncword = context.position, context.alnums_normalized
 
-        async with conn.lock:
-            async for word, match_normalized in prefix_query(
-                conn, ncword=ncword, prefix_matches=prefix_matches
-            ):
-                old_prefix, old_suffix = parse_common_affix(
-                    context, match_normalized=match_normalized, use_line=False,
-                )
+        async for word, match_normalized in prefix_query(
+            conn, ncword=ncword, prefix_matches=prefix_matches
+        ):
+            old_prefix, old_suffix = parse_common_affix(
+                context, match_normalized=match_normalized, use_line=False,
+            )
 
-                medit = MEdit(
-                    old_prefix=old_prefix,
-                    new_prefix=word,
-                    old_suffix=old_suffix,
-                    new_suffix="",
-                )
-                yield Completion(position=position, medit=medit)
+            medit = MEdit(
+                old_prefix=old_prefix,
+                new_prefix=word,
+                old_suffix=old_suffix,
+                new_suffix="",
+            )
+            yield Completion(position=position, medit=medit)
 
     run_forever(nvim, log=log, thing=background_update)
     return source

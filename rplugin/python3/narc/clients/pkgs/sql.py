@@ -31,8 +31,9 @@ WHERE
 
 
 async def init(conn: AConnection) -> None:
-    async with await conn.execute_script(_INIT):
-        pass
+    async with conn.lock:
+        async with await conn.execute_script(_INIT):
+            pass
 
 
 async def populate(conn: AConnection, words: Iterator[str]) -> None:
@@ -40,9 +41,10 @@ async def populate(conn: AConnection, words: Iterator[str]) -> None:
         for word in words:
             yield word, word
 
-    async with await conn.execute_many(_POPULATE, cont()):
-        pass
-    await conn.commit()
+    async with conn.lock:
+        async with await conn.execute_many(_POPULATE, cont()):
+            pass
+        await conn.commit()
 
 
 async def prefix_query(
@@ -53,6 +55,8 @@ async def prefix_query(
 
     if escaped:
         match = f'"{escaped}"*'
-        async with await conn.execute(_QUERY, (match, ncword)) as cursor:
-            async for row in cursor:
-                yield row
+
+        async with conn.lock:
+            async with await conn.execute(_QUERY, (match, ncword)) as cursor:
+                async for row in cursor:
+                    yield row
