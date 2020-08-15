@@ -69,12 +69,11 @@ def shorten(text: str, tabsize: int, max_width: int, ellipsis: str) -> str:
     def expand_ws() -> Iterator[str]:
         for c in text:
             if c == linesep:
-                yield "\\"
-                yield "n"
+                yield " "
             elif c == "\t":
                 yield from repeat(" ", tabsize)
             else:
-                yield " "
+                yield c
 
     def cont() -> Iterator[str]:
         for i, c in enumerate(expand_ws(), 1):
