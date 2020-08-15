@@ -1,6 +1,5 @@
 from asyncio import create_subprocess_exec, get_running_loop
 from asyncio.subprocess import PIPE
-from concurrent.futures import Executor
 from dataclasses import dataclass
 from functools import partial
 from importlib.util import module_from_spec, spec_from_file_location
@@ -42,12 +41,10 @@ async def anext(aiter: AsyncIterator[T], default: Optional[T] = None) -> Optiona
         return default
 
 
-async def run_in_executor(
-    executor: Optional[Executor], f: Callable[..., T], *args: Any, **kwargs: Any
-) -> T:
+async def run_in_executor(f: Callable[..., T], *args: Any, **kwargs: Any) -> T:
     loop = get_running_loop()
     cont = partial(f, *args, **kwargs)
-    return await loop.run_in_executor(executor, cont)
+    return await loop.run_in_executor(None, cont)
 
 
 def merge(ds1: Any, ds2: Any, replace: bool = False) -> Any:

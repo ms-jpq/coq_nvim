@@ -76,7 +76,7 @@ async def find_children(paths: Iterator[str]) -> Sequence[str]:
     def co() -> Sequence[str]:
         return tuple(cont())
 
-    return await run_in_executor(None, co)
+    return await run_in_executor(co)
 
 
 async def main(comm: Comm, seed: Seed) -> Source:
