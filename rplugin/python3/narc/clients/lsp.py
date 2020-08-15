@@ -27,11 +27,10 @@ from ..shared.types import (
     Snippet,
     Source,
 )
-from ..snippets.lsp_snippet import parse_snippet
 from .pkgs.comm_scheduler import schedule
 
 NAME = "lsp"
-SNIPPET_TYPE = "lsp_snippet"
+SNIPPET_TYPE = "lsp"
 
 
 @dataclass(frozen=True)
@@ -143,51 +142,32 @@ def parse_rows(
         edits = parse_textedit(row)
         require_parse = is_snippet(row, insert_lookup)
 
-        if require_parse:
-            new_prefix, new_suffix = parse_snippet(context, text=text)
-            match = new_prefix + new_suffix
-            match_normalized = normalize(match)
-            old_prefix, old_suffix = parse_common_affix(
-                context, match_normalized=match_normalized, use_line=True,
-            )
-            snippet = Snippet(kind=SNIPPET_TYPE, match=match, content=text)
-            medit = MEdit(
-                old_prefix=old_prefix,
-                new_prefix=new_prefix,
-                old_suffix=old_suffix,
-                new_suffix=new_suffix,
-            )
-            yield Completion(
-                position=position,
-                label=label,
-                sortby=sortby,
-                kind=kind,
-                doc=doc,
-                medit=medit,
-                ledits=edits,
-                snippet=snippet,
-            )
-        else:
-            match_normalized = normalize(text)
-            old_prefix, old_suffix = parse_common_affix(
-                context, match_normalized=match_normalized, use_line=False,
-            )
+        match_normalized = normalize(text)
+        old_prefix, old_suffix = parse_common_affix(
+            context, match_normalized=match_normalized, use_line=False,
+        )
+        medit = MEdit(
+            old_prefix=old_prefix,
+            new_prefix=text,
+            old_suffix=old_suffix,
+            new_suffix="",
+        )
 
-            medit = MEdit(
-                old_prefix=old_prefix,
-                new_prefix=text,
-                old_suffix=old_suffix,
-                new_suffix="",
-            )
-            yield Completion(
-                position=position,
-                label=label,
-                sortby=sortby,
-                kind=kind,
-                doc=doc,
-                medit=medit,
-                ledits=edits,
-            )
+        snippet = (
+            Snippet(kind=SNIPPET_TYPE, match=label or text, content=text)
+            if require_parse
+            else None
+        )
+        yield Completion(
+            position=position,
+            label=label,
+            sortby=sortby,
+            kind=kind,
+            doc=doc,
+            medit=medit,
+            ledits=edits,
+            snippet=snippet,
+        )
 
 
 async def main(comm: Comm, seed: Seed) -> Source:
