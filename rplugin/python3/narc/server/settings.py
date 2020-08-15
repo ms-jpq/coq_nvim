@@ -36,7 +36,7 @@ def load_engine(config: Dict[str, Any]) -> SnippetEngineSpec:
     spec = SnippetEngineSpec(
         main=config["main"],
         enabled=config["enabled"],
-        kind=config["kind"],
+        kinds=config["kinds"],
         config=config.get("config") or {},
     )
     return spec
@@ -122,7 +122,7 @@ def load_factories(settings: Settings) -> Dict[str, SourceFactory]:
                 if main:
                     yield name, assemble(spec, main=main, match=settings.match)
 
-    return {n: f for n, f in cont()}
+    return {name: main for name, main in cont()}
 
 
 def build(
@@ -134,18 +134,18 @@ def build(
 
 
 def load_engines(settings: Settings) -> Dict[str, EngineFactory]:
-    def cont() -> Iterator[Tuple[str, EngineFactory]]:
+    def cont() -> Iterator[Tuple[Sequence[str], EngineFactory]]:
         intrinsic: Dict[str, SnippetEngineFactory] = {}
 
         for name, main in intrinsic.items():
             spec = settings.snippet_engines[name]
-            yield spec.kind, build(spec, main=main, match=settings.match)
+            yield spec.kinds, build(spec, main=main, match=settings.match)
 
         for name, spec in settings.snippet_engines.items():
             if name not in intrinsic:
                 spec = settings.snippet_engines[name]
                 main = load_external(spec.main)
                 if main:
-                    yield spec.kind, build(spec, main=main, match=settings.match)
+                    yield spec.kinds, build(spec, main=main, match=settings.match)
 
-    return {n: f for n, f in cont()}
+    return {name: main for names, main in cont() for name in names}

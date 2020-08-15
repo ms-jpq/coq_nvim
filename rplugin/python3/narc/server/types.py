@@ -48,7 +48,7 @@ class SourceSpec:
 class SnippetEngineSpec:
     main: str
     enabled: str
-    kind: str
+    kinds: Sequence[str]
     config: Dict[str, Any]
 
 
