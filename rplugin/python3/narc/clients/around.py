@@ -1,4 +1,4 @@
-from asyncio import Lock, gather
+from asyncio import gather
 from dataclasses import dataclass
 from itertools import chain
 from os import linesep
@@ -48,10 +48,10 @@ async def main(comm: Comm, seed: Seed) -> Source:
         seed.match.unifying_chars,
     )
 
-    conn, lock = AConnection(), Lock()
+    conn = AConnection()
 
     async def reinit() -> None:
-        async with lock:
+        async with conn.lock:
             await init(conn)
 
     async def source(context: Context) -> AsyncIterator[Completion]:
@@ -61,7 +61,7 @@ async def main(comm: Comm, seed: Seed) -> Source:
             buffer_chars(comm.nvim, band_size=band_size, pos=position), reinit()
         )
         words = coalesce(chars, max_length=max_length, unifying_chars=unifying_chars)
-        async with lock:
+        async with conn.lock:
             await populate(conn, words=words)
             async for word, match_normalized in prefix_query(
                 conn, ncword=ncword, prefix_matches=prefix_matches

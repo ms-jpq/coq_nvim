@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from asyncio import Lock
 from collections.abc import AsyncIterable
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import AbstractAsyncContextManager
@@ -37,6 +38,7 @@ class AsyncExecutor:
 
 class ACursor(AbstractAsyncContextManager, AsyncIterable):
     def __init__(self, chan: AsyncExecutor, cursor: Cursor) -> None:
+        self.lock = Lock()
         self._chan = chan
         self._cursor = cursor
 
