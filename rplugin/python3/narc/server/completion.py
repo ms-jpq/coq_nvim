@@ -171,7 +171,7 @@ async def merge(
 
     async def gen(options: GenOptions) -> Tuple[Position, Iterator[VimCompletion]]:
         s_context = StepContext(force=options.force)
-        context, buf_context = await gen_context(nvim, options=match_opt, pos=None)
+        context, buf_context = await gen_context(nvim, options=match_opt)
         position = context.position
         enabled, limits, max_wait = buffer_opts(factories, buf_context=buf_context)
 
