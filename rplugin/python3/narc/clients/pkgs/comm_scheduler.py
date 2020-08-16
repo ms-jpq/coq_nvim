@@ -1,11 +1,10 @@
 from asyncio import Future, Queue
 from itertools import count
-from logging import Logger
 from typing import Awaitable, Callable, Tuple
 
 
 def schedule(
-    chan: Queue, log: Logger
+    chan: Queue,
 ) -> Tuple[Callable[[], Awaitable[None]], Callable[[], Tuple[int, Future]]]:
     it = count()
     uid = next(it)

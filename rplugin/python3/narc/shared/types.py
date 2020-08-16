@@ -1,6 +1,5 @@
 from asyncio import Queue
 from dataclasses import dataclass, field
-from logging import Logger
 from typing import (
     Any,
     AsyncIterator,
@@ -25,7 +24,6 @@ class MatchOptions:
 class Comm:
     nvim: Nvim
     chan: Queue
-    log: Logger
 
 
 @dataclass(frozen=True)

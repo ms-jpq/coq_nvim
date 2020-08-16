@@ -171,11 +171,8 @@ def parse_rows(
 
 
 async def main(comm: Comm, seed: Seed) -> Source:
-    nvim, log = (
-        comm.nvim,
-        comm.log,
-    )
-    background_update, require = schedule(comm.chan, log=log)
+    nvim = comm.nvim
+    background_update, require = schedule(comm.chan)
     entry_kind, insert_kind = await init_lua(nvim)
 
     async def source(context: Context) -> AsyncIterator[Completion]:
@@ -188,5 +185,5 @@ async def main(comm: Comm, seed: Seed) -> Source:
         ):
             yield row
 
-    run_forever(nvim, log=log, thing=background_update)
+    run_forever(nvim, thing=background_update)
     return source

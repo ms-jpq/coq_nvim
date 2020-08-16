@@ -10,14 +10,13 @@ from logging import (
     LogRecord,
     StreamHandler,
     getLevelName,
-    getLogger,
 )
 from typing import Dict
 
 from pynvim import Nvim
 
-from ..shared.consts import __log_file__, LOGGER_NAME
-
+from ..shared.consts import __log_file__
+from ..shared.logging import log
 
 LOG_FMT = """
 --  {name}
@@ -46,13 +45,9 @@ def setup(nvim: Nvim, level: str) -> None:
             else:
                 nvim.async_call(nvim.out_write, msg)
 
-    logger = getLogger(LOGGER_NAME)
-    logger.setLevel(LEVELS.get(level, DEBUG))
+    log.setLevel(LEVELS.get(level, DEBUG))
     formatter = Formatter(fmt=LOG_FMT, datefmt=DATE_FMT, style="{")
     handlers = (StreamHandler(), FileHandler(filename=__log_file__), NvimHandler())
     for handler in handlers:
         handler.setFormatter(formatter)
-        logger.addHandler(handler)
-
-
-log = getLogger(LOGGER_NAME)
+        log.addHandler(handler)

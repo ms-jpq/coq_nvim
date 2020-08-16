@@ -1,10 +1,11 @@
 from asyncio import Future, Task, create_task, sleep
-from logging import Logger
 from os import linesep
 from typing import Any, Awaitable, Callable, Sequence, Tuple, TypeVar
 
 from pynvim import Nvim
 from pynvim.api.common import NvimError
+
+from .logging import log
 
 T = TypeVar("T")
 
@@ -47,7 +48,6 @@ async def print(
 
 def run_forever(
     nvim: Nvim,
-    log: Logger,
     thing: Callable[[], Awaitable[None]],
     retries: int = 3,
     timeout: float = 1.0,

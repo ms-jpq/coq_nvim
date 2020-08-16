@@ -6,6 +6,7 @@ from shutil import which
 from typing import AsyncIterator, Iterator, Sequence, Set
 
 from ..shared.da import call
+from ..shared.logging import log
 from ..shared.nvim import run_forever
 from ..shared.parse import coalesce, parse_common_affix
 from ..shared.sql import AConnection
@@ -97,7 +98,7 @@ async def tmux_words(
 
 
 async def main(comm: Comm, seed: Seed) -> Source:
-    nvim, log = comm.nvim, comm.log
+    nvim = comm.nvim
     config = Config(**seed.config)
     prefix_matches, max_length, unifying_chars = (
         config.prefix_matches,
@@ -138,5 +139,5 @@ async def main(comm: Comm, seed: Seed) -> Source:
             )
             yield Completion(position=position, medit=medit)
 
-    run_forever(nvim, log=log, thing=background_update)
+    run_forever(nvim, thing=background_update)
     return source

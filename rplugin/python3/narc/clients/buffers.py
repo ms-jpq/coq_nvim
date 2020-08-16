@@ -57,7 +57,7 @@ async def buffer_chars(nvim: Nvim, buf_gen: Iterator[Buffer]) -> Sequence[str]:
 
 
 async def main(comm: Comm, seed: Seed) -> Source:
-    nvim, log, chan = comm.nvim, comm.log, comm.chan
+    nvim, chan = comm.nvim, comm.chan
     config = Config(**seed.config)
     ch = Event()
     prefix_matches, max_length, unifying_chars = (
@@ -114,6 +114,6 @@ async def main(comm: Comm, seed: Seed) -> Source:
             )
             yield Completion(position=position, medit=medit)
 
-    run_forever(nvim, log=log, thing=ooda)
-    run_forever(nvim, log=log, thing=background_update)
+    run_forever(nvim, thing=ooda)
+    run_forever(nvim, thing=background_update)
     return source

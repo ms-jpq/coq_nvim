@@ -65,7 +65,7 @@ async def manufacture(
     nvim: Nvim, name: str, factory: SourceFactory
 ) -> Tuple[StepFunction, Queue]:
     chan: Queue = Queue()
-    comm = Comm(nvim=nvim, log=log, chan=chan)
+    comm = Comm(nvim=nvim, chan=chan)
     src = await factory.manufacture(comm, factory.seed)
 
     async def source(context: Context, s_context: StepContext) -> Sequence[Step]:
