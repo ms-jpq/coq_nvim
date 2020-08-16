@@ -64,6 +64,7 @@ async def apply_patch(
             if snippet and engine_available(snippet):
                 context = SnippetContext(position=position, snippet=snippet)
                 await engine(context)
+                return True
             elif payload.medit or payload.ledits:
 
                 def cont() -> None:
