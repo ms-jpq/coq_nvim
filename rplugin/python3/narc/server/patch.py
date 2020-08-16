@@ -4,8 +4,16 @@ from pynvim import Nvim
 from pynvim.api.window import Window
 
 from ..shared.nvim import call
-from ..shared.types import LEdit, MEdit, Position, Snippet, SnippetContext, SnippetEngine
+from ..shared.types import (
+    LEdit,
+    MEdit,
+    Position,
+    Snippet,
+    SnippetContext,
+    SnippetEngine,
+)
 from .edit import replace_lines
+from .logging import log
 from .types import Payload
 
 
@@ -33,7 +41,10 @@ async def apply_patch(
         snip = d.get("snippet")
         snippet = Snippet(**snip) if snip else None
         payload = Payload(
-            **{**d, **dict(position=position, medit=medit, ledits=edits, snippet=snippet)}
+            **{
+                **d,
+                **dict(position=position, medit=medit, ledits=edits, snippet=snippet),
+            }
         )
     except (KeyError, TypeError):
         return False
@@ -53,12 +64,16 @@ async def apply_patch(
             if snippet and engine_available(snippet):
                 context = SnippetContext(position=position, snippet=snippet)
                 await engine(context)
-            else:
+            elif payload.medit or payload.ledits:
 
                 def cont() -> None:
                     replace_lines(nvim, payload=payload)
 
                 await call(nvim, cont)
-            return True
+                return True
+            else:
+                msg = f"Invaild payload: {payload}"
+                log.error("%s", msg)
+                return False
         else:
             return False
