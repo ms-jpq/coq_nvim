@@ -46,7 +46,7 @@ class Main:
         self.state = initial_state(settings)
         setup(nvim, settings.logging_level)
         self._init = create_task(self.initialize())
-        run_forever(nvim, log=log, thing=self.ooda)
+        run_forever(nvim, thing=self.ooda)
 
     def _submit(self, co: Awaitable[None]) -> None:
         loop: AbstractEventLoop = self.nvim.loop

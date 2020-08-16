@@ -15,7 +15,7 @@ async def osha(
 ) -> Tuple[str, Queue, Optional[SnippetEngine]]:
     manufacture = factory.manufacture
     chan: Queue = Queue()
-    comm = Comm(nvim=nvim, chan=chan, log=log)
+    comm = Comm(nvim=nvim, chan=chan)
 
     try:
         engine = await manufacture(comm, factory.seed)
