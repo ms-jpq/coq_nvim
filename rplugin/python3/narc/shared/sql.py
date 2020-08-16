@@ -19,23 +19,13 @@ from .executor import Executor
 SQL_TYPES = Union[int, float, str, bytes, None]
 
 
-class ACursor(AbstractAsyncContextManager, AsyncIterator):
+class ACursor(AbstractAsyncContextManager):
     def __init__(self, chan: Executor, cursor: Cursor) -> None:
         self._chan = chan
         self._cursor = cursor
 
     async def __aexit__(self, *_: Any) -> None:
         await self._chan.run(self._cursor.close)
-
-    def __aiter__(self) -> ACursor:
-        return self
-
-    async def __anext__(self) -> Row:
-        row = await self.fetch_one()
-        if row is None:
-            raise StopAsyncIteration
-        else:
-            return row
 
     @property
     def lastrowid(self) -> int:
