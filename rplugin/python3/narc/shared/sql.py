@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from asyncio import Lock
-from collections.abc import AsyncIterable
 from contextlib import AbstractAsyncContextManager
 from sqlite3 import Connection, Cursor, Row, connect
 from typing import (
@@ -23,7 +22,7 @@ T = TypeVar("T")
 SQL_TYPES = Union[int, float, str, bytes, None]
 
 
-class ACursor(AbstractAsyncContextManager, AsyncIterable):
+class ACursor(AbstractAsyncContextManager, AsyncIterator):
     def __init__(self, cursor: Cursor) -> None:
         self._cursor = cursor
 
