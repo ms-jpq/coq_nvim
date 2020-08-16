@@ -5,7 +5,6 @@ from asyncio import (
     gather,
     run_coroutine_threadsafe,
 )
-from concurrent.futures import ThreadPoolExecutor
 from typing import Any, Awaitable, Sequence
 
 from pynvim import Nvim, command, function, plugin
@@ -26,6 +25,7 @@ from .server.transitions import (
 )
 from .server.types import Notification
 from .shared.consts import conf_var_name, conf_var_name_private
+from .shared.executor import Executor
 from .shared.nvim import print, run_forever
 
 
@@ -33,7 +33,7 @@ from .shared.nvim import print, run_forever
 class Main:
     def __init__(self, nvim: Nvim) -> None:
         self.nvim = nvim
-        self.chan = ThreadPoolExecutor(max_workers=1)
+        self.chan = Executor()
         self.ch: Queue = Queue()
         self.reply_ch: Queue = Queue()
         self.msg_ch: Queue = Queue()
@@ -58,7 +58,7 @@ class Main:
             except Exception as e:
                 log.exception("%s", e)
 
-        self.chan.submit(run, self.nvim)
+        self.chan.run_sync(run, self.nvim)
 
     async def initialize(self) -> None:
         await autocmd(self.nvim, events=("InsertEnter",), fn="_NARCinsert_enter")
