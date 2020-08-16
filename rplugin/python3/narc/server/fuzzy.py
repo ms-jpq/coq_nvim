@@ -81,6 +81,7 @@ def shorten(text: str, tabsize: int, max_width: int, ellipsis: str) -> str:
                 yield c
             else:
                 yield ellipsis
+                break
 
     return "".join(cont())
 
