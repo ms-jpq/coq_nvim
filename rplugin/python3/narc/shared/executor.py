@@ -10,11 +10,11 @@ T = TypeVar("T")
 
 class Executor:
     def __init__(self) -> None:
-        self.__th = Thread(target=self.__submit, daemon=True)
+        self.__th = Thread(target=self.__ooda, daemon=True)
         self.__chan: SimpleQueue = SimpleQueue()
         self.__th.start()
 
-    def __submit(self) -> None:
+    def __ooda(self) -> None:
         while True:
             f = self.__chan.get()
             f()
