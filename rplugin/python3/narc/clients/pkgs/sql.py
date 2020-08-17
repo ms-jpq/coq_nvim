@@ -58,5 +58,7 @@ async def prefix_query(
 
         async with conn.lock:
             async with await conn.execute(_QUERY, (match, ncword)) as cursor:
-                for row in await cursor.fetch_all():
-                    yield row
+                rows = await cursor.fetch_all()
+
+        for row in rows:
+            yield row
