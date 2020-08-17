@@ -21,9 +21,10 @@ from pynvim import Nvim
 from ..shared.nvim import print
 from ..shared.parse import normalize
 from ..shared.types import Comm, Context, Position
-from .cache import make_cache
+from .sql import init
+from ..shared.sql import AConnection
 from .context import gen_context, goahead
-from .fuzzy import FuzzyStep, fuzzify, fuzzy
+from .fuzzy import fuzzy
 from .logging import log
 from .nvim import VimCompletion
 from .settings import load_factories
@@ -41,7 +42,7 @@ class StepContext:
     force: bool
 
 
-StepFunction = Callable[[Context, StepContext], Awaitable[Sequence[Step]]]
+StepFunction = Callable[[AConnection, Context, StepContext], Awaitable[None]]
 
 
 def parse_step(comp: Completion, name: str, short_name: str, rank: float) -> Step:
@@ -69,7 +70,9 @@ async def manufacture(
     comm = Comm(nvim=nvim, chan=chan)
     src = await factory.manufacture(comm, factory.seed)
 
-    async def source(context: Context, s_context: StepContext) -> Sequence[Step]:
+    async def source(
+        conn: AConnection, context: Context, s_context: StepContext
+    ) -> None:
         timeout = s_context.timeout
         acc: List[Step] = []
 
@@ -84,12 +87,12 @@ async def manufacture(
         for p in pending:
             p.cancel()
         await gather(*done)
+
         if pending:
             timeout_fmt = round(timeout * 1000)
             msg1 = "⚠️  Completion source timed out - "
             msg2 = f"{name}, exceeded {timeout_fmt}ms{linesep}"
             await print(nvim, msg1 + msg2)
-        return acc
 
     return source, chan
 
@@ -97,8 +100,8 @@ async def manufacture(
 async def osha(
     nvim: Nvim, name: str, factory: SourceFactory, retries: int
 ) -> Tuple[str, StepFunction, Optional[Queue]]:
-    async def nil_steps(_: Context, __: StepContext) -> Sequence[Step]:
-        return ()
+    async def nil_steps(_: AConnection, __: Context, ___: StepContext) -> None:
+        pass
 
     try:
         step_fn, chan = await manufacture(nvim, name=name, factory=factory)
@@ -109,20 +112,22 @@ async def osha(
     else:
         errored = 0
 
-        async def o_step(context: Context, s_context: StepContext) -> Sequence[Step]:
+        async def o_step(
+            conn: AConnection, context: Context, s_context: StepContext
+        ) -> None:
             nonlocal errored
-            try:
-                if errored >= retries:
-                    return ()
-                else:
-                    return await step_fn(context, s_context)
-            except Exception as e:
-                errored += 1
-                message = f"Error in source {name}:{linesep}{e}"
-                log.exception("%s", message)
-                return ()
+            if errored >= retries:
+                return
             else:
-                errored = 0
+                try:
+                    await step_fn(conn, context, s_context)
+                except Exception as e:
+                    errored += 1
+                    message = f"Error in source {name}:{linesep}{e}"
+                    log.exception("%s", message)
+                    return
+                else:
+                    errored = 0
 
         return name, o_step, chan
 
@@ -165,7 +170,9 @@ async def merge(
         )
     )
     sources: Dict[str, StepFunction] = {name: source for name, source, _ in src_gen}
-    push, pull = make_cache(match_opt=match_opt, cache_opt=cache_opt)
+    conn = AConnection()
+    async with conn.lock:
+        await init(conn)
 
     async def gen(options: GenOptions) -> Tuple[Position, Iterator[VimCompletion]]:
         timeout = inf if options.force else settings.timeout
@@ -176,26 +183,16 @@ async def merge(
 
         if options.force or goahead(context):
 
-            async def gen() -> AsyncIterator[FuzzyStep]:
-                source_gen = tuple(
-                    source(context, s_context)
-                    for name, source in sources.items()
-                    if name in enabled
-                )
-                for steps in as_completed(source_gen):
-                    for step in await steps:
-                        yield fuzzify(context, step=step, options=match_opt)
-
-            async def cont() -> Sequence[FuzzyStep]:
-                return [step async for step in gen()]
-
-            cached, steps = await gather(pull(context, timeout), cont())
-            push(context, steps)
-            all_steps = chain(steps, cached)
+            source_gen = (
+                source(conn, context, s_context)
+                for name, source in sources.items()
+                if name in enabled
+            )
+            await gather(*source_gen)
 
             return (
                 position,
-                fuzzy(all_steps, display=display_opt, options=match_opt, limits=limits),
+                fuzzy(iter(()), display=display_opt, options=match_opt, limits=limits),
             )
         else:
             return position, iter(())
