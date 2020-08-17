@@ -2,44 +2,48 @@ from dataclasses import asdict, dataclass
 from itertools import repeat
 from locale import strxfrm
 from os import linesep
-from typing import Any, Callable, Dict, Iterator, Sequence, Set, Union, cast
+from typing import Any, Callable, Dict, Iterator, Match, Sequence, Set, Union, cast
 
-from ..shared.types import Completion, Context
+from ..shared.types import Context
 from .match import gen_metric_wrap
 from .nvim import VimCompletion
-from .types import DisplayOptions, MatchOptions, Metric, Payload, Step
+from .types import DisplayOptions, MatchOptions, Metric, Payload, Suggestion
 
 
 @dataclass(frozen=True)
-class FuzzyStep:
-    step: Step
+class Step:
+    suggestion: Suggestion
     metric: Metric
 
 
-def fuzzify(context: Context, step: Step, options: MatchOptions) -> FuzzyStep:
-    metric = gen_metric_wrap(context, step=step, options=options, use_secondary=True)
-    return FuzzyStep(step=step, metric=metric)
+def fuzzify(context: Context, suggestion: Suggestion, options: MatchOptions) -> Step:
+    metric = gen_metric_wrap(
+        context, suggestion=suggestion, options=options, use_secondary=True
+    )
+    return Step(suggestion=suggestion, metric=metric)
 
 
-def rank(fuzz: FuzzyStep) -> Sequence[Union[float, int, str]]:
-    metric = fuzz.metric
-    step = fuzz.step
-    comp = step.comp
-    text = (comp.sortby or comp.label or strxfrm(step.text_normalized)).lower()
+def rank(fuzz: Step) -> Sequence[Union[float, int, str]]:
+    suggestion, metric = fuzz.suggestion, fuzz.metric
+    text = (
+        suggestion.sortby
+        or suggestion.label
+        or strxfrm(suggestion.match_normalized).lower()
+    )
     return (
         metric.prefix_matches * -1,
         metric.num_matches * -1,
         metric.consecutive_matches * -1,
-        step.rank * -1,
+        suggestion.rank * -1,
         metric.density * -1,
         text,
     )
 
 
-def context_gen(fuzz: FuzzyStep) -> str:
+def context_gen(fuzz: Step) -> str:
     match_set = fuzz.metric.matches
-    text = fuzz.step.text
-    label = fuzz.step.comp.label or text
+    text = fuzz.suggestion.match
+    label = fuzz.suggestion.label or text
 
     def gen() -> Iterator[str]:
         for idx, char in enumerate(text):
@@ -56,12 +60,12 @@ def context_gen(fuzz: FuzzyStep) -> str:
     return full_label
 
 
-def gen_payload(comp: Completion) -> Payload:
+def gen_payload(suggestion: Suggestion) -> Payload:
     return Payload(
-        position=comp.position,
-        medit=comp.medit,
-        ledits=comp.ledits,
-        snippet=comp.snippet,
+        position=suggestion.position,
+        medit=suggestion.medit,
+        ledits=suggestion.ledits,
+        snippet=suggestion.snippet,
     )
 
 
@@ -86,14 +90,12 @@ def shorten(text: str, tabsize: int, max_width: int, ellipsis: str) -> str:
     return "".join(cont())
 
 
-def vimify(fuzz: FuzzyStep, display: DisplayOptions) -> VimCompletion:
-    metric = fuzz.metric
-    step = fuzz.step
-    comp = step.comp
-    source = f"[{step.source_shortname}]"
-    menu = f"{comp.kind} {source}" if comp.kind else source
+def vimify(fuzz: Step, display: DisplayOptions) -> VimCompletion:
+    suggestion, metric = fuzz.suggestion, fuzz.metric
+    source = f"[{suggestion.source_shortname}]"
+    menu = f"{suggestion.kind} {source}" if suggestion.kind else source
     long_abbr = (
-        (comp.label or step.text)
+        (suggestion.label or suggestion.match)
         if metric.full_match or not metric.num_matches
         else context_gen(fuzz)
     )
@@ -104,7 +106,7 @@ def vimify(fuzz: FuzzyStep, display: DisplayOptions) -> VimCompletion:
         max_width=max_width,
         ellipsis=display.ellipsis,
     )
-    user_data = gen_payload(comp=comp)
+    user_data = gen_payload(suggestion)
     ret = VimCompletion(
         equal=1,
         icase=1,
@@ -113,32 +115,34 @@ def vimify(fuzz: FuzzyStep, display: DisplayOptions) -> VimCompletion:
         word="",
         abbr=abbr,
         menu=menu,
-        info=comp.doc,
+        info=suggestion.doc,
         user_data=asdict(user_data),
     )
     return ret
 
 
 def fuzzy(
-    steps: Iterator[FuzzyStep],
-    display: DisplayOptions,
-    options: MatchOptions,
+    context: Context,
+    suggestions: Sequence[Suggestion],
+    match_opt: MatchOptions,
+    display_opt: DisplayOptions,
     limits: Dict[str, float],
 ) -> Iterator[VimCompletion]:
     seen: Set[str] = set()
     seen_by_source: Dict[str, int] = {}
-
-    sorted_steps = sorted(steps, key=cast(Callable[[FuzzyStep], Any], rank))
+    steps = (
+        fuzzify(context, suggestion=suggestion, options=match_opt)
+        for suggestion in suggestions
+    )
+    sorted_steps = sorted(steps, key=cast(Callable[[Step], Any], rank))
     for fuzz in sorted_steps:
-        step = fuzz.step
-        unique = False
-        source = step.source
+        suggestion = fuzz.suggestion
+        unique, source, text = suggestion.unique, suggestion.source, suggestion.match
         seen_count = seen_by_source.get(source, 0) + 1
         seen_by_source[source] = seen_count
-        text = step.text
 
         if seen_count <= limits[source]:
             if not unique or text not in seen:
                 if unique:
                     seen.add(text)
-                yield vimify(fuzz, display=display)
+                yield vimify(fuzz, display=display_opt)

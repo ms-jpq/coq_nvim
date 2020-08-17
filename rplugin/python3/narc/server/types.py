@@ -3,7 +3,6 @@ from math import inf
 from typing import Any, Dict, Optional, Sequence
 
 from ..shared.types import (
-    Completion,
     Factory,
     LEdit,
     MatchOptions,
@@ -31,7 +30,7 @@ class DisplayOptions:
 
 @dataclass(frozen=True)
 class CacheOptions:
-    min_match: int
+    prefix_matches: int
     band_size: int
     source_name: str = "cache"
 
@@ -94,21 +93,15 @@ class BufferContext:
 
 
 @dataclass(frozen=True)
-class Step:
-    source: str
-    source_shortname: str
-    rank: float
-    text: str
-    text_normalized: str
-    comp: Completion
-
-
-@dataclass(frozen=True)
 class Suggestion:
     position: Position
     source: str
     source_shortname: str
     rank: float
+    kind: str
+    label: str
+    doc: str
+    sortby: str
     match: str
     match_normalized: str
     medit: Optional[MEdit]

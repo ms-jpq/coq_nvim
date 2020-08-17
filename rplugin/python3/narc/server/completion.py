@@ -8,14 +8,14 @@ from pynvim import Nvim
 
 from ..shared.nvim import print
 from ..shared.sql import AConnection
-from ..shared.types import Comm, Context, Position
+from ..shared.types import Comm, Completion, Context, Position
 from .context import gen_context, goahead
 from .fuzzy import fuzzy
 from .logging import log
 from .nvim import VimCompletion
 from .settings import load_factories
-from .sql import init, populate_batch, populate_suggestions
-from .types import BufferContext, Completion, Settings, SourceFactory, Step
+from .sql import init, populate_batch, populate_suggestions, query
+from .types import BufferContext, Settings, SourceFactory
 
 
 @dataclass(frozen=True)
@@ -162,10 +162,18 @@ async def merge(
                 if name in enabled
             )
             await gather(*source_gen)
-
+            suggestions = await query(
+                conn, batch, ncword=context.alnums_normalized, options=cache_opt
+            )
             return (
                 position,
-                fuzzy(iter(()), display=display_opt, options=match_opt, limits=limits),
+                fuzzy(
+                    context,
+                    suggestions=suggestions,
+                    match_opt=match_opt,
+                    display_opt=display_opt,
+                    limits=limits,
+                ),
             )
         else:
             return position, iter(())

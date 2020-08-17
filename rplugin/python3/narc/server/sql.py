@@ -5,9 +5,9 @@ from typing import Iterable, Iterator, Optional, Sequence, Tuple
 from ..shared.da import slurp
 from ..shared.logging import log
 from ..shared.parse import normalize
-from ..shared.sql import SQL_TYPES, AConnection
+from ..shared.sql import SQL_TYPES, AConnection, sql_escape
 from ..shared.types import Completion, LEdit, MEdit, Position, Snippet
-from .types import Suggestion
+from .types import CacheOptions, Suggestion
 
 __sql__ = join(dirname(realpath(__file__)), "sql")
 
@@ -26,6 +26,10 @@ _QUERY_SNIPPET = slurp(join(__sql__, "query_snippet"))
 _QUERY_SUGGESTIONS = slurp(join(__sql__, "query_suggestions"))
 
 
+ESCAPE_CHAR = "!"
+LIKE_ESCAPE = {"_", "[", "%"} | {ESCAPE_CHAR}
+
+
 async def init(conn: AConnection) -> None:
     async with conn.lock:
         async with await conn.execute_script(_INIT):
@@ -40,7 +44,9 @@ async def populate_sources(conn: AConnection) -> None:
 
 async def populate_batch(conn: AConnection, position: Position) -> int:
     async with conn.lock:
-        async with await conn.execute(_POPULATE_BATCH, (position.row, position.col)) as cursor:
+        async with await conn.execute(
+            _POPULATE_BATCH, (position.row, position.col)
+        ) as cursor:
             return cursor.lastrowid
 
 
@@ -165,12 +171,17 @@ def query_medit(cursor: Cursor, suggestions_id: int) -> Optional[MEdit]:
         return None
 
 
-async def query(conn: AConnection, batch: int, ncword: str) -> Sequence[Suggestion]:
+async def query(
+    conn: AConnection, batch: int, ncword: str, options: CacheOptions
+) -> Sequence[Suggestion]:
+    prefix = ncword[: options.prefix_matches]
+    escaped = sql_escape(prefix, nono=LIKE_ESCAPE, escape=ESCAPE_CHAR)
+
     def cont() -> Iterator[Suggestion]:
         c2 = conn._conn
         cursor = c2.cursor()
         try:
-            cursor.execute(_QUERY_SUGGESTIONS, (batch, batch, ncword))
+            cursor.execute(_QUERY_SUGGESTIONS, (batch, batch, escaped))
             for row in cursor.fetchall():
                 suggestions_id = row["suggestions_id"]
                 match = row["match"]
@@ -185,6 +196,10 @@ async def query(conn: AConnection, batch: int, ncword: str) -> Sequence[Suggesti
                     source=row["source"],
                     source_shortname=row["source_shortname"],
                     rank=row["priority"],
+                    kind=row["kind"],
+                    doc=row["doc"],
+                    label=row["label"],
+                    sortby=row["sortby"],
                     match=match,
                     match_normalized=row["match_normalized"],
                     medit=medit,
