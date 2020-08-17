@@ -58,7 +58,9 @@ class AConnection(AbstractAsyncContextManager):
         self.lock = Lock()
 
         def cont() -> Connection:
-            return connect(database)
+            conn = connect(database)
+            conn.row_factory = Row
+            return conn
 
         self._conn = self.chan.run_sync(connect, database).result()
 

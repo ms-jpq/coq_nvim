@@ -1,11 +1,11 @@
 from os.path import dirname, join, realpath
 from sqlite3 import Cursor
-from typing import Optional, Sequence, Tuple
+from typing import Iterator, Optional, Sequence, Tuple
 
-from .types import Suggestion
 from ..shared.da import slurp
 from ..shared.sql import AConnection
 from ..shared.types import LEdit, MEdit
+from .types import Suggestion
 
 __sql__ = join(dirname(realpath(__file__)), "sql")
 
@@ -49,17 +49,48 @@ def query_ledits(cursor: Cursor, snippet_id: int) -> Sequence[LEdit]:
 def query_medit(cursor: Cursor, snippet_id: int) -> MEdit:
     cursor.execute(_QUERY_LEDIT, (snippet_id,))
     if row := cursor.fetchone():
-        old_prefix, new_prefix, old_suffix, new_suffix = row
         medit = MEdit(
-            old_prefix=old_prefix,
-            new_prefix=new_prefix,
-            old_suffix=old_suffix,
-            new_suffix=new_suffix,
+            old_prefix=row["old_prefix"],
+            new_prefix=row["new_prefix"],
+            old_suffix=row["old_suffix"],
+            new_suffix=row["new_suffix"],
         )
         return medit
     else:
         return None
 
 
-async def query(conn: AConnection) -> Suggestion:
-    pass
+async def query(conn: AConnection, batch: int, ncword: str) -> Sequence[Suggestion]:
+    def cont() -> Iterator[Suggestion]:
+        c2 = conn._conn
+        cursor = c2.cursor()
+        try:
+            cursor.execute(_QUERY_SUGGESTIONS, (batch, batch, ncword))
+            for row in cursor.fetchall():
+                suggestions_id = row["suggestions_id"]
+                (
+                    cached,
+                    source,
+                    source_shortname,
+                    label,
+                    sortby,
+                    kind,
+                    doc,
+                    ensure_unique,
+                    match,
+                    match_normalized,
+                ) = row
+                snip = query_snippet(cursor, suggestions_id)
+                ledits = query_ledits(cursor, suggestions_id)
+                medit = query_medit(cursor, suggestions_id)
+                suggestion = Suggestion(medit=medit, ledits=ledits,)
+                yield suggestion
+
+        finally:
+            cursor.close()
+
+    def co() -> Sequence[Suggestion]:
+        return tuple(cont())
+
+    async with conn.lock:
+        return await conn.chan.run(co)
