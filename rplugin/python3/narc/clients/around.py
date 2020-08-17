@@ -11,7 +11,7 @@ from ..shared.parse import coalesce, parse_common_affix
 from ..shared.sql import AConnection
 from ..shared.types import Comm, Completion, Context, MEdit, Position, Seed, Source
 from .pkgs.nvim import call
-from .pkgs.sql import init, populate, prefix_query
+from .pkgs.sql import init, populate, prefix_query, depopulate
 
 NAME = "around"
 
@@ -49,9 +49,10 @@ async def main(comm: Comm, seed: Seed) -> Source:
     )
 
     conn = AConnection()
+    await init(conn)
 
     async def reinit() -> None:
-        await init(conn)
+        await depopulate(conn)
 
     async def source(context: Context) -> AsyncIterator[Completion]:
         position, ncword = context.position, context.alnums_normalized

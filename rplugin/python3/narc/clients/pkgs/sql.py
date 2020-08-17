@@ -1,5 +1,6 @@
 from typing import AsyncIterator, Iterable, Iterator, Tuple
 
+from ...shared.logging import log
 from ...shared.sql import SQL_TYPES, AConnection, sql_escape
 
 ESCAPE_CHAR = '"'
@@ -7,12 +8,14 @@ MATCH_ESCAPE = set() | {ESCAPE_CHAR}
 
 
 _INIT = """
-DROP TABLE IF EXISTS words;
-
 CREATE VIRTUAL TABLE IF NOT EXISTS words USING fts5(
   word,
   nword
-);
+)
+"""
+
+_DEPOPULATE = """
+DELETE FROM words
 """
 
 _POPULATE = """
@@ -31,8 +34,15 @@ WHERE
 
 
 async def init(conn: AConnection) -> None:
+    log.debug("")
     async with conn.lock:
-        async with await conn.execute_script(_INIT):
+        async with await conn.execute(_INIT):
+            pass
+
+
+async def depopulate(conn: AConnection) -> None:
+    async with conn.lock:
+        async with await conn.execute(_DEPOPULATE):
             pass
 
 

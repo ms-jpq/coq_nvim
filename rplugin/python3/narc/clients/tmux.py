@@ -12,7 +12,7 @@ from ..shared.parse import coalesce, parse_common_affix
 from ..shared.sql import AConnection
 from ..shared.types import Comm, Completion, Context, MEdit, Seed, Source
 from .pkgs.scheduler import schedule
-from .pkgs.sql import init, populate, prefix_query
+from .pkgs.sql import depopulate, init, populate, prefix_query
 
 NAME = "tmux"
 
@@ -111,7 +111,7 @@ async def main(comm: Comm, seed: Seed) -> Source:
 
     async def background_update() -> None:
         async for _ in schedule(Event(), min_time=0, max_time=config.polling_rate):
-            await init(conn)
+            await depopulate(conn)
             try:
                 async for words in tmux_words(
                     max_length=max_length, unifying_chars=unifying_chars
