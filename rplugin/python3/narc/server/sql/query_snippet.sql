@@ -5,6 +5,6 @@ SELECT
 FROM snippets
 JOIN snippet_kinds
 ON
-  snippet_kinds.rowid = snippets.snippet_kind_id;
+  snippet_kinds.rowid = snippets.kind_id;
 WHERE
   snippets.suggestions_id = ?

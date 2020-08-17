@@ -54,9 +54,9 @@ CREATE TABLE IF NOT EXISTS snippet_kinds (
 
 
 CREATE TABLE IF NOT EXISTS snippets (
-  suggestions_id  INTEGER NOT NULL,
-  snippet_kind_id INTEGER NOT NULL,
-  content         TEXT    NOT NULL,
-  FOREIGN KEY (suggestions_id)  REFERENCES suggestions (rowid) ON DELETE CASCADE,
-  FOREIGN KEY (snippet_kind_id) REFERENCES suggestions (rowid) ON DELETE CASCADE
+  suggestions_id INTEGER NOT NULL,
+  kind_id        INTEGER NOT NULL,
+  content        TEXT    NOT NULL,
+  FOREIGN KEY (suggestions_id) REFERENCES suggestions (rowid) ON DELETE CASCADE,
+  FOREIGN KEY (kind_id)        REFERENCES suggestions (rowid) ON DELETE CASCADE
 );
