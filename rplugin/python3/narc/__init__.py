@@ -118,8 +118,8 @@ class Main:
 
         self._submit(cont())
 
-    @command("NARCstart")
-    def start(self) -> None:
+    @command("NARCstart", nargs="*")
+    def start(self, args: Sequence[str]) -> None:
         async def cont() -> None:
             await self._init
             await print(self.nvim, "NARC ⭐️")
