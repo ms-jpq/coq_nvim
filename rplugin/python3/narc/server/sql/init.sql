@@ -60,32 +60,3 @@ CREATE TABLE IF NOT EXISTS snippets (
   FOREIGN KEY (suggestions_id)  REFERENCES suggestions (rowid) ON DELETE CASCADE,
   FOREIGN KEY (snippet_kind_id) REFERENCES suggestions (rowid) ON DELETE CASCADE
 );
-
-
-CREATE VIEW IF NOT EXISTS suggestions_view AS
-SELECT
-  suggestions.rowid AS suggestions_id,
-  sources.name AS source,
-  sources.short_name AS source_shortname,
-  suggestions.label AS label,
-  suggestions.sortby AS sortby,
-  suggestions.kind AS kind,
-  suggestions.doc AS doc,
-  suggestions.ensure_unique AS ensure_unique,
-  suggestions.match AS match,
-  suggestions.match_normalized as match_normalized
-FROM suggestions
-JOIN sources
-ON
-  sources.rowid = suggestions.source_id;
-
-
-CREATE VIEW IF NOT EXISTS snippets_view AS
-SELECT
-  snippets.suggestions_id AS suggestions_id,
-  snippet_kinds.kind AS kind,
-  snippets.content AS content
-FROM snippets
-JOIN snippet_kinds
-ON
-  snippet_kinds.rowid = snippets.snippet_kind_id;

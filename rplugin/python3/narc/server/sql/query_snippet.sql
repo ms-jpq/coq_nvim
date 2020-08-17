@@ -1,6 +1,10 @@
 SELECT
-  kind,
-  content,
-FROM snippets_view
+  snippets.suggestions_id AS suggestions_id,
+  snippet_kinds.kind AS kind,
+  snippets.content AS content
+FROM snippets
+JOIN snippet_kinds
+ON
+  snippet_kinds.rowid = snippets.snippet_kind_id;
 WHERE
-  snippets_view.suggestions_id = ?
+  snippets.suggestions_id = ?
