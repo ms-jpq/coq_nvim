@@ -37,7 +37,7 @@ async def init(conn: AConnection) -> None:
             pass
 
 
-async def populate_sources(
+async def init_sources(
     conn: AConnection, sources: Dict[str, SourceFactory]
 ) -> Dict[str, int]:
     def cont() -> Iterator[Iterable[SQL_TYPES]]:

@@ -1,11 +1,7 @@
 from typing import Optional
 
 from ..shared.da import or_else
-from .types import Settings, State
-
-
-def initial(settings: Settings) -> State:
-    return State(char_inserted=False, comp_inserted=False)
+from .types import State
 
 
 def forward(

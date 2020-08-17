@@ -14,7 +14,7 @@ from .fuzzy import fuzzy
 from .logging import log
 from .nvim import VimCompletion
 from .settings import load_factories
-from .sql import init, populate_batch, populate_suggestions, query
+from .sql import init, populate_batch, populate_suggestions, query, init_sources
 from .types import BufferContext, Settings, SourceFactory
 
 
@@ -28,6 +28,7 @@ class StepContext:
     batch: int
     timeout: float
     force: bool
+    source_indices: Dict[str, int]
 
 
 StepFunction = Callable[[AConnection, Context, StepContext], Awaitable[None]]
@@ -43,7 +44,11 @@ async def manufacture(
     async def source(
         conn: AConnection, context: Context, s_context: StepContext
     ) -> None:
-        timeout = s_context.timeout
+        timeout, batch, source = (
+            s_context.timeout,
+            s_context.batch,
+            s_context.source_indices[name],
+        )
         acc: List[Completion] = []
 
         async def cont() -> None:
@@ -55,7 +60,7 @@ async def manufacture(
             p.cancel()
         await gather(*done)
         await populate_suggestions(
-            conn, batch=s_context.batch, source=1, completions=acc
+            conn, batch=batch, source=source, completions=acc,
         )
 
         if pending:
@@ -143,6 +148,7 @@ async def merge(
 
     conn = AConnection()
     await init(conn)
+    source_indices = await init_sources(conn, sources=factories)
 
     async def gen(options: GenOptions) -> Tuple[Position, Iterator[VimCompletion]]:
         timeout = inf if options.force else settings.timeout
@@ -150,7 +156,12 @@ async def merge(
         position = context.position
 
         batch = await populate_batch(conn, position=position)
-        s_context = StepContext(batch=batch, timeout=timeout, force=options.force)
+        s_context = StepContext(
+            batch=batch,
+            timeout=timeout,
+            force=options.force,
+            source_indices=source_indices,
+        )
 
         enabled, limits = buffer_opts(factories, buf_context=buf_context)
 
