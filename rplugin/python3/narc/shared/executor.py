@@ -32,7 +32,7 @@ class Executor:
         self.__chan.put_nowait(cont)
         return await run_in_executor(fut.result)
 
-    def run_sync(self, f: Callable[..., T], *args: Any, **kwargs: Any) -> Future:
+    def run_sync(self, f: Callable[..., T], *args: Any, **kwargs: Any) -> T:
         fut: Future = Future()
 
         def cont() -> None:
@@ -43,4 +43,4 @@ class Executor:
                 fut.set_exception(e)
 
         self.__chan.put_nowait(cont)
-        return fut
+        return fut.result()

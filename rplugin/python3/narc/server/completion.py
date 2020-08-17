@@ -1,33 +1,20 @@
-from asyncio import Queue, as_completed, gather, wait
+from asyncio import Queue, gather, wait
 from dataclasses import dataclass
-from itertools import chain
 from math import inf
 from os import linesep
-from typing import (
-    AsyncIterator,
-    Awaitable,
-    Callable,
-    Dict,
-    Iterator,
-    List,
-    Optional,
-    Sequence,
-    Set,
-    Tuple,
-)
+from typing import Awaitable, Callable, Dict, Iterator, List, Optional, Set, Tuple
 
 from pynvim import Nvim
 
 from ..shared.nvim import print
-from ..shared.parse import normalize
-from ..shared.types import Comm, Context, Position
-from .sql import init
 from ..shared.sql import AConnection
+from ..shared.types import Comm, Context, Position
 from .context import gen_context, goahead
 from .fuzzy import fuzzy
 from .logging import log
 from .nvim import VimCompletion
 from .settings import load_factories
+from .sql import init, populate_batch, populate_suggestions
 from .types import BufferContext, Completion, Settings, SourceFactory, Step
 
 
@@ -38,29 +25,12 @@ class GenOptions:
 
 @dataclass(frozen=True)
 class StepContext:
+    batch: int
     timeout: float
     force: bool
 
 
 StepFunction = Callable[[AConnection, Context, StepContext], Awaitable[None]]
-
-
-def parse_step(comp: Completion, name: str, short_name: str, rank: float) -> Step:
-    text = (
-        comp.snippet.match
-        if comp.snippet
-        else (comp.medit.new_prefix + comp.medit.new_suffix if comp.medit else "")
-    )
-    normalized_text = normalize(text)
-    step = Step(
-        source=name,
-        source_shortname=short_name,
-        rank=rank,
-        text=text,
-        text_normalized=normalized_text,
-        comp=comp,
-    )
-    return step
 
 
 async def manufacture(
@@ -74,19 +44,19 @@ async def manufacture(
         conn: AConnection, context: Context, s_context: StepContext
     ) -> None:
         timeout = s_context.timeout
-        acc: List[Step] = []
+        acc: List[Completion] = []
 
         async def cont() -> None:
             async for comp in src(context):
-                step = parse_step(
-                    comp, name=name, short_name=factory.short_name, rank=factory.rank
-                )
-                acc.append(step)
+                acc.append(comp)
 
         done, pending = await wait((cont(),), timeout=timeout)
         for p in pending:
             p.cancel()
         await gather(*done)
+        await populate_suggestions(
+            conn, batch=s_context.batch, source=1, completions=acc
+        )
 
         if pending:
             timeout_fmt = round(timeout * 1000)
@@ -170,15 +140,18 @@ async def merge(
         )
     )
     sources: Dict[str, StepFunction] = {name: source for name, source, _ in src_gen}
+
     conn = AConnection()
-    async with conn.lock:
-        await init(conn)
+    await init(conn)
 
     async def gen(options: GenOptions) -> Tuple[Position, Iterator[VimCompletion]]:
         timeout = inf if options.force else settings.timeout
-        s_context = StepContext(timeout=timeout, force=options.force)
         context, buf_context = await gen_context(nvim, options=match_opt)
         position = context.position
+
+        batch = await populate_batch(conn, position=position)
+        s_context = StepContext(batch=batch, timeout=timeout, force=options.force)
+
         enabled, limits = buffer_opts(factories, buf_context=buf_context)
 
         if options.force or goahead(context):

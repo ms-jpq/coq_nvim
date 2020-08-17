@@ -1,10 +1,12 @@
 from os.path import dirname, join, realpath
 from sqlite3 import Cursor
-from typing import Iterator, Optional, Sequence
+from typing import Iterable, Iterator, Optional, Sequence, Tuple
 
 from ..shared.da import slurp
-from ..shared.sql import AConnection
-from ..shared.types import LEdit, MEdit, Position, Snippet
+from ..shared.logging import log
+from ..shared.parse import normalize
+from ..shared.sql import SQL_TYPES, AConnection
+from ..shared.types import Completion, LEdit, MEdit, Position, Snippet
 from .types import Suggestion
 
 __sql__ = join(dirname(realpath(__file__)), "sql")
@@ -16,7 +18,6 @@ _POPULATE_BATCH = slurp(join(__sql__, "populate_batch.sql"))
 _POPULATE_LEDIT = slurp(join(__sql__, "populate_ledit.sql"))
 _POPULATE_MEDIT = slurp(join(__sql__, "populate_medit.sql"))
 _POPULATE_SNIPPET = slurp(join(__sql__, "populate_snippet.sql"))
-_POPULATE_SNIPPET_KIND = slurp(join(__sql__, "populate_snippet_kind.sql"))
 _POPULATE_SUGGESTION = slurp(join(__sql__, "populate_suggestion.sql"))
 _DEPOPULATE = slurp(join(__sql__, "depopulate.sql"))
 _QUERY_LEDIT = slurp(join(__sql__, "query_ledit"))
@@ -26,37 +27,108 @@ _QUERY_SUGGESTIONS = slurp(join(__sql__, "query_suggestions"))
 
 
 async def init(conn: AConnection) -> None:
-    async with await conn.execute_script(_INIT):
-        pass
+    async with conn.lock:
+        async with await conn.execute_script(_INIT):
+            pass
 
 
 async def populate_sources(conn: AConnection) -> None:
-    pass
+    async with conn.lock:
+        async with await conn.execute_many(_POPULATE_SOURCE):
+            pass
 
 
-async def populate_batch(conn: AConnection) -> None:
-    pass
+async def populate_batch(conn: AConnection, position: Position) -> int:
+    async with conn.lock:
+        async with await conn.execute(_POPULATE_BATCH, (position.row, position.col)) as cursor:
+            return cursor.lastrowid
 
 
-def populate_snippet(cursor: Cursor) -> None:
-    pass
+def populate_snippet(cursor: Cursor, suggestions_id: int, snippet: Snippet) -> None:
+    cursor.execute(_POPULATE_SNIPPET, (suggestions_id, snippet.kind, snippet.content))
 
 
-def populate_ledits(cursor: Cursor) -> None:
-    pass
+def populate_ledits(
+    cursor: Cursor, suggestions_id: int, ledits: Sequence[LEdit]
+) -> None:
+    def cont() -> Iterator[Iterable[SQL_TYPES]]:
+        for ledit in ledits:
+            yield suggestions_id, ledit.begin.row, ledit.begin.col, ledit.end.row, ledit.end.col, ledit.new_text
+
+    cursor.executemany(_POPULATE_LEDIT, cont())
 
 
-def populate_medit(cursor: Cursor) -> None:
-    pass
+def populate_medit(cursor: Cursor, suggestions_id: int, medit: MEdit) -> None:
+    cursor.execute(
+        _POPULATE_MEDIT,
+        (
+            suggestions_id,
+            medit.old_prefix,
+            medit.new_prefix,
+            medit.old_suffix,
+            medit.new_suffix,
+        ),
+    )
 
 
-async def populate_suggestions(conn: AConnection) -> None:
-    pass
+def parse_match(comp: Completion) -> Tuple[str, str]:
+    def cont() -> str:
+        if comp.snippet:
+            return comp.snippet.match
+        elif comp.medit:
+            return comp.medit.new_prefix + comp.medit.new_suffix
+        elif comp.ledits:
+            return next(iter(comp.ledits)).new_text
+        else:
+            msg = f"No actionable match for - {comp}"
+            log.warning("%s", msg)
+            return ""
+
+    match = cont()
+    normalized = normalize(match)
+    return match, normalized
+
+
+async def populate_suggestions(
+    conn: AConnection, batch: int, source: int, completions: Sequence[Completion]
+) -> None:
+    def cont() -> None:
+        c2 = conn._conn
+        cursor = c2.cursor()
+        try:
+            for comp in completions:
+                match, match_normalized = parse_match(comp)
+                cursor.execute(
+                    _POPULATE_SUGGESTION,
+                    (
+                        batch,
+                        source,
+                        match,
+                        match_normalized,
+                        comp.label,
+                        comp.sortby,
+                        comp.kind,
+                        comp.doc,
+                    ),
+                )
+                rowid = cursor.lastrowid
+                if comp.medit:
+                    populate_medit(cursor, suggestions_id=rowid, medit=comp.medit)
+                populate_ledits(cursor, suggestions_id=rowid, ledits=comp.ledits)
+                if comp.snippet:
+                    populate_snippet(cursor, suggestions_id=rowid, snippet=comp.snippet)
+
+        finally:
+            cursor.close()
+
+    async with conn.lock:
+        await conn.chan.run(cont)
 
 
 async def depopulate(conn: AConnection) -> None:
-    async with await conn.execute(_DEPOPULATE):
-        pass
+    async with conn.lock:
+        async with await conn.execute(_DEPOPULATE):
+            pass
 
 
 def query_snippet(cursor: Cursor, suggestions_id: int, match: str) -> Optional[Snippet]:
@@ -118,6 +190,7 @@ async def query(conn: AConnection, batch: int, ncword: str) -> Sequence[Suggesti
                     medit=medit,
                     ledits=tuple(ledits),
                     snippet=snippet,
+                    unique=row["unique"],
                 )
                 yield suggestion
 

@@ -1,2 +1,2 @@
-INSERT INTO snippets (suggestions_id, kind_id, content)
+INSERT INTO snippets (suggestions_id, kind, content)
 VALUES (?, ?, ?)
