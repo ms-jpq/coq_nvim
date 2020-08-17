@@ -19,9 +19,9 @@ CREATE TABLE IF NOT EXISTS suggestions (
   sortby           TEXT,
   kind             TEXT,
   doc              TEXT    NOT NULL,
-  ensure_unique    INTEGER NOT NULL,
-  match_syms       INTEGER NOT NULL,
-  use_cache        INTEGER NOT NULL,
+  ensure_unique    BOOLEAN NOT NULL,
+  match_syms       BOOLEAN NOT NULL,
+  use_cache        BOOLEAN NOT NULL,
   FOREIGN KEY (batch_id)   REFERENCES batches  (rowid) ON DELETE CASCADE,
   FOREIGN KEY (source_id)  REFERENCES sources  (rowid) ON DELETE CASCADE
 );
@@ -48,9 +48,44 @@ CREATE TABLE IF NOT EXISTS ledits (
 );
 
 
-CREATE TABLE IF NOT EXISTS snippets (
-  suggestions_id INTEGER NOT NULL,
-  kind           TEXT    NOT NULL,
-  content        TEXT    NOT NULL,
-  FOREIGN KEY (suggestions_id) REFERENCES suggestions (rowid) ON DELETE CASCADE
+CREATE TABLE IF NOT EXISTS snippet_kinds (
+  kind TEXT NOT NULL
 );
+
+
+CREATE TABLE IF NOT EXISTS snippets (
+  suggestions_id  INTEGER NOT NULL,
+  snippet_kind_id INTEGER NOT NULL,
+  content         TEXT    NOT NULL,
+  FOREIGN KEY (suggestions_id)  REFERENCES suggestions (rowid) ON DELETE CASCADE,
+  FOREIGN KEY (snippet_kind_id) REFERENCES suggestions (rowid) ON DELETE CASCADE
+);
+
+
+CREATE VIEW IF NOT EXISTS suggestions_view AS
+SELECT
+  suggestions.rowid AS suggestions_id,
+  sources.name AS source,
+  sources.short_name AS source_shortname,
+  suggestions.label AS label,
+  suggestions.sortby AS sortby,
+  suggestions.kind AS kind,
+  suggestions.doc AS doc,
+  suggestions.ensure_unique AS ensure_unique,
+  suggestions.match AS match,
+  suggestions.match_normalized as match_normalized
+FROM suggestions
+JOIN sources
+ON
+  sources.rowid = suggestions.source_id;
+
+
+CREATE VIEW IF NOT EXISTS snippets_view AS
+SELECT
+  snippets.suggestions_id AS suggestions_id,
+  snippet_kinds.kind AS kind,
+  snippets.content AS content
+FROM snippets
+JOIN snippet_kinds
+ON
+  snippet_kinds.rowid = snippets.snippet_kind_id;
