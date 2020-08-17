@@ -54,8 +54,3 @@ CREATE TABLE IF NOT EXISTS snippets (
   content        TEXT    NOT NULL,
   FOREIGN KEY (suggestions_id) REFERENCES suggestions (rowid) ON DELETE CASCADE
 );
-
-
-CREATE VIEW IF NOT EXISTS suggestions_view (
-
-);
