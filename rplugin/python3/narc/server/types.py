@@ -96,8 +96,8 @@ class BufferContext:
 @dataclass(frozen=True)
 class Step:
     source: str
-    rank: float
     source_shortname: str
+    rank: float
     text: str
     text_normalized: str
     comp: Completion
