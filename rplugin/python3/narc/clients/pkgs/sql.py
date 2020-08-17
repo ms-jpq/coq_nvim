@@ -1,36 +1,20 @@
+from os.path import dirname, join, realpath
 from typing import AsyncIterator, Iterable, Iterator, Tuple
 
+from ...shared.da import slurp
 from ...shared.logging import log
 from ...shared.sql import SQL_TYPES, AConnection, sql_escape
 
+__sql__ = join(realpath(dirname(__file__)), "sql")
+
+_INIT = slurp(join(__sql__, "init.sql"))
+_DEPOPULATE = slurp(join(__sql__, "depopulate.sql"))
+_POPULATE = slurp(join(__sql__, "populate.sql"))
+_QUERY = slurp(join(__sql__, "query.sql"))
+
+
 ESCAPE_CHAR = '"'
 MATCH_ESCAPE = set() | {ESCAPE_CHAR}
-
-
-_INIT = """
-CREATE VIRTUAL TABLE IF NOT EXISTS words USING fts5(
-  word,
-  nword
-)
-"""
-
-_DEPOPULATE = """
-DELETE FROM words
-"""
-
-_POPULATE = """
-INSERT OR IGNORE INTO words (word, nword)
-VALUES (?, lower(?))
-"""
-
-_QUERY = """
-SELECT word, nword
-FROM words
-WHERE
-    nword MATCH ?
-    AND
-    nword <> ?
-"""
 
 
 async def init(conn: AConnection) -> None:
