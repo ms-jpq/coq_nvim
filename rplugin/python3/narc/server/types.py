@@ -104,6 +104,18 @@ class Step:
 
 
 @dataclass(frozen=True)
+class Suggestion:
+    source: str
+    source_shortname: str
+    rank: float
+    match: str
+    match_normalized: str
+    medit: MEdit
+    ledits: LEdit
+    snippet: Snippet
+
+
+@dataclass(frozen=True)
 class Metric:
     prefix_matches: int
     consecutive_matches: int

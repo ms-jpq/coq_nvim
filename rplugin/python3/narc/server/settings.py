@@ -64,7 +64,7 @@ def initial(configs: Sequence[Any]) -> Settings:
     }
     settings = Settings(
         retries=config["retries"],
-        timeout=config["timeout"] or inf,
+        timeout=(config["timeout"] or inf) / 1000,
         display=display,
         match=match,
         cache=cache,

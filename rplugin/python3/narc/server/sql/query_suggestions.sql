@@ -1,5 +1,6 @@
 SELECT
   suggestions.rowid AS suggestions_id,
+  suggestions.source_id = ? AS cached,
   sources.name AS source,
   sources.short_name AS source_shortname,
   suggestions.label AS label,

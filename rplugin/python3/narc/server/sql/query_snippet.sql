@@ -1,5 +1,4 @@
 SELECT
-  snippets.suggestions_id AS suggestions_id,
   snippet_kinds.kind AS kind,
   snippets.content AS content
 FROM snippets
