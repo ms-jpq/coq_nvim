@@ -1,7 +1,7 @@
 {
   "cache": {
     "band_size": 20,
-    "min_match": 2
+    "prefix_matches": 2
   },
   "display": {
     "ellipsis": "…",

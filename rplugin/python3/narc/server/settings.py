@@ -24,9 +24,11 @@ def load_source(config: Dict[str, Any]) -> SourceSpec:
         main=config["main"],
         enabled=config["enabled"],
         short_name=config["short_name"],
-        limit=config.get("limit"),
-        rank=config.get("rank"),
-        config=config.get("config") or {},
+        limit=config["limit"],
+        unique=config["unique"],
+        use_cache=config["use_cache"],
+        rank=config["rank"],
+        config=config["config"],
     )
     return spec
 
@@ -56,7 +58,7 @@ def initial(configs: Sequence[Any]) -> Settings:
         unifying_chars={*match_o["unifying_chars"]},
     )
     cache = CacheOptions(
-        min_match=cache_o["min_match"], band_size=cache_o["band_size"],
+        prefix_matches=cache_o["prefix_matches"], band_size=cache_o["band_size"],
     )
     sources = {name: load_source(conf) for name, conf in config["sources"].items()}
     snippet_engines = {
@@ -95,6 +97,8 @@ def assemble(spec: SourceSpec, main: Factory, match: MatchOptions) -> SourceFact
         enabled=spec.enabled,
         short_name=spec.short_name,
         limit=limit,
+        unique=spec.unique,
+        use_cache=spec.use_cache,
         rank=rank,
         seed=seed,
         manufacture=main,

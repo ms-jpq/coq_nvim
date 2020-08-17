@@ -42,6 +42,8 @@ class SourceSpec:
     short_name: str
     limit: Optional[float]
     rank: Optional[int]
+    unique: bool
+    use_cache: bool
     config: Dict[str, Any]
 
 
@@ -71,6 +73,8 @@ class SourceFactory:
     short_name: str
     limit: float
     rank: float
+    unique: bool
+    use_cache: bool
     seed: Seed
     manufacture: Factory
 

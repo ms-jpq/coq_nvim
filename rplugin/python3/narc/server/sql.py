@@ -1,29 +1,30 @@
 from os.path import dirname, join, realpath
 from sqlite3 import Cursor
-from typing import Iterable, Iterator, Optional, Sequence, Tuple
+from typing import AsyncIterator, Dict, Iterable, Iterator, Optional, Sequence, Tuple
 
 from ..shared.da import slurp
 from ..shared.logging import log
 from ..shared.parse import normalize
 from ..shared.sql import SQL_TYPES, AConnection, sql_escape
 from ..shared.types import Completion, LEdit, MEdit, Position, Snippet
-from .types import CacheOptions, Suggestion
+from .types import CacheOptions, Suggestion, SourceFactory
 
 __sql__ = join(dirname(realpath(__file__)), "sql")
 
 
 _INIT = slurp(join(__sql__, "init.sql"))
-_POPULATE_SOURCE = slurp(join(__sql__, "populate_source.sql"))
+_INIT_SOURCE = slurp(join(__sql__, "init_source.sql"))
 _POPULATE_BATCH = slurp(join(__sql__, "populate_batch.sql"))
 _POPULATE_LEDIT = slurp(join(__sql__, "populate_ledit.sql"))
 _POPULATE_MEDIT = slurp(join(__sql__, "populate_medit.sql"))
 _POPULATE_SNIPPET = slurp(join(__sql__, "populate_snippet.sql"))
 _POPULATE_SUGGESTION = slurp(join(__sql__, "populate_suggestion.sql"))
 _DEPOPULATE = slurp(join(__sql__, "depopulate.sql"))
-_QUERY_LEDIT = slurp(join(__sql__, "query_ledit"))
-_QUERY_MEDIT = slurp(join(__sql__, "query_medit"))
-_QUERY_SNIPPET = slurp(join(__sql__, "query_snippet"))
-_QUERY_SUGGESTIONS = slurp(join(__sql__, "query_suggestions"))
+_QUERY_SOURCES = slurp(join(__sql__, "query_sources.sql"))
+_QUERY_LEDIT = slurp(join(__sql__, "query_ledits.sql"))
+_QUERY_MEDIT = slurp(join(__sql__, "query_medit.sql"))
+_QUERY_SNIPPET = slurp(join(__sql__, "query_snippet.sql"))
+_QUERY_SUGGESTIONS = slurp(join(__sql__, "query_suggestions.sql"))
 
 
 ESCAPE_CHAR = "!"
@@ -36,10 +37,27 @@ async def init(conn: AConnection) -> None:
             pass
 
 
-async def populate_sources(conn: AConnection) -> None:
+async def populate_sources(
+    conn: AConnection, sources: Dict[str, SourceFactory]
+) -> Dict[str, int]:
+    def cont() -> Iterator[Iterable[SQL_TYPES]]:
+        for name, source in sources.items():
+            yield name, source.short_name, source.unique, source.use_cache
+
     async with conn.lock:
-        async with await conn.execute_many(_POPULATE_SOURCE):
+        async with await conn.execute_many(_INIT_SOURCE, cont()):
             pass
+        await conn.commit()
+
+    async def co() -> AsyncIterator[Tuple[str, int]]:
+        async with conn.lock:
+            async with await conn.execute(_QUERY_SOURCES) as cursor:
+                rows = await cursor.fetch_all()
+                for row in rows:
+                    yield row["name"], row["rowid"]
+
+    opts = {key: val async for key, val in co()}
+    return opts
 
 
 async def populate_batch(conn: AConnection, position: Position) -> int:
@@ -47,7 +65,9 @@ async def populate_batch(conn: AConnection, position: Position) -> int:
         async with await conn.execute(
             _POPULATE_BATCH, (position.row, position.col)
         ) as cursor:
-            return cursor.lastrowid
+            rowid = cursor.lastrowid
+        await conn.commit()
+    return rowid
 
 
 def populate_snippet(cursor: Cursor, suggestions_id: int, snippet: Snippet) -> None:
@@ -123,7 +143,7 @@ async def populate_suggestions(
                 populate_ledits(cursor, suggestions_id=rowid, ledits=comp.ledits)
                 if comp.snippet:
                     populate_snippet(cursor, suggestions_id=rowid, snippet=comp.snippet)
-
+            c2.commit()
         finally:
             cursor.close()
 
