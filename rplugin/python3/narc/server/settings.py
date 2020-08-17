@@ -25,7 +25,6 @@ def load_source(config: Dict[str, Any]) -> SourceSpec:
         enabled=config["enabled"],
         short_name=config["short_name"],
         limit=config.get("limit"),
-        timeout=config.get("timeout"),
         rank=config.get("rank"),
         config=config.get("config") or {},
     )
@@ -65,6 +64,7 @@ def initial(configs: Sequence[Any]) -> Settings:
     }
     settings = Settings(
         retries=config["retries"],
+        timeout=config["timeout"] or inf,
         display=display,
         match=match,
         cache=cache,
@@ -88,15 +88,13 @@ def load_external(main_name: str) -> Optional[Callable[..., Any]]:
 
 def assemble(spec: SourceSpec, main: Factory, match: MatchOptions) -> SourceFactory:
     limit = spec.limit or inf
-    timeout = (spec.timeout or inf) / 1000
     rank = spec.rank or 100
     config = spec.config
-    seed = Seed(match=match, limit=limit, timeout=timeout, config=config,)
+    seed = Seed(match=match, limit=limit, config=config,)
     fact = SourceFactory(
         enabled=spec.enabled,
         short_name=spec.short_name,
         limit=limit,
-        timeout=timeout,
         rank=rank,
         seed=seed,
         manufacture=main,

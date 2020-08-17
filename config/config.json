@@ -13,7 +13,7 @@
     "transpose_band": 3,
     "unifying_chars": ["_", "-"]
   },
-  "retries": 3,
+  "retries": 2,
   "snippet_engines": {},
   "sources": {
     "around": {
@@ -26,8 +26,7 @@
       "limit": 3,
       "main": "around.py",
       "rank": 100,
-      "short_name": "A",
-      "timeout": 100
+      "short_name": "A"
     },
     "buffers": {
       "config": {
@@ -39,8 +38,7 @@
       "limit": 3,
       "main": "buffers.py",
       "rank": 80,
-      "short_name": "B",
-      "timeout": 100
+      "short_name": "B"
     },
     "lsp": {
       "config": {},
@@ -48,8 +46,7 @@
       "limit": null,
       "main": "lsp.py",
       "rank": 200,
-      "short_name": "L",
-      "timeout": 100
+      "short_name": "L"
     },
     "paths": {
       "config": {},
@@ -57,8 +54,7 @@
       "limit": 3,
       "main": "paths.py",
       "rank": 120,
-      "short_name": "F",
-      "timeout": 100
+      "short_name": "F"
     },
     "tmux": {
       "config": {
@@ -70,8 +66,7 @@
       "limit": 3,
       "main": "tmux.py",
       "rank": 50,
-      "short_name": "T",
-      "timeout": 100
+      "short_name": "T"
     },
     "tree_sitter": {
       "config": {},
@@ -79,8 +74,8 @@
       "limit": 3,
       "main": "tree_sitter.py",
       "rank": 150,
-      "short_name": "TS",
-      "timeout": 100
+      "short_name": "TS"
     }
-  }
+  },
+  "timeout": 100
 }

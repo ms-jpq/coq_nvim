@@ -30,7 +30,6 @@ class Comm:
 class Seed:
     match: MatchOptions
     limit: float
-    timeout: float
     config: Dict[str, Any]
 
 

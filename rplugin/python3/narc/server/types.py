@@ -1,4 +1,5 @@
 from dataclasses import dataclass, field
+from math import inf
 from typing import Any, Dict, Optional, Sequence
 
 from ..shared.types import (
@@ -41,7 +42,6 @@ class SourceSpec:
     enabled: bool
     short_name: str
     limit: Optional[float]
-    timeout: Optional[float]
     rank: Optional[int]
     config: Dict[str, Any]
 
@@ -57,6 +57,7 @@ class SnippetEngineSpec:
 @dataclass(frozen=True)
 class Settings:
     retries: int
+    timeout: float
     logging_level: str
     display: DisplayOptions
     match: MatchOptions
@@ -69,7 +70,6 @@ class Settings:
 class SourceFactory:
     enabled: bool
     short_name: str
-    timeout: float
     limit: float
     rank: float
     seed: Seed
@@ -85,11 +85,11 @@ class EngineFactory:
 @dataclass(frozen=True)
 class BufferSourceSpec:
     enabled: Optional[bool]
-    timeout: Optional[float]
 
 
 @dataclass(frozen=True)
 class BufferContext:
+    timeout: float = inf
     sources: Dict[str, BufferSourceSpec] = field(default_factory=dict)
 
 

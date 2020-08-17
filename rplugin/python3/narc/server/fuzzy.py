@@ -94,7 +94,7 @@ def vimify(fuzz: FuzzyStep, display: DisplayOptions) -> VimCompletion:
     menu = f"{comp.kind} {source}" if comp.kind else source
     long_abbr = (
         (comp.label or step.text)
-        if comp.snippet or metric.full_match or not metric.num_matches
+        if metric.full_match or not metric.num_matches
         else context_gen(fuzz)
     )
     max_width = display.pum_max_len - len(menu)

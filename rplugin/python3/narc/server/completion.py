@@ -37,6 +37,7 @@ class GenOptions:
 
 @dataclass(frozen=True)
 class StepContext:
+    timeout: float
     force: bool
 
 
@@ -69,7 +70,7 @@ async def manufacture(
     src = await factory.manufacture(comm, factory.seed)
 
     async def source(context: Context, s_context: StepContext) -> Sequence[Step]:
-        timeout = inf if s_context.force else factory.timeout
+        timeout = s_context.timeout
         acc: List[Step] = []
 
         async def cont() -> None:
@@ -128,7 +129,7 @@ async def osha(
 
 def buffer_opts(
     factories: Dict[str, SourceFactory], buf_context: BufferContext
-) -> Tuple[Set[str], Dict[str, float], float]:
+) -> Tuple[Set[str], Dict[str, float]]:
     def is_enabled(name: str, factory: SourceFactory) -> bool:
         if name in buf_context.sources:
             spec = buf_context.sources.get(name)
@@ -145,11 +146,8 @@ def buffer_opts(
     limits = {
         **{name: fact.limit for name, fact in factories.items() if name in enabled},
     }
-    max_wait = max(
-        *(fact.timeout for name, fact in factories.items() if name in enabled), 0,
-    )
 
-    return enabled, limits, max_wait
+    return enabled, limits
 
 
 async def merge(
@@ -170,10 +168,11 @@ async def merge(
     push, pull = make_cache(match_opt=match_opt, cache_opt=cache_opt)
 
     async def gen(options: GenOptions) -> Tuple[Position, Iterator[VimCompletion]]:
-        s_context = StepContext(force=options.force)
+        timeout = inf if options.force else settings.timeout
+        s_context = StepContext(timeout=timeout, force=options.force)
         context, buf_context = await gen_context(nvim, options=match_opt)
         position = context.position
-        enabled, limits, max_wait = buffer_opts(factories, buf_context=buf_context)
+        enabled, limits = buffer_opts(factories, buf_context=buf_context)
 
         if options.force or goahead(context):
 
@@ -190,7 +189,7 @@ async def merge(
             async def cont() -> Sequence[FuzzyStep]:
                 return [step async for step in gen()]
 
-            cached, steps = await gather(pull(context, max_wait), cont())
+            cached, steps = await gather(pull(context, timeout), cont())
             push(context, steps)
             all_steps = chain(steps, cached)
 
