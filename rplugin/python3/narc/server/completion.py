@@ -175,7 +175,7 @@ async def merge(
         position = context.position
         enabled, limits, max_wait = buffer_opts(factories, buf_context=buf_context)
 
-        if goahead(context) or options.force:
+        if options.force or goahead(context):
 
             async def gen() -> AsyncIterator[FuzzyStep]:
                 source_gen = tuple(
