@@ -1,8 +1,9 @@
-from asyncio import Future as AFuture
 from concurrent.futures import Future
 from queue import SimpleQueue
 from threading import Thread
 from typing import Any, Callable, TypeVar
+
+from .da import run_in_executor
 
 T = TypeVar("T")
 
@@ -19,7 +20,7 @@ class Executor:
             f()
 
     async def run(self, f: Callable[..., T], *args: Any, **kwargs: Any) -> T:
-        fut: AFuture = AFuture()
+        fut: Future = Future()
 
         def cont() -> None:
             try:
@@ -29,7 +30,7 @@ class Executor:
                 fut.set_exception(e)
 
         self.__chan.put_nowait(cont)
-        return await fut
+        return await run_in_executor(fut.result)
 
     def run_sync(self, f: Callable[..., T], *args: Any, **kwargs: Any) -> Future:
         fut: Future = Future()
