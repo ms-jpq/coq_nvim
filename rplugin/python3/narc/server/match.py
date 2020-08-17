@@ -2,6 +2,7 @@ from difflib import SequenceMatcher
 from math import inf
 from typing import Dict
 
+from ..shared.parse import is_word
 from ..shared.types import Context, MatchOptions
 from .types import Metric, Step
 
@@ -93,10 +94,11 @@ def gen_metric(
 def gen_metric_wrap(
     context: Context, step: Step, options: MatchOptions, use_secondary: bool
 ) -> Metric:
+    word_start = is_word(step.text[:1], unifying_chars=options.unifying_chars)
     cword, ncword = (
-        (context.alnum_syms, context.alnum_syms_normalized)
-        if step.comp.match_syms
-        else (context.alnums, context.alnums_normalized)
+        (context.alnums, context.alnums_normalized)
+        if word_start
+        else (context.alnum_syms, context.alnum_syms_normalized)
     )
     match, n_match = step.text, step.text_normalized
 

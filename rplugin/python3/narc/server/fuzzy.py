@@ -131,7 +131,7 @@ def fuzzy(
     sorted_steps = sorted(steps, key=cast(Callable[[FuzzyStep], Any], rank))
     for fuzz in sorted_steps:
         step = fuzz.step
-        unique = step.comp.unique
+        unique = False
         source = step.source
         seen_count = seen_by_source.get(source, 0) + 1
         seen_by_source[source] = seen_count

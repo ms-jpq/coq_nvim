@@ -26,7 +26,9 @@
       "limit": 3,
       "main": "around.py",
       "rank": 100,
-      "short_name": "A"
+      "short_name": "A",
+      "unique": true,
+      "use_cache": false
     },
     "buffers": {
       "config": {
@@ -38,7 +40,9 @@
       "limit": 3,
       "main": "buffers.py",
       "rank": 80,
-      "short_name": "B"
+      "short_name": "B",
+      "unique": true,
+      "use_cache": false
     },
     "lsp": {
       "config": {},
@@ -46,7 +50,9 @@
       "limit": null,
       "main": "lsp.py",
       "rank": 200,
-      "short_name": "L"
+      "short_name": "L",
+      "unique": true,
+      "use_cache": true
     },
     "paths": {
       "config": {},
@@ -54,7 +60,9 @@
       "limit": 3,
       "main": "paths.py",
       "rank": 120,
-      "short_name": "F"
+      "short_name": "F",
+      "unique": true,
+      "use_cache": false
     },
     "tmux": {
       "config": {
@@ -66,7 +74,9 @@
       "limit": 3,
       "main": "tmux.py",
       "rank": 50,
-      "short_name": "T"
+      "short_name": "T",
+      "unique": true,
+      "use_cache": false
     },
     "tree_sitter": {
       "config": {},
@@ -74,7 +84,9 @@
       "limit": 3,
       "main": "tree_sitter.py",
       "rank": 150,
-      "short_name": "TS"
+      "short_name": "TS",
+      "unique": true,
+      "use_cache": false
     }
   },
   "timeout": 100

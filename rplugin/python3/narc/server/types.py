@@ -105,14 +105,16 @@ class Step:
 
 @dataclass(frozen=True)
 class Suggestion:
+    position: Position
     source: str
     source_shortname: str
     rank: float
     match: str
     match_normalized: str
-    medit: MEdit
-    ledits: LEdit
-    snippet: Snippet
+    medit: Optional[MEdit]
+    ledits: Sequence[LEdit]
+    snippet: Optional[Snippet]
+    unique: bool
 
 
 @dataclass(frozen=True)
