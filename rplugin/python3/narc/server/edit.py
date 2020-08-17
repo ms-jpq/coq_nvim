@@ -8,7 +8,7 @@ from pynvim.api.buffer import Buffer
 from pynvim.api.window import Window
 
 from ..shared.types import LEdit, Position
-from .logging import log
+from ..shared.logging import log
 from .types import Payload
 
 IText = Union[str, Tuple[()]]

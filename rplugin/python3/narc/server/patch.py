@@ -3,6 +3,7 @@ from typing import Any, Callable, Dict, cast
 from pynvim import Nvim
 from pynvim.api.window import Window
 
+from ..shared.logging import log
 from ..shared.nvim import call
 from ..shared.types import (
     LEdit,
@@ -13,7 +14,6 @@ from ..shared.types import (
     SnippetEngine,
 )
 from .edit import replace_lines
-from .logging import log
 from .types import Payload
 
 

@@ -6,15 +6,15 @@ from typing import Awaitable, Callable, Dict, Iterator, List, Optional, Set, Tup
 
 from pynvim import Nvim
 
+from ..shared.logging import log
 from ..shared.nvim import print
 from ..shared.sql import AConnection
 from ..shared.types import Comm, Completion, Context, Position
 from .context import gen_context, goahead
 from .fuzzy import fuzzy
-from .logging import log
 from .nvim import VimCompletion
 from .settings import load_factories
-from .sql import init, populate_batch, populate_suggestions, query, init_sources
+from .sql import init, init_sources, populate_batch, populate_suggestions, query
 from .types import BufferContext, Settings, SourceFactory
 
 
