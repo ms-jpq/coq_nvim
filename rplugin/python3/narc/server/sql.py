@@ -67,18 +67,24 @@ async def init_sources(
 
 async def populate_batch(conn: AConnection, context: Context) -> int:
     filetype, position = context.filetype, context.position
-    async with conn.lock:
-        async with await conn.execute(_INIT_FT, (filetype,)):
-            pass
-        async with await conn.execute(_QUERY_FT, (filetype,)) as cursor:
-            row = await cursor.fetch_one()
+
+    def cont() -> None:
+        c2 = conn._conn
+        cursor = c2.cursor()
+        try:
+            cursor.execute(_INIT_FT, (filetype,))
+            cursor.execute(_QUERY_FT, (filetype,))
+            row = cursor.fetchone()
             ft_id = row["rowid"]
-        async with await conn.execute(
-            _POPULATE_BATCH, (ft_id, position.row, position.col)
-        ) as cursor:
+            cursor.execute(_POPULATE_BATCH, (ft_id, position.row, position.col))
             rowid = cursor.lastrowid
-        await conn.commit()
-    return rowid
+            c2.commit()
+            return rowid
+        finally:
+            cursor.close()
+
+    async with conn.lock:
+        return await conn.chan.run(cont)
 
 
 def populate_snippet(cursor: Cursor, suggestions_id: int, snippet: Snippet) -> None:
