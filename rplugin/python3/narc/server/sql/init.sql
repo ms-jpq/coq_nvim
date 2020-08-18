@@ -8,15 +8,23 @@ DROP TABLE IF EXISTS sources;
 DROP TABLE IF EXISTS batches;
 
 
+CREATE TABLE filetypes (
+  filetype TEXT NOT NULL UNIQUE
+);
+CREATE INDEX filetypes_filetype ON filetypes (filetype);
+
+
 CREATE TABLE batches (
-  p_row INTEGER NOT NULL,
-  p_col INTEGER NOT NULL
+  /* filetype_id INTEGER NOT NULL, */
+  p_row       INTEGER NOT NULL,
+  p_col       INTEGER NOT NULL
+  /* FOREIGN KEY (filetype_id)  REFERENCES filetypes (rowid) ON DELETE CASCADE, */
 );
 
 
 CREATE TABLE sources (
-  name          TEXT    NOT NULL,
-  short_name    TEXT    NOT NULL,
+  name          TEXT    NOT NULL UNIQUE,
+  short_name    TEXT    NOT NULL UNIQUE,
   priority      INTEGER NOT NULL,
   ensure_unique BOOLEAN NOT NULL,
   use_cache     BOOLEAN NOT NULL

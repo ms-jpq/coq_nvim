@@ -186,9 +186,11 @@ async def merge(
                 if name in enabled
             )
             await gather(*source_gen)
+            log.debug("%s", f"begin - {batch}")
             suggestions = await query(
                 conn, context=context, batch=batch, options=cache_opt
             )
+            log.debug("%s", f"end - {batch}")
             return (
                 position,
                 fuzzy(
