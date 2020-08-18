@@ -1,2 +1,2 @@
-INSERT INTO batches (p_row, p_col)
-VALUES (?, ?)
+INSERT INTO batches (filetype_id, p_row, p_col)
+VALUES (?, ?, ?)

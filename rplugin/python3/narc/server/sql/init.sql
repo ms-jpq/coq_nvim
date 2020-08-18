@@ -10,23 +10,22 @@ DROP TABLE IF EXISTS batches;
 
 
 CREATE TABLE filetypes (
-  rowid            INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
-  filetype TEXT NOT NULL UNIQUE
+  rowid    INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+  filetype TEXT    NOT NULL UNIQUE
 );
 CREATE INDEX filetypes_filetype ON filetypes (filetype);
 
 
 CREATE TABLE batches (
-  rowid            INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
-  /* filetype_id INTEGER NOT NULL, */
+  rowid       INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+  filetype_id INTEGER NOT NULL REFERENCES filetypes (rowid) ON DELETE CASCADE,
   p_row       INTEGER NOT NULL,
   p_col       INTEGER NOT NULL
-  /* FOREIGN KEY (filetype_id)  REFERENCES filetypes (rowid) ON DELETE CASCADE, */
 );
 
 
 CREATE TABLE sources (
-  rowid            INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+  rowid         INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
   name          TEXT    NOT NULL UNIQUE,
   short_name    TEXT    NOT NULL UNIQUE,
   priority      INTEGER NOT NULL,

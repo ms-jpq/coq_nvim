@@ -15,6 +15,7 @@ __sql__ = join(dirname(realpath(__file__)), "sql")
 _FK = slurp(join(__sql__, "enable_fk.sql"))
 _INIT = slurp(join(__sql__, "init.sql"))
 _INIT_SOURCE = slurp(join(__sql__, "init_source.sql"))
+_INIT_FT = slurp(join(__sql__, "init_filetype.sql"))
 _POPULATE_BATCH = slurp(join(__sql__, "populate_batch.sql"))
 _POPULATE_LEDIT = slurp(join(__sql__, "populate_ledit.sql"))
 _POPULATE_MEDIT = slurp(join(__sql__, "populate_medit.sql"))
@@ -22,6 +23,7 @@ _POPULATE_SNIPPET = slurp(join(__sql__, "populate_snippet.sql"))
 _POPULATE_SUGGESTION = slurp(join(__sql__, "populate_suggestion.sql"))
 _DEPOPULATE = slurp(join(__sql__, "depopulate.sql"))
 _QUERY_SOURCES = slurp(join(__sql__, "query_sources.sql"))
+_QUERY_FT = slurp(join(__sql__, "query_filetype.sql"))
 _QUERY_LEDIT = slurp(join(__sql__, "query_ledits.sql"))
 _QUERY_MEDIT = slurp(join(__sql__, "query_medit.sql"))
 _QUERY_SNIPPET = slurp(join(__sql__, "query_snippet.sql"))
@@ -64,10 +66,15 @@ async def init_sources(
 
 
 async def populate_batch(conn: AConnection, context: Context) -> int:
-    position = context.position
+    filetype, position = context.filetype, context.position
     async with conn.lock:
+        async with await conn.execute(_INIT_FT, (filetype,)):
+            pass
+        async with await conn.execute(_QUERY_FT, (filetype,)) as cursor:
+            row = await cursor.fetch_one()
+            ft_id = row["rowid"]
         async with await conn.execute(
-            _POPULATE_BATCH, (position.row, position.col)
+            _POPULATE_BATCH, (ft_id, position.row, position.col)
         ) as cursor:
             rowid = cursor.lastrowid
         await conn.commit()
