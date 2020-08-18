@@ -12,6 +12,7 @@ from .types import CacheOptions, SourceFactory, Suggestion
 __sql__ = join(dirname(realpath(__file__)), "sql")
 
 
+_FK = slurp(join(__sql__, "enable_fk.sql"))
 _INIT = slurp(join(__sql__, "init.sql"))
 _INIT_SOURCE = slurp(join(__sql__, "init_source.sql"))
 _POPULATE_BATCH = slurp(join(__sql__, "populate_batch.sql"))
@@ -33,6 +34,8 @@ LIKE_ESCAPE = {"_", "[", "%"} | {ESCAPE_CHAR}
 
 async def init(conn: AConnection) -> None:
     async with conn.lock:
+        async with await conn.execute(_FK):
+            pass
         async with await conn.execute_script(_INIT):
             pass
 
