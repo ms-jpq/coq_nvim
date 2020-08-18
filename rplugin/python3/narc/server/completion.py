@@ -6,6 +6,7 @@ from typing import Awaitable, Callable, Dict, Iterator, List, Optional, Set, Tup
 
 from pynvim import Nvim
 
+from ..shared.consts import __debug_db__
 from ..shared.logging import log
 from ..shared.nvim import print
 from ..shared.sql import AConnection
@@ -14,8 +15,15 @@ from .context import gen_context, goahead
 from .fuzzy import fuzzy
 from .nvim import VimCompletion
 from .settings import load_factories
-from .sql import init, init_sources, populate_batch, populate_suggestions, query
-from .types import BufferContext, Settings, SourceFactory
+from .sql import (
+    depopulate,
+    init,
+    init_sources,
+    populate_batch,
+    populate_suggestions,
+    query,
+)
+from .types import BufferContext, CacheOptions, Settings, SourceFactory
 
 
 @dataclass(frozen=True)
@@ -108,7 +116,9 @@ async def osha(
 
 
 def buffer_opts(
-    factories: Dict[str, SourceFactory], buf_context: BufferContext
+    factories: Dict[str, SourceFactory],
+    buf_context: BufferContext,
+    options: CacheOptions,
 ) -> Tuple[Set[str], Dict[str, float]]:
     def is_enabled(name: str, factory: SourceFactory) -> bool:
         if name in buf_context.sources:
@@ -125,6 +135,7 @@ def buffer_opts(
 
     limits = {
         **{name: fact.limit for name, fact in factories.items() if name in enabled},
+        options.source_name: options.limit,
     }
 
     return enabled, limits
@@ -146,7 +157,7 @@ async def merge(
     )
     sources: Dict[str, StepFunction] = {name: source for name, source, _ in src_gen}
 
-    conn = AConnection()
+    conn = AConnection(__debug_db__)
     await init(conn)
     source_indices = await init_sources(conn, sources=factories)
 
@@ -155,7 +166,9 @@ async def merge(
         context, buf_context = await gen_context(nvim, options=match_opt)
         position = context.position
 
-        batch = await populate_batch(conn, position=position)
+        batch, _ = await gather(
+            populate_batch(conn, position=position), depopulate(conn)
+        )
         s_context = StepContext(
             batch=batch,
             timeout=timeout,
@@ -163,7 +176,9 @@ async def merge(
             source_indices=source_indices,
         )
 
-        enabled, limits = buffer_opts(factories, buf_context=buf_context)
+        enabled, limits = buffer_opts(
+            factories, buf_context=buf_context, options=cache_opt
+        )
 
         if options.force or goahead(context):
 

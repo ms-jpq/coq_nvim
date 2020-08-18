@@ -221,8 +221,8 @@ async def query(
                 medit = query_medit(cursor, suggestions_id=suggestions_id)
                 suggestion = Suggestion(
                     position=position,
-                    source=row["source"],
-                    source_shortname=row["source_shortname"],
+                    source=options.source_name,
+                    source_shortname=options.short_name,
                     rank=row["priority"],
                     kind=row["kind"],
                     doc=row["doc"],
@@ -233,7 +233,7 @@ async def query(
                     medit=medit,
                     ledits=tuple(ledits),
                     snippet=snippet,
-                    unique=row["ensure_unique"],
+                    unique=bool(row["ensure_unique"]),
                 )
                 yield suggestion
 

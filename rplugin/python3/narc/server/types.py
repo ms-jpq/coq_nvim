@@ -32,7 +32,9 @@ class DisplayOptions:
 class CacheOptions:
     prefix_matches: int
     band_size: int
-    source_name: str = "cache"
+    source_name: str
+    short_name: str
+    limit: int
 
 
 @dataclass(frozen=True)

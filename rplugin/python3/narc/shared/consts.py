@@ -5,6 +5,7 @@ __base__ = dirname(dirname(dirname(__narc__)))
 __config__ = join(__base__, "config")
 __artifacts__ = join(__base__, "artifacts")
 __log_file__ = join(__base__, "logs", "narc.log")
+__debug_db__ = join(__artifacts__, "debug.sqlite")
 
 settings_json = join(__config__, "config.json")
 
