@@ -2,7 +2,7 @@ from dataclasses import asdict, dataclass
 from itertools import repeat
 from locale import strxfrm
 from os import linesep
-from typing import Any, Callable, Dict, Iterator, Match, Sequence, Set, Union, cast
+from typing import Any, Callable, Dict, Iterator, Sequence, Set, Union, cast
 
 from ..shared.types import Context
 from .match import gen_metric_wrap
