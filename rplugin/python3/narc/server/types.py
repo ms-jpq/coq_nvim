@@ -34,7 +34,7 @@ class CacheOptions:
     band_size: int
     source_name: str
     short_name: str
-    limit: int
+    limit: float
 
 
 @dataclass(frozen=True)
