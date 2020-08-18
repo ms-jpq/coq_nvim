@@ -2,7 +2,7 @@ SELECT
   rowid,
   name,
   short_name,
-  unique,
+  ensure_unique,
   use_cache
 FROM
   sources

@@ -62,7 +62,7 @@ class AConnection(AbstractAsyncContextManager):
             conn.row_factory = Row
             return conn
 
-        self._conn = self.chan.run_sync(cont, database)
+        self._conn: Connection = self.chan.run_sync(cont).result()
 
     async def __aexit__(self, *_: Any) -> None:
         await self.chan.run(self._conn.close)

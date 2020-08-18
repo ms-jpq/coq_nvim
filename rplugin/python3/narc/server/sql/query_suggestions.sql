@@ -9,7 +9,7 @@ SELECT
   suggestions.doc AS doc,
   suggestions.match AS match,
   suggestions.match_normalized as match_normalized,
-  suggestions.unique AS unique
+  suggestions.ensure_unique AS ensure_unique
 FROM suggestions
 JOIN sources
 ON

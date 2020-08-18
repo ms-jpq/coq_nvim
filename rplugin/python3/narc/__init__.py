@@ -51,14 +51,14 @@ class Main:
     def _submit(self, co: Awaitable[None]) -> None:
         loop: AbstractEventLoop = self.nvim.loop
 
-        def run(nvim: Nvim) -> None:
+        def run() -> None:
             fut = run_coroutine_threadsafe(co, loop)
             try:
                 fut.result()
             except Exception as e:
                 log.exception("%s", e)
 
-        self.chan.run_sync(run, self.nvim)
+        self.chan.run_sync(run)
 
     async def initialize(self) -> None:
         await autocmd(self.nvim, events=("InsertEnter",), fn="_NARCinsert_enter")

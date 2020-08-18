@@ -1,2 +1,2 @@
-INSERT INTO sources (name, short_name, unique, use_cache)
+INSERT INTO sources (name, short_name, ensure_unique, use_cache)
 VALUES (?, ?, ?, ?)

@@ -5,10 +5,10 @@ CREATE TABLE IF NOT EXISTS batches (
 
 
 CREATE TABLE IF NOT EXISTS sources (
-  name       TEXT    NOT NULL,
-  short_name TEXT    NOT NULL,
-  unique     BOOLEAN NOT NULL,
-  use_cache  BOOLEAN NOT NULL
+  name          TEXT    NOT NULL,
+  short_name    TEXT    NOT NULL,
+  ensure_unique BOOLEAN NOT NULL,
+  use_cache     BOOLEAN NOT NULL
 );
 
 
