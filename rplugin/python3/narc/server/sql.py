@@ -222,12 +222,12 @@ async def query(
         cursor = c2.cursor()
         try:
             cursor.execute(_QUERY_SUGGESTIONS, (batch, batch, like_esc))
+
             for row in cursor.fetchall():
                 suggestions_id = row["suggestions_id"]
                 cached = bool(row["cached"])
 
                 match, match_normalized = row["match"], row["match_normalized"]
-                position = Position(row=row["p_row"], col=row["p_col"])
                 snippet = query_snippet(
                     cursor, suggestions_id=suggestions_id, match=match
                 )
@@ -244,7 +244,7 @@ async def query(
                     options.short_name if cached else row["source_shortname"]
                 )
                 suggestion = Suggestion(
-                    position=position,
+                    position=context.position,
                     source=source,
                     source_shortname=source_shortname,
                     rank=row["priority"],
