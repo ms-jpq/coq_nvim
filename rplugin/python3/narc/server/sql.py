@@ -236,7 +236,7 @@ async def query(
                 medit = (
                     new_medit(context, match=match, match_normalized=match_normalized)
                     if cached and old_medit
-                    else None
+                    else old_medit
                 )
 
                 source = options.source_name if cached else row["source"]
