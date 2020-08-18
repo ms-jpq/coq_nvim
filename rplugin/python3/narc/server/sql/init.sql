@@ -21,6 +21,7 @@ CREATE TABLE sources (
   ensure_unique BOOLEAN NOT NULL,
   use_cache     BOOLEAN NOT NULL
 );
+CREATE INDEX sources_use_cache ON sources (use_cache);
 
 
 CREATE TABLE suggestions (
