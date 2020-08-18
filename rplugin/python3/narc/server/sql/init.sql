@@ -10,12 +10,14 @@ DROP TABLE IF EXISTS batches;
 
 
 CREATE TABLE filetypes (
+  rowid            INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
   filetype TEXT NOT NULL UNIQUE
 );
 CREATE INDEX filetypes_filetype ON filetypes (filetype);
 
 
 CREATE TABLE batches (
+  rowid            INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
   /* filetype_id INTEGER NOT NULL, */
   p_row       INTEGER NOT NULL,
   p_col       INTEGER NOT NULL
@@ -24,6 +26,7 @@ CREATE TABLE batches (
 
 
 CREATE TABLE sources (
+  rowid            INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
   name          TEXT    NOT NULL UNIQUE,
   short_name    TEXT    NOT NULL UNIQUE,
   priority      INTEGER NOT NULL,
