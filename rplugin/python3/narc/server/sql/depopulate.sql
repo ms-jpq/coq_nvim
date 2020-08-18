@@ -1,6 +1,6 @@
 DELETE FROM suggestions
 WHERE
-  suggestions.rowid IN (
+  rowid IN (
     SELECT
       suggestions.rowid
     FROM suggestions
