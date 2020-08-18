@@ -4,9 +4,9 @@ from typing import AsyncIterator, Dict, Iterable, Iterator, Optional, Sequence, 
 
 from ..shared.da import slurp
 from ..shared.logging import log
-from ..shared.parse import normalize
+from ..shared.parse import normalize, parse_common_affix
 from ..shared.sql import SQL_TYPES, AConnection, sql_escape
-from ..shared.types import Completion, LEdit, MEdit, Position, Snippet
+from ..shared.types import Completion, Context, LEdit, MEdit, Position, Snippet
 from .types import CacheOptions, SourceFactory, Suggestion
 
 __sql__ = join(dirname(realpath(__file__)), "sql")
@@ -199,8 +199,18 @@ def query_medit(cursor: Cursor, suggestions_id: int) -> Optional[MEdit]:
         return None
 
 
+def new_medit(context: Context, match: str, match_normalized: str) -> MEdit:
+    old_prefix, old_suffix = parse_common_affix(
+        context, match_normalized=match_normalized, use_line=True
+    )
+    medit = MEdit(
+        old_prefix=old_prefix, new_prefix=match, old_suffix=old_suffix, new_suffix=""
+    )
+    return medit
+
+
 async def query(
-    conn: AConnection, batch: int, ncword: str, options: CacheOptions
+    conn: AConnection, context: Context, batch: int, ncword: str, options: CacheOptions
 ) -> Sequence[Suggestion]:
     prefix = ncword[: options.prefix_matches]
     escaped = sql_escape(prefix, nono=LIKE_ESCAPE, escape=ESCAPE_CHAR)
@@ -213,15 +223,21 @@ async def query(
             cursor.execute(_QUERY_SUGGESTIONS, (batch, batch, like_esc))
             for row in cursor.fetchall():
                 suggestions_id = row["suggestions_id"]
-                match = row["match"]
+                cached = bool(row["cached"])
+
+                match, match_normalized = row["match"], row["match_normalized"]
                 position = Position(row=row["p_row"], col=row["p_col"])
                 snippet = query_snippet(
                     cursor, suggestions_id=suggestions_id, match=match
                 )
                 ledits = query_ledits(cursor, suggestions_id=suggestions_id)
-                medit = query_medit(cursor, suggestions_id=suggestions_id)
+                old_medit = query_medit(cursor, suggestions_id=suggestions_id)
+                medit = (
+                    new_medit(context, match=match, match_normalized=match_normalized)
+                    if cached and old_medit
+                    else None
+                )
 
-                cached = bool(row["cached"])
                 source = options.source_name if cached else row["source"]
                 source_shortname = (
                     options.short_name if cached else row["source_shortname"]
@@ -236,7 +252,7 @@ async def query(
                     label=row["label"],
                     sortby=row["sortby"],
                     match=match,
-                    match_normalized=row["match_normalized"],
+                    match_normalized=match_normalized,
                     medit=medit,
                     ledits=tuple(ledits),
                     snippet=snippet,
