@@ -7,7 +7,7 @@ from ..shared.logging import log
 from ..shared.parse import normalize
 from ..shared.sql import SQL_TYPES, AConnection, sql_escape
 from ..shared.types import Completion, LEdit, MEdit, Position, Snippet
-from .types import CacheOptions, Suggestion, SourceFactory
+from .types import CacheOptions, SourceFactory, Suggestion
 
 __sql__ = join(dirname(realpath(__file__)), "sql")
 
@@ -79,7 +79,15 @@ def populate_ledits(
 ) -> None:
     def cont() -> Iterator[Iterable[SQL_TYPES]]:
         for ledit in ledits:
-            yield suggestions_id, ledit.begin.row, ledit.begin.col, ledit.end.row, ledit.end.col, ledit.new_text
+            row = (
+                suggestions_id,
+                ledit.begin.row,
+                ledit.begin.col,
+                ledit.end.row,
+                ledit.end.col,
+                ledit.new_text,
+            )
+            yield row
 
     cursor.executemany(_POPULATE_LEDIT, cont())
 
