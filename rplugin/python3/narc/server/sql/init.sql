@@ -1,3 +1,5 @@
+BEGIN;
+
 DROP TABLE IF EXISTS snippets;
 DROP TABLE IF EXISTS ledits;
 DROP TABLE IF EXISTS medits;
@@ -62,3 +64,5 @@ CREATE TABLE snippets (
   content        TEXT    NOT NULL,
   FOREIGN KEY (suggestions_id) REFERENCES suggestions (rowid) ON DELETE CASCADE
 );
+
+END;
