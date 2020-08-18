@@ -42,7 +42,7 @@ async def init_sources(
 ) -> Dict[str, int]:
     def cont() -> Iterator[Iterable[SQL_TYPES]]:
         for name, source in sources.items():
-            yield name, source.short_name, source.unique, source.use_cache
+            yield name, source.short_name, source.rank, source.unique, source.use_cache
 
     async with conn.lock:
         async with await conn.execute_many(_INIT_SOURCE, cont()):
@@ -205,7 +205,7 @@ async def query(
             for row in cursor.fetchall():
                 suggestions_id = row["suggestions_id"]
                 match = row["match"]
-                position = Position(row=row["prow"], col=row["pcol"])
+                position = Position(row=row["p_row"], col=row["p_col"])
                 snippet = query_snippet(
                     cursor, suggestions_id=suggestions_id, match=match
                 )
@@ -225,7 +225,7 @@ async def query(
                     medit=medit,
                     ledits=tuple(ledits),
                     snippet=snippet,
-                    unique=row["unique"],
+                    unique=row["ensure_unique"],
                 )
                 yield suggestion
 
