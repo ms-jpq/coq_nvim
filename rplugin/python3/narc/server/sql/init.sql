@@ -6,13 +6,13 @@ DROP TABLE IF EXISTS sources;
 DROP TABLE IF EXISTS batches;
 
 
-CREATE TABLE IF NOT EXISTS batches (
+CREATE TABLE batches (
   p_row INTEGER NOT NULL,
   p_col INTEGER NOT NULL
 );
 
 
-CREATE TABLE IF NOT EXISTS sources (
+CREATE TABLE sources (
   name          TEXT    NOT NULL,
   short_name    TEXT    NOT NULL,
   priority      INTEGER NOT NULL,
@@ -21,7 +21,7 @@ CREATE TABLE IF NOT EXISTS sources (
 );
 
 
-CREATE TABLE IF NOT EXISTS suggestions (
+CREATE TABLE suggestions (
   batch_id         INTEGER NOT NULL,
   source_id        INTEGER NOT NULL,
   match            TEXT    NOT NULL,
@@ -30,12 +30,12 @@ CREATE TABLE IF NOT EXISTS suggestions (
   sortby           TEXT,
   kind             TEXT,
   doc              TEXT,
-  FOREIGN KEY (batch_id)   REFERENCES batches  (rowid) ON DELETE CASCADE,
-  FOREIGN KEY (source_id)  REFERENCES sources  (rowid) ON DELETE CASCADE
+  FOREIGN KEY (batch_id)  REFERENCES batches (rowid) ON DELETE CASCADE,
+  FOREIGN KEY (source_id) REFERENCES sources (rowid) ON DELETE CASCADE
 );
 
 
-CREATE TABLE IF NOT EXISTS medits (
+CREATE TABLE medits (
   suggestions_id INTEGER NOT NULL,
   old_prefix     TEXT    NOT NULL,
   new_prefix     TEXT    NOT NULL,
@@ -45,7 +45,7 @@ CREATE TABLE IF NOT EXISTS medits (
 );
 
 
-CREATE TABLE IF NOT EXISTS ledits (
+CREATE TABLE ledits (
   suggestions_id INTEGER NOT NULL,
   begin_row      INTEGER NOT NULL,
   begin_col      INTEGER NOT NULL,
@@ -56,7 +56,7 @@ CREATE TABLE IF NOT EXISTS ledits (
 );
 
 
-CREATE TABLE IF NOT EXISTS snippets (
+CREATE TABLE snippets (
   suggestions_id INTEGER NOT NULL,
   kind           TEXT    NOT NULL,
   content        TEXT    NOT NULL,
