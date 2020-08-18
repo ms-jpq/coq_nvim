@@ -2,7 +2,7 @@ SELECT
   suggestions.rowid AS suggestions_id,
   batches.p_row AS p_row,
   batches.p_col AS p_col,
-  suggestions.source_id <> ? AS cached,
+  batches.rowid <> ? AS cached,
   sources.name AS source,
   sources.short_name AS source_shortname,
   sources.priority AS priority,
