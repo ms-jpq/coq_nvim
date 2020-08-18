@@ -1,6 +1,6 @@
 SELECT word, nword
 FROM words
 WHERE
-    nword MATCH ?
+    nword LIKE ?
     AND
     nword <> ?

@@ -1,4 +1,6 @@
-CREATE VIRTUAL TABLE IF NOT EXISTS words USING fts5(
-  word,
-  nword
-)
+CREATE TABLE words (
+  word  TEXT NOT NULL,
+  nword TEXT NOT NULL
+);
+
+CREATE INDEX words_nword ON words (nword);

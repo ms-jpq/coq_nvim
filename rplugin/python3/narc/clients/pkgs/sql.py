@@ -13,14 +13,14 @@ _POPULATE = slurp(join(__sql__, "populate.sql"))
 _QUERY = slurp(join(__sql__, "query.sql"))
 
 
-ESCAPE_CHAR = '"'
-MATCH_ESCAPE = set() | {ESCAPE_CHAR}
+ESCAPE_CHAR = "!"
+LIKE_ESCAPE = {"_", "[", "%"} | {ESCAPE_CHAR}
 
 
 async def init(conn: AConnection) -> None:
     log.debug("")
     async with conn.lock:
-        async with await conn.execute(_INIT):
+        async with await conn.execute_script(_INIT):
             pass
 
 
@@ -45,14 +45,12 @@ async def prefix_query(
     conn: AConnection, ncword: str, prefix_matches: int
 ) -> AsyncIterator[Tuple[str, str]]:
     smol = ncword[:prefix_matches]
-    escaped = sql_escape(smol, nono=MATCH_ESCAPE, escape=ESCAPE_CHAR)
+    escaped = sql_escape(smol, nono=LIKE_ESCAPE, escape=ESCAPE_CHAR)
+    match = f"{escaped}%" if escaped else ""
 
-    if escaped:
-        match = f'"{escaped}"*'
+    async with conn.lock:
+        async with await conn.execute(_QUERY, (match, ncword)) as cursor:
+            rows = await cursor.fetch_all()
 
-        async with conn.lock:
-            async with await conn.execute(_QUERY, (match, ncword)) as cursor:
-                rows = await cursor.fetch_all()
-
-        for row in rows:
-            yield row
+    for row in rows:
+        yield row
