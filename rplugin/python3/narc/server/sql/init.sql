@@ -35,6 +35,7 @@ CREATE TABLE suggestions (
   FOREIGN KEY (batch_id)  REFERENCES batches (rowid) ON DELETE CASCADE,
   FOREIGN KEY (source_id) REFERENCES sources (rowid) ON DELETE CASCADE
 );
+CREATE INDEX suggestions_match_normalized ON suggestions (match_normalized);
 
 
 CREATE TABLE medits (

@@ -166,9 +166,7 @@ async def merge(
         context, buf_context = await gen_context(nvim, options=match_opt)
         position = context.position
 
-        batch, _ = await gather(
-            populate_batch(conn, position=position), depopulate(conn)
-        )
+        batch = await populate_batch(conn, position=position)
         s_context = StepContext(
             batch=batch,
             timeout=timeout,
