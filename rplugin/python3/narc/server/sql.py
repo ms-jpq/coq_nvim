@@ -204,12 +204,13 @@ async def query(
 ) -> Sequence[Suggestion]:
     prefix = ncword[: options.prefix_matches]
     escaped = sql_escape(prefix, nono=LIKE_ESCAPE, escape=ESCAPE_CHAR)
+    like_esc = f"{escaped}%" if escaped else ""
 
     def cont() -> Iterator[Suggestion]:
         c2 = conn._conn
         cursor = c2.cursor()
         try:
-            cursor.execute(_QUERY_SUGGESTIONS, (batch, batch, escaped))
+            cursor.execute(_QUERY_SUGGESTIONS, (batch, batch, like_esc))
             for row in cursor.fetchall():
                 suggestions_id = row["suggestions_id"]
                 match = row["match"]
