@@ -219,10 +219,16 @@ async def query(
                 )
                 ledits = query_ledits(cursor, suggestions_id=suggestions_id)
                 medit = query_medit(cursor, suggestions_id=suggestions_id)
+
+                cached = bool(row["cached"])
+                source = options.source_name if cached else row["source"]
+                source_shortname = (
+                    options.short_name if cached else row["source_shortname"]
+                )
                 suggestion = Suggestion(
                     position=position,
-                    source=options.source_name,
-                    source_shortname=options.short_name,
+                    source=source,
+                    source_shortname=source_shortname,
                     rank=row["priority"],
                     kind=row["kind"],
                     doc=row["doc"],

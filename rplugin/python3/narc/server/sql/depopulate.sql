@@ -1,3 +1,12 @@
 DELETE FROM suggestions
 WHERE
-  use_cache = 0
+  suggestions.rowid IN (
+    SELECT
+      suggestions.rowid
+    FROM suggestions
+    JOIN sources
+    ON
+      sources.rowid = suggestions.source_id
+    WHERE
+      sources.use_cache = 0
+  )
