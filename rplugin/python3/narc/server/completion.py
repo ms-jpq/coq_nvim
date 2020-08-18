@@ -187,7 +187,7 @@ async def merge(
             )
             await gather(*source_gen)
             suggestions = await query(
-                conn, batch, ncword=context.alnums_normalized, options=cache_opt
+                conn, context=context, batch=batch, options=cache_opt
             )
             return (
                 position,

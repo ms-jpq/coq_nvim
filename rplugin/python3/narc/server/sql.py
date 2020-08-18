@@ -210,8 +210,9 @@ def new_medit(context: Context, match: str, match_normalized: str) -> MEdit:
 
 
 async def query(
-    conn: AConnection, context: Context, batch: int, ncword: str, options: CacheOptions
+    conn: AConnection, context: Context, batch: int, options: CacheOptions
 ) -> Sequence[Suggestion]:
+    ncword = context.alnums_normalized
     prefix = ncword[: options.prefix_matches]
     escaped = sql_escape(prefix, nono=LIKE_ESCAPE, escape=ESCAPE_CHAR)
     like_esc = f"{escaped}%" if escaped else ""
