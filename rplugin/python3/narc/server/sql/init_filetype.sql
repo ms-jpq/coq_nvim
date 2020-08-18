@@ -1,2 +1,2 @@
-INSERT INTO filetypes (filetype)
+INSERT OR IGNORE INTO filetypes (filetype)
 VALUES (?)

@@ -60,7 +60,8 @@ async def init_sources(
     return opts
 
 
-async def populate_batch(conn: AConnection, position: Position) -> int:
+async def populate_batch(conn: AConnection, context: Context) -> int:
+    position = context.position
     async with conn.lock:
         async with await conn.execute(
             _POPULATE_BATCH, (position.row, position.col)

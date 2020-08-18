@@ -2,6 +2,7 @@ from asyncio import Queue, gather, wait
 from dataclasses import dataclass
 from math import inf
 from os import linesep
+from time import time
 from typing import Awaitable, Callable, Dict, Iterator, List, Optional, Set, Tuple
 
 from pynvim import Nvim
@@ -166,7 +167,7 @@ async def merge(
         context, buf_context = await gen_context(nvim, options=match_opt)
         position = context.position
 
-        batch = await populate_batch(conn, position=position)
+        batch, _ = await gather(populate_batch(conn, context=context), depopulate(conn))
         s_context = StepContext(
             batch=batch,
             timeout=timeout,
@@ -186,11 +187,13 @@ async def merge(
                 if name in enabled
             )
             await gather(*source_gen)
+            t1 = time()
             log.debug("%s", f"begin - {batch}")
             suggestions = await query(
                 conn, context=context, batch=batch, options=cache_opt
             )
-            log.debug("%s", f"end - {batch}")
+            t2 = time()
+            log.debug("%s", f"end - {batch} | {t2 - t1}")
             return (
                 position,
                 fuzzy(

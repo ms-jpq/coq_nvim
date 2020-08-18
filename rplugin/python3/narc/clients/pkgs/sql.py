@@ -53,4 +53,4 @@ async def prefix_query(
             rows = await cursor.fetch_all()
 
     for row in rows:
-        yield row
+        yield row["word"], row["nword"]
