@@ -20,6 +20,10 @@
   "snippet_engines": {},
   "sources": {
     "around": {
+      "cache": {
+        "enabled": false,
+        "same_filetype": false
+      },
       "config": {
         "band_size": 20,
         "max_length": 20,
@@ -30,10 +34,13 @@
       "main": "around.py",
       "rank": 100,
       "short_name": "A",
-      "unique": true,
-      "use_cache": false
+      "unique": true
     },
     "buffers": {
+      "cache": {
+        "enabled": false,
+        "same_filetype": false
+      },
       "config": {
         "max_length": 20,
         "polling_rate": 1,
@@ -44,30 +51,39 @@
       "main": "buffers.py",
       "rank": 80,
       "short_name": "B",
-      "unique": true,
-      "use_cache": false
+      "unique": true
     },
     "lsp": {
+      "cache": {
+        "enabled": false,
+        "same_filetype": false
+      },
       "config": {},
       "enabled": false,
       "limit": null,
       "main": "lsp.py",
       "rank": 200,
       "short_name": "L",
-      "unique": true,
-      "use_cache": true
+      "unique": true
     },
     "paths": {
+      "cache": {
+        "enabled": false,
+        "same_filetype": false
+      },
       "config": {},
       "enabled": true,
       "limit": 3,
       "main": "paths.py",
       "rank": 120,
       "short_name": "F",
-      "unique": true,
-      "use_cache": false
+      "unique": true
     },
     "tmux": {
+      "cache": {
+        "enabled": false,
+        "same_filetype": false
+      },
       "config": {
         "max_length": 20,
         "polling_rate": 1,
@@ -78,18 +94,20 @@
       "main": "tmux.py",
       "rank": 50,
       "short_name": "T",
-      "unique": true,
-      "use_cache": false
+      "unique": true
     },
     "tree_sitter": {
+      "cache": {
+        "enabled": false,
+        "same_filetype": false
+      },
       "config": {},
       "enabled": false,
       "limit": 3,
       "main": "tree_sitter.py",
       "rank": 150,
       "short_name": "TS",
-      "unique": true,
-      "use_cache": false
+      "unique": true
     }
   },
   "timeout": 100

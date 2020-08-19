@@ -9,6 +9,7 @@ from ..shared.da import load_json, load_module, merge_all
 from ..shared.types import Factory, Seed, SnippetEngineFactory, SnippetSeed
 from .types import (
     CacheOptions,
+    CacheSpec,
     DisplayOptions,
     EngineFactory,
     MatchOptions,
@@ -20,13 +21,17 @@ from .types import (
 
 
 def load_source(config: Dict[str, Any]) -> SourceSpec:
+    cache = CacheSpec(
+        enabled=config["cache"]["enabled"],
+        same_filetype=config["cache"]["same_filetype"],
+    )
     spec = SourceSpec(
         main=config["main"],
         enabled=config["enabled"],
         short_name=config["short_name"],
         limit=config["limit"],
         unique=config["unique"],
-        use_cache=config["use_cache"],
+        cache=cache,
         rank=config["rank"],
         config=config["config"],
     )
@@ -102,7 +107,7 @@ def assemble(spec: SourceSpec, main: Factory, match: MatchOptions) -> SourceFact
         short_name=spec.short_name,
         limit=limit,
         unique=spec.unique,
-        use_cache=spec.use_cache,
+        cache=spec.cache,
         rank=rank,
         seed=seed,
         manufacture=main,

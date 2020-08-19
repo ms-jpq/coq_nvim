@@ -47,7 +47,8 @@ async def init_sources(
 ) -> Dict[str, int]:
     def cont() -> Iterator[Iterable[SQL_TYPES]]:
         for name, source in sources.items():
-            yield name, source.short_name, source.rank, source.unique, source.use_cache
+            use_cache = source.cache.enabled
+            yield name, source.short_name, source.rank, source.unique, use_cache
 
     async with conn.lock:
         async with await conn.execute_many(_INIT_SOURCE, cont()):

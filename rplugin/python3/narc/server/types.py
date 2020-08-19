@@ -38,6 +38,12 @@ class CacheOptions:
 
 
 @dataclass(frozen=True)
+class CacheSpec:
+    enabled: bool
+    same_filetype: bool
+
+
+@dataclass(frozen=True)
 class SourceSpec:
     main: str
     enabled: bool
@@ -45,7 +51,7 @@ class SourceSpec:
     limit: Optional[float]
     rank: Optional[int]
     unique: bool
-    use_cache: bool
+    cache: CacheSpec
     config: Dict[str, Any]
 
 
@@ -76,7 +82,7 @@ class SourceFactory:
     limit: float
     rank: float
     unique: bool
-    use_cache: bool
+    cache: CacheSpec
     seed: Seed
     manufacture: Factory
 
