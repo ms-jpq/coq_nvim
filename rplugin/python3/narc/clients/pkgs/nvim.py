@@ -3,7 +3,6 @@ from typing import Iterable
 from uuid import uuid4
 
 from pynvim import Nvim
-from pynvim.api.buffer import Buffer
 
 from ...shared.nvim import call
 
@@ -33,11 +32,3 @@ async def autocmd(
         nvim.api.exec(commands, False)
 
     await call(nvim, cont)
-
-
-async def current_buf(nvim: Nvim) -> int:
-    def cont() -> int:
-        buf: Buffer = nvim.api.get_current_buf()
-        return buf.number
-
-    return await call(nvim, cont)

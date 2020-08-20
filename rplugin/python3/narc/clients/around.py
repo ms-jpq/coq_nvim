@@ -51,14 +51,11 @@ async def main(comm: Comm, seed: Seed) -> Source:
     conn = AConnection()
     await init(conn)
 
-    async def reinit() -> None:
-        await depopulate(conn)
-
     async def source(context: Context) -> AsyncIterator[Completion]:
         position, ncword = context.position, context.alnums_normalized
 
         chars, _ = await gather(
-            buffer_chars(comm.nvim, band_size=band_size, pos=position), reinit()
+            buffer_chars(comm.nvim, band_size=band_size, pos=position), depopulate(conn)
         )
         words = coalesce(chars, max_length=max_length, unifying_chars=unifying_chars)
         await populate(conn, words=words)

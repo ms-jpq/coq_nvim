@@ -1,4 +1,4 @@
-from asyncio.locks import Event
+from asyncio import Event, gather
 from dataclasses import dataclass
 from itertools import chain
 from os import linesep
@@ -12,9 +12,9 @@ from ..shared.nvim import call, run_forever
 from ..shared.parse import coalesce
 from ..shared.sql import AConnection
 from ..shared.types import Comm, Completion, Context, SEdit, Seed, Source
-from .pkgs.nvim import autocmd, current_buf
+from .pkgs.nvim import autocmd
 from .pkgs.scheduler import schedule
-from .pkgs.sql import init, populate, prefix_query
+from .pkgs.sql import depopulate, init, populate, prefix_query
 
 NAME = "buffers"
 
@@ -26,24 +26,31 @@ class Config:
     max_length: int
 
 
-def buf_gen(nvim: Nvim, bufnrs: Set[int]) -> Iterator[Buffer]:
+def buf_gen(nvim: Nvim) -> Iterator[Buffer]:
     seen: Set[str] = set()
-    if bufnrs:
-        buffers: Sequence[Buffer] = nvim.api.list_bufs()
-        for buf in buffers:
-            if buf.number in bufnrs:
-                filename = nvim.api.buf_get_name(buf)
-                if filename not in seen:
-                    seen.add(filename)
-                    yield buf
+    buffers: Sequence[Buffer] = nvim.api.list_bufs()
+    for buf in buffers:
+        try:
+            filename = nvim.api.buf_get_name(buf)
+        except NvimError:
+            pass
+        else:
+            if filename not in seen:
+                seen.add(filename)
+                yield buf
 
 
-async def buffer_chars(nvim: Nvim, buf_gen: Iterator[Buffer]) -> Sequence[str]:
+def buf_get_lines(nvim: Nvim, buf: Buffer) -> Sequence[str]:
+    try:
+        return nvim.api.buf_get_lines(buf, 0, -1, True)
+    except NvimError:
+        return ()
+
+
+async def buffer_chars(nvim: Nvim) -> Sequence[str]:
     def cont() -> Sequence[str]:
         lines = tuple(
-            line
-            for buffer in buf_gen
-            for line in nvim.api.buf_get_lines(buffer, 0, -1, True)
+            line for buf in buf_gen(nvim) for line in buf_get_lines(nvim, buf=buf)
         )
         return lines
 
@@ -66,7 +73,6 @@ async def main(comm: Comm, seed: Seed) -> Source:
         seed.match.unifying_chars,
     )
 
-    bufnrs: Set[int] = set()
     conn = AConnection()
     await init(conn)
 
@@ -80,18 +86,11 @@ async def main(comm: Comm, seed: Seed) -> Source:
     async def ooda() -> None:
         while True:
             action, *_ = await chan.get()
-            if action == "add":
-                bufnr = await current_buf(nvim)
-                bufnrs.add(bufnr)
-            elif action == "clear":
-                await init(conn)
-                ch.set()
+            ch.set()
 
     async def background_update() -> None:
         async for _ in schedule(ch, min_time=0.0, max_time=config.polling_rate):
-            b_gen = buf_gen(nvim, bufnrs)
-            chars = await buffer_chars(nvim, b_gen)
-            bufnrs.clear()
+            chars, _ = await gather(buffer_chars(nvim), depopulate(conn))
             words = coalesce(
                 chars, max_length=max_length, unifying_chars=unifying_chars
             )
