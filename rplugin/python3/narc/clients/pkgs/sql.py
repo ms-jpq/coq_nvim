@@ -43,7 +43,7 @@ async def populate(conn: AConnection, words: Iterator[str]) -> None:
 
 async def prefix_query(
     conn: AConnection, ncword: str, prefix_matches: int
-) -> AsyncIterator[Tuple[str, str]]:
+) -> AsyncIterator[str]:
     smol = ncword[:prefix_matches]
     escaped = sql_escape(smol, nono=LIKE_ESCAPE, escape=ESCAPE_CHAR)
     match = f"{escaped}%" if escaped else ""
@@ -53,4 +53,4 @@ async def prefix_query(
             rows = await cursor.fetch_all()
 
     for row in rows:
-        yield row["word"], row["nword"]
+        yield row["word"]

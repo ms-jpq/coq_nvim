@@ -76,6 +76,11 @@ class Context:
 
 
 @dataclass(frozen=True)
+class SEdit:
+    new_text: str
+
+
+@dataclass(frozen=True)
 class MEdit:
     old_prefix: str
     new_prefix: str
@@ -105,6 +110,7 @@ class Completion:
     sortby: Optional[str] = None
     kind: Optional[str] = None
     doc: Optional[str] = None
+    sedit: Optional[SEdit] = None
     medit: Optional[MEdit] = None
     ledits: Sequence[LEdit] = field(default_factory=tuple)
     snippet: Optional[Snippet] = None

@@ -8,9 +8,9 @@ from typing import AsyncIterator, Iterator, Sequence, Set
 from ..shared.da import call
 from ..shared.logging import log
 from ..shared.nvim import run_forever
-from ..shared.parse import coalesce, parse_common_affix
+from ..shared.parse import coalesce
 from ..shared.sql import AConnection
-from ..shared.types import Comm, Completion, Context, MEdit, Seed, Source
+from ..shared.types import Comm, Completion, Context, SEdit, Seed, Source
 from .pkgs.scheduler import schedule
 from .pkgs.sql import depopulate, init, populate, prefix_query
 
@@ -124,20 +124,12 @@ async def main(comm: Comm, seed: Seed) -> Source:
     async def source(context: Context) -> AsyncIterator[Completion]:
         position, ncword = context.position, context.alnums_normalized
 
-        async for word, match_normalized in prefix_query(
+        async for word in prefix_query(
             conn, ncword=ncword, prefix_matches=prefix_matches
         ):
-            old_prefix, old_suffix = parse_common_affix(
-                context, match_normalized=match_normalized, use_line=False,
-            )
 
-            medit = MEdit(
-                old_prefix=old_prefix,
-                new_prefix=word,
-                old_suffix=old_suffix,
-                new_suffix="",
-            )
-            yield Completion(position=position, medit=medit)
+            sedit = SEdit(new_text=word)
+            yield Completion(position=position, sedit=sedit)
 
     run_forever(nvim, thing=background_update)
     return source

@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import AsyncIterator, Iterator, Sequence
 
 from ..shared.da import run_in_executor
-from ..shared.types import Comm, Completion, Context, MEdit, Seed, Source
+from ..shared.types import Comm, Completion, Context, SEdit, Seed, Source
 
 NAME = "paths"
 
@@ -89,12 +89,7 @@ async def main(comm: Comm, seed: Seed) -> Source:
         prefix_char = next(iter(old_prefix), "")
         for child in await find_children(paths):
             if child.startswith(prefix_char):
-                medit = MEdit(
-                    old_prefix=old_prefix,
-                    new_prefix=child,
-                    old_suffix="",
-                    new_suffix="",
-                )
-                yield Completion(position=position, medit=medit)
+                sedit = SEdit(new_text=child)
+                yield Completion(position=position, sedit=sedit)
 
     return source

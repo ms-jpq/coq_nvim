@@ -69,7 +69,7 @@ async def init_sources(
 async def populate_batch(conn: AConnection, context: Context) -> int:
     filetype, position = context.filetype, context.position
 
-    def cont() -> None:
+    def cont() -> int:
         c2 = conn._conn
         cursor = c2.cursor()
         try:

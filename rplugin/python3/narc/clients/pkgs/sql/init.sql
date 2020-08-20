@@ -1,5 +1,5 @@
 CREATE TABLE words (
-  word  TEXT NOT NULL,
+  word  TEXT NOT NULL UNIQUE,
   nword TEXT NOT NULL
 );
 

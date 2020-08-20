@@ -1,6 +1,7 @@
-SELECT word, nword
+SELECT
+  word
 FROM words
 WHERE
-    nword LIKE ?
-    AND
-    nword <> ?
+  nword LIKE ?
+  AND
+  nword <> ?

@@ -15,14 +15,13 @@ from typing import (
 from pynvim import Nvim
 
 from ..shared.nvim import call, run_forever
-from ..shared.parse import normalize, parse_common_affix
 from ..shared.types import (
     Comm,
     Completion,
     Context,
     LEdit,
-    MEdit,
     Position,
+    SEdit,
     Seed,
     Snippet,
     Source,
@@ -142,16 +141,7 @@ def parse_rows(
         edits = parse_textedit(row)
         require_parse = is_snippet(row, insert_lookup)
 
-        match_normalized = normalize(text)
-        old_prefix, old_suffix = parse_common_affix(
-            context, match_normalized=match_normalized, use_line=False,
-        )
-        medit = MEdit(
-            old_prefix=old_prefix,
-            new_prefix=text,
-            old_suffix=old_suffix,
-            new_suffix="",
-        )
+        sedit = SEdit(new_text=text,)
 
         snippet = (
             Snippet(kind=SNIPPET_TYPE, match=label or text, content=text)
@@ -164,7 +154,7 @@ def parse_rows(
             sortby=sortby,
             kind=kind,
             doc=doc,
-            medit=medit,
+            sedit=sedit,
             ledits=edits,
             snippet=snippet,
         )

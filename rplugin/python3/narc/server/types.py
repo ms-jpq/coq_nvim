@@ -8,6 +8,7 @@ from ..shared.types import (
     MatchOptions,
     MEdit,
     Position,
+    SEdit,
     Seed,
     Snippet,
     SnippetEngineFactory,
@@ -116,6 +117,7 @@ class Suggestion:
     sortby: str
     match: str
     match_normalized: str
+    sedit: Optional[SEdit]
     medit: Optional[MEdit]
     ledits: Sequence[LEdit]
     snippet: Optional[Snippet]
