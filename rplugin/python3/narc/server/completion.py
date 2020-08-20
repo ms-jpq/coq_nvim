@@ -230,26 +230,21 @@ async def merge(
         timeout = inf if options.force else settings.timeout
         context, buf_context = await gen_context(nvim, options=match_opt)
         position = context.position
-
         s_context = StepContext(timeout=timeout,)
-
         enabled, limits = buffer_opts(
             factories, buf_context=buf_context, options=cache_opt
         )
 
         if options.force or goahead(context):
-
             source_gen = (
                 source(context, s_context)
                 for name, source in sources.items()
                 if name in enabled
             )
             steps = await gen_steps(context, options=match_opt, futures=source_gen)
+            comps = fuzzy(steps=steps, display_opt=display_opt, limits=limits,)
 
-            return (
-                position,
-                fuzzy(steps=steps, display_opt=display_opt, limits=limits,),
-            )
+            return position, comps
         else:
             return position, iter(())
 
