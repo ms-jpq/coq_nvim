@@ -52,7 +52,7 @@ async def prefix_query(
     match = f"{escaped}%" if escaped else ""
 
     async with conn.lock:
-        async with await conn.execute(_QUERY, (match, ncword, cword)) as cursor:
+        async with await conn.execute(_QUERY, (match, cword)) as cursor:
             rows = await cursor.fetch_all()
 
     for row in rows:

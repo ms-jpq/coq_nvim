@@ -5,3 +5,4 @@ WHERE
   nword LIKE ?
   AND
   word <> ?
+ESCAPE '!'

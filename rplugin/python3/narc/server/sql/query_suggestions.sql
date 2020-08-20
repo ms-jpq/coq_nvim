@@ -1,4 +1,7 @@
 SELECT
+  match,
+  mat
+
 FROM suggestions
 JOIN filetypes
 ON
