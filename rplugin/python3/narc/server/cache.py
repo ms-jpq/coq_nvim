@@ -1,3 +1,4 @@
+from asyncio import gather, wait
 from os.path import dirname, join, realpath
 from typing import Iterable, Iterator, List, Sequence
 
@@ -77,38 +78,47 @@ async def prefix_query(
     cword, ncword = context.alnums, context.alnums_normalized
     prefix = ncword[: cache_opt.prefix_matches]
     escaped = sql_escape(prefix, nono=LIKE_ESCAPE, escape=ESCAPE_CHAR)
-    match = f"{escaped}%" if escaped else ""
-
-    async with conn.lock:
-        async with await conn.execute(
-            _QUERY, (context.filetype, match, cword)
-        ) as cursor:
-            rows = await cursor.fetch_all()
+    like_match = f"{escaped}%" if escaped else ""
 
     steps: List[Step] = []
-    for row in rows:
-        match = row["match"]
-        sedit = SEdit(new_text=match)
-        rank = row["priority"] + cache_opt.rank_penalty
-        suggestion = Suggestion(
-            position=context.position,
-            source=cache_opt.source_name,
-            source_shortname=cache_opt.short_name,
-            rank=rank,
-            label=row["label"],
-            sortby=row["sortby"],
-            kind=row["kind"],
-            doc=row["doc"],
-            match=match,
-            match_normalized=row["match_normalized"],
-            sedit=sedit,
-            unique=True,
-            medit=None,
-            ledits=(),
-            snippet=None,
-        )
-        step = fuzzify(context, suggestion=suggestion, options=match_opt)
-        steps.append(step)
 
-    log.debug("%s", steps)
+    async def cont() -> None:
+        async with conn.lock:
+            async with await conn.execute(
+                _QUERY, (context.filetype, like_match, cword)
+            ) as cursor:
+                rows = await cursor.fetch_all()
+
+        for row in rows:
+            match = row["match"]
+            sedit = SEdit(new_text=match)
+            rank = row["priority"] + cache_opt.rank_penalty
+            suggestion = Suggestion(
+                position=context.position,
+                source=cache_opt.source_name,
+                source_shortname=cache_opt.short_name,
+                rank=rank,
+                label=row["label"],
+                sortby=row["sortby"],
+                kind=row["kind"],
+                doc=row["doc"],
+                match=match,
+                match_normalized=row["match_normalized"],
+                sedit=sedit,
+                unique=True,
+                medit=None,
+                ledits=(),
+                snippet=None,
+            )
+            step = fuzzify(context, suggestion=suggestion, options=match_opt)
+            steps.append(step)
+
+    done, pending = await wait((cont(),), timeout=timeout)
+    for p in pending:
+        p.cancel()
+    await gather(*done)
+
+    if pending:
+        log.warning("%s", "cache timed out")
+
     return steps
