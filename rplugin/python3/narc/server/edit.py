@@ -7,8 +7,10 @@ from pynvim import Nvim
 from pynvim.api.buffer import Buffer
 from pynvim.api.window import Window
 
-from ..shared.types import LEdit, Position
 from ..shared.logging import log
+from ..shared.parse import normalize
+from ..shared.types import LEdit, MEdit, Position, SEdit
+from .parse import parse_common_affix
 from .types import Payload
 
 IText = Union[str, Tuple[()]]
@@ -22,11 +24,35 @@ class Replacement:
     text: TextStream
 
 
+def gen_medit(
+    nvim: Nvim, buf: Buffer, position: Position, sedit: Optional[SEdit]
+) -> Optional[MEdit]:
+    row, col = position.row, position.col
+    if sedit:
+        match = sedit.new_text
+        line, *_ = nvim.api.buf_get_lines(buf, row, row + 1, True)
+        line_before, line_after = line[:col], line[col:]
+        match_normalized = normalize(match)
+        old_prefix, old_suffix = parse_common_affix(
+            before=line_before, after=line_after, match_normalized=match_normalized
+        )
+        medit = MEdit(
+            old_prefix=old_prefix,
+            new_prefix=match,
+            old_suffix=old_suffix,
+            new_suffix="",
+        )
+        return medit
+    else:
+        return None
+
+
 # 0 based
-def rows_to_fetch(payload: Payload) -> Optional[Tuple[int, int]]:
+def rows_to_fetch(
+    position: Position, medit: Optional[MEdit], ledits: Sequence[LEdit]
+) -> Optional[Tuple[int, int]]:
     def cont() -> Iterator[Tuple[int, int]]:
-        row = payload.position.row
-        medit, edits = payload.medit, payload.ledits
+        row = position.row
         if medit:
             old_lc, new_lc = (
                 medit.old_prefix.count(linesep),
@@ -34,7 +60,7 @@ def rows_to_fetch(payload: Payload) -> Optional[Tuple[int, int]]:
             )
             main_btm, main_top = row - old_lc, row + new_lc
             yield main_btm, main_top
-            for edit in edits:
+            for edit in ledits:
                 yield edit.begin.row, edit.end.row
 
     indices = tuple(cont())
@@ -76,11 +102,10 @@ def calculate_replacement(
 
 
 def calculate_main_replacement(
-    row_lens: Dict[int, int], start: int, payload: Payload
+    row_lens: Dict[int, int], start: int, medit: Optional[MEdit], position: Position
 ) -> Optional[Replacement]:
-    medit = payload.medit
     if medit:
-        row, col = payload.position.row, payload.position.col
+        row, col = position.row, position.col
 
         len_pre = len(medit.old_prefix)
         begin = sum(row_lens[r] for r in range(start, row)) + col - len_pre
@@ -103,13 +128,18 @@ def rank(replacement: Replacement) -> Tuple[int, int, TextStream]:
 
 
 def consolidate_replacements(
-    row_lens: Dict[int, int], start: int, payload: Payload
+    row_lens: Dict[int, int],
+    start: int,
+    position: Position,
+    medit: Optional[MEdit],
+    ledits: Sequence[LEdit],
 ) -> Sequence[Replacement]:
-    main = calculate_main_replacement(row_lens, start=start, payload=payload)
+    main = calculate_main_replacement(
+        row_lens, start=start, position=position, medit=medit
+    )
     main_replacements = (main,) if main else ()
     auxiliary_replacements = (
-        calculate_replacement(row_lens, start=start, edit=edit)
-        for edit in payload.ledits
+        calculate_replacement(row_lens, start=start, edit=edit) for edit in ledits
     )
 
     def cont() -> Iterator[Replacement]:
@@ -177,18 +207,23 @@ def split_stream(
 
 
 def replace_lines(nvim: Nvim, payload: Payload) -> None:
-    index = rows_to_fetch(payload)
+    win: Window = nvim.api.get_current_win()
+    buf: Buffer = nvim.api.get_current_buf()
+
+    position, ledits = payload.position, payload.ledits
+    medit = payload.medit or gen_medit(
+        nvim, buf=buf, position=position, sedit=payload.sedit
+    )
+    index = rows_to_fetch(position, medit=medit, ledits=ledits)
     if index:
         btm_idx, top_idx = index
         top_idx = top_idx + 1
 
-        win: Window = nvim.api.get_current_win()
-        buf: Buffer = nvim.api.get_current_buf()
         old_lines: Sequence[str] = nvim.api.buf_get_lines(buf, btm_idx, top_idx, True)
 
         row_lens = row_lengths(old_lines, start=btm_idx)
         replacements = consolidate_replacements(
-            row_lens, start=btm_idx, payload=payload
+            row_lens, start=btm_idx, position=position, medit=medit, ledits=ledits
         )
         stream = stream_lines(old_lines)
         text_stream = perform_edits(stream, replacements=iter(replacements))

@@ -18,8 +18,7 @@ def gen_ctx(
     unifying_chars: Set[str],
 ) -> Context:
     col = position.col
-    line_before = line[:col]
-    line_after = line[col:]
+    line_before, line_after = line[:col], line[col:]
 
     lit = reversed(line_before)
     l_alnums: List[str] = []
