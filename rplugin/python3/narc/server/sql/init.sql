@@ -12,7 +12,7 @@ CREATE INDEX filetypes_filetype ON filetypes (filetype);
 
 
 CREATE TABLE suggestions (
-  match            TEXT    NOT NULL PRIMARY KEY,
+  match            TEXT    NOT NULL UNIQUE PRIMARY KEY,
   filetype_id      INTEGER NOT NULL REFERENCES filetypes (rowid) ON DELETE CASCADE,
   match_normalized TEXT    NOT NULL,
   label            TEXT,

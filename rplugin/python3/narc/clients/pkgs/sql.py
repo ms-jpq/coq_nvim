@@ -1,12 +1,12 @@
 from os.path import dirname, join, realpath
-from typing import AsyncIterator, Iterable, Iterator, Tuple
+from typing import AsyncIterator, Iterable, Iterator
 
 from ...shared.da import slurp
-from ...shared.logging import log
 from ...shared.sql import SQL_TYPES, AConnection, sql_escape
 
 __sql__ = join(realpath(dirname(__file__)), "sql")
 
+_PRAGMA = slurp(join(__sql__, "pragma.sql"))
 _INIT = slurp(join(__sql__, "init.sql"))
 _DEPOPULATE = slurp(join(__sql__, "depopulate.sql"))
 _POPULATE = slurp(join(__sql__, "populate.sql"))
@@ -18,8 +18,9 @@ LIKE_ESCAPE = {"_", "[", "%"} | {ESCAPE_CHAR}
 
 
 async def init(conn: AConnection) -> None:
-    log.debug("")
     async with conn.lock:
+        async with await conn.execute_script(_PRAGMA):
+            pass
         async with await conn.execute_script(_INIT):
             pass
 
@@ -44,8 +45,8 @@ async def populate(conn: AConnection, words: Iterator[str]) -> None:
 async def prefix_query(
     conn: AConnection, ncword: str, prefix_matches: int
 ) -> AsyncIterator[str]:
-    smol = ncword[:prefix_matches]
-    escaped = sql_escape(smol, nono=LIKE_ESCAPE, escape=ESCAPE_CHAR)
+    prefix = ncword[:prefix_matches]
+    escaped = sql_escape(prefix, nono=LIKE_ESCAPE, escape=ESCAPE_CHAR)
     match = f"{escaped}%" if escaped else ""
 
     async with conn.lock:
