@@ -4,7 +4,7 @@ from typing import AsyncIterator, Iterable, Iterator, Sequence
 from ..shared.da import slurp
 from ..shared.parse import normalize
 from ..shared.sql import SQL_TYPES, AConnection, sql_escape
-from ..shared.types import Context
+from ..shared.types import Context, SEdit
 from .types import CacheOptions, Suggestion
 
 __sql__ = join(dirname(realpath(__file__)), "sql")
@@ -84,4 +84,16 @@ async def prefix_query(
             rows = await cursor.fetch_all()
 
     for row in rows:
-        yield row["word"]
+        match = row["match"]
+        sedit = SEdit(new_text=match)
+        suggestion = Suggestion(
+            position=context.position,
+            label=row["label"],
+            sortby=row["sortby"],
+            kind=row["kind"],
+            doc=row["doc"],
+            match=match,
+            match_normalized=row["match_normalized"],
+            sedit=sedit,
+        )
+        yield suggestion

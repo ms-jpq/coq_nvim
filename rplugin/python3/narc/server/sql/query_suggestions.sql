@@ -1,7 +1,10 @@
 SELECT
   match,
-  mat
-
+  match_normalized,
+  label,
+  sortby,
+  kind,
+  doc
 FROM suggestions
 JOIN filetypes
 ON

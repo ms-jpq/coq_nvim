@@ -32,7 +32,6 @@ class DisplayOptions:
 @dataclass(frozen=True)
 class CacheOptions:
     prefix_matches: int
-    band_size: int
     source_name: str
     short_name: str
     limit: float

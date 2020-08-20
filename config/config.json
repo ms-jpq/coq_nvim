@@ -1,6 +1,5 @@
 {
   "cache": {
-    "band_size": 20,
     "limit": 5,
     "prefix_matches": 2,
     "short_name": "C",
