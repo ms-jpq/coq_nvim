@@ -2,7 +2,6 @@ SELECT
   word
 FROM words
 WHERE
-  nword LIKE ?
+  nword LIKE ? ESCAPE '!'
   AND
   word <> ?
-ESCAPE '!'
