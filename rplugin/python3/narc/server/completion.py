@@ -1,30 +1,40 @@
 from asyncio import Queue, gather, wait
+from asyncio.tasks import as_completed
 from dataclasses import dataclass
 from math import inf
 from os import linesep
-from time import time
-from typing import Awaitable, Callable, Dict, Iterator, List, Optional, Set, Tuple
+from typing import (
+    AsyncIterator,
+    Awaitable,
+    Callable,
+    Dict,
+    Iterator,
+    List,
+    Optional,
+    Sequence,
+    Set,
+    Tuple,
+)
 
 from pynvim import Nvim
 
 from ..shared.consts import __debug_db__
 from ..shared.logging import log
 from ..shared.nvim import print
-from ..shared.sql import AConnection
-from ..shared.types import Comm, Completion, Context, Position
+from ..shared.parse import normalize
+from ..shared.types import Comm, Completion, Context, MatchOptions, Position
 from .context import gen_context, goahead
-from .fuzzy import fuzzy
+from .fuzzy import fuzzify, fuzzy
 from .nvim import VimCompletion
 from .settings import load_factories
-from .sql import (
-    depopulate,
-    init,
-    init_sources,
-    populate_batch,
-    populate_suggestions,
-    query,
+from .types import (
+    BufferContext,
+    CacheOptions,
+    Settings,
+    SourceFactory,
+    Step,
+    Suggestion,
 )
-from .types import BufferContext, CacheOptions, Settings, SourceFactory
 
 
 @dataclass(frozen=True)
@@ -34,13 +44,59 @@ class GenOptions:
 
 @dataclass(frozen=True)
 class StepContext:
-    batch: int
     timeout: float
-    force: bool
-    source_indices: Dict[str, int]
 
 
-StepFunction = Callable[[AConnection, Context, StepContext], Awaitable[None]]
+@dataclass(frozen=True)
+class StepReply:
+    suggestions: Sequence[Suggestion]
+
+
+StepFunction = Callable[[Context, StepContext], Awaitable[StepReply]]
+
+
+def parse_match(comp: Completion) -> Tuple[str, str]:
+    def cont() -> str:
+        if comp.snippet:
+            return comp.snippet.match
+        elif comp.medit:
+            return comp.medit.new_prefix + comp.medit.new_suffix
+        elif comp.sedit:
+            return comp.sedit.new_text
+        elif comp.ledits:
+            return next(iter(comp.ledits)).new_text
+        else:
+            msg = f"No actionable match for - {comp}"
+            log.warning("%s", msg)
+            return ""
+
+    match = cont()
+    normalized = normalize(match)
+    return match, normalized
+
+
+def gen_suggestion(
+    name: str, factory: SourceFactory, context: Context, comp: Completion
+) -> Suggestion:
+    match, match_normalized = parse_match(comp)
+    suggestion = Suggestion(
+        position=context.position,
+        source=name,
+        source_shortname=factory.short_name,
+        unique=factory.unique,
+        rank=factory.rank,
+        kind=comp.kind,
+        doc=comp.doc,
+        label=comp.label,
+        sortby=comp.sortby,
+        match=match,
+        match_normalized=match_normalized,
+        sedit=comp.sedit,
+        medit=comp.medit,
+        ledits=comp.ledits,
+        snippet=comp.snippet,
+    )
+    return suggestion
 
 
 async def manufacture(
@@ -50,27 +106,22 @@ async def manufacture(
     comm = Comm(nvim=nvim, chan=chan)
     src = await factory.manufacture(comm, factory.seed)
 
-    async def source(
-        conn: AConnection, context: Context, s_context: StepContext
-    ) -> None:
-        timeout, batch, source = (
-            s_context.timeout,
-            s_context.batch,
-            s_context.source_indices[name],
-        )
-        acc: List[Completion] = []
+    async def source(context: Context, s_context: StepContext) -> StepReply:
+        timeout = s_context.timeout
+
+        suggestions: List[Suggestion] = []
 
         async def cont() -> None:
             async for comp in src(context):
-                acc.append(comp)
+                suggestion = gen_suggestion(
+                    name, factory=factory, context=context, comp=comp
+                )
+                suggestions.append(suggestion)
 
         done, pending = await wait((cont(),), timeout=timeout)
         for p in pending:
             p.cancel()
         await gather(*done)
-        await populate_suggestions(
-            conn, batch=batch, source=source, completions=acc,
-        )
 
         if pending:
             timeout_fmt = round(timeout * 1000)
@@ -78,14 +129,19 @@ async def manufacture(
             msg2 = f"{name}, exceeded {timeout_fmt}ms{linesep}"
             await print(nvim, msg1 + msg2)
 
+        reply = StepReply(suggestions=suggestions)
+        return reply
+
     return source, chan
 
 
 async def osha(
     nvim: Nvim, name: str, factory: SourceFactory, retries: int
 ) -> Tuple[str, StepFunction, Optional[Queue]]:
-    async def nil_steps(_: AConnection, __: Context, ___: StepContext) -> None:
-        pass
+    nil_reply = StepReply(suggestions=())
+
+    async def nil_steps(_: Context, __: StepContext) -> StepReply:
+        return nil_reply
 
     try:
         step_fn, chan = await manufacture(nvim, name=name, factory=factory)
@@ -96,24 +152,23 @@ async def osha(
     else:
         errored = 0
 
-        async def o_step(
-            conn: AConnection, context: Context, s_context: StepContext
-        ) -> None:
+        async def safe_step(context: Context, s_context: StepContext) -> StepReply:
             nonlocal errored
             if errored >= retries:
-                return
+                return nil_reply
             else:
                 try:
-                    await step_fn(conn, context, s_context)
+                    ret = await step_fn(context, s_context)
                 except Exception as e:
                     errored += 1
                     message = f"Error in source {name}:{linesep}{e}"
                     log.exception("%s", message)
-                    return
+                    return nil_reply
                 else:
                     errored = 0
+                    return ret
 
-        return name, o_step, chan
+        return name, safe_step, chan
 
 
 def buffer_opts(
@@ -142,6 +197,19 @@ def buffer_opts(
     return enabled, limits
 
 
+async def gen_steps(
+    context: Context, options: MatchOptions, futures: Iterator[Awaitable[StepReply]],
+) -> Sequence[Step]:
+    async def cont() -> AsyncIterator[Step]:
+        for fut in as_completed(tuple(futures)):
+            reply = await fut
+            for suggestion in reply.suggestions:
+                step = fuzzify(context, suggestion=suggestion, options=options)
+                yield step
+
+    return [suggestion async for suggestion in cont()]
+
+
 async def merge(
     nvim: Nvim, settings: Settings
 ) -> Tuple[
@@ -158,22 +226,12 @@ async def merge(
     )
     sources: Dict[str, StepFunction] = {name: source for name, source, _ in src_gen}
 
-    conn = AConnection(__debug_db__)
-    await init(conn)
-    source_indices = await init_sources(conn, sources=factories)
-
     async def gen(options: GenOptions) -> Tuple[Position, Iterator[VimCompletion]]:
         timeout = inf if options.force else settings.timeout
         context, buf_context = await gen_context(nvim, options=match_opt)
         position = context.position
 
-        batch, _ = await gather(populate_batch(conn, context=context), depopulate(conn))
-        s_context = StepContext(
-            batch=batch,
-            timeout=timeout,
-            force=options.force,
-            source_indices=source_indices,
-        )
+        s_context = StepContext(timeout=timeout,)
 
         enabled, limits = buffer_opts(
             factories, buf_context=buf_context, options=cache_opt
@@ -182,27 +240,15 @@ async def merge(
         if options.force or goahead(context):
 
             source_gen = (
-                source(conn, context, s_context)
+                source(context, s_context)
                 for name, source in sources.items()
                 if name in enabled
             )
-            await gather(*source_gen)
-            t1 = time()
-            log.debug("%s", f"begin - {batch}")
-            suggestions = await query(
-                conn, context=context, batch=batch, options=cache_opt
-            )
-            t2 = time()
-            log.debug("%s", f"end - {batch} | {t2 - t1}")
+            steps = await gen_steps(context, options=match_opt, futures=source_gen)
+
             return (
                 position,
-                fuzzy(
-                    context,
-                    suggestions=suggestions,
-                    match_opt=match_opt,
-                    display_opt=display_opt,
-                    limits=limits,
-                ),
+                fuzzy(steps=steps, display_opt=display_opt, limits=limits,),
             )
         else:
             return position, iter(())

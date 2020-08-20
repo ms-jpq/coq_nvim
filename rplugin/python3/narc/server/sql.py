@@ -272,6 +272,7 @@ async def query(
                     sortby=row["sortby"],
                     match=match,
                     match_normalized=match_normalized,
+                    sedit=None,
                     medit=medit,
                     ledits=tuple(ledits),
                     snippet=snippet,

@@ -110,18 +110,18 @@ class Suggestion:
     position: Position
     source: str
     source_shortname: str
+    unique: bool
     rank: float
-    kind: str
-    label: str
-    doc: str
-    sortby: str
     match: str
     match_normalized: str
+    kind: Optional[str]
+    label: Optional[str]
+    doc: Optional[str]
+    sortby: Optional[str]
     sedit: Optional[SEdit]
     medit: Optional[MEdit]
     ledits: Sequence[LEdit]
     snippet: Optional[Snippet]
-    unique: bool
 
 
 @dataclass(frozen=True)
@@ -135,8 +135,15 @@ class Metric:
 
 
 @dataclass(frozen=True)
+class Step:
+    suggestion: Suggestion
+    metric: Metric
+
+
+@dataclass(frozen=True)
 class Payload:
     position: Position
+    sedit: Optional[SEdit]
     medit: Optional[MEdit]
     ledits: Sequence[LEdit]
     snippet: Optional[Snippet]

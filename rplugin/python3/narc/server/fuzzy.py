@@ -1,4 +1,4 @@
-from dataclasses import asdict, dataclass
+from dataclasses import asdict
 from itertools import repeat
 from locale import strxfrm
 from os import linesep
@@ -7,13 +7,7 @@ from typing import Any, Callable, Dict, Iterator, Sequence, Set, Union, cast
 from ..shared.types import Context
 from .match import gen_metric_wrap
 from .nvim import VimCompletion
-from .types import DisplayOptions, MatchOptions, Metric, Payload, Suggestion
-
-
-@dataclass(frozen=True)
-class Step:
-    suggestion: Suggestion
-    metric: Metric
+from .types import DisplayOptions, MatchOptions, Payload, Suggestion, Step
 
 
 def fuzzify(context: Context, suggestion: Suggestion, options: MatchOptions) -> Step:
@@ -63,6 +57,7 @@ def context_gen(fuzz: Step) -> str:
 def gen_payload(suggestion: Suggestion) -> Payload:
     return Payload(
         position=suggestion.position,
+        sedit=suggestion.sedit,
         medit=suggestion.medit,
         ledits=suggestion.ledits,
         snippet=suggestion.snippet,
@@ -122,18 +117,12 @@ def vimify(fuzz: Step, display: DisplayOptions) -> VimCompletion:
 
 
 def fuzzy(
-    context: Context,
-    suggestions: Sequence[Suggestion],
-    match_opt: MatchOptions,
+    steps: Sequence[Step],
     display_opt: DisplayOptions,
     limits: Dict[str, float],
 ) -> Iterator[VimCompletion]:
     seen: Set[str] = set()
     seen_by_source: Dict[str, int] = {}
-    steps = (
-        fuzzify(context, suggestion=suggestion, options=match_opt)
-        for suggestion in suggestions
-    )
     sorted_steps = sorted(steps, key=cast(Callable[[Step], Any], rank))
     for fuzz in sorted_steps:
         suggestion = fuzz.suggestion

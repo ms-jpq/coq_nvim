@@ -9,6 +9,7 @@ from ..shared.types import (
     LEdit,
     MEdit,
     Position,
+    SEdit,
     Snippet,
     SnippetContext,
     SnippetEngine,
@@ -28,6 +29,8 @@ async def apply_patch(
 
     try:
         position = Position(**d["position"])
+        se = d.get("sedit")
+        sedit = SEdit(**se) if se else None
         me = d.get("medit")
         medit = MEdit(**me) if me else None
         edits = tuple(
@@ -43,7 +46,13 @@ async def apply_patch(
         payload = Payload(
             **{
                 **d,
-                **dict(position=position, medit=medit, ledits=edits, snippet=snippet),
+                **dict(
+                    position=position,
+                    sedit=sedit,
+                    medit=medit,
+                    ledits=edits,
+                    snippet=snippet,
+                ),
             }
         )
     except (KeyError, TypeError):
@@ -65,13 +74,15 @@ async def apply_patch(
                 context = SnippetContext(position=position, snippet=snippet)
                 await engine(context)
                 return True
-            elif payload.medit or payload.ledits:
+
+            elif payload.medit or payload.sedit or payload.ledits:
 
                 def cont() -> None:
                     replace_lines(nvim, payload=payload)
 
                 await call(nvim, cont)
                 return True
+
             else:
                 msg = f"Invaild payload: {payload}"
                 log.error("%s", msg)
