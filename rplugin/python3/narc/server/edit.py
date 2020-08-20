@@ -11,7 +11,7 @@ from ..shared.logging import log
 from ..shared.parse import normalize
 from ..shared.types import LEdit, MEdit, Position, SEdit
 from .parse import parse_common_affix
-from .types import Payload
+from .types import MatchOptions, Payload
 
 IText = Union[str, Tuple[()]]
 TextStream = Sequence[IText]
@@ -25,7 +25,11 @@ class Replacement:
 
 
 def gen_medit(
-    nvim: Nvim, buf: Buffer, position: Position, sedit: Optional[SEdit]
+    nvim: Nvim,
+    buf: Buffer,
+    position: Position,
+    sedit: Optional[SEdit],
+    options: MatchOptions,
 ) -> Optional[MEdit]:
     row, col = position.row, position.col
     if sedit:
@@ -34,7 +38,10 @@ def gen_medit(
         line_before, line_after = line[:col], line[col:]
         match_normalized = normalize(match)
         old_prefix, old_suffix = parse_common_affix(
-            before=line_before, after=line_after, match_normalized=match_normalized
+            before=line_before,
+            after=line_after,
+            match_normalized=match_normalized,
+            unifying_chars=options.unifying_chars,
         )
         medit = MEdit(
             old_prefix=old_prefix,
@@ -206,13 +213,13 @@ def split_stream(
     return tuple(cont()), position
 
 
-def replace_lines(nvim: Nvim, payload: Payload) -> None:
+def replace_lines(nvim: Nvim, payload: Payload, options: MatchOptions) -> None:
     win: Window = nvim.api.get_current_win()
     buf: Buffer = nvim.api.get_current_buf()
 
     position, ledits = payload.position, payload.ledits
     medit = payload.medit or gen_medit(
-        nvim, buf=buf, position=position, sedit=payload.sedit
+        nvim, buf=buf, position=position, sedit=payload.sedit, options=options
     )
     index = rows_to_fetch(position, medit=medit, ledits=ledits)
     if index:

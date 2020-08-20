@@ -106,6 +106,7 @@ class Main:
                     engine=engine,
                     engine_available=engine_available,
                     comp=comp,
+                    options=self.settings.match,
                 )
                 if applied:
                     self.state = t_comp_inserted(self.state)

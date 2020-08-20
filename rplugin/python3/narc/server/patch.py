@@ -15,7 +15,7 @@ from ..shared.types import (
     SnippetEngine,
 )
 from .edit import replace_lines
-from .types import Payload
+from .types import MatchOptions, Payload
 
 
 async def apply_patch(
@@ -23,6 +23,7 @@ async def apply_patch(
     engine: SnippetEngine,
     engine_available: Callable[[Snippet], bool],
     comp: Dict[str, Any],
+    options: MatchOptions,
 ) -> bool:
     data = comp.get("user_data")
     d = cast(dict, data)
@@ -78,7 +79,7 @@ async def apply_patch(
             elif payload.medit or payload.sedit or payload.ledits:
 
                 def cont() -> None:
-                    replace_lines(nvim, payload=payload)
+                    replace_lines(nvim, payload=payload, options=options)
 
                 await call(nvim, cont)
                 return True
