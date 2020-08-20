@@ -32,6 +32,7 @@ class DisplayOptions:
 @dataclass(frozen=True)
 class CacheOptions:
     prefix_matches: int
+    rank_penalty: int
     source_name: str
     short_name: str
     limit: float

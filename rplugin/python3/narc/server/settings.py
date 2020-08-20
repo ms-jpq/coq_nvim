@@ -67,6 +67,7 @@ def initial(configs: Sequence[Any]) -> Settings:
         short_name=cache_o["short_name"],
         source_name=cache_o["source_name"],
         limit=cache_o["limit"],
+        rank_penalty=cache_o["rank_penalty"],
     )
     sources = {name: load_source(conf) for name, conf in config["sources"].items()}
     snippet_engines = {

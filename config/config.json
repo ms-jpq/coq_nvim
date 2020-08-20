@@ -2,6 +2,7 @@
   "cache": {
     "limit": 5,
     "prefix_matches": 2,
+    "rank_penalty": -1,
     "short_name": "C",
     "source_name": "cache"
   },

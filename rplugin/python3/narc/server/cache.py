@@ -72,24 +72,25 @@ async def prefix_query(
     match_opt: MatchOptions,
     cache_opt: CacheOptions,
 ) -> Sequence[Step]:
-    ncword = context.alnums_normalized
+    cword, ncword = context.alnums, context.alnums_normalized
     prefix = ncword[: cache_opt.prefix_matches]
     escaped = sql_escape(prefix, nono=LIKE_ESCAPE, escape=ESCAPE_CHAR)
     match = f"{escaped}%" if escaped else ""
 
     async with conn.lock:
-        async with await conn.execute(_QUERY, (match, ncword)) as cursor:
+        async with await conn.execute(_QUERY, (match, ncword, cword)) as cursor:
             rows = await cursor.fetch_all()
 
     steps: List[Step] = []
     for row in rows:
         match = row["match"]
         sedit = SEdit(new_text=match)
+        rank = row["priority"] + cache_opt.rank_penalty
         suggestion = Suggestion(
             position=context.position,
             source=cache_opt.source_name,
             source_shortname=cache_opt.short_name,
-            rank=row["priority"],
+            rank=rank,
             label=row["label"],
             sortby=row["sortby"],
             kind=row["kind"],
