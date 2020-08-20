@@ -2,6 +2,7 @@ from os.path import dirname, join, realpath
 from typing import Iterable, Iterator, List, Sequence
 
 from ..shared.da import slurp
+from ..shared.logging import log
 from ..shared.parse import normalize
 from ..shared.sql import SQL_TYPES, AConnection, sql_escape
 from ..shared.types import Context, SEdit
@@ -52,6 +53,7 @@ async def populate(
                 match,
                 filetype_id,
                 match_normalized,
+                rank,
                 suggestion.label,
                 suggestion.sortby,
                 suggestion.kind,
@@ -78,7 +80,9 @@ async def prefix_query(
     match = f"{escaped}%" if escaped else ""
 
     async with conn.lock:
-        async with await conn.execute(_QUERY, (match, ncword, cword)) as cursor:
+        async with await conn.execute(
+            _QUERY, (context.filetype, match, cword)
+        ) as cursor:
             rows = await cursor.fetch_all()
 
     steps: List[Step] = []
@@ -106,4 +110,5 @@ async def prefix_query(
         step = fuzzify(context, suggestion=suggestion, options=match_opt)
         steps.append(step)
 
+    log.debug("%s", steps)
     return steps
