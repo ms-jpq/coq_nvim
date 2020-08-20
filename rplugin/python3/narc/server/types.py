@@ -48,8 +48,8 @@ class SourceSpec:
     main: str
     enabled: bool
     short_name: str
-    limit: Optional[float]
-    rank: Optional[int]
+    limit: float
+    rank: int
     unique: bool
     cache: CacheSpec
     config: Dict[str, Any]
@@ -80,7 +80,7 @@ class SourceFactory:
     enabled: bool
     short_name: str
     limit: float
-    rank: float
+    rank: int
     unique: bool
     cache: CacheSpec
     seed: Seed

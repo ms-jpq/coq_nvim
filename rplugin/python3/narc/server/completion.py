@@ -1,6 +1,7 @@
 from asyncio import Queue, gather, wait
 from asyncio.tasks import as_completed
 from dataclasses import dataclass
+from itertools import chain
 from math import inf
 from os import linesep
 from typing import (
@@ -22,7 +23,9 @@ from ..shared.consts import __debug_db__
 from ..shared.logging import log
 from ..shared.nvim import print
 from ..shared.parse import normalize
+from ..shared.sql import AConnection
 from ..shared.types import Comm, Completion, Context, MatchOptions, Position
+from .cache import init, init_filetype, populate, prefix_query
 from .context import gen_context, goahead
 from .fuzzy import fuzzify, fuzzy
 from .nvim import VimCompletion
@@ -30,6 +33,7 @@ from .settings import load_factories
 from .types import (
     BufferContext,
     CacheOptions,
+    CacheSpec,
     Settings,
     SourceFactory,
     Step,
@@ -49,6 +53,8 @@ class StepContext:
 
 @dataclass(frozen=True)
 class StepReply:
+    rank: int
+    cache: CacheSpec
     suggestions: Sequence[Suggestion]
 
 
@@ -108,7 +114,6 @@ async def manufacture(
 
     async def source(context: Context, s_context: StepContext) -> StepReply:
         timeout = s_context.timeout
-
         suggestions: List[Suggestion] = []
 
         async def cont() -> None:
@@ -129,7 +134,9 @@ async def manufacture(
             msg2 = f"{name}, exceeded {timeout_fmt}ms{linesep}"
             await print(nvim, msg1 + msg2)
 
-        reply = StepReply(suggestions=suggestions)
+        reply = StepReply(
+            cache=factory.cache, rank=factory.rank, suggestions=suggestions
+        )
         return reply
 
     return source, chan
@@ -138,7 +145,9 @@ async def manufacture(
 async def osha(
     nvim: Nvim, name: str, factory: SourceFactory, retries: int
 ) -> Tuple[str, StepFunction, Optional[Queue]]:
-    nil_reply = StepReply(suggestions=())
+    nil_reply = StepReply(
+        cache=CacheSpec(enabled=False, same_filetype=False), rank=0, suggestions=()
+    )
 
     async def nil_steps(_: Context, __: StepContext) -> StepReply:
         return nil_reply
@@ -198,16 +207,43 @@ def buffer_opts(
 
 
 async def gen_steps(
-    context: Context, options: MatchOptions, futures: Iterator[Awaitable[StepReply]],
-) -> Sequence[Step]:
+    context: Context,
+    conn: AConnection,
+    match_opt: MatchOptions,
+    cache_opt: CacheOptions,
+    timeout: float,
+    futures: Iterator[Awaitable[StepReply]],
+) -> Iterator[Step]:
+    ft_idx = await init_filetype(conn, filetype=context.filetype)
+
     async def cont() -> AsyncIterator[Step]:
         for fut in as_completed(tuple(futures)):
             reply = await fut
             for suggestion in reply.suggestions:
-                step = fuzzify(context, suggestion=suggestion, options=options)
+                step = fuzzify(context, suggestion=suggestion, options=match_opt)
                 yield step
+            if reply.cache.enabled:
+                await populate(
+                    conn,
+                    filetype_id=ft_idx,
+                    rank=reply.rank,
+                    suggestions=reply.suggestions,
+                )
 
-    return [suggestion async for suggestion in cont()]
+    async def c1() -> Sequence[Step]:
+        return [suggestion async for suggestion in cont()]
+
+    s1, s2 = await gather(
+        c1(),
+        prefix_query(
+            conn,
+            context=context,
+            timeout=timeout,
+            match_opt=match_opt,
+            cache_opt=cache_opt,
+        ),
+    )
+    return chain(s1, s2)
 
 
 async def merge(
@@ -225,6 +261,8 @@ async def merge(
         )
     )
     sources: Dict[str, StepFunction] = {name: source for name, source, _ in src_gen}
+    conn = AConnection()
+    await init(conn)
 
     async def gen(options: GenOptions) -> Tuple[Position, Iterator[VimCompletion]]:
         timeout = inf if options.force else settings.timeout
@@ -241,8 +279,15 @@ async def merge(
                 for name, source in sources.items()
                 if name in enabled
             )
-            steps = await gen_steps(context, options=match_opt, futures=source_gen)
-            comps = fuzzy(steps=steps, display_opt=display_opt, limits=limits,)
+            steps = await gen_steps(
+                context,
+                conn=conn,
+                match_opt=match_opt,
+                cache_opt=cache_opt,
+                timeout=timeout,
+                futures=source_gen,
+            )
+            comps = fuzzy(steps=steps, display_opt=display_opt, limits=limits)
 
             return position, comps
         else:

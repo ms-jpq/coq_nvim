@@ -117,7 +117,7 @@ def vimify(fuzz: Step, display: DisplayOptions) -> VimCompletion:
 
 
 def fuzzy(
-    steps: Sequence[Step],
+    steps: Iterator[Step],
     display_opt: DisplayOptions,
     limits: Dict[str, float],
 ) -> Iterator[VimCompletion]:

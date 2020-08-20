@@ -1,10 +1,11 @@
 SELECT
-  match,
-  match_normalized,
-  label,
-  sortby,
-  kind,
-  doc
+  suggestions.match,
+  suggestions.match_normalized,
+  suggestions.priority,
+  suggestions.label,
+  suggestions.sortby,
+  suggestions.kind,
+  suggestions.doc
 FROM suggestions
 JOIN filetypes
 ON
