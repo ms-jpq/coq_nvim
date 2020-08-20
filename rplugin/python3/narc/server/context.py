@@ -1,12 +1,13 @@
-from typing import Any, Dict, List, Set, Tuple
+from typing import Any, Dict, Set, Tuple
 
 from pynvim import Nvim
 
 from ..shared.consts import buf_var_name
 from ..shared.nvim import call
-from ..shared.parse import is_sym, is_word, normalize
+from ..shared.parse import normalize
 from ..shared.types import Context, MatchOptions, Position
 from .nvim import buf_get_var
+from .parse import gen_lhs_rhs
 from .types import BufferContext, BufferSourceSpec
 
 
@@ -20,51 +21,15 @@ def gen_ctx(
     col = position.col
     line_before, line_after = line[:col], line[col:]
 
-    lit = reversed(line_before)
-    l_alnums: List[str] = []
-    l_syms: List[str] = []
-    for c in lit:
-        if is_word(c, unifying_chars=unifying_chars):
-            l_alnums.append(c)
-        else:
-            if is_sym(c):
-                l_syms.append(c)
-            break
-
-    for c in lit:
-        if is_sym(c):
-            l_syms.append(c)
-        else:
-            break
-
-    rit = iter(line_after)
-    r_alnums: List[str] = []
-    r_syms: List[str] = []
-    for c in rit:
-        if is_word(c, unifying_chars=unifying_chars):
-            r_alnums.append(c)
-        else:
-            if is_sym(c):
-                r_syms.append(c)
-            break
-
-    for c in rit:
-        if is_sym(c):
-            r_syms.append(c)
-        else:
-            break
-
-    alnums_before = "".join(reversed(l_alnums))
-    alnums_before_normalized = normalize(alnums_before)
-
-    alnums_after = "".join(r_alnums)
-    alnums_after_normalized = normalize(alnums_after)
-
+    syms_before, alnums_before, alnums_after, syms_after = gen_lhs_rhs(
+        line_before, line_after, unifying_chars=unifying_chars
+    )
     alnums = alnums_before + alnums_after
+
+    alnums_before_normalized = normalize(alnums_before)
+    alnums_after_normalized = normalize(alnums_after)
     alnums_normalized = alnums_before_normalized + alnums_after_normalized
 
-    syms_before = "".join(reversed(l_syms))
-    syms_after = "".join(r_syms)
     syms = syms_before + syms_after
 
     line_normalized = normalize(line)
