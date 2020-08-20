@@ -122,12 +122,9 @@ async def main(comm: Comm, seed: Seed) -> Source:
                 log.warn("%s", message)
 
     async def source(context: Context) -> AsyncIterator[Completion]:
-        position, ncword = context.position, context.alnums_normalized
-
-        async for word in prefix_query(
-            conn, ncword=ncword, prefix_matches=prefix_matches
-        ):
-
+        position = context.position
+        words = prefix_query(conn, context=context, prefix_matches=prefix_matches)
+        async for word in words:
             sedit = SEdit(new_text=word)
             yield Completion(position=position, sedit=sedit)
 

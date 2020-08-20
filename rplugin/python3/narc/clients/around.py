@@ -52,16 +52,16 @@ async def main(comm: Comm, seed: Seed) -> Source:
     await init(conn)
 
     async def source(context: Context) -> AsyncIterator[Completion]:
-        position, ncword = context.position, context.alnums_normalized
+        position = context.position
 
         chars, _ = await gather(
             buffer_chars(comm.nvim, band_size=band_size, pos=position), depopulate(conn)
         )
         words = coalesce(chars, max_length=max_length, unifying_chars=unifying_chars)
         await populate(conn, words=words)
-        async for word in prefix_query(
-            conn, ncword=ncword, prefix_matches=prefix_matches
-        ):
+
+        words = prefix_query(conn, context=context, prefix_matches=prefix_matches)
+        async for word in words:
             sedit = SEdit(new_text=word)
             yield Completion(position=position, sedit=sedit)
 

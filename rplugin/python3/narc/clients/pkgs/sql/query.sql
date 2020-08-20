@@ -4,4 +4,4 @@ FROM words
 WHERE
   nword LIKE ?
   AND
-  nword <> ?
+  word <> ?

@@ -3,6 +3,7 @@ from typing import AsyncIterator, Iterable, Iterator
 
 from ...shared.da import slurp
 from ...shared.sql import SQL_TYPES, AConnection, sql_escape
+from ...shared.types import Context
 
 __sql__ = join(realpath(dirname(__file__)), "sql")
 
@@ -43,14 +44,15 @@ async def populate(conn: AConnection, words: Iterator[str]) -> None:
 
 
 async def prefix_query(
-    conn: AConnection, ncword: str, prefix_matches: int
+    conn: AConnection, context: Context, prefix_matches: int
 ) -> AsyncIterator[str]:
+    cword, ncword = context.alnums, context.alnums_normalized
     prefix = ncword[:prefix_matches]
     escaped = sql_escape(prefix, nono=LIKE_ESCAPE, escape=ESCAPE_CHAR)
     match = f"{escaped}%" if escaped else ""
 
     async with conn.lock:
-        async with await conn.execute(_QUERY, (match, ncword)) as cursor:
+        async with await conn.execute(_QUERY, (match, ncword, cword)) as cursor:
             rows = await cursor.fetch_all()
 
     for row in rows:
