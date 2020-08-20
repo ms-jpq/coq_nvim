@@ -12,6 +12,6 @@ ON
 WHERE
   filetypes.filetype = ?
   AND
-  suggestions.match_normalized LIKE ?
+  suggestions.match_normalized LIKE ? ESCAPE '!'
   AND
   suggestions.match <> ?
