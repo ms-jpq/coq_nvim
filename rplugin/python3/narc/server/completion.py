@@ -24,7 +24,7 @@ from ..shared.nvim import print
 from ..shared.parse import normalize
 from ..shared.sql import AConnection
 from ..shared.types import Comm, Completion, Context, MatchOptions, Position
-from .cache import init, init_filetype, populate, prefix_query
+from .cache import init, populate, prefix_query
 from .context import gen_context, goahead
 from .fuzzy import fuzzify, fuzzy
 from .nvim import VimCompletion
@@ -213,8 +213,6 @@ async def gen_steps(
     timeout: float,
     futures: Iterator[Awaitable[StepReply]],
 ) -> Iterator[Step]:
-    ft_idx = await init_filetype(conn, filetype=context.filetype)
-
     async def cont() -> AsyncIterator[Step]:
         for fut in as_completed(tuple(futures)):
             reply = await fut
@@ -224,7 +222,7 @@ async def gen_steps(
             if reply.cache.enabled:
                 await populate(
                     conn,
-                    filetype_id=ft_idx,
+                    filetype=context.filetype,
                     rank=reply.rank,
                     suggestions=reply.suggestions,
                 )

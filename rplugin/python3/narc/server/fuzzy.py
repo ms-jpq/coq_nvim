@@ -28,8 +28,8 @@ def rank(fuzz: Step) -> Sequence[Union[float, int, str]]:
         metric.prefix_matches * -1,
         metric.num_matches * -1,
         metric.consecutive_matches * -1,
-        suggestion.rank * -1,
         metric.density * -1,
+        suggestion.rank * -1,
         text,
     )
 

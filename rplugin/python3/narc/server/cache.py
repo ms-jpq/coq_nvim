@@ -33,18 +33,8 @@ async def init(conn: AConnection) -> None:
             pass
 
 
-async def init_filetype(conn: AConnection, filetype: str) -> int:
-    async with conn.lock:
-        async with await conn.execute(_INIT_FT, (filetype,)):
-            pass
-        await conn.commit()
-        async with await conn.execute(_QUERY_FT, (filetype,)) as cursor:
-            row = await cursor.fetch_one()
-            return row["rowid"]
-
-
 async def populate(
-    conn: AConnection, filetype_id: int, rank: int, suggestions: Sequence[Suggestion]
+    conn: AConnection, filetype: str, rank: int, suggestions: Sequence[Suggestion]
 ) -> None:
     def cont() -> Iterator[Iterable[SQL_TYPES]]:
         for suggestion in suggestions:
@@ -52,7 +42,7 @@ async def populate(
             match_normalized = normalize(match)
             values = (
                 match,
-                filetype_id,
+                filetype,
                 match_normalized,
                 rank,
                 suggestion.label,

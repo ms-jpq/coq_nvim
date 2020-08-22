@@ -1,18 +1,15 @@
 SELECT
-  suggestions.match,
-  suggestions.match_normalized,
-  suggestions.priority,
-  suggestions.label,
-  suggestions.sortby,
-  suggestions.kind,
-  suggestions.doc
+  match,
+  match_normalized,
+  priority,
+  label,
+  sortby,
+  kind,
+  doc
 FROM suggestions
-JOIN filetypes
-ON
-  filetypes.rowid = suggestions.filetype_id
 WHERE
-  filetypes.filetype = ?
+  filetype = ?
   AND
-  suggestions.match_normalized LIKE ? ESCAPE '!'
+  match_normalized LIKE ? ESCAPE '!'
   AND
-  suggestions.match <> ?
+  match <> ?
