@@ -4,7 +4,6 @@ from locale import strxfrm
 from os import linesep
 from typing import Any, Callable, Dict, Iterator, Sequence, Set, Union, cast
 
-from ..shared.logging import log
 from ..shared.types import Context
 from .match import gen_metric_wrap
 from .nvim import VimCompletion
@@ -135,4 +134,3 @@ def fuzzy(
             elif text not in seen:
                 seen.add(text)
                 yield vimify(fuzz, display=display_opt)
-    log.debug("%s", seen)
