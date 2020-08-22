@@ -19,7 +19,6 @@ from typing import (
 
 from pynvim import Nvim
 
-from ..shared.consts import __debug_db__
 from ..shared.logging import log
 from ..shared.nvim import print
 from ..shared.parse import normalize

@@ -4,10 +4,11 @@ from locale import strxfrm
 from os import linesep
 from typing import Any, Callable, Dict, Iterator, Sequence, Set, Union, cast
 
+from ..shared.logging import log
 from ..shared.types import Context
 from .match import gen_metric_wrap
 from .nvim import VimCompletion
-from .types import DisplayOptions, MatchOptions, Payload, Suggestion, Step
+from .types import DisplayOptions, MatchOptions, Payload, Step, Suggestion
 
 
 def fuzzify(context: Context, suggestion: Suggestion, options: MatchOptions) -> Step:
@@ -117,9 +118,7 @@ def vimify(fuzz: Step, display: DisplayOptions) -> VimCompletion:
 
 
 def fuzzy(
-    steps: Iterator[Step],
-    display_opt: DisplayOptions,
-    limits: Dict[str, float],
+    steps: Iterator[Step], display_opt: DisplayOptions, limits: Dict[str, float],
 ) -> Iterator[VimCompletion]:
     seen: Set[str] = set()
     seen_by_source: Dict[str, int] = {}
@@ -131,7 +130,9 @@ def fuzzy(
         seen_by_source[source] = seen_count
 
         if seen_count <= limits[source]:
-            if not unique or text not in seen:
-                if unique:
-                    seen.add(text)
+            if not unique:
                 yield vimify(fuzz, display=display_opt)
+            elif text not in seen:
+                seen.add(text)
+                yield vimify(fuzz, display=display_opt)
+    log.debug("%s", seen)
