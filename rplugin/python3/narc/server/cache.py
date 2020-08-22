@@ -15,9 +15,7 @@ __sql__ = join(dirname(realpath(__file__)), "sql")
 
 _PRAGMA = slurp(join(__sql__, "pragma.sql"))
 _INIT = slurp(join(__sql__, "init.sql"))
-_INIT_FT = slurp(join(__sql__, "init_filetype.sql"))
 _POPULATE = slurp(join(__sql__, "populate.sql"))
-_QUERY_FT = slurp(join(__sql__, "query_filetype.sql"))
 _QUERY = slurp(join(__sql__, "query_suggestions.sql"))
 
 
