@@ -12,7 +12,7 @@ CREATE TABLE suggestions (
   kind             TEXT,
   doc              TEXT
 ) WITHOUT ROWID;
-CREATE INDEX suggestions_filetype         ON filetypes   (suggestions);
+CREATE INDEX suggestions_filetype         ON suggestions (filetype);
 CREATE INDEX suggestions_match_normalized ON suggestions (match_normalized);
 
 END;
