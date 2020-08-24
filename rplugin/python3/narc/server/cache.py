@@ -24,11 +24,10 @@ LIKE_ESCAPE = {"_", "[", "%"} | {ESCAPE_CHAR}
 
 
 async def init(conn: AConnection) -> None:
-    async with conn.lock:
-        async with await conn.execute_script(_PRAGMA):
-            pass
-        async with await conn.execute_script(_INIT):
-            pass
+    async with await conn.execute_script(_PRAGMA):
+        pass
+    async with await conn.execute_script(_INIT):
+        pass
 
 
 async def populate(
@@ -50,10 +49,9 @@ async def populate(
             )
             yield values
 
-    async with conn.lock:
-        async with await conn.execute_many(_POPULATE, cont()):
-            pass
-        await conn.commit()
+    async with await conn.execute_many(_POPULATE, cont()):
+        pass
+    await conn.commit()
 
 
 async def prefix_query(
@@ -71,11 +69,10 @@ async def prefix_query(
     steps: List[Step] = []
 
     async def cont() -> None:
-        async with conn.lock:
-            async with await conn.execute(
-                _QUERY, (context.filetype, like_match, cword)
-            ) as cursor:
-                rows = await cursor.fetch_all()
+        async with await conn.execute(
+            _QUERY, (context.filetype, like_match, cword)
+        ) as cursor:
+            rows = await cursor.fetch_all()
 
         for row in rows:
             match = row["match"]
