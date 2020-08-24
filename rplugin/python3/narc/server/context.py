@@ -89,7 +89,7 @@ async def gen_buf_ctx(nvim: Nvim) -> BufferContext:
 async def gen_context(
     nvim: Nvim, options: MatchOptions, pos: Optional[Position]
 ) -> Context:
-    def cont() -> Tuple[str, str, str, Position, Dict[str, Any]]:
+    def cont() -> Tuple[str, str, str, Position]:
         buffer = nvim.api.get_current_buf()
         filename = nvim.api.buf_get_name(buffer)
         filetype = nvim.api.buf_get_option(buffer, "filetype")
@@ -98,9 +98,9 @@ async def gen_context(
         line = nvim.api.get_current_line()
         row = row - 1
         position = Position(row=row, col=col)
-        return filename, filetype, line, position, buf_var
+        return filename, filetype, line, position
 
-    filename, filetype, line, position, buf_var = await call(nvim, cont)
+    filename, filetype, line, position = await call(nvim, cont)
     context = gen_ctx(
         filename=filename,
         filetype=filetype,
