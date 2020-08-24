@@ -14,6 +14,7 @@ from ..shared.types import (
     SnippetContext,
     SnippetEngine,
 )
+from .context import gen_context
 from .edit import replace_lines
 from .types import MatchOptions, Payload
 
@@ -72,7 +73,8 @@ async def apply_patch(
         go = await call(nvim, gogo)
         if go:
             if snippet and engine_available(snippet):
-                context = SnippetContext(position=position, snippet=snippet)
+                ctx = await gen_context(nvim, options=options, pos=position)
+                context = SnippetContext(context=ctx, snippet=snippet)
                 await engine(context)
                 return True
 

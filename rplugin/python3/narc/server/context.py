@@ -1,4 +1,4 @@
-from typing import Any, Dict, Set, Tuple
+from typing import Any, Dict, Optional, Set, Tuple
 
 from pynvim import Nvim
 
@@ -73,28 +73,34 @@ def gen_ctx(
     )
 
 
-def gen_buf_ctx(buf_var: Dict[str, Any]) -> BufferContext:
-    src = buf_var.get("sources") or {}
-    sources = {key: BufferSourceSpec(**val) for key, val in src.items()}
-    return BufferContext(sources=sources)
+async def gen_buf_ctx(nvim: Nvim) -> BufferContext:
+    def cont() -> BufferContext:
+        buffer = nvim.api.get_current_buf()
+        buf_var: Dict[str, Any] = buf_get_var(
+            nvim, buffer=buffer, name=buf_var_name
+        ) or {}
+        src = buf_var.get("sources") or {}
+        sources = {key: BufferSourceSpec(**val) for key, val in src.items()}
+        return BufferContext(sources=sources)
+
+    return await call(nvim, cont)
 
 
 async def gen_context(
-    nvim: Nvim, options: MatchOptions
-) -> Tuple[Context, BufferContext]:
-    def fed() -> Tuple[str, str, str, Position, Dict[str, Any]]:
+    nvim: Nvim, options: MatchOptions, pos: Optional[Position]
+) -> Context:
+    def cont() -> Tuple[str, str, str, Position, Dict[str, Any]]:
         buffer = nvim.api.get_current_buf()
         filename = nvim.api.buf_get_name(buffer)
         filetype = nvim.api.buf_get_option(buffer, "filetype")
         window = nvim.api.get_current_win()
-        row, col = nvim.api.win_get_cursor(window)
+        row, col = (pos.row, pos.col) if pos else nvim.api.win_get_cursor(window)
         line = nvim.api.get_current_line()
-        buf_var = buf_get_var(nvim, buffer=buffer, name=buf_var_name) or {}
         row = row - 1
         position = Position(row=row, col=col)
         return filename, filetype, line, position, buf_var
 
-    filename, filetype, line, position, buf_var = await call(nvim, fed)
+    filename, filetype, line, position, buf_var = await call(nvim, cont)
     context = gen_ctx(
         filename=filename,
         filetype=filetype,
@@ -102,8 +108,7 @@ async def gen_context(
         position=position,
         unifying_chars=options.unifying_chars,
     )
-    buffer_context = gen_buf_ctx(buf_var)
-    return context, buffer_context
+    return context
 
 
 def goahead(context: Context) -> bool:

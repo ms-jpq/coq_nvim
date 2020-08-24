@@ -25,7 +25,7 @@ from ..shared.parse import normalize
 from ..shared.sql import AConnection
 from ..shared.types import Comm, Completion, Context, MatchOptions, Position
 from .cache import init, populate, prefix_query
-from .context import gen_context, goahead
+from .context import gen_buf_ctx, gen_context, goahead
 from .fuzzy import fuzzify, fuzzy
 from .nvim import VimCompletion
 from .settings import load_factories
@@ -263,7 +263,9 @@ async def merge(
 
     async def gen(options: GenOptions) -> Tuple[Position, Iterator[VimCompletion]]:
         timeout = inf if options.force else settings.timeout
-        context, buf_context = await gen_context(nvim, options=match_opt)
+        context, buf_context = await gather(
+            gen_context(nvim, options=match_opt, pos=None), gen_buf_ctx(nvim)
+        )
         position = context.position
         s_context = StepContext(timeout=timeout,)
         enabled, limits = buffer_opts(

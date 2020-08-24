@@ -128,7 +128,7 @@ class SnippetSeed:
 
 @dataclass(frozen=True)
 class SnippetContext:
-    position: Position
+    context: Context
     snippet: Snippet
 
 
