@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from asyncio import Lock
 from contextlib import AbstractAsyncContextManager
 from sqlite3 import Connection, Cursor, Row, connect
 from typing import (
@@ -55,7 +54,6 @@ class ACursor(AbstractAsyncContextManager):
 class AConnection(AbstractAsyncContextManager):
     def __init__(self, database: str = ":memory:") -> None:
         self.chan = Executor()
-        self.lock = Lock()
 
         def cont() -> Connection:
             conn = connect(database)

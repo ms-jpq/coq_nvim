@@ -19,17 +19,15 @@ LIKE_ESCAPE = {"_", "[", "%"} | {ESCAPE_CHAR}
 
 
 async def init(conn: AConnection) -> None:
-    async with conn.lock:
-        async with await conn.execute_script(_PRAGMA):
-            pass
-        async with await conn.execute_script(_INIT):
-            pass
+    async with await conn.execute_script(_PRAGMA):
+        pass
+    async with await conn.execute_script(_INIT):
+        pass
 
 
 async def depopulate(conn: AConnection) -> None:
-    async with conn.lock:
-        async with await conn.execute(_DEPOPULATE):
-            pass
+    async with await conn.execute(_DEPOPULATE):
+        pass
 
 
 async def populate(conn: AConnection, words: Iterator[str]) -> None:
@@ -37,10 +35,9 @@ async def populate(conn: AConnection, words: Iterator[str]) -> None:
         for word in words:
             yield word, word
 
-    async with conn.lock:
-        async with await conn.execute_many(_POPULATE, cont()):
-            pass
-        await conn.commit()
+    async with await conn.execute_many(_POPULATE, cont()):
+        pass
+    await conn.commit()
 
 
 async def prefix_query(
@@ -51,9 +48,8 @@ async def prefix_query(
     escaped = sql_escape(prefix, nono=LIKE_ESCAPE, escape=ESCAPE_CHAR)
     match = f"{escaped}%" if escaped else ""
 
-    async with conn.lock:
-        async with await conn.execute(_QUERY, (match, cword)) as cursor:
-            rows = await cursor.fetch_all()
+    async with await conn.execute(_QUERY, (match, cword)) as cursor:
+        rows = await cursor.fetch_all()
 
     for row in rows:
         yield row["word"]
