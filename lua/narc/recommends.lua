@@ -2,23 +2,24 @@ local bindings = require "narc/bindings"
 
 
 local map_keys = function ()
-
+  
+  local map = bindings.map()
   -- escape key do not select candidate
-  bindings.map.insert("<esc>", "pumvisible() ? '<c-e><esc>' : '<esc>'", {expr = true})
+  map.insert("<esc>", "pumvisible() ? '<c-e><esc>' : '<esc>'", {expr = true})
 
   -- backspace do not select candidate
-  bindings.map.insert("<bs>",  "pumvisible() ? '<c-e><bs>'  : '<bs>'",  {expr = true})
+  map.insert("<bs>",  "pumvisible() ? '<c-e><bs>'  : '<bs>'",  {expr = true})
 
   -- use enter key to select completion items
-  bindings.map.insert("<cr>", "pumvisible() ? (complete_info().selected == -1 ? '<c-e><cr>' : '<c-y>') : '<cr>'",  {expr = true})
+  map.insert("<cr>", "pumvisible() ? (complete_info().selected == -1 ? '<c-e><cr>' : '<c-y>') : '<cr>'",  {expr = true})
 
   -- use tabkeys to navigate completion menu
-  bindings.map.insert("<tab>",   "pumvisible() ? '<c-n>' : '<tab>'", {expr = true})
-  bindings.map.insert("<s-tab>", "pumvisible() ? '<c-p>' : '<bs>'",  {expr = true})
+  map.insert("<tab>",   "pumvisible() ? '<c-n>' : '<tab>'", {expr = true})
+  map.insert("<s-tab>", "pumvisible() ? '<c-p>' : '<bs>'",  {expr = true})
 
   -- use <c-space> to force completion
-  bindings.map.nv("<c-space>")
-  bindings.map.insert("<c-space>", "<c-x><c-u>")
+  map.nv("<c-space>")
+  map.insert("<c-space>", "<c-x><c-u>")
 
 end
 
