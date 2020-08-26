@@ -56,5 +56,5 @@ end
 
 return {
   set = set,
-  map = map,
+  map = map(),
 }
