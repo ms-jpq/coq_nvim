@@ -1,6 +1,6 @@
 from itertools import accumulate
 from os import listdir
-from os.path import dirname, isdir, join, realpath, sep
+from os.path import curdir, dirname, isdir, join, realpath, sep
 from pathlib import Path
 from typing import AsyncIterator, Iterator, Sequence
 
@@ -13,7 +13,7 @@ NAME = "paths"
 def parse_dots(path: str) -> str:
     def cont() -> Iterator[str]:
         for c in reversed(path):
-            if c == ".":
+            if c == curdir:
                 yield c
             else:
                 break
