@@ -203,7 +203,7 @@ def split_stream(
                 curr.clear()
                 r = next(r_it)
                 c_it = count()
-                c = 0
+                c = next(c_it)
             else:
                 c = next(c_it)
                 curr.append(cast(str, char))
