@@ -1,2 +1,2 @@
 PRAGMA journal_mode = OFF;
-PRAGMA synchronous = OFF:
+PRAGMA synchronous = OFF;
