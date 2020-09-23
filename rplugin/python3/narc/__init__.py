@@ -20,7 +20,8 @@ from .server.state import initial as initial_state
 from .server.transitions import (
     t_char_inserted,
     t_comp_inserted,
-    t_natural_insertable,
+    t_i_insertable,
+    t_p_insertable,
     t_text_changed,
 )
 from .server.types import Notification
@@ -66,11 +67,15 @@ class Main:
         await autocmd(self.nvim, events=("InsertCharPre",), fn="_NARCpreinsert_char")
 
         await autocmd(
-            self.nvim, events=("TextChangedI",), fn="_NARCtextchangedi",
+            self.nvim,
+            events=("TextChangedI",),
+            fn="_NARCtextchangedi",
         )
 
         await autocmd(
-            self.nvim, events=("TextChangedP",), fn="_NARCtextchangedp",
+            self.nvim,
+            events=("TextChangedP",),
+            fn="_NARCtextchangedp",
         )
 
         await autocmd(
@@ -156,7 +161,7 @@ class Main:
     @function("_NARCtextchangedi")
     def text_changed_i(self, args: Sequence[Any]) -> None:
         try:
-            if t_natural_insertable(self.state):
+            if t_i_insertable(self.state):
                 self.next_comp(GenOptions())
         finally:
             self.state = t_text_changed(self.state)
@@ -164,7 +169,7 @@ class Main:
     @function("_NARCtextchangedp")
     def text_changed_p(self, args: Sequence[Any]) -> None:
         try:
-            if t_natural_insertable(self.state):
+            if t_p_insertable(self.state):
                 self.next_comp(GenOptions())
         finally:
             self.state = t_text_changed(self.state)

@@ -2,7 +2,11 @@ from .state import forward
 from .types import State
 
 
-def t_natural_insertable(state: State) -> bool:
+def t_i_insertable(state: State) -> bool:
+    return True
+
+
+def t_p_insertable(state: State) -> bool:
     return state.char_inserted and not state.comp_inserted
 
 
