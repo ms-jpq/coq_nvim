@@ -76,9 +76,9 @@ def gen_ctx(
 async def gen_buf_ctx(nvim: Nvim) -> BufferContext:
     def cont() -> BufferContext:
         buffer = nvim.api.get_current_buf()
-        buf_var: Dict[str, Any] = buf_get_var(
-            nvim, buffer=buffer, name=buf_var_name
-        ) or {}
+        buf_var: Dict[str, Any] = (
+            buf_get_var(nvim, buffer=buffer, name=buf_var_name) or {}
+        )
         src = buf_var.get("sources") or {}
         sources = {key: BufferSourceSpec(**val) for key, val in src.items()}
         return BufferContext(sources=sources)
@@ -95,8 +95,8 @@ async def gen_context(
         filetype = nvim.api.buf_get_option(buffer, "filetype")
         window = nvim.api.get_current_win()
         row, col = (pos.row, pos.col) if pos else nvim.api.win_get_cursor(window)
+        row = row if pos else row - 1
         line = nvim.api.get_current_line()
-        row = row - 1
         position = Position(row=row, col=col)
         return filename, filetype, line, position
 
