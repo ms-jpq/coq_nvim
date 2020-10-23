@@ -55,7 +55,7 @@
     },
     "lsp": {
       "cache": {
-        "enabled": true,
+        "enabled": false,
         "same_filetype": true
       },
       "config": {},
