@@ -10,7 +10,7 @@ from pynvim.api.window import Window
 from ..shared.logging import log
 from ..shared.parse import normalize
 from ..shared.types import LEdit, MEdit, Position, SEdit
-from .parse import parse_common_affix
+from .parse import gen_lhs_rhs
 from .types import MatchOptions, Payload
 
 IText = Union[str, Tuple[()]]
@@ -37,10 +37,9 @@ def gen_medit(
         line, *_ = nvim.api.buf_get_lines(buf, row, row + 1, True)
         line_before, line_after = line[:col], line[col:]
         match_normalized = normalize(match)
-        old_prefix, old_suffix = parse_common_affix(
-            before=line_before,
-            after=line_after,
-            match_normalized=match_normalized,
+        _, old_prefix, old_suffix, _ = gen_lhs_rhs(
+            line_before=line_before,
+            line_after=line_after,
             unifying_chars=options.unifying_chars,
         )
         medit = MEdit(

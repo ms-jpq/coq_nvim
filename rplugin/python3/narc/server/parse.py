@@ -1,6 +1,5 @@
 from typing import List, Set, Tuple
 
-from ..shared.da import subsequences
 from ..shared.parse import is_sym, is_word, normalize
 
 
@@ -47,38 +46,3 @@ def gen_lhs_rhs(
     syms_before = "".join(reversed(l_syms))
     syms_after = "".join(r_syms)
     return syms_before, alnums_before, alnums_after, syms_after
-
-
-def parse_common_affix(
-    before: str, after: str, match_normalized: str, unifying_chars: Set[str]
-) -> Tuple[str, str]:
-    syms_before, alnums_before, alnums_after, syms_after = gen_lhs_rhs(
-        before, after, unifying_chars=unifying_chars
-    )
-    before_normalized, after_normalized = normalize(before), normalize(after)
-
-    pre_it = zip(
-        subsequences(before, reverse=True),
-        subsequences(before_normalized, reverse=True),
-        subsequences(match_normalized),
-    )
-
-    prefix = alnums_before
-    idx = -1
-    for i, (text, lhs, rhs) in enumerate(pre_it):
-        if lhs == rhs:
-            prefix = "".join(text)
-            idx = i
-
-    suffix = alnums_after
-    rest = match_normalized[idx + 1 :]
-    post_it = zip(
-        subsequences(after),
-        subsequences(after_normalized),
-        subsequences(rest, reverse=True),
-    )
-    for text, lhs, rhs in post_it:
-        if lhs == rhs:
-            suffix = "".join(text)
-
-    return prefix, suffix

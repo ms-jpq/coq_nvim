@@ -103,13 +103,3 @@ async def call(prog: str, *args: str) -> ProcReturn:
     stdout, stderr = await proc.communicate()
     code = cast(int, proc.returncode)
     return ProcReturn(code=code, out=stdout.decode(), err=stderr.decode())
-
-
-def subsequences(seq: Sequence[T], reverse: bool = False) -> Iterator[Sequence[T]]:
-    if not reverse:
-        for i in range(1, len(seq)):
-            yield seq[:i]
-    if reverse:
-        for i in range(len(seq) - 1, 0, -1):
-            yield seq[i:]
-    yield seq
