@@ -68,8 +68,6 @@ The newer dictionary will automatically be merged with the older one.
 | -------------------------- | ------------------------------------------------- |
 | `match.transpose_band`     | max # of transpose position for fuzzy algorithm   |
 | `match.unifying_chars`     | what symbols also count as part of words          |
-| `cache.band_size`          | cache "band" around cursor                        |
-| `cache.min_match`          | min number of char matches to retrieve from cache |
 | `source.<name>.enabled`    | source enabled                                    |
 | `source.<name>.limit`      | max results shown from source                     |
 | `source.<name>.timeout`    | max wait time for source                          |

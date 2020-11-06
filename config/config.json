@@ -1,11 +1,4 @@
 {
-  "cache": {
-    "limit": 5,
-    "prefix_matches": 2,
-    "rank_penalty": -1,
-    "short_name": "C",
-    "source_name": "cache"
-  },
   "display": {
     "ellipsis": "…",
     "pum_max_len": 66,
@@ -20,10 +13,6 @@
   "snippet_engines": {},
   "sources": {
     "around": {
-      "cache": {
-        "enabled": false,
-        "same_filetype": false
-      },
       "config": {
         "band_size": 20,
         "max_length": 20,
@@ -37,10 +26,6 @@
       "unique": true
     },
     "buffers": {
-      "cache": {
-        "enabled": false,
-        "same_filetype": false
-      },
       "config": {
         "max_length": 20,
         "polling_rate": 1,
@@ -54,10 +39,6 @@
       "unique": true
     },
     "lsp": {
-      "cache": {
-        "enabled": false,
-        "same_filetype": true
-      },
       "config": {},
       "enabled": false,
       "limit": null,
@@ -67,10 +48,6 @@
       "unique": true
     },
     "paths": {
-      "cache": {
-        "enabled": false,
-        "same_filetype": false
-      },
       "config": {},
       "enabled": true,
       "limit": 3,
@@ -80,10 +57,6 @@
       "unique": true
     },
     "tmux": {
-      "cache": {
-        "enabled": false,
-        "same_filetype": false
-      },
       "config": {
         "max_length": 20,
         "polling_rate": 1,
@@ -97,10 +70,6 @@
       "unique": true
     },
     "tree_sitter": {
-      "cache": {
-        "enabled": false,
-        "same_filetype": false
-      },
       "config": {},
       "enabled": false,
       "limit": 3,

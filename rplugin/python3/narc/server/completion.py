@@ -24,20 +24,11 @@ from ..shared.nvim import print
 from ..shared.parse import normalize
 from ..shared.sql import AConnection
 from ..shared.types import Comm, Completion, Context, MatchOptions, Position
-from .cache import init, populate, prefix_query
 from .context import gen_buf_ctx, gen_context, goahead
 from .fuzzy import fuzzify, fuzzy
 from .nvim import VimCompletion
 from .settings import load_factories
-from .types import (
-    BufferContext,
-    CacheOptions,
-    CacheSpec,
-    Settings,
-    SourceFactory,
-    Step,
-    Suggestion,
-)
+from .types import BufferContext, Settings, SourceFactory, Step, Suggestion
 
 
 @dataclass(frozen=True)
@@ -53,7 +44,6 @@ class StepContext:
 @dataclass(frozen=True)
 class StepReply:
     rank: int
-    cache: CacheSpec
     suggestions: Sequence[Suggestion]
 
 
@@ -133,9 +123,7 @@ async def manufacture(
             msg2 = f"{name}, exceeded {timeout_fmt}ms{linesep}"
             await print(nvim, msg1 + msg2)
 
-        reply = StepReply(
-            cache=factory.cache, rank=factory.rank, suggestions=suggestions
-        )
+        reply = StepReply(rank=factory.rank, suggestions=suggestions)
         return reply
 
     return source, chan
@@ -144,9 +132,7 @@ async def manufacture(
 async def osha(
     nvim: Nvim, name: str, factory: SourceFactory, retries: int
 ) -> Tuple[str, StepFunction, Optional[Queue]]:
-    nil_reply = StepReply(
-        cache=CacheSpec(enabled=False, same_filetype=False), rank=0, suggestions=()
-    )
+    nil_reply = StepReply(rank=0, suggestions=())
 
     async def nil_steps(_: Context, __: StepContext) -> StepReply:
         return nil_reply
@@ -182,7 +168,6 @@ async def osha(
 def buffer_opts(
     factories: Dict[str, SourceFactory],
     buf_context: BufferContext,
-    options: CacheOptions,
 ) -> Tuple[Set[str], Dict[str, float]]:
     def is_enabled(name: str, factory: SourceFactory) -> bool:
         if name in buf_context.sources:
@@ -197,10 +182,7 @@ def buffer_opts(
         name for name, factory in factories.items() if is_enabled(name, factory=factory)
     }
 
-    limits = {
-        **{name: fact.limit for name, fact in factories.items() if name in enabled},
-        options.source_name: options.limit,
-    }
+    limits = {name: fact.limit for name, fact in factories.items() if name in enabled}
 
     return enabled, limits
 
@@ -209,7 +191,6 @@ async def gen_steps(
     context: Context,
     conn: AConnection,
     match_opt: MatchOptions,
-    cache_opt: CacheOptions,
     timeout: float,
     futures: Iterator[Awaitable[StepReply]],
 ) -> Iterator[Step]:
@@ -219,28 +200,12 @@ async def gen_steps(
             for suggestion in reply.suggestions:
                 step = fuzzify(context, suggestion=suggestion, options=match_opt)
                 yield step
-            if reply.cache.enabled:
-                await populate(
-                    conn,
-                    filetype=context.filetype,
-                    rank=reply.rank,
-                    suggestions=reply.suggestions,
-                )
 
     async def c1() -> Sequence[Step]:
         return [suggestion async for suggestion in cont()]
 
-    s1, s2 = await gather(
-        c1(),
-        prefix_query(
-            conn,
-            context=context,
-            timeout=timeout,
-            match_opt=match_opt,
-            cache_opt=cache_opt,
-        ),
-    )
-    return chain(s1, s2)
+    s1 = await c1()
+    return iter(s1)
 
 
 async def merge(
@@ -249,7 +214,7 @@ async def merge(
     Callable[[GenOptions], Awaitable[Tuple[Position, Iterator[VimCompletion]]]],
     Dict[str, Queue],
 ]:
-    display_opt, match_opt, cache_opt = settings.display, settings.match, settings.cache
+    display_opt, match_opt = settings.display, settings.match
     factories = load_factories(settings=settings)
     src_gen = await gather(
         *(
@@ -259,7 +224,7 @@ async def merge(
     )
     sources: Dict[str, StepFunction] = {name: source for name, source, _ in src_gen}
     conn = AConnection()
-    await init(conn)
+    # await init(conn)
 
     async def gen(options: GenOptions) -> Tuple[Position, Iterator[VimCompletion]]:
         timeout = inf if options.force else settings.timeout
@@ -267,9 +232,11 @@ async def merge(
             gen_context(nvim, options=match_opt, pos=None), gen_buf_ctx(nvim)
         )
         position = context.position
-        s_context = StepContext(timeout=timeout,)
+        s_context = StepContext(
+            timeout=timeout,
+        )
         enabled, limits = buffer_opts(
-            factories, buf_context=buf_context, options=cache_opt
+            factories, buf_context=buf_context
         )
 
         if options.force or goahead(context):
@@ -282,7 +249,6 @@ async def merge(
                 context,
                 conn=conn,
                 match_opt=match_opt,
-                cache_opt=cache_opt,
                 timeout=timeout,
                 futures=source_gen,
             )

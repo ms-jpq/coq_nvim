@@ -30,21 +30,6 @@ class DisplayOptions:
 
 
 @dataclass(frozen=True)
-class CacheOptions:
-    prefix_matches: int
-    rank_penalty: int
-    source_name: str
-    short_name: str
-    limit: float
-
-
-@dataclass(frozen=True)
-class CacheSpec:
-    enabled: bool
-    same_filetype: bool
-
-
-@dataclass(frozen=True)
 class SourceSpec:
     main: str
     enabled: bool
@@ -52,7 +37,6 @@ class SourceSpec:
     limit: float
     rank: int
     unique: bool
-    cache: CacheSpec
     config: Dict[str, Any]
 
 
@@ -71,7 +55,6 @@ class Settings:
     logging_level: str
     display: DisplayOptions
     match: MatchOptions
-    cache: CacheOptions
     sources: Dict[str, SourceSpec]
     snippet_engines: Dict[str, SnippetEngineSpec]
 
@@ -83,7 +66,6 @@ class SourceFactory:
     limit: float
     rank: int
     unique: bool
-    cache: CacheSpec
     seed: Seed
     manufacture: Factory
 

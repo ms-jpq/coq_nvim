@@ -8,8 +8,6 @@ from ..shared.consts import load_hierarchy, module_entry_point, settings_json
 from ..shared.da import load_json, load_module, merge_all
 from ..shared.types import Factory, Seed, SnippetEngineFactory, SnippetSeed
 from .types import (
-    CacheOptions,
-    CacheSpec,
     DisplayOptions,
     EngineFactory,
     MatchOptions,
@@ -21,17 +19,12 @@ from .types import (
 
 
 def load_source(config: Dict[str, Any]) -> SourceSpec:
-    cache = CacheSpec(
-        enabled=config["cache"]["enabled"],
-        same_filetype=config["cache"]["same_filetype"],
-    )
     spec = SourceSpec(
         main=config["main"],
         enabled=config["enabled"],
         short_name=config["short_name"],
         limit=config["limit"],
         unique=config["unique"],
-        cache=cache,
         rank=config["rank"],
         config=config["config"],
     )
@@ -52,7 +45,6 @@ def initial(configs: Sequence[Any]) -> Settings:
     config = merge_all(load_json(settings_json), *configs, replace=True)
     display_o = config["display"]
     match_o = config["match"]
-    cache_o = config["cache"]
     display = DisplayOptions(
         ellipsis=display_o["ellipsis"],
         tabsize=display_o["tabsize"],
@@ -61,13 +53,6 @@ def initial(configs: Sequence[Any]) -> Settings:
     match = MatchOptions(
         transpose_band=match_o["transpose_band"],
         unifying_chars={*match_o["unifying_chars"]},
-    )
-    cache = CacheOptions(
-        prefix_matches=cache_o["prefix_matches"],
-        short_name=cache_o["short_name"],
-        source_name=cache_o["source_name"],
-        limit=cache_o["limit"],
-        rank_penalty=cache_o["rank_penalty"],
     )
     sources = {name: load_source(conf) for name, conf in config["sources"].items()}
     snippet_engines = {
@@ -78,7 +63,6 @@ def initial(configs: Sequence[Any]) -> Settings:
         timeout=(config["timeout"] or inf) / 1000,
         display=display,
         match=match,
-        cache=cache,
         sources=sources,
         snippet_engines=snippet_engines,
         logging_level=config["logging_level"],
@@ -107,7 +91,6 @@ def assemble(spec: SourceSpec, main: Factory, match: MatchOptions) -> SourceFact
         short_name=spec.short_name,
         limit=limit,
         unique=spec.unique,
-        cache=spec.cache,
         rank=rank,
         seed=seed,
         manufacture=main,
