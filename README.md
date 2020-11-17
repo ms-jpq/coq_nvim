@@ -1,4 +1,4 @@
-# KoK.Nvim - Keeper of Keyboard
+# KoK.nvim - Keeper of Keyboard
 
 Same pronunciation as [`coc.nvim`](https://github.com/neoclide/coc.nvim), but simpler and more "Vim-like".
 
