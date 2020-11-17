@@ -1,5 +1,6 @@
 from collections import defaultdict
 from dataclasses import dataclass
+from numbers import Number
 from typing import (
     Any,
     AsyncIterator,
@@ -56,7 +57,8 @@ async def ask(nvim: Nvim, context: Context, uid: int) -> None:
 
     def cont() -> None:
         nvim.api.exec_lua(
-            "narc_lsp.list_comp_candidates(...)", (uid, row, col),
+            "narc_lsp.list_comp_candidates(...)",
+            (uid, row, col),
         )
 
     await call(nvim, cont)
@@ -69,6 +71,8 @@ def parse_resp_to_rows(resp: Any) -> Sequence[Any]:
         return resp["items"]
     elif type(resp) is list:
         return resp
+    elif isinstance(resp, Number):
+        return (resp,)
     else:
         raise ValueError(f"unknown LSP resp - {type(resp)}")
 
@@ -141,7 +145,9 @@ def parse_rows(
         edits = parse_textedit(row)
         require_parse = is_snippet(row, insert_lookup)
 
-        sedit = SEdit(new_text=text,)
+        sedit = SEdit(
+            new_text=text,
+        )
 
         snippet = (
             Snippet(kind=SNIPPET_TYPE, match=label or text, content=text)
@@ -171,7 +177,10 @@ async def main(comm: Comm, seed: Seed) -> Source:
         resp = await fut
         rows = parse_resp_to_rows(resp)
         for row in parse_rows(
-            rows, context=context, entry_lookup=entry_kind, insert_lookup=insert_kind,
+            rows,
+            context=context,
+            entry_lookup=entry_kind,
+            insert_lookup=insert_kind,
         ):
             yield row
 
