@@ -1,4 +1,6 @@
-# NARC - Nvim Async Reactive Complete
+# KoK.Nvim - Keeper of Keyboard
+
+Same pronunciation as [`coc.nvim`](https://github.com/neoclide/coc.nvim), but simpler and more "Vim-like".
 
 **WORK IN PROGRESS**
 
