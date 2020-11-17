@@ -7,7 +7,7 @@ local cancel = function () end
 
 
 local notify = function (request_id, ret)
-  fn._NARCnotify("lsp", request_id, ret)
+  fn._KoKnotify("lsp", request_id, ret)
 end
 
 

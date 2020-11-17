@@ -1,4 +1,4 @@
-local bindings = require "narc/bindings"
+local bindings = require "kok/bindings"
 
 
 local map_keys = function ()
@@ -30,7 +30,7 @@ local settings = function ()
   bindings.set("completeopt", "menuone,noinsert,noselect", [[+=]])
 
   -- allow <c-x><c-u> to perform manual insertions in insertmode
-  bindings.set("completefunc", "NARComnifunc")
+  bindings.set("completefunc", "KoKomnifunc")
 
 end
 

@@ -62,26 +62,26 @@ class Main:
         self.chan.run_sync(run)
 
     async def initialize(self) -> None:
-        await autocmd(self.nvim, events=("InsertEnter",), fn="_NARCinsert_enter")
+        await autocmd(self.nvim, events=("InsertEnter",), fn="_KoKinsert_enter")
 
-        await autocmd(self.nvim, events=("InsertCharPre",), fn="_NARCpreinsert_char")
+        await autocmd(self.nvim, events=("InsertCharPre",), fn="_KoKpreinsert_char")
 
         await autocmd(
             self.nvim,
             events=("TextChangedI",),
-            fn="_NARCtextchangedi",
+            fn="_KoKtextchangedi",
         )
 
         await autocmd(
             self.nvim,
             events=("TextChangedP",),
-            fn="_NARCtextchangedp",
+            fn="_KoKtextchangedp",
         )
 
         await autocmd(
             self.nvim,
             events=("CompleteDonePre",),
-            fn="_NARCpost_pum",
+            fn="_KoKpost_pum",
             arg_eval=("v:completed_item",),
         )
 
@@ -124,15 +124,15 @@ class Main:
 
         self._submit(cont())
 
-    @command("NARCstart", nargs="*")
+    @command("KoKstart", nargs="*")
     def start(self, args: Sequence[str]) -> None:
         async def cont() -> None:
             await self._init
-            await print(self.nvim, "NARC ⭐️")
+            await print(self.nvim, "KoK ⭐️")
 
         self._submit(cont())
 
-    @function("_NARCnotify")
+    @function("_KoKnotify")
     def notify(self, args: Sequence[Any]) -> None:
         async def cont() -> None:
             source, *body = args
@@ -141,7 +141,7 @@ class Main:
 
         self._submit(cont())
 
-    @function("NARComnifunc", sync=True)
+    @function("KoKomnifunc", sync=True)
     def omnifunc(self, args: Sequence[Any]) -> int:
         find_start, *_ = args
         if find_start == 1:
@@ -150,15 +150,15 @@ class Main:
             self.next_comp(GenOptions(force=True))
             return -2
 
-    @function("_NARCinsert_enter")
+    @function("_KoKinsert_enter")
     def insert_enter(self, args: Sequence[Any]) -> None:
         self.next_comp(GenOptions())
 
-    @function("_NARCpreinsert_char")
+    @function("_KoKpreinsert_char")
     def char_inserted(self, args: Sequence[Any]) -> None:
         self.state = t_char_inserted(self.state)
 
-    @function("_NARCtextchangedi")
+    @function("_KoKtextchangedi")
     def text_changed_i(self, args: Sequence[Any]) -> None:
         try:
             if t_i_insertable(self.state):
@@ -166,7 +166,7 @@ class Main:
         finally:
             self.state = t_text_changed(self.state)
 
-    @function("_NARCtextchangedp")
+    @function("_KoKtextchangedp")
     def text_changed_p(self, args: Sequence[Any]) -> None:
         try:
             if t_p_insertable(self.state):
@@ -174,7 +174,7 @@ class Main:
         finally:
             self.state = t_text_changed(self.state)
 
-    @function("_NARCpost_pum")
+    @function("_KoKpost_pum")
     def post_pum(self, args: Sequence[Any]) -> None:
         comp, *_ = args
 

@@ -23,7 +23,7 @@ async def autocmd(
     group = f"augroup {uuid4().hex}"
     cls = "autocmd!"
     cmd = (
-        f"autocmd {_events} {_filters} {_modifiers} call _NARCnotify('{name}', {_args})"
+        f"autocmd {_events} {_filters} {_modifiers} call _KoKnotify('{name}', {_args})"
     )
     group_end = "augroup END"
 
