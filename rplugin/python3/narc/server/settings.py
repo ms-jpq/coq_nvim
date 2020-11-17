@@ -85,7 +85,11 @@ def assemble(spec: SourceSpec, main: Factory, match: MatchOptions) -> SourceFact
     limit = spec.limit or inf
     rank = spec.rank or 100
     config = spec.config
-    seed = Seed(match=match, limit=limit, config=config,)
+    seed = Seed(
+        match=match,
+        limit=limit,
+        config=config,
+    )
     fact = SourceFactory(
         enabled=spec.enabled,
         short_name=spec.short_name,

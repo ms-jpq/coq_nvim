@@ -235,9 +235,7 @@ async def merge(
         s_context = StepContext(
             timeout=timeout,
         )
-        enabled, limits = buffer_opts(
-            factories, buf_context=buf_context
-        )
+        enabled, limits = buffer_opts(factories, buf_context=buf_context)
 
         if options.force or goahead(context):
             source_gen = (
