@@ -12,8 +12,10 @@ end
 
 
 local list_comp_candidates = function (request_id, row, col)
-  cancel()
-  cancel = function () end
+  if cancel then
+    cancel()
+  end
+  cancel = nil
 
   if #lsp.buf_get_clients() == 0 then
     notify(request_id, nil)
