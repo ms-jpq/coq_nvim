@@ -12,7 +12,7 @@ Async completion on every keystroke.
 
 Fuzzy search through **nearby** results.
 
-![preview.png](https://raw.githubusercontent.com/ms-jpq/nacr/kok/preview/screenshot.png)
+![preview.png](preview/screenshot.png)
 
 ## Advanced Scheduler
 
