@@ -1,22 +1,29 @@
 BEGIN;
 
-DROP TABLE IF EXISTS word_location;
-DROP TABLE IF EXISTS word_count;
+DROP TABLE IF EXISTS filetypes;
+DROP TABLE IF EXISTS locations;
+DROP TABLE IF EXISTS counts;
 
 
-CREATE TABLE word_location (
+CREATE TABLE filetypes (
+  rowid    INTEGER PRIMARY KEY,
+  filetype TEXT NOT NULL UNIQUE,
+) WITHOUT ROWID;
+
+
+CREATE TABLE locations (
   word      TEXT    NOT NULL,
   row_index INTEGER NOT NULL
 );
-CREATE INDEX word_location_word ON word_location (word);
+CREATE INDEX locations_word ON locations (word);
 
 
-CREATE TABLE word_count (
-  word     TEXT PRIMARY KEY,
-  filetype TEXT NOT NULL,
+CREATE TABLE counts (
+  word        TEXT PRIMARY KEY,
+  filetype_id INTEGER NOT NULL REFERENCES filetype (rowid) ON DELETE CASCADE
 ) WITHOUT ROWID;
-CREATE INDEX word_count_word     ON word_count (word);
-CREATE INDEX word_count_filetype ON word_count (filetype);
+CREATE INDEX counts_word        ON counts (word);
+CREATE INDEX counts_filetype_id ON counts (filetype_id);
 
 
 END;
