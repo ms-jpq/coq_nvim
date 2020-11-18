@@ -1,5 +1,6 @@
 BEGIN;
 
+
 DROP TABLE IF EXISTS filenames;
 DROP TABLE IF EXISTS locations;
 DROP TABLE IF EXISTS edits;
@@ -22,8 +23,9 @@ CREATE INDEX locations_co ON locations (co);
 
 
 CREATE TABLE edits (
-  edit     TEXT PRIMARY KEY,
-  filename_id INTEGER NOT NULL REFERENCES filenames (rowid) ON DELETE CASCADE
+  edit        TEXT PRIMARY KEY,
+  filename_id INTEGER NOT NULL REFERENCES filenames (rowid) ON DELETE CASCADE,
+  location_id INTEGER NOT NULL REFERENCES locations (rowid) ON DELETE CASCADE
 ) WITHOUT ROWID;
 CREATE INDEX edits_edit        ON edits (edit);
 CREATE INDEX edits_filename_id ON edits (filename_id);

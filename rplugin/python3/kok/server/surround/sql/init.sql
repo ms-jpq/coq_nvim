@@ -1,5 +1,6 @@
 BEGIN;
 
+
 DROP TABLE IF EXISTS filetypes;
 DROP TABLE IF EXISTS locations;
 DROP TABLE IF EXISTS counts;
@@ -12,8 +13,8 @@ CREATE TABLE filetypes (
 
 
 CREATE TABLE locations (
-  word      TEXT    NOT NULL,
-  row_index INTEGER NOT NULL
+  word TEXT    NOT NULL,
+  ro   INTEGER NOT NULL
 );
 CREATE INDEX locations_word ON locations (word);
 
