@@ -23,7 +23,7 @@ CREATE INDEX locations_co ON locations (co);
 
 CREATE TABLE edits (
   edit     TEXT PRIMARY KEY,
-  filename_id INTEGER NOT NULL REFERENCES filename (rowid) ON DELETE CASCADE
+  filename_id INTEGER NOT NULL REFERENCES filenames (rowid) ON DELETE CASCADE
 ) WITHOUT ROWID;
 CREATE INDEX edits_edit        ON edits (edit);
 CREATE INDEX edits_filename_id ON edits (filename_id);

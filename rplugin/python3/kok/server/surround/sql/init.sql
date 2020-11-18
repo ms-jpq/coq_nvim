@@ -20,7 +20,7 @@ CREATE INDEX locations_word ON locations (word);
 
 CREATE TABLE counts (
   word        TEXT PRIMARY KEY,
-  filetype_id INTEGER NOT NULL REFERENCES filetype (rowid) ON DELETE CASCADE
+  filetype_id INTEGER NOT NULL REFERENCES filetypes (rowid) ON DELETE CASCADE
 ) WITHOUT ROWID;
 CREATE INDEX counts_word        ON counts (word);
 CREATE INDEX counts_filetype_id ON counts (filetype_id);
