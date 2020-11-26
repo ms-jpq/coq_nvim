@@ -22,7 +22,6 @@ from pynvim import Nvim
 from ..shared.logging import log
 from ..shared.nvim import print
 from ..shared.parse import normalize
-from ..shared.sql import AConnection
 from ..shared.types import Comm, Completion, Context, MatchOptions, Position
 from .context import gen_buf_ctx, gen_context, goahead
 from .fuzzy import fuzzify, fuzzy
@@ -189,7 +188,6 @@ def buffer_opts(
 
 async def gen_steps(
     context: Context,
-    conn: AConnection,
     match_opt: MatchOptions,
     timeout: float,
     futures: Iterator[Awaitable[StepReply]],
@@ -223,8 +221,6 @@ async def merge(
         )
     )
     sources: Dict[str, StepFunction] = {name: source for name, source, _ in src_gen}
-    conn = AConnection()
-    # await init(conn)
 
     async def gen(options: GenOptions) -> Tuple[Position, Iterator[VimCompletion]]:
         timeout = inf if options.force else settings.timeout
@@ -245,7 +241,6 @@ async def merge(
             )
             steps = await gen_steps(
                 context,
-                conn=conn,
                 match_opt=match_opt,
                 timeout=timeout,
                 futures=source_gen,

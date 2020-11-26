@@ -41,7 +41,7 @@ class DB:
             pass
         await self._conn.commit()
 
-    async def prefix_query(
+    async def query(
         self, context: Context, prefix_matches: int
     ) -> AsyncIterator[str]:
         cword, ncword = context.alnums, context.alnums_normalized

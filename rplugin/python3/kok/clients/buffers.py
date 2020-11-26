@@ -97,7 +97,7 @@ async def main(comm: Comm, seed: Seed) -> Source:
 
     async def source(context: Context) -> AsyncIterator[Completion]:
         position = context.position
-        words = db.prefix_query(context, prefix_matches=prefix_matches)
+        words = db.query(context, prefix_matches=prefix_matches)
         async for word in words:
             sedit = SEdit(new_text=word)
             yield Completion(position=position, sedit=sedit)

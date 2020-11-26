@@ -59,7 +59,7 @@ async def main(comm: Comm, seed: Seed) -> Source:
         words = coalesce(chars, max_length=max_length, unifying_chars=unifying_chars)
         await db.populate(words=words)
 
-        words = db.prefix_query(context, prefix_matches=prefix_matches)
+        words = db.query(context, prefix_matches=prefix_matches)
         async for word in words:
             sedit = SEdit(new_text=word)
             yield Completion(position=position, sedit=sedit)

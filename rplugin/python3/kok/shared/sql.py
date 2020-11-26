@@ -36,20 +36,6 @@ class ACursor(AbstractAsyncContextManager):
     async def fetch_all(self) -> Sequence[Row]:
         return await self._chan.run(self._cursor.fetchall)
 
-    async def execute(self, sql: str, params: Iterable[SQL_TYPES] = ()) -> None:
-        def cont() -> None:
-            self._cursor.execute(sql, params)
-
-        await self._chan.run(cont)
-
-    async def execute_many(
-        self, sql: str, params: Iterable[Iterable[SQL_TYPES]] = ()
-    ) -> None:
-        def cont() -> None:
-            self._cursor.executemany(sql, params)
-
-        await self._chan.run(cont)
-
 
 class AConnection(AbstractAsyncContextManager):
     def __init__(self, database: str = ":memory:") -> None:
