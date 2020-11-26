@@ -8,10 +8,9 @@ from pynvim import Nvim
 from pynvim.api.buffer import Buffer
 
 from ..shared.parse import coalesce
-from ..shared.sql import AConnection
 from ..shared.types import Comm, Completion, Context, Position, SEdit, Seed, Source
 from .pkgs.nvim import call
-from .pkgs.sql import depopulate, init, populate, prefix_query
+from .pkgs.sql import DB
 
 NAME = "around"
 
@@ -48,19 +47,19 @@ async def main(comm: Comm, seed: Seed) -> Source:
         seed.match.unifying_chars,
     )
 
-    conn = AConnection()
-    await init(conn)
+    db = DB()
+    await db.init()
 
     async def source(context: Context) -> AsyncIterator[Completion]:
         position = context.position
 
         chars, _ = await gather(
-            buffer_chars(comm.nvim, band_size=band_size, pos=position), depopulate(conn)
+            buffer_chars(comm.nvim, band_size=band_size, pos=position), db.depopulate()
         )
         words = coalesce(chars, max_length=max_length, unifying_chars=unifying_chars)
-        await populate(conn, words=words)
+        await db.populate(words=words)
 
-        words = prefix_query(conn, context=context, prefix_matches=prefix_matches)
+        words = db.prefix_query(context, prefix_matches=prefix_matches)
         async for word in words:
             sedit = SEdit(new_text=word)
             yield Completion(position=position, sedit=sedit)

@@ -10,11 +10,10 @@ from pynvim.api.common import NvimError
 
 from ..shared.nvim import call, run_forever
 from ..shared.parse import coalesce
-from ..shared.sql import AConnection
 from ..shared.types import Comm, Completion, Context, SEdit, Seed, Source
 from .pkgs.nvim import autocmd
 from .pkgs.scheduler import schedule
-from .pkgs.sql import depopulate, init, populate, prefix_query
+from .pkgs.sql import DB
 
 NAME = "buffers"
 
@@ -73,8 +72,8 @@ async def main(comm: Comm, seed: Seed) -> Source:
         seed.match.unifying_chars,
     )
 
-    conn = AConnection()
-    await init(conn)
+    db = DB()
+    await db.init()
 
     await autocmd(
         nvim,
@@ -90,15 +89,15 @@ async def main(comm: Comm, seed: Seed) -> Source:
 
     async def background_update() -> None:
         async for _ in schedule(ch, min_time=0.0, max_time=config.polling_rate):
-            chars, _ = await gather(buffer_chars(nvim), depopulate(conn))
+            chars, _ = await gather(buffer_chars(nvim), db.depopulate())
             words = coalesce(
                 chars, max_length=max_length, unifying_chars=unifying_chars
             )
-            await populate(conn, words)
+            await db.populate(words)
 
     async def source(context: Context) -> AsyncIterator[Completion]:
         position = context.position
-        words = prefix_query(conn, context=context, prefix_matches=prefix_matches)
+        words = db.prefix_query(context, prefix_matches=prefix_matches)
         async for word in words:
             sedit = SEdit(new_text=word)
             yield Completion(position=position, sedit=sedit)

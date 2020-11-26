@@ -9,10 +9,9 @@ from ..shared.da import call
 from ..shared.logging import log
 from ..shared.nvim import run_forever
 from ..shared.parse import coalesce
-from ..shared.sql import AConnection
 from ..shared.types import Comm, Completion, Context, SEdit, Seed, Source
 from .pkgs.scheduler import schedule
-from .pkgs.sql import depopulate, init, populate, prefix_query
+from .pkgs.sql import DB
 
 NAME = "tmux"
 
@@ -106,24 +105,24 @@ async def main(comm: Comm, seed: Seed) -> Source:
         seed.match.unifying_chars,
     )
 
-    conn = AConnection()
-    await init(conn)
+    db = DB()
+    await db.init()
 
     async def background_update() -> None:
         async for _ in schedule(Event(), min_time=0, max_time=config.polling_rate):
-            await depopulate(conn)
+            await db.depopulate()
             try:
                 async for words in tmux_words(
                     max_length=max_length, unifying_chars=unifying_chars
                 ):
-                    await populate(conn, words=words)
+                    await db.populate(words=words)
             except TmuxError as e:
                 message = f"failed to fetch tmux{linesep}{e}"
                 log.warn("%s", message)
 
     async def source(context: Context) -> AsyncIterator[Completion]:
         position = context.position
-        words = prefix_query(conn, context=context, prefix_matches=prefix_matches)
+        words = db.prefix_query(context, prefix_matches=prefix_matches)
         async for word in words:
             sedit = SEdit(new_text=word)
             yield Completion(position=position, sedit=sedit)
