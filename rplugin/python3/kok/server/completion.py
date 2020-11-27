@@ -189,7 +189,6 @@ def buffer_opts(
 async def gen_steps(
     context: Context,
     match_opt: MatchOptions,
-    timeout: float,
     futures: Iterator[Awaitable[StepReply]],
 ) -> Iterator[Step]:
     async def cont() -> AsyncIterator[Step]:
@@ -242,7 +241,6 @@ async def merge(
             steps = await gen_steps(
                 context,
                 match_opt=match_opt,
-                timeout=timeout,
                 futures=source_gen,
             )
             comps = fuzzy(steps=steps, display_opt=display_opt, limits=limits)

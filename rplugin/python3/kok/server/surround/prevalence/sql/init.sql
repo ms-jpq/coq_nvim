@@ -1,0 +1,29 @@
+BEGIN;
+
+
+DROP TABLE IF EXISTS filetypes;
+DROP TABLE IF EXISTS files;
+DROP TABLE IF EXISTS words;
+
+
+CREATE TABLE filetypes (
+  rowid    INTEGER PRIMARY KEY,
+  filetype TEXT NOT NULL UNIQUE,
+) WITHOUT ROWID;
+
+
+CREATE TABLE files (
+  rowid    INTEGER PRIMARY KEY,
+  filename INTEGER NOT NULL UNIQUE,
+  filetype_id INTEGER NOT NULL REFERENCES filetypes (rowid) ON DELETE CASCADE
+)
+
+CREATE TABLE words (
+  word    TEXT NOT NULL UNIQUE,
+  count   INTEGER NOT NULL,
+  file_id INTEGER NOT NULL REFERENCES files (rowid) ON DELETE CASCADE,
+  UNIQUE (word, file_id)
+);
+
+
+END;
