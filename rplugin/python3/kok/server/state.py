@@ -1,21 +1,64 @@
-from typing import Optional
+from dataclasses import dataclass
+from enum import Enum, auto
+from typing import Iterator
 
-from ..shared.da import or_else
-from .types import Settings, State
+from ..shared.chan import Chan
+from ..shared.core import run_forevers
+from ..shared.types import Channel
 
 
-def initial(settings: Settings) -> State:
-    return State(char_inserted=False, comp_inserted=False)
+class State(Enum):
+    unitinalized = auto()
+    char_inserted = auto()
+    comp_inserted = auto()
 
 
-def forward(
-    state: State,
-    *,
-    char_inserted: Optional[bool] = None,
-    comp_inserted: Optional[bool] = None,
-) -> State:
-    new_state = State(
-        char_inserted=or_else(char_inserted, state.char_inserted),
-        comp_inserted=or_else(comp_inserted, state.comp_inserted),
+@dataclass(frozen=True)
+class StateChans:
+    char_inserted_ch: Channel[None]
+    text_changed_ch: Channel[None]
+    comp_inserted_ch: Channel[None]
+    i_insertable: Iterator[bool]
+    p_insertable: Iterator[bool]
+
+
+def state() -> StateChans:
+    char_inserted_ch, text_changed_ch, comp_inserted_ch = (
+        Chan[None](),
+        Chan[None](),
+        Chan[None](),
     )
-    return new_state
+    state = State.unitinalized
+
+    async def comp_inserted() -> None:
+        nonlocal state
+        async for _ in char_inserted_ch:
+            state = State.char_inserted
+
+    async def text_changed() -> None:
+        nonlocal state
+        async for _ in text_changed_ch:
+            state = State.char_inserted
+
+    async def comp_changed() -> None:
+        nonlocal state
+        async for _ in comp_inserted_ch:
+            state = State.comp_inserted
+
+    def i_insertable() -> Iterator[bool]:
+        while True:
+            yield True
+
+    def p_insertable() -> Iterator[bool]:
+        while True:
+            yield state != State.comp_inserted
+
+    run_forevers(comp_inserted, text_changed, comp_changed)
+
+    return StateChans(
+        char_inserted_ch=char_inserted_ch,
+        text_changed_ch=text_changed_ch,
+        comp_inserted_ch=comp_inserted_ch,
+        i_insertable=i_insertable(),
+        p_insertable=p_insertable(),
+    )

@@ -2,18 +2,7 @@ from dataclasses import dataclass, field
 from math import inf
 from typing import Any, Mapping, Optional, Sequence
 
-from ..shared.types import (
-    Factory,
-    LEdit,
-    MatchOptions,
-    MEdit,
-    Position,
-    SEdit,
-    Seed,
-    Snippet,
-    SnippetEngineFactory,
-    SnippetSeed,
-)
+from ..shared.types import LEdit, MatchOptions, MEdit, Position, SEdit, Seed, Snippet
 
 
 @dataclass(frozen=True)
@@ -67,13 +56,11 @@ class SourceFactory:
     rank: int
     unique: bool
     seed: Seed
-    manufacture: Factory
 
 
 @dataclass(frozen=True)
-class EngineFactory:
-    seed: SnippetSeed
-    manufacture: SnippetEngineFactory
+class SnippetEngineFactory:
+    seed: Seed
 
 
 @dataclass(frozen=True)
@@ -129,9 +116,3 @@ class Payload:
     medit: Optional[MEdit]
     ledits: Sequence[LEdit]
     snippet: Optional[Snippet]
-
-
-@dataclass(frozen=True)
-class State:
-    char_inserted: bool
-    comp_inserted: bool

@@ -2,18 +2,19 @@ from asyncio import Event, gather
 from dataclasses import dataclass
 from itertools import chain
 from os import linesep
-from ..shared.chan import Chan
-from typing import AsyncIterator, Iterator, Sequence, Set
+from typing import Any, AsyncIterator, Iterator, Sequence, Set
 
 from pynvim import Nvim
 from pynvim.api.buffer import Buffer
 from pynvim.api.common import NvimError
 
+from ..shared.chan import Chan
+from ..shared.comm import make_ch, schedule
+from ..shared.core import run_forever
+from ..shared.da import tiktok
 from ..shared.nvim import call
 from ..shared.parse import coalesce
-from ..shared.types import Completion, Context, SEdit, Seed, SourceChans
-from .pkgs.nvim import autocmd
-from .pkgs.scheduler import schedule
+from ..shared.types import Channel, Completion, Context, SEdit, Seed, SourceChans
 from .pkgs.sql import new_db
 
 NAME = "buffers"
@@ -64,46 +65,35 @@ async def buffer_chars(nvim: Nvim) -> Sequence[str]:
 
 
 async def main(nvim: Nvim, seed: Seed) -> SourceChans:
+    send_ch, recv_ch = make_ch(Context, Channel[Completion])
     comm = Chan[Any]()
-    nvim, chan = comm.nvim, comm.chan
+
     config = Config(**seed.config)
-    ch = Event()
+
     prefix_matches, max_length, unifying_chars = (
         config.prefix_matches,
         config.max_length,
         seed.match.unifying_chars,
     )
 
-    db = DB()
-    await db.init()
-
-    await autocmd(
-        nvim,
-        name="buffers",
-        events=("TextChanged", "TextChangedI", "BufEnter"),
-        arg_eval=("'add'",),
-    )
-
-    async def ooda() -> None:
-        while True:
-            action, *_ = await chan.get()
-            ch.set()
+    db = await new_db()
+    req = schedule(ask=db.ask_ch, reply=db.reply_ch)
 
     async def background_update() -> None:
-        async for _ in schedule(ch, min_time=0.0, max_time=config.polling_rate):
-            chars, _ = await gather(buffer_chars(nvim), db.depopulate())
+        async for _ in tiktok(config.polling_rate):
+            chars, _ = await gather(buffer_chars(nvim), db.depop_ch.send(None))
             words = coalesce(
                 chars, max_length=max_length, unifying_chars=unifying_chars
             )
-            await db.populate(words)
+            await db.pop_ch.send(words)
 
-    async def source(context: Context) -> AsyncIterator[Completion]:
+    async def ooda() -> None:
         position = context.position
         words = db.query(context, prefix_matches=prefix_matches)
         async for word in words:
             sedit = SEdit(new_text=word)
             yield Completion(position=position, sedit=sedit)
 
-    run_forever(nvim, thing=ooda)
-    run_forever(nvim, thing=background_update)
+    run_forever(ooda)
+    run_forever(background_update)
     return source

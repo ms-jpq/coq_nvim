@@ -1,4 +1,4 @@
-from asyncio import create_subprocess_exec, get_running_loop
+from asyncio import create_subprocess_exec, get_running_loop, sleep
 from asyncio.subprocess import PIPE
 from dataclasses import dataclass
 from functools import partial
@@ -8,14 +8,7 @@ from os import makedirs
 from os.path import basename, dirname, exists, splitext
 from sys import modules
 from types import ModuleType
-from typing import (
-    Any,
-    AsyncIterator,
-    Callable,
-    Optional,
-    TypeVar,
-    cast,
-)
+from typing import Any, AsyncIterator, Callable, Optional, TypeVar, cast
 
 T = TypeVar("T")
 
@@ -101,3 +94,9 @@ async def call(prog: str, *args: str) -> ProcReturn:
     stdout, stderr = await proc.communicate()
     code = cast(int, proc.returncode)
     return ProcReturn(code=code, out=stdout.decode(), err=stderr.decode())
+
+
+async def tiktok(interval: float) -> AsyncIterator[None]:
+    while True:
+        yield None
+        await sleep(interval)

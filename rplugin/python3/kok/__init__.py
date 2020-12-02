@@ -13,17 +13,9 @@ from .server.completion import GenOptions, merge
 from .server.logging import log, setup
 from .server.nvim import autocmd, complete
 from .server.patch import apply_patch
-from .server.scheduler import Signal, schedule
 from .server.settings import initial
 from .server.snippet import gen_engine
-from .server.state import initial as initial_state
-from .server.transitions import (
-    t_char_inserted,
-    t_comp_inserted,
-    t_i_insertable,
-    t_p_insertable,
-    t_text_changed,
-)
+from .server.state import state
 from .server.types import Notification
 from .shared.consts import conf_var_name, conf_var_name_private
 from .shared.executor import Executor
@@ -61,28 +53,26 @@ class Main:
 
         self.chan.run_sync(run)
 
-    async def initialize(self) -> None:
-        await autocmd(self.nvim, events=("InsertEnter",), fn="_KoKinsert_enter")
-
-        await autocmd(self.nvim, events=("InsertCharPre",), fn="_KoKpreinsert_char")
-
-        await autocmd(
-            self.nvim,
-            events=("TextChangedI",),
-            fn="_KoKtextchangedi",
-        )
-
-        await autocmd(
-            self.nvim,
-            events=("TextChangedP",),
-            fn="_KoKtextchangedp",
-        )
-
-        await autocmd(
-            self.nvim,
-            events=("CompleteDonePre",),
-            fn="_KoKpost_pum",
-            arg_eval=("v:completed_item",),
+    async def _autocmds(self) -> None:
+        await gather(
+            autocmd(self.nvim, events=("InsertEnter",), fn="_KoKinsert_enter"),
+            autocmd(self.nvim, events=("InsertCharPre",), fn="_KoKpreinsert_char"),
+            autocmd(
+                self.nvim,
+                events=("TextChangedI",),
+                fn="_KoKtextchangedi",
+            ),
+            autocmd(
+                self.nvim,
+                events=("TextChangedP",),
+                fn="_KoKtextchangedp",
+            ),
+            autocmd(
+                self.nvim,
+                events=("CompleteDonePre",),
+                fn="_KoKpost_pum",
+                arg_eval=("v:completed_item",),
+            ),
         )
 
     async def ooda(self) -> None:

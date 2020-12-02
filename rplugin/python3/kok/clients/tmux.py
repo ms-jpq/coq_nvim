@@ -3,15 +3,25 @@ from asyncio.locks import Event
 from dataclasses import dataclass
 from os import linesep
 from shutil import which
-from typing import AsyncIterator, Iterator, Sequence, Set
+from typing import Any, AsyncIterator, Iterator, Sequence, Set
 
-from ..shared.da import call
+from pynvim import Nvim
+
+from ..shared.chan import Chan
+from ..shared.comm import make_ch, schedule
+from ..shared.da import call, tiktok
 from ..shared.logging import log
-from ..shared.nvim import run_forever
 from ..shared.parse import coalesce
-from ..shared.types import Comm, Completion, Context, SEdit, Seed, Source
-from .pkgs.scheduler import schedule
-from .pkgs.sql import DB
+from ..shared.types import (
+    Channel,
+    Completion,
+    Context,
+    SEdit,
+    Seed,
+    Source,
+    SourceChans,
+)
+from .pkgs.sql import new_db
 
 NAME = "tmux"
 
@@ -96,8 +106,9 @@ async def tmux_words(
             yield words
 
 
-async def main(comm: Comm, seed: Seed) -> Source:
-    nvim = comm.nvim
+async def main(nvim: Nvim, seed: Seed) -> Source:
+    send_ch, recv_ch = make_ch(Context, Channel[Completion])
+
     config = Config(**seed.config)
     prefix_matches, max_length, unifying_chars = (
         config.prefix_matches,
@@ -105,17 +116,17 @@ async def main(comm: Comm, seed: Seed) -> Source:
         seed.match.unifying_chars,
     )
 
-    db = DB()
-    await db.init()
+    db = await new_db()
+    req = schedule(ask=db.ask_ch, reply=db.reply_ch)
 
     async def background_update() -> None:
-        async for _ in schedule(Event(), min_time=0, max_time=config.polling_rate):
-            await db.depopulate()
+        async for _ in tiktok(config.polling_rate):
+            await db.depop_ch.send(None)
             try:
                 async for words in tmux_words(
                     max_length=max_length, unifying_chars=unifying_chars
                 ):
-                    await db.populate(words=words)
+                    await db.pop_ch.send(words)
             except TmuxError as e:
                 message = f"failed to fetch tmux{linesep}{e}"
                 log.warn("%s", message)
@@ -128,4 +139,4 @@ async def main(comm: Comm, seed: Seed) -> Source:
             yield Completion(position=position, sedit=sedit)
 
     run_forever(nvim, thing=background_update)
-    return source
+    return SourceChans(comm_ch=Chan[Any](), send_ch=send_ch, recv_ch=recv_ch)
