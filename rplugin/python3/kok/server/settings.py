@@ -6,7 +6,7 @@ from typing import Any, Callable, Dict, Iterator, Optional, Sequence, Tuple
 from ..clients import around, buffers, lsp, paths, tmux, tree_sitter
 from ..shared.consts import load_hierarchy, module_entry_point, settings_json
 from ..shared.da import load_json, load_module, merge_all
-from ..shared.types import Factory, Seed, SnippetEngineFactory, SnippetSeed
+from ..shared.types import Factory, Seed
 from .types import (
     DisplayOptions,
     EngineFactory,

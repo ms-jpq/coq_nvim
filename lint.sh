@@ -13,4 +13,4 @@ FILES=(
   **/*.py
   **/**/*.py
 )
-mypy --ignore-missing-imports -- "${FILES[@]}"
+mypy -- "${FILES[@]}"

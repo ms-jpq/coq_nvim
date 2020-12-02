@@ -1,4 +1,5 @@
 from asyncio import Task, create_task, sleep
+from asyncio.tasks import gather
 from typing import Awaitable, Callable
 
 from .logging import log
@@ -18,3 +19,13 @@ def run_forever(
                 await sleep(timeout)
 
     return create_task(loop())
+
+
+async def run_forevers(
+    *things: Callable[[], Awaitable[None]],
+    retries: int = 3,
+    timeout: float = 1.0,
+) -> Task:
+    await gather(
+        *(run_forever(thing, retries=retries, timeout=timeout) for thing in things)
+    )

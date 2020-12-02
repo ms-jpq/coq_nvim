@@ -166,8 +166,7 @@ def parse_rows(
         )
 
 
-async def main(comm: Comm, seed: Seed) -> Source:
-    nvim = comm.nvim
+async def main(nvim: Nvim, seed: Seed) -> Source:
     background_update, require = schedule(comm.chan)
     entry_kind, insert_kind = await init_lua(nvim)
 

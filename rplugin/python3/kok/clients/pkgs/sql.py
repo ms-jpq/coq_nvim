@@ -1,8 +1,11 @@
-from asyncio import Queue
-from dataclasses import dataclass
+from asyncio import Lock, QueueFull
+from dataclasses import dataclass, field
 from os.path import dirname, join, realpath
-from typing import AsyncIterator, Iterable, Iterator
+from typing import Iterable, Iterator, Tuple
+from uuid import UUID, uuid4
 
+from ...shared.chan import Chan, Channel
+from ...shared.core import run_forever, run_forevers
 from ...shared.da import slurp
 from ...shared.sql import SQL_TYPES, AConnection, sql_escape
 from ...shared.types import Context
@@ -24,66 +27,71 @@ LIKE_ESCAPE = {"_", "[", "%"} | {ESCAPE_CHAR}
 class QueryParams:
     context: Context
     prefix_matches: int
+    uuid: UUID = field(default_factory=uuid4)
 
 
 @dataclass(frozen=True)
-class DB2:
-    depopulate: Queue[None]
-    populate: Queue[Queue[str]]
-    query_ask: Queue[QueryParams]
-    query_reply: Queue[Queue[str]]
+class DBChans:
+    depop_ch: Channel[None]
+    pop_ch: Channel[Iterator[str]]
+    ask_ch: Channel[QueryParams]
+    reply_ch: Channel[Tuple[UUID, Channel[str]]]
 
 
-async def db() -> DB2:
-    depopulate, populate, query_ask, query_reply = (
-        Queue[None](0),
-        Queue[Queue[str]](0),
-        Queue[QueryParams](0),
-        Queue[Queue[str]](0),
+async def db() -> DBChans:
+    depop_ch, pop_ch, ask_ch, reply_ch = (
+        Chan[None](),
+        Chan[Iterator[str]](),
+        Chan[QueryParams](),
+        Chan[Tuple[UUID, Channel[str]]](),
     )
-    conn = AConnection()
+    conn, lock = AConnection(), Lock()
 
     async with await conn.execute_script(_PRAGMA):
         pass
     async with await conn.execute_script(_INIT):
         pass
 
-    
+    async def depop() -> None:
+        async for _ in depop_ch:
+            async with lock:
+                async with await conn.execute_script(_DEPOPULATE):
+                    pass
 
-    return DB2(depopulate=depopulate, populate=populate, query_ask=query_ask, query_reply=query_reply)
+    async def pop() -> None:
+        async for words in pop_ch:
 
+            def cont() -> Iterator[Iterable[SQL_TYPES]]:
+                for word in words:
+                    yield word, word
 
-class DB:
-    def __init__(self) -> None:
-        self._conn = AConnection()
+            async with lock:
+                async with await conn.execute_many(_POPULATE, cont()):
+                    pass
+                await conn.commit()
 
-    async def init(self) -> None:
-        async with await self._conn.execute_script(_PRAGMA):
-            pass
-        async with await self._conn.execute_script(_INIT):
-            pass
+    async def ask() -> None:
+        async for param in ask_ch:
+            ch = Chan[str]()
 
-    async def depopulate(self) -> None:
-        async with await self._conn.execute(_DEPOPULATE):
-            pass
+            async def reply() -> None:
+                context, prefix_matches = param.context, param.prefix_matches
+                cword, ncword = context.alnums, context.alnums_normalized
+                prefix = ncword[:prefix_matches]
+                escaped = sql_escape(prefix, nono=LIKE_ESCAPE, escape=ESCAPE_CHAR)
+                match = f"{escaped}%" if escaped else ""
 
-    async def populate(self, words: Iterator[str]) -> None:
-        def cont() -> Iterator[Iterable[SQL_TYPES]]:
-            for word in words:
-                yield word, word
+                async with lock:
+                    async with await conn.execute(_QUERY, (match, cword)) as cursor:
+                        async for row in cursor:
+                            try:
+                                await ch.send(row["word"])
+                            except QueueFull:
+                                break
 
-        async with await self._conn.execute_many(_POPULATE, cont()):
-            pass
-        await self._conn.commit()
+            run_forever(reply)
+            await reply_ch.send((param.uuid, ch))
 
-    async def query(self, context: Context, prefix_matches: int) -> AsyncIterator[str]:
-        cword, ncword = context.alnums, context.alnums_normalized
-        prefix = ncword[:prefix_matches]
-        escaped = sql_escape(prefix, nono=LIKE_ESCAPE, escape=ESCAPE_CHAR)
-        match = f"{escaped}%" if escaped else ""
+    run_forevers(depop, pop, ask)
 
-        async with await self._conn.execute(_QUERY, (match, cword)) as cursor:
-            rows = await cursor.fetch_all()
-
-        for row in rows:
-            yield row["word"]
+    return DBChans(depop_ch=depop_ch, pop_ch=pop_ch, ask_ch=ask_ch, reply_ch=reply_ch)

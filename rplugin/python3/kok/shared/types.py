@@ -15,6 +15,7 @@ from typing import (
     TypeVar,
     runtime_checkable,
 )
+from uuid import UUID, uuid4
 
 from pynvim import Nvim
 
@@ -101,6 +102,8 @@ class Context:
     alnum_syms_after: str
     alnum_syms_after_normalized: str
 
+    uuid: UUID = field(default_factory=uuid4)
+
 
 @dataclass(frozen=True)
 class SEdit:
@@ -132,6 +135,7 @@ class Snippet:
 
 @dataclass(frozen=True)
 class Completion:
+    uuid: UUID
     position: Position
     label: Optional[str] = None
     sortby: Optional[str] = None
@@ -143,14 +147,14 @@ class Completion:
     snippet: Optional[Snippet] = None
 
 
-Source = Callable[[Context], AsyncIterator[Completion]]
-Factory = Callable[[Nvim, Seed], Awaitable[Source]]
-
-
 @dataclass(frozen=True)
-class SnippetSeed:
-    match: MatchOptions
-    config: Mapping[str, Any]
+class SourceChans:
+    comm_ch: Channel[Any]
+    send_ch: Channel[Context]
+    recv_ch: Channel[Completion]
+
+
+Source = Callable[[Nvim, Seed], Awaitable[SourceChans]]
 
 
 @dataclass(frozen=True)
@@ -159,5 +163,9 @@ class SnippetContext:
     snippet: Snippet
 
 
-SnippetEngine = Callable[[SnippetContext], Awaitable[None]]
-SnippetEngineFactory = Callable[[Nvim, SnippetSeed], Awaitable[SnippetEngine]]
+@dataclass(frozen=True)
+class SnippetChans:
+    send_ch: Channel[SnippetContext]
+
+
+SnippetHandler = Callable[[Nvim, Seed], Awaitable[SnippetChans]]

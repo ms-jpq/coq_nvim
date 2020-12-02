@@ -2,10 +2,14 @@ from itertools import accumulate
 from os import listdir
 from os.path import curdir, dirname, isdir, join, realpath, sep
 from pathlib import Path
-from typing import AsyncIterator, Iterator, Sequence
+from typing import Any, AsyncIterator, Iterator, Sequence
 
+from pynvim import Nvim
+
+from ..shared.chan import Chan
+from ..shared.core import run_forever
 from ..shared.da import run_in_executor
-from ..shared.types import Comm, Completion, Context, SEdit, Seed, Source
+from ..shared.types import Completion, Context, SEdit, Seed, SourceChans
 
 NAME = "paths"
 
@@ -79,17 +83,22 @@ async def find_children(paths: Iterator[str]) -> Sequence[str]:
     return await run_in_executor(co)
 
 
-async def main(comm: Comm, seed: Seed) -> Source:
-    async def source(context: Context) -> AsyncIterator[Completion]:
-        position = context.position
-        before = context.line_before
-        _, _, old_prefix = before.rpartition(sep)
-        paths = parse_paths(before)
+async def main(nvim: Nvim, seed: Seed) -> SourceChans:
+    send_ch, recv_ch = Chan[Context](), Chan[Completion]()
 
-        prefix_char = next(iter(old_prefix), "")
-        for child in await find_children(paths):
-            if child.startswith(prefix_char):
-                sedit = SEdit(new_text=child)
-                yield Completion(position=position, sedit=sedit)
+    async def ooda() -> None:
+        async for context in send_ch:
+            uuid, pos, before = context.uuid, context.position, context.line_before
+            _, _, old_prefix = before.rpartition(sep)
+            paths = parse_paths(before)
 
-    return source
+            prefix_char = next(iter(old_prefix), "")
+            for child in await find_children(paths):
+                if child.startswith(prefix_char):
+                    sedit = SEdit(new_text=child)
+                    comp = Completion(uuid=uuid, position=pos, sedit=sedit)
+                    await recv_ch.send(comp)
+
+    run_forever(ooda)
+
+    return SourceChans(comm_ch=Chan[Any](), send_ch=send_ch, recv_ch=recv_ch)

@@ -8,7 +8,7 @@ from pynvim import Nvim
 from pynvim.api.buffer import Buffer
 
 from ..shared.parse import coalesce
-from ..shared.types import Comm, Completion, Context, Position, SEdit, Seed, Source
+from ..shared.types import Completion, Context, Position, SEdit, Seed, Source
 from .pkgs.nvim import call
 from .pkgs.sql import DB
 
@@ -38,7 +38,7 @@ async def buffer_chars(nvim: Nvim, band_size: int, pos: Position) -> Sequence[st
     return chars
 
 
-async def main(comm: Comm, seed: Seed) -> Source:
+async def main(nvim: Nvim, seed: Seed) -> Source:
     config = Config(**seed.config)
     band_size = config.band_size
     prefix_matches, max_length, unifying_chars = (
@@ -54,7 +54,7 @@ async def main(comm: Comm, seed: Seed) -> Source:
         position = context.position
 
         chars, _ = await gather(
-            buffer_chars(comm.nvim, band_size=band_size, pos=position), db.depopulate()
+            buffer_chars(nvim, band_size=band_size, pos=position), db.depopulate()
         )
         words = coalesce(chars, max_length=max_length, unifying_chars=unifying_chars)
         await db.populate(words=words)
