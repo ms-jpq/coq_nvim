@@ -2,9 +2,9 @@ from asyncio import Lock, QueueFull
 from dataclasses import dataclass, field
 from os.path import dirname, join, realpath
 from typing import Iterable, Iterator, Tuple
-from uuid import UUID, uuid4
 
 from ...shared.chan import Chan, Channel
+from ...shared.comm import make_ch
 from ...shared.core import run_forever, run_forevers
 from ...shared.da import slurp
 from ...shared.sql import SQL_TYPES, AConnection, sql_escape
@@ -27,24 +27,20 @@ LIKE_ESCAPE = {"_", "[", "%"} | {ESCAPE_CHAR}
 class QueryParams:
     context: Context
     prefix_matches: int
-    uuid: UUID = field(default_factory=uuid4)
 
 
 @dataclass(frozen=True)
 class DBChans:
     depop_ch: Channel[None]
     pop_ch: Channel[Iterator[str]]
-    ask_ch: Channel[QueryParams]
-    reply_ch: Channel[Tuple[UUID, Channel[str]]]
+    ask_ch: Channel[Tuple[int, QueryParams]]
+    reply_ch: Channel[Tuple[int, Channel[str]]]
 
 
-async def db() -> DBChans:
-    depop_ch, pop_ch, ask_ch, reply_ch = (
-        Chan[None](),
-        Chan[Iterator[str]](),
-        Chan[QueryParams](),
-        Chan[Tuple[UUID, Channel[str]]](),
-    )
+async def new_db() -> DBChans:
+    depop_ch, pop_ch = Chan[None](), Chan[Iterator[str]]()
+    ask_ch, reply_ch = make_ch(QueryParams, Channel[str])
+
     conn, lock = AConnection(), Lock()
 
     async with await conn.execute_script(_PRAGMA):
@@ -71,15 +67,15 @@ async def db() -> DBChans:
                 await conn.commit()
 
     async def ask() -> None:
-        async for param in ask_ch:
-            ch = Chan[str]()
+        async for uid, param in ask_ch:
+            context, prefix_matches = param.context, param.prefix_matches
+            cword, ncword = context.alnums, context.alnums_normalized
+            prefix = ncword[:prefix_matches]
+            escaped = sql_escape(prefix, nono=LIKE_ESCAPE, escape=ESCAPE_CHAR)
+            match = f"{escaped}%" if escaped else ""
 
-            async def reply() -> None:
-                context, prefix_matches = param.context, param.prefix_matches
-                cword, ncword = context.alnums, context.alnums_normalized
-                prefix = ncword[:prefix_matches]
-                escaped = sql_escape(prefix, nono=LIKE_ESCAPE, escape=ESCAPE_CHAR)
-                match = f"{escaped}%" if escaped else ""
+            async with Chan[str]() as ch:
+                await reply_ch.send((uid, ch))
 
                 async with lock:
                     async with await conn.execute(_QUERY, (match, cword)) as cursor:
@@ -88,9 +84,6 @@ async def db() -> DBChans:
                                 await ch.send(row["word"])
                             except QueueFull:
                                 break
-
-            run_forever(reply)
-            await reply_ch.send((param.uuid, ch))
 
     run_forevers(depop, pop, ask)
 

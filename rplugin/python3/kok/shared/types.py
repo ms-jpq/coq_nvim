@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from abc import abstractmethod
 from dataclasses import dataclass, field
 from typing import (
@@ -32,11 +34,19 @@ class Channel(Sized, AsyncIterable[T], Protocol[T]):
         ...
 
     @abstractmethod
+    async def __aenter__(self) -> Channel[T]:
+        ...
+
+    @abstractmethod
+    async def __aexit__(self, *_: Any) -> None:
+        ...
+
+    @abstractmethod
     def full(self) -> bool:
         ...
 
     @abstractmethod
-    def close(self) -> None:
+    async def close(self) -> None:
         ...
 
     @abstractmethod

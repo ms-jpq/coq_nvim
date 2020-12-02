@@ -26,9 +26,9 @@ async def main(nvim: Nvim, seed: Seed) -> SourceChans:
     await init_lua(nvim)
 
     async def ooda() -> None:
-        async for context in send_ch:
-            ch = Chan[Completion]()
-            await recv_ch.send(ch)
+        async for uid, context in send_ch:
+            async with Chan[Completion]() as ch:
+                await recv_ch.send((uid, ch))
 
     run_forever(ooda)
 

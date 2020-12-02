@@ -1,21 +1,25 @@
 from asyncio import FIRST_COMPLETED, Queue, QueueEmpty, QueueFull, wait
 from collections import deque
 from random import choice
-from typing import (
-    AsyncIterator,
-    Deque,
-    Sequence,
-    Sized,
-    TypeVar,
-    cast,
-)
+from typing import Any, AsyncIterator, Deque, Sequence, Sized, TypeVar, cast
 
 from .types import Channel
 
 T = TypeVar("T")
 
 
-class Chan(Channel[T]):
+class BaseChan(Channel[T]):
+    async def __aenter__(self) -> Channel[T]:
+        return self
+
+    async def __aexit__(self, *_: Any) -> None:
+        await self.close()
+
+    def __aiter__(self) -> AsyncIterator[T]:
+        return self
+
+
+class Chan(BaseChan[T]):
     def __init__(self, size: int = 1) -> None:
         self._closed = False
         self._q: Queue = Queue(maxsize=size)
@@ -26,9 +30,6 @@ class Chan(Channel[T]):
     def __len__(self) -> int:
         return self._q.qsize()
 
-    def __aiter__(self) -> AsyncIterator[T]:
-        return self
-
     async def __anext__(self) -> T:
         try:
             return await self.recv()
@@ -38,7 +39,7 @@ class Chan(Channel[T]):
     def full(self) -> bool:
         return (not self) or self._q.full()
 
-    def close(self) -> None:
+    async def close(self) -> None:
         self._closed = True
 
     async def send(self, item: T) -> None:
@@ -55,7 +56,7 @@ class Chan(Channel[T]):
             return item
 
 
-class _JoinedChan(Channel[T]):
+class _JoinedChan(BaseChan[T]):
     def __init__(self, chan: Channel[T], *chans: Channel[T]) -> None:
         self._q: Deque[T] = deque()
         self._chans: Sequence[Channel[T]] = tuple((chan, *chans))
@@ -66,9 +67,6 @@ class _JoinedChan(Channel[T]):
     def __len__(self) -> int:
         return sum(map(len, (cast(Sized, self._q), *self._chans)))
 
-    def __aiter__(self) -> AsyncIterator[T]:
-        return self
-
     async def __anext__(self) -> T:
         try:
             return await self.recv()
@@ -78,7 +76,7 @@ class _JoinedChan(Channel[T]):
     def full(self) -> bool:
         return all(chan.full() for chan in self._chans)
 
-    def close(self) -> None:
+    async def close(self) -> None:
         for chan in self._chans:
             chan.close()
         self._chans = ()
