@@ -12,9 +12,7 @@ from typing import (
     Any,
     AsyncIterator,
     Callable,
-    Iterator,
     Optional,
-    Sequence,
     TypeVar,
     cast,
 )
