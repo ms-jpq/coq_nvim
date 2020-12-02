@@ -1,10 +1,10 @@
-#!/usr/bin/env python3
-
 from abc import abstractmethod
-from asyncio import Queue, QueueEmpty, QueueFull, wait, FIRST_COMPLETED
+from asyncio import FIRST_COMPLETED, Queue, QueueEmpty, QueueFull, wait
+from collections import deque
 from typing import (
     AsyncIterable,
     AsyncIterator,
+    Deque,
     Protocol,
     Sized,
     TypeVar,
@@ -39,9 +39,8 @@ class Channel(Sized, AsyncIterable[T], Protocol[T]):
 
 class Chan(Channel[T]):
     def __init__(self, size: int = 1) -> None:
-        self._associated_type = T
-        self._q: Queue = Queue(maxsize=size)
         self._closed = False
+        self._q: Queue = Queue(maxsize=size)
 
     def __bool__(self) -> bool:
         return self._closed
@@ -77,14 +76,15 @@ class Chan(Channel[T]):
 
 class _MergedChan(Channel[T]):
     def __init__(self, *chans: Channel[T]) -> None:
-        self._chans = chans
         self._closed = False
+        self._q: Deque[T] = deque()
+        self._chans = chans
 
     def __bool__(self) -> bool:
         return self._closed
 
     def __len__(self) -> int:
-        return sum(map(len, (self._buf, *self._chans)))
+        return sum(map(len, (self._q, *self._chans)))
 
     def __aiter__(self) -> AsyncIterator[T]:
         return self
@@ -97,29 +97,34 @@ class _MergedChan(Channel[T]):
 
     def close(self) -> None:
         self._closed = True
-        self._buf.clear()
+        self._q.clear()
         for chan in self._chans:
             chan.close()
         self._chans = ()
 
     async def send(self, item: T) -> None:
-        raise NotImplementedError
+        self._chans = tuple(chan for chan in self._chans if chan)
+        if not self._chans or self._closed:
+            raise QueueFull()
+        else:
+            raise NotImplementedError
 
     async def recv(self) -> T:
         self._chans = tuple(chan for chan in self._chans if chan)
         if not self._chans or self._closed:
             raise QueueEmpty()
         else:
-            done, pending = await wait(chan.take() for chan in self._chans, return_when=FIRST_COMPLETED)
+            done, pending = await wait(
+                (chan.recv() for chan in self._chans), return_when=FIRST_COMPLETED
+            )
             for co in pending:
-              co.cancel()
+                co.cancel()
+
             for co in done:
-              item = await co
+                item = await co
+                self._q.append(item)
+            return self._q.popleft()
 
 
-# async def merge(*chans: Channel[T]) -> Channel[T]:
-
-#     return chans[1]
-
-
-a: Channel[int] = Chan[int]()
+async def merge(*chans: Channel[T]) -> Channel[T]:
+    return _MergedChan(*chans)
