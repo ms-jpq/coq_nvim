@@ -1,17 +1,51 @@
-from asyncio import Queue
+from abc import abstractmethod
 from dataclasses import dataclass, field
 from typing import (
     Any,
+    AsyncIterable,
     AsyncIterator,
     Awaitable,
     Callable,
-    Dict,
+    Mapping,
     Optional,
+    Protocol,
     Sequence,
     Set,
+    Sized,
+    TypeVar,
+    runtime_checkable,
 )
 
 from pynvim import Nvim
+
+T = TypeVar("T")
+
+
+@runtime_checkable
+class Channel(Sized, AsyncIterable[T], Protocol[T]):
+    @abstractmethod
+    def __bool__(self) -> bool:
+        ...
+
+    @abstractmethod
+    async def __anext__(self) -> T:
+        ...
+
+    @abstractmethod
+    def full(self) -> bool:
+        ...
+
+    @abstractmethod
+    def close(self) -> None:
+        ...
+
+    @abstractmethod
+    async def send(self, item: T) -> None:
+        ...
+
+    @abstractmethod
+    async def recv(self) -> T:
+        ...
 
 
 @dataclass(frozen=True)
@@ -21,16 +55,9 @@ class MatchOptions:
 
 
 @dataclass(frozen=True)
-class Comm:
-    nvim: Nvim
-    chan: Queue
-
-
-@dataclass(frozen=True)
 class Seed:
     match: MatchOptions
-    limit: float
-    config: Dict[str, Any]
+    config: Mapping[str, Any]
 
 
 @dataclass(frozen=True)
@@ -117,13 +144,13 @@ class Completion:
 
 
 Source = Callable[[Context], AsyncIterator[Completion]]
-Factory = Callable[[Comm, Seed], Awaitable[Source]]
+Factory = Callable[[Nvim, Seed], Awaitable[Source]]
 
 
 @dataclass(frozen=True)
 class SnippetSeed:
     match: MatchOptions
-    config: Dict[str, Any]
+    config: Mapping[str, Any]
 
 
 @dataclass(frozen=True)
@@ -133,4 +160,4 @@ class SnippetContext:
 
 
 SnippetEngine = Callable[[SnippetContext], Awaitable[None]]
-SnippetEngineFactory = Callable[[Comm, SnippetSeed], Awaitable[SnippetEngine]]
+SnippetEngineFactory = Callable[[Nvim, SnippetSeed], Awaitable[SnippetEngine]]

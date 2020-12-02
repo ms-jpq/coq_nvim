@@ -4,7 +4,7 @@ from numbers import Number
 from typing import (
     Any,
     AsyncIterator,
-    Dict,
+    Mapping,
     Iterator,
     Optional,
     Sequence,
@@ -38,8 +38,8 @@ class Config:
     pass
 
 
-async def init_lua(nvim: Nvim) -> Tuple[Dict[int, str], Dict[int, str]]:
-    def cont() -> Tuple[Dict[str, int], Dict[str, int]]:
+async def init_lua(nvim: Nvim) -> Tuple[Mapping[int, str], Mapping[int, str]]:
+    def cont() -> Tuple[Mapping[str, int], Mapping[str, int]]:
         nvim.api.exec_lua("kok_lsp = require 'kok/lsp'", ())
         entry_kind = nvim.api.exec_lua("return kok_lsp.list_entry_kind()", ())
         insert_kind = nvim.api.exec_lua("return kok_lsp.list_insert_kind()", ())
@@ -77,12 +77,12 @@ def parse_resp_to_rows(resp: Any) -> Sequence[Any]:
         raise ValueError(f"unknown LSP resp - {type(resp)}")
 
 
-def is_snippet(row: Dict[str, Any], insert_lookup: Dict[int, str]) -> bool:
+def is_snippet(row: Mapping[str, Any], insert_lookup: Mapping[int, str]) -> bool:
     fmt = row.get("insertTextFormat")
     return insert_lookup[cast(int, fmt)] != "PlainText"
 
 
-def parse_text(row: Dict[str, Any]) -> str:
+def parse_text(row: Mapping[str, Any]) -> str:
     new_text = row.get("textEdit", {}).get("newText")
     insert_txt = row.get("insertText")
     if new_text is not None:
@@ -93,14 +93,14 @@ def parse_text(row: Dict[str, Any]) -> str:
         return row["label"]
 
 
-def parse_documentation(doc: Union[str, Dict[str, Any], None]) -> Optional[str]:
+def parse_documentation(doc: Union[str, Mapping[str, Any], None]) -> Optional[str]:
     tp = type(doc)
     if doc is None:
         return None
     elif tp is str:
         return cast(str, doc)
     elif tp is dict:
-        val = cast(Dict[str, Any], doc).get("value")
+        val = cast(Mapping[str, Any], doc).get("value")
         if type(val) is str:
             return val
         else:
@@ -109,13 +109,13 @@ def parse_documentation(doc: Union[str, Dict[str, Any], None]) -> Optional[str]:
         raise ValueError(f"unknown LSP doc - {doc}")
 
 
-def parse_textedit(row: Dict[str, Any]) -> Sequence[LEdit]:
+def parse_textedit(row: Mapping[str, Any]) -> Sequence[LEdit]:
     edits = (row.get("textEdit"), *row.get("additionalTextEdits", ()))
 
     def cont() -> Iterator[LEdit]:
         for edit in edits:
             if type(edit) is dict:
-                e = cast(Dict[str, Any], edit)
+                e = cast(Mapping[str, Any], edit)
                 new_text = e["newText"]
                 begin_end = e["range"]
                 b = begin_end["start"]
@@ -128,10 +128,10 @@ def parse_textedit(row: Dict[str, Any]) -> Sequence[LEdit]:
 
 
 def parse_rows(
-    rows: Sequence[Dict[str, Any]],
+    rows: Sequence[Mapping[str, Any]],
     context: Context,
-    entry_lookup: Dict[int, str],
-    insert_lookup: Dict[int, str],
+    entry_lookup: Mapping[int, str],
+    insert_lookup: Mapping[int, str],
 ) -> Iterator[Completion]:
     position = context.position
 

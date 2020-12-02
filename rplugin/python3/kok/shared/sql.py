@@ -4,11 +4,10 @@ from contextlib import AbstractAsyncContextManager
 from sqlite3 import Connection, Cursor, Row, connect
 from typing import (
     Any,
+    AsyncIterable,
     AsyncIterator,
     Iterable,
     Iterator,
-    Optional,
-    Sequence,
     Set,
     Union,
 )
@@ -18,7 +17,7 @@ from .executor import Executor
 SQL_TYPES = Union[int, float, str, bytes, None]
 
 
-class ACursor(AbstractAsyncContextManager):
+class ACursor(AbstractAsyncContextManager, AsyncIterable[Row]):
     def __init__(self, chan: Executor, cursor: Cursor) -> None:
         self._chan = chan
         self._cursor = cursor
@@ -26,15 +25,20 @@ class ACursor(AbstractAsyncContextManager):
     async def __aexit__(self, *_: Any) -> None:
         await self._chan.run(self._cursor.close)
 
+    def __aiter__(self) -> AsyncIterator[Row]:
+        async def cont() -> AsyncIterator[Row]:
+            while rows := await self._chan.run(self._cursor.fetchmany):
+                for row in rows:
+                    yield row
+
+        return cont()
+
     @property
     def lastrowid(self) -> int:
         return self._cursor.lastrowid
 
     async def fetch_one(self) -> Row:
         return await self._chan.run(self._cursor.fetchone)
-
-    async def fetch_all(self) -> Sequence[Row]:
-        return await self._chan.run(self._cursor.fetchall)
 
 
 class AConnection(AbstractAsyncContextManager):
@@ -57,20 +61,6 @@ class AConnection(AbstractAsyncContextManager):
             return ACursor(self.chan, cursor=cursor)
 
         return await self.chan.run(cont)
-
-    async def iter_dump(self) -> AsyncIterator:
-        def co() -> Iterator[str]:
-            return self._conn.iterdump()
-
-        it = await self.chan.run(co)
-
-        def cont() -> Optional[str]:
-            return next(it, None)
-
-        line = await self.chan.run(cont)
-        while line is not None:
-            yield line
-            line = await self.chan.run(cont)
 
     async def execute_script(self, script: str) -> ACursor:
         def cont() -> ACursor:

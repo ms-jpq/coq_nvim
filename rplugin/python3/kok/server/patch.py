@@ -1,4 +1,4 @@
-from typing import Any, Callable, Dict, cast
+from typing import Any, Callable, Mapping, cast
 
 from pynvim import Nvim
 from pynvim.api.window import Window
@@ -23,7 +23,7 @@ async def apply_patch(
     nvim: Nvim,
     engine: SnippetEngine,
     engine_available: Callable[[Snippet], bool],
-    comp: Dict[str, Any],
+    comp: Mapping[str, Any],
     options: MatchOptions,
 ) -> bool:
     data = comp.get("user_data")

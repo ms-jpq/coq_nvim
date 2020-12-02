@@ -1,47 +1,18 @@
-from abc import abstractmethod
 from asyncio import FIRST_COMPLETED, Queue, QueueEmpty, QueueFull, wait
 from collections import deque
 from random import choice
 from typing import (
-    AsyncIterable,
     AsyncIterator,
     Deque,
-    Protocol,
     Sequence,
     Sized,
     TypeVar,
     cast,
-    runtime_checkable,
 )
 
+from .types import Channel
+
 T = TypeVar("T")
-
-
-@runtime_checkable
-class Channel(Sized, AsyncIterable[T], Protocol[T]):
-    @abstractmethod
-    def __bool__(self) -> bool:
-        ...
-
-    @abstractmethod
-    async def __anext__(self) -> T:
-        ...
-
-    @abstractmethod
-    def full(self) -> bool:
-        ...
-
-    @abstractmethod
-    def close(self) -> None:
-        ...
-
-    @abstractmethod
-    async def send(self, item: T) -> None:
-        ...
-
-    @abstractmethod
-    async def recv(self) -> T:
-        ...
 
 
 class Chan(Channel[T]):
@@ -146,7 +117,3 @@ class _JoinedChan(Channel[T]):
 
 def join(*chans: Channel[T]) -> Channel[T]:
     return _JoinedChan(*chans)
-
-
-async def select(*chans: Channel[T]) -> Channel[T]:
-    pass

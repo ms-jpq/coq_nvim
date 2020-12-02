@@ -11,7 +11,7 @@ from logging import (
     StreamHandler,
     getLevelName,
 )
-from typing import Dict
+from typing import Mapping
 
 from pynvim import Nvim
 
@@ -31,7 +31,7 @@ message:  |-
 
 DATE_FMT = "%Y-%m-%d %H:%M:%S"
 
-LEVELS: Dict[str, int] = {
+LEVELS: Mapping[str, int] = {
     getLevelName(lv): lv for lv in (DEBUG, INFO, WARN, ERROR, FATAL)
 }
 

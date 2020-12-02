@@ -1,6 +1,6 @@
 from dataclasses import dataclass, field
 from math import inf
-from typing import Any, Dict, Optional, Sequence
+from typing import Any, Mapping, Optional, Sequence
 
 from ..shared.types import (
     Factory,
@@ -37,7 +37,7 @@ class SourceSpec:
     limit: float
     rank: int
     unique: bool
-    config: Dict[str, Any]
+    config: Mapping[str, Any]
 
 
 @dataclass(frozen=True)
@@ -45,7 +45,7 @@ class SnippetEngineSpec:
     main: str
     enabled: str
     kinds: Sequence[str]
-    config: Dict[str, Any]
+    config: Mapping[str, Any]
 
 
 @dataclass(frozen=True)
@@ -55,8 +55,8 @@ class Settings:
     logging_level: str
     display: DisplayOptions
     match: MatchOptions
-    sources: Dict[str, SourceSpec]
-    snippet_engines: Dict[str, SnippetEngineSpec]
+    sources: Mapping[str, SourceSpec]
+    snippet_engines: Mapping[str, SnippetEngineSpec]
 
 
 @dataclass(frozen=True)
@@ -84,7 +84,7 @@ class BufferSourceSpec:
 @dataclass(frozen=True)
 class BufferContext:
     timeout: float = inf
-    sources: Dict[str, BufferSourceSpec] = field(default_factory=dict)
+    sources: Mapping[str, BufferSourceSpec] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)
@@ -112,7 +112,7 @@ class Metric:
     consecutive_matches: int
     num_matches: int
     density: float
-    matches: Dict[int, str]
+    matches: Mapping[int, str]
     full_match: bool
 
 

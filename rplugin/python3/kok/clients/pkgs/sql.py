@@ -1,3 +1,5 @@
+from asyncio import Queue
+from dataclasses import dataclass
 from os.path import dirname, join, realpath
 from typing import AsyncIterator, Iterable, Iterator
 
@@ -16,6 +18,39 @@ _QUERY = slurp(join(__sql__, "query.sql"))
 
 ESCAPE_CHAR = "!"
 LIKE_ESCAPE = {"_", "[", "%"} | {ESCAPE_CHAR}
+
+
+@dataclass(frozen=True)
+class QueryParams:
+    context: Context
+    prefix_matches: int
+
+
+@dataclass(frozen=True)
+class DB2:
+    depopulate: Queue[None]
+    populate: Queue[Queue[str]]
+    query_ask: Queue[QueryParams]
+    query_reply: Queue[Queue[str]]
+
+
+async def db() -> DB2:
+    depopulate, populate, query_ask, query_reply = (
+        Queue[None](0),
+        Queue[Queue[str]](0),
+        Queue[QueryParams](0),
+        Queue[Queue[str]](0),
+    )
+    conn = AConnection()
+
+    async with await conn.execute_script(_PRAGMA):
+        pass
+    async with await conn.execute_script(_INIT):
+        pass
+
+    
+
+    return DB2(depopulate=depopulate, populate=populate, query_ask=query_ask, query_reply=query_reply)
 
 
 class DB:
@@ -41,9 +76,7 @@ class DB:
             pass
         await self._conn.commit()
 
-    async def query(
-        self, context: Context, prefix_matches: int
-    ) -> AsyncIterator[str]:
+    async def query(self, context: Context, prefix_matches: int) -> AsyncIterator[str]:
         cword, ncword = context.alnums, context.alnums_normalized
         prefix = ncword[:prefix_matches]
         escaped = sql_escape(prefix, nono=LIKE_ESCAPE, escape=ESCAPE_CHAR)

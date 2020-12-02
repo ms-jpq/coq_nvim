@@ -5,8 +5,6 @@ from typing import Any, Awaitable, Callable, Sequence, Tuple, TypeVar
 from pynvim import Nvim
 from pynvim.api.common import NvimError
 
-from .logging import log
-
 T = TypeVar("T")
 
 

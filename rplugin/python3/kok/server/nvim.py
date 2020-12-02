@@ -1,7 +1,7 @@
 from dataclasses import asdict, dataclass
 from enum import Enum
 from os import linesep
-from typing import Any, Dict, Iterable, Iterator, Optional
+from typing import Any, Mapping, Iterable, Iterator, Optional
 from uuid import uuid4
 
 from pynvim import Nvim
@@ -65,7 +65,7 @@ class VimCompletion:
     user_data: Optional[Any] = None
 
 
-def serialize(comp: VimCompletion) -> Dict[str, Any]:
+def serialize(comp: VimCompletion) -> Mapping[str, Any]:
     serialized = {k: v for k, v in asdict(comp).items() if v is not None}
     return serialized
 
