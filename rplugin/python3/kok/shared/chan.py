@@ -115,5 +115,5 @@ class _JoinedChan(Channel[T]):
             return self._q.popleft()
 
 
-def join(*chans: Channel[T]) -> Channel[T]:
-    return _JoinedChan(*chans)
+def join(chan: Channel[T], *chans: Channel[T]) -> Channel[T]:
+    return _JoinedChan(chan, *chans)

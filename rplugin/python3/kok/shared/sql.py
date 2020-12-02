@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from contextlib import AbstractAsyncContextManager
 from sqlite3 import Connection, Cursor, Row, connect
 from typing import (
+    AsyncContextManager,
     Any,
     AsyncIterable,
     AsyncIterator,
@@ -17,7 +17,7 @@ from .executor import Executor
 SQL_TYPES = Union[int, float, str, bytes, None]
 
 
-class ACursor(AbstractAsyncContextManager, AsyncIterable[Row]):
+class ACursor(AsyncContextManager[ACursor], AsyncIterable[Row]):
     def __init__(self, chan: Executor, cursor: Cursor) -> None:
         self._chan = chan
         self._cursor = cursor
@@ -41,7 +41,7 @@ class ACursor(AbstractAsyncContextManager, AsyncIterable[Row]):
         return await self._chan.run(self._cursor.fetchone)
 
 
-class AConnection(AbstractAsyncContextManager):
+class AConnection(AsyncContextManager[AConnection]):
     def __init__(self, database: str = ":memory:") -> None:
         self.chan = Executor()
 

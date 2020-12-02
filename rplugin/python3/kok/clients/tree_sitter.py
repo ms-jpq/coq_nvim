@@ -2,10 +2,11 @@ from typing import Any
 
 from pynvim import Nvim
 
-from ..shared.types import Completion, Context, SEdit, Seed, SourceChans
-from .pkgs.nvim import call
 from ..shared.chan import Chan
+from ..shared.comm import make_ch
 from ..shared.core import run_forever
+from ..shared.types import Channel, Completion, Context, Seed, SourceChans
+from .pkgs.nvim import call
 
 NAME = "tree_sitter"
 
@@ -20,17 +21,14 @@ async def init_lua(nvim: Nvim) -> None:
 
 # TODO -- waiting on tree sitter to stabilize
 async def main(nvim: Nvim, seed: Seed) -> SourceChans:
-    send_ch, recv_ch = Chan[Context](), Chan[Completion]()
+    send_ch, recv_ch = make_ch(Context, Channel[Completion])
 
     await init_lua(nvim)
 
     async def ooda() -> None:
         async for context in send_ch:
-            pos, uuid = context.position, context.uuid
-            text = "-- TODO: Waiting for Neovim to stabilize TS --"
-            edit = SEdit(new_text=text)
-            comp = Completion(uuid=uuid, position=pos, sedit=edit)
-            await recv_ch.send(comp)
+            ch = Chan[Completion]()
+            await recv_ch.send(ch)
 
     run_forever(ooda)
 
