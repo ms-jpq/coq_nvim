@@ -1,13 +1,16 @@
 from abc import abstractmethod
 from asyncio import FIRST_COMPLETED, Queue, QueueEmpty, QueueFull, wait
 from collections import deque
+from random import choice
 from typing import (
     AsyncIterable,
     AsyncIterator,
     Deque,
     Protocol,
+    Sequence,
     Sized,
     TypeVar,
+    cast,
     runtime_checkable,
 )
 
@@ -22,6 +25,10 @@ class Channel(Sized, AsyncIterable[T], Protocol[T]):
 
     @abstractmethod
     async def __anext__(self) -> T:
+        ...
+
+    @abstractmethod
+    def full(self) -> bool:
         ...
 
     @abstractmethod
@@ -43,7 +50,7 @@ class Chan(Channel[T]):
         self._q: Queue = Queue(maxsize=size)
 
     def __bool__(self) -> bool:
-        return self._closed
+        return not self._closed
 
     def __len__(self) -> int:
         return self._q.qsize()
@@ -56,6 +63,9 @@ class Chan(Channel[T]):
             return await self.recv()
         except QueueEmpty:
             raise StopAsyncIteration()
+
+    def full(self) -> bool:
+        return (not self) or self._q.full()
 
     def close(self) -> None:
         self._closed = True
@@ -74,17 +84,16 @@ class Chan(Channel[T]):
             return item
 
 
-class _MergedChan(Channel[T]):
-    def __init__(self, *chans: Channel[T]) -> None:
-        self._closed = False
+class _JoinedChan(Channel[T]):
+    def __init__(self, chan: Channel[T], *chans: Channel[T]) -> None:
         self._q: Deque[T] = deque()
-        self._chans = chans
+        self._chans: Sequence[Channel[T]] = tuple((chan, *chans))
 
     def __bool__(self) -> bool:
-        return self._closed
+        return any(chan for chan in self._chans)
 
     def __len__(self) -> int:
-        return sum(map(len, (self._q, *self._chans)))
+        return sum(map(len, (cast(Sized, self._q), *self._chans)))
 
     def __aiter__(self) -> AsyncIterator[T]:
         return self
@@ -95,23 +104,31 @@ class _MergedChan(Channel[T]):
         except QueueEmpty:
             raise StopAsyncIteration()
 
+    def full(self) -> bool:
+        return all(chan.full() for chan in self._chans)
+
     def close(self) -> None:
-        self._closed = True
-        self._q.clear()
         for chan in self._chans:
             chan.close()
         self._chans = ()
+        self._q.clear()
+
+    def _prune(self) -> None:
+        self._chans = tuple(chan for chan in self._chans if chan)
 
     async def send(self, item: T) -> None:
-        self._chans = tuple(chan for chan in self._chans if chan)
-        if not self._chans or self._closed:
+        self._prune()
+        if not self:
             raise QueueFull()
         else:
-            raise NotImplementedError
+            chan = next(
+                (chan for chan in self._chans if not chan.full()), choice(self._chans)
+            )
+            await chan.send(item)
 
     async def recv(self) -> T:
-        self._chans = tuple(chan for chan in self._chans if chan)
-        if not self._chans or self._closed:
+        self._prune()
+        if not self:
             raise QueueEmpty()
         else:
             if not self._q:
@@ -127,5 +144,9 @@ class _MergedChan(Channel[T]):
             return self._q.popleft()
 
 
-async def merge(*chans: Channel[T]) -> Channel[T]:
-    return _MergedChan(*chans)
+def join(*chans: Channel[T]) -> Channel[T]:
+    return _JoinedChan(*chans)
+
+
+async def select(*chans: Channel[T]) -> Channel[T]:
+    pass
