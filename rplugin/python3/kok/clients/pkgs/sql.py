@@ -68,14 +68,14 @@ async def new_db() -> DBChans:
 
     async def ask() -> None:
         async for uid, param in ask_ch:
-            context, prefix_matches = param.context, param.prefix_matches
-            cword, ncword = context.alnums, context.alnums_normalized
-            prefix = ncword[:prefix_matches]
-            escaped = sql_escape(prefix, nono=LIKE_ESCAPE, escape=ESCAPE_CHAR)
-            match = f"{escaped}%" if escaped else ""
-
             async with Chan[str]() as ch:
                 await reply_ch.send((uid, ch))
+
+                context, prefix_matches = param.context, param.prefix_matches
+                cword, ncword = context.alnums, context.alnums_normalized
+                prefix = ncword[:prefix_matches]
+                escaped = sql_escape(prefix, nono=LIKE_ESCAPE, escape=ESCAPE_CHAR)
+                match = f"{escaped}%" if escaped else ""
 
                 async with lock:
                     async with await conn.execute(_QUERY, (match, cword)) as cursor:

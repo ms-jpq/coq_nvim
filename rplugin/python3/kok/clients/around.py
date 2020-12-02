@@ -1,8 +1,9 @@
 from asyncio import gather
+from asyncio.queues import QueueFull
 from dataclasses import dataclass
 from itertools import chain
 from os import linesep
-from typing import Sequence
+from typing import Any, Sequence
 
 from pynvim import Nvim
 from pynvim.api.buffer import Buffer
@@ -51,38 +52,41 @@ async def buffer_chars(nvim: Nvim, band_size: int, pos: Position) -> Sequence[st
 
 async def main(nvim: Nvim, seed: Seed) -> SourceChans:
     send_ch, recv_ch = make_ch(Context, Channel[Completion])
-
     config = Config(**seed.config)
-    band_size, prefix_matches, max_length, unifying_chars = (
-        config.band_size,
-        config.prefix_matches,
-        config.max_length,
-        seed.match.unifying_chars,
-    )
 
     db = await new_db()
     req = schedule(ask=db.ask_ch, reply=db.reply_ch)
 
     async def ooda() -> None:
         async for uid, context in send_ch:
-            ch = Chan[Completion]()
-            await recv_ch.send(ch)
+            async with Chan[Completion]() as ch:
+                await recv_ch.send((uid, ch))
 
-            position = context.position
+                position = context.position
 
-            chars, _ = await gather(
-                buffer_chars(nvim, band_size=band_size, pos=position),
-                db.depop_ch.send(None),
-            )
-            words = coalesce(
-                chars, max_length=max_length, unifying_chars=unifying_chars
-            )
-            await db.pop_ch.send(words)
+                chars, _ = await gather(
+                    buffer_chars(nvim, band_size=config.band_size, pos=position),
+                    db.depop_ch.send(None),
+                )
+                words = coalesce(
+                    chars,
+                    max_length=config.max_length,
+                    unifying_chars=seed.match.unifying_chars,
+                )
+                await db.pop_ch.send(words)
 
-            resp = req(QueryParams())
-            async for word in resp:
-                sedit = SEdit(new_text=word)
-                yield Completion(position=position, sedit=sedit)
+                params = QueryParams(
+                    context=context, prefix_matches=config.prefix_matches
+                )
+                resp = await req(params)
+
+                async for word in resp:
+                    sedit = SEdit(new_text=word)
+                    comp = Completion(position=position, sedit=sedit)
+                    try:
+                        await ch.send(comp)
+                    except QueueFull:
+                        break
 
     run_forever(ooda)
 
