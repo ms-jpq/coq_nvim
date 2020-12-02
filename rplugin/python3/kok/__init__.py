@@ -36,7 +36,7 @@ class Main:
         client_config = nvim.vars.get(conf_var_name_private, {})
         settings = initial(configs=(client_config, user_config))
         self.settings = settings
-        self.state = initial_state(settings)
+        self.state = state()
         setup(nvim, settings.logging_level)
         self._init = create_task(self.initialize())
         run_forever(nvim, thing=self.ooda)

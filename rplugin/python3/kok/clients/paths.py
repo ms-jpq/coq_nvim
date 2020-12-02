@@ -108,5 +108,4 @@ async def main(nvim: Nvim, seed: Seed) -> SourceChans:
                             break
 
     run_forever(ooda)
-
     return SourceChans(comm_ch=Chan[Any](), send_ch=send_ch, recv_ch=recv_ch)

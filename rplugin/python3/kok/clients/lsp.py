@@ -1,11 +1,11 @@
 from collections import defaultdict
 from dataclasses import dataclass
+from asyncio  import QueueFull
 from numbers import Number
 from typing import (
     Any,
-    AsyncIterator,
-    Mapping,
     Iterator,
+    Mapping,
     Optional,
     Sequence,
     Tuple,
@@ -15,18 +15,22 @@ from typing import (
 
 from pynvim import Nvim
 
+from ..shared.chan import Chan
+from ..shared.comm import make_ch, schedule
+from ..shared.core import run_forever
 from ..shared.nvim import call
 from ..shared.types import (
+    Channel,
     Completion,
     Context,
     LEdit,
     Position,
     SEdit,
     Seed,
+    SourceChans,
     Snippet,
     Source,
 )
-from ..shared.core import run_forever
 
 NAME = "lsp"
 SNIPPET_TYPE = "lsp"
@@ -166,21 +170,28 @@ def parse_rows(
 
 
 async def main(nvim: Nvim, seed: Seed) -> Source:
-    background_update, require = schedule(comm.chan)
+    send_ch, recv_ch = make_ch(Context, Channel[Completion])
+    comm = Chan[Tuple[int, Any]]()
     entry_kind, insert_kind = await init_lua(nvim)
 
-    async def source(context: Context) -> AsyncIterator[Completion]:
-        uid, fut = require()
-        await ask(nvim, context=context, uid=uid)
-        resp = await fut
-        rows = parse_resp_to_rows(resp)
-        for row in parse_rows(
-            rows,
-            context=context,
-            entry_lookup=entry_kind,
-            insert_lookup=insert_kind,
-        ):
-            yield row
+    async def ooda() -> None:
+        async for uid, context in send_ch:
+            async with Chan[Completion]() as ch:
+                await recv_ch.send((uid, ch))
+                await ask(nvim, context=context, uid=uid)
+                resp = await comm.recv()
+                rows = parse_resp_to_rows(resp)
 
-    run_forever(nvim, thing=background_update)
-    return source
+                for comp in parse_rows(
+                    rows,
+                    context=context,
+                    entry_lookup=entry_kind,
+                    insert_lookup=insert_kind,
+                ):
+                    try:
+                        await ch.send(comp)
+                    except QueueFull:
+                        break
+
+    run_forever(ooda)
+    return SourceChans(comm_ch=Chan[Any](), send_ch=send_ch, recv_ch=recv_ch)

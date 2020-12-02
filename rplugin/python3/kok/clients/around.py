@@ -62,10 +62,10 @@ async def main(nvim: Nvim, seed: Seed) -> SourceChans:
             async with Chan[Completion]() as ch:
                 await recv_ch.send((uid, ch))
 
-                position = context.position
-
                 chars, _ = await gather(
-                    buffer_chars(nvim, band_size=config.band_size, pos=position),
+                    buffer_chars(
+                        nvim, band_size=config.band_size, pos=context.position
+                    ),
                     db.depop_ch.send(None),
                 )
                 words = coalesce(
@@ -78,11 +78,10 @@ async def main(nvim: Nvim, seed: Seed) -> SourceChans:
                 params = QueryParams(
                     context=context, prefix_matches=config.prefix_matches
                 )
-
                 async with await req(params) as resp:
                     async for word in resp:
                         sedit = SEdit(new_text=word)
-                        comp = Completion(position=position, sedit=sedit)
+                        comp = Completion(position=context.position, sedit=sedit)
                         try:
                             await ch.send(comp)
                         except QueueFull:

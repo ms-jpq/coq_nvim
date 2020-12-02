@@ -5,10 +5,10 @@ from typing import Awaitable, Callable
 from .logging import log
 
 
-def run_forever(
+def _run_forever(
     thing: Callable[[], Awaitable[None]],
-    retries: int = 3,
-    timeout: float = 1.0,
+    retries: int,
+    timeout: float,
 ) -> Task:
     async def loop() -> None:
         for _ in range(retries):
@@ -21,11 +21,11 @@ def run_forever(
     return create_task(loop())
 
 
-async def run_forevers(
+async def run_forever(
     *things: Callable[[], Awaitable[None]],
     retries: int = 3,
     timeout: float = 1.0,
 ) -> Task:
     await gather(
-        *(run_forever(thing, retries=retries, timeout=timeout) for thing in things)
+        *(_run_forever(thing, retries=retries, timeout=timeout) for thing in things)
     )

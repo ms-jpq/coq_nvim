@@ -1,8 +1,8 @@
-from asyncio import Event, gather
+from asyncio import QueueFull, gather
 from dataclasses import dataclass
 from itertools import chain
 from os import linesep
-from typing import Any, AsyncIterator, Iterator, Sequence, Set
+from typing import Any, Iterator, Sequence, Set
 
 from pynvim import Nvim
 from pynvim.api.buffer import Buffer
@@ -15,7 +15,7 @@ from ..shared.da import tiktok
 from ..shared.nvim import call
 from ..shared.parse import coalesce
 from ..shared.types import Channel, Completion, Context, SEdit, Seed, SourceChans
-from .pkgs.sql import new_db
+from .pkgs.sql import new_db, QueryParams
 
 NAME = "buffers"
 
@@ -66,15 +66,8 @@ async def buffer_chars(nvim: Nvim) -> Sequence[str]:
 
 async def main(nvim: Nvim, seed: Seed) -> SourceChans:
     send_ch, recv_ch = make_ch(Context, Channel[Completion])
-    comm = Chan[Any]()
 
     config = Config(**seed.config)
-
-    prefix_matches, max_length, unifying_chars = (
-        config.prefix_matches,
-        config.max_length,
-        seed.match.unifying_chars,
-    )
 
     db = await new_db()
     req = schedule(ask=db.ask_ch, reply=db.reply_ch)
@@ -83,17 +76,28 @@ async def main(nvim: Nvim, seed: Seed) -> SourceChans:
         async for _ in tiktok(config.polling_rate):
             chars, _ = await gather(buffer_chars(nvim), db.depop_ch.send(None))
             words = coalesce(
-                chars, max_length=max_length, unifying_chars=unifying_chars
+                chars,
+                max_length=config.max_length,
+                unifying_chars=seed.match.unifying_chars,
             )
             await db.pop_ch.send(words)
 
     async def ooda() -> None:
-        position = context.position
-        words = db.query(context, prefix_matches=prefix_matches)
-        async for word in words:
-            sedit = SEdit(new_text=word)
-            yield Completion(position=position, sedit=sedit)
+        async for uid, context in send_ch:
+            async with Chan[Completion]() as ch:
+                await recv_ch.send((uid, ch))
 
-    run_forever(ooda)
-    run_forever(background_update)
-    return source
+                params = QueryParams(
+                    context=context, prefix_matches=config.prefix_matches
+                )
+                async with await req(params) as resp:
+                    async for word in resp:
+                        sedit = SEdit(new_text=word)
+                        comp = Completion(position=context.position, sedit=sedit)
+                        try:
+                            await ch.send(comp)
+                        except QueueFull:
+                            break
+
+    run_forever(background_update, ooda)
+    return SourceChans(comm_ch=Chan[Any](), send_ch=send_ch, recv_ch=recv_ch)

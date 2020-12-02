@@ -1,5 +1,4 @@
-from asyncio import as_completed, gather
-from asyncio.locks import Event
+from asyncio import QueueFull, as_completed, gather
 from dataclasses import dataclass
 from os import linesep
 from shutil import which
@@ -9,6 +8,7 @@ from pynvim import Nvim
 
 from ..shared.chan import Chan
 from ..shared.comm import make_ch, schedule
+from ..shared.core import run_forever
 from ..shared.da import call, tiktok
 from ..shared.logging import log
 from ..shared.parse import coalesce
@@ -21,7 +21,7 @@ from ..shared.types import (
     Source,
     SourceChans,
 )
-from .pkgs.sql import new_db
+from .pkgs.sql import QueryParams, new_db
 
 NAME = "tmux"
 
@@ -110,11 +110,6 @@ async def main(nvim: Nvim, seed: Seed) -> Source:
     send_ch, recv_ch = make_ch(Context, Channel[Completion])
 
     config = Config(**seed.config)
-    prefix_matches, max_length, unifying_chars = (
-        config.prefix_matches,
-        config.max_length,
-        seed.match.unifying_chars,
-    )
 
     db = await new_db()
     req = schedule(ask=db.ask_ch, reply=db.reply_ch)
@@ -124,19 +119,30 @@ async def main(nvim: Nvim, seed: Seed) -> Source:
             await db.depop_ch.send(None)
             try:
                 async for words in tmux_words(
-                    max_length=max_length, unifying_chars=unifying_chars
+                    max_length=config.max_length,
+                    unifying_chars=seed.match.unifying_chars,
                 ):
                     await db.pop_ch.send(words)
             except TmuxError as e:
                 message = f"failed to fetch tmux{linesep}{e}"
                 log.warn("%s", message)
 
-    async def source(context: Context) -> AsyncIterator[Completion]:
-        position = context.position
-        words = db.query(context, prefix_matches=prefix_matches)
-        async for word in words:
-            sedit = SEdit(new_text=word)
-            yield Completion(position=position, sedit=sedit)
+    async def ooda() -> None:
+        async for uid, context in send_ch:
+            async with Chan[Completion]() as ch:
+                await recv_ch.send((uid, ch))
 
-    run_forever(nvim, thing=background_update)
+                params = QueryParams(
+                    context=context, prefix_matches=config.prefix_matches
+                )
+                async with await req(params) as resp:
+                    async for word in resp:
+                        sedit = SEdit(new_text=word)
+                        comp = Completion(position=context.position, sedit=sedit)
+                        try:
+                            await ch.send(comp)
+                        except QueueFull:
+                            break
+
+    run_forever(background_update, ooda)
     return SourceChans(comm_ch=Chan[Any](), send_ch=send_ch, recv_ch=recv_ch)
