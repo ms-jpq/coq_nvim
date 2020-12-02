@@ -15,9 +15,8 @@ from typing import (
 
 from pynvim import Nvim
 
-from ..shared.nvim import call, run_forever
+from ..shared.nvim import call
 from ..shared.types import (
-    Comm,
     Completion,
     Context,
     LEdit,
@@ -27,7 +26,7 @@ from ..shared.types import (
     Snippet,
     Source,
 )
-from .pkgs.comm_scheduler import schedule
+from ..shared.core import run_forever
 
 NAME = "lsp"
 SNIPPET_TYPE = "lsp"

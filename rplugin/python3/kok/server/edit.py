@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from itertools import chain, count
 from os import linesep
-from typing import Dict, Iterator, List, Optional, Sequence, Tuple, Union, cast
+from typing import Mapping, Iterator, List, Optional, Sequence, Tuple, Union, cast
 
 from pynvim import Nvim
 from pynvim.api.buffer import Buffer
@@ -78,13 +78,13 @@ def rows_to_fetch(
         return None
 
 
-def row_lengths(rows: Sequence[str], start: int) -> Dict[int, int]:
+def row_lengths(rows: Sequence[str], start: int) -> Mapping[int, int]:
     ret = {idx: len(row) + 1 for idx, row in enumerate(rows, start)}
     return ret
 
 
 def calculate_replacement(
-    row_lens: Dict[int, int], start: int, edit: LEdit
+    row_lens: Mapping[int, int], start: int, edit: LEdit
 ) -> Replacement:
     b_row, e_row = edit.begin.row, edit.end.row
     b_col, e_col = edit.begin.col, edit.end.col
@@ -108,7 +108,7 @@ def calculate_replacement(
 
 
 def calculate_main_replacement(
-    row_lens: Dict[int, int], start: int, medit: Optional[MEdit], position: Position
+    row_lens: Mapping[int, int], start: int, medit: Optional[MEdit], position: Position
 ) -> Optional[Replacement]:
     if medit:
         row, col = position.row, position.col
@@ -134,7 +134,7 @@ def rank(replacement: Replacement) -> Tuple[int, int, TextStream]:
 
 
 def consolidate_replacements(
-    row_lens: Dict[int, int],
+    row_lens: Mapping[int, int],
     start: int,
     position: Position,
     medit: Optional[MEdit],

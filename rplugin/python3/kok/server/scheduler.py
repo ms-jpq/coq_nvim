@@ -7,7 +7,7 @@ from typing import (
     AsyncIterator,
     Awaitable,
     Callable,
-    Dict,
+    Mapping,
     Sequence,
     Tuple,
     TypeVar,
@@ -20,7 +20,7 @@ T = TypeVar("T")
 @dataclass(frozen=True, eq=False)
 class Signal:
     args: Sequence[Any] = ()
-    kwargs: Dict[str, Any] = field(default_factory=dict)
+    kwargs: Mapping[str, Any] = field(default_factory=dict)
 
 
 async def schedule(chan: Queue, gen: Callable[..., Awaitable[T]]) -> AsyncIterator[T]:

@@ -2,18 +2,19 @@ from asyncio import Event, gather
 from dataclasses import dataclass
 from itertools import chain
 from os import linesep
+from ..shared.chan import Chan
 from typing import AsyncIterator, Iterator, Sequence, Set
 
 from pynvim import Nvim
 from pynvim.api.buffer import Buffer
 from pynvim.api.common import NvimError
 
-from ..shared.nvim import call, run_forever
+from ..shared.nvim import call
 from ..shared.parse import coalesce
-from ..shared.types import Comm, Completion, Context, SEdit, Seed, Source
+from ..shared.types import Completion, Context, SEdit, Seed, SourceChans
 from .pkgs.nvim import autocmd
 from .pkgs.scheduler import schedule
-from .pkgs.sql import DB
+from .pkgs.sql import new_db
 
 NAME = "buffers"
 
@@ -62,7 +63,8 @@ async def buffer_chars(nvim: Nvim) -> Sequence[str]:
         return chars
 
 
-async def main(comm: Comm, seed: Seed) -> Source:
+async def main(nvim: Nvim, seed: Seed) -> SourceChans:
+    comm = Chan[Any]()
     nvim, chan = comm.nvim, comm.chan
     config = Config(**seed.config)
     ch = Event()

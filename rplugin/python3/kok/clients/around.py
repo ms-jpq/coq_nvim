@@ -78,15 +78,15 @@ async def main(nvim: Nvim, seed: Seed) -> SourceChans:
                 params = QueryParams(
                     context=context, prefix_matches=config.prefix_matches
                 )
-                resp = await req(params)
 
-                async for word in resp:
-                    sedit = SEdit(new_text=word)
-                    comp = Completion(position=position, sedit=sedit)
-                    try:
-                        await ch.send(comp)
-                    except QueueFull:
-                        break
+                async with await req(params) as resp:
+                    async for word in resp:
+                        sedit = SEdit(new_text=word)
+                        comp = Completion(position=position, sedit=sedit)
+                        try:
+                            await ch.send(comp)
+                        except QueueFull:
+                            break
 
     run_forever(ooda)
 

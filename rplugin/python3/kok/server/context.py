@@ -1,4 +1,4 @@
-from typing import Any, Dict, Optional, Set, Tuple
+from typing import Any, Mapping, Optional, Set, Tuple
 
 from pynvim import Nvim
 
@@ -76,7 +76,7 @@ def gen_ctx(
 async def gen_buf_ctx(nvim: Nvim) -> BufferContext:
     def cont() -> BufferContext:
         buffer = nvim.api.get_current_buf()
-        buf_var: Dict[str, Any] = (
+        buf_var: Mapping[str, Any] = (
             buf_get_var(nvim, buffer=buffer, name=buf_var_name) or {}
         )
         src = buf_var.get("sources") or {}

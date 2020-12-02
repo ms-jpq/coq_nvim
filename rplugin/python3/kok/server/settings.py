@@ -1,7 +1,7 @@
 from inspect import getmembers, isfunction
 from math import inf
 from os.path import exists, join
-from typing import Any, Callable, Dict, Iterator, Optional, Sequence, Tuple
+from typing import Any, Callable, Mapping, Iterator, Optional, Sequence, Tuple
 
 from ..clients import around, buffers, lsp, paths, tmux, tree_sitter
 from ..shared.consts import load_hierarchy, module_entry_point, settings_json
@@ -18,7 +18,7 @@ from .types import (
 )
 
 
-def load_source(config: Dict[str, Any]) -> SourceSpec:
+def load_source(config: Mapping[str, Any]) -> SourceSpec:
     spec = SourceSpec(
         main=config["main"],
         enabled=config["enabled"],
@@ -31,7 +31,7 @@ def load_source(config: Dict[str, Any]) -> SourceSpec:
     return spec
 
 
-def load_engine(config: Dict[str, Any]) -> SnippetEngineSpec:
+def load_engine(config: Mapping[str, Any]) -> SnippetEngineSpec:
     spec = SnippetEngineSpec(
         main=config["main"],
         enabled=config["enabled"],
@@ -102,9 +102,9 @@ def assemble(spec: SourceSpec, main: Factory, match: MatchOptions) -> SourceFact
     return fact
 
 
-def load_factories(settings: Settings) -> Dict[str, SourceFactory]:
+def load_factories(settings: Settings) -> Mapping[str, SourceFactory]:
     def cont() -> Iterator[Tuple[str, SourceFactory]]:
-        intrinsic: Dict[str, Factory] = {
+        intrinsic: Mapping[str, Factory] = {
             around.NAME: around.main,
             buffers.NAME: buffers.main,
             lsp.NAME: lsp.main,
@@ -135,9 +135,9 @@ def build(
     return fact
 
 
-def load_engines(settings: Settings) -> Dict[str, EngineFactory]:
+def load_engines(settings: Settings) -> Mapping[str, EngineFactory]:
     def cont() -> Iterator[Tuple[Sequence[str], EngineFactory]]:
-        intrinsic: Dict[str, SnippetEngineFactory] = {}
+        intrinsic: Mapping[str, SnippetEngineFactory] = {}
 
         for name, main in intrinsic.items():
             spec = settings.snippet_engines[name]

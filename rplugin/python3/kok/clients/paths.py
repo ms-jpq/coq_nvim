@@ -1,3 +1,4 @@
+from asyncio.queues import QueueFull
 from itertools import accumulate
 from os import listdir
 from os.path import curdir, dirname, isdir, join, realpath, sep
@@ -92,16 +93,19 @@ async def main(nvim: Nvim, seed: Seed) -> SourceChans:
             async with Chan[Completion]() as ch:
                 await recv_ch.send((uid, ch))
 
-                uuid, pos, before = context.uuid, context.position, context.line_before
+                pos, before = context.position, context.line_before
                 _, _, old_prefix = before.rpartition(sep)
                 paths = parse_paths(before)
-
                 prefix_char = next(iter(old_prefix), "")
+
                 for child in await find_children(paths):
                     if child.startswith(prefix_char):
                         sedit = SEdit(new_text=child)
-                        comp = Completion(uuid=uuid, position=pos, sedit=sedit)
-                        await ch.send(comp)
+                        comp = Completion(position=pos, sedit=sedit)
+                        try:
+                            await ch.send(comp)
+                        except QueueFull:
+                            break
 
     run_forever(ooda)
 
