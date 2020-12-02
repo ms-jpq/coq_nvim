@@ -1,11 +1,22 @@
 from asyncio import FIRST_COMPLETED, Queue, QueueEmpty, QueueFull, wait
 from collections import deque
 from random import choice
-from typing import Any, AsyncIterator, Deque, Sequence, Sized, TypeVar, cast
+from typing import (
+    Any,
+    AsyncIterator,
+    Awaitable,
+    Callable,
+    Deque,
+    Generic,
+    Sequence,
+    Sized,
+    TypeVar,
+    cast,
+)
 
 from .types import Channel
 
-T = TypeVar("T")
+T, U, V = TypeVar("T"), TypeVar("U"), TypeVar("V")
 
 
 class BaseChan(Channel[T]):
@@ -18,6 +29,12 @@ class BaseChan(Channel[T]):
     def __aiter__(self) -> AsyncIterator[T]:
         return self
 
+    async def __anext__(self) -> T:
+        try:
+            return await self.recv()
+        except QueueEmpty:
+            raise StopAsyncIteration()
+
 
 class Chan(BaseChan[T]):
     def __init__(self, size: int = 1) -> None:
@@ -29,12 +46,6 @@ class Chan(BaseChan[T]):
 
     def __len__(self) -> int:
         return self._q.qsize()
-
-    async def __anext__(self) -> T:
-        try:
-            return await self.recv()
-        except QueueEmpty:
-            raise StopAsyncIteration()
 
     def full(self) -> bool:
         return (not self) or self._q.full()
@@ -66,12 +77,6 @@ class _JoinedChan(BaseChan[T]):
 
     def __len__(self) -> int:
         return sum(map(len, (cast(Sized, self._q), *self._chans)))
-
-    async def __anext__(self) -> T:
-        try:
-            return await self.recv()
-        except QueueEmpty:
-            raise StopAsyncIteration()
 
     def full(self) -> bool:
         return all(chan.full() for chan in self._chans)
@@ -115,3 +120,39 @@ class _JoinedChan(BaseChan[T]):
 
 def join(chan: Channel[T], *chans: Channel[T]) -> Channel[T]:
     return _JoinedChan(chan, *chans)
+
+
+class _ReducedChan(BaseChan[V], Generic[T], Generic[U]):
+    def __init__(
+        self, reducer: Callable[[U, T], Awaitable[V]], state: U, chan: Channel[T]
+    ) -> None:
+        self._reducer = reducer
+        self._q = chan
+        self._state = state
+
+    def __bool__(self) -> bool:
+        return bool(self._q)
+
+    def __len__(self) -> int:
+        return len(self._q)
+
+    def full(self) -> bool:
+        return self._q.full()
+
+    async def close(self) -> None:
+        await self._q.close()
+        self._state = None
+
+    async def send(self, item: T) -> None:
+        await self._q.send(item)
+
+    async def recv(self) -> T:
+        curr = await self._q.recv()
+        nxt = await self._reducer(self._state, curr)
+        return nxt
+
+
+def reduce(
+    reducer: Callable[[U, T], Awaitable[V]], state: U, chan: Channel[T]
+) -> Channel[V]:
+    return _ReducedChan(reducer, state=state, chan=chan)
