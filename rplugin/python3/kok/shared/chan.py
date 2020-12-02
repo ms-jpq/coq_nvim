@@ -114,15 +114,16 @@ class _MergedChan(Channel[T]):
         if not self._chans or self._closed:
             raise QueueEmpty()
         else:
-            done, pending = await wait(
-                (chan.recv() for chan in self._chans), return_when=FIRST_COMPLETED
-            )
-            for co in pending:
-                co.cancel()
+            if not self._q:
+                done, pending = await wait(
+                    (chan.recv() for chan in self._chans), return_when=FIRST_COMPLETED
+                )
+                for co in pending:
+                    co.cancel()
+                for co in done:
+                    item = await co
+                    self._q.append(item)
 
-            for co in done:
-                item = await co
-                self._q.append(item)
             return self._q.popleft()
 
 
