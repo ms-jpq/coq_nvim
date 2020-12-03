@@ -65,42 +65,41 @@ class Chan(BaseChan[T]):
 
 class _JoinedChan(BaseChan[T]):
     def __init__(self, chan: Channel[T], *chans: Channel[T]) -> None:
-        self._q: Deque[T] = deque()
+        self._dq: Deque[T] = deque()
         self._chans: Sequence[Channel[T]] = tuple((chan, *chans))
 
     def __bool__(self) -> bool:
-        return any(chan for chan in self._chans)
+        return all(chan for chan in self._chans)
 
     def __len__(self) -> int:
-        return sum(map(len, (cast(Sized, self._q), *self._chans)))
+        return sum(map(len, (cast(Sized, self._dq), *self._chans)))
 
     async def close(self) -> None:
-        for chan in self._chans:
-            chan.close()
+        await gather(*(chan.close() for chan in self._chans))
         self._chans = ()
-        self._q.clear()
+        self._dq.clear()
 
     async def send(self, item: T) -> None:
         if not self:
             raise ChannelClosed()
         else:
-            await gather(chan.send(item) for chan in self._chans if chan)
+            await gather(*(chan.send(item) for chan in self._chans))
 
     async def recv(self) -> T:
         if not self:
             raise ChannelClosed()
         else:
-            if not self._q:
+            if not self._dq:
                 done, pending = await wait(
-                    (chan.recv() for chan in self._chans if chan),
+                    (chan.recv() for chan in self._chans),
                     return_when=FIRST_COMPLETED,
                 )
                 for co in pending:
                     co.cancel()
                 for item in await gather(*done):
-                    self._q.append(item)
+                    self._dq.append(item)
 
-            return self._q.popleft()
+            return self._dq.popleft()
 
 
 def join(chan: Channel[T], *chans: Channel[T]) -> Channel[T]:
