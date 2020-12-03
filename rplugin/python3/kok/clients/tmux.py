@@ -1,4 +1,4 @@
-from asyncio import QueueFull, as_completed, gather
+from asyncio import as_completed, gather
 from dataclasses import dataclass
 from os import linesep
 from shutil import which
@@ -14,6 +14,7 @@ from ..shared.logging import log
 from ..shared.parse import coalesce
 from ..shared.types import (
     Channel,
+    ChannelClosed,
     Completion,
     Context,
     SEdit,
@@ -141,7 +142,7 @@ async def main(nvim: Nvim, seed: Seed) -> Source:
                         comp = Completion(position=context.position, sedit=sedit)
                         try:
                             await ch.send(comp)
-                        except QueueFull:
+                        except ChannelClosed:
                             break
 
     run_forever(background_update, ooda)

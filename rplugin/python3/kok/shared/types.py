@@ -23,6 +23,10 @@ from pynvim import Nvim
 T = TypeVar("T")
 
 
+class ChannelClosed(Exception):
+    pass
+
+
 @runtime_checkable
 class Channel(Sized, AsyncIterable[T], Protocol[T]):
     @abstractmethod

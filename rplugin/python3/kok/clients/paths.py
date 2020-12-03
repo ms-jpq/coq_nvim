@@ -1,4 +1,3 @@
-from asyncio.queues import QueueFull
 from itertools import accumulate
 from os import listdir
 from os.path import curdir, dirname, isdir, join, realpath, sep
@@ -11,7 +10,15 @@ from ..shared.chan import Chan
 from ..shared.comm import make_ch
 from ..shared.core import run_forever
 from ..shared.da import run_in_executor
-from ..shared.types import Channel, Completion, Context, SEdit, Seed, SourceChans
+from ..shared.types import (
+    Channel,
+    ChannelClosed,
+    Completion,
+    Context,
+    SEdit,
+    Seed,
+    SourceChans,
+)
 
 NAME = "paths"
 
@@ -104,7 +111,7 @@ async def main(nvim: Nvim, seed: Seed) -> SourceChans:
                         comp = Completion(position=pos, sedit=sedit)
                         try:
                             await ch.send(comp)
-                        except QueueFull:
+                        except ChannelClosed:
                             break
 
     run_forever(ooda)

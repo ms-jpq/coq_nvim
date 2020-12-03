@@ -1,4 +1,4 @@
-from asyncio import FIRST_COMPLETED, Queue, QueueEmpty, QueueFull, wait
+from asyncio import FIRST_COMPLETED, Queue, wait
 from collections import deque
 from random import choice
 from typing import (
@@ -14,7 +14,7 @@ from typing import (
     cast,
 )
 
-from .types import Channel
+from .types import Channel, ChannelClosed
 
 T, U, V = TypeVar("T"), TypeVar("U"), TypeVar("V")
 
@@ -32,7 +32,7 @@ class BaseChan(Channel[T]):
     async def __anext__(self) -> T:
         try:
             return await self.recv()
-        except QueueEmpty:
+        except ChannelClosed:
             raise StopAsyncIteration()
 
 
@@ -55,13 +55,13 @@ class Chan(BaseChan[T]):
 
     async def send(self, item: T) -> None:
         if self._closed:
-            raise QueueFull()
+            raise ChannelClosed()
         else:
             await self._q.put(item)
 
     async def recv(self) -> T:
         if self._closed:
-            raise QueueEmpty()
+            raise ChannelClosed()
         else:
             item = await self._q.get()
             return item
@@ -93,7 +93,7 @@ class _JoinedChan(BaseChan[T]):
     async def send(self, item: T) -> None:
         self._prune()
         if not self:
-            raise QueueFull()
+            raise ChannelClosed()
         else:
             chan = next(
                 (chan for chan in self._chans if not chan.full()), choice(self._chans)
@@ -103,7 +103,7 @@ class _JoinedChan(BaseChan[T]):
     async def recv(self) -> T:
         self._prune()
         if not self:
-            raise QueueEmpty()
+            raise ChannelClosed()
         else:
             if not self._q:
                 done, pending = await wait(

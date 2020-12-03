@@ -1,17 +1,7 @@
 from collections import defaultdict
 from dataclasses import dataclass
-from asyncio  import QueueFull
 from numbers import Number
-from typing import (
-    Any,
-    Iterator,
-    Mapping,
-    Optional,
-    Sequence,
-    Tuple,
-    Union,
-    cast,
-)
+from typing import Any, Iterator, Mapping, Optional, Sequence, Tuple, Union, cast
 
 from pynvim import Nvim
 
@@ -21,15 +11,16 @@ from ..shared.core import run_forever
 from ..shared.nvim import call
 from ..shared.types import (
     Channel,
+    ChannelClosed,
     Completion,
     Context,
     LEdit,
     Position,
     SEdit,
     Seed,
-    SourceChans,
     Snippet,
     Source,
+    SourceChans,
 )
 
 NAME = "lsp"
@@ -190,7 +181,7 @@ async def main(nvim: Nvim, seed: Seed) -> Source:
                 ):
                     try:
                         await ch.send(comp)
-                    except QueueFull:
+                    except ChannelClosed:
                         break
 
     run_forever(ooda)

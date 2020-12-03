@@ -1,4 +1,4 @@
-from asyncio import QueueFull, gather
+from asyncio import  gather
 from dataclasses import dataclass
 from itertools import chain
 from os import linesep
@@ -14,7 +14,7 @@ from ..shared.core import run_forever
 from ..shared.da import tiktok
 from ..shared.nvim import call
 from ..shared.parse import coalesce
-from ..shared.types import Channel, Completion, Context, SEdit, Seed, SourceChans
+from ..shared.types import Channel, Completion, Context, SEdit, Seed, SourceChans,ChannelClosed
 from .pkgs.sql import new_db, QueryParams
 
 NAME = "buffers"
@@ -96,7 +96,7 @@ async def main(nvim: Nvim, seed: Seed) -> SourceChans:
                         comp = Completion(position=context.position, sedit=sedit)
                         try:
                             await ch.send(comp)
-                        except QueueFull:
+                        except ChannelClosed:
                             break
 
     run_forever(background_update, ooda)

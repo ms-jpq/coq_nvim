@@ -94,16 +94,6 @@ class Suggestion:
 
 
 @dataclass(frozen=True)
-class Metric:
-    prefix_matches: int
-    consecutive_matches: int
-    num_matches: int
-    density: float
-    matches: Mapping[int, str]
-    full_match: bool
-
-
-@dataclass(frozen=True)
 class Step:
     suggestion: Suggestion
     metric: Metric

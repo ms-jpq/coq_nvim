@@ -23,7 +23,7 @@ def _run_forever(
 
 async def run_forever(
     *things: Callable[[], Awaitable[None]],
-    retries: int = 3,
+    retries: int = 1,
     timeout: float = 1.0,
 ) -> Task:
     await gather(

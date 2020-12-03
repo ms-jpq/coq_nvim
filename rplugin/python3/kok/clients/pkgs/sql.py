@@ -1,14 +1,14 @@
-from asyncio import Lock, QueueFull
-from dataclasses import dataclass, field
+from asyncio import Lock
+from dataclasses import dataclass
 from os.path import dirname, join, realpath
 from typing import Iterable, Iterator, Tuple
 
 from ...shared.chan import Chan, Channel
 from ...shared.comm import make_ch
-from ...shared.core import run_forever, run_forevers
+from ...shared.core import run_forever
 from ...shared.da import slurp
 from ...shared.sql import SQL_TYPES, AConnection, sql_escape
-from ...shared.types import Context
+from ...shared.types import ChannelClosed, Context
 
 __sql__ = join(realpath(dirname(__file__)), "sql")
 
@@ -82,9 +82,9 @@ async def new_db() -> DBChans:
                         async for row in cursor:
                             try:
                                 await ch.send(row["word"])
-                            except QueueFull:
+                            except ChannelClosed:
                                 break
 
-    run_forevers(depop, pop, ask)
+    run_forever(depop, pop, ask)
 
     return DBChans(depop_ch=depop_ch, pop_ch=pop_ch, ask_ch=ask_ch, reply_ch=reply_ch)

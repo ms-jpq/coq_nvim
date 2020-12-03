@@ -1,5 +1,4 @@
 from asyncio import gather
-from asyncio.queues import QueueFull
 from dataclasses import dataclass
 from itertools import chain
 from os import linesep
@@ -15,6 +14,7 @@ from ..shared.nvim import call
 from ..shared.parse import coalesce
 from ..shared.types import (
     Channel,
+    ChannelClosed,
     Completion,
     Context,
     Position,
@@ -84,9 +84,8 @@ async def main(nvim: Nvim, seed: Seed) -> SourceChans:
                         comp = Completion(position=context.position, sedit=sedit)
                         try:
                             await ch.send(comp)
-                        except QueueFull:
+                        except ChannelClosed:
                             break
 
     run_forever(ooda)
-
     return SourceChans(comm_ch=Chan[Any](), send_ch=send_ch, recv_ch=recv_ch)
