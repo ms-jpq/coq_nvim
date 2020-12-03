@@ -1,12 +1,8 @@
-from inspect import getmembers, isfunction
 from math import inf
-from os.path import exists, join
-from typing import Any, Callable, Mapping, Iterator, Optional, Sequence, Tuple
+from typing import Any, Mapping, Sequence
 
-from ...clients import around, buffers, lsp, paths, tmux, tree_sitter
-from ...shared.consts import  settings_json
-from ...shared.da import load_json, load_module, merge_all
-from ...shared.types import Factory, Seed
+from ...shared.consts import settings_json
+from ...shared.da import load_json, merge_all
 from ..types import (
     DisplayOptions,
     MatchOptions,
@@ -29,7 +25,7 @@ def load_source(config: Mapping[str, Any]) -> SourceSpec:
     return spec
 
 
-def load_engine(config: Mapping[str, Any]) -> SnippetEngineSpec:
+def load_snippet_engine(config: Mapping[str, Any]) -> SnippetEngineSpec:
     spec = SnippetEngineSpec(
         main=config["main"],
         enabled=config["enabled"],
@@ -39,7 +35,7 @@ def load_engine(config: Mapping[str, Any]) -> SnippetEngineSpec:
     return spec
 
 
-def initial(configs: Sequence[Any]) -> Settings:
+def load(configs: Sequence[Any]) -> Settings:
     config = merge_all(load_json(settings_json), *configs, replace=True)
     display_o = config["display"]
     match_o = config["match"]
@@ -54,7 +50,8 @@ def initial(configs: Sequence[Any]) -> Settings:
     )
     sources = {name: load_source(conf) for name, conf in config["sources"].items()}
     snippet_engines = {
-        name: load_engine(conf) for name, conf in config["snippet_engines"].items()
+        name: load_snippet_engine(conf)
+        for name, conf in config["snippet_engines"].items()
     }
     settings = Settings(
         retries=config["retries"],
@@ -66,77 +63,3 @@ def initial(configs: Sequence[Any]) -> Settings:
         logging_level=config["logging_level"],
     )
     return settings
-
-
-
-
-def assemble(spec: SourceSpec, main: Factory, match: MatchOptions) -> SourceFactory:
-    limit = spec.limit or inf
-    rank = spec.rank or 100
-    config = spec.config
-    seed = Seed(
-        match=match,
-        limit=limit,
-        config=config,
-    )
-    fact = SourceFactory(
-        enabled=spec.enabled,
-        short_name=spec.short_name,
-        limit=limit,
-        unique=spec.unique,
-        rank=rank,
-        seed=seed,
-        manufacture=main,
-    )
-    return fact
-
-
-def load_factories(settings: Settings) -> Mapping[str, SourceFactory]:
-    def cont() -> Iterator[Tuple[str, SourceFactory]]:
-        intrinsic: Mapping[str, Factory] = {
-            around.NAME: around.main,
-            buffers.NAME: buffers.main,
-            lsp.NAME: lsp.main,
-            paths.NAME: paths.main,
-            tmux.NAME: tmux.main,
-            tree_sitter.NAME: tree_sitter.main,
-        }
-
-        for name, main in intrinsic.items():
-            spec = settings.sources[name]
-            yield name, assemble(spec, main=main, match=settings.match)
-
-        for name, spec in settings.sources.items():
-            if name not in intrinsic:
-                spec = settings.sources[name]
-                main = load_external(spec.main)
-                if main:
-                    yield name, assemble(spec, main=main, match=settings.match)
-
-    return {name: main for name, main in cont()}
-
-
-def build(
-    spec: SnippetEngineSpec, main: SnippetEngineFactory, match: MatchOptions
-) -> EngineFactory:
-    seed = SnippetSeed(config=spec.config, match=match)
-    fact = EngineFactory(seed=seed, manufacture=main)
-    return fact
-
-
-def load_engines(settings: Settings) -> Mapping[str, EngineFactory]:
-    def cont() -> Iterator[Tuple[Sequence[str], EngineFactory]]:
-        intrinsic: Mapping[str, SnippetEngineFactory] = {}
-
-        for name, main in intrinsic.items():
-            spec = settings.snippet_engines[name]
-            yield spec.kinds, build(spec, main=main, match=settings.match)
-
-        for name, spec in settings.snippet_engines.items():
-            if name not in intrinsic:
-                spec = settings.snippet_engines[name]
-                main = load_external(spec.main)
-                if main:
-                    yield spec.kinds, build(spec, main=main, match=settings.match)
-
-    return {name: main for names, main in cont() for name in names}

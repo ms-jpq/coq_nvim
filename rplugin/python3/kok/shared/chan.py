@@ -1,6 +1,6 @@
 from asyncio import FIRST_COMPLETED, Queue, wait
+from asyncio.tasks import gather
 from collections import deque
-from random import choice
 from typing import (
     Any,
     AsyncIterator,
@@ -95,10 +95,7 @@ class _JoinedChan(BaseChan[T]):
         if not self:
             raise ChannelClosed()
         else:
-            chan = next(
-                (chan for chan in self._chans if not chan.full()), choice(self._chans)
-            )
-            await chan.send(item)
+            await gather(chan.send(item) for chan in self._chans)
 
     async def recv(self) -> T:
         self._prune()

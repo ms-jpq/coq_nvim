@@ -65,13 +65,13 @@ class VimCompletion:
     user_data: Optional[Any] = None
 
 
-def serialize(comp: VimCompletion) -> Mapping[str, Any]:
+def _serialize(comp: VimCompletion) -> Mapping[str, Any]:
     serialized = {k: v for k, v in asdict(comp).items() if v is not None}
     return serialized
 
 
 async def complete(nvim: Nvim, col: int, comp: Iterator[VimCompletion]) -> None:
-    serialized = tuple(map(serialize, comp))
+    serialized = tuple(map(_serialize, comp))
 
     def cont() -> None:
         try:

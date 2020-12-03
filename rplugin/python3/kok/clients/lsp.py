@@ -1,6 +1,5 @@
 from collections import defaultdict
 from dataclasses import dataclass
-from numbers import Number
 from typing import Any, Iterator, Mapping, Optional, Sequence, Tuple, Union, cast
 
 from pynvim import Nvim
@@ -58,19 +57,6 @@ async def ask(nvim: Nvim, context: Context, uid: int) -> None:
     await call(nvim, cont)
 
 
-def parse_resp_to_rows(resp: Any) -> Sequence[Any]:
-    if resp is None:
-        return ()
-    elif type(resp) is dict:
-        return resp["items"]
-    elif type(resp) is list:
-        return resp
-    elif isinstance(resp, Number):
-        return (resp,)
-    else:
-        raise ValueError(f"unknown LSP resp - {type(resp)}")
-
-
 def is_snippet(row: Mapping[str, Any], insert_lookup: Mapping[int, str]) -> bool:
     fmt = row.get("insertTextFormat")
     return insert_lookup[cast(int, fmt)] != "PlainText"
@@ -121,15 +107,23 @@ def parse_textedit(row: Mapping[str, Any]) -> Sequence[LEdit]:
     return tuple(cont())
 
 
-def parse_rows(
-    rows: Sequence[Mapping[str, Any]],
+def parse_resp_to_rows(
+    resp: Any,
     context: Context,
     entry_lookup: Mapping[int, str],
     insert_lookup: Mapping[int, str],
 ) -> Iterator[Completion]:
-    position = context.position
+    def extract() -> Sequence[Mapping[str, Any]]:
+        if resp is None:
+            return ()
+        elif type(resp) is dict:
+            return resp["items"]
+        elif type(resp) is list:
+            return resp
+        else:
+            raise ValueError(f"unknown LSP resp - {type(resp)}")
 
-    for row in rows:
+    for row in extract():
         label = row.get("label")
         sortby = row.get("sortText")
         r_kind = row.get("kind")
@@ -149,7 +143,7 @@ def parse_rows(
             else None
         )
         yield Completion(
-            position=position,
+            position=context.position,
             label=label,
             sortby=sortby,
             kind=kind,
@@ -162,19 +156,24 @@ def parse_rows(
 
 async def main(nvim: Nvim, seed: Seed) -> Source:
     send_ch, recv_ch = make_ch(Context, Channel[Completion])
-    comm = Chan[Tuple[int, Any]]()
     entry_kind, insert_kind = await init_lua(nvim)
+
+    ask_ch, reply_ch = make_ch(Context, Any)
+    req = schedule(ask=ask_ch, reply=reply_ch)
+
+    async def background_update() -> None:
+        async for uid, context in ask_ch:
+            await ask(nvim, context=context, uid=uid)
 
     async def ooda() -> None:
         async for uid, context in send_ch:
             async with Chan[Completion]() as ch:
                 await recv_ch.send((uid, ch))
-                await ask(nvim, context=context, uid=uid)
-                resp = await comm.recv()
-                rows = parse_resp_to_rows(resp)
 
-                for comp in parse_rows(
-                    rows,
+                resp = await req(context)
+
+                for comp in parse_resp_to_rows(
+                    resp,
                     context=context,
                     entry_lookup=entry_kind,
                     insert_lookup=insert_kind,
@@ -184,5 +183,5 @@ async def main(nvim: Nvim, seed: Seed) -> Source:
                     except ChannelClosed:
                         break
 
-    run_forever(ooda)
-    return SourceChans(comm_ch=Chan[Any](), send_ch=send_ch, recv_ch=recv_ch)
+    run_forever(background_update, ooda)
+    return SourceChans(comm_ch=reply_ch, send_ch=send_ch, recv_ch=recv_ch)

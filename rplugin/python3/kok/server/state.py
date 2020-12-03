@@ -3,7 +3,7 @@ from enum import Enum, auto
 from typing import Iterator
 
 from ..shared.chan import Chan
-from ..shared.core import run_forevers
+from ..shared.core import run_forever
 from ..shared.types import Channel
 
 
@@ -53,7 +53,7 @@ def state() -> StateChans:
         while True:
             yield state != State.comp_inserted
 
-    run_forevers(comp_inserted, text_changed, comp_changed)
+    run_forever(comp_inserted, text_changed, comp_changed)
 
     return StateChans(
         char_inserted_ch=char_inserted_ch,
