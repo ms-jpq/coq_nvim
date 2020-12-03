@@ -44,7 +44,10 @@ class Chan(BaseChan[T]):
         return not self._closed
 
     def __len__(self) -> int:
-        return self._q.qsize()
+        if self:
+            return self._q.qsize()
+        else:
+            return 0
 
     async def close(self) -> None:
         self._closed = True
@@ -80,26 +83,20 @@ class _JoinedChan(BaseChan[T]):
         self._dq.clear()
 
     async def send(self, item: T) -> None:
-        if not self:
-            raise ChannelClosed()
-        else:
-            await gather(*(chan.send(item) for chan in self._chans))
+        await gather(*(chan.send(item) for chan in self._chans))
 
     async def recv(self) -> T:
-        if not self:
-            raise ChannelClosed()
-        else:
-            if not self._dq:
-                done, pending = await wait(
-                    (chan.recv() for chan in self._chans),
-                    return_when=FIRST_COMPLETED,
-                )
-                for co in pending:
-                    co.cancel()
-                for item in await gather(*done):
-                    self._dq.append(item)
+        if not self._dq:
+            done, pending = await wait(
+                (chan.recv() for chan in self._chans),
+                return_when=FIRST_COMPLETED,
+            )
+            for co in pending:
+                co.cancel()
+            for item in await gather(*done):
+                self._dq.append(item)
 
-            return self._dq.popleft()
+        return self._dq.popleft()
 
 
 def join(chan: Channel[T], *chans: Channel[T]) -> Channel[T]:
