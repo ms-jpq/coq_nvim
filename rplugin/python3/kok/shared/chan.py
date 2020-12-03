@@ -10,7 +10,6 @@ from typing import (
     Callable,
     Deque,
     Generic,
-    Sequence,
     Set,
     Sized,
     Tuple,
@@ -80,7 +79,7 @@ class _JoinedChan(BaseChan[T]):
         self._chans: Set[Channel[T]] = {chan, *chans}
         self._available_ch: Set[Channel] = set()
         self._done: Deque[T] = deque()
-        self._pending: Sequence[Future[Tuple[Channel[T], T]]] = ()
+        self._pending: Set[Future[Tuple[Channel[T], T]]] = ()
 
     def __bool__(self) -> bool:
         return all(chan for chan in self._chans)
@@ -90,10 +89,8 @@ class _JoinedChan(BaseChan[T]):
 
     async def close(self) -> None:
         await gather(*(chan.close() for chan in self._chans))
-        self._chans.clear()
-        self._available_ch.clear()
-        self._done.clear()
-        self._pending = ()
+        for mut_seq in (self._chans, self._available_ch, self._done, self._pending):
+            mut_seq.clear()
 
     async def send(self, item: T) -> None:
         await gather(*(chan.send(item) for chan in self._chans))
