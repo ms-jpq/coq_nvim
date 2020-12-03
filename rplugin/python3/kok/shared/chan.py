@@ -1,14 +1,19 @@
 from asyncio import FIRST_COMPLETED, Queue, wait
+from asyncio.futures import Future
 from asyncio.tasks import gather
 from collections import deque
+from itertools import chain
 from typing import (
     Any,
     AsyncIterator,
+    Awaitable,
     Callable,
     Deque,
     Generic,
     Sequence,
+    Set,
     Sized,
+    Tuple,
     TypeVar,
     cast,
 )
@@ -66,37 +71,55 @@ class Chan(BaseChan[T]):
             return item
 
 
+async def _with_ctx(ctx: T, co: Awaitable[U]) -> Tuple[T, U]:
+    return (ctx, await co)
+
+
 class _JoinedChan(BaseChan[T]):
     def __init__(self, chan: Channel[T], *chans: Channel[T]) -> None:
-        self._dq: Deque[T] = deque()
-        self._chans: Sequence[Channel[T]] = tuple((chan, *chans))
+        self._chans: Set[Channel[T]] = {chan, *chans}
+        self._available_ch: Set[Channel] = set()
+        self._done: Deque[T] = deque()
+        self._pending: Sequence[Future[Tuple[Channel[T], T]]] = ()
 
     def __bool__(self) -> bool:
         return all(chan for chan in self._chans)
 
     def __len__(self) -> int:
-        return sum(map(len, (cast(Sized, self._dq), *self._chans)))
+        return sum(map(len, (cast(Sized, self._done), *self._chans)))
 
     async def close(self) -> None:
         await gather(*(chan.close() for chan in self._chans))
-        self._chans = ()
-        self._dq.clear()
+        self._chans.clear()
+        self._available_ch.clear()
+        self._done.clear()
+        self._pending = ()
 
     async def send(self, item: T) -> None:
         await gather(*(chan.send(item) for chan in self._chans))
 
     async def recv(self) -> T:
-        if not self._dq:
+        if not self._done:
             done, pending = await wait(
-                (chan.recv() for chan in self._chans),
+                chain(
+                    self._pending,
+                    (
+                        _with_ctx(chan, co=chan.recv())
+                        for chan in self._chans
+                        if chan in self._available_ch
+                    ),
+                ),
                 return_when=FIRST_COMPLETED,
             )
-            for co in pending:
-                co.cancel()
-            for item in await gather(*done):
-                self._dq.append(item)
 
-        return self._dq.popleft()
+            self._pending = pending
+            self._available_ch.clear()
+            for co in done:
+                chan, item = await co
+                self._available_ch.add(chan)
+                self._done.append(item)
+
+        return self._done.pop()
 
 
 def join(chan: Channel[T], *chans: Channel[T]) -> Channel[T]:
