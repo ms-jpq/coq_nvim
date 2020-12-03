@@ -3,17 +3,15 @@ from math import inf
 from os.path import exists, join
 from typing import Any, Callable, Mapping, Iterator, Optional, Sequence, Tuple
 
-from ..clients import around, buffers, lsp, paths, tmux, tree_sitter
-from ..shared.consts import load_hierarchy, module_entry_point, settings_json
-from ..shared.da import load_json, load_module, merge_all
-from ..shared.types import Factory, Seed
-from .types import (
+from ...clients import around, buffers, lsp, paths, tmux, tree_sitter
+from ...shared.consts import  settings_json
+from ...shared.da import load_json, load_module, merge_all
+from ...shared.types import Factory, Seed
+from ..types import (
     DisplayOptions,
-    EngineFactory,
     MatchOptions,
     Settings,
     SnippetEngineSpec,
-    SourceFactory,
     SourceSpec,
 )
 
@@ -70,15 +68,6 @@ def initial(configs: Sequence[Any]) -> Settings:
     return settings
 
 
-def load_external(main_name: str) -> Optional[Callable[..., Any]]:
-    for path in load_hierarchy:
-        candidate = join(path, main_name)
-        if exists(candidate):
-            mod = load_module(candidate)
-            for member_name, func in getmembers(mod, isfunction):
-                if member_name == module_entry_point:
-                    return func
-    return None
 
 
 def assemble(spec: SourceSpec, main: Factory, match: MatchOptions) -> SourceFactory:

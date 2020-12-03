@@ -2,7 +2,16 @@ from dataclasses import dataclass, field
 from math import inf
 from typing import Any, Mapping, Optional, Sequence
 
-from ..shared.types import LEdit, MatchOptions, MEdit, Position, SEdit, Seed, Snippet
+from ..shared.types import (
+    LEdit,
+    MatchOptions,
+    MEdit,
+    Position,
+    SEdit,
+    Snippet,
+    SnippetChans,
+    SourceChans,
+)
 
 
 @dataclass(frozen=True)
@@ -49,29 +58,15 @@ class Settings:
 
 
 @dataclass(frozen=True)
-class SourceFactory:
-    enabled: bool
-    short_name: str
-    limit: float
-    rank: int
-    unique: bool
-    seed: Seed
+class SourceBundle:
+    spec: SourceSpec
+    chans: SourceChans
 
 
 @dataclass(frozen=True)
-class SnippetEngineFactory:
-    seed: Seed
-
-
-@dataclass(frozen=True)
-class BufferSourceSpec:
-    enabled: Optional[bool]
-
-
-@dataclass(frozen=True)
-class BufferContext:
-    timeout: float = inf
-    sources: Mapping[str, BufferSourceSpec] = field(default_factory=dict)
+class SnippetEngineBundle:
+    spec: SnippetEngineSpec
+    chans: SnippetChans
 
 
 @dataclass(frozen=True)
@@ -91,12 +86,6 @@ class Suggestion:
     medit: Optional[MEdit]
     ledits: Sequence[LEdit]
     snippet: Optional[Snippet]
-
-
-@dataclass(frozen=True)
-class Step:
-    suggestion: Suggestion
-    metric: Metric
 
 
 @dataclass(frozen=True)
