@@ -79,7 +79,7 @@ class _JoinedChan(BaseChan[T]):
         self._chans: Set[Channel[T]] = {chan, *chans}
         self._available_ch: Set[Channel] = set()
         self._done: Deque[T] = deque()
-        self._pending: Set[Future[Tuple[Channel[T], T]]] = ()
+        self._pending: Set[Future[Tuple[Channel[T], T]]] = set()
 
     def __bool__(self) -> bool:
         return all(chan for chan in self._chans)
@@ -116,7 +116,7 @@ class _JoinedChan(BaseChan[T]):
                 self._available_ch.add(chan)
                 self._done.append(item)
 
-        return self._done.pop()
+        return self._done.popleft()
 
 
 def join(chan: Channel[T], *chans: Channel[T]) -> Channel[T]:
