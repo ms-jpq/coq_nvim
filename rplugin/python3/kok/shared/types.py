@@ -46,10 +46,6 @@ class Channel(Sized, AsyncIterable[T], Protocol[T]):
         ...
 
     @abstractmethod
-    def full(self) -> bool:
-        ...
-
-    @abstractmethod
     async def close(self) -> None:
         ...
 
