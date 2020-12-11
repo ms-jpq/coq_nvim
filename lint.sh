@@ -6,11 +6,25 @@ set -o pipefail
 
 cd "$(dirname "$0")" || exit 1
 
-cd "rplugin/python3/kok" || exit 1
 
-FILES=(
-  *.py
-  **/*.py
-  **/**/*.py
-)
-mypy -- "${FILES[@]}"
+readarray -t -d $'\0' TRACKED < <(git ls-files --exclude-standard -z)
+readarray -t -d $'\0' UNTRACKED < <(git ls-files --exclude-standard --others -z)
+
+ALL_FILES=("${TRACKED[@]}" "${UNTRACKED[@]}")
+PYTHON_FILES=()
+for FILE in "${ALL_FILES[@]}";
+do
+  case "$FILE" in
+    *.py)
+      if [[ -f "$FILE" ]]
+      then
+        PYTHON_FILES+=("$PWD/$FILE")
+      fi
+      ;;
+    *)
+      ;;
+  esac
+done
+
+
+mypy -- "${PYTHON_FILES[@]}"
