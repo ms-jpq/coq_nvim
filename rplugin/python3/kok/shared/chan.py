@@ -1,5 +1,6 @@
-from asyncio import FIRST_COMPLETED, Queue, wait
+from asyncio import FIRST_COMPLETED, wait
 from asyncio.futures import Future
+from asyncio.locks import Condition
 from asyncio.tasks import gather
 from collections import deque
 from itertools import chain
@@ -40,34 +41,57 @@ class BaseChan(Channel[T]):
 
 
 class Chan(BaseChan[T]):
-    def __init__(self) -> None:
+    def __init__(self, maxlen: int = 1) -> None:
         self._closed = False
-        self._q: Queue = Queue(maxsize=1)
+        self._send_cond = Condition()
+        self._recv_cond = Condition()
+        self._q: Deque[T] = deque(maxlen=max(1, maxlen))
 
     def __bool__(self) -> bool:
         return not self._closed
 
     def __len__(self) -> int:
         if self:
-            return self._q.qsize()
+            return len(self._q)
         else:
             return 0
 
     async def close(self) -> None:
         self._closed = True
+        async with self._send_cond:
+            self._send_cond.notify_all()
+        async with self._recv_cond:
+            self._recv_cond.notify_all()
 
     async def send(self, item: T) -> None:
         if not self:
             raise ChannelClosed()
+        elif len(self) < self._q.maxlen:
+            self._q.append(item)
+            self._recv_cond.notify()
         else:
-            await self._q.put(item)
+            async with self._send_cond:
+                await self._send_cond.wait()
+                if not self:
+                    raise ChannelClosed()
+                else:
+                    self._q.append(item)
+                    self._recv_cond.notify()
 
     async def recv(self) -> T:
         if not self:
             raise ChannelClosed()
+        elif len(self):
+            self._send_cond.notify()
+            return self._q.popleft()
         else:
-            item = await self._q.get()
-            return item
+            async with self._recv_cond:
+                await self._recv_cond.wait()
+                if not self:
+                    raise ChannelClosed()
+                else:
+                    self._send_cond.notify()
+                    return self._q.popleft()
 
 
 async def _with_ctx(ctx: T, co: Awaitable[U]) -> Tuple[T, U]:
