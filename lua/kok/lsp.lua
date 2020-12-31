@@ -6,12 +6,7 @@ local linesep = "\n"
 local cancel = function () end
 
 
-local notify = function (request_id, ret)
-  fn._KoKnotify("lsp", request_id, ret)
-end
-
-
-local list_comp_candidates = function (request_id, row, col)
+local list_comp_candidates = function (chan_id, request_id, row, col)
   if cancel then
     cancel()
   end
@@ -25,7 +20,7 @@ local list_comp_candidates = function (request_id, row, col)
     local params = {position = position, textDocument=text_doc}
 
     _, cancel = lsp.buf_request(0, "textDocument/completion", params, function (_, _, ret)
-      notify(request_id, ret)
+      vim.notify(chan_id, "", ret)
     end)
   end
 end

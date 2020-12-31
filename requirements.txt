@@ -1,0 +1,3 @@
+git+https://github.com/ms-jpq/std2.git
+git+https://github.com/ms-jpq/pynvim_pp.git
+pynvim
