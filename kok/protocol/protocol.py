@@ -2,9 +2,9 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import Enum, auto
-from typing import Annotated, ClassVar, Literal, Protocol, Type
+from typing import Annotated, ClassVar, Literal, Protocol, Sequence, Type
 
-from .types import Context
+from .types import Completion, Context, MatchOptions
 
 """
 Newline seperated JSON RPC
@@ -16,43 +16,49 @@ Basic Layout
 """
 
 
-@dataclass(frozen=True)
-class Msg(Protocol):
+class Message(Protocol):
     """
     Messages are not ordered
     """
 
-    m_type: Annotated[str, "Must be a Literal"]
-    uid: Annotated[int, "Must be unique between Request / Response"]
+    @property
+    def m_type(self) -> Annotated[str, "Must be a Literal"]:
+        ...
+
+    @property
+    def uid(self) -> Annotated[int, "Must be unique between Request / Response"]:
+        ...
 
 
-@dataclass(frozen=True)
-class Response(Protocol):
+class Response(Message, Protocol):
     """
     Each Request must receive a Response
     """
 
 
-@dataclass(frozen=True)
-class Request(Protocol):
+class Request(Message, Protocol):
     """
     Each Request type has a single vaild Response Type
     """
 
-    resp_type: ClassVar[Type] = Response
+    resp_type: ClassVar[Type[Message]] = Response
 
 
-@dataclass(frozen=True)
-class ClientSent(Protocol):
+class ClientSent(Message, Protocol):
     """
     Can only be sent from client
     """
 
 
-@dataclass(frozen=True)
-class ServerSent(Protocol):
+class ServerSent(Message, Protocol):
     """
     Can only be sent from server
+    """
+
+
+class Broadcast(ServerSent, Request, Protocol):
+    """
+    Sent to all clients
     """
 
 
@@ -78,6 +84,7 @@ class Acknowledge(ServerSent, Response):
 
     connection_type: ConnectionType
     address: str
+    options: MatchOptions
 
     uid: Literal[0] = 0
     m_type: Literal["ACK"] = "ACK"
@@ -92,31 +99,31 @@ class Hello(ClientSent, Request):
     name: str
     short_name: str
 
-    resp_type: ClassVar[Type] = Acknowledge
     uid: Literal[0] = 0
     m_type: Literal["HELO"] = "HELO"
+    resp_type: ClassVar[Type[Message]] = Acknowledge
 
 
 """
 After Handshake
 """
 
-"""
-Except for Handshake
-"""
-
 
 @dataclass(frozen=True)
 class CompletionResponse(ClientSent, Response):
-    complete: Annotated[bool, ""]
+    has_pending: Annotated[bool, ""]
+    completions: Sequence[Completion]
+
+    m_type: Literal["CompletionResponse"] = "CompletionResponse"
 
 
 @dataclass(frozen=True)
-class CompletionRequest(ClientSent, Request):
-    deadline: Annotated[float, "Seconds since 1970"]
-
+class CompletionRequest(Broadcast):
+    deadline: Annotated[float, "Seconds since UNIX epoch"]
     context: Context
-    pass
+
+    m_type: Literal["CompletionRequest"] = "CompletionRequest"
+    resp_type: ClassVar[Type[Message]] = CompletionResponse
 
 
 @dataclass(frozen=True)

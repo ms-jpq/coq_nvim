@@ -1,5 +1,12 @@
 from dataclasses import dataclass
-from typing import Annotated, Literal
+from typing import Annotated, FrozenSet, Literal, Optional, Protocol, Sequence, Union
+
+
+@dataclass(frozen=True)
+class MatchOptions:
+    unifying_chars: Annotated[
+        FrozenSet[str], "Alphanumeric chars linked by these chars constitute as words"
+    ]
 
 
 @dataclass(frozen=True)
@@ -51,18 +58,24 @@ class Context:
     words_syms_after_normalized: str
 
 
+class HasEditType(Protocol):
+    @property
+    def edit_type(self) -> str:
+        ...
+
+
 @dataclass(frozen=True)
 class _BaseEdit:
     new_text: str
 
 
 @dataclass(frozen=True)
-class Edit(_BaseEdit):
+class Edit(_BaseEdit, HasEditType):
     edit_type: Literal["Edit"] = "Edit"
 
 
 @dataclass(frozen=True)
-class ContextualEdit(_BaseEdit):
+class ContextualEdit(_BaseEdit, HasEditType):
     """
     <new_prefix>🐭<new_suffix>
     """
@@ -76,7 +89,7 @@ class ContextualEdit(_BaseEdit):
 
 
 @dataclass(frozen=True)
-class RangeEdit(_BaseEdit):
+class RangeEdit(_BaseEdit, HasEditType):
     """
     End exclusve, like LSP
     """
@@ -88,7 +101,18 @@ class RangeEdit(_BaseEdit):
 
 
 @dataclass(frozen=True)
-class Snippet:
+class Snippet(_BaseEdit, HasEditType):
     grammar: Annotated[str, "ie. LSP, Texmate, Ultisnip, etc"]
-    match: str
-    content: str
+
+    edit_type: Literal["Snippet"] = "Snippet"
+
+
+@dataclass(frozen=True)
+class Completion:
+    position: Position
+    primary_edit: Union[Edit, ContextualEdit, Snippet, None]
+    secondary_edits: Sequence[RangeEdit] = ()
+    label: Optional[str] = None
+    sortby: Optional[str] = None
+    kind: Optional[str] = None
+    doc: Optional[str] = None
