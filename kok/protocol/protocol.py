@@ -2,9 +2,9 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import Enum, auto
-from typing import Annotated, ClassVar, Literal, Protocol, Sequence, Type
+from typing import Annotated, ClassVar, Literal, Optional, Protocol, Sequence, Type
 
-from .types import Completion, Context, MatchOptions
+from .types import Completion, Context, ContextualEdit, MatchOptions, Snippet
 
 """
 Newline seperated JSON RPC
@@ -16,17 +16,28 @@ Basic Layout
 """
 
 
-class Message(Protocol):
+class HasID(Protocol):
+    """
+    ID must be unique between Request / Response pairs
+    """
+
+    @property
+    def uid(self) -> int:
+        ...
+
+
+@dataclass(frozen=True)
+class _HasID(HasID):
+    uid: int
+
+
+class Message(HasID, Protocol):
     """
     Messages are not ordered
     """
 
     @property
     def m_type(self) -> Annotated[str, "Must be a Literal"]:
-        ...
-
-    @property
-    def uid(self) -> Annotated[int, "Must be unique between Request / Response"]:
         ...
 
 
@@ -41,7 +52,7 @@ class Request(Message, Protocol):
     Each Request type has a single vaild Response Type
     """
 
-    resp_type: ClassVar[Type[Message]] = Response
+    resp_type: ClassVar[Type] = Response
 
 
 class ClientSent(Message, Protocol):
@@ -105,20 +116,20 @@ class Hello(ClientSent, Request):
 
 
 """
-After Handshake
+Completion Request / Response
 """
 
 
 @dataclass(frozen=True)
-class CompletionResponse(ClientSent, Response):
-    has_pending: Annotated[bool, ""]
+class CompletionResponse(ClientSent, Response, _HasID):
+    has_pending: bool
     completions: Sequence[Completion]
 
     m_type: Literal["CompletionResponse"] = "CompletionResponse"
 
 
 @dataclass(frozen=True)
-class CompletionRequest(Broadcast):
+class CompletionRequest(Broadcast, _HasID):
     deadline: Annotated[float, "Seconds since UNIX epoch"]
     context: Context
 
@@ -127,5 +138,28 @@ class CompletionRequest(Broadcast):
 
 
 @dataclass(frozen=True)
-class EditRequest(ClientSent, Request):
-    pass
+class FurtherCompletionRequest(Broadcast, _HasID):
+    deadline: Annotated[float, "Seconds since UNIX epoch"]
+    parent_uid: Annotated[int, "UID of parent Response"]
+
+    m_type: Literal["FurtherCompletionRequest"] = "FurtherCompletionRequest"
+    resp_type: ClassVar[Type[Message]] = CompletionResponse
+
+
+"""
+Snippet Request / Response
+"""
+
+
+@dataclass(frozen=True)
+class ParseResponse(ClientSent, Response, _HasID):
+    edit: Optional[ContextualEdit]
+
+    m_type: Literal["ParseResponse"] = "ParseResponse"
+
+
+@dataclass(frozen=True)
+class ParseRequest(Broadcast, _HasID):
+    snippet: Snippet
+
+    m_type: Literal["ParseRequest"] = "ParseRequest"
