@@ -1,17 +1,25 @@
 from dataclasses import dataclass
+from typing import Annotated, Literal
 
 
 @dataclass(frozen=True)
 class Position:
+    """
+    0 based Index
+    """
+
     row: int
     col: int
 
 
-# |...                            line                            ...|
-# |...        line_before          🐭          line_after         ...|
-# |...   <syms_before><words_before>🐭<words_after><syms_after>   ...|
 @dataclass(frozen=True)
 class Context:
+    """
+    |...                            line                            ...|
+    |...        line_before           🐭          line_after        ...|
+    |...   <syms_before><words_before>🐭<words_after><syms_after>   ...|
+    """
+
     filename: str
     filetype: str
 
@@ -44,28 +52,43 @@ class Context:
 
 
 @dataclass(frozen=True)
-class SEdit:
+class _BaseEdit:
     new_text: str
 
 
 @dataclass(frozen=True)
-class MEdit:
+class Edit(_BaseEdit):
+    edit_type: Literal["Edit"] = "Edit"
+
+
+@dataclass(frozen=True)
+class ContextualEdit(_BaseEdit):
+    """
+    <new_prefix>🐭<new_suffix>
+    """
+
     old_prefix: str
     new_prefix: str
     old_suffix: str
     new_suffix: str
 
+    edit_type: Literal["ContextualEdit"] = "ContextualEdit"
 
-# end exclusve
+
 @dataclass(frozen=True)
-class LEdit:
+class RangeEdit(_BaseEdit):
+    """
+    End exclusve, like LSP
+    """
+
     begin: Position
     end: Position
-    new_text: str
+
+    edit_type: Literal["RangeEdit"] = "RangeEdit"
 
 
 @dataclass(frozen=True)
 class Snippet:
-    kind: str
+    grammar: Annotated[str, "ie. LSP, Texmate, Ultisnip, etc"]
     match: str
     content: str

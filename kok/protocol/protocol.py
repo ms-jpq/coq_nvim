@@ -4,6 +4,8 @@ from dataclasses import dataclass
 from enum import Enum, auto
 from typing import Annotated, ClassVar, Literal, Protocol, Type
 
+from .types import Context
+
 """
 Newline seperated JSON RPC
 """
@@ -48,7 +50,7 @@ class ClientSent(Protocol):
 
 
 @dataclass(frozen=True)
-class ServerSent(Msg, Protocol):
+class ServerSent(Protocol):
     """
     Can only be sent from server
     """
@@ -61,7 +63,7 @@ Hand Shake
 
 class ConnectionType(Enum):
     """
-    Enums are serialized by the name not value
+    Enums are serialized by name not value
     """
 
     unix = auto()
@@ -69,7 +71,7 @@ class ConnectionType(Enum):
 
 
 @dataclass(frozen=True)
-class ACK(ServerSent, Response):
+class Acknowledge(ServerSent, Response):
     """
     Server must announce a connection mechanism
     """
@@ -82,7 +84,7 @@ class ACK(ServerSent, Response):
 
 
 @dataclass(frozen=True)
-class HELO(ClientSent, Request):
+class Hello(ClientSent, Request):
     """
     Client must make first request to server via Neovim's RPC mechaism
     """
@@ -90,15 +92,33 @@ class HELO(ClientSent, Request):
     name: str
     short_name: str
 
-    resp_type: ClassVar[Type] = ACK
+    resp_type: ClassVar[Type] = Acknowledge
     uid: Literal[0] = 0
     m_type: Literal["HELO"] = "HELO"
 
 
 """
+After Handshake
+"""
+
+"""
+Except for Handshake
 """
 
 
 @dataclass(frozen=True)
-class EditRequest:
+class CompletionResponse(ClientSent, Response):
+    complete: Annotated[bool, ""]
+
+
+@dataclass(frozen=True)
+class CompletionRequest(ClientSent, Request):
+    deadline: Annotated[float, "Seconds since 1970"]
+
+    context: Context
+    pass
+
+
+@dataclass(frozen=True)
+class EditRequest(ClientSent, Request):
     pass
