@@ -2,7 +2,16 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import Enum, auto
-from typing import Annotated, ClassVar, Literal, Optional, Protocol, Sequence, Type
+from typing import (
+    Annotated,
+    ClassVar,
+    Literal,
+    Optional,
+    Protocol,
+    Sequence,
+    Type,
+    runtime_checkable,
+)
 
 from .types import Completion, Context, ContextualEdit, MatchOptions, Snippet
 
@@ -16,6 +25,7 @@ Basic Layout
 """
 
 
+@runtime_checkable
 class HasID(Protocol):
     """
     ID must be unique between Request / Response pairs
@@ -31,7 +41,8 @@ class _HasID(HasID):
     uid: int
 
 
-class Message(HasID, Protocol):
+@runtime_checkable
+class Message(Protocol):
     """
     Messages are not ordered
     """
@@ -41,13 +52,22 @@ class Message(HasID, Protocol):
         ...
 
 
-class Response(Message, Protocol):
+@runtime_checkable
+class Notification(Message, Protocol):
+    """
+    Notifications can be ignored
+    """
+
+
+@runtime_checkable
+class Response(Message, HasID, Protocol):
     """
     Each Request must receive a Response
     """
 
 
-class Request(Message, Protocol):
+@runtime_checkable
+class Request(Message, HasID, Protocol):
     """
     Each Request type has a single vaild Response Type
     """
@@ -55,19 +75,22 @@ class Request(Message, Protocol):
     resp_type: ClassVar[Type] = Response
 
 
+@runtime_checkable
 class ClientSent(Message, Protocol):
     """
     Can only be sent from client
     """
 
 
+@runtime_checkable
 class ServerSent(Message, Protocol):
     """
     Can only be sent from server
     """
 
 
-class Broadcast(ServerSent, Request, Protocol):
+@runtime_checkable
+class Broadcast(ServerSent, Protocol):
     """
     Sent to all clients
     """
@@ -121,6 +144,13 @@ Completion Request / Response
 
 
 @dataclass(frozen=True)
+class DeadlinePastNotification(Broadcast, Notification):
+    ctx_uid: int
+
+    m_type: Literal["DeadlinePastNotification"] = "DeadlinePastNotification"
+
+
+@dataclass(frozen=True)
 class CompletionResponse(ClientSent, Response, _HasID):
     has_pending: bool
     completions: Sequence[Completion]
@@ -129,7 +159,7 @@ class CompletionResponse(ClientSent, Response, _HasID):
 
 
 @dataclass(frozen=True)
-class CompletionRequest(Broadcast, _HasID):
+class CompletionRequest(Broadcast, Request, _HasID):
     deadline: Annotated[float, "Seconds since UNIX epoch"]
     context: Context
 
@@ -138,9 +168,9 @@ class CompletionRequest(Broadcast, _HasID):
 
 
 @dataclass(frozen=True)
-class FurtherCompletionRequest(Broadcast, _HasID):
+class FurtherCompletionRequest(ServerSent, Request, _HasID):
     deadline: Annotated[float, "Seconds since UNIX epoch"]
-    parent_uid: Annotated[int, "UID of parent Response"]
+    ctx_uid: int
 
     m_type: Literal["FurtherCompletionRequest"] = "FurtherCompletionRequest"
     resp_type: ClassVar[Type[Message]] = CompletionResponse
@@ -152,14 +182,25 @@ Snippet Request / Response
 
 
 @dataclass(frozen=True)
-class ParseResponse(ClientSent, Response, _HasID):
+class _HasToken:
+    completion_token: str
+
+
+@dataclass(frozen=True)
+class ParseResponse(ClientSent, Response, _HasToken, _HasID):
     edit: Optional[ContextualEdit]
 
     m_type: Literal["ParseResponse"] = "ParseResponse"
 
 
 @dataclass(frozen=True)
-class ParseRequest(Broadcast, _HasID):
+class ParseRequest(Broadcast, Request, _HasID):
     snippet: Snippet
 
     m_type: Literal["ParseRequest"] = "ParseRequest"
+    resp_type: ClassVar[Type[Message]] = ParseResponse
+
+
+@dataclass(frozen=True)
+class SnippetAppliedNotification(Broadcast, Notification, _HasToken):
+    m_type: Literal["SnippetAppliedNotification"] = "SnippetAppliedNotification"

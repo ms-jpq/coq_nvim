@@ -27,6 +27,8 @@ class Context:
     |...   <syms_before><words_before>🐭<words_after><syms_after>   ...|
     """
 
+    uid: int
+
     filename: str
     filetype: str
 
