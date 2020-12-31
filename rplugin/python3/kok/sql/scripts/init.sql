@@ -37,4 +37,14 @@ CREATE TABLE word_locations (
 ) WITHOUT ROWID;
 
 
+CREATE VIEW word_sources_view AS
+SELECT
+  words.word,
+  words.nword,
+FROM words
+JOIN sources
+ON
+  words.source_id = sources.rowid;
+
+
 END;
