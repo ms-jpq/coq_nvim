@@ -6,7 +6,7 @@ from asyncio import (
     start_unix_server,
 )
 from pathlib import PurePath
-from typing import Tuple
+from typing import Awaitable, Tuple
 
 from forechan import Chan
 from forechan.types import ChanClosed
@@ -38,10 +38,10 @@ async def start_client(path: PurePath, tx: Chan[bytes], rx: Chan[bytes]) -> None
 
 async def start_server(
     path: PurePath, tx_rx: Chan[Tuple[Chan[bytes], Chan[bytes]]]
-) -> None:
+) -> Awaitable[None]:
     async def handler(reader: StreamReader, writer: StreamWriter) -> None:
         tx, rx = await ([] << tx_rx)
         await gather(transmit(writer, ch=tx), receive(reader, ch=rx))
 
     server = await start_unix_server(handler, path=path)
-    await server.wait_closed()
+    return server.wait_closed()
