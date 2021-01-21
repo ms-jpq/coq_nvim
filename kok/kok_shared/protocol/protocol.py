@@ -1,15 +1,18 @@
 from __future__ import annotations
 
+from abc import abstractmethod
 from dataclasses import dataclass
 from enum import Enum, auto
 from typing import (
     Annotated,
+    Any,
     ClassVar,
     Literal,
     Optional,
     Protocol,
     Sequence,
     Type,
+    TypeVar,
     runtime_checkable,
 )
 
@@ -32,6 +35,7 @@ class HasID(Protocol):
     """
 
     @property
+    @abstractmethod
     def uid(self) -> int:
         ...
 
@@ -48,6 +52,7 @@ class Message(Protocol):
     """
 
     @property
+    @abstractmethod
     def m_type(self) -> Annotated[str, "Must be a Literal"]:
         ...
 
@@ -67,12 +72,34 @@ class Response(Message, HasID, Protocol):
 
 
 @runtime_checkable
+class ErrorResponse(Response, Protocol):
+    """
+    Response Can be an Error
+    """
+
+    @property
+    @abstractmethod
+    def error(self) -> Literal[True]:
+        ...
+
+    @property
+    @abstractmethod
+    def msg(self) -> str:
+        ...
+
+
+@runtime_checkable
 class Request(Message, HasID, Protocol):
     """
     Each Request type has a single vaild Response Type
     """
 
     resp_type: ClassVar[Type] = Response
+
+
+"""
+Authorship
+"""
 
 
 @runtime_checkable

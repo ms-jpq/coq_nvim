@@ -6,5 +6,5 @@ from pynvim_pp.lib import async_call, write
 
 
 class Client(BasicClient):
-    async def wait(self, nvim: Nvim) -> int:
-        return await super().wait(nvim)
+    def wait(self, nvim: Nvim) -> int:
+        return super().wait(nvim)
