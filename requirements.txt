@@ -1,4 +1,4 @@
-git+https://github.com/ms-jpq/std2.git
-git+https://github.com/ms-jpq/pynvim_pp.git
 pynvim
 forechan
+git+https://github.com/ms-jpq/pynvim_pp.git
+git+https://github.com/ms-jpq/std2.git

@@ -1,83 +1,14 @@
 {
   "display": {
     "ellipsis": "…",
-    "pum_max_len": 66,
-    "tabsize": 2
+    "pum_max_len": 66
   },
-  "logging_level": "WARNING",
   "match": {
     "transpose_band": 3,
-    "unifying_chars": ["_", "-"]
-  },
-  "retries": 2,
-  "snippet_engines": {},
-  "sources": {
-    "around": {
-      "config": {
-        "band_size": 20,
-        "max_length": 20,
-        "prefix_matches": 1
-      },
-      "enabled": true,
-      "limit": 3,
-      "main": "around.py",
-      "rank": 100,
-      "short_name": "A",
-      "unique": true
-    },
-    "buffers": {
-      "config": {
-        "max_length": 20,
-        "polling_rate": 1,
-        "prefix_matches": 1
-      },
-      "enabled": true,
-      "limit": 3,
-      "main": "buffers.py",
-      "rank": 80,
-      "short_name": "B",
-      "unique": true
-    },
-    "lsp": {
-      "config": {},
-      "enabled": false,
-      "limit": null,
-      "main": "lsp.py",
-      "rank": 200,
-      "short_name": "L",
-      "unique": true
-    },
-    "paths": {
-      "config": {},
-      "enabled": true,
-      "limit": 3,
-      "main": "paths.py",
-      "rank": 120,
-      "short_name": "F",
-      "unique": true
-    },
-    "tmux": {
-      "config": {
-        "max_length": 20,
-        "polling_rate": 1,
-        "prefix_matches": 1
-      },
-      "enabled": true,
-      "limit": 3,
-      "main": "tmux.py",
-      "rank": 50,
-      "short_name": "T",
-      "unique": true
-    },
-    "tree_sitter": {
-      "config": {},
-      "enabled": false,
-      "limit": 3,
-      "main": "tree_sitter.py",
-      "rank": 150,
-      "short_name": "TS",
-      "unique": true
-    }
+    "unifying_chars": [
+      "_",
+      "-"
+    ]
   },
   "timeout": 100
 }

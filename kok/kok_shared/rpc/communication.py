@@ -15,7 +15,7 @@ from forechan.types import ChanClosed
 async def transmit(writer: StreamWriter, ch: Chan[bytes]) -> None:
     async for data in ch:
         writer.write(data)
-        writer.write("\0")
+        writer.write(b"\n")
         await writer.drain()
     writer.close()
     await writer.wait_closed()
@@ -23,7 +23,7 @@ async def transmit(writer: StreamWriter, ch: Chan[bytes]) -> None:
 
 async def receive(reader: StreamReader, ch: Chan[bytes]) -> None:
     while ch:
-        data = await reader.readuntil("\0")
+        data = await reader.readuntil(b"\n")
         try:
             await (ch << data)
         except ChanClosed:

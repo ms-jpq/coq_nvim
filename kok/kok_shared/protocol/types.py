@@ -114,7 +114,7 @@ class Completion:
     position: Position
     primary_edit: Union[Edit, ContextualEdit, Snippet, None]
     secondary_edits: Sequence[RangeEdit] = ()
-    label: Optional[str] = None
-    sortby: Optional[str] = None
-    kind: Optional[str] = None
-    doc: Optional[str] = None
+    sortby: str = ""
+    label: str = ""
+    kind: str = ""
+    doc: str = ""
