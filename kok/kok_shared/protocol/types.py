@@ -1,8 +1,8 @@
 from abc import abstractmethod
 from dataclasses import dataclass
 from typing import (
+    AbstractSet,
     Annotated,
-    FrozenSet,
     Literal,
     Optional,
     Protocol,
@@ -16,7 +16,7 @@ from typing import (
 @dataclass(frozen=True)
 class MatchOptions:
     unifying_chars: Annotated[
-        FrozenSet[str], "Alphanumeric chars linked by these chars constitute as words"
+        AbstractSet[str], "Alphanumeric chars linked by these chars constitute as words"
     ]
 
 
@@ -72,7 +72,7 @@ class _BaseEdit:
 
 @dataclass(frozen=True)
 class Edit(_BaseEdit, HasEditType):
-    edit_type: Literal["Edit"] = "Edit"
+    edit_type: Literal["Vanilla"] = "Vanilla"
 
 
 @dataclass(frozen=True)
@@ -86,7 +86,7 @@ class ContextualEdit(_BaseEdit, HasEditType):
     old_suffix: str
     new_suffix: str
 
-    edit_type: Literal["ContextualEdit"] = "ContextualEdit"
+    edit_type: Literal["Contextual"] = "Contextual"
 
 
 @dataclass(frozen=True)
@@ -98,7 +98,7 @@ class RangeEdit(_BaseEdit, HasEditType):
     begin: Position
     end: Position
 
-    edit_type: Literal["RangeEdit"] = "RangeEdit"
+    edit_type: Literal["Range"] = "Range"
 
 
 @dataclass(frozen=True)
