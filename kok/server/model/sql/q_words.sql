@@ -3,6 +3,6 @@ SELECT
 FROM
   words
 WHERE
-  nword LIKE ? ESCAPE '!',
+  SUBSTR(?, 1, ?) = SUBSTR(nword, 1, ?)
   AND
   NOT INSTR(?, word)
