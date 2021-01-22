@@ -4,7 +4,7 @@ SELECT
     SELECT rowid
     FROM words
     WHERE
-      words.word = ?
+      word = ?
   ) AS word_id,
   (
     SELECT rowid

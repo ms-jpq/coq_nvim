@@ -1,5 +1,4 @@
-DELETE
-FROM words
+DELETE FROM words
 WHERE
   NOT EXISTS (
     SELECT
