@@ -12,4 +12,4 @@ SELECT
     WHERE
       filename = :filename
   ) AS file_id,
-  ? AS line_num
+  :line_num AS line_num
