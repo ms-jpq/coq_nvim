@@ -170,6 +170,11 @@ Completion Request / Response
 """
 
 
+@runtime_checkable
+class CompletionMessage(Protocol):
+    ...
+
+
 @dataclass(frozen=True)
 class DeadlinePastNotification(Broadcast, Notification):
     ctx_uid: int
@@ -213,20 +218,25 @@ Snippet Request / Response
 """
 
 
+@runtime_checkable
+class SnippetMessage(Protocol):
+    ...
+
+
 @dataclass(frozen=True)
 class _HasToken:
     completion_token: str
 
 
 @dataclass(frozen=True)
-class ParseResponse(ClientSent, Response, _HasToken, _HasID):
+class ParseResponse(SnippetMessage, ClientSent, Response, _HasToken, _HasID):
     edit: Optional[ContextualEdit]
 
     m_type: Literal["ParseResponse"] = "ParseResponse"
 
 
 @dataclass(frozen=True)
-class ParseRequest(Broadcast, Request, _HasID):
+class ParseRequest(SnippetMessage, Broadcast, Request, _HasID):
     snippet: Snippet
 
     m_type: Literal["ParseRequest"] = "ParseRequest"
@@ -234,5 +244,5 @@ class ParseRequest(Broadcast, Request, _HasID):
 
 
 @dataclass(frozen=True)
-class SnippetAppliedNotification(Broadcast, Notification, _HasToken):
+class SnippetAppliedNotification(SnippetMessage, Broadcast, Notification, _HasToken):
     m_type: Literal["SnippetAppliedNotification"] = "SnippetAppliedNotification"
