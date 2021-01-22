@@ -1,7 +1,7 @@
 from dataclasses import asdict, dataclass
 from enum import Enum
 from os import linesep
-from typing import Any, Mapping, Iterable, Iterator, Optional
+from typing import Any, Iterable, Iterator, Mapping, Optional
 from uuid import uuid4
 
 from pynvim import Nvim
@@ -31,18 +31,8 @@ class VimCompletion:
     user_data: Optional[Any] = None
 
 
-def _serialize(comp: VimCompletion) -> Mapping[str, Any]:
-    serialized = {k: v for k, v in asdict(comp).items() if v is not None}
-    return serialized
-
-
-async def complete(nvim: Nvim, col: int, comp: Iterator[VimCompletion]) -> None:
-    serialized = tuple(map(_serialize, comp))
-
-    def cont() -> None:
-        try:
-            nvim.funcs.complete(col, serialized)
-        except NvimError:
-            pass
-
-    await call(nvim, cont)
+def complete(nvim: Nvim, col: int, comp: Iterable[VimCompletion]) -> None:
+    serialized = tuple(
+        {k: v for k, v in asdict(cmp).items() if v is not None} for cmp in comp
+    )
+    nvim.funcs.complete(col, serialized)
