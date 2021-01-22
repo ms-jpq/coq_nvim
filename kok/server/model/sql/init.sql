@@ -71,5 +71,23 @@ CREATE VIEW count_words_by_filetype_view AS (
 );
 
 
+CREATE VIEW count_words_by_file_lines_view AS (
+  SELECT
+    count(words.word)       AS count,
+    words.word              AS word,
+    word_locations.line_num AS line_num,
+    files.filename          AS filename
+  FROM words
+  JOIN word_locations
+  ON
+    word_locations.word_id = words.rowid
+  JOIN files
+  ON
+    files.rowid = word_locations.file_id
+  GROUP BY
+    words.word,
+    word_locations.line_num,
+    files.filename
+);
 
 END;
