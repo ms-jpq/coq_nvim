@@ -27,7 +27,7 @@ CREATE TABLE word_locations (
   line_num INTEGER NOT NULL
 ) WITHOUT ROWID;
 CREATE INDEX word_locations_filename ON word_locations (filename);
-CREATE INDEX word_locations_name     ON word_locations (word);
+CREATE INDEX word_locations_word     ON word_locations (word);
 CREATE INDEX word_locations_line_num ON word_locations (line_num);
 
 
