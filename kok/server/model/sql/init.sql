@@ -50,7 +50,7 @@ CREATE VIEW main_view AS (
 
 CREATE VIEW count_words_by_filetype_view AS (
   SELECT
-    COUNT(*)           AS count,
+    COUNT(*)           AS w_count,
     words.word         AS word,
     filetypes.filetype AS filetype
   FROM words
@@ -71,7 +71,7 @@ CREATE VIEW count_words_by_filetype_view AS (
 
 CREATE VIEW count_words_by_file_lines_view AS (
   SELECT
-    COUNT(*)                AS count,
+    COUNT(*)                AS w_count,
     words.word              AS word,
     word_locations.line_num AS line_num,
     files.filename          AS filename
@@ -87,5 +87,6 @@ CREATE VIEW count_words_by_file_lines_view AS (
     word_locations.line_num,
     files.filename
 );
+
 
 END;
