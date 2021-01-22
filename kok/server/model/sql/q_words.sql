@@ -3,6 +3,6 @@ SELECT
 FROM
   words
 WHERE
-  SUBSTR(?, 1, ?) = SUBSTR(nword, 1, ?)
+  SUBSTR(:q_nword, 1, :match_len) = SUBSTR(nword, 1, :match_len)
   AND
-  NOT INSTR(?, word)
+  NOT INSTR(:q_word, word)

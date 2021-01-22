@@ -4,14 +4,12 @@ SELECT
     SELECT rowid
     FROM words
     WHERE
-      word = ?
+      word = :word
   ) AS word_id,
   (
     SELECT rowid
     FROM files
     WHERE
-      filename = ?
+      filename = :filename
   ) AS file_id,
   ? AS line_num
-
-

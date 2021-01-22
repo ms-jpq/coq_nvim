@@ -1,2 +1,2 @@
-INSERT OR REPLACE INTO words (word, nword)
-VALUES (?, ?)
+REPLACE INTO words (word, nword)
+VALUES (:word, :nword)

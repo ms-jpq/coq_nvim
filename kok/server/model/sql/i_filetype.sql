@@ -1,2 +1,2 @@
 REPLACE INTO filetypes (filetype)
-VALUES (?)
+VALUES (:filetype)
