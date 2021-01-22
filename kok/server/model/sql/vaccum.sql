@@ -6,5 +6,5 @@ WHERE
       NULL
     FROM word_locations
     WHERE
-      word_locations.word_id = word.rowid
+      word_locations.word_id = words.rowid
   )
