@@ -1,2 +1,2 @@
-INSERT OR REPLACE INTO filetypes (filetype)
+REPLACE INTO filetypes (filetype)
 VALUES (?)
