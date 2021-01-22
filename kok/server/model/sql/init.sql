@@ -17,7 +17,7 @@ CREATE TABLE files (
 CREATE TABLE words (
   rowid INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
   word  TEXT    NOT NULL UNIQUE,
-  nword TEXT    NOT NULL,
+  nword TEXT    NOT NULL
 ) WITHOUT ROWID;
 CREATE INDEX words_nword ON words (nword);
 
