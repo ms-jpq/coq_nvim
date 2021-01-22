@@ -4,15 +4,18 @@ from typing import Dict
 
 from ..shared.parse import is_word
 from ..shared.types import Context, MatchOptions
-from .types import Metric, Suggestion
+from .types import Metric
+
+#     matches: Mapping[int, str]
+#     full_match: bool
 
 
-def isjunk(s: str) -> bool:
+def _isjunk(s: str) -> bool:
     return s.isspace()
 
 
 def gen_metric_secondary(ncword: str, n_match: str) -> Metric:
-    m = SequenceMatcher(a=ncword, b=n_match, autojunk=True, isjunk=isjunk)
+    m = SequenceMatcher(a=ncword, b=n_match, autojunk=True, isjunk=_isjunk)
     matches: Dict[int, str] = {}
     prefix_matches = 0
     num_matches = 0

@@ -2,9 +2,6 @@ from typing import Any, Mapping, Optional, Set, Tuple
 
 from pynvim import Nvim
 
-from ..shared.consts import buf_var_name
-from ..shared.nvim import call
-from ..shared.parse import normalize
 from ..shared.types import Context, MatchOptions, Position
 from .nvim import buf_get_var
 from .parse import gen_lhs_rhs
@@ -73,17 +70,6 @@ def gen_ctx(
     )
 
 
-async def gen_buf_ctx(nvim: Nvim) -> BufferContext:
-    def cont() -> BufferContext:
-        buffer = nvim.api.get_current_buf()
-        buf_var: Mapping[str, Any] = (
-            buf_get_var(nvim, buffer=buffer, name=buf_var_name) or {}
-        )
-        src = buf_var.get("sources") or {}
-        sources = {key: BufferSourceSpec(**val) for key, val in src.items()}
-        return BufferContext(sources=sources)
-
-    return await call(nvim, cont)
 
 
 async def gen_context(

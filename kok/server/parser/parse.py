@@ -32,3 +32,4 @@ def coalesce(
         wl = len(word)
         if wl >= max_length:
             yield word
+
