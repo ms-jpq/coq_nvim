@@ -50,4 +50,26 @@ CREATE VIEW main_view AS (
 );
 
 
+CREATE VIEW count_words_by_filetype_view AS (
+  SELECT
+    count(words.word)  AS count,
+    words.word         AS word,
+    filetypes.filetype AS filetype
+  FROM words
+  JOIN word_locations
+  ON
+    word_locations.word_id = words.rowid
+  JOIN files
+  ON
+    files.rowid = word_locations.file_id
+  JOIN filetypes
+  ON
+    filetypes.rowid = files.filetype_id
+  GROUP BY
+    words.word,
+    filetypes.filetype
+);
+
+
+
 END;
