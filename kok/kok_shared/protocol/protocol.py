@@ -224,12 +224,12 @@ class SnippetMessage(Protocol):
 
 
 @dataclass(frozen=True)
-class _HasToken:
-    completion_token: str
+class _HasMeta:
+    meta: Any
 
 
 @dataclass(frozen=True)
-class ParseResponse(SnippetMessage, ClientSent, Response, _HasToken, _HasID):
+class ParseResponse(SnippetMessage, ClientSent, Response, _HasMeta, _HasID):
     edit: Optional[ContextualEdit]
 
     m_type: Literal["ParseResponse"] = "ParseResponse"
@@ -244,5 +244,5 @@ class ParseRequest(SnippetMessage, Broadcast, Request, _HasID):
 
 
 @dataclass(frozen=True)
-class SnippetAppliedNotification(SnippetMessage, Broadcast, Notification, _HasToken):
+class SnippetAppliedNotification(SnippetMessage, ServerSent, Notification, _HasMeta):
     m_type: Literal["SnippetAppliedNotification"] = "SnippetAppliedNotification"
