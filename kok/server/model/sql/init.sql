@@ -31,5 +31,23 @@ CREATE TABLE word_locations (
 ) WITHOUT ROWID;
 
 
+CREATE VIEW main_view AS (
+  SELECT
+    words.word         AS word,
+    words.nword        AS nword,
+    files.filename     AS filename,
+    filetypes.filetype AS filetype
+  FROM words
+  JOIN word_locations
+  ON
+    word_locations.word_id = words.rowid
+  JOIN files
+  ON
+    files.rowid = word_locations.file_id
+  JOIN filetypes
+  ON
+    filetypes.rowid = files.filetype_id
+);
+
 
 END;

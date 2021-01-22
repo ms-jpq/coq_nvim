@@ -7,7 +7,6 @@ from pynvim import Nvim
 from pynvim.api.buffer import Buffer
 from pynvim.api.window import Window
 
-from ..shared.logging import log
 from ..shared.parse import normalize
 from ..shared.types import LEdit, MEdit, Position, SEdit
 from .parse import gen_lhs_rhs

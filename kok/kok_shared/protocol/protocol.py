@@ -179,6 +179,8 @@ class DeadlinePastNotification(Broadcast, Notification):
 
 @dataclass(frozen=True)
 class CompletionResponse(ClientSent, Response, _HasID):
+    ctx_uid: int
+
     has_pending: bool
     completions: Sequence[Completion]
 
@@ -187,6 +189,8 @@ class CompletionResponse(ClientSent, Response, _HasID):
 
 @dataclass(frozen=True)
 class CompletionRequest(Broadcast, Request, _HasID):
+    ctx_uid: int
+
     deadline: Annotated[float, "Seconds since UNIX epoch"]
     context: Context
 
@@ -196,8 +200,9 @@ class CompletionRequest(Broadcast, Request, _HasID):
 
 @dataclass(frozen=True)
 class FurtherCompletionRequest(ServerSent, Request, _HasID):
-    deadline: Annotated[float, "Seconds since UNIX epoch"]
     ctx_uid: int
+
+    deadline: Annotated[float, "Seconds since UNIX epoch"]
 
     m_type: Literal["FurtherCompletionRequest"] = "FurtherCompletionRequest"
     resp_type: ClassVar[Type[Message]] = CompletionResponse

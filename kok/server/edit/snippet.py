@@ -4,7 +4,6 @@ from typing import Callable, Dict, Optional, Tuple
 
 from pynvim import Nvim
 
-from ..shared.logging import log
 from ..shared.types import Comm, SnippetContext, SnippetEngine
 from .settings import load_engines
 from .types import EngineFactory, Settings, Snippet

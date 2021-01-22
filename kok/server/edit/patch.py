@@ -3,7 +3,6 @@ from typing import Any, Callable, Mapping, cast
 from pynvim import Nvim
 from pynvim.api.window import Window
 
-from ..shared.logging import log
 from ..shared.nvim import call
 from ..shared.types import (
     LEdit,
