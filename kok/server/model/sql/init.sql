@@ -15,7 +15,8 @@ CREATE INDEX files_filetype ON filetypes (filetype);
 
 CREATE TABLE words (
   word  TEXT NOT NULL PRIMARY KEY,
-  nword TEXT NOT NULL
+  nword TEXT NOT NULL,
+  _test TEXT NOT NULL GENERATED ALWAYS AS ('%' + REPLACE(word, '!', '!!') + '%') STORED
 ) WITHOUT ROWID;
 CREATE INDEX words_nword ON words (nword);
 
