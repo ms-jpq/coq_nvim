@@ -3,6 +3,6 @@ SELECT
 FROM
   words
 WHERE
-  SUBSTR(:q_nword, 1, :match_len) = SUBSTR(nword, 1, :match_len)
+  nword LIKE REPLACE(SUBSTR(:q_nword, 1, :match_len), '!', '!!') + '%' ESCAPE '!'
   AND
-  NOT INSTR(:q_word, word)
+  NOT _test LIKE :q_word ESCAPE '!'
