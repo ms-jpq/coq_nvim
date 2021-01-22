@@ -1,5 +1,16 @@
+from abc import abstractmethod
 from dataclasses import dataclass
-from typing import Annotated, FrozenSet, Literal, Optional, Protocol, Sequence, Union
+from typing import (
+    Annotated,
+    FrozenSet,
+    Literal,
+    Optional,
+    Protocol,
+    Sequence,
+    Tuple,
+    Union,
+    runtime_checkable,
+)
 
 
 @dataclass(frozen=True)
@@ -9,14 +20,7 @@ class MatchOptions:
     ]
 
 
-@dataclass(frozen=True)
-class Position:
-    """
-    0 based Index
-    """
-
-    row: int
-    col: int
+Position = Tuple[int, int]
 
 
 @dataclass(frozen=True)
@@ -27,41 +31,36 @@ class Context:
     |...   <syms_before><words_before>🐭<words_after><syms_after>   ...|
     """
 
-    uid: int
-
     filename: str
     filetype: str
 
     position: Position
 
     line: str
-    line_normalized: str
     line_before: str
-    line_before_normalized: str
     line_after: str
-    line_after_normalized: str
+
+    line_n: str
+    line_before_n: str
+    line_after_n: str
 
     words: str
-    words_normalized: str
     words_before: str
-    words_before_normalized: str
     words_after: str
-    words_after_normalized: str
+
+    words_n: str
+    words_before_n: str
+    words_after_n: str
 
     syms: str
     syms_before: str
     syms_after: str
 
-    words_syms: str
-    words_syms_normalized: str
-    words_syms_before: str
-    words_syms_before_normalized: str
-    words_syms_after: str
-    words_syms_after_normalized: str
 
-
+@runtime_checkable
 class HasEditType(Protocol):
     @property
+    @abstractmethod
     def edit_type(self) -> str:
         ...
 
@@ -103,7 +102,7 @@ class RangeEdit(_BaseEdit, HasEditType):
 
 
 @dataclass(frozen=True)
-class Snippet(_BaseEdit, HasEditType):
+class SnippetEdit(_BaseEdit, HasEditType):
     grammar: Annotated[str, "ie. LSP, Texmate, Ultisnip, etc"]
 
     edit_type: Literal["Snippet"] = "Snippet"
@@ -112,9 +111,10 @@ class Snippet(_BaseEdit, HasEditType):
 @dataclass(frozen=True)
 class Completion:
     position: Position
-    primary_edit: Union[Edit, ContextualEdit, Snippet, None]
+    primary_edit: Union[Edit, ContextualEdit, SnippetEdit, None]
     secondary_edits: Sequence[RangeEdit] = ()
     sortby: str = ""
     label: str = ""
     kind: str = ""
     doc: str = ""
+    doc_type: str = ""

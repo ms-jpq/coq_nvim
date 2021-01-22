@@ -16,7 +16,7 @@ from typing import (
     runtime_checkable,
 )
 
-from .types import Completion, Context, ContextualEdit, MatchOptions, Snippet
+from .types import Completion, Context, ContextualEdit, MatchOptions, SnippetEdit
 
 """
 Newline seperated JSON RPC
@@ -128,6 +128,11 @@ Hand Shake
 """
 
 
+@runtime_checkable
+class HandShakeMessage(Protocol):
+    ...
+
+
 class ConnectionType(Enum):
     """
     Enums are serialized by name not value
@@ -138,7 +143,7 @@ class ConnectionType(Enum):
 
 
 @dataclass(frozen=True)
-class Acknowledge(ServerSent, Response):
+class Acknowledge(HandShakeMessage, ServerSent, Response):
     """
     Server must announce a connection mechanism
     """
@@ -152,7 +157,7 @@ class Acknowledge(ServerSent, Response):
 
 
 @dataclass(frozen=True)
-class Hello(ClientSent, Request):
+class Hello(HandShakeMessage, ClientSent, Request):
     """
     Client must make first request to server via Neovim's RPC mechaism
     """
@@ -176,14 +181,14 @@ class CompletionMessage(Protocol):
 
 
 @dataclass(frozen=True)
-class DeadlinePastNotification(Broadcast, Notification):
+class DeadlinePastNotification(CompletionMessage, Broadcast, Notification):
     ctx_uid: int
 
     m_type: Literal["DeadlinePastNotification"] = "DeadlinePastNotification"
 
 
 @dataclass(frozen=True)
-class CompletionResponse(ClientSent, Response, _HasID):
+class CompletionResponse(CompletionMessage, ClientSent, Response, _HasID):
     ctx_uid: int
 
     has_pending: bool
@@ -193,7 +198,7 @@ class CompletionResponse(ClientSent, Response, _HasID):
 
 
 @dataclass(frozen=True)
-class CompletionRequest(Broadcast, Request, _HasID):
+class CompletionRequest(CompletionMessage, Broadcast, Request, _HasID):
     ctx_uid: int
 
     deadline: Annotated[float, "Seconds since UNIX epoch"]
@@ -204,7 +209,7 @@ class CompletionRequest(Broadcast, Request, _HasID):
 
 
 @dataclass(frozen=True)
-class FurtherCompletionRequest(ServerSent, Request, _HasID):
+class FurtherCompletionRequest(CompletionMessage, ServerSent, Request, _HasID):
     ctx_uid: int
 
     deadline: Annotated[float, "Seconds since UNIX epoch"]
@@ -237,7 +242,7 @@ class ParseResponse(SnippetMessage, ClientSent, Response, _HasMeta, _HasID):
 
 @dataclass(frozen=True)
 class ParseRequest(SnippetMessage, Broadcast, Request, _HasID):
-    snippet: Snippet
+    snippet: SnippetEdit
 
     m_type: Literal["ParseRequest"] = "ParseRequest"
     resp_type: ClassVar[Type[Message]] = ParseResponse
