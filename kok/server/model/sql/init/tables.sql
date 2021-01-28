@@ -2,7 +2,7 @@ BEGIN;
 
 
 -- Should be vacuumed if no files references filetype
-CREATE TABLE filetypes (
+CREATE TABLE IF NOT EXISTS filetypes (
   filetype TEXT NOT NULL PRIMARY KEY
 ) WITHOUT ROWID;
 
@@ -19,7 +19,7 @@ CREATE TABLE projects (
 -- Should be vacuumed if file no longer exists, once at beginning
 -- Should be vacuumed by foreign key constraints on `projects`
 -- Should be vacuumed if is ephemeral?
-CREATE TABLE files (
+CREATE TABLE IF NOT EXISTS files (
   filename TEXT NOT NULL PRIMARY KEY,
   project  TEXT NOT NULL REFERENCES projects  (project)  ON DELETE CASCADE,
   filetype TEXT NOT NULL REFERENCES filetypes (filetype) ON DELETE CASCADE
@@ -29,7 +29,7 @@ CREATE INDEX files_filetype ON filetypes (filetype);
 
 -- Index for words in files
 -- Should be vacuumed when no longer in word_locations
-CREATE TABLE words (
+CREATE TABLE IF NOT EXISTS words (
   word  TEXT NOT NULL PRIMARY KEY,
   lword TEXT NOT NULL
 ) WITHOUT ROWID;
@@ -40,7 +40,7 @@ CREATE INDEX words_lword ON words (lword);
 -- !! files 1:N word_locations
 -- Store word location in files
 -- Should be vacuumed by foreign key constraints on `files`
-CREATE TABLE word_locations (
+CREATE TABLE IF NOT EXISTS word_locations (
   rowid    INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
   filename TEXT    NOT NULL REFERENCES files (filename) ON DELETE CASCADE,
   word     TEXT    NOT NULL REFERENCES words (word)     ON DELETE CASCADE,
@@ -55,7 +55,7 @@ CREATE INDEX word_locations_line_num ON word_locations (line_num);
 -- Stores insertion history
 -- Should be vacuumed by only keeping last n rows
 -- Should be vacuumed by foreign key constraints on `files`
-CREATE TABLE insertions (
+CREATE TABLE IF NOT EXISTS insertions (
   rowid    INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
   prefix   TEXT    NOT NULL,
   affix    TEXT    NOT NULL,
@@ -68,10 +68,10 @@ CREATE INDEX insertions_content      ON insertions (content);
 
 
 -- Words debug view
-CREATE VIEW words_debug_view AS (
+CREATE VIEW IF NOT EXISTS words_debug_view AS (
   SELECT
     files.project           AS project,
-    filetypes.filetype      AS filetype,
+    files.filetype          AS filetype,
     files.filename          AS filename,
     word_locations.line_num AS line_num,
     words.word              AS word,
@@ -85,11 +85,54 @@ CREATE VIEW words_debug_view AS (
     files.filename = word_locations.filename
   ORDER BY
     files.project,
-    filetypes.filetype,
+    files.filetype,
     files.filename,
     word_locations.line_num,
     words.word
 );
+
+
+CREATE VIEW IF NOT EXISTS insertions_debug_view AS (
+  SELECT
+    files.project      AS project,
+    files.filetype     AS filetype,
+    files.filename     AS filename,
+    insertions.content AS content,
+    insertions.prefix  AS prefix,
+    insertions.suffix  AS suffix
+  FROM insertions
+  JOIN files
+  ON
+    files.filename = insertions.filename
+  ORDER BY
+    files.project,
+    files.filetype,
+    files.filename,
+    insertions.content,
+    insertions.prefix,
+    insertions.suffix
+);
+
+
+CREATE VIEW count_words_by_project_filetype_view AS (
+  SELECT
+    COUNT(*)       AS w_count,
+    words.word     AS word,
+    files.project  AS project,
+    files.filetype AS filetype
+  FROM words
+  JOIN word_locations
+  ON
+    word_locations.word = words.word
+  JOIN files
+  ON
+    files.filename = word_locations.filename
+  GROUP BY
+    words.word,
+    files.project,
+    files.filetype
+);
+
 
 
 CREATE VIEW count_words_by_filetype_view AS (

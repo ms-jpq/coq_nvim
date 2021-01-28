@@ -7,6 +7,7 @@ from std2.sqllite3 import with_transaction
 
 from ...shared.parse import coalesce, normalize
 from .sql import sql
+from .types import Metric
 
 
 def _ensure_file(cursor: Cursor, project: str, file: str, filetype: str) -> None:
@@ -96,12 +97,27 @@ class Database:
     async def get_suggestions(self, word: str, prefix_len: int) -> Sequence[str]:
         def cont(cursor: Cursor) -> Sequence[str]:
             nword = normalize(word)
-            params = {
-                "word": nword,
-                "lword": nword.casefold(),
-                "prefix_len": prefix_len,
-            }
-            cursor.execute(sql("query", "words_by_prefix"), params)
+            with with_transaction(cursor):
+                cursor.execute(
+                    sql("query", "words_by_prefix"),
+                    {
+                        "word": nword,
+                        "lword": nword.casefold(),
+                        "prefix_len": prefix_len,
+                    },
+                )
+                suggestions = cursor.fetchall()
+            return suggestions
+
+        return await self._conn.with_cursor(cont)
+
+    async def gen_metric(self, words: Sequence[str]) -> Sequence[Metric]:
+        def cont(cursor: Cursor) -> Sequence[str]:
+            nwords = tuple(map(normalize, words))
+            with with_transaction(cursor):
+                nwords = 2
+                pass
+            # cursor.execute(sql("query", "words_by_prefix"), params)
             return cursor.fetchall()
 
         return await self._conn.with_cursor(cont)
