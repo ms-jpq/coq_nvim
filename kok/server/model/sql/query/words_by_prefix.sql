@@ -3,6 +3,6 @@ SELECT
 FROM
   words
 WHERE
-  nword LIKE (REPLACE(REPLACE(REPLACE(SUBSTR(:q_nword, 1, :match_len), '!', '!!'), '%', '!%'), '_', '!_') || '%') ESCAPE '!'
-  AND 
-  NOT INSTR(:q_word, word)
+  lword LIKE (REPLACE(REPLACE(REPLACE(SUBSTR(:lword, 1, :prefix_len), '!', '!!'), '%', '!%'), '_', '!_') || '%') ESCAPE '!'
+  AND
+  NOT INSTR(:word, word)

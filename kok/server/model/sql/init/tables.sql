@@ -31,9 +31,9 @@ CREATE INDEX files_filetype ON filetypes (filetype);
 -- Should be vacuumed when no longer in word_locations
 CREATE TABLE words (
   word  TEXT NOT NULL PRIMARY KEY,
-  nword TEXT NOT NULL
+  lword TEXT NOT NULL
 ) WITHOUT ROWID;
-CREATE INDEX words_nword ON words (nword);
+CREATE INDEX words_lword ON words (lword);
 
 
 -- !! words 1:N word_locations
@@ -75,7 +75,7 @@ CREATE VIEW words_debug_view AS (
     files.filename          AS filename,
     word_locations.line_num AS line_num,
     words.word              AS word,
-    words.nword             AS nword
+    words.lword             AS lword
   FROM words
   JOIN word_locations
   ON
