@@ -1,6 +1,12 @@
 BEGIN;
 
 
+-- Should be vaccumed?
+CREATE TABLE IF NOT EXISTS sources (
+  source TEXT NOT NULL PRIMARY KEY
+) WITHOUT ROWID;
+
+
 -- Should be vacuumed if no files references filetype
 CREATE TABLE IF NOT EXISTS filetypes (
   filetype TEXT NOT NULL PRIMARY KEY
@@ -51,20 +57,41 @@ CREATE INDEX word_locations_word     ON word_locations (word);
 CREATE INDEX word_locations_line_num ON word_locations (line_num);
 
 
--- !! files 1:N insertions
+-- !! sources 1:N insertions
+-- !! files   1:N insertions
 -- Stores insertion history
 -- Should be vacuumed by only keeping last n rows
 -- Should be vacuumed by foreign key constraints on `files`
 CREATE TABLE IF NOT EXISTS insertions (
   rowid    INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+  source   TEXT    NOT NULL REFERENCES sources (source)   ON DELETE CASCADE,
+  filename TEXT    NOT NULL REFERENCES files   (filename) ON DELETE CASCADE,
   prefix   TEXT    NOT NULL,
   affix    TEXT    NOT NULL,
-  filename TEXT    NOT NULL REFERENCES files (filename) ON DELETE CASCADE,
   content  TEXT    NOT NULL
 ) WITHOUT ROWID;
 CREATE INDEX insertions_prefix_affix ON insertions (prefix, affix);
 CREATE INDEX insertions_filename     ON insertions (filename);
 CREATE INDEX insertions_content      ON insertions (content);
+
+
+-- !! sources 1:N completions
+-- !! files   1:N completions
+-- Should be vaccumed by keeping last n rows, per source
+CREATE TABLE IF NOT EXISTS completions (
+  rowid        INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+  source       TEXT    NOT NULL REFERENCES sources  (source)   ON DELETE CASCADE,
+  filename     TEXT    NOT NULL REFERENCES files    (filename) ON DELETE CASCADE,
+  time_elapsed REAL,   -- if timeout -> NULL
+  num_items    INTEGER -- if timeout -> NULL
+) WITHOUT ROWID;
+CREATE INDEX completions_source   ON completions (source);
+CREATE INDEX completions_filename ON completions (filename);
+
+
+---             ---
+--- DEBUG VIEWS ---
+---             ---
 
 
 -- Words debug view
@@ -114,7 +141,41 @@ CREATE VIEW IF NOT EXISTS insertions_debug_view AS (
 );
 
 
-CREATE VIEW count_words_by_project_filetype_view AS (
+CREATE VIEW IF NOT EXISTS completions_debug_view AS (
+  SELECT
+    completions.source       AS source,
+    files.filetype           AS filetype,
+    files.project            AS project,
+    files.filename           AS filename,
+    completions.time_elapsed AS time_elapsed,
+    completions.num_items    AS num_items
+  FROM completions
+  JOIN files
+  ON
+    files.filename = completions.filename
+  ORDER BY
+    completions.source,
+    files.filetype,
+    files.project,
+    files.filename,
+    completions.time_elapsed,
+    completions.num_items
+);
+
+
+---            ---
+--- OLAP VIEWS ---
+---            ---
+
+
+
+
+---            ---
+--- OLTP VIEWS ---
+---            ---
+
+
+CREATE VIEW IF NOT EXISTS count_words_by_project_filetype_view AS (
   SELECT
     COUNT(*)       AS w_count,
     words.word     AS word,
@@ -135,7 +196,7 @@ CREATE VIEW count_words_by_project_filetype_view AS (
 
 
 
-CREATE VIEW count_words_by_filetype_view AS (
+CREATE VIEW IF NOT EXISTS count_words_by_filetype_view AS (
   SELECT
     COUNT(*)       AS w_count,
     words.word     AS word,
@@ -153,7 +214,7 @@ CREATE VIEW count_words_by_filetype_view AS (
 );
 
 
-CREATE VIEW count_words_by_file_lines_view AS (
+CREATE VIEW IF NOT EXISTS count_words_by_file_lines_view AS (
   SELECT
     COUNT(*)                AS w_count,
     words.word              AS word,
