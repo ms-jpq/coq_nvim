@@ -73,13 +73,15 @@ CREATE TABLE insertions (
 CREATE INDEX insertions_prefix_affix ON insertions (prefix, affix);
 
 
-CREATE VIEW main_view AS (
+-- Words debug view
+CREATE VIEW words_debug_view AS (
   SELECT
-    words.word              AS word,
-    words.nword             AS nword,
-    word_locations.line_num AS line_num,
+    files.project           AS project,
+    filetypes.filetype      AS filetype,
     files.filename          AS filename,
-    filetypes.filetype      AS filetype
+    word_locations.line_num AS line_num,
+    words.word              AS word,
+    words.nword             AS nword
   FROM words
   JOIN word_locations
   ON
@@ -87,9 +89,12 @@ CREATE VIEW main_view AS (
   JOIN files
   ON
     files.filename = word_locations.filename
-  JOIN filetypes
-  ON
-    filetypes.filetype = files.filetype
+  ORDER BY
+    files.project,
+    filetypes.filetype,
+    files.filename,
+    word_locations.line_num,
+    words.word
 );
 
 

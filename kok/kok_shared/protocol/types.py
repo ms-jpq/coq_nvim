@@ -4,7 +4,6 @@ from typing import (
     AbstractSet,
     Annotated,
     Literal,
-    Optional,
     Protocol,
     Sequence,
     Tuple,
@@ -31,6 +30,7 @@ class Context:
     |...   <syms_before><words_before>🐭<words_after><syms_after>   ...|
     """
 
+    project: str
     filename: str
     filetype: str
 
@@ -111,7 +111,7 @@ class SnippetEdit(_BaseEdit, HasEditType):
 @dataclass(frozen=True)
 class Completion:
     position: Position
-    primary_edit: Union[Edit, ContextualEdit, SnippetEdit, None]
+    primary_edit: Union[Edit, ContextualEdit, RangeEdit, SnippetEdit]
     secondary_edits: Sequence[RangeEdit] = ()
     sortby: str = ""
     label: str = ""
