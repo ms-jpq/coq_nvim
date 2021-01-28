@@ -1,3 +1,6 @@
+BEGIN;
+
+
 DELETE FROM words
 WHERE
   NOT EXISTS (
@@ -6,4 +9,7 @@ WHERE
     FROM word_locations
     WHERE
       word_locations.word = words.word
-  )
+  );
+
+
+END;
