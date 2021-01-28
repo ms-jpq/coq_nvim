@@ -13,7 +13,7 @@ from typing import (
 
 
 @dataclass(frozen=True)
-class MatchOptions:
+class Options:
     unifying_chars: Annotated[
         AbstractSet[str], "Alphanumeric chars linked by these chars constitute as words"
     ]
@@ -76,6 +76,16 @@ class Edit(_BaseEdit, HasEditType):
 
 
 @dataclass(frozen=True)
+class RangeEdit(_BaseEdit, HasEditType):
+    """
+    End exclusve, like LSP
+    """
+
+    begin: Position
+    end: Position
+
+
+@dataclass(frozen=True)
 class ContextualEdit(_BaseEdit, HasEditType):
     """
     <new_prefix>🐭<new_suffix>
@@ -85,20 +95,6 @@ class ContextualEdit(_BaseEdit, HasEditType):
     new_prefix: str
     old_suffix: str
     new_suffix: str
-
-    edit_type: Literal["Contextual"] = "Contextual"
-
-
-@dataclass(frozen=True)
-class RangeEdit(_BaseEdit, HasEditType):
-    """
-    End exclusve, like LSP
-    """
-
-    begin: Position
-    end: Position
-
-    edit_type: Literal["Range"] = "Range"
 
 
 @dataclass(frozen=True)
@@ -111,10 +107,9 @@ class SnippetEdit(_BaseEdit, HasEditType):
 @dataclass(frozen=True)
 class Completion:
     position: Position
-    primary_edit: Union[Edit, ContextualEdit, RangeEdit, SnippetEdit]
+    primary_edit: Union[Edit, RangeEdit, ContextualEdit, SnippetEdit]
     secondary_edits: Sequence[RangeEdit] = ()
-    sortby: str = ""
     label: str = ""
-    kind: str = ""
+    short_label: str = ""
     doc: str = ""
     doc_type: str = ""

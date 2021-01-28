@@ -3,7 +3,7 @@ from math import inf
 from typing import Dict
 
 from ...shared.parse import is_word
-from ...shared.protocol.types import Context, MatchOptions
+from ...shared.protocol.types import Context, Options
 from .types import Metric
 
 #     matches: Mapping[int, str]
@@ -52,7 +52,7 @@ def gen_metric(
     ncword: str,
     match: str,
     n_match: str,
-    options: MatchOptions,
+    options: Options,
     use_secondary: bool,
 ) -> Metric:
     transband = options.transpose_band
@@ -95,7 +95,7 @@ def gen_metric(
 
 
 def gen_metric_wrap(
-    context: Context, suggestion: Suggestion, options: MatchOptions, use_secondary: bool
+    context: Context, suggestion: Suggestion, options: Options, use_secondary: bool
 ) -> Metric:
     match, n_match = suggestion.match, suggestion.match_normalized
     word_start = is_word(match[:1], unifying_chars=options.unifying_chars)

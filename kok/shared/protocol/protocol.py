@@ -2,20 +2,19 @@ from __future__ import annotations
 
 from abc import abstractmethod
 from dataclasses import dataclass
-from enum import Enum, auto
 from typing import (
     Annotated,
     Any,
     ClassVar,
     Literal,
-    Optional,
     Protocol,
     Sequence,
     Type,
+    Union,
     runtime_checkable,
 )
 
-from .types import Completion, Context, ContextualEdit, MatchOptions, SnippetEdit
+from .types import Completion, Context, ContextualEdit, Options, RangeEdit, SnippetEdit
 
 """
 Newline seperated JSON RPC
@@ -132,24 +131,13 @@ class HandShakeMessage(Protocol):
     ...
 
 
-class ConnectionType(Enum):
-    """
-    Enums are serialized by name not value
-    """
-
-    unix = auto()
-    tcp = auto()
-
-
 @dataclass(frozen=True)
 class Acknowledge(HandShakeMessage, ServerSent, Response):
     """
-    Server must announce a connection mechanism
+    Server must provide options to client
     """
 
-    connection_type: ConnectionType
-    address: str
-    options: MatchOptions
+    options: Options
 
     uid: Literal[0] = 0
     m_type: Literal["ACK"] = "ACK"
@@ -158,11 +146,8 @@ class Acknowledge(HandShakeMessage, ServerSent, Response):
 @dataclass(frozen=True)
 class Hello(HandShakeMessage, ClientSent, Request):
     """
-    Client must make first request to server via Neovim's RPC mechaism
+    Client must make first request to server
     """
-
-    name: str
-    short_name: str
 
     uid: Literal[0] = 0
     m_type: Literal["HELO"] = "HELO"
@@ -180,16 +165,17 @@ class CompletionMessage(Protocol):
 
 
 @dataclass(frozen=True)
-class DeadlinePastNotification(CompletionMessage, Broadcast, Notification):
+class _HasCtxID:
     ctx_uid: int
 
+
+@dataclass(frozen=True)
+class DeadlinePastNotification(CompletionMessage, Broadcast, Notification, _HasCtxID):
     m_type: Literal["DeadlinePastNotification"] = "DeadlinePastNotification"
 
 
 @dataclass(frozen=True)
-class CompletionResponse(CompletionMessage, ClientSent, Response, _HasID):
-    ctx_uid: int
-
+class CompletionResponse(CompletionMessage, ClientSent, Response, _HasID, _HasCtxID):
     has_pending: bool
     completions: Sequence[Completion]
 
@@ -197,9 +183,7 @@ class CompletionResponse(CompletionMessage, ClientSent, Response, _HasID):
 
 
 @dataclass(frozen=True)
-class CompletionRequest(CompletionMessage, Broadcast, Request, _HasID):
-    ctx_uid: int
-
+class CompletionRequest(CompletionMessage, Broadcast, Request, _HasID, _HasCtxID):
     deadline: Annotated[float, "Seconds since UNIX epoch"]
     context: Context
 
@@ -208,9 +192,9 @@ class CompletionRequest(CompletionMessage, Broadcast, Request, _HasID):
 
 
 @dataclass(frozen=True)
-class FurtherCompletionRequest(CompletionMessage, ServerSent, Request, _HasID):
-    ctx_uid: int
-
+class FurtherCompletionRequest(
+    CompletionMessage, ServerSent, Request, _HasID, _HasCtxID
+):
     deadline: Annotated[float, "Seconds since UNIX epoch"]
 
     m_type: Literal["FurtherCompletionRequest"] = "FurtherCompletionRequest"
@@ -234,7 +218,7 @@ class _HasMeta:
 
 @dataclass(frozen=True)
 class ParseResponse(SnippetMessage, ClientSent, Response, _HasMeta, _HasID):
-    edit: Optional[ContextualEdit]
+    edit: Union[ContextualEdit, RangeEdit, None]
 
     m_type: Literal["ParseResponse"] = "ParseResponse"
 
