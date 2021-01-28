@@ -8,13 +8,15 @@ CREATE TABLE filetypes (
 
 
 -- Probably just cwd
--- Should be vacuumed if folder not longer exists
+-- Should be vacuumed if folder not longer exists, once at beginning
 CREATE TABLE projects (
   project TEXT NOT NULL PRIMARY KEY
 ) WITHOUT ROWID;
 
 
--- Should be vacuumed if file no longer exists
+-- !! projects  1:N files
+-- !! filetypes 1:N files
+-- Should be vacuumed if file no longer exists, once at beginning
 -- Should be vacuumed by foreign key constraints on `projects`
 -- Should be vacuumed if is ephemeral?
 CREATE TABLE files (
@@ -23,13 +25,6 @@ CREATE TABLE files (
   filetype TEXT NOT NULL REFERENCES filetypes (filetype) ON DELETE CASCADE
 ) WITHOUT ROWID;
 CREATE INDEX files_filetype ON filetypes (filetype);
-
-
--- Index for buffers without a name
--- Should be vacuumed when?
-CREATE TABLE ephemeral_files (
-  filename TEXT NOT NULL PRIMARY KEY REFERENCES files (filename) ON DELETE CASCADE
-) WITHOUT ROWID;
 
 
 -- Index for words in files
@@ -41,6 +36,8 @@ CREATE TABLE words (
 CREATE INDEX words_nword ON words (nword);
 
 
+-- !! words 1:N word_locations
+-- !! files 1:N word_locations
 -- Store word location in files
 -- Should be vacuumed by foreign key constraints on `files`
 CREATE TABLE word_locations (
@@ -54,14 +51,17 @@ CREATE INDEX word_locations_word     ON word_locations (word);
 CREATE INDEX word_locations_line_num ON word_locations (line_num);
 
 
--- Store inserted files
+-- Store inserted content
 -- Should be vacuumed if not in `insertions`
 CREATE TABLE inserted (
   content TEXT NOT NULL PRIMARY KEY
 ) WITHOUT ROWID;
 
 
+-- !! files    1:N insertions
+-- !! inserted 1:N insertions
 -- Stores insertion history
+-- Should be vacuumed by only keeping last n rows
 -- Should be vacuumed by foreign key constraints on `files`
 CREATE TABLE insertions (
   rowid    INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
