@@ -14,7 +14,14 @@ from typing import (
     runtime_checkable,
 )
 
-from .types import Completion, Context, ContextualEdit, Options, RangeEdit, SnippetEdit
+from .types import (
+    Completion,
+    Context,
+    ContextualEdit,
+    Options,
+    RangeEdit,
+    SnippetContext,
+)
 
 """
 Newline seperated JSON RPC
@@ -27,23 +34,6 @@ Basic Layout
 
 
 @runtime_checkable
-class HasID(Protocol):
-    """
-    ID must be unique between Request / Response pairs
-    """
-
-    @property
-    @abstractmethod
-    def uid(self) -> int:
-        ...
-
-
-@dataclass(frozen=True)
-class _HasID(HasID):
-    uid: int
-
-
-@runtime_checkable
 class Message(Protocol):
     """
     Messages are not ordered
@@ -51,8 +41,17 @@ class Message(Protocol):
 
     @property
     @abstractmethod
-    def m_type(self) -> Annotated[str, "Must be a Literal"]:
-        ...
+    def uid(self) -> int:
+        """
+        ID must be unique between Request / Response pairs
+        """
+
+    @property
+    @abstractmethod
+    def m_type(self) -> str:
+        """
+        Must be a Literal
+        """
 
 
 @runtime_checkable
@@ -63,10 +62,22 @@ class Notification(Message, Protocol):
 
 
 @runtime_checkable
-class Response(Message, HasID, Protocol):
+class Response(Message, Protocol):
     """
     Each Request must receive a Response
     """
+
+
+@runtime_checkable
+class NotSupportedResponse(Response, Protocol):
+    """
+    Response Can be "Not supported"
+    """
+
+    @property
+    @abstractmethod
+    def not_supported(self) -> Literal[True]:
+        ...
 
 
 @runtime_checkable
@@ -87,12 +98,12 @@ class ErrorResponse(Response, Protocol):
 
 
 @runtime_checkable
-class Request(Message, HasID, Protocol):
+class Request(Message, Protocol):
     """
     Each Request type has a single vaild Response Type
     """
 
-    resp_type: ClassVar[Type] = Response
+    resp_type: Annotated[ClassVar[Type], "resp_type is NOT serialized"] = Response
 
 
 """
@@ -122,17 +133,44 @@ class Broadcast(ServerSent, Protocol):
 
 
 """
+================================================================================
+================================================================================
+================================================================================
+Implementation dataclasses
+Not part of protocol
+"""
+
+
+@dataclass(frozen=True)
+class _HasID:
+    uid: int
+
+
+@dataclass(frozen=True)
+class NotSupportedResp(NotSupportedResponse, _HasID):
+    not_supported: Literal[True] = True
+
+
+@dataclass(frozen=True)
+class ErrorResp(ErrorResponse, _HasID):
+    msg: str
+    error: Literal[True]
+
+
+"""
 Hand Shake
 """
 
 
 @runtime_checkable
-class HandShakeMessage(Protocol):
-    ...
+class HandShakeMessage(Message, Protocol):
+    """
+    The first message is always a handshake
+    """
 
 
 @dataclass(frozen=True)
-class Acknowledge(HandShakeMessage, ServerSent, Response):
+class Acknowledge(HandShakeMessage, ServerSent, Response, _HasID):
     """
     Server must provide options to client
     """
@@ -144,7 +182,7 @@ class Acknowledge(HandShakeMessage, ServerSent, Response):
 
 
 @dataclass(frozen=True)
-class Hello(HandShakeMessage, ClientSent, Request):
+class Hello(HandShakeMessage, ClientSent, Request, _HasID):
     """
     Client must make first request to server
     """
@@ -160,7 +198,7 @@ Completion Request / Response
 
 
 @runtime_checkable
-class CompletionMessage(Protocol):
+class CompletionMessage(Message, Protocol):
     ...
 
 
@@ -170,12 +208,22 @@ class _HasCtxID:
 
 
 @dataclass(frozen=True)
-class DeadlinePastNotification(CompletionMessage, Broadcast, Notification, _HasCtxID):
+class DeadlinePastNotification(
+    CompletionMessage, Broadcast, Notification, _HasCtxID, _HasID
+):
+    """
+    Server must announce when completion is no longer required
+    """
+
     m_type: Literal["DeadlinePastNotification"] = "DeadlinePastNotification"
 
 
 @dataclass(frozen=True)
-class CompletionResponse(CompletionMessage, ClientSent, Response, _HasID, _HasCtxID):
+class CompletionResponse(CompletionMessage, ClientSent, Response, _HasCtxID, _HasID):
+    """
+    Client must send completions to server
+    """
+
     has_pending: bool
     completions: Sequence[Completion]
 
@@ -183,7 +231,11 @@ class CompletionResponse(CompletionMessage, ClientSent, Response, _HasID, _HasCt
 
 
 @dataclass(frozen=True)
-class CompletionRequest(CompletionMessage, Broadcast, Request, _HasID, _HasCtxID):
+class CompletionRequest(CompletionMessage, Broadcast, Request, _HasCtxID, _HasID):
+    """
+    Client must send completions to server
+    """
+
     deadline: Annotated[float, "Seconds since UNIX epoch"]
     context: Context
 
@@ -193,8 +245,12 @@ class CompletionRequest(CompletionMessage, Broadcast, Request, _HasID, _HasCtxID
 
 @dataclass(frozen=True)
 class FurtherCompletionRequest(
-    CompletionMessage, ServerSent, Request, _HasID, _HasCtxID
+    CompletionMessage, ServerSent, Request, _HasCtxID, _HasID
 ):
+    """
+    Client must send completions to server
+    """
+
     deadline: Annotated[float, "Seconds since UNIX epoch"]
 
     m_type: Literal["FurtherCompletionRequest"] = "FurtherCompletionRequest"
@@ -217,20 +273,37 @@ class _HasMeta:
 
 
 @dataclass(frozen=True)
-class ParseResponse(SnippetMessage, ClientSent, Response, _HasMeta, _HasID):
+class SnippetAppliedNotification(
+    SnippetMessage, ServerSent, Notification, _HasMeta, _HasID
+):
+    """
+    Server must send notif after it applies the edits
+    Contains -- `meta`
+    """
+
+    m_type: Literal["SnippetAppliedNotification"] = "SnippetAppliedNotification"
+
+
+@dataclass(frozen=True)
+class SnippetEditResponse(SnippetMessage, ClientSent, Response, _HasMeta, _HasID):
+    """
+    Client must reply to each snippet parse request
+    Client can optionally ask the server to apply an edit
+    """
+
     edit: Union[ContextualEdit, RangeEdit, None]
 
     m_type: Literal["ParseResponse"] = "ParseResponse"
 
 
 @dataclass(frozen=True)
-class ParseRequest(SnippetMessage, Broadcast, Request, _HasID):
-    snippet: SnippetEdit
+class SnippetParseRequest(SnippetMessage, Broadcast, Request, _HasID):
+    """
+    Server will ask all clients to parse / apply snippet
+    Clients can reply with
+    """
+
+    context: SnippetContext
 
     m_type: Literal["ParseRequest"] = "ParseRequest"
-    resp_type: ClassVar[Type[Message]] = ParseResponse
-
-
-@dataclass(frozen=True)
-class SnippetAppliedNotification(SnippetMessage, ServerSent, Notification, _HasMeta):
-    m_type: Literal["SnippetAppliedNotification"] = "SnippetAppliedNotification"
+    resp_type: ClassVar[Type[Message]] = SnippetEditResponse
