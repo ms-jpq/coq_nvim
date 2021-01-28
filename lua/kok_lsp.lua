@@ -2,9 +2,7 @@ local api = vim.api
 local fn = vim.fn
 local lsp = vim.lsp
 
-local linesep = "\n"
 local cancel = function () end
-
 
 local list_comp_candidates = function (chan_id, request_id, row, col)
   if cancel then
