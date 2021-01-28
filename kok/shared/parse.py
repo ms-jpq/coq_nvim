@@ -2,7 +2,7 @@ from typing import Iterable, Iterator, List, Set
 
 
 def normalize(text: str) -> str:
-    return text.lower()
+    return text.casefold()
 
 
 def is_word(char: str, unifying_chars: Set[str]) -> bool:
@@ -32,4 +32,3 @@ def coalesce(
         wl = len(word)
         if wl >= max_length:
             yield word
-

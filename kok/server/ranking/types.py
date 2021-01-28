@@ -1,10 +1,9 @@
 from dataclasses import dataclass
-from functools import cached_property
 from typing import Annotated, Mapping
 
 
 @dataclass(frozen=True, order=True)
-class Metric:
+class Metrics:
     prefix_matches: Annotated[int, ""]
     consecutive_matches: Annotated[
         int, "number of matches where at least two chars match consecutively"

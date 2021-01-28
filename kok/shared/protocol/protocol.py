@@ -12,7 +12,6 @@ from typing import (
     Protocol,
     Sequence,
     Type,
-    TypeVar,
     runtime_checkable,
 )
 

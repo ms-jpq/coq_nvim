@@ -2,8 +2,8 @@ from difflib import SequenceMatcher
 from math import inf
 from typing import Dict
 
-from ..shared.parse import is_word
-from ..shared.types import Context, MatchOptions
+from ...shared.parse import is_word
+from ...shared.protocol.types import Context, MatchOptions
 from .types import Metric
 
 #     matches: Mapping[int, str]
