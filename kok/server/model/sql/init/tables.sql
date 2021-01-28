@@ -51,15 +51,7 @@ CREATE INDEX word_locations_word     ON word_locations (word);
 CREATE INDEX word_locations_line_num ON word_locations (line_num);
 
 
--- Store inserted content
--- Should be vacuumed if not in `insertions`
-CREATE TABLE inserted (
-  content TEXT NOT NULL PRIMARY KEY
-) WITHOUT ROWID;
-
-
--- !! files    1:N insertions
--- !! inserted 1:N insertions
+-- !! files 1:N insertions
 -- Stores insertion history
 -- Should be vacuumed by only keeping last n rows
 -- Should be vacuumed by foreign key constraints on `files`
@@ -67,10 +59,12 @@ CREATE TABLE insertions (
   rowid    INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
   prefix   TEXT    NOT NULL,
   affix    TEXT    NOT NULL,
-  filename TEXT    NOT NULL REFERENCES files    (filename) ON DELETE CASCADE,
-  content  TEXT    NOT NULL REFERENCES inserted (content)  ON DELETE CASCADE
+  filename TEXT    NOT NULL REFERENCES files (filename) ON DELETE CASCADE,
+  content  TEXT    NOT NULL
 ) WITHOUT ROWID;
 CREATE INDEX insertions_prefix_affix ON insertions (prefix, affix);
+CREATE INDEX insertions_filename     ON insertions (filename);
+CREATE INDEX insertions_content      ON insertions (content);
 
 
 -- Words debug view
