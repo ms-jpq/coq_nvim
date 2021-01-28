@@ -13,6 +13,11 @@ CREATE TABLE files (
 CREATE INDEX files_filetype ON filetypes (filetype);
 
 
+CREATE TABLE ephemeral_files (
+  filename TEXT NOT NULL PRIMARY KEY REFERENCES files (filename) ON DELETE CASCADE
+) WITHOUT ROWID;
+
+
 CREATE TABLE words (
   word  TEXT NOT NULL PRIMARY KEY,
   nword TEXT NOT NULL
@@ -29,6 +34,28 @@ CREATE TABLE word_locations (
 CREATE INDEX word_locations_filename ON word_locations (filename);
 CREATE INDEX word_locations_word     ON word_locations (word);
 CREATE INDEX word_locations_line_num ON word_locations (line_num);
+
+
+CREATE TABLE inserted (
+  content TEXT NOT NULL PRIMARY KEY
+) WITHOUT ROWID;
+
+
+CREATE TABLE insertion_contexts (
+  rowid    INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+  prefix   TEXT    NOT NULL,
+  affix    TEXT    NOT NULL,
+  filename TEXT    NOT NULL REFERENCES files    (filename) ON DELETE CASCADE,
+  content  TEXT    NOT NULL REFERENCES inserted (content)  ON DELETE CASCADE
+) WITHOUT ROWID;
+CREATE INDEX insertion_contexts_prefix_affix ON insertion_contexts (prefix, affix);
+
+
+CREATE TABLE insertions (
+  rowid    INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+  filename TEXT    NOT NULL REFERENCES files    (filename) ON DELETE CASCADE,
+  content  TEXT    NOT NULL REFERENCES inserted (content)  ON DELETE CASCADE
+) WITHOUT ROWID;
 
 
 CREATE VIEW main_view AS (
@@ -53,9 +80,9 @@ CREATE VIEW main_view AS (
 
 CREATE VIEW count_words_by_filetype_view AS (
   SELECT
-    COUNT(*)           AS w_count,
-    words.word         AS word,
-    filetypes.filetype AS filetype
+    COUNT(*)       AS w_count,
+    words.word     AS word,
+    files.filetype AS filetype
   FROM words
   JOIN word_locations
   ON
@@ -63,12 +90,9 @@ CREATE VIEW count_words_by_filetype_view AS (
   JOIN files
   ON
     files.filename = word_locations.filename
-  JOIN filetypes
-  ON
-    filetypes.filetype = files.filetype
   GROUP BY
     words.word,
-    filetypes.filetype
+    files.filetype
 );
 
 
