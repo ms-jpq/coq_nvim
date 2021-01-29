@@ -94,7 +94,6 @@ CREATE INDEX completions_filename ON completions (filename);
 ---             ---
 
 
--- Words debug view
 CREATE VIEW IF NOT EXISTS words_debug_view AS (
   SELECT
     files.project           AS project,
