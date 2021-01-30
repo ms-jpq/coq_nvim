@@ -256,10 +256,10 @@ CREATE VIEW IF NOT EXISTS most_inserted_content_view (
 
 CREATE VIEW IF NOT EXISTS count_words_by_project_filetype_view AS (
   SELECT
-    COUNT(*)       AS w_count,
-    words.word     AS word,
+    files.filetype AS filetype,
     files.project  AS project,
-    files.filetype AS filetype
+    words.word     AS word,
+    COUNT(*)       AS w_count
   FROM words
   JOIN word_locations
   ON
@@ -268,18 +268,17 @@ CREATE VIEW IF NOT EXISTS count_words_by_project_filetype_view AS (
   ON
     files.filename = word_locations.filename
   GROUP BY
-    words.word,
+    files.filetype,
     files.project,
-    files.filetype
+    words.word
 );
-
 
 
 CREATE VIEW IF NOT EXISTS count_words_by_filetype_view AS (
   SELECT
-    COUNT(*)       AS w_count,
+    files.filetype AS filetype,
     words.word     AS word,
-    files.filetype AS filetype
+    COUNT(*)       AS w_count
   FROM words
   JOIN word_locations
   ON
@@ -288,17 +287,17 @@ CREATE VIEW IF NOT EXISTS count_words_by_filetype_view AS (
   ON
     files.filename = word_locations.filename
   GROUP BY
-    words.word,
-    files.filetype
+    files.filetype,
+    words.word
 );
 
 
 CREATE VIEW IF NOT EXISTS count_words_by_file_lines_view AS (
   SELECT
-    COUNT(*)                AS w_count,
-    words.word              AS word,
+    files.filename          AS filename,
     word_locations.line_num AS line_num,
-    files.filename          AS filename
+    words.word              AS word,
+    COUNT(*)                AS w_count
   FROM words
   JOIN word_locations
   ON
@@ -307,9 +306,9 @@ CREATE VIEW IF NOT EXISTS count_words_by_file_lines_view AS (
   ON
     files.filename = word_locations.filename
   GROUP BY
-    words.word,
+    files.filename,
     word_locations.line_num,
-    files.filename
+    words.word
 );
 
 
