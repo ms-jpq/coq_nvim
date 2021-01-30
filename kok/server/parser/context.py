@@ -12,14 +12,14 @@ from pynvim_pp.api import (
 )
 from pynvim_pp.text_object import SplitCtx, gen_split
 
-from ...shared.protocol.types import Context, WTF8Pos
-from ..consts import INTERNAL_ENCODING
+from ...shared.parse import normalize
+from ...shared.protocol.types import Context, NvimPos
 
 
 def gen_context_at(
-    nvim: Nvim, pos: WTF8Pos, unifying_chars: AbstractSet[str]
+    nvim: Nvim, pos: NvimPos, unifying_chars: AbstractSet[str]
 ) -> SplitCtx:
-    row, col = pos.row, len(pos.col)
+    row, col = pos
     win = cur_win(nvim)
     buf = win_get_buf(nvim, win=win)
 
@@ -35,16 +35,15 @@ def gen_context(nvim: Nvim, project: Path, unifying_chars: AbstractSet[str]) -> 
     win = cur_win(nvim)
     buf = win_get_buf(nvim, win=win)
     row, col = win_get_cursor(nvim, win=win)
+    pos = (row, col)
 
     lines = buf_get_lines(nvim, buf=buf, lo=row, hi=row + 1)
     filename = buf_name(nvim, buf=buf)
     filetype = buf_filetype(nvim, buf=buf)
 
     b_line = next(iter(lines)).encode()
-    before, after = b_line[:col].decode(), b_line[col:].decode()
+    before, after = normalize(b_line[:col].decode()), normalize(b_line[col:].decode())
     split = gen_split(lhs=before, rhs=after, unifying_chars=unifying_chars)
-
-    pos = WTF8Pos(row=row, col=len(before), encoding=INTERNAL_ENCODING)
 
     ctx = Context(
         project=str(project),

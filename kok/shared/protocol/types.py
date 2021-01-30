@@ -1,5 +1,6 @@
 from abc import abstractmethod
 from dataclasses import dataclass
+from enum import Enum, auto
 from typing import (
     AbstractSet,
     Annotated,
@@ -19,20 +20,13 @@ class Options:
     ]
 
 
-NvimPos = Annotated[
-    Tuple[int, Annotated[int, "In nvim, the col is a ut8 byte offset"]], "0,0 based"
-]
+class OffsetEncoding(Enum):
+    utf_8 = auto()  # equivalent to NvimPos
+    utf_16 = auto()  # LSP
 
 
-@dataclass(frozen=True)
-class WTF8Pos:
-    """
-    0,0 based
-    """
-
-    row: int
-    col: int
-    encoding: Literal["UTF-8", "UTF-16"]
+NvimPos = Tuple[int, Annotated[int, "In nvim, the col is a ut8 byte offset"]]
+WTF8Pos = Tuple[int, Annotated[int, "Depends on `OffsetEncoding`"]]
 
 
 @dataclass(frozen=True)
@@ -47,7 +41,7 @@ class Context:
     filename: str
     filetype: str
 
-    position: WTF8Pos
+    position: NvimPos
 
     line: str
     line_before: str
@@ -114,7 +108,8 @@ ApplicableEdit = Union[Edit, RangeEdit, ContextualEdit]
 
 @dataclass(frozen=True)
 class Completion:
-    position: WTF8Pos
+    position: NvimPos
+    encoding: OffsetEncoding
     primary_edit: Union[ApplicableEdit, SnippetEdit]
     secondary_edits: Sequence[RangeEdit] = ()
     label: str = ""
