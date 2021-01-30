@@ -52,7 +52,7 @@ CREATE INDEX IF NOT EXISTS words_lword ON words (lword);
 -- Store word location in files
 -- Should be vacuumed by foreign key constraints on `files`
 CREATE TABLE IF NOT EXISTS word_locations (
-  rowid    INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+  rowid    INTEGER NOT NULL PRIMARY KEY,
   filename TEXT    NOT NULL REFERENCES files (filename) ON DELETE CASCADE,
   word     TEXT    NOT NULL REFERENCES words (word)     ON DELETE CASCADE,
   line_num INTEGER NOT NULL
@@ -66,7 +66,7 @@ CREATE INDEX IF NOT EXISTS word_locations_line_num ON word_locations (line_num);
 -- !! files   1:N completions
 -- Should be vaccumed by keeping last n rows, per source
 CREATE TABLE IF NOT EXISTS completions (
-  rowid         INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+  rowid         INTEGER NOT NULL PRIMARY KEY,
   source        TEXT    NOT NULL REFERENCES sources  (source)   ON DELETE CASCADE,
   filename      TEXT    NOT NULL REFERENCES files    (filename) ON DELETE CASCADE,
   response_time REAL,   -- if timeout -> NULL
@@ -81,7 +81,7 @@ CREATE INDEX IF NOT EXISTS completions_filename ON completions (filename);
 -- Should be vacuumed by only keeping last n rows
 -- Should be vacuumed by foreign key constraints on `completions`
 CREATE TABLE IF NOT EXISTS insertions (
-  rowid         INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+  rowid         INTEGER NOT NULL PRIMARY KEY,
   completion_id INTEGER NOT NULL UNIQUE REFERENCES completions (rowid) ON DELETE CASCADE,
   prefix        TEXT    NOT NULL,
   affix         TEXT    NOT NULL,
@@ -97,7 +97,7 @@ CREATE INDEX IF NOT EXISTS insertions_content       ON insertions (content);
 --------------------------------------------------------------------------------
 
 
-CREATE VIEW IF NOT EXISTS words_debug_view AS (
+CREATE VIEW IF NOT EXISTS words_debug_view AS
   SELECT
     files.project           AS project,
     files.filetype          AS filetype,
@@ -117,11 +117,10 @@ CREATE VIEW IF NOT EXISTS words_debug_view AS (
     files.filetype,
     files.filename,
     word_locations.line_num,
-    words.word
-);
+    words.word;
 
 
-CREATE VIEW IF NOT EXISTS completions_debug_view AS (
+CREATE VIEW IF NOT EXISTS completions_debug_view AS
   SELECT
     completions.source        AS source,
     files.filetype            AS filetype,
@@ -139,11 +138,10 @@ CREATE VIEW IF NOT EXISTS completions_debug_view AS (
     files.project,
     files.filename,
     completions.response_time,
-    completions.num_items
-);
+    completions.num_items;
 
 
-CREATE VIEW IF NOT EXISTS insertions_debug_view AS (
+CREATE VIEW IF NOT EXISTS insertions_debug_view AS
   SELECT
     completions.source AS source,
     files.filetype     AS filetype,
@@ -166,8 +164,7 @@ CREATE VIEW IF NOT EXISTS insertions_debug_view AS (
     files.filename,
     insertions.prefix,
     insertions.suffix,
-    insertions.content
-);
+    insertions.content;
 
 
 --------------------------------------------------------------------------------
@@ -175,40 +172,37 @@ CREATE VIEW IF NOT EXISTS insertions_debug_view AS (
 --------------------------------------------------------------------------------
 
 
-CREATE VIEW IF NOT EXISTS source_total_view (
+CREATE VIEW IF NOT EXISTS source_total_view AS
   SELECT
     source   AS source,
     COUNT(*) AS totals
   FROM
     source
   GROUP BY
-    source
-);
+    source;
 
 
-CREATE VIEW IF NOT EXISTS source_response_time_view (
+CREATE VIEW IF NOT EXISTS source_response_time_view AS
   SELECT
     source             AS source,
-    AVG(response_time) AS avg_response_time,
+    AVG(response_time) AS avg_response_time
   FROM completions
   GROUP BY
-    source
-);
+    source;
 
 
-CREATE VIEW IF NOT EXISTS source_timeout_view (
+CREATE VIEW IF NOT EXISTS source_timeout_view AS
   SELECT
     source   AS source,
-    COUNT(*) AS timeouts,
+    COUNT(*) AS timeouts
   FROM completions
   GROUP BY
     source
   HAVING
-    response_time IS NULL
-);
+    response_time IS NULL;
 
 
-CREATE VIEW IF NOT EXISTS most_inserted_trigger_view (
+CREATE VIEW IF NOT EXISTS most_inserted_trigger_view AS
   SELECT
     insertions.prefix || insertions.suffix AS trigger,
     COUNT(*)                               AS occurrences
@@ -225,11 +219,10 @@ CREATE VIEW IF NOT EXISTS most_inserted_trigger_view (
     insertions.prefix,
     insertions.suffix
   ORDER BY
-    occurrences
-);
+    occurrences;
 
 
-CREATE VIEW IF NOT EXISTS most_inserted_content_view (
+CREATE VIEW IF NOT EXISTS most_inserted_content_view AS
   SELECT
     insertions.content AS content,
     COUNT(*)           AS occurrences
@@ -245,8 +238,7 @@ CREATE VIEW IF NOT EXISTS most_inserted_content_view (
     files.filetype,
     insertions.content
   ORDER BY
-    occurrences
-);
+    occurrences;
 
 
 --------------------------------------------------------------------------------
@@ -254,7 +246,7 @@ CREATE VIEW IF NOT EXISTS most_inserted_content_view (
 --------------------------------------------------------------------------------
 
 
-CREATE VIEW IF NOT EXISTS count_words_by_project_filetype_view AS (
+CREATE VIEW IF NOT EXISTS count_words_by_project_filetype_view AS
   SELECT
     files.filetype AS filetype,
     files.project  AS project,
@@ -270,11 +262,10 @@ CREATE VIEW IF NOT EXISTS count_words_by_project_filetype_view AS (
   GROUP BY
     files.filetype,
     files.project,
-    words.word
-);
+    words.word;
 
 
-CREATE VIEW IF NOT EXISTS count_words_by_filetype_view AS (
+CREATE VIEW IF NOT EXISTS count_words_by_filetype_view AS
   SELECT
     files.filetype AS filetype,
     words.word     AS word,
@@ -288,11 +279,10 @@ CREATE VIEW IF NOT EXISTS count_words_by_filetype_view AS (
     files.filename = word_locations.filename
   GROUP BY
     files.filetype,
-    words.word
-);
+    words.word;
 
 
-CREATE VIEW IF NOT EXISTS count_words_by_file_lines_view AS (
+CREATE VIEW IF NOT EXISTS count_words_by_file_lines_view AS
   SELECT
     files.filename          AS filename,
     word_locations.line_num AS line_num,
@@ -308,8 +298,7 @@ CREATE VIEW IF NOT EXISTS count_words_by_file_lines_view AS (
   GROUP BY
     files.filename,
     word_locations.line_num,
-    words.word
-);
+    words.word;
 
 
 END;
