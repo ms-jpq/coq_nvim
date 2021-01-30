@@ -27,4 +27,4 @@ do
 done
 
 
-mypy -- "${PYTHON_FILES[@]}"
+mypy "$@" -- "${PYTHON_FILES[@]}"
