@@ -1,6 +1,11 @@
 BEGIN;
 
 
+--------------------------------------------------------------------------------
+-- TABLES
+--------------------------------------------------------------------------------
+
+
 -- Should be vaccumed?
 CREATE TABLE IF NOT EXISTS sources (
   source TEXT NOT NULL PRIMARY KEY
@@ -71,14 +76,13 @@ CREATE INDEX completions_source   ON completions (source);
 CREATE INDEX completions_filename ON completions (filename);
 
 
--- !! sources 1:N insertions
--- !! files   1:N insertions
+-- !! completions 1:1 insertions
 -- Stores insertion history
 -- Should be vacuumed by only keeping last n rows
--- Should be vacuumed by foreign key constraints on `files`
+-- Should be vacuumed by foreign key constraints on `completions`
 CREATE TABLE IF NOT EXISTS insertions (
   rowid         INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
-  completion_id INTEGER NOT NULL REFERENCES completions (rowid) ON DELETE CASCADE,
+  completion_id INTEGER NOT NULL UNIQUE REFERENCES completions (rowid) ON DELETE CASCADE,
   prefix        TEXT    NOT NULL,
   affix         TEXT    NOT NULL,
   content       TEXT    NOT NULL
@@ -88,9 +92,9 @@ CREATE INDEX insertions_filename     ON insertions (filename);
 CREATE INDEX insertions_content      ON insertions (content);
 
 
----             ---
---- DEBUG VIEWS ---
----             ---
+--------------------------------------------------------------------------------
+-- DEBUG VIEWS
+--------------------------------------------------------------------------------
 
 
 CREATE VIEW IF NOT EXISTS words_debug_view AS (
@@ -119,12 +123,12 @@ CREATE VIEW IF NOT EXISTS words_debug_view AS (
 
 CREATE VIEW IF NOT EXISTS completions_debug_view AS (
   SELECT
-    completions.source       AS source,
-    files.filetype           AS filetype,
-    files.project            AS project,
-    files.filename           AS filename,
-    completions.time_elapsed AS time_elapsed,
-    completions.num_items    AS num_items
+    completions.source        AS source,
+    files.filetype            AS filetype,
+    files.project             AS project,
+    files.filename            AS filename,
+    completions.response_time AS response_time,
+    completions.num_items     AS num_items
   FROM completions
   JOIN files
   ON
@@ -134,7 +138,7 @@ CREATE VIEW IF NOT EXISTS completions_debug_view AS (
     files.filetype,
     files.project,
     files.filename,
-    completions.time_elapsed,
+    completions.response_time,
     completions.num_items
 );
 
@@ -142,12 +146,12 @@ CREATE VIEW IF NOT EXISTS completions_debug_view AS (
 CREATE VIEW IF NOT EXISTS insertions_debug_view AS (
   SELECT
     completions.source AS source,
-    files.project      AS project,
     files.filetype     AS filetype,
+    files.project      AS project,
     files.filename     AS filename,
-    insertions.content AS content,
     insertions.prefix  AS prefix,
-    insertions.suffix  AS suffix
+    insertions.suffix  AS suffix,
+    insertions.content AS content
   FROM insertions
   JOIN completions
   ON
@@ -156,30 +160,98 @@ CREATE VIEW IF NOT EXISTS insertions_debug_view AS (
   ON
     files.filename = completions.filename
   ORDER BY
+    completions.source,
     files.project,
     files.filetype,
     files.filename,
-    insertions.content,
+    insertions.prefix,
+    insertions.suffix,
+    insertions.content
+);
+
+
+--------------------------------------------------------------------------------
+-- OLAP VIEWS
+--------------------------------------------------------------------------------
+
+
+CREATE VIEW IF NOT EXISTS source_total_view (
+  SELECT
+    source   AS source,
+    COUNT(*) AS totals
+  FROM
+    source
+  GROUP BY
+    source
+);
+
+
+CREATE VIEW IF NOT EXISTS source_response_time_view (
+  SELECT
+    source             AS source,
+    AVG(response_time) AS avg_response_time,
+  FROM completions
+  GROUP BY
+    source
+);
+
+
+CREATE VIEW IF NOT EXISTS source_timeout_view (
+  SELECT
+    source   AS source,
+    COUNT(*) AS timeouts,
+  FROM completions
+  GROUP BY
+    source
+  HAVING
+    response_time IS NULL
+);
+
+
+CREATE VIEW IF NOT EXISTS most_inserted_trigger_view (
+  SELECT
+    insertions.prefix || insertions.suffix AS trigger,
+    COUNT(*)                               AS occurrences
+  FROM insertions
+  JOIN completions
+  ON
+    completions.rowid = insertions.completion_id
+  JOIN
+    files
+  ON
+    files.filename = completions.filename
+  GROUP BY
+    files.filetype,
     insertions.prefix,
     insertions.suffix
+  ORDER BY
+    occurrences
 );
 
 
----            ---
---- OLAP VIEWS ---
----            ---
-
-
-CREATE VIEW IF NOT EXISTS completions_debug_view (
-
-
+CREATE VIEW IF NOT EXISTS most_inserted_content_view (
+  SELECT
+    insertions.content AS content,
+    COUNT(*)           AS occurrences
+  FROM insertions
+  JOIN completions
+  ON
+    completions.rowid = insertions.completion_id
+  JOIN
+    files
+  ON
+    files.filename = completions.filename
+  GROUP BY
+    files.filetype,
+    insertions.content
+  ORDER BY
+    occurrences
 );
 
 
-
----            ---
---- OLTP VIEWS ---
----            ---
+--------------------------------------------------------------------------------
+-- OLTP VIEWS
+--------------------------------------------------------------------------------
 
 
 CREATE VIEW IF NOT EXISTS count_words_by_project_filetype_view AS (
