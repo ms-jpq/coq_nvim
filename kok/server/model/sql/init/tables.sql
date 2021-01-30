@@ -87,9 +87,9 @@ CREATE TABLE IF NOT EXISTS insertions (
   affix         TEXT    NOT NULL,
   content       TEXT    NOT NULL
 ) WITHOUT ROWID;
-CREATE INDEX IF NOT EXISTS insertions_prefix_affix ON insertions (prefix, affix);
-CREATE INDEX IF NOT EXISTS insertions_filename     ON insertions (filename);
-CREATE INDEX IF NOT EXISTS insertions_content      ON insertions (content);
+CREATE INDEX IF NOT EXISTS insertions_prefix_affix  ON insertions (prefix, affix);
+CREATE INDEX IF NOT EXISTS insertions_completion_id ON insertions (completion_id);
+CREATE INDEX IF NOT EXISTS insertions_content       ON insertions (content);
 
 
 --------------------------------------------------------------------------------
