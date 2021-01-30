@@ -75,16 +75,6 @@ class Edit(_BaseEdit, HasEditType):
 
 
 @dataclass(frozen=True)
-class RangeEdit(_BaseEdit, HasEditType):
-    """
-    End exclusve, like LSP
-    """
-
-    begin: WTF8Pos
-    end: WTF8Pos
-
-
-@dataclass(frozen=True)
 class ContextualEdit(_BaseEdit, HasEditType):
     """
     <new_prefix>🐭<new_suffix>
@@ -94,6 +84,16 @@ class ContextualEdit(_BaseEdit, HasEditType):
     new_prefix: str
     old_suffix: str
     new_suffix: str
+
+
+@dataclass(frozen=True)
+class RangeEdit(_BaseEdit, HasEditType):
+    """
+    End exclusve, like LSP
+    """
+
+    begin: WTF8Pos
+    end: WTF8Pos
 
 
 @dataclass(frozen=True)
