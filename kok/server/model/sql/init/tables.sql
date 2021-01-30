@@ -57,36 +57,35 @@ CREATE INDEX word_locations_word     ON word_locations (word);
 CREATE INDEX word_locations_line_num ON word_locations (line_num);
 
 
+-- !! sources 1:N completions
+-- !! files   1:N completions
+-- Should be vaccumed by keeping last n rows, per source
+CREATE TABLE IF NOT EXISTS completions (
+  rowid         INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+  source        TEXT    NOT NULL REFERENCES sources  (source)   ON DELETE CASCADE,
+  filename      TEXT    NOT NULL REFERENCES files    (filename) ON DELETE CASCADE,
+  response_time REAL,   -- if timeout -> NULL
+  num_items     INTEGER -- if timeout -> NULL
+) WITHOUT ROWID;
+CREATE INDEX completions_source   ON completions (source);
+CREATE INDEX completions_filename ON completions (filename);
+
+
 -- !! sources 1:N insertions
 -- !! files   1:N insertions
 -- Stores insertion history
 -- Should be vacuumed by only keeping last n rows
 -- Should be vacuumed by foreign key constraints on `files`
 CREATE TABLE IF NOT EXISTS insertions (
-  rowid    INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
-  source   TEXT    NOT NULL REFERENCES sources (source)   ON DELETE CASCADE,
-  filename TEXT    NOT NULL REFERENCES files   (filename) ON DELETE CASCADE,
-  prefix   TEXT    NOT NULL,
-  affix    TEXT    NOT NULL,
-  content  TEXT    NOT NULL
+  rowid         INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+  completion_id INTEGER NOT NULL REFERENCES completions (rowid) ON DELETE CASCADE,
+  prefix        TEXT    NOT NULL,
+  affix         TEXT    NOT NULL,
+  content       TEXT    NOT NULL
 ) WITHOUT ROWID;
 CREATE INDEX insertions_prefix_affix ON insertions (prefix, affix);
 CREATE INDEX insertions_filename     ON insertions (filename);
 CREATE INDEX insertions_content      ON insertions (content);
-
-
--- !! sources 1:N completions
--- !! files   1:N completions
--- Should be vaccumed by keeping last n rows, per source
-CREATE TABLE IF NOT EXISTS completions (
-  rowid        INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
-  source       TEXT    NOT NULL REFERENCES sources  (source)   ON DELETE CASCADE,
-  filename     TEXT    NOT NULL REFERENCES files    (filename) ON DELETE CASCADE,
-  time_elapsed REAL,   -- if timeout -> NULL
-  num_items    INTEGER -- if timeout -> NULL
-) WITHOUT ROWID;
-CREATE INDEX completions_source   ON completions (source);
-CREATE INDEX completions_filename ON completions (filename);
 
 
 ---             ---
@@ -118,28 +117,6 @@ CREATE VIEW IF NOT EXISTS words_debug_view AS (
 );
 
 
-CREATE VIEW IF NOT EXISTS insertions_debug_view AS (
-  SELECT
-    files.project      AS project,
-    files.filetype     AS filetype,
-    files.filename     AS filename,
-    insertions.content AS content,
-    insertions.prefix  AS prefix,
-    insertions.suffix  AS suffix
-  FROM insertions
-  JOIN files
-  ON
-    files.filename = insertions.filename
-  ORDER BY
-    files.project,
-    files.filetype,
-    files.filename,
-    insertions.content,
-    insertions.prefix,
-    insertions.suffix
-);
-
-
 CREATE VIEW IF NOT EXISTS completions_debug_view AS (
   SELECT
     completions.source       AS source,
@@ -162,10 +139,41 @@ CREATE VIEW IF NOT EXISTS completions_debug_view AS (
 );
 
 
+CREATE VIEW IF NOT EXISTS insertions_debug_view AS (
+  SELECT
+    completions.source AS source,
+    files.project      AS project,
+    files.filetype     AS filetype,
+    files.filename     AS filename,
+    insertions.content AS content,
+    insertions.prefix  AS prefix,
+    insertions.suffix  AS suffix
+  FROM insertions
+  JOIN completions
+  ON
+    completions.rowid = insertions.completion_id
+  JOIN files
+  ON
+    files.filename = completions.filename
+  ORDER BY
+    files.project,
+    files.filetype,
+    files.filename,
+    insertions.content,
+    insertions.prefix,
+    insertions.suffix
+);
+
+
 ---            ---
 --- OLAP VIEWS ---
 ---            ---
 
+
+CREATE VIEW IF NOT EXISTS completions_debug_view (
+
+
+);
 
 
 

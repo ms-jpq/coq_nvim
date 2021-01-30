@@ -1,2 +1,2 @@
 REPLACE INTO sources (source)
-VALUES (:source)
+VALUES               (:source)

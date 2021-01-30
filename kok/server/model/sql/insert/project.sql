@@ -1,2 +1,2 @@
 REPLACE INTO projects (project)
-VALUES (:project)
+VALUES                (:project)

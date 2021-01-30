@@ -1,2 +1,2 @@
-INSERT INTO insertions (prefix, affix, filename, content)
-VALUES (:prefix, :affix, :filename, :content)
+INSERT INTO insertions (completion_id,  prefix,  affix,  content)
+VALUES                 (:completion_id, :prefix, :affix, :content)

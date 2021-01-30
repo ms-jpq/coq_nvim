@@ -1,2 +1,2 @@
-REPLACE INTO files (filename, project, filetype)
-VALUES (:filename, :project, :filetype)
+REPLACE INTO files (filename,  project,  filetype)
+VALUES             (:filename, :project, :filetype)
