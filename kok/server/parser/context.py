@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import AbstractSet, Optional
+from typing import AbstractSet
 
 from pynvim import Nvim
 from pynvim_pp.api import (
@@ -10,37 +10,50 @@ from pynvim_pp.api import (
     win_get_buf,
     win_get_cursor,
 )
-from pynvim_pp.text_object import gen_split
+from pynvim_pp.text_object import SplitCtx, gen_split
 
-from ...shared.parse import normalize
-from ...shared.protocol.types import Context, Position
+from ...shared.protocol.types import Context, WTF8Pos
+from ..consts import INTERNAL_ENCODING
 
 
-def gen_context(
-    nvim: Nvim, project: Path, unifying_chars: AbstractSet[str], pos: Optional[Position]
-) -> Context:
+def gen_context_at(
+    nvim: Nvim, pos: WTF8Pos, unifying_chars: AbstractSet[str]
+) -> SplitCtx:
+    row, col = pos.row, len(pos.col)
     win = cur_win(nvim)
     buf = win_get_buf(nvim, win=win)
-    position = pos if pos else win_get_cursor(nvim, win=win)
-    row, col = position
+
+    lines = buf_get_lines(nvim, buf=buf, lo=row, hi=row + 1)
+    b_line = next(iter(lines)).encode()
+    before, after = b_line[:col].decode(), b_line[col:].decode()
+    split = gen_split(lhs=before, rhs=after, unifying_chars=unifying_chars)
+
+    return split
+
+
+def gen_context(nvim: Nvim, project: Path, unifying_chars: AbstractSet[str]) -> Context:
+    win = cur_win(nvim)
+    buf = win_get_buf(nvim, win=win)
+    row, col = win_get_cursor(nvim, win=win)
 
     lines = buf_get_lines(nvim, buf=buf, lo=row, hi=row + 1)
     filename = buf_name(nvim, buf=buf)
     filetype = buf_filetype(nvim, buf=buf)
 
     b_line = next(iter(lines)).encode()
-    before, after = normalize(b_line[:col].decode()), normalize(b_line[col:].decode())
-    line = before + after
+    before, after = b_line[:col].decode(), b_line[col:].decode()
     split = gen_split(lhs=before, rhs=after, unifying_chars=unifying_chars)
+
+    pos = WTF8Pos(row=row, col=len(before), encoding=INTERNAL_ENCODING)
 
     ctx = Context(
         project=str(project),
         filename=filename,
         filetype=filetype,
-        position=position,
-        line=line,
-        line_before=before,
-        line_after=after,
+        pos=pos,
+        line=split.lhs + split.rhs,
+        line_before=split.lhs,
+        line_after=split.rhs,
         words=split.word_lhs + split.word_rhs,
         words_before=split.word_lhs,
         words_after=split.word_rhs,

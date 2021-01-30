@@ -12,44 +12,9 @@ from ..shared.types import LEdit, MEdit, Position, SEdit
 from .parse import gen_lhs_rhs
 from .types import MatchOptions, Payload
 
-IText = Union[str, Tuple[()]]
-TextStream = Sequence[IText]
 
 
-@dataclass(frozen=True)
-class Replacement:
-    begin: int
-    length: int
-    text: TextStream
 
-
-def gen_medit(
-    nvim: Nvim,
-    buf: Buffer,
-    position: Position,
-    sedit: Optional[SEdit],
-    options: MatchOptions,
-) -> Optional[MEdit]:
-    row, col = position.row, position.col
-    if sedit:
-        match = sedit.new_text
-        line, *_ = nvim.api.buf_get_lines(buf, row, row + 1, True)
-        line_before, line_after = line[:col], line[col:]
-        match_normalized = normalize(match)
-        _, old_prefix, old_suffix, _ = gen_lhs_rhs(
-            line_before=line_before,
-            line_after=line_after,
-            unifying_chars=options.unifying_chars,
-        )
-        medit = MEdit(
-            old_prefix=old_prefix,
-            new_prefix=match,
-            old_suffix=old_suffix,
-            new_suffix="",
-        )
-        return medit
-    else:
-        return None
 
 
 # 0 based

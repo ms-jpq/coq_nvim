@@ -19,7 +19,20 @@ class Options:
     ]
 
 
-Position = Tuple[int, int]
+NvimPos = Annotated[
+    Tuple[int, Annotated[int, "In nvim, the col is a ut8 byte offset"]], "0,0 based"
+]
+
+
+@dataclass(frozen=True)
+class WTF8Pos:
+    """
+    0,0 based
+    """
+
+    row: int
+    col: int
+    encoding: Literal["UTF-8", "UTF-16"]
 
 
 @dataclass(frozen=True)
@@ -34,7 +47,7 @@ class Context:
     filename: str
     filetype: str
 
-    position: Position
+    position: WTF8Pos
 
     line: str
     line_before: str
@@ -73,8 +86,8 @@ class RangeEdit(_BaseEdit, HasEditType):
     End exclusve, like LSP
     """
 
-    begin: Position
-    end: Position
+    begin: WTF8Pos
+    end: WTF8Pos
 
 
 @dataclass(frozen=True)
@@ -96,10 +109,13 @@ class SnippetEdit(_BaseEdit, HasEditType):
     edit_type: Literal["Snippet"] = "Snippet"
 
 
+ApplicableEdit = Union[Edit, RangeEdit, ContextualEdit]
+
+
 @dataclass(frozen=True)
 class Completion:
-    position: Position
-    primary_edit: Union[Edit, RangeEdit, ContextualEdit, SnippetEdit]
+    position: WTF8Pos
+    primary_edit: Union[ApplicableEdit, SnippetEdit]
     secondary_edits: Sequence[RangeEdit] = ()
     label: str = ""
     short_label: str = ""
