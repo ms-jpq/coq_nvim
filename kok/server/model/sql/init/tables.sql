@@ -35,7 +35,7 @@ CREATE TABLE IF NOT EXISTS files (
   project  TEXT NOT NULL REFERENCES projects  (project)  ON DELETE CASCADE,
   filetype TEXT NOT NULL REFERENCES filetypes (filetype) ON DELETE CASCADE
 ) WITHOUT ROWID;
-CREATE INDEX files_filetype ON filetypes (filetype);
+CREATE INDEX IF NOT EXISTS files_filetype ON filetypes (filetype);
 
 
 -- Index for words in files
@@ -44,7 +44,7 @@ CREATE TABLE IF NOT EXISTS words (
   word  TEXT NOT NULL PRIMARY KEY,
   lword TEXT NOT NULL
 ) WITHOUT ROWID;
-CREATE INDEX words_lword ON words (lword);
+CREATE INDEX IF NOT EXISTS words_lword ON words (lword);
 
 
 -- !! words 1:N word_locations
@@ -57,9 +57,9 @@ CREATE TABLE IF NOT EXISTS word_locations (
   word     TEXT    NOT NULL REFERENCES words (word)     ON DELETE CASCADE,
   line_num INTEGER NOT NULL
 ) WITHOUT ROWID;
-CREATE INDEX word_locations_filename ON word_locations (filename);
-CREATE INDEX word_locations_word     ON word_locations (word);
-CREATE INDEX word_locations_line_num ON word_locations (line_num);
+CREATE INDEX IF NOT EXISTS word_locations_filename ON word_locations (filename);
+CREATE INDEX IF NOT EXISTS word_locations_word     ON word_locations (word);
+CREATE INDEX IF NOT EXISTS word_locations_line_num ON word_locations (line_num);
 
 
 -- !! sources 1:N completions
@@ -72,8 +72,8 @@ CREATE TABLE IF NOT EXISTS completions (
   response_time REAL,   -- if timeout -> NULL
   num_items     INTEGER -- if timeout -> NULL
 ) WITHOUT ROWID;
-CREATE INDEX completions_source   ON completions (source);
-CREATE INDEX completions_filename ON completions (filename);
+CREATE INDEX IF NOT EXISTS completions_source   ON completions (source);
+CREATE INDEX IF NOT EXISTS completions_filename ON completions (filename);
 
 
 -- !! completions 1:1 insertions
@@ -87,9 +87,9 @@ CREATE TABLE IF NOT EXISTS insertions (
   affix         TEXT    NOT NULL,
   content       TEXT    NOT NULL
 ) WITHOUT ROWID;
-CREATE INDEX insertions_prefix_affix ON insertions (prefix, affix);
-CREATE INDEX insertions_filename     ON insertions (filename);
-CREATE INDEX insertions_content      ON insertions (content);
+CREATE INDEX IF NOT EXISTS insertions_prefix_affix ON insertions (prefix, affix);
+CREATE INDEX IF NOT EXISTS insertions_filename     ON insertions (filename);
+CREATE INDEX IF NOT EXISTS insertions_content      ON insertions (content);
 
 
 --------------------------------------------------------------------------------
