@@ -40,17 +40,9 @@ class Context:
     line_before: str
     line_after: str
 
-    line_n: str
-    line_before_n: str
-    line_after_n: str
-
     words: str
     words_before: str
     words_after: str
-
-    words_n: str
-    words_before_n: str
-    words_after_n: str
 
     syms: str
     syms_before: str
