@@ -1,6 +1,6 @@
-# kok.nvim - Keeper of Keyboard
+# coq.nvim 🐔
 
-Same pronunciation as [`coc.nvim`](https://github.com/neoclide/coc.nvim), but simpler and more "Vim-like".
+Named after the [famous theorem prover](https://coq.inria.fr/)
 
 **WORK IN PROGRESS**
 
