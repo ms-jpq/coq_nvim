@@ -36,7 +36,7 @@ CREATE INDEX IF NOT EXISTS files_filetype ON filetypes (filetype);
 -- Should be vacuumed when no longer in word_locations
 CREATE TABLE IF NOT EXISTS words (
   word  TEXT NOT NULL PRIMARY KEY,
-  lword TEXT NOT NULL
+  lword TEXT NOT NULL AS X_LOWER(word) STORED
 ) WITHOUT ROWID;
 CREATE INDEX IF NOT EXISTS words_lword ON words (lword);
 
@@ -63,80 +63,6 @@ CREATE TABLE IF NOT EXISTS insertions (
   content       TEXT    NOT NULL
 ) WITHOUT ROWID;
 CREATE INDEX IF NOT EXISTS insertions_content ON insertions (content);
-
-
---------------------------------------------------------------------------------
--- OLTP VIEWS
---------------------------------------------------------------------------------
-
-
-CREATE VIEW IF NOT EXISTS words_by_project_insertion_view AS
-  SELECT
-    words.word       AS word,
-    files.filetype   AS filetype,
-    files.project    AS project,
-    insertions.rowid AS sort_by
-  FROM words
-  JOIN word_locations
-  ON
-    word_locations.word = words.word
-  JOIN files
-  ON
-    files.filename = word_locations.filename
-  LEFT JOIN insertions
-  ON
-    insertions.content = word.word;
-
-
-CREATE VIEW IF NOT EXISTS words_by_project_filetype_view AS
-  SELECT
-    words.word     AS word,
-    files.filetype AS filetype,
-    files.project  AS project,
-    COUNT(*)       AS w_count
-  FROM words
-  JOIN word_locations
-  ON
-    word_locations.word = words.word
-  JOIN files
-  ON
-    files.filename = word_locations.filename
-  GROUP BY
-    files.filetype,
-    files.project,
-    words.word;
-
-
-CREATE VIEW IF NOT EXISTS words_by_file_lines_view AS
-  SELECT
-    words.word              AS word,
-    files.filename          AS filename,
-    word_locations.line_num AS line_num,
-    COUNT(*)                AS w_count
-  FROM words
-  JOIN word_locations
-  ON
-    word_locations.word = words.word
-  JOIN files
-  ON
-    files.filename = word_locations.filename
-  GROUP BY
-    files.filename,
-    word_locations.line_num,
-    words.word;
-
-
-CREATE VIEW IF NOT EXISTS metrics_view AS
-  SELECT
-    words.word AS word,
-
-  FROM words
-  JOIN words_by_project_filetype_view
-  ON
-    words_by_project_filetype_view.word = word.word
-  JOIN words_by_file_lines_view
-  ON
-    words_by_file_lines_view.word = word.word;
 
 
 END;
