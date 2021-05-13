@@ -2,7 +2,7 @@ SELECT
   w_count,
   line_num
 FROM
-  count_words_by_file_lines_view
+  word_metrics_view
 WHERE
   word = :word
   AND

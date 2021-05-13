@@ -10,7 +10,7 @@ T_co = TypeVar("T_co", contravariant=True)
 
 
 class Collector(Protocol):
-    async def add(self, token: UUID, completions: Iterable[Completion]) -> None:
+    def add(self, token: UUID, completions: Iterable[Completion]) -> None:
         ...
 
     def done(self) -> None:

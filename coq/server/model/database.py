@@ -1,13 +1,14 @@
+from concurrent.futures import ThreadPoolExecutor
+from contextlib import closing
 from sqlite3 import Connection
 from sqlite3.dbapi2 import Cursor
-from typing import AbstractSet, Iterator, Mapping, Sequence
+from typing import AbstractSet, Iterator, Mapping, Sequence, Tuple
 
-from std2.asqllite3 import AConnection
 from std2.sqllite3 import with_transaction
 
-from ...shared.parse import coalesce, normalize
+from ...agnostic.parse import coalesce, normalize
 from .sql import sql
-from .types import Metric
+from .types import Metrics
 
 
 def _ensure_file(cursor: Cursor, project: str, file: str, filetype: str) -> None:
@@ -21,16 +22,22 @@ def _ensure_file(cursor: Cursor, project: str, file: str, filetype: str) -> None
 
 class Database:
     def __init__(self, location: str) -> None:
-        self._conn = AConnection(database=location)
+        self._pool = ThreadPoolExecutor(max_workers=1)
+        self._conn = Connection(location)
 
-    async def init(self) -> None:
-        def cont(conn: Connection) -> None:
-            conn.executescript(sql("init", "pragma"))
-            conn.executescript(sql("init", "tables"))
+        def cont() -> None:
+            self._conn.executescript(sql("init", "pragma"))
+            self._conn.executescript(sql("init", "tables"))
 
-        await self._conn.with_conn(cont)
+        self._pool.submit(cont).result()
 
-    async def set_lines(
+    def vaccum(self) -> None:
+        def cont() -> None:
+            self._conn.executescript(sql("vaccum", "periodical"))
+
+        self._pool.submit(cont).result()
+
+    def set_lines(
         self,
         project: str,
         file: str,
@@ -39,7 +46,7 @@ class Database:
         start_idx: int,
         unifying_chars: AbstractSet[str],
     ) -> None:
-        def cont(cursor: Cursor) -> Sequence[str]:
+        def cont() -> None:
             words = tuple(
                 tuple(coalesce(normalize(line), unifying_chars=unifying_chars))
                 for line in lines
@@ -59,18 +66,19 @@ class Database:
                             "line_num": line_num,
                         }
 
-            with with_transaction(cursor):
-                _ensure_file(cursor, project=project, file=file, filetype=filetype)
-                cursor.execute(
-                    sql("delete", "word_locations"),
-                    {"lo": start_idx, "hi": start_idx + len(lines)},
-                )
-                cursor.executemany(sql("insert", "word"), m1())
-                cursor.executemany(sql("insert", "word_location"), m2())
+            with closing(self._conn.cursor()) as cursor:
+                with with_transaction(cursor):
+                    _ensure_file(cursor, project=project, file=file, filetype=filetype)
+                    cursor.execute(
+                        sql("delete", "word_locations"),
+                        {"lo": start_idx, "hi": start_idx + len(lines)},
+                    )
+                    cursor.executemany(sql("insert", "word"), m1())
+                    cursor.executemany(sql("insert", "word_location"), m2())
 
-        return await self._conn.with_cursor(cont)
+        self._pool.submit(cont).result()
 
-    async def set_insertion(
+    def set_insertion(
         self,
         project: str,
         file: str,
@@ -79,51 +87,59 @@ class Database:
         suffix: str,
         content: str,
     ) -> None:
-        def cont(cursor: Cursor) -> None:
-            with with_transaction(cursor):
-                _ensure_file(cursor, project=project, file=file, filetype=filetype)
-                cursor.execute(
-                    sql("insert", "insertion"),
-                    {
-                        "prefix": prefix,
-                        "suffix": suffix,
-                        "filename": file,
-                        "content": content,
-                    },
-                )
+        def cont() -> None:
+            with closing(self._conn.cursor()) as cursor:
+                with with_transaction(cursor):
+                    _ensure_file(cursor, project=project, file=file, filetype=filetype)
+                    cursor.execute(
+                        sql("insert", "insertion"),
+                        {
+                            "prefix": prefix,
+                            "suffix": suffix,
+                            "filename": file,
+                            "content": content,
+                        },
+                    )
 
-        await self._conn.with_cursor(cont)
+        self._pool.submit(cont).result()
 
-    async def get_suggestions(self, word: str, prefix_len: int) -> Sequence[str]:
-        def cont(cursor: Cursor) -> Sequence[str]:
-            nword = normalize(word)
-            with with_transaction(cursor):
-                cursor.execute(
-                    sql("query", "words_by_prefix"),
-                    {
-                        "word": nword,
-                        "lword": nword.casefold(),
-                        "prefix_len": prefix_len,
-                    },
-                )
-                suggestions = cursor.fetchall()
-            return suggestions
+    def get_suggestions(self, word: str, prefix_len: int) -> Sequence[str]:
+        nword = normalize(word)
 
-        return await self._conn.with_cursor(cont)
+        def cont() -> Sequence[str]:
+            with closing(self._conn.cursor()) as cursor:
+                with with_transaction(cursor):
+                    cursor.execute(
+                        sql("query", "words_by_prefix"),
+                        {
+                            "word": nword,
+                            "lword": nword.casefold(),
+                            "prefix_len": prefix_len,
+                        },
+                    )
+                    return cursor.fetchall()
 
-    async def gen_metric(self, words: Sequence[str]) -> Sequence[Metric]:
-        def cont(cursor: Cursor) -> Sequence[str]:
-            nwords = tuple(map(normalize, words))
-            with with_transaction(cursor):
-                nwords = 2
-                pass
-            # cursor.execute(sql("query", "words_by_prefix"), params)
-            return cursor.fetchall()
+        return self._pool.submit(cont).result()
 
-        return await self._conn.with_cursor(cont)
+    def gen_metric(self, words: Sequence[str], filetype: str) -> Sequence[Metrics]:
+        def m1() -> Iterator[Mapping]:
+            for word in words:
+                yield {"word": word, "filetype": filetype}
 
-    async def vaccum(self) -> None:
-        def cont(conn: Connection) -> None:
-            conn.executescript(sql("vaccum", "periodical"))
+        def m2() -> Iterator[Mapping]:
+            for word in words:
+                yield {"word": word, "filetype": filetype}
 
-        await self._conn.with_conn(cont)
+        def cont() -> Tuple[Sequence[int], Sequence[int]]:
+
+            with closing(self._conn.cursor()) as cursor:
+                with with_transaction(cursor):
+                    cursor.execute(sql("query", "count_words_by_file_lines"), m1())
+                    lines = cursor.fetchall()
+
+                    cursor.execute(sql("query", "count_words_by_filetype"), m2())
+                    fts = cursor.fetchall()
+
+                    return lines, fts
+
+        lines, fts = self._pool.submit(cont).result()

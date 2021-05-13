@@ -12,8 +12,8 @@ from pynvim_pp.api import (
 )
 from pynvim_pp.text_object import SplitCtx, gen_split
 
-from ...shared.parse import normalize
-from ...shared.protocol.types import Context, NvimPos
+from ...agnostic.datatypes import Context, NvimPos
+from ...agnostic.parse import normalize
 
 
 def gen_context_at(
