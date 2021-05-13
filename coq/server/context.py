@@ -44,7 +44,6 @@ def gen_context(nvim: Nvim, project: Path, unifying_chars: AbstractSet[str]) -> 
     before, after = b_line[:col].decode(), b_line[col:].decode()
     split = gen_split(lhs=before, rhs=after, unifying_chars=unifying_chars)
 
-    words = split.word_lhs + split.word_rhs
     ctx = Context(
         project=str(project),
         filename=filename,
