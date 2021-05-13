@@ -2,11 +2,11 @@ from concurrent.futures import ThreadPoolExecutor
 from contextlib import closing
 from sqlite3 import Connection
 from sqlite3.dbapi2 import Cursor
-from typing import AbstractSet, Iterator, Mapping, Sequence, TypedDict
+from typing import AbstractSet, Iterator, Mapping, Sequence, TypedDict, Iterable
 
 from std2.sqllite3 import with_transaction
 
-from ...agnostic.parse import coalesce, normalize
+from ...agnostic.parse import coalesce
 from .sql import sql
 
 
@@ -53,8 +53,7 @@ class Database:
     ) -> None:
         def cont() -> None:
             words = tuple(
-                tuple(coalesce(normalize(line), unifying_chars=unifying_chars))
-                for line in lines
+                tuple(coalesce(line, unifying_chars=unifying_chars)) for line in lines
             )
 
             def m1() -> Iterator[Mapping]:
@@ -109,16 +108,13 @@ class Database:
         self._pool.submit(cont).result()
 
     def suggestions(self, word: str, prefix_len: int) -> Sequence[str]:
-        nword = normalize(word)
-
         def cont() -> Sequence[str]:
             with closing(self._conn.cursor()) as cursor:
                 with with_transaction(cursor):
                     cursor.execute(
                         sql("query", "words_by_prefix"),
                         {
-                            "word": nword,
-                            "lword": nword.casefold(),
+                            "word": word,
                             "prefix_len": prefix_len,
                         },
                     )
@@ -128,11 +124,11 @@ class Database:
 
     def metric(
         self,
-        words: Sequence[str],
+        words: Iterable[str],
         project: str,
         filetype: str,
         filename: str,
-        line_no: int,
+        line_num: int,
     ) -> Sequence[SqlMetrics]:
         def m1() -> Iterator[Mapping]:
             for word in words:
@@ -141,7 +137,7 @@ class Database:
                     "project": project,
                     "filetype": filetype,
                     "filename": filename,
-                    "line_num": line_no,
+                    "line_num": line_num,
                 }
 
         def cont() -> Sequence[SqlMetrics]:

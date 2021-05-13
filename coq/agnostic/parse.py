@@ -4,8 +4,8 @@ from unicodedata import normalize as _normalize
 NORM_FORM = "NFC"
 
 
-def normalize(text: str) -> str:
-    return _normalize(NORM_FORM, text)
+# def normalize(text: str) -> str:
+    # return _normalize(NORM_FORM, text)
 
 
 def is_word(char: str, unifying_chars: AbstractSet[str]) -> bool:

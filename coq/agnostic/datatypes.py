@@ -21,8 +21,9 @@ class Context:
     """
 
     project: str
-    filename: str
     filetype: str
+    filename: str
+    line_num: int
 
     position: NvimPos
 
