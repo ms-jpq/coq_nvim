@@ -1,6 +1,10 @@
 from dataclasses import dataclass
+from typing import AbstractSet
 
-from ...shared.protocol.types import Options
+
+@dataclass(frozen=True)
+class Options:
+    unifying_chars: AbstractSet[str]
 
 
 @dataclass(frozen=True)

@@ -2,7 +2,6 @@ from abc import abstractmethod
 from dataclasses import dataclass
 from enum import Enum, auto
 from typing import (
-    AbstractSet,
     Annotated,
     Literal,
     Protocol,
@@ -11,13 +10,6 @@ from typing import (
     Union,
     runtime_checkable,
 )
-
-
-@dataclass(frozen=True)
-class Options:
-    unifying_chars: Annotated[
-        AbstractSet[str], "Alphanumeric chars linked by these chars constitute as words"
-    ]
 
 
 class OffsetEncoding(Enum):
