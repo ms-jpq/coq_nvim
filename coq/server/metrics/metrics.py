@@ -1,20 +1,25 @@
+from dataclasses import dataclass
 from difflib import SequenceMatcher
 from math import inf
 from typing import Dict
 
-from ...shared.parse import is_word
-from ...shared.protocol.types import Context, Options
-from .types import Metric
+from ...agnostic.datatypes import Context
+from ...agnostic.parse import is_word
+from ...agnostic.settings.types import Options
 
-#     matches: Mapping[int, str]
-#     full_match: bool
+
+@dataclass(frozen=True)
+class _Metrics:
+    prefix_matches: int
+    consecutive_matches: int
+    num_matches:int
 
 
 def _isjunk(s: str) -> bool:
     return s.isspace()
 
 
-def gen_metric_secondary(ncword: str, n_match: str) -> Metric:
+def _metrics_secondary(ncword: str, n_match: str) -> _Metrics:
     m = SequenceMatcher(a=ncword, b=n_match, autojunk=True, isjunk=_isjunk)
     matches: Dict[int, str] = {}
     prefix_matches = 0
@@ -34,27 +39,22 @@ def gen_metric_secondary(ncword: str, n_match: str) -> Metric:
             consecutive_matches += 1
         pm_idx = i
 
-    density = num_matches / len(n_match) if n_match else 0
-    full_match = prefix_matches == len(ncword)
-    metric = Metric(
+    metric = _Metrics(
         prefix_matches=prefix_matches,
         num_matches=num_matches,
         consecutive_matches=consecutive_matches,
-        density=density,
-        matches=matches,
-        full_match=full_match,
     )
     return metric
 
 
-def gen_metric(
+def _metrics_primary(
     cword: str,
     ncword: str,
     match: str,
     n_match: str,
     options: Options,
     use_secondary: bool,
-) -> Metric:
+) -> _Metrics:
     transband = options.transpose_band
     matches: Dict[int, str] = {}
 
@@ -66,7 +66,7 @@ def gen_metric(
     num_matches = 0
     for i, char in enumerate(cword):
         if use_secondary and i > transband and not num_matches:
-            return gen_metric_secondary(ncword, n_match=n_match)
+            return _metrics_secondary(ncword, n_match=n_match)
         target = match if char.isupper() else n_match
         m_idx = target.find(char, idx, idx + transband)
         if m_idx != -1:
@@ -83,7 +83,7 @@ def gen_metric(
 
     density = num_matches / len(match) if match else 0
     full_match = prefix_matches == len(ncword)
-    metric = Metric(
+    metric = Metrics(
         prefix_matches=prefix_matches,
         num_matches=num_matches,
         consecutive_matches=consecutive_matches,
@@ -96,7 +96,7 @@ def gen_metric(
 
 def gen_metric_wrap(
     context: Context, suggestion: Suggestion, options: Options, use_secondary: bool
-) -> Metric:
+) -> Metrics:
     match, n_match = suggestion.match, suggestion.match_normalized
     word_start = is_word(match[:1], unifying_chars=options.unifying_chars)
     cword, ncword = (

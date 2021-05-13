@@ -2,13 +2,18 @@ from concurrent.futures import ThreadPoolExecutor
 from contextlib import closing
 from sqlite3 import Connection
 from sqlite3.dbapi2 import Cursor
-from typing import AbstractSet, Iterator, Mapping, Sequence, Tuple
+from typing import AbstractSet, Iterator, Mapping, Sequence, TypedDict
 
 from std2.sqllite3 import with_transaction
 
 from ...agnostic.parse import coalesce, normalize
 from .sql import sql
-from .types import Metrics
+
+
+class SqlMetrics(TypedDict):
+    insertion_order: int
+    ft_count: int
+    line_diff: int
 
 
 def _ensure_file(cursor: Cursor, project: str, file: str, filetype: str) -> None:
@@ -78,7 +83,7 @@ class Database:
 
         self._pool.submit(cont).result()
 
-    def set_insertion(
+    def insert(
         self,
         project: str,
         file: str,
@@ -103,7 +108,7 @@ class Database:
 
         self._pool.submit(cont).result()
 
-    def get_suggestions(self, word: str, prefix_len: int) -> Sequence[str]:
+    def suggestions(self, word: str, prefix_len: int) -> Sequence[str]:
         nword = normalize(word)
 
         def cont() -> Sequence[str]:
@@ -121,25 +126,28 @@ class Database:
 
         return self._pool.submit(cont).result()
 
-    def gen_metric(self, words: Sequence[str], filetype: str) -> Sequence[Metrics]:
+    def metric(
+        self,
+        words: Sequence[str],
+        project: str,
+        filetype: str,
+        filename: str,
+        line_no: int,
+    ) -> Sequence[SqlMetrics]:
         def m1() -> Iterator[Mapping]:
             for word in words:
-                yield {"word": word, "filetype": filetype}
+                yield {
+                    "word": word,
+                    "project": project,
+                    "filetype": filetype,
+                    "filename": filename,
+                    "line_num": line_no,
+                }
 
-        def m2() -> Iterator[Mapping]:
-            for word in words:
-                yield {"word": word, "filetype": filetype}
-
-        def cont() -> Tuple[Sequence[int], Sequence[int]]:
-
+        def cont() -> Sequence[SqlMetrics]:
             with closing(self._conn.cursor()) as cursor:
                 with with_transaction(cursor):
-                    cursor.execute(sql("query", "count_words_by_file_lines"), m1())
-                    lines = cursor.fetchall()
+                    cursor.execute(sql("query", "word_metrics"), m1())
+                    return cursor.fetchall()
 
-                    cursor.execute(sql("query", "count_words_by_filetype"), m2())
-                    fts = cursor.fetchall()
-
-                    return lines, fts
-
-        lines, fts = self._pool.submit(cont).result()
+        return self._pool.submit(cont).result()

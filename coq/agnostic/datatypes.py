@@ -1,15 +1,6 @@
-from abc import abstractmethod
 from dataclasses import dataclass
 from enum import Enum, auto
-from typing import (
-    Annotated,
-    Literal,
-    Protocol,
-    Sequence,
-    Tuple,
-    Union,
-    runtime_checkable,
-)
+from typing import Annotated, Literal, Sequence, Tuple, Union
 
 
 class OffsetEncoding(Enum):
@@ -48,26 +39,13 @@ class Context:
     syms_after: str
 
 
-@runtime_checkable
-class HasEditType(Protocol):
-    @property
-    @abstractmethod
-    def edit_type(self) -> str:
-        ...
-
-
 @dataclass(frozen=True)
-class _BaseEdit:
+class Edit:
     new_text: str
 
 
 @dataclass(frozen=True)
-class Edit(_BaseEdit, HasEditType):
-    edit_type: Literal["Vanilla"] = "Vanilla"
-
-
-@dataclass(frozen=True)
-class ContextualEdit(_BaseEdit, HasEditType):
+class ContextualEdit(Edit):
     """
     <new_prefix>🐭<new_suffix>
     """
@@ -79,7 +57,7 @@ class ContextualEdit(_BaseEdit, HasEditType):
 
 
 @dataclass(frozen=True)
-class RangeEdit(_BaseEdit, HasEditType):
+class RangeEdit(Edit):
     """
     End exclusve, like LSP
     """
@@ -89,10 +67,8 @@ class RangeEdit(_BaseEdit, HasEditType):
 
 
 @dataclass(frozen=True)
-class SnippetEdit(_BaseEdit, HasEditType):
+class SnippetEdit(Edit):
     grammar: Annotated[str, "ie. LSP, Texmate, Ultisnip, etc"]
-
-    edit_type: Literal["Snippet"] = "Snippet"
 
 
 ApplicableEdit = Union[Edit, RangeEdit, ContextualEdit]
