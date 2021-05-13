@@ -108,10 +108,3 @@ class Completion:
     short_label: str = ""
     doc: str = ""
     doc_type: str = ""
-
-
-@dataclass(frozen=True)
-class SnippetContext:
-    snippet: SnippetEdit
-    expand_tabs: bool
-    tab_size: bool
