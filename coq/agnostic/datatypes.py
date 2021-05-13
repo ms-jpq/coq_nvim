@@ -23,7 +23,6 @@ class Context:
     project: str
     filetype: str
     filename: str
-    line_num: int
 
     position: NvimPos
 

@@ -12,8 +12,7 @@ from pynvim_pp.api import (
 )
 from pynvim_pp.text_object import SplitCtx, gen_split
 
-from ...agnostic.datatypes import Context, NvimPos
-from ...agnostic.parse import normalize
+from ..agnostic.datatypes import Context, NvimPos
 
 
 def gen_context_at(
@@ -42,14 +41,15 @@ def gen_context(nvim: Nvim, project: Path, unifying_chars: AbstractSet[str]) -> 
     filetype = buf_filetype(nvim, buf=buf)
 
     b_line = next(iter(lines)).encode()
-    before, after = normalize(b_line[:col].decode()), normalize(b_line[col:].decode())
+    before, after = b_line[:col].decode(), b_line[col:].decode()
     split = gen_split(lhs=before, rhs=after, unifying_chars=unifying_chars)
 
+    words = split.word_lhs + split.word_rhs
     ctx = Context(
         project=str(project),
         filename=filename,
         filetype=filetype,
-        pos=pos,
+        position=pos,
         line=split.lhs + split.rhs,
         line_before=split.lhs,
         line_after=split.rhs,
