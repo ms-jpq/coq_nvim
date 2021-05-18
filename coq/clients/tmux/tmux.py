@@ -4,11 +4,12 @@ from shutil import which
 from subprocess import check_output
 from time import sleep
 from typing import AbstractSet, Iterator, Mapping, Sequence
+from uuid import UUID
 
 from ...shared.parse import coalesce
 from ...shared.runtime import Supervisor
 from ...shared.runtime import Worker as BaseWorker
-from ...shared.types import Completion, Edit
+from ...shared.types import Completion, Context, Edit
 
 
 @dataclass(frozen=True)
