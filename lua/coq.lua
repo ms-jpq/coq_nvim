@@ -16,26 +16,26 @@ return function(args)
   end
 
   local settings = function()
-    local go, _settings = pcall(vim.api.nvim_get_var, "KoK_settings")
+    local go, _settings = pcall(vim.api.nvim_get_var, "Coq_settings")
     local settings = go and _settings or {}
     return settings
   end
 
-  KoK = KoK or {}
+  Coq = Coq or {}
   local linesep = "\n"
   local POLLING_RATE = 10
 
-  if KoK.loaded then
+  if Coq.loaded then
     return
   else
-    KoK.loaded = true
+    Coq.loaded = true
     local job_id = nil
-    local KoK_params = {}
+    local Coq_params = {}
     local err_exit = false
 
-    KoK.on_exit = function(args)
+    Coq.on_exit = function(args)
       local code = unpack(args)
-      local msg = " | KoK EXITED - " .. code
+      local msg = " | Coq EXITED - " .. code
       if not (code == 0 or code == 143) then
         err_exit = true
         vim.api.nvim_err_writeln(msg)
@@ -43,17 +43,17 @@ return function(args)
         err_exit = false
       end
       job_id = nil
-      for _, param in ipairs(KoK_params) do
-        KoK[KoK_params] = nil
+      for _, param in ipairs(Coq_params) do
+        Coq[Coq_params] = nil
       end
     end
 
-    KoK.on_stdout = function(args)
+    Coq.on_stdout = function(args)
       local msg = unpack(args)
       vim.api.nvim_out_write(table.concat(msg, linesep))
     end
 
-    KoK.on_stderr = function(args)
+    Coq.on_stderr = function(args)
       local msg = unpack(args)
       vim.api.nvim_err_write(table.concat(msg, linesep))
     end
@@ -67,29 +67,29 @@ return function(args)
 
       local args =
         vim.tbl_flatten {
-        {main, py3, "-m", "KoK"},
+        {main, py3, "-m", "Coq"},
         {...},
         (settings().xdg and {"--xdg"} or {})
       }
       local params = {
-        on_exit = "KoKon_exit",
-        on_stdout = "KoKon_stdout",
-        on_stderr = "KoKon_stderr"
+        on_exit = "Coqon_exit",
+        on_stdout = "Coqon_stdout",
+        on_stderr = "Coqon_stderr"
       }
       local job_id = vim.api.nvim_call_function("jobstart", {args, params})
       return job_id
     end
 
-    KoK.deps_cmd = function()
+    Coq.deps_cmd = function()
       start("deps")
     end
 
-    vim.api.nvim_command [[command! -nargs=0 KoKdeps lua KoK.deps_cmd()]]
+    vim.api.nvim_command [[command! -nargs=0 Coqdeps lua Coq.deps_cmd()]]
 
-    local set_KoK_call = function(name, cmd)
-      table.insert(KoK_params, name)
+    local set_Coq_call = function(name, cmd)
+      table.insert(Coq_params, name)
       local t1 = 0
-      KoK[name] = function(...)
+      Coq[name] = function(...)
         local args = {...}
         if t1 == 0 then
           t1 = vim.loop.now()
@@ -114,7 +114,7 @@ return function(args)
               if err_exit then
                 return
               else
-                KoK[name](unpack(args))
+                Coq[name](unpack(args))
               end
             end
           )
@@ -122,10 +122,10 @@ return function(args)
       end
     end
 
-    set_KoK_call("open_cmd", "KoKopen")
-    vim.api.nvim_command [[command! -nargs=* KoKopen lua KoK.open_cmd(<f-args>)]]
+    set_Coq_call("open_cmd", "Coqopen")
+    vim.api.nvim_command [[command! -nargs=* Coqopen lua Coq.open_cmd(<f-args>)]]
 
-    set_KoK_call("help_cmd", "KoKhelp")
-    vim.api.nvim_command [[command! -nargs=* KoKhelp lua KoK.help_cmd(<f-args>)]]
+    set_Coq_call("help_cmd", "Coqhelp")
+    vim.api.nvim_command [[command! -nargs=* Coqhelp lua Coq.help_cmd(<f-args>)]]
   end
 end

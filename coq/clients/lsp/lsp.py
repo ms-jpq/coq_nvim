@@ -33,9 +33,9 @@ class Config:
 
 async def init_lua(nvim: Nvim) -> Tuple[Mapping[int, str], Mapping[int, str]]:
     def cont() -> Tuple[Mapping[str, int], Mapping[str, int]]:
-        nvim.api.exec_lua("kok_lsp = require 'kok/lsp'", ())
-        entry_kind = nvim.api.exec_lua("return kok_lsp.list_entry_kind()", ())
-        insert_kind = nvim.api.exec_lua("return kok_lsp.list_insert_kind()", ())
+        nvim.api.exec_lua("Coq_lsp = require 'Coq/lsp'", ())
+        entry_kind = nvim.api.exec_lua("return Coq_lsp.list_entry_kind()", ())
+        insert_kind = nvim.api.exec_lua("return Coq_lsp.list_insert_kind()", ())
         return entry_kind, insert_kind
 
     entry_kind, insert_kind = await call(nvim, cont)
@@ -50,7 +50,7 @@ async def ask(nvim: Nvim, context: Context, uid: int) -> None:
 
     def cont() -> None:
         nvim.api.exec_lua(
-            "kok_lsp.list_comp_candidates(...)",
+            "Coq_lsp.list_comp_candidates(...)",
             (uid, row, col),
         )
 

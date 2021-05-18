@@ -35,7 +35,7 @@ pip3 install pynvim
 Install the usual way, ie. [VimPlug](https://github.com/junegunn/vim-plug), [Vundle](https://github.com/VundleVim/Vundle.vim), etc
 
 ```VimL
-Plug 'ms-jpq/kok', {'branch': 'kok', 'do': ':UpdateRemotePlugins'}
+Plug 'ms-jpq/Coq', {'branch': 'Coq', 'do': ':UpdateRemotePlugins'}
 ```
 
 ## Documentation

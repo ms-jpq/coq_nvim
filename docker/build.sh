@@ -6,5 +6,5 @@ set -o pipefail
 
 cd "$(dirname "$0")/.." || exit 1
 
-IMAGE='kok'
+IMAGE='Coq'
 docker build -f 'docker/Dockerfile' -t "$IMAGE" .
