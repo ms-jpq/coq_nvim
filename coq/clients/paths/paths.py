@@ -1,6 +1,7 @@
 from os.path import sep
 from pathlib import Path
 from typing import Iterator, Sequence, Tuple
+from uuid import UUID
 
 from ...shared.runtime import Worker as BaseWorker
 from ...shared.types import Completion, Context, ContextualEdit
@@ -25,7 +26,7 @@ def _parse(segments: Sequence[str]) -> Iterator[Tuple[str, Path]]:
 
 
 class Worker(BaseWorker[None]):
-    def work(self, context: Context) -> Sequence[Completion]:
+    def work(self, token: UUID, context: Context) -> Tuple[UUID, Sequence[Completion]]:
         context.line_before
 
         def cont() -> Iterator[Completion]:
@@ -38,4 +39,4 @@ class Worker(BaseWorker[None]):
                 completion = Completion(position=context.position, primary_edit=edit)
                 yield completion
 
-        return tuple(cont())
+        return token, tuple(cont())

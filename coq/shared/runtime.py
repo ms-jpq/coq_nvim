@@ -3,7 +3,7 @@ from __future__ import annotations
 from abc import abstractmethod
 from concurrent.futures import ThreadPoolExecutor
 from threading import Lock
-from typing import Generic, MutableSequence, Sequence, TypeVar
+from typing import Generic, MutableSequence, Sequence, Tuple, TypeVar
 from uuid import UUID, uuid4
 from weakref import WeakSet
 
@@ -52,13 +52,12 @@ class Supervisor:
     def notify(self, context: Context) -> None:
         with self._lock:
             assert not self._completions
-            token = self._token
 
             for worker in self._workers:
 
                 def cont() -> None:
                     try:
-                        completions = worker.work(context)
+                        token, completions = worker.work(self._token, context=context)
                     except Exception as e:
                         log.exception("%s", e)
                     else:
@@ -80,5 +79,5 @@ class Worker(Generic[T_co]):
         self._supervisor.register(self)
 
     @abstractmethod
-    def work(self, context: Context) -> Sequence[Completion]:
+    def work(self, token: UUID, context: Context) -> Tuple[UUID, Sequence[Completion]]:
         ...
