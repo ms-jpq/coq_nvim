@@ -1,6 +1,6 @@
 from abc import abstractmethod
 from concurrent.futures import ThreadPoolExecutor
-from typing import Iterable, Protocol, TypeVar
+from typing import Iterable, Protocol, Sequence, TypeVar
 from uuid import UUID
 
 from pynvim import Nvim
@@ -30,7 +30,7 @@ class Supervisor(Protocol):
     def add(self, token: UUID, completions: Iterable[Completion]) -> None:
         ...
 
-    def done(self) -> None:
+    def report(self) -> Sequence[Completion]:
         ...
 
 
