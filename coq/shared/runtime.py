@@ -42,13 +42,6 @@ class Supervisor:
         with self._lock:
             self._workers.add(worker)
 
-    def _report(self, token: UUID, completions: Sequence[Completion]) -> None:
-        with self._lock:
-            if token != self._token:
-                pass
-            else:
-                self._completions.extend(completions)
-
     def notify(self, context: Context) -> None:
         with self._lock:
             assert not self._completions
@@ -57,13 +50,18 @@ class Supervisor:
 
                 def cont() -> None:
                     try:
-                        token, completions = worker.work(self._token, context=context)
+                        worker.work(self._token, context=context)
                     except Exception as e:
                         log.exception("%s", e)
-                    else:
-                        self._report(token, completions)
 
                 self._pool.submit(cont)
+
+    def report(self, token: UUID, completions: Sequence[Completion]) -> None:
+        with self._lock:
+            if token != self._token:
+                pass
+            else:
+                self._completions.extend(completions)
 
     def collect(self) -> Sequence[Completion]:
         with self._lock:
@@ -79,5 +77,5 @@ class Worker(Generic[T_co]):
         self._supervisor.register(self)
 
     @abstractmethod
-    def work(self, token: UUID, context: Context) -> Tuple[UUID, Sequence[Completion]]:
+    def work(self, token: UUID, context: Context) -> None:
         ...

@@ -26,7 +26,7 @@ def _parse(segments: Sequence[str]) -> Iterator[Tuple[str, Path]]:
 
 
 class Worker(BaseWorker[None]):
-    def work(self, token: UUID, context: Context) -> Tuple[UUID, Sequence[Completion]]:
+    def work(self, token: UUID, context: Context) -> None:
         context.line_before
 
         def cont() -> Iterator[Completion]:
@@ -39,4 +39,4 @@ class Worker(BaseWorker[None]):
                 completion = Completion(position=context.position, primary_edit=edit)
                 yield completion
 
-        return token, tuple(cont())
+        self._supervisor.report(token, completions=tuple(cont()))

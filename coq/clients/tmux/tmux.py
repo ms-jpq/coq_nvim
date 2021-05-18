@@ -3,7 +3,7 @@ from dataclasses import dataclass
 from shutil import which
 from subprocess import CalledProcessError, check_output
 from time import sleep
-from typing import AbstractSet, Iterator, Mapping, Optional, Sequence, Tuple
+from typing import AbstractSet, Iterator, Mapping, Optional, Sequence
 from uuid import UUID
 
 from ...shared.parse import coalesce
@@ -101,7 +101,7 @@ class Worker(BaseWorker[None]):
             )
             sleep(1)
 
-    def work(self, token: UUID, context: Context) -> Tuple[UUID, Sequence[Completion]]:
+    def work(self, token: UUID, context: Context) -> None:
         def cont() -> Iterator[Completion]:
             for pane, words in self._panes.items():
                 if not (pane.window_active and pane.pane_active):
@@ -112,4 +112,4 @@ class Worker(BaseWorker[None]):
                         )
                         yield completion
 
-        return token, tuple(cont())
+        self._supervisor.report(token, completions=tuple(cont()))

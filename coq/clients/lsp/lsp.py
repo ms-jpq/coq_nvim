@@ -13,23 +13,19 @@
 
 from concurrent.futures import ThreadPoolExecutor
 from queue import SimpleQueue
-from typing import Any, Iterator, Mapping, cast, Sequence, Tuple
+from typing import Any, Iterator, Mapping, Sequence, Tuple, cast
 from uuid import UUID
 
 from pynvim import Nvim
 
 from ...shared.runtime import Supervisor
 from ...shared.runtime import Worker as BaseWorker
-from ...shared.types import Completion, Context, Edit
+from ...shared.types import Completion, Context, Edit, NvimPos
 from .types import Resp
 
 
-def _req(nvim: Nvim) -> Resp:
+def _req(nvim: Nvim, token: UUID, pos: NvimPos) -> Resp:
     nvim.api.exec_lua("")
-
-
-def _ask(nvim: Nvim) -> Iterator[Resp]:
-    pass
 
 
 class Worker(BaseWorker[SimpleQueue]):
@@ -40,18 +36,9 @@ class Worker(BaseWorker[SimpleQueue]):
 
     def _poll(self) -> None:
         while True:
-            token, msg = cast(Tuple[str, Any], self._misc.get())
+            uuid, msg = cast(Tuple[str, Any], self._misc.get())
+            token = UUID(uuid)
+            self._supervisor.report(token, completions=tuple(cont()))
 
-
-    def work(self, token: UUID, context: Context) -> Tuple[UUID,Sequence[Completion]]:
-        def cont() -> Iterator[Completion]:
-            for pane, words in self._panes.items():
-                if not (pane.window_active and pane.pane_active):
-                    for word in words:
-                        edit = Edit(new_text=word)
-                        completion = Completion(
-                            position=context.position, primary_edit=edit
-                        )
-                        yield completion
-
-        return token, tuple(cont())
+    def work(self, token: UUID, context: Context) -> None:
+        _req(self._supervisor.nvim, token=token, pos=context.position)
