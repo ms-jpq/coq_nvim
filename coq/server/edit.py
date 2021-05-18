@@ -7,12 +7,11 @@ from std2.ordinal import clamp
 from std2.seq import maybe_indexed
 from std2.types import never
 
-from ...shared.protocol.types import (
+from ..shared.types import (
     ApplicableEdit,
     ContextualEdit,
     Edit,
     NvimPos,
-    OffsetEncoding,
     RangeEdit,
 )
 

@@ -57,9 +57,9 @@ class _CompletionItem:
 
 
 @dataclass(frozen=True)
-class _CompletionList:
+class CompletionList:
     isIncomplete: bool
     items: Sequence[_CompletionItem]
 
 
-Resp = Optional[Union[Sequence[_CompletionItem], _CompletionList]]
+Resp = Optional[Union[Sequence[_CompletionItem], CompletionList]]

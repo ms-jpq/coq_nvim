@@ -3,7 +3,7 @@ from __future__ import annotations
 from abc import abstractmethod
 from concurrent.futures import ThreadPoolExecutor
 from threading import Lock
-from typing import Generic, MutableSequence, Sequence, Tuple, TypeVar
+from typing import Generic, MutableSequence, Sequence, TypeVar
 from uuid import UUID, uuid4
 from weakref import WeakSet
 
