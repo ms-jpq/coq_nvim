@@ -1,14 +1,14 @@
 from concurrent.futures import ThreadPoolExecutor
-from time import sleep
 from dataclasses import dataclass
-from itertools import chain
 from shutil import which
 from subprocess import check_output
-from typing import AbstractSet, Iterator, Sequence
+from time import sleep
+from typing import AbstractSet, Iterator, Mapping, Sequence
 
 from ...shared.parse import coalesce
 from ...shared.runtime import Supervisor
 from ...shared.runtime import Worker as BaseWorker
+from ...shared.types import Completion, Edit
 
 
 @dataclass(frozen=True)
@@ -59,30 +59,43 @@ def _is_active(session_id: str, pane: _Pane) -> bool:
     return session_id == pane.session_id and pane.pane_active and pane.window_active
 
 
-def _words(pool: ThreadPoolExecutor, unifying_chars: AbstractSet[str]) -> Sequence[str]:
-    if which("tmux"):
-        f1, f2 = pool.submit(_session), pool.submit(_panes)
-        session_id, panes = f1.result(), f2.result()
-
-        c1 = lambda pane: _screenshot(unifying_chars, pane=pane)
-        it = pool.map(
-            c1, (pane for pane in panes if not _is_active(session_id, pane=pane))
-        )
-        return tuple(chain.from_iterable(it))
-    else:
-        return ()
-
-
-def _poll(pool: ThreadPoolExecutor, unifying_chars: AbstractSet[str]) -> None:
-    while True:
-        words = _words(pool, unifying_chars=unifying_chars)
-        sleep(1)
+def _collect(
+    pool: ThreadPoolExecutor, unifying_chars: AbstractSet[str], session_id: str
+) -> Mapping[_Pane, Sequence[str]]:
+    panes = (pane for pane in _panes() if pane.session_id == session_id)
+    l1 = lambda pane: (pane, _screenshot(unifying_chars, pane=pane))
+    return {pane: words for pane, words in pool.map(l1, panes)}
 
 
 class Worker(BaseWorker[None]):
     def __init__(self, supervisor: Supervisor, misc: None) -> None:
         super().__init__(supervisor, misc=misc)
-        poll = lambda: _poll(
-            supervisor.pool, unifying_chars=supervisor.options.unifying_chars
-        )
-        supervisor.pool.submit(poll)
+
+        self._panes: Mapping[_Pane, Sequence[str]] = {}
+        if which("tmux"):
+            self._session = _session()
+            supervisor.pool.submit(self._poll)
+        else:
+            self._session = None
+
+    def _poll(self) -> None:
+        while self._session:
+            self._panes = _collect(
+                self._supervisor.pool,
+                unifying_chars=self._supervisor.options.unifying_chars,
+                session_id=self._session,
+            )
+            sleep(1)
+
+    def work(self, token: UUID, context: Context) -> Sequence[Completion]:
+        def cont() -> Iterator[Completion]:
+            for pane, words in self._panes.items():
+                if not (pane.window_active and pane.pane_active):
+                    for word in words:
+                        edit = Edit(new_text=word)
+                        completion = Completion(
+                            position=context.position, primary_edit=edit
+                        )
+                        yield completion
+
+        return tuple(cont())

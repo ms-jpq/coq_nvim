@@ -1,12 +1,5 @@
 from dataclasses import dataclass
-from enum import Enum, auto
 from typing import Annotated, Sequence, Tuple, Union
-
-
-class OffsetEncoding(Enum):
-    utf_8 = auto()  # equivalent to NvimPos
-    utf_16 = auto()  # LSP
-
 
 NvimPos = Tuple[int, Annotated[int, "In nvim, the col is a ut8 byte offset"]]
 WTF8Pos = Tuple[int, Annotated[int, "Depends on `OffsetEncoding`"]]
@@ -76,7 +69,6 @@ ApplicableEdit = Union[Edit, RangeEdit, ContextualEdit]
 @dataclass(frozen=True)
 class Completion:
     position: NvimPos
-    encoding: OffsetEncoding
     primary_edit: Union[ApplicableEdit, SnippetEdit]
     secondary_edits: Sequence[RangeEdit] = ()
     label: str = ""
