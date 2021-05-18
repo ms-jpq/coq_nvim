@@ -12,8 +12,6 @@ WITH q1 AS (
   ON
     files.filename = word_locations.filename
   WHERE
-    files.project = :project
-    AND
     files.filetype = :filetype
     AND
     word_locations.word = :word

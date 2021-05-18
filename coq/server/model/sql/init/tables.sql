@@ -12,21 +12,11 @@ CREATE TABLE IF NOT EXISTS filetypes (
 ) WITHOUT ROWID;
 
 
--- Probably just cwd
--- Should be vacuumed if folder not longer exists, once at beginning
-CREATE TABLE projects (
-  project TEXT NOT NULL PRIMARY KEY
-) WITHOUT ROWID;
-
-
--- !! projects  1:N files
 -- !! filetypes 1:N files
 -- Should be vacuumed if file no longer exists, once at beginning
--- Should be vacuumed by foreign key constraints on `projects`
 -- Should be vacuumed if is ephemeral?
 CREATE TABLE IF NOT EXISTS files (
   filename TEXT NOT NULL PRIMARY KEY,
-  project  TEXT NOT NULL REFERENCES projects  (project)  ON DELETE CASCADE,
   filetype TEXT NOT NULL REFERENCES filetypes (filetype) ON DELETE CASCADE
 ) WITHOUT ROWID;
 CREATE INDEX IF NOT EXISTS files_filetype ON filetypes (filetype);

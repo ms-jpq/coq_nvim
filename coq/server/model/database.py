@@ -2,7 +2,7 @@ from concurrent.futures import ThreadPoolExecutor
 from contextlib import closing
 from sqlite3 import Connection
 from sqlite3.dbapi2 import Cursor
-from typing import AbstractSet, Iterator, Mapping, Sequence, TypedDict, Iterable
+from typing import AbstractSet, Iterable, Iterator, Mapping, Sequence, TypedDict
 
 from std2.sqllite3 import with_transaction
 
@@ -16,12 +16,11 @@ class SqlMetrics(TypedDict):
     line_diff: int
 
 
-def _ensure_file(cursor: Cursor, project: str, file: str, filetype: str) -> None:
-    cursor.execute(sql("insert", "project"), {"project": project})
+def _ensure_file(cursor: Cursor, file: str, filetype: str) -> None:
     cursor.execute(sql("insert", "filetype"), {"filetype": filetype})
     cursor.execute(
         sql("insert", "file"),
-        {"filename": file, "project": project, "filetype": filetype},
+        {"filename": file, "filetype": filetype},
     )
 
 
@@ -44,7 +43,6 @@ class Database:
 
     def set_lines(
         self,
-        project: str,
         file: str,
         filetype: str,
         lines: Sequence[str],
@@ -72,7 +70,7 @@ class Database:
 
             with closing(self._conn.cursor()) as cursor:
                 with with_transaction(cursor):
-                    _ensure_file(cursor, project=project, file=file, filetype=filetype)
+                    _ensure_file(cursor, file=file, filetype=filetype)
                     cursor.execute(
                         sql("delete", "word_locations"),
                         {"lo": start_idx, "hi": start_idx + len(lines)},
@@ -84,7 +82,6 @@ class Database:
 
     def insert(
         self,
-        project: str,
         file: str,
         filetype: str,
         prefix: str,
@@ -94,7 +91,7 @@ class Database:
         def cont() -> None:
             with closing(self._conn.cursor()) as cursor:
                 with with_transaction(cursor):
-                    _ensure_file(cursor, project=project, file=file, filetype=filetype)
+                    _ensure_file(cursor,  file=file, filetype=filetype)
                     cursor.execute(
                         sql("insert", "insertion"),
                         {
@@ -125,7 +122,6 @@ class Database:
     def metric(
         self,
         words: Iterable[str],
-        project: str,
         filetype: str,
         filename: str,
         line_num: int,
@@ -134,7 +130,6 @@ class Database:
             for word in words:
                 yield {
                     "word": word,
-                    "project": project,
                     "filetype": filetype,
                     "filename": filename,
                     "line_num": line_num,

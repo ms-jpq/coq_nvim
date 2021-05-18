@@ -1,4 +1,3 @@
-from pathlib import Path
 from typing import AbstractSet
 
 from pynvim import Nvim
@@ -30,7 +29,7 @@ def gen_context_at(
     return split
 
 
-def gen_context(nvim: Nvim, project: Path, unifying_chars: AbstractSet[str]) -> Context:
+def gen_context(nvim: Nvim,  unifying_chars: AbstractSet[str]) -> Context:
     win = cur_win(nvim)
     buf = win_get_buf(nvim, win=win)
     row, col = win_get_cursor(nvim, win=win)
@@ -45,7 +44,6 @@ def gen_context(nvim: Nvim, project: Path, unifying_chars: AbstractSet[str]) -> 
     split = gen_split(lhs=before, rhs=after, unifying_chars=unifying_chars)
 
     ctx = Context(
-        project=str(project),
         filename=filename,
         filetype=filetype,
         position=pos,

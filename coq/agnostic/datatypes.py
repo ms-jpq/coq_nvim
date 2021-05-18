@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from enum import Enum, auto
-from typing import Annotated, Literal, Sequence, Tuple, Union
+from typing import Annotated, Sequence, Tuple, Union
 
 
 class OffsetEncoding(Enum):
@@ -20,7 +20,6 @@ class Context:
     |...   <syms_before><words_before>🐭<words_after><syms_after>   ...|
     """
 
-    project: str
     filetype: str
     filename: str
 

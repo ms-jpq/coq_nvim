@@ -1,5 +1,7 @@
 from pathlib import Path
 
-TOP_LEVEL = Path(__file__).resolve().parent.parent
-_VARS = TOP_LEVEL / ".vars"
+_TOP_LEVEL = Path(__file__).resolve().parent.parent
+
+_VARS = _TOP_LEVEL / ".vars"
+
 RT_DIR = _VARS / "runtime"
