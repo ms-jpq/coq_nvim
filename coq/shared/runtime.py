@@ -52,13 +52,13 @@ class Supervisor:
     def notify(self, context: Context) -> None:
         with self._lock:
             assert not self._completions
+            token = self._token
 
             for worker in self._workers:
 
                 def cont() -> None:
-                    token = self._token
                     try:
-                        completions = worker.work(token, context=context)
+                        completions = worker.work(context)
                     except Exception as e:
                         log.exception("%s", e)
                     else:
@@ -80,5 +80,5 @@ class Worker(Generic[T_co]):
         self._supervisor.register(self)
 
     @abstractmethod
-    def work(self, token: UUID, context: Context) -> Sequence[Completion]:
+    def work(self, context: Context) -> Sequence[Completion]:
         ...

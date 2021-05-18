@@ -44,8 +44,7 @@ class ContextualEdit(Edit):
 
     old_prefix: str
     new_prefix: str
-    old_suffix: str
-    new_suffix: str
+    old_suffix: str = ""
 
 
 @dataclass(frozen=True)
