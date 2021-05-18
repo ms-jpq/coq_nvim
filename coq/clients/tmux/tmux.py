@@ -1,149 +1,88 @@
-from asyncio import as_completed, gather
+from concurrent.futures import ThreadPoolExecutor
+from time import sleep
 from dataclasses import dataclass
-from os import linesep
+from itertools import chain
 from shutil import which
-from typing import Any, AsyncIterator, Iterator, Sequence, Set
+from subprocess import check_output
+from typing import AbstractSet, Iterator, Sequence
 
-from pynvim import Nvim
-
-from ..shared.chan import Chan
-from ..shared.comm import make_ch, schedule
-from ..shared.core import run_forever
-from ..shared.da import call, tiktok
-from ..shared.logging import log
-from ..shared.parse import coalesce
-from ..shared.types import (
-    Channel,
-    ChannelClosed,
-    Completion,
-    Context,
-    SEdit,
-    Seed,
-    Source,
-    SourceChans,
-)
-from .pkgs.sql import QueryParams, new_db
-
-NAME = "tmux"
+from ...shared.parse import coalesce
+from ...shared.runtime import Supervisor
+from ...shared.runtime import Worker as BaseWorker
 
 
 @dataclass(frozen=True)
-class Config:
-    polling_rate: float
-    prefix_matches: int
-    max_length: int
-
-
-class TmuxError(Exception):
-    pass
-
-
-@dataclass(frozen=True)
-class TmuxPane:
+class _Pane:
     session_id: str
     pane_id: str
     pane_active: bool
     window_active: bool
 
 
-async def tmux_session() -> str:
-    ret = await call("tmux", "display-message", "-p", "#{session_id}")
-    if ret.code != 0:
-        raise TmuxError(ret.err)
-    else:
-        return ret.out.strip()
+def _session() -> str:
+    out = check_output(("tmux", "display-message", "-p", "#{session_id}"), text=True)
+    return out.strip()
 
 
-async def tmux_panes() -> Sequence[TmuxPane]:
-    ret = await call(
-        "tmux",
-        "list-panes",
-        "-a",
-        "-F",
-        "#{session_id} #{pane_id} #{pane_active} #{window_active}",
+def _panes() -> Sequence[_Pane]:
+    out = check_output(
+        (
+            "tmux",
+            "list-panes",
+            "-a",
+            "-F",
+            "#{session_id} #{pane_id} #{pane_active} #{window_active}",
+        ),
+        text=True,
     )
 
-    def cont() -> Iterator[TmuxPane]:
-        for line in ret.out.splitlines():
+    def cont() -> Iterator[_Pane]:
+        for line in out.strip().splitlines():
             session_id, pane_id, pane_active, window_active = line.split(" ")
-            info = TmuxPane(
+            pane = _Pane(
                 session_id=session_id,
                 pane_id=pane_id,
                 pane_active=bool(int(pane_active)),
                 window_active=bool(int(window_active)),
             )
-            yield info
+            yield pane
 
-    if ret.code != 0:
-        raise TmuxError(ret.err)
-    else:
-        return tuple(cont())
+    return tuple(cont())
 
 
-async def screenshot(pane: TmuxPane) -> str:
-    ret = await call("tmux", "capture-pane", "-p", "-t", pane.pane_id)
-    if ret.code != 0:
-        raise TmuxError(ret.err)
-    else:
-        return ret.out
+def _screenshot(unifying_chars: AbstractSet[str], pane: _Pane) -> Sequence[str]:
+    out = check_output(("tmux", "capture-pane", "-p", "-t", pane.pane_id), text=True)
+    return tuple(coalesce(out, unifying_chars=unifying_chars))
 
 
-def is_active(session_id: str, pane: TmuxPane) -> bool:
+def _is_active(session_id: str, pane: _Pane) -> bool:
     return session_id == pane.session_id and pane.pane_active and pane.window_active
 
 
-async def tmux_words(
-    max_length: int, unifying_chars: Set[str]
-) -> AsyncIterator[Iterator[str]]:
+def _words(pool: ThreadPoolExecutor, unifying_chars: AbstractSet[str]) -> Sequence[str]:
     if which("tmux"):
-        session_id, panes = await gather(tmux_session(), tmux_panes())
-        sources = tuple(
-            screenshot(pane) for pane in panes if not is_active(session_id, pane=pane)
+        f1, f2 = pool.submit(_session), pool.submit(_panes)
+        session_id, panes = f1.result(), f2.result()
+
+        c1 = lambda pane: _screenshot(unifying_chars, pane=pane)
+        it = pool.map(
+            c1, (pane for pane in panes if not _is_active(session_id, pane=pane))
         )
-        for source in as_completed(sources):
-            text = await source
-            it = iter(text)
-            words = coalesce(it, max_length=max_length, unifying_chars=unifying_chars)
-            yield words
+        return tuple(chain.from_iterable(it))
+    else:
+        return ()
 
 
-async def main(nvim: Nvim, seed: Seed) -> Source:
-    send_ch, recv_ch = make_ch(Context, Channel[Completion])
+def _poll(pool: ThreadPoolExecutor, unifying_chars: AbstractSet[str]) -> None:
+    while True:
+        words = _words(pool, unifying_chars=unifying_chars)
+        sleep(1)
 
-    config = Config(**seed.config)
 
-    db = await new_db()
-    req = schedule(ask=db.ask_ch, reply=db.reply_ch)
-
-    async def background_update() -> None:
-        async for _ in tiktok(config.polling_rate):
-            await db.depop_ch.send(None)
-            try:
-                async for words in tmux_words(
-                    max_length=config.max_length,
-                    unifying_chars=seed.match.unifying_chars,
-                ):
-                    await db.pop_ch.send(words)
-            except TmuxError as e:
-                message = f"failed to fetch tmux{linesep}{e}"
-                log.warn("%s", message)
-
-    async def ooda() -> None:
-        async for uid, context in send_ch:
-            async with Chan[Completion]() as ch:
-                await recv_ch.send((uid, ch))
-
-                params = QueryParams(
-                    context=context, prefix_matches=config.prefix_matches
-                )
-                async with await req(params) as resp:
-                    async for word in resp:
-                        sedit = SEdit(new_text=word)
-                        comp = Completion(position=context.position, sedit=sedit)
-                        try:
-                            await ch.send(comp)
-                        except ChannelClosed:
-                            break
-
-    run_forever(background_update, ooda)
-    return SourceChans(comm_ch=Chan[Any](), send_ch=send_ch, recv_ch=recv_ch)
+class Worker(BaseWorker[None]):
+    def __init__(self, supervisor: Supervisor, misc: None) -> None:
+        super().__init__(supervisor, misc=misc)
+        poll = lambda: _poll(
+            supervisor.pool, unifying_chars=supervisor.options.unifying_chars
+        )
+        supervisor.pool.submit(poll)

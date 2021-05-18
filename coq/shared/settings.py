@@ -30,3 +30,4 @@ class Settings:
     display: Display
     match: Options
     weights: Weights
+
