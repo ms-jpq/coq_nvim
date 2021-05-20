@@ -81,6 +81,7 @@ return function(args)
         {"-m", "coq"},
         {...}
       }
+
       local params = {
         cwd = cwd,
         on_exit = on_exit,
@@ -95,7 +96,7 @@ return function(args)
       start("deps")
     end
 
-    vim.api.nvim_command [[command! -nargs=0 coqdeps lua coq.deps_cmd()]]
+    vim.api.nvim_command [[command! -nargs=0 COQdeps lua coq.deps_cmd()]]
 
     local set_coq_call = function(name, cmd)
       table.insert(coq_params, name)
@@ -126,9 +127,9 @@ return function(args)
     end
 
     set_coq_call("open_cmd", "coqopen")
-    vim.api.nvim_command [[command! -nargs=* coqopen lua coq.open_cmd(<f-args>)]]
+    vim.api.nvim_command [[command! -nargs=* COQopen lua coq.open_cmd(<f-args>)]]
 
     set_coq_call("help_cmd", "coqhelp")
-    vim.api.nvim_command [[command! -nargs=* coqhelp lua coq.help_cmd(<f-args>)]]
+    vim.api.nvim_command [[command! -nargs=* COQhelp lua coq.help_cmd(<f-args>)]]
   end
 end
