@@ -24,10 +24,8 @@ def parse_args() -> Namespace:
 
     s_run = sub_parsers.add_parser("run")
     s_run.add_argument("--socket", required=True)
-    s_run.add_argument("--xdg", action="store_true")
 
     s_deps = sub_parsers.add_parser("deps")
-    s_deps.add_argument("--xdg", action="store_true")
 
     return parser.parse_args()
 
