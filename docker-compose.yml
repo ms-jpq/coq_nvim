@@ -1,0 +1,10 @@
+version: "3.8"
+
+services:
+  coq:
+    restart: always
+    build: .
+    container_name: chad
+    environment:
+      - TZ
+

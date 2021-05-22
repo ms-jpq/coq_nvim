@@ -7,9 +7,9 @@ RUN apt-get update && \
 
 
 ADD https://raw.githubusercontent.com/junegunn/vim-plug/master/plug.vim /root/.config/nvim/autoload/plug.vim
-COPY docker/root /
-COPY . /root/.config/nvim/plugged/coq-nvim/
+COPY ./docker /
+COPY . /root/.config/nvim/plugged/coq-nvim
 
-
+ENV XDG_DATA_HOME /root/XDG_DATA_HOME
 WORKDIR /root/.config/nvim/plugged/coq-nvim
-# RUN python3 -m coq-nvim deps --xdg
+# RUN python3 -m coq deps
