@@ -1,6 +1,7 @@
 from asyncio.events import AbstractEventLoop
 from concurrent.futures import ThreadPoolExecutor
 from os import linesep
+from queue import SimpleQueue
 from sys import stderr
 from time import monotonic
 from typing import Any, MutableMapping, Optional, cast
@@ -14,13 +15,12 @@ from pynvim_pp.logging import log
 from pynvim_pp.rpc import RpcCallable, RpcMsg, nil_handler
 from std2.pickle import DecodeError
 from std2.types import AnyFun
-from queue import SimpleQueue
 
-from ..shared.settings import Settings
+from .shared.settings import Settings
 from .types import State
 
 
-class ChadClient(Client):
+class CoqClient(Client):
     def __init__(self) -> None:
         self._handlers: MutableMapping[str, RpcCallable] = {}
         self._pool, self._events = ThreadPoolExecutor(), SimpleQueue()
@@ -35,7 +35,7 @@ class ChadClient(Client):
     def wait(self, nvim: Nvim) -> int:
         def cont() -> None:
             if isinstance(nvim.loop, AbstractEventLoop):
-                nvim.loop.set_default_executor(pool)
+                nvim.loop.set_default_executor(self._pool)
 
             atomic, specs = rpc.drain(nvim.channel_id)
             self._handlers.update(specs)
@@ -58,7 +58,7 @@ class ChadClient(Client):
             return 1
         else:
             settings = cast(Settings, self._settings)
-            t1, has_drawn = monotonic(), False
+
 
         while True:
             msg: RpcMsg = event_queue.get()
@@ -83,9 +83,6 @@ class ChadClient(Client):
                     else:
                         redraw(nvim, state=self._state, focus=stage.focus)
 
-                    if settings.profiling and not has_drawn:
-                        has_drawn = True
-                        _profile(nvim, t1=t1)
 
             try:
                 threadsafe_call(nvim, cdraw)

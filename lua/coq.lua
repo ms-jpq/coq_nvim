@@ -29,7 +29,7 @@ return function(args)
     local err_exit = false
 
     local on_exit = function(_, code)
-      local msg = " | coqTree EXITED - " .. code
+      local msg = " | COQ EXITED - " .. code
       if not (code == 0 or code == 143) then
         err_exit = true
         vim.api.nvim_err_writeln(msg)

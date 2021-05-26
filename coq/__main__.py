@@ -138,10 +138,10 @@ elif command == "run":
         from pynvim import attach
         from pynvim_pp.client import run_client
 
-        from .client import ChadClient
+        from .client import CoqClient
 
         nvim = attach("socket", path=args.socket)
-        code = run_client(nvim, client=ChadClient())
+        code = run_client(nvim, client=CoqClient())
         exit(code)
 
 else:
