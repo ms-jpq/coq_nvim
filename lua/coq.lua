@@ -25,7 +25,6 @@ return function(args)
   else
     coq.loaded = true
     local job_id = nil
-    local coq_params = {}
     local err_exit = false
 
     local on_exit = function(_, code)
@@ -37,9 +36,6 @@ return function(args)
         err_exit = false
       end
       job_id = nil
-      for _, param in ipairs(coq_params) do
-        coq[coq_params] = nil
-      end
     end
 
     local on_stdout = function(_, msg)
@@ -92,16 +88,14 @@ return function(args)
       return job_id
     end
 
-    coq.deps_cmd = function()
+    coq.COQdeps = function()
       start("deps")
     end
 
-    vim.api.nvim_command [[command! -nargs=0 COQdeps lua coq.deps_cmd()]]
+    vim.api.nvim_command [[command! -nargs=0 COQdeps lua coq.COQdeps()]]
 
-    local set_coq_call = function(name, cmd)
-      table.insert(coq_params, name)
-
-      coq[name] = function(...)
+    local set_coq_call = function(cmd)
+      coq[cmd] = function(...)
         local args = {...}
 
         if not job_id then
@@ -118,7 +112,7 @@ return function(args)
               if err_exit then
                 return
               else
-                coq[name](unpack(args))
+                coq[cmd](unpack(args))
               end
             end
           )
@@ -126,10 +120,10 @@ return function(args)
       end
     end
 
-    set_coq_call("open_cmd", "coqnow")
-    vim.api.nvim_command [[command! -nargs=* COQnow lua coq.open_cmd(<f-args>)]]
+    set_coq_call("COQnow")
+    vim.api.nvim_command [[command! -nargs=* COQnow lua coq.COQnow(<f-args>)]]
 
-    set_coq_call("help_cmd", "coqhelp")
-    vim.api.nvim_command [[command! -nargs=* COQhelp lua coq.help_cmd(<f-args>)]]
+    set_coq_call("COQhelp")
+    vim.api.nvim_command [[command! -nargs=* COQhelp lua coq.COQhelp(<f-args>)]]
   end
 end
