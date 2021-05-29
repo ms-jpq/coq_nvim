@@ -102,8 +102,7 @@ if command == "deps":
             _LOCK_FILE.write_text(_REQ)
             msg = """
             ---
-            This is not an error:
-            You can now use :CHADopen
+            You can now use :COQnow
             """
             msg = dedent(msg)
             print(msg, file=stderr)
@@ -125,11 +124,11 @@ elif command == "run":
             import yaml
     except ImportError:
         msg = """
-        Please update dependencies using :CHADdeps
+        Please update dependencies using :COQdeps
         -
         -
-        Dependencies will be installed privately inside `chadtree/.vars`
-        `rm -rf chadtree/` will cleanly remove everything
+        Dependencies will be installed privately inside `coq-nvim/.vars`
+        `rm -rf coq-nvim/` will cleanly remove everything
         """
         msg = dedent(msg)
         print(msg, end="", file=stderr)

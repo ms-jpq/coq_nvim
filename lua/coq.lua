@@ -126,8 +126,8 @@ return function(args)
       end
     end
 
-    set_coq_call("open_cmd", "coqopen")
-    vim.api.nvim_command [[command! -nargs=* COQopen lua coq.open_cmd(<f-args>)]]
+    set_coq_call("open_cmd", "coqnow")
+    vim.api.nvim_command [[command! -nargs=* COQnow lua coq.open_cmd(<f-args>)]]
 
     set_coq_call("help_cmd", "coqhelp")
     vim.api.nvim_command [[command! -nargs=* COQhelp lua coq.help_cmd(<f-args>)]]
