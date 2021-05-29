@@ -13,6 +13,7 @@ from pynvim_pp.rpc import RpcCallable, RpcMsg, nil_handler
 from std2.pickle import DecodeError
 from std2.types import AnyFun
 
+from ._registry import ____
 from .registry import atomic, autocmd, rpc
 from .shared.settings import Settings
 from .types import State
@@ -55,7 +56,14 @@ class CoqClient(Client):
             name, args = msg
             handler = cast(AnyFun[None], self._handlers.get(name, nil_handler(name)))
 
-            try:
+            def handle() -> None:
+                from pynvim_pp.lib import write
+
+                write(nvim, args)
                 handler(nvim, *args)
+                pass
+
+            try:
+                threadsafe_call(nvim, handle)
             except Exception as e:
                 log.exception("%s", e)

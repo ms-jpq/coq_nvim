@@ -6,7 +6,7 @@ from pynvim_pp.rpc import RPC
 
 
 def _name_gen(fn: Callable[[Callable[..., Any]], str]) -> str:
-    return f"COQ_{fn.__qualname__.lstrip('_')}"
+    return f"COQ{fn.__qualname__.lstrip('_')}"
 
 
 autocmd = AutoCMD()
