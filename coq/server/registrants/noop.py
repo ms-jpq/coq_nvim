@@ -1,3 +1,4 @@
+from itertools import chain
 from random import choice, sample
 
 from pynvim import Nvim
@@ -14,10 +15,18 @@ _ANNOUNCE = (
     "🐓",
     "🐔",
 )
+_STARS = (
+    "✨",
+    "💫",
+    "⭐️",
+    "🌟",
+    "☄️",
+)
 
 
 @rpc(blocking=True)
 def now(nvim: Nvim, *_: None) -> None:
     chars = choice(_CHARS)
-    msg = " ".join(sample(_ANNOUNCE, k=chars))
+    star = choice(_STARS)
+    msg = " ".join(chain((star,), sample(_ANNOUNCE, k=chars), (star,)))
     write(nvim, msg)
