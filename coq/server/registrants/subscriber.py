@@ -1,9 +1,10 @@
 from pynvim import Nvim
-from pynvim_pp.api import cur_buf
+from pynvim_pp.api import buf_get_option, cur_buf
 
 from ...registry import autocmd, rpc
 
 _SEEN = {0}
+
 
 @rpc(blocking=True)
 def _sub(nvim: Nvim, *_: None) -> None:
@@ -12,8 +13,10 @@ def _sub(nvim: Nvim, *_: None) -> None:
         pass
     else:
         _SEEN.add(buf.number)
-        succ = nvim.api.buf_attach(buf, True, {})
-        assert succ
+        listed = buf_get_option(nvim, buf=buf, key="buflisted")
+        if listed:
+            succ = nvim.api.buf_attach(buf, True, {})
+            assert succ
 
 
 autocmd("BufNew") << f"lua {_sub.name}()"
