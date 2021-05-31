@@ -6,10 +6,10 @@ from typing import Iterable, Iterator, MutableSequence, Sequence, Tuple
 
 from std2.concurrent.futures import gather
 
-from ...agnostic.datatypes import Completion, Context
-from ...agnostic.parse import is_word
-from ...agnostic.settings.types import Options, Weights
-from ..model.database import Database, SqlMetrics
+from ..shared.parse import is_word
+from ..shared.settings import Options, Weights
+from ..shared.types import Completion, Context
+from .model.database import Database, SqlMetrics
 
 
 class _ToleranceExceeded(Exception):
@@ -164,11 +164,12 @@ def rank(
 ) -> Iterator[Completion]:
     def c1() -> Sequence[SqlMetrics]:
         words = (comp.primary_edit.new_text for comp in completions)
+        row, _ = context.position
         return db.metric(
             words,
             filetype=context.filetype,
             filename=context.filename,
-            line_num=context.line_num,
+            line_num=row,
         )
 
     def c2() -> Sequence[_MatchMetrics]:

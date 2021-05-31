@@ -155,7 +155,6 @@ def _consolidate(
 
 
 def _trans(
-    encoding: OffsetEncoding,
     pos: NvimPos,
     ctx: SplitCtx,
     lines: Sequence[str],

@@ -11,7 +11,7 @@ from pynvim_pp.api import (
 )
 from pynvim_pp.text_object import SplitCtx, gen_split
 
-from ..agnostic.datatypes import Context, NvimPos
+from ..shared.types import Context, NvimPos
 
 
 def gen_context_at(
@@ -29,7 +29,7 @@ def gen_context_at(
     return split
 
 
-def gen_context(nvim: Nvim,  unifying_chars: AbstractSet[str]) -> Context:
+def gen_context(nvim: Nvim, unifying_chars: AbstractSet[str]) -> Context:
     win = cur_win(nvim)
     buf = win_get_buf(nvim, win=win)
     row, col = win_get_cursor(nvim, win=win)
