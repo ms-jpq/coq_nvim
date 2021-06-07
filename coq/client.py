@@ -39,7 +39,6 @@ class CoqClient(Client):
 
             rpc_atomic, specs = rpc.drain(nvim.channel_id)
             self._handlers.update(specs)
-            self._handlers.update((fn.alias, fn) for _, fn in specs)
             (rpc_atomic + autocmd.drain() + atomic).commit(nvim)
             self._settings = load(nvim)
             self._state = new_state(nvim)

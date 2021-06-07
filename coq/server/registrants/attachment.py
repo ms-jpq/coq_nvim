@@ -1,21 +1,26 @@
 from pynvim import Nvim
-from pynvim.api import NvimError
-from pynvim_pp.api import buf_get_option, cur_buf, list_bufs
+from pynvim.api import Buffer, NvimError
+from pynvim_pp.api import buf_get_lines, buf_get_option, cur_buf, list_bufs, new_buf
 from pynvim_pp.lib import write
 
 from ...registry import atomic, autocmd, rpc
 from ..state import State
 
 
+
+
 @rpc(blocking=True)
-def _lines_event(nvim: Nvim, state: State, buf_nr: int) -> None:
-    write(nvim, buf_nr)
+def _lines_event(
+    nvim: Nvim, state: State, buf_nr: int, lo: int, hi: int, wot: int
+) -> None:
+    buf = new_buf(nvim, nr=buf_nr)
+    write(nvim, buf[lo:hi])
 
 
 _lua = f"""
 (function (buf)
     local on_lines = function (_, buf, changedtick, lo, hi, wut)
-        {_lines_event.name}(buf)
+        {_lines_event.name}(buf, lo, hi, wut)
     end
     local go = vim.api.nvim_buf_attach(bur, True, {{on_lines = on_lines}})
     assert(go)
