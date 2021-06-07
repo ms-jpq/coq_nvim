@@ -19,9 +19,9 @@ CREATE TEMP TABLE lines (
   buffer   INTEGER NOT NULL REFERENCES buffers (buffer) ON DELETE CASCADE,
   line_num INTEGER NOT NULL,
   line     TEXT    NOT NULL,
-  UNIQUE (buffer, line_no)
+  UNIQUE (buffer, line_num)
 );
-CREATE INDEX IF NOT EXISTS lines_line_no ON lines (line_no);
+CREATE INDEX IF NOT EXISTS lines_line_num ON lines (line_num);
 
 
 -- Should be vacuumed if no files references filetype

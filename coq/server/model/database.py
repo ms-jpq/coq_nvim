@@ -47,7 +47,8 @@ def _init(location: str) -> Connection:
 
 
 def _vaccum(conn: Connection) -> None:
-    conn.execute(sql("vaccum", "words"), {})
+    # conn.execute(sql("vaccum", "words"), {})
+    pass
 
 
 class Database:
@@ -85,15 +86,16 @@ class Database:
                         }
 
             lst = tuple(it())
+            del_param = {"filename": file, "lo": lo, "hi": hi}
 
             with closing(self._conn.cursor()) as cursor:
                 with with_transaction(cursor):
                     _ensure_buffer(cursor, buf=buf, tick=tick)
                     _ensure_file(cursor, file=file, filetype=filetype)
-                    cursor.execute(
-                        sql("delete", "word_locations"),
-                        {"filename": file, "lo": lo, "hi": hi},
-                    )
+
+                    cursor.execute(sql("delete", "words"), del_param)
+                    cursor.execute(sql("delete", "word_locations"), del_param)
+
                     cursor.executemany(sql("insert", "word"), lst)
                     cursor.executemany(sql("insert", "word_location"), lst)
 
