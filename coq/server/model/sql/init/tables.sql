@@ -21,6 +21,7 @@ CREATE TEMP TABLE lines (
   line    TEXT    NOT NULL,
   UNIQUE (buffer, line_no)
 );
+CREATE INDEX IF NOT EXISTS lines_line_no ON lines (line_no);
 
 
 -- Should be vacuumed if no files references filetype
