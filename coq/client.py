@@ -15,6 +15,7 @@ from std2.types import AnyFun
 
 from ._registry import ____
 from .registry import atomic, autocmd, rpc
+from .server.registrants.attachment import BUF_EVENTS
 from .server.settings import load
 from .server.state import State, new_state
 from .shared.settings import Settings
@@ -57,12 +58,15 @@ class CoqClient(Client):
         while True:
             msg: RpcMsg = self._events.get()
             name, args = msg
-            handler = cast(AnyFun[None], self._handlers.get(name, nil_handler(name)))
 
             def handle() -> None:
                 if name.startswith("nvim_buf_"):
-                    print(args, flush=True)
+                    handler = BUF_EVENTS[name]
+                    handler(nvim, self._state, *args)
                 else:
+                    handler = cast(
+                        AnyFun[None], self._handlers.get(name, nil_handler(name))
+                    )
                     a, *_ = args
                     handler(nvim, self._state, *a)
 

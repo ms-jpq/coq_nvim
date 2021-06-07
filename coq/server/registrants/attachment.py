@@ -40,8 +40,7 @@ def _buf_new_init(nvim: Nvim, state: State) -> None:
 atomic.exec_lua(f"{_buf_new_init.name}()", ())
 
 
-@rpc(blocking=True, name="nvim_buf_lines_event")
-def lines_event(
+def _lines_event(
     nvim: Nvim,
     state: State,
     buf: Buffer,
@@ -51,14 +50,19 @@ def lines_event(
     lines: Sequence[str],
     multipart: bool,
 ) -> None:
+    print(lines, flush=True)
+
+
+def _changed_event(nvim: Nvim, state: State, buf: Buffer, changed: int) -> None:
     pass
 
 
-@rpc(blocking=True, name="nvim_buf_changedtick_event")
-def changed_event(nvim: Nvim, state: State, buf: Buffer, changed: int) -> None:
+def _detach_event(nvim: Nvim, state: State, buf: Buffer) -> None:
     pass
 
 
-@rpc(blocking=True, name="nvim_buf_detach_event")
-def detach_event(nvim: Nvim, state: State, buf: Buffer) -> None:
-    pass
+BUF_EVENTS = {
+    "nvim_buf_lines_event": _lines_event,
+    "nvim_buf_changedtick_event": _changed_event,
+    "nvim_buf_detach_event": _detach_event,
+}
