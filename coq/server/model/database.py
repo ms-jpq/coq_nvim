@@ -3,7 +3,7 @@ from sqlite3 import Connection
 from sqlite3.dbapi2 import Cursor
 from typing import AbstractSet, Iterable, Iterator, Mapping, Sequence, TypedDict
 
-from std2.sqllite3 import with_transaction
+from std2.sqllite3 import escape, with_transaction
 
 from ...shared.parse import coalesce, lower, normalize
 from .executor import Executor
@@ -24,10 +24,16 @@ def _ensure_file(cursor: Cursor, file: str, filetype: str) -> None:
     )
 
 
+def _like_esc(like: str) -> str:
+    escaped = escape(nono={"%", "_"}, escape="!", param=like)
+    return f"{escaped}%"
+
+
 def _init(location: str) -> Connection:
     conn = Connection(location)
     conn.create_function("X_LOWER", narg=1, func=lower, deterministic=True)
     conn.create_function("X_NORM", narg=1, func=normalize, deterministic=True)
+    conn.create_function("X_LIKE_ESC", narg=1, func=_like_esc, deterministic=True)
     conn.executescript(sql("init", "pragma"))
     conn.executescript(sql("init", "tables"))
     return conn
@@ -61,7 +67,7 @@ class Database:
             def m1() -> Iterator[Mapping]:
                 for line in words:
                     for word in line:
-                        yield {"word": word, "lword": word.casefold()}
+                        yield {"word": word}
 
             def m2() -> Iterator[Mapping]:
                 for line_num, line in enumerate(words, start=lo):

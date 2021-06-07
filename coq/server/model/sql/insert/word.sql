@@ -1,2 +1,2 @@
-REPLACE INTO words (word,  lword)
-VALUES             (:word, :lword)
+REPLACE INTO words (word)
+VALUES             (:word)

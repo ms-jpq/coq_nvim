@@ -26,7 +26,7 @@ CREATE INDEX IF NOT EXISTS files_filetype ON filetypes (filetype);
 -- Should be vacuumed when no longer in word_locations
 CREATE TABLE IF NOT EXISTS words (
   word  TEXT NOT NULL PRIMARY KEY,
-  lword TEXT NOT NULL AS X_LOWER(word) STORED
+  lword TEXT NOT NULL AS (X_LOWER(word)) STORED
 ) WITHOUT ROWID;
 CREATE INDEX IF NOT EXISTS words_lword ON words (lword);
 
