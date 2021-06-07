@@ -6,6 +6,23 @@ BEGIN;
 --------------------------------------------------------------------------------
 
 
+-- TMP!
+CREATE TEMP TABLE buffers (
+  buffer INTEGER NOT NULL PRIMARY KEY,
+  tick   INTEGER NOT NULL
+) WITHOUT ROWID;
+
+
+-- TMP!
+-- !! filetypes 1:N buffers
+CREATE TEMP TABLE lines (
+  buffer  INTEGER NOT NULL REFERENCES buffers (buffer) ON DELETE CASCADE,
+  line_no INTEGER NOT NULL,
+  line    TEXT    NOT NULL,
+  UNIQUE (buffer, line_no)
+);
+
+
 -- Should be vacuumed if no files references filetype
 CREATE TABLE IF NOT EXISTS filetypes (
   filetype TEXT NOT NULL PRIMARY KEY
