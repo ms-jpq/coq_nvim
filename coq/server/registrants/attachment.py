@@ -12,12 +12,10 @@ from .omnifunc import omnifunc
 @rpc(blocking=True)
 def _buf_new(nvim: Nvim, stack: Stack) -> None:
     buf = cur_buf(nvim)
-    if buf.number not in stack.state.ticks:
-        listed = buf_get_option(nvim, buf=buf, key="buflisted")
-        if listed:
-            succ = nvim.api.buf_attach(buf, True, {})
-            assert succ
-        stack.state.ticks[buf.number] = -1
+    listed = buf_get_option(nvim, buf=buf, key="buflisted")
+    if listed:
+        succ = nvim.api.buf_attach(buf, True, {})
+        assert succ
 
 
 autocmd("BufNew") << f"lua {_buf_new.name}()"
@@ -28,7 +26,6 @@ def _buf_new_init(nvim: Nvim, stack: Stack) -> None:
     for buf in list_bufs(nvim, listed=True):
         succ = nvim.api.buf_attach(buf, True, {})
         assert succ
-        stack.state.ticks[buf.number] = -1
 
 
 atomic.exec_lua(f"{_buf_new_init.name}()", ())
@@ -56,7 +53,7 @@ def _lines_event(
         lines=lines,
         unifying_chars=stack.settings.match.unifying_chars,
     )
-    print(lo, hi, lines,flush=True)
+    print(lo, hi, lines, flush=True)
     if stack.state.inserting:
         omnifunc(nvim, stack)
 
