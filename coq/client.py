@@ -27,14 +27,22 @@ class CoqClient(Client):
 
         self._stack: Optional[Stack] = None
 
-    def on_msg(self, nvim: Nvim, msg: RpcMsg) -> Any:
+    def _handle(self, nvim: Nvim, msg: RpcMsg) -> Any:
         name, args = msg
-        if name == omnifunc.name:
-            a, *_ = args
-            return omnifunc(nvim, self._stack, *a)
+        if name.startswith("nvim_buf_"):
+            handler = BUF_EVENTS[name]
+            return handler(nvim, self._stack, *args)
         else:
+            handler = cast(AnyFun[None], self._handlers.get(name, nil_handler(name)))
+            a, *_ = args
+            return handler(nvim, self._stack, *a)
+
+    def on_msg(self, nvim: Nvim, msg: RpcMsg) -> Any:
+        if not self._stack:
             self._events.put(msg)
             return None
+        else:
+            return self._handle(nvim, msg)
 
     def wait(self, nvim: Nvim) -> int:
         def cont() -> None:
@@ -60,20 +68,7 @@ class CoqClient(Client):
 
         while True:
             msg: RpcMsg = self._events.get()
-            name, args = msg
-
-            def handle() -> None:
-                if name.startswith("nvim_buf_"):
-                    handler = BUF_EVENTS[name]
-                    handler(nvim, self._stack, *args)
-                else:
-                    handler = cast(
-                        AnyFun[None], self._handlers.get(name, nil_handler(name))
-                    )
-                    a, *_ = args
-                    handler(nvim, self._stack, *a)
-
             try:
-                threadsafe_call(nvim, handle)
+                threadsafe_call(nvim, self._handle, nvim, msg)
             except Exception as e:
                 log.exception("%s", e)
