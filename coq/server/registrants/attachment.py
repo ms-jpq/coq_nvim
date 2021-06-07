@@ -50,7 +50,10 @@ def _lines_event(
     lines: Sequence[str],
     multipart: bool,
 ) -> None:
-    print(lines, flush=True)
+    if state.inserting:
+        pass
+    else:
+        print(lines, flush=True)
 
 
 def _changed_event(nvim: Nvim, state: State, buf: Buffer, changed: int) -> None:

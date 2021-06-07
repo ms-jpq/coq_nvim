@@ -15,7 +15,7 @@ autocmd("DirChanged") << f"lua {_dir_changed.name}()"
 
 @rpc(blocking=True)
 def _insert_enter(nvim: Nvim, state: State) -> None:
-    state.insertion_mode = True
+    state.inserting = True
 
 
 autocmd("InsertEnter") << f"lua {_insert_enter.name}()"
@@ -23,7 +23,7 @@ autocmd("InsertEnter") << f"lua {_insert_enter.name}()"
 
 @rpc(blocking=True)
 def _insert_leave(nvim: Nvim, state: State) -> None:
-    state.insertion_mode = False
+    state.inserting = False
 
 
 autocmd("InsertLeave") << f"lua {_insert_leave.name}()"
