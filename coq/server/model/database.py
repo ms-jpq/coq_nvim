@@ -1,4 +1,5 @@
 from contextlib import closing
+from locale import strcoll
 from sqlite3 import Connection
 from sqlite3.dbapi2 import Cursor
 from typing import AbstractSet, Iterable, Iterator, Mapping, Sequence, TypedDict
@@ -30,7 +31,8 @@ def _like_esc(like: str) -> str:
 
 
 def _init(location: str) -> Connection:
-    conn = Connection(location)
+    conn = Connection(location, isolation_level=None)
+    conn.create_collation("X_COLL", strcoll)
     conn.create_function("X_LOWER", narg=1, func=lower, deterministic=True)
     conn.create_function("X_NORM", narg=1, func=normalize, deterministic=True)
     conn.create_function("X_LIKE_ESC", narg=1, func=_like_esc, deterministic=True)
@@ -39,16 +41,18 @@ def _init(location: str) -> Connection:
     return conn
 
 
+def _vaccum(conn: Connection) -> None:
+    # conn.executescript(sql("vaccum", "periodical"))
+    pass
+
+
 class Database:
     def __init__(self, location: str) -> None:
         self._pool = Executor()
         self._conn: Connection = self._pool.submit(_init, location)
 
     def vaccum(self) -> None:
-        def cont() -> None:
-            self._conn.executescript(sql("vaccum", "periodical"))
-
-        self._pool.submit(cont)
+        self._pool.submit(_vaccum, self._conn)
 
     def set_lines(
         self,
