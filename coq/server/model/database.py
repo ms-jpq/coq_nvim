@@ -1,6 +1,6 @@
 from contextlib import closing
 from locale import strcoll
-from sqlite3 import Connection
+from sqlite3 import Connection, Row
 from sqlite3.dbapi2 import Cursor
 from typing import AbstractSet, Iterable, Iterator, Mapping, Sequence, TypedDict
 
@@ -32,6 +32,7 @@ def _like_esc(like: str) -> str:
 
 def _init(location: str) -> Connection:
     conn = Connection(location, isolation_level=None)
+    conn.row_factory = Row
     conn.create_collation("X_COLL", strcoll)
     conn.create_function("X_LOWER", narg=1, func=lower, deterministic=True)
     conn.create_function("X_NORM", narg=1, func=normalize, deterministic=True)
