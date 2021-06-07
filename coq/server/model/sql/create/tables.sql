@@ -24,18 +24,10 @@ CREATE TEMP TABLE lines (
 CREATE INDEX IF NOT EXISTS lines_line_num ON lines (line_num);
 
 
--- Should be vacuumed if no files references filetype
-CREATE TABLE IF NOT EXISTS filetypes (
-  filetype TEXT NOT NULL PRIMARY KEY
-) WITHOUT ROWID;
-
-
--- !! filetypes 1:N files
 -- Should be vacuumed if file no longer exists, once at beginning
--- Should be vacuumed if is ephemeral?
 CREATE TABLE IF NOT EXISTS files (
   filename TEXT NOT NULL PRIMARY KEY,
-  filetype TEXT NOT NULL REFERENCES filetypes (filetype) ON DELETE CASCADE
+  filetype TEXT NOT NULL
 ) WITHOUT ROWID;
 CREATE INDEX IF NOT EXISTS files_filetype ON filetypes (filetype);
 
