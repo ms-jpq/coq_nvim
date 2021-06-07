@@ -32,10 +32,7 @@ CREATE TABLE IF NOT EXISTS files (
 CREATE INDEX IF NOT EXISTS files_filetype ON filetypes (filetype);
 
 
--- !! words 1:N word_locations
--- !! files 1:N word_locations
--- Store word location in files
--- Should be vacuumed by foreign key constraints on `files`
+-- !! files 1:N words
 CREATE TABLE IF NOT EXISTS words (
   filename TEXT    NOT NULL REFERENCES files (filename) ON DELETE CASCADE,
   word     TEXT    NOT NULL,
