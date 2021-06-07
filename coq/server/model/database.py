@@ -6,7 +6,7 @@ from typing import AbstractSet, Iterable, Iterator, Mapping, Sequence, TypedDict
 
 from std2.sqllite3 import with_transaction
 
-from ...agnostic.parse import coalesce
+from ...shared.parse import coalesce
 from .sql import sql
 
 
@@ -91,7 +91,7 @@ class Database:
         def cont() -> None:
             with closing(self._conn.cursor()) as cursor:
                 with with_transaction(cursor):
-                    _ensure_file(cursor,  file=file, filetype=filetype)
+                    _ensure_file(cursor, file=file, filetype=filetype)
                     cursor.execute(
                         sql("insert", "insertion"),
                         {

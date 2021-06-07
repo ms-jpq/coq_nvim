@@ -16,7 +16,7 @@ from std2.types import AnyFun
 from ._registry import ____
 from .registry import atomic, autocmd, rpc
 from .server.registrants.attachment import BUF_EVENTS
-from .server.state import State, new_state
+from .server.runtime import Stack, stack
 
 
 class CoqClient(Client):
@@ -24,7 +24,7 @@ class CoqClient(Client):
         self._handlers: MutableMapping[str, RpcCallable] = {}
         self._pool, self._events = ThreadPoolExecutor(), SimpleQueue()
 
-        self._state: Optional[State] = None
+        self._stack: Optional[Stack] = None
 
     def on_msg(self, nvim: Nvim, msg: RpcMsg) -> Any:
         self._events.put(msg)
@@ -39,7 +39,7 @@ class CoqClient(Client):
             self._handlers.update(specs)
             (rpc_atomic + autocmd.drain() + atomic).commit(nvim)
 
-            self._state = new_state(nvim)
+            self._stack = stack(self._pool,nvim=nvim)
 
         try:
             threadsafe_call(nvim, cont)
@@ -59,13 +59,13 @@ class CoqClient(Client):
             def handle() -> None:
                 if name.startswith("nvim_buf_"):
                     handler = BUF_EVENTS[name]
-                    handler(nvim, self._state, *args)
+                    handler(nvim, self._stack, *args)
                 else:
                     handler = cast(
                         AnyFun[None], self._handlers.get(name, nil_handler(name))
                     )
                     a, *_ = args
-                    handler(nvim, self._state, *a)
+                    handler(nvim, self._stack, *a)
 
             try:
                 threadsafe_call(nvim, handle)
