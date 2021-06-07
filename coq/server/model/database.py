@@ -43,8 +43,7 @@ def _init(location: str) -> Connection:
 
 
 def _vaccum(conn: Connection) -> None:
-    # conn.executescript(sql("vaccum", "periodical"))
-    pass
+    conn.execute(sql("vaccum", "words"), {})
 
 
 class Database:
