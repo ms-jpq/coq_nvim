@@ -1,8 +1,6 @@
-from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from os import sep
-from typing import MutableMapping
 
 from pynvim import Nvim
 from pynvim_pp.api import get_cwd
@@ -24,7 +22,6 @@ _ESC = {"$": "$$", sep: "$"}
 class _State:
     inserting: bool
     cwd: str
-    ticks: MutableMapping[int, int]
 
 
 @dataclass(frozen=True)
@@ -60,7 +57,6 @@ def stack(pool: ThreadPoolExecutor, nvim: Nvim) -> Stack:
     state = _State(
         inserting=nvim.api.get_mode()["mode"] == "i",
         cwd=cwd,
-        ticks=defaultdict(lambda: -1),
     )
     supervisor = Supervisor(pool=pool, nvim=nvim, options=settings.match)
     stack = Stack(
