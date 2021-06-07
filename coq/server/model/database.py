@@ -71,34 +71,35 @@ class Database:
         unifying_chars: AbstractSet[str],
     ) -> None:
         def cont() -> None:
-            words = tuple(
-                tuple(coalesce(line, unifying_chars=unifying_chars)) for line in lines
-            )
+            del_p = {"filename": file, "lo": lo, "hi": hi}
 
-            def it() -> Iterator[Mapping]:
-                for line_num, line in enumerate(words, start=lo):
-                    for word in line:
+            def m1() -> Iterator[Mapping]:
+                for line_num, line in enumerate(lines, start=lo):
+                    for word in coalesce(line, unifying_chars=unifying_chars):
                         yield {
-                            "buffer": buf,
                             "word": word,
                             "filename": file,
                             "line_num": line_num,
                         }
 
-            lst = tuple(it())
-            del_param = {"filename": file, "lo": lo, "hi": hi}
+            def m2() -> Iterator[Mapping]:
+                for line_num, line in enumerate(lines, start=lo):
+                    yield {
+                        "buffer": buf,
+                        "line_num": line_num,
+                        "line": line,
+                    }
 
             with closing(self._conn.cursor()) as cursor:
                 with with_transaction(cursor):
                     _ensure_buffer(cursor, buf=buf, tick=tick)
                     _ensure_file(cursor, file=file, filetype=filetype)
 
-                    cursor.execute(sql("delete", "words"), del_param)
-                    cursor.execute(sql("delete", "word_locations"), del_param)
-                    cursor.execute(sql("delte", "lines"), del_param)
+                    cursor.execute(sql("delete", "words"), del_p)
+                    cursor.execute(sql("delte", "lines"), del_p)
 
-                    cursor.executemany(sql("insert", "word"), lst)
-                    cursor.executemany(sql("insert", "word_location"), lst)
+                    cursor.executemany(sql("insert", "words"), m1())
+                    cursor.executemany(sql("insert", "lines"), m2())
 
         self._pool.submit(cont)
 
