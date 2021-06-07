@@ -1,15 +1,12 @@
 DELETE FROM words
 WHERE
-  EXISTS (
-    SELECT
+  filename = :filename
+  AND
+  CASE
+    WHEN :hi > 0
+      THEN line_num >= :lo
+      AND
+      line_num < :hi
+    ELSE
       TRUE
-    FROM word_locations
-    WHERE
-      word_locations.filename = :filename
-      AND
-      word_locations.word = words.word
-      AND
-      word_locations.line_num >= :lo
-      AND
-      word_locations.line_num < :hi
-  )
+  END

@@ -1,0 +1,3 @@
+SELECT
+  filename
+FROM files
