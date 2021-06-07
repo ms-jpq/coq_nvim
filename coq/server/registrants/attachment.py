@@ -53,7 +53,7 @@ def _lines_event(
         lines=lines,
         unifying_chars=stack.settings.match.unifying_chars,
     )
-    print(lo, hi, lines, flush=True)
+
     if stack.state.inserting:
         omnifunc(nvim, stack)
 
