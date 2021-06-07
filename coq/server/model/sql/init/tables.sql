@@ -36,11 +36,10 @@ CREATE INDEX IF NOT EXISTS words_lword ON words (lword);
 -- Store word location in files
 -- Should be vacuumed by foreign key constraints on `files`
 CREATE TABLE IF NOT EXISTS word_locations (
-  rowid    INTEGER NOT NULL PRIMARY KEY,
   filename TEXT    NOT NULL REFERENCES files (filename) ON DELETE CASCADE,
   word     TEXT    NOT NULL REFERENCES words (word)     ON DELETE CASCADE,
   line_num INTEGER NOT NULL
-) WITHOUT ROWID;
+);
 CREATE INDEX IF NOT EXISTS word_locations_filename ON word_locations (filename);
 CREATE INDEX IF NOT EXISTS word_locations_word     ON word_locations (word);
 CREATE INDEX IF NOT EXISTS word_locations_line_num ON word_locations (line_num);
