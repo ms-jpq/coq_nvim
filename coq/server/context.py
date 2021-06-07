@@ -1,6 +1,5 @@
 from typing import AbstractSet
 
-
 from pynvim import Nvim
 from pynvim_pp.api import (
     buf_filetype,
@@ -10,24 +9,9 @@ from pynvim_pp.api import (
     win_get_buf,
     win_get_cursor,
 )
-from pynvim_pp.text_object import SplitCtx, gen_split
+from pynvim_pp.text_object import gen_split
 
-from ..shared.types import Context, NvimPos
-
-
-def gen_context_at(
-    nvim: Nvim, pos: NvimPos, unifying_chars: AbstractSet[str]
-) -> SplitCtx:
-    row, col = pos
-    win = cur_win(nvim)
-    buf = win_get_buf(nvim, win=win)
-
-    lines = buf_get_lines(nvim, buf=buf, lo=row, hi=row + 1)
-    b_line = next(iter(lines)).encode()
-    before, after = b_line[:col].decode(), b_line[col:].decode()
-    split = gen_split(lhs=before, rhs=after, unifying_chars=unifying_chars)
-
-    return split
+from ..shared.types import Context
 
 
 def gen_context(nvim: Nvim, unifying_chars: AbstractSet[str]) -> Context:

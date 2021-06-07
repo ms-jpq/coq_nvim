@@ -41,8 +41,8 @@ def _init(location: str) -> Connection:
     conn.create_function("X_LOWER", narg=1, func=lower, deterministic=True)
     conn.create_function("X_NORM", narg=1, func=normalize, deterministic=True)
     conn.create_function("X_LIKE_ESC", narg=1, func=_like_esc, deterministic=True)
-    conn.executescript(sql("init", "pragma"))
-    conn.executescript(sql("init", "tables"))
+    conn.executescript(sql("create", "pragma"))
+    conn.executescript(sql("create", "tables"))
     return conn
 
 
@@ -74,19 +74,17 @@ class Database:
                 tuple(coalesce(line, unifying_chars=unifying_chars)) for line in lines
             )
 
-            def m1() -> Iterator[Mapping]:
-                for line in words:
-                    for word in line:
-                        yield {"word": word}
-
-            def m2() -> Iterator[Mapping]:
+            def it() -> Iterator[Mapping]:
                 for line_num, line in enumerate(words, start=lo):
                     for word in line:
                         yield {
+                            "buffer": buf,
                             "word": word,
                             "filename": file,
                             "line_num": line_num,
                         }
+
+            lst = tuple(it())
 
             with closing(self._conn.cursor()) as cursor:
                 with with_transaction(cursor):
@@ -96,8 +94,8 @@ class Database:
                         sql("delete", "word_locations"),
                         {"filename": file, "lo": lo, "hi": hi},
                     )
-                    cursor.executemany(sql("insert", "word"), m1())
-                    cursor.executemany(sql("insert", "word_location"), m2())
+                    cursor.executemany(sql("insert", "word"), lst)
+                    cursor.executemany(sql("insert", "word_location"), lst)
 
         self._pool.submit(cont)
 
@@ -120,7 +118,7 @@ class Database:
     def ticks(self, buf: int) -> int:
         def cont() -> int:
             with closing(self._conn.cursor()) as cursor:
-                cursor.execute(sql("query", "ticks"), {"buffer": buf})
+                cursor.execute(sql("select", "ticks"), {"buffer": buf})
                 row = cursor.fetchone()
 
             return row["tick"]
@@ -156,7 +154,7 @@ class Database:
             with closing(self._conn.cursor()) as cursor:
                 with with_transaction(cursor):
                     cursor.execute(
-                        sql("query", "words_by_prefix"),
+                        sql("select", "words_by_prefix"),
                         {
                             "word": word,
                             "prefix_len": prefix_len,
@@ -185,7 +183,7 @@ class Database:
         def cont() -> Sequence[SqlMetrics]:
             with closing(self._conn.cursor()) as cursor:
                 with with_transaction(cursor):
-                    cursor.execute(sql("query", "word_metrics"), m1())
+                    cursor.execute(sql("select", "word_metrics"), m1())
                     return cursor.fetchall()
 
         return self._pool.submit(cont)

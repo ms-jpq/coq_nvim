@@ -2,7 +2,15 @@ from typing import Sequence
 
 from pynvim import Nvim
 from pynvim.api import Buffer
-from pynvim_pp.api import buf_filetype, buf_get_option, buf_name, cur_buf, list_bufs
+from pynvim_pp.api import (
+    buf_filetype,
+    buf_get_option,
+    buf_name,
+    cur_buf,
+    cur_win,
+    list_bufs,
+    win_get_cursor,
+)
 
 from ...registry import atomic, autocmd, rpc
 from ..runtime import Stack
@@ -43,6 +51,9 @@ def _lines_event(
 ) -> None:
     file = buf_name(nvim, buf=buf)
     filetype = buf_filetype(nvim, buf=buf)
+    win = cur_win(nvim)
+    row, col = win_get_cursor(nvim, win=win)
+
     stack.db.set_lines(
         buf=buf.number,
         tick=tick,
@@ -53,6 +64,7 @@ def _lines_event(
         lines=lines,
         unifying_chars=stack.settings.match.unifying_chars,
     )
+    # print(line, flush=True)
 
     if stack.state.inserting:
         omnifunc(nvim, stack)
