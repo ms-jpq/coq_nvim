@@ -1,2 +1,2 @@
-REPLACE INTO files (filename,  filetype)
-VALUES             (:filename, :filetype)
+INSERT OR IGNORE INTO files (filename,  filetype)
+VALUES                      (:filename, :filetype)
