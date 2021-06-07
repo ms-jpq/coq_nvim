@@ -21,7 +21,8 @@ CREATE TEMP TABLE lines (
   line     TEXT    NOT NULL,
   UNIQUE (buffer, line_num)
 );
-CREATE INDEX IF NOT EXISTS lines_line_num ON lines (line_num);
+CREATE INDEX IF NOT EXISTS lines_line_buffer ON lines (buffer);
+CREATE INDEX IF NOT EXISTS lines_line_num    ON lines (line_num);
 
 
 -- Should be vacuumed if file no longer exists, once at beginning
