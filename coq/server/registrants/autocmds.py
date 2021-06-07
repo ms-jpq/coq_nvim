@@ -34,7 +34,8 @@ autocmd("InsertLeave") << f"lua {_insert_leave.name}()"
 
 @rpc(blocking=True)
 def _comp_done_pre(nvim: Nvim, stack: Stack) -> None:
-    pass
+    target = nvim.api.nvim_get_vvar("completed_item")
+    print(target, flush=True)
 
 
 autocmd("CompleteDonePre") << f"lua {_comp_done_pre.name}()"

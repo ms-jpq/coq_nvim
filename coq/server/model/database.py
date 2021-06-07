@@ -45,8 +45,9 @@ class Database:
         self,
         file: str,
         filetype: str,
+        lo: int,
+        hi: int,
         lines: Sequence[str],
-        start_idx: int,
         unifying_chars: AbstractSet[str],
     ) -> None:
         def cont() -> None:
@@ -60,7 +61,7 @@ class Database:
                         yield {"word": word, "lword": word.casefold()}
 
             def m2() -> Iterator[Mapping]:
-                for line_num, line in enumerate(words, start=start_idx):
+                for line_num, line in enumerate(words, start=lo):
                     for word in line:
                         yield {
                             "word": word,
@@ -73,7 +74,7 @@ class Database:
                     _ensure_file(cursor, file=file, filetype=filetype)
                     cursor.execute(
                         sql("delete", "word_locations"),
-                        {"lo": start_idx, "hi": start_idx + len(lines)},
+                        {"lo": lo, "hi": hi},
                     )
                     cursor.executemany(sql("insert", "word"), m1())
                     cursor.executemany(sql("insert", "word_location"), m2())

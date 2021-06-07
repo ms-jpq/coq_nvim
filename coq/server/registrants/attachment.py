@@ -2,10 +2,11 @@ from typing import Sequence
 
 from pynvim import Nvim
 from pynvim.api import Buffer, NvimError
-from pynvim_pp.api import buf_get_option, cur_buf, list_bufs
+from pynvim_pp.api import buf_filetype, buf_get_option, buf_name, cur_buf, list_bufs
 
 from ...registry import atomic, autocmd, rpc
 from ..runtime import Stack
+from .omnifunc import omnifunc
 
 _seen = {0}
 
@@ -50,10 +51,18 @@ def _lines_event(
     lines: Sequence[str],
     multipart: bool,
 ) -> None:
+    file = buf_name(nvim, buf=buf)
+    filetype = buf_filetype(nvim, buf=buf)
+    stack.db.set_lines(
+        file=file,
+        filetype=filetype,
+        lo=lo,
+        hi=hi,
+        lines=lines,
+        unifying_chars=stack.settings.match.unifying_chars,
+    )
     if stack.state.inserting:
-        pass
-    else:
-        print(lines, flush=True)
+        omnifunc(nvim, stack)
 
 
 def _changed_event(nvim: Nvim, stack: Stack, buf: Buffer, changed: int) -> None:
