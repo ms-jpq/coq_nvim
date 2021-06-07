@@ -1,4 +1,7 @@
-from pynvim import Nvim
+from asyncio.events import Handle, get_running_loop
+from typing import Optional
+
+from pynvim.api.nvim import Nvim
 
 from ...registry import autocmd, rpc
 from ..runtime import Stack
@@ -35,3 +38,22 @@ def _comp_done_pre(nvim: Nvim, stack: Stack) -> None:
 
 
 autocmd("CompleteDonePre") << f"lua {_comp_done_pre.name}()"
+
+
+_handle: Optional[Handle] = None
+
+
+@rpc(blocking=True)
+def _cursor_hold(nvim: Nvim, stack: Stack) -> None:
+    global _handle
+    if _handle:
+        _handle.cancel()
+
+    def cont() -> None:
+        stack.db.vaccum()
+
+    loop = get_running_loop()
+    _handle = loop.call_later(0.5, cont)
+
+
+autocmd("CursorHold", "CursorHoldI") << f"lua {_cursor_hold.name}()"
