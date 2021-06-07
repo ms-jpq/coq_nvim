@@ -117,6 +117,16 @@ class Database:
 
         self._pool.submit(cont)
 
+    def ticks(self, buf: int) -> int:
+        def cont() -> int:
+            with closing(self._conn.cursor()) as cursor:
+                cursor.execute(sql("query", "ticks"), {"buffer": buf})
+                row = cursor.fetchone()
+
+            return row["tick"]
+
+        return self._pool.submit(cont)
+
     def insert(
         self,
         file: str,
