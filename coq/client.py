@@ -60,7 +60,11 @@ class CoqClient(Client):
             handler = cast(AnyFun[None], self._handlers.get(name, nil_handler(name)))
 
             def handle() -> None:
-                handler(nvim, self._state, *args)
+                if name.startswith("nvim_buf_"):
+                    print(args, flush=True)
+                else:
+                    a, *_ = args
+                    handler(nvim, self._state, *a)
 
             try:
                 threadsafe_call(nvim, handle)
