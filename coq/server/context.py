@@ -1,5 +1,6 @@
 from typing import AbstractSet
 
+
 from pynvim import Nvim
 from pynvim_pp.api import (
     buf_filetype,

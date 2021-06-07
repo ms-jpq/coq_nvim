@@ -1,8 +1,8 @@
 from pynvim import Nvim
 from pynvim.api import NvimError
-from pynvim_pp.api import buf_get_option, cur_buf
+from pynvim_pp.api import buf_get_option, cur_buf, list_bufs
 
-from ...registry import autocmd, rpc
+from ...registry import atomic, autocmd, rpc
 from ..state import State
 
 
@@ -18,7 +18,7 @@ _SEEN = {0}
 
 
 @rpc(blocking=True)
-def _buf_new(nvim: Nvim, *_: None) -> None:
+def _buf_new(nvim: Nvim, state: State) -> None:
     buf = cur_buf(nvim)
     if buf.number in _SEEN:
         pass
@@ -37,7 +37,18 @@ autocmd("BufNew") << f"lua {_buf_new.name}()"
 
 
 @rpc(blocking=True)
-def _insert_enter(nvim: Nvim, state: State, *_: None) -> None:
+def _buf_new_init(nvim: Nvim, state: State) -> None:
+    for buf in list_bufs(nvim, listed=True):
+        _SEEN.add(buf.number)
+        succ = nvim.api.buf_attach(buf, True, {})
+        assert succ
+
+
+atomic.exec_lua(f"{_buf_new_init.name}()", ())
+
+
+@rpc(blocking=True)
+def _insert_enter(nvim: Nvim, state: State) -> None:
     state.insertion_mode = True
 
 
@@ -45,7 +56,7 @@ autocmd("InsertEnter") << f"lua {_insert_enter.name}()"
 
 
 @rpc(blocking=True)
-def _insert_leave(nvim: Nvim, state: State, *_: None) -> None:
+def _insert_leave(nvim: Nvim, state: State) -> None:
     state.insertion_mode = False
 
 
@@ -53,7 +64,7 @@ autocmd("InsertLeave") << f"lua {_insert_leave.name}()"
 
 
 @rpc(blocking=True)
-def _comp_done_pre(nvim: Nvim, state: State, *_: None) -> None:
+def _comp_done_pre(nvim: Nvim, state: State) -> None:
     pass
 
 

@@ -1,8 +1,15 @@
+from dataclasses import dataclass
+
 from pynvim import Nvim
 from pynvim_pp.api import get_cwd
 
 
+@dataclass
 class State:
-    def __init__(self, nvim: Nvim) -> None:
-        self.insertion_mode = nvim.api.get_mode()["mode"] == "i"
-        self.cwd = get_cwd(nvim)
+    insertion_mode: bool
+    cwd: str
+
+
+def new_state(nvim: Nvim) -> State:
+    state = State(insertion_mode=nvim.api.get_mode()["mode"] == "i", cwd=get_cwd(nvim))
+    return state

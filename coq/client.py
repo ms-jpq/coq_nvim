@@ -16,8 +16,8 @@ from std2.types import AnyFun
 from ._registry import ____
 from .registry import atomic, autocmd, rpc
 from .server.settings import load
+from .server.state import State, new_state
 from .shared.settings import Settings
-from .types import State
 
 
 class CoqClient(Client):
@@ -25,8 +25,8 @@ class CoqClient(Client):
         self._handlers: MutableMapping[str, RpcCallable] = {}
         self._pool, self._events = ThreadPoolExecutor(), SimpleQueue()
 
-        self._state = State()
         self._settings: Optional[Settings] = None
+        self._state: Optional[State] = None
 
     def on_msg(self, nvim: Nvim, msg: RpcMsg) -> Any:
         self._events.put(msg)
@@ -40,8 +40,9 @@ class CoqClient(Client):
             rpc_atomic, specs = rpc.drain(nvim.channel_id)
             self._handlers.update(specs)
             self._handlers.update((fn.alias, fn) for _, fn in specs)
-            (atomic + rpc_atomic + autocmd.drain()).commit(nvim)
+            (rpc_atomic + autocmd.drain() + atomic).commit(nvim)
             self._settings = load(nvim)
+            self._state = new_state(nvim)
 
         try:
             threadsafe_call(nvim, cont)
@@ -60,7 +61,11 @@ class CoqClient(Client):
             handler = cast(AnyFun[None], self._handlers.get(name, nil_handler(name)))
 
             def handle() -> None:
-                handler(nvim, *args)
+                if name.startswith("nvim_buf_"):
+                    buf, *_ = args
+                    handler(nvim, self._state, buf)
+                else:
+                    handler(nvim, self._state, *args)
 
             try:
                 threadsafe_call(nvim, handle)
