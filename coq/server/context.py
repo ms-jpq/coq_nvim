@@ -9,7 +9,7 @@ from ..shared.types import Context
 from .model.database import Database
 
 
-def gen_context(
+def context(
     nvim: Nvim,
     db: Database,
     unifying_chars: AbstractSet[str],
