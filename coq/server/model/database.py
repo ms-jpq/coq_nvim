@@ -6,8 +6,8 @@ from typing import AbstractSet, Iterable, Iterator, Mapping, Sequence, TypedDict
 
 from std2.sqllite3 import escape, with_transaction
 
-from ...shared.parse import coalesce, lower, normalize
 from ...shared.executor import Executor
+from ...shared.parse import coalesce, lower, normalize
 from .sql import sql
 
 
@@ -63,8 +63,6 @@ class Database:
         lines: Sequence[str],
         unifying_chars: AbstractSet[str],
     ) -> None:
-        print(lo, hi, lines, flush=True)
-
         def cont() -> None:
             def it() -> Iterator[Mapping]:
                 for line_num, line in enumerate(lines, start=lo):

@@ -1,5 +1,5 @@
 from asyncio.events import Handle, get_running_loop
-from typing import Optional
+from typing import Any, Mapping, Optional
 
 from pynvim.api.nvim import Nvim
 
@@ -8,12 +8,12 @@ from ..runtime import Stack
 
 
 @rpc(blocking=True)
-def _dir_changed(nvim: Nvim, stack: Stack, *_: None) -> None:
-    cwd: str = nvim.api.get_vvar("event")["cwd"]
+def _dir_changed(nvim: Nvim, stack: Stack, event: Mapping[str, Any]) -> None:
+    cwd: str = event["cwd"]
     stack.state.cwd = cwd
 
 
-autocmd("DirChanged") << f"lua {_dir_changed.name}()"
+autocmd("DirChanged") << f"lua {_dir_changed.name}(vim.v.event)"
 
 
 @rpc(blocking=True)
@@ -33,12 +33,11 @@ autocmd("InsertLeave") << f"lua {_insert_leave.name}()"
 
 
 @rpc(blocking=True)
-def _comp_done_pre(nvim: Nvim, stack: Stack) -> None:
-    target = nvim.api.get_vvar("completed_item")
-    print(target, flush=True)
+def _comp_done_pre(nvim: Nvim, stack: Stack, event: Mapping[str, Any]) -> None:
+    print(event, flush=True)
 
 
-autocmd("CompleteDonePre") << f"lua {_comp_done_pre.name}()"
+autocmd("CompleteDonePre") << f"lua {_comp_done_pre.name}(vim.v.completed_item)"
 
 
 _handle: Optional[Handle] = None

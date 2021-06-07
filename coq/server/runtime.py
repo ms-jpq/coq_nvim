@@ -44,7 +44,6 @@ def _db(cwd: str) -> Database:
     DB_DIR.mkdir(parents=True, exist_ok=True)
     hashed = md5(cwd.encode()).hexdigest()
     location = (DB_DIR / hashed).with_suffix(".sqlite3")
-    print(location, flush=True)
     db = Database(location=str(location))
     return db
 
