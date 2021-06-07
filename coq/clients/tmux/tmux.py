@@ -86,11 +86,8 @@ class Worker(BaseWorker[None]):
         super().__init__(supervisor, misc=misc)
 
         self._panes: Mapping[_Pane, Sequence[str]] = {}
-        if which("tmux"):
-            self._session = _session()
-            supervisor.pool.submit(self._poll)
-        else:
-            self._session = None
+        self._session = _session() if which("tmux") else None
+        supervisor.pool.submit(self._poll)
 
     def _poll(self) -> None:
         while self._session:

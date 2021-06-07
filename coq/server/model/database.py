@@ -7,7 +7,7 @@ from typing import AbstractSet, Iterable, Iterator, Mapping, Sequence, TypedDict
 from std2.sqllite3 import escape, with_transaction
 
 from ...shared.parse import coalesce, lower, normalize
-from .executor import Executor
+from ...shared.executor import Executor
 from .sql import sql
 
 

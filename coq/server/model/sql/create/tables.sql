@@ -23,6 +23,7 @@ CREATE TABLE IF NOT EXISTS words (
 );
 CREATE INDEX IF NOT EXISTS words_filename ON words (filename);
 CREATE INDEX IF NOT EXISTS words_word     ON words (word);
+CREATE INDEX IF NOT EXISTS words_lword    ON words (lword);
 CREATE INDEX IF NOT EXISTS words_line_num ON words (line_num);
 
 
