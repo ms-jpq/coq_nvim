@@ -16,9 +16,7 @@ from std2.types import AnyFun
 from ._registry import ____
 from .registry import atomic, autocmd, rpc
 from .server.registrants.attachment import BUF_EVENTS
-from .server.settings import load
 from .server.state import State, new_state
-from .shared.settings import Settings
 
 
 class CoqClient(Client):
@@ -26,7 +24,6 @@ class CoqClient(Client):
         self._handlers: MutableMapping[str, RpcCallable] = {}
         self._pool, self._events = ThreadPoolExecutor(), SimpleQueue()
 
-        self._settings: Optional[Settings] = None
         self._state: Optional[State] = None
 
     def on_msg(self, nvim: Nvim, msg: RpcMsg) -> Any:
@@ -41,7 +38,7 @@ class CoqClient(Client):
             rpc_atomic, specs = rpc.drain(nvim.channel_id)
             self._handlers.update(specs)
             (rpc_atomic + autocmd.drain() + atomic).commit(nvim)
-            self._settings = load(nvim)
+
             self._state = new_state(nvim)
 
         try:
