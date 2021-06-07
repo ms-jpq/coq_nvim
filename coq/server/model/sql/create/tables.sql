@@ -40,27 +40,19 @@ CREATE TABLE IF NOT EXISTS files (
 CREATE INDEX IF NOT EXISTS files_filetype ON filetypes (filetype);
 
 
--- Index for words in files
--- Should be vacuumed when no longer in word_locations
-CREATE TABLE IF NOT EXISTS words (
-  word  TEXT NOT NULL PRIMARY KEY,
-  lword TEXT NOT NULL AS (X_LOWER(word)) STORED
-) WITHOUT ROWID;
-CREATE INDEX IF NOT EXISTS words_lword ON words (lword);
-
-
 -- !! words 1:N word_locations
 -- !! files 1:N word_locations
 -- Store word location in files
 -- Should be vacuumed by foreign key constraints on `files`
-CREATE TABLE IF NOT EXISTS word_locations (
+CREATE TABLE IF NOT EXISTS words (
   filename TEXT    NOT NULL REFERENCES files (filename) ON DELETE CASCADE,
-  word     TEXT    NOT NULL REFERENCES words (word)     ON DELETE CASCADE,
+  word     TEXT    NOT NULL,
+  lword    TEXT    NOT NULL AS (X_LOWER(word)) STORED,
   line_num INTEGER NOT NULL
 );
-CREATE INDEX IF NOT EXISTS word_locations_filename ON word_locations (filename);
-CREATE INDEX IF NOT EXISTS word_locations_word     ON word_locations (word);
-CREATE INDEX IF NOT EXISTS word_locations_line_num ON word_locations (line_num);
+CREATE INDEX IF NOT EXISTS words_filename ON words (filename);
+CREATE INDEX IF NOT EXISTS words_word     ON words (word);
+CREATE INDEX IF NOT EXISTS words_line_num ON words (line_num);
 
 
 -- Stores insertion history

@@ -95,6 +95,7 @@ class Database:
 
                     cursor.execute(sql("delete", "words"), del_param)
                     cursor.execute(sql("delete", "word_locations"), del_param)
+                    cursor.execute(sql("delte", "lines"), del_param)
 
                     cursor.executemany(sql("insert", "word"), lst)
                     cursor.executemany(sql("insert", "word_location"), lst)
