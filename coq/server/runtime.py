@@ -1,11 +1,10 @@
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
-from os import sep
+from hashlib import md5
 
 from pynvim import Nvim
 from pynvim_pp.api import get_cwd
 from std2.configparser import hydrate
-from std2.lex import escape_with_replacement
 from std2.pickle import decode
 from std2.tree import merge
 from yaml import safe_load
@@ -14,8 +13,6 @@ from ..consts import CONFIG_YML, DB_DIR, SETTINGS_VAR
 from ..shared.runtime import Supervisor
 from ..shared.settings import Settings
 from .model.database import Database
-
-_ESC = {"$": "$$", sep: "$"}
 
 
 @dataclass
@@ -45,8 +42,9 @@ def _settings(nvim: Nvim) -> Settings:
 
 def _db(cwd: str) -> Database:
     DB_DIR.mkdir(parents=True, exist_ok=True)
-    escaped = "".join(escape_with_replacement(cwd, escape=_ESC))
-    location = (DB_DIR / escaped).with_suffix(".sqlite")
+    hashed = md5(cwd.encode()).hexdigest()
+    location = (DB_DIR / hashed).with_suffix(".sqlite3")
+    print(location, flush=True)
     db = Database(location=str(location))
     return db
 
