@@ -1,4 +1,4 @@
-INSERT INTO buffers (filename,  filetype)
-VALUES              (:filename, :filetype)
+INSERT INTO files (filename,  filetype)
+VALUES            (:filename, :filetype)
 ON CONFLICT (filename)
 DO UPDATE SET filetype = :filetype

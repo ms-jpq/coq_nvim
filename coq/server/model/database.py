@@ -70,7 +70,7 @@ class Database:
         unifying_chars: AbstractSet[str],
     ) -> None:
         def cont() -> None:
-            del_p = {"filename": file, "lo": lo, "hi": hi}
+            del_p = {"buffer": buf, "filename": file, "lo": lo, "hi": hi}
 
             def m1() -> Iterator[Mapping]:
                 for line_num, line in enumerate(lines, start=lo):
@@ -95,7 +95,7 @@ class Database:
                     _ensure_file(cursor, file=file, filetype=filetype)
 
                     cursor.execute(sql("delete", "words"), del_p)
-                    cursor.execute(sql("delte", "lines"), del_p)
+                    cursor.execute(sql("delete", "lines"), del_p)
 
                     cursor.executemany(sql("insert", "words"), m1())
                     cursor.executemany(sql("insert", "lines"), m2())
