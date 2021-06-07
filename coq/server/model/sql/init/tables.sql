@@ -14,7 +14,7 @@ CREATE TEMP TABLE buffers (
 
 
 -- TMP!
--- !! filetypes 1:N buffers
+-- !! buffer 1:N lines
 CREATE TEMP TABLE lines (
   buffer  INTEGER NOT NULL REFERENCES buffers (buffer) ON DELETE CASCADE,
   line_no INTEGER NOT NULL,
