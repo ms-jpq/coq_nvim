@@ -1,2 +1,2 @@
-INSERT INTO word_locations (word,          filename,  line_num)
-VALUES                     (X_NORM(:word), :filename, :line_num)
+REPLACE INTO word_locations (filename,  word,          line_num)
+VALUES                      (:filename, X_NORM(:word), :line_num)

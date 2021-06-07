@@ -87,7 +87,7 @@ class Database:
                     _ensure_file(cursor, file=file, filetype=filetype)
                     cursor.execute(
                         sql("delete", "word_locations"),
-                        {"lo": lo, "hi": hi},
+                        {"filename": file, "lo": lo, "hi": hi},
                     )
                     cursor.executemany(sql("insert", "word"), m1())
                     cursor.executemany(sql("insert", "word_location"), m2())

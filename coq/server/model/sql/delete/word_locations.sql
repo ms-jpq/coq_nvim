@@ -1,5 +1,12 @@
 DELETE FROM word_locations
 WHERE
-  line_num >= :lo
+  filename = :filename
   AND
-  line_num < :hi
+  CASE
+    WHEN :hi > 0
+      THEN line_num >= :lo
+      AND
+      line_num < :hi
+    ELSE
+      TRUE
+  END
