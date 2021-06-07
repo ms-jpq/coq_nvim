@@ -1,4 +1,3 @@
-from concurrent.futures import ThreadPoolExecutor
 from contextlib import closing
 from sqlite3 import Connection
 from sqlite3.dbapi2 import Cursor
@@ -7,6 +6,7 @@ from typing import AbstractSet, Iterable, Iterator, Mapping, Sequence, TypedDict
 from std2.sqllite3 import with_transaction
 
 from ...shared.parse import coalesce
+from .executor import Executor
 from .sql import sql
 
 
@@ -26,20 +26,20 @@ def _ensure_file(cursor: Cursor, file: str, filetype: str) -> None:
 
 class Database:
     def __init__(self, location: str) -> None:
-        self._pool = ThreadPoolExecutor(max_workers=1)
+        self._pool = Executor()
         self._conn = Connection(location)
 
         def cont() -> None:
             self._conn.executescript(sql("init", "pragma"))
             self._conn.executescript(sql("init", "tables"))
 
-        self._pool.submit(cont).result()
+        self._pool.submit(cont)
 
     def vaccum(self) -> None:
         def cont() -> None:
             self._conn.executescript(sql("vaccum", "periodical"))
 
-        self._pool.submit(cont).result()
+        self._pool.submit(cont)
 
     def set_lines(
         self,
@@ -79,7 +79,7 @@ class Database:
                     cursor.executemany(sql("insert", "word"), m1())
                     cursor.executemany(sql("insert", "word_location"), m2())
 
-        self._pool.submit(cont).result()
+        self._pool.submit(cont)
 
     def insert(
         self,
@@ -103,7 +103,7 @@ class Database:
                         },
                     )
 
-        self._pool.submit(cont).result()
+        self._pool.submit(cont)
 
     def suggestions(self, word: str, prefix_len: int) -> Sequence[str]:
         def cont() -> Sequence[str]:
@@ -118,7 +118,7 @@ class Database:
                     )
                     return cursor.fetchall()
 
-        return self._pool.submit(cont).result()
+        return self._pool.submit(cont)
 
     def metric(
         self,
@@ -142,4 +142,4 @@ class Database:
                     cursor.execute(sql("query", "word_metrics"), m1())
                     return cursor.fetchall()
 
-        return self._pool.submit(cont).result()
+        return self._pool.submit(cont)
