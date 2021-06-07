@@ -3,7 +3,7 @@ from dataclasses import dataclass
 from shutil import which
 from subprocess import CalledProcessError, check_output
 from time import sleep
-from typing import AbstractSet, Iterator, Mapping, Optional, Sequence
+from typing import AbstractSet, Iterator, Mapping, Sequence
 from uuid import UUID
 
 from ...shared.parse import coalesce
@@ -14,21 +14,9 @@ from ...shared.types import Completion, Context, Edit
 
 @dataclass(frozen=True)
 class _Pane:
-    session_id: str
     pane_id: str
     pane_active: bool
     window_active: bool
-
-
-def _session() -> Optional[str]:
-    try:
-        out = check_output(
-            ("tmux", "display-message", "-p", "#{session_id}"), text=True
-        )
-    except CalledProcessError:
-        return None
-    else:
-        return out.strip()
 
 
 def _panes() -> Sequence[_Pane]:
@@ -37,9 +25,9 @@ def _panes() -> Sequence[_Pane]:
             (
                 "tmux",
                 "list-panes",
-                "-a",
+                "-s",
                 "-F",
-                "#{session_id} #{pane_id} #{pane_active} #{window_active}",
+                "#{pane_id} #{pane_active} #{window_active}",
             ),
             text=True,
         )
@@ -50,9 +38,8 @@ def _panes() -> Sequence[_Pane]:
 
         def cont() -> Iterator[_Pane]:
             for line in out.strip().splitlines():
-                session_id, pane_id, pane_active, window_active = line.split(" ")
+                pane_id, pane_active, window_active = line.split(" ")
                 pane = _Pane(
-                    session_id=session_id,
                     pane_id=pane_id,
                     pane_active=bool(int(pane_active)),
                     window_active=bool(int(window_active)),
@@ -74,11 +61,10 @@ def _screenshot(unifying_chars: AbstractSet[str], pane: _Pane) -> Sequence[str]:
 
 
 def _collect(
-    pool: ThreadPoolExecutor, unifying_chars: AbstractSet[str], session_id: str
+    pool: ThreadPoolExecutor, unifying_chars: AbstractSet[str]
 ) -> Mapping[_Pane, Sequence[str]]:
-    panes = (pane for pane in _panes() if pane.session_id == session_id)
     cont = lambda pane: (pane, _screenshot(unifying_chars, pane=pane))
-    return {pane: words for pane, words in pool.map(cont, panes)}
+    return {pane: words for pane, words in pool.map(cont, _panes())}
 
 
 class Worker(BaseWorker[None]):
@@ -86,15 +72,14 @@ class Worker(BaseWorker[None]):
         super().__init__(supervisor, misc=misc)
 
         self._panes: Mapping[_Pane, Sequence[str]] = {}
-        self._session = _session() if which("tmux") else None
-        supervisor.pool.submit(self._poll)
+        if which("tmux"):
+            supervisor.pool.submit(self._poll)
 
     def _poll(self) -> None:
-        while self._session:
+        while True:
             self._panes = _collect(
                 self._supervisor.pool,
                 unifying_chars=self._supervisor.options.unifying_chars,
-                session_id=self._session,
             )
             sleep(1)
 
