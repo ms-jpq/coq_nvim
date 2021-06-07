@@ -45,12 +45,14 @@ def _lines_event(
     nvim: Nvim,
     stack: Stack,
     buf: Buffer,
-    changed: int,
+    tick: int,
     lo: int,
     hi: int,
     lines: Sequence[str],
     multipart: bool,
 ) -> None:
+    stack.state.ticks[buf.number] = tick
+
     file = buf_name(nvim, buf=buf)
     filetype = buf_filetype(nvim, buf=buf)
     stack.db.set_lines(
@@ -65,12 +67,13 @@ def _lines_event(
         omnifunc(nvim, stack)
 
 
-def _changed_event(nvim: Nvim, stack: Stack, buf: Buffer, changed: int) -> None:
-    pass
+def _changed_event(nvim: Nvim, stack: Stack, buf: Buffer, tick: int) -> None:
+    stack.state.ticks[buf.number] = tick
 
 
 def _detach_event(nvim: Nvim, stack: Stack, buf: Buffer) -> None:
-    pass
+    if buf.number in stack.state.ticks:
+        stack.state.ticks.pop(buf.number)
 
 
 BUF_EVENTS = {
