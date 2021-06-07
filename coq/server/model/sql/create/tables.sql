@@ -16,9 +16,9 @@ CREATE TEMP TABLE buffers (
 -- TMP!
 -- !! buffer 1:N lines
 CREATE TEMP TABLE lines (
-  buffer  INTEGER NOT NULL REFERENCES buffers (buffer) ON DELETE CASCADE,
-  line_no INTEGER NOT NULL,
-  line    TEXT    NOT NULL,
+  buffer   INTEGER NOT NULL REFERENCES buffers (buffer) ON DELETE CASCADE,
+  line_num INTEGER NOT NULL,
+  line     TEXT    NOT NULL,
   UNIQUE (buffer, line_no)
 );
 CREATE INDEX IF NOT EXISTS lines_line_no ON lines (line_no);
