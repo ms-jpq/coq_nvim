@@ -53,8 +53,6 @@ def _lines_event(
     filetype = buf_filetype(nvim, buf=buf)
 
     stack.db.set_lines(
-        buf=buf.number,
-        tick=tick,
         file=file,
         filetype=filetype,
         lo=lo,
@@ -64,15 +62,15 @@ def _lines_event(
     )
 
     if stack.state.inserting:
-        omnifunc(nvim, stack)
+        pass
 
 
 def _changed_event(nvim: Nvim, stack: Stack, buf: Buffer, tick: int) -> None:
-    stack.db.set_tick(buf=buf.number, tick=tick)
+    pass
 
 
 def _detach_event(nvim: Nvim, stack: Stack, buf: Buffer) -> None:
-    stack.db.rm_buf(buf=buf.number)
+    pass
 
 
 BUF_EVENTS = {

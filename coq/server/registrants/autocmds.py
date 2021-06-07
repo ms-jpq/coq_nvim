@@ -9,7 +9,7 @@ from ..runtime import Stack
 
 @rpc(blocking=True)
 def _dir_changed(nvim: Nvim, stack: Stack, *_: None) -> None:
-    cwd: str = nvim.api.nvim_get_vvar("event")["cwd"]
+    cwd: str = nvim.api.get_vvar("event")["cwd"]
     stack.state.cwd = cwd
 
 
@@ -34,7 +34,7 @@ autocmd("InsertLeave") << f"lua {_insert_leave.name}()"
 
 @rpc(blocking=True)
 def _comp_done_pre(nvim: Nvim, stack: Stack) -> None:
-    target = nvim.api.nvim_get_vvar("completed_item")
+    target = nvim.api.get_vvar("completed_item")
     print(target, flush=True)
 
 

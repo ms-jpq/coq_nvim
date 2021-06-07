@@ -17,10 +17,6 @@ class SqlMetrics(TypedDict):
     line_diff: int
 
 
-def _ensure_buffer(cursor: Cursor, buf: int, tick: int) -> None:
-    cursor.execute(sql("insert", "buffer"), {"buffer": buf, "tick": tick})
-
-
 def _ensure_file(cursor: Cursor, file: str, filetype: str) -> None:
     cursor.execute(
         sql("insert", "file"),
@@ -60,8 +56,6 @@ class Database:
 
     def set_lines(
         self,
-        buf: int,
-        tick: int,
         file: str,
         filetype: str,
         lo: int,
@@ -69,10 +63,10 @@ class Database:
         lines: Sequence[str],
         unifying_chars: AbstractSet[str],
     ) -> None:
-        def cont() -> None:
-            del_p = {"buffer": buf, "filename": file, "lo": lo, "hi": hi}
+        print(lo, hi, lines, flush=True)
 
-            def m1() -> Iterator[Mapping]:
+        def cont() -> None:
+            def it() -> Iterator[Mapping]:
                 for line_num, line in enumerate(lines, start=lo):
                     for word in coalesce(line, unifying_chars=unifying_chars):
                         yield {
@@ -81,65 +75,15 @@ class Database:
                             "line_num": line_num,
                         }
 
-            def m2() -> Iterator[Mapping]:
-                for line_num, line in enumerate(lines, start=lo):
-                    yield {
-                        "buffer": buf,
-                        "line_num": line_num,
-                        "line": line,
-                    }
-
             with closing(self._conn.cursor()) as cursor:
                 with with_transaction(cursor):
-                    _ensure_buffer(cursor, buf=buf, tick=tick)
                     _ensure_file(cursor, file=file, filetype=filetype)
-
-                    cursor.execute(sql("delete", "words"), del_p)
-                    cursor.execute(sql("delete", "lines"), del_p)
-
-                    cursor.executemany(sql("insert", "words"), m1())
-                    cursor.executemany(sql("insert", "lines"), m2())
+                    cursor.execute(
+                        sql("delete", "words"), {"filename": file, "lo": lo, "hi": hi}
+                    )
+                    cursor.executemany(sql("insert", "words"), it())
 
         self._pool.submit(cont)
-
-    def set_tick(self, buf: int, tick: int) -> None:
-        def cont() -> None:
-            with closing(self._conn.cursor()) as cursor:
-                with with_transaction(cursor):
-                    _ensure_buffer(cursor, buf=buf, tick=tick)
-
-        self._pool.submit(cont)
-
-    def rm_buf(self, buf: int) -> None:
-        def cont() -> None:
-            with closing(self._conn.cursor()) as cursor:
-                with with_transaction(cursor):
-                    cursor.execute(sql("delete", "buffer"), {"buffer": buf})
-
-        self._pool.submit(cont)
-
-    def ticks(self, buf: int) -> int:
-        def cont() -> int:
-            with closing(self._conn.cursor()) as cursor:
-                cursor.execute(sql("select", "ticks"), {"buffer": buf})
-                row = cursor.fetchone()
-
-            return row["tick"]
-
-        return self._pool.submit(cont)
-
-    def lines(self, buf: int, lo: int, hi: int) -> Sequence[str]:
-        def cont() -> Sequence[str]:
-            with closing(self._conn.cursor()) as cursor:
-                cursor.execute(
-                    sql("select", "lines"), {"buffer": buf, "lo": lo, "hi": hi}
-                )
-                rows = cursor.fetchall()
-
-            lines = tuple(row["line"] for row in rows)
-            return lines
-
-        return self._pool.submit(cont)
 
     def insert(
         self,

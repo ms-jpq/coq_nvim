@@ -6,25 +6,6 @@ BEGIN;
 --------------------------------------------------------------------------------
 
 
--- TMP!
-CREATE TEMP TABLE buffers (
-  buffer INTEGER NOT NULL PRIMARY KEY,
-  tick   INTEGER NOT NULL
-) WITHOUT ROWID;
-
-
--- TMP!
--- !! buffer 1:N lines
-CREATE TEMP TABLE lines (
-  buffer   INTEGER NOT NULL REFERENCES buffers (buffer) ON DELETE CASCADE,
-  line_num INTEGER NOT NULL,
-  line     TEXT    NOT NULL,
-  UNIQUE (buffer, line_num)
-);
-CREATE INDEX IF NOT EXISTS lines_line_buffer ON lines (buffer);
-CREATE INDEX IF NOT EXISTS lines_line_num    ON lines (line_num);
-
-
 -- Should be vacuumed if file no longer exists, once at beginning
 CREATE TABLE IF NOT EXISTS files (
   filename TEXT NOT NULL PRIMARY KEY,
