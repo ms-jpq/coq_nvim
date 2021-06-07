@@ -1,27 +1,23 @@
 from typing import Sequence
 
 from pynvim import Nvim
-from pynvim.api import Buffer, NvimError
+from pynvim.api import Buffer
 from pynvim_pp.api import buf_filetype, buf_get_option, buf_name, cur_buf, list_bufs
 
 from ...registry import atomic, autocmd, rpc
 from ..runtime import Stack
 from .omnifunc import omnifunc
 
-_seen = {0}
-
 
 @rpc(blocking=True)
 def _buf_new(nvim: Nvim, stack: Stack) -> None:
     buf = cur_buf(nvim)
-    if buf.number in _seen:
-        pass
-    else:
-        _seen.add(buf.number)
+    if buf.number not in stack.state.ticks:
         listed = buf_get_option(nvim, buf=buf, key="buflisted")
         if listed:
             succ = nvim.api.buf_attach(buf, True, {})
             assert succ
+        stack.state.ticks[buf.number] = -1
 
 
 autocmd("BufNew") << f"lua {_buf_new.name}()"
@@ -30,9 +26,9 @@ autocmd("BufNew") << f"lua {_buf_new.name}()"
 @rpc(blocking=True)
 def _buf_new_init(nvim: Nvim, stack: Stack) -> None:
     for buf in list_bufs(nvim, listed=True):
-        _seen.add(buf.number)
         succ = nvim.api.buf_attach(buf, True, {})
         assert succ
+        stack.state.ticks[buf.number] = -1
 
 
 atomic.exec_lua(f"{_buf_new_init.name}()", ())
