@@ -1,30 +1,32 @@
-from typing import AbstractSet
+from typing import AbstractSet, Optional
 
 from pynvim import Nvim
-from pynvim_pp.api import (
-    buf_filetype,
-    buf_get_lines,
-    buf_name,
-    cur_win,
-    win_get_buf,
-    win_get_cursor,
-)
+from pynvim.api import Buffer
+from pynvim_pp.api import buf_filetype, buf_name, cur_win, win_get_buf, win_get_cursor
 from pynvim_pp.text_object import gen_split
 
 from ..shared.types import Context
+from .model.database import Database
 
 
-def gen_context(nvim: Nvim, unifying_chars: AbstractSet[str]) -> Context:
+def gen_context(
+    nvim: Nvim,
+    db: Database,
+    unifying_chars: AbstractSet[str],
+    buf: Optional[Buffer],
+    filename: Optional[str],
+    filetype: Optional[str],
+) -> Context:
     win = cur_win(nvim)
-    buf = win_get_buf(nvim, win=win)
+    buf = buf or win_get_buf(nvim, win=win)
     row, col = win_get_cursor(nvim, win=win)
     pos = (row, col)
 
-    lines = buf_get_lines(nvim, buf=buf, lo=row, hi=row + 1)
-    filename = buf_name(nvim, buf=buf)
-    filetype = buf_filetype(nvim, buf=buf)
+    line, *_ = db.lines(buf=buf.number, lo=row, hi=row + 1)
+    filename = filename if filename is not None else buf_name(nvim, buf=buf)
+    filetype = filetype if filetype is not None else buf_filetype(nvim, buf=buf)
 
-    b_line = next(iter(lines)).encode()
+    b_line = line.encode()
     before, after = b_line[:col].decode(), b_line[col:].decode()
     split = gen_split(lhs=before, rhs=after, unifying_chars=unifying_chars)
 

@@ -51,8 +51,6 @@ def _lines_event(
 ) -> None:
     file = buf_name(nvim, buf=buf)
     filetype = buf_filetype(nvim, buf=buf)
-    win = cur_win(nvim)
-    row, col = win_get_cursor(nvim, win=win)
 
     stack.db.set_lines(
         buf=buf.number,
@@ -64,7 +62,6 @@ def _lines_event(
         lines=lines,
         unifying_chars=stack.settings.match.unifying_chars,
     )
-    # print(line, flush=True)
 
     if stack.state.inserting:
         omnifunc(nvim, stack)

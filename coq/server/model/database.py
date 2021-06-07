@@ -132,7 +132,7 @@ class Database:
         def cont() -> Sequence[str]:
             with closing(self._conn.cursor()) as cursor:
                 cursor.execute(
-                    sql("select", "ticks"), {"buffer": buf, "lo": lo, "hi": hi}
+                    sql("select", "lines"), {"buffer": buf, "lo": lo, "hi": hi}
                 )
                 rows = cursor.fetchall()
 
