@@ -16,6 +16,7 @@ from std2.types import AnyFun
 from ._registry import ____
 from .registry import atomic, autocmd, rpc
 from .server.registrants.attachment import BUF_EVENTS
+from .server.registrants.omnifunc import omnifunc
 from .server.runtime import Stack, stack
 
 
@@ -27,8 +28,13 @@ class CoqClient(Client):
         self._stack: Optional[Stack] = None
 
     def on_msg(self, nvim: Nvim, msg: RpcMsg) -> Any:
-        self._events.put(msg)
-        return None
+        name, args = msg
+        if name == omnifunc.name:
+            a, *_ = args
+            return omnifunc(nvim, self._stack, *a)
+        else:
+            self._events.put(msg)
+            return None
 
     def wait(self, nvim: Nvim) -> int:
         def cont() -> None:
@@ -39,7 +45,7 @@ class CoqClient(Client):
             self._handlers.update(specs)
             (rpc_atomic + autocmd.drain() + atomic).commit(nvim)
 
-            self._stack = stack(self._pool,nvim=nvim)
+            self._stack = stack(self._pool, nvim=nvim)
 
         try:
             threadsafe_call(nvim, cont)

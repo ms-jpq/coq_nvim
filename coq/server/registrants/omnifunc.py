@@ -1,7 +1,6 @@
 from typing import Literal, Sequence, Tuple, TypedDict, Union
 
 from pynvim import Nvim
-from pynvim_pp.api import cur_win, win_get_cursor
 
 from ...registry import rpc
 from ..runtime import Stack
@@ -18,9 +17,7 @@ def omnifunc(
     (op, _), *_ = args
 
     if op == 1:
-        win = cur_win(nvim)
-        _, col = win_get_cursor(nvim, win=win)
-        return col
+        return -1
     else:
         words = ("i love", "kfc")
         return {"words": words}
