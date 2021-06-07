@@ -1,2 +1,2 @@
-REPLACE INTO words (        word)
-VALUES             (X_NORM(:word))
+INSERT OR IGNORE INTO words (        word)
+VALUES                      (X_NORM(:word))
