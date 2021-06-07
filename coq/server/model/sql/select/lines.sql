@@ -1,4 +1,6 @@
-DELETE FROM words
+SELECT
+  line
+FROM lines
 WHERE
   filename = :filename
   AND
