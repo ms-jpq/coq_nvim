@@ -22,7 +22,6 @@ def _ensure_buffer(cursor: Cursor, buf: int, tick: int) -> None:
 
 
 def _ensure_file(cursor: Cursor, file: str, filetype: str) -> None:
-    cursor.execute(sql("insert", "filetype"), {"filetype": filetype})
     cursor.execute(
         sql("insert", "file"),
         {"filename": file, "filetype": filetype},
