@@ -7,25 +7,25 @@ WITH q1 AS (
 ), q2 AS (
   SELECT
     COUNT(*) AS ft_count
-  FROM word_locations
+  FROM words
   JOIN files
   ON
-    files.filename = word_locations.filename
+    files.filename = words.filename
   WHERE
     files.filetype = :filetype
     AND
-    word_locations.word = :word
+    words.word = :word
 ), q3 AS (
   SELECT
-    COALESCE(MIN(ABS(word_locations.line_num - :line_num)), 10000) AS line_diff
-  FROM word_locations
+    COALESCE(MIN(ABS(words.line_num - :line_num)), 10000) AS line_diff
+  FROM words
   JOIN files
   ON
-    files.filename = word_locations.filename
+    files.filename = words.filename
   WHERE
     files.filename = :filename
     AND
-    word_locations.word = :word
+    words.word = :word
 ),
 SELECT
   q1.insertion_order,
