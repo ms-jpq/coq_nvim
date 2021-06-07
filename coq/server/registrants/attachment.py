@@ -18,13 +18,10 @@ def _buf_new(nvim: Nvim, stack: Stack) -> None:
         pass
     else:
         _seen.add(buf.number)
-        try:
-            listed = buf_get_option(nvim, buf=buf, key="buflisted")
-            if listed:
-                succ = nvim.api.buf_attach(buf, True, {})
-                assert succ
-        except NvimError:
-            pass
+        listed = buf_get_option(nvim, buf=buf, key="buflisted")
+        if listed:
+            succ = nvim.api.buf_attach(buf, True, {})
+            assert succ
 
 
 autocmd("BufNew") << f"lua {_buf_new.name}()"

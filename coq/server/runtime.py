@@ -7,7 +7,7 @@ from typing import MutableMapping
 from pynvim import Nvim
 from pynvim_pp.api import get_cwd
 from std2.configparser import hydrate
-from std2.lex import escape_with_prefix
+from std2.lex import escape_with_replacement
 from std2.pickle import decode
 from std2.tree import merge
 from yaml import safe_load
@@ -17,7 +17,7 @@ from ..shared.runtime import Supervisor
 from ..shared.settings import Settings
 from .model.database import Database
 
-_ESC = {"$": "$", sep: "$"}
+_ESC = {"$": "$$", sep: "$"}
 
 
 @dataclass
@@ -47,7 +47,8 @@ def _settings(nvim: Nvim) -> Settings:
 
 
 def _db(cwd: str) -> Database:
-    escaped = "".join(escape_with_prefix(cwd, escape=_ESC))
+    DB_DIR.mkdir(parents=True, exist_ok=True)
+    escaped = "".join(escape_with_replacement(cwd, escape=_ESC))
     location = (DB_DIR / escaped).with_suffix(".sqlite")
     db = Database(location=str(location))
     return db
