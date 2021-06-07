@@ -10,7 +10,7 @@ from ..runtime import Stack
 @rpc(blocking=True)
 def _dir_changed(nvim: Nvim, stack: Stack, *_: None) -> None:
     cwd: str = nvim.api.nvim_get_vvar("event")["cwd"]
-    state.cwd = cwd
+    stack.state.cwd = cwd
 
 
 autocmd("DirChanged") << f"lua {_dir_changed.name}()"
