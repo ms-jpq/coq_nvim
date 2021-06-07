@@ -5,7 +5,7 @@ from typing import AbstractSet, Iterable, Iterator, Mapping, Sequence, TypedDict
 
 from std2.sqllite3 import with_transaction
 
-from ...shared.parse import coalesce
+from ...shared.parse import coalesce, lower, normalize
 from .executor import Executor
 from .sql import sql
 
@@ -24,16 +24,19 @@ def _ensure_file(cursor: Cursor, file: str, filetype: str) -> None:
     )
 
 
+def _init(location: str) -> Connection:
+    conn = Connection(location)
+    conn.create_function("X_LOWER", narg=1, func=lower, deterministic=True)
+    conn.create_function("X_NORM", narg=1, func=normalize, deterministic=True)
+    conn.executescript(sql("init", "pragma"))
+    conn.executescript(sql("init", "tables"))
+    return conn
+
+
 class Database:
     def __init__(self, location: str) -> None:
         self._pool = Executor()
-        self._conn = Connection(location)
-
-        def cont() -> None:
-            self._conn.executescript(sql("init", "pragma"))
-            self._conn.executescript(sql("init", "tables"))
-
-        self._pool.submit(cont)
+        self._conn: Connection = self._pool.submit(_init, location)
 
     def vaccum(self) -> None:
         def cont() -> None:
