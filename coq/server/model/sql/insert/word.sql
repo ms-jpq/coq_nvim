@@ -1,2 +1,2 @@
-REPLACE INTO words (word)
-VALUES             (:word)
+REPLACE INTO words (        word)
+VALUES             (X_NORM(:word))
