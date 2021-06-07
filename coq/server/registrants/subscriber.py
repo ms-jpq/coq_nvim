@@ -1,8 +1,6 @@
 from pynvim import Nvim
-from pynvim.api import NvimError
-from pynvim_pp.api import buf_get_option, cur_buf, list_bufs
 
-from ...registry import atomic, autocmd, rpc
+from ...registry import autocmd, rpc
 from ..state import State
 
 
@@ -13,38 +11,6 @@ def _dir_changed(nvim: Nvim, state: State, *_: None) -> None:
 
 
 autocmd("DirChanged") << f"lua {_dir_changed.name}()"
-
-_SEEN = {0}
-
-
-@rpc(blocking=True)
-def _buf_new(nvim: Nvim, state: State) -> None:
-    buf = cur_buf(nvim)
-    if buf.number in _SEEN:
-        pass
-    else:
-        _SEEN.add(buf.number)
-        try:
-            listed = buf_get_option(nvim, buf=buf, key="buflisted")
-            if listed:
-                succ = nvim.api.buf_attach(buf, True, {})
-                assert succ
-        except NvimError:
-            pass
-
-
-autocmd("BufNew") << f"lua {_buf_new.name}()"
-
-
-@rpc(blocking=True)
-def _buf_new_init(nvim: Nvim, state: State) -> None:
-    for buf in list_bufs(nvim, listed=True):
-        _SEEN.add(buf.number)
-        succ = nvim.api.buf_attach(buf, True, {})
-        assert succ
-
-
-atomic.exec_lua(f"{_buf_new_init.name}()", ())
 
 
 @rpc(blocking=True)
