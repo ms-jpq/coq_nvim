@@ -128,6 +128,19 @@ class Database:
 
         return self._pool.submit(cont)
 
+    def lines(self, buf: int, lo: int, hi: int) -> Sequence[str]:
+        def cont() -> Sequence[str]:
+            with closing(self._conn.cursor()) as cursor:
+                cursor.execute(
+                    sql("select", "ticks"), {"buffer": buf, "lo": lo, "hi": hi}
+                )
+                rows = cursor.fetchall()
+
+            lines = tuple(row["line"] for row in rows)
+            return lines
+
+        return self._pool.submit(cont)
+
     def insert(
         self,
         file: str,

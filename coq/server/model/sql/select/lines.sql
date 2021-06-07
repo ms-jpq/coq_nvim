@@ -2,7 +2,7 @@ SELECT
   line
 FROM lines
 WHERE
-  filename = :filename
+  buffer = :buffer
   AND
   line_num >= :lo
   AND
