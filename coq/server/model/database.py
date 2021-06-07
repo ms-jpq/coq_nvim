@@ -17,6 +17,10 @@ class SqlMetrics(TypedDict):
     line_diff: int
 
 
+def _ensure_buffer(cursor: Cursor, buf: int, tick: int) -> None:
+    cursor.execute(sql("insert", "buffer"), {"buffer": buf, "tick": tick})
+
+
 def _ensure_file(cursor: Cursor, file: str, filetype: str) -> None:
     cursor.execute(sql("insert", "filetype"), {"filetype": filetype})
     cursor.execute(
@@ -56,6 +60,8 @@ class Database:
 
     def set_lines(
         self,
+        buf: int,
+        tick: int,
         file: str,
         filetype: str,
         lo: int,
@@ -84,6 +90,7 @@ class Database:
 
             with closing(self._conn.cursor()) as cursor:
                 with with_transaction(cursor):
+                    _ensure_buffer(cursor, buf=buf, tick=tick)
                     _ensure_file(cursor, file=file, filetype=filetype)
                     cursor.execute(
                         sql("delete", "word_locations"),
@@ -91,6 +98,22 @@ class Database:
                     )
                     cursor.executemany(sql("insert", "word"), m1())
                     cursor.executemany(sql("insert", "word_location"), m2())
+
+        self._pool.submit(cont)
+
+    def set_tick(self, buf: int, tick: int) -> None:
+        def cont() -> None:
+            with closing(self._conn.cursor()) as cursor:
+                with with_transaction(cursor):
+                    _ensure_buffer(cursor, buf=buf, tick=tick)
+
+        self._pool.submit(cont)
+
+    def rm_buf(self, buf: int) -> None:
+        def cont() -> None:
+            with closing(self._conn.cursor()) as cursor:
+                with with_transaction(cursor):
+                    cursor.execute(sql("delete", "buffer"), {"buffer": buf})
 
         self._pool.submit(cont)
 

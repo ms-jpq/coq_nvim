@@ -41,11 +41,11 @@ def _lines_event(
     lines: Sequence[str],
     multipart: bool,
 ) -> None:
-    stack.state.ticks[buf.number] = tick
-
     file = buf_name(nvim, buf=buf)
     filetype = buf_filetype(nvim, buf=buf)
     stack.db.set_lines(
+        buf=buf.number,
+        tick=tick,
         file=file,
         filetype=filetype,
         lo=lo,
@@ -59,12 +59,11 @@ def _lines_event(
 
 
 def _changed_event(nvim: Nvim, stack: Stack, buf: Buffer, tick: int) -> None:
-    stack.state.ticks[buf.number] = tick
+    stack.db.set_tick(buf=buf.number, tick=tick)
 
 
 def _detach_event(nvim: Nvim, stack: Stack, buf: Buffer) -> None:
-    if buf.number in stack.state.ticks:
-        stack.state.ticks.pop(buf.number)
+    stack.db.rm_buf(buf=buf.number)
 
 
 BUF_EVENTS = {
