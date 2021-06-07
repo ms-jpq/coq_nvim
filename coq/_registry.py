@@ -1,3 +1,3 @@
-from .server.registrants import noop, omnifunc, subscriber
+from .server.registrants import attachment, noop, omnifunc, subscriber
 
 ____ = None

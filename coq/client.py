@@ -39,7 +39,8 @@ class CoqClient(Client):
 
             rpc_atomic, specs = rpc.drain(nvim.channel_id)
             self._handlers.update(specs)
-            (rpc_atomic + autocmd.drain()).commit(nvim)
+            self._handlers.update((fn.alias, fn) for _, fn in specs)
+            (atomic + rpc_atomic + autocmd.drain()).commit(nvim)
             self._settings = load(nvim)
 
         try:
@@ -59,11 +60,7 @@ class CoqClient(Client):
             handler = cast(AnyFun[None], self._handlers.get(name, nil_handler(name)))
 
             def handle() -> None:
-                from pynvim_pp.lib import write
-
-                write(nvim, args)
                 handler(nvim, *args)
-                pass
 
             try:
                 threadsafe_call(nvim, handle)

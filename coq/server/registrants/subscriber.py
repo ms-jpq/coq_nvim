@@ -52,8 +52,9 @@ def _insert_leave(nvim: Nvim, state: State, *_: None) -> None:
 autocmd("InsertLeave") << f"lua {_insert_leave.name}()"
 
 
+@rpc(blocking=True)
 def _comp_done_pre(nvim: Nvim, state: State, *_: None) -> None:
     pass
 
 
-autocmd("CompleteDonePre") << f"lua {_comp_done_pre}()"
+autocmd("CompleteDonePre") << f"lua {_comp_done_pre.name}()"
