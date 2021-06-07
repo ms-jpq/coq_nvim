@@ -15,6 +15,7 @@ from std2.types import AnyFun
 
 from ._registry import ____
 from .registry import atomic, autocmd, rpc
+from .server.settings import load
 from .shared.settings import Settings
 from .types import State
 
@@ -39,6 +40,7 @@ class CoqClient(Client):
             rpc_atomic, specs = rpc.drain(nvim.channel_id)
             self._handlers.update(specs)
             (rpc_atomic + autocmd.drain()).commit(nvim)
+            self._settings = load(nvim)
 
         try:
             threadsafe_call(nvim, cont)
