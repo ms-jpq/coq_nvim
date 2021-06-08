@@ -2,19 +2,10 @@ from typing import Sequence
 
 from pynvim import Nvim
 from pynvim.api import Buffer
-from pynvim_pp.api import (
-    buf_filetype,
-    buf_get_option,
-    buf_name,
-    cur_buf,
-    cur_win,
-    list_bufs,
-    win_get_cursor,
-)
+from pynvim_pp.api import buf_filetype, buf_get_option, buf_name, cur_buf, list_bufs
 
 from ...registry import atomic, autocmd, rpc
 from ..runtime import Stack
-from .omnifunc import omnifunc
 
 
 @rpc(blocking=True)
