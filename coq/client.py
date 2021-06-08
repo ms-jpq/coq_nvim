@@ -1,7 +1,6 @@
 from asyncio.events import AbstractEventLoop
 from concurrent.futures import ThreadPoolExecutor
 from os import linesep
-from queue import SimpleQueue
 from sys import stderr
 from typing import Any, MutableMapping, Optional, cast
 
@@ -14,21 +13,21 @@ from std2.pickle import DecodeError
 from std2.types import AnyFun
 
 from ._registry import ____
-from .registry import atomic, autocmd, rpc
+from .registry import atomic, autocmd, event_queue, rpc, settings
 from .server.registrants.attachment import BUF_EVENTS
-from .server.registrants.omnifunc import omnifunc
 from .server.runtime import Stack, stack
 
 
 class CoqClient(Client):
     def __init__(self) -> None:
         self._handlers: MutableMapping[str, RpcCallable] = {}
-        self._pool, self._events = ThreadPoolExecutor(), SimpleQueue()
+        self._pool = ThreadPoolExecutor()
 
         self._stack: Optional[Stack] = None
 
     def _handle(self, nvim: Nvim, msg: RpcMsg) -> Any:
         name, args = msg
+
         if name.startswith("nvim_buf_"):
             handler = BUF_EVENTS[name]
             return handler(nvim, self._stack, *args)
@@ -39,7 +38,7 @@ class CoqClient(Client):
 
     def on_msg(self, nvim: Nvim, msg: RpcMsg) -> Any:
         if not self._stack:
-            self._events.put(msg)
+            event_queue.put(msg)
             return None
         else:
             return self._handle(nvim, msg)
@@ -51,7 +50,7 @@ class CoqClient(Client):
 
             rpc_atomic, specs = rpc.drain(nvim.channel_id)
             self._handlers.update(specs)
-            (rpc_atomic + autocmd.drain() + atomic).commit(nvim)
+            (rpc_atomic + autocmd.drain() + atomic + settings.drain()).commit(nvim)
 
             self._stack = stack(self._pool, nvim=nvim)
 
@@ -67,7 +66,7 @@ class CoqClient(Client):
             return 1
 
         while True:
-            msg: RpcMsg = self._events.get()
+            msg: RpcMsg = event_queue.get()
             try:
                 threadsafe_call(nvim, self._handle, nvim, msg)
             except Exception as e:

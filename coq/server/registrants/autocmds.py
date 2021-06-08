@@ -1,10 +1,14 @@
 from asyncio.events import Handle, get_running_loop
-from typing import Any, Mapping, Optional
+from typing import Any, Mapping, Optional, TypedDict
 
 from pynvim.api.nvim import Nvim
 
-from ...registry import autocmd, rpc
+from ...registry import autocmd, enqueue_event, rpc
 from ..runtime import Stack
+
+
+class _CompEvent(TypedDict, total=False):
+    user_data: Any
 
 
 @rpc(blocking=True)
@@ -33,11 +37,18 @@ autocmd("InsertLeave") << f"lua {_insert_leave.name}()"
 
 
 @rpc(blocking=True)
-def _comp_done_pre(nvim: Nvim, stack: Stack, event: Mapping[str, Any]) -> None:
-    print(event, flush=True)
+def _comp_done_pre(nvim: Nvim, stack: Stack, event: _CompEvent) -> None:
+    data = event.get("user_data")
+    if data:
+        print(data, flush=True)
 
 
 autocmd("CompleteDonePre") << f"lua {_comp_done_pre.name}(vim.v.completed_item)"
+
+
+@rpc(blocking=True)
+def _vaccum(nvim: Nvim, stack: Stack) -> None:
+    stack.db.vaccum()
 
 
 _handle: Optional[Handle] = None
@@ -50,7 +61,7 @@ def _cursor_hold(nvim: Nvim, stack: Stack) -> None:
         _handle.cancel()
 
     def cont() -> None:
-        stack.db.vaccum()
+        enqueue_event(_vaccum)
 
     loop = get_running_loop()
     _handle = loop.call_later(0.5, cont)

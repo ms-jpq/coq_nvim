@@ -2,7 +2,7 @@ from typing import Any, Literal, Mapping, Sequence, Tuple, Union
 
 from pynvim import Nvim
 
-from ...registry import rpc
+from ...registry import rpc, settings
 from ..runtime import Stack
 
 
@@ -16,3 +16,6 @@ def omnifunc(
         return -1
     else:
         return ({"word": "--TODO--"},)
+
+
+settings["completefunc"] = omnifunc.name
