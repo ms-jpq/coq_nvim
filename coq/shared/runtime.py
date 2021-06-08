@@ -42,7 +42,15 @@ class Supervisor:
         with self._lock:
             self._workers.add(worker)
 
-    def notify(self, context: Context) -> None:
+
+    def report(self, token: UUID, completions: Sequence[Completion]) -> None:
+        with self._lock:
+            if token != self._token:
+                pass
+            else:
+                self._completions.extend(completions)
+
+    def exploit(self, context: Context) -> Sequence[Completion]:
         with self._lock:
             assert not self._completions
 
@@ -56,14 +64,6 @@ class Supervisor:
 
                 self._pool.submit(cont)
 
-    def report(self, token: UUID, completions: Sequence[Completion]) -> None:
-        with self._lock:
-            if token != self._token:
-                pass
-            else:
-                self._completions.extend(completions)
-
-    def collect(self) -> Sequence[Completion]:
         with self._lock:
             completions = self._completions
             self._completions = []
