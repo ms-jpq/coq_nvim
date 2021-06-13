@@ -1,14 +1,16 @@
-from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from shutil import which
 from subprocess import CalledProcessError, check_output
 from time import sleep
-from typing import AbstractSet, Iterator, Mapping, Sequence, Tuple
+from typing import AbstractSet, Iterator, Sequence, Tuple
 
 from ...shared.parse import coalesce
 from ...shared.runtime import Supervisor
 from ...shared.runtime import Worker as BaseWorker
 from ...shared.types import Completion, Context, Edit
+from .database import Database
+
+_POLL_INTERVAL = 1
 
 
 @dataclass(frozen=True)
@@ -48,6 +50,14 @@ def _panes() -> Sequence[_Pane]:
         return tuple(cont())
 
 
+def _cur() -> _Pane:
+    for pane in _panes():
+        if pane.window_active and pane.window_active:
+            return pane
+    else:
+        assert False
+
+
 def _screenshot(unifying_chars: AbstractSet[str], uid: str) -> Sequence[str]:
     try:
         out = check_output(("tmux", "capture-pane", "-p", "-t", uid), text=True)
@@ -57,39 +67,36 @@ def _screenshot(unifying_chars: AbstractSet[str], uid: str) -> Sequence[str]:
         return tuple(coalesce(out, unifying_chars=unifying_chars))
 
 
-def _collect(
-    pool: ThreadPoolExecutor, unifying_chars: AbstractSet[str]
-) -> Mapping[_Pane, Sequence[str]]:
-    def cont(pane: _Pane) -> Tuple[_Pane, Sequence[str]]:
-        return pane, _screenshot(unifying_chars, uid=pane.uid)
-
-    return {pane: words for pane, words in pool.map(cont, _panes())}
-
-
 class Worker(BaseWorker[None]):
     def __init__(self, supervisor: Supervisor, misc: None) -> None:
-        super().__init__(supervisor, misc=misc)
+        self._db = Database(supervisor.pool, location=":memory:")
 
-        self._panes: Mapping[_Pane, Sequence[str]] = {}
         if which("tmux"):
             supervisor.pool.submit(self._poll)
 
+        super().__init__(supervisor, misc=misc)
+
     def _poll(self) -> None:
+        def cont(pane: _Pane) -> Tuple[_Pane, Sequence[str]]:
+            words = _screenshot(self._supervisor.options.unifying_chars, uid=pane.uid)
+            return pane, words
+
         while True:
-            self._panes = _collect(
-                self._supervisor.pool,
-                unifying_chars=self._supervisor.options.unifying_chars,
-            )
-            sleep(1)
+            snapshot = {
+                pane.uid: words
+                for pane, words in self._supervisor.pool.map(cont, _panes())
+            }
+            self._db.periodical(snapshot)
+            sleep(_POLL_INTERVAL)
 
     def work(self, context: Context) -> Iterator[Sequence[Completion]]:
+        active = _cur()
+
         def cont() -> Iterator[Completion]:
-            for pane, words in self._panes.items():
-                if not (pane.window_active and pane.pane_active):
-                    for word in words:
-                        edit = Edit(new_text=word)
-                        completion = Completion(primary_edit=edit)
-                        yield completion
+            for word in self._db.select(context.words, active_pane=active.uid):
+                edit = Edit(new_text=word)
+                completion = Completion(primary_edit=edit)
+                yield completion
 
         yield tuple(cont())
 
