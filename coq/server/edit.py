@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from functools import cache
 from itertools import chain, repeat
-from typing import Iterator, MutableSequence, Sequence, Tuple
+from typing import Iterable, Iterator, MutableSequence, Sequence, Tuple
 
 from pynvim import Nvim
 from pynvim_pp.api import cur_buf
@@ -32,21 +32,17 @@ class _EditInstruction:
     replacement: bytes
 
 
+@dataclass(frozen=True)
 class _Lines:
-    def __init__(self, lines: Sequence[str]) -> None:
-        self._lines = lines
+    len8: Sequence[int]
+    len16: Sequence[int]
 
-    @property
-    @cache
-    def len8(self) -> Sequence[int]:
-        lengths = tuple(len(line.encode(UTF8)) for line in self._lines)
-        return lengths
 
-    @property
-    @cache
-    def len16(self) -> Sequence[int]:
-        lengths = tuple(len(line.encode(UTF16)) // 2 for line in self._lines)
-        return lengths
+def _lines(lines: Sequence[str]) -> _Lines:
+    return _Lines(
+        len8=tuple(len(line.encode(UTF8)) for line in lines),
+        len16=tuple(len(line.encode(UTF16)) // 2 for line in lines),
+    )
 
 
 def _rows_to_fetch(
@@ -128,10 +124,8 @@ def _contextual_edit_trans(
     return inst
 
 
-def _range_edit_trans(ctx: Context, edit: RangeEdit) -> _EditInstruction:
-    row, _ = pos
-    r1 = row - len(edit.old_prefix.encode(UTF8))
-    r2 = row - len(edit.old_prefix.encode(UTF8))
+def _range_edit_trans(ctx: Context, lines: _Lines, edit: RangeEdit) -> _EditInstruction:
+    (r1, ec1), (r2, ec2) = edit.begin, edit.end
 
     c1 = len(ctx.line_before.encode(UTF8))
     c2 = c1 + len(ctx.words_before.encode(UTF8))
@@ -178,18 +172,22 @@ def _instructions(
             yield _edit_trans(ctx, edit=primary)
 
         elif isinstance(primary, ContextualEdit):
-            yield _contextual_edit_trans(ctx, edit=primary)
+            yield _contextual_edit_trans(ctx, env=env, lines=lines, edit=primary)
 
         elif isinstance(primary, RangeEdit):
-            yield _range_edit_trans(ctx, lengths=lengths, edit=primary)
+            yield _range_edit_trans(ctx, lines=lines, edit=primary)
         else:
             never(primary)
 
         for edit in secondary:
-            yield from _range_edit_trans(lengths=lengths, edit=edit)
+            yield _range_edit_trans(ctx, lines=lines, edit=edit)
 
     instructions = _consolidate(*cont())
     return instructions
+
+
+def _commit(nvim: Nvim, instructions: Iterable[_EditInstruction]) -> None:
+    pass
 
 
 def edit(nvim: Nvim, ctx: Context, env: EditEnv, data: UserData) -> None:
@@ -203,9 +201,10 @@ def edit(nvim: Nvim, ctx: Context, env: EditEnv, data: UserData) -> None:
     )
     lo, hi = _rows_to_fetch(ctx.position, env, primary, *data.secondary_edits)
     lines = tuple(chain(repeat("", times=lo), buf[lo:hi]))
-    view = _Lines(lines=lines)
+    view = _lines(lines)
 
     instructions = _instructions(
         ctx, env=env, lines=view, primary=primary, secondary=data.secondary_edits
     )
+    _commit(nvim, instructions=instructions)
 
