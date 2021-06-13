@@ -2,6 +2,7 @@ from dataclasses import dataclass
 from itertools import chain
 from typing import Annotated, Iterable, Iterator, MutableSequence, Sequence
 
+from pynvim import Nvim
 from pynvim_pp.text_object import SplitCtx
 from std2.ordinal import clamp
 from std2.seq import maybe_indexed
@@ -14,7 +15,9 @@ from ..shared.types import (
     Edit,
     NvimPos,
     RangeEdit,
+    SnippetEdit,
 )
+from ..snippets.parse import parse
 from .types import UserData
 
 
@@ -162,10 +165,7 @@ def _trans(
     lines: Sequence[str],
     primary: ApplicableEdit,
     *secondary: RangeEdit
-) -> str:
-    """
-    Byte level edits
-    """
+) -> None:
 
     coding = "UTF-16-LE" if encoding is OffsetEncoding.utf_16 else "UTF-8"
     offset_mul = 2 if encoding is OffsetEncoding.utf_16 else 1
@@ -190,5 +190,9 @@ def _trans(
     instructions = _consolidate(*cont())
 
 
-def edit(ctx: Context, data: UserData) -> None:
-    pass
+def edit(nvim: Nvim, ctx: Context, data: UserData) -> None:
+    primary = (
+        parse(nvim, snippet=data.primary_edit)
+        if isinstance(data.primary_edit, SnippetEdit)
+        else data.primary_edit
+    )
