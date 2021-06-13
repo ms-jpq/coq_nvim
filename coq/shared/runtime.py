@@ -1,12 +1,19 @@
 from __future__ import annotations
 
 from abc import abstractmethod
-from concurrent.futures import FIRST_EXCEPTION, ThreadPoolExecutor, TimeoutError, wait
+from concurrent.futures import (
+    Future,
+    InvalidStateError,
+    ThreadPoolExecutor,
+    as_completed,
+)
+from contextlib import suppress
 from threading import Lock
-from typing import Generic, Iterator, MutableSequence, MutableSet, Sequence, TypeVar
+from typing import Generic, Iterator, MutableSequence, MutableSet, TypeVar
 from weakref import WeakSet
 
 from pynvim import Nvim
+from pynvim_pp.log import log
 
 from .settings import Options
 from .types import Completion, Context
@@ -34,28 +41,33 @@ class Supervisor:
     def register(self, worker: Worker) -> None:
         self._workers.add(worker)
 
-    def work(self, context: Context) -> Sequence[Completion]:
-        lock, timed_out = Lock(), False
+    def work(self, context: Context) -> Future:
+        fut, lock = Future(), Lock()
         acc: MutableSequence[Completion] = []
 
         def supervise(worker: Worker) -> None:
             for completion in worker.work(context):
+                if fut.cancelled():
+                    break
                 with lock:
-                    if timed_out:
-                        break
-                    else:
-                        acc.append(completion)
+                    acc.append(completion)
 
-        futs = (self._pool.submit(supervise, worker) for worker in self._workers)
-        try:
-            wait(futs, return_when=FIRST_EXCEPTION, timeout=self._options.timeout)
-        except TimeoutError:
+        def cont() -> None:
+            futs = tuple(
+                self._pool.submit(supervise, worker) for worker in self._workers
+            )
+            for f in as_completed(futs):
+                try:
+                    f.result()
+                except Exception as e:
+                    log.exception("%s", e)
             with lock:
-                timed_out = True
-                return tuple(acc)
-        else:
-            with lock:
-                return tuple(acc)
+                ret = tuple(acc)
+            with suppress(InvalidStateError):
+                fut.set_result(ret)
+
+        self._pool.submit(cont)
+        return fut
 
 
 class Worker(Generic[T_co]):
