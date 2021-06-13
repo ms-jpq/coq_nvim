@@ -1,8 +1,10 @@
 from dataclasses import asdict, dataclass
 from enum import Enum
-from typing import Any, Iterable, Optional
+from typing import Generic, Iterable, Optional, TypeVar
 
 from pynvim import Nvim
+
+T = TypeVar("T")
 
 
 class VimCompKind(Enum):
@@ -14,7 +16,7 @@ class VimCompKind(Enum):
 
 
 @dataclass(frozen=True)
-class VimCompletion:
+class VimCompletion(Generic[T]):
     word: str
     abbr: Optional[str] = None
     menu: Optional[str] = None
@@ -24,7 +26,7 @@ class VimCompletion:
     equal: Optional[int] = None
     dup: Optional[int] = None
     empty: Optional[int] = None
-    user_data: Optional[Any] = None
+    user_data: Optional[T] = None
 
 
 def complete(nvim: Nvim, col: int, comp: Iterable[VimCompletion]) -> None:
