@@ -28,9 +28,9 @@ WITH q1 AS (
     words.word = :word
 )
 SELECT
-  q1.insertion_order,
-  q2.ft_count,
-  q3.line_diff
+  q1.insertion_order AS insertion_order,
+  q2.ft_count AS ft_count,
+  q3.line_diff AS line_diff
 FROM q1
 JOIN q2
 JOIN q3
