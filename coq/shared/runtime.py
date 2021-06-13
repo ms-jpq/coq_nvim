@@ -80,9 +80,8 @@ class Worker(Generic[T_co]):
         self._supervisor, self._misc = supervisor, misc
         self._supervisor.register(self)
 
-    @abstractmethod
     def notify(self, token: UUID, msg: Sequence[str]) -> None:
-        ...
+        pass
 
     @abstractmethod
     def work(self, context: Context) -> Iterator[Sequence[Completion]]:
