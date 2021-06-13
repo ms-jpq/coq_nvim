@@ -6,6 +6,7 @@ from concurrent.futures import (
     Future,
     InvalidStateError,
     ThreadPoolExecutor,
+    TimeoutError,
     as_completed,
 )
 from contextlib import suppress
@@ -54,7 +55,7 @@ class Supervisor:
                 futs = tuple(
                     self._pool.submit(supervise, worker) for worker in self._workers
                 )
-                for f in as_completed(futs):
+                for f in as_completed(futs, timeout=self._options.timeout):
                     try:
                         f.result()
                     except Exception as e:
@@ -62,6 +63,8 @@ class Supervisor:
 
                 with suppress(InvalidStateError):
                     fut.set_result(tuple(acc))
+            except TimeoutError:
+                pass
             except Exception as e:
                 log.exception("%s", e)
                 raise

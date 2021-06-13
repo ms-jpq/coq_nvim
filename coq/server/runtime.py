@@ -1,7 +1,7 @@
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import Future, ThreadPoolExecutor
 from dataclasses import dataclass
 from hashlib import md5
-from typing import AbstractSet, Iterator
+from typing import AbstractSet, Iterator, Optional, Tuple
 
 from pynvim import Nvim
 from pynvim_pp.api import get_cwd
@@ -18,11 +18,13 @@ from ..clients.tree_sitter.worker import Worker as TreeWorker
 from ..consts import CONFIG_YML, DB_DIR, SETTINGS_VAR
 from ..shared.runtime import Supervisor, Worker
 from ..shared.settings import Settings
+from ..shared.types import Context
 from .model.database import Database
 
 
 @dataclass
 class _State:
+    cur: Optional[Tuple[Context, Future]]
     inserting: bool
     cwd: str
 
@@ -69,6 +71,7 @@ def stack(pool: ThreadPoolExecutor, nvim: Nvim) -> Stack:
     settings = _settings(nvim)
     cwd = get_cwd(nvim)
     state = _State(
+        cur=None,
         inserting=nvim.api.get_mode()["mode"] == "i",
         cwd=cwd,
     )
