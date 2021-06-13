@@ -6,6 +6,7 @@ from threading import Lock
 from typing import Any, Iterator, MutableMapping, Sequence, Tuple
 from uuid import UUID, uuid4
 
+from pynvim_pp.lib import threadsafe_call
 from std2.pickle import DecodeError, decode
 
 from ...consts import ARTIFACTS_DIR
@@ -100,9 +101,13 @@ class Worker(BaseWorker[None]):
         with self._lock:
             self._sessions[token] = fut
 
-        self._supervisor.nvim.api.exec_lua(
-            "COQlsp_req", (str(token), str(session), pos)
-        )
+        def cont() -> None:
+            self._supervisor.nvim.api.exec_lua(
+                "COQlsp_req(...)", (str(token), str(session), pos)
+            )
+
+        threadsafe_call(self._supervisor.nvim, cont)
+
         try:
             ret = fut.result(timeout=self._supervisor.options.timeout)
         except TimeoutError:

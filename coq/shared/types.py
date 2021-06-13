@@ -24,6 +24,7 @@ class Context:
 
     uid: UUID
 
+    cwd: str
     filetype: str
     filename: str
 

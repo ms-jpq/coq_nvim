@@ -22,6 +22,7 @@ def omnifunc(
         ctx = context(
             nvim,
             unifying_chars=stack.settings.match.unifying_chars,
+            cwd=stack.state.cwd,
             buf=None,
             filename=None,
             filetype=None,
@@ -36,3 +37,4 @@ def omnifunc(
 
 
 settings["completefunc"] = omnifunc.name
+

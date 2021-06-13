@@ -21,6 +21,7 @@ from ..shared.types import Context, EditEnv
 def context(
     nvim: Nvim,
     unifying_chars: AbstractSet[str],
+    cwd: str,
     buf: Optional[Buffer],
     filename: Optional[str],
     filetype: Optional[str],
@@ -40,6 +41,7 @@ def context(
 
     ctx = Context(
         uid=uuid4(),
+        cwd=cwd,
         filename=filename,
         filetype=filetype,
         position=pos,

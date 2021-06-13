@@ -76,9 +76,10 @@ def _lines_event(
             ctx = context(
                 nvim,
                 unifying_chars=stack.settings.match.unifying_chars,
-                buf=None,
-                filename=None,
-                filetype=None,
+                cwd=stack.state.cwd,
+                buf=buf,
+                filename=file,
+                filetype=filetype,
             )
             fut = stack.supervisor.collect(ctx)
             stack.state.cur = (ctx, fut)
@@ -111,3 +112,4 @@ BUF_EVENTS = {
     "nvim_buf_changedtick_event": _changed_event,
     "nvim_buf_detach_event": _detach_event,
 }
+
