@@ -35,19 +35,23 @@ class Supervisor:
         self._workers.add(worker)
 
     def work(self, context: Context) -> Sequence[Completion]:
-        lock = Lock()
+        lock, timed_out = Lock(), False
         acc: MutableSequence[Completion] = []
 
         def supervise(worker: Worker) -> None:
             for completion in worker.work(context):
                 with lock:
-                    acc.append(completion)
+                    if timed_out:
+                        break
+                    else:
+                        acc.append(completion)
 
         futs = (self._pool.submit(supervise, worker) for worker in self._workers)
         try:
             wait(futs, return_when=FIRST_EXCEPTION, timeout=self._options.timeout)
         except TimeoutError:
             with lock:
+                timed_out = True
                 return tuple(acc)
         else:
             with lock:
