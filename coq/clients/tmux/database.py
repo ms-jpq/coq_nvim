@@ -3,13 +3,13 @@ from contextlib import closing
 from locale import strcoll
 from sqlite3 import Connection, Row
 from sqlite3.dbapi2 import Cursor
-from typing import Mapping, Sequence
+from typing import Iterator, Mapping, Sequence
 
 from std2.sqllite3 import escape, with_transaction
 
 from ...shared.executor import Executor
 from ...shared.parse import coalesce, lower, normalize
-from .sql import sql, sqlt
+from .sql import sql
 
 
 def _like_esc(like: str) -> str:
@@ -35,8 +35,34 @@ class Database:
         self._conn: Connection = self._pool.submit(_init, location)
 
     def periodical(self, panes: Mapping[str, Sequence[str]]) -> None:
-        pass
+        def cont() -> None:
+            def it() -> Iterator[Mapping]:
+                for pane_id, words in panes.items():
+                    for word in words:
+                        yield {
+                            "pane_id": pane_id,
+                            "word": word,
+                        }
 
-    def select(self, word: str, active_pane: str) -> Sequence[str]:
-        return ()
+            with closing(self._conn.cursor()) as cursor:
+                with with_transaction(cursor):
+                    cursor.execute(sql("delete", "words"), {"pane_ids": panes.keys()})
+                    cursor.executemany(sql("insert", "words"), it())
+
+        self._pool.submit(cont)
+
+    def select(self, prefix_len: int, word: str, active_pane: str) -> Sequence[str]:
+        def cont() -> Sequence[str]:
+            with closing(self._conn.cursor()) as cursor:
+                cursor.execute(
+                    sql("select", "words"),
+                    {
+                        "prefix_len": prefix_len,
+                        "pane_id": active_pane,
+                        "word": word,
+                    },
+                )
+                return cursor.fetchall()
+
+        return self._pool.submit(cont)
 

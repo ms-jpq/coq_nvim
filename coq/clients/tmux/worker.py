@@ -11,6 +11,7 @@ from ...shared.types import Completion, Context, Edit
 from .database import Database
 
 _POLL_INTERVAL = 1
+_PREFIX_LEN = 3
 
 
 @dataclass(frozen=True)
@@ -93,7 +94,9 @@ class Worker(BaseWorker[None]):
         active = _cur()
 
         def cont() -> Iterator[Completion]:
-            for word in self._db.select(context.words, active_pane=active.uid):
+            for word in self._db.select(
+                _PREFIX_LEN, word=context.words, active_pane=active.uid
+            ):
                 edit = Edit(new_text=word)
                 completion = Completion(primary_edit=edit)
                 yield completion

@@ -111,15 +111,14 @@ class Database:
     def suggestions(self, word: str, prefix_len: int) -> Sequence[str]:
         def cont() -> Sequence[str]:
             with closing(self._conn.cursor()) as cursor:
-                with with_transaction(cursor):
-                    cursor.execute(
-                        sql("select", "words_by_prefix"),
-                        {
-                            "word": word,
-                            "prefix_len": prefix_len,
-                        },
-                    )
-                    return cursor.fetchall()
+                cursor.execute(
+                    sql("select", "words_by_prefix"),
+                    {
+                        "word": word,
+                        "prefix_len": prefix_len,
+                    },
+                )
+                return cursor.fetchall()
 
         return self._pool.submit(cont)
 
@@ -146,3 +145,4 @@ class Database:
                     return cursor.fetchall()
 
         return self._pool.submit(cont)
+
