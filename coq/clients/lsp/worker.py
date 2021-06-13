@@ -12,7 +12,7 @@
 
 
 from queue import SimpleQueue
-from typing import Any, Tuple, cast, Iterator
+from typing import Any, Iterator, Sequence, Tuple, cast
 from uuid import UUID
 
 from pynvim import Nvim
@@ -20,21 +20,22 @@ from std2.pickle import decode
 
 from ...shared.runtime import Supervisor
 from ...shared.runtime import Worker as BaseWorker
-from ...shared.types import Completion, Context, Edit, NvimPos
+from ...shared.types import Completion, Context, NvimPos
 from .types import CompletionList, Resp
 
 
 def _req(nvim: Nvim, token: UUID, pos: NvimPos) -> Resp:
     nvim.api.exec_lua("")
 
+
 def _parse(resp: Resp) -> Iterator[Completion]:
     pass
 
+
 class Worker(BaseWorker[SimpleQueue]):
     def __init__(self, supervisor: Supervisor, misc: SimpleQueue) -> None:
-        super().__init__(supervisor, misc=misc)
-
         supervisor.pool.submit(self._poll)
+        super().__init__(supervisor, misc=misc)
 
     def _poll(self) -> None:
         while True:
@@ -46,5 +47,6 @@ class Worker(BaseWorker[SimpleQueue]):
             if isinstance(resp, CompletionList) and resp.isIncomplete:
                 _req(self._supervisor.nvim, token=token, pos=context.position)
 
-    def work(self, token: UUID, context: Context) -> None:
+    def work(self, context: Context) -> Iterator[Sequence[Completion]]:
         _req(self._supervisor.nvim, token=token, pos=context.position)
+

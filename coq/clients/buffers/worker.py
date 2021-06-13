@@ -1,15 +1,11 @@
-from uuid import UUID
-
-from ...shared.runtime import Supervisor
-from ...shared.runtime import Worker as BaseWorker
-from ...shared.types import Context
+from typing import Iterator, Sequence
 
 from ...server.model.database import Database
+from ...shared.runtime import Worker as BaseWorker
+from ...shared.types import Completion, Context
+
 
 class Worker(BaseWorker[Database]):
-    def __init__(self, supervisor: Supervisor, misc: Database) -> None:
-        super().__init__(supervisor, misc=misc)
-
-    def work(self, token: UUID, context: Context) -> None:
-        self._supervisor.report(token, completions=tuple())
+    def work(self, context: Context) -> Iterator[Sequence[Completion]]:
+        yield ()
 

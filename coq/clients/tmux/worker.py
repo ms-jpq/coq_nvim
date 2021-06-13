@@ -4,7 +4,6 @@ from shutil import which
 from subprocess import CalledProcessError, check_output
 from time import sleep
 from typing import AbstractSet, Iterator, Mapping, Sequence
-from uuid import UUID
 
 from ...shared.parse import coalesce
 from ...shared.runtime import Supervisor
@@ -83,7 +82,7 @@ class Worker(BaseWorker[None]):
             )
             sleep(1)
 
-    def work(self, token: UUID, context: Context) -> None:
+    def work(self, context: Context) -> Iterator[Sequence[Completion]]:
         def cont() -> Iterator[Completion]:
             for pane, words in self._panes.items():
                 if not (pane.window_active and pane.pane_active):
@@ -94,4 +93,5 @@ class Worker(BaseWorker[None]):
                         )
                         yield completion
 
-        self._supervisor.report(token, completions=tuple(cont()))
+        yield tuple(cont())
+
