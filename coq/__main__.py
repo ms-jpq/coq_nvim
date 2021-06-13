@@ -1,12 +1,13 @@
 from argparse import ArgumentParser, Namespace
 from os import name
 from pathlib import Path
+from shlex import join
 from subprocess import DEVNULL, run
 from sys import executable, stderr, stdout, version_info
 from textwrap import dedent
 from typing import Union
 
-from .consts import REQUIREMENTS, RT_DIR, RT_PY
+from .consts import REQUIREMENTS, RT_DIR, RT_PY, TOP_LEVEL, VARS
 
 if version_info < (3, 8, 2):
     msg = "⛔️ python < 3.8.2"
@@ -123,12 +124,12 @@ elif command == "run":
             import std2
             import yaml
     except ImportError:
-        msg = """
+        msg = f"""
         Please update dependencies using :COQdeps
         -
         -
-        Dependencies will be installed privately inside `coq-nvim/.vars`
-        `rm -rf coq-nvim/` will cleanly remove everything
+        Dependencies will be installed privately inside `{VARS}`
+        `{join(("rm", "-rf", str(TOP_LEVEL.name)))}` will cleanly remove everything
         """
         msg = dedent(msg)
         print(msg, end="", file=stderr)
@@ -145,3 +146,4 @@ elif command == "run":
 
 else:
     assert False
+
