@@ -6,7 +6,18 @@ from ....coq.clients.paths.worker import parse
 class Parser(TestCase):
     def test_1(self) -> None:
         line = "./.gith"
-        actual = tuple(parse(line))
-        expected = (("./.gith", "./.github"),)
+        actual = sorted(parse(line))
+        expected = sorted((("./.gith", "./.github/"),))
+        self.assertEqual(actual, expected)
+
+    def test_2(self) -> None:
+        line = "./.github"
+        actual = sorted(parse(line))
+        expected = sorted(
+            (
+                ("./.github", "./.github/.agp"),
+                ("./.github", "./.github/workflows/"),
+            )
+        )
         self.assertEqual(actual, expected)
 

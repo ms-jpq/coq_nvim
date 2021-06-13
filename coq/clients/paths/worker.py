@@ -23,15 +23,17 @@ def _parse(maybe_path: str) -> Iterator[Tuple[str, str]]:
         try:
             prefix = maybe_path
             for path in entire.iterdir():
-                yield prefix, str(path)
+                term = sep if path.is_dir() else ""
+                yield prefix, f"{lhs}{sep}{path}{term}"
         except PermissionError:
             pass
     elif go and left_side.is_dir():
-        prefix = lhs + sep + rhs
+        prefix = f"{lhs}{sep}{rhs}"
         try:
             for path in left_side.iterdir():
                 if path.name.startswith(rhs):
-                    yield prefix, str(path)
+                    term = sep if path.is_dir() else ""
+                    yield prefix, f"{lhs}{sep}{path}{term}"
         except PermissionError:
             pass
     else:
