@@ -8,20 +8,27 @@ from ...shared.types import Completion, Context, ContextualEdit
 
 def _parse(segments: Sequence[str]) -> Iterator[Tuple[str, Path]]:
     if segments:
-        _, body, tail = segments
-        p0 = Path(*body)
-        p1 = p0 / tail
-        if p1.is_dir():
-            prefix = sep.join(segments)
-            for path in p1.iterdir():
-                yield prefix, path
-        elif p0.is_dir():
-            prefix = sep.join(body)
-            for path in p0.iterdir():
-                if path.name.startswith(tail):
+        *lhs, rhs = segments
+        left_side = Path(*lhs)
+        entire = left_side / rhs
+
+        if entire.is_dir():
+            prefix = str(entire)
+            try:
+                for path in entire.iterdir():
                     yield prefix, path
+            except PermissionError:
+                pass
+        elif left_side.is_dir():
+            prefix = str(left_side)
+            try:
+                for path in left_side.iterdir():
+                    if path.name.startswith(rhs):
+                        yield prefix, path
+            except PermissionError:
+                pass
         else:
-            yield from _parse(body)
+            yield from _parse(lhs)
 
 
 class Worker(BaseWorker[None]):
@@ -30,13 +37,16 @@ class Worker(BaseWorker[None]):
 
         def cont() -> Iterator[Completion]:
             segments = context.line_before.split(sep)
-            for prefix, path in _parse(segments):
-                new_text = str(path)
-                edit = ContextualEdit(
-                     old_prefix=prefix,new_text=new_text, new_prefix=new_text
-                )
-                completion = Completion(primary_edit=edit)
-                yield completion
+            if len(segments) > 1:
+                _, *segs = segments
+
+                for prefix, path in _parse(segs):
+                    new_text = str(path)
+                    edit = ContextualEdit(
+                        old_prefix=prefix, new_text=new_text, new_prefix=new_text
+                    )
+                    completion = Completion(primary_edit=edit)
+                    yield completion
 
         yield tuple(cont())
 
