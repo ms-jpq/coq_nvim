@@ -1,11 +1,11 @@
 from concurrent.futures import CancelledError, Future, InvalidStateError
 from contextlib import suppress
 from json import loads
+from pathlib import Path
 from threading import Lock
 from typing import Any, Iterator, MutableMapping, Sequence, Tuple
 from uuid import UUID, uuid4
 
-from pynvim import Nvim
 from std2.pickle import DecodeError, decode
 
 from ...consts import ARTIFACTS_DIR
@@ -16,8 +16,8 @@ from .runtime import LSP
 from .types import CompletionItem, CompletionList, MarkupContent, Resp, TextEdit
 
 _LSP_ARTIFACTS = ARTIFACTS_DIR / "lsp.json"
-
 _LSP: LSP = decode(LSP, loads(_LSP_ARTIFACTS.read_text("UTF-8")))
+_LUA = (Path(__file__).resolve().parent / "request.lua").read_text("UTF-8")
 
 
 def _range_edit(edit: TextEdit) -> RangeEdit:
@@ -86,15 +86,14 @@ def _parse(pos: NvimPos, reply: Any) -> Tuple[bool, Sequence[Completion]]:
             return False, ()
 
 
-def _req(nvim: Nvim, token: UUID, pos: NvimPos) -> Resp:
-    nvim.api.exec_lua("")
-
-
 class Worker(BaseWorker[None]):
     def __init__(self, supervisor: Supervisor, misc: None) -> None:
         self._lock = Lock()
         self._pending: MutableMapping[UUID, Future] = {}
         super().__init__(supervisor, misc=misc)
+
+    def _req(self, pos: NvimPos) -> None:
+        self._supervisor.nvim.api.exec_lua(_LUA, ())
 
     def notify(self, token: UUID, msg: Sequence[Any]) -> None:
         with self._lock:

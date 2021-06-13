@@ -8,7 +8,7 @@ from ..runtime import Stack
 
 
 @rpc(blocking=True)
-def comm(nvim: Nvim, stack: Stack, args: Sequence[Any]) -> None:
+def notify(nvim: Nvim, stack: Stack, args: Sequence[Any]) -> None:
     uid, *msg = args
     uuid = UUID(uid)
     stack.supervisor.notify(uuid, msg)
