@@ -1,3 +1,4 @@
-from .server.registrants import attachment, noop, omnifunc, autocmds
+from .server.registrants import attachment, autocmds, noop, notify, omnifunc
 
 ____ = None
+
