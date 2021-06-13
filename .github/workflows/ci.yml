@@ -18,7 +18,7 @@ jobs:
         uses: actions/setup-python@v2
 
       - name: Pip Packages
-        run: pip install -U mypy
+        run: pip install -U mypy types-PyYAML
 
       - name: Pip Packages
         run: pip install -U -r requirements.txt
