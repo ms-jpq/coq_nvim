@@ -14,6 +14,7 @@ from typing import Deque, Generic, Iterator, MutableSet, Sequence, TypeVar
 from weakref import WeakSet
 
 from pynvim import Nvim
+from pynvim_pp.logging import log
 
 from .settings import Options
 from .types import Completion, Context
@@ -42,7 +43,7 @@ class Supervisor:
         self._workers.add(worker)
 
     def collect(self, context: Context) -> Future:
-        fut = Future()
+        fut: Future = Future()
         acc: Deque[Completion] = deque()
 
         def supervise(worker: Worker) -> None:
@@ -77,3 +78,4 @@ class Worker(Generic[T_co]):
     @abstractmethod
     def work(self, context: Context) -> Iterator[Sequence[Completion]]:
         ...
+

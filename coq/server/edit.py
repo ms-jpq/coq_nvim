@@ -61,17 +61,17 @@ def _rows_to_fetch(
 
     def cont() -> Iterator[int]:
         for e in chain((edit,), edits):
-            if isinstance(e, Edit):
-                yield row
+            if isinstance(e, ContextualEdit):
+                lo = row - len(e.old_prefix.split(env.linefeed)) - 1
+                hi = row + len(e.old_suffix.split(env.linefeed)) - 1
+                yield from (lo, hi)
 
             elif isinstance(e, RangeEdit):
                 (lo, _), (hi, _) = e.begin, e.end
                 yield from (lo, hi)
 
-            elif isinstance(e, ContextualEdit):
-                lo = row - len(e.old_prefix.split(env.linefeed)) - 1
-                hi = row + len(e.old_suffix.split(env.linefeed)) - 1
-                yield from (lo, hi)
+            elif isinstance(e, Edit):
+                yield row
 
             else:
                 never(e)
@@ -198,16 +198,17 @@ def _instructions(
     secondary: Sequence[RangeEdit],
 ) -> Sequence[_EditInstruction]:
     def cont() -> Iterator[_EditInstruction]:
-        if isinstance(primary, Edit):
-            yield _edit_trans(ctx, env=env, edit=primary)
+        if isinstance(primary, RangeEdit):
+            yield _range_edit_trans(
+                ctx, env=env, primary=True, lines=lines, edit=primary
+            )
 
         elif isinstance(primary, ContextualEdit):
             yield _contextual_edit_trans(ctx, env=env, lines=lines, edit=primary)
 
-        elif isinstance(primary, RangeEdit):
-            yield _range_edit_trans(
-                ctx, env=env, primary=True, lines=lines, edit=primary
-            )
+        elif isinstance(primary, Edit):
+            yield _edit_trans(ctx, env=env, edit=primary)
+
         else:
             never(primary)
 
@@ -264,7 +265,7 @@ def _cursor(cursor: NvimPos, instructions: Sequence[_EditInstruction]) -> NvimPo
     return row, col
 
 
-def edit(nvim: Nvim, ctx: Context, env: EditEnv, data: UserData) -> None:
+def edit(nvim: Nvim, ctx: Context, data: UserData) -> None:
     win = cur_win(nvim)
     buf = win_get_buf(nvim, win=win)
     cursor = win_get_cursor(nvim, win=win)

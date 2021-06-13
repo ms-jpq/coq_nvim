@@ -1,5 +1,5 @@
 from concurrent.futures import ThreadPoolExecutor
-from os import cpu_count
+from multiprocessing import cpu_count
 from queue import SimpleQueue
 from typing import Any, Callable
 
@@ -32,3 +32,4 @@ def enqueue_event(event: RpcCallable, *args: Any) -> None:
     except Exception as e:
         log.exception("%s", e)
         raise
+
