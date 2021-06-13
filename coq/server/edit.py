@@ -9,11 +9,13 @@ from std2.types import never
 
 from ..shared.types import (
     ApplicableEdit,
+    Context,
     ContextualEdit,
     Edit,
     NvimPos,
     RangeEdit,
 )
+from .types import UserData
 
 
 @dataclass(frozen=True)
@@ -186,3 +188,7 @@ def _trans(
             )
 
     instructions = _consolidate(*cont())
+
+
+def edit(ctx: Context, data: UserData) -> None:
+    pass

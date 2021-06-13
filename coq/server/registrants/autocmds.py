@@ -2,9 +2,13 @@ from asyncio.events import Handle, get_running_loop
 from typing import Any, Mapping, Optional, TypedDict
 
 from pynvim.api.nvim import Nvim
+from std2.pickle import DecodeError, decode
+from std2.pickle.coders import BUILTIN_DECODERS
 
 from ...registry import autocmd, enqueue_event, rpc
+from ..edit import edit
 from ..runtime import Stack
+from ..types import UserData
 
 
 class _CompEvent(TypedDict, total=False):
@@ -40,7 +44,15 @@ autocmd("InsertLeave") << f"lua {_insert_leave.name}()"
 def _comp_done_pre(nvim: Nvim, stack: Stack, event: _CompEvent) -> None:
     data = event.get("user_data")
     if data:
-        print(data, flush=True)
+        try:
+            user_data: UserData = decode(UserData, data, decoders=BUILTIN_DECODERS)
+        except DecodeError:
+            pass
+        else:
+            if stack.state.cur:
+                ctx, _ = stack.state.cur
+                if user_data.uid == ctx.uid:
+                    edit(ctx, data=user_data)
 
 
 autocmd("CompleteDonePre") << f"lua {_comp_done_pre.name}(vim.v.completed_item)"
