@@ -138,16 +138,38 @@ def _talley(
     def key_by(metric: Tuple[Completion, SqlMetrics, _MatchMetrics]) -> float:
         _, sql, match = metric
         return (
-            (weights.insertion_order * sql["insertion_order"] / insertion_order)
-            + (weights.count_by_filetype * sql["ft_count"] / ft_count)
-            + (weights.nearest_neighbour * sql["line_diff"] / line_diff)
-            + (weights.prefix_matches * match.prefix_matches / match.prefix_matches)
+            (
+                weights.insertion_order * sql["insertion_order"] / insertion_order
+                if insertion_order
+                else 0
+            )
+            + (
+                weights.count_by_filetype * sql["ft_count"] / ft_count
+                if ft_count
+                else 0
+            )
+            + (
+                weights.nearest_neighbour * sql["line_diff"] / line_diff
+                if line_diff
+                else 0
+            )
+            + (
+                weights.prefix_matches * match.prefix_matches / match.prefix_matches
+                if match.prefix_matches
+                else 0
+            )
             + (
                 weights.consecutive_matches
                 * match.consecutive_matches
                 / consecutive_matches
+                if consecutive_matches
+                else 0
             )
-            + (weights.num_matches * match.num_matches / num_matches)
+            + (
+                weights.num_matches * match.num_matches / num_matches
+                if num_matches
+                else 0
+            )
         )
 
     completions = (comp for comp, _, _ in sorted(metrics, key=key_by))
@@ -178,3 +200,4 @@ def rank(
     gather(f1, f2)
     metrics = tuple(zip(completions, f1.result(), f2.result()))
     return _talley(weights, metrics=metrics)
+
