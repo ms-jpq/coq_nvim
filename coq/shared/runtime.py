@@ -10,7 +10,7 @@ from concurrent.futures import (
     as_completed,
 )
 from contextlib import suppress
-from typing import Deque, Generic, Iterator, MutableSet, Sequence, TypeVar
+from typing import Any, Deque, Generic, Iterator, MutableSet, Sequence, TypeVar
 from uuid import UUID
 from weakref import WeakSet
 
@@ -43,7 +43,7 @@ class Supervisor:
     def register(self, worker: Worker) -> None:
         self._workers.add(worker)
 
-    def notify(self, token: UUID, msg: Sequence[str]) -> None:
+    def notify(self, token: UUID, msg: Sequence[Any]) -> None:
         for worker in self._workers:
             worker.notify(token, msg=msg)
 
@@ -80,7 +80,7 @@ class Worker(Generic[T_co]):
         self._supervisor, self._misc = supervisor, misc
         self._supervisor.register(self)
 
-    def notify(self, token: UUID, msg: Sequence[str]) -> None:
+    def notify(self, token: UUID, msg: Sequence[Any]) -> None:
         pass
 
     @abstractmethod

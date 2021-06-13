@@ -17,7 +17,7 @@ class _Range:
 
 
 @dataclass(frozen=True)
-class _TextEdit:
+class TextEdit:
     newText: str
     range: _Range
 
@@ -34,32 +34,34 @@ _CompletionItemKind = int
 
 @dataclass(frozen=True)
 class _MarkupContent:
-    pass
-
-
-@dataclass(frozen=True)
-class _InsertTextFormat:
     kind: Union[Literal["plaintext", "markdown"], str]
     value: str
 
 
 @dataclass(frozen=True)
-class _CompletionItem:
+class _InsertTextFormat:
+    pass
+
+
+@dataclass(frozen=True)
+class CompletionItem:
     label: str
-    additionalTextEdits: Optional[Sequence[_TextEdit]] = None
+    additionalTextEdits: Optional[Sequence[TextEdit]] = None
     detail: Optional[str] = None
-    documentation: Optional[Union[str, _MarkupContent]] = None
+    documentation: Union[str, _MarkupContent, None] = None
     filterText: Optional[str] = None
     insertText: Optional[str] = None
     insertTextFormat: Optional[_InsertTextFormat] = None
     kind: Optional[_CompletionItemKind] = None
-    textEdit: Optional[Union[_TextEdit, _InsertReplaceEdit]] = None
+    sortText: Optional[str] = None
+    textEdit: Union[TextEdit, _InsertReplaceEdit, None] = None
 
 
 @dataclass(frozen=True)
 class CompletionList:
     isIncomplete: bool
-    items: Sequence[_CompletionItem]
+    items: Sequence[CompletionItem]
 
 
-Resp = Optional[Union[Sequence[_CompletionItem], CompletionList]]
+Resp = Union[None, Sequence[CompletionItem], CompletionList]
+
