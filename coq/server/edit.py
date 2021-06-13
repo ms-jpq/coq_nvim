@@ -1,9 +1,10 @@
 from dataclasses import dataclass
 from itertools import chain, repeat
-from typing import Iterable, Iterator, MutableSequence, Sequence, Tuple
+from typing import Iterator, MutableSequence, Sequence, Tuple
 
 from pynvim import Nvim
-from pynvim_pp.api import cur_win, win_get_buf, win_set_cursor
+from pynvim_pp.api import cur_win, win_get_buf, win_get_cursor, win_set_cursor
+from std2.itertools import deiter
 from std2.types import never
 
 from ..shared.types import (
@@ -34,6 +35,7 @@ class _EditInstruction:
 
 @dataclass(frozen=True)
 class _Lines:
+    lines: Sequence[str]
     b_lines8: Sequence[bytes]
     b_lines16: Sequence[bytes]
     len8: Sequence[int]
@@ -42,6 +44,7 @@ class _Lines:
 def _lines(lines: Sequence[str]) -> _Lines:
     b_lines8 = tuple(line.encode(UTF8) for line in lines)
     return _Lines(
+        lines=lines,
         b_lines8=b_lines8,
         b_lines16=tuple(line.encode(UTF16) for line in lines),
         len8=tuple(len(line) for line in b_lines8),
@@ -208,14 +211,48 @@ def _instructions(
 
 
 def _commit(
-    lines: _Lines, instructions: Iterable[_EditInstruction]
+    lines: _Lines, cursor: NvimPos, instructions: Sequence[_EditInstruction]
 ) -> Tuple[Sequence[str], NvimPos]:
-    return (), (1, 1)
+    row, col = cursor
+
+    for inst in instructions:
+        r_shift, c_shift = inst.cursor_offset
+        row += r_shift
+        col += c_shift
+
+    def cont() -> Iterator[str]:
+        it = deiter(range(len(lines.b_lines8)))
+        stack = [*reversed(instructions)]
+        inst = None
+
+        for idx in it:
+            if stack and not inst:
+                inst = stack.pop()
+            if inst:
+                (r1, c1), (r2, c2) = inst.begin, inst.end
+                if idx >= r1 or idx <= r2:
+                    it.push_back(idx)
+                    for idx, new_line in zip(it, inst.replacement):
+                        if idx == r1:
+                            yield lines.b_lines8[c1].decode(UTF8) + new_line
+                        elif idx == r2:
+                            yield new_line + lines.b_lines8[c2].decode(UTF8)
+                            break
+                        else:
+                            yield new_line
+                    inst = None
+                else:
+                    yield lines.lines[idx]
+            else:
+                yield lines.lines[idx]
+
+    return tuple(cont()), (row, col)
 
 
 def edit(nvim: Nvim, ctx: Context, env: EditEnv, data: UserData) -> None:
     win = cur_win(nvim)
     buf = win_get_buf(nvim, win=win)
+    cursor = win_get_cursor(nvim, win=win)
     env = edit_env(nvim, buf=buf)
 
     primary = (
@@ -230,7 +267,7 @@ def edit(nvim: Nvim, ctx: Context, env: EditEnv, data: UserData) -> None:
     instructions = _instructions(
         ctx, env=env, lines=view, primary=primary, secondary=data.secondary_edits
     )
-    new_lines, (n_row, n_col) = _commit(view, instructions=instructions)
+    new_lines, (n_row, n_col) = _commit(view, cursor=cursor, instructions=instructions)
 
     buf[lo:hi] = new_lines[lo:]
     win_set_cursor(nvim, win=win, row=n_row, col=n_col)
