@@ -35,8 +35,17 @@ def _parse(maybe_path: str) -> Iterator[Tuple[str, Path]]:
         except PermissionError:
             pass
     else:
-        yield from _parse(lhs)
-        pass
+        lhs, go, rhs = maybe_path.partition(sep)
+        if go:
+            yield from _parse(rhs)
+
+
+def parse(line: str) -> Iterator[Tuple[str, Path]]:
+    lhs, go, rhs = line.rpartition(sep)
+    if go:
+        left = _p_lhs(lhs)
+        maybe_path = left + sep + rhs
+        yield from _parse(maybe_path)
 
 
 class Worker(BaseWorker[None]):
@@ -44,17 +53,14 @@ class Worker(BaseWorker[None]):
         context.line_before
 
         def cont() -> Iterator[Completion]:
-            lhs, go, rhs = context.line_before.rpartition(sep)
-            if go:
-                left = _p_lhs(lhs)
-                maybe_path = left + sep + rhs
-                for prefix, path in _parse(maybe_path):
-                    new_text = str(path)
-                    edit = ContextualEdit(
-                        old_prefix=prefix, new_text=new_text, new_prefix=new_text
-                    )
-                    completion = Completion(primary_edit=edit)
-                    yield completion
+            line = context.line_before + context.words_after
+            for prefix, path in parse(line):
+                new_text = str(path)
+                edit = ContextualEdit(
+                    old_prefix=prefix, new_text=new_text, new_prefix=new_text
+                )
+                completion = Completion(primary_edit=edit)
+                yield completion
 
         yield tuple(cont())
 
