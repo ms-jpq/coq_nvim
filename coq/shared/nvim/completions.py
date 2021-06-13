@@ -1,8 +1,10 @@
-from dataclasses import asdict, dataclass
+from dataclasses import dataclass
 from enum import Enum
 from typing import Generic, Iterable, Optional, TypeVar
 
 from pynvim import Nvim
+from std2.pickle import encode
+from std2.pickle.coders import uuid_encoder
 
 T = TypeVar("T")
 
@@ -31,6 +33,13 @@ class VimCompletion(Generic[T]):
 
 def complete(nvim: Nvim, col: int, comp: Iterable[VimCompletion]) -> None:
     serialized = tuple(
-        {k: v for k, v in asdict(cmp).items() if v is not None} for cmp in comp
+        {
+            k: v
+            for k, v in encode(cmp, encoders=(uuid_encoder,)).items()
+            if v is not None
+        }
+        for cmp in comp
     )
+
     nvim.funcs.complete(col, serialized)
+

@@ -1,7 +1,8 @@
-from dataclasses import asdict
 from typing import Any, Literal, Mapping, Sequence, Tuple, Union, cast
 
 from pynvim import Nvim
+from std2.pickle import encode
+from std2.pickle.coders import uuid_encoder
 
 from ...registry import rpc, settings
 from ...shared.types import Completion
@@ -31,7 +32,12 @@ def omnifunc(
         completions = cast(Sequence[Completion], fut.result())
         comp = trans(stack, context=ctx, completions=completions)
         serialized = tuple(
-            {k: v for k, v in asdict(cmp).items() if v is not None} for cmp in comp
+            {
+                k: v
+                for k, v in encode(cmp, encoders=(uuid_encoder,)).items()
+                if v is not None
+            }
+            for cmp in comp
         )
         return serialized
 
