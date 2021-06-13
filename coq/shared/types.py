@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 from typing import Annotated, Sequence, Tuple, Union
+from uuid import UUID
 
 NvimPos = Tuple[int, Annotated[int, "In nvim, the col is a ut8 byte offset"]]
 WTF8Pos = Tuple[int, Annotated[int, "Depends on `OffsetEncoding`"]]
@@ -12,6 +13,8 @@ class Context:
     |...        line_before           🐭          line_after        ...|
     |...   <syms_before><words_before>🐭<words_after><syms_after>   ...|
     """
+
+    uid: UUID
 
     filetype: str
     filename: str
@@ -63,12 +66,13 @@ class SnippetEdit(Edit):
 
 
 ApplicableEdit = Union[Edit, RangeEdit, ContextualEdit]
+PrimaryEdit = Union[ApplicableEdit, SnippetEdit]
 
 
 @dataclass(frozen=True)
 class Completion:
     position: NvimPos
-    primary_edit: Union[ApplicableEdit, SnippetEdit]
+    primary_edit: PrimaryEdit
     secondary_edits: Sequence[RangeEdit] = ()
     label: str = ""
     short_label: str = ""

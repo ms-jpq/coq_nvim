@@ -1,4 +1,5 @@
 from typing import AbstractSet, Optional
+from uuid import uuid4
 
 from pynvim import Nvim
 from pynvim.api import Buffer
@@ -36,6 +37,7 @@ def context(
     split = gen_split(lhs=before, rhs=after, unifying_chars=unifying_chars)
 
     ctx = Context(
+        uid=uuid4(),
         filename=filename,
         filetype=filetype,
         position=pos,

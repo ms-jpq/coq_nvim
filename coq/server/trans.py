@@ -4,10 +4,16 @@ from ..shared.nvim.completions import VimCompletion
 from ..shared.types import Completion, Context
 from .metrics import rank
 from .runtime import Stack
+from .types import UserData
 
 
-def _cmp_to_vcmp(cmp: Completion) -> VimCompletion[Completion]:
+def _cmp_to_vcmp(context: Context, cmp: Completion) -> VimCompletion[UserData]:
     abbr = cmp.label or cmp.primary_edit.new_text
+    user_data = UserData(
+        uid=context.uid,
+        primary_edit=cmp.primary_edit,
+        secondary_edits=cmp.secondary_edits,
+    )
     vcmp = VimCompletion(
         word="",
         empty=1,
@@ -16,7 +22,7 @@ def _cmp_to_vcmp(cmp: Completion) -> VimCompletion[Completion]:
         abbr=abbr,
         menu=cmp.short_label,
         info=cmp.doc,
-        user_data=cmp,
+        user_data=user_data,
     )
     return vcmp
 
@@ -31,4 +37,5 @@ def trans(
         context=context,
         completions=completions,
     )
-    yield from map(_cmp_to_vcmp, ranked)
+    for cmp in ranked:
+        yield _cmp_to_vcmp(context, cmp=cmp)
