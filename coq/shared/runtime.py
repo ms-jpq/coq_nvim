@@ -50,17 +50,21 @@ class Supervisor:
                 acc.extend(completions)
 
         def cont() -> None:
-            futs = tuple(
-                self._pool.submit(supervise, worker) for worker in self._workers
-            )
-            for f in as_completed(futs):
-                try:
-                    f.result()
-                except Exception as e:
-                    log.exception("%s", e)
+            try:
+                futs = tuple(
+                    self._pool.submit(supervise, worker) for worker in self._workers
+                )
+                for f in as_completed(futs):
+                    try:
+                        f.result()
+                    except Exception as e:
+                        log.exception("%s", e)
 
-            with suppress(InvalidStateError):
-                fut.set_result(tuple(acc))
+                with suppress(InvalidStateError):
+                    fut.set_result(tuple(acc))
+            except Exception as e:
+                log.exception("%s", e)
+                raise
 
         self._pool.submit(cont)
         return fut
