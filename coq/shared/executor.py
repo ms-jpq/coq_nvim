@@ -1,17 +1,16 @@
-from concurrent.futures import Future, InvalidStateError
+from concurrent.futures import Future, InvalidStateError, ThreadPoolExecutor
 from contextlib import suppress
 from queue import SimpleQueue
-from threading import Lock, Thread
+from threading import Lock
 from typing import Any, Callable, TypeVar
 
 T = TypeVar("T")
 
 
 class Executor:
-    def __init__(self) -> None:
+    def __init__(self, pool: ThreadPoolExecutor) -> None:
         self._lock, self._q = Lock(), SimpleQueue()
-        self._th = Thread(target=self._forever, daemon=True)
-        self._started = False
+        pool.submit(self._forever)
 
     def _forever(self) -> None:
         while True:
@@ -19,10 +18,6 @@ class Executor:
             f()
 
     def submit(self, f: Callable[..., T], *args: Any, **kwargs: Any) -> T:
-        with self._lock:
-            if not self._started:
-                self._th.start()
-                self._started = True
 
         fut = Future()
 

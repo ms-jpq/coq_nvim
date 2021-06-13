@@ -1,4 +1,3 @@
-from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from difflib import SequenceMatcher
 from math import inf
@@ -6,6 +5,7 @@ from typing import Iterable, Iterator, MutableSequence, Sequence, Tuple
 
 from std2.concurrent.futures import gather
 
+from ..registry import pool
 from ..shared.parse import is_word
 from ..shared.settings import Options, Weights
 from ..shared.types import Completion, Context
@@ -155,7 +155,6 @@ def _talley(
 
 
 def rank(
-    pool: ThreadPoolExecutor,
     options: Options,
     weights: Weights,
     db: Database,

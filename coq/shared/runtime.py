@@ -41,7 +41,7 @@ class Supervisor:
     def register(self, worker: Worker) -> None:
         self._workers.add(worker)
 
-    def work(self, context: Context) -> Future:
+    def collect(self, context: Context) -> Future:
         fut = Future()
         acc: Deque[Completion] = deque()
 

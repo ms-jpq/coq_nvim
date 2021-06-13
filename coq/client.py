@@ -1,5 +1,4 @@
 from asyncio.events import AbstractEventLoop
-from concurrent.futures import ThreadPoolExecutor
 from os import linesep
 from sys import stderr
 from typing import Any, MutableMapping, Optional, cast
@@ -13,7 +12,7 @@ from std2.pickle import DecodeError
 from std2.types import AnyFun
 
 from ._registry import ____
-from .registry import atomic, autocmd, event_queue, rpc, settings
+from .registry import atomic, autocmd, event_queue, pool, rpc, settings
 from .server.registrants.attachment import BUF_EVENTS
 from .server.runtime import Stack, stack
 
@@ -21,7 +20,6 @@ from .server.runtime import Stack, stack
 class CoqClient(Client):
     def __init__(self) -> None:
         self._handlers: MutableMapping[str, RpcCallable] = {}
-        self._pool = ThreadPoolExecutor()
 
         self._stack: Optional[Stack] = None
 
@@ -46,13 +44,13 @@ class CoqClient(Client):
     def wait(self, nvim: Nvim) -> int:
         def cont() -> None:
             if isinstance(nvim.loop, AbstractEventLoop):
-                nvim.loop.set_default_executor(self._pool)
+                nvim.loop.set_default_executor(pool)
 
             rpc_atomic, specs = rpc.drain(nvim.channel_id)
             self._handlers.update(specs)
             (rpc_atomic + autocmd.drain() + atomic + settings.drain()).commit(nvim)
 
-            self._stack = stack(self._pool, nvim=nvim)
+            self._stack = stack(pool, nvim=nvim)
 
         try:
             threadsafe_call(nvim, cont)

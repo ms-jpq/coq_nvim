@@ -1,3 +1,4 @@
+from concurrent.futures import ThreadPoolExecutor
 from queue import SimpleQueue
 from typing import Any, Callable
 
@@ -12,7 +13,9 @@ def _name_gen(fn: Callable[[Callable[..., Any]], str]) -> str:
     return f"COQ{fn.__qualname__.lstrip('_')}"
 
 
+pool = ThreadPoolExecutor()
 event_queue: SimpleQueue = SimpleQueue()
+
 autocmd = AutoCMD()
 atomic = Atomic()
 rpc = RPC(name_gen=_name_gen)

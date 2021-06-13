@@ -6,6 +6,7 @@ from typing import AbstractSet, Iterable, Iterator, Mapping, Sequence, TypedDict
 
 from std2.sqllite3 import escape, with_transaction
 
+from ...registry import pool
 from ...shared.executor import Executor
 from ...shared.parse import coalesce, lower, normalize
 from .sql import sql
@@ -48,7 +49,7 @@ def _vaccum(conn: Connection) -> None:
 
 class Database:
     def __init__(self, location: str) -> None:
-        self._pool = Executor()
+        self._pool = Executor(pool)
         self._conn: Connection = self._pool.submit(_init, location)
 
     def vaccum(self) -> None:
