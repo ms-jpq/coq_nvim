@@ -46,7 +46,7 @@ def _doc(item: CompletionItem) -> Tuple[str, str]:
         return "", ""
 
 
-def _parse_item(pos: NvimPos, item: CompletionItem) -> Completion:
+def _parse_item(item: CompletionItem) -> Completion:
     primary = _primary(item)
     secondaries = tuple(map(_range_edit, item.additionalTextEdits or ()))
 
@@ -61,7 +61,6 @@ def _parse_item(pos: NvimPos, item: CompletionItem) -> Completion:
     doc, doc_type = _doc(item)
 
     cmp = Completion(
-        position=pos,
         primary_edit=primary,
         secondary_edits=secondaries,
         sort_by=sort_by,
@@ -80,11 +79,9 @@ def _parse(pos: NvimPos, reply: Any) -> Tuple[bool, Sequence[Completion]]:
         raise
     else:
         if isinstance(resp, CompletionList):
-            return resp.isIncomplete, tuple(
-                _parse_item(pos, item=item) for item in resp.items
-            )
+            return resp.isIncomplete, tuple(map(_parse_item, resp.items))
         elif isinstance(resp, Sequence):
-            return False, tuple(_parse_item(pos, item=item) for item in resp)
+            return False, tuple(map(_parse_item, resp))
         else:
             return False, ()
 
