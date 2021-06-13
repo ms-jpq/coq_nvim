@@ -11,6 +11,7 @@ from concurrent.futures import (
 )
 from contextlib import suppress
 from typing import Deque, Generic, Iterator, MutableSet, Sequence, TypeVar
+from uuid import UUID
 from weakref import WeakSet
 
 from pynvim import Nvim
@@ -41,6 +42,10 @@ class Supervisor:
 
     def register(self, worker: Worker) -> None:
         self._workers.add(worker)
+
+    def notify(self, token: UUID, msg: Sequence[str]) -> None:
+        for worker in self._workers:
+            worker.notify(token, msg=msg)
 
     def collect(self, context: Context) -> Future:
         fut: Future = Future()
@@ -74,6 +79,10 @@ class Worker(Generic[T_co]):
     def __init__(self, supervisor: Supervisor, misc: T_co) -> None:
         self._supervisor, self._misc = supervisor, misc
         self._supervisor.register(self)
+
+    @abstractmethod
+    def notify(self, token: UUID, msg: Sequence[str]) -> None:
+        ...
 
     @abstractmethod
     def work(self, context: Context) -> Iterator[Sequence[Completion]]:
