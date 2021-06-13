@@ -33,7 +33,7 @@ _CompletionItemKind = int
 
 
 @dataclass(frozen=True)
-class _MarkupContent:
+class MarkupContent:
     kind: Union[Literal["plaintext", "markdown"], str]
     value: str
 
@@ -48,7 +48,7 @@ class CompletionItem:
     label: str
     additionalTextEdits: Optional[Sequence[TextEdit]] = None
     detail: Optional[str] = None
-    documentation: Union[str, _MarkupContent, None] = None
+    documentation: Union[str, MarkupContent, None] = None
     filterText: Optional[str] = None
     insertText: Optional[str] = None
     insertTextFormat: Optional[_InsertTextFormat] = None

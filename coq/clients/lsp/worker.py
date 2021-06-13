@@ -13,15 +13,11 @@ from ...shared.runtime import Supervisor
 from ...shared.runtime import Worker as BaseWorker
 from ...shared.types import Completion, Context, Edit, NvimPos, RangeEdit
 from .runtime import LSP
-from .types import CompletionItem, CompletionList, Resp, TextEdit
+from .types import CompletionItem, CompletionList, MarkupContent, Resp, TextEdit
 
 _LSP_ARTIFACTS = ARTIFACTS_DIR / "lsp.json"
 
 _LSP: LSP = decode(LSP, loads(_LSP_ARTIFACTS.read_text("UTF-8")))
-
-
-def _req(nvim: Nvim, token: UUID, pos: NvimPos) -> Resp:
-    nvim.api.exec_lua("")
 
 
 def _range_edit(edit: TextEdit) -> RangeEdit:
@@ -39,15 +35,29 @@ def _primary(item: CompletionItem) -> Edit:
         return Edit(new_text=item.label)
 
 
+def _doc(item: CompletionItem) -> Tuple[str, str]:
+    if isinstance(item.documentation, MarkupContent):
+        return item.documentation.value, item.documentation.kind
+    elif isinstance(item.documentation, str):
+        return item.documentation, ""
+    elif item.detail:
+        return item.detail, ""
+    else:
+        return "", ""
+
+
 def _parse_item(pos: NvimPos, item: CompletionItem) -> Completion:
     primary = _primary(item)
     secondaries = tuple(map(_range_edit, item.additionalTextEdits or ()))
 
     label = item.label
-    short_label = _LSP.cmp_item_kind.lookup.get(item.kind, _LSP.cmp_item_kind.default) if item.kind else ""
+    short_label = (
+        _LSP.cmp_item_kind.lookup.get(item.kind, _LSP.cmp_item_kind.default)
+        if item.kind
+        else ""
+    )
 
-    doc = item.detail or ""
-    doc_type = "markdown"
+    doc, doc_type = _doc(item)
 
     cmp = Completion(
         position=pos,
@@ -75,6 +85,10 @@ def _parse(pos: NvimPos, reply: Any) -> Tuple[bool, Sequence[Completion]]:
             return False, tuple(_parse_item(pos, item=item) for item in resp)
         else:
             return False, ()
+
+
+def _req(nvim: Nvim, token: UUID, pos: NvimPos) -> Resp:
+    nvim.api.exec_lua("")
 
 
 class Worker(BaseWorker[None]):
