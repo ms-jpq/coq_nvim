@@ -15,7 +15,7 @@
     local params = {position = position, textDocument=text_doc}
 
     _, cancel = vim.lsp.buf_request(0, "textDocument/completion", params, function (_, _, resp)
-      COQnotify(request_id, pos, resp)
+      COQnotify(request_id, resp)
     end)
   end
 end)(...)

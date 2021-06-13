@@ -72,7 +72,7 @@ def _parse_item(item: CompletionItem) -> Completion:
     return cmp
 
 
-def _parse(pos: NvimPos, reply: Any) -> Tuple[bool, Sequence[Completion]]:
+def _parse(reply: Any) -> Tuple[bool, Sequence[Completion]]:
     try:
         resp: Resp = decode(Resp, reply, strict=False)
     except DecodeError:
@@ -93,9 +93,22 @@ class Worker(BaseWorker[None]):
         supervisor.nvim.api.exec_lua(_LUA, ())
         super().__init__(supervisor, misc=misc)
 
-    def _req(self, pos: NvimPos) -> None:
+    def _req(self, session: UUID, pos: NvimPos) -> Any:
         token = uuid4()
-        self._supervisor.nvim.api.exec_lua("COQlsp_req", (token, pos))
+        fut: Future = Future()
+
+        with self._lock:
+            self._sessions[token] = fut
+
+        self._supervisor.nvim.api.exec_lua(
+            "COQlsp_req", (str(token), str(session), pos)
+        )
+        ret = fut.result()
+
+        with self._lock:
+            if token in self._sessions:
+                self._sessions.pop(token)
+        return ret
 
     def notify(self, token: UUID, msg: Sequence[Any]) -> None:
         with self._lock:
@@ -105,19 +118,11 @@ class Worker(BaseWorker[None]):
                     self._sessions[token].set_result(reply)
 
     def work(self, context: Context) -> Iterator[Sequence[Completion]]:
-        yield ()
+        session = uuid4()
+        go = True
 
-        token = uuid4()
-        fut: Future = Future()
-
-        def cont() -> None:
-            with self._lock:
-                if token in self._sessions:
-                    self._sessions.pop(token)
-
-            ret = fut.result()
-
-
-        with self._lock:
-            self._sessions[token] = fut
+        while go:
+            reply = self._req(session, pos=context.position)
+            go, comps = _parse(reply)
+            yield comps
 
