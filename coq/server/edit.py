@@ -1,14 +1,15 @@
 from dataclasses import dataclass
-from itertools import chain
-from typing import Annotated, Iterable, Iterator, MutableSequence, Sequence
+from functools import cache
+from itertools import chain, repeat
+from typing import Iterator, MutableSequence, Sequence, Tuple
 
 from pynvim import Nvim
-from pynvim_pp.text_object import SplitCtx
-from std2.ordinal import clamp
-from std2.seq import maybe_indexed
+from pynvim_pp.api import cur_buf
 from std2.types import never
 
 from ..shared.types import (
+    UTF8,
+    UTF16,
     ApplicableEdit,
     Context,
     ContextualEdit,
@@ -23,122 +24,110 @@ from .types import UserData
 
 @dataclass(frozen=True)
 class _EditInstruction:
-    begin: int
-    end: int
+    begin: NvimPos
+    end: NvimPos
+    cursor_offset: NvimPos
     replacement: bytes
-    is_cursor: Annotated[bool, "only one instruction can place cursor"]
 
 
-def _rows_to_fetch(pos: NvimPos, edits: Iterable[ApplicableEdit]) -> range:
+class _Lines:
+    def __init__(self, lines: Sequence[str]) -> None:
+        self._lines = lines
+
+    @property
+    @cache
+    def len8(self) -> Sequence[int]:
+        lengths = tuple(len(line.encode(UTF8)) for line in self._lines)
+        return lengths
+
+    @property
+    @cache
+    def len16(self) -> Sequence[int]:
+        lengths = tuple(len(line.encode(UTF16)) // 2 for line in self._lines)
+        return lengths
+
+
+def _rows_to_fetch(
+    pos: NvimPos, edit: ApplicableEdit, *edits: ApplicableEdit
+) -> Tuple[int, int]:
     row, _ = pos
 
     def cont() -> Iterator[int]:
-        for edit in edits:
-            if isinstance(edit, Edit):
+        for e in chain((edit,), edits):
+            if isinstance(e, Edit):
                 yield row
-            elif isinstance(edit, RangeEdit):
-                (lo, _), (hi, _) = edit.begin, edit.end
+
+            elif isinstance(e, RangeEdit):
+                (lo, _), (hi, _) = e.begin, e.end
                 yield from (lo, hi)
-            elif isinstance(edit, ContextualEdit):
-                lo = row - len(edit.old_prefix.splitlines())
-                hi = row + len(edit.old_suffix.splitlines())
+
+            elif isinstance(e, ContextualEdit):
+                lo = row - len(e.old_prefix.splitlines()) - 1
+                hi = row + len(e.old_suffix.splitlines()) - 1
                 yield from (lo, hi)
+
             else:
-                never(edit)
+                never(e)
 
     line_nums = tuple(cont())
-    return range(start=min(line_nums), stop=max(line_nums) + 1)
+    return min(line_nums), max(line_nums) + 1
 
 
-def _edit_trans(
-    coding: str, pos: NvimPos, ctx: SplitCtx, lengths: Sequence[int], edit: Edit
-) -> Iterator[_EditInstruction]:
-    (row, _), col = pos, len(ctx.lhs.encode(coding))
+def _edit_trans(ctx: Context, edit: Edit) -> _EditInstruction:
+    row, _ = ctx.position
+    c1 = len(ctx.line_before.encode(UTF8))
+    c2 = c1 + len(ctx.words_before.encode(UTF8))
 
-    below = sum(lengths[:row])
-    begin = below + col - len(ctx.word_lhs.encode(coding))
-    end = begin + len(ctx.word_rhs.encode(coding))
+    begin = row, c1
+    end = row, c2
 
-    yield _EditInstruction(
+    inst = _EditInstruction(
         begin=begin,
         end=end,
-        replacement=edit.new_text.encode(coding),
-        is_cursor=True,
+        cursor_offset=(0, 0),
+        replacement=edit.new_text.encode(UTF8),
     )
+    return inst
 
 
-def _contextual_edit_trans(
-    coding: str,
-    pos: NvimPos,
-    ctx: SplitCtx,
-    lengths: Sequence[int],
-    edit: ContextualEdit,
-) -> Iterator[_EditInstruction]:
-    (row, _), col = pos, len(ctx.lhs.encode(coding))
-    replacement = edit.new_text.encode(coding)
+def _contextual_edit_trans(ctx: Context, edit: ContextualEdit) -> _EditInstruction:
+    row, _ = ctx.position
+    r1 = row - len(edit.old_prefix.encode(UTF8))
+    r2 = row - len(edit.old_prefix.encode(UTF8))
 
-    below = sum(lengths[:row])
-    op_l, os_l = len(edit.old_prefix.encode(coding)), len(
-        edit.old_suffix.encode(coding)
-    )
-    begin1 = below + col - op_l
-    end1 = begin1 + op_l
-    begin2 = end1
-    end2 = begin1 + os_l
+    c1 = len(ctx.line_before.encode(UTF8))
+    c2 = c1 + len(ctx.words_before.encode(UTF8))
 
-    yield _EditInstruction(
-        begin=begin1,
-        end=end1,
-        replacement=replacement,
-        is_cursor=True,
-    )
-    yield _EditInstruction(
-        begin=begin2,
-        end=end2,
-        replacement=replacement,
-        is_cursor=False,
-    )
+    begin = r1, c1
+    end = r2, c2
 
-
-def _range_edit_trans(
-    coding: str, offset_mul: int, lengths: Sequence[int], edit: RangeEdit
-) -> Iterator[_EditInstruction]:
-    (lo_r, lo_c), (hi_r, hi_c) = sorted((edit.begin, edit.end))
-    begin = sum(lengths[:lo_r]) + (
-        clamp(0, lo_c, maybe_indexed(lengths, at=lo_r, default=0)) * offset_mul
-    )
-    end = sum(lengths[:hi_r]) + (
-        clamp(0, hi_c, maybe_indexed(lengths, at=hi_r, default=0)) * offset_mul
-    )
-
-    yield _EditInstruction(
+    inst = _EditInstruction(
         begin=begin,
         end=end,
-        replacement=edit.new_text.encode(coding),
-        is_cursor=True,
+        cursor_offset=(0, 0),
+        replacement=edit.new_text.encode(UTF8),
     )
+    return inst
 
 
-def _primary_edit_trans(
-    coding: str,
-    pos: NvimPos,
-    ctx: SplitCtx,
-    offset_mul: int,
-    lengths: Sequence[int],
-    edit: ApplicableEdit,
-) -> Iterator[_EditInstruction]:
-    if isinstance(edit, Edit):
-        yield from _edit_trans(coding, pos=pos, ctx=ctx, lengths=lengths, edit=edit)
-    elif isinstance(edit, ContextualEdit):
-        yield from _contextual_edit_trans(
-            coding, pos=pos, ctx=ctx, lengths=lengths, edit=edit
-        )
-    elif isinstance(edit, RangeEdit):
-        yield from _range_edit_trans(
-            coding, offset_mul=offset_mul, lengths=lengths, edit=edit
-        )
-    else:
-        never(edit)
+def _range_edit_trans(ctx: Context, edit: RangeEdit) -> _EditInstruction:
+    row, _ = pos
+    r1 = row - len(edit.old_prefix.encode(UTF8))
+    r2 = row - len(edit.old_prefix.encode(UTF8))
+
+    c1 = len(ctx.line_before.encode(UTF8))
+    c2 = c1 + len(ctx.words_before.encode(UTF8))
+
+    begin = r1, c1
+    end = r2, c2
+
+    inst = _EditInstruction(
+        begin=begin,
+        end=end,
+        cursor_offset=(0, 0),
+        replacement=edit.new_text.encode(UTF8),
+    )
+    return inst
 
 
 def _consolidate(
@@ -159,35 +148,29 @@ def _consolidate(
     return stack
 
 
-def _trans(
-    pos: NvimPos,
-    ctx: SplitCtx,
-    lines: Sequence[str],
+def _instructions(
+    ctx: Context,
+    lines: _Lines,
     primary: ApplicableEdit,
-    *secondary: RangeEdit
-) -> None:
-
-    coding = "UTF-16-LE" if encoding is OffsetEncoding.utf_16 else "UTF-8"
-    offset_mul = 2 if encoding is OffsetEncoding.utf_16 else 1
-
-    b_lines = tuple((line.encode(coding) for line in lines))
-    lengths = tuple(map(len, b_lines))
-
+    secondary: Sequence[RangeEdit],
+) -> Sequence[_EditInstruction]:
     def cont() -> Iterator[_EditInstruction]:
-        yield from _primary_edit_trans(
-            coding,
-            pos=pos,
-            ctx=ctx,
-            offset_mul=offset_mul,
-            lengths=lengths,
-            edit=primary,
-        )
+        if isinstance(primary, Edit):
+            yield _edit_trans(ctx, edit=primary)
+
+        elif isinstance(primary, ContextualEdit):
+            yield _contextual_edit_trans(ctx, edit=primary)
+
+        elif isinstance(primary, RangeEdit):
+            yield _range_edit_trans(ctx, lengths=lengths, edit=primary)
+        else:
+            never(primary)
+
         for edit in secondary:
-            yield from _range_edit_trans(
-                coding, offset_mul=offset_mul, lengths=lengths, edit=edit
-            )
+            yield from _range_edit_trans(lengths=lengths, edit=edit)
 
     instructions = _consolidate(*cont())
+    return instructions
 
 
 def edit(nvim: Nvim, ctx: Context, data: UserData) -> None:
@@ -195,4 +178,12 @@ def edit(nvim: Nvim, ctx: Context, data: UserData) -> None:
         parse(nvim, snippet=data.primary_edit)
         if isinstance(data.primary_edit, SnippetEdit)
         else data.primary_edit
+    )
+    lo, hi = _rows_to_fetch(ctx.position, primary, *data.secondary_edits)
+    buf = cur_buf(nvim)
+    lines = tuple(chain(repeat("", times=lo), buf[lo:hi]))
+    view = _Lines(lines=lines)
+
+    instructions = _instructions(
+        ctx, lines=view, primary=primary, secondary=data.secondary_edits
     )

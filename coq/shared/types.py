@@ -2,8 +2,16 @@ from dataclasses import dataclass
 from typing import Annotated, Sequence, Tuple, Union
 from uuid import UUID
 
+UTF8 = "UTF-8"
+UTF16 = "UTF-16-LE"
+
 NvimPos = Tuple[int, Annotated[int, "In nvim, the col is a ut8 byte offset"]]
 WTF8Pos = Tuple[int, Annotated[int, "Depends on `OffsetEncoding`"]]
+
+BYTE_TRANS = {
+    UTF8: 1,
+    UTF16: 2,
+}
 
 
 @dataclass(frozen=True)
@@ -58,6 +66,7 @@ class RangeEdit(Edit):
 
     begin: WTF8Pos
     end: WTF8Pos
+    encoding: str = UTF16
 
 
 @dataclass(frozen=True)
