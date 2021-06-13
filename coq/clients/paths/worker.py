@@ -38,9 +38,7 @@ class Worker(BaseWorker[None]):
         def cont() -> Iterator[Completion]:
             segments = context.line_before.split(sep)
             if len(segments) > 1:
-                _, *segs = segments
-
-                for prefix, path in _parse(segs):
+                for prefix, path in _parse(segments):
                     new_text = str(path)
                     edit = ContextualEdit(
                         old_prefix=prefix, new_text=new_text, new_prefix=new_text
