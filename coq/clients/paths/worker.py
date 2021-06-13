@@ -14,24 +14,24 @@ def _p_lhs(lhs: str) -> str:
         return ""
 
 
-def _parse(maybe_path: str) -> Iterator[Tuple[str, Path]]:
+def _parse(maybe_path: str) -> Iterator[Tuple[str, str]]:
     entire = Path(maybe_path)
     lhs, go, rhs = maybe_path.rpartition(sep)
     left_side = Path(lhs)
 
     if entire.is_dir():
-        prefix = str(entire)
         try:
+            prefix = maybe_path
             for path in entire.iterdir():
-                yield prefix, path
+                yield prefix, str(path)
         except PermissionError:
             pass
     elif go and left_side.is_dir():
-        prefix = str(left_side)
+        prefix = lhs + sep + rhs
         try:
             for path in left_side.iterdir():
                 if path.name.startswith(rhs):
-                    yield prefix, path
+                    yield prefix, str(path)
         except PermissionError:
             pass
     else:
@@ -40,7 +40,7 @@ def _parse(maybe_path: str) -> Iterator[Tuple[str, Path]]:
             yield from _parse(rhs)
 
 
-def parse(line: str) -> Iterator[Tuple[str, Path]]:
+def parse(line: str) -> Iterator[Tuple[str, str]]:
     lhs, go, rhs = line.rpartition(sep)
     if go:
         left = _p_lhs(lhs)
@@ -54,8 +54,7 @@ class Worker(BaseWorker[None]):
 
         def cont() -> Iterator[Completion]:
             line = context.line_before + context.words_after
-            for prefix, path in parse(line):
-                new_text = str(path)
+            for prefix, new_text in parse(line):
                 edit = ContextualEdit(
                     old_prefix=prefix, new_text=new_text, new_prefix=new_text
                 )
