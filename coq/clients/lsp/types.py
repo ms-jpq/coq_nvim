@@ -53,7 +53,6 @@ class CompletionItem:
     insertText: Optional[str] = None
     insertTextFormat: Optional[_InsertTextFormat] = None
     kind: Optional[_CompletionItemKind] = None
-    sortText: Optional[str] = None
     textEdit: Union[TextEdit, _InsertReplaceEdit, None] = None
 
 

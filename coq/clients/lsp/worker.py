@@ -50,6 +50,7 @@ def _parse_item(pos: NvimPos, item: CompletionItem) -> Completion:
     primary = _primary(item)
     secondaries = tuple(map(_range_edit, item.additionalTextEdits or ()))
 
+    sort_by = item.filterText or ""
     label = item.label
     short_label = (
         _LSP.cmp_item_kind.lookup.get(item.kind, _LSP.cmp_item_kind.default)
@@ -63,6 +64,7 @@ def _parse_item(pos: NvimPos, item: CompletionItem) -> Completion:
         position=pos,
         primary_edit=primary,
         secondary_edits=secondaries,
+        sort_by=sort_by,
         label=label,
         short_label=short_label,
         doc=doc,

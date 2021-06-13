@@ -83,6 +83,7 @@ class Completion:
     position: NvimPos
     primary_edit: PrimaryEdit
     secondary_edits: Sequence[RangeEdit] = ()
+    sort_by: str = ""
     label: str = ""
     short_label: str = ""
     doc: str = ""

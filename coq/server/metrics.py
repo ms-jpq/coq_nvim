@@ -162,7 +162,7 @@ def rank(
     completions: Sequence[Completion],
 ) -> Iterator[Completion]:
     def c1() -> Sequence[SqlMetrics]:
-        words = (comp.primary_edit.new_text for comp in completions)
+        words = (comp.sort_by or comp.primary_edit.new_text for comp in completions)
         row, _ = context.position
         return db.metric(
             words,
