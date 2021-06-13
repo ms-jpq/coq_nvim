@@ -1,5 +1,4 @@
 from dataclasses import dataclass
-from functools import cache
 from itertools import chain, repeat
 from typing import Iterable, Iterator, MutableSequence, Sequence, Tuple
 
@@ -26,6 +25,7 @@ from .types import UserData
 
 @dataclass(frozen=True)
 class _EditInstruction:
+    primary: bool
     begin: NvimPos
     end: NvimPos
     cursor_offset: NvimPos
@@ -34,14 +34,19 @@ class _EditInstruction:
 
 @dataclass(frozen=True)
 class _Lines:
+    lines: Sequence[str]
+    b_lines8: Sequence[bytes]
+    b_lines16: Sequence[bytes]
     len8: Sequence[int]
-    len16: Sequence[int]
 
 
 def _lines(lines: Sequence[str]) -> _Lines:
+    b_lines8 = tuple(line.encode(UTF8) for line in lines)
     return _Lines(
-        len8=tuple(len(line.encode(UTF8)) for line in lines),
-        len16=tuple(len(line.encode(UTF16)) // 2 for line in lines),
+        lines=lines,
+        b_lines8=b_lines8,
+        b_lines16=tuple(line.encode(UTF16) for line in lines),
+        len8=tuple(len(line) for line in b_lines8),
     )
 
 
@@ -82,6 +87,7 @@ def _edit_trans(ctx: Context, edit: Edit) -> _EditInstruction:
     cursor_offset = 0, c1 - col
 
     inst = _EditInstruction(
+        primary=True,
         begin=begin,
         end=end,
         cursor_offset=cursor_offset,
@@ -116,6 +122,7 @@ def _contextual_edit_trans(
     cursor_offset = 0, 0
 
     inst = _EditInstruction(
+        primary=True,
         begin=begin,
         end=end,
         cursor_offset=cursor_offset,
@@ -124,19 +131,24 @@ def _contextual_edit_trans(
     return inst
 
 
-def _range_edit_trans(ctx: Context, lines: _Lines, edit: RangeEdit) -> _EditInstruction:
+def _range_edit_trans(
+    primary: bool, lines: _Lines, edit: RangeEdit
+) -> _EditInstruction:
     (r1, ec1), (r2, ec2) = edit.begin, edit.end
 
-    c1 = len(ctx.line_before.encode(UTF8))
-    c2 = c1 + len(ctx.words_before.encode(UTF8))
+    assert edit.encoding == UTF16
+    c1 = len(lines.b_lines16[ec1].decode(UTF16).encode(UTF8))
+    c2 = len(lines.b_lines16[ec2].decode(UTF16).encode(UTF8))
 
     begin = r1, c1
     end = r2, c2
+    cursor_offset = 0, 0
 
     inst = _EditInstruction(
+        primary=primary,
         begin=begin,
         end=end,
-        cursor_offset=(0, 0),
+        cursor_offset=cursor_offset,
         replacement=edit.new_text.encode(UTF8),
     )
     return inst
@@ -146,12 +158,12 @@ def _consolidate(
     instruction: _EditInstruction, *instructions: _EditInstruction
 ) -> Sequence[_EditInstruction]:
     edits = sorted(chain((instruction,), instructions), key=lambda i: (i.begin, i.end))
-    pivot = 0
+    pivot = 0, 0
     stack: MutableSequence[_EditInstruction] = []
     for edit in edits:
         if edit.begin >= pivot:
             stack.append(edit)
-        elif edit.is_cursor:
+        elif edit.primary:
             if stack:
                 stack.pop()
             stack.append(edit)
@@ -175,12 +187,12 @@ def _instructions(
             yield _contextual_edit_trans(ctx, env=env, lines=lines, edit=primary)
 
         elif isinstance(primary, RangeEdit):
-            yield _range_edit_trans(ctx, lines=lines, edit=primary)
+            yield _range_edit_trans(True, lines=lines, edit=primary)
         else:
             never(primary)
 
         for edit in secondary:
-            yield _range_edit_trans(ctx, lines=lines, edit=edit)
+            yield _range_edit_trans(False, lines=lines, edit=edit)
 
     instructions = _consolidate(*cont())
     return instructions
