@@ -23,14 +23,17 @@ from ..snippets.parse import parse
 from .context import edit_env
 from .types import UserData
 
+_Offset = int
+_AbsPos = int
+
 
 @dataclass(frozen=True)
 class _EditInstruction:
     primary: bool
     begin: NvimPos
     end: NvimPos
-    cursor_offset: NvimPos
-    replacement: Sequence[str]
+    cursor_offset: Tuple[_Offset, _AbsPos]
+    new_lines: Sequence[str]
 
 
 @dataclass(frozen=True)
@@ -86,14 +89,14 @@ def _edit_trans(ctx: Context, env: EditEnv, edit: Edit) -> _EditInstruction:
     begin = row, c1
     end = row, c2
     cursor_offset = 0, c1 - col
-    replacement = tuple(line for line in edit.new_text.split(env.linefeed))
+    new_lines = tuple(line for line in edit.new_text.split(env.linefeed))
 
     inst = _EditInstruction(
         primary=True,
         begin=begin,
         end=end,
         cursor_offset=cursor_offset,
-        replacement=replacement,
+        new_lines=new_lines,
     )
     return inst
 
@@ -121,22 +124,23 @@ def _contextual_edit_trans(
 
     begin = r1, c1
     end = r2, c2
-    cursor_offset = 0, 0
-    replacement = tuple(line for line in edit.new_text.split(env.linefeed))
+    cursor_offset = -len(prefix_lines) + 1, len(prefix_lines[-1].encode(UTF8))
+    new_lines = tuple(line for line in edit.new_text.split(env.linefeed))
 
     inst = _EditInstruction(
         primary=True,
         begin=begin,
         end=end,
         cursor_offset=cursor_offset,
-        replacement=replacement,
+        new_lines=new_lines,
     )
     return inst
 
 
 def _range_edit_trans(
-    primary: bool, env: EditEnv, lines: _Lines, edit: RangeEdit
+    ctx: Context, env: EditEnv, primary: bool, lines: _Lines, edit: RangeEdit
 ) -> _EditInstruction:
+    row, _ = ctx.position
     (r1, ec1), (r2, ec2) = sorted((edit.begin, edit.end))
 
     assert edit.encoding == UTF16
@@ -145,15 +149,17 @@ def _range_edit_trans(
 
     begin = r1, c1
     end = r2, c2
-    cursor_offset = 0, 0
-    replacement = tuple(line for line in edit.new_text.split(env.linefeed))
+    new_lines = tuple(line for line in edit.new_text.split(env.linefeed))
+    cursor_offset = row - r1 + r2, (
+        len(new_lines[-1].encode("UTF8")) if primary else -1
+    )
 
     inst = _EditInstruction(
         primary=primary,
         begin=begin,
         end=end,
         cursor_offset=cursor_offset,
-        replacement=replacement,
+        new_lines=new_lines,
     )
     return inst
 
@@ -199,12 +205,14 @@ def _instructions(
             yield _contextual_edit_trans(ctx, env=env, lines=lines, edit=primary)
 
         elif isinstance(primary, RangeEdit):
-            yield _range_edit_trans(True, env=env, lines=lines, edit=primary)
+            yield _range_edit_trans(
+                ctx, env=env, primary=True, lines=lines, edit=primary
+            )
         else:
             never(primary)
 
         for edit in secondary:
-            yield _range_edit_trans(False, env=env, lines=lines, edit=edit)
+            yield _range_edit_trans(ctx, env=env, primary=False, lines=lines, edit=edit)
 
     instructions = _consolidate(*cont())
     return instructions
@@ -226,7 +234,7 @@ def _new_lines(
                 (r1, c1), (r2, c2) = inst.begin, inst.end
                 if idx >= r1 or idx <= r2:
                     it.push_back(idx)
-                    for idx, new_line in zip(it, inst.replacement):
+                    for idx, new_line in zip(it, inst.new_lines):
                         if idx == r1:
                             yield lines.b_lines8[c1].decode(UTF8) + new_line
                         elif idx == r2:
@@ -244,12 +252,14 @@ def _new_lines(
 
 
 def _cursor(cursor: NvimPos, instructions: Sequence[_EditInstruction]) -> NvimPos:
-    row, col = cursor
+    row, _ = cursor
+    col = -1
 
     for inst in instructions:
-        r_shift, c_shift = inst.cursor_offset
+        r_shift, col = inst.cursor_offset
         row += r_shift
-        col += c_shift
+        if inst.primary:
+            break
 
     return row, col
 
