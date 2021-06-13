@@ -130,7 +130,7 @@ class Database:
         filename: str,
         line_num: int,
     ) -> Sequence[SqlMetrics]:
-        def m1() -> Iterator[Mapping]:
+        def it() -> Iterator[Mapping]:
             for word in words:
                 yield {
                     "word": word,
@@ -142,7 +142,7 @@ class Database:
         def cont() -> Sequence[SqlMetrics]:
             with closing(self._conn.cursor()) as cursor:
                 with with_transaction(cursor):
-                    cursor.execute(sql("select", "word_metrics"), m1())
+                    cursor.execute(sql("select", "word_metrics"), it())
                     return cursor.fetchall()
 
         return self._pool.submit(cont)
