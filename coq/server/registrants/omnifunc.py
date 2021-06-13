@@ -1,13 +1,13 @@
+from dataclasses import asdict
 from typing import Any, Literal, Mapping, Sequence, Tuple, Union, cast
 
 from pynvim import Nvim
 
 from ...registry import rpc, settings
 from ...shared.types import Completion
-
-from ...shared.nvim.completions import
 from ..context import context
 from ..runtime import Stack
+from ..trans import trans
 
 
 @rpc(blocking=True)
@@ -28,7 +28,11 @@ def omnifunc(
         )
         fut = stack.supervisor.collect(ctx)
         completions = cast(Sequence[Completion], fut.result())
-        return ({"word": "--TODO--"},)
+        comp = trans(stack, context=ctx, completions=completions)
+        serialized = tuple(
+            {k: v for k, v in asdict(cmp).items() if v is not None} for cmp in comp
+        )
+        return serialized
 
 
 settings["completefunc"] = omnifunc.name
