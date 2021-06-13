@@ -21,3 +21,20 @@ class Parser(TestCase):
         )
         self.assertEqual(actual, expected)
 
+    def test_3(self) -> None:
+        line = "abc./.gith"
+        actual = sorted(parse(line))
+        expected = sorted((("./.gith", "./.github/"),))
+        self.assertEqual(actual, expected)
+
+    def test_4(self) -> None:
+        line = "def./.github"
+        actual = sorted(parse(line))
+        expected = sorted(
+            (
+                ("./.github", "./.github/.agp"),
+                ("./.github", "./.github/workflows/"),
+            )
+        )
+        self.assertEqual(actual, expected)
+
