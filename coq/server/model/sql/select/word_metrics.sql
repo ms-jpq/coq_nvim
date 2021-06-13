@@ -26,7 +26,7 @@ WITH q1 AS (
     files.filename = :filename
     AND
     words.word = :word
-),
+)
 SELECT
   q1.insertion_order,
   q2.ft_count,
