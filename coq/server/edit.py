@@ -134,7 +134,7 @@ def _contextual_edit_trans(
 def _range_edit_trans(
     primary: bool, env: EditEnv, lines: _Lines, edit: RangeEdit
 ) -> _EditInstruction:
-    (r1, ec1), (r2, ec2) = edit.begin, edit.end
+    (r1, ec1), (r2, ec2) = sorted((edit.begin, edit.end))
 
     assert edit.encoding == UTF16
     c1 = len(lines.b_lines16[ec1].decode(UTF16).encode(UTF8))
@@ -161,15 +161,23 @@ def _consolidate(
     edits = sorted(chain((instruction,), instructions), key=lambda i: (i.begin, i.end))
     pivot = 0, 0
     stack: MutableSequence[_EditInstruction] = []
+
     for edit in edits:
         if edit.begin >= pivot:
             stack.append(edit)
+            pivot = edit.end
+
         elif edit.primary:
-            if stack:
-                stack.pop()
+            while stack:
+                conflicting = stack.pop()
+                if conflicting.end <= edit.begin:
+                    break
             stack.append(edit)
+            pivot = edit.end
+
         else:
             pass
+
     return stack
 
 
@@ -199,7 +207,9 @@ def _instructions(
     return instructions
 
 
-def _commit(instructions: Iterable[_EditInstruction]) -> Tuple[Sequence[str], NvimPos]:
+def _commit(
+    lines: _Lines, instructions: Iterable[_EditInstruction]
+) -> Tuple[Sequence[str], NvimPos]:
     return (), (1, 1)
 
 
@@ -220,8 +230,8 @@ def edit(nvim: Nvim, ctx: Context, env: EditEnv, data: UserData) -> None:
     instructions = _instructions(
         ctx, env=env, lines=view, primary=primary, secondary=data.secondary_edits
     )
-    new_lines, (n_row, n_col) = _commit(instructions=instructions)
+    new_lines, (n_row, n_col) = _commit(view, instructions=instructions)
 
-    buf[lo:hi] = new_lines
+    buf[lo:hi] = new_lines[lo:]
     win_set_cursor(nvim, win=win, row=n_row, col=n_col)
 
