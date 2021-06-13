@@ -130,20 +130,22 @@ class Database:
         filename: str,
         line_num: int,
     ) -> Sequence[SqlMetrics]:
-        def it() -> Iterator[Mapping]:
-            for word in words:
-                yield {
-                    "word": word,
-                    "filetype": filetype,
-                    "filename": filename,
-                    "line_num": line_num,
-                }
-
         def cont() -> Sequence[SqlMetrics]:
-            with closing(self._conn.cursor()) as cursor:
-                with with_transaction(cursor):
-                    cursor.execute(sql("select", "word_metrics"), it())
-                    return cursor.fetchall()
+            def c2() -> Iterator[SqlMetrics]:
+                with closing(self._conn.cursor()) as cursor:
+                    for word in words:
+                        cursor.execute(
+                            sql("select", "word_metrics"),
+                            {
+                                "word": word,
+                                "filetype": filetype,
+                                "filename": filename,
+                                "line_num": line_num,
+                            },
+                        )
+                        yield cursor.fetchone()
+
+            return tuple(c2())
 
         return self._pool.submit(cont)
 
