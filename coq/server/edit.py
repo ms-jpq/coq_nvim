@@ -210,19 +210,13 @@ def _instructions(
     return instructions
 
 
-def _commit(
-    lines: _Lines, cursor: NvimPos, instructions: Sequence[_EditInstruction]
-) -> Tuple[Sequence[str], NvimPos]:
-    row, col = cursor
-
-    for inst in instructions:
-        r_shift, c_shift = inst.cursor_offset
-        row += r_shift
-        col += c_shift
+def _new_lines(
+    lines: _Lines, instructions: Sequence[_EditInstruction]
+) -> Sequence[str]:
+    it = deiter(range(len(lines.b_lines8)))
+    stack = [*reversed(instructions)]
 
     def cont() -> Iterator[str]:
-        it = deiter(range(len(lines.b_lines8)))
-        stack = [*reversed(instructions)]
         inst = None
 
         for idx in it:
@@ -246,7 +240,18 @@ def _commit(
             else:
                 yield lines.lines[idx]
 
-    return tuple(cont()), (row, col)
+    return tuple(cont())
+
+
+def _cursor(cursor: NvimPos, instructions: Sequence[_EditInstruction]) -> NvimPos:
+    row, col = cursor
+
+    for inst in instructions:
+        r_shift, c_shift = inst.cursor_offset
+        row += r_shift
+        col += c_shift
+
+    return row, col
 
 
 def edit(nvim: Nvim, ctx: Context, env: EditEnv, data: UserData) -> None:
@@ -267,7 +272,8 @@ def edit(nvim: Nvim, ctx: Context, env: EditEnv, data: UserData) -> None:
     instructions = _instructions(
         ctx, env=env, lines=view, primary=primary, secondary=data.secondary_edits
     )
-    new_lines, (n_row, n_col) = _commit(view, cursor=cursor, instructions=instructions)
+    new_lines = _new_lines(view, instructions=instructions)
+    n_row, n_col = _cursor(cursor, instructions=instructions)
 
     buf[lo:hi] = new_lines[lo:]
     win_set_cursor(nvim, win=win, row=n_row, col=n_col)
