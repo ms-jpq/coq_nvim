@@ -6,6 +6,8 @@ from pynvim.api import Buffer
 from pynvim_pp.api import (
     buf_filetype,
     buf_get_lines,
+    buf_get_option,
+    buf_linefeed,
     buf_name,
     cur_win,
     win_get_buf,
@@ -13,7 +15,7 @@ from pynvim_pp.api import (
 )
 from pynvim_pp.text_object import gen_split
 
-from ..shared.types import Context
+from ..shared.types import Context, EditEnv
 
 
 def context(
@@ -56,3 +58,13 @@ def context(
 
 def should_complete(context: Context) -> bool:
     return context.line_before != "" and not context.line_before.isspace()
+
+
+def edit_env(nvim: Nvim, buf: Buffer) -> EditEnv:
+    env = EditEnv(
+        linefeed=buf_linefeed(nvim, buf=buf),
+        tabstop=buf_get_option(nvim, buf=buf, key="tabstop"),
+        expandtab=buf_get_option(nvim, buf=buf, key="expandtab"),
+    )
+    return env
+

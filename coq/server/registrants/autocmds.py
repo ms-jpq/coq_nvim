@@ -80,3 +80,4 @@ def _cursor_hold(nvim: Nvim, stack: Stack) -> None:
 
 
 autocmd("CursorHold", "CursorHoldI") << f"lua {_cursor_hold.name}()"
+

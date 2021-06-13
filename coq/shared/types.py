@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Annotated, Sequence, Tuple, Union
+from typing import Annotated, Literal, Sequence, Tuple, Union
 from uuid import UUID
 
 UTF8 = "UTF-8"
@@ -87,3 +87,10 @@ class Completion:
     short_label: str = ""
     doc: str = ""
     doc_type: str = ""
+
+
+@dataclass(frozen=True)
+class EditEnv:
+    linefeed: Literal["\r\n", "\n", "\r"]
+    tabstop: bool
+    expandtab: bool

@@ -14,11 +14,13 @@ from ..shared.types import (
     Context,
     ContextualEdit,
     Edit,
+    EditEnv,
     NvimPos,
     RangeEdit,
     SnippetEdit,
 )
 from ..snippets.parse import parse
+from .context import edit_env
 from .types import UserData
 
 
@@ -48,7 +50,7 @@ class _Lines:
 
 
 def _rows_to_fetch(
-    pos: NvimPos, edit: ApplicableEdit, *edits: ApplicableEdit
+    pos: NvimPos, env: EditEnv, edit: ApplicableEdit, *edits: ApplicableEdit
 ) -> Tuple[int, int]:
     row, _ = pos
 
@@ -62,8 +64,8 @@ def _rows_to_fetch(
                 yield from (lo, hi)
 
             elif isinstance(e, ContextualEdit):
-                lo = row - len(e.old_prefix.splitlines()) - 1
-                hi = row + len(e.old_suffix.splitlines()) - 1
+                lo = row - len(e.old_prefix.split(env.linefeed)) - 1
+                hi = row + len(e.old_suffix.split(env.linefeed)) - 1
                 yield from (lo, hi)
 
             else:
@@ -74,37 +76,44 @@ def _rows_to_fetch(
 
 
 def _edit_trans(ctx: Context, edit: Edit) -> _EditInstruction:
-    row, _ = ctx.position
+    row, col = ctx.position
+
     c1 = len(ctx.line_before.encode(UTF8))
     c2 = c1 + len(ctx.words_before.encode(UTF8))
 
     begin = row, c1
     end = row, c2
+    cursor_offset = 0, c1 - col
 
     inst = _EditInstruction(
         begin=begin,
         end=end,
-        cursor_offset=(0, 0),
+        cursor_offset=cursor_offset,
         replacement=edit.new_text.encode(UTF8),
     )
     return inst
 
 
-def _contextual_edit_trans(ctx: Context, edit: ContextualEdit) -> _EditInstruction:
-    row, _ = ctx.position
-    r1 = row - len(edit.old_prefix.encode(UTF8))
-    r2 = row - len(edit.old_prefix.encode(UTF8))
+def _contextual_edit_trans(
+    ctx: Context, env: EditEnv, edit: ContextualEdit
+) -> _EditInstruction:
+    row, col = ctx.position
+    lop = len(edit.old_prefix.split(env.linefeed))
+    los = len(edit.old_suffix.split(env.linefeed))
 
-    c1 = len(ctx.line_before.encode(UTF8))
-    c2 = c1 + len(ctx.words_before.encode(UTF8))
+    r1 = row - lop - 1
+    r2 = row + los - 1
+    c1 = 0 if lop > 1 else 0
+    c2 = 0 if los > 1 else 0
 
     begin = r1, c1
     end = r2, c2
+    cursor_offset = 0, 0
 
     inst = _EditInstruction(
         begin=begin,
         end=end,
-        cursor_offset=(0, 0),
+        cursor_offset=cursor_offset,
         replacement=edit.new_text.encode(UTF8),
     )
     return inst
@@ -150,6 +159,7 @@ def _consolidate(
 
 def _instructions(
     ctx: Context,
+    env: EditEnv,
     lines: _Lines,
     primary: ApplicableEdit,
     secondary: Sequence[RangeEdit],
@@ -173,17 +183,20 @@ def _instructions(
     return instructions
 
 
-def edit(nvim: Nvim, ctx: Context, data: UserData) -> None:
+def edit(nvim: Nvim, ctx: Context, env: EditEnv, data: UserData) -> None:
+    buf = cur_buf(nvim)
+    env = edit_env(nvim, buf=buf)
+
     primary = (
-        parse(nvim, snippet=data.primary_edit)
+        parse(nvim, env=env, snippet=data.primary_edit)
         if isinstance(data.primary_edit, SnippetEdit)
         else data.primary_edit
     )
-    lo, hi = _rows_to_fetch(ctx.position, primary, *data.secondary_edits)
-    buf = cur_buf(nvim)
+    lo, hi = _rows_to_fetch(ctx.position, env, primary, *data.secondary_edits)
     lines = tuple(chain(repeat("", times=lo), buf[lo:hi]))
     view = _Lines(lines=lines)
 
     instructions = _instructions(
-        ctx, lines=view, primary=primary, secondary=data.secondary_edits
+        ctx, env=env, lines=view, primary=primary, secondary=data.secondary_edits
     )
+
