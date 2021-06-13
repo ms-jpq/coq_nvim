@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from abc import abstractmethod
+from collections import deque
 from concurrent.futures import (
     Future,
     InvalidStateError,
@@ -8,12 +9,11 @@ from concurrent.futures import (
     as_completed,
 )
 from contextlib import suppress
-from threading import Lock
-from typing import Generic, Iterator, MutableSequence, MutableSet, TypeVar
+from typing import Deque, Generic, Iterator, MutableSet, Sequence, TypeVar
 from weakref import WeakSet
 
 from pynvim import Nvim
-from pynvim_pp.log import log
+from pynvim_pp.logging import log
 
 from .settings import Options
 from .types import Completion, Context
@@ -42,15 +42,12 @@ class Supervisor:
         self._workers.add(worker)
 
     def work(self, context: Context) -> Future:
-        fut, lock = Future(), Lock()
-        acc: MutableSequence[Completion] = []
+        fut = Future()
+        acc: Deque[Completion] = deque()
 
         def supervise(worker: Worker) -> None:
-            for completion in worker.work(context):
-                if fut.cancelled():
-                    break
-                with lock:
-                    acc.append(completion)
+            for completions in worker.work(context):
+                acc.extend(completions)
 
         def cont() -> None:
             futs = tuple(
@@ -61,10 +58,9 @@ class Supervisor:
                     f.result()
                 except Exception as e:
                     log.exception("%s", e)
-            with lock:
-                ret = tuple(acc)
+
             with suppress(InvalidStateError):
-                fut.set_result(ret)
+                fut.set_result(tuple(acc))
 
         self._pool.submit(cont)
         return fut
@@ -76,5 +72,5 @@ class Worker(Generic[T_co]):
         self._supervisor.register(self)
 
     @abstractmethod
-    def work(self, context: Context) -> Iterator[Completion]:
+    def work(self, context: Context) -> Iterator[Sequence[Completion]]:
         ...
