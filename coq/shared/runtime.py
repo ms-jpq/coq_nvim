@@ -14,7 +14,6 @@ from typing import Deque, Generic, Iterator, MutableSet, Sequence, TypeVar
 from weakref import WeakSet
 
 from pynvim import Nvim
-from pynvim_pp.logging import log
 
 from .settings import Options
 from .types import Completion, Context
@@ -65,9 +64,6 @@ class Supervisor:
                     fut.set_result(tuple(acc))
             except TimeoutError:
                 pass
-            except Exception as e:
-                log.exception("%s", e)
-                raise
 
         self._pool.submit(cont)
         return fut

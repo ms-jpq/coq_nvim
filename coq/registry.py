@@ -1,4 +1,5 @@
 from concurrent.futures import ThreadPoolExecutor
+from os import cpu_count
 from queue import SimpleQueue
 from typing import Any, Callable
 
@@ -13,7 +14,7 @@ def _name_gen(fn: Callable[[Callable[..., Any]], str]) -> str:
     return f"COQ{fn.__qualname__.lstrip('_')}"
 
 
-pool = ThreadPoolExecutor()
+pool = ThreadPoolExecutor(max_workers=min(32, cpu_count() + 6))
 event_queue: SimpleQueue = SimpleQueue()
 
 autocmd = AutoCMD()
