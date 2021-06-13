@@ -33,9 +33,9 @@ class Worker(BaseWorker[None]):
             for prefix, path in _parse(segments):
                 new_text = str(path)
                 edit = ContextualEdit(
-                    new_text=new_text, old_prefix=prefix, new_prefix=new_text
+                     old_prefix=prefix,new_text=new_text, new_prefix=new_text
                 )
-                completion = Completion(position=context.position, primary_edit=edit)
+                completion = Completion(primary_edit=edit)
                 yield completion
 
         yield tuple(cont())

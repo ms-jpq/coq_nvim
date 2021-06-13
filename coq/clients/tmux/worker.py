@@ -3,7 +3,7 @@ from dataclasses import dataclass
 from shutil import which
 from subprocess import CalledProcessError, check_output
 from time import sleep
-from typing import AbstractSet, Iterator, Mapping, Sequence
+from typing import AbstractSet, Iterator, Mapping, Sequence, Tuple
 
 from ...shared.parse import coalesce
 from ...shared.runtime import Supervisor
@@ -13,7 +13,7 @@ from ...shared.types import Completion, Context, Edit
 
 @dataclass(frozen=True)
 class _Pane:
-    pane_id: str
+    uid: str
     pane_active: bool
     window_active: bool
 
@@ -39,7 +39,7 @@ def _panes() -> Sequence[_Pane]:
             for line in out.strip().splitlines():
                 pane_id, pane_active, window_active = line.split(" ")
                 pane = _Pane(
-                    pane_id=pane_id,
+                    uid=pane_id,
                     pane_active=bool(int(pane_active)),
                     window_active=bool(int(window_active)),
                 )
@@ -48,11 +48,9 @@ def _panes() -> Sequence[_Pane]:
         return tuple(cont())
 
 
-def _screenshot(unifying_chars: AbstractSet[str], pane: _Pane) -> Sequence[str]:
+def _screenshot(unifying_chars: AbstractSet[str], uid: str) -> Sequence[str]:
     try:
-        out = check_output(
-            ("tmux", "capture-pane", "-p", "-t", pane.pane_id), text=True
-        )
+        out = check_output(("tmux", "capture-pane", "-p", "-t", uid), text=True)
     except CalledProcessError:
         return ()
     else:
@@ -62,7 +60,9 @@ def _screenshot(unifying_chars: AbstractSet[str], pane: _Pane) -> Sequence[str]:
 def _collect(
     pool: ThreadPoolExecutor, unifying_chars: AbstractSet[str]
 ) -> Mapping[_Pane, Sequence[str]]:
-    cont = lambda pane: (pane, _screenshot(unifying_chars, pane=pane))
+    def cont(pane: _Pane) -> Tuple[_Pane, Sequence[str]]:
+        return pane, _screenshot(unifying_chars, uid=pane.uid)
+
     return {pane: words for pane, words in pool.map(cont, _panes())}
 
 
@@ -88,9 +88,7 @@ class Worker(BaseWorker[None]):
                 if not (pane.window_active and pane.pane_active):
                     for word in words:
                         edit = Edit(new_text=word)
-                        completion = Completion(
-                            position=context.position, primary_edit=edit
-                        )
+                        completion = Completion(primary_edit=edit)
                         yield completion
 
         yield tuple(cont())
