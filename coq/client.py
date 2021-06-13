@@ -27,7 +27,7 @@ class CoqClient(Client):
         name, args = msg
 
         if name.startswith("nvim_buf_"):
-            handler = BUF_EVENTS[name]
+            handler = cast(AnyFun[None], BUF_EVENTS[name])
             return handler(nvim, self._stack, *args)
         else:
             handler = cast(AnyFun[None], self._handlers.get(name, nil_handler(name)))
@@ -69,3 +69,4 @@ class CoqClient(Client):
                 threadsafe_call(nvim, self._handle, nvim, msg)
             except Exception as e:
                 log.exception("%s", e)
+
