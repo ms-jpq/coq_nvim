@@ -3,7 +3,7 @@ from itertools import chain, repeat
 from typing import Iterable, Iterator, MutableSequence, Sequence, Tuple
 
 from pynvim import Nvim
-from pynvim_pp.api import cur_buf
+from pynvim_pp.api import cur_win, win_get_buf, win_set_cursor
 from std2.types import never
 
 from ..shared.types import (
@@ -29,12 +29,11 @@ class _EditInstruction:
     begin: NvimPos
     end: NvimPos
     cursor_offset: NvimPos
-    replacement: bytes
+    replacement: Sequence[str]
 
 
 @dataclass(frozen=True)
 class _Lines:
-    lines: Sequence[str]
     b_lines8: Sequence[bytes]
     b_lines16: Sequence[bytes]
     len8: Sequence[int]
@@ -43,7 +42,6 @@ class _Lines:
 def _lines(lines: Sequence[str]) -> _Lines:
     b_lines8 = tuple(line.encode(UTF8) for line in lines)
     return _Lines(
-        lines=lines,
         b_lines8=b_lines8,
         b_lines16=tuple(line.encode(UTF16) for line in lines),
         len8=tuple(len(line) for line in b_lines8),
@@ -76,7 +74,7 @@ def _rows_to_fetch(
     return min(line_nums), max(line_nums) + 1
 
 
-def _edit_trans(ctx: Context, edit: Edit) -> _EditInstruction:
+def _edit_trans(ctx: Context, env: EditEnv, edit: Edit) -> _EditInstruction:
     row, col = ctx.position
 
     c1 = len(ctx.line_before.encode(UTF8))
@@ -85,13 +83,14 @@ def _edit_trans(ctx: Context, edit: Edit) -> _EditInstruction:
     begin = row, c1
     end = row, c2
     cursor_offset = 0, c1 - col
+    replacement = tuple(line for line in edit.new_text.split(env.linefeed))
 
     inst = _EditInstruction(
         primary=True,
         begin=begin,
         end=end,
         cursor_offset=cursor_offset,
-        replacement=edit.new_text.encode(UTF8),
+        replacement=replacement,
     )
     return inst
 
@@ -120,19 +119,20 @@ def _contextual_edit_trans(
     begin = r1, c1
     end = r2, c2
     cursor_offset = 0, 0
+    replacement = tuple(line for line in edit.new_text.split(env.linefeed))
 
     inst = _EditInstruction(
         primary=True,
         begin=begin,
         end=end,
         cursor_offset=cursor_offset,
-        replacement=edit.new_text.encode(UTF8),
+        replacement=replacement,
     )
     return inst
 
 
 def _range_edit_trans(
-    primary: bool, lines: _Lines, edit: RangeEdit
+    primary: bool, env: EditEnv, lines: _Lines, edit: RangeEdit
 ) -> _EditInstruction:
     (r1, ec1), (r2, ec2) = edit.begin, edit.end
 
@@ -143,13 +143,14 @@ def _range_edit_trans(
     begin = r1, c1
     end = r2, c2
     cursor_offset = 0, 0
+    replacement = tuple(line for line in edit.new_text.split(env.linefeed))
 
     inst = _EditInstruction(
         primary=primary,
         begin=begin,
         end=end,
         cursor_offset=cursor_offset,
-        replacement=edit.new_text.encode(UTF8),
+        replacement=replacement,
     )
     return inst
 
@@ -181,29 +182,30 @@ def _instructions(
 ) -> Sequence[_EditInstruction]:
     def cont() -> Iterator[_EditInstruction]:
         if isinstance(primary, Edit):
-            yield _edit_trans(ctx, edit=primary)
+            yield _edit_trans(ctx, env=env, edit=primary)
 
         elif isinstance(primary, ContextualEdit):
             yield _contextual_edit_trans(ctx, env=env, lines=lines, edit=primary)
 
         elif isinstance(primary, RangeEdit):
-            yield _range_edit_trans(True, lines=lines, edit=primary)
+            yield _range_edit_trans(True, env=env, lines=lines, edit=primary)
         else:
             never(primary)
 
         for edit in secondary:
-            yield _range_edit_trans(False, lines=lines, edit=edit)
+            yield _range_edit_trans(False, env=env, lines=lines, edit=edit)
 
     instructions = _consolidate(*cont())
     return instructions
 
 
-def _commit(nvim: Nvim, instructions: Iterable[_EditInstruction]) -> None:
-    pass
+def _commit(instructions: Iterable[_EditInstruction]) -> Tuple[Sequence[str], NvimPos]:
+    return (), (1, 1)
 
 
 def edit(nvim: Nvim, ctx: Context, env: EditEnv, data: UserData) -> None:
-    buf = cur_buf(nvim)
+    win = cur_win(nvim)
+    buf = win_get_buf(nvim, win=win)
     env = edit_env(nvim, buf=buf)
 
     primary = (
@@ -218,5 +220,8 @@ def edit(nvim: Nvim, ctx: Context, env: EditEnv, data: UserData) -> None:
     instructions = _instructions(
         ctx, env=env, lines=view, primary=primary, secondary=data.secondary_edits
     )
-    _commit(nvim, instructions=instructions)
+    new_lines, (n_row, n_col) = _commit(instructions=instructions)
+
+    buf[lo:hi] = new_lines
+    win_set_cursor(nvim, win=win, row=n_row, col=n_col)
 
