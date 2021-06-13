@@ -1,7 +1,6 @@
 from concurrent.futures import CancelledError, Future, InvalidStateError
 from contextlib import suppress
 from json import loads
-from pathlib import Path
 from threading import Lock
 from typing import Any, Iterator, MutableMapping, Sequence, Tuple
 from uuid import UUID, uuid4
@@ -9,15 +8,16 @@ from uuid import UUID, uuid4
 from pynvim import Nvim
 from std2.pickle import DecodeError, decode
 
+from ...consts import ARTIFACTS_DIR
 from ...shared.runtime import Supervisor
 from ...shared.runtime import Worker as BaseWorker
 from ...shared.types import Completion, Context, Edit, NvimPos, RangeEdit
+from .runtime import LSP
 from .types import CompletionItem, CompletionList, Resp, TextEdit
 
-# elookup = defaultdict(lambda: "Unknown", ((v, k) for k, v in entry_kind.items()))
-# ilookup = defaultdict(lambda: "PlainText", ((v, k) for k, v in insert_kind.items()))
+_LSP_ARTIFACTS = ARTIFACTS_DIR / "lsp.json"
 
-_KIND = {}
+_LSP: LSP = decode(LSP, loads(_LSP_ARTIFACTS.read_text("UTF-8")))
 
 
 def _req(nvim: Nvim, token: UUID, pos: NvimPos) -> Resp:
@@ -44,7 +44,7 @@ def _parse_item(pos: NvimPos, item: CompletionItem) -> Completion:
     secondaries = tuple(map(_range_edit, item.additionalTextEdits or ()))
 
     label = item.label
-    short_label = _KIND[item.kind]
+    short_label = _LSP.cmp_item_kind.lookup.get(item.kind, _LSP.cmp_item_kind.default) if item.kind else ""
 
     doc = item.detail or ""
     doc_type = "markdown"

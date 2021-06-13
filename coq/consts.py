@@ -10,6 +10,7 @@ RT_DIR = _VARS / "runtime"
 RT_PY = (
     RT_DIR / "Scripts" / "python.exe" if name == "nt" else RT_DIR / "bin" / "python3"
 )
+ARTIFACTS_DIR = _TOP_LEVEL / "artifacts"
 DB_DIR = _VARS / "db"
 
 CONFIG_YML = _TOP_LEVEL / "config" / "defaults.yml"
