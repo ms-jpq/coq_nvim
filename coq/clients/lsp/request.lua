@@ -1,10 +1,12 @@
 (function (...)
   local cancel = function () end
+  local session = nil
 
-  return function (request_id, pos)
-    if cancel then
+  COQlsp_req = function (request_id, session_id, pos)
+    if cancel and session ~= session_id then
       cancel()
     end
+    session = session_id
     cancel = nil
 
     local row, col = unpack(pos)
