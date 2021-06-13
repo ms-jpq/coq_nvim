@@ -89,18 +89,20 @@ def _parse(pos: NvimPos, reply: Any) -> Tuple[bool, Sequence[Completion]]:
 class Worker(BaseWorker[None]):
     def __init__(self, supervisor: Supervisor, misc: None) -> None:
         self._lock = Lock()
-        self._pending: MutableMapping[UUID, Future] = {}
+        self._sessions: MutableMapping[UUID, Future] = {}
+        supervisor.nvim.api.exec_lua(_LUA, ())
         super().__init__(supervisor, misc=misc)
 
     def _req(self, pos: NvimPos) -> None:
-        self._supervisor.nvim.api.exec_lua(_LUA, ())
+        token = uuid4()
+        self._supervisor.nvim.api.exec_lua("COQlsp_req", (token, pos))
 
     def notify(self, token: UUID, msg: Sequence[Any]) -> None:
         with self._lock:
-            if token in self._pending:
+            if token in self._sessions:
                 reply, *_ = msg
                 with suppress(InvalidStateError):
-                    self._pending[token].set_result(reply)
+                    self._sessions[token].set_result(reply)
 
     def work(self, context: Context) -> Iterator[Sequence[Completion]]:
         yield ()
@@ -108,18 +110,14 @@ class Worker(BaseWorker[None]):
         token = uuid4()
         fut: Future = Future()
 
-        def cont(fut: Future) -> None:
+        def cont() -> None:
             with self._lock:
-                if token in self._pending:
-                    self._pending.pop(token)
-            try:
-                ret = fut.result()
-            except CancelledError:
-                pass
+                if token in self._sessions:
+                    self._sessions.pop(token)
 
-        fut.add_done_callback(cont)
+            ret = fut.result()
+
+
         with self._lock:
-            self._pending[token] = fut
-
-        _req(self._supervisor.nvim, token=token, pos=context.position)
+            self._sessions[token] = fut
 
