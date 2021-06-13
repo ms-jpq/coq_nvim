@@ -95,16 +95,25 @@ def _edit_trans(ctx: Context, edit: Edit) -> _EditInstruction:
 
 
 def _contextual_edit_trans(
-    ctx: Context, env: EditEnv, edit: ContextualEdit
+    ctx: Context, env: EditEnv, lines: _Lines, edit: ContextualEdit
 ) -> _EditInstruction:
     row, col = ctx.position
-    lop = len(edit.old_prefix.split(env.linefeed))
-    los = len(edit.old_suffix.split(env.linefeed))
+    prefix_lines = edit.old_prefix.split(env.linefeed)
+    suffix_lines = edit.old_suffix.split(env.linefeed)
 
-    r1 = row - lop - 1
-    r2 = row + los - 1
-    c1 = 0 if lop > 1 else 0
-    c2 = 0 if los > 1 else 0
+    r1 = row - len(prefix_lines) - 1
+    r2 = row + len(suffix_lines) - 1
+
+    c1 = (
+        lines.len8[r1] - len(prefix_lines[0].encode(UTF8))
+        if len(prefix_lines) > 1
+        else col - len(prefix_lines[0].encode(UTF8))
+    )
+    c2 = (
+        len(suffix_lines[-1].encode(UTF8))
+        if len(prefix_lines) > 1
+        else col + len(suffix_lines[0].encode(UTF8))
+    )
 
     begin = r1, c1
     end = r2, c2
