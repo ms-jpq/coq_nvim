@@ -91,8 +91,10 @@ def _lines_event(
                     except CancelledError:
                         pass
                     else:
-                        if stack.state.cur == ctx:
-                            enqueue_event(_cmp, cmps)
+                        if stack.state.cur:
+                            prev, _ = stack.state.cur
+                            if prev == ctx:
+                                enqueue_event(_cmp, cmps)
                 except Exception as e:
                     log.exception("%s", e)
 
