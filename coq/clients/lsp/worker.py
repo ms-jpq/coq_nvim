@@ -1,4 +1,4 @@
-from concurrent.futures import CancelledError, Future, InvalidStateError
+from concurrent.futures import Future, InvalidStateError, TimeoutError
 from contextlib import suppress
 from json import loads
 from pathlib import Path
@@ -103,7 +103,10 @@ class Worker(BaseWorker[None]):
         self._supervisor.nvim.api.exec_lua(
             "COQlsp_req", (str(token), str(session), pos)
         )
-        ret = fut.result()
+        try:
+            ret = fut.result(timeout=self._supervisor.options.timeout)
+        except TimeoutError:
+            ret = None
 
         with self._lock:
             if token in self._sessions:
