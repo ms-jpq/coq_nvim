@@ -119,7 +119,7 @@ class Database:
                         "word": word,
                     },
                 )
-                return cursor.fetchall()
+                return tuple(row["word"] for row in cursor.fetchall())
 
         return self._pool.submit(cont)
 
