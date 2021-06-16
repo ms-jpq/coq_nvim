@@ -2,7 +2,7 @@
 name: CI
 
 on:
-  # push:
+  push:
   schedule:
     - cron: "0 0 * * *" # daily
 
