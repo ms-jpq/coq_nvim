@@ -41,5 +41,5 @@ def complete(nvim: Nvim, col: int, comp: Iterable[VimCompletion]) -> None:
         for cmp in comp
     )
 
-    nvim.funcs.complete(col, serialized)
+    nvim.funcs.complete(col + 1, serialized)
 
