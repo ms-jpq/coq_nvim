@@ -34,7 +34,6 @@ def _cmp(nvim: Nvim, stack: Stack, completions: Sequence[Completion]) -> None:
 
 
 def comp_func(nvim: Nvim, stack: Stack, manual: bool) -> None:
-
     prev: Optional[Context] = None
     if stack.state.cur:
         prev, f = stack.state.cur
