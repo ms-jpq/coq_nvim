@@ -26,6 +26,7 @@ def omnifunc(
             cwd=stack.state.cwd,
         )
         fut = stack.supervisor.collect(ctx)
+        stack.state.cur = ctx, fut
         completions = cast(Sequence[Completion], fut.result())
         comp = trans(stack, context=ctx, completions=completions)
         serialized = tuple(
