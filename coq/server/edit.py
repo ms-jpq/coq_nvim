@@ -82,8 +82,9 @@ def _rows_to_fetch(
 def _edit_trans(ctx: Context, env: EditEnv, edit: Edit) -> _EditInstruction:
     row, _ = ctx.position
 
-    c1 = len(ctx.line_before.encode(UTF8)) - len(ctx.words_before.encode(UTF8))
-    c2 = c1 + len(ctx.words_before.encode(UTF8))
+    before = len(ctx.line_before.encode(UTF8))
+    c1 = before - len(ctx.words_before.encode(UTF8))
+    c2 = before
 
     begin = row, c1
     end = row, c2
