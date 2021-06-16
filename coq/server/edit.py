@@ -91,7 +91,7 @@ def _edit_trans(ctx: Context, env: EditEnv, edit: Edit) -> _EditInstruction:
     new_lines = tuple(line for line in edit.new_text.split(env.linefeed))
     cursor_yoffset = len(new_lines) - 1
     cursor_xpos = (
-        len(new_lines[-1])
+        len(new_lines[-1].encode(UTF8))
         if len(new_lines) > 1
         else c1 + len(new_lines[0].encode(UTF8))
     )
@@ -166,7 +166,15 @@ def _range_edit_trans(
 
     new_lines = tuple(line for line in edit.new_text.split(env.linefeed))
     cursor_yoffset = (r2 - r1) + (len(new_lines) - 1)
-    cursor_xpos = c2 if primary else -1
+    cursor_xpos = (
+        (
+            len(new_lines[-1].encode(UTF8))
+            if len(new_lines) > 1
+            else len(lines.b_lines8[r2][:c1]) + len(new_lines[0].encode(UTF8))
+        )
+        if primary
+        else -1
+    )
 
     inst = _EditInstruction(
         primary=primary,
