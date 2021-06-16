@@ -62,8 +62,8 @@ def _rows_to_fetch(
     def cont() -> Iterator[int]:
         for e in chain((edit,), edits):
             if isinstance(e, ContextualEdit):
-                lo = row - len(e.old_prefix.split(env.linefeed)) - 1
-                hi = row + len(e.old_suffix.split(env.linefeed)) - 1
+                lo = row - (len(e.old_prefix.split(env.linefeed)) - 1)
+                hi = row + (len(e.old_suffix.split(env.linefeed)) - 1)
                 yield from (lo, hi)
 
             elif isinstance(e, RangeEdit):
