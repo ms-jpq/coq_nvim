@@ -32,7 +32,7 @@ CREATE INDEX IF NOT EXISTS words_line_num ON words (line_num);
 CREATE TABLE IF NOT EXISTS insertions (
   rowid   INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
   content TEXT    NOT NULL
-) WITHOUT ROWID;
+);
 CREATE INDEX IF NOT EXISTS insertions_content ON insertions (content);
 
 

@@ -125,7 +125,7 @@ class Worker(BaseWorker[None]):
     def work(self, context: Context) -> Iterator[Sequence[Completion]]:
         session = uuid4()
         row, c = context.position
-        col = len(context.line_before[:c].encode(UTF16))
+        col = len(context.line_before[:c].encode(UTF16)) // 2
 
         go = True
         while go:
