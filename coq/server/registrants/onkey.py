@@ -8,7 +8,7 @@ from pynvim_pp.logging import log
 from ...registry import autocmd, enqueue_event, pool, rpc
 from ...shared.nvim.completions import complete
 from ...shared.types import Completion
-from ..context import context
+from ..context import context, should_complete
 from ..runtime import Stack
 from ..trans import trans
 
@@ -33,24 +33,25 @@ def _txt_changed(nvim: Nvim, stack: Stack) -> None:
         unifying_chars=stack.settings.match.unifying_chars,
         cwd=stack.state.cwd,
     )
-    fut = stack.supervisor.collect(ctx)
-    stack.state.cur = (ctx, fut)
+    if should_complete(ctx):
+        fut = stack.supervisor.collect(ctx)
+        stack.state.cur = (ctx, fut)
 
-    def cont() -> None:
-        try:
+        def cont() -> None:
             try:
-                cmps = fut.result()
-            except CancelledError:
-                pass
-            else:
-                if stack.state.cur:
-                    prev, _ = stack.state.cur
-                    if prev == ctx:
-                        enqueue_event(_cmp, cmps)
-        except Exception as e:
-            log.exception("%s", e)
+                try:
+                    cmps = fut.result()
+                except CancelledError:
+                    pass
+                else:
+                    if stack.state.cur:
+                        prev, _ = stack.state.cur
+                        if prev == ctx:
+                            enqueue_event(_cmp, cmps)
+            except Exception as e:
+                log.exception("%s", e)
 
-    pool.submit(cont)
+        pool.submit(cont)
 
 
 autocmd("TextChangedI", "TextChangedP") << f"lua {_txt_changed.name}()"
