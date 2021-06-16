@@ -37,4 +37,5 @@ clients:
     short_name: "TMX"
     weight: 1.0
     prefix_length: 2
+    polling_interval: 1.0
 

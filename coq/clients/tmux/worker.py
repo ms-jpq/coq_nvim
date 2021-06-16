@@ -9,11 +9,10 @@ from pynvim_pp.logging import log
 from ...shared.parse import coalesce
 from ...shared.runtime import Supervisor
 from ...shared.runtime import Worker as BaseWorker
-from ...shared.settings import BasicClient
+from ...shared.settings import PollingClient
 from ...shared.types import Completion, Context, ContextualEdit
 from .database import Database
 
-_POLL_INTERVAL = 1
 
 
 @dataclass(frozen=True)
@@ -81,9 +80,9 @@ def _comp(src: str, ctx: Context, word: str) -> Completion:
     return cmp
 
 
-class Worker(BaseWorker[BasicClient, None]):
+class Worker(BaseWorker[PollingClient, None]):
     def __init__(
-        self, supervisor: Supervisor, options: BasicClient, misc: None
+        self, supervisor: Supervisor, options: PollingClient, misc: None
     ) -> None:
         self._db = Database(supervisor.pool, location=":memory:")
         super().__init__(supervisor, options=options, misc=misc)
@@ -105,7 +104,7 @@ class Worker(BaseWorker[BasicClient, None]):
                     for pane, words in self._supervisor.pool.map(cont, _panes())
                 }
                 self._db.periodical(snapshot)
-                sleep(_POLL_INTERVAL)
+                sleep(self._options.polling_interval)
         except Exception as e:
             log.exception("%s", e)
 

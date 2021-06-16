@@ -38,11 +38,16 @@ class BasicClient(BaseClient):
 
 
 @dataclass(frozen=True)
+class PollingClient(BasicClient):
+    polling_interval: float
+
+
+@dataclass(frozen=True)
 class Clients:
     buffers: BasicClient
     lsp: BaseClient
     paths: BaseClient
-    tmux: BasicClient
+    tmux: PollingClient
     tree_sitter: BaseClient
 
 
