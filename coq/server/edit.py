@@ -23,16 +23,14 @@ from ..snippets.parse import parse
 from .context import edit_env
 from .types import UserData
 
-_Offset = int
-_AbsPos = int
-
 
 @dataclass(frozen=True)
 class _EditInstruction:
     primary: bool
     begin: NvimPos
     end: NvimPos
-    cursor_offset: Tuple[_Offset, _AbsPos]
+    cursor_yoffset: int
+    cursor_xpos: int
     new_lines: Sequence[str]
 
 
@@ -81,21 +79,24 @@ def _rows_to_fetch(
 
 
 def _edit_trans(ctx: Context, env: EditEnv, edit: Edit) -> _EditInstruction:
-    row, col = ctx.position
+    row, _ = ctx.position
 
     c1 = len(ctx.line_before.encode(UTF8))
     c2 = c1 + len(ctx.words_before.encode(UTF8))
 
     begin = row, c1
     end = row, c2
-    cursor_offset = 0, c1 - col
+
     new_lines = tuple(line for line in edit.new_text.split(env.linefeed))
+    cursor_yoffset = len(new_lines) - 1
+    cursor_xpos = len(new_lines[-1]) if len(new_lines) > 1 else c2
 
     inst = _EditInstruction(
         primary=True,
         begin=begin,
         end=end,
-        cursor_offset=cursor_offset,
+        cursor_yoffset=cursor_yoffset,
+        cursor_xpos=cursor_xpos,
         new_lines=new_lines,
     )
     return inst
@@ -124,14 +125,18 @@ def _contextual_edit_trans(
 
     begin = r1, c1
     end = r2, c2
-    cursor_offset = -len(prefix_lines) + 1, len(prefix_lines[-1].encode(UTF8))
+
     new_lines = tuple(line for line in edit.new_text.split(env.linefeed))
+
+    cursor_yoffset = -len(prefix_lines) + len(new_lines)
+    cursor_xpos = len(ctx.line_before.encode(UTF8)) - len(prefix_lines[-1].encode(UTF8))
 
     inst = _EditInstruction(
         primary=True,
         begin=begin,
         end=end,
-        cursor_offset=cursor_offset,
+        cursor_yoffset=cursor_yoffset,
+        cursor_xpos=cursor_xpos,
         new_lines=new_lines,
     )
     return inst
@@ -146,16 +151,21 @@ def _range_edit_trans(
     c1 = len(lines.b_lines16[r1][: ec1 * 2].decode(UTF16).encode(UTF8))
     c2 = len(lines.b_lines16[r2][-(ec2 * 2) :].decode(UTF16).encode(UTF8))
 
+    print([lines.b_lines16[r1][: ec1 * 2].decode(UTF16)], flush=True)
+
     begin = r1, c1
     end = r2, c2
+
     new_lines = tuple(line for line in edit.new_text.split(env.linefeed))
-    cursor_offset = (r2 - r1) - (len(new_lines) - 1), c2 if primary else -1
+    cursor_yoffset = (r2 - r1) + (len(new_lines) - 1)
+    cursor_xpos = c2 if primary else -1
 
     inst = _EditInstruction(
         primary=primary,
         begin=begin,
         end=end,
-        cursor_offset=cursor_offset,
+        cursor_yoffset=cursor_yoffset,
+        cursor_xpos=cursor_xpos,
         new_lines=new_lines,
     )
     return inst
