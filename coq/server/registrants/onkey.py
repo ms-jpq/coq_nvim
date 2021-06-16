@@ -15,7 +15,7 @@ from ..trans import trans
 
 @rpc(blocking=True)
 def _cmp(nvim: Nvim, stack: Stack, completions: Sequence[Completion]) -> None:
-    if stack.state.cur:
+    if stack.state.inserting and stack.state.cur:
         ctx, _ = stack.state.cur
         _, col = ctx.position
         comp = trans(stack, context=ctx, completions=completions)
