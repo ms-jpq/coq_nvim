@@ -3,7 +3,14 @@ from itertools import chain, repeat
 from typing import Iterator, MutableSequence, Sequence, Tuple
 
 from pynvim import Nvim
-from pynvim_pp.api import cur_win, win_get_buf, win_get_cursor, win_set_cursor
+from pynvim_pp.api import (
+    buf_get_lines,
+    buf_set_lines,
+    cur_win,
+    win_get_buf,
+    win_get_cursor,
+    win_set_cursor,
+)
 from std2.itertools import deiter
 from std2.types import never
 
@@ -338,7 +345,8 @@ def edit(nvim: Nvim, stack: Stack, data: UserData) -> None:
                 else data.primary_edit
             )
             lo, hi = _rows_to_fetch(ctx.position, env, primary, *data.secondary_edits)
-            lines = tuple(chain(repeat("", times=lo), buf[lo:hi]))
+            limited_lines = buf_get_lines(nvim, buf=buf, lo=lo, hi=hi)
+            lines = tuple(chain(repeat("", times=lo), limited_lines))
             view = _lines(lines)
 
             instructions = _instructions(
@@ -351,7 +359,7 @@ def edit(nvim: Nvim, stack: Stack, data: UserData) -> None:
             new_lines = _new_lines(view, instructions=instructions)
             n_row, n_col = _cursor(cursor, instructions=instructions)
 
-            buf[lo:hi] = new_lines[lo:]
+            buf_set_lines(nvim, buf=buf, lo=lo, hi=hi, lines=new_lines[lo:])
             win_set_cursor(nvim, win=win, row=n_row, col=n_col)
 
             stack.state.inserted = n_row, n_col
