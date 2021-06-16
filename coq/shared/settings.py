@@ -27,23 +27,23 @@ class Weights:
 
 
 @dataclass(frozen=True)
-class _BaseClient:
+class BaseClient:
     short_name: str
     weight: float
 
 
 @dataclass(frozen=True)
-class BasicClient(_BaseClient):
-    prefix_length: int
+class BasicClient(BaseClient):
+    prefix_len: int
 
 
 @dataclass(frozen=True)
 class Clients:
     buffers: BasicClient
-    lsp: _BaseClient
-    paths: _BaseClient
+    lsp: BaseClient
+    paths: BaseClient
     tmux: BasicClient
-    tree_sitter: _BaseClient
+    tree_sitter: BaseClient
 
 
 @dataclass(frozen=True)

@@ -15,6 +15,7 @@ from .settings import Options
 from .types import Completion, Context
 
 T_co = TypeVar("T_co", contravariant=True)
+O_co = TypeVar("O_co", contravariant=True)
 
 
 class Supervisor:
@@ -74,9 +75,9 @@ class Supervisor:
         return fut
 
 
-class Worker(Generic[T_co]):
-    def __init__(self, supervisor: Supervisor, misc: T_co) -> None:
-        self._supervisor, self._misc = supervisor, misc
+class Worker(Generic[O_co, T_co]):
+    def __init__(self, supervisor: Supervisor, options: O_co, misc: T_co) -> None:
+        self._supervisor, self._options, self._misc = supervisor, options, misc
         self._supervisor.register(self)
 
     def notify(self, token: UUID, msg: Sequence[Any]) -> None:

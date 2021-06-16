@@ -4,9 +4,8 @@ from pathlib import Path
 from typing import Iterator, Sequence, Tuple
 
 from ...shared.runtime import Worker as BaseWorker
+from ...shared.settings import BaseClient
 from ...shared.types import Completion, Context, ContextualEdit
-
-_SOURCE = "F"
 
 
 def _p_lhs(lhs: str) -> str:
@@ -49,7 +48,7 @@ def parse(line: str) -> Iterator[Tuple[str, str]]:
             break
 
 
-class Worker(BaseWorker[None]):
+class Worker(BaseWorker[BaseClient, None]):
     def work(self, context: Context) -> Iterator[Sequence[Completion]]:
         def cont() -> Iterator[Completion]:
             line = context.line_before + context.words_after
@@ -58,7 +57,7 @@ class Worker(BaseWorker[None]):
                     old_prefix=prefix, new_text=new_text, new_prefix=new_text
                 )
                 completion = Completion(
-                    source=_SOURCE, primary_edit=edit, label=new_text
+                    source=self._options.short_name, primary_edit=edit, label=new_text
                 )
                 yield completion
 

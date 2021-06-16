@@ -12,11 +12,11 @@ from std2.pickle import DecodeError, decode
 from ...consts import ARTIFACTS_DIR
 from ...shared.runtime import Supervisor
 from ...shared.runtime import Worker as BaseWorker
+from ...shared.settings import BaseClient
 from ...shared.types import UTF16, Completion, Context, Edit, RangeEdit, WTF8Pos
 from .runtime import LSP
 from .types import CompletionItem, CompletionList, MarkupContent, Resp, TextEdit
 
-_SOURCE = "LSP"
 _LSP_ARTIFACTS = ARTIFACTS_DIR / "lsp.json"
 _LSP: LSP = decode(LSP, loads(_LSP_ARTIFACTS.read_text("UTF-8")))
 _LUA = (Path(__file__).resolve().parent / "request.lua").read_text("UTF-8")
@@ -48,7 +48,7 @@ def _doc(item: CompletionItem) -> Tuple[str, str]:
         return "", ""
 
 
-def _parse_item(item: CompletionItem) -> Completion:
+def _parse_item(src: str, item: CompletionItem) -> Completion:
     primary = _primary(item)
     secondaries = tuple(map(_range_edit, item.additionalTextEdits or ()))
 
@@ -59,7 +59,7 @@ def _parse_item(item: CompletionItem) -> Completion:
     doc, doc_type = _doc(item)
 
     cmp = Completion(
-        source=_SOURCE,
+        source=src,
         primary_edit=primary,
         secondary_edits=secondaries,
         sort_by=sort_by,
@@ -70,26 +70,28 @@ def _parse_item(item: CompletionItem) -> Completion:
     return cmp
 
 
-def _parse(reply: Any) -> Tuple[bool, Sequence[Completion]]:
+def _parse(src: str, reply: Any) -> Tuple[bool, Sequence[Completion]]:
     try:
         resp: Resp = decode(Resp, reply, strict=False)
     except DecodeError:
         raise
     else:
         if isinstance(resp, CompletionList):
-            return resp.isIncomplete, tuple(map(_parse_item, resp.items))
+            return resp.isIncomplete, tuple(
+                _parse_item(src, item=item) for item in resp.items
+            )
         elif isinstance(resp, Sequence):
-            return False, tuple(map(_parse_item, resp))
+            return False, tuple(_parse_item(src, item=item) for item in resp)
         else:
             return False, ()
 
 
-class Worker(BaseWorker[None]):
-    def __init__(self, supervisor: Supervisor, misc: None) -> None:
+class Worker(BaseWorker[BaseClient, None]):
+    def __init__(self, supervisor: Supervisor, option: BaseClient, misc: None) -> None:
         self._lock = Lock()
         self._sessions: MutableMapping[UUID, Future] = {}
         supervisor.nvim.api.exec_lua(_LUA, ())
-        super().__init__(supervisor, misc=misc)
+        super().__init__(supervisor, options=option, misc=misc)
 
     def _req(self, session: UUID, pos: WTF8Pos) -> Any:
         token = uuid4()
@@ -130,6 +132,6 @@ class Worker(BaseWorker[None]):
         go = True
         while go:
             reply = self._req(session, pos=(row, col))
-            go, comps = _parse(reply)
+            go, comps = _parse(self._options.short_name, reply=reply)
             yield comps
 
