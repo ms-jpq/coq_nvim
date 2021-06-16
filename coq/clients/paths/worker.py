@@ -8,7 +8,7 @@ from ...shared.types import Completion, Context, ContextualEdit
 
 
 def _p_lhs(lhs: str) -> str:
-    for sym in (".", "..", "~"):
+    for sym in ("..", ".", "~"):
         if lhs.endswith(sym):
             return sym
     else:
