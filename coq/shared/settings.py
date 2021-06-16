@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import AbstractSet
+from typing import AbstractSet, Any, Mapping
 
 
 @dataclass(frozen=True)
@@ -31,4 +31,5 @@ class Settings:
     display: Display
     match: Options
     weights: Weights
+    clients: Mapping[str, Any]
 
