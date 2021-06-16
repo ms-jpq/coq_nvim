@@ -355,13 +355,7 @@ def edit(nvim: Nvim, stack: Stack, data: UserData) -> None:
             win_set_cursor(nvim, win=win, row=n_row, col=n_col)
 
             stack.state.inserted = n_row, n_col
-            stack.db.inserted(
-                ctx.filename,
-                filetype=ctx.filetype,
-                prefix="",
-                suffix="",
-                content=primary.new_text,
-            )
+            stack.db.inserted(primary.new_text)
 
             # TODO - Remove DEBUG
             print(
