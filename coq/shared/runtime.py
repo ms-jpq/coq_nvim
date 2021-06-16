@@ -3,11 +3,11 @@ from __future__ import annotations
 from abc import abstractmethod
 from collections import deque
 from concurrent.futures import (
+    CancelledError,
     Future,
     InvalidStateError,
     ThreadPoolExecutor,
-    TimeoutError,
-    as_completed,
+    wait,
 )
 from contextlib import suppress
 from typing import Any, Deque, Generic, Iterator, MutableSet, Sequence, TypeVar
@@ -60,11 +60,11 @@ class Supervisor:
                 futs = tuple(
                     self._pool.submit(supervise, worker) for worker in self._workers
                 )
-                for f in as_completed(futs, timeout=self._options.timeout):
-                    try:
+                wait(futs, timeout=self._options.timeout)
+                for f in futs:
+                    f.cancel()
+                    with suppress(CancelledError):
                         f.result()
-                    except Exception as e:
-                        log.exception("%s", e)
 
                 with suppress(InvalidStateError):
                     fut.set_result(tuple(acc))
