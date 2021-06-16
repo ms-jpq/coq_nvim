@@ -1,5 +1,5 @@
 from concurrent.futures import CancelledError
-from typing import Sequence
+from typing import Optional, Sequence
 
 from pynvim import Nvim
 from pynvim.api.nvim import Nvim
@@ -7,7 +7,7 @@ from pynvim_pp.logging import log
 
 from ...registry import autocmd, enqueue_event, pool, rpc
 from ...shared.nvim.completions import complete
-from ...shared.types import Completion
+from ...shared.types import Completion, Context
 from ..context import context, should_complete
 from ..runtime import Stack
 from ..trans import trans
@@ -24,11 +24,10 @@ def _cmp(nvim: Nvim, stack: Stack, completions: Sequence[Completion]) -> None:
 
 @rpc(blocking=True)
 def _txt_changed(nvim: Nvim, stack: Stack, pum: bool) -> None:
+    prev: Optional[Context] = None
     if stack.state.cur:
         prev, f = stack.state.cur
         f.cancel()
-    else:
-        prev = None
 
     ctx = context(
         nvim,
@@ -36,7 +35,7 @@ def _txt_changed(nvim: Nvim, stack: Stack, pum: bool) -> None:
         cwd=stack.state.cwd,
     )
     if (
-        (pum and prev and prev.position != ctx.position)
+        (pum and (prev and prev.position != ctx.position) or (not prev))
         or (not pum)
         and should_complete(ctx)
     ):
