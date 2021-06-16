@@ -1,14 +1,14 @@
 from contextlib import contextmanager
-from typing import Iterator
+from typing import Any, Iterator
 
 from std2.timeit import timeit as _timeit
 
 
 @contextmanager
-def timeit(f: str, threshold: float = 0.1) -> Iterator[None]:
+def timeit(threshold: float, name: str, *args: Any) -> Iterator[None]:
     with _timeit() as t:
         yield None
     delta = t()
     if delta > threshold:
-        print(f"TIME -- {f} :: {delta}", flush=True)
+        print(f"TIME -- {name} :: {round(delta, 3)}", *args, flush=True)
 
