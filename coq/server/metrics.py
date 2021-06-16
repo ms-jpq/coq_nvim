@@ -138,7 +138,9 @@ def _talley(
     alphabetical = {
         cmp.uid: idx
         for idx, (cmp, _, _) in enumerate(
-            sorted(metrics, key=lambda x: strxfrm(x[0].primary_edit.new_text))
+            sorted(
+                metrics, key=lambda x: strxfrm(x[0].primary_edit.new_text), reverse=True
+            )
         )
     }
 
@@ -180,7 +182,7 @@ def _talley(
             )
         )
 
-    completions = (comp for comp, _, _ in sorted(metrics, key=key_by))
+    completions = (comp for comp, _, _ in sorted(metrics, key=key_by, reverse=True))
     return completions
 
 
