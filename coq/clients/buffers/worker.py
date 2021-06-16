@@ -5,7 +5,7 @@ from ...shared.runtime import Worker as BaseWorker
 from ...shared.types import Completion, Context, ContextualEdit
 
 _SOURCE = "B"
-_PREFIX_LEN = 3
+_PREFIX_LEN = 2
 
 
 def _comp(ctx: Context, word: str) -> Completion:

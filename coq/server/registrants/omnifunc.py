@@ -86,7 +86,7 @@ settings["completefunc"] = omnifunc.name
 
 @rpc(blocking=True)
 def _txt_changed(nvim: Nvim, stack: Stack) -> None:
-    pass
+    comp_func(nvim, stack=stack, manual=False)
 
 
 autocmd("TextChangedI", "TextChangedP") << f"lua {_txt_changed.name}()"

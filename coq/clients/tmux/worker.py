@@ -14,7 +14,7 @@ from .database import Database
 
 _SOURCE = "TMUX"
 _POLL_INTERVAL = 1
-_PREFIX_LEN = 3
+_PREFIX_LEN = 2
 
 
 @dataclass(frozen=True)
