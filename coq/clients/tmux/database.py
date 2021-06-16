@@ -30,8 +30,8 @@ def _init(location: str) -> Connection:
 
 class Database:
     def __init__(self, pool: ThreadPoolExecutor, location: str) -> None:
-        self._pool = Executor(pool)
-        self._conn: Connection = self._pool.submit(_init, location)
+        self._ex = Executor(pool)
+        self._conn: Connection = self._ex.submit(_init, location)
 
     def periodical(self, panes: Mapping[str, Sequence[str]]) -> None:
         def cont() -> None:
@@ -50,7 +50,7 @@ class Database:
                     cursor.execute(instruction, ())
                     cursor.executemany(sql("insert", "words"), it())
 
-        self._pool.submit(cont)
+        self._ex.submit(cont)
 
     def select(self, prefix_len: int, word: str, active_pane: str) -> Sequence[str]:
         def cont() -> Sequence[str]:
@@ -65,5 +65,5 @@ class Database:
                 )
                 return tuple(row["word"] for row in cursor.fetchall())
 
-        return self._pool.submit(cont)
+        return self._ex.submit(cont)
 

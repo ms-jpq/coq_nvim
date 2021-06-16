@@ -49,11 +49,11 @@ def _vaccum(conn: Connection) -> None:
 
 class Database:
     def __init__(self, location: str) -> None:
-        self._pool = Executor(pool)
-        self._conn: Connection = self._pool.submit(_init, location)
+        self._ex = Executor(pool)
+        self._conn: Connection = self._ex.submit(_init, location)
 
     def vaccum(self) -> None:
-        self._pool.submit(_vaccum, self._conn)
+        self._ex.submit(_vaccum, self._conn)
 
     def set_lines(
         self,
@@ -82,7 +82,7 @@ class Database:
                     )
                     cursor.executemany(sql("insert", "words"), it())
 
-        self._pool.submit(cont)
+        self._ex.submit(cont)
 
     def insert(
         self,
@@ -106,7 +106,7 @@ class Database:
                         },
                     )
 
-        self._pool.submit(cont)
+        self._ex.submit(cont)
 
     def suggestions(self, prefix_len: int, cwd: str, word: str) -> Sequence[str]:
         def cont() -> Sequence[str]:
@@ -121,7 +121,7 @@ class Database:
                 )
                 return tuple(row["word"] for row in cursor.fetchall())
 
-        return self._pool.submit(cont)
+        return self._ex.submit(cont)
 
     def metric(
         self,
@@ -147,5 +147,5 @@ class Database:
 
             return tuple(c2())
 
-        return self._pool.submit(cont)
+        return self._ex.submit(cont)
 
