@@ -4,6 +4,8 @@ from subprocess import CalledProcessError, check_output
 from time import sleep
 from typing import AbstractSet, Iterator, Sequence, Tuple
 
+from pynvim_pp.logging import log
+
 from ...shared.parse import coalesce
 from ...shared.runtime import Supervisor
 from ...shared.runtime import Worker as BaseWorker
@@ -71,24 +73,28 @@ def _screenshot(unifying_chars: AbstractSet[str], uid: str) -> Sequence[str]:
 class Worker(BaseWorker[None]):
     def __init__(self, supervisor: Supervisor, misc: None) -> None:
         self._db = Database(supervisor.pool, location=":memory:")
-
+        super().__init__(supervisor, misc=misc)
         if which("tmux"):
             supervisor.pool.submit(self._poll)
 
-        super().__init__(supervisor, misc=misc)
-
     def _poll(self) -> None:
-        def cont(pane: _Pane) -> Tuple[_Pane, Sequence[str]]:
-            words = _screenshot(self._supervisor.options.unifying_chars, uid=pane.uid)
-            return pane, words
+        try:
 
-        while True:
-            snapshot = {
-                pane.uid: words
-                for pane, words in self._supervisor.pool.map(cont, _panes())
-            }
-            self._db.periodical(snapshot)
-            sleep(_POLL_INTERVAL)
+            def cont(pane: _Pane) -> Tuple[_Pane, Sequence[str]]:
+                words = _screenshot(
+                    self._supervisor.options.unifying_chars, uid=pane.uid
+                )
+                return pane, words
+
+            while True:
+                snapshot = {
+                    pane.uid: words
+                    for pane, words in self._supervisor.pool.map(cont, _panes())
+                }
+                self._db.periodical(snapshot)
+                sleep(_POLL_INTERVAL)
+        except Exception as e:
+            log.exception("%s", e)
 
     def work(self, context: Context) -> Iterator[Sequence[Completion]]:
         active = _cur()
