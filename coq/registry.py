@@ -23,6 +23,7 @@ rpc = RPC(name_gen=_name_gen)
 settings = Settings()
 
 settings["shortmess"] += "c"
+settings["completeopt"] += ("noinsert", "noselect")
 
 
 def enqueue_event(event: RpcCallable, *args: Any) -> None:
