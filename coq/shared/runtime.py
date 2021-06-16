@@ -68,8 +68,8 @@ class Supervisor:
 
                 with suppress(InvalidStateError):
                     fut.set_result(tuple(acc))
-            except TimeoutError:
-                pass
+            except Exception as e:
+                log.exception("%s", e)
 
         self._pool.submit(cont)
         return fut
