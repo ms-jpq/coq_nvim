@@ -24,9 +24,6 @@ def omnifunc(
             nvim,
             unifying_chars=stack.settings.match.unifying_chars,
             cwd=stack.state.cwd,
-            buf=None,
-            filename=None,
-            filetype=None,
         )
         fut = stack.supervisor.collect(ctx)
         completions = cast(Sequence[Completion], fut.result())

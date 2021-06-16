@@ -1,4 +1,4 @@
-from typing import AbstractSet, Optional
+from typing import AbstractSet
 from uuid import uuid4
 
 from pynvim import Nvim
@@ -22,18 +22,15 @@ def context(
     nvim: Nvim,
     unifying_chars: AbstractSet[str],
     cwd: str,
-    buf: Optional[Buffer],
-    filename: Optional[str],
-    filetype: Optional[str],
 ) -> Context:
     win = cur_win(nvim)
-    buf = buf or win_get_buf(nvim, win=win)
+    buf = win_get_buf(nvim, win=win)
     row, col = win_get_cursor(nvim, win=win)
     pos = (row, col)
 
     line, *_ = buf_get_lines(nvim, buf=buf, lo=row, hi=row + 1)
-    filename = filename if filename is not None else buf_name(nvim, buf=buf)
-    filetype = filetype if filetype is not None else buf_filetype(nvim, buf=buf)
+    filename = buf_name(nvim, buf=buf)
+    filetype = buf_filetype(nvim, buf=buf)
 
     b_line = line.encode()
     before, after = b_line[:col].decode(), b_line[col:].decode()
