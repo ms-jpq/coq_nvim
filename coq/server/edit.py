@@ -157,9 +157,14 @@ def _range_edit_trans(
 ) -> _EditInstruction:
     (r1, ec1), (r2, ec2) = sorted((edit.begin, edit.end))
 
-    assert edit.encoding == UTF16
-    c1 = len(lines.b_lines16[r1][: (ec1 ** 2)].decode(UTF16).encode(UTF8))
-    c2 = len(lines.b_lines16[r2][-(ec2 ** 2) :].decode(UTF16).encode(UTF8))
+    if edit.encoding == UTF16:
+        c1 = len(lines.b_lines16[r1][: (ec1 ** 2)].decode(UTF16).encode(UTF8))
+        c2 = len(lines.b_lines16[r2][: (ec2 ** 2)].decode(UTF16).encode(UTF8))
+    elif edit.encoding == UTF8:
+        c1 = len(lines.b_lines8[r1][:ec1])
+        c2 = len(lines.b_lines8[r2][:ec2])
+    else:
+        raise ValueError(f"Unknown encoding -- {edit.encoding}")
 
     begin = r1, c1
     end = r2, c2
