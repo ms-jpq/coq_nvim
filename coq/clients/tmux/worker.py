@@ -12,6 +12,7 @@ from ...shared.runtime import Worker as BaseWorker
 from ...shared.types import Completion, Context, Edit
 from .database import Database
 
+_SOURCE = "TMUX"
 _POLL_INTERVAL = 1
 _PREFIX_LEN = 3
 
@@ -104,7 +105,7 @@ class Worker(BaseWorker[None]):
                 _PREFIX_LEN, word=context.words, active_pane=active.uid
             ):
                 edit = Edit(new_text=word)
-                completion = Completion(primary_edit=edit)
+                completion = Completion(source=_SOURCE, primary_edit=edit)
                 yield completion
 
         yield tuple(cont())

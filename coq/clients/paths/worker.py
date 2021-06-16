@@ -6,6 +6,8 @@ from typing import Iterator, Sequence, Tuple
 from ...shared.runtime import Worker as BaseWorker
 from ...shared.types import Completion, Context, ContextualEdit
 
+_SOURCE = "F"
+
 
 def _p_lhs(lhs: str) -> str:
     for sym in ("..", ".", "~"):
@@ -55,7 +57,7 @@ class Worker(BaseWorker[None]):
                 edit = ContextualEdit(
                     old_prefix=prefix, new_text=new_text, new_prefix=new_text
                 )
-                completion = Completion(primary_edit=edit)
+                completion = Completion(source=_SOURCE, primary_edit=edit)
                 yield completion
 
         yield tuple(cont())

@@ -16,6 +16,7 @@ from ...shared.types import Completion, Context, Edit, NvimPos, RangeEdit
 from .runtime import LSP
 from .types import CompletionItem, CompletionList, MarkupContent, Resp, TextEdit
 
+_SOURCE = "LSP"
 _LSP_ARTIFACTS = ARTIFACTS_DIR / "lsp.json"
 _LSP: LSP = decode(LSP, loads(_LSP_ARTIFACTS.read_text("UTF-8")))
 _LUA = (Path(__file__).resolve().parent / "request.lua").read_text("UTF-8")
@@ -62,6 +63,7 @@ def _parse_item(item: CompletionItem) -> Completion:
     doc, doc_type = _doc(item)
 
     cmp = Completion(
+        source=_SOURCE,
         primary_edit=primary,
         secondary_edits=secondaries,
         sort_by=sort_by,

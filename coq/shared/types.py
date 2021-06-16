@@ -81,6 +81,7 @@ PrimaryEdit = Union[ApplicableEdit, SnippetEdit]
 
 @dataclass(frozen=True)
 class Completion:
+    source: str
     primary_edit: PrimaryEdit
     secondary_edits: Sequence[RangeEdit] = ()
     sort_by: str = ""

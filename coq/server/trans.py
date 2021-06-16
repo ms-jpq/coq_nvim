@@ -8,7 +8,7 @@ from .types import UserData
 
 
 def _cmp_to_vcmp(context: Context, cmp: Completion) -> VimCompletion[UserData]:
-    abbr = cmp.label or cmp.primary_edit.new_text
+    abbr = cmp.short_label or cmp.label or cmp.primary_edit.new_text
     user_data = UserData(
         uid=context.uid,
         primary_edit=cmp.primary_edit,
@@ -20,7 +20,7 @@ def _cmp_to_vcmp(context: Context, cmp: Completion) -> VimCompletion[UserData]:
         dup=1,
         equal=1,
         abbr=abbr,
-        menu=cmp.short_label,
+        menu=cmp.source,
         info=cmp.doc,
         user_data=user_data,
     )
@@ -39,3 +39,4 @@ def trans(
     )
     for cmp in ranked:
         yield _cmp_to_vcmp(context, cmp=cmp)
+
