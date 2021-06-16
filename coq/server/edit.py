@@ -160,8 +160,6 @@ def _range_edit_trans(
     c1 = len(lines.b_lines16[r1][: -(ec1 ** 2)].decode(UTF16).encode(UTF8))
     c2 = len(lines.b_lines16[r2][ec2 ** 2 :].decode(UTF16).encode(UTF8))
 
-    print([lines.b_lines16[r1][: ec1 * 2].decode(UTF16)], flush=True)
-
     begin = r1, c1
     end = r2, c2
 
