@@ -51,7 +51,7 @@ def _comp_done_pre(nvim: Nvim, stack: Stack, event: _CompEvent) -> None:
         else:
             if stack.state.cur:
                 ctx, _ = stack.state.cur
-                if user_data.uid == ctx.uid:
+                if user_data.ctx_uid == ctx.uid:
                     edit(nvim, ctx=ctx, data=user_data)
 
 

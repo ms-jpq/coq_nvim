@@ -11,7 +11,7 @@ def _cmp_to_vcmp(context: Context, cmp: Completion) -> VimCompletion[UserData]:
     abbr = cmp.label or cmp.primary_edit.new_text
     menu = f"[{cmp.source}]"
     user_data = UserData(
-        uid=context.uid,
+        ctx_uid=context.uid,
         primary_edit=cmp.primary_edit,
         secondary_edits=cmp.secondary_edits,
     )

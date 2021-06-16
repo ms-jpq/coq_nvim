@@ -7,6 +7,6 @@ from ..shared.types import PrimaryEdit, RangeEdit
 
 @dataclass(frozen=True)
 class UserData:
-    uid: UUID
+    ctx_uid: UUID
     primary_edit: PrimaryEdit
     secondary_edits: Sequence[RangeEdit]
