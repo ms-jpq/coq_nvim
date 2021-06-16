@@ -140,7 +140,6 @@ def _contextual_edit_trans(
 def _range_edit_trans(
     ctx: Context, env: EditEnv, primary: bool, lines: _Lines, edit: RangeEdit
 ) -> _EditInstruction:
-    row, _ = ctx.position
     (r1, ec1), (r2, ec2) = sorted((edit.begin, edit.end))
 
     assert edit.encoding == UTF16
@@ -150,7 +149,7 @@ def _range_edit_trans(
     begin = r1, c1
     end = r2, c2
     new_lines = tuple(line for line in edit.new_text.split(env.linefeed))
-    cursor_offset = row + (r2 - r1 - len(new_lines)), c2 if primary else -1
+    cursor_offset = (r2 - r1) - (len(new_lines) - 1), c2 if primary else -1
 
     inst = _EditInstruction(
         primary=primary,
@@ -290,7 +289,6 @@ def edit(nvim: Nvim, ctx: Context, data: UserData) -> None:
     )
     new_lines = _new_lines(view, instructions=instructions)
     n_row, n_col = _cursor(cursor, instructions=instructions)
-    print(instructions, flush=True)
 
     buf[lo:hi] = new_lines[lo:]
     win_set_cursor(nvim, win=win, row=n_row, col=n_col)
