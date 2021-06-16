@@ -1,4 +1,5 @@
-from os.path import sep
+from os import X_OK, access
+from os.path import join, sep
 from pathlib import Path
 from typing import Iterator, Sequence, Tuple
 
@@ -14,46 +15,39 @@ def _p_lhs(lhs: str) -> str:
         return ""
 
 
-def _parse(maybe_path: str) -> Iterator[Tuple[str, str]]:
-    entire = Path(maybe_path)
-    lhs, go, rhs = maybe_path.rpartition(sep)
-    left_side = Path(lhs)
-
-    if entire.is_dir():
-        try:
-            prefix = maybe_path
-            for path in entire.iterdir():
-                term = sep if path.is_dir() else ""
-                yield prefix, f"{lhs}{sep}{path}{term}"
-        except PermissionError:
-            pass
-    elif go and left_side.is_dir():
-        prefix = f"{lhs}{sep}{rhs}"
-        try:
-            for path in left_side.iterdir():
-                if path.name.startswith(rhs):
-                    term = sep if path.is_dir() else ""
-                    yield prefix, f"{lhs}{sep}{path}{term}"
-        except PermissionError:
-            pass
-    else:
-        lhs, go, rhs = maybe_path.partition(sep)
-        if go:
-            yield from _parse(rhs)
+def _segments(line: str) -> Iterator[str]:
+    segments = line.split(sep)
+    if len(segments) > 1:
+        *rest, front = reversed(segments)
+        lhs = _p_lhs(front)
+        segs = (*rest, lhs)
+        for idx in range(2, len(segs) + 1):
+            yield sep.join(reversed(segs[:idx]))
 
 
 def parse(line: str) -> Iterator[Tuple[str, str]]:
-    lhs, go, rhs = line.rpartition(sep)
-    if go:
-        left = _p_lhs(lhs)
-        maybe_path = left + sep + rhs
-        yield from _parse(maybe_path)
+    segments = reversed(tuple(_segments(line)))
+    for segment in segments:
+        entire = Path(segment)
+        if entire.is_dir() and access(entire, mode=X_OK):
+            for path in entire.iterdir():
+                term = sep if path.is_dir() else ""
+                yield segment, join(segment, path.name) + term
+            break
+        else:
+            lhs, go, rhs = segment.rpartition(sep)
+            assert go
+            left = Path(lhs)
+            if left.is_dir() and access(left, mode=X_OK):
+                for path in left.iterdir():
+                    if path.name.startswith(rhs):
+                        term = sep if path.is_dir() else ""
+                        yield segment, join(lhs, path.name) + term
+            break
 
 
 class Worker(BaseWorker[None]):
     def work(self, context: Context) -> Iterator[Sequence[Completion]]:
-        context.line_before
-
         def cont() -> Iterator[Completion]:
             line = context.line_before + context.words_after
             for prefix, new_text in parse(line):
