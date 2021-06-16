@@ -2,7 +2,7 @@ SELECT DISTINCT
   word
 FROM words
 WHERE
-  LEN(:word) >= :prefix_len - 1
+  LENGTH(:word) >= (:prefix_len - 1)
   AND
   filename LIKE X_LIKE_ESC(:cwd) ESCAPE '!'
   AND
