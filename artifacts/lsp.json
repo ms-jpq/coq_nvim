@@ -1,7 +1,4 @@
 {
-  "cmp_item_kind": {
-    "default": "Unknown",
-    "lookup": {}
-  }
+  "cmp_item_kind": {}
 }
 

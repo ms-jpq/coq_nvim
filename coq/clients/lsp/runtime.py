@@ -3,12 +3,6 @@ from typing import Mapping
 
 
 @dataclass(frozen=True)
-class _CmpItemKind:
-    lookup: Mapping[int, str]
-    default: str
-
-
-@dataclass(frozen=True)
 class LSP:
-    cmp_item_kind: _CmpItemKind
+    cmp_item_kind: Mapping[int, str]
 

@@ -53,11 +53,7 @@ def _parse_item(item: CompletionItem) -> Completion:
     secondaries = tuple(map(_range_edit, item.additionalTextEdits or ()))
 
     sort_by = item.filterText or ""
-    kind = (
-        _LSP.cmp_item_kind.lookup.get(item.kind, _LSP.cmp_item_kind.default)
-        if item.kind
-        else ""
-    )
+    kind = _LSP.cmp_item_kind.get(item.kind) if item.kind else None
     label = f"{item.label} ({kind})" if kind else item.label
 
     doc, doc_type = _doc(item)
