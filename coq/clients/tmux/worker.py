@@ -55,7 +55,7 @@ def _panes() -> Sequence[_Pane]:
 
 def _cur() -> _Pane:
     for pane in _panes():
-        if pane.window_active and pane.window_active:
+        if pane.window_active and pane.pane_active:
             return pane
     else:
         assert False
