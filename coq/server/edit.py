@@ -158,8 +158,8 @@ def _range_edit_trans(
     (r1, ec1), (r2, ec2) = sorted((edit.begin, edit.end))
 
     assert edit.encoding == UTF16
-    c1 = len(lines.b_lines16[r1][: -(ec1 ** 2)].decode(UTF16).encode(UTF8))
-    c2 = len(lines.b_lines16[r2][ec2 ** 2 :].decode(UTF16).encode(UTF8))
+    c1 = len(lines.b_lines16[r1][: (ec1 ** 2)].decode(UTF16).encode(UTF8))
+    c2 = len(lines.b_lines16[r2][-(ec2 ** 2) :].decode(UTF16).encode(UTF8))
 
     begin = r1, c1
     end = r2, c2
@@ -321,4 +321,7 @@ def edit(nvim: Nvim, state: State, ctx: Context, data: UserData) -> None:
     buf[lo:hi] = new_lines[lo:]
     win_set_cursor(nvim, win=win, row=n_row, col=n_col)
     state.inserted = n_row, n_col
+
+    print(data, flush=True)
+    print(instructions, flush=True)
 
