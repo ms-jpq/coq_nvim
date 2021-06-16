@@ -1,2 +1,2 @@
-INSERT INTO insertions ( completion_id,  prefix,  affix,  content)
-VALUES                 (:completion_id, :prefix, :affix, :content)
+INSERT INTO insertions (content)
+VALUES                 (:content)

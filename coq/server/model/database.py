@@ -84,27 +84,14 @@ class Database:
 
         self._ex.submit(cont)
 
-    def insert(
+    def inserted(
         self,
-        file: str,
-        filetype: str,
-        prefix: str,
-        suffix: str,
         content: str,
     ) -> None:
         def cont() -> None:
             with closing(self._conn.cursor()) as cursor:
                 with with_transaction(cursor):
-                    _ensure_file(cursor, file=file, filetype=filetype)
-                    cursor.execute(
-                        sql("insert", "insertion"),
-                        {
-                            "prefix": prefix,
-                            "suffix": suffix,
-                            "filename": file,
-                            "content": content,
-                        },
-                    )
+                    cursor.execute(sql("insert", "insertion"), {"content": content})
 
         self._ex.submit(cont)
 

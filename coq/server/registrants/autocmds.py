@@ -49,10 +49,7 @@ def _comp_done_pre(nvim: Nvim, stack: Stack, event: _CompEvent) -> None:
         except DecodeError:
             pass
         else:
-            if stack.state.cur:
-                ctx, _ = stack.state.cur
-                if user_data.ctx_uid == ctx.uid:
-                    edit(nvim, state=stack.state, ctx=ctx, data=user_data)
+            edit(nvim, stack=stack, data=user_data)
 
 
 autocmd("CompleteDonePre") << f"lua {_comp_done_pre.name}(vim.v.completed_item)"

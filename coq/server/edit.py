@@ -21,7 +21,7 @@ from ..shared.types import (
 )
 from ..snippets.parse import parse
 from .context import edit_env
-from .runtime import State
+from .runtime import Stack
 from .types import UserData
 
 
@@ -323,31 +323,52 @@ def _cursor(cursor: NvimPos, instructions: Sequence[_EditInstruction]) -> NvimPo
     return row, col
 
 
-def edit(nvim: Nvim, state: State, ctx: Context, data: UserData) -> None:
-    win = cur_win(nvim)
-    buf = win_get_buf(nvim, win=win)
-    cursor = win_get_cursor(nvim, win=win)
-    env = edit_env(nvim, buf=buf)
+def edit(nvim: Nvim, stack: Stack, data: UserData) -> None:
+    if stack.state.cur:
+        ctx, _ = stack.state.cur
+        if data.ctx_uid == ctx.uid:
+            win = cur_win(nvim)
+            buf = win_get_buf(nvim, win=win)
+            cursor = win_get_cursor(nvim, win=win)
+            env = edit_env(nvim, buf=buf)
 
-    primary = (
-        parse(nvim, env=env, snippet=data.primary_edit)
-        if isinstance(data.primary_edit, SnippetEdit)
-        else data.primary_edit
-    )
-    lo, hi = _rows_to_fetch(ctx.position, env, primary, *data.secondary_edits)
-    lines = tuple(chain(repeat("", times=lo), buf[lo:hi]))
-    view = _lines(lines)
+            primary = (
+                parse(nvim, env=env, snippet=data.primary_edit)
+                if isinstance(data.primary_edit, SnippetEdit)
+                else data.primary_edit
+            )
+            lo, hi = _rows_to_fetch(ctx.position, env, primary, *data.secondary_edits)
+            lines = tuple(chain(repeat("", times=lo), buf[lo:hi]))
+            view = _lines(lines)
 
-    instructions = _instructions(
-        ctx, env=env, lines=view, primary=primary, secondary=data.secondary_edits
-    )
-    new_lines = _new_lines(view, instructions=instructions)
-    n_row, n_col = _cursor(cursor, instructions=instructions)
+            instructions = _instructions(
+                ctx,
+                env=env,
+                lines=view,
+                primary=primary,
+                secondary=data.secondary_edits,
+            )
+            new_lines = _new_lines(view, instructions=instructions)
+            n_row, n_col = _cursor(cursor, instructions=instructions)
 
-    buf[lo:hi] = new_lines[lo:]
-    win_set_cursor(nvim, win=win, row=n_row, col=n_col)
-    state.inserted = n_row, n_col
+            buf[lo:hi] = new_lines[lo:]
+            win_set_cursor(nvim, win=win, row=n_row, col=n_col)
 
-    # TODO - Remove DEBUG
-    print([ctx.line_before, ctx.line_after], data, instructions, sep="\n", flush=True)
+            stack.state.inserted = n_row, n_col
+            stack.db.inserted(
+                ctx.filename,
+                filetype=ctx.filetype,
+                prefix="",
+                suffix="",
+                content=primary.new_text,
+            )
+
+            # TODO - Remove DEBUG
+            print(
+                [ctx.line_before, ctx.line_after],
+                data,
+                instructions,
+                sep="\n",
+                flush=True,
+            )
 

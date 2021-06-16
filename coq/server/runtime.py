@@ -23,7 +23,7 @@ from .model.database import Database
 
 
 @dataclass
-class State:
+class _State:
     cur: Optional[Tuple[Context, Future]]
     inserted: Optional[NvimPos]
     inserting: bool
@@ -33,7 +33,7 @@ class State:
 @dataclass(frozen=True)
 class Stack:
     settings: Settings
-    state: State
+    state: _State
     db: Database
     supervisor: Supervisor
     workers: AbstractSet[Worker]
@@ -71,7 +71,7 @@ def _from_each_according_to_their_ability(
 def stack(pool: ThreadPoolExecutor, nvim: Nvim) -> Stack:
     settings = _settings(nvim)
     cwd = get_cwd(nvim)
-    state = State(
+    state = _State(
         cur=None,
         inserted=None,
         inserting=nvim.api.get_mode()["mode"] == "i",
