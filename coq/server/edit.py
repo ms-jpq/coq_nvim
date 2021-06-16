@@ -108,8 +108,8 @@ def _contextual_edit_trans(
     prefix_lines = edit.old_prefix.split(env.linefeed)
     suffix_lines = edit.old_suffix.split(env.linefeed)
 
-    r1 = row - len(prefix_lines) - 1
-    r2 = row + len(suffix_lines) - 1
+    r1 = row - (len(prefix_lines) - 1)
+    r2 = row + (len(suffix_lines) - 1)
 
     c1 = (
         lines.len8[r1] - len(prefix_lines[0].encode(UTF8))
@@ -145,7 +145,7 @@ def _range_edit_trans(
 
     assert edit.encoding == UTF16
     c1 = len(lines.b_lines16[r1][: ec1 * 2].decode(UTF16).encode(UTF8))
-    c2 = len(lines.b_lines16[r2][ec2 * 2 :].decode(UTF16).encode(UTF8))
+    c2 = len(lines.b_lines16[r2][-(ec2 * 2) :].decode(UTF16).encode(UTF8))
 
     begin = r1, c1
     end = r2, c2
@@ -292,6 +292,7 @@ def edit(nvim: Nvim, ctx: Context, data: UserData) -> None:
     )
     new_lines = _new_lines(view, instructions=instructions)
     n_row, n_col = _cursor(cursor, instructions=instructions)
+    print(instructions, flush=True)
 
     buf[lo:hi] = new_lines[lo:]
     win_set_cursor(nvim, win=win, row=n_row, col=n_col)
