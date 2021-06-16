@@ -250,6 +250,8 @@ def _new_lines(
                             yield (lines.b_lines8[r1][:c1].decode(UTF8) + new_line)
                         elif idx == r2:
                             yield (new_line + lines.b_lines8[r2][c2:].decode(UTF8))
+                            if longer:
+                                yield from lit
                             break
                         else:
                             yield new_line
