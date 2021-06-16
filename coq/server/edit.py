@@ -233,7 +233,7 @@ def _new_lines(
                 (r1, c1), (r2, c2) = inst.begin, inst.end
                 if idx >= r1 and idx <= r2:
                     it.push_back(idx)
-                    lit = inst.new_lines
+                    lit = iter(inst.new_lines)
                     longer = len(inst.new_lines) - 1 > r2 - r1
 
                     for idx, new_line in zip(it, lit):
