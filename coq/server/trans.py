@@ -1,4 +1,4 @@
-from typing import Iterator, Sequence
+from typing import Iterator, MutableSet, Sequence
 
 from ..shared.nvim.completions import VimCompletion
 from ..shared.types import Completion, Context
@@ -8,7 +8,7 @@ from .types import UserData
 
 
 def _cmp_to_vcmp(context: Context, cmp: Completion) -> VimCompletion[UserData]:
-    abbr = cmp.short_label or cmp.label or cmp.primary_edit.new_text
+    abbr = cmp.label or cmp.primary_edit.new_text
     menu = f"[{cmp.source}]"
     user_data = UserData(
         uid=context.uid,
@@ -38,6 +38,10 @@ def trans(
         context=context,
         completions=completions,
     )
+
+    seen: MutableSet[str] = set()
     for cmp in ranked:
-        yield _cmp_to_vcmp(context, cmp=cmp)
+        if cmp.primary_edit.new_text not in seen:
+            seen.add(cmp.primary_edit.new_text)
+            yield _cmp_to_vcmp(context, cmp=cmp)
 

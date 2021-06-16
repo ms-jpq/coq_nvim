@@ -86,7 +86,6 @@ class Completion:
     secondary_edits: Sequence[RangeEdit] = ()
     sort_by: str = ""
     label: str = ""
-    short_label: str = ""
     doc: str = ""
     doc_type: str = ""
 
