@@ -231,15 +231,22 @@ def _new_lines(
         for idx in it:
             if stack and not inst:
                 inst = stack.pop()
+
             if inst:
                 (r1, c1), (r2, c2) = inst.begin, inst.end
-                if idx >= r1 or idx <= r2:
+                if idx >= r1 and idx <= r2:
                     it.push_back(idx)
                     for idx, new_line in zip(it, inst.new_lines):
-                        if idx == r1:
-                            yield lines.b_lines8[c1].decode(UTF8) + new_line
+                        if idx == r1 and idx == r2:
+                            yield (
+                                lines.b_lines8[c1].decode(UTF8)
+                                + new_line
+                                + lines.b_lines8[c2].decode(UTF8)
+                            )
+                        elif idx == r1:
+                            yield (lines.b_lines8[c1].decode(UTF8) + new_line)
                         elif idx == r2:
-                            yield new_line + lines.b_lines8[c2].decode(UTF8)
+                            yield (new_line + lines.b_lines8[c2].decode(UTF8))
                             break
                         else:
                             yield new_line
@@ -286,6 +293,7 @@ def edit(nvim: Nvim, ctx: Context, data: UserData) -> None:
     new_lines = _new_lines(view, instructions=instructions)
     n_row, n_col = _cursor(cursor, instructions=instructions)
 
+    print(lo, hi, new_lines, len(new_lines), instructions, flush=True)
     buf[lo:hi] = new_lines[lo:]
     win_set_cursor(nvim, win=win, row=n_row, col=n_col)
 
