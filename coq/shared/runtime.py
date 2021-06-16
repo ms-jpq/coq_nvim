@@ -2,13 +2,7 @@ from __future__ import annotations
 
 from abc import abstractmethod
 from collections import deque
-from concurrent.futures import (
-    CancelledError,
-    Future,
-    InvalidStateError,
-    ThreadPoolExecutor,
-    wait,
-)
+from concurrent.futures import Future, InvalidStateError, ThreadPoolExecutor, wait
 from contextlib import suppress
 from typing import Any, Deque, Generic, Iterator, MutableSet, Sequence, TypeVar
 from uuid import UUID
@@ -52,8 +46,11 @@ class Supervisor:
         acc: Deque[Completion] = deque()
 
         def supervise(worker: Worker) -> None:
-            for completions in worker.work(context):
-                acc.extend(completions)
+            try:
+                for completions in worker.work(context):
+                    acc.extend(completions)
+            except Exception as e:
+                log.exception("%s", e)
 
         def cont() -> None:
             try:
@@ -63,8 +60,6 @@ class Supervisor:
                 wait(futs, timeout=self._options.timeout)
                 for f in futs:
                     f.cancel()
-                    with suppress(CancelledError):
-                        f.result()
 
                 with suppress(InvalidStateError):
                     fut.set_result(tuple(acc))
