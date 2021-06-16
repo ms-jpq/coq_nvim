@@ -42,7 +42,7 @@ class Supervisor:
         for worker in self._workers:
             worker.notify(token, msg=msg)
 
-    def collect(self, context: Context) -> Future:
+    def collect(self, context: Context, manual: bool) -> Future:
         fut: Future = Future()
         acc: Deque[Completion] = deque()
 
@@ -60,7 +60,8 @@ class Supervisor:
                 self._futs = tuple(
                     self._pool.submit(supervise, worker) for worker in self._workers
                 )
-                wait(self._futs, timeout=self._options.timeout)
+                timeout = None if manual else self._options.timeout
+                wait(self._futs, timeout=timeout)
                 for f in self._futs:
                     f.cancel()
 
