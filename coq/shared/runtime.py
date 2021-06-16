@@ -21,6 +21,7 @@ class Supervisor:
     def __init__(self, nvim: Nvim, pool: ThreadPoolExecutor, options: Options) -> None:
         self._nvim, self._pool, self._options = nvim, pool, options
         self._workers: MutableSet[Worker] = WeakSet()
+        self._futs: Sequence[Future] = ()
 
     @property
     def options(self) -> Options:
@@ -54,11 +55,13 @@ class Supervisor:
 
         def cont() -> None:
             try:
-                futs = tuple(
+                for f in self._futs:
+                    f.cancel()
+                self._futs = tuple(
                     self._pool.submit(supervise, worker) for worker in self._workers
                 )
-                wait(futs, timeout=self._options.timeout)
-                for f in futs:
+                wait(self._futs, timeout=self._options.timeout)
+                for f in self._futs:
                     f.cancel()
 
                 with suppress(InvalidStateError):
