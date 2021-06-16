@@ -1,6 +1,6 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Annotated, Literal, Sequence, Tuple, Union
-from uuid import UUID
+from uuid import UUID, uuid4
 
 UTF8 = "UTF-8"
 UTF16 = "UTF-16-LE"
@@ -88,6 +88,7 @@ class Completion:
     label: str = ""
     doc: str = ""
     doc_type: str = ""
+    uid: UUID = field(default_factory=uuid4)
 
 
 @dataclass(frozen=True)
@@ -95,3 +96,4 @@ class EditEnv:
     linefeed: Literal["\r\n", "\n", "\r"]
     tabstop: bool
     expandtab: bool
+

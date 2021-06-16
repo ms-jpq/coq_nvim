@@ -17,6 +17,7 @@ class Options:
 
 @dataclass(frozen=True)
 class Weights:
+    alphabetical: float
     consecutive_matches: float
     count_by_filetype: float
     insertion_order: float

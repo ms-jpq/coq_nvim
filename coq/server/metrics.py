@@ -1,6 +1,7 @@
 from concurrent.futures import FIRST_EXCEPTION, Future, wait
 from dataclasses import dataclass
 from difflib import SequenceMatcher
+from locale import strxfrm
 from math import inf
 from typing import Iterable, Iterator, MutableSequence, Sequence, Tuple, cast
 
@@ -134,10 +135,18 @@ def _talley(
         consecutive_matches += match.consecutive_matches
         num_matches += match.num_matches
 
+    alphabetical = {
+        cmp.uid: idx
+        for idx, (cmp, _, _) in enumerate(
+            sorted(metrics, key=lambda x: strxfrm(x[0].primary_edit.new_text))
+        )
+    }
+
     def key_by(metric: Tuple[Completion, SqlMetrics, _MatchMetrics]) -> float:
-        _, sql, match = metric
+        cmp, sql, match = metric
         return (
-            (
+            (weights.alphabetical * alphabetical[cmp.uid] / len(alphabetical))
+            + (
                 weights.insertion_order * sql["insertion_order"] / insertion_order
                 if insertion_order
                 else 0
