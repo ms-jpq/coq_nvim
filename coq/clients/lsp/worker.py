@@ -87,11 +87,11 @@ def _parse(src: str, reply: Any) -> Tuple[bool, Sequence[Completion]]:
 
 
 class Worker(BaseWorker[BaseClient, None]):
-    def __init__(self, supervisor: Supervisor, option: BaseClient, misc: None) -> None:
+    def __init__(self, supervisor: Supervisor, options: BaseClient, misc: None) -> None:
         self._lock = Lock()
         self._sessions: MutableMapping[UUID, Future] = {}
         supervisor.nvim.api.exec_lua(_LUA, ())
-        super().__init__(supervisor, options=option, misc=misc)
+        super().__init__(supervisor, options=options, misc=misc)
 
     def _req(self, session: UUID, pos: WTF8Pos) -> Any:
         token = uuid4()

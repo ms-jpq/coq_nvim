@@ -116,7 +116,7 @@ class Worker(BaseWorker[BasicClient, None]):
             for word in self._db.select(
                 self._options.prefix_len, word=context.words, active_pane=active.uid
             ):
-                completion = _comp(src, ctx=context, word=word)
+                completion = _comp(self._options.short_name, ctx=context, word=word)
                 yield completion
 
         yield tuple(cont())
