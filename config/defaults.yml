@@ -19,5 +19,22 @@ weights:
   num_matches: 1.0
   prefix_matches: 1.0
 
-clients: {}
+clients:
+  tree_sitter:
+    short_name: "TS"
+    weight: 1.5
+  lsp:
+    short_name: "LS"
+    weight: 1.5
+  buffers:
+    short_name: "B"
+    weight: 1.0
+    prefix_length: 2
+  paths:
+    short_name: "F"
+    weight: 2.0
+  tmux:
+    short_name: "TMX"
+    weight: 1.0
+    prefix_length: 2
 
