@@ -133,17 +133,18 @@ class Database:
         def cont() -> Sequence[SqlMetrics]:
             def c2() -> Iterator[SqlMetrics]:
                 with closing(self._conn.cursor()) as cursor:
-                    for word in words:
-                        cursor.execute(
-                            sql("select", "word_metrics"),
-                            {
-                                "word": word,
-                                "filetype": filetype,
-                                "filename": filename,
-                                "line_num": line_num,
-                            },
-                        )
-                        yield cursor.fetchone()
+                    with with_transaction(cursor):
+                        for word in words:
+                            cursor.execute(
+                                sql("select", "word_metrics"),
+                                {
+                                    "word": word,
+                                    "filetype": filetype,
+                                    "filename": filename,
+                                    "line_num": line_num,
+                                },
+                            )
+                            yield cursor.fetchone()
 
             return tuple(c2())
 
