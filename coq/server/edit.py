@@ -234,6 +234,8 @@ def _new_lines(
                 if idx >= r1 and idx <= r2:
                     it.push_back(idx)
                     lit = inst.new_lines
+                    longer = len(inst.new_lines) - 1 > r2 - r1
+
                     for idx, new_line in zip(it, lit):
                         if idx == r1 and idx == r2:
                             yield (
@@ -241,7 +243,7 @@ def _new_lines(
                                 + new_line
                                 + lines.b_lines8[r2][c2:].decode(UTF8)
                             )
-                            if len(inst.new_lines) - 1 > r2 - r1:
+                            if longer:
                                 yield from lit
                             break
                         elif idx == r1:
