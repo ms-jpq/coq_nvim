@@ -322,7 +322,6 @@ def edit(nvim: Nvim, state: State, ctx: Context, data: UserData) -> None:
     win_set_cursor(nvim, win=win, row=n_row, col=n_col)
     state.inserted = n_row, n_col
 
-    print([ctx.line_before, ctx.line_after], flush=True)
-    print(data, flush=True)
-    print(instructions, flush=True)
+    # TODO - Remove DEBUG
+    print([ctx.line_before, ctx.line_after], data, instructions, sep="\n", flush=True)
 
