@@ -120,7 +120,7 @@ def _contextual_edit_trans(
     c2 = (
         len(suffix_lines[-1].encode(UTF8))
         if len(prefix_lines) > 1
-        else col + len(suffix_lines[0].encode(UTF8))
+        else col + len(suffix_lines[0].encode(UTF8)) - 1
     )
 
     begin = r1, c1
