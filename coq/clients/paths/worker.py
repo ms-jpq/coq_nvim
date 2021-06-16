@@ -28,7 +28,7 @@ def _segments(line: str) -> Iterator[str]:
 def parse(line: str) -> Iterator[Tuple[str, str]]:
     segments = reversed(tuple(_segments(line)))
     for segment in segments:
-        entire = Path(segment)
+        entire = Path(segment).expanduser()
         if entire.is_dir() and access(entire, mode=X_OK):
             for path in entire.iterdir():
                 term = sep if path.is_dir() else ""
@@ -38,7 +38,7 @@ def parse(line: str) -> Iterator[Tuple[str, str]]:
             lft, go, rhs = segment.rpartition(sep)
             assert go
             lhs = lft + go
-            left = Path(lhs)
+            left = Path(lhs).expanduser()
             if left.is_dir() and access(left, mode=X_OK):
                 for path in left.iterdir():
                     if path.name.startswith(rhs):
