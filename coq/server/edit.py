@@ -158,8 +158,8 @@ def _range_edit_trans(
     (r1, ec1), (r2, ec2) = sorted((edit.begin, edit.end))
 
     if edit.encoding == UTF16:
-        c1 = len(lines.b_lines16[r1][: (ec1 * 2)].decode(UTF16).encode(UTF8))
-        c2 = len(lines.b_lines16[r2][: (ec2 * 2)].decode(UTF16).encode(UTF8))
+        c1 = len(lines.b_lines16[r1][: ec1 * 2].decode(UTF16).encode(UTF8))
+        c2 = len(lines.b_lines16[r2][: ec2 * 2].decode(UTF16).encode(UTF8))
     elif edit.encoding == UTF8:
         c1 = len(lines.b_lines8[r1][:ec1])
         c2 = len(lines.b_lines8[r2][:ec2])
