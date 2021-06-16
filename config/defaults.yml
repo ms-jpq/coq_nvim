@@ -29,13 +29,13 @@ clients:
   buffers:
     short_name: "B"
     weight: 1.0
-    prefix_length: 2
+    prefix_len: 2
   paths:
     short_name: "F"
     weight: 2.0
   tmux:
     short_name: "TMX"
     weight: 1.0
-    prefix_length: 2
+    prefix_len: 2
     polling_interval: 1.0
 
