@@ -57,7 +57,9 @@ class Worker(BaseWorker[None]):
                 edit = ContextualEdit(
                     old_prefix=prefix, new_text=new_text, new_prefix=new_text
                 )
-                completion = Completion(source=_SOURCE, primary_edit=edit)
+                completion = Completion(
+                    source=_SOURCE, primary_edit=edit, label=new_text
+                )
                 yield completion
 
         yield tuple(cont())
