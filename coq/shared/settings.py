@@ -27,9 +27,29 @@ class Weights:
 
 
 @dataclass(frozen=True)
+class _BaseClient:
+    short_name: str
+    weight: float
+
+
+@dataclass(frozen=True)
+class BasicClient(_BaseClient):
+    prefix_length: int
+
+
+@dataclass(frozen=True)
+class Clients:
+    buffers: BasicClient
+    lsp: _BaseClient
+    paths: _BaseClient
+    tmux: BasicClient
+    tree_sitter: _BaseClient
+
+
+@dataclass(frozen=True)
 class Settings:
     display: Display
     match: Options
     weights: Weights
-    clients: Mapping[str, Any]
+    clients: Clients
 

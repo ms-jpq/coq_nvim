@@ -13,8 +13,7 @@ def _buf_new(nvim: Nvim, stack: Stack) -> None:
     buf = cur_buf(nvim)
     listed = buf_get_option(nvim, buf=buf, key="buflisted")
     if listed:
-        succ = nvim.api.buf_attach(buf, True, {})
-        assert succ
+        nvim.api.buf_attach(buf, True, {})
 
 
 autocmd("BufNew") << f"lua {_buf_new.name}()"
@@ -23,8 +22,7 @@ autocmd("BufNew") << f"lua {_buf_new.name}()"
 @rpc(blocking=True)
 def _buf_new_init(nvim: Nvim, stack: Stack) -> None:
     for buf in list_bufs(nvim, listed=True):
-        succ = nvim.api.buf_attach(buf, True, {})
-        assert succ
+        nvim.api.buf_attach(buf, True, {})
 
 
 atomic.exec_lua(f"{_buf_new_init.name}()", ())
