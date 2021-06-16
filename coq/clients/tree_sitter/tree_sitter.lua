@@ -1,8 +1,7 @@
-local init = function ()
+(function (...)
 
-end
+  COQts_req = function (request_id, session_id, pos)
 
+  end
+end)(...)
 
-return {
-  init = init,
-}
