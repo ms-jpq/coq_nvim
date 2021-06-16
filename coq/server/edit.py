@@ -129,7 +129,13 @@ def _contextual_edit_trans(
     new_lines = tuple(line for line in edit.new_text.split(env.linefeed))
 
     cursor_yoffset = -len(prefix_lines) + len(new_lines)
-    cursor_xpos = len(ctx.line_before.encode(UTF8)) - len(prefix_lines[-1].encode(UTF8))
+    cursor_xpos = (
+        len(new_lines[-1].encode(UTF8))
+        if len(new_lines) > 1
+        else len(ctx.line_before.encode(UTF8))
+        - len(prefix_lines[-1].encode(UTF8))
+        + len(new_lines[0].encode(UTF8))
+    )
 
     inst = _EditInstruction(
         primary=True,
@@ -143,7 +149,7 @@ def _contextual_edit_trans(
 
 
 def _range_edit_trans(
-    ctx: Context, env: EditEnv, primary: bool, lines: _Lines, edit: RangeEdit
+    env: EditEnv, primary: bool, lines: _Lines, edit: RangeEdit
 ) -> _EditInstruction:
     (r1, ec1), (r2, ec2) = sorted((edit.begin, edit.end))
 
@@ -206,9 +212,7 @@ def _instructions(
 ) -> Sequence[_EditInstruction]:
     def cont() -> Iterator[_EditInstruction]:
         if isinstance(primary, RangeEdit):
-            yield _range_edit_trans(
-                ctx, env=env, primary=True, lines=lines, edit=primary
-            )
+            yield _range_edit_trans(env, primary=True, lines=lines, edit=primary)
 
         elif isinstance(primary, ContextualEdit):
             yield _contextual_edit_trans(ctx, env=env, lines=lines, edit=primary)
@@ -220,7 +224,7 @@ def _instructions(
             never(primary)
 
         for edit in secondary:
-            yield _range_edit_trans(ctx, env=env, primary=False, lines=lines, edit=edit)
+            yield _range_edit_trans(env, primary=False, lines=lines, edit=edit)
 
     instructions = _consolidate(*cont())
     return instructions
