@@ -82,7 +82,7 @@ def _edit_trans(ctx: Context, env: EditEnv, edit: Edit) -> _EditInstruction:
     row, _ = ctx.position
 
     c1 = len(ctx.line_before.encode(UTF8))
-    c2 = c1 + len(ctx.words_before.encode(UTF8))
+    c2 = c1 + len(ctx.words_before.encode(UTF8)) - 1
 
     begin = row, c1
     end = row, c2
