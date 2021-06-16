@@ -81,7 +81,7 @@ def _rows_to_fetch(
 def _edit_trans(ctx: Context, env: EditEnv, edit: Edit) -> _EditInstruction:
     row, _ = ctx.position
 
-    c1 = len(ctx.line_before.encode(UTF8))
+    c1 = len(ctx.line_before.encode(UTF8)) - len(ctx.words_before.encode(UTF8))
     c2 = c1 + len(ctx.words_before.encode(UTF8)) - 1
 
     begin = row, c1
@@ -89,7 +89,11 @@ def _edit_trans(ctx: Context, env: EditEnv, edit: Edit) -> _EditInstruction:
 
     new_lines = tuple(line for line in edit.new_text.split(env.linefeed))
     cursor_yoffset = len(new_lines) - 1
-    cursor_xpos = len(new_lines[-1]) if len(new_lines) > 1 else c2
+    cursor_xpos = (
+        len(new_lines[-1])
+        if len(new_lines) > 1
+        else c1 + len(new_lines[0].encode(UTF8)) - 1
+    )
 
     inst = _EditInstruction(
         primary=True,
@@ -153,8 +157,8 @@ def _range_edit_trans(
     (r1, ec1), (r2, ec2) = sorted((edit.begin, edit.end))
 
     assert edit.encoding == UTF16
-    c1 = len(lines.b_lines16[r1][: ec1 * 2].decode(UTF16).encode(UTF8))
-    c2 = len(lines.b_lines16[r2][-(ec2 * 2) :].decode(UTF16).encode(UTF8))
+    c1 = len(lines.b_lines16[r1][: -(ec1 ** 2)].decode(UTF16).encode(UTF8))
+    c2 = len(lines.b_lines16[r2][ec2 ** 2 :].decode(UTF16).encode(UTF8))
 
     print([lines.b_lines16[r1][: ec1 * 2].decode(UTF16)], flush=True)
 
