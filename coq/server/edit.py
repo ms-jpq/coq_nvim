@@ -83,7 +83,7 @@ def _edit_trans(ctx: Context, env: EditEnv, edit: Edit) -> _EditInstruction:
     row, _ = ctx.position
 
     c1 = len(ctx.line_before.encode(UTF8)) - len(ctx.words_before.encode(UTF8))
-    c2 = c1 + len(ctx.words_before.encode(UTF8)) - 1
+    c2 = c1 + len(ctx.words_before.encode(UTF8))
 
     begin = row, c1
     end = row, c2
@@ -125,7 +125,7 @@ def _contextual_edit_trans(
     c2 = (
         len(suffix_lines[-1].encode(UTF8))
         if len(prefix_lines) > 1
-        else col + len(suffix_lines[0].encode(UTF8)) - 1
+        else col + len(suffix_lines[0].encode(UTF8))
     )
 
     begin = r1, c1
@@ -322,6 +322,7 @@ def edit(nvim: Nvim, state: State, ctx: Context, data: UserData) -> None:
     win_set_cursor(nvim, win=win, row=n_row, col=n_col)
     state.inserted = n_row, n_col
 
+    print([ctx.line_before, ctx.line_after], flush=True)
     print(data, flush=True)
     print(instructions, flush=True)
 
