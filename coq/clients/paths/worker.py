@@ -21,7 +21,7 @@ def _segments(line: str) -> Iterator[str]:
         *rest, front = reversed(segments)
         lhs = _p_lhs(front)
         segs = (*rest, lhs)
-        for idx in range(2, len(segs) + 1):
+        for idx in range(1, len(segs) + 1):
             yield sep.join(reversed(segs[:idx]))
 
 
@@ -35,8 +35,9 @@ def parse(line: str) -> Iterator[Tuple[str, str]]:
                 yield segment, join(segment, path.name) + term
             break
         else:
-            lhs, go, rhs = segment.rpartition(sep)
+            lft, go, rhs = segment.rpartition(sep)
             assert go
+            lhs = lft + go
             left = Path(lhs)
             if left.is_dir() and access(left, mode=X_OK):
                 for path in left.iterdir():

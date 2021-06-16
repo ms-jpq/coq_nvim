@@ -60,3 +60,9 @@ class Parser(TestCase):
         )
         self.assertEqual(actual, expected)
 
+    def test_7(self) -> None:
+        line = "/h"
+        results = {*parse(line)}
+        expected = ("/h", "/home/")
+        self.assertIn(expected, results)
+
