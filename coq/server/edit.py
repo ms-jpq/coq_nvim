@@ -240,6 +240,7 @@ def _new_lines(
                                 + new_line
                                 + lines.b_lines8[r2][c2:].decode(UTF8)
                             )
+                            break
                         elif idx == r1:
                             yield (lines.b_lines8[r1][:c1].decode(UTF8) + new_line)
                         elif idx == r2:
