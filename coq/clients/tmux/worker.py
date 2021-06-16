@@ -9,7 +9,7 @@ from pynvim_pp.logging import log
 from ...shared.parse import coalesce
 from ...shared.runtime import Supervisor
 from ...shared.runtime import Worker as BaseWorker
-from ...shared.types import Completion, Context, Edit
+from ...shared.types import Completion, Context, ContextualEdit
 from .database import Database
 
 _SOURCE = "TMUX"
@@ -71,6 +71,17 @@ def _screenshot(unifying_chars: AbstractSet[str], uid: str) -> Sequence[str]:
         return tuple(coalesce(out, unifying_chars=unifying_chars))
 
 
+def _comp(ctx: Context, word: str) -> Completion:
+    edit = ContextualEdit(
+        old_prefix=ctx.words_before,
+        old_suffix=ctx.words_after,
+        new_text=word,
+        new_prefix=word,
+    )
+    cmp = Completion(source=_SOURCE, primary_edit=edit)
+    return cmp
+
+
 class Worker(BaseWorker[None]):
     def __init__(self, supervisor: Supervisor, misc: None) -> None:
         self._db = Database(supervisor.pool, location=":memory:")
@@ -104,8 +115,7 @@ class Worker(BaseWorker[None]):
             for word in self._db.select(
                 _PREFIX_LEN, word=context.words, active_pane=active.uid
             ):
-                edit = Edit(new_text=word)
-                completion = Completion(source=_SOURCE, primary_edit=edit)
+                completion = _comp(context, word=word)
                 yield completion
 
         yield tuple(cont())
