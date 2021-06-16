@@ -1,4 +1,4 @@
-from typing import AbstractSet
+from typing import AbstractSet, Optional
 from uuid import uuid4
 
 from pynvim import Nvim
@@ -55,8 +55,8 @@ def context(
     return ctx
 
 
-def should_complete(context: Context) -> bool:
-    return context.line_before != "" and not context.line_before.isspace()
+def should_complete(prev: Optional[Context], cur: Context) -> bool:
+    return (not prev or prev and cur.position != prev.position)  and (cur.line_before != "" and not cur.line_before.isspace())
 
 
 def edit_env(nvim: Nvim, buf: Buffer) -> EditEnv:

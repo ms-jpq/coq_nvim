@@ -23,7 +23,7 @@ def _cmp(nvim: Nvim, stack: Stack, completions: Sequence[Completion]) -> None:
 
 
 @rpc(blocking=True)
-def _txt_changed(nvim: Nvim, stack: Stack, pum: bool) -> None:
+def _txt_changed(nvim: Nvim, stack: Stack) -> None:
     prev: Optional[Context] = None
     if stack.state.cur:
         prev, f = stack.state.cur
@@ -34,11 +34,7 @@ def _txt_changed(nvim: Nvim, stack: Stack, pum: bool) -> None:
         unifying_chars=stack.settings.match.unifying_chars,
         cwd=stack.state.cwd,
     )
-    if (
-        (pum and (prev and prev.position != ctx.position) or (not prev))
-        or (not pum)
-        and should_complete(ctx)
-    ):
+    if should_complete(prev=prev, cur=ctx):
         fut = stack.supervisor.collect(ctx)
         stack.state.cur = (ctx, fut)
 
@@ -59,6 +55,5 @@ def _txt_changed(nvim: Nvim, stack: Stack, pum: bool) -> None:
         pool.submit(cont)
 
 
-autocmd("TextChangedI") << f"lua {_txt_changed.name}(false)"
-autocmd("TextChangedP") << f"lua {_txt_changed.name}(true)"
+autocmd("TextChangedI", "TextChangedP") << f"lua {_txt_changed.name}()"
 
