@@ -1,9 +1,8 @@
+from concurrent.futures import FIRST_EXCEPTION, Future, wait
 from dataclasses import dataclass
 from difflib import SequenceMatcher
 from math import inf
-from typing import Iterable, Iterator, MutableSequence, Sequence, Tuple
-
-from std2.concurrent.futures import gather
+from typing import Iterable, Iterator, MutableSequence, Sequence, Tuple, cast
 
 from ..registry import pool
 from ..shared.parse import is_word
@@ -197,7 +196,7 @@ def rank(
         return tuple(_metrics(options, context=context, completions=completions))
 
     f1, f2 = pool.submit(c1), pool.submit(c2)
-    gather(f1, f2)
+    wait((cast(Future, f1), cast(Future, f2)), return_when=FIRST_EXCEPTION)
     metrics = tuple(zip(completions, f1.result(), f2.result()))
     return _talley(weights, metrics=metrics)
 
