@@ -12,7 +12,7 @@ from std2.pickle import DecodeError, decode
 from ...consts import ARTIFACTS_DIR
 from ...shared.runtime import Supervisor
 from ...shared.runtime import Worker as BaseWorker
-from ...shared.types import Completion, Context, Edit, NvimPos, RangeEdit
+from ...shared.types import UTF16, Completion, Context, Edit, RangeEdit, WTF8Pos
 from .runtime import LSP
 from .types import CompletionItem, CompletionList, MarkupContent, Resp, TextEdit
 
@@ -91,7 +91,7 @@ class Worker(BaseWorker[None]):
         supervisor.nvim.api.exec_lua(_LUA, ())
         super().__init__(supervisor, misc=misc)
 
-    def _req(self, session: UUID, pos: NvimPos) -> Any:
+    def _req(self, session: UUID, pos: WTF8Pos) -> Any:
         token = uuid4()
         fut: Future = Future()
 
@@ -124,10 +124,12 @@ class Worker(BaseWorker[None]):
 
     def work(self, context: Context) -> Iterator[Sequence[Completion]]:
         session = uuid4()
-        go = True
+        row, c = context.position
+        col = len(context.line_before[:c].encode(UTF16))
 
+        go = True
         while go:
-            reply = self._req(session, pos=context.position)
+            reply = self._req(session, pos=(row, col))
             go, comps = _parse(reply)
             yield comps
 
