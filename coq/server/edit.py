@@ -127,7 +127,6 @@ def _contextual_edit_trans(
     end = r2, c2
 
     new_lines = tuple(line for line in edit.new_text.split(env.linefeed))
-
     cursor_yoffset = -len(prefix_lines) + len(new_lines)
     cursor_xpos = (
         len(new_lines[-1].encode(UTF8))
@@ -286,11 +285,12 @@ def _cursor(cursor: NvimPos, instructions: Sequence[_EditInstruction]) -> NvimPo
     col = -1
 
     for inst in instructions:
-        r_shift, col = inst.cursor_offset
-        row += r_shift
+        row += inst.cursor_yoffset
+        col = inst.cursor_xpos
         if inst.primary:
             break
 
+    assert col != -1
     return row, col
 
 
