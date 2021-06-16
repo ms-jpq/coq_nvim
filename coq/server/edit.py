@@ -92,7 +92,7 @@ def _edit_trans(ctx: Context, env: EditEnv, edit: Edit) -> _EditInstruction:
     cursor_xpos = (
         len(new_lines[-1])
         if len(new_lines) > 1
-        else c1 + len(new_lines[0].encode(UTF8)) - 1
+        else c1 + len(new_lines[0].encode(UTF8))
     )
 
     inst = _EditInstruction(
