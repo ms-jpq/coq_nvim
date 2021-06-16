@@ -7,16 +7,21 @@ from pynvim_pp.logging import log
 
 from ...registry import autocmd, enqueue_event, pool, rpc
 from ...shared.nvim.completions import complete
-from ...shared.types import Completion, Context
+from ...shared.types import Completion, Context, NvimPos
 from ..context import context
 from ..runtime import Stack
 from ..trans import trans
 
 
-def _should_cont(prev: Optional[Context], cur: Context) -> bool:
-    return (prev is None or prev and cur.position != prev.position) and (
-        cur.line_before != "" and not cur.line_before.isspace()
-    )
+def _should_cont(
+    inserted: Optional[NvimPos], prev: Optional[Context], cur: Context
+) -> bool:
+    if prev and cur.position == prev.position:
+        return False
+    elif cur.position == inserted:
+        return False
+    else:
+        return cur.line_before != "" and not cur.line_before.isspace()
 
 
 @rpc(blocking=True)
@@ -40,7 +45,7 @@ def _txt_changed(nvim: Nvim, stack: Stack) -> None:
         unifying_chars=stack.settings.match.unifying_chars,
         cwd=stack.state.cwd,
     )
-    if _should_cont(prev=prev, cur=ctx):
+    if _should_cont(stack.state.inserted, prev=prev, cur=ctx):
         fut = stack.supervisor.collect(ctx)
         stack.state.cur = (ctx, fut)
 
@@ -59,6 +64,8 @@ def _txt_changed(nvim: Nvim, stack: Stack) -> None:
                 log.exception("%s", e)
 
         pool.submit(cont)
+    else:
+        stack.state.inserted = None
 
 
 autocmd("TextChangedI", "TextChangedP") << f"lua {_txt_changed.name}()"

@@ -18,13 +18,14 @@ from ..clients.tree_sitter.worker import Worker as TreeWorker
 from ..consts import CONFIG_YML, DB_DIR, SETTINGS_VAR
 from ..shared.runtime import Supervisor, Worker
 from ..shared.settings import Settings
-from ..shared.types import Context
+from ..shared.types import Context, NvimPos
 from .model.database import Database
 
 
 @dataclass
-class _State:
+class State:
     cur: Optional[Tuple[Context, Future]]
+    inserted: Optional[NvimPos]
     inserting: bool
     cwd: str
 
@@ -32,7 +33,7 @@ class _State:
 @dataclass(frozen=True)
 class Stack:
     settings: Settings
-    state: _State
+    state: State
     db: Database
     supervisor: Supervisor
     workers: AbstractSet[Worker]
@@ -70,8 +71,9 @@ def _from_each_according_to_their_ability(
 def stack(pool: ThreadPoolExecutor, nvim: Nvim) -> Stack:
     settings = _settings(nvim)
     cwd = get_cwd(nvim)
-    state = _State(
+    state = State(
         cur=None,
+        inserted=None,
         inserting=nvim.api.get_mode()["mode"] == "i",
         cwd=cwd,
     )
@@ -82,3 +84,4 @@ def stack(pool: ThreadPoolExecutor, nvim: Nvim) -> Stack:
         settings=settings, state=state, db=db, supervisor=supervisor, workers=workers
     )
     return stack
+

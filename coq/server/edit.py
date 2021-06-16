@@ -21,6 +21,7 @@ from ..shared.types import (
 )
 from ..snippets.parse import parse
 from .context import edit_env
+from .runtime import State
 from .types import UserData
 
 
@@ -296,7 +297,7 @@ def _cursor(cursor: NvimPos, instructions: Sequence[_EditInstruction]) -> NvimPo
     return row, col
 
 
-def edit(nvim: Nvim, ctx: Context, data: UserData) -> None:
+def edit(nvim: Nvim, state: State, ctx: Context, data: UserData) -> None:
     win = cur_win(nvim)
     buf = win_get_buf(nvim, win=win)
     cursor = win_get_cursor(nvim, win=win)
@@ -319,4 +320,5 @@ def edit(nvim: Nvim, ctx: Context, data: UserData) -> None:
 
     buf[lo:hi] = new_lines[lo:]
     win_set_cursor(nvim, win=win, row=n_row, col=n_col)
+    state.inserted = n_row, n_col
 
