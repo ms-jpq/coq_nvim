@@ -150,9 +150,7 @@ def _range_edit_trans(
     begin = r1, c1
     end = r2, c2
     new_lines = tuple(line for line in edit.new_text.split(env.linefeed))
-    cursor_offset = row - r1 + r2, (
-        len(new_lines[-1].encode("UTF8")) if primary else -1
-    )
+    cursor_offset = row + (r2 - r1 - len(new_lines)), c2 if primary else -1
 
     inst = _EditInstruction(
         primary=primary,
