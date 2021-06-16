@@ -275,20 +275,14 @@ def _new_lines(
                     for idx, new_line in zip(it, lit):
                         if idx == r1 and idx == r2:
                             new_lines = tuple(lit)
-                            padding = " " * (c1 - lines.len8[r1])
                             if new_lines:
                                 *body, tail = new_lines
-                                yield (
-                                    lines.b_lines8[r1][:c1].decode(UTF8)
-                                    + padding
-                                    + new_line
-                                )
+                                yield lines.b_lines8[r1][:c1].decode(UTF8) + new_line
                                 yield from body
                                 yield tail + lines.b_lines8[r2][c2:].decode(UTF8)
                             else:
                                 yield (
                                     lines.b_lines8[r1][:c1].decode(UTF8)
-                                    + padding
                                     + new_line
                                     + lines.b_lines8[r2][c2:].decode(UTF8)
                                 )
