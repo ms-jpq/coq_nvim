@@ -20,6 +20,10 @@ weights:
   count_by_filetype: 1.0
   alphabetical: 1.0
 
+keymap:
+  prev_mark: <C-p>
+  next_mark: <C-n>
+
 clients:
   tree_sitter:
     enabled: True

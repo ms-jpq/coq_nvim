@@ -5,6 +5,7 @@ from typing import Any, MutableMapping, Optional, cast
 
 from pynvim import Nvim
 from pynvim_pp.client import Client
+from pynvim_pp.keymap import Keymap
 from pynvim_pp.lib import threadsafe_call
 from pynvim_pp.logging import log
 from pynvim_pp.rpc import RpcCallable, RpcMsg, nil_handler
@@ -14,13 +15,13 @@ from std2.types import AnyFun
 from ._registry import ____
 from .registry import atomic, autocmd, event_queue, pool, rpc, settings
 from .server.registrants.attachment import BUF_EVENTS
+from .server.registrants.marks import next_mark, prev_mark
 from .server.runtime import Stack, stack
 
 
 class CoqClient(Client):
     def __init__(self) -> None:
         self._handlers: MutableMapping[str, RpcCallable] = {}
-
         self._stack: Optional[Stack] = None
 
     def _handle(self, nvim: Nvim, msg: RpcMsg) -> Any:
@@ -42,15 +43,27 @@ class CoqClient(Client):
             return self._handle(nvim, msg)
 
     def wait(self, nvim: Nvim) -> int:
-        def cont() -> None:
-            if isinstance(nvim.loop, AbstractEventLoop):
-                nvim.loop.set_default_executor(pool)
+        if isinstance(nvim.loop, AbstractEventLoop):
+            nvim.loop.set_default_executor(pool)
 
+        def cont() -> None:
+            keymap = Keymap()
             rpc_atomic, specs = rpc.drain(nvim.channel_id)
             self._handlers.update(specs)
-            (rpc_atomic + autocmd.drain() + atomic + settings.drain()).commit(nvim)
 
             self._stack = stack(pool, nvim=nvim)
+            km = self._stack.settings.keymap
+
+            keymap[km.prev_mark] << f"lua {prev_mark.name}()"
+            keymap[km.next_mark] << f"lua {next_mark.name}()"
+
+            (
+                rpc_atomic
+                + autocmd.drain()
+                + atomic
+                + keymap.drain(buf=None)
+                + settings.drain()
+            ).commit(nvim)
 
         try:
             threadsafe_call(nvim, cont)

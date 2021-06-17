@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import AbstractSet, Any, Mapping
+from typing import AbstractSet
 
 
 @dataclass(frozen=True)
@@ -28,6 +28,12 @@ class Weights:
 
 
 @dataclass(frozen=True)
+class Keymap:
+    prev_mark: str
+    next_mark: str
+
+
+@dataclass(frozen=True)
 class BaseClient:
     enabled: bool
     short_name: str
@@ -53,5 +59,6 @@ class Settings:
     display: Display
     match: Options
     weights: Weights
+    keymap: Keymap
     clients: Clients
 
