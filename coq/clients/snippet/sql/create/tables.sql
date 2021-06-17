@@ -14,36 +14,27 @@ CREATE TABLE IF NOT EXISTS extensions (
 CREATE INDEX extensions_src ON extensions (src);
 
 
-CREATE TABLE IF NOT EXISTS grammar (
-  grammar TEXT NOT NULL PRIMARY KEY,
+CREATE TABLE IF NOT EXISTS snippets (
+  rowid    INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+  filetype TEXT    NOT NULL REFERENCES filetypes (filetype) ON DELETE CASCADE,
+  grammar  TEXT    NOT NULL,
+  content  TEXT    NOT NULL,
+  label    TEXT,
+  doc      TEXT
 ) WITHOUT ROWID;
+
+
+CREATE TABLE IF NOT EXISTS matches (
+  snippet_id INTEGER NOT NULL REFERENCES snippets (rowid) ON DELETE CASCADE,
+  match      TEXT    NOT NULL,
+  UNIQUE(snippet_id, match)
+) WITHOUT ROWID;
+CREATE INDEX matches_match ON snippet_matches (match);
 
 
 CREATE TABLE IF NOT EXISTS options (
-  option TEXT NOT NULL PRIMARY KEY
-) WITHOUT ROWID;
-
-
-CREATE TABLE IF NOT EXISTS snippets (
-  rowid    INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
-  filetype text    NOT NULL REFERENCES filetypes     (filetype) ON DELETE CASCADE,
-  grammar  text    NOT NULL REFERENCES snippet_kinds (grammar)  ON DELETE CASCADE,
-  content     TEXT NOT NULL,
-  label       TEXT,
-  doc         TEXT
-);
-
-
-CREATE TABLE IF NOT EXISTS snippet_matches (
   snippet_id INTEGER NOT NULL REFERENCES snippets (rowid) ON DELETE CASCADE,
-  match      TEXT    NOT NULL
-);
-CREATE INDEX snippet_matches_match ON snippet_matches (match);
-
-
-CREATE TABLE IF NOT EXISTS snippet_options (
-  snippet_id INTEGER NOT NULL REFERENCES snippets (rowid) ON DELETE CASCADE,
-  option_id  INTEGER NOT NULL REFERENCES options  (rowid) ON DELETE CASCADE
+  option     TEXT    NOT NULL
 );
 
 
@@ -75,104 +66,6 @@ SELECT
 FROM all_exts
 WHERE
   lvl < 10;
-
-
-CREATE VIEW IF NOT EXISTS snippets_matches_view AS
-SELECT
-  snippet_id AS snippet_id,
-  count(match) AS aliases,
-  group_concat(match, ' | ') AS matches
-FROM snippet_matches
-GROUP BY
-  snippet_id;
-
-
-CREATE VIEW IF NOT EXISTS snippets_options_view AS
-SELECT
-  snippet_options.snippet_id AS snippet_id,
-  group_concat(options.name, ',') AS options
-FROM snippet_options
-JOIN options
-ON
-  options.rowid = snippet_options.option_id
-GROUP BY
-  snippet_options.snippet_id;
-
-
-CREATE VIEW IF NOT EXISTS snippets_view AS
-SELECT
-  snippets.rowid AS snippet_id,
-  ft_dest.filetype AS filetype,
-  ft_src.filetype AS source_filetype,
-  snippet_kinds.name AS kind,
-  snippet_kinds.display AS kind_name,
-  snippets.content AS content,
-  snippets.label AS label,
-  snippets.doc AS doc
-FROM extensions_view
-JOIN filetypes AS ft_dest
-ON
-  ft_dest.rowid = extensions_view.dest
-JOIN filetypes AS ft_src
-ON
-  ft_src.rowid = extensions_view.src
-JOIN snippets
-ON
-  snippets.filetype_id = extensions_view.src
-JOIN snippet_kinds
-ON
-  snippet_kinds.rowid = snippets.kind_id;
-
-
-CREATE VIEW IF NOT EXISTS overview AS
-SELECT
-  snippets_view.filetype AS filetype,
-  snippets_view.source_filetype AS source_filetype,
-  snippets_view.kind AS kind,
-  snippets_matches_view.matches AS matches,
-  snippets_options_view.options AS options,
-  snippets_view.content AS content,
-  snippets_view.label AS label,
-  snippets_view.doc AS doc
-FROM snippets_view
-LEFT JOIN snippets_options_view
-ON
-  snippets_options_view.snippet_id = snippets_view.snippet_id
-LEFT JOIN snippets_matches_view
-ON
-  snippets_matches_view.snippet_id = snippets_view.snippet_id;
-
-
-CREATE VIEW IF NOT EXISTS query_view AS
-SELECT
-  snippets_view.filetype AS filetype,
-  snippets_view.source_filetype AS source_filetype,
-  snippet_matches.match AS match,
-  snippets_view.kind AS kind,
-  snippets_view.kind_name AS kind_name,
-  snippets_view.content AS content,
-  snippets_view.label AS label,
-  snippets_view.doc AS doc
-FROM snippet_matches
-JOIN snippets_view
-ON
-  snippets_view.snippet_id = snippet_matches.snippet_id;
-
-
-CREATE VIEW IF NOT EXISTS dump_view AS
-SELECT
-  snippet_kinds.name AS kind,
-  filetypes.filetype AS filetype,
-  snippets.content AS content,
-  snippets.label AS label,
-  snippets.doc AS doc
-FROM snippets
-JOIN snippet_kinds
-ON
-  snippet_kinds.rowid = snippets.kind_id
-JOIN filetypes
-ON
-  filetypes.rowid = snippets.filetype_id;
 
 
 END;

@@ -1,2 +1,2 @@
-INSERT OR IGNORE INTO filetypes (filetype) 
-VALUES (?)
+INSERT OR IGNORE INTO filetypes ( filetype)
+VALUES                          (:filetype)
