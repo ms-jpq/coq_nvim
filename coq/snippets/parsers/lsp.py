@@ -4,22 +4,14 @@ from string import ascii_letters, ascii_lowercase, digits
 from typing import AbstractSet, MutableSequence, Optional, Sequence
 
 from ...shared.types import Context
-from ..server.parser import (
+from .parser import (
     context_from,
     next_char,
     pushback_chars,
     raise_err,
     token_parser,
 )
-from ..server.types import (
-    Begin,
-    DummyBegin,
-    End,
-    ParseContext,
-    Parsed,
-    TokenStream,
-    Unparsable,
-)
+from .types import Begin, DummyBegin, End, ParserCtx, Parsed, TokenStream, Unparsed
 
 #
 # O(n) single pass LSP Parser:
@@ -49,7 +41,7 @@ text        ::= .*
 
 
 @dataclass(frozen=False)
-class Local:
+class _Local:
     depth: int
 
 
@@ -63,7 +55,7 @@ _regex_flag_chars = {*ascii_lowercase}
 
 
 def _parse_escape(
-    context: ParseContext[Local], *, escapable_chars: AbstractSet[str]
+    context: ParserCtx[_Local], *, escapable_chars: AbstractSet[str]
 ) -> str:
     pos, char = next_char(context)
     assert char == "\\"
@@ -82,7 +74,7 @@ def _parse_escape(
 
 
 # choice      ::= '${' int '|' text (',' text)* '|}'
-def _half_parse_choice(context: ParseContext[Local]) -> TokenStream:
+def _half_parse_choice(context: ParserCtx[_Local]) -> TokenStream:
     pos, char = next_char(context)
     assert char == "|"
 
@@ -113,7 +105,7 @@ def _half_parse_choice(context: ParseContext[Local]) -> TokenStream:
 
 # tabstop | choice | placeholder
 # -- all starts with (int)
-def _parse_tcp(context: ParseContext[Local]) -> TokenStream:
+def _parse_tcp(context: ParserCtx[_Local]) -> TokenStream:
     idx_acc: MutableSequence[str] = []
 
     for pos, char in context:
@@ -144,8 +136,11 @@ def _parse_tcp(context: ParseContext[Local]) -> TokenStream:
                 )
 
 
-def _variable_substitution(context: ParseContext[Local], *, name: str) -> Optional[str]:
-    ctx = context.vals
+def _variable_substitution(
+    context: ParserCtx[_Local], *, name: str
+) -> Optional[str]:
+    ctx = context.ctx
+    row, _ = ctx.position
 
     if name == "TM_SELECTED_TEXT":
         return ""
@@ -154,13 +149,13 @@ def _variable_substitution(context: ParseContext[Local], *, name: str) -> Option
         return ctx.line
 
     elif name == "TM_CURRENT_WORD":
-        return ctx.alnums
+        return ctx.words_before + ctx.words_after
 
     elif name == "TM_LINE_INDEX":
-        return str(ctx.position.row)
+        return str(row)
 
     elif name == "TM_LINE_NUMBER":
-        return str(ctx.position.row + 1)
+        return str(row + 1)
 
     elif name == "TM_FILENAME":
         return basename(ctx.filename)
@@ -180,7 +175,7 @@ def _variable_substitution(context: ParseContext[Local], *, name: str) -> Option
 
 
 # variable    ::= '$' var
-def _parse_variable_naked(context: ParseContext[Local]) -> TokenStream:
+def _parse_variable_naked(context: ParserCtx[_Local]) -> TokenStream:
     name_acc: MutableSequence[str] = []
 
     for pos, char in context:
@@ -196,15 +191,15 @@ def _parse_variable_naked(context: ParseContext[Local]) -> TokenStream:
 
 # /' regex '/' (format | text)+ '/'
 def _variable_decoration(
-    context: ParseContext, *, var: str, decoration: Sequence[str]
+    context: ParserCtx, *, var: str, decoration: Sequence[str]
 ) -> TokenStream:
     text = "".join(decoration)
     yield var
-    yield Unparsable(text=text)
+    yield Unparsed(text=text)
 
 
 # | '${' var '/' regex '/' (format | text)+ '/' options '}'
-def _parse_variable_decorated(context: ParseContext[Local], var: str) -> TokenStream:
+def _parse_variable_decorated(context: ParserCtx[_Local], var: str) -> TokenStream:
     pos, char = next_char(context)
     assert char == "/"
 
@@ -239,7 +234,7 @@ def _parse_variable_decorated(context: ParseContext[Local], var: str) -> TokenSt
             pass
 
 
-def _consume_var_subst(context: ParseContext) -> None:
+def _consume_var_subst(context: ParserCtx) -> None:
     context.local.depth += 1
     for token in _parse(context, discard=True):
         pass
@@ -248,7 +243,7 @@ def _consume_var_subst(context: ParseContext) -> None:
 # variable    ::= '$' var | '${' var }'
 #                | '${' var ':' any '}'
 #                | '${' var '/' regex '/' (format | text)+ '/' options '}'
-def _parse_variable_nested(context: ParseContext[Local]) -> TokenStream:
+def _parse_variable_nested(context: ParserCtx[_Local]) -> TokenStream:
     name_acc: MutableSequence[str] = []
 
     for pos, char in context:
@@ -288,7 +283,7 @@ def _parse_variable_nested(context: ParseContext[Local]) -> TokenStream:
 
 
 # ${...}
-def _parse_inner_scope(context: ParseContext[Local]) -> TokenStream:
+def _parse_inner_scope(context: ParserCtx[_Local]) -> TokenStream:
     pos, char = next_char(context)
     assert char == "{"
 
@@ -312,7 +307,7 @@ def _parse_inner_scope(context: ParseContext[Local]) -> TokenStream:
 
 
 # $...
-def _parse_scope(context: ParseContext[Local]) -> TokenStream:
+def _parse_scope(context: ParserCtx[_Local]) -> TokenStream:
     pos, char = next_char(context)
     assert char == "$"
 
@@ -345,7 +340,7 @@ def _parse_scope(context: ParseContext[Local]) -> TokenStream:
 
 
 # any         ::= tabstop | placeholder | choice | variable | text
-def _parse(context: ParseContext[Local], discard: bool) -> TokenStream:
+def _parse(context: ParserCtx[_Local], discard: bool) -> TokenStream:
     for pos, char in context:
         if char == "\\":
             pushback_chars(context, (pos, char))
@@ -363,7 +358,7 @@ def _parse(context: ParseContext[Local], discard: bool) -> TokenStream:
 
 
 def parser(context: Context, snippet: str) -> Parsed:
-    local = Local(depth=0)
+    local = _Local(depth=0)
     ctx = context_from(snippet, context=context, local=local)
     tokens = _parse(ctx, discard=False)
     parsed = token_parser(ctx, stream=tokens)

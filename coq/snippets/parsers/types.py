@@ -1,12 +1,13 @@
 from __future__ import annotations
 
-from collections import deque
 from dataclasses import dataclass
 from typing import Callable, Generic, Iterator, Sequence, Tuple, TypeVar, Union
 
-from ..shared.types import Context, Position
+from ...shared.types import Context, NvimPos
 
 T = TypeVar("T")
+
+from std2.itertools import deiter
 
 
 class ParseError(Exception):
@@ -24,25 +25,21 @@ EChar = Tuple[Index, str]
 
 
 @dataclass(frozen=True)
-class ParseContext(Generic[T], Iterator):
-    vals: Context
-    queue: deque
+class ParserCtx(Generic[T], Iterator):
+    ctx: Context
+    it: deiter
     text: str
     local: T
 
-    def __iter__(self) -> ParseContext:
+    def __iter__(self) -> ParserCtx:
         return self
 
     def __next__(self) -> EChar:
-        if self.queue:
-            char = self.queue.popleft()
-            return char
-        else:
-            raise StopIteration
+        return next(self.it)
 
 
 @dataclass(frozen=True)
-class Unparsable:
+class Unparsed:
     text: str
 
 
@@ -61,7 +58,7 @@ class End:
     pass
 
 
-Token = Union[Unparsable, Begin, DummyBegin, End, str]
+Token = Union[Unparsed, Begin, DummyBegin, End, str]
 TokenStream = Iterator[Token]
 
 
@@ -83,20 +80,15 @@ Parser = Callable[[Context, str], Parsed]
 
 
 @dataclass(frozen=True)
-class InstanceSettings:
-    prefer_tabs: bool
-    tab_width: int
-
-
-@dataclass(frozen=True)
 class Mark:
     name: str
-    begin: Position
-    end: Position
+    begin: NvimPos
+    end: NvimPos
 
 
 @dataclass(frozen=True)
 class Expanded:
     text: str
-    pos: Position
+    pos: NvimPos
     marks: Sequence[Mark]
+

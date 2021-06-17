@@ -3,22 +3,22 @@ from string import ascii_letters, ascii_lowercase, digits
 from typing import List, Optional, Set
 
 from ...shared.types import Context
-from ..server.parser import (
+from .parser import (
     context_from,
     next_char,
     pushback_chars,
     raise_err,
     token_parser,
 )
-from ..server.types import (
+from .types import (
     Begin,
     DummyBegin,
     End,
-    ParseContext,
+    ParserCtx,
     Parsed,
     Token,
     TokenStream,
-    Unparsable,
+    Unparsed,
 )
 
 """
@@ -48,7 +48,7 @@ _lang_begin_chars = {*ascii_lowercase}
 _regex_flag_chars = {*ascii_lowercase}
 
 
-def _parse_escape(context: ParseContext[Local], *, escapable_chars: Set[str]) -> str:
+def _parse_escape(context: ParserCtx[Local], *, escapable_chars: Set[str]) -> str:
     pos, char = next_char(context)
     assert char == "\\"
 
@@ -61,7 +61,7 @@ def _parse_escape(context: ParseContext[Local], *, escapable_chars: Set[str]) ->
 
 
 # regexreplace ::= '/' text '/' text '/' [a-z]*
-def _parse_decorated(context: ParseContext[Local]) -> TokenStream:
+def _parse_decorated(context: ParserCtx[Local]) -> TokenStream:
     pos, char = next_char(context)
     assert char == "/"
 
@@ -80,7 +80,7 @@ def _parse_decorated(context: ParseContext[Local]) -> TokenStream:
                         decoration_acc.append(char)
                     elif char == "}":
                         decoration = "".join(decoration_acc)
-                        yield Unparsable(text=decoration)
+                        yield Unparsed(text=decoration)
                         return
                     else:
                         raise_err(
@@ -96,7 +96,7 @@ def _parse_decorated(context: ParseContext[Local]) -> TokenStream:
 
 # tabstop      ::= '$' int | '${' int '}'
 # placeholder  ::= '${' int ':' ('#:'? any | regexreplace) '}'
-def _parse_tp(context: ParseContext[Local]) -> TokenStream:
+def _parse_tp(context: ParserCtx[Local]) -> TokenStream:
     idx_acc: List[str] = []
 
     for pos, char in context:
@@ -132,22 +132,22 @@ def _parse_tp(context: ParseContext[Local]) -> TokenStream:
                 )
 
 
-def _variable_substitution(context: ParseContext[Local], *, name: str) -> Optional[str]:
-    ctx = context.vals
+def _variable_substitution(context: ParserCtx[Local], *, name: str) -> Optional[str]:
+    ctx = context.ctx
     if name == "VISUAL":
         return ""
     else:
         return None
 
 
-def _consume_var_subst(context: ParseContext[Local]) -> None:
+def _consume_var_subst(context: ParserCtx[Local]) -> None:
     context.local.depth += 1
     for token in _parse(context, discard=True):
         pass
 
 
 # variable    ::= '${' var '}' | '${' var ':' any '}'
-def _parse_variable(context: ParseContext[Local]) -> TokenStream:
+def _parse_variable(context: ParserCtx[Local]) -> TokenStream:
     name_acc: List[str] = []
 
     for pos, char in context:
@@ -171,7 +171,7 @@ def _parse_variable(context: ParseContext[Local]) -> TokenStream:
 
 
 # ${...}
-def _parse_inner_scope(context: ParseContext[Local]) -> TokenStream:
+def _parse_inner_scope(context: ParserCtx[Local]) -> TokenStream:
     pos, char = next_char(context)
     assert char == "{"
 
@@ -195,7 +195,7 @@ def _parse_inner_scope(context: ParseContext[Local]) -> TokenStream:
 
 
 # $...
-def _parse_scope(context: ParseContext[Local]) -> TokenStream:
+def _parse_scope(context: ParserCtx[Local]) -> TokenStream:
     pos, char = next_char(context)
     assert char == "$"
 
@@ -219,7 +219,7 @@ def _parse_scope(context: ParseContext[Local]) -> TokenStream:
 
 
 # lang         ::= '`' text  '`' | '`!' [a-z] text '`'
-def _parse_lang(context: ParseContext[Local]) -> Token:
+def _parse_lang(context: ParserCtx[Local]) -> Token:
     pos, char = next_char(context)
     assert char == "`"
 
@@ -230,7 +230,7 @@ def _parse_lang(context: ParseContext[Local]) -> Token:
             esc = _parse_escape(context, escapable_chars=_escapable_chars)
             acc.append(esc)
         elif char == "`":
-            return Unparsable(text="".join(acc))
+            return Unparsed(text="".join(acc))
         else:
             acc.append(char)
 
@@ -238,7 +238,7 @@ def _parse_lang(context: ParseContext[Local]) -> Token:
 
 
 # any          ::= tabstop | variable | placeholder | text
-def _parse(context: ParseContext[Local], discard: bool) -> TokenStream:
+def _parse(context: ParserCtx[Local], discard: bool) -> TokenStream:
     for pos, char in context:
         if char == "\\":
             pushback_chars(context, (pos, char))
