@@ -130,7 +130,7 @@ def _talley(
     prefix_matches = 0
     consecutive_matches = 0
     num_matches = 0
-    total_density = 0
+    total_density = 0.0
 
     for _, sql, match in metrics:
         insertion_order += sql["insertion_order"]
