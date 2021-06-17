@@ -15,11 +15,11 @@ _SNIPPET_START = "snippet"
 _ALIAS_START = "alias"
 _LABEL_START = "abbr"
 _OPTIONS_START = "options"
-_IGNORED_STARTS = {"source", "delete", "regexp"}
+_IGNORED_STARTS = ("source", "delete", "regexp")
 _SNIPPET_LINE_STARTS = {*whitespace}
 
 
-def parse_one(path: Path) -> MetaSnippets:
+def parse(path: Path) -> MetaSnippets:
     snippets: MutableSequence[MetaSnippet] = []
     extends: MutableSet[str] = set()
 
@@ -44,7 +44,12 @@ def parse_one(path: Path) -> MetaSnippets:
 
     lines = path.read_text().splitlines()
     for lineno, line in enumerate(lines, 1):
-        if not line or line.isspace() or line.startswith(_COMMENT_START):
+        if (
+            not line
+            or line.isspace()
+            or line.startswith(_COMMENT_START)
+            or any(line.startswith(i) for i in _IGNORED_STARTS)
+        ):
             pass
 
         elif line.startswith(_EXTENDS_START):
@@ -74,9 +79,6 @@ def parse_one(path: Path) -> MetaSnippets:
 
         elif line.startswith(_OPTIONS_START):
             current_options.extend(line[len(_OPTIONS_START) :].split(","))
-
-        elif any(line.startswith(i) for i in _IGNORED_STARTS):
-            pass
 
         elif any(line.startswith(c) for c in _SNIPPET_LINE_STARTS):
             if current_name:

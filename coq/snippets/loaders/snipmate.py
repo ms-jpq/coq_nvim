@@ -13,7 +13,7 @@ _SNIPPET_START = "snippet"
 _SNIPPET_LINE_STARTS = {*whitespace}
 
 
-def _parse_start(
+def _start(
     path: Path, lineno: int, line: str
 ) -> Tuple[str, Optional[str], AbstractSet[Options]]:
     rest = line[len(_SNIPPET_START) :]
@@ -60,7 +60,7 @@ def _parse_start(
         return raise_err(path, lineno=lineno, line=line, reason=reason)
 
 
-def parse_one(path: Path) -> MetaSnippets:
+def parse(path: Path) -> MetaSnippets:
     snippets: MutableSequence[MetaSnippet] = []
     extends: MutableSet[str] = set()
 
@@ -93,7 +93,7 @@ def parse_one(path: Path) -> MetaSnippets:
 
         elif line.startswith(_SNIPPET_START):
             push()
-            current_name, current_label, current_opts = _parse_start(
+            current_name, current_label, current_opts = _start(
                 path, lineno=lineno, line=line
             )
             current_lines.clear()

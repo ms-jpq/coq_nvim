@@ -19,7 +19,7 @@ class _Unit:
 _FMT = Mapping[str, _Unit]
 
 
-def _prefix_parse(prefix: Union[str, Sequence[str]]) -> AbstractSet[str]:
+def _prefix(prefix: Union[str, Sequence[str]]) -> AbstractSet[str]:
     if isinstance(prefix, str):
         return {prefix}
     elif isinstance(prefix, Sequence):
@@ -28,7 +28,7 @@ def _prefix_parse(prefix: Union[str, Sequence[str]]) -> AbstractSet[str]:
         raise ValueError(prefix)
 
 
-def _body_parse(body: Union[str, Sequence[str]]) -> str:
+def _body(body: Union[str, Sequence[str]]) -> str:
     if isinstance(body, str):
         return body
     elif isinstance(body, Sequence):
@@ -37,7 +37,7 @@ def _body_parse(body: Union[str, Sequence[str]]) -> str:
         raise ValueError(body)
 
 
-def parse_one(path: Path) -> MetaSnippets:
+def parse(path: Path) -> MetaSnippets:
     text = path.read_text("UTF-8") if path.exists() else ""
     json = loads(text)
     fmt: _FMT = decode(_FMT, json)
@@ -45,10 +45,10 @@ def parse_one(path: Path) -> MetaSnippets:
     def cont() -> Iterator[MetaSnippet]:
         for label, values in fmt.items():
             snippet = MetaSnippet(
-                content=_body_parse(values.body),
+                content=_body(values.body),
                 doc=values.description,
                 label=label,
-                matches=_prefix_parse(values.prefix),
+                matches=_prefix(values.prefix),
                 opts=set(),
             )
             yield snippet

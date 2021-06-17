@@ -28,7 +28,7 @@ class _State(Enum):
     pglobal = auto()
 
 
-def _parse_start(
+def _start(
     path: Path, lineno: int, line: str
 ) -> Tuple[str, Optional[str], AbstractSet[Options]]:
     rest = line[len(_SNIPPET_START) :]
@@ -75,7 +75,7 @@ def _parse_start(
         return raise_err(path, lineno=lineno, line=line, reason=reason)
 
 
-def parse_one(path: Path) -> MetaSnippets:
+def parse(path: Path) -> MetaSnippets:
     snippets: MutableSequence[MetaSnippet] = []
     extends: MutableSet[str] = set()
 
@@ -88,7 +88,12 @@ def parse_one(path: Path) -> MetaSnippets:
     lines = path.read_text().splitlines()
     for lineno, line in enumerate(lines, 1):
         if state == _State.normal:
-            if not line or line.isspace() or line.startswith(_COMMENT_START):
+            if (
+                not line
+                or line.isspace()
+                or line.startswith(_COMMENT_START)
+                or any(line.startswith(ignore) for ignore in _IGNORE_STARTS)
+            ):
                 pass
 
             elif line.startswith(_EXTENDS_START):
@@ -99,15 +104,12 @@ def parse_one(path: Path) -> MetaSnippets:
             elif line.startswith(_SNIPPET_START):
                 state = _State.snippet
 
-                current_name, current_label, current_opts = _parse_start(
+                current_name, current_label, current_opts = _start(
                     path, lineno=lineno, line=line
                 )
 
             elif line.startswith(_GLOBAL_START):
                 state = _State.pglobal
-
-            elif any(line.startswith(ignore) for ignore in _IGNORE_STARTS):
-                pass
 
             else:
                 reason = "Unexpected line start"
