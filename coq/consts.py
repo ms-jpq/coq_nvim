@@ -1,4 +1,4 @@
-from os import name
+from os import environ, name
 from pathlib import Path
 from uuid import uuid4
 
@@ -18,4 +18,7 @@ CONFIG_YML = TOP_LEVEL / "config" / "defaults.yml"
 
 SETTINGS_VAR = "coq_settings"
 NS = uuid4().hex
+
+
+DEBUG = "COQ_DEBUG" in environ
 
