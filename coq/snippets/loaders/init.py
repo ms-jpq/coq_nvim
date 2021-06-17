@@ -1,11 +1,9 @@
-from asyncio import Future, Queue, gather
 from dataclasses import dataclass
-from itertools import count, product
+from itertools import  product
 from os import walk
 from os.path import basename, join, splitext
 from typing import (
     Any,
-    Awaitable,
     Callable,
     List,
     MutableMapping,
@@ -18,22 +16,14 @@ from typing import (
     AbstractSet
 )
 
-from ..shared.consts import __search_paths__
+
 from .lsp import SNIPPET_DISPLAY as L_SNIPPET_DISPLAY
 from .lsp import SNIPPET_KIND as L_SNIPPET_KIND
 from .lsp import parse_one as parse_one_lsp
 from .neosnippet import SNIPPET_DISPLAY as N_SNIPPET_DISPLAY
 from .neosnippet import SNIPPET_KIND as N_SNIPPET_KIND
 from .neosnippet import parse_one as parse_one_neosnippet
-from .pkgs.sql import (
-    init_extensions,
-    init_filetype,
-    init_options,
-    init_snippet_kind,
-    populate,
-    query_filetype,
-)
-from .pkgs.types import LoadError, LoadSingle, MetaSnippet, Options
+from .types import LoadError, LoadSingle, MetaSnippet, Options
 from .snipmate import SNIPPET_DISPLAY as S_SNIPPET_DISPLAY
 from .snipmate import SNIPPET_KIND as S_SNIPPET_KIND
 from .snipmate import parse_one as parse_one_snipmate
@@ -72,7 +62,7 @@ def load_paths(paths: Sequence[Path], exts: Set[str]) -> Mapping[str, Sequence[s
     return path_resolved
 
 
-async def parse_many(
+def parse_many(
     filetype: str, arg: L2
 ) -> Tuple[int, Sequence[MetaSnippet], Sequence[str]]:
     async def p1(path: str) -> LoadSingle:
@@ -98,8 +88,8 @@ async def parse_many(
         return arg.kind_idx, (), ()
 
 
-async def load_filetype(
-    conn: AConnection,
+def load_filetype(
+
     filetype: str,
     options: Dict[Options, int],
     args: Sequence[L2],
@@ -154,15 +144,12 @@ async def gen_l2(
     return l2
 
 
-async def load_all(
-    chan: Queue,
-    conn: AConnection,
+def load_all(
     lsp: Sequence[str],
     snipmate: Sequence[str],
     neosnippet: Sequence[str],
     ultisnips: Sequence[str],
-    testing: bool = False,
-) -> Tuple[Callable[[], Awaitable[None]], Future]:
+    ) -> None:
 
     l2s = await gather(
         gen_l2(
@@ -201,21 +188,4 @@ async def load_all(
 
     fut: Future = Future()
     keys = {filetype for l2 in l2s for filetype in l2.resolved_paths}
-
-    options = await init_options(conn, options={*Options})
-
-    async def ooda() -> None:
-        for i in count(1):
-            filetype = await chan.get()
-            try:
-                await load_filetype(conn, filetype=filetype, options=options, args=l2s)
-            except Exception as e:
-                log.exception("%s", e)
-            if i == len(keys):
-                fut.set_result(None)
-
-    if testing:
-        await gather(*map(chan.put, keys))
-
-    return ooda, fut
 

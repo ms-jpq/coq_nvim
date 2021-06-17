@@ -5,9 +5,6 @@ from typing import Dict, List, Sequence, Set, Union, cast
 
 from .types import LoadSingle, MetaSnippet
 
-SNIPPET_KIND = "lsp"
-SNIPPET_DISPLAY = SNIPPET_KIND.capitalize()
-
 
 def _prefix_parse(prefix: Union[str, Sequence[str]]) -> Set[str]:
     if type(prefix) is str:

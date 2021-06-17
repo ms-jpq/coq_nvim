@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from enum import Enum, auto
-from typing import Optional, Sequence, Set, Tuple
+from typing import AbstractSet, Optional, Sequence
 
 
 class LoadError(Exception):
@@ -27,8 +27,12 @@ class MetaSnippet:
     content: str
     label: Optional[str]
     doc: Optional[str]
-    matches: Set[str]
-    opts: Set[Options]
+    matches: AbstractSet[str]
+    opts: AbstractSet[Options]
 
 
-LoadSingle = Tuple[Sequence[MetaSnippet], Sequence[str]]
+@dataclass(frozen=True)
+class MetaSnippets:
+    snippets: Sequence[MetaSnippet]
+    extends: AbstractSet[str]
+

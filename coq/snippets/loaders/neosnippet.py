@@ -8,9 +8,6 @@ from typing import MutableSequence, Optional
 from .parse import opt_parse, raise_err
 from .types import LoadSingle, MetaSnippet
 
-SNIPPET_KIND = "neosnippet"
-SNIPPET_DISPLAY = SNIPPET_KIND.capitalize()
-
 _COMMENT_START = "#"
 _EXTENDS_START = "extends"
 _INCLUDES_START = "include"

@@ -7,9 +7,6 @@ from typing import List, Set, Tuple
 from .parse import opt_parse, raise_err
 from .types import LoadSingle, MetaSnippet, Optional, Options
 
-SNIPPET_KIND = "snipmate"
-SNIPPET_DISPLAY = SNIPPET_KIND.capitalize()
-
 _COMMENT_START = "#"
 _EXTENDS_START = "extends"
 _SNIPPET_START = "snippet"

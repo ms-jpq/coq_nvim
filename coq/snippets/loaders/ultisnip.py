@@ -5,9 +5,6 @@ from typing import List, Optional, Set, Tuple
 from .parse import opt_parse, raise_err
 from .types import LoadSingle, MetaSnippet, Options
 
-SNIPPET_KIND = "ultisnip"
-SNIPPET_DISPLAY = SNIPPET_KIND.capitalize()
-
 _COMMENT_START = "#"
 _EXTENDS_START = "extends"
 _SNIPPET_START = "snippet"
@@ -15,7 +12,13 @@ _SNIPPET_END = "endsnippet"
 _GLOBAL_START = "global"
 _GLOBAL_END = "globalend"
 
-_IGNORE_STARTS = {"priority", "iclearsnippets", "pre_expand", "post_expand", "post_jump"}
+_IGNORE_STARTS = {
+    "priority",
+    "iclearsnippets",
+    "pre_expand",
+    "post_expand",
+    "post_jump",
+}
 
 
 class _State(Enum):
@@ -136,3 +139,4 @@ def parse_one(path: str) -> LoadSingle:
                 assert False, "bad state"
 
     return snippets, extends
+
