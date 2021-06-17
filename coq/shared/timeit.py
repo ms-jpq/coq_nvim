@@ -1,6 +1,7 @@
 from contextlib import contextmanager
 from typing import Any, Iterator
 
+from pynvim_pp.logging import log
 from std2.timeit import timeit as _timeit
 
 
@@ -10,5 +11,6 @@ def timeit(threshold: float, name: str, *args: Any) -> Iterator[None]:
         yield None
     delta = t()
     if delta > threshold:
-        print(f"TIME -- {name} :: {round(delta, 3)}", *args, flush=True)
+        msg = f"TIME -- {name} :: {round(delta, 3)} {' '.join(args)}"
+        log.debug("%s", msg)
 
