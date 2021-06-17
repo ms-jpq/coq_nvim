@@ -1,4 +1,5 @@
 from asyncio.events import AbstractEventLoop
+from logging import DEBUG as DEBUG_LV
 from os import linesep
 from sys import stderr
 from typing import Any, MutableMapping, Optional, cast
@@ -13,10 +14,14 @@ from std2.pickle import DecodeError
 from std2.types import AnyFun
 
 from ._registry import ____
+from .consts import DEBUG
 from .registry import atomic, autocmd, event_queue, pool, rpc, settings
 from .server.registrants.attachment import BUF_EVENTS
 from .server.registrants.marks import next_mark, prev_mark
 from .server.runtime import Stack, stack
+
+if DEBUG:
+    log.setLevel(DEBUG_LV)
 
 
 class CoqClient(Client):
