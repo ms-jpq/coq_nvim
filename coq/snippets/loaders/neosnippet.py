@@ -5,8 +5,8 @@ from string import whitespace
 from textwrap import dedent
 from typing import MutableSequence, MutableSet, Optional
 
+from ..types import MetaSnippets, ParsedSnippet
 from .parse import opt_parse, raise_err
-from .types import ParsedSnippet, MetaSnippets
 
 _COMMENT_START = "#"
 _EXTENDS_START = "extends"

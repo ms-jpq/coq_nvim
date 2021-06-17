@@ -2,7 +2,7 @@ from pathlib import PurePath
 from textwrap import dedent
 from typing import Iterator, NoReturn, Sequence, Set
 
-from .types import LoadError, Options
+from ..types import LoadError, Options
 
 _OPTIONS_MAP = {o.name: o for o in Options}
 

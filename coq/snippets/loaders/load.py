@@ -3,10 +3,10 @@ from typing import AbstractSet, Mapping, MutableMapping, MutableSequence, Mutabl
 
 from std2.pathlib import walk
 
+from ..types import ParsedSnippet, SnippetSpecs
 from .lsp import parse as parse_lsp
 from .neosnippet import parse as parse_neosnippets
 from .snipmate import parse as parse_snipmate
-from .types import ParsedSnippet, SnippetSpecs
 from .ultisnip import parse as parse_ultisnip
 
 

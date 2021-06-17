@@ -3,8 +3,8 @@ from os import linesep
 from pathlib import Path
 from typing import AbstractSet, MutableSequence, MutableSet, Optional, Tuple
 
+from ..types import MetaSnippets, Options, ParsedSnippet
 from .parse import opt_parse, raise_err
-from .types import ParsedSnippet, MetaSnippets, Options
 
 _COMMENT_START = "#"
 _EXTENDS_START = "extends"

@@ -6,7 +6,7 @@ from typing import AbstractSet, Iterator, Mapping, Optional, Sequence, Union
 
 from std2.pickle import decode
 
-from .types import ParsedSnippet, MetaSnippets
+from ..types import MetaSnippets, ParsedSnippet
 
 
 @dataclass
