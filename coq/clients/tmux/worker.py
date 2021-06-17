@@ -109,9 +109,10 @@ class Worker(BaseWorker[PollingClient, None]):
 
     def work(self, context: Context) -> Iterator[Sequence[Completion]]:
         active = _cur()
+        words = self._db.select(context.words, active_pane=active.uid)
 
         def cont() -> Iterator[Completion]:
-            for word in self._db.select(context.words, active_pane=active.uid):
+            for word in words:
                 completion = _comp(self._options.short_name, ctx=context, word=word)
                 yield completion
 

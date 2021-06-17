@@ -2,13 +2,19 @@ from concurrent.futures import ThreadPoolExecutor
 from contextlib import closing
 from locale import strcoll
 from sqlite3 import Connection, Row
-from typing import Iterator, Mapping, Sequence
+from typing import Iterator, Mapping, Sequence, TypedDict
 
 from std2.sqllite3 import escape, with_transaction
 
 from ...shared.executor import Executor
 from ...shared.parse import lower, normalize
 from .sql import sql
+
+
+class _Snip(TypedDict):
+    prefix: str
+    snippet: str
+    grammar: str
 
 
 def _like_esc(like: str) -> str:
@@ -33,6 +39,10 @@ class Database:
         self._ex = Executor(pool)
         self._conn: Connection = self._ex.submit(_init, location)
 
-    def select(self, word: str, filetype: str) -> Sequence[str]:
-        return ()
+    def select(self, word: str, filetype: str) -> Sequence[_Snip]:
+        def cont() -> Sequence[_Snip]:
+            with closing(self._conn.cursor()) as cursor:
+                return ()
+
+        return self._ex.submit(cont)
 
