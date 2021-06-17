@@ -54,8 +54,8 @@ class CoqClient(Client):
             self._stack = stack(pool, nvim=nvim)
             km = self._stack.settings.keymap
 
-            keymap[km.prev_mark] << f"lua {prev_mark.name}()"
-            keymap[km.next_mark] << f"lua {next_mark.name}()"
+            keymap.n(km.prev_mark) << f"lua {prev_mark.name}()"
+            keymap.n(km.next_mark) << f"lua {next_mark.name}()"
 
             (
                 rpc_atomic
