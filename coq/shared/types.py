@@ -75,6 +75,13 @@ class SnippetEdit(Edit):
     grammar: Annotated[str, "ie. LSP, Texmate, Ultisnip, etc"]
 
 
+@dataclass(frozen=True)
+class Mark:
+    idx: int
+    begin: NvimPos
+    end: NvimPos
+
+
 ApplicableEdit = Union[Edit, RangeEdit, ContextualEdit]
 PrimaryEdit = Union[ApplicableEdit, SnippetEdit]
 
@@ -94,6 +101,6 @@ class Completion:
 @dataclass(frozen=True)
 class EditEnv:
     linefeed: Literal["\r\n", "\n", "\r"]
-    tabstop: bool
+    tabstop: int
     expandtab: bool
 

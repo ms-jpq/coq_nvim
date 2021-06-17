@@ -75,20 +75,3 @@ class Parsed:
     cursor: int
     regions: Sequence[Region]
 
-
-Parser = Callable[[Context, str], Parsed]
-
-
-@dataclass(frozen=True)
-class Mark:
-    name: str
-    begin: NvimPos
-    end: NvimPos
-
-
-@dataclass(frozen=True)
-class Expanded:
-    text: str
-    pos: NvimPos
-    marks: Sequence[Mark]
-
