@@ -1,4 +1,4 @@
-from typing import AbstractSet, Optional
+from typing import AbstractSet
 from uuid import uuid4
 
 from pynvim import Nvim
