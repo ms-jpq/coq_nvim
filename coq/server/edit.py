@@ -28,6 +28,7 @@ from ..shared.types import (
 )
 from ..snippets.parse import parse
 from .context import edit_env
+from .marks import mark
 from .runtime import Stack
 from .types import UserData
 
@@ -333,10 +334,10 @@ def edit(nvim: Nvim, stack: Stack, data: UserData) -> None:
             cursor = win_get_cursor(nvim, win=win)
             env = edit_env(nvim, buf=buf)
 
-            primary = (
-                parse(nvim, env=env, snippet=data.primary_edit)
+            primary, marks = (
+                parse(ctx, env=env, snippet=data.primary_edit)
                 if isinstance(data.primary_edit, SnippetEdit)
-                else data.primary_edit
+                else (data.primary_edit, ())
             )
             lo, hi = _rows_to_fetch(ctx.position, env, primary, *data.secondary_edits)
             limited_lines = buf_get_lines(nvim, buf=buf, lo=lo, hi=hi)
@@ -358,6 +359,7 @@ def edit(nvim: Nvim, stack: Stack, data: UserData) -> None:
 
             stack.state.inserted = n_row, n_col
             stack.db.inserted(primary.new_text)
+            mark(nvim, marks=marks)
 
             # TODO - Remove DEBUG
             print(
