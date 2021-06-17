@@ -34,7 +34,8 @@ CREATE INDEX matches_match ON snippet_matches (match);
 
 CREATE TABLE IF NOT EXISTS options (
   snippet_id INTEGER NOT NULL REFERENCES snippets (rowid) ON DELETE CASCADE,
-  option     TEXT    NOT NULL
+  option     TEXT    NOT NULL,
+  UNIQUE(snippet_id, option)
 );
 
 
