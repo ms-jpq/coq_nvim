@@ -10,6 +10,7 @@ from std2.pickle.coders import BUILTIN_DECODERS
 from ...registry import autocmd, enqueue_event, pool, rpc, settings
 from ...shared.nvim.completions import complete
 from ...shared.types import Completion, Context, NvimPos
+from ...shared.timeit import timeit
 from ..context import context
 from ..edit import edit
 from ..runtime import Stack
@@ -33,7 +34,8 @@ def _cmp(nvim: Nvim, stack: Stack, completions: Sequence[Completion]) -> None:
     if stack.state.inserting and stack.state.cur:
         ctx, _ = stack.state.cur
         _, col = ctx.position
-        comp = trans(stack, context=ctx, completions=completions)
+        with timeit(0, "TRANS"):
+            comp = trans(stack, context=ctx, completions=completions)
         complete(nvim, col=col, comp=comp)
 
 

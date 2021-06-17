@@ -19,6 +19,7 @@ class _ToleranceExceeded(Exception):
 @dataclass(frozen=True)
 class _MatchMetrics:
     prefix_matches: int
+    match_density: float
     consecutive_matches: int
     num_matches: int
 
@@ -47,9 +48,11 @@ def _secondary(n_cword: str, n_match: str) -> _MatchMetrics:
             consecutive_matches += 1
         pm_idx = i
 
+    match_density = num_matches / len(n_match) if n_match else 0
     metric = _MatchMetrics(
         prefix_matches=prefix_matches,
         consecutive_matches=consecutive_matches,
+        match_density=match_density,
         num_matches=num_matches,
     )
     return metric
@@ -87,9 +90,11 @@ def _primary(
             if not prefix_broken:
                 prefix_matches += 1
 
+    match_density = num_matches / len(match) if match else 0
     metric = _MatchMetrics(
         prefix_matches=prefix_matches,
         consecutive_matches=consecutive_matches,
+        match_density=match_density,
         num_matches=num_matches,
     )
     return metric
@@ -125,6 +130,7 @@ def _talley(
     prefix_matches = 0
     consecutive_matches = 0
     num_matches = 0
+    total_density = 0
 
     for _, sql, match in metrics:
         insertion_order += sql["insertion_order"]
@@ -134,6 +140,7 @@ def _talley(
         prefix_matches += match.prefix_matches
         consecutive_matches += match.consecutive_matches
         num_matches += match.num_matches
+        total_density += match.match_density
 
     alphabetical = {
         cmp.uid: idx
@@ -143,11 +150,12 @@ def _talley(
             )
         )
     }
+    alpha_sum = len(alphabetical) * (len(alphabetical) + 1) / 2
 
     def key_by(metric: Tuple[Completion, SqlMetrics, _MatchMetrics]) -> float:
         cmp, sql, match = metric
         return (
-            (weights.alphabetical * alphabetical[cmp.uid] / len(alphabetical))
+            (weights.alphabetical * alphabetical[cmp.uid] / alpha_sum)
             + (
                 weights.insertion_order * sql["insertion_order"] / insertion_order
                 if insertion_order
@@ -173,6 +181,11 @@ def _talley(
                 * match.consecutive_matches
                 / consecutive_matches
                 if consecutive_matches
+                else 0
+            )
+            + (
+                weights.match_density * match.match_density / total_density
+                if total_density
                 else 0
             )
             + (

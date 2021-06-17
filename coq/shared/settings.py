@@ -21,6 +21,7 @@ class Weights:
     consecutive_matches: float
     count_by_filetype: float
     insertion_order: float
+    match_density: float
     nearest_neighbour: float
     num_matches: float
     prefix_matches: float
