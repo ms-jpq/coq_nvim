@@ -2,10 +2,10 @@ from os import linesep
 from pathlib import Path
 from string import whitespace
 from textwrap import dedent
-from typing import List, Set, Tuple
+from typing import AbstractSet, MutableSequence, MutableSet, Tuple
 
 from .parse import opt_parse, raise_err
-from .types import LoadSingle, MetaSnippet, Optional, Options
+from .types import MetaSnippet, MetaSnippets, Optional, Options
 
 _COMMENT_START = "#"
 _EXTENDS_START = "extends"
@@ -15,7 +15,7 @@ _SNIPPET_LINE_STARTS = {*whitespace}
 
 def _parse_start(
     path: Path, lineno: int, line: str
-) -> Tuple[str, Optional[str], Set[Options]]:
+) -> Tuple[str, Optional[str], AbstractSet[Options]]:
     rest = line[len(_SNIPPET_START) :]
     sep_count = rest.count('"')
 
@@ -60,12 +60,14 @@ def _parse_start(
         return raise_err(path, lineno=lineno, line=line, reason=reason)
 
 
-def parse_one(path: Path) -> LoadSingle:
-    snippets: List[MetaSnippet] = []
-    extends: List[str] = []
+def parse_one(path: Path) -> MetaSnippets:
+    snippets: MutableSequence[MetaSnippet] = []
+    extends: MutableSet[str] = set()
+
     current_name = ""
     current_label: Optional[str] = None
-    current_lines: List[str] = []
+    current_lines: MutableSequence[str] = []
+    current_opts: AbstractSet[Options] = frozenset()
 
     def push() -> None:
         if current_name:
@@ -75,7 +77,7 @@ def parse_one(path: Path) -> LoadSingle:
                 label=current_label,
                 doc=None,
                 matches={current_name},
-                opts=set(),
+                opts=current_opts,
             )
             snippets.append(snippet)
 
@@ -87,7 +89,7 @@ def parse_one(path: Path) -> LoadSingle:
         elif line.startswith(_EXTENDS_START):
             filetypes = line[len(_EXTENDS_START) :].strip()
             for filetype in filetypes.split(","):
-                extends.append(filetype.strip())
+                extends.add(filetype.strip())
 
         elif line.startswith(_SNIPPET_START):
             push()
@@ -109,5 +111,6 @@ def parse_one(path: Path) -> LoadSingle:
 
     push()
 
-    return snippets, extends
+    meta = MetaSnippets(snippets=snippets, extends=extends)
+    return meta
 

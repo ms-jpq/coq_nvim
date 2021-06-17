@@ -1,9 +1,10 @@
 from enum import Enum, auto
 from os import linesep
-from typing import List, Optional, Set, Tuple
+from pathlib import Path
+from typing import AbstractSet, MutableSequence, MutableSet, Optional, Tuple
 
 from .parse import opt_parse, raise_err
-from .types import LoadSingle, MetaSnippet, Options
+from .types import MetaSnippet, MetaSnippets, Options
 
 _COMMENT_START = "#"
 _EXTENDS_START = "extends"
@@ -28,8 +29,8 @@ class _State(Enum):
 
 
 def _parse_start(
-    path: str, lineno: int, line: str
-) -> Tuple[str, Optional[str], Set[Options]]:
+    path: Path, lineno: int, line: str
+) -> Tuple[str, Optional[str], AbstractSet[Options]]:
     rest = line[len(_SNIPPET_START) :]
     sep_count = rest.count('"')
 
@@ -74,69 +75,71 @@ def _parse_start(
         return raise_err(path, lineno=lineno, line=line, reason=reason)
 
 
-def parse_one(path: str) -> LoadSingle:
-    snippets: List[MetaSnippet] = []
-    extends: List[str] = []
+def parse_one(path: Path) -> MetaSnippets:
+    snippets: MutableSequence[MetaSnippet] = []
+    extends: MutableSet[str] = set()
+
     current_name = ""
-    current_label: Optional[str] = None
-    current_lines: List[str] = []
-    current_opts: Set[Options] = set()
     state = _State.normal
+    current_label: Optional[str] = None
+    current_lines: MutableSequence[str] = []
+    current_opts: AbstractSet[Options] = frozenset()
 
-    with open(path) as fd:
-        for lineno, line in enumerate(fd, 1):
-            if state == _State.normal:
-                if not line or line.isspace() or line.startswith(_COMMENT_START):
-                    pass
+    lines = path.read_text().splitlines()
+    for lineno, line in enumerate(lines, 1):
+        if state == _State.normal:
+            if not line or line.isspace() or line.startswith(_COMMENT_START):
+                pass
 
-                elif line.startswith(_EXTENDS_START):
-                    filetypes = line[len(_EXTENDS_START) :].strip()
-                    for filetype in filetypes.split(","):
-                        extends.append(filetype.strip())
+            elif line.startswith(_EXTENDS_START):
+                filetypes = line[len(_EXTENDS_START) :].strip()
+                for filetype in filetypes.split(","):
+                    extends.add(filetype.strip())
 
-                elif line.startswith(_SNIPPET_START):
-                    state = _State.snippet
+            elif line.startswith(_SNIPPET_START):
+                state = _State.snippet
 
-                    current_name, current_label, current_opts = _parse_start(
-                        path=path, lineno=lineno, line=line
-                    )
+                current_name, current_label, current_opts = _parse_start(
+                    path, lineno=lineno, line=line
+                )
 
-                elif line.startswith(_GLOBAL_START):
-                    state = _State.pglobal
+            elif line.startswith(_GLOBAL_START):
+                state = _State.pglobal
 
-                elif any(line.startswith(ignore) for ignore in _IGNORE_STARTS):
-                    pass
-
-                else:
-                    reason = "Unexpected line start"
-                    raise_err(path, lineno=lineno, line=line, reason=reason)
-
-            elif state == _State.snippet:
-                if line.startswith(_SNIPPET_END):
-                    state = _State.normal
-
-                    content = linesep.join(current_lines)
-                    snippet = MetaSnippet(
-                        content=content,
-                        label=current_label,
-                        doc=None,
-                        matches={current_name},
-                        opts=current_opts,
-                    )
-                    snippets.append(snippet)
-                    current_lines.clear()
-
-                else:
-                    current_lines.append(line)
-
-            elif state == _State.pglobal:
-                if line.startswith(_GLOBAL_END):
-                    state = _State.normal
-                else:
-                    pass
+            elif any(line.startswith(ignore) for ignore in _IGNORE_STARTS):
+                pass
 
             else:
-                assert False, "bad state"
+                reason = "Unexpected line start"
+                raise_err(path, lineno=lineno, line=line, reason=reason)
 
-    return snippets, extends
+        elif state == _State.snippet:
+            if line.startswith(_SNIPPET_END):
+                state = _State.normal
+
+                content = linesep.join(current_lines)
+                snippet = MetaSnippet(
+                    content=content,
+                    label=current_label,
+                    doc=None,
+                    matches={current_name},
+                    opts=current_opts,
+                )
+                snippets.append(snippet)
+                current_lines.clear()
+
+            else:
+                current_lines.append(line)
+
+        elif state == _State.pglobal:
+            if line.startswith(_GLOBAL_END):
+                state = _State.normal
+            else:
+                pass
+
+        else:
+            assert False
+
+    meta = MetaSnippets(snippets=snippets, extends=extends)
+    return meta
 
