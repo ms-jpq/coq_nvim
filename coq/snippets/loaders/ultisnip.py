@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import AbstractSet, MutableSequence, MutableSet, Optional, Tuple
 
 from .parse import opt_parse, raise_err
-from .types import MetaSnippet, MetaSnippets, Options
+from .types import ParsedSnippet, MetaSnippets, Options
 
 _COMMENT_START = "#"
 _EXTENDS_START = "extends"
@@ -76,7 +76,7 @@ def _start(
 
 
 def parse(path: Path) -> MetaSnippets:
-    snippets: MutableSequence[MetaSnippet] = []
+    snippets: MutableSequence[ParsedSnippet] = []
     extends: MutableSet[str] = set()
 
     current_name = ""
@@ -120,7 +120,7 @@ def parse(path: Path) -> MetaSnippets:
                 state = _State.normal
 
                 content = linesep.join(current_lines)
-                snippet = MetaSnippet(
+                snippet = ParsedSnippet(
                     content=content,
                     label=current_label,
                     doc=None,

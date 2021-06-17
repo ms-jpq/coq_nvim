@@ -6,7 +6,7 @@ from typing import AbstractSet, Iterator, Mapping, Optional, Sequence, Union
 
 from std2.pickle import decode
 
-from .types import MetaSnippet, MetaSnippets
+from .types import ParsedSnippet, MetaSnippets
 
 
 @dataclass
@@ -42,9 +42,9 @@ def parse(path: Path) -> MetaSnippets:
     json = loads(text)
     fmt: _FMT = decode(_FMT, json)
 
-    def cont() -> Iterator[MetaSnippet]:
+    def cont() -> Iterator[ParsedSnippet]:
         for label, values in fmt.items():
-            snippet = MetaSnippet(
+            snippet = ParsedSnippet(
                 content=_body(values.body),
                 doc=values.description,
                 label=label,

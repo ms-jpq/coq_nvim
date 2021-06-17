@@ -6,7 +6,7 @@ from textwrap import dedent
 from typing import MutableSequence, MutableSet, Optional
 
 from .parse import opt_parse, raise_err
-from .types import MetaSnippet, MetaSnippets
+from .types import ParsedSnippet, MetaSnippets
 
 _COMMENT_START = "#"
 _EXTENDS_START = "extends"
@@ -20,7 +20,7 @@ _SNIPPET_LINE_STARTS = {*whitespace}
 
 
 def parse(path: Path) -> MetaSnippets:
-    snippets: MutableSequence[MetaSnippet] = []
+    snippets: MutableSequence[ParsedSnippet] = []
     extends: MutableSet[str] = set()
 
     current_name = ""
@@ -33,7 +33,7 @@ def parse(path: Path) -> MetaSnippets:
         if current_name:
             content = dedent(linesep.join(current_lines))
             opts = opt_parse(current_options)
-            snippet = MetaSnippet(
+            snippet = ParsedSnippet(
                 content=content,
                 label=current_label,
                 doc="",

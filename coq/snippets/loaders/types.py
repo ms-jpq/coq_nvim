@@ -23,7 +23,7 @@ class Options(Enum):
 
 
 @dataclass(frozen=True)
-class MetaSnippet:
+class ParsedSnippet:
     content: str
     label: Optional[str]
     doc: Optional[str]
@@ -33,6 +33,6 @@ class MetaSnippet:
 
 @dataclass(frozen=True)
 class MetaSnippets:
-    snippets: Sequence[MetaSnippet]
+    snippets: Sequence[ParsedSnippet]
     extends: AbstractSet[str]
 
