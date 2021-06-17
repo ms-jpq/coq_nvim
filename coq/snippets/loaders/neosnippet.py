@@ -3,10 +3,10 @@ from os.path import splitext
 from pathlib import Path
 from string import whitespace
 from textwrap import dedent
-from typing import MutableSequence, Optional
+from typing import MutableSequence, MutableSet, Optional
 
 from .parse import opt_parse, raise_err
-from .types import LoadSingle, MetaSnippet
+from .types import MetaSnippet, MetaSnippets
 
 _COMMENT_START = "#"
 _EXTENDS_START = "extends"
@@ -19,9 +19,10 @@ _IGNORED_STARTS = {"source", "delete", "regexp"}
 _SNIPPET_LINE_STARTS = {*whitespace}
 
 
-def parse_one(path: Path) -> LoadSingle:
+def parse_one(path: Path) -> MetaSnippets:
     snippets: MutableSequence[MetaSnippet] = []
-    extends: MutableSequence[str] = []
+    extends: MutableSet[str] = set()
+
     current_name = ""
     current_label: Optional[str] = None
     current_aliases: MutableSequence[str] = []
@@ -49,12 +50,12 @@ def parse_one(path: Path) -> LoadSingle:
         elif line.startswith(_EXTENDS_START):
             filetypes = line[len(_EXTENDS_START) :].strip()
             for filetype in filetypes.split(","):
-                extends.append(filetype.strip())
+                extends.add(filetype.strip())
 
         elif line.startswith(_INCLUDES_START):
             ft = line[len(_INCLUDES_START) :].strip()
             filetype, _ = splitext(ft)
-            extends.append(filetype)
+            extends.add(filetype)
 
         elif line.startswith(_SNIPPET_START):
             push()
@@ -90,5 +91,6 @@ def parse_one(path: Path) -> LoadSingle:
 
     push()
 
-    return snippets, extends
+    meta = MetaSnippets(snippets=snippets, extends=extends)
+    return meta
 
