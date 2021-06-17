@@ -1,43 +1,58 @@
+from dataclasses import dataclass
 from json import loads
 from os import linesep
 from pathlib import Path
-from typing import Dict, List, Sequence, Set, Union, cast
+from typing import AbstractSet, Iterator, Mapping, Optional, Sequence, Union
 
-from .types import LoadSingle, MetaSnippet
+from std2.pickle import decode
+
+from .types import MetaSnippet, MetaSnippets
 
 
-def _prefix_parse(prefix: Union[str, Sequence[str]]) -> Set[str]:
-    if type(prefix) is str:
-        return {cast(str, prefix)}
-    elif type(prefix) is list:
-        return {*cast(List[str], prefix)}
+@dataclass
+class _Unit:
+    prefix: Union[str, Sequence[str]]
+    body: Union[str, Sequence[str]]
+    description: Optional[str] = None
+
+
+_FMT = Mapping[str, _Unit]
+
+
+def _prefix_parse(prefix: Union[str, Sequence[str]]) -> AbstractSet[str]:
+    if isinstance(prefix, str):
+        return {prefix}
+    elif isinstance(prefix, Sequence):
+        return {*prefix}
     else:
         raise ValueError(prefix)
 
 
 def _body_parse(body: Union[str, Sequence[str]]) -> str:
-    if type(body) is str:
-        return cast(str, body)
-    elif type(body) is list:
-        return linesep.join(cast(List, body))
+    if isinstance(body, str):
+        return body
+    elif isinstance(body, Sequence):
+        return linesep.join(body)
     else:
         raise ValueError(body)
 
 
-def parse_one(path: Path) -> LoadSingle:
-    snippets: List[MetaSnippet] = []
+def parse_one(path: Path) -> MetaSnippets:
     text = path.read_text("UTF-8") if path.exists() else ""
     json = loads(text)
+    fmt: _FMT = decode(_FMT, json)
 
-    for label, values in cast(Dict[str, Dict[str, str]], json).items():
-        snippet = MetaSnippet(
-            content=_body_parse(values["body"]),
-            label=label,
-            doc=values.get("description"),
-            matches=_prefix_parse(values["prefix"]),
-            opts=set(),
-        )
-        snippets.append(snippet)
+    def cont() -> Iterator[MetaSnippet]:
+        for label, values in fmt.items():
+            snippet = MetaSnippet(
+                content=_body_parse(values.body),
+                doc=values.description,
+                label=label,
+                matches=_prefix_parse(values.prefix),
+                opts=set(),
+            )
+            yield snippet
 
-    return snippets, []
+    meta = MetaSnippets(snippets=tuple(cont()), extends=frozenset())
+    return meta
 
