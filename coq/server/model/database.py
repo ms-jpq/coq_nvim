@@ -55,6 +55,16 @@ class Database:
     def vaccum(self) -> None:
         self._ex.submit(_vaccum, self._conn)
 
+    def ft_update(self, file: str, filetype: str) -> None:
+        def cont() -> None:
+            with closing(self._conn.cursor()) as cursor:
+                _ensure_file(cursor, file=file, filetype=filetype)
+                cursor.execute(
+                    sql("update", "files"), {"filename": file, "filetype": filetype}
+                )
+
+        self._ex.submit(cont)
+
     def set_lines(
         self,
         file: str,

@@ -14,39 +14,34 @@ CREATE TABLE IF NOT EXISTS extensions (
 CREATE INDEX extensions_src ON extensions (src);
 
 
+CREATE TABLE IF NOT EXISTS grammar (
+  grammar TEXT NOT NULL PRIMARY KEY,
+) WITHOUT ROWID;
+
+
 CREATE TABLE IF NOT EXISTS options (
   option TEXT NOT NULL PRIMARY KEY
 ) WITHOUT ROWID;
 
 
-CREATE TABLE IF NOT EXISTS snippet_kinds (
-  rowid   INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
-  name    TEXT    NOT NULL UNIQUE,
-  display TEXT    NOT NULL UNIQUE
-);
-
-
 CREATE TABLE IF NOT EXISTS snippets (
-  rowid       INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
-  filetype_id INTEGER NOT NULL REFERENCES filetypes     (rowid) ON DELETE CASCADE,
-  kind_id     INTEGER NOT NULL REFERENCES snippet_kinds (rowid) ON DELETE CASCADE,
-  content     TEXT    NOT NULL,
+  rowid    INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+  filetype text    NOT NULL REFERENCES filetypes     (filetype) ON DELETE CASCADE,
+  grammar  text    NOT NULL REFERENCES snippet_kinds (grammar)  ON DELETE CASCADE,
+  content     TEXT NOT NULL,
   label       TEXT,
   doc         TEXT
 );
 
 
 CREATE TABLE IF NOT EXISTS snippet_matches (
-  rowid      INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
   snippet_id INTEGER NOT NULL REFERENCES snippets (rowid) ON DELETE CASCADE,
-  match      TEXT    NOT NULL,
-  UNIQUE (snippet_id, match)
+  match      TEXT    NOT NULL
 );
 CREATE INDEX snippet_matches_match ON snippet_matches (match);
 
 
 CREATE TABLE IF NOT EXISTS snippet_options (
-  rowid      INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
   snippet_id INTEGER NOT NULL REFERENCES snippets (rowid) ON DELETE CASCADE,
   option_id  INTEGER NOT NULL REFERENCES options  (rowid) ON DELETE CASCADE
 );
