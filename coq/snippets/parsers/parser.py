@@ -112,19 +112,19 @@ def token_parser(context: ParserCtx, stream: TokenStream) -> Parsed:
         else:
             never(token)
 
+    bad_tokens.extend(begins)
     text = "".join(slices)
     cursor = min(region.idx for region in regions) if regions else 0
-    if begins or bad_tokens:
-        all_tokens = (*begins, *bad_tokens)
+    if bad_tokens:
         tpl = """
-        Unbalanced tokens - ${all_tokens}
+        Unbalanced tokens - ${bad_tokens}
         Parsed: |-
         ${text}
         Original: |-
         ${ctx}
         """
         msg = Template(dedent(tpl)).substitute(
-            all_tokens=all_tokens, text=text, ctx=context.text
+            bad_tokens=bad_tokens, text=text, ctx=context.text
         )
         raise ParseError(msg)
 
