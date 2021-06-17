@@ -61,11 +61,22 @@ def _db(cwd: str) -> Database:
 def _from_each_according_to_their_ability(
     settings: Settings, db: Database, supervisor: Supervisor
 ) -> Iterator[Worker]:
-    yield BuffersWorker(supervisor, options=settings.clients.buffers, misc=db)
-    yield PathsWorker(supervisor, options=settings.clients.paths, misc=None)
-    yield TreeWorker(supervisor, options=settings.clients.tree_sitter, misc=None)
-    yield LspWorker(supervisor, options=settings.clients.lsp, misc=None)
-    yield TmuxWorker(supervisor, options=settings.clients.tmux, misc=None)
+    clients = settings.clients
+
+    if clients.buffers.enabled:
+        yield BuffersWorker(supervisor, options=clients.buffers, misc=db)
+
+    if clients.paths.enabled:
+        yield PathsWorker(supervisor, options=clients.paths, misc=None)
+
+    if clients.tree_sitter.enabled:
+        yield TreeWorker(supervisor, options=clients.tree_sitter, misc=None)
+
+    if clients.lsp.enabled:
+        yield LspWorker(supervisor, options=clients.lsp, misc=None)
+
+    if clients.tmux.enabled:
+        yield TmuxWorker(supervisor, options=clients.tmux, misc=None)
 
 
 def stack(pool: ThreadPoolExecutor, nvim: Nvim) -> Stack:

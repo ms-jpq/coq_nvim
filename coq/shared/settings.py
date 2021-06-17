@@ -29,6 +29,7 @@ class Weights:
 
 @dataclass(frozen=True)
 class BaseClient:
+    enabled: bool
     short_name: str
     weight: float
 
