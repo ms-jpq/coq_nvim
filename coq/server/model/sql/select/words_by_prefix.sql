@@ -2,10 +2,10 @@ SELECT DISTINCT
   word
 FROM words
 WHERE
-  LENGTH(:word) >= :prefix_len
+  :word <> ''
   AND
   filename LIKE X_LIKE_ESC(:cwd) ESCAPE '!'
   AND
-  lword LIKE X_LIKE_ESC(SUBSTR(X_LOWER(:word), 1, :prefix_len)) ESCAPE '!'
+  lword LIKE X_LIKE_ESC(X_LOWER(:word)) ESCAPE '!'
   AND
   NOT INSTR(:word, word)

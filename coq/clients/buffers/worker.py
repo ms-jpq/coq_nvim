@@ -2,7 +2,7 @@ from typing import Iterator, Sequence
 
 from ...server.model.database import Database
 from ...shared.runtime import Worker as BaseWorker
-from ...shared.settings import BasicClient
+from ...shared.settings import BaseClient
 from ...shared.types import Completion, Context, ContextualEdit
 
 
@@ -17,11 +17,9 @@ def _comp(src: str, ctx: Context, word: str) -> Completion:
     return cmp
 
 
-class Worker(BaseWorker[BasicClient, Database]):
+class Worker(BaseWorker[BaseClient, Database]):
     def work(self, context: Context) -> Iterator[Sequence[Completion]]:
-        words = self._misc.suggestions(
-            self._options.prefix_len, cwd=context.cwd, word=context.words
-        )
+        words = self._misc.suggestions(context.cwd, word=context.words)
         yield tuple(
             _comp(self._options.short_name, ctx=context, word=word) for word in words
         )

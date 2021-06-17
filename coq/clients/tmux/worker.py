@@ -14,7 +14,6 @@ from ...shared.types import Completion, Context, ContextualEdit
 from .database import Database
 
 
-
 @dataclass(frozen=True)
 class _Pane:
     uid: str
@@ -112,9 +111,7 @@ class Worker(BaseWorker[PollingClient, None]):
         active = _cur()
 
         def cont() -> Iterator[Completion]:
-            for word in self._db.select(
-                self._options.prefix_len, word=context.words, active_pane=active.uid
-            ):
+            for word in self._db.select(context.words, active_pane=active.uid):
                 completion = _comp(self._options.short_name, ctx=context, word=word)
                 yield completion
 

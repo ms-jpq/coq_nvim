@@ -52,13 +52,12 @@ class Database:
 
         self._ex.submit(cont)
 
-    def select(self, prefix_len: int, word: str, active_pane: str) -> Sequence[str]:
+    def select(self, word: str, active_pane: str) -> Sequence[str]:
         def cont() -> Sequence[str]:
             with closing(self._conn.cursor()) as cursor:
                 cursor.execute(
                     sql("select", "words"),
                     {
-                        "prefix_len": prefix_len,
                         "pane_id": active_pane,
                         "word": word,
                     },
