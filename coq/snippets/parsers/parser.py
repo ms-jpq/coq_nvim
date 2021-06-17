@@ -4,6 +4,7 @@ from textwrap import dedent
 from typing import Iterable, Iterator, MutableSequence, NoReturn, Tuple, TypeVar, Union
 
 from std2.itertools import deiter
+from std2.types import never
 
 from ...shared.types import Context
 from .types import (
@@ -109,7 +110,7 @@ def token_parser(context: ParserCtx, stream: TokenStream) -> Parsed:
             else:
                 bad_tokens.append((idx, token))
         else:
-            assert False, f"unrecognized token: {token}"
+            never(token)
 
     text = "".join(slices)
     cursor = min(region.idx for region in regions) if regions else 0
