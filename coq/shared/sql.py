@@ -12,7 +12,7 @@ class _Loader(Protocol):
 
 def loader(base: Path) -> _Loader:
     def cont(*paths: AnyPath) -> str:
-        path = base / Path(*paths)
+        path = (base / Path(*paths)).with_suffix(".sql")
         return path.read_text("UTF-8")
 
     return cast(_Loader, cache(cont))
