@@ -55,6 +55,16 @@ def raise_err(
     raise ParseError(msg)
 
 
+def next_char(context: ParserCtx) -> EChar:
+    return next(context, (Index(i=-1, row=-1, col=-1), ""))
+
+
+def pushback_chars(context: ParserCtx, *vals: EChar) -> None:
+    for pos, char in reversed(vals):
+        if char:
+            context.dit.push_back((pos, char))
+
+
 def _gen_iter(src: str) -> Iterator[EChar]:
     row, col = 1, 1
     for i, c in enumerate(src):
@@ -69,25 +79,6 @@ def context_from(snippet: str, context: Context, local: T) -> ParserCtx[T]:
     dit = deiter(_gen_iter(snippet))
     ctx = ParserCtx(ctx=context, dit=dit, text=snippet, local=local)
     return ctx
-
-
-def next_char(context: ParserCtx) -> EChar:
-    return next(context, (Index(i=-1, row=-1, col=-1), ""))
-
-
-def pushback_chars(context: ParserCtx, *vals: EChar) -> None:
-    for pos, char in reversed(vals):
-        if char:
-            context.dit.push_back((pos, char))
-
-
-def log_rest(context: ParserCtx) -> NoReturn:
-    def cont() -> Iterator[str]:
-        for _, char in context:
-            yield char
-
-    text = "".join(cont())
-    raise ParseError(f"Rest: |-{linesep}{text}")
 
 
 def token_parser(context: ParserCtx, stream: TokenStream) -> Parsed:
