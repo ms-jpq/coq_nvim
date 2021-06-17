@@ -359,7 +359,7 @@ def edit(nvim: Nvim, stack: Stack, data: UserData) -> None:
 
             stack.state.inserted = n_row, n_col
             stack.db.inserted(primary.new_text)
-            mark(nvim, marks=marks)
+            mark(nvim, buf=buf, marks=marks)
 
             # TODO - Remove DEBUG
             print(

@@ -23,7 +23,7 @@ def _marks(linefeed: str, new_prefix: str, row: int, parsed: Parsed) -> Iterator
                 r2, c2 = idx + line_shift, region.end - last_len
             last_len = l8
 
-        assert r1 != -1 and r2 != -1
+        assert (r1, r2) != (-1, -1)
         begin = r1, c1
         end = r2, c2
         mark = Mark(idx=region.idx, begin=begin, end=end)
