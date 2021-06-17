@@ -1,20 +1,12 @@
 from pathlib import Path
-from typing import (
-    AbstractSet,
-    Mapping,
-    MutableMapping,
-    MutableSequence,
-    MutableSet,
-    Sequence,
-    Tuple,
-)
+from typing import AbstractSet, Mapping, MutableMapping, MutableSequence, MutableSet
 
 from std2.pathlib import walk
 
 from .lsp import parse as parse_lsp
 from .neosnippet import parse as parse_neosnippets
 from .snipmate import parse as parse_snipmate
-from .types import ParsedSnippet
+from .types import ParsedSnippet, SnippetSpecs
 from .ultisnip import parse as parse_ultisnip
 
 
@@ -37,7 +29,7 @@ def parse(
     neosnippet: AbstractSet[Path],
     snipmate: AbstractSet[Path],
     ultisnip: AbstractSet[Path],
-) -> Tuple[Mapping[str, Sequence[ParsedSnippet]], Mapping[str, AbstractSet[str]]]:
+) -> SnippetSpecs:
     specs = {
         parse_lsp: _load_paths(lsp, exts={".json"}),
         parse_neosnippets: _load_paths(neosnippet, exts={".snippets", ".snip"}),
@@ -58,5 +50,6 @@ def parse(
                 for e in meta.extends:
                     extends.add(e)
 
-    return acc, exts
+    final = SnippetSpecs(snippets=acc, extends=exts)
+    return final
 

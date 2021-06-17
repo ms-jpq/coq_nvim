@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from enum import Enum, auto
-from typing import AbstractSet, Optional, Sequence
+from typing import AbstractSet, Mapping, Optional, Sequence
 
 
 class LoadError(Exception):
@@ -35,4 +35,10 @@ class ParsedSnippet:
 class MetaSnippets:
     snippets: Sequence[ParsedSnippet]
     extends: AbstractSet[str]
+
+
+@dataclass(frozen=True)
+class SnippetSpecs:
+    snippets: Mapping[str, Sequence[ParsedSnippet]]
+    extends: Mapping[str, AbstractSet[str]]
 
