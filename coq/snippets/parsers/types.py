@@ -27,7 +27,7 @@ EChar = Tuple[Index, str]
 @dataclass(frozen=True)
 class ParserCtx(Generic[T], Iterator):
     ctx: Context
-    it: deiter
+    dit: deiter[EChar]
     text: str
     local: T
 
@@ -35,7 +35,7 @@ class ParserCtx(Generic[T], Iterator):
         return self
 
     def __next__(self) -> EChar:
-        return next(self.it)
+        return next(self.dit)
 
 
 @dataclass(frozen=True)
