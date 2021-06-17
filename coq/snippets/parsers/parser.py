@@ -2,20 +2,20 @@ from collections import deque
 from os import linesep
 from typing import Any, Iterable, Iterator, List, NoReturn, Tuple, TypeVar, Union, cast
 
-from ..shared.types import Context
+from ...shared.types import Context
 from .types import (
     Begin,
     DummyBegin,
     EChar,
     End,
     Index,
-    ParseContext,
     Parsed,
     ParseError,
+    ParserCtx,
     Region,
     Token,
     TokenStream,
-    Unparsable,
+    Unparsed,
 )
 
 T = TypeVar("T")
@@ -53,23 +53,23 @@ def gen_iter(src: str) -> Iterator[EChar]:
             col = 0
 
 
-def context_from(snippet: str, context: Context, local: T) -> ParseContext[T]:
+def context_from(snippet: str, context: Context, local: T) -> ParserCtx[T]:
     queue = deque(gen_iter(snippet))
-    ctx = ParseContext(vals=context, queue=queue, text=snippet, local=local)
+    ctx = ParserCtx(vals=context, queue=queue, text=snippet, local=local)
     return ctx
 
 
-def next_char(context: ParseContext) -> EChar:
+def next_char(context: ParserCtx) -> EChar:
     return next(context, (Index(i=-1, row=-1, col=-1), ""))
 
 
-def pushback_chars(context: ParseContext, *vals: EChar) -> None:
+def pushback_chars(context: ParserCtx, *vals: EChar) -> None:
     for pos, char in reversed(vals):
         if char:
-            context.queue.appendleft((pos, char))
+            context.it.push_back(pos, char)
 
 
-def log_rest(context: ParseContext) -> NoReturn:
+def log_rest(context: ParserCtx) -> NoReturn:
     def cont() -> Iterator[str]:
         for _, char in context:
             yield char
@@ -78,17 +78,17 @@ def log_rest(context: ParseContext) -> NoReturn:
     raise ParseError(f"Rest: |-{linesep}{text}")
 
 
-def token_parser(context: ParseContext, stream: TokenStream) -> Parsed:
+def token_parser(context: ParserCtx, stream: TokenStream) -> Parsed:
     idx = 0
     regions: List[Region] = []
     slices: List[str] = []
     begins: List[Tuple[int, Union[Begin, DummyBegin]]] = []
-    unparsables: List[Unparsable] = []
+    unparsables: List[Unparsed] = []
     bad_tokens: List[Tuple[int, Token]] = []
 
     for token in stream:
-        if type(token) is Unparsable:
-            token = cast(Unparsable, token)
+        if type(token) is Unparsed:
+            token = cast(Unparsed, token)
             unparsables.append(token)
         elif type(token) is str:
             token = cast(str, token)
@@ -117,13 +117,14 @@ def token_parser(context: ParseContext, stream: TokenStream) -> Parsed:
     if begins or bad_tokens:
         all_tokens = cast(List[Any], begins) + cast(List[Any], bad_tokens)
         msg = f"""
-Unbalanced tokens - {all_tokens}
-Parsed: |-
-{text}
-Original: |-
-{context.text}
-"""
+        Unbalanced tokens - {all_tokens}
+        Parsed: |-
+        {text}
+        Original: |-
+        {context.text}
+        """
         raise ParseError(msg)
 
     parsed = Parsed(text=text, cursor=cursor, regions=regions)
     return parsed
+
