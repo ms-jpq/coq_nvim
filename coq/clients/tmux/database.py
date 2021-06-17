@@ -2,13 +2,14 @@ from concurrent.futures import ThreadPoolExecutor
 from contextlib import closing
 from locale import strcoll
 from sqlite3 import Connection, Row
+from string import Template
 from typing import Iterator, Mapping, Sequence
 
 from std2.sqllite3 import escape, with_transaction
 
 from ...shared.executor import Executor
 from ...shared.parse import lower, normalize
-from .sql import sql, sqlt
+from .sql import sql
 
 
 def _like_esc(like: str) -> str:
@@ -45,7 +46,7 @@ class Database:
 
             with closing(self._conn.cursor()) as cursor:
                 with with_transaction(cursor):
-                    template = sqlt("delete", "words")
+                    template = Template(sql("delete", "words"))
                     instruction = template.substitute(pane_ids=tuple(panes.keys()))
                     cursor.execute(instruction, ())
                     cursor.executemany(sql("insert", "words"), it())
