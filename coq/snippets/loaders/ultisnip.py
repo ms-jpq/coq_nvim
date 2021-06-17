@@ -2,8 +2,8 @@ from enum import Enum, auto
 from os import linesep
 from typing import List, Optional, Set, Tuple
 
-from .pkgs.parse import opt_parse, raise_err
-from .pkgs.types import LoadSingle, MetaSnippet, Options
+from .parse import opt_parse, raise_err
+from .types import LoadSingle, MetaSnippet, Options
 
 SNIPPET_KIND = "ultisnip"
 SNIPPET_DISPLAY = SNIPPET_KIND.capitalize()

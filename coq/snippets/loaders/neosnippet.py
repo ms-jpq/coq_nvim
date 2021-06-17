@@ -5,8 +5,8 @@ from string import whitespace
 from textwrap import dedent
 from typing import MutableSequence, Optional
 
-from .pkgs.parse import opt_parse, raise_err
-from .pkgs.types import LoadSingle, MetaSnippet
+from .parse import opt_parse, raise_err
+from .types import LoadSingle, MetaSnippet
 
 SNIPPET_KIND = "neosnippet"
 SNIPPET_DISPLAY = SNIPPET_KIND.capitalize()

@@ -4,8 +4,8 @@ from string import whitespace
 from textwrap import dedent
 from typing import List, Set, Tuple
 
-from .pkgs.parse import opt_parse, raise_err
-from .pkgs.types import LoadSingle, MetaSnippet, Optional, Options
+from .parse import opt_parse, raise_err
+from .types import LoadSingle, MetaSnippet, Optional, Options
 
 SNIPPET_KIND = "snipmate"
 SNIPPET_DISPLAY = SNIPPET_KIND.capitalize()

@@ -3,10 +3,7 @@ from typing import Iterator, Sequence, Tuple
 from pynvim import Nvim
 from pynvim.api import Buffer, Window
 
-from ..shared.da import expand_tabs
-from ..shared.logging import log
-from ..shared.nvim import call
-from ..shared.types import Context, Position
+from ...shared.types import Context, NvimPos
 from .edit import edit
 from .parser import Parsed
 from .settings import instance
@@ -14,7 +11,8 @@ from .types import Expanded, InstanceSettings
 
 
 def indent_by(context: Context, settings: InstanceSettings) -> str:
-    before_len = len(context.line[: context.position.col])
+    _, col = context.position
+    before_len = len(context.line[: col])
     tabsize = settings.tab_width
     if settings.prefer_tabs:
         return "\t" * (before_len // tabsize) + " " * (before_len % tabsize)

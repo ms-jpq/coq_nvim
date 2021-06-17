@@ -3,7 +3,7 @@ from os import linesep
 from pathlib import Path
 from typing import Dict, List, Sequence, Set, Union, cast
 
-from .pkgs.types import LoadSingle, MetaSnippet
+from .types import LoadSingle, MetaSnippet
 
 SNIPPET_KIND = "lsp"
 SNIPPET_DISPLAY = SNIPPET_KIND.capitalize()
