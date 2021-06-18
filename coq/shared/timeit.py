@@ -11,6 +11,6 @@ def timeit(threshold: float, name: str, *args: Any) -> Iterator[None]:
         yield None
     delta = t()
     if delta > threshold:
-        msg = f"TIME -- {name.ljust(9)} :: {round(delta, 3)} {' '.join(args)}"
+        msg = f"TIME -- {name.ljust(9)} :: {format(delta, '0.3f')} {' '.join(args)}"
         log.debug("%s", msg)
 

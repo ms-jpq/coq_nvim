@@ -11,7 +11,7 @@ CREATE TABLE IF NOT EXISTS extensions (
   dest TEXT NOT NULL REFERENCES filetypes (filetype) ON DELETE CASCADE,
   UNIQUE (src, dest)
 );
-CREATE INDEX extensions_src ON extensions (src);
+CREATE INDEX IF NOT EXISTS extensions_src ON extensions (src);
 
 
 CREATE TABLE IF NOT EXISTS snippets (
@@ -30,7 +30,7 @@ CREATE TABLE IF NOT EXISTS matches (
   lmatch     TEXT    NOT NULL AS (X_LOWER(match)) STORED,
   UNIQUE(snippet_id, match)
 );
-CREATE INDEX matches_lmatch ON matches (lmatch);
+CREATE INDEX IF NOT EXISTS matches_lmatch ON matches (lmatch);
 
 
 CREATE TABLE IF NOT EXISTS options (
