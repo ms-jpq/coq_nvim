@@ -15,7 +15,7 @@ CREATE INDEX extensions_src ON extensions (src);
 
 
 CREATE TABLE IF NOT EXISTS snippets (
-  rowid    INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+  rowid    INTEGER NOT NULL PRIMARY KEY,
   filetype TEXT    NOT NULL REFERENCES filetypes (filetype) ON DELETE CASCADE,
   grammar  TEXT    NOT NULL,
   content  TEXT    NOT NULL,
@@ -29,7 +29,7 @@ CREATE TABLE IF NOT EXISTS matches (
   match      TEXT    NOT NULL,
   lmatch     TEXT    NOT NULL AS (X_LOWER(match)) STORED,
   UNIQUE(snippet_id, match)
-) WITHOUT ROWID;
+);
 CREATE INDEX matches_lmatch ON matches (lmatch);
 
 
