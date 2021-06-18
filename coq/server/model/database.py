@@ -121,6 +121,11 @@ class Database:
             def c2() -> Iterator[SqlMetrics]:
                 with closing(self._conn.cursor()) as cursor:
                     with with_transaction(cursor):
+                        cursor.execute(
+                            sql("select", "num_lines"), {"filename": filename}
+                        )
+                        lines_tot = cursor.fetchone()["lines_tot"]
+
                         for word in words:
                             cursor.execute(
                                 sql("select", "word_metrics"),
@@ -129,6 +134,7 @@ class Database:
                                     "filetype": filetype,
                                     "filename": filename,
                                     "line_num": line_num,
+                                    "lines_tot": lines_tot,
                                 },
                             )
                             yield cursor.fetchone()

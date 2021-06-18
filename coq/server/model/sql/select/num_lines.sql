@@ -1,6 +1,6 @@
 SELECT
-  COALESCE(MAX(line_num), 0) AS num_lines
+  COALESCE(MAX(line_num), 0) AS lines_tot
 FROM words
 WHERE
-  words.filename = :filename
+  filename = :filename
 

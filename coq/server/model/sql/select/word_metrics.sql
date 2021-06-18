@@ -17,7 +17,7 @@ WITH q1 AS (
     words.word = :word
 ), q3 AS (
   SELECT
-    COALESCE(MIN(ABS(words.line_num - :line_num)), 0) AS line_diff
+    :lines_tot - COALESCE(MIN(ABS(words.line_num - :line_num)), :lines_tot) AS line_diff
   FROM words
   JOIN files
   ON
