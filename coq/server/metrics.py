@@ -173,9 +173,10 @@ def _sorted(
     adjustment = asdict(cum)
 
     def key_by(single: Tuple[Completion, Weights]) -> float:
+        _, weight = single
         tot = sum(
             val / adjustment[key] if adjustment[key] else 0
-            for key, val in asdict(single).items()
+            for key, val in asdict(weight).items()
         )
         return tot
 
@@ -209,6 +210,7 @@ def rank(
 
     individual = tuple(_weights(metrics))
     cum = _cum(weights, weights=(w for _, w in individual))
+    print(cum, individual, flush=True)
     ordered = _sorted(cum, it=individual)
     return ordered
 
