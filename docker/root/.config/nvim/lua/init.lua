@@ -1,4 +1,4 @@
-local convert = function (spec)
+local convert = function(spec)
   local tb = {}
   for k, v in pairs(lsp.protocol[spec]) do
     if type(k) == "string" and type(v) == "number" then
@@ -9,3 +9,4 @@ local convert = function (spec)
 end
 
 local specs = {"CompletionItemKind", "InsertTextFormat"}
+

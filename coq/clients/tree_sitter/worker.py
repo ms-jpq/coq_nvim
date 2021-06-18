@@ -6,11 +6,13 @@ from typing import Any, Iterator, MutableMapping, Sequence
 from uuid import UUID, uuid4
 
 from pynvim_pp.lib import threadsafe_call
+from std2.pickle import decode
 
 from ...shared.runtime import Supervisor
 from ...shared.runtime import Worker as BaseWorker
 from ...shared.settings import BaseClient
-from ...shared.types import Completion, Context, Edit, NvimPos
+from ...shared.types import Completion, Context, ContextualEdit, NvimPos
+from .types import Msg
 
 _LUA = (Path(__file__).resolve().parent / "request.lua").read_text("UTF-8")
 
@@ -55,9 +57,18 @@ class Worker(BaseWorker[BaseClient, None]):
 
     def work(self, context: Context) -> Iterator[Sequence[Completion]]:
         reply = self._req(context.position)
-        # cmp = Completion(
-        #     source=self._options.short_name,
-        #     primary_edit=Edit(new_text="TODO"),
-        # )
-        yield ()
+        resp = decode(Msg, reply)
+
+        def cont() -> Iterator[Completion]:
+            for payload in resp:
+                edit = ContextualEdit(
+                    old_prefix=context.words_before,
+                    old_suffix=context.words_after,
+                    new_prefix=payload.text,
+                    new_text=payload.text,
+                )
+                cmp = Completion(source=self._options.short_name, primary_edit=edit)
+                yield cmp
+
+        yield tuple(cont())
 
