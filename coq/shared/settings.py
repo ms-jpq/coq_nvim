@@ -49,6 +49,7 @@ class Clients:
     buffers: BaseClient
     lsp: BaseClient
     paths: BaseClient
+    snippets: BaseClient
     tmux: PollingClient
     tree_sitter: BaseClient
 

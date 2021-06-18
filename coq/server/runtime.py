@@ -13,6 +13,7 @@ from yaml import safe_load
 from ..clients.buffers.worker import Worker as BuffersWorker
 from ..clients.lsp.worker import Worker as LspWorker
 from ..clients.paths.worker import Worker as PathsWorker
+from ..clients.snippet.worker import Worker as SnippetWorker
 from ..clients.tmux.worker import Worker as TmuxWorker
 from ..clients.tree_sitter.worker import Worker as TreeWorker
 from ..consts import CONFIG_YML, SETTINGS_VAR
@@ -66,7 +67,8 @@ def _from_each_according_to_their_ability(
 
     if clients.lsp.enabled:
         yield LspWorker(supervisor, options=clients.lsp, misc=None)
-
+    if clients.snippets.enabled:
+        yield SnippetWorker(supervisor, options=clients.snippets, misc=None)
     if clients.tmux.enabled:
         yield TmuxWorker(supervisor, options=clients.tmux, misc=None)
 
