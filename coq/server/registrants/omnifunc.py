@@ -9,8 +9,8 @@ from std2.pickle.coders import BUILTIN_DECODERS
 
 from ...registry import autocmd, enqueue_event, pool, rpc, settings
 from ...shared.nvim.completions import complete
-from ...shared.types import Completion, Context, NvimPos
 from ...shared.timeit import timeit
+from ...shared.types import Completion, Context, NvimPos
 from ..context import context
 from ..edit import edit
 from ..runtime import Stack
@@ -21,9 +21,7 @@ from ..types import UserData
 def _should_cont(
     inserted: Optional[NvimPos], prev: Optional[Context], cur: Context
 ) -> bool:
-    if prev and cur.position == prev.position:
-        return False
-    elif cur.position == inserted:
+    if cur.position == inserted:
         return False
     else:
         return cur.line_before != "" and not cur.line_before.isspace()
