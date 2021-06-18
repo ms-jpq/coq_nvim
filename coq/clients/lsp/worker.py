@@ -109,6 +109,7 @@ class Worker(BaseWorker[BaseClient, None]):
         try:
             ret = fut.result(timeout=self._supervisor.options.timeout)
         except TimeoutError:
+            fut.cancel()
             ret = None
 
         with self._lock:

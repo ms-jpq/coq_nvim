@@ -62,5 +62,5 @@ class CompletionList:
     items: Sequence[CompletionItem]
 
 
-Resp = Union[None, Sequence[CompletionItem], CompletionList]
+Resp = Union[None, Literal[0], Sequence[CompletionItem], CompletionList]
 
