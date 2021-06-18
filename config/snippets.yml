@@ -1,20 +1,20 @@
 ---
 sources:
   lsp:
-    - vue-vscode-snippets/snippets
-    - vscode-angular-snippets/snippets
-    - vscode-es7-javascript-react-snippets/snippets
-    - vscode-react/snippets
-    - rocketseat-vscode-react-native-snippets/snippets
-    - snipsnap/snippets
-    - vscode-javascript/snippets
-    - vscode-R/snippets
+    - https://github.com/vue-vscode-snippets/snippets
+    - https://github.com/vscode-angular-snippets/snippets
+    - https://github.com/vscode-es7-javascript-react-snippets/snippets
+    - https://github.com/vscode-react/snippets
+    - https://github.com/rocketseat-vscode-react-native-snippets/snippets
+    - https://github.com/snipsnap/snippets
+    - https://github.com/vscode-javascript/snippets
+    - https://github.com/vscode-R/snippets
   neosnippet:
-    - neosnippet-snippets/neosnippets
+    - https://github.com/neosnippet-snippets/neosnippets
   snipmate:
-    - vim-snippets/snippets
-    - vim-go/gosnippets/snippets
+    - https://github.com/vim-snippets/snippets
+    - https://github.com/vim-go/gosnippets/snippets
   ultisnips:
-    - vim-snippets/UltiSnips
-    - vim-go/gosnippets/UltiSnips
+    - https://github.com/vim-snippets/UltiSnips
+    - https://github.com/vim-go/gosnippets/UltiSnips
 
