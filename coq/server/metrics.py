@@ -162,7 +162,7 @@ def _cum(adjustment: Weights, weights: Iterable[Weights]) -> Weights:
     for weight in weights:
         for key, val in asdict(weight).items():
             acc[key] += val
-    for key, val in asdict(adjustment):
+    for key, val in asdict(adjustment).items():
         acc[key] *= val
     return Weights(**acc)
 
@@ -175,7 +175,7 @@ def _sorted(
     def key_by(single: Tuple[Completion, Weights]) -> float:
         tot = sum(
             val / adjustment[key] if adjustment[key] else 0
-            for key, val in asdict(single)
+            for key, val in asdict(single).items()
         )
         return tot
 
