@@ -1,20 +1,22 @@
 ---
+git:
+  # SNU
+  - https://github.com/honza/vim-snippets
+  - https://github.com/Shougo/neosnippet-snippets
+  - https://github.com/fatih/vim-go
+  # LSP
+  - https://github.com/snipsnapdev/snipsnap
+  - https://github.com/sdras/vue-vscode-snippets
+  - https://github.com/johnpapa/vscode-angular-snippets
+  - https://github.com/dsznajder/vscode-es7-javascript-react-snippets
+  - https://github.com/xabikos/vscode-react
+  - https://github.com/Rocketseat/rocketseat-vscode-react-native-snippets
+  - https://github.com/xabikos/vscode-javascript
+  - https://github.com/Ikuyadeu/vscode-R
+
 sources:
-  lsp:
-    - https://github.com/vue-vscode-snippets/snippets
-    - https://github.com/vscode-angular-snippets/snippets
-    - https://github.com/vscode-es7-javascript-react-snippets/snippets
-    - https://github.com/vscode-react/snippets
-    - https://github.com/rocketseat-vscode-react-native-snippets/snippets
-    - https://github.com/snipsnap/snippets
-    - https://github.com/vscode-javascript/snippets
-    - https://github.com/vscode-R/snippets
-  neosnippet:
-    - https://github.com/neosnippet-snippets/neosnippets
-  snipmate:
-    - https://github.com/vim-snippets/snippets
-    - https://github.com/vim-go/gosnippets/snippets
-  ultisnips:
-    - https://github.com/vim-snippets/UltiSnips
-    - https://github.com/vim-go/gosnippets/UltiSnips
+  lsp: []
+  neosnippet: []
+  snipmate: []
+  ultisnips: []
 
