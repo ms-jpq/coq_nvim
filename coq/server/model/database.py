@@ -102,16 +102,10 @@ class Database:
 
         self._ex.submit(cont)
 
-    def suggestions(self, cwd: str, word: str) -> Sequence[str]:
+    def suggestions(self, word: str) -> Sequence[str]:
         def cont() -> Sequence[str]:
             with closing(self._conn.cursor()) as cursor:
-                cursor.execute(
-                    sql("select", "words_by_prefix"),
-                    {
-                        "cwd": cwd,
-                        "word": word,
-                    },
-                )
+                cursor.execute(sql("select", "words_by_prefix"), {"word": word})
                 return tuple(row["word"] for row in cursor.fetchall())
 
         return self._ex.submit(cont)

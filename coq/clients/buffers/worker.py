@@ -19,7 +19,7 @@ def _comp(src: str, ctx: Context, word: str) -> Completion:
 
 class Worker(BaseWorker[BaseClient, Database]):
     def work(self, context: Context) -> Iterator[Sequence[Completion]]:
-        words = self._misc.suggestions(context.cwd, word=context.words)
+        words = self._misc.suggestions(context.words)
         yield tuple(
             _comp(self._options.short_name, ctx=context, word=word) for word in words
         )
