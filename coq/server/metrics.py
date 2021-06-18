@@ -219,7 +219,7 @@ def rank(
                 for c, w in ordered
             ),
         }
-        dump(thing, fd)
+        dump(thing, fd, indent=2)
 
     return (c for c, _ in ordered)
 
