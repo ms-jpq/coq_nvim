@@ -18,7 +18,6 @@ weights:
   nearest_neighbour: 1.0
   num_matches: 1.0
   count_by_filetype: 1.0
-  alphabetical: 1.0
 
 keymap:
   prev_mark: <C-p>

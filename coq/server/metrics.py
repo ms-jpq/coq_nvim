@@ -25,7 +25,6 @@ class _MatchMetrics:
 
 
 _ZERO = Weights(
-    alphabetical=0,
     consecutive_matches=0,
     count_by_filetype=0,
     insertion_order=0,
@@ -137,7 +136,6 @@ def _weights(
 ) -> Iterator[Tuple[Completion, Weights]]:
     for cmp, sql, match in metrics:
         weight = Weights(
-            alphabetical=0,
             consecutive_matches=match.consecutive_matches,
             count_by_filetype=sql["ft_count"],
             insertion_order=sql["insertion_order"],
@@ -164,23 +162,15 @@ def _sorted(
 ) -> Sequence[Tuple[Completion, Weights]]:
     adjustment = asdict(cum)
 
-    def key_by(single: Tuple[Completion, Weights]) -> float:
-        _, weight = single
+    def key_by(single: Tuple[Completion, Weights]) -> Tuple[float, str]:
+        cmp, weight = single
         tot = sum(
             val / adjustment[key] if adjustment[key] else 0
             for key, val in asdict(weight).items()
         )
-        return tot
+        return tot, strxfrm(cmp.sort_by or cmp.primary_edit.new_text)
 
     return sorted(it, key=key_by, reverse=True)
-
-
-from json import dump
-
-from std2.pickle import encode
-from std2.pickle.coders import BUILTIN_ENCODERS
-
-from ..consts import TMP_DIR
 
 
 def rank(
@@ -210,16 +200,5 @@ def rank(
     individual = tuple(_weights(metrics))
     cum = _cum(weights, weights=(w for _, w in individual))
     ordered = _sorted(cum, it=individual)
-
-    with open(TMP_DIR / "log.json", "w") as fd:
-        thing = {
-            "ADJ": asdict(cum),
-            "CMP": tuple(
-                {"C": encode(c, encoders=BUILTIN_ENCODERS), "W": asdict(w)}
-                for c, w in ordered
-            ),
-        }
-        dump(thing, fd, indent=2)
-
     return (c for c, _ in ordered)
 
