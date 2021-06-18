@@ -361,12 +361,3 @@ def edit(nvim: Nvim, stack: Stack, data: UserData) -> None:
             stack.db.inserted(primary.new_text)
             mark(nvim, buf=buf, marks=marks)
 
-            # TODO - Remove DEBUG
-            print(
-                [ctx.line_before, ctx.line_after],
-                data,
-                instructions,
-                sep="\n",
-                flush=True,
-            )
-
