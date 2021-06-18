@@ -30,19 +30,19 @@ clients:
     weight: 1.5
   lsp:
     enabled: True
-    short_name: "LS"
+    short_name: "LSP"
     weight: 1.5
   buffers:
     enabled: True
-    short_name: "B"
+    short_name: "BUF"
     weight: 1.0
   paths:
     enabled: True
-    short_name: "F"
+    short_name: "FILE"
     weight: 2.0
   tmux:
     enabled: True
-    short_name: "TMX"
+    short_name: "TMUX"
     weight: 1.0
     polling_interval: 1.0
 

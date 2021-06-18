@@ -2,6 +2,7 @@ from concurrent.futures import CancelledError
 from typing import Any, Literal, Mapping, Optional, Sequence, Tuple, TypedDict, Union
 
 from pynvim import Nvim
+from pynvim.api.common import NvimError
 from pynvim.api.nvim import Nvim
 from pynvim_pp.logging import log
 from std2.pickle import DecodeError, decode
@@ -32,7 +33,10 @@ def _cmp(nvim: Nvim, stack: Stack, completions: Sequence[Completion]) -> None:
         _, col = ctx.position
         with timeit(0, "TRANS"):
             comp = trans(stack, context=ctx, completions=completions)
-        complete(nvim, col=col, comp=comp)
+        try:
+            complete(nvim, col=col, comp=comp)
+        except NvimError:
+            pass
 
 
 def comp_func(nvim: Nvim, stack: Stack, manual: bool) -> None:
