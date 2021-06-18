@@ -161,7 +161,7 @@ def _cum(adjustment: Weights, weights: Iterable[Weights]) -> Weights:
 
 def _sorted(
     cum: Weights, it: Iterable[Tuple[Completion, Weights]]
-) -> Iterator[Completion]:
+) -> Sequence[Tuple[Completion, Weights]]:
     adjustment = asdict(cum)
 
     def key_by(single: Tuple[Completion, Weights]) -> float:
@@ -172,11 +172,14 @@ def _sorted(
         )
         return tot
 
-    ordered = sorted(it, key=key_by)
-    return (c for c, _ in ordered)
+    return sorted(it, key=key_by)
 
 
-from pprint import pprint
+from json import dump
+
+from std2.pickle import encode
+from std2.pickle.coders import BUILTIN_ENCODERS
+
 from ..consts import TMP_DIR
 
 
@@ -206,9 +209,17 @@ def rank(
 
     individual = tuple(_weights(metrics))
     cum = _cum(weights, weights=(w for _, w in individual))
-
-    with open(TMP_DIR / "log.log", "w") as fd:
-        pprint((cum, individual), fd)
     ordered = _sorted(cum, it=individual)
-    return ordered
+
+    with open(TMP_DIR / "log.json", "w") as fd:
+        thing = {
+            "ADJ": asdict(cum),
+            "CMP": tuple(
+                {"C": encode(c, encoders=BUILTIN_ENCODERS), "W": asdict(w)}
+                for c, w in ordered
+            ),
+        }
+        dump(thing, fd)
+
+    return (c for c, _ in ordered)
 

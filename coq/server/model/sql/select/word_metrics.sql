@@ -1,6 +1,6 @@
 WITH q1 AS (
   SELECT
-    COALESCE(MAX(rowid), -1) AS insertion_order
+    COALESCE(MAX(rowid), 0) AS insertion_order
   FROM insertions
   WHERE
     content = :word
@@ -17,7 +17,7 @@ WITH q1 AS (
     words.word = :word
 ), q3 AS (
   SELECT
-    COALESCE(MIN(ABS(words.line_num - :line_num)), 10000) AS line_diff
+    COALESCE(MIN(ABS(words.line_num - :line_num)), 0) AS line_diff
   FROM words
   JOIN files
   ON
