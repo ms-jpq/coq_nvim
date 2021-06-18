@@ -9,7 +9,7 @@ from .database import Database
 
 class Worker(BaseWorker[BaseClient, None]):
     def __init__(self, supervisor: Supervisor, options: BaseClient, misc: None) -> None:
-        self._db = Database(supervisor.pool, location=":memory:")
+        self._db = Database(supervisor.pool)
         super().__init__(supervisor, options=options, misc=misc)
 
     def work(self, context: Context) -> Iterator[Sequence[Completion]]:

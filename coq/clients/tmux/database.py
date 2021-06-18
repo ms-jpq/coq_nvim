@@ -7,6 +7,7 @@ from typing import Iterator, Mapping, Sequence
 
 from std2.sqllite3 import escape, with_transaction
 
+from ...consts import TMUX_DB
 from ...shared.executor import Executor
 from ...shared.parse import lower, normalize
 from .sql import sql
@@ -17,8 +18,8 @@ def _like_esc(like: str) -> str:
     return f"{escaped}%"
 
 
-def _init(location: str) -> Connection:
-    conn = Connection(location, isolation_level=None)
+def _init() -> Connection:
+    conn = Connection(TMUX_DB, isolation_level=None)
     conn.row_factory = Row
     conn.create_collation("X_COLL", strcoll)
     conn.create_function("X_LOWER", narg=1, func=lower, deterministic=True)
@@ -30,9 +31,9 @@ def _init(location: str) -> Connection:
 
 
 class Database:
-    def __init__(self, pool: ThreadPoolExecutor, location: str) -> None:
+    def __init__(self, pool: ThreadPoolExecutor) -> None:
         self._ex = Executor(pool)
-        self._conn: Connection = self._ex.submit(_init, location)
+        self._conn: Connection = self._ex.submit(_init)
 
     def periodical(self, panes: Mapping[str, Sequence[str]]) -> None:
         def cont() -> None:

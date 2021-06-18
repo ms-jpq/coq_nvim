@@ -6,6 +6,7 @@ from typing import AbstractSet, Iterable, Iterator, Mapping, Sequence, TypedDict
 
 from std2.sqllite3 import escape, with_transaction
 
+from ...consts import BUFFERS_DB
 from ...registry import pool
 from ...shared.executor import Executor
 from ...shared.parse import coalesce, lower, normalize
@@ -30,8 +31,8 @@ def _like_esc(like: str) -> str:
     return f"{escaped}%"
 
 
-def _init(location: str) -> Connection:
-    conn = Connection(location, isolation_level=None)
+def _init() -> Connection:
+    conn = Connection(BUFFERS_DB, isolation_level=None)
     conn.row_factory = Row
     conn.create_collation("X_COLL", strcoll)
     conn.create_function("X_LOWER", narg=1, func=lower, deterministic=True)
@@ -42,18 +43,13 @@ def _init(location: str) -> Connection:
     return conn
 
 
-def _vaccum(conn: Connection) -> None:
-    # conn.execute(sql("vaccum", "words"), {})
-    pass
-
-
 class Database:
-    def __init__(self, location: str) -> None:
+    def __init__(self) -> None:
         self._ex = Executor(pool)
-        self._conn: Connection = self._ex.submit(_init, location)
+        self._conn: Connection = self._ex.submit(_init)
 
     def vaccum(self) -> None:
-        self._ex.submit(_vaccum, self._conn)
+        pass
 
     def ft_update(self, file: str, filetype: str) -> None:
         def cont() -> None:

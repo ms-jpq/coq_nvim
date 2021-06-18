@@ -18,13 +18,11 @@ from ..trans import trans
 from ..types import UserData
 
 
-def _should_cont(
-    inserted: Optional[NvimPos], prev: Optional[Context], cur: Context
-) -> bool:
+def _should_cont(inserted: Optional[NvimPos], cur: Context) -> bool:
     if cur.position == inserted:
         return False
     else:
-        return cur.line_before != "" and not cur.line_before.isspace()
+        return cur.words != "" or cur.syms != ""
 
 
 @rpc(blocking=True)
@@ -38,9 +36,8 @@ def _cmp(nvim: Nvim, stack: Stack, completions: Sequence[Completion]) -> None:
 
 
 def comp_func(nvim: Nvim, stack: Stack, manual: bool) -> None:
-    prev: Optional[Context] = None
     if stack.state.cur:
-        prev, f = stack.state.cur
+        _, f = stack.state.cur
         f.cancel()
 
     ctx = context(
@@ -48,7 +45,7 @@ def comp_func(nvim: Nvim, stack: Stack, manual: bool) -> None:
         unifying_chars=stack.settings.match.unifying_chars,
         cwd=stack.state.cwd,
     )
-    if manual or _should_cont(stack.state.inserted, prev=prev, cur=ctx):
+    if manual or _should_cont(stack.state.inserted, cur=ctx):
         fut = stack.supervisor.collect(ctx, manual=manual)
         stack.state.cur = (ctx, fut)
 

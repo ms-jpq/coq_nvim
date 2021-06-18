@@ -172,7 +172,7 @@ def _sorted(
         )
         return tot
 
-    return sorted(it, key=key_by)
+    return sorted(it, key=key_by, reverse=True)
 
 
 from json import dump

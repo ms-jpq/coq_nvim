@@ -80,7 +80,7 @@ def stack(pool: ThreadPoolExecutor, nvim: Nvim) -> Stack:
         inserting=nvim.api.get_mode()["mode"] == "i",
         cwd=cwd,
     )
-    db = Database(location=":memory:")
+    db = Database()
     supervisor = Supervisor(pool=pool, nvim=nvim, options=settings.match)
     workers = {
         *_from_each_according_to_their_ability(settings, db=db, supervisor=supervisor)

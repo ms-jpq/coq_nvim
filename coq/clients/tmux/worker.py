@@ -83,7 +83,7 @@ class Worker(BaseWorker[PollingClient, None]):
     def __init__(
         self, supervisor: Supervisor, options: PollingClient, misc: None
     ) -> None:
-        self._db = Database(supervisor.pool, location=":memory:")
+        self._db = Database(supervisor.pool)
         super().__init__(supervisor, options=options, misc=misc)
         if which("tmux"):
             supervisor.pool.submit(self._poll)
