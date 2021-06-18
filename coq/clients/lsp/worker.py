@@ -101,9 +101,8 @@ class Worker(BaseWorker[BaseClient, None]):
             self._sessions[token] = fut
 
         def cont() -> None:
-            self._supervisor.nvim.api.exec_lua(
-                "COQlsp_req(...)", (str(token), str(session), pos)
-            )
+            args = (str(token), str(session), pos)
+            self._supervisor.nvim.api.exec_lua("COQlsp_req(...)", args)
 
         threadsafe_call(self._supervisor.nvim, cont)
 

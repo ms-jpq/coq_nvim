@@ -2,7 +2,7 @@ from concurrent.futures import Future, InvalidStateError, TimeoutError
 from contextlib import suppress
 from pathlib import Path
 from threading import Lock
-from typing import Any, Iterator, MutableMapping, Sequence, Tuple
+from typing import Any, Iterator, MutableMapping, Sequence
 from uuid import UUID, uuid4
 
 from pynvim_pp.lib import threadsafe_call
@@ -10,7 +10,7 @@ from pynvim_pp.lib import threadsafe_call
 from ...shared.runtime import Supervisor
 from ...shared.runtime import Worker as BaseWorker
 from ...shared.settings import BaseClient
-from ...shared.types import Completion, Context, Edit, WTF8Pos
+from ...shared.types import Completion, Context, Edit, NvimPos
 
 _LUA = (Path(__file__).resolve().parent / "request.lua").read_text("UTF-8")
 
@@ -22,7 +22,7 @@ class Worker(BaseWorker[BaseClient, None]):
         supervisor.nvim.api.exec_lua(_LUA, ())
         super().__init__(supervisor, options=options, misc=misc)
 
-    def _req(self, session: UUID, pos: WTF8Pos) -> Any:
+    def _req(self, pos: NvimPos) -> Any:
         token = uuid4()
         fut: Future = Future()
 
@@ -30,9 +30,8 @@ class Worker(BaseWorker[BaseClient, None]):
             self._sessions[token] = fut
 
         def cont() -> None:
-            self._supervisor.nvim.api.exec_lua(
-                "COQts_req(...)", (str(token), str(session), pos)
-            )
+            args = (str(token), pos)
+            self._supervisor.nvim.api.exec_lua("COQts_req(...)", args)
 
         threadsafe_call(self._supervisor.nvim, cont)
 
@@ -54,9 +53,10 @@ class Worker(BaseWorker[BaseClient, None]):
                     self._sessions[token].set_result(reply)
 
     def work(self, context: Context) -> Iterator[Sequence[Completion]]:
-        cmp = Completion(
-            source=self._options.short_name,
-            primary_edit=Edit(new_text="TODO"),
-        )
+        reply = self._req(context.position)
+        # cmp = Completion(
+        #     source=self._options.short_name,
+        #     primary_edit=Edit(new_text="TODO"),
+        # )
         yield ()
 
