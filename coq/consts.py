@@ -12,9 +12,9 @@ RT_PY = (
     RT_DIR / "Scripts" / "python.exe" if name == "nt" else RT_DIR / "bin" / "python3"
 )
 ARTIFACTS_DIR = TOP_LEVEL / "artifacts"
-DB_DIR = VARS / "db"
-
 CONFIG_YML = TOP_LEVEL / "config" / "defaults.yml"
+TMP_DIR = TOP_LEVEL / "temp"
+
 
 SETTINGS_VAR = "coq_settings"
 NS = uuid4().hex

@@ -15,7 +15,7 @@ from ..clients.lsp.worker import Worker as LspWorker
 from ..clients.paths.worker import Worker as PathsWorker
 from ..clients.tmux.worker import Worker as TmuxWorker
 from ..clients.tree_sitter.worker import Worker as TreeWorker
-from ..consts import CONFIG_YML, DB_DIR, SETTINGS_VAR
+from ..consts import CONFIG_YML, SETTINGS_VAR
 from ..shared.runtime import Supervisor, Worker
 from ..shared.settings import Settings
 from ..shared.types import Context, NvimPos
@@ -50,14 +50,6 @@ def _settings(nvim: Nvim) -> Settings:
     return config
 
 
-def _db(cwd: str) -> Database:
-    DB_DIR.mkdir(parents=True, exist_ok=True)
-    hashed = md5(cwd.encode()).hexdigest()
-    location = (DB_DIR / hashed).with_suffix(".sqlite3")
-    db = Database(location=str(location))
-    return db
-
-
 def _from_each_according_to_their_ability(
     settings: Settings, db: Database, supervisor: Supervisor
 ) -> Iterator[Worker]:
@@ -88,7 +80,7 @@ def stack(pool: ThreadPoolExecutor, nvim: Nvim) -> Stack:
         inserting=nvim.api.get_mode()["mode"] == "i",
         cwd=cwd,
     )
-    db = _db(cwd)
+    db = Database(location=":memory:")
     supervisor = Supervisor(pool=pool, nvim=nvim, options=settings.match)
     workers = {
         *_from_each_according_to_their_ability(settings, db=db, supervisor=supervisor)

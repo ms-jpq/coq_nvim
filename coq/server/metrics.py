@@ -3,15 +3,7 @@ from dataclasses import asdict, dataclass
 from difflib import SequenceMatcher
 from locale import strxfrm
 from math import inf
-from typing import (
-    Iterable,
-    Iterator,
-    MutableMapping,
-    MutableSequence,
-    Sequence,
-    Tuple,
-    cast,
-)
+from typing import Iterable, Iterator, MutableSequence, Sequence, Tuple, cast
 
 from ..registry import pool
 from ..shared.parse import is_word
@@ -184,6 +176,10 @@ def _sorted(
     return (c for c, _ in ordered)
 
 
+from pprint import pprint
+from ..consts import TMP_DIR
+
+
 def rank(
     options: Options,
     weights: Weights,
@@ -210,7 +206,9 @@ def rank(
 
     individual = tuple(_weights(metrics))
     cum = _cum(weights, weights=(w for _, w in individual))
-    print(cum, individual, flush=True)
+
+    with open(TMP_DIR / "log.log", "w") as fd:
+        pprint((cum, individual), fd)
     ordered = _sorted(cum, it=individual)
     return ordered
 
