@@ -92,7 +92,7 @@ def _edit_trans(ctx: Context, env: EditEnv, edit: Edit) -> _EditInstruction:
 
     before = len(ctx.line_before.encode(UTF8))
     c1 = before - len(ctx.words_before.encode(UTF8))
-    c2 = before
+    c2 = before + len(ctx.words_after.encode(UTF8))
 
     begin = row, c1
     end = row, c2
