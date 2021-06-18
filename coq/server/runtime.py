@@ -1,6 +1,5 @@
 from concurrent.futures import Future, ThreadPoolExecutor
 from dataclasses import dataclass
-from hashlib import md5
 from typing import AbstractSet, Iterator, Optional, Tuple
 
 from pynvim import Nvim
@@ -67,8 +66,10 @@ def _from_each_according_to_their_ability(
 
     if clients.lsp.enabled:
         yield LspWorker(supervisor, options=clients.lsp, misc=None)
+
     if clients.snippets.enabled:
         yield SnippetWorker(supervisor, options=clients.snippets, misc=None)
+
     if clients.tmux.enabled:
         yield TmuxWorker(supervisor, options=clients.tmux, misc=None)
 
