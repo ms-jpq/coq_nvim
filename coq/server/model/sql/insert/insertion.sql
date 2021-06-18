@@ -1,2 +1,2 @@
-INSERT INTO insertions (content)
-VALUES                 (:content)
+REPLACE INTO insertions ( content)
+VALUES                  (:content)

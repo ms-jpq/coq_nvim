@@ -31,7 +31,7 @@ CREATE INDEX IF NOT EXISTS words_line_num ON words (line_num);
 -- Should be vacuumed by only keeping last n rows
 CREATE TABLE IF NOT EXISTS insertions (
   rowid   INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
-  content TEXT    NOT NULL
+  content TEXT    NOT NULL UNIQUE
 );
 CREATE INDEX IF NOT EXISTS insertions_content ON insertions (content);
 
