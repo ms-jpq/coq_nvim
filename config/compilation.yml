@@ -14,8 +14,7 @@ git:
   - https://github.com/snipsnapdev/snipsnap
   - https://github.com/xabikos/vscode-javascript
   - https://github.com/xabikos/vscode-react
-
-compile:
+paths:
   lsp:
     - rocketseat-vscode-react-native-snippets/snippets
     - snipsnap/snippets
