@@ -1,0 +1,29 @@
+---
+name: Artifacts
+
+on:
+  push:
+    branch:
+      - bwaaak
+  schedule:
+    - cron: "0 0 * * *" # daily
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Setup Python
+        uses: actions/setup-python@v2
+
+      - name: Pip Packages
+        run: pip install -U -r requirements.txt
+
+      - name: Build
+        env:
+          CI_TOKEN: ${{ secrets.CI_TOKEN }}
+        run: ./ci/prepare.py
+
