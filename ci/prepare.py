@@ -30,7 +30,7 @@ def _git_clone(path: Path) -> None:
 
 
 def _build() -> None:
-    check_call(("python3", "-m", "ci"), cwd=_TOP_LV)
+    check_call(("python3", "-m", f"{_TOP_LV.name}.ci"), cwd=_TOP_LV.parent)
 
 
 def _git_alert(cwd: Path) -> None:
@@ -61,7 +61,7 @@ def _git_alert(cwd: Path) -> None:
 
 
 def main() -> None:
-    cwd = Path() / "temp" / "coq"
+    cwd = _TOP_LV / "temp" / "coq"
     _git_identity()
     _git_clone(cwd)
     _build()
