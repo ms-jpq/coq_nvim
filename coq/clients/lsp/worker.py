@@ -9,7 +9,7 @@ from uuid import UUID, uuid4
 from pynvim_pp.lib import threadsafe_call
 from std2.pickle import DecodeError, decode
 
-from ...consts import ARTIFACTS_DIR
+from ...consts import LSP_ARTIFACTS
 from ...shared.runtime import Supervisor
 from ...shared.runtime import Worker as BaseWorker
 from ...shared.settings import BaseClient
@@ -24,8 +24,7 @@ from ...shared.types import (
 from .runtime import LSP
 from .types import CompletionItem, CompletionList, MarkupContent, Resp, TextEdit
 
-_LSP_ARTIFACTS = ARTIFACTS_DIR / "lsp.json"
-_LSP: LSP = decode(LSP, loads(_LSP_ARTIFACTS.read_text("UTF-8")))
+_LSP: LSP = decode(LSP, loads(LSP_ARTIFACTS.read_text("UTF-8")))
 _LUA = (Path(__file__).resolve().parent / "request.lua").read_text("UTF-8")
 
 

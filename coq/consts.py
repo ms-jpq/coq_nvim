@@ -11,12 +11,15 @@ RT_DIR = VARS / "runtime"
 RT_PY = (
     RT_DIR / "Scripts" / "python.exe" if name == "nt" else RT_DIR / "bin" / "python3"
 )
-ARTIFACTS_DIR = TOP_LEVEL / "artifacts"
+_ARTIFACTS_DIR = TOP_LEVEL / "artifacts"
+
 _CONF_DIR = TOP_LEVEL / "config"
 CONFIG_YML = _CONF_DIR / "defaults.yml"
 COMPILATION_YML = _CONF_DIR / "compilation.yml"
 TMP_DIR = TOP_LEVEL / "temp"
 
+LSP_ARTIFACTS = _ARTIFACTS_DIR / "lsp.json"
+SNIPPET_ARTIFACTS = _ARTIFACTS_DIR / "snippets.json"
 
 SETTINGS_VAR = "coq_settings"
 NS = uuid4().hex
