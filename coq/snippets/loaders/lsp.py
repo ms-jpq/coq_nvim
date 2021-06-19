@@ -45,6 +45,7 @@ def parse(path: Path) -> MetaSnippets:
     def cont() -> Iterator[ParsedSnippet]:
         for label, values in fmt.items():
             snippet = ParsedSnippet(
+                grammar="lsp",
                 content=_body(values.body),
                 doc=values.description,
                 label=label,

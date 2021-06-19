@@ -73,6 +73,7 @@ def parse(path: Path) -> MetaSnippets:
         if current_name:
             content = dedent(linesep.join(current_lines))
             snippet = ParsedSnippet(
+                grammar="snu",
                 content=content,
                 label=current_label,
                 doc=None,

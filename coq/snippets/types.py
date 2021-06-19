@@ -24,6 +24,7 @@ class Options(Enum):
 
 @dataclass(frozen=True)
 class ParsedSnippet:
+    grammar: str
     content: str
     label: Optional[str]
     doc: Optional[str]

@@ -121,6 +121,7 @@ def parse(path: Path) -> MetaSnippets:
 
                 content = linesep.join(current_lines)
                 snippet = ParsedSnippet(
+                    grammar="snu",
                     content=content,
                     label=current_label,
                     doc=None,

@@ -34,6 +34,7 @@ def parse(path: Path) -> MetaSnippets:
             content = dedent(linesep.join(current_lines))
             opts = opt_parse(current_options)
             snippet = ParsedSnippet(
+                grammar="snu",
                 content=content,
                 label=current_label,
                 doc="",
