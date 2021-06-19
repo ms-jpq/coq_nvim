@@ -30,7 +30,7 @@ def _git_clone(path: Path) -> None:
 
 
 def _build() -> None:
-    check_call(("python3", "-m", f"{_TOP_LV.name}.ci"), cwd=_TOP_LV.parent)
+    check_call(("python3", "-m", f"coq.ci"), cwd=_TOP_LV)
 
 
 def _git_alert(cwd: Path) -> None:
