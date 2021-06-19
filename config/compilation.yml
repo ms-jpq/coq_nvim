@@ -30,7 +30,7 @@ paths:
   snipmate:
     - vim-go/gosnippets/snippets
     - vim-snippets/snippets
-  ultisnips:
+  ultisnip:
     - vim-go/gosnippets/UltiSnips
     - vim-snippets/UltiSnips
 

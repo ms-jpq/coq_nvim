@@ -40,7 +40,7 @@ def _body(body: Union[str, Sequence[str]]) -> str:
 def parse(path: Path) -> MetaSnippets:
     text = path.read_text("UTF-8") if path.exists() else ""
     json = loads(text)
-    fmt: _FMT = decode(_FMT, json)
+    fmt: _FMT = decode(_FMT, json, strict=False)
 
     def cont() -> Iterator[ParsedSnippet]:
         for label, values in fmt.items():
