@@ -12,7 +12,9 @@ RT_PY = (
     RT_DIR / "Scripts" / "python.exe" if name == "nt" else RT_DIR / "bin" / "python3"
 )
 ARTIFACTS_DIR = TOP_LEVEL / "artifacts"
-CONFIG_YML = TOP_LEVEL / "config" / "defaults.yml"
+_CONF_DIR = TOP_LEVEL / "config"
+CONFIG_YML = _CONF_DIR / "defaults.yml"
+COMPILATION_YML = _CONF_DIR / "compilation.yml"
 TMP_DIR = TOP_LEVEL / "temp"
 
 
@@ -25,3 +27,4 @@ DEBUG = "COQ_DEBUG" in environ
 BUFFERS_DB = str(TMP_DIR / "buffers.sqlite3") if DEBUG else ":memory:"
 TMUX_DB = str(TMP_DIR / "tmux.sqlite3") if DEBUG else ":memory:"
 SNIPPET_DB = str(TMP_DIR / "snippet.sqlite3") if DEBUG else ":memory:"
+
