@@ -41,6 +41,8 @@ def _cmp(nvim: Nvim, stack: Stack, completions: Sequence[Completion]) -> None:
             complete(nvim, col=col, comp=comp)
         except NvimError:
             pass
+        else:
+            stack.state.commit = ctx.uid
 
 
 def comp_func(nvim: Nvim, stack: Stack, manual: bool) -> None:

@@ -328,7 +328,7 @@ def _cursor(cursor: NvimPos, instructions: Sequence[_EditInstruction]) -> NvimPo
 
 def edit(nvim: Nvim, stack: Stack, data: UserData) -> None:
     ctx = stack.state.cur
-    if ctx and data.ctx_uid == ctx.uid:
+    if ctx and data.commit_uid == stack.state.commit:
         win = cur_win(nvim)
         buf = win_get_buf(nvim, win=win)
         cursor = win_get_cursor(nvim, win=win)

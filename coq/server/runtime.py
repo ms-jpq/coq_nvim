@@ -1,6 +1,7 @@
 from concurrent.futures import Future, ThreadPoolExecutor
 from dataclasses import dataclass
 from typing import AbstractSet, Iterator, Optional, Sequence
+from uuid import UUID, uuid4
 
 from pynvim import Nvim
 from pynvim_pp.api import get_cwd
@@ -24,6 +25,7 @@ from .model.database import Database
 
 @dataclass
 class _State:
+    commit: UUID
     futs: Sequence[Future]
     cur: Optional[Context]
     inserted: Optional[NvimPos]
@@ -79,6 +81,7 @@ def stack(pool: ThreadPoolExecutor, nvim: Nvim) -> Stack:
     settings = _settings(nvim)
     cwd = get_cwd(nvim)
     state = _State(
+        commit=uuid4(),
         futs=(),
         cur=None,
         inserted=None,
