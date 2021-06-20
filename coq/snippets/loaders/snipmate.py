@@ -76,7 +76,7 @@ def parse(path: Path) -> MetaSnippets:
                 label=current_label,
                 doc="",
                 matches={current_name},
-                opts=current_opts,
+                options=current_opts,
             )
             snippets.append(snippet)
 

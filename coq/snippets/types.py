@@ -29,7 +29,7 @@ class ParsedSnippet:
     label: str
     doc: str
     matches: AbstractSet[str]
-    opts: AbstractSet[Options]
+    options: AbstractSet[Options]
 
 
 @dataclass(frozen=True)

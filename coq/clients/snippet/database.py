@@ -82,6 +82,16 @@ class Database:
                             },
                         )
                         snippet_id = cursor.lastrowid
+                        for match in snippet.matches:
+                            cursor.execute(
+                                sql("insert", "match"),
+                                {"snippet_id": snippet_id, "match": match},
+                            )
+                        for option in snippet.options:
+                            cursor.execute(
+                                sql("insert", "option"),
+                                {"snippet_id": snippet_id, "option": option},
+                            )
 
         self._ex.submit(cont)
 

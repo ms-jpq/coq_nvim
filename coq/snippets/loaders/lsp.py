@@ -50,7 +50,7 @@ def parse(path: Path) -> MetaSnippets:
                 doc=values.description,
                 label=label,
                 matches=_prefix(values.prefix),
-                opts=set(),
+                options=set(),
             )
             yield snippet
 
