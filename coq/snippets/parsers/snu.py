@@ -136,12 +136,6 @@ def _variable_substitution(context: ParserCtx[Local], *, name: str) -> Optional[
         return None
 
 
-def _consume_var_subst(context: ParserCtx[Local]) -> None:
-    context.local.depth += 1
-    for token in _parse(context, discard=True):
-        pass
-
-
 # variable    ::= '${' var '}' | '${' var ':' any '}'
 def _parse_variable(context: ParserCtx[Local]) -> TokenStream:
     name_acc: MutableSequence[str] = []
@@ -157,7 +151,8 @@ def _parse_variable(context: ParserCtx[Local]) -> TokenStream:
             var = _variable_substitution(context, name=name)
             if var is not None:
                 yield var
-                _consume_var_subst(context)
+                context.local.depth += 1
+                yield from _parse(context, shallow=True)
             else:
                 yield DummyBegin()
                 context.local.depth += 1
@@ -226,7 +221,7 @@ def _parse_lang(context: ParserCtx[Local]) -> Token:
             esc = _parse_escape(context, escapable_chars=_ESCAPABLE_CHARS)
             acc.append(esc)
         elif char == "`":
-            return Unparsed(text="".join(acc))
+            return Unparsed(text=f"`{''.join(acc)}`")
         else:
             acc.append(char)
 
@@ -234,7 +229,7 @@ def _parse_lang(context: ParserCtx[Local]) -> Token:
 
 
 # any          ::= tabstop | variable | placeholder | text
-def _parse(context: ParserCtx[Local], discard: bool) -> TokenStream:
+def _parse(context: ParserCtx[Local], shallow: bool) -> TokenStream:
     for pos, char in context:
         if char == "\\":
             pushback_chars(context, (pos, char))
@@ -242,7 +237,7 @@ def _parse(context: ParserCtx[Local], discard: bool) -> TokenStream:
         elif context.local.depth and char == "}":
             yield End()
             context.local.depth -= 1
-            if discard:
+            if shallow:
                 break
         elif char == "$":
             pushback_chars(context, (pos, char))
@@ -257,7 +252,7 @@ def _parse(context: ParserCtx[Local], discard: bool) -> TokenStream:
 def parser(context: Context, snippet: str) -> Parsed:
     local = Local(depth=0)
     ctx = context_from(snippet, context=context, local=local)
-    tokens = _parse(ctx, discard=False)
+    tokens = _parse(ctx, shallow=False)
     parsed = token_parser(ctx, stream=tokens)
     return parsed
 
