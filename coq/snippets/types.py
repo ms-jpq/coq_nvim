@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from enum import Enum, auto
-from typing import AbstractSet, Mapping, Optional, Sequence
+from typing import AbstractSet, Mapping, Sequence
 
 
 class LoadError(Exception):

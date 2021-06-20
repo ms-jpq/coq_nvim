@@ -57,7 +57,7 @@ def _marks(
 
 
 def parse(
-    context: Context, env: EditEnv, snippet: SnippetEdit
+    context: Context, env: EditEnv, snippet: SnippetEdit, sort_by: str
 ) -> Tuple[ContextualEdit, Sequence[Mark]]:
     row, _ = context.position
     parser = lsp_parser if snippet.grammar == "lsp" else snu_parser
@@ -69,7 +69,7 @@ def parse(
     )
     parsed = parser(context, snippet=text)
 
-    old_prefix, old_suffix = _before_after(context, text=parsed.text)
+    old_prefix, old_suffix = _before_after(context, text=sort_by + parsed.text)
     indent = _indent(env, old_prefix=old_prefix, line_before=context.line_before)
     new_lines = tuple(
         lhs + rhs

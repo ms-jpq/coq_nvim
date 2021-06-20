@@ -72,7 +72,7 @@ def load_parsable() -> SnippetSpecs:
                 grammar=snippet.grammar,
             )
             try:
-                parse(EMPTY_CTX, env=EMPTY_ENV, snippet=edit)
+                parse(EMPTY_CTX, env=EMPTY_ENV, snippet=edit, sort_by="")
             except ParseError:
                 pass
             else:

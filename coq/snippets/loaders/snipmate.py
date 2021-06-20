@@ -4,7 +4,7 @@ from string import whitespace
 from textwrap import dedent
 from typing import AbstractSet, MutableSequence, MutableSet, Tuple
 
-from ..types import MetaSnippets, Optional, Options, ParsedSnippet
+from ..types import MetaSnippets, Options, ParsedSnippet
 from .parse import opt_parse, raise_err
 
 _COMMENT_START = "#"

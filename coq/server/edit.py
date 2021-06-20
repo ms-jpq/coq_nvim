@@ -314,7 +314,7 @@ def edit(nvim: Nvim, stack: Stack, data: UserData) -> None:
         env = edit_env(nvim, buf=buf)
 
         primary, marks = (
-            parse(ctx, env=env, snippet=data.primary_edit)
+            parse(ctx, env=env, snippet=data.primary_edit, sort_by=data.sort_by)
             if isinstance(data.primary_edit, SnippetEdit)
             else (data.primary_edit, ())
         )

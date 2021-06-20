@@ -8,5 +8,7 @@ from ..shared.types import PrimaryEdit, RangeEdit
 @dataclass(frozen=True)
 class UserData:
     commit_uid: UUID
+    sort_by: str
     primary_edit: PrimaryEdit
     secondary_edits: Sequence[RangeEdit]
+

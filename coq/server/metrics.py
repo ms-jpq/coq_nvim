@@ -12,8 +12,6 @@ from ..shared.types import Completion, Context
 from .model.buffers.database import BDB, SqlMetrics
 
 
-
-
 @dataclass(frozen=True)
 class _MatchMetrics:
     prefix_matches: int
