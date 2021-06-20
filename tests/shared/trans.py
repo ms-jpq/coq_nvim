@@ -33,3 +33,24 @@ class Trans(TestCase):
         actual = trans(lhs, rhs, edit=Edit(new_text=edit))
         self.assertEquals((actual.old_prefix, actual.old_suffix), expected)
 
+    def test_5(self) -> None:
+        lhs, rhs = "abd", "efc"
+        edit = "bd"
+        expected = "bd", ""
+        actual = trans(lhs, rhs, edit=Edit(new_text=edit))
+        self.assertEquals((actual.old_prefix, actual.old_suffix), expected)
+
+    def test_6(self) -> None:
+        lhs, rhs = "ab", "c"
+        edit = "bbc"
+        expected = "b", "c"
+        actual = trans(lhs, rhs, edit=Edit(new_text=edit))
+        self.assertEquals((actual.old_prefix, actual.old_suffix), expected)
+
+    def test_7(self) -> None:
+        lhs, rhs = "abe", "cd"
+        edit = "becf"
+        expected = "be", ""
+        actual = trans(lhs, rhs, edit=Edit(new_text=edit))
+        self.assertEquals((actual.old_prefix, actual.old_suffix), expected)
+
