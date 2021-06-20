@@ -1,9 +1,10 @@
 from operator import add, sub
 from typing import Iterator, Sequence, Tuple, TypedDict
 
-from pynvim.api.nvim import Nvim, Window
+from pynvim.api.nvim import Buffer, Nvim
 from pynvim_pp.api import cur_win, win_get_buf, win_get_cursor, win_set_cursor
 from pynvim_pp.keymap import Keymap
+from pynvim_pp.operators import set_visual_selection
 
 from ...consts import NS
 from ...registry import rpc
@@ -17,9 +18,7 @@ class _MarkDetail(TypedDict):
     end_col: int
 
 
-def _ls_marks(nvim: Nvim, win: Window) -> Sequence[Mark]:
-    buf = win_get_buf(nvim, win=win)
-    ns = nvim.api.create_namespace(NS)
+def _ls_marks(nvim: Nvim, ns: str, buf: Buffer) -> Sequence[Mark]:
     marks: Sequence[Tuple[int, int, int, _MarkDetail]] = nvim.api.buf_get_extmarks(
         buf, ns, 0, -1, {"details": True}
     )
@@ -42,9 +41,12 @@ def _rank(row: int, col: int, idx_mark: Tuple[int, Mark]) -> Tuple[int, int, int
 
 @rpc(blocking=True)
 def _nav_mark(nvim: Nvim, stack: Stack, inc: bool) -> None:
+    ns = nvim.api.create_namespace(NS)
     win = cur_win(nvim)
-    marks = _ls_marks(nvim, win=win)
+    buf = win_get_buf(nvim, win=win)
     row, col = win_get_cursor(nvim, win=win)
+    marks = _ls_marks(nvim, ns=ns, buf=buf)
+
     ranked = iter(sorted(enumerate(marks), key=lambda im: _rank(row, col, im)))
     closest = next(ranked, None)
     if closest:
@@ -54,11 +56,16 @@ def _nav_mark(nvim: Nvim, stack: Stack, inc: bool) -> None:
         mark = marks[new_idx]
 
         (r1, c1), (r2, c2) = mark.begin, mark.end
-        win_set_cursor(nvim, win=win, row=r2, col=c2 - 1)
-        nvim.command(f"norm! v")
-        win_set_cursor(nvim, win=win, row=r1, col=c1)
+        if r1 == r2 and abs(c2 - c1) <= 1:
+            win_set_cursor(nvim, win=win, row=r1, col=min(c1, c2))
+        else:
+            set_visual_selection(
+                nvim, win=win, mode="v", mark1=(r1, c1), mark2=(r2, c2 - 1)
+            )
+            nvim.command("norm! c")
 
-        print(f"Mark {idx + 1} of {len(marks)}", flush=True)
+        nvim.command("startinsert")
+        nvim.api.buf_del_extmark(buf, ns, idx)
     else:
         print("NOTHING", flush=True)
 
