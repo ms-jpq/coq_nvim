@@ -32,7 +32,7 @@ def raise_err(
     char = f"'{actual}'" if actual else "EOF"
     expected_chars = ", ".join(map(lambda c: f"'{c}'", expected))
     index = pos.i
-    ctx = "" if index == -1 else f"{text[index-band:index+band+1]}"
+    ctx = "" if index == -1 else text[index - band : index + band + 1]
     tpl = """
     Unexpected char found @ ${condition}:
     row:  ${row}
