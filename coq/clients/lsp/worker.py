@@ -89,7 +89,7 @@ class Worker(BaseWorker[LSPClient, None]):
         self._lock = Lock()
         self._cur: Tuple[UUID, Future] = uuid4(), Future()
         self._kind_lookup = {
-            int(key): val for key, val in self._options.cmp_item_kind.items()
+            int(key): val for key, val in options.cmp_item_kind.items()
         }
         supervisor.nvim.api.exec_lua(_LUA, ())
         super().__init__(supervisor, options=options, misc=misc)
