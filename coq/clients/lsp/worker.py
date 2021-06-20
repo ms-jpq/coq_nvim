@@ -2,7 +2,7 @@ from concurrent.futures import CancelledError, Future, InvalidStateError
 from contextlib import suppress
 from pathlib import Path
 from threading import Lock
-from typing import Any, Iterator, Mapping, MutableMapping, Optional, Sequence, Tuple
+from typing import Any, Iterator, Mapping, Optional, Sequence, Tuple
 from uuid import UUID, uuid4
 
 from pynvim_pp.lib import threadsafe_call

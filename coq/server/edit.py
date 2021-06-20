@@ -337,7 +337,7 @@ def edit(nvim: Nvim, stack: Stack, data: UserData) -> None:
         win_set_cursor(nvim, win=win, row=n_row, col=n_col)
 
         stack.state.inserted = n_row, n_col
-        stack.bdb.inserted(primary.new_text)
+        stack.bdb.inserted(data.sort_by or primary.new_text)
         mark(nvim, buf=buf, marks=marks)
     else:
         pass
