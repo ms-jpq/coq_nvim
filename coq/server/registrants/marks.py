@@ -51,13 +51,14 @@ def _nav_mark(nvim: Nvim, stack: Stack, inc: bool) -> None:
         idx, _ = closest
         op = add if inc else sub
         new_idx = op(idx, 1) % len(marks)
-        new_mark = marks[new_idx]
+        mark = marks[new_idx]
 
-        (r1, c1), (r2, c2) = new_mark.begin, new_mark.end
+        (r1, c1), (r2, c2) = mark.begin, mark.end
         win_set_cursor(nvim, win=win, row=r2, col=c2 - 1)
         nvim.command(f"norm! v")
         win_set_cursor(nvim, win=win, row=r1, col=c1)
 
+        print(f"Mark {idx + 1} of {len(marks)}", flush=True)
     else:
         print("NOTHING", flush=True)
 
