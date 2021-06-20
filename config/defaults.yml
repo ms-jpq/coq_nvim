@@ -29,7 +29,7 @@ clients:
     short_name: "TS"
     weight: 1.0
   lsp:
-    enabled: False
+    enabled: True
     short_name: "LSP"
     weight: 1.0
   buffers:

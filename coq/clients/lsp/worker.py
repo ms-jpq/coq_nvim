@@ -104,7 +104,7 @@ class Worker(BaseWorker[LSPClient, None]):
         threadsafe_call(self._supervisor.nvim, cont)
 
         try:
-            ret = fut.result(timeout=self._supervisor.options.timeout)
+            ret = fut.result()
         except CancelledError:
             ret = None
 
