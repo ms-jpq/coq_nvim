@@ -1,4 +1,4 @@
-from concurrent.futures import Future, InvalidStateError, TimeoutError
+from concurrent.futures import CancelledError, Future, InvalidStateError
 from contextlib import suppress
 from pathlib import Path
 from threading import Lock
@@ -87,16 +87,15 @@ def _parse(
 class Worker(BaseWorker[LSPClient, None]):
     def __init__(self, supervisor: Supervisor, options: LSPClient, misc: None) -> None:
         self._lock = Lock()
-        self._sessions: MutableMapping[UUID, Future] = {}
+        self._cur: Tuple[UUID, Future] = uuid4(), Future()
         supervisor.nvim.api.exec_lua(_LUA, ())
         super().__init__(supervisor, options=options, misc=misc)
 
     def _req(self, session: UUID, pos: WTF8Pos) -> Any:
-        token = uuid4()
-        fut: Future = Future()
-
         with self._lock:
-            self._sessions[token] = fut
+            _, fut = self._cur
+            fut.cancel()
+            self._cur = token, fut = uuid4(), Future()
 
         def cont() -> None:
             args = (str(token), str(session), pos)
@@ -106,21 +105,18 @@ class Worker(BaseWorker[LSPClient, None]):
 
         try:
             ret = fut.result(timeout=self._supervisor.options.timeout)
-        except TimeoutError:
-            fut.cancel()
+        except CancelledError:
             ret = None
 
-        with self._lock:
-            if token in self._sessions:
-                self._sessions.pop(token)
         return ret
 
     def notify(self, token: UUID, msg: Sequence[Any]) -> None:
         with self._lock:
-            if token in self._sessions:
+            c_token, fut = self._cur
+            if token == c_token:
                 reply, *_ = msg
                 with suppress(InvalidStateError):
-                    self._sessions[token].set_result(reply)
+                    fut.set_result(reply)
 
     def work(self, context: Context) -> Iterator[Sequence[Completion]]:
         session = uuid4()
