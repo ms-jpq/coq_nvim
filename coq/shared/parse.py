@@ -30,15 +30,3 @@ def coalesce(chars: Iterable[str], unifying_chars: AbstractSet[str]) -> Iterator
         word = "".join(curr)
         yield word
 
-
-def match(rev: bool, existing: str, insertion: str) -> str:
-    if not rev:
-        for l in reversed(range(len(insertion))):
-            match = insertion[:l]
-            if match == existing[-l:]:
-                return match
-        else:
-            return ""
-    else:
-        assert False
-

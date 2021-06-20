@@ -27,11 +27,11 @@ clients:
   tree_sitter:
     enabled: True
     short_name: "TS"
-    weight: 1.5
+    weight: 1.0
   lsp:
-    enabled: True
+    enabled: False
     short_name: "LSP"
-    weight: 1.5
+    weight: 1.0
   buffers:
     enabled: True
     short_name: "BUF"
@@ -39,7 +39,7 @@ clients:
   paths:
     enabled: True
     short_name: "FILE"
-    weight: 2.0
+    weight: 1.0
   snippets:
     enabled: True
     short_name: "SNIP"
