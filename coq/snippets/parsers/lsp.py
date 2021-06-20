@@ -130,7 +130,7 @@ def _parse_tcp(context: ParserCtx[_Local]) -> TokenStream:
                 raise_err(
                     text=context.text,
                     pos=pos,
-                    condition="after |",
+                    condition="while parsing (tabstop | choice | placeholder)",
                     expected=("0-9", "|", ":"),
                     actual=char,
                 )
