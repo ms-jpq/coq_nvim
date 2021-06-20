@@ -6,6 +6,8 @@ from ...coq.ci.load import load
 from ...coq.shared.types import Context, EditEnv, SnippetEdit
 from ...coq.snippets.parse import parse
 
+_THRESHOLD = 0.95
+
 
 class Parser(TestCase):
     def test_1(self) -> None:
@@ -37,18 +39,22 @@ class Parser(TestCase):
                     )
                     yield edit
 
-        # edits = tuple(cont())
-        edits = ()
+        edits = tuple(cont())
 
         def errs() -> Iterator[Exception]:
             for edit in edits:
                 try:
                     parse(ctx, env=env, snippet=edit)
                 except Exception as e:
+                    print(e)
                     yield e
 
         errors = tuple(errs())
+        succ = len(errors) / len(edits) if edits else 0
 
-        succ = len(errors) / (len(edits) or 1)
-        # self.assertGreater(succ, 0.95)
+        self.assertGreater(succ, _THRESHOLD)
+
+        if succ < _THRESHOLD:
+            for err in errors:
+                print(err)
 
