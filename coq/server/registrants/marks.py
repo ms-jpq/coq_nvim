@@ -65,7 +65,7 @@ def _nav_mark(nvim: Nvim, stack: Stack, inc: bool) -> None:
             nvim.command("norm! c")
 
         nvim.command("startinsert")
-        nvim.api.buf_del_extmark(buf, ns, idx)
+        nvim.api.buf_del_extmark(buf, ns, mark.idx)
     else:
         print("NOTHING", flush=True)
 
