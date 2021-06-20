@@ -27,7 +27,7 @@ class Weights:
 
 
 @dataclass(frozen=True)
-class Keymap:
+class KeyMapping:
     prev_mark: str
     next_mark: str
 
@@ -70,6 +70,6 @@ class Settings:
     display: Display
     match: Options
     weights: Weights
-    keymap: Keymap
+    keymap: KeyMapping
     clients: Clients
 

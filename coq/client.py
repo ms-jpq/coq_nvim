@@ -6,7 +6,6 @@ from typing import Any, MutableMapping, Optional, cast
 
 from pynvim import Nvim
 from pynvim_pp.client import Client
-from pynvim_pp.keymap import Keymap
 from pynvim_pp.lib import threadsafe_call
 from pynvim_pp.logging import log
 from pynvim_pp.rpc import RpcCallable, RpcMsg, nil_handler
@@ -17,7 +16,7 @@ from ._registry import ____
 from .consts import DEBUG
 from .registry import atomic, autocmd, event_queue, pool, rpc, settings
 from .server.registrants.attachment import BUF_EVENTS
-from .server.registrants.marks import next_mark, prev_mark
+from .server.registrants.marks import set_km
 from .server.runtime import Stack, stack
 
 if DEBUG:
@@ -52,23 +51,12 @@ class CoqClient(Client):
             nvim.loop.set_default_executor(pool)
 
         def cont() -> None:
-            keymap = Keymap()
             rpc_atomic, specs = rpc.drain(nvim.channel_id)
             self._handlers.update(specs)
 
             self._stack = stack(pool, nvim=nvim)
-            km = self._stack.settings.keymap
-
-            keymap.n(km.prev_mark) << f"lua {prev_mark.name}()"
-            keymap.n(km.next_mark) << f"lua {next_mark.name}()"
-
-            (
-                rpc_atomic
-                + autocmd.drain()
-                + atomic
-                + keymap.drain(buf=None)
-                + settings.drain()
-            ).commit(nvim)
+            (rpc_atomic + autocmd.drain() + atomic + settings.drain()).commit(nvim)
+            set_km(nvim, mapping=self._stack.settings.keymap)
 
         try:
             threadsafe_call(nvim, cont)
