@@ -52,16 +52,12 @@ class Parser(TestCase):
                 try:
                     parse(_CTX, env=_ENV, snippet=edit)
                 except Exception as e:
-                    print(e)
                     yield e
 
         errors = tuple(errs())
         succ = len(errors) / len(edits) if edits else 0
 
-        self.assertGreater(succ, _THRESHOLD)
-
         if succ < _THRESHOLD:
             for err in errors:
-                print(err)
-                break
+                raise err
 
