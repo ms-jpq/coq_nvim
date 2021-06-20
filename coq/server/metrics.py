@@ -9,11 +9,9 @@ from ..registry import pool
 from ..shared.parse import is_word, lower
 from ..shared.settings import Options, Weights
 from ..shared.types import Completion, Context
-from .model.database import Database, SqlMetrics
+from .model.buffers.database import BDB, SqlMetrics
 
 
-class _ToleranceExceeded(Exception):
-    pass
 
 
 @dataclass(frozen=True)
@@ -130,7 +128,7 @@ def _sorted(
 def rank(
     options: Options,
     weights: Weights,
-    db: Database,
+    db: BDB,
     context: Context,
     completions: Sequence[Completion],
 ) -> Iterator[Completion]:

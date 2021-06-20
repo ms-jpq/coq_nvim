@@ -21,7 +21,8 @@ from ..consts import CONFIG_YML, LSP_ARTIFACTS, SETTINGS_VAR, SNIPPET_ARTIFACTS
 from ..shared.runtime import Supervisor, Worker
 from ..shared.settings import Settings
 from ..shared.types import Context, NvimPos
-from .model.database import Database
+from .model.buffers.database import BDB
+from .model.snippets.database import SDB
 
 
 @dataclass
@@ -38,7 +39,8 @@ class _State:
 class Stack:
     settings: Settings
     state: _State
-    db: Database
+    bdb: BDB
+    sdb: SDB
     supervisor: Supervisor
     workers: AbstractSet[Worker]
 
@@ -63,12 +65,12 @@ def _settings(nvim: Nvim) -> Settings:
 
 
 def _from_each_according_to_their_ability(
-    settings: Settings, db: Database, supervisor: Supervisor
+    settings: Settings, bdb: BDB, sdb: SDB, supervisor: Supervisor
 ) -> Iterator[Worker]:
     clients = settings.clients
 
     if clients.buffers.enabled:
-        yield BuffersWorker(supervisor, options=clients.buffers, misc=db)
+        yield BuffersWorker(supervisor, options=clients.buffers, misc=bdb)
 
     if clients.paths.enabled:
         yield PathsWorker(supervisor, options=clients.paths, misc=None)
@@ -80,7 +82,7 @@ def _from_each_according_to_their_ability(
         yield LspWorker(supervisor, options=clients.lsp, misc=None)
 
     if clients.snippets.enabled:
-        yield SnippetWorker(supervisor, options=clients.snippets, misc=None)
+        yield SnippetWorker(supervisor, options=clients.snippets, misc=sdb)
 
     if clients.tmux.enabled:
         yield TmuxWorker(supervisor, options=clients.tmux, misc=None)
@@ -97,13 +99,20 @@ def stack(pool: ThreadPoolExecutor, nvim: Nvim) -> Stack:
         inserting=nvim.api.get_mode()["mode"] == "i",
         cwd=cwd,
     )
-    db = Database()
+    bdb, sdb = BDB(), SDB()
     supervisor = Supervisor(pool=pool, nvim=nvim, options=settings.match)
     workers = {
-        *_from_each_according_to_their_ability(settings, db=db, supervisor=supervisor)
+        *_from_each_according_to_their_ability(
+            settings, bdb=bdb, sdb=sdb, supervisor=supervisor
+        )
     }
     stack = Stack(
-        settings=settings, state=state, db=db, supervisor=supervisor, workers=workers
+        settings=settings,
+        state=state,
+        bdb=bdb,
+        sdb=sdb,
+        supervisor=supervisor,
+        workers=workers,
     )
     return stack
 

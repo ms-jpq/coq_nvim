@@ -34,7 +34,7 @@ def trans(
     ranked = rank(
         options=stack.settings.match,
         weights=stack.settings.weights,
-        db=stack.db,
+        db=stack.bdb,
         context=context,
         completions=completions,
     )

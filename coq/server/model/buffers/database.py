@@ -43,7 +43,7 @@ def _init() -> Connection:
     return conn
 
 
-class Database:
+class BDB:
     def __init__(self) -> None:
         self._ex = Executor(pool)
         self._conn: Connection = self._ex.submit(_init)

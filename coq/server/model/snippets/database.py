@@ -1,4 +1,3 @@
-from concurrent.futures import ThreadPoolExecutor
 from contextlib import closing
 from locale import strcoll
 from sqlite3 import Connection, Cursor, Row
@@ -6,10 +5,11 @@ from typing import Iterable, Iterator, Mapping, Sequence, TypedDict
 
 from std2.sqllite3 import escape, with_transaction
 
-from ...consts import SNIPPET_DB
-from ...shared.executor import Executor
-from ...shared.parse import lower, normalize
-from ...snippets.types import ParsedSnippet
+from ....consts import SNIPPET_DB
+from ....registry import pool
+from ....shared.executor import Executor
+from ....shared.parse import lower, normalize
+from ....snippets.types import ParsedSnippet
 from .sql import sql
 
 
@@ -46,8 +46,8 @@ def _ensure_ft(cursor: Cursor, filetypes: Iterable[str]) -> None:
     cursor.executemany(sql("insert", "filetype"), it())
 
 
-class Database:
-    def __init__(self, pool: ThreadPoolExecutor) -> None:
+class SDB:
+    def __init__(self) -> None:
         self._ex = Executor(pool)
         self._conn: Connection = self._ex.submit(_init)
 

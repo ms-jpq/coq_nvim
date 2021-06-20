@@ -22,7 +22,7 @@ def _ft_changed(nvim: Nvim, stack: Stack) -> None:
     buf = cur_buf(nvim)
     name = buf_name(nvim, buf=buf)
     ft = buf_filetype(nvim, buf=buf)
-    stack.db.ft_update(name, filetype=ft)
+    stack.bdb.ft_update(name, filetype=ft)
 
 
 autocmd("FileType") << f"lua {_ft_changed.name}()"
@@ -46,7 +46,7 @@ autocmd("InsertLeave") << f"lua {_insert_leave.name}()"
 
 @rpc(blocking=True)
 def _vaccum(nvim: Nvim, stack: Stack) -> None:
-    stack.db.vaccum()
+    stack.bdb.vaccum()
 
 
 _handle: Optional[Handle] = None
