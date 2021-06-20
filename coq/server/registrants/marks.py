@@ -40,15 +40,6 @@ def _rank(row: int, col: int, idx_mark: Tuple[int, Mark]) -> Tuple[int, int, int
     return abs(row - r1), abs(row - r2), abs(col - c1), abs(col - c2)
 
 
-def _inside(row: int, col: int, mark: Mark) -> bool:
-    (r1, c1), (r2, c2) = mark.begin, mark.end
-    lhs = col >= c1 if row == r1 else True
-    rhs = col <= c2 if row == r2 else True
-    top = row <= r2
-    btm = row >= r1
-    return lhs and rhs and top and btm
-
-
 @rpc(blocking=True)
 def _nav_mark(nvim: Nvim, stack: Stack, inc: bool) -> None:
     win = cur_win(nvim)
@@ -57,14 +48,10 @@ def _nav_mark(nvim: Nvim, stack: Stack, inc: bool) -> None:
     ranked = iter(sorted(enumerate(marks), key=lambda im: _rank(row, col, im)))
     closest = next(ranked, None)
     if closest:
-        idx, mark = closest
-        if _inside(row, col, mark=mark):
-            op = add if inc else sub
-            new_idx = op(idx, 1) % len(marks)
-            print(idx, new_idx)
-            new_mark = marks[new_idx]
-        else:
-            new_mark = mark
+        idx, _ = closest
+        op = add if inc else sub
+        new_idx = op(idx, 1) % len(marks)
+        new_mark = marks[new_idx]
 
         (r1, c1), (r2, c2) = new_mark.begin, new_mark.end
         win_set_cursor(nvim, win=win, row=r2, col=c2 - 1)
