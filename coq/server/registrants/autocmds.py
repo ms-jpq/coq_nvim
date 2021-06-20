@@ -32,7 +32,7 @@ def _ft_changed(nvim: Nvim, stack: Stack) -> None:
 
 
 autocmd("FileType") << f"lua {_ft_changed.name}()"
-atomic.command(f"lua {_ft_changed.name}()")
+atomic.exec_lua(f"{_ft_changed.name}()", ())
 
 
 @rpc(blocking=True)
