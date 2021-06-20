@@ -18,7 +18,7 @@ CREATE INDEX IF NOT EXISTS files_filetype ON files (filetype);
 CREATE TABLE IF NOT EXISTS words (
   filename TEXT    NOT NULL REFERENCES files (filename) ON DELETE CASCADE,
   word     TEXT    NOT NULL,
-  lword    TEXT    NOT NULL AS (X_LOWER(word)) STORED,
+  lword    TEXT    NOT NULL AS (X_LOWER(X_NORM(word))) STORED,
   line_num INTEGER NOT NULL
 );
 CREATE INDEX IF NOT EXISTS words_filename ON words (filename);

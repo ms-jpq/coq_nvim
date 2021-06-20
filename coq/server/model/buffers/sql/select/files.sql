@@ -1,3 +1,0 @@
-SELECT
-  filename
-FROM files

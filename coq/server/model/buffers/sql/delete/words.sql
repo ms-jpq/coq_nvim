@@ -1,6 +1,6 @@
 DELETE FROM words
 WHERE
-  filename = :filename
+  filename = X_NORM(:filename)
   AND
   line_num >= :lo
   AND
