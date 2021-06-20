@@ -1,4 +1,3 @@
-from operator import add, sub
 from typing import Iterable, Iterator, Sequence, Tuple, TypedDict
 from uuid import uuid4
 
@@ -31,32 +30,18 @@ def _ls_marks(nvim: Nvim, ns: str, buf: Buffer) -> Sequence[Mark]:
             m = Mark(idx=idx, begin=(r1, c1), end=(r2, c2))
             yield m
 
-    ordered = sorted(cont(), key=lambda m: (m.begin, m.end))
-    return ordered
-
-
-def _rank(row: int, col: int, idx_mark: Tuple[int, Mark]) -> Tuple[int, int, int, int]:
-    _, mark = idx_mark
-    (r1, c1), (r2, c2) = mark.begin, mark.end
-    return abs(row - r1), abs(row - r2), abs(col - c1), abs(col - c2)
+    return sorted(cont(), key=lambda m: m.idx)
 
 
 @rpc(blocking=True)
-def _nav_mark(nvim: Nvim, stack: Stack, inc: bool) -> None:
+def _nav_mark(nvim: Nvim, stack: Stack) -> None:
     ns = nvim.api.create_namespace(_NS)
     win = cur_win(nvim)
     buf = win_get_buf(nvim, win=win)
-    row, col = win_get_cursor(nvim, win=win)
     marks = _ls_marks(nvim, ns=ns, buf=buf)
 
-    ranked = iter(sorted(enumerate(marks), key=lambda im: _rank(row, col, im)))
-    closest = next(ranked, None)
-    if closest:
-        idx, _ = closest
-        op = add if inc else sub
-        new_idx = op(idx, 1) % len(marks)
-        mark = marks[new_idx]
-
+    mark = next(iter(marks), None)
+    if mark:
         (r1, c1), (r2, c2) = mark.begin, mark.end
         if r1 == r2 and abs(c2 - c1) <= 1:
             win_set_cursor(nvim, win=win, row=r1, col=min(c1, c2))
