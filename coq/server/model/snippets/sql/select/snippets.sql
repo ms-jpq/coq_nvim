@@ -15,5 +15,5 @@ WHERE
   AND
   extensions_view.src = :filetype
   AND
-  matches.lmatch LIKE X_LIKE_ESC(X_LOWER(:word)) ESCAPE '!'
+  matches.lmatch LIKE X_LIKE_ESC(X_LOWER(X_NORM(:word))) ESCAPE '!'
 
