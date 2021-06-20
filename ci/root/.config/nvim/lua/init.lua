@@ -9,8 +9,7 @@ local sanitize = function(spec)
 end
 
 local lookup = sanitize(vim.lsp.protocol.CompletionItemKind)
-local lsprotocol = {cmp_item_kind = lookup}
-local json = vim.fn.json_encode(lsprotocol)
+local json = vim.fn.json_encode(lookup)
 
 vim.fn.writefile({json}, "/dev/stdout")
 
