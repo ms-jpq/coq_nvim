@@ -1,4 +1,7 @@
+from textwrap import shorten
 from typing import Iterator, MutableSet, Sequence
+
+from pynvim import Nvim
 
 from ..shared.nvim.completions import VimCompletion
 from ..shared.types import Completion, Context
@@ -7,8 +10,12 @@ from .runtime import Stack
 from .types import UserData
 
 
-def _cmp_to_vcmp(context: Context, cmp: Completion) -> VimCompletion[UserData]:
-    abbr = cmp.label or cmp.primary_edit.new_text
+def _cmp_to_vcmp(
+    context: Context, width: int, ellipsis: str, cmp: Completion
+) -> VimCompletion[UserData]:
+    abbr = shorten(
+        cmp.label or cmp.primary_edit.new_text, width=width, placeholder=ellipsis
+    )
     menu = f"[{cmp.source}]"
     user_data = UserData(
         sort_by=cmp.sort_by,
@@ -30,8 +37,13 @@ def _cmp_to_vcmp(context: Context, cmp: Completion) -> VimCompletion[UserData]:
 
 
 def trans(
-    stack: Stack, context: Context, completions: Sequence[Completion]
+    nvim: Nvim, stack: Stack, context: Context, completions: Sequence[Completion]
 ) -> Iterator[VimCompletion]:
+    display = stack.settings.display
+    _, col = context.position
+    width: int = nvim.options["columns"]
+    truncate = min(width - col - display.margin, display.max_len)
+
     ranked = rank(
         options=stack.settings.match,
         weights=stack.settings.weights,
@@ -39,10 +51,14 @@ def trans(
         context=context,
         completions=completions,
     )
-
     seen: MutableSet[str] = set()
     for cmp in ranked:
         if cmp.primary_edit.new_text not in seen:
             seen.add(cmp.primary_edit.new_text)
-            yield _cmp_to_vcmp(context, cmp=cmp)
+            yield _cmp_to_vcmp(
+                context,
+                width=truncate,
+                ellipsis=display.ellipsis,
+                cmp=cmp,
+            )
 

@@ -5,7 +5,8 @@ from typing import AbstractSet, Any, Literal, Mapping, Optional, Sequence
 @dataclass(frozen=True)
 class Display:
     ellipsis: str
-    pum_max_len: int
+    margin: int
+    max_len: int
 
 
 @dataclass(frozen=True)

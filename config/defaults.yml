@@ -1,7 +1,8 @@
 ---
 display:
   ellipsis: …
-  pum_max_len: 66
+  margin: 16
+  max_len: 66
 
 match:
   unifying_chars:

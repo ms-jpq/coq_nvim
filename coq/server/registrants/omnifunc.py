@@ -36,7 +36,7 @@ def _cmp(nvim: Nvim, stack: Stack, completions: Sequence[Completion]) -> None:
     if stack.state.inserting and ctx:
         _, col = ctx.position
         with timeit(0, "RANK"):
-            comp = trans(stack, context=ctx, completions=completions)
+            comp = trans(nvim, stack=stack, context=ctx, completions=completions)
         try:
             complete(nvim, col=col, comp=comp)
         except NvimError:
