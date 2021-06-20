@@ -1,36 +1,13 @@
 from sys import stderr
 from typing import Iterator
 from unittest import TestCase
-from uuid import uuid4
 
 from ...coq.ci.load import load
-from ...coq.shared.types import Context, EditEnv, SnippetEdit
+from ...coq.shared.types import SnippetEdit
+from ...coq.snippets.main import EMPTY_CTX, EMPTY_ENV
 from ...coq.snippets.parse import parse
 
 _THRESHOLD = 0.95
-
-
-_CTX = Context(
-    uid=uuid4(),
-    cwd="",
-    filename="",
-    filetype="",
-    position=(0, 0),
-    line="",
-    line_before="",
-    line_after="",
-    words="",
-    words_before="",
-    words_after="",
-    syms="",
-    syms_before="",
-    syms_after="",
-)
-_ENV = EditEnv(
-    linefeed="\n",
-    tabstop=2,
-    expandtab=True,
-)
 
 
 def _edits() -> Iterator[SnippetEdit]:
@@ -51,7 +28,7 @@ class Parser(TestCase):
         def errs() -> Iterator[Exception]:
             for edit in edits:
                 try:
-                    parse(_CTX, env=_ENV, snippet=edit)
+                    parse(EMPTY_CTX, env=EMPTY_ENV, snippet=edit)
                 except Exception as e:
                     yield e
 
