@@ -1,3 +1,4 @@
+from locale import strxfrm
 from pathlib import Path
 from typing import AbstractSet, Mapping, MutableMapping, MutableSequence, MutableSet
 
@@ -44,7 +45,7 @@ def load(
         for ext, paths in spec.items():
             snippets = acc.setdefault(ext, [])
             extends = exts.setdefault(ext, set())
-            for path in paths:
+            for path in sorted(paths, key=lambda p: tuple(map(strxfrm, p.parts))):
                 meta = parser(path)
                 snippets.extend(meta.snippets)
                 for e in meta.extends:
