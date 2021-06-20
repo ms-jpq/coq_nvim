@@ -1,5 +1,5 @@
 from itertools import accumulate, chain, repeat
-from typing import Iterable, Iterator, Sequence, Tuple
+from typing import Iterator, Sequence, Tuple
 
 from ..shared.trans import trans
 from ..shared.types import (
@@ -16,9 +16,9 @@ from .parsers.snu import parser as snu_parser
 from .parsers.types import Parsed
 
 
-def _indent(env: EditEnv, line_before: str) -> str:
+def _indent(env: EditEnv, old_prefix: str, line_before: str) -> str:
+    l = len(line_before.encode(UTF8)) - len(old_prefix.encode(UTF8))
     spaces = " " * env.tabstop
-    l = len(line_before.replace("\t", spaces))
     return " " * l if env.expandtab else (" " * l).replace(spaces, "\t")
 
 
@@ -29,21 +29,24 @@ def _before_after(context: Context, text: str) -> Tuple[str, str]:
 
 
 def _marks(
-    env: EditEnv, row: int, new_prefix: str, indent: str, parsed: Parsed
+    env: EditEnv, row: int, edit: ContextualEdit, indent: str, parsed: Parsed
 ) -> Iterator[Mark]:
     len8 = tuple(
-        accumulate(len(indent) + len(line.encode(UTF8)) + 1 for line in parsed.text)
+        accumulate(
+            len(line.encode(UTF8)) + 1 for line in parsed.text.split(env.linefeed)
+        )
     )
-    line_shift = row - (len(new_prefix.split(env.linefeed)) - 1)
+    y_shift = row - (len(edit.new_prefix.split(env.linefeed)) - 1)
+    x_shift = len(indent)
 
     for region in parsed.regions:
         r1, c1, r2, c2 = -1, -1, -1, -1
         last_len = 0
         for idx, l8 in enumerate(len8):
             if r1 == -1 and l8 >= region.begin:
-                r1, c1 = idx + line_shift, region.begin - last_len
+                r1, c1 = idx + y_shift, region.begin - last_len + x_shift
             if r2 == -1 and l8 >= region.end:
-                r2, c2 = idx + line_shift, region.end - last_len
+                r2, c2 = idx + y_shift, region.end - last_len + x_shift
             last_len = l8
 
         assert r1 >= 0 and r2 >= 0
@@ -67,7 +70,7 @@ def parse(
     parsed = parser(context, snippet=text)
 
     old_prefix, old_suffix = _before_after(context, text=parsed.text)
-    indent = _indent(env, line_before=context.line_before)
+    indent = _indent(env, old_prefix=old_prefix, line_before=context.line_before)
     new_lines = tuple(
         lhs + rhs
         for lhs, rhs in zip(
@@ -81,8 +84,6 @@ def parse(
         old_suffix=old_suffix,
         new_prefix=parsed.text[: parsed.cursor],
     )
-    marks = tuple(
-        _marks(env, row=row, new_prefix=edit.new_prefix, indent=indent, parsed=parsed)
-    )
+    marks = tuple(_marks(env, row=row, edit=edit, indent=indent, parsed=parsed))
     return edit, marks
 
