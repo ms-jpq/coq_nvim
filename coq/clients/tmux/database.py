@@ -48,7 +48,9 @@ class Database:
             with closing(self._conn.cursor()) as cursor:
                 with with_transaction(cursor):
                     template = Template(sql("delete", "words"))
-                    instruction = template.substitute(pane_ids=tuple(panes.keys()))
+                    instruction = template.substitute(
+                        pane_ids=",".join(f"'{pid}'" for pid in panes.keys())
+                    )
                     cursor.execute(instruction, ())
                     cursor.executemany(sql("insert", "words"), it())
 
