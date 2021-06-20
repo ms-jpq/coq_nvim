@@ -2,7 +2,7 @@ from typing import Iterable, Iterator, Sequence, Tuple, TypedDict
 from uuid import uuid4
 
 from pynvim.api.nvim import Buffer, Nvim
-from pynvim_pp.api import cur_win, win_get_buf, win_get_cursor, win_set_cursor
+from pynvim_pp.api import cur_win, win_get_buf, win_set_cursor
 from pynvim_pp.keymap import Keymap
 from pynvim_pp.operators import set_visual_selection
 
