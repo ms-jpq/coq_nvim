@@ -1,7 +1,7 @@
 from contextlib import closing
 from locale import strcoll
 from sqlite3 import Connection, Cursor, Row
-from typing import Iterable, Iterator, Mapping, Sequence, TypedDict
+from typing import Iterable, Iterator, Mapping, MutableSet, Sequence, TypedDict
 from uuid import uuid4
 
 from std2.sqllite3 import escape, with_transaction
@@ -51,6 +51,7 @@ class SDB:
     def __init__(self) -> None:
         self._ex = Executor(pool)
         self._conn: Connection = self._ex.submit(_init)
+        self._seen: MutableSet[str] = set()
 
     def add_exts(self, exts: Mapping[str, Iterable[str]]) -> None:
         def it() -> Iterator[Mapping]:
@@ -68,31 +69,33 @@ class SDB:
 
     def populate(self, filetype: str, snippets: Iterable[ParsedSnippet]) -> None:
         def cont() -> None:
-            with closing(self._conn.cursor()) as cursor:
-                with with_transaction(cursor):
-                    _ensure_ft(cursor, filetypes=(filetype,))
-                    for row_id, snippet in zip(iter(uuid4, None), snippets):
-                        cursor.execute(
-                            sql("insert", "snippet"),
-                            {
-                                "rowid": row_id,
-                                "filetype": filetype,
-                                "grammar": snippet.grammar,
-                                "content": snippet.content,
-                                "label": snippet.label,
-                                "doc": snippet.doc,
-                            },
-                        )
-                        for match in snippet.matches:
+            if filetype not in self._seen:
+                self._seen.add(filetype)
+                with closing(self._conn.cursor()) as cursor:
+                    with with_transaction(cursor):
+                        _ensure_ft(cursor, filetypes=(filetype,))
+                        for row_id, snippet in zip(iter(uuid4, None), snippets):
                             cursor.execute(
-                                sql("insert", "match"),
-                                {"snippet_id": row_id, "match": match},
+                                sql("insert", "snippet"),
+                                {
+                                    "rowid": row_id,
+                                    "filetype": filetype,
+                                    "grammar": snippet.grammar,
+                                    "content": snippet.content,
+                                    "label": snippet.label,
+                                    "doc": snippet.doc,
+                                },
                             )
-                        for option in snippet.options:
-                            cursor.execute(
-                                sql("insert", "option"),
-                                {"snippet_id": row_id, "option": option},
-                            )
+                            for match in snippet.matches:
+                                cursor.execute(
+                                    sql("insert", "match"),
+                                    {"snippet_id": row_id, "match": match},
+                                )
+                            for option in snippet.options:
+                                cursor.execute(
+                                    sql("insert", "option"),
+                                    {"snippet_id": row_id, "option": option},
+                                )
 
         self._ex.submit(cont)
 
