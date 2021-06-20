@@ -4,14 +4,8 @@ from string import ascii_letters, ascii_lowercase, digits
 from typing import AbstractSet, MutableSequence, Optional, Sequence
 
 from ...shared.types import Context
-from .parser import (
-    context_from,
-    next_char,
-    pushback_chars,
-    raise_err,
-    token_parser,
-)
-from .types import Begin, DummyBegin, End, ParserCtx, Parsed, TokenStream, Unparsed
+from .parser import context_from, next_char, pushback_chars, raise_err, token_parser
+from .types import Begin, DummyBegin, End, Parsed, ParserCtx, TokenStream, Unparsed
 
 #
 # O(n) single pass LSP Parser:
@@ -136,9 +130,7 @@ def _parse_tcp(context: ParserCtx[_Local]) -> TokenStream:
                 )
 
 
-def _variable_substitution(
-    context: ParserCtx[_Local], *, name: str
-) -> Optional[str]:
+def _variable_substitution(context: ParserCtx[_Local], *, name: str) -> Optional[str]:
     ctx = context.ctx
     row, _ = ctx.position
 
@@ -234,12 +226,6 @@ def _parse_variable_decorated(context: ParserCtx[_Local], var: str) -> TokenStre
             pass
 
 
-def _consume_var_subst(context: ParserCtx) -> None:
-    context.local.depth += 1
-    for token in _parse(context, discard=True):
-        pass
-
-
 # variable    ::= '$' var | '${' var }'
 #                | '${' var ':' any '}'
 #                | '${' var '/' regex '/' (format | text)+ '/' options '}'
@@ -261,7 +247,8 @@ def _parse_variable_nested(context: ParserCtx[_Local]) -> TokenStream:
             var = _variable_substitution(context, name=name)
             if var is not None:
                 yield var
-                _consume_var_subst(context)
+                context.local.depth += 1
+                yield from _parse(context, shallow=True)
             else:
                 yield DummyBegin()
                 context.local.depth += 1
@@ -340,7 +327,7 @@ def _parse_scope(context: ParserCtx[_Local]) -> TokenStream:
 
 
 # any         ::= tabstop | placeholder | choice | variable | text
-def _parse(context: ParserCtx[_Local], discard: bool) -> TokenStream:
+def _parse(context: ParserCtx[_Local], shallow: bool) -> TokenStream:
     for pos, char in context:
         if char == "\\":
             pushback_chars(context, (pos, char))
@@ -348,7 +335,7 @@ def _parse(context: ParserCtx[_Local], discard: bool) -> TokenStream:
         elif context.local.depth and char == "}":
             yield End()
             context.local.depth -= 1
-            if discard:
+            if shallow:
                 break
         elif char == "$":
             pushback_chars(context, (pos, char))
@@ -360,7 +347,7 @@ def _parse(context: ParserCtx[_Local], discard: bool) -> TokenStream:
 def parser(context: Context, snippet: str) -> Parsed:
     local = _Local(depth=0)
     ctx = context_from(snippet, context=context, local=local)
-    tokens = _parse(ctx, discard=False)
+    tokens = _parse(ctx, shallow=False)
     parsed = token_parser(ctx, stream=tokens)
     return parsed
 
