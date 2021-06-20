@@ -39,13 +39,13 @@ class Local:
     depth: int
 
 
-_escapable_chars = {"\\", "$", "}"}
-_regex_escape_chars = {"/"}
-_lang_escape_chars = {"`"}
-_int_chars = {*digits}
-_var_begin_chars = {*ascii_letters, "$"}
-_lang_begin_chars = {*ascii_lowercase}
-_regex_flag_chars = {*ascii_lowercase}
+_ESCAPABLE_CHARS = {"\\", "$", "}"}
+_REGEX_ESCAPABLE_CHARS = {"/"}
+_LANG_ESCAPE_CHARS = {"`"}
+_INT_CHARS = {*digits}
+_VAR_BEGIN_CHARS = {*ascii_letters, "$"}
+_LANG_BEGIN_CHARS = {*ascii_lowercase}
+_REGEX_FLAG_CHARS = {*ascii_lowercase}
 
 
 def _parse_escape(context: ParserCtx[Local], *, escapable_chars: Set[str]) -> str:
@@ -70,13 +70,13 @@ def _parse_decorated(context: ParserCtx[Local]) -> TokenStream:
     for pos, char in context:
         if char == "\\":
             pushback_chars(context, (pos, char))
-            char = _parse_escape(context, escapable_chars=_regex_escape_chars)
+            char = _parse_escape(context, escapable_chars=_REGEX_ESCAPABLE_CHARS)
             decoration_acc.append(char)
         elif char == "/":
             seen += 1
             if seen >= 3:
                 for pos, char in context:
-                    if char in _regex_flag_chars:
+                    if char in _REGEX_FLAG_CHARS:
                         decoration_acc.append(char)
                     elif char == "}":
                         decoration = "".join(decoration_acc)
@@ -100,7 +100,7 @@ def _parse_tp(context: ParserCtx[Local]) -> TokenStream:
     idx_acc: List[str] = []
 
     for pos, char in context:
-        if char in _int_chars:
+        if char in _INT_CHARS:
             idx_acc.append(char)
         else:
             yield Begin(idx=int("".join(idx_acc)))
@@ -176,11 +176,11 @@ def _parse_inner_scope(context: ParserCtx[Local]) -> TokenStream:
     assert char == "{"
 
     pos, char = next_char(context)
-    if char in _int_chars:
+    if char in _INT_CHARS:
         # tabstop | placeholder
         pushback_chars(context, (pos, char))
         yield from _parse_tp(context)
-    elif char in _var_begin_chars:
+    elif char in _VAR_BEGIN_CHARS:
         # variable
         pushback_chars(context, (pos, char))
         yield from _parse_variable(context)
@@ -203,11 +203,11 @@ def _parse_scope(context: ParserCtx[Local]) -> TokenStream:
     if char == "{":
         pushback_chars(context, (pos, char))
         yield from _parse_inner_scope(context)
-    elif char in _int_chars:
+    elif char in _INT_CHARS:
         idx_acc: List[str] = [char]
         # tabstop     ::= '$' int
         for pos, char in context:
-            if char in _int_chars:
+            if char in _INT_CHARS:
                 idx_acc.append(char)
             else:
                 yield Begin(idx=int("".join(idx_acc)))
@@ -227,7 +227,7 @@ def _parse_lang(context: ParserCtx[Local]) -> Token:
     for pos, char in context:
         if char == "\\":
             pushback_chars(context, (pos, char))
-            esc = _parse_escape(context, escapable_chars=_escapable_chars)
+            esc = _parse_escape(context, escapable_chars=_ESCAPABLE_CHARS)
             acc.append(esc)
         elif char == "`":
             return Unparsed(text="".join(acc))
@@ -242,7 +242,7 @@ def _parse(context: ParserCtx[Local], discard: bool) -> TokenStream:
     for pos, char in context:
         if char == "\\":
             pushback_chars(context, (pos, char))
-            yield _parse_escape(context, escapable_chars=_escapable_chars)
+            yield _parse_escape(context, escapable_chars=_ESCAPABLE_CHARS)
         elif context.local.depth and char == "}":
             yield End()
             context.local.depth -= 1
