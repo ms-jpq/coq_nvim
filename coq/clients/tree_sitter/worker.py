@@ -57,14 +57,14 @@ class Worker(BaseWorker[BaseClient, None]):
                     self._sessions[token].set_result(reply)
 
     def work(self, context: Context) -> Iterator[Sequence[Completion]]:
+        match = lower(context.words or context.syms)
         reply = self._req(context.position)
         resp = decode(Msg, reply)
 
         def cont() -> Iterator[Completion]:
-            lword = lower(context.words)
             for payload in resp:
-                if lower(payload.text).startswith(lword) and len(payload.text) > len(
-                    context.words
+                if lower(payload.text).startswith(match) and (
+                    len(payload.text) > len(match)
                 ):
                     edit = Edit(new_text=payload.text)
                     cmp = Completion(source=self._options.short_name, primary_edit=edit)

@@ -15,7 +15,8 @@ class Worker(BaseWorker[SnippetClient, SDB]):
         self._misc.add_exts(options.extends)
 
     def work(self, context: Context) -> Iterator[Sequence[Completion]]:
-        snippets = self._misc.select(context.filetype, word=context.words)
+        match = context.words or context.syms
+        snippets = self._misc.select(context.filetype, word=match)
 
         def cont() -> Iterator[Completion]:
             for snip in snippets:

@@ -103,8 +103,9 @@ class Worker(BaseWorker[PollingClient, None]):
             log.exception("%s", e)
 
     def work(self, context: Context) -> Iterator[Sequence[Completion]]:
+        match = context.words or context.syms
         active = _cur()
-        words = self._db.select(context.words, active_pane=active.uid)
+        words = self._db.select(match, active_pane=active.uid)
 
         def cont() -> Iterator[Completion]:
             for word in words:

@@ -30,27 +30,13 @@
       )
     end
 
-    local smallest_scope = function(scopes, node)
-      local cur = node
-      while cur ~= nil and not vim.tbl_contains(scopes, cur) do
-        cur = cur:parent()
-      end
-      return cur
-    end
-
     local parse = function()
-      local cursor_node = ts_utils.get_node_at_cursor()
-      local scopes = ts_locals.get_scopes()
-
       return co.wrap(
         function()
           for _, d in ipairs(ts_locals.get_definitions(0)) do
             for m in matches(d, "") do
-              local node_scope = smallest_scope(scopes, m.node)
               local text = unpack(ts_utils.get_node_text(m.node, 0))
-              local vaild =
-                not node_scope or ts_utils.is_parent(node_scope, cursor_node)
-              if text and vaild then
+              if text then
                 co.yield({kind = m.kind, text = text})
               end
             end

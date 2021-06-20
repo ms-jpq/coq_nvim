@@ -56,7 +56,10 @@ def parse(
     indent = _indent(env, line_before=context.line_before)
     new_lines = tuple(
         lhs + rhs
-        for lhs, rhs in zip(chain((context.line_before,), repeat(indent)), parsed.text)
+        for lhs, rhs in zip(
+            chain((context.line_before,), repeat(indent)),
+            parsed.text.split(env.linefeed),
+        )
     )
     new_text = env.linefeed.join(new_lines)
 

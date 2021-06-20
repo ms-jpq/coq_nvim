@@ -14,6 +14,7 @@ def _comp(src: str, word: str) -> Completion:
 
 class Worker(BaseWorker[BaseClient, BDB]):
     def work(self, context: Context) -> Iterator[Sequence[Completion]]:
-        words = self._misc.suggestions(context.words)
+        match = context.words or context.syms
+        words = self._misc.suggestions(match)
         yield tuple(_comp(self._options.short_name, word=word) for word in words)
 
