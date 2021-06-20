@@ -67,7 +67,7 @@ def _nav_mark(nvim: Nvim, stack: Stack, inc: bool) -> None:
         nvim.command("startinsert")
         nvim.api.buf_del_extmark(buf, ns, mark.idx)
     else:
-        print("NOTHING", flush=True)
+        print("🐸 ", flush=True)
 
 
 def set_km(nvim: Nvim, mapping: KeyMapping) -> None:
