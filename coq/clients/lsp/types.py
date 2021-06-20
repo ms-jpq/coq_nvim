@@ -38,9 +38,7 @@ class MarkupContent:
     value: str
 
 
-@dataclass(frozen=True)
-class _InsertTextFormat:
-    pass
+_InsertTextFormat = int
 
 
 @dataclass(frozen=True)
@@ -62,5 +60,5 @@ class CompletionList:
     items: Sequence[CompletionItem]
 
 
-Resp = Union[None, int, Sequence[CompletionItem], CompletionList]
+Resp = Union[None, Sequence[CompletionItem], CompletionList]
 
