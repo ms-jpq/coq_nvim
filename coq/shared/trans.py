@@ -1,9 +1,11 @@
 from itertools import accumulate
 
+from .parse import lower
 from .types import ContextualEdit, Edit
 
 
 def _match(lhs: bool, existing: str, insertion: str) -> str:
+    existing, insertion = lower(existing), lower(insertion)
     if lhs:
         for match in reversed(tuple(accumulate(insertion))):
             if match == existing[-len(match) :]:
