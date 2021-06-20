@@ -1,8 +1,8 @@
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import closing
 from locale import strcoll
-from sqlite3 import Connection, Row
-from typing import Iterator, Mapping, Sequence, TypedDict
+from sqlite3 import Connection, Cursor, Row
+from typing import Any, Iterable, Iterator, Mapping, Sequence, TypedDict
 
 from std2.sqllite3 import escape, with_transaction
 
@@ -35,10 +35,32 @@ def _init() -> Connection:
     return conn
 
 
+def _ensure_ft(cursor: Cursor, filetypes: Iterable[str]) -> None:
+    def it() -> Iterator[Mapping]:
+        for ft in filetypes:
+            yield {"filetype": ft}
+
+    cursor.executemany(sql("insert", "filetype"), it())
+
+
 class Database:
     def __init__(self, pool: ThreadPoolExecutor) -> None:
         self._ex = Executor(pool)
         self._conn: Connection = self._ex.submit(_init)
+
+    def add_exts(self, exts: Mapping[str, Iterable[str]]) -> None:
+        def it() -> Iterator[Mapping]:
+            for src, dests in exts.items():
+                for dest in dests:
+                    yield {"src": src, "dest": dest}
+
+        def cont() -> None:
+            with closing(self._conn.cursor()) as cursor:
+                with with_transaction(cursor):
+                    _ensure_ft(cursor, filetypes=exts)
+                    cursor.executemany(sql("insert", "extension"), it())
+
+        self._ex.submit(cont)
 
     def select(self, word: str, filetype: str) -> Sequence[_Snip]:
         def cont() -> Sequence[_Snip]:

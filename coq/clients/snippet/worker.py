@@ -20,6 +20,7 @@ _ARTIFACTS: Artifacts = loads(SNIPPET_ARTIFACTS.read_text("UTF-8"))
 class Worker(BaseWorker[BaseClient, None]):
     def __init__(self, supervisor: Supervisor, options: BaseClient, misc: None) -> None:
         self._db = Database(supervisor.pool)
+        self._db.add_exts(_ARTIFACTS["extends"])
         super().__init__(supervisor, options=options, misc=misc)
 
     def work(self, context: Context) -> Iterator[Sequence[Completion]]:
