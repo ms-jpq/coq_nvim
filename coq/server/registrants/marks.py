@@ -59,10 +59,8 @@ def _nav_mark(nvim: Nvim, stack: Stack) -> None:
 
 def set_km(nvim: Nvim, mapping: KeyMapping) -> None:
     keymap = Keymap()
-    keymap.n(mapping.prev_mark) << f"<cmd>lua {_nav_mark.name}(false)<cr>"
-    keymap.n(mapping.next_mark) << f"<cmd>lua {_nav_mark.name}(true)<cr>"
-    keymap.v(mapping.prev_mark) << f"<esc><cmd>lua {_nav_mark.name}(false)<cr>"
-    keymap.v(mapping.next_mark) << f"<esc><cmd>lua {_nav_mark.name}(true)<cr>"
+    keymap.n(mapping.jump_to_mark) << f"<cmd>lua {_nav_mark.name}()<cr>"
+    keymap.v(mapping.jump_to_mark) << f"<esc><cmd>lua {_nav_mark.name}()<cr>"
 
     keymap.drain(buf=None).commit(nvim)
 

@@ -29,8 +29,7 @@ class Weights:
 
 @dataclass(frozen=True)
 class KeyMapping:
-    prev_mark: str
-    next_mark: str
+    jump_to_mark: str
 
 
 @dataclass(frozen=True)
