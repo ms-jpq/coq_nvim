@@ -13,7 +13,7 @@ from ..types import MetaSnippets, ParsedSnippet
 class _Unit:
     prefix: Union[str, Sequence[str]]
     body: Union[str, Sequence[str]]
-    description: Optional[str] = None
+    description: str = ""
 
 
 _FMT = Mapping[str, _Unit]

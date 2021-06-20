@@ -26,8 +26,8 @@ class Options(Enum):
 class ParsedSnippet:
     grammar: str
     content: str
-    label: Optional[str]
-    doc: Optional[str]
+    label: str
+    doc: str
     matches: AbstractSet[str]
     opts: AbstractSet[Options]
 

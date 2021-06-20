@@ -24,7 +24,7 @@ class Worker(BaseWorker[BaseClient, None]):
         super().__init__(supervisor, options=options, misc=misc)
 
     def work(self, context: Context) -> Iterator[Sequence[Completion]]:
-        snippets = self._db.select(context.words_before, filetype=context.filetype)
+        snippets = self._db.select(context.filetype, word=context.words)
 
         def cont() -> Iterator[Completion]:
             for snip in snippets:

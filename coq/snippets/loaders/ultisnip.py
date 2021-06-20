@@ -28,17 +28,15 @@ class _State(Enum):
     pglobal = auto()
 
 
-def _start(
-    path: Path, lineno: int, line: str
-) -> Tuple[str, Optional[str], AbstractSet[Options]]:
+def _start(path: Path, lineno: int, line: str) -> Tuple[str, str, AbstractSet[Options]]:
     rest = line[len(_SNIPPET_START) :]
     sep_count = rest.count('"')
 
     if sep_count == 0:
-        return rest.strip(), None, opt_parse("")
+        return rest.strip(), "", opt_parse("")
 
     if sep_count == 1:
-        return rest.strip(), None, opt_parse("")
+        return rest.strip(), "", opt_parse("")
 
     elif sep_count == 2:
         first = rest.find('"')
@@ -81,7 +79,7 @@ def parse(path: Path) -> MetaSnippets:
 
     current_name = ""
     state = _State.normal
-    current_label: Optional[str] = None
+    current_label: str = ""
     current_lines: MutableSequence[str] = []
     current_opts: AbstractSet[Options] = frozenset()
 
@@ -124,7 +122,7 @@ def parse(path: Path) -> MetaSnippets:
                     grammar="snu",
                     content=content,
                     label=current_label,
-                    doc=None,
+                    doc="",
                     matches={current_name},
                     opts=current_opts,
                 )

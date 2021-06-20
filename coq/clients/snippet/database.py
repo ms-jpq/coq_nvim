@@ -9,6 +9,7 @@ from std2.sqllite3 import escape, with_transaction
 from ...consts import SNIPPET_DB
 from ...shared.executor import Executor
 from ...shared.parse import lower, normalize
+from ...snippets.types import ParsedSnippet
 from .sql import sql
 
 
@@ -61,6 +62,26 @@ class Database:
                 with with_transaction(cursor):
                     _ensure_ft(cursor, filetypes=exts)
                     cursor.executemany(sql("insert", "extension"), it())
+
+        self._ex.submit(cont)
+
+    def populate(self, filetype: str, snippets: Iterable[ParsedSnippet]) -> None:
+        def cont() -> None:
+            with closing(self._conn.cursor()) as cursor:
+                with with_transaction(cursor):
+                    _ensure_ft(cursor, filetypes=(filetype,))
+                    for snippet in snippets:
+                        cursor.execute(
+                            sql("insert", "snippet"),
+                            {
+                                "filetype": filetype,
+                                "grammar": snippet.grammar,
+                                "content": snippet.content,
+                                "label": snippet.label,
+                                "doc": snippet.doc,
+                            },
+                        )
+                        snippet_id = cursor.lastrowid
 
         self._ex.submit(cont)
 

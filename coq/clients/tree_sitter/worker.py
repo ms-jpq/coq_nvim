@@ -8,6 +8,7 @@ from uuid import UUID, uuid4
 from pynvim_pp.lib import threadsafe_call
 from std2.pickle import decode
 
+from ...shared.parse import lower
 from ...shared.runtime import Supervisor
 from ...shared.runtime import Worker as BaseWorker
 from ...shared.settings import BaseClient
@@ -60,10 +61,14 @@ class Worker(BaseWorker[BaseClient, None]):
         resp = decode(Msg, reply)
 
         def cont() -> Iterator[Completion]:
+            lword = lower(context.words)
             for payload in resp:
-                edit = Edit(new_text=payload.text)
-                cmp = Completion(source=self._options.short_name, primary_edit=edit)
-                yield cmp
+                if lower(payload.text).startswith(lword) and len(payload.text) >= len(
+                    context.words
+                ):
+                    edit = Edit(new_text=payload.text)
+                    cmp = Completion(source=self._options.short_name, primary_edit=edit)
+                    yield cmp
 
         yield tuple(cont())
 

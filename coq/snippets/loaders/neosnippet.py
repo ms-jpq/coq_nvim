@@ -24,7 +24,7 @@ def parse(path: Path) -> MetaSnippets:
     extends: MutableSet[str] = set()
 
     current_name = ""
-    current_label: Optional[str] = None
+    current_label: str = ""
     current_aliases: MutableSequence[str] = []
     current_options: MutableSequence[str] = []
     current_lines: MutableSequence[str] = []
@@ -66,7 +66,7 @@ def parse(path: Path) -> MetaSnippets:
         elif line.startswith(_SNIPPET_START):
             push()
             current_name = line[len(_SNIPPET_START) :].strip()
-            current_label = None
+            current_label = ""
             current_aliases.clear()
             current_options.clear()
             current_lines.clear()
