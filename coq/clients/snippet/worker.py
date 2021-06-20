@@ -1,10 +1,20 @@
+from json import loads
 from typing import Iterator, Sequence
 
+from pynvim_pp.autocmd import AutoCMD
+from pynvim_pp.rpc import RPC
+from std2.pickle import decode
+
+from ...consts import SNIPPET_ARTIFACTS
 from ...shared.runtime import Supervisor
 from ...shared.runtime import Worker as BaseWorker
 from ...shared.settings import BaseClient
 from ...shared.types import Completion, Context, SnippetEdit
+from ...snippets.types import ParsedSnippet
 from .database import Database
+from .types import Artifacts
+
+_ARTIFACTS: Artifacts = loads(SNIPPET_ARTIFACTS.read_text("UTF-8"))
 
 
 class Worker(BaseWorker[BaseClient, None]):
