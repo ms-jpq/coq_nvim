@@ -11,7 +11,6 @@ from pynvim_pp.api import (
     win_get_cursor,
     win_set_cursor,
 )
-from pynvim_pp.lib import write
 from std2.itertools import deiter
 from std2.types import never
 
@@ -361,5 +360,5 @@ def edit(nvim: Nvim, stack: Stack, data: UserData) -> None:
         stack.db.inserted(primary.new_text)
         mark(nvim, buf=buf, marks=marks)
     else:
-        write(nvim, ctx, error=True)
+        pass
 
