@@ -1,6 +1,6 @@
 from dataclasses import dataclass
-from typing import AbstractSet
 from pathlib import Path
+from typing import AbstractSet
 
 
 @dataclass

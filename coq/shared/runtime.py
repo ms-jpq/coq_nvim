@@ -4,7 +4,17 @@ from abc import abstractmethod
 from collections import deque
 from concurrent.futures import Future, InvalidStateError, ThreadPoolExecutor, wait
 from contextlib import suppress
-from typing import Any, Deque, Generic, Iterator, MutableSet, Sequence, TypeVar
+from threading import Lock
+from typing import (
+    Any,
+    Deque,
+    Generic,
+    Iterator,
+    MutableSequence,
+    MutableSet,
+    Sequence,
+    TypeVar,
+)
 from uuid import UUID
 from weakref import WeakSet
 
@@ -21,8 +31,9 @@ O_co = TypeVar("O_co", contravariant=True)
 class Supervisor:
     def __init__(self, nvim: Nvim, pool: ThreadPoolExecutor, options: Options) -> None:
         self._nvim, self._pool, self._options = nvim, pool, options
+        self._lock = Lock()
         self._workers: MutableSet[Worker] = WeakSet()
-        self._futs: Sequence[Future] = ()
+        self._futs: MutableSequence[Future] = []
 
     @property
     def options(self) -> Options:
@@ -56,22 +67,26 @@ class Supervisor:
 
         def cont() -> None:
             try:
-                for f in self._futs:
-                    f.cancel()
-                self._futs = tuple(
-                    self._pool.submit(supervise, worker) for worker in self._workers
-                )
+                with self._lock:
+                    for f in self._futs:
+                        f.cancel()
+                    self._futs.clear()
+                    self._futs.extend(
+                        self._pool.submit(supervise, worker) for worker in self._workers
+                    )
                 timeout = None if manual else self._options.timeout
                 wait(self._futs, timeout=timeout)
-                for f in self._futs:
-                    f.cancel()
+                with self._lock:
+                    for f in self._futs:
+                        f.cancel()
 
                 with suppress(InvalidStateError):
                     fut.set_result(tuple(acc))
             except Exception as e:
                 log.exception("%s", e)
 
-        self._pool.submit(cont)
+        with self._lock:
+            self._futs.append(self._pool.submit(cont))
         return fut
 
 
