@@ -1,21 +1,15 @@
 from dataclasses import dataclass
 from string import ascii_letters, ascii_lowercase, digits
-from typing import List, Optional, Set
+from typing import AbstractSet, MutableSequence, Optional
 
 from ...shared.types import Context
-from .parser import (
-    context_from,
-    next_char,
-    pushback_chars,
-    raise_err,
-    token_parser,
-)
+from .parser import context_from, next_char, pushback_chars, raise_err, token_parser
 from .types import (
     Begin,
     DummyBegin,
     End,
-    ParserCtx,
     Parsed,
+    ParserCtx,
     Token,
     TokenStream,
     Unparsed,
@@ -48,7 +42,9 @@ _LANG_BEGIN_CHARS = {*ascii_lowercase}
 _REGEX_FLAG_CHARS = {*ascii_lowercase}
 
 
-def _parse_escape(context: ParserCtx[Local], *, escapable_chars: Set[str]) -> str:
+def _parse_escape(
+    context: ParserCtx[Local], *, escapable_chars: AbstractSet[str]
+) -> str:
     pos, char = next_char(context)
     assert char == "\\"
 
@@ -65,7 +61,7 @@ def _parse_decorated(context: ParserCtx[Local]) -> TokenStream:
     pos, char = next_char(context)
     assert char == "/"
 
-    decoration_acc: List[str] = [char]
+    decoration_acc = [char]
     seen = 1
     for pos, char in context:
         if char == "\\":
@@ -97,7 +93,7 @@ def _parse_decorated(context: ParserCtx[Local]) -> TokenStream:
 # tabstop      ::= '$' int | '${' int '}'
 # placeholder  ::= '${' int ':' ('#:'? any | regexreplace) '}'
 def _parse_tp(context: ParserCtx[Local]) -> TokenStream:
-    idx_acc: List[str] = []
+    idx_acc: MutableSequence[str] = []
 
     for pos, char in context:
         if char in _INT_CHARS:
@@ -148,7 +144,7 @@ def _consume_var_subst(context: ParserCtx[Local]) -> None:
 
 # variable    ::= '${' var '}' | '${' var ':' any '}'
 def _parse_variable(context: ParserCtx[Local]) -> TokenStream:
-    name_acc: List[str] = []
+    name_acc: MutableSequence[str] = []
 
     for pos, char in context:
         if char == "}":
@@ -204,7 +200,7 @@ def _parse_scope(context: ParserCtx[Local]) -> TokenStream:
         pushback_chars(context, (pos, char))
         yield from _parse_inner_scope(context)
     elif char in _INT_CHARS:
-        idx_acc: List[str] = [char]
+        idx_acc = [char]
         # tabstop     ::= '$' int
         for pos, char in context:
             if char in _INT_CHARS:
@@ -223,7 +219,7 @@ def _parse_lang(context: ParserCtx[Local]) -> Token:
     pos, char = next_char(context)
     assert char == "`"
 
-    acc: List[str] = []
+    acc: MutableSequence[str] = []
     for pos, char in context:
         if char == "\\":
             pushback_chars(context, (pos, char))
