@@ -1,3 +1,4 @@
+from sys import stderr
 from typing import Iterator
 from unittest import TestCase
 from uuid import uuid4
@@ -55,9 +56,9 @@ class Parser(TestCase):
                     yield e
 
         errors = tuple(errs())
-        succ = len(errors) / len(edits) if edits else 0
+        succ = 1 - (len(errors) / len(edits) if edits else 0)
+        self.assertGreater(succ, _THRESHOLD)
 
-        if succ < _THRESHOLD:
-            for err in errors:
-                raise err
+        for err in errors:
+            print(err, file=stderr)
 
