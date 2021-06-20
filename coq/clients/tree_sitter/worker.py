@@ -11,7 +11,7 @@ from std2.pickle import decode
 from ...shared.runtime import Supervisor
 from ...shared.runtime import Worker as BaseWorker
 from ...shared.settings import BaseClient
-from ...shared.types import Completion, Context, ContextualEdit, NvimPos
+from ...shared.types import Completion, Context, Edit, NvimPos
 from .types import Msg
 
 _LUA = (Path(__file__).resolve().parent / "request.lua").read_text("UTF-8")
@@ -61,12 +61,7 @@ class Worker(BaseWorker[BaseClient, None]):
 
         def cont() -> Iterator[Completion]:
             for payload in resp:
-                edit = ContextualEdit(
-                    old_prefix=context.words_before,
-                    old_suffix=context.words_after,
-                    new_prefix=payload.text,
-                    new_text=payload.text,
-                )
+                edit = Edit(new_text=payload.text)
                 cmp = Completion(source=self._options.short_name, primary_edit=edit)
                 yield cmp
 

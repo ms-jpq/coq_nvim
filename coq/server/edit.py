@@ -14,6 +14,7 @@ from pynvim_pp.api import (
 from std2.itertools import deiter
 from std2.types import never
 
+from ..shared.trans import trans
 from ..shared.types import (
     UTF8,
     UTF16,
@@ -87,35 +88,6 @@ def _rows_to_fetch(
     return min(line_nums), max(line_nums) + 1
 
 
-def _edit_trans(ctx: Context, env: EditEnv, edit: Edit) -> _EditInstruction:
-    row, _ = ctx.position
-
-    before = len(ctx.line_before.encode(UTF8))
-    c1 = before - len(ctx.words_before.encode(UTF8))
-    c2 = before + len(ctx.words_after.encode(UTF8))
-
-    begin = row, c1
-    end = row, c2
-
-    new_lines = tuple(line for line in edit.new_text.split(env.linefeed))
-    cursor_yoffset = len(new_lines) - 1
-    cursor_xpos = (
-        len(new_lines[-1].encode(UTF8))
-        if len(new_lines) > 1
-        else c1 + len(new_lines[0].encode(UTF8))
-    )
-
-    inst = _EditInstruction(
-        primary=True,
-        begin=begin,
-        end=end,
-        cursor_yoffset=cursor_yoffset,
-        cursor_xpos=cursor_xpos,
-        new_lines=new_lines,
-    )
-    return inst
-
-
 def _contextual_edit_trans(
     ctx: Context, env: EditEnv, lines: _Lines, edit: ContextualEdit
 ) -> _EditInstruction:
@@ -158,6 +130,14 @@ def _contextual_edit_trans(
         cursor_xpos=cursor_xpos,
         new_lines=new_lines,
     )
+    return inst
+
+
+def _edit_trans(
+    ctx: Context, env: EditEnv, lines: _Lines, edit: Edit
+) -> _EditInstruction:
+    c_edit = trans(line_before=ctx.line_before, line_after=ctx.line_after, edit=edit)
+    inst = _contextual_edit_trans(ctx, env=env, lines=lines, edit=c_edit)
     return inst
 
 
@@ -242,7 +222,7 @@ def _instructions(
             yield _contextual_edit_trans(ctx, env=env, lines=lines, edit=primary)
 
         elif isinstance(primary, Edit):
-            yield _edit_trans(ctx, env=env, edit=primary)
+            yield _edit_trans(ctx, env=env, lines=lines, edit=primary)
 
         else:
             never(primary)

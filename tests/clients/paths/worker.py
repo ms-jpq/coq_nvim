@@ -7,7 +7,9 @@ class Parser(TestCase):
     def test_1(self) -> None:
         line = "./.gith"
         actual = sorted(parse(line))
-        expected = sorted((("./.gith", "./.github/"),))
+        expected = sorted(
+            ("./.github/",),
+        )
         self.assertEqual(actual, expected)
 
     def test_2(self) -> None:
@@ -15,8 +17,8 @@ class Parser(TestCase):
         actual = sorted(parse(line))
         expected = sorted(
             (
-                ("./.github", "./.github/.agp"),
-                ("./.github", "./.github/workflows/"),
+                "./.github/.agp",
+                "./.github/workflows/",
             )
         )
         self.assertEqual(actual, expected)
@@ -26,8 +28,8 @@ class Parser(TestCase):
         actual = sorted(parse(line))
         expected = sorted(
             (
-                ("./.github/", "./.github/.agp"),
-                ("./.github/", "./.github/workflows/"),
+                "./.github/.agp",
+                "./.github/workflows/",
             )
         )
         self.assertEqual(actual, expected)
@@ -35,7 +37,7 @@ class Parser(TestCase):
     def test_4(self) -> None:
         line = "abc./.gith"
         actual = sorted(parse(line))
-        expected = sorted((("./.gith", "./.github/"),))
+        expected = sorted(("./.github/",))
         self.assertEqual(actual, expected)
 
     def test_5(self) -> None:
@@ -43,8 +45,8 @@ class Parser(TestCase):
         actual = sorted(parse(line))
         expected = sorted(
             (
-                ("./.github", "./.github/.agp"),
-                ("./.github", "./.github/workflows/"),
+                "./.github/.agp",
+                "./.github/workflows/",
             )
         )
         self.assertEqual(actual, expected)
@@ -54,8 +56,8 @@ class Parser(TestCase):
         actual = sorted(parse(line))
         expected = sorted(
             (
-                ("./.github/", "./.github/.agp"),
-                ("./.github/", "./.github/workflows/"),
+                "./.github/.agp",
+                "./.github/workflows/",
             )
         )
         self.assertEqual(actual, expected)
@@ -63,6 +65,6 @@ class Parser(TestCase):
     def test_7(self) -> None:
         line = "/h"
         results = {*parse(line)}
-        expected = ("/h", "/home/")
+        expected = "/home/"
         self.assertIn(expected, results)
 

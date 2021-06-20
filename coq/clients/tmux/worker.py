@@ -10,7 +10,7 @@ from ...shared.parse import coalesce
 from ...shared.runtime import Supervisor
 from ...shared.runtime import Worker as BaseWorker
 from ...shared.settings import PollingClient
-from ...shared.types import Completion, Context, ContextualEdit
+from ...shared.types import Completion, Context, Edit
 from .database import Database
 
 
@@ -69,12 +69,7 @@ def _screenshot(unifying_chars: AbstractSet[str], uid: str) -> Sequence[str]:
 
 
 def _comp(src: str, ctx: Context, word: str) -> Completion:
-    edit = ContextualEdit(
-        old_prefix=ctx.words_before,
-        old_suffix=ctx.words_after,
-        new_text=word,
-        new_prefix=word,
-    )
+    edit = Edit(new_text=word)
     cmp = Completion(source=src, primary_edit=edit)
     return cmp
 

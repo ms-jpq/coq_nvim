@@ -3,7 +3,7 @@ from contextlib import suppress
 from json import loads
 from pathlib import Path
 from threading import Lock
-from typing import Any, Iterator, MutableMapping, Sequence, Tuple, Union
+from typing import Any, Iterator, MutableMapping, Sequence, Tuple
 from uuid import UUID, uuid4
 
 from pynvim_pp.lib import threadsafe_call
@@ -13,14 +13,7 @@ from ...consts import LSP_ARTIFACTS
 from ...shared.runtime import Supervisor
 from ...shared.runtime import Worker as BaseWorker
 from ...shared.settings import BaseClient
-from ...shared.types import (
-    UTF16,
-    Completion,
-    Context,
-    ContextualEdit,
-    RangeEdit,
-    WTF8Pos,
-)
+from ...shared.types import UTF16, Completion, Context, Edit, RangeEdit, WTF8Pos
 from .runtime import LSP
 from .types import CompletionItem, CompletionList, MarkupContent, Resp, TextEdit
 
@@ -34,25 +27,13 @@ def _range_edit(edit: TextEdit) -> RangeEdit:
     return RangeEdit(new_text=edit.newText, begin=begin, end=end)
 
 
-def _primary(
-    context: Context, item: CompletionItem
-) -> Union[ContextualEdit, RangeEdit]:
+def _primary(item: CompletionItem) -> Edit:
     if isinstance(item.textEdit, TextEdit):
         return _range_edit(item.textEdit)
     elif item.insertText:
-        return ContextualEdit(
-            old_prefix=context.words_before,
-            old_suffix=context.words_after,
-            new_prefix=item.insertText,
-            new_text=item.insertText,
-        )
+        return Edit(new_text=item.insertText)
     else:
-        return ContextualEdit(
-            old_prefix=context.words_before,
-            old_suffix=context.words_after,
-            new_prefix=item.label,
-            new_text=item.label,
-        )
+        return Edit(new_text=item.label)
 
 
 def _doc(item: CompletionItem) -> Tuple[str, str]:
@@ -66,8 +47,8 @@ def _doc(item: CompletionItem) -> Tuple[str, str]:
         return "", ""
 
 
-def _parse_item(src: str, context: Context, item: CompletionItem) -> Completion:
-    primary = _primary(context, item=item)
+def _parse_item(src: str, item: CompletionItem) -> Completion:
+    primary = _primary(item)
     secondaries = tuple(map(_range_edit, item.additionalTextEdits or ()))
 
     sort_by = item.filterText or ""
@@ -88,7 +69,7 @@ def _parse_item(src: str, context: Context, item: CompletionItem) -> Completion:
     return cmp
 
 
-def _parse(src: str, context: Context, reply: Any) -> Tuple[bool, Sequence[Completion]]:
+def _parse(src: str, reply: Any) -> Tuple[bool, Sequence[Completion]]:
     try:
         resp: Resp = decode(Resp, reply, strict=False)
     except DecodeError:
@@ -96,12 +77,10 @@ def _parse(src: str, context: Context, reply: Any) -> Tuple[bool, Sequence[Compl
     else:
         if isinstance(resp, CompletionList):
             return resp.isIncomplete, tuple(
-                _parse_item(src, context=context, item=item) for item in resp.items
+                _parse_item(src, item=item) for item in resp.items
             )
         elif isinstance(resp, Sequence):
-            return False, tuple(
-                _parse_item(src, context=context, item=item) for item in resp
-            )
+            return False, tuple(_parse_item(src, item=item) for item in resp)
         else:
             return False, ()
 
@@ -152,6 +131,6 @@ class Worker(BaseWorker[BaseClient, None]):
         go = True
         while go:
             reply = self._req(session, pos=(row, col))
-            go, comps = _parse(self._options.short_name, context=context, reply=reply)
+            go, comps = _parse(self._options.short_name, reply=reply)
             yield comps
 
