@@ -7,7 +7,7 @@ from pynvim_pp.keymap import Keymap
 from pynvim_pp.operators import set_visual_selection
 
 from ...registry import rpc
-from ...shared.settings import KeyMapping
+from ...shared.settings import KeyMapping, Settings
 from ...shared.types import Mark
 from ..runtime import Stack
 
@@ -65,11 +65,11 @@ def set_km(nvim: Nvim, mapping: KeyMapping) -> None:
     keymap.drain(buf=None).commit(nvim)
 
 
-def mark(nvim: Nvim, buf: Buffer, marks: Iterable[Mark]) -> None:
+def mark(nvim: Nvim, settings: Settings, buf: Buffer, marks: Iterable[Mark]) -> None:
     ns = nvim.api.create_namespace(_NS)
     nvim.api.buf_clear_namespace(buf, ns, 0, -1)
     for mark in marks:
         (r1, c1), (r2, c2) = mark.begin, mark.end
-        opts = {"end_line": r2, "end_col": c2, "hl_group": "Pmenu"}
+        opts = {"end_line": r2, "end_col": c2, "hl_group": settings.display.mark_highlight_group}
         nvim.api.buf_set_extmark(buf, ns, r1, c1, opts)
 

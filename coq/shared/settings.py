@@ -7,6 +7,7 @@ class Display:
     ellipsis: str
     margin: int
     max_len: int
+    mark_highlight_group: str
 
 
 @dataclass(frozen=True)

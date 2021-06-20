@@ -3,6 +3,7 @@ display:
   ellipsis: …
   margin: 16
   max_len: 66
+  mark_highlight_group: Pmenu
 
 match:
   unifying_chars:
