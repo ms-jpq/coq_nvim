@@ -13,9 +13,11 @@ from .sql import sql
 
 
 class _Snip(TypedDict):
+    grammar: str
     prefix: str
     snippet: str
-    grammar: str
+    label: str
+    doc: str
 
 
 def _like_esc(like: str) -> str:
@@ -62,10 +64,30 @@ class Database:
 
         self._ex.submit(cont)
 
-    def select(self, word: str, filetype: str) -> Sequence[_Snip]:
+    def select(self, filetype: str, word: str) -> Sequence[_Snip]:
         def cont() -> Sequence[_Snip]:
             with closing(self._conn.cursor()) as cursor:
-                return ()
+                with with_transaction(cursor):
+                    cursor.execute(
+                        sql("select", "snippets"), {"filetype": filetype, "word": word}
+                    )
+
+                    def c1() -> Iterator[_Snip]:
+                        for row in cursor.fetchall():
+                            cursor.execute(
+                                sql("select", "matches"),
+                                {"snippet_id": row["snippet_id"], "word": word},
+                            )
+                            snip = _Snip(
+                                grammar=row["grammar"],
+                                prefix=cursor.fetchone()["match"],
+                                snippet=row["content"],
+                                label=row["label"],
+                                doc=row["doc"],
+                            )
+                            yield snip
+
+                    return tuple(c1())
 
         return self._ex.submit(cont)
 

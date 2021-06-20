@@ -19,8 +19,8 @@ CREATE TABLE IF NOT EXISTS snippets (
   filetype TEXT    NOT NULL REFERENCES filetypes (filetype) ON DELETE CASCADE,
   grammar  TEXT    NOT NULL,
   content  TEXT    NOT NULL,
-  label    TEXT,
-  doc      TEXT
+  label    TEXT    NOT NULL,
+  doc      TEXT    NOT NULL
 ) WITHOUT ROWID;
 
 
@@ -30,7 +30,8 @@ CREATE TABLE IF NOT EXISTS matches (
   lmatch     TEXT    NOT NULL AS (X_LOWER(match)) STORED,
   UNIQUE(snippet_id, match)
 );
-CREATE INDEX IF NOT EXISTS matches_lmatch ON matches (lmatch);
+CREATE INDEX IF NOT EXISTS matches_snippet_id ON matches (snippet_id);
+CREATE INDEX IF NOT EXISTS matches_lmatch     ON matches (lmatch);
 
 
 CREATE TABLE IF NOT EXISTS options (

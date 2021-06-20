@@ -7,19 +7,13 @@ SELECT
 FROM snippets
 JOIN matches
 ON matches.snippet_id = snippets.rowid
-JOIN (
-  SELECT DISTINCT
-    dest AS filetype
-  FROM extensions_view
-  WHERE
-    src = :filetype
-  ) AS filetypes
+JOIN extensions_view
 ON
-  snippets.filetype = filetypes.filetype
+  snippets.filetype = extensions_view.dest
 WHERE
   :word <> ''
   AND
-  snippets.filetype IN
+  extensions_view.src = :filetype
   AND
   matches.lmatch LIKE X_LIKE_ESC(X_LOWER(:word)) ESCAPE '!'
 
