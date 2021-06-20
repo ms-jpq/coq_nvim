@@ -5,7 +5,7 @@ from pynvim.api.nvim import Nvim
 from pynvim_pp.api import buf_filetype, buf_name, cur_buf
 from std2.pickle import decode
 
-from ...registry import autocmd, enqueue_event, rpc
+from ...registry import atomic, autocmd, enqueue_event, rpc
 from ...snippets.types import ParsedSnippet
 from ..runtime import Stack
 
@@ -32,6 +32,7 @@ def _ft_changed(nvim: Nvim, stack: Stack) -> None:
 
 
 autocmd("FileType") << f"lua {_ft_changed.name}()"
+atomic.command(f"lua {_ft_changed.name}()")
 
 
 @rpc(blocking=True)
