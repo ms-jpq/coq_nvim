@@ -1,7 +1,5 @@
 from os import environ, name
 from pathlib import Path
-from uuid import uuid4
-
 TOP_LEVEL = Path(__file__).resolve().parent.parent
 REQUIREMENTS = TOP_LEVEL / "requirements.txt"
 
@@ -22,7 +20,6 @@ LSP_ARTIFACTS = _ARTIFACTS_DIR / "lsp.json"
 SNIPPET_ARTIFACTS = _ARTIFACTS_DIR / "snippets.json"
 
 SETTINGS_VAR = "coq_settings"
-NS = uuid4().hex
 
 
 DEBUG = "COQ_DEBUG" in environ

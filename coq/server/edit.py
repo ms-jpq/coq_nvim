@@ -29,7 +29,7 @@ from ..shared.types import (
 )
 from ..snippets.parse import parse
 from .context import edit_env
-from .marks import mark
+from .registrants.marks import mark
 from .runtime import Stack
 from .types import UserData
 

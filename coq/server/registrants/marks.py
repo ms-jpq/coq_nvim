@@ -1,16 +1,18 @@
 from operator import add, sub
-from typing import Iterator, Sequence, Tuple, TypedDict
+from typing import Iterable, Iterator, Sequence, Tuple, TypedDict
+from uuid import uuid4
 
 from pynvim.api.nvim import Buffer, Nvim
 from pynvim_pp.api import cur_win, win_get_buf, win_get_cursor, win_set_cursor
 from pynvim_pp.keymap import Keymap
 from pynvim_pp.operators import set_visual_selection
 
-from ...consts import NS
 from ...registry import rpc
 from ...shared.settings import KeyMapping
 from ...shared.types import Mark
 from ..runtime import Stack
+
+_NS = uuid4().hex
 
 
 class _MarkDetail(TypedDict):
@@ -41,7 +43,7 @@ def _rank(row: int, col: int, idx_mark: Tuple[int, Mark]) -> Tuple[int, int, int
 
 @rpc(blocking=True)
 def _nav_mark(nvim: Nvim, stack: Stack, inc: bool) -> None:
-    ns = nvim.api.create_namespace(NS)
+    ns = nvim.api.create_namespace(_NS)
     win = cur_win(nvim)
     buf = win_get_buf(nvim, win=win)
     row, col = win_get_cursor(nvim, win=win)
@@ -78,4 +80,13 @@ def set_km(nvim: Nvim, mapping: KeyMapping) -> None:
     keymap.v(mapping.next_mark) << f"<esc><cmd>lua {_nav_mark.name}(true)<cr>"
 
     keymap.drain(buf=None).commit(nvim)
+
+
+def mark(nvim: Nvim, buf: Buffer, marks: Iterable[Mark]) -> None:
+    ns = nvim.api.create_namespace(_NS)
+    nvim.api.buf_clear_namespace(buf, ns, 0, -1)
+    for mark in marks:
+        (r1, c1), (r2, c2) = mark.begin, mark.end
+        opts = {"end_line": r2, "end_col": c2, "hl_group": "Pmenu"}
+        nvim.api.buf_set_extmark(buf, ns, r1, c1, opts)
 
