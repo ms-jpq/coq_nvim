@@ -24,7 +24,7 @@ def _load_paths(
     return acc
 
 
-def parse(
+def load(
     lsp: AbstractSet[Path],
     neosnippet: AbstractSet[Path],
     snipmate: AbstractSet[Path],

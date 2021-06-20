@@ -1,15 +1,20 @@
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from subprocess import check_call
+from typing import MutableMapping, MutableSequence
 from urllib.parse import urlparse
 
 from std2.pickle import decode
 from std2.pickle.coders import BUILTIN_DECODERS
 from yaml import safe_load
 
-from ..consts import COMPILATION_YML,  TMP_DIR
-from ..snippets.loaders.load import parse
-from ..snippets.types import SnippetSpecs
+from ..consts import COMPILATION_YML, TMP_DIR
+from ..shared.types import SnippetEdit
+from ..snippets.loaders.load import load as load_from_paths
+from ..snippets.main import EMPTY_CTX, EMPTY_ENV
+from ..snippets.parse import parse
+from ..snippets.parsers.parser import ParseError
+from ..snippets.types import ParsedSnippet, SnippetSpecs
 from .types import Compilation
 
 
@@ -46,11 +51,36 @@ def load() -> SnippetSpecs:
     with ThreadPoolExecutor() as pool:
         tuple(pool.map(_git_pull, specs.git))
 
-    parsed = parse(
+    parsed = load_from_paths(
         lsp={*map(_trans_name, specs.paths.lsp)},
         neosnippet={*map(_trans_name, specs.paths.neosnippet)},
         snipmate={*map(_trans_name, specs.paths.snipmate)},
         ultisnip={*map(_trans_name, specs.paths.ultisnip)},
     )
     return parsed
+
+
+def load_parsable() -> SnippetSpecs:
+    specs = load()
+    acc: MutableMapping[str, MutableSequence[ParsedSnippet]] = {}
+
+    for ext, snippets in specs.snippets.items():
+        snips = acc.setdefault(ext, [])
+        for snippet in snippets:
+            edit = SnippetEdit(
+                new_text=snippet.content,
+                grammar=snippet.grammar,
+            )
+            try:
+                parse(EMPTY_CTX, env=EMPTY_ENV, snippet=edit)
+            except ParseError:
+                pass
+            else:
+                snips.append(snippet)
+
+    good_specs = SnippetSpecs(
+        extends=specs.extends,
+        snippets=acc,
+    )
+    return good_specs
 
