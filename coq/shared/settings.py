@@ -12,6 +12,7 @@ class Display:
 @dataclass(frozen=True)
 class Options:
     timeout: float
+    manual_timeout: float
     transpose_band: int
     unifying_chars: AbstractSet[str]
 

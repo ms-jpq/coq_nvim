@@ -9,6 +9,7 @@ match:
     - _
     - "-"
   timeout: 0.1
+  manual_timeout: 0.5
   transpose_band: 3
 
 weights:

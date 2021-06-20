@@ -75,7 +75,9 @@ class Supervisor:
                         self._pool.submit(supervise, worker) for worker in self._workers
                     )
                     self._futs.extend(futs)
-                timeout = None if manual else self._options.timeout
+                timeout = (
+                    self._options.manual_timeout if manual else self._options.timeout
+                )
                 wait(futs, timeout=timeout)
                 with self._lock:
                     for f in self._futs:
