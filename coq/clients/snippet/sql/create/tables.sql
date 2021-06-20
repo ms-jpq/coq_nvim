@@ -58,13 +58,13 @@ WITH RECURSIVE all_exts AS (
     all_exts.dest = e2.src
 )
 SELECT
-  rowid AS src,
-  rowid AS dest
+  filetypes.filetype AS src,
+  filetypes.filetype AS dest
 FROM filetypes
 UNION ALL
 SELECT
-  src,
-  dest
+  all_exts.src,
+  all_exts.dest
 FROM all_exts
 WHERE
   lvl < 10;

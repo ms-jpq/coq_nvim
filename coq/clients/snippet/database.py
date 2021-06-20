@@ -2,7 +2,7 @@ from concurrent.futures import ThreadPoolExecutor
 from contextlib import closing
 from locale import strcoll
 from sqlite3 import Connection, Cursor, Row
-from typing import Any, Iterable, Iterator, Mapping, Sequence, TypedDict
+from typing import Iterable, Iterator, Mapping, Sequence, TypedDict
 
 from std2.sqllite3 import escape, with_transaction
 
