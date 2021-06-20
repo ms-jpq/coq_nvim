@@ -1,3 +1,5 @@
+from os import linesep
+from shutil import get_terminal_size
 from sys import stderr
 from typing import Iterator
 from unittest import TestCase
@@ -36,6 +38,7 @@ class Parser(TestCase):
         succ = 1 - (len(errors) / len(edits) if edits else 0)
         self.assertGreater(succ, _THRESHOLD)
 
-        for err in errors:
-            print(err, file=stderr)
+        cols, _ = get_terminal_size()
+        sep = "=" * cols + linesep
+        print(*errors, sep=sep, file=stderr)
 

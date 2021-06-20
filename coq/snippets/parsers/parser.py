@@ -86,13 +86,12 @@ def token_parser(context: ParserCtx, stream: TokenStream) -> Parsed:
     regions: MutableSequence[Region] = []
     slices: MutableSequence[str] = []
     begins: MutableSequence[Tuple[int, Union[Begin, DummyBegin]]] = []
-    unparsables: MutableSequence[Unparsed] = []
     bad_tokens: MutableSequence[Tuple[int, Token]] = []
 
     for token in stream:
         if isinstance(token, Unparsed):
             token = token
-            unparsables.append(token)
+            bad_tokens.append((idx, token))
         elif isinstance(token, str):
             idx += len(token)
             slices.append(token)
