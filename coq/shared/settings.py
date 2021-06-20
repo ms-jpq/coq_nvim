@@ -47,8 +47,13 @@ class PollingClient(BaseClient):
 
 
 @dataclass(frozen=True)
-class LSPClient(BaseClient):
+class LSProtocol:
     cmp_item_kind: Mapping[Optional[int], str]
+
+
+@dataclass(frozen=True)
+class LSPClient(BaseClient, LSProtocol):
+    pass
 
 
 @dataclass(frozen=True)
