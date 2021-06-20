@@ -48,7 +48,7 @@ class PollingClient(BaseClient):
 
 @dataclass(frozen=True)
 class LSProtocol:
-    cmp_item_kind: Mapping[Optional[int], str]
+    cmp_item_kind: Mapping[str, str]
 
 
 @dataclass(frozen=True)

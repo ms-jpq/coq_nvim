@@ -2,7 +2,7 @@ from concurrent.futures import CancelledError, Future, InvalidStateError
 from contextlib import suppress
 from pathlib import Path
 from threading import Lock
-from typing import Any, Iterator, Mapping, Optional, Sequence, Tuple
+from typing import Any, Iterator, Mapping, Sequence, Tuple, cast
 from uuid import UUID, uuid4
 
 from pynvim_pp.lib import threadsafe_call
@@ -44,7 +44,7 @@ def _doc(item: CompletionItem) -> Tuple[str, str]:
 
 
 def _parse_item(
-    src: str, kind_lookup: Mapping[Optional[int], str], item: CompletionItem
+    src: str, kind_lookup: Mapping[int, str], item: CompletionItem
 ) -> Completion:
     primary = _primary(item)
     secondaries = tuple(map(_range_edit, item.additionalTextEdits or ()))
@@ -55,7 +55,7 @@ def _parse_item(
         primary_edit=primary,
         secondary_edits=secondaries,
         sort_by=item.filterText or "",
-        kind=kind_lookup.get(item.kind, ""),
+        kind=kind_lookup.get(cast(Any, item.kind), ""),
         label=item.label,
         doc=doc,
         doc_type=doc_type,
@@ -64,7 +64,7 @@ def _parse_item(
 
 
 def _parse(
-    src: str, kind_lookup: Mapping[Optional[int], str], reply: Any
+    src: str, kind_lookup: Mapping[int, str], reply: Any
 ) -> Tuple[bool, Sequence[Completion]]:
     try:
         resp: Resp = decode(Resp, reply, strict=False)
@@ -88,6 +88,9 @@ class Worker(BaseWorker[LSPClient, None]):
     def __init__(self, supervisor: Supervisor, options: LSPClient, misc: None) -> None:
         self._lock = Lock()
         self._cur: Tuple[UUID, Future] = uuid4(), Future()
+        self._kind_lookup = {
+            int(key): val for key, val in self._options.cmp_item_kind.items()
+        }
         supervisor.nvim.api.exec_lua(_LUA, ())
         super().__init__(supervisor, options=options, misc=misc)
 
@@ -128,7 +131,7 @@ class Worker(BaseWorker[LSPClient, None]):
             reply = self._req(session, pos=(row, col))
             go, comps = _parse(
                 self._options.short_name,
-                kind_lookup=self._options.cmp_item_kind,
+                kind_lookup=self._kind_lookup,
                 reply=reply,
             )
             yield comps
