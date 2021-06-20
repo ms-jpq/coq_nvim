@@ -11,6 +11,7 @@ from pynvim_pp.api import (
     win_get_cursor,
     win_set_cursor,
 )
+from pynvim_pp.lib import write
 from std2.itertools import deiter
 from std2.types import never
 
@@ -327,37 +328,38 @@ def _cursor(cursor: NvimPos, instructions: Sequence[_EditInstruction]) -> NvimPo
 
 def edit(nvim: Nvim, stack: Stack, data: UserData) -> None:
     ctx = stack.state.cur
-    if ctx:
-        if data.ctx_uid == ctx.uid:
-            win = cur_win(nvim)
-            buf = win_get_buf(nvim, win=win)
-            cursor = win_get_cursor(nvim, win=win)
-            env = edit_env(nvim, buf=buf)
+    if ctx and data.ctx_uid == ctx.uid:
+        win = cur_win(nvim)
+        buf = win_get_buf(nvim, win=win)
+        cursor = win_get_cursor(nvim, win=win)
+        env = edit_env(nvim, buf=buf)
 
-            primary, marks = (
-                parse(ctx, env=env, snippet=data.primary_edit)
-                if isinstance(data.primary_edit, SnippetEdit)
-                else (data.primary_edit, ())
-            )
-            lo, hi = _rows_to_fetch(ctx.position, env, primary, *data.secondary_edits)
-            limited_lines = buf_get_lines(nvim, buf=buf, lo=lo, hi=hi)
-            lines = tuple(chain(repeat("", times=lo), limited_lines))
-            view = _lines(lines)
+        primary, marks = (
+            parse(ctx, env=env, snippet=data.primary_edit)
+            if isinstance(data.primary_edit, SnippetEdit)
+            else (data.primary_edit, ())
+        )
+        lo, hi = _rows_to_fetch(ctx.position, env, primary, *data.secondary_edits)
+        limited_lines = buf_get_lines(nvim, buf=buf, lo=lo, hi=hi)
+        lines = tuple(chain(repeat("", times=lo), limited_lines))
+        view = _lines(lines)
 
-            instructions = _instructions(
-                ctx,
-                env=env,
-                lines=view,
-                primary=primary,
-                secondary=data.secondary_edits,
-            )
-            new_lines = _new_lines(view, instructions=instructions)
-            n_row, n_col = _cursor(cursor, instructions=instructions)
+        instructions = _instructions(
+            ctx,
+            env=env,
+            lines=view,
+            primary=primary,
+            secondary=data.secondary_edits,
+        )
+        new_lines = _new_lines(view, instructions=instructions)
+        n_row, n_col = _cursor(cursor, instructions=instructions)
 
-            buf_set_lines(nvim, buf=buf, lo=lo, hi=hi, lines=new_lines[lo:])
-            win_set_cursor(nvim, win=win, row=n_row, col=n_col)
+        buf_set_lines(nvim, buf=buf, lo=lo, hi=hi, lines=new_lines[lo:])
+        win_set_cursor(nvim, win=win, row=n_row, col=n_col)
 
-            stack.state.inserted = n_row, n_col
-            stack.db.inserted(primary.new_text)
-            mark(nvim, buf=buf, marks=marks)
+        stack.state.inserted = n_row, n_col
+        stack.db.inserted(primary.new_text)
+        mark(nvim, buf=buf, marks=marks)
+    else:
+        write(nvim, ctx, error=True)
 
