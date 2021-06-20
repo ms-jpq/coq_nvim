@@ -19,8 +19,12 @@ from ..trans import trans
 from ..types import UserData
 
 
-def _should_cont(inserted: Optional[NvimPos], cur: Context) -> bool:
-    if cur.position == inserted:
+def _should_cont(
+    inserted: Optional[NvimPos], prev: Optional[Context], cur: Context
+) -> bool:
+    if prev and prev.position == cur.position:
+        return False
+    elif cur.position == inserted:
         return False
     else:
         return cur.words != "" and cur.syms != ""
@@ -49,9 +53,10 @@ def comp_func(nvim: Nvim, stack: Stack, manual: bool) -> None:
         unifying_chars=stack.settings.match.unifying_chars,
         cwd=stack.state.cwd,
     )
-    if manual or _should_cont(stack.state.inserted, cur=ctx):
+    prev = stack.state.cur
+    stack.state.cur = ctx
+    if manual or _should_cont(stack.state.inserted, prev=prev, cur=ctx):
         fut = stack.supervisor.collect(ctx, manual=manual)
-        stack.state.cur = ctx
 
         @timeit(0, "WAIT")
         def cont() -> None:
