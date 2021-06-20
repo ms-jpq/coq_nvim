@@ -6,7 +6,7 @@ from math import inf
 from typing import Iterable, Iterator, MutableSequence, Sequence, Tuple, cast
 
 from ..registry import pool
-from ..shared.parse import is_word
+from ..shared.parse import is_word, lower
 from ..shared.settings import Options, Weights
 from ..shared.types import Completion, Context
 from .model.database import Database, SqlMetrics
@@ -39,8 +39,8 @@ def _isjunk(s: str) -> bool:
     return s.isspace()
 
 
-def _secondary(n_cword: str, n_match: str) -> _MatchMetrics:
-    m = SequenceMatcher(a=n_cword, b=n_match, autojunk=True, isjunk=_isjunk)
+def _count(cword: str, match: str) -> _MatchMetrics:
+    m = SequenceMatcher(a=cword, b=match, autojunk=True, isjunk=_isjunk)
     matches: MutableSequence[int] = []
     prefix_matches = 0
     num_matches = 0
@@ -59,48 +59,6 @@ def _secondary(n_cword: str, n_match: str) -> _MatchMetrics:
             consecutive_matches += 1
         pm_idx = i
 
-    match_density = num_matches / len(n_match) if n_match else 0
-    metric = _MatchMetrics(
-        prefix_matches=prefix_matches,
-        consecutive_matches=consecutive_matches,
-        match_density=match_density,
-        num_matches=num_matches,
-    )
-    return metric
-
-
-def _primary(
-    transpose_band: int,
-    cword: str,
-    match: str,
-    n_match: str,
-) -> _MatchMetrics:
-
-    idx = 0
-    prefix_broken = False
-    pm_idx = inf
-    prefix_matches = 0
-    consecutive_matches = 0
-    num_matches = 0
-
-    for i, char in enumerate(cword):
-        if i > transpose_band and not num_matches:
-            raise _ToleranceExceeded()
-        else:
-            target = match if char.isupper() else n_match
-            m_idx = target.find(char, idx, idx + transpose_band)
-
-            if m_idx != -1:
-                if pm_idx == m_idx - 1:
-                    consecutive_matches += 1
-                num_matches += 1
-                pm_idx = m_idx
-                idx = m_idx + 1
-            if m_idx != i:
-                prefix_broken = True
-            if not prefix_broken:
-                prefix_matches += 1
-
     match_density = num_matches / len(match) if match else 0
     metric = _MatchMetrics(
         prefix_matches=prefix_matches,
@@ -114,21 +72,17 @@ def _primary(
 def _metrics(
     options: Options, context: Context, completions: Iterable[Completion]
 ) -> Iterator[_MatchMetrics]:
-    w_before = context.words_before, context.words_before.casefold()
-    sw_before = context.syms_before, context.syms_before.casefold()
+    w_before = lower(context.words_before)
+    s_before = lower(context.syms_before)
 
     for completion in completions:
-        edit = completion.primary_edit
-        match, n_match = edit.new_text, edit.new_text.casefold()
-        word_start = is_word(match[:1], unifying_chars=options.unifying_chars)
-        cword, n_cword = w_before if word_start else sw_before
-
-        try:
-            yield _primary(
-                options.transpose_band, cword=cword, match=match, n_match=n_match
-            )
-        except _ToleranceExceeded:
-            yield _secondary(n_cword, n_match=n_match)
+        match = lower(completion.primary_edit.new_text)
+        cword = (
+            w_before
+            if is_word(match[:1], unifying_chars=options.unifying_chars)
+            else s_before
+        )
+        yield _count(cword, match=match)
 
 
 def _weights(
