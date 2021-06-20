@@ -1,8 +1,8 @@
 from contextlib import closing
+from itertools import count
 from locale import strcoll
 from sqlite3 import Connection, Cursor, Row
 from typing import Iterable, Iterator, Mapping, MutableSet, Sequence, TypedDict
-from uuid import uuid4
 
 from std2.sqllite3 import escape, with_transaction
 
@@ -52,6 +52,7 @@ class SDB:
         self._ex = Executor(pool)
         self._conn: Connection = self._ex.submit(_init)
         self._seen: MutableSet[str] = set()
+        self._count = count()
 
     def add_exts(self, exts: Mapping[str, Iterable[str]]) -> None:
         def it() -> Iterator[Mapping]:
@@ -74,7 +75,7 @@ class SDB:
                 with closing(self._conn.cursor()) as cursor:
                     with with_transaction(cursor):
                         _ensure_ft(cursor, filetypes=(filetype,))
-                        for row_id, snippet in zip(iter(uuid4, None), snippets):
+                        for row_id, snippet in zip(self._count, snippets):
                             cursor.execute(
                                 sql("insert", "snippet"),
                                 {
@@ -86,6 +87,7 @@ class SDB:
                                     "doc": snippet.doc,
                                 },
                             )
+
                             for match in snippet.matches:
                                 cursor.execute(
                                     sql("insert", "match"),
@@ -94,7 +96,7 @@ class SDB:
                             for option in snippet.options:
                                 cursor.execute(
                                     sql("insert", "option"),
-                                    {"snippet_id": row_id, "option": option},
+                                    {"snippet_id": row_id, "option": option.name},
                                 )
 
         self._ex.submit(cont)

@@ -1,26 +1,37 @@
-from itertools import accumulate
-from typing import Iterator, Sequence, Tuple
+from itertools import accumulate, chain, repeat
+from typing import Iterable, Iterator, Sequence, Tuple
 
 from ..shared.types import UTF8, Context, ContextualEdit, EditEnv, Mark, SnippetEdit
 from .parsers.lsp import parser as lsp_parser
 from .parsers.snu import parser as snu_parser
-from .parsers.types import Parsed
+from .parsers.types import Region
 
 
-def _marks(linefeed: str, row: int, new_prefix: str, parsed: Parsed) -> Iterator[Mark]:
-    len8 = tuple(
-        accumulate(len(line.encode(UTF8)) + 1 for line in parsed.text.split(linefeed))
-    )
-    line_shift = row - (len(new_prefix.split(linefeed)) - 1)
+def _indent(env: EditEnv, line_before: str) -> str:
+    spaces = " " * env.tabstop
+    l = len(line_before.replace("\t", spaces))
+    return " " * l if env.expandtab else (" " * l).replace(spaces, "\t")
 
-    for region in parsed.regions:
+
+def _marks(
+    env: EditEnv,
+    row: int,
+    new_prefix: str,
+    indent: str,
+    new_lines: Iterable[str],
+    regions: Iterable[Region],
+) -> Iterator[Mark]:
+    len8 = tuple(accumulate(len(line.encode(UTF8)) + 1 for line in new_lines))
+    line_shift = row - (len(new_prefix.split(env.linefeed)) - 1)
+
+    for region in regions:
         r1, c1, r2, c2 = -1, -1, -1, -1
         last_len = 0
         for idx, l8 in enumerate(len8):
             if r1 == -1 and l8 >= region.begin:
-                r1, c1 = idx + line_shift, region.begin - last_len
+                r1, c1 = idx + line_shift, region.begin - last_len + len(indent)
             if r2 == -1 and l8 >= region.end:
-                r2, c2 = idx + line_shift, region.end - last_len
+                r2, c2 = idx + line_shift, region.end - last_len + len(indent)
             last_len = l8
 
         assert r1 >= 0 and r2 >= 0
@@ -42,14 +53,29 @@ def parse(
         else snippet.new_text.replace(" " * env.tabstop, "\t")
     )
     parsed = parser(context, snippet=text)
-    new_prefix = parsed.text[: parsed.cursor]
+    indent = _indent(env, line_before=context.line_before)
+    new_lines = tuple(
+        lhs + rhs
+        for lhs, rhs in zip(chain((context.line_before,), repeat(indent)), parsed.text)
+    )
+    new_text = env.linefeed.join(new_lines)
 
+    new_prefix = new_text[: parsed.cursor + len(indent)]
     edit = ContextualEdit(
-        new_text=parsed.text,
+        new_text=new_text,
         old_prefix=context.words_before,
         old_suffix=context.words_after,
         new_prefix=new_prefix,
     )
-    marks = tuple(_marks(env.linefeed, row=row, new_prefix=new_prefix, parsed=parsed))
+    marks = tuple(
+        _marks(
+            env,
+            row=row,
+            new_prefix=new_prefix,
+            indent=indent,
+            new_lines=new_lines,
+            regions=parsed.regions,
+        )
+    )
     return edit, marks
 

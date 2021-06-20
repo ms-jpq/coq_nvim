@@ -63,7 +63,7 @@ class Worker(BaseWorker[BaseClient, None]):
         def cont() -> Iterator[Completion]:
             lword = lower(context.words)
             for payload in resp:
-                if lower(payload.text).startswith(lword) and len(payload.text) >= len(
+                if lower(payload.text).startswith(lword) and len(payload.text) > len(
                     context.words
                 ):
                     edit = Edit(new_text=payload.text)
