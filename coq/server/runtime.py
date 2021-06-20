@@ -1,6 +1,6 @@
 from concurrent.futures import Future, ThreadPoolExecutor
 from dataclasses import dataclass
-from typing import AbstractSet, Iterator, Optional, Tuple
+from typing import AbstractSet, Iterator, Optional, Sequence
 
 from pynvim import Nvim
 from pynvim_pp.api import get_cwd
@@ -24,7 +24,8 @@ from .model.database import Database
 
 @dataclass
 class _State:
-    cur: Optional[Tuple[Context, Future]]
+    futs: Sequence[Future]
+    cur: Optional[Context]
     inserted: Optional[NvimPos]
     inserting: bool
     cwd: str
@@ -78,6 +79,7 @@ def stack(pool: ThreadPoolExecutor, nvim: Nvim) -> Stack:
     settings = _settings(nvim)
     cwd = get_cwd(nvim)
     state = _State(
+        futs=(),
         cur=None,
         inserted=None,
         inserting=nvim.api.get_mode()["mode"] == "i",

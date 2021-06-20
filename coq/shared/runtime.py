@@ -71,11 +71,12 @@ class Supervisor:
                     for f in self._futs:
                         f.cancel()
                     self._futs.clear()
-                    self._futs.extend(
+                    futs = tuple(
                         self._pool.submit(supervise, worker) for worker in self._workers
                     )
+                    self._futs.extend(futs)
                 timeout = None if manual else self._options.timeout
-                wait(self._futs, timeout=timeout)
+                wait(futs, timeout=timeout)
                 with self._lock:
                     for f in self._futs:
                         f.cancel()

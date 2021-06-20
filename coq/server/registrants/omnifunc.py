@@ -28,8 +28,8 @@ def _should_cont(inserted: Optional[NvimPos], cur: Context) -> bool:
 
 @rpc(blocking=True)
 def _cmp(nvim: Nvim, stack: Stack, completions: Sequence[Completion]) -> None:
-    if stack.state.inserting and stack.state.cur:
-        ctx, _ = stack.state.cur
+    ctx = stack.state.cur
+    if stack.state.inserting and ctx:
         _, col = ctx.position
         with timeit(0, "RANK"):
             comp = trans(stack, context=ctx, completions=completions)
@@ -40,9 +40,9 @@ def _cmp(nvim: Nvim, stack: Stack, completions: Sequence[Completion]) -> None:
 
 
 def comp_func(nvim: Nvim, stack: Stack, manual: bool) -> None:
-    if stack.state.cur:
-        _, f = stack.state.cur
-        f.cancel()
+    for fut in stack.state.futs:
+        fut.cancel()
+    stack.state.futs = ()
 
     ctx = context(
         nvim,
@@ -51,7 +51,7 @@ def comp_func(nvim: Nvim, stack: Stack, manual: bool) -> None:
     )
     if manual or _should_cont(stack.state.inserted, cur=ctx):
         fut = stack.supervisor.collect(ctx, manual=manual)
-        stack.state.cur = (ctx, fut)
+        stack.state.cur = ctx
 
         @timeit(0, "WAIT")
         def cont() -> None:
@@ -61,14 +61,12 @@ def comp_func(nvim: Nvim, stack: Stack, manual: bool) -> None:
                 except CancelledError:
                     pass
                 else:
-                    if stack.state.cur:
-                        prev, _ = stack.state.cur
-                        if prev == ctx:
-                            enqueue_event(_cmp, cmps)
+                    if stack.state.cur == ctx:
+                        enqueue_event(_cmp, cmps)
             except Exception as e:
                 log.exception("%s", e)
 
-        pool.submit(cont)
+        stack.state.futs = (pool.submit(cont),)
     else:
         stack.state.inserted = None
 
