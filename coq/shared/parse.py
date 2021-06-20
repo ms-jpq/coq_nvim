@@ -15,18 +15,27 @@ def is_word(char: str, unifying_chars: AbstractSet[str]) -> bool:
 
 
 def coalesce(chars: Iterable[str], unifying_chars: AbstractSet[str]) -> Iterator[str]:
-    curr: MutableSequence[str] = []
+    words: MutableSequence[str] = []
+    syms: MutableSequence[str] = []
 
     for char in chars:
         if is_word(char, unifying_chars=unifying_chars):
-            curr.append(char)
+            words.append(char)
+        elif not char.isspace():
+            syms.append(char)
+        else:
+            if words:
+                word = "".join(words)
+                words.clear()
+                yield word
+            if syms:
+                sym = "".join(syms)
+                syms.clear()
+                yield sym
 
-        elif curr:
-            word = "".join(curr)
-            curr.clear()
-            yield word
+    if words:
+        yield "".join(words)
 
-    if curr:
-        word = "".join(curr)
-        yield word
+    if syms:
+        yield "".join(syms)
 
