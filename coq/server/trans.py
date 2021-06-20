@@ -16,7 +16,8 @@ def _cmp_to_vcmp(
     abbr = shorten(
         cmp.label or cmp.primary_edit.new_text, width=width, placeholder=ellipsis
     )
-    menu = f"[{cmp.source}]"
+    source = f"[{cmp.source}]"
+    menu = f"{cmp.kind} {source}" if cmp.kind else source
     user_data = UserData(
         sort_by=cmp.sort_by,
         commit_uid=context.uid,
