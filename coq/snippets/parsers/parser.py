@@ -116,7 +116,7 @@ def token_parser(context: ParserCtx, stream: TokenStream) -> Parsed:
     cursor = min(region.idx for region in regions) if regions else 0
     if bad_tokens:
         tpl = """
-        Unbalanced tokens - ${bad_tokens}
+        Bad tokens - ${bad_tokens}
         Parsed: |-
         ${text}
         Original: |-
