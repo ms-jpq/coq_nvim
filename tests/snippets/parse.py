@@ -9,42 +9,48 @@ from ...coq.snippets.parse import parse
 _THRESHOLD = 0.95
 
 
+_CTX = Context(
+    uid=uuid4(),
+    cwd="",
+    filename="",
+    filetype="",
+    position=(0, 0),
+    line="",
+    line_before="",
+    line_after="",
+    words="",
+    words_before="",
+    words_after="",
+    syms="",
+    syms_before="",
+    syms_after="",
+)
+_ENV = EditEnv(
+    linefeed="\n",
+    tabstop=2,
+    expandtab=True,
+)
+
+
+def _edits() -> Iterator[SnippetEdit]:
+    specs = load()
+    for snippets in specs.snippets.values():
+        for snippet in snippets:
+            edit = SnippetEdit(
+                new_text=snippet.content,
+                grammar=snippet.grammar,
+            )
+            yield edit
+
+
 class Parser(TestCase):
     def test_1(self) -> None:
-        ctx = Context(
-            uid=uuid4(),
-            cwd="",
-            filename="",
-            filetype="",
-            position=(0, 0),
-            line="",
-            line_before="",
-            line_after="",
-            words="",
-            words_before="",
-            words_after="",
-            syms="",
-            syms_before="",
-            syms_after="",
-        )
-        env = EditEnv(linefeed="\n", tabstop=4, expandtab=True)
-
-        def cont() -> Iterator[SnippetEdit]:
-            specs = load()
-            for snippets in specs.snippets.values():
-                for snippet in snippets:
-                    edit = SnippetEdit(
-                        new_text=snippet.content,
-                        grammar=snippet.grammar,
-                    )
-                    yield edit
-
-        edits = tuple(cont())
+        edits = tuple(_edits())
 
         def errs() -> Iterator[Exception]:
             for edit in edits:
                 try:
-                    parse(ctx, env=env, snippet=edit)
+                    parse(_CTX, env=_ENV, snippet=edit)
                 except Exception as e:
                     print(e)
                     yield e
@@ -57,4 +63,5 @@ class Parser(TestCase):
         if succ < _THRESHOLD:
             for err in errors:
                 print(err)
+                break
 
