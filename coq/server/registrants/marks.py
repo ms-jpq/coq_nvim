@@ -2,9 +2,8 @@ from operator import add, sub
 from typing import Iterator, Sequence, Tuple, TypedDict
 
 from pynvim.api.nvim import Nvim, Window
-from pynvim_pp.api import cur_win, win_get_buf, win_get_cursor
+from pynvim_pp.api import cur_win, win_get_buf, win_get_cursor, win_set_cursor
 from pynvim_pp.keymap import Keymap
-from pynvim_pp.operators import set_visual_selection
 
 from ...consts import NS
 from ...registry import rpc
@@ -38,13 +37,13 @@ def _ls_marks(nvim: Nvim, win: Window) -> Sequence[Mark]:
 def _rank(row: int, col: int, idx_mark: Tuple[int, Mark]) -> Tuple[int, int, int, int]:
     _, mark = idx_mark
     (r1, c1), (r2, c2) = mark.begin, mark.end
-    return abs(row - r1), abs(col - c1), abs(row - r2), abs(col - c2)
+    return abs(row - r1), abs(row - r2), abs(col - c1), abs(col - c2)
 
 
 def _inside(row: int, col: int, mark: Mark) -> bool:
     (r1, c1), (r2, c2) = mark.begin, mark.end
     lhs = col >= c1 if row == r1 else True
-    rhs = col < c2 if row == r2 else True
+    rhs = col <= c2 if row == r2 else True
     top = row <= r2
     btm = row >= r1
     return lhs and rhs and top and btm
@@ -62,13 +61,16 @@ def _nav_mark(nvim: Nvim, stack: Stack, inc: bool) -> None:
         if _inside(row, col, mark=mark):
             op = add if inc else sub
             new_idx = op(idx, 1) % len(marks)
+            print(idx, new_idx)
             new_mark = marks[new_idx]
         else:
             new_mark = mark
+
         (r1, c1), (r2, c2) = new_mark.begin, new_mark.end
-        set_visual_selection(
-            nvim, win=win, mode="v", mark1=(r1, c1), mark2=(r2, c2 - 1)
-        )
+        win_set_cursor(nvim, win=win, row=r2, col=c2 - 1)
+        nvim.command(f"norm! v")
+        win_set_cursor(nvim, win=win, row=r1, col=c1)
+
     else:
         print("NOTHING", flush=True)
 
