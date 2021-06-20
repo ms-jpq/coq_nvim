@@ -1,23 +1,19 @@
 from concurrent.futures import Future, InvalidStateError, TimeoutError
 from contextlib import suppress
-from json import loads
 from pathlib import Path
 from threading import Lock
-from typing import Any, Iterator, MutableMapping, Sequence, Tuple
+from typing import Any, Iterator, Mapping, MutableMapping, Optional, Sequence, Tuple
 from uuid import UUID, uuid4
 
 from pynvim_pp.lib import threadsafe_call
 from std2.pickle import DecodeError, decode
 
-from ...consts import LSP_ARTIFACTS
 from ...shared.runtime import Supervisor
 from ...shared.runtime import Worker as BaseWorker
-from ...shared.settings import BaseClient
+from ...shared.settings import LSPClient
 from ...shared.types import UTF16, Completion, Context, Edit, RangeEdit, WTF8Pos
-from .runtime import LSP
 from .types import CompletionItem, CompletionList, MarkupContent, Resp, TextEdit
 
-_LSP: LSP = decode(LSP, loads(LSP_ARTIFACTS.read_text("UTF-8")))
 _LUA = (Path(__file__).resolve().parent / "request.lua").read_text("UTF-8")
 
 
@@ -47,29 +43,29 @@ def _doc(item: CompletionItem) -> Tuple[str, str]:
         return "", ""
 
 
-def _parse_item(src: str, item: CompletionItem) -> Completion:
+def _parse_item(
+    src: str, kind_lookup: Mapping[Optional[int], str], item: CompletionItem
+) -> Completion:
     primary = _primary(item)
     secondaries = tuple(map(_range_edit, item.additionalTextEdits or ()))
-
-    sort_by = item.filterText or ""
-    kind = _LSP.cmp_item_kind.get(item.kind) if item.kind else None
-    label = f"{item.label} ({kind})" if kind else item.label
-
     doc, doc_type = _doc(item)
 
     cmp = Completion(
         source=src,
         primary_edit=primary,
         secondary_edits=secondaries,
-        sort_by=sort_by,
-        label=label,
+        sort_by=item.filterText or "",
+        kind=kind_lookup.get(item.kind, ""),
+        label=item.label,
         doc=doc,
         doc_type=doc_type,
     )
     return cmp
 
 
-def _parse(src: str, reply: Any) -> Tuple[bool, Sequence[Completion]]:
+def _parse(
+    src: str, kind_lookup: Mapping[Optional[int], str], reply: Any
+) -> Tuple[bool, Sequence[Completion]]:
     try:
         resp: Resp = decode(Resp, reply, strict=False)
     except DecodeError:
@@ -77,16 +73,19 @@ def _parse(src: str, reply: Any) -> Tuple[bool, Sequence[Completion]]:
     else:
         if isinstance(resp, CompletionList):
             return resp.isIncomplete, tuple(
-                _parse_item(src, item=item) for item in resp.items
+                _parse_item(src, kind_lookup=kind_lookup, item=item)
+                for item in resp.items
             )
         elif isinstance(resp, Sequence):
-            return False, tuple(_parse_item(src, item=item) for item in resp)
+            return False, tuple(
+                _parse_item(src, kind_lookup=kind_lookup, item=item) for item in resp
+            )
         else:
             return False, ()
 
 
-class Worker(BaseWorker[BaseClient, None]):
-    def __init__(self, supervisor: Supervisor, options: BaseClient, misc: None) -> None:
+class Worker(BaseWorker[LSPClient, None]):
+    def __init__(self, supervisor: Supervisor, options: LSPClient, misc: None) -> None:
         self._lock = Lock()
         self._sessions: MutableMapping[UUID, Future] = {}
         supervisor.nvim.api.exec_lua(_LUA, ())
@@ -131,6 +130,10 @@ class Worker(BaseWorker[BaseClient, None]):
         go = True
         while go:
             reply = self._req(session, pos=(row, col))
-            go, comps = _parse(self._options.short_name, reply=reply)
+            go, comps = _parse(
+                self._options.short_name,
+                kind_lookup=self._options.cmp_item_kind,
+                reply=reply,
+            )
             yield comps
 

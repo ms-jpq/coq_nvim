@@ -93,6 +93,7 @@ class Completion:
     secondary_edits: Sequence[RangeEdit] = ()
     sort_by: str = ""
     label: str = ""
+    kind: str = ""
     doc: str = ""
     doc_type: str = ""
     uid: UUID = field(default_factory=uuid4)

@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import AbstractSet
+from typing import AbstractSet, Any, Literal, Mapping, Optional, Sequence
 
 
 @dataclass(frozen=True)
@@ -45,9 +45,20 @@ class PollingClient(BaseClient):
 
 
 @dataclass(frozen=True)
+class LSPClient(BaseClient):
+    cmp_item_kind: Mapping[Optional[int], str]
+
+
+@dataclass(frozen=True)
+class SnippetClient(BaseClient):
+    extends: Mapping[str, Mapping[str, Literal[True]]]
+    snippets: Mapping[str, Sequence[Any]]
+
+
+@dataclass(frozen=True)
 class Clients:
     buffers: BaseClient
-    lsp: BaseClient
+    lsp: LSPClient
     paths: BaseClient
     snippets: BaseClient
     tmux: PollingClient

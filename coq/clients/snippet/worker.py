@@ -1,26 +1,18 @@
-from json import loads
 from typing import Iterator, Sequence
 
-from pynvim_pp.autocmd import AutoCMD
-from pynvim_pp.rpc import RPC
-from std2.pickle import decode
-
-from ...consts import SNIPPET_ARTIFACTS
 from ...shared.runtime import Supervisor
 from ...shared.runtime import Worker as BaseWorker
-from ...shared.settings import BaseClient
+from ...shared.settings import SnippetClient
 from ...shared.types import Completion, Context, SnippetEdit
-from ...snippets.types import ParsedSnippet
 from .database import Database
-from .types import Artifacts
-
-_ARTIFACTS: Artifacts = loads(SNIPPET_ARTIFACTS.read_text("UTF-8"))
 
 
-class Worker(BaseWorker[BaseClient, None]):
-    def __init__(self, supervisor: Supervisor, options: BaseClient, misc: None) -> None:
+class Worker(BaseWorker[SnippetClient, None]):
+    def __init__(
+        self, supervisor: Supervisor, options: SnippetClient, misc: None
+    ) -> None:
         self._db = Database(supervisor.pool)
-        self._db.add_exts(_ARTIFACTS["extends"])
+        self._db.add_exts(options.extends)
         super().__init__(supervisor, options=options, misc=misc)
 
     def work(self, context: Context) -> Iterator[Sequence[Completion]]:

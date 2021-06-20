@@ -1,5 +1,6 @@
 from concurrent.futures import Future, ThreadPoolExecutor
 from dataclasses import dataclass
+from json import loads
 from typing import AbstractSet, Iterator, Optional, Sequence
 from uuid import UUID, uuid4
 
@@ -16,7 +17,7 @@ from ..clients.paths.worker import Worker as PathsWorker
 from ..clients.snippet.worker import Worker as SnippetWorker
 from ..clients.tmux.worker import Worker as TmuxWorker
 from ..clients.tree_sitter.worker import Worker as TreeWorker
-from ..consts import CONFIG_YML, SETTINGS_VAR
+from ..consts import CONFIG_YML, LSP_ARTIFACTS, SETTINGS_VAR, SNIPPET_ARTIFACTS
 from ..shared.runtime import Supervisor, Worker
 from ..shared.settings import Settings
 from ..shared.types import Context, NvimPos
@@ -47,7 +48,15 @@ def _settings(nvim: Nvim) -> Settings:
     config: Settings = decode(
         Settings,
         merge(
-            safe_load(CONFIG_YML.read_text("UTF-8")), hydrate(user_config), replace=True
+            safe_load(CONFIG_YML.read_text("UTF-8")),
+            {
+                "clients": {
+                    "lsp": loads(LSP_ARTIFACTS.read_text("UTF-8")),
+                    "snippets": loads(SNIPPET_ARTIFACTS.read_text("UTF-8")),
+                }
+            },
+            hydrate(user_config),
+            replace=True,
         ),
     )
     return config
