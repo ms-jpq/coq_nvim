@@ -1,8 +1,10 @@
 from typing import AbstractSet, Iterable, Iterator, MutableSequence
 from unicodedata import normalize as _normalize
 
+
 def lower(text: str) -> str:
     return text.casefold()
+
 
 def normalize(text: str) -> str:
     return _normalize("NFC", text)
@@ -27,3 +29,16 @@ def coalesce(chars: Iterable[str], unifying_chars: AbstractSet[str]) -> Iterator
     if curr:
         word = "".join(curr)
         yield word
+
+
+def match(rev: bool, existing: str, insertion: str) -> str:
+    if not rev:
+        for l in reversed(range(len(insertion))):
+            match = insertion[:l]
+            if match == existing[-l:]:
+                return match
+        else:
+            return ""
+    else:
+        assert False
+
