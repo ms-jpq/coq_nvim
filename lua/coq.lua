@@ -2,20 +2,6 @@ return function(args)
   local cwd = unpack(args)
   local is_win = vim.api.nvim_call_function("has", {"win32"}) == 1
 
-  local function defer(timeout, callback)
-    local timer = vim.loop.new_timer()
-    timer:start(
-      timeout,
-      0,
-      function()
-        timer:stop()
-        timer:close()
-        vim.schedule(callback)
-      end
-    )
-    return timer
-  end
-
   coq = coq or {}
   local linesep = "\n"
   local POLLING_RATE = 10
@@ -106,15 +92,15 @@ return function(args)
         if not err_exit and _G[cmd] then
           _G[cmd](args)
         else
-          defer(
-            POLLING_RATE,
+          vim.defer_fn(
             function()
               if err_exit then
                 return
               else
                 coq[cmd](unpack(args))
               end
-            end
+            end,
+            POLLING_RATE
           )
         end
       end
