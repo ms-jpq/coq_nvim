@@ -23,8 +23,9 @@ SETTINGS_VAR = "coq_settings"
 
 
 DEBUG = "COQ_DEBUG" in environ
+_DEBUG_DB = False
 
-BUFFERS_DB = str(TMP_DIR / "buffers.sqlite3") if False else ":memory:"
-TMUX_DB = str(TMP_DIR / "tmux.sqlite3") if False else ":memory:"
-SNIPPET_DB = str(TMP_DIR / "snippet.sqlite3") if False else ":memory:"
+BUFFERS_DB = str(TMP_DIR / "buffers.sqlite3") if _DEBUG_DB else ":memory:"
+TMUX_DB = str(TMP_DIR / "tmux.sqlite3") if _DEBUG_DB else ":memory:"
+SNIPPET_DB = str(TMP_DIR / "snippet.sqlite3") if _DEBUG_DB else ":memory:"
 
