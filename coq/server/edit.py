@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from itertools import chain, repeat
-from typing import Iterator, MutableSequence, Sequence, Tuple
+from typing import AbstractSet, Iterator, MutableSequence, Sequence, Tuple
 
 from pynvim import Nvim
 from pynvim_pp.api import (
@@ -14,6 +14,7 @@ from pynvim_pp.api import (
 from std2.itertools import deiter
 from std2.types import never
 
+from ..shared.parse import is_word
 from ..shared.trans import trans
 from ..shared.types import (
     UTF8,
@@ -134,10 +135,30 @@ def _contextual_edit_trans(
 
 
 def _edit_trans(
-    ctx: Context, env: EditEnv, lines: _Lines, edit: Edit
+    ctx: Context,
+    env: EditEnv,
+    unifying_chars: AbstractSet[str],
+    lines: _Lines,
+    edit: Edit,
 ) -> _EditInstruction:
     c_edit = trans(line_before=ctx.line_before, line_after=ctx.line_after, edit=edit)
-    inst = _contextual_edit_trans(ctx, env=env, lines=lines, edit=c_edit)
+    old_prefix = c_edit.old_prefix or (
+        ctx.words_before
+        if is_word(c_edit.new_text[:1], unifying_chars=unifying_chars)
+        else ctx.words_before + ctx.syms_before
+    )
+    old_suffix = c_edit.old_suffix or (
+        ctx.words_after
+        if is_word(c_edit.new_text[-1:], unifying_chars=unifying_chars)
+        else ctx.words_after + ctx.syms_after
+    )
+    adjusted = ContextualEdit(
+        new_text=c_edit.new_text,
+        new_prefix=c_edit.new_text,
+        old_prefix=old_prefix,
+        old_suffix=old_suffix,
+    )
+    inst = _contextual_edit_trans(ctx, env=env, lines=lines, edit=adjusted)
     return inst
 
 
@@ -210,6 +231,7 @@ def _consolidate(
 def _instructions(
     ctx: Context,
     env: EditEnv,
+    unifying_chars: AbstractSet[str],
     lines: _Lines,
     primary: ApplicableEdit,
     secondary: Sequence[RangeEdit],
@@ -222,7 +244,9 @@ def _instructions(
             yield _contextual_edit_trans(ctx, env=env, lines=lines, edit=primary)
 
         elif isinstance(primary, Edit):
-            yield _edit_trans(ctx, env=env, lines=lines, edit=primary)
+            yield _edit_trans(
+                ctx, env=env, unifying_chars=unifying_chars, lines=lines, edit=primary
+            )
 
         else:
             never(primary)
@@ -326,6 +350,7 @@ def edit(nvim: Nvim, stack: Stack, data: UserData) -> None:
         instructions = _instructions(
             ctx,
             env=env,
+            unifying_chars=stack.settings.match.unifying_chars,
             lines=view,
             primary=primary,
             secondary=data.secondary_edits,
@@ -338,7 +363,8 @@ def edit(nvim: Nvim, stack: Stack, data: UserData) -> None:
 
         stack.state.inserted = n_row, n_col
         stack.bdb.inserted(data.sort_by or primary.new_text)
-        mark(nvim, settings=stack.settings, buf=buf, marks=marks)
+        if marks:
+            mark(nvim, settings=stack.settings, buf=buf, marks=marks)
     else:
         pass
 
