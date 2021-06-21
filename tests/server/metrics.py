@@ -5,8 +5,10 @@ from ...coq.server.metrics import count
 
 class Matcher(TestCase):
     def test_1(self) -> None:
-        cword = "in"
-        match = "_from_each_according_to_their_ability"
+        cword = "ab"
+        match = "abab"
         c = count(cword, match=match)
-        print(c)
+        self.assertEqual(c.prefix_matches, 2)
+        self.assertEqual(c.num_matches, 2)
+        self.assertEqual(c.consecutive_matches, 1)
 
