@@ -36,7 +36,7 @@ def lsp() -> LSProtocol:
     json = loads(raw)
     spec = {
         "cmp_item_kind": {
-            str(val): key for key, val in sorted(json.items(), key=lambda t: t[0])
+            str(val): key for key, val in sorted(json.items())
         }
     }
     specs: LSProtocol = decode(LSProtocol, spec)
