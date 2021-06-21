@@ -18,24 +18,29 @@ def coalesce(chars: Iterable[str], unifying_chars: AbstractSet[str]) -> Iterator
     words: MutableSequence[str] = []
     syms: MutableSequence[str] = []
 
+    def wit() -> Iterator[str]:
+        if words:
+            word = "".join(words)
+            words.clear()
+            yield word
+
+    def sit() -> Iterator[str]:
+        if syms:
+            sym = "".join(syms)
+            syms.clear()
+            yield sym
+
     for char in chars:
         if is_word(char, unifying_chars=unifying_chars):
             words.append(char)
+            yield from sit()
         elif not char.isspace():
             syms.append(char)
+            yield from wit()
         else:
-            if words:
-                word = "".join(words)
-                words.clear()
-                yield word
-            if syms:
-                sym = "".join(syms)
-                syms.clear()
-                yield sym
+            yield from wit()
+            yield from sit()
 
-    if words:
-        yield "".join(words)
-
-    if syms:
-        yield "".join(syms)
+    yield from wit()
+    yield from sit()
 
