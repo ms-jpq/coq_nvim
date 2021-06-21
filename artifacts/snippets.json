@@ -51381,6 +51381,30 @@
         "options": {
           "b": true
         }
+      },
+      {
+        "content": "Main.@bp",
+        "doc": "",
+        "grammar": "snu",
+        "label": "Debugger breakpoint",
+        "matches": {
+          "deb": true
+        },
+        "options": {
+          "b": true
+        }
+      },
+      {
+        "content": "Main.@infiltrate",
+        "doc": "",
+        "grammar": "snu",
+        "label": "Infiltrator breakpoint",
+        "matches": {
+          "inf": true
+        },
+        "options": {
+          "b": true
+        }
       }
     ],
     "kotlin": [
