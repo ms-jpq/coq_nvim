@@ -56,7 +56,7 @@ def _git_alert(cwd: Path) -> None:
         brname = f"{prefix}--{time}"
         check_call(("git", "checkout", "-b", brname))
         check_call(("git", "add", "."))
-        check_call(("git", "commit", "-m", f"update_icons: {time}"))
+        check_call(("git", "commit", "-m", f"update_artifacts: {time}"))
         check_call(("git", "push", "--set-upstream", "origin", brname))
 
 

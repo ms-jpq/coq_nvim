@@ -34,7 +34,11 @@ def _build(dockerfile: Path) -> str:
 def lsp() -> LSProtocol:
     raw = _build(_DOCKER_FILE)
     json = loads(raw)
-    spec = {"cmp_item_kind": {str(val): key for key, val in json.items()}}
+    spec = {
+        "cmp_item_kind": {
+            str(val): key for key, val in sorted(json.items(), key=lambda t: t[0])
+        }
+    }
     specs: LSProtocol = decode(LSProtocol, spec)
     return specs
 
