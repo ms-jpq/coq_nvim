@@ -35,7 +35,7 @@ def _isjunk(s: str) -> bool:
     return s.isspace()
 
 
-def _count(cword: str, match: str) -> _MatchMetrics:
+def count(cword: str, match: str) -> _MatchMetrics:
     m = SequenceMatcher(a=cword, b=match, autojunk=True, isjunk=_isjunk)
     matches: MutableSequence[int] = []
     prefix_matches = 0
@@ -78,7 +78,7 @@ def _metrics(
             if is_word(match[:1], unifying_chars=options.unifying_chars)
             else s_before
         )
-        yield _count(cword, match=match)
+        yield count(cword, match=match)
 
 
 def _weights(
