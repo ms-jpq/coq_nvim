@@ -17,8 +17,9 @@ setup(
     long_description_content_type="text/markdown",
     author="ms-jpq",
     author_email="github@bigly.dog",
-    url="https://github.com/ms-jpq/Coq.nvim",
+    url="https://github.com/ms-jpq/coq_nvim",
     packages=packages,
     package_data=package_data,
     install_requires=install_requires,
 )
+
