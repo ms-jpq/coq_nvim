@@ -14,8 +14,8 @@ match:
   transpose_band: 3
 
 weights:
-  prefix_matches: 1.0
-  consecutive_matches: 1.0
+  prefix_matches: 2.0
+  consecutive_matches: 1.5
   insertion_order: 1.0
   match_density: 1.0
   nearest_neighbour: 1.0
