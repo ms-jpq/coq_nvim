@@ -15,7 +15,7 @@ from std2.types import AnyFun
 from ._registry import ____
 from .consts import DEBUG
 from .registry import atomic, autocmd, event_queue, pool, rpc
-from .server.options import set_options
+from .server.registrants.options import set_options
 from .server.registrants.attachment import BUF_EVENTS
 from .server.runtime import Stack, stack
 

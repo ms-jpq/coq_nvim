@@ -43,7 +43,7 @@ def trans(
     display = stack.settings.display
     _, col = context.position
     width: int = nvim.options["columns"]
-    truncate = min(width - col - display.margin, display.max_len)
+    truncate = min(width - col - display.pum.x_margin, display.pum.x_max_len)
 
     ranked = rank(
         options=stack.settings.match,

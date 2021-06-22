@@ -2,9 +2,25 @@ from pynvim import Nvim
 from pynvim_pp.keymap import Keymap
 from pynvim_pp.settings import Settings
 
-from ..shared.settings import KeyMapping
-from .registrants.marks import nav_mark
-from .registrants.omnifunc import omnifunc
+from ...registry import atomic, autocmd, rpc
+from ...shared.settings import KeyMapping
+from ..runtime import Stack
+from .marks import nav_mark
+from .omnifunc import omnifunc
+
+
+@rpc(blocking=True)
+def _update_pumheight(nvim: Nvim, stack: Stack) -> None:
+    lines: int = nvim.options["lines"]
+    pumheight = max(
+        round(lines * stack.settings.display.pum.y_ratio),
+        stack.settings.display.pum.y_max_len,
+    )
+    nvim.options["pumheight"] = pumheight
+
+
+atomic.exec_lua(f"{_update_pumheight.name}()", ())
+autocmd("VimResized") << f"lua {_update_pumheight.name}()"
 
 
 def set_options(nvim: Nvim, mapping: KeyMapping) -> None:

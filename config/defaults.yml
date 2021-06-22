@@ -1,8 +1,12 @@
 ---
 display:
   ellipsis: …
-  margin: 16
-  max_len: 66
+  pum:
+    y_max_len: 16
+    x_max_len: 66
+    y_ratio: 0.3
+    x_margin: 16
+
   mark_highlight_group: Pmenu
 
 match:
