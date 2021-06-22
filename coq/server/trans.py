@@ -2,6 +2,7 @@ from textwrap import shorten
 from typing import Iterator, MutableSet, Sequence
 
 from pynvim import Nvim
+from std2.ordinal import clamp
 
 from ..shared.nvim.completions import VimCompletion
 from ..shared.types import Completion, Context
@@ -43,7 +44,7 @@ def trans(
     display = stack.settings.display
     _, col = context.position
     width: int = nvim.options["columns"]
-    truncate = min(width - col - display.pum.x_margin, display.pum.x_max_len)
+    truncate = clamp(1, width - col - display.pum.x_margin, display.pum.x_max_len)
 
     ranked = rank(
         options=stack.settings.match,
