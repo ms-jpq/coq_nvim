@@ -1,11 +1,13 @@
 from concurrent.futures import CancelledError, Future, InvalidStateError
 from contextlib import suppress
+from os import linesep
 from pathlib import Path
 from threading import Lock
 from typing import Any, Iterator, Mapping, Sequence, Tuple, cast
 from uuid import UUID, uuid4
 
 from pynvim_pp.lib import threadsafe_call
+from pynvim_pp.logging import log
 from std2.pickle import DecodeError, decode
 
 from ...shared.runtime import Supervisor
@@ -68,8 +70,9 @@ def _parse(
 ) -> Tuple[bool, Sequence[Completion]]:
     try:
         resp: Resp = decode(Resp, reply, strict=False)
-    except DecodeError:
-        raise
+    except DecodeError as e:
+        log.exception("%s", f"{reply}{linesep}{e}")
+        return False, ()
     else:
         if isinstance(resp, CompletionList):
             return resp.isIncomplete, tuple(
