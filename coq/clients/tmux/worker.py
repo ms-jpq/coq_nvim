@@ -68,7 +68,7 @@ def _screenshot(unifying_chars: AbstractSet[str], uid: str) -> Sequence[str]:
         return tuple(coalesce(out, unifying_chars=unifying_chars))
 
 
-def _comp(src: str, ctx: Context, word: str) -> Completion:
+def _comp(src: str, word: str) -> Completion:
     edit = Edit(new_text=word)
     cmp = Completion(source=src, primary_edit=edit)
     return cmp
@@ -103,13 +103,13 @@ class Worker(BaseWorker[PollingClient, None]):
             log.exception("%s", e)
 
     def work(self, context: Context) -> Iterator[Sequence[Completion]]:
-        match = context.words or context.syms
+        match = context.words or (context.syms if self._options.match_syms else "")
         active = _cur()
         words = self._db.select(match, active_pane=active.uid)
 
         def cont() -> Iterator[Completion]:
             for word in words:
-                completion = _comp(self._options.short_name, ctx=context, word=word)
+                completion = _comp(self._options.short_name, word=word)
                 yield completion
 
         yield tuple(cont())

@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import AbstractSet, Any, Literal, Mapping, Optional, Sequence
+from typing import AbstractSet, Any, Literal, Mapping, Sequence
 
 
 @dataclass(frozen=True)
@@ -42,7 +42,12 @@ class BaseClient:
 
 
 @dataclass(frozen=True)
-class PollingClient(BaseClient):
+class WordbankClient(BaseClient):
+    match_syms: bool
+
+
+@dataclass(frozen=True)
+class PollingClient(WordbankClient):
     polling_interval: float
 
 
@@ -64,7 +69,7 @@ class SnippetClient(BaseClient):
 
 @dataclass(frozen=True)
 class Clients:
-    buffers: BaseClient
+    buffers: WordbankClient
     lsp: LSPClient
     paths: BaseClient
     snippets: SnippetClient

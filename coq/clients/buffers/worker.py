@@ -2,7 +2,7 @@ from typing import Iterator, Sequence
 
 from ...server.model.buffers.database import BDB
 from ...shared.runtime import Worker as BaseWorker
-from ...shared.settings import BaseClient
+from ...shared.settings import WordbankClient
 from ...shared.types import Completion, Context, Edit
 
 
@@ -12,9 +12,9 @@ def _comp(src: str, word: str) -> Completion:
     return cmp
 
 
-class Worker(BaseWorker[BaseClient, BDB]):
+class Worker(BaseWorker[WordbankClient, BDB]):
     def work(self, context: Context) -> Iterator[Sequence[Completion]]:
-        match = context.words or context.syms
+        match = context.words or (context.syms if self._options.match_syms else "")
         words = self._misc.suggestions(match)
         yield tuple(_comp(self._options.short_name, word=word) for word in words)
 

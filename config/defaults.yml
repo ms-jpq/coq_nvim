@@ -37,6 +37,7 @@ clients:
   buffers:
     enabled: True
     short_name: "BUF"
+    match_syms: False
     weight: 1.0
   paths:
     enabled: True
@@ -50,5 +51,6 @@ clients:
     enabled: True
     short_name: "TMUX"
     weight: 1.0
+    match_syms: False
     polling_interval: 1.0
 
