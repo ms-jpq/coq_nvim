@@ -14,9 +14,9 @@ from std2.types import AnyFun
 
 from ._registry import ____
 from .consts import DEBUG
-from .registry import atomic, autocmd, event_queue, pool, rpc, settings
+from .registry import atomic, autocmd, event_queue, pool, rpc
+from .server.options import set_options
 from .server.registrants.attachment import BUF_EVENTS
-from .server.registrants.marks import set_km
 from .server.runtime import Stack, stack
 
 if DEBUG:
@@ -55,8 +55,8 @@ class CoqClient(Client):
             self._handlers.update(specs)
 
             self._stack = stack(pool, nvim=nvim)
-            (rpc_atomic + autocmd.drain() + atomic + settings.drain()).commit(nvim)
-            set_km(nvim, mapping=self._stack.settings.keymap)
+            (rpc_atomic + autocmd.drain() + atomic).commit(nvim)
+            set_options(nvim, mapping=self._stack.settings.keymap)
 
         try:
             threadsafe_call(nvim, cont)

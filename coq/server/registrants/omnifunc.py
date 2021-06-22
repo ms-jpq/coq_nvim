@@ -8,7 +8,7 @@ from pynvim_pp.logging import log
 from std2.pickle import DecodeError, decode
 from std2.pickle.coders import BUILTIN_DECODERS
 
-from ...registry import autocmd, enqueue_event, pool, rpc, settings
+from ...registry import autocmd, enqueue_event, pool, rpc
 from ...shared.nvim.completions import complete
 from ...shared.timeit import timeit
 from ...shared.types import Completion, Context, NvimPos
@@ -89,9 +89,6 @@ def omnifunc(
     else:
         comp_func(nvim, stack=stack, manual=True)
         return ()
-
-
-settings["completefunc"] = omnifunc.name
 
 
 @rpc(blocking=True)

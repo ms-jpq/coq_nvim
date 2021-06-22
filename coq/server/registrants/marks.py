@@ -3,11 +3,11 @@ from uuid import uuid4
 
 from pynvim.api.nvim import Buffer, Nvim
 from pynvim_pp.api import cur_win, win_get_buf, win_set_cursor
-from pynvim_pp.keymap import Keymap
 from pynvim_pp.operators import set_visual_selection
 
-from ...registry import rpc
+from pynvim_pp.keymap import Keymap
 from ...shared.settings import KeyMapping, Settings
+from ...registry import rpc
 from ...shared.types import Mark
 from ..runtime import Stack
 
@@ -34,7 +34,7 @@ def _ls_marks(nvim: Nvim, ns: str, buf: Buffer) -> Sequence[Mark]:
 
 
 @rpc(blocking=True)
-def _nav_mark(nvim: Nvim, stack: Stack) -> None:
+def nav_mark(nvim: Nvim, stack: Stack) -> None:
     ns = nvim.api.create_namespace(_NS)
     win = cur_win(nvim)
     buf = win_get_buf(nvim, win=win)
@@ -57,12 +57,6 @@ def _nav_mark(nvim: Nvim, stack: Stack) -> None:
         print("🐸 ", flush=True)
 
 
-def set_km(nvim: Nvim, mapping: KeyMapping) -> None:
-    keymap = Keymap()
-    keymap.n(mapping.jump_to_mark) << f"<cmd>lua {_nav_mark.name}()<cr>"
-    keymap.v(mapping.jump_to_mark) << f"<esc><cmd>lua {_nav_mark.name}()<cr>"
-
-    keymap.drain(buf=None).commit(nvim)
 
 
 def mark(nvim: Nvim, settings: Settings, buf: Buffer, marks: Iterable[Mark]) -> None:

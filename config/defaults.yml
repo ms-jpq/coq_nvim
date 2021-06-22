@@ -23,6 +23,7 @@ weights:
   count_by_filetype: 0.5
 
 keymap:
+  recommended: True
   jump_to_mark: <C-space>
 
 clients:

@@ -31,6 +31,7 @@ class Weights:
 
 @dataclass(frozen=True)
 class KeyMapping:
+    recommended: bool
     jump_to_mark: str
 
 
