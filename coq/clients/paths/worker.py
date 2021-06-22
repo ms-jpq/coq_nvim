@@ -30,7 +30,7 @@ def parse(file: Path, line: str) -> Iterator[str]:
     segments = reversed(tuple(_segments(line)))
     for segment in segments:
         e = Path(segment).expanduser()
-        entire = e if e.is_absolute() else file / e
+        entire = e if e.is_absolute() else file.parent / e
         if entire.is_dir() and access(entire, mode=X_OK):
             for path in entire.iterdir():
                 term = sep if path.is_dir() else ""
@@ -41,7 +41,7 @@ def parse(file: Path, line: str) -> Iterator[str]:
             assert go
             lhs = lft + go
             l = Path(lhs).expanduser()
-            left = l if l.is_absolute() else file / l
+            left = l if l.is_absolute() else file.parent / l
             if left.is_dir() and access(left, mode=X_OK):
                 for path in left.iterdir():
                     if path.name.startswith(rhs):
