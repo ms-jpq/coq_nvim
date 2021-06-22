@@ -12,8 +12,12 @@ def set_options(nvim: Nvim, mapping: KeyMapping) -> None:
     keymap = Keymap()
 
     settings["completefunc"] = omnifunc.name
-    keymap.n(mapping.jump_to_mark) << f"<cmd>lua {nav_mark.name}()<cr>"
-    keymap.v(mapping.jump_to_mark) << f"<esc><cmd>lua {nav_mark.name}()<cr>"
+
+    if mapping.manual_complete:
+        keymap.i(mapping.manual_complete) << "<c-x><c-u>"
+    if mapping.jump_to_mark:
+        keymap.n(mapping.jump_to_mark) << f"<cmd>lua {nav_mark.name}()<cr>"
+        keymap.v(mapping.jump_to_mark) << f"<esc><cmd>lua {nav_mark.name}()<cr>"
 
     if mapping.recommended:
         settings["shortmess"] += "c"

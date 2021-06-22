@@ -24,7 +24,8 @@ weights:
 
 keymap:
   recommended: True
-  jump_to_mark: <C-space>
+  manual_complete: <c-space>
+  jump_to_mark: <c-space>
 
 clients:
   tree_sitter:

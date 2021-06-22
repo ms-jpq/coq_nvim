@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import AbstractSet, Any, Literal, Mapping, Sequence
+from typing import AbstractSet, Any, Literal, Mapping, Optional, Sequence
 
 
 @dataclass(frozen=True)
@@ -32,7 +32,8 @@ class Weights:
 @dataclass(frozen=True)
 class KeyMapping:
     recommended: bool
-    jump_to_mark: str
+    manual_complete: Optional[str]
+    jump_to_mark: Optional[str]
 
 
 @dataclass(frozen=True)
