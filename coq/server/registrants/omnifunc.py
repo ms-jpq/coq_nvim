@@ -45,7 +45,7 @@ def _cmp(nvim: Nvim, stack: Stack, completions: Sequence[Completion]) -> None:
             stack.state.commit = ctx.uid
 
 
-def comp_func(nvim: Nvim, stack: Stack, manual: bool) -> None:
+def _comp_func(nvim: Nvim, stack: Stack, manual: bool) -> None:
     for fut in stack.state.futs:
         fut.cancel()
     stack.state.futs = ()
@@ -89,33 +89,31 @@ def omnifunc(
     if op == 1:
         return -1
     else:
-        comp_func(nvim, stack=stack, manual=True)
+        _comp_func(nvim, stack=stack, manual=True)
         return ()
 
 
 @rpc(blocking=True)
 def _txt_changed(nvim: Nvim, stack: Stack) -> None:
     with timeit(0, "BEGIN"):
-        comp_func(nvim, stack=stack, manual=False)
+        _comp_func(nvim, stack=stack, manual=False)
 
 
 autocmd("TextChangedI", "TextChangedP") << f"lua {_txt_changed.name}()"
 
 
 @rpc(blocking=True)
-def _cmp_changed(
-    nvim: Nvim, stack: Stack, event: Optional[Mapping[str, Any]] = None
-) -> None:
-    if event:
-        data = event["completed_item"].get("user_data")
-        if data:
-            try:
-                user_data: UserData = decode(UserData, data, decoders=BUILTIN_DECODERS)
-            except DecodeError:
+def _cmp_changed(nvim: Nvim, stack: Stack, event: Mapping[str, Any] = {}) -> None:
+    data = event.get("completed_item", {}).get("user_data")
+    if data:
+        try:
+            user_data: UserData = decode(UserData, data, decoders=BUILTIN_DECODERS)
+        except DecodeError:
+            pass
+        else:
+            lines = user_data.doc.splitlines()
+            if lines:
                 pass
-            else:
-                if user_data.doc:
-                    pass
 
 
 autocmd("CompleteChanged") << f"lua {_cmp_changed.name}(vim.v.event)"

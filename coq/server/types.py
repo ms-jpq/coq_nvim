@@ -11,5 +11,5 @@ class UserData:
     sort_by: str
     primary_edit: PrimaryEdit
     secondary_edits: Sequence[RangeEdit]
-    doc: Optional[str]
+    doc: str
 
