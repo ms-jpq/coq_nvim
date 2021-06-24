@@ -17,7 +17,6 @@ from ..edit import edit
 from ..runtime import Stack
 from ..trans import trans
 from ..types import UserData
-from .preview import preview
 
 
 def _should_cont(
@@ -101,23 +100,6 @@ def _txt_changed(nvim: Nvim, stack: Stack) -> None:
 
 
 autocmd("TextChangedI", "TextChangedP") << f"lua {_txt_changed.name}()"
-
-
-@rpc(blocking=True)
-def _cmp_changed(nvim: Nvim, stack: Stack, event: Mapping[str, Any] = {}) -> None:
-    data = event.get("completed_item", {}).get("user_data")
-    if data:
-        try:
-            user_data: UserData = decode(UserData, data, decoders=BUILTIN_DECODERS)
-        except DecodeError:
-            pass
-        else:
-            doc = user_data.doc
-            if doc:
-                preview(nvim, doc=doc)
-
-
-autocmd("CompleteChanged") << f"lua {_cmp_changed.name}(vim.v.event)"
 
 
 @rpc(blocking=True)
