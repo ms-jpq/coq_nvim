@@ -3,7 +3,7 @@ from contextlib import suppress
 from os import linesep
 from pathlib import Path
 from threading import Lock
-from typing import Any, Iterator, Mapping, Sequence, Tuple, cast
+from typing import Any, Iterator, Sequence, Tuple, cast
 from uuid import UUID, uuid4
 
 from pynvim_pp.lib import threadsafe_call
