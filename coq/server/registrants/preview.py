@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Any, Callable, Mapping, Sequence
+from typing import Any, Callable, Iterator, Mapping, Sequence
 from uuid import uuid4
 
 from pynvim import Nvim
@@ -9,6 +9,7 @@ from pynvim_pp.api import (
     list_wins,
     win_close,
     win_get_var,
+    win_set_buf,
     win_set_option,
     win_set_var,
 )
@@ -49,19 +50,19 @@ _MARGIN = 4
 _MIN = 4
 
 
-def _kill_floating(nvim: Nvim) -> None:
+def _ls(nvim: Nvim) -> Iterator[Window]:
     for win in list_wins(nvim):
         if win_get_var(nvim, win=win, key=_FLOAT_WIN_UUID):
-            win_close(nvim, win=win)
+            yield win
 
 
 @rpc(blocking=True)
 def _kill_win(nvim: Nvim, stack: Stack) -> None:
-    with timeit(0, "CURSOR MOVE"):
-        _kill_floating(nvim)
+    for win in _ls(nvim):
+        win_close(nvim, win=win)
 
 
-autocmd("CursorMoved", "CursorMovedI") << f"lua {_kill_win.name}()"
+autocmd("CursorMoved", "CursorMovedI", "CompleteChanged") << f"lua {_kill_win.name}()"
 
 
 def _clamp(hi: int) -> Callable[[int], int]:
@@ -135,11 +136,14 @@ def _preview(nvim: Nvim, event: _Event, doc: Doc) -> None:
         nvim, listed=False, scratch=True, wipe=True, nofile=True, noswap=True
     )
     buf_set_preview(nvim, buf=buf, filetype=doc.filetype, preview=lines)
-    win: Window = nvim.api.open_win(buf, False, opts)
-    win_set_option(nvim, win=win, key="wrap", val=True)
-    win_set_option(nvim, win=win, key="foldenable", val=False)
-    win_set_var(nvim, win=win, key=_FLOAT_WIN_UUID, val=True)
-    # win_set_option(nvim, win=win, key="winhighlight", val="Normal:Floating")
+    win = next(_ls(nvim), None)
+    if win:
+        win_set_buf(nvim, win=win, buf=buf)
+    else:
+        win = nvim.api.open_win(buf, False, opts)
+        win_set_option(nvim, win=win, key="wrap", val=True)
+        win_set_option(nvim, win=win, key="foldenable", val=False)
+        win_set_var(nvim, win=win, key=_FLOAT_WIN_UUID, val=True)
 
 
 @rpc(blocking=True)
@@ -154,7 +158,6 @@ def _cmp_changed(nvim: Nvim, stack: Stack, event: Mapping[str, Any] = {}) -> Non
             pass
         else:
             if data and data.doc and data.doc.text:
-                _kill_floating(nvim)
                 _preview(nvim, event=ev, doc=data.doc)
 
 
