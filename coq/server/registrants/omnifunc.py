@@ -58,8 +58,8 @@ def _comp_func(nvim: Nvim, stack: Stack, manual: bool) -> None:
     prev = stack.state.cur
     stack.state.cur = ctx
     if manual or _should_cont(stack.state.inserted, prev=prev, cur=ctx):
-        # _, col = ctx.position
-        # complete(nvim, col=col - 1, comp=())
+        _, col = ctx.position
+        complete(nvim, col=col - 1, comp=())
         fut = stack.supervisor.collect(ctx, manual=manual)
 
         @timeit(0, "WAIT")

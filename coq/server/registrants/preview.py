@@ -2,7 +2,8 @@ from dataclasses import dataclass
 from typing import Any, Mapping, Sequence
 
 from pynvim import Nvim
-from pynvim_pp.api import buf_set_lines, create_buf
+from pynvim_pp.api import create_buf
+from pynvim_pp.preview import buf_set_preview
 from std2.pickle import DecodeError, decode
 from std2.pickle.coders import BUILTIN_DECODERS
 
@@ -50,12 +51,14 @@ def _positions(nvim: Nvim, event: _Event, lines: Sequence[str]) -> Sequence[_Pos
     height = min(max_height, t_height - top - _MARGIN)
     width = min(max_width, t_width - left - _MARGIN)
     n = _Pos(
-        row=1,
+        row=top + 1 + height,
         col=left,
         height=height,
         width=width,
     )
 
+    height = min(max_height, t_height - top - _MARGIN)
+    width = min(max_width, t_width - left - _MARGIN)
     s = _Pos(
         row=btm + 1,
         col=left,
@@ -63,13 +66,17 @@ def _positions(nvim: Nvim, event: _Event, lines: Sequence[str]) -> Sequence[_Pos
         width=width,
     )
 
+    height = min(max_height, t_height - top - _MARGIN)
+    width = min(max_width, t_width - left - _MARGIN)
     w = _Pos(
-        row=1,
-        col=1,
+        row=top,
+        col=left - width,
         height=height,
         width=width,
     )
 
+    height = min(max_height, t_height - top - _MARGIN)
+    width = min(max_width, t_width - left - _MARGIN)
     e = _Pos(
         row=top,
         col=right + 1,
@@ -98,7 +105,7 @@ def _preview(nvim: Nvim, event: _Event, doc: Doc) -> None:
     buf = create_buf(
         nvim, listed=False, scratch=True, wipe=True, nofile=True, noswap=True
     )
-    buf_set_lines(nvim, buf=buf, lo=0, hi=-1, lines=lines)
+    buf_set_preview(nvim, buf=buf, filetype=doc.filetype, preview=lines)
     nvim.api.open_win(buf, True, opts)
 
 

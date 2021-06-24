@@ -11,6 +11,7 @@ from pynvim_pp.api import (
     win_get_cursor,
     win_set_cursor,
 )
+from pynvim_pp.logging import log
 from std2.itertools import deiter
 from std2.types import never
 
@@ -390,5 +391,5 @@ def edit(nvim: Nvim, stack: Stack, data: UserData) -> None:
         if marks:
             mark(nvim, settings=stack.settings, buf=buf, marks=marks)
     else:
-        pass
+        log.warn("%s", f"Expired edit -- {data}")
 
