@@ -1,12 +1,10 @@
 from dataclasses import dataclass
 from enum import Enum
-from typing import Generic, Iterable, Optional, TypeVar
+from typing import Any, Iterable, Optional
 
 from pynvim import Nvim
 from std2.pickle import encode
 from std2.pickle.coders import uuid_encoder
-
-T = TypeVar("T")
 
 
 class VimCompKind(Enum):
@@ -18,7 +16,7 @@ class VimCompKind(Enum):
 
 
 @dataclass(frozen=True)
-class VimCompletion(Generic[T]):
+class VimCompletion:
     word: str
     abbr: Optional[str] = None
     menu: Optional[str] = None
@@ -28,7 +26,7 @@ class VimCompletion(Generic[T]):
     equal: Optional[int] = None
     dup: Optional[int] = None
     empty: Optional[int] = None
-    user_data: Optional[T] = None
+    user_data: Optional[Any] = None
 
 
 def complete(nvim: Nvim, col: int, comp: Iterable[VimCompletion]) -> None:

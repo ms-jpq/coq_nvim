@@ -13,7 +13,7 @@ from .types import UserData
 
 def _cmp_to_vcmp(
     context: Context, width: int, ellipsis: str, cmp: Completion
-) -> VimCompletion[UserData]:
+) -> VimCompletion:
     abbr = shorten(
         cmp.label or cmp.primary_edit.new_text, width=width, placeholder=ellipsis
     )
