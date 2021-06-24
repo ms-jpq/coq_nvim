@@ -3,7 +3,7 @@ from typing import Any, Callable, Iterator, Mapping, Sequence
 from uuid import uuid4
 
 from pynvim import Nvim
-from pynvim.api import Window
+from pynvim.api import Buffer, Window
 from pynvim_pp.api import (
     create_buf,
     list_wins,
@@ -118,13 +118,7 @@ def _positions(nvim: Nvim, event: _Event, lines: Sequence[str]) -> Sequence[_Pos
     return (n, s, w, e)
 
 
-def _preview(nvim: Nvim, event: _Event, doc: Doc) -> None:
-    lines = doc.text.splitlines()
-    pos, *_ = sorted(
-        _positions(nvim, event=event, lines=lines),
-        key=lambda p: p.height * p.width,
-        reverse=True,
-    )
+def _set_win(nvim: Nvim, buf: Buffer, pos: _Pos) -> None:
     opts = {
         "relative": "editor",
         "anchor": "NW",
@@ -134,14 +128,23 @@ def _preview(nvim: Nvim, event: _Event, doc: Doc) -> None:
         "row": pos.row,
         "col": pos.col,
     }
+    win: Window = nvim.api.open_win(buf, False, opts)
+    win_set_option(nvim, win=win, key="wrap", val=True)
+    win_set_var(nvim, win=win, key=_FLOAT_WIN_UUID, val=True)
+
+
+def _preview(nvim: Nvim, event: _Event, doc: Doc) -> None:
+    lines = doc.text.splitlines()
+    pos, *_ = sorted(
+        _positions(nvim, event=event, lines=lines),
+        key=lambda p: p.height * p.width,
+        reverse=True,
+    )
     buf = create_buf(
         nvim, listed=False, scratch=True, wipe=True, nofile=True, noswap=True
     )
     buf_set_preview(nvim, buf=buf, filetype=doc.filetype, preview=lines)
-    win: Window = nvim.api.open_win(buf, False, opts)
-    win_set_option(nvim, win=win, key="wrap", val=True)
-    win_set_option(nvim, win=win, key="foldenable", val=False)
-    win_set_var(nvim, win=win, key=_FLOAT_WIN_UUID, val=True)
+    _set_win(nvim, buf=buf, pos=pos)
 
 
 @rpc(blocking=True)
