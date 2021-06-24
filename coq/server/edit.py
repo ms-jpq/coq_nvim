@@ -163,43 +163,53 @@ def _edit_trans(
 
 
 def _range_edit_trans(
-    env: EditEnv, primary: bool, lines: _Lines, edit: RangeEdit
+    ctx: Context,
+    env: EditEnv,
+    unifying_chars: AbstractSet[str],
+    primary: bool,
+    lines: _Lines,
+    edit: RangeEdit,
 ) -> _EditInstruction:
-    (r1, ec1), (r2, ec2) = sorted((edit.begin, edit.end))
-
-    if edit.encoding == UTF16:
-        c1 = len(lines.b_lines16[r1][: ec1 * 2].decode(UTF16).encode(UTF8))
-        c2 = len(lines.b_lines16[r2][: ec2 * 2].decode(UTF16).encode(UTF8))
-    elif edit.encoding == UTF8:
-        c1 = len(lines.b_lines8[r1][:ec1])
-        c2 = len(lines.b_lines8[r2][:ec2])
-    else:
-        raise ValueError(f"Unknown encoding -- {edit.encoding}")
-
-    begin = r1, c1
-    end = r2, c2
-
-    new_lines = tuple(line for line in edit.new_text.split(env.linefeed))
-    cursor_yoffset = (r2 - r1) + (len(new_lines) - 1)
-    cursor_xpos = (
-        (
-            len(new_lines[-1].encode(UTF8))
-            if len(new_lines) > 1
-            else len(lines.b_lines8[r2][:c1]) + len(new_lines[0].encode(UTF8))
+    if primary and edit.begin == edit.end:
+        return _edit_trans(
+            ctx, env=env, unifying_chars=unifying_chars, lines=lines, edit=edit
         )
-        if primary
-        else -1
-    )
+    else:
+        (r1, ec1), (r2, ec2) = sorted((edit.begin, edit.end))
 
-    inst = _EditInstruction(
-        primary=primary,
-        begin=begin,
-        end=end,
-        cursor_yoffset=cursor_yoffset,
-        cursor_xpos=cursor_xpos,
-        new_lines=new_lines,
-    )
-    return inst
+        if edit.encoding == UTF16:
+            c1 = len(lines.b_lines16[r1][: ec1 * 2].decode(UTF16).encode(UTF8))
+            c2 = len(lines.b_lines16[r2][: ec2 * 2].decode(UTF16).encode(UTF8))
+        elif edit.encoding == UTF8:
+            c1 = len(lines.b_lines8[r1][:ec1])
+            c2 = len(lines.b_lines8[r2][:ec2])
+        else:
+            raise ValueError(f"Unknown encoding -- {edit.encoding}")
+
+        begin = r1, c1
+        end = r2, c2
+
+        new_lines = tuple(line for line in edit.new_text.split(env.linefeed))
+        cursor_yoffset = (r2 - r1) + (len(new_lines) - 1)
+        cursor_xpos = (
+            (
+                len(new_lines[-1].encode(UTF8))
+                if len(new_lines) > 1
+                else len(lines.b_lines8[r2][:c1]) + len(new_lines[0].encode(UTF8))
+            )
+            if primary
+            else -1
+        )
+
+        inst = _EditInstruction(
+            primary=primary,
+            begin=begin,
+            end=end,
+            cursor_yoffset=cursor_yoffset,
+            cursor_xpos=cursor_xpos,
+            new_lines=new_lines,
+        )
+        return inst
 
 
 def _consolidate(
@@ -238,7 +248,14 @@ def _instructions(
 ) -> Sequence[_EditInstruction]:
     def cont() -> Iterator[_EditInstruction]:
         if isinstance(primary, RangeEdit):
-            yield _range_edit_trans(env, primary=True, lines=lines, edit=primary)
+            yield _range_edit_trans(
+                ctx,
+                env=env,
+                unifying_chars=unifying_chars,
+                primary=True,
+                lines=lines,
+                edit=primary,
+            )
 
         elif isinstance(primary, ContextualEdit):
             yield _contextual_edit_trans(ctx, env=env, lines=lines, edit=primary)
@@ -252,7 +269,14 @@ def _instructions(
             never(primary)
 
         for edit in secondary:
-            yield _range_edit_trans(env, primary=False, lines=lines, edit=edit)
+            yield _range_edit_trans(
+                ctx,
+                env=env,
+                unifying_chars=unifying_chars,
+                primary=False,
+                lines=lines,
+                edit=edit,
+            )
 
     instructions = _consolidate(*cont())
     return instructions
