@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Any, Iterator, Mapping, Sequence
+from typing import Any, Mapping, Sequence
 
 from pynvim import Nvim
 from pynvim_pp.api import buf_set_lines, create_buf
@@ -33,40 +33,50 @@ class _Pos:
     width: int
 
 
-def _positions(nvim: Nvim, event: _Event, lines: Sequence[str]) -> Iterator[_Pos]:
+_MARGIN = 4
+
+
+def _positions(nvim: Nvim, event: _Event, lines: Sequence[str]) -> Sequence[_Pos]:
     t_height, t_width = nvim.options["lines"], nvim.options["columns"]
-    row, col = nvim.funcs.screenrow(), nvim.funcs.screencol()
-    n, s, w, e = event.row, event.row + 1, event.height, event.col + event.width
-    r, c = len(lines), max(map(len, lines))
+    top, btm, left, right = (
+        event.row,
+        event.row + 1,
+        event.height,
+        event.col + event.width,
+    )
+    max_height = len(lines)
+    max_width = max(map(len, lines))
 
-    top = _Pos(
+    height = min(max_height, t_height - top - _MARGIN)
+    width = min(max_width, t_width - left - _MARGIN)
+    n = _Pos(
         row=1,
-        col=1,
-        height=1,
-        width=1,
+        col=left,
+        height=height,
+        width=width,
     )
 
-    btm = _Pos(
-        row=1,
-        col=1,
-        height=1,
-        width=1,
+    s = _Pos(
+        row=btm + 1,
+        col=left,
+        height=height,
+        width=width,
     )
 
-    lhs = _Pos(
+    w = _Pos(
         row=1,
         col=1,
-        height=1,
-        width=1,
+        height=height,
+        width=width,
     )
 
-    rhs = _Pos(
-        row=1,
-        col=1,
-        height=1,
-        width=1,
+    e = _Pos(
+        row=top,
+        col=right + 1,
+        height=height,
+        width=width,
     )
-    yield from (top, btm, lhs, rhs)
+    return (n, s, w, e)
 
 
 def _preview(nvim: Nvim, event: _Event, doc: Doc) -> None:
