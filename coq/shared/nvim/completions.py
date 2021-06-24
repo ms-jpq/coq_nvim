@@ -29,6 +29,16 @@ class VimCompletion:
     user_data: Optional[Any] = None
 
 
+_LUA = """
+(function(col, items)
+  local mode = vim.api.nvim_get_mode().mode
+  if mode == "i" or mode == "ic" then
+    vim.fn.complete(col, items)
+  end
+end)(...)
+"""
+
+
 def complete(nvim: Nvim, col: int, comp: Iterable[VimCompletion]) -> None:
     serialized = tuple(
         {
@@ -39,5 +49,5 @@ def complete(nvim: Nvim, col: int, comp: Iterable[VimCompletion]) -> None:
         for cmp in comp
     )
 
-    nvim.funcs.complete(col + 1, serialized)
+    nvim.api.exec_lua(_LUA, (col + 1, serialized))
 

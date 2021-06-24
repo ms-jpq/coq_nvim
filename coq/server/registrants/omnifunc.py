@@ -35,15 +35,11 @@ def _should_cont(
 @rpc(blocking=True)
 def _cmp(nvim: Nvim, stack: Stack, completions: Sequence[Completion]) -> None:
     ctx = stack.state.cur
-    if stack.state.inserting and ctx:
+    if ctx:
         _, col = ctx.position
         with timeit(0, "RANK"):
             comp = trans(nvim, stack=stack, context=ctx, completions=completions)
-        try:
             complete(nvim, col=col, comp=comp)
-        except NvimError:
-            pass
-        else:
             stack.state.commit = ctx.uid
 
 
