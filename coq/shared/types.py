@@ -23,6 +23,7 @@ class Context:
     """
 
     uid: UUID
+    changedtick: int
 
     cwd: str
     filetype: str

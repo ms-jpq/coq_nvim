@@ -22,7 +22,7 @@ from ..types import UserData
 def _should_cont(
     inserted: Optional[NvimPos], prev: Optional[Context], cur: Context
 ) -> bool:
-    if prev and prev.position == cur.position:
+    if prev and prev.changedtick == cur.changedtick:
         return False
     elif cur.position == inserted:
         return False

@@ -1,4 +1,4 @@
-from typing import AbstractSet
+from typing import AbstractSet, cast
 from uuid import uuid4
 
 from pynvim import Nvim
@@ -7,6 +7,7 @@ from pynvim_pp.api import (
     buf_filetype,
     buf_get_lines,
     buf_get_option,
+    buf_get_var,
     buf_linefeed,
     buf_name,
     cur_win,
@@ -31,6 +32,7 @@ def context(
     line, *_ = buf_get_lines(nvim, buf=buf, lo=row, hi=row + 1)
     filename = buf_name(nvim, buf=buf)
     filetype = buf_filetype(nvim, buf=buf)
+    changedtick = cast(int, buf_get_var(nvim, buf=buf, key="changedtick"))
 
     b_line = line.encode()
     before, after = b_line[:col].decode(), b_line[col:].decode()
@@ -39,6 +41,7 @@ def context(
     ctx = Context(
         uid=uuid4(),
         cwd=cwd,
+        changedtick=changedtick,
         filename=filename,
         filetype=filetype,
         position=pos,

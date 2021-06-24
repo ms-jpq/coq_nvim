@@ -7,6 +7,7 @@ from .parse import parse
 
 EMPTY_CTX = Context(
     uid=uuid4(),
+    changedtick=0,
     cwd="",
     filename="",
     filetype="",
