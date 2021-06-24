@@ -1,19 +1,24 @@
 from dataclasses import dataclass
 from functools import partial
+from pathlib import Path
 from typing import Any, Mapping, Sequence
 
 from pynvim import Nvim
-from pynvim.api import NvimError, Window
-from pynvim_pp.api import buf_set_lines, buf_set_option, create_buf, win_set_option
+from pynvim.api import Window
+from pynvim_pp.api import create_buf, win_set_option
+from pynvim_pp.preview import buf_set_preview
 from std2.pickle import DecodeError, decode
 from std2.pickle.coders import BUILTIN_DECODERS
 
-from ...registry import autocmd, enqueue_event, rpc
+from ...registry import atomic, autocmd, rpc
 from ...shared.nvim.completions import VimCompletion
 from ...shared.timeit import timeit
 from ...shared.types import Doc
 from ..runtime import Stack
 from ..types import UserData
+
+_LUA = (Path(__file__).resolve().parent / "preview.lua").read_text("UTF-8")
+atomic.exec_lua(_LUA, ())
 
 
 @dataclass(frozen=True)
@@ -87,63 +92,44 @@ def _positions(nvim: Nvim, event: _Event, lines: Sequence[str]) -> Sequence[_Pos
 
 
 @rpc(blocking=True)
-def _preview(nvim: Nvim, stack: Stack, event: _Event, doc: Doc) -> None:
-    lines = doc.text.splitlines()
-    pos, *_ = sorted(
-        _positions(nvim, event=event, lines=lines),
-        key=lambda p: p.height * p.width,
-        reverse=True,
-    )
-    opts = {
-        "relative": "editor",
-        "anchor": "NW",
-        "style": "minimal",
-        "width": pos.width,
-        "height": pos.height,
-        "row": pos.row,
-        "col": pos.col,
-    }
-    buf = create_buf(
-        nvim, listed=False, scratch=True, wipe=True, nofile=True, noswap=True
-    )
-    buf_set_option(nvim, buf=buf, key="buftype", val="nofile")
-    buf_set_option(nvim, buf=buf, key="filetype", val=doc.filetype)
-    buf_set_option(nvim, buf=buf, key="modifiable", val=True)
-    while True:
-        try:
-            buf_set_lines(nvim, buf=buf, lo=0, hi=-1, lines=lines)
-        except NvimError:
-            pass
-        else:
-            break
-    buf_set_option(nvim, buf=buf, key="modifiable", val=False)
-
-    while True:
-        try:
+def _d_preview(nvim: Nvim, stack: Stack, event: Mapping[str, Any] = {}) -> None:
+    try:
+        ev: _Event = decode(_Event, event)
+        data: UserData = decode(
+            UserData, ev.completed_item.user_data, decoders=BUILTIN_DECODERS
+        )
+    except DecodeError as e:
+        pass
+    else:
+        if data and data.doc and data.doc.text:
+            lines = data.doc.text.splitlines()
+            pos, *_ = sorted(
+                _positions(nvim, event=ev, lines=lines),
+                key=lambda p: p.height * p.width,
+                reverse=True,
+            )
+            opts = {
+                "relative": "editor",
+                "anchor": "NW",
+                "style": "minimal",
+                "width": pos.width,
+                "height": pos.height,
+                "row": pos.row,
+                "col": pos.col,
+            }
+            buf = create_buf(
+                nvim, listed=False, scratch=True, wipe=True, nofile=True, noswap=True
+            )
+            buf_set_preview(nvim, buf=buf, filetype=data.doc.filetype, preview=lines)
             win: Window = nvim.api.open_win(buf, False, opts)
-        except NvimError:
-            pass
-        else:
-            break
-    win_set_option(nvim, win=win, key="wrap", val=True)
-    win_set_option(nvim, win=win, key="foldenable", val=False)
-    # win_set_option(nvim, win=win, key="winhighlight", val="Normal:Floating")
+            win_set_option(nvim, win=win, key="wrap", val=True)
+            win_set_option(nvim, win=win, key="foldenable", val=False)
+            # win_set_option(nvim, win=win, key="winhighlight", val="Normal:Floating")
 
 
 @rpc(blocking=True)
 def _cmp_changed(nvim: Nvim, stack: Stack, event: Mapping[str, Any] = {}) -> None:
-    with timeit(0, "PREVIEW"):
-        try:
-            ev: _Event = decode(_Event, event)
-            data: UserData = decode(
-                UserData, ev.completed_item.user_data, decoders=BUILTIN_DECODERS
-            )
-        except DecodeError:
-            pass
-        else:
-            if data and data.doc and data.doc.text:
-                enqueue_event(_preview, ev, data.doc)
-                # _preview(nvim, event=ev, doc=data.doc)
+    nvim.api.exec_lua("COQpreview(...)", (event,))
 
 
 autocmd("CompleteChanged") << f"lua {_cmp_changed.name}(vim.v.event)"
