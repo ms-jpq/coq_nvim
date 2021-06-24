@@ -31,10 +31,12 @@ class VimCompletion:
 
 _LUA = """
 (function(col, items)
-  local mode = vim.api.nvim_get_mode().mode
-  if mode == "i" or mode == "ic" then
-    vim.fn.complete(col, items)
-  end
+  vim.schedule(function()
+    local mode = vim.api.nvim_get_mode().mode
+    if mode == "i" or mode == "ic" then
+      vim.fn.complete(col, items)
+    end
+  end)
 end)(...)
 """
 
