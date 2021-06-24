@@ -1,23 +1,29 @@
 from dataclasses import dataclass
-from pathlib import Path
 from typing import Any, Callable, Mapping, Sequence
+from uuid import uuid4
 
 from pynvim import Nvim
 from pynvim.api import Window
-from pynvim_pp.api import create_buf, win_set_option
+from pynvim_pp.api import (
+    create_buf,
+    list_wins,
+    win_close,
+    win_get_var,
+    win_set_option,
+    win_set_var,
+)
 from pynvim_pp.preview import buf_set_preview
 from std2.pickle import DecodeError, decode
 from std2.pickle.coders import BUILTIN_DECODERS
 
-from ...registry import atomic, autocmd, rpc
+from ...registry import autocmd, rpc
 from ...shared.nvim.completions import VimCompletion
 from ...shared.timeit import timeit
 from ...shared.types import Doc
 from ..runtime import Stack
 from ..types import UserData
 
-_LUA = (Path(__file__).resolve().parent / "preview.lua").read_text("UTF-8")
-atomic.exec_lua(_LUA, ())
+_FLOAT_WIN_UUID = uuid4().hex
 
 
 @dataclass(frozen=True)
@@ -43,6 +49,21 @@ _MARGIN = 4
 _MIN = 4
 
 
+def _kill_floating(nvim: Nvim) -> None:
+    for win in list_wins(nvim):
+        if win_get_var(nvim, win=win, key=_FLOAT_WIN_UUID):
+            win_close(nvim, win=win)
+
+
+@rpc(blocking=True)
+def _kill_win(nvim: Nvim, stack: Stack) -> None:
+    with timeit(0, "CURSOR MOVE"):
+        _kill_floating(nvim)
+
+
+autocmd("CursorMoved", "CursorMovedI") << f"lua {_kill_win.name}()"
+
+
 def _clamp(hi: int) -> Callable[[int], int]:
     return lambda i: max(_MIN, min(hi, i) - _MARGIN)
 
@@ -53,7 +74,7 @@ def _positions(nvim: Nvim, event: _Event, lines: Sequence[str]) -> Sequence[_Pos
         event.row,
         event.row + event.height + 1,
         event.col,
-        event.col + event.width + 1,
+        event.col + event.width + event.scrollbar,
     )
     limit_h, limit_w = _clamp(len(lines)), _clamp(max(map(len, lines)))
 
@@ -117,6 +138,7 @@ def _preview(nvim: Nvim, event: _Event, doc: Doc) -> None:
     win: Window = nvim.api.open_win(buf, False, opts)
     win_set_option(nvim, win=win, key="wrap", val=True)
     win_set_option(nvim, win=win, key="foldenable", val=False)
+    win_set_var(nvim, win=win, key=_FLOAT_WIN_UUID, val=True)
     # win_set_option(nvim, win=win, key="winhighlight", val="Normal:Floating")
 
 
@@ -132,6 +154,7 @@ def _cmp_changed(nvim: Nvim, stack: Stack, event: Mapping[str, Any] = {}) -> Non
             pass
         else:
             if data and data.doc and data.doc.text:
+                _kill_floating(nvim)
                 _preview(nvim, event=ev, doc=data.doc)
 
 
@@ -144,5 +167,5 @@ _LUA = f"""
 end)()
 """
 
-autocmd("CompleteChanged") << f"lua {_LUA}"
+autocmd("CompleteChanged") << f"lua {_LUA.strip()}"
 
