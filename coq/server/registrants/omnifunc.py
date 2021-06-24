@@ -20,9 +20,11 @@ from ..types import UserData
 
 
 def _should_cont(
-    inserted: Optional[NvimPos], prev: Optional[Context], cur: Context
+    inserted: Optional[NvimPos], prev: Optional[Context], cur: Context, pum_open: bool
 ) -> bool:
     if prev and prev.changedtick == cur.changedtick:
+        return False
+    elif pum_open and prev and prev.position == cur.position:
         return False
     elif cur.position == inserted:
         return False
@@ -45,7 +47,7 @@ def _cmp(nvim: Nvim, stack: Stack, completions: Sequence[Completion]) -> None:
             stack.state.commit = ctx.uid
 
 
-def _comp_func(nvim: Nvim, stack: Stack, manual: bool) -> None:
+def _comp_func(nvim: Nvim, stack: Stack, manual: bool, pum_open: bool) -> None:
     for fut in stack.state.futs:
         fut.cancel()
     stack.state.futs = ()
@@ -57,7 +59,9 @@ def _comp_func(nvim: Nvim, stack: Stack, manual: bool) -> None:
     )
     prev = stack.state.cur
     stack.state.cur = ctx
-    if manual or _should_cont(stack.state.inserted, prev=prev, cur=ctx):
+    if manual or _should_cont(
+        stack.state.inserted, prev=prev, cur=ctx, pum_open=pum_open
+    ):
         _, col = ctx.position
         complete(nvim, col=col - 1, comp=())
         fut = stack.supervisor.collect(ctx, manual=manual)
@@ -94,12 +98,13 @@ def omnifunc(
 
 
 @rpc(blocking=True)
-def _txt_changed(nvim: Nvim, stack: Stack) -> None:
+def _txt_changed(nvim: Nvim, stack: Stack, pum_open: bool) -> None:
     with timeit(0, "BEGIN"):
-        _comp_func(nvim, stack=stack, manual=False)
+        _comp_func(nvim, stack=stack, manual=False, pum_open=pum_open)
 
 
-autocmd("TextChangedI", "TextChangedP") << f"lua {_txt_changed.name}()"
+autocmd("TextChangedI") << f"lua {_txt_changed.name}(false)"
+autocmd("TextChangedP") << f"lua {_txt_changed.name}(true)"
 
 
 @rpc(blocking=True)
