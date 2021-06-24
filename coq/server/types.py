@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Sequence
+from typing import Optional, Sequence
 from uuid import UUID
 
 from ..shared.types import PrimaryEdit, RangeEdit
@@ -11,4 +11,5 @@ class UserData:
     sort_by: str
     primary_edit: PrimaryEdit
     secondary_edits: Sequence[RangeEdit]
+    doc: Optional[str]
 

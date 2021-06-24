@@ -24,6 +24,7 @@ def _cmp_to_vcmp(
         commit_uid=context.uid,
         primary_edit=cmp.primary_edit,
         secondary_edits=cmp.secondary_edits,
+        doc=cmp.doc,
     )
     vcmp = VimCompletion(
         word="",
@@ -32,7 +33,6 @@ def _cmp_to_vcmp(
         equal=1,
         abbr=abbr,
         menu=menu,
-        info=cmp.doc,
         user_data=user_data,
     )
     return vcmp
