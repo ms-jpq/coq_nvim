@@ -20,7 +20,7 @@ from std2.pickle.coders import BUILTIN_DECODERS
 from ...registry import autocmd, rpc
 from ...shared.nvim.completions import VimCompletion
 from ...shared.timeit import timeit
-from ...shared.types import Doc
+from ...shared.types import UTF8, Doc
 from ..runtime import Stack
 from ..types import UserData
 
@@ -62,7 +62,7 @@ def _kill_win(nvim: Nvim, stack: Stack) -> None:
         win_close(nvim, win=win)
 
 
-autocmd("CursorMoved", "CursorMovedI", "CompleteChanged") << f"lua {_kill_win.name}()"
+autocmd("CompleteDone") << f"lua {_kill_win.name}()"
 
 
 def _clamp(hi: int) -> Callable[[int], int]:
@@ -77,7 +77,9 @@ def _positions(nvim: Nvim, event: _Event, lines: Sequence[str]) -> Sequence[_Pos
         event.col,
         event.col + event.width + event.scrollbar,
     )
-    limit_h, limit_w = _clamp(len(lines)), _clamp(max(map(len, lines)))
+    limit_h, limit_w = _clamp(len(lines)), _clamp(
+        max(len(line.encode(UTF8)) for line in lines) + 4
+    )
 
     ns_width = limit_w(t_width - right)
     n_height = limit_h(top - 1)
@@ -136,18 +138,15 @@ def _preview(nvim: Nvim, event: _Event, doc: Doc) -> None:
         nvim, listed=False, scratch=True, wipe=True, nofile=True, noswap=True
     )
     buf_set_preview(nvim, buf=buf, filetype=doc.filetype, preview=lines)
-    win = next(_ls(nvim), None)
-    if win:
-        win_set_buf(nvim, win=win, buf=buf)
-    else:
-        win = nvim.api.open_win(buf, False, opts)
-        win_set_option(nvim, win=win, key="wrap", val=True)
-        win_set_option(nvim, win=win, key="foldenable", val=False)
-        win_set_var(nvim, win=win, key=_FLOAT_WIN_UUID, val=True)
+    win: Window = nvim.api.open_win(buf, False, opts)
+    win_set_option(nvim, win=win, key="wrap", val=True)
+    win_set_option(nvim, win=win, key="foldenable", val=False)
+    win_set_var(nvim, win=win, key=_FLOAT_WIN_UUID, val=True)
 
 
 @rpc(blocking=True)
 def _cmp_changed(nvim: Nvim, stack: Stack, event: Mapping[str, Any] = {}) -> None:
+    _kill_win(nvim, stack=stack)
     with timeit(0, "PREVIEW"):
         try:
             ev: _Event = decode(_Event, event)
