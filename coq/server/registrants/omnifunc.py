@@ -17,6 +17,7 @@ from ..edit import edit
 from ..runtime import Stack
 from ..trans import trans
 from ..types import UserData
+from .preview import preview
 
 
 def _should_cont(
@@ -113,7 +114,7 @@ def _cmp_changed(nvim: Nvim, stack: Stack, event: Mapping[str, Any] = {}) -> Non
         else:
             doc = user_data.doc
             if doc:
-                lines = doc.text.splitlines()
+                preview(nvim, doc=doc)
 
 
 autocmd("CompleteChanged") << f"lua {_cmp_changed.name}(vim.v.event)"
