@@ -9,7 +9,6 @@ from pynvim_pp.api import (
     list_wins,
     win_close,
     win_get_var,
-    win_set_buf,
     win_set_option,
     win_set_var,
 )
@@ -25,6 +24,11 @@ from ..runtime import Stack
 from ..types import UserData
 
 _FLOAT_WIN_UUID = uuid4().hex
+
+_MARGIN = 4
+
+_OVERHEAD = 3
+_OVERHEAD_X = 4
 
 
 @dataclass(frozen=True)
@@ -46,10 +50,6 @@ class _Pos:
     width: int
 
 
-_MARGIN = 4
-_MIN = 4
-
-
 def _ls(nvim: Nvim) -> Iterator[Window]:
     for win in list_wins(nvim):
         if win_get_var(nvim, win=win, key=_FLOAT_WIN_UUID):
@@ -66,7 +66,7 @@ autocmd("CompleteDone") << f"lua {_kill_win.name}()"
 
 
 def _clamp(hi: int) -> Callable[[int], int]:
-    return lambda i: max(_MIN, min(hi, i) - _MARGIN)
+    return lambda i: max(_OVERHEAD, min(hi, i) - _MARGIN)
 
 
 def _positions(nvim: Nvim, event: _Event, lines: Sequence[str]) -> Sequence[_Pos]:
@@ -78,7 +78,7 @@ def _positions(nvim: Nvim, event: _Event, lines: Sequence[str]) -> Sequence[_Pos
         event.col + event.width + event.scrollbar,
     )
     limit_h, limit_w = _clamp(len(lines)), _clamp(
-        max(len(line.encode(UTF8)) for line in lines) + 4
+        max(len(line.encode(UTF8)) for line in lines) + _OVERHEAD_X
     )
 
     ns_width = limit_w(t_width - right)
