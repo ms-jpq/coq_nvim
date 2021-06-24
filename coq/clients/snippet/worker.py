@@ -23,6 +23,7 @@ class Worker(BaseWorker[SnippetClient, SDB]):
                 edit = SnippetEdit(new_text=snip["snippet"], grammar=snip["grammar"])
                 completion = Completion(
                     source=self._options.short_name,
+                    priority=self._options.priority,
                     primary_edit=edit,
                     sort_by=snip["prefix"],
                 )

@@ -45,19 +45,18 @@ def _doc(item: CompletionItem) -> Tuple[str, str]:
         return "", ""
 
 
-def _parse_item(
-    src: str, kind_lookup: Mapping[int, str], item: CompletionItem
-) -> Completion:
+def _parse_item(client: LSPClient, item: CompletionItem) -> Completion:
     primary = _primary(item)
     secondaries = tuple(map(_range_edit, item.additionalTextEdits or ()))
     doc, doc_type = _doc(item)
 
     cmp = Completion(
-        source=src,
+        source=client.short_name,
+        priority=client.priority,
         primary_edit=primary,
         secondary_edits=secondaries,
         sort_by=item.filterText or "",
-        kind=kind_lookup.get(cast(Any, item.kind), ""),
+        kind=client.cmp_item_kind.get(cast(Any, item.kind), ""),
         label=item.label,
         doc=doc,
         doc_type=doc_type,
@@ -65,9 +64,7 @@ def _parse_item(
     return cmp
 
 
-def _parse(
-    src: str, kind_lookup: Mapping[int, str], reply: Any
-) -> Tuple[bool, Sequence[Completion]]:
+def _parse(client: LSPClient, reply: Any) -> Tuple[bool, Sequence[Completion]]:
     try:
         resp: Resp = decode(Resp, reply, strict=False)
     except DecodeError as e:
@@ -76,13 +73,10 @@ def _parse(
     else:
         if isinstance(resp, CompletionList):
             return resp.isIncomplete, tuple(
-                _parse_item(src, kind_lookup=kind_lookup, item=item)
-                for item in resp.items
+                _parse_item(client, item=item) for item in resp.items
             )
         elif isinstance(resp, Sequence):
-            return False, tuple(
-                _parse_item(src, kind_lookup=kind_lookup, item=item) for item in resp
-            )
+            return False, tuple(_parse_item(client, item=item) for item in resp)
         else:
             return False, ()
 
@@ -132,10 +126,6 @@ class Worker(BaseWorker[LSPClient, None]):
         go = True
         while go:
             reply = self._req(session, pos=(row, col))
-            go, comps = _parse(
-                self._options.short_name,
-                kind_lookup=self._kind_lookup,
-                reply=reply,
-            )
+            go, comps = _parse(self._options, reply=reply)
             yield comps
 

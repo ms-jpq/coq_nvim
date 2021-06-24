@@ -112,13 +112,17 @@ def _sorted(
 ) -> Sequence[Tuple[Completion, Weights]]:
     adjustment = asdict(cum)
 
-    def key_by(single: Tuple[Completion, Weights]) -> Tuple[float, str]:
+    def key_by(single: Tuple[Completion, Weights]) -> Tuple[int, int, str]:
         cmp, weight = single
         tot = sum(
             val / adjustment[key] if adjustment[key] else 0
             for key, val in asdict(weight).items()
         )
-        return tot, strxfrm(cmp.sort_by or cmp.primary_edit.new_text)
+        return (
+            round(tot * 3),
+            cmp.priority,
+            strxfrm(cmp.sort_by or cmp.primary_edit.new_text),
+        )
 
     return sorted(it, key=key_by, reverse=True)
 

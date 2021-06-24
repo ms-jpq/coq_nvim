@@ -63,7 +63,11 @@ class Worker(BaseWorker[BaseClient, None]):
                     len(payload.text) > len(match)
                 ):
                     edit = Edit(new_text=payload.text)
-                    cmp = Completion(source=self._options.short_name, primary_edit=edit)
+                    cmp = Completion(
+                        source=self._options.short_name,
+                        priority=self._options.priority,
+                        primary_edit=edit,
+                    )
                     yield cmp
 
         yield tuple(cont())

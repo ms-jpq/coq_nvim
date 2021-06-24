@@ -57,7 +57,10 @@ class Worker(BaseWorker[BaseClient, None]):
             for new_text in parse(Path(context.filename), line=line):
                 edit = Edit(new_text=new_text)
                 completion = Completion(
-                    source=self._options.short_name, primary_edit=edit, label=new_text
+                    source=self._options.short_name,
+                    priority=self._options.priority,
+                    primary_edit=edit,
+                    label=new_text,
                 )
                 yield completion
 

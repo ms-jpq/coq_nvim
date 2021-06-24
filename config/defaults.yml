@@ -35,28 +35,28 @@ clients:
   tree_sitter:
     enabled: True
     short_name: "TS"
-    weight: 1.0
+    priority: 3
   lsp:
     enabled: True
     short_name: "LSP"
-    weight: 1.0
+    priority: 4
   buffers:
     enabled: True
     short_name: "BUF"
     match_syms: False
-    weight: 1.0
+    priority: 1
   paths:
     enabled: True
     short_name: "FILE"
-    weight: 1.0
+    priority: 5
   snippets:
     enabled: True
     short_name: "SNIP"
-    weight: 1.0
+    priority: 2
   tmux:
     enabled: True
     short_name: "TMUX"
-    weight: 1.0
+    priority: 0
     match_syms: False
     polling_interval: 1.0
 
