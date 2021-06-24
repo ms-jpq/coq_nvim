@@ -1,5 +1,4 @@
 from dataclasses import dataclass
-from functools import partial
 from pathlib import Path
 from typing import Any, Callable, Mapping, Sequence
 
@@ -41,10 +40,11 @@ class _Pos:
 
 
 _MARGIN = 4
+_MIN = 4
 
 
 def _clamp(hi: int) -> Callable[[int], int]:
-    return lambda i: min(hi, i) - _MARGIN
+    return lambda i: max(_MIN, min(hi, i) - _MARGIN)
 
 
 def _positions(nvim: Nvim, event: _Event, lines: Sequence[str]) -> Sequence[_Pos]:
@@ -69,7 +69,7 @@ def _positions(nvim: Nvim, event: _Event, lines: Sequence[str]) -> Sequence[_Pos
     )
 
     s = _Pos(
-        row=btm + 2,
+        row=btm,
         col=ns_col,
         height=limit_h(t_height - btm),
         width=ns_width,
@@ -79,15 +79,15 @@ def _positions(nvim: Nvim, event: _Event, lines: Sequence[str]) -> Sequence[_Pos
     w_width = limit_w(left - 1)
 
     w = _Pos(
-        row=top,  # OK
-        col=left - w_width - 1,
+        row=top,
+        col=left - w_width - 2,
         height=we_height,
         width=w_width,
     )
 
     e = _Pos(
-        row=top,  # OK
-        col=right + 2,  # OK
+        row=top,
+        col=right + 2,
         height=we_height,
         width=limit_w(t_width - right - 2),
     )
@@ -122,16 +122,17 @@ def _preview(nvim: Nvim, event: _Event, doc: Doc) -> None:
 
 @rpc(blocking=True)
 def _cmp_changed(nvim: Nvim, stack: Stack, event: Mapping[str, Any] = {}) -> None:
-    try:
-        ev: _Event = decode(_Event, event)
-        data: UserData = decode(
-            UserData, ev.completed_item.user_data, decoders=BUILTIN_DECODERS
-        )
-    except DecodeError:
-        pass
-    else:
-        if data and data.doc and data.doc.text:
-            _preview(nvim, event=ev, doc=data.doc)
+    with timeit(0, "PREVIEW"):
+        try:
+            ev: _Event = decode(_Event, event)
+            data: UserData = decode(
+                UserData, ev.completed_item.user_data, decoders=BUILTIN_DECODERS
+            )
+        except DecodeError:
+            pass
+        else:
+            if data and data.doc and data.doc.text:
+                _preview(nvim, event=ev, doc=data.doc)
 
 
 _LUA = f"""

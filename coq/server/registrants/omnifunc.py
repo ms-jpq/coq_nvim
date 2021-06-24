@@ -93,7 +93,7 @@ def omnifunc(
     if op == 1:
         return -1
     else:
-        _comp_func(nvim, stack=stack, manual=True)
+        _comp_func(nvim, stack=stack, manual=True, pum_open=False)
         return ()
 
 
