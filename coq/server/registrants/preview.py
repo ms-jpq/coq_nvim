@@ -1,7 +1,8 @@
 from dataclasses import dataclass
-from typing import Any, Mapping
+from typing import Any, Iterator, Mapping, Sequence
 
 from pynvim import Nvim
+from pynvim_pp.api import buf_set_lines, create_buf
 from std2.pickle import DecodeError, decode
 from std2.pickle.coders import BUILTIN_DECODERS
 
@@ -16,16 +17,79 @@ from ..types import UserData
 @dataclass(frozen=True)
 class _Event:
     completed_item: VimCompletion[UserData]
-    height: int
-    width: int
     row: int
     col: int
+    height: int
+    width: int
     size: int
     scrollbar: bool
 
 
+@dataclass(frozen=True)
+class _Pos:
+    row: int
+    col: int
+    height: int
+    width: int
+
+
+def _positions(nvim: Nvim, event: _Event, lines: Sequence[str]) -> Iterator[_Pos]:
+    t_height, t_width = nvim.options["lines"], nvim.options["columns"]
+    row, col = nvim.funcs.screenrow(), nvim.funcs.screencol()
+    n, s, w, e = event.row, event.row + 1, event.height, event.col + event.width
+    r, c = len(lines), max(map(len, lines))
+
+    top = _Pos(
+        row=1,
+        col=1,
+        height=1,
+        width=1,
+    )
+
+    btm = _Pos(
+        row=1,
+        col=1,
+        height=1,
+        width=1,
+    )
+
+    lhs = _Pos(
+        row=1,
+        col=1,
+        height=1,
+        width=1,
+    )
+
+    rhs = _Pos(
+        row=1,
+        col=1,
+        height=1,
+        width=1,
+    )
+    yield from (top, btm, lhs, rhs)
+
+
 def _preview(nvim: Nvim, event: _Event, doc: Doc) -> None:
-    pass
+    lines = doc.text.splitlines()
+    pos, *_ = sorted(
+        _positions(nvim, event=event, lines=lines),
+        key=lambda p: p.height * p.width,
+        reverse=True,
+    )
+    opts = {
+        "relative": "editor",
+        "anchor": "NW",
+        "style": "minimal",
+        "width": pos.width,
+        "height": pos.height,
+        "row": pos.row,
+        "col": pos.col,
+    }
+    buf = create_buf(
+        nvim, listed=False, scratch=True, wipe=True, nofile=True, noswap=True
+    )
+    buf_set_lines(nvim, buf=buf, lo=0, hi=-1, lines=lines)
+    nvim.api.open_win(buf, True, opts)
 
 
 @rpc(blocking=True)
