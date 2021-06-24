@@ -119,12 +119,12 @@ def _sorted(
             for key, val in asdict(weight).items()
         )
         return (
-            round(tot * 3),
-            cmp.priority,
+            -round(tot * 3),
+            -cmp.priority,
             strxfrm(cmp.sort_by or cmp.primary_edit.new_text),
         )
 
-    return sorted(it, key=key_by, reverse=True)
+    return sorted(it, key=key_by)
 
 
 def rank(
