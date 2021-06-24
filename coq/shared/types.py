@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from typing import Annotated, Literal, Sequence, Tuple, Union
+from typing import Annotated, Literal, Optional, Sequence, Tuple, Union
 from uuid import UUID, uuid4
 
 UTF8 = "UTF-8"
@@ -88,6 +88,12 @@ PrimaryEdit = Union[ApplicableEdit, SnippetEdit]
 
 
 @dataclass(frozen=True)
+class Doc:
+    text: str
+    filetype: str
+
+
+@dataclass(frozen=True)
 class Completion:
     source: str
     priority: int
@@ -96,8 +102,7 @@ class Completion:
     sort_by: str = ""
     label: str = ""
     kind: str = ""
-    doc: str = ""
-    doc_type: str = ""
+    doc: Optional[Doc] = None
     uid: UUID = field(default_factory=uuid4)
 
 

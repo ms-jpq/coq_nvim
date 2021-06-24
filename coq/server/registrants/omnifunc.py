@@ -111,9 +111,9 @@ def _cmp_changed(nvim: Nvim, stack: Stack, event: Mapping[str, Any] = {}) -> Non
         except DecodeError:
             pass
         else:
-            lines = user_data.doc.splitlines()
-            if lines:
-                pass
+            doc = user_data.doc
+            if doc:
+                lines = doc.text.splitlines()
 
 
 autocmd("CompleteChanged") << f"lua {_cmp_changed.name}(vim.v.event)"

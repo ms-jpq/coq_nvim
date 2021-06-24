@@ -3,7 +3,7 @@ from contextlib import suppress
 from os import linesep
 from pathlib import Path
 from threading import Lock
-from typing import Any, Iterator, Sequence, Tuple, cast
+from typing import Any, Iterator, Optional, Sequence, Tuple, cast
 from uuid import UUID, uuid4
 
 from pynvim_pp.lib import threadsafe_call
@@ -13,7 +13,7 @@ from std2.pickle import DecodeError, decode
 from ...shared.runtime import Supervisor
 from ...shared.runtime import Worker as BaseWorker
 from ...shared.settings import LSPClient
-from ...shared.types import UTF16, Completion, Context, Edit, RangeEdit, WTF8Pos
+from ...shared.types import UTF16, Completion, Context, Doc, Edit, RangeEdit, WTF8Pos
 from .types import CompletionItem, CompletionList, MarkupContent, Resp, TextEdit
 
 _LUA = (Path(__file__).resolve().parent / "request.lua").read_text("UTF-8")
@@ -34,32 +34,27 @@ def _primary(item: CompletionItem) -> Edit:
         return Edit(new_text=item.label)
 
 
-def _doc(item: CompletionItem) -> Tuple[str, str]:
+def _doc(item: CompletionItem) -> Optional[Doc]:
     if isinstance(item.documentation, MarkupContent):
-        return item.documentation.value, item.documentation.kind
+        return Doc(text=item.documentation.value, filetype=item.documentation.kind)
     elif isinstance(item.documentation, str):
-        return item.documentation, ""
+        return Doc(text=item.documentation, filetype="")
     elif item.detail:
-        return item.detail, ""
+        return Doc(text=item.detail, filetype="")
     else:
-        return "", ""
+        return None
 
 
 def _parse_item(client: LSPClient, item: CompletionItem) -> Completion:
-    primary = _primary(item)
-    secondaries = tuple(map(_range_edit, item.additionalTextEdits or ()))
-    doc, doc_type = _doc(item)
-
     cmp = Completion(
         source=client.short_name,
         priority=client.priority,
-        primary_edit=primary,
-        secondary_edits=secondaries,
+        primary_edit=_primary(item),
+        secondary_edits=tuple(map(_range_edit, item.additionalTextEdits or ())),
         sort_by=item.filterText or "",
         kind=client.cmp_item_kind.get(cast(Any, item.kind), ""),
         label=item.label,
-        doc=doc,
-        doc_type=doc_type,
+        doc=_doc(item),
     )
     return cmp
 
