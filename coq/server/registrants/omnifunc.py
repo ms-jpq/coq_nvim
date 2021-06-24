@@ -1,5 +1,5 @@
 from concurrent.futures import CancelledError
-from typing import Any, Literal, Mapping, Optional, Sequence, Tuple, TypedDict, Union
+from typing import Any, Literal, Mapping, Optional, Sequence, Tuple, Union
 
 from pynvim import Nvim
 from pynvim.api.common import NvimError
@@ -58,8 +58,8 @@ def comp_func(nvim: Nvim, stack: Stack, manual: bool) -> None:
     prev = stack.state.cur
     stack.state.cur = ctx
     if manual or _should_cont(stack.state.inserted, prev=prev, cur=ctx):
-        _, col = ctx.position
-        complete(nvim, col=col - 1, comp=())
+        # _, col = ctx.position
+        # complete(nvim, col=col - 1, comp=())
         fut = stack.supervisor.collect(ctx, manual=manual)
 
         @timeit(0, "WAIT")
@@ -102,12 +102,27 @@ def _txt_changed(nvim: Nvim, stack: Stack) -> None:
 autocmd("TextChangedI", "TextChangedP") << f"lua {_txt_changed.name}()"
 
 
-class _CompEvent(TypedDict, total=False):
-    user_data: Any
+@rpc(blocking=True)
+def _cmp_changed(
+    nvim: Nvim, stack: Stack, event: Optional[Mapping[str, Any]] = None
+) -> None:
+    if event:
+        data = event["completed_item"].get("user_data")
+        if data:
+            try:
+                user_data: UserData = decode(UserData, data, decoders=BUILTIN_DECODERS)
+            except DecodeError:
+                pass
+            else:
+                if user_data.doc:
+                    pass
+
+
+autocmd("CompleteChanged") << f"lua {_cmp_changed.name}(vim.v.event)"
 
 
 @rpc(blocking=True)
-def _comp_done(nvim: Nvim, stack: Stack, event: _CompEvent) -> None:
+def _comp_done(nvim: Nvim, stack: Stack, event: Mapping[str, Any]) -> None:
     data = event.get("user_data")
     if data:
         try:
