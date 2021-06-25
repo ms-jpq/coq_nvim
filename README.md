@@ -2,17 +2,6 @@
 
 Named after the [famous theorem prover](https://coq.inria.fr/)
 
-**WORK IN PROGRESS**
-
-## Built around Fuzzy Searching
-
-## VScode Style Fuzzy Search
-
-Async completion on every keystroke.
-
-Fuzzy search through **nearby** results.
-
-![preview.png](preview/screenshot.png)
 
 ## Advanced Scheduler
 
