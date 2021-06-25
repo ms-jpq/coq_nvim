@@ -25,7 +25,7 @@ from ..registry import pool
 from ..shared.parse import is_word, lower
 from ..shared.settings import Options, Weights
 from ..shared.timeit import timeit
-from ..shared.types import Completion, Context
+from ..shared.types import Completion, Context, SnippetEdit
 from .model.buffers.database import BDB, SqlMetrics
 
 _M = Tuple[Completion, Weights]
@@ -122,7 +122,7 @@ def _cum(adjustment: Weights, weights: Iterable[Weights]) -> Weights:
         for key, val in asdict(weight).items():
             acc[key] += val
     for key, val in asdict(adjustment).items():
-        acc[key] *= val
+        acc[key] /= val
     return Weights(**acc)
 
 
@@ -137,7 +137,9 @@ def _sort_by(cum: Weights) -> Callable[[_M], Any]:
         )
         return (
             -round(tot * 1000),
-            (-len(cmp.secondary_edits), -(cmp.doc is not None)),
+            -len(cmp.secondary_edits),
+            -(cmp.doc is not None),
+            -isinstance(cmp.primary_edit, SnippetEdit),
             strxfrm(cmp.sort_by or cmp.primary_edit.new_text),
         )
 
