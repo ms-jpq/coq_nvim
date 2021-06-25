@@ -1,7 +1,8 @@
 from contextlib import closing
 from itertools import count
 from locale import strcoll
-from sqlite3 import Connection, Cursor, Row
+from sqlite3 import Connection, Cursor, OperationalError, Row
+from threading import Lock
 from typing import Iterable, Iterator, Mapping, MutableSet, Sequence, TypedDict
 
 from std2.sqllite3 import escape, with_transaction
@@ -49,10 +50,15 @@ def _ensure_ft(cursor: Cursor, filetypes: Iterable[str]) -> None:
 
 class SDB:
     def __init__(self) -> None:
+        self._lock = Lock()
         self._ex = Executor(pool)
         self._conn: Connection = self._ex.submit(_init)
         self._seen: MutableSet[str] = set()
         self._count = count()
+
+    def _interrupt(self) -> None:
+        with self._lock:
+            self._conn.interrupt()
 
     def add_exts(self, exts: Mapping[str, Iterable[str]]) -> None:
         def it() -> Iterator[Mapping]:
@@ -61,7 +67,7 @@ class SDB:
                     yield {"src": src, "dest": dest}
 
         def cont() -> None:
-            with closing(self._conn.cursor()) as cursor:
+            with self._lock, closing(self._conn.cursor()) as cursor:
                 with with_transaction(cursor):
                     _ensure_ft(cursor, filetypes=exts)
                     cursor.executemany(sql("insert", "extension"), it())
@@ -72,7 +78,7 @@ class SDB:
         def cont() -> None:
             if filetype not in self._seen:
                 self._seen.add(filetype)
-                with closing(self._conn.cursor()) as cursor:
+                with self._lock, closing(self._conn.cursor()) as cursor:
                     with with_transaction(cursor):
                         _ensure_ft(cursor, filetypes=(filetype,))
                         for row_id, snippet in zip(self._count, snippets):
@@ -124,7 +130,11 @@ class SDB:
                             )
                             yield snip
 
-                    return tuple(c1())
+                    try:
+                        return tuple(c1())
+                    except OperationalError:
+                        return ()
 
+        self._interrupt()
         return self._ex.submit(cont)
 

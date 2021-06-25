@@ -1,8 +1,9 @@
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import closing
 from locale import strcoll
-from sqlite3 import Connection, Row
+from sqlite3 import Connection, Cursor, OperationalError, Row
 from string import Template
+from threading import Lock
 from typing import Iterator, Mapping, Sequence
 
 from std2.sqllite3 import escape, with_transaction
@@ -32,8 +33,13 @@ def _init() -> Connection:
 
 class Database:
     def __init__(self, pool: ThreadPoolExecutor) -> None:
+        self._lock = Lock()
         self._ex = Executor(pool)
         self._conn: Connection = self._ex.submit(_init)
+
+    def _interrupt(self) -> None:
+        with self._lock:
+            self._conn.interrupt()
 
     def periodical(self, panes: Mapping[str, Sequence[str]]) -> None:
         def cont() -> None:
@@ -45,7 +51,7 @@ class Database:
                             "word": word,
                         }
 
-            with closing(self._conn.cursor()) as cursor:
+            with self._lock, closing(self._conn.cursor()) as cursor:
                 with with_transaction(cursor):
                     template = Template(sql("delete", "words"))
                     instruction = template.substitute(
@@ -66,7 +72,11 @@ class Database:
                         "word": word,
                     },
                 )
-                return tuple(row["word"] for row in cursor.fetchall())
+                try:
+                    return tuple(row["word"] for row in cursor.fetchall())
+                except OperationalError:
+                    return ()
 
+        self._interrupt()
         return self._ex.submit(cont)
 
