@@ -1,5 +1,6 @@
 from os import environ, name
 from pathlib import Path
+
 TOP_LEVEL = Path(__file__).resolve().parent.parent
 REQUIREMENTS = TOP_LEVEL / "requirements.txt"
 
@@ -23,6 +24,7 @@ SETTINGS_VAR = "coq_settings"
 
 
 DEBUG = "COQ_DEBUG" in environ
+DEBUG_METRICS = "COQ_DEBUG_METRICS" in environ
 _DEBUG_DB = "COQ_DEBUG_DB" in environ
 
 BUFFERS_DB = str(TMP_DIR / "buffers.sqlite3") if _DEBUG_DB else ":memory:"

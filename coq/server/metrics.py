@@ -5,17 +5,30 @@ from itertools import islice
 from locale import strxfrm
 from math import inf
 from pprint import pformat
-from typing import Iterable, Iterator, MutableSequence, Sequence, Tuple, cast
+from string import Template
+from textwrap import dedent
+from typing import (
+    Any,
+    Callable,
+    Iterable,
+    Iterator,
+    MutableSequence,
+    Sequence,
+    Tuple,
+    cast,
+)
 
 from pynvim_pp.logging import log
 
-from ..consts import DEBUG
+from ..consts import DEBUG_METRICS
 from ..registry import pool
 from ..shared.parse import is_word, lower
 from ..shared.settings import Options, Weights
 from ..shared.timeit import timeit
 from ..shared.types import Completion, Context
 from .model.buffers.database import BDB, SqlMetrics
+
+_M = Tuple[Completion, Weights]
 
 
 @dataclass(frozen=True)
@@ -89,7 +102,7 @@ def _metrics(
 
 def _weights(
     metrics: Iterable[Tuple[Completion, SqlMetrics, _MatchMetrics]]
-) -> Iterator[Tuple[Completion, Weights]]:
+) -> Iterator[_M]:
     for cmp, sql, match in metrics:
         weight = Weights(
             consecutive_matches=match.consecutive_matches,
@@ -113,36 +126,42 @@ def _cum(adjustment: Weights, weights: Iterable[Weights]) -> Weights:
     return Weights(**acc)
 
 
-def _sorted(
-    cum: Weights, it: Iterable[Tuple[Completion, Weights]]
-) -> Sequence[Tuple[Completion, Weights]]:
+def _sort_by(cum: Weights) -> Callable[[_M], Any]:
     adjustment = asdict(cum)
 
-    def key_by(single: Tuple[Completion, Weights]) -> Tuple[int, int, str]:
+    def key_by(single: _M) -> Tuple[int, int, str]:
         cmp, weight = single
         tot = sum(
             val / adjustment[key] if adjustment[key] else 0
             for key, val in asdict(weight).items()
         )
         return (
-            -round(tot * 3),
+            -round(tot * 1000),
             -cmp.priority,
             strxfrm(cmp.sort_by or cmp.primary_edit.new_text),
         )
 
-    return sorted(it, key=key_by)
+    return key_by
 
 
-def _debug_log(ordered: Sequence[Tuple[Completion, Weights]]) -> None:
-    if DEBUG:
+def _debug_log(
+    key_by: Callable[[_M], Any],
+    cum: Weights,
+    ordered: Sequence[_M],
+) -> None:
+    def cont() -> Iterator[Any]:
+        for cmp, weight in islice(ordered, 20):
+            word = cmp.sort_by or cmp.primary_edit.new_text
+            yield word, weight, key_by((cmp, weight))
 
-        def cont() -> Iterator[Tuple[str, Weights]]:
-            for cmp, weight in islice(ordered, 10):
-                word = cmp.sort_by or cmp.primary_edit.new_text
-                yield word, weight
-
-        msg = pformat(tuple(cont()))
-        log.debug("%s", msg)
+    t = f"""
+    {"#" * 20}
+    $cum
+    $rows
+    {"#" * 20}
+    """
+    msg = Template(dedent(t)).substitute(cum=pformat(cum), rows=pformat(tuple(cont())))
+    log.debug("%s", msg)
 
 
 def rank(
@@ -177,7 +196,9 @@ def rank(
     with timeit("RANK :: SORT"):
         individual = tuple(_weights(metrics))
         cum = _cum(weights, weights=(w for _, w in individual))
-        ordered = _sorted(cum, it=individual)
-        _debug_log(ordered)
+        key_by = _sort_by(cum)
+        ordered = sorted(individual, key=key_by)
+        if DEBUG_METRICS:
+            _debug_log(key_by, cum=cum, ordered=ordered)
         return (c for c, _ in ordered)
 
