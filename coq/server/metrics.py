@@ -1,10 +1,15 @@
 from concurrent.futures import FIRST_EXCEPTION, Future, wait
 from dataclasses import asdict, dataclass
 from difflib import SequenceMatcher
+from itertools import islice
 from locale import strxfrm
 from math import inf
+from pprint import pformat
 from typing import Iterable, Iterator, MutableSequence, Sequence, Tuple, cast
 
+from pynvim_pp.logging import log
+
+from ..consts import DEBUG
 from ..registry import pool
 from ..shared.parse import is_word, lower
 from ..shared.settings import Options, Weights
@@ -128,6 +133,18 @@ def _sorted(
     return sorted(it, key=key_by)
 
 
+def _debug_log(ordered: Sequence[Tuple[Completion, Weights]]) -> None:
+    if DEBUG:
+
+        def cont() -> Iterator[Tuple[str, Weights]]:
+            for cmp, weight in islice(ordered, 10):
+                word = cmp.sort_by or cmp.primary_edit.new_text
+                yield word, weight
+
+        msg = pformat(tuple(cont()))
+        log.debug("%s", msg)
+
+
 def rank(
     options: Options,
     weights: Weights,
@@ -137,7 +154,9 @@ def rank(
 ) -> Iterator[Completion]:
     def c1() -> Sequence[SqlMetrics]:
         with timeit("RANK :: SQL"):
-            words = tuple(comp.sort_by or comp.primary_edit.new_text for comp in completions)
+            words = tuple(
+                comp.sort_by or comp.primary_edit.new_text for comp in completions
+            )
             row, _ = context.position
             return db.metric(
                 words,
@@ -159,5 +178,6 @@ def rank(
         individual = tuple(_weights(metrics))
         cum = _cum(weights, weights=(w for _, w in individual))
         ordered = _sorted(cum, it=individual)
+        _debug_log(ordered)
         return (c for c, _ in ordered)
 
