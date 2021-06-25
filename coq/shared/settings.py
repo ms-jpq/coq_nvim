@@ -1,12 +1,14 @@
 from dataclasses import dataclass
 from typing import AbstractSet, Any, Literal, Mapping, Optional, Sequence
 
+
 @dataclass(frozen=True)
 class _Pum:
     y_max_len: int
     x_max_len: int
     y_ratio: float
     x_margin: int
+
 
 @dataclass(frozen=True)
 class Display:

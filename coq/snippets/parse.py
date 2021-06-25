@@ -5,7 +5,7 @@ from typing import Iterator, Sequence, Tuple
 from pynvim_pp.logging import log
 
 from ..consts import DEBUG
-from ..shared.trans import trans
+from ..shared.trans import trans, expand_tabs
 from ..shared.types import (
     UTF8,
     Context,
@@ -71,11 +71,8 @@ def parse(
     row, _ = context.position
     parser = lsp_parser if snippet.grammar == "lsp" else snu_parser
 
-    text = (
-        snippet.new_text.replace("\t", " " * env.tabstop)
-        if env.expandtab
-        else snippet.new_text.replace(" " * env.tabstop, "\t")
-    )
+    
+    text = expand_tabs(env, text=snippet.new_text)
     parsed = parser(context, snippet=text)
     if DEBUG:
         _log_parsed(parsed)

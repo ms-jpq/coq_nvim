@@ -5,9 +5,8 @@ from pynvim import Nvim
 from pynvim.api import Buffer, NvimError
 from pynvim_pp.api import buf_filetype, buf_get_option, buf_name, cur_buf, list_bufs
 
-from coq.server.context import edit_env
-
 from ...registry import atomic, autocmd, rpc
+from ...server.context import edit_env
 from ..runtime import Stack
 
 

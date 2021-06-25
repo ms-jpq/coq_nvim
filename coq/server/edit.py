@@ -65,7 +65,7 @@ def _lines(lines: Sequence[str]) -> _Lines:
 
 
 def _rows_to_fetch(
-    pos: NvimPos, env: EditEnv, edit: ApplicableEdit, *edits: ApplicableEdit
+    pos: NvimPos, edit: ApplicableEdit, *edits: ApplicableEdit, env: EditEnv
 ) -> Tuple[int, int]:
     row, _ = pos
 
@@ -372,7 +372,10 @@ def edit(nvim: Nvim, stack: Stack, data: UserData) -> None:
             else (data.primary_edit, ())
         )
         lo, hi = _rows_to_fetch(
-            ctx.position, env=stack.state.env, edit=primary, *data.secondary_edits
+            ctx.position,
+            primary,
+            *data.secondary_edits,
+            env=stack.state.env,
         )
         limited_lines = buf_get_lines(nvim, buf=buf, lo=lo, hi=hi)
         lines = tuple(chain(repeat("", times=lo), limited_lines))

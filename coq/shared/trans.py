@@ -1,7 +1,7 @@
 from itertools import accumulate
 
 from .parse import lower
-from .types import ContextualEdit, Edit
+from .types import ContextualEdit, Edit, EditEnv
 
 
 def _match(lhs: bool, existing: str, insertion: str) -> str:
@@ -31,4 +31,14 @@ def trans(line_before: str, line_after: str, edit: Edit) -> ContextualEdit:
         old_suffix=line_after[: len(r_match)],
     )
     return c_edit
+
+
+def expand_tabs(env: EditEnv, text: str) -> str:
+
+    new_text = (
+        text.replace("\t", " " * env.tabstop)
+        if env.expandtab
+        else text.replace(" " * env.tabstop, "\t")
+    )
+    return new_text
 

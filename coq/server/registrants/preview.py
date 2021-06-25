@@ -19,7 +19,8 @@ from std2.pickle.coders import BUILTIN_DECODERS
 from ...registry import autocmd, rpc
 from ...shared.nvim.completions import VimCompletion
 from ...shared.timeit import timeit
-from ...shared.types import UTF8, Doc
+from ...shared.trans import expand_tabs
+from ...shared.types import UTF8, Doc, EditEnv
 from ..runtime import Stack
 from ..types import UserData
 
@@ -133,8 +134,9 @@ def _set_win(nvim: Nvim, buf: Buffer, pos: _Pos) -> None:
     win_set_var(nvim, win=win, key=_FLOAT_WIN_UUID, val=True)
 
 
-def _preview(nvim: Nvim, event: _Event, doc: Doc) -> None:
-    lines = doc.text.splitlines()
+def _preview(nvim: Nvim, env: EditEnv, event: _Event, doc: Doc) -> None:
+    text = expand_tabs(env, text=doc.text)
+    lines = text.splitlines()
     pos, *_ = sorted(
         _positions(nvim, event=event, lines=lines),
         key=lambda p: p.height * p.width,
@@ -160,7 +162,7 @@ def _cmp_changed(nvim: Nvim, stack: Stack, event: Mapping[str, Any] = {}) -> Non
             pass
         else:
             if data and data.doc and data.doc.text:
-                _preview(nvim, event=ev, doc=data.doc)
+                _preview(nvim, env=stack.state.env, event=ev, doc=data.doc)
 
 
 _LUA = f"""
