@@ -48,7 +48,6 @@
     COQts_req = function(request_id, pos)
       vim.schedule(
         function()
-          local row, col = unpack(pos)
           local acc = {}
           if parsers.has_parser() then
             for payload in parse() do
