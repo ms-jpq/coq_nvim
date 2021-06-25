@@ -4,7 +4,7 @@ from locale import strcoll
 from sqlite3 import Connection, OperationalError, Row
 from sqlite3.dbapi2 import Cursor
 from threading import Lock
-from typing import AbstractSet, Iterable, Iterator, Mapping, Sequence, TypedDict
+from typing import AbstractSet, Iterator, Mapping, Sequence, TypedDict
 
 from std2.sqllite3 import escape, with_transaction
 
