@@ -12,6 +12,7 @@ from ....consts import BUFFERS_DB
 from ....registry import pool
 from ....shared.executor import Executor
 from ....shared.parse import coalesce, lower, normalize
+from ....shared.timeit import timeit
 from .sql import sql
 
 
@@ -88,13 +89,14 @@ class BDB:
                             "line_num": line_num,
                         }
 
-            with self._lock, closing(self._conn.cursor()) as cursor:
-                with with_transaction(cursor):
-                    _ensure_file(cursor, file=file, filetype=filetype)
-                    cursor.execute(
-                        sql("delete", "words"), {"filename": file, "lo": lo, "hi": hi}
-                    )
-                    cursor.executemany(sql("insert", "words"), it())
+            with timeit("SQL -- SETLINES"):
+                with self._lock, closing(self._conn.cursor()) as cursor:
+                    with with_transaction(cursor):
+                        _ensure_file(cursor, file=file, filetype=filetype)
+                        cursor.execute(
+                            sql("delete", "words"), {"filename": file, "lo": lo, "hi": hi}
+                        )
+                        cursor.executemany(sql("insert", "words"), it())
 
         self._interrupt()
         self._ex.submit(cont)
