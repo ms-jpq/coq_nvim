@@ -15,8 +15,8 @@ from std2.types import AnyFun
 from ._registry import ____
 from .consts import DEBUG
 from .registry import atomic, autocmd, event_queue, pool, rpc
-from .server.registrants.options import set_options
 from .server.registrants.attachment import BUF_EVENTS
+from .server.registrants.options import set_options
 from .server.runtime import Stack, stack
 
 if DEBUG:
@@ -40,7 +40,8 @@ class CoqClient(Client):
             return handler(nvim, self._stack, *a)
 
     def on_msg(self, nvim: Nvim, msg: RpcMsg) -> Any:
-        if not self._stack:
+        name, _ = msg
+        if not self._stack or name.startswith("nvim_buf_"):
             event_queue.put(msg)
             return None
         else:

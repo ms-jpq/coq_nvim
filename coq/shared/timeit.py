@@ -24,7 +24,7 @@ def timeit(name: str, *args: Any) -> Iterator[None]:
         label = name.ljust(16)
         time = f"{si_prefixed_smol(delta, precision=0)}s".ljust(8)
         ttime = f"{si_prefixed_smol(c / t, precision=0)}s".ljust(8)
-        msg = f"TIME -- {label} :: {time} & {ttime} {' '.join(args)}"
+        msg = f"TIME -- {label} :: {time} @ {ttime} {' '.join(args)}"
         log.debug("%s", msg)
     else:
         yield None

@@ -64,18 +64,18 @@ class Database:
 
     def select(self, word: str, active_pane: str) -> Sequence[str]:
         def cont() -> Sequence[str]:
-            with closing(self._conn.cursor()) as cursor:
-                cursor.execute(
-                    sql("select", "words"),
-                    {
-                        "pane_id": active_pane,
-                        "word": word,
-                    },
-                )
-                try:
-                    return tuple(row["word"] for row in cursor.fetchall())
-                except OperationalError:
-                    return ()
+            try:
+                with closing(self._conn.cursor()) as cursor:
+                    cursor.execute(
+                        sql("select", "words"),
+                        {
+                            "pane_id": active_pane,
+                            "word": word,
+                        },
+                    )
+                return tuple(row["word"] for row in cursor.fetchall())
+            except OperationalError:
+                return ()
 
         self._interrupt()
         return self._ex.submit(cont)
