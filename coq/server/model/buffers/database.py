@@ -98,7 +98,6 @@ class BDB:
                         )
                         cursor.executemany(sql("insert", "words"), it())
 
-        self._interrupt()
         self._ex.submit(cont)
 
     def inserted(
