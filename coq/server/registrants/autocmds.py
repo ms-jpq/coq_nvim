@@ -1,11 +1,10 @@
-from asyncio.events import Handle, get_running_loop
-from typing import Any, Mapping, Optional, Sequence
+from typing import Any, Mapping, Sequence
 
 from pynvim.api.nvim import Nvim
 from pynvim_pp.api import buf_filetype, buf_name, cur_buf
 from std2.pickle import decode
 
-from ...registry import atomic, autocmd, enqueue_event, rpc
+from ...registry import atomic, autocmd, rpc
 from ...snippets.types import ParsedSnippet
 from ..runtime import Stack
 
