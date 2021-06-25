@@ -1,6 +1,10 @@
 from itertools import accumulate, chain, repeat
+from pprint import pformat
 from typing import Iterator, Sequence, Tuple
 
+from pynvim_pp.logging import log
+
+from ..consts import DEBUG
 from ..shared.trans import trans
 from ..shared.types import (
     UTF8,
@@ -56,6 +60,11 @@ def _marks(
         yield mark
 
 
+def _log_parsed(parsed: Parsed) -> None:
+    msg = pformat(parsed)
+    log.debug("%s", msg)
+
+
 def parse(
     context: Context, env: EditEnv, snippet: SnippetEdit, sort_by: str
 ) -> Tuple[ContextualEdit, Sequence[Mark]]:
@@ -68,6 +77,8 @@ def parse(
         else snippet.new_text.replace(" " * env.tabstop, "\t")
     )
     parsed = parser(context, snippet=text)
+    if DEBUG:
+        _log_parsed(parsed)
 
     old_prefix, old_suffix = _before_after(context, text=sort_by + parsed.text)
     indent = _indent(env, old_prefix=old_prefix, line_before=context.line_before)
