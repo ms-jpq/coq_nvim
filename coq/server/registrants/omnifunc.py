@@ -37,7 +37,7 @@ def _cmp(nvim: Nvim, stack: Stack, completions: Sequence[Completion]) -> None:
     ctx = stack.state.cur
     if ctx:
         _, col = ctx.position
-        with timeit(0, "RANK"):
+        with timeit("RANK"):
             comp = trans(nvim, stack=stack, context=ctx, completions=completions)
             complete(nvim, col=col, comp=comp)
             stack.state.commit = ctx.uid
@@ -62,7 +62,7 @@ def _comp_func(nvim: Nvim, stack: Stack, manual: bool, pum_open: bool) -> None:
         complete(nvim, col=col - 1, comp=())
         fut = stack.supervisor.collect(ctx, manual=manual)
 
-        @timeit(0, "WAIT")
+        @timeit("WAIT")
         def cont() -> None:
             try:
                 try:
@@ -95,7 +95,7 @@ def omnifunc(
 
 @rpc(blocking=True)
 def _txt_changed(nvim: Nvim, stack: Stack, pum_open: bool) -> None:
-    with timeit(0, "BEGIN"):
+    with timeit("BEGIN"):
         _comp_func(nvim, stack=stack, manual=False, pum_open=pum_open)
 
 

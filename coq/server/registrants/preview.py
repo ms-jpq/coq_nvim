@@ -150,7 +150,7 @@ def _preview(nvim: Nvim, event: _Event, doc: Doc) -> None:
 @rpc(blocking=True)
 def _cmp_changed(nvim: Nvim, stack: Stack, event: Mapping[str, Any] = {}) -> None:
     _kill_win(nvim, stack=stack)
-    with timeit(0, "PREVIEW"):
+    with timeit("PREVIEW"):
         try:
             ev: _Event = decode(_Event, event)
             data: UserData = decode(

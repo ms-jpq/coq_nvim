@@ -7,12 +7,11 @@ from std2.timeit import timeit as _timeit
 
 
 @contextmanager
-def timeit(threshold: float, name: str, *args: Any) -> Iterator[None]:
+def timeit(name: str, *args: Any) -> Iterator[None]:
     with _timeit() as t:
         yield None
     delta = t()
-    time = si_prefixed_smol(delta, precision=3)
-    if delta > threshold:
-        msg = f"TIME -- {name.ljust(9)} :: {time} {' '.join(args)}"
-        log.debug("%s", msg)
+    time = f"{si_prefixed_smol(delta)}s".ljust(8)
+    msg = f"TIME -- {name.ljust(9)} :: {time} {' '.join(args)}"
+    log.debug("%s", msg)
 
