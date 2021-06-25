@@ -33,6 +33,7 @@ class Worker(BaseWorker[SnippetClient, SDB]):
                     tie_breaker=self._options.tie_breaker,
                     primary_edit=edit,
                     sort_by=snip["prefix"],
+                    label=f"({snip['prefix']}) {snip['label'] or edit.new_text}",
                     doc=doc,
                 )
                 yield completion
