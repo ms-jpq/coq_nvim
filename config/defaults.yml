@@ -35,22 +35,27 @@ clients:
   tree_sitter:
     enabled: True
     short_name: "TS"
+    tie_breaker: 50
   lsp:
     enabled: True
     short_name: "LSP"
+    tie_breaker: 60
   buffers:
     enabled: True
     short_name: "BUF"
     match_syms: False
+    tie_breaker: 20
   paths:
     enabled: True
     short_name: "FILE"
+    tie_breaker: 30
   snippets:
     enabled: True
     short_name: "SNIP"
+    tie_breaker: 40
   tmux:
     enabled: True
     short_name: "TMUX"
     match_syms: False
     polling_interval: 1.0
-
+    tie_breaker: 10

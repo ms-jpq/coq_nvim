@@ -47,6 +47,7 @@ class KeyMapping:
 class BaseClient:
     enabled: bool
     short_name: str
+    tie_breaker: int
 
 
 @dataclass(frozen=True)

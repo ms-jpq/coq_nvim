@@ -58,6 +58,7 @@ class Worker(BaseWorker[BaseClient, None]):
                 edit = Edit(new_text=new_text)
                 completion = Completion(
                     source=self._options.short_name,
+                    tie_breaker=self._options.tie_breaker,
                     primary_edit=edit,
                     label=new_text,
                 )

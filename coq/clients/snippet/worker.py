@@ -30,6 +30,7 @@ class Worker(BaseWorker[SnippetClient, SDB]):
                 )
                 completion = Completion(
                     source=self._options.short_name,
+                    tie_breaker=self._options.tie_breaker,
                     primary_edit=edit,
                     sort_by=snip["prefix"],
                     doc=doc,

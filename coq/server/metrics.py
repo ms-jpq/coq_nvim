@@ -140,6 +140,7 @@ def _sort_by(cum: Weights) -> Callable[[_M], Any]:
             -len(cmp.secondary_edits),
             -(cmp.doc is not None),
             -isinstance(cmp.primary_edit, SnippetEdit),
+            -cmp.tie_breaker,
             strxfrm(cmp.sort_by or cmp.primary_edit.new_text),
         )
 

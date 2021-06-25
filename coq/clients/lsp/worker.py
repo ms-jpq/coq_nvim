@@ -48,6 +48,7 @@ def _doc(item: CompletionItem) -> Optional[Doc]:
 def _parse_item(client: LSPClient, item: CompletionItem) -> Completion:
     cmp = Completion(
         source=client.short_name,
+        tie_breaker=client.tie_breaker,
         primary_edit=_primary(item),
         secondary_edits=tuple(map(_range_edit, item.additionalTextEdits or ())),
         sort_by=item.filterText or "",
