@@ -1,4 +1,5 @@
 from contextlib import closing
+from itertools import repeat
 from locale import strcoll
 from sqlite3 import Connection, OperationalError, Row
 from sqlite3.dbapi2 import Cursor
@@ -18,6 +19,9 @@ class SqlMetrics(TypedDict):
     insertion_order: int
     ft_count: int
     line_diff: int
+
+
+_NUL_METRIC = SqlMetrics(insertion_order=0, ft_count=0, line_diff=0)
 
 
 def _ensure_file(cursor: Cursor, file: str, filetype: str) -> None:
@@ -120,7 +124,7 @@ class BDB:
 
     def metric(
         self,
-        words: Iterable[str],
+        words: Sequence[str],
         filetype: str,
         filename: str,
         line_num: int,
@@ -150,7 +154,7 @@ class BDB:
             try:
                 return tuple(c2())
             except OperationalError:
-                return ()
+                return tuple(repeat(_NUL_METRIC, times=len(words)))
 
         return self._ex.submit(cont)
 

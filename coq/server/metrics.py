@@ -137,7 +137,7 @@ def rank(
 ) -> Iterator[Completion]:
     def c1() -> Sequence[SqlMetrics]:
         with timeit("RANK :: SQL"):
-            words = (comp.sort_by or comp.primary_edit.new_text for comp in completions)
+            words = tuple(comp.sort_by or comp.primary_edit.new_text for comp in completions)
             row, _ = context.position
             return db.metric(
                 words,
