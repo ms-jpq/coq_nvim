@@ -109,7 +109,7 @@ class SDB:
 
     def select(self, filetype: str, word: str) -> Sequence[_Snip]:
         def cont() -> Sequence[_Snip]:
-            try:
+            def c1() -> Iterator[_Snip]:
                 with closing(self._conn.cursor()) as cursor:
                     with with_transaction(cursor):
                         cursor.execute(
@@ -117,23 +117,22 @@ class SDB:
                             {"filetype": filetype, "word": word},
                         )
 
-                        def c1() -> Iterator[_Snip]:
-                            for row in cursor.fetchall():
-                                cursor.execute(
-                                    sql("select", "matches"),
-                                    {"snippet_id": row["snippet_id"], "word": word},
-                                )
-                                snip = _Snip(
-                                    grammar=row["grammar"],
-                                    prefix=cursor.fetchone()["match"],
-                                    snippet=row["content"],
-                                    label=row["label"],
-                                    doc=row["doc"],
-                                )
-                                yield snip
+                        for row in cursor.fetchall():
+                            cursor.execute(
+                                sql("select", "matches"),
+                                {"snippet_id": row["snippet_id"], "word": word},
+                            )
+                            snip = _Snip(
+                                grammar=row["grammar"],
+                                prefix=cursor.fetchone()["match"],
+                                snippet=row["content"],
+                                label=row["label"],
+                                doc=row["doc"],
+                            )
+                            yield snip
 
-                        return tuple(c1())
-
+            try:
+                return tuple(c1())
             except OperationalError:
                 return ()
 
