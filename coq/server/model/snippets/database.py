@@ -3,7 +3,7 @@ from itertools import count
 from locale import strcoll
 from sqlite3 import Connection, Cursor, OperationalError, Row
 from threading import Lock
-from typing import Iterable, Iterator, Mapping, MutableSet, Sequence, TypedDict
+from typing import Iterable, Iterator, Mapping, Sequence, TypedDict
 
 from std2.sqllite3 import escape, with_transaction
 
@@ -53,7 +53,6 @@ class SDB:
         self._lock = Lock()
         self._ex = Executor(pool)
         self._conn: Connection = self._ex.submit(_init)
-        self._seen: MutableSet[str] = set()
         self._count = count()
 
     def _interrupt(self) -> None:
@@ -78,34 +77,31 @@ class SDB:
         def cont() -> None:
             with self._lock, closing(self._conn.cursor()) as cursor:
                 for filetype, snippets in mapping.items():
-                    if filetype not in self._seen:
-                        self._seen.add(filetype)
+                    with with_transaction(cursor):
+                        _ensure_ft(cursor, filetypes=(filetype,))
+                        for row_id, snippet in zip(self._count, snippets):
+                            cursor.execute(
+                                sql("insert", "snippet"),
+                                {
+                                    "rowid": row_id,
+                                    "filetype": filetype,
+                                    "grammar": snippet.grammar,
+                                    "content": snippet.content,
+                                    "label": snippet.label,
+                                    "doc": snippet.doc,
+                                },
+                            )
 
-                        with with_transaction(cursor):
-                            _ensure_ft(cursor, filetypes=(filetype,))
-                            for row_id, snippet in zip(self._count, snippets):
+                            for match in snippet.matches:
                                 cursor.execute(
-                                    sql("insert", "snippet"),
-                                    {
-                                        "rowid": row_id,
-                                        "filetype": filetype,
-                                        "grammar": snippet.grammar,
-                                        "content": snippet.content,
-                                        "label": snippet.label,
-                                        "doc": snippet.doc,
-                                    },
+                                    sql("insert", "match"),
+                                    {"snippet_id": row_id, "match": match},
                                 )
-
-                                for match in snippet.matches:
-                                    cursor.execute(
-                                        sql("insert", "match"),
-                                        {"snippet_id": row_id, "match": match},
-                                    )
-                                for option in snippet.options:
-                                    cursor.execute(
-                                        sql("insert", "option"),
-                                        {"snippet_id": row_id, "option": option.name},
-                                    )
+                            for option in snippet.options:
+                                cursor.execute(
+                                    sql("insert", "option"),
+                                    {"snippet_id": row_id, "option": option.name},
+                                )
 
         self._ex.submit(cont)
 

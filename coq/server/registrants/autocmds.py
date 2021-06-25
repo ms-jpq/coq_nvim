@@ -1,5 +1,5 @@
 from itertools import chain
-from typing import Any, Mapping, Sequence
+from typing import Any, Mapping, MutableSet, Sequence
 
 from pynvim.api.nvim import Nvim
 from pynvim_pp.api import buf_filetype, buf_name, cur_buf
@@ -18,6 +18,8 @@ def _dir_changed(nvim: Nvim, stack: Stack, event: Mapping[str, Any]) -> None:
 
 autocmd("DirChanged") << f"lua {_dir_changed.name}(vim.v.event)"
 
+_SEEN: MutableSet[str] = set()
+
 
 @rpc(blocking=True)
 def _ft_changed(nvim: Nvim, stack: Stack) -> None:
@@ -25,14 +27,16 @@ def _ft_changed(nvim: Nvim, stack: Stack) -> None:
     name = buf_name(nvim, buf=buf)
     ft = buf_filetype(nvim, buf=buf)
 
-    snippets = stack.settings.clients.snippets
-    mappings = {
-        f: decode(Sequence[ParsedSnippet], snippets.snippets.get(f, ()))
-        for f in chain(snippets.extends.get(ft, {}).keys(), (ft,))
-    }
-
     stack.bdb.ft_update(name, filetype=ft)
-    stack.sdb.populate(mappings)
+
+    if ft not in _SEEN:
+        _SEEN.add(ft)
+        snippets = stack.settings.clients.snippets
+        mappings = {
+            f: decode(Sequence[ParsedSnippet], snippets.snippets.get(f, ()))
+            for f in chain(snippets.extends.get(ft, {}).keys(), (ft,))
+        }
+        stack.sdb.populate(mappings)
 
 
 autocmd("FileType") << f"lua {_ft_changed.name}()"
