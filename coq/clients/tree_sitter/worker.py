@@ -65,7 +65,6 @@ class Worker(BaseWorker[BaseClient, None]):
                     edit = Edit(new_text=payload.text)
                     cmp = Completion(
                         source=self._options.short_name,
-                        priority=self._options.priority,
                         primary_edit=edit,
                     )
                     yield cmp

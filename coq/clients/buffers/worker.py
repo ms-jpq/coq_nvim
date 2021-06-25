@@ -3,15 +3,13 @@ from typing import Iterator, Sequence
 from ...server.model.buffers.database import BDB
 from ...shared.runtime import Worker as BaseWorker
 from ...shared.settings import WordbankClient
-from ...shared.types import Completion, Context, Edit
 from ...shared.timeit import timeit
+from ...shared.types import Completion, Context, Edit
 
 
 def _comp(client: WordbankClient, word: str) -> Completion:
     edit = Edit(new_text=word)
-    cmp = Completion(
-        source=client.short_name, priority=client.priority, primary_edit=edit
-    )
+    cmp = Completion(source=client.short_name, primary_edit=edit)
     return cmp
 
 

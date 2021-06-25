@@ -45,7 +45,6 @@ class KeyMapping:
 class BaseClient:
     enabled: bool
     short_name: str
-    priority: int
 
 
 @dataclass(frozen=True)

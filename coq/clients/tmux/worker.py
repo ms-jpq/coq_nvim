@@ -70,9 +70,7 @@ def _screenshot(unifying_chars: AbstractSet[str], uid: str) -> Sequence[str]:
 
 def _comp(client: PollingClient, word: str) -> Completion:
     edit = Edit(new_text=word)
-    cmp = Completion(
-        source=client.short_name, priority=client.priority, primary_edit=edit
-    )
+    cmp = Completion(source=client.short_name, primary_edit=edit)
     return cmp
 
 

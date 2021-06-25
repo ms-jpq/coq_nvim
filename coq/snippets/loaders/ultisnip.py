@@ -1,7 +1,7 @@
 from enum import Enum, auto
 from os import linesep
 from pathlib import Path
-from typing import AbstractSet, MutableSequence, MutableSet, Optional, Tuple
+from typing import AbstractSet, MutableSequence, MutableSet, Tuple
 
 from ..types import MetaSnippets, Options, ParsedSnippet
 from .parse import opt_parse, raise_err

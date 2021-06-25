@@ -96,7 +96,6 @@ class Doc:
 @dataclass(frozen=True)
 class Completion:
     source: str
-    priority: int
     primary_edit: PrimaryEdit
     secondary_edits: Sequence[RangeEdit] = ()
     sort_by: str = ""

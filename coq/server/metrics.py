@@ -129,7 +129,7 @@ def _cum(adjustment: Weights, weights: Iterable[Weights]) -> Weights:
 def _sort_by(cum: Weights) -> Callable[[_M], Any]:
     adjustment = asdict(cum)
 
-    def key_by(single: _M) -> Tuple[int, int, str]:
+    def key_by(single: _M) -> Any:
         cmp, weight = single
         tot = sum(
             val / adjustment[key] if adjustment[key] else 0
@@ -137,7 +137,7 @@ def _sort_by(cum: Weights) -> Callable[[_M], Any]:
         )
         return (
             -round(tot * 1000),
-            -cmp.priority,
+            (-len(cmp.secondary_edits), -(cmp.doc is not None)),
             strxfrm(cmp.sort_by or cmp.primary_edit.new_text),
         )
 

@@ -13,20 +13,19 @@ from std2.pickle import DecodeError
 from std2.types import AnyFun
 
 from ._registry import ____
-from .consts import DEBUG
+from .consts import DEBUG, DEBUG_METRICS
 from .registry import atomic, autocmd, event_queue, pool, rpc
 from .server.registrants.attachment import BUF_EVENTS
 from .server.registrants.options import set_options
 from .server.runtime import Stack, stack
-
-if DEBUG:
-    log.setLevel(DEBUG_LV)
 
 
 class CoqClient(Client):
     def __init__(self) -> None:
         self._handlers: MutableMapping[str, RpcCallable] = {}
         self._stack: Optional[Stack] = None
+        if DEBUG or DEBUG_METRICS:
+            log.setLevel(DEBUG_LV)
 
     def _handle(self, nvim: Nvim, msg: RpcMsg) -> Any:
         name, args = msg
