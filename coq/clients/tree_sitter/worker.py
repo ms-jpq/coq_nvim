@@ -55,7 +55,7 @@ class Worker(BaseWorker[BaseClient, None]):
     def work(self, context: Context) -> Iterator[Sequence[Completion]]:
         match = lower(context.words or context.syms)
         reply = self._req(context.position)
-        resp: Msg = decode(Msg, reply)
+        resp: Msg = decode(Msg, reply or ())
 
         def cont() -> Iterator[Completion]:
             for payload in resp:
