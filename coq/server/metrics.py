@@ -8,6 +8,7 @@ from typing import Iterable, Iterator, MutableSequence, Sequence, Tuple, cast
 from ..registry import pool
 from ..shared.parse import is_word, lower
 from ..shared.settings import Options, Weights
+from ..shared.timeit import timeit
 from ..shared.types import Completion, Context
 from .model.buffers.database import BDB, SqlMetrics
 
@@ -135,24 +136,28 @@ def rank(
     completions: Sequence[Completion],
 ) -> Iterator[Completion]:
     def c1() -> Sequence[SqlMetrics]:
-        words = (comp.sort_by or comp.primary_edit.new_text for comp in completions)
-        row, _ = context.position
-        return db.metric(
-            words,
-            filetype=context.filetype,
-            filename=context.filename,
-            line_num=row,
-        )
+        with timeit("RANK :: SQL"):
+            words = (comp.sort_by or comp.primary_edit.new_text for comp in completions)
+            row, _ = context.position
+            return db.metric(
+                words,
+                filetype=context.filetype,
+                filename=context.filename,
+                line_num=row,
+            )
 
     def c2() -> Sequence[_MatchMetrics]:
-        return tuple(_metrics(options, context=context, completions=completions))
+        with timeit("RANK :: MAN"):
+            return tuple(_metrics(options, context=context, completions=completions))
 
-    f1, f2 = pool.submit(c1), pool.submit(c2)
-    wait((cast(Future, f1), cast(Future, f2)), return_when=FIRST_EXCEPTION)
-    metrics = zip(completions, f1.result(), f2.result())
+    with timeit("RANK :: T2"):
+        f1, f2 = pool.submit(c1), pool.submit(c2)
+        wait((cast(Future, f1), cast(Future, f2)), return_when=FIRST_EXCEPTION)
+        metrics = zip(completions, f1.result(), f2.result())
 
-    individual = tuple(_weights(metrics))
-    cum = _cum(weights, weights=(w for _, w in individual))
-    ordered = _sorted(cum, it=individual)
-    return (c for c, _ in ordered)
+    with timeit("RANK :: SORT"):
+        individual = tuple(_weights(metrics))
+        cum = _cum(weights, weights=(w for _, w in individual))
+        ordered = _sorted(cum, it=individual)
+        return (c for c, _ in ordered)
 
