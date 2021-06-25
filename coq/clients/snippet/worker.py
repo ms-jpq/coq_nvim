@@ -4,7 +4,7 @@ from ...server.model.snippets.database import SDB
 from ...shared.runtime import Supervisor
 from ...shared.runtime import Worker as BaseWorker
 from ...shared.settings import SnippetClient
-from ...shared.types import Completion, Context, SnippetEdit
+from ...shared.types import Completion, Context, Doc, SnippetEdit
 
 
 class Worker(BaseWorker[SnippetClient, SDB]):
@@ -20,11 +20,19 @@ class Worker(BaseWorker[SnippetClient, SDB]):
 
         def cont() -> Iterator[Completion]:
             for snip in snippets:
-                edit = SnippetEdit(new_text=snip["snippet"], grammar=snip["grammar"])
+                edit = SnippetEdit(
+                    new_text=snip["snippet"],
+                    grammar=snip["grammar"],
+                )
+                doc = Doc(
+                    text=snip["doc"] or edit.new_text,
+                    filetype="",
+                )
                 completion = Completion(
                     source=self._options.short_name,
                     primary_edit=edit,
                     sort_by=snip["prefix"],
+                    doc=doc,
                 )
                 yield completion
 
