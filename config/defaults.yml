@@ -1,11 +1,13 @@
 ---
 display:
-  ellipsis: …
   pum:
     y_max_len: 16
     x_max_len: 66
     y_ratio: 0.3
     x_margin: 16
+    ellipsis: …
+    quote_left: "『 "
+    quote_right: " 』"
 
   mark_highlight_group: Pmenu
 
@@ -59,3 +61,4 @@ clients:
     match_syms: False
     polling_interval: 1.0
     tie_breaker: 10
+

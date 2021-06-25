@@ -5,6 +5,7 @@ from pynvim import Nvim
 from std2.ordinal import clamp
 
 from ..shared.nvim.completions import VimCompletion
+from ..shared.settings import PumDisplay
 from ..shared.types import Completion, Context
 from .metrics import rank
 from .runtime import Stack
@@ -12,12 +13,17 @@ from .types import UserData
 
 
 def _cmp_to_vcmp(
-    context: Context, width: int, ellipsis: str, cmp: Completion
+    pum: PumDisplay,
+    context: Context,
+    width: int,
+    cmp: Completion,
 ) -> VimCompletion:
     abbr = shorten(
-        cmp.label or cmp.primary_edit.new_text, width=width, placeholder=ellipsis
+        cmp.label or cmp.primary_edit.new_text,
+        width=width,
+        placeholder=pum.ellipsis,
     )
-    source = f"[{cmp.source}]"
+    source = f"{pum.quote_left}{cmp.source}{pum.quote_right}"
     menu = f"{cmp.kind} {source}" if cmp.kind else source
     user_data = UserData(
         sort_by=cmp.sort_by,
@@ -58,9 +64,9 @@ def trans(
         if cmp.primary_edit.new_text not in seen:
             seen.add(cmp.primary_edit.new_text)
             yield _cmp_to_vcmp(
-                context,
+                display.pum,
+                context=context,
                 width=truncate,
-                ellipsis=display.ellipsis,
                 cmp=cmp,
             )
 

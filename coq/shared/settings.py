@@ -3,17 +3,20 @@ from typing import AbstractSet, Any, Literal, Mapping, Optional, Sequence
 
 
 @dataclass(frozen=True)
-class _Pum:
+class PumDisplay:
     y_max_len: int
     x_max_len: int
     y_ratio: float
     x_margin: int
 
+    ellipsis: str
+    quote_left: str
+    quote_right: str
+
 
 @dataclass(frozen=True)
 class Display:
-    pum: _Pum
-    ellipsis: str
+    pum: PumDisplay
     mark_highlight_group: str
 
 

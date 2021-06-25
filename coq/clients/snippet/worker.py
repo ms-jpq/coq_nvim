@@ -28,12 +28,13 @@ class Worker(BaseWorker[SnippetClient, SDB]):
                     text=snip["doc"] or edit.new_text,
                     filetype="",
                 )
+                label = f"({snip['prefix']}) {snip['label'] or edit.new_text}"
                 completion = Completion(
                     source=self._options.short_name,
                     tie_breaker=self._options.tie_breaker,
                     primary_edit=edit,
                     sort_by=snip["prefix"],
-                    label=f"({snip['prefix']}) {snip['label'] or edit.new_text}",
+                    label=label,
                     doc=doc,
                 )
                 yield completion
