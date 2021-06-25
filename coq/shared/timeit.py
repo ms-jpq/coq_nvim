@@ -18,12 +18,12 @@ def timeit(name: str, *args: Any) -> Iterator[None]:
         delta = t()
 
         times, cum = _RECORDS.get(name, (0, 0))
-        t, c = times + 1, cum + delta
-        _RECORDS[name] = t, c
+        tt, c = times + 1, cum + delta
+        _RECORDS[name] = tt, c
 
         label = name.ljust(16)
         time = f"{si_prefixed_smol(delta, precision=0)}s".ljust(8)
-        ttime = f"{si_prefixed_smol(c / t, precision=0)}s".ljust(8)
+        ttime = f"{si_prefixed_smol(c / tt, precision=0)}s".ljust(8)
         msg = f"TIME -- {label} :: {time} @ {ttime} {' '.join(args)}"
         log.debug("%s", msg)
     else:

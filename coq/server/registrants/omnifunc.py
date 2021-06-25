@@ -2,7 +2,6 @@ from concurrent.futures import CancelledError
 from typing import Any, Literal, Mapping, Optional, Sequence, Tuple, Union
 
 from pynvim import Nvim
-from pynvim.api.common import NvimError
 from pynvim.api.nvim import Nvim
 from pynvim_pp.logging import log
 from std2.pickle import DecodeError, decode
