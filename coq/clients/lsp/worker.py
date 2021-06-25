@@ -66,9 +66,8 @@ def _parse(client: LSPClient, reply: Any) -> Tuple[bool, Sequence[Completion]]:
         return False, ()
     else:
         if isinstance(resp, CompletionList):
-            return resp.isIncomplete, tuple(
-                _parse_item(client, item=item) for item in resp.items
-            )
+            # TODO -- resp.isIncomplete always True???
+            return False, tuple(_parse_item(client, item=item) for item in resp.items)
         elif isinstance(resp, Sequence):
             return False, tuple(_parse_item(client, item=item) for item in resp)
         else:
