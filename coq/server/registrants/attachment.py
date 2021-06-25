@@ -1,7 +1,8 @@
+from contextlib import suppress
 from typing import Sequence
 
 from pynvim import Nvim
-from pynvim.api import Buffer
+from pynvim.api import Buffer, NvimError
 from pynvim_pp.api import buf_filetype, buf_get_option, buf_name, cur_buf, list_bufs
 
 from ...registry import atomic, autocmd, rpc
@@ -10,10 +11,11 @@ from ..runtime import Stack
 
 @rpc(blocking=True)
 def _buf_new(nvim: Nvim, stack: Stack) -> None:
-    buf = cur_buf(nvim)
-    listed = buf_get_option(nvim, buf=buf, key="buflisted")
-    if listed:
-        nvim.api.buf_attach(buf, True, {})
+    with suppress(NvimError):
+        buf = cur_buf(nvim)
+        listed = buf_get_option(nvim, buf=buf, key="buflisted")
+        if listed:
+            nvim.api.buf_attach(buf, True, {})
 
 
 autocmd("BufEnter") << f"lua {_buf_new.name}()"
@@ -21,8 +23,9 @@ autocmd("BufEnter") << f"lua {_buf_new.name}()"
 
 @rpc(blocking=True)
 def _buf_new_init(nvim: Nvim, stack: Stack) -> None:
-    for buf in list_bufs(nvim, listed=True):
-        nvim.api.buf_attach(buf, True, {})
+    with suppress(NvimError):
+        for buf in list_bufs(nvim, listed=True):
+            nvim.api.buf_attach(buf, True, {})
 
 
 atomic.exec_lua(f"{_buf_new_init.name}()", ())
