@@ -1,7 +1,8 @@
 from contextlib import closing
 from locale import strcoll
-from sqlite3 import Connection, Row
+from sqlite3 import Connection, OperationalError, Row
 from sqlite3.dbapi2 import Cursor
+from threading import Lock
 from typing import AbstractSet, Iterable, Iterator, Mapping, Sequence, TypedDict
 
 from std2.sqllite3 import escape, with_transaction
@@ -45,15 +46,17 @@ def _init() -> Connection:
 
 class BDB:
     def __init__(self) -> None:
+        self._lock = Lock()
         self._ex = Executor(pool)
         self._conn: Connection = self._ex.submit(_init)
 
-    def vaccum(self) -> None:
-        pass
+    def _interrupt(self) -> None:
+        with self._lock:
+            self._conn.interrupt()
 
     def ft_update(self, file: str, filetype: str) -> None:
         def cont() -> None:
-            with closing(self._conn.cursor()) as cursor:
+            with self._lock, closing(self._conn.cursor()) as cursor:
                 with with_transaction(cursor):
                     _ensure_file(cursor, file=file, filetype=filetype)
                     cursor.execute(
@@ -81,7 +84,7 @@ class BDB:
                             "line_num": line_num,
                         }
 
-            with closing(self._conn.cursor()) as cursor:
+            with self._lock, closing(self._conn.cursor()) as cursor:
                 with with_transaction(cursor):
                     _ensure_file(cursor, file=file, filetype=filetype)
                     cursor.execute(
@@ -89,6 +92,7 @@ class BDB:
                     )
                     cursor.executemany(sql("insert", "words"), it())
 
+        self._interrupt()
         self._ex.submit(cont)
 
     def inserted(
@@ -96,7 +100,7 @@ class BDB:
         content: str,
     ) -> None:
         def cont() -> None:
-            with closing(self._conn.cursor()) as cursor:
+            with self._lock, closing(self._conn.cursor()) as cursor:
                 with with_transaction(cursor):
                     cursor.execute(sql("insert", "insertion"), {"content": content})
 
@@ -104,10 +108,14 @@ class BDB:
 
     def suggestions(self, word: str) -> Sequence[str]:
         def cont() -> Sequence[str]:
-            with closing(self._conn.cursor()) as cursor:
-                cursor.execute(sql("select", "words_by_prefix"), {"word": word})
-                return tuple(row["word"] for row in cursor.fetchall())
+            try:
+                with closing(self._conn.cursor()) as cursor:
+                    cursor.execute(sql("select", "words_by_prefix"), {"word": word})
+                    return tuple(row["word"] for row in cursor.fetchall())
+            except OperationalError:
+                return ()
 
+        self._interrupt()
         return self._ex.submit(cont)
 
     def metric(
@@ -139,7 +147,10 @@ class BDB:
                             )
                             yield cursor.fetchone()
 
-            return tuple(c2())
+            try:
+                return tuple(c2())
+            except OperationalError:
+                return ()
 
         return self._ex.submit(cont)
 

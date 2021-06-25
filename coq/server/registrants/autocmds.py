@@ -50,27 +50,3 @@ def _insert_leave(nvim: Nvim, stack: Stack) -> None:
 
 autocmd("InsertLeave") << f"lua {_insert_leave.name}()"
 
-
-@rpc(blocking=True)
-def _vaccum(nvim: Nvim, stack: Stack) -> None:
-    stack.bdb.vaccum()
-
-
-_handle: Optional[Handle] = None
-
-
-@rpc(blocking=True)
-def _cursor_hold(nvim: Nvim, stack: Stack) -> None:
-    global _handle
-    if _handle:
-        _handle.cancel()
-
-    def cont() -> None:
-        enqueue_event(_vaccum)
-
-    loop = get_running_loop()
-    _handle = loop.call_later(0.5, cont)
-
-
-autocmd("CursorHold", "CursorHoldI") << f"lua {_cursor_hold.name}()"
-
