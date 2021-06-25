@@ -1,7 +1,8 @@
 from concurrent.futures import Future, ThreadPoolExecutor
 from dataclasses import dataclass
 from json import loads
-from typing import AbstractSet, Iterator, Optional, Sequence
+from os import linesep
+from typing import AbstractSet, Iterator, Literal, Optional, Sequence, cast
 from uuid import UUID, uuid4
 
 from pynvim import Nvim
@@ -20,7 +21,7 @@ from ..clients.tree_sitter.worker import Worker as TreeWorker
 from ..consts import CONFIG_YML, LSP_ARTIFACTS, SETTINGS_VAR, SNIPPET_ARTIFACTS
 from ..shared.runtime import Supervisor, Worker
 from ..shared.settings import Settings
-from ..shared.types import Context, NvimPos
+from ..shared.types import Context, EditEnv, NvimPos
 from .model.buffers.database import BDB
 from .model.snippets.database import SDB
 
@@ -29,6 +30,7 @@ from .model.snippets.database import SDB
 class _State:
     commit: UUID
     futs: Sequence[Future]
+    env: EditEnv
     cur: Optional[Context]
     inserted: Optional[NvimPos]
     cwd: str
@@ -90,9 +92,15 @@ def _from_each_according_to_their_ability(
 def stack(pool: ThreadPoolExecutor, nvim: Nvim) -> Stack:
     settings = _settings(nvim)
     cwd = get_cwd(nvim)
+    env = EditEnv(
+        linefeed=cast(Literal["\n"], linesep),
+        tabstop=4,
+        expandtab=True,
+    )
     state = _State(
         commit=uuid4(),
         futs=(),
+        env=env,
         cur=None,
         inserted=None,
         cwd=cwd,

@@ -360,21 +360,27 @@ def edit(nvim: Nvim, stack: Stack, data: UserData) -> None:
         win = cur_win(nvim)
         buf = win_get_buf(nvim, win=win)
         cursor = win_get_cursor(nvim, win=win)
-        env = edit_env(nvim, buf=buf)
 
         primary, marks = (
-            parse(ctx, env=env, snippet=data.primary_edit, sort_by=data.sort_by)
+            parse(
+                ctx,
+                env=stack.state.env,
+                snippet=data.primary_edit,
+                sort_by=data.sort_by,
+            )
             if isinstance(data.primary_edit, SnippetEdit)
             else (data.primary_edit, ())
         )
-        lo, hi = _rows_to_fetch(ctx.position, env, primary, *data.secondary_edits)
+        lo, hi = _rows_to_fetch(
+            ctx.position, env=stack.state.env, edit=primary, *data.secondary_edits
+        )
         limited_lines = buf_get_lines(nvim, buf=buf, lo=lo, hi=hi)
         lines = tuple(chain(repeat("", times=lo), limited_lines))
         view = _lines(lines)
 
         instructions = _instructions(
             ctx,
-            env=env,
+            env=stack.state.env,
             unifying_chars=stack.settings.match.unifying_chars,
             lines=view,
             primary=primary,

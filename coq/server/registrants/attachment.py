@@ -5,20 +5,24 @@ from pynvim import Nvim
 from pynvim.api import Buffer, NvimError
 from pynvim_pp.api import buf_filetype, buf_get_option, buf_name, cur_buf, list_bufs
 
+from coq.server.context import edit_env
+
 from ...registry import atomic, autocmd, rpc
 from ..runtime import Stack
 
 
 @rpc(blocking=True)
-def _buf_new(nvim: Nvim, stack: Stack) -> None:
+def _buf_enter(nvim: Nvim, stack: Stack) -> None:
     with suppress(NvimError):
         buf = cur_buf(nvim)
         listed = buf_get_option(nvim, buf=buf, key="buflisted")
         if listed:
             nvim.api.buf_attach(buf, True, {})
+            env = edit_env(nvim, buf=buf)
+            stack.state.env = env
 
 
-autocmd("BufEnter") << f"lua {_buf_new.name}()"
+autocmd("BufEnter") << f"lua {_buf_enter.name}()"
 
 
 @rpc(blocking=True)
