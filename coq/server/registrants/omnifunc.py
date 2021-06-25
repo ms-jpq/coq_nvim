@@ -53,11 +53,15 @@ def _comp_func(nvim: Nvim, stack: Stack, manual: bool, pum_open: bool) -> None:
         unifying_chars=stack.settings.match.unifying_chars,
         cwd=stack.state.cwd,
     )
-    prev = stack.state.cur
-    stack.state.cur = ctx
-    if manual or _should_cont(
-        stack.state.inserted, prev=prev, cur=ctx, pum_open=pum_open
-    ):
+    should = _should_cont(
+        stack.state.inserted,
+        prev=stack.state.cur,
+        cur=ctx,
+        pum_open=pum_open,
+    )
+    if manual or should:
+        stack.state.cur = ctx
+
         _, col = ctx.position
         complete(nvim, col=col - 1, comp=())
         fut = stack.supervisor.collect(ctx, manual=manual)
