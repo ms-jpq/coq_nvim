@@ -1,3 +1,4 @@
+from itertools import chain
 from typing import Any, Mapping, Sequence
 
 from pynvim.api.nvim import Nvim
@@ -23,11 +24,15 @@ def _ft_changed(nvim: Nvim, stack: Stack) -> None:
     buf = cur_buf(nvim)
     name = buf_name(nvim, buf=buf)
     ft = buf_filetype(nvim, buf=buf)
-    raw = stack.settings.clients.snippets.snippets.get(ft, ())
-    snippets: Sequence[ParsedSnippet] = decode(Sequence[ParsedSnippet], raw)
+
+    snippets = stack.settings.clients.snippets
+    mappings = {
+        f: decode(Sequence[ParsedSnippet], snippets.snippets.get(f, ()))
+        for f in chain(snippets.extends.get(ft, {}).keys(), (ft,))
+    }
 
     stack.bdb.ft_update(name, filetype=ft)
-    stack.sdb.populate(ft, snippets=snippets)
+    stack.sdb.populate(mappings)
 
 
 autocmd("FileType") << f"lua {_ft_changed.name}()"
