@@ -31,7 +31,6 @@ class _State:
     futs: Sequence[Future]
     cur: Optional[Context]
     inserted: Optional[NvimPos]
-    inserting: bool
     cwd: str
 
 
@@ -96,7 +95,6 @@ def stack(pool: ThreadPoolExecutor, nvim: Nvim) -> Stack:
         futs=(),
         cur=None,
         inserted=None,
-        inserting=nvim.api.get_mode()["mode"] == "i",
         cwd=cwd,
     )
     bdb, sdb = BDB(), SDB()
