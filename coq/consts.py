@@ -31,6 +31,7 @@ DEBUG_METRICS = "COQ_DEBUG_METRICS" in environ
 _DEBUG_DB = "COQ_DEBUG_DB" in environ
 
 BUFFERS_DB = str(TMP_DIR / "buffers.sqlite3") if _DEBUG_DB else ":memory:"
-TMUX_DB = str(TMP_DIR / "tmux.sqlite3") if _DEBUG_DB else ":memory:"
 SNIPPET_DB = str(TMP_DIR / "snippet.sqlite3") if _DEBUG_DB else ":memory:"
+TAGS_DB = str(TMP_DIR / "tags.sqlite3") if _DEBUG_DB else ":memory:"
+TMUX_DB = str(TMP_DIR / "tmux.sqlite3") if _DEBUG_DB else ":memory:"
 
