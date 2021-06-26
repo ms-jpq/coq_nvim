@@ -13,7 +13,7 @@ from std2.pickle import DecodeError
 from std2.types import AnyFun
 
 from ._registry import ____
-from .consts import DEBUG, DEBUG_METRICS
+from .consts import DEBUG, DEBUG_DB, DEBUG_METRICS, TMP_DIR
 from .registry import atomic, autocmd, event_queue, pool, rpc
 from .server.registrants.attachment import BUF_EVENTS
 from .server.registrants.options import set_options
@@ -26,6 +26,8 @@ class CoqClient(Client):
         self._stack: Optional[Stack] = None
         if DEBUG or DEBUG_METRICS:
             log.setLevel(DEBUG_LV)
+        if DEBUG_DB:
+            TMP_DIR.mkdir(parents=True, exist_ok=True)
 
     def _handle(self, nvim: Nvim, msg: RpcMsg) -> Any:
         name, args = msg
