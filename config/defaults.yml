@@ -53,7 +53,7 @@ clients:
     tie_breaker: 30
 
   tags:
-    enabled: False
+    enabled: True
     short_name: "TAG"
     match_syms: True
     polling_interval: 1.0

@@ -4,7 +4,7 @@ BEGIN;
 CREATE TABLE IF NOT EXISTS files (
   filename TEXT NOT NULL PRIMARY KEY,
   filetype TEXT NOT NULL,
-  mtime    REAL NOT NULL,
+  mtime    REAL NOT NULL
 ) WITHOUT ROWID;
 CREATE INDEX IF NOT EXISTS files_filetype ON files (filetype);
 

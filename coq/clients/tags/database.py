@@ -47,7 +47,7 @@ class Database:
     def ls_files(self) -> Sequence[_File]:
         def cont() -> Sequence[_File]:
             with self._lock, closing(self._conn.cursor()) as cursor:
-                cursor.execute(sql("select", "file"), ())
+                cursor.execute(sql("select", "files"), ())
                 return cursor.fetchall()
 
         return self._ex.submit(cont)
@@ -91,7 +91,7 @@ class Database:
             with self._lock, closing(self._conn.cursor()) as cursor:
                 with with_transaction(cursor):
                     cursor.executemany(sql("insert", "file"), m1())
-                    cursor.executemany(sql("insert", "tags"), m2())
+                    cursor.executemany(sql("insert", "tag"), m2())
 
         self._ex.submit(cont)
 
