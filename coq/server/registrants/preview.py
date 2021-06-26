@@ -19,6 +19,7 @@ from std2.pickle.coders import BUILTIN_DECODERS
 
 from ...registry import autocmd, rpc
 from ...shared.nvim.completions import VimCompletion
+from ...shared.settings import PreviewDisplay
 from ...shared.timeit import timeit
 from ...shared.trans import expand_tabs
 from ...shared.types import UTF8, Doc, EditEnv
@@ -26,8 +27,6 @@ from ..runtime import Stack
 from ..types import UserData
 
 _FLOAT_WIN_UUID = uuid4().hex
-
-_MARGIN = 4
 
 
 @dataclass(frozen=True)
@@ -64,11 +63,16 @@ def _kill_win(nvim: Nvim, stack: Stack) -> None:
 autocmd("CompleteDone", "InsertLeave") << f"lua {_kill_win.name}()"
 
 
-def _clamp(units: int) -> Callable[[int], int]:
-    return lambda i: clamp(1, i - _MARGIN, units)
+def _clamp(margin: int, hi: int) -> Callable[[int], int]:
+    return lambda i: clamp(1, i - margin, hi)
 
 
-def _positions(nvim: Nvim, event: _Event, lines: Sequence[str]) -> Sequence[_Pos]:
+def _positions(
+    nvim: Nvim,
+    display: PreviewDisplay,
+    event: _Event,
+    lines: Sequence[str],
+) -> Sequence[_Pos]:
     t_height, t_width = nvim.options["lines"], nvim.options["columns"]
     top, btm, left, right = (
         event.row,
@@ -76,8 +80,9 @@ def _positions(nvim: Nvim, event: _Event, lines: Sequence[str]) -> Sequence[_Pos
         event.col,
         event.col + event.width + event.scrollbar,
     )
-    limit_h, limit_w = _clamp(len(lines)), _clamp(
-        max(len(line.encode(UTF8)) for line in lines)
+    limit_h, limit_w = (
+        _clamp(display.margin, hi=len(lines)),
+        _clamp(display.margin, hi=max(len(line.encode(UTF8)) for line in lines)),
     )
 
     ns_width = limit_w(t_width - right)
@@ -132,11 +137,17 @@ def _set_win(nvim: Nvim, buf: Buffer, pos: _Pos) -> None:
     win_set_var(nvim, win=win, key=_FLOAT_WIN_UUID, val=True)
 
 
-def _preview(nvim: Nvim, env: EditEnv, event: _Event, doc: Doc) -> None:
+def _preview(
+    nvim: Nvim,
+    display: PreviewDisplay,
+    env: EditEnv,
+    event: _Event,
+    doc: Doc,
+) -> None:
     text = expand_tabs(env, text=doc.text)
     lines = text.splitlines()
     pos, *_ = sorted(
-        _positions(nvim, event=event, lines=lines),
+        _positions(nvim, display=display, event=event, lines=lines),
         key=lambda p: p.height * p.width,
         reverse=True,
     )
@@ -160,7 +171,13 @@ def _cmp_changed(nvim: Nvim, stack: Stack, event: Mapping[str, Any] = {}) -> Non
             pass
         else:
             if data and data.doc and data.doc.text:
-                _preview(nvim, env=stack.state.env, event=ev, doc=data.doc)
+                _preview(
+                    nvim,
+                    display=stack.settings.display.preview,
+                    env=stack.state.env,
+                    event=ev,
+                    doc=data.doc,
+                )
 
 
 _LUA = f"""

@@ -15,8 +15,14 @@ class PumDisplay:
 
 
 @dataclass(frozen=True)
+class PreviewDisplay:
+    margin: int
+
+
+@dataclass(frozen=True)
 class Display:
     pum: PumDisplay
+    preview: PreviewDisplay
     mark_highlight_group: str
 
 
