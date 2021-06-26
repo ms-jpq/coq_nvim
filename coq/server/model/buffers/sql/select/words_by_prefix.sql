@@ -8,4 +8,4 @@ WHERE
   AND
   NOT INSTR(:word, word)
   AND
-  X_SIMILARITY(SUBSTR(:word, 1, :exact), word) > :cut_off
+  X_SIMILARITY(X_LOWER(X_NORMALIZE(SUBSTR(:word, 1, :exact))), lword) > :cut_off
