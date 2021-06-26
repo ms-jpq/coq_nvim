@@ -16,4 +16,6 @@ WHERE
   NOT INSTR(:word, tags.lname)
   AND
   X_SIMILARITY(SUBSTR(:word, 1, :exact), tags.name) > :cut_off
-
+ORDER BY
+  tags.filename = :filename DESC
+  ABS(tags.line_num - :line_num)

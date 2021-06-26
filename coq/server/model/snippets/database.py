@@ -116,7 +116,12 @@ class SDB:
                         for row in cursor.fetchall():
                             cursor.execute(
                                 sql("select", "matches"),
-                                {"snippet_id": row["snippet_id"], "word": word},
+                                {
+                                    "exact": opts.exact_matches,
+                                    "cut_off": opts.fuzzy_cutoff,
+                                    "snippet_id": row["snippet_id"],
+                                    "word": word,
+                                },
                             )
                             snip = _Snip(
                                 grammar=row["grammar"],
