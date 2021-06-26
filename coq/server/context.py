@@ -32,8 +32,10 @@ def context(
     line, *_ = buf_get_lines(nvim, buf=buf, lo=row, hi=row + 1)
     filename = buf_name(nvim, buf=buf)
     filetype = buf_filetype(nvim, buf=buf)
+    comment_str = cast(str, buf_get_option(nvim, buf=buf, key="commentstring"))
     changedtick = cast(int, buf_get_var(nvim, buf=buf, key="changedtick"))
 
+    lhs, _, rhs = comment_str.partition("%s")
     b_line = line.encode()
     before, after = b_line[:col].decode(), b_line[col:].decode()
     split = gen_split(lhs=before, rhs=after, unifying_chars=unifying_chars)
@@ -44,6 +46,7 @@ def context(
         changedtick=changedtick,
         filename=filename,
         filetype=filetype,
+        comment=(lhs, rhs),
         position=pos,
         line=split.lhs + split.rhs,
         line_before=split.lhs,

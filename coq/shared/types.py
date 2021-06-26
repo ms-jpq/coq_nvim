@@ -28,6 +28,7 @@ class Context:
     cwd: str
     filetype: str
     filename: str
+    comment: Tuple[str, str]
 
     position: NvimPos
 

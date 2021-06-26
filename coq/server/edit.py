@@ -30,7 +30,6 @@ from ..shared.types import (
     SnippetEdit,
 )
 from ..snippets.parse import parse
-from .context import edit_env
 from .registrants.marks import mark
 from .runtime import Stack
 from .types import UserData

@@ -1,9 +1,10 @@
 from contextlib import suppress
 from pathlib import Path
 from shutil import which
+from string import Template
 from subprocess import check_output
 from time import sleep
-from typing import Iterator, Sequence, Tuple
+from typing import Iterator, Mapping, Sequence, Tuple
 
 from pynvim.api.nvim import Nvim, NvimError
 from pynvim_pp.api import buf_filetype, buf_name, list_bufs
@@ -17,8 +18,15 @@ from ...shared.types import Completion, Context, Doc, Edit
 from .database import Database
 from .parser import parse
 
+_DOC_T = """
+$lc$pos$rc
+$tag
+"""
 
-def _ls(nvim: Nvim) -> Sequence[Tuple[Path, float, str]]:
+_DOC = Template(_DOC_T)
+
+
+def _ls(nvim: Nvim) -> Mapping[Path, Tuple[str, float]]:
     def cont() -> Sequence[Tuple[str, str]]:
         def c1() -> Iterator[Tuple[str, str]]:
             for buf in list_bufs(nvim, listed=True):
@@ -37,7 +45,7 @@ def _ls(nvim: Nvim) -> Sequence[Tuple[Path, float, str]]:
                 stat = path.stat()
                 yield path, stat.st_mtime, filetype
 
-    return tuple(c2())
+    return {path: (filetype, mtime) for path, mtime, filetype in c2()}
 
 
 class Worker(BaseWorker[PollingClient, None]):
@@ -52,19 +60,32 @@ class Worker(BaseWorker[PollingClient, None]):
     def _poll(self) -> None:
         try:
             while True:
+                in_db = {
+                    Path(file["filename"]): file["mtime"]
+                    for file in self._db.ls_files()
+                }
+                gone = (str(file) for file in in_db.keys() if not file.exists())
+                self._db.vaccum(gone)
                 lsd = _ls(self._supervisor.nvim)
-                paths = tuple(str(path) for path, _, _ in lsd)
+
+                paths = tuple(
+                    str(path)
+                    for path, (_, mtime) in lsd.items()
+                    if mtime > in_db.get(path, 0)
+                )
                 raw = (
                     check_output(("etags", "-o", "-", *paths), text=True)
                     if paths
                     else ""
                 )
                 parsed = parse(raw)
+                self._db.add(lsd, sections=parsed)
                 sleep(self._options.polling_interval)
         except Exception as e:
             log.exception("%s", e)
 
     def work(self, context: Context) -> Iterator[Sequence[Completion]]:
+        lc, rc = context.comment
         row, _ = context.position
         match = context.words or (context.syms if self._options.match_syms else "")
 
@@ -75,9 +96,15 @@ class Worker(BaseWorker[PollingClient, None]):
                 filename=context.filename,
                 line_num=row,
             ):
+                pos = (
+                    f"<tag['line_num']>"
+                    if tag["filename"] == context.filename
+                    else context.filename
+                )
+                doc_txt = _DOC.substitute(lc=lc, rc=rc, pos=pos, tag=tag["text"])
                 edit = Edit(new_text=tag["name"])
                 doc = Doc(
-                    text=tag["text"],
+                    text=doc_txt,
                     filetype=context.filetype,
                 )
                 cmp = Completion(

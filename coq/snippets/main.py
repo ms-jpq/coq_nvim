@@ -11,6 +11,7 @@ EMPTY_CTX = Context(
     cwd="",
     filename="",
     filetype="",
+    comment=("", ""),
     position=(0, 0),
     line="",
     line_before="",

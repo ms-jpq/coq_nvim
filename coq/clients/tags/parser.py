@@ -1,5 +1,6 @@
-from dataclasses import dataclass
-from typing import Iterator, Optional, Sequence
+from typing import Iterator
+
+from .types import Header, Section, Tag
 
 # https://en.wikipedia.org/wiki/Ctags
 
@@ -22,42 +23,22 @@ _DEF_SEP = "\x7f"
 _LINE_NO_SEP = "\x01"
 
 
-@dataclass(frozen=True)
-class _Header:
-    filename: str
-    byte_len: int
-
-
-@dataclass(frozen=True)
-class _Tag:
-    row: int
-    col_offset: int
-    name: Optional[str]
-    text: str
-
-
-@dataclass(frozen=True)
-class _Section:
-    header: _Header
-    tags: Sequence[_Tag]
-
-
-def _header(line: str) -> _Header:
+def _header(line: str) -> Header:
     filename, sep, byte_len = line.rpartition(_BYTE_SEP)
     assert sep == _BYTE_SEP, line
-    header = _Header(
+    header = Header(
         filename=filename,
         byte_len=int(byte_len),
     )
     return header
 
 
-def _tag(line: str) -> _Tag:
+def _tag(line: str) -> Tag:
     lhs, sep, col_offset = line.rpartition(_BYTE_SEP)
     assert sep == _BYTE_SEP, line
     text, sep, rhs = lhs.rpartition(_DEF_SEP)
     name, sep, row = rhs.rpartition(_LINE_NO_SEP)
-    tag = _Tag(
+    tag = Tag(
         row=int(row),
         col_offset=int(col_offset),
         name=name or None,
@@ -66,7 +47,7 @@ def _tag(line: str) -> _Tag:
     return tag
 
 
-def parse(text: str) -> Iterator[_Section]:
+def parse(text: str) -> Iterator[Section]:
     sections = text.split(_SECTION_SEP)
     for section in sections:
         lines = section.splitlines()
@@ -74,7 +55,7 @@ def parse(text: str) -> Iterator[_Section]:
             h_line, *t_lines = (line for line in lines if line)
             header = _header(h_line)
             tags = tuple(map(_tag, t_lines))
-            sec = _Section(
+            sec = Section(
                 header=header,
                 tags=tags,
             )
