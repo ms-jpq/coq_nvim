@@ -68,8 +68,8 @@ class Database:
 
             with self._lock, closing(self._conn.cursor()) as cursor:
                 with with_transaction(cursor):
-                    template = Template(sql("delete", "words"))
-                    cursor.execute(instruction, ())
+
+
                     cursor.executemany(sql("insert", "words"), it())
 
         self._ex.submit(cont)

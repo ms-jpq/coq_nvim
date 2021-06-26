@@ -1,13 +1,8 @@
 from typing import AbstractSet, Iterable, Iterator, MutableSequence
-from unicodedata import normalize as _normalize
 
 
 def lower(text: str) -> str:
     return text.casefold()
-
-
-def normalize(text: str) -> str:
-    return _normalize("NFC", text)
 
 
 def is_word(char: str, unifying_chars: AbstractSet[str]) -> bool:
