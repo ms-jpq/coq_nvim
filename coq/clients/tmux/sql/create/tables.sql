@@ -1,8 +1,13 @@
 BEGIN;
 
 
+CREATE TABLE IF NOT EXISTS panes (
+  pane_id TEXT NOT NULL PRIMARY KEY
+) WITHOUT ROWID;
+
+
 CREATE TABLE IF NOT EXISTS words (
-  pane_id TEXT NOT NULL,
+  pane_id TEXT NOT NULL REFERENCES panes (pane_id) ON DELETE CASCADE,
   word    TEXT NOT NULL,
   lword   TEXT NOT NULL AS (X_LOWER(word)) STORED,
   UNIQUE (pane_id, word)

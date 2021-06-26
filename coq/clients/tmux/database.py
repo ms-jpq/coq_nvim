@@ -1,8 +1,7 @@
 from concurrent.futures import ThreadPoolExecutor
-from contextlib import closing
+from contextlib import closing, suppress
 from locale import strcoll
 from sqlite3 import Connection, OperationalError, Row
-from string import Template
 from threading import Lock
 from typing import Iterator, Mapping, Sequence
 
@@ -42,7 +41,7 @@ class Database:
             self._conn.interrupt()
 
     def periodical(self, panes: Mapping[str, Sequence[str]]) -> None:
-        def it() -> Iterator[Mapping]:
+        def m2() -> Iterator[Mapping]:
             for pane_id, words in panes.items():
                 for word in words:
                     yield {
@@ -50,13 +49,15 @@ class Database:
                         "word": word,
                     }
 
-        def 
         def cont() -> None:
             with suppress(OperationalError):
                 with closing(self._conn.cursor()) as cursor:
                     with with_transaction(cursor):
-                        cursor.executemany(sql("delete", "word"), panes.keys())
-                        cursor.executemany(sql("insert", "word"), it())
+                        cursor.execute(sql("select", "panes"))
+                        existing = {row["pane_id"] for row in cursor.fetchall()}
+                        gone = ({"pane_id": pane} for pane in existing - panes.keys())
+                        cursor.executemany(sql("delete", "pane"), gone)
+                        cursor.executemany(sql("insert", "word"), m2())
 
         self._ex.submit(cont)
 
