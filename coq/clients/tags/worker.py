@@ -1,4 +1,5 @@
 from contextlib import suppress
+from os.path import relpath
 from pathlib import Path, PurePath
 from shutil import which
 from string import Template
@@ -24,7 +25,7 @@ $lc$pos$rc
 $tag
 """
 
-_DOC = Template(_DOC_T)
+_DOC = Template(_DOC_T.strip())
 
 
 def _ls(nvim: Nvim) -> Mapping[Path, Tuple[str, float]]:
@@ -110,12 +111,13 @@ class Worker(BaseWorker[PollingClient, None]):
                 filename=context.filename,
                 line_num=row,
             ):
-                pos = (
-                    f"<{tag['line_num']}>"
-                    if tag["filename"] == context.filename
-                    else context.filename
+                pos = relpath(tag["filename"], Path(context.filename).parent)
+                doc_txt = _DOC.substitute(
+                    lc=lc,
+                    rc=rc,
+                    pos=f"{pos}:{tag['line_num']}",
+                    tag=tag["text"],
                 )
-                doc_txt = _DOC.substitute(lc=lc, rc=rc, pos=pos, tag=tag["text"])
                 edit = Edit(new_text=tag["name"])
                 doc = Doc(
                     text=doc_txt,
