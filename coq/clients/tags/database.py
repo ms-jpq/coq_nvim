@@ -10,7 +10,6 @@ from std2.sqllite3 import with_transaction
 from ...consts import TAGS_DB
 from ...shared.database import init_db
 from ...shared.executor import Executor
-from ...shared.parse import lower, normalize
 from .sql import sql
 
 
