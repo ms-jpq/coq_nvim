@@ -103,14 +103,16 @@ class Worker(BaseWorker[PollingClient, None]):
         lc, rc = context.comment
         row, _ = context.position
         match = context.words or (context.syms if self._options.match_syms else "")
+        tags = self._db.select(
+            self._supervisor.options,
+            filetype=context.filetype,
+            filename=context.filename,
+            line_num=row,
+            word=match,
+        )
 
         def cont() -> Iterator[Completion]:
-            for tag in self._db.select(
-                match,
-                filetype=context.filetype,
-                filename=context.filename,
-                line_num=row,
-            ):
+            for tag in tags:
                 pos = (
                     "."
                     if tag["filename"] == context.filename

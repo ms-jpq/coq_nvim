@@ -10,6 +10,7 @@ from ....consts import SNIPPET_DB
 from ....registry import pool
 from ....shared.database import init_db
 from ....shared.executor import Executor
+from ....shared.settings import Options
 from ....snippets.types import ParsedSnippet
 from .sql import sql
 
@@ -97,14 +98,19 @@ class SDB:
 
         self._ex.submit(cont)
 
-    def select(self, filetype: str, word: str) -> Sequence[_Snip]:
+    def select(self, opts: Options, filetype: str, word: str) -> Sequence[_Snip]:
         def cont() -> Sequence[_Snip]:
             def c1() -> Iterator[_Snip]:
                 with closing(self._conn.cursor()) as cursor:
                     with with_transaction(cursor):
                         cursor.execute(
                             sql("select", "snippets"),
-                            {"filetype": filetype, "word": word},
+                            {
+                                "exact": opts.exact_matches,
+                                "cut_off": opts.fuzzy_cutoff,
+                                "filetype": filetype,
+                                "word": word,
+                            },
                         )
 
                         for row in cursor.fetchall():

@@ -12,6 +12,7 @@ from ....registry import pool
 from ....shared.database import init_db
 from ....shared.executor import Executor
 from ....shared.parse import coalesce
+from ....shared.settings import Options
 from ....shared.timeit import timeit
 from .sql import sql
 
@@ -105,11 +106,18 @@ class BDB:
 
         self._ex.submit(cont)
 
-    def suggestions(self, word: str) -> Sequence[str]:
+    def suggestions(self, opts: Options, word: str) -> Sequence[str]:
         def cont() -> Sequence[str]:
             try:
                 with closing(self._conn.cursor()) as cursor:
-                    cursor.execute(sql("select", "words_by_prefix"), {"word": word})
+                    cursor.execute(
+                        sql("select", "words_by_prefix"),
+                        {
+                            "exact": opts.exact_matches,
+                            "cut_off": opts.fuzzy_cutoff,
+                            "word": word,
+                        },
+                    )
                     return tuple(row["word"] for row in cursor.fetchall())
             except OperationalError:
                 return ()

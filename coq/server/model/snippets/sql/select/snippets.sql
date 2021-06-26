@@ -15,5 +15,7 @@ WHERE
   AND
   extensions_view.src = :filetype
   AND
-  matches.lmatch LIKE X_LIKE_ESC(X_LOWER(X_NORMALIZE(:word))) ESCAPE '!'
+  matches.lmatch LIKE X_LIKE_ESC(X_LOWER(X_NORMALIZE(SUBSTR(:word, 1, :exact)))) ESCAPE '!'
+  AND
+  X_SIMILARITY(SUBSTR(:word, 1, :exact), matches.match) > :cut_off
 

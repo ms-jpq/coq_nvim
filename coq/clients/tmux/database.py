@@ -9,6 +9,7 @@ from std2.sqllite3 import with_transaction
 from ...consts import TMUX_DB
 from ...shared.database import init_db
 from ...shared.executor import Executor
+from ...shared.settings import Options
 from .sql import sql
 
 
@@ -56,13 +57,15 @@ class Database:
 
         self._ex.submit(cont)
 
-    def select(self, word: str, active_pane: str) -> Sequence[str]:
+    def select(self, opts: Options, active_pane: str, word: str) -> Sequence[str]:
         def cont() -> Sequence[str]:
             try:
                 with closing(self._conn.cursor()) as cursor:
                     cursor.execute(
                         sql("select", "words"),
                         {
+                            "exact": opts.exact_matches,
+                            "cut_off": opts.fuzzy_cutoff,
                             "pane_id": active_pane,
                             "word": word,
                         },

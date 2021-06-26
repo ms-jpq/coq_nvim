@@ -106,7 +106,11 @@ class Worker(BaseWorker[PollingClient, None]):
     def work(self, context: Context) -> Iterator[Sequence[Completion]]:
         match = context.words or (context.syms if self._options.match_syms else "")
         active = _cur()
-        words = self._db.select(match, active_pane=active.uid)
+        words = self._db.select(
+            self._supervisor.options,
+            active_pane=active.uid,
+            word=match,
+        )
 
         def cont() -> Iterator[Completion]:
             for word in words:

@@ -10,6 +10,7 @@ from std2.sqllite3 import with_transaction
 from ...consts import TAGS_DB
 from ...shared.database import init_db
 from ...shared.executor import Executor
+from ...shared.settings import Options
 from .sql import sql
 from .types import Section
 
@@ -95,7 +96,7 @@ class Database:
         self._ex.submit(cont)
 
     def select(
-        self, word: str, filetype: str, filename: str, line_num: int
+        self, opts: Options, filetype: str, filename: str, line_num: int, word: str
     ) -> Sequence[_Tag]:
         def cont() -> Sequence[_Tag]:
             try:
@@ -103,6 +104,8 @@ class Database:
                     cursor.execute(
                         sql("select", "tags"),
                         {
+                            "exact": opts.exact_matches,
+                            "cut_off": opts.fuzzy_cutoff,
                             "filetype": filetype,
                             "filename": filename,
                             "word": word,

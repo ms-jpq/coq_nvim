@@ -22,10 +22,11 @@ class Display:
 
 @dataclass(frozen=True)
 class Options:
+    unifying_chars: AbstractSet[str]
+    exact_matches: int
+    fuzzy_cutoff: float
     timeout: float
     manual_timeout: float
-    transpose_band: int
-    unifying_chars: AbstractSet[str]
 
 
 @dataclass(frozen=True)
