@@ -1,2 +1,2 @@
-REPLACE INTO insertions (        content)
-VALUES                  (X_NORM(:content))
+REPLACE INTO insertions (             content)
+VALUES                  (X_NORMALIZE(:content))

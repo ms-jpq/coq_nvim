@@ -1,4 +1,4 @@
-INSERT INTO files (        filename,          filetype)
-VALUES            (X_NORM(:filename), X_NORM(:filetype))
+INSERT INTO files (             filename,               filetype)
+VALUES            (X_NORMALIZE(:filename), X_NORMALIZE(:filetype))
 ON CONFLICT (filename)
-DO UPDATE SET filetype = X_NORM(:filetype)
+DO UPDATE SET filetype = X_NORMALIZE(:filetype)

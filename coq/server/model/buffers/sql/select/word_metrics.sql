@@ -3,7 +3,7 @@ WITH q1 AS (
     COALESCE(MAX(rowid), 0) AS insertion_order
   FROM insertions
   WHERE
-    content = X_NORM(:word)
+    content = X_NORMALIZE(:word)
 ), q2 AS (
   SELECT
     COUNT(*) AS ft_count
@@ -12,7 +12,7 @@ WITH q1 AS (
   ON
     files.filename = words.filename
   WHERE
-    files.filetype = X_NORM(:filetype)
+    files.filetype = X_NORMALIZE(:filetype)
     AND
     words.word = :word
 ), q3 AS (
@@ -23,9 +23,9 @@ WITH q1 AS (
   ON
     files.filename = words.filename
   WHERE
-    files.filename = X_NORM(:filename)
+    files.filename = X_NORMALIZE(:filename)
     AND
-    words.word = X_NORM(:word)
+    words.word = X_NORMALIZE(:word)
 )
 SELECT
   q1.insertion_order AS insertion_order,

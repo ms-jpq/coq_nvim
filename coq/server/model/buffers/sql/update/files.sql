@@ -1,4 +1,4 @@
 UPDATE files
-SET filetype = X_NORM(:filetype)
+SET filetype = X_NORMALIZE(:filetype)
 WHERE
-  filename = X_NORM(:filename)
+  filename = X_NORMALIZE(:filename)

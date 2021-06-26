@@ -1,2 +1,2 @@
-INSERT OR IGNORE INTO extensions (        src,          dest)
-VALUES                           (X_NORM(:src), X_NORM(:dest))
+INSERT OR IGNORE INTO extensions (             src,               dest)
+VALUES                           (X_NORMALIZE(:src), X_NORMALIZE(:dest))

@@ -7,10 +7,10 @@ FROM tags
 JOIN files
 ON files.filename = tags.filename
 WHERE
-  X_NORM(:word) <> ''
+  X_NORMALIZE(:word) <> ''
   AND
-  files.filetype = X_NORM(:filetype)
-  tags.lname LIKE X_LIKE_ESC(X_LOWER(X_NORM(:word))) ESCAPE '!'
+  files.filetype = X_NORMALIZE(:filetype)
+  tags.lname LIKE X_LIKE_ESC(X_LOWER(X_NORMALIZE(:word)), '!') ESCAPE '!'
   AND
   NOT INSTR(:word, tags.lname)
 
