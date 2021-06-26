@@ -1,9 +1,9 @@
 SELECT
-  snippets.rowid AS snippet_id,
+  snippets.rowid   AS snippet_id,
   snippets.grammar AS grammar,
   snippets.content AS content,
-  snippets.label AS label,
-  snippets.doc AS doc
+  snippets.label   AS label,
+  snippets.doc     AS doc
 FROM snippets
 JOIN matches
 ON matches.snippet_id = snippets.rowid

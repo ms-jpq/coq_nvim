@@ -29,8 +29,8 @@ WITH q1 AS (
 )
 SELECT
   q1.insertion_order AS insertion_order,
-  q2.ft_count AS ft_count,
-  q3.line_diff AS line_diff
+  q2.ft_count        AS ft_count,
+  q3.line_diff       AS line_diff
 FROM q1
 JOIN q2
 JOIN q3
