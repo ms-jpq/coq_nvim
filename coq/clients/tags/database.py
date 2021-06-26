@@ -87,7 +87,6 @@ class Database:
                     }
 
         def cont() -> None:
-
             with self._lock, closing(self._conn.cursor()) as cursor:
                 with with_transaction(cursor):
                     cursor.executemany(sql("insert", "file"), m1())
