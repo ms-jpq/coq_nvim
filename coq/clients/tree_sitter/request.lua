@@ -46,13 +46,17 @@
     end
 
     COQts_req = function(request_id, pos)
-      local acc = {}
-      if parsers.has_parser() then
-        for payload in parse() do
-          table.insert(acc, payload)
+      vim.schedule(
+        function()
+          local acc = {}
+          if parsers.has_parser() then
+            for payload in parse() do
+              table.insert(acc, payload)
+            end
+          end
+          COQnotify(request_id, acc)
         end
-      end
-      COQnotify(request_id, acc)
+      )
     end
   end
 end)(...)
