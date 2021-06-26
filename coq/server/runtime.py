@@ -16,6 +16,7 @@ from ..clients.buffers.worker import Worker as BuffersWorker
 from ..clients.lsp.worker import Worker as LspWorker
 from ..clients.paths.worker import Worker as PathsWorker
 from ..clients.snippet.worker import Worker as SnippetWorker
+from ..clients.tags.worker import Worker as TagsWorker
 from ..clients.tmux.worker import Worker as TmuxWorker
 from ..clients.tree_sitter.worker import Worker as TreeWorker
 from ..consts import CONFIG_YML, LSP_ARTIFACTS, SETTINGS_VAR, SNIPPET_ARTIFACTS
@@ -84,6 +85,9 @@ def _from_each_according_to_their_ability(
 
     if clients.snippets.enabled:
         yield SnippetWorker(supervisor, options=clients.snippets, misc=sdb)
+
+    if clients.tags.enabled:
+        yield TagsWorker(supervisor, options=clients.tags, misc=None)
 
     if clients.tmux.enabled:
         yield TmuxWorker(supervisor, options=clients.tmux, misc=None)

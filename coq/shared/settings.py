@@ -85,6 +85,7 @@ class Clients:
     lsp: LSPClient
     paths: BaseClient
     snippets: SnippetClient
+    tags: PollingClient
     tmux: PollingClient
     tree_sitter: BaseClient
 

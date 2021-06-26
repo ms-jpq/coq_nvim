@@ -68,16 +68,6 @@ def _screenshot(unifying_chars: AbstractSet[str], uid: str) -> Sequence[str]:
         return tuple(coalesce(out, unifying_chars=unifying_chars))
 
 
-def _comp(client: PollingClient, word: str) -> Completion:
-    edit = Edit(new_text=word)
-    cmp = Completion(
-        source=client.short_name,
-        tie_breaker=client.tie_breaker,
-        primary_edit=edit,
-    )
-    return cmp
-
-
 class Worker(BaseWorker[PollingClient, None]):
     def __init__(
         self, supervisor: Supervisor, options: PollingClient, misc: None
@@ -113,8 +103,13 @@ class Worker(BaseWorker[PollingClient, None]):
 
         def cont() -> Iterator[Completion]:
             for word in words:
-                completion = _comp(self._options, word=word)
-                yield completion
+                edit = Edit(new_text=word)
+                cmp = Completion(
+                    source=self._options.short_name,
+                    tie_breaker=self._options.tie_breaker,
+                    primary_edit=edit,
+                )
+                yield cmp
 
         yield tuple(cont())
 

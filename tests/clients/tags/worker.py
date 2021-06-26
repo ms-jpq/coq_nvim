@@ -1,3 +1,6 @@
+from itertools import islice
+from os import linesep
+from shutil import get_terminal_size
 from subprocess import check_call
 from unittest import TestCase
 
@@ -13,5 +16,9 @@ class Parser(TestCase):
             check_call(("etags", "--recurse", "-o", str(tag)), cwd=TOP_LEVEL)
 
         spec = tag.read_text()
-        tuple(parse(spec, raise_err=True))
+        parsed = tuple(parse(spec, raise_err=True))
+
+        cols, _ = get_terminal_size()
+        sep = linesep + "-" * cols + linesep
+        print(*islice(parsed, 10), sep=sep)
 

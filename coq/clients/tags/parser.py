@@ -77,11 +77,11 @@ def parse(text: str, raise_err: bool) -> Iterator[_Section]:
                 h_line, *t_lines = (line for line in section.splitlines() if line)
                 header = _header(h_line)
                 tags = tuple(map(_tag, t_lines))
-                section = _Section(
+                sec = _Section(
                     header=header,
                     tags=tags,
                 )
-                yield section
+                yield sec
             except ValueError:
                 if raise_err:
                     raise
