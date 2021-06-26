@@ -1,3 +1,4 @@
+from difflib import SequenceMatcher
 from locale import strcoll
 from sqlite3.dbapi2 import Connection, Row
 
@@ -11,10 +12,16 @@ def _like_esc(like: str) -> str:
     return f"{escaped}%"
 
 
+def _similarity(lhs: str, rhs: str) -> float:
+    m = SequenceMatcher(a=lhs, b=rhs, isjunk=None)
+    return m.ratio()
+
+
 def init_db(conn: Connection) -> None:
     conn.row_factory = Row
     conn.create_collation("X_COLL", strcoll)
-    conn.create_function("X_LOWER", narg=1, func=lower, deterministic=True)
     conn.create_function("X_NORM", narg=1, func=normalize, deterministic=True)
+    conn.create_function("X_LOWER", narg=1, func=lower, deterministic=True)
     conn.create_function("X_LIKE_ESC", narg=1, func=_like_esc, deterministic=True)
+    conn.create_function("X_SIMILARITY", narg=2, func=_similarity, deterministic=True)
 
