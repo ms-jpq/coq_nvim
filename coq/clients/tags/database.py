@@ -1,14 +1,15 @@
 from concurrent.futures import ThreadPoolExecutor
-from contextlib import closing
+from contextlib import closing, suppress
 from locale import strcoll
+from pathlib import PurePath
 from sqlite3 import Connection, OperationalError, Row
 from string import Template
 from threading import Lock
-from typing import Iterator, Mapping, Sequence
+from typing import Iterator, Mapping, Sequence, Iterable
 
 from std2.sqllite3 import escape, with_transaction
 
-from ...consts import TMUX_DB
+from ...consts import TAGS_DB
 from ...shared.executor import Executor
 from ...shared.parse import lower, normalize
 from .sql import sql
@@ -20,7 +21,7 @@ def _like_esc(like: str) -> str:
 
 
 def _init() -> Connection:
-    conn = Connection(TMUX_DB, isolation_level=None)
+    conn = Connection(TAGS_DB, isolation_level=None)
     conn.row_factory = Row
     conn.create_collation("X_COLL", strcoll)
     conn.create_function("X_LOWER", narg=1, func=lower, deterministic=True)
@@ -41,26 +42,40 @@ class Database:
         with self._lock:
             self._conn.interrupt()
 
-    def periodical(self, panes: Mapping[str, Sequence[str]]) -> None:
-        def it() -> Iterator[Mapping]:
-            for pane_id, words in panes.items():
-                for word in words:
-                    yield {
-                        "pane_id": pane_id,
-                        "word": word,
-                    }
+    def vaccum(self, dead: Iterable[PurePath]) -> None:
+        template = Template(sql("delete", "files"))
+        instruction = template.substitute(
+            filename=",".join(f"'{pid}'" for pid in panes.keys())
+        )
 
-        def 
         def cont() -> None:
             with suppress(OperationalError):
                 with closing(self._conn.cursor()) as cursor:
-                    with with_transaction(cursor):
-                        cursor.executemany(sql("delete", "word"), panes.keys())
-                        cursor.executemany(sql("insert", "word"), it())
+                    cursor.execute(sql(), ())
 
         self._ex.submit(cont)
 
-    def select(self, word: str, active_pane: str) -> Sequence[str]:
+    def periodical(self, panes: Mapping[str, Sequence[str]]) -> None:
+        def cont() -> None:
+            def it() -> Iterator[Mapping]:
+                for pane_id, words in panes.items():
+                    for word in words:
+                        yield {
+                            "pane_id": pane_id,
+                            "word": word,
+                        }
+
+            with self._lock, closing(self._conn.cursor()) as cursor:
+                with with_transaction(cursor):
+                    template = Template(sql("delete", "words"))
+                    cursor.execute(instruction, ())
+                    cursor.executemany(sql("insert", "words"), it())
+
+        self._ex.submit(cont)
+
+    def select(
+        self, word: str, filetype: str, filename: str, line_num: int
+    ) -> Sequence[str]:
         def cont() -> Sequence[str]:
             try:
                 with closing(self._conn.cursor()) as cursor:
