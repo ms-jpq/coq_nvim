@@ -1,5 +1,5 @@
 from contextlib import closing
-from itertools import count
+from hashlib import md5
 from sqlite3 import Connection, Cursor, OperationalError
 from threading import Lock
 from typing import Iterable, Iterator, Mapping, Sequence, TypedDict
@@ -43,7 +43,6 @@ class SDB:
         self._lock = Lock()
         self._ex = Executor(pool)
         self._conn: Connection = self._ex.submit(_init)
-        self._count = count()
 
     def _interrupt(self) -> None:
         with self._lock:
@@ -69,7 +68,10 @@ class SDB:
                 for filetype, snippets in mapping.items():
                     with with_transaction(cursor):
                         _ensure_ft(cursor, filetypes=(filetype,))
-                        for row_id, snippet in zip(self._count, snippets):
+                        for snippet in snippets:
+                            row_id = md5(
+                                (snippet.grammar + snippet.content).encode()
+                            ).digest()
                             cursor.execute(
                                 sql("insert", "snippet"),
                                 {
