@@ -1,4 +1,4 @@
 SELECT DISTINCT
-  pand_id
+  pane_id
 FROM panes
 

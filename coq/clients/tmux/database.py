@@ -1,9 +1,9 @@
 from concurrent.futures import ThreadPoolExecutor
-from contextlib import closing, suppress
+from contextlib import closing
 from locale import strcoll
 from sqlite3 import Connection, OperationalError, Row
 from threading import Lock
-from typing import Iterator, Mapping, Sequence
+from typing import Iterable, Iterator, Mapping, Sequence
 
 from std2.sqllite3 import escape, with_transaction
 
@@ -41,6 +41,10 @@ class Database:
             self._conn.interrupt()
 
     def periodical(self, panes: Mapping[str, Sequence[str]]) -> None:
+        def m1(panes: Iterable[str]) -> Iterator[Mapping]:
+            for pane_id in panes:
+                yield {"pane_id": pane_id}
+
         def m2() -> Iterator[Mapping]:
             for pane_id, words in panes.items():
                 for word in words:
@@ -50,14 +54,15 @@ class Database:
                     }
 
         def cont() -> None:
-            with suppress(OperationalError):
-                with closing(self._conn.cursor()) as cursor:
-                    with with_transaction(cursor):
-                        cursor.execute(sql("select", "panes"))
-                        existing = {row["pane_id"] for row in cursor.fetchall()}
-                        gone = ({"pane_id": pane} for pane in existing - panes.keys())
-                        cursor.executemany(sql("delete", "pane"), gone)
-                        cursor.executemany(sql("insert", "word"), m2())
+            with self._lock, closing(self._conn.cursor()) as cursor:
+                with with_transaction(cursor):
+                    cursor.execute(sql("select", "panes"))
+                    existing = {row["pane_id"] for row in cursor.fetchall()}
+                    cursor.executemany(
+                        sql("delete", "pane"), m1(existing - panes.keys())
+                    )
+                    cursor.executemany(sql("insert", "pane"), m1(panes.keys()))
+                    cursor.executemany(sql("insert", "word"), m2())
 
         self._ex.submit(cont)
 
