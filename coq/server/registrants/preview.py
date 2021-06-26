@@ -63,7 +63,7 @@ def _kill_win(nvim: Nvim, stack: Stack) -> None:
         win_close(nvim, win=win)
 
 
-autocmd("CompleteDone") << f"lua {_kill_win.name}()"
+autocmd("CompleteDone", "InsertLeave") << f"lua {_kill_win.name}()"
 
 
 def _clamp(hi: int) -> Callable[[int], int]:
