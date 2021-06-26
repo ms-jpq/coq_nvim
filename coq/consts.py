@@ -10,12 +10,15 @@ RT_DIR = VARS / "runtime"
 RT_PY = (
     RT_DIR / "Scripts" / "python.exe" if name == "nt" else RT_DIR / "bin" / "python3"
 )
-_ARTIFACTS_DIR = TOP_LEVEL / "artifacts"
 
+_ARTIFACTS_DIR = TOP_LEVEL / "artifacts"
 _CONF_DIR = TOP_LEVEL / "config"
 CONFIG_YML = _CONF_DIR / "defaults.yml"
 COMPILATION_YML = _CONF_DIR / "compilation.yml"
-TMP_DIR = TOP_LEVEL / "temp"
+
+TAGS_DIR = VARS / "tags"
+TMP_DIR = VARS / "tmp"
+
 
 LSP_ARTIFACTS = _ARTIFACTS_DIR / "lsp.json"
 SNIPPET_ARTIFACTS = _ARTIFACTS_DIR / "snippets.json"
