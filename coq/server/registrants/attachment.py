@@ -15,7 +15,8 @@ def _buf_enter(nvim: Nvim, stack: Stack) -> None:
     with suppress(NvimError):
         buf = cur_buf(nvim)
         listed = buf_get_option(nvim, buf=buf, key="buflisted")
-        if listed:
+        buf_type: str = buf_get_option(nvim, buf=buf, key="buftype")
+        if listed and buf_type != "terminal":
             nvim.api.buf_attach(buf, True, {})
             env = edit_env(nvim, buf=buf)
             stack.state.env = env
@@ -28,7 +29,9 @@ autocmd("BufEnter") << f"lua {_buf_enter.name}()"
 def _buf_new_init(nvim: Nvim, stack: Stack) -> None:
     with suppress(NvimError):
         for buf in list_bufs(nvim, listed=True):
-            nvim.api.buf_attach(buf, True, {})
+            buf_type: str = buf_get_option(nvim, buf=buf, key="buftype")
+            if buf_type != "terminal":
+                nvim.api.buf_attach(buf, True, {})
 
 
 atomic.exec_lua(f"{_buf_new_init.name}()", ())
