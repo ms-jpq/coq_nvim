@@ -25,5 +25,5 @@ jobs:
       - name: Build
         env:
           CI_TOKEN: ${{ secrets.CI_TOKEN }}
-        run: ./ci/prepare.py
+        run: python -m ci
 
