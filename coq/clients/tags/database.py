@@ -18,6 +18,13 @@ class _File(TypedDict):
     mtime: float
 
 
+class _Tag(TypedDict):
+    name: str
+    text: str
+    filename: str
+    line_num: int
+
+
 def _init() -> Connection:
     conn = Connection(TAGS_DB, isolation_level=None)
     init_db(conn)
@@ -69,25 +76,26 @@ class Database:
             with self._lock, closing(self._conn.cursor()) as cursor:
                 with with_transaction(cursor):
 
-
                     cursor.executemany(sql("insert", "words"), it())
 
         self._ex.submit(cont)
 
     def select(
         self, word: str, filetype: str, filename: str, line_num: int
-    ) -> Sequence[str]:
-        def cont() -> Sequence[str]:
+    ) -> Sequence[_Tag]:
+        def cont() -> Sequence[_Tag]:
             try:
                 with closing(self._conn.cursor()) as cursor:
                     cursor.execute(
-                        sql("select", "words"),
+                        sql("select", "tags"),
                         {
-                            "pane_id": active_pane,
+                            "filetype": filetype,
+                            "filename": filename,
                             "word": word,
+                            "line_num": line_num,
                         },
                     )
-                    return tuple(row["word"] for row in cursor.fetchall())
+                    return cursor.fetchall()
             except OperationalError:
                 return ()
 

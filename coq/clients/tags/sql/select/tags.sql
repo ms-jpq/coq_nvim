@@ -1,6 +1,7 @@
 SELECT
   tags.name     AS name,
   tags.text     AS text,
+  tags.filename AS filename,
   tags.line_num AS line_num
 FROM tags
 JOIN files

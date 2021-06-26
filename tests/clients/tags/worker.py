@@ -16,7 +16,7 @@ class Parser(TestCase):
             check_call(("etags", "--recurse", "-o", str(tag)), cwd=TOP_LEVEL)
 
         spec = tag.read_text()
-        parsed = tuple(parse(spec, raise_err=True))
+        parsed = tuple(parse(spec))
 
         cols, _ = get_terminal_size()
         sep = linesep + "-" * cols + linesep

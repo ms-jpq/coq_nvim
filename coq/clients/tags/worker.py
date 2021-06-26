@@ -13,7 +13,8 @@ from pynvim_pp.logging import log
 from ...shared.runtime import Supervisor
 from ...shared.runtime import Worker as BaseWorker
 from ...shared.settings import PollingClient
-from ...shared.types import Completion, Context, Edit
+from ...shared.types import Completion, Context, Doc, Edit
+from .database import Database
 from .parser import parse
 
 
@@ -43,6 +44,7 @@ class Worker(BaseWorker[PollingClient, None]):
     def __init__(
         self, supervisor: Supervisor, options: PollingClient, misc: None
     ) -> None:
+        self._db = Database(supervisor.pool)
         super().__init__(supervisor, options=options, misc=misc)
         if which("etags"):
             supervisor.pool.submit(self._poll)
@@ -51,35 +53,40 @@ class Worker(BaseWorker[PollingClient, None]):
         try:
             while True:
                 lsd = _ls(self._supervisor.nvim)
-
                 paths = tuple(str(path) for path, _, _ in lsd)
                 raw = (
                     check_output(("etags", "-o", "-", *paths), text=True)
                     if paths
                     else ""
                 )
-                parsed = parse(raw, raise_err=False)
+                parsed = parse(raw)
                 sleep(self._options.polling_interval)
         except Exception as e:
             log.exception("%s", e)
 
     def work(self, context: Context) -> Iterator[Sequence[Completion]]:
+        row, _ = context.position
         match = context.words or (context.syms if self._options.match_syms else "")
 
-        path = Path(context.filename).resolve()
-        if path.exists():
+        def cont() -> Iterator[Completion]:
+            for tag in self._db.select(
+                match,
+                filetype=context.filetype,
+                filename=context.filename,
+                line_num=row,
+            ):
+                edit = Edit(new_text=tag["name"])
+                doc = Doc(
+                    text=tag["text"],
+                    filetype=context.filetype,
+                )
+                cmp = Completion(
+                    source=self._options.short_name,
+                    tie_breaker=self._options.tie_breaker,
+                    primary_edit=edit,
+                    doc=doc,
+                )
+                yield cmp
 
-            def cont() -> Iterator[Completion]:
-                # for section in :
-                for tag in section.tags:
-                    word = tag.name or tag.text
-                    edit = Edit(new_text=word)
-                    cmp = Completion(
-                        source=self._options.short_name,
-                        tie_breaker=self._options.tie_breaker,
-                        primary_edit=edit,
-                    )
-                    yield cmp
-
-            yield tuple(cont())
+        yield tuple(cont())
 
