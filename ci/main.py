@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-
 from datetime import datetime, timezone
 from os import environ, sep
 from pathlib import Path
@@ -66,7 +64,4 @@ def main() -> None:
     _git_clone(cwd)
     _build()
     _git_alert(cwd)
-
-
-main()
 
