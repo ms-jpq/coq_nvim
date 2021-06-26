@@ -3,6 +3,7 @@ from pathlib import Path
 
 TOP_LEVEL = Path(__file__).resolve().parent.parent
 REQUIREMENTS = TOP_LEVEL / "requirements.txt"
+TIMEOUT = 1
 
 VARS = TOP_LEVEL / ".vars"
 

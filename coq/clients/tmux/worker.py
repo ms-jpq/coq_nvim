@@ -6,6 +6,7 @@ from typing import AbstractSet, Iterator, Sequence, Tuple
 
 from pynvim_pp.logging import log
 
+from ...consts import TIMEOUT
 from ...shared.parse import coalesce
 from ...shared.runtime import Supervisor
 from ...shared.runtime import Worker as BaseWorker
@@ -32,6 +33,7 @@ def _panes() -> Sequence[_Pane]:
                 "#{pane_id} #{pane_active} #{window_active}",
             ),
             text=True,
+            timeout=TIMEOUT,
             stdin=DEVNULL,
             stderr=DEVNULL,
         )
@@ -66,6 +68,7 @@ def _screenshot(unifying_chars: AbstractSet[str], uid: str) -> Sequence[str]:
         out = check_output(
             ("tmux", "capture-pane", "-p", "-t", uid),
             text=True,
+            timeout=TIMEOUT,
             stdin=DEVNULL,
             stderr=DEVNULL,
         )

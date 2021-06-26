@@ -12,6 +12,7 @@ from pynvim_pp.api import buf_filetype, buf_name, list_bufs
 from pynvim_pp.lib import threadsafe_call
 from pynvim_pp.logging import log
 
+from ...consts import TIMEOUT
 from ...shared.runtime import Supervisor
 from ...shared.runtime import Worker as BaseWorker
 from ...shared.settings import PollingClient
@@ -56,6 +57,7 @@ def _check_etags(paths: Sequence[PurePath]) -> Iterator[Section]:
             check_output(
                 ("ctags", "-e", "-o", "-", *paths),
                 text=True,
+                timeout=TIMEOUT,
                 stdin=DEVNULL,
                 stderr=DEVNULL,
             )
