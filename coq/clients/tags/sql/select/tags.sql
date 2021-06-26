@@ -17,5 +17,5 @@ WHERE
   AND
   X_SIMILARITY(X_LOWER(X_NORMALIZE(SUBSTR(:word, 1, :exact))), tags.lname) > :cut_off
 ORDER BY
-  tags.filename = :filename DESC
+  tags.filename = :filename DESC,
   ABS(tags.line_num - :line_num)
