@@ -1,8 +1,8 @@
 from contextlib import suppress
-from pathlib import Path
+from pathlib import Path, PurePath
 from shutil import which
 from string import Template
-from subprocess import check_output
+from subprocess import DEVNULL, CalledProcessError, check_output
 from time import sleep
 from typing import Iterator, Mapping, Sequence, Tuple
 
@@ -17,6 +17,7 @@ from ...shared.settings import PollingClient
 from ...shared.types import Completion, Context, Doc, Edit
 from .database import Database
 from .parser import parse
+from .types import Section
 
 _DOC_T = """
 $lc$pos$rc
@@ -48,13 +49,29 @@ def _ls(nvim: Nvim) -> Mapping[Path, Tuple[str, float]]:
     return {path: (filetype, mtime) for path, mtime, filetype in c2()}
 
 
+def _check_etags(paths: Sequence[PurePath]) -> Iterator[Section]:
+    try:
+        raw = (
+            check_output(
+                ("ctags", "-o", "-", *paths), text=True, stdin=DEVNULL, stderr=DEVNULL
+            )
+            if paths
+            else ""
+        )
+    except CalledProcessError:
+        raw = ""
+
+    parsed = parse(raw)
+    return parsed
+
+
 class Worker(BaseWorker[PollingClient, None]):
     def __init__(
         self, supervisor: Supervisor, options: PollingClient, misc: None
     ) -> None:
         self._db = Database(supervisor.pool)
         super().__init__(supervisor, options=options, misc=misc)
-        if which("etags"):
+        if which("ctags"):
             supervisor.pool.submit(self._poll)
 
     def _poll(self) -> None:
@@ -67,18 +84,12 @@ class Worker(BaseWorker[PollingClient, None]):
                 gone = (str(file) for file in in_db.keys() if not file.exists())
                 self._db.vaccum(gone)
                 lsd = _ls(self._supervisor.nvim)
-
                 paths = tuple(
-                    str(path)
+                    path
                     for path, (_, mtime) in lsd.items()
                     if mtime > in_db.get(path, 0)
                 )
-                raw = (
-                    check_output(("etags", "-o", "-", *paths), text=True)
-                    if paths
-                    else ""
-                )
-                parsed = parse(raw)
+                parsed = _check_etags(paths)
                 self._db.add(lsd, sections=parsed)
                 sleep(self._options.polling_interval)
         except Exception as e:

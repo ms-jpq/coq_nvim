@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from shutil import which
-from subprocess import CalledProcessError, check_output
+from subprocess import DEVNULL, CalledProcessError, check_output
 from time import sleep
 from typing import AbstractSet, Iterator, Sequence, Tuple
 
@@ -32,6 +32,8 @@ def _panes() -> Sequence[_Pane]:
                 "#{pane_id} #{pane_active} #{window_active}",
             ),
             text=True,
+            stdin=DEVNULL,
+            stderr=DEVNULL,
         )
 
     except CalledProcessError:
@@ -61,7 +63,12 @@ def _cur() -> _Pane:
 
 def _screenshot(unifying_chars: AbstractSet[str], uid: str) -> Sequence[str]:
     try:
-        out = check_output(("tmux", "capture-pane", "-p", "-t", uid), text=True)
+        out = check_output(
+            ("tmux", "capture-pane", "-p", "-t", uid),
+            text=True,
+            stdin=DEVNULL,
+            stderr=DEVNULL,
+        )
     except CalledProcessError:
         return ()
     else:
