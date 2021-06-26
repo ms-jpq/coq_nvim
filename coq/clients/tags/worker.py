@@ -53,7 +53,10 @@ def _check_etags(paths: Sequence[PurePath]) -> Iterator[Section]:
     try:
         raw = (
             check_output(
-                ("ctags", "-o", "-", *paths), text=True, stdin=DEVNULL, stderr=DEVNULL
+                ("ctags", "-e", "-o", "-", *paths),
+                text=True,
+                stdin=DEVNULL,
+                stderr=DEVNULL,
             )
             if paths
             else ""
