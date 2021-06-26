@@ -1,5 +1,5 @@
 from contextlib import suppress
-from os.path import relpath
+from os.path import dirname, relpath
 from pathlib import Path, PurePath
 from shutil import which
 from string import Template
@@ -111,12 +111,16 @@ class Worker(BaseWorker[PollingClient, None]):
                 filename=context.filename,
                 line_num=row,
             ):
-                pos = relpath(tag["filename"], Path(context.filename).parent)
+                pos = (
+                    "."
+                    if tag["filename"] == context.filename
+                    else relpath(tag["filename"], dirname(context.filename))
+                )
                 doc_txt = _DOC.substitute(
                     lc=lc,
                     rc=rc,
                     pos=f"{pos}:{tag['line_num']}",
-                    tag=tag["text"],
+                    tag=tag["text"].strip(),
                 )
                 edit = Edit(new_text=tag["name"])
                 doc = Doc(
