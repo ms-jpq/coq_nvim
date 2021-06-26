@@ -10,6 +10,7 @@ WHERE
   X_NORMALIZE(:word) <> ''
   AND
   files.filetype = X_NORMALIZE(:filetype)
+  AND
   tags.lname LIKE X_LIKE_ESC(X_LOWER(X_NORMALIZE(:word)), '!') ESCAPE '!'
   AND
   NOT INSTR(:word, tags.lname)

@@ -13,6 +13,7 @@ from pynvim_pp.api import (
     win_set_var,
 )
 from pynvim_pp.preview import buf_set_preview
+from std2.ordinal import clamp
 from std2.pickle import DecodeError, decode
 from std2.pickle.coders import BUILTIN_DECODERS
 
@@ -27,9 +28,6 @@ from ..types import UserData
 _FLOAT_WIN_UUID = uuid4().hex
 
 _MARGIN = 4
-
-_OVERHEAD = 3
-_OVERHEAD_X = 4
 
 
 @dataclass(frozen=True)
@@ -66,8 +64,8 @@ def _kill_win(nvim: Nvim, stack: Stack) -> None:
 autocmd("CompleteDone", "InsertLeave") << f"lua {_kill_win.name}()"
 
 
-def _clamp(hi: int) -> Callable[[int], int]:
-    return lambda i: max(_OVERHEAD, min(hi, i) - _MARGIN)
+def _clamp(units: int) -> Callable[[int], int]:
+    return lambda i: clamp(1, i - _MARGIN, units)
 
 
 def _positions(nvim: Nvim, event: _Event, lines: Sequence[str]) -> Sequence[_Pos]:
@@ -79,7 +77,7 @@ def _positions(nvim: Nvim, event: _Event, lines: Sequence[str]) -> Sequence[_Pos
         event.col + event.width + event.scrollbar,
     )
     limit_h, limit_w = _clamp(len(lines)), _clamp(
-        max(len(line.encode(UTF8)) for line in lines) + _OVERHEAD_X
+        max(len(line.encode(UTF8)) for line in lines)
     )
 
     ns_width = limit_w(t_width - right)

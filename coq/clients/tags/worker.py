@@ -111,7 +111,7 @@ class Worker(BaseWorker[PollingClient, None]):
                 line_num=row,
             ):
                 pos = (
-                    f"<tag['line_num']>"
+                    f"<{tag['line_num']}>"
                     if tag["filename"] == context.filename
                     else context.filename
                 )
