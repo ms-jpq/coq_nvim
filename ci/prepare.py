@@ -61,7 +61,7 @@ def _git_alert(cwd: Path) -> None:
 
 
 def main() -> None:
-    cwd = _TOP_LV / "temp" / "coq"
+    cwd = _TOP_LV / ".vars" / "ci"
     _git_identity()
     _git_clone(cwd)
     _build()

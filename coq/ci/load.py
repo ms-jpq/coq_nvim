@@ -46,6 +46,7 @@ def _trans_name(relative: Path) -> Path:
 
 
 def load() -> SnippetSpecs:
+    TMP_DIR.mkdir(parents=True, exist_ok=True)
     yaml = safe_load(COMPILATION_YML.read_bytes())
     specs: Compilation = decode(Compilation, yaml, decoders=BUILTIN_DECODERS)
     with ThreadPoolExecutor() as pool:
