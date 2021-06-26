@@ -1,7 +1,7 @@
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import closing
 from locale import strcoll
-from sqlite3 import Connection, Cursor, OperationalError, Row
+from sqlite3 import Connection, OperationalError, Row
 from string import Template
 from threading import Lock
 from typing import Iterator, Mapping, Sequence
