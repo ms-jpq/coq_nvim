@@ -44,7 +44,8 @@ class _Section:
 
 def _header(line: str) -> _Header:
     filename, sep, byte_len = line.rpartition(_BYTE_SEP)
-    assert sep == _BYTE_SEP
+    if sep != _BYTE_SEP:
+        raise ValueError(line)
     header = _Header(
         filename=filename,
         byte_len=int(byte_len),
@@ -54,7 +55,9 @@ def _header(line: str) -> _Header:
 
 def _tag(line: str) -> _Tag:
     lhs, sep, col_offset = line.rpartition(_BYTE_SEP)
-    assert sep == _BYTE_SEP
+    if sep != _BYTE_SEP:
+        raise ValueError(line)
+
     text, sep, rhs = lhs.rpartition(_DEF_SEP)
     name, sep, row = rhs.rpartition(_LINE_NO_SEP)
     tag = _Tag(
@@ -66,15 +69,20 @@ def _tag(line: str) -> _Tag:
     return tag
 
 
-def parse(text: str) -> Iterator[_Section]:
+def parse(text: str, raise_err: bool) -> Iterator[_Section]:
     sections = text.split(_SECTION_SEP)
     for section in sections:
-        h_line, *t_lines = section.splitlines()
-        header = _header(h_line)
-        tags = tuple(map(_tag, t_lines))
-        section = _Section(
-            header=header,
-            tags=tags,
-        )
-        yield section
+        if section:
+            try:
+                h_line, *t_lines = (line for line in section.splitlines() if line)
+                header = _header(h_line)
+                tags = tuple(map(_tag, t_lines))
+                section = _Section(
+                    header=header,
+                    tags=tags,
+                )
+                yield section
+            except ValueError:
+                if raise_err:
+                    raise
 

@@ -23,6 +23,9 @@ jobs:
       - name: Pip Packages
         run: pip install -U -r requirements.txt
 
+      - name: Apt Packages
+        run: apt install -y ctags
+
       - name: Lint
         run: ./lint.sh
 
