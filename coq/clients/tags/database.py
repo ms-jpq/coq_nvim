@@ -1,32 +1,27 @@
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import closing, suppress
-from locale import strcoll
-from pathlib import PurePath
-from sqlite3 import Connection, OperationalError, Row
+from sqlite3 import Connection, OperationalError
 from string import Template
 from threading import Lock
-from typing import Iterator, Mapping, Sequence, Iterable
+from typing import Iterable, Iterator, Mapping, Sequence, TypedDict
 
-from std2.sqllite3 import escape, with_transaction
+from std2.sqllite3 import with_transaction
 
 from ...consts import TAGS_DB
+from ...shared.database import init_db
 from ...shared.executor import Executor
 from ...shared.parse import lower, normalize
 from .sql import sql
 
 
-def _like_esc(like: str) -> str:
-    escaped = escape(nono={"%", "_"}, escape="!", param=like)
-    return f"{escaped}%"
+class _File(TypedDict):
+    filename: str
+    mtime: float
 
 
 def _init() -> Connection:
     conn = Connection(TAGS_DB, isolation_level=None)
-    conn.row_factory = Row
-    conn.create_collation("X_COLL", strcoll)
-    conn.create_function("X_LOWER", narg=1, func=lower, deterministic=True)
-    conn.create_function("X_NORM", narg=1, func=normalize, deterministic=True)
-    conn.create_function("X_LIKE_ESC", narg=1, func=_like_esc, deterministic=True)
+    init_db(conn)
     conn.executescript(sql("create", "pragma"))
     conn.executescript(sql("create", "tables"))
     return conn
@@ -42,20 +37,27 @@ class Database:
         with self._lock:
             self._conn.interrupt()
 
-    def vaccum(self, dead: Iterable[PurePath]) -> None:
-        template = Template(sql("delete", "files"))
-        instruction = template.substitute(
-            filename=",".join(f"'{pid}'" for pid in panes.keys())
-        )
+    def ls_files(self) -> Sequence[_File]:
+        def cont() -> Sequence[_File]:
+            with self._lock, closing(self._conn.cursor()) as cursor:
+                cursor.execute(sql("select", "file"), ())
+                return cursor.fetchall()
+
+        return self._ex.submit(cont)
+
+    def vaccum(self, dead_files: Iterable[str]) -> None:
+        def m1() -> Iterator[Mapping]:
+            for filename in dead_files:
+                yield {"filename": filename}
 
         def cont() -> None:
             with suppress(OperationalError):
                 with closing(self._conn.cursor()) as cursor:
-                    cursor.execute(sql(), ())
+                    cursor.executemany(sql("delete", "file"), m1())
 
         self._ex.submit(cont)
 
-    def periodical(self, panes: Mapping[str, Sequence[str]]) -> None:
+    def add(self, panes: Mapping[str, Sequence[str]]) -> None:
         def cont() -> None:
             def it() -> Iterator[Mapping]:
                 for pane_id, words in panes.items():

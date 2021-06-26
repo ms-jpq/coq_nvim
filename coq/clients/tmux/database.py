@@ -1,30 +1,20 @@
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import closing
-from locale import strcoll
-from sqlite3 import Connection, OperationalError, Row
+from sqlite3 import Connection, OperationalError
 from threading import Lock
 from typing import Iterable, Iterator, Mapping, Sequence
 
-from std2.sqllite3 import escape, with_transaction
+from std2.sqllite3 import with_transaction
 
 from ...consts import TMUX_DB
+from ...shared.database import init_db
 from ...shared.executor import Executor
-from ...shared.parse import lower, normalize
 from .sql import sql
-
-
-def _like_esc(like: str) -> str:
-    escaped = escape(nono={"%", "_"}, escape="!", param=like)
-    return f"{escaped}%"
 
 
 def _init() -> Connection:
     conn = Connection(TMUX_DB, isolation_level=None)
-    conn.row_factory = Row
-    conn.create_collation("X_COLL", strcoll)
-    conn.create_function("X_LOWER", narg=1, func=lower, deterministic=True)
-    conn.create_function("X_NORM", narg=1, func=normalize, deterministic=True)
-    conn.create_function("X_LIKE_ESC", narg=1, func=_like_esc, deterministic=True)
+    init_db(conn)
     conn.executescript(sql("create", "pragma"))
     conn.executescript(sql("create", "tables"))
     return conn

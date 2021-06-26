@@ -1,17 +1,17 @@
 from contextlib import closing
 from itertools import repeat
-from locale import strcoll
-from sqlite3 import Connection, OperationalError, Row
+from sqlite3 import Connection, OperationalError
 from sqlite3.dbapi2 import Cursor
 from threading import Lock
 from typing import AbstractSet, Iterator, Mapping, Sequence, TypedDict
 
-from std2.sqllite3 import escape, with_transaction
+from std2.sqllite3 import with_transaction
 
 from ....consts import BUFFERS_DB
 from ....registry import pool
+from ....shared.database import init_db
 from ....shared.executor import Executor
-from ....shared.parse import coalesce, lower, normalize
+from ....shared.parse import coalesce
 from ....shared.timeit import timeit
 from .sql import sql
 
@@ -32,18 +32,9 @@ def _ensure_file(cursor: Cursor, file: str, filetype: str) -> None:
     )
 
 
-def _like_esc(like: str) -> str:
-    escaped = escape(nono={"%", "_"}, escape="!", param=like)
-    return f"{escaped}%"
-
-
 def _init() -> Connection:
     conn = Connection(BUFFERS_DB, isolation_level=None)
-    conn.row_factory = Row
-    conn.create_collation("X_COLL", strcoll)
-    conn.create_function("X_LOWER", narg=1, func=lower, deterministic=True)
-    conn.create_function("X_NORM", narg=1, func=normalize, deterministic=True)
-    conn.create_function("X_LIKE_ESC", narg=1, func=_like_esc, deterministic=True)
+    init_db(conn)
     conn.executescript(sql("create", "pragma"))
     conn.executescript(sql("create", "tables"))
     return conn
@@ -79,24 +70,27 @@ class BDB:
         lines: Sequence[str],
         unifying_chars: AbstractSet[str],
     ) -> None:
-        def cont() -> None:
-            def it() -> Iterator[Mapping]:
-                for line_num, line in enumerate(lines, start=lo):
-                    for word in coalesce(line, unifying_chars=unifying_chars):
-                        yield {
-                            "word": word,
-                            "filename": file,
-                            "line_num": line_num,
-                        }
+        def it() -> Iterator[Mapping]:
+            for line_num, line in enumerate(lines, start=lo):
+                for word in coalesce(line, unifying_chars=unifying_chars):
+                    yield {
+                        "word": word,
+                        "filename": file,
+                        "line_num": line_num,
+                    }
 
+        words = tuple(it())
+
+        def cont() -> None:
             with timeit("SQL -- SETLINES"):
                 with self._lock, closing(self._conn.cursor()) as cursor:
                     with with_transaction(cursor):
                         _ensure_file(cursor, file=file, filetype=filetype)
                         cursor.execute(
-                            sql("delete", "words"), {"filename": file, "lo": lo, "hi": hi}
+                            sql("delete", "words"),
+                            {"filename": file, "lo": lo, "hi": hi},
                         )
-                        cursor.executemany(sql("insert", "words"), it())
+                        cursor.executemany(sql("insert", "words"), words)
 
         self._ex.submit(cont)
 

@@ -51,6 +51,7 @@ class Worker(BaseWorker[PollingClient, None]):
         try:
             while True:
                 lsd = _ls(self._supervisor.nvim)
+
                 paths = tuple(str(path) for path, _, _ in lsd)
                 raw = (
                     check_output(("etags", "-o", "-", *paths), text=True)
