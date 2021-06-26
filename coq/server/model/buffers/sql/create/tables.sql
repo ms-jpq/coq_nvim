@@ -6,7 +6,6 @@ BEGIN;
 --------------------------------------------------------------------------------
 
 
--- Should be vacuumed if file no longer exists, once at beginning
 CREATE TABLE IF NOT EXISTS files (
   filename TEXT NOT NULL PRIMARY KEY,
   filetype TEXT NOT NULL
