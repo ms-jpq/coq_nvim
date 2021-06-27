@@ -52,49 +52,26 @@ def _decode(client: TabnineClient, reply: Any) -> Iterator[Completion]:
         yield cmp
 
 
-def _reactor(
-    pool: ThreadPoolExecutor,
-) -> Callable[[TabnineClient, Context], Sequence[Completion]]:
-    proc: Optional[Popen] = None
-    lock = Lock()
-
-    def cont() -> None:
-        nonlocal proc
-        try:
-            ensure_installed()
-            while True:
-                if proc:
-                    proc.wait()
-                else:
-                    proc = Popen((str(T9_BIN),), text=True, stdin=PIPE, stdout=PIPE)
-        except Exception as e:
-            log.exception("%s", e)
-
-    def req(client: TabnineClient, context: Context) -> Sequence[Completion]:
-        if not proc or not proc.stdin or not proc.stdout:
-            return ()
-        else:
-            req = _encode(context)
-            json = dumps(req, check_circular=False, ensure_ascii=False)
-            proc.stdin.writelines((json,))
-            proc.stdin.flush()
-            json = proc.stdout.readline()
-            reply = loads(json)
-            cmps = tuple(_decode(client, reply=reply))
-            return cmps
-
-    pool.submit(cont)
-    return req
-
-
 class Worker(BaseWorker[TabnineClient, None]):
     def __init__(
         self, supervisor: Supervisor, options: TabnineClient, misc: None
     ) -> None:
-        self._req = _reactor(supervisor.pool)
         super().__init__(supervisor, options=options, misc=misc)
 
+    def _req(self, context: Context) -> Sequence[Completion]:
+        if not self._proc:
+            self._proc = Popen((str(T9_BIN),), text=True, stdin=PIPE, stdout=PIPE)
+
+        req = _encode(context)
+        json = dumps(req, check_circular=False, ensure_ascii=False)
+        self._proc.stdin.writelines((json,))
+        self._proc.stdin.flush()
+        json = self._proc.stdout.readline()
+        reply = loads(json)
+        cmps = tuple(_decode(self._options, reply=reply))
+        return cmps
+
     def work(self, context: Context) -> Iterator[Sequence[Completion]]:
-        cmps = self._req(self._options, context)
+        cmps = self._req(context)
         yield cmps
 
