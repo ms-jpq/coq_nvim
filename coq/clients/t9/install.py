@@ -1,15 +1,20 @@
 from platform import machine
-from shutil import unpack_archive, which
+from shutil import which
 from string import Template
 
 from std2.os import OS, os
 from std2.urllib import urlopen
 
-from ...consts import TIMEOUT
+from ...consts import CLIENTS_DIR, TIMEOUT
+
+T9_DIR = CLIENTS_DIR / "t9"
+_LOCK = T9_DIR / "version.lock"
 
 _VER = "https://update.tabnine.com/version"
 _EXEC = "TabNine.exe" if os is OS.windows else "TabNine"
 _DOWN = Template(f"https://update.tabnine.com/$version/$triple/{_EXEC}")
+
+T9_BIN = T9_DIR / _EXEC
 
 
 def _triple() -> str:
@@ -30,10 +35,25 @@ def _version() -> str:
         return resp.read().decode()
 
 
-def _download(ver: str) -> bytes:
+def _uri() -> str:
     triple = _triple()
     ver = _version()
     uri = _DOWN.substitute(version=ver, triple=triple)
-    with urlopen(uri, timeout=TIMEOUT) as resp:
-        return resp.read()
+    return uri
+
+
+def update(timeout: float) -> None:
+    T9_DIR.mkdir(parents=True, exist_ok=True)
+    try:
+        p_uri = _LOCK.read_text()
+    except FileNotFoundError:
+        p_uri = ""
+
+    uri = _uri()
+    if uri != p_uri:
+        with urlopen(uri, timeout=timeout) as resp:
+            buf = resp.read()
+        T9_BIN.write_bytes(buf)
+        T9_BIN.chmod(0o755)
+        _LOCK.write_text(uri)
 

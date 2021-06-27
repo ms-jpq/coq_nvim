@@ -17,7 +17,7 @@ _CONF_DIR = TOP_LEVEL / "config"
 CONFIG_YML = _CONF_DIR / "defaults.yml"
 COMPILATION_YML = _CONF_DIR / "compilation.yml"
 
-TAGS_DIR = VARS / "tags"
+CLIENTS_DIR = VARS / "clients"
 TMP_DIR = VARS / "tmp"
 
 

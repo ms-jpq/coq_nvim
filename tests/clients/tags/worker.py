@@ -5,13 +5,13 @@ from subprocess import check_call
 from unittest import TestCase
 
 from ....coq.clients.tags.parser import parse
-from ....coq.consts import TAGS_DIR, TOP_LEVEL
+from ....coq.consts import TMP_DIR, TOP_LEVEL
 
 
 class Parser(TestCase):
     def test_1(self) -> None:
-        tag = TAGS_DIR / "TAG"
-        TAGS_DIR.mkdir(parents=True, exist_ok=True)
+        tag = TMP_DIR / "TAG"
+        TMP_DIR.mkdir(parents=True, exist_ok=True)
         if not tag.exists():
             check_call(("etags", "--recurse", "-o", str(tag)), cwd=TOP_LEVEL)
 
