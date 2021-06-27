@@ -96,7 +96,7 @@ def omnifunc(
 @rpc(blocking=True)
 def _txt_changed(nvim: Nvim, stack: Stack, pum_open: bool) -> None:
     # if not pum_open:
-        stack.state.request = True
+    stack.state.request = True
 
 
 autocmd("TextChangedI") << f"lua {_txt_changed.name}(false)"

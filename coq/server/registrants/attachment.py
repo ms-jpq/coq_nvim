@@ -6,6 +6,7 @@ from pynvim.api import Buffer, NvimError
 from pynvim_pp.api import buf_filetype, buf_get_option, buf_name, cur_buf, list_bufs
 
 from ...registry import atomic, autocmd, rpc
+from ...shared.timeit import timeit
 from ..runtime import Stack
 from .omnifunc import comp_func
 
@@ -58,7 +59,9 @@ def _lines_event(
     )
     if not pending and stack.state.request:
         stack.state.request = False
-        comp_func(nvim, stack=stack, manual=False)
+
+        with timeit("BEGIN"):
+            comp_func(nvim, stack=stack, manual=False)
 
 
 def _changed_event(nvim: Nvim, stack: Stack, buf: Buffer, tick: int) -> None:
