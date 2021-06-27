@@ -1,11 +1,9 @@
-from concurrent.futures.thread import ThreadPoolExecutor
 from dataclasses import asdict
 from json import dumps, loads
 from subprocess import PIPE, Popen
-from threading import Lock
-from typing import Any, Callable, Iterator, Optional, Sequence
+from threading import Event
+from typing import Any, Iterator, Optional, Sequence
 
-from pynvim_pp.logging import log
 from std2.pickle import decode
 
 from ...shared.runtime import Supervisor
@@ -31,7 +29,7 @@ def _encode(context: Context) -> Any:
 
 
 def _decode(client: TabnineClient, reply: Any) -> Iterator[Completion]:
-    resp: Response = decode(Response, reply)
+    resp: Response = decode(Response, reply, strict=False)
 
     for result in resp.results:
         edit = ContextualEdit(
@@ -56,21 +54,31 @@ class Worker(BaseWorker[TabnineClient, None]):
     def __init__(
         self, supervisor: Supervisor, options: TabnineClient, misc: None
     ) -> None:
+        self._ev = Event()
         self._proc: Optional[Popen] = None
+        supervisor.pool.submit(self._install)
         super().__init__(supervisor, options=options, misc=misc)
 
-    def _req(self, context: Context) -> Sequence[Completion]:
-        if not self._proc:
-            self._proc = Popen((str(T9_BIN),), text=True, stdin=PIPE, stdout=PIPE)
+    def _install(self) -> None:
+        ensure_installed(60)
+        self._ev.set()
 
-        req = _encode(context)
-        json = dumps(req, check_circular=False, ensure_ascii=False)
-        self._proc.stdin.writelines((json,))
-        self._proc.stdin.flush()
-        json = self._proc.stdout.readline()
-        reply = loads(json)
-        cmps = tuple(_decode(self._options, reply=reply))
-        return cmps
+    def _req(self, context: Context) -> Sequence[Completion]:
+        if not self._ev.is_set():
+            return ()
+        else:
+            if not self._proc:
+                self._proc = Popen((str(T9_BIN),), text=True, stdin=PIPE, stdout=PIPE)
+
+            req = _encode(context)
+            json = dumps(req, check_circular=False, ensure_ascii=False)
+            self._proc.stdin.write(json)
+            self._proc.stdin.write("\n")
+            self._proc.stdin.flush()
+            json = self._proc.stdout.readline()
+            reply = loads(json)
+            cmps = tuple(_decode(self._options, reply=reply))
+            return cmps
 
     def work(self, context: Context) -> Iterator[Sequence[Completion]]:
         cmps = self._req(context)

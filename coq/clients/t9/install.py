@@ -62,14 +62,14 @@ def _update(timeout: float) -> None:
         _LOCK.write_text(uri)
 
 
-def ensure_installed() -> None:
+def ensure_installed(timeout: float) -> None:
     if not T9_BIN.exists() or not access(T9_BIN, X_OK):
         while True:
             try:
-                _update(timeout=60)
+                _update(timeout=timeout)
             except HTTPError as e:
-                log.exception("%s", e)
-                sleep(60)
+                log.warn("%s", e)
+                sleep(timeout)
             else:
                 break
 

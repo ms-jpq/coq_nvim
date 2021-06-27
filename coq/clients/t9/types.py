@@ -28,16 +28,10 @@ class _RespL1:
     new_prefix: str
     old_suffix: str
     new_suffix: str
-    kind: Optional[int] = None
-    detail: Optional[str] = None
-    documentation: Optional[str] = None
-    deprecated: Optional[bool] = None
-    origin: Optional[str] = None
 
 
 @dataclass(frozen=True)
 class Response:
     old_prefix: str
     results: Sequence[_RespL1]
-    user_message: Sequence[str] = ()
 
