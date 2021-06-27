@@ -28,6 +28,12 @@ class Worker(BaseWorker[SnippetClient, SDB]):
                     new_text=snip["snippet"],
                     grammar=snip["grammar"],
                 )
+                label = (
+                    (snip["label"] or edit.new_text or " ")
+                    .splitlines()[0]
+                    .strip()
+                    .replace("\t", "  ")
+                )
                 doc = Doc(
                     text=snip["doc"] or edit.new_text,
                     filetype="",
@@ -37,9 +43,9 @@ class Worker(BaseWorker[SnippetClient, SDB]):
                     tie_breaker=self._options.tie_breaker,
                     primary_edit=edit,
                     sort_by=snip["prefix"],
-                    label=snip['label'] or edit.new_text.strip(),
+                    label=label,
                     doc=doc,
-                    kind=snip["prefix"]
+                    kind=snip["prefix"],
                 )
                 yield completion
 
