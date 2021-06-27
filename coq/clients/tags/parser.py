@@ -10,7 +10,7 @@ from std2.pathlib import AnyPath
 class Tag:
     filename: str
     line_num: int
-    line: str
+    context: str
     kind: str
     name: str
 
@@ -40,11 +40,11 @@ def run(*args: str, cwd: Optional[AnyPath], timeout: Optional[float]) -> str:
 
 def parse_lines(raw: str) -> Iterator[Tag]:
     for line in raw.splitlines():
-        filename, line_num, line, kind, name = line.split(_SEP)
+        filename, line_num, context, kind, name = line.split(_SEP)
         tag = Tag(
             filename=filename,
             line_num=int(line_num),
-            line=line,
+            context=context,
             kind=kind,
             name=name,
         )

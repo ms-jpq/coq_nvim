@@ -19,7 +19,6 @@ from ...shared.settings import PollingClient
 from ...shared.types import Completion, Context, Doc, Edit
 from .database import Database
 from .parser import parse
-from .types import Section
 
 _DOC_T = """
 $lc$pos$rc
@@ -51,26 +50,6 @@ def _ls(nvim: Nvim) -> Mapping[Path, Tuple[str, float]]:
     return {path: (filetype, mtime) for path, mtime, filetype in c2()}
 
 
-def _check_etags(paths: Sequence[PurePath]) -> Iterator[Section]:
-    try:
-        raw = (
-            check_output(
-                ("ctags", "-e", "-o", "-", *paths),
-                text=True,
-                timeout=TIMEOUT,
-                stdin=DEVNULL,
-                stderr=DEVNULL,
-            )
-            if paths
-            else ""
-        )
-    except CalledProcessError:
-        raw = ""
-
-    parsed = parse(raw)
-    return parsed
-
-
 class Worker(BaseWorker[PollingClient, None]):
     def __init__(
         self, supervisor: Supervisor, options: PollingClient, misc: None
@@ -95,8 +74,8 @@ class Worker(BaseWorker[PollingClient, None]):
                     for path, (_, mtime) in lsd.items()
                     if mtime > in_db.get(path, 0)
                 )
-                parsed = _check_etags(paths)
-                self._db.add(lsd, sections=parsed)
+                tags = parse(paths)
+                self._db.add(lsd, tags=tags)
                 sleep(self._options.polling_interval)
         except Exception as e:
             log.exception("%s", e)

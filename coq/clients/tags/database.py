@@ -1,5 +1,6 @@
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import closing
+from dataclasses import asdict
 from pathlib import Path
 from sqlite3 import Connection, OperationalError
 from threading import Lock
@@ -18,13 +19,6 @@ from .sql import sql
 class _File(TypedDict):
     filename: str
     mtime: float
-
-
-class _Tag(TypedDict):
-    name: str
-    text: str
-    filename: str
-    line_num: int
 
 
 def _init() -> Connection:
@@ -77,13 +71,7 @@ class Database:
 
         def m2() -> Iterator[Mapping]:
             for tag in tags:
-                yield {
-                    "filename": tag.filename,
-                    "name": tag.name,
-                    "line": tag.line,
-                    "kind": tag.kind,
-                    "line_num": tag.line_num,
-                }
+                yield asdict(tag)
 
         def cont() -> None:
             with self._lock, closing(self._conn.cursor()) as cursor:
@@ -95,8 +83,8 @@ class Database:
 
     def select(
         self, opts: Options, filetype: str, filename: str, line_num: int, word: str
-    ) -> Sequence[_Tag]:
-        def cont() -> Sequence[_Tag]:
+    ) -> Sequence[Tag]:
+        def cont() -> Sequence[Tag]:
             try:
                 with closing(self._conn.cursor()) as cursor:
                     cursor.execute(
@@ -106,11 +94,11 @@ class Database:
                             "cut_off": opts.fuzzy_cutoff,
                             "filetype": filetype,
                             "filename": filename,
-                            "word": word,
                             "line_num": line_num,
+                            "word": word,
                         },
                     )
-                    return cursor.fetchall()
+                    return tuple(Tag(**row) for row in cursor.fetchall())
             except OperationalError:
                 return ()
 

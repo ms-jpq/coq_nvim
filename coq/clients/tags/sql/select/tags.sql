@@ -1,8 +1,9 @@
 SELECT
-  tags.name     AS name,
-  tags.text     AS text,
   tags.filename AS filename,
-  tags.line_num AS line_num
+  tags.line_num AS line_num,
+  tags.context  AS context,
+  tags.kind     AS kind,
+  tags.name     AS name
 FROM tags
 JOIN files
 ON files.filename = tags.filename
