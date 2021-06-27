@@ -57,8 +57,9 @@ def _lines_event(
         lines=lines,
         unifying_chars=stack.settings.match.unifying_chars,
     )
+    mode: str = nvim.api.get_mode()["mode"]
     with stack.lock:
-        go = not pending and stack.state.request
+        go = not pending and mode.startswith("i") and stack.state.request
 
     if go:
         with timeit("BEGIN"):
