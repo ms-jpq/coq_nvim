@@ -30,10 +30,11 @@ from .model.snippets.database import SDB
 
 @dataclass
 class _State:
-    commit: UUID
     futs: Sequence[Future]
+    commit: UUID
     env: EditEnv
     cur: Optional[Context]
+    request: bool
     inserted: Optional[NvimPos]
     cwd: str
 
@@ -110,6 +111,7 @@ def stack(pool: ThreadPoolExecutor, nvim: Nvim) -> Stack:
         futs=(),
         env=env,
         cur=None,
+        request=False,
         inserted=None,
         cwd=cwd,
     )

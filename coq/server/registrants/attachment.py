@@ -8,6 +8,7 @@ from pynvim_pp.api import buf_filetype, buf_get_option, buf_name, cur_buf, list_
 from ...registry import atomic, autocmd, rpc
 from ...server.context import edit_env
 from ..runtime import Stack
+from .omnifunc import comp_func
 
 
 @rpc(blocking=True)
@@ -58,6 +59,9 @@ def _lines_event(
         lines=lines,
         unifying_chars=stack.settings.match.unifying_chars,
     )
+    if not multipart and stack.state.request:
+        stack.state.request = False
+        comp_func(nvim, stack=stack, manual=False)
 
 
 def _changed_event(nvim: Nvim, stack: Stack, buf: Buffer, tick: int) -> None:
