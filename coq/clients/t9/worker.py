@@ -3,7 +3,7 @@ from dataclasses import asdict
 from json import dumps, loads
 from subprocess import PIPE, Popen
 from threading import Lock
-from typing import Any, Callable, Iterator, Optional, Sequence, cast
+from typing import Any, Callable, Iterator, Optional, Sequence
 
 from pynvim_pp.logging import log
 from std2.pickle import decode
@@ -65,7 +65,7 @@ def _reactor(
             while True:
                 if proc:
                     proc.wait()
-                with lock:
+                else:
                     proc = Popen((str(T9_BIN),), text=True, stdin=PIPE, stdout=PIPE)
         except Exception as e:
             log.exception("%s", e)
@@ -76,10 +76,9 @@ def _reactor(
         else:
             req = _encode(context)
             json = dumps(req, check_circular=False, ensure_ascii=False)
-            with lock:
-                proc.stdin.writelines((json,))
-                json = proc.stdout.readline()
-
+            proc.stdin.writelines((json,))
+            proc.stdin.flush()
+            json = proc.stdout.readline()
             reply = loads(json)
             cmps = tuple(_decode(client, reply=reply))
             return cmps
