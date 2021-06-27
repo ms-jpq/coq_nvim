@@ -57,9 +57,10 @@ def _lines_event(
         lines=lines,
         unifying_chars=stack.settings.match.unifying_chars,
     )
-    if not pending and stack.state.request:
-        stack.state.request = False
+    with stack.lock:
+        go = not pending and stack.state.request
 
+    if go:
         with timeit("BEGIN"):
             comp_func(nvim, stack=stack, manual=False)
 

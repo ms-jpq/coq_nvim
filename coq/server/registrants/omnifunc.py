@@ -56,6 +56,7 @@ def comp_func(nvim: Nvim, stack: Stack, manual: bool) -> None:
         else False
     )
     if ctx and (manual or should):
+        stack.state.request = ctx.position
         stack.state.cur = ctx
         _, col = ctx.position
         complete(nvim, col=col - 1, comp=())
@@ -100,14 +101,13 @@ def omnifunc(
 
 @rpc(blocking=True)
 def _txt_changed(nvim: Nvim, stack: Stack, pum_open: bool) -> None:
-    ctx = stack.state.cur
-    if pum_open and ctx:
-        win = cur_win(nvim)
-        pos = win_get_cursor(nvim, win=win)
-        if pos != ctx.position:
-            stack.state.request = True
-    else:
-        stack.state.request = True
+    win = cur_win(nvim)
+    pos = win_get_cursor(nvim, win=win)
+    with stack.lock:
+        if pum_open and pos != stack.state.request:
+            stack.state.request = pos
+        else:
+            stack.state.request = pos
 
 
 autocmd("TextChangedI") << f"lua {_txt_changed.name}(false)"

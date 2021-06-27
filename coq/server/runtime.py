@@ -33,7 +33,7 @@ class _State:
     futs: Sequence[Future]
     commit: UUID
     cur: Optional[Context]
-    request: bool
+    request: Optional[NvimPos]
     inserted: Optional[NvimPos]
 
 
@@ -104,7 +104,7 @@ def stack(pool: ThreadPoolExecutor, nvim: Nvim) -> Stack:
         commit=uuid4(),
         futs=(),
         cur=None,
-        request=False,
+        request=None,
         inserted=None,
     )
     bdb, sdb = BDB(), SDB()
