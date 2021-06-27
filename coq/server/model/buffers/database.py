@@ -64,7 +64,7 @@ class BDB:
 
     def set_lines(
         self,
-        file: str,
+        filename: str,
         filetype: str,
         lo: int,
         hi: int,
@@ -76,7 +76,7 @@ class BDB:
                 for word in coalesce(line, unifying_chars=unifying_chars):
                     yield {
                         "word": word,
-                        "filename": file,
+                        "filename": filename,
                         "line_num": line_num,
                     }
 
@@ -84,7 +84,7 @@ class BDB:
             for line_num, line in enumerate(lines, start=lo):
                 yield {
                     "line": line,
-                    "filename": file,
+                    "filename": filename,
                     "line_num": line_num,
                 }
 
@@ -95,12 +95,13 @@ class BDB:
             with timeit("SQL -- SETLINES"):
                 with self._lock, closing(self._conn.cursor()) as cursor:
                     with with_transaction(cursor):
-                        _ensure_file(cursor, file=file, filetype=filetype)
-                        del_params = {"filename": file, "lo": lo, "hi": hi}
+                        _ensure_file(cursor, file=filename, filetype=filetype)
+                        del_params = {"filename": filename, "lo": lo, "hi": hi}
                         cursor.execute(sql("delete", "words"), del_params)
                         cursor.execute(sql("delete", "lines"), del_params)
                         cursor.execute(
-                            sql("update", "lines"), {"lo": lo, "shift": shift}
+                            sql("update", "lines"),
+                            {"filename": filename, "lo": lo, "shift": shift},
                         )
                         cursor.executemany(sql("insert", "word"), words)
                         cursor.executemany(sql("insert", "line"), m2())

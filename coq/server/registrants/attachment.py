@@ -51,7 +51,7 @@ def _lines_event(
     filetype = buf_filetype(nvim, buf=buf)
 
     stack.bdb.set_lines(
-        file=file,
+        filename=file,
         filetype=filetype,
         lo=lo,
         hi=hi,
