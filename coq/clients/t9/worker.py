@@ -10,7 +10,7 @@ from std2.pickle import decode
 
 from ...shared.runtime import Supervisor
 from ...shared.runtime import Worker as BaseWorker
-from ...shared.settings import TabnineClient
+from ...shared.settings import Options, TabnineClient
 from ...shared.types import Completion, Context, ContextualEdit
 from .install import T9_BIN, ensure_installed
 from .types import ReqL1, ReqL2, Request, Response
@@ -19,12 +19,13 @@ _VERSION = "3.2.28"
 _TIMEOUT = 60
 
 
-def _encode(context: Context) -> Any:
+def _encode(options: Options, context: Context) -> Any:
     row, _ = context.position
     before = linesep.join(chain(context.lines_before, (context.line_before,)))
     after = linesep.join(chain((context.line_after,), context.lines_after))
-    ibg = len(context.lines_before) == row
-    ieof = row + len(context.lines_after) == context.line_count
+    ibg = row - options.context_lines <= 0
+    ieof = row + options.context_lines >= context.line_count
+
     l2 = ReqL2(
         filename=context.filename,
         before=before,
@@ -84,7 +85,7 @@ class Worker(BaseWorker[TabnineClient, None]):
             if not self._proc:
                 self._proc = _proc()
 
-            req = _encode(context)
+            req = _encode(self._supervisor.options, context=context)
             json = dumps(req, check_circular=False, ensure_ascii=False)
             try:
                 cast(IO, self._proc.stdin).write(json)
