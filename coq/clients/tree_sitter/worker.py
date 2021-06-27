@@ -66,6 +66,7 @@ class Worker(BaseWorker[BaseClient, None]):
                     cmp = Completion(
                         source=self._options.short_name,
                         tie_breaker=self._options.tie_breaker,
+                        label=edit.new_text.strip(),
                         primary_edit=edit,
                     )
                     yield cmp

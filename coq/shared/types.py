@@ -98,10 +98,10 @@ class Doc:
 class Completion:
     source: str
     tie_breaker: int
+    label: str
     primary_edit: PrimaryEdit
     secondary_edits: Sequence[RangeEdit] = ()
     sort_by: str = ""
-    label: str = ""
     kind: str = ""
     doc: Optional[Doc] = None
     uid: UUID = field(default_factory=uuid4)

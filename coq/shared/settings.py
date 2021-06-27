@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from pathlib import PurePath
-from typing import AbstractSet, Any, Literal, Mapping, Optional, Sequence
+from typing import AbstractSet, Any, Literal, Mapping, Optional, Sequence, Tuple
 
 
 @dataclass(frozen=True)
@@ -11,8 +11,9 @@ class PumDisplay:
     x_margin: int
 
     ellipsis: str
-    quote_left: str
-    quote_right: str
+
+    kind_context: Tuple[str, str]
+    source_context: Tuple[str, str]
 
 
 @dataclass(frozen=True)

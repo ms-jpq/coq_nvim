@@ -49,11 +49,11 @@ def _parse_item(client: LSPClient, item: CompletionItem) -> Completion:
     cmp = Completion(
         source=client.short_name,
         tie_breaker=client.tie_breaker,
+        label=item.label,
         primary_edit=_primary(item),
         secondary_edits=tuple(map(_range_edit, item.additionalTextEdits or ())),
         sort_by=item.filterText or "",
         kind=client.cmp_item_kind.get(cast(Any, item.kind), ""),
-        label=item.label,
         doc=_doc(item),
     )
     return cmp

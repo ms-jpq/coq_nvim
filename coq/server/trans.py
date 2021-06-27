@@ -1,4 +1,3 @@
-from textwrap import shorten
 from typing import Iterator, MutableSet, Sequence
 
 from pynvim import Nvim
@@ -7,24 +6,50 @@ from std2.ordinal import clamp
 from ..shared.nvim.completions import VimCompletion
 from ..shared.settings import PumDisplay
 from ..shared.types import Completion, Context
-from .metrics import rank
+from .metrics import annotate
 from .runtime import Stack
 from .types import UserData
+
+_SEP = 2
+
+
+def _abbr(
+    label: str,
+    menu: str,
+    kind: str,
+    truncate: int,
+    max_width: int,
+    ellipsis: str,
+) -> str:
+    rhs = len(kind) + len(menu)
+    lhs = truncate - _SEP - rhs
+    if len(label) > lhs:
+        new_label = label[: lhs - len(ellipsis)] + ellipsis
+    else:
+        padding = max_width - rhs
+        new_label = label.ljust(padding)
+    return new_label + kind
 
 
 def _cmp_to_vcmp(
     pum: PumDisplay,
     context: Context,
+    truncate: int,
     width: int,
     cmp: Completion,
 ) -> VimCompletion:
-    abbr = shorten(
-        cmp.label or cmp.primary_edit.new_text,
-        width=width,
-        placeholder=pum.ellipsis,
+    (kl, kr), (sl, sr) = pum.kind_context, pum.source_context
+    kind = f"{kl}{cmp.kind}{kr}" if cmp.kind else ""
+    menu = f"{sl}{cmp.source}{sr}"
+
+    abbr = _abbr(
+        cmp.label,
+        menu=menu,
+        kind=kind,
+        truncate=truncate,
+        max_width=width,
+        ellipsis=pum.ellipsis,
     )
-    source = f"{pum.quote_left}{cmp.source}{pum.quote_right}"
-    menu = f"{cmp.kind} {source}" if cmp.kind else source
     user_data = UserData(
         sort_by=cmp.sort_by,
         commit_uid=context.uid,
@@ -49,16 +74,17 @@ def trans(
 ) -> Iterator[VimCompletion]:
     display = stack.settings.display
     _, col = context.position
-    width: int = nvim.options["columns"]
-    truncate = clamp(1, width - col - display.pum.x_margin, display.pum.x_max_len)
+    scr_width: int = nvim.options["columns"]
+    truncate = clamp(1, scr_width - col - display.pum.x_margin, display.pum.x_max_len)
 
-    ranked = rank(
+    max_width, ranked = annotate(
         options=stack.settings.match,
         weights=stack.settings.weights,
         db=stack.bdb,
         context=context,
         completions=completions,
     )
+
     seen: MutableSet[str] = set()
     for cmp in ranked:
         if cmp.primary_edit.new_text not in seen:
@@ -66,7 +92,8 @@ def trans(
             yield _cmp_to_vcmp(
                 display.pum,
                 context=context,
-                width=truncate,
+                truncate=truncate,
+                width=max_width,
                 cmp=cmp,
             )
 

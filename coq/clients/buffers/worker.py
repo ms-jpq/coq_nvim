@@ -11,6 +11,7 @@ def _comp(client: WordbankClient, word: str) -> Completion:
     cmp = Completion(
         source=client.short_name,
         tie_breaker=client.tie_breaker,
+        label=edit.new_text,
         primary_edit=edit,
     )
     return cmp

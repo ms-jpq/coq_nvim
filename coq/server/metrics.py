@@ -116,14 +116,17 @@ def _weights(
         yield cmp, weight
 
 
-def _cum(adjustment: Weights, weights: Iterable[Weights]) -> Weights:
+def _cum(adjustment: Weights, it: Iterable[_M]) -> Tuple[int, Weights]:
     acc = asdict(_ZERO)
-    for weight in weights:
+    max_len = 0
+    for cmp, weight in it:
+        max_len = max(max_len, len(cmp.label))
         for key, val in asdict(weight).items():
             acc[key] += val
     for key, val in asdict(adjustment).items():
         acc[key] /= val
-    return Weights(**acc)
+
+    return max_len, Weights(**acc)
 
 
 def _sort_by(cum: Weights) -> Callable[[_M], Any]:
@@ -167,13 +170,13 @@ def _debug_log(
     log.debug("%s", msg)
 
 
-def rank(
+def annotate(
     options: Options,
     weights: Weights,
     db: BDB,
     context: Context,
     completions: Sequence[Completion],
-) -> Iterator[Completion]:
+) -> Tuple[int, Iterator[Completion]]:
     def c1() -> Sequence[SqlMetrics]:
         with timeit("RANK :: SQL"):
             words = tuple(
@@ -198,10 +201,10 @@ def rank(
 
     with timeit("RANK :: SORT"):
         individual = tuple(_weights(metrics))
-        cum = _cum(weights, weights=(w for _, w in individual))
+        max_len, cum = _cum(weights, it=individual)
         key_by = _sort_by(cum)
         ordered = sorted(individual, key=key_by)
         if DEBUG_METRICS:
             _debug_log(key_by, cum=cum, ordered=ordered)
-        return (c for c, _ in ordered)
+        return max_len, (c for c, _ in ordered)
 

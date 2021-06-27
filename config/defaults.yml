@@ -8,8 +8,13 @@ display:
     y_ratio: 0.3
     x_margin: 16
     ellipsis: …
-    quote_left: "「"
-    quote_right: "」"
+
+    kind_context:
+      - "["
+      - "]"
+    source_context:
+      - "「"
+      - "」"
 
   mark_highlight_group: Pmenu
 
