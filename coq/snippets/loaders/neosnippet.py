@@ -20,48 +20,9 @@ _SNIPPET_LINE_STARTS = {*whitespace}
 
 
 def _start(path: Path, lineno: int, line: str) -> Tuple[str, str, MutableSet[Options]]:
-    rest = line[len(_SNIPPET_START) :]
-    sep_count = rest.count('"')
-
-    if sep_count == 0:
-        return rest.strip(), "", opt_parse("")
-
-    if sep_count == 1:
-        return rest.strip(), "", opt_parse("")
-
-    elif sep_count == 2:
-        first = rest.find('"')
-        second = rest.find('"', first + 1)
-        return (
-            rest[:first].strip(),
-            rest[first + 1 : second],
-            opt_parse(rest[second + 1 :].strip()),
-        )
-
-    elif sep_count == 3:
-        first = rest.find('"')
-        second = rest.find('"', first + 1)
-        third = rest.find('"', second + 1)
-        return (
-            '"',
-            rest[second + 1 : third],
-            opt_parse(rest[third + 1 :].strip()),
-        )
-
-    elif sep_count == 4:
-        first = rest.find('"')
-        second = rest.find('"', first + 1)
-        third = rest.find('"', second + 1)
-        fourth = rest.find('"', third + 1)
-        return (
-            '"',
-            rest[third + 1 : fourth],
-            opt_parse(rest[fourth + 1 :].strip()),
-        )
-
-    else:
-        reason = f'Invaild # of " - {sep_count}'
-        return raise_err(path, lineno=lineno, line=line, reason=reason)
+    rest = line[len(_SNIPPET_START) :].strip()
+    lhs, _, rhs = rest.partition(" ")
+    return lhs, rhs, set()
 
 
 def parse(path: Path) -> MetaSnippets:
