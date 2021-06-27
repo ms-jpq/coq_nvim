@@ -1,29 +1,25 @@
 from contextlib import suppress
+from os import linesep
 from os.path import dirname, relpath
 from pathlib import Path
 from shutil import which
-from string import Template
 from time import sleep
-from typing import Iterator, Mapping, MutableSet, Sequence, Tuple
+from typing import Iterator, Mapping, MutableSet, Optional, Sequence, Tuple
 
 from pynvim.api.nvim import Nvim, NvimError
 from pynvim_pp.api import buf_filetype, buf_name, list_bufs
 from pynvim_pp.lib import threadsafe_call
 from pynvim_pp.logging import log
 
+from ...consts import CLIENTS_DIR
 from ...shared.runtime import Supervisor
 from ...shared.runtime import Worker as BaseWorker
 from ...shared.settings import PollingClient
 from ...shared.types import Completion, Context, Doc, Edit
 from .database import Database
-from .parser import parse
+from .parser import Tag, parse
 
-_DOC_T = """
-$lc$pos$rc
-$tag
-"""
-
-_DOC = Template(_DOC_T.strip())
+_TAGS_DIR = CLIENTS_DIR / "tags"
 
 
 def _ls(nvim: Nvim) -> Mapping[Path, Tuple[str, float]]:
@@ -48,10 +44,25 @@ def _ls(nvim: Nvim) -> Mapping[Path, Tuple[str, float]]:
     return {path: (filetype, mtime) for path, mtime, filetype in c2()}
 
 
+def _doc(context: Context, tag: Tag) -> Doc:
+    lc, rc = context.comment
+    pos = (
+        "."
+        if tag.filename == context.filename
+        else relpath(tag.filename, dirname(context.filename))
+    )
+    doc = Doc(
+        text=f"{lc}{pos}:{tag.line_num}{rc}{linesep}{tag.context}",
+        filetype=context.filetype,
+    )
+    return doc
+
+
 class Worker(BaseWorker[PollingClient, None]):
     def __init__(
         self, supervisor: Supervisor, options: PollingClient, misc: None
     ) -> None:
+        self._cwd: Optional[str] = None
         self._db = Database(supervisor.pool)
         super().__init__(supervisor, options=options, misc=misc)
         if which("ctags"):
@@ -79,7 +90,6 @@ class Worker(BaseWorker[PollingClient, None]):
             log.exception("%s", e)
 
     def work(self, context: Context) -> Iterator[Sequence[Completion]]:
-        lc, rc = context.comment
         row, _ = context.position
         match = context.words or (context.syms if self._options.match_syms else "")
         tags = self._db.select(
@@ -95,26 +105,14 @@ class Worker(BaseWorker[PollingClient, None]):
             for tag in tags:
                 if tag.name not in seen:
                     seen.add(tag.name)
-                    pos = (
-                        "."
-                        if tag.filename == context.filename
-                        else relpath(tag.filename, dirname(context.filename))
-                    )
-                    doc_txt = _DOC.substitute(
-                        lc=lc, rc=rc, pos=f"{pos}:{tag.line_num}", tag=tag.context
-                    )
                     edit = Edit(new_text=tag.name)
-                    doc = Doc(
-                        text=doc_txt,
-                        filetype=context.filetype,
-                    )
                     cmp = Completion(
                         source=self._options.short_name,
                         tie_breaker=self._options.tie_breaker,
                         label=edit.new_text.strip(),
                         primary_edit=edit,
                         kind=tag.kind,
-                        doc=doc,
+                        doc=_doc(context, tag=tag),
                     )
                     yield cmp
 

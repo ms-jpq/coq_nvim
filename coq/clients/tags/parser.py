@@ -1,9 +1,7 @@
 from dataclasses import dataclass
 from pathlib import PurePath
 from subprocess import DEVNULL, CalledProcessError, check_output
-from typing import Iterator, Optional, Sequence
-
-from std2.pathlib import AnyPath
+from typing import Iterator, Sequence
 
 
 @dataclass(frozen=True)
@@ -22,13 +20,19 @@ FMT = f"""
 """.strip()
 
 
-def run(*args: str, cwd: Optional[AnyPath], timeout: Optional[float]) -> str:
+def run(
+    *args: str,
+) -> str:
     try:
         raw = check_output(
-            ("ctags", "-o", "-", "--output-format=xref", f"--_xformat={FMT}", *args),
+            (
+                "ctags",
+                "--sort=no",
+                "--output-format=xref",
+                f"--_xformat={FMT}",
+                *args,
+            ),
             text=True,
-            cwd=cwd,
-            timeout=timeout,
             stdin=DEVNULL,
             stderr=DEVNULL,
         )
@@ -55,6 +59,6 @@ def parse(paths: Sequence[PurePath]) -> Sequence[Tag]:
     if not paths:
         return ()
     else:
-        raw = run(*map(str, paths), cwd=None, timeout=None)
+        raw = run(*map(str, paths))
         return tuple(parse_lines(raw))
 
