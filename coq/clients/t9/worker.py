@@ -25,7 +25,9 @@ def _encode(context: Context) -> Any:
         filename=context.filename,
         before=before,
         after=after,
-        max_num_results=10,
+        region_includes_beginning=True,
+        region_includes_end=True,
+        max_num_results=None,
     )
     l1 = ReqL1(Autocomplete=l2)
     req = Request(request=l1, version=_VERSION)

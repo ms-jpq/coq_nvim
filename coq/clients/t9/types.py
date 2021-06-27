@@ -7,9 +7,9 @@ class ReqL2:
     before: str
     after: str
     filename: str
+    region_includes_beginning: bool
+    region_includes_end: bool
     max_num_results: Optional[int] = None
-    region_includes_beginning: bool = False
-    region_includes_end: bool = False
 
 
 @dataclass(frozen=True)
