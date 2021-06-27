@@ -3,7 +3,6 @@ from os.path import dirname, relpath
 from pathlib import Path, PurePath
 from shutil import which
 from string import Template
-from subprocess import DEVNULL, CalledProcessError, check_output
 from time import sleep
 from typing import Iterator, Mapping, Sequence, Tuple
 
@@ -96,16 +95,16 @@ class Worker(BaseWorker[PollingClient, None]):
             for tag in tags:
                 pos = (
                     "."
-                    if tag["filename"] == context.filename
-                    else relpath(tag["filename"], dirname(context.filename))
+                    if tag.filename == context.filename
+                    else relpath(tag.filename, dirname(context.filename))
                 )
                 doc_txt = _DOC.substitute(
                     lc=lc,
                     rc=rc,
-                    pos=f"{pos}:{tag['line_num']}",
-                    tag=tag["text"].strip(),
+                    pos=f"{pos}:{tag.line_num}",
+                    tag=tag.context
                 )
-                edit = Edit(new_text=tag["name"])
+                edit = Edit(new_text=tag.name)
                 doc = Doc(
                     text=doc_txt,
                     filetype=context.filetype,
@@ -114,6 +113,7 @@ class Worker(BaseWorker[PollingClient, None]):
                     source=self._options.short_name,
                     tie_breaker=self._options.tie_breaker,
                     primary_edit=edit,
+                    kind=tag.kind,
                     doc=doc,
                 )
                 yield cmp

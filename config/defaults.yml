@@ -8,8 +8,8 @@ display:
     y_ratio: 0.3
     x_margin: 16
     ellipsis: …
-    quote_left: "「 "
-    quote_right: " 」"
+    quote_left: "「"
+    quote_right: "」"
 
   mark_highlight_group: Pmenu
 
