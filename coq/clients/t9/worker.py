@@ -20,14 +20,17 @@ _TIMEOUT = 60
 
 
 def _encode(context: Context) -> Any:
+    row, _ = context.position
     before = linesep.join(chain(context.lines_before, (context.line_before,)))
     after = linesep.join(chain((context.line_after,), context.lines_after))
+    ibg = len(context.lines_before) == row
+    ieof = row + len(context.lines_after) == context.line_count
     l2 = ReqL2(
         filename=context.filename,
         before=before,
         after=after,
-        region_includes_beginning=True,
-        region_includes_end=True,
+        region_includes_beginning=ibg,
+        region_includes_end=ieof,
         max_num_results=None,
     )
     l1 = ReqL1(Autocomplete=l2)

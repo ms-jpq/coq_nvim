@@ -46,7 +46,7 @@ keymap:
 
 clients:
   tabnine:
-    enabled: False
+    enabled: True
     short_name: "T9"
     bin: null
     tie_breaker: -10
