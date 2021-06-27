@@ -1,4 +1,4 @@
-from typing import Literal, Tuple, cast
+from typing import Literal, Optional, Tuple, cast
 from uuid import uuid4
 
 from pynvim import Nvim
@@ -11,7 +11,7 @@ from ..shared.types import Context
 from .model.buffers.database import BDB
 
 
-def context(nvim: Nvim, options: Options, db: BDB) -> Context:
+def context(nvim: Nvim, options: Options, db: BDB) -> Optional[Context]:
 
     with Atomic() as (atomic, ns):
         ns.cwd = atomic.call_function("getcwd", ())
@@ -40,39 +40,42 @@ def context(nvim: Nvim, options: Options, db: BDB) -> Context:
     line_count, lines = db.lines(
         filename, lo=row - options.context_lines, hi=row + options.context_lines + 1
     )
-    r = min(options.context_lines, row)
-    line = lines[r]
-    lines_before, lines_after = lines[:r], lines[r + 1 :]
+    if not line_count:
+        return None
+    else:
+        r = min(options.context_lines, row)
+        line = lines[r]
+        lines_before, lines_after = lines[:r], lines[r + 1 :]
 
-    lhs, _, rhs = comment_str.partition("%s")
-    b_line = line.encode()
-    before, after = b_line[:col].decode(), b_line[col:].decode()
-    split = gen_split(lhs=before, rhs=after, unifying_chars=options.unifying_chars)
+        lhs, _, rhs = comment_str.partition("%s")
+        b_line = line.encode()
+        before, after = b_line[:col].decode(), b_line[col:].decode()
+        split = gen_split(lhs=before, rhs=after, unifying_chars=options.unifying_chars)
 
-    ctx = Context(
-        uid=uuid4(),
-        cwd=cwd,
-        changedtick=changedtick,
-        filename=filename,
-        filetype=filetype,
-        line_count=line_count,
-        linefeed=linefeed,
-        tabstop=tabstop,
-        expandtab=expandtab,
-        comment=(lhs, rhs),
-        position=pos,
-        line=split.lhs + split.rhs,
-        line_before=split.lhs,
-        line_after=split.rhs,
-        lines=lines,
-        lines_before=lines_before,
-        lines_after=lines_after,
-        words=split.word_lhs + split.word_rhs,
-        words_before=split.word_lhs,
-        words_after=split.word_rhs,
-        syms=split.syms_lhs + split.syms_rhs,
-        syms_before=split.syms_lhs,
-        syms_after=split.syms_rhs,
-    )
-    return ctx
+        ctx = Context(
+            uid=uuid4(),
+            cwd=cwd,
+            changedtick=changedtick,
+            filename=filename,
+            filetype=filetype,
+            line_count=line_count,
+            linefeed=linefeed,
+            tabstop=tabstop,
+            expandtab=expandtab,
+            comment=(lhs, rhs),
+            position=pos,
+            line=split.lhs + split.rhs,
+            line_before=split.lhs,
+            line_after=split.rhs,
+            lines=lines,
+            lines_before=lines_before,
+            lines_after=lines_after,
+            words=split.word_lhs + split.word_rhs,
+            words_before=split.word_lhs,
+            words_after=split.word_rhs,
+            syms=split.syms_lhs + split.syms_rhs,
+            syms_before=split.syms_lhs,
+            syms_after=split.syms_rhs,
+        )
+        return ctx
 

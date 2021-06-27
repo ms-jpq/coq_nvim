@@ -47,12 +47,16 @@ def comp_func(nvim: Nvim, stack: Stack, manual: bool) -> None:
 
     with timeit("GEN CTX"):
         ctx = context(nvim, options=stack.settings.match, db=stack.bdb)
-    should = _should_cont(
-        stack.state.inserted,
-        prev=stack.state.cur,
-        cur=ctx,
+    should = (
+        _should_cont(
+            stack.state.inserted,
+            prev=stack.state.cur,
+            cur=ctx,
+        )
+        if ctx
+        else False
     )
-    if manual or should:
+    if ctx and (manual or should):
         stack.state.cur = ctx
         _, col = ctx.position
         complete(nvim, col=col - 1, comp=())
