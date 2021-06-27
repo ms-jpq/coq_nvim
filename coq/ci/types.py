@@ -7,7 +7,6 @@ from typing import AbstractSet
 class _CompilationPaths:
     lsp: AbstractSet[Path]
     neosnippet: AbstractSet[Path]
-    snipmate: AbstractSet[Path]
     ultisnip: AbstractSet[Path]
 
 

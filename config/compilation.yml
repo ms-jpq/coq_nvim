@@ -29,7 +29,6 @@ paths:
     - neosnippet-snippets/neosnippets
     - vim-go/gosnippets/snippets
     - vim-snippets/snippets
-  snipmate: []
   ultisnip:
     - vim-go/gosnippets/UltiSnips
     - vim-snippets/UltiSnips
