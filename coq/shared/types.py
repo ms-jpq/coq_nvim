@@ -36,6 +36,10 @@ class Context:
     line_before: str
     line_after: str
 
+    lines: Sequence[str]
+    lines_before: Sequence[str]
+    lines_after: Sequence[str]
+
     words: str
     words_before: str
     words_after: str
