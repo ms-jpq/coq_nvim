@@ -22,6 +22,7 @@ class Worker(BaseWorker[WordbankClient, BDB]):
         match = context.words or (context.syms if self._options.match_syms else "")
         words = self._misc.suggestions(
             self._supervisor.options,
+            filetype=context.filetype,
             word=match,
         )
         yield tuple(_comp(self._options, word=word) for word in words)

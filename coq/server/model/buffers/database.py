@@ -134,7 +134,8 @@ class BDB:
 
         self._ex.submit(cont)
 
-    def suggestions(self, opts: Options, word: str) -> Sequence[str]:
+    @timeit("BUF SUGGEST")
+    def suggestions(self, opts: Options, filetype: str, word: str) -> Sequence[str]:
         def cont() -> Sequence[str]:
             try:
                 with closing(self._conn.cursor()) as cursor:
@@ -143,6 +144,7 @@ class BDB:
                         {
                             "exact": opts.exact_matches,
                             "cut_off": opts.fuzzy_cutoff,
+                            "filetype": filetype,
                             "word": word,
                         },
                     )
@@ -159,29 +161,26 @@ class BDB:
         filename: str,
         line_num: int,
     ) -> Sequence[SqlMetrics]:
+        def m1() -> Iterator[Mapping]:
+            for word in words:
+                yield {
+                    "word": word,
+                    "filetype": filetype,
+                    "filename": filename,
+                    "line_num": line_num,
+                }
+
         def cont() -> Sequence[SqlMetrics]:
-            def c2() -> Iterator[SqlMetrics]:
+            try:
                 with closing(self._conn.cursor()) as cursor:
                     with with_transaction(cursor):
+                        cursor.execute(sql("delete", "tmp_for_metrics"), ())
                         cursor.execute(
                             sql("select", "num_lines"), {"filename": filename}
                         )
                         lines_tot = cursor.fetchone()["lines_tot"]
+                        cursor.executemany(sql("insert", "tmp_for_metrics"), m1())
 
-                        for word in words:
-                            cursor.execute(
-                                sql("select", "word_metrics"),
-                                {
-                                    "word": word,
-                                    "filetype": filetype,
-                                    "filename": filename,
-                                    "line_num": line_num,
-                                    "lines_tot": lines_tot,
-                                },
-                            )
-                            yield cursor.fetchone()
-
-            try:
                 return tuple(repeat(_NUL_METRIC, times=len(words)))
             except OperationalError:
                 return tuple(repeat(_NUL_METRIC, times=len(words)))
