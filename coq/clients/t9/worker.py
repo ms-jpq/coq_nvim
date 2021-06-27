@@ -50,6 +50,10 @@ def _decode(client: TabnineClient, reply: Any) -> Iterator[Completion]:
         yield cmp
 
 
+def _proc() -> Popen:
+    return Popen((str(T9_BIN),), text=True, stdin=PIPE, stdout=PIPE)
+
+
 class Worker(BaseWorker[TabnineClient, None]):
     def __init__(
         self, supervisor: Supervisor, options: TabnineClient, misc: None
@@ -68,17 +72,22 @@ class Worker(BaseWorker[TabnineClient, None]):
             return ()
         else:
             if not self._proc:
-                self._proc = Popen((str(T9_BIN),), text=True, stdin=PIPE, stdout=PIPE)
+                self._proc = _proc()
 
             req = _encode(context)
             json = dumps(req, check_circular=False, ensure_ascii=False)
-            self._proc.stdin.write(json)
-            self._proc.stdin.write("\n")
-            self._proc.stdin.flush()
-            json = self._proc.stdout.readline()
-            reply = loads(json)
-            cmps = tuple(_decode(self._options, reply=reply))
-            return cmps
+            try:
+                self._proc.stdin.write(json)
+                self._proc.stdin.write("\n")
+                self._proc.stdin.flush()
+                json = self._proc.stdout.readline()
+            except BrokenPipeError:
+                self._proc = _proc()
+                return ()
+            else:
+                reply = loads(json)
+                cmps = tuple(_decode(self._options, reply=reply))
+                return cmps
 
     def work(self, context: Context) -> Iterator[Sequence[Completion]]:
         cmps = self._req(context)
