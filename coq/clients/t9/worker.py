@@ -56,6 +56,7 @@ class Worker(BaseWorker[TabnineClient, None]):
     def __init__(
         self, supervisor: Supervisor, options: TabnineClient, misc: None
     ) -> None:
+        self._proc: Optional[Popen] = None
         super().__init__(supervisor, options=options, misc=misc)
 
     def _req(self, context: Context) -> Sequence[Completion]:
