@@ -22,7 +22,7 @@ from ...shared.nvim.completions import VimCompletion
 from ...shared.settings import PreviewDisplay
 from ...shared.timeit import timeit
 from ...shared.trans import expand_tabs
-from ...shared.types import UTF8, Doc, EditEnv
+from ...shared.types import UTF8, Context, Doc, EditEnv
 from ..runtime import Stack
 from ..types import UserData
 
@@ -61,6 +61,13 @@ def _kill_win(nvim: Nvim, stack: Stack) -> None:
 
 
 autocmd("CompleteDone", "InsertLeave") << f"lua {_kill_win.name}()"
+
+
+def _preprocess(context: Context, doc: Doc) -> Doc:
+    if doc.filetype == "markdown":
+        return doc
+    else:
+        return doc
 
 
 def _clamp(margin: int, hi: int) -> Callable[[int], int]:
@@ -139,12 +146,15 @@ def _set_win(nvim: Nvim, buf: Buffer, pos: _Pos) -> None:
 
 def _preview(
     nvim: Nvim,
+    context: Context,
     display: PreviewDisplay,
     env: EditEnv,
     event: _Event,
     doc: Doc,
 ) -> None:
-    text = expand_tabs(env, text=doc.text)
+    new_doc = _preprocess(context, doc=doc)
+
+    text = expand_tabs(env, text=new_doc.text)
     lines = text.splitlines()
     (_, pos), *_ = sorted(
         enumerate(_positions(nvim, display=display, event=event, lines=lines)),
@@ -155,7 +165,7 @@ def _preview(
     buf = create_buf(
         nvim, listed=False, scratch=True, wipe=True, nofile=True, noswap=True
     )
-    buf_set_preview(nvim, buf=buf, filetype=doc.filetype, preview=lines)
+    buf_set_preview(nvim, buf=buf, filetype=new_doc.filetype, preview=lines)
     _set_win(nvim, buf=buf, pos=pos)
 
 
@@ -171,9 +181,10 @@ def _cmp_changed(nvim: Nvim, stack: Stack, event: Mapping[str, Any] = {}) -> Non
         except DecodeError:
             pass
         else:
-            if data and data.doc and data.doc.text:
+            if stack.state.cur and data and data.doc and data.doc.text:
                 _preview(
                     nvim,
+                    context=stack.state.cur,
                     display=stack.settings.display.preview,
                     env=stack.state.env,
                     event=ev,
