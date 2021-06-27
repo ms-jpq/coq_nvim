@@ -49,6 +49,7 @@ def _comp_func(nvim: Nvim, stack: Stack, manual: bool, pum_open: bool) -> None:
 
     ctx = context(
         nvim,
+        db=stack.bdb,
         unifying_chars=stack.settings.match.unifying_chars,
         cwd=stack.state.cwd,
     )

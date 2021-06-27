@@ -5,7 +5,6 @@ from pynvim import Nvim
 from pynvim.api import Buffer
 from pynvim_pp.api import (
     buf_filetype,
-    buf_get_lines,
     buf_get_option,
     buf_get_var,
     buf_linefeed,
@@ -17,10 +16,12 @@ from pynvim_pp.api import (
 from pynvim_pp.text_object import gen_split
 
 from ..shared.types import Context, EditEnv
+from .model.buffers.database import BDB
 
 
 def context(
     nvim: Nvim,
+    db: BDB,
     unifying_chars: AbstractSet[str],
     cwd: str,
 ) -> Context:
@@ -29,12 +30,13 @@ def context(
     row, col = win_get_cursor(nvim, win=win)
     pos = (row, col)
 
-    line, *_ = buf_get_lines(nvim, buf=buf, lo=row, hi=row + 1)
     filename = buf_name(nvim, buf=buf)
     filetype = buf_filetype(nvim, buf=buf)
     comment_str = cast(str, buf_get_option(nvim, buf=buf, key="commentstring"))
     changedtick = cast(int, buf_get_var(nvim, buf=buf, key="changedtick"))
 
+    lines = db.lines(filename)
+    line = lines[row]
     lhs, _, rhs = comment_str.partition("%s")
     b_line = line.encode()
     before, after = b_line[:col].decode(), b_line[col:].decode()
