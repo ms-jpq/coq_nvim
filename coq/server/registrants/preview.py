@@ -85,7 +85,7 @@ def _positions(
         _clamp(display.margin, hi=max(len(line.encode(UTF8)) for line in lines)),
     )
 
-    ns_width = limit_w(t_width - right)
+    ns_width = limit_w(t_width - left)
     n_height = limit_h(top - 1)
 
     ns_col = left - 1
@@ -119,7 +119,7 @@ def _positions(
         height=we_height,
         width=limit_w(t_width - right - 2),
     )
-    return (n, s, w, e)
+    return n, s, w, e
 
 
 def _set_win(nvim: Nvim, buf: Buffer, pos: _Pos) -> None:
@@ -146,11 +146,12 @@ def _preview(
 ) -> None:
     text = expand_tabs(env, text=doc.text)
     lines = text.splitlines()
-    pos, *_ = sorted(
-        _positions(nvim, display=display, event=event, lines=lines),
-        key=lambda p: p.height * p.width,
+    (_, pos), *_ = sorted(
+        enumerate(_positions(nvim, display=display, event=event, lines=lines)),
+        key=lambda p: (p[1].height * p[1].width, p[0]),
         reverse=True,
     )
+
     buf = create_buf(
         nvim, listed=False, scratch=True, wipe=True, nofile=True, noswap=True
     )
