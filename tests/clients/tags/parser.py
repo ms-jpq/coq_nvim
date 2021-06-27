@@ -1,10 +1,9 @@
 from itertools import islice
 from os import linesep
 from shutil import get_terminal_size
-from subprocess import check_call
 from unittest import TestCase
 
-from ....coq.clients.tags.parser import parse
+from ....coq.clients.tags.parser import parse_lines, run
 from ....coq.consts import TMP_DIR, TOP_LEVEL
 
 
@@ -13,10 +12,11 @@ class Parser(TestCase):
         tag = TMP_DIR / "TAG"
         TMP_DIR.mkdir(parents=True, exist_ok=True)
         if not tag.exists():
-            check_call(("etags", "--recurse", "-o", str(tag)), cwd=TOP_LEVEL)
+            text = run("--recurse", cwd=TOP_LEVEL, timeout=None)
+            tag.write_text(text)
 
         spec = tag.read_text()
-        parsed = tuple(parse(spec))
+        parsed = tuple(parse_lines(spec))
 
         cols, _ = get_terminal_size()
         sep = linesep + "-" * cols + linesep

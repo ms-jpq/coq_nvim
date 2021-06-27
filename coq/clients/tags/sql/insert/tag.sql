@@ -1,3 +1,3 @@
-INSERT INTO tags (             filename,               name,               text,   line_num)
-VALUES           (X_NORMALIZE(:filename), X_NORMALIZE(:name), X_NORMALIZE(:text), :line_num)
+INSERT INTO tags (             filename,   line_num,             line,              kind,               name)
+VALUES           (X_NORMALIZE(:filename), :line_num, X_NORMALIZE(line) X_NORMALIZE(:kind), X_NORMALIZE(:name))
 

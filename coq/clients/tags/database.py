@@ -11,8 +11,8 @@ from ...consts import TAGS_DB
 from ...shared.database import init_db
 from ...shared.executor import Executor
 from ...shared.settings import Options
+from .parser import Tag
 from .sql import sql
-from .types import Section
 
 
 class _File(TypedDict):
@@ -66,9 +66,7 @@ class Database:
 
         self._ex.submit(cont)
 
-    def add(
-        self, files: Mapping[Path, Tuple[str, float]], sections: Iterable[Section]
-    ) -> None:
+    def add(self, files: Mapping[Path, Tuple[str, float]], tags: Iterable[Tag]) -> None:
         def m1() -> Iterator[Mapping]:
             for filename, (filetype, mtime) in files.items():
                 yield {
@@ -78,14 +76,14 @@ class Database:
                 }
 
         def m2() -> Iterator[Mapping]:
-            for section in sections:
-                for tag in section.tags:
-                    yield {
-                        "filename": section.header.filename,
-                        "name": tag.name or tag.text,
-                        "text": tag.text,
-                        "line_num": tag.row,
-                    }
+            for tag in tags:
+                yield {
+                    "filename": tag.filename,
+                    "name": tag.name,
+                    "line": tag.line,
+                    "kind": tag.kind,
+                    "line_num": tag.line_num,
+                }
 
         def cont() -> None:
             with self._lock, closing(self._conn.cursor()) as cursor:
