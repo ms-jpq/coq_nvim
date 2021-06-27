@@ -113,6 +113,7 @@ def parse(path: Path) -> MetaSnippets:
                 path, lineno=lineno, line=line
             )
             current_lines.clear()
+            current_aliases.clear()
             current_aliases.append(current_name)
 
         elif line.startswith(_ALIAS_START):
