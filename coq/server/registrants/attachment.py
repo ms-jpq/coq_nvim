@@ -46,7 +46,7 @@ def _lines_event(
     lo: int,
     hi: int,
     lines: Sequence[str],
-    multipart: bool,
+    pending: bool,
 ) -> None:
     file = buf_name(nvim, buf=buf)
     filetype = buf_filetype(nvim, buf=buf)
@@ -59,7 +59,7 @@ def _lines_event(
         lines=lines,
         unifying_chars=stack.settings.match.unifying_chars,
     )
-    if not multipart and stack.state.request:
+    if not pending and stack.state.request:
         stack.state.request = False
         comp_func(nvim, stack=stack, manual=False)
 
