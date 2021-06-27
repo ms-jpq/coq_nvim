@@ -102,7 +102,7 @@ if command == "deps":
             print("Installation failed, check :message", file=stderr)
             exit(proc.returncode)
         proc = run(
-            ("git", "submodule", "update", "--init", "--recursive"),
+            ("git", "submodule", "update", "--recursive"),
             cwd=TOP_LEVEL,
             stdin=DEVNULL,
             stderr=stdout,
