@@ -56,9 +56,9 @@ def comp_func(nvim: Nvim, stack: Stack, manual: bool) -> None:
         else False
     )
     if ctx and (manual or should):
-        stack.state.request = ctx.position
+        _, col = stack.state.request = ctx.position
         stack.state.cur = ctx
-        _, col = ctx.position
+
         complete(nvim, col=col - 1, comp=())
         fut = stack.supervisor.collect(ctx, manual=manual)
 
