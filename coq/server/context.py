@@ -38,7 +38,7 @@ def context(
     changedtick = ns.changedtick
     tabstop = ns.tabstop
     expandtab = cast(bool, ns.expandtab)
-    linefeed = cast(Literal["\n", "\r", "\r\n"], LFfmt[cast(str, ns.fileformat)].name)
+    linefeed = cast(Literal["\n", "\r", "\r\n"], LFfmt[cast(str, ns.fileformat)].value)
 
     lines = db.lines(filename)
     line = lines[row]
