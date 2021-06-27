@@ -3,6 +3,8 @@ from pathlib import PurePath
 from subprocess import DEVNULL, CalledProcessError, check_output
 from typing import Iterator, Sequence
 
+from std2.pathlib import AnyPath
+
 
 @dataclass(frozen=True)
 class Tag:
@@ -20,9 +22,7 @@ FMT = f"""
 """.strip()
 
 
-def run(
-    *args: str,
-) -> str:
+def run(*args: str, cwd: AnyPath) -> str:
     try:
         raw = check_output(
             (
@@ -32,6 +32,7 @@ def run(
                 f"--_xformat={FMT}",
                 *args,
             ),
+            cwd=cwd,
             text=True,
             stdin=DEVNULL,
             stderr=DEVNULL,
@@ -59,6 +60,6 @@ def parse(paths: Sequence[PurePath]) -> Sequence[Tag]:
     if not paths:
         return ()
     else:
-        raw = run(*map(str, paths))
+        raw = run(*map(str, paths), cwd=".")
         return tuple(parse_lines(raw))
 

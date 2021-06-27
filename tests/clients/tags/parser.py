@@ -12,7 +12,7 @@ class Parser(TestCase):
         tag = TMP_DIR / "TAG"
         TMP_DIR.mkdir(parents=True, exist_ok=True)
         if not tag.exists():
-            text = run("--recurse", cwd=TOP_LEVEL, timeout=None)
+            text = run("--recurse", cwd=TOP_LEVEL)
             tag.write_text(text)
 
         spec = tag.read_text()
