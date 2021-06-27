@@ -2,7 +2,7 @@ from dataclasses import asdict
 from json import dumps, loads
 from subprocess import PIPE, Popen
 from threading import Event
-from typing import Any, Iterator, Optional, Sequence
+from typing import IO, Any, Iterator, Optional, Sequence, cast
 
 from std2.pickle import decode
 
@@ -77,10 +77,10 @@ class Worker(BaseWorker[TabnineClient, None]):
             req = _encode(context)
             json = dumps(req, check_circular=False, ensure_ascii=False)
             try:
-                self._proc.stdin.write(json)
-                self._proc.stdin.write("\n")
-                self._proc.stdin.flush()
-                json = self._proc.stdout.readline()
+                cast(IO, self._proc.stdin).write(json)
+                cast(IO, self._proc.stdin).write("\n")
+                cast(IO, self._proc.stdin).flush()
+                json = cast(IO, self._proc.stdout).readline()
             except BrokenPipeError:
                 self._proc = _proc()
                 return ()
