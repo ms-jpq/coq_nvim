@@ -22,7 +22,7 @@ def _get_branch() -> str:
 def _git_clone(path: Path) -> None:
     if not path.is_dir():
         token = environ["CI_TOKEN"]
-        uri = f"https://ms-jpq:{token}@github.com/ms-jpq/coq_nvim.git"
+        uri = f"https://ms-jpq:{token}@github.com/ms-jpq/coq.artifacts.git"
         branch = _get_branch()
         check_call(("git", "clone", "--branch", branch, uri, str(path)))
 
