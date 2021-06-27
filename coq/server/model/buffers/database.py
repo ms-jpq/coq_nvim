@@ -89,9 +89,7 @@ class BDB:
                 }
 
         words = tuple(m1())
-        shift = hi - lo + len(lines)
-        print(f"DEL -- [{lo}, {hi})", flush=True)
-        print(f"SFT -- [{lo}, inf) :: {shift}", flush=True)
+        shift = len(lines) - (hi - lo)
 
         def cont() -> None:
             with timeit("SQL -- SETLINES"):
