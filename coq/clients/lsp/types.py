@@ -23,7 +23,7 @@ class TextEdit:
 
 
 @dataclass(frozen=True)
-class _InsertReplaceEdit:
+class InsertReplaceEdit:
     newText: str
     insert: _Range
     replace: _Range
@@ -51,7 +51,7 @@ class CompletionItem:
     insertText: Optional[str] = None
     insertTextFormat: Optional[_InsertTextFormat] = None
     kind: Optional[_CompletionItemKind] = None
-    textEdit: Union[TextEdit, _InsertReplaceEdit, None] = None
+    textEdit: Union[TextEdit, InsertReplaceEdit, None] = None
 
 
 @dataclass(frozen=True)
