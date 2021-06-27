@@ -47,7 +47,7 @@ CREATE TABLE IF NOT EXISTS insertions (
 CREATE TEMP TABLE IF NOT EXISTS tmp_for_metrics (
   rowid    INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
   filetype TEXT    NOT NULL,
-  filename TEXT    NOT NULL,
+  filename TEXT    NOT NULL REFERENCES files (filename) ON DELETE CASCADE,
   content  TEXT    NOT NULL
 );
 CREATE INDEX IF NOT EXISTS tmp_for_metrics_filetype ON tmp_for_metrics (filetype);
