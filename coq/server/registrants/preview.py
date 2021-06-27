@@ -80,12 +80,15 @@ def _clamp(margin: int, hi: int) -> Callable[[int], int]:
 
 
 def _positions(
-    nvim: Nvim,
+    stack: Stack,
     display: PreviewDisplay,
     event: _Event,
     lines: Sequence[str],
 ) -> Sequence[_Pos]:
-    t_height, t_width = nvim.options["lines"], nvim.options["columns"]
+    (
+        t_width,
+        t_height,
+    ) = stack.state.screen
     top, btm, left, right = (
         event.row,
         event.row + event.height + 1,
@@ -151,6 +154,7 @@ def _set_win(nvim: Nvim, buf: Buffer, pos: _Pos) -> None:
 
 def _preview(
     nvim: Nvim,
+    stack: Stack,
     context: Context,
     display: PreviewDisplay,
     event: _Event,
@@ -161,7 +165,7 @@ def _preview(
     text = expand_tabs(context, text=new_doc.text)
     lines = text.splitlines()
     (_, pos), *_ = sorted(
-        enumerate(_positions(nvim, display=display, event=event, lines=lines)),
+        enumerate(_positions(stack, display=display, event=event, lines=lines)),
         key=lambda p: (p[1].height * p[1].width, -p[0]),
         reverse=True,
     )
@@ -188,6 +192,7 @@ def _cmp_changed(nvim: Nvim, stack: Stack, event: Mapping[str, Any] = {}) -> Non
             if stack.state.cur and data and data.doc and data.doc.text:
                 _preview(
                     nvim,
+                    stack=stack,
                     context=stack.state.cur,
                     display=stack.settings.display.preview,
                     event=ev,

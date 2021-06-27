@@ -1,5 +1,6 @@
 from concurrent.futures import CancelledError
-from typing import Any, Literal, Mapping, Optional, Sequence, Tuple, Union
+from typing import Any, Literal, Mapping, Optional, Sequence, Tuple, Union, cast
+from uuid import UUID
 
 from pynvim import Nvim
 from pynvim.api.nvim import Nvim
@@ -8,7 +9,7 @@ from std2.pickle import DecodeError, decode
 from std2.pickle.coders import BUILTIN_DECODERS
 
 from ...registry import autocmd, enqueue_event, pool, rpc
-from ...shared.nvim.completions import complete
+from ...shared.nvim.completions import VimCompletion, complete
 from ...shared.timeit import timeit
 from ...shared.types import Completion, Context, NvimPos
 from ..context import context
@@ -30,14 +31,11 @@ def _should_cont(
 
 
 @rpc(blocking=True)
-def _cmp(nvim: Nvim, stack: Stack, completions: Sequence[Completion]) -> None:
-    ctx = stack.state.cur
-    if ctx:
-        _, col = ctx.position
-        with timeit("RANK"):
-            comp = trans(nvim, stack=stack, context=ctx, completions=completions)
-            complete(nvim, col=col, comp=comp)
-            stack.state.commit = ctx.uid
+def _cmp(
+    nvim: Nvim, stack: Stack, uid: UUID, col: int, comp: Sequence[VimCompletion]
+) -> None:
+    complete(nvim, col=col, comp=comp)
+    stack.state.commit = uid
 
 
 def comp_func(nvim: Nvim, stack: Stack, manual: bool) -> None:
@@ -66,12 +64,18 @@ def comp_func(nvim: Nvim, stack: Stack, manual: bool) -> None:
         def cont() -> None:
             try:
                 try:
-                    cmps = fut.result()
+                    cmp = fut.result()
                 except CancelledError:
                     pass
                 else:
-                    if stack.state.cur == ctx:
-                        enqueue_event(_cmp, cmps)
+                    if ctx and stack.state.cur == ctx:
+                        _, col = ctx.position
+                        completions = cast(Sequence[Completion], cmp)
+                        with timeit("RANK"):
+                            vim_comps = tuple(
+                                trans(stack, context=ctx, completions=completions)
+                            )
+                        enqueue_event(_cmp, ctx.uid, col, vim_comps)
             except Exception as e:
                 log.exception("%s", e)
 

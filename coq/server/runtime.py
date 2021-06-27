@@ -1,12 +1,11 @@
 from concurrent.futures import Future, ThreadPoolExecutor
 from dataclasses import dataclass
 from json import loads
-from os import linesep
-from typing import AbstractSet, Iterator, Literal, Optional, Sequence, cast
+from threading import Lock
+from typing import AbstractSet, Iterator, Optional, Sequence, Tuple
 from uuid import UUID, uuid4
 
 from pynvim import Nvim
-from pynvim_pp.api import get_cwd
 from std2.configparser import hydrate
 from std2.pickle import decode
 from std2.tree import merge
@@ -30,6 +29,7 @@ from .model.snippets.database import SDB
 
 @dataclass
 class _State:
+    screen: Tuple[int, int]
     futs: Sequence[Future]
     commit: UUID
     cur: Optional[Context]
@@ -39,6 +39,7 @@ class _State:
 
 @dataclass(frozen=True)
 class Stack:
+    lock: Lock
     settings: Settings
     state: _State
     bdb: BDB
@@ -99,6 +100,7 @@ def _from_each_according_to_their_ability(
 def stack(pool: ThreadPoolExecutor, nvim: Nvim) -> Stack:
     settings = _settings(nvim)
     state = _State(
+        screen=(0, 0),
         commit=uuid4(),
         futs=(),
         cur=None,
@@ -113,6 +115,7 @@ def stack(pool: ThreadPoolExecutor, nvim: Nvim) -> Stack:
         )
     }
     stack = Stack(
+        lock=Lock(),
         settings=settings,
         state=state,
         bdb=bdb,

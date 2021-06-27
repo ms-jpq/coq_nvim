@@ -11,9 +11,12 @@ from .omnifunc import omnifunc
 
 @rpc(blocking=True)
 def _update_pumheight(nvim: Nvim, stack: Stack) -> None:
-    lines: int = nvim.options["lines"]
+    scr_width: int = nvim.options["columns"]
+    scr_height: int = nvim.options["lines"]
+
+    stack.state.screen = (scr_width, scr_height)
     pumheight = max(
-        round(lines * stack.settings.display.pum.y_ratio),
+        round(scr_height * stack.settings.display.pum.y_ratio),
         stack.settings.display.pum.y_max_len,
     )
     nvim.options["pumheight"] = pumheight

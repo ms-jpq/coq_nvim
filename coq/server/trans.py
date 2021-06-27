@@ -1,6 +1,5 @@
 from typing import Iterator, MutableSet, Sequence
 
-from pynvim import Nvim
 from std2.ordinal import clamp
 
 from ..shared.nvim.completions import VimCompletion
@@ -70,11 +69,11 @@ def _cmp_to_vcmp(
 
 
 def trans(
-    nvim: Nvim, stack: Stack, context: Context, completions: Sequence[Completion]
+    stack: Stack, context: Context, completions: Sequence[Completion]
 ) -> Iterator[VimCompletion]:
+    scr_width, _ = stack.state.screen
     display = stack.settings.display
     _, col = context.position
-    scr_width: int = nvim.options["columns"]
     truncate = clamp(1, scr_width - col - display.pum.x_margin, display.pum.x_max_len)
 
     max_width, ranked = annotate(
