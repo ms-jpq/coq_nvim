@@ -3,9 +3,9 @@ from os.path import splitext
 from pathlib import Path
 from string import whitespace
 from textwrap import dedent
-from typing import MutableSequence, MutableSet, Optional
+from typing import MutableSequence, MutableSet, Tuple
 
-from ..types import MetaSnippets, ParsedSnippet
+from ..types import MetaSnippets, Options, ParsedSnippet
 from .parse import opt_parse, raise_err
 
 _COMMENT_START = "#"
@@ -19,6 +19,51 @@ _IGNORED_STARTS = ("source", "delete", "regexp")
 _SNIPPET_LINE_STARTS = {*whitespace}
 
 
+def _start(path: Path, lineno: int, line: str) -> Tuple[str, str, MutableSet[Options]]:
+    rest = line[len(_SNIPPET_START) :]
+    sep_count = rest.count('"')
+
+    if sep_count == 0:
+        return rest.strip(), "", opt_parse("")
+
+    if sep_count == 1:
+        return rest.strip(), "", opt_parse("")
+
+    elif sep_count == 2:
+        first = rest.find('"')
+        second = rest.find('"', first + 1)
+        return (
+            rest[:first].strip(),
+            rest[first + 1 : second],
+            opt_parse(rest[second + 1 :].strip()),
+        )
+
+    elif sep_count == 3:
+        first = rest.find('"')
+        second = rest.find('"', first + 1)
+        third = rest.find('"', second + 1)
+        return (
+            '"',
+            rest[second + 1 : third],
+            opt_parse(rest[third + 1 :].strip()),
+        )
+
+    elif sep_count == 4:
+        first = rest.find('"')
+        second = rest.find('"', first + 1)
+        third = rest.find('"', second + 1)
+        fourth = rest.find('"', third + 1)
+        return (
+            '"',
+            rest[third + 1 : fourth],
+            opt_parse(rest[fourth + 1 :].strip()),
+        )
+
+    else:
+        reason = f'Invaild # of " - {sep_count}'
+        return raise_err(path, lineno=lineno, line=line, reason=reason)
+
+
 def parse(path: Path) -> MetaSnippets:
     snippets: MutableSequence[ParsedSnippet] = []
     extends: MutableSet[str] = set()
@@ -26,20 +71,19 @@ def parse(path: Path) -> MetaSnippets:
     current_name = ""
     current_label: str = ""
     current_aliases: MutableSequence[str] = []
-    current_options: MutableSequence[str] = []
+    current_options: MutableSet[Options] = set()
     current_lines: MutableSequence[str] = []
 
     def push() -> None:
         if current_name:
             content = dedent(linesep.join(current_lines))
-            opts = opt_parse(current_options)
             snippet = ParsedSnippet(
                 grammar="snu",
                 content=content,
                 label=current_label,
                 doc="",
                 matches={*current_aliases},
-                options=opts,
+                options=current_options,
             )
             snippets.append(snippet)
 
@@ -65,10 +109,9 @@ def parse(path: Path) -> MetaSnippets:
 
         elif line.startswith(_SNIPPET_START):
             push()
-            current_name = line[len(_SNIPPET_START) :].strip()
-            current_label = ""
-            current_aliases.clear()
-            current_options.clear()
+            current_name, current_label, current_options = _start(
+                path, lineno=lineno, line=line
+            )
             current_lines.clear()
             current_aliases.append(current_name)
 
@@ -79,7 +122,8 @@ def parse(path: Path) -> MetaSnippets:
             current_label = line[len(_LABEL_START) :].strip()
 
         elif line.startswith(_OPTIONS_START):
-            current_options.extend(line[len(_OPTIONS_START) :].split(","))
+            for opt in opt_parse(line[len(_OPTIONS_START) :].split(",")):
+                current_options.add(opt)
 
         elif any(line.startswith(c) for c in _SNIPPET_LINE_STARTS):
             if current_name:

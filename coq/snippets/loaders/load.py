@@ -7,7 +7,6 @@ from std2.pathlib import walk
 from ..types import ParsedSnippet, SnippetSpecs
 from .lsp import parse as parse_lsp
 from .neosnippet import parse as parse_neosnippets
-from .snipmate import parse as parse_snipmate
 from .ultisnip import parse as parse_ultisnip
 
 
@@ -28,13 +27,11 @@ def _load_paths(
 def load(
     lsp: AbstractSet[Path],
     neosnippet: AbstractSet[Path],
-    snipmate: AbstractSet[Path],
     ultisnip: AbstractSet[Path],
 ) -> SnippetSpecs:
     specs = {
         parse_lsp: _load_paths(lsp, exts={".json"}),
         parse_neosnippets: _load_paths(neosnippet, exts={".snippets", ".snip"}),
-        parse_snipmate: _load_paths(snipmate, exts={".snippets", ".snip"}),
         parse_ultisnip: _load_paths(ultisnip, exts={".snippets", ".snip"}),
     }
 

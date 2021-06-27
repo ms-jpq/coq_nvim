@@ -55,7 +55,6 @@ def load() -> SnippetSpecs:
     parsed = load_from_paths(
         lsp={*map(_trans_name, specs.paths.lsp)},
         neosnippet={*map(_trans_name, specs.paths.neosnippet)},
-        snipmate={*map(_trans_name, specs.paths.snipmate)},
         ultisnip={*map(_trans_name, specs.paths.ultisnip)},
     )
     return parsed
