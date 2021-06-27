@@ -2,8 +2,10 @@ from os import X_OK, access
 from platform import machine
 from shutil import which
 from string import Template
+from time import sleep
 from urllib.error import HTTPError
 
+from pynvim_pp.logging import log
 from std2.os import OS, os
 from std2.urllib import urlopen
 
@@ -66,7 +68,8 @@ def ensure_installed() -> None:
             try:
                 _update(timeout=60)
             except HTTPError as e:
-                pass
+                log.exception("%s", e)
+                sleep(60)
             else:
                 break
 
