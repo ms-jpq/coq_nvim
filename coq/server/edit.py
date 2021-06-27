@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from itertools import chain
+from itertools import chain, repeat
 from typing import AbstractSet, Iterator, MutableSequence, Sequence, Tuple
 
 from pynvim import Nvim
@@ -364,7 +364,9 @@ def edit(nvim: Nvim, stack: Stack, data: UserData) -> None:
             primary,
             *data.secondary_edits,
         )
-        view = _lines(ctx.lines[: row + 1])
+        _, limited_lines = stack.bdb.lines(ctx.filename, lo=lo, hi=hi)
+        lines = tuple(chain(repeat("", times=lo), limited_lines))
+        view = _lines(lines)
 
         instructions = _instructions(
             ctx,
