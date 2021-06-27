@@ -45,11 +45,12 @@ def comp_func(nvim: Nvim, stack: Stack, manual: bool) -> None:
         fut.cancel()
     stack.state.futs = ()
 
-    ctx = context(
-        nvim,
-        db=stack.bdb,
-        unifying_chars=stack.settings.match.unifying_chars,
-    )
+    with timeit("GEN CTX"):
+        ctx = context(
+            nvim,
+            db=stack.bdb,
+            unifying_chars=stack.settings.match.unifying_chars,
+        )
     should = _should_cont(
         stack.state.inserted,
         prev=stack.state.cur,
