@@ -28,7 +28,7 @@ def _should_cont(
     elif cur.position == inserted:
         return False
     else:
-        return (cur.words or cur.syms) != ""
+        return (cur.words_before or cur.syms_before) != ""
 
 
 @rpc(blocking=True)
