@@ -148,7 +148,7 @@ def _preview(
     lines = text.splitlines()
     (_, pos), *_ = sorted(
         enumerate(_positions(nvim, display=display, event=event, lines=lines)),
-        key=lambda p: (p[1].height * p[1].width, p[0]),
+        key=lambda p: (p[1].height * p[1].width, -p[0]),
         reverse=True,
     )
 
