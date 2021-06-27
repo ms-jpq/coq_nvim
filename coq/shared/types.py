@@ -28,6 +28,9 @@ class Context:
     cwd: str
     filetype: str
     filename: str
+    linefeed: Literal["\r\n", "\n", "\r"]
+    tabstop: int
+    expandtab: bool
     comment: Tuple[str, str]
 
     position: NvimPos
@@ -109,11 +112,4 @@ class Completion:
     kind: str = ""
     doc: Optional[Doc] = None
     uid: UUID = field(default_factory=uuid4)
-
-
-@dataclass(frozen=True)
-class EditEnv:
-    linefeed: Literal["\r\n", "\n", "\r"]
-    tabstop: int
-    expandtab: bool
 
