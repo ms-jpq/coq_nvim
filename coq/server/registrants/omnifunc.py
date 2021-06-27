@@ -94,12 +94,13 @@ def omnifunc(
 
 
 @rpc(blocking=True)
-def _txt_changed(nvim: Nvim, stack: Stack) -> None:
-    with timeit("BEGIN"):
+def _txt_changed(nvim: Nvim, stack: Stack, pum_open: bool) -> None:
+    # if not pum_open:
         stack.state.request = True
 
 
-autocmd("TextChangedI", "TextChangedP") << f"lua {_txt_changed.name}()"
+autocmd("TextChangedI") << f"lua {_txt_changed.name}(false)"
+autocmd("TextChangedP") << f"lua {_txt_changed.name}(true)"
 
 
 @rpc(blocking=True)
