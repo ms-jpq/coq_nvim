@@ -1,0 +1,3 @@
+[submodule "coq.artifacts"]
+	path = coq.artifacts
+	url = https://github.com/ms-jpq/coq.artifacts
