@@ -4,7 +4,6 @@ from typing import AbstractSet, Iterator, MutableSequence, Sequence, Tuple
 
 from pynvim import Nvim
 from pynvim_pp.api import (
-    buf_get_lines,
     buf_set_lines,
     cur_win,
     win_get_buf,
@@ -376,8 +375,7 @@ def edit(nvim: Nvim, stack: Stack, data: UserData) -> None:
             *data.secondary_edits,
             env=stack.state.env,
         )
-        limited_lines = buf_get_lines(nvim, buf=buf, lo=lo, hi=hi)
-        lines = tuple(chain(repeat("", times=lo), limited_lines))
+        lines = stack.bdb.lines(ctx.filename)
         view = _lines(lines)
 
         instructions = _instructions(
