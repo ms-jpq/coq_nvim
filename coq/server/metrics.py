@@ -177,34 +177,33 @@ def annotate(
     context: Context,
     completions: Sequence[Completion],
 ) -> Tuple[int, Iterator[Completion]]:
+    @timeit("RANK :: SQL")
     def c1() -> Sequence[SqlMetrics]:
-        with timeit("RANK :: SQL"):
-            words = tuple(
-                comp.sort_by or comp.primary_edit.new_text for comp in completions
-            )
-            row, _ = context.position
-            return db.metric(
-                words,
-                filetype=context.filetype,
-                filename=context.filename,
-                line_num=row,
-            )
+        words = tuple(
+            comp.sort_by or comp.primary_edit.new_text for comp in completions
+        )
+        row, _ = context.position
+        return db.metric(
+            words,
+            filetype=context.filetype,
+            filename=context.filename,
+            line_num=row,
+        )
 
+    @timeit("RANK :: MAN")
     def c2() -> Sequence[_MatchMetrics]:
-        with timeit("RANK :: MAN"):
-            return tuple(_metrics(options, context=context, completions=completions))
+        return tuple(_metrics(options, context=context, completions=completions))
 
     with timeit("RANK :: T2"):
         f1, f2 = pool.submit(c1), pool.submit(c2)
         wait((cast(Future, f1), cast(Future, f2)), return_when=FIRST_EXCEPTION)
-        metrics = zip(completions, f1.result(), f2.result())
 
-    with timeit("RANK :: SORT"):
-        individual = tuple(_weights(metrics))
-        max_len, cum = _cum(weights, it=individual)
-        key_by = _sort_by(cum)
-        ordered = sorted(individual, key=key_by)
-        if DEBUG_METRICS:
-            _debug_log(key_by, cum=cum, ordered=ordered)
-        return max_len, (c for c, _ in ordered)
+    metrics = zip(completions, f1.result(), f2.result())
+    individual = tuple(_weights(metrics))
+    max_len, cum = _cum(weights, it=individual)
+    key_by = _sort_by(cum)
+    ordered = sorted(individual, key=key_by)
+    if DEBUG_METRICS:
+        _debug_log(key_by, cum=cum, ordered=ordered)
+    return max_len, (c for c, _ in ordered)
 

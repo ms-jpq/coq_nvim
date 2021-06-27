@@ -91,24 +91,25 @@ class BDB:
         words = tuple(m1())
         shift = len(lines) - (hi - lo)
 
+        @timeit("SQL -- SETLINES")
         def cont() -> None:
-            with timeit("SQL -- SETLINES"):
-                with self._lock, closing(self._conn.cursor()) as cursor:
-                    with with_transaction(cursor):
-                        _ensure_file(cursor, file=filename, filetype=filetype)
-                        del_params = {"filename": filename, "lo": lo, "hi": hi}
-                        cursor.execute(sql("delete", "words"), del_params)
-                        cursor.execute(sql("delete", "lines"), del_params)
-                        cursor.execute(
-                            sql("update", "lines"),
-                            {"filename": filename, "lo": lo, "shift": shift},
-                        )
-                        cursor.executemany(sql("insert", "word"), words)
-                        cursor.executemany(sql("insert", "line"), m2())
+            with self._lock, closing(self._conn.cursor()) as cursor:
+                with with_transaction(cursor):
+                    _ensure_file(cursor, file=filename, filetype=filetype)
+                    del_params = {"filename": filename, "lo": lo, "hi": hi}
+                    cursor.execute(sql("delete", "words"), del_params)
+                    cursor.execute(sql("delete", "lines"), del_params)
+                    cursor.execute(
+                        sql("update", "lines"),
+                        {"filename": filename, "lo": lo, "shift": shift},
+                    )
+                    cursor.executemany(sql("insert", "word"), words)
+                    cursor.executemany(sql("insert", "line"), m2())
 
         self._ex.submit(cont)
 
     def lines(self, filename: str, lo: int, hi: int) -> Tuple[int, Sequence[str]]:
+        @timeit("SQL -- GETLINES")
         def cont() -> Tuple[int, Sequence[str]]:
             params = {"filename": filename, "lo": lo, "hi": hi}
             with self._lock, closing(self._conn.cursor()) as cursor:

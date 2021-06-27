@@ -18,6 +18,7 @@ from .registry import atomic, autocmd, event_queue, pool, rpc
 from .server.registrants.attachment import BUF_EVENTS
 from .server.registrants.options import set_options
 from .server.runtime import Stack, stack
+from .shared.timeit import timeit
 
 
 class CoqClient(Client):
@@ -41,11 +42,13 @@ class CoqClient(Client):
             return handler(nvim, self._stack, *a)
 
     def on_msg(self, nvim: Nvim, msg: RpcMsg) -> Any:
+        name, *_ = msg
         if not self._stack:
             event_queue.put(msg)
             return None
         else:
-            return self._handle(nvim, msg)
+            with timeit(name):
+                return self._handle(nvim, msg)
 
     def wait(self, nvim: Nvim) -> int:
         if isinstance(nvim.loop, AbstractEventLoop):
