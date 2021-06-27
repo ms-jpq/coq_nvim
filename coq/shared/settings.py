@@ -32,6 +32,8 @@ class Display:
 class Options:
     unifying_chars: AbstractSet[str]
     exact_matches: int
+    context_lines: int
+
     fuzzy_cutoff: float
     timeout: float
     manual_timeout: float

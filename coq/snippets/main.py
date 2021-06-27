@@ -11,6 +11,7 @@ EMPTY_CTX = Context(
     cwd="",
     filename="",
     filetype="",
+    line_count=0,
     linefeed="\n",
     tabstop=2,
     expandtab=True,

@@ -3,7 +3,7 @@ from itertools import repeat
 from sqlite3 import Connection, OperationalError
 from sqlite3.dbapi2 import Cursor
 from threading import Lock
-from typing import AbstractSet, Iterator, Mapping, Sequence, TypedDict
+from typing import AbstractSet, Iterator, Mapping, Sequence, Tuple, TypedDict
 
 from std2.sqllite3 import with_transaction
 
@@ -108,11 +108,15 @@ class BDB:
 
         self._ex.submit(cont)
 
-    def lines(self, filename: str) -> Sequence[str]:
-        def cont() -> Sequence[str]:
+    def lines(self, filename: str, lo: int, hi: int) -> Tuple[int, Sequence[str]]:
+        def cont() -> Tuple[int, Sequence[str]]:
+            params = {"filename": filename, "lo": lo, "hi": hi}
             with self._lock, closing(self._conn.cursor()) as cursor:
-                cursor.execute(sql("select", "lines"), {"filename": filename})
-                lines = tuple(row["line"] for row in cursor.fetchall())
+                with with_transaction(cursor):
+                    cursor.execute(sql("select", "line_count"), params)
+                    count = cursor.fetchone()["line_count"]
+                    cursor.execute(sql("select", "lines"), params)
+                    lines = count, tuple(row["line"] for row in cursor.fetchall())
             return lines
 
         self._interrupt()

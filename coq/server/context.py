@@ -1,4 +1,4 @@
-from typing import AbstractSet, Literal, Tuple, cast
+from typing import Literal, Tuple, cast
 from uuid import uuid4
 
 from pynvim import Nvim
@@ -6,15 +6,12 @@ from pynvim_pp.api import LFfmt
 from pynvim_pp.atomic import Atomic
 from pynvim_pp.text_object import gen_split
 
+from ..shared.settings import Options
 from ..shared.types import Context
 from .model.buffers.database import BDB
 
 
-def context(
-    nvim: Nvim,
-    db: BDB,
-    unifying_chars: AbstractSet[str],
-) -> Context:
+def context(nvim: Nvim, options: Options, db: BDB) -> Context:
 
     with Atomic() as (atomic, ns):
         ns.cwd = atomic.call_function("getcwd", ())
@@ -40,12 +37,14 @@ def context(
     expandtab = cast(bool, ns.expandtab)
     linefeed = cast(Literal["\n", "\r", "\r\n"], LFfmt[cast(str, ns.fileformat)].value)
 
-    lines = db.lines(filename)
-    line = lines[row]
+    line_count, lines = db.lines(
+        filename, lo=row - options.context_lines, hi=row + options.context_lines + 1
+    )
+    line = lines[min(options.context_lines, row)]
     lhs, _, rhs = comment_str.partition("%s")
     b_line = line.encode()
     before, after = b_line[:col].decode(), b_line[col:].decode()
-    split = gen_split(lhs=before, rhs=after, unifying_chars=unifying_chars)
+    split = gen_split(lhs=before, rhs=after, unifying_chars=options.unifying_chars)
 
     ctx = Context(
         uid=uuid4(),
@@ -53,6 +52,7 @@ def context(
         changedtick=changedtick,
         filename=filename,
         filetype=filetype,
+        line_count=line_count,
         linefeed=linefeed,
         tabstop=tabstop,
         expandtab=expandtab,

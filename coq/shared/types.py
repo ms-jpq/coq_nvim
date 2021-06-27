@@ -28,6 +28,7 @@ class Context:
     cwd: str
     filetype: str
     filename: str
+    line_count: int
     linefeed: Literal["\r\n", "\n", "\r"]
     tabstop: int
     expandtab: bool

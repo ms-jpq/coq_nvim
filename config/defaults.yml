@@ -25,6 +25,7 @@ match:
 
   exact_matches: 2
   fuzzy_cutoff: 0.6
+  context_lines: 20
 
   timeout: 0.1
   manual_timeout: 0.5
