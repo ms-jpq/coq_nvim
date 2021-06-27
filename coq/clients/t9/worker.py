@@ -1,5 +1,7 @@
 from dataclasses import asdict
+from itertools import chain
 from json import dumps, loads
+from os import linesep
 from subprocess import PIPE, Popen
 from threading import Event
 from typing import IO, Any, Iterator, Optional, Sequence, cast
@@ -17,10 +19,12 @@ _VERSION = "3.2.28"
 
 
 def _encode(context: Context) -> Any:
+    before = linesep.join(chain(context.lines_before, (context.line_before,)))
+    after = linesep.join(chain((context.line_after,), context.lines_after))
     l2 = ReqL2(
         filename=context.filename,
-        before=context.line_before,
-        after=context.line_after,
+        before=before,
+        after=after,
         max_num_results=10,
     )
     l1 = ReqL1(Autocomplete=l2)
