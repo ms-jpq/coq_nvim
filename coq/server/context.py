@@ -17,7 +17,7 @@ def context(
 ) -> Context:
 
     with Atomic() as (atomic, ns):
-        ns.cwd = atomic.call_function("get_cwd", ())
+        ns.cwd = atomic.call_function("getcwd", ())
         ns.name = atomic.buf_get_name(0)
         ns.filetype = atomic.buf_get_option(0, "filetype")
         ns.commentstring = atomic.buf_get_option(0, "commentstring")
