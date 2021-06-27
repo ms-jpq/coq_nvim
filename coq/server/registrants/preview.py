@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from os import linesep
 from typing import Any, Callable, Iterator, Mapping, Sequence
 from uuid import uuid4
 
@@ -65,7 +66,11 @@ autocmd("CompleteDone", "InsertLeave") << f"lua {_kill_win.name}()"
 
 def _preprocess(context: Context, doc: Doc) -> Doc:
     if doc.filetype == "markdown":
-        return doc
+        if doc.text.startswith(f"```{linesep}") and doc.text.endswith("```"):
+            text = doc.text[4:-3]
+            return Doc(text=text, filetype=context.filetype)
+        else:
+            return doc
     else:
         return doc
 
