@@ -25,7 +25,7 @@ def _abbr(
     if naive > truncate:
         lhs = label[: truncate - rhs - len(ellipsis)] + ellipsis
     else:
-        just = max_width - rhs
+        just = max_width - len(kind) + addendum
         lhs = label.ljust(just)
 
     return lhs + kind
