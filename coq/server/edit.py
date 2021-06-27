@@ -357,7 +357,10 @@ def edit(nvim: Nvim, stack: Stack, data: UserData) -> None:
     if ctx and data.commit_uid == stack.state.commit:
         win = cur_win(nvim)
         buf = win_get_buf(nvim, win=win)
-        cursor = win_get_cursor(nvim, win=win)
+        (
+            row,
+            _,
+        ) = cursor = ctx.position
 
         primary, marks = (
             parse(
@@ -375,7 +378,7 @@ def edit(nvim: Nvim, stack: Stack, data: UserData) -> None:
             *data.secondary_edits,
             env=stack.state.env,
         )
-        lines = stack.bdb.lines(ctx.filename)
+        lines = stack.bdb.lines(ctx.filename)[: row + 1]
         view = _lines(lines)
 
         instructions = _instructions(
