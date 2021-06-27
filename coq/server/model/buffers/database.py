@@ -115,6 +115,7 @@ class BDB:
                 lines = tuple(row["line"] for row in cursor.fetchall())
             return lines
 
+        self._interrupt()
         return self._ex.submit(cont)
 
     def inserted(
@@ -144,7 +145,6 @@ class BDB:
             except OperationalError:
                 return ()
 
-        self._interrupt()
         return self._ex.submit(cont)
 
     def metric(
