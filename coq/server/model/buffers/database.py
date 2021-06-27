@@ -71,7 +71,7 @@ class BDB:
         lines: Sequence[str],
         unifying_chars: AbstractSet[str],
     ) -> None:
-        def it() -> Iterator[Mapping]:
+        def m1() -> Iterator[Mapping]:
             for line_num, line in enumerate(lines, start=lo):
                 for word in coalesce(line, unifying_chars=unifying_chars):
                     yield {
@@ -80,18 +80,26 @@ class BDB:
                         "line_num": line_num,
                     }
 
-        words = tuple(it())
+        def m2() -> Iterator[Mapping]:
+            for line_num, line in enumerate(lines, start=lo):
+                yield {
+                    "line": line,
+                    "filename": file,
+                    "line_num": line_num,
+                }
+
+        words = tuple(m1())
 
         def cont() -> None:
             with timeit("SQL -- SETLINES"):
                 with self._lock, closing(self._conn.cursor()) as cursor:
                     with with_transaction(cursor):
                         _ensure_file(cursor, file=file, filetype=filetype)
-                        cursor.execute(
-                            sql("delete", "words"),
-                            {"filename": file, "lo": lo, "hi": hi},
-                        )
-                        cursor.executemany(sql("insert", "words"), words)
+                        del_params = {"filename": file, "lo": lo, "hi": hi}
+                        cursor.execute(sql("delete", "words"), del_params)
+                        cursor.execute(sql("delete", "lines"), del_params)
+                        cursor.executemany(sql("insert", "word"), words)
+                        cursor.executemany(sql("insert", "line"), m2())
 
         self._ex.submit(cont)
 

@@ -13,7 +13,6 @@ CREATE TABLE IF NOT EXISTS files (
 CREATE INDEX IF NOT EXISTS files_filetype ON files (filetype);
 
 
--- !! files 1:N words
 CREATE TABLE IF NOT EXISTS words (
   filename TEXT    NOT NULL REFERENCES files (filename) ON DELETE CASCADE,
   word     TEXT    NOT NULL,
@@ -24,6 +23,16 @@ CREATE INDEX IF NOT EXISTS words_filename ON words (filename);
 CREATE INDEX IF NOT EXISTS words_word     ON words (word);
 CREATE INDEX IF NOT EXISTS words_lword    ON words (lword);
 CREATE INDEX IF NOT EXISTS words_line_num ON words (line_num);
+
+
+CREATE TABLE IF NOT EXISTS lines (
+  filename TEXT    NOT NULL REFERENCES files (filename) ON DELETE CASCADE,
+  line     TEXT    NOT NULL,
+  line_num INTEGER NOT NULL,
+  UNIQUE(filename, line_num)
+);
+CREATE INDEX IF NOT EXISTS lines_filename ON lines (filename);
+CREATE INDEX IF NOT EXISTS lines_line_num ON lines (line_num);
 
 
 -- Stores insertion history
