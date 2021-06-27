@@ -29,11 +29,13 @@ def context(
         atomic.commit(nvim)
 
     cwd = cast(str, ns.cwd)
+    (r, col) = cast(Tuple[int, int], ns.cursor)
+    row = r - 1
+    pos = (row, col)
     filename = cast(str, ns.name)
     filetype = cast(str, ns.filetype)
     comment_str = cast(str, ns.commentstring)
     changedtick = ns.changedtick
-    pos = (row, col) = cast(Tuple[int, int], ns.cursor)
     tabstop = ns.tabstop
     expandtab = cast(bool, ns.expandtab)
     linefeed = cast(Literal["\n", "\r", "\r\n"], LFfmt[cast(str, ns.fileformat)])
