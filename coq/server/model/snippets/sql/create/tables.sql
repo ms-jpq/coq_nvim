@@ -31,6 +31,7 @@ CREATE TABLE IF NOT EXISTS matches (
   UNIQUE(snippet_id, match)
 );
 CREATE INDEX IF NOT EXISTS matches_snippet_id ON matches (snippet_id);
+CREATE INDEX IF NOT EXISTS matches_match      ON matches (match);
 CREATE INDEX IF NOT EXISTS matches_lmatch     ON matches (lmatch);
 
 
