@@ -13,7 +13,16 @@ from std2.pickle import DecodeError, decode
 from ...shared.runtime import Supervisor
 from ...shared.runtime import Worker as BaseWorker
 from ...shared.settings import LSPClient
-from ...shared.types import UTF16, Completion, Context, Doc, Edit, RangeEdit, WTF8Pos
+from ...shared.types import (
+    UTF16,
+    Completion,
+    Context,
+    Doc,
+    Edit,
+    RangeEdit,
+    SnippetEdit,
+    WTF8Pos,
+)
 from .types import CompletionItem, CompletionList, MarkupContent, Resp, TextEdit
 
 _LUA = (Path(__file__).resolve().parent / "request.lua").read_text("UTF-8")
@@ -25,13 +34,21 @@ def _range_edit(edit: TextEdit) -> RangeEdit:
     return RangeEdit(new_text=edit.newText, begin=begin, end=end)
 
 
-def _primary(item: CompletionItem) -> Edit:
-    if isinstance(item.textEdit, TextEdit):
+def _primary(client: LSPClient, item: CompletionItem) -> Edit:
+    if (
+        client.InsertTextFormat.get(
+            cast(
+                Any,
+                None if item.insertTextFormat is None else str(item.insertTextFormat),
+            )
+        )
+        == "Snippet"
+    ):
+        return SnippetEdit(grammar="lsp", new_text=item.insertText or item.label)
+    elif isinstance(item.textEdit, TextEdit):
         return _range_edit(item.textEdit)
-    elif item.insertText:
-        return Edit(new_text=item.insertText)
     else:
-        return Edit(new_text=item.label)
+        return Edit(new_text=item.insertText or item.label)
 
 
 def _doc(item: CompletionItem) -> Optional[Doc]:
@@ -50,10 +67,12 @@ def _parse_item(client: LSPClient, item: CompletionItem) -> Completion:
         source=client.short_name,
         tie_breaker=client.tie_breaker,
         label=item.label,
-        primary_edit=_primary(item),
+        primary_edit=_primary(client, item=item),
         secondary_edits=tuple(map(_range_edit, item.additionalTextEdits or ())),
         sort_by=item.filterText or "",
-        kind=client.cmp_item_kind.get(cast(Any, item.kind), ""),
+        kind=client.CompletionItemKind.get(
+            cast(Any, None if item.kind is None else str(item.kind)), ""
+        ),
         doc=_doc(item),
     )
     return cmp
@@ -79,9 +98,6 @@ class Worker(BaseWorker[LSPClient, None]):
     def __init__(self, supervisor: Supervisor, options: LSPClient, misc: None) -> None:
         self._lock = Lock()
         self._cur: Tuple[UUID, Future] = uuid4(), Future()
-        self._kind_lookup = {
-            int(key): val for key, val in options.cmp_item_kind.items()
-        }
         supervisor.nvim.api.exec_lua(_LUA, ())
         super().__init__(supervisor, options=options, misc=misc)
 

@@ -35,9 +35,8 @@ def lsp() -> LSProtocol:
     raw = _build(_DOCKER_FILE)
     json = loads(raw)
     spec = {
-        "cmp_item_kind": {
-            str(val): key for key, val in sorted(json.items())
-        }
+        key: {k: str(v) for k, v in sorted(val.items())}
+        for key, val in sorted(json.items())
     }
     specs: LSProtocol = decode(LSProtocol, spec)
     return specs

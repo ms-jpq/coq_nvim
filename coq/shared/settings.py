@@ -74,7 +74,8 @@ class PollingClient(WordbankClient):
 
 @dataclass(frozen=True)
 class LSProtocol:
-    cmp_item_kind: Mapping[str, str]
+    CompletionItemKind: Mapping[str, str]
+    InsertTextFormat: Mapping[str, str]
 
 
 @dataclass(frozen=True)
