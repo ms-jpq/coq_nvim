@@ -23,7 +23,7 @@ from ..clients.tree_sitter.worker import Worker as TreeWorker
 from ..consts import CONFIG_YML, LSP_ARTIFACTS, SETTINGS_VAR, SNIPPET_ARTIFACTS
 from ..shared.runtime import Supervisor, Worker
 from ..shared.settings import Settings
-from ..shared.types import Context, EditEnv, NvimPos
+from ..shared.types import Context, NvimPos
 from .model.buffers.database import BDB
 from .model.snippets.database import SDB
 
@@ -32,11 +32,9 @@ from .model.snippets.database import SDB
 class _State:
     futs: Sequence[Future]
     commit: UUID
-    env: EditEnv
     cur: Optional[Context]
     request: bool
     inserted: Optional[NvimPos]
-    cwd: str
 
 
 @dataclass(frozen=True)
@@ -100,20 +98,12 @@ def _from_each_according_to_their_ability(
 
 def stack(pool: ThreadPoolExecutor, nvim: Nvim) -> Stack:
     settings = _settings(nvim)
-    cwd = get_cwd(nvim)
-    env = EditEnv(
-        linefeed=cast(Literal["\n"], linesep),
-        tabstop=4,
-        expandtab=True,
-    )
     state = _State(
         commit=uuid4(),
         futs=(),
-        env=env,
         cur=None,
         request=False,
         inserted=None,
-        cwd=cwd,
     )
     bdb, sdb = BDB(), SDB()
     supervisor = Supervisor(pool=pool, nvim=nvim, options=settings.match)

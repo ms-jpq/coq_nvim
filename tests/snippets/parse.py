@@ -6,7 +6,7 @@ from unittest import TestCase
 
 from ...coq.ci.load import load
 from ...coq.shared.types import SnippetEdit
-from ...coq.snippets.main import EMPTY_CTX, EMPTY_ENV
+from ...coq.snippets.main import EMPTY_CTX
 from ...coq.snippets.parse import parse
 
 _THRESHOLD = 0.95
@@ -30,7 +30,7 @@ class Parser(TestCase):
         def errs() -> Iterator[Exception]:
             for edit in edits:
                 try:
-                    parse(EMPTY_CTX, env=EMPTY_ENV, snippet=edit, sort_by="")
+                    parse(EMPTY_CTX, snippet=edit, sort_by="")
                 except Exception as e:
                     yield e
 

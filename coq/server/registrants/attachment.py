@@ -6,7 +6,6 @@ from pynvim.api import Buffer, NvimError
 from pynvim_pp.api import buf_filetype, buf_get_option, buf_name, cur_buf, list_bufs
 
 from ...registry import atomic, autocmd, rpc
-from ...server.context import edit_env
 from ..runtime import Stack
 from .omnifunc import comp_func
 
@@ -19,8 +18,6 @@ def _buf_enter(nvim: Nvim, stack: Stack) -> None:
         buf_type: str = buf_get_option(nvim, buf=buf, key="buftype")
         if listed and buf_type != "terminal":
             nvim.api.buf_attach(buf, True, {})
-            env = edit_env(nvim, buf=buf)
-            stack.state.env = env
 
 
 autocmd("BufEnter") << f"lua {_buf_enter.name}()"

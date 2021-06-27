@@ -11,7 +11,7 @@ from yaml import safe_load
 from ..consts import COMPILATION_YML, TMP_DIR
 from ..shared.types import SnippetEdit
 from ..snippets.loaders.load import load as load_from_paths
-from ..snippets.main import EMPTY_CTX, EMPTY_ENV
+from ..snippets.main import EMPTY_CTX
 from ..snippets.parse import parse
 from ..snippets.parsers.parser import ParseError
 from ..snippets.types import ParsedSnippet, SnippetSpecs
@@ -72,7 +72,7 @@ def load_parsable() -> SnippetSpecs:
                 grammar=snippet.grammar,
             )
             try:
-                parse(EMPTY_CTX, env=EMPTY_ENV, snippet=edit, sort_by="")
+                parse(EMPTY_CTX, snippet=edit, sort_by="")
             except ParseError:
                 pass
             else:

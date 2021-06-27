@@ -5,25 +5,17 @@ from typing import Iterator, Sequence, Tuple
 from pynvim_pp.logging import log
 
 from ..consts import DEBUG
-from ..shared.trans import trans, expand_tabs
-from ..shared.types import (
-    UTF8,
-    Context,
-    ContextualEdit,
-    Edit,
-    EditEnv,
-    Mark,
-    SnippetEdit,
-)
+from ..shared.trans import expand_tabs, trans
+from ..shared.types import UTF8, Context, ContextualEdit, Edit, Mark, SnippetEdit
 from .parsers.lsp import parser as lsp_parser
 from .parsers.snu import parser as snu_parser
 from .parsers.types import Parsed
 
 
-def _indent(env: EditEnv, old_prefix: str, line_before: str) -> str:
+def _indent(ctx: Context, old_prefix: str, line_before: str) -> str:
     l = len(line_before.encode(UTF8)) - len(old_prefix.encode(UTF8))
-    spaces = " " * env.tabstop
-    return " " * l if env.expandtab else (" " * l).replace(spaces, "\t")
+    spaces = " " * ctx.tabstop
+    return " " * l if ctx.expandtab else (" " * l).replace(spaces, "\t")
 
 
 def _before_after(context: Context, text: str) -> Tuple[str, str]:
@@ -33,14 +25,15 @@ def _before_after(context: Context, text: str) -> Tuple[str, str]:
 
 
 def _marks(
-    env: EditEnv, row: int, edit: ContextualEdit, indent: str, parsed: Parsed
+    ctx: Context, edit: ContextualEdit, indent: str, parsed: Parsed
 ) -> Iterator[Mark]:
+    row, _ = ctx.position
     len8 = tuple(
         accumulate(
-            len(line.encode(UTF8)) + 1 for line in parsed.text.split(env.linefeed)
+            len(line.encode(UTF8)) + 1 for line in parsed.text.split(ctx.linefeed)
         )
     )
-    y_shift = row - (len(edit.new_prefix.split(env.linefeed)) - 1)
+    y_shift = row - (len(edit.new_prefix.split(ctx.linefeed)) - 1)
     x_shift = len(indent)
 
     for region in parsed.regions:
@@ -66,32 +59,30 @@ def _log_parsed(parsed: Parsed) -> None:
 
 
 def parse(
-    context: Context, env: EditEnv, snippet: SnippetEdit, sort_by: str
+    context: Context, snippet: SnippetEdit, sort_by: str
 ) -> Tuple[ContextualEdit, Sequence[Mark]]:
-    row, _ = context.position
     parser = lsp_parser if snippet.grammar == "lsp" else snu_parser
 
-    
-    text = expand_tabs(env, text=snippet.new_text)
+    text = expand_tabs(context, text=snippet.new_text)
     parsed = parser(context, snippet=text)
     if DEBUG:
         _log_parsed(parsed)
 
     old_prefix, old_suffix = _before_after(context, text=sort_by + parsed.text)
-    indent = _indent(env, old_prefix=old_prefix, line_before=context.line_before)
+    indent = _indent(context, old_prefix=old_prefix, line_before=context.line_before)
     new_lines = tuple(
         lhs + rhs
         for lhs, rhs in zip(
-            chain(("",), repeat(indent)), parsed.text.split(env.linefeed)
+            chain(("",), repeat(indent)), parsed.text.split(context.linefeed)
         )
     )
 
     edit = ContextualEdit(
-        new_text=env.linefeed.join(new_lines),
+        new_text=context.linefeed.join(new_lines),
         old_prefix=old_prefix,
         old_suffix=old_suffix,
         new_prefix=parsed.text[: parsed.cursor],
     )
-    marks = tuple(_marks(env, row=row, edit=edit, indent=indent, parsed=parsed))
+    marks = tuple(_marks(context, edit=edit, indent=indent, parsed=parsed))
     return edit, marks
 

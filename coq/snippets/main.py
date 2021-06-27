@@ -2,7 +2,7 @@ from argparse import ArgumentParser, Namespace
 from sys import stdin
 from uuid import uuid4
 
-from ..shared.types import Context, EditEnv, SnippetEdit
+from ..shared.types import Context, SnippetEdit
 from .parse import parse
 
 EMPTY_CTX = Context(
@@ -11,6 +11,9 @@ EMPTY_CTX = Context(
     cwd="",
     filename="",
     filetype="",
+    linefeed="\n",
+    tabstop=2,
+    expandtab=True,
     comment=("", ""),
     position=(0, 0),
     line="",
@@ -27,12 +30,6 @@ EMPTY_CTX = Context(
     syms_after="",
 )
 
-EMPTY_ENV = EditEnv(
-    linefeed="\n",
-    tabstop=2,
-    expandtab=True,
-)
-
 
 def _parse_args() -> Namespace:
     parser = ArgumentParser()
@@ -43,6 +40,6 @@ def _parse_args() -> Namespace:
 def main() -> None:
     args = _parse_args()
     edit = SnippetEdit(grammar=args.grammar, new_text=stdin.read())
-    parsed = parse(EMPTY_CTX, env=EMPTY_ENV, snippet=edit, sort_by="")
+    parsed = parse(EMPTY_CTX, snippet=edit, sort_by="")
     print(parsed)
 

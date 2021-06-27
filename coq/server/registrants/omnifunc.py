@@ -49,7 +49,6 @@ def comp_func(nvim: Nvim, stack: Stack, manual: bool) -> None:
         nvim,
         db=stack.bdb,
         unifying_chars=stack.settings.match.unifying_chars,
-        cwd=stack.state.cwd,
     )
     should = _should_cont(
         stack.state.inserted,

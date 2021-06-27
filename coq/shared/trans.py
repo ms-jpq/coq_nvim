@@ -1,7 +1,7 @@
 from itertools import accumulate
 
 from .parse import lower
-from .types import ContextualEdit, Edit, EditEnv
+from .types import Context, ContextualEdit, Edit
 
 
 def _match(lhs: bool, existing: str, insertion: str) -> str:
@@ -33,12 +33,12 @@ def trans(line_before: str, line_after: str, edit: Edit) -> ContextualEdit:
     return c_edit
 
 
-def expand_tabs(env: EditEnv, text: str) -> str:
+def expand_tabs(context: Context, text: str) -> str:
 
     new_text = (
-        text.replace("\t", " " * env.tabstop)
-        if env.expandtab
-        else text.replace(" " * env.tabstop, "\t")
+        text.replace("\t", " " * context.tabstop)
+        if context.expandtab
+        else text.replace(" " * context.tabstop, "\t")
     )
     return new_text
 

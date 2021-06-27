@@ -23,7 +23,7 @@ from ...shared.nvim.completions import VimCompletion
 from ...shared.settings import PreviewDisplay
 from ...shared.timeit import timeit
 from ...shared.trans import expand_tabs
-from ...shared.types import UTF8, Context, Doc, EditEnv
+from ...shared.types import UTF8, Context, Doc
 from ..runtime import Stack
 from ..types import UserData
 
@@ -153,13 +153,12 @@ def _preview(
     nvim: Nvim,
     context: Context,
     display: PreviewDisplay,
-    env: EditEnv,
     event: _Event,
     doc: Doc,
 ) -> None:
     new_doc = _preprocess(context, doc=doc)
 
-    text = expand_tabs(env, text=new_doc.text)
+    text = expand_tabs(context, text=new_doc.text)
     lines = text.splitlines()
     (_, pos), *_ = sorted(
         enumerate(_positions(nvim, display=display, event=event, lines=lines)),
@@ -191,7 +190,6 @@ def _cmp_changed(nvim: Nvim, stack: Stack, event: Mapping[str, Any] = {}) -> Non
                     nvim,
                     context=stack.state.cur,
                     display=stack.settings.display.preview,
-                    env=stack.state.env,
                     event=ev,
                     doc=data.doc,
                 )

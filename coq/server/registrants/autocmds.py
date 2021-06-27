@@ -1,5 +1,5 @@
 from itertools import chain
-from typing import Any, Mapping, MutableSet, Sequence
+from typing import MutableSet, Sequence
 
 from pynvim.api.nvim import Nvim
 from pynvim_pp.api import buf_filetype, buf_name, cur_buf
@@ -9,15 +9,6 @@ from ...registry import atomic, autocmd, rpc
 from ...shared.timeit import timeit
 from ...snippets.types import ParsedSnippet
 from ..runtime import Stack
-
-
-@rpc(blocking=True)
-def _dir_changed(nvim: Nvim, stack: Stack, event: Mapping[str, Any]) -> None:
-    cwd: str = event["cwd"]
-    stack.state.cwd = cwd
-
-
-autocmd("DirChanged") << f"lua {_dir_changed.name}(vim.v.event)"
 
 _SEEN: MutableSet[str] = set()
 

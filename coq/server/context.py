@@ -1,21 +1,12 @@
-from typing import AbstractSet, cast
+from typing import AbstractSet, Literal, Tuple, cast
 from uuid import uuid4
 
 from pynvim import Nvim
-from pynvim.api import Buffer
-from pynvim_pp.api import (
-    buf_filetype,
-    buf_get_option,
-    buf_get_var,
-    buf_linefeed,
-    buf_name,
-    cur_win,
-    win_get_buf,
-    win_get_cursor,
-)
+from pynvim_pp.api import LFfmt
+from pynvim_pp.atomic import Atomic
 from pynvim_pp.text_object import gen_split
 
-from ..shared.types import Context, EditEnv
+from ..shared.types import Context
 from .model.buffers.database import BDB
 
 
@@ -23,17 +14,29 @@ def context(
     nvim: Nvim,
     db: BDB,
     unifying_chars: AbstractSet[str],
-    cwd: str,
 ) -> Context:
-    win = cur_win(nvim)
-    buf = win_get_buf(nvim, win=win)
-    row, col = win_get_cursor(nvim, win=win)
-    pos = (row, col)
 
-    filename = buf_name(nvim, buf=buf)
-    filetype = buf_filetype(nvim, buf=buf)
-    comment_str = cast(str, buf_get_option(nvim, buf=buf, key="commentstring"))
-    changedtick = cast(int, buf_get_var(nvim, buf=buf, key="changedtick"))
+    with Atomic() as (atomic, ns):
+        ns.cwd = atomic.call_function("get_cwd", ())
+        ns.name = atomic.buf_get_name(0)
+        ns.filetype = atomic.buf_get_option(0, "filetype")
+        ns.commentstring = atomic.buf_get_option(0, "commentstring")
+        ns.changedtick = atomic.buf_get_var(0, "changedtick")
+        ns.fileformat = atomic.buf_get_option(0, "fileformat")
+        ns.tabstop = atomic.buf_get_option(0, "tabstop")
+        ns.expandtab = atomic.buf_get_option(0, "expandtab")
+        ns.cursor = atomic.win_get_cursor(0)
+        atomic.commit(nvim)
+
+    cwd = cast(str, ns.cwd)
+    filename = cast(str, ns.name)
+    filetype = cast(str, ns.filetype)
+    comment_str = cast(str, ns.commentstring)
+    changedtick = ns.changedtick
+    pos = (row, col) = cast(Tuple[int, int], ns.cursor)
+    tabstop = ns.tabstop
+    expandtab = cast(bool, ns.expandtab)
+    linefeed = cast(Literal["\n", "\r", "\r\n"], LFfmt[cast(str, ns.fileformat)])
 
     lines = db.lines(filename)
     line = lines[row]
@@ -48,6 +51,9 @@ def context(
         changedtick=changedtick,
         filename=filename,
         filetype=filetype,
+        linefeed=linefeed,
+        tabstop=tabstop,
+        expandtab=expandtab,
         comment=(lhs, rhs),
         position=pos,
         line=split.lhs + split.rhs,
@@ -64,13 +70,4 @@ def context(
         syms_after=split.syms_rhs,
     )
     return ctx
-
-
-def edit_env(nvim: Nvim, buf: Buffer) -> EditEnv:
-    env = EditEnv(
-        linefeed=buf_linefeed(nvim, buf=buf),
-        tabstop=buf_get_option(nvim, buf=buf, key="tabstop"),
-        expandtab=buf_get_option(nvim, buf=buf, key="expandtab"),
-    )
-    return env
 

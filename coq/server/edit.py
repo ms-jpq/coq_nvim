@@ -17,7 +17,6 @@ from ..shared.types import (
     Context,
     ContextualEdit,
     Edit,
-    EditEnv,
     NvimPos,
     RangeEdit,
     SnippetEdit,
@@ -57,15 +56,17 @@ def _lines(lines: Sequence[str]) -> _Lines:
 
 
 def _rows_to_fetch(
-    pos: NvimPos, edit: ApplicableEdit, *edits: ApplicableEdit, env: EditEnv
+    ctx: Context,
+    edit: ApplicableEdit,
+    *edits: ApplicableEdit,
 ) -> Tuple[int, int]:
-    row, _ = pos
+    row, _ = ctx.position
 
     def cont() -> Iterator[int]:
         for e in chain((edit,), edits):
             if isinstance(e, ContextualEdit):
-                lo = row - (len(e.old_prefix.split(env.linefeed)) - 1)
-                hi = row + (len(e.old_suffix.split(env.linefeed)) - 1)
+                lo = row - (len(e.old_prefix.split(ctx.linefeed)) - 1)
+                hi = row + (len(e.old_suffix.split(ctx.linefeed)) - 1)
                 yield from (lo, hi)
 
             elif isinstance(e, RangeEdit):
@@ -83,11 +84,11 @@ def _rows_to_fetch(
 
 
 def _contextual_edit_trans(
-    ctx: Context, env: EditEnv, lines: _Lines, edit: ContextualEdit
+    ctx: Context, lines: _Lines, edit: ContextualEdit
 ) -> _EditInstruction:
     row, col = ctx.position
-    prefix_lines = edit.old_prefix.split(env.linefeed)
-    suffix_lines = edit.old_suffix.split(env.linefeed)
+    prefix_lines = edit.old_prefix.split(ctx.linefeed)
+    suffix_lines = edit.old_suffix.split(ctx.linefeed)
 
     r1 = row - (len(prefix_lines) - 1)
     r2 = row + (len(suffix_lines) - 1)
@@ -106,7 +107,7 @@ def _contextual_edit_trans(
     begin = r1, c1
     end = r2, c2
 
-    new_lines = tuple(line for line in edit.new_text.split(env.linefeed))
+    new_lines = tuple(line for line in edit.new_text.split(ctx.linefeed))
     cursor_yoffset = -len(prefix_lines) + len(new_lines)
     cursor_xpos = (
         len(new_lines[-1].encode(UTF8))
@@ -129,7 +130,6 @@ def _contextual_edit_trans(
 
 def _edit_trans(
     ctx: Context,
-    env: EditEnv,
     unifying_chars: AbstractSet[str],
     lines: _Lines,
     edit: Edit,
@@ -151,22 +151,19 @@ def _edit_trans(
         old_prefix=old_prefix,
         old_suffix=old_suffix,
     )
-    inst = _contextual_edit_trans(ctx, env=env, lines=lines, edit=adjusted)
+    inst = _contextual_edit_trans(ctx, lines=lines, edit=adjusted)
     return inst
 
 
 def _range_edit_trans(
     ctx: Context,
-    env: EditEnv,
     unifying_chars: AbstractSet[str],
     primary: bool,
     lines: _Lines,
     edit: RangeEdit,
 ) -> _EditInstruction:
     if primary and edit.begin == edit.end:
-        return _edit_trans(
-            ctx, env=env, unifying_chars=unifying_chars, lines=lines, edit=edit
-        )
+        return _edit_trans(ctx, unifying_chars=unifying_chars, lines=lines, edit=edit)
     else:
         (r1, ec1), (r2, ec2) = sorted((edit.begin, edit.end))
 
@@ -182,7 +179,7 @@ def _range_edit_trans(
         begin = r1, c1
         end = r2, c2
 
-        new_lines = tuple(line for line in edit.new_text.split(env.linefeed))
+        new_lines = tuple(line for line in edit.new_text.split(ctx.linefeed))
         cursor_yoffset = (r2 - r1) + (len(new_lines) - 1)
         cursor_xpos = (
             (
@@ -233,7 +230,6 @@ def _consolidate(
 
 def _instructions(
     ctx: Context,
-    env: EditEnv,
     unifying_chars: AbstractSet[str],
     lines: _Lines,
     primary: ApplicableEdit,
@@ -243,7 +239,6 @@ def _instructions(
         if isinstance(primary, RangeEdit):
             yield _range_edit_trans(
                 ctx,
-                env=env,
                 unifying_chars=unifying_chars,
                 primary=True,
                 lines=lines,
@@ -251,11 +246,11 @@ def _instructions(
             )
 
         elif isinstance(primary, ContextualEdit):
-            yield _contextual_edit_trans(ctx, env=env, lines=lines, edit=primary)
+            yield _contextual_edit_trans(ctx, lines=lines, edit=primary)
 
         elif isinstance(primary, Edit):
             yield _edit_trans(
-                ctx, env=env, unifying_chars=unifying_chars, lines=lines, edit=primary
+                ctx, unifying_chars=unifying_chars, lines=lines, edit=primary
             )
 
         else:
@@ -264,7 +259,6 @@ def _instructions(
         for edit in secondary:
             yield _range_edit_trans(
                 ctx,
-                env=env,
                 unifying_chars=unifying_chars,
                 primary=False,
                 lines=lines,
@@ -359,7 +353,6 @@ def edit(nvim: Nvim, stack: Stack, data: UserData) -> None:
         primary, marks = (
             parse(
                 ctx,
-                env=stack.state.env,
                 snippet=data.primary_edit,
                 sort_by=data.sort_by,
             )
@@ -367,16 +360,14 @@ def edit(nvim: Nvim, stack: Stack, data: UserData) -> None:
             else (data.primary_edit, ())
         )
         lo, hi = _rows_to_fetch(
-            ctx.position,
+            ctx,
             primary,
             *data.secondary_edits,
-            env=stack.state.env,
         )
         view = _lines(ctx.lines[: row + 1])
 
         instructions = _instructions(
             ctx,
-            env=stack.state.env,
             unifying_chars=stack.settings.match.unifying_chars,
             lines=view,
             primary=primary,
