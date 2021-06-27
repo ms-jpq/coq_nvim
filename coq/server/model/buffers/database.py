@@ -89,6 +89,7 @@ class BDB:
                 }
 
         words = tuple(m1())
+        shift = hi - lo + len(lines)
 
         def cont() -> None:
             with timeit("SQL -- SETLINES"):
@@ -98,6 +99,9 @@ class BDB:
                         del_params = {"filename": file, "lo": lo, "hi": hi}
                         cursor.execute(sql("delete", "words"), del_params)
                         cursor.execute(sql("delete", "lines"), del_params)
+                        cursor.execute(
+                            sql("update", "lines"), {"lo": lo, "shift": shift}
+                        )
                         cursor.executemany(sql("insert", "word"), words)
                         cursor.executemany(sql("insert", "line"), m2())
 
