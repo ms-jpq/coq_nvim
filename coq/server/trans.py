@@ -20,12 +20,13 @@ def _abbr(
     ellipsis: str,
 ) -> str:
     rhs = len(kind)
-    naive = len(label) + rhs
+    tr = truncate - rhs
 
-    if naive > truncate:
-        lhs = label[: truncate - rhs - len(ellipsis)] + ellipsis
+    if len(label) > tr:
+        lhs = label[: tr - len(ellipsis)] + ellipsis
     else:
-        lhs = label.ljust(min(max_width, truncate) - rhs + addendum - len(ellipsis) - 1)
+        max_truncated_to = min(max_width + addendum, truncate)
+        lhs = label.ljust(max_truncated_to - rhs)
 
     return lhs + kind
 
