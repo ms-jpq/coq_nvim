@@ -182,7 +182,7 @@ class BDB:
                             yield cursor.fetchone()
 
             try:
-                return tuple(c2())
+                return tuple(repeat(_NUL_METRIC, times=len(words)))
             except OperationalError:
                 return tuple(repeat(_NUL_METRIC, times=len(words)))
 
