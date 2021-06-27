@@ -1,15 +1,9 @@
 from dataclasses import dataclass
-from itertools import chain, repeat
+from itertools import chain
 from typing import AbstractSet, Iterator, MutableSequence, Sequence, Tuple
 
 from pynvim import Nvim
-from pynvim_pp.api import (
-    buf_set_lines,
-    cur_win,
-    win_get_buf,
-    win_get_cursor,
-    win_set_cursor,
-)
+from pynvim_pp.api import buf_set_lines, cur_win, win_get_buf, win_set_cursor
 from pynvim_pp.logging import log
 from std2.itertools import deiter
 from std2.types import never
