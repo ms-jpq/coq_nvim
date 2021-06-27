@@ -40,7 +40,10 @@ def context(nvim: Nvim, options: Options, db: BDB) -> Context:
     line_count, lines = db.lines(
         filename, lo=row - options.context_lines, hi=row + options.context_lines + 1
     )
-    line = lines[min(options.context_lines, row)]
+    r = min(options.context_lines, row)
+    line = lines[r]
+    lines_before, lines_after = lines[:r], lines[r + 1 :]
+
     lhs, _, rhs = comment_str.partition("%s")
     b_line = line.encode()
     before, after = b_line[:col].decode(), b_line[col:].decode()
@@ -62,8 +65,8 @@ def context(nvim: Nvim, options: Options, db: BDB) -> Context:
         line_before=split.lhs,
         line_after=split.rhs,
         lines=lines,
-        lines_before=lines[:row],
-        lines_after=lines[row + 1 :],
+        lines_before=lines_before,
+        lines_after=lines_after,
         words=split.word_lhs + split.word_rhs,
         words_before=split.word_lhs,
         words_after=split.word_rhs,
