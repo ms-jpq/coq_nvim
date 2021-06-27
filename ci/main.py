@@ -14,17 +14,11 @@ def _git_identity() -> None:
     check_call(("git", "config", "--global", "user.name", username))
 
 
-def _get_branch() -> str:
-    ref = environ["GITHUB_REF"]
-    return ref.replace("refs/heads/", "")
-
-
 def _git_clone(path: Path) -> None:
     if not path.is_dir():
         token = environ["CI_TOKEN"]
         uri = f"https://ms-jpq:{token}@github.com/ms-jpq/coq.artifacts.git"
-        branch = _get_branch()
-        check_call(("git", "clone", "--branch", branch, uri, str(path)))
+        check_call(("git", "clone", uri, str(path)))
 
 
 def _build() -> None:
