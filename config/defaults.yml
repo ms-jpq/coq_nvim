@@ -1,6 +1,6 @@
 ---
 display:
-  preview: 
+  preview:
     margin: 4
   pum:
     y_max_len: 16
@@ -39,6 +39,12 @@ keymap:
   jump_to_mark: <c-space>
 
 clients:
+  tabnine:
+    enabled: True
+    short_name: "T9"
+    bin: null
+    tie_breaker: -10
+
   tmux:
     enabled: True
     short_name: "TMUX"

@@ -88,7 +88,7 @@ class SnippetClient(BaseClient):
 
 
 @dataclass(frozen=True)
-class TabNineClient:
+class TabNineClient(BaseClient):
     bin: Optional[PurePath]
 
 
