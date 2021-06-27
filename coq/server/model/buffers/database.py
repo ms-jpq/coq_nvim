@@ -110,13 +110,10 @@ class BDB:
 
     def lines(self, filename: str) -> Sequence[str]:
         def cont() -> Sequence[str]:
-            try:
-                with closing(self._conn.cursor()) as cursor:
-                    cursor.execute(sql("select", "lines"), {"filename": filename})
-                    lines = tuple(row["line"] for row in cursor.fetchall())
-                return lines
-            except OperationalError:
-                return ()
+            with self._lock, closing(self._conn.cursor()) as cursor:
+                cursor.execute(sql("select", "lines"), {"filename": filename})
+                lines = tuple(row["line"] for row in cursor.fetchall())
+            return lines
 
         return self._ex.submit(cont)
 
