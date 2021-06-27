@@ -28,8 +28,9 @@ CREATE INDEX IF NOT EXISTS words_line_num ON words (line_num);
 CREATE TABLE IF NOT EXISTS lines (
   filename TEXT    NOT NULL REFERENCES files (filename) ON DELETE CASCADE,
   line     TEXT    NOT NULL,
-  line_num INTEGER NOT NULL,
-  UNIQUE(filename, line_num)
+  line_num INTEGER NOT NULL
+  -- TODO -- How to update from back -> front in a single query
+  -- UNIQUE(filename, line_num)
 );
 CREATE INDEX IF NOT EXISTS lines_filename ON lines (filename);
 CREATE INDEX IF NOT EXISTS lines_line_num ON lines (line_num);
