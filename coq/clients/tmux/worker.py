@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from shutil import which
 from subprocess import DEVNULL, CalledProcessError, check_output
 from time import sleep
-from typing import AbstractSet, Iterator, Sequence, Tuple
+from typing import AbstractSet, Iterator, Optional, Sequence, Tuple
 
 from pynvim_pp.logging import log
 
@@ -38,7 +38,7 @@ def _panes() -> Sequence[_Pane]:
             stderr=DEVNULL,
         )
 
-    except CalledProcessError:
+    except (CalledProcessError, TimeoutError):
         return ()
     else:
 
@@ -55,12 +55,12 @@ def _panes() -> Sequence[_Pane]:
         return tuple(cont())
 
 
-def _cur() -> _Pane:
+def _cur() -> Optional[_Pane]:
     for pane in _panes():
         if pane.window_active and pane.pane_active:
             return pane
     else:
-        assert False
+        return None
 
 
 def _screenshot(unifying_chars: AbstractSet[str], uid: str) -> Sequence[str]:
@@ -72,7 +72,7 @@ def _screenshot(unifying_chars: AbstractSet[str], uid: str) -> Sequence[str]:
             stdin=DEVNULL,
             stderr=DEVNULL,
         )
-    except CalledProcessError:
+    except (CalledProcessError, TimeoutError):
         return ()
     else:
         return tuple(coalesce(out, unifying_chars=unifying_chars))
@@ -109,10 +109,14 @@ class Worker(BaseWorker[PollingClient, None]):
     def work(self, context: Context) -> Iterator[Sequence[Completion]]:
         match = context.words or (context.syms if self._options.match_syms else "")
         active = _cur()
-        words = self._db.select(
-            self._supervisor.options,
-            active_pane=active.uid,
-            word=match,
+        words = (
+            self._db.select(
+                self._supervisor.options,
+                active_pane=active.uid,
+                word=match,
+            )
+            if active
+            else ()
         )
 
         def cont() -> Iterator[Completion]:
