@@ -10,7 +10,7 @@ display:
     ellipsis: …
 
     kind_context:
-      - "["
+      - " ["
       - "]"
     source_context:
       - "「"

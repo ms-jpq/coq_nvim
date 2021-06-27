@@ -10,32 +10,32 @@ from .metrics import annotate
 from .runtime import Stack
 from .types import UserData
 
-_SEP = 2
-
 
 def _abbr(
     label: str,
-    menu: str,
     kind: str,
+    addendum: int,
     truncate: int,
     max_width: int,
     ellipsis: str,
 ) -> str:
-    rhs = len(kind) + len(menu)
-    lhs = truncate - _SEP - rhs
-    if len(label) > lhs:
-        new_label = label[: lhs - len(ellipsis)] + ellipsis
+    rhs = len(kind) + addendum
+    naive = len(label) + rhs
+
+    if naive > truncate:
+        lhs = label[: truncate - rhs - len(ellipsis)] + ellipsis
     else:
-        padding = max_width - rhs
-        new_label = label.ljust(padding)
-    return new_label + kind
+        just = max_width - rhs
+        lhs = label.ljust(just)
+
+    return lhs + kind
 
 
 def _cmp_to_vcmp(
     pum: PumDisplay,
     context: Context,
     truncate: int,
-    width: int,
+    max_width: int,
     cmp: Completion,
 ) -> VimCompletion:
     (kl, kr), (sl, sr) = pum.kind_context, pum.source_context
@@ -44,10 +44,10 @@ def _cmp_to_vcmp(
 
     abbr = _abbr(
         cmp.label,
-        menu=menu,
         kind=kind,
+        addendum=len(kl) + len(kr) + len(sl) + len(sr),
         truncate=truncate,
-        max_width=width,
+        max_width=max_width,
         ellipsis=pum.ellipsis,
     )
     user_data = UserData(
@@ -93,7 +93,7 @@ def trans(
                 display.pum,
                 context=context,
                 truncate=truncate,
-                width=max_width,
+                max_width=max_width,
                 cmp=cmp,
             )
 

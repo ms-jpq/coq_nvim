@@ -120,7 +120,7 @@ def _cum(adjustment: Weights, it: Iterable[_M]) -> Tuple[int, Weights]:
     acc = asdict(_ZERO)
     max_len = 0
     for cmp, weight in it:
-        max_len = max(max_len, (len(cmp.label) + len(cmp.kind) + len(cmp.source)))
+        max_len = max(max_len, (len(cmp.label) + len(cmp.kind)))
         for key, val in asdict(weight).items():
             acc[key] += val
     for key, val in asdict(adjustment).items():
