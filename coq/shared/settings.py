@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from pathlib import PurePath
 from typing import AbstractSet, Any, Literal, Mapping, Optional, Sequence
 
 
@@ -87,6 +88,11 @@ class SnippetClient(BaseClient):
 
 
 @dataclass(frozen=True)
+class TabNineClient:
+    bin: Optional[PurePath]
+
+
+@dataclass(frozen=True)
 class Clients:
     buffers: WordbankClient
     lsp: LSPClient
@@ -95,6 +101,7 @@ class Clients:
     tags: PollingClient
     tmux: PollingClient
     tree_sitter: BaseClient
+    tabnine: TabNineClient
 
 
 @dataclass(frozen=True)
