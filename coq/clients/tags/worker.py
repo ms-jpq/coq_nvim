@@ -1,17 +1,16 @@
 from contextlib import suppress
 from os.path import dirname, relpath
-from pathlib import Path, PurePath
+from pathlib import Path
 from shutil import which
 from string import Template
 from time import sleep
-from typing import Iterator, Mapping, Sequence, Tuple
+from typing import Iterator, Mapping, MutableSet, Sequence, Tuple
 
 from pynvim.api.nvim import Nvim, NvimError
 from pynvim_pp.api import buf_filetype, buf_name, list_bufs
 from pynvim_pp.lib import threadsafe_call
 from pynvim_pp.logging import log
 
-from ...consts import TIMEOUT
 from ...shared.runtime import Supervisor
 from ...shared.runtime import Worker as BaseWorker
 from ...shared.settings import PollingClient
@@ -92,32 +91,32 @@ class Worker(BaseWorker[PollingClient, None]):
         )
 
         def cont() -> Iterator[Completion]:
+            seen: MutableSet[str] = set()
             for tag in tags:
-                pos = (
-                    "."
-                    if tag.filename == context.filename
-                    else relpath(tag.filename, dirname(context.filename))
-                )
-                doc_txt = _DOC.substitute(
-                    lc=lc,
-                    rc=rc,
-                    pos=f"{pos}:{tag.line_num}",
-                    tag=tag.context
-                )
-                edit = Edit(new_text=tag.name)
-                doc = Doc(
-                    text=doc_txt,
-                    filetype=context.filetype,
-                )
-                cmp = Completion(
-                    source=self._options.short_name,
-                    tie_breaker=self._options.tie_breaker,
-                    label=edit.new_text.strip(),
-                    primary_edit=edit,
-                    kind=tag.kind,
-                    doc=doc,
-                )
-                yield cmp
+                if tag.name not in seen:
+                    seen.add(tag.name)
+                    pos = (
+                        "."
+                        if tag.filename == context.filename
+                        else relpath(tag.filename, dirname(context.filename))
+                    )
+                    doc_txt = _DOC.substitute(
+                        lc=lc, rc=rc, pos=f"{pos}:{tag.line_num}", tag=tag.context
+                    )
+                    edit = Edit(new_text=tag.name)
+                    doc = Doc(
+                        text=doc_txt,
+                        filetype=context.filetype,
+                    )
+                    cmp = Completion(
+                        source=self._options.short_name,
+                        tie_breaker=self._options.tie_breaker,
+                        label=edit.new_text.strip(),
+                        primary_edit=edit,
+                        kind=tag.kind,
+                        doc=doc,
+                    )
+                    yield cmp
 
         yield tuple(cont())
 

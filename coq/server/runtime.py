@@ -16,6 +16,7 @@ from ..clients.buffers.worker import Worker as BuffersWorker
 from ..clients.lsp.worker import Worker as LspWorker
 from ..clients.paths.worker import Worker as PathsWorker
 from ..clients.snippet.worker import Worker as SnippetWorker
+from ..clients.t9.worker import Worker as T9Worker
 from ..clients.tags.worker import Worker as TagsWorker
 from ..clients.tmux.worker import Worker as TmuxWorker
 from ..clients.tree_sitter.worker import Worker as TreeWorker
@@ -91,6 +92,9 @@ def _from_each_according_to_their_ability(
 
     if clients.tmux.enabled:
         yield TmuxWorker(supervisor, options=clients.tmux, misc=None)
+
+    if clients.tabnine.enabled:
+        yield T9Worker(supervisor, options=clients.tabnine, misc=None)
 
 
 def stack(pool: ThreadPoolExecutor, nvim: Nvim) -> Stack:

@@ -1,48 +1,101 @@
-from typing import Iterator, Sequence
+from concurrent.futures.thread import ThreadPoolExecutor
+from dataclasses import asdict
+from json import dumps, loads
+from subprocess import PIPE, Popen
+from threading import Lock
+from typing import Any, Callable, Iterator, Optional, Sequence, cast
 
-from ...server.model.snippets.database import SDB
+from pynvim_pp.logging import log
+from std2.pickle import decode
+
 from ...shared.runtime import Supervisor
 from ...shared.runtime import Worker as BaseWorker
-from ...shared.settings import SnippetClient
-from ...shared.types import Completion, Context, Doc, SnippetEdit
+from ...shared.settings import TabnineClient
+from ...shared.types import Completion, Context, ContextualEdit
+from .install import T9_BIN, ensure_installed
+from .types import ReqL1, ReqL2, Request, Response
+
+_VERSION = "3.2.28"
 
 
-class Worker(BaseWorker[SnippetClient, SDB]):
+def _encode(context: Context) -> Any:
+    l2 = ReqL2(
+        filename=context.filename,
+        before=context.line_before,
+        after=context.line_after,
+        max_num_results=10,
+    )
+    l1 = ReqL1(Autocomplete=l2)
+    req = Request(request=l1, version=_VERSION)
+    return asdict(req)
+
+
+def _decode(client: TabnineClient, reply: Any) -> Iterator[Completion]:
+    resp: Response = decode(Response, reply)
+
+    for result in resp.results:
+        edit = ContextualEdit(
+            old_prefix=resp.old_prefix,
+            new_prefix=result.new_prefix,
+            old_suffix=result.old_suffix,
+            new_text=result.new_prefix + result.new_suffix,
+        )
+        label = (result.new_prefix.splitlines() or ("",))[-1] + (
+            result.new_suffix.splitlines() or ("",)
+        )[0]
+        cmp = Completion(
+            primary_edit=edit,
+            source=client.short_name,
+            tie_breaker=client.tie_breaker,
+            label=label,
+        )
+        yield cmp
+
+
+def _reactor(
+    pool: ThreadPoolExecutor,
+) -> Callable[[TabnineClient, Context], Sequence[Completion]]:
+    proc: Optional[Popen] = None
+    lock = Lock()
+
+    def cont() -> None:
+        nonlocal proc
+        try:
+            ensure_installed()
+            while True:
+                if proc:
+                    proc.wait()
+                with lock:
+                    proc = Popen((str(T9_BIN),), text=True, stdin=PIPE, stdout=PIPE)
+        except Exception as e:
+            log.exception("%s", e)
+
+    def req(client: TabnineClient, context: Context) -> Sequence[Completion]:
+        if not proc or not proc.stdin or not proc.stdout:
+            return ()
+        else:
+            req = _encode(context)
+            json = dumps(req, check_circular=False, ensure_ascii=False)
+            with lock:
+                proc.stdin.writelines((json,))
+                json = proc.stdout.readline()
+
+            reply = loads(json)
+            cmps = tuple(_decode(client, reply=reply))
+            return cmps
+
+    pool.submit(cont)
+    return req
+
+
+class Worker(BaseWorker[TabnineClient, None]):
     def __init__(
-        self, supervisor: Supervisor, options: SnippetClient, misc: SDB
+        self, supervisor: Supervisor, options: TabnineClient, misc: None
     ) -> None:
+        self._req = _reactor(supervisor.pool)
         super().__init__(supervisor, options=options, misc=misc)
-        self._misc.add_exts(options.extends)
 
     def work(self, context: Context) -> Iterator[Sequence[Completion]]:
-        match = context.words or context.syms
-        snippets = self._misc.select(
-            self._supervisor.options,
-            filetype=context.filetype,
-            word=match,
-        )
-
-        def cont() -> Iterator[Completion]:
-            for snip in snippets:
-                edit = SnippetEdit(
-                    new_text=snip["snippet"],
-                    grammar=snip["grammar"],
-                )
-                doc = Doc(
-                    text=snip["doc"] or edit.new_text,
-                    filetype="",
-                )
-                label = f"({snip['prefix']}) {snip['label'] or edit.new_text}"
-                completion = Completion(
-                    source=self._options.short_name,
-                    tie_breaker=self._options.tie_breaker,
-                    primary_edit=edit,
-                    sort_by=snip["prefix"],
-                    label=label,
-                    doc=doc,
-                )
-                yield completion
-
-        yield tuple(cont())
-
+        cmps = self._req(self._options, context)
+        yield cmps
 

@@ -3,24 +3,24 @@ from typing import Optional, Sequence
 
 
 @dataclass(frozen=True)
-class _ReqL2:
-    max_num_results: int
+class ReqL2:
     before: str
     after: str
     filename: str
+    max_num_results: Optional[int] = None
     region_includes_beginning: bool = False
     region_includes_end: bool = False
 
 
 @dataclass(frozen=True)
-class _ReqL1:
-    Autocomplete: _ReqL2
+class ReqL1:
+    Autocomplete: ReqL2
 
 
 @dataclass(frozen=True)
 class Request:
-    request: _ReqL1
-    version: str = "2.9.2"
+    request: ReqL1
+    version: str
 
 
 @dataclass(frozen=True)

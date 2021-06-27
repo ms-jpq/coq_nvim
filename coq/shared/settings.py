@@ -89,7 +89,7 @@ class SnippetClient(BaseClient):
 
 
 @dataclass(frozen=True)
-class TabNineClient(BaseClient):
+class TabnineClient(BaseClient):
     bin: Optional[PurePath]
 
 
@@ -102,7 +102,7 @@ class Clients:
     tags: PollingClient
     tmux: PollingClient
     tree_sitter: BaseClient
-    tabnine: TabNineClient
+    tabnine: TabnineClient
 
 
 @dataclass(frozen=True)

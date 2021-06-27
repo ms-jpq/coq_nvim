@@ -1,6 +1,8 @@
+from os import X_OK, access
 from platform import machine
 from shutil import which
 from string import Template
+from urllib.error import HTTPError
 
 from std2.os import OS, os
 from std2.urllib import urlopen
@@ -42,7 +44,7 @@ def _uri() -> str:
     return uri
 
 
-def update(timeout: float) -> None:
+def _update(timeout: float) -> None:
     T9_DIR.mkdir(parents=True, exist_ok=True)
     try:
         p_uri = _LOCK.read_text()
@@ -56,4 +58,15 @@ def update(timeout: float) -> None:
         T9_BIN.write_bytes(buf)
         T9_BIN.chmod(0o755)
         _LOCK.write_text(uri)
+
+
+def ensure_installed() -> None:
+    if not T9_BIN.exists() or not access(T9_BIN, X_OK):
+        while True:
+            try:
+                _update(timeout=60)
+            except HTTPError as e:
+                pass
+            else:
+                break
 
