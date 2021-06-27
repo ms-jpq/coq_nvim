@@ -372,8 +372,7 @@ def edit(nvim: Nvim, stack: Stack, data: UserData) -> None:
             *data.secondary_edits,
             env=stack.state.env,
         )
-        lines = stack.bdb.lines(ctx.filename)[: row + 1]
-        view = _lines(lines)
+        view = _lines(ctx.lines[: row + 1])
 
         instructions = _instructions(
             ctx,
