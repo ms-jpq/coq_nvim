@@ -16,6 +16,7 @@ from .install import T9_BIN, ensure_installed
 from .types import ReqL1, ReqL2, Request, Response
 
 _VERSION = "3.2.28"
+_TIMEOUT = 60
 
 
 def _encode(context: Context) -> Any:
@@ -70,7 +71,7 @@ class Worker(BaseWorker[TabnineClient, None]):
         super().__init__(supervisor, options=options, misc=misc)
 
     def _install(self) -> None:
-        ensure_installed(60)
+        ensure_installed(_TIMEOUT)
         self._ev.set()
 
     def _req(self, context: Context) -> Sequence[Completion]:

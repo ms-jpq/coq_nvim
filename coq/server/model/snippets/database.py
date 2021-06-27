@@ -1,5 +1,4 @@
 from contextlib import closing
-from hashlib import md5
 from sqlite3 import Connection, Cursor, OperationalError
 from threading import Lock
 from typing import Iterable, Iterator, Mapping, Sequence, TypedDict
@@ -70,9 +69,7 @@ class SDB:
                     with with_transaction(cursor):
                         _ensure_ft(cursor, filetypes=(filetype,))
                         for snippet in snippets:
-                            row_id = md5(
-                                (snippet.grammar + snippet.content).encode()
-                            ).digest()
+                            row_id = hash(snippet.grammar + snippet.content)
                             cursor.execute(
                                 sql("insert", "snippet"),
                                 {
