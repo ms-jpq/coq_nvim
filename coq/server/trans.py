@@ -77,9 +77,8 @@ def _cmp_to_vcmp(
     if label_width > tr:
         label_lhs = metric.comp.label[: tr - len(pum.ellipsis)] + pum.ellipsis
     else:
-        max_truncated_to = min(max_width + kind_dead_width, truncate)
-        just = max_truncated_to - kind_width
-        label_lhs = metric.comp.label.ljust(just)
+        truncated_to = min(max_width + kind_dead_width, truncate) - kind_width
+        label_lhs = metric.comp.label.ljust(truncated_to)
 
     abbr = label_lhs + kind
     user_data = UserData(
