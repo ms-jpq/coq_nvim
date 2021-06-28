@@ -18,7 +18,7 @@ _ZERO = Weights(
     count_by_filetype=0,
     insertion_order=0,
     match_density=0,
-    nearest_neighbour=0,
+    neighbours=0,
     num_matches=0,
     prefix_matches=0,
 )

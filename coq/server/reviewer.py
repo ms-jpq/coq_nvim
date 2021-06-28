@@ -82,7 +82,7 @@ def _join(
         count_by_filetype=sqm["ft_count"],
         insertion_order=sqm["insertion_order"],
         match_density=mm.match_density,
-        nearest_neighbour=mm.neighbours,
+        neighbours=mm.neighbours,
         num_matches=mm.num_matches,
         prefix_matches=mm.prefix_matches,
     )

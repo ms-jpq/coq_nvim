@@ -45,7 +45,7 @@ class Weights:
     count_by_filetype: float
     insertion_order: float
     match_density: float
-    nearest_neighbour: float
+    neighbours: float
     num_matches: float
     prefix_matches: float
 
