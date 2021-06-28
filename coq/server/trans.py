@@ -76,7 +76,8 @@ def _cmp_to_vcmp(
         label_lhs = metric.comp.label[: tr - len(pum.ellipsis)] + pum.ellipsis
     else:
         max_truncated_to = min(max_width + kind_dead_width, truncate)
-        label_lhs = metric.comp.label.ljust(max_truncated_to - rhs)
+        just = max_truncated_to - rhs
+        label_lhs = metric.comp.label.ljust(just)
 
     abbr = label_lhs + kind
 
