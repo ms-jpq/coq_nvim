@@ -11,8 +11,9 @@ from std2.pickle.coders import BUILTIN_DECODERS
 
 from ...registry import autocmd, enqueue_event, pool, rpc
 from ...shared.nvim.completions import VimCompletion, complete
+from ...shared.runtime import Metric
 from ...shared.timeit import timeit
-from ...shared.types import Completion, Context, NvimPos
+from ...shared.types import Context, NvimPos
 from ..context import context
 from ..edit import edit
 from ..runtime import Stack
@@ -66,16 +67,15 @@ def comp_func(nvim: Nvim, stack: Stack, manual: bool) -> None:
         def cont() -> None:
             try:
                 try:
-                    cmp = fut.result()
+                    metrics = cast(Sequence[Metric], fut.result())
                 except CancelledError:
                     pass
                 else:
                     if ctx and stack.state.cur == ctx:
                         _, col = ctx.position
-                        completions = cast(Sequence[Completion], cmp)
-                        with timeit("RANK"):
+                        with timeit("TRANS"):
                             vim_comps = tuple(
-                                trans(stack, context=ctx, completions=completions)
+                                trans(stack, context=ctx, metrics=metrics)
                             )
                         enqueue_event(_cmp, ctx.uid, col, vim_comps)
             except Exception as e:

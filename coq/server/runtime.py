@@ -25,6 +25,7 @@ from ..shared.settings import Settings
 from ..shared.types import Context, NvimPos
 from .model.buffers.database import BDB
 from .model.snippets.database import SDB
+from .reviewer import Reviewer
 
 
 @dataclass
@@ -108,7 +109,10 @@ def stack(pool: ThreadPoolExecutor, nvim: Nvim) -> Stack:
         inserted=None,
     )
     bdb, sdb = BDB(), SDB()
-    supervisor = Supervisor(pool=pool, nvim=nvim, options=settings.match)
+    reviewer = Reviewer(options=settings.match, db=bdb)
+    supervisor = Supervisor(
+        pool=pool, nvim=nvim, options=settings.match, reviewer=reviewer
+    )
     workers = {
         *_from_each_according_to_their_ability(
             settings, bdb=bdb, sdb=sdb, supervisor=supervisor

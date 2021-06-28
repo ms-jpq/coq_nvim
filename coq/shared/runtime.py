@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from abc import abstractmethod
-from collections import Counter, defaultdict, deque
+from collections import Counter, deque
 from concurrent.futures import Future, InvalidStateError, ThreadPoolExecutor, wait
 from contextlib import suppress
 from dataclasses import dataclass
@@ -54,8 +54,8 @@ class PReviewer(Protocol):
 class Supervisor:
     def __init__(
         self,
-        nvim: Nvim,
         pool: ThreadPoolExecutor,
+        nvim: Nvim,
         options: Options,
         reviewer: PReviewer,
     ) -> None:
@@ -92,13 +92,10 @@ class Supervisor:
         fut: Future = Future()
         acc: Deque[Metric] = deque()
 
-        neighbours = defaultdict(
-            lambda: 0,
-            Counter(
-                word
-                for line in context.lines
-                for word in coalesce(line, unifying_chars=self.options.unifying_chars)
-            ),
+        neighbours = Counter(
+            word
+            for line in context.lines
+            for word in coalesce(line, unifying_chars=self.options.unifying_chars)
         )
         timeout = self._options.manual_timeout if manual else self._options.timeout
 
