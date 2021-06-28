@@ -68,7 +68,6 @@ def _cmp_to_vcmp(
 ) -> VimCompletion:
     (kl, kr), (sl, sr) = pum.kind_context, pum.source_context
     kind = f"{kl}{metric.comp.kind}{kr}" if metric.comp.kind else ""
-    menu = f"{sl}{metric.comp.source}{sr}"
 
     label_width = metric.label_width
     kind_width = metric.kind_width + kind_dead_width
@@ -81,6 +80,7 @@ def _cmp_to_vcmp(
         label_lhs = metric.comp.label.ljust(truncated_to)
 
     abbr = label_lhs + kind
+    menu = f"{sl}{metric.comp.source}{sr}"
     user_data = UserData(
         sort_by=metric.comp.sort_by,
         commit_uid=context.uid,
