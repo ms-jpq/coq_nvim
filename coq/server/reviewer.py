@@ -119,7 +119,7 @@ class Reviewer(PReviewer):
             context=context,
             completions=completions,
         )
-        dbm = self._db.metric(words, filetype=context.filetype)
+        dbm = self._db.metric(context.filetype, words=words)
         metrics = tuple(
             _join(context, cmp, mm, sqm) for cmp, mm, sqm in zip(completions, mmm, dbm)
         )

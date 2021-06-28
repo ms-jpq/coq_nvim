@@ -38,12 +38,12 @@ def _cum(adjustment: Weights, metrics: Iterable[Metric]) -> Tuple[int, Weights]:
     return max_width, Weights(**acc)
 
 
-def _sort_by(cum: Weights) -> Callable[[Metric], Any]:
-    adjustment = asdict(cum)
+def _sort_by(adjustment: Weights) -> Callable[[Metric], Any]:
+    adjust = asdict(adjustment)
 
     def key_by(metric: Metric) -> Any:
         tot = sum(
-            val / adjustment[key] if adjustment[key] else 0
+            val / adjust[key] if adjust[key] else 0
             for key, val in asdict(metric.weight).items()
         )
         return (
@@ -61,7 +61,7 @@ def _sort_by(cum: Weights) -> Callable[[Metric], Any]:
 def _abbr(
     label: str,
     kind: str,
-    addendum: int,
+    dead_spaces: int,
     truncate: int,
     max_width: int,
     ellipsis: str,
@@ -72,7 +72,7 @@ def _abbr(
     if len(label) > tr:
         lhs = label[: tr - len(ellipsis)] + ellipsis
     else:
-        max_truncated_to = min(max_width + addendum, truncate)
+        max_truncated_to = min(max_width + dead_spaces, truncate)
         lhs = label.ljust(max_truncated_to - rhs)
 
     return lhs + kind
@@ -81,6 +81,7 @@ def _abbr(
 def _cmp_to_vcmp(
     pum: PumDisplay,
     context: Context,
+    dead_spaces: int,
     truncate: int,
     max_width: int,
     cmp: Completion,
@@ -92,7 +93,7 @@ def _cmp_to_vcmp(
     abbr = _abbr(
         cmp.label,
         kind=kind,
-        addendum=len(kl) + len(kr) + len(sl) + len(sr),
+        dead_spaces=dead_spaces,
         truncate=truncate,
         max_width=max_width,
         ellipsis=pum.ellipsis,
@@ -123,18 +124,25 @@ def trans(
     display = stack.settings.display
     _, col = context.position
     truncate = clamp(1, scr_width - col - display.pum.x_margin, display.pum.x_max_len)
+    dead_spaces = sum(
+        display_width(s, tabsize=context.tabstop, linefeed=context.linefeed)
+        for s in chain(display.pum.kind_context, display.pum.source_context)
+    )
 
-    max_width, ranked = 0, ()
+    max_width, w_adjust = _cum(stack.settings.weights, metrics=metrics)
+    sortby = _sort_by(w_adjust)
+    ranked = sorted(metrics, key=sortby)
 
     seen: MutableSet[str] = set()
-    for cmp in ranked:
-        if cmp.primary_edit.new_text not in seen:
-            seen.add(cmp.primary_edit.new_text)
+    for metric in ranked:
+        if metric.comp.primary_edit.new_text not in seen:
+            seen.add(metric.comp.primary_edit.new_text)
             yield _cmp_to_vcmp(
                 display.pum,
                 context=context,
+                dead_spaces=dead_spaces,
                 truncate=truncate,
                 max_width=max_width,
-                cmp=cmp,
+                cmp=metric.comp,
             )
 
