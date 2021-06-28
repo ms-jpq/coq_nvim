@@ -79,8 +79,8 @@ def _join(
 ) -> Metric:
     weight = Weights(
         consecutive_matches=mm.consecutive_matches,
-        count_by_filetype=sqm["ft_count"],
-        insertion_order=sqm["insertion_order"],
+        count_by_filetype=sqm["wordcount"],
+        insertion_order=sqm["insert_order"],
         match_density=mm.match_density,
         neighbours=mm.neighbours,
         num_matches=mm.num_matches,

@@ -18,12 +18,8 @@ from .sql import sql
 
 
 class SqlMetrics(TypedDict):
-    insertion_order: int
-    ft_count: int
-    line_diff: int
-
-
-_NUL_METRIC = SqlMetrics(insertion_order=0, ft_count=0, line_diff=0)
+    wordcount: int
+    insert_order: int
 
 
 def _ensure_file(cursor: Cursor, file: str, filetype: str) -> None:
@@ -165,10 +161,12 @@ class BDB:
                     with with_transaction(cursor):
                         cursor.execute(sql("delete", "tmp_for_metrics"), ())
                         cursor.executemany(sql("insert", "tmp_for_metrics"), m1())
-
-                return tuple(repeat(_NUL_METRIC, times=len(words)))
+                        cursor.execute(sql("select", "metrics"))
+                        return cursor.fetchall()
             except OperationalError:
-                return tuple(repeat(_NUL_METRIC, times=len(words)))
+                return tuple(
+                    repeat(SqlMetrics(wordcount=0, insert_order=0), times=len(words))
+                )
 
         return self._ex.submit(cont)
 

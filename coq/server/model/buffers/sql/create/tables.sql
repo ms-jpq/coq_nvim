@@ -44,7 +44,7 @@ CREATE TABLE IF NOT EXISTS insertions (
 );
 
 
-CREATE VIEW IF NOT EXISTS filetype_wordcount AS
+CREATE VIEW IF NOT EXISTS filetype_wordcount_view AS
 SELECT
   filetype.filetype AS filetype,
   words.word        AS word,
@@ -57,7 +57,6 @@ GROUP BY
   files.filetype,
   words.word;
   
-
 
 CREATE TEMP TABLE IF NOT EXISTS tmp_for_metrics (
   rowid INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
