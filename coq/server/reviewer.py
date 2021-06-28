@@ -94,7 +94,7 @@ def _join(
             cmp.label, tabsize=context.tabstop, linefeed=context.linefeed
         ),
         kind_width=display_width(
-            cmp.label, tabsize=context.tabstop, linefeed=context.linefeed
+            cmp.kind, tabsize=context.tabstop, linefeed=context.linefeed
         ),
     )
     return metric
