@@ -1,17 +1,20 @@
 from __future__ import annotations
 
 from abc import abstractmethod
-from collections import deque
+from collections import Counter, defaultdict, deque
 from concurrent.futures import Future, InvalidStateError, ThreadPoolExecutor, wait
 from contextlib import suppress
+from dataclasses import dataclass
 from threading import Lock
 from typing import (
     Any,
     Deque,
     Generic,
     Iterator,
+    Mapping,
     MutableSequence,
     MutableSet,
+    Protocol,
     Sequence,
     TypeVar,
 )
@@ -21,16 +24,47 @@ from weakref import WeakSet
 from pynvim import Nvim
 from pynvim_pp.logging import log
 
-from .settings import Options
+from .parse import coalesce
+from .settings import Options, Weights
 from .types import Completion, Context
 
 T_co = TypeVar("T_co", contravariant=True)
 O_co = TypeVar("O_co", contravariant=True)
 
 
+@dataclass(frozen=True)
+class Metric:
+    comp: Completion
+    weight: Weights
+
+    label_width: int
+    kind_width: int
+
+
+class PReviewer(Protocol):
+    def rate(
+        self,
+        context: Context,
+        neighbours: Mapping[str, int],
+        completions: Sequence[Completion],
+    ) -> Sequence[Metric]:
+        ...
+
+
 class Supervisor:
-    def __init__(self, nvim: Nvim, pool: ThreadPoolExecutor, options: Options) -> None:
-        self._nvim, self._pool, self._options = nvim, pool, options
+    def __init__(
+        self,
+        nvim: Nvim,
+        pool: ThreadPoolExecutor,
+        options: Options,
+        reviewer: PReviewer,
+    ) -> None:
+        self._nvim, self._pool, self._options, self._reviewer = (
+            nvim,
+            pool,
+            options,
+            reviewer,
+        )
         self._lock = Lock()
         self._workers: MutableSet[Worker] = WeakSet()
         self._futs: MutableSequence[Future] = []
@@ -56,12 +90,25 @@ class Supervisor:
 
     def collect(self, context: Context, manual: bool) -> Future:
         fut: Future = Future()
-        acc: Deque[Completion] = deque()
+        acc: Deque[Metric] = deque()
+
+        neighbours = defaultdict(
+            lambda: 0,
+            Counter(
+                word
+                for line in context.lines
+                for word in coalesce(line, unifying_chars=self.options.unifying_chars)
+            ),
+        )
+        timeout = self._options.manual_timeout if manual else self._options.timeout
 
         def supervise(worker: Worker) -> None:
             try:
                 for completions in worker.work(context):
-                    acc.extend(completions)
+                    metrics = self._reviewer.rate(
+                        context, neighbours=neighbours, completions=completions
+                    )
+                    acc.extend(metrics)
             except Exception as e:
                 log.exception("%s", e)
 
@@ -75,9 +122,6 @@ class Supervisor:
                         self._pool.submit(supervise, worker) for worker in self._workers
                     )
                     self._futs.extend(futs)
-                timeout = (
-                    self._options.manual_timeout if manual else self._options.timeout
-                )
                 wait(futs, timeout=timeout)
                 with self._lock:
                     for f in self._futs:

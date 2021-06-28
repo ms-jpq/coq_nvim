@@ -154,31 +154,16 @@ class BDB:
 
         return self._ex.submit(cont)
 
-    def metric(
-        self,
-        words: Sequence[str],
-        filetype: str,
-        filename: str,
-        line_num: int,
-    ) -> Sequence[SqlMetrics]:
+    def metric(self, filetype: str, words: Sequence[str]) -> Sequence[SqlMetrics]:
         def m1() -> Iterator[Mapping]:
             for word in words:
-                yield {
-                    "word": word,
-                    "filetype": filetype,
-                    "filename": filename,
-                    "line_num": line_num,
-                }
+                yield {"filetype": filetype, "word": word}
 
         def cont() -> Sequence[SqlMetrics]:
             try:
                 with closing(self._conn.cursor()) as cursor:
                     with with_transaction(cursor):
                         cursor.execute(sql("delete", "tmp_for_metrics"), ())
-                        cursor.execute(
-                            sql("select", "num_lines"), {"filename": filename}
-                        )
-                        lines_tot = cursor.fetchone()["lines_tot"]
                         cursor.executemany(sql("insert", "tmp_for_metrics"), m1())
 
                 return tuple(repeat(_NUL_METRIC, times=len(words)))
