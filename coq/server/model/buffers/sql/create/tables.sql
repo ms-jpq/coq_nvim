@@ -45,16 +45,8 @@ CREATE TABLE IF NOT EXISTS insertions (
 
 
 CREATE TEMP TABLE IF NOT EXISTS tmp_for_metrics (
-  rowid    INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
-  filetype TEXT    NOT NULL,
-  filename TEXT    NOT NULL,
-  line_num INTEGER NOT NULL,
-  content  TEXT    NOT NULL
+  word TEXT NOT NULL PRIMARY KEY
 );
-CREATE INDEX IF NOT EXISTS tmp_for_metrics_filetype ON tmp_for_metrics (filetype);
-CREATE INDEX IF NOT EXISTS tmp_for_metrics_filename ON tmp_for_metrics (filename);
-CREATE INDEX IF NOT EXISTS tmp_for_metrics_line_num ON tmp_for_metrics (line_num);
-CREATE INDEX IF NOT EXISTS tmp_for_metrics_content  ON tmp_for_metrics (content);
 
 
 END;
