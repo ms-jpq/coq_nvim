@@ -1,6 +1,6 @@
 from typing import Iterator, Sequence
 
-from ...server.model.buffers.database import BDB
+from ...server.databases.buffers.database import BDB
 from ...shared.runtime import Worker as BaseWorker
 from ...shared.settings import WordbankClient
 from ...shared.types import Completion, Context, Edit

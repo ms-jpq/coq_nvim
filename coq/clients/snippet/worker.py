@@ -1,6 +1,6 @@
 from typing import Iterator, Sequence
 
-from ...server.model.snippets.database import SDB
+from ...server.databases.snippets.database import SDB
 from ...shared.runtime import Supervisor
 from ...shared.runtime import Worker as BaseWorker
 from ...shared.settings import SnippetClient

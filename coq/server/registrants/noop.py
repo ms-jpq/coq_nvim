@@ -25,8 +25,9 @@ _STARS = (
 
 
 @rpc(blocking=True)
-def now(nvim: Nvim, stack: Stack, *args: str) -> None:
+def now(nvim: Nvim, stack: Stack) -> None:
     chars = choice(_CHARS)
     star = (choice(_STARS),)
     msg = " ".join(chain(star, sample(_ANNOUNCE, k=chars), star))
     write(nvim, msg)
+

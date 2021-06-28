@@ -8,7 +8,7 @@ from pynvim_pp.text_object import gen_split
 
 from ..shared.settings import Options
 from ..shared.types import Context
-from .model.buffers.database import BDB
+from .databases.buffers.database import BDB
 
 
 def context(nvim: Nvim, options: Options, db: BDB) -> Optional[Context]:

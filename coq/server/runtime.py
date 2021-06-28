@@ -23,8 +23,8 @@ from ..consts import CONFIG_YML, LSP_ARTIFACTS, SETTINGS_VAR, SNIPPET_ARTIFACTS
 from ..shared.runtime import Supervisor, Worker
 from ..shared.settings import Settings
 from ..shared.types import Context, NvimPos
-from .model.buffers.database import BDB
-from .model.snippets.database import SDB
+from .databases.buffers.database import BDB
+from .databases.snippets.database import SDB
 from .reviewer import Reviewer
 
 

@@ -7,7 +7,7 @@ from ..shared.parse import display_width, is_word, lower
 from ..shared.runtime import Metric, PReviewer
 from ..shared.settings import Options, Weights
 from ..shared.types import Completion, Context
-from .model.buffers.database import BDB, SqlMetrics
+from .databases.buffers.database import BDB, SqlMetrics
 
 
 @dataclass(frozen=True)
