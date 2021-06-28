@@ -46,7 +46,7 @@ CREATE TABLE IF NOT EXISTS insertions (
 
 CREATE VIEW IF NOT EXISTS filetype_wordcount_view AS
 SELECT
-  filetype.filetype AS filetype,
+  files.filetype    AS filetype,
   words.word        AS word,
   COUNT(words.word) AS wordcount
 FROM files
