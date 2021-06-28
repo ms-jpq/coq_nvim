@@ -12,19 +12,18 @@ from ..shared.types import Context, SnippetEdit
 from .runtime import Stack
 from .types import UserData
 
-_ZERO = Weights(
-    consecutive_matches=0,
-    count_by_filetype=0,
-    insertion_order=0,
-    match_density=0,
-    neighbours=0,
-    num_matches=0,
-    prefix_matches=0,
-)
-
 
 def _cum(adjustment: Weights, metrics: Iterable[Metric]) -> Tuple[int, Weights]:
-    acc = asdict(_ZERO)
+    zero = Weights(
+        consecutive_matches=0,
+        count_by_filetype=0,
+        insertion_order=0,
+        match_density=0,
+        neighbours=0,
+        num_matches=0,
+        prefix_matches=0,
+    )
+    acc = asdict(zero)
     max_width = 0
     for metric in metrics:
         max_width = max(max_width, metric.label_width + metric.kind_width)
