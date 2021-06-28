@@ -61,6 +61,7 @@ def _cmp_to_vcmp(
     pum: PumDisplay,
     context: Context,
     kind_dead_width: int,
+    ellipsis_width: int,
     truncate: int,
     max_width: int,
     metric: Metric,
@@ -72,13 +73,16 @@ def _cmp_to_vcmp(
     kind_width = metric.kind_width + kind_dead_width
     tr = truncate - kind_width
 
-    if label_width > tr:
-        label_lhs = metric.comp.label[: tr - len(pum.ellipsis)] + pum.ellipsis
+    if kind_width + ellipsis_width + 2 > tr:
+        abbr = metric.comp.label[: tr - ellipsis_width] + pum.ellipsis
+    elif label_width > tr:
+        label_lhs = metric.comp.label[: tr - ellipsis_width] + pum.ellipsis
+        abbr = label_lhs + kind
     else:
         truncated_to = min(max_width + kind_dead_width, truncate) - kind_width
         label_lhs = metric.comp.label.ljust(truncated_to)
+        abbr = label_lhs + kind
 
-    abbr = label_lhs + kind
     menu = f"{sl}{metric.comp.source}{sr}"
     user_data = UserData(
         sort_by=metric.comp.sort_by,
@@ -110,6 +114,9 @@ def trans(
         display_width(s, tabsize=context.tabstop, linefeed=context.linefeed)
         for s in display.pum.kind_context
     )
+    ellipsis_width = display_width(
+        display.pum.ellipsis, tabsize=context.tabstop, linefeed=context.linefeed
+    )
     truncate = clamp(1, scr_width - col - display.pum.x_margin, display.pum.x_max_len)
 
     max_width, w_adjust = _cum(stack.settings.weights, metrics=metrics)
@@ -124,6 +131,7 @@ def trans(
                 display.pum,
                 context=context,
                 kind_dead_width=kind_dead_width,
+                ellipsis_width=ellipsis_width,
                 truncate=truncate,
                 max_width=max_width,
                 metric=metric,
