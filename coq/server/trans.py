@@ -1,15 +1,14 @@
 from dataclasses import asdict
-from itertools import chain
 from locale import strxfrm
-from typing import Any, Callable, Iterable, Iterator, MutableSet, Sequence, Tuple, cast
+from typing import Any, Callable, Iterable, Iterator, MutableSet, Sequence, Tuple
 
 from std2.ordinal import clamp
 
 from ..shared.nvim.completions import VimCompletion
 from ..shared.parse import display_width
 from ..shared.runtime import Metric
-from ..shared.settings import Options, PumDisplay, Weights
-from ..shared.types import Completion, Context, SnippetEdit
+from ..shared.settings import PumDisplay, Weights
+from ..shared.types import Context, SnippetEdit
 from .runtime import Stack
 from .types import UserData
 
@@ -28,6 +27,7 @@ def _cum(adjustment: Weights, metrics: Iterable[Metric]) -> Tuple[int, Weights]:
     acc = asdict(_ZERO)
     max_width = 0
     for metric in metrics:
+        max_width = max(max_width, metric.label_width + metric.kind_width)
         for key, val in asdict(metric.weight).items():
             acc[key] += val
     for key, val in asdict(adjustment).items():
@@ -58,52 +58,34 @@ def _sort_by(adjustment: Weights) -> Callable[[Metric], Any]:
     return key_by
 
 
-def _abbr(
-    label: str,
-    kind: str,
-    dead_spaces: int,
-    truncate: int,
-    max_width: int,
-    ellipsis: str,
-) -> str:
-    rhs = len(kind)
-    tr = truncate - rhs
-
-    if len(label) > tr:
-        lhs = label[: tr - len(ellipsis)] + ellipsis
-    else:
-        max_truncated_to = min(max_width + dead_spaces, truncate)
-        lhs = label.ljust(max_truncated_to - rhs)
-
-    return lhs + kind
-
-
 def _cmp_to_vcmp(
     pum: PumDisplay,
     context: Context,
-    dead_spaces: int,
+    kind_dead_width: int,
     truncate: int,
     max_width: int,
-    cmp: Completion,
+    metric: Metric,
 ) -> VimCompletion:
     (kl, kr), (sl, sr) = pum.kind_context, pum.source_context
-    kind = f"{kl}{cmp.kind}{kr}" if cmp.kind else ""
-    menu = f"{sl}{cmp.source}{sr}"
+    kind = f"{kl}{metric.comp.kind}{kr}" if metric.comp.kind else ""
+    menu = f"{sl}{metric.comp.source}{sr}"
 
-    abbr = _abbr(
-        cmp.label,
-        kind=kind,
-        dead_spaces=dead_spaces,
-        truncate=truncate,
-        max_width=max_width,
-        ellipsis=pum.ellipsis,
-    )
+    rhs = metric.kind_width + kind_dead_width
+    tr = truncate - rhs
+    if metric.label_width > tr:
+        label_lhs = metric.comp.label[: tr - len(pum.ellipsis)] + pum.ellipsis
+    else:
+        max_truncated_to = min(max_width + kind_dead_width, truncate)
+        label_lhs = metric.comp.label.ljust(max_truncated_to - rhs)
+
+    abbr = label_lhs + kind
+
     user_data = UserData(
-        sort_by=cmp.sort_by,
+        sort_by=metric.comp.sort_by,
         commit_uid=context.uid,
-        primary_edit=cmp.primary_edit,
-        secondary_edits=cmp.secondary_edits,
-        doc=cmp.doc,
+        primary_edit=metric.comp.primary_edit,
+        secondary_edits=metric.comp.secondary_edits,
+        doc=metric.comp.doc,
     )
     vcmp = VimCompletion(
         word="",
@@ -123,11 +105,12 @@ def trans(
     scr_width, _ = stack.state.screen
     display = stack.settings.display
     _, col = context.position
-    truncate = clamp(1, scr_width - col - display.pum.x_margin, display.pum.x_max_len)
-    dead_spaces = sum(
+
+    kind_dead_width = sum(
         display_width(s, tabsize=context.tabstop, linefeed=context.linefeed)
-        for s in chain(display.pum.kind_context, display.pum.source_context)
+        for s in display.pum.kind_context
     )
+    truncate = clamp(1, scr_width - col - display.pum.x_margin, display.pum.x_max_len)
 
     max_width, w_adjust = _cum(stack.settings.weights, metrics=metrics)
     sortby = _sort_by(w_adjust)
@@ -140,9 +123,9 @@ def trans(
             yield _cmp_to_vcmp(
                 display.pum,
                 context=context,
-                dead_spaces=dead_spaces,
+                kind_dead_width=kind_dead_width,
                 truncate=truncate,
                 max_width=max_width,
-                cmp=metric.comp,
+                metric=metric,
             )
 
