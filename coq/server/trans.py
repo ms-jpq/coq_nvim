@@ -72,8 +72,8 @@ def _cmp_to_vcmp(
 
     label_width = metric.label_width
     kind_width = metric.kind_width + kind_dead_width
-
     tr = truncate - kind_width
+
     if label_width > tr:
         label_lhs = metric.comp.label[: tr - len(pum.ellipsis)] + pum.ellipsis
     else:
@@ -82,7 +82,6 @@ def _cmp_to_vcmp(
         label_lhs = metric.comp.label.ljust(just)
 
     abbr = label_lhs + kind
-
     user_data = UserData(
         sort_by=metric.comp.sort_by,
         commit_uid=context.uid,
