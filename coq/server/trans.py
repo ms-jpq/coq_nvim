@@ -70,13 +70,15 @@ def _cmp_to_vcmp(
     kind = f"{kl}{metric.comp.kind}{kr}" if metric.comp.kind else ""
     menu = f"{sl}{metric.comp.source}{sr}"
 
-    rhs = metric.kind_width + kind_dead_width
-    tr = truncate - rhs
-    if metric.label_width > tr:
+    label_width = metric.label_width
+    kind_width = metric.kind_width + kind_dead_width
+
+    tr = truncate - kind_width
+    if label_width > tr:
         label_lhs = metric.comp.label[: tr - len(pum.ellipsis)] + pum.ellipsis
     else:
         max_truncated_to = min(max_width + kind_dead_width, truncate)
-        just = max_truncated_to - rhs
+        just = max_truncated_to - kind_width
         label_lhs = metric.comp.label.ljust(just)
 
     abbr = label_lhs + kind
