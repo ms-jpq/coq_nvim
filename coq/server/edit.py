@@ -107,14 +107,15 @@ def _contextual_edit_trans(
     begin = r1, c1
     end = r2, c2
 
-    new_lines = tuple(line for line in edit.new_text.split(ctx.linefeed))
+    new_lines = edit.new_text.split(ctx.linefeed)
     cursor_yoffset = -len(prefix_lines) + len(new_lines)
+    new_prefix_lines = edit.new_prefix.split(ctx.linefeed)
     cursor_xpos = (
-        len(new_lines[-1].encode(UTF8))
-        if len(new_lines) > 1
+        len(new_prefix_lines[-1].encode(UTF8)) - 1
+        if len(new_prefix_lines) > 1
         else len(ctx.line_before.encode(UTF8))
         - len(prefix_lines[-1].encode(UTF8))
-        + len(new_lines[0].encode(UTF8))
+        + len(new_prefix_lines[0].encode(UTF8))
     )
 
     inst = _EditInstruction(

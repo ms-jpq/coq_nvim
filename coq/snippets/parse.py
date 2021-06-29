@@ -78,7 +78,7 @@ def parse(
     marks = tuple(_marks(context, edit=edit, indent=indent, parsed=parsed))
 
     if DEBUG:
-        msg = pformat((parsed, edit, marks))
+        msg = pformat((snippet, parsed, edit, marks))
         log.debug("%s", msg)
 
     return edit, marks
