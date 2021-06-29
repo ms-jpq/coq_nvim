@@ -64,16 +64,14 @@ clients:
     match_syms: False
     tie_breaker: 20
 
+  tree_sitter:
+    enabled: False
+    short_name: "TS"
+    tie_breaker: 30
+
   paths:
     enabled: True
     short_name: "FILE"
-    tie_breaker: 30
-
-  tags:
-    enabled: True
-    short_name: "TAG"
-    match_syms: True
-    polling_interval: 1.0
     tie_breaker: 40
 
   snippets:
@@ -81,9 +79,12 @@ clients:
     short_name: "SNIP"
     tie_breaker: 50
 
-  tree_sitter:
-    enabled: False
-    short_name: "TS"
+  tags:
+    enabled: True
+    short_name: "TAG"
+    match_syms: True
+    polling_interval: 1.0
+    path_sep: " :: "
     tie_breaker: 60
 
   lsp:

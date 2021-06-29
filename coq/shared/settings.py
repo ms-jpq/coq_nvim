@@ -75,6 +75,11 @@ class PollingClient(WordbankClient):
 
 
 @dataclass(frozen=True)
+class TagsClient(PollingClient):
+    path_sep: str
+
+
+@dataclass(frozen=True)
 class LSProtocol:
     CompletionItemKind: Mapping[str, str]
     InsertTextFormat: Mapping[str, str]
@@ -102,7 +107,7 @@ class Clients:
     lsp: LSPClient
     paths: BaseClient
     snippets: SnippetClient
-    tags: PollingClient
+    tags: TagsClient
     tmux: PollingClient
     tree_sitter: BaseClient
     tabnine: TabnineClient

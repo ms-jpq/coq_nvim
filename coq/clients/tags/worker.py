@@ -13,7 +13,7 @@ from pynvim_pp.logging import log
 
 from ...shared.runtime import Supervisor
 from ...shared.runtime import Worker as BaseWorker
-from ...shared.settings import PollingClient
+from ...shared.settings import TagsClient
 from ...shared.types import Completion, Context, Doc, Edit
 from .database import Database
 from .parser import Tag
@@ -34,7 +34,7 @@ def _ls(nvim: Nvim) -> Tuple[Path, AbstractSet[str]]:
     return threadsafe_call(nvim, cont)
 
 
-def _doc(context: Context, tag: Tag) -> Doc:
+def _doc(client: TagsClient, context: Context, tag: Tag) -> Doc:
     def cont() -> Iterator[str]:
         lc, rc = context.comment
         pos = (
@@ -51,11 +51,11 @@ def _doc(context: Context, tag: Tag) -> Doc:
 
         scope_kind = tag["scopeKind"] or None
         scope = tag["scope"] or None
-    
+
         if scope_kind and scope:
             yield lc
             yield scope_kind
-            yield " :: "
+            yield client.path_sep
             yield scope
             yield rc
             yield linesep
@@ -75,23 +75,23 @@ def _doc(context: Context, tag: Tag) -> Doc:
         if access and ref:
             yield lc
             yield access
-            yield " :: "
+            yield client.path_sep
             yield tag["kind"]
-            yield " :: "
+            yield client.path_sep
             yield ref
             yield rc
             yield linesep
         elif access:
             yield lc
             yield access
-            yield " :: "
+            yield client.path_sep
             yield tag["kind"]
             yield rc
             yield linesep
         elif ref:
             yield lc
             yield tag["kind"]
-            yield " :: "
+            yield client.path_sep
             yield ref
             yield rc
             yield linesep
@@ -105,7 +105,7 @@ def _doc(context: Context, tag: Tag) -> Doc:
     return doc
 
 
-def _cmp(client: PollingClient, context: Context, tag: Tag) -> Completion:
+def _cmp(client: TagsClient, context: Context, tag: Tag) -> Completion:
     edit = Edit(new_text=tag["name"])
 
     cmp = Completion(
@@ -114,15 +114,13 @@ def _cmp(client: PollingClient, context: Context, tag: Tag) -> Completion:
         label=edit.new_text,
         primary_edit=edit,
         kind=tag["kind"],
-        doc=_doc(context, tag=tag),
+        doc=_doc(client, context=context, tag=tag),
     )
     return cmp
 
 
-class Worker(BaseWorker[PollingClient, None]):
-    def __init__(
-        self, supervisor: Supervisor, options: PollingClient, misc: None
-    ) -> None:
+class Worker(BaseWorker[TagsClient, None]):
+    def __init__(self, supervisor: Supervisor, options: TagsClient, misc: None) -> None:
         self._db = Database(supervisor.pool)
         super().__init__(supervisor, options=options, misc=misc)
         if which("ctags"):
