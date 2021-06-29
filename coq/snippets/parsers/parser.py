@@ -112,7 +112,9 @@ def token_parser(context: ParserCtx, stream: TokenStream) -> Parsed:
 
     bad_tokens.extend(begins)
     text = "".join(slices)
-    cursor = min(region.idx for region in regions) if regions else 0
+    cursor = next(
+        iter(sorted(regions, key=lambda r: r.idx)), Region(idx=0, begin=0, end=0)
+    ).begin
     if bad_tokens:
         tpl = """
         Bad tokens - ${bad_tokens}
