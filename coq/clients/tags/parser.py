@@ -1,25 +1,36 @@
-from dataclasses import dataclass
+from json import loads
 from pathlib import PurePath
 from subprocess import DEVNULL, CalledProcessError, check_output
-from typing import Iterator, Sequence
+from typing import Iterator, Optional, Sequence, TypedDict
 
 from std2.pathlib import AnyPath
 
 
-@dataclass(frozen=True)
-class Tag:
-    filename: str
-    line_num: int
-    context: str
-    kind: str
+class Tag(TypedDict):
+    language: str
+    path: str
+    line: int
     name: str
 
+    kind: Optional[str]
+    typeref: Optional[str]
+    scopeKind: Optional[str]
+    access: Optional[str]
 
-_SEP = "\x04"
 
-FMT = f"""
-%{{input}}{_SEP}%{{line}}{_SEP}%{{compact}}{_SEP}%{{kind}}{_SEP}%{{name}}
-""".strip()
+_FIELDS = "".join(
+    f"{f}"
+    for f in (
+        "language",
+        "input",
+        "line",
+        "kind",
+        "typeref",
+        "scopeKind",
+        "access",
+        "name",
+    )
+)
 
 
 def run(*args: str, cwd: AnyPath) -> str:
@@ -28,8 +39,8 @@ def run(*args: str, cwd: AnyPath) -> str:
             (
                 "ctags",
                 "--sort=no",
-                "--output-format=xref",
-                f"--_xformat={FMT}",
+                "--output-format=json",
+                f"--fields={_FIELDS}",
                 *args,
             ),
             cwd=cwd,
@@ -45,15 +56,9 @@ def run(*args: str, cwd: AnyPath) -> str:
 
 def parse_lines(raw: str) -> Iterator[Tag]:
     for line in raw.splitlines():
-        filename, line_num, context, kind, name = line.split(_SEP)
-        tag = Tag(
-            filename=filename,
-            line_num=int(line_num),
-            context=context,
-            kind=kind,
-            name=name,
-        )
-        yield tag
+        json = loads(line)
+        if json["_type"] == "tag":
+            yield json
 
 
 def parse(paths: Sequence[PurePath]) -> Sequence[Tag]:
