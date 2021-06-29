@@ -99,9 +99,6 @@ class Worker(BaseWorker[PollingClient, None]):
             log.exception("%s", e)
 
     def work(self, context: Context) -> Iterator[Sequence[Completion]]:
-        with self._lock:
-            self._cwd = context.cwd
-
         row, _ = context.position
         match = context.words or (context.syms if self._options.match_syms else "")
         tags = self._db.select(
