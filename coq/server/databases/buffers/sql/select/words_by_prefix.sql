@@ -1,7 +1,7 @@
 SELECT DISTINCT
   word
 FROM words
-JOIN files
+JOIN buffers
 ON buffers.buffer_id = words.buffer_id
 WHERE
   buffers.filetype = X_NORMALIZE(:filetype)
