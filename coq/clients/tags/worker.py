@@ -61,12 +61,6 @@ def _doc(context: Context, tag: Tag) -> Doc:
             yield rc
             yield linesep
 
-        if tag["roles"]:
-            yield lc
-            yield tag["roles"] or ""
-            yield rc
-            yield linesep
-
         _, _, ref = (tag.get("typeref") or "").partition(":")
         if ref:
             yield ref
