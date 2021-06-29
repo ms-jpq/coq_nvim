@@ -84,8 +84,8 @@ clients:
     short_name: "TAG"
     match_syms: True
     polling_interval: 1.0
-    path_sep: " :: "
-    parent_scope: " ->"
+    path_sep: " ⇉ "
+    parent_scope: " ⇊"
     tie_breaker: 60
 
   lsp:
