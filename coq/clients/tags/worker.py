@@ -49,7 +49,6 @@ def _doc(context: Context, tag: Tag) -> Doc:
         yield rc
         yield linesep
 
-
         scope_kind = tag["scopeKind"] or None
         if scope_kind:
             yield lc
@@ -71,9 +70,13 @@ def _doc(context: Context, tag: Tag) -> Doc:
             yield rc
             yield linesep
 
-        _, _, ref = (tag.get("typeref") or "").partition(":")
+        _, rsep, ref = (tag.get("typeref") or "").partition(":")
         if ref:
+            yield lc
+            yield tag["kind"]
+            yield rsep
             yield ref
+            yield rc
             yield linesep
 
         yield tag["pattern"]
