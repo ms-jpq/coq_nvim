@@ -53,11 +53,6 @@ def _marks(
         yield mark
 
 
-def _log_parsed(parsed: Parsed) -> None:
-    msg = pformat(parsed)
-    log.debug("%s", msg)
-
-
 def parse(
     context: Context, snippet: SnippetEdit, sort_by: str
 ) -> Tuple[ContextualEdit, Sequence[Mark]]:
@@ -65,9 +60,6 @@ def parse(
 
     text = expand_tabs(context, text=snippet.new_text)
     parsed = parser(context, snippet=text)
-    if DEBUG:
-        _log_parsed(parsed)
-
     old_prefix, old_suffix = _before_after(context, text=sort_by + parsed.text)
     indent = _indent(context, old_prefix=old_prefix, line_before=context.line_before)
     new_lines = tuple(
@@ -84,5 +76,10 @@ def parse(
         new_prefix=parsed.text[: parsed.cursor],
     )
     marks = tuple(_marks(context, edit=edit, indent=indent, parsed=parsed))
+
+    if DEBUG:
+        msg = pformat((parsed, edit, marks))
+        log.debug("%s", msg)
+
     return edit, marks
 
