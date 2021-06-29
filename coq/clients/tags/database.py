@@ -57,27 +57,37 @@ class Database:
                         for row in cursor.fetchall()
                     }
 
-                    def m0() -> Iterator[Mapping]:
+                    def ded() -> Iterator[str]:
+
                         for f, (ft, mtime) in files.items():
                             info = tags.get(f)
                             if info:
                                 if info["lang"] != ft or info["mtime"] != mtime:
-                                    yield {"filename": f}
+                                    yield f
                             else:
-                                yield {"filename": f}
+                                yield f
+
+                    dead = {*ded()}
+                    live = files.keys() - dead
+
+                    def m0() -> Iterator[Mapping]:
+                        for f in dead:
+                            yield {"filename": f}
 
                     def m1() -> Iterator[Mapping]:
                         for filename, info in tags.items():
-                            yield {
-                                "filename": filename,
-                                "filetype": info["lang"],
-                                "mtime": info["mtime"],
-                            }
+                            if filename not in live:
+                                yield {
+                                    "filename": filename,
+                                    "filetype": info["lang"],
+                                    "mtime": info["mtime"],
+                                }
 
                     def m2() -> Iterator[Mapping]:
-                        for info in tags.values():
-                            for tag in info["tags"]:
-                                yield {**_NIL_TAG, **tag}
+                        for filename, info in tags.items():
+                            if filename not in live:
+                                for tag in info["tags"]:
+                                    yield {**_NIL_TAG, **tag}
 
                     cursor.executemany(sql("delete", "file"), m0())
                     cursor.executemany(sql("insert", "file"), m1())
