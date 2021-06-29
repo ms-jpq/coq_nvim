@@ -2,7 +2,15 @@ from contextlib import suppress
 from hashlib import md5
 from json import dumps, loads
 from pathlib import Path
-from typing import AbstractSet, Iterable, Mapping, MutableSequence, Tuple, TypedDict
+from typing import (
+    AbstractSet,
+    Iterable,
+    Mapping,
+    MutableMapping,
+    MutableSequence,
+    Tuple,
+    TypedDict,
+)
 
 from ...consts import CLIENTS_DIR
 from .parser import Tag, parse_lines, run
@@ -12,12 +20,13 @@ _TAGS_DIR = CLIENTS_DIR / "tags"
 
 class _TagInfo(TypedDict):
     mtime: float
+    lang: str
     tags: MutableSequence[Tag]
 
 
 Tags = Mapping[str, _TagInfo]
 
-_NIL_INFO = _TagInfo(mtime=0, tags=[])
+_NIL_INFO = _TagInfo(mtime=0, lang="", tags=[])
 
 
 def _mtimes(paths: Iterable[Path]) -> Mapping[str, float]:
@@ -37,9 +46,9 @@ def reconciliate(cwd: Path, paths: AbstractSet[str]) -> Tags:
     try:
         json = tag_path.read_text("UTF-8")
     except FileNotFoundError:
-        existing = {}
+        existing: Tags = {}
     else:
-        existing: Tags = loads(json)
+        existing = loads(json)
 
     mtimes = _mtimes(map(Path, existing.keys() | paths))
     query_paths = tuple(
@@ -49,10 +58,11 @@ def reconciliate(cwd: Path, paths: AbstractSet[str]) -> Tags:
     )
     raw = run(*query_paths) if query_paths else ""
 
-    acc: Tags = {}
+    acc: MutableMapping[str, _TagInfo] = {}
     for tag in parse_lines(raw):
         path = tag["path"]
         info = acc.setdefault(path, _NIL_INFO)
+        info["lang"] = tag["language"]
         info["tags"].append(tag)
 
     new = {**existing, **acc}

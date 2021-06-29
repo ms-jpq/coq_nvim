@@ -36,20 +36,26 @@ class Database:
 
     def add(self, tags: Tags) -> None:
         def m1() -> Iterator[Mapping]:
-            for filename, (filetype, mtime) in files.items():
+            for filename, info in tags.items():
                 yield {
-                    "filename": str(filename),
-                    "filetype": filetype,
-                    "mtime": mtime,
+                    "filename": filename,
+                    "filetype": info["lang"],
                 }
 
         def m2() -> Iterator[Mapping]:
-            for tag in tags:
-                yield asdict(tag)
+            for info in tags.values():
+                for tag in info["tags"]:
+                    yield asdict(tag)
 
         def cont() -> None:
             with self._lock, closing(self._conn.cursor()) as cursor:
                 with with_transaction(cursor):
+                    cursor.execute(sql("select", "files"), ())
+                    existing = {row["filename"] for row in cursor.fetchall()}
+                    dead = existing - tags.keys()
+                    cursor.executemany(
+                        sql("delete", "file"), ({"filename": d} for d in dead)
+                    )
                     cursor.executemany(sql("insert", "file"), m1())
                     cursor.executemany(sql("insert", "tag"), m2())
 
@@ -72,7 +78,7 @@ class Database:
                             "word": word,
                         },
                     )
-                    return tuple(Tag(**row) for row in cursor.fetchall())
+                    return tuple(row for row in cursor.fetchall())
             except OperationalError:
                 return ()
 

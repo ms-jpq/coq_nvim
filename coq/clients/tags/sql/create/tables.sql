@@ -2,8 +2,11 @@ BEGIN;
 
 
 CREATE TABLE IF NOT EXISTS files (
-  filename TEXT NOT NULL PRIMARY KEY
+  filename TEXT NOT NULL PRIMARY KEY,
+  filetype TEXT NOT NULL
 ) WITHOUT ROWID;
+CREATE INDEX IF NOT EXISTS files_filetype ON files (filetype);
+
 
 
 -- !! files 1:N tags
