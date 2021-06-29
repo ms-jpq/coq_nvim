@@ -65,7 +65,7 @@ def reconciliate(cwd: Path, paths: AbstractSet[str]) -> Tags:
         info["lang"] = tag["language"]
         info["tags"].append(tag)
 
-    new = {**{key: val for key, val in existing if key in mtimes}, **acc}
+    new = {**{key: val for key, val in existing.items() if key in mtimes}, **acc}
     json = dumps(new, check_circular=False, ensure_ascii=False, indent=2)
     tags_path.write_text(json)
     return new
