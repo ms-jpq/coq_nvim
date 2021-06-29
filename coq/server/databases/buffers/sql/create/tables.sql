@@ -10,7 +10,7 @@ CREATE TABLE IF NOT EXISTS buffers (
   buffer_id INTEGER NOT NULL PRIMARY KEY,
   filetype  TEXT    NOT NULL
 ) WITHOUT ROWID;
-CREATE INDEX IF NOT EXISTS files_filetype ON files (filetype);
+CREATE INDEX IF NOT EXISTS buffers_filetype ON buffers (filetype);
 
 
 CREATE TABLE IF NOT EXISTS words (

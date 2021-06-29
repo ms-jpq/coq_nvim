@@ -2,9 +2,9 @@ SELECT DISTINCT
   word
 FROM words
 JOIN files
-ON files.filename = words.filename
+ON buffers.buffer_id = words.buffer_id
 WHERE
-  files.filetype = X_NORMALIZE(:filetype)
+  buffers.filetype = X_NORMALIZE(:filetype)
   AND
   X_NORMALIZE(:word) <> ''
   AND
