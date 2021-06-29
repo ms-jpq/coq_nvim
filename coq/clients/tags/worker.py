@@ -42,22 +42,35 @@ def _doc(context: Context, tag: Tag) -> Doc:
             if tag["path"] == context.filename
             else relpath(tag["path"], dirname(context.filename))
         )
-        yield f"{lc}{pos}:{tag['line']}{rc}"
+        yield lc
+        yield pos
+        yield ":"
+        yield str(tag["line"])
+        yield rc
         yield linesep
 
         _, _, ref = (tag.get("typeref") or "").partition(":")
-        if ref:
-            yield ref
+
+        if tag["scopeKind"]:
+            yield lc
+            yield tag["scopeKind"] or ""
+            yield rc
             yield linesep
 
         if tag["scope"]:
+            yield lc
             yield tag["scope"] or ""
-            if tag["scopeKind"]:
-                yield " -> "
-                yield tag["scopeKind"] or ""
-                if tag["roles"]:
-                    yield " -> "
-                    yield tag["roles"] or ""
+            yield rc
+            yield linesep
+
+        if tag["roles"]:
+            yield lc
+            yield tag["roles"] or ""
+            yield rc
+            yield linesep
+
+        if ref:
+            yield ref
             yield linesep
 
         yield tag["pattern"]
