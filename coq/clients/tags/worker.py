@@ -57,16 +57,19 @@ def _doc(client: TagsClient, context: Context, tag: Tag) -> Doc:
             yield scope_kind
             yield client.path_sep
             yield scope
+            yield client.parent_scope
             yield rc
             yield linesep
         elif scope_kind:
             yield lc
             yield scope_kind
+            yield client.parent_scope
             yield rc
             yield linesep
         elif scope:
             yield lc
             yield scope
+            yield client.parent_scope
             yield rc
             yield linesep
 

@@ -76,6 +76,7 @@ class PollingClient(WordbankClient):
 
 @dataclass(frozen=True)
 class TagsClient(PollingClient):
+    parent_scope: str
     path_sep: str
 
 
