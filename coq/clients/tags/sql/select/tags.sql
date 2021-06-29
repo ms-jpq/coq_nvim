@@ -11,7 +11,7 @@ SELECT
 
 FROM tags
 JOIN files
-ON files.filename = tags.filename
+ON files.filename = tags.`path`
 WHERE
   X_NORMALIZE(:word) <> ''
   AND
