@@ -1,3 +1,3 @@
-INSERT INTO lines (             filename,               line,   line_num)
-VALUES            (X_NORMALIZE(:filename), X_NORMALIZE(:line), :line_num)
+INSERT INTO lines ( buffer_id,              line,   line_num)
+VALUES            (:buffer_id, X_NORMALIZE(:line), :line_num)
 

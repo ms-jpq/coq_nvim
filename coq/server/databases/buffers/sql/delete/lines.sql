@@ -1,6 +1,6 @@
 DELETE FROM lines
 WHERE
-  filename = X_NORMALIZE(:filename)
+  buffer_id = :buffer_id
   AND
   line_num >= :lo
   AND

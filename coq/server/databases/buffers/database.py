@@ -22,10 +22,10 @@ class SqlMetrics(TypedDict):
     insert_order: int
 
 
-def _ensure_file(cursor: Cursor, file: str, filetype: str) -> None:
+def _ensure_buffer(cursor: Cursor, buf_id: int, filetype: str) -> None:
     cursor.execute(
-        sql("insert", "file"),
-        {"filename": file, "filetype": filetype},
+        sql("insert", "buffer"),
+        {"buffer_id": buf_id, "filetype": filetype},
     )
 
 
@@ -47,20 +47,17 @@ class BDB:
         with self._lock:
             self._conn.interrupt()
 
-    def ft_update(self, file: str, filetype: str) -> None:
+    def ft_update(self, buf_id: int, filetype: str) -> None:
         def cont() -> None:
             with self._lock, closing(self._conn.cursor()) as cursor:
                 with with_transaction(cursor):
-                    _ensure_file(cursor, file=file, filetype=filetype)
-                    cursor.execute(
-                        sql("update", "files"), {"filename": file, "filetype": filetype}
-                    )
+                    _ensure_buffer(cursor, buf_id=buf_id, filetype=filetype)
 
         self._ex.submit(cont)
 
     def set_lines(
         self,
-        filename: str,
+        buf_id: int,
         filetype: str,
         lo: int,
         hi: int,
@@ -72,7 +69,7 @@ class BDB:
                 for word in coalesce(line, unifying_chars=unifying_chars):
                     yield {
                         "word": word,
-                        "filename": filename,
+                        "buffer_id": buf_id,
                         "line_num": line_num,
                     }
 
@@ -80,7 +77,7 @@ class BDB:
             for line_num, line in enumerate(lines, start=lo):
                 yield {
                     "line": line,
-                    "filename": filename,
+                    "buffer_id": buf_id,
                     "line_num": line_num,
                 }
 
@@ -91,23 +88,23 @@ class BDB:
         def cont() -> None:
             with self._lock, closing(self._conn.cursor()) as cursor:
                 with with_transaction(cursor):
-                    _ensure_file(cursor, file=filename, filetype=filetype)
-                    del_params = {"filename": filename, "lo": lo, "hi": hi}
+                    _ensure_buffer(cursor, buf_id=buf_id, filetype=filetype)
+                    del_params = {"buffer_id": buf_id, "lo": lo, "hi": hi}
                     cursor.execute(sql("delete", "words"), del_params)
                     cursor.execute(sql("delete", "lines"), del_params)
                     cursor.execute(
                         sql("update", "lines"),
-                        {"filename": filename, "lo": lo, "shift": shift},
+                        {"buffer_id": buf_id, "lo": lo, "shift": shift},
                     )
                     cursor.executemany(sql("insert", "word"), words)
                     cursor.executemany(sql("insert", "line"), m2())
 
         self._ex.submit(cont)
 
-    def lines(self, filename: str, lo: int, hi: int) -> Tuple[int, Sequence[str]]:
+    def lines(self, buf_id: int, lo: int, hi: int) -> Tuple[int, Sequence[str]]:
         @timeit("SQL -- GETLINES")
         def cont() -> Tuple[int, Sequence[str]]:
-            params = {"filename": filename, "lo": lo, "hi": hi}
+            params = {"buffer_id": buf_id, "lo": lo, "hi": hi}
             with self._lock, closing(self._conn.cursor()) as cursor:
                 with with_transaction(cursor):
                     cursor.execute(sql("select", "line_count"), params)
@@ -119,10 +116,7 @@ class BDB:
         self._interrupt()
         return self._ex.submit(cont)
 
-    def inserted(
-        self,
-        content: str,
-    ) -> None:
+    def inserted(self, content: str) -> None:
         def cont() -> None:
             with self._lock, closing(self._conn.cursor()) as cursor:
                 with with_transaction(cursor):
