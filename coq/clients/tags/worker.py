@@ -49,15 +49,21 @@ def _doc(context: Context, tag: Tag) -> Doc:
         yield rc
         yield linesep
 
-        if tag["scopeKind"]:
+        if "scopeKind" in tag:
             yield lc
             yield tag["scopeKind"] or ""
             yield rc
             yield linesep
 
-        if tag["scope"]:
+        if "scope" in tag:
             yield lc
             yield tag["scope"] or ""
+            yield rc
+            yield linesep
+
+        if "access" in tag:
+            yield lc
+            yield tag["access"] or ""
             yield rc
             yield linesep
 
