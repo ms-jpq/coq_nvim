@@ -30,20 +30,6 @@ def _ls(nvim: Nvim) -> AbstractSet[str]:
     return {*threadsafe_call(nvim, lambda: tuple(cont()))}
 
 
-# class Tag(TypedDict):
-
-#     name: str
-
-#     roles: Optional[str]
-#     kind: Optional[str]
-#     typeref: Optional[str]
-
-#     scope: Optional[str]
-#     scopeKind: Optional[str]
-
-#     access: Optional[str]
-
-
 def _doc(context: Context, tag: Tag) -> Doc:
     lc, rc = context.comment
     pos = (

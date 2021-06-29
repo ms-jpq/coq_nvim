@@ -12,7 +12,6 @@ CREATE INDEX IF NOT EXISTS files_filetype ON files (filetype);
 -- !! files 1:N tags
 CREATE TABLE IF NOT EXISTS tags (
   filename  TEXT    NOT NULL REFERENCES files (filename) ON DELETE CASCADE,
-  language  TEXT    NOT NULL,
   line      INTEGER,
   name      TEXT    NOT NULL,
   lname     TEXT    NOT NULL AS (X_LOWER(name)) STORED,
@@ -22,7 +21,7 @@ CREATE TABLE IF NOT EXISTS tags (
   typeref   TEXT,
   scope     TEXT,
   scopeKind TEXT,
-  'access'  TEXT
+  `access`  TEXT
 );
 CREATE INDEX IF NOT EXISTS tags_filename ON tags (filename);
 CREATE INDEX IF NOT EXISTS tags_line_num ON tags (line_num);
