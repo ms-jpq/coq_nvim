@@ -52,11 +52,19 @@ class Database:
             with self._lock, closing(self._conn.cursor()) as cursor:
                 with with_transaction(cursor):
                     cursor.execute(sql("select", "files"), ())
-                    files = cursor.fetchall()
-                    dead = {f["filename"] for f in files} - tags.keys()
-                    cursor.executemany(
-                        sql("delete", "file"), ({"filename": d} for d in dead)
-                    )
+                    files = {
+                        row["filename"]: (row["filetype"], row["mtime"])
+                        for row in cursor.fetchall()
+                    }
+
+                    def m0() -> Iterator[Mapping]:
+                        for f, (ft, mtime) in files.items():
+                            info = tags.get(f)
+                            if info:
+                                if info["lang"] != ft or info["mtime"] != mtime:
+                                    yield {"filename": f}
+                            else:
+                                yield {"filename": f}
 
                     def m1() -> Iterator[Mapping]:
                         for filename, info in tags.items():
@@ -71,6 +79,7 @@ class Database:
                             for tag in info["tags"]:
                                 yield {**_NIL_TAG, **tag}
 
+                    cursor.executemany(sql("delete", "file"), m0())
                     cursor.executemany(sql("insert", "file"), m1())
                     cursor.executemany(sql("insert", "tag"), m2())
 
