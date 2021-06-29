@@ -96,23 +96,29 @@ class Database:
         self._ex.submit(cont)
 
     def select(
-        self, opts: Options, filetype: str, filename: str, line_num: int, word: str
+        self, opts: Options, filename: str, line_num: int, word: str
     ) -> Sequence[Tag]:
         def cont() -> Sequence[Tag]:
             try:
                 with closing(self._conn.cursor()) as cursor:
-                    cursor.execute(
-                        sql("select", "tags"),
-                        {
-                            "exact": opts.exact_matches,
-                            "cut_off": opts.fuzzy_cutoff,
-                            "filetype": filetype,
-                            "filename": filename,
-                            "line_num": line_num,
-                            "word": word,
-                        },
-                    )
-                    return tuple(Tag(**row) for row in cursor.fetchall())
+                    with with_transaction(cursor):
+                        cursor.execute(
+                            sql("select", "files_filetype"), {"filename": filename}
+                        )
+                        row = cursor.fetchone()
+                        filetype = row["filetype"] if row else None
+                        cursor.execute(
+                            sql("select", "tags"),
+                            {
+                                "exact": opts.exact_matches,
+                                "cut_off": opts.fuzzy_cutoff,
+                                "filetype": filetype,
+                                "filename": filename,
+                                "line_num": line_num,
+                                "word": word,
+                            },
+                        )
+                        return tuple(Tag(**row) for row in cursor.fetchall())
             except OperationalError:
                 return ()
 

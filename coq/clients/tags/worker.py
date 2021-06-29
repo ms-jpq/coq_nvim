@@ -103,7 +103,6 @@ class Worker(BaseWorker[PollingClient, None]):
         match = context.words or (context.syms if self._options.match_syms else "")
         tags = self._db.select(
             self._supervisor.options,
-            filetype=context.filetype,
             filename=context.filename,
             line_num=row,
             word=match,
