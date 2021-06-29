@@ -1,10 +1,9 @@
 from concurrent.futures import Executor
 from contextlib import closing
 from dataclasses import asdict
-from pathlib import Path
 from sqlite3 import Connection, OperationalError
 from threading import Lock
-from typing import Iterable, Iterator, Mapping, Sequence, Tuple, TypedDict
+from typing import Iterator, Mapping, Sequence
 
 from std2.sqllite3 import with_transaction
 
@@ -13,12 +12,8 @@ from ...shared.database import init_db
 from ...shared.executor import SingleThreadExecutor
 from ...shared.settings import Options
 from .parser import Tag
+from .reconciliate import Tag, Tags
 from .sql import sql
-
-
-class _File(TypedDict):
-    filename: str
-    mtime: float
 
 
 def _init() -> Connection:
@@ -39,28 +34,7 @@ class Database:
         with self._lock:
             self._conn.interrupt()
 
-    def ls_files(self) -> Sequence[_File]:
-        def cont() -> Sequence[_File]:
-            with self._lock, closing(self._conn.cursor()) as cursor:
-                cursor.execute(sql("select", "files"), ())
-                return cursor.fetchall()
-
-        return self._ex.submit(cont)
-
-    def vaccum(self, dead_files: Iterable[str]) -> None:
-        def m1() -> Iterator[Mapping]:
-            for filename in dead_files:
-                yield {"filename": filename}
-
-        dead = tuple(m1())
-
-        def cont() -> None:
-            with self._lock, closing(self._conn.cursor()) as cursor:
-                cursor.executemany(sql("delete", "file"), dead)
-
-        self._ex.submit(cont)
-
-    def add(self, files: Mapping[Path, Tuple[str, float]], tags: Iterable[Tag]) -> None:
+    def add(self, tags: Tags) -> None:
         def m1() -> Iterator[Mapping]:
             for filename, (filetype, mtime) in files.items():
                 yield {

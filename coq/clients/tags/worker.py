@@ -4,7 +4,7 @@ from os.path import dirname, relpath
 from pathlib import Path
 from shutil import which
 from time import sleep
-from typing import AbstractSet, Iterator, Mapping, MutableSet, Optional, Sequence, Tuple
+from typing import AbstractSet, Iterator, MutableSet, Optional, Sequence
 
 from pynvim.api.nvim import Nvim, NvimError
 from pynvim_pp.api import buf_name, list_bufs
@@ -17,7 +17,7 @@ from ...shared.settings import PollingClient
 from ...shared.types import Completion, Context, Doc, Edit
 from .database import Database
 from .parser import Tag
-from .reconciliate import Tags, reconciliate
+from .reconciliate import reconciliate
 
 
 def _ls(nvim: Nvim) -> AbstractSet[str]:
@@ -28,6 +28,25 @@ def _ls(nvim: Nvim) -> AbstractSet[str]:
                 yield filename
 
     return {*threadsafe_call(nvim, lambda: tuple(cont()))}
+
+
+# class Tag(TypedDict):
+#     language: str
+
+#     path: str
+
+#     line: int
+#     name: str
+#     pattern: str
+
+#     roles: Optional[str]
+#     kind: Optional[str]
+#     typeref: Optional[str]
+
+#     scope: Optional[str]
+#     scopeKind: Optional[str]
+
+#     access: Optional[str]
 
 
 def _doc(context: Context, tag: Tag) -> Doc:
