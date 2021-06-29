@@ -18,7 +18,6 @@ CREATE TABLE IF NOT EXISTS tags (
   name      TEXT    NOT NULL,
   lname     TEXT    NOT NULL AS (X_LOWER(name)) STORED,
   pattern   TEXT    NOT NULL,
-  roles     TEXT,
   typeref   TEXT,
   scope     TEXT,
   scopeKind TEXT,

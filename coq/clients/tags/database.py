@@ -21,7 +21,6 @@ _NIL_TAG = Tag(
     kind="",
     name="",
     pattern="",
-    roles=None,
     typeref=None,
     scope=None,
     scopeKind=None,

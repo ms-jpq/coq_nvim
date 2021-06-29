@@ -15,7 +15,6 @@ class Tag(TypedDict):
     pattern: str
     kind: str
 
-    roles: Optional[str]
     typeref: Optional[str]
 
     scope: Optional[str]
@@ -33,7 +32,6 @@ _FIELDS = "".join(
         "kind",
         "name",
         "pattern",
-        "roles",
         "typeref",
         "scope",
         "scopeKind",
