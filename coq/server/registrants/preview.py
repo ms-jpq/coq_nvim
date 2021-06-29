@@ -66,8 +66,9 @@ autocmd("CompleteDone", "InsertLeave") << f"lua {_kill_win.name}()"
 
 def _preprocess(context: Context, doc: Doc) -> Doc:
     if doc.filetype == "markdown":
-        if doc.text.startswith(f"```{linesep}") and doc.text.endswith("```"):
-            text = doc.text[4:-3]
+        split = doc.text.splitlines()
+        if split and split[0] == "```" and split[-1] == "```":
+            text = linesep.join(split[1:-1])
             return Doc(text=text, filetype=context.filetype)
         else:
             return doc
