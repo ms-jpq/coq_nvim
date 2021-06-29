@@ -50,7 +50,7 @@ def _sort_by(adjustment: Weights) -> Callable[[Metric], Any]:
             -len(metric.comp.secondary_edits),
             -(metric.comp.doc is not None),
             -isinstance(metric.comp.primary_edit, SnippetEdit),
-            metric.comp.tie_breaker,
+            -metric.comp.tie_breaker,
             strxfrm(metric.comp.sort_by or metric.comp.primary_edit.new_text),
         )
 
