@@ -11,9 +11,9 @@ class Tag(TypedDict):
     line: int
     name: str
     pattern: str
+    kind: str
 
     roles: Optional[str]
-    kind: Optional[str]
     typeref: Optional[str]
 
     scope: Optional[str]

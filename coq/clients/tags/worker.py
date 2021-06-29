@@ -45,6 +45,12 @@ def _doc(context: Context, tag: Tag) -> Doc:
     def cont() -> Iterator[str]:
         yield f"{lc}{pos}:{tag['line']}{rc}"
         yield linesep
+
+        _, _, ref = (tag.get("typeref") or "").partition(":")
+        if ref:
+            yield ref
+            yield linesep
+
         if tag["scope"]:
             yield tag["scope"] or ""
             if tag["scopeKind"]:
@@ -54,6 +60,7 @@ def _doc(context: Context, tag: Tag) -> Doc:
                     yield " -> "
                     yield tag["roles"] or ""
             yield linesep
+
         yield tag["pattern"]
 
     doc = Doc(
@@ -65,15 +72,13 @@ def _doc(context: Context, tag: Tag) -> Doc:
 
 def _cmp(client: PollingClient, context: Context, tag: Tag) -> Completion:
     edit = Edit(new_text=tag["name"])
-    _, ref_sep, ref = (tag.get("typeref") or "").partition(":")
-    kind = ref + ref_sep + (tag["kind"] or "")
 
     cmp = Completion(
         source=client.short_name,
         tie_breaker=client.tie_breaker,
         label=edit.new_text,
         primary_edit=edit,
-        kind=kind,
+        kind=tag["kind"],
         doc=_doc(context, tag=tag),
     )
     return cmp
