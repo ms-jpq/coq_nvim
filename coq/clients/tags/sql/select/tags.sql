@@ -5,7 +5,6 @@ SELECT
   tags.name,
   tags.lname,
   tags.pattern,
-  tags.roles,
   tags.typeref,
   tags.scope,
   tags.scopeKind,
