@@ -93,7 +93,11 @@ class Worker(BaseWorker[TabnineClient, None]):
                 cast(IO, self._proc.stdin).flush()
                 json = cast(IO, self._proc.stdout).readline()
             except BrokenPipeError:
-                self._proc = _proc()
+                try:
+                    self._proc.kill()
+                finally:
+                    self._proc.wait()
+                    self._proc = _proc()
                 return ()
             else:
                 reply = loads(json)
