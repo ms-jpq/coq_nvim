@@ -1,4 +1,6 @@
 SELECT 
-  filename
+  filename,
+  filetype,
+  mtime
 FROM files
 

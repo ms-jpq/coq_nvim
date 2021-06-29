@@ -3,12 +3,11 @@ from os import linesep
 from os.path import dirname, relpath
 from pathlib import Path
 from shutil import which
-from threading import Lock
 from time import sleep
-from typing import AbstractSet, Iterator, MutableSet, Optional, Sequence
+from typing import AbstractSet, Iterator, MutableSet, Optional, Sequence, Tuple
 
 from pynvim.api.nvim import Nvim, NvimError
-from pynvim_pp.api import buf_name, list_bufs
+from pynvim_pp.api import buf_name, get_cwd, list_bufs
 from pynvim_pp.lib import threadsafe_call
 from pynvim_pp.logging import log
 
@@ -21,14 +20,18 @@ from .parser import Tag
 from .reconciliate import reconciliate
 
 
-def _ls(nvim: Nvim) -> AbstractSet[str]:
-    def cont() -> Iterator[str]:
+def _ls(nvim: Nvim) -> Tuple[Path, AbstractSet[str]]:
+    def c1() -> Iterator[str]:
         for buf in list_bufs(nvim, listed=True):
             with suppress(NvimError):
                 filename = buf_name(nvim, buf=buf)
                 yield filename
 
-    return {*threadsafe_call(nvim, lambda: tuple(cont()))}
+    def cont() -> Tuple[Path, AbstractSet[str]]:
+        cwd = Path(get_cwd(nvim))
+        return cwd, {*c1()}
+
+    return threadsafe_call(nvim, cont)
 
 
 def _doc(context: Context, tag: Tag) -> Doc:
@@ -80,8 +83,6 @@ class Worker(BaseWorker[PollingClient, None]):
     def __init__(
         self, supervisor: Supervisor, options: PollingClient, misc: None
     ) -> None:
-        self._cwd: Optional[Path] = None
-        self._lock = Lock()
         self._db = Database(supervisor.pool)
         super().__init__(supervisor, options=options, misc=misc)
         if which("ctags"):
@@ -90,13 +91,9 @@ class Worker(BaseWorker[PollingClient, None]):
     def _poll(self) -> None:
         try:
             while True:
-                with self._lock:
-                    cwd = self._cwd
-
-                if cwd:
-                    buf_names = _ls(self._supervisor.nvim)
-                    tags = reconciliate(cwd, paths=buf_names)
-                    self._db.add(tags)
+                cwd, buf_names = _ls(self._supervisor.nvim)
+                tags = reconciliate(cwd, paths=buf_names)
+                self._db.add(tags)
                 sleep(self._options.polling_interval)
         except Exception as e:
             log.exception("%s", e)
