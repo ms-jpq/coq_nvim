@@ -1,4 +1,6 @@
 SELECT
+  tags.`path`,
+  tags.line,
   tags.name,
   tags.lname,
   tags.pattern,
@@ -8,7 +10,6 @@ SELECT
   tags.scope,
   tags.scopeKind,
   tags.`access`
-
 FROM tags
 JOIN files
 ON files.filename = tags.`path`
@@ -25,3 +26,4 @@ WHERE
 ORDER BY
   tags.filename = :filename DESC,
   ABS(tags.line_num - :line_num)
+

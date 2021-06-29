@@ -112,7 +112,7 @@ class Database:
                             "word": word,
                         },
                     )
-                    return tuple(row for row in cursor.fetchall())
+                    return tuple(Tag(**row) for row in cursor.fetchall())
             except OperationalError:
                 return ()
 
