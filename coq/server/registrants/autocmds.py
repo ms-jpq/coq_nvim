@@ -15,10 +15,9 @@ _SEEN: MutableSet[str] = set()
 @rpc(blocking=True)
 def _ft_changed(nvim: Nvim, stack: Stack) -> None:
     buf = cur_buf(nvim)
-    name = buf_name(nvim, buf=buf)
     ft = buf_filetype(nvim, buf=buf)
 
-    stack.bdb.ft_update(name, filetype=ft)
+    stack.bdb.ft_update(buf.number, filetype=ft)
 
     if ft not in _SEEN:
         _SEEN.add(ft)

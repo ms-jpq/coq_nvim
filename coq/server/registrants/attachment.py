@@ -3,7 +3,7 @@ from typing import Sequence
 
 from pynvim import Nvim
 from pynvim.api import Buffer, NvimError
-from pynvim_pp.api import buf_filetype, buf_get_option, buf_name, cur_buf, list_bufs
+from pynvim_pp.api import buf_filetype, buf_get_option, cur_buf, list_bufs
 
 from ...registry import atomic, autocmd, rpc
 from ...shared.timeit import timeit
@@ -46,11 +46,10 @@ def _lines_event(
     lines: Sequence[str],
     pending: bool,
 ) -> None:
-    file = buf_name(nvim, buf=buf)
     filetype = buf_filetype(nvim, buf=buf)
 
     stack.bdb.set_lines(
-        filename=file,
+        buf.number,
         filetype=filetype,
         lo=lo,
         hi=hi,

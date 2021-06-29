@@ -10,6 +10,7 @@ EMPTY_CTX = Context(
     uid=uuid4(),
     changedtick=0,
     cwd=Path(),
+    buf_id=0,
     filename="",
     filetype="",
     line_count=0,

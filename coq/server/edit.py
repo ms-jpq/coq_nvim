@@ -364,7 +364,7 @@ def edit(nvim: Nvim, stack: Stack, data: UserData) -> None:
             primary,
             *data.secondary_edits,
         )
-        _, limited_lines = stack.bdb.lines(ctx.filename, lo=lo, hi=hi)
+        _, limited_lines = stack.bdb.lines(ctx.buf_id, lo=lo, hi=hi)
         lines = tuple(chain(repeat("", times=lo), limited_lines))
         view = _lines(lines)
 

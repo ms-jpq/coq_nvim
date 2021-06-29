@@ -16,6 +16,7 @@ def context(nvim: Nvim, options: Options, db: BDB) -> Optional[Context]:
 
     with Atomic() as (atomic, ns):
         ns.cwd = atomic.call_function("getcwd", ())
+        ns.buf_nr = atomic.get_current_buf()
         ns.name = atomic.buf_get_name(0)
         ns.filetype = atomic.buf_get_option(0, "filetype")
         ns.commentstring = atomic.buf_get_option(0, "commentstring")
@@ -27,6 +28,7 @@ def context(nvim: Nvim, options: Options, db: BDB) -> Optional[Context]:
         atomic.commit(nvim)
 
     cwd = cast(str, ns.cwd)
+    buf_nr = ns.buf_nr
     (r, col) = cast(Tuple[int, int], ns.cursor)
     row = r - 1
     pos = (row, col)
@@ -39,7 +41,7 @@ def context(nvim: Nvim, options: Options, db: BDB) -> Optional[Context]:
     linefeed = cast(Literal["\n", "\r", "\r\n"], LFfmt[cast(str, ns.fileformat)].value)
 
     line_count, lines = db.lines(
-        filename, lo=row - options.context_lines, hi=row + options.context_lines + 1
+        buf_nr, lo=row - options.context_lines, hi=row + options.context_lines + 1
     )
     if not line_count:
         return None
@@ -56,6 +58,7 @@ def context(nvim: Nvim, options: Options, db: BDB) -> Optional[Context]:
         ctx = Context(
             uid=uuid4(),
             cwd=Path(cwd),
+            buf_id=buf_nr,
             changedtick=changedtick,
             filename=filename,
             filetype=filetype,

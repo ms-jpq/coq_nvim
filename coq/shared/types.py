@@ -27,6 +27,7 @@ class Context:
     changedtick: int
 
     cwd: Path
+    buf_id: int
     filetype: str
     filename: str
     line_count: int
