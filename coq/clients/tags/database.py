@@ -1,6 +1,5 @@
 from concurrent.futures import Executor
 from contextlib import closing
-from dataclasses import asdict
 from sqlite3 import Connection, OperationalError
 from threading import Lock
 from typing import Iterator, Mapping, Sequence
@@ -45,7 +44,7 @@ class Database:
         def m2() -> Iterator[Mapping]:
             for info in tags.values():
                 for tag in info["tags"]:
-                    yield asdict(tag)
+                    yield tag
 
         def cont() -> None:
             with self._lock, closing(self._conn.cursor()) as cursor:

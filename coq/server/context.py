@@ -1,3 +1,4 @@
+from pathlib import Path
 from typing import Literal, Optional, Tuple, cast
 from uuid import uuid4
 
@@ -54,7 +55,7 @@ def context(nvim: Nvim, options: Options, db: BDB) -> Optional[Context]:
 
         ctx = Context(
             uid=uuid4(),
-            cwd=cwd,
+            cwd=Path(cwd),
             changedtick=changedtick,
             filename=filename,
             filetype=filetype,

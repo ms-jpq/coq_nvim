@@ -3,6 +3,7 @@ from os import linesep
 from os.path import dirname, relpath
 from pathlib import Path
 from shutil import which
+from threading import Lock
 from time import sleep
 from typing import AbstractSet, Iterator, MutableSet, Optional, Sequence
 
@@ -80,6 +81,7 @@ class Worker(BaseWorker[PollingClient, None]):
         self, supervisor: Supervisor, options: PollingClient, misc: None
     ) -> None:
         self._cwd: Optional[Path] = None
+        self._lock = Lock()
         self._db = Database(supervisor.pool)
         super().__init__(supervisor, options=options, misc=misc)
         if which("ctags"):
@@ -87,16 +89,22 @@ class Worker(BaseWorker[PollingClient, None]):
 
     def _poll(self) -> None:
         try:
-            while self._cwd:
-                buf_names = _ls(self._supervisor.nvim)
-                tags = reconciliate(self._cwd, paths=buf_names)
+            while True:
+                with self._lock:
+                    cwd = self._cwd
 
-                self._db.add(tags)
+                if cwd:
+                    buf_names = _ls(self._supervisor.nvim)
+                    tags = reconciliate(cwd, paths=buf_names)
+                    self._db.add(tags)
                 sleep(self._options.polling_interval)
         except Exception as e:
             log.exception("%s", e)
 
     def work(self, context: Context) -> Iterator[Sequence[Completion]]:
+        with self._lock:
+            self._cwd = context.cwd
+
         row, _ = context.position
         match = context.words or (context.syms if self._options.match_syms else "")
         tags = self._db.select(

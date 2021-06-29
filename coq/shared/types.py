@@ -1,4 +1,5 @@
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Annotated, Literal, Optional, Sequence, Tuple, Union
 from uuid import UUID, uuid4
 
@@ -25,7 +26,7 @@ class Context:
     uid: UUID
     changedtick: int
 
-    cwd: str
+    cwd: Path
     filetype: str
     filename: str
     line_count: int

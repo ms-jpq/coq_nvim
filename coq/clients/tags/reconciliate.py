@@ -40,6 +40,7 @@ def _mtimes(paths: Iterable[Path]) -> Mapping[str, float]:
 
 
 def reconciliate(cwd: Path, paths: AbstractSet[str]) -> Tags:
+    print(paths, flush=True)
     _TAGS_DIR.mkdir(parents=True, exist_ok=True)
     tag_path = _TAGS_DIR / md5(str(cwd).encode()).hexdigest()
 

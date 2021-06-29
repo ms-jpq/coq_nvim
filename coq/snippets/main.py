@@ -1,4 +1,5 @@
 from argparse import ArgumentParser, Namespace
+from pathlib import Path
 from sys import stdin
 from uuid import uuid4
 
@@ -8,7 +9,7 @@ from .parse import parse
 EMPTY_CTX = Context(
     uid=uuid4(),
     changedtick=0,
-    cwd="",
+    cwd=Path(),
     filename="",
     filetype="",
     line_count=0,
