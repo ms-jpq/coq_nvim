@@ -4,7 +4,7 @@ from os.path import dirname, relpath
 from pathlib import Path
 from shutil import which
 from time import sleep
-from typing import AbstractSet, Iterator, MutableSet, Optional, Sequence, Tuple
+from typing import AbstractSet, Iterator, MutableSet, Sequence, Tuple
 
 from pynvim.api.nvim import Nvim, NvimError
 from pynvim_pp.api import buf_name, get_cwd, list_bufs

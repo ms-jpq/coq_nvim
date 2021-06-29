@@ -26,8 +26,6 @@ class _TagInfo(TypedDict):
 
 Tags = Mapping[str, _TagInfo]
 
-_NIL_INFO = _TagInfo(mtime=0, lang="", tags=[])
-
 
 def _mtimes(paths: Iterable[Path]) -> Mapping[str, float]:
     def cont() -> Iterable[Tuple[Path, float]]:
@@ -54,14 +52,16 @@ def reconciliate(cwd: Path, paths: AbstractSet[str]) -> Tags:
     query_paths = tuple(
         path
         for path, mtime in mtimes.items()
-        if mtime > existing.get(path, _NIL_INFO)["mtime"]
+        if mtime > existing.get(path, _TagInfo(mtime=0, lang="", tags=[]))["mtime"]
     )
     raw = run(*query_paths) if query_paths else ""
 
     acc: MutableMapping[str, _TagInfo] = {}
     for tag in parse_lines(raw):
         path = tag["path"]
-        info = acc.setdefault(path, _NIL_INFO)
+        info = acc.setdefault(
+            path, _TagInfo(mtime=mtimes.get(path, 0), lang="", tags=[])
+        )
         info["lang"] = tag["language"]
         info["tags"].append(tag)
 
