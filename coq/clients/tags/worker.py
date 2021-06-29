@@ -50,31 +50,48 @@ def _doc(context: Context, tag: Tag) -> Doc:
         yield linesep
 
         scope_kind = tag["scopeKind"] or None
-        if scope_kind:
+        scope = tag["scope"] or None
+    
+        if scope_kind and scope:
+            yield lc
+            yield scope_kind
+            yield " :: "
+            yield scope
+            yield rc
+            yield linesep
+        elif scope_kind:
             yield lc
             yield scope_kind
             yield rc
             yield linesep
-
-        scope = tag["scope"] or None
-        if scope:
+        elif scope:
             yield lc
             yield scope
             yield rc
             yield linesep
 
         access = tag["access"] or None
-        if access:
+        _, _, ref = (tag.get("typeref") or "").partition(":")
+        if access and ref:
             yield lc
             yield access
+            yield " :: "
+            yield tag["kind"]
+            yield " :: "
+            yield ref
             yield rc
             yield linesep
-
-        _, rsep, ref = (tag.get("typeref") or "").partition(":")
-        if ref:
+        elif access:
+            yield lc
+            yield access
+            yield " :: "
+            yield tag["kind"]
+            yield rc
+            yield linesep
+        elif ref:
             yield lc
             yield tag["kind"]
-            yield rsep
+            yield " :: "
             yield ref
             yield rc
             yield linesep
