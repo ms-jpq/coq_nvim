@@ -24,7 +24,7 @@ CREATE TABLE IF NOT EXISTS tags (
   `access`  TEXT
 );
 CREATE INDEX IF NOT EXISTS tags_filename ON tags (filename);
-CREATE INDEX IF NOT EXISTS tags_line_num ON tags (line_num);
+CREATE INDEX IF NOT EXISTS tags_line     ON tags (line);
 CREATE INDEX IF NOT EXISTS tags_name     ON tags (name);
 CREATE INDEX IF NOT EXISTS tags_lname    ON tags (lname);
 
