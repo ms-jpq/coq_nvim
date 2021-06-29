@@ -38,7 +38,11 @@ def _primary(client: LSPClient, item: CompletionItem) -> Edit:
     fmt = None if item.insertTextFormat is None else str(item.insertTextFormat)
 
     if client.InsertTextFormat.get(cast(Any, fmt)) == "Snippet":
-        return SnippetEdit(grammar="lsp", new_text=item.insertText or item.label)
+        if isinstance(item.textEdit, TextEdit):
+            new_text = item.textEdit.newText
+        else:
+            new_text = item.insertText or item.label
+        return SnippetEdit(grammar="lsp", new_text=new_text)
     elif isinstance(item.textEdit, TextEdit):
         return _range_edit(item.textEdit)
     else:
