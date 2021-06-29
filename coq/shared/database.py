@@ -5,7 +5,7 @@ from std2.sqllite3 import add_functions, escape
 
 
 def _like_esc(like: str) -> str:
-    escaped = escape(nono={"%", "_"}, escape="!", param=like)
+    escaped = escape(nono={"%", "_", "["}, escape="!", param=like)
     return f"{escaped}%"
 
 

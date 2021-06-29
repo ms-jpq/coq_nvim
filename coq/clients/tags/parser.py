@@ -1,6 +1,8 @@
 from json import loads
 from subprocess import DEVNULL, CalledProcessError, check_output
-from typing import Iterator, Optional, TypedDict
+from typing import Iterator, MutableSequence, Optional, TypedDict
+
+from std2.string import removeprefix, removesuffix
 
 
 class Tag(TypedDict):
@@ -28,9 +30,10 @@ _FIELDS = "".join(
         "language",
         "input",
         "line",
-        "name",
-        "roles",
         "kind",
+        "name",
+        "pattern",
+        "roles",
         "typeref",
         "scope",
         "scopeKind",
@@ -63,9 +66,25 @@ def run(*args: str) -> str:
             return raw
 
 
+def _unescape(pattern: str) -> str:
+    def cont() -> Iterator[str]:
+        stripped = removesuffix(removeprefix(pattern[1:-1], "^"), "$")
+        it = iter(stripped)
+        for c in it:
+            if c == "\\":
+                nc = next(it, "")
+                if nc in {"/", "\\"}:
+                    yield nc
+            else:
+                yield c
+
+    return "".join(cont())
+
+
 def parse_lines(raw: str) -> Iterator[Tag]:
     for line in raw.splitlines():
         json = loads(line)
         if json["_type"] == "tag":
+            json["pattern"] = _unescape(json["pattern"])
             yield json
 

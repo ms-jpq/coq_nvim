@@ -1,11 +1,11 @@
 SELECT
   tags.`path`,
   tags.line,
+  tags.kind,
   tags.name,
   tags.lname,
   tags.pattern,
   tags.roles,
-  tags.kind,
   tags.typeref,
   tags.scope,
   tags.scopeKind,
