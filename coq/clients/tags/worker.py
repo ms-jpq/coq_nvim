@@ -31,13 +31,8 @@ def _ls(nvim: Nvim) -> AbstractSet[str]:
 
 
 # class Tag(TypedDict):
-#     language: str
 
-#     path: str
-
-#     line: int
 #     name: str
-#     pattern: str
 
 #     roles: Optional[str]
 #     kind: Optional[str]
@@ -56,11 +51,42 @@ def _doc(context: Context, tag: Tag) -> Doc:
         if tag["path"] == context.filename
         else relpath(tag["path"], dirname(context.filename))
     )
+
+    def cont() -> Iterator[str]:
+        yield f"{lc}{pos}:{tag['line']}{rc}"
+        yield linesep
+        if tag["scope"]:
+            yield tag["scope"] or ""
+            if tag["scopeKind"]:
+                yield " -> "
+                yield tag["scopeKind"] or ""
+                if tag["roles"]:
+                    yield " -> "
+                    yield tag["roles"] or ""
+            yield linesep
+        yield tag["pattern"]
+
     doc = Doc(
-        text=f"{lc}{pos}:{tag['line']}{rc}{linesep}{tag.context}",
+        text="".join(cont()),
         filetype=context.filetype,
     )
     return doc
+
+
+def _cmp(client: PollingClient, context: Context, tag: Tag) -> Completion:
+    edit = Edit(new_text=tag["name"])
+    _, ref_sep, ref = (tag.get("typeref") or "").partition(":")
+    kind = ref + ref_sep + (tag["kind"] or "")
+
+    cmp = Completion(
+        source=client.short_name,
+        tie_breaker=client.tie_breaker,
+        label=edit.new_text,
+        primary_edit=edit,
+        kind=kind,
+        doc=_doc(context, tag=tag),
+    )
+    return cmp
 
 
 class Worker(BaseWorker[PollingClient, None]):
@@ -79,7 +105,7 @@ class Worker(BaseWorker[PollingClient, None]):
                 buf_names = _ls(self._supervisor.nvim)
                 tags = reconciliate(self._cwd, paths=buf_names)
 
-                self._db.add(lsd, tags=tags)
+                self._db.add(tags)
                 sleep(self._options.polling_interval)
         except Exception as e:
             log.exception("%s", e)
@@ -98,19 +124,9 @@ class Worker(BaseWorker[PollingClient, None]):
         def cont() -> Iterator[Completion]:
             seen: MutableSet[str] = set()
             for tag in tags:
-                name = tag["name"]
-                if name not in seen:
-                    seen.add(name)
-                    edit = Edit(new_text=name)
-                    cmp = Completion(
-                        source=self._options.short_name,
-                        tie_breaker=self._options.tie_breaker,
-                        label=edit.new_text,
-                        primary_edit=edit,
-                        kind=tag["kind"] or "",
-                        doc=_doc(context, tag=tag),
-                    )
-                    yield cmp
+                if tag["name"] not in seen:
+                    seen.add(tag["name"])
+                    yield _cmp(self._options, context=context, tag=tag)
 
         yield tuple(cont())
 
