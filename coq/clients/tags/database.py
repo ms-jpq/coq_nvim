@@ -14,6 +14,20 @@ from .parser import Tag
 from .reconciliate import Tag, Tags
 from .sql import sql
 
+_NIL_TAG = Tag(
+    language="",
+    path="",
+    line=0,
+    name="",
+    pattern="",
+    roles=None,
+    kind=None,
+    typeref=None,
+    scope=None,
+    scopeKind=None,
+    access=None,
+)
+
 
 def _init() -> Connection:
     conn = Connection(TAGS_DB, isolation_level=None)
@@ -44,7 +58,7 @@ class Database:
         def m2() -> Iterator[Mapping]:
             for info in tags.values():
                 for tag in info["tags"]:
-                    yield tag
+                    yield {**_NIL_TAG, **tag}
 
         def cont() -> None:
             with self._lock, closing(self._conn.cursor()) as cursor:
