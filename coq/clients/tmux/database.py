@@ -1,4 +1,4 @@
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import Executor
 from contextlib import closing
 from sqlite3 import Connection, OperationalError
 from threading import Lock
@@ -8,7 +8,7 @@ from std2.sqllite3 import with_transaction
 
 from ...consts import TMUX_DB
 from ...shared.database import init_db
-from ...shared.executor import Executor
+from ...shared.executor import SingleThreadExecutor
 from ...shared.settings import Options
 from .sql import sql
 
@@ -22,9 +22,9 @@ def _init() -> Connection:
 
 
 class Database:
-    def __init__(self, pool: ThreadPoolExecutor) -> None:
+    def __init__(self, pool: Executor) -> None:
         self._lock = Lock()
-        self._ex = Executor(pool)
+        self._ex = SingleThreadExecutor(pool)
         self._conn: Connection = self._ex.submit(_init)
 
     def _interrupt(self) -> None:

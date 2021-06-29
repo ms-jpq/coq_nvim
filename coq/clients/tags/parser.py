@@ -1,39 +1,48 @@
+from concurrent.futures import Executor
 from json import loads
-from pathlib import PurePath
+from pathlib import Path
 from subprocess import DEVNULL, CalledProcessError, check_output
-from typing import Iterator, Optional, Sequence, TypedDict
-
-from std2.pathlib import AnyPath
+from typing import Iterator, Mapping, Optional, Sequence, TypedDict
 
 
 class Tag(TypedDict):
     language: str
+
     path: str
+
     line: int
     name: str
+    pattern: str
 
+    roles: Optional[str]
     kind: Optional[str]
     typeref: Optional[str]
+
+    scope: Optional[str]
     scopeKind: Optional[str]
+
     access: Optional[str]
 
 
 _FIELDS = "".join(
-    f"{f}"
+    f"{{{f}}}"
     for f in (
         "language",
         "input",
         "line",
+        "name",
+        "roles",
         "kind",
         "typeref",
+        "scope",
         "scopeKind",
         "access",
-        "name",
+        "signature",
     )
 )
 
 
-def run(*args: str, cwd: AnyPath) -> str:
+def run(*args: str, cwd: Path) -> str:
     try:
         raw = check_output(
             (
@@ -61,10 +70,10 @@ def parse_lines(raw: str) -> Iterator[Tag]:
             yield json
 
 
-def parse(paths: Sequence[PurePath]) -> Sequence[Tag]:
+def parse(pool: Executor, paths: Sequence[Path], cwd: Path) -> Mapping[str, Tag]:
     if not paths:
-        return ()
+        return {}
     else:
-        raw = run(*map(str, paths), cwd=".")
+        raw = run(*map(str, paths), cwd=cwd)
         return tuple(parse_lines(raw))
 

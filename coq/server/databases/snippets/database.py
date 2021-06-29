@@ -8,7 +8,7 @@ from std2.sqllite3 import with_transaction
 from ....consts import SNIPPET_DB
 from ....registry import pool
 from ....shared.database import init_db
-from ....shared.executor import Executor
+from ....shared.executor import SingleThreadExecutor
 from ....shared.settings import Options
 from ....snippets.types import ParsedSnippet
 from .sql import sql
@@ -41,7 +41,7 @@ def _ensure_ft(cursor: Cursor, filetypes: Iterable[str]) -> None:
 class SDB:
     def __init__(self) -> None:
         self._lock = Lock()
-        self._ex = Executor(pool)
+        self._ex = SingleThreadExecutor(pool)
         self._conn: Connection = self._ex.submit(_init)
 
     def _interrupt(self) -> None:

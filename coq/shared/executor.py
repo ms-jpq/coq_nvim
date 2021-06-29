@@ -1,4 +1,4 @@
-from concurrent.futures import Future, InvalidStateError, ThreadPoolExecutor
+from concurrent.futures import Future, InvalidStateError, Executor
 from contextlib import suppress
 from queue import SimpleQueue
 from threading import Lock
@@ -7,8 +7,8 @@ from typing import Any, Callable, TypeVar, cast
 T = TypeVar("T")
 
 
-class Executor:
-    def __init__(self, pool: ThreadPoolExecutor) -> None:
+class SingleThreadExecutor:
+    def __init__(self, pool: Executor) -> None:
         self._lock = Lock()
         self._q: SimpleQueue = SimpleQueue()
         pool.submit(self._forever)

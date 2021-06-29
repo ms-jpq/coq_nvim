@@ -1,4 +1,4 @@
-from concurrent.futures import Future, ThreadPoolExecutor
+from concurrent.futures import Future, Executor
 from dataclasses import dataclass
 from json import loads
 from threading import Lock
@@ -98,7 +98,7 @@ def _from_each_according_to_their_ability(
         yield T9Worker(supervisor, options=clients.tabnine, misc=None)
 
 
-def stack(pool: ThreadPoolExecutor, nvim: Nvim) -> Stack:
+def stack(pool: Executor, nvim: Nvim) -> Stack:
     settings = _settings(nvim)
     state = _State(
         screen=(0, 0),

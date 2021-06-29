@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from abc import abstractmethod
 from collections import Counter, deque
-from concurrent.futures import Future, InvalidStateError, ThreadPoolExecutor, wait
+from concurrent.futures import Executor, Future, InvalidStateError, wait
 from contextlib import suppress
 from dataclasses import dataclass
 from threading import Lock
@@ -54,7 +54,7 @@ class PReviewer(Protocol):
 class Supervisor:
     def __init__(
         self,
-        pool: ThreadPoolExecutor,
+        pool: Executor,
         nvim: Nvim,
         options: Options,
         reviewer: PReviewer,
@@ -78,7 +78,7 @@ class Supervisor:
         return self._nvim
 
     @property
-    def pool(self) -> ThreadPoolExecutor:
+    def pool(self) -> Executor:
         return self._pool
 
     def register(self, worker: Worker) -> None:
