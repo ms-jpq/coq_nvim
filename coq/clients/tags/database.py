@@ -48,27 +48,29 @@ class Database:
             self._conn.interrupt()
 
     def add(self, tags: Tags) -> None:
-        def m1() -> Iterator[Mapping]:
-            for filename, info in tags.items():
-                yield {
-                    "filename": filename,
-                    "filetype": info["lang"],
-                }
-
-        def m2() -> Iterator[Mapping]:
-            for info in tags.values():
-                for tag in info["tags"]:
-                    yield {**_NIL_TAG, **tag}
-
         def cont() -> None:
             with self._lock, closing(self._conn.cursor()) as cursor:
                 with with_transaction(cursor):
                     cursor.execute(sql("select", "files"), ())
-                    existing = {row["filename"] for row in cursor.fetchall()}
-                    dead = existing - tags.keys()
+                    files = cursor.fetchall()
+                    dead = {f["filename"] for f in files} - tags.keys()
                     cursor.executemany(
                         sql("delete", "file"), ({"filename": d} for d in dead)
                     )
+
+                    def m1() -> Iterator[Mapping]:
+                        for filename, info in tags.items():
+                            yield {
+                                "filename": filename,
+                                "filetype": info["lang"],
+                                "mtime": info["mtime"],
+                            }
+
+                    def m2() -> Iterator[Mapping]:
+                        for info in tags.values():
+                            for tag in info["tags"]:
+                                yield {**_NIL_TAG, **tag}
+
                     cursor.executemany(sql("insert", "file"), m1())
                     cursor.executemany(sql("insert", "tag"), m2())
 

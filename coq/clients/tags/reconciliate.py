@@ -41,10 +41,10 @@ def _mtimes(paths: Iterable[Path]) -> Mapping[str, float]:
 
 def reconciliate(cwd: Path, paths: AbstractSet[str]) -> Tags:
     _TAGS_DIR.mkdir(parents=True, exist_ok=True)
-    tag_path = _TAGS_DIR / md5(str(cwd).encode()).hexdigest()
+    tags_path = _TAGS_DIR / md5(str(cwd).encode()).hexdigest()
 
     try:
-        json = tag_path.read_text("UTF-8")
+        json = tags_path.read_text("UTF-8")
     except FileNotFoundError:
         existing: Tags = {}
     else:
@@ -67,5 +67,6 @@ def reconciliate(cwd: Path, paths: AbstractSet[str]) -> Tags:
 
     new = {**existing, **acc}
     json = dumps(new, check_circular=False, ensure_ascii=False, indent=2)
+    tags_path.write_text(json)
     return new
 
