@@ -1,9 +1,14 @@
 SELECT
-  tags.filename AS filename,
-  tags.line_num AS line_num,
-  tags.context  AS context,
-  tags.kind     AS kind,
-  tags.name     AS name
+  tags.name,
+  tags.lname,
+  tags.pattern,
+  tags.roles,
+  tags.kind,
+  tags.typeref,
+  tags.scope,
+  tags.scopeKind,
+  tags.`access`
+
 FROM tags
 JOIN files
 ON files.filename = tags.filename
