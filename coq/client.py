@@ -47,7 +47,7 @@ class CoqClient(Client):
             event_queue.put(msg)
             return None
         else:
-            with timeit(name):
+            # with timeit(name):
                 return self._handle(nvim, msg)
 
     def wait(self, nvim: Nvim) -> int:

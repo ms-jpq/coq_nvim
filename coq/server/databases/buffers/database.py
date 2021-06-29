@@ -124,7 +124,6 @@ class BDB:
 
         self._ex.submit(cont)
 
-    @timeit("BUF SUGGEST")
     def suggestions(self, opts: Options, filetype: str, word: str) -> Sequence[str]:
         def cont() -> Sequence[str]:
             try:
