@@ -3,6 +3,7 @@ from typing import Literal, Optional, Tuple, cast
 from uuid import uuid4
 
 from pynvim import Nvim
+from pynvim.api import Buffer
 from pynvim_pp.api import LFfmt
 from pynvim_pp.atomic import Atomic
 from pynvim_pp.text_object import gen_split
@@ -16,7 +17,7 @@ def context(nvim: Nvim, options: Options, db: BDB) -> Optional[Context]:
 
     with Atomic() as (atomic, ns):
         ns.cwd = atomic.call_function("getcwd", ())
-        ns.buf_nr = atomic.get_current_buf()
+        ns.buf = atomic.get_current_buf()
         ns.name = atomic.buf_get_name(0)
         ns.filetype = atomic.buf_get_option(0, "filetype")
         ns.commentstring = atomic.buf_get_option(0, "commentstring")
@@ -28,7 +29,7 @@ def context(nvim: Nvim, options: Options, db: BDB) -> Optional[Context]:
         atomic.commit(nvim)
 
     cwd = cast(str, ns.cwd)
-    buf_nr = ns.buf_nr
+    buf_nr = cast(Buffer, ns.buf).number
     (r, col) = cast(Tuple[int, int], ns.cursor)
     row = r - 1
     pos = (row, col)
