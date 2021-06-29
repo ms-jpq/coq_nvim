@@ -35,14 +35,13 @@ def _ls(nvim: Nvim) -> Tuple[Path, AbstractSet[str]]:
 
 
 def _doc(context: Context, tag: Tag) -> Doc:
-    lc, rc = context.comment
-    pos = (
-        "."
-        if tag["path"] == context.filename
-        else relpath(tag["path"], dirname(context.filename))
-    )
-
     def cont() -> Iterator[str]:
+        lc, rc = context.comment
+        pos = (
+            "."
+            if tag["path"] == context.filename
+            else relpath(tag["path"], dirname(context.filename))
+        )
         yield f"{lc}{pos}:{tag['line']}{rc}"
         yield linesep
 

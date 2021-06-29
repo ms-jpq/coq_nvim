@@ -1,6 +1,6 @@
 from json import loads
 from subprocess import DEVNULL, CalledProcessError, check_output
-from typing import Iterator, MutableSequence, Optional, TypedDict
+from typing import Iterator, Optional, TypedDict
 
 from std2.string import removeprefix, removesuffix
 
@@ -68,7 +68,7 @@ def run(*args: str) -> str:
 
 def _unescape(pattern: str) -> str:
     def cont() -> Iterator[str]:
-        stripped = removesuffix(removeprefix(pattern[1:-1], "^"), "$")
+        stripped = removesuffix(removeprefix(pattern[1:-1], "^"), "$").strip()
         it = iter(stripped)
         for c in it:
             if c == "\\":
