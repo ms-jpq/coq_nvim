@@ -3,7 +3,7 @@ from os import linesep
 from shutil import get_terminal_size
 from unittest import TestCase
 
-from ....coq.clients.tags.parser import parse_lines, run
+from ....coq.clients.tags.parser import _parse_lines, run
 from ....coq.consts import TMP_DIR, TOP_LEVEL
 
 
@@ -16,7 +16,7 @@ class Parser(TestCase):
             tag.write_text(text)
 
         spec = tag.read_text()
-        parsed = tuple(parse_lines(spec))
+        parsed = tuple(_parse_lines(spec))
 
         cols, _ = get_terminal_size()
         sep = linesep + "-" * cols + linesep

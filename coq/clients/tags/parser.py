@@ -1,8 +1,6 @@
-from concurrent.futures import Executor
 from json import loads
-from pathlib import Path
 from subprocess import DEVNULL, CalledProcessError, check_output
-from typing import Iterator, Mapping, Optional, Sequence, TypedDict
+from typing import Iterator, Optional, TypedDict
 
 
 class Tag(TypedDict):
@@ -42,25 +40,27 @@ _FIELDS = "".join(
 )
 
 
-def run(*args: str, cwd: Path) -> str:
-    try:
-        raw = check_output(
-            (
-                "ctags",
-                "--sort=no",
-                "--output-format=json",
-                f"--fields={_FIELDS}",
-                *args,
-            ),
-            cwd=cwd,
-            text=True,
-            stdin=DEVNULL,
-            stderr=DEVNULL,
-        )
-    except CalledProcessError:
+def run(*args: str) -> str:
+    if not args:
         return ""
     else:
-        return raw
+        try:
+            raw = check_output(
+                (
+                    "ctags",
+                    "--sort=no",
+                    "--output-format=json",
+                    f"--fields={_FIELDS}",
+                    *args,
+                ),
+                text=True,
+                stdin=DEVNULL,
+                stderr=DEVNULL,
+            )
+        except CalledProcessError:
+            return ""
+        else:
+            return raw
 
 
 def parse_lines(raw: str) -> Iterator[Tag]:
@@ -68,12 +68,4 @@ def parse_lines(raw: str) -> Iterator[Tag]:
         json = loads(line)
         if json["_type"] == "tag":
             yield json
-
-
-def parse(pool: Executor, paths: Sequence[Path], cwd: Path) -> Mapping[str, Tag]:
-    if not paths:
-        return {}
-    else:
-        raw = run(*map(str, paths), cwd=cwd)
-        return tuple(parse_lines(raw))
 

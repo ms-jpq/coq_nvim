@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from shutil import which
-from subprocess import DEVNULL, CalledProcessError, check_output
+from subprocess import DEVNULL, CalledProcessError, TimeoutExpired, check_output
 from time import sleep
 from typing import AbstractSet, Iterator, Optional, Sequence, Tuple
 
@@ -38,7 +38,7 @@ def _panes() -> Sequence[_Pane]:
             stderr=DEVNULL,
         )
 
-    except (CalledProcessError, TimeoutError):
+    except (CalledProcessError, TimeoutExpired):
         return ()
     else:
 
@@ -72,7 +72,7 @@ def _screenshot(unifying_chars: AbstractSet[str], uid: str) -> Sequence[str]:
             stdin=DEVNULL,
             stderr=DEVNULL,
         )
-    except (CalledProcessError, TimeoutError):
+    except (CalledProcessError, TimeoutExpired):
         return ()
     else:
         return tuple(coalesce(out, unifying_chars=unifying_chars))
