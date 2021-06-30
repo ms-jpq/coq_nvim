@@ -22,6 +22,7 @@ from std2.ordinal import clamp
 from std2.pickle import DecodeError, decode
 from std2.pickle.coders import BUILTIN_DECODERS
 
+from ...lsp.requests.preview import request
 from ...lsp.types import CompletionItem
 from ...registry import autocmd, rpc
 from ...shared.nvim.completions import VimCompletion

@@ -77,13 +77,6 @@ def _from_each_according_to_their_ability(
 
 def stack(pool: Executor, nvim: Nvim) -> Stack:
     settings = _settings(nvim)
-    state = State(
-        screen=(0, 0),
-        commit=uuid4(),
-        cur=None,
-        request=None,
-        inserted=None,
-    )
     bdb, sdb = BDB(), SDB()
     reviewer = Reviewer(options=settings.match, db=bdb)
     supervisor = Supervisor(
@@ -95,9 +88,8 @@ def stack(pool: Executor, nvim: Nvim) -> Stack:
         )
     }
     stack = Stack(
-        lock=Lock(),
         settings=settings,
-        state=state,
+        state=State(),
         bdb=bdb,
         sdb=sdb,
         supervisor=supervisor,

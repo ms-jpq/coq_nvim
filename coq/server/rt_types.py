@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from threading import Lock
-from typing import AbstractSet, Optional, Tuple
-from uuid import UUID
+from typing import AbstractSet, Optional
+from uuid import  uuid4
 
 from ..shared.runtime import Supervisor, Worker
 from ..shared.settings import Settings
@@ -10,18 +10,18 @@ from .databases.buffers.database import BDB
 from .databases.snippets.database import SDB
 
 
-@dataclass
 class State:
-    screen: Tuple[int, int]
-    commit: UUID
-    cur: Optional[Context]
-    request: Optional[NvimPos]
-    inserted: Optional[NvimPos]
+    def __init__(self) -> None:
+        self.lock = Lock()
+        self.screen = 0, 0
+        self.commit = uuid4()
+        self.cur: Optional[Context] = None
+        self.request: Optional[NvimPos] = None
+        self.inserted: Optional[NvimPos] = None
 
 
 @dataclass(frozen=True)
 class Stack:
-    lock: Lock
     settings: Settings
     state: State
     bdb: BDB

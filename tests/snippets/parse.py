@@ -6,7 +6,7 @@ from unittest import TestCase
 
 from ...coq.ci.load import load
 from ...coq.shared.types import SnippetEdit
-from ...coq.snippets.main import EMPTY_CTX
+from ...coq.snippets.main import EMPTY_CONTEXT
 from ...coq.snippets.parse import parse
 from ...coq.snippets.parsers.types import ParseError
 
@@ -31,7 +31,12 @@ class Parser(TestCase):
         def errs() -> Iterator[Exception]:
             for edit in edits:
                 try:
-                    parse(set(), context=EMPTY_CTX, snippet=edit, visual="")
+                    parse(
+                        set(),
+                        context=EMPTY_CONTEXT,
+                        snippet=edit,
+                        visual="",
+                    )
                 except ParseError as e:
                     yield e
 

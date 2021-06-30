@@ -9,9 +9,9 @@ from std2.pickle.coders import BUILTIN_DECODERS
 from yaml import safe_load
 
 from ..consts import COMPILATION_YML, TMP_DIR
+from ..shared.context import EMPTY_CONTEXT
 from ..shared.types import SnippetEdit
 from ..snippets.loaders.load import load as load_from_paths
-from ..snippets.main import EMPTY_CTX
 from ..snippets.parse import parse
 from ..snippets.parsers.parser import ParseError
 from ..snippets.types import ParsedSnippet, SnippetSpecs
@@ -72,7 +72,12 @@ def load_parsable() -> SnippetSpecs:
                 grammar=snippet.grammar,
             )
             try:
-                parse(set(), context=EMPTY_CTX, snippet=edit, visual="")
+                parse(
+                    set(),
+                    context=EMPTY_CONTEXT,
+                    snippet=edit,
+                    visual="",
+                )
             except ParseError:
                 pass
             else:
