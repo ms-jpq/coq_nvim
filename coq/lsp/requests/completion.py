@@ -29,7 +29,7 @@ def request(
 
     reply = blocking_request(nvim, "COQlsp_comp", str(session), (row, col))
     try:
-        resp: CompletionResponse = decode(CompletionResponse, reply)
+        resp: CompletionResponse = decode(CompletionResponse, reply, strict=False)
     except DecodeError as e:
         log.warn("%s", e)
     else:

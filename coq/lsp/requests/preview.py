@@ -21,7 +21,7 @@ def request(nvim: Nvim, item: CompletionItem) -> Optional[Doc]:
     reply = blocking_request(nvim, "COQlsp_preview", asdict(item))
 
     try:
-        resp: CompletionItem = decode(CompletionItem, reply)
+        resp: CompletionItem = decode(CompletionItem, reply, strict=False)
     except DecodeError as e:
         log.warn("%s", e)
         return None
