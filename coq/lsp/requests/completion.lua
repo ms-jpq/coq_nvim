@@ -26,7 +26,11 @@
         "textDocument/completion",
         params,
         function(_, _, resp)
-          COQnotify(request_id, resp or vim.NIL)
+          vim.schedule(
+            function()
+              COQnotify(request_id, resp or vim.NIL)
+            end
+          )
         end
       )
     end
