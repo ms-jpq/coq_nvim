@@ -1,4 +1,5 @@
 from concurrent.futures import CancelledError, Future
+from threading import Lock
 from typing import (
     Any,
     Literal,
@@ -48,13 +49,15 @@ def _cmp(
     state(commit=uid)
 
 
+_LOCK = Lock()
 _FUTS: MutableSequence[Future] = []
 
 
 def _comp_func(nvim: Nvim, stack: Stack, manual: bool) -> None:
-    for f1 in _FUTS:
-        f1.cancel()
-    _FUTS.clear()
+    with _LOCK:
+        for f1 in _FUTS:
+            f1.cancel()
+        _FUTS.clear()
 
     s = state()
     with timeit("GEN CTX"):
@@ -71,31 +74,33 @@ def _comp_func(nvim: Nvim, stack: Stack, manual: bool) -> None:
     if ctx and (manual or should):
         _, col = ctx.position
         complete(nvim, col=col - 1, comp=())
-
         state(context=ctx)
-        f1 = stack.supervisor.collect(ctx, manual=manual)
-        _FUTS.append(f1)
 
         @timeit("COLLECT")
         def cont() -> None:
             try:
-                try:
-                    metrics = cast(Sequence[Metric], f1.result())
-                except CancelledError:
-                    pass
-                else:
-                    s = state()
-                    if ctx and s.context == ctx:
-                        with timeit("TRANS"):
-                            vim_comps = tuple(
-                                trans(stack, context=ctx, metrics=metrics)
-                            )
-                        enqueue_event(_cmp, ctx.uid, col, vim_comps)
+                if ctx:
+                    f1 = stack.supervisor.collect(ctx, manual=manual)
+                    with _LOCK:
+                        _FUTS.append(f1)
+                    try:
+                        metrics = cast(Sequence[Metric], f1.result())
+                    except CancelledError:
+                        pass
+                    else:
+                        s = state()
+                        if s.context == ctx:
+                            with timeit("TRANS"):
+                                vim_comps = tuple(
+                                    trans(stack, context=ctx, metrics=metrics)
+                                )
+                            enqueue_event(_cmp, ctx.uid, col, vim_comps)
             except Exception as e:
                 log.exception("%s", e)
 
         f2 = pool.submit(cont)
-        _FUTS.append(f2)
+        with _LOCK:
+            _FUTS.append(f2)
     else:
         state(inserted=(-1, -1))
 
