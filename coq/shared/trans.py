@@ -50,7 +50,7 @@ def trans_adjusted(
     )
     adjusted = ContextualEdit(
         new_text=c_edit.new_text,
-        new_prefix=c_edit.new_text,
+        new_prefix=c_edit.new_prefix,
         old_prefix=old_prefix,
         old_suffix=old_suffix,
     )
