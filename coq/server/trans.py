@@ -49,9 +49,9 @@ def _sort_by(adjustment: Weights) -> Callable[[Metric], Any]:
         return (
             -round(tot * 1000),
             -len(metric.comp.secondary_edits),
-            -(metric.comp.doc is not None),
             -isinstance(metric.comp.primary_edit, SnippetEdit),
             -metric.comp.tie_breaker,
+            -(metric.comp.doc is not None),
             -sort_by[:1].isalnum(),
             strxfrm(sort_by),
         )
