@@ -3,12 +3,11 @@
   end
   local session = nil
 
-  COQlsp_req = function(name, session_id, pos)
-    if cancel and session ~= session_id then
+  COQlsp_comp = function(name, session_id, pos)
+    if session ~= session_id then
       cancel()
     end
     session = session_id
-    cancel = nil
 
     local clients = vim.lsp.buf_get_clients(0)
     if #clients == 0 then

@@ -26,7 +26,7 @@ def request(
 
     go = True
     while go:
-        reply = blocking_request(nvim, "COQlsp_req", str(session), (row, col))
+        reply = blocking_request(nvim, "COQlsp_comp", str(session), (row, col))
         go, comps = parse(
             short_name, tie_breaker=tie_breaker, client=protocol, reply=reply
         )
