@@ -21,6 +21,7 @@ from std2.ordinal import clamp
 from std2.pickle import DecodeError, decode
 from std2.pickle.coders import BUILTIN_DECODERS
 
+from ...lsp.types import CompletionItem
 from ...registry import autocmd, rpc
 from ...shared.nvim.completions import VimCompletion
 from ...shared.settings import PreviewDisplay
@@ -193,15 +194,20 @@ def _cmp_changed(nvim: Nvim, stack: Stack, event: Mapping[str, Any] = {}) -> Non
         except DecodeError:
             pass
         else:
-            if stack.state.cur and data and data.doc and data.doc.text:
-                _preview(
-                    nvim,
-                    stack=stack,
-                    context=stack.state.cur,
-                    display=stack.settings.display.preview,
-                    event=ev,
-                    doc=data.doc,
-                )
+            try:
+                item: CompletionItem = decode(CompletionItem, data.extern)
+            except DecodeError:
+                if stack.state.cur and data and data.doc and data.doc.text:
+                    _preview(
+                        nvim,
+                        stack=stack,
+                        context=stack.state.cur,
+                        display=stack.settings.display.preview,
+                        event=ev,
+                        doc=data.doc,
+                    )
+            else:
+                pass
 
 
 _LUA_1 = f"""
