@@ -100,7 +100,6 @@ def _comp_func(nvim: Nvim, stack: Stack, manual: bool) -> None:
         state(inserted=(-1, -1))
 
 
-@rpc(blocking=True)
 def comp_func(nvim: Nvim, stack: Stack, manual: bool) -> None:
     mode: str = nvim.api.get_mode()["mode"]
     if mode.startswith("i"):

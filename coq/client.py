@@ -44,7 +44,7 @@ class CoqClient(Client):
 
     def on_msg(self, nvim: Nvim, msg: RpcMsg) -> Any:
         name, *_ = msg
-        if not self._stack or name.startswith("nvim_buf_"):
+        if not self._stack:
             event_queue.put(msg)
             return None
         else:

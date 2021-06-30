@@ -13,7 +13,7 @@ def _name_gen(fn: Callable[[Callable[..., Any]], str]) -> str:
     return f"COQ{fn.__qualname__.lstrip('_')}"
 
 
-pool = ThreadPoolExecutor(max_workers=min(32, cpu_count() + 10))
+pool = ThreadPoolExecutor(max_workers=min(32, cpu_count() + 8))
 event_queue: SimpleQueue = SimpleQueue()
 
 autocmd = AutoCMD()
