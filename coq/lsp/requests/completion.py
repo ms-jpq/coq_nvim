@@ -6,6 +6,7 @@ from pynvim_pp.logging import log
 from std2.pickle import DecodeError, decode
 
 from ...registry import atomic
+from ...shared.timeit import timeit
 from ...shared.types import UTF16, Completion, Context
 from ..parse import parse
 from ..types import CompletionResponse
@@ -28,7 +29,8 @@ def request(
 
     reply = blocking_request(nvim, "COQlsp_comp", (row, col))
     try:
-        resp: CompletionResponse = decode(CompletionResponse, reply, strict=False)
+        with timeit("DECODE"):
+            resp: CompletionResponse = decode(CompletionResponse, reply, strict=False)
     except DecodeError as e:
         log.warn("%s", e)
     else:
