@@ -92,6 +92,7 @@ class Mark:
     idx: int
     begin: NvimPos
     end: NvimPos
+    text: str
 
 
 ApplicableEdit = Union[Edit, RangeEdit, ContextualEdit]

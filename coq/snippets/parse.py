@@ -28,31 +28,40 @@ def _marks(
     ctx: Context, edit: ContextualEdit, indent: str, parsed: Parsed
 ) -> Iterator[Mark]:
     row, _ = ctx.position
+    parsed_lines = parsed.text.split(ctx.linefeed)
     len8 = tuple(
-        accumulate(
-            len(line.encode(UTF8)) + 1 for line in parsed.text.split(ctx.linefeed)
+        zip(
+            accumulate(len(line.encode(UTF8)) + 1 for line in parsed_lines),
+            parsed_lines,
         )
     )
 
     old_plines = edit.old_prefix.split(ctx.linefeed)
     new_plines = edit.new_prefix.split(ctx.linefeed)
-    y_shift = row + (-len(old_plines) + len(new_plines))
+    y_shift = row + (-len(old_plines) + len(new_plines)) - 1
     x_shift = len(indent.encode(UTF8))
 
     for region in parsed.regions:
         r1, c1, r2, c2 = -1, -1, -1, -1
         last_len = 0
-        for idx, l8 in enumerate(len8):
+
+        lines, recording = [], False
+        for idx, (l8, line) in enumerate(len8):
             if r1 < 0 and l8 >= region.begin:
                 r1, c1 = idx + y_shift, region.begin - last_len + x_shift
+                recording = True
             if r2 < 0 and l8 >= region.end:
                 r2, c2 = idx + y_shift, region.end - last_len + x_shift
+                recording = False
+
             last_len = l8
+            if recording:
+                lines.append(line)
 
         assert (r1 >= 0 and c1 >= 0) and (r2 >= 0 and c2 >= 0)
         begin = r1, c1
         end = r2, c2
-        mark = Mark(idx=region.idx, begin=begin, end=end)
+        mark = Mark(idx=region.idx, begin=begin, end=end, text=ctx.linefeed.join(lines))
         yield mark
 
 
