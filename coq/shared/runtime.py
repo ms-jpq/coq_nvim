@@ -26,6 +26,7 @@ from pynvim_pp.logging import log
 
 from .parse import coalesce
 from .settings import Options, Weights
+from .timeit import timeit
 from .types import Completion, Context
 
 T_co = TypeVar("T_co", contravariant=True)
@@ -101,11 +102,12 @@ class Supervisor:
 
         def supervise(worker: Worker) -> None:
             try:
-                for completions in worker.work(context):
-                    metrics = self._reviewer.rate(
-                        context, neighbours=neighbours, completions=completions
-                    )
-                    acc.extend(metrics)
+                with timeit(f"COLLECT -- {type(worker)}"):
+                    for completions in worker.work(context):
+                        metrics = self._reviewer.rate(
+                            context, neighbours=neighbours, completions=completions
+                        )
+                        acc.extend(metrics)
             except Exception as e:
                 log.exception("%s", e)
 
