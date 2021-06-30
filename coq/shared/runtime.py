@@ -90,7 +90,12 @@ class Supervisor:
             worker.notify(token, msg=msg)
 
     def collect(self, context: Context, manual: bool) -> Future:
-        fut: Future = Future()
+        with self._lock:
+            for f in self._futs:
+                f.cancel()
+            self._futs.clear()
+
+        future: Future = Future()
         acc: Deque[Metric] = deque()
 
         neighbours = Counter(
@@ -102,7 +107,8 @@ class Supervisor:
 
         def supervise(worker: Worker) -> None:
             try:
-                with timeit(f"COLLECT -- {type(worker)}"):
+                m_name = worker.__class__.__module__
+                with timeit(f"COLLECT -- {m_name}"):
                     for completions in worker.work(context):
                         metrics = self._reviewer.rate(
                             context, neighbours=neighbours, completions=completions
@@ -113,27 +119,23 @@ class Supervisor:
 
         def cont() -> None:
             try:
+                futs = tuple(
+                    self._pool.submit(supervise, worker) for worker in self._workers
+                )
                 with self._lock:
-                    for f in self._futs:
-                        f.cancel()
-                    self._futs.clear()
-                    futs = tuple(
-                        self._pool.submit(supervise, worker) for worker in self._workers
-                    )
                     self._futs.extend(futs)
                 wait(futs, timeout=timeout)
-                with self._lock:
-                    for f in self._futs:
-                        f.cancel()
 
                 with suppress(InvalidStateError):
-                    fut.set_result(tuple(acc))
+                    future.set_result(tuple(acc))
             except Exception as e:
                 log.exception("%s", e)
 
+        f = self._pool.submit(cont)
         with self._lock:
-            self._futs.append(self._pool.submit(cont))
-        return fut
+            self._futs.append(f)
+
+        return future
 
 
 class Worker(Generic[O_co, T_co]):
