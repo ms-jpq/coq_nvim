@@ -24,7 +24,7 @@ from std2.pickle.coders import BUILTIN_DECODERS
 
 from ...lsp.requests.preview import request
 from ...lsp.types import CompletionItem
-from ...registry import autocmd, rpc
+from ...registry import autocmd, rpc,enqueue_event
 from ...shared.nvim.completions import VimCompletion
 from ...shared.settings import PreviewDisplay
 from ...shared.timeit import timeit
@@ -159,36 +159,48 @@ def _set_win(nvim: Nvim, buf: Buffer, pos: _Pos) -> None:
     win_set_var(nvim, win=win, key=_FLOAT_WIN_UUID, val=True)
 
 
-def _preview(
-    nvim: Nvim,
-    stack: Stack,
-    context: Context,
-    display: PreviewDisplay,
-    event: _Event,
-    doc: Doc,
-) -> None:
-    new_doc = _preprocess(context, doc=doc)
+@rpc(blocking=True)
+def _show_preview(nvim: Nvim, stack: Stack, event: _Event, doc: Doc) -> None:
+    ctx = stack.state.cur
+    if ctx:
+        new_doc = _preprocess(ctx, doc=doc)
 
-    text = expand_tabs(context, text=new_doc.text)
-    lines = text.splitlines()
-    (_, pos), *_ = sorted(
-        enumerate(_positions(stack, display=display, event=event, lines=lines)),
-        key=lambda p: (p[1].height * p[1].width, -p[0]),
-        reverse=True,
-    )
+        text = expand_tabs(ctx, text=new_doc.text)
+        lines = text.splitlines()
+        (_, pos), *_ = sorted(
+            enumerate(
+                _positions(
+                    stack,
+                    display=stack.settings.display.preview,
+                    event=event,
+                    lines=lines,
+                )
+            ),
+            key=lambda p: (p[1].height * p[1].width, -p[0]),
+            reverse=True,
+        )
 
-    buf = create_buf(
-        nvim, listed=False, scratch=True, wipe=True, nofile=True, noswap=True
-    )
-    buf_set_preview(nvim, buf=buf, syntax=new_doc.syntax, preview=lines)
-    _set_win(nvim, buf=buf, pos=pos)
+        buf = create_buf(
+            nvim, listed=False, scratch=True, wipe=True, nofile=True, noswap=True
+        )
+        buf_set_preview(nvim, buf=buf, syntax=new_doc.syntax, preview=lines)
+        _set_win(nvim, buf=buf, pos=pos)
 
 
 _FUT: Future = Future()
 
 
-def _resolve_comp(nvim: Nvim, item: CompletionItem) -> None:
-    pass
+def _resolve_comp(
+    nvim: Nvim, stack: Stack, event: _Event, item: CompletionItem
+) -> None:
+    global _FUT
+
+    def cont() -> None:
+        doc = request(nvim, item=item)
+        if doc:
+            enqueue_event(_show_preview, event, doc)
+
+    _FUT = stack.supervisor.pool.submit(cont)
 
 
 @rpc(blocking=True)
@@ -204,21 +216,13 @@ def _cmp_changed(nvim: Nvim, stack: Stack, event: Mapping[str, Any] = {}) -> Non
         except DecodeError:
             pass
         else:
-            if stack.state.cur:
-                try:
-                    item: CompletionItem = decode(CompletionItem, data.extern)
-                except DecodeError:
-                    if data.doc and data.doc.text:
-                        _preview(
-                            nvim,
-                            stack=stack,
-                            context=stack.state.cur,
-                            display=stack.settings.display.preview,
-                            event=ev,
-                            doc=data.doc,
-                        )
-                else:
-                    _resolve_comp(nvim, item=item)
+            try:
+                item: CompletionItem = decode(CompletionItem, data.extern)
+            except DecodeError:
+                if data.doc and data.doc.text:
+                    _show_preview(nvim, stack=stack, event=ev, doc=data.doc)
+            else:
+                _resolve_comp(nvim, stack=stack, event=ev, item=item)
 
 
 _LUA_1 = f"""
