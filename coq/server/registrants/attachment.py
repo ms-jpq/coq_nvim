@@ -1,5 +1,5 @@
 from contextlib import suppress
-from typing import MutableSet, Sequence
+from typing import Sequence
 
 from pynvim import Nvim
 from pynvim.api import Buffer, NvimError
@@ -9,7 +9,6 @@ from pynvim_pp.api import (
     cur_buf,
     cur_win,
     list_bufs,
-    win_get_buf,
     win_get_cursor,
 )
 
@@ -18,17 +17,11 @@ from ...shared.timeit import timeit
 from ..runtime import Stack
 from .omnifunc import comp_func
 
-_SEEN: MutableSet[int] = set()
-
 
 @rpc(blocking=True)
 def _txt_changed(nvim: Nvim, stack: Stack, pum_open: bool) -> None:
     win = cur_win(nvim)
-    buf = win_get_buf(nvim, win=win)
     pos = win_get_cursor(nvim, win=win)
-    if buf.number not in _SEEN:
-        _SEEN.add(buf.number)
-        nvim.api.buf_attach(buf, True, {})
 
     with stack.lock:
         if pum_open and pos != stack.state.request:
@@ -45,26 +38,22 @@ autocmd("TextChangedP") << f"lua {_txt_changed.name}(true)"
 def _buf_enter(nvim: Nvim, stack: Stack) -> None:
     with suppress(NvimError):
         buf = cur_buf(nvim)
-        if buf.number not in _SEEN:
-            _SEEN.add(buf.number)
-            listed = buf_get_option(nvim, buf=buf, key="buflisted")
-            buf_type: str = buf_get_option(nvim, buf=buf, key="buftype")
-            if listed and buf_type != "terminal":
-                nvim.api.buf_attach(buf, True, {})
+        listed = buf_get_option(nvim, buf=buf, key="buflisted")
+        buf_type: str = buf_get_option(nvim, buf=buf, key="buftype")
+        if listed and buf_type != "terminal":
+            nvim.api.buf_attach(buf, True, {})
 
 
-autocmd("BufEnter") << f"lua {_buf_enter.name}()"
+autocmd("BufEnter", "InsertEnter") << f"lua {_buf_enter.name}()"
 
 
 @rpc(blocking=True)
 def _buf_new_init(nvim: Nvim, stack: Stack) -> None:
     with suppress(NvimError):
         for buf in list_bufs(nvim, listed=True):
-            if buf.number not in _SEEN:
-                _SEEN.add(buf.number)
-                buf_type: str = buf_get_option(nvim, buf=buf, key="buftype")
-                if buf_type != "terminal":
-                    nvim.api.buf_attach(buf, True, {})
+            buf_type: str = buf_get_option(nvim, buf=buf, key="buftype")
+            if buf_type != "terminal":
+                nvim.api.buf_attach(buf, True, {})
 
 
 atomic.exec_lua(f"{_buf_new_init.name}()", ())

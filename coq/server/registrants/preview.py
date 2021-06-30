@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from os import linesep
-from typing import Any, Callable, Iterator, Mapping, Sequence
+from typing import Any, Callable, Iterator, Mapping, Sequence, Tuple
 from uuid import uuid4
 
 from pynvim import Nvim
@@ -216,9 +216,9 @@ end)(...)
 autocmd("CompleteChanged") << f"lua {_LUA_1}"
 
 
-def _bigger_preview(
-    nvim: Nvim, stack: Stack, syntax: str, lines: Sequence[str]
-) -> None:
+@rpc(blocking=True)
+def _bigger_preview(nvim: Nvim, stack: Stack, args: Tuple[str, Sequence[str]]) -> None:
+    syntax, lines = args
     set_preview(nvim, syntax=syntax, preview=lines)
 
 
@@ -240,4 +240,5 @@ def preview_preview(nvim: Nvim, stack: Stack, *_: str) -> None:
         syntax = buf_get_option(nvim, buf=buf, key="syntax")
         lines = buf_get_lines(nvim, buf=buf, lo=0, hi=-1)
         nvim.exec_lua(_LUA_2, (syntax, lines))
+        nvim.command("stopinsert")
 
