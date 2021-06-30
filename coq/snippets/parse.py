@@ -36,20 +36,25 @@ def _marks(
 
     old_plines = edit.old_prefix.split(ctx.linefeed)
     new_plines = edit.new_prefix.split(ctx.linefeed)
-    y_shift = row - len(old_plines) + len(new_plines) - 1
+    y_shift = row + (-len(old_plines) + len(new_plines))
     x_shift = len(indent.encode(UTF8))
 
     for region in parsed.regions:
         r1, c1, r2, c2 = -1, -1, -1, -1
         last_len = 0
         for idx, l8 in enumerate(len8):
-            if r1 == -1 and l8 >= region.begin:
+            if r1 < 0 and l8 >= region.begin:
                 r1, c1 = idx + y_shift, region.begin - last_len + x_shift
-            if r2 == -1 and l8 >= region.end:
+            if r2 < 0 and l8 >= region.end:
                 r2, c2 = idx + y_shift, region.end - last_len + x_shift
             last_len = l8
 
-        assert r1 >= 0 and r2 >= 0, (region, parsed)
+        assert (r1 >= 0 and c1 >= 0) and (r2 >= 0 and c2 >= 0), (
+            ((r1, c1), (r2, c2)),
+            region,
+            len8,
+            parsed,
+        )
         begin = r1, c1
         end = r2, c2
         mark = Mark(idx=region.idx, begin=begin, end=end)
