@@ -241,5 +241,7 @@ def preview_preview(nvim: Nvim, stack: Stack, *_: str) -> str:
         syntax = buf_get_option(nvim, buf=buf, key="syntax")
         lines = buf_get_lines(nvim, buf=buf, lo=0, hi=-1)
         nvim.exec_lua(_LUA_2, (syntax, lines))
-        return nvim.api.replace_termcodes("<c-e>", True, False, True)
+
+    escaped: str = nvim.api.replace_termcodes("<c-e>", True, False, True)
+    return escaped
 
