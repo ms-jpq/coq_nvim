@@ -1,4 +1,5 @@
 from concurrent.futures import CancelledError, Future
+from threading import Lock
 from typing import (
     Any,
     Literal,
@@ -34,7 +35,7 @@ from ..types import UserData
 def _should_cont(
     inserted: Optional[NvimPos], prev: Optional[Context], cur: Context
 ) -> bool:
-    if prev and prev.changedtick == cur.changedtick:
+    if prev.changedtick == cur.changedtick:
         return False
     elif cur.position == inserted:
         return False
@@ -47,45 +48,50 @@ def _cmp(
     nvim: Nvim, stack: Stack, uid: UUID, col: int, comp: Sequence[VimCompletion]
 ) -> None:
     complete(nvim, col=col, comp=comp)
-    stack.state.commit = uid
+    state(commit=uid)
 
 
+_LOCK = Lock()
 _FUTS: MutableSequence[Future] = []
 
 
 def comp_func(nvim: Nvim, stack: Stack, manual: bool) -> None:
-    for fut in _FUTS:
-        fut.cancel()
-    _FUTS.clear()
+    with _LOCK:
+        for f1 in _FUTS:
+            f1.cancel()
+        _FUTS.clear()
 
+    s = state()
     with timeit("GEN CTX"):
         ctx = context(nvim, options=stack.settings.match, db=stack.bdb)
     should = (
         _should_cont(
-            stack.state.inserted,
-            prev=stack.state.cur,
+            s.inserted,
+            prev=s.context,
             cur=ctx,
         )
         if ctx
         else False
     )
     if ctx and (manual or should):
-        _, col = stack.state.request = ctx.position
-        stack.state.cur = ctx
+        _, col = ctx.position
 
         complete(nvim, col=col - 1, comp=())
-        fut = stack.supervisor.collect(ctx, manual=manual)
-        _FUTS.append(fut)
+        state(request=None, context=ctx)
+        f1 = stack.supervisor.collect(ctx, manual=manual)
+        with _LOCK:
+            _FUTS.append(f1)
 
         @timeit("COLLECT")
         def cont() -> None:
             try:
                 try:
-                    metrics = cast(Sequence[Metric], fut.result())
+                    metrics = cast(Sequence[Metric], f1.result())
                 except CancelledError:
                     pass
                 else:
-                    if ctx and stack.state.cur == ctx:
+                    s = state()
+                    if ctx and s.context == ctx:
                         _, col = ctx.position
                         with timeit("TRANS"):
                             vim_comps = tuple(
@@ -95,9 +101,12 @@ def comp_func(nvim: Nvim, stack: Stack, manual: bool) -> None:
             except Exception as e:
                 log.exception("%s", e)
 
-        _FUTS.append(pool.submit(cont))
+        f2 = pool.submit(cont)
+        with _LOCK:
+            _FUTS.append(f2)
     else:
-        stack.state.inserted = None
+        # TODO -- FIX THIS
+        state(inserted=None)
 
 
 @rpc(blocking=True)

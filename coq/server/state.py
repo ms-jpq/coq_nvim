@@ -3,6 +3,7 @@ from threading import Lock
 from typing import Optional, Tuple
 from uuid import UUID, uuid4
 
+from ..shared.context import EMPTY_CONTEXT
 from ..shared.types import Context, NvimPos
 
 _LOCK = Lock()
@@ -12,7 +13,7 @@ _LOCK = Lock()
 class State:
     screen: Tuple[int, int]
     commit: UUID
-    context: Optional[Context]
+    context: Context
     request: Optional[NvimPos]
     inserted: Optional[NvimPos]
 
@@ -20,7 +21,7 @@ class State:
 _state = State(
     screen=(0, 0),
     commit=uuid4(),
-    context=None,
+    context=EMPTY_CONTEXT,
     request=None,
     inserted=None,
 )
