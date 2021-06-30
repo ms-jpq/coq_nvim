@@ -9,7 +9,7 @@ from ..shared.parse import display_width
 from ..shared.runtime import Metric
 from ..shared.settings import PumDisplay, Weights
 from ..shared.types import Context, SnippetEdit
-from .runtime import Stack
+from .rt_types import Stack
 from .types import UserData
 
 

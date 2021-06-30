@@ -10,7 +10,7 @@ from pynvim_pp.operators import set_visual_selection
 from ...registry import rpc
 from ...shared.settings import Settings
 from ...shared.types import Mark
-from ..runtime import Stack
+from ..rt_types import Stack
 
 _NS = uuid4().hex
 

@@ -5,7 +5,7 @@ from pynvim import Nvim
 from pynvim_pp.lib import write
 
 from ...registry import rpc
-from ..runtime import Stack
+from ..rt_types import Stack
 
 _CHARS = range(2, 6)
 _ANNOUNCE = (

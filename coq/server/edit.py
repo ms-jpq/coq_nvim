@@ -27,7 +27,7 @@ from ..shared.types import (
 from ..snippets.parse import parse
 from .databases.buffers.database import BDB
 from .registrants.marks import mark
-from .runtime import Stack
+from .rt_types import Stack
 from .types import UserData
 
 

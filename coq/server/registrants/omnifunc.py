@@ -25,7 +25,7 @@ from ...shared.timeit import timeit
 from ...shared.types import Context, NvimPos
 from ..context import context
 from ..edit import edit
-from ..runtime import Stack
+from ..rt_types import Stack
 from ..trans import trans
 from ..types import UserData
 

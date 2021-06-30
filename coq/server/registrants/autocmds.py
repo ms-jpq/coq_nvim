@@ -7,7 +7,7 @@ from std2.pickle import decode
 
 from ...registry import atomic, autocmd, rpc
 from ...snippets.types import ParsedSnippet
-from ..runtime import Stack
+from ..rt_types import Stack
 
 _SEEN: MutableSet[str] = set()
 

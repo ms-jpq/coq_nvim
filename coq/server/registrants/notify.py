@@ -4,7 +4,7 @@ from uuid import UUID
 from pynvim import Nvim
 
 from ...registry import rpc
-from ..runtime import Stack
+from ..rt_types import Stack
 
 
 @rpc(blocking=False)

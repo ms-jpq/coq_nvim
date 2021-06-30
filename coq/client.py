@@ -17,7 +17,8 @@ from .consts import DEBUG, DEBUG_DB, DEBUG_METRICS, TMP_DIR
 from .registry import atomic, autocmd, event_queue, pool, rpc
 from .server.registrants.attachment import BUF_EVENTS
 from .server.registrants.options import set_options
-from .server.runtime import Stack, stack
+from .server.rt_types import Stack
+from .server.runtime import stack
 from .shared.timeit import timeit
 
 
@@ -48,7 +49,7 @@ class CoqClient(Client):
             return None
         else:
             # with timeit(name):
-                return self._handle(nvim, msg)
+            return self._handle(nvim, msg)
 
     def wait(self, nvim: Nvim) -> int:
         if isinstance(nvim.loop, AbstractEventLoop):

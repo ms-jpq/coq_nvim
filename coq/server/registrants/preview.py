@@ -29,7 +29,7 @@ from ...shared.settings import PreviewDisplay
 from ...shared.timeit import timeit
 from ...shared.trans import expand_tabs
 from ...shared.types import UTF8, Context, Doc
-from ..runtime import Stack
+from ..rt_types import Stack
 from ..types import UserData
 
 _FLOAT_WIN_UUID = uuid4().hex

@@ -14,7 +14,7 @@ from pynvim_pp.api import (
 
 from ...registry import atomic, autocmd, rpc
 from ...shared.timeit import timeit
-from ..runtime import Stack
+from ..rt_types import Stack
 from .omnifunc import comp_func
 
 

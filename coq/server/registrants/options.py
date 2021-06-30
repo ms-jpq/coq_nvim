@@ -4,7 +4,7 @@ from pynvim_pp.settings import Settings
 
 from ...registry import atomic, autocmd, rpc
 from ...shared.settings import KeyMapping
-from ..runtime import Stack
+from ..rt_types import Stack
 from .marks import nav_mark
 from .omnifunc import omnifunc
 from .preview import preview_preview
