@@ -194,20 +194,21 @@ def _cmp_changed(nvim: Nvim, stack: Stack, event: Mapping[str, Any] = {}) -> Non
         except DecodeError:
             pass
         else:
-            try:
-                item: CompletionItem = decode(CompletionItem, data.extern)
-            except DecodeError:
-                if stack.state.cur and data and data.doc and data.doc.text:
-                    _preview(
-                        nvim,
-                        stack=stack,
-                        context=stack.state.cur,
-                        display=stack.settings.display.preview,
-                        event=ev,
-                        doc=data.doc,
-                    )
-            else:
-                pass
+            if stack.state.cur:
+                try:
+                    item: CompletionItem = decode(CompletionItem, data.extern)
+                except DecodeError:
+                    if data.doc and data.doc.text:
+                        _preview(
+                            nvim,
+                            stack=stack,
+                            context=stack.state.cur,
+                            display=stack.settings.display.preview,
+                            event=ev,
+                            doc=data.doc,
+                        )
+                else:
+                    pass
 
 
 _LUA_1 = f"""
