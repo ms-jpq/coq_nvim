@@ -21,8 +21,7 @@ _FUT: Future = Future()
 
 
 @rpc(blocking=True)
-def _lsp_comp_notify(nvim: Nvim, stack: Stack, msg: Sequence[Any]) -> None:
-    reply, *_ = msg
+def _lsp_comp_notify(nvim: Nvim, stack: Stack, reply: Any) -> None:
     with suppress(InvalidStateError):
         _FUT.set_result(reply)
 
