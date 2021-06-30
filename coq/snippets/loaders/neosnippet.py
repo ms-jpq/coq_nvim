@@ -23,7 +23,7 @@ def _start(line: str) -> Tuple[str, str, MutableSet[Options]]:
     rest = line[len(_SNIPPET_START) :].strip()
     name, _, label = rest.partition(" ")
     if label.startswith('"') and label[1:].count('"') == 1:
-        quoted, _, opts = label.partition('"')
+        quoted, _, opts = label[1:].partition('"')
         options = opt_parse(o for o in opts.split(" ") if o)
         return name, quoted, options
     else:
