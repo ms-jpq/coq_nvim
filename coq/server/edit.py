@@ -166,7 +166,9 @@ def _range_edit_trans(
     lines: _Lines,
     edit: RangeEdit,
 ) -> _EditInstruction:
-    if primary and edit.begin == edit.end:
+    new_lines = edit.new_text.split(ctx.linefeed)
+
+    if primary and len(new_lines) <= 1 and edit.begin == edit.end:
         return _edit_trans(ctx, unifying_chars=unifying_chars, lines=lines, edit=edit)
     else:
         (r1, ec1), (r2, ec2) = sorted((edit.begin, edit.end))
@@ -183,7 +185,6 @@ def _range_edit_trans(
         begin = r1, c1
         end = r2, c2
 
-        new_lines = tuple(line for line in edit.new_text.split(ctx.linefeed))
         cursor_yoffset = (r2 - r1) + (len(new_lines) - 1)
         cursor_xpos = (
             (
