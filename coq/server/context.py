@@ -48,6 +48,7 @@ def context(nvim: Nvim, options: Options, db: BDB) -> Optional[Context]:
         return None
     else:
         r = min(options.context_lines, row)
+        assert r < len(lines), (r, lines)
         line = lines[r]
         lines_before, lines_after = lines[:r], lines[r + 1 :]
 
