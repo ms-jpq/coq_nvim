@@ -2,8 +2,6 @@ from dataclasses import dataclass
 from pathlib import PurePath
 from typing import AbstractSet, Any, Literal, Mapping, Optional, Sequence, Tuple
 
-from ..lsp.protocol import LSProtocol
-
 
 @dataclass(frozen=True)
 class PumDisplay:
@@ -84,11 +82,6 @@ class TagsClient(PollingClient):
 
 
 @dataclass(frozen=True)
-class LSPClient(BaseClient, LSProtocol):
-    pass
-
-
-@dataclass(frozen=True)
 class SnippetClient(BaseClient):
     extends: Mapping[str, Mapping[str, Literal[True]]]
     snippets: Mapping[str, Sequence[Any]]
@@ -102,7 +95,7 @@ class TabnineClient(BaseClient):
 @dataclass(frozen=True)
 class Clients:
     buffers: WordbankClient
-    lsp: LSPClient
+    lsp: BaseClient
     paths: BaseClient
     snippets: SnippetClient
     tags: TagsClient

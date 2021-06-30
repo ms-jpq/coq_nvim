@@ -1,11 +1,9 @@
 from json import loads
 from pathlib import Path
 from subprocess import check_call, check_output
-
-from std2.pickle import decode
+from typing import Any
 
 from ..consts import TOP_LEVEL
-from ..shared.settings import LSProtocol
 
 _DOCKER_FILE = TOP_LEVEL / "ci" / "Dockerfile"
 
@@ -31,13 +29,8 @@ def _build(dockerfile: Path) -> str:
     return output
 
 
-def lsp() -> LSProtocol:
+def lsp() -> Any:
     raw = _build(_DOCKER_FILE)
     json = loads(raw)
-    spec = {
-        key: {str(v): k for k, v in sorted(val.items())}
-        for key, val in sorted(json.items())
-    }
-    specs: LSProtocol = decode(LSProtocol, spec)
-    return specs
+    return json
 

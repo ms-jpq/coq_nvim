@@ -8,10 +8,14 @@ local sanitize = function(spec)
   return tb
 end
 
-local lookup = {
-  CompletionItemKind = sanitize(vim.lsp.protocol.CompletionItemKind),
-  InsertTextFormat = sanitize(vim.lsp.protocol.InsertTextFormat)
-}
+local lookup = {}
+
+for key, val in pairs(vim.lsp.protocol) do
+  if type(val) == "table" then
+    lookup[key] = sanitize(val)
+  end
+end
+
 local json = vim.fn.json_encode(lookup)
 
 vim.fn.writefile({json}, "/dev/stdout")

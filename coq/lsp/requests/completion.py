@@ -4,20 +4,20 @@ from uuid import uuid4
 
 from pynvim.api.nvim import Nvim
 
+from ...registry import atomic
 from ...shared.types import UTF16, Completion, Context
 from ..parse import parse
-from ..protocol import LSProtocol
-
-LUA = (Path(__file__).resolve().parent / "completion.lua").read_text("UTF-8")
-
 from .request import blocking_request
+
+_LUA = (Path(__file__).resolve().parent / "completion.lua").read_text("UTF-8")
+
+atomic.exec_lua(_LUA, ())
 
 
 def request(
     nvim: Nvim,
     short_name: str,
     tie_breaker: int,
-    protocol: LSProtocol,
     context: Context,
 ) -> Iterator[Sequence[Completion]]:
     session = uuid4()
@@ -27,8 +27,6 @@ def request(
     go = True
     while go:
         reply = blocking_request(nvim, "COQlsp_comp", str(session), (row, col))
-        go, comps = parse(
-            short_name, tie_breaker=tie_breaker, client=protocol, reply=reply
-        )
+        go, comps = parse(short_name, tie_breaker=tie_breaker, reply=reply)
         yield comps
 

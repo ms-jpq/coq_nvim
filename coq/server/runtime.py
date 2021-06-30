@@ -18,7 +18,7 @@ from ..clients.t9.worker import Worker as T9Worker
 from ..clients.tags.worker import Worker as TagsWorker
 from ..clients.tmux.worker import Worker as TmuxWorker
 from ..clients.tree_sitter.worker import Worker as TreeWorker
-from ..consts import CONFIG_YML, LSP_ARTIFACTS, SETTINGS_VAR, SNIPPET_ARTIFACTS
+from ..consts import CONFIG_YML, SETTINGS_VAR, SNIPPET_ARTIFACTS
 from ..shared.runtime import Supervisor, Worker
 from ..shared.settings import Settings
 from .databases.buffers.database import BDB
@@ -35,7 +35,6 @@ def _settings(nvim: Nvim) -> Settings:
             safe_load(CONFIG_YML.read_text("UTF-8")),
             {
                 "clients": {
-                    "lsp": loads(LSP_ARTIFACTS.read_text("UTF-8")),
                     "snippets": loads(SNIPPET_ARTIFACTS.read_text("UTF-8")),
                 }
             },
