@@ -44,7 +44,7 @@ keymap:
 
   manual_complete: <c-space>
   bigger_preview: <c-k>
-  jump_to_mark: <c-m>
+  jump_to_mark: <c-h>
 
 clients:
   tabnine:
