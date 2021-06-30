@@ -204,16 +204,32 @@ def _cmp_changed(nvim: Nvim, stack: Stack, event: Mapping[str, Any] = {}) -> Non
                 )
 
 
-_LUA = f"""
+_LUA_1 = f"""
 (function()
   local event = vim.v.event
   vim.schedule(function() 
     {_cmp_changed.name}(event)
   end)
-end)()
-"""
+end)(...)
+""".strip()
 
-autocmd("CompleteChanged") << f"lua {_LUA.strip()}"
+autocmd("CompleteChanged") << f"lua {_LUA_1}"
+
+
+def _bigger_preview(
+    nvim: Nvim, stack: Stack, syntax: str, lines: Sequence[str]
+) -> None:
+    set_preview(nvim, syntax=syntax, preview=lines)
+
+
+_LUA_2 = f"""
+(function(syntax, lines)
+  local event = vim.v.event
+  vim.schedule(function() 
+    {_bigger_preview.name}(syntax, lines)
+  end)
+end)(...)
+""".strip()
 
 
 @rpc(blocking=True)
@@ -223,5 +239,5 @@ def preview_preview(nvim: Nvim, stack: Stack, *_: str) -> None:
         buf = win_get_buf(nvim, win=win)
         syntax = buf_get_option(nvim, buf=buf, key="syntax")
         lines = buf_get_lines(nvim, buf=buf, lo=0, hi=-1)
-        set_preview(nvim, syntax=syntax, preview=lines)
+        nvim.exec_lua(_LUA_2, (syntax, lines))
 
