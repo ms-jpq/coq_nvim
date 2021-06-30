@@ -2,6 +2,7 @@
 display:
   preview:
     margin: 4
+    lsp_timeout: 0.05
   pum:
     y_max_len: 16
     x_max_len: 66

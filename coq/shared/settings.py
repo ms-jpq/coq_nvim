@@ -19,7 +19,7 @@ class PumDisplay:
 @dataclass(frozen=True)
 class PreviewDisplay:
     margin: int
-
+    lsp_timeout: float
 
 @dataclass(frozen=True)
 class Display:

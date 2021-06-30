@@ -1,7 +1,17 @@
-from concurrent.futures import Future
+from concurrent.futures import CancelledError, Future, TimeoutError
 from dataclasses import dataclass
 from os import linesep
-from typing import Any, Callable, Iterator, Mapping, Sequence, Tuple
+from threading import Lock
+from typing import (
+    Any,
+    Callable,
+    Iterator,
+    Mapping,
+    MutableSequence,
+    Optional,
+    Sequence,
+    Tuple,
+)
 from uuid import uuid4
 
 from pynvim import Nvim
@@ -24,7 +34,7 @@ from std2.pickle.coders import BUILTIN_DECODERS
 
 from ...lsp.requests.preview import request
 from ...lsp.types import CompletionItem
-from ...registry import autocmd, rpc,enqueue_event
+from ...registry import autocmd, enqueue_event, rpc
 from ...shared.nvim.completions import VimCompletion
 from ...shared.settings import PreviewDisplay
 from ...shared.timeit import timeit
@@ -187,25 +197,45 @@ def _show_preview(nvim: Nvim, stack: Stack, event: _Event, doc: Doc) -> None:
         _set_win(nvim, buf=buf, pos=pos)
 
 
-_FUT: Future = Future()
+_LOCK = Lock()
+_FUTS: MutableSequence[Future] = []
 
 
 def _resolve_comp(
-    nvim: Nvim, stack: Stack, event: _Event, item: CompletionItem
+    nvim: Nvim,
+    stack: Stack,
+    event: _Event,
+    item: CompletionItem,
+    maybe_doc: Optional[Doc],
 ) -> None:
-    global _FUT
+    f1 = stack.supervisor.pool.submit(request, nvim, item)
+    with _LOCK:
+        _FUTS.append(f1)
 
     def cont() -> None:
-        doc = request(nvim, item=item)
+        doc = None
+        try:
+            doc = f1.result(timeout=stack.settings.display.preview.lsp_timeout)
+        except CancelledError:
+            pass
+        except TimeoutError:
+            doc = maybe_doc
+
         if doc:
             enqueue_event(_show_preview, event, doc)
 
-    _FUT = stack.supervisor.pool.submit(cont)
+    f2 = stack.supervisor.pool.submit(cont)
+    with _LOCK:
+        _FUTS.append(f2)
 
 
 @rpc(blocking=True)
 def _cmp_changed(nvim: Nvim, stack: Stack, event: Mapping[str, Any] = {}) -> None:
-    _FUT.cancel()
+    with _LOCK:
+        for fut in _FUTS:
+            fut.cancel()
+        _FUTS.clear()
+
     _kill_win(nvim, stack=stack)
     with timeit("PREVIEW"):
         try:
@@ -222,7 +252,9 @@ def _cmp_changed(nvim: Nvim, stack: Stack, event: Mapping[str, Any] = {}) -> Non
                 if data.doc and data.doc.text:
                     _show_preview(nvim, stack=stack, event=ev, doc=data.doc)
             else:
-                _resolve_comp(nvim, stack=stack, event=ev, item=item)
+                _resolve_comp(
+                    nvim, stack=stack, event=ev, item=item, maybe_doc=data.doc
+                )
 
 
 _LUA_1 = f"""
