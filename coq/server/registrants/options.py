@@ -7,6 +7,7 @@ from ...shared.settings import KeyMapping
 from ..runtime import Stack
 from .marks import nav_mark
 from .omnifunc import omnifunc
+from .preview import preview_preview
 
 
 @rpc(blocking=True)
@@ -40,6 +41,12 @@ def set_options(nvim: Nvim, mapping: KeyMapping) -> None:
     if mapping.jump_to_mark:
         keymap.n(mapping.jump_to_mark) << f"<cmd>lua {nav_mark.name}()<cr>"
         keymap.v(mapping.jump_to_mark) << f"<esc><cmd>lua {nav_mark.name}()<cr>"
+
+    if mapping.bigger_preview:
+        (
+            keymap.i(mapping.bigger_preview, expr=True)
+            << f"pumvisible() ? {preview_preview.name}() : '{mapping.bigger_preview}'"
+        )
 
     if mapping.recommended:
         settings["shortmess"] += "c"

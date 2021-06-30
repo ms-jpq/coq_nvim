@@ -6,14 +6,17 @@ from uuid import uuid4
 from pynvim import Nvim
 from pynvim.api import Buffer, Window
 from pynvim_pp.api import (
+    buf_get_lines,
+    buf_get_option,
     create_buf,
     list_wins,
     win_close,
+    win_get_buf,
     win_get_var,
     win_set_option,
     win_set_var,
 )
-from pynvim_pp.preview import buf_set_preview
+from pynvim_pp.preview import buf_set_preview, set_preview
 from std2.ordinal import clamp
 from std2.pickle import DecodeError, decode
 from std2.pickle.coders import BUILTIN_DECODERS
@@ -65,11 +68,11 @@ autocmd("CompleteDone", "InsertLeave") << f"lua {_kill_win.name}()"
 
 
 def _preprocess(context: Context, doc: Doc) -> Doc:
-    if doc.filetype == "markdown":
+    if doc.syntax == "markdown":
         split = doc.text.splitlines()
         if split and split[0] == "```" and split[-1] == "```":
             text = linesep.join(split[1:-1])
-            return Doc(text=text, filetype=context.filetype)
+            return Doc(text=text, syntax=context.filetype)
         else:
             return doc
     else:
@@ -174,7 +177,7 @@ def _preview(
     buf = create_buf(
         nvim, listed=False, scratch=True, wipe=True, nofile=True, noswap=True
     )
-    buf_set_preview(nvim, buf=buf, filetype=new_doc.filetype, preview=lines)
+    buf_set_preview(nvim, buf=buf, syntax=new_doc.syntax, preview=lines)
     _set_win(nvim, buf=buf, pos=pos)
 
 
@@ -211,4 +214,14 @@ end)()
 """
 
 autocmd("CompleteChanged") << f"lua {_LUA.strip()}"
+
+
+@rpc(blocking=True)
+def preview_preview(nvim: Nvim, stack: Stack, *_: str) -> None:
+    win = next(_ls(nvim), None)
+    if win:
+        buf = win_get_buf(nvim, win=win)
+        syntax = buf_get_option(nvim, buf=buf, key="syntax")
+        lines = buf_get_lines(nvim, buf=buf, lo=0, hi=-1)
+        set_preview(nvim, syntax=syntax, preview=lines)
 

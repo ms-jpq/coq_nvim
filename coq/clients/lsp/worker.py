@@ -51,11 +51,11 @@ def _primary(client: LSPClient, item: CompletionItem) -> Edit:
 
 def _doc(item: CompletionItem) -> Optional[Doc]:
     if isinstance(item.documentation, MarkupContent):
-        return Doc(text=item.documentation.value, filetype=item.documentation.kind)
+        return Doc(text=item.documentation.value, syntax=item.documentation.kind)
     elif isinstance(item.documentation, str):
-        return Doc(text=item.documentation, filetype="")
+        return Doc(text=item.documentation, syntax="")
     elif item.detail:
-        return Doc(text=item.detail, filetype="")
+        return Doc(text=item.detail, syntax="")
     else:
         return None
 

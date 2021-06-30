@@ -102,7 +102,7 @@ PrimaryEdit = Union[ApplicableEdit, SnippetEdit]
 @dataclass(frozen=True)
 class Doc:
     text: str
-    filetype: str
+    syntax: str
 
 
 @dataclass(frozen=True)

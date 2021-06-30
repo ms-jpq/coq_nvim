@@ -43,6 +43,7 @@ keymap:
   recommended: True
   manual_complete: <c-space>
   jump_to_mark: <c-space>
+  bigger_preview: <c-k>
 
 clients:
   tabnine:

@@ -4,7 +4,6 @@ from uuid import UUID
 
 from pynvim import Nvim
 from pynvim.api.nvim import Nvim
-from pynvim_pp.api import cur_win, win_get_cursor
 from pynvim_pp.logging import log
 from std2.pickle import DecodeError, decode
 from std2.pickle.coders import BUILTIN_DECODERS
@@ -97,21 +96,6 @@ def omnifunc(
     else:
         comp_func(nvim, stack=stack, manual=True)
         return ()
-
-
-@rpc(blocking=True)
-def _txt_changed(nvim: Nvim, stack: Stack, pum_open: bool) -> None:
-    win = cur_win(nvim)
-    pos = win_get_cursor(nvim, win=win)
-    with stack.lock:
-        if pum_open and pos != stack.state.request:
-            stack.state.request = pos
-        else:
-            stack.state.request = pos
-
-
-autocmd("TextChangedI") << f"lua {_txt_changed.name}(false)"
-autocmd("TextChangedP") << f"lua {_txt_changed.name}(true)"
 
 
 @rpc(blocking=True)

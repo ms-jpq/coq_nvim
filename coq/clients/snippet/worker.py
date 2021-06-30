@@ -36,7 +36,7 @@ class Worker(BaseWorker[SnippetClient, SDB]):
                 )
                 doc = Doc(
                     text=snip["doc"] or edit.new_text,
-                    filetype="",
+                    syntax="",
                 )
                 completion = Completion(
                     source=self._options.short_name,

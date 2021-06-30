@@ -103,7 +103,7 @@ def _doc(client: TagsClient, context: Context, tag: Tag) -> Doc:
 
     doc = Doc(
         text="".join(cont()),
-        filetype=context.filetype,
+        syntax=context.filetype,
     )
     return doc
 
