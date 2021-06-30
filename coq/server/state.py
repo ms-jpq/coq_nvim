@@ -14,7 +14,6 @@ class State:
     screen: Tuple[int, int]
     commit: UUID
     context: Context
-    request: NvimPos
     inserted: NvimPos
 
 
@@ -22,7 +21,6 @@ _state = State(
     screen=(0, 0),
     commit=uuid4(),
     context=EMPTY_CONTEXT,
-    request=(-1, -1),
     inserted=(-1, -1),
 )
 
@@ -31,7 +29,6 @@ def state(
     screen: Optional[Tuple[int, int]] = None,
     commit: Optional[UUID] = None,
     context: Optional[Context] = None,
-    request: Optional[NvimPos] = None,
     inserted: Optional[NvimPos] = None,
 ) -> State:
     global _state
@@ -41,7 +38,6 @@ def state(
             screen=screen or _state.screen,
             commit=commit or _state.commit,
             context=context or _state.context,
-            request=request or _state.request,
             inserted=inserted or _state.inserted,
         )
         _state = state

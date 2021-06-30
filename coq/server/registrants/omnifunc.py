@@ -1,5 +1,4 @@
 from concurrent.futures import CancelledError, Future
-from threading import Lock
 from typing import (
     Any,
     Literal,
@@ -49,15 +48,13 @@ def _cmp(
     state(commit=uid)
 
 
-_LOCK = Lock()
 _FUTS: MutableSequence[Future] = []
 
 
 def comp_func(nvim: Nvim, stack: Stack, manual: bool) -> None:
-    with _LOCK:
-        for f1 in _FUTS:
-            f1.cancel()
-        _FUTS.clear()
+    for f1 in _FUTS:
+        f1.cancel()
+    _FUTS.clear()
 
     s = state()
     with timeit("GEN CTX"):
@@ -74,11 +71,10 @@ def comp_func(nvim: Nvim, stack: Stack, manual: bool) -> None:
     if ctx and (manual or should):
         _, col = ctx.position
         complete(nvim, col=col - 1, comp=())
-        state(request=(-1, -1), context=ctx)
 
+        state(context=ctx)
         f1 = stack.supervisor.collect(ctx, manual=manual)
-        with _LOCK:
-            _FUTS.append(f1)
+        _FUTS.append(f1)
 
         @timeit("COLLECT")
         def cont() -> None:
@@ -99,8 +95,7 @@ def comp_func(nvim: Nvim, stack: Stack, manual: bool) -> None:
                 log.exception("%s", e)
 
         f2 = pool.submit(cont)
-        with _LOCK:
-            _FUTS.append(f2)
+        _FUTS.append(f2)
     else:
         state(inserted=(-1, -1))
 

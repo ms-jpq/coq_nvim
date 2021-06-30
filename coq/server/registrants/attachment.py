@@ -15,19 +15,20 @@ from pynvim_pp.api import (
 from ...registry import atomic, autocmd, rpc
 from ...shared.timeit import timeit
 from ..rt_types import Stack
-from ..state import state
 from .omnifunc import comp_func
+
+_POS = (-1, -1)
 
 
 @rpc(blocking=True)
 def _txt_changed(nvim: Nvim, stack: Stack, pum_open: bool) -> None:
+    global _POS
     win = cur_win(nvim)
     pos = win_get_cursor(nvim, win=win)
-    s = state()
-    if pum_open and pos != s.request:
-        state(request=pos)
+    if pum_open and pos != _POS:
+        _POS = pos
     else:
-        state(request=pos)
+        _POS = pos
 
 
 autocmd("TextChangedI") << f"lua {_txt_changed.name}(false)"
@@ -80,8 +81,7 @@ def _lines_event(
         unifying_chars=stack.settings.match.unifying_chars,
     )
     mode: str = nvim.api.get_mode()["mode"]
-    s = state()
-    if not pending and mode.startswith("i") and s.request:
+    if not pending and mode.startswith("i"):
         with timeit("BEGIN"):
             comp_func(nvim, stack=stack, manual=False)
 
