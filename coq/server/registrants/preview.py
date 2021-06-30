@@ -225,7 +225,6 @@ def _bigger_preview(nvim: Nvim, stack: Stack, args: Tuple[str, Sequence[str]]) -
 
 _LUA_2 = f"""
 (function(syntax, lines)
-  local event = vim.v.event
   vim.schedule(function() 
     {_bigger_preview.name}(syntax, lines)
   end)
