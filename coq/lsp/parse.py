@@ -1,12 +1,14 @@
-from os import linesep
-from typing import Any, Optional, Sequence, Tuple
-
-from pynvim_pp.logging import log
-from std2.pickle import DecodeError, decode
+from typing import Optional, Sequence
 
 from ..shared.types import Completion, Doc, Edit, RangeEdit, SnippetEdit
 from .protocol import PROTOCOL
-from .types import CompletionItem, CompletionList, MarkupContent, Resp, TextEdit
+from .types import (
+    CompletionItem,
+    CompletionList,
+    CompletionResponse,
+    MarkupContent,
+    TextEdit,
+)
 
 
 def _range_edit(edit: TextEdit) -> RangeEdit:
@@ -55,25 +57,17 @@ def _parse_item(short_name: str, tie_breaker: int, item: CompletionItem) -> Comp
 
 
 def parse(
-    short_name: str, tie_breaker: int, reply: Any
-) -> Tuple[bool, Sequence[Completion]]:
-    try:
-        resp: Resp = decode(Resp, reply, strict=False)
-    except DecodeError as e:
-        log.exception("%s", f"{reply}{linesep}{e}")
-        return False, ()
+    short_name: str, tie_breaker: int, resp: CompletionResponse
+) -> Sequence[Completion]:
+    if isinstance(resp, CompletionList):
+        return tuple(
+            _parse_item(short_name, tie_breaker=tie_breaker, item=item)
+            for item in resp.items
+        )
+    elif isinstance(resp, Sequence):
+        return tuple(
+            _parse_item(short_name, tie_breaker=tie_breaker, item=item) for item in resp
+        )
     else:
-        if isinstance(resp, CompletionList):
-            # TODO -- resp.isIncomplete always True???
-            return False, tuple(
-                _parse_item(short_name, tie_breaker=tie_breaker, item=item)
-                for item in resp.items
-            )
-        elif isinstance(resp, Sequence):
-            return False, tuple(
-                _parse_item(short_name, tie_breaker=tie_breaker, item=item)
-                for item in resp
-            )
-        else:
-            return False, ()
+        return ()
 
