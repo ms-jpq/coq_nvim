@@ -1,5 +1,6 @@
 from asyncio.events import AbstractEventLoop
 from logging import DEBUG as DEBUG_LV
+from logging import FileHandler
 from os import linesep
 from sys import stderr
 from typing import Any, MutableMapping, Optional, cast
@@ -26,10 +27,10 @@ class CoqClient(Client):
     def __init__(self) -> None:
         self._handlers: MutableMapping[str, RpcCallable] = {}
         self._stack: Optional[Stack] = None
-        if DEBUG or DEBUG_METRICS:
-            log.setLevel(DEBUG_LV)
-        if DEBUG_DB:
+        if DEBUG or DEBUG_METRICS or DEBUG_DB:
             TMP_DIR.mkdir(parents=True, exist_ok=True)
+            log.addHandler(FileHandler(TMP_DIR / "debug.log"))
+            log.setLevel(DEBUG_LV)
 
     def _handle(self, nvim: Nvim, msg: RpcMsg) -> Any:
         name, args = msg

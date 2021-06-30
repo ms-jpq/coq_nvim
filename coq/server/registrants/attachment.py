@@ -1,6 +1,6 @@
-from asyncio import AbstractEventLoop, TimerHandle
 from contextlib import suppress
-from typing import Optional, Sequence
+from threading import Timer
+from typing import Sequence
 
 from pynvim import Nvim
 from pynvim.api import Buffer, NvimError
@@ -37,8 +37,8 @@ def _buf_new_init(nvim: Nvim, stack: Stack) -> None:
 atomic.exec_lua(f"{_buf_new_init.name}()", ())
 
 
-_HANDLE: Optional[TimerHandle] = None
-_LATER = 0.02
+_TIMER = Timer(0, lambda: None)
+_LATER = 0.05
 
 
 def _go(nvim: Nvim, stack: Stack) -> None:
@@ -55,7 +55,7 @@ def _lines_event(
     lines: Sequence[str],
     pending: bool,
 ) -> None:
-    global _HANDLE
+    global _TIMER
 
     filetype = buf_filetype(nvim, buf=buf)
     stack.bdb.set_lines(
@@ -67,10 +67,9 @@ def _lines_event(
         unifying_chars=stack.settings.match.unifying_chars,
     )
     if not pending:
-        if isinstance(nvim.loop, AbstractEventLoop):
-            if _HANDLE:
-                _HANDLE.cancel()
-            _HANDLE = nvim.loop.call_later(_LATER, _go, nvim, stack)
+        _TIMER.cancel()
+        _TIMER = Timer(_LATER, _go, (nvim, stack))
+        _TIMER.start()
 
 
 def _changed_event(nvim: Nvim, stack: Stack, buf: Buffer, tick: int) -> None:

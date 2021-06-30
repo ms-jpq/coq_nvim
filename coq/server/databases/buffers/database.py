@@ -84,7 +84,6 @@ class BDB:
         words = tuple(m1())
         shift = len(lines) - (hi - lo)
 
-        @timeit("SQL -- SETLINES")
         def cont() -> None:
             with self._lock, closing(self._conn.cursor()) as cursor:
                 with with_transaction(cursor):
@@ -102,7 +101,6 @@ class BDB:
         self._ex.submit(cont)
 
     def lines(self, buf_id: int, lo: int, hi: int) -> Tuple[int, Sequence[str]]:
-        @timeit("SQL -- GETLINES")
         def cont() -> Tuple[int, Sequence[str]]:
             params = {"buffer_id": buf_id, "lo": lo, "hi": hi}
             with self._lock, closing(self._conn.cursor()) as cursor:

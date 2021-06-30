@@ -1,17 +1,15 @@
 (function(...)
   local cancel = function()
   end
-  local session = nil
 
-  COQlsp_comp = function(name, session_id, pos)
+  COQlsp_comp = function(name, request_id, pos)
     if session ~= session_id then
       cancel()
     end
-    session = session_id
 
     local clients = vim.lsp.buf_get_clients(0)
     if #clients == 0 then
-      COQlsp_notify(name, vim.NIL)
+      COQlsp_notify(name, request_id, vim.NIL)
     else
       local row, col = unpack(pos)
       local position = {line = row, character = col}
@@ -25,7 +23,7 @@
         "textDocument/completion",
         params,
         function(_, _, resp)
-          COQlsp_notify(name, resp or vim.NIL)
+          COQlsp_notify(name, request_id, resp or vim.NIL)
         end
       )
     end
