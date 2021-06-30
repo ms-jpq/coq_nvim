@@ -8,6 +8,7 @@ from ...coq.ci.load import load
 from ...coq.shared.types import SnippetEdit
 from ...coq.snippets.main import EMPTY_CTX
 from ...coq.snippets.parse import parse
+from ...coq.snippets.parsers.types import ParseError
 
 _THRESHOLD = 0.85
 
@@ -31,7 +32,7 @@ class Parser(TestCase):
             for edit in edits:
                 try:
                     parse(EMPTY_CTX, snippet=edit, sort_by="")
-                except Exception as e:
+                except ParseError as e:
                     yield e
 
         errors = tuple(errs())
