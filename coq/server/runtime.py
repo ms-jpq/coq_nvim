@@ -1,8 +1,8 @@
-from concurrent.futures import Future, Executor
+from concurrent.futures import Executor
 from dataclasses import dataclass
 from json import loads
 from threading import Lock
-from typing import AbstractSet, Iterator, Optional, Sequence, Tuple
+from typing import AbstractSet, Iterator, Optional, Tuple
 from uuid import UUID, uuid4
 
 from pynvim import Nvim
@@ -31,7 +31,6 @@ from .reviewer import Reviewer
 @dataclass
 class _State:
     screen: Tuple[int, int]
-    futs: Sequence[Future]
     commit: UUID
     cur: Optional[Context]
     request: Optional[NvimPos]
@@ -103,7 +102,6 @@ def stack(pool: Executor, nvim: Nvim) -> Stack:
     state = _State(
         screen=(0, 0),
         commit=uuid4(),
-        futs=(),
         cur=None,
         request=None,
         inserted=None,

@@ -1,5 +1,15 @@
-from concurrent.futures import CancelledError
-from typing import Any, Literal, Mapping, Optional, Sequence, Tuple, Union, cast
+from concurrent.futures import CancelledError, Future
+from typing import (
+    Any,
+    Literal,
+    Mapping,
+    MutableSequence,
+    Optional,
+    Sequence,
+    Tuple,
+    Union,
+    cast,
+)
 from uuid import UUID
 
 from pynvim import Nvim
@@ -39,10 +49,13 @@ def _cmp(
     stack.state.commit = uid
 
 
+_FUTS: MutableSequence[Future] = []
+
+
 def comp_func(nvim: Nvim, stack: Stack, manual: bool) -> None:
-    for fut in stack.state.futs:
+    for fut in _FUTS:
         fut.cancel()
-    stack.state.futs = ()
+    _FUTS.clear()
 
     with timeit("GEN CTX"):
         ctx = context(nvim, options=stack.settings.match, db=stack.bdb)
@@ -80,7 +93,7 @@ def comp_func(nvim: Nvim, stack: Stack, manual: bool) -> None:
             except Exception as e:
                 log.exception("%s", e)
 
-        stack.state.futs = (pool.submit(cont),)
+        _FUTS.append(pool.submit(cont))
     else:
         stack.state.inserted = None
 
