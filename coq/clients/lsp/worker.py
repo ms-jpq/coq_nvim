@@ -10,6 +10,7 @@ from pynvim_pp.lib import threadsafe_call
 from pynvim_pp.logging import log
 from std2.pickle import DecodeError, decode
 
+from ...lsp.types import CompletionItem, CompletionList, MarkupContent, Resp, TextEdit
 from ...shared.runtime import Supervisor
 from ...shared.runtime import Worker as BaseWorker
 from ...shared.settings import LSPClient
@@ -23,7 +24,6 @@ from ...shared.types import (
     SnippetEdit,
     WTF8Pos,
 )
-from .types import CompletionItem, CompletionList, MarkupContent, Resp, TextEdit
 
 _LUA = (Path(__file__).resolve().parent / "request.lua").read_text("UTF-8")
 

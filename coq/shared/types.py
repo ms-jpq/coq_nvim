@@ -1,6 +1,6 @@
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Annotated, Literal, Optional, Sequence, Tuple, Union
+from typing import Annotated, Any, Literal, Optional, Sequence, Tuple, Union
 from uuid import UUID, uuid4
 
 UTF8 = "UTF-8"
@@ -116,4 +116,5 @@ class Completion:
     kind: str = ""
     doc: Optional[Doc] = None
     uid: UUID = field(default_factory=uuid4)
+    extern: Optional[Any] = None
 

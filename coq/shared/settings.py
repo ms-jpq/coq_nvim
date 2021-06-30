@@ -2,6 +2,8 @@ from dataclasses import dataclass
 from pathlib import PurePath
 from typing import AbstractSet, Any, Literal, Mapping, Optional, Sequence, Tuple
 
+from ..lsp.protocol import LSProtocol
+
 
 @dataclass(frozen=True)
 class PumDisplay:
@@ -79,12 +81,6 @@ class PollingClient(WordbankClient):
 class TagsClient(PollingClient):
     parent_scope: str
     path_sep: str
-
-
-@dataclass(frozen=True)
-class LSProtocol:
-    CompletionItemKind: Mapping[str, str]
-    InsertTextFormat: Mapping[str, str]
 
 
 @dataclass(frozen=True)

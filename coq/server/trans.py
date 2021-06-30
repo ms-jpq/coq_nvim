@@ -87,11 +87,12 @@ def _cmp_to_vcmp(
 
     menu = f"{sl}{metric.comp.source}{sr}"
     user_data = UserData(
-        sort_by=metric.comp.sort_by,
         commit_uid=context.uid,
+        sort_by=metric.comp.sort_by,
         primary_edit=metric.comp.primary_edit,
         secondary_edits=metric.comp.secondary_edits,
         doc=metric.comp.doc,
+        extern=metric.comp.extern,
     )
     vcmp = VimCompletion(
         word="",
