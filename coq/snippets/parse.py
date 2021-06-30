@@ -33,8 +33,11 @@ def _marks(
             len(line.encode(UTF8)) + 1 for line in parsed.text.split(ctx.linefeed)
         )
     )
-    y_shift = row - (len(edit.new_prefix.split(ctx.linefeed)) - 1)
-    x_shift = len(indent)
+
+    old_plines = edit.old_prefix.split(ctx.linefeed)
+    new_plines = edit.new_prefix.split(ctx.linefeed)
+    y_shift = row - len(old_plines) + len(new_plines) - 1
+    x_shift = len(indent.encode(UTF8))
 
     for region in parsed.regions:
         r1, c1, r2, c2 = -1, -1, -1, -1
@@ -46,7 +49,7 @@ def _marks(
                 r2, c2 = idx + y_shift, region.end - last_len + x_shift
             last_len = l8
 
-        assert r1 >= 0 and r2 >= 0
+        assert r1 >= 0 and r2 >= 0, (region, parsed)
         begin = r1, c1
         end = r2, c2
         mark = Mark(idx=region.idx, begin=begin, end=end)
