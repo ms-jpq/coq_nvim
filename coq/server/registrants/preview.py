@@ -56,8 +56,6 @@ class _Event:
     width: int
     size: int
     scrollbar: bool
-    screen: Tuple[int, int]
-    context: Context
 
 
 @dataclass(frozen=True)
