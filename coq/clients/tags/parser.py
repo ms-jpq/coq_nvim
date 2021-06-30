@@ -1,7 +1,9 @@
 from json import loads
+from json.decoder import JSONDecodeError
 from subprocess import DEVNULL, CalledProcessError, check_output
 from typing import Iterator, Optional, TypedDict
 
+from pynvim_pp.logging import log
 from std2.string import removeprefix, removesuffix
 
 
@@ -81,7 +83,11 @@ def _unescape(pattern: str) -> str:
 
 def parse_lines(raw: str) -> Iterator[Tag]:
     for line in raw.splitlines():
-        json = loads(line)
+        try:
+            json = loads(line)
+        except JSONDecodeError:
+            log.exception("%s", line)
+            raise
         if json["_type"] == "tag":
             json["pattern"] = _unescape(json["pattern"])
             yield json
