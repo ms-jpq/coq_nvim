@@ -51,8 +51,9 @@ def set_options(nvim: Nvim, mapping: KeyMapping) -> None:
         )
 
     if mapping.recommended:
-        settings["shortmess"] += "c"
         settings["completeopt"] += ("noinsert", "noselect", "menuone")
+        settings["shortmess"] += "c"
+        settings["noshowmode"] = True
 
         keymap.i("<esc>", expr=True) << "pumvisible() ? '<c-e><esc>' : '<esc>'"
         keymap.i("<bs>", expr=True) << "pumvisible() ? '<c-e><bs>' : '<bs>'"
