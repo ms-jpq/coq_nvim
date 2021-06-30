@@ -49,12 +49,7 @@ def _marks(
                 r2, c2 = idx + y_shift, region.end - last_len + x_shift
             last_len = l8
 
-        assert (r1 >= 0 and c1 >= 0) and (r2 >= 0 and c2 >= 0), (
-            ((r1, c1), (r2, c2)),
-            region,
-            len8,
-            parsed,
-        )
+        assert (r1 >= 0 and c1 >= 0) and (r2 >= 0 and c2 >= 0)
         begin = r1, c1
         end = r2, c2
         mark = Mark(idx=region.idx, begin=begin, end=end)
