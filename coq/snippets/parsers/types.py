@@ -67,6 +67,7 @@ class Region:
     idx: int
     begin: int
     end: int
+    text: str
 
 
 @dataclass(frozen=True)

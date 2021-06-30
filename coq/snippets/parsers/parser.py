@@ -83,7 +83,7 @@ def context_from(snippet: str, context: Context, local: T) -> ParserCtx[T]:
 
 def token_parser(context: ParserCtx, stream: TokenStream) -> Parsed:
     idx = 0
-    regions: MutableSequence[Region] = []
+    raw_regions: MutableSequence[Region] = []
     slices: MutableSequence[str] = []
     begins: MutableSequence[Tuple[int, Union[Begin, DummyBegin]]] = []
     bad_tokens: MutableSequence[Tuple[int, Token]] = []
@@ -103,8 +103,8 @@ def token_parser(context: ParserCtx, stream: TokenStream) -> Parsed:
             if begins:
                 pos, begin = begins.pop()
                 if isinstance(begin, Begin):
-                    region = Region(idx=begin.idx, begin=pos, end=idx)
-                    regions.append(region)
+                    region = Region(idx=begin.idx, begin=pos, end=idx, text="")
+                    raw_regions.append(region)
             else:
                 bad_tokens.append((idx, token))
         else:
@@ -113,7 +113,8 @@ def token_parser(context: ParserCtx, stream: TokenStream) -> Parsed:
     bad_tokens.extend(begins)
     text = "".join(slices)
     cursor = next(
-        iter(sorted(regions, key=lambda r: r.idx)), Region(idx=0, begin=0, end=0)
+        iter(sorted(raw_regions, key=lambda r: r.idx)),
+        Region(idx=0, begin=0, end=0, text=""),
     ).begin
     if bad_tokens:
         tpl = """
@@ -128,6 +129,15 @@ def token_parser(context: ParserCtx, stream: TokenStream) -> Parsed:
         )
         raise ParseError(msg)
 
+    regions = tuple(
+        Region(
+            idx=r.idx,
+            begin=r.begin,
+            end=r.end,
+            text=text[r.begin : r.end],
+        )
+        for r in raw_regions
+    )
     parsed = Parsed(text=text, cursor=cursor, regions=regions)
     return parsed
 

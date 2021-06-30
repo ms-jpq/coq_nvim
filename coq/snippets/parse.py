@@ -45,23 +45,18 @@ def _marks(
         r1, c1, r2, c2 = -1, -1, -1, -1
         last_len = 0
 
-        lines, recording = [], False
-        for idx, (l8, line) in enumerate(len8):
+        for idx, (l8, _) in enumerate(len8):
             if r1 < 0 and l8 >= region.begin:
                 r1, c1 = idx + y_shift, region.begin - last_len + x_shift
-                recording = True
             if r2 < 0 and l8 >= region.end:
                 r2, c2 = idx + y_shift, region.end - last_len + x_shift
-                recording = False
 
             last_len = l8
-            if recording:
-                lines.append(line)
 
         assert (r1 >= 0 and c1 >= 0) and (r2 >= 0 and c2 >= 0)
         begin = r1, c1
         end = r2, c2
-        mark = Mark(idx=region.idx, begin=begin, end=end, text=ctx.linefeed.join(lines))
+        mark = Mark(idx=region.idx, begin=begin, end=end, text=region.text)
         yield mark
 
 
