@@ -219,6 +219,7 @@ autocmd("CompleteChanged") << f"lua {_LUA_1}"
 @rpc(blocking=True)
 def _bigger_preview(nvim: Nvim, stack: Stack, args: Tuple[str, Sequence[str]]) -> None:
     syntax, lines = args
+    nvim.command("stopinsert")
     set_preview(nvim, syntax=syntax, preview=lines)
 
 
@@ -233,12 +234,12 @@ end)(...)
 
 
 @rpc(blocking=True)
-def preview_preview(nvim: Nvim, stack: Stack, *_: str) -> None:
+def preview_preview(nvim: Nvim, stack: Stack, *_: str) -> str:
     win = next(_ls(nvim), None)
     if win:
         buf = win_get_buf(nvim, win=win)
         syntax = buf_get_option(nvim, buf=buf, key="syntax")
         lines = buf_get_lines(nvim, buf=buf, lo=0, hi=-1)
         nvim.exec_lua(_LUA_2, (syntax, lines))
-        nvim.command("stopinsert")
+        return nvim.api.replace_termcodes("<c-e>", True, False, True)
 
