@@ -45,13 +45,15 @@ def _sort_by(adjustment: Weights) -> Callable[[Metric], Any]:
             val / adjust[key] if adjust[key] else 0
             for key, val in asdict(metric.weight).items()
         )
+        sort_by = metric.comp.sort_by or metric.comp.primary_edit.new_text
         return (
             -round(tot * 1000),
             -len(metric.comp.secondary_edits),
             -(metric.comp.doc is not None),
             -isinstance(metric.comp.primary_edit, SnippetEdit),
             -metric.comp.tie_breaker,
-            strxfrm(metric.comp.sort_by or metric.comp.primary_edit.new_text),
+            -sort_by[:1].isalnum(),
+            strxfrm(sort_by),
         )
 
     return key_by

@@ -4,8 +4,10 @@ from pprint import pformat
 from typing import AbstractSet, Iterator, MutableSequence, Sequence, Tuple
 
 from pynvim import Nvim
+from pynvim.api.buffer import Buffer
 from pynvim_pp.api import buf_set_lines, cur_win, win_get_buf, win_set_cursor
 from pynvim_pp.logging import log
+from pynvim_pp.operators import operator_marks
 from std2.itertools import deiter
 from std2.types import never
 
@@ -23,6 +25,7 @@ from ..shared.types import (
     SnippetEdit,
 )
 from ..snippets.parse import parse
+from .databases.buffers.database import BDB
 from .registrants.marks import mark
 from .runtime import Stack
 from .types import UserData
@@ -325,17 +328,33 @@ def _cursor(cursor: NvimPos, instructions: Sequence[_EditInstruction]) -> NvimPo
     return row, col
 
 
+def _visual(nvim: Nvim, buf: Buffer, context: Context, db: BDB) -> str:
+    (row1, col1), (row2, col2) = operator_marks(nvim, buf=buf, visual_type=None)
+    _, lines = db.lines(context.buf_id, lo=row1, hi=row2 + 1)
+
+    if len(lines) == 1:
+        return lines[0].encode()[col1 : col2 + 1].decode()
+    else:
+        head = lines[0].encode()[col1:].decode()
+        body = lines[1:-1]
+        tail = lines[-1].encode()[: col2 + 1].decode()
+        return context.linefeed.join(chain((head,), body, (tail,)))
+
+
 def edit(nvim: Nvim, stack: Stack, data: UserData) -> None:
     ctx = stack.state.cur
     if ctx and data.commit_uid == stack.state.commit:
         cursor = ctx.position
+
+        win = cur_win(nvim)
+        buf = win_get_buf(nvim, win=win)
 
         primary, marks = (
             parse(
                 stack.settings.match.unifying_chars,
                 context=ctx,
                 snippet=data.primary_edit,
-                visual="",
+                visual=_visual(nvim, buf=buf, context=ctx, db=stack.bdb),
             )
             if isinstance(data.primary_edit, SnippetEdit)
             else (data.primary_edit, ())
@@ -363,8 +382,6 @@ def edit(nvim: Nvim, stack: Stack, data: UserData) -> None:
             msg = pformat((data, instructions, (n_row + 1, n_col + 1), new_lines))
             log.debug("%s", msg)
 
-        win = cur_win(nvim)
-        buf = win_get_buf(nvim, win=win)
         buf_set_lines(nvim, buf=buf, lo=lo, hi=hi, lines=new_lines[lo:])
         win_set_cursor(nvim, win=win, row=n_row, col=n_col)
 

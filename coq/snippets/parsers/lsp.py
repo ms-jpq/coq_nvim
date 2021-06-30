@@ -136,7 +136,7 @@ def _variable_substitution(context: ParserCtx, *, name: str) -> Optional[str]:
     row, _ = ctx.position
 
     if name == "TM_SELECTED_TEXT":
-        return ""
+        return context.info.visual
 
     elif name == "TM_CURRENT_LINE":
         return ctx.line
