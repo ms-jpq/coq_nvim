@@ -1,38 +1,15 @@
+from asyncio import AbstractEventLoop, TimerHandle
 from contextlib import suppress
-from typing import Sequence
+from typing import Optional, Sequence
 
 from pynvim import Nvim
 from pynvim.api import Buffer, NvimError
-from pynvim_pp.api import (
-    buf_filetype,
-    buf_get_option,
-    cur_buf,
-    cur_win,
-    list_bufs,
-    win_get_cursor,
-)
+from pynvim_pp.api import buf_filetype, buf_get_option, cur_buf, list_bufs
 
-from ...registry import atomic, autocmd, rpc
+from ...registry import atomic, autocmd, enqueue_event, rpc
 from ...shared.timeit import timeit
 from ..rt_types import Stack
 from .omnifunc import comp_func
-
-_POS = (-1, -1)
-
-
-@rpc(blocking=True)
-def _txt_changed(nvim: Nvim, stack: Stack, pum_open: bool) -> None:
-    global _POS
-    win = cur_win(nvim)
-    pos = win_get_cursor(nvim, win=win)
-    if pum_open and pos != _POS:
-        _POS = pos
-    else:
-        _POS = pos
-
-
-autocmd("TextChangedI") << f"lua {_txt_changed.name}(false)"
-autocmd("TextChangedP") << f"lua {_txt_changed.name}(true)"
 
 
 @rpc(blocking=True)
@@ -60,6 +37,14 @@ def _buf_new_init(nvim: Nvim, stack: Stack) -> None:
 atomic.exec_lua(f"{_buf_new_init.name}()", ())
 
 
+_HANDLE: Optional[TimerHandle] = None
+_LATER = 0.02
+
+
+def _go(nvim: Nvim, stack: Stack) -> None:
+    enqueue_event(comp_func, False)
+
+
 def _lines_event(
     nvim: Nvim,
     stack: Stack,
@@ -70,8 +55,9 @@ def _lines_event(
     lines: Sequence[str],
     pending: bool,
 ) -> None:
-    filetype = buf_filetype(nvim, buf=buf)
+    global _HANDLE
 
+    filetype = buf_filetype(nvim, buf=buf)
     stack.bdb.set_lines(
         buf.number,
         filetype=filetype,
@@ -80,10 +66,11 @@ def _lines_event(
         lines=lines,
         unifying_chars=stack.settings.match.unifying_chars,
     )
-    mode: str = nvim.api.get_mode()["mode"]
-    if not pending and mode.startswith("i"):
-        with timeit("BEGIN"):
-            comp_func(nvim, stack=stack, manual=False)
+    if not pending:
+        if isinstance(nvim.loop, AbstractEventLoop):
+            if _HANDLE:
+                _HANDLE.cancel()
+            _HANDLE = nvim.loop.call_later(_LATER, _go, nvim, stack)
 
 
 def _changed_event(nvim: Nvim, stack: Stack, buf: Buffer, tick: int) -> None:
