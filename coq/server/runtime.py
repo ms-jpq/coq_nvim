@@ -1,9 +1,8 @@
 from concurrent.futures import Executor
-from dataclasses import dataclass
 from json import loads
 from threading import Lock
-from typing import AbstractSet, Iterator, Optional, Tuple
-from uuid import UUID, uuid4
+from typing import Iterator
+from uuid import uuid4
 
 from pynvim import Nvim
 from std2.configparser import hydrate
@@ -22,30 +21,10 @@ from ..clients.tree_sitter.worker import Worker as TreeWorker
 from ..consts import CONFIG_YML, LSP_ARTIFACTS, SETTINGS_VAR, SNIPPET_ARTIFACTS
 from ..shared.runtime import Supervisor, Worker
 from ..shared.settings import Settings
-from ..shared.types import Context, NvimPos
 from .databases.buffers.database import BDB
 from .databases.snippets.database import SDB
 from .reviewer import Reviewer
-
-
-@dataclass
-class _State:
-    screen: Tuple[int, int]
-    commit: UUID
-    cur: Optional[Context]
-    request: Optional[NvimPos]
-    inserted: Optional[NvimPos]
-
-
-@dataclass(frozen=True)
-class Stack:
-    lock: Lock
-    settings: Settings
-    state: _State
-    bdb: BDB
-    sdb: SDB
-    supervisor: Supervisor
-    workers: AbstractSet[Worker]
+from .rt_types import Stack, _State
 
 
 def _settings(nvim: Nvim) -> Settings:

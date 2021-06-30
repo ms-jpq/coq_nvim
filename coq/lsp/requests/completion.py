@@ -9,12 +9,12 @@ from pynvim.api.nvim import Nvim
 from pynvim_pp.lib import threadsafe_call
 
 from ...registry import rpc
-from ...server.runtime import Stack
+from ...server.rt_types import Stack
 from ...shared.types import UTF16, Completion, Context, WTF8Pos
 from ..parse import parse
 from ..protocol import LSProtocol
 
-LUA = (Path(__file__).resolve().parent / "request.lua").read_text("UTF-8")
+LUA = (Path(__file__).resolve().parent / "completion.lua").read_text("UTF-8")
 
 _LOCK = Lock()
 _CUR: Tuple[UUID, Future] = uuid4(), Future()
