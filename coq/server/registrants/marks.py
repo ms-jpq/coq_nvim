@@ -4,6 +4,7 @@ from uuid import uuid4
 from pynvim.api.common import NvimError
 from pynvim.api.nvim import Buffer, Nvim
 from pynvim_pp.api import cur_win, win_get_buf, win_set_cursor
+from pynvim_pp.lib import write
 from pynvim_pp.operators import set_visual_selection
 
 from ...registry import rpc
@@ -53,8 +54,9 @@ def nav_mark(nvim: Nvim, stack: Stack) -> None:
 
         nvim.command("startinsert")
         nvim.api.buf_del_extmark(buf, ns, mark.idx)
+        write(nvim, "TODO --")
     else:
-        print("🐸 ", flush=True)
+        write(nvim, "TODO --")
 
 
 def mark(nvim: Nvim, settings: Settings, buf: Buffer, marks: Iterable[Mark]) -> None:
@@ -72,4 +74,6 @@ def mark(nvim: Nvim, settings: Settings, buf: Buffer, marks: Iterable[Mark]) -> 
         except NvimError:
             print(mark, flush=True)
             raise
+
+    write(nvim, *marks)
 

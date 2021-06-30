@@ -1,6 +1,6 @@
 from itertools import accumulate, chain, repeat
 from pprint import pformat
-from typing import AbstractSet, Iterator, Sequence, Tuple
+from typing import AbstractSet, Iterable, Iterator, Sequence, Tuple
 
 from pynvim_pp.logging import log
 
@@ -9,7 +9,7 @@ from ..shared.trans import expand_tabs, trans_adjusted
 from ..shared.types import UTF8, Context, ContextualEdit, Edit, Mark, SnippetEdit
 from .parsers.lsp import parser as lsp_parser
 from .parsers.snu import parser as snu_parser
-from .parsers.types import Parsed
+from .parsers.types import Region
 
 
 def _indent(ctx: Context, old_prefix: str, line_before: str) -> str:
@@ -27,10 +27,13 @@ def _before_after(
 
 
 def _marks(
-    ctx: Context, edit: ContextualEdit, indent: str, parsed: Parsed
+    ctx: Context,
+    edit: ContextualEdit,
+    indent: str,
+    parsed_lines: Sequence[str],
+    regions: Iterable[Region],
 ) -> Iterator[Mark]:
     row, _ = ctx.position
-    parsed_lines = parsed.text.split(ctx.linefeed)
     len8 = tuple(
         zip(
             accumulate(len(line.encode(UTF8)) + 1 for line in parsed_lines),
@@ -41,7 +44,7 @@ def _marks(
     y_shift = row - len(edit.old_prefix.split(ctx.linefeed)) + 1
     x_shift = len(indent.encode(UTF8))
 
-    for region in parsed.regions:
+    for region in regions:
         r1, c1, r2, c2 = None, None, None, None
         last_len = 0
 
@@ -74,11 +77,9 @@ def parse(
         unifying_chars, context=context, text=parsed.text
     )
     indent = _indent(context, old_prefix=old_prefix, line_before=context.line_before)
+    parsed_lines = parsed.text.split(context.linefeed)
     new_lines = tuple(
-        lhs + rhs
-        for lhs, rhs in zip(
-            chain(("",), repeat(indent)), parsed.text.split(context.linefeed)
-        )
+        lhs + rhs for lhs, rhs in zip(chain(("",), repeat(indent)), parsed_lines)
     )
 
     edit = ContextualEdit(
@@ -87,7 +88,15 @@ def parse(
         old_suffix=old_suffix,
         new_prefix=parsed.text[: parsed.cursor],
     )
-    marks = tuple(_marks(context, edit=edit, indent=indent, parsed=parsed))
+    marks = tuple(
+        _marks(
+            context,
+            edit=edit,
+            indent=indent,
+            parsed_lines=parsed_lines,
+            regions=parsed.regions,
+        )
+    )
 
     if DEBUG:
         msg = pformat((snippet, parsed, edit, marks))
