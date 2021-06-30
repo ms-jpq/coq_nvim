@@ -3,7 +3,7 @@
   end
   local session = nil
 
-  COQlsp_req = function(request_id, session_id, pos)
+  COQlsp_req = function(session_id, pos)
     if cancel and session ~= session_id then
       cancel()
     end
@@ -12,7 +12,7 @@
 
     local clients = vim.lsp.buf_get_clients(0)
     if #clients == 0 then
-      COQnotify(request_id, vim.NIL)
+      COQlsp_comp_notify(vim.NIL)
     else
       local row, col = unpack(pos)
       local position = {line = row, character = col}
@@ -28,7 +28,7 @@
         function(_, _, resp)
           vim.schedule(
             function()
-              COQlsp_comp_notify(request_id, resp or vim.NIL)
+              COQlsp_comp_notify(resp or vim.NIL)
             end
           )
         end

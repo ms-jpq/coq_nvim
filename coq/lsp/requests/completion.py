@@ -2,7 +2,7 @@ from concurrent.futures import CancelledError, Future, InvalidStateError
 from contextlib import suppress
 from pathlib import Path
 from threading import Lock
-from typing import Any, Iterator, Sequence, Tuple
+from typing import Any, Iterator, Sequence
 from uuid import UUID, uuid4
 
 from pynvim.api.nvim import Nvim
@@ -17,24 +17,30 @@ from ..protocol import LSProtocol
 LUA = (Path(__file__).resolve().parent / "completion.lua").read_text("UTF-8")
 
 _LOCK = Lock()
-_CUR: Tuple[UUID, Future] = uuid4(), Future()
+_FUT: Future = Future()
+
+
+@rpc(blocking=True)
+def _lsp_comp_notify(nvim: Nvim, stack: Stack, msg: Sequence[Any]) -> None:
+    reply, *_ = msg
+    with suppress(InvalidStateError):
+        _FUT.set_result(reply)
 
 
 def _request(nvim: Nvim, session: UUID, pos: WTF8Pos) -> Any:
-    global _CUR
+    global _FUT
     with _LOCK:
-        _, fut = _CUR
-        fut.cancel()
-        _CUR = token, fut = uuid4(), Future()
+        _FUT.cancel()
+        _FUT = Future()
 
     def cont() -> None:
-        args = (str(token), str(session), pos)
+        args = (str(session), pos)
         nvim.api.exec_lua("COQlsp_req(...)", args)
 
     threadsafe_call(nvim, cont)
 
     try:
-        ret = fut.result()
+        ret = _FUT.result()
     except CancelledError:
         ret = None
 
@@ -59,15 +65,4 @@ def request(
             short_name, tie_breaker=tie_breaker, client=protocol, reply=reply
         )
         yield comps
-
-
-@rpc(blocking=True)
-def _lsp_comp_notify(nvim: Nvim, stack: Stack, token: UUID, msg: Sequence[Any]) -> None:
-    with _LOCK:
-        c_token, fut = _CUR
-
-    if token == c_token:
-        reply, *_ = msg
-        with suppress(InvalidStateError):
-            fut.set_result(reply)
 
