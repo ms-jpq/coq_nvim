@@ -62,11 +62,7 @@ def request(
 
 
 @rpc(blocking=True)
-def _lsp_comp_notify(
-    nvim: Nvim, stack: Stack, args: Tuple[UUID, Sequence[Any]]
-) -> None:
-    token, msg = args
-
+def _lsp_comp_notify(nvim: Nvim, stack: Stack, token: UUID, msg: Sequence[Any]) -> None:
     with _LOCK:
         c_token, fut = _CUR
 

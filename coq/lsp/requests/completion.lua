@@ -28,7 +28,7 @@
         function(_, _, resp)
           vim.schedule(
             function()
-              COQnotify(request_id, resp or vim.NIL)
+              COQlsp_comp_notify(request_id, resp or vim.NIL)
             end
           )
         end
