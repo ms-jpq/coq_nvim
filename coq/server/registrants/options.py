@@ -38,9 +38,10 @@ def set_options(nvim: Nvim, mapping: KeyMapping) -> None:
             keymap.i(mapping.manual_complete, expr=True)
             << "pumvisible() ? '<c-e><c-x><c-u>' : '<c-x><c-u>'"
         )
+
     if mapping.jump_to_mark:
         keymap.n(mapping.jump_to_mark) << f"<cmd>lua {nav_mark.name}()<cr>"
-        keymap.v(mapping.jump_to_mark) << f"<esc><cmd>lua {nav_mark.name}()<cr>"
+        keymap.iv(mapping.jump_to_mark) << f"<esc><cmd>lua {nav_mark.name}()<cr>"
 
     if mapping.bigger_preview:
         (

@@ -325,19 +325,6 @@ def _cursor(cursor: NvimPos, instructions: Sequence[_EditInstruction]) -> NvimPo
     return row, col
 
 
-_LUA = """
-(function()
-  vim.schedule(function()
-    vim.api.nvim_command("stopinsert")
-  end)
-end)(...)
-""".strip()
-
-
-def _stop_insert(nvim: Nvim) -> None:
-    nvim.exec_lua(_LUA, ())
-
-
 def edit(nvim: Nvim, stack: Stack, data: UserData) -> None:
     ctx = stack.state.cur
     if ctx and data.commit_uid == stack.state.commit:
@@ -385,8 +372,6 @@ def edit(nvim: Nvim, stack: Stack, data: UserData) -> None:
 
         if marks:
             mark(nvim, settings=stack.settings, buf=buf, marks=marks)
-            if stack.settings.keymap.stop_insert_on_snippet:
-                _stop_insert(nvim)
     else:
         log.warn("%s", f"Expired edit -- {data}")
 

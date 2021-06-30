@@ -41,11 +41,10 @@ weights:
 
 keymap:
   recommended: True
-  stop_insert_on_snippet: True
 
   manual_complete: <c-space>
-  jump_to_mark: <c-space>
   bigger_preview: <c-k>
+  jump_to_mark: <c-m>
 
 clients:
   tabnine:
