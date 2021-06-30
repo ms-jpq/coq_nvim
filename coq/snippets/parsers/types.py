@@ -1,13 +1,11 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Generic, Iterator, Sequence, Tuple, TypeVar, Union
-
-from ...shared.types import Context
-
-T = TypeVar("T")
+from typing import Iterator, Sequence, Tuple, Union
 
 from std2.itertools import deiter
+
+from ...shared.types import Context
 
 
 class ParseError(Exception):
@@ -35,7 +33,7 @@ class ParserState:
 
 
 @dataclass(frozen=True)
-class ParserCtx(Generic[T], Iterator):
+class ParserCtx(Iterator):
     ctx: Context
     text: str
     info: ParseInfo

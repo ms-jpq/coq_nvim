@@ -80,7 +80,13 @@ def _gen_iter(src: str) -> Iterator[EChar]:
 def context_from(snippet: str, context: Context, info: ParseInfo) -> ParserCtx:
     dit = deiter(_gen_iter(snippet))
     state = ParserState(depth=0)
-    ctx = ParserCtx(ctx=context, text=snippet, info=info, dit=dit, state=state)
+    ctx = ParserCtx(
+        ctx=context,
+        text=snippet,
+        info=info,
+        dit=dit,
+        state=state,
+    )
     return ctx
 
 
