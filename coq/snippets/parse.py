@@ -29,7 +29,7 @@ def _before_after(
 def _marks(
     ctx: Context,
     edit: ContextualEdit,
-    indent: str,
+    indent_len: int,
     parsed_lines: Sequence[str],
     regions: Iterable[Region],
 ) -> Iterator[Mark]:
@@ -42,7 +42,7 @@ def _marks(
     )
 
     y_shift = row - len(edit.old_prefix.split(ctx.linefeed)) + 1
-    x_shift = len(indent.encode(UTF8))
+    x_shift = indent_len
 
     for region in regions:
         r1, c1, r2, c2 = None, None, None, None
@@ -76,23 +76,28 @@ def parse(
     old_prefix, old_suffix = _before_after(
         unifying_chars, context=context, text=parsed.text
     )
+
     indent = _indent(context, old_prefix=old_prefix, line_before=context.line_before)
+    indent_len = len(indent.encode(UTF8))
     parsed_lines = parsed.text.split(context.linefeed)
     new_lines = tuple(
         lhs + rhs for lhs, rhs in zip(chain(("",), repeat(indent)), parsed_lines)
     )
+    cursor = (
+        len(parsed.text[: parsed.cursor].split(context.linefeed)) - 1
+    ) * indent_len + parsed.cursor
 
     edit = ContextualEdit(
         new_text=context.linefeed.join(new_lines),
         old_prefix=old_prefix,
         old_suffix=old_suffix,
-        new_prefix=parsed.text[: parsed.cursor],
+        new_prefix=parsed.text[:cursor],
     )
     marks = tuple(
         _marks(
             context,
             edit=edit,
-            indent=indent,
+            indent_len=indent_len,
             parsed_lines=parsed_lines,
             regions=parsed.regions,
         )
