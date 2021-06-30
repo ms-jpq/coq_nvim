@@ -52,52 +52,54 @@ _FUTS: MutableSequence[Future] = []
 
 
 def comp_func(nvim: Nvim, stack: Stack, manual: bool) -> None:
-    for f1 in _FUTS:
-        f1.cancel()
-    _FUTS.clear()
+    mode: str = nvim.api.get_mode()["mode"]
+    if mode.startswith("i"):
+        for f1 in _FUTS:
+            f1.cancel()
+        _FUTS.clear()
 
-    s = state()
-    with timeit("GEN CTX"):
-        ctx = context(nvim, options=stack.settings.match, db=stack.bdb)
-    should = (
-        _should_cont(
-            s.inserted,
-            prev=s.context,
-            cur=ctx,
+        s = state()
+        with timeit("GEN CTX"):
+            ctx = context(nvim, options=stack.settings.match, db=stack.bdb)
+        should = (
+            _should_cont(
+                s.inserted,
+                prev=s.context,
+                cur=ctx,
+            )
+            if ctx
+            else False
         )
-        if ctx
-        else False
-    )
-    if ctx and (manual or should):
-        _, col = ctx.position
-        complete(nvim, col=col - 1, comp=())
+        if ctx and (manual or should):
+            _, col = ctx.position
+            complete(nvim, col=col - 1, comp=())
 
-        state(context=ctx)
-        f1 = stack.supervisor.collect(ctx, manual=manual)
-        _FUTS.append(f1)
+            state(context=ctx)
+            f1 = stack.supervisor.collect(ctx, manual=manual)
+            _FUTS.append(f1)
 
-        @timeit("COLLECT")
-        def cont() -> None:
-            try:
+            @timeit("COLLECT")
+            def cont() -> None:
                 try:
-                    metrics = cast(Sequence[Metric], f1.result())
-                except CancelledError:
-                    pass
-                else:
-                    s = state()
-                    if ctx and s.context == ctx:
-                        with timeit("TRANS"):
-                            vim_comps = tuple(
-                                trans(stack, context=ctx, metrics=metrics)
-                            )
-                        enqueue_event(_cmp, ctx.uid, col, vim_comps)
-            except Exception as e:
-                log.exception("%s", e)
+                    try:
+                        metrics = cast(Sequence[Metric], f1.result())
+                    except CancelledError:
+                        pass
+                    else:
+                        s = state()
+                        if ctx and s.context == ctx:
+                            with timeit("TRANS"):
+                                vim_comps = tuple(
+                                    trans(stack, context=ctx, metrics=metrics)
+                                )
+                            enqueue_event(_cmp, ctx.uid, col, vim_comps)
+                except Exception as e:
+                    log.exception("%s", e)
 
-        f2 = pool.submit(cont)
-        _FUTS.append(f2)
-    else:
-        state(inserted=(-1, -1))
+            f2 = pool.submit(cont)
+            _FUTS.append(f2)
+        else:
+            state(inserted=(-1, -1))
 
 
 @rpc(blocking=True)
