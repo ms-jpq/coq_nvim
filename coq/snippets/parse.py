@@ -36,9 +36,7 @@ def _marks(
         )
     )
 
-    old_plines = edit.old_prefix.split(ctx.linefeed)
-    new_plines = edit.new_prefix.split(ctx.linefeed)
-    y_shift = row + (-len(old_plines) + len(new_plines))
+    y_shift = row - len(edit.old_prefix.split(ctx.linefeed)) + 1
     x_shift = len(indent.encode(UTF8))
 
     for region in parsed.regions:
