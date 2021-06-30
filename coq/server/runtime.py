@@ -24,7 +24,7 @@ from ..shared.settings import Settings
 from .databases.buffers.database import BDB
 from .databases.snippets.database import SDB
 from .reviewer import Reviewer
-from .rt_types import Stack, _State
+from .rt_types import Stack, State
 
 
 def _settings(nvim: Nvim) -> Settings:
@@ -77,7 +77,7 @@ def _from_each_according_to_their_ability(
 
 def stack(pool: Executor, nvim: Nvim) -> Stack:
     settings = _settings(nvim)
-    state = _State(
+    state = State(
         screen=(0, 0),
         commit=uuid4(),
         cur=None,

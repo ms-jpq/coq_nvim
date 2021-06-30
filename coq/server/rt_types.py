@@ -11,7 +11,7 @@ from .databases.snippets.database import SDB
 
 
 @dataclass
-class _State:
+class State:
     screen: Tuple[int, int]
     commit: UUID
     cur: Optional[Context]
@@ -23,7 +23,7 @@ class _State:
 class Stack:
     lock: Lock
     settings: Settings
-    state: _State
+    state: State
     bdb: BDB
     sdb: SDB
     supervisor: Supervisor
