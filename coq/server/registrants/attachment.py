@@ -1,5 +1,4 @@
 from contextlib import suppress
-from threading import Timer
 from typing import Sequence
 
 from pynvim import Nvim
@@ -37,14 +36,6 @@ def _buf_new_init(nvim: Nvim, stack: Stack) -> None:
 atomic.exec_lua(f"{_buf_new_init.name}()", ())
 
 
-_TIMER = Timer(0, lambda: None)
-_LATER = 0.05
-
-
-def _go(nvim: Nvim, stack: Stack) -> None:
-    enqueue_event(comp_func, False)
-
-
 def _lines_event(
     nvim: Nvim,
     stack: Stack,
@@ -67,9 +58,7 @@ def _lines_event(
         unifying_chars=stack.settings.match.unifying_chars,
     )
     if not pending:
-        _TIMER.cancel()
-        _TIMER = Timer(_LATER, _go, (nvim, stack))
-        _TIMER.start()
+        comp_func(nvim, stack=stack, manual=False)
 
 
 def _changed_event(nvim: Nvim, stack: Stack, buf: Buffer, tick: int) -> None:

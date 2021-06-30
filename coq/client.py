@@ -34,7 +34,6 @@ class CoqClient(Client):
 
     def _handle(self, nvim: Nvim, msg: RpcMsg) -> Any:
         name, args = msg
-
         if name.startswith("nvim_buf_"):
             handler = cast(AnyFun[None], BUF_EVENTS[name])
             return handler(nvim, self._stack, *args)
@@ -45,12 +44,12 @@ class CoqClient(Client):
 
     def on_msg(self, nvim: Nvim, msg: RpcMsg) -> Any:
         name, *_ = msg
-        if not self._stack:
+        if not self._stack or name.startswith("nvim_buf_"):
             event_queue.put(msg)
             return None
         else:
-            # with timeit(name):
-            return self._handle(nvim, msg)
+            with timeit(name):
+                return self._handle(nvim, msg)
 
     def wait(self, nvim: Nvim) -> int:
         if isinstance(nvim.loop, AbstractEventLoop):
