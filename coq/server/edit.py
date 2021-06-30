@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 from itertools import chain, repeat
+from pprint import pformat
 from typing import AbstractSet, Iterator, MutableSequence, Sequence, Tuple
 
 from pynvim import Nvim
@@ -7,6 +8,8 @@ from pynvim_pp.api import buf_set_lines, cur_win, win_get_buf, win_set_cursor
 from pynvim_pp.logging import log
 from std2.itertools import deiter
 from std2.types import never
+
+from coq.consts import DEBUG
 
 from ..shared.parse import is_word
 from ..shared.trans import trans
@@ -108,10 +111,10 @@ def _contextual_edit_trans(
     end = r2, c2
 
     new_lines = edit.new_text.split(ctx.linefeed)
-    cursor_yoffset = -len(prefix_lines) + len(new_lines)
     new_prefix_lines = edit.new_prefix.split(ctx.linefeed)
+    cursor_yoffset = -len(prefix_lines) + len(new_prefix_lines)
     cursor_xpos = (
-        len(new_prefix_lines[-1].encode(UTF8)) - 1
+        len(new_prefix_lines[-1].encode(UTF8))
         if len(new_prefix_lines) > 1
         else len(ctx.line_before.encode(UTF8))
         - len(prefix_lines[-1].encode(UTF8))
@@ -344,12 +347,7 @@ def _cursor(cursor: NvimPos, instructions: Sequence[_EditInstruction]) -> NvimPo
 def edit(nvim: Nvim, stack: Stack, data: UserData) -> None:
     ctx = stack.state.cur
     if ctx and data.commit_uid == stack.state.commit:
-        win = cur_win(nvim)
-        buf = win_get_buf(nvim, win=win)
-        (
-            row,
-            _,
-        ) = cursor = ctx.position
+        cursor = ctx.position
 
         primary, marks = (
             parse(
@@ -379,11 +377,18 @@ def edit(nvim: Nvim, stack: Stack, data: UserData) -> None:
         new_lines = _new_lines(view, instructions=instructions)
         n_row, n_col = _cursor(cursor, instructions=instructions)
 
+        if DEBUG:
+            msg = pformat((data, instructions, (n_row + 1, n_col + 1), new_lines))
+            log.debug("%s", msg)
+
+        win = cur_win(nvim)
+        buf = win_get_buf(nvim, win=win)
         buf_set_lines(nvim, buf=buf, lo=lo, hi=hi, lines=new_lines[lo:])
         win_set_cursor(nvim, win=win, row=n_row, col=n_col)
 
         stack.state.inserted = n_row, n_col
         stack.bdb.inserted(data.sort_by or primary.new_text)
+
         if marks:
             mark(nvim, settings=stack.settings, buf=buf, marks=marks)
     else:
