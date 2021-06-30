@@ -1,7 +1,9 @@
 from contextlib import suppress
 from hashlib import md5
 from json import dumps, loads
+from os import close
 from pathlib import Path
+from tempfile import NamedTemporaryFile
 from typing import (
     AbstractSet,
     Iterable,
@@ -12,7 +14,7 @@ from typing import (
     TypedDict,
 )
 
-from ...consts import CLIENTS_DIR
+from ...consts import CLIENTS_DIR, TMP_DIR
 from .parser import Tag, parse_lines, run
 
 _TAGS_DIR = CLIENTS_DIR / "tags"
@@ -67,6 +69,9 @@ def reconciliate(cwd: Path, paths: AbstractSet[str]) -> Tags:
 
     new = {**{key: val for key, val in existing.items() if key in mtimes}, **acc}
     json = dumps(new, check_circular=False, ensure_ascii=False, indent=2)
-    tags_path.write_text(json)
+    with NamedTemporaryFile(dir=TMP_DIR) as tmp:
+        tmp.write(json.encode("UTF-8"))
+        tmp.close()
+        Path(tmp.name).rename(tags_path)
     return new
 
