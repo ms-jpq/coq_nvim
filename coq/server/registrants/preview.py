@@ -1,3 +1,4 @@
+from concurrent.futures import Future
 from dataclasses import dataclass
 from os import linesep
 from typing import Any, Callable, Iterator, Mapping, Sequence, Tuple
@@ -182,8 +183,16 @@ def _preview(
     _set_win(nvim, buf=buf, pos=pos)
 
 
+_FUT: Future = Future()
+
+
+def _resolve_comp(nvim: Nvim, item: CompletionItem) -> None:
+    pass
+
+
 @rpc(blocking=True)
 def _cmp_changed(nvim: Nvim, stack: Stack, event: Mapping[str, Any] = {}) -> None:
+    _FUT.cancel()
     _kill_win(nvim, stack=stack)
     with timeit("PREVIEW"):
         try:
@@ -208,7 +217,7 @@ def _cmp_changed(nvim: Nvim, stack: Stack, event: Mapping[str, Any] = {}) -> Non
                             doc=data.doc,
                         )
                 else:
-                    pass
+                    _resolve_comp(nvim, item=item)
 
 
 _LUA_1 = f"""

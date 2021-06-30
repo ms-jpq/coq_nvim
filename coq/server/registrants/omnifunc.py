@@ -74,6 +74,7 @@ def comp_func(nvim: Nvim, stack: Stack, manual: bool) -> None:
 
         complete(nvim, col=col - 1, comp=())
         fut = stack.supervisor.collect(ctx, manual=manual)
+        _FUTS.append(fut)
 
         @timeit("COLLECT")
         def cont() -> None:

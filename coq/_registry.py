@@ -7,6 +7,7 @@ from .server.registrants import (
     omnifunc,
     preview,
 )
+from .lsp.requests import completion
 
 ____ = None
 
