@@ -10,7 +10,7 @@ from ...coq.snippets.main import EMPTY_CTX
 from ...coq.snippets.parse import parse
 from ...coq.snippets.parsers.types import ParseError
 
-_THRESHOLD = 0.85
+_THRESHOLD = 0.95
 
 
 def _edits() -> Iterator[SnippetEdit]:
