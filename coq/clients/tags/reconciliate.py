@@ -1,8 +1,8 @@
 from contextlib import suppress
 from hashlib import md5
 from json import dumps, loads
-from os import close
 from pathlib import Path
+from shutil import move
 from tempfile import NamedTemporaryFile
 from typing import (
     AbstractSet,
@@ -69,9 +69,10 @@ def reconciliate(cwd: Path, paths: AbstractSet[str]) -> Tags:
 
     new = {**{key: val for key, val in existing.items() if key in mtimes}, **acc}
     json = dumps(new, check_circular=False, ensure_ascii=False, indent=2)
-    with NamedTemporaryFile(dir=TMP_DIR) as tmp:
-        tmp.write(json.encode("UTF-8"))
-        tmp.close()
-        Path(tmp.name).rename(tags_path)
+    with suppress(FileNotFoundError):
+        with NamedTemporaryFile(dir=TMP_DIR) as tmp:
+            tmp.write(json.encode("UTF-8"))
+            tmp.flush()
+            move(tmp.name, tags_path)
     return new
 
