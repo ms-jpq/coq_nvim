@@ -26,6 +26,7 @@ from ...shared.types import Context, NvimPos
 from ..context import context
 from ..edit import edit
 from ..rt_types import Stack
+from ..state import state
 from ..trans import trans
 from ..types import UserData
 
@@ -121,7 +122,12 @@ def _comp_done(nvim: Nvim, stack: Stack, event: Mapping[str, Any]) -> None:
         except DecodeError:
             pass
         else:
-            edit(nvim, stack=stack, data=user_data)
+            s = state()
+            if user_data.commit_uid == s.commit:
+                inserted = edit(nvim, stack=stack, context=s.context, data=user_data)
+                state(inserted=inserted)
+            else:
+                log.warn("%s", "delayed completion")
 
 
 autocmd("CompleteDone") << f"lua {_comp_done.name}(vim.v.completed_item)"

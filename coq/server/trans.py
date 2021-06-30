@@ -10,6 +10,7 @@ from ..shared.runtime import Metric
 from ..shared.settings import PumDisplay, Weights
 from ..shared.types import Context, SnippetEdit
 from .rt_types import Stack
+from .state import state
 from .types import UserData
 
 
@@ -109,7 +110,9 @@ def _cmp_to_vcmp(
 def trans(
     stack: Stack, context: Context, metrics: Sequence[Metric]
 ) -> Iterator[VimCompletion]:
-    scr_width, _ = stack.state.screen
+    s = state()
+    scr_width, _ = s.screen
+
     display = stack.settings.display
     _, col = context.position
 

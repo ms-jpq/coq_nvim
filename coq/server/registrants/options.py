@@ -5,6 +5,7 @@ from pynvim_pp.settings import Settings
 from ...registry import atomic, autocmd, rpc
 from ...shared.settings import KeyMapping
 from ..rt_types import Stack
+from ..state import state
 from .marks import nav_mark
 from .omnifunc import omnifunc
 from .preview import preview_preview
@@ -14,8 +15,8 @@ from .preview import preview_preview
 def _update_pumheight(nvim: Nvim, stack: Stack) -> None:
     scr_width: int = nvim.options["columns"]
     scr_height: int = nvim.options["lines"]
+    state(screen=(scr_width, scr_height))
 
-    stack.state.screen = (scr_width, scr_height)
     pumheight = max(
         round(scr_height * stack.settings.display.pum.y_ratio),
         stack.settings.display.pum.y_max_len,

@@ -41,6 +41,7 @@ from ...shared.timeit import timeit
 from ...shared.trans import expand_tabs
 from ...shared.types import UTF8, Context, Doc
 from ..rt_types import Stack
+from ..state import State, state
 from ..types import UserData
 
 _FLOAT_WIN_UUID = uuid4().hex
@@ -55,6 +56,8 @@ class _Event:
     width: int
     size: int
     scrollbar: bool
+    screen: Tuple[int, int]
+    context: Context
 
 
 @dataclass(frozen=True)
@@ -97,15 +100,12 @@ def _clamp(margin: int, hi: int) -> Callable[[int], int]:
 
 
 def _positions(
-    stack: Stack,
     display: PreviewDisplay,
     event: _Event,
     lines: Sequence[str],
+    state: State,
 ) -> Sequence[_Pos]:
-    (
-        t_width,
-        t_height,
-    ) = stack.state.screen
+    scr_width, src_height = state.screen
     top, btm, left, right = (
         event.row,
         event.row + event.height + 1,
@@ -117,7 +117,7 @@ def _positions(
         _clamp(display.margin, hi=max(len(line.encode(UTF8)) for line in lines)),
     )
 
-    ns_width = limit_w(t_width - left)
+    ns_width = limit_w(scr_width - left)
     n_height = limit_h(top - 1)
 
     ns_col = left - 1
@@ -131,11 +131,11 @@ def _positions(
     s = _Pos(
         row=btm,
         col=ns_col,
-        height=limit_h(t_height - btm),
+        height=limit_h(src_height - btm),
         width=ns_width,
     )
 
-    we_height = limit_h(t_height - top)
+    we_height = limit_h(src_height - top)
     w_width = limit_w(left - 1)
 
     w = _Pos(
@@ -149,7 +149,7 @@ def _positions(
         row=top,
         col=right + 2,
         height=we_height,
-        width=limit_w(t_width - right - 2),
+        width=limit_w(scr_width - right - 2),
     )
     return n, s, w, e
 
@@ -170,31 +170,27 @@ def _set_win(nvim: Nvim, buf: Buffer, pos: _Pos) -> None:
 
 
 @rpc(blocking=True)
-def _show_preview(nvim: Nvim, stack: Stack, event: _Event, doc: Doc) -> None:
-    ctx = stack.state.cur
-    if ctx:
-        new_doc = _preprocess(ctx, doc=doc)
+def _show_preview(
+    nvim: Nvim, stack: Stack, event: _Event, doc: Doc, state: State
+) -> None:
+    new_doc = _preprocess(state.context, doc=doc)
+    text = expand_tabs(state.context, text=new_doc.text)
+    lines = text.splitlines()
+    (_, pos), *_ = sorted(
+        enumerate(
+            _positions(
+                stack.settings.display.preview, event=event, lines=lines, state=state
+            )
+        ),
+        key=lambda p: (p[1].height * p[1].width, -p[0]),
+        reverse=True,
+    )
 
-        text = expand_tabs(ctx, text=new_doc.text)
-        lines = text.splitlines()
-        (_, pos), *_ = sorted(
-            enumerate(
-                _positions(
-                    stack,
-                    display=stack.settings.display.preview,
-                    event=event,
-                    lines=lines,
-                )
-            ),
-            key=lambda p: (p[1].height * p[1].width, -p[0]),
-            reverse=True,
-        )
-
-        buf = create_buf(
-            nvim, listed=False, scratch=True, wipe=True, nofile=True, noswap=True
-        )
-        buf_set_preview(nvim, buf=buf, syntax=new_doc.syntax, preview=lines)
-        _set_win(nvim, buf=buf, pos=pos)
+    buf = create_buf(
+        nvim, listed=False, scratch=True, wipe=True, nofile=True, noswap=True
+    )
+    buf_set_preview(nvim, buf=buf, syntax=new_doc.syntax, preview=lines)
+    _set_win(nvim, buf=buf, pos=pos)
 
 
 _LOCK = Lock()
@@ -207,6 +203,7 @@ def _resolve_comp(
     event: _Event,
     item: CompletionItem,
     maybe_doc: Optional[Doc],
+    state: State,
 ) -> None:
     f1 = stack.supervisor.pool.submit(request, nvim, item)
     with _LOCK:
@@ -222,7 +219,7 @@ def _resolve_comp(
             doc = maybe_doc
 
         if doc:
-            enqueue_event(_show_preview, event, doc)
+            enqueue_event(_show_preview, event, doc, state)
 
     f2 = stack.supervisor.pool.submit(cont)
     with _LOCK:
@@ -246,14 +243,15 @@ def _cmp_changed(nvim: Nvim, stack: Stack, event: Mapping[str, Any] = {}) -> Non
         except DecodeError:
             pass
         else:
+            s = state()
             try:
                 item: CompletionItem = decode(CompletionItem, data.extern)
             except DecodeError:
                 if data.doc and data.doc.text:
-                    _show_preview(nvim, stack=stack, event=ev, doc=data.doc)
+                    _show_preview(nvim, stack=stack, event=ev, doc=data.doc, state=s)
             else:
                 _resolve_comp(
-                    nvim, stack=stack, event=ev, item=item, maybe_doc=data.doc
+                    nvim, stack=stack, event=ev, item=item, maybe_doc=data.doc, state=s
                 )
 
 

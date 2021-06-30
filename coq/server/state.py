@@ -9,7 +9,7 @@ _LOCK = Lock()
 
 
 @dataclass(frozen=True)
-class _State:
+class State:
     screen: Tuple[int, int]
     commit: UUID
     context: Optional[Context]
@@ -17,7 +17,7 @@ class _State:
     inserted: Optional[NvimPos]
 
 
-_state = _State(
+_state = State(
     screen=(0, 0),
     commit=uuid4(),
     context=None,
@@ -27,16 +27,16 @@ _state = _State(
 
 
 def state(
-    screen: Optional[Tuple[int, int]],
-    commit: Optional[UUID],
-    context: Optional[Context],
-    request: Optional[NvimPos],
-    inserted: Optional[NvimPos],
-) -> _State:
+    screen: Optional[Tuple[int, int]] = None,
+    commit: Optional[UUID] = None,
+    context: Optional[Context] = None,
+    request: Optional[NvimPos] = None,
+    inserted: Optional[NvimPos] = None,
+) -> State:
     global _state
 
     with _LOCK:
-        state = _State(
+        state = State(
             screen=screen or _state.screen,
             commit=commit or _state.commit,
             context=context or _state.context,

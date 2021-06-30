@@ -1,8 +1,8 @@
 from concurrent.futures import Executor
 from json import loads
-from threading import Lock
+
 from typing import Iterator
-from uuid import uuid4
+
 
 from pynvim import Nvim
 from std2.configparser import hydrate
@@ -24,7 +24,7 @@ from ..shared.settings import Settings
 from .databases.buffers.database import BDB
 from .databases.snippets.database import SDB
 from .reviewer import Reviewer
-from .rt_types import Stack, State
+from .rt_types import Stack
 
 
 def _settings(nvim: Nvim) -> Settings:
@@ -89,7 +89,6 @@ def stack(pool: Executor, nvim: Nvim) -> Stack:
     }
     stack = Stack(
         settings=settings,
-        state=State(),
         bdb=bdb,
         sdb=sdb,
         supervisor=supervisor,

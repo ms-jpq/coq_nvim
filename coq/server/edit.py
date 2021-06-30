@@ -341,55 +341,52 @@ def _visual(nvim: Nvim, buf: Buffer, context: Context, db: BDB) -> str:
         return context.linefeed.join(chain((head,), body, (tail,)))
 
 
-def edit(nvim: Nvim, stack: Stack, data: UserData) -> None:
-    ctx = stack.state.cur
-    if ctx and data.commit_uid == stack.state.commit:
-        cursor = ctx.position
+def edit(nvim: Nvim, stack: Stack, context: Context, data: UserData) -> Tuple[int, int]:
+    cursor = context.position
 
-        win = cur_win(nvim)
-        buf = win_get_buf(nvim, win=win)
+    win = cur_win(nvim)
+    buf = win_get_buf(nvim, win=win)
 
-        primary, marks = (
-            parse(
-                stack.settings.match.unifying_chars,
-                context=ctx,
-                snippet=data.primary_edit,
-                visual=_visual(nvim, buf=buf, context=ctx, db=stack.bdb),
-            )
-            if isinstance(data.primary_edit, SnippetEdit)
-            else (data.primary_edit, ())
+    primary, marks = (
+        parse(
+            stack.settings.match.unifying_chars,
+            context=context,
+            snippet=data.primary_edit,
+            visual=_visual(nvim, buf=buf, context=context, db=stack.bdb),
         )
-        lo, hi = _rows_to_fetch(
-            ctx,
-            primary,
-            *data.secondary_edits,
-        )
-        _, limited_lines = stack.bdb.lines(ctx.buf_id, lo=lo, hi=hi)
-        lines = tuple(chain(repeat("", times=lo), limited_lines))
-        view = _lines(lines)
+        if isinstance(data.primary_edit, SnippetEdit)
+        else (data.primary_edit, ())
+    )
+    lo, hi = _rows_to_fetch(
+        context,
+        primary,
+        *data.secondary_edits,
+    )
+    _, limited_lines = stack.bdb.lines(context.buf_id, lo=lo, hi=hi)
+    lines = tuple(chain(repeat("", times=lo), limited_lines))
+    view = _lines(lines)
 
-        instructions = _instructions(
-            ctx,
-            unifying_chars=stack.settings.match.unifying_chars,
-            lines=view,
-            primary=primary,
-            secondary=data.secondary_edits,
-        )
-        new_lines = _new_lines(view, instructions=instructions)
-        n_row, n_col = _cursor(cursor, instructions=instructions)
+    instructions = _instructions(
+        context,
+        unifying_chars=stack.settings.match.unifying_chars,
+        lines=view,
+        primary=primary,
+        secondary=data.secondary_edits,
+    )
+    new_lines = _new_lines(view, instructions=instructions)
+    n_row, n_col = _cursor(cursor, instructions=instructions)
 
-        if DEBUG:
-            msg = pformat((data, instructions, (n_row + 1, n_col + 1), new_lines))
-            log.debug("%s", msg)
+    if DEBUG:
+        msg = pformat((data, instructions, (n_row + 1, n_col + 1), new_lines))
+        log.debug("%s", msg)
 
-        buf_set_lines(nvim, buf=buf, lo=lo, hi=hi, lines=new_lines[lo:])
-        win_set_cursor(nvim, win=win, row=n_row, col=n_col)
+    buf_set_lines(nvim, buf=buf, lo=lo, hi=hi, lines=new_lines[lo:])
+    win_set_cursor(nvim, win=win, row=n_row, col=n_col)
 
-        stack.state.inserted = n_row, n_col
-        stack.bdb.inserted(data.sort_by or primary.new_text)
+    stack.bdb.inserted(data.sort_by or primary.new_text)
 
-        if marks:
-            mark(nvim, settings=stack.settings, buf=buf, marks=marks)
-    else:
-        log.warn("%s", f"Expired edit -- {data}")
+    if marks:
+        mark(nvim, settings=stack.settings, buf=buf, marks=marks)
+
+    return n_row, n_col
 
