@@ -32,9 +32,7 @@ from ..trans import trans
 from ..types import UserData
 
 
-def _should_cont(
-    inserted: Optional[NvimPos], prev: Optional[Context], cur: Context
-) -> bool:
+def _should_cont(inserted: Optional[NvimPos], prev: Context, cur: Context) -> bool:
     if prev.changedtick == cur.changedtick:
         return False
     elif cur.position == inserted:
@@ -75,9 +73,9 @@ def comp_func(nvim: Nvim, stack: Stack, manual: bool) -> None:
     )
     if ctx and (manual or should):
         _, col = ctx.position
-
         complete(nvim, col=col - 1, comp=())
-        state(request=None, context=ctx)
+        state(request=(-1, -1), context=ctx)
+
         f1 = stack.supervisor.collect(ctx, manual=manual)
         with _LOCK:
             _FUTS.append(f1)
@@ -92,7 +90,6 @@ def comp_func(nvim: Nvim, stack: Stack, manual: bool) -> None:
                 else:
                     s = state()
                     if ctx and s.context == ctx:
-                        _, col = ctx.position
                         with timeit("TRANS"):
                             vim_comps = tuple(
                                 trans(stack, context=ctx, metrics=metrics)
@@ -105,8 +102,7 @@ def comp_func(nvim: Nvim, stack: Stack, manual: bool) -> None:
         with _LOCK:
             _FUTS.append(f2)
     else:
-        # TODO -- FIX THIS
-        state(inserted=None)
+        state(inserted=(-1, -1))
 
 
 @rpc(blocking=True)

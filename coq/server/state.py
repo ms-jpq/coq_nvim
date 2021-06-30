@@ -14,16 +14,16 @@ class State:
     screen: Tuple[int, int]
     commit: UUID
     context: Context
-    request: Optional[NvimPos]
-    inserted: Optional[NvimPos]
+    request: NvimPos
+    inserted: NvimPos
 
 
 _state = State(
     screen=(0, 0),
     commit=uuid4(),
     context=EMPTY_CONTEXT,
-    request=None,
-    inserted=None,
+    request=(-1, -1),
+    inserted=(-1, -1),
 )
 
 
