@@ -1,11 +1,11 @@
 from itertools import accumulate, chain, repeat
 from pprint import pformat
-from typing import Iterator, Sequence, Tuple
+from typing import AbstractSet, Iterator, Sequence, Tuple
 
 from pynvim_pp.logging import log
 
 from ..consts import DEBUG
-from ..shared.trans import expand_tabs, trans
+from ..shared.trans import expand_tabs, trans_adjusted
 from ..shared.types import UTF8, Context, ContextualEdit, Edit, Mark, SnippetEdit
 from .parsers.lsp import parser as lsp_parser
 from .parsers.snu import parser as snu_parser
@@ -18,9 +18,11 @@ def _indent(ctx: Context, old_prefix: str, line_before: str) -> str:
     return " " * l if ctx.expandtab else (" " * l).replace(spaces, "\t")
 
 
-def _before_after(context: Context, text: str) -> Tuple[str, str]:
+def _before_after(
+    unifying_chars: AbstractSet[str], context: Context, text: str
+) -> Tuple[str, str]:
     edit = Edit(new_text=text)
-    c_edit = trans(context.line_before, context.line_after, edit=edit)
+    c_edit = trans_adjusted(unifying_chars, ctx=context, edit=edit)
     return c_edit.old_prefix, c_edit.old_suffix
 
 
@@ -61,13 +63,16 @@ def _marks(
 
 
 def parse(
-    context: Context, snippet: SnippetEdit, sort_by: str
+    unifying_chars: AbstractSet[str], context: Context, snippet: SnippetEdit
 ) -> Tuple[ContextualEdit, Sequence[Mark]]:
     parser = lsp_parser if snippet.grammar == "lsp" else snu_parser
 
     text = expand_tabs(context, text=snippet.new_text)
     parsed = parser(context, snippet=text)
-    old_prefix, old_suffix = _before_after(context, text=sort_by + parsed.text)
+
+    old_prefix, old_suffix = _before_after(
+        unifying_chars, context=context, text=parsed.text
+    )
     indent = _indent(context, old_prefix=old_prefix, line_before=context.line_before)
     new_lines = tuple(
         lhs + rhs

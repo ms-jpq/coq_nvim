@@ -10,8 +10,7 @@ from std2.itertools import deiter
 from std2.types import never
 
 from ..consts import DEBUG
-from ..shared.parse import is_word
-from ..shared.trans import trans
+from ..shared.trans import trans_adjusted
 from ..shared.types import (
     UTF8,
     UTF16,
@@ -132,35 +131,19 @@ def _contextual_edit_trans(
 
 
 def _edit_trans(
-    ctx: Context,
     unifying_chars: AbstractSet[str],
+    ctx: Context,
     lines: _Lines,
     edit: Edit,
 ) -> _EditInstruction:
-    c_edit = trans(line_before=ctx.line_before, line_after=ctx.line_after, edit=edit)
-    old_prefix = c_edit.old_prefix or (
-        ctx.words_before
-        if is_word(c_edit.new_text[:1], unifying_chars=unifying_chars)
-        else ctx.words_before + ctx.syms_before
-    )
-    old_suffix = c_edit.old_suffix or (
-        ctx.words_after
-        if is_word(c_edit.new_text[-1:], unifying_chars=unifying_chars)
-        else ctx.words_after + ctx.syms_after
-    )
-    adjusted = ContextualEdit(
-        new_text=c_edit.new_text,
-        new_prefix=c_edit.new_text,
-        old_prefix=old_prefix,
-        old_suffix=old_suffix,
-    )
+    adjusted = trans_adjusted(unifying_chars, ctx=ctx, edit=edit)
     inst = _contextual_edit_trans(ctx, lines=lines, edit=adjusted)
     return inst
 
 
 def _range_edit_trans(
-    ctx: Context,
     unifying_chars: AbstractSet[str],
+    ctx: Context,
     primary: bool,
     lines: _Lines,
     edit: RangeEdit,
@@ -168,7 +151,7 @@ def _range_edit_trans(
     new_lines = edit.new_text.split(ctx.linefeed)
 
     if primary and len(new_lines) <= 1 and edit.begin == edit.end:
-        return _edit_trans(ctx, unifying_chars=unifying_chars, lines=lines, edit=edit)
+        return _edit_trans(unifying_chars, ctx=ctx, lines=lines, edit=edit)
     else:
         (r1, ec1), (r2, ec2) = sorted((edit.begin, edit.end))
 
@@ -242,8 +225,8 @@ def _instructions(
     def cont() -> Iterator[_EditInstruction]:
         if isinstance(primary, RangeEdit):
             yield _range_edit_trans(
-                ctx,
-                unifying_chars=unifying_chars,
+                unifying_chars,
+                ctx=ctx,
                 primary=True,
                 lines=lines,
                 edit=primary,
@@ -253,17 +236,15 @@ def _instructions(
             yield _contextual_edit_trans(ctx, lines=lines, edit=primary)
 
         elif isinstance(primary, Edit):
-            yield _edit_trans(
-                ctx, unifying_chars=unifying_chars, lines=lines, edit=primary
-            )
+            yield _edit_trans(unifying_chars, ctx=ctx, lines=lines, edit=primary)
 
         else:
             never(primary)
 
         for edit in secondary:
             yield _range_edit_trans(
-                ctx,
-                unifying_chars=unifying_chars,
+                unifying_chars,
+                ctx=ctx,
                 primary=False,
                 lines=lines,
                 edit=edit,
@@ -351,9 +332,9 @@ def edit(nvim: Nvim, stack: Stack, data: UserData) -> None:
 
         primary, marks = (
             parse(
-                ctx,
+                stack.settings.match.unifying_chars,
+                context=ctx,
                 snippet=data.primary_edit,
-                sort_by=data.sort_by,
             )
             if isinstance(data.primary_edit, SnippetEdit)
             else (data.primary_edit, ())

@@ -1,6 +1,7 @@
 from itertools import accumulate
+from typing import AbstractSet
 
-from .parse import lower
+from .parse import is_word, lower
 from .types import Context, ContextualEdit, Edit
 
 
@@ -31,6 +32,29 @@ def trans(line_before: str, line_after: str, edit: Edit) -> ContextualEdit:
         old_suffix=line_after[: len(r_match)],
     )
     return c_edit
+
+
+def trans_adjusted(
+    unifying_chars: AbstractSet[str], ctx: Context, edit: Edit
+) -> ContextualEdit:
+    c_edit = trans(line_before=ctx.line_before, line_after=ctx.line_after, edit=edit)
+    old_prefix = c_edit.old_prefix or (
+        ctx.words_before
+        if is_word(c_edit.new_text[:1], unifying_chars=unifying_chars)
+        else ctx.words_before + ctx.syms_before
+    )
+    old_suffix = c_edit.old_suffix or (
+        ctx.words_after
+        if is_word(c_edit.new_text[-1:], unifying_chars=unifying_chars)
+        else ctx.words_after + ctx.syms_after
+    )
+    adjusted = ContextualEdit(
+        new_text=c_edit.new_text,
+        new_prefix=c_edit.new_text,
+        old_prefix=old_prefix,
+        old_suffix=old_suffix,
+    )
+    return adjusted
 
 
 def expand_tabs(context: Context, text: str) -> str:
