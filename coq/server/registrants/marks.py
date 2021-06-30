@@ -1,6 +1,7 @@
 from typing import Iterable, Iterator, Sequence, Tuple, TypedDict
 from uuid import uuid4
 
+from pynvim.api.common import NvimError
 from pynvim.api.nvim import Buffer, Nvim
 from pynvim_pp.api import cur_win, win_get_buf, win_set_cursor
 from pynvim_pp.operators import set_visual_selection
@@ -26,7 +27,7 @@ def _ls_marks(nvim: Nvim, ns: str, buf: Buffer) -> Sequence[Mark]:
     def cont() -> Iterator[Mark]:
         for idx, r1, c1, details in marks:
             r2, c2 = details["end_row"], details["end_col"]
-            m = Mark(idx=idx, begin=(r1, c1), end=(r2, c2))
+            m = Mark(idx=idx, begin=(r1, c1), end=(r2, c2), text="")
             yield m
 
     return sorted(cont(), key=lambda m: m.idx)
@@ -66,5 +67,9 @@ def mark(nvim: Nvim, settings: Settings, buf: Buffer, marks: Iterable[Mark]) -> 
             "end_col": c2,
             "hl_group": settings.display.mark_highlight_group,
         }
-        nvim.api.buf_set_extmark(buf, ns, r1, c1, opts)
+        try:
+            nvim.api.buf_set_extmark(buf, ns, r1, c1, opts)
+        except NvimError:
+            print(mark, flush=True)
+            raise
 
