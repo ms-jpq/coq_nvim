@@ -19,10 +19,15 @@ _IGNORED_STARTS = ("source", "delete", "regexp")
 _SNIPPET_LINE_STARTS = {*whitespace}
 
 
-def _start(path: Path, lineno: int, line: str) -> Tuple[str, str, MutableSet[Options]]:
+def _start(line: str) -> Tuple[str, str, MutableSet[Options]]:
     rest = line[len(_SNIPPET_START) :].strip()
-    lhs, _, rhs = rest.partition(" ")
-    return lhs, rhs, set()
+    name, _, label = rest.partition(" ")
+    if label.startswith('"') and label[1:].count('"') == 1:
+        quoted, _, opts = label.partition('"')
+        options = opt_parse(o for o in opts.split(" ") if o)
+        return name, quoted, options
+    else:
+        return name, label, set()
 
 
 def parse(path: Path) -> MetaSnippets:
@@ -70,9 +75,7 @@ def parse(path: Path) -> MetaSnippets:
 
         elif line.startswith(_SNIPPET_START):
             push()
-            current_name, current_label, current_options = _start(
-                path, lineno=lineno, line=line
-            )
+            current_name, current_label, current_options = _start(line=line)
             current_lines.clear()
             current_aliases.clear()
             current_aliases.append(current_name)

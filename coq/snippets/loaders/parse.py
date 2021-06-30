@@ -1,6 +1,6 @@
 from pathlib import PurePath
 from textwrap import dedent
-from typing import Iterator, NoReturn, Sequence, Set
+from typing import Iterable, Iterator, NoReturn, Set
 
 from ..types import LoadError, Options
 
@@ -19,7 +19,7 @@ def raise_err(path: PurePath, lineno: int, line: str, reason: str) -> NoReturn:
     raise LoadError(dedent(msg))
 
 
-def opt_parse(opts: Sequence[str]) -> Set[Options]:
+def opt_parse(opts: Iterable[str]) -> Set[Options]:
     def cont() -> Iterator[Options]:
         for c in opts:
             opt = _OPTIONS_MAP.get(c.strip())
