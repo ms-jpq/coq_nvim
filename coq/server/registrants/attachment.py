@@ -57,7 +57,8 @@ def _lines_event(
         lines=lines,
         unifying_chars=stack.settings.match.unifying_chars,
     )
-    if not pending:
+
+    if not pending and nvim.api.get_mode()["mode"].startswith("i"):
         comp_func(nvim, stack=stack, manual=False)
 
 

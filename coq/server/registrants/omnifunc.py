@@ -53,7 +53,7 @@ _LOCK = Lock()
 _FUTS: MutableSequence[Future] = []
 
 
-def _comp_func(nvim: Nvim, stack: Stack, manual: bool) -> None:
+def comp_func(nvim: Nvim, stack: Stack, manual: bool) -> None:
     with _LOCK:
         for f1 in _FUTS:
             f1.cancel()
@@ -103,12 +103,6 @@ def _comp_func(nvim: Nvim, stack: Stack, manual: bool) -> None:
             _FUTS.append(f2)
     else:
         state(inserted=(-1, -1))
-
-
-def comp_func(nvim: Nvim, stack: Stack, manual: bool) -> None:
-    mode: str = nvim.api.get_mode()["mode"]
-    if mode.startswith("i"):
-        _comp_func(nvim, stack=stack, manual=manual)
 
 
 @rpc(blocking=True)
