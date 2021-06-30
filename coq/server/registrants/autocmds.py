@@ -2,7 +2,7 @@ from itertools import chain
 from typing import MutableSet, Sequence
 
 from pynvim.api.nvim import Nvim
-from pynvim_pp.api import buf_filetype, buf_name, cur_buf
+from pynvim_pp.api import buf_filetype, cur_buf
 from std2.pickle import decode
 
 from ...registry import atomic, autocmd, rpc

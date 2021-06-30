@@ -57,6 +57,15 @@ def nav_mark(nvim: Nvim, stack: Stack) -> None:
         print("🐸 ", flush=True)
 
 
+_LUA = """
+(function()
+  vim.schedule(function()
+    vim.api.nvim_command("stopinsert")
+  end)
+end)(...)
+""".strip()
+
+
 def mark(nvim: Nvim, settings: Settings, buf: Buffer, marks: Iterable[Mark]) -> None:
     ns = nvim.api.create_namespace(_NS)
     nvim.api.buf_clear_namespace(buf, ns, 0, -1)
@@ -72,4 +81,5 @@ def mark(nvim: Nvim, settings: Settings, buf: Buffer, marks: Iterable[Mark]) -> 
         except NvimError:
             print(mark, flush=True)
             raise
+    nvim.exec_lua(_LUA, ())
 
