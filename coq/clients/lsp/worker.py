@@ -72,6 +72,7 @@ def _parse_item(client: LSPClient, item: CompletionItem) -> Completion:
             cast(Any, None if item.kind is None else str(item.kind)), ""
         ),
         doc=_doc(item),
+        extern=item,
     )
     return cmp
 
