@@ -1,7 +1,6 @@
 from concurrent.futures import CancelledError, Future, TimeoutError
 from dataclasses import dataclass
 from os import linesep
-from threading import Lock
 from typing import (
     Any,
     Callable,
@@ -27,6 +26,7 @@ from pynvim_pp.api import (
     win_set_option,
     win_set_var,
 )
+from pynvim_pp.logging import log
 from pynvim_pp.preview import buf_set_preview, set_preview
 from std2.ordinal import clamp
 from std2.pickle import DecodeError, decode
@@ -193,7 +193,6 @@ def _show_preview(
     _set_win(nvim, buf=buf, pos=pos)
 
 
-_LOCK = Lock()
 _FUTS: MutableSequence[Future] = []
 
 
@@ -206,32 +205,32 @@ def _resolve_comp(
     state: State,
 ) -> None:
     f1 = stack.supervisor.pool.submit(request, nvim, item)
-    with _LOCK:
-        _FUTS.append(f1)
+    _FUTS.append(f1)
 
     def cont() -> None:
-        doc = None
         try:
-            doc = f1.result(timeout=stack.settings.display.preview.lsp_timeout)
-        except CancelledError:
-            pass
-        except TimeoutError:
-            doc = maybe_doc
+            doc = None
+            try:
+                doc = f1.result(timeout=stack.settings.display.preview.lsp_timeout)
+            except CancelledError:
+                pass
+            except TimeoutError:
+                doc = maybe_doc
 
-        if doc:
-            enqueue_event(_show_preview, event, doc, state)
+            if doc:
+                enqueue_event(_show_preview, event, doc, state)
+        except Exception as e:
+            log.exception("%s", e)
 
     f2 = stack.supervisor.pool.submit(cont)
-    with _LOCK:
-        _FUTS.append(f2)
+    _FUTS.append(f2)
 
 
 @rpc(blocking=True)
 def _cmp_changed(nvim: Nvim, stack: Stack, event: Mapping[str, Any] = {}) -> None:
-    with _LOCK:
-        for fut in _FUTS:
-            fut.cancel()
-        _FUTS.clear()
+    for fut in _FUTS:
+        fut.cancel()
+    _FUTS.clear()
 
     _kill_win(nvim, stack=stack)
     with timeit("PREVIEW"):
