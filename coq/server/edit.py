@@ -9,8 +9,7 @@ from pynvim_pp.logging import log
 from std2.itertools import deiter
 from std2.types import never
 
-from coq.consts import DEBUG
-
+from ..consts import DEBUG
 from ..shared.parse import is_word
 from ..shared.trans import trans
 from ..shared.types import (
