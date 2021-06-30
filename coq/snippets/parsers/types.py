@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Callable, Generic, Iterator, Sequence, Tuple, TypeVar, Union
+from typing import Generic, Iterator, Sequence, Tuple, TypeVar, Union
 
-from ...shared.types import Context, NvimPos
+from ...shared.types import Context
 
 T = TypeVar("T")
 
@@ -25,11 +25,22 @@ EChar = Tuple[Index, str]
 
 
 @dataclass(frozen=True)
+class ParseInfo:
+    visual: str
+
+
+@dataclass(frozen=False)
+class ParserState:
+    depth: int
+
+
+@dataclass(frozen=True)
 class ParserCtx(Generic[T], Iterator):
     ctx: Context
-    dit: deiter[EChar]
     text: str
-    local: T
+    info: ParseInfo
+    dit: deiter[EChar]
+    state: ParserState
 
     def __iter__(self) -> ParserCtx:
         return self

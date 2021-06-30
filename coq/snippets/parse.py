@@ -9,7 +9,7 @@ from ..shared.trans import expand_tabs, trans_adjusted
 from ..shared.types import UTF8, Context, ContextualEdit, Edit, Mark, SnippetEdit
 from .parsers.lsp import parser as lsp_parser
 from .parsers.snu import parser as snu_parser
-from .parsers.types import Region
+from .parsers.types import ParseInfo, Region
 
 
 def _indent(ctx: Context, old_prefix: str, line_before: str) -> str:
@@ -66,12 +66,15 @@ def _marks(
 
 
 def parse(
-    unifying_chars: AbstractSet[str], context: Context, snippet: SnippetEdit
+    unifying_chars: AbstractSet[str],
+    context: Context,
+    snippet: SnippetEdit,
+    visual: str,
 ) -> Tuple[ContextualEdit, Sequence[Mark]]:
     parser = lsp_parser if snippet.grammar == "lsp" else snu_parser
 
     text = expand_tabs(context, text=snippet.new_text)
-    parsed = parser(context, snippet=text)
+    parsed = parser(context, snippet=text, info=ParseInfo(visual=visual))
 
     old_prefix, old_suffix = _before_after(
         unifying_chars, context=context, text=parsed.text

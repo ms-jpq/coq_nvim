@@ -43,6 +43,6 @@ def _parse_args() -> Namespace:
 def main() -> None:
     args = _parse_args()
     edit = SnippetEdit(grammar=args.grammar, new_text=stdin.read())
-    parsed = parse(set(), context=EMPTY_CTX, snippet=edit)
+    parsed = parse(set(), context=EMPTY_CTX, snippet=edit, visual="")
     print(parsed)
 

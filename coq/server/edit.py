@@ -335,6 +335,7 @@ def edit(nvim: Nvim, stack: Stack, data: UserData) -> None:
                 stack.settings.match.unifying_chars,
                 context=ctx,
                 snippet=data.primary_edit,
+                visual="",
             )
             if isinstance(data.primary_edit, SnippetEdit)
             else (data.primary_edit, ())

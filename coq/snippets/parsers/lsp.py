@@ -1,11 +1,19 @@
-from dataclasses import dataclass
 from os.path import basename, dirname, splitext
 from string import ascii_letters, ascii_lowercase, digits
 from typing import AbstractSet, MutableSequence, Optional, Sequence
 
 from ...shared.types import Context
 from .parser import context_from, next_char, pushback_chars, raise_err, token_parser
-from .types import Begin, DummyBegin, End, Parsed, ParserCtx, TokenStream, Unparsed
+from .types import (
+    Begin,
+    DummyBegin,
+    End,
+    Parsed,
+    ParseInfo,
+    ParserCtx,
+    TokenStream,
+    Unparsed,
+)
 
 #
 # O(n) single pass LSP Parser:
@@ -34,11 +42,6 @@ text        ::= .*
 """
 
 
-@dataclass(frozen=False)
-class _Local:
-    depth: int
-
-
 _escapable_chars = {"\\", "$", "}"}
 _regex_escape_chars = {"\\", "/"}
 _choice_escapable_chars = _escapable_chars | {",", "|"}
@@ -48,9 +51,7 @@ _var_chars = {*digits, *ascii_letters, "_"}
 _regex_flag_chars = {*ascii_lowercase}
 
 
-def _parse_escape(
-    context: ParserCtx[_Local], *, escapable_chars: AbstractSet[str]
-) -> str:
+def _parse_escape(context: ParserCtx, *, escapable_chars: AbstractSet[str]) -> str:
     pos, char = next_char(context)
     assert char == "\\"
 
@@ -68,7 +69,7 @@ def _parse_escape(
 
 
 # choice      ::= '${' int '|' text (',' text)* '|}'
-def _half_parse_choice(context: ParserCtx[_Local]) -> TokenStream:
+def _half_parse_choice(context: ParserCtx) -> TokenStream:
     pos, char = next_char(context)
     assert char == "|"
 
@@ -99,7 +100,7 @@ def _half_parse_choice(context: ParserCtx[_Local]) -> TokenStream:
 
 # tabstop | choice | placeholder
 # -- all starts with (int)
-def _parse_tcp(context: ParserCtx[_Local]) -> TokenStream:
+def _parse_tcp(context: ParserCtx) -> TokenStream:
     idx_acc: MutableSequence[str] = []
 
     for pos, char in context:
@@ -118,7 +119,7 @@ def _parse_tcp(context: ParserCtx[_Local]) -> TokenStream:
                 break
             elif char == ":":
                 # placeholder ::= '${' int ':' any '}'
-                context.local.depth += 1
+                context.state.depth += 1
                 break
             else:
                 raise_err(
@@ -130,7 +131,7 @@ def _parse_tcp(context: ParserCtx[_Local]) -> TokenStream:
                 )
 
 
-def _variable_substitution(context: ParserCtx[_Local], *, name: str) -> Optional[str]:
+def _variable_substitution(context: ParserCtx, *, name: str) -> Optional[str]:
     ctx = context.ctx
     row, _ = ctx.position
 
@@ -167,7 +168,7 @@ def _variable_substitution(context: ParserCtx[_Local], *, name: str) -> Optional
 
 
 # variable    ::= '$' var
-def _parse_variable_naked(context: ParserCtx[_Local]) -> TokenStream:
+def _parse_variable_naked(context: ParserCtx) -> TokenStream:
     name_acc: MutableSequence[str] = []
 
     for pos, char in context:
@@ -191,7 +192,7 @@ def _variable_decoration(
 
 
 # | '${' var '/' regex '/' (format | text)+ '/' options '}'
-def _parse_variable_decorated(context: ParserCtx[_Local], var: str) -> TokenStream:
+def _parse_variable_decorated(context: ParserCtx, var: str) -> TokenStream:
     pos, char = next_char(context)
     assert char == "/"
 
@@ -229,7 +230,7 @@ def _parse_variable_decorated(context: ParserCtx[_Local], var: str) -> TokenStre
 # variable    ::= '$' var | '${' var }'
 #                | '${' var ':' any '}'
 #                | '${' var '/' regex '/' (format | text)+ '/' options '}'
-def _parse_variable_nested(context: ParserCtx[_Local]) -> TokenStream:
+def _parse_variable_nested(context: ParserCtx) -> TokenStream:
     name_acc: MutableSequence[str] = []
 
     for pos, char in context:
@@ -247,11 +248,11 @@ def _parse_variable_nested(context: ParserCtx[_Local]) -> TokenStream:
             var = _variable_substitution(context, name=name)
             if var is not None:
                 yield var
-                context.local.depth += 1
+                context.state.depth += 1
                 yield from _parse(context, shallow=True)
             else:
                 yield DummyBegin()
-                context.local.depth += 1
+                context.state.depth += 1
             break
         elif char == "/":
             # '${' var '/' regex '/' (format | text)+ '/' options '}'
@@ -270,7 +271,7 @@ def _parse_variable_nested(context: ParserCtx[_Local]) -> TokenStream:
 
 
 # ${...}
-def _parse_inner_scope(context: ParserCtx[_Local]) -> TokenStream:
+def _parse_inner_scope(context: ParserCtx) -> TokenStream:
     pos, char = next_char(context)
     assert char == "{"
 
@@ -294,7 +295,7 @@ def _parse_inner_scope(context: ParserCtx[_Local]) -> TokenStream:
 
 
 # $...
-def _parse_scope(context: ParserCtx[_Local]) -> TokenStream:
+def _parse_scope(context: ParserCtx) -> TokenStream:
     pos, char = next_char(context)
     assert char == "$"
 
@@ -327,14 +328,14 @@ def _parse_scope(context: ParserCtx[_Local]) -> TokenStream:
 
 
 # any         ::= tabstop | placeholder | choice | variable | text
-def _parse(context: ParserCtx[_Local], shallow: bool) -> TokenStream:
+def _parse(context: ParserCtx, shallow: bool) -> TokenStream:
     for pos, char in context:
         if char == "\\":
             pushback_chars(context, (pos, char))
             yield _parse_escape(context, escapable_chars=_escapable_chars)
-        elif context.local.depth and char == "}":
+        elif context.state.depth and char == "}":
             yield End()
-            context.local.depth -= 1
+            context.state.depth -= 1
             if shallow:
                 break
         elif char == "$":
@@ -344,9 +345,8 @@ def _parse(context: ParserCtx[_Local], shallow: bool) -> TokenStream:
             yield char
 
 
-def parser(context: Context, snippet: str) -> Parsed:
-    local = _Local(depth=0)
-    ctx = context_from(snippet, context=context, local=local)
+def parser(context: Context, info: ParseInfo, snippet: str) -> Parsed:
+    ctx = context_from(snippet, context=context, info=info)
     tokens = _parse(ctx, shallow=False)
     parsed = token_parser(ctx, stream=tokens)
     return parsed

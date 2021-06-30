@@ -31,7 +31,7 @@ class Parser(TestCase):
         def errs() -> Iterator[Exception]:
             for edit in edits:
                 try:
-                    parse(set(), context=EMPTY_CTX, snippet=edit)
+                    parse(set(), context=EMPTY_CTX, snippet=edit, visual="")
                 except ParseError as e:
                     yield e
 

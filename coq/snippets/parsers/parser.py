@@ -15,7 +15,9 @@ from .types import (
     Index,
     Parsed,
     ParseError,
+    ParseInfo,
     ParserCtx,
+    ParserState,
     Region,
     Token,
     TokenStream,
@@ -75,9 +77,10 @@ def _gen_iter(src: str) -> Iterator[EChar]:
             col = 0
 
 
-def context_from(snippet: str, context: Context, local: T) -> ParserCtx[T]:
+def context_from(snippet: str, context: Context, info: ParseInfo) -> ParserCtx:
     dit = deiter(_gen_iter(snippet))
-    ctx = ParserCtx(ctx=context, dit=dit, text=snippet, local=local)
+    state = ParserState(depth=0)
+    ctx = ParserCtx(ctx=context, text=snippet, info=info, dit=dit, state=state)
     return ctx
 
 
