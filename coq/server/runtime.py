@@ -1,12 +1,10 @@
 from concurrent.futures import Executor
 from json import loads
-
 from typing import Iterator
-
 
 from pynvim import Nvim
 from std2.configparser import hydrate
-from std2.pickle import decode
+from std2.pickle import new_decoder
 from std2.tree import merge
 from yaml import safe_load
 
@@ -26,11 +24,12 @@ from .databases.snippets.database import SDB
 from .reviewer import Reviewer
 from .rt_types import Stack
 
+_DECODER = new_decoder(Settings)
+
 
 def _settings(nvim: Nvim) -> Settings:
     user_config = nvim.vars.get(SETTINGS_VAR, {})
-    config: Settings = decode(
-        Settings,
+    config: Settings = _DECODER(
         merge(
             safe_load(CONFIG_YML.read_text("UTF-8")),
             {

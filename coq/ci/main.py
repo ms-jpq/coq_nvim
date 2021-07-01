@@ -2,7 +2,6 @@ from json import dumps
 from pathlib import Path
 from typing import Any
 
-from std2.pickle import encode
 from std2.tree import recur_sort
 
 from ..consts import LSP_ARTIFACTS, SNIPPET_ARTIFACTS
@@ -11,9 +10,7 @@ from .lsp import lsp
 
 
 def _dump(path: Path, o: Any) -> None:
-    json = dumps(
-        recur_sort(encode(o)), check_circular=False, ensure_ascii=False, indent=2
-    )
+    json = dumps(recur_sort(o), check_circular=False, ensure_ascii=False, indent=2)
     path.write_text(json)
 
 

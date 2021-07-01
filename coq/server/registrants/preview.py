@@ -29,8 +29,7 @@ from pynvim_pp.api import (
 from pynvim_pp.logging import log
 from pynvim_pp.preview import buf_set_preview, set_preview
 from std2.ordinal import clamp
-from std2.pickle import DecodeError, decode
-from std2.pickle.coders import BUILTIN_DECODERS
+from std2.pickle import DecodeError, new_decoder
 
 from ...lsp.requests.preview import request
 from ...lsp.types import CompletionItem
@@ -224,6 +223,11 @@ def _resolve_comp(
     _FUTS.append(f2)
 
 
+_EV_DECODER = new_decoder(_Event)
+_UD_DECODER = new_decoder(UserData)
+_ITEM_DECODER = new_decoder(CompletionItem)
+
+
 @rpc(blocking=True)
 def _cmp_changed(nvim: Nvim, stack: Stack, event: Mapping[str, Any] = {}) -> None:
     for fut in _FUTS:
@@ -233,16 +237,14 @@ def _cmp_changed(nvim: Nvim, stack: Stack, event: Mapping[str, Any] = {}) -> Non
     _kill_win(nvim, stack=stack)
     with timeit("PREVIEW"):
         try:
-            ev: _Event = decode(_Event, event)
-            data: UserData = decode(
-                UserData, ev.completed_item.user_data, decoders=BUILTIN_DECODERS
-            )
+            ev: _Event = _EV_DECODER(event)
+            data: UserData = _UD_DECODER(ev.completed_item.user_data)
         except DecodeError:
             pass
         else:
             s = state()
             try:
-                item: CompletionItem = decode(CompletionItem, data.extern)
+                item: CompletionItem = _ITEM_DECODER(data.extern)
             except DecodeError:
                 if data.doc and data.doc.text:
                     _show_preview(nvim, stack=stack, event=ev, doc=data.doc, state=s)

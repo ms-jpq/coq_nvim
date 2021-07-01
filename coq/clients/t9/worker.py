@@ -1,4 +1,3 @@
-from dataclasses import asdict
 from itertools import chain
 from json import dumps, loads
 from os import linesep
@@ -6,7 +5,7 @@ from subprocess import PIPE, Popen
 from threading import Event
 from typing import IO, Any, Iterator, Optional, Sequence, cast
 
-from std2.pickle import decode
+from std2.pickle import new_decoder, new_encoder
 
 from ...shared.runtime import Supervisor
 from ...shared.runtime import Worker as BaseWorker
@@ -17,6 +16,9 @@ from .types import ReqL1, ReqL2, Request, Response
 
 _VERSION = "3.2.28"
 _TIMEOUT = 60
+
+_DECODER = new_decoder(Response, strict=False)
+_ENCODER = new_encoder(Request)
 
 
 def _encode(options: Options, context: Context) -> Any:
@@ -36,11 +38,11 @@ def _encode(options: Options, context: Context) -> Any:
     )
     l1 = ReqL1(Autocomplete=l2)
     req = Request(request=l1, version=_VERSION)
-    return asdict(req)
+    return _ENCODER(req)
 
 
 def _decode(client: TabnineClient, reply: Any) -> Iterator[Completion]:
-    resp: Response = decode(Response, reply, strict=False)
+    resp: Response = _DECODER(reply)
 
     for result in resp.results:
         edit = ContextualEdit(

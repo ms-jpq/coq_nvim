@@ -4,7 +4,7 @@ from os import linesep
 from pathlib import Path
 from typing import AbstractSet, Iterator, Mapping, Optional, Sequence, Union
 
-from std2.pickle import decode
+from std2.pickle import new_decoder
 
 from ..types import MetaSnippets, ParsedSnippet
 
@@ -17,6 +17,7 @@ class _Unit:
 
 
 _FMT = Mapping[str, _Unit]
+_DECODER = new_decoder(_FMT, strict=False)
 
 
 def _prefix(prefix: Union[str, Sequence[str]]) -> AbstractSet[str]:
@@ -40,7 +41,7 @@ def _body(body: Union[str, Sequence[str]]) -> str:
 def parse(path: Path) -> MetaSnippets:
     text = path.read_text("UTF-8") if path.exists() else ""
     json = loads(text)
-    fmt: _FMT = decode(_FMT, json, strict=False)
+    fmt: _FMT = _DECODER(json)
 
     def cont() -> Iterator[ParsedSnippet]:
         for label, values in fmt.items():

@@ -4,8 +4,7 @@ from subprocess import check_call
 from typing import MutableMapping, MutableSequence
 from urllib.parse import urlparse
 
-from std2.pickle import decode
-from std2.pickle.coders import BUILTIN_DECODERS
+from std2.pickle import new_decoder, new_encoder
 from yaml import safe_load
 
 from ..consts import COMPILATION_YML, TMP_DIR
@@ -48,7 +47,7 @@ def _trans_name(relative: Path) -> Path:
 def load() -> SnippetSpecs:
     TMP_DIR.mkdir(parents=True, exist_ok=True)
     yaml = safe_load(COMPILATION_YML.read_bytes())
-    specs: Compilation = decode(Compilation, yaml, decoders=BUILTIN_DECODERS)
+    specs: Compilation = new_decoder(Compilation)(yaml)
     with ThreadPoolExecutor() as pool:
         tuple(pool.map(_git_pull, specs.git))
 

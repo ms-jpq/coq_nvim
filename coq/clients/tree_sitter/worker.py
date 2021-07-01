@@ -6,7 +6,7 @@ from typing import Any, Iterator, Optional, Sequence, Tuple
 from uuid import UUID, uuid4
 
 from pynvim_pp.lib import threadsafe_call
-from std2.pickle import decode
+from std2.pickle import new_decoder
 
 from ...shared.parse import lower
 from ...shared.runtime import Supervisor
@@ -16,6 +16,8 @@ from ...shared.types import Completion, Context, Edit, NvimPos
 from .types import Msg
 
 _LUA = (Path(__file__).resolve().parent / "request.lua").read_text("UTF-8")
+
+_DECODER = new_decoder(Msg)
 
 
 class Worker(BaseWorker[BaseClient, None]):
@@ -55,7 +57,7 @@ class Worker(BaseWorker[BaseClient, None]):
     def work(self, context: Context) -> Iterator[Sequence[Completion]]:
         match = lower(context.words or context.syms)
         reply = self._req(context.position)
-        resp: Msg = decode(Msg, reply or ())
+        resp: Msg = _DECODER(reply or ())
 
         def cont() -> Iterator[Completion]:
             for payload in resp:

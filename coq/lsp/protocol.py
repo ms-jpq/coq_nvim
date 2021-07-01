@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from json import loads
 from typing import Mapping, Optional
 
-from std2.pickle import decode
+from std2.pickle import new_decoder
 
 from ..consts import LSP_ARTIFACTS
 
@@ -17,7 +17,7 @@ def _load() -> LSProtocol:
     raw = LSP_ARTIFACTS.read_text("UTF-8")
     json: Mapping[str, Mapping[str, int]] = loads(raw)
     trans = {key: {v: k for k, v in val.items()} for key, val in json.items()}
-    p: LSProtocol = decode(LSProtocol, trans, strict=False)
+    p: LSProtocol = new_decoder(LSProtocol, strict=False)(trans)
     return p
 
 

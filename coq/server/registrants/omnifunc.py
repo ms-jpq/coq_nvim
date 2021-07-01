@@ -16,8 +16,7 @@ from uuid import UUID
 from pynvim import Nvim
 from pynvim.api.nvim import Nvim
 from pynvim_pp.logging import log
-from std2.pickle import DecodeError, decode
-from std2.pickle.coders import BUILTIN_DECODERS
+from std2.pickle import DecodeError, new_decoder
 
 from ...registry import autocmd, enqueue_event, pool, rpc
 from ...shared.nvim.completions import VimCompletion, complete
@@ -118,12 +117,15 @@ def omnifunc(
         return ()
 
 
+_DECODER = new_decoder(UserData)
+
+
 @rpc(blocking=True)
 def _comp_done(nvim: Nvim, stack: Stack, event: Mapping[str, Any]) -> None:
     data = event.get("user_data")
     if data:
         try:
-            user_data: UserData = decode(UserData, data, decoders=BUILTIN_DECODERS)
+            user_data: UserData = _DECODER(data)
         except DecodeError:
             pass
         else:

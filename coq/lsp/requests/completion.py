@@ -3,7 +3,7 @@ from typing import Iterator, Sequence
 
 from pynvim.api.nvim import Nvim
 from pynvim_pp.logging import log
-from std2.pickle import DecodeError, decode
+from std2.pickle import DecodeError, new_decoder
 
 from ...registry import atomic
 from ...shared.timeit import timeit
@@ -15,6 +15,8 @@ from .request import blocking_request
 _LUA = (Path(__file__).resolve().parent / "completion.lua").read_text("UTF-8")
 
 atomic.exec_lua(_LUA, ())
+
+_DECODER = new_decoder(CompletionResponse, strict=False)
 
 
 def request(
@@ -30,7 +32,7 @@ def request(
     reply = blocking_request(nvim, "COQlsp_comp", (row, col))
     try:
         with timeit("DECODE"):
-            resp: CompletionResponse = decode(CompletionResponse, reply, strict=False)
+            resp: CompletionResponse = _DECODER(reply)
     except DecodeError as e:
         log.warn("%s", e)
     else:
