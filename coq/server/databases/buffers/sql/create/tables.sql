@@ -30,9 +30,9 @@ CREATE TABLE IF NOT EXISTS words (
   word    TEXT    NOT NULL,
   lword   TEXT    NOT NULL AS (X_LOWER(word)) STORED
 );
-CREATE INDEX IF NOT EXISTS words_line_id   ON words (line_id);
-CREATE INDEX IF NOT EXISTS words_word      ON words (word);
-CREATE INDEX IF NOT EXISTS words_lword     ON words (lword);
+CREATE INDEX IF NOT EXISTS words_line_id ON words (line_id);
+CREATE INDEX IF NOT EXISTS words_word    ON words (word);
+CREATE INDEX IF NOT EXISTS words_lword   ON words (lword);
 
 
 -- Stores insertion history

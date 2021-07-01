@@ -25,7 +25,7 @@ class SqlMetrics(TypedDict):
 def _ensure_buffer(cursor: Cursor, buf_id: int, filetype: str) -> None:
     cursor.execute(
         sql("insert", "buffer"),
-        {"buffer_id": buf_id, "filetype": filetype},
+        {"rowid": buf_id, "filetype": filetype},
     )
 
 
