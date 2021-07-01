@@ -116,8 +116,8 @@ class BDB:
                     cursor.execute(sql("select", "line_count"), params)
                     count = cursor.fetchone()["line_count"]
                     cursor.execute(sql("select", "lines"), params)
-                    lines = count, tuple(row["line"] for row in cursor.fetchall())
-            return lines
+                    lines = tuple(row["line"] for row in cursor.fetchall())
+            return count, lines
 
         self._interrupt()
         return self._ex.submit(cont)
