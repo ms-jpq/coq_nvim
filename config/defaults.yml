@@ -33,12 +33,12 @@ match:
 
 weights:
   prefix_matches: 2.0
-  consecutive_matches: 1.5
-  insertion_order: 1.0
+  consecutive_matches: 2.0
+  insertion_order: 2.0
   match_density: 1.0
   neighbours: 1.0
   num_matches: 1.0
-  count_by_filetype: 0.5
+  count_by_filetype: 1.0
 
 keymap:
   recommended: True
