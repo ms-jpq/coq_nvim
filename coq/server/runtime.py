@@ -29,18 +29,18 @@ _DECODER = new_decoder(Settings)
 
 def _settings(nvim: Nvim) -> Settings:
     user_config = nvim.vars.get(SETTINGS_VAR, {})
-    config: Settings = _DECODER(
-        merge(
-            safe_load(CONFIG_YML.read_text("UTF-8")),
-            {
-                "clients": {
-                    "snippets": loads(SNIPPET_ARTIFACTS.read_text("UTF-8")),
-                }
-            },
-            hydrate(user_config),
-            replace=True,
-        ),
+    merged = merge(
+        safe_load(CONFIG_YML.read_text("UTF-8")),
+        {
+            "clients": {
+                "snippets": loads(SNIPPET_ARTIFACTS.read_text("UTF-8")),
+            }
+        },
+        hydrate(user_config),
+        replace=True,
     )
+
+    config: Settings = _DECODER(merged)
     return config
 
 
