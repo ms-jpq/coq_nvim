@@ -1,8 +1,10 @@
 SELECT DISTINCT
   word
 FROM words
+JOIN lines
+ON lines.rowid = words.line_id
 JOIN buffers
-ON buffers.buffer_id = words.buffer_id
+ON buffers.rowid = lines.buffer_id
 WHERE
   buffers.filetype = X_NORMALIZE(:filetype)
   AND

@@ -1,5 +1,5 @@
 from contextlib import closing
-from itertools import repeat
+from itertools import count, repeat
 from sqlite3 import Connection, OperationalError
 from sqlite3.dbapi2 import Cursor
 from threading import Lock
@@ -42,6 +42,7 @@ class BDB:
         self._lock = Lock()
         self._ex = SingleThreadExecutor(pool)
         self._conn: Connection = self._ex.submit(_init)
+        self._uid_gen = count()
 
     def _interrupt(self) -> None:
         with self._lock:
@@ -64,24 +65,32 @@ class BDB:
         lines: Sequence[str],
         unifying_chars: AbstractSet[str],
     ) -> None:
-        def m1() -> Iterator[Mapping]:
-            for line_num, line in enumerate(lines, start=lo):
-                for word in coalesce(line, unifying_chars=unifying_chars):
-                    yield {
-                        "word": word,
-                        "buffer_id": buf_id,
-                        "line_num": line_num,
-                    }
+        def m0() -> Iterator[Tuple[int, str, int]]:
+            for (line_num, line), line_id in zip(
+                enumerate(lines, start=lo), self._uid_gen
+            ):
+                yield line_num, line, line_id
 
-        def m2() -> Iterator[Mapping]:
-            for line_num, line in enumerate(lines, start=lo):
+        line_info = tuple(m0())
+
+        def m1() -> Iterator[Mapping]:
+            for line_num, line, line_id in line_info:
                 yield {
+                    "rowid": line_id,
                     "line": line,
                     "buffer_id": buf_id,
                     "line_num": line_num,
                 }
 
-        words = tuple(m1())
+        def m2() -> Iterator[Mapping]:
+            for line_num, line, line_id in line_info:
+                for word in coalesce(line, unifying_chars=unifying_chars):
+                    yield {
+                        "line_id": line_id,
+                        "word": word,
+                        "line_num": line_num,
+                    }
+
         shift = len(lines) - (hi - lo)
 
         def cont() -> None:
@@ -89,14 +98,13 @@ class BDB:
                 with with_transaction(cursor):
                     _ensure_buffer(cursor, buf_id=buf_id, filetype=filetype)
                     del_params = {"buffer_id": buf_id, "lo": lo, "hi": hi}
-                    cursor.execute(sql("delete", "words"), del_params)
                     cursor.execute(sql("delete", "lines"), del_params)
                     cursor.execute(
                         sql("update", "lines"),
                         {"buffer_id": buf_id, "lo": lo, "shift": shift},
                     )
-                    cursor.executemany(sql("insert", "word"), words)
-                    cursor.executemany(sql("insert", "line"), m2())
+                    cursor.executemany(sql("insert", "line"), m1())
+                    cursor.executemany(sql("insert", "word"), m2())
 
         self._ex.submit(cont)
 

@@ -1,4 +1,4 @@
-INSERT INTO buffers ( buffer_id,              filetype)
-VALUES              (:buffer_id, X_NORMALIZE(:filetype))
-ON CONFLICT (buffer_id)
+INSERT INTO buffers ( rowid,              filetype)
+VALUES              (:rowid, X_NORMALIZE(:filetype))
+ON CONFLICT (rowid)
 DO UPDATE SET filetype = X_NORMALIZE(:filetype)
