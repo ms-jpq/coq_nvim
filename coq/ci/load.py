@@ -75,6 +75,7 @@ def load_parsable() -> Any:
                     set(),
                     context=EMPTY_CONTEXT,
                     snippet=edit,
+                    sort_by="",
                     visual="",
                 )
             except ParseError:
