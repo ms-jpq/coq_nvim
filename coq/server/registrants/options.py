@@ -50,8 +50,8 @@ def set_options(nvim: Nvim, mapping: KeyMapping) -> None:
             << "pumvisible() ? '<c-e><c-x><c-u>' : '<c-x><c-u>'"
         )
 
+
     if mapping.recommended:
-        settings["completeopt"] += ("noinsert", "noselect", "menuone")
         settings["shortmess"] += "c"
         settings["noshowmode"] = True
 
@@ -64,5 +64,6 @@ def set_options(nvim: Nvim, mapping: KeyMapping) -> None:
         keymap.i("<tab>", expr=True) << "pumvisible() ? '<c-n>' : '<tab>'"
         keymap.i("<s-tab>", expr=True) << "pumvisible() ? '<c-p>' : '<bs>'"
 
-    # (settings.drain() + keymap.drain(buf=None)).commit(nvim)
+    settings["completeopt"] += ("noinsert", "noselect", "menuone")
+    (settings.drain() + keymap.drain(buf=None)).commit(nvim)
 
