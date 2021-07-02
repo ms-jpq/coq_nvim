@@ -1,7 +1,7 @@
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from subprocess import check_call
-from typing import MutableMapping, MutableSequence
+from typing import Any, MutableMapping, MutableSequence
 from urllib.parse import urlparse
 
 from std2.pickle import new_decoder, new_encoder
@@ -59,7 +59,7 @@ def load() -> SnippetSpecs:
     return parsed
 
 
-def load_parsable() -> SnippetSpecs:
+def load_parsable() -> Any:
     specs = load()
     acc: MutableMapping[str, MutableSequence[ParsedSnippet]] = {}
 
@@ -86,5 +86,6 @@ def load_parsable() -> SnippetSpecs:
         extends=specs.extends,
         snippets=acc,
     )
-    return good_specs
+    encoded = new_encoder(SnippetSpecs)(good_specs)
+    return encoded
 

@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from json import loads
 from os import linesep
 from pathlib import Path
-from typing import AbstractSet, Iterator, Mapping, Optional, Sequence, Union
+from typing import AbstractSet, Iterator, Mapping, Sequence, Union
 
 from std2.pickle import new_decoder
 

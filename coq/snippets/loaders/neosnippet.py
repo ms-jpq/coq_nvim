@@ -49,7 +49,7 @@ def parse(path: Path) -> MetaSnippets:
                 label=current_label,
                 doc="",
                 matches={*current_aliases},
-                options=current_options,
+                options=current_options - {""},
             )
             snippets.append(snippet)
 

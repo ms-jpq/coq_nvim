@@ -88,7 +88,7 @@ def parse(path: Path) -> MetaSnippets:
                     label=current_label,
                     doc="",
                     matches={current_name},
-                    options=current_opts,
+                    options=current_opts - {""},
                 )
                 snippets.append(snippet)
                 current_lines.clear()
