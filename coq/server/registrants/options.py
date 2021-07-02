@@ -64,5 +64,5 @@ def set_options(nvim: Nvim, mapping: KeyMapping) -> None:
         keymap.i("<tab>", expr=True) << "pumvisible() ? '<c-n>' : '<tab>'"
         keymap.i("<s-tab>", expr=True) << "pumvisible() ? '<c-p>' : '<bs>'"
 
-    (settings.drain() + keymap.drain(buf=None)).commit(nvim)
+    # (settings.drain() + keymap.drain(buf=None)).commit(nvim)
 

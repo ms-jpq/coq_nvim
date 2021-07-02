@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from enum import Enum
-from typing import  Iterable, Optional, Sequence, Union
+from typing import Iterable, Optional, Sequence, Union
 from uuid import UUID
 
 from pynvim import Nvim
@@ -57,6 +57,6 @@ _ENCODER = new_encoder(Sequence[VimCompletion])
 
 
 def complete(nvim: Nvim, col: int, comp: Iterable[VimCompletion]) -> None:
-    serialized = _ENCODER(comp)
+    serialized = {k: v for k, v in _ENCODER(comp).items() if v is not None}
     nvim.api.exec_lua(_LUA, (col + 1, serialized))
 

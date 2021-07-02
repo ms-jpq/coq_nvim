@@ -43,12 +43,12 @@ class CoqClient(Client):
             return handler(nvim, self._stack, *a)
 
     def on_msg(self, nvim: Nvim, msg: RpcMsg) -> Any:
-        name, *_ = msg
+        name, args = msg
         if not self._stack:
             event_queue.put(msg)
             return None
         else:
-            with timeit(name):
+            with timeit(name, args):
                 return self._handle(nvim, msg)
 
     def wait(self, nvim: Nvim) -> int:
