@@ -38,6 +38,7 @@ class Metric:
     comp: Completion
     weight: Weights
     label_width: int
+    kind_width: int
 
 
 class PReviewer(Protocol):

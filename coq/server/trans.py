@@ -1,4 +1,5 @@
 from dataclasses import asdict
+from itertools import chain
 from locale import strxfrm
 from typing import Any, Callable, Iterable, Iterator, MutableSet, Sequence
 
@@ -58,18 +59,23 @@ def _cmp_to_vcmp(
     pum: PumDisplay,
     context: Context,
     ellipsis_width: int,
-    truncate: int,
+    truncate_label: int,
+    truncate_kind: int,
     metric: Metric,
 ) -> VimCompletion:
     (kl, kr), (sl, sr) = pum.kind_context, pum.source_context
 
-    if metric.label_width > truncate:
-        abbr = metric.comp.label[2 : truncate - ellipsis_width - 2] + pum.ellipsis
+    if metric.label_width > truncate_label:
+        abbr = metric.comp.label[2 : truncate_label - ellipsis_width - 2] + pum.ellipsis
     else:
         abbr = metric.comp.label
+    if metric.kind_width > truncate_kind:
+        src = metric.comp.source[2 : truncate_kind - ellipsis_width - 2] + pum.ellipsis
+    else:
+        src = metric.comp.kind
 
     kind = f"{kl}{metric.comp.kind}{kr}" if metric.comp.kind else None
-    menu = f"{sl}{metric.comp.source}{sr}"
+    menu = f"{sl}{src}{sr}"
     user_data = UserData(
         change_uid=context.change_id,
         sort_by=metric.comp.sort_by,
@@ -100,10 +106,20 @@ def trans(
     display = stack.settings.display
     _, col = context.position
 
+    decoration_width = sum(
+        display_width(s, tabsize=context.tabstop, linefeed=context.linefeed)
+        for s in chain(display.pum.kind_context, display.pum.source_context)
+    )
     ellipsis_width = display_width(
         display.pum.ellipsis, tabsize=context.tabstop, linefeed=context.linefeed
     )
-    truncate = clamp(1, scr_width - col - display.pum.x_margin, display.pum.x_max_len)
+    truncate = clamp(
+        1,
+        scr_width - col - display.pum.x_margin - decoration_width,
+        display.pum.x_max_len - decoration_width,
+    )
+    truncate_label = round(truncate * 0.7)
+    truncate_kind = truncate - truncate_label
 
     w_adjust = _cum(stack.settings.weights, metrics=metrics)
     sortby = _sort_by(w_adjust)
@@ -117,7 +133,8 @@ def trans(
                 display.pum,
                 context=context,
                 ellipsis_width=ellipsis_width,
-                truncate=truncate,
+                truncate_label=truncate_label,
+                truncate_kind=truncate_kind,
                 metric=metric,
             )
 
