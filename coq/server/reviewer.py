@@ -87,15 +87,13 @@ def _join(
         prefix_matches=mm.prefix_matches,
     )
 
+    label_width = display_width(
+        cmp.label, tabsize=context.tabstop, linefeed=context.linefeed
+    )
     metric = Metric(
         comp=cmp,
         weight=weight,
-        label_width=display_width(
-            cmp.label, tabsize=context.tabstop, linefeed=context.linefeed
-        ),
-        kind_width=display_width(
-            cmp.kind, tabsize=context.tabstop, linefeed=context.linefeed
-        ),
+        label_width=label_width,
     )
     return metric
 

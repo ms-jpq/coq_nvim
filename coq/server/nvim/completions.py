@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any, Iterable, Optional, Sequence
+from typing import  Iterable, Optional, Sequence, Union
 from uuid import UUID
 
 from pynvim import Nvim
@@ -25,7 +25,7 @@ class UserData:
     primary_edit: PrimaryEdit
     secondary_edits: Sequence[RangeEdit]
     doc: Optional[Doc]
-    extern: Optional[CompletionItem]
+    extern: Union[CompletionItem, None]
 
 
 @dataclass(frozen=True)
@@ -39,7 +39,7 @@ class VimCompletion:
     equal: Optional[int] = None
     dup: Optional[int] = None
     empty: Optional[int] = None
-    user_data: Optional[UserData] = None
+    user_data: Union[UserData, None] = None
 
 
 _LUA = """
