@@ -125,8 +125,8 @@ def _comp_done(nvim: Nvim, stack: Stack, event: Mapping[str, Any]) -> None:
     if data:
         try:
             user_data: UserData = _DECODER(data)
-        except DecodeError:
-            pass
+        except DecodeError as e:
+            log.warn("%s", e)
         else:
             s = state()
             if user_data.commit_uid == s.commit:
