@@ -82,11 +82,6 @@ class SnippetClient(BaseClient):
 
 
 @dataclass(frozen=True)
-class TabnineClient(BaseClient):
-    bin: Optional[PurePath]
-
-
-@dataclass(frozen=True)
 class Clients:
     buffers: WordbankClient
     lsp: BaseClient
@@ -95,7 +90,7 @@ class Clients:
     tags: TagsClient
     tmux: WordbankClient
     tree_sitter: BaseClient
-    tabnine: TabnineClient
+    tabnine: BaseClient
 
 
 @dataclass(frozen=True)
