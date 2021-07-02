@@ -1,7 +1,6 @@
 from dataclasses import asdict
-from itertools import chain
 from locale import strxfrm
-from typing import Any, Callable, Iterable, Iterator, MutableSet, Sequence
+from typing import Any, Callable, Iterable, Iterator, MutableSet, Sequence, Tuple
 
 from std2.ordinal import clamp
 
@@ -14,7 +13,7 @@ from .rt_types import Stack
 from .state import state
 
 
-def _cum(adjustment: Weights, metrics: Iterable[Metric]) -> Weights:
+def _cum(adjustment: Weights, metrics: Iterable[Metric]) -> Tuple[int, Weights]:
     zero = Weights(
         consecutive_matches=0,
         insertion_order=0,
@@ -23,7 +22,9 @@ def _cum(adjustment: Weights, metrics: Iterable[Metric]) -> Weights:
         prefix_matches=0,
     )
     acc = asdict(zero)
+    max_width = 0
     for metric in metrics:
+        max_width = max(max_width, metric.label_width + metric.kind_width)
         for key, val in asdict(metric.weight).items():
             acc[key] += val
     for key, val in asdict(adjustment).items():
@@ -31,7 +32,7 @@ def _cum(adjustment: Weights, metrics: Iterable[Metric]) -> Weights:
             acc[key] /= val
         else:
             acc[key] = 0
-    return Weights(**acc)
+    return max_width, Weights(**acc)
 
 
 def _sort_by(adjustment: Weights) -> Callable[[Metric], Any]:
@@ -58,24 +59,31 @@ def _sort_by(adjustment: Weights) -> Callable[[Metric], Any]:
 def _cmp_to_vcmp(
     pum: PumDisplay,
     context: Context,
+    kind_dead_width: int,
     ellipsis_width: int,
-    truncate_label: int,
-    truncate_kind: int,
+    truncate: int,
+    max_width: int,
     metric: Metric,
 ) -> VimCompletion:
     (kl, kr), (sl, sr) = pum.kind_context, pum.source_context
+    kind = f"{kl}{metric.comp.kind}{kr}" if metric.comp.kind else ""
 
-    if metric.label_width > truncate_label:
-        abbr = metric.comp.label[2 : truncate_label - ellipsis_width - 2] + pum.ellipsis
-    else:
-        abbr = metric.comp.label
-    if metric.kind_width > truncate_kind:
-        src = metric.comp.source[2 : truncate_kind - ellipsis_width - 2] + pum.ellipsis
-    else:
-        src = metric.comp.kind
+    label_width = metric.label_width
+    kind_width = metric.kind_width + kind_dead_width
+    tr = truncate - kind_width
 
-    kind = f"{kl}{metric.comp.kind}{kr}" if metric.comp.kind else None
-    menu = f"{sl}{src}{sr}"
+    if (kind_width + ellipsis_width + 2) > truncate:
+        abbr = metric.comp.label[: truncate - ellipsis_width] + pum.ellipsis
+    elif label_width > tr:
+        label_lhs = metric.comp.label[: tr - ellipsis_width] + pum.ellipsis
+        abbr = label_lhs + kind
+    else:
+        truncated_to = min(max_width + kind_dead_width, truncate) - kind_width
+        label_lhs = metric.comp.label.ljust(truncated_to)
+        abbr = label_lhs + kind
+
+    menu = f"{sl}{metric.comp.source}{sr}"
+
     user_data = UserData(
         change_uid=context.change_id,
         sort_by=metric.comp.sort_by,
@@ -90,7 +98,6 @@ def _cmp_to_vcmp(
         dup=1,
         equal=1,
         abbr=abbr,
-        kind=kind,
         menu=menu,
         user_data=user_data,
     )
@@ -106,22 +113,16 @@ def trans(
     display = stack.settings.display
     _, col = context.position
 
-    decoration_width = sum(
+    kind_dead_width = sum(
         display_width(s, tabsize=context.tabstop, linefeed=context.linefeed)
-        for s in chain(display.pum.kind_context, display.pum.source_context)
+        for s in display.pum.kind_context
     )
     ellipsis_width = display_width(
         display.pum.ellipsis, tabsize=context.tabstop, linefeed=context.linefeed
     )
-    truncate = clamp(
-        1,
-        scr_width - col - display.pum.x_margin - decoration_width,
-        display.pum.x_max_len - decoration_width,
-    )
-    truncate_label = round(truncate * 0.7)
-    truncate_kind = truncate - truncate_label
+    truncate = clamp(1, scr_width - col - display.pum.x_margin, display.pum.x_max_len)
 
-    w_adjust = _cum(stack.settings.weights, metrics=metrics)
+    max_width, w_adjust = _cum(stack.settings.weights, metrics=metrics)
     sortby = _sort_by(w_adjust)
     ranked = sorted(metrics, key=sortby)
 
@@ -133,8 +134,9 @@ def trans(
                 display.pum,
                 context=context,
                 ellipsis_width=ellipsis_width,
-                truncate_label=truncate_label,
-                truncate_kind=truncate_kind,
+                kind_dead_width=kind_dead_width,
+                truncate=truncate,
+                max_width=max_width,
                 metric=metric,
             )
 
