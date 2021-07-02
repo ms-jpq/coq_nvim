@@ -1,9 +1,17 @@
+from dataclasses import dataclass
 from typing import Iterator, Sequence
 
 from ...lsp.requests.completion import request
 from ...shared.runtime import Worker as BaseWorker
 from ...shared.settings import BaseClient
-from ...shared.types import Completion, Context
+from ...shared.types import Completion, Context, NvimPos
+
+
+@dataclass(frozen=True)
+class _CacheCtx:
+    buf_id: int
+    pos: NvimPos
+    line: str
 
 
 class Worker(BaseWorker[BaseClient, None]):

@@ -20,6 +20,7 @@ from ..consts import CONFIG_YML, SETTINGS_VAR, SNIPPET_ARTIFACTS
 from ..shared.runtime import Supervisor, Worker
 from ..shared.settings import Settings
 from .databases.buffers.database import BDB
+from .databases.insertions.database import IDB
 from .databases.snippets.database import SDB
 from .reviewer import Reviewer
 from .rt_types import Stack
@@ -76,8 +77,8 @@ def _from_each_according_to_their_ability(
 
 def stack(pool: Executor, nvim: Nvim) -> Stack:
     settings = _settings(nvim)
-    bdb, sdb = BDB(), SDB()
-    reviewer = Reviewer(options=settings.match, db=bdb)
+    bdb, sdb, idb = BDB(), SDB(), IDB()
+    reviewer = Reviewer(options=settings.match, db=idb)
     supervisor = Supervisor(
         pool=pool, nvim=nvim, options=settings.match, reviewer=reviewer
     )
@@ -90,6 +91,7 @@ def stack(pool: Executor, nvim: Nvim) -> Stack:
         settings=settings,
         bdb=bdb,
         sdb=sdb,
+        idb=idb,
         supervisor=supervisor,
         workers=workers,
     )
