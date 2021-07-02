@@ -96,7 +96,7 @@ def parse(
         new_text=parsed.text,
         old_prefix=old_prefix,
         old_suffix=old_suffix,
-        new_prefix=parsed.text[: parsed.cursor],
+        new_prefix=parsed.text.encode(UTF8)[: parsed.cursor].decode(),
     )
     marks = tuple(_marks(context, edit=edit, regions=parsed.regions))
 
