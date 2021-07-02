@@ -8,10 +8,9 @@ from ..shared.parse import display_width
 from ..shared.runtime import Metric
 from ..shared.settings import PumDisplay, Weights
 from ..shared.types import Context, SnippetEdit
-from .nvim.completions import VimCompletion
+from .nvim.completions import UserData, VimCompletion
 from .rt_types import Stack
 from .state import state
-from .types import UserData
 
 
 def _cum(adjustment: Weights, metrics: Iterable[Metric]) -> Tuple[int, Weights]:

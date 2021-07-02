@@ -26,9 +26,9 @@ from ..shared.types import (
 )
 from ..snippets.parse import parse
 from .databases.buffers.database import BDB
+from .nvim.completions import UserData
 from .registrants.marks import mark
 from .rt_types import Stack
-from .types import UserData
 
 
 @dataclass(frozen=True)

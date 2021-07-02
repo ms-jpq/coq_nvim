@@ -1,11 +1,13 @@
 from dataclasses import dataclass
 from enum import Enum
 from typing import Any, Iterable, Optional, Sequence
+from uuid import UUID
 
 from pynvim import Nvim
 from std2.pickle import new_encoder
 
-from ..types import UserData
+from ...lsp.types import CompletionItem
+from ...shared.types import Doc, PrimaryEdit, RangeEdit
 
 
 class VimCompKind(Enum):
@@ -14,6 +16,16 @@ class VimCompKind(Enum):
     member = "m"
     typedef = "t"
     define = "d"
+
+
+@dataclass(frozen=True)
+class UserData:
+    sort_by: str
+    commit_uid: UUID
+    primary_edit: PrimaryEdit
+    secondary_edits: Sequence[RangeEdit]
+    doc: Optional[Doc]
+    extern: Optional[CompletionItem]
 
 
 @dataclass(frozen=True)
@@ -46,6 +58,5 @@ _ENCODER = new_encoder(Sequence[VimCompletion])
 
 def complete(nvim: Nvim, col: int, comp: Iterable[VimCompletion]) -> None:
     serialized = _ENCODER(comp)
-    print(serialized, flush=True)
-    # nvim.api.exec_lua(_LUA, (col + 1, serialized))
+    nvim.api.exec_lua(_LUA, (col + 1, serialized))
 

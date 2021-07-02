@@ -24,11 +24,10 @@ from ...shared.timeit import timeit
 from ...shared.types import Context, NvimPos
 from ..context import context
 from ..edit import edit
-from ..nvim.completions import VimCompletion, complete
+from ..nvim.completions import UserData, VimCompletion, complete
 from ..rt_types import Stack
 from ..state import state
 from ..trans import trans
-from ..types import UserData
 
 
 def _should_cont(inserted: Optional[NvimPos], prev: Context, cur: Context) -> bool:
