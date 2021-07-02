@@ -10,7 +10,7 @@ from ...consts import TIMEOUT
 from ...shared.parse import coalesce
 from ...shared.runtime import Supervisor
 from ...shared.runtime import Worker as BaseWorker
-from ...shared.settings import PollingClient
+from ...shared.settings import WordbankClient
 from ...shared.types import Completion, Context, Edit
 from .database import Database
 
@@ -78,9 +78,9 @@ def _screenshot(unifying_chars: AbstractSet[str], uid: str) -> Sequence[str]:
         return tuple(coalesce(out, unifying_chars=unifying_chars))
 
 
-class Worker(BaseWorker[PollingClient, None]):
+class Worker(BaseWorker[WordbankClient, None]):
     def __init__(
-        self, supervisor: Supervisor, options: PollingClient, misc: None
+        self, supervisor: Supervisor, options: WordbankClient, misc: None
     ) -> None:
         self._db = Database(supervisor.pool)
         super().__init__(supervisor, options=options, misc=misc)

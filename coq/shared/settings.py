@@ -21,6 +21,7 @@ class PreviewDisplay:
     margin: int
     lsp_timeout: float
 
+
 @dataclass(frozen=True)
 class Display:
     pum: PumDisplay
@@ -70,12 +71,7 @@ class WordbankClient(BaseClient):
 
 
 @dataclass(frozen=True)
-class PollingClient(WordbankClient):
-    polling_interval: float
-
-
-@dataclass(frozen=True)
-class TagsClient(PollingClient):
+class TagsClient(WordbankClient):
     parent_scope: str
     path_sep: str
 
@@ -98,13 +94,14 @@ class Clients:
     paths: BaseClient
     snippets: SnippetClient
     tags: TagsClient
-    tmux: PollingClient
+    tmux: WordbankClient
     tree_sitter: BaseClient
     tabnine: TabnineClient
 
 
 @dataclass(frozen=True)
 class Settings:
+    idle_time: float
     display: Display
     match: Options
     weights: Weights

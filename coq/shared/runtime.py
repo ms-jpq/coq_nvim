@@ -83,6 +83,10 @@ class Supervisor:
     def register(self, worker: Worker) -> None:
         self._workers.add(worker)
 
+    def notify_idle(self) -> None:
+        for worker in self._workers:
+            worker.notify_idle()
+
     def notify(self, token: UUID, msg: Sequence[Any]) -> None:
         for worker in self._workers:
             worker.notify(token, msg=msg)
@@ -140,6 +144,10 @@ class Worker(Generic[O_co, T_co]):
     def __init__(self, supervisor: Supervisor, options: O_co, misc: T_co) -> None:
         self._supervisor, self._options, self._misc = supervisor, options, misc
         self._supervisor.register(self)
+
+    @abstractmethod
+    def notify_idle(self) -> None:
+        pass
 
     def notify(self, token: UUID, msg: Sequence[Any]) -> None:
         pass

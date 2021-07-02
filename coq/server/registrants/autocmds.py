@@ -45,13 +45,14 @@ def _on_idle(nvim: Nvim, stack: Stack) -> None:
     with timeit("IDLE"):
         bufs = list_bufs(nvim, listed=False)
         stack.bdb.vacuum({buf.number for buf in bufs})
+        stack.supervisor.notify_idle()
 
 
 @rpc(blocking=False)
 def _when_idle(nvim: Nvim, stack: Stack) -> None:
     global _TIMER
     _TIMER.cancel()
-    _TIMER = Timer(1, lambda: enqueue_event(_on_idle))
+    _TIMER = Timer(stack.settings.idle_time, lambda: enqueue_event(_on_idle))
     _TIMER.start()
 
 

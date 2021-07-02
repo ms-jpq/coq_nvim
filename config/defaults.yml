@@ -1,4 +1,6 @@
 ---
+idle_time: 1
+
 display:
   preview:
     margin: 4
@@ -57,7 +59,6 @@ clients:
     enabled: True
     short_name: "TMUX"
     match_syms: False
-    polling_interval: 1.0
     tie_breaker: 10
 
   buffers:
@@ -85,7 +86,6 @@ clients:
     enabled: True
     short_name: "TAG"
     match_syms: True
-    polling_interval: 1.0
     path_sep: " ⇉ "
     parent_scope: " ⇊"
     tie_breaker: 60
