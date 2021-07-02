@@ -15,7 +15,7 @@ class Worker(BaseWorker[BaseClient, None], CacheWorker):
 
     def work(self, context: Context) -> Iterator[Sequence[Completion]]:
         cached = self._use_cache(context)
-        if cached:
+        if cached is not None:
             yield cached
         else:
             local_cache, comps = request(
