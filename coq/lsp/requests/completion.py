@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Iterator, Sequence
+from typing import Sequence, Tuple
 
 from pynvim.api.nvim import Nvim
 from pynvim_pp.logging import log
@@ -24,7 +24,7 @@ def request(
     short_name: str,
     tie_breaker: int,
     context: Context,
-) -> Iterator[Sequence[Completion]]:
+) -> Tuple[bool, Sequence[Completion]]:
 
     row, c = context.position
     col = len(context.line_before[:c].encode(UTF16)) // 2
@@ -35,7 +35,9 @@ def request(
             resp: CompletionResponse = _DECODER(reply)
     except DecodeError as e:
         log.warn("%s", e)
+        return False, ()
     else:
-        _, comps = parse(short_name, tie_breaker=tie_breaker, resp=resp)
-        yield comps
+        incomplete, comps = parse(short_name, tie_breaker=tie_breaker, resp=resp)
+        use_cache = not incomplete
+        return use_cache, comps
 

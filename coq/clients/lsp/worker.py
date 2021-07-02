@@ -8,10 +8,11 @@ from ...shared.types import Completion, Context
 
 class Worker(BaseWorker[BaseClient, None]):
     def work(self, context: Context) -> Iterator[Sequence[Completion]]:
-        yield from request(
+        use_cache, comps = request(
             self._supervisor.nvim,
             short_name=self._options.short_name,
             tie_breaker=self._options.tie_breaker,
             context=context,
         )
+        yield comps
 
