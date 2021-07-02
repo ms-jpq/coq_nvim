@@ -20,7 +20,7 @@ def _comp(client: WordbankClient, word: str) -> Completion:
 class Worker(BaseWorker[WordbankClient, BDB]):
     def work(self, context: Context) -> Iterator[Sequence[Completion]]:
         match = context.words or (context.syms if self._options.match_syms else "")
-        words = self._misc.suggestions(
+        words = self._misc.words(
             self._supervisor.options,
             filetype=context.filetype,
             word=match,

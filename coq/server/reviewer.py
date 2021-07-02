@@ -7,7 +7,7 @@ from ..shared.parse import display_width, is_word, lower
 from ..shared.runtime import Metric, PReviewer
 from ..shared.settings import Options, Weights
 from ..shared.types import Completion, Context
-from .databases.buffers.database import BDB, SqlMetrics
+from .databases.insertions.database import IDB, SqlMetrics
 
 
 @dataclass(frozen=True)
@@ -99,7 +99,7 @@ def _join(
 
 
 class Reviewer(PReviewer):
-    def __init__(self, options: Options, db: BDB) -> None:
+    def __init__(self, options: Options, db: IDB) -> None:
         self._options, self._db = options, db
 
     def rate(

@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Sequence, Tuple
 
@@ -9,7 +10,7 @@ from ...registry import atomic
 from ...shared.timeit import timeit
 from ...shared.types import UTF16, Completion, Context
 from ..parse import parse
-from ..types import CompletionResponse
+from ..types import CompletionResponse, NvimPos
 from .request import blocking_request
 
 _LUA = (Path(__file__).resolve().parent / "completion.lua").read_text("UTF-8")
@@ -17,6 +18,13 @@ _LUA = (Path(__file__).resolve().parent / "completion.lua").read_text("UTF-8")
 atomic.exec_lua(_LUA, ())
 
 _DECODER = new_decoder(CompletionResponse, strict=False)
+
+
+@dataclass(frozen=True)
+class _CacheCtx:
+    buf_id: int
+    pos: NvimPos
+    line: str
 
 
 def request(
