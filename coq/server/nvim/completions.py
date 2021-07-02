@@ -57,6 +57,8 @@ _ENCODER = new_encoder(Sequence[VimCompletion])
 
 
 def complete(nvim: Nvim, col: int, comp: Iterable[VimCompletion]) -> None:
-    serialized = {k: v for k, v in _ENCODER(comp).items() if v is not None}
+    serialized = tuple(
+        {k: v for k, v in cmp.items() if v is not None} for cmp in _ENCODER(comp)
+    )
     nvim.api.exec_lua(_LUA, (col + 1, serialized))
 
