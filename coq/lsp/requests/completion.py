@@ -31,11 +31,11 @@ def request(
 
     reply = blocking_request(nvim, "COQlsp_comp", (row, col))
     try:
-        with timeit("DECODE"):
+        with timeit("LSP :: DECODE"):
             resp: CompletionResponse = _DECODER(reply)
     except DecodeError as e:
         log.warn("%s", e)
     else:
-        comps = parse(short_name, tie_breaker=tie_breaker, resp=resp)
+        _, comps = parse(short_name, tie_breaker=tie_breaker, resp=resp)
         yield comps
 

@@ -1,4 +1,4 @@
-from typing import Optional, Sequence
+from typing import Optional, Sequence, Tuple
 
 from ..shared.types import Completion, Doc, Edit, RangeEdit, SnippetEdit
 from .protocol import PROTOCOL
@@ -58,16 +58,16 @@ def _parse_item(short_name: str, tie_breaker: int, item: CompletionItem) -> Comp
 
 def parse(
     short_name: str, tie_breaker: int, resp: CompletionResponse
-) -> Sequence[Completion]:
+) -> Tuple[bool, Sequence[Completion]]:
     if isinstance(resp, CompletionList):
-        return tuple(
+        return resp.isIncomplete, tuple(
             _parse_item(short_name, tie_breaker=tie_breaker, item=item)
             for item in resp.items
         )
     elif isinstance(resp, Sequence):
-        return tuple(
+        return True, tuple(
             _parse_item(short_name, tie_breaker=tie_breaker, item=item) for item in resp
         )
     else:
-        return ()
+        return True, ()
 
