@@ -2,6 +2,7 @@ from concurrent.futures import Executor
 from dataclasses import dataclass
 from typing import Iterator, Mapping, Optional, Sequence
 
+from ...shared.runtime import Supervisor
 from ...shared.types import Completion, Context
 from .database import Database
 
@@ -19,13 +20,14 @@ def _cachin(comp: Completion) -> Tuple[str, Completion]:
 
 
 class CacheWorker:
-    def __init__(self, pool: Executor) -> None:
-        self._db = Database(pool)
+    def __init__(self, supervisor: Supervisor) -> None:
+        self._soup = supervisor
+        self._db = Database(supervisor.pool)
         self._cache_ctx = _CacheCtx(buf_id=-1, row=-1, line_before="", comps={})
 
     def _use_cache(self, context: Context) -> Optional[Sequence[Completion]]:
         match = context.words or context.syms
-        words = self._db.select(match)
+        words = self._db.select(self._soup.options, word=match)
 
         def cont() -> Iterator[Completion]:
             for word in words:

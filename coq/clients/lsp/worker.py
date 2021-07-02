@@ -10,8 +10,8 @@ from ..cache.worker import CacheWorker
 
 class Worker(BaseWorker[BaseClient, None], CacheWorker):
     def __init__(self, supervisor: Supervisor, options: BaseClient, misc: None) -> None:
-        CacheWorker.__init__(self, supervisor.pool)
-        BaseWorker.__init__(self, supervisor, options=options, misc=misc)
+        CacheWorker.__init__(self, supervisor=supervisor)
+        BaseWorker.__init__(self, supervisor=supervisor, options=options, misc=misc)
 
     def work(self, context: Context) -> Iterator[Sequence[Completion]]:
         cached = self._use_cache(context)
