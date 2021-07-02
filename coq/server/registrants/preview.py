@@ -238,8 +238,8 @@ def _cmp_changed(nvim: Nvim, stack: Stack, event: Mapping[str, Any] = {}) -> Non
         try:
             ev: _Event = _EV_DECODER(event)
             data: UserData = _UD_DECODER(ev.completed_item.user_data)
-        except DecodeError:
-            pass
+        except DecodeError as e:
+            log.warn("%s", e)
         else:
             s = state()
             try:
