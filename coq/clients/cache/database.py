@@ -2,7 +2,7 @@ from concurrent.futures import Executor
 from contextlib import closing
 from sqlite3 import Connection, OperationalError
 from threading import Lock
-from typing import Iterable, Iterator, Mapping, Sequence
+from typing import Sequence
 
 from std2.sqllite3 import with_transaction
 
@@ -30,33 +30,18 @@ class Database:
         with self._lock:
             self._conn.interrupt()
 
-    def periodical(self, panes: Mapping[str, Sequence[str]]) -> None:
-        def m1(panes: Iterable[str]) -> Iterator[Mapping]:
-            for pane_id in panes:
-                yield {"pane_id": pane_id}
-
-        def m2() -> Iterator[Mapping]:
-            for pane_id, words in panes.items():
-                for word in words:
-                    yield {
-                        "pane_id": pane_id,
-                        "word": word,
-                    }
-
+    def add(self, words: Sequence[str]) -> None:
         def cont() -> None:
             with self._lock, closing(self._conn.cursor()) as cursor:
                 with with_transaction(cursor):
-                    cursor.execute(sql("select", "panes"))
-                    existing = {row["pane_id"] for row in cursor.fetchall()}
+                    cursor.execute(sql("delete", "words"))
                     cursor.executemany(
-                        sql("delete", "pane"), m1(existing - panes.keys())
+                        sql("insert", "word"), ({"word": word} for word in words)
                     )
-                    cursor.executemany(sql("insert", "pane"), m1(panes.keys()))
-                    cursor.executemany(sql("insert", "word"), m2())
 
         self._ex.submit(cont)
 
-    def select(self, opts: Options, active_pane: str, word: str) -> Sequence[str]:
+    def select(self, opts: Options, word: str) -> Sequence[str]:
         def cont() -> Sequence[str]:
             try:
                 with closing(self._conn.cursor()) as cursor:
@@ -65,7 +50,6 @@ class Database:
                         {
                             "exact": opts.exact_matches,
                             "cut_off": opts.fuzzy_cutoff,
-                            "pane_id": active_pane,
                             "word": word,
                         },
                     )

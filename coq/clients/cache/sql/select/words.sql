@@ -1,4 +1,4 @@
-SELECT DISTINCT
+SELECT
   word
 FROM words
 WHERE
