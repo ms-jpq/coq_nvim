@@ -4,11 +4,11 @@ from typing import Any, Callable, Iterable, Iterator, MutableSet, Sequence, Tupl
 
 from std2.ordinal import clamp
 
-from ..shared.nvim.completions import VimCompletion
 from ..shared.parse import display_width
 from ..shared.runtime import Metric
 from ..shared.settings import PumDisplay, Weights
 from ..shared.types import Context, SnippetEdit
+from .nvim.completions import VimCompletion
 from .rt_types import Stack
 from .state import state
 from .types import UserData

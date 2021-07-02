@@ -1,9 +1,11 @@
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any, Iterable, Optional
+from typing import Any, Iterable, Optional, Sequence
 
 from pynvim import Nvim
 from std2.pickle import new_encoder
+
+from ..types import UserData
 
 
 class VimCompKind(Enum):
@@ -25,7 +27,7 @@ class VimCompletion:
     equal: Optional[int] = None
     dup: Optional[int] = None
     empty: Optional[int] = None
-    user_data: Optional[Any] = None
+    user_data: Optional[UserData] = None
 
 
 _LUA = """
@@ -39,13 +41,11 @@ _LUA = """
 end)(...)
 """
 
-_ENCODER = new_encoder(VimCompletion)
+_ENCODER = new_encoder(Sequence[VimCompletion])
 
 
 def complete(nvim: Nvim, col: int, comp: Iterable[VimCompletion]) -> None:
-    serialized = tuple(
-        {k: v for k, v in _ENCODER(cmp).items() if v is not None} for cmp in comp
-    )
-
-    nvim.api.exec_lua(_LUA, (col + 1, serialized))
+    serialized = _ENCODER(comp)
+    print(serialized, flush=True)
+    # nvim.api.exec_lua(_LUA, (col + 1, serialized))
 

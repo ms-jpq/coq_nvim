@@ -19,12 +19,12 @@ from pynvim_pp.logging import log
 from std2.pickle import DecodeError, new_decoder
 
 from ...registry import autocmd, enqueue_event, pool, rpc
-from ...shared.nvim.completions import VimCompletion, complete
 from ...shared.runtime import Metric
 from ...shared.timeit import timeit
 from ...shared.types import Context, NvimPos
 from ..context import context
 from ..edit import edit
+from ..nvim.completions import VimCompletion, complete
 from ..rt_types import Stack
 from ..state import state
 from ..trans import trans

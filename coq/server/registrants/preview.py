@@ -34,11 +34,11 @@ from std2.pickle import DecodeError, new_decoder
 from ...lsp.requests.preview import request
 from ...lsp.types import CompletionItem
 from ...registry import autocmd, enqueue_event, rpc
-from ...shared.nvim.completions import VimCompletion
 from ...shared.settings import PreviewDisplay
 from ...shared.timeit import timeit
 from ...shared.trans import expand_tabs
 from ...shared.types import UTF8, Context, Doc
+from ..nvim.completions import VimCompletion
 from ..rt_types import Stack
 from ..state import State, state
 from ..types import UserData
