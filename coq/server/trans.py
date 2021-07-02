@@ -71,7 +71,7 @@ def _cmp_to_vcmp(
     kind = f"{kl}{metric.comp.kind}{kr}" if metric.comp.kind else None
     menu = f"{sl}{metric.comp.source}{sr}"
     user_data = UserData(
-        commit_uid=context.uid,
+        change_uid=context.change_id,
         sort_by=metric.comp.sort_by,
         primary_edit=metric.comp.primary_edit,
         secondary_edits=metric.comp.secondary_edits,

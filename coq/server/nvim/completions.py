@@ -21,7 +21,7 @@ class VimCompKind(Enum):
 @dataclass(frozen=True)
 class UserData:
     sort_by: str
-    commit_uid: UUID
+    change_uid: UUID
     primary_edit: PrimaryEdit
     secondary_edits: Sequence[RangeEdit]
     doc: Optional[Doc]

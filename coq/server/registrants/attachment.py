@@ -1,13 +1,15 @@
 from contextlib import suppress
 from typing import Sequence
+from uuid import uuid4
 
 from pynvim import Nvim
 from pynvim.api import Buffer, NvimError
 from pynvim_pp.api import buf_filetype, buf_get_option, cur_buf, list_bufs
 
-from ...registry import atomic, autocmd, enqueue_event, rpc
+from ...registry import atomic, autocmd, rpc
 from ...shared.timeit import timeit
 from ..rt_types import Stack
+from ..state import state
 from .omnifunc import comp_func
 
 
@@ -58,8 +60,15 @@ def _lines_event(
         unifying_chars=stack.settings.match.unifying_chars,
     )
 
+    s = state(change_id=uuid4())
     if not pending and nvim.api.get_mode()["mode"].startswith("i"):
-        comp_func(nvim, stack=stack, manual=False)
+        comp_func(
+            nvim,
+            stack=stack,
+            change_id=s.change_id,
+            commit_id=s.commit_id,
+            manual=False,
+        )
 
 
 def _changed_event(nvim: Nvim, stack: Stack, buf: Buffer, tick: int) -> None:

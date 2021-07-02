@@ -1,7 +1,7 @@
 from pathlib import Path
 from pprint import pformat
 from typing import Literal, Optional, Tuple, cast
-from uuid import uuid4
+from uuid import UUID
 
 from pynvim import Nvim
 from pynvim.api import Buffer
@@ -14,16 +14,16 @@ from ..shared.types import Context
 from .databases.buffers.database import BDB
 
 
-def context(nvim: Nvim, options: Options, db: BDB) -> Optional[Context]:
+def context(
+    nvim: Nvim, options: Options, db: BDB, commit_id: UUID, change_id: UUID
+) -> Optional[Context]:
 
     with Atomic() as (atomic, ns):
-        ns.pumvisible = atomic.call_function("pumvisible", ())
         ns.cwd = atomic.call_function("getcwd", ())
         ns.buf = atomic.get_current_buf()
         ns.name = atomic.buf_get_name(0)
         ns.filetype = atomic.buf_get_option(0, "filetype")
         ns.commentstring = atomic.buf_get_option(0, "commentstring")
-        ns.changedtick = atomic.buf_get_var(0, "changedtick")
         ns.fileformat = atomic.buf_get_option(0, "fileformat")
         ns.tabstop = atomic.buf_get_option(0, "tabstop")
         ns.expandtab = atomic.buf_get_option(0, "expandtab")
@@ -38,7 +38,6 @@ def context(nvim: Nvim, options: Options, db: BDB) -> Optional[Context]:
     filename = cast(str, ns.name)
     filetype = cast(str, ns.filetype)
     comment_str = cast(str, ns.commentstring)
-    changedtick = ns.changedtick
     tabstop = ns.tabstop
     expandtab = cast(bool, ns.expandtab)
     linefeed = cast(Literal["\n", "\r", "\r\n"], LFfmt[cast(str, ns.fileformat)].value)
@@ -61,10 +60,10 @@ def context(nvim: Nvim, options: Options, db: BDB) -> Optional[Context]:
         split = gen_split(lhs=before, rhs=after, unifying_chars=options.unifying_chars)
 
         ctx = Context(
-            uid=uuid4(),
+            change_id=change_id,
+            commit_id=commit_id,
             cwd=Path(cwd),
             buf_id=buf_nr,
-            changedtick=changedtick,
             filename=filename,
             filetype=filetype,
             line_count=line_count,

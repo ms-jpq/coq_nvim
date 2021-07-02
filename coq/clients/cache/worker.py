@@ -1,5 +1,6 @@
 from dataclasses import dataclass, replace
 from typing import Iterator, Mapping, Optional, Sequence, Tuple
+from uuid import UUID, uuid4
 
 from ...shared.runtime import Supervisor
 from ...shared.types import Completion, Context, Edit
@@ -8,6 +9,7 @@ from .database import Database
 
 @dataclass(frozen=True)
 class _CacheCtx:
+    commit_id: UUID
     buf_id: int
     row: int
     line_before: str
@@ -17,7 +19,8 @@ class _CacheCtx:
 def _use_cache(cache: _CacheCtx, ctx: Context) -> bool:
     row, _ = ctx.position
     return (
-        len(cache.comps) > 0
+        cache.commit_id == ctx.commit_id
+        and len(cache.comps) > 0
         and ctx.buf_id == cache.buf_id
         and row == cache.row
         and ctx.line_before.startswith(cache.line_before)
@@ -35,7 +38,9 @@ class CacheWorker:
     def __init__(self, supervisor: Supervisor) -> None:
         self._soup = supervisor
         self._db = Database(supervisor.pool)
-        self._cache_ctx = _CacheCtx(buf_id=-1, row=-1, line_before="", comps={})
+        self._cache_ctx = _CacheCtx(
+            commit_id=uuid4(), buf_id=-1, row=-1, line_before="", comps={}
+        )
 
     def _use_cache(self, context: Context) -> Optional[Sequence[Completion]]:
         if _use_cache(self._cache_ctx, ctx=context):
@@ -55,6 +60,7 @@ class CacheWorker:
     def _set_cache(self, context: Context, completions: Sequence[Completion]) -> None:
         row, _ = context.position
         ctx = _CacheCtx(
+            commit_id=context.commit_id,
             buf_id=context.buf_id,
             row=row,
             line_before=context.line_before,

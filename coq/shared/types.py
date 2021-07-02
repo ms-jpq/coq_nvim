@@ -23,8 +23,8 @@ class Context:
     |...   <syms_before><words_before>🐭<words_after><syms_after>   ...|
     """
 
-    uid: UUID
-    changedtick: int
+    change_id: UUID
+    commit_id: UUID
 
     cwd: Path
     buf_id: int

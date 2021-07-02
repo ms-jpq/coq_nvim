@@ -11,7 +11,7 @@ from typing import (
     Union,
     cast,
 )
-from uuid import UUID
+from uuid import UUID, uuid4
 
 from pynvim import Nvim
 from pynvim.api.nvim import Nvim
@@ -31,7 +31,7 @@ from ..trans import trans
 
 
 def _should_cont(inserted: Optional[NvimPos], prev: Context, cur: Context) -> bool:
-    if prev.changedtick == cur.changedtick:
+    if prev.change_id == cur.change_id:
         return False
     elif cur.position == inserted:
         return False
@@ -40,18 +40,17 @@ def _should_cont(inserted: Optional[NvimPos], prev: Context, cur: Context) -> bo
 
 
 @rpc(blocking=True)
-def _cmp(
-    nvim: Nvim, stack: Stack, uid: UUID, col: int, comp: Sequence[VimCompletion]
-) -> None:
+def _cmp(nvim: Nvim, stack: Stack, col: int, comp: Sequence[VimCompletion]) -> None:
     complete(nvim, col=col, comp=comp)
-    state(commit=uid)
 
 
 _LOCK = Lock()
 _FUTS: MutableSequence[Future] = []
 
 
-def comp_func(nvim: Nvim, stack: Stack, manual: bool) -> None:
+def comp_func(
+    nvim: Nvim, stack: Stack, change_id: UUID, commit_id: UUID, manual: bool
+) -> None:
     with _LOCK:
         for f1 in _FUTS:
             f1.cancel()
@@ -59,7 +58,13 @@ def comp_func(nvim: Nvim, stack: Stack, manual: bool) -> None:
 
     s = state()
     with timeit("GEN CTX"):
-        ctx = context(nvim, options=stack.settings.match, db=stack.bdb)
+        ctx = context(
+            nvim,
+            options=stack.settings.match,
+            db=stack.bdb,
+            change_id=change_id,
+            commit_id=commit_id,
+        )
     should = (
         _should_cont(
             s.inserted,
@@ -92,7 +97,7 @@ def comp_func(nvim: Nvim, stack: Stack, manual: bool) -> None:
                                 vim_comps = tuple(
                                     trans(stack, context=ctx, metrics=metrics)
                                 )
-                            enqueue_event(_cmp, ctx.uid, col, vim_comps)
+                            enqueue_event(_cmp, col, vim_comps)
             except Exception as e:
                 log.exception("%s", e)
 
@@ -112,7 +117,10 @@ def omnifunc(
     if op == 1:
         return -1
     else:
-        comp_func(nvim, stack=stack, manual=True)
+        s = state(commit_id=uuid4())
+        comp_func(
+            nvim, stack=stack, manual=True, commit_id=s.commit_id, change_id=s.change_id
+        )
         return ()
 
 
@@ -129,9 +137,9 @@ def _comp_done(nvim: Nvim, stack: Stack, event: Mapping[str, Any]) -> None:
             log.warn("%s", e)
         else:
             s = state()
-            if user_data.commit_uid == s.commit:
+            if user_data.change_uid == s.change_id:
                 inserted = edit(nvim, stack=stack, context=s.context, data=user_data)
-                state(inserted=inserted)
+                state(inserted=inserted, commit_id=uuid4())
             else:
                 log.warn("%s", "delayed completion")
 
