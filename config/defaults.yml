@@ -49,7 +49,7 @@ keymap:
 
 clients:
   tabnine:
-    enabled: False
+    enabled: True
     short_name: "T9"
     tie_breaker: -10
 

@@ -1,10 +1,12 @@
 from itertools import accumulate, chain, repeat
+from os import linesep
 from pprint import pformat
 from typing import AbstractSet, Iterable, Iterator, Sequence, Tuple
 
 from pynvim_pp.logging import log
 
 from ..consts import DEBUG
+from ..shared.parse import is_word
 from ..shared.trans import expand_tabs, trans_adjusted
 from ..shared.types import UTF8, Context, ContextualEdit, Edit, Mark, SnippetEdit
 from .parsers.lsp import parser as lsp_parser
@@ -29,11 +31,11 @@ def _before_after(
 def _marks(
     ctx: Context,
     edit: ContextualEdit,
-    indent_len: int,
-    parsed_lines: Sequence[str],
     regions: Iterable[Region],
 ) -> Iterator[Mark]:
     row, _ = ctx.position
+    parsed_lines = edit.new_text.split(ctx.linefeed)
+    old_lines = edit.old_prefix.split(ctx.linefeed)
     len8 = tuple(
         zip(
             accumulate(len(line.encode(UTF8)) + 1 for line in parsed_lines),
@@ -41,8 +43,7 @@ def _marks(
         )
     )
 
-    y_shift = row - len(edit.old_prefix.split(ctx.linefeed)) + 1
-    x_shift = indent_len
+    y_shift = row - len(old_lines) + 1
 
     for region in regions:
         r1, c1, r2, c2 = None, None, None, None
@@ -50,9 +51,9 @@ def _marks(
 
         for idx, (l8, _) in enumerate(len8):
             if r1 is None and l8 >= region.begin:
-                r1, c1 = idx + y_shift, region.begin - last_len + x_shift
+                r1, c1 = idx + y_shift, region.begin - last_len
             if r2 is None and l8 >= region.end:
-                r2, c2 = idx + y_shift, region.end - last_len + x_shift
+                r2, c2 = idx + y_shift, region.end - last_len
 
             last_len = l8
 
@@ -69,42 +70,35 @@ def parse(
     unifying_chars: AbstractSet[str],
     context: Context,
     snippet: SnippetEdit,
+    sort_by: str,
     visual: str,
 ) -> Tuple[ContextualEdit, Sequence[Mark]]:
     parser = lsp_parser if snippet.grammar == "lsp" else snu_parser
 
-    text = expand_tabs(context, text=snippet.new_text)
-    parsed = parser(context, snippet=text, info=ParseInfo(visual=visual))
+    trigger_word = (
+        context.words_before
+        if is_word(sort_by[:1], unifying_chars=unifying_chars)
+        else context.syms_before + context.words_before
+    )
+    indent = _indent(context, old_prefix=trigger_word, line_before=context.line_before)
+    expanded_text = expand_tabs(context, text=snippet.new_text)
+    indented_text = context.linefeed.join(
+        lhs + rhs
+        for lhs, rhs in zip(chain(("",), repeat(indent)), expanded_text.splitlines())
+    )
+    parsed = parser(context, snippet=indented_text, info=ParseInfo(visual=visual))
 
     old_prefix, old_suffix = _before_after(
         unifying_chars, context=context, text=parsed.text
     )
 
-    indent = _indent(context, old_prefix=old_prefix, line_before=context.line_before)
-    indent_len = len(indent.encode(UTF8))
-    parsed_lines = parsed.text.split(context.linefeed)
-    new_lines = tuple(
-        lhs + rhs for lhs, rhs in zip(chain(("",), repeat(indent)), parsed_lines)
-    )
-    cursor = (
-        len(parsed.text[: parsed.cursor].split(context.linefeed)) - 1
-    ) * indent_len + parsed.cursor
-
     edit = ContextualEdit(
-        new_text=context.linefeed.join(new_lines),
+        new_text=parsed.text,
         old_prefix=old_prefix,
         old_suffix=old_suffix,
-        new_prefix=parsed.text[:cursor],
+        new_prefix=parsed.text[: parsed.cursor],
     )
-    marks = tuple(
-        _marks(
-            context,
-            edit=edit,
-            indent_len=indent_len,
-            parsed_lines=parsed_lines,
-            regions=parsed.regions,
-        )
-    )
+    marks = tuple(_marks(context, edit=edit, regions=parsed.regions))
 
     if DEBUG:
         msg = pformat((snippet, parsed, edit, marks))

@@ -123,7 +123,7 @@ def token_parser(context: ParserCtx, stream: TokenStream) -> Parsed:
     text = "".join(slices)
     cursor = next(
         iter(sorted(raw_regions, key=lambda r: r.idx)),
-        Region(idx=0, begin=0, end=0, text=""),
+        Region(idx=0, begin=len(text), end=0, text=""),
     ).begin
     if bad_tokens:
         tpl = """

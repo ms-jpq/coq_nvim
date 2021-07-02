@@ -353,6 +353,7 @@ def edit(nvim: Nvim, stack: Stack, context: Context, data: UserData) -> Tuple[in
             stack.settings.match.unifying_chars,
             context=context,
             snippet=data.primary_edit,
+            sort_by=data.sort_by,
             visual=_visual(nvim, buf=buf, context=context, db=stack.bdb),
         )
         if isinstance(data.primary_edit, SnippetEdit)

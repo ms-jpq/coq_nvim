@@ -35,6 +35,7 @@ class Parser(TestCase):
                         set(),
                         context=EMPTY_CONTEXT,
                         snippet=edit,
+                        sort_by="",
                         visual="",
                     )
                 except ParseError as e:
