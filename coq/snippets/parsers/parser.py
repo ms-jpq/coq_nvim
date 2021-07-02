@@ -6,7 +6,7 @@ from typing import Iterable, Iterator, MutableSequence, NoReturn, Tuple, TypeVar
 from std2.itertools import deiter
 from std2.types import never
 
-from ...shared.types import Context
+from ...shared.types import UTF8, Context
 from .types import (
     Begin,
     DummyBegin,
@@ -102,7 +102,7 @@ def token_parser(context: ParserCtx, stream: TokenStream) -> Parsed:
             token = token
             bad_tokens.append((idx, token))
         elif isinstance(token, str):
-            idx += len(token)
+            idx += len(token.encode(UTF8))
             slices.append(token)
         elif isinstance(token, Begin):
             begins.append((idx, token))
