@@ -33,7 +33,7 @@ def _start(line: str) -> Tuple[str, str, MutableSet[str]]:
     name, _, label = rest.partition(" ")
     if label.startswith('"') and label[1:].count('"') == 1:
         quoted, _, opts = label[1:].partition('"')
-        options = {*opts.split(" ")}
+        options = {*opts.strip()}
         return name, quoted, options
     else:
         return name, label, set()
