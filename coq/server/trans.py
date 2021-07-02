@@ -66,11 +66,11 @@ def _cmp_to_vcmp(
     (kl, kr), (sl, sr) = pum.kind_context, pum.source_context
 
     if metric.label_width > truncate:
-        abbr = metric.comp.label[: truncate - ellipsis_width] + pum.ellipsis
+        abbr = metric.comp.label[2 : truncate - ellipsis_width - 2] + pum.ellipsis
     else:
         abbr = metric.comp.label
 
-    kind = f"{kl}{metric.comp.kind}{kr}" if metric.comp.kind else ""
+    kind = f"{kl}{metric.comp.kind}{kr}" if metric.comp.kind else None
     menu = f"{sl}{metric.comp.source}{sr}"
     user_data = UserData(
         commit_uid=context.uid,
