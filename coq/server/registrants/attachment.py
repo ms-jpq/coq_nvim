@@ -15,6 +15,7 @@ from .omnifunc import comp_func
 
 @rpc(blocking=True)
 def _buf_enter(nvim: Nvim, stack: Stack) -> None:
+    state(commit_id=uuid4())
     with suppress(NvimError):
         buf = cur_buf(nvim)
         listed = buf_get_option(nvim, buf=buf, key="buflisted")
