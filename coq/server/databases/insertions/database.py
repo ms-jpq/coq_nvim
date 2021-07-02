@@ -58,13 +58,9 @@ class IDB:
                 #         cursor.executemany(sql("insert", "tmp_for_metrics"), m1())
                 #         cursor.execute(sql("select", "metrics"))
                 #         return cursor.fetchall()
-                return tuple(
-                    repeat(SqlMetrics(wordcount=0, insert_order=0), times=len(words))
-                )
+                return tuple(repeat(SqlMetrics(insert_order=0), times=len(words)))
             except OperationalError:
-                return tuple(
-                    repeat(SqlMetrics(wordcount=0, insert_order=0), times=len(words))
-                )
+                return tuple(repeat(SqlMetrics(insert_order=0), times=len(words)))
 
         return self._ex.submit(cont)
 

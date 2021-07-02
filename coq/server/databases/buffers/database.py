@@ -52,7 +52,21 @@ class BDB:
         self._ex.submit(cont)
 
     def vacuum(self, buf_ids: AbstractSet[int]) -> None:
-        pass
+        def cont() -> None:
+            try:
+                with closing(self._conn.cursor()) as cursor:
+                    with with_transaction(cursor):
+                        cursor.execute(sql("create", "tmp_bufs"), ())
+                        cursor.execute(
+                            sql("insert", "tmp_bufs"),
+                            ({"buf_id": buf_id} for buf_id in buf_ids),
+                        )
+                        cursor.execute(sql("delete", "buffers"), ())
+                        cursor.execute(sql("drop", "tmp_bufs"), ())
+            except OperationalError:
+                pass
+
+        self._ex.submit(cont)
 
     def set_lines(
         self,
