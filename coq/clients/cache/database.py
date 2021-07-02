@@ -2,7 +2,7 @@ from concurrent.futures import Executor
 from contextlib import closing
 from sqlite3 import Connection, OperationalError
 from threading import Lock
-from typing import Sequence
+from typing import Iterable, Sequence
 
 from std2.sqllite3 import with_transaction
 
@@ -30,7 +30,7 @@ class Database:
         with self._lock:
             self._conn.interrupt()
 
-    def add(self, words: Sequence[str]) -> None:
+    def add(self, words: Iterable[str]) -> None:
         def cont() -> None:
             with self._lock, closing(self._conn.cursor()) as cursor:
                 with with_transaction(cursor):
