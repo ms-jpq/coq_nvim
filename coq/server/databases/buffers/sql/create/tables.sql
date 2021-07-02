@@ -52,10 +52,4 @@ GROUP BY
   words.word;
   
 
-CREATE TEMP TABLE IF NOT EXISTS tmp_for_metrics (
-  rowid INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
-  word  TEXT NOT NULL
-);
-
-
 END;

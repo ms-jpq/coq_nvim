@@ -52,12 +52,12 @@ class IDB:
 
         def cont() -> Sequence[SqlMetrics]:
             try:
-                with closing(self._conn.cursor()) as cursor:
-                    with with_transaction(cursor):
-                        cursor.execute(sql("delete", "tmp_for_metrics"), ())
-                        cursor.executemany(sql("insert", "tmp_for_metrics"), m1())
-                        cursor.execute(sql("select", "metrics"))
-                        return cursor.fetchall()
+                # with closing(self._conn.cursor()) as cursor:
+                #     with with_transaction(cursor):
+                #         cursor.execute(sql("delete", "tmp_for_metrics"), ())
+                #         cursor.executemany(sql("insert", "tmp_for_metrics"), m1())
+                #         cursor.execute(sql("select", "metrics"))
+                #         return cursor.fetchall()
                 return tuple(
                     repeat(SqlMetrics(wordcount=0, insert_order=0), times=len(words))
                 )
