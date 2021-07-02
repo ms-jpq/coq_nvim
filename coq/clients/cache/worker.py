@@ -18,7 +18,6 @@ def _use_cache(cache: _CacheCtx, ctx: Context) -> bool:
     row, _ = ctx.position
     return (
         len(cache.comps) > 0
-        # and ctx.pum_visible
         and ctx.buf_id == cache.buf_id
         and row == cache.row
         and ctx.line_before.startswith(cache.line_before)

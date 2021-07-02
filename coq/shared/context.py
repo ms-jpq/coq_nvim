@@ -5,7 +5,6 @@ from .types import Context
 
 EMPTY_CONTEXT = Context(
     uid=uuid4(),
-    pum_visible=False,
     changedtick=0,
     cwd=Path(),
     buf_id=0,

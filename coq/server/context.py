@@ -30,7 +30,6 @@ def context(nvim: Nvim, options: Options, db: BDB) -> Optional[Context]:
         ns.cursor = atomic.win_get_cursor(0)
         atomic.commit(nvim)
 
-    pum_visible: bool = bool(ns.pumvisible)
     cwd = cast(str, ns.cwd)
     buf_nr = cast(Buffer, ns.buf).number
     (r, col) = cast(Tuple[int, int], ns.cursor)
@@ -63,7 +62,6 @@ def context(nvim: Nvim, options: Options, db: BDB) -> Optional[Context]:
 
         ctx = Context(
             uid=uuid4(),
-            pum_visible=pum_visible,
             cwd=Path(cwd),
             buf_id=buf_nr,
             changedtick=changedtick,
