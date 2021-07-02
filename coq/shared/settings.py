@@ -42,7 +42,6 @@ class Options:
 @dataclass(frozen=True)
 class Weights:
     consecutive_matches: float
-    count_by_filetype: float
     insertion_order: float
     match_density: float
     neighbours: float

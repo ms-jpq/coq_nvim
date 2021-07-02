@@ -16,7 +16,6 @@ from .state import state
 def _cum(adjustment: Weights, metrics: Iterable[Metric]) -> Weights:
     zero = Weights(
         consecutive_matches=0,
-        count_by_filetype=0,
         insertion_order=0,
         match_density=0,
         neighbours=0,

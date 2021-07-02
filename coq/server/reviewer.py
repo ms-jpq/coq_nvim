@@ -79,7 +79,6 @@ def _join(
 ) -> Metric:
     weight = Weights(
         consecutive_matches=mm.consecutive_matches,
-        count_by_filetype=sqm["wordcount"],
         insertion_order=sqm["insert_order"],
         match_density=mm.match_density,
         neighbours=mm.neighbours,
@@ -117,7 +116,7 @@ class Reviewer(PReviewer):
             context=context,
             completions=completions,
         )
-        dbm = self._db.metric(context.filetype, words=words)
+        dbm = self._db.metric(words)
         metrics = tuple(
             _join(context, cmp, mm, sqm) for cmp, mm, sqm in zip(completions, mmm, dbm)
         )

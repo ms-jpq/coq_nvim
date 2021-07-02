@@ -15,7 +15,6 @@ from .sql import sql
 
 
 class SqlMetrics(TypedDict):
-    wordcount: int
     insert_order: int
 
 
@@ -46,10 +45,10 @@ class IDB:
 
         self._ex.submit(cont)
 
-    def metric(self, filetype: str, words: Sequence[str]) -> Sequence[SqlMetrics]:
+    def metric(self, words: Sequence[str]) -> Sequence[SqlMetrics]:
         def m1() -> Iterator[Mapping]:
             for word in words:
-                yield {"filetype": filetype, "word": word}
+                yield {"word": word}
 
         def cont() -> Sequence[SqlMetrics]:
             try:
@@ -59,6 +58,9 @@ class IDB:
                         cursor.executemany(sql("insert", "tmp_for_metrics"), m1())
                         cursor.execute(sql("select", "metrics"))
                         return cursor.fetchall()
+                return tuple(
+                    repeat(SqlMetrics(wordcount=0, insert_order=0), times=len(words))
+                )
             except OperationalError:
                 return tuple(
                     repeat(SqlMetrics(wordcount=0, insert_order=0), times=len(words))
