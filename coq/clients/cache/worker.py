@@ -1,9 +1,8 @@
-from concurrent.futures import Executor
-from dataclasses import dataclass
-from typing import Iterator, Mapping, Optional, Sequence
+from dataclasses import dataclass, replace
+from typing import Iterator, Mapping, Optional, Sequence, Tuple
 
 from ...shared.runtime import Supervisor
-from ...shared.types import Completion, Context
+from ...shared.types import Completion, Context, Edit
 from .database import Database
 
 
@@ -16,7 +15,10 @@ class _CacheCtx:
 
 
 def _cachin(comp: Completion) -> Tuple[str, Completion]:
-    pass
+    pedit = comp.primary_edit
+    sort_by = comp.sort_by or pedit.new_text
+    edit = pedit if type(pedit) is Edit else Edit(new_text=pedit.new_text)
+    return sort_by, replace(comp, edit=edit, secondary_edits=())
 
 
 class CacheWorker:
