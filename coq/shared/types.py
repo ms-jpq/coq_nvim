@@ -95,8 +95,8 @@ class Mark:
     text: str
 
 
-ApplicableEdit = Union[Edit, RangeEdit, ContextualEdit]
-PrimaryEdit = Union[ApplicableEdit, SnippetEdit]
+ApplicableEdit = Union[ContextualEdit, RangeEdit, Edit]
+PrimaryEdit = Union[SnippetEdit, ApplicableEdit]
 
 
 @dataclass(frozen=True)
