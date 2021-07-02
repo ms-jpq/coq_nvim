@@ -1,6 +1,7 @@
 from typing import Iterator, Sequence
 
 from ...lsp.requests.completion import request
+from ...shared.runtime import Supervisor
 from ...shared.runtime import Worker as BaseWorker
 from ...shared.settings import BaseClient
 from ...shared.types import Completion, Context
@@ -8,6 +9,10 @@ from ..cache.worker import CacheWorker
 
 
 class Worker(BaseWorker[BaseClient, None], CacheWorker):
+    def __init__(self, supervisor: Supervisor, options: BaseClient, misc: None) -> None:
+        CacheWorker.__init__(self, supervisor.pool)
+        BaseWorker.__init__(self, supervisor, options=options, misc=misc)
+
     def work(self, context: Context) -> Iterator[Sequence[Completion]]:
         cached = self._use_cache(context)
         if cached:
