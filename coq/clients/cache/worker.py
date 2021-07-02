@@ -15,9 +15,9 @@ class _CacheCtx:
 
 
 def _cachin(comp: Completion) -> Tuple[str, Completion]:
-    pedit = comp.primary_edit
-    sort_by = comp.sort_by or pedit.new_text
-    edit = pedit if type(pedit) is Edit else Edit(new_text=pedit.new_text)
+    p_edit = comp.primary_edit
+    sort_by = comp.sort_by or p_edit.new_text
+    edit = p_edit if type(p_edit) is Edit else Edit(new_text=p_edit.new_text)
     return sort_by, replace(comp, edit=edit, secondary_edits=())
 
 
