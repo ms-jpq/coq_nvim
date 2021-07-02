@@ -1,4 +1,5 @@
 from pathlib import Path
+from pprint import pformat
 from typing import Literal, Optional, Tuple, cast
 from uuid import uuid4
 
@@ -16,6 +17,7 @@ from .databases.buffers.database import BDB
 def context(nvim: Nvim, options: Options, db: BDB) -> Optional[Context]:
 
     with Atomic() as (atomic, ns):
+        ns.pumvisible = atomic.call_function("pumvisible", ())
         ns.cwd = atomic.call_function("getcwd", ())
         ns.buf = atomic.get_current_buf()
         ns.name = atomic.buf_get_name(0)
@@ -28,6 +30,7 @@ def context(nvim: Nvim, options: Options, db: BDB) -> Optional[Context]:
         ns.cursor = atomic.win_get_cursor(0)
         atomic.commit(nvim)
 
+    pum_visible: bool = bool(ns.pumvisible)
     cwd = cast(str, ns.cwd)
     buf_nr = cast(Buffer, ns.buf).number
     (r, col) = cast(Tuple[int, int], ns.cursor)
@@ -48,7 +51,8 @@ def context(nvim: Nvim, options: Options, db: BDB) -> Optional[Context]:
         return None
     else:
         r = min(options.context_lines, row)
-        assert r < len(lines), (r, lines)
+        assert r < len(lines), pformat((r, tuple(enumerate(lines))), indent=2)
+
         line = lines[r]
         lines_before, lines_after = lines[:r], lines[r + 1 :]
 
@@ -59,6 +63,7 @@ def context(nvim: Nvim, options: Options, db: BDB) -> Optional[Context]:
 
         ctx = Context(
             uid=uuid4(),
+            pum_visible=pum_visible,
             cwd=Path(cwd),
             buf_id=buf_nr,
             changedtick=changedtick,

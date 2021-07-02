@@ -24,6 +24,7 @@ class Context:
     """
 
     uid: UUID
+    pum_visible: bool
     changedtick: int
 
     cwd: Path
