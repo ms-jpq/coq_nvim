@@ -6,7 +6,6 @@ from typing import Iterable, Iterator, Mapping, Sequence
 
 from std2.sqllite3 import with_transaction
 
-from ...consts import TMUX_DB
 from ...shared.database import init_db
 from ...shared.executor import SingleThreadExecutor
 from ...shared.settings import Options
@@ -14,7 +13,7 @@ from .sql import sql
 
 
 def _init() -> Connection:
-    conn = Connection(TMUX_DB, isolation_level=None)
+    conn = Connection(":memory:", isolation_level=None)
     init_db(conn)
     conn.executescript(sql("create", "pragma"))
     conn.executescript(sql("create", "tables"))

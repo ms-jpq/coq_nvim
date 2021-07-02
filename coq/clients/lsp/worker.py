@@ -19,9 +19,10 @@ class Worker(BaseWorker[BaseClient, None], CacheWorker):
                 tie_breaker=self._options.tie_breaker,
                 context=context,
             )
+            yield comps
             if local_cache:
                 self._set_cache(context, completions=comps)
             else:
                 self._set_cache(context, completions=())
-            yield comps
+            yield ()
 
