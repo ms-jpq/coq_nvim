@@ -3,8 +3,8 @@ from os import linesep
 from pathlib import Path
 from typing import AbstractSet, MutableSequence, MutableSet, Tuple
 
-from ..types import MetaSnippets, Options, ParsedSnippet
-from .parse import opt_parse, raise_err
+from ..types import MetaSnippets, ParsedSnippet
+from .parse import raise_err
 
 _COMMENT_START = "#"
 _EXTENDS_START = "extends"
@@ -28,49 +28,15 @@ class _State(Enum):
     pglobal = auto()
 
 
-def _start(path: Path, lineno: int, line: str) -> Tuple[str, str, AbstractSet[Options]]:
-    rest = line[len(_SNIPPET_START) :]
-    sep_count = rest.count('"')
-
-    if sep_count == 0:
-        return rest.strip(), "", opt_parse("")
-
-    if sep_count == 1:
-        return rest.strip(), "", opt_parse("")
-
-    elif sep_count == 2:
-        first = rest.find('"')
-        second = rest.find('"', first + 1)
-        return (
-            rest[:first].strip(),
-            rest[first + 1 : second],
-            opt_parse(rest[second + 1 :].strip()),
-        )
-
-    elif sep_count == 3:
-        first = rest.find('"')
-        second = rest.find('"', first + 1)
-        third = rest.find('"', second + 1)
-        return (
-            '"',
-            rest[second + 1 : third],
-            opt_parse(rest[third + 1 :].strip()),
-        )
-
-    elif sep_count == 4:
-        first = rest.find('"')
-        second = rest.find('"', first + 1)
-        third = rest.find('"', second + 1)
-        fourth = rest.find('"', third + 1)
-        return (
-            rest[first:second],
-            rest[third + 1 : fourth],
-            opt_parse(rest[fourth + 1 :].strip()),
-        )
-
+def _start(line: str) -> Tuple[str, str, MutableSet[str]]:
+    rest = line[len(_SNIPPET_START) :].strip()
+    name, _, label = rest.partition(" ")
+    if label.startswith('"') and label[1:].count('"') == 1:
+        quoted, _, opts = label[1:].partition('"')
+        options = {*opts.split(" ")}
+        return name, quoted, options
     else:
-        reason = f'Invaild # of " - {sep_count}'
-        return raise_err(path, lineno=lineno, line=line, reason=reason)
+        return name, label, set()
 
 
 def parse(path: Path) -> MetaSnippets:
@@ -81,7 +47,7 @@ def parse(path: Path) -> MetaSnippets:
     state = _State.normal
     current_label: str = ""
     current_lines: MutableSequence[str] = []
-    current_opts: AbstractSet[Options] = frozenset()
+    current_opts: AbstractSet[str] = frozenset()
 
     lines = path.read_text().splitlines()
     for lineno, line in enumerate(lines, 1):
@@ -102,9 +68,7 @@ def parse(path: Path) -> MetaSnippets:
             elif line.startswith(_SNIPPET_START):
                 state = _State.snippet
 
-                current_name, current_label, current_opts = _start(
-                    path, lineno=lineno, line=line
-                )
+                current_name, current_label, current_opts = _start(line)
 
             elif line.startswith(_GLOBAL_START):
                 state = _State.pglobal

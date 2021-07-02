@@ -90,7 +90,7 @@ class SDB:
                             for option in snippet.options:
                                 cursor.execute(
                                     sql("insert", "option"),
-                                    {"snippet_id": row_id, "option": option.name},
+                                    {"snippet_id": row_id, "option": option},
                                 )
 
         self._ex.submit(cont)

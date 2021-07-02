@@ -5,8 +5,8 @@ from string import whitespace
 from textwrap import dedent
 from typing import MutableSequence, MutableSet, Tuple
 
-from ..types import MetaSnippets, Options, ParsedSnippet
-from .parse import opt_parse, raise_err
+from ..types import MetaSnippets, ParsedSnippet
+from .parse import raise_err
 
 _COMMENT_START = "#"
 _EXTENDS_START = "extends"
@@ -19,12 +19,12 @@ _IGNORED_STARTS = ("source", "delete", "regexp")
 _SNIPPET_LINE_STARTS = {*whitespace}
 
 
-def _start(line: str) -> Tuple[str, str, MutableSet[Options]]:
+def _start(line: str) -> Tuple[str, str, MutableSet[str]]:
     rest = line[len(_SNIPPET_START) :].strip()
     name, _, label = rest.partition(" ")
     if label.startswith('"') and label[1:].count('"') == 1:
         quoted, _, opts = label[1:].partition('"')
-        options = opt_parse(o for o in opts.split(" ") if o)
+        options = {*opts.split(" ")}
         return name, quoted, options
     else:
         return name, label, set()
@@ -37,7 +37,7 @@ def parse(path: Path) -> MetaSnippets:
     current_name = ""
     current_label: str = ""
     current_aliases: MutableSequence[str] = []
-    current_options: MutableSet[Options] = set()
+    current_options: MutableSet[str] = set()
     current_lines: MutableSequence[str] = []
 
     def push() -> None:
@@ -87,7 +87,7 @@ def parse(path: Path) -> MetaSnippets:
             current_label = line[len(_LABEL_START) :].strip()
 
         elif line.startswith(_OPTIONS_START):
-            for opt in opt_parse(line[len(_OPTIONS_START) :].split(",")):
+            for opt in line[len(_OPTIONS_START) :].strip().split(","):
                 current_options.add(opt)
 
         elif any(line.startswith(c) for c in _SNIPPET_LINE_STARTS):

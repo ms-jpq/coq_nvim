@@ -1,25 +1,9 @@
 from dataclasses import dataclass
-from enum import Enum, auto
 from typing import AbstractSet, Mapping, Sequence
 
 
 class LoadError(Exception):
     pass
-
-
-class Options(Enum):
-    b = auto()
-    i = auto()
-    w = auto()
-    r = auto()
-    t = auto()
-    s = auto()
-    m = auto()
-    e = auto()
-    a = auto()
-    word = auto()
-    head = auto()
-    indent = auto()
 
 
 @dataclass(frozen=True)
@@ -29,7 +13,7 @@ class ParsedSnippet:
     label: str
     doc: str
     matches: AbstractSet[str]
-    options: AbstractSet[Options]
+    options: AbstractSet[str]
 
 
 @dataclass(frozen=True)
