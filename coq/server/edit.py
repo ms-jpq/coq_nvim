@@ -331,8 +331,9 @@ def _cursor(cursor: NvimPos, instructions: Sequence[_EditInstruction]) -> NvimPo
 def _visual(nvim: Nvim, buf: Buffer, context: Context, db: BDB) -> str:
     (row1, col1), (row2, col2) = operator_marks(nvim, buf=buf, visual_type=None)
     _, lines = db.lines(context.buf_id, lo=row1, hi=row2 + 1)
-
-    if len(lines) == 1:
+    if not lines:
+        return ""
+    elif len(lines) == 1:
         return lines[0].encode()[col1 : col2 + 1].decode()
     else:
         head = lines[0].encode()[col1:].decode()

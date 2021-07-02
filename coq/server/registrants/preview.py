@@ -222,9 +222,7 @@ def _resolve_comp(
     _FUTS.append(f2)
 
 
-_EV_DECODER = new_decoder(_Event)
-_UD_DECODER = new_decoder(UserData)
-_ITEM_DECODER = new_decoder(CompletionItem)
+_DECODER = new_decoder(_Event)
 
 
 @rpc(blocking=True)
@@ -236,21 +234,24 @@ def _cmp_changed(nvim: Nvim, stack: Stack, event: Mapping[str, Any] = {}) -> Non
     _kill_win(nvim, stack=stack)
     with timeit("PREVIEW"):
         try:
-            ev: _Event = _EV_DECODER(event)
-            data: UserData = _UD_DECODER(ev.completed_item.user_data)
-        except DecodeError as e:
-            log.warn("%s", e)
+            ev: _Event = _DECODER(event)
+        except DecodeError:
+            pass
         else:
-            s = state()
-            try:
-                item: CompletionItem = _ITEM_DECODER(data.extern)
-            except DecodeError:
+            data = ev.completed_item.user_data
+            if data:
+                s = state()
                 if data.doc and data.doc.text:
                     _show_preview(nvim, stack=stack, event=ev, doc=data.doc, state=s)
-            else:
-                _resolve_comp(
-                    nvim, stack=stack, event=ev, item=item, maybe_doc=data.doc, state=s
-                )
+                elif data.extern:
+                    _resolve_comp(
+                        nvim,
+                        stack=stack,
+                        event=ev,
+                        item=data.extern,
+                        maybe_doc=data.doc,
+                        state=s,
+                    )
 
 
 _LUA_1 = f"""
