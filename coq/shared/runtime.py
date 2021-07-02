@@ -5,7 +5,7 @@ from collections import Counter, deque
 from concurrent.futures import Executor, Future, InvalidStateError, wait
 from contextlib import suppress
 from dataclasses import dataclass
-from threading import Lock
+from threading import Event, Lock
 from typing import (
     Any,
     Deque,
@@ -85,7 +85,7 @@ class Supervisor:
 
     def notify_idle(self) -> None:
         for worker in self._workers:
-            worker.notify_idle()
+            worker.idling.set()
 
     def notify(self, token: UUID, msg: Sequence[Any]) -> None:
         for worker in self._workers:
@@ -142,12 +142,10 @@ class Supervisor:
 
 class Worker(Generic[O_co, T_co]):
     def __init__(self, supervisor: Supervisor, options: O_co, misc: T_co) -> None:
+        self.idling = Event()
         self._supervisor, self._options, self._misc = supervisor, options, misc
         self._supervisor.register(self)
-
-    @abstractmethod
-    def notify_idle(self) -> None:
-        pass
+        self.idling.set()
 
     def notify(self, token: UUID, msg: Sequence[Any]) -> None:
         pass

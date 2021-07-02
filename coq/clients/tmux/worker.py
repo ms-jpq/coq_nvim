@@ -1,7 +1,6 @@
 from dataclasses import dataclass
 from shutil import which
 from subprocess import DEVNULL, CalledProcessError, TimeoutExpired, check_output
-from time import sleep
 from typing import AbstractSet, Iterator, Optional, Sequence, Tuple
 
 from pynvim_pp.logging import log
@@ -97,12 +96,13 @@ class Worker(BaseWorker[WordbankClient, None]):
                 return pane, words
 
             while True:
+                self.idling.wait()
+                self.idling.clear()
                 snapshot = {
                     pane.uid: words
                     for pane, words in self._supervisor.pool.map(cont, _panes())
                 }
                 self._db.periodical(snapshot)
-                sleep(self._options.polling_interval)
         except Exception as e:
             log.exception("%s", e)
 

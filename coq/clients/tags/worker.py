@@ -3,7 +3,6 @@ from os import linesep
 from os.path import dirname, relpath
 from pathlib import Path
 from shutil import which
-from time import sleep
 from typing import AbstractSet, Iterator, MutableSet, Sequence, Tuple
 
 from pynvim.api.nvim import Nvim, NvimError
@@ -132,10 +131,11 @@ class Worker(BaseWorker[TagsClient, None]):
     def _poll(self) -> None:
         try:
             while True:
+                self.idling.wait()
+                self.idling.clear()
                 cwd, buf_names = _ls(self._supervisor.nvim)
                 tags = reconciliate(cwd, paths=buf_names)
                 self._db.add(tags)
-                sleep(self._options.polling_interval)
         except Exception as e:
             log.exception("%s", e)
 
