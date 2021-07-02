@@ -44,7 +44,6 @@ class Options:
 class Weights:
     consecutive_matches: float
     insertion_order: float
-    match_density: float
     neighbours: float
     num_matches: float
     prefix_matches: float

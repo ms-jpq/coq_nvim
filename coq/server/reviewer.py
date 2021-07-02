@@ -13,7 +13,6 @@ from .databases.insertions.database import IDB, SqlMetrics
 @dataclass(frozen=True)
 class _MatchMetrics:
     prefix_matches: int
-    match_density: float
     consecutive_matches: int
     num_matches: int
     neighbours: int
@@ -43,11 +42,9 @@ def count(neighbours: Mapping[str, int], cword: str, match: str) -> _MatchMetric
             consecutive_matches += 1
         pm_idx = i
 
-    match_density = num_matches / len(match) if match else 0
     metric = _MatchMetrics(
         prefix_matches=prefix_matches,
         consecutive_matches=consecutive_matches,
-        match_density=match_density,
         num_matches=num_matches,
         neighbours=neighbours.get(match, 0),
     )
@@ -80,7 +77,6 @@ def _join(
     weight = Weights(
         consecutive_matches=mm.consecutive_matches,
         insertion_order=sqm["insert_order"],
-        match_density=mm.match_density,
         neighbours=mm.neighbours,
         num_matches=mm.num_matches,
         prefix_matches=mm.prefix_matches,

@@ -7,7 +7,7 @@ from std2.ordinal import clamp
 from ..shared.parse import display_width
 from ..shared.runtime import Metric
 from ..shared.settings import PumDisplay, Weights
-from ..shared.types import Context, SnippetEdit
+from ..shared.types import Context
 from .nvim.completions import UserData, VimCompletion
 from .rt_types import Stack
 from .state import state
@@ -17,7 +17,6 @@ def _cum(adjustment: Weights, metrics: Iterable[Metric]) -> Weights:
     zero = Weights(
         consecutive_matches=0,
         insertion_order=0,
-        match_density=0,
         neighbours=0,
         num_matches=0,
         prefix_matches=0,
@@ -46,7 +45,6 @@ def _sort_by(adjustment: Weights) -> Callable[[Metric], Any]:
         return (
             -round(tot * 1000),
             -len(metric.comp.secondary_edits),
-            -isinstance(metric.comp.primary_edit, SnippetEdit),
             -metric.comp.tie_breaker,
             -(metric.comp.doc is not None),
             -sort_by[:1].isalnum(),
