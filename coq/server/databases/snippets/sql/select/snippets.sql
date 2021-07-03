@@ -1,7 +1,7 @@
 SELECT
-  snippets.rowid   AS snippet_id,
   snippets.grammar AS grammar,
-  snippets.content AS content,
+  matches.match    AS prefix,
+  snippets.content AS snippet,
   snippets.label   AS label,
   snippets.doc     AS doc
 FROM snippets

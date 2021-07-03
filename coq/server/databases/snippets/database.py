@@ -1,7 +1,7 @@
 from contextlib import closing
 from sqlite3 import Connection, Cursor, OperationalError
 from threading import Lock
-from typing import Iterable, Iterator, Mapping, Sequence, TypedDict
+from typing import Iterable, Iterator, Mapping, Sequence, TypedDict, cast
 
 from std2.sqllite3 import with_transaction
 
@@ -97,7 +97,7 @@ class SDB:
 
     def select(self, opts: Options, filetype: str, word: str) -> Sequence[_Snip]:
         def cont() -> Sequence[_Snip]:
-            def c1() -> Iterator[_Snip]:
+            try:
                 with closing(self._conn.cursor()) as cursor:
                     with with_transaction(cursor):
                         cursor.execute(
@@ -109,28 +109,7 @@ class SDB:
                                 "word": word,
                             },
                         )
-
-                        for row in cursor.fetchall():
-                            cursor.execute(
-                                sql("select", "matches"),
-                                {
-                                    "exact": opts.exact_matches,
-                                    "cut_off": opts.fuzzy_cutoff,
-                                    "snippet_id": row["snippet_id"],
-                                    "word": word,
-                                },
-                            )
-                            snip = _Snip(
-                                grammar=row["grammar"],
-                                prefix=cursor.fetchone()["match"],
-                                snippet=row["content"],
-                                label=row["label"],
-                                doc=row["doc"],
-                            )
-                            yield snip
-
-            try:
-                return tuple(c1())
+                    return tuple(cast(_Snip, row) for row in cursor.fetchall())
             except OperationalError:
                 return ()
 
