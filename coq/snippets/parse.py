@@ -24,27 +24,21 @@ def _marks(
     edit: ContextualEdit,
     regions: Iterable[Region],
 ) -> Iterator[Mark]:
-    row, _ = ctx.position
-    parsed_lines = edit.new_text.split(ctx.linefeed)
-    old_lines = edit.old_prefix.split(ctx.linefeed)
-    len8 = tuple(
-        zip(
-            accumulate(len(line.encode(UTF8)) + 1 for line in parsed_lines),
-            parsed_lines,
-        )
-    )
 
-    y_shift = row - len(old_lines) + 1
+    parsed_lines = edit.new_text.split(ctx.linefeed)
+    len8 = accumulate(
+        len(line.encode(UTF8)) + len(ctx.linefeed) for line in parsed_lines
+    )
 
     for region in regions:
         r1, c1, r2, c2 = None, None, None, None
         last_len = 0
 
-        for idx, (l8, _) in enumerate(len8):
+        for idx, l8 in enumerate(len8):
             if r1 is None and l8 >= region.begin:
-                r1, c1 = idx + y_shift, region.begin - last_len
+                r1, c1 = idx, region.begin - last_len
             if r2 is None and l8 >= region.end:
-                r2, c2 = idx + y_shift, region.end - last_len
+                r2, c2 = idx, region.end - last_len
 
             last_len = l8
 
