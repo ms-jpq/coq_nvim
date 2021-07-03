@@ -1,7 +1,7 @@
 from concurrent.futures import CancelledError, Future, InvalidStateError
 from contextlib import suppress
 from threading import Lock
-from typing import Any, MutableMapping, Tuple
+from typing import Any, Iterator, MutableMapping, Tuple
 from uuid import uuid4
 
 from pynvim.api.nvim import Nvim
@@ -24,7 +24,7 @@ def _lsp_notify(
             fut.set_result(reply)
 
 
-def blocking_request(nvim: Nvim, method: str, *args: Any) -> Any:
+def blocking_request(nvim: Nvim, method: str, *args: Any) -> Iterator[Any]:
     session = uuid4().hex
     with _LOCK:
         prev = _FUTS.get(method)

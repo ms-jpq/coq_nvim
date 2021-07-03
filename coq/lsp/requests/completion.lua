@@ -11,7 +11,7 @@
     end
 
     if #clients == 0 then
-      COQlsp_notify(name, session_id, vim.NIL)
+      COQlsp_notify(name, session_id, vim.NIL, vim.NIL)
     else
       local row, col = unpack(pos)
       local position = {line = row, character = col}
