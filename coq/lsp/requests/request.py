@@ -1,5 +1,5 @@
 from threading import Event, Lock
-from typing import Any, Iterator, MutableMapping, MutableSequence, Tuple
+from typing import Any, Iterator, MutableMapping, MutableSequence, Optional, Tuple
 from uuid import uuid4
 
 from pynvim.api.nvim import Nvim
@@ -9,14 +9,20 @@ from ...registry import rpc
 from ...server.rt_types import Stack
 
 _LOCK = Lock()
-_EVENTS: MutableMapping[str, Event]
+_EVENTS: MutableMapping[str, Event] = {}
 _STATE: MutableMapping[str, Tuple[str, MutableSequence[Any]]] = {}
 
 
 @rpc(blocking=False)
 def _lsp_notify(
-    nvim: Nvim, stack: Stack, method: str, session: str, reply: Any
+    nvim: Nvim,
+    stack: Stack,
+    method: str,
+    session: str,
+    client: Optional[str],
+    reply: Any,
 ) -> None:
+    print(client, flush=True)
     with _LOCK:
         ev = _EVENTS.get(method, Event())
         ses, acc = _STATE.get(method, ("", []))
