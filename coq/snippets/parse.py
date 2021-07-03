@@ -1,6 +1,6 @@
 from itertools import accumulate, chain, repeat
 from pprint import pformat
-from typing import AbstractSet, Iterable, Iterator, Sequence, Tuple
+from typing import AbstractSet, Iterator, Mapping, Sequence, Tuple
 
 from pynvim_pp.logging import log
 
@@ -23,7 +23,7 @@ def _marks(
     ctx: Context,
     edit: ContextualEdit,
     indent_len: int,
-    regions: Iterable[Region],
+    regions: Mapping[int, Region],
 ) -> Iterator[Mark]:
     row, _ = ctx.position
     l0_before = indent_len
@@ -32,7 +32,7 @@ def _marks(
         accumulate(len(line.encode(UTF8)) + len(ctx.linefeed) for line in parsed_lines)
     )
 
-    for region in regions:
+    for r_idx, region in regions.items():
         r1, c1, r2, c2 = None, None, None, None
         last_len = 0
 
@@ -50,7 +50,7 @@ def _marks(
         )
         begin = r1, c1
         end = r2, c2
-        mark = Mark(idx=region.idx, begin=begin, end=end, text=region.text)
+        mark = Mark(idx=r_idx, begin=begin, end=end, text=region.text)
         yield mark
 
 

@@ -1,7 +1,16 @@
 from os import linesep
 from string import Template
 from textwrap import dedent
-from typing import Iterable, Iterator, MutableSequence, NoReturn, Tuple, TypeVar, Union
+from typing import (
+    Iterable,
+    Iterator,
+    MutableMapping,
+    MutableSequence,
+    NoReturn,
+    Tuple,
+    TypeVar,
+    Union,
+)
 
 from std2.itertools import deiter
 from std2.types import never
@@ -92,7 +101,7 @@ def context_from(snippet: str, context: Context, info: ParseInfo) -> ParserCtx:
 
 def token_parser(context: ParserCtx, stream: TokenStream) -> Parsed:
     idx = 0
-    raw_regions: MutableSequence[Region] = []
+    raw_regions: MutableMapping[int, Region] = {}
     slices: MutableSequence[str] = []
     begins: MutableSequence[Tuple[int, Union[Begin, DummyBegin]]] = []
     bad_tokens: MutableSequence[Tuple[int, Token]] = []
@@ -112,8 +121,7 @@ def token_parser(context: ParserCtx, stream: TokenStream) -> Parsed:
             if begins:
                 pos, begin = begins.pop()
                 if isinstance(begin, Begin):
-                    region = Region(idx=begin.idx, begin=pos, end=idx, text="")
-                    raw_regions.append(region)
+                    raw_regions[begin.idx] = Region(begin=pos, end=idx, text="")
             else:
                 bad_tokens.append((idx, token))
         else:
@@ -121,9 +129,8 @@ def token_parser(context: ParserCtx, stream: TokenStream) -> Parsed:
 
     bad_tokens.extend(begins)
     text = "".join(slices)
-    cursor = next(
-        iter(sorted(raw_regions, key=lambda r: r.idx)),
-        Region(idx=0, begin=len(text), end=0, text=""),
+    cursor = raw_regions.get(
+        0, Region(begin=len(text.encode(UTF8)), end=0, text="")
     ).begin
     if bad_tokens:
         tpl = """
@@ -138,15 +145,14 @@ def token_parser(context: ParserCtx, stream: TokenStream) -> Parsed:
         )
         raise ParseError(msg)
 
-    regions = tuple(
-        Region(
-            idx=r.idx,
+    regions = {
+        idx: Region(
             begin=r.begin,
             end=r.end,
             text=text[r.begin : r.end],
         )
-        for r in raw_regions
-    )
+        for idx, r in raw_regions.items()
+    }
     parsed = Parsed(text=text, cursor=cursor, regions=regions)
     return parsed
 

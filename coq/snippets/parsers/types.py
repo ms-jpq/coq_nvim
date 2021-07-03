@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Iterator, Sequence, Tuple, Union
+from typing import Iterator, Mapping, Tuple, Union
 
 from std2.itertools import deiter
 
@@ -73,7 +73,6 @@ TokenStream = Iterator[Token]
 
 @dataclass(frozen=True)
 class Region:
-    idx: int
     begin: int
     end: int
     text: str
@@ -83,5 +82,5 @@ class Region:
 class Parsed:
     text: str
     cursor: int
-    regions: Sequence[Region]
+    regions: Mapping[int, Region]
 
