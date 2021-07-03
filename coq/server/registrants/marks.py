@@ -1,7 +1,6 @@
 from typing import Iterable, Iterator, Sequence, Tuple, TypedDict
 from uuid import uuid4
 
-from pynvim.api.common import NvimError
 from pynvim.api.nvim import Buffer, Nvim
 from pynvim_pp.api import cur_win, win_get_buf, win_set_cursor
 from pynvim_pp.lib import write
@@ -40,10 +39,10 @@ def nav_mark(nvim: Nvim, stack: Stack) -> None:
     ns = nvim.api.create_namespace(_NS)
     win = cur_win(nvim)
     buf = win_get_buf(nvim, win=win)
-    marks = _ls_marks(nvim, ns=ns, buf=buf)
+    marks = [*_ls_marks(nvim, ns=ns, buf=buf)]
 
-    mark = next(iter(marks), None)
-    if mark:
+    if marks:
+        mark = marks.pop()
         (r1, c1), (r2, c2) = mark.begin, mark.end
         if r1 == r2 and abs(c2 - c1) <= 1:
             row, col = r1, min(c1, c2)
@@ -57,10 +56,10 @@ def nav_mark(nvim: Nvim, stack: Stack) -> None:
 
         nvim.command("startinsert")
         nvim.api.buf_del_extmark(buf, ns, mark.idx)
-        write(nvim, "TODO --")
+        write(nvim, f"✅ {len(marks)} <>")
         state(inserted=(row, col))
     else:
-        write(nvim, "TODO --")
+        write(nvim, f"❌ {len(marks)} <>")
 
 
 def mark(nvim: Nvim, settings: Settings, buf: Buffer, marks: Iterable[Mark]) -> None:
@@ -73,11 +72,5 @@ def mark(nvim: Nvim, settings: Settings, buf: Buffer, marks: Iterable[Mark]) -> 
             "end_col": c2,
             "hl_group": settings.display.mark_highlight_group,
         }
-        try:
-            nvim.api.buf_set_extmark(buf, ns, r1, c1, opts)
-        except NvimError:
-            print(mark, flush=True)
-            raise
-
-    write(nvim, *marks)
+        nvim.api.buf_set_extmark(buf, ns, r1, c1, opts)
 
