@@ -47,12 +47,10 @@ def context(
     line_count, lines = db.lines(
         buf_nr, lo=row - options.context_lines, hi=row + options.context_lines + 1
     )
-    if row >= len(lines):
+    r = min(options.context_lines, row)
+    if r >= len(lines):
         return None
     else:
-        r = min(options.context_lines, row)
-        assert r < len(lines), pformat((r, tuple(enumerate(lines))), indent=2)
-
         line = lines[r]
         lines_before, lines_after = lines[:r], lines[r + 1 :]
 
