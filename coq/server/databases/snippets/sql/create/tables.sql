@@ -28,6 +28,7 @@ CREATE TABLE IF NOT EXISTS matches (
   snippet_id INTEGER NOT NULL REFERENCES snippets (rowid) ON DELETE CASCADE,
   match      TEXT    NOT NULL,
   lmatch     TEXT    NOT NULL AS (X_LOWER(match)) STORED,
+  sort_by    TEXT    NOT NULL AS (X_STRXFRM(lmatch)),
   UNIQUE(snippet_id, match)
 );
 CREATE INDEX IF NOT EXISTS matches_snippet_id ON matches (snippet_id);

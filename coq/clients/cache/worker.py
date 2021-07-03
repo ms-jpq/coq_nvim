@@ -1,5 +1,5 @@
 from dataclasses import dataclass, replace
-from typing import Iterator, Mapping, Optional, Sequence, Tuple
+from typing import Iterator, Mapping, Optional, Sequence
 from uuid import UUID, uuid4
 
 from ...shared.runtime import Supervisor
@@ -27,11 +27,10 @@ def _use_cache(cache: _CacheCtx, ctx: Context) -> bool:
     )
 
 
-def _cachin(comp: Completion) -> Tuple[str, Completion]:
+def _cachin(comp: Completion) -> Completion:
     p_edit = comp.primary_edit
-    sort_by = comp.sort_by or p_edit.new_text
     edit = p_edit if type(p_edit) is Edit else Edit(new_text=p_edit.new_text)
-    return sort_by, replace(comp, primary_edit=edit, secondary_edits=())
+    return replace(comp, primary_edit=edit, secondary_edits=())
 
 
 class CacheWorker:
@@ -64,7 +63,7 @@ class CacheWorker:
             buf_id=context.buf_id,
             row=row,
             line_before=context.line_before,
-            comps={k: v for k, v in map(_cachin, completions)},
+            comps={c.sort_by: c for c in map(_cachin, completions)},
         )
         self._db.add(ctx.comps)
         self._cache_ctx = ctx

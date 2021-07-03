@@ -1,5 +1,7 @@
+from locale import strxfrm
 from typing import Optional, Sequence, Tuple
 
+from ..shared.parse import lower
 from ..shared.types import Completion, Doc, Edit, RangeEdit, SnippetEdit
 from .protocol import PROTOCOL
 from .types import (
@@ -42,13 +44,14 @@ def doc(item: CompletionItem) -> Optional[Doc]:
 
 
 def _parse_item(short_name: str, tie_breaker: int, item: CompletionItem) -> Completion:
+    p_edit = _primary(item)
     cmp = Completion(
         source=short_name,
         tie_breaker=tie_breaker,
         label=item.label,
-        primary_edit=_primary(item),
+        sort_by=strxfrm(lower(item.filterText or p_edit.new_text)),
+        primary_edit=p_edit,
         secondary_edits=tuple(map(_range_edit, item.additionalTextEdits or ())),
-        sort_by=item.filterText or "",
         kind=PROTOCOL.CompletionItemKind.get(item.kind, ""),
         doc=doc(item),
         extern=item,

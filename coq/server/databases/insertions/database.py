@@ -2,7 +2,7 @@ from contextlib import closing
 from itertools import count, repeat
 from sqlite3 import Connection, OperationalError
 from threading import Lock
-from typing import Iterator, Mapping, Sequence, TypedDict
+from typing import Iterable, Iterator, Mapping, Sequence, TypedDict
 
 from std2.sqllite3 import with_transaction
 
@@ -45,7 +45,7 @@ class IDB:
 
         self._ex.submit(cont)
 
-    def metric(self, words: Sequence[str]) -> Sequence[SqlMetrics]:
+    def metric(self, words: Iterable[str]) -> Sequence[SqlMetrics]:
         def m1() -> Iterator[Mapping]:
             for word in words:
                 yield {"word": word}

@@ -43,14 +43,13 @@ def _sort_by(adjustment: Weights) -> Callable[[Metric], Any]:
             val / adjust[key] if adjust[key] else 0
             for key, val in asdict(metric.weight).items()
         )
-        sort_by = metric.comp.sort_by or metric.comp.primary_edit.new_text
         return (
             -round(tot * 1000),
             -len(metric.comp.secondary_edits),
             -metric.comp.tie_breaker,
             -(metric.comp.doc is not None),
-            -sort_by[:1].isalnum(),
-            strxfrm(sort_by),
+            metric.comp.sort_by[:1].isalnum(),
+            metric.comp.sort_by,
         )
 
     return key_by
@@ -86,7 +85,7 @@ def _cmp_to_vcmp(
 
     user_data = UserData(
         change_uid=context.change_id,
-        sort_by=metric.comp.sort_by or metric.comp.primary_edit.new_text,
+        sort_by=metric.comp.sort_by,
         primary_edit=metric.comp.primary_edit,
         secondary_edits=metric.comp.secondary_edits,
         doc=metric.comp.doc,

@@ -120,12 +120,13 @@ class Worker(BaseWorker[WordbankClient, None]):
         )
 
         def cont() -> Iterator[Completion]:
-            for word in words:
+            for word, sort_by in words:
                 edit = Edit(new_text=word)
                 cmp = Completion(
                     source=self._options.short_name,
                     tie_breaker=self._options.tie_breaker,
                     label=edit.new_text,
+                    sort_by=sort_by,
                     primary_edit=edit,
                 )
                 yield cmp

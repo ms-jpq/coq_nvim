@@ -62,13 +62,12 @@ def _metrics(
     s_before = lower(context.syms_before)
 
     for completion in completions:
-        match = lower(completion.sort_by or completion.primary_edit.new_text)
         cword = (
             w_before
-            if is_word(match[:1], unifying_chars=options.unifying_chars)
+            if is_word(completion.sort_by[:1], unifying_chars=options.unifying_chars)
             else s_before
         )
-        yield count(neighbours, cword=cword, match=match)
+        yield count(neighbours, cword=cword, match=completion.sort_by)
 
 
 def _join(
@@ -107,9 +106,7 @@ class Reviewer(PReviewer):
         neighbours: Mapping[str, int],
         completions: Sequence[Completion],
     ) -> Sequence[Metric]:
-        words = tuple(
-            comp.sort_by or comp.primary_edit.new_text for comp in completions
-        )
+        words = (comp.sort_by for comp in completions)
         mmm = _metrics(
             self._options,
             neighbours=neighbours,
