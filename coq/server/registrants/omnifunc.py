@@ -92,7 +92,7 @@ def comp_func(
                         pass
                     else:
                         s = state()
-                        if s.context == ctx:
+                        if s.change_id == ctx.change_id:
                             with timeit("TRANS"):
                                 vim_comps = tuple(
                                     trans(stack, context=ctx, metrics=metrics)
