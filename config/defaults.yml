@@ -9,7 +9,6 @@ display:
     y_max_len: 16
     x_max_len: 66
     y_ratio: 0.3
-    x_margin: 16
     ellipsis: …
 
     kind_context:
