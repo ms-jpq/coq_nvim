@@ -10,8 +10,9 @@
       clients[client.id] = client.name
     end
 
-    if #clients == 0 then
-      COQlsp_notify(name, session_id, vim.NIL, vim.NIL)
+    local n_clients = #clients
+    if n_clients == 0 then
+      COQlsp_notify(name, session_id, true, vim.NIL, vim.NIL)
     else
       local row, col = unpack(pos)
       local position = {line = row, character = col}
@@ -25,9 +26,15 @@
         "textDocument/completion",
         params,
         function(err, _, resp, client_id)
-          if not err then
-            COQlsp_notify(name, session_id, client_id, resp or vim.NIL)
-          end
+          n_clients = n_clients - 1
+
+          COQlsp_notify(
+            name,
+            session_id,
+            n_clients == 0,
+            clients[client_id],
+            resp or vim.NIL
+          )
         end
       )
     end
