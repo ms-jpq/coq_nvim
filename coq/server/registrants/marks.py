@@ -11,6 +11,7 @@ from ...registry import rpc
 from ...shared.settings import Settings
 from ...shared.types import Mark
 from ..rt_types import Stack
+from ..state import state
 
 _NS = uuid4().hex
 
@@ -45,8 +46,10 @@ def nav_mark(nvim: Nvim, stack: Stack) -> None:
     if mark:
         (r1, c1), (r2, c2) = mark.begin, mark.end
         if r1 == r2 and abs(c2 - c1) <= 1:
-            win_set_cursor(nvim, win=win, row=r1, col=min(c1, c2))
+            row, col = r1, min(c1, c2)
+            win_set_cursor(nvim, win=win, row=row, col=col)
         else:
+            row, col = r1, c1
             set_visual_selection(
                 nvim, win=win, mode="v", mark1=(r1, c1), mark2=(r2, c2 - 1)
             )
@@ -55,6 +58,7 @@ def nav_mark(nvim: Nvim, stack: Stack) -> None:
         nvim.command("startinsert")
         nvim.api.buf_del_extmark(buf, ns, mark.idx)
         write(nvim, "TODO --")
+        state(inserted=(row, col))
     else:
         write(nvim, "TODO --")
 

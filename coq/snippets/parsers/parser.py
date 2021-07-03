@@ -99,6 +99,10 @@ def context_from(snippet: str, context: Context, info: ParseInfo) -> ParserCtx:
     return ctx
 
 
+def _unparse() -> None:
+    pass
+
+
 def token_parser(context: ParserCtx, stream: TokenStream) -> Parsed:
     idx = 0
     raw_regions: MutableMapping[int, Region] = {}
