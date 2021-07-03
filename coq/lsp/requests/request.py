@@ -15,7 +15,9 @@ _FUTS: MutableMapping[str, Tuple[str, Future]] = {}
 
 
 @rpc(blocking=False)
-def _lsp_notify(nvim: Nvim, stack: Stack, method: str, uid: str, reply: Any) -> None:
+def _lsp_notify(
+    nvim: Nvim, stack: Stack, method: str, session: str, uid: str, reply: Any
+) -> None:
     with _LOCK:
         u, fut = _FUTS[method]
     if u == uid:
@@ -24,6 +26,7 @@ def _lsp_notify(nvim: Nvim, stack: Stack, method: str, uid: str, reply: Any) -> 
 
 
 def blocking_request(nvim: Nvim, method: str, *args: Any) -> Any:
+    session = uuid4().hex
     with _LOCK:
         prev = _FUTS.get(method)
         if prev:
@@ -32,7 +35,7 @@ def blocking_request(nvim: Nvim, method: str, *args: Any) -> Any:
         uid, fut = _FUTS[method] = uuid4().hex, Future()
 
     def cont() -> None:
-        nvim.api.exec_lua(f"{method}(...)", (method, uid, *args))
+        nvim.api.exec_lua(f"{method}(...)", (method, session, uid, *args))
 
     threadsafe_call(nvim, cont)
 

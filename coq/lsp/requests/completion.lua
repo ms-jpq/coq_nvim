@@ -2,7 +2,7 @@
   local cancel = function()
   end
 
-  COQlsp_comp = function(name, request_id, pos)
+  COQlsp_comp = function(name, session_id, request_id, pos)
     if session ~= session_id then
       cancel()
     end
@@ -23,8 +23,9 @@
         "textDocument/completion",
         params,
         function(err, _, resp)
-          assert(not err, table.concat(err))
-          COQlsp_notify(name, request_id, resp or vim.NIL)
+          if not err then
+            COQlsp_notify(name, session_id, request_id, resp or vim.NIL)
+          end
         end
       )
     end

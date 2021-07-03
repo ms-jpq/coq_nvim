@@ -2,7 +2,7 @@
   local cancel = function()
   end
 
-  COQlsp_preview = function(name, request_id, item)
+  COQlsp_preview = function(name, session_id, request_id, item)
     cancel()
 
     local clients = vim.lsp.buf_get_clients(0)
@@ -16,8 +16,9 @@
         "completionItem/resolve",
         item,
         function(err, _, resp)
-          assert(not err, table.concat(err))
-          COQlsp_notify(name, request_id, resp or vim.NIL)
+          if not err then
+            COQlsp_notify(name, session_id, request_id, resp or vim.NIL)
+          end
         end
       )
     end
