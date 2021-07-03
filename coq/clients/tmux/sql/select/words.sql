@@ -1,5 +1,6 @@
 SELECT DISTINCT
-  word
+  word,
+  sort_by
 FROM words
 WHERE
   X_NORMALIZE(:word) <> ''
