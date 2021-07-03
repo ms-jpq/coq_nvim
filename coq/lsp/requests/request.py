@@ -45,5 +45,7 @@ def blocking_request(nvim: Nvim, method: str, *args: Any) -> Iterator[Any]:
             else:
                 now = tuple(acc)
                 acc.clear()
-                yield from now
+                for item in now:
+                    if item:
+                        yield item
 
