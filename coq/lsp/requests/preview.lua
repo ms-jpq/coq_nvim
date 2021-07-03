@@ -9,13 +9,14 @@
     if #clients == 0 then
       COQlsp_notify(name, request_id, vim.NIL)
     else
-      local _ = nil
-      _, cancel =
+      local ids = {}
+      ids, cancel =
         vim.lsp.buf_request(
         0,
         "completionItem/resolve",
         item,
-        function(_, _, resp)
+        function(err, _, resp)
+          assert(not err, table.concat(err))
           COQlsp_notify(name, request_id, resp or vim.NIL)
         end
       )

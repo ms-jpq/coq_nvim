@@ -16,13 +16,14 @@
       local text_doc = vim.lsp.util.make_text_document_params()
       local params = {position = position, textDocument = text_doc}
 
-      local _ = nil
-      _, cancel =
+      local ids = {}
+      ids, cancel =
         vim.lsp.buf_request(
         0,
         "textDocument/completion",
         params,
-        function(_, _, resp)
+        function(err, _, resp)
+          assert(not err, table.concat(err))
           COQlsp_notify(name, request_id, resp or vim.NIL)
         end
       )
