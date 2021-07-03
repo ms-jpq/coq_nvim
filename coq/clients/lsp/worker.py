@@ -18,16 +18,17 @@ class Worker(BaseWorker[BaseClient, None], CacheWorker):
         if cached is not None:
             yield cached
         else:
-            local_cache, comps = request(
+            stream = request(
                 self._supervisor.nvim,
                 short_name=self._options.short_name,
                 tie_breaker=self._options.tie_breaker,
                 context=context,
             )
-            yield comps
-            if local_cache:
-                self._set_cache(context, completions=comps)
-            else:
-                self._set_cache(context, completions=())
-            yield ()
+            for local_cache, comps in stream:
+                yield comps
+                if local_cache:
+                    self._set_cache(context, completions=comps)
+                else:
+                    self._set_cache(context, completions=())
+                yield ()
 
