@@ -101,7 +101,7 @@ def context_from(snippet: str, context: Context, info: ParseInfo) -> ParserCtx:
     return ctx
 
 
-def _overlap(r1: Region, r2: Region) -> bool:
+def _non_overlap(r1: Region, r2: Region) -> bool:
     return (r1.begin >= r2.begin and r1.end >= r2.end) or (
         r2.begin >= r1.begin and r2.end >= r1.end
     )
@@ -113,7 +113,7 @@ def _consolidate(regions: Mapping[int, Region]) -> Mapping[int, Region]:
     )
     acc: MutableMapping[int, Region] = {}
     for _, idx, region in ordered:
-        if not any(map(partial(_overlap, region), acc.values())):
+        if all(map(partial(_non_overlap, region), acc.values())):
             acc[idx] = region
 
     return acc
