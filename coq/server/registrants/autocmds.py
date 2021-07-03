@@ -40,7 +40,7 @@ atomic.exec_lua(f"{_ft_changed.name}()", ())
 _TIMER = Timer(0, lambda: None)
 
 
-@rpc(blocking=False)
+@rpc(blocking=True)
 def _on_idle(nvim: Nvim, stack: Stack) -> None:
     with timeit("IDLE"):
         bufs = list_bufs(nvim, listed=False)
@@ -48,7 +48,7 @@ def _on_idle(nvim: Nvim, stack: Stack) -> None:
         stack.supervisor.notify_idle()
 
 
-@rpc(blocking=False)
+@rpc(blocking=True)
 def _when_idle(nvim: Nvim, stack: Stack) -> None:
     global _TIMER
     _TIMER.cancel()
