@@ -9,6 +9,7 @@ from .database import Database
 
 @dataclass(frozen=True)
 class _CacheCtx:
+    change_id: UUID
     commit_id: UUID
     buf_id: int
     row: int
@@ -38,7 +39,12 @@ class CacheWorker:
         self._soup = supervisor
         self._db = Database(supervisor.pool)
         self._cache_ctx = _CacheCtx(
-            commit_id=uuid4(), buf_id=-1, row=-1, line_before="", comps={}
+            change_id=uuid4(),
+            commit_id=uuid4(),
+            buf_id=-1,
+            row=-1,
+            line_before="",
+            comps={},
         )
 
     def _use_cache(self, context: Context) -> Optional[Sequence[Completion]]:
@@ -58,15 +64,20 @@ class CacheWorker:
 
     def _set_cache(self, context: Context, completions: Sequence[Completion]) -> None:
         row, _ = context.position
+        additive = context.change_id == self._cache_ctx.change_id
+        new_comps = {hash(c): c for c in map(_trans, completions)}
+        comps = {**self._cache_ctx.comps, **new_comps} if additive else new_comps
         ctx = _CacheCtx(
+            change_id=context.change_id,
             commit_id=context.commit_id,
             buf_id=context.buf_id,
             row=row,
             line_before=context.line_before,
-            comps={hash(c): c for c in map(_trans, completions)},
+            comps=comps,
         )
         self._db.populate(
-            {hash_id: c.primary_edit.new_text for hash_id, c in ctx.comps.items()}
+                additive,
+            pool={hash_id: c.primary_edit.new_text for hash_id, c in new_comps.items()}
         )
         self._cache_ctx = ctx
 

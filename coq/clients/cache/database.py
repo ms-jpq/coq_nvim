@@ -30,11 +30,12 @@ class Database:
         with self._lock:
             self._conn.interrupt()
 
-    def populate(self, pool: Mapping[int, str]) -> None:
+    def populate(self, additive: bool, pool: Mapping[int, str]) -> None:
         def cont() -> None:
             with self._lock, closing(self._conn.cursor()) as cursor:
                 with with_transaction(cursor):
-                    cursor.execute(sql("delete", "words"))
+                    if not additive:
+                        cursor.execute(sql("delete", "words"))
                     cursor.executemany(
                         sql("insert", "word"),
                         (
