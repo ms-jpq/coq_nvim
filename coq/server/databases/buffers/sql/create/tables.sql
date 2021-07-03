@@ -40,18 +40,4 @@ CREATE TABLE IF NOT EXISTS insertions (
 );
 
 
-CREATE VIEW IF NOT EXISTS filetype_wordcount_view AS
-SELECT
-  buffers.filetype  AS filetype,
-  words.word        AS word,
-  COUNT(words.word) AS wordcount
-FROM files
-JOIN words
-ON
-  words.filename = buffers.filename
-GROUP BY
-  buffers.filetype,
-  words.word;
-  
-
 END;
