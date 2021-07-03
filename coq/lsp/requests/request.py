@@ -36,10 +36,9 @@ def blocking_request(nvim: Nvim, method: str, *args: Any) -> Iterator[Any]:
     session = uuid4().hex
     with _LOCK:
         prev, _, __, ___ = _STATE[method]
-        prev.set()
-
         ev = Event()
         _STATE[method] = (ev, session, False, ())
+        prev.set()
 
     def cont() -> None:
         nvim.api.exec_lua(f"{method}(...)", (method, session, *args))
