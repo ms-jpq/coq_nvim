@@ -1,5 +1,4 @@
 from itertools import accumulate, chain, repeat
-from os import linesep
 from pprint import pformat
 from typing import AbstractSet, Iterable, Iterator, Sequence, Tuple
 
@@ -7,8 +6,8 @@ from pynvim_pp.logging import log
 
 from ..consts import DEBUG
 from ..shared.parse import is_word
-from ..shared.trans import expand_tabs, trans_adjusted
-from ..shared.types import UTF8, Context, ContextualEdit, Edit, Mark, SnippetEdit
+from ..shared.trans import expand_tabs
+from ..shared.types import UTF8, Context, ContextualEdit, Mark, SnippetEdit
 from .parsers.lsp import parser as lsp_parser
 from .parsers.snu import parser as snu_parser
 from .parsers.types import ParseInfo, Region
@@ -18,14 +17,6 @@ def _indent(ctx: Context, old_prefix: str, line_before: str) -> str:
     l = len(line_before.encode(UTF8)) - len(old_prefix.encode(UTF8))
     spaces = " " * ctx.tabstop
     return " " * l if ctx.expandtab else (" " * l).replace(spaces, "\t")
-
-
-def _before_after(
-    unifying_chars: AbstractSet[str], context: Context, text: str
-) -> Tuple[str, str]:
-    edit = Edit(new_text=text)
-    c_edit = trans_adjusted(unifying_chars, ctx=context, edit=edit)
-    return c_edit.old_prefix, c_edit.old_suffix
 
 
 def _marks(
@@ -75,21 +66,22 @@ def parse(
 ) -> Tuple[ContextualEdit, Sequence[Mark]]:
     parser = lsp_parser if snippet.grammar == "lsp" else snu_parser
 
-    trigger_word = (
+    old_prefix = (
         context.words_before
         if is_word(sort_by[:1], unifying_chars=unifying_chars)
         else context.syms_before + context.words_before
     )
-    indent = _indent(context, old_prefix=trigger_word, line_before=context.line_before)
+    indent = _indent(context, old_prefix=old_prefix, line_before=context.line_before)
     expanded_text = expand_tabs(context, text=snippet.new_text)
     indented_text = context.linefeed.join(
         lhs + rhs
         for lhs, rhs in zip(chain(("",), repeat(indent)), expanded_text.splitlines())
     )
     parsed = parser(context, snippet=indented_text, info=ParseInfo(visual=visual))
-
-    old_prefix, old_suffix = _before_after(
-        unifying_chars, context=context, text=parsed.text
+    old_suffix = (
+        context.words_after
+        if is_word(parsed.text[-1:], unifying_chars=unifying_chars)
+        else context.words_after + context.syms_after
     )
 
     edit = ContextualEdit(
