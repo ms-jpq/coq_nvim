@@ -47,7 +47,7 @@ def context(
     line_count, lines = db.lines(
         buf_nr, lo=row - options.context_lines, hi=row + options.context_lines + 1
     )
-    if not line_count:
+    if row >= len(lines):
         return None
     else:
         r = min(options.context_lines, row)
