@@ -1,5 +1,5 @@
 SELECT
-  word
+  rowid
 FROM words
 WHERE
   X_NORMALIZE(:word) <> ''

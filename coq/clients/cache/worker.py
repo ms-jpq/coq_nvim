@@ -13,7 +13,7 @@ class _CacheCtx:
     buf_id: int
     row: int
     line_before: str
-    comps: Mapping[str, Completion]
+    comps: Mapping[int, Completion]
 
 
 def _use_cache(cache: _CacheCtx, ctx: Context) -> bool:
@@ -27,7 +27,7 @@ def _use_cache(cache: _CacheCtx, ctx: Context) -> bool:
     )
 
 
-def _cachin(comp: Completion) -> Completion:
+def _trans(comp: Completion) -> Completion:
     p_edit = comp.primary_edit
     edit = p_edit if type(p_edit) is Edit else Edit(new_text=p_edit.new_text)
     return replace(comp, primary_edit=edit, secondary_edits=())
@@ -44,11 +44,11 @@ class CacheWorker:
     def _use_cache(self, context: Context) -> Optional[Sequence[Completion]]:
         if _use_cache(self._cache_ctx, ctx=context):
             match = context.words or context.syms
-            words = self._db.select(self._soup.options, word=match)
+            hashes = self._db.select(self._soup.options, word=match)
 
             def cont() -> Iterator[Completion]:
-                for word in words:
-                    cmp = self._cache_ctx.comps.get(word)
+                for hash_id in hashes:
+                    cmp = self._cache_ctx.comps.get(hash_id)
                     if cmp:
                         yield cmp
 
@@ -63,8 +63,10 @@ class CacheWorker:
             buf_id=context.buf_id,
             row=row,
             line_before=context.line_before,
-            comps={c.sort_by: c for c in map(_cachin, completions)},
+            comps={hash(c): c for c in map(_trans, completions)},
         )
-        self._db.add(ctx.comps)
+        self._db.populate(
+            {hash_id: c.primary_edit.new_text for hash_id, c in ctx.comps.items()}
+        )
         self._cache_ctx = ctx
 
