@@ -13,7 +13,7 @@ CREATE INDEX IF NOT EXISTS files_filetype ON files (filetype);
 -- !! files 1:N tags
 CREATE TABLE IF NOT EXISTS tags (
   `path`    TEXT    NOT NULL REFERENCES files (filename) ON DELETE CASCADE,
-  line      INTEGER,
+  line      INTEGER NOT NULL,
   kind      TEXT    NOT NULL,
   name      TEXT    NOT NULL,
   lname     TEXT    NOT NULL AS (X_LOWER(name)) STORED,
