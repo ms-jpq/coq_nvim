@@ -63,18 +63,19 @@ class Database:
         def cont() -> Sequence[Tuple[str, str]]:
             try:
                 with closing(self._conn.cursor()) as cursor:
-                    cursor.execute(
-                        sql("select", "words"),
-                        {
-                            "exact": opts.exact_matches,
-                            "cut_off": opts.fuzzy_cutoff,
-                            "pane_id": active_pane,
-                            "word": word,
-                        },
-                    )
-                    return tuple(
-                        (row["word"], row["sort_by"]) for row in cursor.fetchall()
-                    )
+                    with with_transaction(cursor):
+                        cursor.execute(
+                            sql("select", "words"),
+                            {
+                                "exact": opts.exact_matches,
+                                "cut_off": opts.fuzzy_cutoff,
+                                "pane_id": active_pane,
+                                "word": word,
+                            },
+                        )
+                        return tuple(
+                            (row["word"], row["sort_by"]) for row in cursor.fetchall()
+                        )
             except OperationalError:
                 return ()
 

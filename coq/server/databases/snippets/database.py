@@ -65,8 +65,8 @@ class SDB:
     def populate(self, mapping: Mapping[str, Iterable[ParsedSnippet]]) -> None:
         def cont() -> None:
             with self._lock, closing(self._conn.cursor()) as cursor:
-                for filetype, snippets in mapping.items():
-                    with with_transaction(cursor):
+                with with_transaction(cursor):
+                    for filetype, snippets in mapping.items():
                         _ensure_ft(cursor, filetypes=(filetype,))
                         for snippet in snippets:
                             row_id = hash(snippet.grammar + snippet.content)
@@ -109,7 +109,7 @@ class SDB:
                                 "word": word,
                             },
                         )
-                    return tuple(cast(_Snip, row) for row in cursor.fetchall())
+                        return tuple(cast(_Snip, row) for row in cursor.fetchall())
             except OperationalError:
                 return ()
 

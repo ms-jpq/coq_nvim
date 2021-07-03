@@ -50,15 +50,16 @@ class Database:
         def cont() -> Sequence[int]:
             try:
                 with closing(self._conn.cursor()) as cursor:
-                    cursor.execute(
-                        sql("select", "words"),
-                        {
-                            "exact": opts.exact_matches,
-                            "cut_off": opts.fuzzy_cutoff,
-                            "word": word,
-                        },
-                    )
-                    return tuple(row["rowid"] for row in cursor.fetchall())
+                    with with_transaction(cursor):
+                        cursor.execute(
+                            sql("select", "words"),
+                            {
+                                "exact": opts.exact_matches,
+                                "cut_off": opts.fuzzy_cutoff,
+                                "word": word,
+                            },
+                        )
+                        return tuple(row["rowid"] for row in cursor.fetchall())
             except OperationalError:
                 return ()
 
