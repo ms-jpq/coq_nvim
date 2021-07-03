@@ -25,6 +25,7 @@ def _marks(
     regions: Iterable[Region],
 ) -> Iterator[Mark]:
 
+    prefix_len = len(edit.old_prefix.encode(UTF8))
     parsed_lines = edit.new_text.split(ctx.linefeed)
     len8 = accumulate(
         len(line.encode(UTF8)) + len(ctx.linefeed) for line in parsed_lines
@@ -35,10 +36,11 @@ def _marks(
         last_len = 0
 
         for idx, l8 in enumerate(len8):
+            x_shift = 0 if idx else prefix_len
             if r1 is None and l8 >= region.begin:
-                r1, c1 = idx, region.begin - last_len
+                r1, c1 = idx, region.begin - last_len + x_shift
             if r2 is None and l8 >= region.end:
-                r2, c2 = idx, region.end - last_len
+                r2, c2 = idx, region.end - last_len + x_shift
 
             last_len = l8
 
