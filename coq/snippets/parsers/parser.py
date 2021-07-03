@@ -1,9 +1,11 @@
+from functools import partial
 from os import linesep
 from string import Template
 from textwrap import dedent
 from typing import (
     Iterable,
     Iterator,
+    Mapping,
     MutableMapping,
     MutableSequence,
     NoReturn,
@@ -99,8 +101,22 @@ def context_from(snippet: str, context: Context, info: ParseInfo) -> ParserCtx:
     return ctx
 
 
-def _unparse() -> None:
-    pass
+def _overlap(r1: Region, r2: Region) -> bool:
+    return (r1.begin >= r2.begin and r1.end >= r2.end) or (
+        r2.begin >= r1.begin and r2.end >= r1.end
+    )
+
+
+def _consolidate(regions: Mapping[int, Region]) -> Mapping[int, Region]:
+    ordered = sorted(
+        ((r.end - r.begin, idx, r) for idx, r in regions.items()), key=lambda t: t[:-1]
+    )
+    acc: MutableMapping[int, Region] = {}
+    for _, idx, region in ordered:
+        if not any(map(partial(_overlap, region), acc.values())):
+            acc[idx] = region
+
+    return acc
 
 
 def token_parser(context: ParserCtx, stream: TokenStream) -> Parsed:
@@ -155,7 +171,7 @@ def token_parser(context: ParserCtx, stream: TokenStream) -> Parsed:
             end=r.end,
             text=text[r.begin : r.end],
         )
-        for idx, r in raw_regions.items()
+        for idx, r in _consolidate(raw_regions).items()
     }
     parsed = Parsed(text=text, cursor=cursor, regions=regions)
     return parsed
