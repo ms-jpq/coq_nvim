@@ -26,7 +26,8 @@ def _lsp_notify(
         ev = _EVENTS.get(method, Event())
         ses, acc = _STATE.get(method, ("", []))
         if session == ses:
-            acc.append(reply)
+            if reply:
+                acc.append(reply)
             ev.set()
 
 
@@ -45,12 +46,10 @@ def blocking_request(nvim: Nvim, method: str, *args: Any) -> Iterator[Any]:
         ev.wait()
         with _LOCK:
             ses, acc = _STATE.get(method, ("", []))
-            if ses != session:
+            if ses != session or not acc:
                 break
             else:
                 now = tuple(acc)
                 acc.clear()
-                for item in now:
-                    if item:
-                        yield item
+                yield from now
 
