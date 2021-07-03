@@ -33,10 +33,9 @@ def _lsp_notify(
 
 
 def blocking_request(nvim: Nvim, method: str, *args: Any) -> Iterator[Any]:
-    session = uuid4().hex
+    ev, session = Event(), uuid4().hex
     with _LOCK:
         prev, _, __, ___ = _STATE[method]
-        ev = Event()
         _STATE[method] = (ev, session, False, ())
         prev.set()
 
