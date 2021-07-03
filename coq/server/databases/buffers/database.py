@@ -56,13 +56,13 @@ class BDB:
             try:
                 with closing(self._conn.cursor()) as cursor:
                     with with_transaction(cursor):
-                        cursor.execute(sql("create", "tmp_bufs"), ())
+                        cursor.execute(sql("select", "buffers"), ())
+                        existing = {row["rowid"] for row in cursor.fetchall()}
                         cursor.execute(
-                            sql("insert", "tmp_bufs"),
-                            ({"buf_id": buf_id} for buf_id in buf_ids),
+                            sql("delete", "buffers"),
+                            ({"buf_id": buf_id} for buf_id in existing - buf_ids),
                         )
                         cursor.execute(sql("delete", "buffers"), ())
-                        cursor.execute(sql("drop", "tmp_bufs"), ())
             except OperationalError:
                 pass
 

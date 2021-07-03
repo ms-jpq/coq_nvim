@@ -42,9 +42,11 @@ _TIMER = Timer(0, lambda: None)
 
 @rpc(blocking=True)
 def _on_idle(nvim: Nvim, stack: Stack) -> None:
-    with timeit("IDLE"):
+    with timeit("IDLE -- VACUUM"):
         bufs = list_bufs(nvim, listed=False)
         stack.bdb.vacuum({buf.number for buf in bufs})
+
+    with timeit("IDLE -- WORKER"):
         stack.supervisor.notify_idle()
 
 
