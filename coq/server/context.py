@@ -19,6 +19,7 @@ def context(
 ) -> Optional[Context]:
 
     with Atomic() as (atomic, ns):
+        ns.scr_col = atomic.call_function("screencol", ())
         ns.cwd = atomic.call_function("getcwd", ())
         ns.buf = atomic.get_current_buf()
         ns.name = atomic.buf_get_name(0)
@@ -30,6 +31,7 @@ def context(
         ns.cursor = atomic.win_get_cursor(0)
         atomic.commit(nvim)
 
+    scr_col = ns.scr_col
     cwd = cast(str, ns.cwd)
     buf_nr = cast(Buffer, ns.buf).number
     (r, col) = cast(Tuple[int, int], ns.cursor)
@@ -72,6 +74,7 @@ def context(
             expandtab=expandtab,
             comment=(lhs, rhs),
             position=pos,
+            scr_col=scr_col,
             line=split.lhs + split.rhs,
             line_before=split.lhs,
             line_after=split.rhs,

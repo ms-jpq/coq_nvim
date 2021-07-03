@@ -111,7 +111,6 @@ def trans(
     scr_width, _ = s.screen
 
     display = stack.settings.display
-    _, col = context.position
 
     kind_dead_width = sum(
         display_width(s, tabsize=context.tabstop, linefeed=context.linefeed)
@@ -120,7 +119,9 @@ def trans(
     ellipsis_width = display_width(
         display.pum.ellipsis, tabsize=context.tabstop, linefeed=context.linefeed
     )
-    truncate = clamp(1, scr_width - col - display.pum.x_margin, display.pum.x_max_len)
+    truncate = clamp(
+        1, scr_width - context.scr_col - display.pum.x_margin, display.pum.x_max_len
+    )
 
     max_width, w_adjust = _cum(stack.settings.weights, metrics=metrics)
     sortby = _sort_by(w_adjust)

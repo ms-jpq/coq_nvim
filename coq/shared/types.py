@@ -39,6 +39,7 @@ class Context:
     comment: Tuple[str, str]
 
     position: NvimPos
+    scr_col: int
 
     line: str
     line_before: str

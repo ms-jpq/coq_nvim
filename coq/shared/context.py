@@ -16,6 +16,7 @@ EMPTY_CONTEXT = Context(
     expandtab=True,
     comment=("", ""),
     position=(0, 0),
+    scr_col=0,
     line="",
     line_before="",
     line_after="",
