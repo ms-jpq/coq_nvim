@@ -2,14 +2,16 @@
   local cancel = function()
   end
 
-  COQlsp_comp = function(name, session_id, request_id, pos)
-    if session ~= session_id then
-      cancel()
+  COQlsp_comp = function(name, session_id, pos)
+    cancel()
+
+    local clients = {}
+    for _, client in ipairs(vim.lsp.buf_get_clients(0)) do
+      clients[client.id] = client.name
     end
 
-    local clients = vim.lsp.buf_get_clients(0)
     if #clients == 0 then
-      COQlsp_notify(name, request_id, vim.NIL)
+      COQlsp_notify(name, session_id, vim.NIL)
     else
       local row, col = unpack(pos)
       local position = {line = row, character = col}
@@ -22,9 +24,9 @@
         0,
         "textDocument/completion",
         params,
-        function(err, _, resp)
+        function(err, _, resp, client_id)
           if not err then
-            COQlsp_notify(name, session_id, request_id, resp or vim.NIL)
+            COQlsp_notify(name, session_id, client_id, resp or vim.NIL)
           end
         end
       )
