@@ -86,7 +86,7 @@ def _cmp_to_vcmp(
 
     user_data = UserData(
         change_uid=context.change_id,
-        sort_by=metric.comp.sort_by,
+        sort_by=metric.comp.sort_by or metric.comp.primary_edit.new_text,
         primary_edit=metric.comp.primary_edit,
         secondary_edits=metric.comp.secondary_edits,
         doc=metric.comp.doc,
