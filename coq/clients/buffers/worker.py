@@ -6,17 +6,6 @@ from ...shared.settings import WordbankClient
 from ...shared.types import Completion, Context, Edit
 
 
-def _comp(client: WordbankClient, word: str) -> Completion:
-    edit = Edit(new_text=word)
-    cmp = Completion(
-        source=client.short_name,
-        tie_breaker=client.tie_breaker,
-        label=edit.new_text,
-        primary_edit=edit,
-    )
-    return cmp
-
-
 class Worker(BaseWorker[WordbankClient, BDB]):
     def work(self, context: Context) -> Iterator[Sequence[Completion]]:
         match = context.words or (context.syms if self._options.match_syms else "")
@@ -25,5 +14,18 @@ class Worker(BaseWorker[WordbankClient, BDB]):
             filetype=context.filetype,
             word=match,
         )
-        yield tuple(_comp(self._options, word=word) for word in words)
+
+        def cont() -> Iterator[Completion]:
+            for word, sort_by in words:
+                edit = Edit(new_text=word)
+                cmp = Completion(
+                    source=self._options.short_name,
+                    tie_breaker=self._options.tie_breaker,
+                    label=edit.new_text,
+                    sort_by=sort_by,
+                    primary_edit=edit,
+                )
+                yield cmp
+
+        yield tuple(cont())
 

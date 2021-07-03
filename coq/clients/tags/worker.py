@@ -107,20 +107,6 @@ def _doc(client: TagsClient, context: Context, tag: Tag) -> Doc:
     return doc
 
 
-def _cmp(client: TagsClient, context: Context, tag: Tag) -> Completion:
-    edit = Edit(new_text=tag["name"])
-
-    cmp = Completion(
-        source=client.short_name,
-        tie_breaker=client.tie_breaker,
-        label=edit.new_text,
-        primary_edit=edit,
-        kind=tag["kind"],
-        doc=_doc(client, context=context, tag=tag),
-    )
-    return cmp
-
-
 class Worker(BaseWorker[TagsClient, None]):
     def __init__(self, supervisor: Supervisor, options: TagsClient, misc: None) -> None:
         self._db = Database(supervisor.pool)
@@ -151,10 +137,20 @@ class Worker(BaseWorker[TagsClient, None]):
 
         def cont() -> Iterator[Completion]:
             seen: MutableSet[str] = set()
-            for tag in tags:
+            for tag, sort_by in tags:
                 if tag["name"] not in seen:
                     seen.add(tag["name"])
-                    yield _cmp(self._options, context=context, tag=tag)
+                    edit = Edit(new_text=tag["name"])
+                    cmp = Completion(
+                        source=self._options.short_name,
+                        tie_breaker=self._options.tie_breaker,
+                        label=edit.new_text,
+                        sort_by=sort_by,
+                        primary_edit=edit,
+                        kind=tag["kind"],
+                        doc=_doc(self._options, context=context, tag=tag),
+                    )
+                    yield cmp
 
         yield tuple(cont())
 

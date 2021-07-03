@@ -106,7 +106,7 @@ class Reviewer(PReviewer):
         neighbours: Mapping[str, int],
         completions: Sequence[Completion],
     ) -> Sequence[Metric]:
-        words = (comp.sort_by for comp in completions)
+        words = tuple(comp.sort_by for comp in completions)
         mmm = _metrics(
             self._options,
             neighbours=neighbours,

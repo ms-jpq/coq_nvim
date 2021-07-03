@@ -2,7 +2,7 @@ from concurrent.futures import Executor
 from contextlib import closing
 from sqlite3 import Connection, OperationalError
 from threading import Lock
-from typing import Iterator, Mapping, Sequence, cast
+from typing import Iterator, Mapping, Sequence, Tuple, cast
 
 from std2.sqllite3 import with_transaction
 
@@ -96,8 +96,8 @@ class Database:
 
     def select(
         self, opts: Options, filename: str, line_num: int, word: str
-    ) -> Sequence[Tag]:
-        def cont() -> Sequence[Tag]:
+    ) -> Sequence[Tuple[Tag, str]]:
+        def cont() -> Sequence[Tuple[Tag, str]]:
             try:
                 with closing(self._conn.cursor()) as cursor:
                     with with_transaction(cursor):
@@ -117,7 +117,10 @@ class Database:
                                 "word": word,
                             },
                         )
-                        return tuple(cast(Tag, {**row}) for row in cursor.fetchall())
+                        return tuple(
+                            (cast(Tag, {**row}), row["sort_by"])
+                            for row in cursor.fetchall()
+                        )
             except OperationalError:
                 return ()
 

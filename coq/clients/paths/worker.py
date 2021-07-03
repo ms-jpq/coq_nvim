@@ -1,8 +1,10 @@
+from locale import strxfrm
 from os import X_OK, access
 from os.path import join, sep
 from pathlib import Path
 from typing import Iterator, Sequence
 
+from ...shared.parse import lower
 from ...shared.runtime import Worker as BaseWorker
 from ...shared.settings import BaseClient
 from ...shared.types import Completion, Context, Edit
@@ -59,7 +61,8 @@ class Worker(BaseWorker[BaseClient, None]):
                 completion = Completion(
                     source=self._options.short_name,
                     tie_breaker=self._options.tie_breaker,
-                    label=edit.new_text.strip(),
+                    label=edit.new_text,
+                    sort_by=strxfrm(lower(edit.new_text)),
                     primary_edit=edit,
                 )
                 yield completion

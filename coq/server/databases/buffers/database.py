@@ -134,8 +134,10 @@ class BDB:
         self._interrupt()
         return self._ex.submit(cont)
 
-    def words(self, opts: Options, filetype: str, word: str) -> Sequence[str]:
-        def cont() -> Sequence[str]:
+    def words(
+        self, opts: Options, filetype: str, word: str
+    ) -> Sequence[Tuple[str, str]]:
+        def cont() -> Sequence[Tuple[str, str]]:
             try:
                 with closing(self._conn.cursor()) as cursor:
                     cursor.execute(
@@ -147,7 +149,9 @@ class BDB:
                             "word": word,
                         },
                     )
-                    return tuple(row["word"] for row in cursor.fetchall())
+                    return tuple(
+                        (row["word"], row["sort_by"]) for row in cursor.fetchall()
+                    )
             except OperationalError:
                 return ()
 

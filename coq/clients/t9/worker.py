@@ -1,5 +1,6 @@
 from itertools import chain
 from json import dumps, loads
+from locale import strxfrm
 from os import linesep
 from subprocess import PIPE, Popen
 from threading import Event
@@ -7,6 +8,7 @@ from typing import IO, Any, Iterator, Optional, Sequence, cast
 
 from std2.pickle import new_decoder, new_encoder
 
+from ...shared.parse import lower
 from ...shared.runtime import Supervisor
 from ...shared.runtime import Worker as BaseWorker
 from ...shared.settings import BaseClient, Options
@@ -55,10 +57,11 @@ def _decode(client: BaseClient, reply: Any) -> Iterator[Completion]:
             result.new_suffix.splitlines() or ("",)
         )[0]
         cmp = Completion(
-            primary_edit=edit,
             source=client.short_name,
             tie_breaker=client.tie_breaker,
             label=label,
+            sort_by=strxfrm(lower(edit.new_text)),
+            primary_edit=edit,
         )
         yield cmp
 

@@ -1,5 +1,6 @@
 from concurrent.futures import CancelledError, Future, InvalidStateError
 from contextlib import suppress
+from locale import strxfrm
 from pathlib import Path
 from threading import Lock
 from typing import Any, Iterator, Optional, Sequence, Tuple
@@ -61,14 +62,14 @@ class Worker(BaseWorker[BaseClient, None]):
 
         def cont() -> Iterator[Completion]:
             for payload in resp:
-                if lower(payload.text).startswith(match) and (
-                    len(payload.text) > len(match)
-                ):
+                ltext = lower(payload.text)
+                if ltext.startswith(match) and (len(payload.text) > len(match)):
                     edit = Edit(new_text=payload.text)
                     cmp = Completion(
                         source=self._options.short_name,
                         tie_breaker=self._options.tie_breaker,
                         label=edit.new_text.strip(),
+                        sort_by=strxfrm(ltext),
                         primary_edit=edit,
                     )
                     yield cmp
