@@ -1,3 +1,4 @@
+from collections import defaultdict
 from threading import Event, Lock
 from typing import Any, Iterator, MutableMapping, Optional, Sequence, Tuple
 from uuid import uuid4
@@ -9,8 +10,9 @@ from ...registry import rpc
 from ...server.rt_types import Stack
 
 _LOCK = Lock()
-_EVENTS: MutableMapping[str, Event] = {}
-_STATE: MutableMapping[str, Tuple[str, bool, Sequence[Any]]] = {}
+_STATE: MutableMapping[str, Tuple[Event, str, bool, Sequence[Any]]] = defaultdict(
+    lambda: (Event(), "", True, ())
+)
 
 
 @rpc(blocking=False)
@@ -24,18 +26,20 @@ def _lsp_notify(
     reply: Any,
 ) -> None:
     with _LOCK:
-        ev = _EVENTS.get(method, Event())
-        ses, _, acc = _STATE.get(method, ("", True, ()))
+        ev, ses, _, acc = _STATE[method]
         if session == ses:
-            _STATE[method] = (session, done, (*acc, reply))
+            _STATE[method] = (ev, session, done, (*acc, reply))
             ev.set()
 
 
 def blocking_request(nvim: Nvim, method: str, *args: Any) -> Iterator[Any]:
     session = uuid4().hex
     with _LOCK:
-        ev = _EVENTS.setdefault(method, Event())
-        _STATE[method] = (session, False, ())
+        prev, _, __, ___ = _STATE[method]
+        prev.set()
+
+        ev = Event()
+        _STATE[method] = (ev, session, False, ())
 
     def cont() -> None:
         nvim.api.exec_lua(f"{method}(...)", (method, session, *args))
@@ -45,8 +49,7 @@ def blocking_request(nvim: Nvim, method: str, *args: Any) -> Iterator[Any]:
     while True:
         ev.wait()
         with _LOCK:
-            ses, done, acc = _STATE.get(method, ("", True, ()))
-            ev.clear()
+            ____, ses, done, acc = _STATE[method]
         if ses != session:
             break
         else:
