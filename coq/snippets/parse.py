@@ -13,22 +13,23 @@ from .parsers.snu import parser as snu_parser
 from .parsers.types import ParseInfo, Region
 
 
-def _indent(ctx: Context, old_prefix: str, line_before: str) -> str:
+def _indent(ctx: Context, old_prefix: str, line_before: str) -> Tuple[int, str]:
     l = len(line_before.encode(UTF8)) - len(old_prefix.encode(UTF8))
     spaces = " " * ctx.tabstop
-    return " " * l if ctx.expandtab else (" " * l).replace(spaces, "\t")
+    return l, " " * l if ctx.expandtab else (" " * l).replace(spaces, "\t")
 
 
 def _marks(
     ctx: Context,
     edit: ContextualEdit,
+    indent_len: int,
     regions: Iterable[Region],
 ) -> Iterator[Mark]:
-
-    prefix_len = len(edit.old_prefix.encode(UTF8))
+    row, _ = ctx.position
+    l0_before = indent_len
     parsed_lines = edit.new_text.split(ctx.linefeed)
-    len8 = accumulate(
-        len(line.encode(UTF8)) + len(ctx.linefeed) for line in parsed_lines
+    len8 = tuple(
+        accumulate(len(line.encode(UTF8)) + len(ctx.linefeed) for line in parsed_lines)
     )
 
     for region in regions:
@@ -36,11 +37,11 @@ def _marks(
         last_len = 0
 
         for idx, l8 in enumerate(len8):
-            x_shift = 0 if idx else prefix_len
+            x_shift = 0 if idx else l0_before
             if r1 is None and l8 >= region.begin:
-                r1, c1 = idx, region.begin - last_len + x_shift
+                r1, c1 = idx + row, region.begin - last_len + x_shift
             if r2 is None and l8 >= region.end:
-                r2, c2 = idx, region.end - last_len + x_shift
+                r2, c2 = idx + row, region.end - last_len + x_shift
 
             last_len = l8
 
@@ -67,7 +68,9 @@ def parse(
         if is_word(sort_by[:1], unifying_chars=unifying_chars)
         else context.syms_before + context.words_before
     )
-    indent = _indent(context, old_prefix=old_prefix, line_before=context.line_before)
+    indent_len, indent = _indent(
+        context, old_prefix=old_prefix, line_before=context.line_before
+    )
     expanded_text = expand_tabs(context, text=snippet.new_text)
     indented_text = context.linefeed.join(
         lhs + rhs
@@ -86,7 +89,9 @@ def parse(
         old_suffix=old_suffix,
         new_prefix=parsed.text.encode(UTF8)[: parsed.cursor].decode(),
     )
-    marks = tuple(_marks(context, edit=edit, regions=parsed.regions))
+    marks = tuple(
+        _marks(context, edit=edit, indent_len=indent_len, regions=parsed.regions)
+    )
 
     if DEBUG:
         msg = pformat((snippet, parsed, edit, marks))
