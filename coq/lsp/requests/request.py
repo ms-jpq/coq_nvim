@@ -22,7 +22,6 @@ def _lsp_notify(
     client: Optional[str],
     reply: Any,
 ) -> None:
-    print(client, flush=True)
     with _LOCK:
         ev = _EVENTS.get(method, Event())
         ses, acc = _STATE.get(method, ("", []))
