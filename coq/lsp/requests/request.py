@@ -46,10 +46,10 @@ def blocking_request(nvim: Nvim, method: str, *args: Any) -> Iterator[Any]:
         ev.wait()
         with _LOCK:
             ses, done, acc = _STATE.get(method, ("", True, ()))
-            if ses != session:
+        if ses != session:
+            break
+        else:
+            yield from acc
+            if done:
                 break
-            else:
-                yield from acc
-                if done:
-                    break
 
