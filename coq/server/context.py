@@ -49,6 +49,7 @@ def context(
     )
     r = min(options.context_lines, row)
     if r >= len(lines):
+        print(pformat(tuple(enumerate(lines))), flush=True)
         return None
     else:
         line = lines[r]
