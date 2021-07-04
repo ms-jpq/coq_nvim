@@ -49,8 +49,6 @@ def _lines_event(
     lines: Sequence[str],
     pending: bool,
 ) -> None:
-    global _TIMER
-
     filetype = buf_filetype(nvim, buf=buf)
     stack.bdb.set_lines(
         buf.number,
