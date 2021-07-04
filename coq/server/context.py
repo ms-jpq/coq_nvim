@@ -1,5 +1,6 @@
 from pathlib import Path
 from pprint import pformat
+from sys import stderr
 from typing import Literal, Optional, Tuple, cast
 from uuid import UUID
 
@@ -49,7 +50,7 @@ def context(
     )
     r = min(options.context_lines, row)
     if r >= len(lines):
-        print(pformat(tuple(enumerate(lines))), flush=True)
+        print(pformat(tuple(enumerate(lines))), file=stderr, flush=True)
         return None
     else:
         line = lines[r]
