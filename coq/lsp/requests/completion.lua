@@ -4,7 +4,6 @@
 
   COQlsp_comp = function(name, session_id, pos)
     cancel()
-    print(pos)
 
     local clients = {}
     for _, client in ipairs(vim.lsp.buf_get_clients(0)) do

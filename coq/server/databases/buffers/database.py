@@ -109,8 +109,10 @@ class BDB:
             with self._lock, closing(self._conn.cursor()) as cursor:
                 with with_transaction(cursor):
                     _ensure_buffer(cursor, buf_id=buf_id, filetype=filetype)
-                    del_params = {"buffer_id": buf_id, "lo": lo, "hi": hi}
-                    cursor.execute(sql("delete", "lines"), del_params)
+                    cursor.execute(
+                        sql("delete", "lines"),
+                        {"buffer_id": buf_id, "lo": lo, "hi": hi},
+                    )
                     cursor.execute(
                         sql("update", "lines"),
                         {"buffer_id": buf_id, "lo": lo, "shift": shift},
