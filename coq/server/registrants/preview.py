@@ -210,7 +210,7 @@ def _show_preview(
         key=lambda p: (p[1].height * p[1].width, -p[0]),
         reverse=True,
     )
-    nvim.api.exec_lua(_LUA_0, (doc.syntax, lines, asdict(pos)))
+    nvim.api.exec_lua(_LUA_0, (new_doc.syntax, lines, asdict(pos)))
 
 
 _FUTS: MutableSequence[Future] = []
