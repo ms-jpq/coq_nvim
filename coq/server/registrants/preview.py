@@ -1,5 +1,5 @@
 from concurrent.futures import CancelledError, Future, TimeoutError
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from os import linesep
 from typing import (
     Any,
@@ -100,7 +100,7 @@ def _positions(
     event: _Event,
     lines: Sequence[str],
     state: State,
-) -> Sequence[_Pos]:
+) -> Iterator[_Pos]:
     scr_width, src_height = state.screen
     top, btm, left, right = (
         event.row,
@@ -123,6 +123,7 @@ def _positions(
         height=n_height,
         width=ns_width,
     )
+    yield n
 
     s = _Pos(
         row=btm,
@@ -130,6 +131,7 @@ def _positions(
         height=limit_h(src_height - btm),
         width=ns_width,
     )
+    yield s
 
     we_height = limit_h(src_height - top)
     w_width = limit_w(left - 1)
@@ -140,6 +142,7 @@ def _positions(
         height=we_height,
         width=w_width,
     )
+    yield w
 
     e = _Pos(
         row=top,
@@ -147,7 +150,7 @@ def _positions(
         height=we_height,
         width=limit_w(scr_width - right - 2),
     )
-    return n, s, w, e
+    yield e
 
 
 def _set_win(nvim: Nvim, buf: Buffer, pos: _Pos) -> None:
@@ -188,9 +191,6 @@ _LUA_0 = f"""
   end)
 end)(...)
 """.strip()
-
-
-from dataclasses import asdict
 
 
 @rpc(blocking=True)
