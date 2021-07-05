@@ -1,6 +1,6 @@
 from collections import defaultdict
 from threading import Event, Lock
-from typing import Any, Iterator, MutableMapping, Optional, Sequence, Tuple
+from typing import Any, Iterator, MutableMapping, Sequence, Tuple
 from uuid import uuid4
 
 from pynvim.api.nvim import Nvim
@@ -18,13 +18,7 @@ _STATE: MutableMapping[str, Tuple[Event, str, bool, Sequence[Any]]] = defaultdic
 
 @rpc(blocking=False)
 def _lsp_notify(
-    nvim: Nvim,
-    stack: Stack,
-    method: str,
-    session: str,
-    done: bool,
-    client: Optional[str],
-    reply: Any,
+    nvim: Nvim, stack: Stack, method: str, session: str, done: bool, reply: Any
 ) -> None:
     with _LOCK:
         ev, ses, _, acc = _STATE[method]
