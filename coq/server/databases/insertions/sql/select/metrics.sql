@@ -4,6 +4,6 @@ SELECT
 FROM candidates
 LEFT JOIN inserted
 ON
-  inserted.sort_by = candidates.inserted
+  inserted.sort_by = candidates.sort_by
 ORDER BY
   candidates.rowid
