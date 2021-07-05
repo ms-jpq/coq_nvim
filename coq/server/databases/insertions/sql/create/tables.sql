@@ -13,8 +13,8 @@ CREATE TABLE IF NOT EXISTS batch (
 
 CREATE TABLE IF NOT EXISTS insertions (
   rowid     INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
-  source_id TEXT    NOT NULL REFERENCES sources (name),
-  batch_id  INTEGER NOT NULL REFERENCES batch   (rowid),
+  source_id TEXT    NOT NULL REFERENCES sources (name)  ON DELETE CASCADE,
+  batch_id  INTEGER NOT NULL REFERENCES batch   (rowid) ON DELETE CASCADE,
   sort_by   TEXT    NOT NULL UNIQUE
 );
 
