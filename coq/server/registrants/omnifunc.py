@@ -74,12 +74,12 @@ def comp_func(
         if ctx
         else False
     )
-    if ctx:
-        _, col = ctx.position
-        complete(nvim, col=col - 1, comp=())
+    _, col = ctx.position
+    complete(nvim, col=col - 1, comp=())
 
-    if ctx and (manual or should):
+    if manual or should:
         state(context=ctx)
+
         @timeit("COLLECT")
         def cont() -> None:
             try:

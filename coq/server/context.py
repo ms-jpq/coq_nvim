@@ -1,13 +1,12 @@
 from pathlib import Path
 from pprint import pformat
-from typing import Literal, Optional, Tuple, cast
+from typing import Literal, Tuple, cast
 from uuid import UUID
 
 from pynvim import Nvim
 from pynvim.api import Buffer
 from pynvim_pp.api import LFfmt
 from pynvim_pp.atomic import Atomic
-from pynvim_pp.logging import log
 from pynvim_pp.text_object import gen_split
 
 from ..shared.settings import Options
@@ -17,7 +16,7 @@ from .databases.buffers.database import BDB
 
 def context(
     nvim: Nvim, options: Options, db: BDB, commit_id: UUID, change_id: UUID
-) -> Optional[Context]:
+) -> Context:
 
     with Atomic() as (atomic, ns):
         ns.scr_col = atomic.call_function("screencol", ())
@@ -51,8 +50,7 @@ def context(
     r = min(options.context_lines, row)
     if r >= len(lines):
         _, all_lines = db.lines(buf_nr, lo=0, hi=-1)
-        log.critical("%s", pformat((row, tuple(enumerate(all_lines)))))
-        return None
+        raise RuntimeError(pformat((row, tuple(enumerate(all_lines)))))
     else:
         line = lines[r]
         lines_before, lines_after = lines[:r], lines[r + 1 :]
