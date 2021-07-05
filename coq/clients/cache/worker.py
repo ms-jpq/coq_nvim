@@ -47,7 +47,7 @@ class CacheWorker:
             comps={},
         )
 
-    def _use_cache(self, context: Context) -> Optional[Sequence[Completion]]:
+    def _use_cache(self, context: Context) -> Sequence[Completion]:
         if _use_cache(self._cache_ctx, ctx=context):
             match = context.words or context.syms
             hashes = self._db.select(self._soup.options, word=match)
@@ -60,7 +60,7 @@ class CacheWorker:
 
             return tuple(cont())
         else:
-            return None
+            return ()
 
     def _set_cache(self, context: Context, completions: Sequence[Completion]) -> None:
         row, _ = context.position
