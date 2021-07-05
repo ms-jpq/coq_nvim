@@ -35,9 +35,6 @@ class Worker(BaseWorker[BaseClient, None], CacheWorker):
                     self._cache_only = use_cache
 
                 yield comps
-                if use_cache:
-                    self._set_cache(context, completions=comps)
-                else:
-                    self._set_cache(context, completions=())
+                self._set_cache(context, completions=comps)
                 yield ()
 
