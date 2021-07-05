@@ -31,4 +31,6 @@ class Worker(BaseWorker[BaseClient, None], CacheWorker):
                 else:
                     self._set_cache(context, completions=())
                 yield ()
+                if comps:
+                    break
 
