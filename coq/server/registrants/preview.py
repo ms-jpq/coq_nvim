@@ -169,7 +169,7 @@ def _set_win(nvim: Nvim, buf: Buffer, pos: _Pos) -> None:
     win_set_var(nvim, win=win, key=_FLOAT_WIN_UUID, val=True)
 
 
-@rpc(blocking=True)
+@rpc(blocking=True, schedule=True)
 def _go_show(
     nvim: Nvim,
     stack: Stack,
@@ -183,15 +183,6 @@ def _go_show(
     )
     buf_set_preview(nvim, buf=buf, syntax=syntax, preview=preview)
     _set_win(nvim, buf=buf, pos=pos)
-
-
-_LUA_0 = f"""
-(function(syntax, preview, pos)
-  vim.schedule(function() 
-    {_go_show.name}(syntax, preview, pos)
-  end)
-end)(...)
-""".strip()
 
 
 @rpc(blocking=True)
@@ -210,7 +201,7 @@ def _show_preview(
         key=lambda p: (p[1].height * p[1].width, -p[0]),
         reverse=True,
     )
-    nvim.api.exec_lua(_LUA_0, (new_doc.syntax, lines, asdict(pos)))
+    nvim.api.exec_lua(f"{_go_show.name}(...)", (new_doc.syntax, lines, asdict(pos)))
 
 
 _FUTS: MutableSequence[Future] = []
@@ -249,7 +240,7 @@ def _resolve_comp(
 _DECODER = new_decoder(_Event)
 
 
-@rpc(blocking=True)
+@rpc(blocking=True, schedule=True)
 def _cmp_changed(nvim: Nvim, stack: Stack, event: Mapping[str, Any] = {}) -> None:
     for fut in _FUTS:
         fut.cancel()
@@ -278,32 +269,14 @@ def _cmp_changed(nvim: Nvim, stack: Stack, event: Mapping[str, Any] = {}) -> Non
                     )
 
 
-_LUA_1 = f"""
-(function()
-  local event = vim.v.event
-  vim.schedule(function() 
-    {_cmp_changed.name}(event)
-  end)
-end)(...)
-""".strip()
-
-autocmd("CompleteChanged") << f"lua {_LUA_1}"
+autocmd("CompleteChanged") << f"lua {_cmp_changed.name}(vim.v.event)"
 
 
-@rpc(blocking=True)
+@rpc(blocking=True, schedule=True)
 def _bigger_preview(nvim: Nvim, stack: Stack, args: Tuple[str, Sequence[str]]) -> None:
     syntax, lines = args
     nvim.command("stopinsert")
     set_preview(nvim, syntax=syntax, preview=lines)
-
-
-_LUA_2 = f"""
-(function(syntax, lines)
-  vim.schedule(function() 
-    {_bigger_preview.name}(syntax, lines)
-  end)
-end)(...)
-""".strip()
 
 
 @rpc(blocking=True)
@@ -313,7 +286,7 @@ def preview_preview(nvim: Nvim, stack: Stack, *_: str) -> str:
         buf = win_get_buf(nvim, win=win)
         syntax = buf_get_option(nvim, buf=buf, key="syntax")
         lines = buf_get_lines(nvim, buf=buf, lo=0, hi=-1)
-        nvim.exec_lua(_LUA_2, (syntax, lines))
+        nvim.exec_lua(f"{_bigger_preview.name}(...)", (syntax, lines))
 
     escaped: str = nvim.api.replace_termcodes("<c-e>", True, False, True)
     return escaped
