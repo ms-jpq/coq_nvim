@@ -21,10 +21,11 @@ _DECODER = new_decoder(CompletionItem, strict=False)
 
 def request(nvim: Nvim, item: CompletionItem) -> Optional[Doc]:
     stream = blocking_request(nvim, "COQlsp_preview", asdict(item))
-    while True:
-        reply = next(stream)
+    for reply in stream:
         if reply:
             break
+    else:
+        reply = None
 
     try:
         resp: CompletionItem = _DECODER(reply)
