@@ -1,5 +1,5 @@
 from locale import strxfrm
-from typing import Mapping, Optional, Sequence, Tuple
+from typing import Mapping, Optional, Sequence, Tuple, cast
 
 from ..shared.parse import lower
 from ..shared.types import Completion, Doc, Edit, RangeEdit, SnippetEdit
@@ -24,7 +24,7 @@ def _primary(item: CompletionItem) -> Edit:
             new_text = fall_back
         return SnippetEdit(grammar="lsp", new_text=new_text)
     elif isinstance(text_edit, Mapping) and "range" in text_edit:
-        return _range_edit(text_edit)
+        return _range_edit(cast(TextEdit, text_edit))
     else:
         return Edit(new_text=fall_back)
 
