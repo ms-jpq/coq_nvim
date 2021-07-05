@@ -8,6 +8,7 @@ from pynvim_pp.lib import threadsafe_call
 
 from ...registry import rpc
 from ...server.rt_types import Stack
+from ...shared.timeit import timeit
 
 _LOCK = Lock()
 _STATE: MutableMapping[str, Tuple[Event, str, bool, Sequence[Any]]] = defaultdict(
@@ -33,26 +34,27 @@ def _lsp_notify(
 
 
 def blocking_request(nvim: Nvim, method: str, *args: Any) -> Iterator[Any]:
-    ev, session = Event(), uuid4().hex
-    with _LOCK:
-        prev, _, __, ___ = _STATE[method]
-        _STATE[method] = (ev, session, False, ())
-        prev.set()
-
-    def cont() -> None:
-        nvim.api.exec_lua(f"{method}(...)", (method, session, *args))
-
-    threadsafe_call(nvim, cont)
-
-    while True:
-        ev.wait()
+    with timeit(f"LSP :: {method}"):
+        ev, session = Event(), uuid4().hex
         with _LOCK:
-            ____, ses, done, acc = _STATE[method]
-            ev.clear()
-        if ses != session:
-            break
-        else:
-            yield from acc
-            if done:
+            prev, _, __, ___ = _STATE[method]
+            _STATE[method] = (ev, session, False, ())
+            prev.set()
+
+        def cont() -> None:
+            nvim.api.exec_lua(f"{method}(...)", (method, session, *args))
+
+        threadsafe_call(nvim, cont)
+
+        while True:
+            ev.wait()
+            with _LOCK:
+                ____, ses, done, acc = _STATE[method]
+                ev.clear()
+            if ses != session:
                 break
+            else:
+                yield from acc
+                if done:
+                    break
 
