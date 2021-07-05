@@ -57,7 +57,8 @@ class Worker(BaseWorker[BaseClient, None]):
         def cont() -> Iterator[Completion]:
             line = context.line_before + context.words_after
             base_paths = {Path(context.filename).parent, Path(context.cwd)}
-            for new_text in (txt for p in base_paths for txt in parse(p, line=line)):
+            for txt in (t for p in base_paths for t in parse(p, line=line)):
+                new_text = txt.replace(f"{sep}.{sep}", sep)
                 edit = Edit(new_text=new_text)
                 completion = Completion(
                     source=self._options.short_name,
