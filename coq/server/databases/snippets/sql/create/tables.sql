@@ -7,8 +7,8 @@ CREATE TABLE IF NOT EXISTS filetypes (
 
 
 CREATE TABLE IF NOT EXISTS extensions (
-  src  TEXT NOT NULL REFERENCES filetypes (filetype) ON DELETE CASCADE,
-  dest TEXT NOT NULL REFERENCES filetypes (filetype) ON DELETE CASCADE,
+  src  TEXT NOT NULL REFERENCES filetypes (filetype) ON UPDATE CASCADE ON DELETE CASCADE,
+  dest TEXT NOT NULL REFERENCES filetypes (filetype) ON UPDATE CASCADE ON DELETE CASCADE,
   UNIQUE (src, dest)
 );
 CREATE INDEX IF NOT EXISTS extensions_src ON extensions (src);
@@ -16,7 +16,7 @@ CREATE INDEX IF NOT EXISTS extensions_src ON extensions (src);
 
 CREATE TABLE IF NOT EXISTS snippets (
   rowid    INTEGER NOT NULL PRIMARY KEY,
-  filetype TEXT    NOT NULL REFERENCES filetypes (filetype) ON DELETE CASCADE,
+  filetype TEXT    NOT NULL REFERENCES filetypes (filetype) ON UPDATE CASCADE ON DELETE CASCADE,
   grammar  TEXT    NOT NULL,
   content  TEXT    NOT NULL,
   label    TEXT    NOT NULL,
@@ -25,7 +25,7 @@ CREATE TABLE IF NOT EXISTS snippets (
 
 
 CREATE TABLE IF NOT EXISTS matches (
-  snippet_id INTEGER NOT NULL REFERENCES snippets (rowid) ON DELETE CASCADE,
+  snippet_id INTEGER NOT NULL REFERENCES snippets (rowid) ON UPDATE CASCADE ON DELETE CASCADE,
   match      TEXT    NOT NULL,
   lmatch     TEXT    NOT NULL AS (X_LOWER(match)) STORED,
   sort_by    TEXT    NOT NULL AS (X_STRXFRM(lmatch)),
@@ -37,7 +37,7 @@ CREATE INDEX IF NOT EXISTS matches_lmatch     ON matches (lmatch);
 
 
 CREATE TABLE IF NOT EXISTS options (
-  snippet_id INTEGER NOT NULL REFERENCES snippets (rowid) ON DELETE CASCADE,
+  snippet_id INTEGER NOT NULL REFERENCES snippets (rowid) ON UPDATE CASCADE ON DELETE CASCADE,
   option     TEXT    NOT NULL,
   UNIQUE(snippet_id, option)
 );

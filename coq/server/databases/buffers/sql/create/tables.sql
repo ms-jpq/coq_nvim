@@ -10,7 +10,7 @@ CREATE INDEX IF NOT EXISTS buffers_filetype ON buffers (filetype);
 
 CREATE TABLE IF NOT EXISTS lines (
   rowid     INTEGER NOT NULL PRIMARY KEY,
-  buffer_id INTEGER NOT NULL REFERENCES buffers (rowid) ON DELETE CASCADE,
+  buffer_id INTEGER NOT NULL REFERENCES buffers (rowid) ON UPDATE CASCADE ON DELETE CASCADE,
   line_num  INTEGER NOT NULL,
   line      TEXT    NOT NULL
   -- TODO -- How to update line_num from back -> front in a single query
@@ -21,7 +21,7 @@ CREATE INDEX IF NOT EXISTS lines_line_num   ON lines (line_num);
 
 
 CREATE TABLE IF NOT EXISTS words (
-  line_id INTEGER NOT NULL REFERENCES lines (rowid) ON DELETE CASCADE,
+  line_id INTEGER NOT NULL REFERENCES lines (rowid) ON UPDATE CASCADE ON DELETE CASCADE,
   word    TEXT    NOT NULL,
   lword   TEXT    NOT NULL AS (X_LOWER(word)) STORED,
   sort_by TEXT    NOT NULL AS (X_STRXFRM(lword)),
