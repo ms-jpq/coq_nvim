@@ -1,4 +1,5 @@
 from dataclasses import dataclass, replace
+from itertools import count
 from typing import Iterator, Mapping, Optional, Sequence
 from uuid import UUID, uuid4
 
@@ -46,6 +47,7 @@ class CacheWorker:
             line_before="",
             comps={},
         )
+        self._uids = count()
 
     def _use_cache(self, context: Context) -> Optional[Sequence[Completion]]:
         if _use_cache(self._cache_ctx, ctx=context):
@@ -65,7 +67,7 @@ class CacheWorker:
     def _set_cache(self, context: Context, completions: Sequence[Completion]) -> None:
         row, _ = context.position
         additive = context.change_id == self._cache_ctx.change_id
-        new_comps = {hash(c): c for c in map(_trans, completions)}
+        new_comps = {next(self._uids): c for c in map(_trans, completions)}
         comps = {**self._cache_ctx.comps, **new_comps} if additive else new_comps
         ctx = _CacheCtx(
             change_id=context.change_id,
@@ -76,8 +78,8 @@ class CacheWorker:
             comps=comps,
         )
         self._db.populate(
-                additive,
-            pool={hash_id: c.primary_edit.new_text for hash_id, c in new_comps.items()}
+            additive,
+            pool={hash_id: c.primary_edit.new_text for hash_id, c in new_comps.items()},
         )
         self._cache_ctx = ctx
 

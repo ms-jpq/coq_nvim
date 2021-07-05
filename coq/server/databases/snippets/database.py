@@ -1,4 +1,5 @@
 from contextlib import closing
+from itertools import count
 from sqlite3 import Connection, Cursor, OperationalError
 from threading import Lock
 from typing import Iterable, Iterator, Mapping, Sequence, TypedDict, cast
@@ -38,6 +39,9 @@ def _ensure_ft(cursor: Cursor, filetypes: Iterable[str]) -> None:
     cursor.executemany(sql("insert", "filetype"), it())
 
 
+_UIDS = count()
+
+
 class SDB:
     def __init__(self) -> None:
         self._lock = Lock()
@@ -68,8 +72,7 @@ class SDB:
                 with with_transaction(cursor):
                     for filetype, snippets in mapping.items():
                         _ensure_ft(cursor, filetypes=(filetype,))
-                        for snippet in snippets:
-                            row_id = hash(snippet.grammar + snippet.content)
+                        for row_id, snippet in zip(_UIDS, snippets):
                             cursor.execute(
                                 sql("insert", "snippet"),
                                 {

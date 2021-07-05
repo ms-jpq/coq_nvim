@@ -32,12 +32,14 @@ def _init() -> Connection:
     return conn
 
 
+_UIDS = count()
+
+
 class BDB:
     def __init__(self) -> None:
         self._lock = Lock()
         self._ex = SingleThreadExecutor(pool)
         self._conn: Connection = self._ex.submit(_init)
-        self._uid_gen = count()
 
     def _interrupt(self) -> None:
         with self._lock:
@@ -78,9 +80,7 @@ class BDB:
         unifying_chars: AbstractSet[str],
     ) -> None:
         def m0() -> Iterator[Tuple[int, str, int]]:
-            for (line_num, line), line_id in zip(
-                enumerate(lines, start=lo), self._uid_gen
-            ):
+            for (line_num, line), line_id in zip(enumerate(lines, start=lo), _UIDS):
                 yield line_num, line, line_id
 
         line_info = tuple(m0())
@@ -125,7 +125,7 @@ class BDB:
                         cursor.execute(
                             sql("insert", "line"),
                             {
-                                "rowid": next(self._uid_gen),
+                                "rowid": next(_UIDS),
                                 "line": "",
                                 "buffer_id": buf_id,
                                 "line_num": 0,
