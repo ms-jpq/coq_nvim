@@ -1,2 +1,2 @@
-INSERT INTO batches (             source_id,   duration,  items)
-VALUES              (X_NORMALIZE(:source_id), :duration, :items)
+INSERT INTO batches ( rowid,              source_id,   duration,  items)
+VALUES              (:rowid, X_NORMALIZE(:source_id), :duration, :items)

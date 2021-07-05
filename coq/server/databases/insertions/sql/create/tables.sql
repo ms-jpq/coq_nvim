@@ -21,13 +21,14 @@ CREATE TABLE IF NOT EXISTS inserted (
   sort_by  TEXT    NOT NULL
 );
 CREATE INDEX IF NOT EXISTS inserted_batch_id ON inserted (batch_id);
+CREATE INDEX IF NOT EXISTS inserted_sort_by  ON inserted (sort_by);
 
 
 CREATE TABLE IF NOT EXISTS candidates (
   rowid     INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
   sort_by   TEXT    NOT NULL
 );
-CREATE INDEX IF NOT EXISTS candidates_batch_id ON candidates (batch_id);
+CREATE INDEX IF NOT EXISTS candidates_sort_by ON candidates (sort_by);
 
 
 END;
