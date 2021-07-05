@@ -1,2 +1,2 @@
-REPLACE INTO insertions (             content)
-VALUES                  (X_NORMALIZE(:content))
+REPLACE INTO insertions (             sort_by)
+VALUES                  (X_NORMALIZE(:sort_by))
