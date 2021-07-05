@@ -1,8 +1,6 @@
 from contextlib import closing
-from itertools import repeat
-from sqlite3 import Connection, OperationalError
-from threading import Lock
-from typing import Sequence, TypedDict
+from sqlite3 import Connection
+from typing import Iterable, Sequence, TypedDict
 
 from std2.sqllite3 import with_transaction
 
@@ -28,17 +26,12 @@ def _init() -> Connection:
 
 class IDB:
     def __init__(self) -> None:
-        self._lock = Lock()
         self._ex = SingleThreadExecutor(pool)
         self._conn: Connection = self._ex.submit(_init)
 
-    def _interrupt(self) -> None:
-        with self._lock:
-            self._conn.interrupt()
-
     def new_source(self, source: str) -> None:
         def cont() -> None:
-            with self._lock, closing(self._conn.cursor()) as cursor:
+            with closing(self._conn.cursor()) as cursor:
                 with with_transaction(cursor):
                     cursor.execute(sql("insert", "source"), {"name": source})
 
@@ -48,7 +41,7 @@ class IDB:
         self, source: str, batch_id: bytes, duration: float, items: int
     ) -> None:
         def cont() -> None:
-            with self._lock, closing(self._conn.cursor()) as cursor:
+            with closing(self._conn.cursor()) as cursor:
                 with with_transaction(cursor):
                     cursor.execute(
                         sql("insert", "batch"),
@@ -64,7 +57,7 @@ class IDB:
 
     def inserted(self, batch_id: bytes, sort_by: str) -> None:
         def cont() -> None:
-            with self._lock, closing(self._conn.cursor()) as cursor:
+            with closing(self._conn.cursor()) as cursor:
                 with with_transaction(cursor):
                     cursor.execute(
                         sql("insert", "inserted"),
@@ -73,21 +66,17 @@ class IDB:
 
         self._ex.submit(cont)
 
-    def metric(self, words: Sequence[str]) -> Sequence[SqlMetrics]:
+    def metric(self, words: Iterable[str]) -> Sequence[SqlMetrics]:
         def cont() -> Sequence[SqlMetrics]:
-            try:
-                with closing(self._conn.cursor()) as cursor:
-                    with with_transaction(cursor):
-                        cursor.execute(sql("delete", "candidates"), ())
-                        cursor.executemany(
-                            sql("insert", "candidate"),
-                            ({"sort_by": sort_by} for sort_by in words),
-                        )
-                        cursor.execute(sql("select", "metrics"), ())
-                        return cursor.fetchall()
-            except OperationalError:
-                return tuple(repeat(SqlMetrics(insert_order=0), times=len(words)))
+            with closing(self._conn.cursor()) as cursor:
+                with with_transaction(cursor):
+                    cursor.execute(sql("delete", "candidates"), ())
+                    cursor.executemany(
+                        sql("insert", "candidate"),
+                        ({"sort_by": sort_by} for sort_by in words),
+                    )
+                    cursor.execute(sql("select", "metrics"), ())
+                    return cursor.fetchall()
 
-        self._interrupt()
         return self._ex.submit(cont)
 
