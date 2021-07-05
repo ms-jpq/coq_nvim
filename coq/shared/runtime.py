@@ -119,24 +119,22 @@ class Supervisor:
         timeout = self._options.manual_timeout if manual else self._options.timeout
 
         def supervise(worker: Worker) -> None:
-            m_name = worker.__class__.__module__
-            with l_timeit(f"COLLECT -- {m_name}"):
-                try:
-                    batch = uuid4()
-                    with timeit() as t:
-                        items = 0
-                        for completions in worker.work(context):
-                            metrics = self._reviewer.rate(
-                                batch,
-                                context=context,
-                                neighbours=neighbours,
-                                completions=completions,
-                            )
-                            items += len(metrics)
-                            acc.extend(metrics)
-                    self._reviewer.perf(worker, batch=batch, duration=t(), items=items)
-                except Exception as e:
-                    log.exception("%s", e)
+            try:
+                m_name = worker.__class__.__module__
+                with l_timeit(f"COLLECT -- {m_name}"):
+                    batch, items = uuid4(), 0
+                    self._reviewer.perf(worker, batch=batch, duration=0, items=items)
+                    for completions in worker.work(context):
+                        metrics = self._reviewer.rate(
+                            batch,
+                            context=context,
+                            neighbours=neighbours,
+                            completions=completions,
+                        )
+                        items += len(metrics)
+                        acc.extend(metrics)
+            except Exception as e:
+                log.exception("%s", e)
 
         def cont() -> None:
             try:
