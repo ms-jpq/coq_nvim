@@ -32,5 +32,6 @@ class Worker(BaseWorker[BaseClient, None], CacheWorker):
                     self._set_cache(context, completions=())
                 yield ()
                 if comps:
+                    # TODO -- What happens for multiple LSPs???
                     break
 

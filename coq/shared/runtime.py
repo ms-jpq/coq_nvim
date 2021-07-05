@@ -123,6 +123,7 @@ class Supervisor:
                 m_name = worker.__class__.__module__
                 with l_timeit(f"COLLECT -- {m_name}"):
                     batch, items = uuid4(), 0
+                    # TODO -- split off batch
                     self._reviewer.perf(worker, batch=batch, duration=0, items=items)
                     for completions in worker.work(context):
                         metrics = self._reviewer.rate(
