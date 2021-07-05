@@ -2,6 +2,7 @@ from dataclasses import dataclass
 from difflib import SequenceMatcher
 from math import inf
 from typing import Iterable, Iterator, Mapping, MutableSequence, Sequence
+from uuid import UUID
 
 from ..shared.parse import display_width, is_word, lower
 from ..shared.runtime import Metric, PReviewer, Worker
@@ -71,7 +72,7 @@ def _metrics(
 
 
 def _join(
-    context: Context, cmp: Completion, mm: _MatchMetrics, sqm: SqlMetrics
+    batch: UUID, context: Context, cmp: Completion, mm: _MatchMetrics, sqm: SqlMetrics
 ) -> Metric:
     weight = Weights(
         consecutive_matches=mm.consecutive_matches,
@@ -88,6 +89,7 @@ def _join(
         cmp.kind, tabsize=context.tabstop, linefeed=context.linefeed
     )
     metric = Metric(
+        batch=batch,
         comp=cmp,
         weight=weight,
         label_width=label_width,
@@ -106,6 +108,7 @@ class Reviewer(PReviewer):
 
     def rate(
         self,
+        batch: UUID,
         context: Context,
         neighbours: Mapping[str, int],
         completions: Sequence[Completion],
@@ -119,15 +122,12 @@ class Reviewer(PReviewer):
         )
         dbm = self._db.metric(words)
         metrics = tuple(
-            _join(context, cmp, mm, sqm) for cmp, mm, sqm in zip(completions, mmm, dbm)
+            _join(batch, context, cmp, mm, sqm)
+            for cmp, mm, sqm in zip(completions, mmm, dbm)
         )
         return metrics
 
-    def perf(
-        self, worker: Worker, context: Context, duration: float, items: int
-    ) -> None:
+    def perf(self, worker: Worker, batch: UUID, duration: float, items: int) -> None:
         m_name = worker.__class__.__module__
-        self._db.new_batch(
-            m_name, batch_id=context.change_id.bytes, duration=duration, items=items
-        )
+        self._db.new_batch(m_name, batch_id=batch.bytes, duration=duration, items=items)
 

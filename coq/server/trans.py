@@ -1,5 +1,4 @@
 from dataclasses import asdict
-from locale import strxfrm
 from typing import Any, Callable, Iterable, Iterator, MutableSet, Sequence, Tuple
 
 from std2.ordinal import clamp
@@ -84,6 +83,7 @@ def _cmp_to_vcmp(
     menu = f"{sl}{metric.comp.source}{sr}"
 
     user_data = UserData(
+        batch=metric.batch,
         change_uid=context.change_id,
         sort_by=metric.comp.sort_by,
         primary_edit=metric.comp.primary_edit,

@@ -385,7 +385,7 @@ def edit(nvim: Nvim, stack: Stack, context: Context, data: UserData) -> Tuple[in
     buf_set_lines(nvim, buf=buf, lo=lo, hi=hi, lines=new_lines[lo:])
     win_set_cursor(nvim, win=win, row=n_row, col=n_col)
 
-    stack.idb.inserted(context.change_id.int, sort_by=data.sort_by)
+    stack.idb.inserted(data.batch.bytes, sort_by=data.sort_by)
 
     if marks:
         mark(nvim, settings=stack.settings, buf=buf, marks=marks)

@@ -62,7 +62,7 @@ class IDB:
 
         self._ex.submit(cont)
 
-    def inserted(self, batch_id: int, sort_by: str) -> None:
+    def inserted(self, batch_id: bytes, sort_by: str) -> None:
         def cont() -> None:
             with self._lock, closing(self._conn.cursor()) as cursor:
                 with with_transaction(cursor):

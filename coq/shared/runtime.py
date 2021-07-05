@@ -18,7 +18,7 @@ from typing import (
     Sequence,
     TypeVar,
 )
-from uuid import UUID
+from uuid import UUID, uuid4
 from weakref import WeakSet
 
 from pynvim import Nvim
@@ -36,6 +36,7 @@ O_co = TypeVar("O_co", contravariant=True)
 
 @dataclass(frozen=True)
 class Metric:
+    batch: UUID
     comp: Completion
     weight: Weights
     label_width: int
@@ -48,15 +49,14 @@ class PReviewer(Protocol):
 
     def rate(
         self,
+        batch: UUID,
         context: Context,
         neighbours: Mapping[str, int],
         completions: Sequence[Completion],
     ) -> Sequence[Metric]:
         ...
 
-    def perf(
-        self, worker: Worker, context: Context, duration: float, items: int
-    ) -> None:
+    def perf(self, worker: Worker, batch: UUID, duration: float, items: int) -> None:
         ...
 
 
@@ -122,19 +122,19 @@ class Supervisor:
             m_name = worker.__class__.__module__
             with l_timeit(f"COLLECT -- {m_name}"):
                 try:
+                    batch = uuid4()
                     with timeit() as t:
                         items = 0
                         for completions in worker.work(context):
                             metrics = self._reviewer.rate(
+                                batch,
                                 context=context,
                                 neighbours=neighbours,
                                 completions=completions,
                             )
                             items += len(metrics)
                             acc.extend(metrics)
-                    self._reviewer.perf(
-                        worker, context=context, duration=t(), items=items
-                    )
+                    self._reviewer.perf(worker, batch=batch, duration=t(), items=items)
                 except Exception as e:
                     log.exception("%s", e)
 

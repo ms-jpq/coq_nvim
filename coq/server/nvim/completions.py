@@ -20,6 +20,7 @@ class VimCompKind(Enum):
 
 @dataclass(frozen=True)
 class UserData:
+    batch: UUID
     sort_by: str
     change_uid: UUID
     primary_edit: PrimaryEdit
