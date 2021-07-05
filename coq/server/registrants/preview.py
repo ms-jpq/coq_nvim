@@ -30,6 +30,7 @@ from pynvim_pp.logging import log
 from pynvim_pp.preview import buf_set_preview, set_preview
 from std2.ordinal import clamp
 from std2.pickle import DecodeError, new_decoder
+from std2.string import removeprefix
 
 from ...lsp.requests.preview import request
 from ...lsp.types import CompletionItem
@@ -82,9 +83,10 @@ autocmd("CompleteDone", "InsertLeave") << f"lua {_kill_win.name}()"
 def _preprocess(context: Context, doc: Doc) -> Doc:
     if doc.syntax == "markdown":
         split = doc.text.splitlines()
-        if split and split[0] == "```" and split[-1] == "```":
+        if split and split[0].startswith("```") and split[-1].endswith("```"):
             text = linesep.join(split[1:-1])
-            return Doc(text=text, syntax=context.filetype)
+            ft = removeprefix(split[0], "```") or context.filetype
+            return Doc(text=text, syntax=ft)
         else:
             return doc
     else:
