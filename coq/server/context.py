@@ -50,7 +50,7 @@ def context(
     r = min(options.context_lines, row)
     if r >= len(lines):
         _, all_lines = db.lines(buf_nr, lo=0, hi=-1)
-        raise RuntimeError(pformat((row, tuple(enumerate(all_lines)))))
+        raise AssertionError(pformat((row, tuple(enumerate(all_lines)))))
     else:
         line = lines[r]
         lines_before, lines_after = lines[:r], lines[r + 1 :]
