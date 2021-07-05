@@ -91,6 +91,7 @@ class Supervisor:
         return self._pool
 
     def register(self, worker: Worker) -> None:
+        self._reviewer.register(worker)
         self._workers.add(worker)
 
     def notify_idle(self) -> None:
