@@ -1,29 +1,24 @@
-from dataclasses import dataclass
-from typing import Literal, Optional, Sequence, Union
+from typing import Literal, Optional, Sequence, TypedDict, Union
 
 # https://microsoft.github.io/language-server-protocol/specification
 
 
-@dataclass(frozen=True)
-class _Position:
+class _Position(TypedDict):
     line: int
     character: int
 
 
-@dataclass(frozen=True)
-class _Range:
+class _Range(TypedDict):
     start: _Position
     end: _Position
 
 
-@dataclass(frozen=True)
-class TextEdit:
+class TextEdit(TypedDict):
     newText: str
     range: _Range
 
 
-@dataclass(frozen=True)
-class InsertReplaceEdit:
+class InsertReplaceEdit(TypedDict):
     newText: str
     insert: _Range
     replace: _Range
@@ -32,8 +27,7 @@ class InsertReplaceEdit:
 _CompletionItemKind = int
 
 
-@dataclass(frozen=True)
-class MarkupContent:
+class _MarkupContent(TypedDict):
     kind: Union[Literal["plaintext", "markdown"], str]
     value: str
 
@@ -41,26 +35,24 @@ class MarkupContent:
 _InsertTextFormat = int
 
 
-@dataclass(frozen=True)
-class CompletionItem:
+class CompletionItem(TypedDict):
     label: str
-    additionalTextEdits: Optional[Sequence[TextEdit]] = None
-    detail: Optional[str] = None
-    documentation: Union[str, MarkupContent, None] = None
-    filterText: Optional[str] = None
-    insertText: Optional[str] = None
-    insertTextFormat: Optional[_InsertTextFormat] = None
-    kind: Optional[_CompletionItemKind] = None
-    textEdit: Union[TextEdit, InsertReplaceEdit, None] = None
+    additionalTextEdits: Optional[Sequence[TextEdit]]
+    detail: Optional[str]
+    documentation: Union[str, _MarkupContent, None]
+    filterText: Optional[str]
+    insertText: Optional[str]
+    insertTextFormat: Optional[_InsertTextFormat]
+    kind: Optional[_CompletionItemKind]
+    textEdit: Union[TextEdit, InsertReplaceEdit, None]
 
 
-@dataclass(frozen=True)
-class CompletionList:
+class _CompletionList(TypedDict):
     isIncomplete: bool
     items: Sequence[CompletionItem]
 
 
 CompletionResponse = Union[
-    Literal[None, False, 0], Sequence[CompletionItem], CompletionList
+    Literal[None, False, 0], Sequence[CompletionItem], _CompletionList
 ]
 
