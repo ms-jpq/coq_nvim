@@ -2,7 +2,7 @@ from contextlib import closing
 from itertools import count, repeat
 from sqlite3 import Connection, OperationalError
 from threading import Lock
-from typing import Iterator, Mapping, Sequence, TypedDict
+from typing import AbstractSet, Sequence, TypedDict
 
 from std2.sqllite3 import with_transaction
 
@@ -37,28 +37,58 @@ class IDB:
         with self._lock:
             self._conn.interrupt()
 
-    def inserted(self, content: str) -> None:
+    def new_sources(self, sources: AbstractSet[str]) -> None:
         def cont() -> None:
             with self._lock, closing(self._conn.cursor()) as cursor:
                 with with_transaction(cursor):
-                    cursor.execute(sql("insert", "insertion"), {"content": content})
+                    cursor.executemany(
+                        sql("insert", "source"),
+                        ({"name": source} for source in sources),
+                    )
+
+        self._ex.submit(cont)
+
+    def new_batch(
+        self, source: str, batch_id: int, duration: float, items: int
+    ) -> None:
+        def cont() -> None:
+            with self._lock, closing(self._conn.cursor()) as cursor:
+                with with_transaction(cursor):
+                    cursor.execute(
+                        sql("insert", "batch"),
+                        {
+                            "rowid": batch_id,
+                            "source_id": source,
+                            "duration": duration,
+                            "items": items,
+                        },
+                    )
+
+        self._ex.submit(cont)
+
+    def inserted(self, batch_id: int, sort_by: str) -> None:
+        def cont() -> None:
+            with self._lock, closing(self._conn.cursor()) as cursor:
+                with with_transaction(cursor):
+                    cursor.execute(
+                        sql("insert", "inserted"),
+                        {"batch_id": batch_id, "sort_by": sort_by},
+                    )
 
         self._ex.submit(cont)
 
     def metric(self, words: Sequence[str]) -> Sequence[SqlMetrics]:
-        def m1() -> Iterator[Mapping]:
-            for word in words:
-                yield {"word": word}
-
         def cont() -> Sequence[SqlMetrics]:
             try:
-                # with closing(self._conn.cursor()) as cursor:
-                #     with with_transaction(cursor):
-                #         cursor.execute(sql("delete", "tmp_for_metrics"), ())
-                #         cursor.executemany(sql("insert", "tmp_for_metrics"), m1())
-                #         cursor.execute(sql("select", "metrics"))
-                #         return cursor.fetchall()
-                return tuple(repeat(SqlMetrics(insert_order=0), times=len(words)))
+                with closing(self._conn.cursor()) as cursor:
+                    with with_transaction(cursor):
+                        cursor.execute(sql("delete", "candidates"), ())
+                        cursor.executemany(
+                            sql("insert", "candidate"),
+                            ({"sort_by": sort_by} for sort_by in words),
+                        )
+                        cursor.execute(sql("select", "metrics"))
+                        return cursor.fetchall()
             except OperationalError:
                 return tuple(repeat(SqlMetrics(insert_order=0), times=len(words)))
 

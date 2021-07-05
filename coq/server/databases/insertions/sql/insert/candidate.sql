@@ -1,2 +1,2 @@
-INSERT INTO candidates ( rowid,  sort_by)
-VALUES                 (:rowid, :sort_by)
+INSERT INTO candidates ( sort_by)
+VALUES                 (:sort_by)
