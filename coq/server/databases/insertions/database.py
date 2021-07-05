@@ -2,7 +2,7 @@ from contextlib import closing
 from itertools import count, repeat
 from sqlite3 import Connection, OperationalError
 from threading import Lock
-from typing import AbstractSet, Sequence, TypedDict
+from typing import Sequence, TypedDict
 
 from std2.sqllite3 import with_transaction
 
@@ -37,14 +37,11 @@ class IDB:
         with self._lock:
             self._conn.interrupt()
 
-    def new_sources(self, sources: AbstractSet[str]) -> None:
+    def new_source(self, source: str) -> None:
         def cont() -> None:
             with self._lock, closing(self._conn.cursor()) as cursor:
                 with with_transaction(cursor):
-                    cursor.executemany(
-                        sql("insert", "source"),
-                        ({"name": source} for source in sources),
-                    )
+                    cursor.execute(sql("insert", "source"), {"name": source})
 
         self._ex.submit(cont)
 

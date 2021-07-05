@@ -4,7 +4,7 @@ from math import inf
 from typing import Iterable, Iterator, Mapping, MutableSequence, Sequence
 
 from ..shared.parse import display_width, is_word, lower
-from ..shared.runtime import Metric, PReviewer
+from ..shared.runtime import Metric, PReviewer, Worker
 from ..shared.settings import Options, Weights
 from ..shared.types import Completion, Context
 from .databases.insertions.database import IDB, SqlMetrics
@@ -100,6 +100,10 @@ class Reviewer(PReviewer):
     def __init__(self, options: Options, db: IDB) -> None:
         self._options, self._db = options, db
 
+    def register(self, worker: Worker) -> None:
+        m_name = worker.__class__.__module__
+        self._db.new_source(m_name)
+
     def rate(
         self,
         context: Context,
@@ -118,4 +122,8 @@ class Reviewer(PReviewer):
             _join(context, cmp, mm, sqm) for cmp, mm, sqm in zip(completions, mmm, dbm)
         )
         return metrics
+
+    def perf(self, worker: Worker, batch: int, duration: float, items: int) -> None:
+        m_name = worker.__class__.__module__
+        self._db.new_batch(m_name, batch_id=batch, duration=duration, items=items)
 

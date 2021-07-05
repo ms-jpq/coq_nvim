@@ -5,6 +5,7 @@ from collections import Counter, deque
 from concurrent.futures import Executor, Future, InvalidStateError, wait
 from contextlib import suppress
 from dataclasses import dataclass
+from itertools import count
 from threading import Event, Lock
 from typing import (
     Any,
@@ -23,10 +24,11 @@ from weakref import WeakSet
 
 from pynvim import Nvim
 from pynvim_pp.logging import log
+from std2.timeit import timeit
 
 from .parse import coalesce
 from .settings import Options, Weights
-from .timeit import timeit
+from .timeit import timeit as l_timeit
 from .types import Completion, Context
 
 T_co = TypeVar("T_co", contravariant=True)
@@ -42,6 +44,9 @@ class Metric:
 
 
 class PReviewer(Protocol):
+    def register(self, worker: Worker) -> None:
+        ...
+
     def rate(
         self,
         context: Context,
@@ -49,6 +54,12 @@ class PReviewer(Protocol):
         completions: Sequence[Completion],
     ) -> Sequence[Metric]:
         ...
+
+    def perf(self, worker: Worker, batch: int, duration: float, items: int) -> None:
+        ...
+
+
+_UIDS = count()
 
 
 class Supervisor:
@@ -107,18 +118,27 @@ class Supervisor:
             for word in coalesce(line, unifying_chars=self.options.unifying_chars)
         )
         timeout = self._options.manual_timeout if manual else self._options.timeout
+        batch = next(_UIDS)
 
         def supervise(worker: Worker) -> None:
-            try:
-                m_name = worker.__class__.__module__
-                with timeit(f"COLLECT -- {m_name}"):
-                    for completions in worker.work(context):
-                        metrics = self._reviewer.rate(
-                            context, neighbours=neighbours, completions=completions
+            m_name = worker.__class__.__module__
+            with l_timeit(f"COLLECT -- {m_name}"):
+                try:
+                    with timeit() as t:
+                        items = 0
+                        for completions in worker.work(context):
+                            metrics = self._reviewer.rate(
+                                context=context,
+                                neighbours=neighbours,
+                                completions=completions,
+                            )
+                            items += len(metrics)
+                            acc.extend(metrics)
+                        self._reviewer.perf(
+                            worker, batch=batch, duration=t(), items=items
                         )
-                        acc.extend(metrics)
-            except Exception as e:
-                log.exception("%s", e)
+                except Exception as e:
+                    log.exception("%s", e)
 
         def cont() -> None:
             try:
