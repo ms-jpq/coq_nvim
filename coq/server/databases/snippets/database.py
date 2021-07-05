@@ -71,7 +71,7 @@ class SDB:
                     for filetype, snippets in mapping.items():
                         _ensure_ft(cursor, filetypes=(filetype,))
                         for snippet in snippets:
-                            row_id = uuid4().int
+                            row_id = uuid4().bytes
                             cursor.execute(
                                 sql("insert", "snippet"),
                                 {

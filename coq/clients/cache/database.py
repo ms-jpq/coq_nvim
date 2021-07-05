@@ -30,7 +30,7 @@ class Database:
         with self._lock:
             self._conn.interrupt()
 
-    def populate(self, additive: bool, pool: Mapping[int, str]) -> None:
+    def populate(self, additive: bool, pool: Mapping[bytes, str]) -> None:
         def cont() -> None:
             with self._lock, closing(self._conn.cursor()) as cursor:
                 with with_transaction(cursor):
@@ -46,8 +46,8 @@ class Database:
 
         self._ex.submit(cont)
 
-    def select(self, opts: Options, word: str) -> Sequence[int]:
-        def cont() -> Sequence[int]:
+    def select(self, opts: Options, word: str) -> Sequence[bytes]:
+        def cont() -> Sequence[bytes]:
             try:
                 with closing(self._conn.cursor()) as cursor:
                     with with_transaction(cursor):

@@ -76,9 +76,9 @@ class BDB:
         lines: Sequence[str],
         unifying_chars: AbstractSet[str],
     ) -> None:
-        def m0() -> Iterator[Tuple[int, str, int]]:
+        def m0() -> Iterator[Tuple[int, str, bytes]]:
             for line_num, line in enumerate(lines, start=lo):
-                line_id = uuid4().int
+                line_id = uuid4().bytes
                 yield line_num, line, line_id
 
         line_info = tuple(m0())
@@ -123,7 +123,7 @@ class BDB:
                         cursor.execute(
                             sql("insert", "line"),
                             {
-                                "rowid": uuid4().int,
+                                "rowid": uuid4().bytes,
                                 "line": "",
                                 "buffer_id": buf_id,
                                 "line_num": 0,

@@ -14,7 +14,7 @@ class _CacheCtx:
     buf_id: int
     row: int
     line_before: str
-    comps: Mapping[int, Completion]
+    comps: Mapping[bytes, Completion]
 
 
 def _use_cache(cache: _CacheCtx, ctx: Context) -> bool:
@@ -65,7 +65,7 @@ class CacheWorker:
     def _set_cache(self, context: Context, completions: Sequence[Completion]) -> None:
         row, _ = context.position
         additive = context.change_id == self._cache_ctx.change_id
-        new_comps = {uuid4().int: c for c in map(_trans, completions)}
+        new_comps = {uuid4().bytes: c for c in map(_trans, completions)}
         comps = {**self._cache_ctx.comps, **new_comps} if additive else new_comps
         ctx = _CacheCtx(
             change_id=context.change_id,
