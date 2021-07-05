@@ -166,6 +166,34 @@ def _set_win(nvim: Nvim, buf: Buffer, pos: _Pos) -> None:
 
 
 @rpc(blocking=True)
+def _go_show(
+    nvim: Nvim,
+    stack: Stack,
+    syntax: str,
+    preview: Sequence[str],
+    _pos: Mapping[str, int],
+) -> None:
+    pos = _Pos(**_pos)
+    buf = create_buf(
+        nvim, listed=False, scratch=True, wipe=True, nofile=True, noswap=True
+    )
+    buf_set_preview(nvim, buf=buf, syntax=syntax, preview=preview)
+    _set_win(nvim, buf=buf, pos=pos)
+
+
+_LUA_0 = f"""
+(function(syntax, preview, pos)
+  vim.schedule(function() 
+    {_go_show.name}(syntax, preview, pos)
+  end)
+end)(...)
+""".strip()
+
+
+from dataclasses import asdict
+
+
+@rpc(blocking=True)
 def _show_preview(
     nvim: Nvim, stack: Stack, event: _Event, doc: Doc, state: State
 ) -> None:
@@ -181,12 +209,7 @@ def _show_preview(
         key=lambda p: (p[1].height * p[1].width, -p[0]),
         reverse=True,
     )
-
-    buf = create_buf(
-        nvim, listed=False, scratch=True, wipe=True, nofile=True, noswap=True
-    )
-    buf_set_preview(nvim, buf=buf, syntax=new_doc.syntax, preview=lines)
-    _set_win(nvim, buf=buf, pos=pos)
+    nvim.api.exec_lua(_LUA_0, (doc.syntax, lines, asdict(pos)))
 
 
 _FUTS: MutableSequence[Future] = []
