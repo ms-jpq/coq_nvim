@@ -32,9 +32,14 @@
             name,
             session_id,
             n_clients == 0,
-            clients[client_id],
+            clients[client_id] or vim.NIL,
             resp or vim.NIL
           )
+          if not clients[client_id] then
+            print(client_id)
+            print(vim.inspect(clients))
+            print(vim.inspect(resp))
+          end
         end
       )
     end
