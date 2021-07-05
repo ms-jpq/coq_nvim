@@ -7,7 +7,7 @@ from uuid import uuid4
 
 from std2.sqllite3 import with_transaction
 
-from ....consts import BUFFERS_DB
+from ....consts import BUFFER_DB
 from ....registry import pool
 from ....shared.database import init_db
 from ....shared.executor import SingleThreadExecutor
@@ -25,7 +25,7 @@ def _ensure_buffer(cursor: Cursor, buf_id: int, filetype: str) -> None:
 
 
 def _init() -> Connection:
-    conn = Connection(BUFFERS_DB, isolation_level=None)
+    conn = Connection(BUFFER_DB, isolation_level=None)
     init_db(conn)
     conn.executescript(sql("create", "pragma"))
     conn.executescript(sql("create", "tables"))

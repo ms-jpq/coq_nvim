@@ -6,7 +6,7 @@ from typing import Sequence, TypedDict
 
 from std2.sqllite3 import with_transaction
 
-from ....consts import BUFFERS_DB
+from ....consts import INSERT_DB
 from ....registry import pool
 from ....shared.database import init_db
 from ....shared.executor import SingleThreadExecutor
@@ -19,7 +19,7 @@ class SqlMetrics(TypedDict):
 
 
 def _init() -> Connection:
-    conn = Connection(BUFFERS_DB, isolation_level=None)
+    conn = Connection(INSERT_DB, isolation_level=None)
     init_db(conn)
     conn.executescript(sql("create", "pragma"))
     conn.executescript(sql("create", "tables"))
