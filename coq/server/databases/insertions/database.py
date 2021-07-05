@@ -88,5 +88,6 @@ class IDB:
             except OperationalError:
                 return tuple(repeat(SqlMetrics(insert_order=0), times=len(words)))
 
+        self._interrupt()
         return self._ex.submit(cont)
 
