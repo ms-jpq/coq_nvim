@@ -5,7 +5,6 @@ from collections import Counter, deque
 from concurrent.futures import Executor, Future, InvalidStateError, wait
 from contextlib import suppress
 from dataclasses import dataclass
-from itertools import count
 from threading import Event, Lock
 from typing import (
     Any,
@@ -55,11 +54,10 @@ class PReviewer(Protocol):
     ) -> Sequence[Metric]:
         ...
 
-    def perf(self, worker: Worker, batch: int, duration: float, items: int) -> None:
+    def perf(
+        self, worker: Worker, context: Context, duration: float, items: int
+    ) -> None:
         ...
-
-
-_UIDS = count()
 
 
 class Supervisor:
@@ -118,7 +116,6 @@ class Supervisor:
             for word in coalesce(line, unifying_chars=self.options.unifying_chars)
         )
         timeout = self._options.manual_timeout if manual else self._options.timeout
-        batch = next(_UIDS)
 
         def supervise(worker: Worker) -> None:
             m_name = worker.__class__.__module__
@@ -135,7 +132,7 @@ class Supervisor:
                             items += len(metrics)
                             acc.extend(metrics)
                         self._reviewer.perf(
-                            worker, batch=batch, duration=t(), items=items
+                            worker, context=context, duration=t(), items=items
                         )
                 except Exception as e:
                     log.exception("%s", e)

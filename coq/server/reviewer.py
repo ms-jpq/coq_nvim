@@ -123,7 +123,11 @@ class Reviewer(PReviewer):
         )
         return metrics
 
-    def perf(self, worker: Worker, batch: int, duration: float, items: int) -> None:
+    def perf(
+        self, worker: Worker, context: Context, duration: float, items: int
+    ) -> None:
         m_name = worker.__class__.__module__
-        self._db.new_batch(m_name, batch_id=batch, duration=duration, items=items)
+        self._db.new_batch(
+            m_name, batch_id=context.change_id.int, duration=duration, items=items
+        )
 
