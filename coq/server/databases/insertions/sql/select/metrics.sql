@@ -4,3 +4,5 @@ FROM candidates
 LEFT JOIN inserted
 ON
   inserted.sort_by = candidates.inserted
+ORDER BY
+  candidates.rowid
