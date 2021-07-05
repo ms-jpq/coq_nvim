@@ -28,11 +28,11 @@ def _segments(line: str) -> Iterator[str]:
             yield sep.join(reversed(segs[:idx]))
 
 
-def parse(file: Path, line: str) -> Iterator[str]:
+def parse(base: Path, line: str) -> Iterator[str]:
     segments = reversed(tuple(_segments(line)))
     for segment in segments:
         e = Path(segment).expanduser()
-        entire = e if e.is_absolute() else file.parent / e
+        entire = e if e.is_absolute() else base / e
         if entire.is_dir() and access(entire, mode=X_OK):
             for path in entire.iterdir():
                 term = sep if path.is_dir() else ""
@@ -43,7 +43,7 @@ def parse(file: Path, line: str) -> Iterator[str]:
             assert go
             lhs = lft + go
             l = Path(lhs).expanduser()
-            left = l if l.is_absolute() else file.parent / l
+            left = l if l.is_absolute() else base / l
             if left.is_dir() and access(left, mode=X_OK):
                 for path in left.iterdir():
                     if path.name.startswith(rhs):
@@ -56,7 +56,8 @@ class Worker(BaseWorker[BaseClient, None]):
     def work(self, context: Context) -> Iterator[Sequence[Completion]]:
         def cont() -> Iterator[Completion]:
             line = context.line_before + context.words_after
-            for new_text in parse(Path(context.filename), line=line):
+            base_paths = {Path(context.filename).parent, Path(context.cwd)}
+            for new_text in (txt for p in base_paths for txt in parse(p, line=line)):
                 edit = Edit(new_text=new_text)
                 completion = Completion(
                     source=self._options.short_name,
