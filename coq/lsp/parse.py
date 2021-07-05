@@ -7,10 +7,24 @@ from .protocol import PROTOCOL
 from .types import CompletionItem, CompletionResponse, TextEdit
 
 
-def _range_edit(edit: TextEdit) -> RangeEdit:
-    begin = edit["range"]["start"]["line"], edit["range"]["end"]["character"]
-    end = edit["range"]["end"]["line"], edit["range"]["end"]["character"]
-    return RangeEdit(new_text=edit["newText"], begin=begin, end=end)
+def _range_edit(edit: TextEdit) -> Optional[RangeEdit]:
+    rg = edit.get("range", {})
+    s, e = rg.get("start", {}), rg.get("end", {})
+    b_r, b_c = s.get("line"), s.get("character")
+    e_r, e_c = e.get("line"), e.get("character")
+    new_text = edit.get("newText")
+    if (
+        new_text
+        and b_r is not None
+        and b_c is not None
+        and e_r is not None
+        and e_c is not None
+    ):
+        begin = b_r, b_c
+        end = e_r, e_c
+        return RangeEdit(new_text=new_text, begin=begin, end=end)
+    else:
+        return None
 
 
 def _primary(item: CompletionItem) -> Edit:
@@ -24,7 +38,11 @@ def _primary(item: CompletionItem) -> Edit:
             new_text = fall_back
         return SnippetEdit(grammar="lsp", new_text=new_text)
     elif isinstance(text_edit, Mapping) and "range" in text_edit:
-        return _range_edit(cast(TextEdit, text_edit))
+        re = _range_edit(cast(TextEdit, text_edit))
+        if re:
+            return re
+        else:
+            return Edit(new_text=fall_back)
     else:
         return Edit(new_text=fall_back)
 
@@ -61,7 +79,9 @@ def _parse_item(
             sort_by=strxfrm(lower(item.get("filterText") or p_edit.new_text)),
             primary_edit=p_edit,
             secondary_edits=tuple(
-                map(_range_edit, item.get("additionalTextEdits") or ())
+                re
+                for re in map(_range_edit, item.get("additionalTextEdits") or ())
+                if re
             ),
             kind=PROTOCOL.CompletionItemKind.get(item.get("kind"), ""),
             doc=doc(item),
