@@ -1,3 +1,4 @@
+from threading import Lock
 from typing import Iterator, Sequence
 
 from ...lsp.requests.completion import request
@@ -12,20 +13,31 @@ class Worker(BaseWorker[BaseClient, None], CacheWorker):
     def __init__(self, supervisor: Supervisor, options: BaseClient, misc: None) -> None:
         CacheWorker.__init__(self, supervisor=supervisor)
         BaseWorker.__init__(self, supervisor=supervisor, options=options, misc=misc)
+        self._lock, self._cache_only = Lock(), False
 
     def work(self, context: Context) -> Iterator[Sequence[Completion]]:
-        yield self._use_cache(context)
+        cached = self._use_cache(context)
+        if cached:
+            yield cached
+
         stream = request(
             self._supervisor.nvim,
             short_name=self._options.short_name,
             tie_breaker=self._options.tie_breaker,
             context=context,
         )
-        for local_cache, comps in stream:
-            yield comps
-            if local_cache:
-                self._set_cache(context, completions=comps)
-            else:
-                self._set_cache(context, completions=())
-            yield ()
+        with self._lock:
+            cache_only = self._cache_only
+
+        if cached is None or not cache_only:
+            for use_cache, comps in stream:
+                with self._lock:
+                    self._cache_only = use_cache
+
+                yield comps
+                if use_cache:
+                    self._set_cache(context, completions=comps)
+                else:
+                    self._set_cache(context, completions=())
+                yield ()
 
