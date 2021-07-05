@@ -2,7 +2,7 @@ from contextlib import closing
 from sqlite3 import Connection, OperationalError
 from sqlite3.dbapi2 import Cursor
 from threading import Lock
-from typing import AbstractSet, Iterator, Mapping, Sequence, Tuple
+from typing import AbstractSet, Iterator, Mapping, Optional, Sequence, Tuple
 from uuid import uuid4
 
 from std2.sqllite3 import with_transaction
@@ -147,7 +147,7 @@ class BDB:
         return self._ex.submit(cont)
 
     def words(
-        self, opts: Options, filetype: str, word: str
+        self, opts: Options, filetype: Optional[str], word: str
     ) -> Sequence[Tuple[str, str]]:
         def cont() -> Sequence[Tuple[str, str]]:
             try:

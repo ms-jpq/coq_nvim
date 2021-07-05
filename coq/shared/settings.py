@@ -68,6 +68,11 @@ class WordbankClient(BaseClient):
 
 
 @dataclass(frozen=True)
+class BuffersClient(WordbankClient):
+    same_filetype: bool
+
+
+@dataclass(frozen=True)
 class TagsClient(WordbankClient):
     parent_scope: str
     path_sep: str
@@ -81,7 +86,7 @@ class SnippetClient(BaseClient):
 
 @dataclass(frozen=True)
 class Clients:
-    buffers: WordbankClient
+    buffers: BuffersClient
     lsp: BaseClient
     paths: BaseClient
     snippets: SnippetClient

@@ -62,6 +62,7 @@ clients:
     enabled: True
     short_name: "BUF"
     match_syms: False
+    same_filetype: False
     tie_breaker: 20
 
   tree_sitter:

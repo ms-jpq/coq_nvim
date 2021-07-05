@@ -7,7 +7,10 @@ ON lines.rowid = words.line_id
 JOIN buffers
 ON buffers.rowid = lines.buffer_id
 WHERE
-  buffers.filetype = X_NORMALIZE(:filetype)
+  CASE
+    WHEN :filetype <> NULL THEN buffers.filetype = X_NORMALIZE(:filetype)
+    ELSE TRUE
+  END
   AND
   X_NORMALIZE(:word) <> ''
   AND
