@@ -45,7 +45,7 @@ class IDB:
         self._ex.submit(cont)
 
     def new_batch(
-        self, source: str, batch_id: int, duration: float, items: int
+        self, source: str, batch_id: bytes, duration: float, items: int
     ) -> None:
         def cont() -> None:
             with self._lock, closing(self._conn.cursor()) as cursor:

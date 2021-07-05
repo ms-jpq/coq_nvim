@@ -131,9 +131,9 @@ class Supervisor:
                             )
                             items += len(metrics)
                             acc.extend(metrics)
-                        self._reviewer.perf(
-                            worker, context=context, duration=t(), items=items
-                        )
+                    self._reviewer.perf(
+                        worker, context=context, duration=t(), items=items
+                    )
                 except Exception as e:
                     log.exception("%s", e)
 

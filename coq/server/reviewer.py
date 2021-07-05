@@ -128,6 +128,6 @@ class Reviewer(PReviewer):
     ) -> None:
         m_name = worker.__class__.__module__
         self._db.new_batch(
-            m_name, batch_id=context.change_id.int, duration=duration, items=items
+            m_name, batch_id=context.change_id.bytes, duration=duration, items=items
         )
 
