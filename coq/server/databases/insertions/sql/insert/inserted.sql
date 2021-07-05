@@ -1,2 +1,2 @@
-REPLACE INTO insertions (             sort_by)
-VALUES                  (X_NORMALIZE(:sort_by))
+INSERT INTO inserted ( batch_id,  sort_by)
+VALUES               (:batch_id, :sort_by)
