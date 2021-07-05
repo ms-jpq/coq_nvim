@@ -38,7 +38,7 @@ from ...shared.settings import PreviewDisplay
 from ...shared.timeit import timeit
 from ...shared.trans import expand_tabs
 from ...shared.types import UTF8, Context, Doc
-from ..nvim.completions import UserData, VimCompletion
+from ..nvim.completions import VimCompletion
 from ..rt_types import Stack
 from ..state import State, state
 

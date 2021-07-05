@@ -1,12 +1,11 @@
 from dataclasses import dataclass
 from enum import Enum
-from typing import Iterable, Optional, Sequence
+from typing import Any, Iterable, Optional, Sequence
 from uuid import UUID
 
 from pynvim import Nvim
 from std2.pickle import new_encoder
 
-from ...lsp.types import CompletionItem
 from ...shared.types import Doc, PrimaryEdit, RangeEdit
 
 
@@ -26,7 +25,7 @@ class UserData:
     primary_edit: PrimaryEdit
     secondary_edits: Sequence[RangeEdit]
     doc: Optional[Doc]
-    extern: Optional[CompletionItem]
+    extern: Optional[Any]
 
 
 @dataclass(frozen=True)
