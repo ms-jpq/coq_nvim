@@ -121,6 +121,7 @@ class Reviewer(PReviewer):
             completions=completions,
         )
         dbm = self._db.metric(words)
+        assert len(dbm) == len(completions)
         metrics = tuple(
             _join(batch, context, cmp, mm, sqm)
             for cmp, mm, sqm in zip(completions, mmm, dbm)
