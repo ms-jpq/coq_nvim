@@ -1,6 +1,5 @@
 from pathlib import Path
 from pprint import pformat
-from sys import stderr
 from typing import Literal, Optional, Tuple, cast
 from uuid import UUID
 
@@ -8,6 +7,7 @@ from pynvim import Nvim
 from pynvim.api import Buffer
 from pynvim_pp.api import LFfmt
 from pynvim_pp.atomic import Atomic
+from pynvim_pp.logging import log
 from pynvim_pp.text_object import gen_split
 
 from ..shared.settings import Options
@@ -50,7 +50,8 @@ def context(
     )
     r = min(options.context_lines, row)
     if r >= len(lines):
-        print(pformat(tuple(enumerate(lines))), file=stderr, flush=True)
+        _, all_lines = db.lines(buf_nr, lo=0, hi=-1)
+        log.critical("%s", pformat((row, tuple(enumerate(all_lines)))))
         return None
     else:
         line = lines[r]

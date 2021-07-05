@@ -119,6 +119,18 @@ class BDB:
                     )
                     cursor.executemany(sql("insert", "line"), m1())
                     cursor.executemany(sql("insert", "word"), m2())
+                    cursor.execute(sql("select", "line_count"), {"buffer_id": buf_id})
+                    count = cursor.fetchone()["line_count"]
+                    if not count:
+                        cursor.execute(
+                            sql("insert", "line"),
+                            {
+                                "rowid": next(self._uid_gen),
+                                "line": "",
+                                "buffer_id": buf_id,
+                                "line_num": 0,
+                            },
+                        )
 
         self._ex.submit(cont)
 
