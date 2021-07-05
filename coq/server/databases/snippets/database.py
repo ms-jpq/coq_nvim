@@ -3,6 +3,7 @@ from itertools import count
 from sqlite3 import Connection, Cursor, OperationalError
 from threading import Lock
 from typing import Iterable, Iterator, Mapping, Sequence, TypedDict, cast
+from uuid import uuid4
 
 from std2.sqllite3 import with_transaction
 
@@ -39,9 +40,6 @@ def _ensure_ft(cursor: Cursor, filetypes: Iterable[str]) -> None:
     cursor.executemany(sql("insert", "filetype"), it())
 
 
-_UIDS = count()
-
-
 class SDB:
     def __init__(self) -> None:
         self._lock = Lock()
@@ -72,7 +70,8 @@ class SDB:
                 with with_transaction(cursor):
                     for filetype, snippets in mapping.items():
                         _ensure_ft(cursor, filetypes=(filetype,))
-                        for row_id, snippet in zip(_UIDS, snippets):
+                        for snippet in snippets:
+                            row_id = uuid4().int
                             cursor.execute(
                                 sql("insert", "snippet"),
                                 {

@@ -1,5 +1,5 @@
 from contextlib import closing
-from itertools import count, repeat
+from itertools import repeat
 from sqlite3 import Connection, OperationalError
 from threading import Lock
 from typing import Sequence, TypedDict
@@ -31,7 +31,6 @@ class IDB:
         self._lock = Lock()
         self._ex = SingleThreadExecutor(pool)
         self._conn: Connection = self._ex.submit(_init)
-        self._uid_gen = count()
 
     def _interrupt(self) -> None:
         with self._lock:

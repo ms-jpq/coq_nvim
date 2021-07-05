@@ -1,9 +1,9 @@
 from contextlib import closing
-from itertools import count
 from sqlite3 import Connection, OperationalError
 from sqlite3.dbapi2 import Cursor
 from threading import Lock
 from typing import AbstractSet, Iterator, Mapping, Sequence, Tuple
+from uuid import uuid4
 
 from std2.sqllite3 import with_transaction
 
@@ -30,9 +30,6 @@ def _init() -> Connection:
     conn.executescript(sql("create", "pragma"))
     conn.executescript(sql("create", "tables"))
     return conn
-
-
-_UIDS = count()
 
 
 class BDB:
@@ -80,7 +77,8 @@ class BDB:
         unifying_chars: AbstractSet[str],
     ) -> None:
         def m0() -> Iterator[Tuple[int, str, int]]:
-            for (line_num, line), line_id in zip(enumerate(lines, start=lo), _UIDS):
+            for line_num, line in enumerate(lines, start=lo):
+                line_id = uuid4().int
                 yield line_num, line, line_id
 
         line_info = tuple(m0())
@@ -125,7 +123,7 @@ class BDB:
                         cursor.execute(
                             sql("insert", "line"),
                             {
-                                "rowid": next(_UIDS),
+                                "rowid": uuid4().int,
                                 "line": "",
                                 "buffer_id": buf_id,
                                 "line_num": 0,
