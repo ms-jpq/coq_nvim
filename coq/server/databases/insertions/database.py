@@ -83,7 +83,7 @@ class IDB:
                             sql("insert", "candidate"),
                             ({"sort_by": sort_by} for sort_by in words),
                         )
-                        cursor.execute(sql("select", "metrics"))
+                        cursor.execute(sql("select", "metrics"), ())
                         return cursor.fetchall()
             except OperationalError:
                 return tuple(repeat(SqlMetrics(insert_order=0), times=len(words)))
