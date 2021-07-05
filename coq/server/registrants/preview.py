@@ -123,7 +123,8 @@ def _positions(
         height=n_height,
         width=ns_width,
     )
-    yield n
+    if n.row > 0:
+        yield n
 
     s = _Pos(
         row=btm,
