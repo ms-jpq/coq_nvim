@@ -11,11 +11,19 @@ CREATE TABLE IF NOT EXISTS batch (
 ) WITHOUT ROWID;
 
 
+CREATE TABLE IF NOT EXISTS durations (
+  batch_id INTEGER NOT NULL,
+  duration REAL    NOT NULL,
+  items    INTEGER NOT NULL
+);
+
+
 CREATE TABLE IF NOT EXISTS insertions (
   rowid     INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
   source_id TEXT    NOT NULL REFERENCES sources (name)  ON UPDATE CASCADE ON DELETE CASCADE,
   batch_id  INTEGER NOT NULL REFERENCES batch   (rowid) ON UPDATE CASCADE ON DELETE CASCADE,
-  sort_by   TEXT    NOT NULL UNIQUE
+  sort_by   TEXT    NOT NULL UNIQUE,
+  UNIQUE(source_id, batch_id)
 );
 
 
