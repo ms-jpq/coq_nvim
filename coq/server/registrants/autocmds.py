@@ -7,7 +7,6 @@ from pynvim_pp.api import buf_filetype, cur_buf, list_bufs
 from std2.pickle import new_decoder
 
 from ...registry import atomic, autocmd, enqueue_event, rpc
-from ...shared.timeit import timeit
 from ...snippets.types import ParsedSnippet
 from ..rt_types import Stack
 
@@ -42,12 +41,9 @@ _TIMER = Timer(0, lambda: None)
 
 @rpc(blocking=True)
 def _on_idle(nvim: Nvim, stack: Stack) -> None:
-    with timeit("IDLE -- VACUUM"):
-        bufs = list_bufs(nvim, listed=False)
-        stack.bdb.vacuum({buf.number for buf in bufs})
-
-    with timeit("IDLE -- WORKER"):
-        stack.supervisor.notify_idle()
+    bufs = list_bufs(nvim, listed=False)
+    stack.bdb.vacuum({buf.number for buf in bufs})
+    stack.supervisor.notify_idle()
 
 
 @rpc(blocking=True)
