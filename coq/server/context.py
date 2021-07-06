@@ -6,7 +6,7 @@ from pynvim import Nvim
 from pynvim.api import Buffer
 from pynvim_pp.api import LFfmt, buf_get_lines
 from pynvim_pp.atomic import Atomic
-from pynvim_pp.log import log
+from pynvim_pp.logging import log
 from pynvim_pp.text_object import gen_split
 
 from ..shared.settings import Options
