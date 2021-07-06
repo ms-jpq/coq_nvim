@@ -5,7 +5,7 @@ from collections import Counter, deque
 from concurrent.futures import Executor, Future, InvalidStateError, wait
 from contextlib import suppress
 from dataclasses import dataclass
-from threading import Event, Lock
+from threading import Condition, Event, Lock
 from typing import (
     Any,
     Deque,
@@ -74,7 +74,7 @@ class Supervisor:
             options,
             reviewer,
         )
-        self._lock = Lock()
+        self._lock, self._cond = Lock(), Condition()
         self._workers: MutableSet[Worker] = WeakSet()
         self._futs: MutableSequence[Future] = []
 
@@ -121,7 +121,7 @@ class Supervisor:
         def supervise(worker: Worker) -> None:
             try:
                 m_name = worker.__class__.__module__
-                with l_timeit(f"COLLECT -- {m_name}"):
+                with l_timeit(f"COLLECTED -- {m_name}"):
                     batch, items = uuid4(), 0
                     # TODO -- split off batch
                     self._reviewer.perf(worker, batch=batch, duration=0, items=items)
@@ -134,6 +134,9 @@ class Supervisor:
                         )
                         items += len(metrics)
                         acc.extend(metrics)
+                        if metrics:
+                            with self._cond:
+                                self._cond.notify_all()
             except Exception as e:
                 log.exception("%s", e)
 
@@ -145,6 +148,9 @@ class Supervisor:
                 with self._lock:
                     self._futs.extend(futs)
                 wait(futs, timeout=timeout)
+                if not acc:
+                    with self._cond:
+                        self._cond.wait()
 
                 with suppress(InvalidStateError):
                     future.set_result(tuple(acc))
