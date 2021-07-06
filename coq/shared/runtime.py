@@ -147,8 +147,8 @@ class Supervisor:
                 )
                 with self._lock:
                     self._futs.extend(futs)
-                wait(futs, timeout=timeout)
-                if not acc:
+                done, _ = wait(futs, timeout=timeout)
+                if not acc and len(self._workers) != len(done):
                     with self._cond:
                         self._cond.wait()
 
