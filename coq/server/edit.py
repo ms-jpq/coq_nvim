@@ -20,6 +20,7 @@ from ..shared.types import (
     Context,
     ContextualEdit,
     Edit,
+    Mark,
     NvimPos,
     RangeEdit,
     SnippetEdit,
@@ -352,13 +353,14 @@ def edit(nvim: Nvim, stack: Stack, context: Context, data: UserData) -> Tuple[in
     if isinstance(data.primary_edit, SnippetEdit):
         visual = _visual(nvim, buf=buf, context=context, db=stack.bdb)
         try:
-            primary, marks = parse(
+            parsed: Tuple[Edit, Sequence[Mark]] = parse(
                 stack.settings.match.unifying_chars,
                 context=context,
                 snippet=data.primary_edit,
                 sort_by=data.sort_by,
                 visual=visual,
             )
+            primary, marks = parsed
         except ParseError as e:
             primary, marks = data.primary_edit, ()
     else:
