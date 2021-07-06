@@ -351,13 +351,16 @@ def edit(nvim: Nvim, stack: Stack, context: Context, data: UserData) -> Tuple[in
 
     if isinstance(data.primary_edit, SnippetEdit):
         visual = _visual(nvim, buf=buf, context=context, db=stack.bdb)
-        primary, marks = parse(
-            stack.settings.match.unifying_chars,
-            context=context,
-            snippet=data.primary_edit,
-            sort_by=data.sort_by,
-            visual=visual,
-        )
+        try:
+            primary, marks = parse(
+                stack.settings.match.unifying_chars,
+                context=context,
+                snippet=data.primary_edit,
+                sort_by=data.sort_by,
+                visual=visual,
+            )
+        except ParseError as e:
+            primary, marks = data.primary_edit, ()
     else:
         primary, marks = data.primary_edit, ()
 
