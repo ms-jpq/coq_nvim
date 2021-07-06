@@ -23,7 +23,7 @@ def context(
         ns.cwd = atomic.call_function("getcwd", ())
         ns.buf = atomic.get_current_buf()
         ns.name = atomic.buf_get_name(0)
-        ns.line_count = atomic.nvim_buf_line_count(0)
+        ns.line_count = atomic.buf_line_count(0)
         ns.filetype = atomic.buf_get_option(0, "filetype")
         ns.commentstring = atomic.buf_get_option(0, "commentstring")
         ns.fileformat = atomic.buf_get_option(0, "fileformat")
