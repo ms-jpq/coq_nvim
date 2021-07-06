@@ -63,10 +63,12 @@ class CacheWorker:
             return None
 
     def _set_cache(self, context: Context, completions: Sequence[Completion]) -> None:
+        use_cache = _use_cache(self._cache_ctx, ctx=context)
+
         row, _ = context.position
-        additive = context.change_id == self._cache_ctx.change_id
         new_comps = {uuid4().bytes: c for c in map(_trans, completions)}
-        comps = {**self._cache_ctx.comps, **new_comps} if additive else new_comps
+
+        comps = {**self._cache_ctx.comps, **new_comps} if use_cache else new_comps
         ctx = _CacheCtx(
             change_id=context.change_id,
             commit_id=context.commit_id,
@@ -75,8 +77,9 @@ class CacheWorker:
             line_before=context.line_before,
             comps=comps,
         )
+
         self._db.populate(
-            additive,
+            use_cache,
             pool={hash_id: c.primary_edit.new_text for hash_id, c in new_comps.items()},
         )
         self._cache_ctx = ctx
