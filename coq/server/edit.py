@@ -25,6 +25,7 @@ from ..shared.types import (
     SnippetEdit,
 )
 from ..snippets.parse import parse
+from ..snippets.parsers.types import ParseError
 from .databases.buffers.database import BDB
 from .nvim.completions import UserData
 from .registrants.marks import mark
@@ -348,17 +349,18 @@ def edit(nvim: Nvim, stack: Stack, context: Context, data: UserData) -> Tuple[in
     win = cur_win(nvim)
     buf = win_get_buf(nvim, win=win)
 
-    primary, marks = (
-        parse(
+    if isinstance(data.primary_edit, SnippetEdit):
+        visual = _visual(nvim, buf=buf, context=context, db=stack.bdb)
+        primary, marks = parse(
             stack.settings.match.unifying_chars,
             context=context,
             snippet=data.primary_edit,
             sort_by=data.sort_by,
-            visual=_visual(nvim, buf=buf, context=context, db=stack.bdb),
+            visual=visual,
         )
-        if isinstance(data.primary_edit, SnippetEdit)
-        else (data.primary_edit, ())
-    )
+    else:
+        primary, marks = data.primary_edit, ()
+
     lo, hi = _rows_to_fetch(
         context,
         primary,
