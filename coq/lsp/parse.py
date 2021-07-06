@@ -94,8 +94,8 @@ def parse(
     short_name: str, tie_breaker: int, resp: CompletionResponse
 ) -> Tuple[bool, Sequence[Completion]]:
     if isinstance(resp, Mapping):
-        force_cached = resp.get("isIncomplete") in {None, False, 0, ""}
-        return force_cached, tuple(
+        only_use_cached = resp.get("isIncomplete") in {None, False, 0, ""}
+        return only_use_cached, tuple(
             c
             for c in (
                 _parse_item(short_name, tie_breaker=tie_breaker, item=item)

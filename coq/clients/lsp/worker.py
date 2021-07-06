@@ -13,17 +13,17 @@ class Worker(BaseWorker[BaseClient, None], CacheWorker):
     def __init__(self, supervisor: Supervisor, options: BaseClient, misc: None) -> None:
         CacheWorker.__init__(self, supervisor=supervisor)
         BaseWorker.__init__(self, supervisor=supervisor, options=options, misc=misc)
-        self._lock, self._force_cache = Lock(), False
+        self._lock, self._only_use_cached = Lock(), False
 
     def work(self, context: Context) -> Iterator[Sequence[Completion]]:
         with self._lock:
-            force_cache = self._force_cache
+            only_use_cached = self._only_use_cached
 
         cached = self._use_cache(context)
         if cached:
             yield cached
 
-        if force_cache and cached is not None:
+        if only_use_cached and cached is not None:
             pass
         else:
             stream = request(
@@ -33,9 +33,9 @@ class Worker(BaseWorker[BaseClient, None], CacheWorker):
                 context=context,
             )
 
-            for force_cache, comps in stream:
+            for only_use_cached, comps in stream:
                 with self._lock:
-                    self._force_cache = force_cache
+                    self._only_use_cached = only_use_cached
                 yield comps
                 self._set_cache(context, completions=comps)
                 yield ()
