@@ -1,4 +1,5 @@
 from dataclasses import dataclass, replace
+from threading import Lock
 from typing import Iterator, Mapping, Optional, Sequence
 from uuid import UUID, uuid4
 
@@ -38,6 +39,7 @@ class CacheWorker:
     def __init__(self, supervisor: Supervisor) -> None:
         self._soup = supervisor
         self._db = Database(supervisor.pool)
+        self._lock = Lock()
         self._cache_ctx = _CacheCtx(
             change_id=uuid4(),
             commit_id=uuid4(),
@@ -48,13 +50,16 @@ class CacheWorker:
         )
 
     def _use_cache(self, context: Context) -> Optional[Sequence[Completion]]:
-        if _use_cache(self._cache_ctx, ctx=context):
+        with self._lock:
+            cache_ctx = self._cache_ctx
+
+        if _use_cache(cache_ctx, ctx=context):
             match = context.words or context.syms
             hashes = self._db.select(self._soup.options, word=match)
 
             def cont() -> Iterator[Completion]:
                 for hash_id in hashes:
-                    cmp = self._cache_ctx.comps.get(hash_id)
+                    cmp = cache_ctx.comps.get(hash_id)
                     if cmp:
                         yield cmp
 
@@ -63,13 +68,15 @@ class CacheWorker:
             return None
 
     def _set_cache(self, context: Context, completions: Sequence[Completion]) -> None:
-        use_cache = _use_cache(self._cache_ctx, ctx=context)
+        with self._lock:
+            cache_ctx = self._cache_ctx
 
+        use_cache = _use_cache(cache_ctx, ctx=context)
         row, _ = context.position
         new_comps = {uuid4().bytes: c for c in map(_trans, completions)}
 
-        comps = {**self._cache_ctx.comps, **new_comps} if use_cache else new_comps
-        ctx = _CacheCtx(
+        comps = {**cache_ctx.comps, **new_comps} if use_cache else new_comps
+        new_cache_ctx = _CacheCtx(
             change_id=context.change_id,
             commit_id=context.commit_id,
             buf_id=context.buf_id,
@@ -82,5 +89,7 @@ class CacheWorker:
             use_cache,
             pool={hash_id: c.primary_edit.new_text for hash_id, c in new_comps.items()},
         )
-        self._cache_ctx = ctx
+
+        with self._lock:
+            self._cache_ctx = new_cache_ctx
 
