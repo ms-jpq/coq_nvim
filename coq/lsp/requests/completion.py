@@ -27,7 +27,5 @@ def request(
 
     for reply in blocking_request(nvim, "COQlsp_comp", (row, col)):
         resp = cast(CompletionResponse, reply)
-        incomplete, comps = parse(short_name, tie_breaker=tie_breaker, resp=resp)
-        use_cache = not incomplete
-        yield use_cache, comps
+        yield parse(short_name, tie_breaker=tie_breaker, resp=resp)
 

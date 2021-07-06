@@ -13,27 +13,29 @@ class Worker(BaseWorker[BaseClient, None], CacheWorker):
     def __init__(self, supervisor: Supervisor, options: BaseClient, misc: None) -> None:
         CacheWorker.__init__(self, supervisor=supervisor)
         BaseWorker.__init__(self, supervisor=supervisor, options=options, misc=misc)
-        self._lock, self._cache_only = Lock(), False
+        self._lock, self._force_cache = Lock(), False
 
     def work(self, context: Context) -> Iterator[Sequence[Completion]]:
+        with self._lock:
+            force_cache = self._force_cache
+
         cached = self._use_cache(context)
         if cached:
             yield cached
 
-        stream = request(
-            self._supervisor.nvim,
-            short_name=self._options.short_name,
-            tie_breaker=self._options.tie_breaker,
-            context=context,
-        )
-        with self._lock:
-            cache_only = self._cache_only
+        if force_cache and cached is not None:
+            pass
+        else:
+            stream = request(
+                self._supervisor.nvim,
+                short_name=self._options.short_name,
+                tie_breaker=self._options.tie_breaker,
+                context=context,
+            )
 
-        if cached is None or not cache_only:
-            for use_cache, comps in stream:
+            for force_cache, comps in stream:
                 with self._lock:
-                    self._cache_only = use_cache
-
+                    self._force_cache = force_cache
                 yield comps
                 self._set_cache(context, completions=comps)
                 yield ()
