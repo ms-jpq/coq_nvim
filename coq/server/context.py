@@ -1,12 +1,12 @@
 from pathlib import Path
-from pprint import pformat
 from typing import Literal, Tuple, cast
 from uuid import UUID
 
 from pynvim import Nvim
 from pynvim.api import Buffer
-from pynvim_pp.api import LFfmt
+from pynvim_pp.api import LFfmt, buf_get_lines
 from pynvim_pp.atomic import Atomic
+from pynvim_pp.log import log
 from pynvim_pp.text_object import gen_split
 
 from ..shared.settings import Options
@@ -23,6 +23,7 @@ def context(
         ns.cwd = atomic.call_function("getcwd", ())
         ns.buf = atomic.get_current_buf()
         ns.name = atomic.buf_get_name(0)
+        ns.line_count = atomic.nvim_buf_line_count(0)
         ns.filetype = atomic.buf_get_option(0, "filetype")
         ns.commentstring = atomic.buf_get_option(0, "commentstring")
         ns.fileformat = atomic.buf_get_option(0, "fileformat")
@@ -33,10 +34,11 @@ def context(
 
     scr_col = ns.scr_col
     cwd = cast(str, ns.cwd)
-    buf_nr = cast(Buffer, ns.buf).number
+    buf = cast(Buffer, ns.buf)
     (r, col) = cast(Tuple[int, int], ns.cursor)
     row = r - 1
     pos = (row, col)
+    buf_line_count = ns.line_count
     filename = cast(str, ns.name)
     filetype = cast(str, ns.filetype)
     comment_str = cast(str, ns.commentstring)
@@ -44,48 +46,50 @@ def context(
     expandtab = cast(bool, ns.expandtab)
     linefeed = cast(Literal["\n", "\r", "\r\n"], LFfmt[cast(str, ns.fileformat)].value)
 
-    line_count, lines = db.lines(
-        buf_nr, lo=row - options.context_lines, hi=row + options.context_lines + 1
+    lo, r, hi = (
+        row - options.context_lines,
+        min(options.context_lines, row),
+        row + options.context_lines + 1,
     )
-    r = min(options.context_lines, row)
-    if r >= len(lines):
-        _, all_lines = db.lines(buf_nr, lo=0, hi=-1)
-        raise AssertionError(pformat((row, tuple(enumerate(all_lines)))))
-    else:
-        line = lines[r]
-        lines_before, lines_after = lines[:r], lines[r + 1 :]
+    line_count, lines = db.lines(buf.number, lo=lo, hi=hi)
+    if line_count != buf_line_count:
+        lines = buf_get_lines(nvim, buf=buf, lo=lo, hi=hi)
+        log.debug("%s", f"lines out of sync - @{row}")
 
-        lhs, _, rhs = comment_str.partition("%s")
-        b_line = line.encode()
-        before, after = b_line[:col].decode(), b_line[col:].decode()
-        split = gen_split(lhs=before, rhs=after, unifying_chars=options.unifying_chars)
+    line = lines[r]
+    lines_before, lines_after = lines[:r], lines[r + 1 :]
 
-        ctx = Context(
-            change_id=change_id,
-            commit_id=commit_id,
-            cwd=Path(cwd),
-            buf_id=buf_nr,
-            filename=filename,
-            filetype=filetype,
-            line_count=line_count,
-            linefeed=linefeed,
-            tabstop=tabstop,
-            expandtab=expandtab,
-            comment=(lhs, rhs),
-            position=pos,
-            scr_col=scr_col,
-            line=split.lhs + split.rhs,
-            line_before=split.lhs,
-            line_after=split.rhs,
-            lines=lines,
-            lines_before=lines_before,
-            lines_after=lines_after,
-            words=split.word_lhs + split.word_rhs,
-            words_before=split.word_lhs,
-            words_after=split.word_rhs,
-            syms=split.syms_lhs + split.syms_rhs,
-            syms_before=split.syms_lhs,
-            syms_after=split.syms_rhs,
-        )
-        return ctx
+    lhs, _, rhs = comment_str.partition("%s")
+    b_line = line.encode()
+    before, after = b_line[:col].decode(), b_line[col:].decode()
+    split = gen_split(lhs=before, rhs=after, unifying_chars=options.unifying_chars)
+
+    ctx = Context(
+        change_id=change_id,
+        commit_id=commit_id,
+        cwd=Path(cwd),
+        buf_id=buf.number,
+        filename=filename,
+        filetype=filetype,
+        line_count=line_count,
+        linefeed=linefeed,
+        tabstop=tabstop,
+        expandtab=expandtab,
+        comment=(lhs, rhs),
+        position=pos,
+        scr_col=scr_col,
+        line=split.lhs + split.rhs,
+        line_before=split.lhs,
+        line_after=split.rhs,
+        lines=lines,
+        lines_before=lines_before,
+        lines_after=lines_after,
+        words=split.word_lhs + split.word_rhs,
+        words_before=split.word_lhs,
+        words_after=split.word_rhs,
+        syms=split.syms_lhs + split.syms_rhs,
+        syms_before=split.syms_lhs,
+        syms_after=split.syms_rhs,
+    )
+    return ctx
 
