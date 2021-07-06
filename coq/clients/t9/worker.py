@@ -2,10 +2,11 @@ from itertools import chain
 from json import dumps, loads
 from locale import strxfrm
 from os import linesep
-from subprocess import PIPE, Popen
+from subprocess import DEVNULL, PIPE, Popen
 from threading import Event
 from typing import IO, Any, Iterator, Optional, Sequence, cast
 
+from pynvim_pp.logging import log
 from std2.pickle import new_decoder, new_encoder
 
 from ...shared.parse import lower
@@ -67,7 +68,7 @@ def _decode(client: BaseClient, reply: Any) -> Iterator[Completion]:
 
 
 def _proc() -> Popen:
-    return Popen((str(T9_BIN),), text=True, stdin=PIPE, stdout=PIPE)
+    return Popen((str(T9_BIN),), text=True, stdin=PIPE, stdout=PIPE, stderr=DEVNULL)
 
 
 class Worker(BaseWorker[BaseClient, None]):
@@ -78,8 +79,11 @@ class Worker(BaseWorker[BaseClient, None]):
         super().__init__(supervisor, options=options, misc=misc)
 
     def _install(self) -> None:
-        ensure_installed(_TIMEOUT)
-        self._ev.set()
+        try:
+            ensure_installed(_TIMEOUT)
+            self._ev.set()
+        except Exception as e:
+            log.exception("%s", e)
 
     def _req(self, context: Context) -> Sequence[Completion]:
         if not self._ev.is_set():
