@@ -92,6 +92,10 @@ class CacheWorker:
         )
 
         pool = {hash_id: c.primary_edit.new_text for hash_id, c in new_comps.items()}
-        await shield(self._db.populate(use_cache, pool=pool))
-        self._cache_ctx = new_cache_ctx
+
+        async def trans() -> None:
+            await self._db.populate(use_cache, pool=pool)
+            self._cache_ctx = new_cache_ctx
+
+        await shield(trans())
 
