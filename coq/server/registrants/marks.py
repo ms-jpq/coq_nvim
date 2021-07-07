@@ -1,9 +1,10 @@
 from typing import Iterable, Iterator, Sequence, Tuple, TypedDict
 from uuid import uuid4
 
-from pynvim.api.nvim import Buffer, Nvim
+from pynvim.api.nvim import Buffer, Nvim, NvimError
 from pynvim_pp.api import cur_win, win_get_buf, win_set_cursor
 from pynvim_pp.lib import write
+from pynvim_pp.logging import log
 from pynvim_pp.operators import set_visual_selection
 
 from ...registry import rpc
@@ -72,5 +73,14 @@ def mark(nvim: Nvim, settings: Settings, buf: Buffer, marks: Iterable[Mark]) -> 
             "end_col": c2,
             "hl_group": settings.display.mark_highlight_group,
         }
-        nvim.api.buf_set_extmark(buf, ns, r1, c1, opts)
+        try:
+            nvim.api.buf_set_extmark(buf, ns, r1, c1, opts)
+        except NvimError as e:
+            lines = nvim.api.buf_get_lines(buf, r1, r2 + 1, True)
+
+            msg = tuple(
+                f"{idx} |{len(line)}| {[line]}"
+                for idx, line in enumerate(lines, start=r1)
+            )
+            log.exception("%s", f"{e} {mark} {msg}")
 
