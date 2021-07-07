@@ -21,16 +21,13 @@ def _indent(ctx: Context, old_prefix: str, line_before: str) -> Tuple[int, str]:
 
 def _marks(
     ctx: Context,
-    edit: ContextualEdit,
     indent_len: int,
+    parsed_lines: Sequence[str],
     regions: Mapping[int, Region],
 ) -> Iterator[Mark]:
     row, _ = ctx.position
     l0_before = indent_len
-    parsed_lines = edit.new_text.split(ctx.linefeed)
-    len8 = tuple(
-        accumulate(len(line.encode(UTF8)) + len(ctx.linefeed) for line in parsed_lines)
-    )
+    len8 = tuple(accumulate(len(line.encode(UTF8)) for line in parsed_lines))
 
     for r_idx, region in regions.items():
         r1, c1, r2, c2 = None, None, None, None
@@ -39,9 +36,9 @@ def _marks(
         for idx, l8 in enumerate(len8):
             x_shift = 0 if idx else l0_before
             if r1 is None and l8 >= region.begin:
-                r1, c1 = idx + row, region.begin - last_len + x_shift
+                r1, c1 = idx + row, min(l8 - 1, region.begin - last_len + x_shift)
             if r2 is None and l8 >= region.end:
-                r2, c2 = idx + row, region.end - last_len + x_shift
+                r2, c2 = idx + row, min(l8 - 1, region.end - last_len + x_shift)
 
             last_len = l8
 
@@ -90,7 +87,12 @@ def parse(
         new_prefix=parsed.text.encode(UTF8)[: parsed.cursor].decode(),
     )
     marks = tuple(
-        _marks(context, edit=edit, indent_len=indent_len, regions=parsed.regions)
+        _marks(
+            context,
+            indent_len=indent_len,
+            parsed_lines=expanded_text.splitlines(keepends=True),
+            regions=parsed.regions,
+        )
     )
 
     if DEBUG:
