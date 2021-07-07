@@ -3,7 +3,9 @@
   end
 
   COQlsp_preview = function(name, session_id, item)
-    cancel()
+    if cancel then
+      cancel()
+    end
 
     local n_clients = #vim.lsp.buf_get_clients(0)
     if n_clients == 0 then

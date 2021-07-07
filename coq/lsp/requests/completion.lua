@@ -3,7 +3,9 @@
   end
 
   COQlsp_comp = function(name, session_id, pos)
-    cancel()
+    if cancel then
+      cancel()
+    end
 
     local n_clients = #vim.lsp.buf_get_clients(0)
     if n_clients == 0 then
