@@ -90,7 +90,6 @@ class CacheWorker:
             line_before=context.line_before,
             comps=comps,
         )
-
         pool = {hash_id: c.primary_edit.new_text for hash_id, c in new_comps.items()}
 
         async def trans() -> None:
