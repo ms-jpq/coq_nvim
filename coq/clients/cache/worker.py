@@ -80,7 +80,7 @@ class CacheWorker:
 
         use_cache = _use_cache(cache_ctx, ctx=context)
         row, _ = context.position
-        new_comps = {uuid4().bytes: c for c in map(_trans, completions)}
+        new_comps = {c.uid.bytes: c for c in map(_trans, completions)}
 
         comps = {**cache_ctx.comps, **new_comps} if use_cache else new_comps
         new_cache_ctx = _CacheCtx(
