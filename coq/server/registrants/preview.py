@@ -92,7 +92,9 @@ def _preprocess(context: Context, doc: Doc) -> Doc:
             and not sum(line.startswith(_SEP) for line in split[1:-1])
         ):
             text = linesep.join(split[1:-1])
-            ft = removeprefix(split[0], "```") or context.filetype
+            ft = removeprefix(split[0], prefix=_SEP).strip()
+            if not ft.isalnum():
+                ft = context.filetype
             return Doc(text=text, syntax=ft)
         else:
             return doc
