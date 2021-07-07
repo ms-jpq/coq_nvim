@@ -35,10 +35,17 @@ def _marks(
 
         for idx, l8 in enumerate(len8):
             x_shift = 0 if idx else l0_before
-            if r1 is None and l8 > region.begin:
-                r1, c1 = idx + row, region.begin - last_len + x_shift
-            if r2 is None and l8 > region.end:
-                r2, c2 = idx + row, region.end - last_len + x_shift
+            if r1 is None:
+                if l8 > region.begin:
+                    r1, c1 = idx + row, region.begin - last_len + x_shift
+                elif l8 == region.begin:
+                    r1, c1 = idx + 1, 0
+
+            if r2 is None:
+                if l8 > region.end:
+                    r2, c2 = idx + row, region.end - last_len + x_shift
+                elif l8 == region.end:
+                    r2, c2 = idx + 1, 0
 
             last_len = l8
 
