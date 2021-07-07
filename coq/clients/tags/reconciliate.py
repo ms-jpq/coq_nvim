@@ -6,13 +6,17 @@ from shutil import move
 from tempfile import NamedTemporaryFile
 from typing import (
     AbstractSet,
+    Any,
     Iterable,
     Mapping,
     MutableMapping,
     MutableSequence,
     Tuple,
     TypedDict,
+    cast,
 )
+
+from std2.asyncio import run_in_executor
 
 from ...consts import CLIENTS_DIR, TMP_DIR
 from .parser import Tag, parse_lines, run
@@ -39,24 +43,36 @@ def _mtimes(paths: Iterable[Path]) -> Mapping[str, float]:
     return {str(key): val for key, val in cont()}
 
 
-def reconciliate(cwd: Path, paths: AbstractSet[str]) -> Tags:
+def _load(path: Path) -> Tags:
+    try:
+        json = path.read_text("UTF-8")
+    except FileNotFoundError:
+        return {}
+    else:
+        return cast(Tags, loads(json))
+
+
+def _dump(path: Path, o: Any) -> None:
+    json = dumps(o, check_circular=False, ensure_ascii=False, indent=2)
+    with suppress(FileNotFoundError):
+        with NamedTemporaryFile(dir=TMP_DIR) as tmp:
+            tmp.write(json.encode("UTF-8"))
+            tmp.flush()
+            move(tmp.name, path)
+
+
+async def reconciliate(cwd: Path, paths: AbstractSet[str]) -> Tags:
     _TAGS_DIR.mkdir(parents=True, exist_ok=True)
     tags_path = _TAGS_DIR / md5(str(cwd).encode()).hexdigest()
 
-    try:
-        json = tags_path.read_text("UTF-8")
-    except FileNotFoundError:
-        existing: Tags = {}
-    else:
-        existing = loads(json)
-
+    existing = await run_in_executor(_load, tags_path)
     mtimes = _mtimes(map(Path, existing.keys() | paths))
     query_paths = tuple(
         path
         for path, mtime in mtimes.items()
         if mtime > existing.get(path, _TagInfo(mtime=0, lang="", tags=[]))["mtime"]
     )
-    raw = run(*query_paths) if query_paths else ""
+    raw = await run(*query_paths) if query_paths else ""
 
     acc: MutableMapping[str, _TagInfo] = {}
     for tag in parse_lines(raw):
@@ -68,11 +84,6 @@ def reconciliate(cwd: Path, paths: AbstractSet[str]) -> Tags:
         info["tags"].append(tag)
 
     new = {**{key: val for key, val in existing.items() if key in mtimes}, **acc}
-    json = dumps(new, check_circular=False, ensure_ascii=False, indent=2)
-    with suppress(FileNotFoundError):
-        with NamedTemporaryFile(dir=TMP_DIR) as tmp:
-            tmp.write(json.encode("UTF-8"))
-            tmp.flush()
-            move(tmp.name, tags_path)
+    await run_in_executor(_dump, tags_path, o=new)
     return new
 

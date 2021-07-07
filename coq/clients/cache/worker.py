@@ -1,6 +1,6 @@
+from asyncio import shield
 from dataclasses import dataclass, replace
-from threading import Lock
-from typing import Iterator, Mapping, Optional, Sequence
+from typing import AsyncIterator, Mapping, Sequence, Tuple
 from uuid import UUID, uuid4
 
 from ...shared.runtime import Supervisor
@@ -44,7 +44,6 @@ class CacheWorker:
     def __init__(self, supervisor: Supervisor) -> None:
         self._soup = supervisor
         self._db = Database(supervisor.pool)
-        self._lock = Lock()
         self._cache_ctx = _CacheCtx(
             change_id=uuid4(),
             commit_id=uuid4(),
@@ -55,28 +54,28 @@ class CacheWorker:
         )
 
     @timeit("CACHE -- GET")
-    def _use_cache(self, context: Context) -> Optional[Sequence[Completion]]:
-        with self._lock:
-            cache_ctx = self._cache_ctx
+    async def _use_cache(
+        self, context: Context
+    ) -> Tuple[bool, AsyncIterator[Completion]]:
+        cache_ctx = self._cache_ctx
+        use_cache = _use_cache(cache_ctx, ctx=context)
 
-        if _use_cache(cache_ctx, ctx=context):
-            match = context.words or context.syms
-            hashes = self._db.select(self._soup.options, word=match)
-
-            def cont() -> Iterator[Completion]:
+        async def cont() -> AsyncIterator[Completion]:
+            if use_cache:
+                match = context.words or context.syms
+                hashes = await self._db.select(self._soup.options, word=match)
                 for hash_id in hashes:
                     cmp = cache_ctx.comps.get(hash_id)
                     if cmp:
                         yield cmp
 
-            return tuple(cont())
-        else:
-            return None
+        return use_cache, cont()
 
     @timeit("CACHE -- SET")
-    def _set_cache(self, context: Context, completions: Sequence[Completion]) -> None:
-        with self._lock:
-            cache_ctx = self._cache_ctx
+    async def _set_cache(
+        self, context: Context, completions: Sequence[Completion]
+    ) -> None:
+        cache_ctx = self._cache_ctx
 
         use_cache = _use_cache(cache_ctx, ctx=context)
         row, _ = context.position
@@ -92,11 +91,7 @@ class CacheWorker:
             comps=comps,
         )
 
-        self._db.populate(
-            use_cache,
-            pool={hash_id: c.primary_edit.new_text for hash_id, c in new_comps.items()},
-        )
-
-        with self._lock:
-            self._cache_ctx = new_cache_ctx
+        pool = {hash_id: c.primary_edit.new_text for hash_id, c in new_comps.items()}
+        await shield(self._db.populate(use_cache, pool=pool))
+        self._cache_ctx = new_cache_ctx
 

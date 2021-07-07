@@ -2,8 +2,9 @@ from concurrent.futures import Executor
 from contextlib import closing
 from sqlite3 import Connection, OperationalError
 from threading import Lock
-from typing import Iterable, Iterator, Mapping, Sequence, Tuple
+from typing import Iterable, Iterator, Mapping, Sequence, Tuple, cast
 
+from std2.asyncio import run_in_executor
 from std2.sqllite3 import with_transaction
 
 from ...consts import TMUX_DB
@@ -31,7 +32,7 @@ class Database:
         with self._lock:
             self._conn.interrupt()
 
-    def periodical(self, panes: Mapping[str, Sequence[str]]) -> None:
+    async def periodical(self, panes: Mapping[str, Sequence[str]]) -> None:
         def m1(panes: Iterable[str]) -> Iterator[Mapping]:
             for pane_id in panes:
                 yield {"pane_id": pane_id}
@@ -55,9 +56,9 @@ class Database:
                     cursor.executemany(sql("insert", "pane"), m1(panes.keys()))
                     cursor.executemany(sql("insert", "word"), m2())
 
-        self._ex.submit(cont)
+        await run_in_executor(self._ex.submit, cont)
 
-    def select(
+    async def select(
         self, opts: Options, active_pane: str, word: str
     ) -> Sequence[Tuple[str, str]]:
         def cont() -> Sequence[Tuple[str, str]]:
@@ -80,5 +81,6 @@ class Database:
                 return ()
 
         self._interrupt()
-        return self._ex.submit(cont)
+        ret = await run_in_executor(self._ex.submit, cont)
+        return cast(Sequence[Tuple[str, str]], ret)
 

@@ -1,5 +1,4 @@
-from threading import Lock
-from typing import Iterator, Sequence
+from typing import AsyncIterator
 
 from ...lsp.requests.completion import request
 from ...shared.runtime import Supervisor
@@ -13,17 +12,16 @@ class Worker(BaseWorker[BaseClient, None], CacheWorker):
     def __init__(self, supervisor: Supervisor, options: BaseClient, misc: None) -> None:
         CacheWorker.__init__(self, supervisor=supervisor)
         BaseWorker.__init__(self, supervisor=supervisor, options=options, misc=misc)
-        self._lock, self._only_use_cached = Lock(), False
+        self._only_use_cached = False
 
-    def work(self, context: Context) -> Iterator[Sequence[Completion]]:
-        with self._lock:
-            only_use_cached = self._only_use_cached
+    async def work(self, context: Context) -> AsyncIterator[Completion]:
+        only_use_cached = self._only_use_cached
 
-        cached = self._use_cache(context)
-        if cached:
-            yield cached
+        can_use, cached = await self._use_cache(context)
+        async for c in cached:
+            yield c
 
-        if only_use_cached and cached is not None:
+        if only_use_cached and can_use:
             pass
         else:
             stream = request(
@@ -33,10 +31,9 @@ class Worker(BaseWorker[BaseClient, None], CacheWorker):
                 context=context,
             )
 
-            for only_use_cached, comps in stream:
-                with self._lock:
-                    self._only_use_cached = only_use_cached
-                yield comps
-                self._set_cache(context, completions=comps)
-                yield ()
+            async for only_use_cached, comps in stream:
+                self._only_use_cached = only_use_cached
+                for c in comps:
+                    yield c
+                await self._set_cache(context, completions=comps)
 

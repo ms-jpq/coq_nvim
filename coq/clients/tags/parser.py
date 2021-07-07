@@ -4,6 +4,7 @@ from subprocess import DEVNULL, CalledProcessError, check_output
 from typing import Iterator, Optional, TypedDict
 
 from pynvim_pp.logging import log
+from std2.asyncio import call
 from std2.string import removeprefix, removesuffix
 
 
@@ -43,27 +44,18 @@ _FIELDS = "".join(
 )
 
 
-def run(*args: str) -> str:
+async def run(*args: str) -> str:
     if not args:
         return ""
     else:
-        try:
-            raw = check_output(
-                (
-                    "ctags",
-                    "--sort=no",
-                    "--output-format=json",
-                    f"--fields={_FIELDS}",
-                    *args,
-                ),
-                text=True,
-                stdin=DEVNULL,
-                stderr=DEVNULL,
-            )
-        except CalledProcessError:
-            return ""
-        else:
-            return raw
+        proc = await call(
+            "ctags",
+            "--sort=no",
+            "--output-format=json",
+            f"--fields={_FIELDS}",
+            *args,
+        )
+        return proc.out.decode()
 
 
 def _unescape(pattern: str) -> str:

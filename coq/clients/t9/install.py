@@ -1,11 +1,12 @@
+from asyncio import sleep
 from os import X_OK, access
 from platform import machine
 from shutil import which
 from string import Template
-from time import sleep
 from urllib.error import HTTPError
 
 from pynvim_pp.logging import log
+from std2.asyncio import run_in_executor
 from std2.os import OS, os
 from std2.urllib import urlopen
 
@@ -62,14 +63,14 @@ def _update(timeout: float) -> None:
         _LOCK.write_text(uri)
 
 
-def ensure_installed(timeout: float) -> None:
+async def ensure_installed(timeout: float) -> None:
     if not T9_BIN.exists() or not access(T9_BIN, X_OK):
-        while True:
+        for _ in range(3):
             try:
-                _update(timeout=timeout)
+                await run_in_executor(_update, timeout=timeout)
             except HTTPError as e:
                 log.warn("%s", e)
-                sleep(timeout)
+                await sleep(timeout)
             else:
                 break
 

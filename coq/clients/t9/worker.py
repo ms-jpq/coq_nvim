@@ -1,12 +1,14 @@
+from asyncio import Event, create_subprocess_exec
+from asyncio.subprocess import Process
+from contextlib import suppress
 from itertools import chain
 from json import dumps, loads
 from locale import strxfrm
 from os import linesep
-from subprocess import DEVNULL, PIPE, Popen
-from threading import Event
-from typing import IO, Any, Iterator, Optional, Sequence, cast
+from subprocess import DEVNULL, PIPE
+from typing import Any, AsyncIterator, Iterator, Optional
 
-from pynvim_pp.logging import log
+from pynvim_pp.lib import go
 from std2.pickle import new_decoder, new_encoder
 
 from ...shared.parse import lower
@@ -67,51 +69,49 @@ def _decode(client: BaseClient, reply: Any) -> Iterator[Completion]:
         yield cmp
 
 
-def _proc() -> Popen:
-    return Popen((str(T9_BIN),), text=True, stdin=PIPE, stdout=PIPE, stderr=DEVNULL)
+async def _proc() -> Process:
+    proc = await create_subprocess_exec(T9_BIN, stdin=PIPE, stdout=PIPE, stderr=DEVNULL)
+    return proc
 
 
 class Worker(BaseWorker[BaseClient, None]):
     def __init__(self, supervisor: Supervisor, options: BaseClient, misc: None) -> None:
         self._ev = Event()
-        self._proc: Optional[Popen] = None
-        supervisor.pool.submit(self._install)
+        self._proc: Optional[Process] = None
         super().__init__(supervisor, options=options, misc=misc)
+        go(self._install())
 
-    def _install(self) -> None:
-        try:
-            ensure_installed(_TIMEOUT)
-            self._ev.set()
-        except Exception as e:
-            log.exception("%s", e)
+    async def _install(self) -> None:
+        await ensure_installed(_TIMEOUT)
+        self._ev.set()
 
-    def _req(self, context: Context) -> Sequence[Completion]:
+    async def work(self, context: Context) -> AsyncIterator[Completion]:
         if not self._ev.is_set():
-            return ()
+            pass
         else:
             if not self._proc:
-                self._proc = _proc()
+                self._proc = await _proc()
 
             req = _encode(self._supervisor.options, context=context)
             json = dumps(req, check_circular=False, ensure_ascii=False)
             try:
-                cast(IO, self._proc.stdin).write(json)
-                cast(IO, self._proc.stdin).write("\n")
-                cast(IO, self._proc.stdin).flush()
-                json = cast(IO, self._proc.stdout).readline()
-            except BrokenPipeError:
-                try:
+                if self._proc.stdin:
+                    self._proc.stdin.write(json.encode())
+                    self._proc.stdin.write(b"\n")
+                    await self._proc.stdin.drain()
+                if self._proc.stdout:
+                    out = await self._proc.stdout.readline()
+                    json = out.decode()
+                else:
+                    json = "{}"
+            except (BrokenPipeError, ConnectionResetError):
+                with suppress(ProcessLookupError):
                     self._proc.kill()
-                finally:
-                    self._proc.wait()
-                    self._proc = _proc()
-                return ()
+                await self._proc.wait()
+                self._proc = await _proc()
             else:
                 reply = loads(json)
                 cmps = tuple(_decode(self._options, reply=reply))
-                return cmps
-
-    def work(self, context: Context) -> Iterator[Sequence[Completion]]:
-        cmps = self._req(context)
-        yield cmps
+                for c in cmps:
+                    yield c
 

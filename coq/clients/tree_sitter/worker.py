@@ -1,12 +1,11 @@
-from concurrent.futures import CancelledError, Future, InvalidStateError
+from asyncio import Future, InvalidStateError
 from contextlib import suppress
 from locale import strxfrm
 from pathlib import Path
-from threading import Lock
-from typing import Any, Iterator, Optional, Sequence, Tuple
+from typing import Any, AsyncIterator, Optional, Sequence, Tuple
 from uuid import UUID, uuid4
 
-from pynvim_pp.lib import threadsafe_call
+from pynvim_pp.lib import async_call
 from std2.pickle import new_decoder
 
 from ...shared.parse import lower
@@ -23,56 +22,45 @@ _DECODER = new_decoder(Msg)
 
 class Worker(BaseWorker[BaseClient, None]):
     def __init__(self, supervisor: Supervisor, options: BaseClient, misc: None) -> None:
-        self._lock = Lock()
         self._cur: Tuple[UUID, Future] = uuid4(), Future()
         supervisor.nvim.api.exec_lua(_LUA, ())
         super().__init__(supervisor, options=options, misc=misc)
 
-    def _req(self, pos: NvimPos) -> Optional[Any]:
-        with self._lock:
-            _, fut = self._cur
-            fut.cancel()
-            self._cur = token, fut = uuid4(), Future()
+    async def _req(self, pos: NvimPos) -> Optional[Any]:
+        _, fut = self._cur
+        fut.cancel()
+        self._cur = token, fut = uuid4(), Future()
 
         def cont() -> None:
             args = (str(token), pos)
             self._supervisor.nvim.api.exec_lua("COQts_req(...)", args)
 
-        threadsafe_call(self._supervisor.nvim, cont)
+        await async_call(self._supervisor.nvim, cont)
 
-        try:
-            ret = fut.result()
-        except CancelledError:
-            ret = None
-
+        ret = await fut
         return ret
 
-    def notify(self, token: UUID, msg: Sequence[Any]) -> None:
-        with self._lock:
-            c_token, fut = self._cur
-            if token == c_token:
-                reply, *_ = msg
-                with suppress(InvalidStateError):
-                    fut.set_result(reply)
+    async def notify(self, token: UUID, msg: Sequence[Any]) -> None:
+        c_token, fut = self._cur
+        if token == c_token:
+            reply, *_ = msg
+            with suppress(InvalidStateError):
+                fut.set_result(reply)
 
-    def work(self, context: Context) -> Iterator[Sequence[Completion]]:
+    async def work(self, context: Context) -> AsyncIterator[Completion]:
         match = lower(context.words or context.syms)
         reply = self._req(context.position)
         resp: Msg = _DECODER(reply or ())
-
-        def cont() -> Iterator[Completion]:
-            for payload in resp:
-                ltext = lower(payload.text)
-                if ltext.startswith(match) and (len(payload.text) > len(match)):
-                    edit = Edit(new_text=payload.text)
-                    cmp = Completion(
-                        source=self._options.short_name,
-                        tie_breaker=self._options.tie_breaker,
-                        label=edit.new_text.strip(),
-                        sort_by=strxfrm(ltext),
-                        primary_edit=edit,
-                    )
-                    yield cmp
-
-        yield tuple(cont())
+        for payload in resp:
+            ltext = lower(payload.text)
+            if ltext.startswith(match) and (len(payload.text) > len(match)):
+                edit = Edit(new_text=payload.text)
+                cmp = Completion(
+                    source=self._options.short_name,
+                    tie_breaker=self._options.tie_breaker,
+                    label=edit.new_text.strip(),
+                    sort_by=strxfrm(ltext),
+                    primary_edit=edit,
+                )
+                yield cmp
 

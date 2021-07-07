@@ -2,9 +2,10 @@ from contextlib import closing
 from sqlite3 import Connection, OperationalError
 from sqlite3.dbapi2 import Cursor
 from threading import Lock
-from typing import AbstractSet, Iterator, Mapping, Optional, Sequence, Tuple
+from typing import AbstractSet, Iterator, Mapping, Optional, Sequence, Tuple, cast
 from uuid import uuid4
 
+from std2.asyncio import run_in_executor
 from std2.sqllite3 import with_transaction
 
 from ....consts import BUFFER_DB
@@ -13,7 +14,6 @@ from ....shared.database import init_db
 from ....shared.executor import SingleThreadExecutor
 from ....shared.parse import coalesce
 from ....shared.settings import Options
-from ....shared.timeit import timeit
 from .sql import sql
 
 
@@ -146,7 +146,7 @@ class BDB:
         self._interrupt()
         return self._ex.submit(cont)
 
-    def words(
+    async def words(
         self, opts: Options, filetype: Optional[str], word: str
     ) -> Sequence[Tuple[str, str]]:
         def cont() -> Sequence[Tuple[str, str]]:
@@ -168,5 +168,6 @@ class BDB:
             except OperationalError:
                 return ()
 
-        return self._ex.submit(cont)
+        ret = await run_in_executor(self._ex.submit, cont)
+        return cast(Sequence[Tuple[str, str]], ret)
 

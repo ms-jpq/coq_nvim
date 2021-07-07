@@ -1,10 +1,10 @@
 from contextlib import closing
-from itertools import count
 from sqlite3 import Connection, Cursor, OperationalError
 from threading import Lock
 from typing import Iterable, Iterator, Mapping, Sequence, TypedDict, cast
 from uuid import uuid4
 
+from std2.asyncio import run_in_executor
 from std2.sqllite3 import with_transaction
 
 from ....consts import SNIPPET_DB
@@ -97,7 +97,7 @@ class SDB:
 
         self._ex.submit(cont)
 
-    def select(self, opts: Options, filetype: str, word: str) -> Sequence[_Snip]:
+    async def select(self, opts: Options, filetype: str, word: str) -> Sequence[_Snip]:
         def cont() -> Sequence[_Snip]:
             try:
                 with closing(self._conn.cursor()) as cursor:
@@ -116,5 +116,6 @@ class SDB:
                 return ()
 
         self._interrupt()
-        return self._ex.submit(cont)
+        ret = run_in_executor(self._ex.submit, cont)
+        return cast(Sequence[_Snip], ret)
 

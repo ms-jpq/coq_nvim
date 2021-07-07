@@ -4,6 +4,7 @@ from sqlite3 import Connection, OperationalError
 from threading import Lock
 from typing import Iterator, Mapping, Sequence, Tuple, cast
 
+from std2.asyncio import run_in_executor
 from std2.sqllite3 import with_transaction
 
 from ...consts import TAGS_DB
@@ -46,7 +47,7 @@ class Database:
         with self._lock:
             self._conn.interrupt()
 
-    def add(self, tags: Tags) -> None:
+    async def add(self, tags: Tags) -> None:
         def cont() -> None:
             with self._lock, closing(self._conn.cursor()) as cursor:
                 with with_transaction(cursor):
@@ -92,9 +93,9 @@ class Database:
                     cursor.executemany(sql("insert", "file"), m1())
                     cursor.executemany(sql("insert", "tag"), m2())
 
-        self._ex.submit(cont)
+        await run_in_executor(self._ex.submit, cont)
 
-    def select(
+    async def select(
         self, opts: Options, filename: str, line_num: int, word: str
     ) -> Sequence[Tuple[Tag, str]]:
         def cont() -> Sequence[Tuple[Tag, str]]:
@@ -125,5 +126,6 @@ class Database:
                 return ()
 
         self._interrupt()
-        return self._ex.submit(cont)
+        ret = await run_in_executor(self._ex.submit, cont)
+        return cast(Sequence[Tuple[Tag, str]], ret)
 

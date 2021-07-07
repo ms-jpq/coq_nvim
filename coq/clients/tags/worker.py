@@ -3,12 +3,11 @@ from os import linesep
 from os.path import dirname, relpath
 from pathlib import Path
 from shutil import which
-from typing import AbstractSet, Iterator, MutableSet, Sequence, Tuple
+from typing import AbstractSet, AsyncIterator, Iterator, MutableSet, Tuple
 
 from pynvim.api.nvim import Nvim, NvimError
 from pynvim_pp.api import buf_name, get_cwd, list_bufs
-from pynvim_pp.lib import threadsafe_call
-from pynvim_pp.logging import log
+from pynvim_pp.lib import async_call, go
 
 from ...shared.runtime import Supervisor
 from ...shared.runtime import Worker as BaseWorker
@@ -19,7 +18,7 @@ from .parser import Tag
 from .reconciliate import reconciliate
 
 
-def _ls(nvim: Nvim) -> Tuple[Path, AbstractSet[str]]:
+async def _ls(nvim: Nvim) -> Tuple[Path, AbstractSet[str]]:
     def c1() -> Iterator[str]:
         for buf in list_bufs(nvim, listed=True):
             with suppress(NvimError):
@@ -30,7 +29,7 @@ def _ls(nvim: Nvim) -> Tuple[Path, AbstractSet[str]]:
         cwd = Path(get_cwd(nvim))
         return cwd, {*c1()}
 
-    return threadsafe_call(nvim, cont)
+    return await async_call(nvim, cont)
 
 
 def _doc(client: TagsClient, context: Context, tag: Tag) -> Doc:
@@ -112,45 +111,39 @@ class Worker(BaseWorker[TagsClient, None]):
         self._db = Database(supervisor.pool)
         super().__init__(supervisor, options=options, misc=misc)
         if which("ctags"):
-            supervisor.pool.submit(self._poll)
+            go(self._poll())
 
-    def _poll(self) -> None:
-        try:
-            while True:
-                self.idling.wait()
-                self.idling.clear()
-                cwd, buf_names = _ls(self._supervisor.nvim)
-                tags = reconciliate(cwd, paths=buf_names)
-                self._db.add(tags)
-        except Exception as e:
-            log.exception("%s", e)
+    async def _poll(self) -> None:
+        while True:
+            async with self._supervisor.idling:
+                await self._supervisor.idling.wait()
+            cwd, buf_names = await _ls(self._supervisor.nvim)
+            tags = await reconciliate(cwd, paths=buf_names)
+            await self._db.add(tags)
 
-    def work(self, context: Context) -> Iterator[Sequence[Completion]]:
+    async def work(self, context: Context) -> AsyncIterator[Completion]:
         row, _ = context.position
         match = context.words or (context.syms if self._options.match_syms else "")
-        tags = self._db.select(
+        tags = await self._db.select(
             self._supervisor.options,
             filename=context.filename,
             line_num=row,
             word=match,
         )
 
-        def cont() -> Iterator[Completion]:
-            seen: MutableSet[str] = set()
-            for tag, sort_by in tags:
-                if tag["name"] not in seen:
-                    seen.add(tag["name"])
-                    edit = Edit(new_text=tag["name"])
-                    cmp = Completion(
-                        source=self._options.short_name,
-                        tie_breaker=self._options.tie_breaker,
-                        label=edit.new_text,
-                        sort_by=sort_by,
-                        primary_edit=edit,
-                        kind=tag["kind"],
-                        doc=_doc(self._options, context=context, tag=tag),
-                    )
-                    yield cmp
-
-        yield tuple(cont())
+        seen: MutableSet[str] = set()
+        for tag, sort_by in tags:
+            if tag["name"] not in seen:
+                seen.add(tag["name"])
+                edit = Edit(new_text=tag["name"])
+                cmp = Completion(
+                    source=self._options.short_name,
+                    tie_breaker=self._options.tie_breaker,
+                    label=edit.new_text,
+                    sort_by=sort_by,
+                    primary_edit=edit,
+                    kind=tag["kind"],
+                    doc=_doc(self._options, context=context, tag=tag),
+                )
+                yield cmp
 

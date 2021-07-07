@@ -53,22 +53,21 @@ def count(neighbours: Mapping[str, int], cword: str, match: str) -> _MatchMetric
     return metric
 
 
-def _metrics(
+def _metric(
     options: Options,
     context: Context,
     neighbours: Mapping[str, int],
-    completions: Iterable[Completion],
-) -> Iterator[_MatchMetrics]:
+    completion: Completion,
+) -> _MatchMetrics:
     w_before = lower(context.words_before)
     s_before = lower(context.syms_before)
 
-    for completion in completions:
-        cword = (
-            w_before
-            if is_word(completion.sort_by[:1], unifying_chars=options.unifying_chars)
-            else s_before
-        )
-        yield count(neighbours, cword=cword, match=completion.sort_by)
+    cword = (
+        w_before
+        if is_word(completion.sort_by[:1], unifying_chars=options.unifying_chars)
+        else s_before
+    )
+    return count(neighbours, cword=cword, match=completion.sort_by)
 
 
 def _join(
@@ -111,24 +110,25 @@ class Reviewer(PReviewer):
         batch: UUID,
         context: Context,
         neighbours: Mapping[str, int],
-        completions: Sequence[Completion],
-    ) -> Sequence[Metric]:
-        words = (comp.sort_by for comp in completions)
-        mmm = _metrics(
+        completion: Completion,
+    ) -> Metric:
+        # word = completion.sort_by
+        mm = _metric(
             self._options,
             neighbours=neighbours,
             context=context,
-            completions=completions,
+            completion=completion,
         )
-        dbm = self._db.metric(words)
-        assert len(dbm) == len(completions)
-        metrics = tuple(
-            _join(batch, context, cmp, mm, sqm)
-            for cmp, mm, sqm in zip(completions, mmm, dbm)
-        )
-        return metrics
+        # dbm = self._db.metric(words)
+        # assert len(dbm) == len(completions)
+        metric = _join(batch, context, completion, mm, SqlMetrics(insert_order=0))
+        return metric
 
-    def perf(self, worker: Worker, batch: UUID, duration: float, items: int) -> None:
+
+    async def perf(
+        self, worker: Worker, batch: UUID, duration: float, items: int
+    ) -> None:
         m_name = worker.__class__.__module__
         self._db.new_batch(m_name, batch_id=batch.bytes, duration=duration, items=items)
+
 

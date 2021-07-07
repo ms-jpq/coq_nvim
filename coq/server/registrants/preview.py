@@ -1,4 +1,5 @@
-from concurrent.futures import CancelledError, Future, TimeoutError
+from asyncio import Task, wait
+from asyncio.tasks import create_task
 from dataclasses import asdict, dataclass
 from os import linesep
 from typing import (
@@ -10,6 +11,7 @@ from typing import (
     Optional,
     Sequence,
     Tuple,
+    cast,
 )
 from uuid import uuid4
 
@@ -26,6 +28,7 @@ from pynvim_pp.api import (
     win_set_option,
     win_set_var,
 )
+from pynvim_pp.lib import go
 from pynvim_pp.logging import log
 from pynvim_pp.preview import buf_set_preview, set_preview
 from std2.ordinal import clamp
@@ -214,7 +217,11 @@ def _show_preview(
     nvim.api.exec_lua(f"{_go_show.name}(...)", (new_doc.syntax, lines, asdict(pos)))
 
 
-_FUTS: MutableSequence[Future] = []
+async def _nil() -> None:
+    pass
+
+
+_TASK: Task = create_task(_nil())
 
 
 def _resolve_comp(
@@ -225,26 +232,22 @@ def _resolve_comp(
     maybe_doc: Optional[Doc],
     state: State,
 ) -> None:
-    f1 = stack.supervisor.pool.submit(request, nvim, item)
-    _FUTS.append(f1)
+    global _TASK
 
-    def cont() -> None:
-        try:
-            doc = None
-            try:
-                doc = f1.result(timeout=stack.settings.display.preview.lsp_timeout)
-            except CancelledError:
-                pass
-            except TimeoutError:
-                doc = maybe_doc
+    async def cont() -> None:
+        done, _ = await wait(
+            (request(nvim, item=item),),
+            timeout=stack.settings.display.preview.lsp_timeout,
+        )
+        if done:
+            doc = await done.pop()
+        else:
+            doc = maybe_doc
 
-            if doc:
-                enqueue_event(_show_preview, event, doc, state)
-        except Exception as e:
-            log.exception("%s", e)
+        if doc:
+            enqueue_event(_show_preview, event, doc, state)
 
-    f2 = stack.supervisor.pool.submit(cont)
-    _FUTS.append(f2)
+    _TASK = cast(Task, go(cont()))
 
 
 _DECODER = new_decoder(_Event)
@@ -252,9 +255,7 @@ _DECODER = new_decoder(_Event)
 
 @rpc(blocking=True, schedule=True)
 def _cmp_changed(nvim: Nvim, stack: Stack, event: Mapping[str, Any] = {}) -> None:
-    for fut in _FUTS:
-        fut.cancel()
-    _FUTS.clear()
+    _TASK.cancel()
 
     _kill_win(nvim, stack=stack)
     with timeit("PREVIEW"):

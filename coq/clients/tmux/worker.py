@@ -1,9 +1,11 @@
+from asyncio import gather
 from dataclasses import dataclass
 from shutil import which
-from subprocess import DEVNULL, CalledProcessError, TimeoutExpired, check_output
-from typing import AbstractSet, Iterator, Optional, Sequence, Tuple
+from subprocess import DEVNULL, TimeoutExpired
+from typing import AbstractSet, AsyncIterator, Optional, Sequence, Tuple
 
-from pynvim_pp.logging import log
+from pynvim_pp.lib import go
+from std2.asyncio import call
 
 from ...consts import TIMEOUT
 from ...shared.parse import coalesce
@@ -21,60 +23,44 @@ class _Pane:
     window_active: bool
 
 
-def _panes() -> Sequence[_Pane]:
-    try:
-        out = check_output(
-            (
-                "tmux",
-                "list-panes",
-                "-s",
-                "-F",
-                "#{pane_id} #{pane_active} #{window_active}",
-            ),
-            text=True,
-            timeout=TIMEOUT,
-            stdin=DEVNULL,
-            stderr=DEVNULL,
-        )
-
-    except (CalledProcessError, TimeoutExpired):
-        return ()
+async def _panes() -> AsyncIterator[_Pane]:
+    proc = await call(
+        "tmux",
+        "list-panes",
+        "-s",
+        "-F",
+        "#{pane_id} #{pane_active} #{window_active}",
+    )
+    if not proc.code:
+        pass
     else:
-
-        def cont() -> Iterator[_Pane]:
-            for line in out.strip().splitlines():
-                pane_id, pane_active, window_active = line.split(" ")
-                pane = _Pane(
-                    uid=pane_id,
-                    pane_active=bool(int(pane_active)),
-                    window_active=bool(int(window_active)),
-                )
-                yield pane
-
-        return tuple(cont())
+        for line in proc.out.decode().strip().splitlines():
+            pane_id, pane_active, window_active = line.split(" ")
+            pane = _Pane(
+                uid=pane_id,
+                pane_active=bool(int(pane_active)),
+                window_active=bool(int(window_active)),
+            )
+            yield pane
 
 
-def _cur() -> Optional[_Pane]:
-    for pane in _panes():
+async def _cur() -> Optional[_Pane]:
+    async for pane in _panes():
         if pane.window_active and pane.pane_active:
             return pane
     else:
         return None
 
 
-def _screenshot(unifying_chars: AbstractSet[str], uid: str) -> Sequence[str]:
-    try:
-        out = check_output(
-            ("tmux", "capture-pane", "-p", "-t", uid),
-            text=True,
-            timeout=TIMEOUT,
-            stdin=DEVNULL,
-            stderr=DEVNULL,
-        )
-    except (CalledProcessError, TimeoutExpired):
-        return ()
+async def _screenshot(
+    unifying_chars: AbstractSet[str], uid: str
+) -> Tuple[str, Sequence[str]]:
+    proc = await call("tmux", "capture-pane", "-p", "-t", uid)
+    if not proc.code:
+        return uid, ()
     else:
-        return tuple(coalesce(out, unifying_chars=unifying_chars))
+        words = tuple(coalesce(proc.out.decode(), unifying_chars=unifying_chars))
+        return uid, words
 
 
 class Worker(BaseWorker[WordbankClient, None]):
@@ -84,33 +70,26 @@ class Worker(BaseWorker[WordbankClient, None]):
         self._db = Database(supervisor.pool)
         super().__init__(supervisor, options=options, misc=misc)
         if which("tmux"):
-            supervisor.pool.submit(self._poll)
+            go(self._poll())
 
-    def _poll(self) -> None:
-        try:
+    async def _poll(self) -> None:
+        while True:
+            async with self._supervisor.idling:
+                await self._supervisor.idling.wait()
+            shots = await gather(
+                *[
+                    _screenshot(self._supervisor.options.unifying_chars, uid=pane.uid)
+                    async for pane in _panes()
+                ]
+            )
+            snapshot = {uid: words for uid, words in shots}
+            await self._db.periodical(snapshot)
 
-            def cont(pane: _Pane) -> Tuple[_Pane, Sequence[str]]:
-                words = _screenshot(
-                    self._supervisor.options.unifying_chars, uid=pane.uid
-                )
-                return pane, words
-
-            while True:
-                self.idling.wait()
-                self.idling.clear()
-                snapshot = {
-                    pane.uid: words
-                    for pane, words in self._supervisor.pool.map(cont, _panes())
-                }
-                self._db.periodical(snapshot)
-        except Exception as e:
-            log.exception("%s", e)
-
-    def work(self, context: Context) -> Iterator[Sequence[Completion]]:
+    async def work(self, context: Context) -> AsyncIterator[Completion]:
         match = context.words or (context.syms if self._options.match_syms else "")
-        active = _cur()
+        active = await _cur()
         words = (
-            self._db.select(
+            await self._db.select(
                 self._supervisor.options,
                 active_pane=active.uid,
                 word=match,
@@ -119,17 +98,14 @@ class Worker(BaseWorker[WordbankClient, None]):
             else ()
         )
 
-        def cont() -> Iterator[Completion]:
-            for word, sort_by in words:
-                edit = Edit(new_text=word)
-                cmp = Completion(
-                    source=self._options.short_name,
-                    tie_breaker=self._options.tie_breaker,
-                    label=edit.new_text,
-                    sort_by=sort_by,
-                    primary_edit=edit,
-                )
-                yield cmp
-
-        yield tuple(cont())
+        for word, sort_by in words:
+            edit = Edit(new_text=word)
+            cmp = Completion(
+                source=self._options.short_name,
+                tie_breaker=self._options.tie_breaker,
+                label=edit.new_text,
+                sort_by=sort_by,
+                primary_edit=edit,
+            )
+            yield cmp
 

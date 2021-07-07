@@ -2,8 +2,9 @@ from concurrent.futures import Executor
 from contextlib import closing
 from sqlite3 import Connection, OperationalError
 from threading import Lock
-from typing import Mapping, Sequence
+from typing import Mapping, Sequence, cast
 
+from std2.asyncio import run_in_executor
 from std2.sqllite3 import with_transaction
 
 from ...shared.database import init_db
@@ -30,7 +31,7 @@ class Database:
         with self._lock:
             self._conn.interrupt()
 
-    def populate(self, additive: bool, pool: Mapping[bytes, str]) -> None:
+    async def populate(self, additive: bool, pool: Mapping[bytes, str]) -> None:
         def cont() -> None:
             with self._lock, closing(self._conn.cursor()) as cursor:
                 with with_transaction(cursor):
@@ -44,9 +45,9 @@ class Database:
                         ),
                     )
 
-        self._ex.submit(cont)
+        await run_in_executor(self._ex.submit, cont)
 
-    def select(self, opts: Options, word: str) -> Sequence[bytes]:
+    async def select(self, opts: Options, word: str) -> Sequence[bytes]:
         def cont() -> Sequence[bytes]:
             try:
                 with closing(self._conn.cursor()) as cursor:
@@ -64,5 +65,6 @@ class Database:
                 return ()
 
         self._interrupt()
-        return self._ex.submit(cont)
+        ret = await run_in_executor(self._ex.submit, cont)
+        return cast(Sequence[bytes], ret)
 

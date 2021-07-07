@@ -1,8 +1,11 @@
+from asyncio import as_completed
 from locale import strxfrm
 from os import X_OK, access
 from os.path import join, sep
 from pathlib import Path
-from typing import Iterator, Sequence
+from typing import AbstractSet, AsyncIterator, Iterator
+
+from std2.asyncio import run_in_executor
 
 from ...shared.parse import lower
 from ...shared.runtime import Worker as BaseWorker
@@ -52,12 +55,20 @@ def parse(base: Path, line: str) -> Iterator[str]:
             break
 
 
+async def _parse(base: Path, line: str) -> AbstractSet[str]:
+    def cont() -> AbstractSet[str]:
+        return {*parse(base, line=line)}
+
+    return await run_in_executor(cont)
+
+
 class Worker(BaseWorker[BaseClient, None]):
-    def work(self, context: Context) -> Iterator[Sequence[Completion]]:
-        def cont() -> Iterator[Completion]:
-            line = context.line_before + context.words_after
-            base_paths = {Path(context.filename).parent, Path(context.cwd)}
-            for new_text in (t for p in base_paths for t in parse(p, line=line)):
+    async def work(self, context: Context) -> AsyncIterator[Completion]:
+        line = context.line_before + context.words_after
+        base_paths = {Path(context.filename).parent, Path(context.cwd)}
+
+        for co in as_completed(_parse(p, line=line) for p in base_paths):
+            for new_text in await co:
                 edit = Edit(new_text=new_text)
                 completion = Completion(
                     source=self._options.short_name,
@@ -67,6 +78,4 @@ class Worker(BaseWorker[BaseClient, None]):
                     primary_edit=edit,
                 )
                 yield completion
-
-        yield tuple(cont())
 

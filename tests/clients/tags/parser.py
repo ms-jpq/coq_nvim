@@ -1,18 +1,18 @@
 from itertools import islice
 from os import linesep
 from shutil import get_terminal_size
-from unittest import TestCase
+from unittest import IsolatedAsyncioTestCase
 
 from ....coq.clients.tags.parser import parse_lines, run
 from ....coq.consts import TMP_DIR
 
 
-class Parser(TestCase):
-    def test_1(self) -> None:
+class Parser(IsolatedAsyncioTestCase):
+    async def test_1(self) -> None:
         tag = TMP_DIR / "TAG"
         TMP_DIR.mkdir(parents=True, exist_ok=True)
         if not tag.exists():
-            text = run("--recurse")
+            text = await run("--recurse")
             tag.write_text(text)
 
         spec = tag.read_text()
