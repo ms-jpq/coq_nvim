@@ -1,5 +1,5 @@
 from collections import defaultdict
-from threading import Event, Lock
+from threading import Condition, Lock
 from typing import Any, Iterator, MutableMapping, Sequence, Tuple
 from uuid import uuid4
 
@@ -11,8 +11,9 @@ from ...server.rt_types import Stack
 from ...shared.timeit import timeit
 
 _LOCK = Lock()
-_STATE: MutableMapping[str, Tuple[Event, str, bool, Sequence[Any]]] = defaultdict(
-    lambda: (Event(), "", True, ())
+_CONDS: MutableMapping[str, Condition] = {}
+_STATE: MutableMapping[str, Tuple[str, bool, Sequence[Any]]] = defaultdict(
+    lambda: ("", True, ())
 )
 
 
@@ -21,19 +22,22 @@ def _lsp_notify(
     nvim: Nvim, stack: Stack, method: str, session: str, done: bool, reply: Any
 ) -> None:
     with _LOCK:
-        ev, ses, _, acc = _STATE[method]
+        cond = _CONDS.setdefault(session, Condition())
+        ses, _, acc = _STATE[method]
         if session == ses:
-            _STATE[method] = (ev, session, done, (*acc, reply))
-            ev.set()
+            _STATE[method] = (session, done, (*acc, reply))
+    with cond:
+        cond.notify_all()
 
 
 def blocking_request(nvim: Nvim, method: str, *args: Any) -> Iterator[Any]:
     with timeit(f"LSP :: {method}", force=True):
-        ev, session = Event(), uuid4().hex
+        session = uuid4().hex
         with _LOCK:
-            prev, _, __, ___ = _STATE[method]
-            _STATE[method] = (ev, session, False, ())
-            prev.set()
+            _STATE[method] = (session, False, ())
+            cond = _CONDS.setdefault(session, Condition())
+            with cond:
+                cond.notify_all()
 
         def cont() -> None:
             nvim.api.exec_lua(f"{method}(...)", (method, session, *args))
@@ -41,10 +45,10 @@ def blocking_request(nvim: Nvim, method: str, *args: Any) -> Iterator[Any]:
         threadsafe_call(nvim, cont)
 
         while True:
-            ev.wait()
+            with cond:
+                cond.wait()
             with _LOCK:
-                ____, ses, done, acc = _STATE[method]
-                ev.clear()
+                ses, done, acc = _STATE[method]
             if ses != session:
                 break
             else:
