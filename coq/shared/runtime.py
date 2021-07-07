@@ -1,13 +1,10 @@
 from __future__ import annotations
 
 from abc import abstractmethod
-from asyncio import Condition, Task, gather, run_coroutine_threadsafe, wait
-from asyncio.tasks import create_task
+from asyncio import Condition, Task, gather, wait
 from collections import Counter
-from concurrent.futures import Executor, Future, InvalidStateError
-from contextlib import suppress
+from concurrent.futures import Executor
 from dataclasses import dataclass
-from threading import Lock
 from typing import (
     Any,
     AsyncIterator,
@@ -18,6 +15,7 @@ from typing import (
     Protocol,
     Sequence,
     TypeVar,
+    cast,
 )
 from uuid import UUID, uuid4
 from weakref import WeakSet
@@ -25,7 +23,6 @@ from weakref import WeakSet
 from pynvim import Nvim
 from pynvim_pp.lib import go
 from pynvim_pp.logging import log
-from std2.asyncio import run_in_executor
 from std2.contextlib import log_aexc
 
 from .parse import coalesce
@@ -79,11 +76,9 @@ class Supervisor:
             options,
             reviewer,
         )
-        self._lock, self._cond = Lock(), Condition()
         self._idling = Condition()
         self._workers: MutableSet[Worker] = WeakSet()
         self._tasks: MutableSequence[Task] = []
-        self._futs: MutableSequence[Future] = []
 
     @property
     def pool(self) -> Executor:
@@ -110,9 +105,7 @@ class Supervisor:
             async with self._idling:
                 self._idling.notify_all()
 
-        f = run_coroutine_threadsafe(cont(), loop=self.nvim.loop)
-        with self._lock:
-            self._futs.append(f)
+        go(cont())
 
     def notify(self, token: UUID, msg: Sequence[Any]) -> None:
         async def cont() -> None:
@@ -120,13 +113,7 @@ class Supervisor:
 
         go(cont())
 
-    def collect(self, context: Context, manual: bool) -> Future:
-        with self._lock:
-            for f in self._futs:
-                f.cancel()
-            self._futs.clear()
-
-        future: Future = Future()
+    async def collect(self, context: Context, manual: bool) -> Sequence[Metric]:
         acc: MutableSequence[Metric] = []
 
         neighbours = Counter(
@@ -138,40 +125,26 @@ class Supervisor:
 
         async def supervise(worker: Worker) -> None:
             m_name = worker.__class__.__module__
-            async with log_aexc(log):
-                with l_timeit(f"COLLECTED -- {m_name}"):
-                    batch, items = uuid4(), 0
-                    await self._reviewer.perf(
-                        worker, batch=batch, duration=0, items=items
+            with l_timeit(f"COLLECTED -- {m_name}"):
+                batch, items = uuid4(), 0
+                await self._reviewer.perf(worker, batch=batch, duration=0, items=items)
+                async for completion in worker.work(context):
+                    metric = self._reviewer.rate(
+                        batch,
+                        context=context,
+                        neighbours=neighbours,
+                        completion=completion,
                     )
-                    async for completion in worker.work(context):
-                        metric = self._reviewer.rate(
-                            batch,
-                            context=context,
-                            neighbours=neighbours,
-                            completion=completion,
-                        )
-                        acc.append(metric)
+                    acc.append(metric)
 
-        async def cont() -> None:
-            try:
-                async with log_aexc(log):
-                    for task in self._tasks:
-                        task.cancel()
-                    futs = tuple(
-                        create_task(run_in_executor(supervise, worker))
-                        for worker in self._workers
-                    )
-                    self._tasks.extend(futs)
-                    await wait(futs, timeout=timeout)
-            finally:
-                with suppress(InvalidStateError):
-                    future.set_result(tuple(acc))
+        async with log_aexc(log):
+            for task in self._tasks:
+                task.cancel()
+            futs = tuple(cast(Task, go(supervise(worker))) for worker in self._workers)
+            self._tasks.extend(futs)
+            await wait(futs, timeout=timeout)
 
-        f = run_coroutine_threadsafe(cont(), loop=self._nvim.loop)
-        with self._lock:
-            self._futs.append(f)
-        return future
+        return acc
 
 
 class Worker(Generic[O_co, T_co]):

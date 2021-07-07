@@ -1,4 +1,5 @@
-from concurrent.futures import CancelledError, Future
+from asyncio import Task
+from concurrent.futures import Future
 from threading import Lock
 from typing import (
     Any,
@@ -15,11 +16,11 @@ from uuid import UUID, uuid4
 
 from pynvim import Nvim
 from pynvim.api.nvim import Nvim
+from pynvim_pp.lib import go
 from pynvim_pp.logging import log
 from std2.pickle import DecodeError, new_decoder
 
 from ...registry import autocmd, enqueue_event, pool, rpc
-from ...shared.runtime import Metric
 from ...shared.timeit import timeit
 from ...shared.types import Context, NvimPos
 from ..context import context
@@ -44,17 +45,14 @@ def _cmp(nvim: Nvim, stack: Stack, col: int, comp: Sequence[VimCompletion]) -> N
     complete(nvim, col=col, comp=comp)
 
 
-_LOCK = Lock()
-_FUTS: MutableSequence[Future] = []
+_FUTS: MutableSequence[Task] = []
 
 
 def comp_func(
     nvim: Nvim, stack: Stack, change_id: UUID, commit_id: UUID, manual: bool
 ) -> None:
-    with _LOCK:
-        for f1 in _FUTS:
-            f1.cancel()
-        _FUTS.clear()
+    for f in _FUTS:
+        f.cancel()
 
     s = state()
     with timeit("GEN CTX"):
@@ -81,30 +79,16 @@ def comp_func(
         state(context=ctx)
 
         @timeit("COLLECT")
-        def cont() -> None:
-            try:
-                if ctx:
-                    f1 = stack.supervisor.collect(ctx, manual=manual)
-                    with _LOCK:
-                        _FUTS.append(f1)
-                    try:
-                        metrics = cast(Sequence[Metric], f1.result())
-                    except CancelledError:
-                        pass
-                    else:
-                        s = state()
-                        if s.change_id == ctx.change_id:
-                            with timeit("TRANS"):
-                                vim_comps = tuple(
-                                    trans(stack, context=ctx, metrics=metrics)
-                                )
-                            enqueue_event(_cmp, col, vim_comps)
-            except Exception as e:
-                log.exception("%s", e)
+        async def cont() -> None:
+            metrics = await stack.supervisor.collect(ctx, manual=manual)
+            s = state()
+            if s.change_id == ctx.change_id:
+                with timeit("TRANS"):
+                    vim_comps = tuple(trans(stack, context=ctx, metrics=metrics))
+                enqueue_event(_cmp, col, vim_comps)
 
-        f2 = pool.submit(cont)
-        with _LOCK:
-            _FUTS.append(f2)
+        f2 = cast(Task, go(cont()))
+        _FUTS.append(f2)
     else:
         state(inserted=(-1, -1))
 

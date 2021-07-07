@@ -124,11 +124,11 @@ class Reviewer(PReviewer):
         metric = _join(batch, context, completion, mm, SqlMetrics(insert_order=0))
         return metric
 
-
     async def perf(
         self, worker: Worker, batch: UUID, duration: float, items: int
     ) -> None:
         m_name = worker.__class__.__module__
-        self._db.new_batch(m_name, batch_id=batch.bytes, duration=duration, items=items)
-
+        await self._db.new_batch(
+            m_name, batch_id=batch.bytes, duration=duration, items=items
+        )
 

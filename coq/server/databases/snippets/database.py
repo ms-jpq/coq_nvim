@@ -116,6 +116,6 @@ class SDB:
                 return ()
 
         self._interrupt()
-        ret = run_in_executor(self._ex.submit, cont)
+        ret = await run_in_executor(self._ex.submit, cont)
         return cast(Sequence[_Snip], ret)
 

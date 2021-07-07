@@ -217,11 +217,7 @@ def _show_preview(
     nvim.api.exec_lua(f"{_go_show.name}(...)", (new_doc.syntax, lines, asdict(pos)))
 
 
-async def _nil() -> None:
-    pass
-
-
-_TASK: Task = create_task(_nil())
+_TASK: Optional[Task] = None
 
 
 def _resolve_comp(
@@ -255,7 +251,8 @@ _DECODER = new_decoder(_Event)
 
 @rpc(blocking=True, schedule=True)
 def _cmp_changed(nvim: Nvim, stack: Stack, event: Mapping[str, Any] = {}) -> None:
-    _TASK.cancel()
+    if _TASK:
+        _TASK.cancel()
 
     _kill_win(nvim, stack=stack)
     with timeit("PREVIEW"):

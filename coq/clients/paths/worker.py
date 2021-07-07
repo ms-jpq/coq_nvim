@@ -67,7 +67,7 @@ class Worker(BaseWorker[BaseClient, None]):
         line = context.line_before + context.words_after
         base_paths = {Path(context.filename).parent, Path(context.cwd)}
 
-        for co in as_completed(_parse(p, line=line) for p in base_paths):
+        for co in as_completed(tuple(_parse(p, line=line) for p in base_paths)):
             for new_text in await co:
                 edit = Edit(new_text=new_text)
                 completion = Completion(
