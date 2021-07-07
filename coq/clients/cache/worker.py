@@ -4,7 +4,7 @@ from typing import Iterator, Mapping, Optional, Sequence
 from uuid import UUID, uuid4
 
 from ...shared.runtime import Supervisor
-from ...shared.types import Completion, Context, Edit
+from ...shared.types import Completion, Context, Edit, SnippetEdit
 from .database import Database
 
 
@@ -31,7 +31,11 @@ def _use_cache(cache: _CacheCtx, ctx: Context) -> bool:
 
 def _trans(comp: Completion) -> Completion:
     p_edit = comp.primary_edit
-    edit = p_edit if type(p_edit) is Edit else Edit(new_text=p_edit.new_text)
+    edit = (
+        p_edit
+        if type(p_edit) in {Edit, SnippetEdit}
+        else Edit(new_text=p_edit.new_text)
+    )
     return replace(comp, primary_edit=edit, secondary_edits=())
 
 
