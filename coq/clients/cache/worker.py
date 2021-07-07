@@ -4,6 +4,7 @@ from typing import Iterator, Mapping, Optional, Sequence
 from uuid import UUID, uuid4
 
 from ...shared.runtime import Supervisor
+from ...shared.timeit import timeit
 from ...shared.types import Completion, Context, Edit, SnippetEdit
 from .database import Database
 
@@ -53,6 +54,7 @@ class CacheWorker:
             comps={},
         )
 
+    @timeit("CACHE -- GET")
     def _use_cache(self, context: Context) -> Optional[Sequence[Completion]]:
         with self._lock:
             cache_ctx = self._cache_ctx
@@ -71,6 +73,7 @@ class CacheWorker:
         else:
             return None
 
+    @timeit("CACHE -- SET")
     def _set_cache(self, context: Context, completions: Sequence[Completion]) -> None:
         with self._lock:
             cache_ctx = self._cache_ctx
