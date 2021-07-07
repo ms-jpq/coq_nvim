@@ -1,6 +1,6 @@
 from asyncio.events import AbstractEventLoop
 from logging import DEBUG as DEBUG_LV
-from logging import FileHandler
+from logging import INFO, FileHandler
 from os import linesep
 from sys import stderr
 from typing import Any, MutableMapping, Optional, cast
@@ -31,6 +31,8 @@ class CoqClient(Client):
             TMP_DIR.mkdir(parents=True, exist_ok=True)
             log.addHandler(FileHandler(TMP_DIR / "debug.log"))
             log.setLevel(DEBUG_LV)
+        else:
+            log.setLevel(INFO)
 
     def _handle(self, nvim: Nvim, msg: RpcMsg) -> Any:
         name, args = msg
