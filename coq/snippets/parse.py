@@ -47,11 +47,14 @@ def _marks(
                 elif l8 == region.end:
                     r2, c2 = idx + row + 1, x_shift
 
+            if r1 is not None and r2 is not None:
+                break
+
             last_len = l8
 
         assert (r1 is not None and c1 is not None) and (
             r2 is not None and c2 is not None
-        ), (region, parsed_lines)
+        ), pformat((region, parsed_lines))
         begin = r1, c1
         end = r2, c2
         mark = Mark(idx=r_idx, begin=begin, end=end, text=region.text)
