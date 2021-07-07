@@ -39,13 +39,13 @@ def _marks(
                 if l8 > region.begin:
                     r1, c1 = idx + row, region.begin - last_len + x_shift
                 elif l8 == region.begin:
-                    r1, c1 = idx + row + 1, 0
+                    r1, c1 = idx + row + 1, x_shift
 
             if r2 is None:
                 if l8 > region.end:
                     r2, c2 = idx + row, region.end - last_len + x_shift
                 elif l8 == region.end:
-                    r2, c2 = idx + row + 1, 0
+                    r2, c2 = idx + row + 1, x_shift
 
             last_len = l8
 
