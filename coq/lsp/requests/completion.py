@@ -4,7 +4,6 @@ from typing import AsyncIterator, Sequence, Tuple, cast
 from pynvim.api.nvim import Nvim
 
 from ...registry import atomic
-from ...shared.timeit import timeit
 from ...shared.types import UTF16, Completion, Context
 from ..parse import parse
 from ..types import CompletionResponse
