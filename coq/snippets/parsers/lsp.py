@@ -93,7 +93,7 @@ def _half_parse_choice(context: ParserCtx) -> TokenStream:
                     actual=char,
                 )
         elif char == ",":
-            yield " | "
+            yield "|"
         else:
             yield char
 
