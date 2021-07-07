@@ -28,7 +28,7 @@ def _lsp_notify(
 
 
 def blocking_request(nvim: Nvim, method: str, *args: Any) -> Iterator[Any]:
-    with timeit(f"LSP :: {method}"):
+    with timeit(f"LSP :: {method}", force=True):
         ev, session = Event(), uuid4().hex
         with _LOCK:
             prev, _, __, ___ = _STATE[method]
