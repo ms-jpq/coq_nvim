@@ -7,7 +7,7 @@ from pynvim_pp.logging import log
 from ..consts import DEBUG
 from ..shared.parse import is_word
 from ..shared.trans import expand_tabs
-from ..shared.types import UTF8, Context, ContextualEdit, Mark, SnippetEdit
+from ..shared.types import UTF8, Context, ContextualEdit, Edit, Mark, SnippetEdit
 from .parsers.lsp import parser as lsp_parser
 from .parsers.snu import parser as snu_parser
 from .parsers.types import ParseInfo, Region
@@ -22,12 +22,17 @@ def _indent(ctx: Context, old_prefix: str, line_before: str) -> Tuple[int, str]:
 def _marks(
     ctx: Context,
     indent_len: int,
-    parsed_lines: Sequence[str],
+    edit: Edit,
     regions: Mapping[int, Region],
 ) -> Iterator[Mark]:
     row, _ = ctx.position
     l0_before = indent_len
-    len8 = tuple(accumulate(len(line.encode(UTF8)) for line in parsed_lines))
+    len8 = tuple(
+        accumulate(
+            len(line.encode(UTF8)) + len(ctx.linefeed)
+            for line in edit.new_text.split(ctx.linefeed)
+        )
+    )
 
     for r_idx, region in regions.items():
         r1, c1, r2, c2 = None, None, None, None
@@ -54,7 +59,7 @@ def _marks(
 
         assert (r1 is not None and c1 is not None) and (
             r2 is not None and c2 is not None
-        ), pformat((region, parsed_lines))
+        ), pformat((region, edit.new_text))
         begin = r1, c1
         end = r2, c2
         mark = Mark(idx=r_idx, begin=begin, end=end, text=region.text)
@@ -79,10 +84,11 @@ def parse(
         context, old_prefix=old_prefix, line_before=context.line_before
     )
     expanded_text = expand_tabs(context, text=snippet.new_text)
-    indented_text = context.linefeed.join(
+    indented_lines = tuple(
         lhs + rhs
         for lhs, rhs in zip(chain(("",), repeat(indent)), expanded_text.splitlines())
     )
+    indented_text = context.linefeed.join(indented_lines)
     parsed = parser(context, snippet=indented_text, info=ParseInfo(visual=visual))
     old_suffix = (
         context.words_after
@@ -100,7 +106,7 @@ def parse(
         _marks(
             context,
             indent_len=indent_len,
-            parsed_lines=expanded_text.splitlines(keepends=True),
+            edit=edit,
             regions=parsed.regions,
         )
     )
