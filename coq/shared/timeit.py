@@ -11,8 +11,8 @@ _RECORDS: MutableMapping[str, Tuple[int, float]] = {}
 
 
 @contextmanager
-def timeit(name: str, *args: Any) -> Iterator[None]:
-    if DEBUG:
+def timeit(name: str, *args: Any, force: bool = False) -> Iterator[None]:
+    if DEBUG or force:
         with _timeit() as t:
             yield None
         delta = t()

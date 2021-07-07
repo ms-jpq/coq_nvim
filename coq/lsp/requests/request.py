@@ -28,7 +28,6 @@ def _lsp_notify(
 
 
 def blocking_request(nvim: Nvim, method: str, *args: Any) -> Iterator[Any]:
-    print("LSP REQ", flush=True)
     with timeit(f"LSP :: {method}"):
         ev, session = Event(), uuid4().hex
         with _LOCK:
@@ -47,10 +46,8 @@ def blocking_request(nvim: Nvim, method: str, *args: Any) -> Iterator[Any]:
                 ____, ses, done, acc = _STATE[method]
                 ev.clear()
             if ses != session:
-                print("EARLY EXIT", flush=True)
                 break
             else:
-                print("LSP RESP", flush=True)
                 yield from acc
                 if done:
                     break
