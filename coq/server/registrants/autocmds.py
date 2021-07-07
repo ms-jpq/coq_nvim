@@ -1,12 +1,13 @@
+from asyncio import Handle, get_running_loop
 from itertools import chain
-from threading import Timer
-from typing import MutableSet, Sequence
+from typing import MutableSet, Optional, Sequence
 
 from pynvim.api.nvim import Nvim
 from pynvim_pp.api import buf_filetype, cur_buf, list_bufs
+from pynvim_pp.lib import async_call, go
 from std2.pickle import new_decoder
 
-from ...registry import atomic, autocmd, enqueue_event, rpc
+from ...registry import atomic, autocmd, rpc
 from ...snippets.types import ParsedSnippet
 from ..rt_types import Stack
 
@@ -36,22 +37,23 @@ autocmd("FileType") << f"lua {_ft_changed.name}()"
 atomic.exec_lua(f"{_ft_changed.name}()", ())
 
 
-_TIMER = Timer(0, lambda: None)
-
-
-@rpc(blocking=True)
-def _on_idle(nvim: Nvim, stack: Stack) -> None:
-    bufs = list_bufs(nvim, listed=False)
-    stack.bdb.vacuum({buf.number for buf in bufs})
-    stack.supervisor.notify_idle()
+_HANDLE: Optional[Handle] = None
 
 
 @rpc(blocking=True)
 def _when_idle(nvim: Nvim, stack: Stack) -> None:
-    global _TIMER
-    _TIMER.cancel()
-    _TIMER = Timer(stack.settings.idle_time, lambda: enqueue_event(_on_idle))
-    _TIMER.start()
+    global _HANDLE
+    if _HANDLE:
+        _HANDLE.cancel()
+
+    def cont() -> None:
+        bufs = list_bufs(nvim, listed=False)
+        stack.bdb.vacuum({buf.number for buf in bufs})
+        stack.supervisor.notify_idle()
+
+    get_running_loop().call_later(
+        stack.settings.idle_time, lambda: go(async_call(nvim, cont))
+    )
 
 
 autocmd("CursorHold", "CursorHoldI") << f"lua {_when_idle.name}()"

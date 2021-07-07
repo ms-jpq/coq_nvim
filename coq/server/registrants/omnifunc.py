@@ -1,26 +1,14 @@
 from asyncio import Task
-from concurrent.futures import Future
-from threading import Lock
-from typing import (
-    Any,
-    Literal,
-    Mapping,
-    MutableSequence,
-    Optional,
-    Sequence,
-    Tuple,
-    Union,
-    cast,
-)
+from typing import Any, Literal, Mapping, Optional, Sequence, Tuple, Union, cast
 from uuid import UUID, uuid4
 
 from pynvim import Nvim
 from pynvim.api.nvim import Nvim
-from pynvim_pp.lib import go
+from pynvim_pp.lib import async_call, go
 from pynvim_pp.logging import log
 from std2.pickle import DecodeError, new_decoder
 
-from ...registry import autocmd, enqueue_event, pool, rpc
+from ...registry import autocmd, rpc
 from ...shared.timeit import timeit
 from ...shared.types import Context, NvimPos
 from ..context import context
@@ -40,19 +28,19 @@ def _should_cont(inserted: Optional[NvimPos], prev: Context, cur: Context) -> bo
         return (cur.words_before or cur.syms_before) != ""
 
 
-@rpc(blocking=True)
-def _cmp(nvim: Nvim, stack: Stack, col: int, comp: Sequence[VimCompletion]) -> None:
+def _cmp(nvim: Nvim, col: int, comp: Sequence[VimCompletion]) -> None:
     complete(nvim, col=col, comp=comp)
 
 
-_FUTS: MutableSequence[Task] = []
+_TASK: Optional[Task] = None
 
 
 def comp_func(
     nvim: Nvim, stack: Stack, change_id: UUID, commit_id: UUID, manual: bool
 ) -> None:
-    for f in _FUTS:
-        f.cancel()
+    global _TASK
+    if _TASK:
+        _TASK.cancel()
 
     s = state()
     with timeit("GEN CTX"):
@@ -85,10 +73,9 @@ def comp_func(
             if s.change_id == ctx.change_id:
                 with timeit("TRANS"):
                     vim_comps = tuple(trans(stack, context=ctx, metrics=metrics))
-                enqueue_event(_cmp, col, vim_comps)
+                await async_call(nvim, _cmp, nvim, col=col, comp=vim_comps)
 
-        f2 = cast(Task, go(cont()))
-        _FUTS.append(f2)
+        _TASK = cast(Task, go(cont()))
     else:
         state(inserted=(-1, -1))
 

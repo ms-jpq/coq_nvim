@@ -22,8 +22,6 @@ from weakref import WeakSet
 
 from pynvim import Nvim
 from pynvim_pp.lib import go
-from pynvim_pp.logging import log
-from std2.contextlib import log_aexc
 
 from .parse import coalesce
 from .settings import Options, Weights
@@ -137,13 +135,11 @@ class Supervisor:
                     )
                     acc.append(metric)
 
-        async with log_aexc(log):
-            for task in self._tasks:
-                task.cancel()
-            futs = tuple(cast(Task, go(supervise(worker))) for worker in self._workers)
-            self._tasks.extend(futs)
-            await wait(futs, timeout=timeout)
-
+        for task in self._tasks:
+            task.cancel()
+        futs = tuple(cast(Task, go(supervise(worker))) for worker in self._workers)
+        self._tasks.extend(futs)
+        await wait(futs, timeout=timeout)
         return acc
 
 

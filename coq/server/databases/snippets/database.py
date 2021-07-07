@@ -1,3 +1,4 @@
+from concurrent.futures import Executor
 from contextlib import closing
 from sqlite3 import Connection, Cursor, OperationalError
 from threading import Lock
@@ -8,7 +9,6 @@ from std2.asyncio import run_in_executor
 from std2.sqllite3 import with_transaction
 
 from ....consts import SNIPPET_DB
-from ....registry import pool
 from ....shared.database import init_db
 from ....shared.executor import SingleThreadExecutor
 from ....shared.settings import Options
@@ -41,7 +41,7 @@ def _ensure_ft(cursor: Cursor, filetypes: Iterable[str]) -> None:
 
 
 class SDB:
-    def __init__(self) -> None:
+    def __init__(self, pool: Executor) -> None:
         self._lock = Lock()
         self._ex = SingleThreadExecutor(pool)
         self._conn: Connection = self._ex.submit(_init)

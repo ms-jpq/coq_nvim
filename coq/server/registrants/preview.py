@@ -1,18 +1,7 @@
 from asyncio import Task, wait
-from asyncio.tasks import create_task
 from dataclasses import asdict, dataclass
 from os import linesep
-from typing import (
-    Any,
-    Callable,
-    Iterator,
-    Mapping,
-    MutableSequence,
-    Optional,
-    Sequence,
-    Tuple,
-    cast,
-)
+from typing import Any, Callable, Iterator, Mapping, Optional, Sequence, Tuple, cast
 from uuid import uuid4
 
 from pynvim import Nvim
@@ -28,8 +17,7 @@ from pynvim_pp.api import (
     win_set_option,
     win_set_var,
 )
-from pynvim_pp.lib import go
-from pynvim_pp.logging import log
+from pynvim_pp.lib import async_call, go
 from pynvim_pp.preview import buf_set_preview, set_preview
 from std2.ordinal import clamp
 from std2.pickle import DecodeError, new_decoder
@@ -37,7 +25,7 @@ from std2.string import removeprefix
 
 from ...lsp.requests.preview import request
 from ...lsp.types import CompletionItem
-from ...registry import autocmd, enqueue_event, rpc
+from ...registry import autocmd, rpc
 from ...shared.settings import PreviewDisplay
 from ...shared.timeit import timeit
 from ...shared.trans import expand_tabs
@@ -198,7 +186,6 @@ def _go_show(
     _set_win(nvim, buf=buf, pos=pos)
 
 
-@rpc(blocking=True)
 def _show_preview(
     nvim: Nvim, stack: Stack, event: _Event, doc: Doc, state: State
 ) -> None:
@@ -241,7 +228,15 @@ def _resolve_comp(
             doc = maybe_doc
 
         if doc:
-            enqueue_event(_show_preview, event, doc, state)
+            await async_call(
+                nvim,
+                _show_preview,
+                nvim,
+                stack=stack,
+                event=event,
+                doc=doc,
+                state=state,
+            )
 
     _TASK = cast(Task, go(cont()))
 

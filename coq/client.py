@@ -1,7 +1,10 @@
 from asyncio.events import AbstractEventLoop
+from concurrent.futures import ThreadPoolExecutor
 from logging import DEBUG as DEBUG_LV
 from logging import INFO, FileHandler
+from multiprocessing import cpu_count
 from os import linesep
+from queue import SimpleQueue
 from sys import stderr
 from typing import Any, MutableMapping, Optional, cast
 
@@ -15,7 +18,7 @@ from std2.types import AnyFun
 
 from ._registry import ____
 from .consts import DEBUG, DEBUG_DB, DEBUG_METRICS, TMP_DIR
-from .registry import atomic, autocmd, event_queue, pool, rpc
+from .registry import atomic, autocmd, rpc
 from .server.registrants.attachment import BUF_EVENTS
 from .server.registrants.options import set_options
 from .server.rt_types import Stack
@@ -23,16 +26,23 @@ from .server.runtime import stack
 from .shared.timeit import timeit
 
 
+def _set_debug() -> None:
+    if DEBUG or DEBUG_METRICS or DEBUG_DB:
+        TMP_DIR.mkdir(parents=True, exist_ok=True)
+        log.addHandler(FileHandler(TMP_DIR / "debug.log"))
+        log.setLevel(DEBUG_LV)
+    else:
+        log.setLevel(INFO)
+
+
 class CoqClient(Client):
     def __init__(self) -> None:
+        self._pool = ThreadPoolExecutor(max_workers=min(32, cpu_count() + 16))
         self._handlers: MutableMapping[str, RpcCallable] = {}
+        self._event_queue: SimpleQueue = SimpleQueue()
         self._stack: Optional[Stack] = None
-        if DEBUG or DEBUG_METRICS or DEBUG_DB:
-            TMP_DIR.mkdir(parents=True, exist_ok=True)
-            log.addHandler(FileHandler(TMP_DIR / "debug.log"))
-            log.setLevel(DEBUG_LV)
-        else:
-            log.setLevel(INFO)
+
+        _set_debug()
 
     def _handle(self, nvim: Nvim, msg: RpcMsg) -> Any:
         name, args = msg
@@ -47,7 +57,7 @@ class CoqClient(Client):
     def on_msg(self, nvim: Nvim, msg: RpcMsg) -> Any:
         name, _ = msg
         if not self._stack:
-            event_queue.put(msg)
+            self._event_queue.put(msg)
             return None
         else:
             with timeit(name):
@@ -55,13 +65,13 @@ class CoqClient(Client):
 
     def wait(self, nvim: Nvim) -> int:
         if isinstance(nvim.loop, AbstractEventLoop):
-            nvim.loop.set_default_executor(pool)
+            nvim.loop.set_default_executor(self._pool)
 
         def cont() -> None:
             rpc_atomic, specs = rpc.drain(nvim.channel_id)
             self._handlers.update(specs)
 
-            self._stack = stack(pool, nvim=nvim)
+            self._stack = stack(self._pool, nvim=nvim)
             (rpc_atomic + autocmd.drain() + atomic).commit(nvim)
             set_options(nvim, mapping=self._stack.settings.keymap)
 
@@ -77,7 +87,7 @@ class CoqClient(Client):
             return 1
 
         while True:
-            msg: RpcMsg = event_queue.get()
+            msg: RpcMsg = self._event_queue.get()
             try:
                 threadsafe_call(nvim, self._handle, nvim, msg)
             except Exception as e:
