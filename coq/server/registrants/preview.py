@@ -93,9 +93,8 @@ def _preprocess(context: Context, doc: Doc) -> Doc:
         ):
             text = linesep.join(split[1:-1])
             ft = removeprefix(split[0], prefix=_SEP).strip()
-            if not ft.isalnum():
-                ft = context.filetype
-            return Doc(text=text, syntax=ft)
+            syntax = ft if ft.isalnum() else context.filetype
+            return Doc(text=text, syntax=syntax)
         else:
             return doc
     else:
