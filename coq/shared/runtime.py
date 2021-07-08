@@ -4,6 +4,7 @@ from abc import abstractmethod
 from asyncio import CancelledError, Condition, Task, gather, wait
 from collections import Counter
 from concurrent.futures import Executor
+from contextlib import suppress
 from dataclasses import dataclass
 from typing import (
     Any,
@@ -114,10 +115,8 @@ class Supervisor:
         with l_timeit("COLLECTED -- **ALL**"):
             if self._task:
                 self._task.cancel()
-                try:
+                with suppress(CancelledError):
                     await self._task
-                except CancelledError:
-                    pass
 
             acc: MutableSequence[Metric] = []
             neighbours = Counter(
