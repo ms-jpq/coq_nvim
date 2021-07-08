@@ -1,7 +1,7 @@
 from concurrent.futures import Executor
 from contextlib import closing
 from sqlite3 import Connection
-from typing import Iterable, Sequence, TypedDict
+from typing import Mapping, cast
 
 from std2.asyncio import run_in_executor
 from std2.sqllite3 import with_transaction
@@ -9,12 +9,7 @@ from std2.sqllite3 import with_transaction
 from ....consts import INSERT_DB
 from ....shared.database import init_db
 from ....shared.executor import SingleThreadExecutor
-from ....shared.timeit import timeit
 from .sql import sql
-
-
-class SqlMetrics(TypedDict):
-    insert_order: int
 
 
 def _init() -> Connection:
@@ -49,6 +44,17 @@ class IDB:
 
         await run_in_executor(self._ex.submit, cont)
 
+    async def update_batch(self, batch_id: bytes, duration: float, items: int) -> None:
+        def cont() -> None:
+            with closing(self._conn.cursor()) as cursor:
+                with with_transaction(cursor):
+                    cursor.execute(
+                        sql("update", "batch"),
+                        {"batch_id": batch_id, "duration": duration, "items": items},
+                    )
+
+        await run_in_executor(self._ex.submit, cont)
+
     def inserted(self, batch_id: bytes, sort_by: str) -> None:
         def cont() -> None:
             with closing(self._conn.cursor()) as cursor:
@@ -60,17 +66,16 @@ class IDB:
 
         self._ex.submit(cont)
 
-    def metric(self, words: Iterable[str]) -> Sequence[SqlMetrics]:
-        def cont() -> Sequence[SqlMetrics]:
+    async def insertion_order(self, n_rows: int) -> Mapping[str, int]:
+        def cont() -> Mapping[str, int]:
             with closing(self._conn.cursor()) as cursor:
                 with with_transaction(cursor):
-                    cursor.execute(sql("delete", "candidates"), ())
-                    cursor.executemany(
-                        sql("insert", "candidate"),
-                        ({"sort_by": sort_by} for sort_by in words),
-                    )
-                    cursor.execute(sql("select", "metrics"), ())
-                    return cursor.fetchall()
+                    cursor.execute(sql("select", "inserted"), {"limit": n_rows})
+                    order = {
+                        row["sort_by"]: row["insert_order"] for row in cursor.fetchall()
+                    }
+                    return order
 
-        return self._ex.submit(cont)
+        ret = await run_in_executor(self._ex.submit, cont)
+        return cast(Mapping[str, int], ret)
 

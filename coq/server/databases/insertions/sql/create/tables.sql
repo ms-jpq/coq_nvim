@@ -8,7 +8,9 @@ CREATE TABLE IF NOT EXISTS sources (
 
 CREATE TABLE IF NOT EXISTS batches (
   rowid     BLOB    NOT NULL PRIMARY KEY,
-  source_id TEXT    NOT NULL REFERENCES sources (name) ON UPDATE CASCADE ON DELETE CASCADE
+  source_id TEXT    NOT NULL REFERENCES sources (name) ON UPDATE CASCADE ON DELETE CASCADE,
+  duration  REAL,
+  items     INTEGER
 ) WITHOUT rowid;
 CREATE INDEX IF NOT EXISTS batches_source_id ON batches (source_id);
 
@@ -20,13 +22,6 @@ CREATE TABLE IF NOT EXISTS inserted (
 );
 CREATE INDEX IF NOT EXISTS inserted_batch_id ON inserted (batch_id);
 CREATE INDEX IF NOT EXISTS inserted_sort_by  ON inserted (sort_by);
-
-
-CREATE TABLE IF NOT EXISTS candidates (
-  rowid   INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
-  sort_by TEXT    NOT NULL
-);
-CREATE INDEX IF NOT EXISTS candidates_sort_by ON candidates (sort_by);
 
 
 END;
