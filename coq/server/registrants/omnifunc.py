@@ -63,7 +63,6 @@ def comp_func(
         state(context=ctx)
 
         async def cont() -> None:
-
             metrics = await stack.supervisor.collect(ctx, manual=manual)
             s = state()
             if s.change_id == ctx.change_id:
