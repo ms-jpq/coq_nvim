@@ -66,15 +66,16 @@ _WIN_LOCATION = -1
 
 
 @rpc(blocking=True)
-def _kill_win(nvim: Nvim, stack: Stack) -> None:
+def _kill_win(nvim: Nvim, stack: Stack, reset: bool) -> None:
     global _WIN_LOCATION
-    _WIN_LOCATION = -1
+    if reset:
+        _WIN_LOCATION = -1
 
     for win in _ls(nvim):
         win_close(nvim, win=win)
 
 
-autocmd("CompleteDone", "InsertLeave") << f"lua {_kill_win.name}()"
+autocmd("CompleteDone", "InsertLeave") << f"lua {_kill_win.name}(true)"
 
 _SEP = "```"
 
@@ -255,7 +256,7 @@ def _cmp_changed(nvim: Nvim, stack: Stack, event: Mapping[str, Any] = {}) -> Non
     if _TASK:
         _TASK.cancel()
 
-    _kill_win(nvim, stack=stack)
+    _kill_win(nvim, stack=stack, reset=False)
     with timeit("PREVIEW"):
         try:
             ev: _Event = _DECODER(event)
