@@ -111,37 +111,38 @@ class Supervisor:
 
         go(cont())
 
-    @l_timeit("COLLECT -- ALL")
     async def collect(self, context: Context, manual: bool) -> Sequence[Metric]:
-        acc: MutableSequence[Metric] = []
+        with l_timeit("COLLECT -- ALL"):
+            acc: MutableSequence[Metric] = []
+            neighbours = Counter(
+                word
+                for line in context.lines
+                for word in coalesce(line, unifying_chars=self.options.unifying_chars)
+            )
+            timeout = self._options.manual_timeout if manual else self._options.timeout
 
-        neighbours = Counter(
-            word
-            for line in context.lines
-            for word in coalesce(line, unifying_chars=self.options.unifying_chars)
-        )
-        timeout = self._options.manual_timeout if manual else self._options.timeout
-
-        async def supervise(worker: Worker) -> None:
-            m_name = worker.__class__.__module__
-            with l_timeit(f"COLLECTED -- {m_name}"):
-                batch, items = uuid4(), 0
-                await self._reviewer.perf(worker, batch=batch, duration=0, items=items)
-                async for completion in worker.work(context):
-                    metric = self._reviewer.rate(
-                        batch,
-                        context=context,
-                        neighbours=neighbours,
-                        completion=completion,
+            async def supervise(worker: Worker) -> None:
+                m_name = worker.__class__.__module__
+                with l_timeit(f"COLLECTED -- {m_name}"):
+                    batch, items = uuid4(), 0
+                    await self._reviewer.perf(
+                        worker, batch=batch, duration=0, items=items
                     )
-                    acc.append(metric)
+                    async for completion in worker.work(context):
+                        metric = self._reviewer.rate(
+                            batch,
+                            context=context,
+                            neighbours=neighbours,
+                            completion=completion,
+                        )
+                        acc.append(metric)
 
-        for task in self._tasks:
-            task.cancel()
-        futs = tuple(cast(Task, go(supervise(worker))) for worker in self._workers)
-        self._tasks.extend(futs)
-        await wait(futs, timeout=timeout)
-        return acc
+            for task in self._tasks:
+                task.cancel()
+            futs = tuple(cast(Task, go(supervise(worker))) for worker in self._workers)
+            self._tasks.extend(futs)
+            await wait(futs, timeout=timeout)
+            return acc
 
 
 class Worker(Generic[O_co, T_co]):
