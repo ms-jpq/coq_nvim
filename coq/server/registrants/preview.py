@@ -101,7 +101,7 @@ def _positions(
     event: _Event,
     lines: Sequence[str],
     state: State,
-) -> Iterator[_Pos]:
+) -> Iterator[Tuple[int, _Pos]]:
     scr_width, src_height = state.screen
     top, btm, left, right = (
         event.row,
@@ -125,7 +125,7 @@ def _positions(
         width=ns_width,
     )
     if n.row > 0:
-        yield n
+        yield 1, n
 
     s = _Pos(
         row=btm,
@@ -133,7 +133,7 @@ def _positions(
         height=limit_h(src_height - btm),
         width=ns_width,
     )
-    yield s
+    yield 2, s
 
     we_height = limit_h(src_height - top)
     w_width = limit_w(left - 1)
@@ -144,7 +144,7 @@ def _positions(
         height=we_height,
         width=w_width,
     )
-    yield w
+    yield 3, w
 
     e = _Pos(
         row=top,
@@ -152,7 +152,7 @@ def _positions(
         height=we_height,
         width=limit_w(scr_width - right - 2),
     )
-    yield e
+    yield 4, e
 
 
 def _set_win(nvim: Nvim, buf: Buffer, pos: _Pos) -> None:
@@ -186,19 +186,22 @@ def _go_show(
     _set_win(nvim, buf=buf, pos=pos)
 
 
+_IDX = -1
+
+
 def _show_preview(
     nvim: Nvim, stack: Stack, event: _Event, doc: Doc, state: State
 ) -> None:
+    global _IDX
+
     new_doc = _preprocess(state.context, doc=doc)
     text = expand_tabs(state.context, text=new_doc.text)
     lines = text.splitlines()
-    (_, pos), *_ = sorted(
-        enumerate(
-            _positions(
-                stack.settings.display.preview, event=event, lines=lines, state=state
-            )
+    (_IDX, pos), *_ = sorted(
+        _positions(
+            stack.settings.display.preview, event=event, lines=lines, state=state
         ),
-        key=lambda p: (p[1].height * p[1].width, -p[0]),
+        key=lambda p: (p[1].height * p[1].width, p[0] == _IDX, -p[0]),
         reverse=True,
     )
     nvim.api.exec_lua(f"{_go_show.name}(...)", (new_doc.syntax, lines, asdict(pos)))
