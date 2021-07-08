@@ -1,7 +1,7 @@
 from concurrent.futures import Executor
 from contextlib import closing
 from sqlite3 import Connection
-from typing import Mapping, cast
+from typing import Mapping, Optional, cast
 
 from std2.asyncio import run_in_executor
 from std2.sqllite3 import with_transaction
@@ -44,7 +44,9 @@ class IDB:
 
         await run_in_executor(self._ex.submit, cont)
 
-    async def update_batch(self, batch_id: bytes, duration: float, items: int) -> None:
+    async def update_batch(
+        self, batch_id: bytes, duration: Optional[float], items: Optional[int]
+    ) -> None:
         def cont() -> None:
             with closing(self._conn.cursor()) as cursor:
                 with with_transaction(cursor):
@@ -54,17 +56,6 @@ class IDB:
                     )
 
         await run_in_executor(self._ex.submit, cont)
-
-    def inserted(self, batch_id: bytes, sort_by: str) -> None:
-        def cont() -> None:
-            with closing(self._conn.cursor()) as cursor:
-                with with_transaction(cursor):
-                    cursor.execute(
-                        sql("insert", "inserted"),
-                        {"batch_id": batch_id, "sort_by": sort_by},
-                    )
-
-        self._ex.submit(cont)
 
     async def insertion_order(self, n_rows: int) -> Mapping[str, int]:
         def cont() -> Mapping[str, int]:
@@ -78,4 +69,15 @@ class IDB:
 
         ret = await run_in_executor(self._ex.submit, cont)
         return cast(Mapping[str, int], ret)
+
+    def inserted(self, batch_id: bytes, sort_by: str) -> None:
+        def cont() -> None:
+            with closing(self._conn.cursor()) as cursor:
+                with with_transaction(cursor):
+                    cursor.execute(
+                        sql("insert", "inserted"),
+                        {"batch_id": batch_id, "sort_by": sort_by},
+                    )
+
+        self._ex.submit(cont)
 

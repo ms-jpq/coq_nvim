@@ -2,14 +2,12 @@ from __future__ import annotations
 
 from abc import abstractmethod
 from asyncio import Condition, Task, gather, wait
-from collections import Counter
 from concurrent.futures import Executor
 from dataclasses import dataclass
 from typing import (
     Any,
     AsyncIterator,
     Generic,
-    Mapping,
     MutableSequence,
     MutableSet,
     Optional,
@@ -23,6 +21,8 @@ from weakref import WeakSet
 
 from pynvim import Nvim
 from pynvim_pp.lib import go
+from std2.aitertools import aenumerate
+from std2.timeit import timeit
 
 from .parse import coalesce
 from .settings import Options, Weights
@@ -46,16 +46,16 @@ class PReviewer(Protocol):
     def register(self, worker: Worker) -> None:
         ...
 
-    def rate(
-        self,
-        batch: UUID,
-        context: Context,
-        neighbours: Mapping[str, int],
-        completion: Completion,
-    ) -> Metric:
+    async def begin(self, context: Context) -> None:
         ...
 
-    async def new_batch(self, worker: Worker, batch: UUID) -> None:
+    async def s1(self, worker: Worker, batch: UUID) -> None:
+        ...
+
+    def s2(self, batch: UUID, completion: Completion) -> Metric:
+        ...
+
+    async def end(self, elapsed: Optional[float], items: Optional[int]) -> None:
         ...
 
 
@@ -116,26 +116,25 @@ class Supervisor:
                 self._task.cancel()
 
             acc: MutableSequence[Metric] = []
-            neighbours = Counter(
-                word
-                for line in context.lines
-                for word in coalesce(line, unifying_chars=self.options.unifying_chars)
-            )
             timeout = self._options.manual_timeout if manual else self._options.timeout
 
             async def supervise(worker: Worker) -> None:
                 m_name, batch = worker.__class__.__module__, uuid4()
                 with l_timeit(f"COLLECTED -- {m_name}"):
-                    await self._reviewer.new_batch(worker, batch=batch)
-                    async for completion in worker.work(context):
-                        metric = self._reviewer.rate(
-                            batch,
-                            context=context,
-                            neighbours=neighbours,
-                            completion=completion,
-                        )
-                        acc.append(metric)
+                    await self._reviewer.s1(worker, batch=batch)
+                    elapsed, items = None, None
+                    try:
+                        with timeit() as t:
+                            async for items, completion in aenumerate(
+                                worker.work(context), start=1
+                            ):
+                                metric = self._reviewer.s2(batch, completion=completion)
+                                acc.append(metric)
+                        elapsed = t()
+                    finally:
+                        await self._reviewer.end(elapsed, items=items)
 
+            await self._reviewer.begin(context)
             self._task = cast(Task, go(gather(*map(supervise, self._workers))))
             await wait((self._task,), timeout=timeout)
             return acc
