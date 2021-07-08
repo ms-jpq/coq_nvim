@@ -76,7 +76,6 @@ class Supervisor:
         )
         self._idling = Condition()
         self._workers: MutableSet[Worker] = WeakSet()
-        self._tasks: MutableSequence[Task] = []
 
     @property
     def pool(self) -> Executor:
@@ -113,10 +112,6 @@ class Supervisor:
 
     async def collect(self, context: Context, manual: bool) -> Sequence[Metric]:
         with l_timeit("COLLECTED -- **ALL**"):
-            for task in self._tasks:
-                task.cancel()
-            self._tasks.clear()
-
             acc: MutableSequence[Metric] = []
             neighbours = Counter(
                 word
@@ -141,9 +136,10 @@ class Supervisor:
                         )
                         acc.append(metric)
 
-            futs = tuple(cast(Task, go(supervise(worker))) for worker in self._workers)
-            self._tasks.extend(futs)
-            await wait(futs, timeout=timeout)
+            task = cast(Task, go(gather(*map(supervise, self._workers))))
+            await wait((task,), timeout=timeout)
+            task.cancel()
+            await task
             return acc
 
 
