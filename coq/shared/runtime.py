@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from abc import abstractmethod
-from asyncio import Condition, Task, gather, shield, wait
+from asyncio import CancelledError, Condition, Task, gather, wait
 from collections import Counter
 from concurrent.futures import Executor
 from dataclasses import dataclass
@@ -12,6 +12,7 @@ from typing import (
     Mapping,
     MutableSequence,
     MutableSet,
+    Optional,
     Protocol,
     Sequence,
     TypeVar,
@@ -74,6 +75,7 @@ class Supervisor:
         )
         self._idling = Condition()
         self._workers: MutableSet[Worker] = WeakSet()
+        self._task: Optional[Task] = None
 
     @property
     def pool(self) -> Executor:
@@ -110,6 +112,13 @@ class Supervisor:
 
     async def collect(self, context: Context, manual: bool) -> Sequence[Metric]:
         with l_timeit("COLLECTED -- **ALL**"):
+            if self._task:
+                self._task.cancel()
+                try:
+                    await self._task
+                except CancelledError:
+                    pass
+
             acc: MutableSequence[Metric] = []
             neighbours = Counter(
                 word
@@ -131,10 +140,8 @@ class Supervisor:
                         )
                         acc.append(metric)
 
-            task = cast(Task, go(gather(*map(supervise, self._workers))))
-            await wait((task,), timeout=timeout)
-            task.cancel()
-            await shield(task)
+            self._task = cast(Task, go(gather(*map(supervise, self._workers))))
+            await wait((self._task,), timeout=timeout)
             return acc
 
 

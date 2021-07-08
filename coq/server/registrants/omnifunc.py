@@ -28,16 +28,9 @@ def _should_cont(inserted: Optional[NvimPos], prev: Context, cur: Context) -> bo
         return (cur.words_before or cur.syms_before) != ""
 
 
-_TASK: Optional[Task] = None
-
-
 def comp_func(
     nvim: Nvim, stack: Stack, change_id: UUID, commit_id: UUID, manual: bool
 ) -> None:
-    global _TASK
-    if _TASK:
-        _TASK.cancel()
-
     s = state()
     with timeit("GEN CTX"):
         ctx = context(
@@ -62,7 +55,6 @@ def comp_func(
     if manual or should:
         state(context=ctx)
 
-        @timeit("COLLECT")
         async def cont() -> None:
             metrics = await stack.supervisor.collect(ctx, manual=manual)
             s = state()
@@ -71,7 +63,7 @@ def comp_func(
                     vim_comps = tuple(trans(stack, context=ctx, metrics=metrics))
                 await async_call(nvim, complete, nvim, col=col, comp=vim_comps)
 
-        _TASK = cast(Task, go(cont()))
+        go(cont())
     else:
         state(inserted=(-1, -1))
 
