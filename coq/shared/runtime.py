@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from abc import abstractmethod
-from asyncio import Condition, Task, gather, wait
+from asyncio import Condition, Task, gather, shield, wait
 from collections import Counter
 from concurrent.futures import Executor
 from dataclasses import dataclass
@@ -134,7 +134,7 @@ class Supervisor:
             task = cast(Task, go(gather(*map(supervise, self._workers))))
             await wait((task,), timeout=timeout)
             task.cancel()
-            await task
+            await shield(task)
             return acc
 
 
