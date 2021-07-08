@@ -1,7 +1,7 @@
 from asyncio.events import AbstractEventLoop
 from concurrent.futures import ThreadPoolExecutor
 from logging import DEBUG as DEBUG_LV
-from logging import INFO, FileHandler
+from logging import INFO
 from multiprocessing import cpu_count
 from os import linesep
 from queue import SimpleQueue
@@ -29,7 +29,6 @@ from .shared.timeit import timeit
 def _set_debug() -> None:
     if DEBUG or DEBUG_METRICS or DEBUG_DB:
         TMP_DIR.mkdir(parents=True, exist_ok=True)
-        log.addHandler(FileHandler(TMP_DIR / "debug.log"))
         log.setLevel(DEBUG_LV)
     else:
         log.setLevel(INFO)
