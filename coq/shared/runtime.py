@@ -112,7 +112,7 @@ class Supervisor:
         go(cont())
 
     async def collect(self, context: Context, manual: bool) -> Sequence[Metric]:
-        with l_timeit("COLLECT -- ALL"):
+        with l_timeit("COLLECTED -- **ALL**"):
             acc: MutableSequence[Metric] = []
             neighbours = Counter(
                 word
