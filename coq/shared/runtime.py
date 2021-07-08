@@ -24,7 +24,6 @@ from pynvim_pp.lib import go
 from std2.aitertools import aenumerate
 from std2.timeit import timeit
 
-from .parse import coalesce
 from .settings import Options, Weights
 from .timeit import timeit as l_timeit
 from .types import Completion, Context

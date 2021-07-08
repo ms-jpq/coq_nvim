@@ -1,5 +1,5 @@
 SELECT DISTINCT
-  rowid   AS insert_order
+  rowid   AS insert_order,
   sort_by AS sort_by
 FROM inserted
 GROUP BY
