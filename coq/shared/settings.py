@@ -80,8 +80,7 @@ class TagsClient(WordbankClient):
 
 @dataclass(frozen=True)
 class SnippetClient(BaseClient):
-    extends: Mapping[str, Mapping[str, Literal[True]]]
-    snippets: Mapping[str, Sequence[Any]]
+    pass
 
 
 @dataclass(frozen=True)

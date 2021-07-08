@@ -5,6 +5,7 @@ from ...shared.runtime import Supervisor
 from ...shared.runtime import Worker as BaseWorker
 from ...shared.settings import SnippetClient
 from ...shared.types import Completion, Context, Doc, SnippetEdit
+from ...snippets.artifacts import SNIPPETS
 
 
 class Worker(BaseWorker[SnippetClient, SDB]):
@@ -12,7 +13,7 @@ class Worker(BaseWorker[SnippetClient, SDB]):
         self, supervisor: Supervisor, options: SnippetClient, misc: SDB
     ) -> None:
         super().__init__(supervisor, options=options, misc=misc)
-        self._misc.add_exts(options.extends)
+        self._misc.add_exts(SNIPPETS.extends)
 
     async def work(self, context: Context) -> AsyncIterator[Completion]:
         match = context.words or context.syms

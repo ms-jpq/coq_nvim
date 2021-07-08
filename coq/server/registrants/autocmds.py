@@ -10,6 +10,7 @@ from std2.pickle import new_decoder
 from ...registry import atomic, autocmd, rpc
 from ...snippets.types import ParsedSnippet
 from ..rt_types import Stack
+from ...snippets.artifacts import SNIPPETS
 
 _SEEN: MutableSet[str] = set()
 
@@ -27,8 +28,8 @@ def _ft_changed(nvim: Nvim, stack: Stack) -> None:
         _SEEN.add(ft)
         snippets = stack.settings.clients.snippets
         mappings = {
-            f: _DECODER(snippets.snippets.get(f, ()))
-            for f in chain(snippets.extends.get(ft, {}).keys(), (ft,))
+            f: _DECODER(SNIPPETS.snippets.get(f, ()))
+            for f in chain(SNIPPETS.extends.get(ft, {}).keys(), (ft,))
         }
         stack.sdb.populate(mappings)
 

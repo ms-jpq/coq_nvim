@@ -1,5 +1,4 @@
 from concurrent.futures import Executor
-from json import loads
 from typing import Iterator
 
 from pynvim import Nvim
@@ -16,7 +15,7 @@ from ..clients.t9.worker import Worker as T9Worker
 from ..clients.tags.worker import Worker as TagsWorker
 from ..clients.tmux.worker import Worker as TmuxWorker
 from ..clients.tree_sitter.worker import Worker as TreeWorker
-from ..consts import CONFIG_YML, SETTINGS_VAR, SNIPPET_ARTIFACTS
+from ..consts import CONFIG_YML, SETTINGS_VAR
 from ..shared.runtime import Supervisor, Worker
 from ..shared.settings import Settings
 from .databases.buffers.database import BDB
@@ -32,11 +31,6 @@ def _settings(nvim: Nvim) -> Settings:
     user_config = nvim.vars.get(SETTINGS_VAR, {})
     merged = merge(
         safe_load(CONFIG_YML.read_text("UTF-8")),
-        {
-            "clients": {
-                "snippets": loads(SNIPPET_ARTIFACTS.read_text("UTF-8")),
-            }
-        },
         hydrate(user_config),
         replace=True,
     )
