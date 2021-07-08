@@ -111,6 +111,7 @@ class Supervisor:
 
         go(cont())
 
+    @l_timeit("COLLECT -- ALL")
     async def collect(self, context: Context, manual: bool) -> Sequence[Metric]:
         acc: MutableSequence[Metric] = []
 
