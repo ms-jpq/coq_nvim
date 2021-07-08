@@ -56,19 +56,21 @@ def comp_func(
         if ctx
         else False
     )
-    _, col = ctx.position
-    complete(nvim, col=col - 1, comp=())
+    if ctx:
+        _, col = ctx.position
+        complete(nvim, col=col - 1, comp=())
 
-    if manual or should:
+    if ctx and (manual or should):
         state(context=ctx)
 
         async def cont() -> None:
-            metrics = await stack.supervisor.collect(ctx, manual=manual)
-            s = state()
-            if s.change_id == ctx.change_id:
-                with timeit("TRANS"):
-                    vim_comps = tuple(trans(stack, context=ctx, metrics=metrics))
-                await async_call(nvim, complete, nvim, col=col, comp=vim_comps)
+            if ctx:
+                metrics = await stack.supervisor.collect(ctx, manual=manual)
+                s = state()
+                if s.change_id == ctx.change_id:
+                    with timeit("TRANS"):
+                        vim_comps = tuple(trans(stack, context=ctx, metrics=metrics))
+                    await async_call(nvim, complete, nvim, col=col, comp=vim_comps)
 
         _TASK = cast(Task, go(cont()))
     else:
