@@ -38,20 +38,13 @@ class IDB:
 
         self._ex.submit(cont)
 
-    async def new_batch(
-        self, source: str, batch_id: bytes, duration: float, items: int
-    ) -> None:
+    async def new_batch(self, source: str, batch_id: bytes) -> None:
         def cont() -> None:
             with closing(self._conn.cursor()) as cursor:
                 with with_transaction(cursor):
                     cursor.execute(
                         sql("insert", "batch"),
-                        {
-                            "rowid": batch_id,
-                            "source_id": source,
-                            "duration": duration,
-                            "items": items,
-                        },
+                        {"rowid": batch_id, "source_id": source},
                     )
 
         await run_in_executor(self._ex.submit, cont)

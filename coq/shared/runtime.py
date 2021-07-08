@@ -54,9 +54,7 @@ class PReviewer(Protocol):
     ) -> Metric:
         ...
 
-    async def perf(
-        self, worker: Worker, batch: UUID, duration: float, items: int
-    ) -> None:
+    async def new_batch(self, worker: Worker, batch: UUID) -> None:
         ...
 
 
@@ -121,12 +119,9 @@ class Supervisor:
             timeout = self._options.manual_timeout if manual else self._options.timeout
 
             async def supervise(worker: Worker) -> None:
-                m_name = worker.__class__.__module__
+                m_name, batch = worker.__class__.__module__, uuid4()
                 with l_timeit(f"COLLECTED -- {m_name}"):
-                    batch, items = uuid4(), 0
-                    await self._reviewer.perf(
-                        worker, batch=batch, duration=0, items=items
-                    )
+                    await self._reviewer.new_batch(worker, batch=batch)
                     async for completion in worker.work(context):
                         metric = self._reviewer.rate(
                             batch,

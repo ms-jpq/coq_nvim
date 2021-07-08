@@ -8,9 +8,7 @@ CREATE TABLE IF NOT EXISTS sources (
 
 CREATE TABLE IF NOT EXISTS batches (
   rowid     BLOB    NOT NULL PRIMARY KEY,
-  source_id TEXT    NOT NULL REFERENCES sources (name) ON UPDATE CASCADE ON DELETE CASCADE,
-  duration  REAL    NOT NULL,
-  items     INTEGER NOT NULL
+  source_id TEXT    NOT NULL REFERENCES sources (name) ON UPDATE CASCADE ON DELETE CASCADE
 ) WITHOUT rowid;
 CREATE INDEX IF NOT EXISTS batches_source_id ON batches (source_id);
 

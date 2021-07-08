@@ -1,7 +1,8 @@
+from asyncio import shield
 from dataclasses import dataclass
 from difflib import SequenceMatcher
 from math import inf
-from typing import Iterable, Iterator, Mapping, MutableSequence, Sequence
+from typing import Mapping, MutableSequence
 from uuid import UUID
 
 from ..shared.parse import display_width, is_word, lower
@@ -124,11 +125,7 @@ class Reviewer(PReviewer):
         metric = _join(batch, context, completion, mm, SqlMetrics(insert_order=0))
         return metric
 
-    async def perf(
-        self, worker: Worker, batch: UUID, duration: float, items: int
-    ) -> None:
+    async def new_batch(self, worker: Worker, batch: UUID) -> None:
         m_name = worker.__class__.__module__
-        await self._db.new_batch(
-            m_name, batch_id=batch.bytes, duration=duration, items=items
-        )
+        await shield(self._db.new_batch(m_name, batch_id=batch.bytes))
 
