@@ -62,8 +62,14 @@ def _ls(nvim: Nvim) -> Iterator[Window]:
             yield win
 
 
+_WIN_LOCATION = -1
+
+
 @rpc(blocking=True)
 def _kill_win(nvim: Nvim, stack: Stack) -> None:
+    global _WIN_LOCATION
+    _WIN_LOCATION = -1
+
     for win in _ls(nvim):
         win_close(nvim, win=win)
 
@@ -186,22 +192,19 @@ def _go_show(
     _set_win(nvim, buf=buf, pos=pos)
 
 
-_IDX = -1
-
-
 def _show_preview(
     nvim: Nvim, stack: Stack, event: _Event, doc: Doc, state: State
 ) -> None:
-    global _IDX
+    global _WIN_LOCATION
 
     new_doc = _preprocess(state.context, doc=doc)
     text = expand_tabs(state.context, text=new_doc.text)
     lines = text.splitlines()
-    (_IDX, pos), *_ = sorted(
+    (_WIN_LOCATION, pos), *_ = sorted(
         _positions(
             stack.settings.display.preview, event=event, lines=lines, state=state
         ),
-        key=lambda p: (p[1].height * p[1].width, p[0] == _IDX, -p[0]),
+        key=lambda p: (p[1].height * p[1].width, p[0] == _WIN_LOCATION, -p[0]),
         reverse=True,
     )
     nvim.api.exec_lua(f"{_go_show.name}(...)", (new_doc.syntax, lines, asdict(pos)))
