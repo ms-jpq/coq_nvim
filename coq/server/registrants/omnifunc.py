@@ -13,7 +13,7 @@ from ...shared.timeit import timeit
 from ...shared.types import Context, NvimPos
 from ..context import context
 from ..edit import edit
-from ..nvim.completions import UserData, VimCompletion, complete
+from ..nvim.completions import UserData, complete
 from ..rt_types import Stack
 from ..state import state
 from ..trans import trans
@@ -26,10 +26,6 @@ def _should_cont(inserted: Optional[NvimPos], prev: Context, cur: Context) -> bo
         return False
     else:
         return (cur.words_before or cur.syms_before) != ""
-
-
-def _cmp(nvim: Nvim, col: int, comp: Sequence[VimCompletion]) -> None:
-    complete(nvim, col=col, comp=comp)
 
 
 _TASK: Optional[Task] = None
@@ -73,7 +69,7 @@ def comp_func(
             if s.change_id == ctx.change_id:
                 with timeit("TRANS"):
                     vim_comps = tuple(trans(stack, context=ctx, metrics=metrics))
-                await async_call(nvim, _cmp, nvim, col=col, comp=vim_comps)
+                await async_call(nvim, complete, nvim, col=col, comp=vim_comps)
 
         _TASK = cast(Task, go(cont()))
     else:

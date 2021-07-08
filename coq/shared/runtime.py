@@ -113,6 +113,10 @@ class Supervisor:
 
     async def collect(self, context: Context, manual: bool) -> Sequence[Metric]:
         with l_timeit("COLLECTED -- **ALL**"):
+            for task in self._tasks:
+                task.cancel()
+            self._tasks.clear()
+
             acc: MutableSequence[Metric] = []
             neighbours = Counter(
                 word
@@ -137,8 +141,6 @@ class Supervisor:
                         )
                         acc.append(metric)
 
-            for task in self._tasks:
-                task.cancel()
             futs = tuple(cast(Task, go(supervise(worker))) for worker in self._workers)
             self._tasks.extend(futs)
             await wait(futs, timeout=timeout)
