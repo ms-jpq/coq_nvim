@@ -32,7 +32,7 @@ def _lsp_notify(
 
 
 async def async_request(nvim: Nvim, method: str, *args: Any) -> AsyncIterator[Any]:
-    with timeit(f"LSP :: {method}", force=True):
+    with timeit(f"LSP :: {method}"):
         session, done = uuid4().hex, False
         cond = _CONDS.setdefault(session, Condition())
 
