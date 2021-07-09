@@ -82,7 +82,7 @@ def _preprocess(context: Context, doc: Doc) -> Doc:
         if (
             split
             and split[0].startswith(_SEP)
-            and split[-1] == _SEP
+            and split[-1].startswith(_SEP)
             and not sum(line.startswith(_SEP) for line in split[1:-1])
         ):
             text = linesep.join(split[1:-1])
