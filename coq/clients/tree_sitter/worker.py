@@ -24,7 +24,8 @@ class Worker(BaseWorker[BaseClient, None]):
         super().__init__(supervisor, options=options, misc=misc)
 
     async def _req(self, pos: NvimPos) -> Optional[Any]:
-        self._cur = token, fut = uuid4(), Future()
+        fut: Future = Future()
+        self._cur = token = uuid4(), fut
 
         def cont() -> None:
             args = (str(token), pos)
