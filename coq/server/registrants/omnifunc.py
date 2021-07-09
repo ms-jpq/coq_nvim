@@ -64,7 +64,7 @@ def comp_func(
     if ctx and (manual or should):
         state(context=ctx)
 
-        async def c1() -> None:
+        async def cont() -> None:
             await sleep(0)
             if ctx:
                 metrics = await stack.supervisor.collect(ctx, manual=manual)
@@ -73,7 +73,7 @@ def comp_func(
                     vim_comps = tuple(trans(stack, context=ctx, metrics=metrics))
                     await async_call(nvim, complete, nvim, col=col, comp=vim_comps)
 
-        _TASK = cast(Task, go(nvim, aw=c1()))
+        _TASK = cast(Task, go(nvim, aw=cont()))
     else:
         state(inserted=(-1, -1))
 
