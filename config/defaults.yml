@@ -68,7 +68,7 @@ clients:
     tie_breaker: 20
 
   tree_sitter:
-    enabled: False
+    enabled: True
     short_name: "TS"
     tie_breaker: 30
 
