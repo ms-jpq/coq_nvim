@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from abc import abstractmethod
 from asyncio import Condition, Task, gather, sleep, wait
+from asyncio.events import AbstractEventLoop
 from concurrent.futures import Executor
 from dataclasses import dataclass
 from typing import (
@@ -74,7 +75,6 @@ class Supervisor:
         )
         self._idling = Condition()
         self._workers: MutableSet[Worker] = WeakSet()
-        self._task: Optional[Task] = None
 
     @property
     def pool(self) -> Executor:
@@ -111,10 +111,6 @@ class Supervisor:
 
     async def collect(self, context: Context, manual: bool) -> Sequence[Metric]:
         with l_timeit("COLLECTED -- **ALL**"):
-            if self._task:
-                self._task.cancel()
-                await sleep(0)
-
             acc: MutableSequence[Metric] = []
             timeout = self._options.manual_timeout if manual else self._options.timeout
 
@@ -135,10 +131,10 @@ class Supervisor:
                         await self._reviewer.end(elapsed, items=items)
 
             await self._reviewer.begin(context)
-            self._task = cast(
-                Task, go(self.nvim, aw=gather(*map(supervise, self._workers)))
-            )
-            await wait((self._task,), timeout=timeout)
+
+            assert isinstance(self.nvim.loop, AbstractEventLoop)
+            task = self.nvim.loop.create_task(gather(*map(supervise, self._workers)))
+            await wait((task,), timeout=timeout)
             return acc
 
 
