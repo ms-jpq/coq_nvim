@@ -70,7 +70,7 @@ class Worker(BaseWorker[WordbankClient, None]):
         self._db = Database(supervisor.pool)
         super().__init__(supervisor, options=options, misc=misc)
         if which("tmux"):
-            go(self._poll())
+            go(supervisor.nvim, aw=self._poll())
 
     async def _poll(self) -> None:
         while True:

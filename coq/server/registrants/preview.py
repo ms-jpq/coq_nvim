@@ -238,7 +238,7 @@ def _resolve_comp(
                 s=state,
             )
 
-    _TASK = cast(Task, go(cont()))
+    _TASK = cast(Task, go(nvim, aw=cont()))
 
 
 _DECODER = new_decoder(_Event)

@@ -71,7 +71,7 @@ def comp_func(
                     vim_comps = tuple(trans(stack, context=ctx, metrics=metrics))
                     await async_call(nvim, complete, nvim, col=col, comp=vim_comps)
 
-        _TASK = cast(Task, go(c1()))
+        _TASK = cast(Task, go(nvim, aw=c1()))
     else:
         state(inserted=(-1, -1))
 

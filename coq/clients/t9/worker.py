@@ -80,7 +80,7 @@ class Worker(BaseWorker[BaseClient, None]):
         self._installed = False
         self._proc: Optional[Process] = None
         super().__init__(supervisor, options=options, misc=misc)
-        go(self._install())
+        go(supervisor.nvim, aw=self._install())
 
     async def _install(self) -> None:
         self._installed = await ensure_installed(_RETRIES, timeout=_TIMEOUT)

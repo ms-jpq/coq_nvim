@@ -8,9 +8,9 @@ from pynvim_pp.lib import async_call, go
 from std2.pickle import new_decoder
 
 from ...registry import atomic, autocmd, rpc
+from ...snippets.artifacts import SNIPPETS
 from ...snippets.types import ParsedSnippet
 from ..rt_types import Stack
-from ...snippets.artifacts import SNIPPETS
 
 _SEEN: MutableSet[str] = set()
 
@@ -53,7 +53,7 @@ def _when_idle(nvim: Nvim, stack: Stack) -> None:
         stack.supervisor.notify_idle()
 
     get_running_loop().call_later(
-        stack.settings.idle_time, lambda: go(async_call(nvim, cont))
+        stack.settings.idle_time, lambda: go(nvim, aw=async_call(nvim, cont))
     )
 
 

@@ -112,7 +112,7 @@ class Worker(BaseWorker[TagsClient, None]):
         self._db = Database(supervisor.pool)
         super().__init__(supervisor, options=options, misc=misc)
         if which("ctags"):
-            go(self._poll())
+            go(supervisor.nvim, aw=self._poll())
 
     async def _poll(self) -> None:
         while True:

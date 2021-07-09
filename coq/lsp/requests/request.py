@@ -28,7 +28,7 @@ def _lsp_notify(
         async with cond:
             cond.notify_all()
 
-    go(cont())
+    go(nvim, aw=cont())
 
 
 async def async_request(nvim: Nvim, method: str, *args: Any) -> AsyncIterator[Any]:

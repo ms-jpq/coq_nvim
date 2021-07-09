@@ -101,13 +101,13 @@ class Supervisor:
             async with self._idling:
                 self._idling.notify_all()
 
-        go(cont())
+        go(self.nvim, aw=cont())
 
     def notify(self, token: UUID, msg: Sequence[Any]) -> None:
         async def cont() -> None:
             await gather(*(worker.notify(token, msg=msg) for worker in self._workers))
 
-        go(cont())
+        go(self.nvim, aw=cont())
 
     async def collect(self, context: Context, manual: bool) -> Sequence[Metric]:
         with l_timeit("COLLECTED -- **ALL**"):
@@ -134,7 +134,9 @@ class Supervisor:
                         await self._reviewer.end(elapsed, items=items)
 
             await self._reviewer.begin(context)
-            self._task = cast(Task, go(gather(*map(supervise, self._workers))))
+            self._task = cast(
+                Task, go(self.nvim, aw=gather(*map(supervise, self._workers)))
+            )
             await wait((self._task,), timeout=timeout)
             return acc
 
