@@ -67,13 +67,10 @@ def _metric(
     context: Context,
     completion: Completion,
 ) -> _MatchMetrics:
-    w_before = lower(context.words_before)
-    s_before = lower(context.syms_before)
-
     cword = (
-        w_before
+        lower(context.words_before)
         if is_word(completion.sort_by[:1], unifying_chars=options.unifying_chars)
-        else s_before
+        else lower(context.syms_before)
     )
     return count(cword, match=completion.sort_by)
 
