@@ -6,8 +6,6 @@ from uuid import UUID, uuid4
 from ..shared.context import EMPTY_CONTEXT
 from ..shared.types import Context, NvimPos
 
-_LOCK = Lock()
-
 
 @dataclass(frozen=True)
 class State:
@@ -16,6 +14,9 @@ class State:
     commit_id: UUID
     context: Context
     inserted: NvimPos
+
+
+_LOCK = Lock()
 
 
 _state = State(
