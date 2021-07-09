@@ -3,7 +3,7 @@ from locale import strxfrm
 from os import X_OK, access
 from os.path import join, sep
 from pathlib import Path
-from typing import AbstractSet, AsyncIterator, Iterator
+from typing import AbstractSet, AsyncIterator, Iterator, Tuple
 
 from std2.asyncio import run_in_executor
 
@@ -31,7 +31,7 @@ def _segments(line: str) -> Iterator[str]:
             yield sep.join(reversed(segs[:idx]))
 
 
-def parse(base: Path, line: str) -> Iterator[str]:
+def parse(base: Path, line: str) -> Iterator[Tuple[str, str]]:
     segments = reversed(tuple(_segments(line)))
     for segment in segments:
         e = Path(segment).expanduser()
@@ -39,7 +39,13 @@ def parse(base: Path, line: str) -> Iterator[str]:
         if entire.is_dir() and access(entire, mode=X_OK):
             for path in entire.iterdir():
                 term = sep if path.is_dir() else ""
-                yield join(segment, path.name) + term
+                line = join(segment, path.name) + term
+                sort_by = (
+                    sep + path.name + term
+                    if segment.endswith(sep)
+                    else path.name + term
+                )
+                yield line, sort_by
             break
         else:
             lft, go, rhs = segment.rpartition(sep)
@@ -51,12 +57,14 @@ def parse(base: Path, line: str) -> Iterator[str]:
                 for path in left.iterdir():
                     if path.name.startswith(rhs):
                         term = sep if path.is_dir() else ""
-                        yield join(lhs, path.name) + term
+                        line = join(lhs, path.name) + term
+                        sort_by = path.name + term
+                        yield line, sort_by
             break
 
 
-async def _parse(base: Path, line: str) -> AbstractSet[str]:
-    def cont() -> AbstractSet[str]:
+async def _parse(base: Path, line: str) -> AbstractSet[Tuple[str, str]]:
+    def cont() -> AbstractSet[Tuple[str, str]]:
         return {*parse(base, line=line)}
 
     return await run_in_executor(cont)
@@ -68,13 +76,13 @@ class Worker(BaseWorker[BaseClient, None]):
         base_paths = {Path(context.filename).parent, Path(context.cwd)}
 
         for co in as_completed(tuple(_parse(p, line=line) for p in base_paths)):
-            for new_text in await co:
+            for new_text, sort_by in await co:
                 edit = Edit(new_text=new_text)
                 completion = Completion(
                     source=self._options.short_name,
                     tie_breaker=self._options.tie_breaker,
                     label=edit.new_text,
-                    sort_by=strxfrm(lower(edit.new_text)),
+                    sort_by=strxfrm(lower(sort_by)),
                     primary_edit=edit,
                 )
                 yield completion

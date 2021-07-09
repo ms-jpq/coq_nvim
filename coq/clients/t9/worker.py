@@ -1,4 +1,4 @@
-from asyncio import Event, create_subprocess_exec
+from asyncio import create_subprocess_exec
 from asyncio.subprocess import Process
 from contextlib import suppress
 from itertools import chain
