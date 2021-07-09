@@ -1,7 +1,7 @@
 from asyncio import as_completed
 from locale import strxfrm
 from os import X_OK, access
-from os.path import join, sep
+from os.path import join, normpath, sep
 from pathlib import Path
 from typing import AbstractSet, AsyncIterator, Iterator, Tuple
 
@@ -31,6 +31,11 @@ def _segments(line: str) -> Iterator[str]:
             yield sep.join(reversed(segs[:idx]))
 
 
+def _join(lhs: str, rhs: str) -> str:
+    l, s, r = lhs.rpartition(sep)
+    return l + s + normpath(join(r, rhs))
+
+
 def parse(base: Path, line: str) -> Iterator[Tuple[str, str]]:
     segments = reversed(tuple(_segments(line)))
     for segment in segments:
@@ -42,7 +47,7 @@ def parse(base: Path, line: str) -> Iterator[Tuple[str, str]]:
         if entire.is_dir() and access(entire, mode=X_OK):
             for path in entire.iterdir():
                 term = sep if path.is_dir() else ""
-                line = join(segment, path.name) + term
+                line = _join(segment, path.name) + term
                 yield line, sort_by
             break
         else:
@@ -55,7 +60,7 @@ def parse(base: Path, line: str) -> Iterator[Tuple[str, str]]:
                 for path in left.iterdir():
                     if path.name.startswith(rhs):
                         term = sep if path.is_dir() else ""
-                        line = join(lhs, path.name) + term
+                        line = _join(lhs, path.name) + term
                         yield line, sort_by
             break
 
