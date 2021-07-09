@@ -27,6 +27,7 @@ class Worker(BaseWorker[BaseClient, None]):
         _, fut = self._cur
         fut.cancel()
         await sleep(0)
+
         self._cur = token, fut = uuid4(), Future()
 
         def cont() -> None:
@@ -35,8 +36,7 @@ class Worker(BaseWorker[BaseClient, None]):
 
         await async_call(self._supervisor.nvim, cont)
 
-        ret = await fut
-        return ret
+        return await fut
 
     async def notify(self, token: UUID, msg: Sequence[Any]) -> None:
         c_token, fut = self._cur

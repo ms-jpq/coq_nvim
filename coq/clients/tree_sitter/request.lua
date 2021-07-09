@@ -17,7 +17,7 @@
       return co.wrap(
         function()
           if match.node then
-            local user_d = {node = match.node, kind = ""}
+            local user_d = {node = match.node, kind = kind}
             co.yield(user_d)
           else
             for kind, submatch in pairs(match) do
