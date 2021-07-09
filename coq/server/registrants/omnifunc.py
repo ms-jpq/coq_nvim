@@ -1,4 +1,5 @@
 from asyncio import Task
+from asyncio.tasks import sleep
 from typing import Any, Literal, Mapping, Optional, Sequence, Tuple, Union, cast
 from uuid import UUID, uuid4
 
@@ -64,6 +65,7 @@ def comp_func(
         state(context=ctx)
 
         async def c1() -> None:
+            await sleep(0)
             if ctx:
                 metrics = await stack.supervisor.collect(ctx, manual=manual)
                 s = state()
