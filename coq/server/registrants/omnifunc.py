@@ -34,13 +34,8 @@ _TASK: Optional[Task] = None
 def comp_func(
     nvim: Nvim, stack: Stack, change_id: UUID, commit_id: UUID, manual: bool
 ) -> None:
-    loop = get_running_loop()
-
-    def c0() -> None:
-        if _TASK:
-            _TASK.cancel()
-
-    loop.call_soon_threadsafe(c0)
+    if _TASK:
+        _TASK.cancel()
 
     s = state()
     with timeit("GEN CTX"):
