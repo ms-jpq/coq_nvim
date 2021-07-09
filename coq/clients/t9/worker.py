@@ -1,4 +1,5 @@
 from asyncio import create_subprocess_exec, shield
+from asyncio.locks import Lock
 from asyncio.subprocess import Process
 from contextlib import suppress
 from itertools import chain
@@ -77,7 +78,7 @@ async def _proc() -> Process:
 
 class Worker(BaseWorker[BaseClient, None]):
     def __init__(self, supervisor: Supervisor, options: BaseClient, misc: None) -> None:
-        self._installed = False
+        self._lock, self._installed = Lock(), False
         self._proc: Optional[Process] = None
         super().__init__(supervisor, options=options, misc=misc)
         go(supervisor.nvim, aw=self._install())
@@ -87,16 +88,16 @@ class Worker(BaseWorker[BaseClient, None]):
 
     async def _comm(self, json: str) -> str:
         if self._proc:
-            if self._proc.stdin:
-                self._proc.stdin.write(json.encode())
-                self._proc.stdin.write(b"\n")
-                await self._proc.stdin.drain()
-            if self._proc.stdout:
-                out = await self._proc.stdout.readline()
-                return out.decode()
-            else:
-                return "{}"
-
+            async with self._lock:
+                if self._proc.stdin:
+                    self._proc.stdin.write(json.encode())
+                    self._proc.stdin.write(b"\n")
+                    await self._proc.stdin.drain()
+                if self._proc.stdout:
+                    out = await self._proc.stdout.readline()
+                    return out.decode()
+                else:
+                    return "{}"
         else:
             return "{}"
 
