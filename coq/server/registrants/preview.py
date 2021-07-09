@@ -62,14 +62,10 @@ def _ls(nvim: Nvim) -> Iterator[Window]:
             yield win
 
 
-_WIN_LOCATION = -1
-
-
 @rpc(blocking=True)
 def _kill_win(nvim: Nvim, stack: Stack, reset: bool) -> None:
-    global _WIN_LOCATION
     if reset:
-        _WIN_LOCATION = -1
+        state(pum_location=-1)
 
     for win in _ls(nvim):
         win_close(nvim, win=win)
@@ -193,21 +189,16 @@ def _go_show(
     _set_win(nvim, buf=buf, pos=pos)
 
 
-def _show_preview(
-    nvim: Nvim, stack: Stack, event: _Event, doc: Doc, state: State
-) -> None:
-    global _WIN_LOCATION
-
-    new_doc = _preprocess(state.context, doc=doc)
-    text = expand_tabs(state.context, text=new_doc.text)
+def _show_preview(nvim: Nvim, stack: Stack, event: _Event, doc: Doc, s: State) -> None:
+    new_doc = _preprocess(s.context, doc=doc)
+    text = expand_tabs(s.context, text=new_doc.text)
     lines = text.splitlines()
-    (_WIN_LOCATION, pos), *_ = sorted(
-        _positions(
-            stack.settings.display.preview, event=event, lines=lines, state=state
-        ),
-        key=lambda p: (p[1].height * p[1].width, p[0] == _WIN_LOCATION, -p[0]),
+    (pum_location, pos), *_ = sorted(
+        _positions(stack.settings.display.preview, event=event, lines=lines, state=s),
+        key=lambda p: (p[1].height * p[1].width, p[0] == s.pum_location, -p[0]),
         reverse=True,
     )
+    state(pum_location=pum_location)
     nvim.api.exec_lua(f"{_go_show.name}(...)", (new_doc.syntax, lines, asdict(pos)))
 
 
@@ -223,17 +214,11 @@ def _resolve_comp(
     state: State,
 ) -> None:
     global _TASK
+    timeout = stack.settings.display.preview.lsp_timeout if maybe_doc else None
 
     async def cont() -> None:
-        done, _ = await wait(
-            (request(nvim, item=item),),
-            timeout=stack.settings.display.preview.lsp_timeout,
-        )
-        if done:
-            doc = await done.pop()
-        else:
-            doc = maybe_doc
-
+        done, _ = await wait((request(nvim, item=item),), timeout=timeout)
+        doc = await done.pop() if done else maybe_doc
         if doc:
             await async_call(
                 nvim,
@@ -267,7 +252,7 @@ def _cmp_changed(nvim: Nvim, stack: Stack, event: Mapping[str, Any] = {}) -> Non
             if data:
                 s = state()
                 if data.doc and data.doc.text:
-                    _show_preview(nvim, stack=stack, event=ev, doc=data.doc, state=s)
+                    _show_preview(nvim, stack=stack, event=ev, doc=data.doc, s=s)
                 elif data.extern:
                     _resolve_comp(
                         nvim,
