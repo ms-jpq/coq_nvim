@@ -21,7 +21,7 @@ def _lsp_notify(
     nvim: Nvim, stack: Stack, method: str, session: str, done: bool, reply: Any
 ) -> None:
     async def cont() -> None:
-        cond = _CONDS.setdefault(session, Condition())
+        cond = _CONDS.setdefault(method, Condition())
         ses, _, acc = _STATE[method]
         if session == ses:
             _STATE[method] = (session, done, (*acc, reply))
@@ -34,7 +34,7 @@ def _lsp_notify(
 async def async_request(nvim: Nvim, method: str, *args: Any) -> AsyncIterator[Any]:
     with timeit(f"LSP :: {method}"):
         session, done = uuid4().hex, False
-        cond = _CONDS.setdefault(session, Condition())
+        cond = _CONDS.setdefault(method, Condition())
 
         _STATE[method] = (session, done, ())
         async with cond:
