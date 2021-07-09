@@ -63,14 +63,16 @@ def _update(timeout: float) -> None:
         _LOCK.write_text(uri)
 
 
-async def ensure_installed(timeout: float) -> None:
-    while True:
+async def ensure_installed(retries: int, timeout: float) -> bool:
+    for _ in range(retries):
         if access(T9_BIN, X_OK):
-            break
+            return True
         else:
             try:
                 await run_in_executor(_update, timeout=timeout)
             except URLError as e:
                 log.warn("%s", e)
                 await sleep(timeout)
+    else:
+        return False
 

@@ -20,6 +20,7 @@ from .install import T9_BIN, ensure_installed
 from .types import ReqL1, ReqL2, Request, Response
 
 _VERSION = "3.2.28"
+_RETRIES = 3
 _TIMEOUT = 60
 
 _DECODER = new_decoder(Response, strict=False)
@@ -76,17 +77,16 @@ async def _proc() -> Process:
 
 class Worker(BaseWorker[BaseClient, None]):
     def __init__(self, supervisor: Supervisor, options: BaseClient, misc: None) -> None:
-        self._ev = Event()
+        self._installed = False
         self._proc: Optional[Process] = None
         super().__init__(supervisor, options=options, misc=misc)
         go(self._install())
 
     async def _install(self) -> None:
-        await ensure_installed(_TIMEOUT)
-        self._ev.set()
+        self._installed = await ensure_installed(_RETRIES, timeout=_TIMEOUT)
 
     async def work(self, context: Context) -> AsyncIterator[Completion]:
-        if not self._ev.is_set():
+        if not self._installed:
             pass
         else:
             if not self._proc:
