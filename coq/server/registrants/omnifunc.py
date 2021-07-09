@@ -68,8 +68,7 @@ def comp_func(
                 metrics = await stack.supervisor.collect(ctx, manual=manual)
                 s = state()
                 if s.change_id == ctx.change_id:
-                    with timeit("TRANS"):
-                        vim_comps = tuple(trans(stack, context=ctx, metrics=metrics))
+                    vim_comps = tuple(trans(stack, context=ctx, metrics=metrics))
                     await async_call(nvim, complete, nvim, col=col, comp=vim_comps)
 
         _TASK = cast(Task, go(cont()))
