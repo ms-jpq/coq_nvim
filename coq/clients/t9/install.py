@@ -10,7 +10,7 @@ from std2.asyncio import run_in_executor
 from std2.os import OS, os
 from std2.urllib import urlopen
 
-from ...consts import CLIENTS_DIR, TIMEOUT
+from ...consts import CLIENTS_DIR
 
 T9_DIR = CLIENTS_DIR / "t9"
 _LOCK = T9_DIR / "version.lock"
@@ -35,14 +35,14 @@ def _triple() -> str:
         assert False
 
 
-def _version() -> str:
-    with urlopen(_VER, timeout=TIMEOUT) as resp:
+def _version(timeout: float) -> str:
+    with urlopen(_VER, timeout=timeout) as resp:
         return resp.read().decode()
 
 
-def _uri() -> str:
+def _uri(timeout: float) -> str:
     triple = _triple()
-    ver = _version()
+    ver = _version(timeout)
     uri = _DOWN.substitute(version=ver, triple=triple)
     return uri
 
@@ -54,8 +54,8 @@ def _update(timeout: float) -> None:
     except FileNotFoundError:
         p_uri = ""
 
-    uri = _uri()
-    if uri != p_uri:
+    uri = _uri(timeout)
+    if not access(T9_BIN, X_OK) or uri != p_uri:
         with urlopen(uri, timeout=timeout) as resp:
             buf = resp.read()
         T9_BIN.write_bytes(buf)
@@ -65,7 +65,7 @@ def _update(timeout: float) -> None:
 
 async def ensure_installed(timeout: float) -> None:
     while True:
-        if T9_BIN.exists() and access(T9_BIN, X_OK):
+        if access(T9_BIN, X_OK):
             break
         else:
             try:
