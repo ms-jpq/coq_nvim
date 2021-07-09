@@ -227,7 +227,7 @@ def _resolve_comp(
                 stack=stack,
                 event=event,
                 doc=doc,
-                state=state,
+                s=state,
             )
 
     _TASK = cast(Task, go(cont()))
