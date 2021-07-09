@@ -1,4 +1,4 @@
-from asyncio import create_subprocess_exec
+from asyncio import create_subprocess_exec, shield
 from asyncio.subprocess import Process
 from contextlib import suppress
 from itertools import chain
@@ -85,6 +85,21 @@ class Worker(BaseWorker[BaseClient, None]):
     async def _install(self) -> None:
         self._installed = await ensure_installed(_RETRIES, timeout=_TIMEOUT)
 
+    async def _comm(self, json: str) -> str:
+        if self._proc:
+            if self._proc.stdin:
+                self._proc.stdin.write(json.encode())
+                self._proc.stdin.write(b"\n")
+                await self._proc.stdin.drain()
+            if self._proc.stdout:
+                out = await self._proc.stdout.readline()
+                return out.decode()
+            else:
+                return "{}"
+
+        else:
+            return "{}"
+
     async def work(self, context: Context) -> AsyncIterator[Completion]:
         if not self._installed:
             pass
@@ -95,15 +110,7 @@ class Worker(BaseWorker[BaseClient, None]):
             req = _encode(self._supervisor.options, context=context)
             json = dumps(req, check_circular=False, ensure_ascii=False)
             try:
-                if self._proc.stdin:
-                    self._proc.stdin.write(json.encode())
-                    self._proc.stdin.write(b"\n")
-                    await self._proc.stdin.drain()
-                if self._proc.stdout:
-                    out = await self._proc.stdout.readline()
-                    json = out.decode()
-                else:
-                    json = "{}"
+                json = await shield(self._comm(json))
             except (BrokenPipeError, ConnectionResetError):
                 with suppress(ProcessLookupError):
                     self._proc.kill()
