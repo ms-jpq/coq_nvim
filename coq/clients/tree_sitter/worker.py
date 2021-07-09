@@ -50,7 +50,7 @@ class Worker(BaseWorker[BaseClient, None]):
 
     async def work(self, context: Context) -> AsyncIterator[Completion]:
         match = lower(context.words or context.syms)
-        reply = self._req(context.position)
+        reply = await self._req(context.position)
         resp: Msg = _DECODER(reply or ())
         for payload in resp:
             ltext = lower(payload.text)
