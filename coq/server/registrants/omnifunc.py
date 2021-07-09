@@ -1,4 +1,4 @@
-from asyncio import Task
+from asyncio import Task, get_running_loop
 from typing import Any, Literal, Mapping, Optional, Sequence, Tuple, Union, cast
 from uuid import UUID, uuid4
 
@@ -34,9 +34,13 @@ _TASK: Optional[Task] = None
 def comp_func(
     nvim: Nvim, stack: Stack, change_id: UUID, commit_id: UUID, manual: bool
 ) -> None:
-    global _TASK
-    if _TASK:
-        _TASK.cancel()
+    loop = get_running_loop()
+
+    def c0() -> None:
+        if _TASK:
+            _TASK.cancel()
+
+    loop.call_soon_threadsafe(c0)
 
     s = state()
     with timeit("GEN CTX"):
@@ -63,7 +67,7 @@ def comp_func(
     if ctx and (manual or should):
         state(context=ctx)
 
-        async def cont() -> None:
+        async def c1() -> None:
             if ctx:
                 metrics = await stack.supervisor.collect(ctx, manual=manual)
                 s = state()
@@ -71,7 +75,11 @@ def comp_func(
                     vim_comps = tuple(trans(stack, context=ctx, metrics=metrics))
                     await async_call(nvim, complete, nvim, col=col, comp=vim_comps)
 
-        _TASK = cast(Task, go(cont()))
+        def c2() -> None:
+            global _TASK
+            _TASK = cast(Task, go(c1()))
+
+        loop.call_soon_threadsafe(c2)
     else:
         state(inserted=(-1, -1))
 
