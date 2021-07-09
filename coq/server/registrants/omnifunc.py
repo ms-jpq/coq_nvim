@@ -1,4 +1,4 @@
-from asyncio import Task, get_running_loop
+from asyncio import Task
 from typing import Any, Literal, Mapping, Optional, Sequence, Tuple, Union, cast
 from uuid import UUID, uuid4
 
