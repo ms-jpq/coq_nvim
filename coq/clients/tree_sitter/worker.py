@@ -24,10 +24,6 @@ class Worker(BaseWorker[BaseClient, None]):
         super().__init__(supervisor, options=options, misc=misc)
 
     async def _req(self, pos: NvimPos) -> Optional[Any]:
-        _, fut = self._cur
-        fut.cancel()
-        await sleep(0)
-
         self._cur = token, fut = uuid4(), Future()
 
         def cont() -> None:
@@ -35,7 +31,6 @@ class Worker(BaseWorker[BaseClient, None]):
             self._supervisor.nvim.api.exec_lua("COQts_req(...)", args)
 
         await async_call(self._supervisor.nvim, cont)
-
         return await fut
 
     async def notify(self, token: UUID, msg: Sequence[Any]) -> None:
