@@ -118,7 +118,9 @@ def _positions(
             display.margin,
             hi=min(
                 display.x_max_len,
-                max(display_width(line, tabsize=2) for line in lines),
+                max(
+                    display_width(line, tabsize=state.context.tabstop) for line in lines
+                ),
             ),
         ),
     )
