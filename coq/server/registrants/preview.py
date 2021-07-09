@@ -26,6 +26,7 @@ from std2.string import removeprefix
 from ...lsp.requests.preview import request
 from ...lsp.types import CompletionItem
 from ...registry import autocmd, rpc
+from ...shared.parse import display_width
 from ...shared.settings import PreviewDisplay
 from ...shared.timeit import timeit
 from ...shared.trans import expand_tabs
@@ -113,7 +114,13 @@ def _positions(
     )
     limit_h, limit_w = (
         _clamp(display.margin, hi=len(lines)),
-        _clamp(display.margin, hi=max(len(line.encode(UTF8)) for line in lines)),
+        _clamp(
+            display.margin,
+            hi=min(
+                display.x_max_len,
+                max(display_width(line, tabsize=2) for line in lines),
+            ),
+        ),
     )
 
     ns_width = limit_w(scr_width - left)

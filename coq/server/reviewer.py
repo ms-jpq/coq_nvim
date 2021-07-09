@@ -91,16 +91,8 @@ def _join(
         num_matches=match_metrics.num_matches,
         prefix_matches=match_metrics.prefix_matches,
     )
-    label_width = display_width(
-        completion.label,
-        tabsize=ctx.context.tabstop,
-        linefeed=ctx.context.linefeed,
-    )
-    kind_width = display_width(
-        completion.kind,
-        tabsize=ctx.context.tabstop,
-        linefeed=ctx.context.linefeed,
-    )
+    label_width = display_width(completion.label, tabsize=ctx.context.tabstop)
+    kind_width = display_width(completion.kind, tabsize=ctx.context.tabstop)
     metric = Metric(
         batch=batch,
         comp=completion,
