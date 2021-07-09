@@ -234,7 +234,7 @@ def _resolve_comp(
     async def cont() -> None:
         if prev:
             prev.cancel()
-        await sleep(0)
+            await sleep(0)
         done, _ = await wait((request(nvim, item=item),), timeout=timeout)
         doc = await done.pop() if done else maybe_doc
         if doc:

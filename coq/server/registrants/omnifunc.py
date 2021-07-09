@@ -66,7 +66,7 @@ def comp_func(
         async def cont() -> None:
             if prev:
                 prev.cancel()
-            await sleep(0)
+                await sleep(0)
             if ctx:
                 metrics = await stack.supervisor.collect(ctx, manual=manual)
                 s = state()

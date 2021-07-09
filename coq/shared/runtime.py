@@ -113,7 +113,7 @@ class Supervisor:
         with l_timeit("COLLECTED -- **ALL**"):
             if self._task:
                 self._task.cancel()
-            await sleep(0)
+                await sleep(0)
 
             acc: MutableSequence[Metric] = []
             timeout = self._options.manual_timeout if manual else self._options.timeout
