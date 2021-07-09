@@ -131,9 +131,7 @@ class Supervisor:
                         await self._reviewer.end(elapsed, items=items)
 
             await self._reviewer.begin(context)
-
-            assert isinstance(self.nvim.loop, AbstractEventLoop)
-            task = self.nvim.loop.create_task(gather(*map(supervise, self._workers)))
+            task = gather(*map(supervise, self._workers))
             await wait((task,), timeout=timeout)
             return acc
 
