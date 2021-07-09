@@ -6,7 +6,6 @@ from typing import Any, AsyncIterator, Optional, Sequence, Tuple
 from uuid import UUID, uuid4
 
 from pynvim_pp.lib import async_call
-from std2.pickle import new_decoder
 
 from ...shared.parse import lower
 from ...shared.runtime import Supervisor
@@ -16,8 +15,6 @@ from ...shared.types import Completion, Context, Edit, NvimPos
 from .types import Msg
 
 _LUA = (Path(__file__).resolve().parent / "request.lua").read_text("UTF-8")
-
-_DECODER = new_decoder(Msg)
 
 
 class Worker(BaseWorker[BaseClient, None]):
@@ -51,17 +48,18 @@ class Worker(BaseWorker[BaseClient, None]):
     async def work(self, context: Context) -> AsyncIterator[Completion]:
         match = lower(context.words or context.syms)
         reply = await self._req(context.position)
-        resp: Msg = _DECODER(reply or ())
+        resp: Msg = reply or ()
         for payload in resp:
-            ltext = lower(payload.text)
-            if ltext.startswith(match) and (len(payload.text) > len(match)):
-                edit = Edit(new_text=payload.text)
+            ltext = lower(payload["text"])
+            if ltext.startswith(match) and (len(payload["text"]) > len(match)):
+                edit = Edit(new_text=payload["text"])
                 cmp = Completion(
                     source=self._options.short_name,
                     tie_breaker=self._options.tie_breaker,
                     label=edit.new_text.strip(),
                     sort_by=strxfrm(ltext),
                     primary_edit=edit,
+                    kind=payload["kind"],
                 )
                 yield cmp
 

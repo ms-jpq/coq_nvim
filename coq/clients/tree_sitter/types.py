@@ -1,9 +1,7 @@
-from dataclasses import dataclass
-from typing import Sequence
+from typing import Sequence, TypedDict
 
 
-@dataclass(frozen=True)
-class Payload:
+class Payload(TypedDict):
     kind: str
     text: str
 
