@@ -1,9 +1,8 @@
 from __future__ import annotations
 
 from abc import abstractmethod
-from asyncio import CancelledError, Condition, Task, gather, sleep, wait
+from asyncio import Condition, Task, gather, sleep, wait
 from concurrent.futures import Executor
-from contextlib import suppress
 from dataclasses import dataclass
 from typing import (
     Any,
@@ -114,8 +113,6 @@ class Supervisor:
         with l_timeit("COLLECTED -- **ALL**"):
             if self._task:
                 self._task.cancel()
-                with suppress(CancelledError):
-                    await self._task
             await sleep(0)
 
             acc: MutableSequence[Metric] = []

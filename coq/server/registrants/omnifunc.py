@@ -36,8 +36,7 @@ def comp_func(
     nvim: Nvim, stack: Stack, change_id: UUID, commit_id: UUID, manual: bool
 ) -> None:
     global _TASK
-    if _TASK:
-        _TASK.cancel()
+    prev = _TASK
 
     s = state()
     with timeit("GEN CTX"):
@@ -65,6 +64,8 @@ def comp_func(
         state(context=ctx)
 
         async def cont() -> None:
+            if prev:
+                prev.cancel()
             await sleep(0)
             if ctx:
                 metrics = await stack.supervisor.collect(ctx, manual=manual)
