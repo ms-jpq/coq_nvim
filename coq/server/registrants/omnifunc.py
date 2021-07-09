@@ -34,6 +34,7 @@ _TASK: Optional[Task] = None
 def comp_func(
     nvim: Nvim, stack: Stack, change_id: UUID, commit_id: UUID, manual: bool
 ) -> None:
+    global _TASK
     if _TASK:
         _TASK.cancel()
 
@@ -70,11 +71,7 @@ def comp_func(
                     vim_comps = tuple(trans(stack, context=ctx, metrics=metrics))
                     await async_call(nvim, complete, nvim, col=col, comp=vim_comps)
 
-        def c2() -> None:
-            global _TASK
-            _TASK = cast(Task, go(c1()))
-
-        get_running_loop().call_soon_threadsafe(c2)
+        _TASK = cast(Task, go(c1()))
     else:
         state(inserted=(-1, -1))
 
