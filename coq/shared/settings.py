@@ -16,7 +16,8 @@ class PumDisplay:
 
 @dataclass(frozen=True)
 class PreviewDisplay:
-    margin: int
+    y_margin: int
+    x_margin: int
     x_max_len: int
     lsp_timeout: float
 

@@ -114,14 +114,14 @@ def _positions(
         event.col + event.width + event.scrollbar,
     )
     limit_w = _clamp(
-        display.margin,
+        display.x_margin,
         hi=min(
             display.x_max_len,
             max(display_width(line, tabsize=state.context.tabstop) for line in lines),
         ),
     )
     limit_h = _clamp(
-        display.margin,
+        display.y_margin,
         hi=sum(
             ceil(display_width(line, tabsize=state.context.tabstop) / display.x_max_len)
             for line in lines

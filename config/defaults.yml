@@ -3,7 +3,8 @@ idle_time: 2.0
 
 display:
   preview:
-    margin: 4
+    y_margin: 2
+    x_margin: 4
     x_max_len: 88
     lsp_timeout: 0.05
   pum:
