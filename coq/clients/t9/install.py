@@ -64,13 +64,13 @@ def _update(timeout: float) -> None:
 
 
 async def ensure_installed(timeout: float) -> None:
-    if not T9_BIN.exists() or not access(T9_BIN, X_OK):
-        for _ in range(3):
+    while True:
+        if T9_BIN.exists() and access(T9_BIN, X_OK):
+            break
+        else:
             try:
                 await run_in_executor(_update, timeout=timeout)
             except URLError as e:
                 log.warn("%s", e)
                 await sleep(timeout)
-            else:
-                break
 
