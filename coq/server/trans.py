@@ -83,6 +83,7 @@ def _cmp_to_vcmp(
     menu = f"{sl}{metric.comp.source}{sr}"
 
     user_data = UserData(
+        uid=metric.comp.uid,
         batch=metric.batch,
         change_uid=context.change_id,
         sort_by=metric.comp.sort_by,

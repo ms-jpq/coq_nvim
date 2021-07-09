@@ -1,8 +1,8 @@
-from asyncio import Task, wait
+from asyncio import Task, sleep, wait
 from dataclasses import asdict, dataclass
 from os import linesep
 from typing import Any, Callable, Iterator, Mapping, Optional, Sequence, Tuple, cast
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 from pynvim import Nvim
 from pynvim.api import Buffer, Window
@@ -30,7 +30,7 @@ from ...shared.parse import display_width
 from ...shared.settings import PreviewDisplay
 from ...shared.timeit import timeit
 from ...shared.trans import expand_tabs
-from ...shared.types import UTF8, Context, Doc
+from ...shared.types import Context, Doc
 from ..nvim.completions import VimCompletion
 from ..rt_types import Stack
 from ..state import State, state
@@ -185,19 +185,23 @@ def _set_win(nvim: Nvim, buf: Buffer, pos: _Pos) -> None:
 def _go_show(
     nvim: Nvim,
     stack: Stack,
+    preview_id: str,
     syntax: str,
     preview: Sequence[str],
     _pos: Mapping[str, int],
 ) -> None:
-    pos = _Pos(**_pos)
-    buf = create_buf(
-        nvim, listed=False, scratch=True, wipe=True, nofile=True, noswap=True
-    )
-    buf_set_preview(nvim, buf=buf, syntax=syntax, preview=preview)
-    _set_win(nvim, buf=buf, pos=pos)
+    if preview_id == state().preview_id.hex:
+        pos = _Pos(**_pos)
+        buf = create_buf(
+            nvim, listed=False, scratch=True, wipe=True, nofile=True, noswap=True
+        )
+        buf_set_preview(nvim, buf=buf, syntax=syntax, preview=preview)
+        _set_win(nvim, buf=buf, pos=pos)
 
 
-def _show_preview(nvim: Nvim, stack: Stack, event: _Event, doc: Doc, s: State) -> None:
+def _show_preview(
+    nvim: Nvim, stack: Stack, event: _Event, doc: Doc, s: State, preview_id: UUID
+) -> None:
     new_doc = _preprocess(s.context, doc=doc)
     text = expand_tabs(s.context, text=new_doc.text)
     lines = text.splitlines()
@@ -207,7 +211,9 @@ def _show_preview(nvim: Nvim, stack: Stack, event: _Event, doc: Doc, s: State) -
         reverse=True,
     )
     state(pum_location=pum_location)
-    nvim.api.exec_lua(f"{_go_show.name}(...)", (new_doc.syntax, lines, asdict(pos)))
+    nvim.api.exec_lua(
+        f"{_go_show.name}(...)", (preview_id.hex, new_doc.syntax, lines, asdict(pos))
+    )
 
 
 _TASK: Optional[Task] = None
@@ -222,9 +228,13 @@ def _resolve_comp(
     state: State,
 ) -> None:
     global _TASK
+    prev = _TASK
     timeout = stack.settings.display.preview.lsp_timeout if maybe_doc else None
 
     async def cont() -> None:
+        if prev:
+            prev.cancel()
+        await sleep(0)
         done, _ = await wait((request(nvim, item=item),), timeout=timeout)
         doc = await done.pop() if done else maybe_doc
         if doc:
@@ -236,6 +246,7 @@ def _resolve_comp(
                 event=event,
                 doc=doc,
                 s=state,
+                preview_id=state.preview_id,
             )
 
     _TASK = cast(Task, go(nvim, aw=cont()))
@@ -246,9 +257,6 @@ _DECODER = new_decoder(_Event)
 
 @rpc(blocking=True, schedule=True)
 def _cmp_changed(nvim: Nvim, stack: Stack, event: Mapping[str, Any] = {}) -> None:
-    if _TASK:
-        _TASK.cancel()
-
     _kill_win(nvim, stack=stack, reset=False)
     with timeit("PREVIEW"):
         try:
@@ -258,9 +266,16 @@ def _cmp_changed(nvim: Nvim, stack: Stack, event: Mapping[str, Any] = {}) -> Non
         else:
             data = ev.completed_item.user_data
             if data:
-                s = state()
+                s = state(preview_id=data.uid)
                 if data.doc and data.doc.text:
-                    _show_preview(nvim, stack=stack, event=ev, doc=data.doc, s=s)
+                    _show_preview(
+                        nvim,
+                        stack=stack,
+                        event=ev,
+                        doc=data.doc,
+                        s=s,
+                        preview_id=s.preview_id,
+                    )
                 elif data.extern:
                     _resolve_comp(
                         nvim,
