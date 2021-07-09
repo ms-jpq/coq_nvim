@@ -74,7 +74,7 @@ def comp_func(
             global _TASK
             _TASK = cast(Task, go(c1()))
 
-        loop.call_soon_threadsafe(c2)
+        get_running_loop().call_soon_threadsafe(c2)
     else:
         state(inserted=(-1, -1))
 
