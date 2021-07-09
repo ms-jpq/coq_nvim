@@ -3,7 +3,7 @@ from os import X_OK, access
 from platform import machine
 from shutil import which
 from string import Template
-from urllib.error import HTTPError
+from urllib.error import URLError
 
 from pynvim_pp.logging import log
 from std2.asyncio import run_in_executor
@@ -68,7 +68,7 @@ async def ensure_installed(timeout: float) -> None:
         for _ in range(3):
             try:
                 await run_in_executor(_update, timeout=timeout)
-            except HTTPError as e:
+            except URLError as e:
                 log.warn("%s", e)
                 await sleep(timeout)
             else:
