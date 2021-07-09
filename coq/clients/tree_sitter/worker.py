@@ -1,4 +1,4 @@
-from asyncio import Future, InvalidStateError
+from asyncio import Future, InvalidStateError, sleep
 from contextlib import suppress
 from locale import strxfrm
 from pathlib import Path
@@ -29,6 +29,7 @@ class Worker(BaseWorker[BaseClient, None]):
     async def _req(self, pos: NvimPos) -> Optional[Any]:
         _, fut = self._cur
         fut.cancel()
+        await sleep(0)
         self._cur = token, fut = uuid4(), Future()
 
         def cont() -> None:
