@@ -73,20 +73,19 @@ def _kill_win(nvim: Nvim, stack: Stack, reset: bool) -> None:
 
 autocmd("CompleteDone", "InsertLeave") << f"lua {_kill_win.name}(true)"
 
-_SEP = "```"
-
 
 def _preprocess(context: Context, doc: Doc) -> Doc:
+    sep = "```"
     if doc.syntax == "markdown":
         split = doc.text.splitlines()
         if (
             split
-            and split[0].startswith(_SEP)
-            and split[-1].startswith(_SEP)
-            and not sum(line.startswith(_SEP) for line in split[1:-1])
+            and split[0].startswith(sep)
+            and split[-1].startswith(sep)
+            and not sum(line.startswith(sep) for line in split[1:-1])
         ):
             text = linesep.join(split[1:-1])
-            ft = removeprefix(split[0], prefix=_SEP).strip()
+            ft = removeprefix(split[0], prefix=sep).strip()
             syntax = ft if ft.isalnum() else context.filetype
             return Doc(text=text, syntax=syntax)
         else:
