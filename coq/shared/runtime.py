@@ -1,8 +1,7 @@
 from __future__ import annotations
 
 from abc import abstractmethod
-from asyncio import Condition, Task, gather, sleep, wait
-from asyncio.events import AbstractEventLoop
+from asyncio import Condition, gather, wait
 from concurrent.futures import Executor
 from dataclasses import dataclass
 from typing import (
@@ -15,7 +14,6 @@ from typing import (
     Protocol,
     Sequence,
     TypeVar,
-    cast,
 )
 from uuid import UUID, uuid4
 from weakref import WeakSet
