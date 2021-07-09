@@ -34,17 +34,15 @@ def _segments(line: str) -> Iterator[str]:
 def parse(base: Path, line: str) -> Iterator[Tuple[str, str]]:
     segments = reversed(tuple(_segments(line)))
     for segment in segments:
+        _, ss, sr = segment.rpartition(sep)
+        sort_by = ss + sr
+
         e = Path(segment).expanduser()
         entire = e if e.is_absolute() else base / e
         if entire.is_dir() and access(entire, mode=X_OK):
             for path in entire.iterdir():
                 term = sep if path.is_dir() else ""
                 line = join(segment, path.name) + term
-                sort_by = (
-                    sep + path.name + term
-                    if segment.endswith(sep)
-                    else path.name + term
-                )
                 yield line, sort_by
             break
         else:
@@ -58,7 +56,6 @@ def parse(base: Path, line: str) -> Iterator[Tuple[str, str]]:
                     if path.name.startswith(rhs):
                         term = sep if path.is_dir() else ""
                         line = join(lhs, path.name) + term
-                        sort_by = path.name + term
                         yield line, sort_by
             break
 
