@@ -1,4 +1,3 @@
-from asyncio import shield
 from dataclasses import dataclass, replace
 from typing import AsyncIterator, Mapping, Sequence, Tuple
 from uuid import UUID, uuid4
@@ -93,10 +92,6 @@ class CacheWorker:
             comps=comps,
         )
         pool = {hash_id: c.primary_edit.new_text for hash_id, c in new_comps.items()}
-
-        async def trans() -> None:
-            await self._db.populate(use_cache, pool=pool)
-            self._cache_ctx = new_cache_ctx
-
-        await shield(trans())
+        await self._db.populate(use_cache, pool=pool)
+        self._cache_ctx = new_cache_ctx
 

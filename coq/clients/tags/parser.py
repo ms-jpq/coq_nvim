@@ -1,7 +1,6 @@
 from json import loads
 from json.decoder import JSONDecodeError
-from subprocess import DEVNULL, CalledProcessError, check_output
-from typing import Iterator, Optional, TypedDict
+from typing import AsyncIterator, Iterator, Optional, TypedDict
 
 from pynvim_pp.logging import log
 from std2.asyncio import call
@@ -73,7 +72,7 @@ def _unescape(pattern: str) -> str:
     return "".join(cont())
 
 
-def parse_lines(raw: str) -> Iterator[Tag]:
+async def parse_lines(raw: str) -> AsyncIterator[Tag]:
     for line in raw.splitlines():
         if line:
             try:

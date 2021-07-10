@@ -1,4 +1,3 @@
-from asyncio import shield
 from contextlib import suppress
 from os import linesep
 from os.path import dirname, relpath
@@ -120,11 +119,8 @@ class Worker(BaseWorker[TagsClient, None]):
                 await self._supervisor.idling.wait()
             cwd, buf_names = await _ls(self._supervisor.nvim)
 
-            async def trans() -> None:
-                tags = await reconciliate(cwd, paths=buf_names)
-                await self._db.add(tags)
-
-            await shield(trans())
+            tags = await reconciliate(cwd, paths=buf_names)
+            await self._db.add(tags)
 
     async def work(self, context: Context) -> AsyncIterator[Completion]:
         row, _ = context.position

@@ -58,7 +58,6 @@ class Database:
                     }
 
                     def ded() -> Iterator[str]:
-
                         for f, (ft, mtime) in files.items():
                             info = tags.get(f)
                             if info:

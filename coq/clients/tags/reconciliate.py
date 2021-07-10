@@ -75,7 +75,7 @@ async def reconciliate(cwd: Path, paths: AbstractSet[str]) -> Tags:
     raw = await run(*query_paths) if query_paths else ""
 
     acc: MutableMapping[str, _TagInfo] = {}
-    for tag in parse_lines(raw):
+    async for tag in parse_lines(raw):
         path = tag["path"]
         info = acc.setdefault(
             path, _TagInfo(mtime=mtimes.get(path, 0), lang="", tags=[])

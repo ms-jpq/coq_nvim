@@ -1,4 +1,3 @@
-from asyncio import shield
 from collections import Counter
 from dataclasses import dataclass, replace
 from difflib import SequenceMatcher
@@ -126,7 +125,7 @@ class Reviewer(PReviewer):
     async def s1(self, worker: Worker, batch: UUID) -> None:
         m_name = worker.__class__.__module__
         self._ctx = replace(self._ctx, batch_id=batch)
-        await shield(self._db.new_batch(m_name, batch_id=batch.bytes))
+        await self._db.new_batch(m_name, batch_id=batch.bytes)
 
     def s2(self, batch: UUID, completion: Completion) -> Metric:
         match_metrics = _metric(
@@ -140,9 +139,7 @@ class Reviewer(PReviewer):
         return metric
 
     async def end(self, elapsed: Optional[float], items: Optional[int]) -> None:
-        await shield(
-            self._db.update_batch(
-                self._ctx.batch_id.bytes, duration=elapsed, items=items
-            )
+        await self._db.update_batch(
+            self._ctx.batch_id.bytes, duration=elapsed, items=items
         )
 
