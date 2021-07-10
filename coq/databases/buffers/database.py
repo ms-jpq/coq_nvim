@@ -146,6 +146,7 @@ class BDB:
             except OperationalError:
                 return ()
 
+        self._interrupt()
         ret = await run_in_executor(self._ex.submit, cont)
         return cast(Sequence[Tuple[str, str]], ret)
 
