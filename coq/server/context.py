@@ -53,7 +53,7 @@ def context(
     )
     line_count, lines = db.lines(buf.number, lo=lo, hi=hi)
     if line_count != buf_line_count:
-        log.debug("%s", f"lines out of sync - @{row}")
+        log.critical("%s", f"lines out of sync - @{row}")
         return None
     else:
         line = lines[r]
