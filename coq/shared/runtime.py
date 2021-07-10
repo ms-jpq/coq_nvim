@@ -136,8 +136,6 @@ class Supervisor:
                     await fut
                     if acc:
                         break
-                    else:
-                        await sleep(0)
             return acc
 
 
