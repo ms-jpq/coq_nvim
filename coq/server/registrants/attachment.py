@@ -51,7 +51,6 @@ def _lines_event(
             hi=hi,
             lines=lines,
             unifying_chars=stack.settings.match.unifying_chars,
-            max_index=stack.settings.limits.max_oneoff_index,
         )
     else:
         msg = f"❌ 👉 :: {size} > {stack.settings.limits.max_buf_index}"

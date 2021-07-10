@@ -6,7 +6,6 @@ from typing import AbstractSet, Optional, Tuple
 class Limits:
     idle_time: float
     max_buf_index: int
-    max_oneoff_index: int
 
 
 @dataclass(frozen=True)
