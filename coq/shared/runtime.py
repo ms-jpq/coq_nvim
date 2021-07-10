@@ -125,8 +125,6 @@ class Supervisor:
             await self._reviewer.begin(context)
             task = gather(*map(supervise, self._workers))
             await wait((task,), timeout=timeout)
-            task.cancel()
-            await sleep(0)
             return acc
 
 
