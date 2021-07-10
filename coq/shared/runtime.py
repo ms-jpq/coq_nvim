@@ -123,18 +123,20 @@ class Supervisor:
 
             await self._reviewer.begin(context)
             tasks = tuple(create_task(supervise(worker)) for worker in self._workers)
-            await wait(tasks, timeout=timeout)
-            if not acc:
-                for fut in as_completed(tasks):
-                    await fut
-                    if acc:
-                        break
-                    else:
-                        await sleep(0)
-            for task in tasks:
-                task.cancel()
-            await sleep(0)
-            return acc
+            try:
+                await wait(tasks, timeout=timeout)
+                if not acc:
+                    for fut in as_completed(tasks):
+                        await fut
+                        if acc:
+                            break
+                        else:
+                            await sleep(0)
+                return acc
+            finally:
+                for task in tasks:
+                    task.cancel()
+                await sleep(0)
 
 
 class Worker(Generic[O_co, T_co]):
