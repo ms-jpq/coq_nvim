@@ -3,7 +3,6 @@ limits:
   idle_time: 2.0
   max_buf_index: 99999
 
-
 display:
   preview:
     y_margin: 2
