@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from abc import abstractmethod
-from asyncio import Condition, as_completed, create_task, sleep, wait
+from asyncio import Condition, Task, as_completed, create_task, sleep, wait
 from concurrent.futures import Executor
 from dataclasses import dataclass
 from typing import (
@@ -72,6 +72,7 @@ class Supervisor:
         )
         self._idling = Condition()
         self._workers: MutableSet[Worker] = WeakSet()
+        self._tasks: Sequence[Task] = ()
 
     @property
     def pool(self) -> Executor:
@@ -102,6 +103,10 @@ class Supervisor:
 
     async def collect(self, context: Context, manual: bool) -> Sequence[Metric]:
         with l_timeit("COLLECTED -- **ALL**"):
+            for task in self._tasks:
+                task.cancel()
+            await sleep(0)
+
             acc: MutableSequence[Metric] = []
             timeout = self._options.manual_timeout if manual else self._options.timeout
 
@@ -122,20 +127,18 @@ class Supervisor:
                         await self._reviewer.end(elapsed, items=items)
 
             await self._reviewer.begin(context)
-            tasks = tuple(create_task(supervise(worker)) for worker in self._workers)
-            try:
-                await wait(tasks, timeout=timeout)
-                if not acc:
-                    for fut in as_completed(tasks):
-                        await fut
-                        if acc:
-                            break
-                        else:
-                            await sleep(0)
-                return acc
-            finally:
-                for task in tasks:
-                    task.cancel()
+            self._tasks = tuple(
+                create_task(supervise(worker)) for worker in self._workers
+            )
+            _, pending = await wait(self._tasks, timeout=timeout)
+            if not acc:
+                for fut in as_completed(pending):
+                    await fut
+                    if acc:
+                        break
+                    else:
+                        await sleep(0)
+            return acc
 
 
 class Worker(Generic[O_co, T_co]):
