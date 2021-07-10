@@ -1,10 +1,7 @@
-from typing import Sequence, TypedDict
+from typing import TypedDict
 
 
 class Payload(TypedDict):
     kind: str
     text: str
-
-
-Msg = Sequence[Payload]
 

@@ -5,7 +5,6 @@ from asyncio import Condition, gather, wait
 from concurrent.futures import Executor
 from dataclasses import dataclass
 from typing import (
-    Any,
     AsyncIterator,
     Generic,
     MutableSequence,
@@ -101,12 +100,6 @@ class Supervisor:
 
         go(self.nvim, aw=cont())
 
-    def notify(self, token: UUID, msg: Sequence[Any]) -> None:
-        async def cont() -> None:
-            await gather(*(worker.notify(token, msg=msg) for worker in self._workers))
-
-        go(self.nvim, aw=cont())
-
     async def collect(self, context: Context, manual: bool) -> Sequence[Metric]:
         with l_timeit("COLLECTED -- **ALL**"):
             acc: MutableSequence[Metric] = []
@@ -138,9 +131,6 @@ class Worker(Generic[O_co, T_co]):
     def __init__(self, supervisor: Supervisor, options: O_co, misc: T_co) -> None:
         self._supervisor, self._options, self._misc = supervisor, options, misc
         self._supervisor.register(self)
-
-    async def notify(self, token: UUID, msg: Sequence[Any]) -> None:
-        pass
 
     @abstractmethod
     def work(self, context: Context) -> AsyncIterator[Completion]:
