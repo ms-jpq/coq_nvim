@@ -54,8 +54,6 @@ async def async_request(nvim: Nvim, method: str, *args: Any) -> AsyncIterator[An
             if ses == session:
                 for a in acc:
                     yield a
-            elif ses < session:
-                pass
-            else:
+            elif ses > session:
                 break
 
