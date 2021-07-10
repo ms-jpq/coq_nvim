@@ -66,6 +66,7 @@ async def async_request(nvim: Nvim) -> AsyncIterator[Payload]:
             if ses == session:
                 async for payload in _vaildate(reply):
                     yield payload
+                break
             elif ses < session:
                 pass
 
