@@ -1,12 +1,12 @@
 from typing import AsyncIterator
 
-from ...databases.treesitter.database import Database
+from ...databases.treesitter.database import TDB
 from ...shared.runtime import Worker as BaseWorker
 from ...shared.settings import BaseClient
 from ...shared.types import Completion, Context, Edit
 
 
-class Worker(BaseWorker[BaseClient, Database]):
+class Worker(BaseWorker[BaseClient, TDB]):
     async def work(self, context: Context) -> AsyncIterator[Completion]:
         match = context.words or context.syms
         words = await self._misc.select(

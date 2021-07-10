@@ -19,6 +19,7 @@ from ..consts import CONFIG_YML, SETTINGS_VAR
 from ..databases.buffers.database import BDB
 from ..databases.insertions.database import IDB
 from ..databases.snippets.database import SDB
+from ..databases.treesitter.database import TDB
 from ..shared.runtime import Supervisor, Worker
 from ..shared.settings import Settings
 from .reviewer import Reviewer
@@ -40,7 +41,7 @@ def _settings(nvim: Nvim) -> Settings:
 
 
 def _from_each_according_to_their_ability(
-    settings: Settings, bdb: BDB, sdb: SDB, supervisor: Supervisor
+    settings: Settings, bdb: BDB, sdb: SDB, tdb: TDB, supervisor: Supervisor
 ) -> Iterator[Worker]:
     clients = settings.clients
 
@@ -51,7 +52,7 @@ def _from_each_according_to_their_ability(
         yield PathsWorker(supervisor, options=clients.paths, misc=None)
 
     if clients.tree_sitter.enabled:
-        yield TreeWorker(supervisor, options=clients.tree_sitter, misc=None)
+        yield TreeWorker(supervisor, options=clients.tree_sitter, misc=tdb)
 
     if clients.lsp.enabled:
         yield LspWorker(supervisor, options=clients.lsp, misc=None)
@@ -71,14 +72,21 @@ def _from_each_according_to_their_ability(
 
 def stack(pool: Executor, nvim: Nvim) -> Stack:
     settings = _settings(nvim)
-    bdb, sdb, idb = BDB(pool), SDB(pool), IDB(pool)
+    bdb, sdb, idb, tdb = BDB(pool), SDB(pool), IDB(pool), TDB(pool)
     reviewer = Reviewer(options=settings.match, db=idb)
     supervisor = Supervisor(
-        pool=pool, nvim=nvim, options=settings.match, reviewer=reviewer
+        pool=pool,
+        nvim=nvim,
+        options=settings.match,
+        reviewer=reviewer,
     )
     workers = {
         *_from_each_according_to_their_ability(
-            settings, bdb=bdb, sdb=sdb, supervisor=supervisor
+            settings,
+            bdb=bdb,
+            sdb=sdb,
+            tdb=tdb,
+            supervisor=supervisor,
         )
     }
     stack = Stack(
@@ -86,6 +94,7 @@ def stack(pool: Executor, nvim: Nvim) -> Stack:
         bdb=bdb,
         sdb=sdb,
         idb=idb,
+        tdb=tdb,
         supervisor=supervisor,
         workers=workers,
     )
