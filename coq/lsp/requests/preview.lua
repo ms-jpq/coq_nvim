@@ -7,7 +7,11 @@
       cancel()
     end
 
-    local n_clients = #vim.lsp.buf_get_clients(0)
+    local n_clients = 0
+    for _ in pairs(vim.lsp.buf_get_clients(0)) do
+      n_clients = n_clients + 1
+    end
+
     if n_clients == 0 then
       COQlsp_notify(name, session_id, true, vim.NIL)
     else
