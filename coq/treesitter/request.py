@@ -1,10 +1,11 @@
 from asyncio import Condition, sleep
 from itertools import count
 from pathlib import Path
-from typing import Optional, Sequence, Tuple
+from typing import AsyncIterator, Optional, Sequence, Tuple
 
 from pynvim.api.nvim import Nvim
 from pynvim_pp.lib import async_call, go
+from pynvim_pp.logging import log
 
 from ..registry import atomic, rpc
 from ..server.rt_types import Stack
@@ -36,7 +37,17 @@ def _ts_notify(nvim: Nvim, stack: Stack, ses: int, reply: Sequence[Payload]) -> 
     go(nvim, aw=cont())
 
 
-async def async_request(nvim: Nvim) -> Sequence[Payload]:
+async def _vaildate(resp: Sequence[Payload]) -> AsyncIterator[Payload]:
+    for payload in resp:
+        try:
+            payload["text"].encode()
+        except UnicodeError as e:
+            log.warn("%s", e)
+        else:
+            yield payload
+
+
+async def async_request(nvim: Nvim) -> AsyncIterator[Payload]:
     global _COND, _SESSION
     _COND = _COND or Condition()
 
@@ -57,9 +68,8 @@ async def async_request(nvim: Nvim) -> Sequence[Payload]:
                 await _COND.wait()
             ses, reply = _SESSION
             if ses == session:
-                return reply
+                async for payload in _vaildate(reply):
+                    yield payload
             elif ses < session:
                 pass
-            else:
-                return ()
 

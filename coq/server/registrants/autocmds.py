@@ -46,7 +46,7 @@ def _insert_enter(nvim: Nvim, stack: Stack) -> None:
     if not buf.number in heavy_bufs:
 
         async def cont() -> None:
-            payloads = await async_request(nvim)
+            payloads = [p async for p in async_request(nvim)]
             await stack.tdb.new_nodes(
                 {payload["text"]: payload["kind"] for payload in payloads}
             )
