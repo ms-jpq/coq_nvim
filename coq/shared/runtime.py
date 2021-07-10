@@ -123,9 +123,9 @@ class Supervisor:
 
             await self._reviewer.begin(context)
             tasks = tuple(map(supervise, self._workers))
-            await wait(tasks, timeout=timeout)
+            _, pending = await wait(tasks, timeout=timeout)
             if not acc:
-                for fut in as_completed(tasks):
+                for fut in as_completed(pending):
                     await fut
                     if acc:
                         break
