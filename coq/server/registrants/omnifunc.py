@@ -5,12 +5,14 @@ from uuid import UUID, uuid4
 
 from pynvim import Nvim
 from pynvim.api.nvim import Nvim
-from pynvim_pp.lib import async_call, go
+from pynvim_pp.lib import async_call, awrite, go
 from pynvim_pp.logging import log
+from std2.locale import si_prefixed_smol
 from std2.pickle import DecodeError, new_decoder
+from std2.timeit import timeit
 
 from ...registry import autocmd, rpc
-from ...shared.timeit import timeit
+from ...shared.timeit import timeit as l_timeit
 from ...shared.types import Context, NvimPos
 from ..context import context
 from ..edit import edit
@@ -39,7 +41,7 @@ def comp_func(
     prev = _TASK
 
     s = state()
-    with timeit("GEN CTX"):
+    with l_timeit("GEN CTX"):
         ctx = context(
             nvim,
             options=stack.settings.match,
@@ -64,15 +66,23 @@ def comp_func(
         state(context=ctx)
 
         async def cont() -> None:
-            if prev:
-                prev.cancel()
-                await sleep(0)
-            if ctx:
-                metrics = await stack.supervisor.collect(ctx, manual=manual)
-                s = state()
-                if s.change_id == ctx.change_id:
-                    vim_comps = tuple(trans(stack, context=ctx, metrics=metrics))
-                    await async_call(nvim, complete, nvim, col=col, comp=vim_comps)
+            with timeit() as t:
+                if prev:
+                    prev.cancel()
+                    await sleep(0)
+                if ctx:
+                    metrics = await stack.supervisor.collect(ctx, manual=manual)
+                    s = state()
+                    if s.change_id == ctx.change_id:
+                        vim_comps = tuple(trans(stack, context=ctx, metrics=metrics))
+                        await async_call(nvim, complete, nvim, col=col, comp=vim_comps)
+                    else:
+                        vim_comps = ()
+                else:
+                    vim_comps = ()
+
+            time = f"{si_prefixed_smol(t(), precision=0)}s".ljust(8)
+            await awrite(nvim, time, len(vim_comps))
 
         _TASK = cast(Task, go(nvim, aw=cont()))
     else:
