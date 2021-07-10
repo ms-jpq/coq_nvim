@@ -53,7 +53,7 @@ def _load(path: Path) -> Tags:
 
 
 def _dump(path: Path, o: Any) -> None:
-    json = dumps(o, check_circular=False, ensure_ascii=False, indent=2)
+    json = dumps(o, check_circular=False, ensure_ascii=False)
     with suppress(FileNotFoundError):
         with NamedTemporaryFile(dir=TMP_DIR) as tmp:
             tmp.write(json.encode("UTF-8"))
