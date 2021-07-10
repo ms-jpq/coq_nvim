@@ -25,7 +25,7 @@ class Worker(BaseWorker[BaseClient, None]):
         super().__init__(supervisor, options=options, misc=misc)
 
     async def _req(self, pos: NvimPos) -> Optional[Any]:
-        token = uuid4()
+        self._token = token = uuid4()
 
         def cont() -> None:
             args = (str(token), pos)
@@ -48,11 +48,12 @@ class Worker(BaseWorker[BaseClient, None]):
 
     async def work(self, context: Context) -> AsyncIterator[Completion]:
         match = lower(context.words or context.syms)
+        prefix = match[: self._supervisor.options.exact_matches]
         reply = await self._req(context.position)
         resp: Msg = reply or ()
         for payload in resp:
             ltext = lower(payload["text"])
-            if ltext.startswith(match) and (len(payload["text"]) > len(match)):
+            if ltext.startswith(prefix) and (len(payload["text"]) > len(match)):
                 edit = Edit(new_text=payload["text"])
                 cmp = Completion(
                     source=self._options.short_name,
