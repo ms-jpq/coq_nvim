@@ -46,9 +46,9 @@
     end
 
     COQts_req = function(request_id, pos)
+      local acc = {}
       vim.schedule(
         function()
-          local acc = {}
           if parsers.has_parser() then
             for payload in parse() do
               table.insert(acc, payload)
