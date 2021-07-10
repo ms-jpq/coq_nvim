@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from abc import abstractmethod
-from asyncio import Condition, as_completed, sleep, wait
+from asyncio import Condition, as_completed, gather, sleep, wait
 from concurrent.futures import Executor
 from dataclasses import dataclass
 from typing import (
@@ -132,6 +132,7 @@ class Supervisor:
                     else:
                         await sleep(0)
 
+            gather(*tasks).cancel()
             return acc
 
 
