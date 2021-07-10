@@ -12,6 +12,7 @@ from ...snippets.artifacts import SNIPPETS
 from ...snippets.types import ParsedSnippet
 from ...treesitter.request import async_request
 from ..rt_types import Stack
+from ..state import state
 
 _SEEN: MutableSet[str] = set()
 
@@ -40,13 +41,17 @@ atomic.exec_lua(f"{_ft_changed.name}()", ())
 
 @rpc(blocking=True)
 def _insert_enter(nvim: Nvim, stack: Stack) -> None:
-    async def cont() -> None:
-        payloads = await async_request(nvim)
-        await stack.tdb.new_nodes(
-            {payload["text"]: payload["kind"] for payload in payloads}
-        )
+    heavy_bufs = state().heavy_bufs
+    buf = cur_buf(nvim)
+    if not buf.number in heavy_bufs:
 
-    go(nvim, aw=cont())
+        async def cont() -> None:
+            payloads = await async_request(nvim)
+            await stack.tdb.new_nodes(
+                {payload["text"]: payload["kind"] for payload in payloads}
+            )
+
+        go(nvim, aw=cont())
 
 
 autocmd("InsertEnter") << f"lua {_insert_enter.name}()"

@@ -4,10 +4,9 @@ from uuid import uuid4
 
 from pynvim import Nvim
 from pynvim.api import Buffer, NvimError
-from pynvim_pp.api import buf_filetype, buf_get_option, cur_buf, list_bufs
+from pynvim_pp.api import buf_filetype, buf_get_option, cur_buf
 
-from ...registry import atomic, autocmd, rpc
-from ...shared.timeit import timeit
+from ...registry import autocmd, rpc
 from ..rt_types import Stack
 from ..state import state
 from .omnifunc import comp_func
@@ -27,18 +26,6 @@ def _buf_enter(nvim: Nvim, stack: Stack) -> None:
 autocmd("BufEnter", "InsertEnter") << f"lua {_buf_enter.name}()"
 
 
-@rpc(blocking=True)
-def _buf_new_init(nvim: Nvim, stack: Stack) -> None:
-    with suppress(NvimError):
-        for buf in list_bufs(nvim, listed=True):
-            buf_type: str = buf_get_option(nvim, buf=buf, key="buftype")
-            if buf_type != "terminal":
-                nvim.api.buf_attach(buf, True, {})
-
-
-atomic.exec_lua(f"{_buf_new_init.name}()", ())
-
-
 def _lines_event(
     nvim: Nvim,
     stack: Stack,
@@ -50,24 +37,22 @@ def _lines_event(
     pending: bool,
 ) -> None:
     filetype = buf_filetype(nvim, buf=buf)
-    stack.bdb.set_lines(
-        buf.number,
-        filetype=filetype,
-        lo=lo,
-        hi=hi,
-        lines=lines,
-        unifying_chars=stack.settings.match.unifying_chars,
-    )
+    size = sum(map(len, lines))
+    heavy_bufs = {buf.number} if size > 10000 else set()
+    s = state(change_id=uuid4(), heavy_bufs=heavy_bufs)
 
-    s = state(change_id=uuid4())
-    if not pending and nvim.api.get_mode()["mode"].startswith("i"):
-        comp_func(
-            nvim,
-            stack=stack,
-            change_id=s.change_id,
-            commit_id=s.commit_id,
-            manual=False,
+    if not heavy_bufs:
+        stack.bdb.set_lines(
+            buf.number,
+            filetype=filetype,
+            lo=lo,
+            hi=hi,
+            lines=lines,
+            unifying_chars=stack.settings.match.unifying_chars,
         )
+
+    if not pending and nvim.api.get_mode()["mode"].startswith("i"):
+        comp_func(nvim, stack=stack, s=s, manual=False)
 
 
 def _changed_event(nvim: Nvim, stack: Stack, buf: Buffer, tick: int) -> None:

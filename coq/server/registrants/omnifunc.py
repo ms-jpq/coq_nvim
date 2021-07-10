@@ -1,7 +1,7 @@
 from asyncio import Task
 from asyncio.tasks import sleep
 from typing import Any, Literal, Mapping, Optional, Sequence, Tuple, Union, cast
-from uuid import UUID, uuid4
+from uuid import uuid4
 
 from pynvim import Nvim
 from pynvim.api.nvim import Nvim
@@ -16,7 +16,7 @@ from ..context import context
 from ..edit import edit
 from ..nvim.completions import UserData, complete
 from ..rt_types import Stack
-from ..state import state
+from ..state import State, state
 from ..trans import trans
 
 
@@ -32,20 +32,17 @@ def _should_cont(inserted: Optional[NvimPos], prev: Context, cur: Context) -> bo
 _TASK: Optional[Task] = None
 
 
-def comp_func(
-    nvim: Nvim, stack: Stack, change_id: UUID, commit_id: UUID, manual: bool
-) -> None:
+def comp_func(nvim: Nvim, stack: Stack, s: State, manual: bool) -> None:
     global _TASK
     prev = _TASK
 
-    s = state()
     with l_timeit("GEN CTX"):
         ctx = context(
             nvim,
             options=stack.settings.match,
             db=stack.bdb,
-            change_id=change_id,
-            commit_id=commit_id,
+            change_id=s.change_id,
+            commit_id=s.commit_id,
         )
     should = (
         _should_cont(
@@ -93,9 +90,7 @@ def omnifunc(
         return -1
     else:
         s = state(commit_id=uuid4())
-        comp_func(
-            nvim, stack=stack, manual=True, commit_id=s.commit_id, change_id=s.change_id
-        )
+        comp_func(nvim, stack=stack, manual=True, s=s)
         return ()
 
 
