@@ -23,4 +23,4 @@ WHERE
   NOT INSTR(:word, tags.lname)
   AND
   X_SIMILARITY(X_LOWER(X_NORMALIZE(SUBSTR(:word, 1, :exact))), tags.lname) > :cut_off
-
+LIMIT :limit

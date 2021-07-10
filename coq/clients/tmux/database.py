@@ -59,7 +59,7 @@ class Database:
         await run_in_executor(self._ex.submit, cont)
 
     async def select(
-        self, opts: Options, active_pane: str, word: str
+        self, opts: Options, active_pane: str, word: str, limit: int
     ) -> Sequence[Tuple[str, str]]:
         def cont() -> Sequence[Tuple[str, str]]:
             try:
@@ -70,6 +70,7 @@ class Database:
                             {
                                 "exact": opts.exact_matches,
                                 "cut_off": opts.fuzzy_cutoff,
+                                "limit": limit,
                                 "pane_id": active_pane,
                                 "word": word,
                             },

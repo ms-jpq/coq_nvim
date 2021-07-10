@@ -47,7 +47,7 @@ class Database:
 
         await run_in_executor(self._ex.submit, cont)
 
-    async def select(self, opts: Options, word: str) -> Sequence[bytes]:
+    async def select(self, opts: Options, word: str, limit: int) -> Sequence[bytes]:
         def cont() -> Sequence[bytes]:
             try:
                 with closing(self._conn.cursor()) as cursor:
@@ -57,6 +57,7 @@ class Database:
                             {
                                 "exact": opts.exact_matches,
                                 "cut_off": opts.fuzzy_cutoff,
+                                "limit": limit,
                                 "word": word,
                             },
                         )

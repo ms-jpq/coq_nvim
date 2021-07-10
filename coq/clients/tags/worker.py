@@ -134,6 +134,7 @@ class Worker(BaseWorker[TagsClient, None]):
             filename=context.filename,
             line_num=row,
             word=match,
+            limit=self._options.limit,
         )
 
         seen: MutableSet[str] = set()

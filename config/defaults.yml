@@ -52,12 +52,14 @@ clients:
   tabnine:
     enabled: False
     short_name: "T9"
+    limit: 6
     tie_breaker: -10
 
   tmux:
     enabled: True
     short_name: "TMUX"
     match_syms: False
+    limit: 66
     tie_breaker: 10
 
   buffers:
@@ -65,26 +67,31 @@ clients:
     short_name: "BUF"
     match_syms: False
     same_filetype: False
+    limit: 66
     tie_breaker: 20
 
   tree_sitter:
     enabled: True
     short_name: "TS"
+    limit: 66
     tie_breaker: 30
 
   paths:
     enabled: True
     short_name: "FILE"
+    limit: 66
     tie_breaker: 40
 
   snippets:
     enabled: True
     short_name: "SNIP"
+    limit: 66
     tie_breaker: 50
 
   tags:
     enabled: True
     short_name: "TAG"
+    limit: 66
     match_syms: True
     path_sep: " ⇉ "
     parent_scope: " ⇊"

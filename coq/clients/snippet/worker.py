@@ -21,6 +21,7 @@ class Worker(BaseWorker[SnippetClient, SDB]):
             self._supervisor.options,
             filetype=context.filetype,
             word=match,
+            limit=self._options.limit,
         )
 
         for snip in snippets:

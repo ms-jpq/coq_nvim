@@ -147,7 +147,7 @@ class BDB:
         return self._ex.submit(cont)
 
     async def words(
-        self, opts: Options, filetype: Optional[str], word: str
+        self, opts: Options, filetype: Optional[str], word: str, limit: int
     ) -> Sequence[Tuple[str, str]]:
         def cont() -> Sequence[Tuple[str, str]]:
             try:
@@ -158,6 +158,7 @@ class BDB:
                             {
                                 "exact": opts.exact_matches,
                                 "cut_off": opts.fuzzy_cutoff,
+                                "limit": limit,
                                 "filetype": filetype,
                                 "word": word,
                             },

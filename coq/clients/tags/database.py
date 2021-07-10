@@ -96,7 +96,7 @@ class Database:
         await run_in_executor(self._ex.submit, cont)
 
     async def select(
-        self, opts: Options, filename: str, line_num: int, word: str
+        self, opts: Options, filename: str, line_num: int, word: str, limit: int
     ) -> Sequence[Tuple[Tag, str]]:
         def cont() -> Sequence[Tuple[Tag, str]]:
             try:
@@ -112,6 +112,7 @@ class Database:
                             {
                                 "exact": opts.exact_matches,
                                 "cut_off": opts.fuzzy_cutoff,
+                                "limit": limit,
                                 "filetype": filetype,
                                 "filename": filename,
                                 "line_num": line_num,

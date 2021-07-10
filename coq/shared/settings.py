@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import AbstractSet, Any, Literal, Mapping, Optional, Sequence, Tuple
+from typing import AbstractSet, Optional, Tuple
 
 
 @dataclass(frozen=True)
@@ -61,6 +61,7 @@ class KeyMapping:
 class BaseClient:
     enabled: bool
     short_name: str
+    limit: int
     tie_breaker: int
 
 

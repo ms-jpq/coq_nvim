@@ -3,11 +3,13 @@ from unittest import TestCase
 
 from ....coq.clients.paths.worker import parse
 
+_LIMIT = 100
+
 
 class Parser(TestCase):
     def test_1(self) -> None:
         line = "./.gith"
-        actual = sorted(parse(Path("."), line=line))
+        actual = sorted(parse(Path("."), line=line, limit=_LIMIT))
         expected = sorted(
             (("./.github/", "/.gith"),),
         )
@@ -15,7 +17,7 @@ class Parser(TestCase):
 
     def test_2(self) -> None:
         line = "./.github"
-        actual = sorted(parse(Path("."), line=line))
+        actual = sorted(parse(Path("."), line=line, limit=_LIMIT))
         expected = sorted(
             (
                 ("./.github/.agp", "/.github"),
@@ -26,7 +28,7 @@ class Parser(TestCase):
 
     def test_3(self) -> None:
         line = "./.github/"
-        actual = sorted(parse(Path("."), line=line))
+        actual = sorted(parse(Path("."), line=line, limit=_LIMIT))
         expected = sorted(
             (
                 ("./.github/.agp", "/"),
@@ -37,14 +39,14 @@ class Parser(TestCase):
 
     def test_4(self) -> None:
         line = "abc./.gith"
-        actual = sorted(parse(Path("."), line=line))
+        actual = sorted(parse(Path("."), line=line, limit=_LIMIT))
 
         expected = sorted((("./.github/", "/.gith"),))
         self.assertEqual(actual, expected)
 
     def test_5(self) -> None:
         line = "abc./.github"
-        actual = sorted(parse(Path("."), line=line))
+        actual = sorted(parse(Path("."), line=line, limit=_LIMIT))
         expected = sorted(
             (
                 ("./.github/.agp", "/.github"),
@@ -55,7 +57,7 @@ class Parser(TestCase):
 
     def test_6(self) -> None:
         line = "abc./.github/"
-        actual = sorted(parse(Path("."), line=line))
+        actual = sorted(parse(Path("."), line=line, limit=_LIMIT))
 
         expected = sorted(
             (
@@ -67,7 +69,7 @@ class Parser(TestCase):
 
     def test_7(self) -> None:
         line = "/h"
-        results = {*parse(Path("."), line=line)}
+        results = {*parse(Path("."), line=line, limit=_LIMIT)}
         expected = ("/home/", "/h")
         self.assertIn(expected, results)
 

@@ -36,9 +36,9 @@ def _join(lhs: str, rhs: str) -> str:
     return join(l, normpath(join(r, rhs)))
 
 
-def parse(base: Path, line: str) -> Iterator[Tuple[str, str]]:
+def parse(base: Path, line: str, limit: int) -> Iterator[Tuple[str, str]]:
     segments = reversed(tuple(_segments(line)))
-    for segment in segments:
+    for segment, _ in zip(segments, range(limit)):
         _, ss, sr = segment.rpartition(sep)
         sort_by = ss + sr
 
@@ -65,9 +65,9 @@ def parse(base: Path, line: str) -> Iterator[Tuple[str, str]]:
             break
 
 
-async def _parse(base: Path, line: str) -> AbstractSet[Tuple[str, str]]:
+async def _parse(base: Path, line: str, limit: int) -> AbstractSet[Tuple[str, str]]:
     def cont() -> AbstractSet[Tuple[str, str]]:
-        return {*parse(base, line=line)}
+        return {*parse(base, line=line, limit=limit)}
 
     return await run_in_executor(cont)
 
@@ -77,7 +77,8 @@ class Worker(BaseWorker[BaseClient, None]):
         line = context.line_before + context.words_after
         base_paths = {Path(context.filename).parent, Path(context.cwd)}
 
-        for co in as_completed(tuple(_parse(p, line=line) for p in base_paths)):
+        aw = (_parse(p, line=line, limit=self._options.limit) for p in base_paths)
+        for co in as_completed(tuple(aw)):
             for new_text, sort_by in await co:
                 edit = Edit(new_text=new_text)
                 completion = Completion(

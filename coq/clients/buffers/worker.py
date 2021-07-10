@@ -14,6 +14,7 @@ class Worker(BaseWorker[BuffersClient, BDB]):
             self._supervisor.options,
             filetype=filetype,
             word=match,
+            limit=self._options.limit,
         )
         for word, sort_by in words:
             edit = Edit(new_text=word)

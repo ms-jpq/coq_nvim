@@ -20,3 +20,4 @@ WHERE
   X_SIMILARITY(X_LOWER(X_NORMALIZE(SUBSTR(:word, 1, :exact))), matches.lmatch) > :cut_off
 GROUP BY
   snippets.rowid
+LIMIT :limit

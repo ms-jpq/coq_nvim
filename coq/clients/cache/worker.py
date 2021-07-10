@@ -55,7 +55,7 @@ class CacheWorker:
 
     @timeit("CACHE -- GET")
     async def _use_cache(
-        self, context: Context
+        self, context: Context, limit: int
     ) -> Tuple[bool, AsyncIterator[Completion]]:
         cache_ctx = self._cache_ctx
         use_cache = _use_cache(cache_ctx, ctx=context)
@@ -63,7 +63,9 @@ class CacheWorker:
         async def cont() -> AsyncIterator[Completion]:
             if use_cache:
                 match = context.words or context.syms
-                hashes = await self._db.select(self._soup.options, word=match)
+                hashes = await self._db.select(
+                    self._soup.options, word=match, limit=limit
+                )
                 for hash_id in hashes:
                     cmp = cache_ctx.comps.get(hash_id)
                     if cmp:

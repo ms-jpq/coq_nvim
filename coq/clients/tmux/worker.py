@@ -1,13 +1,11 @@
 from asyncio import gather
 from dataclasses import dataclass
 from shutil import which
-from subprocess import DEVNULL, TimeoutExpired
 from typing import AbstractSet, AsyncIterator, Optional, Sequence, Tuple
 
 from pynvim_pp.lib import go
 from std2.asyncio import call
 
-from ...consts import TIMEOUT
 from ...shared.parse import coalesce
 from ...shared.runtime import Supervisor
 from ...shared.runtime import Worker as BaseWorker
@@ -93,6 +91,7 @@ class Worker(BaseWorker[WordbankClient, None]):
                 self._supervisor.options,
                 active_pane=active.uid,
                 word=match,
+                limit=self._options.limit,
             )
             if active
             else ()

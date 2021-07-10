@@ -62,6 +62,7 @@ class Worker(BaseWorker[BaseClient, None]):
         words = await self._db.select(
             self._supervisor.options,
             word=match,
+            limit=self._options.limit,
         )
 
         for word, kind, sort_by in words:
