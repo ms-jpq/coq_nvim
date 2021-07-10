@@ -1,20 +1,18 @@
 from pathlib import Path
-from typing import Literal, Optional, Tuple, cast
+from typing import Literal, Tuple, cast
 
 from pynvim import Nvim
 from pynvim.api import Buffer
 from pynvim_pp.api import LFfmt, buf_get_lines
 from pynvim_pp.atomic import Atomic
-from pynvim_pp.logging import log
 from pynvim_pp.text_object import gen_split
 
-from ..databases.buffers.database import BDB
 from ..shared.settings import Options
 from ..shared.types import Context
 from .state import State
 
 
-def context(nvim: Nvim, options: Options, db: BDB, state: State) -> Context:
+def context(nvim: Nvim, options: Options, state: State) -> Context:
     with Atomic() as (atomic, ns):
         ns.scr_col = atomic.call_function("screencol", ())
         ns.cwd = atomic.call_function("getcwd", ())

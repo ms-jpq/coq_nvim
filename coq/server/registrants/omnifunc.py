@@ -37,29 +37,23 @@ def comp_func(nvim: Nvim, stack: Stack, s: State, manual: bool) -> None:
     prev = _TASK
 
     with l_timeit("GEN CTX"):
-        ctx = context(nvim, options=stack.settings.match, db=stack.bdb, state=s)
+        ctx = context(nvim, options=stack.settings.match, state=s)
     should = _should_cont(s.inserted, prev=s.context, cur=ctx) if ctx else False
-    if ctx:
-        _, col = ctx.position
-        complete(nvim, col=col - 1, comp=())
+    _, col = ctx.position
+    complete(nvim, col=col - 1, comp=())
 
-    if ctx and (manual or should):
+    if manual or should:
         state(context=ctx)
 
         async def cont() -> None:
             if prev:
                 prev.cancel()
                 await sleep(0)
-            if ctx:
-                metrics = await stack.supervisor.collect(ctx, manual=manual)
-                s = state()
-                if s.change_id == ctx.change_id:
-                    vim_comps = tuple(trans(stack, context=ctx, metrics=metrics))
-                    await async_call(nvim, complete, nvim, col=col, comp=vim_comps)
-                else:
-                    vim_comps = ()
-            else:
-                vim_comps = ()
+            metrics = await stack.supervisor.collect(ctx, manual=manual)
+            s = state()
+            if s.change_id == ctx.change_id:
+                vim_comps = tuple(trans(stack, context=ctx, metrics=metrics))
+                await async_call(nvim, complete, nvim, col=col, comp=vim_comps)
 
         _TASK = cast(Task, go(nvim, aw=cont()))
     else:
