@@ -337,20 +337,6 @@ def _cursor(cursor: NvimPos, instructions: Sequence[_EditInstruction]) -> NvimPo
     return row, col
 
 
-def _visual(nvim: Nvim, buf: Buffer, context: Context, db: BDB) -> str:
-    (row1, col1), (row2, col2) = operator_marks(nvim, buf=buf, visual_type=None)
-    _, lines = db.lines(context.buf_id, lo=row1, hi=row2 + 1)
-    if not lines:
-        return ""
-    elif len(lines) == 1:
-        return lines[0].encode()[col1 : col2 + 1].decode()
-    else:
-        head = lines[0].encode()[col1:].decode()
-        body = lines[1:-1]
-        tail = lines[-1].encode()[: col2 + 1].decode()
-        return context.linefeed.join(chain((head,), body, (tail,)))
-
-
 def edit(nvim: Nvim, stack: Stack, state: State, data: UserData) -> Tuple[int, int]:
     win = cur_win(nvim)
     buf = win_get_buf(nvim, win=win)
