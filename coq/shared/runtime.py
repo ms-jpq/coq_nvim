@@ -136,7 +136,6 @@ class Supervisor:
             finally:
                 for task in tasks:
                     task.cancel()
-                await sleep(0)
 
 
 class Worker(Generic[O_co, T_co]):
