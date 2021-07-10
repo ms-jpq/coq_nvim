@@ -1,4 +1,4 @@
-from asyncio import Future, InvalidStateError
+from asyncio import AbstractEventLoop, Future, InvalidStateError
 from contextlib import suppress
 from locale import strxfrm
 from pathlib import Path
@@ -24,9 +24,8 @@ class Worker(BaseWorker[BaseClient, None]):
         super().__init__(supervisor, options=options, misc=misc)
 
     async def _req(self, pos: NvimPos) -> Optional[Any]:
-        token = uuid4()
-        fut: Future = Future()
-        self._cur = token, fut
+        loop: AbstractEventLoop = self._supervisor.nvim.loop
+        self._cur = token, fut = uuid4(), loop.create_future()
 
         def cont() -> None:
             args = (str(token), pos)
