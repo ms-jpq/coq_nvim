@@ -1,12 +1,10 @@
 from asyncio import Condition, shield
-from locale import strxfrm
 from pathlib import Path
 from typing import Any, AsyncIterator, Optional, Sequence
 from uuid import UUID, uuid4
 
-from pynvim_pp.lib import async_call
+from pynvim_pp.lib import async_call, go
 
-from ...shared.parse import lower
 from ...shared.runtime import Supervisor
 from ...shared.runtime import Worker as BaseWorker
 from ...shared.settings import BaseClient
@@ -25,6 +23,7 @@ class Worker(BaseWorker[BaseClient, None]):
         self._db = Database(pool=supervisor.pool)
         supervisor.nvim.api.exec_lua(_LUA, ())
         super().__init__(supervisor, options=options, misc=misc)
+        go(supervisor.nvim, aw=self._poll())
 
     async def _req(self) -> Optional[Any]:
         self._token = token = uuid4()
