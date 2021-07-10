@@ -5,7 +5,13 @@ from typing import AbstractSet, Iterator, MutableSequence, Sequence, Tuple
 
 from pynvim import Nvim
 from pynvim.api.buffer import Buffer
-from pynvim_pp.api import buf_set_lines, cur_win, win_get_buf, win_set_cursor
+from pynvim_pp.api import (
+    buf_get_lines,
+    buf_set_lines,
+    cur_win,
+    win_get_buf,
+    win_set_cursor,
+)
 from pynvim_pp.logging import log
 from pynvim_pp.operators import operator_marks
 from std2.itertools import deiter
@@ -31,6 +37,7 @@ from ..snippets.parsers.types import ParseError
 from .nvim.completions import UserData
 from .registrants.marks import mark
 from .rt_types import Stack
+from .state import State
 
 
 @dataclass(frozen=True)
@@ -344,18 +351,16 @@ def _visual(nvim: Nvim, buf: Buffer, context: Context, db: BDB) -> str:
         return context.linefeed.join(chain((head,), body, (tail,)))
 
 
-def edit(nvim: Nvim, stack: Stack, context: Context, data: UserData) -> Tuple[int, int]:
-    cursor = context.position
-
+def edit(nvim: Nvim, stack: Stack, state: State, data: UserData) -> Tuple[int, int]:
     win = cur_win(nvim)
     buf = win_get_buf(nvim, win=win)
 
     if isinstance(data.primary_edit, SnippetEdit):
-        visual = _visual(nvim, buf=buf, context=context, db=stack.bdb)
+        visual = _visual(nvim, buf=buf, context=state.context, db=stack.bdb)
         try:
             parsed: Tuple[Edit, Sequence[Mark]] = parse(
                 stack.settings.match.unifying_chars,
-                context=context,
+                context=state.context,
                 snippet=data.primary_edit,
                 sort_by=data.sort_by,
                 visual=visual,
@@ -367,23 +372,26 @@ def edit(nvim: Nvim, stack: Stack, context: Context, data: UserData) -> Tuple[in
         primary, marks = data.primary_edit, ()
 
     lo, hi = _rows_to_fetch(
-        context,
+        state.context,
         primary,
         *data.secondary_edits,
     )
-    _, limited_lines = stack.bdb.lines(context.buf_id, lo=lo, hi=hi)
+    if buf.number in state.heavy_bufs:
+        limited_lines = buf_get_lines(nvim, buf=buf, lo=lo, hi=hi)
+    else:
+        _, limited_lines = stack.bdb.lines(state.context.buf_id, lo=lo, hi=hi)
     lines = tuple(chain(repeat("", times=lo), limited_lines))
     view = _lines(lines)
 
     instructions = _instructions(
-        context,
+        state.context,
         unifying_chars=stack.settings.match.unifying_chars,
         lines=view,
         primary=primary,
         secondary=data.secondary_edits,
     )
     new_lines = _new_lines(view, instructions=instructions)
-    n_row, n_col = _cursor(cursor, instructions=instructions)
+    n_row, n_col = _cursor(state.context.position, instructions=instructions)
 
     if DEBUG:
         msg = pformat((data, instructions, (n_row + 1, n_col + 1), new_lines))
