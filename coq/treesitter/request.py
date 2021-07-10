@@ -36,7 +36,7 @@ def _ts_notify(nvim: Nvim, stack: Stack, ses: str, reply: Sequence[Payload]) -> 
 async def async_request(nvim: Nvim) -> Sequence[Payload]:
     global _SESSION
 
-    with timeit(f"TS"):
+    with timeit("TS"):
         _SESSION = session, _ = uuid4().hex, ()
 
         async with _COND:
@@ -44,7 +44,7 @@ async def async_request(nvim: Nvim) -> Sequence[Payload]:
         await sleep(0)
 
         def cont() -> None:
-            nvim.api.exec_lua("TSreq(...)", ())
+            nvim.api.exec_lua("COQts_req(...)", (session,))
 
         await async_call(nvim, cont)
 

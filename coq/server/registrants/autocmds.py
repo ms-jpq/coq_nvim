@@ -1,4 +1,4 @@
-from asyncio import Handle, get_running_loop
+from asyncio import Handle, gather, get_running_loop
 from itertools import chain
 from typing import MutableSet, Optional, Sequence
 
@@ -10,6 +10,7 @@ from std2.pickle import new_decoder
 from ...registry import atomic, autocmd, rpc
 from ...snippets.artifacts import SNIPPETS
 from ...snippets.types import ParsedSnippet
+from ...treesitter.request import async_request
 from ..rt_types import Stack
 
 _SEEN: MutableSet[str] = set()
@@ -26,7 +27,6 @@ def _ft_changed(nvim: Nvim, stack: Stack) -> None:
 
     if ft not in _SEEN:
         _SEEN.add(ft)
-        snippets = stack.settings.clients.snippets
         mappings = {
             f: _DECODER(SNIPPETS.snippets.get(f, ()))
             for f in chain(SNIPPETS.extends.get(ft, {}).keys(), (ft,))
@@ -47,13 +47,20 @@ def _when_idle(nvim: Nvim, stack: Stack) -> None:
     if _HANDLE:
         _HANDLE.cancel()
 
-    def cont() -> None:
+    def c1() -> None:
         bufs = list_bufs(nvim, listed=False)
         stack.bdb.vacuum({buf.number for buf in bufs})
         stack.supervisor.notify_idle()
 
+    async def c2() -> None:
+        payloads = await async_request(nvim)
+        await stack.tdb.new_nodes(
+            {payload["text"]: payload["kind"] for payload in payloads}
+        )
+
     get_running_loop().call_later(
-        stack.settings.idle_time, lambda: go(nvim, aw=async_call(nvim, cont))
+        stack.settings.idle_time,
+        lambda: go(nvim, aw=gather(async_call(nvim, c1), c2())),
     )
 
 

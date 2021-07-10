@@ -45,7 +45,7 @@
       )
     end
 
-    COQts_req = function(request_id, pos)
+    COQts_req = function(session, pos)
       local acc = {}
       vim.schedule(
         function()
@@ -54,7 +54,7 @@
               table.insert(acc, payload)
             end
           end
-          COQnotify(request_id, acc)
+          COQts_notify(session, acc)
         end
       )
     end
