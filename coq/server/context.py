@@ -14,7 +14,7 @@ from ..shared.types import Context
 from .state import State
 
 
-def context(nvim: Nvim, options: Options, db: BDB, state: State) -> Optional[Context]:
+def context(nvim: Nvim, options: Options, db: BDB, state: State) -> Context:
     with Atomic() as (atomic, ns):
         ns.scr_col = atomic.call_function("screencol", ())
         ns.cwd = atomic.call_function("getcwd", ())
@@ -43,29 +43,15 @@ def context(nvim: Nvim, options: Options, db: BDB, state: State) -> Optional[Con
     expandtab = cast(bool, ns.expandtab)
     linefeed = cast(Literal["\n", "\r", "\r\n"], LFfmt[cast(str, ns.fileformat)].value)
 
-    if buf.number not in state.heavy_bufs:
-        r = min(options.context_lines, row)
-        line_count, lines = db.lines(
-            buf.number,
-            lo=row - options.context_lines,
-            hi=row + options.context_lines + 1,
-        )
-        if line_count != buf_line_count:
-            log.critical("%s", f"lines out of sync - @{row}")
-            return None
-        else:
-            line = lines[r]
-            lines_before, lines_after = lines[:r], lines[r + 1 :]
-    else:
-        line_count = buf_line_count
-        lines = buf_get_lines(
-            nvim,
-            buf=buf,
-            lo=row,
-            hi=row + 1,
-        )
-        line, *_ = lines
-        lines_before, lines_after = (), ()
+    r = min(options.context_lines, row)
+    lines = buf_get_lines(
+        nvim,
+        buf=buf,
+        lo=row - options.context_lines,
+        hi=row + options.context_lines + 1,
+    )
+    line = lines[r]
+    lines_before, lines_after = lines[:r], lines[r + 1 :]
 
     lhs, _, rhs = comment_str.partition("%s")
     b_line = line.encode()
@@ -79,7 +65,7 @@ def context(nvim: Nvim, options: Options, db: BDB, state: State) -> Optional[Con
         buf_id=buf.number,
         filename=filename,
         filetype=filetype,
-        line_count=line_count,
+        line_count=buf_line_count,
         linefeed=linefeed,
         tabstop=tabstop,
         expandtab=expandtab,

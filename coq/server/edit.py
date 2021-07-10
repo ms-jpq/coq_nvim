@@ -356,7 +356,7 @@ def edit(nvim: Nvim, stack: Stack, state: State, data: UserData) -> Tuple[int, i
     buf = win_get_buf(nvim, win=win)
 
     if isinstance(data.primary_edit, SnippetEdit):
-        visual = _visual(nvim, buf=buf, context=state.context, db=stack.bdb)
+        visual = ""
         try:
             parsed: Tuple[Edit, Sequence[Mark]] = parse(
                 stack.settings.match.unifying_chars,
@@ -376,10 +376,7 @@ def edit(nvim: Nvim, stack: Stack, state: State, data: UserData) -> Tuple[int, i
         primary,
         *data.secondary_edits,
     )
-    if buf.number in state.heavy_bufs:
-        limited_lines = buf_get_lines(nvim, buf=buf, lo=lo, hi=hi)
-    else:
-        _, limited_lines = stack.bdb.lines(state.context.buf_id, lo=lo, hi=hi)
+    limited_lines = buf_get_lines(nvim, buf=buf, lo=lo, hi=hi)
     lines = tuple(chain(repeat("", times=lo), limited_lines))
     view = _lines(lines)
 
