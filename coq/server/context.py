@@ -9,9 +9,9 @@ from pynvim_pp.atomic import Atomic
 from pynvim_pp.logging import log
 from pynvim_pp.text_object import gen_split
 
+from ..databases.buffers.database import BDB
 from ..shared.settings import Options
 from ..shared.types import Context
-from .databases.buffers.database import BDB
 
 
 def context(

@@ -12,6 +12,7 @@ from std2.itertools import deiter
 from std2.types import never
 
 from ..consts import DEBUG
+from ..databases.buffers.database import BDB
 from ..shared.trans import trans_adjusted
 from ..shared.types import (
     UTF8,
@@ -27,7 +28,6 @@ from ..shared.types import (
 )
 from ..snippets.parse import parse
 from ..snippets.parsers.types import ParseError
-from .databases.buffers.database import BDB
 from .nvim.completions import UserData
 from .registrants.marks import mark
 from .rt_types import Stack
