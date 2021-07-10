@@ -3,6 +3,13 @@ from typing import AbstractSet, Optional, Tuple
 
 
 @dataclass(frozen=True)
+class Limits:
+    idle_time: float
+    max_buf_index: int
+    max_oneoff_index: int
+
+
+@dataclass(frozen=True)
 class PumDisplay:
     y_max_len: int
     x_max_len: int
@@ -100,8 +107,7 @@ class Clients:
 
 @dataclass(frozen=True)
 class Settings:
-    idle_time: float
-    max_buf_size: int
+    limits: Limits
     display: Display
     match: Options
     weights: Weights

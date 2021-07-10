@@ -75,6 +75,7 @@ class BDB:
         hi: int,
         lines: Sequence[str],
         unifying_chars: AbstractSet[str],
+        max_index: int,
     ) -> None:
         def m0() -> Iterator[Tuple[int, str, bytes]]:
             for line_num, line in enumerate(lines, start=lo):
@@ -93,7 +94,7 @@ class BDB:
                 }
 
         def m2() -> Iterator[Mapping]:
-            for line_num, line, line_id in line_info:
+            for _, (line_num, line, line_id) in zip(range(max_index), line_info):
                 for word in coalesce(line, unifying_chars=unifying_chars):
                     yield {
                         "line_id": line_id,

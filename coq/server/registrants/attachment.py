@@ -39,7 +39,7 @@ def _lines_event(
 ) -> None:
     filetype = buf_filetype(nvim, buf=buf)
     size = sum(map(len, lines))
-    heavy_bufs = {buf.number} if size > stack.settings.max_buf_size else set()
+    heavy_bufs = {buf.number} if size > stack.settings.limits.max_buf_index else set()
     s = state(change_id=uuid4(), heavy_bufs=heavy_bufs)
 
     if not heavy_bufs:
@@ -50,9 +50,10 @@ def _lines_event(
             hi=hi,
             lines=lines,
             unifying_chars=stack.settings.match.unifying_chars,
+            max_index=stack.settings.limits.max_oneoff_index,
         )
     else:
-        msg = f"❌ 👉 :: {size} > {stack.settings.max_buf_size}"
+        msg = f"❌ 👉 :: {size} > {stack.settings.limits.max_buf_index}"
         write(nvim, msg, error=True)
 
     if not pending and nvim.api.get_mode()["mode"].startswith("i"):
