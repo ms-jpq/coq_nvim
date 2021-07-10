@@ -100,5 +100,6 @@ clients:
   lsp:
     enabled: True
     short_name: "LSP"
+    limit: 66
     tie_breaker: 70
 
