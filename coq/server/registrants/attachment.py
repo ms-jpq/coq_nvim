@@ -5,6 +5,7 @@ from uuid import uuid4
 from pynvim import Nvim
 from pynvim.api import Buffer, NvimError
 from pynvim_pp.api import buf_filetype, buf_get_option, cur_buf
+from pynvim_pp.lib import write
 
 from ...registry import autocmd, rpc
 from ..rt_types import Stack
@@ -37,9 +38,8 @@ def _lines_event(
     pending: bool,
 ) -> None:
     filetype = buf_filetype(nvim, buf=buf)
-    heavy_bufs = (
-        {buf.number} if sum(map(len, lines)) > stack.settings.max_buf_size else set()
-    )
+    size = sum(map(len, lines))
+    heavy_bufs = {buf.number} if size > stack.settings.max_buf_size else set()
     s = state(change_id=uuid4(), heavy_bufs=heavy_bufs)
 
     if not heavy_bufs:
@@ -51,6 +51,9 @@ def _lines_event(
             lines=lines,
             unifying_chars=stack.settings.match.unifying_chars,
         )
+    else:
+        msg = f"❌ 👉 :: {size} > {stack.settings.max_buf_size}"
+        write(nvim, msg, error=True)
 
     if not pending and nvim.api.get_mode()["mode"].startswith("i"):
         comp_func(nvim, stack=stack, s=s, manual=False)
