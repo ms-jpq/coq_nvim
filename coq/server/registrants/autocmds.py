@@ -1,4 +1,4 @@
-from asyncio import Handle, gather, get_running_loop
+from asyncio import Handle, get_running_loop
 from itertools import chain
 from typing import MutableSet, Optional, Sequence
 
@@ -38,6 +38,19 @@ autocmd("FileType") << f"lua {_ft_changed.name}()"
 atomic.exec_lua(f"{_ft_changed.name}()", ())
 
 
+@rpc(blocking=True)
+def _insert_enter(nvim: Nvim, stack: Stack) -> None:
+    async def cont() -> None:
+        payloads = await async_request(nvim)
+        await stack.tdb.new_nodes(
+            {payload["text"]: payload["kind"] for payload in payloads}
+        )
+
+    go(nvim, aw=cont())
+
+
+autocmd("InsertEnter") << f"lua {_insert_enter.name}()"
+
 _HANDLE: Optional[Handle] = None
 
 
@@ -47,20 +60,15 @@ def _when_idle(nvim: Nvim, stack: Stack) -> None:
     if _HANDLE:
         _HANDLE.cancel()
 
-    def c1() -> None:
+    def cont() -> None:
         bufs = list_bufs(nvim, listed=False)
         stack.bdb.vacuum({buf.number for buf in bufs})
+        _insert_enter(nvim, stack=stack)
         stack.supervisor.notify_idle()
-
-    async def c2() -> None:
-        payloads = await async_request(nvim)
-        await stack.tdb.new_nodes(
-            {payload["text"]: payload["kind"] for payload in payloads}
-        )
 
     get_running_loop().call_later(
         stack.settings.idle_time,
-        lambda: go(nvim, aw=gather(async_call(nvim, c1), c2())),
+        lambda: go(nvim, aw=async_call(nvim, cont)),
     )
 
 
