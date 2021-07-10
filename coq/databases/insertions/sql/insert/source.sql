@@ -1,2 +1,2 @@
-INSERT INTO sources (             name)
-VALUES              (X_NORMALIZE(:name))
+INSERT INTO sources ( name)
+VALUES              (:name)

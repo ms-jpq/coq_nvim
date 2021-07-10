@@ -1,2 +1,2 @@
-INSERT OR IGNORE INTO filetypes (             filetype)
-VALUES                          (X_NORMALIZE(:filetype))
+INSERT OR IGNORE INTO filetypes ( filetype)
+VALUES                          (:filetype)
