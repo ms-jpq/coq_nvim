@@ -37,22 +37,8 @@ def comp_func(nvim: Nvim, stack: Stack, s: State, manual: bool) -> None:
     prev = _TASK
 
     with l_timeit("GEN CTX"):
-        ctx = context(
-            nvim,
-            options=stack.settings.match,
-            db=stack.bdb,
-            change_id=s.change_id,
-            commit_id=s.commit_id,
-        )
-    should = (
-        _should_cont(
-            s.inserted,
-            prev=s.context,
-            cur=ctx,
-        )
-        if ctx
-        else False
-    )
+        ctx = context(nvim, options=stack.settings.match, db=stack.bdb, state=s)
+    should = _should_cont(s.inserted, prev=s.context, cur=ctx) if ctx else False
     if ctx:
         _, col = ctx.position
         complete(nvim, col=col - 1, comp=())
