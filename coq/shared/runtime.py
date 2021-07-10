@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from abc import abstractmethod
 from asyncio import Condition, gather, wait
+from asyncio.tasks import sleep
 from concurrent.futures import Executor
 from dataclasses import dataclass
 from typing import (
@@ -124,6 +125,8 @@ class Supervisor:
             await self._reviewer.begin(context)
             task = gather(*map(supervise, self._workers))
             await wait((task,), timeout=timeout)
+            task.cancel()
+            await sleep(0)
             return acc
 
 
