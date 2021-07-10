@@ -1,8 +1,7 @@
-from asyncio import AbstractEventLoop, Future, InvalidStateError
-from contextlib import suppress
+from asyncio import Condition
 from locale import strxfrm
 from pathlib import Path
-from typing import Any, AsyncIterator, Optional, Sequence, Tuple
+from typing import Any, AsyncIterator, Optional, Sequence
 from uuid import UUID, uuid4
 
 from pynvim_pp.lib import async_call
@@ -19,27 +18,33 @@ _LUA = (Path(__file__).resolve().parent / "request.lua").read_text("UTF-8")
 
 class Worker(BaseWorker[BaseClient, None]):
     def __init__(self, supervisor: Supervisor, options: BaseClient, misc: None) -> None:
-        self._cur: Tuple[UUID, Future] = uuid4(), Future()
+        self._cond = Condition()
+        self._token = uuid4()
+        self._resp: Any = None
         supervisor.nvim.api.exec_lua(_LUA, ())
         super().__init__(supervisor, options=options, misc=misc)
 
     async def _req(self, pos: NvimPos) -> Optional[Any]:
-        loop: AbstractEventLoop = self._supervisor.nvim.loop
-        self._cur = token, fut = uuid4(), loop.create_future()
+        token = uuid4()
 
         def cont() -> None:
             args = (str(token), pos)
             self._supervisor.nvim.api.exec_lua("COQts_req(...)", args)
 
         await async_call(self._supervisor.nvim, cont)
-        return await fut
+        async with self._cond:
+            await self._cond.wait()
+        if self._token == token:
+            return self._resp
+        else:
+            return None
 
     async def notify(self, token: UUID, msg: Sequence[Any]) -> None:
-        c_token, fut = self._cur
-        if token == c_token:
+        if token == self._token:
             reply, *_ = msg
-            with suppress(InvalidStateError):
-                fut.set_result(reply)
+            async with self._cond:
+                self._resp = reply
+                self._cond.notify_all()
 
     async def work(self, context: Context) -> AsyncIterator[Completion]:
         match = lower(context.words or context.syms)
