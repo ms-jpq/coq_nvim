@@ -42,11 +42,13 @@ def context(nvim: Nvim, options: Options, state: State) -> Context:
     linefeed = cast(Literal["\n", "\r", "\r\n"], LFfmt[cast(str, ns.fileformat)].value)
 
     r = min(options.context_lines, row)
+    lo = max(0, r - options.context_lines)
+    hi = min(buf_line_count, r + options.context_lines + 1)
     lines = buf_get_lines(
         nvim,
         buf=buf,
-        lo=row - options.context_lines,
-        hi=row + options.context_lines + 1,
+        lo=lo,
+        hi=hi,
     )
     line = lines[r]
     lines_before, lines_after = lines[:r], lines[r + 1 :]
