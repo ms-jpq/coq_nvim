@@ -1,7 +1,7 @@
 from asyncio import Condition, sleep
 from collections import defaultdict
+from itertools import count
 from typing import Any, AsyncIterator, MutableMapping, Sequence, Tuple
-from uuid import uuid4
 
 from pynvim.api.nvim import Nvim
 from pynvim_pp.lib import async_call, go
@@ -10,21 +10,22 @@ from ...registry import rpc
 from ...server.rt_types import Stack
 from ...shared.timeit import timeit
 
+_UIDS = count()
 _CONDS: MutableMapping[str, Condition] = {}
-_STATE: MutableMapping[str, Tuple[str, bool, Sequence[Any]]] = defaultdict(
-    lambda: ("", True, ())
+_STATE: MutableMapping[str, Tuple[int, bool, Sequence[Any]]] = defaultdict(
+    lambda: (-1, True, ())
 )
 
 
 @rpc(blocking=False)
 def _lsp_notify(
-    nvim: Nvim, stack: Stack, method: str, session: str, done: bool, reply: Any
+    nvim: Nvim, stack: Stack, method: str, ses: int, done: bool, reply: Any
 ) -> None:
     async def cont() -> None:
         cond = _CONDS.setdefault(method, Condition())
-        ses, _, acc = _STATE[method]
-        if session == ses:
-            _STATE[method] = (session, done, (*acc, reply))
+        session, _, acc = _STATE[method]
+        if ses == session:
+            _STATE[method] = (ses, done, (*acc, reply))
         async with cond:
             cond.notify_all()
 
@@ -33,7 +34,7 @@ def _lsp_notify(
 
 async def async_request(nvim: Nvim, method: str, *args: Any) -> AsyncIterator[Any]:
     with timeit(f"LSP :: {method}", force=True):
-        session, done = uuid4().hex, False
+        session, done = next(_UIDS), False
         cond = _CONDS.setdefault(method, Condition())
 
         _STATE[method] = (session, done, ())
@@ -50,9 +51,11 @@ async def async_request(nvim: Nvim, method: str, *args: Any) -> AsyncIterator[An
             async with cond:
                 await cond.wait()
             ses, done, acc = _STATE[method]
-            if ses != session:
-                break
-            else:
+            if ses == session:
                 for a in acc:
                     yield a
+            elif ses < session:
+                pass
+            else:
+                break
 

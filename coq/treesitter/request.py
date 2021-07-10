@@ -1,7 +1,7 @@
 from asyncio import Condition, sleep
+from itertools import count
 from pathlib import Path
 from typing import Optional, Sequence, Tuple
-from uuid import uuid4
 
 from pynvim.api.nvim import Nvim
 from pynvim_pp.lib import async_call, go
@@ -11,8 +11,9 @@ from ..server.rt_types import Stack
 from ..shared.timeit import timeit
 from .types import Payload
 
+_UIDS = count()
 _COND: Optional[Condition] = None
-_SESSION: Tuple[str, Sequence[Payload]] = uuid4().hex, ()
+_SESSION: Tuple[int, Sequence[Payload]] = -1, ()
 
 
 _LUA = (Path(__file__).resolve().parent / "request.lua").read_text("UTF-8")
@@ -20,7 +21,7 @@ atomic.exec_lua(_LUA, ())
 
 
 @rpc(blocking=False)
-def _ts_notify(nvim: Nvim, stack: Stack, ses: str, reply: Sequence[Payload]) -> None:
+def _ts_notify(nvim: Nvim, stack: Stack, ses: int, reply: Sequence[Payload]) -> None:
     async def cont() -> None:
         global _COND, _SESSION
         _COND = _COND or Condition()
@@ -40,7 +41,7 @@ async def async_request(nvim: Nvim) -> Sequence[Payload]:
     _COND = _COND or Condition()
 
     with timeit("TS"):
-        _SESSION = session, _ = uuid4().hex, ()
+        _SESSION = session, _ = next(_UIDS), ()
 
         async with _COND:
             _COND.notify_all()
@@ -55,8 +56,10 @@ async def async_request(nvim: Nvim) -> Sequence[Payload]:
             async with _COND:
                 await _COND.wait()
             ses, reply = _SESSION
-            if ses != session:
-                return ()
-            else:
+            if ses == session:
                 return reply
+            elif ses < session:
+                pass
+            else:
+                return ()
 
