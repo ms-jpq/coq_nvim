@@ -37,8 +37,9 @@ def _lines_event(
     pending: bool,
 ) -> None:
     filetype = buf_filetype(nvim, buf=buf)
-    size = sum(map(len, lines))
-    heavy_bufs = {buf.number} if size > 10000 else set()
+    heavy_bufs = (
+        {buf.number} if sum(map(len, lines)) > stack.settings.max_buf_size else set()
+    )
     s = state(change_id=uuid4(), heavy_bufs=heavy_bufs)
 
     if not heavy_bufs:

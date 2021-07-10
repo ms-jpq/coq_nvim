@@ -101,6 +101,7 @@ class Clients:
 @dataclass(frozen=True)
 class Settings:
     idle_time: float
+    max_buf_size: int
     display: Display
     match: Options
     weights: Weights

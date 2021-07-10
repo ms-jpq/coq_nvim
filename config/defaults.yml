@@ -1,5 +1,6 @@
 ---
 idle_time: 2.0
+max_buf_size: 10000
 
 display:
   preview:
