@@ -12,9 +12,9 @@ from std2.sqllite3 import with_transaction
 from ...consts import BUFFER_DB
 from ...shared.database import init_db
 from ...shared.executor import SingleThreadExecutor
-from ...shared.timeit import timeit
 from ...shared.parse import coalesce
 from ...shared.settings import Options
+from ...shared.timeit import timeit
 from .sql import sql
 
 
@@ -112,11 +112,10 @@ class BDB:
                         sql("delete", "lines"),
                         {"buffer_id": buf_id, "lo": lo, "hi": hi},
                     )
-                    with timeit("UPDATE", force=True):
-                        cursor.execute(
-                            sql("update", "lines"),
-                            {"buffer_id": buf_id, "lo": lo, "shift": shift},
-                        )
+                    cursor.execute(
+                        sql("update", "lines"),
+                        {"buffer_id": buf_id, "lo": lo, "shift": shift},
+                    )
                     cursor.executemany(sql("insert", "line"), m1())
                     cursor.executemany(sql("insert", "word"), m2())
                     cursor.execute(sql("select", "line_count"), {"buffer_id": buf_id})
