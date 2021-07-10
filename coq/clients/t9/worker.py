@@ -28,7 +28,7 @@ _DECODER = new_decoder(Response, strict=False)
 _ENCODER = new_encoder(Request)
 
 
-def _encode(options: Options, context: Context) -> Any:
+def _encode(options: Options, context: Context, limit: int) -> Any:
     row, _ = context.position
     before = linesep.join(chain(context.lines_before, (context.line_before,)))
     after = linesep.join(chain((context.line_after,), context.lines_after))
@@ -41,7 +41,7 @@ def _encode(options: Options, context: Context) -> Any:
         after=after,
         region_includes_beginning=ibg,
         region_includes_end=ieof,
-        max_num_results=None,
+        max_num_results=limit,
     )
     l1 = ReqL1(Autocomplete=l2)
     req = Request(request=l1, version=_VERSION)
@@ -108,7 +108,9 @@ class Worker(BaseWorker[BaseClient, None]):
             if not self._proc:
                 self._proc = await _proc()
 
-            req = _encode(self._supervisor.options, context=context)
+            req = _encode(
+                self._supervisor.options, context=context, limit=self._options.limit
+            )
             json = dumps(req, check_circular=False, ensure_ascii=False)
             try:
                 json = await shield(self._comm(json))
