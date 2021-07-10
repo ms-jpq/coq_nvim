@@ -1,8 +1,7 @@
 from __future__ import annotations
 
 from abc import abstractmethod
-from asyncio import Condition, gather, wait
-from asyncio.tasks import sleep
+from asyncio import Condition, as_completed, wait
 from concurrent.futures import Executor
 from dataclasses import dataclass
 from typing import (
@@ -123,8 +122,14 @@ class Supervisor:
                         await self._reviewer.end(elapsed, items=items)
 
             await self._reviewer.begin(context)
-            task = gather(*map(supervise, self._workers))
-            await wait((task,), timeout=timeout)
+            tasks = tuple(map(supervise, self._workers))
+            _, pending = await wait(tasks, timeout=timeout)
+            if not acc and pending:
+                for fut in as_completed(pending):
+                    await fut
+                    if acc:
+                        break
+
             return acc
 
 
