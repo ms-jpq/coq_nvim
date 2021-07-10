@@ -39,12 +39,8 @@ def _ts_notify(nvim: Nvim, stack: Stack, ses: int, reply: Sequence[Payload]) -> 
 
 async def _vaildate(resp: Sequence[Payload]) -> AsyncIterator[Payload]:
     for payload in resp:
-        try:
-            payload["text"].encode()
-        except UnicodeError as e:
-            log.warn("%s", e)
-        else:
-            yield payload
+        text = payload["text"].encode(errors="ignore").decode()
+        yield Payload(text=text, kind=payload["kind"])
 
 
 async def async_request(nvim: Nvim) -> AsyncIterator[Payload]:
