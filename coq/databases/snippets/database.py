@@ -8,11 +8,11 @@ from uuid import uuid4
 from std2.asyncio import run_in_executor
 from std2.sqllite3 import with_transaction
 
-from ....consts import SNIPPET_DB
-from ....shared.database import init_db
-from ....shared.executor import SingleThreadExecutor
-from ....shared.settings import Options
-from ....snippets.types import ParsedSnippet
+from ...consts import SNIPPET_DB
+from ...shared.database import init_db
+from ...shared.executor import SingleThreadExecutor
+from ...shared.settings import Options
+from ...snippets.types import ParsedSnippet
 from .sql import sql
 
 

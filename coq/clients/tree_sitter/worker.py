@@ -12,7 +12,6 @@ from ...shared.types import Completion, Context, Edit
 from .database import Database
 from .types import Msg
 
-_LUA = (Path(__file__).resolve().parent / "request.lua").read_text("UTF-8")
 
 
 class Worker(BaseWorker[BaseClient, None]):

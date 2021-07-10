@@ -1,6 +1,6 @@
 from typing import AsyncIterator
 
-from ...server.databases.buffers.database import BDB
+from ...databases.buffers.database import BDB
 from ...shared.runtime import Worker as BaseWorker
 from ...shared.settings import BuffersClient
 from ...shared.types import Completion, Context, Edit

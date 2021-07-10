@@ -1,11 +1,11 @@
 from dataclasses import dataclass
 from typing import AbstractSet
 
+from ..databases.buffers.database import BDB
+from ..databases.insertions.database import IDB
+from ..databases.snippets.database import SDB
 from ..shared.runtime import Supervisor, Worker
 from ..shared.settings import Settings
-from .databases.buffers.database import BDB
-from .databases.insertions.database import IDB
-from .databases.snippets.database import SDB
 
 
 @dataclass(frozen=True)

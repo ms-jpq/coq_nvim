@@ -1,6 +1,6 @@
 from typing import AsyncIterator
 
-from ...server.databases.snippets.database import SDB
+from ...databases.snippets.database import SDB
 from ...shared.runtime import Supervisor
 from ...shared.runtime import Worker as BaseWorker
 from ...shared.settings import SnippetClient

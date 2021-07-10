@@ -6,12 +6,12 @@ from math import inf
 from typing import Mapping, MutableSequence, Optional
 from uuid import UUID, uuid4
 
+from ..databases.insertions.database import IDB
 from ..shared.context import EMPTY_CONTEXT
 from ..shared.parse import coalesce, display_width, is_word, lower
 from ..shared.runtime import Metric, PReviewer, Worker
 from ..shared.settings import Options, Weights
 from ..shared.types import Completion, Context
-from .databases.insertions.database import IDB
 
 
 @dataclass(frozen=True)

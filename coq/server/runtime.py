@@ -16,11 +16,11 @@ from ..clients.tags.worker import Worker as TagsWorker
 from ..clients.tmux.worker import Worker as TmuxWorker
 from ..clients.tree_sitter.worker import Worker as TreeWorker
 from ..consts import CONFIG_YML, SETTINGS_VAR
+from ..databases.buffers.database import BDB
+from ..databases.insertions.database import IDB
+from ..databases.snippets.database import SDB
 from ..shared.runtime import Supervisor, Worker
 from ..shared.settings import Settings
-from .databases.buffers.database import BDB
-from .databases.insertions.database import IDB
-from .databases.snippets.database import SDB
 from .reviewer import Reviewer
 from .rt_types import Stack
 
