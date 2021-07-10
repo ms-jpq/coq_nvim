@@ -133,6 +133,7 @@ class Supervisor:
                         await sleep(0)
             for task in tasks:
                 task.cancel()
+            await sleep(0)
             return acc
 
 
