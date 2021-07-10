@@ -87,22 +87,12 @@ class BDB:
 
         def m1() -> Iterator[Mapping]:
             for line_num, _, line_id in line_info:
-                yield {
-                    "rowid": line_id,
-                    "buffer_id": buf_id,
-                    "line_num": line_num,
-                }
+                yield {"rowid": line_id, "buffer_id": buf_id, "line_num": line_num}
 
         def m2() -> Iterator[Mapping]:
             for _, (line_num, line, line_id) in zip(range(max_index), line_info):
                 for word in coalesce(line, unifying_chars=unifying_chars):
-                    yield {
-                        "line_id": line_id,
-                        "word": word,
-                        "line_num": line_num,
-                    }
-
-        shift = len(lines) - (hi - lo)
+                    yield {"line_id": line_id, "word": word, "line_num": line_num}
 
         def cont() -> None:
             with self._lock, closing(self._conn.cursor()) as cursor:
@@ -112,6 +102,7 @@ class BDB:
                         sql("delete", "lines"),
                         {"buffer_id": buf_id, "lo": lo, "hi": hi},
                     )
+                    shift = len(lines) - (hi - lo)
                     cursor.execute(
                         sql("update", "lines"),
                         {"buffer_id": buf_id, "lo": lo, "shift": shift},
