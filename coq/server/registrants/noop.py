@@ -4,6 +4,7 @@ from random import choice, sample
 from pynvim import Nvim
 from pynvim_pp.lib import write
 
+from ...lang import LANG
 from ...registry import rpc
 from ..rt_types import Stack
 
@@ -28,6 +29,7 @@ _STARS = (
 def now(nvim: Nvim, stack: Stack, *_: str) -> None:
     chars = choice(_CHARS)
     star = (choice(_STARS),)
-    msg = " ".join(chain(star, sample(_ANNOUNCE, k=chars), star))
+    birds = " ".join(chain(star, sample(_ANNOUNCE, k=chars), star))
+    msg = LANG("welcome", birds=birds)
     write(nvim, msg)
 
