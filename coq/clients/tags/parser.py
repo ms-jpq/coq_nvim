@@ -6,6 +6,8 @@ from pynvim_pp.logging import log
 from std2.asyncio import call
 from std2.string import removeprefix, removesuffix
 
+from ...shared.timeit import timeit
+
 
 class Tag(TypedDict):
     language: str
@@ -73,14 +75,15 @@ def _unescape(pattern: str) -> str:
 
 
 async def parse_lines(raw: str) -> AsyncIterator[Tag]:
-    for line in raw.splitlines():
-        if line:
-            try:
-                json = loads(line)
-            except JSONDecodeError:
-                log.exception("%s", line)
-                raise
-            if json["_type"] == "tag":
-                json["pattern"] = _unescape(json["pattern"])
-                yield json
+    with timeit("Parse ctags"):
+        for line in raw.splitlines():
+            if line:
+                try:
+                    json = loads(line)
+                except JSONDecodeError:
+                    log.exception("%s", line)
+                    raise
+                if json["_type"] == "tag":
+                    json["pattern"] = _unescape(json["pattern"])
+                    yield json
 
