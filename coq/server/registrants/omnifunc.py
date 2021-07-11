@@ -1,5 +1,6 @@
-from asyncio import CancelledError, Task, sleep
+from asyncio import CancelledError, Event, Task, gather, sleep
 from contextlib import suppress
+from queue import SimpleQueue
 from typing import Any, Literal, Mapping, Optional, Sequence, Tuple, Union, cast
 from uuid import uuid4
 
@@ -7,9 +8,10 @@ from pynvim import Nvim
 from pynvim.api.nvim import Nvim
 from pynvim_pp.lib import async_call, go
 from pynvim_pp.logging import log
+from std2.asyncio import run_in_executor
 from std2.pickle import DecodeError, new_decoder
 
-from ...registry import autocmd, rpc
+from ...registry import atomic, autocmd, rpc
 from ...shared.timeit import timeit as l_timeit
 from ...shared.types import Context, NvimPos
 from ..context import context
@@ -18,6 +20,54 @@ from ..nvim.completions import UserData, complete
 from ..rt_types import Stack
 from ..state import State, state
 from ..trans import trans
+
+q: SimpleQueue = SimpleQueue()
+_QUED = Tuple[Context, bool]
+
+
+@rpc(blocking=True)
+def _launch_loop(nvim: Nvim, stack: Stack) -> None:
+    async def cont() -> None:
+        event = Event()
+        qued: Optional[_QUED] = None
+        task: Optional[Task] = None
+
+        async def c0(ctx: Context, manual: bool) -> None:
+            _, col = ctx.position
+            await stack.supervisor.interrupt()
+            metrics = await stack.supervisor.collect(ctx, manual=manual)
+            s = state()
+            if s.change_id == ctx.change_id:
+                vim_comps = tuple(trans(stack, context=ctx, metrics=metrics))
+                await async_call(nvim, complete, nvim, col=col, comp=vim_comps)
+
+        async def c1() -> None:
+            nonlocal qued
+            while True:
+                qued = await run_in_executor(q.get)
+                event.set()
+
+        async def c2() -> None:
+            nonlocal qued, task
+            while True:
+                await event.wait()
+                if task:
+                    task.cancel()
+                    while not task.done():
+                        await sleep(0)
+                    with suppress(CancelledError):
+                        await task
+                if qued:
+                    ctx, manual = qued
+                    qued = None
+                    task = cast(Task, go(nvim, aw=c0(ctx, manual=manual)))
+
+        await gather(c1(), c2())
+
+    go(nvim, aw=cont())
+
+
+atomic.exec_lua(f"{_launch_loop.name}()", ())
 
 
 def _should_cont(inserted: Optional[NvimPos], prev: Context, cur: Context) -> bool:
@@ -29,13 +79,7 @@ def _should_cont(inserted: Optional[NvimPos], prev: Context, cur: Context) -> bo
         return (cur.words_before or cur.syms_before) != ""
 
 
-_TASK: Optional[Task] = None
-
-
 def comp_func(nvim: Nvim, stack: Stack, s: State, manual: bool) -> None:
-    global _TASK
-    prev = _TASK
-
     with l_timeit("GEN CTX"):
         ctx = context(nvim, options=stack.settings.match, state=s)
     should = _should_cont(s.inserted, prev=s.context, cur=ctx) if ctx else False
@@ -44,23 +88,7 @@ def comp_func(nvim: Nvim, stack: Stack, s: State, manual: bool) -> None:
 
     if manual or should:
         state(context=ctx)
-
-        async def cont() -> None:
-            if prev:
-                prev.cancel()
-                while not prev.done():
-                    await sleep(0)
-                with suppress(CancelledError):
-                    await prev
-
-            await stack.supervisor.interrupt()
-            metrics = await stack.supervisor.collect(ctx, manual=manual)
-            s = state()
-            if s.change_id == ctx.change_id:
-                vim_comps = tuple(trans(stack, context=ctx, metrics=metrics))
-                await async_call(nvim, complete, nvim, col=col, comp=vim_comps)
-
-        _TASK = cast(Task, go(nvim, aw=cont()))
+        q.put((ctx, manual))
     else:
         state(inserted=(-1, -1))
 
