@@ -22,6 +22,8 @@ _STARS = (
     "⭐️",
     "🌟",
 )
+
+# http://www.copahabitat.ca/sites/default/files/languagetool.pdf
 _HELO = (
     "Aanii",  # Ojibwe
     "Alo",  # Michif
@@ -36,7 +38,7 @@ _HELO = (
     "Olá",  # Portuguese
     "Sekoh",  # Mohawk
     "Ullaqut",  # Inuktitut
-    "Waajiiye", # Oji-Cree
+    "Waajiiye",  # Oji-Cree
     "Wâciyê",  # Cree
     "γεια",  # Greek
     "Здраво",  # Serbian
