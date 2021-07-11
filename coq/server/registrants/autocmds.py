@@ -46,7 +46,7 @@ def _insert_enter(nvim: Nvim, stack: Stack) -> None:
     buf = cur_buf(nvim)
 
     async def cont() -> None:
-        if not buf.number in heavy_bufs:
+        if buf.number in heavy_bufs:
             payloads: Sequence[Payload] = ()
         else:
             payloads = [p async for p in async_request(nvim)]
@@ -54,7 +54,7 @@ def _insert_enter(nvim: Nvim, stack: Stack) -> None:
             {payload["text"]: payload["kind"] for payload in payloads}
         )
 
-        go(nvim, aw=cont())
+    go(nvim, aw=cont())
 
 
 autocmd("InsertEnter") << f"lua {_insert_enter.name}()"
