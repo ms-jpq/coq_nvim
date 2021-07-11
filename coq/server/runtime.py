@@ -78,6 +78,7 @@ def stack(pool: Executor, nvim: Nvim) -> Stack:
         pool=pool,
         nvim=nvim,
         options=settings.match,
+        limits=settings.limits,
         reviewer=reviewer,
     )
     workers = {

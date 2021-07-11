@@ -6,6 +6,8 @@ from typing import AbstractSet, Optional, Tuple
 class Limits:
     idle_time: float
     max_buf_index: int
+    timeout: float
+    manual_timeout: float
 
 
 @dataclass(frozen=True)
@@ -42,8 +44,6 @@ class Options:
     context_lines: int
 
     fuzzy_cutoff: float
-    timeout: float
-    manual_timeout: float
 
 
 @dataclass(frozen=True)

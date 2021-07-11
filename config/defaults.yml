@@ -2,6 +2,8 @@
 limits:
   idle_time: 2.0
   max_buf_index: 333333
+  timeout: 0.1
+  manual_timeout: 0.5
 
 display:
   preview:
@@ -28,13 +30,9 @@ match:
   unifying_chars:
     - _
     - "-"
-
   exact_matches: 2
   fuzzy_cutoff: 0.6
   context_lines: 20
-
-  timeout: 0.1
-  manual_timeout: 0.5
 
 weights:
   prefix_matches: 2.0

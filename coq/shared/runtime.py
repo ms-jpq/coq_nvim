@@ -33,7 +33,7 @@ from pynvim_pp.lib import go
 from std2.aitertools import aenumerate
 from std2.timeit import timeit
 
-from .settings import Options, Weights
+from .settings import Limits, Options, Weights
 from .timeit import timeit as l_timeit
 from .types import Completion, Context
 
@@ -73,12 +73,14 @@ class Supervisor:
         pool: Executor,
         nvim: Nvim,
         options: Options,
+        limits: Limits,
         reviewer: PReviewer,
     ) -> None:
-        self._pool, self._nvim, self._options, self._reviewer = (
+        self._pool, self._nvim, self._options, self._limits, self._reviewer = (
             pool,
             nvim,
             options,
+            limits,
             reviewer,
         )
         self._lock = Lock()
@@ -127,7 +129,7 @@ class Supervisor:
             async with self._lock:
                 acc: MutableSequence[Metric] = []
                 timeout = (
-                    self._options.manual_timeout if manual else self._options.timeout
+                    self._limits.manual_timeout if manual else self._limits.timeout
                 )
 
                 async def supervise(worker: Worker) -> None:
