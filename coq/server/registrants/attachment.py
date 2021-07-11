@@ -5,8 +5,10 @@ from uuid import uuid4
 from pynvim import Nvim
 from pynvim.api import Buffer, NvimError
 from pynvim_pp.api import buf_filetype, buf_get_option, cur_buf
+from pynvim_pp.lib import write
 
 from ...registry import autocmd, rpc
+from ...shared.timeit import timeit
 from ..rt_types import Stack
 from ..state import state
 from .omnifunc import comp_func
