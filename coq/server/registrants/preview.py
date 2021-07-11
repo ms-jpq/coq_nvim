@@ -140,7 +140,7 @@ def _positions(
         height=n_height,
         width=ns_width,
     )
-    if n.row > 0 and display.positions.north:
+    if n.row > 1 and display.positions.north:
         yield display.positions.north, n
 
     s = _Pos(
