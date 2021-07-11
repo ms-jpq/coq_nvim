@@ -36,21 +36,22 @@ _Qmsg = Tuple[State, str, bool, Buffer, Tuple[int, int], Sequence[str], str]
 @rpc(blocking=True)
 def _listener(nvim: Nvim, stack: Stack) -> None:
     async def cont() -> None:
-        thing: _Qmsg = await run_in_executor(q.get)
-        s, mode, pending, buf, (lo, hi), lines, ft = thing
+        while True:
+            thing: _Qmsg = await run_in_executor(q.get)
+            s, mode, pending, buf, (lo, hi), lines, ft = thing
 
-        if buf.number not in s.heavy_bufs:
-            await stack.bdb.set_lines(
-                buf.number,
-                filetype=ft,
-                lo=lo,
-                hi=hi,
-                lines=lines,
-                unifying_chars=stack.settings.match.unifying_chars,
-            )
+            if buf.number not in s.heavy_bufs:
+                await stack.bdb.set_lines(
+                    buf.number,
+                    filetype=ft,
+                    lo=lo,
+                    hi=hi,
+                    lines=lines,
+                    unifying_chars=stack.settings.match.unifying_chars,
+                )
 
-        if not pending and mode.startswith("i"):
-            await async_call(nvim, comp_func, nvim, stack=stack, s=s, manual=False)
+            if not pending and mode.startswith("i"):
+                await async_call(nvim, comp_func, nvim, stack=stack, s=s, manual=False)
 
     go(nvim, aw=cont())
 
