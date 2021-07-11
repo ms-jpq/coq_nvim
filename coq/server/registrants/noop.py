@@ -23,18 +23,21 @@ _STARS = (
     "🌟",
 )
 _HELO = (
-    "你好",  # Chinese
-    "Hello",  # English
+    "Aloha", # Spongebob
     "Bonjour",  # French
-    "Hola",  # Spanish
-    "Привет",  # Russian
+    "Dia dhuit",  # Irish
     "Hallo",  # Germoney
+    "Hello",  # English
+    "Hola",  # Spanish
     "Olá",  # Portuguese
+    "γεια",  # Greek
+    "Здраво",  # Serbian
+    "Привет",  # Russian
     "שלום",  # Hebrew
+    "سلام",  # Persian
     "مرحبا",  # Arabic
     "สวัสดี",  #  Thai
-    "Здраво",  # Serbian
-    "γεια",  # Greek
+    "你好",  # Chinese
 )
 
 
