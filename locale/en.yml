@@ -1,7 +1,4 @@
 ---
-"welcome": |-
-  COQ ready: ${birds}
-
 "buf 2 fat": |-
   ❌ Buffer will not be indexed: size ${size} > ${limit}
 
