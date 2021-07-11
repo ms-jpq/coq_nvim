@@ -69,7 +69,7 @@ def _ls(nvim: Nvim) -> Iterator[Window]:
 @rpc(blocking=True)
 def _kill_win(nvim: Nvim, stack: Stack, reset: bool) -> None:
     if reset:
-        state(pum_location=-1)
+        state(pum_location=-1, preview_id=uuid4())
 
     for win in _ls(nvim):
         win_close(nvim, win=win)
