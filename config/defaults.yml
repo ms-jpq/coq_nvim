@@ -65,7 +65,7 @@ clients:
     enabled: True
     short_name: "TMUX"
     match_syms: False
-    limit: 66
+    limit: 16
     tie_breaker: 10
 
   buffers:
@@ -73,31 +73,31 @@ clients:
     short_name: "BUF"
     match_syms: False
     same_filetype: False
-    limit: 66
+    limit: 16
     tie_breaker: 20
 
   tree_sitter:
     enabled: True
     short_name: "TS"
-    limit: 66
+    limit: 16
     tie_breaker: 30
 
   paths:
     enabled: True
     short_name: "FILE"
-    limit: 66
+    limit: 16
     tie_breaker: 40
 
   snippets:
     enabled: True
     short_name: "SNIP"
-    limit: 66
+    limit: 16
     tie_breaker: 50
 
   tags:
     enabled: True
     short_name: "TAG"
-    limit: 66
+    limit: 16
     match_syms: True
     path_sep: " ⇉ "
     parent_scope: " ⇊"
@@ -106,6 +106,6 @@ clients:
   lsp:
     enabled: True
     short_name: "LSP"
-    limit: 66
+    limit: 16
     tie_breaker: 70
 

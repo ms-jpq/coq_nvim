@@ -131,7 +131,7 @@ def trans(
     for metric in ranked:
         if (
             counts[metric.comp.source] <= limits[metric.comp.source]
-            or metric.comp.primary_edit.new_text not in seen
+            and metric.comp.primary_edit.new_text not in seen
         ):
             counts[metric.comp.source] += 1
             seen.add(metric.comp.primary_edit.new_text)
