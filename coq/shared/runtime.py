@@ -118,16 +118,14 @@ class Supervisor:
                 with l_timeit(f"COLLECTED -- {m_name}"):
                     await self._reviewer.s1(worker, batch=batch)
                     elapsed, items = None, None
-                    try:
-                        with timeit() as t:
-                            async for items, completion in aenumerate(
-                                worker.work(context), start=1
-                            ):
-                                metric = self._reviewer.s2(batch, completion=completion)
-                                acc.append(metric)
-                        elapsed = t()
-                    finally:
-                        await self._reviewer.end(elapsed, items=items)
+                    with timeit() as t:
+                        async for items, completion in aenumerate(
+                            worker.work(context), start=1
+                        ):
+                            metric = self._reviewer.s2(batch, completion=completion)
+                            acc.append(metric)
+                    elapsed = t()
+                    await self._reviewer.end(elapsed, items=items)
 
             await self._reviewer.begin(context)
             self._tasks = tuple(
