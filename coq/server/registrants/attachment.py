@@ -5,7 +5,7 @@ from uuid import uuid4
 from pynvim import Nvim
 from pynvim.api import Buffer, NvimError
 from pynvim_pp.api import buf_filetype, buf_get_option, cur_buf
-from pynvim_pp.lib import async_call, go, write
+from pynvim_pp.lib import async_call, awrite, go
 
 from ...registry import autocmd, rpc
 from ..rt_types import Stack
@@ -67,7 +67,7 @@ def _lines_event(
             )
         else:
             msg = f"❌ 👉 :: {size} > {stack.settings.limits.max_buf_index}"
-            write(nvim, msg, error=True)
+            await awrite(nvim, msg, error=True)
 
         if not pending and mode.startswith("i"):
             await async_call(nvim, comp_func, nvim, stack=stack, s=s, manual=False)
