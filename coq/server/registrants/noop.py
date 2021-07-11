@@ -23,6 +23,8 @@ _STARS = (
     "🌟",
 )
 _HELO = (
+    "Aanii",  # Ojibwe
+    "Alo",  # Michif
     "Aloha",  # Spongebob
     "Bonjour",  # French
     "Dia dhuit",  # Irish
@@ -30,7 +32,12 @@ _HELO = (
     "Halò",  # Scottish?
     "Hello",  # English
     "Hola",  # Spanish
+    "Kwīingu-néewul",  # Lunaapeew
     "Olá",  # Portuguese
+    "Sekoh",  # Mohawk
+    "Ullaqut",  # Inuktitut
+    "Waajiiye", # Oji-Cree
+    "Wâciyê",  # Cree
     "γεια",  # Greek
     "Здраво",  # Serbian
     "Привет",  # Russian
