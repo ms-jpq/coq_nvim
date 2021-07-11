@@ -104,7 +104,7 @@ def parse(
             if c
         )
     elif isinstance(resp, Sequence):
-        return True, tuple(
+        return False, tuple(
             c
             for c in (
                 _parse_item(short_name, tie_breaker=tie_breaker, item=item)
@@ -113,5 +113,5 @@ def parse(
             if c
         )
     else:
-        return True, ()
+        return False, ()
 
