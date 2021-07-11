@@ -1,8 +1,18 @@
 from __future__ import annotations
 
 from abc import abstractmethod
-from asyncio import Condition, Lock, Task, as_completed, gather, sleep, wait
+from asyncio import (
+    CancelledError,
+    Condition,
+    Lock,
+    Task,
+    as_completed,
+    gather,
+    sleep,
+    wait,
+)
 from concurrent.futures import Executor
+from contextlib import suppress
 from dataclasses import dataclass
 from typing import (
     AsyncIterator,
@@ -105,8 +115,10 @@ class Supervisor:
 
     async def interrupt(self) -> None:
         g = gather(*self._tasks)
-        while not g.cancelled():
+        while not g.done():
             await sleep(0)
+        with suppress(CancelledError):
+            await g
 
     async def collect(self, context: Context, manual: bool) -> Sequence[Metric]:
         with l_timeit("COLLECTED -- **ALL**"):
