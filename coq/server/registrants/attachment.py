@@ -1,16 +1,17 @@
 from contextlib import suppress
-from typing import Sequence
+from queue import SimpleQueue
+from typing import Sequence, Tuple
 from uuid import uuid4
 
 from pynvim import Nvim
 from pynvim.api import Buffer, NvimError
 from pynvim_pp.api import buf_filetype, buf_get_option, cur_buf
-from pynvim_pp.lib import write
+from pynvim_pp.lib import async_call, awrite, go
+from std2.asyncio import run_in_executor
 
-from ...registry import autocmd, rpc
-from ...shared.timeit import timeit
+from ...registry import atomic, autocmd, rpc
 from ..rt_types import Stack
-from ..state import state
+from ..state import State, state
 from .omnifunc import comp_func
 
 
@@ -26,6 +27,35 @@ def _buf_enter(nvim: Nvim, stack: Stack) -> None:
 
 
 autocmd("BufEnter", "InsertEnter") << f"lua {_buf_enter.name}()"
+
+q: SimpleQueue = SimpleQueue()
+
+_Qmsg = Tuple[State, str, bool, Buffer, Tuple[int, int], Sequence[str], str]
+
+
+@rpc(blocking=True)
+def _listener(nvim: Nvim, stack: Stack) -> None:
+    async def cont() -> None:
+        thing: _Qmsg = await run_in_executor(q.get)
+        s, mode, pending, buf, (lo, hi), lines, ft = thing
+
+        if buf.number not in s.heavy_bufs:
+            await stack.bdb.set_lines(
+                buf.number,
+                filetype=ft,
+                lo=lo,
+                hi=hi,
+                lines=lines,
+                unifying_chars=stack.settings.match.unifying_chars,
+            )
+
+        if not pending and mode.startswith("i"):
+            await async_call(nvim, comp_func, nvim, stack=stack, s=s, manual=False)
+
+    go(nvim, aw=cont())
+
+
+atomic.exec_lua(f"{_listener.name}()", ())
 
 
 def _lines_event(
@@ -43,19 +73,7 @@ def _lines_event(
     size = sum(map(len, lines))
     heavy_bufs = {buf.number} if size > stack.settings.limits.max_buf_index else set()
     s = state(change_id=uuid4(), heavy_bufs=heavy_bufs)
-
-    if buf.number not in s.heavy_bufs:
-        stack.bdb.set_lines(
-            buf.number,
-            filetype=filetype,
-            lo=lo,
-            hi=hi,
-            lines=lines,
-            unifying_chars=stack.settings.match.unifying_chars,
-        )
-
-    if not pending and mode.startswith("i"):
-        comp_func(nvim, stack=stack, s=s, manual=False)
+    q.put((s, mode, pending, buf, (lo, hi), lines, filetype))
 
 
 def _changed_event(nvim: Nvim, stack: Stack, buf: Buffer, tick: int) -> None:

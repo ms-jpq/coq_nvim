@@ -68,7 +68,7 @@ class BDB:
 
         self._ex.submit(cont)
 
-    def set_lines(
+    async def set_lines(
         self,
         buf_id: int,
         filetype: str,
@@ -121,7 +121,7 @@ class BDB:
                             },
                         )
 
-        self._ex.submit(cont)
+        await run_in_executor(self._ex.submit, cont)
 
     async def words(
         self, opts: Options, filetype: Optional[str], word: str, limit: int
