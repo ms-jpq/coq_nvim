@@ -23,10 +23,11 @@ _STARS = (
     "🌟",
 )
 _HELO = (
-    "Aloha", # Spongebob
+    "Aloha",  # Spongebob
     "Bonjour",  # French
     "Dia dhuit",  # Irish
     "Hallo",  # Germoney
+    "Halò",  # Scottish?
     "Hello",  # English
     "Hola",  # Spanish
     "Olá",  # Portuguese
