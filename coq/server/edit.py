@@ -4,7 +4,6 @@ from pprint import pformat
 from typing import AbstractSet, Iterator, MutableSequence, Sequence, Tuple
 
 from pynvim import Nvim
-from pynvim.api.buffer import Buffer
 from pynvim_pp.api import (
     buf_get_lines,
     buf_set_lines,
@@ -13,12 +12,10 @@ from pynvim_pp.api import (
     win_set_cursor,
 )
 from pynvim_pp.logging import log
-from pynvim_pp.operators import operator_marks
 from std2.itertools import deiter
 from std2.types import never
 
 from ..consts import DEBUG
-from ..databases.buffers.database import BDB
 from ..shared.trans import trans_adjusted
 from ..shared.types import (
     UTF8,
