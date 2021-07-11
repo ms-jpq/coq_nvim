@@ -1,4 +1,5 @@
 from asyncio import as_completed
+from itertools import islice
 from locale import strxfrm
 from os import X_OK, access
 from os.path import join, normpath, sep, split
@@ -38,14 +39,14 @@ def _join(lhs: str, rhs: str) -> str:
 
 def parse(base: Path, line: str, limit: int) -> Iterator[Tuple[str, str]]:
     segments = reversed(tuple(_segments(line)))
-    for segment, _ in zip(segments, range(limit)):
+    for segment in segments:
         _, ss, sr = segment.rpartition(sep)
         sort_by = ss + sr
 
         e = Path(segment).expanduser()
         entire = e if e.is_absolute() else base / e
         if entire.is_dir() and access(entire, mode=X_OK):
-            for path in entire.iterdir():
+            for path in islice(entire.iterdir(), limit):
                 term = sep if path.is_dir() else ""
                 line = _join(segment, path.name) + term
                 yield line, sort_by
@@ -57,7 +58,7 @@ def parse(base: Path, line: str, limit: int) -> Iterator[Tuple[str, str]]:
             l = Path(lhs).expanduser()
             left = l if l.is_absolute() else base / l
             if left.is_dir() and access(left, mode=X_OK):
-                for path in left.iterdir():
+                for path in islice(left.iterdir(), limit):
                     if path.name.startswith(rhs):
                         term = sep if path.is_dir() else ""
                         line = _join(lhs, path.name) + term
