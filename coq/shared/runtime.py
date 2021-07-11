@@ -115,6 +115,7 @@ class Supervisor:
 
     async def interrupt(self) -> None:
         g = gather(*self._tasks)
+        g.cancel()
         while not g.done():
             await sleep(0)
         with suppress(CancelledError):
