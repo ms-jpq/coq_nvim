@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from abc import abstractmethod
-from asyncio import Condition, Lock, Task, as_completed, sleep, wait
+from asyncio import Condition, Lock, Task, as_completed, gather, sleep, wait
 from concurrent.futures import Executor
 from dataclasses import dataclass
 from typing import (
@@ -103,13 +103,15 @@ class Supervisor:
 
         go(self.nvim, aw=cont())
 
+    async def interrupt(self) -> None:
+        g = gather(*self._tasks)
+        while not g.cancelled():
+            await sleep(0)
+
     async def collect(self, context: Context, manual: bool) -> Sequence[Metric]:
         with l_timeit("COLLECTED -- **ALL**"):
             async with self._lock:
-                for task in self._tasks:
-                    task.cancel()
                 await sleep(0)
-
                 acc: MutableSequence[Metric] = []
                 timeout = (
                     self._options.manual_timeout if manual else self._options.timeout
