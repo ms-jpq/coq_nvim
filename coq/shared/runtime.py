@@ -111,7 +111,6 @@ class Supervisor:
     async def collect(self, context: Context, manual: bool) -> Sequence[Metric]:
         with l_timeit("COLLECTED -- **ALL**"):
             async with self._lock:
-                await sleep(0)
                 acc: MutableSequence[Metric] = []
                 timeout = (
                     self._options.manual_timeout if manual else self._options.timeout
