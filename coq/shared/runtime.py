@@ -1,7 +1,16 @@
 from __future__ import annotations
 
 from abc import abstractmethod
-from asyncio import CancelledError, Condition, Task, as_completed, gather, sleep, wait
+from asyncio import (
+    CancelledError,
+    Condition,
+    Lock,
+    Task,
+    as_completed,
+    gather,
+    sleep,
+    wait,
+)
 from concurrent.futures import Executor
 from contextlib import suppress
 from dataclasses import dataclass
@@ -72,6 +81,7 @@ class Supervisor:
             options,
             reviewer,
         )
+        self._lock = Lock()
         self._idling = Condition()
         self._workers: MutableSet[Worker] = WeakSet()
         self._tasks: Sequence[Task] = ()
@@ -105,40 +115,43 @@ class Supervisor:
 
     async def collect(self, context: Context, manual: bool) -> Sequence[Metric]:
         with l_timeit("COLLECTED -- **ALL**"):
-            g = gather(*self._tasks)
-            g.cancel()
-            with suppress(CancelledError):
-                await g
+            async with self._lock:
+                g = gather(*self._tasks)
+                g.cancel()
+                with suppress(CancelledError):
+                    await g
 
-            acc: MutableSequence[Metric] = []
-            timeout = self._options.manual_timeout if manual else self._options.timeout
+                acc: MutableSequence[Metric] = []
+                timeout = (
+                    self._options.manual_timeout if manual else self._options.timeout
+                )
 
-            async def supervise(worker: Worker) -> None:
-                m_name, batch = worker.__class__.__module__, uuid4()
-                with l_timeit(f"WORKER -- {m_name}", force=True):
-                    await self._reviewer.s1(worker, batch=batch)
-                    elapsed, items = None, None
-                    with timeit() as t:
-                        async for items, completion in aenumerate(
-                            worker.work(context), start=1
-                        ):
-                            metric = self._reviewer.s2(batch, completion=completion)
-                            acc.append(metric)
-                    elapsed = t()
-                    await self._reviewer.end(elapsed, items=items)
+                async def supervise(worker: Worker) -> None:
+                    m_name, batch = worker.__class__.__module__, uuid4()
+                    with l_timeit(f"WORKER -- {m_name}", force=True):
+                        await self._reviewer.s1(worker, batch=batch)
+                        elapsed, items = None, None
+                        with timeit() as t:
+                            async for items, completion in aenumerate(
+                                worker.work(context), start=1
+                            ):
+                                metric = self._reviewer.s2(batch, completion=completion)
+                                acc.append(metric)
+                        elapsed = t()
+                        await self._reviewer.end(elapsed, items=items)
 
-            await self._reviewer.begin(context)
-            self._tasks = tuple(
-                cast(Task, go(self.nvim, aw=supervise(worker)))
-                for worker in self._workers
-            )
-            _, pending = await wait(self._tasks, timeout=timeout)
-            if not acc:
-                for fut in as_completed(pending):
-                    await fut
-                    if acc:
-                        break
-            return acc
+                await self._reviewer.begin(context)
+                self._tasks = tuple(
+                    cast(Task, go(self.nvim, aw=supervise(worker)))
+                    for worker in self._workers
+                )
+                _, pending = await wait(self._tasks, timeout=timeout)
+                if not acc:
+                    for fut in as_completed(pending):
+                        await fut
+                        if acc:
+                            break
+                return acc
 
 
 class Worker(Generic[O_co, T_co]):
