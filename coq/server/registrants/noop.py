@@ -23,12 +23,18 @@ _STARS = (
     "🌟",
 )
 _HELO = (
-    "你好",
-    "Hello",
-    "Bonjour",
-    "Hola",
-    "Привет",
-    "Hallo",
+    "你好",  # Chinese
+    "Hello",  # English
+    "Bonjour",  # French
+    "Hola",  # Spanish
+    "Привет",  # Russian
+    "Hallo",  # Germoney
+    "Olá",  # Portuguese
+    "שלום",  # Hebrew
+    "مرحبا",  # Arabic
+    "สวัสดี",  #  Thai
+    "Здраво",  # Serbian
+    "γεια",  # Greek
 )
 
 
