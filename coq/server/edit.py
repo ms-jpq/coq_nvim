@@ -372,12 +372,13 @@ def edit(nvim: Nvim, stack: Stack, state: State, data: UserData) -> Tuple[int, i
     )
     new_lines = _new_lines(view, instructions=instructions)
     n_row, n_col = _cursor(state.context.position, instructions=instructions)
+    send_lines = new_lines[lo:]
 
     if DEBUG:
-        msg = pformat((data, instructions, (n_row + 1, n_col + 1), new_lines))
+        msg = pformat((data, instructions, (n_row + 1, n_col + 1), send_lines))
         log.debug("%s", msg)
 
-    buf_set_lines(nvim, buf=buf, lo=lo, hi=hi, lines=new_lines[lo:])
+    buf_set_lines(nvim, buf=buf, lo=lo, hi=hi, lines=send_lines)
     win_set_cursor(nvim, win=win, row=n_row, col=n_col)
 
     stack.idb.inserted(data.batch.bytes, sort_by=data.sort_by)
