@@ -34,7 +34,7 @@ display:
 
 match:
   unifying_chars:
-    - _
+    - "_"
     - "-"
   exact_matches: 2
   fuzzy_cutoff: 0.6
