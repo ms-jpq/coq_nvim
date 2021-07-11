@@ -106,9 +106,9 @@ class Supervisor:
         with l_timeit("COLLECTED -- **ALL**"):
             for task in self._tasks:
                 task.cancel()
-            for task in as_completed(self._tasks):
+            for fut in as_completed(self._tasks):
                 with suppress(CancelledError):
-                    await task
+                    await fut
 
             acc: MutableSequence[Metric] = []
             timeout = self._options.manual_timeout if manual else self._options.timeout
