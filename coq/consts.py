@@ -14,8 +14,12 @@ RT_PY = (
 
 _ARTIFACTS_DIR = TOP_LEVEL / "coq.artifacts"
 _CONF_DIR = TOP_LEVEL / "config"
+LANG_ROOT = TOP_LEVEL / "locale"
+DEFAULT_LANG = "en"
+
 CONFIG_YML = _CONF_DIR / "defaults.yml"
 COMPILATION_YML = _CONF_DIR / "compilation.yml"
+
 
 CLIENTS_DIR = VARS / "clients"
 TMP_DIR = VARS / "tmp"

@@ -11,11 +11,13 @@ from pynvim_pp.api import (
     win_get_buf,
     win_set_cursor,
 )
+from pynvim_pp.lib import write
 from pynvim_pp.logging import log
 from std2.itertools import deiter
 from std2.types import never
 
 from ..consts import DEBUG
+from ..lang import LANG
 from ..shared.trans import trans_adjusted
 from ..shared.types import (
     UTF8,
@@ -351,6 +353,9 @@ def edit(nvim: Nvim, stack: Stack, state: State, data: UserData) -> Tuple[int, i
             primary, marks = parsed
         except ParseError as e:
             primary, marks = data.primary_edit, ()
+            log.warn("%s", e)
+            msg = LANG("failed to parse snippet")
+            write(nvim, msg)
     else:
         primary, marks = data.primary_edit, ()
 

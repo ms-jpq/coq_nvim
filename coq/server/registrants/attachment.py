@@ -9,9 +9,10 @@ from pynvim_pp.api import buf_filetype, buf_get_option, cur_buf
 from pynvim_pp.lib import async_call, awrite, go
 from std2.asyncio import run_in_executor
 
+from ...lang import LANG
 from ...registry import atomic, autocmd, rpc
 from ..rt_types import Stack
-from ..state import State, state
+from ..state import state
 from .omnifunc import comp_func
 
 
@@ -55,6 +56,13 @@ def _listener(nvim: Nvim, stack: Stack) -> None:
                     lines=lines,
                     unifying_chars=stack.settings.match.unifying_chars,
                 )
+            else:
+                msg = LANG(
+                    "buf 2 fat",
+                    size=size,
+                    limit=stack.settings.limits.max_buf_index,
+                )
+                await awrite(nvim, msg)
 
             if not pending and mode.startswith("i"):
                 await async_call(nvim, comp_func, nvim, stack=stack, s=s, manual=False)

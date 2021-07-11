@@ -1,0 +1,16 @@
+---
+"buf 2 fat": |-
+  ❌ Buffer will not be indexed: size ${size} > ${limit}
+
+"failed to parse snippet": |-
+  Failed to parse snippet, inserting as it is
+
+"no more marks": |-
+  ⛔️ No more marks available
+
+"applied mark": |-
+  ✅ Mark applied, ${marks_left} left
+
+"added marks": |-
+  🎯 Marks added: ${regions}
+
