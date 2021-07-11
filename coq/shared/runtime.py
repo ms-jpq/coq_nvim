@@ -132,7 +132,7 @@ class Supervisor:
 
                 async def supervise(worker: Worker) -> None:
                     m_name, batch = worker.__class__.__module__, uuid4()
-                    with l_timeit(f"WORKER -- {m_name}", force=True):
+                    with l_timeit(f"WORKER -- {m_name}"):
                         await self._reviewer.s1(worker, batch=batch)
                         elapsed, items = None, None
                         with timeit() as t:
