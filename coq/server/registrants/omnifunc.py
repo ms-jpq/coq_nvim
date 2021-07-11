@@ -47,8 +47,10 @@ def comp_func(nvim: Nvim, stack: Stack, s: State, manual: bool) -> None:
         async def cont() -> None:
             if prev:
                 prev.cancel()
-                await sleep(0)
+                while not prev.cancelled():
+                    await sleep(0)
 
+            await stack.supervisor.interrupt()
             metrics = await stack.supervisor.collect(ctx, manual=manual)
             s = state()
             if s.change_id == ctx.change_id:
