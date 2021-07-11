@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 from abc import abstractmethod
-from asyncio import Condition, Task, as_completed, create_task, sleep, wait
+from asyncio import CancelledError, Condition, Task, as_completed, create_task, wait
 from concurrent.futures import Executor
+from contextlib import suppress
 from dataclasses import dataclass
 from typing import (
     AsyncIterator,
@@ -105,7 +106,9 @@ class Supervisor:
         with l_timeit("COLLECTED -- **ALL**"):
             for task in self._tasks:
                 task.cancel()
-            await sleep(0)
+            for task in as_completed(self._tasks):
+                with suppress(CancelledError):
+                    await task
 
             acc: MutableSequence[Metric] = []
             timeout = self._options.manual_timeout if manual else self._options.timeout

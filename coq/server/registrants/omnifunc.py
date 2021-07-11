@@ -1,5 +1,5 @@
-from asyncio import Task
-from asyncio.tasks import sleep
+from asyncio import CancelledError, Task
+from contextlib import suppress
 from typing import Any, Literal, Mapping, Optional, Sequence, Tuple, Union, cast
 from uuid import uuid4
 
@@ -48,7 +48,9 @@ def comp_func(nvim: Nvim, stack: Stack, s: State, manual: bool) -> None:
         async def cont() -> None:
             if prev:
                 prev.cancel()
-                await sleep(0)
+                with suppress(CancelledError):
+                    await prev
+
             metrics = await stack.supervisor.collect(ctx, manual=manual)
             s = state()
             if s.change_id == ctx.change_id:
