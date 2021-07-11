@@ -118,7 +118,9 @@ class SDB:
             except OperationalError:
                 return ()
 
-        self._interrupt()
-        ret = await run_in_executor(self._ex.submit, cont)
-        return cast(Sequence[_Snip], ret)
+        def step() -> Sequence[_Snip]:
+            self._interrupt()
+            return self._ex.submit(cont)
+
+        return await run_in_executor(step)
 

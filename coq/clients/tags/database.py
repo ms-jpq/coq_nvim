@@ -125,7 +125,9 @@ class Database:
             except OperationalError:
                 return ()
 
-        self._interrupt()
-        ret = await run_in_executor(self._ex.submit, cont)
-        return cast(Sequence[Tuple[Tag, str]], ret)
+        def step() -> Sequence[Tuple[Tag, str]]:
+            self._interrupt()
+            return self._ex.submit(cont)
+
+        return await run_in_executor(step)
 
