@@ -48,7 +48,7 @@ def _launch_loop(nvim: Nvim, stack: Stack) -> None:
                 event.set()
 
         async def c2() -> None:
-            nonlocal qued, task
+            nonlocal task
             while True:
                 await event.wait()
                 event.clear()
@@ -60,7 +60,6 @@ def _launch_loop(nvim: Nvim, stack: Stack) -> None:
                         await task
                 if qued:
                     ctx, manual = qued
-                    qued = None
                     task = cast(Task, go(nvim, aw=c0(ctx, manual=manual)))
 
         await gather(c1(), c2())
