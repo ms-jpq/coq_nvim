@@ -1,4 +1,6 @@
 from asyncio import Task, sleep, wait
+from asyncio.exceptions import CancelledError
+from contextlib import suppress
 from dataclasses import asdict, dataclass
 from math import ceil
 from os import linesep
@@ -238,6 +240,11 @@ def _resolve_comp(
         if prev:
             prev.cancel()
             await sleep(0)
+            while not prev.done():
+                await sleep(0)
+            with suppress(CancelledError):
+                await prev
+
         done, _ = await wait((request(nvim, item=item),), timeout=timeout)
         doc = await done.pop() if done else maybe_doc
         if doc:
