@@ -123,6 +123,7 @@ class Supervisor:
 
     async def collect(self, context: Context, manual: bool) -> Sequence[Metric]:
         with l_timeit("COLLECTED -- **ALL**"):
+            assert not self._lock.locked()
             async with self._lock:
                 acc: MutableSequence[Metric] = []
                 timeout = (

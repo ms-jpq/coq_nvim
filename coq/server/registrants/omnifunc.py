@@ -51,6 +51,7 @@ def _launch_loop(nvim: Nvim, stack: Stack) -> None:
             nonlocal qued, task
             while True:
                 await event.wait()
+                event.clear()
                 if task:
                     task.cancel()
                     while not task.done():
