@@ -66,7 +66,7 @@ async def reconciliate(cwd: Path, paths: AbstractSet[str]) -> Tags:
     tags_path = _TAGS_DIR / md5(str(cwd).encode()).hexdigest()
 
     existing = await run_in_executor(_load, tags_path)
-    mtimes = _mtimes(map(Path, existing.keys() | paths))
+    mtimes = await run_in_executor(_mtimes, map(Path, existing.keys() | paths))
     query_paths = tuple(
         path
         for path, mtime in mtimes.items()
