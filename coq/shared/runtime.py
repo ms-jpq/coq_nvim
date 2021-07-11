@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from abc import abstractmethod
-from asyncio import Condition, Task, as_completed, create_task, sleep, wait
+from asyncio import Condition, Task, as_completed, sleep, wait
 from concurrent.futures import Executor
 from dataclasses import dataclass
 from typing import (
@@ -13,6 +13,7 @@ from typing import (
     Protocol,
     Sequence,
     TypeVar,
+    cast,
 )
 from uuid import UUID, uuid4
 from weakref import WeakSet
@@ -112,7 +113,7 @@ class Supervisor:
 
             async def supervise(worker: Worker) -> None:
                 m_name, batch = worker.__class__.__module__, uuid4()
-                with l_timeit(f"WORKER -- {m_name}"):
+                with l_timeit(f"WORKER -- {m_name}", force=True):
                     await self._reviewer.s1(worker, batch=batch)
                     elapsed, items = None, None
                     with timeit() as t:
@@ -126,7 +127,8 @@ class Supervisor:
 
             await self._reviewer.begin(context)
             self._tasks = tuple(
-                create_task(supervise(worker)) for worker in self._workers
+                cast(Task, go(self.nvim, aw=supervise(worker)))
+                for worker in self._workers
             )
             _, pending = await wait(self._tasks, timeout=timeout)
             if not acc:
