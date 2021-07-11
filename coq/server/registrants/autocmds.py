@@ -11,6 +11,7 @@ from ...registry import atomic, autocmd, rpc
 from ...snippets.artifacts import SNIPPETS
 from ...snippets.types import ParsedSnippet
 from ...treesitter.request import async_request
+from ...treesitter.types import Payload
 from ..rt_types import Stack
 from ..state import state
 
@@ -43,13 +44,15 @@ atomic.exec_lua(f"{_ft_changed.name}()", ())
 def _insert_enter(nvim: Nvim, stack: Stack) -> None:
     heavy_bufs = state().heavy_bufs
     buf = cur_buf(nvim)
-    if not buf.number in heavy_bufs:
 
-        async def cont() -> None:
+    async def cont() -> None:
+        if not buf.number in heavy_bufs:
+            payloads: Sequence[Payload] = ()
+        else:
             payloads = [p async for p in async_request(nvim)]
-            await stack.tdb.new_nodes(
-                {payload["text"]: payload["kind"] for payload in payloads}
-            )
+        await stack.tdb.new_nodes(
+            {payload["text"]: payload["kind"] for payload in payloads}
+        )
 
         go(nvim, aw=cont())
 
