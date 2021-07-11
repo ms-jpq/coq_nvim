@@ -30,7 +30,7 @@ autocmd("BufEnter", "InsertEnter") << f"lua {_buf_enter.name}()"
 
 q: SimpleQueue = SimpleQueue()
 
-_Qmsg = Tuple[State, str, bool, Buffer, Tuple[int, int], Sequence[str], str]
+_Qmsg = Tuple[str, bool, Buffer, Tuple[int, int], Sequence[str], str]
 
 
 @rpc(blocking=True)
@@ -38,7 +38,13 @@ def _listener(nvim: Nvim, stack: Stack) -> None:
     async def cont() -> None:
         while True:
             thing: _Qmsg = await run_in_executor(q.get)
-            s, mode, pending, buf, (lo, hi), lines, ft = thing
+            mode, pending, buf, (lo, hi), lines, ft = thing
+
+            size = sum(map(len, lines))
+            heavy_bufs = (
+                {buf.number} if size > stack.settings.limits.max_buf_index else set()
+            )
+            s = state(change_id=uuid4(), heavy_bufs=heavy_bufs)
 
             if buf.number not in s.heavy_bufs:
                 await stack.bdb.set_lines(
@@ -71,10 +77,7 @@ def _lines_event(
 ) -> None:
     filetype = buf_filetype(nvim, buf=buf)
     mode = nvim.api.get_mode()["mode"]
-    size = sum(map(len, lines))
-    heavy_bufs = {buf.number} if size > stack.settings.limits.max_buf_index else set()
-    s = state(change_id=uuid4(), heavy_bufs=heavy_bufs)
-    q.put((s, mode, pending, buf, (lo, hi), lines, filetype))
+    q.put((mode, pending, buf, (lo, hi), lines, filetype))
 
 
 def _changed_event(nvim: Nvim, stack: Stack, buf: Buffer, tick: int) -> None:
