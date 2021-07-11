@@ -149,13 +149,16 @@ class Supervisor:
                     cast(Task, go(self.nvim, aw=supervise(worker)))
                     for worker in self._workers
                 )
-                _, pending = await wait(self._tasks, timeout=timeout)
-                if not acc:
-                    for fut in as_completed(pending):
-                        await fut
-                        if acc:
-                            break
-                return acc
+                if not self._tasks:
+                    return ()
+                else:
+                    _, pending = await wait(self._tasks, timeout=timeout)
+                    if not acc:
+                        for fut in as_completed(pending):
+                            await fut
+                            if acc:
+                                break
+                    return acc
 
 
 class Worker(Generic[O_co, T_co]):
