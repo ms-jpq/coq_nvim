@@ -23,10 +23,19 @@ class PumDisplay:
 
 
 @dataclass(frozen=True)
+class PreviewPositions:
+    north: Optional[int]
+    south: Optional[int]
+    west: Optional[int]
+    east: Optional[int]
+
+
+@dataclass(frozen=True)
 class PreviewDisplay:
     y_margin: int
     x_margin: int
     x_max_len: int
+    positions: PreviewPositions
     lsp_timeout: float
 
 

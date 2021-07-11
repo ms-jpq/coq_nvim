@@ -11,6 +11,12 @@ display:
     x_margin: 4
     x_max_len: 88
     lsp_timeout: 0.05
+    positions:
+      north: 1
+      south: 2
+      west: 3
+      east: 4
+
   pum:
     y_max_len: 16
     x_max_len: 66

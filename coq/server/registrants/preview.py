@@ -140,8 +140,8 @@ def _positions(
         height=n_height,
         width=ns_width,
     )
-    if n.row > 0:
-        yield 1, n
+    if n.row > 0 and display.positions.north:
+        yield display.positions.north, n
 
     s = _Pos(
         row=btm,
@@ -149,7 +149,9 @@ def _positions(
         height=limit_h(src_height - btm),
         width=ns_width,
     )
-    yield 2, s
+
+    if display.positions.south:
+        yield display.positions.south, s
 
     we_height = limit_h(src_height - top)
     w_width = limit_w(left - 1)
@@ -160,7 +162,9 @@ def _positions(
         height=we_height,
         width=w_width,
     )
-    yield 3, w
+
+    if display.positions.west:
+        yield display.positions.west, w
 
     e = _Pos(
         row=top,
@@ -168,7 +172,9 @@ def _positions(
         height=we_height,
         width=limit_w(scr_width - right - 2),
     )
-    yield 4, e
+
+    if display.positions.east:
+        yield display.positions.east, e
 
 
 def _set_win(nvim: Nvim, buf: Buffer, pos: _Pos) -> None:
