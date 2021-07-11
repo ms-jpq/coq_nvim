@@ -140,7 +140,7 @@ def _positions(
         height=n_height,
         width=ns_width,
     )
-    if n.row > 1 and display.positions.north:
+    if n.row > 1 and display.positions.north is not None:
         yield display.positions.north, n
 
     s = _Pos(
@@ -150,7 +150,7 @@ def _positions(
         width=ns_width,
     )
 
-    if display.positions.south:
+    if display.positions.south is not None:
         yield display.positions.south, s
 
     we_height = limit_h(src_height - top)
@@ -163,7 +163,7 @@ def _positions(
         width=w_width,
     )
 
-    if display.positions.west:
+    if display.positions.west is not None:
         yield display.positions.west, w
 
     e = _Pos(
@@ -173,7 +173,7 @@ def _positions(
         width=limit_w(scr_width - right - 2),
     )
 
-    if display.positions.east:
+    if display.positions.east is not None:
         yield display.positions.east, e
 
 
@@ -216,15 +216,18 @@ def _show_preview(
     new_doc = _preprocess(s.context, doc=doc)
     text = expand_tabs(s.context, text=new_doc.text)
     lines = text.splitlines()
-    (pum_location, pos), *_ = sorted(
+    ordered = sorted(
         _positions(stack.settings.display.preview, event=event, lines=lines, state=s),
         key=lambda p: (p[1].height * p[1].width, p[0] == s.pum_location, -p[0]),
         reverse=True,
     )
-    state(pum_location=pum_location)
-    nvim.api.exec_lua(
-        f"{_go_show.name}(...)", (preview_id.hex, new_doc.syntax, lines, asdict(pos))
-    )
+    if ordered:
+        (pum_location, pos), *_ = ordered
+        state(pum_location=pum_location)
+        nvim.api.exec_lua(
+            f"{_go_show.name}(...)",
+            (preview_id.hex, new_doc.syntax, lines, asdict(pos)),
+        )
 
 
 _TASK: Optional[Task] = None

@@ -1,3 +1,4 @@
+from collections import defaultdict
 from dataclasses import asdict
 from typing import Any, Callable, Iterable, Iterator, MutableSet, Sequence, Tuple
 
@@ -123,9 +124,16 @@ def trans(
     sortby = _sort_by(w_adjust)
     ranked = sorted(metrics, key=sortby)
 
+    clients = stack.supervisor.clients
     seen: MutableSet[str] = set()
+    limits = {client.short_name: client.limit for client in clients}
+    counts = defaultdict(lambda: 0, {client.short_name: 0 for client in clients})
     for metric in ranked:
-        if metric.comp.primary_edit.new_text not in seen:
+        if (
+            counts[metric.comp.source] <= limits[metric.comp.source]
+            or metric.comp.primary_edit.new_text not in seen
+        ):
+            counts[metric.comp.source] += 1
             seen.add(metric.comp.primary_edit.new_text)
             yield _cmp_to_vcmp(
                 display.pum,

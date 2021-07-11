@@ -9,7 +9,7 @@ from ..databases.insertions.database import IDB
 from ..shared.context import EMPTY_CONTEXT
 from ..shared.parse import coalesce, display_width, is_word, lower
 from ..shared.runtime import Metric, PReviewer, Worker
-from ..shared.settings import Options, Weights
+from ..shared.settings import BaseClient, Options, Weights
 from ..shared.types import Completion, Context
 
 
@@ -106,9 +106,8 @@ class Reviewer(PReviewer):
             batch_id=uuid4(), context=EMPTY_CONTEXT, neighbours={}, inserted={}
         )
 
-    def register(self, worker: Worker) -> None:
-        m_name = worker.__class__.__module__
-        self._db.new_source(m_name)
+    def register(self, worker: Worker, assoc: BaseClient) -> None:
+        self._db.new_source(assoc.short_name)
 
     async def begin(self, context: Context) -> None:
         inserted = await self._db.insertion_order(n_rows=100)
@@ -122,10 +121,9 @@ class Reviewer(PReviewer):
         )
         self._ctx = ctx
 
-    async def s1(self, worker: Worker, batch: UUID) -> None:
-        m_name = worker.__class__.__module__
+    async def s1(self, worker: Worker, assoc: BaseClient, batch: UUID) -> None:
         self._ctx = replace(self._ctx, batch_id=batch)
-        await self._db.new_batch(m_name, batch_id=batch.bytes)
+        await self._db.new_batch(assoc.short_name, batch_id=batch.bytes)
 
     def s2(self, batch: UUID, completion: Completion) -> Metric:
         match_metrics = _metric(

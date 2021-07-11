@@ -15,8 +15,10 @@ from concurrent.futures import Executor
 from contextlib import suppress
 from dataclasses import dataclass
 from typing import (
+    AbstractSet,
     AsyncIterator,
     Generic,
+    MutableMapping,
     MutableSequence,
     MutableSet,
     Optional,
@@ -26,19 +28,19 @@ from typing import (
     cast,
 )
 from uuid import UUID, uuid4
-from weakref import WeakSet
+from weakref import WeakKeyDictionary
 
 from pynvim import Nvim
 from pynvim_pp.lib import go
 from std2.aitertools import aenumerate
 from std2.timeit import timeit
 
-from .settings import Limits, Options, Weights
+from .settings import BaseClient, Limits, Options, Weights
 from .timeit import timeit as l_timeit
 from .types import Completion, Context
 
 T_co = TypeVar("T_co", contravariant=True)
-O_co = TypeVar("O_co", contravariant=True)
+O_co = TypeVar("O_co", contravariant=True, bound=BaseClient)
 
 
 @dataclass(frozen=True)
@@ -51,13 +53,13 @@ class Metric:
 
 
 class PReviewer(Protocol):
-    def register(self, worker: Worker) -> None:
+    def register(self, worker: Worker, assoc: BaseClient) -> None:
         ...
 
     async def begin(self, context: Context) -> None:
         ...
 
-    async def s1(self, worker: Worker, batch: UUID) -> None:
+    async def s1(self, worker: Worker, assoc: BaseClient, batch: UUID) -> None:
         ...
 
     def s2(self, batch: UUID, completion: Completion) -> Metric:
@@ -85,7 +87,7 @@ class Supervisor:
         )
         self._lock = Lock()
         self._idling = Condition()
-        self._workers: MutableSet[Worker] = WeakSet()
+        self._workers: MutableMapping[Worker, BaseClient] = WeakKeyDictionary()
         self._tasks: Sequence[Task] = ()
 
     @property
@@ -101,12 +103,16 @@ class Supervisor:
         return self._nvim
 
     @property
+    def clients(self) -> AbstractSet[BaseClient]:
+        return {*self._workers.values()}
+
+    @property
     def options(self) -> Options:
         return self._options
 
-    def register(self, worker: Worker) -> None:
-        self._reviewer.register(worker)
-        self._workers.add(worker)
+    def register(self, worker: Worker, assoc: BaseClient) -> None:
+        self._reviewer.register(worker, assoc=assoc)
+        self._workers[worker] = assoc
 
     def notify_idle(self) -> None:
         async def cont() -> None:
@@ -132,10 +138,10 @@ class Supervisor:
                     self._limits.manual_timeout if manual else self._limits.timeout
                 )
 
-                async def supervise(worker: Worker) -> None:
-                    m_name, batch = worker.__class__.__module__, uuid4()
-                    with l_timeit(f"WORKER -- {m_name}"):
-                        await self._reviewer.s1(worker, batch=batch)
+                async def supervise(worker: Worker, assoc: BaseClient) -> None:
+                    batch = uuid4()
+                    with l_timeit(f"WORKER -- {assoc.short_name}"):
+                        await self._reviewer.s1(worker, assoc=assoc, batch=batch)
                         elapsed, items = None, None
                         with timeit() as t:
                             async for items, completion in aenumerate(
@@ -148,8 +154,8 @@ class Supervisor:
 
                 await self._reviewer.begin(context)
                 self._tasks = tuple(
-                    cast(Task, go(self.nvim, aw=supervise(worker)))
-                    for worker in self._workers
+                    cast(Task, go(self.nvim, aw=supervise(worker, assoc=assoc)))
+                    for worker, assoc in self._workers.items()
                 )
                 if not self._tasks:
                     return ()
@@ -166,7 +172,7 @@ class Supervisor:
 class Worker(Generic[O_co, T_co]):
     def __init__(self, supervisor: Supervisor, options: O_co, misc: T_co) -> None:
         self._supervisor, self._options, self._misc = supervisor, options, misc
-        self._supervisor.register(self)
+        self._supervisor.register(self, assoc=options)
 
     @abstractmethod
     def work(self, context: Context) -> AsyncIterator[Completion]:
