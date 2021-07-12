@@ -37,7 +37,7 @@ def _join(lhs: str, rhs: str) -> str:
     return join(l, normpath(join(r, rhs)))
 
 
-def parse(base: Path, line: str, limit: int) -> Iterator[Tuple[str, str]]:
+def parse(base: Path, line: str) -> Iterator[Tuple[str, str]]:
     segments = reversed(tuple(_segments(line)))
     for segment in segments:
         _, ss, sr = segment.rpartition(sep)
@@ -46,7 +46,7 @@ def parse(base: Path, line: str, limit: int) -> Iterator[Tuple[str, str]]:
         e = Path(segment).expanduser()
         entire = e if e.is_absolute() else base / e
         if entire.is_dir() and access(entire, mode=X_OK):
-            for path in islice(entire.iterdir(), limit):
+            for path in entire.iterdir():
                 term = sep if path.is_dir() else ""
                 line = _join(segment, path.name) + term
                 yield line, sort_by
@@ -58,7 +58,7 @@ def parse(base: Path, line: str, limit: int) -> Iterator[Tuple[str, str]]:
             l = Path(lhs).expanduser()
             left = l if l.is_absolute() else base / l
             if left.is_dir() and access(left, mode=X_OK):
-                for path in islice(left.iterdir(), limit):
+                for path in left.iterdir():
                     if path.name.startswith(rhs):
                         term = sep if path.is_dir() else ""
                         line = _join(lhs, path.name) + term
@@ -68,7 +68,7 @@ def parse(base: Path, line: str, limit: int) -> Iterator[Tuple[str, str]]:
 
 async def _parse(base: Path, line: str, limit: int) -> AbstractSet[Tuple[str, str]]:
     def cont() -> AbstractSet[Tuple[str, str]]:
-        return {*parse(base, line=line, limit=limit)}
+        return {*islice(parse(base, line=line), limit)}
 
     return await run_in_executor(cont)
 
