@@ -108,7 +108,7 @@ def _positions(
     lines: Sequence[str],
     state: State,
 ) -> Iterator[Tuple[int, _Pos]]:
-    scr_width, src_height = state.screen
+    scr_width, scr_height = state.screen
     top, btm, left, right = (
         event.row,
         event.row + event.height + 1,
@@ -146,14 +146,14 @@ def _positions(
     s = _Pos(
         row=btm,
         col=ns_col,
-        height=limit_h(src_height - btm),
+        height=limit_h(scr_height - btm),
         width=ns_width,
     )
 
-    if display.positions.south is not None:
+    if s.row + s.height < scr_height - 1 and display.positions.south is not None:
         yield display.positions.south, s
 
-    we_height = limit_h(src_height - top)
+    we_height = limit_h(scr_height - top)
     w_width = limit_w(left - 1)
 
     w = _Pos(
