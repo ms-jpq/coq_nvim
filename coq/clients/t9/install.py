@@ -70,7 +70,7 @@ async def ensure_installed(retries: int, timeout: float) -> bool:
         else:
             try:
                 await run_in_executor(_update, timeout=timeout)
-            except URLError as e:
+            except (URLError, TimeoutError) as e:
                 log.warn("%s", e)
                 await sleep(timeout)
     else:
