@@ -2,6 +2,7 @@ from asyncio import sleep
 from os import X_OK, access
 from platform import machine
 from shutil import which
+from socket import timeout as TimeoutE
 from string import Template
 from urllib.error import URLError
 
@@ -70,7 +71,7 @@ async def ensure_installed(retries: int, timeout: float) -> bool:
         else:
             try:
                 await run_in_executor(_update, timeout=timeout)
-            except (URLError, TimeoutError) as e:
+            except (URLError, TimeoutE) as e:
                 log.warn("%s", e)
                 await sleep(timeout)
     else:
