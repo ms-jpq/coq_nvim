@@ -266,6 +266,7 @@ def _instructions(
     return instructions
 
 
+# TODO -- PrimaryEdit ought to be applied first
 def _new_lines(
     lines: _Lines, instructions: Sequence[_EditInstruction]
 ) -> Sequence[str]:
