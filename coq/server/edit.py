@@ -1,3 +1,4 @@
+from collections import deque
 from dataclasses import dataclass
 from itertools import chain, repeat
 from pprint import pformat
@@ -269,14 +270,14 @@ def _new_lines(
     lines: _Lines, instructions: Sequence[_EditInstruction]
 ) -> Sequence[str]:
     it = deiter(range(len(lines.b_lines8)))
-    stack = [*reversed(instructions)]
+    insts = deque(instructions)
 
     def cont() -> Iterator[str]:
         inst = None
 
         for idx in it:
-            if stack and not inst:
-                inst = stack.pop()
+            if insts and not inst:
+                inst = insts.popleft()
 
             if inst:
                 (r1, c1), (r2, c2) = inst.begin, inst.end
