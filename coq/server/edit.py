@@ -201,6 +201,7 @@ def _range_edit_trans(
         return inst
 
 
+# TODO -- PrimaryEdit ought to be applied first
 def _consolidate(
     instruction: _EditInstruction, *instructions: _EditInstruction
 ) -> Sequence[_EditInstruction]:
