@@ -228,6 +228,7 @@ def _consolidate(
 
 
 # TODO -- The PrimaryEdit need a shift factor
+# The shift factor is for edits BEHIND the PrimaryEdit
 def _instructions(
     ctx: Context,
     unifying_chars: AbstractSet[str],
