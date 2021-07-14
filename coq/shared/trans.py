@@ -1,7 +1,7 @@
 from itertools import accumulate
 from typing import AbstractSet
 
-from .parse import is_word, lower
+from .parse import coalesce, is_word, lower
 from .types import Context, ContextualEdit, Edit
 
 
@@ -38,16 +38,20 @@ def trans_adjusted(
     unifying_chars: AbstractSet[str], ctx: Context, edit: Edit
 ) -> ContextualEdit:
     c_edit = trans(line_before=ctx.line_before, line_after=ctx.line_after, edit=edit)
-    old_prefix = c_edit.old_prefix or (
+    n_symbols = len(tuple(coalesce(edit.new_text, unifying_chars=unifying_chars)))
+    b = (
         ctx.words_before
         if is_word(c_edit.new_text[:1], unifying_chars=unifying_chars)
         else ctx.words_before + ctx.syms_before
     )
-    old_suffix = c_edit.old_suffix or (
+    a = (
         ctx.words_after
         if is_word(c_edit.new_text[-1:], unifying_chars=unifying_chars)
         else ctx.words_after + ctx.syms_after
     )
+
+    old_prefix = b if n_symbols <= 1 else c_edit.old_prefix or b
+    old_suffix = a if n_symbols <= 1 else c_edit.old_suffix or a
     adjusted = ContextualEdit(
         new_text=c_edit.new_text,
         new_prefix=c_edit.new_prefix,
