@@ -201,7 +201,6 @@ def _range_edit_trans(
         return inst
 
 
-# TODO -- PrimaryEdit ought to be applied first
 def _consolidate(
     instruction: _EditInstruction, *instructions: _EditInstruction
 ) -> Sequence[_EditInstruction]:
@@ -228,6 +227,7 @@ def _consolidate(
     return stack
 
 
+# TODO -- The PrimaryEdit need a shift factor
 def _instructions(
     ctx: Context,
     unifying_chars: AbstractSet[str],
@@ -267,7 +267,6 @@ def _instructions(
     return instructions
 
 
-# TODO -- Need to deal with out of order instructions
 def _new_lines(
     lines: _Lines, instructions: Sequence[_EditInstruction]
 ) -> Sequence[str]:
