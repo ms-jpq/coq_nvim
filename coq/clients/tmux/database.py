@@ -2,7 +2,7 @@ from concurrent.futures import Executor
 from contextlib import closing
 from sqlite3 import Connection, OperationalError
 from threading import Lock
-from typing import Iterable, Iterator, Mapping, Sequence, Tuple, cast
+from typing import Iterable, Iterator, Mapping, Sequence, Tuple
 
 from std2.asyncio import run_in_executor
 from std2.sqllite3 import with_transaction

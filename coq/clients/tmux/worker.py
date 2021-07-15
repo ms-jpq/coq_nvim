@@ -29,7 +29,7 @@ async def _panes() -> AsyncIterator[_Pane]:
         "-F",
         "#{pane_id} #{pane_active} #{window_active}",
     )
-    if not proc.code:
+    if proc.code:
         pass
     else:
         for line in proc.out.decode().strip().splitlines():
@@ -54,7 +54,7 @@ async def _screenshot(
     unifying_chars: AbstractSet[str], uid: str
 ) -> Tuple[str, Sequence[str]]:
     proc = await call("tmux", "capture-pane", "-p", "-t", uid)
-    if not proc.code:
+    if proc.code:
         return uid, ()
     else:
         words = tuple(coalesce(proc.out.decode(), unifying_chars=unifying_chars))
