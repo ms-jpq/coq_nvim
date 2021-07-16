@@ -17,7 +17,7 @@ WHERE
   AND
   matches.lmatch LIKE X_LIKE_ESC(LOWER(SUBSTR(:word, 1, :exact))) ESCAPE '!'
   AND
-  X_SIMILARITY(LOWER(SUBSTR(:word, 1, :exact)), matches.lmatch) > :cut_off
+  X_SIMILARITY(LOWER(:word), matches.lmatch) > :cut_off
 GROUP BY
   snippets.rowid
 LIMIT :limit

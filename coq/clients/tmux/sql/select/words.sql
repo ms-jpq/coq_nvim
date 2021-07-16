@@ -11,5 +11,5 @@ WHERE
   AND
   NOT INSTR(:word, word)
   AND
-  X_SIMILARITY(LOWER(SUBSTR(:word, 1, :exact)), lword) > :cut_off
+  X_SIMILARITY(LOWER(:word), lword) > :cut_off
 LIMIT :limit
