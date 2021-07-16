@@ -20,6 +20,8 @@ More details at the [PERFORMANCE.md](./docs/PERFORMANCE.md)
 
 - Results on **every keystroke**
 
+_`LSP` can be slower, nothing I can do. I didn't write the servers_
+
 ### Fuzzy Search
 
 - **Typo resistant**
