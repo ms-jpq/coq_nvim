@@ -1,8 +1,8 @@
 ---
 limits:
-  idle_time: 2.0
   max_buf_index: 333333
-  timeout: 0.1
+  idle_time: 2.0
+  timeout: 0.088
   manual_timeout: 0.5
 
 display:
