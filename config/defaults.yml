@@ -106,7 +106,7 @@ clients:
     tie_breaker: 60
 
   lsp:
-    enabled: True
+    enabled: False
     short_name: "LSP"
     limit: 16
     tie_breaker: 70

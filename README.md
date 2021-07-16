@@ -20,7 +20,7 @@ More details at the [PERFORMANCE.md](./docs/PERFORMANCE.md)
 
 - Results on **every keystroke**
 
-_`LSP` can be slower, nothing I can do. I didn't write the servers_
+_`LSP` can be far slower, nothing I can do. I didn't write the servers_
 
 ### Fuzzy Search
 
@@ -49,6 +49,8 @@ _`LSP` can be slower, nothing I can do. I didn't write the servers_
 - Header imports
 
 - Snippet Support
+
+**Need to be enabled in config**
 
 ### Snippets
 
