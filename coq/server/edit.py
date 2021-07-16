@@ -2,7 +2,7 @@ from collections import deque
 from dataclasses import dataclass
 from itertools import chain, repeat
 from pprint import pformat
-from typing import AbstractSet, Iterator, MutableSequence, Optional, Sequence, Tuple
+from typing import AbstractSet, Iterator, MutableSequence, Sequence, Tuple
 
 from pynvim import Nvim
 from pynvim_pp.api import (
@@ -43,7 +43,7 @@ from .state import State
 @dataclass(frozen=True)
 class _EditInstruction:
     primary: bool
-    primary_shift: Optional[NvimPos]
+    primary_shift: bool
     begin: NvimPos
     end: NvimPos
     cursor_yoffset: int
@@ -132,17 +132,9 @@ def _contextual_edit_trans(
         + len(new_prefix_lines[0].encode(UTF8))
     )
 
-    ps_r = r1 - (len(old_prefix_lines) - 1)
-    ps_c = (
-        lines.len8[ps_r] - len(old_prefix_lines[0].encode(UTF8))
-        if len(old_prefix_lines) > 1
-        else len(ctx.line_before.encode(UTF8)) - len(old_prefix_lines[-1].encode(UTF8))
-    )
-    primary_shift = ps_r, ps_c
-
     inst = _EditInstruction(
         primary=True,
-        primary_shift=primary_shift,
+        primary_shift=True,
         begin=begin,
         end=end,
         cursor_yoffset=cursor_yoffset,
@@ -202,7 +194,7 @@ def _range_edit_trans(
 
         inst = _EditInstruction(
             primary=primary,
-            primary_shift=None,
+            primary_shift=False,
             begin=begin,
             end=end,
             cursor_yoffset=cursor_yoffset,
