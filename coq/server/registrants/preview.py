@@ -99,7 +99,7 @@ def _preprocess(context: Context, doc: Doc) -> Doc:
 
 
 def _clamp(margin: int, hi: int) -> Callable[[int], int]:
-    return lambda i: clamp(1, i - margin, hi)
+    return lambda i: clamp(1, i - margin - 1, hi - 1)
 
 
 def _positions(
