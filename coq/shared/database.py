@@ -1,4 +1,4 @@
-from difflib import SequenceMatcher
+from collections import Counter
 from sqlite3.dbapi2 import Connection
 
 from std2.sqllite3 import add_functions, escape
@@ -10,9 +10,11 @@ def _like_esc(like: str) -> str:
 
 
 def _similarity(lhs: str, rhs: str) -> float:
-    m = SequenceMatcher(a=lhs, b=rhs, isjunk=None)
-    adjust = min(1, 1 / len(lhs) * len(rhs))
-    return m.quick_ratio() * adjust
+    l, r = Counter(lhs), Counter(rhs)
+    a = l - r if len(lhs) > len(rhs) else r - l
+    t = sum(a.values())
+    m = max(len(lhs), len(rhs))
+    return t / m
 
 
 def init_db(conn: Connection) -> None:
