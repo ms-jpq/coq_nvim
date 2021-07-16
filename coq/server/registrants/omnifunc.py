@@ -12,7 +12,7 @@ from std2.asyncio import run_in_executor
 from std2.pickle import DecodeError, new_decoder
 
 from ...registry import atomic, autocmd, rpc
-from ...shared.timeit import timeit as l_timeit
+from ...shared.timeit import timeit
 from ...shared.types import Context, NvimPos
 from ..context import context
 from ..edit import edit
@@ -34,7 +34,8 @@ def _launch_loop(nvim: Nvim, stack: Stack) -> None:
 
         async def c0(ctx: Context, manual: bool) -> None:
             _, col = ctx.position
-            await stack.supervisor.interrupt()
+            with timeit("CANCEL -- 2"):
+                await stack.supervisor.interrupt()
             metrics = await stack.supervisor.collect(ctx, manual=manual)
             s = state()
             if s.change_id == ctx.change_id:
@@ -53,11 +54,12 @@ def _launch_loop(nvim: Nvim, stack: Stack) -> None:
                 await event.wait()
                 event.clear()
                 if task:
-                    task.cancel()
-                    while not task.done():
-                        await sleep(0)
-                    with suppress(CancelledError):
-                        await task
+                    with timeit("CANCEL -- 1"):
+                        task.cancel()
+                        while not task.done():
+                            await sleep(0)
+                        with suppress(CancelledError):
+                            await task
                 if qued:
                     ctx, manual = qued
                     task = cast(Task, go(nvim, aw=c0(ctx, manual=manual)))
@@ -80,7 +82,7 @@ def _should_cont(inserted: Optional[NvimPos], prev: Context, cur: Context) -> bo
 
 
 def comp_func(nvim: Nvim, stack: Stack, s: State, manual: bool) -> None:
-    with l_timeit("GEN CTX"):
+    with timeit("GEN CTX"):
         ctx = context(nvim, options=stack.settings.match, state=s)
     should = _should_cont(s.inserted, prev=s.context, cur=ctx) if ctx else False
     _, col = ctx.position
