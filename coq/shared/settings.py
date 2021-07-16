@@ -12,9 +12,11 @@ class Limits:
 
 @dataclass(frozen=True)
 class PumDisplay:
-    y_max_len: int
-    x_max_len: int
     y_ratio: float
+    y_max_len: int
+
+    x_max_len: int
+    x_min_len: int
 
     ellipsis: str
 

@@ -72,8 +72,12 @@ def _cmp_to_vcmp(
     kind_width = metric.kind_width + kind_dead_width
     tr = truncate - kind_width
 
-    if (kind_width + ellipsis_width + 2) > truncate:
-        abbr = metric.comp.label[: truncate - ellipsis_width] + pum.ellipsis
+    if (kind_width + ellipsis_width + pum.x_min_len) > truncate:
+        truncated = metric.comp.label[: truncate - ellipsis_width]
+        label_lhs = (
+            truncated + pum.ellipsis if truncated != metric.comp.label else truncated
+        )
+        abbr = label_lhs
     elif label_width > tr:
         label_lhs = metric.comp.label[: tr - ellipsis_width] + pum.ellipsis
         abbr = label_lhs + kind
