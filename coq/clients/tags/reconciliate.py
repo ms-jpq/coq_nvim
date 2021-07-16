@@ -17,6 +17,7 @@ from typing import (
 )
 
 from std2.asyncio import run_in_executor
+from std2.pathlib import is_relative_to
 
 from ...consts import CLIENTS_DIR, TMP_DIR
 from .parser import Tag, parse_lines, run
@@ -33,12 +34,13 @@ class _TagInfo(TypedDict):
 Tags = Mapping[str, _TagInfo]
 
 
-def _mtimes(paths: Iterable[Path]) -> Mapping[str, float]:
+def _mtimes(cwd: Path, paths: Iterable[Path]) -> Mapping[str, float]:
     def cont() -> Iterable[Tuple[Path, float]]:
         for path in paths:
-            with suppress(FileNotFoundError):
-                stat = path.stat()
-                yield path, stat.st_mtime
+            if is_relative_to(path, cwd):
+                with suppress(FileNotFoundError):
+                    stat = path.stat()
+                    yield path, stat.st_mtime
 
     return {str(key): val for key, val in cont()}
 
@@ -66,7 +68,9 @@ async def reconciliate(cwd: Path, paths: AbstractSet[str]) -> Tags:
     tags_path = _TAGS_DIR / md5(str(cwd).encode()).hexdigest()
 
     existing = await run_in_executor(_load, tags_path)
-    mtimes = await run_in_executor(_mtimes, map(Path, existing.keys() | paths))
+    mtimes = await run_in_executor(
+        _mtimes, cwd, paths=map(Path, existing.keys() | paths)
+    )
     query_paths = tuple(
         path
         for path, mtime in mtimes.items()
