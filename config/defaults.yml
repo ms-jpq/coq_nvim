@@ -86,7 +86,7 @@ clients:
 
   paths:
     enabled: True
-    short_name: "FILE"
+    short_name: "PATH"
     limit: 16
     tie_breaker: 40
 
