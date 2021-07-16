@@ -37,10 +37,17 @@ def _primary(item: CompletionItem) -> Edit:
         else:
             new_text = fall_back
         return SnippetEdit(grammar="lsp", new_text=new_text)
-    elif isinstance(text_edit, Mapping) and "range" in text_edit:
-        re = _range_edit(cast(TextEdit, text_edit))
-        if re:
-            return re
+
+    elif isinstance(text_edit, Mapping):
+        # TODO -- InsertReplaceEdit
+        # if "insert" in text_edit:
+        #     return Edit(new_text=fall_back)
+        if "range" in text_edit:
+            re = _range_edit(cast(TextEdit, text_edit))
+            if re:
+                return re
+            else:
+                return Edit(new_text=fall_back)
         else:
             return Edit(new_text=fall_back)
     else:
