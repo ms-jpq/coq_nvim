@@ -2,7 +2,7 @@ from collections import deque
 from dataclasses import dataclass
 from itertools import chain, repeat
 from pprint import pformat
-from typing import AbstractSet, Iterator, MutableSequence, Sequence, Tuple
+from typing import AbstractSet, Iterator, MutableSequence, Optional, Sequence, Tuple
 
 from pynvim import Nvim
 from pynvim_pp.api import (
@@ -43,6 +43,7 @@ from .state import State
 @dataclass(frozen=True)
 class _EditInstruction:
     primary: bool
+    primary_shift: Optional[NvimPos]
     begin: NvimPos
     end: NvimPos
     cursor_yoffset: int
@@ -100,21 +101,21 @@ def _contextual_edit_trans(
     ctx: Context, lines: _Lines, edit: ContextualEdit
 ) -> _EditInstruction:
     row, col = ctx.position
-    prefix_lines = edit.old_prefix.split(ctx.linefeed)
-    suffix_lines = edit.old_suffix.split(ctx.linefeed)
+    old_prefix_lines = edit.old_prefix.split(ctx.linefeed)
+    old_suffix_lines = edit.old_suffix.split(ctx.linefeed)
 
-    r1 = row - (len(prefix_lines) - 1)
-    r2 = row + (len(suffix_lines) - 1)
+    r1 = row - (len(old_prefix_lines) - 1)
+    r2 = row + (len(old_suffix_lines) - 1)
 
     c1 = (
-        lines.len8[r1] - len(prefix_lines[0].encode(UTF8))
-        if len(prefix_lines) > 1
-        else col - len(prefix_lines[0].encode(UTF8))
+        lines.len8[r1] - len(old_prefix_lines[0].encode(UTF8))
+        if len(old_prefix_lines) > 1
+        else col - len(old_prefix_lines[0].encode(UTF8))
     )
     c2 = (
-        len(suffix_lines[-1].encode(UTF8))
-        if len(prefix_lines) > 1
-        else col + len(suffix_lines[0].encode(UTF8))
+        len(old_suffix_lines[-1].encode(UTF8))
+        if len(old_prefix_lines) > 1
+        else col + len(old_suffix_lines[0].encode(UTF8))
     )
 
     begin = r1, c1
@@ -122,17 +123,26 @@ def _contextual_edit_trans(
 
     new_lines = edit.new_text.split(ctx.linefeed)
     new_prefix_lines = edit.new_prefix.split(ctx.linefeed)
-    cursor_yoffset = -len(prefix_lines) + len(new_prefix_lines)
+    cursor_yoffset = -len(old_prefix_lines) + len(new_prefix_lines)
     cursor_xpos = (
         len(new_prefix_lines[-1].encode(UTF8))
         if len(new_prefix_lines) > 1
         else len(ctx.line_before.encode(UTF8))
-        - len(prefix_lines[-1].encode(UTF8))
+        - len(old_prefix_lines[-1].encode(UTF8))
         + len(new_prefix_lines[0].encode(UTF8))
     )
 
+    ps_r = r1 - (len(old_prefix_lines) - 1)
+    ps_c = (
+        lines.len8[ps_r] - len(old_prefix_lines[0].encode(UTF8))
+        if len(old_prefix_lines) > 1
+        else len(ctx.line_before.encode(UTF8)) - len(old_prefix_lines[-1].encode(UTF8))
+    )
+    primary_shift = ps_r, ps_c
+
     inst = _EditInstruction(
         primary=True,
+        primary_shift=primary_shift,
         begin=begin,
         end=end,
         cursor_yoffset=cursor_yoffset,
@@ -192,6 +202,7 @@ def _range_edit_trans(
 
         inst = _EditInstruction(
             primary=primary,
+            primary_shift=None,
             begin=begin,
             end=end,
             cursor_yoffset=cursor_yoffset,
@@ -238,31 +249,38 @@ def _instructions(
 ) -> Sequence[_EditInstruction]:
     def cont() -> Iterator[_EditInstruction]:
         if isinstance(primary, RangeEdit):
-            yield _range_edit_trans(
+            inst = _range_edit_trans(
                 unifying_chars,
                 ctx=ctx,
                 primary=True,
                 lines=lines,
                 edit=primary,
             )
+            yield inst
 
         elif isinstance(primary, ContextualEdit):
-            yield _contextual_edit_trans(ctx, lines=lines, edit=primary)
+            inst = _contextual_edit_trans(ctx, lines=lines, edit=primary)
+            yield inst
 
         elif isinstance(primary, Edit):
-            yield _edit_trans(unifying_chars, ctx=ctx, lines=lines, edit=primary)
+            inst = _edit_trans(unifying_chars, ctx=ctx, lines=lines, edit=primary)
+            yield inst
 
         else:
             never(primary)
 
         for edit in secondary:
-            yield _range_edit_trans(
+            i = _range_edit_trans(
                 unifying_chars,
                 ctx=ctx,
                 primary=False,
                 lines=lines,
                 edit=edit,
             )
+            if inst.primary_shift and i.begin >= inst.primary_shift:
+                pass
+            else:
+                yield i
 
     instructions = _consolidate(*cont())
     return instructions
