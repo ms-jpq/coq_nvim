@@ -10,8 +10,9 @@ def _like_esc(like: str) -> str:
 
 
 def _similarity(lhs: str, rhs: str) -> float:
-    m = SequenceMatcher(a=lhs, b=rhs[: len(lhs)], isjunk=None)
-    return m.quick_ratio()
+    m = SequenceMatcher(a=lhs, b=rhs, isjunk=None)
+    adjust = min(1, 1 / len(lhs) * len(rhs))
+    return m.quick_ratio() * adjust
 
 
 def init_db(conn: Connection) -> None:
