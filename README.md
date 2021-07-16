@@ -30,6 +30,14 @@ More details at the [PERFORMANCE.md](./docs/PERFORMANCE.md)
 
 - Weighted average of relative ranks
 
+### Documentation
+
+- View documentation in big buffer
+
+- Auto open preview on side with most space
+
+- Customizable location: n, s, w, e
+
 ### LSP
 
 - Client-side caching
@@ -39,10 +47,6 @@ More details at the [PERFORMANCE.md](./docs/PERFORMANCE.md)
 - Header imports
 
 - Snippet Support
-
-- Documentation popup
-
-- View documentation in big buffer
 
 ### Snippets
 
@@ -54,7 +58,7 @@ _Not supported (right now): linked edits, regex, arbitrary code execution_
 
 _The `%` statistic comes from compiling the 10,000 snippets_
 
-## CTags
+### CTags
 
 - Incremental & automatic **background compilation**
 
@@ -73,25 +77,29 @@ brew install universal-ctags
 apt  install universal-ctags
 ```
 
-## Buffers
+### Buffers
 
 - Real time completion
 
 - Fast in files with thousands of lines
 
-## TreeSitter
+### TreeSitter
 
-## Paths
+### Paths
 
 - Relative to both `cwd` and file path
 
-## Tmux
+### Tmux
 
-## Tabnine
+### Tabnine
 
 - Auto download & install
 
 _T9 is disabled by default, I might remove it, if they do not improve the CPU usage. [Their own bug tracker](https://github.com/codota/TabNine/issues/43)._
+
+### Validating config parser
+
+- Prevents typos
 
 ## Install
 
