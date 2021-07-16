@@ -99,7 +99,7 @@ def _preprocess(context: Context, doc: Doc) -> Doc:
 
 
 def _clamp(margin: int, hi: int) -> Callable[[int], int]:
-    return lambda i: clamp(1, i - margin - 1, hi - 1)
+    return lambda i: clamp(1, i - margin, hi)
 
 
 def _positions(
@@ -127,7 +127,8 @@ def _positions(
         hi=sum(
             ceil(display_width(line, tabsize=state.context.tabstop) / display.x_max_len)
             for line in lines
-        ),
+        )
+        - 1,
     )
 
     ns_width = limit_w(scr_width - left)
