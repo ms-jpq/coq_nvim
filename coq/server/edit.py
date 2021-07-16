@@ -2,7 +2,7 @@ from collections import deque
 from dataclasses import dataclass
 from itertools import chain, repeat
 from pprint import pformat
-from typing import AbstractSet, Iterator, MutableSequence, Sequence, Tuple
+from typing import AbstractSet, Iterator, MutableSequence, Optional, Sequence, Tuple
 
 from pynvim import Nvim
 from pynvim_pp.api import (
@@ -43,7 +43,7 @@ from .state import State
 @dataclass(frozen=True)
 class _EditInstruction:
     primary: bool
-    primary_shift: bool
+    primary_shift: Optional[Tuple[int, int]]
     begin: NvimPos
     end: NvimPos
     cursor_yoffset: int
@@ -120,6 +120,7 @@ def _contextual_edit_trans(
 
     begin = r1, c1
     end = r2, c2
+    primary_shift = r2 - r1, c2 - c1 if r1 == r2 else 0
 
     new_lines = edit.new_text.split(ctx.linefeed)
     new_prefix_lines = edit.new_prefix.split(ctx.linefeed)
@@ -134,7 +135,7 @@ def _contextual_edit_trans(
 
     inst = _EditInstruction(
         primary=True,
-        primary_shift=True,
+        primary_shift=primary_shift,
         begin=begin,
         end=end,
         cursor_yoffset=cursor_yoffset,
@@ -194,7 +195,7 @@ def _range_edit_trans(
 
         inst = _EditInstruction(
             primary=primary,
-            primary_shift=False,
+            primary_shift=None,
             begin=begin,
             end=end,
             cursor_yoffset=cursor_yoffset,
@@ -230,8 +231,6 @@ def _consolidate(
     return stack
 
 
-# TODO -- The PrimaryEdit need a shift factor
-# The shift factor is for edits BEHIND the PrimaryEdit
 def _instructions(
     ctx: Context,
     unifying_chars: AbstractSet[str],
@@ -269,8 +268,10 @@ def _instructions(
                 lines=lines,
                 edit=edit,
             )
-            if inst.primary_shift and i.begin >= inst.primary_shift:
-                pass
+
+            if inst.primary_shift and i.begin >= inst.begin:
+                # TODO -- The PrimaryEdit need a shift factor
+                yield i
             else:
                 yield i
 
