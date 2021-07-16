@@ -1,6 +1,7 @@
 from contextlib import suppress
 from hashlib import md5
 from json import dumps, loads
+from json.decoder import JSONDecodeError
 from pathlib import Path
 from shutil import move
 from tempfile import NamedTemporaryFile
@@ -51,7 +52,12 @@ def _load(path: Path) -> Tags:
     except FileNotFoundError:
         return {}
     else:
-        return cast(Tags, loads(json))
+        try:
+            tags = loads(json)
+        except JSONDecodeError:
+            return {}
+        else:
+            return cast(Tags, tags)
 
 
 def _dump(path: Path, o: Any) -> None:
