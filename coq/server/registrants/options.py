@@ -49,7 +49,7 @@ def set_options(nvim: Nvim, mapping: KeyMapping) -> None:
             keymap.i(mapping.manual_complete, expr=True)
             << "pumvisible() ? '<c-e><c-x><c-u>' : '<c-x><c-u>'"
         )
-
+        keymap.nv(mapping.manual_complete) << "<esc>i<c-x><c-u>"
 
     if mapping.recommended:
         settings["shortmess"] += "c"
