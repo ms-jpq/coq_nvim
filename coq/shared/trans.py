@@ -47,7 +47,7 @@ def trans_adjusted(
     simple_after = (
         ctx.words_after
         if is_word(c_edit.new_text[-1:], unifying_chars=unifying_chars)
-        else ctx.words_after + ctx.syms_after
+        else ""
     )
 
     old_prefix = simple_before if new_syms <= 1 else c_edit.old_prefix or simple_before
