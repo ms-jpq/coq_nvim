@@ -4,6 +4,7 @@ from ...databases.snippets.database import SDB
 from ...shared.runtime import Supervisor
 from ...shared.runtime import Worker as BaseWorker
 from ...shared.settings import SnippetClient
+from ...shared.sql import BIGGEST_INT
 from ...shared.types import Completion, Context, Doc, SnippetEdit
 from ...snippets.artifacts import SNIPPETS
 
@@ -21,7 +22,7 @@ class Worker(BaseWorker[SnippetClient, SDB]):
             self._supervisor.options,
             filetype=context.filetype,
             word=match,
-            limit=self._options.limit,
+            limit=BIGGEST_INT if context.manual else self._options.limit,
         )
 
         for snip in snippets:

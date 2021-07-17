@@ -3,6 +3,7 @@ from typing import AsyncIterator, Mapping, Sequence, Tuple
 from uuid import UUID, uuid4
 
 from ...shared.runtime import Supervisor
+from ...shared.sql import BIGGEST_INT
 from ...shared.timeit import timeit
 from ...shared.types import Completion, Context, Edit, SnippetEdit
 from .database import Database
@@ -63,7 +64,9 @@ class CacheWorker:
             if use_cache:
                 match = context.words or context.syms
                 hashes = await self._db.select(
-                    self._soup.options, word=match, limit=limit
+                    self._soup.options,
+                    word=match,
+                    limit=BIGGEST_INT if context.manual else limit,
                 )
                 for hash_id in hashes:
                     cmp = cache_ctx.comps.get(hash_id)

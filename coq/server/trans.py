@@ -138,7 +138,8 @@ def trans(
             counts[metric.comp.source] <= limits[metric.comp.source]
             and metric.comp.primary_edit.new_text not in seen
         ):
-            counts[metric.comp.source] += 1
+            if not context.manual:
+                counts[metric.comp.source] += 1
             seen.add(metric.comp.primary_edit.new_text)
             yield _cmp_to_vcmp(
                 display.pum,

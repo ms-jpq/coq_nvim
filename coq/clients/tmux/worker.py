@@ -10,6 +10,7 @@ from ...shared.parse import coalesce
 from ...shared.runtime import Supervisor
 from ...shared.runtime import Worker as BaseWorker
 from ...shared.settings import WordbankClient
+from ...shared.sql import BIGGEST_INT
 from ...shared.types import Completion, Context, Edit
 from .database import Database
 
@@ -91,7 +92,7 @@ class Worker(BaseWorker[WordbankClient, None]):
                 self._supervisor.options,
                 active_pane=active.uid,
                 word=match,
-                limit=self._options.limit,
+                limit=BIGGEST_INT if context.manual else self._options.limit,
             )
             if active
             else ()

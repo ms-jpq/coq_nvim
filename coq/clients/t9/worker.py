@@ -41,7 +41,7 @@ def _encode(options: Options, context: Context, limit: int) -> Any:
         after=after,
         region_includes_beginning=ibg,
         region_includes_end=ieof,
-        max_num_results=limit,
+        max_num_results=None if context.manual else limit,
     )
     l1 = ReqL1(Autocomplete=l2)
     req = Request(request=l1, version=_VERSION)

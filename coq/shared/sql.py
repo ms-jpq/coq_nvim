@@ -8,6 +8,8 @@ from std2.sqllite3 import add_functions, escape
 
 from .parse import similarity
 
+BIGGEST_INT = 2 ** 63 - 1
+
 
 class _Loader(Protocol):
     def __call__(self, *paths: AnyPath) -> str:

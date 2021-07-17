@@ -3,6 +3,7 @@ from typing import AsyncIterator
 from ...databases.treesitter.database import TDB
 from ...shared.runtime import Worker as BaseWorker
 from ...shared.settings import BaseClient
+from ...shared.sql import BIGGEST_INT
 from ...shared.types import Completion, Context, Edit
 
 
@@ -12,7 +13,7 @@ class Worker(BaseWorker[BaseClient, TDB]):
         words = await self._misc.select(
             self._supervisor.options,
             word=match,
-            limit=self._options.limit,
+            limit=BIGGEST_INT if context.manual else self._options.limit,
         )
 
         for word, kind in words:

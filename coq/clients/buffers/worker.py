@@ -3,6 +3,7 @@ from typing import AsyncIterator
 from ...databases.buffers.database import BDB
 from ...shared.runtime import Worker as BaseWorker
 from ...shared.settings import BuffersClient
+from ...shared.sql import BIGGEST_INT
 from ...shared.types import Completion, Context, Edit
 
 
@@ -14,7 +15,7 @@ class Worker(BaseWorker[BuffersClient, BDB]):
             self._supervisor.options,
             filetype=filetype,
             word=match,
-            limit=self._options.limit,
+            limit=BIGGEST_INT if context.manual else self._options.limit,
         )
         for word in words:
             edit = Edit(new_text=word)
