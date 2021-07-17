@@ -1,6 +1,5 @@
 SELECT DISTINCT
-  word,
-  sort_by
+  word
 FROM words
 WHERE
   :word <> ''

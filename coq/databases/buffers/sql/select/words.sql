@@ -1,6 +1,5 @@
 SELECT DISTINCT
-  word,
-  sort_by
+  word
 FROM words
 JOIN lines
 ON lines.rowid = words.line_id

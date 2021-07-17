@@ -23,7 +23,6 @@ CREATE TABLE IF NOT EXISTS words (
   line_id BLOB NOT NULL REFERENCES lines (rowid) ON UPDATE CASCADE ON DELETE CASCADE,
   word    TEXT NOT NULL,
   lword   TEXT NOT NULL AS (LOWER(word)) STORED,
-  sort_by TEXT NOT NULL AS (X_STRXFRM(lword)),
   UNIQUE(line_id, word)
 );
 CREATE INDEX IF NOT EXISTS words_line_id ON words (line_id);

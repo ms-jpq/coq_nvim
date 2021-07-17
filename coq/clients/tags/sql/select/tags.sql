@@ -4,7 +4,6 @@ SELECT
   tags.kind,
   tags.name,
   tags.lname,
-  tags.sort_by,
   tags.pattern,
   tags.typeref,
   tags.scope,

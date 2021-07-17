@@ -16,13 +16,13 @@ class Worker(BaseWorker[BuffersClient, BDB]):
             word=match,
             limit=self._options.limit,
         )
-        for word, sort_by in words:
+        for word in words:
             edit = Edit(new_text=word)
             cmp = Completion(
                 source=self._options.short_name,
                 tie_breaker=self._options.tie_breaker,
                 label=edit.new_text,
-                sort_by=sort_by,
+                sort_by=word,
                 primary_edit=edit,
             )
             yield cmp

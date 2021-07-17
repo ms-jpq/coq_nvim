@@ -1,6 +1,5 @@
 SELECT DISTINCT
   word,
-  sort_by,
   kind
 FROM words
 WHERE

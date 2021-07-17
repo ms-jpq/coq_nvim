@@ -17,7 +17,6 @@ CREATE TABLE IF NOT EXISTS tags (
   kind      TEXT    NOT NULL,
   name      TEXT    NOT NULL,
   lname     TEXT    NOT NULL AS (LOWER(name)) STORED,
-  sort_by   TEXT    NOT NULL AS (X_STRXFRM(lname)),
   pattern   TEXT    NOT NULL,
   typeref   TEXT,
   scope     TEXT,

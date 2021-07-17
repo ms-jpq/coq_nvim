@@ -2,7 +2,7 @@ from concurrent.futures import Executor
 from contextlib import closing
 from sqlite3 import Connection, OperationalError
 from threading import Lock
-from typing import Iterator, Mapping, Sequence, Tuple, cast
+from typing import Iterator, Mapping, Sequence, Tuple
 
 from std2.asyncio import run_in_executor
 from std2.sqllite3 import with_transaction
@@ -47,8 +47,8 @@ class TDB:
 
     async def select(
         self, opts: Options, word: str, limit: int
-    ) -> Sequence[Tuple[str, str, str]]:
-        def cont() -> Sequence[Tuple[str, str, str]]:
+    ) -> Sequence[Tuple[str, str]]:
+        def cont() -> Sequence[Tuple[str, str]]:
             try:
                 with closing(self._conn.cursor()) as cursor:
                     with with_transaction(cursor):
@@ -62,13 +62,12 @@ class TDB:
                             },
                         )
                         return tuple(
-                            (row["word"], row["kind"], row["sort_by"])
-                            for row in cursor.fetchall()
+                            (row["word"], row["kind"]) for row in cursor.fetchall()
                         )
             except OperationalError:
                 return ()
 
-        def step() -> Sequence[Tuple[str, str, str]]:
+        def step() -> Sequence[Tuple[str, str]]:
             self._interrupt()
             return self._ex.submit(cont)
 

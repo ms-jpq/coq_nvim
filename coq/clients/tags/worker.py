@@ -134,15 +134,16 @@ class Worker(BaseWorker[TagsClient, None]):
         )
 
         seen: MutableSet[str] = set()
-        for tag, sort_by in tags:
-            if tag["name"] not in seen:
-                seen.add(tag["name"])
-                edit = Edit(new_text=tag["name"])
+        for tag in tags:
+            name = tag["name"]
+            if name not in seen:
+                seen.add(name)
+                edit = Edit(new_text=name)
                 cmp = Completion(
                     source=self._options.short_name,
                     tie_breaker=self._options.tie_breaker,
                     label=edit.new_text,
-                    sort_by=sort_by,
+                    sort_by=name,
                     primary_edit=edit,
                     kind=tag["kind"],
                     doc=_doc(self._options, context=context, tag=tag),

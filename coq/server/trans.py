@@ -1,5 +1,6 @@
 from collections import defaultdict
 from dataclasses import asdict
+from locale import strxfrm
 from typing import Any, Callable, Iterable, Iterator, MutableSet, Sequence, Tuple
 
 from std2.ordinal import clamp
@@ -50,7 +51,7 @@ def _sort_by(adjustment: Weights) -> Callable[[Metric], Any]:
             -metric.comp.tie_breaker,
             -(metric.comp.doc is not None),
             -metric.comp.sort_by[:1].isalnum(),
-            metric.comp.sort_by,
+            strxfrm(metric.comp.sort_by),
         )
 
     return key_by
