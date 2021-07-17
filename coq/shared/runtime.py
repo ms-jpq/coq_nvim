@@ -20,7 +20,6 @@ from typing import (
     Generic,
     MutableMapping,
     MutableSequence,
-    MutableSet,
     Optional,
     Protocol,
     Sequence,
