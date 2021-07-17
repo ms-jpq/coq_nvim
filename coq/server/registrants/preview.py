@@ -267,7 +267,7 @@ def _resolve_comp(
             done, _ = await wait((request(nvim, item=item),), timeout=timeout)
             do = await done.pop() if done else None
             if do:
-                _LRU[state.preview_id]
+                _LRU[state.preview_id] = do
             doc = do or maybe_doc
 
         if doc:
