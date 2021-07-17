@@ -7,7 +7,7 @@ from uuid import UUID, uuid4
 
 from ..databases.insertions.database import IDB
 from ..shared.context import EMPTY_CONTEXT
-from ..shared.parse import coalesce, display_width, is_word, lower
+from ..shared.parse import coalesce, display_width, is_word
 from ..shared.runtime import Metric, PReviewer, Worker
 from ..shared.settings import BaseClient, Options, Weights
 from ..shared.types import Completion, Context
@@ -67,9 +67,9 @@ def _metric(
     completion: Completion,
 ) -> _MatchMetrics:
     cword = (
-        lower(context.words_before)
+        context.words_before
         if is_word(completion.sort_by[:1], unifying_chars=options.unifying_chars)
-        else lower(context.syms_before)
+        else context.syms_before
     )
     return count(cword, match=completion.sort_by)
 
@@ -112,7 +112,7 @@ class Reviewer(PReviewer):
     async def begin(self, context: Context) -> None:
         inserted = await self._db.insertion_order(n_rows=100)
         neighbours = Counter(
-            lower(word)
+            word
             for line in context.lines
             for word in coalesce(line, unifying_chars=self._options.unifying_chars)
         )
