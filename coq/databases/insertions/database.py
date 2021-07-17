@@ -7,8 +7,8 @@ from std2.asyncio import run_in_executor
 from std2.sqllite3 import with_transaction
 
 from ...consts import INSERT_DB
-from ...shared.database import init_db
 from ...shared.executor import SingleThreadExecutor
+from ...shared.sql import init_db
 from .sql import sql
 
 

@@ -10,10 +10,10 @@ from std2.asyncio import run_in_executor
 from std2.sqllite3 import with_transaction
 
 from ...consts import BUFFER_DB
-from ...shared.database import init_db
 from ...shared.executor import SingleThreadExecutor
 from ...shared.parse import coalesce
 from ...shared.settings import Options
+from ...shared.sql import init_db
 from ...shared.timeit import timeit
 from .sql import sql
 
