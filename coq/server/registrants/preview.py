@@ -29,6 +29,7 @@ from std2.string import removeprefix
 from ...lsp.requests.preview import request
 from ...lsp.types import CompletionItem
 from ...registry import autocmd, rpc
+from ...shared.lru import LRU
 from ...shared.parse import display_width
 from ...shared.settings import PreviewDisplay
 from ...shared.timeit import timeit
@@ -234,6 +235,9 @@ def _show_preview(
 _TASK: Optional[Task] = None
 
 
+_LRU = LRU[UUID, Doc](size=128)
+
+
 def _resolve_comp(
     nvim: Nvim,
     stack: Stack,
@@ -255,8 +259,17 @@ def _resolve_comp(
             with suppress(CancelledError):
                 await prev
 
-        done, _ = await wait((request(nvim, item=item),), timeout=timeout)
-        doc = await done.pop() if done else maybe_doc
+        cached = _LRU.get(state.preview_id)
+
+        if cached:
+            doc: Optional[Doc] = cached
+        else:
+            done, _ = await wait((request(nvim, item=item),), timeout=timeout)
+            do = await done.pop() if done else None
+            if do:
+                _LRU[state.preview_id]
+            doc = do or maybe_doc
+
         if doc:
             await async_call(
                 nvim,
