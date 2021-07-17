@@ -2,7 +2,7 @@ from concurrent.futures import Executor
 from contextlib import closing
 from sqlite3 import Connection, OperationalError
 from threading import Lock
-from typing import Iterator, Mapping, Sequence, cast
+from typing import Iterator, Mapping, Sequence
 
 from std2.asyncio import run_in_executor
 from std2.sqllite3 import with_transaction
@@ -118,7 +118,7 @@ class Database:
                                 "word": word,
                             },
                         )
-                        return tuple(cast(Tag, row) for row in cursor.fetchall())
+                        return tuple(Tag(**row) for row in cursor.fetchall())
             except OperationalError:
                 return ()
 
