@@ -62,6 +62,8 @@ clients:
     enabled: False
     short_name: "T9"
     tie_breaker: -10
+    download_retries: 3
+    download_timeout: 60.0
 
   tmux:
     enabled: True

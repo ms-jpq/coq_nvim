@@ -104,6 +104,12 @@ class SnippetClient(BaseClient):
 
 
 @dataclass(frozen=True)
+class TabnineClient(BaseClient):
+    download_retries: int
+    download_timeout: float
+
+
+@dataclass(frozen=True)
 class Clients:
     buffers: BuffersClient
     lsp: BaseClient
@@ -112,7 +118,7 @@ class Clients:
     tags: TagsClient
     tmux: WordbankClient
     tree_sitter: BaseClient
-    tabnine: BaseClient
+    tabnine: TabnineClient
 
 
 @dataclass(frozen=True)
