@@ -92,7 +92,9 @@ class Worker(BaseWorker[WordbankClient, None]):
                 self._supervisor.options,
                 active_pane=active.uid,
                 word=match,
-                limit=BIGGEST_INT if context.manual else self._options.limit,
+                limit=BIGGEST_INT
+                if context.manual
+                else self._supervisor.options.max_results,
             )
             if active
             else ()

@@ -22,7 +22,9 @@ class Worker(BaseWorker[SnippetClient, SDB]):
             self._supervisor.options,
             filetype=context.filetype,
             word=match,
-            limit=BIGGEST_INT if context.manual else self._options.limit,
+            limit=BIGGEST_INT
+            if context.manual
+            else self._supervisor.options.max_results,
         )
 
         for snip in snippets:

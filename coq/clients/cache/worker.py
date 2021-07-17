@@ -53,48 +53,52 @@ class CacheWorker:
             comps={},
         )
 
-    @timeit("CACHE -- GET")
     async def _use_cache(
-        self, context: Context, limit: int
+        self, context: Context
     ) -> Tuple[bool, AsyncIterator[Completion]]:
         cache_ctx = self._cache_ctx
         use_cache = _use_cache(cache_ctx, ctx=context)
 
         async def cont() -> AsyncIterator[Completion]:
             if use_cache:
-                match = context.words or context.syms
-                hashes = await self._db.select(
-                    self._soup.options,
-                    word=match,
-                    limit=BIGGEST_INT if context.manual else limit,
-                )
-                for hash_id in hashes:
-                    cmp = cache_ctx.comps.get(hash_id)
-                    if cmp:
-                        yield cmp
+                with timeit("CACHE -- GET"):
+                    match = context.words or context.syms
+                    hashes = await self._db.select(
+                        self._soup.options,
+                        word=match,
+                        limit=BIGGEST_INT
+                        if context.manual
+                        else self._soup.options.max_results,
+                    )
+                    for hash_id in hashes:
+                        cmp = cache_ctx.comps.get(hash_id)
+                        if cmp:
+                            yield cmp
 
         return use_cache, cont()
 
-    @timeit("CACHE -- SET")
     async def _set_cache(
         self, context: Context, completions: Sequence[Completion]
     ) -> None:
-        cache_ctx = self._cache_ctx
+        with timeit("CACHE -- SET"):
+            cache_ctx = self._cache_ctx
 
-        use_cache = _use_cache(cache_ctx, ctx=context)
-        row, _ = context.position
-        new_comps = {c.uid.bytes: c for c in map(_trans, completions)}
+            use_cache = _use_cache(cache_ctx, ctx=context)
+            row, _ = context.position
+            new_comps = {c.uid.bytes: c for c in map(_trans, completions)}
 
-        comps = {**cache_ctx.comps, **new_comps} if use_cache else new_comps
-        new_cache_ctx = _CacheCtx(
-            change_id=context.change_id,
-            commit_id=context.commit_id,
-            buf_id=context.buf_id,
-            row=row,
-            line_before=context.line_before,
-            comps=comps,
-        )
-        pool = {hash_id: c.primary_edit.new_text for hash_id, c in new_comps.items()}
-        await self._db.populate(use_cache, pool=pool)
-        self._cache_ctx = new_cache_ctx
+            comps = {**cache_ctx.comps, **new_comps} if use_cache else new_comps
+            new_cache_ctx = _CacheCtx(
+                change_id=context.change_id,
+                commit_id=context.commit_id,
+                buf_id=context.buf_id,
+                row=row,
+                line_before=context.line_before,
+                comps=comps,
+            )
+            pool = {
+                hash_id: c.primary_edit.new_text for hash_id, c in new_comps.items()
+            }
+            await self._db.populate(use_cache, pool=pool)
+            self._cache_ctx = new_cache_ctx
 

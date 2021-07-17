@@ -1,9 +1,32 @@
 ---
+match:
+  max_results: 33
+  unifying_chars:
+    - "_"
+    - "-"
+  exact_matches: 2
+  fuzzy_cutoff: 0.6
+  context_lines: 20
+
 limits:
   max_buf_index: 333333
   idle_time: 2.0
   timeout: 0.088
   manual_timeout: 0.5
+
+weights:
+  prefix_matches: 2.0
+  consecutive_matches: 2.0
+  insertion_order: 2.0
+  neighbours: 1.0
+  num_matches: 1.0
+
+keymap:
+  recommended: True
+
+  manual_complete: <c-space>
+  bigger_preview: <c-k>
+  jump_to_mark: <c-h>
 
 display:
   preview:
@@ -34,40 +57,16 @@ display:
 
   mark_highlight_group: Pmenu
 
-match:
-  unifying_chars:
-    - "_"
-    - "-"
-  exact_matches: 2
-  fuzzy_cutoff: 0.6
-  context_lines: 20
-
-weights:
-  prefix_matches: 2.0
-  consecutive_matches: 2.0
-  insertion_order: 2.0
-  neighbours: 1.0
-  num_matches: 1.0
-
-keymap:
-  recommended: True
-
-  manual_complete: <c-space>
-  bigger_preview: <c-k>
-  jump_to_mark: <c-h>
-
 clients:
   tabnine:
     enabled: False
     short_name: "T9"
-    limit: 6
     tie_breaker: -10
 
   tmux:
     enabled: True
     short_name: "TMUX"
     match_syms: False
-    limit: 16
     tie_breaker: 10
 
   buffers:
@@ -75,31 +74,26 @@ clients:
     short_name: "BUF"
     match_syms: False
     same_filetype: False
-    limit: 16
     tie_breaker: 20
 
   tree_sitter:
     enabled: True
     short_name: "TS"
-    limit: 16
     tie_breaker: 30
 
   paths:
     enabled: True
     short_name: "PATH"
-    limit: 16
     tie_breaker: 40
 
   snippets:
     enabled: True
     short_name: "SNIP"
-    limit: 16
     tie_breaker: 50
 
   tags:
     enabled: True
     short_name: "TAG"
-    limit: 16
     match_syms: True
     path_sep: " ⇉ "
     parent_scope: " ⇊"
@@ -108,6 +102,5 @@ clients:
   lsp:
     enabled: False
     short_name: "LSP"
-    limit: 16
     tie_breaker: 70
 

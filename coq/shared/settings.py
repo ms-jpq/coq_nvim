@@ -50,6 +50,7 @@ class Display:
 
 @dataclass(frozen=True)
 class Options:
+    max_results: int
     unifying_chars: AbstractSet[str]
     exact_matches: int
     context_lines: int
@@ -78,7 +79,6 @@ class KeyMapping:
 class BaseClient:
     enabled: bool
     short_name: str
-    limit: int
     tie_breaker: int
 
 

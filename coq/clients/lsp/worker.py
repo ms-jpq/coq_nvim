@@ -22,7 +22,7 @@ class Worker(BaseWorker[BaseClient, None], CacheWorker):
         )
         only_use_cached = self._only_use_cached
 
-        can_use, cached = await self._use_cache(context, limit=self._options.limit)
+        can_use, cached = await self._use_cache(context)
         async for c in cached:
             yield c
 

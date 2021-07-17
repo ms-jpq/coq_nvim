@@ -13,7 +13,9 @@ class Worker(BaseWorker[BaseClient, TDB]):
         words = await self._misc.select(
             self._supervisor.options,
             word=match,
-            limit=BIGGEST_INT if context.manual else self._options.limit,
+            limit=BIGGEST_INT
+            if context.manual
+            else self._supervisor.options.max_results,
         )
 
         for word, kind in words:

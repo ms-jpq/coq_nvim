@@ -15,7 +15,9 @@ class Worker(BaseWorker[BuffersClient, BDB]):
             self._supervisor.options,
             filetype=filetype,
             word=match,
-            limit=BIGGEST_INT if context.manual else self._options.limit,
+            limit=BIGGEST_INT
+            if context.manual
+            else self._supervisor.options.max_results,
         )
         for word in words:
             edit = Edit(new_text=word)

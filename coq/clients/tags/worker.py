@@ -131,7 +131,9 @@ class Worker(BaseWorker[TagsClient, None]):
             filename=context.filename,
             line_num=row,
             word=match,
-            limit=BIGGEST_INT if context.manual else self._options.limit,
+            limit=BIGGEST_INT
+            if context.manual
+            else self._supervisor.options.max_results,
         )
 
         seen: MutableSet[str] = set()

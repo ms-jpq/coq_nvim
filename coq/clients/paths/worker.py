@@ -79,7 +79,7 @@ class Worker(BaseWorker[BaseClient, None]):
         line = context.line_before + context.words_after
         base_paths = {Path(context.filename).parent, Path(context.cwd)}
 
-        limit = BIGGEST_INT if context.manual else self._options.limit
+        limit = BIGGEST_INT if context.manual else self._supervisor.options.max_results
         aw = (_parse(p, line=line, limit=limit) for p in base_paths)
         for co in as_completed(tuple(aw)):
             for new_text, sort_by in await co:

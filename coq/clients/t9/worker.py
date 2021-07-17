@@ -109,7 +109,9 @@ class Worker(BaseWorker[BaseClient, None]):
                 self._proc = await _proc()
 
             req = _encode(
-                self._supervisor.options, context=context, limit=self._options.limit
+                self._supervisor.options,
+                context=context,
+                limit=self._supervisor.options.max_results,
             )
             json = dumps(req, check_circular=False, ensure_ascii=False)
             try:
