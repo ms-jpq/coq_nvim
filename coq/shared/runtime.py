@@ -128,13 +128,15 @@ class Supervisor:
         with suppress(CancelledError):
             await g
 
-    async def collect(self, context: Context, manual: bool) -> Sequence[Metric]:
+    async def collect(self, context: Context) -> Sequence[Metric]:
         with l_timeit("COLLECTED -- **ALL**"):
             assert not self._lock.locked()
             async with self._lock:
                 acc: MutableSequence[Metric] = []
                 timeout = (
-                    self._limits.manual_timeout if manual else self._limits.timeout
+                    self._limits.manual_timeout
+                    if context.manual
+                    else self._limits.timeout
                 )
 
                 async def supervise(worker: Worker, assoc: BaseClient) -> None:

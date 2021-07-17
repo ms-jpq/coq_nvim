@@ -23,6 +23,8 @@ class Context:
     |...   <syms_before><words_before>🐭<words_after><syms_after>   ...|
     """
 
+    manual: bool
+
     # CHANGE ID <-> Trigged by NVIM, ie lines changes
     change_id: UUID
     # COMMIT ID <-> Trigged by COQ

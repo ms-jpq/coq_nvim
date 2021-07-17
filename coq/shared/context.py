@@ -4,6 +4,7 @@ from uuid import uuid4
 from .types import Context
 
 EMPTY_CONTEXT = Context(
+    manual=True,
     change_id=uuid4(),
     commit_id=uuid4(),
     cwd=Path(),

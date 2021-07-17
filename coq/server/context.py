@@ -12,7 +12,7 @@ from ..shared.types import Context
 from .state import State
 
 
-def context(nvim: Nvim, options: Options, state: State) -> Context:
+def context(nvim: Nvim, options: Options, state: State, manual: bool) -> Context:
     with Atomic() as (atomic, ns):
         ns.scr_col = atomic.call_function("screencol", ())
         ns.cwd = atomic.call_function("getcwd", ())
@@ -59,6 +59,7 @@ def context(nvim: Nvim, options: Options, state: State) -> Context:
     split = gen_split(lhs=before, rhs=after, unifying_chars=options.unifying_chars)
 
     ctx = Context(
+        manual=manual,
         change_id=state.change_id,
         commit_id=state.commit_id,
         cwd=Path(cwd),

@@ -22,30 +22,29 @@ from ..state import State, state
 from ..trans import trans
 
 q: SimpleQueue = SimpleQueue()
-_QUED = Tuple[Context, bool]
 
 
 @rpc(blocking=True)
 def _launch_loop(nvim: Nvim, stack: Stack) -> None:
     async def cont() -> None:
         event = Event()
-        qued: Optional[_QUED] = None
+        ctx: Optional[Context] = None
         task: Optional[Task] = None
 
-        async def c0(ctx: Context, manual: bool) -> None:
+        async def c0(ctx: Context) -> None:
             _, col = ctx.position
             with timeit("CANCEL -- 2"):
                 await stack.supervisor.interrupt()
-            metrics = await stack.supervisor.collect(ctx, manual=manual)
+            metrics = await stack.supervisor.collect(ctx)
             s = state()
             if s.change_id == ctx.change_id:
                 vim_comps = tuple(trans(stack, context=ctx, metrics=metrics))
                 await async_call(nvim, complete, nvim, col=col, comp=vim_comps)
 
         async def c1() -> None:
-            nonlocal qued
+            nonlocal ctx
             while True:
-                qued = await run_in_executor(q.get)
+                ctx = await run_in_executor(q.get)
                 event.set()
 
         async def c2() -> None:
@@ -60,9 +59,8 @@ def _launch_loop(nvim: Nvim, stack: Stack) -> None:
                             await sleep(0)
                         with suppress(CancelledError):
                             await task
-                if qued:
-                    ctx, manual = qued
-                    task = cast(Task, go(nvim, aw=c0(ctx, manual=manual)))
+                if ctx:
+                    task = cast(Task, go(nvim, aw=c0(ctx)))
 
         await gather(c1(), c2())
 
@@ -83,14 +81,14 @@ def _should_cont(inserted: Optional[NvimPos], prev: Context, cur: Context) -> bo
 
 def comp_func(nvim: Nvim, stack: Stack, s: State, manual: bool) -> None:
     with timeit("GEN CTX"):
-        ctx = context(nvim, options=stack.settings.match, state=s)
+        ctx = context(nvim, options=stack.settings.match, state=s, manual=manual)
     should = _should_cont(s.inserted, prev=s.context, cur=ctx) if ctx else False
     _, col = ctx.position
     complete(nvim, col=col - 1, comp=())
 
     if manual or should:
         state(context=ctx)
-        q.put((ctx, manual))
+        q.put(ctx)
     else:
         state(inserted=(-1, -1))
 
