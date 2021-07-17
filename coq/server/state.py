@@ -1,7 +1,9 @@
 from dataclasses import dataclass
 from threading import Lock
-from typing import AbstractSet, Optional, Tuple
+from typing import AbstractSet, Optional, Tuple, Union
 from uuid import UUID, uuid4
+
+from std2.types import Void, VoidType
 
 from ..shared.context import EMPTY_CONTEXT
 from ..shared.types import Context, NvimPos
@@ -16,7 +18,7 @@ class State:
     heavy_bufs: AbstractSet[int]
     context: Context
     inserted: NvimPos
-    pum_location: int
+    pum_location: Optional[int]
 
 
 _LOCK = Lock()
@@ -30,7 +32,7 @@ _state = State(
     heavy_bufs=set(),
     context=EMPTY_CONTEXT,
     inserted=(-1, -1),
-    pum_location=-1,
+    pum_location=None,
 )
 
 
@@ -42,7 +44,7 @@ def state(
     heavy_bufs: AbstractSet[int] = frozenset(),
     context: Optional[Context] = None,
     inserted: Optional[NvimPos] = None,
-    pum_location: Optional[int] = None,
+    pum_location: Union[VoidType, Optional[int]] = Void,
 ) -> State:
     global _state
 
@@ -56,7 +58,7 @@ def state(
             context=context or _state.context,
             inserted=inserted or _state.inserted,
             pum_location=pum_location
-            if pum_location is not None
+            if not isinstance(pum_location, VoidType)
             else _state.pum_location,
         )
         _state = state
