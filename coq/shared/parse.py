@@ -65,12 +65,12 @@ def coalesce(chars: Iterable[str], unifying_chars: AbstractSet[str]) -> Iterator
 
 
 def similarity(lhs: str, rhs: str) -> float:
-    l_c, r_c = Counter(lhs), Counter(rhs)
-    dif = l_c - r_c if len(lhs) > len(rhs) else r_c - l_c
     bigger, smaller = max(len(lhs), len(rhs)), min(len(lhs), len(rhs))
     if not bigger or not smaller:
         return 1
     else:
+        l_c, r_c = Counter(lhs), Counter(rhs)
+        dif = l_c - r_c if len(lhs) > len(rhs) else r_c - l_c
         ratio = 1 - sum(dif.values()) / bigger
         adjust = smaller / bigger
         return ratio / adjust
