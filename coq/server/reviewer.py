@@ -7,7 +7,7 @@ from uuid import UUID, uuid4
 
 from ..databases.insertions.database import IDB
 from ..shared.context import EMPTY_CONTEXT
-from ..shared.parse import coalesce, display_width, is_word
+from ..shared.parse import coalesce, display_width, is_word, lower
 from ..shared.runtime import Metric, PReviewer, Worker
 from ..shared.settings import BaseClient, Options, Weights
 from ..shared.types import Completion, Context
@@ -19,6 +19,10 @@ class _ReviewCtx:
     context: Context
     neighbours: Mapping[str, int]
     inserted: Mapping[str, int]
+
+    is_lower: bool
+    w_before: str
+    sw_before: str
 
 
 @dataclass(frozen=True)
@@ -63,15 +67,16 @@ def count(cword: str, match: str) -> _MatchMetrics:
 
 def _metric(
     options: Options,
-    context: Context,
+    ctx: _ReviewCtx,
     completion: Completion,
 ) -> _MatchMetrics:
+    match = lower(completion.sort_by) if ctx.is_lower else completion.sort_by
     cword = (
-        context.words_before
-        if is_word(completion.sort_by[:1], unifying_chars=options.unifying_chars)
-        else context.syms_before
+        ctx.w_before
+        if is_word(match[:1], unifying_chars=options.unifying_chars)
+        else ctx.sw_before
     )
-    return count(cword, match=completion.sort_by)
+    return count(cword, match=match)
 
 
 def _join(
@@ -103,7 +108,13 @@ class Reviewer(PReviewer):
     def __init__(self, options: Options, db: IDB) -> None:
         self._options, self._db = options, db
         self._ctx = _ReviewCtx(
-            batch_id=uuid4(), context=EMPTY_CONTEXT, neighbours={}, inserted={}
+            batch_id=uuid4(),
+            context=EMPTY_CONTEXT,
+            neighbours={},
+            inserted={},
+            is_lower=True,
+            w_before="",
+            sw_before="",
         )
 
     def register(self, worker: Worker, assoc: BaseClient) -> None:
@@ -117,7 +128,13 @@ class Reviewer(PReviewer):
             for word in coalesce(line, unifying_chars=self._options.unifying_chars)
         )
         ctx = _ReviewCtx(
-            batch_id=uuid4(), context=context, neighbours=neighbours, inserted=inserted
+            batch_id=uuid4(),
+            context=context,
+            neighbours=neighbours,
+            inserted=inserted,
+            is_lower=lower(context.words_before) == context.words_before,
+            w_before=context.words_before,
+            sw_before=context.syms_before + context.words_before,
         )
         self._ctx = ctx
 
@@ -128,7 +145,7 @@ class Reviewer(PReviewer):
     def s2(self, batch: UUID, completion: Completion) -> Metric:
         match_metrics = _metric(
             self._options,
-            context=self._ctx.context,
+            ctx=self._ctx,
             completion=completion,
         )
         metric = _join(
