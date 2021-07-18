@@ -12,7 +12,7 @@ limits:
   max_buf_index: 333333
   idle_time: 2.0
   timeout: 0.088
-  manual_timeout: 0.5
+  manual_timeout: 0.6
 
 weights:
   prefix_matches: 2.0
@@ -61,37 +61,37 @@ clients:
   tabnine:
     enabled: False
     short_name: "T9"
-    tie_breaker: -10
-    download_retries: 3
-    download_timeout: 60.0
+    tie_breaker: -16
+    download_retries: 6
+    download_timeout: 66.0
 
   tmux:
     enabled: True
     short_name: "TMUX"
     match_syms: False
-    tie_breaker: 10
+    tie_breaker: 06
 
   buffers:
     enabled: True
     short_name: "BUF"
     match_syms: False
     same_filetype: False
-    tie_breaker: 20
+    tie_breaker: 16
 
   tree_sitter:
     enabled: True
     short_name: "TS"
-    tie_breaker: 30
+    tie_breaker: 26
 
   paths:
     enabled: True
     short_name: "PATH"
-    tie_breaker: 40
+    tie_breaker: 36
 
   snippets:
     enabled: True
     short_name: "SNIP"
-    tie_breaker: 50
+    tie_breaker: 46
 
   tags:
     enabled: True
@@ -99,10 +99,10 @@ clients:
     match_syms: True
     path_sep: " ⇉ "
     parent_scope: " ⇊"
-    tie_breaker: 60
+    tie_breaker: 56
 
   lsp:
     enabled: False
     short_name: "LSP"
-    tie_breaker: 70
+    tie_breaker: 66
 
