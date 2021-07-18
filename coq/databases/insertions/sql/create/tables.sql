@@ -53,7 +53,7 @@ SELECT
 FROM instances
 LEFT JOIN instance_stats
 ON
-  instance_stats.instance_id = instances.rowid
+  instance_stats.instance_id = instances.rowid;
 
 
 CREATE VIEW IF NOT EXISTS stats_view AS
