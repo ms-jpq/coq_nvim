@@ -101,7 +101,7 @@ SELECT
   COALESCE(stats_interrupt_view.interrupted, 0)    AS interrupted,
   COALESCE(stats_interrupt_view.avg_items, 0)      AS avg_items,
   COALESCE(stats_interrupt_view.max_items, 0)      AS max_items,
-  COALESCE(stats_interrupt_view.q50_items, 0)      AS q90_items,
+  COALESCE(stats_interrupt_view.q50_items, 0)      AS q50_items,
   COALESCE(stats_interrupt_view.q90_items, 0)      AS q90_items,
   COALESCE(stats_nointerrupt_view.avg_duration, 0) AS avg_duration,
   COALESCE(stats_nointerrupt_view.max_duration, 0) AS max_duration,

@@ -2,7 +2,7 @@ from concurrent.futures import Executor
 from contextlib import closing
 from dataclasses import dataclass
 from sqlite3 import Connection
-from typing import Mapping, cast
+from typing import Mapping, Sequence, cast
 
 from std2.asyncio import run_in_executor
 from std2.sqllite3 import with_transaction
@@ -15,7 +15,17 @@ from .sql import sql
 
 @dataclass(frozen=True)
 class Statistics:
-    pass
+    source: str
+    interrupted: int
+    avg_items: float
+    max_items: int
+    q50_items: int
+    q90_items: int
+    avg_duration: float
+    max_duration: float
+    q50_duration: float
+    q90_duration: float
+    inserted: int
 
 
 def _init() -> Connection:
@@ -99,4 +109,13 @@ class IDB:
                     )
 
         self._ex.submit(cont)
+
+    def stats(self) -> Sequence[Statistics]:
+        def cont() -> Sequence[Statistics]:
+            with closing(self._conn.cursor()) as cursor:
+                with with_transaction(cursor):
+                    cursor.execute(sql("select", "stats"), ())
+                    return tuple(Statistics(**row) for row in cursor.fetchall())
+
+        return self._ex.submit(cont)
 
