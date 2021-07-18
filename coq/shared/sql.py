@@ -31,7 +31,7 @@ def _like_esc(like: str) -> str:
 
 class _Quantile:
     def __init__(self) -> None:
-        self._q = 0
+        self._q = 0.5
         self._acc: MutableSequence[float] = []
 
     def step(self, value: Optional[float], q: float) -> None:
