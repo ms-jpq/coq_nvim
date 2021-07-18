@@ -20,7 +20,6 @@ from typing import (
     Generic,
     MutableMapping,
     MutableSequence,
-    Optional,
     Protocol,
     Sequence,
     TypeVar,
@@ -62,7 +61,12 @@ class PReviewer(Protocol):
         ...
 
     async def end(
-        self, assoc: BaseClient, instance: UUID, elapsed: float, items: int
+        self,
+        assoc: BaseClient,
+        instance: UUID,
+        interrupted: bool,
+        elapsed: float,
+        items: int,
     ) -> None:
         ...
 

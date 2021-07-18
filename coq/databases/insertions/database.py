@@ -42,7 +42,13 @@ class IDB:
         await run_in_executor(self._ex.submit, cont)
 
     async def new_instance(
-        self, instance: bytes, source: str, batch_id: bytes, duration: float, items: int
+        self,
+        instance: bytes,
+        source: str,
+        batch_id: bytes,
+        interrupted: bool,
+        duration: float,
+        items: int,
     ) -> None:
         def cont() -> None:
             with closing(self._conn.cursor()) as cursor:
@@ -53,6 +59,7 @@ class IDB:
                             "rowid": instance,
                             "source_id": source,
                             "batch_id": batch_id,
+                            "interrupted": interrupted,
                             "duration": duration,
                             "items": items,
                         },

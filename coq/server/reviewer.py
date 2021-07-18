@@ -148,12 +148,18 @@ class Reviewer(PReviewer):
         return metric
 
     async def end(
-        self, assoc: BaseClient, instance: UUID, elapsed: float, items: int
+        self,
+        assoc: BaseClient,
+        instance: UUID,
+        interrupted: bool,
+        elapsed: float,
+        items: int,
     ) -> None:
         await self._db.new_instance(
             instance.bytes,
             source=assoc.short_name,
             batch_id=self._ctx.context.change_id.bytes,
+            interrupted=interrupted,
             duration=elapsed,
             items=items,
         )
