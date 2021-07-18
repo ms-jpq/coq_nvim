@@ -30,12 +30,13 @@ def _like_esc(like: str) -> str:
 
 
 class _Quantile:
-    def __init__(self, q: float) -> None:
-        assert q >= 0 and q <= 1
-        self._q = q
+    def __init__(self) -> None:
+        self._q = 0
         self._acc: MutableSequence[float] = []
 
-    def step(self, value: Optional[float]) -> None:
+    def step(self, value: Optional[float], q: float) -> None:
+        assert q >= 0 and q <= 1
+        self._q = q
         if value is not None:
             self._acc.append(value)
 
