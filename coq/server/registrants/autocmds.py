@@ -3,7 +3,8 @@ from itertools import chain
 from typing import MutableSet, Optional, Sequence
 
 from pynvim.api.nvim import Nvim
-from pynvim_pp.api import buf_filetype, cur_buf, list_bufs
+from pynvim_pp.api import buf_filetype, cur_buf, list_bufs, win_close
+from pynvim_pp.float_win import list_floatwins
 from pynvim_pp.lib import async_call, go
 from std2.pickle import new_decoder
 
@@ -18,6 +19,17 @@ from ..state import state
 _SEEN: MutableSet[str] = set()
 
 _DECODER = new_decoder(Sequence[ParsedSnippet])
+
+
+@rpc(blocking=True)
+def _kill_float_wins(nvim: Nvim, stack: Stack) -> None:
+    wins = tuple(list_floatwins(nvim))
+    if len(wins) != 2:
+        for win in wins:
+            win_close(nvim, win=win)
+
+
+autocmd("WinEnter") << f"lua {_kill_float_wins.name}()"
 
 
 @rpc(blocking=True)
