@@ -1,7 +1,6 @@
 from itertools import chain
 from locale import strxfrm
 from os import linesep
-from pprint import pformat
 from typing import AbstractSet, Iterator, Mapping, Sequence
 
 from pynvim import Nvim
@@ -57,8 +56,18 @@ def _table(headers: AbstractSet[str], rows: Mapping[str, Mapping[str, str]]) -> 
     return sep.join(chain((h,), t))
 
 
+def _trans(stat: Statistics) -> Mapping[str, str]:
+    return {}
+
+
 def _pprn(stats: Sequence[Statistics]) -> str:
-    return pformat(stats)
+    if not stats:
+        return ""
+    else:
+        rows = {stat.source: _trans(stat) for stat in stats}
+        headers = next(iter(rows.values()), {}).keys()
+        table = _table(headers, rows=rows)
+        return table
 
 
 @rpc(blocking=True)
