@@ -1,5 +1,6 @@
 from concurrent.futures import Executor
 from contextlib import closing
+from dataclasses import dataclass
 from sqlite3 import Connection
 from typing import Mapping, cast
 
@@ -10,6 +11,11 @@ from ...consts import INSERT_DB
 from ...shared.executor import SingleThreadExecutor
 from ...shared.sql import init_db
 from .sql import sql
+
+
+@dataclass(frozen=True)
+class Statistics:
+    pass
 
 
 def _init() -> Connection:
