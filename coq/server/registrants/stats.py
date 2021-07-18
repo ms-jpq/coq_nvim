@@ -1,7 +1,7 @@
 from itertools import chain
 from locale import strxfrm
 from os import linesep
-from typing import AbstractSet, Iterator, Mapping, Sequence
+from typing import Iterator, Mapping, Sequence
 
 from pynvim import Nvim
 from pynvim_pp.preview import set_preview
@@ -17,36 +17,36 @@ H_SEP = " | "
 V_SEP = "-"
 
 
-def _table(headers: AbstractSet[str], rows: Mapping[str, Mapping[str, str]]) -> str:
-    s_headers = sorted(headers, key=strxfrm)
-    s_rows = sorted(rows.items(), key=lambda kv: strxfrm(kv[0]))
-
-    c0_just = max(chain((0,), (display_width(k, tabsize=TAB_SIZE) for k, _ in s_rows)))
+def _table(headers: Sequence[str], rows: Mapping[str, Mapping[str, str]]) -> str:
+    s_rows = sorted(rows.keys(), key=strxfrm)
+    c0_just = max(chain((0,), (display_width(key, tabsize=TAB_SIZE) for key in s_rows)))
     c_justs = {
         header: max(
             chain(
                 (display_width(header, tabsize=TAB_SIZE),),
                 (
                     display_width(vs.get(header, ""), tabsize=TAB_SIZE)
-                    for _, vs in s_rows
+                    for vs in rows.values()
                 ),
             )
         )
-        for header in s_headers
+        for header in headers
     }
 
     def cont() -> Iterator[str]:
         yield H_SEP.join(
             chain(
-                (" " * c0_just,),
-                (header.ljust(c_justs[header]) for header in s_headers),
+                (" " * c0_just,), (header.ljust(c_justs[header]) for header in headers)
             )
         )
-        for k, vs in s_rows:
+        for key in s_rows:
             yield H_SEP.join(
                 chain(
-                    (k.ljust(c0_just),),
-                    (vs.get(header, "").ljust(c_justs[header]) for header in s_headers),
+                    (key.ljust(c0_just),),
+                    (
+                        rows[key].get(header, "").ljust(c_justs[header])
+                        for header in headers
+                    ),
                 )
             )
 
@@ -57,7 +57,20 @@ def _table(headers: AbstractSet[str], rows: Mapping[str, Mapping[str, str]]) -> 
 
 
 def _trans(stat: Statistics) -> Mapping[str, str]:
-    return {}
+    stat.interrupted
+    mapping = {
+        "Interrupted": str(stat.interrupted),
+        "Inserted": str(stat.inserted),
+        "Avg Duration": f"{si_prefixed_smol(stat.avg_duration)}s",
+        "Q50 Duration": f"{si_prefixed_smol(stat.q50_duration)}s",
+        "Q90 Duration": f"{si_prefixed_smol(stat.q90_duration)}s",
+        "Max Duration": f"{si_prefixed_smol(stat.max_duration)}s",
+        "Avg Items": f"{si_prefixed_smol(stat.avg_items)}s",
+        "Q50 Items": f"{si_prefixed_smol(stat.q50_items)}s",
+        "Q90 Items": f"{si_prefixed_smol(stat.q90_items)}s",
+        "Max Items": f"{si_prefixed_smol(stat.max_items)}s",
+    }
+    return mapping
 
 
 def _pprn(stats: Sequence[Statistics]) -> str:
@@ -65,7 +78,7 @@ def _pprn(stats: Sequence[Statistics]) -> str:
         return ""
     else:
         rows = {stat.source: _trans(stat) for stat in stats}
-        headers = next(iter(rows.values()), {}).keys()
+        headers = tuple(key for key, _ in next(iter(rows.values()), {}).items())
         table = _table(headers, rows=rows)
         return table
 
