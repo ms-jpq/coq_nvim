@@ -1,5 +1,5 @@
 from functools import cache
-from math import nan
+from math import isnan, nan
 from pathlib import Path
 from sqlite3.dbapi2 import Connection
 from typing import Any, MutableSequence, Optional, Protocol, cast
@@ -46,6 +46,7 @@ class _Quantile:
         if not ordered:
             return None
         else:
+            assert not isnan(self._q)
             idx = round((len(ordered) - 1) * self._q)
             return ordered[idx]
 
