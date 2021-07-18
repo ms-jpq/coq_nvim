@@ -145,7 +145,7 @@ class Supervisor:
                 async def supervise(worker: Worker, assoc: BaseClient) -> None:
                     with l_timeit(f"WORKER -- {assoc.short_name}"):
                         instance = uuid4()
-                        elapsed, items = 0.0, 0
+                        interrupted, elapsed, items = True, 0.0, 0
                         try:
                             with timeit() as t:
                                 async for items, completion in aenumerate(
@@ -155,10 +155,16 @@ class Supervisor:
                                         instance, completion=completion
                                     )
                                     acc.append(metric)
+                                else:
+                                    interrupted = False
                             elapsed = t()
                         finally:
                             await self._reviewer.end(
-                                assoc, instance=instance, elapsed=elapsed, items=items
+                                assoc,
+                                instance=instance,
+                                interrupted=interrupted,
+                                elapsed=elapsed,
+                                items=items,
                             )
 
                 await self._reviewer.begin(context)
