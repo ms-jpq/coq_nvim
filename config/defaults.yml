@@ -33,7 +33,7 @@ display:
     y_margin: 2
     x_margin: 4
     x_max_len: 88
-    lsp_timeout: 0.05
+    lsp_timeout: 0.06
     positions:
       north: 1
       south: 2
