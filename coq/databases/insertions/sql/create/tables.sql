@@ -98,7 +98,7 @@ GROUP BY
 CREATE VIEW IF NOT EXISTS stats_view AS
 SELECT
   sources.name                                     AS source,
-  COALESCE(stats_interrupt_view.interrupted,       AS interrupted,
+  COALESCE(stats_interrupt_view.interrupted, 0)    AS interrupted,
   COALESCE(stats_interrupt_view.avg_items, 0)      AS avg_items,
   COALESCE(stats_interrupt_view.max_items, 0)      AS max_items,
   COALESCE(stats_interrupt_view.q50_items, 0)      AS q90_items,
