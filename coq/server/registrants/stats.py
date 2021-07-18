@@ -9,6 +9,7 @@ from pynvim_pp.api import buf_set_lines, buf_set_option, create_buf, win_close
 from pynvim_pp.float_win import list_floatwins, open_float_win
 from std2.locale import si_prefixed_smol
 
+from ...consts import MD_STATISTICS
 from ...databases.insertions.database import Statistics
 from ...lang import LANG
 from ...registry import rpc
@@ -103,7 +104,8 @@ def _pprn(stats: Sequence[Statistics]) -> str:
 def stats(nvim: Nvim, stack: Stack, *_: str) -> None:
     stats = stack.idb.stats()
     chart = _pprn(stats)
-    lines = Template(_TPL).substitute(chart=chart, desc="").splitlines()
+    desc = MD_STATISTICS.read_text()
+    lines = Template(_TPL).substitute(chart=chart, desc=desc).splitlines()
     for win in list_floatwins(nvim):
         win_close(nvim, win=win)
     buf = create_buf(

@@ -16,6 +16,8 @@ _ARTIFACTS_DIR = TOP_LEVEL / "coq.artifacts"
 _CONF_DIR = TOP_LEVEL / "config"
 LANG_ROOT = TOP_LEVEL / "locale"
 DEFAULT_LANG = "en"
+_DOC_DIR = TOP_LEVEL / "docs"
+
 
 CONFIG_YML = _CONF_DIR / "defaults.yml"
 COMPILATION_YML = _CONF_DIR / "compilation.yml"
@@ -42,3 +44,10 @@ INSERT_DB = str(TMP_DIR / "inserts.sqlite3") if DEBUG_DB else ":memory:"
 TAGS_DB = str(TMP_DIR / "tags.sqlite3") if DEBUG_DB else ":memory:"
 TMUX_DB = str(TMP_DIR / "tmux.sqlite3") if DEBUG_DB else ":memory:"
 
+
+
+MD_README = _DOC_DIR / "README.md"
+MD_STATISTICS = _DOC_DIR / "STATISTICS.md"
+MD_CONF = _DOC_DIR / "CONF.md"
+MD_KEYBIND = _CONF_DIR / "KEYBIND.md"
+MD_PREF = _CONF_DIR / "PERFORMANCE.md"
