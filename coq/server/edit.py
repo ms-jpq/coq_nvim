@@ -378,32 +378,36 @@ def edit(nvim: Nvim, stack: Stack, state: State, data: UserData) -> Tuple[int, i
         primary,
         *data.secondary_edits,
     )
-    limited_lines = buf_get_lines(nvim, buf=buf, lo=lo, hi=hi)
-    lines = tuple(chain(repeat("", times=lo), limited_lines))
-    view = _lines(lines)
+    if lo < 0 or hi > state.context.line_count + 1:
+        log.warn("%s", pformat(("OUT OF BOUNDS", (lo, hi), data)))
+        return -1, -1
+    else:
+        limited_lines = buf_get_lines(nvim, buf=buf, lo=lo, hi=hi)
+        lines = tuple(chain(repeat("", times=lo), limited_lines))
+        view = _lines(lines)
 
-    instructions = _instructions(
-        state.context,
-        unifying_chars=stack.settings.match.unifying_chars,
-        lines=view,
-        primary=primary,
-        secondary=data.secondary_edits,
-    )
-    new_lines = _new_lines(view, instructions=instructions)
-    n_row, n_col = _cursor(state.context.position, instructions=instructions)
-    send_lines = new_lines[lo:]
+        instructions = _instructions(
+            state.context,
+            unifying_chars=stack.settings.match.unifying_chars,
+            lines=view,
+            primary=primary,
+            secondary=data.secondary_edits,
+        )
+        new_lines = _new_lines(view, instructions=instructions)
+        n_row, n_col = _cursor(state.context.position, instructions=instructions)
+        send_lines = new_lines[lo:]
 
-    if DEBUG:
-        msg = pformat((data, instructions, (n_row + 1, n_col + 1), send_lines))
-        log.debug("%s", msg)
+        if DEBUG:
+            msg = pformat((data, instructions, (n_row + 1, n_col + 1), send_lines))
+            log.debug("%s", msg)
 
-    buf_set_lines(nvim, buf=buf, lo=lo, hi=hi, lines=send_lines)
-    win_set_cursor(nvim, win=win, row=n_row, col=n_col)
+        buf_set_lines(nvim, buf=buf, lo=lo, hi=hi, lines=send_lines)
+        win_set_cursor(nvim, win=win, row=n_row, col=n_col)
 
-    stack.idb.inserted(data.instance.bytes, sort_by=data.sort_by)
+        stack.idb.inserted(data.instance.bytes, sort_by=data.sort_by)
 
-    if marks:
-        mark(nvim, settings=stack.settings, buf=buf, marks=marks)
+        if marks:
+            mark(nvim, settings=stack.settings, buf=buf, marks=marks)
 
-    return n_row, n_col
+        return n_row, n_col
 
