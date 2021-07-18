@@ -56,7 +56,7 @@ ON
   instance_stats.instance_id = instances.rowid;
 
 
-CREATE VIEW IF NOT EXISTS stats_view AS
+CREATE VIEW IF NOT EXISTS stats_interrupt_view AS
 SELECT
   source_id                           AS source,
   COALESCE(SUM(interrupted), 0)       AS interrupted,
@@ -83,7 +83,7 @@ HAVING
   NOT interrupted;
 
 
-CREATE VIEW IF NOT EXISTS stat_inserted_view AS
+CREATE VIEW IF NOT EXISTS stats_inserted_view AS
 SELECT
   instances.source_id   AS source,
   COUNT(inserted.rowid) AS inserted
@@ -93,6 +93,28 @@ ON
   inserted.instance_id = instances.rowid
 GROUP BY
   instances.source_id;
+
+
+CREATE VIEW IF NOT EXISTS stats_view AS
+SELECT
+  sources.name                                     AS source,
+  COALESCE(stats_interrupt_view.interrupted,       AS interrupted,
+  COALESCE(stats_interrupt_view.avg_items, 0)      AS avg_items,
+  COALESCE(stats_interrupt_view.max_items, 0)      AS max_items,
+  COALESCE(stats_interrupt_view.q50_items, 0)      AS q90_items,
+  COALESCE(stats_interrupt_view.q90_items, 0)      AS q90_items,
+  COALESCE(stats_nointerrupt_view.avg_duration, 0) AS avg_duration,
+  COALESCE(stats_nointerrupt_view.max_duration, 0) AS max_duration,
+  COALESCE(stats_nointerrupt_view.q50_duration, 0) AS q50_duration,
+  COALESCE(stats_nointerrupt_view.q90_duration, 0) AS q90_duration,
+  COALESCE(stats_inserted_view.inserted, 0)        AS inserted
+FROM sources
+LEFT JOIN stats_interrupt_view
+ON stats_interrupt_view.source = sources.name
+LEFT JOIN stats_nointerrupt_view
+ON stats_nointerrupt_view.source = sources.name
+LEFT JOIN stats_inserted_view
+ON stats_inserted_view.source = sources.name;
 
 
 END;
