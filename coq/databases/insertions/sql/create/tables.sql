@@ -12,9 +12,9 @@ CREATE TABLE IF NOT EXISTS batches (
 
 
 CREATE TABLE IF NOT EXISTS instances (
-  rowid       BLOB    NOT NULL PRIMARY KEY,
-  source_id   TEXT    NOT NULL REFERENCES sources (name)  ON UPDATE CASCADE ON DELETE CASCADE,
-  batch_id    BLOB    NOT NULL REFERENCES batches (rowid) ON UPDATE CASCADE ON DELETE CASCADE
+  rowid     BLOB NOT NULL PRIMARY KEY,
+  source_id TEXT NOT NULL REFERENCES sources (name)  ON UPDATE CASCADE ON DELETE CASCADE,
+  batch_id  BLOB NOT NULL REFERENCES batches (rowid) ON UPDATE CASCADE ON DELETE CASCADE,
   UNIQUE(batch_id, source_id)
 ) WITHOUT rowid;
 CREATE INDEX IF NOT EXISTS instances_batch_id  ON instances (batch_id);
@@ -25,7 +25,7 @@ CREATE TABLE IF NOT EXISTS instance_stats (
   instance_id BLOB    NOT NULL REFERENCES instances (rowid) ON UPDATE CASCADE ON DELETE CASCADE,
   interrupted INTEGER NOT NULL,
   duration    REAL    NOT NULL,
-  items       INTEGER NOT NULL,
+  items       INTEGER NOT NULL
 );
 CREATE INDEX IF NOT EXISTS instance_stats_instance_id ON instance_stats (instance_id);
 
