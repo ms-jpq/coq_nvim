@@ -158,7 +158,7 @@ class Reviewer(PReviewer):
     async def s_end(
         self, instance: UUID, interrupted: bool, elapsed: float, items: int
     ) -> None:
-        await self._db.instance_stat(
+        await self._db.new_stat(
             instance.bytes, interrupted=interrupted, duration=elapsed, items=items
         )
 

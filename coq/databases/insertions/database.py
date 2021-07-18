@@ -2,6 +2,7 @@ from concurrent.futures import Executor
 from contextlib import closing
 from dataclasses import dataclass
 from sqlite3 import Connection
+from threading import Lock
 from typing import Mapping, Sequence, cast
 
 from std2.asyncio import run_in_executor
@@ -41,12 +42,17 @@ def _init() -> Connection:
 
 class IDB:
     def __init__(self, pool: Executor) -> None:
+        self._lock = Lock()
         self._ex = SingleThreadExecutor(pool)
         self._conn: Connection = self._ex.submit(_init)
 
+    def _interrupt(self) -> None:
+        with self._lock:
+            self._conn.interrupt()
+
     def new_source(self, source: str) -> None:
         def cont() -> None:
-            with closing(self._conn.cursor()) as cursor:
+            with self._lock, closing(self._conn.cursor()) as cursor:
                 with with_transaction(cursor):
                     cursor.execute(sql("insert", "source"), {"name": source})
 
@@ -54,7 +60,7 @@ class IDB:
 
     async def new_batch(self, batch_id: bytes) -> None:
         def cont() -> None:
-            with closing(self._conn.cursor()) as cursor:
+            with self._lock, closing(self._conn.cursor()) as cursor:
                 with with_transaction(cursor):
                     cursor.execute(sql("insert", "batch"), {"rowid": batch_id})
 
@@ -62,7 +68,7 @@ class IDB:
 
     async def new_instance(self, instance: bytes, source: str, batch_id: bytes) -> None:
         def cont() -> None:
-            with closing(self._conn.cursor()) as cursor:
+            with self._lock, closing(self._conn.cursor()) as cursor:
                 with with_transaction(cursor):
                     cursor.execute(
                         sql("insert", "instance"),
@@ -71,11 +77,11 @@ class IDB:
 
         await run_in_executor(self._ex.submit, cont)
 
-    async def instance_stat(
+    async def new_stat(
         self, instance: bytes, interrupted: bool, duration: float, items: int
     ) -> None:
         def cont() -> None:
-            with closing(self._conn.cursor()) as cursor:
+            with self._lock, closing(self._conn.cursor()) as cursor:
                 with with_transaction(cursor):
                     cursor.execute(
                         sql("insert", "instance_stat"),
@@ -99,12 +105,15 @@ class IDB:
                     }
                     return order
 
-        ret = await run_in_executor(self._ex.submit, cont)
-        return cast(Mapping[str, int], ret)
+        def step() -> Mapping[str, int]:
+            self._interrupt()
+            return self._ex.submit(cont)
+
+        return await run_in_executor(step)
 
     def inserted(self, instance_id: bytes, sort_by: str) -> None:
         def cont() -> None:
-            with closing(self._conn.cursor()) as cursor:
+            with self._lock, closing(self._conn.cursor()) as cursor:
                 with with_transaction(cursor):
                     cursor.execute(
                         sql("insert", "inserted"),
@@ -115,7 +124,7 @@ class IDB:
 
     def stats(self) -> Sequence[Statistics]:
         def cont() -> Sequence[Statistics]:
-            with closing(self._conn.cursor()) as cursor:
+            with self._lock, closing(self._conn.cursor()) as cursor:
                 with with_transaction(cursor):
                     cursor.execute(sql("select", "stats"), ())
                     return tuple(Statistics(**row) for row in cursor.fetchall())
