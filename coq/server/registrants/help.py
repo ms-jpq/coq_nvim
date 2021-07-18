@@ -10,7 +10,18 @@ from pynvim_pp.lib import write
 from std2.argparse import ArgparseError, ArgParser
 from std2.types import never
 
-from ...consts import MD_CONF, MD_KEYBIND, MD_PREF, MD_README, MD_STATISTICS
+from ...consts import (
+    MD_CONF,
+    MD_KEYBIND,
+    MD_PREF,
+    MD_README,
+    MD_STATISTICS,
+    URI_CONF,
+    URI_KEYBIND,
+    URI_PREF,
+    URI_README,
+    URI_STATISTICS,
+)
 from ...registry import rpc
 from ..rt_types import Stack
 
@@ -25,15 +36,15 @@ class _Topics(Enum):
 
 def _directory(topic: _Topics) -> Tuple[Path, str]:
     if topic is _Topics.index:
-        return MD_README, ""
+        return MD_README, URI_README
     elif topic is _Topics.config:
-        return MD_CONF, ""
+        return MD_CONF, URI_CONF
     elif topic is _Topics.keybind:
-        return MD_KEYBIND, ""
+        return MD_KEYBIND, URI_KEYBIND
     elif topic is _Topics.stats:
-        return MD_STATISTICS, ""
+        return MD_STATISTICS, URI_STATISTICS
     elif topic is _Topics.performance:
-        return MD_PREF, ""
+        return MD_PREF, URI_PREF
     else:
         never(topic)
 
