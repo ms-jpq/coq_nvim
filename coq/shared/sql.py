@@ -35,8 +35,9 @@ class _Quantile:
         self._q = q
         self._acc: MutableSequence[float] = []
 
-    def step(self, value: float) -> None:
-        self._acc.append(value)
+    def step(self, value: Optional[float]) -> None:
+        if value is not None:
+            self._acc.append(value)
 
     def finalize(self) -> Optional[float]:
         ordered = sorted(self._acc)
