@@ -2,7 +2,7 @@ from functools import cache
 from pathlib import Path
 from sqlite3.dbapi2 import Connection
 from statistics import median
-from typing import Protocol, cast
+from typing import Any, MutableSequence, Protocol, cast
 
 from std2.pathlib import AnyPath
 from std2.sqllite3 import add_functions, escape
@@ -30,9 +30,20 @@ def _like_esc(like: str) -> str:
     return f"{escaped}%"
 
 
+class _Median:
+    def __init__(self) -> None:
+        self._acc: MutableSequence[float] = []
+
+    def step(self, value: float) -> None:
+        self._acc.append(value)
+
+    def finalize(self) -> float:
+        return median(self._acc)
+
+
 def init_db(conn: Connection) -> None:
     add_functions(conn)
     conn.create_function("X_LIKE_ESC", narg=1, func=_like_esc, deterministic=True)
     conn.create_function("X_SIMILARITY", narg=2, func=similarity, deterministic=True)
-    conn.create_function("X_MEDIAN", narg=1, func=median, deterministic=True)
+    conn.create_aggregate("X_MEDIAN", n_arg=1, aggregate_class=cast(Any, _Median))
 
