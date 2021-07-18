@@ -1,8 +1,7 @@
 from functools import cache
 from pathlib import Path
 from sqlite3.dbapi2 import Connection
-from statistics import median
-from typing import Any, MutableSequence, Protocol, cast
+from typing import Any, MutableSequence, Optional, Protocol, cast
 
 from std2.pathlib import AnyPath
 from std2.sqllite3 import add_functions, escape
@@ -30,20 +29,27 @@ def _like_esc(like: str) -> str:
     return f"{escaped}%"
 
 
-class _Median:
-    def __init__(self) -> None:
+class _Quantile:
+    def __init__(self, q: float) -> None:
+        assert q >= 0 and q <= 1
+        self._q = q
         self._acc: MutableSequence[float] = []
 
     def step(self, value: float) -> None:
         self._acc.append(value)
 
-    def finalize(self) -> float:
-        return median(self._acc)
+    def finalize(self) -> Optional[float]:
+        ordered = sorted(self._acc)
+        if not ordered:
+            return None
+        else:
+            idx = round((len(ordered) - 1) * self._q)
+            return ordered[idx]
 
 
 def init_db(conn: Connection) -> None:
     add_functions(conn)
     conn.create_function("X_LIKE_ESC", narg=1, func=_like_esc, deterministic=True)
     conn.create_function("X_SIMILARITY", narg=2, func=similarity, deterministic=True)
-    conn.create_aggregate("X_MEDIAN", n_arg=1, aggregate_class=cast(Any, _Median))
+    conn.create_aggregate("X_QUANTILE", n_arg=2, aggregate_class=cast(Any, _Quantile))
 
