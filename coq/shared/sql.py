@@ -1,4 +1,5 @@
 from functools import cache
+from math import nan
 from pathlib import Path
 from sqlite3.dbapi2 import Connection
 from typing import Any, MutableSequence, Optional, Protocol, cast
@@ -31,7 +32,7 @@ def _like_esc(like: str) -> str:
 
 class _Quantile:
     def __init__(self) -> None:
-        self._q = 0.5
+        self._q = nan
         self._acc: MutableSequence[float] = []
 
     def step(self, value: Optional[float], q: float) -> None:
