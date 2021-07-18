@@ -34,19 +34,45 @@ CREATE INDEX IF NOT EXISTS inserted_sort_by     ON inserted (sort_by);
 
 
 
-CREATE VIEW IF NOT EXISTS statistics_1 AS
+CREATE VIEW IF NOT EXISTS stat_interrupted_view AS
 SELECT
-  sources.name AS source,
+  source_id AS source,
   CASE
     WHEN COUNT(*) = 0 THEN 0.0
-    ELSE SUM(instances.interrupted) / COUNT(*)
+    ELSE SUM(interrupted) / COUNT(*)
   END AS interrupted
-FROM sources
-JOIN instances
-ON
-  instances.source_id = sources.name
+FROM instances
 GROUP BY
-  sources.name
+  source_id;
+
+
+CREATE VIEW IF NOT EXISTS stat_avg_items_view AS
+SELECT
+  source_id  AS source,
+  AVG(items) AS avg_items
+FROM instances
+GROUP BY
+  source_id;
+
+
+CREATE VIEW IF NOT EXISTS stat_duration_view AS
+SELECT
+  source_id     AS source,
+  AVG(duration) AS duration
+FROM instances
+GROUP BY
+  source_id;
+
+
+CREATE VIEW IF NOT EXISTS stat_duration_nointerrupt_view AS
+SELECT
+  source_id     AS source,
+  AVG(duration) AS duration
+FROM instances
+GROUP BY
+  source_id
+HAVING
+  NOT interrupted;
 
 
 END;
