@@ -22,11 +22,11 @@ _TPL = f"""
 # Statistics
 
 ```txt
-${chart}
+${{chart}}
 ```
 
-${desc}
-"""
+${{desc}}
+""".lstrip()
 
 
 def _table(headers: Sequence[str], rows: Mapping[str, Mapping[str, str]]) -> str:
