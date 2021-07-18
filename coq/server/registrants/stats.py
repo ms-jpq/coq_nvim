@@ -1,6 +1,7 @@
 from itertools import chain
 from locale import strxfrm
 from os import linesep
+from string import Template
 from typing import Iterator, Mapping, Sequence
 
 from pynvim import Nvim
@@ -13,20 +14,32 @@ from ...registry import rpc
 from ...shared.parse import display_width
 from ..rt_types import Stack
 
-TAB_SIZE = 2
-H_SEP = " | "
-V_SEP = "─"
+_TAB_SIZE = 2
+_H_SEP = " | "
+_V_SEP = "─"
+
+_TPL = f"""
+# Statistics
+
+```txt
+${chart}
+```
+
+${desc}
+"""
 
 
 def _table(headers: Sequence[str], rows: Mapping[str, Mapping[str, str]]) -> str:
     s_rows = sorted(rows.keys(), key=strxfrm)
-    c0_just = max(chain((0,), (display_width(key, tabsize=TAB_SIZE) for key in s_rows)))
+    c0_just = max(
+        chain((0,), (display_width(key, tabsize=_TAB_SIZE) for key in s_rows))
+    )
     c_justs = {
         header: max(
             chain(
-                (display_width(header, tabsize=TAB_SIZE),),
+                (display_width(header, tabsize=_TAB_SIZE),),
                 (
-                    display_width(vs.get(header, ""), tabsize=TAB_SIZE)
+                    display_width(vs.get(header, ""), tabsize=_TAB_SIZE)
                     for vs in rows.values()
                 ),
             )
@@ -35,13 +48,13 @@ def _table(headers: Sequence[str], rows: Mapping[str, Mapping[str, str]]) -> str
     }
 
     def cont() -> Iterator[str]:
-        yield H_SEP.join(
+        yield _H_SEP.join(
             chain(
                 (" " * c0_just,), (header.ljust(c_justs[header]) for header in headers)
             )
         )
         for key in s_rows:
-            yield H_SEP.join(
+            yield _H_SEP.join(
                 chain(
                     (key.ljust(c0_just),),
                     (
@@ -52,8 +65,8 @@ def _table(headers: Sequence[str], rows: Mapping[str, Mapping[str, str]]) -> str
             )
 
     h, *t = cont()
-    rep = display_width(h, tabsize=TAB_SIZE)
-    sep = f"{linesep}{V_SEP * rep}{linesep}"
+    rep = display_width(h, tabsize=_TAB_SIZE)
+    sep = f"{linesep}{_V_SEP * rep}{linesep}"
     return sep.join(chain((h,), t))
 
 
@@ -88,7 +101,8 @@ def _pprn(stats: Sequence[Statistics]) -> str:
 @rpc(blocking=True)
 def stats(nvim: Nvim, stack: Stack, *_: str) -> None:
     stats = stack.idb.stats()
-    lines = _pprn(stats).splitlines()
+    chart = _pprn(stats)
+    lines = Template(_TPL).substitute(chart=chart, desc="").splitlines()
     for win in list_floatwins(nvim):
         win_close(nvim, win=win)
     buf = create_buf(
@@ -96,5 +110,6 @@ def stats(nvim: Nvim, stack: Stack, *_: str) -> None:
     )
     buf_set_lines(nvim, buf=buf, lo=0, hi=-1, lines=lines)
     buf_set_option(nvim, buf=buf, key="modifiable", val=False)
+    buf_set_option(nvim, buf=buf, key="syntax", val="markdown")
     open_float_win(nvim, margin=0, relsize=0.95, buf=buf)
 
