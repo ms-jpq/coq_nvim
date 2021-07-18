@@ -6,7 +6,7 @@ from typing import Iterable, Iterator, Mapping, Sequence, TypedDict, cast
 from uuid import uuid4
 
 from std2.asyncio import run_in_executor
-from std2.sqllite3 import with_transaction
+from std2.sqlite3 import with_transaction
 
 from ...consts import SNIPPET_DB
 from ...shared.executor import SingleThreadExecutor

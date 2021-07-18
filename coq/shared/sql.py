@@ -5,7 +5,7 @@ from sqlite3.dbapi2 import Connection
 from typing import Any, MutableSequence, Optional, Protocol, cast
 
 from std2.pathlib import AnyPath
-from std2.sqllite3 import add_functions, escape
+from std2.sqlite3 import add_functions, escape
 
 from .parse import similarity
 

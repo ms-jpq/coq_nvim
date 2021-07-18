@@ -5,7 +5,7 @@ from sqlite3 import Connection
 from typing import Mapping, Sequence, cast
 
 from std2.asyncio import run_in_executor
-from std2.sqllite3 import with_transaction
+from std2.sqlite3 import with_transaction
 
 from ...consts import INSERT_DB
 from ...shared.executor import SingleThreadExecutor

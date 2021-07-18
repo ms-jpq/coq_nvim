@@ -65,10 +65,10 @@ def _trans(stat: Statistics) -> Mapping[str, str]:
         "Q50 Duration": f"{si_prefixed_smol(stat.q50_duration)}s",
         "Q90 Duration": f"{si_prefixed_smol(stat.q90_duration)}s",
         "Max Duration": f"{si_prefixed_smol(stat.max_duration)}s",
-        "Avg Items": f"{si_prefixed_smol(stat.avg_items)}s",
-        "Q50 Items": f"{si_prefixed_smol(stat.q50_items)}s",
-        "Q90 Items": f"{si_prefixed_smol(stat.q90_items)}s",
-        "Max Items": f"{si_prefixed_smol(stat.max_items)}s",
+        "Avg Items": str(round(stat.avg_items)),
+        "Q50 Items": str(stat.q50_items),
+        "Q90 Items": str(stat.q90_items),
+        "Max Items": str(stat.max_items),
     }
     return mapping
 

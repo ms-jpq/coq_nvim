@@ -5,7 +5,7 @@ from threading import Lock
 from typing import Iterator, Mapping, Sequence, cast
 
 from std2.asyncio import run_in_executor
-from std2.sqllite3 import with_transaction
+from std2.sqlite3 import with_transaction
 
 from ...consts import TAGS_DB
 from ...shared.executor import SingleThreadExecutor
