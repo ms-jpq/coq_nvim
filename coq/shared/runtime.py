@@ -44,7 +44,7 @@ O_co = TypeVar("O_co", contravariant=True, bound=BaseClient)
 
 @dataclass(frozen=True)
 class Metric:
-    batch: UUID
+    istance: UUID
     comp: Completion
     weight: Weights
     label_width: int
@@ -52,19 +52,18 @@ class Metric:
 
 
 class PReviewer(Protocol):
-    def register(self, worker: Worker, assoc: BaseClient) -> None:
+    def register(self, assoc: BaseClient) -> None:
         ...
 
     async def begin(self, context: Context) -> None:
         ...
 
-    async def s1(self, worker: Worker, assoc: BaseClient, batch: UUID) -> None:
+    def trans(self, instance: UUID, completion: Completion) -> Metric:
         ...
 
-    def s2(self, batch: UUID, completion: Completion) -> Metric:
-        ...
-
-    async def end(self, elapsed: Optional[float], items: Optional[int]) -> None:
+    async def end(
+        self, assoc: BaseClient, instance: UUID, elapsed: float, items: int
+    ) -> None:
         ...
 
 
@@ -110,7 +109,7 @@ class Supervisor:
         return self._options
 
     def register(self, worker: Worker, assoc: BaseClient) -> None:
-        self._reviewer.register(worker, assoc=assoc)
+        self._reviewer.register(assoc)
         self._workers[worker] = assoc
 
     def notify_idle(self) -> None:
@@ -140,18 +139,23 @@ class Supervisor:
                 )
 
                 async def supervise(worker: Worker, assoc: BaseClient) -> None:
-                    batch = uuid4()
                     with l_timeit(f"WORKER -- {assoc.short_name}"):
-                        await self._reviewer.s1(worker, assoc=assoc, batch=batch)
-                        elapsed, items = None, None
-                        with timeit() as t:
-                            async for items, completion in aenumerate(
-                                worker.work(context), start=1
-                            ):
-                                metric = self._reviewer.s2(batch, completion=completion)
-                                acc.append(metric)
-                        elapsed = t()
-                        await self._reviewer.end(elapsed, items=items)
+                        instance = uuid4()
+                        elapsed, items = 0.0, 0
+                        try:
+                            with timeit() as t:
+                                async for items, completion in aenumerate(
+                                    worker.work(context), start=1
+                                ):
+                                    metric = self._reviewer.trans(
+                                        instance, completion=completion
+                                    )
+                                    acc.append(metric)
+                            elapsed = t()
+                        finally:
+                            await self._reviewer.end(
+                                assoc, instance=instance, elapsed=elapsed, items=items
+                            )
 
                 await self._reviewer.begin(context)
                 self._tasks = tuple(

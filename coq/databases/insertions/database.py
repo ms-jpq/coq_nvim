@@ -1,7 +1,7 @@
 from concurrent.futures import Executor
 from contextlib import closing
 from sqlite3 import Connection
-from typing import Mapping, Optional, cast
+from typing import Mapping, cast
 
 from std2.asyncio import run_in_executor
 from std2.sqllite3 import with_transaction
@@ -33,26 +33,29 @@ class IDB:
 
         self._ex.submit(cont)
 
-    async def new_batch(self, source: str, batch_id: bytes) -> None:
+    async def new_batch(self, batch_id: bytes) -> None:
         def cont() -> None:
             with closing(self._conn.cursor()) as cursor:
                 with with_transaction(cursor):
-                    cursor.execute(
-                        sql("insert", "batch"),
-                        {"rowid": batch_id, "source_id": source},
-                    )
+                    cursor.execute(sql("insert", "batch"), {"rowid": batch_id})
 
         await run_in_executor(self._ex.submit, cont)
 
-    async def update_batch(
-        self, batch_id: bytes, duration: Optional[float], items: Optional[int]
+    async def new_instance(
+        self, instance: bytes, source: str, batch_id: bytes, duration: float, items: int
     ) -> None:
         def cont() -> None:
             with closing(self._conn.cursor()) as cursor:
                 with with_transaction(cursor):
                     cursor.execute(
-                        sql("update", "batch"),
-                        {"batch_id": batch_id, "duration": duration, "items": items},
+                        sql("insert", "instance"),
+                        {
+                            "rowid": instance,
+                            "source_id": source,
+                            "batch_id": batch_id,
+                            "duration": duration,
+                            "items": items,
+                        },
                     )
 
         await run_in_executor(self._ex.submit, cont)
@@ -70,13 +73,13 @@ class IDB:
         ret = await run_in_executor(self._ex.submit, cont)
         return cast(Mapping[str, int], ret)
 
-    def inserted(self, batch_id: bytes, sort_by: str) -> None:
+    def inserted(self, instance_id: bytes, sort_by: str) -> None:
         def cont() -> None:
             with closing(self._conn.cursor()) as cursor:
                 with with_transaction(cursor):
                     cursor.execute(
                         sql("insert", "inserted"),
-                        {"batch_id": batch_id, "sort_by": sort_by},
+                        {"instance_id": instance_id, "sort_by": sort_by},
                     )
 
         self._ex.submit(cont)

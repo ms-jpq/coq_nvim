@@ -1,21 +1,20 @@
 from collections import Counter
-from dataclasses import dataclass, replace
+from dataclasses import dataclass
 from difflib import SequenceMatcher
 from math import inf
-from typing import Mapping, MutableSequence, Optional
-from uuid import UUID, uuid4
+from typing import Mapping, MutableSequence
+from uuid import UUID
 
 from ..databases.insertions.database import IDB
 from ..shared.context import EMPTY_CONTEXT
 from ..shared.parse import coalesce, display_width, is_word, lower
-from ..shared.runtime import Metric, PReviewer, Worker
+from ..shared.runtime import Metric, PReviewer
 from ..shared.settings import BaseClient, Options, Weights
 from ..shared.types import Completion, Context
 
 
 @dataclass(frozen=True)
 class _ReviewCtx:
-    batch_id: UUID
     context: Context
     neighbours: Mapping[str, int]
     inserted: Mapping[str, int]
@@ -80,7 +79,7 @@ def _metric(
 
 
 def _join(
-    batch: UUID,
+    instance: UUID,
     ctx: _ReviewCtx,
     completion: Completion,
     match_metrics: _MatchMetrics,
@@ -95,7 +94,7 @@ def _join(
     label_width = display_width(completion.label, tabsize=ctx.context.tabstop)
     kind_width = display_width(completion.kind, tabsize=ctx.context.tabstop)
     metric = Metric(
-        batch=batch,
+        istance=instance,
         comp=completion,
         weight=weight,
         label_width=label_width,
@@ -108,7 +107,6 @@ class Reviewer(PReviewer):
     def __init__(self, options: Options, db: IDB) -> None:
         self._options, self._db = options, db
         self._ctx = _ReviewCtx(
-            batch_id=uuid4(),
             context=EMPTY_CONTEXT,
             neighbours={},
             inserted={},
@@ -117,7 +115,7 @@ class Reviewer(PReviewer):
             sw_before="",
         )
 
-    def register(self, worker: Worker, assoc: BaseClient) -> None:
+    def register(self, assoc: BaseClient) -> None:
         self._db.new_source(assoc.short_name)
 
     async def begin(self, context: Context) -> None:
@@ -128,7 +126,6 @@ class Reviewer(PReviewer):
             for word in coalesce(line, unifying_chars=self._options.unifying_chars)
         )
         ctx = _ReviewCtx(
-            batch_id=uuid4(),
             context=context,
             neighbours=neighbours,
             inserted=inserted,
@@ -137,24 +134,27 @@ class Reviewer(PReviewer):
             sw_before=context.syms_before + context.words_before,
         )
         self._ctx = ctx
+        await self._db.new_batch(ctx.context.change_id.bytes)
 
-    async def s1(self, worker: Worker, assoc: BaseClient, batch: UUID) -> None:
-        self._ctx = replace(self._ctx, batch_id=batch)
-        await self._db.new_batch(assoc.short_name, batch_id=batch.bytes)
-
-    def s2(self, batch: UUID, completion: Completion) -> Metric:
+    def trans(self, instance: UUID, completion: Completion) -> Metric:
         match_metrics = _metric(
             self._options,
             ctx=self._ctx,
             completion=completion,
         )
         metric = _join(
-            batch, ctx=self._ctx, completion=completion, match_metrics=match_metrics
+            instance, ctx=self._ctx, completion=completion, match_metrics=match_metrics
         )
         return metric
 
-    async def end(self, elapsed: Optional[float], items: Optional[int]) -> None:
-        await self._db.update_batch(
-            self._ctx.batch_id.bytes, duration=elapsed, items=items
+    async def end(
+        self, assoc: BaseClient, instance: UUID, elapsed: float, items: int
+    ) -> None:
+        await self._db.new_instance(
+            instance.bytes,
+            source=assoc.short_name,
+            batch_id=self._ctx.context.change_id.bytes,
+            duration=elapsed,
+            items=items,
         )
 
