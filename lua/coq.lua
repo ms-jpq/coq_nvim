@@ -70,7 +70,7 @@ return function(args)
         on_stdout = on_stdout,
         on_stderr = on_stderr
       }
-      local job_id = vim.fn.jobstart(args, params)
+      job_id = vim.fn.jobstart(args, params)
       return job_id
     end
 
@@ -108,6 +108,9 @@ return function(args)
 
     set_coq_call("COQnow")
     vim.api.nvim_command [[command! -nargs=* COQnow lua coq.COQnow(<f-args>)]]
+
+    set_coq_call("COQstats")
+    vim.api.nvim_command [[command! -nargs=* COQstats lua coq.COQstats(<f-args>)]]
 
     set_coq_call("COQhelp")
     vim.api.nvim_command [[command! -nargs=* COQhelp lua coq.COQhelp(<f-args>)]]

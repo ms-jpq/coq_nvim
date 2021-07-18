@@ -4,7 +4,8 @@ from os import linesep
 from typing import Iterator, Mapping, Sequence
 
 from pynvim import Nvim
-from pynvim_pp.preview import set_preview
+from pynvim_pp.api import buf_set_lines, buf_set_option, create_buf, win_close
+from pynvim_pp.float_win import list_floatwins, open_float_win
 from std2.locale import si_prefixed_smol
 
 from ...databases.insertions.database import Statistics
@@ -13,7 +14,7 @@ from ...shared.parse import display_width
 from ..rt_types import Stack
 
 TAB_SIZE = 2
-H_SEP = " │ "
+H_SEP = " | "
 V_SEP = "─"
 
 
@@ -87,6 +88,13 @@ def _pprn(stats: Sequence[Statistics]) -> str:
 @rpc(blocking=True)
 def stats(nvim: Nvim, stack: Stack, *_: str) -> None:
     stats = stack.idb.stats()
-    preview = _pprn(stats).splitlines()
-    set_preview(nvim, syntax="", preview=preview)
+    lines = _pprn(stats).splitlines()
+    for win in list_floatwins(nvim):
+        win_close(nvim, win=win)
+    buf = create_buf(
+        nvim, listed=False, scratch=True, wipe=True, nofile=True, noswap=True
+    )
+    buf_set_lines(nvim, buf=buf, lo=0, hi=-1, lines=lines)
+    buf_set_option(nvim, buf=buf, key="modifiable", val=False)
+    open_float_win(nvim, margin=0, relsize=0.95, buf=buf)
 
