@@ -139,6 +139,11 @@ class Reviewer(PReviewer):
         self._ctx = ctx
         await self._db.new_batch(ctx.batch.bytes)
 
+    async def s_begin(self, assoc: BaseClient, instance: UUID) -> None:
+        await self._db.new_instance(
+            instance.bytes, source=assoc.short_name, batch_id=self._ctx.batch.bytes
+        )
+
     def trans(self, instance: UUID, completion: Completion) -> Metric:
         match_metrics = _metric(
             self._options,
@@ -150,20 +155,10 @@ class Reviewer(PReviewer):
         )
         return metric
 
-    async def end(
-        self,
-        assoc: BaseClient,
-        instance: UUID,
-        interrupted: bool,
-        elapsed: float,
-        items: int,
+    async def s_end(
+        self, instance: UUID, interrupted: bool, elapsed: float, items: int
     ) -> None:
-        await self._db.new_instance(
-            instance.bytes,
-            source=assoc.short_name,
-            batch_id=self._ctx.batch.bytes,
-            interrupted=interrupted,
-            duration=elapsed,
-            items=items,
+        await self._db.instance_stat(
+            instance.bytes, interrupted=interrupted, duration=elapsed, items=items
         )
 

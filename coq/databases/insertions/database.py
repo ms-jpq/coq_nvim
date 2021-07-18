@@ -47,24 +47,27 @@ class IDB:
 
         await run_in_executor(self._ex.submit, cont)
 
-    async def new_instance(
-        self,
-        instance: bytes,
-        source: str,
-        batch_id: bytes,
-        interrupted: bool,
-        duration: float,
-        items: int,
-    ) -> None:
+    async def new_instance(self, instance: bytes, source: str, batch_id: bytes) -> None:
         def cont() -> None:
             with closing(self._conn.cursor()) as cursor:
                 with with_transaction(cursor):
                     cursor.execute(
                         sql("insert", "instance"),
+                        {"rowid": instance, "source_id": source, "batch_id": batch_id},
+                    )
+
+        await run_in_executor(self._ex.submit, cont)
+
+    async def instance_stat(
+        self, instance: bytes, interrupted: bool, duration: float, items: int
+    ) -> None:
+        def cont() -> None:
+            with closing(self._conn.cursor()) as cursor:
+                with with_transaction(cursor):
+                    cursor.execute(
+                        sql("insert", "instance_stat"),
                         {
-                            "rowid": instance,
-                            "source_id": source,
-                            "batch_id": batch_id,
+                            "instance_id": instance,
                             "interrupted": interrupted,
                             "duration": duration,
                             "items": items,

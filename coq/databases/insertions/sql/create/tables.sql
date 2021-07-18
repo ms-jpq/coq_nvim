@@ -21,13 +21,13 @@ CREATE INDEX IF NOT EXISTS instances_batch_id  ON instances (batch_id);
 CREATE INDEX IF NOT EXISTS instances_source_id ON instances (source_id);
 
 
-CREATE TABLE IF NOT EXISTS instance_stat (
+CREATE TABLE IF NOT EXISTS instance_stats (
   instance_id BLOB    NOT NULL REFERENCES instances (rowid) ON UPDATE CASCADE ON DELETE CASCADE,
   interrupted INTEGER NOT NULL,
   duration    REAL    NOT NULL,
   items       INTEGER NOT NULL,
 );
-CREATE INDEX IF NOT EXISTS instance_stat_instance_id ON instance_stat (instance_id);
+CREATE INDEX IF NOT EXISTS instance_stats_instance_id ON instance_stats (instance_id);
 
 
 CREATE TABLE IF NOT EXISTS inserted (
@@ -42,54 +42,54 @@ CREATE INDEX IF NOT EXISTS inserted_sort_by     ON inserted (sort_by);
 
 CREATE VIEW IF NOT EXISTS stat_interrupted_view AS
 SELECT
-  instances.source_id                                         AS source,
-  COALESCE(SUM(COALESCE(instance_stat.interrupted, TRUE)), 0) AS interrupted
+  instances.source_id                                          AS source,
+  COALESCE(SUM(COALESCE(instance_stats.interrupted, TRUE)), 0) AS interrupted
 FROM instances
-LEFT JOIN instance_stat
+LEFT JOIN instance_stats
 ON
-  instance_stat.instance_id = instances.rowid
+  instance_stats.instance_id = instances.rowid
 GROUP BY
   instances.source_id;
 
 
 CREATE VIEW IF NOT EXISTS stat_avg_items_view AS
 SELECT
-  instances.source_id                                AS source,
-  COALESCE(AVG(COALESCE(instance_stat.items, 0)), 0) AS avg_items
+  instances.source_id                                 AS source,
+  COALESCE(AVG(COALESCE(instance_stats.items, 0)), 0) AS avg_items
 FROM instances
-LEFT JOIN instance_stat
+LEFT JOIN instance_stats
 ON
-  instance_stat.instance_id = instances.rowid
+  instance_stats.instance_id = instances.rowid
 GROUP BY
   instances.source_id;
 
 
 CREATE VIEW IF NOT EXISTS stat_duration_view AS
 SELECT
-  instances.source_id                      AS source,
-  COALESCE(AVG(instance_stat.duration), 0) AS duration
+  instances.source_id                       AS source,
+  COALESCE(AVG(instance_stats.duration), 0) AS duration
 FROM instances
-LEFT JOIN instance_stat
+LEFT JOIN instance_stats
 ON
-  instance_stat.instance_id = instances.rowid
+  instance_stats.instance_id = instances.rowid
 GROUP BY
   instances.source_id
 HAVING
-  instance_stat.rowid <> NULL;
+  instance_stats.rowid <> NULL;
 
 
 CREATE VIEW IF NOT EXISTS stat_duration_nointerrupt_view AS
 SELECT
-  instances.source_id                      AS source,
-  COALESCE(AVG(instance_stat.duration), 0) AS duration
+  instances.source_id                       AS source,
+  COALESCE(AVG(instance_stats.duration), 0) AS duration
 FROM instances
-LEFT JOIN instance_stat
+LEFT JOIN instance_stats
 ON
-  instance_stat.instance_id = instances.rowid
+  instance_stats.instance_id = instances.rowid
 GROUP BY
   instances.source_id
 HAVING
-  NOT COALESCE(instance_stat.interrupted, TRUE);
+  NOT COALESCE(instance_stats.interrupted, TRUE);
 
 
 CREATE VIEW IF NOT EXISTS stat_inserted_view AS

@@ -57,16 +57,14 @@ class PReviewer(Protocol):
     async def begin(self, context: Context) -> None:
         ...
 
+    async def s_begin(self, assoc: BaseClient, instance: UUID) -> None:
+        ...
+
     def trans(self, instance: UUID, completion: Completion) -> Metric:
         ...
 
-    async def end(
-        self,
-        assoc: BaseClient,
-        instance: UUID,
-        interrupted: bool,
-        elapsed: float,
-        items: int,
+    async def s_end(
+        self, instance: UUID, interrupted: bool, elapsed: float, items: int
     ) -> None:
         ...
 
@@ -146,6 +144,7 @@ class Supervisor:
                     with l_timeit(f"WORKER -- {assoc.short_name}"):
                         instance = uuid4()
                         interrupted, elapsed, items = True, 0.0, 0
+                        await self._reviewer.s_begin(assoc, instance=instance)
                         try:
                             with timeit() as t:
                                 async for items, completion in aenumerate(
@@ -159,9 +158,8 @@ class Supervisor:
                                     interrupted = False
                             elapsed = t()
                         finally:
-                            await self._reviewer.end(
-                                assoc,
-                                instance=instance,
+                            await self._reviewer.s_end(
+                                instance,
                                 interrupted=interrupted,
                                 elapsed=elapsed,
                                 items=items,
