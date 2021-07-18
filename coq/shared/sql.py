@@ -1,6 +1,7 @@
 from functools import cache
 from pathlib import Path
 from sqlite3.dbapi2 import Connection
+from statistics import median
 from typing import Protocol, cast
 
 from std2.pathlib import AnyPath
@@ -33,4 +34,5 @@ def init_db(conn: Connection) -> None:
     add_functions(conn)
     conn.create_function("X_LIKE_ESC", narg=1, func=_like_esc, deterministic=True)
     conn.create_function("X_SIMILARITY", narg=2, func=similarity, deterministic=True)
+    conn.create_function("X_MEDIAN", narg=1, func=median, deterministic=True)
 
