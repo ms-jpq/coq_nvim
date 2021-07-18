@@ -36,11 +36,8 @@ CREATE INDEX IF NOT EXISTS inserted_sort_by     ON inserted (sort_by);
 
 CREATE VIEW IF NOT EXISTS stat_interrupted_view AS
 SELECT
-  source_id AS source,
-  CASE
-    WHEN COUNT(*) = 0 THEN 0.0
-    ELSE SUM(interrupted) / COUNT(*)
-  END AS interrupted
+  source_id        AS source,
+  SUM(interrupted) AS interrupted
 FROM instances
 GROUP BY
   source_id;
