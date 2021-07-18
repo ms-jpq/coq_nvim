@@ -58,7 +58,7 @@ ON
 
 CREATE VIEW IF NOT EXISTS stats_interrupt_view AS
 SELECT
-  source_id                           AS source,
+  source                              AS source,
   COALESCE(SUM(interrupted), 0)       AS interrupted,
   COALESCE(AVG(items), 0)             AS avg_items,
   COALESCE(MAX(items), 0)             AS max_items,
@@ -66,19 +66,19 @@ SELECT
   COALESCE(X_QUANTILE(items, 0.9), 0) AS q90_items
 FROM instance_stats_view
 GROUP BY
-  source_id;
+  source;
 
 
 CREATE VIEW IF NOT EXISTS stats_nointerrupt_view AS
 SELECT
-  source_id                              AS source,
+  source                                 AS source,
   COALESCE(AVG(duration), 0)             AS avg_duration,
   COALESCE(MAX(duration), 0)             AS max_duration,
   COALESCE(X_QUANTILE(duration, 0.5), 0) AS q50_duration,
   COALESCE(X_QUANTILE(duration, 0.9), 0) AS q90_duration
 FROM instance_stats_view
 GROUP BY
-  source_id
+  source
 HAVING
   NOT interrupted;
 
