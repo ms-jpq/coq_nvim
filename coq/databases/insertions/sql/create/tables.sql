@@ -69,9 +69,9 @@ GROUP BY
 
 CREATE VIEW IF NOT EXISTS stats_nointerrupt_view AS
 SELECT
-  source_id                     AS source,
-  COALESCE(AVG(duration), 0)    AS duration,
-
+  source_id                       AS source,
+  COALESCE(AVG(duration), 0)      AS avg_duration,
+  COALESCE(X_MEDIAN(duration), 0) AS median_duration
 FROM instance_stats_view
 GROUP BY
   source_id
