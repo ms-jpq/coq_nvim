@@ -33,16 +33,20 @@ CREATE INDEX IF NOT EXISTS inserted_instance_id ON inserted (instance_id);
 CREATE INDEX IF NOT EXISTS inserted_sort_by     ON inserted (sort_by);
 
 
+
 CREATE VIEW IF NOT EXISTS statistics_1 AS
 SELECT
-  sources.name AS source
+  sources.name AS source,
+  CASE
+    WHEN COUNT(*) = 0 THEN 0.0
+    ELSE SUM(instances.interrupted) / COUNT(*)
+  END AS interrupted
 FROM sources
 JOIN instances
 ON
   instances.source_id = sources.name
 GROUP BY
   sources.name
-
 
 
 END;
