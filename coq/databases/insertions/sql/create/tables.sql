@@ -73,6 +73,7 @@ CREATE VIEW IF NOT EXISTS stats_nointerrupt_view AS
 SELECT
   source                                 AS source,
   COALESCE(AVG(duration), 0)             AS avg_duration,
+  COALESCE(MIN(duration), 0)             AS min_duration,
   COALESCE(MAX(duration), 0)             AS max_duration,
   COALESCE(X_QUANTILE(duration, 0.5), 0) AS q50_duration,
   COALESCE(X_QUANTILE(duration, 0.9), 0) AS q90_duration
@@ -104,6 +105,7 @@ SELECT
   COALESCE(stats_interrupt_view.q50_items, 0)      AS q50_items,
   COALESCE(stats_interrupt_view.q90_items, 0)      AS q90_items,
   COALESCE(stats_nointerrupt_view.avg_duration, 0) AS avg_duration,
+  COALESCE(stats_nointerrupt_view.min_duration, 0) AS min_duration,
   COALESCE(stats_nointerrupt_view.max_duration, 0) AS max_duration,
   COALESCE(stats_nointerrupt_view.q50_duration, 0) AS q50_duration,
   COALESCE(stats_nointerrupt_view.q90_duration, 0) AS q90_duration,

@@ -17,15 +17,18 @@ from .sql import sql
 class Statistics:
     source: str
     interrupted: int
-    avg_items: float
-    max_items: int
-    q50_items: int
-    q90_items: int
+    inserted: int
+
     avg_duration: float
-    max_duration: float
+    min_duration: int
     q50_duration: float
     q90_duration: float
-    inserted: int
+    max_duration: float
+
+    avg_items: float
+    q50_items: int
+    q90_items: int
+    max_items: int
 
 
 def _init() -> Connection:

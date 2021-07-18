@@ -13,8 +13,8 @@ from ...shared.parse import display_width
 from ..rt_types import Stack
 
 TAB_SIZE = 2
-H_SEP = " | "
-V_SEP = "-"
+H_SEP = " │ "
+V_SEP = "─"
 
 
 def _table(headers: Sequence[str], rows: Mapping[str, Mapping[str, str]]) -> str:
@@ -61,14 +61,15 @@ def _trans(stat: Statistics) -> Mapping[str, str]:
     mapping = {
         "Interrupted": str(stat.interrupted),
         "Inserted": str(stat.inserted),
-        "Avg Duration": f"{si_prefixed_smol(stat.avg_duration)}s",
-        "Q50 Duration": f"{si_prefixed_smol(stat.q50_duration)}s",
-        "Q90 Duration": f"{si_prefixed_smol(stat.q90_duration)}s",
-        "Max Duration": f"{si_prefixed_smol(stat.max_duration)}s",
+        "Avg Duration": f"{si_prefixed_smol(stat.avg_duration, precision=0)}s",
+        "Q0 Duration": f"{si_prefixed_smol(stat.q50_duration, precision=0)}s",
+        "Q50 Duration": f"{si_prefixed_smol(stat.q50_duration, precision=0)}s",
+        "Q90 Duration": f"{si_prefixed_smol(stat.q90_duration, precision=0)}s",
+        "Q100 Duration": f"{si_prefixed_smol(stat.max_duration, precision=0)}s",
         "Avg Items": str(round(stat.avg_items)),
         "Q50 Items": str(stat.q50_items),
         "Q90 Items": str(stat.q90_items),
-        "Max Items": str(stat.max_items),
+        "Q100 Items": str(stat.max_items),
     }
     return mapping
 
