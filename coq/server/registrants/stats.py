@@ -10,6 +10,7 @@ from pynvim_pp.float_win import list_floatwins, open_float_win
 from std2.locale import si_prefixed_smol
 
 from ...databases.insertions.database import Statistics
+from ...lang import LANG
 from ...registry import rpc
 from ...shared.parse import display_width
 from ..rt_types import Stack
@@ -19,11 +20,9 @@ _H_SEP = " | "
 _V_SEP = "─"
 
 _TPL = f"""
-# Statistics
+# {LANG("statistics")}
 
-```txt
 ${{chart}}
-```
 
 ${{desc}}
 """.lstrip()
@@ -75,11 +74,13 @@ def _trans(stat: Statistics) -> Mapping[str, str]:
     mapping = {
         "Interrupted": str(stat.interrupted),
         "Inserted": str(stat.inserted),
+        "": "ˣ",
         "Avg Duration": f"{si_prefixed_smol(stat.avg_duration, precision=0)}s",
         "Q0 Duration": f"{si_prefixed_smol(stat.q50_duration, precision=0)}s",
         "Q50 Duration": f"{si_prefixed_smol(stat.q50_duration, precision=0)}s",
         "Q90 Duration": f"{si_prefixed_smol(stat.q90_duration, precision=0)}s",
         "Q100 Duration": f"{si_prefixed_smol(stat.max_duration, precision=0)}s",
+        " ": "ˣ",
         "Avg Items": str(round(stat.avg_items)),
         "Q50 Items": str(stat.q50_items),
         "Q90 Items": str(stat.q90_items),
