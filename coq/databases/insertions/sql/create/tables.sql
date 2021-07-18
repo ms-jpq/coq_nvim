@@ -75,4 +75,16 @@ HAVING
   NOT interrupted;
 
 
+CREATE VIEW IF NOT EXISTS stat_inserted_view AS
+SELECT
+  instances.source_id   AS source,
+  COUNT(inserted.rowid) AS inserted
+FROM instances
+LEFT JOIN inserted
+ON
+  inserted.instance_id = instances.rowid
+GROUP BY
+  instances.source_id;
+
+
 END;
