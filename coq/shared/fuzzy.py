@@ -20,7 +20,8 @@ def quick_ratio(lhs: str, rhs: str, look_ahead: int = _LOOK_AHEAD) -> float:
     if not shorter:
         return 1
     else:
-        l, r = lhs[: shorter + look_ahead], rhs[: shorter + look_ahead]
+        cutoff = shorter + look_ahead
+        l, r = lhs[:cutoff], rhs[:cutoff]
         longer = max(len(l), len(r))
         l_c, r_c = Counter(l), Counter(r)
         dif = l_c - r_c if len(l) > len(r) else r_c - l_c
@@ -29,12 +30,12 @@ def quick_ratio(lhs: str, rhs: str, look_ahead: int = _LOOK_AHEAD) -> float:
         return ratio / adjust
 
 
-def _isjunk(s: str) -> bool:
-    return s.isspace()
+def osa_distance(lhs: str, rhs: str) -> int:
+    pass
 
 
 def metrics(cword: str, match: str) -> MatchMetrics:
-    m = SequenceMatcher(a=cword, b=match, autojunk=True, isjunk=_isjunk)
+    m = SequenceMatcher(a=cword, b=match, autojunk=False)
     matches: MutableSequence[int] = []
     prefix_matches = 0
     num_matches = 0
