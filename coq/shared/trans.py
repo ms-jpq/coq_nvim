@@ -42,7 +42,7 @@ def trans_adjusted(
     simple_before = (
         ctx.words_before
         if is_word(c_edit.new_text[:1], unifying_chars=unifying_chars)
-        else ctx.words_before + ctx.syms_before
+        else ctx.syms_before
     )
     simple_after = (
         ctx.words_after

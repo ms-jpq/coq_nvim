@@ -142,7 +142,7 @@ def _variable_substitution(context: ParserCtx, *, name: str) -> Optional[str]:
         return ctx.line
 
     elif name == "TM_CURRENT_WORD":
-        return ctx.words_before + ctx.words_after
+        return ctx.words
 
     elif name == "TM_LINE_INDEX":
         return str(row)

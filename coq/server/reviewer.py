@@ -20,8 +20,6 @@ class _ReviewCtx:
     inserted: Mapping[str, int]
 
     is_lower: bool
-    w_before: str
-    sw_before: str
 
 
 def _metric(
@@ -31,9 +29,9 @@ def _metric(
 ) -> MatchMetrics:
     match = lower(completion.sort_by) if ctx.is_lower else completion.sort_by
     cword = (
-        ctx.w_before
+        ctx.context.words_before
         if is_word(match[:1], unifying_chars=options.unifying_chars)
-        else ctx.sw_before
+        else ctx.context.syms_before
     )
     return metrics(cword, match, look_ahead=options.look_ahead)
 
@@ -71,8 +69,6 @@ class Reviewer(PReviewer):
             neighbours={},
             inserted={},
             is_lower=True,
-            w_before="",
-            sw_before="",
         )
 
     def register(self, assoc: BaseClient) -> None:
@@ -91,8 +87,6 @@ class Reviewer(PReviewer):
             neighbours=neighbours,
             inserted=inserted,
             is_lower=lower(context.words_before) == context.words_before,
-            w_before=context.words_before,
-            sw_before=context.syms_before + context.words_before,
         )
         self._ctx = ctx
         await self._db.new_batch(ctx.batch.bytes)

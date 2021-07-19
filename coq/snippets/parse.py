@@ -78,7 +78,7 @@ def parse(
     old_prefix = (
         context.words_before
         if is_word(sort_by[:1], unifying_chars=unifying_chars)
-        else context.syms_before + context.words_before
+        else context.syms_before
     )
     indent_len, indent = _indent(
         context, old_prefix=old_prefix, line_before=context.line_before
@@ -93,7 +93,7 @@ def parse(
     old_suffix = (
         context.words_after
         if is_word(parsed.text[-1:], unifying_chars=unifying_chars)
-        else context.words_after + context.syms_after
+        else context.syms_after
     )
 
     edit = ContextualEdit(
