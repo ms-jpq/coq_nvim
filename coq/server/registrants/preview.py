@@ -115,20 +115,14 @@ def _positions(
         event.col,
         event.col + event.width + event.scrollbar,
     )
+    dls = tuple(display_width(line, tabsize=state.context.tabstop) for line in lines)
     limit_w = _clamp(
         display.x_margin,
-        hi=min(
-            display.x_max_len,
-            max(display_width(line, tabsize=state.context.tabstop) for line in lines),
-        ),
+        hi=min(display.x_max_len, max(dls)),
     )
     limit_h = _clamp(
         display.y_margin,
-        hi=sum(
-            ceil(display_width(line, tabsize=state.context.tabstop) / display.x_max_len)
-            for line in lines
-        )
-        - 1,
+        hi=sum(ceil(dl / display.x_max_len) for dl in dls),
     )
 
     ns_width = limit_w(scr_width - left)
