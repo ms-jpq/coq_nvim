@@ -43,14 +43,14 @@ def dl_distance(lhs: str, rhs: str) -> int:
 
     da: MutableMapping[str, int] = {}
 
-    score = [*repeat([*repeat(0, times=len_r + 2)], times=len_l + 2)]
-    score[0][0] = max_d
+    d = [*repeat([*repeat(0, times=len_r + 2)], times=len_l + 2)]
+    d[0][0] = max_d
     for i in range(0, len_l + 1):
-        score[i + 1][0] = max_d
-        score[i + 1][1] = i
-    for i in range(0, len_r + 1):
-        score[0][i + 1] = max_d
-        score[1][i + 1] = i
+        d[i + 1][0] = max_d
+        d[i + 1][1] = i
+    for j in range(0, len_r + 1):
+        d[0][j + 1] = max_d
+        d[1][j + 1] = j
 
     for i in range(1, len_l + 1):
         db = 0
@@ -58,20 +58,21 @@ def dl_distance(lhs: str, rhs: str) -> int:
             i1 = da.get(rhs[j - 1], 0)
             j1 = db
 
-            cost = 1
             if lhs[i - 1] == rhs[j - 1]:
                 cost = 0
                 db = j
+            else:
+                cost = 1
 
-            score[i + 1][j + 1] = min(
-                score[i][j] + cost,
-                score[i + 1][j] + 1,
-                score[i][j + 1] + 1,
-                score[i1][j1] + (i - i1 - 1) + 1 + (j - j1 - 1),
+            d[i + 1][j + 1] = min(
+                d[i][j] + cost,
+                d[i + 1][j] + 1,
+                d[i][j + 1] + 1,
+                d[i1][j1] + (i - i1 - 1) + 1 + (j - j1 - 1),
             )
         da[lhs[i - 1]] = i
 
-    return score[len_l + 1][len_r + 1]
+    return d[len_l + 1][len_r + 1]
 
 
 def metrics(cword: str, match: str) -> MatchMetrics:
