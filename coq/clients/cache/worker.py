@@ -62,7 +62,9 @@ class CacheWorker:
             if use_cache:
                 with timeit("CACHE -- GET"):
                     match = context.words or context.syms
-                    hashes = await self._db.select(self._soup.options, word=match)
+                    hashes = await self._db.select(
+                        self._soup.options, word=match, limitless=context.manual
+                    )
                     for hash_id in hashes:
                         cmp = cache_ctx.comps.get(hash_id)
                         if cmp:

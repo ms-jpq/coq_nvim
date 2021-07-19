@@ -9,7 +9,9 @@ from ...shared.types import Completion, Context, Edit
 class Worker(BaseWorker[BaseClient, TDB]):
     async def work(self, context: Context) -> AsyncIterator[Completion]:
         match = context.words or context.syms
-        words = await self._misc.select(self._supervisor.options, word=match)
+        words = await self._misc.select(
+            self._supervisor.options, word=match, limitless=context.manual
+        )
 
         for word, kind in words:
             edit = Edit(new_text=word)

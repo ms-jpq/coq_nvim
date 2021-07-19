@@ -88,7 +88,10 @@ class Worker(BaseWorker[WordbankClient, None]):
         active = await _cur()
         words = (
             await self._db.select(
-                self._supervisor.options, active_pane=active.uid, word=match
+                self._supervisor.options,
+                active_pane=active.uid,
+                word=match,
+                limitless=context.manual,
             )
             if active
             else ()

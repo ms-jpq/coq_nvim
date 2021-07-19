@@ -10,7 +10,7 @@ from std2.sqlite3 import with_transaction
 from ...consts import TMUX_DB
 from ...shared.executor import SingleThreadExecutor
 from ...shared.settings import Options
-from ...shared.sql import init_db
+from ...shared.sql import BIGGEST_INT, init_db
 from .sql import sql
 
 
@@ -58,7 +58,9 @@ class Database:
 
         await run_in_executor(self._ex.submit, cont)
 
-    async def select(self, opts: Options, active_pane: str, word: str) -> Sequence[str]:
+    async def select(
+        self, opts: Options, active_pane: str, word: str, limitless: int
+    ) -> Sequence[str]:
         def cont() -> Sequence[str]:
             try:
                 with closing(self._conn.cursor()) as cursor:
@@ -69,7 +71,7 @@ class Database:
                                 "exact": opts.exact_matches,
                                 "cut_off": opts.fuzzy_cutoff,
                                 "look_ahead": opts.look_ahead,
-                                "limit": opts.max_results,
+                                "limit": BIGGEST_INT if limitless else opts.max_results,
                                 "pane_id": active_pane,
                                 "word": word,
                             },

@@ -11,6 +11,7 @@ from std2.asyncio import run_in_executor
 from ...shared.parse import lower
 from ...shared.runtime import Worker as BaseWorker
 from ...shared.settings import BaseClient
+from ...shared.sql import BIGGEST_INT
 from ...shared.types import Completion, Context, Edit
 
 
@@ -78,10 +79,8 @@ class Worker(BaseWorker[BaseClient, None]):
         line = context.line_before + context.words_after
         base_paths = {Path(context.filename).parent, Path(context.cwd)}
 
-        aw = tuple(
-            _parse(p, line=line, limit=self._supervisor.options.max_results)
-            for p in base_paths
-        )
+        limit = BIGGEST_INT if context.manual else self._supervisor.options.max_results
+        aw = tuple(_parse(p, line=line, limit=limit) for p in base_paths)
         for co in as_completed(aw):
             for new_text, sort_by in await co:
                 edit = Edit(new_text=new_text)

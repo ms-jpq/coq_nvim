@@ -18,7 +18,10 @@ class Worker(BaseWorker[SnippetClient, SDB]):
     async def work(self, context: Context) -> AsyncIterator[Completion]:
         match = context.words or context.syms
         snippets = await self._misc.select(
-            self._supervisor.options, filetype=context.filetype, word=match
+            self._supervisor.options,
+            filetype=context.filetype,
+            word=match,
+            limitless=context.manual,
         )
 
         for snip in snippets:

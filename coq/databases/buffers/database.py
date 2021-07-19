@@ -13,7 +13,7 @@ from ...consts import BUFFER_DB
 from ...shared.executor import SingleThreadExecutor
 from ...shared.parse import coalesce
 from ...shared.settings import Options
-from ...shared.sql import init_db
+from ...shared.sql import BIGGEST_INT, init_db
 from ...shared.timeit import timeit
 from .sql import sql
 
@@ -124,7 +124,7 @@ class BDB:
         await run_in_executor(self._ex.submit, cont)
 
     async def words(
-        self, opts: Options, filetype: Optional[str], word: str
+        self, opts: Options, filetype: Optional[str], word: str, limitless: int
     ) -> Sequence[str]:
         def cont() -> Sequence[str]:
             try:
@@ -136,7 +136,7 @@ class BDB:
                                 "exact": opts.exact_matches,
                                 "cut_off": opts.fuzzy_cutoff,
                                 "look_ahead": opts.look_ahead,
-                                "limit": opts.max_results,
+                                "limit": BIGGEST_INT if limitless else opts.max_results,
                                 "filetype": filetype,
                                 "word": word,
                             },

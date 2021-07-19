@@ -11,7 +11,7 @@ from std2.sqlite3 import with_transaction
 from ...consts import SNIPPET_DB
 from ...shared.executor import SingleThreadExecutor
 from ...shared.settings import Options
-from ...shared.sql import init_db
+from ...shared.sql import BIGGEST_INT, init_db
 from ...snippets.types import ParsedSnippet
 from .sql import sql
 
@@ -97,7 +97,7 @@ class SDB:
 
         self._ex.submit(cont)
 
-    async def select(self, opts: Options, filetype: str, word: str) -> Sequence[_Snip]:
+    async def select(self, opts: Options, filetype: str, word: str, limitless: int) -> Sequence[_Snip]:
         def cont() -> Sequence[_Snip]:
             try:
                 with closing(self._conn.cursor()) as cursor:
@@ -108,7 +108,7 @@ class SDB:
                                 "exact": opts.exact_matches,
                                 "cut_off": opts.fuzzy_cutoff,
                                 "look_ahead": opts.look_ahead,
-                                "limit": opts.max_results,
+                                "limit": BIGGEST_INT if limitless else opts.max_results,
                                 "filetype": filetype,
                                 "word": word,
                             },

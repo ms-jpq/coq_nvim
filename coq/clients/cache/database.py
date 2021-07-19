@@ -9,7 +9,7 @@ from std2.sqlite3 import with_transaction
 
 from ...shared.executor import SingleThreadExecutor
 from ...shared.settings import Options
-from ...shared.sql import init_db
+from ...shared.sql import BIGGEST_INT, init_db
 from .sql import sql
 
 
@@ -47,7 +47,7 @@ class Database:
 
         await run_in_executor(self._ex.submit, cont)
 
-    async def select(self, opts: Options, word: str) -> Sequence[bytes]:
+    async def select(self, opts: Options, word: str, limitless: int) -> Sequence[bytes]:
         def cont() -> Sequence[bytes]:
             try:
                 with closing(self._conn.cursor()) as cursor:
@@ -58,7 +58,7 @@ class Database:
                                 "exact": opts.exact_matches,
                                 "cut_off": opts.fuzzy_cutoff,
                                 "look_ahead": opts.look_ahead,
-                                "limit": opts.max_results,
+                                "limit": BIGGEST_INT if limitless else opts.max_results,
                                 "word": word,
                             },
                         )

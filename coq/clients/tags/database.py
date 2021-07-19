@@ -10,7 +10,7 @@ from std2.sqlite3 import with_transaction
 from ...consts import TAGS_DB
 from ...shared.executor import SingleThreadExecutor
 from ...shared.settings import Options
-from ...shared.sql import init_db
+from ...shared.sql import BIGGEST_INT, init_db
 from .parser import Tag
 from .reconciliate import Tag, Tags
 from .sql import sql
@@ -95,7 +95,7 @@ class Database:
         await run_in_executor(self._ex.submit, cont)
 
     async def select(
-        self, opts: Options, filename: str, line_num: int, word: str
+        self, opts: Options, filename: str, line_num: int, word: str, limitless: int
     ) -> Sequence[Tag]:
         def cont() -> Sequence[Tag]:
             try:
@@ -112,7 +112,7 @@ class Database:
                                 "exact": opts.exact_matches,
                                 "cut_off": opts.fuzzy_cutoff,
                                 "look_ahead": opts.look_ahead,
-                                "limit": opts.max_results,
+                                "limit": BIGGEST_INT if limitless else opts.max_results,
                                 "filetype": filetype,
                                 "filename": filename,
                                 "line_num": line_num,

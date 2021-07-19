@@ -11,7 +11,7 @@ from std2.sqlite3 import with_transaction
 
 from ...consts import INSERT_DB
 from ...shared.executor import SingleThreadExecutor
-from ...shared.sql import init_db
+from ...shared.sql import BIGGEST_INT, init_db
 from .sql import sql
 
 

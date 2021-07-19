@@ -14,6 +14,7 @@ class Worker(BaseWorker[BuffersClient, BDB]):
             self._supervisor.options,
             filetype=filetype,
             word=match,
+            limitless=context.manual
         )
         for word in words:
             edit = Edit(new_text=word)
