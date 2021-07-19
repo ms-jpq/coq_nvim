@@ -41,8 +41,8 @@ def _join(lhs: str, rhs: str) -> str:
 def parse(base: Path, line: str) -> Iterator[Tuple[str, str]]:
     segments = reversed(tuple(_segments(line)))
     for segment in segments:
-        _, ss, sr = segment.rpartition(sep)
-        sort_by = ss + sr
+        sl, ss, sr = segment.rpartition(sep)
+        sort_by = _p_lhs(sl) + ss + sr
 
         e = Path(segment).expanduser()
         entire = e if e.is_absolute() else base / e

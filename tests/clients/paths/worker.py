@@ -9,7 +9,7 @@ class Parser(TestCase):
         line = "./.gith"
         actual = sorted(parse(Path("."), line=line))
         expected = sorted(
-            (("./.github/", "/.gith"),),
+            (("./.github/", "./.gith"),),
         )
         self.assertEqual(actual, expected)
 
@@ -18,8 +18,8 @@ class Parser(TestCase):
         actual = sorted(parse(Path("."), line=line))
         expected = sorted(
             (
-                ("./.github/.agp", "/.github"),
-                ("./.github/workflows/", "/.github"),
+                ("./.github/.agp", "./.github"),
+                ("./.github/workflows/", "./.github"),
             )
         )
         self.assertEqual(actual, expected)
@@ -39,7 +39,7 @@ class Parser(TestCase):
         line = "abc./.gith"
         actual = sorted(parse(Path("."), line=line))
 
-        expected = sorted((("./.github/", "/.gith"),))
+        expected = sorted((("./.github/", "./.gith"),))
         self.assertEqual(actual, expected)
 
     def test_5(self) -> None:
@@ -47,8 +47,8 @@ class Parser(TestCase):
         actual = sorted(parse(Path("."), line=line))
         expected = sorted(
             (
-                ("./.github/.agp", "/.github"),
-                ("./.github/workflows/", "/.github"),
+                ("./.github/.agp", "./.github"),
+                ("./.github/workflows/", "./.github"),
             )
         )
         self.assertEqual(actual, expected)
@@ -69,5 +69,11 @@ class Parser(TestCase):
         line = "/h"
         results = {*parse(Path("."), line=line)}
         expected = ("/home/", "/h")
+        self.assertIn(expected, results)
+
+    def test_8(self) -> None:
+        line = "~/.c"
+        results = {*parse(Path("."), line=line)}
+        expected = ("~/.config/", "~/.c")
         self.assertIn(expected, results)
 
