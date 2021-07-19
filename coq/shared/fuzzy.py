@@ -83,8 +83,12 @@ def metrics(lhs: str, rhs: str, look_ahead: int) -> MatchMetrics:
                     break
 
         pl = len(tuple(pre()))
-        l, r = lhs[pl:shorter], rhs[pl:shorter]
+        cutoff = min(max(len(lhs), len(rhs)), shorter + look_ahead)
+        more = cutoff - shorter
+        l, r = lhs[pl:cutoff], rhs[pl:cutoff]
+
         dist = dl_distance(l, r)
-        edit_dist = 1 - dist / shorter
+        edit_dist = 1 - (dist - more) / shorter
+        print([lhs, rhs], edit_dist)
         return MatchMetrics(prefix_matches=pl, edit_distance=edit_dist)
 
