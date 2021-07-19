@@ -32,6 +32,12 @@ def quick_ratio(lhs: str, rhs: str, look_ahead: int = _LOOK_AHEAD) -> float:
 
 
 def osa_distance(lhs: str, rhs: str) -> int:
+    """
+    Modified from
+    https://github.com/jamesturk/jellyfish/blob/main/LICENSE
+    Dont sue me
+    """
+
     len_l = len(lhs)
     len_r = len(rhs)
     inf = len_l + len_r
