@@ -1,6 +1,5 @@
 from collections import Counter
 from dataclasses import dataclass
-from itertools import repeat
 from typing import Iterator, MutableMapping
 
 
