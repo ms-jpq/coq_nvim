@@ -2,6 +2,8 @@ from unittest import TestCase
 
 from ...coq.shared.fuzzy import dl_distance, metrics, quick_ratio
 
+_LOOK_AHEAD = 2
+
 
 class EditD(TestCase):
     def test_1(self) -> None:
@@ -57,9 +59,6 @@ class EditD(TestCase):
         rhs = "pervisor"
         d = dl_distance(lhs, rhs)
         self.assertEqual(d, 2)
-
-
-_LOOK_AHEAD = 2
 
 
 class QuickRatio(TestCase):
