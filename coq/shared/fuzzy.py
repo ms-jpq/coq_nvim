@@ -31,7 +31,7 @@ def quick_ratio(lhs: str, rhs: str, look_ahead: int = _LOOK_AHEAD) -> float:
         return ratio / adjust
 
 
-def osa_distance(lhs: str, rhs: str) -> int:
+def dl_distance(lhs: str, rhs: str) -> int:
     """
     Modified from
     https://github.com/jamesturk/jellyfish/blob/main/LICENSE
@@ -39,22 +39,23 @@ def osa_distance(lhs: str, rhs: str) -> int:
     """
 
     len_l, len_r = len(lhs), len(rhs)
-    inf = len_l + len_r
-    score = [*repeat([*repeat(0, times=len_r + 2)], times=len_l + 2)]
-    acc: MutableMapping[str, int] = {}
+    max_d = len_l + len_r
 
-    score[0][0] = inf
+    da: MutableMapping[str, int] = {}
+
+    score = [*repeat([*repeat(0, times=len_r + 2)], times=len_l + 2)]
+    score[0][0] = max_d
     for i in range(0, len_l + 1):
-        score[i + 1][0] = inf
+        score[i + 1][0] = max_d
         score[i + 1][1] = i
     for i in range(0, len_r + 1):
-        score[0][i + 1] = inf
+        score[0][i + 1] = max_d
         score[1][i + 1] = i
 
     for i in range(1, len_l + 1):
         db = 0
         for j in range(1, len_r + 1):
-            i1 = acc.get(rhs[j - 1], 0)
+            i1 = da.get(rhs[j - 1], 0)
             j1 = db
 
             cost = 1
@@ -68,7 +69,7 @@ def osa_distance(lhs: str, rhs: str) -> int:
                 score[i][j + 1] + 1,
                 score[i1][j1] + (i - i1 - 1) + 1 + (j - j1 - 1),
             )
-        acc[lhs[i - 1]] = i
+        da[lhs[i - 1]] = i
 
     return score[len_l + 1][len_r + 1]
 
