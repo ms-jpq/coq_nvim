@@ -1,5 +1,6 @@
 from asyncio import Task, wait
 from dataclasses import asdict, dataclass
+from itertools import chain
 from math import ceil
 from os import linesep
 from typing import Any, Callable, Iterator, Mapping, Optional, Sequence, Tuple, cast
@@ -118,7 +119,7 @@ def _positions(
     dls = tuple(display_width(line, tabsize=state.context.tabstop) for line in lines)
     limit_w = _clamp(
         display.x_margin,
-        hi=min(display.x_max_len, max(dls)),
+        hi=min(display.x_max_len, max(chain((0,), dls))),
     )
     limit_h = _clamp(
         display.y_margin,
