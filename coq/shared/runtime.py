@@ -113,8 +113,8 @@ class Supervisor:
         go(self.nvim, aw=cont())
 
     async def interrupt(self) -> None:
-        g = gather(*self._tasks)
-        await cancel(g)
+        await cancel(gather(*self._tasks))
+        self._tasks = ()
 
     async def collect(self, context: Context) -> Sequence[Metric]:
         with l_timeit("COLLECTED -- **ALL**"):
