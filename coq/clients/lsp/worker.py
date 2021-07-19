@@ -2,7 +2,7 @@ from typing import AsyncIterator
 
 from ...lsp.requests.completion import request
 from ...shared.fuzzy import quick_ratio
-from ...shared.parse import is_word
+from ...shared.parse import is_word, lower
 from ...shared.runtime import Supervisor
 from ...shared.runtime import Worker as BaseWorker
 from ...shared.settings import BaseClient
@@ -18,8 +18,8 @@ class Worker(BaseWorker[BaseClient, None], CacheWorker):
 
     async def work(self, context: Context) -> AsyncIterator[Completion]:
         w_before, sw_before = (
-            context.words_before,
-            context.syms_before + context.words_before,
+            lower(context.words_before),
+            context.syms_before + lower(context.words_before),
         )
         only_use_cached = self._only_use_cached
 
@@ -54,7 +54,7 @@ class Worker(BaseWorker[BaseClient, None], CacheWorker):
                     go = (
                         quick_ratio(
                             cword,
-                            c.sort_by,
+                            lower(c.sort_by),
                             look_ahead=self._supervisor._options.look_ahead,
                         )
                         > self._supervisor._options.fuzzy_cutoff
