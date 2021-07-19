@@ -58,12 +58,10 @@ ON
 
 CREATE VIEW IF NOT EXISTS stats_interrupt_view AS
 SELECT
-  source                              AS source,
-  COALESCE(SUM(interrupted), 0)       AS interrupted,
-  COALESCE(AVG(items), 0)             AS avg_items,
-  COALESCE(MAX(items), 0)             AS max_items,
-  COALESCE(X_QUANTILE(items, 0.5), 0) AS q50_items,
-  COALESCE(X_QUANTILE(items, 0.9), 0) AS q90_items
+  source                        AS source,
+  COALESCE(SUM(interrupted), 0) AS interrupted,
+  COALESCE(AVG(items), 0)       AS avg_items,
+  X_QUANTILES(items, 0.5, 1.0)  AS q_items
 FROM instance_stats_view
 GROUP BY
   source;
@@ -71,12 +69,9 @@ GROUP BY
 
 CREATE VIEW IF NOT EXISTS stats_nointerrupt_view AS
 SELECT
-  source                                 AS source,
-  COALESCE(AVG(duration), 0)             AS avg_duration,
-  COALESCE(MIN(duration), 0)             AS min_duration,
-  COALESCE(MAX(duration), 0)             AS max_duration,
-  COALESCE(X_QUANTILE(duration, 0.5), 0) AS q50_duration,
-  COALESCE(X_QUANTILE(duration, 0.9), 0) AS q90_duration
+  source                                      AS source,
+  COALESCE(AVG(duration), 0)                  AS avg_duration,
+  X_QUANTILES(duration, 0, 0.5, 0.9, 0.95, 1) AS q_duration
 FROM instance_stats_view
 GROUP BY
   source
@@ -101,14 +96,9 @@ SELECT
   sources.name                                     AS source,
   COALESCE(stats_interrupt_view.interrupted, 0)    AS interrupted,
   COALESCE(stats_interrupt_view.avg_items, 0)      AS avg_items,
-  COALESCE(stats_interrupt_view.max_items, 0)      AS max_items,
-  COALESCE(stats_interrupt_view.q50_items, 0)      AS q50_items,
-  COALESCE(stats_interrupt_view.q90_items, 0)      AS q90_items,
+  COALESCE(stats_interrupt_view.q_items, 0)        AS q_items,
   COALESCE(stats_nointerrupt_view.avg_duration, 0) AS avg_duration,
-  COALESCE(stats_nointerrupt_view.min_duration, 0) AS min_duration,
-  COALESCE(stats_nointerrupt_view.max_duration, 0) AS max_duration,
-  COALESCE(stats_nointerrupt_view.q50_duration, 0) AS q50_duration,
-  COALESCE(stats_nointerrupt_view.q90_duration, 0) AS q90_duration,
+  COALESCE(stats_nointerrupt_view.q_duration, 0)   AS q_duration,
   COALESCE(stats_inserted_view.inserted, 0)        AS inserted
 FROM sources
 LEFT JOIN stats_interrupt_view

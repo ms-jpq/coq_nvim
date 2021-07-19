@@ -1,8 +1,17 @@
 from functools import cache
-from math import isnan, nan
+from json import dumps
 from pathlib import Path
 from sqlite3.dbapi2 import Connection
-from typing import Any, MutableSequence, Optional, Protocol, cast
+from typing import (
+    Any,
+    Iterator,
+    MutableSequence,
+    MutableSet,
+    Optional,
+    Protocol,
+    Tuple,
+    cast,
+)
 
 from std2.pathlib import AnyPath
 from std2.sqlite3 import add_functions, escape
@@ -30,30 +39,39 @@ def _like_esc(like: str) -> str:
     return f"{escaped}%"
 
 
-class _Quantile:
+class _Quantiles:
     def __init__(self) -> None:
-        self._q = nan
+        self._qs: MutableSet[float] = set()
         self._acc: MutableSequence[float] = []
 
-    def step(self, value: Optional[float], q: float) -> None:
-        assert q >= 0 and q <= 1
-        self._q = q
+    def step(self, value: Optional[float], *quantiles: float) -> None:
+        for q in quantiles:
+            self._qs.add(q)
+
         if value is not None:
             self._acc.append(value)
 
-    def finalize(self) -> Optional[float]:
-        ordered = sorted(self._acc)
-        if not ordered:
-            return None
-        else:
-            assert not isnan(self._q)
-            idx = round((len(ordered) - 1) * self._q)
-            return ordered[idx]
+    def finalize(self) -> str:
+        def cont() -> Iterator[Tuple[int, Optional[float]]]:
+            ordered = sorted(self._acc)
+            for q in self._qs:
+                assert q >= 0 and q <= 1
+                key = round(q * 100)
+                if ordered:
+                    idx = round((len(ordered) - 1) * q)
+                    yield key, ordered[idx]
+                else:
+                    yield key, None
+
+        json = dumps(tuple(cont()), checheck_circular=False, ensure_ascii=False)
+        return json
 
 
 def init_db(conn: Connection) -> None:
     add_functions(conn)
     conn.create_function("X_LIKE_ESC", narg=1, func=_like_esc, deterministic=True)
     conn.create_function("X_SIMILARITY", narg=2, func=similarity, deterministic=True)
-    conn.create_aggregate("X_QUANTILE", n_arg=2, aggregate_class=cast(Any, _Quantile))
+    conn.create_aggregate(
+        "X_QUANTILES", n_arg=-1, aggregate_class=cast(Any, _Quantiles)
+    )
 
