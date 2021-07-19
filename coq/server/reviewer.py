@@ -1,12 +1,11 @@
 from collections import Counter
 from dataclasses import dataclass
-from difflib import SequenceMatcher
-from math import inf
-from typing import Mapping, MutableSequence
+from typing import Mapping
 from uuid import UUID, uuid4
 
 from ..databases.insertions.database import IDB
 from ..shared.context import EMPTY_CONTEXT
+from ..shared.fuzzy import MatchMetrics, count
 from ..shared.parse import coalesce, display_width, is_word, lower
 from ..shared.runtime import Metric, PReviewer
 from ..shared.settings import BaseClient, Options, Weights
@@ -25,51 +24,11 @@ class _ReviewCtx:
     sw_before: str
 
 
-@dataclass(frozen=True)
-class _MatchMetrics:
-    prefix_matches: int
-    consecutive_matches: int
-    num_matches: int
-
-
-def _isjunk(s: str) -> bool:
-    return s.isspace()
-
-
-def count(cword: str, match: str) -> _MatchMetrics:
-    m = SequenceMatcher(a=cword, b=match, autojunk=True, isjunk=_isjunk)
-    matches: MutableSequence[int] = []
-    prefix_matches = 0
-    num_matches = 0
-    consecutive_matches = 0
-
-    for ai, bi, size in m.get_matching_blocks():
-        num_matches += size
-        if ai == bi == 0:
-            prefix_matches = size
-        for i in range(bi, bi + size):
-            matches.append(i)
-
-    pm_idx = inf
-    for i in matches:
-        if pm_idx == i - 1:
-            consecutive_matches += 1
-        pm_idx = i
-
-    metric = _MatchMetrics(
-        prefix_matches=prefix_matches,
-        consecutive_matches=consecutive_matches,
-        num_matches=num_matches,
-    )
-
-    return metric
-
-
 def _metric(
     options: Options,
     ctx: _ReviewCtx,
     completion: Completion,
-) -> _MatchMetrics:
+) -> MatchMetrics:
     match = lower(completion.sort_by) if ctx.is_lower else completion.sort_by
     cword = (
         ctx.w_before
@@ -83,7 +42,7 @@ def _join(
     instance: UUID,
     ctx: _ReviewCtx,
     completion: Completion,
-    match_metrics: _MatchMetrics,
+    match_metrics: MatchMetrics,
 ) -> Metric:
     weight = Weights(
         consecutive_matches=match_metrics.consecutive_matches,
