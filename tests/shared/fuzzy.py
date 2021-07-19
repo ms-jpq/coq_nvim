@@ -32,7 +32,7 @@ class EditD(TestCase):
         lhs = "cacaca"
         rhs = "acacac"
         d = dl_distance(lhs, rhs)
-        self.assertEqual(d, 3)
+        self.assertEqual(d, 2)
 
     def test_6(self) -> None:
         lhs = ""
@@ -50,7 +50,13 @@ class EditD(TestCase):
         lhs = "badc"
         rhs = "abcd"
         d = dl_distance(lhs, rhs)
-        self.assertEqual(d, 3)
+        self.assertEqual(d, 2)
+
+    def test_9(self) -> None:
+        lhs = "supervisor"
+        rhs = "pervisor"
+        d = dl_distance(lhs, rhs)
+        self.assertEqual(d, 2)
 
 
 _LOOK_AHEAD = 2
