@@ -130,7 +130,6 @@ class IDB:
                     with with_transaction(cursor):
                         cursor.execute(sql("select", "stats"), ())
                         for row in cursor.fetchall():
-                            print({**row},flush=True)
                             q_duration: Mapping[int, Optional[float]] = loads(
                                 row["q_duration"]
                             )
