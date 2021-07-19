@@ -1,8 +1,9 @@
 from collections import Counter
 from dataclasses import dataclass
 from difflib import SequenceMatcher
+from itertools import repeat
 from math import inf
-from typing import MutableSequence
+from typing import MutableMapping, MutableSequence
 
 
 @dataclass(frozen=True)
@@ -31,7 +32,41 @@ def quick_ratio(lhs: str, rhs: str, look_ahead: int = _LOOK_AHEAD) -> float:
 
 
 def osa_distance(lhs: str, rhs: str) -> int:
-    pass
+    len_l = len(lhs)
+    len_r = len(rhs)
+    inf = len_l + len_r
+
+    acc: MutableMapping[str, int] = {}
+    score = [*repeat([*repeat(0, times=len_r + 2)], times=len_l + 2)]
+
+    score[0][0] = inf
+    for i in range(0, len_l + 1):
+        score[i + 1][0] = inf
+        score[i + 1][1] = i
+    for i in range(0, len_r + 1):
+        score[0][i + 1] = inf
+        score[1][i + 1] = i
+
+    for i in range(1, len_l + 1):
+        db = 0
+        for j in range(1, len_r + 1):
+            i1 = acc.get(rhs[j - 1], 0)
+            j1 = db
+
+            cost = 1
+            if lhs[i - 1] == rhs[j - 1]:
+                cost = 0
+                db = j
+
+            score[i + 1][j + 1] = min(
+                score[i][j] + cost,
+                score[i + 1][j] + 1,
+                score[i][j + 1] + 1,
+                score[i1][j1] + (i - i1 - 1) + 1 + (j - j1 - 1),
+            )
+        acc[lhs[i - 1]] = i
+
+    return score[len_l + 1][len_r + 1]
 
 
 def metrics(cword: str, match: str) -> MatchMetrics:
