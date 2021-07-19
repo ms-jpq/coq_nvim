@@ -12,15 +12,20 @@ class MatchMetrics:
     num_matches: int
 
 
-def quick_ratio(lhs: str, rhs: str) -> float:
-    bigger, smaller = max(len(lhs), len(rhs)), min(len(lhs), len(rhs))
-    if not bigger or not smaller:
+_LOOK_AHEAD = 3
+
+
+def quick_ratio(lhs: str, rhs: str, look_ahead: int = _LOOK_AHEAD) -> float:
+    shorter = min(len(lhs), len(rhs))
+    if not shorter:
         return 1
     else:
-        l_c, r_c = Counter(lhs), Counter(rhs)
-        dif = l_c - r_c if len(lhs) > len(rhs) else r_c - l_c
-        ratio = 1 - sum(dif.values()) / bigger
-        adjust = smaller / bigger
+        l, r = lhs[: shorter + look_ahead], rhs[: shorter + look_ahead]
+        longer = max(len(l), len(r))
+        l_c, r_c = Counter(l), Counter(r)
+        dif = l_c - r_c if len(l) > len(r) else r_c - l_c
+        ratio = 1 - sum(dif.values()) / longer
+        adjust = shorter / longer
         return ratio / adjust
 
 
