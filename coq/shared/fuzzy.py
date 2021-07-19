@@ -73,18 +73,21 @@ def dl_distance(lhs: str, rhs: str) -> int:
 
 
 def metrics(cword: str, match: str) -> MatchMetrics:
-    def pre() -> Iterator[str]:
-        for lhs, rhs in zip(cword, match):
-            if lhs == rhs:
-                yield lhs
-            else:
-                break
-
-    pl = len(tuple(pre()))
     shorter = min(len(cword), len(match))
-    lhs, rhs = cword[pl:shorter], match[pl:shorter]
-    dist = dl_distance(lhs, rhs)
-    edit_dist = dist
-    metric = MatchMetrics(prefix_matches=pl, edit_distance=edit_dist)
-    return metric
+    if not shorter:
+        return MatchMetrics(prefix_matches=0, edit_distance=0)
+    else:
+
+        def pre() -> Iterator[str]:
+            for lhs, rhs in zip(cword, match):
+                if lhs == rhs:
+                    yield lhs
+                else:
+                    break
+
+        pl = len(tuple(pre()))
+        lhs, rhs = cword[pl:shorter], match[pl:shorter]
+        dist = dl_distance(lhs, rhs)
+        edit_dist = 1 - dist / shorter
+        return MatchMetrics(prefix_matches=pl, edit_distance=edit_dist)
 

@@ -64,7 +64,7 @@ class QuickRatio(TestCase):
         lhs = "ac"
         rhs = "ab"
         ratio = quick_ratio(lhs, rhs)
-        self.assertAlmostEqual(ratio, 0.5)
+        self.assertAlmostEqual(ratio, 1 / 2)
 
     def test_3(self) -> None:
         lhs = "acb"
@@ -85,5 +85,12 @@ class Metrics(TestCase):
         match = "abab"
         m = metrics(cword, match=match)
         self.assertEqual(m.prefix_matches, 2)
-        self.assertEqual(m.edit_distance, 0)
+        self.assertEqual(m.edit_distance, 1)
+
+    def test_2(self) -> None:
+        cword = "ab"
+        match = "ac"
+        m = metrics(cword, match=match)
+        self.assertEqual(m.prefix_matches, 1)
+        self.assertAlmostEqual(m.edit_distance, 1 / 2)
 
