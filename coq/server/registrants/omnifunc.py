@@ -1,5 +1,4 @@
-from asyncio import CancelledError, Event, Task, gather, sleep
-from contextlib import suppress
+from asyncio import Event, Task, gather
 from queue import SimpleQueue
 from typing import Any, Literal, Mapping, Optional, Sequence, Tuple, Union, cast
 from uuid import uuid4
@@ -8,7 +7,7 @@ from pynvim import Nvim
 from pynvim.api.nvim import Nvim
 from pynvim_pp.lib import async_call, go
 from pynvim_pp.logging import log
-from std2.asyncio import run_in_executor
+from std2.asyncio import cancel, run_in_executor
 from std2.pickle import DecodeError, new_decoder
 
 from ...registry import atomic, autocmd, rpc
@@ -33,8 +32,7 @@ def _launch_loop(nvim: Nvim, stack: Stack) -> None:
 
         async def c0(ctx: Context) -> None:
             _, col = ctx.position
-            with timeit("CANCEL -- 2"):
-                await stack.supervisor.interrupt()
+            await stack.supervisor.interrupt()
             metrics = await stack.supervisor.collect(ctx)
             s = state()
             if s.change_id == ctx.change_id:
@@ -53,12 +51,7 @@ def _launch_loop(nvim: Nvim, stack: Stack) -> None:
                 await event.wait()
                 event.clear()
                 if task:
-                    with timeit("CANCEL -- 1"):
-                        task.cancel()
-                        while not task.done():
-                            await sleep(0)
-                        with suppress(CancelledError):
-                            await task
+                    await cancel(task)
                 if ctx:
                     task = cast(Task, go(nvim, aw=c0(ctx)))
 

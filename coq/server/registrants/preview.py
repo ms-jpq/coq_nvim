@@ -1,6 +1,4 @@
-from asyncio import Task, sleep, wait
-from asyncio.exceptions import CancelledError
-from contextlib import suppress
+from asyncio import Task, wait
 from dataclasses import asdict, dataclass
 from math import ceil
 from os import linesep
@@ -22,6 +20,7 @@ from pynvim_pp.api import (
 )
 from pynvim_pp.lib import async_call, go
 from pynvim_pp.preview import buf_set_preview, set_preview
+from std2.asyncio import cancel
 from std2.ordinal import clamp
 from std2.pickle import DecodeError, new_decoder
 from std2.string import removeprefix
@@ -252,12 +251,7 @@ def _resolve_comp(
 
     async def cont() -> None:
         if prev:
-            prev.cancel()
-            await sleep(0)
-            while not prev.done():
-                await sleep(0)
-            with suppress(CancelledError):
-                await prev
+            await cancel(prev)
 
         cached = _LRU.get(state.preview_id)
 

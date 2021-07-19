@@ -1,18 +1,8 @@
 from __future__ import annotations
 
 from abc import abstractmethod
-from asyncio import (
-    CancelledError,
-    Condition,
-    Lock,
-    Task,
-    as_completed,
-    gather,
-    sleep,
-    wait,
-)
+from asyncio import Condition, Lock, Task, as_completed, gather, wait
 from concurrent.futures import Executor
-from contextlib import suppress
 from dataclasses import dataclass
 from typing import (
     AbstractSet,
@@ -31,6 +21,7 @@ from weakref import WeakKeyDictionary
 from pynvim import Nvim
 from pynvim_pp.lib import go
 from std2.aitertools import aenumerate
+from std2.asyncio import cancel
 from std2.timeit import timeit
 
 from .settings import BaseClient, Limits, Options, Weights
@@ -123,11 +114,7 @@ class Supervisor:
 
     async def interrupt(self) -> None:
         g = gather(*self._tasks)
-        g.cancel()
-        while not g.done():
-            await sleep(0)
-        with suppress(CancelledError):
-            await g
+        await cancel(g)
 
     async def collect(self, context: Context) -> Sequence[Metric]:
         with l_timeit("COLLECTED -- **ALL**"):
