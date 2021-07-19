@@ -89,6 +89,5 @@ def metrics(lhs: str, rhs: str, look_ahead: int) -> MatchMetrics:
 
         dist = dl_distance(l, r)
         edit_dist = 1 - (dist - more) / shorter
-        print([lhs, rhs], edit_dist)
         return MatchMetrics(prefix_matches=pl, edit_distance=edit_dist)
 
