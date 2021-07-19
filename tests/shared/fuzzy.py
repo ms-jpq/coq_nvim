@@ -53,7 +53,7 @@ class EditD(TestCase):
         self.assertEqual(d, 3)
 
 
-_LOOK_AHEAD = 3
+_LOOK_AHEAD = 2
 
 
 class QuickRatio(TestCase):
