@@ -94,3 +94,10 @@ class Metrics(TestCase):
         self.assertEqual(m.prefix_matches, 1)
         self.assertAlmostEqual(m.edit_distance, 1 / 2)
 
+    def test_3(self) -> None:
+        cword = "abc"
+        match = "abd"
+        m = metrics(cword, match=match)
+        self.assertEqual(m.prefix_matches, 2)
+        self.assertAlmostEqual(m.edit_distance, 2 / 3)
+
