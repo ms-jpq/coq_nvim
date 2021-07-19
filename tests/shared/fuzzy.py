@@ -1,9 +1,17 @@
 from unittest import TestCase
 
-from ...coq.server.reviewer import count
+from ...coq.shared.fuzzy import count, quick_ratio
 
 
-class Matcher(TestCase):
+class QuickRatio(TestCase):
+    def test_1(self) -> None:
+        lhs = "a"
+        rhs = "ab"
+        ratio = quick_ratio(lhs, rhs)
+        self.assertAlmostEqual(ratio, 1)
+
+
+class Metrics(TestCase):
     def test_1(self) -> None:
         cword = "ab"
         match = "abab"
