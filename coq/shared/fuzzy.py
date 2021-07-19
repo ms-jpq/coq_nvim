@@ -70,7 +70,7 @@ def dl_distance(lhs: str, rhs: str) -> int:
     return d[len_l + 1][len_r + 1]
 
 
-def metrics(cword: str, match: str) -> MatchMetrics:
+def metrics(cword: str, match: str, look_ahead: int) -> MatchMetrics:
     shorter = min(len(cword), len(match))
     if not shorter:
         return MatchMetrics(prefix_matches=0, edit_distance=0)
