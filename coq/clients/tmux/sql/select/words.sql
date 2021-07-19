@@ -6,7 +6,7 @@ WHERE
   AND
   pane_id <> :pane_id
   AND
-  lword LIKE X_LIKE_ESC(SUBSTR(LOWER(:word) 1, :exact)) ESCAPE '!'
+  lword LIKE X_LIKE_ESC(SUBSTR(LOWER(:word), 1, :exact)) ESCAPE '!'
   AND
   NOT INSTR(:word, word)
   AND
