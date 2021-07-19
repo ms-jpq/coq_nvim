@@ -4,7 +4,7 @@ from locale import strxfrm
 from os import X_OK, access
 from os.path import join, normpath, sep, split
 from pathlib import Path
-from typing import AbstractSet, AsyncIterator, Iterator, Tuple
+from typing import AbstractSet, AsyncIterator, Iterator, MutableSet, Tuple
 
 from std2.asyncio import run_in_executor
 
@@ -81,15 +81,21 @@ class Worker(BaseWorker[BaseClient, None]):
 
         limit = BIGGEST_INT if context.manual else self._supervisor.options.max_results
         aw = tuple(_parse(p, line=line, limit=limit) for p in base_paths)
+        seen: MutableSet[str] = set()
+
         for co in as_completed(aw):
             for new_text, sort_by in await co:
-                edit = Edit(new_text=new_text)
-                completion = Completion(
-                    source=self._options.short_name,
-                    tie_breaker=self._options.tie_breaker,
-                    label=edit.new_text,
-                    sort_by=strxfrm(lower(sort_by)),
-                    primary_edit=edit,
-                )
-                yield completion
+                if len(seen) >= limit:
+                    break
+                elif new_text not in seen:
+                    seen.add(new_text)
+                    edit = Edit(new_text=new_text)
+                    completion = Completion(
+                        source=self._options.short_name,
+                        tie_breaker=self._options.tie_breaker,
+                        label=edit.new_text,
+                        sort_by=strxfrm(lower(sort_by)),
+                        primary_edit=edit,
+                    )
+                    yield completion
 
