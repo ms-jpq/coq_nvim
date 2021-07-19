@@ -50,21 +50,20 @@ class Display:
 
 @dataclass(frozen=True)
 class Options:
-    max_results: int
     unifying_chars: AbstractSet[str]
-    exact_matches: int
+    max_results: int
     context_lines: int
-
+    look_ahead: int
+    exact_matches: int
     fuzzy_cutoff: float
 
 
 @dataclass(frozen=True)
 class Weights:
-    consecutive_matches: float
+    prefix_matches: float
+    edit_distance: float
     insertion_order: float
     neighbours: float
-    num_matches: float
-    prefix_matches: float
 
 
 @dataclass(frozen=True)

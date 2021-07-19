@@ -1,16 +1,13 @@
 from collections import Counter
 from dataclasses import dataclass
-from difflib import SequenceMatcher
 from itertools import repeat
-from math import inf
-from typing import MutableMapping, MutableSequence
+from typing import Iterator, MutableMapping
 
 
 @dataclass(frozen=True)
 class MatchMetrics:
     prefix_matches: int
-    consecutive_matches: int
-    num_matches: int
+    edit_distance: float
 
 
 _LOOK_AHEAD = 3
@@ -76,30 +73,18 @@ def dl_distance(lhs: str, rhs: str) -> int:
 
 
 def metrics(cword: str, match: str) -> MatchMetrics:
-    m = SequenceMatcher(a=cword, b=match, autojunk=False)
-    matches: MutableSequence[int] = []
-    prefix_matches = 0
-    num_matches = 0
-    consecutive_matches = 0
+    def pre() -> Iterator[str]:
+        for lhs, rhs in zip(cword, match):
+            if lhs == rhs:
+                yield lhs
+            else:
+                break
 
-    for ai, bi, size in m.get_matching_blocks():
-        num_matches += size
-        if ai == bi == 0:
-            prefix_matches = size
-        for i in range(bi, bi + size):
-            matches.append(i)
-
-    pm_idx = inf
-    for i in matches:
-        if pm_idx == i - 1:
-            consecutive_matches += 1
-        pm_idx = i
-
-    metric = MatchMetrics(
-        prefix_matches=prefix_matches,
-        consecutive_matches=consecutive_matches,
-        num_matches=num_matches,
-    )
-
+    pl = len(tuple(pre()))
+    shorter = min(len(cword), len(match))
+    lhs, rhs = cword[pl:shorter], match[pl:shorter]
+    dist = dl_distance(lhs, rhs)
+    edit_dist = dist
+    metric = MatchMetrics(prefix_matches=pl, edit_distance=edit_dist)
     return metric
 

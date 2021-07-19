@@ -15,11 +15,10 @@ from .state import state
 
 def _cum(adjustment: Weights, metrics: Iterable[Metric]) -> Tuple[int, Weights]:
     zero = Weights(
-        consecutive_matches=0,
+        prefix_matches=0,
+        edit_distance=0,
         insertion_order=0,
         neighbours=0,
-        num_matches=0,
-        prefix_matches=0,
     )
     acc = asdict(zero)
     max_width = 0

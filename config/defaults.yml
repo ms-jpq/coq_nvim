@@ -1,12 +1,13 @@
 ---
 match:
-  max_results: 33
   unifying_chars:
     - "_"
     - "-"
-  exact_matches: 2
-  fuzzy_cutoff: 0.6
+  max_results: 33
   context_lines: 20
+  exact_matches: 2
+  look_ahead: 3
+  fuzzy_cutoff: 0.6
 
 limits:
   max_buf_index: 333333
@@ -16,10 +17,9 @@ limits:
 
 weights:
   prefix_matches: 2.0
-  consecutive_matches: 2.0
-  insertion_order: 2.0
+  edit_distance: 1.5
+  insertion_order: 1.0
   neighbours: 1.0
-  num_matches: 1.0
 
 keymap:
   recommended: True

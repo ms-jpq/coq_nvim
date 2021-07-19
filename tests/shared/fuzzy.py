@@ -85,6 +85,5 @@ class Metrics(TestCase):
         match = "abab"
         m = metrics(cword, match=match)
         self.assertEqual(m.prefix_matches, 2)
-        self.assertEqual(m.num_matches, 2)
-        self.assertEqual(m.consecutive_matches, 1)
+        self.assertEqual(m.edit_distance, 0)
 

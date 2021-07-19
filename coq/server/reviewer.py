@@ -45,11 +45,10 @@ def _join(
     match_metrics: MatchMetrics,
 ) -> Metric:
     weight = Weights(
-        consecutive_matches=match_metrics.consecutive_matches,
+        prefix_matches=match_metrics.prefix_matches,
+        edit_distance=match_metrics.edit_distance,
         insertion_order=ctx.inserted.get(completion.sort_by, 0),
         neighbours=ctx.neighbours.get(completion.sort_by, 0),
-        num_matches=match_metrics.num_matches,
-        prefix_matches=match_metrics.prefix_matches,
     )
     label_width = display_width(completion.label, tabsize=ctx.context.tabstop)
     kind_width = display_width(completion.kind, tabsize=ctx.context.tabstop)
