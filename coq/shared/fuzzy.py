@@ -38,12 +38,10 @@ def osa_distance(lhs: str, rhs: str) -> int:
     Dont sue me
     """
 
-    len_l = len(lhs)
-    len_r = len(rhs)
+    len_l, len_r = len(lhs), len(rhs)
     inf = len_l + len_r
-
-    acc: MutableMapping[str, int] = {}
     score = [*repeat([*repeat(0, times=len_r + 2)], times=len_l + 2)]
+    acc: MutableMapping[str, int] = {}
 
     score[0][0] = inf
     for i in range(0, len_l + 1):
