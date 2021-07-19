@@ -1,9 +1,10 @@
 from concurrent.futures import Executor
 from contextlib import closing
 from dataclasses import dataclass
+from json import loads
 from sqlite3 import Connection
 from threading import Lock
-from typing import Mapping, Sequence, cast
+from typing import Iterator, Mapping, Optional, Sequence
 
 from std2.asyncio import run_in_executor
 from std2.sqlite3 import with_transaction
@@ -21,15 +22,15 @@ class Statistics:
     inserted: int
 
     avg_duration: float
-    min_duration: int
+    q0_duration: float
     q50_duration: float
     q90_duration: float
-    max_duration: float
+    q95_duration: float
+    q100_duration: float
 
     avg_items: float
     q50_items: int
-    q90_items: int
-    max_items: int
+    q100_items: int
 
 
 def _init() -> Connection:
@@ -124,10 +125,33 @@ class IDB:
 
     def stats(self) -> Sequence[Statistics]:
         def cont() -> Sequence[Statistics]:
-            with self._lock, closing(self._conn.cursor()) as cursor:
-                with with_transaction(cursor):
-                    cursor.execute(sql("select", "stats"), ())
-                    return tuple(Statistics(**row) for row in cursor.fetchall())
+            def c1() -> Iterator[Statistics]:
+                with self._lock, closing(self._conn.cursor()) as cursor:
+                    with with_transaction(cursor):
+                        cursor.execute(sql("select", "stats"), ())
+                        for row in cursor.fetchall():
+                            print({**row},flush=True)
+                            q_duration: Mapping[int, Optional[float]] = loads(
+                                row["q_duration"]
+                            )
+                            q_items: Mapping[int, Optional[int]] = loads(row["q_items"])
+                            stat = Statistics(
+                                source=row["source"],
+                                interrupted=row["interrupted"],
+                                inserted=row["inserted"],
+                                avg_duration=row["avg_duration"],
+                                avg_items=row["avg_items"],
+                                q0_duration=q_duration.get(0) or 0,
+                                q50_duration=q_duration.get(50) or 0,
+                                q90_duration=q_duration.get(90) or 0,
+                                q95_duration=q_duration.get(95) or 0,
+                                q100_duration=q_duration.get(100) or 0,
+                                q50_items=q_items.get(50) or 0,
+                                q100_items=q_items.get(100) or 0,
+                            )
+                            yield stat
+
+            return tuple(c1())
 
         return self._ex.submit(cont)
 
