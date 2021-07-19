@@ -33,7 +33,7 @@ def _isjunk(s: str) -> bool:
     return s.isspace()
 
 
-def count(cword: str, match: str) -> MatchMetrics:
+def metrics(cword: str, match: str) -> MatchMetrics:
     m = SequenceMatcher(a=cword, b=match, autojunk=True, isjunk=_isjunk)
     matches: MutableSequence[int] = []
     prefix_matches = 0

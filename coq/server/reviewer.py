@@ -5,7 +5,7 @@ from uuid import UUID, uuid4
 
 from ..databases.insertions.database import IDB
 from ..shared.context import EMPTY_CONTEXT
-from ..shared.fuzzy import MatchMetrics, count
+from ..shared.fuzzy import MatchMetrics, metrics
 from ..shared.parse import coalesce, display_width, is_word, lower
 from ..shared.runtime import Metric, PReviewer
 from ..shared.settings import BaseClient, Options, Weights
@@ -35,7 +35,7 @@ def _metric(
         if is_word(match[:1], unifying_chars=options.unifying_chars)
         else ctx.sw_before
     )
-    return count(cword, match=match)
+    return metrics(cword, match=match)
 
 
 def _join(

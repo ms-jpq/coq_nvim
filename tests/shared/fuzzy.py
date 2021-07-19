@@ -1,6 +1,6 @@
 from unittest import TestCase
 
-from ...coq.shared.fuzzy import count, quick_ratio
+from ...coq.shared.fuzzy import metrics, quick_ratio
 
 
 class QuickRatio(TestCase):
@@ -33,8 +33,8 @@ class Metrics(TestCase):
     def test_1(self) -> None:
         cword = "ab"
         match = "abab"
-        c = count(cword, match=match)
-        self.assertEqual(c.prefix_matches, 2)
-        self.assertEqual(c.num_matches, 2)
-        self.assertEqual(c.consecutive_matches, 1)
+        m = metrics(cword, match=match)
+        self.assertEqual(m.prefix_matches, 2)
+        self.assertEqual(m.num_matches, 2)
+        self.assertEqual(m.consecutive_matches, 1)
 
