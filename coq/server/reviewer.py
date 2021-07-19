@@ -35,7 +35,7 @@ def _metric(
         if is_word(match[:1], unifying_chars=options.unifying_chars)
         else ctx.sw_before
     )
-    return metrics(cword, match=match, look_ahead=options.look_ahead)
+    return metrics(cword, match, look_ahead=options.look_ahead)
 
 
 def _join(

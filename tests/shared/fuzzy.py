@@ -91,35 +91,35 @@ class Metrics(TestCase):
     def test_1(self) -> None:
         cword = "ab"
         match = "abab"
-        m = metrics(cword, match=match, look_ahead=_LOOK_AHEAD)
+        m = metrics(cword, match, look_ahead=_LOOK_AHEAD)
         self.assertEqual(m.prefix_matches, 2)
         self.assertEqual(m.edit_distance, 1)
 
     def test_2(self) -> None:
         cword = "ab"
         match = "ac"
-        m = metrics(cword, match=match, look_ahead=_LOOK_AHEAD)
+        m = metrics(cword, match, look_ahead=_LOOK_AHEAD)
         self.assertEqual(m.prefix_matches, 1)
         self.assertAlmostEqual(m.edit_distance, 1 / 2)
 
     def test_3(self) -> None:
         cword = "abc"
         match = "abd"
-        m = metrics(cword, match=match, look_ahead=_LOOK_AHEAD)
+        m = metrics(cword, match, look_ahead=_LOOK_AHEAD)
         self.assertEqual(m.prefix_matches, 2)
         self.assertAlmostEqual(m.edit_distance, 2 / 3)
 
     def test_4(self) -> None:
         cword = "per"
         match = "supervisor"
-        m = metrics(cword, match=match, look_ahead=_LOOK_AHEAD)
+        m = metrics(cword, match, look_ahead=_LOOK_AHEAD)
         self.assertEqual(m.prefix_matches, 0)
         self.assertAlmostEqual(m.edit_distance, 0)
 
     def test_5(self) -> None:
         cword = "uper"
         match = "supervisor"
-        m = metrics(cword, match=match, look_ahead=_LOOK_AHEAD)
+        m = metrics(cword, match, look_ahead=_LOOK_AHEAD)
         self.assertEqual(m.prefix_matches, 0)
         self.assertAlmostEqual(m.edit_distance, 1 / 2)
 
