@@ -15,9 +15,9 @@ WHERE
   AND
   extensions_view.src = :filetype
   AND
-  matches.lmatch LIKE X_LIKE_ESC(LOWER(SUBSTR(:word, 1, :exact))) ESCAPE '!'
+  matches.lmatch LIKE X_LIKE_ESC(SUBSTR(LOWER(:word) 1, :exact)) ESCAPE '!'
   AND
-  X_SIMILARITY(LOWER(:word), matches.lmatch) > :cut_off
+  X_SIMILARITY(LOWER(:word), matches.lmatch, :look_ahead) > :cut_off
 GROUP BY
   snippets.rowid
 LIMIT :limit

@@ -4,7 +4,6 @@ from ...databases.snippets.database import SDB
 from ...shared.runtime import Supervisor
 from ...shared.runtime import Worker as BaseWorker
 from ...shared.settings import SnippetClient
-from ...shared.sql import BIGGEST_INT
 from ...shared.types import Completion, Context, Doc, SnippetEdit
 from ...snippets.artifacts import SNIPPETS
 
@@ -19,12 +18,7 @@ class Worker(BaseWorker[SnippetClient, SDB]):
     async def work(self, context: Context) -> AsyncIterator[Completion]:
         match = context.words or context.syms
         snippets = await self._misc.select(
-            self._supervisor.options,
-            filetype=context.filetype,
-            word=match,
-            limit=BIGGEST_INT
-            if context.manual
-            else self._supervisor.options.max_results,
+            self._supervisor.options, filetype=context.filetype, word=match
         )
 
         for snip in snippets:

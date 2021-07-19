@@ -12,7 +12,6 @@ from pynvim_pp.lib import async_call, go
 from ...shared.runtime import Supervisor
 from ...shared.runtime import Worker as BaseWorker
 from ...shared.settings import TagsClient
-from ...shared.sql import BIGGEST_INT
 from ...shared.types import Completion, Context, Doc, Edit
 from .database import Database
 from .parser import Tag
@@ -131,9 +130,6 @@ class Worker(BaseWorker[TagsClient, None]):
             filename=context.filename,
             line_num=row,
             word=match,
-            limit=BIGGEST_INT
-            if context.manual
-            else self._supervisor.options.max_results,
         )
 
         seen: MutableSet[str] = set()

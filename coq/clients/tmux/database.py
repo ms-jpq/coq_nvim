@@ -58,9 +58,7 @@ class Database:
 
         await run_in_executor(self._ex.submit, cont)
 
-    async def select(
-        self, opts: Options, active_pane: str, word: str, limit: int
-    ) -> Sequence[str]:
+    async def select(self, opts: Options, active_pane: str, word: str) -> Sequence[str]:
         def cont() -> Sequence[str]:
             try:
                 with closing(self._conn.cursor()) as cursor:
@@ -70,7 +68,8 @@ class Database:
                             {
                                 "exact": opts.exact_matches,
                                 "cut_off": opts.fuzzy_cutoff,
-                                "limit": limit,
+                                "look_ahead": opts.look_ahead,
+                                "limit": opts.max_results,
                                 "pane_id": active_pane,
                                 "word": word,
                             },

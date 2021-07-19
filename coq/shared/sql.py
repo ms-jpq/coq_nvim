@@ -71,7 +71,7 @@ class _Quantiles:
 def init_db(conn: Connection) -> None:
     add_functions(conn)
     conn.create_function("X_LIKE_ESC", narg=1, func=_like_esc, deterministic=True)
-    conn.create_function("X_SIMILARITY", narg=2, func=quick_ratio, deterministic=True)
+    conn.create_function("X_SIMILARITY", narg=3, func=quick_ratio, deterministic=True)
     conn.create_aggregate(
         "X_QUANTILES", n_arg=-1, aggregate_class=cast(Any, _Quantiles)
     )

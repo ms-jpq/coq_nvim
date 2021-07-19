@@ -52,7 +52,11 @@ class Worker(BaseWorker[BaseClient, None], CacheWorker):
                         else sw_before
                     )
                     go = (
-                        quick_ratio(cword, c.sort_by)
+                        quick_ratio(
+                            cword,
+                            c.sort_by,
+                            look_ahead=self._supervisor._options.look_ahead,
+                        )
                         > self._supervisor._options.fuzzy_cutoff
                     )
                     if go:

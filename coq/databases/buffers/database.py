@@ -124,7 +124,7 @@ class BDB:
         await run_in_executor(self._ex.submit, cont)
 
     async def words(
-        self, opts: Options, filetype: Optional[str], word: str, limit: int
+        self, opts: Options, filetype: Optional[str], word: str
     ) -> Sequence[str]:
         def cont() -> Sequence[str]:
             try:
@@ -135,7 +135,8 @@ class BDB:
                             {
                                 "exact": opts.exact_matches,
                                 "cut_off": opts.fuzzy_cutoff,
-                                "limit": limit,
+                                "look_ahead": opts.look_ahead,
+                                "limit": opts.max_results,
                                 "filetype": filetype,
                                 "word": word,
                             },

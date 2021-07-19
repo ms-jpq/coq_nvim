@@ -10,10 +10,7 @@ class MatchMetrics:
     edit_distance: float
 
 
-_LOOK_AHEAD = 3
-
-
-def quick_ratio(lhs: str, rhs: str, look_ahead: int = _LOOK_AHEAD) -> float:
+def quick_ratio(lhs: str, rhs: str, look_ahead: int) -> float:
     shorter = min(len(lhs), len(rhs))
     if not shorter:
         return 1

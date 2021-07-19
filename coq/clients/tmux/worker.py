@@ -10,7 +10,6 @@ from ...shared.parse import coalesce
 from ...shared.runtime import Supervisor
 from ...shared.runtime import Worker as BaseWorker
 from ...shared.settings import WordbankClient
-from ...shared.sql import BIGGEST_INT
 from ...shared.types import Completion, Context, Edit
 from .database import Database
 
@@ -89,12 +88,7 @@ class Worker(BaseWorker[WordbankClient, None]):
         active = await _cur()
         words = (
             await self._db.select(
-                self._supervisor.options,
-                active_pane=active.uid,
-                word=match,
-                limit=BIGGEST_INT
-                if context.manual
-                else self._supervisor.options.max_results,
+                self._supervisor.options, active_pane=active.uid, word=match
             )
             if active
             else ()

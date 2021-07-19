@@ -97,9 +97,7 @@ class SDB:
 
         self._ex.submit(cont)
 
-    async def select(
-        self, opts: Options, filetype: str, word: str, limit: int
-    ) -> Sequence[_Snip]:
+    async def select(self, opts: Options, filetype: str, word: str) -> Sequence[_Snip]:
         def cont() -> Sequence[_Snip]:
             try:
                 with closing(self._conn.cursor()) as cursor:
@@ -109,7 +107,8 @@ class SDB:
                             {
                                 "exact": opts.exact_matches,
                                 "cut_off": opts.fuzzy_cutoff,
-                                "limit": limit,
+                                "look_ahead": opts.look_ahead,
+                                "limit": opts.max_results,
                                 "filetype": filetype,
                                 "word": word,
                             },
