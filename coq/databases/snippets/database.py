@@ -51,6 +51,8 @@ class SDB:
             self._conn.interrupt()
 
     async def add_exts(self, exts: Mapping[str, AbstractSet[str]]) -> None:
+        fts = exts.keys() | {v for vs in exts.values() for v in vs}
+
         def it() -> Iterator[Mapping]:
             for src, dests in exts.items():
                 for dest in dests:
@@ -59,7 +61,7 @@ class SDB:
         def cont() -> None:
             with self._lock, closing(self._conn.cursor()) as cursor:
                 with with_transaction(cursor):
-                    _ensure_ft(cursor, filetypes=exts)
+                    _ensure_ft(cursor, filetypes=fts)
                     cursor.executemany(sql("insert", "extension"), it())
 
         await run_in_executor(self._ex.submit, cont)
