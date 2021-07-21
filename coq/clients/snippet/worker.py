@@ -1,20 +1,12 @@
 from typing import AsyncIterator
 
 from ...databases.snippets.database import SDB
-from ...shared.runtime import Supervisor
 from ...shared.runtime import Worker as BaseWorker
 from ...shared.settings import SnippetClient
 from ...shared.types import Completion, Context, Doc, SnippetEdit
-from ...snippets.artifacts import SNIPPETS
 
 
 class Worker(BaseWorker[SnippetClient, SDB]):
-    def __init__(
-        self, supervisor: Supervisor, options: SnippetClient, misc: SDB
-    ) -> None:
-        super().__init__(supervisor, options=options, misc=misc)
-        self._misc.add_exts(SNIPPETS.extends)
-
     async def work(self, context: Context) -> AsyncIterator[Completion]:
         match = context.words or context.syms
         snippets = await self._misc.select(

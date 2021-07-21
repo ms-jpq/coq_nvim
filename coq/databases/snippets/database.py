@@ -2,7 +2,7 @@ from concurrent.futures import Executor
 from contextlib import closing
 from sqlite3 import Connection, Cursor, OperationalError
 from threading import Lock
-from typing import Iterable, Iterator, Mapping, Sequence, TypedDict, cast
+from typing import AbstractSet, Iterable, Iterator, Mapping, Sequence, TypedDict, cast
 from uuid import uuid4
 
 from std2.asyncio import run_in_executor
@@ -50,7 +50,7 @@ class SDB:
         with self._lock:
             self._conn.interrupt()
 
-    def add_exts(self, exts: Mapping[str, Iterable[str]]) -> None:
+    async def add_exts(self, exts: Mapping[str, AbstractSet[str]]) -> None:
         def it() -> Iterator[Mapping]:
             for src, dests in exts.items():
                 for dest in dests:
@@ -62,9 +62,9 @@ class SDB:
                     _ensure_ft(cursor, filetypes=exts)
                     cursor.executemany(sql("insert", "extension"), it())
 
-        self._ex.submit(cont)
+        await run_in_executor(self._ex.submit, cont)
 
-    def populate(self, mapping: Mapping[str, Iterable[ParsedSnippet]]) -> None:
+    async def populate(self, mapping: Mapping[str, Iterable[ParsedSnippet]]) -> None:
         def cont() -> None:
             with self._lock, closing(self._conn.cursor()) as cursor:
                 with with_transaction(cursor):
@@ -95,9 +95,11 @@ class SDB:
                                     {"snippet_id": row_id, "option": option},
                                 )
 
-        self._ex.submit(cont)
+        await run_in_executor(self._ex.submit, cont)
 
-    async def select(self, opts: Options, filetype: str, word: str, limitless: int) -> Sequence[_Snip]:
+    async def select(
+        self, opts: Options, filetype: str, word: str, limitless: int
+    ) -> Sequence[_Snip]:
         def cont() -> Sequence[_Snip]:
             try:
                 with closing(self._conn.cursor()) as cursor:

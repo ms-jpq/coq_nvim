@@ -1,6 +1,5 @@
 from asyncio import Handle, get_running_loop
-from itertools import chain
-from typing import MutableSet, Optional, Sequence
+from typing import Iterator, MutableMapping, MutableSet, Optional, Sequence
 
 from pynvim.api.nvim import Nvim
 from pynvim_pp.api import buf_filetype, cur_buf, list_bufs, win_close
@@ -16,10 +15,6 @@ from ...treesitter.types import Payload
 from ..rt_types import Stack
 from ..state import state
 
-_SEEN: MutableSet[str] = set()
-
-_DECODER = new_decoder(Sequence[ParsedSnippet])
-
 
 @rpc(blocking=True)
 def _kill_float_wins(nvim: Nvim, stack: Stack) -> None:
@@ -32,20 +27,53 @@ def _kill_float_wins(nvim: Nvim, stack: Stack) -> None:
 autocmd("WinEnter") << f"lua {_kill_float_wins.name}()"
 
 
+def _in_soc(stack: Stack, label: str) -> bool:
+    srcs = stack.settings.clients.snippets.sources
+    return not srcs or label in srcs
+
+
+@rpc(blocking=True)
+def _load_snips(nvim: Nvim, stack: Stack) -> None:
+    async def cont() -> None:
+        exts: MutableMapping[str, MutableSet[str]] = {}
+        for label, (ets, _) in SNIPPETS.items():
+            if _in_soc(stack, label=label):
+                for src, dests in ets.items():
+                    acc = exts.setdefault(src, set())
+                    for d in dests:
+                        acc.add(d)
+
+        await stack.sdb.add_exts(exts)
+
+    go(nvim, aw=cont())
+
+
+atomic.exec_lua(f"{_load_snips.name}()", ())
+
+_DECODER = new_decoder(Sequence[ParsedSnippet])
+_SEEN: MutableSet[str] = set()
+
+
 @rpc(blocking=True)
 def _ft_changed(nvim: Nvim, stack: Stack) -> None:
     buf = cur_buf(nvim)
     ft = buf_filetype(nvim, buf=buf)
 
-    stack.bdb.ft_update(buf.number, filetype=ft)
+    async def cont() -> None:
+        await stack.bdb.ft_update(buf.number, filetype=ft)
+        if ft not in _SEEN:
+            _SEEN.add(ft)
 
-    if ft not in _SEEN:
-        _SEEN.add(ft)
-        mappings = {
-            f: _DECODER(SNIPPETS.snippets.get(f, ()))
-            for f in chain(SNIPPETS.extends.get(ft, {}).keys(), (ft,))
-        }
-        stack.sdb.populate(mappings)
+            def cont() -> Iterator[ParsedSnippet]:
+                for label, (_, snippets) in SNIPPETS.items():
+                    if _in_soc(stack, label=label):
+                        snips = snippets.get(ft, ())
+                        s: Sequence[ParsedSnippet] = _DECODER(snips)
+                        yield from s
+
+            await stack.sdb.populate({ft: cont()})
+
+    go(nvim, aw=cont())
 
 
 autocmd("FileType") << f"lua {_ft_changed.name}()"

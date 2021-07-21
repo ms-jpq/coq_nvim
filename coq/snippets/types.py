@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import AbstractSet, Mapping, Sequence, Tuple, TypedDict, TypeVar
+from typing import AbstractSet, Mapping, Sequence, Tuple
 
 
 class LoadError(Exception):
@@ -15,8 +15,6 @@ class ParsedSnippet:
     matches: AbstractSet[str]
     options: AbstractSet[str]
 
-
-T = TypeVar("T")
 
 _Label = str
 _Type = str
