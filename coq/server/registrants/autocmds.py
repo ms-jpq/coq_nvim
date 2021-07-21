@@ -62,8 +62,8 @@ def _load_snips(nvim: Nvim, stack: Stack) -> None:
                         acc.add(d)
 
                 for ext, snps in snips.items():
-                    acc = s_acc.setdefault(ext, [])
-                    acc.extend(snps)
+                    ac = s_acc.setdefault(ext, [])
+                    ac.extend(snps)
 
         _EXTS, _SNIPPETS = exts, s_acc
         await stack.sdb.add_exts(exts)
