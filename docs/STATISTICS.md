@@ -16,26 +16,19 @@ No, these measure the response speed of the sources.
 
 - There is a near constant (and minor) overhead for each keystroke, the overhead is only profiled by running `coq.nvim` in debug mode.
 
+### Q0, 50, 95, 100?
 
-### Avg, Q0, 50, 90, 100?
+`min`, `median`, `1 in 20`, `max`
 
-- Avg: self explanatory
+Without assuming any statistical distribution:
 
-- Q0: min
-
-- Q50: 50% of results are better / worse than this
-
-- Q90: 90% of results are better / worse than this
-
-- Q100: max
-
-
+`Q50` is a more robust measure than `avg`, and `Q95` is a decent measure of a common `bad` value.
 
 ### What does each column mean?
 
 #### Interrupted
 
-`coq.nvim` uses collaborative multitasking, and will cancel incomplete completion requests, if they are unnecessary.
+`coq.nvim` uses collaborative multitasking, and will cancel incomplete completion requests, if they become unnecessary.
 
 Ideally, all sources should have similar interrupted statistics, which would imply all sources are similarly fast.
 
@@ -49,11 +42,7 @@ Simple count of how many insertions are from this source.
 
 This is a misleading statistic for several reasons.
 
-
-
 , the price `coq.nvim` pays for being collaboratively scheduled is that sources are executed interleavingly.
-
-
 
 This means that one slow source can slow down all sources, with the exception being `LSP`, whose results is mostly calculated by other processes.
 
