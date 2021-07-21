@@ -63,7 +63,7 @@ class _Quantiles:
                 else:
                     yield key, None
 
-        acc = {key: val for key, val in cont()}
+        acc = {f"q{key}": val for key, val in cont()}
         json = dumps(acc, check_circular=False, ensure_ascii=False)
         return json
 

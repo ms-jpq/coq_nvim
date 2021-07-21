@@ -143,12 +143,12 @@ class IDB:
                                 inserted=row["inserted"],
                                 avg_duration=row["avg_duration"],
                                 avg_items=row["avg_items"],
-                                q0_duration=q_duration.get("0") or 0,
-                                q50_duration=q_duration.get("50") or 0,
-                                q95_duration=q_duration.get("95") or 0,
-                                q100_duration=q_duration.get("100") or 0,
-                                q50_items=q_items.get("50") or 0,
-                                q100_items=q_items.get("100") or 0,
+                                q0_duration=q_duration.get("q0") or 0,
+                                q50_duration=q_duration.get("q50") or 0,
+                                q95_duration=q_duration.get("q95") or 0,
+                                q100_duration=q_duration.get("q100") or 0,
+                                q50_items=q_items.get("q50") or 0,
+                                q100_items=q_items.get("q100") or 0,
                             )
                             yield stat
 
