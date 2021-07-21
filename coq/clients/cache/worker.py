@@ -52,25 +52,18 @@ class CacheWorker:
             comps={},
         )
 
-    async def _use_cache(
-        self, context: Context
-    ) -> Tuple[bool, AsyncIterator[Completion]]:
+    async def _use_cache(self, context: Context) -> AsyncIterator[Completion]:
         cache_ctx = self._cache_ctx
-        use_cache = _use_cache(cache_ctx, ctx=context)
-
-        async def cont() -> AsyncIterator[Completion]:
-            if use_cache:
-                with timeit("CACHE -- GET"):
-                    match = context.words or context.syms
-                    hashes = await self._db.select(
-                        self._soup.options, word=match, limitless=context.manual
-                    )
-                    for hash_id in hashes:
-                        cmp = cache_ctx.comps.get(hash_id)
-                        if cmp:
-                            yield cmp
-
-        return use_cache, cont()
+        if _use_cache(cache_ctx, ctx=context):
+            with timeit("CACHE -- GET"):
+                match = context.words or context.syms
+                hashes = await self._db.select(
+                    self._soup.options, word=match, limitless=context.manual
+                )
+                for hash_id in hashes:
+                    cmp = cache_ctx.comps.get(hash_id)
+                    if cmp:
+                        yield cmp
 
     async def _set_cache(
         self, context: Context, completions: Sequence[Completion]
