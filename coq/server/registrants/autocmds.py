@@ -1,5 +1,17 @@
 from asyncio import Handle, get_running_loop
-from typing import Iterator, MutableMapping, MutableSet, Optional, Sequence
+from itertools import groupby, repeat
+from json import loads
+from typing import (
+    AbstractSet,
+    Iterator,
+    Mapping,
+    MutableMapping,
+    MutableSequence,
+    MutableSet,
+    Optional,
+    Sequence,
+    Tuple,
+)
 
 from pynvim.api.nvim import Nvim
 from pynvim_pp.api import buf_filetype, cur_buf, list_bufs, win_close
@@ -7,9 +19,9 @@ from pynvim_pp.float_win import list_floatwins
 from pynvim_pp.lib import async_call, go
 from std2.pickle import new_decoder
 
+from ...consts import SNIPPET_ARTIFACTS
 from ...registry import atomic, autocmd, rpc
-from ...snippets.artifacts import SNIPPETS
-from ...snippets.types import ParsedSnippet
+from ...snippets.types import ASnips, ParsedSnippet
 from ...treesitter.request import async_request
 from ...treesitter.types import Payload
 from ..rt_types import Stack
@@ -26,23 +38,34 @@ def _kill_float_wins(nvim: Nvim, stack: Stack) -> None:
 
 autocmd("WinEnter") << f"lua {_kill_float_wins.name}()"
 
-
-def _in_soc(stack: Stack, label: str) -> bool:
-    srcs = stack.settings.clients.snippets.sources
-    return not srcs or label in srcs
+_EXTS: Mapping[str, AbstractSet[str]] = {}
+_SNIPPETS: Mapping[str, Sequence[ParsedSnippet]] = {}
 
 
 @rpc(blocking=True)
 def _load_snips(nvim: Nvim, stack: Stack) -> None:
+    srcs = stack.settings.clients.snippets.sources
+
     async def cont() -> None:
+        global _EXTS, _SNIPPETS
+
+        json = SNIPPET_ARTIFACTS.read_text("UTF8")
+        snippets: ASnips = loads(json)
+
         exts: MutableMapping[str, MutableSet[str]] = {}
-        for label, (ets, _) in SNIPPETS.items():
-            if _in_soc(stack, label=label):
+        s_acc: MutableMapping[str, MutableSequence[ParsedSnippet]] = {}
+        for label, (ets, snips) in snippets.items():
+            if not srcs or label in srcs:
                 for src, dests in ets.items():
                     acc = exts.setdefault(src, set())
                     for d in dests:
                         acc.add(d)
 
+                for ext, snps in snips.items():
+                    acc = s_acc.setdefault(ext, [])
+                    acc.extend(snps)
+
+        _EXTS, _SNIPPETS = exts, s_acc
         await stack.sdb.add_exts(exts)
 
     go(nvim, aw=cont())
@@ -64,14 +87,23 @@ def _ft_changed(nvim: Nvim, stack: Stack) -> None:
         if ft not in _SEEN:
             _SEEN.add(ft)
 
-            def cont() -> Iterator[ParsedSnippet]:
-                for label, (_, snippets) in SNIPPETS.items():
-                    if _in_soc(stack, label=label):
-                        snips = snippets.get(ft, ())
-                        s: Sequence[ParsedSnippet] = _DECODER(snips)
-                        yield from s
+            def cont() -> Iterator[Tuple[str, ParsedSnippet]]:
+                stack, seen = [ft], {ft}
+                while stack:
+                    ext = stack.pop()
+                    for ext in _EXTS.get(ft, ()):
+                        if ext not in seen:
+                            seen.add(ext)
+                            stack.append(ext)
 
-            await stack.sdb.populate({ft: cont()})
+                    snippets = _SNIPPETS.get(ext, ())
+                    snips: Sequence[ParsedSnippet] = _DECODER(snippets)
+                    yield from zip(repeat(ext), snips)
+
+            snips = {
+                k: {v for _, v in vs} for k, vs in groupby(cont(), key=lambda t: t[0])
+            }
+            await stack.sdb.populate(snips)
 
     go(nvim, aw=cont())
 
