@@ -12,7 +12,6 @@ RT_PY = (
     RT_DIR / "Scripts" / "python.exe" if name == "nt" else RT_DIR / "bin" / "python3"
 )
 
-_ARTIFACTS_DIR = TOP_LEVEL / "coq.artifacts"
 _CONF_DIR = TOP_LEVEL / "config"
 LANG_ROOT = TOP_LEVEL / "locale"
 DEFAULT_LANG = "en"
@@ -27,8 +26,8 @@ CLIENTS_DIR = VARS / "clients"
 TMP_DIR = VARS / "tmp"
 
 
-LSP_ARTIFACTS = _ARTIFACTS_DIR / "lsp.json"
-SNIPPET_ARTIFACTS = _ARTIFACTS_DIR / "snippets.json"
+LSP_ARTIFACTS = TOP_LEVEL / "artifacts" / "lsp.json"
+SNIPPET_ARTIFACTS = TOP_LEVEL / "coq.artifacts" / "snippets.json"
 
 SETTINGS_VAR = "coq_settings"
 

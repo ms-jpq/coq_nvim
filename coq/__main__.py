@@ -129,8 +129,6 @@ elif command == "run":
             raise ImportError()
         elif lock != _REQ:
             raise ImportError()
-        elif not LSP_ARTIFACTS.exists():
-            raise ImportError()
         else:
             import pynvim
             import pynvim_pp

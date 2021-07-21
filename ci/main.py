@@ -60,5 +60,6 @@ def main() -> None:
     _git_identity()
     _git_clone(cwd)
     _build()
+    _git_alert(_TOP_LV)
     _git_alert(cwd)
 
