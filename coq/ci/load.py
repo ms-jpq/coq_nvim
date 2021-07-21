@@ -6,6 +6,7 @@ from typing import Any, MutableMapping, MutableSequence, MutableSet, Tuple
 from urllib.parse import urlparse
 
 from std2.pickle import new_decoder, new_encoder
+from std2.tree import recur_sort
 from yaml import safe_load
 
 from ..consts import COMPILATION_YML, TMP_DIR
@@ -86,5 +87,5 @@ def load_parsable() -> Any:
                     acc.append(snip)
 
     coder = new_encoder(ASnips)
-    return coder(meta)
+    return recur_sort(coder(meta))
 
