@@ -7,7 +7,7 @@ from sys import executable, stderr, stdout, version_info
 from textwrap import dedent
 from typing import Union
 
-from .consts import LSP_ARTIFACTS, REQUIREMENTS, RT_DIR, RT_PY, TOP_LEVEL, VARS
+from .consts import REQUIREMENTS, RT_DIR, RT_PY, TOP_LEVEL, VARS
 
 if version_info < (3, 8, 2):
     msg = "⛔️ python < 3.8.2"
