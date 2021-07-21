@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import AbstractSet, Mapping, Sequence, Tuple
+from typing import AbstractSet, Literal, Mapping, Sequence, Tuple
 
 
 class LoadError(Exception):
@@ -21,6 +21,9 @@ _Type = str
 
 ASnips = Mapping[
     _Label,
-    Tuple[Mapping[_Type, Sequence[_Type]], Mapping[_Type, Sequence[ParsedSnippet]]],
+    Tuple[
+        Mapping[_Type, Mapping[_Type, Literal[True]]],
+        Mapping[_Type, Sequence[ParsedSnippet]],
+    ],
 ]
 

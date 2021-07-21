@@ -3,12 +3,14 @@ from pathlib import Path
 from typing import (
     AbstractSet,
     Iterator,
+    Literal,
     Mapping,
     MutableMapping,
     MutableSequence,
     MutableSet,
     Sequence,
     Tuple,
+    cast,
 )
 
 from std2.pathlib import walk
@@ -68,7 +70,13 @@ def load(
             s_acc.append(s)
 
     fin = {
-        label: ({k: sorted(v, key=strxfrm) for k, v in exts.items()}, snips)
+        label: (
+            {
+                k: cast(Mapping[str, Literal[True]], {e: True for e in v})
+                for k, v in exts.items()
+            },
+            snips,
+        )
         for label, (exts, snips) in meta.items()
     }
     return fin
