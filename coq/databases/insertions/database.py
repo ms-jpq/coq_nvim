@@ -11,7 +11,7 @@ from std2.sqlite3 import with_transaction
 
 from ...consts import INSERT_DB
 from ...shared.executor import SingleThreadExecutor
-from ...shared.sql import BIGGEST_INT, init_db
+from ...shared.sql import init_db
 from .sql import sql
 
 
@@ -24,7 +24,6 @@ class Statistics:
     avg_duration: float
     q0_duration: float
     q50_duration: float
-    q90_duration: float
     q95_duration: float
     q100_duration: float
 
@@ -142,7 +141,6 @@ class IDB:
                                 avg_items=row["avg_items"],
                                 q0_duration=q_duration.get("0") or 0,
                                 q50_duration=q_duration.get("50") or 0,
-                                q90_duration=q_duration.get("90") or 0,
                                 q95_duration=q_duration.get("95") or 0,
                                 q100_duration=q_duration.get("100") or 0,
                                 q50_items=q_items.get("50") or 0,

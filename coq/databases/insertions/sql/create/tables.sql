@@ -69,9 +69,9 @@ GROUP BY
 
 CREATE VIEW IF NOT EXISTS stats_nointerrupt_view AS
 SELECT
-  source                                                      AS source,
-  COALESCE(AVG(duration), 0)                                  AS avg_duration,
-  COALESCE(X_QUANTILES(duration, 0, 0.5, 0.9, 0.95, 1), '{}') AS q_duration
+  source                                                 AS source,
+  COALESCE(AVG(duration), 0)                             AS avg_duration,
+  COALESCE(X_QUANTILES(duration, 0, 0.5, 0.95, 1), '{}') AS q_duration
 FROM instance_stats_view
 GROUP BY
   source

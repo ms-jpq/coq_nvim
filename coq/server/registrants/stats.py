@@ -2,7 +2,7 @@ from itertools import chain
 from locale import strxfrm
 from os import linesep
 from string import Template
-from typing import Iterator, Mapping, Sequence
+from typing import Iterator, Mapping, Sequence, Tuple
 
 from pynvim import Nvim
 from pynvim_pp.api import buf_set_lines, buf_set_option, create_buf, win_close
@@ -23,7 +23,11 @@ _V_SEP = "─"
 _TPL = f"""
 # {LANG("statistics")}
 
-${{chart}}
+${{chart1}}
+
+${{chart2}}
+
+${{chart3}}
 
 ${{desc}}
 """.lstrip()
@@ -70,42 +74,52 @@ def _table(headers: Sequence[str], rows: Mapping[str, Mapping[str, str]]) -> str
     return sep.join(chain((h,), t))
 
 
-def _trans(stat: Statistics) -> Mapping[str, str]:
+def _trans(stat: Statistics) -> Iterator[Tuple[str, Mapping[str, str]]]:
     stat.interrupted
-    mapping = {
+    m1 = {
         "Interrupted": str(stat.interrupted),
         "Inserted": str(stat.inserted),
-        "": "ˣ",
+    }
+    yield stat.source, m1
+
+    m2 = {
         "Avg Duration": f"{si_prefixed_smol(stat.avg_duration, precision=0)}s",
         "Q0 Duration": f"{si_prefixed_smol(stat.q50_duration, precision=0)}s",
         "Q50 Duration": f"{si_prefixed_smol(stat.q50_duration, precision=0)}s",
-        "Q90 Duration": f"{si_prefixed_smol(stat.q90_duration, precision=0)}s",
         "Q95 Duration": f"{si_prefixed_smol(stat.q95_duration, precision=0)}s",
         "Q100 Duration": f"{si_prefixed_smol(stat.q100_duration, precision=0)}s",
-        " ": "ˣ",
+    }
+    yield stat.source, m2
+
+    m3 = {
         "Avg Items": str(round(stat.avg_items)),
         "Q50 Items": str(stat.q50_items),
         "Q100 Items": str(stat.q100_items),
     }
-    return mapping
+    yield stat.source, m3
 
 
-def _pprn(stats: Sequence[Statistics]) -> str:
+def _pprn(stats: Sequence[Statistics]) -> Iterator[str]:
     if not stats:
-        return ""
+        yield from ("", "", "")
     else:
-        rows = {stat.source: _trans(stat) for stat in stats}
-        headers = tuple(key for key, _ in next(iter(rows.values()), {}).items())
-        table = _table(headers, rows=rows)
-        return table
+        for acc in zip(*map(_trans, stats)):
+            rows = {k: v for k, v in acc}
+            headers = tuple(key for key, _ in next(iter(rows.values()), {}).items())
+            table = _table(headers, rows=rows)
+            yield table
 
 
 @rpc(blocking=True)
 def stats(nvim: Nvim, stack: Stack, *_: str) -> None:
     stats = stack.idb.stats()
-    chart = _pprn(stats)
+    chart1, chart2, chart3 = _pprn(stats)
     desc = MD_STATISTICS.read_text()
-    lines = Template(_TPL).substitute(chart=chart, desc=desc).splitlines()
+    lines = (
+        Template(_TPL)
+        .substitute(chart1=chart1, chart2=chart2, chart3=chart3, desc=desc)
+        .splitlines()
+    )
     for win in list_floatwins(nvim):
         win_close(nvim, win=win)
     buf = create_buf(
