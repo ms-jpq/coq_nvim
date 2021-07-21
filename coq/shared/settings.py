@@ -99,7 +99,7 @@ class TagsClient(WordbankClient):
 
 @dataclass(frozen=True)
 class SnippetClient(BaseClient):
-    pass
+    sources: AbstractSet[str]
 
 
 @dataclass(frozen=True)

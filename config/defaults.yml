@@ -92,6 +92,7 @@ clients:
     enabled: True
     short_name: "SNIP"
     tie_breaker: 46
+    sources: []
 
   tags:
     enabled: True
