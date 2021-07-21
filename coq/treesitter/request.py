@@ -67,7 +67,7 @@ async def async_request(nvim: Nvim) -> AsyncIterator[Payload]:
                 break
             elif ses > session:
                 break
-            else:
-                async with _COND:
-                    await _COND.wait()
+
+            async with _COND:
+                await _COND.wait()
 

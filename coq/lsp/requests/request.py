@@ -54,7 +54,7 @@ async def async_request(nvim: Nvim, method: str, *args: Any) -> AsyncIterator[An
                     yield a
             elif ses > session:
                 break
-            else:
-                async with cond:
-                    await cond.wait()
+
+            async with cond:
+                await cond.wait()
 
