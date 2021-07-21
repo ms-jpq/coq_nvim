@@ -29,7 +29,6 @@ def _build() -> None:
 
 
 def _git_alert(cwd: Path) -> None:
-    print(cwd)
     prefix = "ci"
     remote_brs = check_output(("git", "branch", "--remotes"), text=True, cwd=cwd)
 
@@ -45,6 +44,8 @@ def _git_alert(cwd: Path) -> None:
 
     if refs:
         check_call(("git", "push", "--delete", "origin", *refs), cwd=cwd)
+    print(cwd)
+    check_call(("ls", "-Rl"), cwd=cwd)
 
     proc = run(("git", "diff", "--exit-code"), cwd=cwd)
     if proc.returncode:
