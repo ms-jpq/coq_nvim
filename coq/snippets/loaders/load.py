@@ -21,14 +21,16 @@ from .ultisnip import parse as parse_ultisnip
 
 def _load_paths(
     search: Mapping[str, Path], exts: AbstractSet[str]
-) -> Mapping[str, Tuple[str, Path]]:
-    def cont() -> Iterator[Tuple[str, str, Path]]:
-        for label, search_path in search.items():
-            for path in walk(search_path):
-                if path.suffix in exts:
-                    yield label, path.stem, path
+) -> Mapping[str, AbstractSet[Tuple[str, Path]]]:
+    meta: MutableMapping[str, MutableSet[Tuple[str, Path]]] = {}
 
-    return {label: (ext, path) for label, ext, path in cont()}
+    for label, search_path in search.items():
+        acc = meta.setdefault(label, set())
+        for path in walk(search_path):
+            if path.suffix in exts:
+                acc.add((path.stem, path))
+
+    return meta
 
 
 def load(
@@ -44,9 +46,10 @@ def load(
 
     def c1() -> Iterator[Tuple[str, str, AbstractSet[str], Sequence[ParsedSnippet]]]:
         for parser, spec in specs.items():
-            for label, (ext, path) in spec.items():
-                parsed = parser(path)
-                yield label, ext, *parsed
+            for label, sp in spec.items():
+                for ext, path in sp:
+                    parsed = parser(path)
+                    yield label, ext, *parsed
 
     meta: MutableMapping[
         str,
