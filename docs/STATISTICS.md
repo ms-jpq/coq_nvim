@@ -42,9 +42,12 @@ Simple count of how many insertions are from this source.
 
 This is a misleading statistic for several reasons.
 
-The price `coq.nvim` pays for being collaboratively scheduled is that sources are executed interleavingly.
+The price `coq.nvim` pays for being collaboratively scheduled is that sources are executed concurrently.
 
 This means that one slow source can slow down all sources, with the exception being `LSP`, whose results is mostly calculated by other processes.
 
 This also means that the time spans are **not additive**. Say five sources take 20ms to complete, the total execution time is 20ms, not 100ms.
+
+The real duration is `min(timeout, max(<durations>)) + <constant overhead>`.
+
 
