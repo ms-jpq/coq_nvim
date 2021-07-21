@@ -1,6 +1,7 @@
 from datetime import datetime, timezone
 from os import environ, sep
 from pathlib import Path
+from shutil import rmtree
 from subprocess import check_call, check_output, run
 from typing import Iterator
 
@@ -15,18 +16,12 @@ def _git_identity() -> None:
 
 
 def _git_clone(path: Path) -> None:
-    if not path.is_dir():
-        token = environ["CI_TOKEN"]
-        uri = f"https://ms-jpq:{token}@github.com/ms-jpq/coq.artifacts.git"
-        check_call(("git", "clone", uri, str(path)))
-    else:
-        out = check_output(
-            ("git", "rev-parse", "--abbrev-ref", "origin/HEAD"), text=True, cwd=path
-        )
-        origin_main = out.strip()
-        _, _, main = origin_main.partition("/")
-        check_call(("git", "checkout", origin_main), cwd=path)
-        check_call(("git", "switch", main), cwd=path)
+    if path.is_dir():
+        rmtree(path)
+
+    token = environ["CI_TOKEN"]
+    uri = f"https://ms-jpq:{token}@github.com/ms-jpq/coq.artifacts.git"
+    check_call(("git", "clone", uri, str(path)))
 
 
 def _build() -> None:
