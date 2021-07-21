@@ -2,7 +2,7 @@ from concurrent.futures import ThreadPoolExecutor
 from contextlib import suppress
 from pathlib import Path
 from subprocess import check_call
-from typing import Any, MutableMapping, MutableSequence
+from typing import Any, MutableMapping, MutableSequence, MutableSet, Tuple
 from urllib.parse import urlparse
 
 from std2.pickle import new_decoder, new_encoder
@@ -58,10 +58,18 @@ def load() -> ASnips:
 
 def load_parsable() -> Any:
     specs = load()
-    acc: MutableMapping[str, MutableSequence[ParsedSnippet]] = {}
+    meta: MutableMapping[
+        str,
+        Tuple[
+            MutableMapping[str, MutableSet[str]],
+            MutableMapping[str, MutableSequence[ParsedSnippet]],
+        ],
+    ] = {}
 
     for label, (exts, snippets) in specs.items():
+        _, good_snips = meta.setdefault(label, ({k: {*v} for k, v in exts.items()}, {}))
         for ext, snips in snippets.items():
+            acc = good_snips.setdefault(ext, [])
             for snip in snips:
                 edit = SnippetEdit(
                     new_text=snip.content,
@@ -75,6 +83,8 @@ def load_parsable() -> Any:
                         sort_by="",
                         visual="",
                     )
+                    acc.append(snip)
 
-    return encoded
+    coder = new_encoder(ASnips)
+    return coder(meta)
 
