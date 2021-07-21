@@ -20,4 +20,3 @@ def main() -> None:
     _dump(SNIPPET_ARTIFACTS, o=snippets)
     _dump(LSP_ARTIFACTS, o=lsprotocol)
 
-    print([SNIPPET_ARTIFACTS, LSP_ARTIFACTS])
