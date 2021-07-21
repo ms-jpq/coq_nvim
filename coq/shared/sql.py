@@ -1,4 +1,4 @@
-from functools import cache
+from functools import lru_cache
 from json import dumps
 from pathlib import Path
 from sqlite3.dbapi2 import Connection
@@ -27,11 +27,12 @@ class _Loader(Protocol):
 
 
 def loader(base: Path) -> _Loader:
+    @lru_cache(maxsize=None)
     def cont(*paths: AnyPath) -> str:
         path = (base / Path(*paths)).with_suffix(".sql")
         return path.read_text("UTF-8")
 
-    return cast(_Loader, cache(cont))
+    return cast(_Loader, cont)
 
 
 def _like_esc(like: str) -> str:

@@ -1,13 +1,15 @@
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Annotated, Any, Literal, Optional, Sequence, Tuple, Union
+from typing import Any, Literal, Optional, Sequence, Tuple, Union
 from uuid import UUID, uuid4
 
 UTF8 = "UTF-8"
 UTF16 = "UTF-16-LE"
 
-NvimPos = Tuple[int, Annotated[int, "In nvim, the col is a ut8 byte offset"]]
-WTF8Pos = Tuple[int, Annotated[int, "Depends on `OffsetEncoding`"]]
+# In nvim, the col is a ut8 byte offset
+NvimPos = Tuple[int, int]
+# Depends on `OffsetEncoding`
+WTF8Pos = Tuple[int, int]
 
 BYTE_TRANS = {
     UTF8: 1,
@@ -89,7 +91,7 @@ class RangeEdit(Edit):
 
 @dataclass(frozen=True)
 class SnippetEdit(Edit):
-    grammar: Annotated[str, "ie. LSP, Texmate, Ultisnip, etc"]
+    grammar: str  # ie. LSP, Texmate, Ultisnip, etc
 
 
 @dataclass(frozen=True)
