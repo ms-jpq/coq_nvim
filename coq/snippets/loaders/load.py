@@ -1,4 +1,3 @@
-from locale import strxfrm
 from pathlib import Path
 from typing import (
     AbstractSet,
