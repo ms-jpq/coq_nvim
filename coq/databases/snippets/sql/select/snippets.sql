@@ -1,23 +1,18 @@
 SELECT
-  snippets.grammar AS grammar,
-  matches.match    AS prefix,
-  snippets.content AS snippet,
-  snippets.label   AS label,
-  snippets.doc     AS doc
-FROM snippets
-JOIN matches
-ON matches.snippet_id = snippets.rowid
-JOIN extensions_view
-ON
-  snippets.filetype = extensions_view.dest
+  grammar,
+  prefix,
+  snippet,
+  label,
+  doc
+FROM snippets_view
 WHERE
   :word <> ''
   AND
-  extensions_view.src = :filetype
+  ft_src = :filetype
   AND
-  matches.lmatch LIKE X_LIKE_ESC(SUBSTR(LOWER(:word), 1, :exact)) ESCAPE '!'
+  lprefix LIKE X_LIKE_ESC(SUBSTR(LOWER(:word), 1, :exact)) ESCAPE '!'
   AND
-  X_SIMILARITY(LOWER(:word), matches.lmatch, :look_ahead) > :cut_off
+  X_SIMILARITY(LOWER(:word), lprefix, :look_ahead) > :cut_off
 GROUP BY
-  snippets.rowid
+  snippet_id
 LIMIT :limit

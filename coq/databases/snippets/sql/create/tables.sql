@@ -73,5 +73,24 @@ WHERE
   lvl < 10;
 
 
+CREATE VIEW IF NOT EXISTS snippets_view AS
+SELECT
+  snippets.rowid       AS snippet_id,
+  snippets.grammar     AS grammar,
+  matches.match        AS prefix,
+  matches.lmatch       AS lprefix,
+  snippets.content     AS snippet,
+  snippets.label       AS label,
+  snippets.doc         AS doc,
+  extensions_view.src  AS ft_src,
+  extensions_view.dest AS ft_dest
+FROM snippets
+JOIN matches
+ON matches.snippet_id = snippets.rowid
+JOIN extensions_view
+ON
+  snippets.filetype = extensions_view.dest;
+
+
 END;
 
