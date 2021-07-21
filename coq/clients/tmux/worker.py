@@ -72,8 +72,6 @@ class Worker(BaseWorker[WordbankClient, None]):
 
     async def _poll(self) -> None:
         while True:
-            async with self._supervisor.idling:
-                await self._supervisor.idling.wait()
             shots = await gather(
                 *[
                     _screenshot(self._supervisor.options.unifying_chars, uid=pane.uid)
@@ -82,6 +80,9 @@ class Worker(BaseWorker[WordbankClient, None]):
             )
             snapshot = {uid: words for uid, words in shots}
             await self._db.periodical(snapshot)
+
+            async with self._supervisor.idling:
+                await self._supervisor.idling.wait()
 
     async def work(self, context: Context) -> AsyncIterator[Completion]:
         match = context.words or (context.syms if self._options.match_syms else "")

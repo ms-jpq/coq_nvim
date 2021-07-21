@@ -115,12 +115,12 @@ class Worker(BaseWorker[TagsClient, None]):
 
     async def _poll(self) -> None:
         while True:
-            async with self._supervisor.idling:
-                await self._supervisor.idling.wait()
             cwd, buf_names = await _ls(self._supervisor.nvim)
-
             tags = await reconciliate(cwd, paths=buf_names)
             await self._db.add(tags)
+
+            async with self._supervisor.idling:
+                await self._supervisor.idling.wait()
 
     async def work(self, context: Context) -> AsyncIterator[Completion]:
         row, _ = context.position
