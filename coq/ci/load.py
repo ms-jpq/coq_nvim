@@ -1,4 +1,5 @@
 from concurrent.futures import ThreadPoolExecutor
+from contextlib import suppress
 from pathlib import Path
 from subprocess import check_call
 from typing import Any, MutableMapping, MutableSequence
@@ -13,7 +14,7 @@ from ..shared.types import SnippetEdit
 from ..snippets.loaders.load import load as load_from_paths
 from ..snippets.parse import parse
 from ..snippets.parsers.parser import ParseError
-from ..snippets.types import ParsedSnippet, SnippetSpecs
+from ..snippets.types import ASnips, ParsedSnippet
 from .types import Compilation
 
 
@@ -40,11 +41,7 @@ def _git_pull(uri: str) -> None:
         )
 
 
-def _trans_name(relative: Path) -> Path:
-    return TMP_DIR / relative
-
-
-def load() -> SnippetSpecs:
+def load() -> ASnips:
     TMP_DIR.mkdir(parents=True, exist_ok=True)
     yaml = safe_load(COMPILATION_YML.read_bytes())
     specs: Compilation = new_decoder(Compilation)(yaml)
@@ -52,9 +49,9 @@ def load() -> SnippetSpecs:
         tuple(pool.map(_git_pull, specs.git))
 
     parsed = load_from_paths(
-        lsp={*map(_trans_name, specs.paths.lsp)},
-        neosnippet={*map(_trans_name, specs.paths.neosnippet)},
-        ultisnip={*map(_trans_name, specs.paths.ultisnip)},
+        lsp={str(path): TMP_DIR / path for path in specs.paths.lsp},
+        neosnippet={str(path): TMP_DIR / path for path in specs.paths.neosnippet},
+        ultisnip={str(path): TMP_DIR / path for path in specs.paths.ultisnip},
     )
     return parsed
 
@@ -63,30 +60,21 @@ def load_parsable() -> Any:
     specs = load()
     acc: MutableMapping[str, MutableSequence[ParsedSnippet]] = {}
 
-    for ext, snippets in specs.snippets.items():
-        snips = acc.setdefault(ext, [])
-        for snippet in snippets:
-            edit = SnippetEdit(
-                new_text=snippet.content,
-                grammar=snippet.grammar,
-            )
-            try:
-                parse(
-                    set(),
-                    context=EMPTY_CONTEXT,
-                    snippet=edit,
-                    sort_by="",
-                    visual="",
+    for label, (exts, snippets) in specs.items():
+        for ext, snips in snippets.items():
+            for snip in snips:
+                edit = SnippetEdit(
+                    new_text=snip.content,
+                    grammar=snip.grammar,
                 )
-            except ParseError:
-                pass
-            else:
-                snips.append(snippet)
+                with suppress(ParseError):
+                    parse(
+                        set(),
+                        context=EMPTY_CONTEXT,
+                        snippet=edit,
+                        sort_by="",
+                        visual="",
+                    )
 
-    good_specs = SnippetSpecs(
-        extends=specs.extends,
-        snippets=acc,
-    )
-    encoded = new_encoder(SnippetSpecs)(good_specs)
     return encoded
 

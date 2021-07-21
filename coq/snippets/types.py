@@ -1,9 +1,9 @@
 from dataclasses import dataclass
-from typing import AbstractSet, Mapping, Sequence
+from typing import AbstractSet, Mapping, Sequence, Tuple, TypedDict, TypeVar
 
 
 class LoadError(Exception):
-    pass
+    ...
 
 
 @dataclass(frozen=True)
@@ -16,20 +16,13 @@ class ParsedSnippet:
     options: AbstractSet[str]
 
 
+T = TypeVar("T")
+
+_Label = str
 _Type = str
 
-
-@dataclass(frozen=True)
-class MetaSnippets:
-    snippets: Sequence[ParsedSnippet]
-    extends: AbstractSet[_Type]
-
-
-@dataclass(frozen=True)
-class SnippetSpecs:
-    snippets: Mapping[_Type, Sequence[ParsedSnippet]]
-    extends: Mapping[_Type, AbstractSet[_Type]]
-
-
-MetaSpecs = Mapping[str, SnippetSpecs]
+ASnips = Mapping[
+    _Label,
+    Tuple[Mapping[_Type, Sequence[_Type]], Mapping[_Type, Sequence[ParsedSnippet]]],
+]
 

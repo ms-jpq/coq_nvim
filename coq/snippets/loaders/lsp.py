@@ -2,11 +2,11 @@ from dataclasses import dataclass
 from json import loads
 from os import linesep
 from pathlib import Path
-from typing import AbstractSet, Iterator, Mapping, Sequence, Union
+from typing import AbstractSet, Iterator, Mapping, Sequence, Tuple, Union
 
 from std2.pickle import new_decoder
 
-from ..types import MetaSnippets, ParsedSnippet
+from ..types import ParsedSnippet
 
 
 @dataclass
@@ -38,7 +38,7 @@ def _body(body: Union[str, Sequence[str]]) -> str:
         raise ValueError(body)
 
 
-def parse(path: Path) -> MetaSnippets:
+def parse(path: Path) -> Tuple[AbstractSet[str], Sequence[ParsedSnippet]]:
     text = path.read_text("UTF-8") if path.exists() else ""
     json = loads(text)
     fmt: _FMT = _DECODER(json)
@@ -55,6 +55,5 @@ def parse(path: Path) -> MetaSnippets:
             )
             yield snippet
 
-    meta = MetaSnippets(snippets=tuple(cont()), extends=frozenset())
-    return meta
+    return set(), tuple(cont())
 

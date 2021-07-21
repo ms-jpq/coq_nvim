@@ -1,9 +1,9 @@
 from enum import Enum, auto
 from os import linesep
 from pathlib import Path
-from typing import AbstractSet, MutableSequence, MutableSet, Tuple
+from typing import AbstractSet, MutableSequence, MutableSet, Sequence, Tuple
 
-from ..types import MetaSnippets, ParsedSnippet
+from ..types import ParsedSnippet
 from .parse import raise_err
 
 _COMMENT_START = "#"
@@ -39,7 +39,7 @@ def _start(line: str) -> Tuple[str, str, MutableSet[str]]:
         return name, label, set()
 
 
-def parse(path: Path) -> MetaSnippets:
+def parse(path: Path) -> Tuple[AbstractSet[str], Sequence[ParsedSnippet]]:
     snippets: MutableSequence[ParsedSnippet] = []
     extends: MutableSet[str] = set()
 
@@ -105,6 +105,5 @@ def parse(path: Path) -> MetaSnippets:
         else:
             assert False
 
-    meta = MetaSnippets(snippets=snippets, extends=extends)
-    return meta
+    return extends, snippets
 
