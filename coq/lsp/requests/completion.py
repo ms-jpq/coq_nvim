@@ -20,7 +20,6 @@ async def request(
     tie_breaker: int,
     context: Context,
 ) -> AsyncIterator[Tuple[bool, Sequence[Completion]]]:
-
     row, c = context.position
     col = len(context.line_before[:c].encode(UTF16)) // 2
 

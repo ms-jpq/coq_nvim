@@ -14,16 +14,9 @@ class Worker(BaseWorker[BaseClient, None], CacheWorker):
     def __init__(self, supervisor: Supervisor, options: BaseClient, misc: None) -> None:
         CacheWorker.__init__(self, supervisor=supervisor)
         BaseWorker.__init__(self, supervisor=supervisor, options=options, misc=misc)
-        self._no_cache = False
 
     async def work(self, context: Context) -> AsyncIterator[Completion]:
-        w_before, sw_before = (
-            lower(context.words_before),
-            context.syms_before + lower(context.words_before),
-        )
-        if not self._no_cache:
-            async for c in self._use_cache(context):
-                yield c
+        w_before, sw_before = lower(context.words_before), lower(context.syms_before)
 
         stream = request(
             self._supervisor.nvim,
@@ -32,17 +25,15 @@ class Worker(BaseWorker[BaseClient, None], CacheWorker):
             context=context,
         )
 
+        async for c in self._use_cache(context):
+            yield c
         async for no_cache, comps in stream:
-            self._no_cache = no_cache
             for c in comps:
                 cword = (
                     w_before
-                    if all(
-                        is_word(
-                            char,
-                            unifying_chars=self._supervisor._options.unifying_chars,
-                        )
-                        for char in c.sort_by
+                    if is_word(
+                        c.sort_by[:1],
+                        unifying_chars=self._supervisor._options.unifying_chars,
                     )
                     else sw_before
                 )
