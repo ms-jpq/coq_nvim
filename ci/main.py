@@ -22,7 +22,7 @@ def _git_clone(path: Path) -> None:
 
 
 def _build() -> None:
-    check_call(("python3", "-m", f"coq.ci"), cwd=_TOP_LV)
+    check_call(("python3", "-m", "coq.ci"), cwd=_TOP_LV)
 
 
 def _git_alert(cwd: Path) -> None:
@@ -53,7 +53,7 @@ def _git_alert(cwd: Path) -> None:
 
 
 def main() -> None:
-    cwd = _TOP_LV / ".vars" / "ci"
+    cwd = _TOP_LV / "coq.artifacts"
     _git_identity()
     _git_clone(cwd)
     _build()
