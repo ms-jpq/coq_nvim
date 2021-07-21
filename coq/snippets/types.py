@@ -16,14 +16,20 @@ class ParsedSnippet:
     options: AbstractSet[str]
 
 
+_Type = str
+
+
 @dataclass(frozen=True)
 class MetaSnippets:
     snippets: Sequence[ParsedSnippet]
-    extends: AbstractSet[str]
+    extends: AbstractSet[_Type]
 
 
 @dataclass(frozen=True)
 class SnippetSpecs:
-    snippets: Mapping[str, Sequence[ParsedSnippet]]
-    extends: Mapping[str, AbstractSet[str]]
+    snippets: Mapping[_Type, Sequence[ParsedSnippet]]
+    extends: Mapping[_Type, AbstractSet[_Type]]
+
+
+MetaSpecs = Mapping[str, SnippetSpecs]
 

@@ -25,9 +25,7 @@ def _load_paths(
 
 
 def load(
-    lsp: AbstractSet[Path],
-    neosnippet: AbstractSet[Path],
-    ultisnip: AbstractSet[Path],
+    lsp: AbstractSet[Path], neosnippet: AbstractSet[Path], ultisnip: AbstractSet[Path]
 ) -> SnippetSpecs:
     specs = {
         parse_lsp: _load_paths(lsp, exts={".json"}),
