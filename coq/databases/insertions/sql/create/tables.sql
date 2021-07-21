@@ -83,13 +83,13 @@ GROUP BY
 
 CREATE VIEW IF NOT EXISTS stats_view AS
 SELECT
-  sources.name                                      AS source,
-  COALESCE(stats_quantiles_view.interrupted, 0)     AS interrupted,
-  COALESCE(stats_quantiles_view.avg_items, 0)       AS avg_items,
-  COALESCE(stats_quantiles_view.q_items, '{}')      AS q_items,
+  sources.name                                    AS source,
+  COALESCE(stats_quantiles_view.interrupted, 0)   AS interrupted,
+  COALESCE(stats_quantiles_view.avg_items, 0)     AS avg_items,
+  COALESCE(stats_quantiles_view.q_items, '{}')    AS q_items,
   COALESCE(stats_quantiles_view.avg_duration, 0)  AS avg_duration,
   COALESCE(stats_quantiles_view.q_duration, '{}') AS q_duration,
-  COALESCE(stats_inserted_view.inserted, 0)         AS inserted
+  COALESCE(stats_inserted_view.inserted, 0)       AS inserted
 FROM sources
 LEFT JOIN stats_quantiles_view
 ON stats_quantiles_view.source = sources.name
