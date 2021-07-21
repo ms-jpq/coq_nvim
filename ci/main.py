@@ -29,6 +29,7 @@ def _build() -> None:
 
 
 def _git_alert(cwd: Path) -> None:
+    print(cwd)
     prefix = "ci"
     remote_brs = check_output(("git", "branch", "--remotes"), text=True, cwd=cwd)
 
@@ -46,7 +47,6 @@ def _git_alert(cwd: Path) -> None:
         check_call(("git", "push", "--delete", "origin", *refs), cwd=cwd)
 
     proc = run(("git", "diff", "--exit-code"), cwd=cwd)
-    print("AAAAAAAAAAAAAAA", flush=True)
     if proc.returncode:
         time = datetime.now(tz=timezone.utc).strftime("%Y-%m-%d")
         brname = f"{prefix}--{time}"
