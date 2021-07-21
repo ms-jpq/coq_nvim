@@ -1,5 +1,5 @@
 from asyncio import Handle, get_running_loop
-from itertools import groupby, repeat
+from itertools import repeat
 from json import loads
 from typing import (
     AbstractSet,
@@ -91,18 +91,21 @@ def _ft_changed(nvim: Nvim, stack: Stack) -> None:
                 stack, seen = [ft], {ft}
                 while stack:
                     ext = stack.pop()
-                    for ext in _EXTS.get(ft, ()):
-                        if ext not in seen:
-                            seen.add(ext)
-                            stack.append(ext)
+                    for et in _EXTS.get(ft, ()):
+                        if et not in seen:
+                            seen.add(et)
+                            stack.append(et)
 
                     snippets = _SNIPPETS.get(ext, ())
                     snips: Sequence[ParsedSnippet] = _DECODER(snippets)
                     yield from zip(repeat(ext), snips)
 
-            snips = {
-                k: {v for _, v in vs} for k, vs in groupby(cont(), key=lambda t: t[0])
-            }
+            snips: MutableMapping[str, MutableSequence[ParsedSnippet]] = {}
+
+            for filetype, snip in cont():
+                acc = snips.setdefault(filetype, [])
+                acc.append(snip)
+
             await stack.sdb.populate(snips)
 
     go(nvim, aw=cont())
