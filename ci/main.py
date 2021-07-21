@@ -19,6 +19,14 @@ def _git_clone(path: Path) -> None:
         token = environ["CI_TOKEN"]
         uri = f"https://ms-jpq:{token}@github.com/ms-jpq/coq.artifacts.git"
         check_call(("git", "clone", uri, str(path)))
+    else:
+        out = check_output(
+            ("git", "rev-parse", "--abbrev-ref", "origin/HEAD"), text=True, cwd=path
+        )
+        origin_main = out.strip()
+        _, _, main = origin_main.partition("/")
+        check_call(("git", "checkout", origin_main), cwd=path)
+        check_call(("git", "switch", main), cwd=path)
 
 
 def _build() -> None:
@@ -47,7 +55,7 @@ def _git_alert(cwd: Path) -> None:
         time = datetime.now(tz=timezone.utc).strftime("%Y-%m-%d")
         brname = f"{prefix}--{time}"
         check_call(("git", "checkout", "-b", brname), cwd=cwd)
-        check_call(("git", "add", "."))
+        check_call(("git", "add", "."), cwd=cwd)
         check_call(("git", "commit", "-m", f"update_artifacts: {time}"), cwd=cwd)
         check_call(("git", "push", "--set-upstream", "origin", brname), cwd=cwd)
 
