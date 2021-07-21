@@ -60,8 +60,6 @@ async def async_request(nvim: Nvim) -> AsyncIterator[Payload]:
         await async_call(nvim, cont)
 
         while True:
-            async with _COND:
-                await _COND.wait()
             ses, reply = _SESSION
             if ses == session:
                 async for payload in _vaildate(reply):
@@ -69,4 +67,7 @@ async def async_request(nvim: Nvim) -> AsyncIterator[Payload]:
                 break
             elif ses > session:
                 break
+            else:
+                async with _COND:
+                    await _COND.wait()
 

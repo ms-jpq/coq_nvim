@@ -48,12 +48,13 @@ async def async_request(nvim: Nvim, method: str, *args: Any) -> AsyncIterator[An
         await async_call(nvim, cont)
 
         while not done:
-            async with cond:
-                await cond.wait()
             ses, done, acc = _STATE[method]
             if ses == session:
                 for a in acc:
                     yield a
             elif ses > session:
                 break
+            else:
+                async with cond:
+                    await cond.wait()
 
