@@ -1,2 +1,127 @@
 {
+  "CodeActionKind": {},
+  "CompletionItemKind": {
+    "Class": 7,
+    "Color": 16,
+    "Constant": 21,
+    "Constructor": 4,
+    "Enum": 13,
+    "EnumMember": 20,
+    "Event": 23,
+    "Field": 5,
+    "File": 17,
+    "Folder": 19,
+    "Function": 3,
+    "Interface": 8,
+    "Keyword": 14,
+    "Method": 2,
+    "Module": 9,
+    "Operator": 24,
+    "Property": 10,
+    "Reference": 18,
+    "Snippet": 15,
+    "Struct": 22,
+    "Text": 1,
+    "TypeParameter": 25,
+    "Unit": 11,
+    "Value": 12,
+    "Variable": 6
+  },
+  "CompletionTriggerKind": {
+    "Invoked": 1,
+    "TriggerCharacter": 2,
+    "TriggerForIncompleteCompletions": 3
+  },
+  "DiagnosticSeverity": {
+    "Error": 1,
+    "Hint": 4,
+    "Information": 3,
+    "Warning": 2
+  },
+  "DiagnosticTag": {
+    "Deprecated": 2,
+    "Unnecessary": 1
+  },
+  "DocumentHighlightKind": {
+    "Read": 2,
+    "Text": 1,
+    "Write": 3
+  },
+  "ErrorCodes": {
+    "ContentModified": -32801,
+    "InternalError": -32603,
+    "InvalidParams": -32602,
+    "InvalidRequest": -32600,
+    "MethodNotFound": -32601,
+    "ParseError": -32700,
+    "RequestCancelled": -32800,
+    "ServerNotInitialized": -32002,
+    "UnknownErrorCode": -32001,
+    "serverErrorEnd": -32000,
+    "serverErrorStart": -32099
+  },
+  "FailureHandlingKind": {},
+  "FileChangeType": {
+    "Changed": 2,
+    "Created": 1,
+    "Deleted": 3
+  },
+  "InitializeError": {
+    "unknownProtocolVersion": 1
+  },
+  "InsertTextFormat": {
+    "PlainText": 1,
+    "Snippet": 2
+  },
+  "MarkupKind": {},
+  "MessageType": {
+    "Error": 1,
+    "Info": 3,
+    "Log": 4,
+    "Warning": 2
+  },
+  "ResourceOperationKind": {},
+  "SymbolKind": {
+    "Array": 18,
+    "Boolean": 17,
+    "Class": 5,
+    "Constant": 14,
+    "Constructor": 9,
+    "Enum": 10,
+    "EnumMember": 22,
+    "Event": 24,
+    "Field": 8,
+    "File": 1,
+    "Function": 12,
+    "Interface": 11,
+    "Key": 20,
+    "Method": 6,
+    "Module": 2,
+    "Namespace": 3,
+    "Null": 21,
+    "Number": 16,
+    "Object": 19,
+    "Operator": 25,
+    "Package": 4,
+    "Property": 7,
+    "String": 15,
+    "Struct": 23,
+    "TypeParameter": 26,
+    "Variable": 13
+  },
+  "TextDocumentSaveReason": {
+    "AfterDelay": 2,
+    "FocusOut": 3,
+    "Manual": 1
+  },
+  "TextDocumentSyncKind": {
+    "Full": 1,
+    "Incremental": 2,
+    "None": 0
+  },
+  "WatchKind": {
+    "Change": 2,
+    "Create": 1,
+    "Delete": 4
+  }
 }
