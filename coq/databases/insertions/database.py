@@ -2,7 +2,7 @@ from concurrent.futures import Executor
 from contextlib import closing
 from dataclasses import dataclass
 from json import loads
-from sqlite3 import Connection
+from sqlite3 import Connection, OperationalError
 from threading import Lock
 from typing import Iterator, Mapping, Optional, Sequence
 
@@ -97,13 +97,17 @@ class IDB:
 
     async def insertion_order(self, n_rows: int) -> Mapping[str, int]:
         def cont() -> Mapping[str, int]:
-            with closing(self._conn.cursor()) as cursor:
-                with with_transaction(cursor):
-                    cursor.execute(sql("select", "inserted"), {"limit": n_rows})
-                    order = {
-                        row["sort_by"]: row["insert_order"] for row in cursor.fetchall()
-                    }
-                    return order
+            try:
+                with closing(self._conn.cursor()) as cursor:
+                    with with_transaction(cursor):
+                        cursor.execute(sql("select", "inserted"), {"limit": n_rows})
+                        order = {
+                            row["sort_by"]: row["insert_order"]
+                            for row in cursor.fetchall()
+                        }
+                        return order
+            except OperationalError:
+                return {}
 
         def step() -> Mapping[str, int]:
             self._interrupt()
