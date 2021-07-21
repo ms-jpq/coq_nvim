@@ -46,6 +46,7 @@ def _git_alert(cwd: Path) -> None:
         check_call(("git", "push", "--delete", "origin", *refs), cwd=cwd)
 
     proc = run(("git", "diff", "--exit-code"), cwd=cwd)
+    print("AAAAAAAAAAAAAAA", flush=True)
     if proc.returncode:
         time = datetime.now(tz=timezone.utc).strftime("%Y-%m-%d")
         brname = f"{prefix}--{time}"
