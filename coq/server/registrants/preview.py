@@ -118,7 +118,7 @@ def _positions(
     )
     dls = tuple(display_width(line, tabsize=state.context.tabstop) for line in lines)
     limit_w = _clamp(min(display.x_max_len, max(chain((0,), dls))))
-    limit_h = _clamp(sum(ceil(dl / display.x_max_len) for dl in dls))
+    limit_h = _clamp(sum(ceil((dl or 1) / display.x_max_len) for dl in dls))
 
     ns_width = limit_w(scr_width - left)
     n_height = limit_h(top - 1)
