@@ -99,8 +99,8 @@ def _preprocess(context: Context, doc: Doc) -> Doc:
         return doc
 
 
-def _clamp(margin: int, hi: int) -> Callable[[int], int]:
-    return lambda i: clamp(1, i, hi - margin)
+def _clamp(hi: int) -> Callable[[int], int]:
+    return lambda i: clamp(1, i, hi)
 
 
 def _positions(
@@ -117,14 +117,8 @@ def _positions(
         event.col + event.width + event.scrollbar,
     )
     dls = tuple(display_width(line, tabsize=state.context.tabstop) for line in lines)
-    limit_w = _clamp(
-        display.x_margin,
-        hi=min(display.x_max_len, max(chain((0,), dls))),
-    )
-    limit_h = _clamp(
-        display.y_margin,
-        hi=sum(ceil(dl / display.x_max_len) for dl in dls),
-    )
+    limit_w = _clamp(min(display.x_max_len, max(chain((0,), dls))))
+    limit_h = _clamp(sum(ceil(dl / display.x_max_len) for dl in dls))
 
     ns_width = limit_w(scr_width - left)
     n_height = limit_h(top - 1)
