@@ -71,9 +71,25 @@ See help docs on [keybind](https://github.com/ms-jpq/coq_nvim/tree/coq/docs/KEYB
 
 ### coq_settings.match
 
+These control the matching & scoring algorithms
+
 #### `coq_settings.match.unifying_chars`
 
+These characters count as part of words.
+
+**default:**
+
+```json
+["-", "_"]
+```
+
 #### `coq_settings.match.max_results`
+
+**default:**
+
+```json
+33
+```
 
 #### `coq_settings.match.context_lines`
 
