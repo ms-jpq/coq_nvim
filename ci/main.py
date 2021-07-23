@@ -37,6 +37,7 @@ def _git_alert(cwd: Path) -> None:
             b = br.strip()
             if b and "->" not in b:
                 _, _, name = b.partition(sep)
+                print(name, flush=True)
                 if name.startswith(prefix):
                     yield name
 
