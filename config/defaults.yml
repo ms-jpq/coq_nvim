@@ -11,7 +11,7 @@ match:
     - "_"
     - "-"
   max_results: 33
-  context_lines: 20
+  context_lines: 16
   exact_matches: 2
   look_ahead: 2
   fuzzy_cutoff: 0.6
