@@ -24,7 +24,7 @@ limits:
 
 weights:
   prefix_matches: 2.0
-  edit_distance: 2.0
+  edit_distance: 1.5
   insertion_order: 1.0
   neighbours: 0.5
 
