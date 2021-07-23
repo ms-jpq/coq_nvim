@@ -36,7 +36,7 @@ def _set_debug() -> None:
 
 class CoqClient(Client):
     def __init__(self) -> None:
-        self._pool = ThreadPoolExecutor(max_workers=min(32, cpu_count() + 8))
+        self._pool = ThreadPoolExecutor(max_workers=min(12, cpu_count() + 8))
         self._handlers: MutableMapping[str, RpcCallable] = {}
         self._event_queue: SimpleQueue = SimpleQueue()
         self._stack: Optional[Stack] = None
