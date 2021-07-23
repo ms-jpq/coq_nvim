@@ -34,8 +34,6 @@ class PreviewPositions:
 
 @dataclass(frozen=True)
 class PreviewDisplay:
-    y_margin: int
-    x_margin: int
     x_max_len: int
     positions: PreviewPositions
     lsp_timeout: float

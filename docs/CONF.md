@@ -125,12 +125,6 @@ See help docs on [keybind](https://github.com/ms-jpq/coq_nvim/tree/coq/docs/KEYB
 
 ##### `coq_settings.display.preview`
 
-##### `coq_settings.display.preview.y_margin`
-
-##### `coq_settings.display.preview.x_margin`
-
-##### `coq_settings.display.preview.x_max_len`
-
 ##### `coq_settings.display.preview.x_max_len`
 
 ##### `coq_settings.display.preview.lsp_timeout`

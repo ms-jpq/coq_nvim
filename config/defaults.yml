@@ -45,8 +45,6 @@ display:
       - "」"
 
   preview:
-    y_margin: 2
-    x_margin: 4
     x_max_len: 88
     lsp_timeout: 0.06
     positions:
