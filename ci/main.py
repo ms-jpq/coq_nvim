@@ -30,6 +30,7 @@ def _build() -> None:
 
 def _git_alert(cwd: Path) -> None:
     prefix = "ci"
+    check_call(("git", "fetch"), cwd=cwd)
     remote_brs = check_output(("git", "branch", "--remotes"), text=True, cwd=cwd)
 
     def cont() -> Iterator[str]:
@@ -37,7 +38,6 @@ def _git_alert(cwd: Path) -> None:
             b = br.strip()
             if b and "->" not in b:
                 _, _, name = b.partition(sep)
-                print(name, flush=True)
                 if name.startswith(prefix):
                     yield name
 
