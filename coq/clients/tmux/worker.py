@@ -65,9 +65,10 @@ class Worker(BaseWorker[WordbankClient, None]):
     def __init__(
         self, supervisor: Supervisor, options: WordbankClient, misc: None
     ) -> None:
+        self._tmux = which("tmux")
         self._db = Database(supervisor.pool)
         super().__init__(supervisor, options=options, misc=misc)
-        if which("tmux"):
+        if self._tmux:
             go(supervisor.nvim, aw=self._poll())
 
     async def _poll(self) -> None:
@@ -86,7 +87,7 @@ class Worker(BaseWorker[WordbankClient, None]):
 
     async def work(self, context: Context) -> AsyncIterator[Completion]:
         match = context.words or (context.syms if self._options.match_syms else "")
-        active = await _cur()
+        active = await _cur() if self._tmux else None
         words = (
             await self._db.select(
                 self._supervisor.options,
