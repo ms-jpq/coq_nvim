@@ -1,11 +1,11 @@
 from collections import OrderedDict, UserDict
-from typing import TypeVar, cast
+from typing import Generic, TypeVar, cast
 
 K = TypeVar("K")
 V = TypeVar("V")
 
 
-class LRU(UserDict[K, V]):
+class LRU(UserDict, Generic[K, V]):
     def __init__(self, size: int) -> None:
         assert size > 0
         self._size = size
