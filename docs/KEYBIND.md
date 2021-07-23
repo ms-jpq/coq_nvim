@@ -29,7 +29,7 @@ Manually trigger completions, with a longer timeout.
 **default:**
 
 ```json
-["<c-space>"]
+"<c-space>"
 ```
 
 #### `coq_settings.keymap.bigger_preview`
@@ -41,7 +41,7 @@ Useful for reading references.
 **default:**
 
 ```json
-["<c-k>"]
+"<c-k>"
 ```
 
 #### `coq_settings.keymap.jump_to_mark`
@@ -51,6 +51,6 @@ When snippets come with placeholders, jump to edit next placeholder.
 **default:**
 
 ```json
-["<c-h>"]
+"<c-h>"
 ```
 
