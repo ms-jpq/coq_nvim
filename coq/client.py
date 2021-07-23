@@ -63,8 +63,8 @@ class CoqClient(Client):
                 return self._handle(nvim, msg)
 
     def wait(self, nvim: Nvim) -> int:
-        if isinstance(nvim.loop, AbstractEventLoop):
-            nvim.loop.set_default_executor(self._pool)
+        assert isinstance(nvim.loop, AbstractEventLoop)
+        nvim.loop.set_default_executor(self._pool)
 
         def cont() -> None:
             rpc_atomic, specs = rpc.drain(nvim.channel_id)
