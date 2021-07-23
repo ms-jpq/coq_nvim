@@ -1,3 +1,4 @@
+from collections import deque
 from typing import Iterator, Sequence, Tuple, TypedDict
 from uuid import uuid4
 
@@ -40,10 +41,10 @@ def nav_mark(nvim: Nvim, stack: Stack) -> None:
     ns = nvim.api.create_namespace(_NS)
     win = cur_win(nvim)
     buf = win_get_buf(nvim, win=win)
-    marks = [*_ls_marks(nvim, ns=ns, buf=buf)]
+    marks = deque(_ls_marks(nvim, ns=ns, buf=buf))
 
     if marks:
-        mark = marks.pop()
+        mark = marks.popleft()
         (r1, c1), (r2, c2) = mark.begin, mark.end
         if r1 == r2 and abs(c2 - c1) <= 1:
             row, col = r1, min(c1, c2)
@@ -71,6 +72,7 @@ def mark(nvim: Nvim, settings: Settings, buf: Buffer, marks: Sequence[Mark]) -> 
     for mark in marks:
         (r1, c1), (r2, c2) = mark.begin, mark.end
         opts = {
+            "id": mark.idx + 1,
             "end_line": r2,
             "end_col": c2,
             "hl_group": settings.display.mark_highlight_group,
