@@ -3,7 +3,7 @@ version: "3.8"
 services:
   coq:
     restart: always
-    build: .
+    build: ./docker
     environment:
       - TZ
 
