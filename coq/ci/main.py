@@ -23,9 +23,9 @@ def main() -> None:
 
     j_snippets = _json(snippets)
     bj_snippets = j_snippets.encode()
-    hashed = sha256(bj_snippets).digest()
+    hashed = sha256(bj_snippets).hexdigest()
 
-    SNIPPET_HASH.write_bytes(hashed)
-    SNIPPET_ART_HASH.write_bytes(hashed)
+    SNIPPET_HASH.write_text(hashed)
+    SNIPPET_ART_HASH.write_text(hashed)
     SNIPPET_ARTIFACTS.write_bytes(bj_snippets)
 
