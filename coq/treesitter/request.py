@@ -10,11 +10,11 @@ from pynvim_pp.lib import async_call, go
 from ..registry import atomic, rpc
 from ..server.rt_types import Stack
 from ..shared.timeit import timeit
-from .types import Payload
+from .types import Payload, RawPayload
 
 _UIDS = count()
 _COND: Optional[Condition] = None
-_SESSION: Tuple[int, Sequence[Payload]] = -1, ()
+_SESSION: Tuple[int, Sequence[RawPayload]] = -1, ()
 
 
 _LUA = (Path(__file__).resolve().parent / "request.lua").read_text("UTF-8")
@@ -22,7 +22,7 @@ atomic.exec_lua(_LUA, ())
 
 
 @rpc(blocking=False)
-def _ts_notify(nvim: Nvim, stack: Stack, ses: int, reply: Sequence[Payload]) -> None:
+def _ts_notify(nvim: Nvim, stack: Stack, ses: int, reply: Sequence[RawPayload]) -> None:
     async def cont() -> None:
         global _COND, _SESSION
         _COND = _COND or Condition()
@@ -37,7 +37,7 @@ def _ts_notify(nvim: Nvim, stack: Stack, ses: int, reply: Sequence[Payload]) -> 
     go(nvim, aw=cont())
 
 
-async def _vaildate(resp: Sequence[Payload]) -> AsyncIterator[Payload]:
+async def _vaildate(resp: Sequence[RawPayload]) -> AsyncIterator[Payload]:
     for payload in resp:
         text = payload["text"].encode(errors="ignore").decode()
         kind = capwords(payload["kind"])

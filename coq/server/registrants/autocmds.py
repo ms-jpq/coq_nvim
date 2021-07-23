@@ -125,9 +125,7 @@ def _insert_enter(nvim: Nvim, stack: Stack) -> None:
             payloads: Sequence[Payload] = ()
         else:
             payloads = [p async for p in async_request(nvim)]
-        await stack.tdb.new_nodes(
-            {payload["text"]: payload["kind"] for payload in payloads}
-        )
+        await stack.tdb.new_nodes({payload.text: payload.kind for payload in payloads})
 
     go(nvim, aw=cont())
 
