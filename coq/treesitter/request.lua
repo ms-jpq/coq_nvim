@@ -1,6 +1,6 @@
 (function(...)
-  COQts_req = function(request_id)
-    COQnotify(request_id, vim.NIL)
+  COQts_req = function(session, pos)
+     COQts_notify(session, {})
   end
 
   local g1, ts_locals = pcall(require, "nvim-treesitter.locals")
