@@ -1,4 +1,11 @@
 ---
+keymap:
+  recommended: True
+
+  manual_complete: <c-space>
+  bigger_preview: <c-k>
+  jump_to_mark: <c-h>
+
 match:
   unifying_chars:
     - "_"
@@ -19,16 +26,24 @@ weights:
   prefix_matches: 2.0
   edit_distance: 2.0
   insertion_order: 1.0
-  neighbours: 1.0
-
-keymap:
-  recommended: True
-
-  manual_complete: <c-space>
-  bigger_preview: <c-k>
-  jump_to_mark: <c-h>
+  neighbours: 0.5
 
 display:
+  pum:
+    y_max_len: 16
+    y_ratio: 0.3
+
+    x_max_len: 66
+    x_min_len: 9
+
+    ellipsis: …
+    kind_context:
+      - " ["
+      - "]"
+    source_context:
+      - "「"
+      - "」"
+
   preview:
     y_margin: 2
     x_margin: 4
@@ -39,21 +54,6 @@ display:
       south: 2
       west: 3
       east: 4
-
-  pum:
-    y_max_len: 16
-    y_ratio: 0.3
-
-    x_max_len: 66
-    x_min_len: 9
-    ellipsis: …
-
-    kind_context:
-      - " ["
-      - "]"
-    source_context:
-      - "「"
-      - "」"
 
   mark_highlight_group: Pmenu
 

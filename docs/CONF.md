@@ -1,18 +1,17 @@
 # Conf
 
-All configurations are under the global variable **`chadtree_settings`**.
+All configurations are under the global variable **`coq_settings`**.
 
 VimL:
 
 ```vim
-let g:chadtree_settings = { ... }
+let g:coq_settings = { ... }
 ```
 
 Lua:
 
 ```lua
-local chadtree_settings = { ... }
-vim.api.nvim_set_var("chadtree_settings", chadtree_settings)
+local vim.g.coq_settings = { ... }
 ```
 
 ---
@@ -53,7 +52,7 @@ Variables will be validated against a schema.
 ie.
 
 ```vim
-let g:chadtree_settings = { 'ignore.dog': 'scratch, stratch' }
+let g:coq_settings = { 'match.dog': 'scratch, stratch' }
 ```
 
 Will give you the following error message:
@@ -66,31 +65,95 @@ Will give you the following error message:
 
 ## Specifics
 
-### Match
+### coq_settings.keymap
 
-### Limits
+See help docs on [keybind](https://github.com/ms-jpq/coq_nvim/tree/coq/docs/KEYBIND.md)
 
-### Weights
+### coq_settings.match
 
-### Keymap
+#### `coq_settings.match.unifying_chars`
 
-### Display
+#### `coq_settings.match.max_results`
 
-### Clients
+#### `coq_settings.match.context_lines`
 
-#### LSP
+#### `coq_settings.match.exact_matches`
 
-#### Tags
+#### `coq_settings.match.look_ahead`
 
-#### Snippets
+#### `coq_settings.match.fuzzy_cutoff`
 
-#### Paths
+### coq_settings.limits
 
-#### TreeSitter
+#### `coq_settings.limits.max_buf_index`
 
-#### Buffers
+#### `coq_settings.limits.idle_time`
 
-#### Tmux
+#### `coq_settings.limits.timeout`
 
-#### Tabnine
+#### `coq_settings.limits.manual_timeout`
+
+### coq_settings.weights
+
+#### `coq_settings.weights.prefix_matches`
+
+#### `coq_settings.weights.edit_distance`
+
+#### `coq_settings.weights.insertion_order`
+
+#### `coq_settings.weights.neighbours`
+
+### coq_settings.display
+
+#### coq_settings.display.pum
+
+##### `coq_settings.display.pum.y_max_len`
+
+##### `coq_settings.display.pum.y_ratio`
+
+##### `coq_settings.display.pum.x_max_len`
+
+##### `coq_settings.display.pum.x_min_len`
+
+##### `coq_settings.display.pum.ellipsis`
+
+##### `coq_settings.display.pum.kind_context`
+
+##### `coq_settings.display.pum.source_context`
+
+#### coq_settings.display.preview
+
+##### `coq_settings.display.preview`
+
+##### `coq_settings.display.preview.y_margin`
+
+##### `coq_settings.display.preview.x_margin`
+
+##### `coq_settings.display.preview.x_max_len`
+
+##### `coq_settings.display.preview.x_max_len`
+
+##### `coq_settings.display.preview.lsp_timeout`
+
+##### `coq_settings.display.preview.positions`
+
+#### `coq_settings.display.mark_highlight_group`
+
+### coq_settings.clients
+
+#### `coq_settings.clients.lsp`
+
+#### `coq_settings.clients.tags`
+
+#### `coq_settings.clients.snippets`
+
+#### `coq_settings.clients.paths`
+
+#### `coq_settings.clients.tree_sitter`
+
+#### `coq_settings.clients.buffers`
+
+#### `coq_settings.clients.tmux`
+
+#### `coq_settings.clients.tabnine`
 
