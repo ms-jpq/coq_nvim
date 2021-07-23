@@ -1,6 +1,5 @@
 (function(...)
-  local cancel = function()
-  end
+  local cancel = nil
 
   COQlsp_comp = function(name, session_id, pos)
     if cancel then

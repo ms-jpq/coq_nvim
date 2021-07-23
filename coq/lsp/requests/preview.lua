@@ -1,6 +1,5 @@
 (function(...)
-  local cancel = function()
-  end
+  local cancel = nil
 
   COQlsp_preview = function(name, session_id, item)
     if cancel then
