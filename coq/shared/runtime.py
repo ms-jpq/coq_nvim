@@ -4,6 +4,7 @@ from abc import abstractmethod
 from asyncio import Condition, Lock, Task, as_completed, gather, wait
 from concurrent.futures import Executor
 from dataclasses import dataclass
+from time import monotonic
 from typing import (
     AbstractSet,
     AsyncIterator,
@@ -22,10 +23,9 @@ from pynvim import Nvim
 from pynvim_pp.lib import go
 from std2.aitertools import aenumerate
 from std2.asyncio import cancel
-from std2.timeit import timeit
 
 from .settings import BaseClient, Limits, Options, Weights
-from .timeit import timeit as l_timeit
+from .timeit import timeit
 from .types import Completion, Context
 
 T_co = TypeVar("T_co", contravariant=True)
@@ -117,7 +117,7 @@ class Supervisor:
         self._tasks = ()
 
     async def collect(self, context: Context) -> Sequence[Metric]:
-        with l_timeit("COLLECTED -- **ALL**"):
+        with timeit("COLLECTED -- **ALL**"):
             assert not self._lock.locked()
             async with self._lock:
                 acc: MutableSequence[Metric] = []
@@ -128,23 +128,22 @@ class Supervisor:
                 )
 
                 async def supervise(worker: Worker, assoc: BaseClient) -> None:
-                    with l_timeit(f"WORKER -- {assoc.short_name}"):
-                        instance = uuid4()
-                        interrupted, elapsed, items = True, 0.0, 0
-                        await self._reviewer.s_begin(assoc, instance=instance)
+                    with timeit(f"WORKER -- {assoc.short_name}"):
+                        instance, t1 = uuid4(), monotonic()
+                        interrupted, items = True, 0
                         try:
-                            with timeit() as t:
-                                async for items, completion in aenumerate(
-                                    worker.work(context), start=1
-                                ):
-                                    metric = self._reviewer.trans(
-                                        instance, completion=completion
-                                    )
-                                    acc.append(metric)
-                                else:
-                                    interrupted = False
-                            elapsed = t()
+                            await self._reviewer.s_begin(assoc, instance=instance)
+                            async for items, completion in aenumerate(
+                                worker.work(context), start=1
+                            ):
+                                metric = self._reviewer.trans(
+                                    instance, completion=completion
+                                )
+                                acc.append(metric)
+                            else:
+                                interrupted = False
                         finally:
+                            elapsed = monotonic() - t1
                             await self._reviewer.s_end(
                                 instance,
                                 interrupted=interrupted,
