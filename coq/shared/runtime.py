@@ -71,7 +71,7 @@ class Supervisor:
         reviewer: PReviewer,
     ) -> None:
         self._pool, self._ppool = pool, ppool
-        self._options, self._lmits = options, limits
+        self._options, self._limits = options, limits
         self._nvim, self._reviewer = nvim, reviewer
 
         self._lock = Lock()
