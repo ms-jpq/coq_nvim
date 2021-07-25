@@ -58,7 +58,8 @@ async def _screenshot(
     if proc.code:
         return uid, ()
     else:
-        words = tuple(coalesce(proc.out.decode(), unifying_chars=unifying_chars))
+        wds=coalesce(proc.out.decode(), unifying_chars=unifying_chars)
+        words = tuple(wds)
         return uid, words
 
 
@@ -74,7 +75,7 @@ class Worker(BaseWorker[WordbankClient, None]):
 
     async def _poll(self) -> None:
         while True:
-            with timeit("IDLE :: TMUX", force=True):
+            with timeit("IDLE :: TMUX"):
                 shots = await gather(
                     *[
                         _screenshot(
