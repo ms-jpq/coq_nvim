@@ -223,7 +223,7 @@ def _show_preview(
 _TASK: Optional[Task] = None
 
 
-_LRU = LRU[UUID, Doc](size=128)
+_LRU = LRU[UUID, Doc](size=36)
 
 
 def _resolve_comp(

@@ -74,7 +74,7 @@ class Worker(BaseWorker[WordbankClient, None]):
 
     async def _poll(self) -> None:
         while True:
-            with timeit("IDLE :: TMUX", force=True):
+            with timeit("IDLE :: TMUX"):
                 shots = await gather(
                     *[
                         _screenshot(

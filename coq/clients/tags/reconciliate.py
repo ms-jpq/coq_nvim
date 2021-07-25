@@ -23,6 +23,7 @@ from std2.asyncio import run_in_executor
 from std2.pathlib import is_relative_to
 
 from ...consts import CLIENTS_DIR, TMP_DIR
+from ...shared.lru import LRU
 from ...shared.timeit import timeit
 from .parser import Tag, parse_lines, run
 
@@ -72,13 +73,19 @@ def _dump(path: Path, o: Any) -> None:
             move(tmp.name, path)
 
 
+_LRU = LRU[Path, Any](size=3)
+
+
 async def reconciliate(
     loop: AbstractEventLoop, ppool: Executor, cwd: Path, paths: AbstractSet[str]
 ) -> Tags:
     _TAGS_DIR.mkdir(parents=True, exist_ok=True)
     tags_path = _TAGS_DIR / md5(str(cwd).encode()).hexdigest()
 
-    existing = await loop.run_in_executor(ppool, _load, tags_path)
+    existing = _LRU.get(tags_path) or await loop.run_in_executor(
+        ppool, _load, tags_path
+    )
+
     mtimes = await run_in_executor(
         _mtimes, cwd, paths=map(Path, existing.keys() | paths)
     )
@@ -98,7 +105,11 @@ async def reconciliate(
         info["lang"] = tag["language"]
         info["tags"].append(tag)
 
-    new = {**{key: val for key, val in existing.items() if key in mtimes}, **acc}
-    await loop.run_in_executor(ppool, _dump, tags_path, new)
+    if acc:
+        new = {**{key: val for key, val in existing.items() if key in mtimes}, **acc}
+        await loop.run_in_executor(ppool, _dump, tags_path, new)
+        _LRU[tags_path] = new
+    else:
+        new = existing
     return new
 
