@@ -1,3 +1,4 @@
+from asyncio.events import AbstractEventLoop
 from concurrent.futures import Executor
 from contextlib import suppress
 from hashlib import md5
@@ -22,6 +23,7 @@ from std2.asyncio import run_in_executor
 from std2.pathlib import is_relative_to
 
 from ...consts import CLIENTS_DIR, TMP_DIR
+from ...shared.timeit import timeit
 from .parser import Tag, parse_lines, run
 
 _TAGS_DIR = CLIENTS_DIR / "tags"
@@ -70,11 +72,13 @@ def _dump(path: Path, o: Any) -> None:
             move(tmp.name, path)
 
 
-async def reconciliate(ppool: Executor, cwd: Path, paths: AbstractSet[str]) -> Tags:
+async def reconciliate(
+    loop: AbstractEventLoop, ppool: Executor, cwd: Path, paths: AbstractSet[str]
+) -> Tags:
     _TAGS_DIR.mkdir(parents=True, exist_ok=True)
     tags_path = _TAGS_DIR / md5(str(cwd).encode()).hexdigest()
 
-    existing = await run_in_executor(_load, tags_path)
+    existing = await loop.run_in_executor(ppool, _load, tags_path)
     mtimes = await run_in_executor(
         _mtimes, cwd, paths=map(Path, existing.keys() | paths)
     )
@@ -95,6 +99,6 @@ async def reconciliate(ppool: Executor, cwd: Path, paths: AbstractSet[str]) -> T
         info["tags"].append(tag)
 
     new = {**{key: val for key, val in existing.items() if key in mtimes}, **acc}
-    await run_in_executor(_dump, tags_path, o=new)
+    await loop.run_in_executor(ppool, _dump, tags_path, new)
     return new
 
