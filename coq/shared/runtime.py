@@ -64,18 +64,16 @@ class Supervisor:
     def __init__(
         self,
         pool: Executor,
+        ppool: Executor,
         nvim: Nvim,
         options: Options,
         limits: Limits,
         reviewer: PReviewer,
     ) -> None:
-        self._pool, self._nvim, self._options, self._limits, self._reviewer = (
-            pool,
-            nvim,
-            options,
-            limits,
-            reviewer,
-        )
+        self._pool, self._ppool = pool, ppool
+        self._options, self._lmits = options, limits
+        self._nvim, self._reviewer = nvim, reviewer
+
         self._lock = Lock()
         self._idling = Condition()
         self._workers: MutableMapping[Worker, BaseClient] = WeakKeyDictionary()
@@ -84,6 +82,10 @@ class Supervisor:
     @property
     def pool(self) -> Executor:
         return self._pool
+
+    @property
+    def ppool(self) -> Executor:
+        return self._ppool
 
     @property
     def idling(self) -> Condition:
