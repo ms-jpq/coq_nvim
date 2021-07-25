@@ -12,6 +12,7 @@ from pynvim_pp.lib import async_call, go
 from ...shared.runtime import Supervisor
 from ...shared.runtime import Worker as BaseWorker
 from ...shared.settings import TagsClient
+from ...shared.timeit import timeit
 from ...shared.types import Completion, Context, Doc, Edit
 from .database import Database
 from .parser import Tag
@@ -115,9 +116,10 @@ class Worker(BaseWorker[TagsClient, None]):
 
     async def _poll(self) -> None:
         while True:
-            cwd, buf_names = await _ls(self._supervisor.nvim)
-            tags = await reconciliate(cwd, paths=buf_names)
-            await self._db.add(tags)
+            with timeit("IDLE :: TAGS", force=True):
+                cwd, buf_names = await _ls(self._supervisor.nvim)
+                tags = await reconciliate(cwd, paths=buf_names)
+                await self._db.add(tags)
 
             async with self._supervisor.idling:
                 await self._supervisor.idling.wait()

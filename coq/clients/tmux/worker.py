@@ -10,6 +10,7 @@ from ...shared.parse import coalesce
 from ...shared.runtime import Supervisor
 from ...shared.runtime import Worker as BaseWorker
 from ...shared.settings import WordbankClient
+from ...shared.timeit import timeit
 from ...shared.types import Completion, Context, Edit
 from .database import Database
 
@@ -73,14 +74,17 @@ class Worker(BaseWorker[WordbankClient, None]):
 
     async def _poll(self) -> None:
         while True:
-            shots = await gather(
-                *[
-                    _screenshot(self._supervisor.options.unifying_chars, uid=pane.uid)
-                    async for pane in _panes()
-                ]
-            )
-            snapshot = {uid: words for uid, words in shots}
-            await self._db.periodical(snapshot)
+            with timeit("IDLE :: TMUX", force=True):
+                shots = await gather(
+                    *[
+                        _screenshot(
+                            self._supervisor.options.unifying_chars, uid=pane.uid
+                        )
+                        async for pane in _panes()
+                    ]
+                )
+                snapshot = {uid: words for uid, words in shots}
+                await self._db.periodical(snapshot)
 
             async with self._supervisor.idling:
                 await self._supervisor.idling.wait()
