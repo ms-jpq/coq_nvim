@@ -113,8 +113,8 @@ class Supervisor:
                     with timeit(f"WORKER -- {assoc.short_name}"):
                         instance, t1 = uuid4(), monotonic()
                         interrupted, items = True, 0
+                        await self._reviewer.s_begin(assoc, instance=instance)
                         try:
-                            await self._reviewer.s_begin(assoc, instance=instance)
                             async for items, completion in aenumerate(
                                 worker.work(context), start=1
                             ):
