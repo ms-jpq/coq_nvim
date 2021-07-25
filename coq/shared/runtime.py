@@ -70,38 +70,18 @@ class Supervisor:
         limits: Limits,
         reviewer: PReviewer,
     ) -> None:
-        self._pool, self._ppool = pool, ppool
-        self._options, self._limits = options, limits
-        self._nvim, self._reviewer = nvim, reviewer
+        self.pool, self.ppool = pool, ppool
+        self.options, self.limits = options, limits
+        self.nvim, self._reviewer = nvim, reviewer
 
+        self.idling = Condition()
         self._lock = Lock()
-        self._idling = Condition()
         self._workers: MutableMapping[Worker, BaseClient] = WeakKeyDictionary()
         self._tasks: Sequence[Task] = ()
 
     @property
-    def pool(self) -> Executor:
-        return self._pool
-
-    @property
-    def ppool(self) -> Executor:
-        return self._ppool
-
-    @property
-    def idling(self) -> Condition:
-        return self._idling
-
-    @property
-    def nvim(self) -> Nvim:
-        return self._nvim
-
-    @property
     def clients(self) -> AbstractSet[BaseClient]:
         return {*self._workers.values()}
-
-    @property
-    def options(self) -> Options:
-        return self._options
 
     def register(self, worker: Worker, assoc: BaseClient) -> None:
         self._reviewer.register(assoc)
@@ -109,8 +89,8 @@ class Supervisor:
 
     def notify_idle(self) -> None:
         async def cont() -> None:
-            async with self._idling:
-                self._idling.notify_all()
+            async with self.idling:
+                self.idling.notify_all()
 
         go(self.nvim, aw=cont())
 
@@ -124,9 +104,9 @@ class Supervisor:
             async with self._lock:
                 acc: MutableSequence[Metric] = []
                 timeout = (
-                    self._limits.manual_timeout
+                    self.limits.manual_timeout
                     if context.manual
-                    else self._limits.timeout
+                    else self.limits.timeout
                 )
 
                 async def supervise(worker: Worker, assoc: BaseClient) -> None:

@@ -33,7 +33,7 @@ class Worker(BaseWorker[BaseClient, None], CacheWorker):
                     w_before
                     if is_word(
                         c.sort_by[:1],
-                        unifying_chars=self._supervisor._options.unifying_chars,
+                        unifying_chars=self._supervisor.options.unifying_chars,
                     )
                     else sw_before
                 )
@@ -41,9 +41,9 @@ class Worker(BaseWorker[BaseClient, None], CacheWorker):
                     quick_ratio(
                         cword,
                         lower(c.sort_by),
-                        look_ahead=self._supervisor._options.look_ahead,
+                        look_ahead=self._supervisor.options.look_ahead,
                     )
-                    > self._supervisor._options.fuzzy_cutoff
+                    > self._supervisor.options.fuzzy_cutoff
                 )
                 if go:
                     yield c

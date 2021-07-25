@@ -1,3 +1,4 @@
+from concurrent.futures import Executor
 from contextlib import suppress
 from hashlib import md5
 from json import dumps, loads
@@ -69,7 +70,7 @@ def _dump(path: Path, o: Any) -> None:
             move(tmp.name, path)
 
 
-async def reconciliate(cwd: Path, paths: AbstractSet[str]) -> Tags:
+async def reconciliate(ppool: Executor, cwd: Path, paths: AbstractSet[str]) -> Tags:
     _TAGS_DIR.mkdir(parents=True, exist_ok=True)
     tags_path = _TAGS_DIR / md5(str(cwd).encode()).hexdigest()
 

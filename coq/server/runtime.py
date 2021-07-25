@@ -76,6 +76,7 @@ def stack(pool: Executor, ppool: Executor, nvim: Nvim) -> Stack:
     reviewer = Reviewer(options=settings.match, db=idb)
     supervisor = Supervisor(
         pool=pool,
+        ppool=ppool,
         nvim=nvim,
         options=settings.match,
         limits=settings.limits,
