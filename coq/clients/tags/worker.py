@@ -116,14 +116,15 @@ class Worker(BaseWorker[TagsClient, None]):
 
     async def _poll(self) -> None:
         while True:
-            cwd, buf_names = await _ls(self._supervisor.nvim)
-            tags = await reconciliate(
-                self._supervisor.nvim.loop,
-                ppool=self._supervisor.ppool,
-                cwd=cwd,
-                paths=buf_names,
-            )
-            await self._db.add(tags)
+            with timeit("IDLE :: TAGS", force=True):
+                cwd, buf_names = await _ls(self._supervisor.nvim)
+                tags = await reconciliate(
+                    self._supervisor.nvim.loop,
+                    ppool=self._supervisor.ppool,
+                    cwd=cwd,
+                    paths=buf_names,
+                )
+                await self._db.add(tags)
 
             async with self._supervisor.idling:
                 await self._supervisor.idling.wait()
