@@ -14,7 +14,7 @@ from typing import (
 )
 
 from pynvim.api.nvim import Nvim
-from pynvim_pp.api import buf_filetype, cur_buf, list_bufs, win_close
+from pynvim_pp.api import buf_filetype, cur_buf, get_cwd, win_close
 from pynvim_pp.float_win import list_floatwins
 from pynvim_pp.lib import async_call, go
 from std2.pickle import new_decoder
@@ -37,6 +37,19 @@ def _kill_float_wins(nvim: Nvim, stack: Stack) -> None:
 
 
 autocmd("WinEnter") << f"lua {_kill_float_wins.name}()"
+
+
+@rpc(blocking=True)
+def _new_cwd(nvim: Nvim, stack: Stack) -> None:
+    cwd = get_cwd(nvim)
+
+    async def cont() -> None:
+        await stack.ctdb.swap(cwd)
+
+    go(nvim, aw=cont())
+
+
+autocmd("DirChanged") << f"lua {_new_cwd.name}()"
 
 _EXTS: Mapping[str, AbstractSet[str]] = {}
 _SNIPPETS: Mapping[str, Sequence[ParsedSnippet]] = {}
