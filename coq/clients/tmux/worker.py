@@ -1,65 +1,15 @@
-from asyncio import gather
-from dataclasses import dataclass
 from shutil import which
-from typing import AbstractSet, AsyncIterator, Optional, Sequence, Tuple
+from typing import AsyncIterator
 
 from pynvim_pp.lib import go
-from std2.asyncio import call
 
 from ...databases.tmux.database import TMDB
-from ...shared.parse import coalesce
 from ...shared.runtime import Supervisor
 from ...shared.runtime import Worker as BaseWorker
 from ...shared.settings import WordbankClient
 from ...shared.timeit import timeit
 from ...shared.types import Completion, Context, Edit
-
-
-@dataclass(frozen=True)
-class _Pane:
-    uid: str
-    pane_active: bool
-    window_active: bool
-
-
-async def _panes() -> AsyncIterator[_Pane]:
-    proc = await call(
-        "tmux",
-        "list-panes",
-        "-s",
-        "-F",
-        "#{pane_id} #{pane_active} #{window_active}",
-    )
-    if proc.code:
-        pass
-    else:
-        for line in proc.out.decode().strip().splitlines():
-            pane_id, pane_active, window_active = line.split(" ")
-            pane = _Pane(
-                uid=pane_id,
-                pane_active=bool(int(pane_active)),
-                window_active=bool(int(window_active)),
-            )
-            yield pane
-
-
-async def _cur() -> Optional[_Pane]:
-    async for pane in _panes():
-        if pane.window_active and pane.pane_active:
-            return pane
-    else:
-        return None
-
-
-async def _screenshot(
-    unifying_chars: AbstractSet[str], uid: str
-) -> Tuple[str, Sequence[str]]:
-    proc = await call("tmux", "capture-pane", "-p", "-t", uid)
-    if proc.code:
-        return uid, ()
-    else:
-        words = coalesce(proc.out.decode(), unifying_chars=unifying_chars)
-        return uid, tuple(words)
+from ...tmux.parse import cur, snapshot
 
 
 class Worker(BaseWorker[WordbankClient, TMDB]):
@@ -74,24 +24,15 @@ class Worker(BaseWorker[WordbankClient, TMDB]):
     async def _poll(self) -> None:
         while True:
             with timeit("IDLE :: TMUX"):
-                shots = await gather(
-                    *[
-                        _screenshot(
-                            self._supervisor.options.unifying_chars,
-                            uid=pane.uid,
-                        )
-                        async for pane in _panes()
-                    ]
-                )
-                snapshot = {uid: words for uid, words in shots}
-                await self._misc.periodical(snapshot)
+                snap = await snapshot(self._supervisor.options.unifying_chars)
+                await self._misc.periodical(snap)
 
             async with self._supervisor.idling:
                 await self._supervisor.idling.wait()
 
     async def work(self, context: Context) -> AsyncIterator[Completion]:
         match = context.words or (context.syms if self._options.match_syms else "")
-        active = await _cur() if self._tmux else None
+        active = await cur() if self._tmux else None
         words = (
             await self._misc.select(
                 self._supervisor.options,

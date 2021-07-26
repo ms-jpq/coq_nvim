@@ -22,8 +22,8 @@ from std2.pickle import new_decoder
 from ...consts import SNIPPET_ARTIFACTS
 from ...registry import atomic, autocmd, rpc
 from ...snippets.types import ASnips, ParsedSnippet
+from ...tmux.parse import snapshot
 from ...treesitter.request import async_request
-from ...treesitter.types import Payload
 from ..rt_types import Stack
 from ..state import state
 
@@ -147,7 +147,11 @@ autocmd("InsertEnter") << f"lua {_insert_enter.name}()"
 
 @rpc(blocking=True)
 def _on_focus(nvim: Nvim, stack: Stack) -> None:
-    pass
+    async def cont() -> None:
+        snap = await snapshot(stack.settings.match.unifying_chars)
+        await stack.tmdb.periodical(snap)
+
+    go(nvim, aw=cont())
 
 
 autocmd("FocusGained") << f"lua {_on_focus.name}()"
