@@ -2,7 +2,6 @@ from multiprocessing import cpu_count
 from os import environ, name
 from pathlib import Path
 
-AIO_CHUNKS = 100
 MP_CUTOFF = 200 if cpu_count() > 1 else 999999
 
 TOP_LEVEL = Path(__file__).resolve().parent.parent
