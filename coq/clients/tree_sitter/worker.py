@@ -1,12 +1,26 @@
 from typing import AsyncIterator
 
+from pynvim_pp.lib import go
+
 from ...databases.treesitter.database import TDB
+from ...shared.runtime import Supervisor
 from ...shared.runtime import Worker as BaseWorker
 from ...shared.settings import BaseClient
 from ...shared.types import Completion, Context, Edit
 
 
 class Worker(BaseWorker[BaseClient, TDB]):
+    def __init__(self, supervisor: Supervisor, options: BaseClient, misc: TDB) -> None:
+        super().__init__(supervisor, options=options, misc=misc)
+        go(supervisor.nvim, aw=self._poll())
+
+    async def _poll(self) -> None:
+        while True:
+            pass
+
+            async with self._supervisor.idling:
+                await self._supervisor.idling.wait()
+
     async def work(self, context: Context) -> AsyncIterator[Completion]:
         match = context.words or context.syms
         words = await self._misc.select(
