@@ -1,5 +1,6 @@
 from concurrent.futures import Executor
 from contextlib import closing
+from hashlib import md5
 from sqlite3 import Connection, OperationalError
 from threading import Lock
 from typing import Iterator, Mapping, Sequence, cast
@@ -7,13 +8,15 @@ from typing import Iterator, Mapping, Sequence, cast
 from std2.asyncio import run_in_executor
 from std2.sqlite3 import with_transaction
 
-from ...consts import TAGS_DB
+from ...consts import CLIENTS_DIR
 from ...shared.executor import SingleThreadExecutor
 from ...shared.settings import Options
 from ...shared.sql import BIGGEST_INT, init_db
 from .parser import Tag
 from .reconciliate import Tag, Tags
 from .sql import sql
+
+_TAGS_DIR = CLIENTS_DIR / "tags"
 
 _NIL_TAG = Tag(
     language="",
@@ -29,8 +32,9 @@ _NIL_TAG = Tag(
 )
 
 
-def _init() -> Connection:
-    conn = Connection(TAGS_DB, isolation_level=None)
+def _init(cwd: str) -> Connection:
+    db = (_TAGS_DIR / md5(cwd.encode()).hexdigest()).with_suffix(".sqlite3")
+    conn = Connection(str(db), isolation_level=None)
     init_db(conn)
     conn.executescript(sql("create", "pragma"))
     conn.executescript(sql("create", "tables"))
@@ -46,6 +50,14 @@ class Database:
     def _interrupt(self) -> None:
         with self._lock:
             self._conn.interrupt()
+
+    async def swap(self, cwd: str) -> None:
+        def cont() -> None:
+            with self._lock:
+                self._conn.close()
+                self._conn = _init(cwd)
+
+        await run_in_executor(self._ex.submit, cont)
 
     async def add(self, tags: Tags) -> None:
         def cont() -> None:
