@@ -2,6 +2,7 @@ from concurrent.futures import Executor
 from typing import Iterator
 
 from pynvim import Nvim
+from pynvim_pp.api import get_cwd
 from std2.configparser import hydrate
 from std2.pickle import new_decoder
 from std2.tree import merge
@@ -73,7 +74,14 @@ def _from_each_according_to_their_ability(
 
 def stack(pool: Executor, nvim: Nvim) -> Stack:
     settings = _settings(nvim)
-    bdb, sdb, idb, tdb, ctdb = BDB(pool), SDB(pool), IDB(pool), TDB(pool), CTDB(pool)
+    cwd = get_cwd(nvim)
+    bdb, sdb, idb, tdb, ctdb = (
+        BDB(pool),
+        SDB(pool),
+        IDB(pool),
+        TDB(pool),
+        CTDB(pool, cwd=cwd),
+    )
     reviewer = Reviewer(
         options=settings.match,
         db=idb,

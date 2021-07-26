@@ -41,10 +41,10 @@ def _init(cwd: str) -> Connection:
 
 
 class CTDB:
-    def __init__(self, pool: Executor) -> None:
+    def __init__(self, pool: Executor, cwd: str) -> None:
         self._lock = Lock()
         self._ex = SingleThreadExecutor(pool)
-        self._conn: Connection = self._ex.submit(_init)
+        self._conn: Connection = self._ex.submit(_init, cwd)
 
     def _interrupt(self) -> None:
         with self._lock:
