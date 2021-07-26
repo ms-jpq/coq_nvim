@@ -134,16 +134,23 @@ def _insert_enter(nvim: Nvim, stack: Stack) -> None:
     buf = cur_buf(nvim)
 
     async def cont() -> None:
-        if buf.number in heavy_bufs:
-            payloads: Sequence[Payload] = ()
-        else:
-            payloads = [p async for p in async_request(nvim)]
+        payloads = (
+            () if buf.number in heavy_bufs else [p async for p in async_request(nvim)]
+        )
         await stack.tdb.new_nodes({payload.text: payload.kind for payload in payloads})
 
     go(nvim, aw=cont())
 
 
 autocmd("InsertEnter") << f"lua {_insert_enter.name}()"
+
+
+@rpc(blocking=True)
+def _on_focus(nvim: Nvim, stack: Stack) -> None:
+    pass
+
+
+autocmd("FocusGained") << f"lua {_on_focus.name}()"
 
 _HANDLE: Optional[Handle] = None
 
