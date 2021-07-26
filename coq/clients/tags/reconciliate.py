@@ -73,7 +73,7 @@ def _dump(path: Path, o: Any) -> None:
             move(tmp.name, path)
 
 
-_LRU = LRU[Path, Any](size=3)
+_LRU = LRU[Path, Tags](size=3)
 
 
 async def reconciliate(
