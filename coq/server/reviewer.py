@@ -1,4 +1,6 @@
+from asyncio import AbstractEventLoop
 from collections import Counter
+from concurrent.futures import Executor
 from dataclasses import dataclass
 from typing import Mapping
 from uuid import UUID, uuid4
@@ -6,7 +8,7 @@ from uuid import UUID, uuid4
 from ..databases.insertions.database import IDB
 from ..shared.context import EMPTY_CONTEXT
 from ..shared.fuzzy import MatchMetrics, metrics
-from ..shared.parse import coalesce, display_width, is_word, lower
+from ..shared.parse import acoalesce_lines, display_width, is_word, lower
 from ..shared.runtime import Metric, PReviewer
 from ..shared.settings import BaseClient, Options, Weights
 from ..shared.types import Completion, Context
@@ -61,7 +63,10 @@ def _join(
 
 
 class Reviewer(PReviewer):
-    def __init__(self, options: Options, db: IDB) -> None:
+    def __init__(
+        self, loop: AbstractEventLoop, ppool: Executor, options: Options, db: IDB
+    ) -> None:
+        self._loop, self._ppool = loop, ppool
         self._options, self._db = options, db
         self._ctx = _ReviewCtx(
             batch=uuid4(),
@@ -76,11 +81,13 @@ class Reviewer(PReviewer):
 
     async def begin(self, context: Context) -> None:
         inserted = await self._db.insertion_order(n_rows=100)
-        neighbours = Counter(
-            word
-            for line in context.lines
-            for word in coalesce(line, unifying_chars=self._options.unifying_chars)
+        words = await acoalesce_lines(
+            self._loop,
+            ppool=self._ppool,
+            lines=context.lines,
+            unifying_chars=self._options.unifying_chars,
         )
+        neighbours = Counter(words)
         ctx = _ReviewCtx(
             batch=uuid4(),
             context=context,

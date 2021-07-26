@@ -73,7 +73,12 @@ def _from_each_according_to_their_ability(
 def stack(pool: Executor, ppool: Executor, nvim: Nvim) -> Stack:
     settings = _settings(nvim)
     bdb, sdb, idb, tdb = BDB(pool), SDB(pool), IDB(pool), TDB(pool)
-    reviewer = Reviewer(options=settings.match, db=idb)
+    reviewer = Reviewer(
+        loop=nvim.loop,
+        ppool=ppool,
+        options=settings.match,
+        db=idb,
+    )
     supervisor = Supervisor(
         pool=pool,
         ppool=ppool,

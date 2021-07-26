@@ -105,10 +105,11 @@ async def acoalesce_lines(
     unifying_chars: AbstractSet[str],
 ) -> Sequence[str]:
     async def cont() -> AsyncIterator[str]:
-        for fut in as_completed(
+        cos = tuple(
             acoalesce(loop, ppool=ppool, text=chunk, unifying_chars=unifying_chars)
             for chunk in chunk_into(lines)
-        ):
+        )
+        for fut in as_completed(cos):
             for word in await fut:
                 yield word
 
