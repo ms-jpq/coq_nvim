@@ -16,6 +16,7 @@ from ...tags.types import Tag, Tags
 from .sql import sql
 
 _TAGS_DIR = CLIENTS_DIR / "tags"
+_SCHEMA = "v0"
 
 _NIL_TAG = Tag(
     language="",
@@ -32,7 +33,8 @@ _NIL_TAG = Tag(
 
 
 def _init(cwd: str) -> Connection:
-    db = (_TAGS_DIR / md5(cwd.encode()).hexdigest()).with_suffix(".sqlite3")
+    name = f"{md5(cwd.encode()).hexdigest()}-{_SCHEMA}"
+    db = (_TAGS_DIR / name).with_suffix(".sqlite3")
     conn = Connection(str(db), isolation_level=None)
     init_db(conn)
     conn.executescript(sql("create", "pragma"))
