@@ -1,4 +1,6 @@
-from typing import AbstractSet, Iterable, Iterator, MutableSequence
+from asyncio.events import AbstractEventLoop
+from concurrent.futures import Executor
+from typing import AbstractSet, Iterable, Iterator, MutableSequence, Sequence, Union
 from unicodedata import east_asian_width
 
 _UNICODE_WIDTH_LOOKUP = {
@@ -62,4 +64,19 @@ def coalesce(chars: Iterable[str], unifying_chars: AbstractSet[str]) -> Iterator
     yield from wit()
     yield from sit()
 
+
+def _coalesce(
+    text: Union[str, bytes], unifying_chars: AbstractSet[str]
+) -> Sequence[str]:
+    chars = text.decode() if isinstance(text, bytes) else text
+    return tuple(coalesce(chars, unifying_chars=unifying_chars))
+
+
+async def acoalesce(
+    loop: AbstractEventLoop,
+    ppool: Executor,
+    text: Union[str, bytes],
+    unifying_chars: AbstractSet[str],
+) -> Sequence[str]:
+    return await loop.run_in_executor(ppool, _coalesce, text, unifying_chars)
 

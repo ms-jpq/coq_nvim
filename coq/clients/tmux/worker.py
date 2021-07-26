@@ -1,4 +1,6 @@
 from asyncio import gather
+from asyncio.events import AbstractEventLoop
+from concurrent.futures import Executor
 from dataclasses import dataclass
 from shutil import which
 from typing import AbstractSet, AsyncIterator, Optional, Sequence, Tuple
@@ -6,7 +8,7 @@ from typing import AbstractSet, AsyncIterator, Optional, Sequence, Tuple
 from pynvim_pp.lib import go
 from std2.asyncio import call
 
-from ...shared.parse import coalesce
+from ...shared.parse import acoalesce
 from ...shared.runtime import Supervisor
 from ...shared.runtime import Worker as BaseWorker
 from ...shared.settings import WordbankClient
@@ -52,13 +54,15 @@ async def _cur() -> Optional[_Pane]:
 
 
 async def _screenshot(
-    unifying_chars: AbstractSet[str], uid: str
+    loop: AbstractEventLoop, ppool: Executor, unifying_chars: AbstractSet[str], uid: str
 ) -> Tuple[str, Sequence[str]]:
     proc = await call("tmux", "capture-pane", "-p", "-t", uid)
     if proc.code:
         return uid, ()
     else:
-        words = tuple(coalesce(proc.out.decode(), unifying_chars=unifying_chars))
+        words = await acoalesce(
+            loop, ppool=ppool, text=proc.out, unifying_chars=unifying_chars
+        )
         return uid, words
 
 
@@ -78,7 +82,10 @@ class Worker(BaseWorker[WordbankClient, None]):
                 shots = await gather(
                     *[
                         _screenshot(
-                            self._supervisor.options.unifying_chars, uid=pane.uid
+                            self._supervisor.nvim.loop,
+                            ppool=self._supervisor.ppool,
+                            unifying_chars=self._supervisor.options.unifying_chars,
+                            uid=pane.uid,
                         )
                         async for pane in _panes()
                     ]
