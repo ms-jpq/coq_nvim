@@ -42,7 +42,7 @@ def _sort_by(adjustment: Weights) -> Callable[[Metric], Any]:
             val / adjust[key] if adjust[key] else 0
             for key, val in asdict(metric.weight).items()
         )
-        return (
+        key = (
             -round(tot * 1000),
             -len(metric.comp.secondary_edits),
             -(metric.comp.kind != ""),
@@ -51,6 +51,7 @@ def _sort_by(adjustment: Weights) -> Callable[[Metric], Any]:
             -metric.comp.sort_by[:1].isalnum(),
             strxfrm(metric.comp.sort_by),
         )
+        return key
 
     return key_by
 
