@@ -1,15 +1,14 @@
-from asyncio import AbstractEventLoop
+from asyncio import AbstractEventLoop, gather
 from collections import Counter
 from concurrent.futures import Executor
 from dataclasses import dataclass
-from itertools import chain
 from typing import Mapping
 from uuid import UUID, uuid4
 
 from ..databases.insertions.database import IDB
 from ..shared.context import EMPTY_CONTEXT
 from ..shared.fuzzy import MatchMetrics, metrics
-from ..shared.parse import coalesce, display_width, is_word, lower
+from ..shared.parse import acoalesce_lines, display_width, is_word, lower
 from ..shared.runtime import Metric, PReviewer
 from ..shared.settings import BaseClient, Options, Weights
 from ..shared.types import Completion, Context
@@ -81,10 +80,14 @@ class Reviewer(PReviewer):
         self._db.new_source(assoc.short_name)
 
     async def begin(self, context: Context) -> None:
-        inserted = await self._db.insertion_order(n_rows=100)
-        words = coalesce(
-            chain.from_iterable(context.lines),
-            unifying_chars=self._options.unifying_chars,
+        inserted, words = await gather(
+            self._db.insertion_order(n_rows=100),
+            acoalesce_lines(
+                self._loop,
+                ppool=self._ppool,
+                lines=context.lines,
+                unifying_chars=self._options.unifying_chars,
+            ),
         )
         neighbours = Counter(words)
         ctx = _ReviewCtx(
