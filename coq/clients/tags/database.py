@@ -3,7 +3,7 @@ from contextlib import closing
 from hashlib import md5
 from sqlite3 import Connection, OperationalError
 from threading import Lock
-from typing import Iterator, Mapping, Sequence, cast
+from typing import AbstractSet, Iterator, Mapping, Sequence, Tuple, cast
 
 from std2.asyncio import run_in_executor
 from std2.sqlite3 import with_transaction
@@ -12,8 +12,7 @@ from ...consts import CLIENTS_DIR
 from ...shared.executor import SingleThreadExecutor
 from ...shared.settings import Options
 from ...shared.sql import BIGGEST_INT, init_db
-from .parser import Tag
-from .reconciliate import Tag, Tags
+from .parser import Tag, Tags
 from .sql import sql
 
 _TAGS_DIR = CLIENTS_DIR / "tags"
@@ -59,8 +58,8 @@ class Database:
 
         await run_in_executor(self._ex.submit, cont)
 
-    async def add(self, tags: Tags) -> None:
-        def cont() -> None:
+    async def paths(self) -> Mapping[str, Tuple[float, str]]:
+        def cont() -> Mapping[str, Tuple[float, str]]:
             with self._lock, closing(self._conn.cursor()) as cursor:
                 with with_transaction(cursor):
                     cursor.execute(sql("select", "files"), ())
@@ -68,39 +67,35 @@ class Database:
                         row["filename"]: (row["filetype"], row["mtime"])
                         for row in cursor.fetchall()
                     }
+                    return files
 
-                    def ded() -> Iterator[str]:
-                        for f, (ft, mtime) in files.items():
-                            info = tags.get(f)
-                            if info:
-                                if info["lang"] != ft or info["mtime"] != mtime:
-                                    yield f
-                            else:
-                                yield f
+        def step() -> Mapping[str, Tuple[float, str]]:
+            return self._ex.submit(cont)
 
-                    dead = {*ded()}
-                    live = files.keys() - dead
+        return await run_in_executor(step)
 
-                    def m0() -> Iterator[Mapping]:
-                        for f in dead:
-                            yield {"filename": f}
+    async def reconciliate(self, dead: AbstractSet[str], new: Tags) -> None:
+        def cont() -> None:
+            with self._lock, closing(self._conn.cursor()) as cursor:
+                with with_transaction(cursor):
 
                     def m1() -> Iterator[Mapping]:
-                        for filename, info in tags.items():
-                            if filename not in live:
-                                yield {
-                                    "filename": filename,
-                                    "filetype": info["lang"],
-                                    "mtime": info["mtime"],
-                                }
+                        for filename, (lang, mtime, _) in new.items():
+                            yield {
+                                "filename": filename,
+                                "filetype": lang,
+                                "mtime": mtime,
+                            }
 
                     def m2() -> Iterator[Mapping]:
-                        for filename, info in tags.items():
-                            if filename not in live:
-                                for tag in info["tags"]:
-                                    yield {**_NIL_TAG, **tag}
+                        for _, _, tags in new.values():
+                            for tag in tags:
+                                yield {**_NIL_TAG, **tag}
 
-                    cursor.executemany(sql("delete", "file"), m0())
+                    cursor.executemany(
+                        sql("delete", "file"),
+                        ({"filename": f} for f in dead | new.keys()),
+                    )
                     cursor.executemany(sql("insert", "file"), m1())
                     cursor.executemany(sql("insert", "tag"), m2())
 

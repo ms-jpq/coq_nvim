@@ -1,12 +1,19 @@
 from json import loads
 from json.decoder import JSONDecodeError
-from typing import AsyncIterator, Iterator, Optional, TypedDict
+from typing import (
+    Iterator,
+    Mapping,
+    MutableMapping,
+    MutableSequence,
+    Optional,
+    Sequence,
+    Tuple,
+    TypedDict,
+)
 
 from pynvim_pp.logging import log
 from std2.asyncio import call
 from std2.string import removeprefix, removesuffix
-
-from ...shared.timeit import timeit
 
 
 class Tag(TypedDict):
@@ -26,6 +33,8 @@ class Tag(TypedDict):
 
     access: Optional[str]
 
+
+Tags = Mapping[str, Tuple[str, float, Sequence[Tag]]]
 
 _FIELDS = "".join(
     f"{{{f}}}"
@@ -74,16 +83,23 @@ def _unescape(pattern: str) -> str:
     return "".join(cont())
 
 
-async def parse_lines(raw: str) -> AsyncIterator[Tag]:
-    with timeit("Parse ctags"):
-        for line in raw.splitlines():
-            if line:
-                try:
-                    json = loads(line)
-                except JSONDecodeError:
-                    log.exception("%s", line)
-                    raise
+def parse_lines(mtimes: Mapping[str, float], raw: str) -> Tags:
+    tags: MutableMapping[str, Tuple[str, float, MutableSequence[Tag]]] = {}
+
+    for line in raw.splitlines():
+        if line:
+            try:
+                json = loads(line)
+            except JSONDecodeError:
+                log.exception("%s", line)
+            else:
                 if json["_type"] == "tag":
+                    path = json["path"]
                     json["pattern"] = _unescape(json["pattern"])
-                    yield json
+                    _, _, acc = tags.setdefault(
+                        path, (json["language"], mtimes.get(path, 0), [])
+                    )
+                    acc.append(json)
+
+    return tags
 

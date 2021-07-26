@@ -16,9 +16,12 @@ class Parser(IsolatedAsyncioTestCase):
             tag.write_text(text)
 
         spec = tag.read_text()
-        parsed = [tag async for tag in parse_lines(spec)]
+        parsed = parse_lines({}, raw=spec)
 
         cols, _ = get_terminal_size()
         sep = linesep + "-" * cols + linesep
-        print(*islice(parsed, 10), sep=sep)
+        print(
+            *islice((tag for _, _, tags in parsed.values() for tag in tags), 10),
+            sep=sep
+        )
 

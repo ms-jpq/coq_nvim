@@ -1,13 +1,24 @@
+from asyncio import gather
 from contextlib import suppress
 from os import linesep
 from os.path import dirname, relpath
 from pathlib import Path
 from shutil import which
-from typing import AbstractSet, AsyncIterator, Iterator, MutableSet, Tuple
+from typing import (
+    AbstractSet,
+    AsyncIterator,
+    Iterable,
+    Iterator,
+    Mapping,
+    MutableSet,
+    Tuple,
+)
 
 from pynvim.api.nvim import Nvim, NvimError
 from pynvim_pp.api import buf_name, get_cwd, list_bufs
 from pynvim_pp.lib import async_call, go
+from std2.asyncio import run_in_executor
+from std2.pathlib import is_relative_to
 
 from ...shared.runtime import Supervisor
 from ...shared.runtime import Worker as BaseWorker
@@ -15,8 +26,7 @@ from ...shared.settings import TagsClient
 from ...shared.timeit import timeit
 from ...shared.types import Completion, Context, Doc, Edit
 from .database import Database
-from .parser import Tag
-from .reconciliate import reconciliate
+from .parser import Tag, parse_lines, run
 
 
 async def _ls(nvim: Nvim) -> Tuple[Path, AbstractSet[str]]:
@@ -26,11 +36,23 @@ async def _ls(nvim: Nvim) -> Tuple[Path, AbstractSet[str]]:
                 filename = buf_name(nvim, buf=buf)
                 yield filename
 
-    def cont() -> Tuple[Path, AbstractSet[str]]:
+    def c2() -> Tuple[Path, AbstractSet[str]]:
         cwd = Path(get_cwd(nvim))
         return cwd, {*c1()}
 
-    return await async_call(nvim, cont)
+    return await async_call(nvim, c2)
+
+
+async def _mtimes(cwd: Path, paths: AbstractSet[str]) -> Mapping[str, float]:
+    def c1() -> Iterable[Tuple[Path, float]]:
+        for path in map(Path, paths):
+            if is_relative_to(path, cwd):
+                with suppress(FileNotFoundError):
+                    stat = path.stat()
+                    yield path, stat.st_mtime
+
+    c2 = lambda: {str(key): val for key, val in c1()}
+    return await run_in_executor(c2)
 
 
 def _doc(client: TagsClient, context: Context, tag: Tag) -> Doc:
@@ -117,14 +139,20 @@ class Worker(BaseWorker[TagsClient, None]):
     async def _poll(self) -> None:
         while True:
             with timeit("IDLE :: TAGS", force=True):
-                cwd, buf_names = await _ls(self._supervisor.nvim)
-                tags = await reconciliate(
-                    self._supervisor.nvim.loop,
-                    ppool=self._supervisor.ppool,
-                    cwd=cwd,
-                    paths=buf_names,
+                (cwd, buf_names), existing = await gather(
+                    _ls(self._supervisor.nvim), self._db.paths()
                 )
-                await self._db.add(tags)
+                paths = buf_names | existing.keys()
+                mtimes = await _mtimes(cwd, paths=paths)
+                query_paths = tuple(
+                    path
+                    for path, mtime in mtimes.items()
+                    if (mtime, "") > existing.get(path, (0, ""))
+                )
+                raw = await run(*query_paths) if query_paths else ""
+                new = parse_lines(mtimes, raw=raw)
+                dead = existing.keys() - mtimes.keys()
+                await self._db.reconciliate(dead, new=new)
 
             async with self._supervisor.idling:
                 await self._supervisor.idling.wait()
