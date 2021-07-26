@@ -15,7 +15,7 @@ from typing import (
 )
 
 from pynvim.api.nvim import Nvim, NvimError
-from pynvim_pp.api import buf_name, get_cwd, list_bufs
+from pynvim_pp.api import buf_name, list_bufs
 from pynvim_pp.lib import async_call, go
 from std2.asyncio import run_in_executor
 from std2.pathlib import is_relative_to
@@ -30,27 +30,22 @@ from ...tags.parse import parse, run
 from ...tags.types import Tag
 
 
-async def _ls(nvim: Nvim) -> Tuple[Path, AbstractSet[str]]:
-    def c1() -> Iterator[str]:
+async def _ls(nvim: Nvim) -> AbstractSet[str]:
+    def cont() -> Iterator[str]:
         for buf in list_bufs(nvim, listed=True):
             with suppress(NvimError):
                 filename = buf_name(nvim, buf=buf)
                 yield filename
 
-    def c2() -> Tuple[Path, AbstractSet[str]]:
-        cwd = Path(get_cwd(nvim))
-        return cwd, {*c1()}
-
-    return await async_call(nvim, c2)
+    return await async_call(nvim, lambda: {*cont()})
 
 
-async def _mtimes(cwd: Path, paths: AbstractSet[str]) -> Mapping[str, float]:
+async def _mtimes(paths: AbstractSet[str]) -> Mapping[str, float]:
     def c1() -> Iterable[Tuple[Path, float]]:
         for path in map(Path, paths):
-            if is_relative_to(path, cwd):
-                with suppress(FileNotFoundError):
-                    stat = path.stat()
-                    yield path, stat.st_mtime
+            with suppress(FileNotFoundError):
+                stat = path.stat()
+                yield path, stat.st_mtime
 
     c2 = lambda: {str(key): val for key, val in c1()}
     return await run_in_executor(c2)
@@ -62,11 +57,11 @@ def _doc(client: TagsClient, context: Context, tag: Tag) -> Doc:
         path, cfn = PurePath(tag["path"]), PurePath(context.filename)
         if path == cfn:
             pos = "."
-        elif path.anchor != cfn.anchor or PurePath(commonpath((path, cfn))) in {
-            PurePath(sep),
-            Path.home(),
-        }:
-            pos = str(path)
+        elif not is_relative_to(path, context.cwd):
+            try:
+                pos = str(path.relative_to(Path.home()))
+            except ValueError:
+                pos = str(path)
         else:
             pos = relpath(path, cfn.parent)
 
@@ -145,11 +140,11 @@ class Worker(BaseWorker[TagsClient, CTDB]):
     async def _poll(self) -> None:
         while True:
             with timeit("IDLE :: TAGS"):
-                (cwd, buf_names), existing = await gather(
+                buf_names, existing = await gather(
                     _ls(self._supervisor.nvim), self._misc.paths()
                 )
                 paths = buf_names | existing.keys()
-                mtimes = await _mtimes(cwd, paths=paths)
+                mtimes = await _mtimes(paths)
                 query_paths = tuple(
                     path
                     for path, mtime in mtimes.items()
