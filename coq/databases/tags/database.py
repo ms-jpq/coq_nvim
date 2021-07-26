@@ -35,6 +35,7 @@ _NIL_TAG = Tag(
 def _init(cwd: str) -> Connection:
     name = f"{md5(cwd.encode()).hexdigest()}-{_SCHEMA}"
     db = (_TAGS_DIR / name).with_suffix(".sqlite3")
+    db.parent.mkdir(parents=True, exist_ok=True)
     conn = Connection(str(db), isolation_level=None)
     init_db(conn)
     conn.executescript(sql("create", "pragma"))
