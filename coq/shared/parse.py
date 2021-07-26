@@ -1,20 +1,13 @@
 from asyncio import gather
 from asyncio.events import AbstractEventLoop
-from asyncio.tasks import as_completed
 from concurrent.futures import Executor
 from itertools import chain
-from typing import (
-    AbstractSet,
-    AsyncIterator,
-    Iterable,
-    Iterator,
-    MutableSequence,
-    Sequence,
-    Union,
-)
+from typing import AbstractSet, Iterable, Iterator, MutableSequence, Sequence, Union
 from unicodedata import east_asian_width
 
 from std2.itertools import chunk_into
+
+from ..consts import MP_CUTOFF
 
 _UNICODE_WIDTH_LOOKUP = {
     "W": 2,  # CJK
@@ -105,11 +98,16 @@ async def acoalesce_lines(
     lines: Sequence[str],
     unifying_chars: AbstractSet[str],
 ) -> Sequence[str]:
-    seqs = await gather(
-        *(
-            acoalesce(loop, ppool=ppool, text=chunk, unifying_chars=unifying_chars)
-            for chunk in chunk_into(lines)
+    if len(lines) <= MP_CUTOFF:
+        return tuple(
+            coalesce(chain.from_iterable(lines), unifying_chars=unifying_chars)
         )
-    )
-    return tuple(chain.from_iterable(seqs))
+    else:
+        seqs = await gather(
+            *(
+                acoalesce(loop, ppool=ppool, text=chunk, unifying_chars=unifying_chars)
+                for chunk in chunk_into(lines)
+            )
+        )
+        return tuple(chain.from_iterable(seqs))
 
