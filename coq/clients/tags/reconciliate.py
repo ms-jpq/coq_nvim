@@ -14,6 +14,7 @@ from typing import (
     Mapping,
     MutableMapping,
     MutableSequence,
+    Optional,
     Tuple,
     TypedDict,
     cast,
@@ -57,11 +58,11 @@ def _load(path: Path) -> Tags:
         return {}
     else:
         try:
-            tags = loads(json)
+            tags: Tags = loads(json)
         except JSONDecodeError:
             return {}
         else:
-            return cast(Tags, tags)
+            return tags
 
 
 def _dump(path: Path, o: Any) -> None:
@@ -82,7 +83,7 @@ async def reconciliate(
     _TAGS_DIR.mkdir(parents=True, exist_ok=True)
     tags_path = _TAGS_DIR / md5(str(cwd).encode()).hexdigest()
 
-    existing = _LRU.get(tags_path) or await loop.run_in_executor(
+    existing: Tags = cast(Any, _LRU.get(tags_path)) or await loop.run_in_executor(
         ppool, _load, tags_path
     )
 
@@ -105,11 +106,11 @@ async def reconciliate(
         info["lang"] = tag["language"]
         info["tags"].append(tag)
 
-    if acc:
+    if not acc:
+        return existing
+    else:
         new = {**{key: val for key, val in existing.items() if key in mtimes}, **acc}
         await loop.run_in_executor(ppool, _dump, tags_path, new)
         _LRU[tags_path] = new
-    else:
-        new = existing
-    return new
+        return new
 
