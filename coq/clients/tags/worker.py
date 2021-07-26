@@ -62,7 +62,10 @@ def _doc(client: TagsClient, context: Context, tag: Tag) -> Doc:
         path, cfn = PurePath(tag["path"]), PurePath(context.filename)
         if path == cfn:
             pos = "."
-        elif path.anchor != cfn.anchor or commonpath((path, cfn)) == sep:
+        elif path.anchor != cfn.anchor or PurePath(commonpath((path, cfn))) in {
+            PurePath(sep),
+            Path.home(),
+        }:
             pos = str(path)
         else:
             pos = relpath(path, cfn.parent)
