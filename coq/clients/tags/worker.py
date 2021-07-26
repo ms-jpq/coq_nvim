@@ -59,9 +59,11 @@ def _doc(client: TagsClient, context: Context, tag: Tag) -> Doc:
             pos = "."
         elif not is_relative_to(path, context.cwd):
             try:
-                pos = f"~{sep}{path.relative_to(Path.home())}"
+                rel = path.relative_to(Path.home())
             except ValueError:
                 pos = str(path)
+            else:
+                pos = f"~{sep}{rel}"
         else:
             pos = relpath(path, cfn.parent)
 
