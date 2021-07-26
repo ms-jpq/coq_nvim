@@ -1,3 +1,4 @@
+from asyncio import gather
 from asyncio.events import AbstractEventLoop
 from asyncio.tasks import as_completed
 from concurrent.futures import Executor
@@ -104,14 +105,11 @@ async def acoalesce_lines(
     lines: Sequence[str],
     unifying_chars: AbstractSet[str],
 ) -> Sequence[str]:
-    async def cont() -> AsyncIterator[str]:
-        cos = tuple(
+    seqs = await gather(
+        *(
             acoalesce(loop, ppool=ppool, text=chunk, unifying_chars=unifying_chars)
             for chunk in chunk_into(lines)
         )
-        for fut in as_completed(cos):
-            for word in await fut:
-                yield word
-
-    return [word async for word in cont()]
+    )
+    return tuple(chain.from_iterable(seqs))
 
