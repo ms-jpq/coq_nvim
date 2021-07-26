@@ -70,7 +70,7 @@ def _from_each_according_to_their_ability(
         yield T9Worker(supervisor, options=clients.tabnine, misc=None)
 
 
-def stack(pool: Executor, ppool: Executor, nvim: Nvim) -> Stack:
+def stack(pool: Executor, nvim: Nvim) -> Stack:
     settings = _settings(nvim)
     bdb, sdb, idb, tdb = BDB(pool), SDB(pool), IDB(pool), TDB(pool)
     reviewer = Reviewer(
@@ -79,7 +79,6 @@ def stack(pool: Executor, ppool: Executor, nvim: Nvim) -> Stack:
     )
     supervisor = Supervisor(
         pool=pool,
-        ppool=ppool,
         nvim=nvim,
         options=settings.match,
         limits=settings.limits,

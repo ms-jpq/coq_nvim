@@ -1,6 +1,4 @@
 from asyncio import gather
-from asyncio.events import AbstractEventLoop
-from concurrent.futures import Executor
 from dataclasses import dataclass
 from shutil import which
 from typing import AbstractSet, AsyncIterator, Optional, Sequence, Tuple

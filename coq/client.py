@@ -1,5 +1,5 @@
 from asyncio.events import AbstractEventLoop
-from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor
+from concurrent.futures import ThreadPoolExecutor
 from logging import DEBUG as DEBUG_LV
 from logging import INFO
 from multiprocessing import cpu_count
@@ -37,7 +37,6 @@ def _set_debug() -> None:
 class CoqClient(Client):
     def __init__(self) -> None:
         self._pool = ThreadPoolExecutor(max_workers=min(16, cpu_count() + 8))
-        self._ppool = ProcessPoolExecutor()
         self._handlers: MutableMapping[str, RpcCallable] = {}
         self._event_queue: SimpleQueue = SimpleQueue()
         self._stack: Optional[Stack] = None
@@ -71,7 +70,7 @@ class CoqClient(Client):
             rpc_atomic, specs = rpc.drain(nvim.channel_id)
             self._handlers.update(specs)
 
-            self._stack = stack(self._pool, ppool=self._ppool, nvim=nvim)
+            self._stack = stack(self._pool, nvim=nvim)
             (rpc_atomic + autocmd.drain() + atomic).commit(nvim)
             set_options(nvim, mapping=self._stack.settings.keymap)
 

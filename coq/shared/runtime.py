@@ -64,13 +64,12 @@ class Supervisor:
     def __init__(
         self,
         pool: Executor,
-        ppool: Executor,
         nvim: Nvim,
         options: Options,
         limits: Limits,
         reviewer: PReviewer,
     ) -> None:
-        self.pool, self.ppool = pool, ppool
+        self.pool = pool
         self.options, self.limits = options, limits
         self.nvim, self._reviewer = nvim, reviewer
 
