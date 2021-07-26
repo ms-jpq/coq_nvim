@@ -1,7 +1,19 @@
 from asyncio.events import AbstractEventLoop
+from asyncio.tasks import as_completed
 from concurrent.futures import Executor
-from typing import AbstractSet, Iterable, Iterator, MutableSequence, Sequence, Union
+from itertools import chain
+from typing import (
+    AbstractSet,
+    AsyncIterator,
+    Iterable,
+    Iterator,
+    MutableSequence,
+    Sequence,
+    Union,
+)
 from unicodedata import east_asian_width
+
+from std2.itertools import chunk_into
 
 _UNICODE_WIDTH_LOOKUP = {
     "W": 2,  # CJK
@@ -66,17 +78,39 @@ def coalesce(chars: Iterable[str], unifying_chars: AbstractSet[str]) -> Iterator
 
 
 def _coalesce(
-    text: Union[str, bytes], unifying_chars: AbstractSet[str]
+    text: Union[Sequence[str], str, bytes], unifying_chars: AbstractSet[str]
 ) -> Sequence[str]:
-    chars = text.decode() if isinstance(text, bytes) else text
+    if isinstance(text, bytes):
+        chars: Iterable[str] = text.decode()
+    elif isinstance(text, str):
+        chars = text
+    else:
+        chars = chain.from_iterable(text)
     return tuple(coalesce(chars, unifying_chars=unifying_chars))
 
 
 async def acoalesce(
     loop: AbstractEventLoop,
     ppool: Executor,
-    text: Union[str, bytes],
+    text: Union[Sequence[str], str, bytes],
     unifying_chars: AbstractSet[str],
 ) -> Sequence[str]:
     return await loop.run_in_executor(ppool, _coalesce, text, unifying_chars)
+
+
+async def acoalesce_lines(
+    loop: AbstractEventLoop,
+    ppool: Executor,
+    lines: Sequence[str],
+    unifying_chars: AbstractSet[str],
+) -> Sequence[str]:
+    async def cont() -> AsyncIterator[str]:
+        for fut in as_completed(
+            acoalesce(loop, ppool=ppool, text=chunk, unifying_chars=unifying_chars)
+            for chunk in chunk_into(lines)
+        ):
+            for word in await fut:
+                yield word
+
+    return [word async for word in cont()]
 
