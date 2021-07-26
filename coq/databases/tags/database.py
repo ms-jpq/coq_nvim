@@ -3,7 +3,7 @@ from contextlib import closing
 from hashlib import md5
 from sqlite3 import Connection, OperationalError
 from threading import Lock
-from typing import AbstractSet, Iterator, Mapping, Sequence, Tuple, cast
+from typing import AbstractSet, Iterator, Mapping, Sequence, cast
 
 from std2.asyncio import run_in_executor
 from std2.sqlite3 import with_transaction
@@ -61,18 +61,15 @@ class CTDB:
 
         await run_in_executor(self._ex.submit, cont)
 
-    async def paths(self) -> Mapping[str, Tuple[float, str]]:
-        def cont() -> Mapping[str, Tuple[float, str]]:
+    async def paths(self) -> Mapping[str, float]:
+        def cont() -> Mapping[str, float]:
             with self._lock, closing(self._conn.cursor()) as cursor:
                 with with_transaction(cursor):
                     cursor.execute(sql("select", "files"), ())
-                    files = {
-                        row["filename"]: (row["filetype"], row["mtime"])
-                        for row in cursor.fetchall()
-                    }
+                    files = {row["filename"]: row["mtime"] for row in cursor.fetchall()}
                     return files
 
-        def step() -> Mapping[str, Tuple[float, str]]:
+        def step() -> Mapping[str, float]:
             return self._ex.submit(cont)
 
         return await run_in_executor(step)

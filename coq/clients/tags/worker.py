@@ -1,8 +1,8 @@
 from asyncio import gather
 from contextlib import suppress
-from os import linesep
-from os.path import dirname, relpath
-from pathlib import Path
+from os import linesep, sep
+from os.path import commonpath, relpath
+from pathlib import Path, PurePath
 from shutil import which
 from typing import (
     AbstractSet,
@@ -59,11 +59,14 @@ async def _mtimes(cwd: Path, paths: AbstractSet[str]) -> Mapping[str, float]:
 def _doc(client: TagsClient, context: Context, tag: Tag) -> Doc:
     def cont() -> Iterator[str]:
         lc, rc = context.comment
-        pos = (
-            "."
-            if tag["path"] == context.filename
-            else relpath(tag["path"], dirname(context.filename))
-        )
+        path, cfn = PurePath(tag["path"]), PurePath(context.filename)
+        if path == cfn:
+            pos = "."
+        elif path.anchor != cfn.anchor or commonpath((path, cfn)) == sep:
+            pos = str(path)
+        else:
+            pos = relpath(path, cfn.parent)
+
         yield lc
         yield pos
         yield ":"
@@ -138,7 +141,7 @@ class Worker(BaseWorker[TagsClient, CTDB]):
 
     async def _poll(self) -> None:
         while True:
-            with timeit("IDLE :: TAGS", force=True):
+            with timeit("IDLE :: TAGS"):
                 (cwd, buf_names), existing = await gather(
                     _ls(self._supervisor.nvim), self._misc.paths()
                 )
@@ -147,7 +150,7 @@ class Worker(BaseWorker[TagsClient, CTDB]):
                 query_paths = tuple(
                     path
                     for path, mtime in mtimes.items()
-                    if (mtime, "") > existing.get(path, (0, ""))
+                    if mtime > existing.get(path, 0)
                 )
                 raw = await run(*query_paths) if query_paths else ""
                 new = parse(mtimes, raw=raw)
