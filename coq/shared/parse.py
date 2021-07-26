@@ -1,13 +1,5 @@
-from asyncio import gather
-from asyncio.events import AbstractEventLoop
-from concurrent.futures import Executor
-from itertools import chain
-from typing import AbstractSet, Iterable, Iterator, MutableSequence, Sequence, Union
+from typing import AbstractSet, Iterable, Iterator, MutableSequence
 from unicodedata import east_asian_width
-
-from std2.itertools import chunk_into
-
-from ..consts import MP_CUTOFF
 
 _UNICODE_WIDTH_LOOKUP = {
     "W": 2,  # CJK
@@ -69,45 +61,4 @@ def coalesce(chars: Iterable[str], unifying_chars: AbstractSet[str]) -> Iterator
 
     yield from wit()
     yield from sit()
-
-
-def _coalesce(
-    text: Union[Sequence[str], str, bytes], unifying_chars: AbstractSet[str]
-) -> Sequence[str]:
-    if isinstance(text, bytes):
-        chars: Iterable[str] = text.decode()
-    elif isinstance(text, str):
-        chars = text
-    else:
-        chars = chain.from_iterable(text)
-    return tuple(coalesce(chars, unifying_chars=unifying_chars))
-
-
-async def acoalesce(
-    loop: AbstractEventLoop,
-    ppool: Executor,
-    text: Union[Sequence[str], str, bytes],
-    unifying_chars: AbstractSet[str],
-) -> Sequence[str]:
-    return await loop.run_in_executor(ppool, _coalesce, text, unifying_chars)
-
-
-async def acoalesce_lines(
-    loop: AbstractEventLoop,
-    ppool: Executor,
-    lines: Sequence[str],
-    unifying_chars: AbstractSet[str],
-) -> Sequence[str]:
-    if len(lines) <= MP_CUTOFF:
-        return tuple(
-            coalesce(chain.from_iterable(lines), unifying_chars=unifying_chars)
-        )
-    else:
-        seqs = await gather(
-            *(
-                acoalesce(loop, ppool=ppool, text=chunk, unifying_chars=unifying_chars)
-                for chunk in chunk_into(lines)
-            )
-        )
-        return tuple(chain.from_iterable(seqs))
 

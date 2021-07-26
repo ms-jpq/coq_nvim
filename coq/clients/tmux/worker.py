@@ -8,7 +8,7 @@ from typing import AbstractSet, AsyncIterator, Optional, Sequence, Tuple
 from pynvim_pp.lib import go
 from std2.asyncio import call
 
-from ...shared.parse import acoalesce
+from ...shared.parse import coalesce
 from ...shared.runtime import Supervisor
 from ...shared.runtime import Worker as BaseWorker
 from ...shared.settings import WordbankClient
@@ -54,16 +54,14 @@ async def _cur() -> Optional[_Pane]:
 
 
 async def _screenshot(
-    loop: AbstractEventLoop, ppool: Executor, unifying_chars: AbstractSet[str], uid: str
+    unifying_chars: AbstractSet[str], uid: str
 ) -> Tuple[str, Sequence[str]]:
     proc = await call("tmux", "capture-pane", "-p", "-t", uid)
     if proc.code:
         return uid, ()
     else:
-        words = await acoalesce(
-            loop, ppool=ppool, text=proc.out, unifying_chars=unifying_chars
-        )
-        return uid, words
+        words = coalesce(proc.out.decode(), unifying_chars=unifying_chars)
+        return uid, tuple(words)
 
 
 class Worker(BaseWorker[WordbankClient, None]):
@@ -82,9 +80,7 @@ class Worker(BaseWorker[WordbankClient, None]):
                 shots = await gather(
                     *[
                         _screenshot(
-                            self._supervisor.nvim.loop,
-                            ppool=self._supervisor.ppool,
-                            unifying_chars=self._supervisor.options.unifying_chars,
+                            self._supervisor.options.unifying_chars,
                             uid=pane.uid,
                         )
                         async for pane in _panes()
