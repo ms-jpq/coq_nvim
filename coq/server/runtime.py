@@ -21,6 +21,7 @@ from ..databases.buffers.database import BDB
 from ..databases.insertions.database import IDB
 from ..databases.snippets.database import SDB
 from ..databases.tags.database import CTDB
+from ..databases.tmux.database import TMDB
 from ..databases.treesitter.database import TDB
 from ..shared.runtime import Supervisor, Worker
 from ..shared.settings import Settings
@@ -43,7 +44,13 @@ def _settings(nvim: Nvim) -> Settings:
 
 
 def _from_each_according_to_their_ability(
-    settings: Settings, bdb: BDB, sdb: SDB, tdb: TDB, ctdb: CTDB, supervisor: Supervisor
+    settings: Settings,
+    bdb: BDB,
+    sdb: SDB,
+    tdb: TDB,
+    ctdb: CTDB,
+    tmdb: TMDB,
+    supervisor: Supervisor,
 ) -> Iterator[Worker]:
     clients = settings.clients
 
@@ -66,7 +73,7 @@ def _from_each_according_to_their_ability(
         yield TagsWorker(supervisor, options=clients.tags, misc=ctdb)
 
     if clients.tmux.enabled:
-        yield TmuxWorker(supervisor, options=clients.tmux, misc=None)
+        yield TmuxWorker(supervisor, options=clients.tmux, misc=tmdb)
 
     if clients.tabnine.enabled:
         yield T9Worker(supervisor, options=clients.tabnine, misc=None)
@@ -75,12 +82,13 @@ def _from_each_according_to_their_ability(
 def stack(pool: Executor, nvim: Nvim) -> Stack:
     settings = _settings(nvim)
     cwd = get_cwd(nvim)
-    bdb, sdb, idb, tdb, ctdb = (
+    bdb, sdb, idb, tdb, ctdb, tmdb = (
         BDB(pool),
         SDB(pool),
         IDB(pool),
         TDB(pool),
         CTDB(pool, cwd=cwd),
+        TMDB(pool),
     )
     reviewer = Reviewer(
         options=settings.match,
@@ -100,6 +108,7 @@ def stack(pool: Executor, nvim: Nvim) -> Stack:
             sdb=sdb,
             tdb=tdb,
             ctdb=ctdb,
+            tmdb=tmdb,
             supervisor=supervisor,
         )
     }
@@ -110,6 +119,7 @@ def stack(pool: Executor, nvim: Nvim) -> Stack:
         idb=idb,
         tdb=tdb,
         ctdb=ctdb,
+        tmdb=tmdb,
         supervisor=supervisor,
         workers=workers,
     )

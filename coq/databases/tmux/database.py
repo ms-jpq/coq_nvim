@@ -22,7 +22,7 @@ def _init() -> Connection:
     return conn
 
 
-class Database:
+class TMDB:
     def __init__(self, pool: Executor) -> None:
         self._lock = Lock()
         self._ex = SingleThreadExecutor(pool)

@@ -6,13 +6,13 @@ from typing import AbstractSet, AsyncIterator, Optional, Sequence, Tuple
 from pynvim_pp.lib import go
 from std2.asyncio import call
 
+from ...databases.tmux.database import TMDB
 from ...shared.parse import coalesce
 from ...shared.runtime import Supervisor
 from ...shared.runtime import Worker as BaseWorker
 from ...shared.settings import WordbankClient
 from ...shared.timeit import timeit
 from ...shared.types import Completion, Context, Edit
-from .database import Database
 
 
 @dataclass(frozen=True)
@@ -62,12 +62,11 @@ async def _screenshot(
         return uid, tuple(words)
 
 
-class Worker(BaseWorker[WordbankClient, None]):
+class Worker(BaseWorker[WordbankClient, TMDB]):
     def __init__(
-        self, supervisor: Supervisor, options: WordbankClient, misc: None
+        self, supervisor: Supervisor, options: WordbankClient, misc: TMDB
     ) -> None:
         self._tmux = which("tmux")
-        self._db = Database(supervisor.pool)
         super().__init__(supervisor, options=options, misc=misc)
         if self._tmux:
             go(supervisor.nvim, aw=self._poll())
@@ -85,7 +84,7 @@ class Worker(BaseWorker[WordbankClient, None]):
                     ]
                 )
                 snapshot = {uid: words for uid, words in shots}
-                await self._db.periodical(snapshot)
+                await self._misc.periodical(snapshot)
 
             async with self._supervisor.idling:
                 await self._supervisor.idling.wait()
@@ -94,7 +93,7 @@ class Worker(BaseWorker[WordbankClient, None]):
         match = context.words or (context.syms if self._options.match_syms else "")
         active = await _cur() if self._tmux else None
         words = (
-            await self._db.select(
+            await self._misc.select(
                 self._supervisor.options,
                 active_pane=active.uid,
                 word=match,
