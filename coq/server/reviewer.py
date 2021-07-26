@@ -1,6 +1,4 @@
-from asyncio import AbstractEventLoop
 from collections import Counter
-from concurrent.futures import Executor
 from dataclasses import dataclass
 from itertools import chain
 from typing import Mapping
@@ -22,6 +20,8 @@ class _ReviewCtx:
     neighbours: Mapping[str, int]
     inserted: Mapping[str, int]
 
+    l_words_before: str
+    l_syms_before: str
     is_lower: bool
 
 
@@ -30,11 +30,13 @@ def _metric(
     ctx: _ReviewCtx,
     completion: Completion,
 ) -> MatchMetrics:
-    match = lower(completion.sort_by) if ctx.is_lower else completion.sort_by
+    lsy = lower(completion.sort_by)
+    m_lower = lsy == completion.sort_by
+    match = lsy if ctx.is_lower and m_lower else completion.sort_by
     cword = (
-        ctx.context.words_before
+        (ctx.l_words_before if m_lower else ctx.context.words_before)
         if is_word(match[:1], unifying_chars=options.unifying_chars)
-        else ctx.context.syms_before
+        else (ctx.l_syms_before if m_lower else ctx.context.syms_before)
     )
     return metrics(cword, match, look_ahead=options.look_ahead)
 
@@ -71,6 +73,8 @@ class Reviewer(PReviewer):
             context=EMPTY_CONTEXT,
             neighbours={},
             inserted={},
+            l_words_before="",
+            l_syms_before="",
             is_lower=True,
         )
 
@@ -84,12 +88,16 @@ class Reviewer(PReviewer):
             unifying_chars=self._options.unifying_chars,
         )
         neighbours = Counter(words)
+
+        l_words_before = lower(context.words_before)
         ctx = _ReviewCtx(
             batch=uuid4(),
             context=context,
             neighbours=neighbours,
             inserted=inserted,
-            is_lower=lower(context.words_before) == context.words_before,
+            is_lower=l_words_before == context.words_before,
+            l_words_before=l_words_before,
+            l_syms_before=lower(context.syms_before),
         )
         self._ctx = ctx
         await self._db.new_batch(ctx.batch.bytes)
