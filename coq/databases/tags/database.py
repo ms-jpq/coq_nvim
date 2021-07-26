@@ -12,7 +12,7 @@ from ...consts import CLIENTS_DIR
 from ...shared.executor import SingleThreadExecutor
 from ...shared.settings import Options
 from ...shared.sql import BIGGEST_INT, init_db
-from .parser import Tag, Tags
+from ...tags.types import Tag, Tags
 from .sql import sql
 
 _TAGS_DIR = CLIENTS_DIR / "tags"
@@ -40,7 +40,7 @@ def _init(cwd: str) -> Connection:
     return conn
 
 
-class Database:
+class CTDB:
     def __init__(self, pool: Executor) -> None:
         self._lock = Lock()
         self._ex = SingleThreadExecutor(pool)

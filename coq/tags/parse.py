@@ -1,40 +1,12 @@
 from json import loads
 from json.decoder import JSONDecodeError
-from typing import (
-    Iterator,
-    Mapping,
-    MutableMapping,
-    MutableSequence,
-    Optional,
-    Sequence,
-    Tuple,
-    TypedDict,
-)
+from typing import Iterator, Mapping, MutableMapping, MutableSequence, Tuple
 
 from pynvim_pp.logging import log
 from std2.asyncio import call
 from std2.string import removeprefix, removesuffix
 
-
-class Tag(TypedDict):
-    language: str
-
-    path: str
-
-    line: int
-    name: str
-    pattern: str
-    kind: str
-
-    typeref: Optional[str]
-
-    scope: Optional[str]
-    scopeKind: Optional[str]
-
-    access: Optional[str]
-
-
-Tags = Mapping[str, Tuple[str, float, Sequence[Tag]]]
+from .types import Tag, Tags
 
 _FIELDS = "".join(
     f"{{{f}}}"
@@ -83,7 +55,7 @@ def _unescape(pattern: str) -> str:
     return "".join(cont())
 
 
-def parse_lines(mtimes: Mapping[str, float], raw: str) -> Tags:
+def parse(mtimes: Mapping[str, float], raw: str) -> Tags:
     tags: MutableMapping[str, Tuple[str, float, MutableSequence[Tag]]] = {}
 
     for line in raw.splitlines():

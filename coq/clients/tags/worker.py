@@ -20,13 +20,14 @@ from pynvim_pp.lib import async_call, go
 from std2.asyncio import run_in_executor
 from std2.pathlib import is_relative_to
 
+from ...databases.tags.database import CTDB
 from ...shared.runtime import Supervisor
 from ...shared.runtime import Worker as BaseWorker
 from ...shared.settings import TagsClient
 from ...shared.timeit import timeit
 from ...shared.types import Completion, Context, Doc, Edit
-from .database import Database
-from .parser import Tag, parse_lines, run
+from ...tags.parse import parse, run
+from ...tags.types import Tag
 
 
 async def _ls(nvim: Nvim) -> Tuple[Path, AbstractSet[str]]:
@@ -129,9 +130,8 @@ def _doc(client: TagsClient, context: Context, tag: Tag) -> Doc:
     return doc
 
 
-class Worker(BaseWorker[TagsClient, None]):
-    def __init__(self, supervisor: Supervisor, options: TagsClient, misc: None) -> None:
-        self._db = Database(supervisor.pool)
+class Worker(BaseWorker[TagsClient, CTDB]):
+    def __init__(self, supervisor: Supervisor, options: TagsClient, misc: CTDB) -> None:
         super().__init__(supervisor, options=options, misc=misc)
         if which("ctags"):
             go(supervisor.nvim, aw=self._poll())
@@ -140,7 +140,7 @@ class Worker(BaseWorker[TagsClient, None]):
         while True:
             with timeit("IDLE :: TAGS", force=True):
                 (cwd, buf_names), existing = await gather(
-                    _ls(self._supervisor.nvim), self._db.paths()
+                    _ls(self._supervisor.nvim), self._misc.paths()
                 )
                 paths = buf_names | existing.keys()
                 mtimes = await _mtimes(cwd, paths=paths)
@@ -150,9 +150,9 @@ class Worker(BaseWorker[TagsClient, None]):
                     if (mtime, "") > existing.get(path, (0, ""))
                 )
                 raw = await run(*query_paths) if query_paths else ""
-                new = parse_lines(mtimes, raw=raw)
+                new = parse(mtimes, raw=raw)
                 dead = existing.keys() - mtimes.keys()
-                await self._db.reconciliate(dead, new=new)
+                await self._misc.reconciliate(dead, new=new)
 
             async with self._supervisor.idling:
                 await self._supervisor.idling.wait()
@@ -160,7 +160,7 @@ class Worker(BaseWorker[TagsClient, None]):
     async def work(self, context: Context) -> AsyncIterator[Completion]:
         row, _ = context.position
         match = context.words or (context.syms if self._options.match_syms else "")
-        tags = await self._db.select(
+        tags = await self._misc.select(
             self._supervisor.options,
             filename=context.filename,
             line_num=row,

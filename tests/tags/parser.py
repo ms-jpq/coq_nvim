@@ -3,8 +3,8 @@ from os import linesep
 from shutil import get_terminal_size
 from unittest import IsolatedAsyncioTestCase
 
-from ....coq.clients.tags.parser import parse_lines, run
-from ....coq.consts import TMP_DIR
+from ...coq.consts import TMP_DIR
+from ...coq.tags.parse import parse, run
 
 
 class Parser(IsolatedAsyncioTestCase):
@@ -16,7 +16,7 @@ class Parser(IsolatedAsyncioTestCase):
             tag.write_text(text)
 
         spec = tag.read_text()
-        parsed = parse_lines({}, raw=spec)
+        parsed = parse({}, raw=spec)
 
         cols, _ = get_terminal_size()
         sep = linesep + "-" * cols + linesep
