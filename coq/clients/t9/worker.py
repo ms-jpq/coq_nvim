@@ -4,7 +4,6 @@ from asyncio.subprocess import Process
 from contextlib import suppress
 from itertools import chain
 from json import dumps, loads
-from locale import strxfrm
 from os import linesep
 from subprocess import DEVNULL, PIPE
 from typing import Any, AsyncIterator, Iterator, Optional
@@ -12,7 +11,6 @@ from typing import Any, AsyncIterator, Iterator, Optional
 from pynvim_pp.lib import go
 from std2.pickle import new_decoder, new_encoder
 
-from ...shared.parse import lower
 from ...shared.runtime import Supervisor
 from ...shared.runtime import Worker as BaseWorker
 from ...shared.settings import Options, TabnineClient
@@ -63,7 +61,7 @@ def _decode(client: TabnineClient, reply: Any) -> Iterator[Completion]:
             source=client.short_name,
             tie_breaker=client.tie_breaker,
             label=label,
-            sort_by=strxfrm(lower(edit.new_text)),
+            sort_by=edit.new_text,
             primary_edit=edit,
         )
         yield cmp

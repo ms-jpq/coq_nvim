@@ -1,7 +1,5 @@
-from locale import strxfrm
 from typing import Mapping, Optional, Sequence, Tuple, cast
 
-from ..shared.parse import lower
 from ..shared.types import Completion, Doc, Edit, RangeEdit, SnippetEdit
 from .protocol import PROTOCOL
 from .types import CompletionItem, CompletionResponse, TextEdit
@@ -83,7 +81,7 @@ def _parse_item(
             source=short_name,
             tie_breaker=tie_breaker,
             label=label,
-            sort_by=strxfrm(lower(item.get("filterText") or p_edit.new_text)),
+            sort_by=item.get("filterText") or p_edit.new_text,
             primary_edit=p_edit,
             secondary_edits=tuple(
                 re

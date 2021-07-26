@@ -1,6 +1,5 @@
 from asyncio import as_completed
 from itertools import islice
-from locale import strxfrm
 from os import X_OK, access
 from os.path import join, normpath, sep, split
 from pathlib import Path
@@ -8,7 +7,6 @@ from typing import AbstractSet, AsyncIterator, Iterator, MutableSet, Tuple
 
 from std2.asyncio import run_in_executor
 
-from ...shared.parse import lower
 from ...shared.runtime import Worker as BaseWorker
 from ...shared.settings import BaseClient
 from ...shared.sql import BIGGEST_INT
@@ -94,7 +92,7 @@ class Worker(BaseWorker[BaseClient, None]):
                         source=self._options.short_name,
                         tie_breaker=self._options.tie_breaker,
                         label=edit.new_text,
-                        sort_by=strxfrm(lower(sort_by)),
+                        sort_by=sort_by,
                         primary_edit=edit,
                     )
                     yield completion
