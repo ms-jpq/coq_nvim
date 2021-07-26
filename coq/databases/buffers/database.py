@@ -51,7 +51,7 @@ class BDB:
 
         await run_in_executor(self._ex.submit, cont)
 
-    def vacuum(self, buf_ids: AbstractSet[int]) -> None:
+    async def vacuum(self, buf_ids: AbstractSet[int]) -> None:
         def cont() -> None:
             try:
                 with closing(self._conn.cursor()) as cursor:
@@ -66,7 +66,7 @@ class BDB:
             except OperationalError:
                 pass
 
-        self._ex.submit(cont)
+        await run_in_executor(self._ex.submit, cont)
 
     async def set_lines(
         self,

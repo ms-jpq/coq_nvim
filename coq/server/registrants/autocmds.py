@@ -142,8 +142,6 @@ def _when_idle(nvim: Nvim, stack: Stack) -> None:
         _HANDLE.cancel()
 
     def cont() -> None:
-        bufs = list_bufs(nvim, listed=True)
-        stack.bdb.vacuum({buf.number for buf in bufs})
         _insert_enter(nvim, stack=stack)
         stack.supervisor.notify_idle()
 
