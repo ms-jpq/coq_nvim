@@ -1,7 +1,7 @@
 from asyncio import gather
 from contextlib import suppress
 from os import linesep, sep
-from os.path import commonpath, relpath
+from os.path import relpath
 from pathlib import Path, PurePath
 from shutil import which
 from typing import (
@@ -59,7 +59,7 @@ def _doc(client: TagsClient, context: Context, tag: Tag) -> Doc:
             pos = "."
         elif not is_relative_to(path, context.cwd):
             try:
-                pos = str(path.relative_to(Path.home()))
+                pos = f"~{sep}{path.relative_to(Path.home())}"
             except ValueError:
                 pos = str(path)
         else:
