@@ -1,4 +1,4 @@
-from asyncio import Condition, sleep
+from asyncio import Condition
 from itertools import count
 from pathlib import Path
 from string import capwords
@@ -53,7 +53,6 @@ async def async_request(nvim: Nvim) -> AsyncIterator[Payload]:
 
         async with _COND:
             _COND.notify_all()
-        await sleep(0)
 
         def cont() -> None:
             nvim.api.exec_lua("COQts_req(...)", (session,))

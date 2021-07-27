@@ -1,4 +1,4 @@
-from asyncio import Condition, sleep
+from asyncio import Condition
 from collections import defaultdict
 from itertools import count
 from typing import Any, AsyncIterator, MutableMapping, Sequence, Tuple
@@ -40,7 +40,6 @@ async def async_request(nvim: Nvim, method: str, *args: Any) -> AsyncIterator[An
         _STATE[method] = (session, done, ())
         async with cond:
             cond.notify_all()
-        await sleep(0)
 
         def cont() -> None:
             nvim.api.exec_lua(f"{method}(...)", (method, session, *args))
