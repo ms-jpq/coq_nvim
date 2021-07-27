@@ -144,7 +144,7 @@ def _positions(
         yield display.positions.south, s
 
     we_height = limit_h(scr_height - top)
-    w_width = limit_w(left - 1)
+    w_width = limit_w(left - 2)
 
     w = _Pos(
         row=top,
