@@ -6,7 +6,7 @@ from itertools import chain
 from json import dumps, loads
 from os import linesep
 from subprocess import DEVNULL, PIPE
-from typing import Any, AsyncIterator, Iterator, Optional
+from typing import Any, AsyncIterator, Iterator, Optional, Sequence
 
 from pynvim_pp.lib import go
 from std2.pickle import new_decoder, new_encoder
@@ -102,7 +102,7 @@ class Worker(BaseWorker[TabnineClient, None]):
         else:
             return "{}"
 
-    async def work(self, context: Context) -> AsyncIterator[Completion]:
+    async def work(self, context: Context) -> AsyncIterator[Sequence[Completion]]:
         if not self._installed:
             pass
         else:
@@ -125,6 +125,5 @@ class Worker(BaseWorker[TabnineClient, None]):
             else:
                 reply = loads(json)
                 cmps = tuple(_decode(self._options, reply=reply))
-                for c in cmps:
-                    yield c
+                yield cmps
 
