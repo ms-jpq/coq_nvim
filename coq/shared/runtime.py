@@ -9,6 +9,7 @@ from typing import (
     AbstractSet,
     AsyncIterator,
     Generic,
+    Iterator,
     MutableMapping,
     MutableSequence,
     Protocol,
@@ -21,7 +22,6 @@ from weakref import WeakKeyDictionary
 
 from pynvim import Nvim
 from pynvim_pp.lib import go
-from std2.aitertools import aenumerate
 from std2.asyncio import cancel
 
 from .settings import BaseClient, Limits, Options, Weights
@@ -51,7 +51,9 @@ class PReviewer(Protocol):
     async def s_begin(self, assoc: BaseClient, instance: UUID) -> None:
         ...
 
-    def trans(self, instance: UUID, completion: Completion) -> Metric:
+    def trans(
+        self, instance: UUID, completions: Sequence[Completion]
+    ) -> Iterator[Metric]:
         ...
 
     async def s_end(
@@ -114,13 +116,12 @@ class Supervisor:
                         interrupted, items = True, 0
                         await self._reviewer.s_begin(assoc, instance=instance)
                         try:
-                            async for items, completion in aenumerate(
-                                worker.work(context), start=1
-                            ):
-                                metric = self._reviewer.trans(
-                                    instance, completion=completion
+                            async for completions in worker.work(context):
+                                metrics = self._reviewer.trans(
+                                    instance, completions=completions
                                 )
-                                acc.append(metric)
+                                acc.extend(metrics)
+                                items += len(completions)
                             else:
                                 interrupted = False
                         finally:
@@ -155,6 +156,6 @@ class Worker(Generic[O_co, T_co]):
         self._supervisor.register(self, assoc=options)
 
     @abstractmethod
-    def work(self, context: Context) -> AsyncIterator[Completion]:
+    def work(self, context: Context) -> AsyncIterator[Sequence[Completion]]:
         ...
 

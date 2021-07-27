@@ -1,7 +1,7 @@
 from collections import Counter
 from dataclasses import dataclass
 from itertools import chain
-from typing import Mapping
+from typing import Iterator, Mapping, Sequence
 from uuid import UUID, uuid4
 
 from ..databases.insertions.database import IDB
@@ -98,16 +98,22 @@ class Reviewer(PReviewer):
             instance.bytes, source=assoc.short_name, batch_id=self._ctx.batch.bytes
         )
 
-    def trans(self, instance: UUID, completion: Completion) -> Metric:
-        match_metrics = _metric(
-            self._options,
-            ctx=self._ctx,
-            completion=completion,
-        )
-        metric = _join(
-            instance, ctx=self._ctx, completion=completion, match_metrics=match_metrics
-        )
-        return metric
+    def trans(
+        self, instance: UUID, completions: Sequence[Completion]
+    ) -> Iterator[Metric]:
+        for completion in completions:
+            match_metrics = _metric(
+                self._options,
+                ctx=self._ctx,
+                completion=completion,
+            )
+            metric = _join(
+                instance,
+                ctx=self._ctx,
+                completion=completion,
+                match_metrics=match_metrics,
+            )
+            yield metric
 
     async def s_end(
         self, instance: UUID, interrupted: bool, elapsed: float, items: int
