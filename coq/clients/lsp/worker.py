@@ -31,7 +31,7 @@ class Worker(BaseWorker[BaseClient, None], CacheWorker):
         )
 
         async for no_cache, comps in stream:
-            for chunked in chunk(comps, n=self._supervisor.limits.chunk_size):
+            for chunked in chunk(comps, n=self._supervisor.options.max_results):
 
                 def cont() -> Iterator[Completion]:
                     for c in chunked:

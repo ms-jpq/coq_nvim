@@ -119,7 +119,7 @@ class Supervisor:
                         try:
                             async for completions in worker.work(context):
                                 for comps in chunk(
-                                    completions, n=self.limits.chunk_size
+                                    completions, n=self.options.max_results
                                 ):
                                     metrics = self._reviewer.trans(
                                         instance, completions=comps

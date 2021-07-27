@@ -8,7 +8,6 @@ class Limits:
     max_buf_index: int
     timeout: float
     manual_timeout: float
-    chunk_size: int
 
 
 @dataclass(frozen=True)
