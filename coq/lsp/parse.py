@@ -1,6 +1,5 @@
-from typing import Mapping, Optional, Sequence, Tuple, cast
+from typing import Iterator, Mapping, Optional, Sequence, Tuple, cast
 
-from ..shared.timeit import timeit
 from ..shared.types import Completion, Doc, Edit, RangeEdit, SnippetEdit
 from .protocol import PROTOCOL
 from .types import CompletionItem, CompletionResponse, TextEdit
@@ -96,13 +95,12 @@ def _parse_item(
         return cmp
 
 
-@timeit("LSP -- Parse", force=True)
 def parse(
     short_name: str, tie_breaker: int, resp: CompletionResponse
-) -> Tuple[bool, Sequence[Completion]]:
+) -> Tuple[bool, Iterator[Completion]]:
     if isinstance(resp, Mapping):
         no_cache = resp.get("isIncomplete") not in {None, False, 0, ""}
-        comps = tuple(
+        comps = (
             c
             for c in (
                 _parse_item(short_name, tie_breaker=tie_breaker, item=item)
@@ -112,7 +110,7 @@ def parse(
         )
         return no_cache, comps
     elif isinstance(resp, Sequence):
-        comps = tuple(
+        comps = (
             c
             for c in (
                 _parse_item(short_name, tie_breaker=tie_breaker, item=item)
@@ -122,5 +120,5 @@ def parse(
         )
         return False, comps
     else:
-        return False, ()
+        return False, iter(())
 

@@ -1,5 +1,8 @@
 from typing import AsyncIterator, Iterator, Sequence
 
+from std2.itertools import chunk
+
+from ...consts import AIO_CHUNKS
 from ...lsp.requests.completion import request
 from ...shared.fuzzy import quick_ratio
 from ...shared.parse import is_word, lower
@@ -29,31 +32,32 @@ class Worker(BaseWorker[BaseClient, None], CacheWorker):
         )
 
         async for no_cache, comps in stream:
+            for chunked in chunk(comps, n=AIO_CHUNKS):
 
-            def cont() -> Iterator[Completion]:
-                for c in comps:
-                    cword = (
-                        w_before
-                        if is_word(
-                            c.sort_by[:1],
-                            unifying_chars=self._supervisor.options.unifying_chars,
+                def cont() -> Iterator[Completion]:
+                    for c in chunked:
+                        cword = (
+                            w_before
+                            if is_word(
+                                c.sort_by[:1],
+                                unifying_chars=self._supervisor.options.unifying_chars,
+                            )
+                            else sw_before
                         )
-                        else sw_before
-                    )
-                    go = (
-                        quick_ratio(
-                            cword,
-                            lower(c.sort_by),
-                            look_ahead=self._supervisor.options.look_ahead,
+                        go = (
+                            quick_ratio(
+                                cword,
+                                lower(c.sort_by),
+                                look_ahead=self._supervisor.options.look_ahead,
+                            )
+                            > self._supervisor.options.fuzzy_cutoff
                         )
-                        > self._supervisor.options.fuzzy_cutoff
-                    )
-                    if go:
-                        yield c
+                        if go:
+                            yield c
 
-            yield tuple(cont())
+                yield tuple(cont())
 
-            if not no_cache:
-                await self._set_cache(context, completions=comps)
-                yield ()
+                if not no_cache:
+                    await self._set_cache(context, completions=chunked)
+                    yield ()
 

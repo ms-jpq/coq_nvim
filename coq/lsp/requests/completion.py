@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import AsyncIterator, Sequence, Tuple, cast
+from typing import AsyncIterator, Iterator, Tuple, cast
 
 from pynvim.api.nvim import Nvim
 
@@ -19,7 +19,7 @@ async def request(
     short_name: str,
     tie_breaker: int,
     context: Context,
-) -> AsyncIterator[Tuple[bool, Sequence[Completion]]]:
+) -> AsyncIterator[Tuple[bool, Iterator[Completion]]]:
     row, c = context.position
     col = len(context.line_before[:c].encode(UTF16)) // 2
 
