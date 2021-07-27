@@ -1,4 +1,4 @@
-from typing import AsyncIterator
+from typing import AsyncIterator, Iterator, Sequence
 
 from ...lsp.requests.completion import request
 from ...shared.fuzzy import quick_ratio
@@ -15,8 +15,11 @@ class Worker(BaseWorker[BaseClient, None], CacheWorker):
         CacheWorker.__init__(self, supervisor=supervisor)
         BaseWorker.__init__(self, supervisor=supervisor, options=options, misc=misc)
 
-    async def work(self, context: Context) -> AsyncIterator[Completion]:
+    async def work(self, context: Context) -> AsyncIterator[Sequence[Completion]]:
         w_before, sw_before = lower(context.words_before), lower(context.syms_before)
+
+        cached = await self._use_cache(context)
+        yield cached
 
         stream = request(
             self._supervisor.nvim,
@@ -25,29 +28,32 @@ class Worker(BaseWorker[BaseClient, None], CacheWorker):
             context=context,
         )
 
-        async for c in self._use_cache(context):
-            yield c
         async for no_cache, comps in stream:
-            for c in comps:
-                cword = (
-                    w_before
-                    if is_word(
-                        c.sort_by[:1],
-                        unifying_chars=self._supervisor.options.unifying_chars,
+
+            def cont() -> Iterator[Completion]:
+                for c in comps:
+                    cword = (
+                        w_before
+                        if is_word(
+                            c.sort_by[:1],
+                            unifying_chars=self._supervisor.options.unifying_chars,
+                        )
+                        else sw_before
                     )
-                    else sw_before
-                )
-                go = (
-                    quick_ratio(
-                        cword,
-                        lower(c.sort_by),
-                        look_ahead=self._supervisor.options.look_ahead,
+                    go = (
+                        quick_ratio(
+                            cword,
+                            lower(c.sort_by),
+                            look_ahead=self._supervisor.options.look_ahead,
+                        )
+                        > self._supervisor.options.fuzzy_cutoff
                     )
-                    > self._supervisor.options.fuzzy_cutoff
-                )
-                if go:
-                    yield c
+                    if go:
+                        yield c
+
+            yield tuple(cont())
 
             if not no_cache:
                 await self._set_cache(context, completions=comps)
+                yield ()
 
