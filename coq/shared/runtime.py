@@ -121,7 +121,7 @@ class Supervisor:
                             async for completions in worker.work(context):
                                 for comps in chunk(completions, n=AIO_CHUNKS):
                                     metrics = self._reviewer.trans(
-                                        instance, completions=completions
+                                        instance, completions=comps
                                     )
                                     acc.extend(metrics)
                                     items += len(comps)
