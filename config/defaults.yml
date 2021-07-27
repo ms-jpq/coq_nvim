@@ -21,6 +21,7 @@ limits:
   idle_time: 2.0
   timeout: 0.088
   manual_timeout: 0.6
+  chunk_size: 66
 
 weights:
   prefix_matches: 2.0

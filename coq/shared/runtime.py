@@ -25,7 +25,6 @@ from pynvim_pp.lib import go
 from std2.asyncio import cancel
 from std2.itertools import chunk
 
-from ..consts import AIO_CHUNKS
 from .settings import BaseClient, Limits, Options, Weights
 from .timeit import timeit
 from .types import Completion, Context
@@ -119,7 +118,9 @@ class Supervisor:
                         await self._reviewer.s_begin(assoc, instance=instance)
                         try:
                             async for completions in worker.work(context):
-                                for comps in chunk(completions, n=AIO_CHUNKS):
+                                for comps in chunk(
+                                    completions, n=self.limits.chunk_size
+                                ):
                                     metrics = self._reviewer.trans(
                                         instance, completions=comps
                                     )

@@ -2,7 +2,6 @@ from typing import AsyncIterator, Iterator, Sequence
 
 from std2.itertools import chunk
 
-from ...consts import AIO_CHUNKS
 from ...lsp.requests.completion import request
 from ...shared.fuzzy import quick_ratio
 from ...shared.parse import is_word, lower
@@ -32,7 +31,7 @@ class Worker(BaseWorker[BaseClient, None], CacheWorker):
         )
 
         async for no_cache, comps in stream:
-            for chunked in chunk(comps, n=AIO_CHUNKS):
+            for chunked in chunk(comps, n=self._supervisor.limits.chunk_size):
 
                 def cont() -> Iterator[Completion]:
                     for c in chunked:

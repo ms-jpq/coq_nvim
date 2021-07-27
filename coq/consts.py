@@ -4,7 +4,6 @@ from pathlib import Path
 TOP_LEVEL = Path(__file__).resolve().parent.parent
 REQUIREMENTS = TOP_LEVEL / "requirements.txt"
 
-AIO_CHUNKS = 99
 TIMEOUT = 1
 
 VARS = TOP_LEVEL / ".vars"
