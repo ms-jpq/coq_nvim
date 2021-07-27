@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from abc import abstractmethod
-from asyncio import Condition, Lock, Task, as_completed, gather, wait
+from asyncio import Condition, Lock, Task, as_completed, gather, sleep, wait
 from concurrent.futures import Executor
 from dataclasses import dataclass
 from time import monotonic
@@ -23,7 +23,9 @@ from weakref import WeakKeyDictionary
 from pynvim import Nvim
 from pynvim_pp.lib import go
 from std2.asyncio import cancel
+from std2.itertools import chunk
 
+from ..consts import AIO_CHUNKS
 from .settings import BaseClient, Limits, Options, Weights
 from .timeit import timeit
 from .types import Completion, Context
@@ -117,11 +119,13 @@ class Supervisor:
                         await self._reviewer.s_begin(assoc, instance=instance)
                         try:
                             async for completions in worker.work(context):
-                                metrics = self._reviewer.trans(
-                                    instance, completions=completions
-                                )
-                                acc.extend(metrics)
-                                items += len(completions)
+                                for comps in chunk(completions, n=AIO_CHUNKS):
+                                    metrics = self._reviewer.trans(
+                                        instance, completions=completions
+                                    )
+                                    acc.extend(metrics)
+                                    items += len(comps)
+                                    await sleep(0)
                             else:
                                 interrupted = False
                         finally:
