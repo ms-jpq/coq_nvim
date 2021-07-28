@@ -14,6 +14,7 @@ from ...shared.parse import is_word, lower
 from ...shared.runtime import Supervisor
 from ...shared.runtime import Worker as BaseWorker
 from ...shared.settings import BaseClient
+from ...shared.sql import BIGGEST_INT
 from ...shared.types import Completion, Context
 from ..cache.worker import CacheWorker
 
@@ -32,8 +33,9 @@ class Worker(BaseWorker[BaseClient, None], CacheWorker):
 
     async def work(self, context: Context) -> AsyncIterator[Sequence[Completion]]:
         w_before, sw_before = lower(context.words_before), lower(context.syms_before)
-        use_cache, cached, set_cache = self._use_cache(context)
+        limit = BIGGEST_INT if context.manual else self._supervisor.options.max_results
 
+        use_cache, cached, set_cache = self._use_cache(context)
         if not use_cache:
             self._local_cached.clear()
 
@@ -69,6 +71,7 @@ class Worker(BaseWorker[BaseClient, None], CacheWorker):
             async for lc in stream:
                 yield _Src.lsp, lc
 
+        seen = 0
         async for src, lsp_comps in stream():
             if lsp_comps.local_cache:
                 self._local_cached.append(lsp_comps.items)
@@ -76,34 +79,38 @@ class Worker(BaseWorker[BaseClient, None], CacheWorker):
             for chunked in chunk(
                 lsp_comps.items, n=self._supervisor.options.max_results
             ):
-                if src is _Src.dab:
-                    yield chunked
-                else:
+                if seen <= limit:
+                    if src is _Src.dab:
+                        yield chunked
+                        seen += len(chunked)
+                    else:
 
-                    def cont() -> Iterator[Completion]:
-                        for c in chunked:
-                            cword = (
-                                w_before
-                                if is_word(
-                                    c.sort_by[:1],
-                                    unifying_chars=self._supervisor.options.unifying_chars,
+                        def cont() -> Iterator[Completion]:
+                            for c in chunked:
+                                cword = (
+                                    w_before
+                                    if is_word(
+                                        c.sort_by[:1],
+                                        unifying_chars=self._supervisor.options.unifying_chars,
+                                    )
+                                    else sw_before
                                 )
-                                else sw_before
-                            )
-                            go = (
-                                quick_ratio(
-                                    cword,
-                                    lower(c.sort_by),
-                                    look_ahead=self._supervisor.options.look_ahead,
+                                go = (
+                                    quick_ratio(
+                                        cword,
+                                        lower(c.sort_by),
+                                        look_ahead=self._supervisor.options.look_ahead,
+                                    )
+                                    >= self._supervisor.options.fuzzy_cutoff
                                 )
-                                >= self._supervisor.options.fuzzy_cutoff
-                            )
-                            if go:
-                                yield c
+                                if go:
+                                    yield c
 
-                    yield tuple(cont())
+                        cmps = tuple(cont())
+                        yield cmps
+                        seen += len(cmps)
 
-                    if lsp_comps.local_cache and chunked:
-                        await set_cache(chunked)
-                        yield ()
+                if lsp_comps.local_cache and chunked:
+                    await set_cache(chunked)
+                    yield ()
 
