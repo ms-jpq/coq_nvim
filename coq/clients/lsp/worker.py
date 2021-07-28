@@ -26,6 +26,9 @@ class Worker(BaseWorker[BaseClient, None], CacheWorker):
         w_before, sw_before = lower(context.words_before), lower(context.syms_before)
         use_cache, cached, set_cache = self._use_cache(context)
 
+        if not use_cache:
+            self._local_cached.clear()
+
         async def cached_iters() -> LSPcomp:
             items = chain(*self._local_cached) if use_cache else iter(())
             self._local_cached.clear()
