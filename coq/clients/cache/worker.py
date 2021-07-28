@@ -1,5 +1,5 @@
 from dataclasses import dataclass, replace
-from typing import Iterator, Mapping, Sequence
+from typing import Iterator, Mapping, Optional, Sequence
 from uuid import UUID, uuid4
 
 from ...shared.runtime import Supervisor
@@ -52,11 +52,11 @@ class CacheWorker:
             comps={},
         )
 
-    async def _use_cache(self, context: Context) -> Iterator[Completion]:
+    async def _use_cache(self, context: Context) -> Optional[Iterator[Completion]]:
         with timeit("CACHE -- GET"):
             cache_ctx = self._cache_ctx
             if not _use_cache(cache_ctx, ctx=context):
-                return iter(())
+                return None
             else:
                 match = context.words or context.syms
                 hashes = await self._db.select(
@@ -90,3 +90,4 @@ class CacheWorker:
             }
             await self._db.populate(use_cache, pool=pool)
             self._cache_ctx = new_cache_ctx
+

@@ -25,7 +25,7 @@ class Worker(BaseWorker[BaseClient, None], CacheWorker):
 
         async def cached() -> LSPcomp:
             items = await self._use_cache(context)
-            return LSPcomp(complete=False, items=items)
+            return LSPcomp(complete=False, items=items or iter(()))
 
         async def stream() -> AsyncIterator[LSPcomp]:
             stream = request(
