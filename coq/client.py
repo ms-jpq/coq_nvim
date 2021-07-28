@@ -59,7 +59,7 @@ class CoqClient(Client):
             self._event_queue.put(msg)
             return None
         else:
-            with timeit(name):
+            with timeit(f"<> {name}", force=True):
                 return self._handle(nvim, msg)
 
     def wait(self, nvim: Nvim) -> int:
@@ -91,3 +91,4 @@ class CoqClient(Client):
                 threadsafe_call(nvim, self._handle, nvim, msg)
             except Exception as e:
                 log.exception("%s", e)
+
