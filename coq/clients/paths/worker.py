@@ -62,8 +62,6 @@ def parse(
     unifying_chars: AbstractSet[str], base: Path, line: str
 ) -> Iterator[Tuple[str, str]]:
     segments = reversed(tuple(_segments(line)))
-    segments = [*segments]
-    print(segments)
     for segment in segments:
         sort_by = _sort_by(segment, unifying_chars=unifying_chars)
 
@@ -82,7 +80,9 @@ def parse(
                 return
 
             else:
-                lseg, _ = split(segment)
+                lp, sp, _ = segment.rpartition(sep)
+                lseg = lp + sp
+
                 lft, go, rhs = s0.rpartition(sep)
                 assert go, s0
                 lhs = lft + go
@@ -97,7 +97,6 @@ def parse(
                             term = sep if path.is_dir() else ""
                             name = rhs + path.name[len(rhs) :]
                             line = _join(lseg, name) + term
-                            print([segment], [line], lseg, name)
                             yield line, sort_by
                     return
 
