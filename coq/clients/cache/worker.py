@@ -69,7 +69,7 @@ class CacheWorker:
     async def _set_cache(
         self, context: Context, completions: Sequence[Completion]
     ) -> None:
-        with timeit("CACHE -- SET"):
+        with timeit(f"CACHE -- SET :: {len(completions)}"):
             cache_ctx = self._cache_ctx
 
             use_cache = _use_cache(cache_ctx, ctx=context)
