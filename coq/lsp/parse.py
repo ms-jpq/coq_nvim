@@ -1,9 +1,9 @@
 from random import shuffle
-from typing import Iterator, Mapping, MutableSequence, Optional, Sequence, Tuple, cast
+from typing import Mapping, MutableSequence, Optional, Sequence, cast
 
 from ..shared.types import Completion, Doc, Edit, RangeEdit, SnippetEdit
 from .protocol import PROTOCOL
-from .types import CompletionItem, CompletionResponse, TextEdit
+from .types import CompletionItem, CompletionResponse, LSPcomp, TextEdit
 
 
 def _range_edit(edit: TextEdit) -> Optional[RangeEdit]:
@@ -96,12 +96,9 @@ def _parse_item(
         return cmp
 
 
-def parse(
-    short_name: str, tie_breaker: int, resp: CompletionResponse
-) -> Tuple[bool, Iterator[Completion]]:
+def parse(short_name: str, tie_breaker: int, resp: CompletionResponse) -> LSPcomp:
     if isinstance(resp, Mapping):
-        incomplete = resp.get("isIncomplete") not in {None, False, 0, ""}
-        no_cache = incomplete
+        complete = resp.get("isIncomplete") in {None, False, 0, ""}
         items = resp.get("items", ())
         shuffle(cast(MutableSequence, items))
         comps = (
@@ -112,11 +109,10 @@ def parse(
             )
             if c
         )
-        return no_cache, comps
+        lc = LSPcomp(complete=complete, items=comps)
+        return lc
 
     elif isinstance(resp, Sequence) and not isinstance(resp, str):
-        incomplete = False
-        no_cache = incomplete
         shuffle(cast(MutableSequence, resp))
         comps = (
             c
@@ -126,8 +122,8 @@ def parse(
             )
             if c
         )
-        return no_cache, comps
+        return LSPcomp(complete=True, items=comps)
 
     else:
-        return False, iter(())
+        return LSPcomp(complete=True, items=iter(()))
 

@@ -1,4 +1,7 @@
-from typing import Literal, Optional, Sequence, TypedDict, Union
+from dataclasses import dataclass
+from typing import Iterator, Literal, Optional, Sequence, TypedDict, Union
+
+from ..shared.types import Completion
 
 # https://microsoft.github.io/language-server-protocol/specification
 
@@ -55,3 +58,10 @@ class _CompletionList(TypedDict):
 CompletionResponse = Union[
     Literal[None, False, 0], Sequence[CompletionItem], _CompletionList
 ]
+
+
+@dataclass(frozen=True)
+class LSPcomp:
+    complete: bool
+    items: Iterator[Completion]
+
