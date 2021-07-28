@@ -1,5 +1,6 @@
 from asyncio import as_completed
-from typing import AsyncIterator, Iterator, Sequence
+from itertools import chain
+from typing import AsyncIterator, Iterator, MutableSequence, Sequence
 
 from std2.aitertools import anext
 from std2.itertools import chunk
@@ -17,13 +18,18 @@ from ..cache.worker import CacheWorker
 
 class Worker(BaseWorker[BaseClient, None], CacheWorker):
     def __init__(self, supervisor: Supervisor, options: BaseClient, misc: None) -> None:
-        self._local_cache = False
+        self._local_cached: MutableSequence[Iterator[Completion]] = []
         CacheWorker.__init__(self, supervisor=supervisor)
         BaseWorker.__init__(self, supervisor=supervisor, options=options, misc=misc)
 
     async def work(self, context: Context) -> AsyncIterator[Sequence[Completion]]:
         w_before, sw_before = lower(context.words_before), lower(context.syms_before)
-        self._local_cache, cached, set_cache = self._use_cache(context)
+        use_cache, cached, set_cache = self._use_cache(context)
+
+        async def cached_iters() -> LSPcomp:
+            items = chain(*self._local_cached) if use_cache else iter(())
+            self._local_cached.clear()
+            return LSPcomp(local_cache=True, items=items)
 
         async def cached_items() -> LSPcomp:
             items = await cached
@@ -36,8 +42,10 @@ class Worker(BaseWorker[BaseClient, None], CacheWorker):
                 tie_breaker=self._options.tie_breaker,
                 context=context,
             )
+
             for fut in as_completed(
                 (
+                    cached_iters(),
                     cached_items(),
                     anext(stream, LSPcomp(local_cache=False, items=iter(()))),
                 )
@@ -48,6 +56,9 @@ class Worker(BaseWorker[BaseClient, None], CacheWorker):
                 yield lc
 
         async for lsp_comps in stream():
+            if lsp_comps.local_cache:
+                self._local_cached.append(lsp_comps.items)
+
             for chunked in chunk(
                 lsp_comps.items, n=self._supervisor.options.max_results
             ):
@@ -78,3 +89,4 @@ class Worker(BaseWorker[BaseClient, None], CacheWorker):
                 if lsp_comps.local_cache and chunked:
                     await set_cache(chunked)
                     yield ()
+
