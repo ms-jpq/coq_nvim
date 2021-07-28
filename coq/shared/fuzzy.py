@@ -42,7 +42,7 @@ def quick_ratio(lhs: str, rhs: str, look_ahead: int) -> float:
         l, r = lhs[p_matches:cutoff], rhs[p_matches:cutoff]
         l_ratio = p_matches / shorter
         r_ratio = multi_set_ratio(l, r)
-        return l_ratio + r_ratio
+        return l_ratio + r_ratio * 0.5
 
 
 def dl_distance(lhs: str, rhs: str) -> int:
