@@ -1,11 +1,13 @@
 from asyncio import as_completed
 from itertools import islice
 from os import X_OK, access
-from os.path import join, normpath, sep, split
+from os.path import expandvars, join, normcase, normpath, sep, split
 from pathlib import Path
 from typing import AbstractSet, AsyncIterator, Iterator, MutableSet, Sequence, Tuple
 
 from std2.asyncio import run_in_executor
+
+from coq.shared.parse import lower
 
 from ...shared.runtime import Worker as BaseWorker
 from ...shared.settings import BaseClient
@@ -42,7 +44,7 @@ def parse(base: Path, line: str) -> Iterator[Tuple[str, str]]:
         sl, ss, sr = segment.rpartition(sep)
         sort_by = _p_lhs(sl) + ss + sr
 
-        e = Path(segment).expanduser()
+        e = Path(expandvars(Path(segment).expanduser()))
         entire = e if e.is_absolute() else base / e
         if entire.is_dir() and access(entire, mode=X_OK):
             for path in entire.iterdir():
@@ -52,13 +54,15 @@ def parse(base: Path, line: str) -> Iterator[Tuple[str, str]]:
             break
         else:
             lft, go, rhs = segment.rpartition(sep)
+            is_lower = lower(rhs) == rhs
             assert go
             lhs = lft + go
             l = Path(lhs).expanduser()
             left = l if l.is_absolute() else base / l
             if left.is_dir() and access(left, mode=X_OK):
                 for path in left.iterdir():
-                    if path.name.startswith(rhs):
+                    l_match = lower(path.name) if is_lower else normcase(path.name)
+                    if l_match.startswith(rhs):
                         term = sep if path.is_dir() else ""
                         line = _join(lhs, path.name) + term
                         yield line, sort_by
@@ -101,3 +105,4 @@ class Worker(BaseWorker[BaseClient, None]):
                         yield completion
 
             yield tuple(cont())
+
