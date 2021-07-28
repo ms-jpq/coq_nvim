@@ -1,6 +1,6 @@
 from collections import Counter
 from dataclasses import dataclass
-from typing import MutableMapping
+from typing import Iterable, MutableMapping
 
 
 @dataclass(frozen=True)
@@ -9,7 +9,7 @@ class MatchMetrics:
     edit_distance: float
 
 
-def _p_matches(lhs: str, rhs: str) -> int:
+def _p_matches(lhs: Iterable[str], rhs: Iterable[str]) -> int:
     p_matches = 0
     for l, r in zip(lhs, rhs):
         if l == r:
