@@ -57,7 +57,7 @@ class Worker(BaseWorker[BaseClient, None], CacheWorker):
                                 lower(c.sort_by),
                                 look_ahead=self._supervisor.options.look_ahead,
                             )
-                            > self._supervisor.options.fuzzy_cutoff
+                            >= self._supervisor.options.fuzzy_cutoff
                         )
                         if go:
                             yield c
@@ -67,3 +67,4 @@ class Worker(BaseWorker[BaseClient, None], CacheWorker):
                 if not no_cache:
                     await self._set_cache(context, completions=chunked)
                     yield ()
+
