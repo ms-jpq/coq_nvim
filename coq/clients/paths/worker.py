@@ -7,8 +7,7 @@ from typing import AbstractSet, AsyncIterator, Iterator, MutableSet, Sequence, T
 
 from std2.asyncio import run_in_executor
 
-from coq.shared.parse import lower
-
+from ...shared.parse import lower
 from ...shared.runtime import Worker as BaseWorker
 from ...shared.settings import BaseClient
 from ...shared.sql import BIGGEST_INT
@@ -22,12 +21,10 @@ def _p_lhs(lhs: str) -> str:
     else:
         if lhs.endswith("}"):
             _, s, r = lhs.rpartition("${")
-            if s:
-                return s + r
+            return s + r if s else ""
         else:
             _, s, r = lhs.rpartition("$")
-            if s:
-                return s + r
+            return s + r if s else ""
 
 
 def _segments(line: str) -> Iterator[str]:
