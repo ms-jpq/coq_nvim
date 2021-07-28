@@ -54,7 +54,13 @@ class QuickRatio(TestCase):
         lhs = "abc"
         rhs = "acb"
         ratio = quick_ratio(lhs, rhs, look_ahead=_LOOK_AHEAD)
-        self.assertAlmostEqual(ratio, 1 / 2)
+        self.assertAlmostEqual(ratio, 2 / 3)
+
+    def test_4(self) -> None:
+        lhs = "abcd"
+        rhs = "abdc"
+        ratio = quick_ratio(lhs, rhs, look_ahead=_LOOK_AHEAD)
+        self.assertAlmostEqual(ratio, 3 / 4)
 
 
 class EditD(TestCase):
