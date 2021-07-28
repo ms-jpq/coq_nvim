@@ -1,6 +1,8 @@
 from random import shuffle
 from typing import Mapping, MutableSequence, Optional, Sequence, cast
 
+from pynvim_pp.logging import log
+
 from ..shared.types import Completion, Doc, Edit, RangeEdit, SnippetEdit
 from .protocol import PROTOCOL
 from .types import CompletionItem, CompletionResponse, LSPcomp, TextEdit
@@ -125,5 +127,7 @@ def parse(short_name: str, tie_breaker: int, resp: CompletionResponse) -> LSPcom
         return LSPcomp(complete=True, items=comps)
 
     else:
+        msg = f"Unknown LSP resp -- {type(resp)}"
+        log.warn("%s", msg)
         return LSPcomp(complete=False, items=iter(()))
 
