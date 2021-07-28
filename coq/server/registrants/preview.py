@@ -328,4 +328,3 @@ def preview_preview(nvim: Nvim, stack: Stack, *_: str) -> str:
 
     escaped: str = nvim.api.replace_termcodes("<c-e>", True, False, True)
     return escaped
-

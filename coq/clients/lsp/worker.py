@@ -110,4 +110,3 @@ class Worker(BaseWorker[BaseClient, None], CacheWorker):
                 if lsp_comps.local_cache and chunked:
                     await set_cache(chunked)
                     yield ()
-
