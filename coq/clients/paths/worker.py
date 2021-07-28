@@ -65,7 +65,6 @@ def parse(
     segments = [*segments]
     print(segments)
     for segment in segments:
-        print([segment])
         sort_by = _sort_by(segment, unifying_chars=unifying_chars)
 
         s1 = segment
@@ -83,10 +82,10 @@ def parse(
                 return
 
             else:
-                lseg, go1, _ = segment.rpartition(sep)
-                lft, go2, rhs = s0.rpartition(sep)
-                assert go1 and go2, s0
-                lhs = lft + go2
+                lseg, _ = split(segment)
+                lft, go, rhs = s0.rpartition(sep)
+                assert go, s0
+                lhs = lft + go
                 p = Path(lhs)
                 left = p if p.is_absolute() else base / p
                 if left.is_dir() and access(left, mode=X_OK):
@@ -98,7 +97,7 @@ def parse(
                             term = sep if path.is_dir() else ""
                             name = rhs + path.name[len(rhs) :]
                             line = _join(lseg, name) + term
-                            print([line], lseg + name)
+                            print([segment], [line], lseg, name)
                             yield line, sort_by
                     return
 
