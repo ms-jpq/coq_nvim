@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from abc import abstractmethod
-from asyncio import Condition, Task, as_completed, gather, sleep, wait
+from asyncio import Condition, Lock, Task, as_completed, gather, sleep, wait
 from concurrent.futures import Executor
 from dataclasses import dataclass
 from time import monotonic
@@ -79,6 +79,7 @@ class Supervisor:
         self.nvim, self._reviewer = nvim, reviewer
 
         self.idling = Condition()
+        self._lock = Lock()
         self._workers: MutableMapping[Worker, BaseClient] = WeakKeyDictionary()
 
         self._task: Optional[Task] = None
@@ -118,60 +119,62 @@ class Supervisor:
     def collect(self, context: Context) -> Awaitable[Sequence[Metric]]:
         async def cont() -> Sequence[Metric]:
             with timeit("COLLECTED -- **ALL**"):
-                done = False
-                acc: MutableSequence[Metric] = []
-                timeout = (
-                    self.limits.manual_timeout
-                    if context.manual
-                    else self.limits.timeout
-                )
-
-                async def supervise(worker: Worker, assoc: BaseClient) -> None:
-                    with timeit(f"WORKER -- {assoc.short_name}"):
-                        instance, t1 = uuid4(), monotonic()
-                        interrupted, items = True, 0
-                        await self._reviewer.s_begin(assoc, instance=instance)
-                        try:
-                            async for completions in worker.work(context):
-                                for comps in chunk(
-                                    completions, n=self.options.max_results
-                                ):
-                                    if not done:
-                                        metrics = self._reviewer.trans(
-                                            instance, completions=comps
-                                        )
-                                        acc.extend(metrics)
-                                    items += len(comps)
-                                    await sleep(0)
-                            else:
-                                interrupted = False
-                        finally:
-                            elapsed = monotonic() - t1
-                            await self._reviewer.s_end(
-                                instance,
-                                interrupted=interrupted,
-                                elapsed=elapsed,
-                                items=items,
-                            )
-
-                await self._reviewer.begin(context)
-                try:
-                    self._tasks = tuple(
-                        cast(Task, go(self.nvim, aw=supervise(worker, assoc=assoc)))
-                        for worker, assoc in self._workers.items()
+                assert not self._lock.locked()
+                async with self._lock:
+                    done = False
+                    acc: MutableSequence[Metric] = []
+                    timeout = (
+                        self.limits.manual_timeout
+                        if context.manual
+                        else self.limits.timeout
                     )
-                    if not self._tasks:
-                        return ()
-                    else:
-                        _, pending = await wait(self._tasks, timeout=timeout)
-                        if not acc:
-                            for fut in as_completed(pending):
-                                await fut
-                                if acc:
-                                    break
-                        return acc
-                finally:
-                    done = True
+
+                    async def supervise(worker: Worker, assoc: BaseClient) -> None:
+                        with timeit(f"WORKER -- {assoc.short_name}"):
+                            instance, t1 = uuid4(), monotonic()
+                            interrupted, items = True, 0
+                            await self._reviewer.s_begin(assoc, instance=instance)
+                            try:
+                                async for completions in worker.work(context):
+                                    for comps in chunk(
+                                        completions, n=self.options.max_results
+                                    ):
+                                        if not done:
+                                            metrics = self._reviewer.trans(
+                                                instance, completions=comps
+                                            )
+                                            acc.extend(metrics)
+                                        items += len(comps)
+                                        await sleep(0)
+                                else:
+                                    interrupted = False
+                            finally:
+                                elapsed = monotonic() - t1
+                                await self._reviewer.s_end(
+                                    instance,
+                                    interrupted=interrupted,
+                                    elapsed=elapsed,
+                                    items=items,
+                                )
+
+                    await self._reviewer.begin(context)
+                    try:
+                        self._tasks = tuple(
+                            cast(Task, go(self.nvim, aw=supervise(worker, assoc=assoc)))
+                            for worker, assoc in self._workers.items()
+                        )
+                        if not self._tasks:
+                            return ()
+                        else:
+                            _, pending = await wait(self._tasks, timeout=timeout)
+                            if not acc:
+                                for fut in as_completed(pending):
+                                    await fut
+                                    if acc:
+                                        break
+                            return acc
+                    finally:
+                        done = True
 
         self._task = cast(Task, go(self.nvim, aw=cont()))
         return self._task
