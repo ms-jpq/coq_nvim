@@ -1,13 +1,11 @@
-#!/usr/bin/env python3
-
 from argparse import ArgumentParser, Namespace
 from pathlib import Path
 from unittest import defaultTestLoader
 from unittest.runner import TextTestRunner
 from unittest.signals import installHandler
 
-_TOP_LV = Path(__file__).resolve().parent
-_TESTS = _TOP_LV / "tests"
+_TESTS = Path(__file__).resolve().parent
+_TOP_LV = _TESTS.parent
 
 
 def _parse_args() -> Namespace:
@@ -34,4 +32,6 @@ def main() -> None:
     runner.run(suite)
 
 
-main()
+if __name__ == "__main__":
+    main()
+
