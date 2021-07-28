@@ -1,5 +1,8 @@
-from typing import AsyncIterator, Iterator, Sequence
+from asyncio import as_completed, gather
+from typing import AsyncIterator, Iterable, Iterator, Sequence, Tuple
 
+from std2.aitertools import anext
+from std2.asyncio._prelude import pure
 from std2.itertools import chunk
 
 from ...lsp.requests.completion import request
@@ -20,17 +23,22 @@ class Worker(BaseWorker[BaseClient, None], CacheWorker):
     async def work(self, context: Context) -> AsyncIterator[Sequence[Completion]]:
         w_before, sw_before = lower(context.words_before), lower(context.syms_before)
 
-        cached = await self._use_cache(context)
-        yield cached
+        async def stream() -> AsyncIterator[Tuple[bool, Iterable[Completion]]]:
+            cached = gather(pure(True), self._use_cache(context))
+            stream = request(
+                self._supervisor.nvim,
+                short_name=self._options.short_name,
+                tie_breaker=self._options.tie_breaker,
+                context=context,
+            )
+            for fut in as_completed((cached, anext(stream, (True, ())))):
+                no_cache, comps = await fut
+                yield no_cache, comps
 
-        stream = request(
-            self._supervisor.nvim,
-            short_name=self._options.short_name,
-            tie_breaker=self._options.tie_breaker,
-            context=context,
-        )
+            async for no_cache, comps in stream:
+                yield no_cache, comps
 
-        async for no_cache, comps in stream:
+        async for no_cache, comps in stream():
             for chunked in chunk(comps, n=self._supervisor.options.max_results):
 
                 def cont() -> Iterator[Completion]:
