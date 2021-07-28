@@ -99,8 +99,9 @@ class Supervisor:
     def interrupt(self) -> None:
         async def cont() -> None:
             with timeit("CANCEL -- **ALL**"):
-                await cancel(gather(*self._tasks))
+                tasks = self._tasks
                 self._tasks = ()
+                await cancel(gather(*tasks))
 
         go(self.nvim, aw=cont())
 
