@@ -158,7 +158,7 @@ def _positions(
 
     e = _Pos(
         row=top,
-        col=right + 2,
+        col=right + 1,
         height=we_height,
         width=limit_w(scr_width - right - 2),
     )
