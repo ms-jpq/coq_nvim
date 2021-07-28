@@ -140,14 +140,14 @@ class Supervisor:
 
             await self._reviewer.begin(context)
             try:
-                self._tasks = tuple(
+                self._tasks = tasks = tuple(
                     cast(Task, go(self.nvim, aw=supervise(worker, assoc=assoc)))
                     for worker, assoc in self._workers.items()
                 )
-                if not self._tasks:
+                if not tasks:
                     return ()
                 else:
-                    _, pending = await wait(self._tasks, timeout=timeout)
+                    _, pending = await wait(tasks, timeout=timeout)
                     if not acc:
                         for fut in as_completed(pending):
                             await fut
