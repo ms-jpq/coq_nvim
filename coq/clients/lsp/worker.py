@@ -95,15 +95,12 @@ class Worker(BaseWorker[BaseClient, None], CacheWorker):
                                     )
                                     else sw_before
                                 )
-                                go = (
-                                    quick_ratio(
-                                        cword,
-                                        lower(c.sort_by),
-                                        look_ahead=self._supervisor.options.look_ahead,
-                                    )
-                                    >= self._supervisor.options.fuzzy_cutoff
+                                ratio = quick_ratio(
+                                    cword,
+                                    lower(c.sort_by),
+                                    look_ahead=self._supervisor.options.look_ahead,
                                 )
-                                if go:
+                                if ratio >= self._supervisor.options.fuzzy_cutoff:
                                     yield c
 
                         cmps = tuple(cont())
