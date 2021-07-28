@@ -92,4 +92,3 @@ class CoqClient(Client):
                 threadsafe_call(nvim, self._handle, nvim, msg)
             except Exception as e:
                 log.exception("%s", e)
-

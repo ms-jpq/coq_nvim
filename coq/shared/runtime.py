@@ -203,4 +203,3 @@ class Worker(Generic[O_co, T_co]):
     @abstractmethod
     def work(self, context: Context) -> AsyncIterator[Sequence[Completion]]:
         ...
-

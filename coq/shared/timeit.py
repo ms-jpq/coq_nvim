@@ -30,4 +30,3 @@ def timeit(
             log.info("%s", msg)
     else:
         yield None
-
