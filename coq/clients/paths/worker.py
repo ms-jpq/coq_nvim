@@ -1,7 +1,7 @@
 from asyncio import as_completed
 from itertools import islice
 from os import X_OK, access
-from os.path import expandvars, join, normcase, normpath, sep, split
+from os.path import expanduser, expandvars, join, normcase, normpath, sep, split
 from pathlib import Path
 from typing import AbstractSet, AsyncIterator, Iterator, MutableSet, Sequence, Tuple
 
@@ -48,11 +48,12 @@ def parse(base: Path, line: str) -> Iterator[Tuple[str, str]]:
         sl, ss, sr = segment.rpartition(sep)
         sort_by = _p_lhs(sl) + ss + sr
 
-        p1 = Path(segment)
-        p2 = p1.expanduser()
-        p3 = Path(expandvars(p2))
+        s1 = segment
+        s2 = expanduser(s1)
+        s3 = expandvars(s2)
 
-        for p in (p1, p2, p3):
+        for s0 in (s1, s2, s3):
+            p = Path(s0)
             entire = p if p.is_absolute() else base / p
             if entire.is_dir() and access(entire, mode=X_OK):
                 for path in entire.iterdir():
@@ -62,11 +63,11 @@ def parse(base: Path, line: str) -> Iterator[Tuple[str, str]]:
                 return
 
             else:
-                lft, go, rhs = segment.rpartition(sep)
-                assert go, segment
+                lft, go, rhs = s0.rpartition(sep)
+                assert go, s0
                 lhs = lft + go
-                l = Path(lhs).expanduser()
-                left = l if l.is_absolute() else base / l
+                p = Path(lhs)
+                left = p if p.is_absolute() else base / p
                 if left.is_dir() and access(left, mode=X_OK):
                     is_lower = lower(rhs) == rhs
 
