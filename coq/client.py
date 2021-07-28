@@ -64,6 +64,7 @@ class CoqClient(Client):
 
     def wait(self, nvim: Nvim) -> int:
         assert isinstance(nvim.loop, AbstractEventLoop)
+        nvim.loop.set_debug(DEBUG)
         nvim.loop.set_default_executor(self._pool)
 
         def cont() -> None:
