@@ -9,6 +9,7 @@ from subprocess import DEVNULL, PIPE
 from typing import Any, AsyncIterator, Iterator, Optional, Sequence
 
 from pynvim_pp.lib import go
+from std2.itertools import chunk
 from std2.pickle import new_decoder, new_encoder
 
 from ...shared.runtime import Supervisor
@@ -124,5 +125,9 @@ class Worker(BaseWorker[TabnineClient, None]):
                 self._proc = await _proc()
             else:
                 reply = loads(json)
-                cmps = tuple(_decode(self._options, reply=reply))
-                yield cmps
+                for chunked in chunk(
+                    _decode(self._options, reply=reply),
+                    n=self._supervisor.options.max_results,
+                ):
+                    yield chunked
+
