@@ -4,7 +4,7 @@ from typing import Any, Callable, Iterable, Iterator, MutableSet, Sequence, Tupl
 
 from std2.ordinal import clamp
 
-from ..shared.parse import display_width
+from ..shared.parse import display_width, lower
 from ..shared.runtime import Metric
 from ..shared.settings import PumDisplay, Weights
 from ..shared.types import Context
@@ -34,7 +34,7 @@ def _cum(adjustment: Weights, metrics: Iterable[Metric]) -> Tuple[int, Weights]:
     return max_width, Weights(**acc)
 
 
-def _sort_by(adjustment: Weights) -> Callable[[Metric], Any]:
+def _sort_by(is_lower: bool, adjustment: Weights) -> Callable[[Metric], Any]:
     adjust = asdict(adjustment)
 
     def key_by(metric: Metric) -> Any:
@@ -49,7 +49,9 @@ def _sort_by(adjustment: Weights) -> Callable[[Metric], Any]:
             -metric.comp.tie_breaker,
             -(metric.comp.doc is not None),
             -metric.comp.sort_by[:1].isalnum(),
-            strxfrm(metric.comp.sort_by.swapcase()),
+            strxfrm(
+                metric.comp.sort_by.swapcase() if is_lower else metric.comp.sort_by
+            ),
         )
         return key
 
@@ -117,6 +119,7 @@ def trans(
     scr_width, _ = s.screen
 
     display = stack.settings.display
+    is_lower = lower(context.words_before) == context.words_before
 
     kind_dead_width = sum(
         display_width(s, tabsize=context.tabstop) for s in display.pum.kind_context
@@ -125,7 +128,7 @@ def trans(
     truncate = clamp(1, scr_width - context.scr_col, display.pum.x_max_len)
 
     max_width, w_adjust = _cum(stack.settings.weights, metrics=metrics)
-    sortby = _sort_by(w_adjust)
+    sortby = _sort_by(is_lower, adjustment=w_adjust)
     ranked = sorted(metrics, key=sortby)
 
     seen: MutableSet[str] = set()
@@ -143,3 +146,4 @@ def trans(
                 max_width=max_width,
                 metric=metric,
             )
+
