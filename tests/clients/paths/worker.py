@@ -76,3 +76,20 @@ class Parser(TestCase):
         results = {*parse(Path("."), line=line)}
         expected = ("~/.config/", "~/.c")
         self.assertIn(expected, results)
+
+    def test_9(self) -> None:
+        line = "$a$PWD/.gith"
+        actual = sorted(parse(Path("."), line=line))
+        expected = sorted(
+            (("$PWD/.github/", "$PWD/.gith"),),
+        )
+        self.assertEqual(actual, expected)
+
+    def test_10(self) -> None:
+        line = "$a${PWD}/.gith"
+        actual = sorted(parse(Path("."), line=line))
+        expected = sorted(
+            (("${PWD}/.github/", "${PWD}/.gith"),),
+        )
+        self.assertEqual(actual, expected)
+
