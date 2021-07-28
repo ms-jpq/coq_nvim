@@ -98,14 +98,14 @@ class Supervisor:
 
     def interrupt(self) -> None:
         async def cont() -> None:
-            await cancel(gather(*self._tasks))
-            self._tasks = ()
+            async with self._lock:
+                await cancel(gather(*self._tasks))
+                self._tasks = ()
 
         go(self.nvim, aw=cont())
 
     async def collect(self, context: Context) -> Sequence[Metric]:
         with timeit("COLLECTED -- **ALL**"):
-            assert not self._lock.locked()
             async with self._lock:
                 done = False
                 acc: MutableSequence[Metric] = []
