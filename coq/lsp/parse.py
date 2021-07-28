@@ -100,7 +100,8 @@ def parse(
     short_name: str, tie_breaker: int, resp: CompletionResponse
 ) -> Tuple[bool, Iterator[Completion]]:
     if isinstance(resp, Mapping):
-        no_cache = resp.get("isIncomplete") not in {None, False, 0, ""}
+        incomplete = resp.get("isIncomplete") not in {None, False, 0, ""}
+        no_cache = incomplete
         items = resp.get("items", ())
         shuffle(cast(MutableSequence, items))
         comps = (
@@ -112,7 +113,10 @@ def parse(
             if c
         )
         return no_cache, comps
+
     elif isinstance(resp, Sequence):
+        incomplete = False
+        no_cache = incomplete
         shuffle(cast(MutableSequence, resp))
         comps = (
             c
@@ -122,6 +126,8 @@ def parse(
             )
             if c
         )
-        return False, comps
+        return no_cache, comps
+
     else:
         return False, iter(())
+
