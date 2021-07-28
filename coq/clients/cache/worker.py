@@ -53,11 +53,11 @@ class CacheWorker:
         )
 
     async def _use_cache(self, context: Context) -> Sequence[Completion]:
-        cache_ctx = self._cache_ctx
-        if not _use_cache(cache_ctx, ctx=context):
-            return ()
-        else:
-            with timeit("CACHE -- GET"):
+        with timeit("CACHE -- GET"):
+            cache_ctx = self._cache_ctx
+            if not _use_cache(cache_ctx, ctx=context):
+                return ()
+            else:
                 match = context.words or context.syms
                 hashes = await self._db.select(
                     self._soup.options, word=match, limitless=context.manual
