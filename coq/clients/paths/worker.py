@@ -20,7 +20,14 @@ def _p_lhs(lhs: str) -> str:
         if lhs.endswith(sym):
             return sym
     else:
-        return ""
+        if lhs.endswith("}"):
+            _, s, r = lhs.rpartition("${")
+            if s:
+                return s + r
+        else:
+            _, s, r = lhs.partition("$")
+            if s:
+                return s + r
 
 
 def _segments(line: str) -> Iterator[str]:
