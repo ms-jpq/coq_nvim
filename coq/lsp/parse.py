@@ -101,7 +101,7 @@ def _parse_item(
 def parse(short_name: str, tie_breaker: int, resp: CompletionResponse) -> LSPcomp:
     if isinstance(resp, Mapping):
         complete = resp.get("isIncomplete") in {None, False, 0, ""}
-        items = resp.get("items", ())
+        items = resp.get("items", [])
         shuffle(cast(MutableSequence, items))
         comps = (
             c
