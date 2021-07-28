@@ -25,7 +25,7 @@ def _p_lhs(lhs: str) -> str:
             if s:
                 return s + r
         else:
-            _, s, r = lhs.partition("$")
+            _, s, r = lhs.rpartition("$")
             if s:
                 return s + r
 
