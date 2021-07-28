@@ -99,13 +99,9 @@ class Supervisor:
 
         go(self.nvim, aw=cont())
 
-    def interrupt(self) -> None:
-        async def cont() -> None:
-            with timeit("CANCEL -- **ALL**"):
-                if self._task:
-                    await cancel(self._task)
-
-        go(self.nvim, aw=cont())
+    async def interrupt(self) -> None:
+        if self._task:
+            await cancel(self._task)
 
     def collect(self, context: Context) -> Awaitable[Sequence[Metric]]:
         async def cont() -> Sequence[Metric]:

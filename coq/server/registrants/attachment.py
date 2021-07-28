@@ -39,6 +39,7 @@ def _listener(nvim: Nvim, stack: Stack) -> None:
     async def cont() -> None:
         while True:
             thing: _Qmsg = await run_in_executor(q.get)
+            await stack.supervisor.interrupt()
             mode, pending, buf, (lo, hi), lines, ft = thing
 
             size = sum(map(len, lines))
@@ -83,7 +84,6 @@ def _lines_event(
     lines: Sequence[str],
     pending: bool,
 ) -> None:
-    stack.supervisor.interrupt()
     filetype = buf_filetype(nvim, buf=buf)
     mode = nvim.api.get_mode()["mode"]
     q.put((mode, pending, buf, (lo, hi), lines, filetype))
@@ -102,3 +102,4 @@ BUF_EVENTS = {
     "nvim_buf_changedtick_event": _changed_event,
     "nvim_buf_detach_event": _detach_event,
 }
+
