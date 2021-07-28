@@ -1,4 +1,5 @@
-from typing import Iterator, Mapping, Optional, Sequence, Tuple, cast
+from random import shuffle
+from typing import Iterator, Mapping, MutableSequence, Optional, Sequence, Tuple, cast
 
 from ..shared.types import Completion, Doc, Edit, RangeEdit, SnippetEdit
 from .protocol import PROTOCOL
@@ -100,16 +101,19 @@ def parse(
 ) -> Tuple[bool, Iterator[Completion]]:
     if isinstance(resp, Mapping):
         no_cache = resp.get("isIncomplete") not in {None, False, 0, ""}
+        items = resp.get("items", ())
+        shuffle(cast(MutableSequence, items))
         comps = (
             c
             for c in (
                 _parse_item(short_name, tie_breaker=tie_breaker, item=item)
-                for item in resp.get("items", ())
+                for item in items
             )
             if c
         )
         return no_cache, comps
     elif isinstance(resp, Sequence):
+        shuffle(cast(MutableSequence, resp))
         comps = (
             c
             for c in (
