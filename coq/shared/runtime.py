@@ -13,6 +13,7 @@ from asyncio import (
 )
 from concurrent.futures import Executor
 from dataclasses import dataclass
+from itertools import chain
 from time import monotonic
 from typing import (
     AbstractSet,
@@ -92,6 +93,7 @@ class Supervisor:
 
         self._lock = Lock()
         self._task: Optional[Task] = None
+        self._tasks: Sequence[Task] = ()
 
     @property
     def clients(self) -> AbstractSet[BaseClient]:
@@ -109,8 +111,7 @@ class Supervisor:
         go(self.nvim, aw=cont())
 
     async def interrupt(self) -> None:
-        if self._task:
-            await cancel(self._task)
+        await cancel(gather(*chain(((self._task,) if self._task else ()), self._tasks)))
 
     def collect(self, context: Context) -> Awaitable[Sequence[Metric]]:
         loop: AbstractEventLoop = self.nvim.loop
@@ -120,18 +121,20 @@ class Supervisor:
                 with timeit("COLLECTED -- **ALL**"):
                     assert not self._lock.locked()
                     async with self._lock:
-                        acc: MutableSequence[Metric] = []
                         timeout = (
                             self.limits.manual_timeout
                             if context.manual
                             else self.limits.timeout
                         )
 
+                        acc: MutableSequence[Metric] = []
+                        done = False
+
                         async def supervise(worker: Worker, assoc: BaseClient) -> None:
                             try:
                                 with timeit(f"WORKER -- {assoc.short_name}"):
                                     instance, t1 = uuid4(), monotonic()
-                                    interrupted, items = True, 0
+                                    items = 0
                                     await self._reviewer.s_begin(
                                         assoc, instance=instance
                                     )
@@ -140,19 +143,22 @@ class Supervisor:
                                             for comps in chunk(
                                                 completions, n=self.options.max_results
                                             ):
-                                                metrics = self._reviewer.trans(
-                                                    instance, completions=comps
-                                                )
-                                                acc.extend(metrics)
-                                                items += len(comps)
-                                                await sleep(0)
-                                            else:
-                                                interrupted = False
+                                                if not done:
+                                                    metrics = self._reviewer.trans(
+                                                        instance, completions=comps
+                                                    )
+                                                    acc.extend(metrics)
+                                                    items += len(comps)
+                                                else:
+                                                    msg = f":: {assoc.short_name} :: {len(comps)}"
+                                                    log.debug("%s", msg)
+
+                                                await sleep(int(done))
                                     finally:
                                         elapsed = monotonic() - t1
                                         await self._reviewer.s_end(
                                             instance,
-                                            interrupted=interrupted,
+                                            interrupted=done,
                                             elapsed=elapsed,
                                             items=items,
                                         )
@@ -161,7 +167,7 @@ class Supervisor:
                                 raise
 
                         await self._reviewer.begin(context)
-                        tasks = tuple(
+                        self._tasks = tasks = tuple(
                             loop.create_task(supervise(worker, assoc=assoc))
                             for worker, assoc in self._workers.items()
                         )
@@ -177,7 +183,8 @@ class Supervisor:
                                             break
                                 return acc
                         finally:
-                            await cancel(gather(*tasks))
+                            done = True
+
             except Exception as e:
                 log.exception("%s", e)
                 raise
