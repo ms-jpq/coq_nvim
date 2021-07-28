@@ -1,13 +1,14 @@
-from asyncio import Event, Task, gather
+from asyncio import CancelledError, Condition, gather
+from contextlib import suppress
 from queue import SimpleQueue
-from typing import Any, Literal, Mapping, Optional, Sequence, Tuple, Union, cast
+from typing import Any, Literal, Mapping, Optional, Sequence, Tuple, Union
 from uuid import uuid4
 
 from pynvim import Nvim
 from pynvim.api.nvim import Nvim
 from pynvim_pp.lib import async_call, go
 from pynvim_pp.logging import log
-from std2.asyncio import cancel, run_in_executor
+from std2.asyncio import run_in_executor
 from std2.pickle import DecodeError, new_decoder
 
 from ...registry import atomic, autocmd, rpc
@@ -26,9 +27,8 @@ q: SimpleQueue = SimpleQueue()
 @rpc(blocking=True)
 def _launch_loop(nvim: Nvim, stack: Stack) -> None:
     async def cont() -> None:
-        event = Event()
+        cond = Condition()
         ctx: Optional[Context] = None
-        task: Optional[Task] = None
 
         async def c0(ctx: Context) -> None:
             _, col = ctx.position
@@ -42,17 +42,17 @@ def _launch_loop(nvim: Nvim, stack: Stack) -> None:
             nonlocal ctx
             while True:
                 ctx = await run_in_executor(q.get)
-                event.set()
+                async with cond:
+                    cond.notify_all()
 
         async def c2() -> None:
-            nonlocal task
             while True:
-                await event.wait()
-                event.clear()
-                if task:
-                    await cancel(task)
+                async with cond:
+                    await cond.wait()
+
                 if ctx:
-                    task = cast(Task, go(nvim, aw=c0(ctx)))
+                    with suppress(CancelledError):
+                        await c0(ctx)
 
         await gather(c1(), c2())
 
@@ -120,3 +120,4 @@ def _comp_done(nvim: Nvim, stack: Stack, event: Mapping[str, Any]) -> None:
 
 
 autocmd("CompleteDone") << f"lua {_comp_done.name}(vim.v.completed_item)"
+
