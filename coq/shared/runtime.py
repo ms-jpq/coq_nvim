@@ -104,6 +104,7 @@ class Supervisor:
         with timeit("COLLECTED -- **ALL**"):
             assert not self._lock.locked()
             async with self._lock:
+                done = False
                 acc: MutableSequence[Metric] = []
                 timeout = (
                     self.limits.manual_timeout
@@ -121,10 +122,11 @@ class Supervisor:
                                 for comps in chunk(
                                     completions, n=self.options.max_results
                                 ):
-                                    metrics = self._reviewer.trans(
-                                        instance, completions=comps
-                                    )
-                                    acc.extend(metrics)
+                                    if not done:
+                                        metrics = self._reviewer.trans(
+                                            instance, completions=comps
+                                        )
+                                        acc.extend(metrics)
                                     items += len(comps)
                                     await sleep(0)
                             else:
@@ -139,20 +141,23 @@ class Supervisor:
                             )
 
                 await self._reviewer.begin(context)
-                self._tasks = tuple(
-                    cast(Task, go(self.nvim, aw=supervise(worker, assoc=assoc)))
-                    for worker, assoc in self._workers.items()
-                )
-                if not self._tasks:
-                    return ()
-                else:
-                    _, pending = await wait(self._tasks, timeout=timeout)
-                    if not acc:
-                        for fut in as_completed(pending):
-                            await fut
-                            if acc:
-                                break
-                    return acc
+                try:
+                    self._tasks = tuple(
+                        cast(Task, go(self.nvim, aw=supervise(worker, assoc=assoc)))
+                        for worker, assoc in self._workers.items()
+                    )
+                    if not self._tasks:
+                        return ()
+                    else:
+                        _, pending = await wait(self._tasks, timeout=timeout)
+                        if not acc:
+                            for fut in as_completed(pending):
+                                await fut
+                                if acc:
+                                    break
+                        return acc
+                finally:
+                    done = True
 
 
 class Worker(Generic[O_co, T_co]):
