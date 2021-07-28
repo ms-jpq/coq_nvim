@@ -13,6 +13,7 @@ from pynvim_pp.client import Client
 from pynvim_pp.lib import threadsafe_call
 from pynvim_pp.logging import log
 from pynvim_pp.rpc import RpcCallable, RpcMsg, nil_handler
+from std2.functools import constantly
 from std2.pickle import DecodeError
 from std2.types import AnyFun
 
@@ -24,6 +25,8 @@ from .server.registrants.options import set_options
 from .server.rt_types import Stack
 from .server.runtime import stack
 from .shared.timeit import timeit
+
+_FN = constantly(None)
 
 
 def _set_debug() -> None:
@@ -46,7 +49,7 @@ class CoqClient(Client):
     def _handle(self, nvim: Nvim, msg: RpcMsg) -> Any:
         name, args = msg
         if name.startswith("nvim_buf_"):
-            handler = cast(AnyFun[None], BUF_EVENTS[name])
+            handler = cast(AnyFun[None], BUF_EVENTS.get(name, _FN))
             return handler(nvim, self._stack, *args)
         else:
             handler = cast(AnyFun[None], self._handlers.get(name, nil_handler(name)))
@@ -92,3 +95,4 @@ class CoqClient(Client):
                 threadsafe_call(nvim, self._handle, nvim, msg)
             except Exception as e:
                 log.exception("%s", e)
+

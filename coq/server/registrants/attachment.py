@@ -89,17 +89,9 @@ def _lines_event(
     q.put((mode, pending, buf, (lo, hi), lines, filetype))
 
 
-def _changed_event(nvim: Nvim, stack: Stack, buf: Buffer, tick: int) -> None:
-    pass
-
-
-def _detach_event(nvim: Nvim, stack: Stack, buf: Buffer) -> None:
-    pass
 
 
 BUF_EVENTS = {
     "nvim_buf_lines_event": _lines_event,
-    "nvim_buf_changedtick_event": _changed_event,
-    "nvim_buf_detach_event": _detach_event,
 }
 
