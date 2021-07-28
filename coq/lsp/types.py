@@ -62,6 +62,6 @@ CompletionResponse = Union[
 
 @dataclass(frozen=True)
 class LSPcomp:
-    complete: bool
+    local_cache: bool
     items: Iterator[Completion]
 

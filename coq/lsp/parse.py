@@ -100,7 +100,7 @@ def _parse_item(
 
 def parse(short_name: str, tie_breaker: int, resp: CompletionResponse) -> LSPcomp:
     if isinstance(resp, Mapping):
-        complete = resp.get("isIncomplete") in {None, False, 0, ""}
+        is_complete = resp.get("isIncomplete") in {None, False, 0, ""}
         items = resp.get("items", [])
         shuffle(cast(MutableSequence, items))
         comps = (
@@ -111,7 +111,7 @@ def parse(short_name: str, tie_breaker: int, resp: CompletionResponse) -> LSPcom
             )
             if c
         )
-        lc = LSPcomp(complete=complete, items=comps)
+        lc = LSPcomp(local_cache=is_complete, items=comps)
         return lc
 
     elif isinstance(resp, Sequence) and not isinstance(resp, str):
@@ -124,10 +124,10 @@ def parse(short_name: str, tie_breaker: int, resp: CompletionResponse) -> LSPcom
             )
             if c
         )
-        return LSPcomp(complete=True, items=comps)
+        return LSPcomp(local_cache=True, items=comps)
 
     else:
         msg = f"Unknown LSP resp -- {type(resp)}"
         log.warn("%s", msg)
-        return LSPcomp(complete=False, items=iter(()))
+        return LSPcomp(local_cache=False, items=iter(()))
 

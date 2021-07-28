@@ -25,7 +25,7 @@ class Worker(BaseWorker[BaseClient, None], CacheWorker):
 
         async def cached() -> LSPcomp:
             items = await self._use_cache(context)
-            return LSPcomp(complete=False, items=items or iter(()))
+            return LSPcomp(local_cache=False, items=items or iter(()))
 
         async def stream() -> AsyncIterator[LSPcomp]:
             stream = request(
@@ -35,7 +35,7 @@ class Worker(BaseWorker[BaseClient, None], CacheWorker):
                 context=context,
             )
             for fut in as_completed(
-                (cached(), anext(stream, LSPcomp(complete=False, items=iter(()))))
+                (cached(), anext(stream, LSPcomp(local_cache=False, items=iter(()))))
             ):
                 yield await fut
 
@@ -70,7 +70,7 @@ class Worker(BaseWorker[BaseClient, None], CacheWorker):
 
                 yield tuple(cont())
 
-                if lsp_comps.complete and chunked:
+                if lsp_comps.local_cache and chunked:
                     await self._set_cache(context, completions=chunked)
                     yield ()
 
