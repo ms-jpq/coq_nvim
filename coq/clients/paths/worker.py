@@ -63,9 +63,10 @@ def parse(base: Path, line: str) -> Iterator[Tuple[str, str]]:
                 return
 
             else:
-                lft, go, rhs = s0.rpartition(sep)
-                assert go, s0
-                lhs = lft + go
+                lseg, go1, _ = segment.rpartition(sep)
+                lft, go2, rhs = s0.rpartition(sep)
+                assert go1 and go2, s0
+                lhs = lft + go2
                 p = Path(lhs)
                 left = p if p.is_absolute() else base / p
                 if left.is_dir() and access(left, mode=X_OK):
@@ -75,7 +76,7 @@ def parse(base: Path, line: str) -> Iterator[Tuple[str, str]]:
                         l_match = lower(path.name) if is_lower else normcase(path.name)
                         if l_match.startswith(rhs):
                             term = sep if path.is_dir() else ""
-                            line = _join(lhs, path.name) + term
+                            line = _join(lseg, path.name) + term
                             yield line, sort_by
                     return
 
