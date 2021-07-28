@@ -1,7 +1,9 @@
 (function(...)
-  local cancel = nil
+  local cancel, cur_session = nil, nil
 
   COQlsp_preview = function(name, session_id, item)
+    cur_session = session_id
+
     if cancel then
       cancel()
     end
@@ -21,8 +23,10 @@
         "completionItem/resolve",
         item,
         function(err, _, resp, client_id)
-          n_clients = n_clients - 1
-          COQlsp_notify(name, session_id, n_clients == 0, resp or vim.NIL)
+          if session_id == cur_session then
+            n_clients = n_clients - 1
+            COQlsp_notify(name, session_id, n_clients == 0, resp or vim.NIL)
+          end
         end
       )
     end
