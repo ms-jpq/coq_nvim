@@ -114,7 +114,7 @@ def parse(
         )
         return no_cache, comps
 
-    elif isinstance(resp, Sequence):
+    elif isinstance(resp, Sequence) and not isinstance(resp, str):
         incomplete = False
         no_cache = incomplete
         shuffle(cast(MutableSequence, resp))
