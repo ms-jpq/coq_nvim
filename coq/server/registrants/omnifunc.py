@@ -1,14 +1,13 @@
-from asyncio import CancelledError, Condition, gather
-from contextlib import suppress
+from asyncio import Condition, Task, gather
 from queue import SimpleQueue
-from typing import Any, Literal, Mapping, Optional, Sequence, Tuple, Union
+from typing import Any, Literal, Mapping, Optional, Sequence, Tuple, Union, cast
 from uuid import uuid4
 
 from pynvim import Nvim
 from pynvim.api.nvim import Nvim
 from pynvim_pp.lib import async_call, go
 from pynvim_pp.logging import log
-from std2.asyncio import run_in_executor
+from std2.asyncio import cancel, run_in_executor
 from std2.pickle import DecodeError, new_decoder
 
 from ...registry import atomic, autocmd, rpc
@@ -26,6 +25,8 @@ q: SimpleQueue = SimpleQueue()
 
 @rpc(blocking=True)
 def _launch_loop(nvim: Nvim, stack: Stack) -> None:
+    task: Optional[Task] = None
+
     async def cont() -> None:
         cond = Condition()
         ctx: Optional[Context] = None
@@ -46,13 +47,16 @@ def _launch_loop(nvim: Nvim, stack: Stack) -> None:
                     cond.notify_all()
 
         async def c2() -> None:
+            nonlocal task
             while True:
                 async with cond:
                     await cond.wait()
 
+                if task:
+                    await cancel(task)
+
                 if ctx:
-                    with suppress(CancelledError):
-                        await c0(ctx)
+                    task = cast(Task, go(nvim, aw=c0(ctx)))
 
         await gather(c1(), c2())
 

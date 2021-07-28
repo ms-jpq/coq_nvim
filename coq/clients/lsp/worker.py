@@ -2,7 +2,7 @@ from asyncio import as_completed, gather
 from typing import AsyncIterator, Iterable, Iterator, Sequence, Tuple
 
 from std2.aitertools import anext
-from std2.asyncio._prelude import pure
+from std2.asyncio import pure
 from std2.itertools import chunk
 
 from ...lsp.requests.completion import request
