@@ -17,6 +17,7 @@ from ..cache.worker import CacheWorker
 
 class Worker(BaseWorker[BaseClient, None], CacheWorker):
     def __init__(self, supervisor: Supervisor, options: BaseClient, misc: None) -> None:
+        self._local_cache = False
         CacheWorker.__init__(self, supervisor=supervisor)
         BaseWorker.__init__(self, supervisor=supervisor, options=options, misc=misc)
 
@@ -25,6 +26,7 @@ class Worker(BaseWorker[BaseClient, None], CacheWorker):
 
         async def cached() -> LSPcomp:
             items = await self._use_cache(context)
+            self._local_cache = items is not None
             return LSPcomp(local_cache=False, items=items or iter(()))
 
         async def stream() -> AsyncIterator[LSPcomp]:
