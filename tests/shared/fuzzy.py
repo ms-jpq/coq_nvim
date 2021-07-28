@@ -7,34 +7,34 @@ _LOOK_AHEAD = 2
 
 class MultiSetRatio(TestCase):
     def test_1(self) -> None:
+        lhs = ""
+        rhs = "a"
+        ratio = multi_set_ratio(lhs, rhs)
+        self.assertAlmostEqual(ratio, 0)
+
+    def test_2(self) -> None:
         lhs = "a"
         rhs = "ab"
         ratio = multi_set_ratio(lhs, rhs)
         self.assertAlmostEqual(ratio, 1)
 
-    def test_2(self) -> None:
+    def test_3(self) -> None:
         lhs = "ac"
         rhs = "ab"
         ratio = multi_set_ratio(lhs, rhs)
         self.assertAlmostEqual(ratio, 1 / 2)
 
-    def test_3(self) -> None:
+    def test_4(self) -> None:
         lhs = "acb"
         rhs = "abc"
         ratio = multi_set_ratio(lhs, rhs)
         self.assertAlmostEqual(ratio, 1)
 
-    def test_4(self) -> None:
+    def test_5(self) -> None:
         lhs = "abc"
         rhs = "abz"
         ratio = multi_set_ratio(lhs, rhs)
         self.assertAlmostEqual(ratio, 2 / 3)
-
-    def test_5(self) -> None:
-        lhs = ""
-        rhs = "a"
-        ratio = multi_set_ratio(lhs, rhs)
-        self.assertAlmostEqual(ratio, 0)
 
 
 class QuickRatio(TestCase):
@@ -47,6 +47,12 @@ class QuickRatio(TestCase):
     def test_2(self) -> None:
         lhs = "ac"
         rhs = "ab"
+        ratio = quick_ratio(lhs, rhs, look_ahead=_LOOK_AHEAD)
+        self.assertAlmostEqual(ratio, 1 / 2)
+
+    def test_3(self) -> None:
+        lhs = "abc"
+        rhs = "acb"
         ratio = quick_ratio(lhs, rhs, look_ahead=_LOOK_AHEAD)
         self.assertAlmostEqual(ratio, 1 / 2)
 

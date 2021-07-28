@@ -39,9 +39,12 @@ def quick_ratio(lhs: str, rhs: str, look_ahead: int) -> float:
     else:
         p_matches = _p_matches(lhs, rhs)
         cutoff = min(max(len(lhs), len(rhs)), shorter + look_ahead)
+        more = cutoff - shorter
         l, r = lhs[p_matches:cutoff], rhs[p_matches:cutoff]
+
         l_ratio = p_matches / shorter
-        r_ratio = multi_set_ratio(l, r)
+        r_ratio = multi_set_ratio(l, r) * (more / shorter)
+        print([lhs, rhs],more, [l, r], [l_ratio, r_ratio])
         return l_ratio + r_ratio * 0.5
 
 
