@@ -19,14 +19,16 @@ def _p_matches(lhs: Iterable[str], rhs: Iterable[str]) -> int:
     return p_matches
 
 
-def multi_set_ratio(lhs: str, rhs: str) -> float:
+def multi_set_ratio(lhs: str, rhs: str, look_ahead: int) -> float:
     shorter = min(len(lhs), len(rhs))
     if not shorter:
-        return 0
+        return 1
     else:
-        longer = max(len(lhs), len(rhs))
-        l_c, r_c = Counter(lhs), Counter(rhs)
-        dif = l_c - r_c if len(lhs) > len(rhs) else r_c - l_c
+        cutoff = shorter + look_ahead
+        l, r = lhs[:cutoff], rhs[:cutoff]
+        longer = max(len(l), len(r))
+        l_c, r_c = Counter(l), Counter(r)
+        dif = l_c - r_c if len(l) > len(r) else r_c - l_c
         ratio = 1 - sum(dif.values()) / longer
         adjust = shorter / longer
         return ratio / adjust
@@ -38,13 +40,10 @@ def quick_ratio(lhs: str, rhs: str, look_ahead: int) -> float:
         return 1
     else:
         p_matches = _p_matches(lhs, rhs)
-        cutoff = min(max(len(lhs), len(rhs)), shorter + look_ahead)
-        more = cutoff - shorter
-        l, r = lhs[p_matches:cutoff], rhs[p_matches:cutoff]
+        l, r = lhs[p_matches:], rhs[p_matches:]
 
         l_ratio = p_matches / shorter
-        r_ratio = multi_set_ratio(l, r) * (more / shorter)
-        print([lhs, rhs],more, [l, r], [l_ratio, r_ratio])
+        r_ratio = multi_set_ratio(l, r, look_ahead=look_ahead) * 0.5
         return l_ratio + r_ratio * 0.5
 
 
