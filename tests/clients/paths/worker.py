@@ -81,7 +81,7 @@ class Parser(TestCase):
         line = "$a$PWD/.gith"
         actual = sorted(parse(Path("."), line=line))
         expected = sorted(
-            (("$PWD/.github/", "$PWD/.gith"),),
+            (("$PWD/.github/", "/.gith"),),
         )
         self.assertEqual(actual, expected)
 
@@ -89,7 +89,7 @@ class Parser(TestCase):
         line = "$a${PWD}/.gith"
         actual = sorted(parse(Path("."), line=line))
         expected = sorted(
-            (("${PWD}/.github/", "${PWD}/.gith"),),
+            (("${PWD}/.github/", "}/.gith"),),
         )
         self.assertEqual(actual, expected)
 

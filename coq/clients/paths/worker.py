@@ -7,7 +7,7 @@ from typing import AbstractSet, AsyncIterator, Iterator, MutableSet, Sequence, T
 
 from std2.asyncio import run_in_executor
 
-from ...shared.parse import lower
+from ...shared.parse import is_word, lower
 from ...shared.runtime import Worker as BaseWorker
 from ...shared.settings import BaseClient
 from ...shared.sql import BIGGEST_INT
@@ -42,11 +42,25 @@ def _join(lhs: str, rhs: str) -> str:
     return join(l, normpath(join(r, rhs)))
 
 
-def parse(base: Path, line: str) -> Iterator[Tuple[str, str]]:
+def _sort_by(segment: str, unifying_chars: AbstractSet[str]) -> str:
+    def cont() -> Iterator[str]:
+        seen_syms = False
+        for char in reversed(segment):
+            if is_word(char, unifying_chars=unifying_chars):
+                if seen_syms:
+                    break
+                else:
+                    yield char
+
+    return "".join(reversed(tuple(cont())))
+
+
+def parse(
+    unifying_chars: AbstractSet[str], base: Path, line: str
+) -> Iterator[Tuple[str, str]]:
     segments = reversed(tuple(_segments(line)))
     for segment in segments:
-        sl, ss, sr = segment.rpartition(sep)
-        sort_by = _p_lhs(sl) + ss + sr
+        sort_by = _sort_by(segment, unifying_chars=unifying_chars)
 
         s1 = segment
         s2 = expanduser(s1)
@@ -81,9 +95,11 @@ def parse(base: Path, line: str) -> Iterator[Tuple[str, str]]:
                     return
 
 
-async def _parse(base: Path, line: str, limit: int) -> AbstractSet[Tuple[str, str]]:
+async def _parse(
+    base: Path, line: str, limit: int, unifying_chars: AbstractSet[str]
+) -> AbstractSet[Tuple[str, str]]:
     def cont() -> AbstractSet[Tuple[str, str]]:
-        return {*islice(parse(base, line=line), limit)}
+        return {*islice(parse(unifying_chars, base=base, line=line), limit)}
 
     return await run_in_executor(cont)
 
@@ -94,7 +110,15 @@ class Worker(BaseWorker[BaseClient, None]):
         base_paths = {Path(context.filename).parent, Path(context.cwd)}
 
         limit = BIGGEST_INT if context.manual else self._supervisor.options.max_results
-        aw = tuple(_parse(p, line=line, limit=limit) for p in base_paths)
+        aw = tuple(
+            _parse(
+                p,
+                line=line,
+                limit=limit,
+                unifying_chars=self._supervisor.options.unifying_chars,
+            )
+            for p in base_paths
+        )
         seen: MutableSet[str] = set()
 
         for co in as_completed(aw):
@@ -117,3 +141,4 @@ class Worker(BaseWorker[BaseClient, None]):
                         yield completion
 
             yield tuple(cont())
+
