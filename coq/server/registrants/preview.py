@@ -223,7 +223,7 @@ def _show_preview(
 _TASK: Optional[Task] = None
 
 
-_LRU = LRU[UUID, Doc](size=36)
+_LRU: Optional[LRU[UUID, Doc]] = None
 
 
 def _resolve_comp(
@@ -239,6 +239,10 @@ def _resolve_comp(
     timeout = stack.settings.display.preview.lsp_timeout if maybe_doc else None
 
     async def cont() -> None:
+        global _LRU
+        if not _LRU:
+            _LRU = LRU(size=stack.settings.match.max_results)
+
         if prev:
             await cancel(prev)
 
@@ -324,3 +328,4 @@ def preview_preview(nvim: Nvim, stack: Stack, *_: str) -> str:
 
     escaped: str = nvim.api.replace_termcodes("<c-e>", True, False, True)
     return escaped
+
