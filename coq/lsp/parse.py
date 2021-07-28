@@ -125,5 +125,5 @@ def parse(short_name: str, tie_breaker: int, resp: CompletionResponse) -> LSPcom
         return LSPcomp(complete=True, items=comps)
 
     else:
-        return LSPcomp(complete=True, items=iter(()))
+        return LSPcomp(complete=False, items=iter(()))
 
