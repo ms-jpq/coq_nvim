@@ -1,9 +1,8 @@
 from dataclasses import dataclass, replace
-from typing import Iterator, Mapping, Optional, Sequence
+from typing import Awaitable, Callable, Iterator, Mapping, Sequence, Tuple
 from uuid import UUID, uuid4
 
 from ...shared.runtime import Supervisor
-from ...shared.timeit import timeit
 from ...shared.types import Completion, Context, Edit, SnippetEdit
 from .database import Database
 
@@ -52,30 +51,28 @@ class CacheWorker:
             comps={},
         )
 
-    async def _use_cache(self, context: Context) -> Optional[Iterator[Completion]]:
-        with timeit("CACHE -- GET"):
-            cache_ctx = self._cache_ctx
-            if not _use_cache(cache_ctx, ctx=context):
-                return None
-            else:
-                match = context.words or context.syms
-                hashes = await self._db.select(
-                    self._soup.options, word=match, limitless=context.manual
-                )
-                comps = (cache_ctx.comps.get(hash_id) for hash_id in hashes)
-                cached = (c for c in comps if c)
-                return cached
+    def _use_cache(
+        self, context: Context
+    ) -> Tuple[
+        bool,
+        Awaitable[Iterator[Completion]],
+        Callable[[Sequence[Completion]], Awaitable[None]],
+    ]:
+        cache_ctx = self._cache_ctx
+        use_cache = _use_cache(cache_ctx, ctx=context)
+        row, _ = context.position
 
-    async def _set_cache(
-        self, context: Context, completions: Sequence[Completion]
-    ) -> None:
-        with timeit(f"CACHE -- SET :: {len(completions)}"):
-            cache_ctx = self._cache_ctx
+        async def get() -> Iterator[Completion]:
+            match = context.words or context.syms
+            hashes = await self._db.select(
+                self._soup.options, word=match, limitless=context.manual
+            )
+            comps = (cache_ctx.comps.get(hash_id) for hash_id in hashes)
+            cached = (c for c in comps if c)
+            return cached
 
-            use_cache = _use_cache(cache_ctx, ctx=context)
-            row, _ = context.position
+        async def set(completions: Sequence[Completion]) -> None:
             new_comps = {c.uid.bytes: c for c in map(_trans, completions)}
-
             comps = {**cache_ctx.comps, **new_comps} if use_cache else new_comps
             new_cache_ctx = _CacheCtx(
                 change_id=context.change_id,
@@ -90,4 +87,6 @@ class CacheWorker:
             }
             await self._db.populate(use_cache, pool=pool)
             self._cache_ctx = new_cache_ctx
+
+        return use_cache, get(), set
 

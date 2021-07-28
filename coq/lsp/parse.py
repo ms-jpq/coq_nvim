@@ -1,5 +1,5 @@
 from random import shuffle
-from typing import Mapping, MutableSequence, Optional, Sequence, cast
+from typing import Any, Mapping, MutableSequence, Optional, Sequence, cast
 
 from pynvim_pp.logging import log
 
@@ -114,7 +114,7 @@ def parse(short_name: str, tie_breaker: int, resp: CompletionResponse) -> LSPcom
         lc = LSPcomp(local_cache=is_complete, items=comps)
         return lc
 
-    elif isinstance(resp, Sequence) and not isinstance(resp, str):
+    elif isinstance(resp, Sequence) and not isinstance(cast(Any, resp), str):
         shuffle(cast(MutableSequence, resp))
         comps = (
             c
