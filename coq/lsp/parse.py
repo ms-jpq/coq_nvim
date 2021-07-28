@@ -130,4 +130,3 @@ def parse(short_name: str, tie_breaker: int, resp: CompletionResponse) -> LSPcom
         msg = f"Unknown LSP resp -- {type(resp)}"
         log.warn("%s", msg)
         return LSPcomp(local_cache=False, items=iter(()))
-

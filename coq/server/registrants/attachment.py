@@ -89,9 +89,6 @@ def _lines_event(
     q.put((mode, pending, buf, (lo, hi), lines, filetype))
 
 
-
-
 BUF_EVENTS = {
     "nvim_buf_lines_event": _lines_event,
 }
-

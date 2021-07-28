@@ -89,4 +89,3 @@ class CacheWorker:
             self._cache_ctx = new_cache_ctx
 
         return use_cache, get(), set
-

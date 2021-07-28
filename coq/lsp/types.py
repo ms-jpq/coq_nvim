@@ -64,4 +64,3 @@ CompletionResponse = Union[
 class LSPcomp:
     local_cache: bool
     items: Iterator[Completion]
-
