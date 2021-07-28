@@ -30,7 +30,7 @@ class Worker(BaseWorker[BaseClient, None], CacheWorker):
             self._local_cached.clear()
 
         async def cached_iters() -> LSPcomp:
-            items = chain(*self._local_cached) if use_cache else iter(())
+            items = chain(*self._local_cached)
             self._local_cached.clear()
             return LSPcomp(local_cache=True, items=items)
 
