@@ -59,7 +59,7 @@ def parse(base: Path, line: str) -> Iterator[Tuple[str, str]]:
                     term = sep if path.is_dir() else ""
                     line = _join(segment, path.name) + term
                     yield line, sort_by
-                break
+                return
 
             else:
                 lft, go, rhs = segment.rpartition(sep)
@@ -75,7 +75,7 @@ def parse(base: Path, line: str) -> Iterator[Tuple[str, str]]:
                             term = sep if path.is_dir() else ""
                             line = _join(lhs, path.name) + term
                             yield line, sort_by
-                break
+                return
 
 
 async def _parse(base: Path, line: str, limit: int) -> AbstractSet[Tuple[str, str]]:
