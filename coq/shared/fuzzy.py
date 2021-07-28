@@ -74,19 +74,18 @@ def metrics(lhs: str, rhs: str, look_ahead: int) -> MatchMetrics:
     if not shorter:
         return MatchMetrics(prefix_matches=0, edit_distance=0)
     else:
+        p_matches = 0
+        for l, r in zip(lhs, rhs):
+            if l == r:
+                p_matches += 1
+            else:
+                break
 
-        def pre() -> Iterator[str]:
-            for l, r in zip(lhs, rhs):
-                if l == r:
-                    yield l
-                else:
-                    break
-
-        pl = len(tuple(pre()))
         cutoff = min(max(len(lhs), len(rhs)), shorter + look_ahead)
         more = cutoff - shorter
-        l, r = lhs[pl:cutoff], rhs[pl:cutoff]
+        l, r = lhs[p_matches:cutoff], rhs[p_matches:cutoff]
 
         dist = dl_distance(l, r)
         edit_dist = 1 - (dist - more) / shorter
-        return MatchMetrics(prefix_matches=pl, edit_distance=edit_dist)
+        return MatchMetrics(prefix_matches=p_matches, edit_distance=edit_dist)
+
