@@ -26,7 +26,6 @@ from typing import (
     Protocol,
     Sequence,
     TypeVar,
-    cast,
 )
 from uuid import UUID, uuid4
 from weakref import WeakKeyDictionary
@@ -114,6 +113,8 @@ class Supervisor:
             await cancel(self._task)
 
     def collect(self, context: Context) -> Awaitable[Sequence[Metric]]:
+        loop: AbstractEventLoop = self.nvim.loop
+
         async def cont() -> Sequence[Metric]:
             try:
                 with timeit("COLLECTED -- **ALL**"):
@@ -127,35 +128,41 @@ class Supervisor:
                         )
 
                         async def supervise(worker: Worker, assoc: BaseClient) -> None:
-                            with timeit(f"WORKER -- {assoc.short_name}"):
-                                instance, t1 = uuid4(), monotonic()
-                                interrupted, items = True, 0
-                                await self._reviewer.s_begin(assoc, instance=instance)
-                                try:
-                                    async for completions in worker.work(context):
-                                        for comps in chunk(
-                                            completions, n=self.options.max_results
-                                        ):
-                                            metrics = self._reviewer.trans(
-                                                instance, completions=comps
-                                            )
-                                            acc.extend(metrics)
-                                            items += len(comps)
-                                            await sleep(0)
-                                        else:
-                                            interrupted = False
-                                finally:
-                                    elapsed = monotonic() - t1
-                                    await self._reviewer.s_end(
-                                        instance,
-                                        interrupted=interrupted,
-                                        elapsed=elapsed,
-                                        items=items,
+                            try:
+                                with timeit(f"WORKER -- {assoc.short_name}"):
+                                    instance, t1 = uuid4(), monotonic()
+                                    interrupted, items = True, 0
+                                    await self._reviewer.s_begin(
+                                        assoc, instance=instance
                                     )
+                                    try:
+                                        async for completions in worker.work(context):
+                                            for comps in chunk(
+                                                completions, n=self.options.max_results
+                                            ):
+                                                metrics = self._reviewer.trans(
+                                                    instance, completions=comps
+                                                )
+                                                acc.extend(metrics)
+                                                items += len(comps)
+                                                await sleep(0)
+                                            else:
+                                                interrupted = False
+                                    finally:
+                                        elapsed = monotonic() - t1
+                                        await self._reviewer.s_end(
+                                            instance,
+                                            interrupted=interrupted,
+                                            elapsed=elapsed,
+                                            items=items,
+                                        )
+                            except Exception as e:
+                                log.exception("%s", e)
+                                raise
 
                         await self._reviewer.begin(context)
                         tasks = tuple(
-                            cast(Task, go(self.nvim, aw=supervise(worker, assoc=assoc)))
+                            loop.create_task(supervise(worker, assoc=assoc))
                             for worker, assoc in self._workers.items()
                         )
                         try:
@@ -175,8 +182,7 @@ class Supervisor:
                 log.exception("%s", e)
                 raise
 
-        assert isinstance(self.nvim.loop, AbstractEventLoop)
-        self._task = self.nvim.loop.create_task(cont())
+        self._task = loop.create_task(cont())
         return self._task
 
 
