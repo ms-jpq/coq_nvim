@@ -20,6 +20,10 @@ def _p_matches(lhs: Iterable[str], rhs: Iterable[str]) -> int:
 
 
 def multi_set_ratio(lhs: str, rhs: str, look_ahead: int) -> float:
+    """
+    Test intersection size, adjust for length
+    """
+
     shorter = min(len(lhs), len(rhs))
     if not shorter:
         return 1
@@ -37,6 +41,10 @@ def multi_set_ratio(lhs: str, rhs: str, look_ahead: int) -> float:
 
 
 def quick_ratio(lhs: str, rhs: str, look_ahead: int) -> float:
+    """
+    Front end bias
+    """
+
     shorter = min(len(lhs), len(rhs))
     if not shorter:
         return 1
@@ -95,6 +103,10 @@ def dl_distance(lhs: str, rhs: str) -> int:
 
 
 def metrics(lhs: str, rhs: str, look_ahead: int) -> MatchMetrics:
+    """
+    Front end bias
+    """
+
     shorter = min(len(lhs), len(rhs))
     if not shorter:
         return MatchMetrics(prefix_matches=0, edit_distance=0)
