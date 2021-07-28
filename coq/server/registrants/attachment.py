@@ -83,6 +83,7 @@ def _lines_event(
     lines: Sequence[str],
     pending: bool,
 ) -> None:
+    stack.supervisor.interrupt()
     filetype = buf_filetype(nvim, buf=buf)
     mode = nvim.api.get_mode()["mode"]
     q.put((mode, pending, buf, (lo, hi), lines, filetype))

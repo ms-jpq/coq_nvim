@@ -32,7 +32,6 @@ def _launch_loop(nvim: Nvim, stack: Stack) -> None:
 
         async def c0(ctx: Context) -> None:
             _, col = ctx.position
-            await stack.supervisor.interrupt()
             metrics = await stack.supervisor.collect(ctx)
             s = state()
             if s.change_id == ctx.change_id:
