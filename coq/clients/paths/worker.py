@@ -63,12 +63,13 @@ def parse(base: Path, line: str) -> Iterator[Tuple[str, str]]:
 
             else:
                 lft, go, rhs = segment.rpartition(sep)
-                is_lower = lower(rhs) == rhs
-                assert go
+                assert go, segment
                 lhs = lft + go
                 l = Path(lhs).expanduser()
                 left = l if l.is_absolute() else base / l
                 if left.is_dir() and access(left, mode=X_OK):
+                    is_lower = lower(rhs) == rhs
+
                     for path in left.iterdir():
                         l_match = lower(path.name) if is_lower else normcase(path.name)
                         if l_match.startswith(rhs):
