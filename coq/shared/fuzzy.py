@@ -19,19 +19,30 @@ def _p_matches(lhs: Iterable[str], rhs: Iterable[str]) -> int:
     return p_matches
 
 
+def multi_set_ratio(lhs: str, rhs: str) -> float:
+    shorter = min(len(lhs), len(rhs))
+    if not shorter:
+        return 0
+    else:
+        longer = max(len(lhs), len(rhs))
+        l_c, r_c = Counter(lhs), Counter(rhs)
+        dif = l_c - r_c if len(lhs) > len(rhs) else r_c - l_c
+        ratio = 1 - sum(dif.values()) / longer
+        adjust = shorter / longer
+        return ratio / adjust
+
+
 def quick_ratio(lhs: str, rhs: str, look_ahead: int) -> float:
     shorter = min(len(lhs), len(rhs))
     if not shorter:
         return 1
     else:
-        cutoff = shorter + look_ahead
-        l, r = lhs[:cutoff], rhs[:cutoff]
-        longer = max(len(l), len(r))
-        l_c, r_c = Counter(l), Counter(r)
-        dif = l_c - r_c if len(l) > len(r) else r_c - l_c
-        ratio = 1 - sum(dif.values()) / longer
-        adjust = shorter / longer
-        return ratio / adjust
+        p_matches = _p_matches(lhs, rhs)
+        cutoff = min(max(len(lhs), len(rhs)), shorter + look_ahead)
+        l, r = lhs[p_matches:cutoff], rhs[p_matches:cutoff]
+        l_ratio = p_matches / shorter
+        r_ratio = multi_set_ratio(l, r)
+        return l_ratio + r_ratio
 
 
 def dl_distance(lhs: str, rhs: str) -> int:

@@ -1,6 +1,6 @@
 from unittest import TestCase
 
-from ...coq.shared.fuzzy import dl_distance, metrics, quick_ratio
+from ...coq.shared.fuzzy import dl_distance, metrics, multi_set_ratio
 
 _LOOK_AHEAD = 2
 
@@ -61,29 +61,29 @@ class EditD(TestCase):
         self.assertEqual(d, 2)
 
 
-class QuickRatio(TestCase):
+class MultiSetRatio(TestCase):
     def test_1(self) -> None:
         lhs = "a"
         rhs = "ab"
-        ratio = quick_ratio(lhs, rhs, look_ahead=_LOOK_AHEAD)
+        ratio = multi_set_ratio(lhs, rhs)
         self.assertAlmostEqual(ratio, 1)
 
     def test_2(self) -> None:
         lhs = "ac"
         rhs = "ab"
-        ratio = quick_ratio(lhs, rhs, look_ahead=_LOOK_AHEAD)
+        ratio = multi_set_ratio(lhs, rhs)
         self.assertAlmostEqual(ratio, 1 / 2)
 
     def test_3(self) -> None:
         lhs = "acb"
         rhs = "abc"
-        ratio = quick_ratio(lhs, rhs, look_ahead=_LOOK_AHEAD)
+        ratio = multi_set_ratio(lhs, rhs)
         self.assertAlmostEqual(ratio, 1)
 
     def test_4(self) -> None:
         lhs = "abc"
         rhs = "abz"
-        ratio = quick_ratio(lhs, rhs, look_ahead=_LOOK_AHEAD)
+        ratio = multi_set_ratio(lhs, rhs)
         self.assertAlmostEqual(ratio, 2 / 3)
 
 
@@ -129,3 +129,4 @@ class Metrics(TestCase):
         m = metrics(cword, match, look_ahead=_LOOK_AHEAD)
         self.assertEqual(m.prefix_matches, 0)
         self.assertAlmostEqual(m.edit_distance, 0)
+
