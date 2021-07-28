@@ -35,7 +35,7 @@ jobs:
         run: sudo apt install -y universal-ctags
 
       - name: Lint
-        run: ./lint.sh
+        run: mypy -- .
 
       - name: Test
         run: python3 -m tests
