@@ -22,6 +22,7 @@ from weakref import WeakKeyDictionary
 
 from pynvim import Nvim
 from pynvim_pp.lib import go
+from pynvim_pp.logging import log
 from std2.asyncio import cancel
 from std2.itertools import chunk
 
@@ -122,7 +123,7 @@ class Supervisor:
                 async def supervise(worker: Worker, assoc: BaseClient) -> None:
                     with timeit(f"WORKER -- {assoc.short_name}"):
                         instance, t1 = uuid4(), monotonic()
-                        interrupted, items = True, 0
+                        items = 0
                         await self._reviewer.s_begin(assoc, instance=instance)
                         try:
                             async for completions in worker.work(context):
@@ -134,17 +135,15 @@ class Supervisor:
                                             instance, completions=comps
                                         )
                                         acc.extend(metrics)
-                                    items += len(comps)
+                                        items += len(comps)
+                                    if done:
+                                        msg = f":: {assoc.short_name} after :: {len(comps)}"
+                                        log.debug("%s", msg)
                                     await sleep(0)
-                            else:
-                                interrupted = False
                         finally:
                             elapsed = monotonic() - t1
                             await self._reviewer.s_end(
-                                instance,
-                                interrupted=interrupted,
-                                elapsed=elapsed,
-                                items=items,
+                                instance, interrupted=done, elapsed=elapsed, items=items
                             )
 
                 await self._reviewer.begin(context)
@@ -175,3 +174,4 @@ class Worker(Generic[O_co, T_co]):
     @abstractmethod
     def work(self, context: Context) -> AsyncIterator[Sequence[Completion]]:
         ...
+
