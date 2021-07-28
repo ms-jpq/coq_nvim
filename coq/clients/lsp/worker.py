@@ -9,7 +9,7 @@ from std2.itertools import chunk
 
 from ...lsp.requests.completion import request
 from ...lsp.types import LSPcomp
-from ...shared.fuzzy import quick_ratio
+from ...shared.fuzzy import multi_set_ratio
 from ...shared.parse import is_word, lower
 from ...shared.runtime import Supervisor
 from ...shared.runtime import Worker as BaseWorker
@@ -95,7 +95,7 @@ class Worker(BaseWorker[BaseClient, None], CacheWorker):
                                     )
                                     else sw_before
                                 )
-                                ratio = quick_ratio(
+                                ratio = multi_set_ratio(
                                     cword,
                                     lower(c.sort_by),
                                     look_ahead=self._supervisor.options.look_ahead,
