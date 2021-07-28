@@ -51,6 +51,9 @@ def _sort_by(segment: str, unifying_chars: AbstractSet[str]) -> str:
                     break
                 else:
                     yield char
+            else:
+                yield char
+                seen_syms = True
 
     return "".join(reversed(tuple(cont())))
 
