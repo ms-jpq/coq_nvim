@@ -27,8 +27,10 @@ def multi_set_ratio(lhs: str, rhs: str, look_ahead: int) -> float:
         cutoff = shorter + look_ahead
         l, r = lhs[:cutoff], rhs[:cutoff]
         longer = max(len(l), len(r))
+
         l_c, r_c = Counter(l), Counter(r)
         dif = l_c - r_c if len(l) > len(r) else r_c - l_c
+
         ratio = 1 - sum(dif.values()) / longer
         adjust = shorter / longer
         return ratio / adjust
@@ -41,9 +43,10 @@ def quick_ratio(lhs: str, rhs: str, look_ahead: int) -> float:
     else:
         p_matches = _p_matches(lhs, rhs)
         l, r = lhs[p_matches:], rhs[p_matches:]
+        more = shorter - p_matches
 
         l_ratio = p_matches / shorter
-        r_ratio = multi_set_ratio(l, r, look_ahead=look_ahead) * 0.5
+        r_ratio = multi_set_ratio(l, r, look_ahead=look_ahead) * (more / shorter)
         return l_ratio + r_ratio * 0.5
 
 
