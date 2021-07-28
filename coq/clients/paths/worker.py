@@ -62,7 +62,10 @@ def parse(
     unifying_chars: AbstractSet[str], base: Path, line: str
 ) -> Iterator[Tuple[str, str]]:
     segments = reversed(tuple(_segments(line)))
+    segments = [*segments]
+    print(segments)
     for segment in segments:
+        print([segment])
         sort_by = _sort_by(segment, unifying_chars=unifying_chars)
 
         s1 = segment
@@ -93,7 +96,9 @@ def parse(
                         l_match = lower(path.name) if is_lower else normcase(path.name)
                         if l_match.startswith(rhs):
                             term = sep if path.is_dir() else ""
-                            line = _join(lseg, path.name) + term
+                            name = rhs + path.name[len(rhs) :]
+                            line = _join(lseg, name) + term
+                            print([line], lseg + name)
                             yield line, sort_by
                     return
 
