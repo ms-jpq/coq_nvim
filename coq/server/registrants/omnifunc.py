@@ -124,4 +124,3 @@ def _comp_done(nvim: Nvim, stack: Stack, event: Mapping[str, Any]) -> None:
 
 
 autocmd("CompleteDone") << f"lua {_comp_done.name}(vim.v.completed_item)"
-

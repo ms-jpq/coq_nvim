@@ -130,4 +130,3 @@ class Worker(BaseWorker[TabnineClient, None]):
                     n=self._supervisor.options.max_results,
                 ):
                     yield chunked
-
