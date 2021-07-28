@@ -1,12 +1,22 @@
 from collections import Counter
 from dataclasses import dataclass
-from typing import Iterator, MutableMapping
+from typing import MutableMapping
 
 
 @dataclass(frozen=True)
 class MatchMetrics:
     prefix_matches: int
     edit_distance: float
+
+
+def _p_matches(lhs: str, rhs: str) -> int:
+    p_matches = 0
+    for l, r in zip(lhs, rhs):
+        if l == r:
+            p_matches += 1
+        else:
+            break
+    return p_matches
 
 
 def quick_ratio(lhs: str, rhs: str, look_ahead: int) -> float:
@@ -74,13 +84,7 @@ def metrics(lhs: str, rhs: str, look_ahead: int) -> MatchMetrics:
     if not shorter:
         return MatchMetrics(prefix_matches=0, edit_distance=0)
     else:
-        p_matches = 0
-        for l, r in zip(lhs, rhs):
-            if l == r:
-                p_matches += 1
-            else:
-                break
-
+        p_matches = _p_matches(lhs, rhs)
         cutoff = min(max(len(lhs), len(rhs)), shorter + look_ahead)
         more = cutoff - shorter
         l, r = lhs[p_matches:cutoff], rhs[p_matches:cutoff]
