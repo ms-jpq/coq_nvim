@@ -90,4 +90,3 @@ class Parser(TestCase):
             (("${PWD}/.github/", "}/.gith"),),
         )
         self.assertEqual(actual, expected)
-
