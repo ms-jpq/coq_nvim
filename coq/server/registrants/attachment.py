@@ -102,4 +102,3 @@ BUF_EVENTS = {
     "nvim_buf_changedtick_event": _changed_event,
     "nvim_buf_detach_event": _detach_event,
 }
-

@@ -191,4 +191,3 @@ class Worker(BaseWorker[TagsClient, CTDB]):
                     yield cmp
 
         yield tuple(cont())
-

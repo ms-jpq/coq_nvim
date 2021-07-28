@@ -12,4 +12,3 @@ def _name_gen(fn: Callable[[Callable[..., Any]], str]) -> str:
 autocmd = AutoCMD()
 atomic = Atomic()
 rpc = RPC(name_gen=_name_gen)
-

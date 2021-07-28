@@ -41,4 +41,3 @@ class Worker(BaseWorker[BaseClient, TDB]):
                 yield cmp
 
         yield tuple(cont())
-

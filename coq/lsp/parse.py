@@ -125,4 +125,3 @@ def parse(
         return False, comps
     else:
         return False, iter(())
-

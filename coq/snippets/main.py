@@ -17,4 +17,3 @@ def main() -> None:
     edit = SnippetEdit(grammar=args.grammar, new_text=stdin.read())
     parsed = parse(set(), context=EMPTY_CONTEXT, snippet=edit, sort_by="", visual="")
     print(parsed)
-

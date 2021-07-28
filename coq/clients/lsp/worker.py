@@ -67,4 +67,3 @@ class Worker(BaseWorker[BaseClient, None], CacheWorker):
                 if not no_cache:
                     await self._set_cache(context, completions=chunked)
                     yield ()
-

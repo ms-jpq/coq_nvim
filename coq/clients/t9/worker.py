@@ -126,4 +126,3 @@ class Worker(BaseWorker[TabnineClient, None]):
                 reply = loads(json)
                 cmps = tuple(_decode(self._options, reply=reply))
                 yield cmps
-

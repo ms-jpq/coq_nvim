@@ -24,4 +24,3 @@ class Parser(IsolatedAsyncioTestCase):
             *islice((tag for _, _, tags in parsed.values() for tag in tags), 10),
             sep=sep
         )
-

@@ -15,4 +15,3 @@ class LRU(UserDict, Generic[K, V]):
         if len(self) >= self._size:
             cast(OrderedDict, self.data).popitem(last=False)
         return super().__setitem__(key, item)
-

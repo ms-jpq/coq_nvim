@@ -28,4 +28,3 @@ def timeit(name: str, *args: Any, force: bool = False) -> Iterator[None]:
         log.info("%s", msg)
     else:
         yield None
-

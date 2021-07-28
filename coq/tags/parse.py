@@ -74,4 +74,3 @@ def parse(mtimes: Mapping[str, float], raw: str) -> Tags:
                     acc.append(json)
 
     return tags
-

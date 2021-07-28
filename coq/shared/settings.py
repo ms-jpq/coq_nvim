@@ -126,4 +126,3 @@ class Settings:
     weights: Weights
     keymap: KeyMapping
     clients: Clients
-

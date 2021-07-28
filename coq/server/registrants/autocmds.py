@@ -176,4 +176,3 @@ def _when_idle(nvim: Nvim, stack: Stack) -> None:
 
 
 autocmd("CursorHold", "CursorHoldI") << f"lua {_when_idle.name}()"
-

@@ -79,4 +79,3 @@ def load(
         for label, (exts, snips) in meta.items()
     }
     return fin
-

@@ -53,4 +53,3 @@ class Trans(TestCase):
         expected = "be", ""
         actual = trans(lhs, rhs, edit=Edit(new_text=edit))
         self.assertEquals((actual.old_prefix, actual.old_suffix), expected)
-

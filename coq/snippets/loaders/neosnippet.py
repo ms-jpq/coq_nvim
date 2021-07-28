@@ -104,4 +104,3 @@ def parse(path: Path) -> Tuple[AbstractSet[str], Sequence[ParsedSnippet]]:
     push()
 
     return extends, snippets
-

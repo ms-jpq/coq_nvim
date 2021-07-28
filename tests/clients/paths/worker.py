@@ -76,4 +76,3 @@ class Parser(TestCase):
         results = {*parse(Path("."), line=line)}
         expected = ("~/.config/", "~/.c")
         self.assertIn(expected, results)
-

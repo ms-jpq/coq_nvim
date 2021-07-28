@@ -58,4 +58,3 @@ async def async_request(nvim: Nvim, method: str, *args: Any) -> AsyncIterator[An
 
             async with cond:
                 await cond.wait()
-

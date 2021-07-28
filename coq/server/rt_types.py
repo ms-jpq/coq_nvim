@@ -22,4 +22,3 @@ class Stack:
     tmdb: TMDB
     supervisor: Supervisor
     workers: AbstractSet[Worker]
-

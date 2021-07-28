@@ -27,4 +27,3 @@ async def request(nvim: Nvim, item: CompletionItem) -> Optional[Doc]:
         return doc(resp)
     else:
         return None
-

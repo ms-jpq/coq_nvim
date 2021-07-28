@@ -34,4 +34,3 @@ class _RespL1:
 class Response:
     old_prefix: str
     results: Sequence[_RespL1]
-

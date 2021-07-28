@@ -33,4 +33,3 @@ def lsp() -> Any:
     raw = _build(_DOCKER_FILE)
     json = loads(raw)
     return json
-

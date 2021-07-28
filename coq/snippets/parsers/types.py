@@ -83,4 +83,3 @@ class Parsed:
     text: str
     cursor: int
     regions: Mapping[int, Region]
-

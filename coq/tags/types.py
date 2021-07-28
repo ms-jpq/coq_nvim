@@ -20,4 +20,3 @@ class Tag(TypedDict):
 
 
 Tags = Mapping[str, Tuple[str, float, Sequence[Tag]]]
-

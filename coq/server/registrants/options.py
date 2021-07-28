@@ -65,4 +65,3 @@ def set_options(nvim: Nvim, mapping: KeyMapping) -> None:
     settings["shortmess"] += "c"
     settings["noshowmode"] = True
     (settings.drain() + keymap.drain(buf=None)).commit(nvim)
-

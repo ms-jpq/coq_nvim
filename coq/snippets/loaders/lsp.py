@@ -56,4 +56,3 @@ def parse(path: Path) -> Tuple[AbstractSet[str], Sequence[ParsedSnippet]]:
             yield snippet
 
     return set(), tuple(cont())
-

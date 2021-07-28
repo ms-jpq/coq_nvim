@@ -69,4 +69,3 @@ def expand_tabs(context: Context, text: str) -> str:
         else text.replace(" " * context.tabstop, "\t")
     )
     return new_text
-

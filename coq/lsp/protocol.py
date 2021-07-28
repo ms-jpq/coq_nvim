@@ -22,4 +22,3 @@ def _load() -> LSProtocol:
 
 
 PROTOCOL = _load()
-

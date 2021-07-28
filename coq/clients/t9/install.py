@@ -76,4 +76,3 @@ async def ensure_installed(retries: int, timeout: float) -> bool:
                 await sleep(timeout)
     else:
         return False
-

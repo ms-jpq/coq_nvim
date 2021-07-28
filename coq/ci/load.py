@@ -90,4 +90,3 @@ def load_parsable() -> Any:
 
     coder = new_encoder(ASnips)
     return recur_sort(coder(meta))
-

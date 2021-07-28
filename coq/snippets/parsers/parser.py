@@ -175,4 +175,3 @@ def token_parser(context: ParserCtx, stream: TokenStream) -> Parsed:
     }
     parsed = Parsed(text=text, cursor=cursor, regions=regions)
     return parsed
-

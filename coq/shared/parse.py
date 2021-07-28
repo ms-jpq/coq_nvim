@@ -61,4 +61,3 @@ def coalesce(chars: Iterable[str], unifying_chars: AbstractSet[str]) -> Iterator
 
     yield from wit()
     yield from sit()
-

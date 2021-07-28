@@ -101,4 +101,3 @@ class Worker(BaseWorker[BaseClient, None]):
                         yield completion
 
             yield tuple(cont())
-

@@ -57,4 +57,3 @@ class Worker(BaseWorker[WordbankClient, TMDB]):
                 yield cmp
 
         yield tuple(cont())
-

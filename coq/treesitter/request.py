@@ -70,4 +70,3 @@ async def async_request(nvim: Nvim) -> AsyncIterator[Payload]:
 
             async with _COND:
                 await _COND.wait()
-

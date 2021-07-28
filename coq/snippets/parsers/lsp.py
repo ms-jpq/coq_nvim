@@ -350,4 +350,3 @@ def parser(context: Context, info: ParseInfo, snippet: str) -> Parsed:
     tokens = _parse(ctx, shallow=False)
     parsed = token_parser(ctx, stream=tokens)
     return parsed
-

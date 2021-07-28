@@ -28,4 +28,3 @@ def main() -> None:
     SNIPPET_HASH.write_text(hashed)
     SNIPPET_ART_HASH.write_text(hashed)
     SNIPPET_ARTIFACTS.write_bytes(bj_snippets)
-

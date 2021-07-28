@@ -49,4 +49,3 @@ class Worker(BaseWorker[BuffersClient, BDB]):
                 yield cmp
 
         yield tuple(cont())
-

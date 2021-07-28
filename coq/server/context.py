@@ -87,4 +87,3 @@ def context(nvim: Nvim, options: Options, state: State, manual: bool) -> Context
         syms_after=split.syms_rhs,
     )
     return ctx
-

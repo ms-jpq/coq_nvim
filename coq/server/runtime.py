@@ -124,4 +124,3 @@ def stack(pool: Executor, nvim: Nvim) -> Stack:
         workers=workers,
     )
     return stack
-

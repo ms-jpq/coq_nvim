@@ -106,4 +106,3 @@ def parse(path: Path) -> Tuple[AbstractSet[str], Sequence[ParsedSnippet]]:
             assert False
 
     return extends, snippets
-

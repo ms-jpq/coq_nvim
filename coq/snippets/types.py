@@ -26,4 +26,3 @@ ASnips = Mapping[
         Mapping[_Type, Sequence[ParsedSnippet]],
     ],
 ]
-

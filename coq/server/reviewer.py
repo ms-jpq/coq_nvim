@@ -121,4 +121,3 @@ class Reviewer(PReviewer):
         await self._db.new_stat(
             instance.bytes, interrupted=interrupted, duration=elapsed, items=items
         )
-

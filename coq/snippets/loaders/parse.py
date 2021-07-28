@@ -15,4 +15,3 @@ def raise_err(path: PurePath, lineno: int, line: str, reason: str) -> NoReturn:
     {reason}
     """
     raise LoadError(dedent(msg))
-

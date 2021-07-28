@@ -11,4 +11,3 @@ class RawPayload(TypedDict):
 class Payload:
     kind: str
     text: str
-

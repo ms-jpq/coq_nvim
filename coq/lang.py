@@ -47,4 +47,3 @@ def init(code: Optional[str]) -> None:
 
 
 init(None)
-

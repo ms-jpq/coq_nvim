@@ -90,4 +90,3 @@ class CacheWorker:
             }
             await self._db.populate(use_cache, pool=pool)
             self._cache_ctx = new_cache_ctx
-

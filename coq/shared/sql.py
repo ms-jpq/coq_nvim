@@ -76,4 +76,3 @@ def init_db(conn: Connection) -> None:
     conn.create_aggregate(
         "X_QUANTILES", n_arg=-1, aggregate_class=cast(Any, _Quantiles)
     )
-

@@ -31,4 +31,3 @@ class SingleThreadExecutor:
 
         self._q.put(cont)
         return cast(T, fut.result())
-

@@ -143,4 +143,3 @@ def trans(
                 max_width=max_width,
                 metric=metric,
             )
-

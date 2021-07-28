@@ -55,4 +55,3 @@ class _CompletionList(TypedDict):
 CompletionResponse = Union[
     Literal[None, False, 0], Sequence[CompletionItem], _CompletionList
 ]
-

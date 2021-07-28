@@ -66,4 +66,3 @@ async def snapshot(unifying_chars: AbstractSet[str]) -> Mapping[str, Sequence[st
     )
     snapshot = {uid: words for uid, words in shots}
     return snapshot
-

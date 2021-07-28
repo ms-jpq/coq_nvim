@@ -81,4 +81,3 @@ def mark(nvim: Nvim, settings: Settings, buf: Buffer, marks: Sequence[Mark]) -> 
 
     msg = LANG("added marks", regions=" ".join(f"[{mark.text}]" for mark in marks))
     write(nvim, msg)
-

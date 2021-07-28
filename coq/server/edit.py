@@ -410,4 +410,3 @@ def edit(nvim: Nvim, stack: Stack, state: State, data: UserData) -> Tuple[int, i
             mark(nvim, settings=stack.settings, buf=buf, marks=marks)
 
         return n_row, n_col
-

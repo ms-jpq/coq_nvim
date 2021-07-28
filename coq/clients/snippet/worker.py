@@ -44,4 +44,3 @@ class Worker(BaseWorker[SnippetClient, SDB]):
                 yield completion
 
         yield tuple(cont())
-

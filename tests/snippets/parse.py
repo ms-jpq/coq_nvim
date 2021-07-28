@@ -49,4 +49,3 @@ class Parser(TestCase):
         cols, _ = get_terminal_size()
         sep = "=" * cols + linesep
         print(*errors, sep=sep, file=stderr)
-

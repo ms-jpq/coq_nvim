@@ -63,4 +63,3 @@ def main() -> None:
     _build()
     _git_alert(_TOP_LV)
     _git_alert(cwd)
-

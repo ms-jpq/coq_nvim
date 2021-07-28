@@ -82,4 +82,3 @@ def _help(nvim: Nvim, stack: Stack, args: Sequence[str]) -> None:
             buf_set_option(nvim, buf=buf, key="modifiable", val=False)
             buf_set_option(nvim, buf=buf, key="syntax", val="markdown")
             open_float_win(nvim, margin=0, relsize=0.95, buf=buf)
-

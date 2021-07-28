@@ -59,4 +59,3 @@ def now(nvim: Nvim, stack: Stack, *_: str) -> None:
     birds = " ".join(chain(star, sample(_ANNOUNCE, k=chars), star))
     msg = f"{birds}  {helo}"
     write(nvim, msg)
-
