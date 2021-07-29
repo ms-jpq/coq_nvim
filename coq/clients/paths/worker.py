@@ -80,25 +80,27 @@ def parse(
                 return
 
             else:
-                lp, sp, _ = segment.rpartition(sep)
-                lseg = lp + sp
-
                 lft, go, rhs = s0.rpartition(sep)
-                assert go, s0
-                lhs = lft + go
-                p = Path(lhs)
-                left = p if p.is_absolute() else base / p
-                if left.is_dir() and access(left, mode=X_OK):
-                    is_lower = lower(rhs) == rhs
+                if go:
+                    lp, sp, _ = segment.rpartition(sep)
+                    lseg = lp + sp
 
-                    for path in left.iterdir():
-                        l_match = lower(path.name) if is_lower else normcase(path.name)
-                        if l_match.startswith(rhs):
-                            term = sep if path.is_dir() else ""
-                            name = rhs + path.name[len(rhs) :]
-                            line = _join(lseg, name) + term
-                            yield line, sort_by
-                    return
+                    lhs = lft + go
+                    p = Path(lhs)
+                    left = p if p.is_absolute() else base / p
+                    if left.is_dir() and access(left, mode=X_OK):
+                        is_lower = lower(rhs) == rhs
+
+                        for path in left.iterdir():
+                            l_match = (
+                                lower(path.name) if is_lower else normcase(path.name)
+                            )
+                            if l_match.startswith(rhs):
+                                term = sep if path.is_dir() else ""
+                                name = rhs + path.name[len(rhs) :]
+                                line = _join(lseg, name) + term
+                                yield line, sort_by
+                        return
 
 
 async def _parse(
