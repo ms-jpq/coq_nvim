@@ -3,7 +3,7 @@ from enum import Enum, auto
 from itertools import chain
 from typing import AsyncIterator, Iterator, MutableSequence, Sequence, Tuple
 
-from std2.aitertools import anext
+from std2.aitertools import anext, to_async
 from std2.asyncio import pure
 from std2.itertools import chunk
 
@@ -49,11 +49,15 @@ class Worker(BaseWorker[BaseClient, None], CacheWorker):
             return _Src.dab, LSPcomp(local_cache=False, items=items)
 
         async def stream() -> AsyncIterator[Tuple[_Src, LSPcomp]]:
-            stream = request(
-                self._supervisor.nvim,
-                short_name=self._options.short_name,
-                tie_breaker=self._options.tie_breaker,
-                context=context,
+            stream = (
+                to_async(())
+                if self._local_cached
+                else request(
+                    self._supervisor.nvim,
+                    short_name=self._options.short_name,
+                    tie_breaker=self._options.tie_breaker,
+                    context=context,
+                )
             )
 
             for fut in as_completed(
