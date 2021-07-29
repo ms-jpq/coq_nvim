@@ -111,8 +111,9 @@ class Worker(BaseWorker[LspClient, None], CacheWorker):
                                     yield c
 
                         cmps = tuple(cont())
-                        yield cmps
-                        seen += len(cmps)
+                        if cmps:
+                            yield cmps
+                            seen += len(cmps)
 
                 if lsp_comps.local_cache and chunked:
                     await set_cache(chunked)
