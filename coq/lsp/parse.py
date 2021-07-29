@@ -98,11 +98,12 @@ def _parse_item(
         return cmp
 
 
+# TODO -- shuffle or not?
 def parse(short_name: str, tie_breaker: int, resp: CompletionResponse) -> LSPcomp:
     if isinstance(resp, Mapping):
         is_complete = resp.get("isIncomplete") in {None, False, 0, ""}
         items = resp.get("items", [])
-        shuffle(cast(MutableSequence, items))
+        # shuffle(cast(MutableSequence, items))
         comps = (
             c
             for c in (
@@ -115,7 +116,7 @@ def parse(short_name: str, tie_breaker: int, resp: CompletionResponse) -> LSPcom
         return lc
 
     elif isinstance(resp, Sequence) and not isinstance(cast(Any, resp), str):
-        shuffle(cast(MutableSequence, resp))
+        # shuffle(cast(MutableSequence, resp))
         comps = (
             c
             for c in (
