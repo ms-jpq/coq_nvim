@@ -13,7 +13,7 @@ from ...shared.fuzzy import multi_set_ratio
 from ...shared.parse import is_word, lower
 from ...shared.runtime import Supervisor
 from ...shared.runtime import Worker as BaseWorker
-from ...shared.settings import BaseClient
+from ...shared.settings import LspClient
 from ...shared.sql import BIGGEST_INT
 from ...shared.types import Completion, Context
 from ..cache.worker import CacheWorker
@@ -25,8 +25,8 @@ class _Src(Enum):
     lsp = auto()
 
 
-class Worker(BaseWorker[BaseClient, None], CacheWorker):
-    def __init__(self, supervisor: Supervisor, options: BaseClient, misc: None) -> None:
+class Worker(BaseWorker[LspClient, None], CacheWorker):
+    def __init__(self, supervisor: Supervisor, options: LspClient, misc: None) -> None:
         self._local_cached: MutableSequence[Iterator[Completion]] = []
         CacheWorker.__init__(self, supervisor=supervisor)
         BaseWorker.__init__(self, supervisor=supervisor, options=options, misc=misc)
@@ -51,7 +51,7 @@ class Worker(BaseWorker[BaseClient, None], CacheWorker):
         async def stream() -> AsyncIterator[Tuple[_Src, LSPcomp]]:
             stream = (
                 to_async(())
-                if self._local_cached
+                if self._local_cached and not self._options.always_request
                 else request(
                     self._supervisor.nvim,
                     short_name=self._options.short_name,

@@ -80,6 +80,11 @@ class BaseClient:
 
 
 @dataclass(frozen=True)
+class LspClient(BaseClient):
+    always_request: bool
+
+
+@dataclass(frozen=True)
 class WordbankClient(BaseClient):
     match_syms: bool
 
@@ -109,7 +114,7 @@ class TabnineClient(BaseClient):
 @dataclass(frozen=True)
 class Clients:
     buffers: BuffersClient
-    lsp: BaseClient
+    lsp: LspClient
     paths: BaseClient
     snippets: SnippetClient
     tags: TagsClient
