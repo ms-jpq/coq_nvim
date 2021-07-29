@@ -3,7 +3,7 @@ from typing import Any, Mapping, MutableSequence, Optional, Sequence, cast
 
 from pynvim_pp.logging import log
 
-from ..shared.types import Completion, Doc, Edit, RangeEdit, SnippetEdit
+from ..shared.types import Completion, Doc, Edit, Extern, RangeEdit, SnippetEdit
 from .protocol import PROTOCOL
 from .types import CompletionItem, CompletionResponse, LSPcomp, TextEdit
 
@@ -93,7 +93,7 @@ def _parse_item(
             ),
             kind=PROTOCOL.CompletionItemKind.get(item.get("kind"), ""),
             doc=doc(item),
-            extern=item,
+            extern=(Extern.lsp, item),
         )
         return cmp
 

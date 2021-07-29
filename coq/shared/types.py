@@ -1,4 +1,5 @@
 from dataclasses import dataclass, field
+from enum import Enum, auto
 from pathlib import Path
 from typing import Any, Literal, Optional, Sequence, Tuple, Union
 from uuid import UUID, uuid4
@@ -112,6 +113,11 @@ class Doc:
     syntax: str
 
 
+class Extern(Enum):
+    lsp = auto()
+    path = auto()
+
+
 @dataclass(frozen=True)
 class Completion:
     source: str
@@ -123,4 +129,4 @@ class Completion:
     kind: str = ""
     doc: Optional[Doc] = None
     uid: UUID = field(default_factory=uuid4)
-    extern: Optional[Any] = None
+    extern: Optional[Tuple[Extern, Any]] = None

@@ -1,12 +1,12 @@
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any, Iterable, Optional, Sequence
+from typing import Any, Iterable, Optional, Sequence, Tuple
 from uuid import UUID
 
 from pynvim import Nvim
 from std2.pickle import new_encoder
 
-from ...shared.types import Doc, PrimaryEdit, RangeEdit
+from ...shared.types import Doc, Extern, PrimaryEdit, RangeEdit
 
 
 class VimCompKind(Enum):
@@ -26,7 +26,7 @@ class UserData:
     primary_edit: PrimaryEdit
     secondary_edits: Sequence[RangeEdit]
     doc: Optional[Doc]
-    extern: Optional[Any]
+    extern: Optional[Tuple[Extern, Any]]
 
 
 @dataclass(frozen=True)

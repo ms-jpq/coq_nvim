@@ -3,7 +3,18 @@ from dataclasses import asdict, dataclass
 from itertools import chain
 from math import ceil
 from os import linesep
-from typing import Any, Callable, Iterator, Mapping, Optional, Sequence, Tuple, cast
+from typing import (
+    Any,
+    Callable,
+    Iterator,
+    Literal,
+    Mapping,
+    Optional,
+    Sequence,
+    Tuple,
+    Union,
+    cast,
+)
 from uuid import UUID, uuid4
 
 from pynvim import Nvim
@@ -34,7 +45,7 @@ from ...shared.parse import display_width
 from ...shared.settings import PreviewDisplay
 from ...shared.timeit import timeit
 from ...shared.trans import expand_tabs
-from ...shared.types import Context, Doc
+from ...shared.types import Context, Doc, Extern
 from ..nvim.completions import VimCompletion
 from ..rt_types import Stack
 from ..state import State, state
@@ -230,13 +241,14 @@ def _resolve_comp(
     nvim: Nvim,
     stack: Stack,
     event: _Event,
-    item: CompletionItem,
+    extern: Tuple[Extern, Union[CompletionItem, str]],
     maybe_doc: Optional[Doc],
     state: State,
 ) -> None:
     global _TASK
     prev = _TASK
     timeout = stack.settings.display.preview.lsp_timeout if maybe_doc else None
+    _, item = extern
 
     async def cont() -> None:
         global _LRU
@@ -251,11 +263,14 @@ def _resolve_comp(
         if cached:
             doc: Optional[Doc] = cached
         else:
-            done, _ = await wait((request(nvim, item=item),), timeout=timeout)
-            do = await done.pop() if done else None
-            if do:
-                _LRU[state.preview_id] = do
-            doc = do or maybe_doc
+            if isinstance(item, Mapping):
+                done, _ = await wait((request(nvim, item=item),), timeout=timeout)
+                do = await done.pop() if done else None
+                if do:
+                    _LRU[state.preview_id] = do
+                doc = do or maybe_doc
+            else:
+                doc = None
 
         if doc:
             await async_call(
@@ -301,7 +316,7 @@ def _cmp_changed(nvim: Nvim, stack: Stack, event: Mapping[str, Any] = {}) -> Non
                         nvim,
                         stack=stack,
                         event=ev,
-                        item=data.extern,
+                        extern=data.extern,
                         maybe_doc=data.doc,
                         state=s,
                     )
