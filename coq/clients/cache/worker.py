@@ -19,13 +19,14 @@ class _CacheCtx:
 
 def _use_cache(cache: _CacheCtx, ctx: Context) -> bool:
     row, _ = ctx.position
-    return (
+    use_cache = (
         cache.commit_id == ctx.commit_id
         and len(cache.comps) > 0
         and ctx.buf_id == cache.buf_id
         and row == cache.row
         and ctx.line_before.startswith(cache.line_before)
     )
+    return use_cache
 
 
 def _trans(comp: Completion) -> Completion:
@@ -59,8 +60,8 @@ class CacheWorker:
         Callable[[Sequence[Completion]], Awaitable[None]],
     ]:
         cache_ctx = self._cache_ctx
-        use_cache = _use_cache(cache_ctx, ctx=context)
         row, _ = context.position
+        use_cache = _use_cache(cache_ctx, ctx=context)
 
         async def get() -> Iterator[Completion]:
             match = context.words or context.syms
