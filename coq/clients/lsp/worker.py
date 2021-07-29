@@ -49,9 +49,14 @@ class Worker(BaseWorker[LspClient, None], CacheWorker):
             return _Src.dab, LSPcomp(local_cache=False, items=items)
 
         async def stream() -> AsyncIterator[Tuple[_Src, LSPcomp]]:
+            no_ask = (
+                self._local_cached
+                and not self._options.always_request
+                and not context.manual
+            )
             stream = (
                 to_async(())
-                if self._local_cached and not self._options.always_request
+                if no_ask
                 else request(
                     self._supervisor.nvim,
                     short_name=self._options.short_name,
