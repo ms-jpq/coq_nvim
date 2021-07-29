@@ -50,9 +50,7 @@ class Worker(BaseWorker[LspClient, None], CacheWorker):
 
         async def stream() -> AsyncIterator[Tuple[_Src, LSPcomp]]:
             no_ask = (
-                self._local_cached
-                and not self._options.always_request
-                and not context.manual
+                use_cache and not self._options.always_request and not context.manual
             )
             stream = (
                 to_async(())
