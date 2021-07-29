@@ -3,7 +3,7 @@ from os import name
 from pathlib import Path
 from shlex import join
 from subprocess import DEVNULL, run
-from sys import executable, stderr, stdout, version_info
+from sys import executable, exit, stderr, stdout, version_info
 from textwrap import dedent
 from typing import Union
 
