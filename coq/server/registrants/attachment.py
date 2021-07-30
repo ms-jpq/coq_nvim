@@ -7,7 +7,7 @@ from pynvim import Nvim
 from pynvim.api import Buffer, NvimError
 from pynvim_pp.api import buf_filetype, buf_get_option, cur_buf
 from pynvim_pp.lib import async_call, awrite, go
-from pynvim_pp.logging import log
+from pynvim_pp.logging import log, with_suppress
 from std2.asyncio import run_in_executor
 
 from ...lang import LANG
@@ -39,7 +39,7 @@ _Qmsg = Tuple[str, bool, Buffer, Tuple[int, int], Sequence[str], str]
 def _listener(nvim: Nvim, stack: Stack) -> None:
     async def cont() -> None:
         while True:
-            try:
+            with with_suppress():
                 thing: _Qmsg = await run_in_executor(q.get)
                 mode, pending, buf, (lo, hi), lines, ft = thing
 
@@ -72,8 +72,6 @@ def _listener(nvim: Nvim, stack: Stack) -> None:
                     await async_call(
                         nvim, comp_func, nvim, stack=stack, s=s, manual=False
                     )
-            except Exception as e:
-                log.exception("%s", e)
 
     go(nvim, aw=cont())
 

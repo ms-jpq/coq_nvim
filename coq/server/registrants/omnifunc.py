@@ -6,7 +6,7 @@ from uuid import uuid4
 from pynvim import Nvim
 from pynvim.api.nvim import Nvim
 from pynvim_pp.lib import async_call, go
-from pynvim_pp.logging import log
+from pynvim_pp.logging import log, with_suppress
 from std2.asyncio import cancel, run_in_executor
 from std2.pickle import DecodeError, new_decoder
 
@@ -42,17 +42,15 @@ def _launch_loop(nvim: Nvim, stack: Stack) -> None:
         async def c1() -> None:
             nonlocal ctx
             while True:
-                try:
+                with with_suppress():
                     ctx = await run_in_executor(q.get)
                     async with cond:
                         cond.notify_all()
-                except Exception as e:
-                    log.exception("%s", e)
 
         async def c2() -> None:
             nonlocal task
             while True:
-                try:
+                with with_suppress():
                     async with cond:
                         await cond.wait()
 
@@ -61,8 +59,6 @@ def _launch_loop(nvim: Nvim, stack: Stack) -> None:
 
                     if ctx:
                         task = cast(Task, go(nvim, aw=c0(ctx)))
-                except Exception as e:
-                    log.exception("%s", e)
 
         await gather(c1(), c2())
 

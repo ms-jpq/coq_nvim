@@ -11,7 +11,7 @@ from typing import Any, MutableMapping, Optional, cast
 from pynvim import Nvim
 from pynvim_pp.client import Client
 from pynvim_pp.lib import threadsafe_call
-from pynvim_pp.logging import log
+from pynvim_pp.logging import log, with_suppress
 from pynvim_pp.rpc import RpcCallable, RpcMsg, nil_handler
 from std2.functools import constantly
 from std2.pickle import DecodeError
@@ -91,7 +91,5 @@ class CoqClient(Client):
 
         while True:
             msg: RpcMsg = self._event_queue.get()
-            try:
+            with with_suppress():
                 threadsafe_call(nvim, self._handle, nvim, msg)
-            except Exception as e:
-                log.exception("%s", e)

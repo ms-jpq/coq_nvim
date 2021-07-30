@@ -23,7 +23,7 @@ from weakref import WeakKeyDictionary
 
 from pynvim import Nvim
 from pynvim_pp.lib import go
-from pynvim_pp.logging import log
+from pynvim_pp.logging import log, with_suppress
 from std2.asyncio import cancel
 
 from .settings import BaseClient, Limits, Options, Weights
@@ -106,7 +106,7 @@ class Supervisor:
         loop: AbstractEventLoop = self.nvim.loop
 
         async def cont() -> Sequence[Metric]:
-            try:
+            with with_suppress():
                 with timeit("COLLECTED -- **ALL**"):
                     assert not self._lock.locked()
                     async with self._lock:
@@ -120,7 +120,7 @@ class Supervisor:
                         done = False
 
                         async def supervise(worker: Worker, assoc: BaseClient) -> None:
-                            try:
+                            with with_suppress():
                                 with timeit(f"WORKER -- {assoc.short_name}"):
                                     instance, t1 = uuid4(), monotonic()
                                     items = 0
@@ -143,9 +143,6 @@ class Supervisor:
                                             elapsed=elapsed,
                                             items=items,
                                         )
-                            except Exception as e:
-                                log.exception("%s", e)
-                                raise
 
                         await self._reviewer.begin(context)
                         self._tasks = tasks = tuple(
@@ -165,10 +162,6 @@ class Supervisor:
                                 return acc
                         finally:
                             done = True
-
-            except Exception as e:
-                log.exception("%s", e)
-                raise
 
         self._task = loop.create_task(cont())
         return self._task
