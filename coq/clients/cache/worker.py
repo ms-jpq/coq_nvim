@@ -57,7 +57,7 @@ class CacheWorker:
             row=-1,
             line_before="",
         )
-        self._comps: MutableMapping[str, Completion] = {}
+        self._cached: MutableMapping[str, Completion] = {}
 
     async def _use_cache(
         self, context: Context
@@ -75,24 +75,27 @@ class CacheWorker:
             line_before=context.line_before[: -len(context.syms_before)],
         )
         use_cache = _use_cache(cache_ctx, ctx=context)
+        if use_cache:
+            self._cached.clear()
 
         async def get() -> Optional[Iterator[Completion]]:
-            if not use_cache:
-                return None
-            else:
-                match = context.words_before or context.syms_before
-                words = await self._db.select(
-                    not use_cache,
-                    options=self._soup.options,
-                    word=match,
-                    limitless=context.manual,
-                )
-                comps = (self._comps.get(sort_by) for sort_by in words)
-                return (c for c in comps if c)
+            with timeit("CACHE -- GET"):
+                if not use_cache:
+                    return None
+                else:
+                    match = context.words_before or context.syms_before
+                    words = await self._db.select(
+                        not use_cache,
+                        options=self._soup.options,
+                        word=match,
+                        limitless=context.manual,
+                    )
+                    comps = (self._cached.get(sort_by) for sort_by in words)
+                    return (c for c in comps if c)
 
         async def set(completions: Sequence[Completion]) -> None:
             new_comps = {c.sort_by: c for c in map(_trans, completions)}
             await self._db.insert(new_comps.keys())
-            self._comps.update(new_comps)
+            self._cached.update(new_comps)
 
         return get(), set
