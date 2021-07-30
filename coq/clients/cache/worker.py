@@ -11,6 +11,7 @@ from typing import (
 from uuid import UUID, uuid4
 
 from ...shared.runtime import Supervisor
+from ...shared.timeit import timeit
 from ...shared.types import Completion, Context, Edit, SnippetEdit
 from .database import Database
 
@@ -74,9 +75,6 @@ class CacheWorker:
             line_before=context.line_before[: -len(context.syms_before)],
         )
         use_cache = _use_cache(cache_ctx, ctx=context)
-        if not use_cache:
-            self._comps.clear()
-            await self._db.clear()
 
         async def get() -> Optional[Iterator[Completion]]:
             if not use_cache:
@@ -84,7 +82,10 @@ class CacheWorker:
             else:
                 match = context.words_before or context.syms_before
                 words = await self._db.select(
-                    self._soup.options, word=match, limitless=context.manual
+                    not use_cache,
+                    options=self._soup.options,
+                    word=match,
+                    limitless=context.manual,
                 )
                 comps = (self._comps.get(sort_by) for sort_by in words)
                 return (c for c in comps if c)

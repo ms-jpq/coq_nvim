@@ -31,18 +31,6 @@ class Database:
         with self._lock:
             self._conn.interrupt()
 
-    async def clear(self) -> None:
-        def cont() -> None:
-            with self._lock, closing(self._conn.cursor()) as cursor:
-                with with_transaction(cursor):
-                    cursor.execute(sql("delete", "words"))
-
-        def step() -> None:
-            self._interrupt()
-            return self._ex.submit(cont)
-
-        await run_in_executor(step)
-
     async def insert(self, words: Iterable[str]) -> None:
         def cont() -> None:
             with self._lock, closing(self._conn.cursor()) as cursor:
@@ -53,22 +41,30 @@ class Database:
 
         await run_in_executor(self._ex.submit, cont)
 
-    async def select(self, opts: Options, word: str, limitless: int) -> Sequence[str]:
+    async def select(
+        self, clear: bool, options: Options, word: str, limitless: int
+    ) -> Sequence[str]:
         def cont() -> Sequence[str]:
             try:
                 with closing(self._conn.cursor()) as cursor:
                     with with_transaction(cursor):
-                        cursor.execute(
-                            sql("select", "words"),
-                            {
-                                "exact": opts.exact_matches,
-                                "cut_off": opts.fuzzy_cutoff,
-                                "look_ahead": opts.look_ahead,
-                                "limit": BIGGEST_INT if limitless else opts.max_results,
-                                "word": word,
-                            },
-                        )
-                        return tuple(row["word"] for row in cursor.fetchall())
+                        if clear:
+                            cursor.execute(sql("delete", "words"))
+                            return ()
+                        else:
+                            cursor.execute(
+                                sql("select", "words"),
+                                {
+                                    "exact": options.exact_matches,
+                                    "cut_off": options.fuzzy_cutoff,
+                                    "look_ahead": options.look_ahead,
+                                    "limit": BIGGEST_INT
+                                    if limitless
+                                    else options.max_results,
+                                    "word": word,
+                                },
+                            )
+                            return tuple(row["word"] for row in cursor.fetchall())
             except OperationalError:
                 return ()
 
