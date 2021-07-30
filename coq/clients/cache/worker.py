@@ -1,5 +1,13 @@
 from dataclasses import dataclass, replace
-from typing import Awaitable, Callable, Iterator, Mapping, Sequence, Tuple
+from typing import (
+    Awaitable,
+    Callable,
+    Iterator,
+    MutableMapping,
+    Optional,
+    Sequence,
+    Tuple,
+)
 from uuid import UUID, uuid4
 
 from ...shared.runtime import Supervisor
@@ -14,14 +22,12 @@ class _CacheCtx:
     buf_id: int
     row: int
     line_before: str
-    comps: Mapping[bytes, Completion]
 
 
 def _use_cache(cache: _CacheCtx, ctx: Context) -> bool:
     row, _ = ctx.position
     use_cache = (
         cache.commit_id == ctx.commit_id
-        and len(cache.comps) > 0
         and ctx.buf_id == cache.buf_id
         and row == cache.row
         and ctx.line_before.startswith(cache.line_before)
@@ -49,44 +55,43 @@ class CacheWorker:
             buf_id=-1,
             row=-1,
             line_before="",
-            comps={},
         )
+        self._comps: MutableMapping[str, Completion] = {}
 
-    def _use_cache(
+    async def _use_cache(
         self, context: Context
     ) -> Tuple[
-        bool,
-        Awaitable[Iterator[Completion]],
+        Awaitable[Optional[Iterator[Completion]]],
         Callable[[Sequence[Completion]], Awaitable[None]],
     ]:
         cache_ctx = self._cache_ctx
         row, _ = context.position
+        self._cache_ctx = _CacheCtx(
+            change_id=context.change_id,
+            commit_id=context.commit_id,
+            buf_id=context.buf_id,
+            row=row,
+            line_before=context.line_before,
+        )
         use_cache = _use_cache(cache_ctx, ctx=context)
+        if not use_cache:
+            self._comps.clear()
+            await self._db.clear()
 
-        async def get() -> Iterator[Completion]:
-            match = context.words or context.syms
-            hashes = await self._db.select(
-                self._soup.options, word=match, limitless=context.manual
-            )
-            comps = (cache_ctx.comps.get(hash_id) for hash_id in hashes)
-            cached = (c for c in comps if c)
-            return cached
+        async def get() -> Optional[Iterator[Completion]]:
+            if not use_cache:
+                return None
+            else:
+                match = context.words_before or context.syms_before
+                words = await self._db.select(
+                    self._soup.options, word=match, limitless=context.manual
+                )
+                comps = (self._comps.get(sort_by) for sort_by in words)
+                return (c for c in comps if c)
 
         async def set(completions: Sequence[Completion]) -> None:
-            new_comps = {c.uid.bytes: c for c in map(_trans, completions)}
-            comps = {**cache_ctx.comps, **new_comps} if use_cache else new_comps
-            new_cache_ctx = _CacheCtx(
-                change_id=context.change_id,
-                commit_id=context.commit_id,
-                buf_id=context.buf_id,
-                row=row,
-                line_before=context.line_before,
-                comps=comps,
-            )
-            pool = {
-                hash_id: c.primary_edit.new_text for hash_id, c in new_comps.items()
-            }
-            await self._db.populate(use_cache, pool=pool)
-            self._cache_ctx = new_cache_ctx
+            new_comps = {c.sort_by: c for c in map(_trans, completions)}
+            await self._db.insert(new_comps.keys())
+            self._comps.update(new_comps)
 
-        return use_cache, get(), set
+        return get(), set
