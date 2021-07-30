@@ -1,6 +1,7 @@
 from dataclasses import asdict
+from itertools import chain
 from locale import strxfrm
-from typing import Any, Callable, Iterable, Iterator, MutableSet, Sequence, Tuple
+from typing import Any, Callable, Iterable, Iterator, MutableSet, Sequence
 
 from std2.ordinal import clamp
 
@@ -13,7 +14,7 @@ from .rt_types import Stack
 from .state import state
 
 
-def _cum(adjustment: Weights, metrics: Iterable[Metric]) -> Tuple[int, Weights]:
+def _cum(adjustment: Weights, metrics: Iterable[Metric]) -> Weights:
     zero = Weights(
         prefix_matches=0,
         edit_distance=0,
@@ -21,9 +22,7 @@ def _cum(adjustment: Weights, metrics: Iterable[Metric]) -> Tuple[int, Weights]:
         neighbours=0,
     )
     acc = asdict(zero)
-    max_width = 0
     for metric in metrics:
-        max_width = max(max_width, metric.label_width + metric.kind_width)
         for key, val in asdict(metric.weight).items():
             acc[key] += val
     for key, val in asdict(adjustment).items():
@@ -31,7 +30,7 @@ def _cum(adjustment: Weights, metrics: Iterable[Metric]) -> Tuple[int, Weights]:
             acc[key] /= val
         else:
             acc[key] = 0
-    return max_width, Weights(**acc)
+    return Weights(**acc)
 
 
 def _sort_by(is_lower: bool, adjustment: Weights) -> Callable[[Metric], Any]:
@@ -56,6 +55,25 @@ def _sort_by(is_lower: bool, adjustment: Weights) -> Callable[[Metric], Any]:
         return key
 
     return key_by
+
+
+def _prune(
+    stack: Stack, context: Context, ranked: Iterable[Metric]
+) -> Iterator[Metric]:
+    seen: MutableSet[str] = set()
+    for metric in ranked:
+        if not context.manual and len(seen) > stack.settings.match.max_results:
+            break
+        elif metric.comp.primary_edit.new_text not in seen:
+            seen.add(metric.comp.primary_edit.new_text)
+            yield metric
+
+
+def _max_width(metrics: Sequence[Metric]) -> int:
+    max_width = max(
+        chain((0,), (metric.label_width + metric.kind_width for metric in metrics))
+    )
+    return max_width
 
 
 def _cmp_to_vcmp(
@@ -127,22 +145,18 @@ def trans(
     ellipsis_width = display_width(display.pum.ellipsis, tabsize=context.tabstop)
     truncate = clamp(1, scr_width - context.scr_col, display.pum.x_max_len)
 
-    max_width, w_adjust = _cum(stack.settings.weights, metrics=metrics)
+    w_adjust = _cum(stack.settings.weights, metrics=metrics)
     sortby = _sort_by(is_lower, adjustment=w_adjust)
     ranked = sorted(metrics, key=sortby)
-
-    seen: MutableSet[str] = set()
-    for metric in ranked:
-        if not context.manual and len(seen) > stack.settings.match.max_results:
-            break
-        elif metric.comp.primary_edit.new_text not in seen:
-            seen.add(metric.comp.primary_edit.new_text)
-            yield _cmp_to_vcmp(
-                display.pum,
-                context=context,
-                ellipsis_width=ellipsis_width,
-                kind_dead_width=kind_dead_width,
-                truncate=truncate,
-                max_width=max_width,
-                metric=metric,
-            )
+    pruned = tuple(_prune(stack, context=context, ranked=ranked))
+    max_width = _max_width(pruned)
+    for metric in pruned:
+        yield _cmp_to_vcmp(
+            display.pum,
+            context=context,
+            ellipsis_width=ellipsis_width,
+            kind_dead_width=kind_dead_width,
+            truncate=truncate,
+            max_width=max_width,
+            metric=metric,
+        )
