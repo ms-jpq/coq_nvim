@@ -24,7 +24,6 @@ from weakref import WeakKeyDictionary
 from pynvim import Nvim
 from pynvim_pp.lib import go
 from pynvim_pp.logging import log
-from std2.aitertools import aenumerate
 from std2.asyncio import cancel
 
 from .settings import BaseClient, Limits, Options, Weights
