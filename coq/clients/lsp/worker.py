@@ -1,7 +1,7 @@
 from asyncio import as_completed, gather
 from enum import Enum, auto
 from itertools import chain
-from typing import AsyncIterator, Iterator, MutableSequence, Tuple
+from typing import AsyncIterator, Iterator, MutableSequence, Optional, Tuple
 
 from std2.aitertools import anext, to_async
 from std2.asyncio import pure
@@ -31,7 +31,7 @@ class Worker(BaseWorker[LspClient, None], CacheWorker):
         CacheWorker.__init__(self, supervisor=supervisor)
         BaseWorker.__init__(self, supervisor=supervisor, options=options, misc=misc)
 
-    async def work(self, context: Context) -> AsyncIterator[Completion]:
+    async def work(self, context: Context) -> AsyncIterator[Optional[Completion]]:
         w_before, sw_before = lower(context.words_before), lower(context.syms_before)
         limit = BIGGEST_INT if context.manual else self._supervisor.options.max_results
 
@@ -113,3 +113,4 @@ class Worker(BaseWorker[LspClient, None], CacheWorker):
 
                 if lsp_comps.local_cache and chunked:
                     await set_cache(chunked)
+                    yield None

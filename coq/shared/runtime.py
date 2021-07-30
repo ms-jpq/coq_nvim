@@ -1,15 +1,7 @@
 from __future__ import annotations
 
 from abc import abstractmethod
-from asyncio import (
-    AbstractEventLoop,
-    Condition,
-    Lock,
-    Task,
-    as_completed,
-    gather,
-    wait,
-)
+from asyncio import AbstractEventLoop, Condition, Lock, Task, as_completed, gather, wait
 from concurrent.futures import Executor
 from dataclasses import dataclass
 from itertools import chain
@@ -137,15 +129,13 @@ class Supervisor:
                                         assoc, instance=instance
                                     )
                                     try:
-                                        async for items, completion in aenumerate(
-                                            worker.work(context)
-                                        ):
-                                            if not done:
+                                        async for completion in worker.work(context):
+                                            if not done and completion:
                                                 metric = self._reviewer.trans(
                                                     instance, completion=completion
                                                 )
                                                 acc.append(metric)
-
+                                                items += 1
                                     finally:
                                         elapsed = monotonic() - t1
                                         await self._reviewer.s_end(
@@ -191,5 +181,5 @@ class Worker(Generic[O_co, T_co]):
         self._supervisor.register(self, assoc=options)
 
     @abstractmethod
-    def work(self, context: Context) -> AsyncIterator[Completion]:
+    def work(self, context: Context) -> AsyncIterator[Optional[Completion]]:
         ...
