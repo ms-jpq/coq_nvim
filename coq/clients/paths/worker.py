@@ -3,7 +3,7 @@ from itertools import islice
 from os import X_OK, access
 from os.path import expanduser, expandvars, join, normcase, normpath, sep, split
 from pathlib import Path
-from typing import AbstractSet, AsyncIterator, Iterator, MutableSet, Sequence, Tuple
+from typing import AbstractSet, AsyncIterator, Iterator, MutableSet, Tuple
 
 from std2.asyncio import run_in_executor
 
@@ -113,7 +113,7 @@ async def _parse(
 
 
 class Worker(BaseWorker[BaseClient, None]):
-    async def work(self, context: Context) -> AsyncIterator[Sequence[Completion]]:
+    async def work(self, context: Context) -> AsyncIterator[Completion]:
         line = context.line_before + context.words_after
         base_paths = {Path(context.filename).parent, Path(context.cwd)}
 
@@ -132,20 +132,17 @@ class Worker(BaseWorker[BaseClient, None]):
         for co in as_completed(aw):
             seq = await co
 
-            def cont() -> Iterator[Completion]:
-                for new_text, sort_by in seq:
-                    if len(seen) >= limit:
-                        break
-                    elif new_text not in seen:
-                        seen.add(new_text)
-                        edit = Edit(new_text=new_text)
-                        completion = Completion(
-                            source=self._options.short_name,
-                            tie_breaker=self._options.tie_breaker,
-                            label=edit.new_text,
-                            sort_by=sort_by,
-                            primary_edit=edit,
-                        )
-                        yield completion
-
-            yield tuple(cont())
+            for new_text, sort_by in seq:
+                if len(seen) >= limit:
+                    break
+                elif new_text not in seen:
+                    seen.add(new_text)
+                    edit = Edit(new_text=new_text)
+                    completion = Completion(
+                        source=self._options.short_name,
+                        tie_breaker=self._options.tie_breaker,
+                        label=edit.new_text,
+                        sort_by=sort_by,
+                        primary_edit=edit,
+                    )
+                    yield completion

@@ -1,7 +1,7 @@
 from asyncio import as_completed, gather
 from enum import Enum, auto
 from itertools import chain
-from typing import AsyncIterator, Iterator, MutableSequence, Sequence, Tuple
+from typing import AsyncIterator, Iterator, MutableSequence, Tuple
 
 from std2.aitertools import anext, to_async
 from std2.asyncio import pure
@@ -31,7 +31,7 @@ class Worker(BaseWorker[LspClient, None], CacheWorker):
         CacheWorker.__init__(self, supervisor=supervisor)
         BaseWorker.__init__(self, supervisor=supervisor, options=options, misc=misc)
 
-    async def work(self, context: Context) -> AsyncIterator[Sequence[Completion]]:
+    async def work(self, context: Context) -> AsyncIterator[Completion]:
         w_before, sw_before = lower(context.words_before), lower(context.syms_before)
         limit = BIGGEST_INT if context.manual else self._supervisor.options.max_results
 
@@ -88,33 +88,28 @@ class Worker(BaseWorker[LspClient, None], CacheWorker):
             ):
                 if seen <= limit:
                     if src is _Src.dab:
-                        yield chunked
-                        seen += len(chunked)
+                        for c in chunked:
+                            yield c
+                            seen += 1
                     else:
 
-                        def cont() -> Iterator[Completion]:
-                            for c in chunked:
-                                cword = (
-                                    w_before
-                                    if is_word(
-                                        c.sort_by[:1],
-                                        unifying_chars=self._supervisor.options.unifying_chars,
-                                    )
-                                    else sw_before
+                        for c in chunked:
+                            cword = (
+                                w_before
+                                if is_word(
+                                    c.sort_by[:1],
+                                    unifying_chars=self._supervisor.options.unifying_chars,
                                 )
-                                ratio = multi_set_ratio(
-                                    cword,
-                                    lower(c.sort_by),
-                                    look_ahead=self._supervisor.options.look_ahead,
-                                )
-                                if ratio >= self._supervisor.options.fuzzy_cutoff:
-                                    yield c
-
-                        cmps = tuple(cont())
-                        if cmps:
-                            yield cmps
-                            seen += len(cmps)
+                                else sw_before
+                            )
+                            ratio = multi_set_ratio(
+                                cword,
+                                lower(c.sort_by),
+                                look_ahead=self._supervisor.options.look_ahead,
+                            )
+                            if ratio >= self._supervisor.options.fuzzy_cutoff:
+                                yield c
+                                seen += 1
 
                 if lsp_comps.local_cache and chunked:
                     await set_cache(chunked)
-                    yield ()

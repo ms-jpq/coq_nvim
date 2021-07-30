@@ -1,5 +1,5 @@
 from shutil import which
-from typing import AsyncIterator, Iterator, Sequence
+from typing import AsyncIterator
 
 from pynvim_pp.lib import go
 
@@ -30,7 +30,7 @@ class Worker(BaseWorker[WordbankClient, TMDB]):
             async with self._supervisor.idling:
                 await self._supervisor.idling.wait()
 
-    async def work(self, context: Context) -> AsyncIterator[Sequence[Completion]]:
+    async def work(self, context: Context) -> AsyncIterator[Completion]:
         match = context.words or (context.syms if self._options.match_syms else "")
         active = await cur() if self._tmux else None
         words = (
@@ -44,16 +44,13 @@ class Worker(BaseWorker[WordbankClient, TMDB]):
             else ()
         )
 
-        def cont() -> Iterator[Completion]:
-            for word in words:
-                edit = Edit(new_text=word)
-                cmp = Completion(
-                    source=self._options.short_name,
-                    tie_breaker=self._options.tie_breaker,
-                    label=edit.new_text,
-                    sort_by=word,
-                    primary_edit=edit,
-                )
-                yield cmp
-
-        yield tuple(cont())
+        for word in words:
+            edit = Edit(new_text=word)
+            cmp = Completion(
+                source=self._options.short_name,
+                tie_breaker=self._options.tie_breaker,
+                label=edit.new_text,
+                sort_by=word,
+                primary_edit=edit,
+            )
+            yield cmp

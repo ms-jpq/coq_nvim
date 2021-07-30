@@ -6,10 +6,9 @@ from itertools import chain
 from json import dumps, loads
 from os import linesep
 from subprocess import DEVNULL, PIPE
-from typing import Any, AsyncIterator, Iterator, Optional, Sequence
+from typing import Any, AsyncIterator, Iterator, Optional
 
 from pynvim_pp.lib import go
-from std2.itertools import chunk
 from std2.pickle import new_decoder, new_encoder
 
 from ...shared.runtime import Supervisor
@@ -103,7 +102,7 @@ class Worker(BaseWorker[TabnineClient, None]):
         else:
             return "{}"
 
-    async def work(self, context: Context) -> AsyncIterator[Sequence[Completion]]:
+    async def work(self, context: Context) -> AsyncIterator[Completion]:
         if not self._installed:
             pass
         else:
@@ -125,8 +124,5 @@ class Worker(BaseWorker[TabnineClient, None]):
                 self._proc = await _proc()
             else:
                 reply = loads(json)
-                for chunked in chunk(
-                    _decode(self._options, reply=reply),
-                    n=self._supervisor.options.max_results,
-                ):
-                    yield chunked
+                for comp in _decode(self._options, reply=reply):
+                    yield comp

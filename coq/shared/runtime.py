@@ -8,7 +8,6 @@ from asyncio import (
     Task,
     as_completed,
     gather,
-    sleep,
     wait,
 )
 from concurrent.futures import Executor
@@ -20,7 +19,6 @@ from typing import (
     AsyncIterator,
     Awaitable,
     Generic,
-    Iterator,
     MutableMapping,
     MutableSequence,
     Optional,
@@ -34,8 +32,8 @@ from weakref import WeakKeyDictionary
 from pynvim import Nvim
 from pynvim_pp.lib import go
 from pynvim_pp.logging import log
+from std2.aitertools import aenumerate
 from std2.asyncio import cancel
-from std2.itertools import chunk
 
 from .settings import BaseClient, Limits, Options, Weights
 from .timeit import timeit
@@ -64,9 +62,7 @@ class PReviewer(Protocol):
     async def s_begin(self, assoc: BaseClient, instance: UUID) -> None:
         ...
 
-    def trans(
-        self, instance: UUID, completions: Sequence[Completion]
-    ) -> Iterator[Metric]:
+    def trans(self, instance: UUID, completion: Completion) -> Metric:
         ...
 
     async def s_end(
@@ -141,21 +137,15 @@ class Supervisor:
                                         assoc, instance=instance
                                     )
                                     try:
-                                        async for completions in worker.work(context):
-                                            for comps in chunk(
-                                                completions, n=self.options.max_results
-                                            ):
-                                                if not done:
-                                                    metrics = self._reviewer.trans(
-                                                        instance, completions=comps
-                                                    )
-                                                    acc.extend(metrics)
-                                                    items += len(comps)
-                                                else:
-                                                    msg = f":: {assoc.short_name} :: {len(comps)}"
-                                                    log.debug("%s", msg)
+                                        async for items, completion in aenumerate(
+                                            worker.work(context)
+                                        ):
+                                            if not done:
+                                                metric = self._reviewer.trans(
+                                                    instance, completion=completion
+                                                )
+                                                acc.append(metric)
 
-                                                await sleep(int(done))
                                     finally:
                                         elapsed = monotonic() - t1
                                         await self._reviewer.s_end(
@@ -201,5 +191,5 @@ class Worker(Generic[O_co, T_co]):
         self._supervisor.register(self, assoc=options)
 
     @abstractmethod
-    def work(self, context: Context) -> AsyncIterator[Sequence[Completion]]:
+    def work(self, context: Context) -> AsyncIterator[Completion]:
         ...

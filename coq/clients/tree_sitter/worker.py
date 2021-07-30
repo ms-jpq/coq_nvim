@@ -1,4 +1,4 @@
-from typing import AsyncIterator, Iterator, Sequence
+from typing import AsyncIterator
 
 from pynvim_pp.lib import go
 
@@ -21,23 +21,20 @@ class Worker(BaseWorker[BaseClient, TDB]):
             async with self._supervisor.idling:
                 await self._supervisor.idling.wait()
 
-    async def work(self, context: Context) -> AsyncIterator[Sequence[Completion]]:
+    async def work(self, context: Context) -> AsyncIterator[Completion]:
         match = context.words or context.syms
         words = await self._misc.select(
             self._supervisor.options, word=match, limitless=context.manual
         )
 
-        def cont() -> Iterator[Completion]:
-            for word, kind in words:
-                edit = Edit(new_text=word)
-                cmp = Completion(
-                    source=self._options.short_name,
-                    tie_breaker=self._options.tie_breaker,
-                    label=edit.new_text,
-                    sort_by=word,
-                    primary_edit=edit,
-                    kind=kind,
-                )
-                yield cmp
-
-        yield tuple(cont())
+        for word, kind in words:
+            edit = Edit(new_text=word)
+            cmp = Completion(
+                source=self._options.short_name,
+                tie_breaker=self._options.tie_breaker,
+                label=edit.new_text,
+                sort_by=word,
+                primary_edit=edit,
+                kind=kind,
+            )
+            yield cmp

@@ -1,4 +1,4 @@
-from typing import AsyncIterator, Iterator, Sequence
+from typing import AsyncIterator
 
 from pynvim_pp.api import list_bufs
 from pynvim_pp.lib import async_call, go
@@ -26,7 +26,7 @@ class Worker(BaseWorker[BuffersClient, BDB]):
             async with self._supervisor.idling:
                 await self._supervisor.idling.wait()
 
-    async def work(self, context: Context) -> AsyncIterator[Sequence[Completion]]:
+    async def work(self, context: Context) -> AsyncIterator[Completion]:
         match = context.words or (context.syms if self._options.match_syms else "")
         filetype = context.filetype if self._options.same_filetype else None
         words = await self._misc.words(
@@ -35,17 +35,13 @@ class Worker(BaseWorker[BuffersClient, BDB]):
             word=match,
             limitless=context.manual,
         )
-
-        def cont() -> Iterator[Completion]:
-            for word in words:
-                edit = Edit(new_text=word)
-                cmp = Completion(
-                    source=self._options.short_name,
-                    tie_breaker=self._options.tie_breaker,
-                    label=edit.new_text,
-                    sort_by=word,
-                    primary_edit=edit,
-                )
-                yield cmp
-
-        yield tuple(cont())
+        for word in words:
+            edit = Edit(new_text=word)
+            cmp = Completion(
+                source=self._options.short_name,
+                tie_breaker=self._options.tie_breaker,
+                label=edit.new_text,
+                sort_by=word,
+                primary_edit=edit,
+            )
+            yield cmp
