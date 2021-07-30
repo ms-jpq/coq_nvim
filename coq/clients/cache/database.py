@@ -64,7 +64,7 @@ class Database:
                                 "word": word,
                             },
                         )
-                        return tuple(row["rowid"] for row in cursor.fetchall())
+                        return tuple(row["word"] for row in cursor.fetchall())
             except OperationalError:
                 return ()
 
