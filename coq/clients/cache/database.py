@@ -37,7 +37,11 @@ class Database:
                 with with_transaction(cursor):
                     cursor.execute(sql("delete", "words"))
 
-        await run_in_executor(self._ex.submit, cont)
+        def step() -> None:
+            self._interrupt()
+            return self._ex.submit(cont)
+
+        await run_in_executor(step)
 
     async def insert(self, words: Iterable[str]) -> None:
         def cont() -> None:
