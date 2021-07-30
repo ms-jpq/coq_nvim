@@ -46,7 +46,7 @@ class Worker(BaseWorker[LspClient, None], CacheWorker):
             return _Src.lit, LSPcomp(local_cache=True, items=items)
 
         async def cached_items() -> Tuple[_Src, LSPcomp]:
-            items = await cached
+            items = await cached or iter(())
             return _Src.dab, LSPcomp(local_cache=False, items=items)
 
         async def stream() -> AsyncIterator[Tuple[_Src, LSPcomp]]:
