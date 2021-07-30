@@ -92,7 +92,6 @@ class Worker(BaseWorker[LspClient, None], CacheWorker):
                             yield c
                             seen += 1
                     else:
-
                         for c in chunked:
                             cword = (
                                 w_before
