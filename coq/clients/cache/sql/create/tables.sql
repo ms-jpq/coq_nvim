@@ -2,11 +2,9 @@ BEGIN;
 
 
 CREATE TABLE IF NOT EXISTS words (
-  rowid BLOB NOT NULL PRIMARY KEY,
-  word  TEXT NOT NULL,
+  word  TEXT NOT NULL PRIMARY KEY,
   lword TEXT NOT NULL AS (LOWER(word)) STORED
 ) WITHOUT ROWID;
-CREATE INDEX IF NOT EXISTS words_word  ON words (word);
 CREATE INDEX IF NOT EXISTS words_lword ON words (lword);
 
 

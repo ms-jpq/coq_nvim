@@ -1,5 +1,5 @@
 SELECT
-  rowid
+  word
 FROM words
 WHERE
   :word <> ''

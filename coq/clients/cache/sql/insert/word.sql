@@ -1,3 +1,3 @@
-INSERT OR IGNORE INTO words ( rowid,  word)
-VALUES                      (:rowid, :word)
+INSERT OR REPLACE INTO words ( word)
+VALUES                       (:word)
 
