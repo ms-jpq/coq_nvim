@@ -5,7 +5,7 @@
     cur_session = session_id
 
     if cancel then
-      cancel()
+      pcall(cancel)
     end
 
     local n_clients = 0
