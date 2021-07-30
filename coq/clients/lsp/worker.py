@@ -35,8 +35,7 @@ class Worker(BaseWorker[LspClient, None], CacheWorker):
         w_before, sw_before = lower(context.words_before), lower(context.syms_before)
         limit = BIGGEST_INT if context.manual else self._supervisor.options.max_results
 
-        cached, set_cache = await self._use_cache(context)
-        use_cache = cached is not None
+        use_cache, cached, set_cache = self._use_cache(context)
         if not use_cache:
             self._local_cached.clear()
 

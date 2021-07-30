@@ -59,10 +59,11 @@ class CacheWorker:
         )
         self._cached: MutableMapping[str, Completion] = {}
 
-    async def _use_cache(
+    def _use_cache(
         self, context: Context
     ) -> Tuple[
-        Awaitable[Optional[Iterator[Completion]]],
+        bool,
+        Awaitable[Iterator[Completion]],
         Callable[[Sequence[Completion]], Awaitable[None]],
     ]:
         cache_ctx = self._cache_ctx
@@ -74,28 +75,25 @@ class CacheWorker:
             row=row,
             line_before=context.line_before[: -len(context.syms_before)],
         )
-        use_cache = _use_cache(cache_ctx, ctx=context)
+        use_cache = _use_cache(cache_ctx, ctx=context) and bool(self._cached)
         if not use_cache:
             self._cached.clear()
 
-        async def get() -> Optional[Iterator[Completion]]:
+        async def get() -> Iterator[Completion]:
             with timeit("CACHE -- GET"):
-                if not self._cached:
-                    return None
-                else:
-                    match = context.words_before or context.syms_before
-                    words = await self._db.select(
-                        not use_cache,
-                        options=self._soup.options,
-                        word=match,
-                        limitless=context.manual,
-                    )
-                    comps = (self._cached.get(sort_by) for sort_by in words)
-                    return (c for c in comps if c)
+                match = context.words_before or context.syms_before
+                words = await self._db.select(
+                    not use_cache,
+                    options=self._soup.options,
+                    word=match,
+                    limitless=context.manual,
+                )
+                comps = (self._cached.get(sort_by) for sort_by in words)
+                return (c for c in comps if c)
 
         async def set(completions: Sequence[Completion]) -> None:
             new_comps = {c.sort_by: c for c in map(_trans, completions)}
             await self._db.insert(new_comps.keys())
             self._cached.update(new_comps)
 
-        return get(), set
+        return use_cache, get(), set
