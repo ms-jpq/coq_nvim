@@ -75,12 +75,12 @@ class CacheWorker:
             line_before=context.line_before[: -len(context.syms_before)],
         )
         use_cache = _use_cache(cache_ctx, ctx=context)
-        if use_cache:
+        if not use_cache:
             self._cached.clear()
 
         async def get() -> Optional[Iterator[Completion]]:
             with timeit("CACHE -- GET"):
-                if not use_cache:
+                if not self._cached:
                     return None
                 else:
                     match = context.words_before or context.syms_before
