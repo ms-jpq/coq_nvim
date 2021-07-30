@@ -42,21 +42,27 @@ def _launch_loop(nvim: Nvim, stack: Stack) -> None:
         async def c1() -> None:
             nonlocal ctx
             while True:
-                ctx = await run_in_executor(q.get)
-                async with cond:
-                    cond.notify_all()
+                try:
+                    ctx = await run_in_executor(q.get)
+                    async with cond:
+                        cond.notify_all()
+                except Exception as e:
+                    log.exception("%s", e)
 
         async def c2() -> None:
             nonlocal task
             while True:
-                async with cond:
-                    await cond.wait()
+                try:
+                    async with cond:
+                        await cond.wait()
 
-                if task:
-                    await cancel(task)
+                    if task:
+                        await cancel(task)
 
-                if ctx:
-                    task = cast(Task, go(nvim, aw=c0(ctx)))
+                    if ctx:
+                        task = cast(Task, go(nvim, aw=c0(ctx)))
+                except Exception as e:
+                    log.exception("%s", e)
 
         await gather(c1(), c2())
 
