@@ -71,7 +71,7 @@ class CacheWorker:
             commit_id=context.commit_id,
             buf_id=context.buf_id,
             row=row,
-            line_before=context.line_before,
+            line_before=context.line_before[: -len(context.syms_before)],
         )
         use_cache = _use_cache(cache_ctx, ctx=context)
         if not use_cache:
