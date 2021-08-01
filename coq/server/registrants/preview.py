@@ -155,7 +155,7 @@ def _positions(
     if s.row + s.height < scr_height - 1 and display.positions.south is not None:
         yield display.positions.south, s
 
-    we_height = limit_h(scr_height - top)
+    we_height = limit_h(scr_height - top - 2)
     w_width = limit_w(left - 2)
 
     w = _Pos(

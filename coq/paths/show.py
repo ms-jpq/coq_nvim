@@ -6,6 +6,7 @@ from typing import Iterator, Optional
 
 from std2.asyncio import run_in_executor
 
+from ..lang import LANG
 from ..shared.types import Doc
 
 _KB = 1000
@@ -33,25 +34,22 @@ async def _show_dir(path: Path, ellipsis: str, height: int) -> Doc:
 
 async def _show_file(path: Path, ellipsis: str, height: int) -> Doc:
     def lines() -> Iterator[str]:
-        try:
-            with path.open("r") as fd:
-                kb = fd.read(_KB)
-        except UnicodeDecodeError:
-            with path.open("rb") as fd:
-                kb = fd.read(_KB)
-            kbl = (kb.hex(),)
-        else:
-            kbl = kb.splitlines()
-
-        for idx, line in enumerate(islice(kbl, height), start=1):
-            if idx >= height and len(kbl) > height:
+        with path.open("r") as fd:
+            lines = fd.readlines(_KB)
+        for idx, line in enumerate(islice(lines, height), start=1):
+            if idx >= height and len(lines) > height:
                 yield ellipsis
             else:
                 yield line
 
     def cont() -> Doc:
-        text = linesep.join(lines())
-        doc = Doc(text=text, syntax="")
+        try:
+            text = linesep.join(lines())
+        except UnicodeDecodeError:
+            text = LANG("file binary")
+
+        t = text or LANG("file empty")
+        doc = Doc(text=t, syntax="")
         return doc
 
     return await run_in_executor(cont)
