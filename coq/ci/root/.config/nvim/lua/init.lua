@@ -21,4 +21,3 @@ local json = vim.fn.json_encode(lookup)
 vim.fn.writefile({json}, "/dev/stdout")
 
 os.exit(0)
-

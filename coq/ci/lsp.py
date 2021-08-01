@@ -25,7 +25,14 @@ async def _build(dockerfile: Path) -> str:
         capture_stdout=False,
         capture_stderr=False,
     )
-    proc = await call("docker", "run", "--rm", name, capture_stderr=False)
+    proc = await call(
+        "docker",
+        "run",
+        "--rm",
+        name,
+        cwd=_TOP_LV,
+        capture_stderr=False,
+    )
     return proc.out.decode()
 
 
