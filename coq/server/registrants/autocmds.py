@@ -62,24 +62,28 @@ def _load_snips(nvim: Nvim, stack: Stack) -> None:
     async def cont() -> None:
         global _EXTS, _SNIPPETS
 
-        json = SNIPPET_ARTIFACTS.read_text("UTF8")
-        snippets: ASnips = loads(json)
+        try:
+            json = SNIPPET_ARTIFACTS.read_text("UTF8")
+        except FileNotFoundError:
+            pass
+        else:
+            snippets: ASnips = loads(json)
 
-        exts: MutableMapping[str, MutableSet[str]] = {}
-        s_acc: MutableMapping[str, MutableSequence[ParsedSnippet]] = {}
-        for label, (ets, snips) in snippets.items():
-            if not srcs or label in srcs:
-                for src, dests in ets.items():
-                    acc = exts.setdefault(src, set())
-                    for d in dests:
-                        acc.add(d)
+            exts: MutableMapping[str, MutableSet[str]] = {}
+            s_acc: MutableMapping[str, MutableSequence[ParsedSnippet]] = {}
+            for label, (ets, snips) in snippets.items():
+                if not srcs or label in srcs:
+                    for src, dests in ets.items():
+                        acc = exts.setdefault(src, set())
+                        for d in dests:
+                            acc.add(d)
 
-                for ext, snps in snips.items():
-                    ac = s_acc.setdefault(ext, [])
-                    ac.extend(snps)
+                    for ext, snps in snips.items():
+                        ac = s_acc.setdefault(ext, [])
+                        ac.extend(snps)
 
-        _EXTS, _SNIPPETS = exts, s_acc
-        await stack.sdb.add_exts(exts)
+            _EXTS, _SNIPPETS = exts, s_acc
+            await stack.sdb.add_exts(exts)
 
     go(nvim, aw=cont())
 

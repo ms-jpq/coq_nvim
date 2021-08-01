@@ -4,10 +4,10 @@ from typing import Any
 
 from std2.tree import recur_sort
 
-from ..consts import LSP_ARTIFACTS, SNIPPET_ART_HASH, SNIPPET_ARTIFACTS, SNIPPET_HASH
+from ..consts import LSP_ARTIFACTS, SNIPPET_HASH_ACTUAL, SNIPPET_ARTIFACTS, SNIPPET_HASH_DESIRED
+
 from .load import load_parsable
 from .lsp import lsp
-
 
 def _json(o: Any) -> str:
     json = dumps(recur_sort(o), check_circular=False, ensure_ascii=False, indent=2)
@@ -25,6 +25,6 @@ def main() -> None:
     bj_snippets = j_snippets.encode()
     hashed = sha256(bj_snippets).hexdigest()
 
-    SNIPPET_HASH.write_text(hashed)
-    SNIPPET_ART_HASH.write_text(hashed)
+    SNIPPET_HASH_ACTUAL.write_text(hashed)
+    SNIPPET_HASH_DESIRED.write_text(hashed)
     SNIPPET_ARTIFACTS.write_bytes(bj_snippets)

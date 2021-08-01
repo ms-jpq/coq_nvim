@@ -59,18 +59,10 @@ def _git_alert(cwd: Path) -> None:
         check_call(("git", "push", "--set-upstream", "origin", brname), cwd=cwd)
 
 
-def _git_ref(cwd: Path) -> None:
-    note = _TOP_LV / "artifacts" / "snip_ver.info"
-    if _check_diff(cwd):
-        out = check_output(("git", "rev-parse", "HEAD"), cwd=cwd)
-        note.write_bytes(out)
-
-
 def main() -> None:
     cwd = _TOP_LV / "coq.artifacts"
-    # _git_identity()
-    # _git_clone(cwd)
+    _git_identity()
+    _git_clone(cwd)
     _build()
-    _git_ref(cwd)
     _git_alert(_TOP_LV)
     _git_alert(cwd)

@@ -28,12 +28,12 @@ TMP_DIR = VARS / "tmp"
 
 
 _ART_DIR = TOP_LEVEL / "artifacts"
-_SNIP_ART = TOP_LEVEL / "coq.artifacts"
 LSP_ARTIFACTS = _ART_DIR / "lsp.json"
 
-SNIPPET_ARTIFACTS = TOP_LEVEL / _SNIP_ART / "snippets.json"
-SNIPPET_HASH = _ART_DIR / "snip.lock"
-SNIPPET_ART_HASH = _SNIP_ART / "snip.lock"
+_SNIP_VARS = VARS / "snippets"
+SNIPPET_ARTIFACTS = _SNIP_VARS / "snippets.json"
+SNIPPET_HASH_DESIRED = _ART_DIR / "snip.lock"
+SNIPPET_HASH_ACTUAL = _SNIP_VARS / "snip.lock"
 
 
 SETTINGS_VAR = "coq_settings"
