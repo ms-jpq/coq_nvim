@@ -64,7 +64,7 @@ def trans_adjusted(
 
 def expand_tabs(context: Context, text: str) -> str:
     new_text = (
-        text.replace("\t", " " * context.tabstop)
+        text.expandtabs(context.tabstop)
         if context.expandtab
         else text.replace(" " * context.tabstop, "\t")
     )

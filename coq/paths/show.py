@@ -1,4 +1,4 @@
-from itertools import chain, islice
+from itertools import islice
 from locale import strxfrm
 from os import linesep, sep
 from pathlib import Path
@@ -33,9 +33,15 @@ async def _show_dir(path: Path, ellipsis: str, height: int) -> Doc:
 
 async def _show_file(path: Path, ellipsis: str, height: int) -> Doc:
     def lines() -> Iterator[str]:
-        with path.open("rb") as fd:
-            kb = fd.read(_KB).decode(errors="ignore")
-        kbl = kb.splitlines()
+        try:
+            with path.open("r") as fd:
+                kb = fd.read(_KB)
+        except UnicodeDecodeError:
+            with path.open("rb") as fd:
+                kb = fd.read(_KB)
+            kbl = (kb.hex(),)
+        else:
+            kbl = kb.splitlines()
 
         for idx, line in enumerate(islice(kbl, height), start=1):
             if idx >= height and len(kbl) > height:
