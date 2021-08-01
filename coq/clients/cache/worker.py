@@ -1,13 +1,5 @@
 from dataclasses import dataclass, replace
-from typing import (
-    Awaitable,
-    Callable,
-    Iterator,
-    MutableMapping,
-    Optional,
-    Sequence,
-    Tuple,
-)
+from typing import Awaitable, Callable, Iterator, MutableMapping, Sequence, Tuple
 from uuid import UUID, uuid4
 
 from ...shared.runtime import Supervisor

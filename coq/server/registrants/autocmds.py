@@ -1,6 +1,7 @@
 from asyncio import Handle, get_running_loop
 from itertools import repeat
 from json import loads
+from json.decoder import JSONDecodeError
 from typing import (
     AbstractSet,
     Iterator,
@@ -55,6 +56,20 @@ _EXTS: Mapping[str, AbstractSet[str]] = {}
 _SNIPPETS: Mapping[str, Sequence[ParsedSnippet]] = {}
 
 
+async def _load_snip_raw() -> ASnips:
+    try:
+        json = SNIPPET_ARTIFACTS.read_text("UTF8")
+    except FileNotFoundError:
+        return {}
+    else:
+        try:
+            snippets: ASnips = loads(json)
+        except JSONDecodeError:
+            return {}
+        else:
+            return snippets
+
+
 @rpc(blocking=True)
 def _load_snips(nvim: Nvim, stack: Stack) -> None:
     srcs = stack.settings.clients.snippets.sources
@@ -62,28 +77,22 @@ def _load_snips(nvim: Nvim, stack: Stack) -> None:
     async def cont() -> None:
         global _EXTS, _SNIPPETS
 
-        try:
-            json = SNIPPET_ARTIFACTS.read_text("UTF8")
-        except FileNotFoundError:
-            pass
-        else:
-            snippets: ASnips = loads(json)
+        snippets = await _load_snip_raw()
+        exts: MutableMapping[str, MutableSet[str]] = {}
+        s_acc: MutableMapping[str, MutableSequence[ParsedSnippet]] = {}
+        for label, (ets, snips) in snippets.items():
+            if not srcs or label in srcs:
+                for src, dests in ets.items():
+                    acc = exts.setdefault(src, set())
+                    for d in dests:
+                        acc.add(d)
 
-            exts: MutableMapping[str, MutableSet[str]] = {}
-            s_acc: MutableMapping[str, MutableSequence[ParsedSnippet]] = {}
-            for label, (ets, snips) in snippets.items():
-                if not srcs or label in srcs:
-                    for src, dests in ets.items():
-                        acc = exts.setdefault(src, set())
-                        for d in dests:
-                            acc.add(d)
+                for ext, snps in snips.items():
+                    ac = s_acc.setdefault(ext, [])
+                    ac.extend(snps)
 
-                    for ext, snps in snips.items():
-                        ac = s_acc.setdefault(ext, [])
-                        ac.extend(snps)
-
-            _EXTS, _SNIPPETS = exts, s_acc
-            await stack.sdb.add_exts(exts)
+        _EXTS, _SNIPPETS = exts, s_acc
+        await stack.sdb.add_exts(exts)
 
     go(nvim, aw=cont())
 
