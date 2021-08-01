@@ -4,19 +4,24 @@ from typing import Any
 
 from std2.tree import recur_sort
 
-from ..consts import LSP_ARTIFACTS, SNIPPET_HASH_ACTUAL, SNIPPET_ARTIFACTS, SNIPPET_HASH_DESIRED
-
+from ..consts import (
+    LSP_ARTIFACTS,
+    SNIPPET_ARTIFACTS,
+    SNIPPET_HASH_ACTUAL,
+    SNIPPET_HASH_DESIRED,
+)
 from .load import load_parsable
 from .lsp import lsp
+
 
 def _json(o: Any) -> str:
     json = dumps(recur_sort(o), check_circular=False, ensure_ascii=False, indent=2)
     return json
 
 
-def main() -> None:
-    snippets = load_parsable()
-    lsprotocol = lsp()
+async def main() -> None:
+    snippets = await load_parsable()
+    lsprotocol = await lsp()
 
     j_lsp = _json(lsprotocol)
     LSP_ARTIFACTS.write_text(j_lsp)

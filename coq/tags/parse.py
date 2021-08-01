@@ -3,7 +3,7 @@ from json.decoder import JSONDecodeError
 from typing import Iterator, Mapping, MutableMapping, MutableSequence, Tuple
 
 from pynvim_pp.logging import log
-from std2.asyncio import call
+from std2.asyncio.subprocess import call
 from std2.string import removeprefix, removesuffix
 
 from .types import Tag, Tags

@@ -2,7 +2,7 @@ from asyncio import gather
 from dataclasses import dataclass
 from typing import AbstractSet, AsyncIterator, Mapping, Optional, Sequence, Tuple
 
-from std2.asyncio import call
+from std2.asyncio.subprocess import call
 
 from ..shared.parse import coalesce
 

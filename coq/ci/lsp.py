@@ -1,35 +1,35 @@
 from json import loads
 from pathlib import Path
-from subprocess import check_call, check_output
 from typing import Any
 
-from ..consts import TOP_LEVEL
+from std2.asyncio.subprocess import call
 
-_DOCKER_FILE = TOP_LEVEL / "ci" / "Dockerfile"
+_TOP_LV = Path(__file__).resolve().parent
+_DOCKER_FILE = _TOP_LV / "Dockerfile"
 
 
-def _build(dockerfile: Path) -> str:
+async def _build(dockerfile: Path) -> str:
     parent = dockerfile.parent
     name = f"coq_{parent.name}"
-    check_call(
-        (
-            "docker",
-            "build",
-            "--tag",
-            name,
-            "--file",
-            str(dockerfile),
-            "--progress",
-            "plain",
-            ".",
-        ),
+    await call(
+        "docker",
+        "build",
+        "--tag",
+        name,
+        "--file",
+        str(dockerfile),
+        "--progress",
+        "plain",
+        ".",
         cwd=parent,
+        capture_stdout=False,
+        capture_stderr=False,
     )
-    output = check_output(("docker", "run", "--rm", name), text=True)
-    return output
+    proc = await call("docker", "run", "--rm", name, capture_stderr=False)
+    return proc.out.decode()
 
 
-def lsp() -> Any:
-    raw = _build(_DOCKER_FILE)
+async def lsp() -> Any:
+    raw = await _build(_DOCKER_FILE)
     json = loads(raw)
     return json

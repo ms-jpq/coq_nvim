@@ -32,6 +32,7 @@ LSP_ARTIFACTS = _ART_DIR / "lsp.json"
 
 _SNIP_VARS = VARS / "snippets"
 SNIPPET_ARTIFACTS = _SNIP_VARS / "snippets.json"
+SNIPPET_GIT_SHA = _ART_DIR / "snip.sha"
 SNIPPET_HASH_DESIRED = _ART_DIR / "snip.lock"
 SNIPPET_HASH_ACTUAL = _SNIP_VARS / "snip.lock"
 

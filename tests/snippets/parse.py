@@ -1,3 +1,4 @@
+from asyncio import run
 from os import linesep
 from shutil import get_terminal_size
 from sys import stderr
@@ -14,7 +15,7 @@ _THRESHOLD = 0.95
 
 
 def _edits() -> Iterator[SnippetEdit]:
-    specs = load()
+    specs = run(load())
     for _, (_, snippets) in specs.items():
         for _, snips in snippets.items():
             for snip in snips:

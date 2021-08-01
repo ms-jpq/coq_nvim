@@ -1,10 +1,10 @@
-from concurrent.futures import ThreadPoolExecutor
+from asyncio import gather
 from contextlib import suppress
 from pathlib import Path
-from subprocess import check_call
 from typing import Any, Literal, MutableMapping, MutableSequence, Tuple
 from urllib.parse import urlparse
 
+from std2.asyncio.subprocess import call
 from std2.pickle import new_decoder, new_encoder
 from std2.tree import recur_sort
 from yaml import safe_load
@@ -23,32 +23,37 @@ def _p_name(uri: str) -> Path:
     return TMP_DIR / Path(urlparse(uri).path).name
 
 
-def _git_pull(uri: str) -> None:
+async def _git_pull(uri: str) -> None:
     location = _p_name(uri)
     if location.is_dir():
-        check_call(("git", "pull", "--recurse-submodules"), cwd=location)
+        await call(
+            "git",
+            "pull",
+            "--recurse-submodules",
+            cwd=location,
+            capture_stdout=False,
+            capture_stderr=False,
+        )
     else:
-        check_call(
-            (
-                "git",
-                "clone",
-                "--depth=1",
-                "--recurse-submodules",
-                "--shallow-submodules",
-                uri,
-                str(location),
-            ),
+        await call(
+            "git",
+            "clone",
+            "--depth=1",
+            "--recurse-submodules",
+            "--shallow-submodules",
+            uri,
+            str(location),
             cwd=TMP_DIR,
+            capture_stdout=False,
+            capture_stderr=False,
         )
 
 
-def load() -> ASnips:
+async def load() -> ASnips:
     TMP_DIR.mkdir(parents=True, exist_ok=True)
     yaml = safe_load(COMPILATION_YML.read_bytes())
     specs: Compilation = new_decoder(Compilation)(yaml)
-    with ThreadPoolExecutor() as pool:
-        tuple(pool.map(_git_pull, specs.git))
-
+    await gather(*map(_git_pull, specs.git))
     parsed = load_from_paths(
         lsp={str(path): TMP_DIR / path for path in specs.paths.lsp},
         neosnippet={str(path): TMP_DIR / path for path in specs.paths.neosnippet},
@@ -57,8 +62,8 @@ def load() -> ASnips:
     return parsed
 
 
-def load_parsable() -> Any:
-    specs = load()
+async def load_parsable() -> Any:
+    specs = await load()
     meta: MutableMapping[
         str,
         Tuple[
