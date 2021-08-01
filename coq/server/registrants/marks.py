@@ -2,9 +2,11 @@ from collections import deque
 from typing import Iterator, Sequence, Tuple, TypedDict
 from uuid import uuid4
 
+from pynvim.api.common import NvimError
 from pynvim.api.nvim import Buffer, Nvim
 from pynvim_pp.api import cur_win, win_get_buf, win_set_cursor
 from pynvim_pp.lib import write
+from pynvim_pp.logging import log
 from pynvim_pp.operators import set_visual_selection
 
 from ...lang import LANG
@@ -46,7 +48,7 @@ def nav_mark(nvim: Nvim, stack: Stack) -> None:
     if marks:
         mark = marks.popleft()
         (r1, c1), (r2, c2) = mark.begin, mark.end
-        if r1 == r2 and abs(c2 - c1) <= 1:
+        if r1 == r2 and abs(c2 - c1) == 0:
             row, col = r1, min(c1, c2)
             win_set_cursor(nvim, win=win, row=row, col=col)
         else:
@@ -77,7 +79,10 @@ def mark(nvim: Nvim, settings: Settings, buf: Buffer, marks: Sequence[Mark]) -> 
             "end_col": c2,
             "hl_group": settings.display.mark_highlight_group,
         }
-        nvim.api.buf_set_extmark(buf, ns, r1, c1, opts)
+        try:
+            nvim.api.buf_set_extmark(buf, ns, r1, c1, opts)
+        except NvimError:
+            log.warn("%s", f"bad mark location {mark}")
 
     msg = LANG("added marks", regions=" ".join(f"[{mark.text}]" for mark in marks))
     write(nvim, msg)
