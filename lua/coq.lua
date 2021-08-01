@@ -114,6 +114,12 @@ return function(args)
 
     set_coq_call("COQhelp")
     vim.api.nvim_command [[command! -nargs=* COQhelp lua coq.COQhelp(<f-args>)]]
+
+    coq_lsp_ensure_capacities = function(cfg)
+      local capabilities = vim.lsp.protocol.make_client_capabilities()
+      capabilities.textDocument.completion.completionItem.snippetSupport = true
+      local enhancements = {capacities = capacities}
+      vim.tbl_deep_extend("force", {cfg, enhancements})
+    end
   end
 end
-
