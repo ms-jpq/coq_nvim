@@ -1,7 +1,16 @@
 from __future__ import annotations
 
 from abc import abstractmethod
-from asyncio import AbstractEventLoop, Condition, Lock, Task, as_completed, gather, wait
+from asyncio import (
+    AbstractEventLoop,
+    Condition,
+    Lock,
+    Task,
+    as_completed,
+    gather,
+    sleep,
+    wait,
+)
 from concurrent.futures import Executor
 from dataclasses import dataclass
 from itertools import chain
@@ -23,7 +32,7 @@ from weakref import WeakKeyDictionary
 
 from pynvim import Nvim
 from pynvim_pp.lib import go
-from pynvim_pp.logging import log, with_suppress
+from pynvim_pp.logging import with_suppress
 from std2.asyncio import cancel
 
 from .settings import BaseClient, Limits, Options, Weights
@@ -135,6 +144,8 @@ class Supervisor:
                                                 )
                                                 acc.append(metric)
                                                 items += 1
+                                            else:
+                                                await sleep(0)
                                     finally:
                                         elapsed = monotonic() - t1
                                         await self._reviewer.s_end(
