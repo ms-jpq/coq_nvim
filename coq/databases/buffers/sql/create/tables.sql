@@ -11,7 +11,8 @@ CREATE INDEX IF NOT EXISTS buffers_filetype ON buffers (filetype);
 CREATE TABLE IF NOT EXISTS lines (
   rowid     BLOB    NOT NULL PRIMARY KEY,
   buffer_id INTEGER NOT NULL REFERENCES buffers (rowid) ON UPDATE CASCADE ON DELETE CASCADE,
-  line_num  INTEGER NOT NULL
+  line_num  INTEGER NOT NULL,
+  line      TEXT    NOT NULL
   -- TODO -- How to update line_num from back -> front in a single query
   -- UNIQUE(filename, line_num)
 ) WITHOUT ROWID;

@@ -14,7 +14,6 @@ from ...shared.executor import SingleThreadExecutor
 from ...shared.parse import coalesce
 from ...shared.settings import Options
 from ...shared.sql import BIGGEST_INT, init_db
-from ...shared.timeit import timeit
 from .sql import sql
 
 
@@ -85,8 +84,13 @@ class BDB:
         line_info = tuple(m0())
 
         def m1() -> Iterator[Mapping]:
-            for line_num, _, line_id in line_info:
-                yield {"rowid": line_id, "buffer_id": buf_id, "line_num": line_num}
+            for line_num, line, line_id in line_info:
+                yield {
+                    "rowid": line_id,
+                    "buffer_id": buf_id,
+                    "line_num": line_num,
+                    "line": line,
+                }
 
         def m2() -> Iterator[Mapping]:
             for line_num, line, line_id in line_info:
@@ -122,6 +126,22 @@ class BDB:
                         )
 
         await run_in_executor(self._ex.submit, cont)
+
+    async def lines(self, buf_id: int, lo: int, hi: int) -> Tuple[int, Sequence[str]]:
+        def cont() -> Tuple[int, Sequence[str]]:
+            with self._lock, closing(self._conn.cursor()) as cursor:
+                with with_transaction(cursor):
+                    cursor.execute(sql("select", "line_count"), {"buffer_id": buf_id})
+                    count = cursor.fetchone()["line_count"]
+                    cursor.execute(sql("select", "lines"), {"lo": lo, "hi": hi})
+                    lines = tuple(row["line"] for row in cursor.fetchall())
+                    return count, lines
+
+        def step() -> Tuple[int, Sequence[str]]:
+            self._interrupt()
+            return self._ex.submit(cont)
+
+        return await run_in_executor(step)
 
     async def words(
         self, opts: Options, filetype: Optional[str], word: str, limitless: int
