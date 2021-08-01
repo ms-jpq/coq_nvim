@@ -133,7 +133,10 @@ class BDB:
                 with with_transaction(cursor):
                     cursor.execute(sql("select", "line_count"), {"buffer_id": buf_id})
                     count = cursor.fetchone()["line_count"]
-                    cursor.execute(sql("select", "lines"), {"lo": lo, "hi": hi})
+                    cursor.execute(
+                        sql("select", "lines"),
+                        {"buffer_id": buf_id, "lo": lo, "hi": hi},
+                    )
                     lines = tuple(row["line"] for row in cursor.fetchall())
                     return count, lines
 
