@@ -9,6 +9,7 @@ from pynvim_pp.api import LFfmt, buf_get_lines
 from pynvim_pp.atomic import Atomic
 from pynvim_pp.text_object import gen_split
 
+from ..consts import DEBUG
 from ..databases.buffers.database import BDB
 from ..shared.settings import Options
 from ..shared.types import Context
@@ -49,13 +50,16 @@ def context(
     lo = max(0, row - options.context_lines)
     hi = min(buf_line_count, row + options.context_lines + 1)
     lines = buf_get_lines(nvim, buf=buf, lo=lo, hi=hi)
-    if True:
+    if DEBUG or True:
         db_line_count, db_lines = db.lines(buf.number, lo=lo, hi=hi)
         assert db_line_count == buf_line_count, (db_line_count, db_lines)
-        assert db_lines == tuple(
-            line[:-1] if idx == row else line
-            for idx, line in enumerate(lines, start=lo)
-        ), linesep.join(unified_diff(lines, db_lines))
+        assert tuple(
+            "" if idx == row else line for idx, line in enumerate(db_lines, start=lo)
+        ) == tuple(
+            "" if idx == row else line for idx, line in enumerate(lines, start=lo)
+        ), linesep.join(
+            unified_diff(lines, db_lines)
+        )
 
     r = row - lo
     line = lines[r]
