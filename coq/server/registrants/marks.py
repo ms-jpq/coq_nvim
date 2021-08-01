@@ -48,30 +48,36 @@ def nav_mark(nvim: Nvim, stack: Stack) -> None:
     if marks:
         mark = marks.popleft()
         (r1, c1), (r2, c2) = mark.begin, mark.end
-        if r1 == r2 and abs(c2 - c1) == 0:
-            row, col = r1, min(c1, c2)
-            win_set_cursor(nvim, win=win, row=row, col=col)
+        try:
+            if r1 == r2 and abs(c2 - c1) == 0:
+                row, col = r1, min(c1, c2)
+                win_set_cursor(nvim, win=win, row=row, col=col)
+            else:
+                row, col = r1, c1
+                set_visual_selection(
+                    nvim, win=win, mode="v", mark1=(r1, c1), mark2=(r2, c2 - 1)
+                )
+                nvim.command("norm! c")
+        except NvimError as e:
+            log.warn("%s", f"bad mark location {mark}")
         else:
-            row, col = r1, c1
-            set_visual_selection(
-                nvim, win=win, mode="v", mark1=(r1, c1), mark2=(r2, c2 - 1)
-            )
-            nvim.command("norm! c")
-
-        nvim.command("startinsert")
-        nvim.api.buf_del_extmark(buf, ns, mark.idx)
-        state(inserted=(row, col))
-        msg = LANG("applied mark", marks_left=len(marks))
-        write(nvim, msg)
+            nvim.command("startinsert")
+            state(inserted=(row, col))
+            msg = LANG("applied mark", marks_left=len(marks))
+            write(nvim, msg)
+        finally:
+            nvim.api.buf_del_extmark(buf, ns, mark.idx)
     else:
         msg = LANG("no more marks")
         write(nvim, msg)
 
 
 def mark(nvim: Nvim, settings: Settings, buf: Buffer, marks: Sequence[Mark]) -> None:
+    mks = tuple(mark for mark in marks if mark.idx and mark.text)
+
     ns = nvim.api.create_namespace(_NS)
     nvim.api.buf_clear_namespace(buf, ns, 0, -1)
-    for mark in marks:
+    for mark in mks:
         (r1, c1), (r2, c2) = mark.begin, mark.end
         opts = {
             "id": mark.idx + 1,
@@ -84,5 +90,5 @@ def mark(nvim: Nvim, settings: Settings, buf: Buffer, marks: Sequence[Mark]) -> 
         except NvimError:
             log.warn("%s", f"bad mark location {mark}")
 
-    msg = LANG("added marks", regions=" ".join(f"[{mark.text}]" for mark in marks))
+    msg = LANG("added marks", regions=" ".join(f"[{mark.text}]" for mark in mks))
     write(nvim, msg)
