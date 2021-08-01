@@ -30,11 +30,11 @@ TMP_DIR = VARS / "tmp"
 _ART_DIR = TOP_LEVEL / "artifacts"
 LSP_ARTIFACTS = _ART_DIR / "lsp.json"
 
-_SNIP_VARS = VARS / "snippets"
-SNIPPET_ARTIFACTS = _SNIP_VARS / "snippets.json"
-SNIPPET_GIT_SHA = _ART_DIR / "snip.sha"
+SNIP_VARS = VARS / "snippets"
+SNIPPET_ARTIFACTS = SNIP_VARS / "snippets.json"
 SNIPPET_HASH_DESIRED = _ART_DIR / "snip.lock"
-SNIPPET_HASH_ACTUAL = _SNIP_VARS / "snip.lock"
+SNIPPET_HASH_ACTUAL = SNIP_VARS / "snip.lock"
+SNIPPET_GIT_SHA = _ART_DIR / "snip.sha"
 
 
 SETTINGS_VAR = "coq_settings"

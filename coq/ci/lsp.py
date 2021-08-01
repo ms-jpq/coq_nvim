@@ -13,6 +13,7 @@ async def _build(dockerfile: Path) -> str:
     name = f"coq_{parent.name}"
     await call(
         "docker",
+        "buildx",
         "build",
         "--tag",
         name,
