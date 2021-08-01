@@ -85,6 +85,7 @@ clients:
     enabled: True
     short_name: "PATH"
     tie_breaker: 36
+    preview_lines: 6
 
   snippets:
     enabled: True

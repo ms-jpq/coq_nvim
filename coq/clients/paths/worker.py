@@ -9,7 +9,7 @@ from std2.asyncio import run_in_executor
 
 from ...shared.parse import is_word, lower
 from ...shared.runtime import Worker as BaseWorker
-from ...shared.settings import BaseClient
+from ...shared.settings import PathsClient
 from ...shared.sql import BIGGEST_INT
 from ...shared.types import Completion, Context, Edit, Extern
 
@@ -112,7 +112,7 @@ async def _parse(
     return await run_in_executor(cont)
 
 
-class Worker(BaseWorker[BaseClient, None]):
+class Worker(BaseWorker[PathsClient, None]):
     async def work(self, context: Context) -> AsyncIterator[Completion]:
         line = context.line_before + context.words_after
         base_paths = {Path(context.filename).parent, Path(context.cwd)}

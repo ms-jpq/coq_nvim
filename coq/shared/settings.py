@@ -80,6 +80,11 @@ class BaseClient:
 
 
 @dataclass(frozen=True)
+class PathsClient(BaseClient):
+    preview_lines: int
+
+
+@dataclass(frozen=True)
 class LspClient(BaseClient):
     always_request: bool
 
@@ -115,7 +120,7 @@ class TabnineClient(BaseClient):
 class Clients:
     buffers: BuffersClient
     lsp: LspClient
-    paths: BaseClient
+    paths: PathsClient
     snippets: SnippetClient
     tags: TagsClient
     tmux: WordbankClient

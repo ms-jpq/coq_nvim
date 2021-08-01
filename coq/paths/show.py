@@ -14,7 +14,7 @@ _KB = 1000
 async def _show_dir(path: Path, ellipsis: str, height: int) -> Doc:
     def lines() -> Iterator[str]:
         ordered = sorted(path.iterdir(), key=lambda p: strxfrm(str(p)))
-        for idx, child in enumerate(islice(ordered, height)):
+        for idx, child in enumerate(islice(ordered, height), start=1):
             if idx >= height and len(ordered) > height:
                 yield ellipsis
             else:
@@ -37,7 +37,7 @@ async def _show_file(path: Path, ellipsis: str, height: int) -> Doc:
             kb = fd.read(_KB).decode(errors="ignore")
         kbl = kb.splitlines()
 
-        for idx, line in enumerate(islice(kbl, height)):
+        for idx, line in enumerate(islice(kbl, height), start=1):
             if idx >= height and len(kbl) > height:
                 yield ellipsis
             else:

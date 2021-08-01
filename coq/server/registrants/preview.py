@@ -274,7 +274,7 @@ def _resolve_comp(
                 doc = await show(
                     Path(item),
                     ellipsis=stack.settings.display.pum.ellipsis,
-                    height=5,
+                    height=stack.settings.clients.paths.preview_lines,
                 )
             else:
                 doc = None
