@@ -127,7 +127,7 @@ class BDB:
 
         await run_in_executor(self._ex.submit, cont)
 
-    async def lines(self, buf_id: int, lo: int, hi: int) -> Tuple[int, Sequence[str]]:
+    def lines(self, buf_id: int, lo: int, hi: int) -> Tuple[int, Sequence[str]]:
         def cont() -> Tuple[int, Sequence[str]]:
             with self._lock, closing(self._conn.cursor()) as cursor:
                 with with_transaction(cursor):
@@ -137,11 +137,7 @@ class BDB:
                     lines = tuple(row["line"] for row in cursor.fetchall())
                     return count, lines
 
-        def step() -> Tuple[int, Sequence[str]]:
-            self._interrupt()
-            return self._ex.submit(cont)
-
-        return await run_in_executor(step)
+        return self._ex.submit(cont)
 
     async def words(
         self, opts: Options, filetype: Optional[str], word: str, limitless: int

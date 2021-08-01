@@ -1,3 +1,5 @@
+from difflib import unified_diff
+from os import linesep
 from pathlib import Path
 from typing import Literal, Tuple, cast
 
@@ -7,12 +9,15 @@ from pynvim_pp.api import LFfmt, buf_get_lines
 from pynvim_pp.atomic import Atomic
 from pynvim_pp.text_object import gen_split
 
+from ..databases.buffers.database import BDB
 from ..shared.settings import Options
 from ..shared.types import Context
 from .state import State
 
 
-def context(nvim: Nvim, options: Options, state: State, manual: bool) -> Context:
+def context(
+    nvim: Nvim, db: BDB, options: Options, state: State, manual: bool
+) -> Context:
     with Atomic() as (atomic, ns):
         ns.scr_col = atomic.call_function("screencol", ())
         ns.cwd = atomic.call_function("getcwd", ())
@@ -43,12 +48,13 @@ def context(nvim: Nvim, options: Options, state: State, manual: bool) -> Context
 
     lo = max(0, row - options.context_lines)
     hi = min(buf_line_count, row + options.context_lines + 1)
-    lines = buf_get_lines(
-        nvim,
-        buf=buf,
-        lo=lo,
-        hi=hi,
-    )
+    lines = buf_get_lines(nvim, buf=buf, lo=lo, hi=hi)
+    if True:
+        db_line_count, db_lines = db.lines(buf.number, lo=lo, hi=hi)
+        assert db_line_count == buf_line_count and [*db_lines] == lines, linesep.join(
+            unified_diff(lines, db_lines)
+        )
+
     r = row - lo
     line = lines[r]
     lines_before, lines_after = lines[:r], lines[r + 1 :]
