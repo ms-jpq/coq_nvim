@@ -60,7 +60,7 @@ def _git_alert(cwd: Path) -> None:
 
 
 def main() -> None:
-    cwd = _TOP_LV / "coq.artifacts"
+    cwd = _TOP_LV / ".vars" / "snippets"
     _git_identity()
     _git_clone(cwd)
     _build()
