@@ -3,6 +3,7 @@ from dataclasses import asdict, dataclass
 from itertools import chain
 from math import ceil
 from os import linesep
+from pathlib import Path
 from typing import (
     Any,
     Callable,
@@ -38,6 +39,7 @@ from std2.string import removeprefix
 
 from ...lsp.requests.preview import request
 from ...lsp.types import CompletionItem
+from ...paths.show import show
 from ...registry import autocmd, rpc
 from ...shared.lru import LRU
 from ...shared.parse import display_width
@@ -247,7 +249,7 @@ def _resolve_comp(
     global _TASK
     prev = _TASK
     timeout = stack.settings.display.preview.lsp_timeout if maybe_doc else None
-    _, item = extern
+    en, item = extern
 
     async def cont() -> None:
         global _LRU
@@ -262,12 +264,18 @@ def _resolve_comp(
         if cached:
             doc: Optional[Doc] = cached
         else:
-            if isinstance(item, Mapping):
+            if en is Extern.lsp and isinstance(item, Mapping):
                 done, _ = await wait((request(nvim, item=item),), timeout=timeout)
                 do = await done.pop() if done else None
                 if do:
                     _LRU[state.preview_id] = do
                 doc = do or maybe_doc
+            elif en is Extern.path and isinstance(item, str):
+                doc = await show(
+                    Path(item),
+                    ellipsis=stack.settings.display.pum.ellipsis,
+                    height=5,
+                )
             else:
                 doc = None
 

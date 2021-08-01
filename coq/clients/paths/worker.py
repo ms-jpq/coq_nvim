@@ -2,7 +2,7 @@ from asyncio import as_completed
 from itertools import islice
 from os import X_OK, access
 from os.path import expanduser, expandvars, join, normcase, normpath, sep, split
-from pathlib import Path
+from pathlib import Path, PurePath
 from typing import AbstractSet, AsyncIterator, Iterator, MutableSet, Tuple
 
 from std2.asyncio import run_in_executor
@@ -11,7 +11,7 @@ from ...shared.parse import is_word, lower
 from ...shared.runtime import Worker as BaseWorker
 from ...shared.settings import BaseClient
 from ...shared.sql import BIGGEST_INT
-from ...shared.types import Completion, Context, Edit
+from ...shared.types import Completion, Context, Edit, Extern
 
 
 def _p_lhs(lhs: str) -> str:
@@ -60,7 +60,7 @@ def _sort_by(segment: str, unifying_chars: AbstractSet[str]) -> str:
 
 def parse(
     unifying_chars: AbstractSet[str], base: Path, line: str
-) -> Iterator[Tuple[str, str]]:
+) -> Iterator[Tuple[PurePath, str, str]]:
     segments = reversed(tuple(_segments(line)))
     for segment in segments:
         sort_by = _sort_by(segment, unifying_chars=unifying_chars)
@@ -76,7 +76,7 @@ def parse(
                 for path in entire.iterdir():
                     term = sep if path.is_dir() else ""
                     line = _join(segment, path.name) + term
-                    yield line, sort_by
+                    yield path, line, sort_by
                 return
 
             else:
@@ -99,14 +99,14 @@ def parse(
                                 term = sep if path.is_dir() else ""
                                 name = rhs + path.name[len(rhs) :]
                                 line = _join(lseg, name) + term
-                                yield line, sort_by
+                                yield path, line, sort_by
                         return
 
 
 async def _parse(
     base: Path, line: str, limit: int, unifying_chars: AbstractSet[str]
-) -> AbstractSet[Tuple[str, str]]:
-    def cont() -> AbstractSet[Tuple[str, str]]:
+) -> AbstractSet[Tuple[PurePath, str, str]]:
+    def cont() -> AbstractSet[Tuple[PurePath, str, str]]:
         return {*islice(parse(unifying_chars, base=base, line=line), limit)}
 
     return await run_in_executor(cont)
@@ -132,7 +132,7 @@ class Worker(BaseWorker[BaseClient, None]):
         for co in as_completed(aw):
             seq = await co
 
-            for new_text, sort_by in seq:
+            for path, new_text, sort_by in seq:
                 if len(seen) >= limit:
                     break
                 elif new_text not in seen:
@@ -144,5 +144,6 @@ class Worker(BaseWorker[BaseClient, None]):
                         label=edit.new_text,
                         sort_by=sort_by,
                         primary_edit=edit,
+                        extern=(Extern.path, normcase(path)),
                     )
                     yield completion
