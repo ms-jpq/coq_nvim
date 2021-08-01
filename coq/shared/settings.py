@@ -8,6 +8,8 @@ class Limits:
     max_buf_index: int
     timeout: float
     manual_timeout: float
+    download_retries: int
+    download_timeout: float
 
 
 @dataclass(frozen=True)
@@ -111,12 +113,6 @@ class SnippetClient(BaseClient):
 
 
 @dataclass(frozen=True)
-class TabnineClient(BaseClient):
-    download_retries: int
-    download_timeout: float
-
-
-@dataclass(frozen=True)
 class Clients:
     buffers: BuffersClient
     lsp: LspClient
@@ -125,7 +121,7 @@ class Clients:
     tags: TagsClient
     tmux: WordbankClient
     tree_sitter: BaseClient
-    tabnine: TabnineClient
+    tabnine: BaseClient
 
 
 @dataclass(frozen=True)

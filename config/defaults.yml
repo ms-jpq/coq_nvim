@@ -22,6 +22,9 @@ limits:
   timeout: 0.088
   manual_timeout: 0.6
 
+  download_retries: 6
+  download_timeout: 66.0
+
 weights:
   prefix_matches: 2.0
   edit_distance: 1.5
@@ -60,8 +63,6 @@ clients:
     enabled: False
     short_name: "T9"
     tie_breaker: -16
-    download_retries: 6
-    download_timeout: 66.0
 
   tmux:
     enabled: True

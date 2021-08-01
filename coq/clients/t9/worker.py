@@ -13,7 +13,7 @@ from std2.pickle import new_decoder, new_encoder
 
 from ...shared.runtime import Supervisor
 from ...shared.runtime import Worker as BaseWorker
-from ...shared.settings import Options, TabnineClient
+from ...shared.settings import BaseClient, Options
 from ...shared.types import Completion, Context, ContextualEdit
 from .install import T9_BIN, ensure_installed
 from .types import ReqL1, ReqL2, Request, Response
@@ -44,7 +44,7 @@ def _encode(options: Options, context: Context, limit: int) -> Any:
     return _ENCODER(req)
 
 
-def _decode(client: TabnineClient, reply: Any) -> Iterator[Completion]:
+def _decode(client: BaseClient, reply: Any) -> Iterator[Completion]:
     resp: Response = _DECODER(reply)
 
     for result in resp.results:
@@ -72,10 +72,8 @@ async def _proc() -> Process:
     return proc
 
 
-class Worker(BaseWorker[TabnineClient, None]):
-    def __init__(
-        self, supervisor: Supervisor, options: TabnineClient, misc: None
-    ) -> None:
+class Worker(BaseWorker[BaseClient, None]):
+    def __init__(self, supervisor: Supervisor, options: BaseClient, misc: None) -> None:
         self._lock, self._installed = Lock(), False
         self._proc: Optional[Process] = None
         super().__init__(supervisor, options=options, misc=misc)
@@ -83,8 +81,8 @@ class Worker(BaseWorker[TabnineClient, None]):
 
     async def _install(self) -> None:
         self._installed = await ensure_installed(
-            self._options.download_retries,
-            timeout=self._options.download_timeout,
+            self._supervisor.limits.download_retries,
+            timeout=self._supervisor.limits.download_timeout,
         )
 
     async def _comm(self, json: str) -> str:
