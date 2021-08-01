@@ -68,8 +68,8 @@ def _git_ref(cwd: Path) -> None:
 
 def main() -> None:
     cwd = _TOP_LV / "coq.artifacts"
-    _git_identity()
-    _git_clone(cwd)
+    # _git_identity()
+    # _git_clone(cwd)
     _build()
     _git_ref(cwd)
     _git_alert(_TOP_LV)
