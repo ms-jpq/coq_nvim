@@ -51,9 +51,11 @@ def context(
     lines = buf_get_lines(nvim, buf=buf, lo=lo, hi=hi)
     if True:
         db_line_count, db_lines = db.lines(buf.number, lo=lo, hi=hi)
-        assert db_line_count == buf_line_count and [*db_lines] == lines, linesep.join(
-            unified_diff(lines, db_lines)
-        )
+        assert db_line_count == buf_line_count, (db_line_count, db_lines)
+        assert db_lines == tuple(
+            line[:-1] if idx == row else line
+            for idx, line in enumerate(lines, start=lo)
+        ), linesep.join(unified_diff(lines, db_lines))
 
     r = row - lo
     line = lines[r]
