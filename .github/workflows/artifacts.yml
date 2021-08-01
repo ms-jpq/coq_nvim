@@ -3,7 +3,7 @@ name: Artifacts
 
 on:
   push:
-    branch:
+    branches:
       - bwaaak
   schedule:
     - cron: "0 0 * * *" # daily
