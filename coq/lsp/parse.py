@@ -7,7 +7,9 @@ from ..shared.types import UTF16, Completion, Doc, Edit, Extern, RangeEdit, Snip
 from .protocol import PROTOCOL
 from .types import CompletionItem, CompletionResponse, LSPcomp, TextEdit
 
-_FALSY = {None, False, 0, ""}
+
+def _falsy(thing: Any) -> bool:
+    return thing is None or thing == False or thing == 0 or thing == "" or thing == b""
 
 
 def _range_edit(edit: TextEdit) -> Optional[RangeEdit]:
@@ -101,11 +103,11 @@ def _parse_item(
 
 
 def parse(short_name: str, tie_breaker: int, resp: CompletionResponse) -> LSPcomp:
-    if resp in _FALSY:
+    if _falsy(resp):
         return LSPcomp(local_cache=False, items=iter(()))
 
     elif isinstance(resp, Mapping):
-        is_complete = resp.get("isIncomplete") in _FALSY
+        is_complete = _falsy(resp.get("isIncomplete"))
         items = resp.get("items", [])
         shuffle(cast(MutableSequence, items))
         comps = (
