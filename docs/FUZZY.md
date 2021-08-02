@@ -30,6 +30,10 @@ Lexicographical sorting is then applied with secondary metrics such as `presence
 
 ## Conf
 
+`coq_settings.match`
+
+`coq_settings.weights`
+
 ### coq_settings.match
 
 These control the matching & scoring algorithms

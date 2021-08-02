@@ -48,6 +48,10 @@ Useful for reading references.
 
 When snippets come with placeholders, jump to edit next placeholder.
 
+Will ask to apply linked edits in a menu, if linked edits are available.
+
+Pressing `<c-c>` to resume to edit as normal.
+
 **default:**
 
 ```json
