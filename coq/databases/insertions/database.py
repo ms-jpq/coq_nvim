@@ -126,32 +126,32 @@ class IDB:
 
         self._ex.submit(cont)
 
-    def stats(self) -> Sequence[Statistics]:
-        def cont() -> Sequence[Statistics]:
-            def c1() -> Iterator[Statistics]:
-                with self._lock, closing(self._conn.cursor()) as cursor:
-                    with with_transaction(cursor):
-                        cursor.execute(sql("select", "stats"), ())
-                        for row in cursor.fetchall():
-                            q_duration: Mapping[str, Optional[float]] = loads(
-                                row["q_duration"]
-                            )
-                            q_items: Mapping[str, Optional[int]] = loads(row["q_items"])
-                            stat = Statistics(
-                                source=row["source"],
-                                interrupted=row["interrupted"],
-                                inserted=row["inserted"],
-                                avg_duration=row["avg_duration"],
-                                avg_items=row["avg_items"],
-                                q0_duration=q_duration.get("q0") or 0,
-                                q50_duration=q_duration.get("q50") or 0,
-                                q95_duration=q_duration.get("q95") or 0,
-                                q100_duration=q_duration.get("q100") or 0,
-                                q50_items=q_items.get("q50") or 0,
-                                q100_items=q_items.get("q100") or 0,
-                            )
-                            yield stat
+    def stats(self) -> Iterator[Statistics]:
+        def cont() -> Iterator[Statistics]:
+            with self._lock, closing(self._conn.cursor()) as cursor:
+                with with_transaction(cursor):
+                    cursor.execute(sql("select", "stats"), ())
+                    rows = cursor.fetchall()
 
-            return tuple(c1())
+            def c1() -> Iterator[Statistics]:
+                for row in rows:
+                    q_duration: Mapping[str, Optional[float]] = loads(row["q_duration"])
+                    q_items: Mapping[str, Optional[int]] = loads(row["q_items"])
+                    stat = Statistics(
+                        source=row["source"],
+                        interrupted=row["interrupted"],
+                        inserted=row["inserted"],
+                        avg_duration=row["avg_duration"],
+                        avg_items=row["avg_items"],
+                        q0_duration=q_duration.get("q0") or 0,
+                        q50_duration=q_duration.get("q50") or 0,
+                        q95_duration=q_duration.get("q95") or 0,
+                        q100_duration=q_duration.get("q100") or 0,
+                        q50_items=q_items.get("q50") or 0,
+                        q100_items=q_items.get("q100") or 0,
+                    )
+                    yield stat
+
+            return c1()
 
         return self._ex.submit(cont)

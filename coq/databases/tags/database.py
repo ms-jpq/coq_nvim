@@ -3,7 +3,7 @@ from contextlib import closing
 from hashlib import md5
 from sqlite3 import Connection, OperationalError
 from threading import Lock
-from typing import AbstractSet, Iterator, Mapping, Sequence, cast
+from typing import AbstractSet, Iterator, Mapping, cast
 
 from std2.asyncio import run_in_executor
 from std2.sqlite3 import with_transaction
@@ -103,8 +103,8 @@ class CTDB:
 
     async def select(
         self, opts: Options, filename: str, line_num: int, word: str, limitless: int
-    ) -> Sequence[Tag]:
-        def cont() -> Sequence[Tag]:
+    ) -> Iterator[Tag]:
+        def cont() -> Iterator[Tag]:
             try:
                 with closing(self._conn.cursor()) as cursor:
                     with with_transaction(cursor):
@@ -126,11 +126,12 @@ class CTDB:
                                 "word": word,
                             },
                         )
-                        return tuple(cast(Tag, {**row}) for row in cursor.fetchall())
+                        rows = cursor.fetchall()
+                        return (cast(Tag, {**row}) for row in rows)
             except OperationalError:
-                return ()
+                return iter(())
 
-        def step() -> Sequence[Tag]:
+        def step() -> Iterator[Tag]:
             self._interrupt()
             return self._ex.submit(cont)
 

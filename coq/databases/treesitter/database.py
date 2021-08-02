@@ -47,8 +47,8 @@ class TDB:
 
     async def select(
         self, opts: Options, word: str, limitless: int
-    ) -> Sequence[Tuple[str, str]]:
-        def cont() -> Sequence[Tuple[str, str]]:
+    ) -> Iterator[Tuple[str, str]]:
+        def cont() -> Iterator[Tuple[str, str]]:
             try:
                 with closing(self._conn.cursor()) as cursor:
                     with with_transaction(cursor):
@@ -62,13 +62,12 @@ class TDB:
                                 "word": word,
                             },
                         )
-                        return tuple(
-                            (row["word"], row["kind"]) for row in cursor.fetchall()
-                        )
+                        rows = cursor.fetchall()
+                        return ((row["word"], row["kind"]) for row in rows)
             except OperationalError:
-                return ()
+                return iter(())
 
-        def step() -> Sequence[Tuple[str, str]]:
+        def step() -> Iterator[Tuple[str, str]]:
             self._interrupt()
             return self._ex.submit(cont)
 

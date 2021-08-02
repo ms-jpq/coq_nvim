@@ -101,8 +101,8 @@ class SDB:
 
     async def select(
         self, opts: Options, filetype: str, word: str, limitless: int
-    ) -> Sequence[_Snip]:
-        def cont() -> Sequence[_Snip]:
+    ) -> Iterator[_Snip]:
+        def cont() -> Iterator[_Snip]:
             try:
                 with closing(self._conn.cursor()) as cursor:
                     with with_transaction(cursor):
@@ -117,11 +117,12 @@ class SDB:
                                 "word": word,
                             },
                         )
-                        return tuple(cast(_Snip, row) for row in cursor.fetchall())
+                        rows = cursor.fetchall()
+                        return (cast(_Snip, row) for row in rows)
             except OperationalError:
-                return ()
+                return iter(())
 
-        def step() -> Sequence[_Snip]:
+        def step() -> Iterator[_Snip]:
             self._interrupt()
             return self._ex.submit(cont)
 

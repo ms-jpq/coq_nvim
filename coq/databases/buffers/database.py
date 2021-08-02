@@ -159,8 +159,8 @@ class BDB:
 
     async def words(
         self, opts: Options, filetype: Optional[str], word: str, limitless: int
-    ) -> Sequence[str]:
-        def cont() -> Sequence[str]:
+    ) -> Iterator[str]:
+        def cont() -> Iterator[str]:
             try:
                 with closing(self._conn.cursor()) as cursor:
                     with with_transaction(cursor):
@@ -175,11 +175,12 @@ class BDB:
                                 "word": word,
                             },
                         )
-                        return tuple(row["word"] for row in cursor.fetchall())
+                        rows = cursor.fetchall()
+                        return (row["word"] for row in rows)
             except OperationalError:
-                return ()
+                return iter(())
 
-        def step() -> Sequence[str]:
+        def step() -> Iterator[str]:
             self._interrupt()
             return self._ex.submit(cont)
 

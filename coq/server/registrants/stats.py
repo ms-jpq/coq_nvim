@@ -2,7 +2,7 @@ from itertools import chain
 from locale import strxfrm
 from os import linesep
 from string import Template
-from typing import Iterator, Mapping, Sequence, Tuple
+from typing import Iterable, Iterator, Mapping, Sequence, Tuple
 
 from pynvim import Nvim
 from pynvim_pp.api import buf_set_lines, buf_set_option, create_buf, win_close
@@ -99,7 +99,7 @@ def _trans(stat: Statistics) -> Iterator[Tuple[str, Mapping[str, str]]]:
     yield stat.source, m3
 
 
-def _pprn(stats: Sequence[Statistics]) -> Iterator[str]:
+def _pprn(stats: Iterable[Statistics]) -> Iterator[str]:
     if not stats:
         yield from ("", "", "")
     else:
