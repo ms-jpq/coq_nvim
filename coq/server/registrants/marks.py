@@ -157,6 +157,8 @@ def _linked_marks(
         """
         log.warn("%s", dedent(msg))
     finally:
+        # TODO -- Need to delete all marks due to extmark not shifting
+        # Need to translate extmarks to correct location
         for mark in chain((mark,), marks):
             nvim.api.buf_del_extmark(buf, ns, mark.idx)
 
