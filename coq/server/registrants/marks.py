@@ -157,7 +157,7 @@ def _linked_marks(
         """
         log.warn("%s", dedent(msg))
     finally:
-        for mark in ms:
+        for mark in chain((mark,), marks):
             nvim.api.buf_del_extmark(buf, ns, mark.idx)
 
 
