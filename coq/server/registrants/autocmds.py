@@ -18,7 +18,7 @@ from typing import (
 )
 
 from pynvim.api.nvim import Nvim
-from pynvim_pp.api import buf_filetype, cur_buf, get_cwd, win_close
+from pynvim_pp.api import buf_filetype, buf_get_option, cur_buf, get_cwd, win_close
 from pynvim_pp.float_win import list_floatwins
 from pynvim_pp.lib import async_call, awrite, go
 from pynvim_pp.logging import log
@@ -206,6 +206,12 @@ def _when_idle(nvim: Nvim, stack: Stack) -> None:
         _HANDLE.cancel()
 
     def cont() -> None:
+        buf = cur_buf(nvim)
+        buf_type: str = buf_get_option(nvim, buf=buf, key="buftype")
+        if buf_type == "terminal":
+            nvim.api.buf_detach(buf)
+            state(nono_bufs={buf.number})
+
         _insert_enter(nvim, stack=stack)
         stack.supervisor.notify_idle()
 
