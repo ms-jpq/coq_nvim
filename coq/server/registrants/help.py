@@ -19,7 +19,7 @@ from ...consts import (
     MD_PREF,
     MD_README,
     MD_SOURCES,
-    MD_STATISTICS,
+    MD_STATS,
     URI_CONF,
     URI_DISPLAY,
     URI_FUZZY,
@@ -43,7 +43,7 @@ class _Topics(Enum):
     sources = auto()
     misc = auto()
     stats = auto()
-    performance = auto()
+    perf = auto()
 
 
 def _directory(topic: _Topics) -> Tuple[Path, str]:
@@ -62,8 +62,8 @@ def _directory(topic: _Topics) -> Tuple[Path, str]:
     elif topic is _Topics.misc:
         return MD_MISC, URI_MISC
     elif topic is _Topics.stats:
-        return MD_STATISTICS, URI_STATISTICS
-    elif topic is _Topics.performance:
+        return MD_STATS, URI_STATISTICS
+    elif topic is _Topics.perf:
         return MD_PREF, URI_PREF
     else:
         never(topic)

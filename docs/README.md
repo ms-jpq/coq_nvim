@@ -20,9 +20,9 @@ Use `:COQhelp {topic}` or `:COQhelp {topic} --web` to visit a particular topic f
 
 - [:COQhelp misc](https://github.com/ms-jpq/coq_nvim/tree/coq/docs/MISC.md)
 
-- [:COQhelp performance](https://github.com/ms-jpq/coq_nvim/tree/coq/docs/PERFORMANCE.md)
+- [:COQhelp perf](https://github.com/ms-jpq/coq_nvim/tree/coq/docs/PERF.md)
 
-- [:COQhelp statistics](https://github.com/ms-jpq/coq_nvim/tree/coq/docs/STATISTICS.md)
+- [:COQhelp stats](https://github.com/ms-jpq/coq_nvim/tree/coq/docs/STATS.md)
 
 ---
 

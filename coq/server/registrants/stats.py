@@ -9,7 +9,7 @@ from pynvim_pp.api import buf_set_lines, buf_set_option, create_buf, win_close
 from pynvim_pp.float_win import list_floatwins, open_float_win
 from std2.locale import si_prefixed_smol
 
-from ...consts import MD_STATISTICS
+from ...consts import MD_STATS
 from ...databases.insertions.database import Statistics
 from ...lang import LANG
 from ...registry import rpc
@@ -114,7 +114,7 @@ def _pprn(stats: Iterable[Statistics]) -> Iterator[str]:
 def stats(nvim: Nvim, stack: Stack, *_: str) -> None:
     stats = stack.idb.stats()
     chart1, chart2, chart3 = _pprn(stats)
-    desc = MD_STATISTICS.read_text()
+    desc = MD_STATS.read_text()
     lines = (
         Template(_TPL)
         .substitute(chart1=chart1, chart2=chart2, chart3=chart3, desc=desc)
