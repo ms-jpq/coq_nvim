@@ -68,7 +68,12 @@ def _decode(client: BaseClient, reply: Any) -> Iterator[Completion]:
 
 
 async def _proc() -> Process:
-    proc = await create_subprocess_exec(T9_BIN, stdin=PIPE, stdout=PIPE, stderr=DEVNULL)
+    proc = await create_subprocess_exec(
+        T9_BIN,
+        stdin=PIPE,
+        stdout=PIPE,
+        stderr=DEVNULL,
+    )
     return proc
 
 
@@ -86,19 +91,28 @@ class Worker(BaseWorker[BaseClient, None]):
         )
 
     async def _comm(self, json: str) -> str:
-        if self._proc:
+        async def cont() -> str:
             async with self._lock:
-                if self._proc.stdin:
-                    self._proc.stdin.write(json.encode())
-                    self._proc.stdin.write(b"\n")
-                    await self._proc.stdin.drain()
-                if self._proc.stdout:
-                    out = await self._proc.stdout.readline()
-                    return out.decode()
+                if not self._proc:
+                    self._proc = await _proc()
+                    try:
+                        assert self._proc.stdin
+                        self._proc.stdin.write(json.encode())
+                        self._proc.stdin.write(b"\n")
+                        await self._proc.stdin.drain()
+                        assert self._proc.stdout
+                        out = await self._proc.stdout.readline()
+                    except (BrokenPipeError, ConnectionResetError):
+                        with suppress(ProcessLookupError):
+                            self._proc.kill()
+                        await self._proc.wait()
+                        return "{}"
+                    else:
+                        return out.decode()
                 else:
                     return "{}"
-        else:
-            return "{}"
+
+        return await shield(cont())
 
     async def work(self, context: Context) -> AsyncIterator[Completion]:
         if not self._installed:
@@ -106,21 +120,13 @@ class Worker(BaseWorker[BaseClient, None]):
         else:
             if not self._proc:
                 self._proc = await _proc()
-
             req = _encode(
                 self._supervisor.options,
                 context=context,
                 limit=self._supervisor.options.max_results,
             )
             json = dumps(req, check_circular=False, ensure_ascii=False)
-            try:
-                json = await shield(self._comm(json))
-            except (BrokenPipeError, ConnectionResetError):
-                with suppress(ProcessLookupError):
-                    self._proc.kill()
-                await self._proc.wait()
-                self._proc = await _proc()
-            else:
-                reply = loads(json)
-                for comp in _decode(self._options, reply=reply):
-                    yield comp
+            json = await self._comm(json)
+            reply = loads(json)
+            for comp in _decode(self._options, reply=reply):
+                yield comp
