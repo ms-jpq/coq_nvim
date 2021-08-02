@@ -9,6 +9,7 @@ from subprocess import DEVNULL, PIPE
 from typing import Any, AsyncIterator, Iterator, Optional
 
 from pynvim_pp.lib import go
+from pynvim_pp.logging import log
 from std2.pickle import new_decoder, new_encoder
 
 from ...shared.runtime import Supervisor
@@ -112,7 +113,11 @@ class Worker(BaseWorker[BaseClient, None]):
                 else:
                     return "{}"
 
-        return await shield(cont())
+        if self._lock.locked():
+            log.warn("%s", "T9 locked")
+            return ""
+        else:
+            return await shield(cont())
 
     async def work(self, context: Context) -> AsyncIterator[Completion]:
         if not self._installed:
