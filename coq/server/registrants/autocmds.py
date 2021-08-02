@@ -36,7 +36,9 @@ from ...consts import (
     SNIPPET_HASH_ACTUAL,
     SNIPPET_HASH_DESIRED,
 )
+from ...lang import LANG
 from ...registry import atomic, autocmd, rpc
+from ...shared.timeit import timeit
 from ...snippets.types import ASnips, ParsedSnippet
 from ...tmux.parse import snapshot
 from ...treesitter.request import async_request
@@ -87,6 +89,7 @@ async def _load_snip_raw(nvim: Nvim, retries: int, timeout: float) -> ASnips:
                     rmtree(SNIP_VARS)
                 for p in Path(tmp).iterdir():
                     p.replace(SNIP_VARS)
+                    break
 
     def load() -> ASnips:
         try:
@@ -105,6 +108,7 @@ async def _load_snip_raw(nvim: Nvim, retries: int, timeout: float) -> ASnips:
                 return snippets
 
     async def cont() -> ASnips:
+        downloaded = False
         for _ in range(retries):
             try:
                 actual = SNIPPET_HASH_ACTUAL.read_text("UTF8")
@@ -113,16 +117,26 @@ async def _load_snip_raw(nvim: Nvim, retries: int, timeout: float) -> ASnips:
 
             if actual != desired:
                 await run_in_executor(download)
+                downloaded = True
             else:
                 snippets = load()
                 if snippets:
+                    if downloaded:
+                        count = sum(
+                            len(v) for _, val in snippets.values() for v in val.values()
+                        )
+                        await awrite(nvim, LANG("end snip download", count=count))
                     return snippets
         else:
             return {}
 
     snips = load()
     if not snips:
-        return await cont()
+        await awrite(nvim, LANG("begin snip download"))
+        snips = await cont()
+        if not snips:
+            await awrite(nvim, "failed snip download", error=True)
+        return snips
     else:
         go(nvim, aw=cont())
         return snips
@@ -140,14 +154,13 @@ def _load_snips(nvim: Nvim, stack: Stack) -> None:
     async def cont() -> None:
         global _EXTS, _SNIPPETS
 
-        snippets = await _load_snip_raw(
-            nvim,
-            retries=stack.settings.limits.download_retries,
-            timeout=stack.settings.limits.download_timeout,
-        )
-        _SEEN_SNIP_TYPES.clear()
-        if not snippets:
-            await awrite(nvim, "nooooo", error=True)
+        with timeit("Download :: snips"):
+            snippets = await _load_snip_raw(
+                nvim,
+                retries=stack.settings.limits.download_retries,
+                timeout=stack.settings.limits.download_timeout,
+            )
+            _SEEN_SNIP_TYPES.clear()
 
         exts: MutableMapping[str, MutableSet[str]] = {}
         s_acc: MutableMapping[str, MutableSequence[ParsedSnippet]] = {}
