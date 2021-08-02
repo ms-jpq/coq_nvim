@@ -50,7 +50,7 @@ def context(
     lo = max(0, row - options.context_lines)
     hi = min(buf_line_count, row + options.context_lines + 1)
     lines = buf_get_lines(nvim, buf=buf, lo=lo, hi=hi)
-    if DEBUG or True:
+    if DEBUG:
         db_line_count, db_lines = db.lines(buf.number, lo=lo, hi=hi)
         assert db_line_count in {
             buf_line_count - 1,
