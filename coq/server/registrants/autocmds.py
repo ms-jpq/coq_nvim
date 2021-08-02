@@ -95,7 +95,8 @@ def _load_snips(nvim: Nvim, stack: Stack) -> None:
         snippets = await _load_snip_raw(paths)
         _SEEN_SNIP_TYPES.clear()
         if not snippets:
-            await sleep(0)
+            for _ in range(3):
+                await sleep(0)
             await awrite(nvim, LANG("no snippets loaded"))
 
         exts: MutableMapping[str, MutableSet[str]] = {}
