@@ -248,7 +248,7 @@ def _resolve_comp(
 ) -> None:
     global _TASK
     prev = _TASK
-    timeout = stack.settings.display.preview.lsp_timeout if maybe_doc else None
+    timeout = stack.settings.display.preview.resolve_timeout if maybe_doc else None
     en, item = extern
 
     async def cont() -> None:
@@ -276,6 +276,8 @@ def _resolve_comp(
                     ellipsis=stack.settings.display.pum.ellipsis,
                     height=stack.settings.clients.paths.preview_lines,
                 )
+                if doc:
+                    _LRU[state.preview_id] = doc
             else:
                 doc = None
 

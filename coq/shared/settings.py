@@ -38,7 +38,7 @@ class PreviewPositions:
 class PreviewDisplay:
     x_max_len: int
     positions: PreviewPositions
-    lsp_timeout: float
+    resolve_timeout: float
 
 
 @dataclass(frozen=True)
