@@ -88,7 +88,7 @@ class CoqClient(Client):
             ${e}
             """
             ms = Template(dedent(tpl)).substitute(e=e)
-            print(ms, file=stderr)
+            print(ms, file=stderr, flush=True)
             return 1
         except Exception as e:
             log.exception("%s", e)
