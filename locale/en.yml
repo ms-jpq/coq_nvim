@@ -24,7 +24,7 @@
   [<binary>]
 
 "begin snip download": |-
-  Downloading snippets ⏳...
+  ⏳ Downloading snippets ...
 
 "end snip download": |-
   ✅ ${count} snippets downloaded

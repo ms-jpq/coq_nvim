@@ -135,7 +135,7 @@ async def _load_snip_raw(nvim: Nvim, retries: int, timeout: float) -> ASnips:
         await awrite(nvim, LANG("begin snip download"))
         snips = await cont()
         if not snips:
-            await awrite(nvim, "failed snip download", error=True)
+            await awrite(nvim, LANG("failed snip download"), error=True)
         return snips
     else:
         go(nvim, aw=cont())
