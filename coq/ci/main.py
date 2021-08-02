@@ -7,7 +7,7 @@ from ..consts import LSP_ARTIFACTS, VARS
 from .load import load_parsable
 from .lsp import lsp
 
-_SNIPPET_ARTIFACTS = VARS / "snippets"
+_SNIPPET_ARTIFACTS = VARS / "snippets" / "coq+snippets.json"
 
 
 def _json(o: Any) -> str:

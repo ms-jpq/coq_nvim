@@ -2,7 +2,6 @@ from itertools import chain
 from random import choice, sample
 
 from pynvim import Nvim
-from pynvim_pp.lib import write
 
 from ...registry import rpc
 from ..rt_types import Stack
