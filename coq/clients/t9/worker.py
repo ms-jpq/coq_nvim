@@ -1,4 +1,4 @@
-from asyncio import create_subprocess_exec, shield
+from asyncio import create_subprocess_exec, shield, sleep
 from asyncio.locks import Lock
 from asyncio.subprocess import Process
 from contextlib import suppress
@@ -94,7 +94,9 @@ class Worker(BaseWorker[BaseClient, None]):
         self._installed = installed = access(T9_BIN, X_OK)
 
         if not self._installed:
-            await awrite(self._supervisor.nvim, LANG("begin T9 download"))
+            for _ in range(9):
+                await sleep(0)
+                await awrite(self._supervisor.nvim, LANG("begin T9 download"))
 
         self._installed = await ensure_updated(
             self._supervisor.limits.download_retries,
