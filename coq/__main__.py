@@ -42,14 +42,6 @@ _REQ = REQUIREMENTS.read_text()
 _IN_VENV = _EXEC_PATH == RT_PY
 
 
-def _is_relative_to(origin: Path, *other: Path) -> bool:
-    try:
-        origin.relative_to(*other)
-        return True
-    except ValueError:
-        return False
-
-
 if command == "deps":
     assert not _IN_VENV
 
@@ -57,16 +49,13 @@ if command == "deps":
         from venv import EnvBuilder
 
         print("...", flush=True)
-        if _is_relative_to(_EXEC_PATH, RT_DIR):
-            pass
-        else:
-            EnvBuilder(
-                system_site_packages=False,
-                with_pip=True,
-                upgrade=True,
-                symlinks=not is_win,
-                clear=True,
-            ).create(RT_DIR)
+        EnvBuilder(
+            system_site_packages=False,
+            with_pip=True,
+            upgrade=True,
+            symlinks=not is_win,
+            clear=True,
+        ).create(RT_DIR)
     except (ImportError, SystemExit):
         print("Please install venv separately.", file=stderr)
         exit(1)
