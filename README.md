@@ -108,8 +108,13 @@ _The `%` statistic comes from compiling the 10,000 snippets_
 **Requires `Universal CTags`, NOT `ctags`**
 
 ```sh
-brew install universal-ctags
-apt  install universal-ctags
+# MacOS
+brew uninstall ctags           # bad
+brew install   universal-ctags # good
+
+# Ubuntu
+apt remove  ctags              # bad
+apt install universal-ctags    # good
 ```
 
 ### Buffers
