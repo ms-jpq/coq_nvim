@@ -4,19 +4,20 @@ from asyncio.subprocess import Process
 from contextlib import suppress
 from itertools import chain
 from json import dumps, loads
-from os import linesep
+from os import X_OK, access, linesep
 from subprocess import DEVNULL, PIPE
 from typing import Any, AsyncIterator, Iterator, Optional
 
-from pynvim_pp.lib import go
+from pynvim_pp.lib import awrite, go
 from pynvim_pp.logging import log
 from std2.pickle import new_decoder, new_encoder
 
+from ...lang import LANG
 from ...shared.runtime import Supervisor
 from ...shared.runtime import Worker as BaseWorker
 from ...shared.settings import BaseClient, Options
 from ...shared.types import Completion, Context, ContextualEdit
-from .install import T9_BIN, ensure_installed
+from .install import T9_BIN, ensure_updated
 from .types import ReqL1, ReqL2, Request, Response
 
 _VERSION = "3.2.28"
@@ -86,10 +87,20 @@ class Worker(BaseWorker[BaseClient, None]):
         go(supervisor.nvim, aw=self._install())
 
     async def _install(self) -> None:
-        self._installed = await ensure_installed(
+        self._installed = installed = access(T9_BIN, X_OK)
+
+        if not self._installed:
+            await awrite(self._supervisor.nvim, LANG("begin T9 download"))
+
+        self._installed = await ensure_updated(
             self._supervisor.limits.download_retries,
             timeout=self._supervisor.limits.download_timeout,
         )
+
+        if not self._installed:
+            await awrite(self._supervisor.nvim, LANG("failed T9 download"))
+        elif self._installed and not installed:
+            await awrite(self._supervisor.nvim, LANG("end T9 download"))
 
     async def _comm(self, json: str) -> str:
         async def cont() -> str:
@@ -120,11 +131,7 @@ class Worker(BaseWorker[BaseClient, None]):
             return await shield(cont())
 
     async def work(self, context: Context) -> AsyncIterator[Completion]:
-        if not self._installed:
-            pass
-        else:
-            if not self._proc:
-                self._proc = await _proc()
+        if self._installed:
             req = _encode(
                 self._supervisor.options,
                 context=context,

@@ -1,9 +1,11 @@
 from asyncio import sleep
 from os import X_OK, access
+from pathlib import Path
 from platform import machine
 from shutil import which
 from socket import timeout as TimeoutE
 from string import Template
+from tempfile import NamedTemporaryFile
 from urllib.error import URLError
 
 from pynvim_pp.logging import log
@@ -59,12 +61,16 @@ def _update(timeout: float) -> None:
     if not access(T9_BIN, X_OK) or uri != p_uri:
         with urlopen(uri, timeout=timeout) as resp:
             buf = resp.read()
-        T9_BIN.write_bytes(buf)
+        with NamedTemporaryFile() as fd:
+            fd.write(buf)
+            fd.flush()
+            Path(fd.name).replace(T9_BIN)
+
         T9_BIN.chmod(0o755)
         _LOCK.write_text(uri)
 
 
-async def ensure_installed(retries: int, timeout: float) -> bool:
+async def ensure_updated(retries: int, timeout: float) -> bool:
     for _ in range(retries):
         if access(T9_BIN, X_OK):
             return True
