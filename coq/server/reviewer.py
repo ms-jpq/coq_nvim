@@ -46,7 +46,7 @@ def _join(
     weight = Weights(
         prefix_matches=match_metrics.prefix_matches,
         edit_distance=match_metrics.edit_distance,
-        insertion_order=ctx.inserted.get(completion.sort_by, 0),
+        recency=ctx.inserted.get(completion.sort_by, 0),
         neighbours=ctx.neighbours.get(completion.sort_by, 0),
     )
     label_width = display_width(completion.label, tabsize=ctx.context.tabstop)

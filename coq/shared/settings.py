@@ -62,7 +62,7 @@ class Options:
 class Weights:
     prefix_matches: float
     edit_distance: float
-    insertion_order: float
+    recency: float
     neighbours: float
 
 

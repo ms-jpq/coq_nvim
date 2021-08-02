@@ -18,7 +18,7 @@ def _cum(adjustment: Weights, metrics: Iterable[Metric]) -> Weights:
     zero = Weights(
         prefix_matches=0,
         edit_distance=0,
-        insertion_order=0,
+        recency=0,
         neighbours=0,
     )
     acc = asdict(zero)
