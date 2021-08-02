@@ -2,7 +2,7 @@ from collections import deque
 from itertools import chain
 from os import linesep
 from textwrap import dedent
-from typing import Iterator, Sequence, Tuple, TypedDict
+from typing import Iterator, Optional, Sequence, Tuple, TypedDict
 
 from pynvim.api.common import NvimError
 from pynvim.api.nvim import Buffer, Nvim
@@ -116,6 +116,7 @@ def _linked_marks(
             return None
         else:
             print([resp], flush=True)
+            return None
 
     except NvimError as e:
         msg = f"""
@@ -124,6 +125,7 @@ def _linked_marks(
         {e}
         """
         log.warn("%s", dedent(msg))
+        return None
     finally:
         for mark in ms:
             nvim.api.buf_del_extmark(buf, ns, mark.idx)
