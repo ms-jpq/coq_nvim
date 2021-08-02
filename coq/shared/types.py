@@ -1,6 +1,6 @@
 from dataclasses import dataclass, field
 from enum import Enum, auto
-from pathlib import Path
+from pathlib import PurePath
 from typing import Any, Literal, Optional, Sequence, Tuple, Union
 from uuid import UUID, uuid4
 
@@ -33,7 +33,7 @@ class Context:
     # COMMIT ID <-> Trigged by COQ
     commit_id: UUID
 
-    cwd: Path
+    cwd: PurePath
     buf_id: int
     filetype: str
     filename: str

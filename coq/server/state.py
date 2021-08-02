@@ -1,4 +1,6 @@
 from dataclasses import dataclass
+from os import sep
+from pathlib import PurePath
 from threading import Lock
 from typing import AbstractSet, Optional, Tuple, Union
 from uuid import UUID, uuid4
@@ -11,6 +13,7 @@ from ..shared.types import Context, NvimPos
 
 @dataclass(frozen=True)
 class State:
+    cwd: PurePath
     screen: Tuple[int, int]
     change_id: UUID
     commit_id: UUID
@@ -25,6 +28,7 @@ _LOCK = Lock()
 
 
 _state = State(
+    cwd=PurePath(sep),
     screen=(0, 0),
     change_id=uuid4(),
     commit_id=uuid4(),
@@ -37,6 +41,7 @@ _state = State(
 
 
 def state(
+    cwd: Optional[PurePath] = None,
     screen: Optional[Tuple[int, int]] = None,
     change_id: Optional[UUID] = None,
     commit_id: Optional[UUID] = None,
@@ -50,6 +55,7 @@ def state(
 
     with _LOCK:
         state = State(
+            cwd=cwd or _state.cwd,
             screen=screen or _state.screen,
             change_id=change_id or _state.change_id,
             commit_id=commit_id or _state.commit_id,

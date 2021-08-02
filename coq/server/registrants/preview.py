@@ -274,7 +274,8 @@ def _resolve_comp(
                 doc = do or maybe_doc
             elif en is Extern.path and isinstance(item, str):
                 doc = await show(
-                    Path(item),
+                    cwd=state.cwd,
+                    path=Path(item),
                     ellipsis=stack.settings.display.pum.ellipsis,
                     height=stack.settings.clients.paths.preview_lines,
                 )

@@ -1,6 +1,8 @@
 from concurrent.futures import Executor
 from contextlib import closing
 from hashlib import md5
+from os.path import normcase
+from pathlib import PurePath
 from sqlite3 import Connection, OperationalError
 from threading import Lock
 from typing import AbstractSet, Iterator, Mapping, cast
@@ -32,8 +34,9 @@ _NIL_TAG = Tag(
 )
 
 
-def _init(cwd: str) -> Connection:
-    name = f"{md5(cwd.encode()).hexdigest()}-{_SCHEMA}"
+def _init(cwd: PurePath) -> Connection:
+    ncwd = normcase(cwd)
+    name = f"{md5(ncwd.encode()).hexdigest()}-{_SCHEMA}"
     db = (_TAGS_DIR / name).with_suffix(".sqlite3")
     db.parent.mkdir(parents=True, exist_ok=True)
     conn = Connection(str(db), isolation_level=None)
@@ -44,7 +47,7 @@ def _init(cwd: str) -> Connection:
 
 
 class CTDB:
-    def __init__(self, pool: Executor, cwd: str) -> None:
+    def __init__(self, pool: Executor, cwd: PurePath) -> None:
         self._lock = Lock()
         self._ex = SingleThreadExecutor(pool)
         self._conn: Connection = self._ex.submit(_init, cwd)
@@ -53,7 +56,7 @@ class CTDB:
         with self._lock:
             self._conn.interrupt()
 
-    async def swap(self, cwd: str) -> None:
+    async def swap(self, cwd: PurePath) -> None:
         def cont() -> None:
             with self._lock:
                 self._conn.close()

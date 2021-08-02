@@ -4,7 +4,7 @@ from asyncio.tasks import gather
 from itertools import repeat
 from json import loads
 from json.decoder import JSONDecodeError
-from pathlib import Path
+from pathlib import Path, PurePath
 from typing import (
     AbstractSet,
     Iterable,
@@ -52,7 +52,8 @@ def _new_cwd(nvim: Nvim, stack: Stack) -> None:
     cwd = get_cwd(nvim)
 
     async def cont() -> None:
-        await stack.ctdb.swap(cwd)
+        s = state(cwd=PurePath(cwd))
+        await stack.ctdb.swap(s.cwd)
 
     go(nvim, aw=cont())
 

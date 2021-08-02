@@ -21,7 +21,6 @@ def context(
 ) -> Context:
     with Atomic() as (atomic, ns):
         ns.scr_col = atomic.call_function("screencol", ())
-        ns.cwd = atomic.call_function("getcwd", ())
         ns.buf = atomic.get_current_buf()
         ns.name = atomic.buf_get_name(0)
         ns.line_count = atomic.buf_line_count(0)
@@ -34,7 +33,6 @@ def context(
         atomic.commit(nvim)
 
     scr_col = ns.scr_col
-    cwd = cast(str, ns.cwd)
     buf = cast(Buffer, ns.buf)
     (r, col) = cast(Tuple[int, int], ns.cursor)
     row = r - 1
@@ -79,7 +77,7 @@ def context(
         manual=manual,
         change_id=state.change_id,
         commit_id=state.commit_id,
-        cwd=Path(cwd),
+        cwd=state.cwd,
         buf_id=buf.number,
         filename=filename,
         filetype=filetype,

@@ -1,7 +1,7 @@
 from itertools import islice
 from locale import strxfrm
 from os import linesep, sep
-from pathlib import Path
+from pathlib import Path, PurePath
 from typing import Iterator, Optional
 
 from std2.asyncio import run_in_executor
@@ -55,7 +55,7 @@ async def _show_file(path: Path, ellipsis: str, height: int) -> Doc:
     return await run_in_executor(cont)
 
 
-async def show(path: Path, ellipsis: str, height: int) -> Optional[Doc]:
+async def show(cwd:PurePath,path: Path, ellipsis: str, height: int) -> Optional[Doc]:
     try:
         if path.is_dir():
             return await _show_dir(path, ellipsis=ellipsis, height=height)

@@ -1,4 +1,5 @@
 from concurrent.futures import Executor
+from pathlib import PurePath
 from typing import Iterator
 
 from pynvim import Nvim
@@ -27,6 +28,7 @@ from ..shared.runtime import Supervisor, Worker
 from ..shared.settings import Settings
 from .reviewer import Reviewer
 from .rt_types import Stack
+from .state import state
 
 _DECODER = new_decoder(Settings)
 
@@ -81,13 +83,13 @@ def _from_each_according_to_their_ability(
 
 def stack(pool: Executor, nvim: Nvim) -> Stack:
     settings = _settings(nvim)
-    cwd = get_cwd(nvim)
+    s = state(cwd=PurePath(get_cwd(nvim)))
     bdb, sdb, idb, tdb, ctdb, tmdb = (
         BDB(pool),
         SDB(pool),
         IDB(pool),
         TDB(pool),
-        CTDB(pool, cwd=cwd),
+        CTDB(pool, cwd=s.cwd),
         TMDB(pool),
     )
     reviewer = Reviewer(

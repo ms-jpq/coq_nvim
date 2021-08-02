@@ -1,4 +1,4 @@
-from pathlib import Path
+from pathlib import PurePath
 from uuid import uuid4
 
 from .types import Context
@@ -7,7 +7,7 @@ EMPTY_CONTEXT = Context(
     manual=True,
     change_id=uuid4(),
     commit_id=uuid4(),
-    cwd=Path(),
+    cwd=PurePath(),
     buf_id=0,
     filename="",
     filetype="",
