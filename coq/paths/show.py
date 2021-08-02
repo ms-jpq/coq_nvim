@@ -19,13 +19,13 @@ def show_path(cwd: PurePath, path: PurePath, is_dir: bool) -> str:
     posfix = sep if is_dir else ""
     with suppress(ValueError):
         rel = path.relative_to(cwd)
-        return normcase(rel) + posfix
+        return f".{sep}{normcase(rel)}{posfix}"
 
     with suppress(ValueError):
         rel = path.relative_to(_HOME)
         return f"~{sep}{normcase(rel)}{posfix}"
 
-    return normcase(path) + posfix
+    return f"{normcase(path)}{posfix}"
 
 
 async def _show_dir(cwd: PurePath, path: Path, ellipsis: str, height: int) -> Doc:
