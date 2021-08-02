@@ -15,4 +15,6 @@ COPY ./ /root/.config/nvim/plugged/coq_nvim
 
 
 WORKDIR /root/.config/nvim/plugged/coq_nvim
+ENV COQ_DEBUG=1 \
+    COQ_DEBUG_DB=1
 # RUN python3 -m coq deps
