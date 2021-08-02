@@ -10,7 +10,9 @@ RUN apt-get update && \
 
 
 ADD https://raw.githubusercontent.com/junegunn/vim-plug/master/plug.vim /root/.config/nvim/autoload/plug.vim
-COPY ./fs /
+COPY ./docker/fs /
+COPY ./ /root/.config/nvim/plugged/coq_nvim
+
 
 WORKDIR /root/.config/nvim/plugged/coq_nvim
 # RUN python3 -m coq deps
