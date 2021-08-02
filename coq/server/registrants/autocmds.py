@@ -82,6 +82,7 @@ async def _load_snip_raw(paths: Iterable[Path]) -> ASnips:
 _EXTS: Mapping[str, AbstractSet[str]] = {}
 _SNIPPETS: Mapping[str, Sequence[ParsedSnippet]] = {}
 _SEEN_SNIP_TYPES: MutableSet[str] = set()
+_DECODER = new_decoder(Sequence[ParsedSnippet])
 
 
 @rpc(blocking=True)
@@ -92,12 +93,10 @@ def _load_snips(nvim: Nvim, stack: Stack) -> None:
     async def cont() -> None:
         global _EXTS, _SNIPPETS
 
-        with timeit("load snips", force=True):
-            snippets = await _load_snip_raw(paths)
-            _SEEN_SNIP_TYPES.clear()
-
+        snippets = await _load_snip_raw(paths)
+        _SEEN_SNIP_TYPES.clear()
         if not snippets:
-            await awrite(nvim, LANG("no snippets loaded"), error=True)
+            await awrite(nvim, LANG("no snippets loaded"))
 
         exts: MutableMapping[str, MutableSet[str]] = {}
         s_acc: MutableMapping[str, MutableSequence[ParsedSnippet]] = {}
@@ -120,8 +119,6 @@ def _load_snips(nvim: Nvim, stack: Stack) -> None:
 
 atomic.exec_lua(f"{_load_snips.name}()", ())
 
-_DECODER = new_decoder(Sequence[ParsedSnippet])
-
 
 @rpc(blocking=True)
 def _ft_changed(nvim: Nvim, stack: Stack) -> None:
@@ -130,6 +127,7 @@ def _ft_changed(nvim: Nvim, stack: Stack) -> None:
 
     async def cont() -> None:
         await stack.bdb.ft_update(buf.number, filetype=ft)
+
         if ft not in _SEEN_SNIP_TYPES:
             _SEEN_SNIP_TYPES.add(ft)
 
