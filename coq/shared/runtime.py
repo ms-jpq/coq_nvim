@@ -126,13 +126,12 @@ class Supervisor:
                         )
 
                         acc: MutableSequence[Metric] = []
-                        done = False
+                        done, t1 = False, monotonic()
 
                         async def supervise(worker: Worker, assoc: BaseClient) -> None:
                             with with_suppress():
                                 with timeit(f"WORKER -- {assoc.short_name}"):
-                                    instance, t1 = uuid4(), monotonic()
-                                    items = 0
+                                    instance, items = uuid4(), 0
                                     await self._reviewer.s_begin(
                                         assoc, instance=instance
                                     )
