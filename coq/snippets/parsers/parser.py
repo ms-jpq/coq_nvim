@@ -110,7 +110,7 @@ def _overlap(r1: Region, r2: Region) -> bool:
 
 def _consolidate(
     text: str, regions: Mapping[int, Sequence[Region]]
-) -> Mapping[int, Sequence[Region]]:
+) -> Iterator[Tuple[int, Region]]:
     new_regions = (
         (
             r.end - r.begin,
@@ -128,12 +128,9 @@ def _consolidate(
             a = acc.setdefault(idx, [])
             a.append(region)
 
-    fin: MutableMapping[int, MutableSequence[Region]] = {}
     for idx, rs in acc.items():
-        new_idx = idx + LINKED_PAD if len(rs) > 1 else idx
-        fin[new_idx] = rs
-
-    return fin
+        for i, region in enumerate(rs, start=len(rs) > 1):
+            yield idx + LINKED_PAD * i, region
 
 
 def token_parser(context: ParserCtx, stream: TokenStream) -> Parsed:
@@ -185,6 +182,6 @@ def token_parser(context: ParserCtx, stream: TokenStream) -> Parsed:
         )
         raise ParseError(msg)
 
-    regions = _consolidate(text, regions=raw_regions)
+    regions = tuple(_consolidate(text, regions=raw_regions))
     parsed = Parsed(text=text, cursor=cursor, regions=regions)
     return parsed

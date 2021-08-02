@@ -82,4 +82,4 @@ class Region:
 class Parsed:
     text: str
     cursor: int
-    regions: Mapping[int, Sequence[Region]]
+    regions: Sequence[Tuple[int, Region]]
