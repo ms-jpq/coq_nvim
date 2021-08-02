@@ -31,4 +31,3 @@ Launch `coq.nvim` with a greeting.
 Dependencies will be privately installed inside `coq.nvim`'s git root under `.vars/runtime`.
 
 Running `rm -rf` on `coq_nvim/` will cleanly remove everything `coq.nvim` installs to your local system.
-

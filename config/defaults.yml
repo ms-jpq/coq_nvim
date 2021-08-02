@@ -107,4 +107,3 @@ clients:
     short_name: "LSP"
     tie_breaker: 66
     always_request: False
-

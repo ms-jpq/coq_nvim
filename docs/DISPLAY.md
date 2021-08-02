@@ -29,4 +29,3 @@
 ##### `coq_settings.display.preview.positions`
 
 #### `coq_settings.display.mark_highlight_group`
-

@@ -69,7 +69,6 @@ Will give you the following error message:
 
 See help docs on [keybind](https://github.com/ms-jpq/coq_nvim/tree/coq/docs/KEYBIND.md)
 
-
 ### coq_settings.limits
 
 #### `coq_settings.limits.max_buf_index`
@@ -79,6 +78,3 @@ See help docs on [keybind](https://github.com/ms-jpq/coq_nvim/tree/coq/docs/KEYB
 #### `coq_settings.limits.timeout`
 
 #### `coq_settings.limits.manual_timeout`
-
-
-

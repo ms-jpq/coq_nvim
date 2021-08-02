@@ -39,4 +39,3 @@ jobs:
 
       - name: Test
         run: python3 -m tests
-

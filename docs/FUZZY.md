@@ -101,4 +101,3 @@ What is the minimum similarity score, for a word to be proposed by the algorithm
 ```json
 0.5
 ```
-

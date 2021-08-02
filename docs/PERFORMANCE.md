@@ -71,4 +71,3 @@ It goes further than that.
 Not only does work in python get cancelled, the same thing is done for SQLite too. Each SQLite VM have it's own lock protecting the critical operations, and outside of those locked sections, interrupts are fired into the VMs and terminate execution.
 
 The separate SQLite VMs enable more surgical targeting of interrupts.
-

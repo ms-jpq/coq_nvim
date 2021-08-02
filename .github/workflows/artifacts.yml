@@ -26,4 +26,3 @@ jobs:
         env:
           CI_TOKEN: ${{ secrets.CI_TOKEN }}
         run: python -m ci
-

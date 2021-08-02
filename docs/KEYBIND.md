@@ -53,4 +53,3 @@ When snippets come with placeholders, jump to edit next placeholder.
 ```json
 "<c-h>"
 ```
-

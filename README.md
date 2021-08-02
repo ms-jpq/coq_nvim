@@ -118,4 +118,3 @@ Plug 'ms-jpq/coq_nvim', {'branch': 'coq'}
 ## Documentation
 
 ---
-

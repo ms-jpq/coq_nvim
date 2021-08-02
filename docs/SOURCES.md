@@ -35,4 +35,3 @@
 ##### `coq_settings.clients.tmux.match_syms`
 
 #### coq_settings.clients.tabnine
-

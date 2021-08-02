@@ -49,5 +49,3 @@ This means that one slow source can slow down all sources, with the exception be
 This also means that the time spans are **not additive**. Say five sources take 20ms to complete, the total execution time is 20ms, not 100ms.
 
 The real duration is `min(timeout, max(<durations>)) + <constant overhead>`.
-
-

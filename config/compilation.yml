@@ -32,4 +32,3 @@ paths:
   ultisnip:
     - vim-go/gosnippets/UltiSnips
     - vim-snippets/UltiSnips
-
