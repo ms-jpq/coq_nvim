@@ -142,8 +142,8 @@ class BDB:
 
         await run_in_executor(self._ex.submit, cont)
 
-    def lines(self, buf_id: int, lo: int, hi: int) -> Tuple[int, Sequence[str]]:
-        def cont() -> Tuple[int, Sequence[str]]:
+    def lines(self, buf_id: int, lo: int, hi: int) -> Tuple[int, Iterator[str]]:
+        def cont() -> Tuple[int, Iterator[str]]:
             with self._lock, closing(self._conn.cursor()) as cursor:
                 with with_transaction(cursor):
                     cursor.execute(sql("select", "line_count"), {"buffer_id": buf_id})
@@ -152,7 +152,8 @@ class BDB:
                         sql("select", "lines"),
                         {"buffer_id": buf_id, "lo": lo, "hi": hi},
                     )
-                    lines = tuple(row["line"] for row in cursor.fetchall())
+                    rows = cursor.fetchall()
+                    lines = (row["line"] for row in rows)
                     return count, lines
 
         return self._ex.submit(cont)
