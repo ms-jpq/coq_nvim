@@ -122,7 +122,9 @@ def _comp_done(nvim: Nvim, stack: Stack, event: Mapping[str, Any]) -> None:
         else:
             s = state()
             if user_data.change_uid == s.change_id:
-                inserted = edit(nvim, stack=stack, state=s, data=user_data)
+                inserted = edit(
+                    nvim, stack=stack, state=s, data=user_data, synthetic=False
+                )
                 state(inserted=inserted, commit_id=uuid4())
             else:
                 log.warn("%s", "delayed completion")

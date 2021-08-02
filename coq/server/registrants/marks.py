@@ -3,6 +3,7 @@ from itertools import chain
 from os import linesep
 from textwrap import dedent
 from typing import Iterator, Optional, Sequence, Tuple, TypedDict
+from uuid import uuid4
 
 from pynvim.api.common import NvimError
 from pynvim.api.nvim import Buffer, Nvim
@@ -14,7 +15,7 @@ from pynvim_pp.operators import set_visual_selection
 
 from ...lang import LANG
 from ...registry import rpc
-from ...shared.types import UTF8, Mark
+from ...shared.types import UTF8, Mark, RangeEdit
 from ...snippets.consts import LINKED_PAD
 from ..edit import edit
 from ..mark import NS
@@ -80,9 +81,28 @@ def _single_mark(
         nvim.api.buf_del_extmark(buf, ns, mark.idx)
 
 
+def _trans(new_text: str, mark: Mark, marks: Sequence[Mark]) -> UserData:
+    def one(mark: Mark) -> RangeEdit:
+        edit = RangeEdit(new_text=new_text, begin=mark.begin, end=mark.end)
+        return edit
+
+    primary_edit, *secondary_edits = map(one, chain((mark,), marks))
+    data = UserData(
+        uid=uuid4(),
+        instance=uuid4(),
+        sort_by="",
+        change_uid=uuid4(),
+        primary_edit=primary_edit,
+        secondary_edits=secondary_edits,
+        doc=None,
+        extern=None,
+    )
+    return data
+
+
 def _linked_marks(
-    nvim: Nvim, mark: Mark, marks: Sequence[Mark], ns: int, buf: Buffer
-) -> Optional[UserData]:
+    nvim: Nvim, mark: Mark, marks: Sequence[Mark], stack: Stack, ns: int, buf: Buffer
+) -> None:
     ms = tuple(chain((mark,), marks))
 
     def preview(mark: Mark) -> str:
@@ -112,11 +132,9 @@ def _linked_marks(
 
     try:
         resp = ask(nvim, question=LANG("expand marks"), default=place_holder())
-        if resp is None:
-            return None
-        else:
-            print([resp], flush=True)
-            return None
+        if resp is not None:
+            data = _trans(resp, mark=mark, marks=marks)
+            edit(nvim, stack=stack, state=state(), data=data, synthetic=True)
 
     except NvimError as e:
         msg = f"""
@@ -125,7 +143,6 @@ def _linked_marks(
         {e}
         """
         log.warn("%s", dedent(msg))
-        return None
     finally:
         for mark in ms:
             nvim.api.buf_del_extmark(buf, ns, mark.idx)
@@ -143,9 +160,7 @@ def nav_mark(nvim: Nvim, stack: Stack) -> None:
         if mark.idx <= LINKED_PAD:
             _single_mark(nvim, mark=mark, marks=marks, ns=ns, win=win, buf=buf)
         else:
-            data = _linked_marks(nvim, mark=mark, marks=marks, ns=ns, buf=buf)
-            if data:
-                edit(nvim, stack=stack, state=state(), data=data)
+            _linked_marks(nvim, mark=mark, marks=marks, ns=ns, stack=stack, buf=buf)
 
     else:
         msg = LANG("no more marks")

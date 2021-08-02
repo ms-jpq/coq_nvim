@@ -350,7 +350,9 @@ def _cursor(cursor: NvimPos, instructions: Sequence[_EditInstruction]) -> NvimPo
     return row, col
 
 
-def edit(nvim: Nvim, stack: Stack, state: State, data: UserData) -> Tuple[int, int]:
+def edit(
+    nvim: Nvim, stack: Stack, state: State, data: UserData, synthetic: bool
+) -> Tuple[int, int]:
     win = cur_win(nvim)
     buf = win_get_buf(nvim, win=win)
 
@@ -404,9 +406,9 @@ def edit(nvim: Nvim, stack: Stack, state: State, data: UserData) -> Tuple[int, i
         buf_set_lines(nvim, buf=buf, lo=lo, hi=hi, lines=send_lines)
         win_set_cursor(nvim, win=win, row=n_row, col=n_col)
 
-        stack.idb.inserted(data.instance.bytes, sort_by=data.sort_by)
-
-        if marks:
-            mark(nvim, settings=stack.settings, buf=buf, marks=marks)
+        if not synthetic:
+            stack.idb.inserted(data.instance.bytes, sort_by=data.sort_by)
+            if marks:
+                mark(nvim, settings=stack.settings, buf=buf, marks=marks)
 
         return n_row, n_col
