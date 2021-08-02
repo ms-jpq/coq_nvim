@@ -12,13 +12,15 @@ self explanatory
 
 ### Incremental completion
 
-On the python end, this is done via collaborative multi-tasking.
+On the python end, this is done via collaborative multi-tasking similar to [React's new concurrent mode](https://reactjs.org/docs/concurrent-mode-intro.html).
+
+Instead of projecting the entirety of the result-set, rows are computed incrementally, in an interruptable fashion.
 
 More interestingly, on the SQLite end:
 
 `coq.nvim` launches half a dozen independent in memory SQLite virtual machines in their own threads.
 
-This is done in part because it allows the SQLite VMs to each respond without having to wait on unrelated operations.
+This is done in part because it allows the SQLite VMs to each progress without having to block on unrelated operations.
 
 ### Soft Deadlines
 
@@ -48,7 +50,7 @@ But that is not enough!
 
 In a naive network with limited capacity, if the rate of ingress exceeds the capacity of egress, the network will eventually enter a doom spiral, where the incoming traffic piling up in congestion.
 
-For `coq.nvim`, this issue is solved akin to how the linux packet queue `tc-cake` works on a basic level for TCP traffic sharping.
+For `coq.nvim`, this issue is solved akin to how the linux packet queue [`tc-cake`](https://man7.org/linux/man-pages/man8/tc-cake.8.html) works on a basic level for TCP traffic sharping.
 
 Dropping from the front of the queue: Thats it!
 
@@ -69,5 +71,3 @@ It is actually (minor overhead of cancellation + 10s of ms). The heavy lifting c
 It goes further than that.
 
 Not only does work in python get cancelled, the same thing is done for SQLite too. Each SQLite VM have it's own lock protecting the critical operations, and outside of those locked sections, interrupts are fired into the VMs and terminate execution.
-
-The separate SQLite VMs enable more surgical targeting of interrupts.
