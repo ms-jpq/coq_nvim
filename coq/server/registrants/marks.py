@@ -116,7 +116,6 @@ def _linked_marks(
 ) -> None:
     base_idx = mark.idx % MOD_PAD
     ms = tuple(chain((mark,), (m for m in marks if m.idx % MOD_PAD == base_idx)))
-    print([ms, marks], flush=True)
 
     def preview(mark: Mark) -> str:
         linesep = buf_linefeed(nvim, buf=buf)
