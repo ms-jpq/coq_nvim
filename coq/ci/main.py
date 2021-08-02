@@ -1,16 +1,13 @@
 from hashlib import sha256
 from json import dumps
-from pathlib import Path
 from typing import Any
 
-from std2.asyncio.subprocess import call
 from std2.tree import recur_sort
 
 from ..consts import (
     LSP_ARTIFACTS,
     SNIP_VARS,
     SNIPPET_ARTIFACTS,
-    SNIPPET_GIT_SHA,
     SNIPPET_HASH_ACTUAL,
     SNIPPET_HASH_DESIRED,
 )
@@ -36,26 +33,6 @@ async def main() -> None:
 
     SNIP_VARS.mkdir(parents=True, exist_ok=True)
 
-    prev_desired = SNIPPET_HASH_DESIRED.read_text()
     SNIPPET_ARTIFACTS.write_bytes(bj_snippets)
     SNIPPET_HASH_ACTUAL.write_text(hashed)
     SNIPPET_HASH_DESIRED.write_text(hashed)
-
-    if prev_desired != hashed:
-        proc = await call(
-            "git",
-            "rev-parse",
-            "--show-toplevel",
-            cwd=SNIP_VARS,
-            capture_stderr=False,
-        )
-        snip_git = Path(proc.out.decode().strip())
-        if snip_git == SNIP_VARS:
-            proc = await call(
-                "git",
-                "rev-parse",
-                "HEAD",
-                cwd=SNIP_VARS,
-                capture_stderr=False,
-            )
-            SNIPPET_GIT_SHA.write_bytes(proc.out.strip())
