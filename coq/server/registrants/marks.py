@@ -2,7 +2,7 @@ from collections import deque
 from itertools import chain
 from os import linesep
 from textwrap import dedent
-from typing import Iterator, Optional, Sequence, Tuple, TypedDict
+from typing import Iterator, Sequence, Tuple, TypedDict
 from uuid import uuid4
 
 from pynvim.api.common import NvimError
@@ -83,7 +83,12 @@ def _single_mark(
 
 def _trans(new_text: str, mark: Mark, marks: Sequence[Mark]) -> UserData:
     def one(mark: Mark) -> RangeEdit:
-        edit = RangeEdit(new_text=new_text, begin=mark.begin, end=mark.end)
+        edit = RangeEdit(
+            new_text=new_text,
+            begin=mark.begin,
+            end=mark.end,
+            encoding=UTF8,
+        )
         return edit
 
     primary_edit, *secondary_edits = map(one, chain((mark,), marks))
