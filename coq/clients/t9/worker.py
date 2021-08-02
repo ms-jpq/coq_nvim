@@ -102,8 +102,8 @@ class Worker(BaseWorker[BaseClient, None]):
         elif self._installed and not installed:
             await awrite(self._supervisor.nvim, LANG("end T9 download"))
 
-    async def _comm(self, json: str) -> str:
-        async def cont() -> str:
+    async def _comm(self, json: str) -> Optional[str]:
+        async def cont() -> Optional[str]:
             async with self._lock:
                 if not self._proc:
                     self._proc = await _proc()
@@ -118,15 +118,15 @@ class Worker(BaseWorker[BaseClient, None]):
                         with suppress(ProcessLookupError):
                             self._proc.kill()
                         await self._proc.wait()
-                        return "{}"
+                        return None
                     else:
                         return out.decode()
                 else:
-                    return "{}"
+                    return None
 
         if self._lock.locked():
             log.warn("%s", "T9 locked")
-            return ""
+            return None
         else:
             return await shield(cont())
 
@@ -139,6 +139,6 @@ class Worker(BaseWorker[BaseClient, None]):
             )
             json = dumps(req, check_circular=False, ensure_ascii=False)
             json = await self._comm(json)
-            reply = loads(json)
+            reply = loads(json or "{}")
             for comp in _decode(self._options, reply=reply):
                 yield comp
