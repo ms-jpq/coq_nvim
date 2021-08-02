@@ -87,7 +87,7 @@ def _single_mark(
         nvim.api.buf_del_extmark(buf, ns, mark.idx)
 
 
-def _trans(new_text: str, mark: Mark, marks: Sequence[Mark]) -> UserData:
+def _trans(new_text: str, marks: Sequence[Mark]) -> UserData:
     def one(mark: Mark) -> RangeEdit:
         edit = RangeEdit(
             new_text=new_text,
@@ -97,7 +97,7 @@ def _trans(new_text: str, mark: Mark, marks: Sequence[Mark]) -> UserData:
         )
         return edit
 
-    primary_edit, *secondary_edits = map(one, chain((mark,), marks))
+    primary_edit, *secondary_edits = map(one, marks)
     data = UserData(
         uid=uuid4(),
         instance=uuid4(),
@@ -146,7 +146,7 @@ def _linked_marks(
     try:
         resp = ask(nvim, question=LANG("expand marks"), default=place_holder())
         if resp is not None:
-            data = _trans(resp, mark=mark, marks=marks)
+            data = _trans(resp, marks=ms)
             edit(nvim, stack=stack, state=state(), data=data, synthetic=True)
 
     except NvimError as e:
