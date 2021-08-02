@@ -7,7 +7,7 @@ from pynvim import Nvim
 from pynvim.api import Buffer, NvimError
 from pynvim_pp.api import buf_filetype, buf_get_option, cur_buf
 from pynvim_pp.lib import async_call, awrite, go
-from pynvim_pp.logging import log, with_suppress
+from pynvim_pp.logging import with_suppress
 from std2.asyncio import run_in_executor
 
 from ...lang import LANG

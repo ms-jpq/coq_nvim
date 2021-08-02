@@ -24,6 +24,7 @@ from pynvim_pp.logging import log
 from std2.asyncio import run_in_executor
 from std2.pickle import new_decoder
 
+from ...databases.snippets.database import SDB
 from ...lang import LANG
 from ...registry import atomic, autocmd, rpc
 from ...snippets.types import ASnips, ParsedSnippet
@@ -121,6 +122,32 @@ def _load_snips(nvim: Nvim, stack: Stack) -> None:
 atomic.exec_lua(f"{_load_snips.name}()", ())
 
 
+async def _add_snips(ft: str, db: SDB) -> None:
+    if ft not in _SEEN_SNIP_TYPES:
+        _SEEN_SNIP_TYPES.add(ft)
+
+        def cont() -> Iterator[Tuple[str, ParsedSnippet]]:
+            stack, seen = [ft], {ft}
+            while stack:
+                ext = stack.pop()
+                for et in _EXTS.get(ft, ()):
+                    if et not in seen:
+                        seen.add(et)
+                        stack.append(et)
+
+                snippets = _SNIPPETS.get(ext, ())
+                snips: Sequence[ParsedSnippet] = _DECODER(snippets)
+                yield from zip(repeat(ext), snips)
+
+        snips: MutableMapping[str, MutableSequence[ParsedSnippet]] = {}
+
+        for filetype, snip in cont():
+            acc = snips.setdefault(filetype, [])
+            acc.append(snip)
+
+        await db.populate(snips)
+
+
 @rpc(blocking=True)
 def _ft_changed(nvim: Nvim, stack: Stack) -> None:
     buf = cur_buf(nvim)
@@ -128,30 +155,7 @@ def _ft_changed(nvim: Nvim, stack: Stack) -> None:
 
     async def cont() -> None:
         await stack.bdb.ft_update(buf.number, filetype=ft)
-
-        if ft not in _SEEN_SNIP_TYPES:
-            _SEEN_SNIP_TYPES.add(ft)
-
-            def cont() -> Iterator[Tuple[str, ParsedSnippet]]:
-                stack, seen = [ft], {ft}
-                while stack:
-                    ext = stack.pop()
-                    for et in _EXTS.get(ft, ()):
-                        if et not in seen:
-                            seen.add(et)
-                            stack.append(et)
-
-                    snippets = _SNIPPETS.get(ext, ())
-                    snips: Sequence[ParsedSnippet] = _DECODER(snippets)
-                    yield from zip(repeat(ext), snips)
-
-            snips: MutableMapping[str, MutableSequence[ParsedSnippet]] = {}
-
-            for filetype, snip in cont():
-                acc = snips.setdefault(filetype, [])
-                acc.append(snip)
-
-            await stack.sdb.populate(snips)
+        await _add_snips(ft, db=stack.sdb)
 
     go(nvim, aw=cont())
 
