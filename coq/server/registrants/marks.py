@@ -114,7 +114,8 @@ def _trans(new_text: str, mark: Mark, marks: Sequence[Mark]) -> UserData:
 def _linked_marks(
     nvim: Nvim, mark: Mark, marks: Sequence[Mark], stack: Stack, ns: int, buf: Buffer
 ) -> None:
-    ms = tuple(chain((mark,), marks))
+    ms = tuple(chain((mark,), (m for m in marks if m.idx == mark.idx)))
+    print([ms, marks], flush=True)
 
     def preview(mark: Mark) -> str:
         linesep = buf_linefeed(nvim, buf=buf)
