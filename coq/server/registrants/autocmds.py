@@ -139,7 +139,8 @@ def _load_snips(nvim: Nvim, stack: Stack) -> None:
         global _EXTS, _SNIPPETS
 
         snippets = await _load_snip_raw(
-            stack.settings.limits.download_retries,
+            nvim,
+            retries=stack.settings.limits.download_retries,
             timeout=stack.settings.limits.download_timeout,
         )
         _SEEN_SNIP_TYPES.clear()
