@@ -87,7 +87,7 @@ class RangeEdit(Edit):
 
     begin: WTF8Pos
     end: WTF8Pos
-    encoding: str = UTF16
+    encoding: str
 
 
 @dataclass(frozen=True)

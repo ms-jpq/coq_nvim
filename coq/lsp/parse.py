@@ -3,7 +3,7 @@ from typing import Any, Mapping, MutableSequence, Optional, Sequence, cast
 
 from pynvim_pp.logging import log
 
-from ..shared.types import Completion, Doc, Edit, Extern, RangeEdit, SnippetEdit
+from ..shared.types import UTF16, Completion, Doc, Edit, Extern, RangeEdit, SnippetEdit
 from .protocol import PROTOCOL
 from .types import CompletionItem, CompletionResponse, LSPcomp, TextEdit
 
@@ -23,7 +23,7 @@ def _range_edit(edit: TextEdit) -> Optional[RangeEdit]:
     ):
         begin = b_r, b_c
         end = e_r, e_c
-        return RangeEdit(new_text=new_text, begin=begin, end=end)
+        return RangeEdit(new_text=new_text, begin=begin, end=end, encoding=UTF16)
     else:
         return None
 
