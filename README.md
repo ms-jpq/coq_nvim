@@ -44,7 +44,7 @@ I did however added in client side incremental background caching to LSP servers
 
 ### Preview
 
-- View documentation in big buffer
+- [Press key](https://github.com/ms-jpq/coq_nvim/tree/coq/docs/KEYBIND.md) to view documentation in big buffer
 
 - Auto open preview on **side with most space**
 
@@ -84,6 +84,8 @@ lsp.<server>.setup(cfg)
 - [**Over 9000** built-in snippets](https://raw.githubusercontent.com/ms-jpq/coq.artifacts/artifacts/coq%2Bsnippets.json)
 
 - 99% of LSP grammar, 95% of Vim grammar
+
+- [Press key](https://github.com/ms-jpq/coq_nvim/tree/coq/docs/KEYBIND.md) to edit snippet regions.
 
 ![snippet_norm.img]()
 
