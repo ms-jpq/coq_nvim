@@ -65,16 +65,22 @@ Will give you the following error message:
 
 ## Specifics
 
-### coq_settings.keymap
+- [:COQhelp keybind](https://github.com/ms-jpq/coq_nvim/tree/coq/docs/KEYBIND.md)
 
-See help docs on [keybind](https://github.com/ms-jpq/coq_nvim/tree/coq/docs/KEYBIND.md)
+Key bindings
 
-### coq_settings.limits
+- [:COQhelp fuzzy](https://github.com/ms-jpq/coq_nvim/tree/coq/docs/FUZZY.md)
 
-#### `coq_settings.limits.index_cutoff`
+Fuzzy ranking
 
-#### `coq_settings.limits.idle_timeout`
+- [:COQhelp display](https://github.com/ms-jpq/coq_nvim/tree/coq/docs/DISPLAY.md)
 
-#### `coq_settings.limits.timeout`
+Appearances
 
-#### `coq_settings.limits.manual_timeout`
+- [:COQhelp sources](https://github.com/ms-jpq/coq_nvim/tree/coq/docs/SOURCES.md)
+
+Source specific
+
+- [:COQhelp misc](https://github.com/ms-jpq/coq_nvim/tree/coq/docs/MISC.md)
+
+Misc (including timeouts)
