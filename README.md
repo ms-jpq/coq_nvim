@@ -28,7 +28,7 @@ I did however added in client side incremental background caching to LSP servers
 
 ![fast_af.img]()
 
-- Real time performance statistics
+- Real time [performance statistics](https://github.com/ms-jpq/coq_nvim/tree/coq/docs/STATS.md)
 
 ![statistics.img]()
 
