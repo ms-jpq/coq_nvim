@@ -12,10 +12,14 @@ set shortmess+=I
 
 call plug#begin('~/.config/nvim/plugged')
 Plug 'ms-jpq/coq_nvim', {'branch': 'coq'}
+Plug 'ms-jpq/coq.artifacts', {'branch': 'artifacts'}
+Plug 'ms-jpq/chadtree', {'branch': 'chad'}
 call plug#end()
 
 
 let g:python3_host_prog = '/usr/bin/python3'
 let mapleader=' '
+nnoremap <leader>v <cmd>CHADopen<cr>
 nnoremap <leader>z <cmd>COQnow<cr>
+
 

@@ -12,7 +12,9 @@ RUN apt-get update && \
 
 ADD https://raw.githubusercontent.com/junegunn/vim-plug/master/plug.vim /root/.config/nvim/autoload/plug.vim
 COPY ./docker/fs /
-COPY ./ /root/.config/nvim/plugged/coq_nvim
+RUN git clone --depth=1 -- https://github.com/ms-jpq/chadtree.git && \
+    git clone --depth=1 -- https://github.com/ms-jpq/coq.artifacts.git
+COPY ./ /root/.config/nvim/plugged
 
 
 WORKDIR /root/.config/nvim/plugged/coq_nvim
