@@ -1,9 +1,12 @@
 from asyncio import Handle, get_running_loop
+from contextlib import suppress
 from itertools import repeat
 from json import loads
-from shutil import unpack_archive
+from json.decoder import JSONDecodeError
+from pathlib import Path
+from shutil import rmtree, unpack_archive
 from socket import timeout as TimeoutE
-from tempfile import NamedTemporaryFile
+from tempfile import NamedTemporaryFile, TemporaryDirectory
 from typing import (
     AbstractSet,
     Iterator,
@@ -20,7 +23,8 @@ from urllib.error import URLError
 from pynvim.api.nvim import Nvim
 from pynvim_pp.api import buf_filetype, cur_buf, get_cwd, win_close
 from pynvim_pp.float_win import list_floatwins
-from pynvim_pp.lib import async_call, go
+from pynvim_pp.lib import async_call, awrite, go
+from pynvim_pp.logging import log
 from std2.asyncio import run_in_executor
 from std2.pickle import new_decoder
 from std2.urllib import urlopen
@@ -63,25 +67,26 @@ def _new_cwd(nvim: Nvim, stack: Stack) -> None:
 
 autocmd("DirChanged") << f"lua {_new_cwd.name}()"
 
-_EXTS: Mapping[str, AbstractSet[str]] = {}
-_SNIPPETS: Mapping[str, Sequence[ParsedSnippet]] = {}
-
 
 async def _load_snip_raw(retries: int, timeout: float) -> ASnips:
     desired, sha = SNIPPET_HASH_DESIRED.read_text(), SNIPPET_GIT_SHA.read_text()
 
     def download() -> None:
-        uri = f"https://github.com/ms-jpq/std2/archive/{sha}.tar.gz"
+        uri = f"https://github.com/ms-jpq/coq.artifacts/archive/{sha}.tar.gz"
         try:
             with urlopen(uri, timeout=timeout) as resp:
                 buf = resp.read()
-        except (URLError, TimeoutE):
-            pass
+        except (URLError, TimeoutE) as e:
+            log.warn("%s", e)
         else:
             with NamedTemporaryFile() as fd:
                 fd.write(buf)
                 fd.flush()
-                unpack_archive(fd.name, extract_dir=SNIP_VARS, format="targz")
+            with TemporaryDirectory() as tmp:
+                unpack_archive(fd.name, extract_dir=tmp, format="targz")
+                Path(tmp).replace(SNIP_VARS)
+
+    dd = lambda: run_in_executor(download)
 
     for _ in range(retries):
         try:
@@ -90,17 +95,28 @@ async def _load_snip_raw(retries: int, timeout: float) -> ASnips:
             actual = ""
 
         if actual != desired:
-            await run_in_executor(download)
+            await dd()
         else:
             try:
                 json = SNIPPET_ARTIFACTS.read_text("UTF8")
             except FileNotFoundError:
                 pass
             else:
-                snippets: ASnips = loads(json)
-                return snippets
+                try:
+                    snippets: ASnips = loads(json)
+                except JSONDecodeError as e:
+                    log.warn("%s", e)
+                    with suppress(FileNotFoundError):
+                        rmtree(SNIP_VARS)
+                else:
+                    return snippets
     else:
         return {}
+
+
+_EXTS: Mapping[str, AbstractSet[str]] = {}
+_SNIPPETS: Mapping[str, Sequence[ParsedSnippet]] = {}
+_SEEN_SNIP_TYPES: MutableSet[str] = set()
 
 
 @rpc(blocking=True)
@@ -114,6 +130,10 @@ def _load_snips(nvim: Nvim, stack: Stack) -> None:
             stack.settings.limits.download_retries,
             timeout=stack.settings.limits.download_timeout,
         )
+        _SEEN_SNIP_TYPES.clear()
+        if not snippets:
+            await awrite(nvim, "nooooo", error=True)
+
         exts: MutableMapping[str, MutableSet[str]] = {}
         s_acc: MutableMapping[str, MutableSequence[ParsedSnippet]] = {}
         for label, (ets, snips) in snippets.items():
@@ -136,7 +156,6 @@ def _load_snips(nvim: Nvim, stack: Stack) -> None:
 atomic.exec_lua(f"{_load_snips.name}()", ())
 
 _DECODER = new_decoder(Sequence[ParsedSnippet])
-_SEEN: MutableSet[str] = set()
 
 
 @rpc(blocking=True)
@@ -146,8 +165,8 @@ def _ft_changed(nvim: Nvim, stack: Stack) -> None:
 
     async def cont() -> None:
         await stack.bdb.ft_update(buf.number, filetype=ft)
-        if ft not in _SEEN:
-            _SEEN.add(ft)
+        if ft not in _SEEN_SNIP_TYPES:
+            _SEEN_SNIP_TYPES.add(ft)
 
             def cont() -> Iterator[Tuple[str, ParsedSnippet]]:
                 stack, seen = [ft], {ft}
