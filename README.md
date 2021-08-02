@@ -70,15 +70,13 @@ I did however added in client side incremental background caching to LSP servers
 
 ![lsp_snippets.img]()
 
-**Requires 1 more line of setup**
+**Requires 1 line of change to support LSP snippets**
 
 ```lua
 local lsp = require "lspconfig"
 
-cfg = coq.lsp_ensure_capacities(cfg) -- if you already have a conf called `cfg`
-cfg = coq.lsp_ensure_capacities(nil) -- its ok if you don't
-
-lsp.<server>.setup(cfg)
+lsp.<server>.setup(<stuff...>)                            -- before
+lsp.<server>.setup(coq.lsp_ensure_capacities(<stuff...>)) -- after
 ```
 
 ### Snippets
