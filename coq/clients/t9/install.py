@@ -1,4 +1,5 @@
 from asyncio import sleep
+from contextlib import suppress
 from os import X_OK, access
 from pathlib import Path
 from platform import machine
@@ -61,7 +62,7 @@ def _update(timeout: float) -> None:
     if not access(T9_BIN, X_OK) or uri != p_uri:
         with urlopen(uri, timeout=timeout) as resp:
             buf = resp.read()
-        with NamedTemporaryFile() as fd:
+        with suppress(FileNotFoundError), NamedTemporaryFile() as fd:
             fd.write(buf)
             fd.flush()
             Path(fd.name).replace(T9_BIN)
