@@ -140,7 +140,7 @@ class Worker(BaseWorker[BaseClient, None]):
                         self._proc.stdin.write(b"\n")
                         await self._proc.stdin.drain()
                         out = await self._proc.stdout.readline()
-                    except (BrokenPipeError, ConnectionResetError):
+                    except ConnectionError:
                         with suppress(ProcessLookupError):
                             self._proc.kill()
                         await self._proc.wait()
