@@ -92,7 +92,6 @@ def _trans(new_text: str, mark: Mark, marks: Sequence[Mark]) -> UserData:
         return edit
 
     primary_edit, *secondary_edits = map(one, chain((mark,), marks))
-    print([primary_edit, *secondary_edits], flush=True)
     data = UserData(
         uid=uuid4(),
         instance=uuid4(),
