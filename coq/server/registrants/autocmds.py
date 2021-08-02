@@ -91,14 +91,14 @@ async def _load_snip_raw(retries: int, timeout: float) -> ASnips:
 
         if actual != desired:
             await run_in_executor(download)
-
-        try:
-            json = SNIPPET_ARTIFACTS.read_text("UTF8")
-        except FileNotFoundError:
-            pass
         else:
-            snippets: ASnips = loads(json)
-            return snippets
+            try:
+                json = SNIPPET_ARTIFACTS.read_text("UTF8")
+            except FileNotFoundError:
+                pass
+            else:
+                snippets: ASnips = loads(json)
+                return snippets
     else:
         return {}
 
