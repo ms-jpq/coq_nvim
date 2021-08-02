@@ -26,7 +26,6 @@ from std2.pickle import new_decoder
 
 from ...lang import LANG
 from ...registry import atomic, autocmd, rpc
-from ...shared.timeit import timeit
 from ...snippets.types import ASnips, ParsedSnippet
 from ...tmux.parse import snapshot
 from ...treesitter.request import async_request
