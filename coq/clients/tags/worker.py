@@ -128,8 +128,7 @@ def _doc(client: TagsClient, context: Context, tag: Tag) -> Doc:
 class Worker(BaseWorker[TagsClient, CTDB]):
     def __init__(self, supervisor: Supervisor, options: TagsClient, misc: CTDB) -> None:
         super().__init__(supervisor, options=options, misc=misc)
-        if which("ctags"):
-            go(supervisor.nvim, aw=self._poll())
+        go(supervisor.nvim, aw=self._poll())
 
     async def _poll(self) -> None:
         while True:

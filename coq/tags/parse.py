@@ -30,14 +30,18 @@ async def run(*args: str) -> str:
     if not args:
         return ""
     else:
-        proc = await call(
-            "ctags",
-            "--sort=no",
-            "--output-format=json",
-            f"--fields={_FIELDS}",
-            *args,
-        )
-        return proc.out.decode()
+        try:
+            proc = await call(
+                "ctags",
+                "--sort=no",
+                "--output-format=json",
+                f"--fields={_FIELDS}",
+                *args,
+            )
+        except FileNotFoundError:
+            return ""
+        else:
+            return proc.out.decode()
 
 
 def _unescape(pattern: str) -> str:
