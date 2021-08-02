@@ -58,3 +58,5 @@ async def main() -> None:
                 capture_stderr=False,
             )
             SNIPPET_GIT_SHA.write_bytes(proc.out.strip())
+        else:
+            assert False
