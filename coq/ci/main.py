@@ -1,3 +1,4 @@
+from asyncio.tasks import gather
 from json import dumps
 from typing import Any
 
@@ -16,8 +17,7 @@ def _json(o: Any) -> str:
 
 
 async def main() -> None:
-    snippets = await load_parsable()
-    lsprotocol = await lsp()
+    lsprotocol, snippets = await gather(lsp(), load_parsable())
 
     j_lsp = _json(lsprotocol)
     LSP_ARTIFACTS.write_text(j_lsp)
