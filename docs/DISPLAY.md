@@ -90,7 +90,11 @@ For item `<source>` show `「<source>」`, purely for aesthetics.
 
 #### coq_settings.display.preview
 
+Used for the preview window.
+
 ##### `coq_settings.display.preview.x_max_len`
+
+Maximum width.
 
 **default:**
 
@@ -100,10 +104,12 @@ For item `<source>` show `「<source>」`, purely for aesthetics.
 
 ##### `coq_settings.display.preview.resolve_timeout`
 
+Bit niche, if a completion has documentation, but still be be looked up for further documentation, how long to wait for further documentation to show up.
+
 **default:**
 
 ```json
-0.06
+0.09
 ```
 
 ##### `coq_settings.display.preview.positions`
