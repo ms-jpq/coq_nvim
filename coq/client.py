@@ -3,14 +3,14 @@ from concurrent.futures import ThreadPoolExecutor
 from logging import DEBUG as DEBUG_LV
 from logging import INFO
 from multiprocessing import cpu_count
-from os import linesep
 from queue import SimpleQueue
 from sys import stderr
+from textwrap import dedent
 from typing import Any, MutableMapping, Optional, cast
 
 from pynvim import Nvim
 from pynvim_pp.client import Client
-from pynvim_pp.lib import threadsafe_call
+from pynvim_pp.lib import threadsafe_call, write
 from pynvim_pp.logging import log, with_suppress
 from pynvim_pp.rpc import RpcCallable, RpcMsg, nil_handler
 from std2.functools import constantly
@@ -43,8 +43,6 @@ class CoqClient(Client):
         self._handlers: MutableMapping[str, RpcCallable] = {}
         self._event_queue: SimpleQueue = SimpleQueue()
         self._stack: Optional[Stack] = None
-
-        _set_debug()
 
     def _handle(self, nvim: Nvim, msg: RpcMsg) -> Any:
         name, args = msg
@@ -81,9 +79,11 @@ class CoqClient(Client):
         try:
             threadsafe_call(nvim, cont)
         except DecodeError as e:
-            msg1 = "Some options may hanve changed."
-            msg2 = "See help doc on Github under [docs/CONFIGURATION.md]"
-            print(e, msg1, msg2, sep=linesep, file=stderr)
+            ms = """
+            Some options may hanve changed.
+            See help doc on Github under [docs/CONFIGURATION.md]
+            """
+            write(nvim, dedent(ms), error=True)
             return 1
         except Exception as e:
             log.exception("%s", e)
