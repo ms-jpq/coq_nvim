@@ -28,11 +28,6 @@ def _build() -> None:
     check_call(("python3", "-m", "coq.ci"), cwd=_TOP_LV)
 
 
-def _check_diff(cwd: Path) -> int:
-    proc = run(("git", "diff", "--exit-code"), cwd=cwd)
-    return proc.returncode != 0
-
-
 def _git_alert(cwd: Path) -> None:
     prefix = "ci"
     check_call(("git", "fetch"), cwd=cwd)
@@ -50,7 +45,8 @@ def _git_alert(cwd: Path) -> None:
     if refs:
         check_call(("git", "push", "--delete", "origin", *refs), cwd=cwd)
 
-    if _check_diff(cwd):
+    proc = run(("git", "diff", "--exit-code"), cwd=cwd)
+    if proc.returncode:
         time = datetime.now(tz=timezone.utc).strftime("%Y-%m-%d_%H-%M-%S")
         brname = f"{prefix}--{time}"
         check_call(("git", "checkout", "-b", brname), cwd=cwd)
