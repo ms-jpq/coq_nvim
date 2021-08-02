@@ -112,7 +112,7 @@ def _linked_marks(
             return ""
 
     try:
-        resp = ask(nvim, question="", default=place_holder())
+        resp = ask(nvim, question=LANG("expand marks"), default=place_holder())
         if resp is None:
             return None
         else:

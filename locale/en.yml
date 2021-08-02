@@ -5,14 +5,17 @@
 "failed to parse snippet": |-
   Failed to parse snippet, inserting as it is
 
+"added marks": |-
+  🎯 Marks added: ${regions}
+
+"expand marks": |-
+  ✏️  Expand marks
+
 "no more marks": |-
   ⛔️ No more marks available
 
 "applied mark": |-
   ✅ Mark applied, ${marks_left} left
-
-"added marks": |-
-  🎯 Marks added: ${regions}
 
 "statistics": |-
   Statistics
