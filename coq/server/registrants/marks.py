@@ -71,6 +71,7 @@ def _single_mark(
                 nvim, win=win, mode="v", mark1=(r1, c1), mark2=(r2, c2 - 1)
             )
             nvim.command("norm! c")
+            win_set_cursor(nvim, win=win, row=r1, col=c1)
     except NvimError as e:
         msg = f"""
         bad mark location {mark}
