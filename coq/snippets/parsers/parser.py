@@ -1,4 +1,3 @@
-from functools import partial
 from os import linesep
 from string import Template
 from textwrap import dedent
@@ -9,6 +8,7 @@ from typing import (
     MutableMapping,
     MutableSequence,
     NoReturn,
+    Sequence,
     Tuple,
     TypeVar,
     Union,
@@ -18,6 +18,7 @@ from std2.itertools import deiter
 from std2.types import never
 
 from ...shared.types import UTF8, Context
+from ..consts import LINKED_PAD
 from .types import (
     Begin,
     DummyBegin,
@@ -107,21 +108,37 @@ def _overlap(r1: Region, r2: Region) -> bool:
     )
 
 
-def _consolidate(regions: Mapping[int, Region]) -> Mapping[int, Region]:
-    ordered = sorted(
-        ((r.end - r.begin, idx, r) for idx, r in regions.items()), key=lambda t: t[:-1]
+def _consolidate(
+    text: str, regions: Mapping[int, Sequence[Region]]
+) -> Mapping[int, Sequence[Region]]:
+    new_regions = (
+        (
+            r.end - r.begin,
+            idx,
+            Region(begin=r.begin, end=r.end, text=text[r.begin : r.end]),
+        )
+        for idx, rs in regions.items()
+        for r in rs
     )
-    acc: MutableMapping[int, Region] = {}
-    for _, idx, region in ordered:
-        if not any(map(partial(_overlap, region), acc.values())):
-            acc[idx] = region
+    ordered = sorted(new_regions, key=lambda t: t[:-1])
 
-    return acc
+    acc: MutableMapping[int, MutableSequence[Region]] = {}
+    for _, idx, region in ordered:
+        if not any(_overlap(region, r) for rs in acc.values() for r in rs):
+            a = acc.setdefault(idx, [])
+            a.append(region)
+
+    fin: MutableMapping[int, MutableSequence[Region]] = {}
+    for idx, rs in acc.items():
+        new_idx = idx + LINKED_PAD if len(rs) > 1 else idx
+        fin[new_idx] = rs
+
+    return fin
 
 
 def token_parser(context: ParserCtx, stream: TokenStream) -> Parsed:
     idx = 0
-    raw_regions: MutableMapping[int, Region] = {}
+    raw_regions: MutableMapping[int, MutableSequence[Region]] = {}
     slices: MutableSequence[str] = []
     begins: MutableSequence[Tuple[int, Union[Begin, DummyBegin]]] = []
     bad_tokens: MutableSequence[Tuple[int, Token]] = []
@@ -141,7 +158,8 @@ def token_parser(context: ParserCtx, stream: TokenStream) -> Parsed:
             if begins:
                 pos, begin = begins.pop()
                 if isinstance(begin, Begin):
-                    raw_regions[begin.idx] = Region(begin=pos, end=idx, text="")
+                    acc = raw_regions.setdefault(begin.idx, [])
+                    acc.append(Region(begin=pos, end=idx, text=""))
             else:
                 bad_tokens.append((idx, token))
         else:
@@ -149,9 +167,11 @@ def token_parser(context: ParserCtx, stream: TokenStream) -> Parsed:
 
     bad_tokens.extend(begins)
     text = "".join(slices)
-    cursor = raw_regions.get(
-        0, Region(begin=len(text.encode(UTF8)), end=0, text="")
+    cursor = next(
+        iter(raw_regions.get(0, ())),
+        Region(begin=len(text.encode(UTF8)), end=0, text=""),
     ).begin
+
     if bad_tokens:
         tpl = """
         Bad tokens - ${bad_tokens}
@@ -165,13 +185,6 @@ def token_parser(context: ParserCtx, stream: TokenStream) -> Parsed:
         )
         raise ParseError(msg)
 
-    regions = {
-        idx: Region(
-            begin=r.begin,
-            end=r.end,
-            text=text[r.begin : r.end],
-        )
-        for idx, r in _consolidate(raw_regions).items()
-    }
+    regions = _consolidate(text, regions=raw_regions)
     parsed = Parsed(text=text, cursor=cursor, regions=regions)
     return parsed

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Iterator, Mapping, Tuple, Union
+from typing import Iterator, Mapping, Sequence, Tuple, Union
 
 from std2.itertools import deiter
 
@@ -82,4 +82,4 @@ class Region:
 class Parsed:
     text: str
     cursor: int
-    regions: Mapping[int, Region]
+    regions: Mapping[int, Sequence[Region]]

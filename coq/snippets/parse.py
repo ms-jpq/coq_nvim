@@ -23,7 +23,7 @@ def _marks(
     ctx: Context,
     indent_len: int,
     edit: Edit,
-    regions: Mapping[int, Region],
+    regions: Mapping[int, Sequence[Region]],
 ) -> Iterator[Mark]:
     row, _ = ctx.position
     l0_before = indent_len
@@ -34,36 +34,37 @@ def _marks(
         )
     )
 
-    for r_idx, region in regions.items():
-        r1, c1, r2, c2 = None, None, None, None
-        last_len = 0
+    for r_idx, rs in regions.items():
+        for region in rs:
+            r1, c1, r2, c2 = None, None, None, None
+            last_len = 0
 
-        for idx, l8 in enumerate(len8):
-            x_shift = 0 if idx else l0_before
-            if r1 is None:
-                if l8 > region.begin:
-                    r1, c1 = idx + row, region.begin - last_len + x_shift
-                elif l8 == region.begin:
-                    r1, c1 = idx + row + 1, x_shift
+            for idx, l8 in enumerate(len8):
+                x_shift = 0 if idx else l0_before
+                if r1 is None:
+                    if l8 > region.begin:
+                        r1, c1 = idx + row, region.begin - last_len + x_shift
+                    elif l8 == region.begin:
+                        r1, c1 = idx + row + 1, x_shift
 
-            if r2 is None:
-                if l8 > region.end:
-                    r2, c2 = idx + row, region.end - last_len + x_shift
-                elif l8 == region.end:
-                    r2, c2 = idx + row + 1, x_shift
+                if r2 is None:
+                    if l8 > region.end:
+                        r2, c2 = idx + row, region.end - last_len + x_shift
+                    elif l8 == region.end:
+                        r2, c2 = idx + row + 1, x_shift
 
-            if r1 is not None and r2 is not None:
-                break
+                if r1 is not None and r2 is not None:
+                    break
 
-            last_len = l8
+                last_len = l8
 
-        assert (r1 is not None and c1 is not None) and (
-            r2 is not None and c2 is not None
-        ), pformat((region, edit.new_text))
-        begin = r1, c1
-        end = r2, c2
-        mark = Mark(idx=r_idx, begin=begin, end=end, text=region.text)
-        yield mark
+            assert (r1 is not None and c1 is not None) and (
+                r2 is not None and c2 is not None
+            ), pformat((region, edit.new_text))
+            begin = r1, c1
+            end = r2, c2
+            mark = Mark(idx=r_idx, begin=begin, end=end, text=region.text)
+            yield mark
 
 
 def parse(
