@@ -41,7 +41,6 @@ async def main() -> None:
     SNIPPET_HASH_ACTUAL.write_text(hashed)
     SNIPPET_HASH_DESIRED.write_text(hashed)
 
-    print([prev_desired, hashed])
     if prev_desired != hashed:
         proc = await call(
             "git",
@@ -51,7 +50,6 @@ async def main() -> None:
             capture_stderr=False,
         )
         snip_git = Path(proc.out.decode().strip())
-        print([snip_git])
         if snip_git == SNIP_VARS:
             proc = await call(
                 "git",
