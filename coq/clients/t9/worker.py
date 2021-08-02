@@ -6,6 +6,7 @@ from itertools import chain
 from json import dumps, loads
 from json.decoder import JSONDecodeError
 from os import X_OK, access, linesep
+from pathlib import PurePath
 from subprocess import DEVNULL, PIPE
 from typing import Any, AsyncIterator, Iterator, Optional
 
@@ -73,13 +74,14 @@ def _decode(client: BaseClient, reply: Any) -> Iterator[Completion]:
             yield cmp
 
 
-async def _proc() -> Optional[Process]:
+async def _proc(cwd: PurePath) -> Optional[Process]:
     try:
         proc = await create_subprocess_exec(
             T9_BIN,
             stdin=PIPE,
             stdout=PIPE,
             stderr=DEVNULL,
+            cwd=cwd,
         )
     except FileNotFoundError:
         return None
@@ -123,11 +125,11 @@ class Worker(BaseWorker[BaseClient, None]):
         elif self._installed and not installed:
             await awrite(self._supervisor.nvim, LANG("end T9 download"))
 
-    async def _comm(self, json: str) -> Optional[str]:
+    async def _comm(self, cwd: PurePath, json: str) -> Optional[str]:
         async def cont() -> Optional[str]:
             async with self._lock:
                 if not self._proc:
-                    self._proc = await _proc()
+                    self._proc = await _proc(cwd)
                 if not self._proc:
                     return None
                 else:
@@ -158,7 +160,7 @@ class Worker(BaseWorker[BaseClient, None]):
                 limit=self._supervisor.options.max_results,
             )
             json = dumps(req, check_circular=False, ensure_ascii=False)
-            reply = await self._comm(json)
+            reply = await self._comm(context.cwd, json=json)
             if reply:
                 try:
                     resp = loads(reply)
