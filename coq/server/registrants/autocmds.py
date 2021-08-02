@@ -1,4 +1,5 @@
 from asyncio import Handle, get_running_loop, sleep
+from asyncio.tasks import gather
 from itertools import repeat
 from json import loads
 from json.decoder import JSONDecodeError
@@ -166,16 +167,19 @@ atomic.exec_lua(f"{_ft_changed.name}()", ())
 
 @rpc(blocking=True)
 def _insert_enter(nvim: Nvim, stack: Stack) -> None:
-    heavy_bufs = state().nono_bufs
+    nono_bufs = state().nono_bufs
     buf = cur_buf(nvim)
 
-    async def cont() -> None:
+    async def c1() -> None:
+        await stack.bdb.del_bufs(nono_bufs)
+
+    async def c2() -> None:
         payloads = (
-            () if buf.number in heavy_bufs else [p async for p in async_request(nvim)]
+            () if buf.number in nono_bufs else [p async for p in async_request(nvim)]
         )
         await stack.tdb.new_nodes({payload.text: payload.kind for payload in payloads})
 
-    go(nvim, aw=cont())
+    go(nvim, aw=gather(c1(), c2()))
 
 
 autocmd("InsertEnter") << f"lua {_insert_enter.name}()"
@@ -201,12 +205,9 @@ def _when_idle(nvim: Nvim, stack: Stack) -> None:
     if _HANDLE:
         _HANDLE.cancel()
 
-
-
     def cont() -> None:
         _insert_enter(nvim, stack=stack)
         stack.supervisor.notify_idle()
-        
 
     get_running_loop().call_later(
         stack.settings.limits.idle_time,
