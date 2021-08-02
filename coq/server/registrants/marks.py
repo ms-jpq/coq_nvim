@@ -1,5 +1,6 @@
 from collections import deque
 from itertools import chain
+from os import linesep
 from textwrap import dedent
 from typing import Iterator, Sequence, Tuple, TypedDict
 from uuid import uuid4
@@ -7,7 +8,7 @@ from uuid import uuid4
 from pynvim.api.common import NvimError
 from pynvim.api.nvim import Buffer, Nvim
 from pynvim.api.window import Window
-from pynvim_pp.api import cur_win, win_get_buf, win_set_cursor, buf_get_lines
+from pynvim_pp.api import ask, buf_get_lines, cur_win, win_get_buf, win_set_cursor
 from pynvim_pp.lib import write
 from pynvim_pp.logging import log
 from pynvim_pp.operators import set_visual_selection
@@ -15,7 +16,7 @@ from pynvim_pp.operators import set_visual_selection
 from ...lang import LANG
 from ...registry import rpc
 from ...shared.settings import Settings
-from ...shared.types import Mark
+from ...shared.types import UTF8, Mark
 from ...snippets.consts import LINKED_PAD
 from ..rt_types import Stack
 from ..state import state
@@ -85,11 +86,45 @@ def _linked_marks(
 ) -> None:
     ms = tuple(chain((mark,), marks))
 
-    def place_holder() -> Iterator[str]:
-        pass
+    def preview(mark: Mark) -> str:
+        (r1, c1), (r2, c2) = mark.begin, mark.end
+        lo, hi = min(r1, r2), max(r1, r2)
+        lines = buf_get_lines(nvim, buf=buf, lo=lo, hi=hi)
+
+        def cont() -> Iterator[str]:
+            for idx, line in enumerate(lines):
+                if idx == r1 and idx == r2:
+                    yield line.encode(UTF8)[c1:c2].decode(UTF8)
+                elif idx == r1:
+                    yield line.encode(UTF8)[c1:].decode(UTF8)
+                elif idx == r2:
+                    yield line.encode(UTF8)[:c2].decode(UTF8)
+                else:
+                    yield line
+
+        return linesep.join(cont())
+
+    def place_holder() -> str:
+        for p in map(preview, ms):
+            if p:
+                return p
+        else:
+            return ""
 
     try:
-        pass
+        resp = ask(nvim, question="", default=place_holder())
+        if resp is None:
+            return None
+        else:
+            print([resp], flush=True)
+
+    except NvimError as e:
+        msg = f"""
+        bad mark locations {ms}
+
+        {e}
+        """
+        log.warn("%s", dedent(msg))
     finally:
         for mark in ms:
             nvim.api.buf_clear_namespace(buf, ns, mark.idx)
