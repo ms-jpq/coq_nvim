@@ -72,13 +72,13 @@ def _update(timeout: float) -> None:
 
 async def ensure_updated(retries: int, timeout: float) -> bool:
     for _ in range(retries):
-        if access(T9_BIN, X_OK):
-            return True
+        try:
+            await run_in_executor(_update, timeout=timeout)
+        except (URLError, TimeoutE) as e:
+            log.warn("%s", e)
+            await sleep(timeout)
         else:
-            try:
-                await run_in_executor(_update, timeout=timeout)
-            except (URLError, TimeoutE) as e:
-                log.warn("%s", e)
-                await sleep(timeout)
+            if access(T9_BIN, X_OK):
+                return True
     else:
         return False
