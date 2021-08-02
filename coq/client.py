@@ -11,7 +11,7 @@ from typing import Any, MutableMapping, Optional, cast
 
 from pynvim import Nvim
 from pynvim_pp.client import Client
-from pynvim_pp.lib import threadsafe_call, write
+from pynvim_pp.lib import threadsafe_call
 from pynvim_pp.logging import log, with_suppress
 from pynvim_pp.rpc import RpcCallable, RpcMsg, nil_handler
 from std2.functools import constantly
@@ -44,6 +44,8 @@ class CoqClient(Client):
         self._handlers: MutableMapping[str, RpcCallable] = {}
         self._event_queue: SimpleQueue = SimpleQueue()
         self._stack: Optional[Stack] = None
+
+        _set_debug()
 
     def _handle(self, nvim: Nvim, msg: RpcMsg) -> Any:
         name, args = msg
