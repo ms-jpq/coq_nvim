@@ -88,6 +88,14 @@
 
 ##### `coq_settings.display.preview.positions`
 
+Preferred ordering of preview window.
+
+This is a tie breaker, previews will be shown in the position with most usable-space first.
+
+If you do not like a position, setting it to `null` will disable it entirely.
+
+Setting everything to `null` will disable previews.
+
 **default:**
 
 ```json

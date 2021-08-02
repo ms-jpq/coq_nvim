@@ -120,7 +120,7 @@ def _positions(
     event: _Event,
     lines: Sequence[str],
     state: State,
-) -> Iterator[Tuple[int, _Pos]]:
+) -> Iterator[Tuple[int, int, _Pos]]:
     scr_width, scr_height = state.screen
     top, btm, left, right = (
         event.row,
@@ -143,7 +143,7 @@ def _positions(
         width=ns_width,
     )
     if n.row > 1 and display.positions.north is not None:
-        yield display.positions.north, n
+        yield 1, display.positions.north, n
 
     s = _Pos(
         row=btm,
@@ -153,7 +153,7 @@ def _positions(
     )
 
     if s.row + s.height < scr_height - 1 and display.positions.south is not None:
-        yield display.positions.south, s
+        yield 2, display.positions.south, s
 
     we_height = limit_h(scr_height - top - 2)
     w_width = limit_w(left - 2)
@@ -166,7 +166,7 @@ def _positions(
     )
 
     if display.positions.west is not None:
-        yield display.positions.west, w
+        yield 3, display.positions.west, w
 
     e = _Pos(
         row=top,
@@ -176,7 +176,7 @@ def _positions(
     )
 
     if display.positions.east is not None:
-        yield display.positions.east, e
+        yield 4, display.positions.east, e
 
 
 def _set_win(nvim: Nvim, buf: Buffer, pos: _Pos) -> None:
@@ -218,13 +218,15 @@ def _show_preview(
     new_doc = _preprocess(s.context, doc=doc)
     text = expand_tabs(s.context, text=new_doc.text)
     lines = text.splitlines()
-    ordered = sorted(
-        _positions(stack.settings.display.preview, event=event, lines=lines, state=s),
-        key=lambda p: (p[1].height * p[1].width, p[0] == s.pum_location, -p[0]),
-        reverse=True,
-    )
+    pit = _positions(stack.settings.display.preview, event=event, lines=lines, state=s)
+
+    def key(k: Tuple[int, int, _Pos]) -> Tuple[int, int, int, int]:
+        idx, rank, pos = k
+        return pos.height * pos.width, idx == s.pum_location, -rank, -idx
+
+    ordered = sorted(pit, key=key, reverse=True)
     if ordered:
-        (pum_location, pos), *_ = ordered
+        (pum_location, _, pos), *__ = ordered
         state(pum_location=pum_location)
         nvim.api.exec_lua(
             f"{_go_show.name}(...)",
