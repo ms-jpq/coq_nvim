@@ -224,7 +224,7 @@ def _when_idle(nvim: Nvim, stack: Stack) -> None:
         stack.supervisor.notify_idle()
 
     get_running_loop().call_later(
-        stack.settings.limits.idle_time,
+        stack.settings.limits.idle_timeout,
         lambda: go(nvim, aw=async_call(nvim, cont)),
     )
 

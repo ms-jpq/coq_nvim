@@ -4,10 +4,10 @@ from typing import AbstractSet, Optional, Tuple
 
 @dataclass(frozen=True)
 class Limits:
-    idle_time: float
+    idle_timeout: float
     index_cutoff: int
-    timeout: float
-    manual_timeout: float
+    completion_auto_timeout: float
+    completion_manual_timeout: float
     download_retries: int
     download_timeout: float
 

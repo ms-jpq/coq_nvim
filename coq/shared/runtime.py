@@ -120,9 +120,9 @@ class Supervisor:
                     assert not self._lock.locked()
                     async with self._lock:
                         timeout = (
-                            self.limits.manual_timeout
+                            self.limits.completion_manual_timeout
                             if context.manual
-                            else self.limits.timeout
+                            else self.limits.completion_auto_timeout
                         )
 
                         acc: MutableSequence[Metric] = []

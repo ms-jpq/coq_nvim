@@ -51,9 +51,10 @@ display:
 
 limits:
   index_cutoff: 333333
-  idle_time: 2.0
-  timeout: 0.088
-  manual_timeout: 0.6
+  idle_timeout: 1.88
+
+  completion_auto_timeout: 0.088
+  completion_manual_timeout: 0.66
 
   download_retries: 6
   download_timeout: 66.0
