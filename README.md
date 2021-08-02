@@ -176,4 +176,28 @@ There is built-in [help command](https://github.com/ms-jpq/coq_nvim/tree/coq/doc
 :COQhelp [--web] [topic]
 ```
 
----
+## Special Thanks & Acknowledgements
+
+The snippets are compiled from the following open source projects:
+
+- [Shougo/neosnippet-snippets](https://github.com/Shougo/neosnippet-snippets)
+
+- [fatih/vim-go](https://github.com/fatih/vim-go)
+
+- [honza/vim-snippets](https://github.com/honza/vim-snippets)
+
+- [Ikuyadeu/vscode-R](https://github.com/Ikuyadeu/vscode-R)
+
+- [Rocketseat/rocketseat-vscode-react-native-snippets](https://github.com/Rocketseat/rocketseat-vscode-react-native-snippets)
+
+- [dsznajder/vscode-es7-javascript-react-snippets](https://github.com/dsznajder/vscode-es7-javascript-react-snippets)
+
+- [johnpapa/vscode-angular-snippets](https://github.com/johnpapa/vscode-angular-snippets)
+
+- [sdras/vue-vscode-snippets](https://github.com/sdras/vue-vscode-snippets)
+
+- [snipsnapdev/snipsnap](https://github.com/snipsnapdev/snipsnap)
+
+- [xabikos/vscode-javascript](https://github.com/xabikos/vscode-javascript)
+
+- [xabikos/vscode-react](https://github.com/xabikos/vscode-react)
