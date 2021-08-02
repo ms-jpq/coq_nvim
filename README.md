@@ -170,7 +170,7 @@ Plug 'ms-jpq/coq.artifacts', {'branch': 'artifacts'}
 
 ## Documentation
 
-There is built-in [help command](https://github.com/ms-jpq/coq_nvim/tree/coq/docs/PERF.md)
+There is built-in [help command](https://github.com/ms-jpq/coq_nvim/tree/coq/docs/README.md)
 
 ```viml
 :COQhelp [--web] [topic]
