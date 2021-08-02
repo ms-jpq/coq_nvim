@@ -31,8 +31,8 @@ def _encode(options: Options, context: Context, limit: int) -> Any:
     row, _ = context.position
     before = linesep.join(chain(context.lines_before, (context.line_before,)))
     after = linesep.join(chain((context.line_after,), context.lines_after))
-    ibg = row - options.context_lines <= 0
-    ieof = row + options.context_lines >= context.line_count
+    ibg = row - options.proximate_lines <= 0
+    ieof = row + options.proximate_lines >= context.line_count
 
     l2 = ReqL2(
         filename=context.filename,

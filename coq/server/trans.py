@@ -19,7 +19,7 @@ def _cum(adjustment: Weights, metrics: Iterable[Metric]) -> Weights:
         prefix_matches=0,
         edit_distance=0,
         recency=0,
-        neighbours=0,
+        proximity=0,
     )
     acc = asdict(zero)
     for metric in metrics:

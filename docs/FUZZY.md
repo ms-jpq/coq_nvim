@@ -20,7 +20,7 @@ Results that do not score above the `fuzzy_cutoff` are dropped at this stage.
 
 On a reduced search set, a more comperhensive ensemble score is computed for each candidates.
 
-The primary metrics are `prefix_matches`, `edit_distance`, `recency` and `neighbours`.
+The primary metrics are `prefix_matches`, `edit_distance`, `recency` and `proximity`.
 
 For each metric, the relative rank of each candidate among their peers is weight adjusted.
 
@@ -54,7 +54,7 @@ Maximum number of results to return.
 33
 ```
 
-#### `coq_settings.match.context_lines`
+#### `coq_settings.match.proximate_lines`
 
 How many lines to use, for the purpose of proximity bonus.
 
@@ -120,13 +120,17 @@ Relative weight adjustment of [Damerau–Levenshtein distance](https://en.wikipe
 
 #### `coq_settings.weights.recency`
 
+Relative weight adjustment of recently inserted items.
+
 **default:**
 
 ```json
 1.0
 ```
 
-#### `coq_settings.weights.neighbours`
+#### `coq_settings.weights.proximity`
+
+Relative weight adjustment of prevalence within the `proximate_lines`
 
 **default:**
 

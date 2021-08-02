@@ -11,7 +11,7 @@ match:
     - "_"
     - "-"
   max_results: 33
-  context_lines: 16
+  proximate_lines: 16
   exact_matches: 2
   look_ahead: 2
   fuzzy_cutoff: 0.6
@@ -29,7 +29,7 @@ weights:
   prefix_matches: 2.0
   edit_distance: 1.5
   recency: 1.0
-  neighbours: 0.5
+  proximity: 0.5
 
 display:
   pum:

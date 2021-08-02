@@ -52,7 +52,7 @@ class Display:
 class Options:
     unifying_chars: AbstractSet[str]
     max_results: int
-    context_lines: int
+    proximate_lines: int
     look_ahead: int
     exact_matches: int
     fuzzy_cutoff: float
@@ -63,7 +63,7 @@ class Weights:
     prefix_matches: float
     edit_distance: float
     recency: float
-    neighbours: float
+    proximity: float
 
 
 @dataclass(frozen=True)

@@ -47,8 +47,8 @@ def context(
     expandtab = cast(bool, ns.expandtab)
     linefeed = cast(Literal["\n", "\r", "\r\n"], LFfmt[cast(str, ns.fileformat)].value)
 
-    lo = max(0, row - options.context_lines)
-    hi = min(buf_line_count, row + options.context_lines + 1)
+    lo = max(0, row - options.proximate_lines)
+    hi = min(buf_line_count, row + options.proximate_lines + 1)
     lines = buf_get_lines(nvim, buf=buf, lo=lo, hi=hi)
     if DEBUG:
         db_line_count, db_lit = db.lines(buf.number, lo=lo, hi=hi)

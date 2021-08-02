@@ -17,7 +17,7 @@ from ..shared.types import Completion, Context
 class _ReviewCtx:
     batch: UUID
     context: Context
-    neighbours: Mapping[str, int]
+    proximity: Mapping[str, int]
     inserted: Mapping[str, int]
 
     is_lower: bool
@@ -47,7 +47,7 @@ def _join(
         prefix_matches=match_metrics.prefix_matches,
         edit_distance=match_metrics.edit_distance,
         recency=ctx.inserted.get(completion.sort_by, 0),
-        neighbours=ctx.neighbours.get(completion.sort_by, 0),
+        proximity=ctx.proximity.get(completion.sort_by, 0),
     )
     label_width = display_width(completion.label, tabsize=ctx.context.tabstop)
     kind_width = display_width(completion.kind, tabsize=ctx.context.tabstop)
@@ -67,7 +67,7 @@ class Reviewer(PReviewer):
         self._ctx = _ReviewCtx(
             batch=uuid4(),
             context=EMPTY_CONTEXT,
-            neighbours={},
+            proximity={},
             inserted={},
             is_lower=True,
         )
@@ -81,12 +81,12 @@ class Reviewer(PReviewer):
             chain.from_iterable(context.lines),
             unifying_chars=self._options.unifying_chars,
         )
-        neighbours = Counter(words)
+        proximity = Counter(words)
 
         ctx = _ReviewCtx(
             batch=uuid4(),
             context=context,
-            neighbours=neighbours,
+            proximity=proximity,
             inserted=inserted,
             is_lower=lower(context.words_before) == context.words_before,
         )
