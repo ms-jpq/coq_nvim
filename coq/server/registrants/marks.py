@@ -1,6 +1,5 @@
 from collections import deque
 from itertools import chain
-from os import linesep
 from textwrap import dedent
 from typing import Iterator, Sequence, Tuple, TypedDict
 from uuid import uuid4
@@ -108,6 +107,7 @@ def _trans(new_text: str, mark: Mark, marks: Sequence[Mark]) -> UserData:
 def _linked_marks(
     nvim: Nvim, mark: Mark, marks: Sequence[Mark], stack: Stack, ns: int, buf: Buffer
 ) -> None:
+    s = state()
     ms = tuple(chain((mark,), marks))
 
     def preview(mark: Mark) -> str:
@@ -126,7 +126,7 @@ def _linked_marks(
                 else:
                     yield line
 
-        return linesep.join(cont())
+        return s.context.linefeed.join(cont())
 
     def place_holder() -> str:
         for p in map(preview, ms):
@@ -139,7 +139,7 @@ def _linked_marks(
         resp = ask(nvim, question=LANG("expand marks"), default=place_holder())
         if resp is not None:
             data = _trans(resp, mark=mark, marks=marks)
-            edit(nvim, stack=stack, state=state(), data=data, synthetic=True)
+            edit(nvim, stack=stack, state=s, data=data, synthetic=True)
 
     except NvimError as e:
         msg = f"""
