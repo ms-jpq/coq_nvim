@@ -13,7 +13,7 @@ from ...shared.fuzzy import multi_set_ratio
 from ...shared.parse import is_word, lower
 from ...shared.runtime import Supervisor
 from ...shared.runtime import Worker as BaseWorker
-from ...shared.settings import LspClient
+from ...shared.settings import BaseClient
 from ...shared.sql import BIGGEST_INT
 from ...shared.types import Completion, Context
 from ..cache.worker import CacheWorker
@@ -25,8 +25,8 @@ class _Src(Enum):
     lsp = auto()
 
 
-class Worker(BaseWorker[LspClient, None], CacheWorker):
-    def __init__(self, supervisor: Supervisor, options: LspClient, misc: None) -> None:
+class Worker(BaseWorker[BaseClient, None], CacheWorker):
+    def __init__(self, supervisor: Supervisor, options: BaseClient, misc: None) -> None:
         self._local_cached: MutableSequence[Iterator[Completion]] = []
         CacheWorker.__init__(self, supervisor=supervisor)
         BaseWorker.__init__(self, supervisor=supervisor, options=options, misc=misc)
@@ -49,18 +49,16 @@ class Worker(BaseWorker[LspClient, None], CacheWorker):
             return _Src.dab, LSPcomp(local_cache=False, items=items)
 
         async def stream() -> AsyncIterator[Tuple[_Src, LSPcomp]]:
-            no_ask = (
-                use_cache and not self._options.always_request and not context.manual
-            )
+            do_ask = context.manual or not use_cache
             stream = (
-                to_async(())
-                if no_ask
-                else request(
+                request(
                     self._supervisor.nvim,
                     short_name=self._options.short_name,
                     tie_breaker=self._options.tie_breaker,
                     context=context,
                 )
+                if do_ask
+                else to_async(())
             )
 
             for fut in as_completed(

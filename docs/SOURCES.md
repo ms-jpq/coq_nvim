@@ -4,9 +4,43 @@
 
 ##### `coq_settings.clients.<x>.enabled`
 
+Enable source
+
+**default:**
+
+```json
+true
+```
+
+except for `tabnine`
+
 ##### `coq_settings.clients.<x>.short_name`
 
+Source name to display in the completion menu.
+
+**Must be unique**
+
+**default:**
+
+```json
+<name>
+```
+
 ##### `coq_settings.clients.<x>.tie_breaker`
+
+Tie breaker for ranking.
+
+This is fairly low on the rank algorithm. It will usually not take effect.
+
+**Must be unique**
+
+**default:**
+
+```json
+<name>
+```
+
+---
 
 #### coq_settings.clients.lsp
 

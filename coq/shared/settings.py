@@ -86,9 +86,6 @@ class PathsClient(BaseClient):
     preview_lines: int
 
 
-@dataclass(frozen=True)
-class LspClient(BaseClient):
-    always_request: bool
 
 
 @dataclass(frozen=True)
@@ -115,7 +112,7 @@ class SnippetClient(BaseClient):
 @dataclass(frozen=True)
 class Clients:
     buffers: BuffersClient
-    lsp: LspClient
+    lsp: BaseClient
     paths: PathsClient
     snippets: SnippetClient
     tags: TagsClient
