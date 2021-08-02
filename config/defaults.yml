@@ -16,15 +16,6 @@ match:
   look_ahead: 2
   fuzzy_cutoff: 0.6
 
-limits:
-  max_buf_index: 333333
-  idle_time: 2.0
-  timeout: 0.088
-  manual_timeout: 0.6
-
-  download_retries: 6
-  download_timeout: 66.0
-
 weights:
   prefix_matches: 2.0
   edit_distance: 1.5
@@ -57,6 +48,15 @@ display:
       east: 4
 
   mark_highlight_group: Pmenu
+
+limits:
+  index_cutoff: 333333
+  idle_time: 2.0
+  timeout: 0.088
+  manual_timeout: 0.6
+
+  download_retries: 6
+  download_timeout: 66.0
 
 clients:
   tabnine:

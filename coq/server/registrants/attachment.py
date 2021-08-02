@@ -46,7 +46,7 @@ def _listener(nvim: Nvim, stack: Stack) -> None:
                 size = sum(map(len, lines))
                 heavy_bufs = (
                     {buf.number}
-                    if size > stack.settings.limits.max_buf_index
+                    if size > stack.settings.limits.index_cutoff
                     else set()
                 )
                 os = state()
@@ -66,7 +66,7 @@ def _listener(nvim: Nvim, stack: Stack) -> None:
                     msg = LANG(
                         "buf 2 fat",
                         size=size,
-                        limit=stack.settings.limits.max_buf_index,
+                        limit=stack.settings.limits.index_cutoff,
                     )
                     await awrite(nvim, msg)
 

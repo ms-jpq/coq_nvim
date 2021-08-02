@@ -71,7 +71,7 @@ See help docs on [keybind](https://github.com/ms-jpq/coq_nvim/tree/coq/docs/KEYB
 
 ### coq_settings.limits
 
-#### `coq_settings.limits.max_buf_index`
+#### `coq_settings.limits.index_cutoff`
 
 #### `coq_settings.limits.idle_time`
 

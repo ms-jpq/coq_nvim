@@ -5,7 +5,7 @@ from typing import AbstractSet, Optional, Tuple
 @dataclass(frozen=True)
 class Limits:
     idle_time: float
-    max_buf_index: int
+    index_cutoff: int
     timeout: float
     manual_timeout: float
     download_retries: int
