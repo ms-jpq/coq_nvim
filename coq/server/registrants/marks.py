@@ -127,7 +127,7 @@ def _linked_marks(
         log.warn("%s", dedent(msg))
     finally:
         for mark in ms:
-            nvim.api.buf_clear_namespace(buf, ns, mark.idx)
+            nvim.api.buf_del_extmark(buf, ns, mark.idx)
 
 
 @rpc(blocking=True)
