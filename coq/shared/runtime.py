@@ -113,6 +113,7 @@ class Supervisor:
 
     def collect(self, context: Context) -> Awaitable[Sequence[Metric]]:
         loop: AbstractEventLoop = self.nvim.loop
+        t1 = monotonic()
 
         async def cont() -> Sequence[Metric]:
             with with_suppress():
@@ -126,7 +127,7 @@ class Supervisor:
                         )
 
                         acc: MutableSequence[Metric] = []
-                        done, t1 = False, monotonic()
+                        done = False
 
                         async def supervise(worker: Worker, assoc: BaseClient) -> None:
                             with with_suppress():
