@@ -52,7 +52,11 @@ def context(
     lines = buf_get_lines(nvim, buf=buf, lo=lo, hi=hi)
     if DEBUG or True:
         db_line_count, db_lines = db.lines(buf.number, lo=lo, hi=hi)
-        assert db_line_count == buf_line_count, (db_line_count, buf_line_count)
+        assert db_line_count in {
+            buf_line_count - 1,
+            buf_line_count,
+            buf_line_count + 1,
+        }, (db_line_count, buf_line_count)
         assert tuple(
             "" if idx == row else line for idx, line in enumerate(db_lines, start=lo)
         ) == tuple(
