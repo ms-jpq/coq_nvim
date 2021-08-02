@@ -34,12 +34,14 @@ async def main() -> None:
     bj_snippets = j_snippets.encode()
     hashed = sha256(bj_snippets).hexdigest()
 
-    prev_desired = SNIPPET_HASH_DESIRED.read_text()
     SNIP_VARS.mkdir(parents=True, exist_ok=True)
+
+    prev_desired = SNIPPET_HASH_DESIRED.read_text()
+    SNIPPET_ARTIFACTS.write_bytes(bj_snippets)
     SNIPPET_HASH_ACTUAL.write_text(hashed)
     SNIPPET_HASH_DESIRED.write_text(hashed)
-    SNIPPET_ARTIFACTS.write_bytes(bj_snippets)
 
+    print([prev_desired, hashed])
     if prev_desired != hashed:
         proc = await call(
             "git",
@@ -49,6 +51,7 @@ async def main() -> None:
             capture_stderr=False,
         )
         snip_git = Path(proc.out.decode().strip())
+        print([snip_git])
         if snip_git == SNIP_VARS:
             proc = await call(
                 "git",
@@ -58,5 +61,3 @@ async def main() -> None:
                 capture_stderr=False,
             )
             SNIPPET_GIT_SHA.write_bytes(proc.out.strip())
-        else:
-            assert False
