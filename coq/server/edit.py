@@ -34,8 +34,8 @@ from ..shared.types import (
 )
 from ..snippets.parse import parse
 from ..snippets.parsers.types import ParseError
+from .mark import mark
 from .nvim.completions import UserData
-from .registrants.marks import mark
 from .rt_types import Stack
 from .state import State
 

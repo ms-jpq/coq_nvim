@@ -3,7 +3,6 @@ from itertools import chain
 from os import linesep
 from textwrap import dedent
 from typing import Iterator, Sequence, Tuple, TypedDict
-from uuid import uuid4
 
 from pynvim.api.common import NvimError
 from pynvim.api.nvim import Buffer, Nvim
@@ -15,13 +14,13 @@ from pynvim_pp.operators import set_visual_selection
 
 from ...lang import LANG
 from ...registry import rpc
-from ...shared.settings import Settings
 from ...shared.types import UTF8, Mark
 from ...snippets.consts import LINKED_PAD
+from ..edit import edit
+from ..mark import NS
+from ..nvim.completions import UserData
 from ..rt_types import Stack
 from ..state import state
-
-_NS = uuid4().hex
 
 
 class _MarkDetail(TypedDict):
@@ -82,17 +81,17 @@ def _single_mark(
 
 
 def _linked_marks(
-    nvim: Nvim, mark: Mark, marks: Sequence[Mark], ns: int, win: Window, buf: Buffer
-) -> None:
+    nvim: Nvim, mark: Mark, marks: Sequence[Mark], ns: int, buf: Buffer
+) -> Optional[UserData]:
     ms = tuple(chain((mark,), marks))
 
     def preview(mark: Mark) -> str:
         (r1, c1), (r2, c2) = mark.begin, mark.end
-        lo, hi = min(r1, r2), max(r1, r2)
+        lo, hi = min(r1, r2), max(r1, r2) + 1
         lines = buf_get_lines(nvim, buf=buf, lo=lo, hi=hi)
 
         def cont() -> Iterator[str]:
-            for idx, line in enumerate(lines):
+            for idx, line in enumerate(lines, start=lo):
                 if idx == r1 and idx == r2:
                     yield line.encode(UTF8)[c1:c2].decode(UTF8)
                 elif idx == r1:
@@ -132,7 +131,7 @@ def _linked_marks(
 
 @rpc(blocking=True)
 def nav_mark(nvim: Nvim, stack: Stack) -> None:
-    ns = nvim.api.create_namespace(_NS)
+    ns = nvim.api.create_namespace(NS)
     win = cur_win(nvim)
     buf = win_get_buf(nvim, win=win)
     marks = deque(_ls_marks(nvim, ns=ns, buf=buf))
@@ -142,30 +141,10 @@ def nav_mark(nvim: Nvim, stack: Stack) -> None:
         if mark.idx <= LINKED_PAD:
             _single_mark(nvim, mark=mark, marks=marks, ns=ns, win=win, buf=buf)
         else:
-            _linked_marks(nvim, mark=mark, marks=marks, ns=ns, win=win, buf=buf)
+            data = _linked_marks(nvim, mark=mark, marks=marks, ns=ns, buf=buf)
+            if data:
+                edit(nvim, stack=stack, state=state(), data=data)
 
     else:
         msg = LANG("no more marks")
         write(nvim, msg)
-
-
-def mark(nvim: Nvim, settings: Settings, buf: Buffer, marks: Sequence[Mark]) -> None:
-    mks = tuple(mark for mark in marks if mark.idx and mark.text)
-
-    ns = nvim.api.create_namespace(_NS)
-    nvim.api.buf_clear_namespace(buf, ns, 0, -1)
-    for mark in mks:
-        (r1, c1), (r2, c2) = mark.begin, mark.end
-        opts = {
-            "id": mark.idx + 1,
-            "end_line": r2,
-            "end_col": c2,
-            "hl_group": settings.display.mark_highlight_group,
-        }
-        try:
-            nvim.api.buf_set_extmark(buf, ns, r1, c1, opts)
-        except NvimError:
-            log.warn("%s", f"bad mark location {mark}")
-
-    msg = LANG("added marks", regions=" ".join(f"[{mark.text}]" for mark in mks))
-    write(nvim, msg)
