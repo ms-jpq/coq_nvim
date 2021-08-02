@@ -166,7 +166,7 @@ atomic.exec_lua(f"{_ft_changed.name}()", ())
 
 @rpc(blocking=True)
 def _insert_enter(nvim: Nvim, stack: Stack) -> None:
-    heavy_bufs = state().heavy_bufs
+    heavy_bufs = state().nono_bufs
     buf = cur_buf(nvim)
 
     async def cont() -> None:
@@ -201,9 +201,12 @@ def _when_idle(nvim: Nvim, stack: Stack) -> None:
     if _HANDLE:
         _HANDLE.cancel()
 
+
+
     def cont() -> None:
         _insert_enter(nvim, stack=stack)
         stack.supervisor.notify_idle()
+        
 
     get_running_loop().call_later(
         stack.settings.limits.idle_time,

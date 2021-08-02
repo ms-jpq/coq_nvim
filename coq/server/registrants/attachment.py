@@ -49,9 +49,10 @@ def _listener(nvim: Nvim, stack: Stack) -> None:
                     if size > stack.settings.limits.max_buf_index
                     else set()
                 )
-                s = state(change_id=uuid4(), heavy_bufs=heavy_bufs)
+                os = state()
+                s = state(change_id=uuid4(), nono_bufs=heavy_bufs)
 
-                if buf.number not in s.heavy_bufs:
+                if buf.number not in s.nono_bufs:
                     await stack.bdb.set_lines(
                         buf.number,
                         filetype=ft,
@@ -60,7 +61,8 @@ def _listener(nvim: Nvim, stack: Stack) -> None:
                         lines=lines,
                         unifying_chars=stack.settings.match.unifying_chars,
                     )
-                else:
+
+                if buf.number in s.nono_bufs and buf.number not in os.nono_bufs:
                     msg = LANG(
                         "buf 2 fat",
                         size=size,

@@ -15,7 +15,7 @@ class State:
     change_id: UUID
     commit_id: UUID
     preview_id: UUID
-    heavy_bufs: AbstractSet[int]
+    nono_bufs: AbstractSet[int]
     context: Context
     inserted: NvimPos
     pum_location: Optional[int]
@@ -29,7 +29,7 @@ _state = State(
     change_id=uuid4(),
     commit_id=uuid4(),
     preview_id=uuid4(),
-    heavy_bufs=set(),
+    nono_bufs=set(),
     context=EMPTY_CONTEXT,
     inserted=(-1, -1),
     pum_location=None,
@@ -41,7 +41,7 @@ def state(
     change_id: Optional[UUID] = None,
     commit_id: Optional[UUID] = None,
     preview_id: Optional[UUID] = None,
-    heavy_bufs: AbstractSet[int] = frozenset(),
+    nono_bufs: AbstractSet[int] = frozenset(),
     context: Optional[Context] = None,
     inserted: Optional[NvimPos] = None,
     pum_location: Union[VoidType, Optional[int]] = Void,
@@ -54,7 +54,7 @@ def state(
             change_id=change_id or _state.change_id,
             commit_id=commit_id or _state.commit_id,
             preview_id=preview_id or _state.preview_id,
-            heavy_bufs=_state.heavy_bufs | heavy_bufs,
+            nono_bufs=_state.nono_bufs | nono_bufs,
             context=context or _state.context,
             inserted=inserted or _state.inserted,
             pum_location=pum_location
