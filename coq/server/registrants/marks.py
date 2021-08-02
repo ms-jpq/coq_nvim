@@ -7,7 +7,14 @@ from uuid import uuid4
 from pynvim.api.common import NvimError
 from pynvim.api.nvim import Buffer, Nvim
 from pynvim.api.window import Window
-from pynvim_pp.api import ask, buf_get_lines, cur_win, win_get_buf, win_set_cursor
+from pynvim_pp.api import (
+    ask,
+    buf_get_lines,
+    buf_linefeed,
+    cur_win,
+    win_get_buf,
+    win_set_cursor,
+)
 from pynvim_pp.lib import write
 from pynvim_pp.logging import log
 from pynvim_pp.operators import set_visual_selection
@@ -107,10 +114,10 @@ def _trans(new_text: str, mark: Mark, marks: Sequence[Mark]) -> UserData:
 def _linked_marks(
     nvim: Nvim, mark: Mark, marks: Sequence[Mark], stack: Stack, ns: int, buf: Buffer
 ) -> None:
-    s = state()
     ms = tuple(chain((mark,), marks))
 
     def preview(mark: Mark) -> str:
+        linesep = buf_linefeed(nvim, buf=buf)
         (r1, c1), (r2, c2) = mark.begin, mark.end
         lo, hi = min(r1, r2), max(r1, r2) + 1
         lines = buf_get_lines(nvim, buf=buf, lo=lo, hi=hi)
@@ -126,7 +133,7 @@ def _linked_marks(
                 else:
                     yield line
 
-        return s.context.linefeed.join(cont())
+        return linesep.join(cont())
 
     def place_holder() -> str:
         for p in map(preview, ms):
@@ -139,7 +146,7 @@ def _linked_marks(
         resp = ask(nvim, question=LANG("expand marks"), default=place_holder())
         if resp is not None:
             data = _trans(resp, mark=mark, marks=marks)
-            edit(nvim, stack=stack, state=s, data=data, synthetic=True)
+            edit(nvim, stack=stack, state=state(), data=data, synthetic=True)
 
     except NvimError as e:
         msg = f"""
