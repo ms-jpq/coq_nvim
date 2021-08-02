@@ -22,7 +22,7 @@ from pynvim_pp.operators import set_visual_selection
 from ...lang import LANG
 from ...registry import rpc
 from ...shared.types import UTF8, Mark, RangeEdit
-from ...snippets.consts import LINKED_PAD
+from ...snippets.consts import MOD_PAD
 from ..edit import edit
 from ..mark import NS
 from ..nvim.completions import UserData
@@ -49,7 +49,7 @@ def _ls_marks(nvim: Nvim, ns: str, buf: Buffer) -> Sequence[Mark]:
     ordered = sorted(
         cont(),
         key=lambda m: (
-            m.idx - LINKED_PAD if m.idx > LINKED_PAD else m.idx,
+            m.idx % MOD_PAD,
             m.begin,
             m.end,
         ),
@@ -114,7 +114,8 @@ def _trans(new_text: str, mark: Mark, marks: Sequence[Mark]) -> UserData:
 def _linked_marks(
     nvim: Nvim, mark: Mark, marks: Sequence[Mark], stack: Stack, ns: int, buf: Buffer
 ) -> None:
-    ms = tuple(chain((mark,), (m for m in marks if m.idx == mark.idx)))
+    base_idx = mark.idx % MOD_PAD
+    ms = tuple(chain((mark,), (m for m in marks if m.idx % MOD_PAD == base_idx)))
     print([ms, marks], flush=True)
 
     def preview(mark: Mark) -> str:
@@ -170,7 +171,7 @@ def nav_mark(nvim: Nvim, stack: Stack) -> None:
 
     if marks:
         mark = marks.popleft()
-        if mark.idx <= LINKED_PAD:
+        if mark.idx <= MOD_PAD:
             _single_mark(nvim, mark=mark, marks=marks, ns=ns, win=win, buf=buf)
         else:
             _linked_marks(nvim, mark=mark, marks=marks, ns=ns, stack=stack, buf=buf)

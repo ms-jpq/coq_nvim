@@ -18,7 +18,7 @@ from std2.itertools import deiter
 from std2.types import never
 
 from ...shared.types import UTF8, Context
-from ..consts import LINKED_PAD
+from ..consts import MOD_PAD
 from .types import (
     Begin,
     DummyBegin,
@@ -130,7 +130,7 @@ def _consolidate(
 
     for idx, rs in acc.items():
         for i, region in enumerate(rs, start=len(rs) > 1):
-            yield idx + LINKED_PAD * i, region
+            yield idx + MOD_PAD * i, region
 
 
 def token_parser(context: ParserCtx, stream: TokenStream) -> Parsed:
