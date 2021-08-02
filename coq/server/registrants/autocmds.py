@@ -79,12 +79,14 @@ async def _load_snip_raw(nvim: Nvim, retries: int, timeout: float) -> ASnips:
         except (URLError, TimeoutE) as e:
             log.warn("%s", e)
         else:
-            with NamedTemporaryFile() as fd:
+            with NamedTemporaryFile() as fd, TemporaryDirectory() as tmp:
                 fd.write(buf)
                 fd.flush()
-            with TemporaryDirectory() as tmp:
-                unpack_archive(fd.name, extract_dir=tmp, format="targz")
-                Path(tmp).replace(SNIP_VARS)
+                unpack_archive(fd.name, extract_dir=tmp, format="gztar")
+                with suppress(FileNotFoundError):
+                    rmtree(SNIP_VARS)
+                for p in Path(tmp).iterdir():
+                    p.replace(SNIP_VARS)
 
     def load() -> ASnips:
         try:
