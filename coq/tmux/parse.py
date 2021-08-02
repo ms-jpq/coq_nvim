@@ -1,6 +1,7 @@
 from asyncio import gather
+from contextlib import suppress
 from dataclasses import dataclass
-from typing import AbstractSet, AsyncIterator, Mapping, Optional, Sequence, Tuple
+from typing import AbstractSet, AsyncIterator, Iterator, Mapping, Optional, Tuple
 
 from std2.asyncio.subprocess import call
 
@@ -15,24 +16,25 @@ class _Pane:
 
 
 async def _panes() -> AsyncIterator[_Pane]:
-    proc = await call(
-        "tmux",
-        "list-panes",
-        "-s",
-        "-F",
-        "#{pane_id} #{pane_active} #{window_active}",
-    )
-    if proc.code:
-        pass
-    else:
-        for line in proc.out.decode().strip().splitlines():
-            pane_id, pane_active, window_active = line.split(" ")
-            pane = _Pane(
-                uid=pane_id,
-                pane_active=bool(int(pane_active)),
-                window_active=bool(int(window_active)),
-            )
-            yield pane
+    with suppress(FileNotFoundError):
+        proc = await call(
+            "tmux",
+            "list-panes",
+            "-s",
+            "-F",
+            "#{pane_id} #{pane_active} #{window_active}",
+        )
+        if proc.code:
+            pass
+        else:
+            for line in proc.out.decode().strip().splitlines():
+                pane_id, pane_active, window_active = line.split(" ")
+                pane = _Pane(
+                    uid=pane_id,
+                    pane_active=bool(int(pane_active)),
+                    window_active=bool(int(window_active)),
+                )
+                yield pane
 
 
 async def cur() -> Optional[_Pane]:
@@ -45,16 +47,20 @@ async def cur() -> Optional[_Pane]:
 
 async def _screenshot(
     unifying_chars: AbstractSet[str], uid: str
-) -> Tuple[str, Sequence[str]]:
-    proc = await call("tmux", "capture-pane", "-p", "-t", uid)
-    if proc.code:
-        return uid, ()
+) -> Tuple[str, Iterator[str]]:
+    try:
+        proc = await call("tmux", "capture-pane", "-p", "-t", uid)
+    except FileNotFoundError:
+        return uid, iter(())
     else:
-        words = coalesce(proc.out.decode(), unifying_chars=unifying_chars)
-        return uid, tuple(words)
+        if proc.code:
+            return uid, iter(())
+        else:
+            words = coalesce(proc.out.decode(), unifying_chars=unifying_chars)
+            return uid, (words)
 
 
-async def snapshot(unifying_chars: AbstractSet[str]) -> Mapping[str, Sequence[str]]:
+async def snapshot(unifying_chars: AbstractSet[str]) -> Mapping[str, Iterator[str]]:
     shots = await gather(
         *[
             _screenshot(

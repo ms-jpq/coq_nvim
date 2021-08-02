@@ -2,7 +2,7 @@ from concurrent.futures import Executor
 from contextlib import closing
 from sqlite3 import Connection, OperationalError
 from threading import Lock
-from typing import Iterable, Iterator, Mapping, Sequence
+from typing import Iterable, Iterator, Mapping
 
 from std2.asyncio import run_in_executor
 from std2.sqlite3 import with_transaction
@@ -32,7 +32,7 @@ class TMDB:
         with self._lock:
             self._conn.interrupt()
 
-    async def periodical(self, panes: Mapping[str, Sequence[str]]) -> None:
+    async def periodical(self, panes: Mapping[str, Iterable[str]]) -> None:
         def m1(panes: Iterable[str]) -> Iterator[Mapping]:
             for pane_id in panes:
                 yield {"pane_id": pane_id}
