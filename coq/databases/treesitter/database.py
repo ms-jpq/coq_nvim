@@ -2,7 +2,7 @@ from concurrent.futures import Executor
 from contextlib import closing
 from sqlite3 import Connection, OperationalError
 from threading import Lock
-from typing import Iterator, Mapping, Sequence, Tuple
+from typing import Iterator, Mapping, Tuple
 
 from std2.asyncio import run_in_executor
 from std2.sqlite3 import with_transaction
@@ -12,6 +12,10 @@ from ...shared.executor import SingleThreadExecutor
 from ...shared.settings import Options
 from ...shared.sql import BIGGEST_INT, init_db
 from .sql import sql
+
+_Word = str
+_Kind = str
+_Double = Tuple[_Word, _Kind]
 
 
 def _init() -> Connection:
@@ -47,8 +51,8 @@ class TDB:
 
     async def select(
         self, opts: Options, word: str, limitless: int
-    ) -> Iterator[Tuple[str, str]]:
-        def cont() -> Iterator[Tuple[str, str]]:
+    ) -> Iterator[_Double]:
+        def cont() -> Iterator[_Double]:
             try:
                 with closing(self._conn.cursor()) as cursor:
                     with with_transaction(cursor):
@@ -67,7 +71,7 @@ class TDB:
             except OperationalError:
                 return iter(())
 
-        def step() -> Iterator[Tuple[str, str]]:
+        def step() -> Iterator[_Double]:
             self._interrupt()
             return self._ex.submit(cont)
 
