@@ -99,12 +99,11 @@ clients:
     enabled: True
     short_name: "TAG"
     match_syms: True
-    path_sep: " ⇉ "
     parent_scope: " ⇊"
+    path_sep: " ⇉ "
     tie_breaker: 56
 
   lsp:
     enabled: True
     short_name: "LSP"
     tie_breaker: 66
-    always_request: False

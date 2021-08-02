@@ -44,28 +44,96 @@ This is fairly low on the rank algorithm. It will usually not take effect.
 
 #### coq_settings.clients.lsp
 
+No special conf.
+
 #### coq_settings.clients.tags
+
+##### `coq_settings.clients.tags.parent_scope`
+
+Aesthetics only, parent indictor.
+
+**default:**
+
+```json
+" ⇊"
+```
 
 ##### `coq_settings.clients.tags.path_sep`
 
-##### `coq_settings.clients.tags.parent_scope`
+Aesthetics only, path separator.
+
+**default:**
+
+```json
+" ⇉ "
+```
 
 #### coq_settings.clients.snippets
 
 ##### `coq_settings.clients.snippets.sources`
 
+Which snippets to load. When empty, load all snippets.
+
+Take a look at [compilation.yml](https://github.com/ms-jpq/coq_nvim/blob/coq/config/compilation.yml) under `paths.<x>.[<names>]`, the `[<names>]` are the keys.
+
+**default:**
+
+```json
+[]
+```
+
 #### coq_settings.clients.paths
 
+##### `coq_settings.clients.paths.preview_lines`
+
+Try to preview this many lines.
+
+**default:**
+
+```json
+6
+```
+
 #### coq_settings.clients.tree_sitter
+
+No special conf.
 
 #### coq_settings.clients.buffers
 
 ##### `coq_settings.clients.buffers.match_syms`
 
+Also match symbols in addition to words.
+
+**default:**
+
+```json
+false
+```
+
 ##### `coq_settings.clients.buffers.same_filetype`
+
+Restrict matching to buffers of the same filetype
+
+**default:**
+
+```json
+false
+```
 
 #### coq_settings.clients.tmux
 
 ##### `coq_settings.clients.tmux.match_syms`
 
+Also match symbols in addition to words.
+
+**default:**
+
+```json
+false
+```
+
 #### coq_settings.clients.tabnine
+
+No special conf.
+
+But _Disabled by default_. Need `coq_settings.clients.tabnine=true` to enable.
