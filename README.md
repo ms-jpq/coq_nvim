@@ -79,7 +79,7 @@ lsp.<server>.setup(cfg)
 
 ### Snippets
 
-- [**Over 9000** built-in snippets](https://github.com/ms-jpq/coq_nvim/tree/coq/docs/DISPLAY.md)
+- [**Over 9000** built-in snippets](https://raw.githubusercontent.com/ms-jpq/coq.artifacts/artifacts/coq%2Bsnippets.json)
 
 - 99% of LSP grammar, 95% of Vim grammar
 
