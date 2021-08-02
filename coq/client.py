@@ -4,6 +4,7 @@ from logging import DEBUG as DEBUG_LV
 from logging import INFO
 from multiprocessing import cpu_count
 from queue import SimpleQueue
+from string import Template
 from sys import stderr
 from textwrap import dedent
 from typing import Any, MutableMapping, Optional, cast
@@ -79,11 +80,15 @@ class CoqClient(Client):
         try:
             threadsafe_call(nvim, cont)
         except DecodeError as e:
-            ms = """
+            tpl = """
             Some options may hanve changed.
             See help doc on Github under [docs/CONFIGURATION.md]
+
+
+            ${e}
             """
-            write(nvim, dedent(ms), error=True)
+            ms = Template(dedent(tpl)).substitute(e=e)
+            print(ms, file=stderr)
             return 1
         except Exception as e:
             log.exception("%s", e)
