@@ -37,6 +37,7 @@ async def run(*args: str) -> str:
                 "--output-format=json",
                 f"--fields={_FIELDS}",
                 *args,
+                check_returncode=set(),
             )
         except FileNotFoundError:
             return ""

@@ -23,6 +23,7 @@ async def _panes() -> AsyncIterator[_Pane]:
             "-s",
             "-F",
             "#{pane_id} #{pane_active} #{window_active}",
+            check_returncode=set(),
         )
         if proc.code:
             pass
@@ -49,7 +50,14 @@ async def _screenshot(
     unifying_chars: AbstractSet[str], uid: str
 ) -> Tuple[str, Iterator[str]]:
     try:
-        proc = await call("tmux", "capture-pane", "-p", "-t", uid)
+        proc = await call(
+            "tmux",
+            "capture-pane",
+            "-p",
+            "-t",
+            uid,
+            check_returncode=set(),
+        )
     except FileNotFoundError:
         return uid, iter(())
     else:
