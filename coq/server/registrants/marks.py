@@ -114,6 +114,8 @@ def _trans(new_text: str, marks: Sequence[Mark]) -> UserData:
 def _linked_marks(
     nvim: Nvim, mark: Mark, linked: Sequence[Mark], ns: int, buf: Buffer
 ) -> Optional[UserData]:
+    marks = tuple(chain((mark,), linked))
+
     def preview(mark: Mark) -> str:
         linesep = buf_linefeed(nvim, buf=buf)
         (r1, c1), (r2, c2) = mark.begin, mark.end
@@ -134,7 +136,7 @@ def _linked_marks(
         return linesep.join(cont())
 
     def place_holder() -> str:
-        for p in map(preview, linked):
+        for p in map(preview, marks):
             if p:
                 return p
         else:
@@ -143,13 +145,13 @@ def _linked_marks(
     try:
         resp = ask(nvim, question=LANG("expand marks"), default=place_holder())
         if resp is not None:
-            data = _trans(resp, marks=linked)
+            data = _trans(resp, marks=marks)
             return data
         else:
             return None
     except NvimError as e:
         msg = f"""
-        bad mark locations {linked}
+        bad mark locations {marks}
 
         {e}
         """
@@ -158,7 +160,7 @@ def _linked_marks(
     finally:
         # TODO -- Need to delete all marks due to extmark not shifting
         # Need to translate extmarks to correct location
-        for mark in chain((mark,), linked):
+        for mark in marks:
             nvim.api.buf_del_extmark(buf, ns, mark.idx)
 
 
@@ -172,9 +174,7 @@ def nav_mark(nvim: Nvim, stack: Stack) -> None:
     if marks:
         mark = marks.popleft()
         base_idx = mark.idx % MOD_PAD
-        linked = tuple(
-            chain((mark,), (m for m in marks if m.idx % MOD_PAD == base_idx))
-        )
+        linked = tuple(m for m in marks if m.idx % MOD_PAD == base_idx)
 
         def single() -> None:
             _single_mark(nvim, mark=mark, marks=marks, ns=ns, win=win, buf=buf)
