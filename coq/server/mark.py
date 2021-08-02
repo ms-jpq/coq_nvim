@@ -14,9 +14,11 @@ NS = uuid4().hex
 
 
 def mark(nvim: Nvim, settings: Settings, buf: Buffer, marks: Sequence[Mark]) -> None:
+    mks = tuple(mark for mark in marks if mark.idx or mark.text)
     ns = nvim.api.create_namespace(NS)
     nvim.api.buf_clear_namespace(buf, ns, 0, -1)
-    for mark in marks:
+
+    for mark in mks:
         (r1, c1), (r2, c2) = mark.begin, mark.end
         opts = {
             "id": mark.idx + 1,
@@ -29,5 +31,5 @@ def mark(nvim: Nvim, settings: Settings, buf: Buffer, marks: Sequence[Mark]) -> 
         except NvimError:
             log.warn("%s", f"bad mark location {mark}")
 
-    msg = LANG("added marks", regions=" ".join(f"[{mark.text}]" for mark in marks))
+    msg = LANG("added marks", regions=" ".join(f"[{mark.text}]" for mark in mks))
     write(nvim, msg)
