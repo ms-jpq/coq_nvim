@@ -8,7 +8,7 @@ local sanitize = function(spec)
   return tb
 end
 
-local lookup = {}
+local lookup = vim.empty_dict()
 
 for key, val in pairs(vim.lsp.protocol) do
   if type(val) == "table" then
