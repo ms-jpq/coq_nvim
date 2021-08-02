@@ -18,7 +18,7 @@ class PumDisplay:
     y_max_len: int
 
     x_max_len: int
-    x_min_len: int
+    x_truncate_len: int
 
     ellipsis: str
 

@@ -4,6 +4,8 @@
 
 #### `coq_settings.display.mark_highlight_group`
 
+The highlight group alias for snippet regions that you can navigate around using a hotkey.
+
 **default:**
 
 ```json
@@ -12,7 +14,13 @@
 
 #### coq_settings.display.pum
 
+Vim calls the completion popup menu _`pum`_.
+
 ##### `coq_settings.display.pum.y_max_len`
+
+Maximum height of the popup menu.
+
+The min of `(y_max_len, y_ratio)` wins.
 
 **default:**
 
@@ -22,6 +30,8 @@
 
 ##### `coq_settings.display.pum.y_ratio`
 
+Maximum height of the popup menu, as a ratio of window height.
+
 **default:**
 
 ```json
@@ -30,21 +40,27 @@
 
 ##### `coq_settings.display.pum.x_max_len`
 
+Maximum width of the popup menu.
+
 **default:**
 
 ```json
 66
 ```
 
-##### `coq_settings.display.pum.x_min_len`
+##### `coq_settings.display.pum.x_truncate_len`
+
+Omit `<kind>` for snippets when we are out of space.
 
 **default:**
 
 ```json
-9
+12
 ```
 
 ##### `coq_settings.display.pum.ellipsis`
+
+Show `...` when we are out of space.
 
 **default:**
 
@@ -54,6 +70,8 @@
 
 ##### `coq_settings.display.pum.kind_context`
 
+For item `<kind>` show `[<kind>]`, purely for aesthetics.
+
 **default:**
 
 ```json
@@ -61,6 +79,8 @@
 ```
 
 ##### `coq_settings.display.pum.source_context`
+
+For item `<source>` show `「<source>」`, purely for aesthetics.
 
 **default:**
 

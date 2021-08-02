@@ -28,7 +28,7 @@ display:
     y_ratio: 0.3
 
     x_max_len: 66
-    x_min_len: 9
+    x_truncate_len: 12
 
     ellipsis: …
     kind_context:
