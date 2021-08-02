@@ -5,7 +5,7 @@ from contextlib import suppress
 from itertools import chain
 from json import dumps, loads
 from json.decoder import JSONDecodeError
-from os import X_OK, access, linesep, sep
+from os import X_OK, access, linesep
 from pathlib import PurePath
 from subprocess import DEVNULL, PIPE
 from typing import Any, AsyncIterator, Iterator, Optional, Tuple
@@ -93,7 +93,7 @@ class Worker(BaseWorker[BaseClient, None]):
     def __init__(self, supervisor: Supervisor, options: BaseClient, misc: None) -> None:
         self._lock, self._installed = Lock(), False
         self._proc: Optional[Process] = None
-        self._cwd: Optional[PurePath] = PurePath(sep)
+        self._cwd: Optional[PurePath] = None
         super().__init__(supervisor, options=options, misc=misc)
         go(supervisor.nvim, aw=self._install())
         go(supervisor.nvim, aw=self._poll())
