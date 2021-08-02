@@ -1,12 +1,12 @@
 from enum import Enum, auto
 from pathlib import Path
+from sys import stderr
 from typing import Sequence, Tuple
 from webbrowser import open as open_w
 
 from pynvim import Nvim
 from pynvim_pp.api import buf_set_lines, buf_set_option, create_buf, win_close
 from pynvim_pp.float_win import list_floatwins, open_float_win
-from pynvim_pp.lib import write
 from std2.argparse import ArgparseError, ArgParser
 from std2.types import never
 
@@ -67,7 +67,7 @@ def _help(nvim: Nvim, stack: Stack, args: Sequence[str]) -> None:
     try:
         topic, use_web = _parse_args(args)
     except ArgparseError as e:
-        write(nvim, e, error=True)
+        print(e, file=stderr, flush=True)
     else:
         md, uri = _directory(topic)
         web_d = open_w(uri) if use_web else False
