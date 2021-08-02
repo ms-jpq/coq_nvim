@@ -113,22 +113,20 @@ class Worker(BaseWorker[BaseClient, None]):
             async with self._lock:
                 if not self._proc:
                     self._proc = await _proc()
-                    try:
-                        assert self._proc.stdin
-                        self._proc.stdin.write(json.encode())
-                        self._proc.stdin.write(b"\n")
-                        await self._proc.stdin.drain()
-                        assert self._proc.stdout
-                        out = await self._proc.stdout.readline()
-                    except (BrokenPipeError, ConnectionResetError):
-                        with suppress(ProcessLookupError):
-                            self._proc.kill()
-                        await self._proc.wait()
-                        return None
-                    else:
-                        return out.decode()
-                else:
+                try:
+                    assert self._proc.stdin
+                    self._proc.stdin.write(json.encode())
+                    self._proc.stdin.write(b"\n")
+                    await self._proc.stdin.drain()
+                    assert self._proc.stdout
+                    out = await self._proc.stdout.readline()
+                except (BrokenPipeError, ConnectionResetError):
+                    with suppress(ProcessLookupError):
+                        self._proc.kill()
+                    await self._proc.wait()
                     return None
+                else:
+                    return out.decode()
 
         if self._lock.locked():
             log.warn("%s", "T9 locked")
