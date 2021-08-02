@@ -1,4 +1,4 @@
-from asyncio import Handle, get_running_loop
+from asyncio import Handle, get_running_loop, sleep
 from itertools import repeat
 from json import loads
 from json.decoder import JSONDecodeError
@@ -95,6 +95,7 @@ def _load_snips(nvim: Nvim, stack: Stack) -> None:
         snippets = await _load_snip_raw(paths)
         _SEEN_SNIP_TYPES.clear()
         if not snippets:
+            await sleep(0)
             await awrite(nvim, LANG("no snippets loaded"))
 
         exts: MutableMapping[str, MutableSet[str]] = {}
