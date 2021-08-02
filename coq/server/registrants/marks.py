@@ -1,12 +1,13 @@
 from collections import deque
+from itertools import chain
 from textwrap import dedent
-from typing import AbstractSet, Iterator, Sequence, Tuple, TypedDict
+from typing import Iterator, Sequence, Tuple, TypedDict
 from uuid import uuid4
 
 from pynvim.api.common import NvimError
 from pynvim.api.nvim import Buffer, Nvim
 from pynvim.api.window import Window
-from pynvim_pp.api import cur_win, win_get_buf, win_set_cursor
+from pynvim_pp.api import cur_win, win_get_buf, win_set_cursor, buf_get_lines
 from pynvim_pp.lib import write
 from pynvim_pp.logging import log
 from pynvim_pp.operators import set_visual_selection
@@ -38,16 +39,22 @@ def _ls_marks(nvim: Nvim, ns: str, buf: Buffer) -> Sequence[Mark]:
             m = Mark(idx=idx, begin=(r1, c1), end=(r2, c2), text="")
             yield m
 
-    return sorted(
-        cont(), key=lambda m: m.idx - LINKED_PAD if m.idx > LINKED_PAD else m.idx
+    ordered = sorted(
+        cont(),
+        key=lambda m: (
+            m.idx - LINKED_PAD if m.idx > LINKED_PAD else m.idx,
+            m.begin,
+            m.end,
+        ),
     )
+    return ordered
 
 
 def _single_mark(
     nvim: Nvim, mark: Mark, marks: Sequence[Mark], ns: int, win: Window, buf: Buffer
 ) -> None:
+    (r1, c1), (r2, c2) = mark.begin, mark.end
     try:
-        (r1, c1), (r2, c2) = mark.begin, mark.end
         if r1 == r2 and abs(c2 - c1) == 0:
             row, col = r1, min(c1, c2)
             win_set_cursor(nvim, win=win, row=row, col=col)
@@ -74,9 +81,18 @@ def _single_mark(
 
 
 def _linked_marks(
-    nvim: Nvim, marks: AbstractSet[Mark], ns: int, win: Window, buf: Buffer
+    nvim: Nvim, mark: Mark, marks: Sequence[Mark], ns: int, win: Window, buf: Buffer
 ) -> None:
-    pass
+    ms = tuple(chain((mark,), marks))
+
+    def place_holder() -> Iterator[str]:
+        pass
+
+    try:
+        pass
+    finally:
+        for mark in ms:
+            nvim.api.buf_clear_namespace(buf, ns, mark.idx)
 
 
 @rpc(blocking=True)
@@ -91,7 +107,7 @@ def nav_mark(nvim: Nvim, stack: Stack) -> None:
         if mark.idx <= LINKED_PAD:
             _single_mark(nvim, mark=mark, marks=marks, ns=ns, win=win, buf=buf)
         else:
-            _linked_marks(nvim, marks=set(), ns=ns, win=win, buf=buf)
+            _linked_marks(nvim, mark=mark, marks=marks, ns=ns, win=win, buf=buf)
 
     else:
         msg = LANG("no more marks")
