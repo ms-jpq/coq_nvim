@@ -2,6 +2,21 @@
 
 ## Algorithms
 
+`coq.nvim` uses ensemble ranking. It uses a two stage Filter -> Rank system.
+
+Both stages uses a `look_ahead` parameter to adjust for typos.
+
+### Stage 1 - Filtering
+
+All `sqlite` based sources will require some `exact_matches` number of prefix matches.
+
+This is done 
+
+### Stage 2 - Ranking
+
+
+
+
 ## Conf
 
 ### coq_settings.match

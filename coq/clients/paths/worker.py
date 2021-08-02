@@ -7,6 +7,7 @@ from typing import AbstractSet, AsyncIterator, Iterator, MutableSet, Tuple
 
 from std2.asyncio import run_in_executor
 
+from ...shared.fuzzy import quick_ratio
 from ...shared.parse import is_word, lower
 from ...shared.runtime import Worker as BaseWorker
 from ...shared.settings import PathsClient
@@ -59,7 +60,11 @@ def _sort_by(segment: str, unifying_chars: AbstractSet[str]) -> str:
 
 
 def parse(
-    unifying_chars: AbstractSet[str], base: Path, line: str
+    unifying_chars: AbstractSet[str],
+    look_ahead: int,
+    fuzzy_cutoff: float,
+    base: Path,
+    line: str,
 ) -> Iterator[Tuple[PurePath, str, str]]:
     segments = reversed(tuple(_segments(line)))
     for segment in segments:
@@ -89,13 +94,11 @@ def parse(
                     p = Path(lhs)
                     left = p if p.is_absolute() else base / p
                     if left.is_dir() and access(left, mode=X_OK):
-                        is_lower = lower(rhs) == rhs
-
                         for path in left.iterdir():
-                            l_match = (
-                                lower(path.name) if is_lower else normcase(path.name)
+                            ratio = quick_ratio(
+                                rhs, lower(path.name), look_ahead=look_ahead
                             )
-                            if l_match.startswith(rhs):
+                            if ratio >= fuzzy_cutoff:
                                 term = sep if path.is_dir() else ""
                                 name = rhs + path.name[len(rhs) :]
                                 line = _join(lseg, name) + term
@@ -104,10 +107,26 @@ def parse(
 
 
 async def _parse(
-    base: Path, line: str, limit: int, unifying_chars: AbstractSet[str]
+    base: Path,
+    line: str,
+    limit: int,
+    unifying_chars: AbstractSet[str],
+    look_ahead: int,
+    fuzzy_cutoff: float,
 ) -> AbstractSet[Tuple[PurePath, str, str]]:
     def cont() -> AbstractSet[Tuple[PurePath, str, str]]:
-        return {*islice(parse(unifying_chars, base=base, line=line), limit)}
+        return {
+            *islice(
+                parse(
+                    unifying_chars,
+                    look_ahead=look_ahead,
+                    fuzzy_cutoff=fuzzy_cutoff,
+                    base=base,
+                    line=line,
+                ),
+                limit,
+            )
+        }
 
     return await run_in_executor(cont)
 
@@ -124,6 +143,8 @@ class Worker(BaseWorker[PathsClient, None]):
                 line=line,
                 limit=limit,
                 unifying_chars=self._supervisor.options.unifying_chars,
+                look_ahead=self._supervisor.options.look_ahead,
+                fuzzy_cutoff=self._supervisor.options.fuzzy_cutoff,
             )
             for p in base_paths
         )

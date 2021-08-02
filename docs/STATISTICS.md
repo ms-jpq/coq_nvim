@@ -18,7 +18,7 @@ No, these measure the response speed of the sources.
 
 ### Q0, 50, 95, 100?
 
-`min`, `median`, `1 in 20`, `max`
+Mean `min`, `median`, `1 in 20`, `max`, respectively.
 
 Without assuming any statistical distribution:
 
@@ -44,8 +44,8 @@ This is a misleading statistic for several reasons.
 
 The price `coq.nvim` pays for being collaboratively scheduled is that sources are executed concurrently.
 
-This means that one slow source can slow down all sources, with the exception being `LSP`, whose results is mostly calculated by other processes.
+This means that one slow source can slow down all sources, with the exception being `LSP`, and `T9`, whose results are mostly calculated by other processes.
 
-This also means that the time spans are **not additive**. Say five sources take 20ms to complete, the total execution time is 20ms, not 100ms.
+This also means that the time spans are **not additive**. Say five sources each take 40ms to complete, the total execution time is 40ms, not 200ms.
 
-The real duration is `min(timeout, max(<durations>)) + <constant overhead>`.
+The overall duration is `min(timeout, max(<durations>)) + <constant overhead>`.
