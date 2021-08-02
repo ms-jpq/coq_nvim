@@ -2,6 +2,8 @@
 
 Named after the [famous theorem prover](https://coq.inria.fr/)
 
+Fast as FUCK and loads of features.
+
 ## Faster Than Lua
 
 - Native C in memory B-trees
