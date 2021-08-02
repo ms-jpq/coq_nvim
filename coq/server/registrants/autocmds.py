@@ -68,7 +68,7 @@ def _new_cwd(nvim: Nvim, stack: Stack) -> None:
 autocmd("DirChanged") << f"lua {_new_cwd.name}()"
 
 
-async def _load_snip_raw(retries: int, timeout: float) -> ASnips:
+async def _load_snip_raw(nvim: Nvim, retries: int, timeout: float) -> ASnips:
     desired, sha = SNIPPET_HASH_DESIRED.read_text(), SNIPPET_GIT_SHA.read_text()
 
     def download() -> None:
@@ -86,32 +86,44 @@ async def _load_snip_raw(retries: int, timeout: float) -> ASnips:
                 unpack_archive(fd.name, extract_dir=tmp, format="targz")
                 Path(tmp).replace(SNIP_VARS)
 
-    dd = lambda: run_in_executor(download)
-
-    for _ in range(retries):
+    def load() -> ASnips:
         try:
-            actual = SNIPPET_HASH_ACTUAL.read_text("UTF8")
+            json = SNIPPET_ARTIFACTS.read_text("UTF8")
         except FileNotFoundError:
-            actual = ""
-
-        if actual != desired:
-            await dd()
+            return {}
         else:
             try:
-                json = SNIPPET_ARTIFACTS.read_text("UTF8")
-            except FileNotFoundError:
-                pass
+                snippets: ASnips = loads(json)
+            except JSONDecodeError as e:
+                log.warn("%s", e)
+                with suppress(FileNotFoundError):
+                    rmtree(SNIP_VARS)
+                return {}
             else:
-                try:
-                    snippets: ASnips = loads(json)
-                except JSONDecodeError as e:
-                    log.warn("%s", e)
-                    with suppress(FileNotFoundError):
-                        rmtree(SNIP_VARS)
-                else:
+                return snippets
+
+    async def cont() -> ASnips:
+        for _ in range(retries):
+            try:
+                actual = SNIPPET_HASH_ACTUAL.read_text("UTF8")
+            except FileNotFoundError:
+                actual = ""
+
+            if actual != desired:
+                await run_in_executor(download)
+            else:
+                snippets = load()
+                if snippets:
                     return snippets
+        else:
+            return {}
+
+    snips = load()
+    if not snips:
+        return await cont()
     else:
-        return {}
+        go(nvim, aw=cont())
+        return snips
 
 
 _EXTS: Mapping[str, AbstractSet[str]] = {}
