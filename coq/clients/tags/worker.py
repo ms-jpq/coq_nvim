@@ -1,7 +1,6 @@
 from asyncio import gather
 from contextlib import suppress
-from os import linesep, sep
-from os.path import relpath
+from os import linesep
 from pathlib import Path, PurePath
 from shutil import which
 from typing import (
@@ -18,9 +17,9 @@ from pynvim.api.nvim import Nvim, NvimError
 from pynvim_pp.api import buf_name, list_bufs
 from pynvim_pp.lib import async_call, go
 from std2.asyncio import run_in_executor
-from std2.pathlib import is_relative_to
 
 from ...databases.tags.database import CTDB
+from ...paths.show import show_path
 from ...shared.runtime import Supervisor
 from ...shared.runtime import Worker as BaseWorker
 from ...shared.settings import TagsClient
@@ -57,15 +56,8 @@ def _doc(client: TagsClient, context: Context, tag: Tag) -> Doc:
         path, cfn = PurePath(tag["path"]), PurePath(context.filename)
         if path == cfn:
             pos = "."
-        elif not is_relative_to(path, context.cwd):
-            try:
-                rel = path.relative_to(Path.home())
-            except ValueError:
-                pos = str(path)
-            else:
-                pos = f"~{sep}{rel}"
         else:
-            pos = relpath(path, cfn.parent)
+            pos = show_path(context.cwd, path=path, is_dir=False)
 
         yield lc
         yield pos
