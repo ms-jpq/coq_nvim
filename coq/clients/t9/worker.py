@@ -129,7 +129,6 @@ class Worker(BaseWorker[BaseClient, None]):
                     return out.decode()
 
         if self._lock.locked():
-            log.warn("%s", "T9 locked")
             return None
         else:
             return await shield(cont())
