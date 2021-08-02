@@ -14,6 +14,10 @@ from ...shared.settings import PathsClient
 from ...shared.sql import BIGGEST_INT
 from ...shared.types import Completion, Context, Edit, Extern
 
+_NewTxt = str
+_Sort_by = str
+_Triple = Tuple[PurePath, _NewTxt, _Sort_by]
+
 
 def _p_lhs(lhs: str) -> str:
     for sym in ("..", ".", "~"):
@@ -65,7 +69,7 @@ def parse(
     fuzzy_cutoff: float,
     base: Path,
     line: str,
-) -> Iterator[Tuple[PurePath, str, str]]:
+) -> Iterator[_Triple]:
     segments = reversed(tuple(_segments(line)))
     for segment in segments:
         sort_by = _sort_by(segment, unifying_chars=unifying_chars)
@@ -113,8 +117,8 @@ async def _parse(
     unifying_chars: AbstractSet[str],
     look_ahead: int,
     fuzzy_cutoff: float,
-) -> AbstractSet[Tuple[PurePath, str, str]]:
-    def cont() -> AbstractSet[Tuple[PurePath, str, str]]:
+) -> AbstractSet[_Triple]:
+    def cont() -> AbstractSet[_Triple]:
         return {
             *islice(
                 parse(
