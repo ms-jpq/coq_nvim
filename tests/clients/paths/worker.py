@@ -22,7 +22,8 @@ class Parser(TestCase):
         )
         expected = sorted(
             (
-                (Path(".git"), "./.git/", "./.git"),
+                (Path(".git"), "./.git/", "./.gith"),
+                (Path(".gitignore"), "./.gitignore", "./.gith"),
                 (Path(".github"), "./.github/", "./.gith"),
             ),
         )
@@ -174,6 +175,10 @@ class Parser(TestCase):
             )
         )
         expected = sorted(
-            ((Path.cwd() / ".github", "${PWD}/.github/", "}/.gith"),),
+            (
+                (Path.cwd() / ".git", "${PWD}/.git/", "}/.gith"),
+                (Path.cwd() / ".gitignore", "${PWD}/.gitignore", "}/.gith"),
+                (Path.cwd() / ".github", "${PWD}/.github/", "}/.gith"),
+            ),
         )
         self.assertEqual(actual, expected)

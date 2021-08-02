@@ -104,8 +104,7 @@ def parse(
                             )
                             if ratio >= fuzzy_cutoff:
                                 term = sep if path.is_dir() else ""
-                                name = rhs + path.name[len(rhs) :]
-                                line = _join(lseg, name) + term
+                                line = _join(lseg, path.name) + term
                                 yield path, line, sort_by
                         return
 
