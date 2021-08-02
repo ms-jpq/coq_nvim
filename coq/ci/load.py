@@ -1,4 +1,4 @@
-from asyncio import gather
+from asyncio import Semaphore, gather
 from contextlib import suppress
 from pathlib import Path
 from typing import Any, Literal, MutableMapping, MutableSequence, Tuple
@@ -18,35 +18,38 @@ from ..snippets.parsers.parser import ParseError
 from ..snippets.types import ASnips, ParsedSnippet
 from .types import Compilation
 
+_SEM = Semaphore(value=2)
+
 
 def _p_name(uri: str) -> Path:
     return TMP_DIR / Path(urlparse(uri).path).name
 
 
 async def _git_pull(uri: str) -> None:
-    location = _p_name(uri)
-    if location.is_dir():
-        await call(
-            "git",
-            "pull",
-            "--recurse-submodules",
-            cwd=location,
-            capture_stdout=False,
-            capture_stderr=False,
-        )
-    else:
-        await call(
-            "git",
-            "clone",
-            "--depth=1",
-            "--recurse-submodules",
-            "--shallow-submodules",
-            uri,
-            str(location),
-            cwd=TMP_DIR,
-            capture_stdout=False,
-            capture_stderr=False,
-        )
+    async with _SEM:
+        location = _p_name(uri)
+        if location.is_dir():
+            await call(
+                "git",
+                "pull",
+                "--recurse-submodules",
+                cwd=location,
+                capture_stdout=False,
+                capture_stderr=False,
+            )
+        else:
+            await call(
+                "git",
+                "clone",
+                "--depth=1",
+                "--recurse-submodules",
+                "--shallow-submodules",
+                uri,
+                str(location),
+                cwd=TMP_DIR,
+                capture_stdout=False,
+                capture_stderr=False,
+            )
 
 
 async def load() -> ASnips:
