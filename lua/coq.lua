@@ -120,7 +120,7 @@ return function(args)
       local capabilities = vim.lsp.protocol.make_client_capabilities()
       capabilities.textDocument.completion.completionItem.snippetSupport = true
       local enhancements = {capacities = capacities}
-      vim.tbl_deep_extend("force", cfg, enhancements)
+      vim.tbl_deep_extend("force", cfg or {}, enhancements)
     end
   end
 end
