@@ -103,7 +103,7 @@ clients:
     tie_breaker: 56
 
   lsp:
-    enabled: False
+    enabled: True
     short_name: "LSP"
     tie_breaker: 66
     always_request: False
