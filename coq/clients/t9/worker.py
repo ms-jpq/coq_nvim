@@ -5,10 +5,10 @@ from contextlib import suppress
 from itertools import chain
 from json import dumps, loads
 from json.decoder import JSONDecodeError
-from os import X_OK, access, linesep
+from os import X_OK, access, linesep, sep
 from pathlib import PurePath
 from subprocess import DEVNULL, PIPE
-from typing import Any, AsyncIterator, Iterator, Optional
+from typing import Any, AsyncIterator, Iterator, Optional, Tuple
 
 from pynvim_pp.lib import awrite, go
 from pynvim_pp.logging import log
@@ -74,7 +74,7 @@ def _decode(client: BaseClient, reply: Any) -> Iterator[Completion]:
             yield cmp
 
 
-async def _proc(cwd: PurePath) -> Optional[Process]:
+async def _proc(cwd: PurePath) -> Tuple[Optional[PurePath], Optional[Process]]:
     try:
         proc = await create_subprocess_exec(
             T9_BIN,
@@ -84,15 +84,16 @@ async def _proc(cwd: PurePath) -> Optional[Process]:
             cwd=cwd,
         )
     except FileNotFoundError:
-        return None
+        return None, None
     else:
-        return proc
+        return cwd, proc
 
 
 class Worker(BaseWorker[BaseClient, None]):
     def __init__(self, supervisor: Supervisor, options: BaseClient, misc: None) -> None:
         self._lock, self._installed = Lock(), False
         self._proc: Optional[Process] = None
+        self._cwd: Optional[PurePath] = PurePath(sep)
         super().__init__(supervisor, options=options, misc=misc)
         go(supervisor.nvim, aw=self._install())
         go(supervisor.nvim, aw=self._poll())
@@ -129,7 +130,7 @@ class Worker(BaseWorker[BaseClient, None]):
         async def cont() -> Optional[str]:
             async with self._lock:
                 if not self._proc:
-                    self._proc = await _proc(cwd)
+                    self._cwd, self._proc = await _proc(cwd)
                 if not self._proc:
                     return None
                 else:
@@ -153,6 +154,11 @@ class Worker(BaseWorker[BaseClient, None]):
             return await shield(cont())
 
     async def work(self, context: Context) -> AsyncIterator[Completion]:
+        if self._cwd != context.cwd and self._proc:
+            with suppress(ProcessLookupError):
+                self._proc.kill()
+            await self._proc.wait()
+
         if self._installed:
             req = _encode(
                 self._supervisor.options,
