@@ -1,7 +1,9 @@
 from asyncio import Handle, get_running_loop
 from itertools import repeat
 from json import loads
-from json.decoder import JSONDecodeError
+from shutil import unpack_archive
+from socket import timeout as TimeoutE
+from tempfile import NamedTemporaryFile
 from typing import (
     AbstractSet,
     Iterator,
@@ -13,14 +15,23 @@ from typing import (
     Sequence,
     Tuple,
 )
+from urllib.error import URLError
 
 from pynvim.api.nvim import Nvim
 from pynvim_pp.api import buf_filetype, cur_buf, get_cwd, win_close
 from pynvim_pp.float_win import list_floatwins
 from pynvim_pp.lib import async_call, go
+from std2.asyncio import run_in_executor
 from std2.pickle import new_decoder
+from std2.urllib import urlopen
 
-from ...consts import SNIPPET_ARTIFACTS
+from ...consts import (
+    SNIP_VARS,
+    SNIPPET_ARTIFACTS,
+    SNIPPET_GIT_SHA,
+    SNIPPET_HASH_ACTUAL,
+    SNIPPET_HASH_DESIRED,
+)
 from ...registry import atomic, autocmd, rpc
 from ...snippets.types import ASnips, ParsedSnippet
 from ...tmux.parse import snapshot
@@ -56,18 +67,40 @@ _EXTS: Mapping[str, AbstractSet[str]] = {}
 _SNIPPETS: Mapping[str, Sequence[ParsedSnippet]] = {}
 
 
-async def _load_snip_raw() -> ASnips:
-    try:
-        json = SNIPPET_ARTIFACTS.read_text("UTF8")
-    except FileNotFoundError:
-        return {}
-    else:
+async def _load_snip_raw(retries: int, timeout: float) -> ASnips:
+    desired, sha = SNIPPET_HASH_DESIRED.read_text(), SNIPPET_GIT_SHA.read_text()
+
+    def download() -> None:
+        uri = f"https://github.com/ms-jpq/std2/archive/{sha}.tar.gz"
         try:
-            snippets: ASnips = loads(json)
-        except JSONDecodeError:
-            return {}
+            with urlopen(uri, timeout=timeout) as resp:
+                buf = resp.read()
+        except (URLError, TimeoutE):
+            pass
         else:
+            with NamedTemporaryFile() as fd:
+                fd.write(buf)
+                fd.flush()
+                unpack_archive(fd.name, extract_dir=SNIP_VARS, format="targz")
+
+    for _ in range(retries):
+        try:
+            actual = SNIPPET_HASH_ACTUAL.read_text("UTF8")
+        except FileNotFoundError:
+            actual = ""
+
+        if actual != desired:
+            await run_in_executor(download)
+
+        try:
+            json = SNIPPET_ARTIFACTS.read_text("UTF8")
+        except FileNotFoundError:
+            pass
+        else:
+            snippets: ASnips = loads(json)
             return snippets
+    else:
+        return {}
 
 
 @rpc(blocking=True)
@@ -77,7 +110,10 @@ def _load_snips(nvim: Nvim, stack: Stack) -> None:
     async def cont() -> None:
         global _EXTS, _SNIPPETS
 
-        snippets = await _load_snip_raw()
+        snippets = await _load_snip_raw(
+            stack.settings.limits.download_retries,
+            timeout=stack.settings.limits.download_timeout,
+        )
         exts: MutableMapping[str, MutableSet[str]] = {}
         s_acc: MutableMapping[str, MutableSequence[ParsedSnippet]] = {}
         for label, (ets, snips) in snippets.items():
