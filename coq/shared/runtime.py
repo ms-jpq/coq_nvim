@@ -113,66 +113,61 @@ class Supervisor:
 
     def collect(self, context: Context) -> Awaitable[Sequence[Metric]]:
         loop: AbstractEventLoop = self.nvim.loop
-        t1 = monotonic()
+        t1, done = monotonic(), False
+        timeout = (
+            self.limits.completion_manual_timeout
+            if context.manual
+            else self.limits.completion_auto_timeout
+        )
+
+        acc: MutableSequence[Metric] = []
+
+        async def supervise(worker: Worker, assoc: BaseClient) -> None:
+            instance, items = uuid4(), 0
+
+            with with_suppress(), timeit(f"WORKER -- {assoc.short_name}"):
+                await self._reviewer.s_begin(assoc, instance=instance)
+                try:
+                    async for completion in worker.work(context):
+                        if not done and completion:
+                            metric = self._reviewer.trans(
+                                instance, completion=completion
+                            )
+                            acc.append(metric)
+                            items += 1
+                        else:
+                            await sleep(0)
+                finally:
+                    elapsed = monotonic() - t1
+                    await self._reviewer.s_end(
+                        instance,
+                        interrupted=done,
+                        elapsed=elapsed,
+                        items=items,
+                    )
 
         async def cont() -> Sequence[Metric]:
-            with with_suppress():
-                with timeit("COLLECTED -- **ALL**"):
-                    assert not self._lock.locked()
-                    async with self._lock:
-                        timeout = (
-                            self.limits.completion_manual_timeout
-                            if context.manual
-                            else self.limits.completion_auto_timeout
-                        )
-
-                        acc: MutableSequence[Metric] = []
-                        done = False
-
-                        async def supervise(worker: Worker, assoc: BaseClient) -> None:
-                            with with_suppress():
-                                with timeit(f"WORKER -- {assoc.short_name}"):
-                                    instance, items = uuid4(), 0
-                                    await self._reviewer.s_begin(
-                                        assoc, instance=instance
-                                    )
-                                    try:
-                                        async for completion in worker.work(context):
-                                            if not done and completion:
-                                                metric = self._reviewer.trans(
-                                                    instance, completion=completion
-                                                )
-                                                acc.append(metric)
-                                                items += 1
-                                            else:
-                                                await sleep(0)
-                                    finally:
-                                        elapsed = monotonic() - t1
-                                        await self._reviewer.s_end(
-                                            instance,
-                                            interrupted=done,
-                                            elapsed=elapsed,
-                                            items=items,
-                                        )
-
-                        await self._reviewer.begin(context)
-                        self._tasks = tasks = tuple(
-                            loop.create_task(supervise(worker, assoc=assoc))
-                            for worker, assoc in self._workers.items()
-                        )
-                        try:
-                            if not tasks:
-                                return ()
-                            else:
-                                _, pending = await wait(tasks, timeout=timeout)
-                                if not acc:
-                                    for fut in as_completed(pending):
-                                        await fut
-                                        if acc:
-                                            break
-                                return acc
-                        finally:
-                            done = True
+            with with_suppress(), timeit("COLLECTED -- **ALL**"):
+                assert not self._lock.locked()
+                async with self._lock:
+                    await self._reviewer.begin(context)
+                    self._tasks = tasks = tuple(
+                        loop.create_task(supervise(worker, assoc=assoc))
+                        for worker, assoc in self._workers.items()
+                    )
+                    try:
+                        if not tasks:
+                            return ()
+                        else:
+                            _, pending = await wait(tasks, timeout=timeout)
+                            if not acc:
+                                for fut in as_completed(pending):
+                                    await fut
+                                    if acc:
+                                        break
+                            return acc
+                    finally:
+                        done = True
 
         self._task = loop.create_task(cont())
         return self._task
