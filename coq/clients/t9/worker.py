@@ -73,14 +73,18 @@ def _decode(client: BaseClient, reply: Any) -> Iterator[Completion]:
             yield cmp
 
 
-async def _proc() -> Process:
-    proc = await create_subprocess_exec(
-        T9_BIN,
-        stdin=PIPE,
-        stdout=PIPE,
-        stderr=DEVNULL,
-    )
-    return proc
+async def _proc() -> Optional[Process]:
+    try:
+        proc = await create_subprocess_exec(
+            T9_BIN,
+            stdin=PIPE,
+            stdout=PIPE,
+            stderr=DEVNULL,
+        )
+    except FileNotFoundError:
+        return None
+    else:
+        return proc
 
 
 class Worker(BaseWorker[BaseClient, None]):
@@ -124,20 +128,22 @@ class Worker(BaseWorker[BaseClient, None]):
             async with self._lock:
                 if not self._proc:
                     self._proc = await _proc()
-                try:
-                    assert self._proc.stdin
-                    self._proc.stdin.write(json.encode())
-                    self._proc.stdin.write(b"\n")
-                    await self._proc.stdin.drain()
-                    assert self._proc.stdout
-                    out = await self._proc.stdout.readline()
-                except (BrokenPipeError, ConnectionResetError):
-                    with suppress(ProcessLookupError):
-                        self._proc.kill()
-                    await self._proc.wait()
+                if not self._proc:
                     return None
                 else:
-                    return out.decode()
+                    assert self._proc.stdin and self._proc.stdout
+                    try:
+                        self._proc.stdin.write(json.encode())
+                        self._proc.stdin.write(b"\n")
+                        await self._proc.stdin.drain()
+                        out = await self._proc.stdout.readline()
+                    except (BrokenPipeError, ConnectionResetError):
+                        with suppress(ProcessLookupError):
+                            self._proc.kill()
+                        await self._proc.wait()
+                        return None
+                    else:
+                        return out.decode()
 
         if self._lock.locked():
             return None
