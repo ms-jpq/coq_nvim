@@ -21,7 +21,8 @@ CREATE TABLE IF NOT EXISTS tags (
   typeref   TEXT,
   scope     TEXT,
   scopeKind TEXT,
-  `access`  TEXT
+  `access`  TEXT,
+  UNIQUE (`path`, name)
 );
 CREATE INDEX IF NOT EXISTS tags_path ON tags (`path`);
 CREATE INDEX IF NOT EXISTS tags_line ON tags (line);

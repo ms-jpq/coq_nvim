@@ -19,7 +19,7 @@ WHERE
   AND
   tags.lname LIKE X_LIKE_ESC(SUBSTR(LOWER(:word), 1, :exact)) ESCAPE '!'
   AND
-  NOT INSTR(:word, tags.lname)
+  NOT INSTR(:word, tags.name)
   AND
   X_SIMILARITY(LOWER(:word), tags.lname, :look_ahead) > :cut_off
 LIMIT :limit
