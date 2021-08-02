@@ -1,7 +1,7 @@
 from collections import deque
 from itertools import chain
 from textwrap import dedent
-from typing import Iterator, Sequence, Tuple, TypedDict
+from typing import Iterator, Optional, Sequence, Tuple, TypedDict
 from uuid import uuid4
 
 from pynvim.api.common import NvimError
@@ -112,11 +112,8 @@ def _trans(new_text: str, marks: Sequence[Mark]) -> UserData:
 
 
 def _linked_marks(
-    nvim: Nvim, mark: Mark, marks: Sequence[Mark], stack: Stack, ns: int, buf: Buffer
-) -> None:
-    base_idx = mark.idx % MOD_PAD
-    ms = tuple(chain((mark,), (m for m in marks if m.idx % MOD_PAD == base_idx)))
-
+    nvim: Nvim, mark: Mark, linked: Sequence[Mark], ns: int, buf: Buffer
+) -> Optional[UserData]:
     def preview(mark: Mark) -> str:
         linesep = buf_linefeed(nvim, buf=buf)
         (r1, c1), (r2, c2) = mark.begin, mark.end
@@ -137,7 +134,7 @@ def _linked_marks(
         return linesep.join(cont())
 
     def place_holder() -> str:
-        for p in map(preview, ms):
+        for p in map(preview, linked):
             if p:
                 return p
         else:
@@ -146,20 +143,22 @@ def _linked_marks(
     try:
         resp = ask(nvim, question=LANG("expand marks"), default=place_holder())
         if resp is not None:
-            data = _trans(resp, marks=ms)
-            edit(nvim, stack=stack, state=state(), data=data, synthetic=True)
-
+            data = _trans(resp, marks=linked)
+            return data
+        else:
+            return None
     except NvimError as e:
         msg = f"""
-        bad mark locations {ms}
+        bad mark locations {linked}
 
         {e}
         """
         log.warn("%s", dedent(msg))
+        return None
     finally:
         # TODO -- Need to delete all marks due to extmark not shifting
         # Need to translate extmarks to correct location
-        for mark in chain((mark,), marks):
+        for mark in chain((mark,), linked):
             nvim.api.buf_del_extmark(buf, ns, mark.idx)
 
 
@@ -172,10 +171,21 @@ def nav_mark(nvim: Nvim, stack: Stack) -> None:
 
     if marks:
         mark = marks.popleft()
-        if mark.idx <= MOD_PAD:
-            _single_mark(nvim, mark=mark, marks=marks, ns=ns, win=win, buf=buf)
+        base_idx = mark.idx % MOD_PAD
+        linked = tuple(
+            chain((mark,), (m for m in marks if m.idx % MOD_PAD == base_idx))
+        )
+        single = lambda: _single_mark(
+            nvim, mark=mark, marks=marks, ns=ns, win=win, buf=buf
+        )
+        if not linked:
+            single()
         else:
-            _linked_marks(nvim, mark=mark, marks=marks, ns=ns, stack=stack, buf=buf)
+            data = _linked_marks(nvim, mark=mark, linked=linked, ns=ns, buf=buf)
+            if data:
+                edit(nvim, stack=stack, state=state(), data=data, synthetic=True)
+            else:
+                single()
 
     else:
         msg = LANG("no more marks")
