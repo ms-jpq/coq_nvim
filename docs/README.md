@@ -12,6 +12,14 @@ Use `:COQhelp {topic}` or `:COQhelp {topic} --web` to visit a particular topic f
 
 - [:COQhelp keybind](https://github.com/ms-jpq/coq_nvim/tree/coq/docs/KEYBIND.md)
 
+- [:COQhelp fuzzy](https://github.com/ms-jpq/coq_nvim/tree/coq/docs/FUZZY.md)
+
+- [:COQhelp display](https://github.com/ms-jpq/coq_nvim/tree/coq/docs/DISPLAY.md)
+
+- [:COQhelp sources](https://github.com/ms-jpq/coq_nvim/tree/coq/docs/SOURCES.md)
+
+- [:COQhelp misc](https://github.com/ms-jpq/coq_nvim/tree/coq/docs/MISC.md)
+
 - [:COQhelp performance](https://github.com/ms-jpq/coq_nvim/tree/coq/docs/PERFORMANCE.md)
 
 - [:COQhelp statistics](https://github.com/ms-jpq/coq_nvim/tree/coq/docs/STATISTICS.md)
@@ -31,3 +39,7 @@ Launch `coq.nvim` with a greeting.
 Dependencies will be privately installed inside `coq.nvim`'s git root under `.vars/runtime`.
 
 Running `rm -rf` on `coq_nvim/` will cleanly remove everything `coq.nvim` installs to your local system.
+
+### `COQstats`
+
+Launch a window and show performance data.

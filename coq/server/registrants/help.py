@@ -12,14 +12,22 @@ from std2.types import never
 
 from ...consts import (
     MD_CONF,
+    MD_DISPLAY,
+    MD_FUZZY,
     MD_KEYBIND,
+    MD_MISC,
     MD_PREF,
     MD_README,
+    MD_SOURCES,
     MD_STATISTICS,
     URI_CONF,
+    URI_DISPLAY,
+    URI_FUZZY,
     URI_KEYBIND,
+    URI_MISC,
     URI_PREF,
     URI_README,
+    URI_SOURCES,
     URI_STATISTICS,
 )
 from ...registry import rpc
@@ -30,6 +38,10 @@ class _Topics(Enum):
     index = auto()
     config = auto()
     keybind = auto()
+    fuzzy = auto()
+    display = auto()
+    sources = auto()
+    misc = auto()
     stats = auto()
     performance = auto()
 
@@ -41,6 +53,14 @@ def _directory(topic: _Topics) -> Tuple[Path, str]:
         return MD_CONF, URI_CONF
     elif topic is _Topics.keybind:
         return MD_KEYBIND, URI_KEYBIND
+    elif topic is _Topics.fuzzy:
+        return MD_FUZZY, URI_FUZZY
+    elif topic is _Topics.display:
+        return MD_DISPLAY, URI_DISPLAY
+    elif topic is _Topics.sources:
+        return MD_SOURCES, URI_SOURCES
+    elif topic is _Topics.misc:
+        return MD_MISC, URI_MISC
     elif topic is _Topics.stats:
         return MD_STATISTICS, URI_STATISTICS
     elif topic is _Topics.performance:
