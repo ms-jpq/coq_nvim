@@ -185,6 +185,14 @@ There is built-in [help command](https://github.com/ms-jpq/coq_nvim/tree/coq/doc
 :COQhelp [--web] [topic]
 ```
 
+## If you like this...
+
+Also check out
+
+- [`sad`](https://github.com/ms-jpq/sad), its a modern `sed` that does previews with syntax highlighting, and lets you pick and choose which chunks to edit.
+
+- [`CHADTree`](https://github.com/ms-jpq/chadtree), its better than NERDTree.
+
 ## Special Thanks & Acknowledgements
 
 The snippets are compiled from the following open source projects:
