@@ -42,13 +42,15 @@ I did however added in client side incremental background caching to LSP servers
 
 ![fuzz_search.img]()
 
-### Documentation
+### Preview
 
 - View documentation in big buffer
 
 - Auto open preview on **side with most space**
 
 - [Customizable location](https://github.com/ms-jpq/coq_nvim/tree/coq/docs/DISPLAY.md): n, s, w, e
+
+- Ubiquitous: Tags, LSP, Paths, Snippets
 
 ![doc_popup.img]()
 
