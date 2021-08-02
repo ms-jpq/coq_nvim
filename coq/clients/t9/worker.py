@@ -126,6 +126,14 @@ class Worker(BaseWorker[BaseClient, None]):
         elif self._installed and not installed:
             await awrite(self._supervisor.nvim, LANG("end T9 download"))
 
+    async def _clean(self) -> None:
+        proc = self._proc
+        if proc:
+            self._proc = None
+            with suppress(ProcessLookupError):
+                proc.kill()
+            await proc.wait()
+
     async def _comm(self, cwd: PurePath, json: str) -> Optional[str]:
         async def cont() -> Optional[str]:
             async with self._lock:
@@ -141,10 +149,7 @@ class Worker(BaseWorker[BaseClient, None]):
                         await self._proc.stdin.drain()
                         out = await self._proc.stdout.readline()
                     except ConnectionError:
-                        with suppress(ProcessLookupError):
-                            self._proc.kill()
-                        await self._proc.wait()
-                        return None
+                        return await self._clean()
                     else:
                         return out.decode()
 
@@ -154,10 +159,8 @@ class Worker(BaseWorker[BaseClient, None]):
             return await shield(cont())
 
     async def work(self, context: Context) -> AsyncIterator[Completion]:
-        if self._cwd != context.cwd and self._proc:
-            with suppress(ProcessLookupError):
-                self._proc.kill()
-            await self._proc.wait()
+        if self._cwd != context.cwd:
+            await self._clean()
 
         if self._installed:
             req = _encode(
