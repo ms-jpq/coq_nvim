@@ -1,5 +1,6 @@
 from asyncio import Semaphore, gather
 from contextlib import suppress
+from multiprocessing import cpu_count
 from pathlib import Path
 from typing import Any, Literal, MutableMapping, MutableSequence, Tuple
 from urllib.parse import urlparse
@@ -18,15 +19,13 @@ from ..snippets.parsers.parser import ParseError
 from ..snippets.types import ASnips, ParsedSnippet
 from .types import Compilation
 
-_SEM = Semaphore(value=2)
-
 
 def _p_name(uri: str) -> Path:
     return TMP_DIR / Path(urlparse(uri).path).name
 
 
-async def _git_pull(uri: str) -> None:
-    async with _SEM:
+async def _git_pull(sem: Semaphore, uri: str) -> None:
+    async with sem:
         location = _p_name(uri)
         if location.is_dir():
             await call(
@@ -56,7 +55,10 @@ async def load() -> ASnips:
     TMP_DIR.mkdir(parents=True, exist_ok=True)
     yaml = safe_load(COMPILATION_YML.read_bytes())
     specs: Compilation = new_decoder(Compilation)(yaml)
-    await gather(*map(_git_pull, specs.git))
+
+    sem = Semaphore(value=cpu_count())
+    await gather(*(_git_pull(sem, uri=uri) for uri in specs.git))
+
     parsed = load_from_paths(
         lsp={str(path): TMP_DIR / path for path in specs.paths.lsp},
         neosnippet={str(path): TMP_DIR / path for path in specs.paths.neosnippet},
