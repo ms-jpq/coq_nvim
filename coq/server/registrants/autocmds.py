@@ -1,4 +1,5 @@
 from asyncio import Handle, get_running_loop, sleep
+from asyncio.locks import Lock
 from asyncio.tasks import gather
 from itertools import repeat
 from json import loads
@@ -80,6 +81,7 @@ async def _load_snip_raw(paths: Iterable[Path]) -> ASnips:
     return await run_in_executor(cont)
 
 
+_LOCK = Lock()
 _EXTS: Mapping[str, AbstractSet[str]] = {}
 _SNIPPETS: Mapping[str, Sequence[ParsedSnippet]] = {}
 _SEEN_SNIP_TYPES: MutableSet[str] = set()
@@ -93,29 +95,28 @@ def _load_snips(nvim: Nvim, stack: Stack) -> None:
 
     async def cont() -> None:
         global _EXTS, _SNIPPETS
+        async with _LOCK:
+            snippets = await _load_snip_raw(paths)
+            if not snippets:
+                for _ in range(9):
+                    await sleep(0)
+                await awrite(nvim, LANG("no snippets found"))
 
-        snippets = await _load_snip_raw(paths)
-        _SEEN_SNIP_TYPES.clear()
-        if not snippets:
-            for _ in range(9):
-                await sleep(0)
-            await awrite(nvim, LANG("no snippets found"))
+            exts: MutableMapping[str, MutableSet[str]] = {}
+            s_acc: MutableMapping[str, MutableSequence[ParsedSnippet]] = {}
+            for label, (ets, snips) in snippets.items():
+                if not srcs or label in srcs:
+                    for src, dests in ets.items():
+                        acc = exts.setdefault(src, set())
+                        for d in dests:
+                            acc.add(d)
 
-        exts: MutableMapping[str, MutableSet[str]] = {}
-        s_acc: MutableMapping[str, MutableSequence[ParsedSnippet]] = {}
-        for label, (ets, snips) in snippets.items():
-            if not srcs or label in srcs:
-                for src, dests in ets.items():
-                    acc = exts.setdefault(src, set())
-                    for d in dests:
-                        acc.add(d)
+                    for ext, snps in snips.items():
+                        ac = s_acc.setdefault(ext, [])
+                        ac.extend(snps)
 
-                for ext, snps in snips.items():
-                    ac = s_acc.setdefault(ext, [])
-                    ac.extend(snps)
-
-        _EXTS, _SNIPPETS = exts, s_acc
-        await stack.sdb.add_exts(exts)
+            _EXTS, _SNIPPETS = exts, s_acc
+            await stack.sdb.add_exts(exts)
 
     go(nvim, aw=cont())
 
@@ -124,29 +125,30 @@ atomic.exec_lua(f"{_load_snips.name}()", ())
 
 
 async def _add_snips(ft: str, db: SDB) -> None:
-    if ft not in _SEEN_SNIP_TYPES:
-        _SEEN_SNIP_TYPES.add(ft)
+    async with _LOCK:
+        if ft not in _SEEN_SNIP_TYPES:
+            _SEEN_SNIP_TYPES.add(ft)
 
-        def cont() -> Iterator[Tuple[str, ParsedSnippet]]:
-            stack, seen = [ft], {ft}
-            while stack:
-                ext = stack.pop()
-                for et in _EXTS.get(ft, ()):
-                    if et not in seen:
-                        seen.add(et)
-                        stack.append(et)
+            def cont() -> Iterator[Tuple[str, ParsedSnippet]]:
+                stack, seen = [ft], {ft}
+                while stack:
+                    ext = stack.pop()
+                    for et in _EXTS.get(ft, ()):
+                        if et not in seen:
+                            seen.add(et)
+                            stack.append(et)
 
-                snippets = _SNIPPETS.get(ext, ())
-                snips: Sequence[ParsedSnippet] = _DECODER(snippets)
-                yield from zip(repeat(ext), snips)
+                    snippets = _SNIPPETS.get(ext, ())
+                    snips: Sequence[ParsedSnippet] = _DECODER(snippets)
+                    yield from zip(repeat(ext), snips)
 
-        snips: MutableMapping[str, MutableSequence[ParsedSnippet]] = {}
+            snips: MutableMapping[str, MutableSequence[ParsedSnippet]] = {}
 
-        for filetype, snip in cont():
-            acc = snips.setdefault(filetype, [])
-            acc.append(snip)
+            for filetype, snip in cont():
+                acc = snips.setdefault(filetype, [])
+                acc.append(snip)
 
-        await db.populate(snips)
+            await db.populate(snips)
 
 
 @rpc(blocking=True)
