@@ -81,7 +81,7 @@ async def _load_snip_raw(paths: Iterable[Path]) -> ASnips:
     return await run_in_executor(cont)
 
 
-_LOCK = Lock()
+_LOCK: Optional[Lock] = None
 _EXTS: Mapping[str, AbstractSet[str]] = {}
 _SNIPPETS: Mapping[str, Sequence[ParsedSnippet]] = {}
 _SEEN_SNIP_TYPES: MutableSet[str] = set()
@@ -94,7 +94,10 @@ def _load_snips(nvim: Nvim, stack: Stack) -> None:
     paths = tuple(map(Path, nvim.list_runtime_paths()))
 
     async def cont() -> None:
-        global _EXTS, _SNIPPETS
+        global _LOCK, _EXTS, _SNIPPETS
+        assert not _LOCK
+        _LOCK = Lock()
+
         async with _LOCK:
             snippets = await _load_snip_raw(paths)
             if not snippets:
@@ -125,6 +128,9 @@ atomic.exec_lua(f"{_load_snips.name}()", ())
 
 
 async def _add_snips(ft: str, db: SDB) -> None:
+    while not _LOCK:
+        await sleep(0)
+
     async with _LOCK:
         if ft not in _SEEN_SNIP_TYPES:
             _SEEN_SNIP_TYPES.add(ft)
