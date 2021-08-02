@@ -49,7 +49,8 @@ async def _show_file(path: Path, ellipsis: str, height: int) -> Doc:
     def lines() -> Iterator[str]:
         with path.open("r") as fd:
             lines = fd.readlines(_KB)
-        for idx, line in enumerate(islice(lines, height), start=1):
+        lit = islice((line.rstrip() for line in lines), height)
+        for idx, line in enumerate(lit, start=1):
             if idx >= height and len(lines) > height:
                 yield ellipsis
             else:
