@@ -15,17 +15,17 @@ def _git_identity() -> None:
     check_call(("git", "config", "--global", "user.name", username))
 
 
-def _git_clone(path: Path) -> None:
+def _git_clone(path: Path, repo_name: str) -> None:
     if path.is_dir():
         rmtree(path)
 
     token = environ["CI_TOKEN"]
-    uri = f"https://ms-jpq:{token}@github.com/ms-jpq/coq.artifacts.git"
+    uri = f"https://ms-jpq:{token}@github.com/ms-jpq/{repo_name}.git"
     check_call(("git", "clone", uri, str(path)))
 
 
-def _build() -> None:
-    check_call(("python3", "-m", "coq.ci"), cwd=_TOP_LV)
+def _build(cwd: Path) -> None:
+    check_call(("python3", "-m", "coq.ci"), cwd=cwd)
 
 
 def _git_alert(cwd: Path) -> None:
@@ -56,9 +56,13 @@ def _git_alert(cwd: Path) -> None:
 
 
 def main() -> None:
-    cwd = _TOP_LV / ".vars" / "snippets"
+    coq = _TOP_LV / "vars" / "coq"
+    snips = coq / ".vars" / "snippets"
     _git_identity()
-    _git_clone(cwd)
-    _build()
-    _git_alert(_TOP_LV)
-    _git_alert(cwd)
+
+    _git_clone(coq, repo_name="coq_nvim")
+    _git_clone(snips, repo_name="coq.artifacts")
+
+    _build(coq)
+    _git_alert(coq)
+    _git_alert(snips)
