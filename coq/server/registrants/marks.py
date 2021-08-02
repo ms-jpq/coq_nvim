@@ -175,9 +175,10 @@ def nav_mark(nvim: Nvim, stack: Stack) -> None:
         linked = tuple(
             chain((mark,), (m for m in marks if m.idx % MOD_PAD == base_idx))
         )
-        single = lambda: _single_mark(
-            nvim, mark=mark, marks=marks, ns=ns, win=win, buf=buf
-        )
+
+        def single() -> None:
+            _single_mark(nvim, mark=mark, marks=marks, ns=ns, win=win, buf=buf)
+
         if not linked:
             single()
         else:
