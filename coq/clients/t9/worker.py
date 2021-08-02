@@ -4,13 +4,14 @@ from asyncio.subprocess import Process
 from contextlib import suppress
 from itertools import chain
 from json import dumps, loads
+from json.decoder import JSONDecodeError
 from os import X_OK, access, linesep
 from subprocess import DEVNULL, PIPE
 from typing import Any, AsyncIterator, Iterator, Optional
 
 from pynvim_pp.lib import awrite, go
 from pynvim_pp.logging import log
-from std2.pickle import new_decoder, new_encoder
+from std2.pickle import DecodeError, new_decoder, new_encoder
 
 from ...lang import LANG
 from ...shared.runtime import Supervisor
@@ -47,26 +48,29 @@ def _encode(options: Options, context: Context, limit: int) -> Any:
 
 
 def _decode(client: BaseClient, reply: Any) -> Iterator[Completion]:
-    resp: Response = _DECODER(reply)
-
-    for result in resp.results:
-        edit = ContextualEdit(
-            old_prefix=resp.old_prefix,
-            new_prefix=result.new_prefix,
-            old_suffix=result.old_suffix,
-            new_text=result.new_prefix + result.new_suffix,
-        )
-        label = (result.new_prefix.splitlines() or ("",))[-1] + (
-            result.new_suffix.splitlines() or ("",)
-        )[0]
-        cmp = Completion(
-            source=client.short_name,
-            tie_breaker=client.tie_breaker,
-            label=label,
-            sort_by=edit.new_text,
-            primary_edit=edit,
-        )
-        yield cmp
+    try:
+        resp: Response = _DECODER(reply)
+    except DecodeError as e:
+        log.warn("%s", e)
+    else:
+        for result in resp.results:
+            edit = ContextualEdit(
+                old_prefix=resp.old_prefix,
+                new_prefix=result.new_prefix,
+                old_suffix=result.old_suffix,
+                new_text=result.new_prefix + result.new_suffix,
+            )
+            label = (result.new_prefix.splitlines() or ("",))[-1] + (
+                result.new_suffix.splitlines() or ("",)
+            )[0]
+            cmp = Completion(
+                source=client.short_name,
+                tie_breaker=client.tie_breaker,
+                label=label,
+                sort_by=edit.new_text,
+                primary_edit=edit,
+            )
+            yield cmp
 
 
 async def _proc() -> Process:
@@ -138,7 +142,12 @@ class Worker(BaseWorker[BaseClient, None]):
                 limit=self._supervisor.options.max_results,
             )
             json = dumps(req, check_circular=False, ensure_ascii=False)
-            json = await self._comm(json)
-            reply = loads(json or "{}")
-            for comp in _decode(self._options, reply=reply):
-                yield comp
+            reply = await self._comm(json)
+            if reply:
+                try:
+                    resp = loads(reply)
+                except JSONDecodeError as e:
+                    log.warn("%s", e)
+                else:
+                    for comp in _decode(self._options, reply=resp):
+                        yield comp
