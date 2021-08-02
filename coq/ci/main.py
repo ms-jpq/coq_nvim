@@ -1,18 +1,13 @@
-from hashlib import sha256
 from json import dumps
 from typing import Any
 
 from std2.tree import recur_sort
 
-from ..consts import (
-    LSP_ARTIFACTS,
-    SNIP_VARS,
-    SNIPPET_ARTIFACTS,
-    SNIPPET_HASH_ACTUAL,
-    SNIPPET_HASH_DESIRED,
-)
+from ..consts import LSP_ARTIFACTS, VARS
 from .load import load_parsable
 from .lsp import lsp
+
+_SNIPPET_ARTIFACTS = VARS / "snippets"
 
 
 def _json(o: Any) -> str:
@@ -29,10 +24,5 @@ async def main() -> None:
 
     j_snippets = _json(snippets)
     bj_snippets = j_snippets.encode()
-    hashed = sha256(bj_snippets).hexdigest()
 
-    SNIP_VARS.mkdir(parents=True, exist_ok=True)
-
-    SNIPPET_ARTIFACTS.write_bytes(bj_snippets)
-    SNIPPET_HASH_ACTUAL.write_text(hashed)
-    SNIPPET_HASH_DESIRED.write_text(hashed)
+    _SNIPPET_ARTIFACTS.write_bytes(bj_snippets)

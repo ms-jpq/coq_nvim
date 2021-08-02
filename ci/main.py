@@ -28,7 +28,7 @@ def _build(cwd: Path) -> None:
     check_call(("python3", "-m", "coq.ci"), cwd=cwd)
 
 
-def _git_alert(cwd: Path) -> bool:
+def _git_alert(cwd: Path) -> None:
     prefix = "ci"
     check_call(("git", "fetch"), cwd=cwd)
     remote_brs = check_output(("git", "branch", "--remotes"), text=True, cwd=cwd)
@@ -53,22 +53,11 @@ def _git_alert(cwd: Path) -> bool:
         check_call(("git", "add", "."), cwd=cwd)
         check_call(("git", "commit", "-m", f"update_artifacts: {time}"), cwd=cwd)
         check_call(("git", "push", "--set-upstream", "origin", brname), cwd=cwd)
-        return True
-    else:
-        return False
 
 
 def main() -> None:
-    sha_lock = _TOP_LV / "artifacts" / "snip.lock"
     snips = _TOP_LV / ".vars" / "snippets"
-
     _git_identity()
-
     _git_clone(snips, repo_name="coq.artifacts")
-
     _build(_TOP_LV)
-    changed = _git_alert(snips)
-    if changed:
-        out = check_output(("git", "rev-parse", "HEAD"), cwd=snips)
-        sha_lock.write_bytes(out.rstrip())
-    _git_alert(_TOP_LV)
+    _git_alert(snips)

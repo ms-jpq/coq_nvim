@@ -23,11 +23,11 @@
 "file binary": |-
   [<binary>]
 
-"begin snip download": |-
-  ⏳ Downloading snippets ...
+"begin T9 download": |-
+  ⏳ Downloading T9 ...
 
-"end snip download": |-
-  ✅ ${count} snippets downloaded
+"end T9 download": |-
+  ✅ T9 download success!
 
-"failed snip download": |-
-  ❌ 0 snippets downloaded
+"failed T9 download": |-
+  ❌ T9 download failed!

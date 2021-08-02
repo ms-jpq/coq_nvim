@@ -1,14 +1,11 @@
 from asyncio import Handle, get_running_loop
-from contextlib import suppress
 from itertools import repeat
 from json import loads
 from json.decoder import JSONDecodeError
 from pathlib import Path
-from shutil import rmtree, unpack_archive
-from socket import timeout as TimeoutE
-from tempfile import NamedTemporaryFile, TemporaryDirectory
 from typing import (
     AbstractSet,
+    Iterable,
     Iterator,
     Mapping,
     MutableMapping,
@@ -18,7 +15,6 @@ from typing import (
     Sequence,
     Tuple,
 )
-from urllib.error import URLError
 
 from pynvim.api.nvim import Nvim
 from pynvim_pp.api import buf_filetype, cur_buf, get_cwd, win_close
@@ -27,15 +23,7 @@ from pynvim_pp.lib import async_call, awrite, go
 from pynvim_pp.logging import log
 from std2.asyncio import run_in_executor
 from std2.pickle import new_decoder
-from std2.urllib import urlopen
 
-from ...consts import (
-    SNIP_VARS,
-    SNIPPET_ARTIFACTS,
-    SNIPPET_GIT_SHA,
-    SNIPPET_HASH_ACTUAL,
-    SNIPPET_HASH_DESIRED,
-)
 from ...lang import LANG
 from ...registry import atomic, autocmd, rpc
 from ...shared.timeit import timeit
@@ -70,76 +58,25 @@ def _new_cwd(nvim: Nvim, stack: Stack) -> None:
 autocmd("DirChanged") << f"lua {_new_cwd.name}()"
 
 
-async def _load_snip_raw(nvim: Nvim, retries: int, timeout: float) -> ASnips:
-    desired, sha = SNIPPET_HASH_DESIRED.read_text(), SNIPPET_GIT_SHA.read_text()
-
-    def download() -> None:
-        uri = f"https://github.com/ms-jpq/coq.artifacts/archive/{sha}.tar.gz"
-        try:
-            with urlopen(uri, timeout=timeout) as resp:
-                buf = resp.read()
-        except (URLError, TimeoutE) as e:
-            log.warn("%s", e)
-        else:
-            with NamedTemporaryFile() as fd, TemporaryDirectory() as tmp:
-                fd.write(buf)
-                fd.flush()
-                unpack_archive(fd.name, extract_dir=tmp, format="gztar")
-                with suppress(FileNotFoundError):
-                    rmtree(SNIP_VARS)
-                for p in Path(tmp).iterdir():
-                    p.replace(SNIP_VARS)
-                    break
-
-    def load() -> ASnips:
-        try:
-            json = SNIPPET_ARTIFACTS.read_text("UTF8")
-        except FileNotFoundError:
-            return {}
-        else:
+async def _load_snip_raw(paths: Iterable[Path]) -> ASnips:
+    def cont() -> ASnips:
+        for path in paths:
+            candidate = path / "coq+snippets.json"
             try:
-                snippets: ASnips = loads(json)
-            except JSONDecodeError as e:
-                log.warn("%s", e)
-                with suppress(FileNotFoundError):
-                    rmtree(SNIP_VARS)
-                return {}
+                json = candidate.read_text("UTF8")
+            except (FileNotFoundError, PermissionError):
+                pass
             else:
-                return snippets
-
-    async def cont() -> ASnips:
-        downloaded = False
-        for _ in range(retries):
-            try:
-                actual = SNIPPET_HASH_ACTUAL.read_text("UTF8")
-            except FileNotFoundError:
-                actual = ""
-
-            if actual != desired:
-                await run_in_executor(download)
-                downloaded = True
-            else:
-                snippets = load()
-                if snippets:
-                    if downloaded:
-                        count = sum(
-                            len(v) for _, val in snippets.values() for v in val.values()
-                        )
-                        await awrite(nvim, LANG("end snip download", count=count))
-                    return snippets
+                try:
+                    snips: ASnips = loads(json)
+                except JSONDecodeError as e:
+                    log.warn("%s", e)
+                else:
+                    return snips
         else:
             return {}
 
-    snips = load()
-    if not snips:
-        await awrite(nvim, LANG("begin snip download"))
-        snips = await cont()
-        if not snips:
-            await awrite(nvim, LANG("failed snip download"), error=True)
-        return snips
-    else:
-        go(nvim, aw=cont())
-        return snips
+    return await run_in_executor(cont)
 
 
 _EXTS: Mapping[str, AbstractSet[str]] = {}
@@ -150,17 +87,17 @@ _SEEN_SNIP_TYPES: MutableSet[str] = set()
 @rpc(blocking=True)
 def _load_snips(nvim: Nvim, stack: Stack) -> None:
     srcs = stack.settings.clients.snippets.sources
+    paths = tuple(map(Path, nvim.list_runtime_paths()))
 
     async def cont() -> None:
         global _EXTS, _SNIPPETS
 
-        with timeit("Download :: snips"):
-            snippets = await _load_snip_raw(
-                nvim,
-                retries=stack.settings.limits.download_retries,
-                timeout=stack.settings.limits.download_timeout,
-            )
+        with timeit("load snips", force=True):
+            snippets = await _load_snip_raw(paths)
             _SEEN_SNIP_TYPES.clear()
+
+        if not snippets:
+            await awrite(nvim, LANG("no snippets loaded"), error=True)
 
         exts: MutableMapping[str, MutableSet[str]] = {}
         s_acc: MutableMapping[str, MutableSequence[ParsedSnippet]] = {}
