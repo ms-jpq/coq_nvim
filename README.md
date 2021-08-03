@@ -76,7 +76,7 @@ I did however added in client side incremental background caching to LSP servers
 local lsp = require "lspconfig"
 
 lsp.<server>.setup(<stuff...>)                            -- before
-lsp.<server>.setup(coq.lsp_ensure_capacities(<stuff...>)) -- after
+lsp.<server>.setup(coq.lsp_ensure_capabilities(<stuff...>)) -- after
 ```
 
 ### Snippets
