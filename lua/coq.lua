@@ -131,8 +131,9 @@ return function(args)
           }
         }
       }
+      local maps = cfg.capabilities and {spec2} or {spec1, spec2}
       local new =
-        vim.tbl_deep_extend("force", cfg or vim.empty_dict(), spec1, spec2)
+        vim.tbl_deep_extend("force", cfg or vim.empty_dict(), unpack(maps))
       return new
     end
   end
