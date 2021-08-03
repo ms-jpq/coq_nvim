@@ -3,7 +3,8 @@ from enum import Enum, auto
 from itertools import chain
 from typing import AsyncIterator, Iterator, MutableSequence, Optional, Tuple
 
-from std2.aitertools import anext, to_async
+from std2 import anext
+from std2.aitertools import to_async
 from std2.asyncio import pure
 from std2.itertools import chunk
 

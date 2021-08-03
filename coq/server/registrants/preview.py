@@ -32,8 +32,8 @@ from pynvim_pp.api import (
 )
 from pynvim_pp.lib import async_call, go
 from pynvim_pp.preview import buf_set_preview, set_preview
+from std2 import clamp
 from std2.asyncio import cancel
-from std2.ordinal import clamp
 from std2.pickle import DecodeError, new_decoder
 from std2.string import removeprefix
 
