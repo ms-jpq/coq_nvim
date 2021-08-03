@@ -22,9 +22,9 @@ More details at the [PERFORMANCE.md](https://github.com/ms-jpq/coq_nvim/tree/coq
 
 - Results on **every keystroke**
 
-- `LSP` can be much slower, nothing I can do. I didn't write the servers.
+`LSP` and `TabNine` can be slower, nothing I can do. I didn't write the servers.
 
-I did however added in client side incremental background caching to LSP servers.
+I did however added client side incremental background caching to LSP servers.
 
 ![fast_af.img]()
 
@@ -117,6 +117,14 @@ apt remove  ctags              # bad
 apt install universal-ctags    # good
 ```
 
+### Paths
+
+- **Preview contents**
+
+- Relative to both `cwd` and file path
+
+![paths.img]()
+
 ### Buffers
 
 - **Real time** completion
@@ -138,14 +146,6 @@ Treesitter is stil slow and prone to crashing.
 The promise is that Treesitter will have real time parsing on every keystroke, but its actually too slow on big files.
 
 The Treesitter source only parses on `Idle` and `InsertEnter` for now.
-
-### Paths
-
-- **Preview contents**
-
-- Relative to both `cwd` and file path
-
-![paths.img]()
 
 ### Tmux
 
