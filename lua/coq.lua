@@ -116,8 +116,11 @@ return function(args)
     set_coq_call("COQhelp")
     vim.api.nvim_command [[command! -nargs=* COQhelp lua coq.COQhelp(<f-args>)]]
 
-    coq.lsp_ensure_capacities = function(cfg)
-      local spec = {
+    coq.lsp_ensure_capabilities = function(cfg)
+      local spec1 = {
+        capabilities = vim.lsp.protocol.make_client_capabilities()
+      }
+      local spec2 = {
         capabilities = {
           textDocument = {
             completion = {
@@ -128,7 +131,8 @@ return function(args)
           }
         }
       }
-      local new = vim.tbl_deep_extend("force", cfg or vim.empty_dict(), spec)
+      local new =
+        vim.tbl_deep_extend("force", cfg or vim.empty_dict(), spec1, spec2)
       return new
     end
   end
