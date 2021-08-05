@@ -109,8 +109,7 @@ if command == "deps":
             ---
             You can now use :COQnow
             """
-            msg = dedent(msg)
-            print(msg, file=stderr)
+            print(dedent(msg), file=stderr)
 
 elif command == "run":
     try:
