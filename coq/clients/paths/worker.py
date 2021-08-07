@@ -60,7 +60,8 @@ def _sort_by(segment: str, unifying_chars: AbstractSet[str]) -> str:
                 yield char
                 seen_syms = True
 
-    return "".join(reversed(tuple(cont())))
+    sort_by = "".join(reversed(tuple(cont())))
+    return sort_by
 
 
 def parse(
