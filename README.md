@@ -18,6 +18,8 @@ More details at the [PERFORMANCE.md](https://github.com/ms-jpq/coq_nvim/tree/coq
 
 ## Features
 
+**Note: Due to compression, the frame shown in gifs are _slower_**
+
 ### Fast as fuck
 
 - Results on **every keystroke**
