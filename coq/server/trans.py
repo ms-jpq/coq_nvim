@@ -3,7 +3,7 @@ from itertools import chain
 from locale import strxfrm
 from typing import Any, Callable, Iterable, Iterator, MutableSet, Sequence
 
-from std2.ordinal import clamp
+from std2 import clamp
 
 from ..shared.parse import display_width, lower
 from ..shared.runtime import Metric

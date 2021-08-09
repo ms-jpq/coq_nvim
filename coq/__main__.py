@@ -2,8 +2,8 @@ from argparse import ArgumentParser, Namespace
 from os import name
 from pathlib import Path
 from shlex import join
-from subprocess import DEVNULL, run
-from sys import executable, exit, stderr, stdout, version_info
+from subprocess import DEVNULL, STDOUT, run
+from sys import executable, exit, stderr, version_info
 from textwrap import dedent
 from typing import Union
 
@@ -71,7 +71,7 @@ if command == "deps":
             ),
             cwd=TOP_LEVEL,
             stdin=DEVNULL,
-            stderr=stdout,
+            stderr=STDOUT,
         )
         if proc.returncode:
             print("Installation failed, check :message", file=stderr)
@@ -89,7 +89,7 @@ if command == "deps":
             ),
             cwd=TOP_LEVEL,
             stdin=DEVNULL,
-            stderr=stdout,
+            stderr=STDOUT,
         )
         if proc.returncode:
             print("Installation failed, check :message", file=stderr)
@@ -98,7 +98,7 @@ if command == "deps":
             ("git", "submodule", "update", "--recursive"),
             cwd=TOP_LEVEL,
             stdin=DEVNULL,
-            stderr=stdout,
+            stderr=STDOUT,
         )
         if proc.returncode:
             print("Installation failed, check :message", file=stderr)
@@ -109,8 +109,7 @@ if command == "deps":
             ---
             You can now use :COQnow
             """
-            msg = dedent(msg)
-            print(msg, file=stderr)
+            print(dedent(msg), file=stderr)
 
 elif command == "run":
     try:

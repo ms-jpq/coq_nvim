@@ -11,7 +11,7 @@ from urllib.error import URLError
 
 from pynvim_pp.logging import log
 from std2.asyncio import run_in_executor
-from std2.os import OS, os
+from std2.platform import OS, os
 from std2.urllib import urlopen
 
 from ...consts import CLIENTS_DIR
