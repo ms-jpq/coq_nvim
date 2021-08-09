@@ -137,7 +137,7 @@ apt install universal-ctags    # good
 
 - Unicode ready
 
-![tree_sitter.img]()
+- I dont have a picture, its boring
 
 **Treesitter is still unstable in 0.5**
 
