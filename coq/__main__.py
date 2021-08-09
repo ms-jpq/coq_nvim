@@ -1,4 +1,6 @@
 from argparse import ArgumentParser, Namespace
+from concurrent.futures import ThreadPoolExecutor
+from multiprocessing import cpu_count
 from os import name
 from pathlib import Path
 from shlex import join
@@ -144,8 +146,10 @@ elif command == "run":
         from .client import CoqClient
 
         nvim = attach("socket", path=args.socket)
-        code = run_client(nvim, client=CoqClient())
-        exit(code)
+
+        with ThreadPoolExecutor(max_workers=min(16, cpu_count() + 10)) as pool:
+            code = run_client(nvim, pool=pool, client=CoqClient(pool=pool))
+            exit(code)
 
 else:
     assert False

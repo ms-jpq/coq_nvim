@@ -1,8 +1,7 @@
 from asyncio.events import AbstractEventLoop
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import Executor
 from logging import DEBUG as DEBUG_LV
 from logging import INFO
-from multiprocessing import cpu_count
 from queue import SimpleQueue
 from string import Template
 from sys import stderr
@@ -39,8 +38,8 @@ def _set_debug() -> None:
 
 
 class CoqClient(Client):
-    def __init__(self) -> None:
-        self._pool = ThreadPoolExecutor(max_workers=min(16, cpu_count() + 8))
+    def __init__(self, pool: Executor) -> None:
+        self._pool = pool
         self._handlers: MutableMapping[str, RpcCallable] = {}
         self._event_queue: SimpleQueue = SimpleQueue()
         self._stack: Optional[Stack] = None
