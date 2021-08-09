@@ -139,13 +139,11 @@ apt install universal-ctags    # good
 
 - I dont have a picture, its boring
 
-**Treesitter is still unstable in 0.5**
-
-Treesitter is stil slow and prone to crashing.
+**Treesitter is still unstable in 0.5: slow and crash prone**
 
 The promise is that Treesitter will have real time parsing on every keystroke, but its actually too slow on big files.
 
-The Treesitter source only parses on `Idle` and `InsertEnter` for now.
+The Treesitter source only parses on `Idle` events due to unrealized performace promises.
 
 ### Tmux
 
