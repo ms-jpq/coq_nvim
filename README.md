@@ -159,7 +159,11 @@ _T9 is disabled by default, I might remove it, if they do not improve the CPU us
 
 ### Validating config parser
 
-- Prevents typos & type errors
+- Prevents typos & type errors in your config
+
+Here I make a type error on purpose inputting `string` instead of an `integer`.
+
+![conf_demo.img](https://raw.githubusercontent.com/ms-jpq/coq.artifacts/artifacts/preview/conf.png)
 
 ## Install
 
