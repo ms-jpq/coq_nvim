@@ -18,17 +18,15 @@ More details at the [PERFORMANCE.md](https://github.com/ms-jpq/coq_nvim/tree/coq
 
 ## Features
 
-**Note: Due to compression, the frame shown in gifs are _slower_**
+**Note: Due to compression, reality is _faster_ than gifs**
 
 ### Fast as fuck
 
 - Results on **every keystroke**
 
-`LSP` and `TabNine` can be slower, nothing I can do. I didn't write the servers.
+`LSP` and `TabNine` can be ALOT slower, nothing I can do. I didn't write the third party servers.
 
 I did however added client side incremental background caching to LSP servers.
-
-![fast_af.img]()
 
 - Real time [performance statistics](https://github.com/ms-jpq/coq_nvim/tree/coq/docs/STATS.md)
 
@@ -105,7 +103,7 @@ _The `%` statistic comes from compiling the 10,000 snippets_
 
 - Non-blocking
 
-![ctags.img]()
+![ctags.img](https://raw.githubusercontent.com/ms-jpq/coq.artifacts/artifacts/preview/tags.gif)
 
 **Requires `Universal CTags`, NOT `ctags`**
 
