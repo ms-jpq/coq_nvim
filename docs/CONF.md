@@ -52,12 +52,12 @@ Variables will be validated against a schema.
 ie.
 
 ```vim
-let g:coq_settings = { 'match.dog': 'scratch, stratch' }
+let g:coq_settings = { 'match.look_ahead': 'dog' }
 ```
 
 Will give you the following error message:
 
-![schema error.png](https://github.com/ms-jpq/chadtree/raw/chad/docs/img/schema_error.png)
+![conf_demo.img](https://raw.githubusercontent.com/ms-jpq/coq.artifacts/artifacts/preview/conf.png)
 
 **Notice it says `Extra keys: {dog}`**
 

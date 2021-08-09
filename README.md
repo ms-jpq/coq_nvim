@@ -40,7 +40,7 @@ I did however added client side incremental background caching to LSP servers.
 
 - Proximity bonus
 
-- Weighted average of relative ranks & ensemble metrics
+- Weighted average of [relative ranks & ensemble metrics](https://github.com/ms-jpq/coq_nvim/tree/coq/docs/FUZZY.md)
 
 ![fuzz_search.img](https://raw.githubusercontent.com/ms-jpq/coq.artifacts/artifacts/preview/fuzzy.gif)
 
