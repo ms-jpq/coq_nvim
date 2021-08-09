@@ -42,7 +42,7 @@ I did however added client side incremental background caching to LSP servers.
 
 - Weighted average of relative ranks & ensemble metrics
 
-![fuzz_search.img]()
+![fuzz_search.img](https://raw.githubusercontent.com/ms-jpq/coq.artifacts/artifacts/preview/fuzzy.gif)
 
 ### Preview
 
@@ -54,7 +54,7 @@ I did however added client side incremental background caching to LSP servers.
 
 - Ubiquitous: Tags, LSP, Paths, Snippets
 
-![doc_popup.img]()
+![doc_popup.img](https://raw.githubusercontent.com/ms-jpq/coq.artifacts/artifacts/preview/preview.gif)
 
 ### LSP
 
@@ -64,11 +64,11 @@ I did however added client side incremental background caching to LSP servers.
 
 - Header imports
 
-![lsp_imports.img]()
+![lsp_imports.img](https://raw.githubusercontent.com/ms-jpq/coq.artifacts/artifacts/preview/lsp_import.gif)
 
 - Snippet Support
 
-![lsp_snippets.img]()
+![lsp_snippets.img](https://raw.githubusercontent.com/ms-jpq/coq.artifacts/artifacts/preview/lsp_snippet.gif)
 
 **Requires 1 line of change to support LSP snippets**
 
@@ -87,11 +87,11 @@ lsp.<server>.setup(coq.lsp_ensure_capabilities(<stuff...>)) -- after
 
 - [Press key](https://github.com/ms-jpq/coq_nvim/tree/coq/docs/KEYBIND.md) to edit snippet regions.
 
-![snippet_norm.img]()
+![snippet_norm.img](https://raw.githubusercontent.com/ms-jpq/coq.artifacts/artifacts/preview/snip.gif)
 
 - Linked regions (partial support)
 
-![snippet_expand.img]()
+![snippet_expand.img](https://raw.githubusercontent.com/ms-jpq/coq.artifacts/artifacts/preview/expand_snippet.gif)
 
 _The `%` statistic comes from compiling the 10,000 snippets_
 
@@ -123,7 +123,7 @@ apt install universal-ctags    # good
 
 - Relative to both `cwd` and file path
 
-![paths.img]()
+![paths.img](https://raw.githubusercontent.com/ms-jpq/coq.artifacts/artifacts/preview/paths.gif)
 
 ### Buffers
 
@@ -131,7 +131,7 @@ apt install universal-ctags    # good
 
 - **Fast** in files with thousands of lines
 
-![buffers.img]()
+![buffers.img](https://raw.githubusercontent.com/ms-jpq/coq.artifacts/artifacts/preview/buffers.gif)
 
 ### TreeSitter
 
@@ -149,13 +149,13 @@ The Treesitter source only parses on `Idle` and `InsertEnter` for now.
 
 ### Tmux
 
-![tmux.img]()
+![tmux.img](https://raw.githubusercontent.com/ms-jpq/coq.artifacts/artifacts/preview/tmux.gif)
 
 ### Tabnine
 
 - Auto download & install & update
 
-![tabnine.img]()
+![tabnine.img](https://raw.githubusercontent.com/ms-jpq/coq.artifacts/artifacts/preview/tabnine.gif)
 
 _T9 is disabled by default, I might remove it, if they do not improve the CPU usage. [Their own bug tracker](https://github.com/codota/TabNine/issues/43)._
 
