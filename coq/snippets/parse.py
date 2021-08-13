@@ -93,7 +93,7 @@ def parse(
     old_suffix = (
         context.words_after
         if is_word(parsed.text[-1:], unifying_chars=unifying_chars)
-        else context.syms_after
+        else ""
     )
 
     edit = ContextualEdit(
