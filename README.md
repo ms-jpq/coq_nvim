@@ -26,7 +26,7 @@ More details at the [PERFORMANCE.md](https://github.com/ms-jpq/coq_nvim/tree/coq
 
 `LSP` and `TabNine` can be ALOT slower, nothing I can do. I didn't write the third party servers.
 
-I did however added client side incremental background caching to LSP servers.
+I did however added client side incremental background caching to LSP servers, and flow control to Tabnine.
 
 - Real time [performance statistics](https://github.com/ms-jpq/coq_nvim/tree/coq/docs/STATS.md)
 
