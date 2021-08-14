@@ -30,8 +30,6 @@ I did however added client side incremental background caching to LSP servers.
 
 - Real time [performance statistics](https://github.com/ms-jpq/coq_nvim/tree/coq/docs/STATS.md)
 
-![statistics.img](https://raw.githubusercontent.com/ms-jpq/coq.artifacts/artifacts/preview/stats.gif)
-
 ### Fuzzy Search
 
 - **Typo resistant**
@@ -156,6 +154,12 @@ The Treesitter source only parses on `Idle` events due to unrealized performace 
 ![tabnine.img](https://raw.githubusercontent.com/ms-jpq/coq.artifacts/artifacts/preview/tabnine.gif)
 
 _T9 is disabled by default, I might remove it, if they do not improve the CPU usage. [Their own bug tracker](https://github.com/codota/TabNine/issues/43)._
+
+### Statistics
+
+`:COQstats`
+
+![statistics.img](https://raw.githubusercontent.com/ms-jpq/coq.artifacts/artifacts/preview/stats.gif)
 
 ### Validating config parser
 
