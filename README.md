@@ -2,6 +2,8 @@
 
 Named after the [famous theorem prover](https://coq.inria.fr/)
 
+`coq` means `鸡` in `français québécois`.
+
 Fast as FUCK and loads of features.
 
 ## Faster Than Lua
