@@ -139,7 +139,7 @@ apt install universal-ctags    # good
 
 - I dont have a picture, its boring
 
-**Treesitter is still unstable in 0.5: slow and crash prone**
+**Treesitter is still unstable in nvim0.5: slow and crash prone**
 
 The promise is that Treesitter will have real time parsing on every keystroke, but its actually too slow on big files.
 
@@ -186,6 +186,12 @@ Plug 'ms-jpq/coq.artifacts', {'branch': 'artifacts'}
 ```
 
 ## Documentation
+
+To start `coq`
+
+```viml
+:COQnow
+```
 
 There is built-in [help command](https://github.com/ms-jpq/coq_nvim/tree/coq/docs/README.md)
 
