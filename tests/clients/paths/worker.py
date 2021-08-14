@@ -13,8 +13,7 @@ class Parser(TestCase):
         line = "./.gith"
         actual = sorted(
             parse(
-                set(),
-                look_ahead=_LOOK_AHEAD,
+                _LOOK_AHEAD,
                 fuzzy_cutoff=_FUZZY,
                 base=Path("."),
                 line=line,
@@ -22,9 +21,9 @@ class Parser(TestCase):
         )
         expected = sorted(
             (
-                (Path(".git"), "./.git/", "./.gith"),
-                (Path(".gitignore"), "./.gitignore", "./.gith"),
-                (Path(".github"), "./.github/", "./.gith"),
+                (Path(".git"), "./.git/"),
+                (Path(".gitignore"), "./.gitignore"),
+                (Path(".github"), "./.github/"),
             ),
         )
         self.assertEqual(actual, expected)
@@ -33,8 +32,7 @@ class Parser(TestCase):
         line = "./.github"
         actual = sorted(
             parse(
-                set(),
-                look_ahead=_LOOK_AHEAD,
+                _LOOK_AHEAD,
                 fuzzy_cutoff=_FUZZY,
                 base=Path("."),
                 line=line,
@@ -42,8 +40,8 @@ class Parser(TestCase):
         )
         expected = sorted(
             (
-                (Path(".github", ".agp"), "./.github/.agp", "./.github"),
-                (Path(".github", "workflows"), "./.github/workflows/", "./.github"),
+                (Path(".github", ".agp"), "./.github/.agp"),
+                (Path(".github", "workflows"), "./.github/workflows/"),
             )
         )
         self.assertEqual(actual, expected)
@@ -52,8 +50,7 @@ class Parser(TestCase):
         line = "./.github/"
         actual = sorted(
             parse(
-                set(),
-                look_ahead=_LOOK_AHEAD,
+                _LOOK_AHEAD,
                 fuzzy_cutoff=_FUZZY,
                 base=Path("."),
                 line=line,
@@ -61,8 +58,8 @@ class Parser(TestCase):
         )
         expected = sorted(
             (
-                (Path(".github", ".agp"), "./.github/.agp", "/"),
-                (Path(".github", "workflows"), "./.github/workflows/", "/"),
+                (Path(".github", ".agp"), "./.github/.agp"),
+                (Path(".github", "workflows"), "./.github/workflows/"),
             )
         )
         self.assertEqual(actual, expected)
@@ -71,8 +68,7 @@ class Parser(TestCase):
         line = "abc./.gith"
         actual = sorted(
             parse(
-                set(),
-                look_ahead=_LOOK_AHEAD,
+                _LOOK_AHEAD,
                 fuzzy_cutoff=_FUZZY,
                 base=Path("."),
                 line=line,
@@ -80,9 +76,9 @@ class Parser(TestCase):
         )
         expected = sorted(
             (
-                (Path(".git"), "./.git/", "./.gith"),
-                (Path(".gitignore"), "./.gitignore", "./.gith"),
-                (Path(".github"), "./.github/", "./.gith"),
+                (Path(".git"), "./.git/"),
+                (Path(".gitignore"), "./.gitignore"),
+                (Path(".github"), "./.github/"),
             ),
         )
         self.assertEqual(actual, expected)
@@ -91,8 +87,7 @@ class Parser(TestCase):
         line = "abc./.github"
         actual = sorted(
             parse(
-                set(),
-                look_ahead=_LOOK_AHEAD,
+                _LOOK_AHEAD,
                 fuzzy_cutoff=_FUZZY,
                 base=Path("."),
                 line=line,
@@ -100,8 +95,8 @@ class Parser(TestCase):
         )
         expected = sorted(
             (
-                (Path(".github", ".agp"), "./.github/.agp", "./.github"),
-                (Path(".github", "workflows"), "./.github/workflows/", "./.github"),
+                (Path(".github", ".agp"), "./.github/.agp"),
+                (Path(".github", "workflows"), "./.github/workflows/"),
             )
         )
         self.assertEqual(actual, expected)
@@ -110,8 +105,7 @@ class Parser(TestCase):
         line = "abc./.github/"
         actual = sorted(
             parse(
-                set(),
-                look_ahead=_LOOK_AHEAD,
+                _LOOK_AHEAD,
                 fuzzy_cutoff=_FUZZY,
                 base=Path("."),
                 line=line,
@@ -119,8 +113,8 @@ class Parser(TestCase):
         )
         expected = sorted(
             (
-                (Path(".github", ".agp"), "./.github/.agp", "/"),
-                (Path(".github", "workflows"), "./.github/workflows/", "/"),
+                (Path(".github", ".agp"), "./.github/.agp"),
+                (Path(".github", "workflows"), "./.github/workflows/"),
             )
         )
         self.assertEqual(actual, expected)
@@ -129,36 +123,33 @@ class Parser(TestCase):
         line = "/h"
         results = {
             *parse(
-                set(),
-                look_ahead=_LOOK_AHEAD,
+                _LOOK_AHEAD,
                 fuzzy_cutoff=_FUZZY,
                 base=Path("."),
                 line=line,
             )
         }
-        expected = (Path(sep, "home"), "/home/", "/h")
+        expected = (Path(sep, "home"), "/home/")
         self.assertIn(expected, results)
 
     def test_8(self) -> None:
         line = "~/.c"
         results = {
             *parse(
-                set(),
-                look_ahead=_LOOK_AHEAD,
+                _LOOK_AHEAD,
                 fuzzy_cutoff=_FUZZY,
                 base=Path("."),
                 line=line,
             )
         }
-        expected = (Path.home() / ".config", "~/.config/", "~/.c")
+        expected = (Path.home() / ".config", "~/.config/")
         self.assertIn(expected, results)
 
     def test_9(self) -> None:
         line = "$a$PWD/.gith"
         actual = sorted(
             parse(
-                set(),
-                look_ahead=_LOOK_AHEAD,
+                _LOOK_AHEAD,
                 fuzzy_cutoff=_FUZZY,
                 base=Path("."),
                 line=line,
@@ -166,9 +157,9 @@ class Parser(TestCase):
         )
         expected = sorted(
             (
-                (Path.cwd() / ".git", "$PWD/.git/", "/.gith"),
-                (Path.cwd() / ".gitignore", "$PWD/.gitignore", "/.gith"),
-                (Path.cwd() / ".github", "$PWD/.github/", "/.gith"),
+                (Path.cwd() / ".git", "$PWD/.git/"),
+                (Path.cwd() / ".gitignore", "$PWD/.gitignore"),
+                (Path.cwd() / ".github", "$PWD/.github/"),
             ),
         )
         self.assertEqual(actual, expected)
@@ -177,8 +168,7 @@ class Parser(TestCase):
         line = "$a${PWD}/.gith"
         actual = sorted(
             parse(
-                set(),
-                look_ahead=_LOOK_AHEAD,
+                _LOOK_AHEAD,
                 fuzzy_cutoff=_FUZZY,
                 base=Path("."),
                 line=line,
@@ -186,9 +176,9 @@ class Parser(TestCase):
         )
         expected = sorted(
             (
-                (Path.cwd() / ".git", "${PWD}/.git/", "}/.gith"),
-                (Path.cwd() / ".gitignore", "${PWD}/.gitignore", "}/.gith"),
-                (Path.cwd() / ".github", "${PWD}/.github/", "}/.gith"),
+                (Path.cwd() / ".git", "${PWD}/.git/"),
+                (Path.cwd() / ".gitignore", "${PWD}/.gitignore"),
+                (Path.cwd() / ".github", "${PWD}/.github/"),
             ),
         )
         self.assertEqual(actual, expected)

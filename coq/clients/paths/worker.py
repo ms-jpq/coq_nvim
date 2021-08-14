@@ -14,10 +14,6 @@ from ...shared.settings import PathsClient
 from ...shared.sql import BIGGEST_INT
 from ...shared.types import Completion, Context, Edit, Extern
 
-_NewTxt = str
-_Sort_by = str
-_Triple = Tuple[PurePath, _NewTxt, _Sort_by]
-
 
 def _p_lhs(lhs: str) -> str:
     for sym in ("..", ".", "~"):
@@ -47,33 +43,14 @@ def _join(lhs: str, rhs: str) -> str:
     return join(l, normpath(join(r, rhs)))
 
 
-def _sort_by(segment: str, unifying_chars: AbstractSet[str]) -> str:
-    def cont() -> Iterator[str]:
-        seen_syms = False
-        for char in reversed(segment):
-            if is_word(char, unifying_chars=unifying_chars):
-                if seen_syms:
-                    break
-                else:
-                    yield char
-            else:
-                yield char
-                seen_syms = True
-
-    sort_by = "".join(reversed(tuple(cont())))
-    return sort_by
-
-
 def parse(
-    unifying_chars: AbstractSet[str],
     look_ahead: int,
     fuzzy_cutoff: float,
     base: Path,
     line: str,
-) -> Iterator[_Triple]:
+) -> Iterator[Tuple[PurePath, str]]:
     segments = reversed(tuple(_segments(line)))
     for segment in segments:
-        sort_by = _sort_by(segment, unifying_chars=unifying_chars)
 
         s1 = segment
         s2 = expanduser(s1)
@@ -86,7 +63,7 @@ def parse(
                 for path in entire.iterdir():
                     term = sep if path.is_dir() else ""
                     line = _join(segment, path.name) + term
-                    yield path, line, sort_by
+                    yield path, line
                 return
 
             else:
@@ -106,7 +83,7 @@ def parse(
                             if ratio >= fuzzy_cutoff:
                                 term = sep if path.is_dir() else ""
                                 line = _join(lseg, path.name) + term
-                                yield path, line, sort_by
+                                yield path, line
                         return
 
 
@@ -114,16 +91,14 @@ async def _parse(
     base: Path,
     line: str,
     limit: int,
-    unifying_chars: AbstractSet[str],
     look_ahead: int,
     fuzzy_cutoff: float,
-) -> AbstractSet[_Triple]:
-    def cont() -> AbstractSet[_Triple]:
+) -> AbstractSet[Tuple[PurePath, str]]:
+    def cont() -> AbstractSet[Tuple[PurePath, str]]:
         return {
             *islice(
                 parse(
-                    unifying_chars,
-                    look_ahead=look_ahead,
+                    look_ahead,
                     fuzzy_cutoff=fuzzy_cutoff,
                     base=base,
                     line=line,
@@ -133,6 +108,23 @@ async def _parse(
         }
 
     return await run_in_executor(cont)
+
+
+def _sort_by(segment: str, unifying_chars: AbstractSet[str]) -> str:
+    def cont() -> Iterator[str]:
+        seen_syms = False
+        for char in reversed(segment):
+            if is_word(char, unifying_chars=unifying_chars):
+                if seen_syms:
+                    break
+                else:
+                    yield char
+            else:
+                yield char
+                seen_syms = True
+
+    sort_by = "".join(reversed(tuple(cont())))
+    return sort_by
 
 
 class Worker(BaseWorker[PathsClient, None]):
@@ -146,7 +138,6 @@ class Worker(BaseWorker[PathsClient, None]):
                 p,
                 line=line,
                 limit=limit,
-                unifying_chars=self._supervisor.options.unifying_chars,
                 look_ahead=self._supervisor.options.look_ahead,
                 fuzzy_cutoff=self._supervisor.options.fuzzy_cutoff,
             )
@@ -157,7 +148,7 @@ class Worker(BaseWorker[PathsClient, None]):
         for co in as_completed(aw):
             seq = await co
 
-            for path, new_text, sort_by in seq:
+            for path, new_text in seq:
                 if len(seen) >= limit:
                     break
                 elif new_text not in seen:
@@ -167,7 +158,7 @@ class Worker(BaseWorker[PathsClient, None]):
                         source=self._options.short_name,
                         tie_breaker=self._options.tie_breaker,
                         label=edit.new_text,
-                        sort_by=sort_by,
+                        sort_by="",
                         primary_edit=edit,
                         extern=(Extern.path, normcase(path)),
                     )
