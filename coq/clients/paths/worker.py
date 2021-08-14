@@ -110,10 +110,10 @@ async def _parse(
     return await run_in_executor(cont)
 
 
-def _sort_by(segment: str, unifying_chars: AbstractSet[str]) -> str:
+def sort_by(unifying_chars: AbstractSet[str], new_text: str) -> str:
     def cont() -> Iterator[str]:
         seen_syms = False
-        for char in reversed(segment):
+        for char in reversed(new_text):
             if is_word(char, unifying_chars=unifying_chars):
                 if seen_syms:
                     break
@@ -158,7 +158,9 @@ class Worker(BaseWorker[PathsClient, None]):
                         source=self._options.short_name,
                         tie_breaker=self._options.tie_breaker,
                         label=edit.new_text,
-                        sort_by="",
+                        sort_by=sort_by(
+                            self._supervisor.options.unifying_chars, new_text=new_text
+                        ),
                         primary_edit=edit,
                         extern=(Extern.path, normcase(path)),
                     )
