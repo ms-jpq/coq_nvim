@@ -30,7 +30,7 @@ I did however added client side incremental background caching to LSP servers.
 
 - Real time [performance statistics](https://github.com/ms-jpq/coq_nvim/tree/coq/docs/STATS.md)
 
-![statistics.img]()
+![statistics.img](https://raw.githubusercontent.com/ms-jpq/coq.artifacts/artifacts/preview/stats.gif)
 
 ### Fuzzy Search
 
