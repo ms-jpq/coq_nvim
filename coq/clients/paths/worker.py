@@ -113,7 +113,7 @@ async def _parse(
 def sort_by(unifying_chars: AbstractSet[str], new_text: str) -> str:
     def cont() -> Iterator[str]:
         seen_syms = False
-        for char in reversed(new_text):
+        for idx, char in enumerate(reversed(new_text)):
             if is_word(char, unifying_chars=unifying_chars):
                 if seen_syms:
                     break
@@ -121,7 +121,10 @@ def sort_by(unifying_chars: AbstractSet[str], new_text: str) -> str:
                     yield char
             else:
                 yield char
-                seen_syms = True
+                if not idx and char == sep:
+                    pass
+                else:
+                    seen_syms = True
 
     sort_by = "".join(reversed(tuple(cont())))
     return sort_by
