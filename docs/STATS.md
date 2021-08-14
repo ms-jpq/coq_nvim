@@ -3,6 +3,7 @@
 ```viml
 :COQstats
 ```
+![statistics.img](https://raw.githubusercontent.com/ms-jpq/coq.artifacts/artifacts/preview/stats.gif)
 
 ### Is this the actual response speed for each keystroke
 
