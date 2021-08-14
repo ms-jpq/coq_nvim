@@ -28,6 +28,7 @@ TMP_DIR = VARS / "tmp"
 
 
 _ART_DIR = TOP_LEVEL / "artifacts"
+HELO_ARTIFACTS = _ART_DIR / "helo.yml"
 LSP_ARTIFACTS = _ART_DIR / "lsp.json"
 
 
