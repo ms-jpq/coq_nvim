@@ -60,7 +60,7 @@ I did however added client side incremental background caching to LSP servers, a
 
 - **Client-side caching**
 
-- Multi-server completion
+- **Multi-server** completion (i.e. `tailwind` + `cssls`)
 
 - Header imports
 
