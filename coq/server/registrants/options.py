@@ -53,6 +53,7 @@ def set_options(nvim: Nvim, mapping: KeyMapping) -> None:
 
     if mapping.recommended:
         keymap.i("<esc>", expr=True) << "pumvisible() ? '<c-e><esc>' : '<esc>'"
+        keymap.i("<c-c>", expr=True) << "pumvisible() ? '<c-e><c-c>' : '<c-c>'"
         keymap.i("<bs>", expr=True) << "pumvisible() ? '<c-e><bs>' : '<bs>'"
         (
             keymap.i("<cr>", expr=True)
