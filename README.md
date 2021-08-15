@@ -263,7 +263,9 @@ Also check out
 
 - [`sad`](https://github.com/ms-jpq/sad), its a modern `sed` that does previews with syntax highlighting, and lets you pick and choose which chunks to edit.
 
-- [`CHADTree`](https://github.com/ms-jpq/chadtree), its better than NERDTree.
+- [`CHADTree`](https://github.com/ms-jpq/chadtree), its a FULLY featured file manager.
+
+- [isomorphic-copy](https://github.com/ms-jpq/isomorphic-copy), it's a cross platform clipboard that is daemonless, and does not require third party support.
 
 ## Special Thanks & Acknowledgements
 
