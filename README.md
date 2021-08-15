@@ -79,7 +79,7 @@ Install the [Nvim Official LSP integration](https://github.com/neovim/nvim-lspco
 ```lua
 local lsp = require "lspconfig"
 
-lsp.<server>.setup(<stuff...>)                            -- before
+lsp.<server>.setup(<stuff...>)                              -- before
 lsp.<server>.setup(coq.lsp_ensure_capabilities(<stuff...>)) -- after
 ```
 
