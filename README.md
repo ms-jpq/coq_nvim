@@ -203,6 +203,8 @@ To start `coq`
 :COQnow
 ```
 
+🌟 If required, it will ask you to run `:COQdeps`, please run it and do `:COQnow` again.
+
 There is built-in [help command](https://github.com/ms-jpq/coq_nvim/tree/coq/docs/README.md)
 
 ```viml
