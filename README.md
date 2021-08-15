@@ -227,6 +227,26 @@ There is built-in [help command](https://github.com/ms-jpq/coq_nvim/tree/coq/doc
 
 ## FAQ
 
+#### Default hotkeys?
+
+Always:
+
+| key         | function                 |
+| ----------- | ------------------------ |
+| `<c-space>` | manual completion        |
+| `<c-h>`     | edit snippet placeholder |
+
+When completion menu is open:
+
+| key           | function                      |
+| ------------- | ----------------------------- |
+| `<c-k>`       | move preview to bigger window |
+| `<esc>`       | exit to normal                |
+| `<backspace>` | backspace                     |
+| `<enter>`     | select completion             |
+| `<tab>`       | next result                   |
+| `<s-tab>`     | prev result                   |
+
 #### LSP too slow to show up on keystroke.
 
 You have some options, each has it's trade off:
