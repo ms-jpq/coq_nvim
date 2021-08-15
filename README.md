@@ -215,6 +215,34 @@ There is built-in [help command](https://github.com/ms-jpq/coq_nvim/tree/coq/doc
 
 - [:COQhelp stats](https://github.com/ms-jpq/coq_nvim/tree/coq/docs/STATS.md)
 
+## FAQ
+
+#### LSP too slow to show up on keystroke.
+
+You have some options, each has it's trade off:
+
+1. Increase the `coq_settings.limits.completion_auto_timeout`.
+
+This will slow down feedback on _every keystroke_, as `coq` waits for LSP.
+
+2. Use the manual completion hotkey (default `<c-space>`)
+
+Annoying! And the manual completion also has a timeout `coq_settings.limits.completion_manual_timeout`.
+
+Some LSP servers will still fail to respond within the default `.66` seconds.
+
+#### Missing Results
+
+On keystroke only a max of `coq_settings.match.max_results` are shown.
+
+Use manual completion hotkey to show all results.
+
+#### Some LSP servers give inconsistent completions
+
+This happens when certain LSP servers give you 1000s of unfiltered results in _alphabetical order_ and you still have to respond in a few dozen milliseconds.
+
+To eliminate bias, `coq` does a random sort on the resultset and process and cache as many of them as possible within the performance window.
+
 ## If you like this...
 
 Also check out
@@ -248,3 +276,7 @@ The snippets are compiled from the following open source projects:
 - [xabikos/vscode-javascript](https://github.com/xabikos/vscode-javascript)
 
 - [xabikos/vscode-react](https://github.com/xabikos/vscode-react)
+
+Super special thanks goes to [Typescript LSP](https://github.com/typescript-language-server/typescript-language-server).
+
+Nothing like good motivation to improve my design than dumping 1000 results on my client every other keystroke.
