@@ -1,4 +1,4 @@
-# [coq.nvim 🐔](https://ms-jpq.github.io/coq_nvim)
+# coq.nvim 🐔
 
 Named after the [famous theorem prover](https://coq.inria.fr/)
 
