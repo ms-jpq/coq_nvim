@@ -287,6 +287,12 @@ This is an [upstream nvim issue](https://github.com/neovim/neovim/issues/13816).
 
 Theoretically I can work around this by writing my own nvim `extmark` reconciliator, or I can go and cuddle my puppy and let upstream fix it.
 
+#### My vim crashed!
+
+**Disable TreeSitter**
+
+Treesitter still needs stability work.
+
 ## If you like this...
 
 Also check out
