@@ -183,7 +183,7 @@ Here I make a type error on purpose inputting `string` instead of an `integer`.
 
 ## Install
 
-**Minimum version**: python:`3.8.2`, nvim: `0.5`
+**Minimum version**: python:`3.8.2`, nvim: `0.5`, sqlite `3.31.0`
 
 Install the usual way, ie. VimPlug, Vundle, etc
 
