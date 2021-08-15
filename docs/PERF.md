@@ -38,7 +38,7 @@ In general, there are two ways to make a program faster.
 
 The storage & query engine in `coq.nvim` is written in SQL.
 
-SQLite comes natively with python, and its about as battle tested as anything out there.
+SQLite comes natively with python, and it's about as battle tested as anything out there.
 
 ### Write code that does less work
 
