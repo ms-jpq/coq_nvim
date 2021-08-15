@@ -167,6 +167,8 @@ The Treesitter source only parses on `Idle` events due to unrealized performace 
 
 _T9 is disabled by default, I might remove it, if they do not improve the CPU usage. [Their own bug tracker](https://github.com/codota/TabNine/issues/43)._
 
+Enable via: `coq_settings.clients.tabnine.enabled=true`
+
 ### Statistics
 
 `:COQstats`
