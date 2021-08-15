@@ -247,9 +247,9 @@ When completion menu is open:
 | `<tab>`       | next result                   |
 | `<s-tab>`     | prev result                   |
 
-**When hovering over a result, entering anykey with select it**
+**When hovering over a result, entering anykey [a-z] will select it**
 
-This is a vim thing, I have zero control over
+This is a vim thing, I have zero control over :(
 
 #### LSP too slow to show up on keystroke.
 
