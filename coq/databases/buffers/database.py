@@ -9,7 +9,7 @@ from uuid import uuid4
 from std2.asyncio import run_in_executor
 from std2.sqlite3 import with_transaction
 
-from ...consts import BUFFER_DB
+from ...consts import BUFFER_DB, DEBUG
 from ...shared.executor import SingleThreadExecutor
 from ...shared.parse import coalesce
 from ...shared.settings import Options
@@ -94,7 +94,8 @@ class BDB:
         def m0() -> Iterator[Tuple[int, str, bytes]]:
             for line_num, line in enumerate(lines, start=lo):
                 line_id = uuid4().bytes
-                yield line_num, line, line_id
+                safe_line = line.encode(errors="ignore").decode(errors="ignore")
+                yield line_num, safe_line, line_id
 
         line_info = tuple(m0())
 
@@ -104,7 +105,7 @@ class BDB:
                     "rowid": line_id,
                     "buffer_id": buf_id,
                     "line_num": line_num,
-                    "line": line,
+                    "line": line if DEBUG else "",
                 }
 
         def m2() -> Iterator[Mapping]:
