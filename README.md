@@ -26,6 +26,8 @@ More details at the [PERFORMANCE.md](https://github.com/ms-jpq/coq_nvim/tree/coq
 
 - Results on **every keystroke**
 
+- Throttling? Never heard of her
+
 - Real time [performance statistics](https://github.com/ms-jpq/coq_nvim/tree/coq/docs/STATS.md)
 
 - Look at the gifs! The bottom few are the **fastest when I didn't show down on purpose** to show features.
