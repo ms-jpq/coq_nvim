@@ -72,6 +72,8 @@ More details at the [PERFORMANCE.md](https://github.com/ms-jpq/coq_nvim/tree/coq
 
 ![lsp_snippets.img](https://raw.githubusercontent.com/ms-jpq/coq.artifacts/artifacts/preview/lsp_snippet.gif)
 
+Install the [Nvim Official LSP integration](https://github.com/neovim/nvim-lspconfig)
+
 **Requires 1 line of change to support LSP snippets**
 
 ```lua
