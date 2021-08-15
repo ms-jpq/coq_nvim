@@ -54,6 +54,8 @@ More details at the [PERFORMANCE.md](https://github.com/ms-jpq/coq_nvim/tree/coq
 
 ### LSP
 
+- **Incremental completion**
+
 - **Client-side caching**
 
 - **Multi-server** completion (i.e. `tailwind` + `cssls`)
@@ -146,6 +148,8 @@ The Treesitter source only parses on `Idle` events due to unrealized performace 
 ![tmux.img](https://raw.githubusercontent.com/ms-jpq/coq.artifacts/artifacts/preview/tmux.gif)
 
 ### Tabnine
+
+- CPU preserving flow control
 
 - Auto download & install & update
 
