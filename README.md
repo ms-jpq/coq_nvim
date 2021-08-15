@@ -229,7 +229,7 @@ This will slow down feedback on _every keystroke_, as `coq` waits for LSP.
 
 Annoying! And the manual completion also has a timeout `coq_settings.limits.completion_manual_timeout`.
 
-Some LSP servers will still fail to respond within the default `.66` seconds.
+Some LSP servers will still fail to respond within the default `.66` seconds, in that case pressing `<c-space>` multiple times might actually help some LSP servers catch up, depending on their implementation.
 
 #### Missing Results
 
@@ -241,7 +241,11 @@ Use manual completion hotkey to show all results.
 
 This happens when certain LSP servers give you 1000s of unfiltered results in _alphabetical order_ and you still have to respond in a few dozen milliseconds.
 
-To eliminate bias, `coq` does a random sort on the resultset and process and cache as many of them as possible within the performance window.
+To eliminate `a-z` bias, `coq` does a random sort on the resultset and process and cache as many of them as possible within the performance window.
+
+So if some results are not in the SQLite cache, and have yet to be processed, they will be missing. They might however still show up on later keystrokes.
+
+Use the manual hotkey if you need to see everything.
 
 ## If you like this...
 
