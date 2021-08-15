@@ -42,6 +42,8 @@ More details at the [PERFORMANCE.md](https://github.com/ms-jpq/coq_nvim/tree/coq
 
 - Weighted average of [relative ranks & ensemble metrics](https://github.com/ms-jpq/coq_nvim/tree/coq/docs/FUZZY.md)
 
+Error correction: `cour` -> `colour_space`, `flgr` -> `flag_group`, `nasp` -> `Namespace`
+
 ![fuzz_search.img](https://raw.githubusercontent.com/ms-jpq/coq.artifacts/artifacts/preview/fuzzy.gif)
 
 ### Preview
