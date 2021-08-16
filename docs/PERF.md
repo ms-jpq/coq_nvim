@@ -14,7 +14,7 @@ self explanatory
 
 On the python end, this is done via collaborative multi-tasking similar to [React's new concurrent mode](https://reactjs.org/docs/concurrent-mode-intro.html).
 
-Instead of projecting the entirety of the result-set, rows are computed incrementally, in an interruptable fashion.
+Instead of projecting the entirety of the result-set, rows are computed incrementally, in an interriptable fashion.
 
 More interestingly, on the SQLite end:
 
@@ -38,7 +38,7 @@ In general, there are two ways to make a program faster.
 
 The storage & query engine in `coq.nvim` is written in SQL.
 
-SQLite comes natively with python, and its about as battle tested as anything out there.
+SQLite comes natively with python, and it is about as battle tested as anything out there.
 
 ### Write code that does less work
 
@@ -70,7 +70,7 @@ It is actually (minor overhead of cancellation + 10s of ms). The heavy lifting c
 
 It goes further than that.
 
-Not only does work in python get cancelled, the same thing is done for SQLite too. Each SQLite VM have it's own lock protecting the critical operations, and outside of those locked sections, interrupts are fired into the VMs and terminate execution.
+Not only does work in python get cancelled, the same thing is done for SQLite too. Each SQLite VM have its own lock protecting the critical operations, and outside of those locked sections, interrupts are fired into the VMs and terminate execution.
 
 ## Background Processing
 

@@ -8,11 +8,11 @@ Fast as FUCK and loads of features.
 
 ## Faster Than Lua
 
-- Native C in memory B-trees
+- Native C in-memory B-trees
 
 - SQLite VM interrupts
 
-- Coroutine based incremental & interruptable scheduler
+- Coroutine based incremental & interruptible scheduler
 
 - TCP-esque flow control
 
@@ -155,11 +155,11 @@ apt install universal-ctags    # good
 
 - Unicode ready
 
-- I don't have a picture, its boring
+- I don't have a picture, it's boring
 
 **Treesitter is still unstable in nvim0.5: slow and crash prone**
 
-The promise is that Treesitter will have real time parsing on every keystroke, but its actually too slow on big files.
+The promise is that Treesitter will have real time parsing on every keystroke, but it's actually too slow on big files.
 
 The Treesitter source only parses on `Idle` events due to unrealized performance promises.
 
@@ -274,7 +274,7 @@ This is a vim thing, I have zero control over :(
 
 #### LSP too slow to show up on keystroke.
 
-You have some options, each has it's trade off:
+You have some options, each has its trade off:
 
 1. Increase the `coq_settings.limits.completion_auto_timeout`.
 
@@ -324,9 +324,9 @@ Note: `~/` will not be expanded to `$HOME`, use `vim.env.HOME .. <path>` (lua) o
 
 Also check out
 
-- [`sad`](https://github.com/ms-jpq/sad), its a modern `sed` that does previews with syntax highlighting, and lets you pick and choose which chunks to edit.
+- [`sad`](https://github.com/ms-jpq/sad), it's a modern `sed` that does previews with syntax highlighting, and lets you pick and choose which chunks to edit.
 
-- [`CHADTree`](https://github.com/ms-jpq/chadtree), its a FULLY featured file manager.
+- [`CHADTree`](https://github.com/ms-jpq/chadtree), it's a FULLY featured file manager.
 
 - [isomorphic-copy](https://github.com/ms-jpq/isomorphic-copy), it's a cross platform clipboard that is daemonless, and does not require third party support.
 
