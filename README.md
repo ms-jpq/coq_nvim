@@ -85,6 +85,16 @@ lsp.<server>.setup(<stuff...>)                              -- before
 lsp.<server>.setup(coq.lsp_ensure_capabilities(<stuff...>)) -- after
 ```
 
+**If you are using [`packer.nvim`](https://github.com/wbthomason/packer.nvim)**
+
+```lua
+vim.schedule(function ()
+  local lsp = require "lspconfig"
+  require("packer").load("coq coq.artifacts")
+  lsp.<server>.setup(require("coq")().lsp_ensure_capabilities(<stuff...>))
+end)
+```
+
 ### Snippets
 
 - [**Over 9000** built-in snippets](https://raw.githubusercontent.com/ms-jpq/coq.artifacts/artifacts/coq%2Bsnippets.json)
