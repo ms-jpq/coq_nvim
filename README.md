@@ -95,8 +95,6 @@ vim.schedule(function ()
 end)
 ```
 
-or use [this comment](https://github.com/ms-jpq/coq_nvim/issues/11#issuecomment-899181837).
-
 ### Snippets
 
 - [**Over 9000** built-in snippets](https://raw.githubusercontent.com/ms-jpq/coq.artifacts/artifacts/coq%2Bsnippets.json)
