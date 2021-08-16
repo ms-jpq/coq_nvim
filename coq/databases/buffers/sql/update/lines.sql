@@ -5,4 +5,3 @@ WHERE
   buffer_id = :buffer_id
   AND
   line_num >= :lo
-
