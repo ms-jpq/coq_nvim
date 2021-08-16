@@ -1,3 +1,2 @@
-INSERT OR IGNORE INTO words ( word,  kind)
-VALUES                      (:word, :kind)
-
+INSERT OR IGNORE INTO words ( word, lword,         kind)
+VALUES                      (:word, LOWER(:word), :kind)

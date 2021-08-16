@@ -1,2 +1,2 @@
-INSERT OR IGNORE INTO matches ( snippet_id,  match)
-VALUES                        (:snippet_id, :match)
+INSERT OR IGNORE INTO matches ( snippet_id,  match, lmatch)
+VALUES                        (:snippet_id, :match, LOWER(:match))
