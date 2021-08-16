@@ -2,10 +2,11 @@ from argparse import Namespace
 from dataclasses import dataclass
 from itertools import chain
 from random import choice, sample
+from sys import stderr
 from typing import Sequence, Tuple
 
 from pynvim import Nvim
-from std2.argparse import ArgParser
+from std2.argparse import ArgparseError, ArgParser
 from std2.pickle import new_decoder
 from yaml import safe_load
 
@@ -33,12 +34,16 @@ def _parse_args(args: Sequence[str]) -> Namespace:
 
 @rpc(blocking=True)
 def now(nvim: Nvim, stack: Stack, args: Sequence[str]) -> None:
-    ns = _parse_args(args)
-    if not ns.stfu:
-        lo, hi = _HELO.chars
-        chars = choice(range(lo, hi))
-        star = (choice(_HELO.stars),)
-        birds = " ".join(chain(star, sample(_HELO.cocks, k=chars), star))
-        helo = choice(_HELO.helo)
-        msg = f"{birds}  {helo}"
-        print(msg, flush=True)
+    try:
+        ns = _parse_args(args)
+    except ArgparseError as e:
+        print(e, file=stderr, flush=True)
+    else:
+        if not ns.stfu:
+            lo, hi = _HELO.chars
+            chars = choice(range(lo, hi))
+            star = (choice(_HELO.stars),)
+            birds = " ".join(chain(star, sample(_HELO.cocks, k=chars), star))
+            helo = choice(_HELO.helo)
+            msg = f"{birds}  {helo}"
+            print(msg, flush=True)
