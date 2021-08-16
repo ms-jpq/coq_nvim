@@ -2,6 +2,7 @@ return function(args)
   local seek_rtp = function()
     local name = "coq_nvim"
     for _, rtp in ipairs(vim.api.nvim_list_runtime_paths()) do
+      print(rtp)
       if string.sub(rtp, -(#name)) == name then
         return rtp
       end
