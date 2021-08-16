@@ -195,6 +195,12 @@ Here I make a type error on purpose inputting `string` instead of an `integer`.
 
 ## Install
 
+Needs python virtual env
+
+```sh
+apt install --yes -- python3-venv
+```
+
 **Minimum version**: python:`3.8.2`, nvim: `0.5`
 
 Install the usual way, ie. VimPlug, Vundle, etc
