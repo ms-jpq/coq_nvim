@@ -50,7 +50,7 @@ No special conf.
 
 ##### `coq_settings.clients.tags.parent_scope`
 
-Aesthetics only, parent indictor.
+Aesthetics only, parent indicator.
 
 **default:**
 
