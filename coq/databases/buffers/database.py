@@ -18,10 +18,18 @@ from .sql import sql
 
 
 def _ensure_buffer(cursor: Cursor, buf_id: int, filetype: str) -> None:
-    cursor.execute(
-        sql("insert", "buffer"),
-        {"rowid": buf_id, "filetype": filetype},
-    )
+    cursor.execute(sql("select", "buffer_by_id"), {"rowid": buf_id})
+    row = cursor.fetchone()
+    if row:
+        cursor.execute(
+            sql("update", "buffer"),
+            {"rowid": buf_id, "filetype": filetype},
+        )
+    else:
+        cursor.execute(
+            sql("insert", "buffer"),
+            {"rowid": buf_id, "filetype": filetype},
+        )
 
 
 def _init() -> Connection:
