@@ -90,7 +90,7 @@ lsp.<server>.setup(coq.lsp_ensure_capabilities(<stuff...>)) -- after
 ```lua
 vim.schedule(function ()
   local lsp = require "lspconfig"
-  require("packer").load("coq coq.artifacts")
+  require("packer").loader("coq_nvim coq.artifacts")
   lsp.<server>.setup(require("coq")().lsp_ensure_capabilities(<stuff...>))
 end)
 ```
