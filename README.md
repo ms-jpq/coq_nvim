@@ -201,7 +201,7 @@ Needs python virtual env
 apt install --yes -- python3-venv
 ```
 
-**Minimum version**: python:`3.8.2`, nvim: `0.5`
+**Minimum version**: python:`3.8.2`, nvim: `0.5`, sqlite: `recentish`
 
 Install the usual way, ie. VimPlug, Vundle, etc
 
