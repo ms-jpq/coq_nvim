@@ -22,3 +22,12 @@ function! coq#complete_help(arg_lead, cmd_line, cursor_pos) abort
 
   return s:filter_completions(a:arg_lead, insert(l:topics, '--web'))
 endfunction
+
+function! coq#complete_now(arg_lead, cmd_line, cursor_pos) abort
+  let l:args = [
+        \ '-s',
+        \ '--shut-up',
+        \ ]
+
+  return s:filter_completions(a:arg_lead, l:args)
+endfunction
