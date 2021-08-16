@@ -52,11 +52,11 @@ In a naive network with limited capacity, if the rate of ingress exceeds the cap
 
 For `coq.nvim`, this issue is solved akin to how the linux packet queue [`tc-cake`](https://man7.org/linux/man-pages/man8/tc-cake.8.html) works on a basic level for TCP traffic sharping.
 
-Dropping from the front of the queue: Thats it!
+Dropping from the front of the queue: That's it!
 
 Since TCP already ensures packet ordering on a protocol level, this is totally safe to do!
 
-Likewise, for `coq.nvim`, user events that have guaranteed ordering are basiclly treated the same way.
+Likewise, for `coq.nvim`, user events that have guaranteed ordering are basically treated the same way.
 
 #### Cancel Culture
 
@@ -66,7 +66,7 @@ For every keystroke, `coq.nvim` will require 10s of ms worth of work. What happe
 
 Wrong.
 
-It is actually (minor overhead of cancellation + 10s of ms). The heavy lifting code of `coq.nvim` is executed collaboratively, via generator functions. Basiclly at every implicit or explicit `yield` in the codebase, `coq.nvim` will be able to interrupt unnecessary work.
+It is actually (minor overhead of cancellation + 10s of ms). The heavy lifting code of `coq.nvim` is executed collaboratively, via generator functions. Basically at every implicit or explicit `yield` in the codebase, `coq.nvim` will be able to interrupt unnecessary work.
 
 It goes further than that.
 
@@ -76,4 +76,4 @@ Not only does work in python get cancelled, the same thing is done for SQLite to
 
 Even after the results are shown to the user, work can still be done!
 
-As a consequence of being able to resume and interrupt most parts of the data pipeline, it then becomes possible to process and shove un-used results into the cache, so on the next keystroke, more results are instantly avliable.
+As a consequence of being able to resume and interrupt most parts of the data pipeline, it then becomes possible to process and shove unused results into the cache, so on the next keystroke, more results are instantly available.

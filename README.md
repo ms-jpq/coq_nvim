@@ -155,13 +155,13 @@ apt install universal-ctags    # good
 
 - Unicode ready
 
-- I dont have a picture, its boring
+- I don't have a picture, its boring
 
 **Treesitter is still unstable in nvim0.5: slow and crash prone**
 
 The promise is that Treesitter will have real time parsing on every keystroke, but its actually too slow on big files.
 
-The Treesitter source only parses on `Idle` events due to unrealized performace promises.
+The Treesitter source only parses on `Idle` events due to unrealized performance promises.
 
 ### Tmux
 
@@ -268,7 +268,7 @@ When completion menu is open:
 | `<tab>`       | next result                   |
 | `<s-tab>`     | prev result                   |
 
-**When hovering over a result, entering anykey [a-z] will select it**
+**When hovering over a result, entering any key [a-z] will select it**
 
 This is a vim thing, I have zero control over :(
 

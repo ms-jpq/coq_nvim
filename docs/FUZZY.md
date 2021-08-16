@@ -18,7 +18,7 @@ Results that do not score above the `fuzzy_cutoff` are dropped at this stage.
 
 ### Stage 2 - Ranking
 
-On a reduced search set, a more comperhensive ensemble score is computed for each candidates.
+On a reduced search set, a more comprehensive ensemble score is computed for each candidates.
 
 The primary metrics are `prefix_matches`, `edit_distance`, `recency` and `proximity`.
 
@@ -82,7 +82,7 @@ For word searching, how many exact prefix characters is required.
 
 #### `coq_settings.match.look_ahead`
 
-For word searching, how many characters to look ahead, incase of typos.
+For word searching, how many characters to look ahead, in case of typos.
 
 **default:**
 
@@ -114,7 +114,7 @@ Relative weight adjustment of exact prefix matches.
 
 #### `coq_settings.weights.edit_distance`
 
-Relative weight adjustment of [Damerau–Levenshtein distance](https://en.wikipedia.org/wiki/Damerau%E2%80%93Levenshtein_distance), normalized and adjusted for look_aheads.
+Relative weight adjustment of [Damerau–Levenshtein distance](https://en.wikipedia.org/wiki/Damerau%E2%80%93Levenshtein_distance), normalized and adjusted for look-aheads.
 
 **default:**
 

@@ -13,7 +13,7 @@ No, these measure the response speed of the sources.
 
 - When the sources are calculating, you are free to type around already.
 
-- There are also optimizations inplace so that many keystrokes do not trigger unnecessary requests to sources.
+- There are also optimizations in-place so that many keystrokes do not trigger unnecessary requests to sources.
 
 - There is a near constant (and minor) overhead for each keystroke, the overhead is only profiled by running `coq.nvim` in debug mode.
 
