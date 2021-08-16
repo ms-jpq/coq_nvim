@@ -314,7 +314,7 @@ Theoretically I can work around this by writing my own nvim `extmark` reconcilia
 
 Treesitter still needs stability work.
 
-#### I want to use a difference python version
+#### I want to use a different python version
 
 `vim.g.python3_host_prog=<absolute path to python>`
 
