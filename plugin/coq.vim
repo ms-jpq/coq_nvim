@@ -1,9 +1,9 @@
 let s:top_level = resolve(expand('<sfile>:p:h:h'))
 
-function s:COQnoop()
+function COQnoop()
   0
 endfunction
-command! COQnoop call s:COQnoop()
+command! COQnoop call COQnoop()
 
 call luaeval('require("coq")(...)', [s:top_level])
 
