@@ -1,3 +1,3 @@
-INSERT OR REPLACE INTO words ( word)
-VALUES                       (:word)
+INSERT OR REPLACE INTO words ( word, lword)
+VALUES                       (:word, LOWER(:word))
 

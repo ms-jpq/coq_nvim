@@ -18,7 +18,7 @@ from ...tags.types import Tag, Tags
 from .sql import sql
 
 _TAGS_DIR = CLIENTS_DIR / "tags"
-_SCHEMA = "v0"
+_SCHEMA = "v1"
 
 _NIL_TAG = Tag(
     language="",
