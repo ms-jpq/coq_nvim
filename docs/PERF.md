@@ -14,7 +14,7 @@ self explanatory
 
 On the python end, this is done via collaborative multi-tasking similar to [React's new concurrent mode](https://reactjs.org/docs/concurrent-mode-intro.html).
 
-Instead of projecting the entirety of the result-set, rows are computed incrementally, in an interriptable fashion.
+Instead of projecting the entirety of the result-set, rows are computed incrementally, in an interruptible fashion.
 
 More interestingly, on the SQLite end:
 
