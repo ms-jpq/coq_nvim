@@ -1,5 +1,15 @@
 return function(args)
-  local cwd = unpack(args)
+  local seek_rtp = function()
+    local name = "coq_nvim"
+    for _, rtp in ipairs(vim.api.nvim_list_runtime_paths()) do
+      if string.sub(rtp, -(#name)) == name then
+        return rtp
+      end
+    end
+    assert(false, "RTP NOT FOUND")
+  end
+  local cwd = args and unpack(args) or seek_rtp()
+
   local is_win = vim.api.nvim_call_function("has", {"win32"}) == 1
 
   coq = coq or {}
@@ -7,7 +17,7 @@ return function(args)
   local POLLING_RATE = 10
 
   if coq.loaded then
-    return
+    return coq
   else
     coq.loaded = true
     local job_id = nil
@@ -131,10 +141,11 @@ return function(args)
           }
         }
       }
-      local maps = cfg.capabilities and {spec2} or {spec1, spec2}
+      local maps = (cfg or {}).capabilities and {spec2} or {spec1, spec2}
       local new =
         vim.tbl_deep_extend("force", cfg or vim.empty_dict(), unpack(maps))
       return new
     end
   end
+  return coq
 end

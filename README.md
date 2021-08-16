@@ -85,6 +85,16 @@ lsp.<server>.setup(<stuff...>)                              -- before
 lsp.<server>.setup(coq.lsp_ensure_capabilities(<stuff...>)) -- after
 ```
 
+**If you are using [`packer.nvim`](https://github.com/wbthomason/packer.nvim)**
+
+```lua
+vim.schedule(function ()
+  local lsp = require "lspconfig"
+  require("packer").loader("coq_nvim coq.artifacts")
+  lsp.<server>.setup(require("coq")().lsp_ensure_capabilities(<stuff...>))
+end)
+```
+
 ### Snippets
 
 - [**Over 9000** built-in snippets](https://raw.githubusercontent.com/ms-jpq/coq.artifacts/artifacts/coq%2Bsnippets.json)
@@ -184,6 +194,12 @@ Here I make a type error on purpose inputting `string` instead of an `integer`.
 ![conf_demo.img](https://raw.githubusercontent.com/ms-jpq/coq.artifacts/artifacts/preview/conf.png)
 
 ## Install
+
+Needs python virtual env
+
+```sh
+apt install --yes -- python3-venv
+```
 
 **Minimum version**: python:`3.8.2`, nvim: `0.5`
 
