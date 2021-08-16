@@ -199,6 +199,8 @@ Needs python virtual env
 
 ```sh
 apt install --yes -- python3-venv
+#pip3 install virtualenv
+#pip3 install pynvim
 ```
 
 **Minimum version**: python:`3.8.2`, nvim: `0.5`
@@ -206,11 +208,16 @@ apt install --yes -- python3-venv
 Install the usual way, ie. VimPlug, Vundle, etc
 
 ```VimL
-" This is the main one
+" main one
 Plug 'ms-jpq/coq_nvim', {'branch': 'coq'}
-
 " 9000+ Snippets
 Plug 'ms-jpq/coq.artifacts', {'branch': 'artifacts'}
+```
+
+```lua
+-- packer
+use { 'ms-jpq/coq_nvim', branch = 'coq'} -- main one
+use { 'ms-jpq/coq.artifacts', branch= 'artifacts'} -- 9000+ Snippets
 ```
 
 ## Documentation
