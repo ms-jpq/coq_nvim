@@ -95,8 +95,6 @@ vim.schedule(function ()
 end)
 ```
 
-or use [this comment](https://github.com/ms-jpq/coq_nvim/issues/11#issuecomment-899181837).
-
 ### Snippets
 
 - [**Over 9000** built-in snippets](https://raw.githubusercontent.com/ms-jpq/coq.artifacts/artifacts/coq%2Bsnippets.json)
@@ -220,7 +218,8 @@ Plug 'ms-jpq/coq.artifacts', {'branch': 'artifacts'}
 To start `coq`
 
 ```viml
-:COQnow
+" the [-s, --shut-up] flag will remove the greeting message
+:COQnow [--shut-up]
 ```
 
 🌟 If required, it will ask you to run `:COQdeps`, please run it and do `:COQnow` again.
