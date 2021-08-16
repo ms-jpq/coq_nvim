@@ -314,6 +314,12 @@ Theoretically I can work around this by writing my own nvim `extmark` reconcilia
 
 Treesitter still needs stability work.
 
+#### I want to use a difference python version
+
+`vim.g.python3_host_prog=<absolute path to python>`
+
+Note: `~/` will not be expanded to `$HOME`, use `vim.env.HOME .. <path>` instead.
+
 ## If you like this...
 
 Also check out
