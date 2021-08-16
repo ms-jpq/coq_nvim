@@ -71,3 +71,9 @@ It is actually (minor overhead of cancellation + 10s of ms). The heavy lifting c
 It goes further than that.
 
 Not only does work in python get cancelled, the same thing is done for SQLite too. Each SQLite VM have it's own lock protecting the critical operations, and outside of those locked sections, interrupts are fired into the VMs and terminate execution.
+
+## Background Processing
+
+Even after the results are shown to the user, work can still be done!
+
+As a consequence of being able to resume and interrupt most parts of the data pipeline, it then becomes possible to process and shove un-used results into the cache, so on the next keystroke, more results are instantly avliable.
