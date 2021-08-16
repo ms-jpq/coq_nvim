@@ -23,8 +23,8 @@ CONFIG_YML = _CONF_DIR / "defaults.yml"
 COMPILATION_YML = _CONF_DIR / "compilation.yml"
 
 
-CLIENTS_DIR = VARS / "clients"
 TMP_DIR = VARS / "tmp"
+CLIENTS_DIR = VARS / "clients"
 
 
 _ART_DIR = TOP_LEVEL / "artifacts"

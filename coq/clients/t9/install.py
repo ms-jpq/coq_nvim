@@ -14,7 +14,7 @@ from std2.asyncio import run_in_executor
 from std2.platform import OS, os
 from std2.urllib import urlopen
 
-from ...consts import CLIENTS_DIR
+from ...consts import CLIENTS_DIR, TMP_DIR
 
 T9_DIR = CLIENTS_DIR / "t9"
 _LOCK = T9_DIR / "version.lock"
@@ -62,7 +62,9 @@ def _update(timeout: float) -> None:
     if not access(T9_BIN, X_OK) or uri != p_uri:
         with urlopen(uri, timeout=timeout) as resp:
             buf = resp.read()
-        with suppress(FileNotFoundError), NamedTemporaryFile() as fd:
+
+        TMP_DIR.mkdir(parents=True, exist_ok=True)
+        with suppress(FileNotFoundError), NamedTemporaryFile(dir=TMP_DIR) as fd:
             fd.write(buf)
             fd.flush()
             Path(fd.name).replace(T9_BIN)
