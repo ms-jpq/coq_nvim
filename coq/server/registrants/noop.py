@@ -1,8 +1,9 @@
 from argparse import Namespace
 from dataclasses import dataclass
 from itertools import chain
+from os import linesep
 from random import choice, sample
-from sys import stderr
+from sys import stderr, stdout
 from typing import Sequence, Tuple
 
 from pynvim import Nvim
@@ -45,5 +46,7 @@ def now(nvim: Nvim, stack: Stack, args: Sequence[str]) -> None:
             star = (choice(_HELO.stars),)
             birds = " ".join(chain(star, sample(_HELO.cocks, k=chars), star))
             helo = choice(_HELO.helo)
-            msg = f"{birds}  {helo}"
-            print(msg, flush=True)
+            msg = f"{birds}  {helo}{linesep}"
+            encoded = msg.encode("UTF-8")
+            stdout.buffer.write(encoded)
+            stdout.buffer.flush()
