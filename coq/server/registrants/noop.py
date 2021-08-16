@@ -2,7 +2,7 @@ from argparse import Namespace
 from dataclasses import dataclass
 from itertools import chain
 from random import choice, sample
-from sys import stderr
+from sys import stderr, stdout
 from typing import Sequence, Tuple
 
 from pynvim import Nvim
@@ -46,4 +46,9 @@ def now(nvim: Nvim, stack: Stack, args: Sequence[str]) -> None:
             birds = " ".join(chain(star, sample(_HELO.cocks, k=chars), star))
             helo = choice(_HELO.helo)
             msg = f"{birds}  {helo}"
-            print(msg, flush=True)
+            try:
+                print(msg, flush=True)
+            except UnicodeError:
+                encoded = msg.encode("UTF-8")
+                stdout.buffer.write(encoded)
+                stdout.buffer.flush()
