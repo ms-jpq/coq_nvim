@@ -1,0 +1,24 @@
+function! s:filter_completions(arg_lead, completions) abort
+  let l:lead = escape(a:arg_lead, '\\')
+  return filter(a:completions, {_, val -> val =~# "^" . l:lead})
+endfunction
+
+function! coq#complete_help(arg_lead, cmd_line, cursor_pos) abort
+  let l:topics = [
+        \ 'index',
+        \ 'config',
+        \ 'keybind',
+        \ 'fuzzy',
+        \ 'display',
+        \ 'sources',
+        \ 'misc',
+        \ 'stats',
+        \ 'perf',
+        \ ]
+
+  if a:cmd_line[a:cursor_pos - 7 : a:cursor_pos] ==# ' --web '
+    return s:filter_completions(a:arg_lead, l:topics)
+  endif
+
+  return s:filter_completions(a:arg_lead, insert(l:topics, '--web'))
+endfunction

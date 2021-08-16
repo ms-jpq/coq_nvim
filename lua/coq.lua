@@ -118,13 +118,13 @@ return function(args)
     end
 
     set_coq_call("COQnow")
-    vim.api.nvim_command [[command! -nargs=* COQnow lua coq.COQnow(<f-args>)]]
+    vim.api.nvim_command [[command! -complete=customlist,coq#complete_now -nargs=* COQnow lua coq.COQnow(<f-args>)]]
 
     set_coq_call("COQstats")
     vim.api.nvim_command [[command! -nargs=* COQstats lua coq.COQstats(<f-args>)]]
 
     set_coq_call("COQhelp")
-    vim.api.nvim_command [[command! -nargs=* COQhelp lua coq.COQhelp(<f-args>)]]
+    vim.api.nvim_command [[command! -complete=customlist,coq#complete_help  -nargs=* COQhelp lua coq.COQhelp(<f-args>)]]
 
     coq.lsp_ensure_capabilities = function(cfg)
       local spec1 = {
