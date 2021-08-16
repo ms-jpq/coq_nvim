@@ -218,7 +218,7 @@ Plug 'ms-jpq/coq.artifacts', {'branch': 'artifacts'}
 To start `coq`
 
 ```viml
-# the [-s, --shut-up] flag will remove the greeting message
+" the [-s, --shut-up] flag will remove the greeting message
 :COQnow [--shut-up]
 ```
 
