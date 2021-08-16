@@ -39,7 +39,7 @@ def now(nvim: Nvim, stack: Stack, args: Sequence[str]) -> None:
     except ArgparseError as e:
         print(e, file=stderr, flush=True)
     else:
-        if not ns.stfu:
+        if not ns.shut_up:
             lo, hi = _HELO.chars
             chars = choice(range(lo, hi))
             star = (choice(_HELO.stars),)
