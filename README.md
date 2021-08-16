@@ -318,7 +318,7 @@ Treesitter still needs stability work.
 
 `vim.g.python3_host_prog=<absolute path to python>`
 
-Note: `~/` will not be expanded to `$HOME`, use `vim.env.HOME .. <path>` instead.
+Note: `~/` will not be expanded to `$HOME`, use `vim.env.HOME .. <path>` (lua) or `$HOME . <path>` (viml) instead.
 
 ## If you like this...
 
