@@ -1,4 +1,4 @@
-from asyncio import Event, Lock, Task, gather, sleep
+from asyncio import Event, Lock, Task, gather
 from queue import SimpleQueue
 from typing import Any, Literal, Mapping, Optional, Sequence, Tuple, Union, cast
 from uuid import uuid4
@@ -44,9 +44,8 @@ def _launch_loop(nvim: Nvim, stack: Stack) -> None:
 
         async def c0(s: State, manual: bool) -> None:
             with timeit("**OVERALL**"):
-                while lock.locked():
-                    await sleep(0)
-                    log.warn("%s", "LOCKED")
+                if lock.locked():
+                    log.warn("%s", "SHOULD NOT BE LOCKED <><> OODA")
                 async with lock:
                     ctx = await async_call(
                         nvim,
