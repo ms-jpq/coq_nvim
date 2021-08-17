@@ -1,4 +1,6 @@
 ---
+auto_start: False
+
 keymap:
   recommended: True
 

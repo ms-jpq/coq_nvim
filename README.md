@@ -272,6 +272,12 @@ When completion menu is open:
 
 This is a vim thing, I have zero control over :(
 
+#### Autostart COQ
+
+```viml
+coq_settings.auto_start = true
+```
+
 #### LSP too slow to show up on keystroke.
 
 You have some options, each has its trade off:
