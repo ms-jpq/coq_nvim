@@ -45,7 +45,7 @@ _LOCK_FILE = RT_DIR / "requirements.lock"
 _EXEC_PATH = Path(executable)
 _REQ = REQUIREMENTS.read_text()
 
-_IN_VENV = _EXEC_PATH == RT_PY
+_IN_VENV = RT_PY.is_file() and RT_PY.samefile(_EXEC_PATH)
 
 
 if command == "deps":
