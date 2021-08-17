@@ -149,7 +149,7 @@ class Supervisor:
         async def cont() -> Sequence[Metric]:
             nonlocal done
 
-            with with_suppress(), timeit("COLLECTED -- **ALL**"):
+            with with_suppress(), timeit("COLLECTED -- ALL"):
                 assert not self._lock.locked()
                 async with self._lock:
                     await self._reviewer.begin(context)
