@@ -69,9 +69,7 @@ def _listener(nvim: Nvim, stack: Stack) -> None:
                     await awrite(nvim, msg)
 
                 if not pending and mode.startswith("i"):
-                    await async_call(
-                        nvim, comp_func, nvim, stack=stack, s=s, manual=False
-                    )
+                    comp_func(nvim, stack=stack, s=s, manual=False)
 
     go(nvim, aw=cont())
 
