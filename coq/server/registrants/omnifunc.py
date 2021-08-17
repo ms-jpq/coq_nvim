@@ -1,4 +1,4 @@
-from asyncio import CancelledError, Condition, Task, gather
+from asyncio import Condition, Task, gather
 from queue import SimpleQueue
 from typing import Any, Literal, Mapping, Optional, Sequence, Tuple, Union, cast
 from uuid import uuid4
