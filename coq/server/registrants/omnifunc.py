@@ -1,4 +1,4 @@
-from asyncio import Event, Task, gather
+from asyncio import Event, Task, gather, sleep
 from queue import SimpleQueue
 from typing import Any, Literal, Mapping, Optional, Sequence, Tuple, Union, cast
 from uuid import uuid4
@@ -68,11 +68,11 @@ def _launch_loop(nvim: Nvim, stack: Stack) -> None:
                     s = state()
                     if s.change_id == ctx.change_id:
                         vim_comps = tuple(trans(stack, context=ctx, metrics=metrics))
-                        await async_call(nvim, lambda: complete(nvim, col=col, comp=vim_comps))
+                        await async_call(
+                            nvim, lambda: complete(nvim, col=col, comp=vim_comps)
+                        )
                 else:
-                    await async_call(
-                        nvim, lambda: complete(nvim, col=col, comp=())
-                    )
+                    await async_call(nvim, lambda: complete(nvim, col=col, comp=()))
                     state(inserted=(-1, -1))
 
         async def c1() -> None:
@@ -91,6 +91,7 @@ def _launch_loop(nvim: Nvim, stack: Stack) -> None:
 
                     if task:
                         await cancel(task)
+                        await sleep(0)
 
                     if incoming:
                         s, manual = incoming

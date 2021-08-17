@@ -14,6 +14,7 @@ from asyncio import (
 from concurrent.futures import Executor
 from dataclasses import dataclass
 from itertools import chain
+from sys import stderr
 from time import monotonic
 from typing import (
     AbstractSet,
@@ -152,7 +153,7 @@ class Supervisor:
 
             with with_suppress(), timeit("COLLECTED -- **ALL**"):
                 if prev:
-                    print("", flush=True)
+                    print("<><><><>", flush=True, file=stderr)
                     await cancel(gather(*prev))
                 while self._lock.locked():
                     await sleep(0)
