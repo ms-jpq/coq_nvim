@@ -73,9 +73,6 @@ def _launch_loop(nvim: Nvim, stack: Stack) -> None:
                     async with cond:
                         await cond.wait()
 
-                    if task:
-                        await cancel(task)
-
                     if incoming:
                         s, manual = incoming
                         ctx = await async_call(
@@ -95,6 +92,8 @@ def _launch_loop(nvim: Nvim, stack: Stack) -> None:
                         )
 
                         if should:
+                            if task:
+                                await cancel(task)
                             state(context=ctx)
                             task = cast(Task, go(nvim, aw=c0(ctx)))
                         else:
