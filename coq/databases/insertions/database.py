@@ -1,3 +1,4 @@
+from asyncio.exceptions import CancelledError
 from concurrent.futures import Executor
 from contextlib import closing
 from dataclasses import dataclass
@@ -12,6 +13,7 @@ from std2.sqlite3 import with_transaction
 from ...consts import INSERT_DB
 from ...shared.executor import SingleThreadExecutor
 from ...shared.sql import init_db
+from ...shared.timeit import timeit
 from .sql import sql
 
 
@@ -113,7 +115,12 @@ class IDB:
             self._interrupt()
             return self._ex.submit(cont)
 
-        return await run_in_executor(step)
+        try:
+            return await run_in_executor(step)
+        except CancelledError:
+            with timeit("INTERRUPT !! INSERTED"):
+                await run_in_executor(self._interrupt)
+            raise
 
     def inserted(self, instance_id: bytes, sort_by: str) -> None:
         def cont() -> None:
