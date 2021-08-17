@@ -37,10 +37,10 @@ def _should_cont(inserted: Optional[NvimPos], prev: Context, cur: Context) -> bo
 @rpc(blocking=True)
 def _launch_loop(nvim: Nvim, stack: Stack) -> None:
     task: Optional[Task] = None
+    incoming: Optional[Tuple[State, bool]] = None
 
     async def cont() -> None:
         event = Event()
-        incoming: Optional[Tuple[State, bool]] = None
 
         async def c0(s: State, manual: bool) -> None:
             with timeit("**OVERALL**"):
