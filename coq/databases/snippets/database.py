@@ -3,7 +3,7 @@ from concurrent.futures import Executor
 from contextlib import closing
 from sqlite3 import Connection, Cursor, OperationalError
 from threading import Lock
-from typing import AbstractSet, Iterable, Iterator, Mapping, Sequence, TypedDict, cast
+from typing import AbstractSet, Iterable, Iterator, Mapping, TypedDict, cast
 from uuid import uuid4
 
 from std2.asyncio import run_in_executor
@@ -13,6 +13,7 @@ from ...consts import SNIPPET_DB
 from ...shared.executor import SingleThreadExecutor
 from ...shared.settings import Options
 from ...shared.sql import BIGGEST_INT, init_db
+from ...shared.timeit import timeit
 from ...snippets.types import ParsedSnippet
 from .sql import sql
 
@@ -130,5 +131,6 @@ class SDB:
         try:
             return await run_in_executor(step)
         except CancelledError:
-            await run_in_executor(self._interrupt)
+            with timeit("INTERRUPT !! SNIPPETS"):
+                await run_in_executor(self._interrupt)
             raise

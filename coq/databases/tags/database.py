@@ -15,6 +15,7 @@ from ...consts import CLIENTS_DIR
 from ...shared.executor import SingleThreadExecutor
 from ...shared.settings import Options
 from ...shared.sql import BIGGEST_INT, init_db
+from ...shared.timeit import timeit
 from ...tags.types import Tag, Tags
 from .sql import sql
 
@@ -142,5 +143,6 @@ class CTDB:
         try:
             return await run_in_executor(step)
         except CancelledError:
-            await run_in_executor(self._interrupt)
+            with timeit("INTERRUPT !! TAGS"):
+                await run_in_executor(self._interrupt)
             raise

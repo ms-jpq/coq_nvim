@@ -12,6 +12,7 @@ from ...consts import TMUX_DB
 from ...shared.executor import SingleThreadExecutor
 from ...shared.settings import Options
 from ...shared.sql import BIGGEST_INT, init_db
+from ...shared.timeit import timeit
 from .sql import sql
 
 
@@ -89,5 +90,6 @@ class TMDB:
         try:
             return await run_in_executor(step)
         except CancelledError:
-            await run_in_executor(self._interrupt)
+            with timeit("INTERRUPT !! TMUX"):
+                await run_in_executor(self._interrupt)
             raise

@@ -15,6 +15,7 @@ from ...shared.executor import SingleThreadExecutor
 from ...shared.parse import coalesce
 from ...shared.settings import Options
 from ...shared.sql import BIGGEST_INT, init_db
+from ...shared.timeit import timeit
 from .sql import sql
 
 
@@ -198,5 +199,6 @@ class BDB:
         try:
             return await run_in_executor(step)
         except CancelledError:
-            await run_in_executor(self._interrupt)
+            with timeit("INTERRUPT !! BUFFERS"):
+                await run_in_executor(self._interrupt)
             raise
