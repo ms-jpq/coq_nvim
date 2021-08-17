@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from json import loads
 from sqlite3 import Connection, OperationalError
 from threading import Lock
-from typing import Iterator, Mapping, Optional, Sequence
+from typing import Iterator, Mapping, Optional
 
 from std2.asyncio import run_in_executor
 from std2.sqlite3 import with_transaction
