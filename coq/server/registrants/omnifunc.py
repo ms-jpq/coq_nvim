@@ -67,6 +67,7 @@ def _launch_loop(nvim: Nvim, stack: Stack) -> None:
 
                     if should:
                         state(context=ctx)
+                        await stack.supervisor.interrupt()
                         metrics, _ = await gather(
                             stack.supervisor.collect(ctx),
                             async_call(nvim, lambda: complete(nvim, col=col, comp=())),
