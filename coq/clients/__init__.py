@@ -1,3 +1,3 @@
 """
-This file defines ci as a submodule of  coq.
+This file defines clients as a submodule of  coq.
 """
