@@ -68,9 +68,7 @@ def _launch_loop(nvim: Nvim, stack: Stack) -> None:
                     s = state()
                     if s.change_id == ctx.change_id:
                         vim_comps = tuple(trans(stack, context=ctx, metrics=metrics))
-                        await async_call(
-                            nvim, lambda: complete(nvim, col=col, comp=vim_comps)
-                        )
+                        await async_call(nvim, lambda: complete(nvim, col=col, comp=()))
                 else:
                     await async_call(
                         nvim, lambda: complete(nvim, col=col, comp=vim_comps)
