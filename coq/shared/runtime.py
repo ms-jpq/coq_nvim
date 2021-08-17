@@ -112,6 +112,7 @@ class Supervisor:
         await cancel(g)
 
     def collect(self, context: Context) -> Awaitable[Sequence[Metric]]:
+        prev = tuple(chain(((self._task,) if self._task else ()), self._tasks))
         loop: AbstractEventLoop = self.nvim.loop
         t1, done = monotonic(), False
         timeout = (
@@ -150,6 +151,9 @@ class Supervisor:
             nonlocal done
 
             with with_suppress(), timeit("COLLECTED -- **ALL**"):
+                if prev:
+                    print("", flush=True)
+                    await cancel(gather(*prev))
                 while self._lock.locked():
                     await sleep(0)
                 async with self._lock:
