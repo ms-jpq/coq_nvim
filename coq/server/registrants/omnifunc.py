@@ -1,4 +1,4 @@
-from asyncio import Condition, Task, gather
+from asyncio import Event, Task, gather
 from queue import SimpleQueue
 from typing import Any, Literal, Mapping, Optional, Sequence, Tuple, Union, cast
 from uuid import uuid4
@@ -39,7 +39,7 @@ def _launch_loop(nvim: Nvim, stack: Stack) -> None:
     task: Optional[Task] = None
 
     async def cont() -> None:
-        cond = Condition()
+        event = Event()
         incoming: Optional[Tuple[State, bool]] = None
 
         async def c0(ctx: Context) -> None:
@@ -61,15 +61,14 @@ def _launch_loop(nvim: Nvim, stack: Stack) -> None:
             while True:
                 with with_suppress():
                     incoming = await run_in_executor(_Q.get)
-                    async with cond:
-                        cond.notify_all()
+                    event.set()
 
         async def c2() -> None:
             nonlocal task
             while True:
                 with with_suppress():
-                    async with cond:
-                        await cond.wait()
+                    await event.wait()
+                    event.clear()
 
                     if incoming:
                         s, manual = incoming
