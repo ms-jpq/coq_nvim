@@ -14,6 +14,8 @@ JOIN files
 ON files.filename = tags.`path`
 WHERE
   :word <> ''
+  AND 
+  LENGTH(tag.name) * 2 >= LENGTH(:word)
   AND
   files.filetype = :filetype
   AND

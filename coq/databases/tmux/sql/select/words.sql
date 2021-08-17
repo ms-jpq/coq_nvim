@@ -3,6 +3,8 @@ SELECT DISTINCT
 FROM words
 WHERE
   :word <> ''
+  AND 
+  LENGTH(word) * 2 >= LENGTH(:word)
   AND
   pane_id <> :pane_id
   AND

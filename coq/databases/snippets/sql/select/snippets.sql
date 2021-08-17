@@ -7,6 +7,8 @@ SELECT
 FROM snippets_view
 WHERE
   :word <> ''
+  AND 
+  LENGTH(prefix) * 2 >= LENGTH(:word)
   AND
   ft_src = :filetype
   AND

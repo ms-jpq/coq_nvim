@@ -3,6 +3,8 @@ SELECT
 FROM words
 WHERE
   :word <> ''
+  AND 
+  LENGTH(word) * 2 >= LENGTH(:word)
   AND
   lword LIKE X_LIKE_ESC(SUBSTR(LOWER(:word), 1, :exact)) ESCAPE '!'
   AND
