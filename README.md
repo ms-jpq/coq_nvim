@@ -274,9 +274,7 @@ This is a vim thing, I have zero control over :(
 
 #### Autostart COQ
 
-```viml
-coq_settings.auto_start = true
-```
+set `coq_settings.auto_start` to `true`
 
 #### LSP too slow to show up on keystroke.
 
