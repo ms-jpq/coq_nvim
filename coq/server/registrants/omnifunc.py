@@ -20,7 +20,7 @@ from ..rt_types import Stack
 from ..state import State, state
 from ..trans import trans
 
-q: SimpleQueue = SimpleQueue()
+_Q: SimpleQueue = SimpleQueue()
 
 
 @rpc(blocking=True)
@@ -43,7 +43,7 @@ def _launch_loop(nvim: Nvim, stack: Stack) -> None:
             nonlocal ctx
             while True:
                 with with_suppress():
-                    ctx = await run_in_executor(q.get)
+                    ctx = await run_in_executor(_Q.get)
                     async with cond:
                         cond.notify_all()
 
@@ -89,7 +89,7 @@ def comp_func(nvim: Nvim, stack: Stack, s: State, manual: bool) -> None:
 
     if manual or should:
         state(context=ctx)
-        q.put(ctx)
+        _Q.put(ctx)
     else:
         state(inserted=(-1, -1))
 
