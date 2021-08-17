@@ -32,7 +32,7 @@ from weakref import WeakKeyDictionary
 
 from pynvim import Nvim
 from pynvim_pp.lib import go
-from pynvim_pp.logging import with_suppress
+from pynvim_pp.logging import log, with_suppress
 from std2.asyncio import cancel
 
 from .settings import BaseClient, Limits, Options, Weights
@@ -107,10 +107,9 @@ class Supervisor:
         go(self.nvim, aw=cont())
 
     async def interrupt(self) -> None:
-        with timeit("INTERRUPTED -- ALL"):
-            g = gather(*chain(((self._task,) if self._task else ()), self._tasks))
-            self._task, self._tasks = None, ()
-            await cancel(g)
+        g = gather(*chain(((self._task,) if self._task else ()), self._tasks))
+        self._task, self._tasks = None, ()
+        await cancel(g)
 
     def collect(self, context: Context) -> Awaitable[Sequence[Metric]]:
         loop: AbstractEventLoop = self.nvim.loop
@@ -150,9 +149,9 @@ class Supervisor:
         async def cont() -> Sequence[Metric]:
             nonlocal done
 
-            with with_suppress(), timeit("COLLECTED -- **ALL**"):
-                while self._lock.locked():
-                    await sleep(0)
+            with with_suppress(), timeit("COLLECTED -- ALL"):
+                if self._lock.locked():
+                    log.warn("%s", "SHOULD NOT BE LOCKED <><> supervisor")
                 async with self._lock:
                     await self._reviewer.begin(context)
                     self._tasks = tasks = tuple(

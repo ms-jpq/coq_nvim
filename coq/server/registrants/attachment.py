@@ -42,6 +42,7 @@ def _listener(nvim: Nvim, stack: Stack) -> None:
             with with_suppress():
                 thing: _Qmsg = await run_in_executor(q.get)
                 mode, pending, buf, (lo, hi), lines, ft = thing
+                await stack.supervisor.interrupt()
 
                 size = sum(map(len, lines))
                 heavy_bufs = (
@@ -88,7 +89,6 @@ def _lines_event(
     pending: bool,
 ) -> None:
     with suppress(NvimError):
-        go(nvim, aw=stack.supervisor.interrupt())
         filetype = buf_filetype(nvim, buf=buf)
         mode = nvim.api.get_mode()["mode"]
         q.put((mode, pending, buf, (lo, hi), lines, filetype))
