@@ -5,7 +5,6 @@ from io import StringIO
 from multiprocessing import cpu_count
 from os import name
 from pathlib import Path
-from shlex import join
 from subprocess import DEVNULL, STDOUT, CalledProcessError, run
 from sys import executable, exit, stderr, version_info
 from textwrap import dedent
@@ -15,15 +14,13 @@ from .consts import REQUIREMENTS, RT_DIR, RT_PY, TOP_LEVEL, VARS
 
 try:
     from shlex import join
+    from typing import Literal
 
     if version_info < (3, 8, 2):
         raise ImportError()
 except ImportError:
     print("⛔️ python < 3.8.2", end="", file=stderr)
     exit(1)
-
-
-from typing import Literal
 
 
 def parse_args() -> Namespace:
@@ -47,7 +44,9 @@ _LOCK_FILE = RT_DIR / "requirements.lock"
 _EXEC_PATH = Path(executable)
 _REQ = REQUIREMENTS.read_text()
 
-_IN_VENV = RT_PY.is_file() and RT_PY.samefile(_EXEC_PATH)
+_IN_VENV = (
+    RT_PY.parent.resolve() / RT_PY.name == _EXEC_PATH.parent.resolve() / _EXEC_PATH.name
+)
 
 
 if command == "deps":

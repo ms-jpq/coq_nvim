@@ -28,9 +28,9 @@ class Context:
 
     manual: bool
 
-    # CHANGE ID <-> Trigged by NVIM, ie lines changes
+    # CHANGE ID <-> Triggered by NVIM, ie lines changes
     change_id: UUID
-    # COMMIT ID <-> Trigged by COQ
+    # COMMIT ID <-> Triggered by COQ
     commit_id: UUID
 
     cwd: PurePath
