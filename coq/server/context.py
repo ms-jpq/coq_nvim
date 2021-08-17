@@ -1,6 +1,5 @@
 from difflib import unified_diff
 from os import linesep
-from pathlib import Path
 from typing import Literal, Tuple, cast
 
 from pynvim import Nvim

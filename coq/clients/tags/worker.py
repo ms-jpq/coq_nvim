@@ -2,7 +2,6 @@ from asyncio import gather
 from contextlib import suppress
 from os import linesep
 from pathlib import Path, PurePath
-from shutil import which
 from typing import (
     AbstractSet,
     AsyncIterator,

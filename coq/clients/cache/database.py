@@ -1,3 +1,4 @@
+from asyncio import CancelledError
 from concurrent.futures import Executor
 from contextlib import closing
 from sqlite3 import Connection, OperationalError
@@ -10,6 +11,7 @@ from std2.sqlite3 import with_transaction
 from ...shared.executor import SingleThreadExecutor
 from ...shared.settings import Options
 from ...shared.sql import BIGGEST_INT, init_db
+from ...shared.timeit import timeit
 from .sql import sql
 
 
@@ -73,4 +75,9 @@ class Database:
             self._interrupt()
             return self._ex.submit(cont)
 
-        return await run_in_executor(step)
+        try:
+            return await run_in_executor(step)
+        except CancelledError:
+            with timeit("INTERRUPT !! CACHE"):
+                await run_in_executor(self._interrupt)
+            raise

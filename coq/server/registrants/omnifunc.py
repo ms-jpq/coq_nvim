@@ -20,7 +20,18 @@ from ..rt_types import Stack
 from ..state import State, state
 from ..trans import trans
 
-q: SimpleQueue = SimpleQueue()
+_Q: SimpleQueue = SimpleQueue()
+
+
+def _should_cont(inserted: Optional[NvimPos], prev: Context, cur: Context) -> bool:
+    if cur.manual:
+        return True
+    elif prev.change_id == cur.change_id:
+        return False
+    elif cur.position == inserted:
+        return False
+    else:
+        return (cur.words_before or cur.syms_before) != ""
 
 
 @rpc(blocking=True)
@@ -29,10 +40,11 @@ def _launch_loop(nvim: Nvim, stack: Stack) -> None:
 
     async def cont() -> None:
         cond = Condition()
-        ctx: Optional[Context] = None
+        incoming: Optional[Tuple[State, bool]] = None
 
         async def c0(ctx: Context) -> None:
             _, col = ctx.position
+            await async_call(nvim, lambda: complete(nvim, col=col - 1, comp=()))
             metrics = await stack.supervisor.collect(ctx)
             s = state()
             if s.change_id == ctx.change_id:
@@ -40,10 +52,10 @@ def _launch_loop(nvim: Nvim, stack: Stack) -> None:
                 await async_call(nvim, complete, nvim, col=col, comp=vim_comps)
 
         async def c1() -> None:
-            nonlocal ctx
+            nonlocal incoming
             while True:
                 with with_suppress():
-                    ctx = await run_in_executor(q.get)
+                    incoming = await run_in_executor(_Q.get)
                     async with cond:
                         cond.notify_all()
 
@@ -57,8 +69,29 @@ def _launch_loop(nvim: Nvim, stack: Stack) -> None:
                     if task:
                         await cancel(task)
 
-                    if ctx:
-                        task = cast(Task, go(nvim, aw=c0(ctx)))
+                    if incoming:
+                        s, manual = incoming
+                        ctx = await async_call(
+                            nvim,
+                            lambda: context(
+                                nvim,
+                                db=stack.bdb,
+                                options=stack.settings.match,
+                                state=s,
+                                manual=manual,
+                            ),
+                        )
+                        should = (
+                            _should_cont(s.inserted, prev=s.context, cur=ctx)
+                            if ctx
+                            else False
+                        )
+
+                        if should:
+                            state(context=ctx)
+                            task = cast(Task, go(nvim, aw=c0(ctx)))
+                        else:
+                            state(inserted=(-1, -1))
 
         await gather(c1(), c2())
 
@@ -68,30 +101,8 @@ def _launch_loop(nvim: Nvim, stack: Stack) -> None:
 atomic.exec_lua(f"{_launch_loop.name}()", ())
 
 
-def _should_cont(inserted: Optional[NvimPos], prev: Context, cur: Context) -> bool:
-    if prev.change_id == cur.change_id:
-        return False
-    elif cur.position == inserted:
-        return False
-    else:
-        return (cur.words_before or cur.syms_before) != ""
-
-
 def comp_func(nvim: Nvim, stack: Stack, s: State, manual: bool) -> None:
-    with timeit("GEN CTX"):
-        ctx = context(
-            nvim, db=stack.bdb, options=stack.settings.match, state=s, manual=manual
-        )
-
-    should = _should_cont(s.inserted, prev=s.context, cur=ctx) if ctx else False
-    _, col = ctx.position
-    complete(nvim, col=col - 1, comp=())
-
-    if manual or should:
-        state(context=ctx)
-        q.put(ctx)
-    else:
-        state(inserted=(-1, -1))
+    _Q.put((s, manual))
 
 
 @rpc(blocking=True)
