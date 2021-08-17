@@ -45,7 +45,7 @@ def _launch_loop(nvim: Nvim, stack: Stack) -> None:
         async def c0(s: State, manual: bool) -> None:
             with timeit("**OVERALL**"):
                 if lock.locked():
-                    log.critical("%s", "SHOULD NOT BE LOCKED <><> OODA")
+                    log.warn("%s", "SHOULD NOT BE LOCKED <><> OODA")
                 async with lock:
                     ctx = await async_call(
                         nvim,
