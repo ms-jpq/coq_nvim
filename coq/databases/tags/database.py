@@ -1,3 +1,4 @@
+from asyncio import CancelledError
 from concurrent.futures import Executor
 from contextlib import closing
 from hashlib import md5
@@ -138,4 +139,8 @@ class CTDB:
             self._interrupt()
             return self._ex.submit(cont)
 
-        return await run_in_executor(step)
+        try:
+            return await run_in_executor(step)
+        except CancelledError:
+            await run_in_executor(self._interrupt)
+            raise
