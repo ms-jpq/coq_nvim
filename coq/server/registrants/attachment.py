@@ -45,9 +45,7 @@ def _listener(nvim: Nvim, stack: Stack) -> None:
 
                 size = sum(map(len, lines))
                 heavy_bufs = (
-                    {buf.number}
-                    if size > stack.settings.limits.index_cutoff
-                    else set()
+                    {buf.number} if size > stack.settings.limits.index_cutoff else set()
                 )
                 os = state()
                 s = state(change_id=uuid4(), nono_bufs=heavy_bufs)
@@ -91,10 +89,11 @@ def _lines_event(
     lines: Sequence[str],
     pending: bool,
 ) -> None:
-    go(nvim, aw=stack.supervisor.interrupt())
-    filetype = buf_filetype(nvim, buf=buf)
-    mode = nvim.api.get_mode()["mode"]
-    q.put((mode, pending, buf, (lo, hi), lines, filetype))
+    with suppress(NvimError):
+        go(nvim, aw=stack.supervisor.interrupt())
+        filetype = buf_filetype(nvim, buf=buf)
+        mode = nvim.api.get_mode()["mode"]
+        q.put((mode, pending, buf, (lo, hi), lines, filetype))
 
 
 BUF_EVENTS = {
