@@ -1,7 +1,5 @@
 from asyncio import Event, Lock, Task, gather, sleep
-from contextlib import nullcontext
 from queue import SimpleQueue
-from sys import stderr
 from typing import Any, Literal, Mapping, Optional, Sequence, Tuple, Union, cast
 from uuid import uuid4
 
@@ -46,10 +44,9 @@ def _launch_loop(nvim: Nvim, stack: Stack) -> None:
 
         async def c0(s: State, manual: bool) -> None:
             with timeit("**OVERALL**"):
-                with timeit("LOCKED") if lock.locked() else nullcontext():
-                    while lock.locked():
-                        print("<> LOCKED!!", file=stderr, flush=True)
-                        await sleep(0)
+                while lock.locked():
+                    await sleep(0)
+                    log.warn("%s", "LOCKED")
                 async with lock:
                     ctx = await async_call(
                         nvim,
