@@ -125,8 +125,13 @@ M.lsp_ensure_capabilities = function(cfg)
         },
     }
     local maps = (cfg or {}).capabilities and {spec2} or {spec1, spec2}
-    local new = v.tbl_deep_extend('force', cfg or v.empty_dict(), unpack(maps))
+    local new = vim.tbl_deep_extend('force', cfg or vim.empty_dict(),
+                                    unpack(maps))
     return new
 end
+
+local settings = vim.g.coq_settings or {}
+
+if settings.auto_start then coq.COQnow() end
 
 return M
