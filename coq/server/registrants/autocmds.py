@@ -104,7 +104,7 @@ def _load_snips(nvim: Nvim, stack: Stack) -> None:
             if not snippets:
                 for _ in range(9):
                     await sleep(0)
-                await awrite(nvim, LANG("no snippets found"))
+                    await awrite(nvim, LANG("no snippets found"))
 
             exts: MutableMapping[str, MutableSet[str]] = {}
             s_acc: MutableMapping[str, MutableSequence[ParsedSnippet]] = {}
@@ -122,7 +122,8 @@ def _load_snips(nvim: Nvim, stack: Stack) -> None:
             _EXTS, _SNIPPETS = exts, s_acc
             await stack.sdb.add_exts(exts)
 
-    go(nvim, aw=cont())
+    if stack.settings.clients.snippets.enabled:
+        go(nvim, aw=cont())
 
 
 atomic.exec_lua(f"{_load_snips.name}()", ())
@@ -165,7 +166,8 @@ def _ft_changed(nvim: Nvim, stack: Stack) -> None:
 
     async def cont() -> None:
         await stack.bdb.ft_update(buf.number, filetype=ft)
-        await _add_snips(ft, db=stack.sdb)
+        if stack.settings.clients.snippets.enabled:
+            await _add_snips(ft, db=stack.sdb)
 
     go(nvim, aw=cont())
 
