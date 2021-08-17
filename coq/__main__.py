@@ -44,7 +44,9 @@ _LOCK_FILE = RT_DIR / "requirements.lock"
 _EXEC_PATH = Path(executable)
 _REQ = REQUIREMENTS.read_text()
 
-_IN_VENV = RT_PY == _EXEC_PATH
+_IN_VENV = (
+    RT_PY.parent.resolve() / RT_PY.name == _EXEC_PATH.parent.resolve() / _EXEC_PATH.name
+)
 
 
 if command == "deps":
