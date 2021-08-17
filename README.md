@@ -95,6 +95,18 @@ vim.schedule(function ()
 end)
 ```
 
+**If you are using [`vim-plug`](https://github.com/junegunn/vim-plug)**
+
+```lua
+vim.schedule(function ()
+  local lsp = require "lspconfig"
+  lsp.rust_analyzer.setup(coq.lsp_ensure_capabilities()) 
+end)
+
+local lsp = require "lspconfig"
+lsp.rust_analyzer.setup(<stuff...>)
+```
+
 ### Snippets
 
 - [**Over 9000** built-in snippets](https://raw.githubusercontent.com/ms-jpq/coq.artifacts/artifacts/coq%2Bsnippets.json)
