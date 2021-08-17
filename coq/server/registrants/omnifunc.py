@@ -50,9 +50,6 @@ def _launch_loop(nvim: Nvim, stack: Stack) -> None:
                 if s.change_id == ctx.change_id:
                     _, col = s.context.position
                     vim_comps = tuple(trans(stack, context=ctx, metrics=metrics))
-                else:
-                    vim_comps = ()
-                await async_call(nvim, lambda: complete(nvim, col=col, comp=vim_comps))
             except CancelledError:
                 _, col = (s or state()).context.position
                 await async_call(nvim, lambda: complete(nvim, col=col, comp=()))
