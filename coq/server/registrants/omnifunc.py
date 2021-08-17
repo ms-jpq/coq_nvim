@@ -71,7 +71,7 @@ def _launch_loop(nvim: Nvim, stack: Stack) -> None:
                         await async_call(nvim, lambda: complete(nvim, col=col, comp=()))
                 else:
                     await async_call(
-                        nvim, lambda: complete(nvim, col=col, comp=vim_comps)
+                        nvim, lambda: complete(nvim, col=col, comp=())
                     )
                     state(inserted=(-1, -1))
 
