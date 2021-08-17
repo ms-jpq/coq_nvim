@@ -1,8 +1,9 @@
 from argparse import ArgumentParser, Namespace
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import redirect_stderr, redirect_stdout
+from io import StringIO
 from multiprocessing import cpu_count
-from os import devnull, name
+from os import name
 from pathlib import Path
 from shlex import join
 from subprocess import DEVNULL, STDOUT, CalledProcessError, run
@@ -56,7 +57,7 @@ if command == "deps":
         from venv import EnvBuilder
 
         print("...", flush=True)
-        with open(devnull) as fd, redirect_stdout(fd), redirect_stderr(fd):
+        with redirect_stdout(StringIO()), redirect_stderr(StringIO()):
             EnvBuilder(
                 system_site_packages=False,
                 with_pip=True,
