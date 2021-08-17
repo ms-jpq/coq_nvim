@@ -42,19 +42,36 @@ def _launch_loop(nvim: Nvim, stack: Stack) -> None:
         event = Event()
         incoming: Optional[Tuple[State, bool]] = None
 
-        async def c0(ctx: Context) -> None:
+        async def c0(s: State, manual: bool) -> None:
             with timeit("**OVERALL**"):
-                _, col = ctx.position
-                metrics, _ = await gather(
-                    stack.supervisor.collect(ctx),
-                    async_call(nvim, lambda: complete(nvim, col=col, comp=())),
+                ctx = await async_call(
+                    nvim,
+                    lambda: context(
+                        nvim,
+                        db=stack.bdb,
+                        options=stack.settings.match,
+                        state=s,
+                        manual=manual,
+                    ),
                 )
-                s = state()
-                if s.change_id == ctx.change_id:
-                    vim_comps = tuple(trans(stack, context=ctx, metrics=metrics))
-                    await async_call(
-                        nvim, lambda: complete(nvim, col=col, comp=vim_comps)
+                should = (
+                    _should_cont(s.inserted, prev=s.context, cur=ctx) if ctx else False
+                )
+                if should:
+                    state(context=ctx)
+                    _, col = ctx.position
+                    metrics, _ = await gather(
+                        stack.supervisor.collect(ctx),
+                        async_call(nvim, lambda: complete(nvim, col=col, comp=())),
                     )
+                    s = state()
+                    if s.change_id == ctx.change_id:
+                        vim_comps = tuple(trans(stack, context=ctx, metrics=metrics))
+                        await async_call(
+                            nvim, lambda: complete(nvim, col=col, comp=vim_comps)
+                        )
+                else:
+                    state(inserted=(-1, -1))
 
         async def c1() -> None:
             nonlocal incoming
@@ -70,31 +87,12 @@ def _launch_loop(nvim: Nvim, stack: Stack) -> None:
                     await event.wait()
                     event.clear()
 
+                    if task:
+                        await cancel(task)
+
                     if incoming:
                         s, manual = incoming
-                        ctx = await async_call(
-                            nvim,
-                            lambda: context(
-                                nvim,
-                                db=stack.bdb,
-                                options=stack.settings.match,
-                                state=s,
-                                manual=manual,
-                            ),
-                        )
-                        should = (
-                            _should_cont(s.inserted, prev=s.context, cur=ctx)
-                            if ctx
-                            else False
-                        )
-
-                        if should:
-                            if task:
-                                await cancel(task)
-                            state(context=ctx)
-                            task = cast(Task, go(nvim, aw=c0(ctx)))
-                        else:
-                            state(inserted=(-1, -1))
+                        task = cast(Task, go(nvim, aw=c0(s, manual=manual)))
 
         await gather(c1(), c2())
 
