@@ -43,20 +43,15 @@ def _launch_loop(nvim: Nvim, stack: Stack) -> None:
         incoming: Optional[Tuple[State, bool]] = None
 
         async def c0(ctx: Context) -> None:
-            s = None
-            try:
-                metrics = await stack.supervisor.collect(ctx)
-                s = state()
-                if s.change_id == ctx.change_id:
-                    _, col = s.context.position
-                    vim_comps = tuple(trans(stack, context=ctx, metrics=metrics))
-                    await async_call(
-                        nvim, lambda: complete(nvim, col=col, comp=vim_comps)
-                    )
-            except CancelledError:
-                _, col = (s or state()).context.position
-                await async_call(nvim, lambda: complete(nvim, col=col, comp=()))
-                raise
+            _, col = ctx.position
+            metrics, _ = await gather(
+                stack.supervisor.collect(ctx),
+                async_call(nvim, lambda: complete(nvim, col=col, comp=())),
+            )
+            s = state()
+            if s.change_id == ctx.change_id:
+                vim_comps = tuple(trans(stack, context=ctx, metrics=metrics))
+                await async_call(nvim, lambda: complete(nvim, col=col, comp=vim_comps))
 
         async def c1() -> None:
             nonlocal incoming
