@@ -14,6 +14,7 @@ from asyncio import (
 from concurrent.futures import Executor
 from dataclasses import dataclass
 from itertools import chain
+from sys import stderr
 from time import monotonic
 from typing import (
     AbstractSet,
@@ -112,6 +113,7 @@ class Supervisor:
         await cancel(g)
 
     def collect(self, context: Context) -> Awaitable[Sequence[Metric]]:
+        prev = tuple(chain(((self._task,) if self._task else ()), self._tasks))
         loop: AbstractEventLoop = self.nvim.loop
         t1, done = monotonic(), False
         timeout = (
@@ -149,8 +151,10 @@ class Supervisor:
         async def cont() -> Sequence[Metric]:
             nonlocal done
 
-            with with_suppress(), timeit("COLLECTED -- ALL"):
-                assert not self._lock.locked()
+            with with_suppress(), timeit("COLLECTED -- **ALL**"):
+                if prev:
+                    print("<><><><>", flush=True, file=stderr)
+                    await cancel(gather(*prev))
                 async with self._lock:
                     await self._reviewer.begin(context)
                     self._tasks = tasks = tuple(
