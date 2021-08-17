@@ -44,10 +44,7 @@ def _launch_loop(nvim: Nvim, stack: Stack) -> None:
 
         async def c0(ctx: Context) -> None:
             _, col = ctx.position
-            metrics, _ = await gather(
-                stack.supervisor.collect(ctx),
-                async_call(nvim, lambda: complete(nvim, col=col, comp=())),
-            )
+            metrics = await stack.supervisor.collect(ctx)
             s = state()
             if s.change_id == ctx.change_id:
                 vim_comps = tuple(trans(stack, context=ctx, metrics=metrics))
