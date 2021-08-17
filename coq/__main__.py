@@ -1,7 +1,8 @@
 from argparse import ArgumentParser, Namespace
 from concurrent.futures import ThreadPoolExecutor
+from contextlib import redirect_stderr, redirect_stdout
 from multiprocessing import cpu_count
-from os import name
+from os import devnull, name
 from pathlib import Path
 from shlex import join
 from subprocess import DEVNULL, STDOUT, CalledProcessError, run
@@ -55,13 +56,14 @@ if command == "deps":
         from venv import EnvBuilder
 
         print("...", flush=True)
-        EnvBuilder(
-            system_site_packages=False,
-            with_pip=True,
-            upgrade=True,
-            symlinks=not is_win,
-            clear=True,
-        ).create(RT_DIR)
+        with open(devnull) as fd, redirect_stdout(fd), redirect_stderr(fd):
+            EnvBuilder(
+                system_site_packages=False,
+                with_pip=True,
+                upgrade=True,
+                symlinks=not is_win,
+                clear=True,
+            ).create(RT_DIR)
     except (ImportError, SystemExit, CalledProcessError):
         msg = "Please install python3-venv separately. (apt, yum, apk, etc)"
         print(msg, file=stderr)
