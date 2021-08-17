@@ -1,3 +1,3 @@
 """
-This file defines tags as a submodule of  clients.
+This file defines tags as a submodule of clients.
 """

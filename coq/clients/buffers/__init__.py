@@ -1,3 +1,3 @@
 """
-This file defines buffers as a submodule of  clients.
+This file defines buffers as a submodule of clients.
 """

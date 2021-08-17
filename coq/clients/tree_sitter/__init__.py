@@ -1,3 +1,3 @@
 """
-This file defines tree_sitter as a submodule of  clients.
+This file defines tree_sitter as a submodule of clients.
 """
