@@ -148,6 +148,8 @@ class Supervisor:
                     )
 
         async def cont() -> Sequence[Metric]:
+            nonlocal done
+
             with with_suppress(), timeit("COLLECTED -- **ALL**"):
                 while self._lock.locked():
                     await sleep(0)
