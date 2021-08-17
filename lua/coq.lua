@@ -147,5 +147,11 @@ return function(args)
       return new
     end
   end
+
+  local settings = vim.g.coq_settings or {}
+  if settings.auto_start then
+    coq.COQnow()
+  end
+
   return coq
 end
