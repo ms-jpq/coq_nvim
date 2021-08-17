@@ -57,9 +57,10 @@ def _launch_loop(nvim: Nvim, stack: Stack) -> None:
                 should = (
                     _should_cont(s.inserted, prev=s.context, cur=ctx) if ctx else False
                 )
+                _, col = ctx.position
+
                 if should:
                     state(context=ctx)
-                    _, col = ctx.position
                     metrics, _ = await gather(
                         stack.supervisor.collect(ctx),
                         async_call(nvim, lambda: complete(nvim, col=col, comp=())),
@@ -71,6 +72,9 @@ def _launch_loop(nvim: Nvim, stack: Stack) -> None:
                             nvim, lambda: complete(nvim, col=col, comp=vim_comps)
                         )
                 else:
+                    await async_call(
+                        nvim, lambda: complete(nvim, col=col, comp=vim_comps)
+                    )
                     state(inserted=(-1, -1))
 
         async def c1() -> None:
