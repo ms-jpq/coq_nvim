@@ -111,28 +111,19 @@ M.lsp_ensure_capabilities = function(cfg)
     local spec1 = {capabilities = v.lsp.protocol.make_client_capabilities()}
     local spec2 = {
         capabilities = {
-          textDocument = {
-            completion = {
-              completionItem = {
-                snippetSupport = true
-              }
-            }
-          }
-        }
-      }
-      local maps = (cfg or {}).capabilities and {spec2} or {spec1, spec2}
-      local new =
-        vim.tbl_deep_extend("force", cfg or vim.empty_dict(), unpack(maps))
-      return new
-    end
-  end
-
-  local settings = vim.g.coq_settings or {}
-  if settings.auto_start then
-    coq.COQnow()
-  end
-
-  return coq
+            textDocument = {
+                completion = {completionItem = {snippetSupport = true}},
+            },
+        },
+    }
+    local maps = (cfg or {}).capabilities and {spec2} or {spec1, spec2}
+    local new = vim.tbl_deep_extend('force', cfg or vim.empty_dict(),
+                                    unpack(maps))
+    return new
 end
+
+local settings = vim.g.coq_settings or {}
+
+if settings.auto_start then coq.COQnow() end
 
 return M
