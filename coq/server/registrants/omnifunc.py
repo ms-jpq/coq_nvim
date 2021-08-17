@@ -56,6 +56,7 @@ def _launch_loop(nvim: Nvim, stack: Stack) -> None:
             except CancelledError:
                 _, col = (s or state()).context.position
                 await async_call(nvim, lambda: complete(nvim, col=col, comp=()))
+                raise
 
         async def c1() -> None:
             nonlocal incoming
