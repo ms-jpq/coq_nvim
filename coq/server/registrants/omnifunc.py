@@ -1,4 +1,4 @@
-from asyncio import Condition, Task, gather
+from asyncio import CancelledError, Condition, Task, gather
 from queue import SimpleQueue
 from typing import Any, Literal, Mapping, Optional, Sequence, Tuple, Union, cast
 from uuid import uuid4
@@ -43,16 +43,19 @@ def _launch_loop(nvim: Nvim, stack: Stack) -> None:
         incoming: Optional[Tuple[State, bool]] = None
 
         async def c0(ctx: Context) -> None:
-            _, col = ctx.position
-            metrics = await stack.supervisor.collect(ctx)
-            s = state()
-            if s.change_id == ctx.change_id:
-                vim_comps = tuple(trans(stack, context=ctx, metrics=metrics))
-                await async_call(
-                    nvim, lambda: complete(nvim, col=col - 1, comp=vim_comps)
-                )
-            else:
-                await async_call(nvim, lambda: complete(nvim, col=col - 1, comp=()))
+            s = None
+            try:
+                metrics = await stack.supervisor.collect(ctx)
+                s = state()
+                if s.change_id == ctx.change_id:
+                    _, col = s.context.position
+                    vim_comps = tuple(trans(stack, context=ctx, metrics=metrics))
+                else:
+                    vim_comps = ()
+                await async_call(nvim, lambda: complete(nvim, col=col, comp=vim_comps))
+            except CancelledError:
+                _, col = (s or state()).context.position
+                await async_call(nvim, lambda: complete(nvim, col=col, comp=()))
 
         async def c1() -> None:
             nonlocal incoming
