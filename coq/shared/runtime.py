@@ -151,7 +151,7 @@ class Supervisor:
 
             with with_suppress(), timeit("COLLECTED -- **ALL**"):
                 if self._lock.locked():
-                    log.critial("%s", "SHOULD NOT BE LOCKED <><> supervisor")
+                    log.critical("%s", "SHOULD NOT BE LOCKED <><> supervisor")
                 async with self._lock:
                     await self._reviewer.begin(context)
                     self._tasks = tasks = tuple(
