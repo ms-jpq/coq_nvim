@@ -42,11 +42,10 @@ command: Union[Literal["deps"], Literal["run"]] = args.command
 
 _LOCK_FILE = RT_DIR / "requirements.lock"
 _EXEC_PATH = Path(executable)
+_EXEC_PATH = _EXEC_PATH.parent.resolve() / _EXEC_PATH.name
 _REQ = REQUIREMENTS.read_text()
 
-_IN_VENV = (
-    RT_PY.parent.resolve() / RT_PY.name == _EXEC_PATH.parent.resolve() / _EXEC_PATH.name
-)
+_IN_VENV = RT_PY == (_EXEC_PATH.parent.resolve() / _EXEC_PATH.name)
 
 
 if command == "deps":
