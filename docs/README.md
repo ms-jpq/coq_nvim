@@ -34,7 +34,7 @@ Launch `coq.nvim` with a greeting.
 
 ### `COQdeps`
 
-`:COQdeps` will install all of `coq.nvim`'s depdencies locally.
+`:COQdeps` will install all of `coq.nvim`'s dependencies locally.
 
 Dependencies will be privately installed inside `coq.nvim`'s git root under `.vars/runtime`.
 

@@ -8,11 +8,11 @@ Fast as FUCK and loads of features.
 
 ## Faster Than Lua
 
-- Native C in memory B-trees
+- Native C in-memory B-trees
 
 - SQLite VM interrupts
 
-- Coroutine based incremental & interruptable scheduler
+- Coroutine based incremental & interruptible scheduler
 
 - TCP-esque flow control
 
@@ -96,8 +96,6 @@ vim.schedule(function ()
 end)
 ```
 
-or use [this comment](https://github.com/ms-jpq/coq_nvim/issues/11#issuecomment-899181837).
-
 ### Snippets
 
 - [**Over 9000** built-in snippets](https://raw.githubusercontent.com/ms-jpq/coq.artifacts/artifacts/coq%2Bsnippets.json)
@@ -158,13 +156,13 @@ apt install universal-ctags    # good
 
 - Unicode ready
 
-- I dont have a picture, its boring
+- I don't have a picture, it's boring
 
 **Treesitter is still unstable in nvim0.5: slow and crash prone**
 
-The promise is that Treesitter will have real time parsing on every keystroke, but its actually too slow on big files.
+The promise is that Treesitter will have real time parsing on every keystroke, but it's actually too slow on big files.
 
-The Treesitter source only parses on `Idle` events due to unrealized performace promises.
+The Treesitter source only parses on `Idle` events due to unrealized performance promises.
 
 ### Tmux
 
@@ -204,16 +202,21 @@ Needs python virtual env
 apt install --yes -- python3-venv
 ```
 
-**Minimum version**: python:`3.8.2`, nvim: `0.5`
+**Minimum version**: python:`3.8.2`, nvim: `0.5`, sqlite: `recentish`
 
 Install the usual way, ie. VimPlug, Vundle, etc
 
 ```VimL
-" This is the main one
+" main one
 Plug 'ms-jpq/coq_nvim', {'branch': 'coq'}
-
 " 9000+ Snippets
 Plug 'ms-jpq/coq.artifacts', {'branch': 'artifacts'}
+```
+
+```lua
+-- packer
+use { 'ms-jpq/coq_nvim', branch = 'coq'} -- main one
+use { 'ms-jpq/coq.artifacts', branch= 'artifacts'} -- 9000+ Snippets
 ```
 
 ## Documentation
@@ -221,7 +224,8 @@ Plug 'ms-jpq/coq.artifacts', {'branch': 'artifacts'}
 To start `coq`
 
 ```viml
-:COQnow
+" the [-s, --shut-up] flag will remove the greeting message
+:COQnow [--shut-up]
 ```
 
 🌟 If required, it will ask you to run `:COQdeps`, please run it and do `:COQnow` again.
@@ -270,13 +274,17 @@ When completion menu is open:
 | `<tab>`       | next result                   |
 | `<s-tab>`     | prev result                   |
 
-**When hovering over a result, entering anykey [a-z] will select it**
+**When hovering over a result, entering any key [a-z] will select it**
 
 This is a vim thing, I have zero control over :(
 
+#### Autostart COQ
+
+set `coq_settings.auto_start` to `true`
+
 #### LSP too slow to show up on keystroke.
 
-You have some options, each has it's trade off:
+You have some options, each has its trade off:
 
 1. Increase the `coq_settings.limits.completion_auto_timeout`.
 
@@ -316,13 +324,19 @@ Theoretically I can work around this by writing my own nvim `extmark` reconcilia
 
 Treesitter still needs stability work.
 
+#### I want to use a different python version
+
+`vim.g.python3_host_prog=<absolute path to python>`
+
+Note: `~/` will not be expanded to `$HOME`, use `vim.env.HOME .. <path>` (lua) or `$HOME . <path>` (viml) instead.
+
 ## If you like this...
 
 Also check out
 
-- [`sad`](https://github.com/ms-jpq/sad), its a modern `sed` that does previews with syntax highlighting, and lets you pick and choose which chunks to edit.
+- [`sad`](https://github.com/ms-jpq/sad), it's a modern `sed` that does previews with syntax highlighting, and lets you pick and choose which chunks to edit.
 
-- [`CHADTree`](https://github.com/ms-jpq/chadtree), its a FULLY featured file manager.
+- [`CHADTree`](https://github.com/ms-jpq/chadtree), it's a FULLY featured file manager.
 
 - [isomorphic-copy](https://github.com/ms-jpq/isomorphic-copy), it's a cross platform clipboard that is daemonless, and does not require third party support.
 

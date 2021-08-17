@@ -16,7 +16,7 @@ CREATE TABLE IF NOT EXISTS tags (
   line      INTEGER NOT NULL,
   kind      TEXT    NOT NULL,
   name      TEXT    NOT NULL,
-  lname     TEXT    NOT NULL AS (LOWER(name)) STORED,
+  lname     TEXT    NOT NULL,
   pattern   TEXT    NOT NULL,
   typeref   TEXT,
   scope     TEXT,

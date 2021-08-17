@@ -11,9 +11,13 @@ from typing import Union
 
 from .consts import REQUIREMENTS, RT_DIR, RT_PY, TOP_LEVEL, VARS
 
-if version_info < (3, 8, 2):
-    msg = "⛔️ python < 3.8.2"
-    print(msg, end="", file=stderr)
+try:
+    from shlex import join
+
+    if version_info < (3, 8, 2):
+        raise ImportError()
+except ImportError:
+    print("⛔️ python < 3.8.2", end="", file=stderr)
     exit(1)
 
 
@@ -41,7 +45,7 @@ _LOCK_FILE = RT_DIR / "requirements.lock"
 _EXEC_PATH = Path(executable)
 _REQ = REQUIREMENTS.read_text()
 
-_IN_VENV = _EXEC_PATH == RT_PY
+_IN_VENV = RT_PY.is_file() and RT_PY.samefile(_EXEC_PATH)
 
 
 if command == "deps":

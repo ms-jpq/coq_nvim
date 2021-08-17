@@ -6,6 +6,6 @@ WHERE
   AND
   CASE
     WHEN :hi >= 0 THEN line_num < :hi
-    ELSE TRUE
+    ELSE 1
   END
 
