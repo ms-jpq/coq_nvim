@@ -206,11 +206,16 @@ apt install --yes -- python3-venv
 Install the usual way, ie. VimPlug, Vundle, etc
 
 ```VimL
-" This is the main one
+" main one
 Plug 'ms-jpq/coq_nvim', {'branch': 'coq'}
-
 " 9000+ Snippets
 Plug 'ms-jpq/coq.artifacts', {'branch': 'artifacts'}
+```
+
+```lua
+-- packer
+use { 'ms-jpq/coq_nvim', branch = 'coq'} -- main one
+use { 'ms-jpq/coq.artifacts', branch= 'artifacts'} -- 9000+ Snippets
 ```
 
 ## Documentation
