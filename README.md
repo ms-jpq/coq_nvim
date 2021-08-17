@@ -2,7 +2,7 @@
 
 Named after the [famous theorem prover](https://coq.inria.fr/)
 
-`coq` also means `鸡` in [`français québécois`](https://www.youtube.com/watch?v=ZoAhZPRBMgE), and I guess `🥖`.
+`coq` also means `鸡` in [`français québécois`](https://youtu.be/ZoAhZPRBMgE), and I guess `🥖`.
 
 Fast as FUCK and loads of features.
 
