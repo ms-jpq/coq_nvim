@@ -10,8 +10,6 @@ return function(args)
   end
   local cwd = args and unpack(args) or seek_rtp()
 
-  local is_win = vim.api.nvim_call_function("has", {"win32"}) == 1
-
   coq = coq or {}
   local linesep = "\n"
   local POLLING_RATE = 10
@@ -19,6 +17,8 @@ return function(args)
   if coq.loaded then
     return coq
   else
+    local is_win = vim.api.nvim_call_function("has", {"win32"}) == 1
+
     coq.loaded = true
     local job_id = nil
     local err_exit = false
@@ -147,5 +147,11 @@ return function(args)
       return new
     end
   end
+
+  local settings = vim.g.coq_settings or {}
+  if settings.auto_start then
+    coq.COQnow()
+  end
+
   return coq
 end

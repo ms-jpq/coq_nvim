@@ -86,8 +86,6 @@ class PathsClient(BaseClient):
     preview_lines: int
 
 
-
-
 @dataclass(frozen=True)
 class WordbankClient(BaseClient):
     match_syms: bool
@@ -123,6 +121,7 @@ class Clients:
 
 @dataclass(frozen=True)
 class Settings:
+    auto_start: bool
     limits: Limits
     display: Display
     match: Options
