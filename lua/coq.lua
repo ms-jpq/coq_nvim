@@ -44,13 +44,13 @@ local main = function()
     local win_proxy = cwd .. [[/win.bat]]
 
     if is_win then
-        if v.fn.filereadable(v_py) == 1 then
+        if fn.filereadable(v_py) == 1 then
             return {v_py}
         else
             return {win_proxy, py3}
         end
     else
-        if v.fn.filereadable(v_py) == 1 then
+        if fn.filereadable(v_py) == 1 then
             return {v_py}
         else
             return {py3}
@@ -67,13 +67,11 @@ local start = function(deps, ...)
         on_stdout = on_stdout,
         on_stderr = on_stderr,
     }
-    job_id = v.fn.jobstart(args, params)
+    job_id = fn.jobstart(args, params)
     return job_id
 end
 
 M.COQdeps = function() start(true, 'deps') end
-
-api.nvim_command [[command! -nargs=0 COQdeps lua M.COQdeps()]]
 
 local set_coq_call = function(cmd)
     M[cmd] = function(...)
@@ -91,21 +89,23 @@ local set_coq_call = function(cmd)
                 if err_exit then
                     return
                 else
-                    M[cmd](unpack(args))
+                    M[cmd](table.unpack(args))
                 end
             end, POLLING_RATE)
         end
     end
 end
 
+api.nvim_command [[command! -nargs=0 COQdeps lua require("coq").COQdeps()]]
+
 set_coq_call('COQnow')
-api.nvim_command [[command! -nargs=* COQnow lua M.COQnow(<f-args>)]]
+api.nvim_command [[command! -nargs=* COQnow lua require("coq").COQnow(<f-args>)]]
 
 set_coq_call('COQstats')
-api.nvim_command [[command! -nargs=* COQstats lua M.COQstats(<f-args>)]]
+api.nvim_command [[command! -nargs=* COQstats lua require("coq").COQstats(<f-args>)]]
 
 set_coq_call('COQhelp')
-api.nvim_command [[command! -nargs=* COQhelp lua M.COQhelp(<f-args>)]]
+api.nvim_command [[command! -nargs=* COQhelp lua require("coq").COQhelp(<f-args>)]]
 
 M.lsp_ensure_capabilities = function(cfg)
     local spec1 = {capabilities = v.lsp.protocol.make_client_capabilities()}
@@ -117,13 +117,12 @@ M.lsp_ensure_capabilities = function(cfg)
         },
     }
     local maps = (cfg or {}).capabilities and {spec2} or {spec1, spec2}
-    local new = vim.tbl_deep_extend('force', cfg or vim.empty_dict(),
-                                    unpack(maps))
+    local new = v.tbl_deep_extend('force', cfg or v.empty_dict(), table.unpack(maps))
     return new
 end
 
-local settings = vim.g.coq_settings or {}
+local settings = v.g.coq_settings or {}
 
-if settings.auto_start then coq.COQnow() end
+if settings.auto_start then M.COQnow() end
 
 return M
