@@ -45,7 +45,7 @@ def _launch_loop(nvim: Nvim, stack: Stack) -> None:
         async def c0(s: State, manual: bool) -> None:
             with timeit("**OVERALL**"):
                 if lock.locked():
-                    with timeit("LOCKED", force=True):
+                    with timeit("LOCKED"):
                         await sleep(0)
                 async with lock:
                     ctx = await async_call(
