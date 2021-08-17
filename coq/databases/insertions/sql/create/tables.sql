@@ -46,10 +46,10 @@ CREATE INDEX IF NOT EXISTS inserted_sort_by     ON inserted (sort_by);
 
 CREATE VIEW IF NOT EXISTS instance_stats_view AS
 SELECT
-  instances.source_id                        AS source,
-  COALESCE(instance_stats.interrupted, TRUE) AS interrupted,
-  instance_stats.duration                    AS duration,
-  COALESCE(instance_stats.items, 0)          AS items
+  instances.source_id                     AS source,
+  COALESCE(instance_stats.interrupted, 1) AS interrupted,
+  instance_stats.duration                 AS duration,
+  COALESCE(instance_stats.items, 0)       AS items
 FROM instances
 LEFT JOIN instance_stats
 ON

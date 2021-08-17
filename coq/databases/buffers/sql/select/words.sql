@@ -8,7 +8,7 @@ ON buffers.rowid = lines.buffer_id
 WHERE
   CASE
     WHEN :filetype <> NULL THEN buffers.filetype = :filetype
-    ELSE TRUE
+    ELSE 1
   END
   AND
   :word <> ''
