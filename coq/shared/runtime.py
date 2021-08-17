@@ -107,10 +107,9 @@ class Supervisor:
         go(self.nvim, aw=cont())
 
     async def interrupt(self) -> None:
-        with timeit("INTERRUPTED -- ALL"):
-            g = gather(*chain(((self._task,) if self._task else ()), self._tasks))
-            self._task, self._tasks = None, ()
-            await cancel(g)
+        g = gather(*chain(((self._task,) if self._task else ()), self._tasks))
+        self._task, self._tasks = None, ()
+        await cancel(g)
 
     def collect(self, context: Context) -> Awaitable[Sequence[Metric]]:
         loop: AbstractEventLoop = self.nvim.loop
