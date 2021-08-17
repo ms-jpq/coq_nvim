@@ -110,7 +110,7 @@ def _cmp_to_vcmp(
 
     user_data = UserData(
         uid=metric.comp.uid,
-        instance=metric.istance,
+        instance=metric.instance,
         change_uid=context.change_id,
         sort_by=metric.comp.sort_by,
         primary_edit=metric.comp.primary_edit,

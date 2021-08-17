@@ -45,7 +45,7 @@ O_co = TypeVar("O_co", contravariant=True, bound=BaseClient)
 
 @dataclass(frozen=True)
 class Metric:
-    istance: UUID
+    instance: UUID
     comp: Completion
     weight: Weights
     label_width: int
