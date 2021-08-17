@@ -71,25 +71,22 @@ def _launch_loop(nvim: Nvim, stack: Stack) -> None:
 
                     if incoming:
                         s, manual = incoming
-
-                        def c3() -> Context:
-                            ctx = context(
+                        ctx = await async_call(
+                            nvim,
+                            lambda: context(
                                 nvim,
                                 db=stack.bdb,
                                 options=stack.settings.match,
                                 state=s,
                                 manual=manual,
-                            )
-
-                            return ctx
-
-                        ctx = await async_call(nvim, c3)
-
+                            ),
+                        )
                         should = (
                             _should_cont(s.inserted, prev=s.context, cur=ctx)
                             if ctx
                             else False
                         )
+
                         if should:
                             state(context=ctx)
                             task = cast(Task, go(nvim, aw=c0(ctx)))
