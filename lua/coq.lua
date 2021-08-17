@@ -97,7 +97,7 @@ local set_coq_call = function(cmd)
                 if err_exit then
                     return
                 else
-                    M[cmd](table.unpack(args))
+                    M[cmd](unpack(args))
                 end
             end, POLLING_RATE)
         end
@@ -125,7 +125,7 @@ M.lsp_ensure_capabilities = function(cfg)
         },
     }
     local maps = (cfg or {}).capabilities and {spec2} or {spec1, spec2}
-    local new = v.tbl_deep_extend('force', cfg or v.empty_dict(), table.unpack(maps))
+    local new = v.tbl_deep_extend('force', cfg or v.empty_dict(), unpack(maps))
     return new
 end
 
