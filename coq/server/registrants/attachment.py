@@ -6,7 +6,7 @@ from uuid import uuid4
 from pynvim import Nvim
 from pynvim.api import Buffer, NvimError
 from pynvim_pp.api import buf_filetype, buf_get_option, cur_buf
-from pynvim_pp.lib import async_call, awrite, go
+from pynvim_pp.lib import awrite, go
 from pynvim_pp.logging import with_suppress
 from std2.asyncio import run_in_executor
 
@@ -69,9 +69,7 @@ def _listener(nvim: Nvim, stack: Stack) -> None:
                     await awrite(nvim, msg)
 
                 if not pending and mode.startswith("i"):
-                    await async_call(
-                        nvim, comp_func, nvim, stack=stack, s=s, manual=False
-                    )
+                    comp_func(nvim, stack=stack, s=s, manual=False)
 
     go(nvim, aw=cont())
 
