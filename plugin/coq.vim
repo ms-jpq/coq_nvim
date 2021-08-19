@@ -1,1 +1,1 @@
-call luaeval('require("coq")')
+call luaeval('require("coq") and 0')
