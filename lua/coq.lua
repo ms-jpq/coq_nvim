@@ -150,7 +150,7 @@ return function(args)
 
   local settings = vim.g.coq_settings or {}
   if settings.auto_start then
-    coq.COQnow()
+    coq.COQnow('--shut-up')
   end
 
   return coq
