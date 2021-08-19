@@ -94,7 +94,7 @@ local set_coq_call = function(cmd)
     local args = {...}
 
     if not job_id then
-      local server = vim.api.nvim_call_function("serverstart", {})
+      local server = vim.fn.serverstart()
       job_id = start(false, "run", "--socket", server)
     end
 
