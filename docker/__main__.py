@@ -1,39 +1,34 @@
 from asyncio import gather, run
 from pathlib import Path
-from typing import Awaitable, Iterator
 
-from std2.asyncio.subprocess import ProcReturn, call
+from std2.asyncio.subprocess import call
 
 _PARENT = Path(__file__).resolve().parent
 _TOP_LEVEL = _PARENT.parent
 
 
-async def main() -> None:
+async def _build(path: str) -> None:
+    tag = f"coq_{path.lstrip('_')}"
     await call(
         "docker",
         "buildx",
         "build",
+        "--progress",
+        "plain",
+        "--file",
+        _PARENT / path / "Dockerfile",
         "--tag",
-        "coq_base",
+        tag,
         "--",
-        _PARENT / "_base" / "Dockerfile",
-        cwd=_TOP_LEVEL,
+        _TOP_LEVEL,
+        capture_stdout=False,
+        capture_stderr=False,
     )
 
-    def cont() -> Iterator[Awaitable[ProcReturn]]:
-        for path in ("packer", "vimplug"):
-            yield call(
-                "docker",
-                "buildx",
-                "build",
-                "--tag",
-                f"coq_{path}",
-                "--",
-                _PARENT / path / "Dockerfile",
-                cwd=_TOP_LEVEL,
-            )
 
-    await gather(*cont())
+async def main() -> None:
+    await _build("_base")
+    await gather(_build("packer"), _build("vimplug"))
 
 
 run(main())
