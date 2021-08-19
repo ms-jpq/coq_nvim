@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import AbstractSet, Optional, Tuple
+from typing import AbstractSet, Literal, Optional, Tuple, Union
 
 
 @dataclass(frozen=True)
@@ -121,7 +121,7 @@ class Clients:
 
 @dataclass(frozen=True)
 class Settings:
-    auto_start: bool
+    auto_start: Union[bool, Literal["shut-up"]]
     limits: Limits
     display: Display
     match: Options
