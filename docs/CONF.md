@@ -65,7 +65,7 @@ Will give you the following error message:
 
 ## Specifics
 
-Set `coq_settings.auto_start` to `true` to auto start.
+Set `coq_settings.auto_start` to `true | 'shut-up'` to auto start.
 
 - [:COQhelp keybind](https://github.com/ms-jpq/coq_nvim/tree/coq/docs/KEYBIND.md)
 
