@@ -6,8 +6,8 @@ local POLLING_RATE = 10
 
 local cwd = (function()
   local source = debug.getinfo(2, "S").source
-  local file = string.match(source, "@?(.*)")
-  return vim.fn.fnamemodify(file, ":p:h")
+  local file = string.match(source, "^@(.*)")
+  return vim.fn.fnamemodify(file, ":p:h:h")
 end)()
 
 local job_id = nil
