@@ -26,13 +26,13 @@ jobs:
           python-version: ${{ matrix.python_ver }}
 
       - name: Pip Packages
-        run: pip install -U mypy types-PyYAML
-
-      - name: Pip Packages
-        run: pip install -U -r requirements.txt
+        run: pip install --upgrade codespell mypy types-PyYAML -r requirements.txt
 
       - name: Apt Packages
         run: sudo apt install -y universal-ctags
+
+      - name: Codespell
+        run: codespell --ignore-words-list="alo,wit"
 
       - name: Lint
         run: mypy -- .
