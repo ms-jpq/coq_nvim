@@ -21,5 +21,3 @@ let g:python3_host_prog = '/usr/bin/python3'
 let mapleader=' '
 nnoremap <leader>v <cmd>CHADopen<cr>
 nnoremap <leader>z <cmd>COQnow<cr>
-
-
