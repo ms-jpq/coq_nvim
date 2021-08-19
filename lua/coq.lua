@@ -155,5 +155,3 @@ return function(args)
 
   return coq
 end
-
-return init()
