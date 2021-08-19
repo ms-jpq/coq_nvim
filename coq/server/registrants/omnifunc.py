@@ -144,6 +144,8 @@ def _comp_done(nvim: Nvim, stack: Stack, event: Mapping[str, Any]) -> None:
         else:
             s = state()
             if user_data.change_uid == s.change_id:
+                if not user_data.secondary_edits:
+                    user_data = user_data
                 inserted = edit(
                     nvim, stack=stack, state=s, data=user_data, synthetic=False
                 )

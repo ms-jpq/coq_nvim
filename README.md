@@ -270,7 +270,7 @@ This is a vim thing, I have zero control over :(
 
 #### Autostart COQ
 
-`let g:coq_settings = { 'auto_start': v:true }` (or the lua way)
+`let g:coq_settings = { 'auto_start': v:true | 'shut-up' }` (or the lua way)
 
 #### LSP too slow to show up on keystroke.
 

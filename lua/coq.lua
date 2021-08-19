@@ -136,7 +136,8 @@ end
 
 local settings = vim.g.coq_settings or {}
 if settings.auto_start then
-  coq.COQnow()
+  local args = settings.auto_start == "shut-up" and {"--shut-up"} or {}
+  coq.COQnow(unpack(args))
 end
 
 setmetatable(
