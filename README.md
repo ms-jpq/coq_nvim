@@ -106,9 +106,9 @@ _The `%` statistic comes from compiling the 10,000 snippets_
 
 ### CTags
 
-- Incremental & automatic **background compilation**
+- **LSP like**
 
-- Tag location & context
+- Incremental & automatic **background compilation**
 
 - Non-blocking
 
