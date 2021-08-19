@@ -76,7 +76,7 @@ Error correction: `cour` -> `colour_space`, `flgr` -> `flag_group`, `nasp` -> `N
 
 Install the [Nvim Official LSP integration](https://github.com/neovim/nvim-lspconfig)
 
-**Requires 2 line of change to support LSP snippets**
+**Requires 2 lines of change to support LSP snippets**
 
 ```lua
 local lsp = require "lspconfig"
