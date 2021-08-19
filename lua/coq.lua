@@ -94,8 +94,7 @@ local set_coq_call = function(cmd)
     local args = {...}
 
     if not job_id then
-      local server = vim.fn.serverstart()
-      job_id = start(false, "run", "--socket", server)
+      job_id = start(false, "run", "--socket", vim.fn.serverstart())
     end
 
     if not err_exit and _G[cmd] then
