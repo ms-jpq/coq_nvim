@@ -1,4 +1,6 @@
-# coq.nvim 🐔
+# nvim-completion 🐔
+
+## SAME as the original [coq_nvim](https://github.com/ms-jpq/coq_nvim) plugin but slightly different configuration.
 
 Named after the [famous theorem prover](https://coq.inria.fr/)
 
