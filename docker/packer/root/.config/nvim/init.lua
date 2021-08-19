@@ -9,3 +9,5 @@ require("packer").startup(
 local lsp = require "lspconfig"
 local coq = require("coq")
 lsp.cssls.setup(coq.lsp_ensure_capabilities())
+lsp.cssls.setup(coq().lsp_ensure_capabilities())
+assert(coq == coq()())

@@ -5,19 +5,10 @@ local linesep = "\n"
 local POLLING_RATE = 10
 
 local cwd = (function()
-  local seek_rtp = function()
-    local name = "coq_nvim"
-    for _, rtp in ipairs(vim.api.nvim_list_runtime_paths()) do
-      if string.sub(rtp, -(#name)) == name then
-        return rtp
-      end
-    end
-    return nil
-  end
-
-  return seek_rtp()
+  local source = debug.getinfo(2, "S").source
+  local file = string.match(source, "@?(.*)")
+  return vim.fn.fnamemodify(file, ":p:h")
 end)()
-assert(cwd, "RTP NOT FOUND")
 
 local job_id = nil
 local err_exit = false
