@@ -150,4 +150,13 @@ if settings.auto_start then
   coq.COQnow()
 end
 
+setmetatable(
+  coq,
+  {
+    __call = function()
+      return coq
+    end
+  }
+)
+
 return coq
