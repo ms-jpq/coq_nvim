@@ -1,4 +1,4 @@
-from asyncio import CancelledError, Condition, Task, gather
+from asyncio import Event, Lock, Task, gather
 from queue import SimpleQueue
 from typing import Any, Literal, Mapping, Optional, Sequence, Tuple, Union, cast
 from uuid import uuid4
@@ -37,63 +37,72 @@ def _should_cont(inserted: Optional[NvimPos], prev: Context, cur: Context) -> bo
 @rpc(blocking=True)
 def _launch_loop(nvim: Nvim, stack: Stack) -> None:
     task: Optional[Task] = None
+    incoming: Optional[Tuple[State, bool]] = None
 
     async def cont() -> None:
-        cond = Condition()
-        incoming: Optional[Tuple[State, bool]] = None
+        lock, event = Lock(), Event()
 
-        async def c0(ctx: Context) -> None:
-            _, col = ctx.position
-            metrics, _ = await gather(
-                stack.supervisor.collect(ctx),
-                async_call(nvim, lambda: complete(nvim, col=col, comp=())),
-            )
-            s = state()
-            if s.change_id == ctx.change_id:
-                vim_comps = tuple(trans(stack, context=ctx, metrics=metrics))
-                await async_call(nvim, lambda: complete(nvim, col=col, comp=vim_comps))
+        async def c0(s: State, manual: bool) -> None:
+            with timeit("**OVERALL**"):
+                if lock.locked():
+                    log.warn("%s", "SHOULD NOT BE LOCKED <><> OODA")
+                async with lock:
+                    ctx = await async_call(
+                        nvim,
+                        lambda: context(
+                            nvim,
+                            db=stack.bdb,
+                            options=stack.settings.match,
+                            state=s,
+                            manual=manual,
+                        ),
+                    )
+                    should = (
+                        _should_cont(s.inserted, prev=s.context, cur=ctx)
+                        if ctx
+                        else False
+                    )
+                    _, col = ctx.position
+
+                    if should:
+                        state(context=ctx)
+                        await stack.supervisor.interrupt()
+                        metrics, _ = await gather(
+                            stack.supervisor.collect(ctx),
+                            async_call(nvim, lambda: complete(nvim, col=col, comp=())),
+                        )
+                        s = state()
+                        if s.change_id == ctx.change_id:
+                            vim_comps = tuple(
+                                trans(stack, context=ctx, metrics=metrics)
+                            )
+                            await async_call(
+                                nvim, lambda: complete(nvim, col=col, comp=vim_comps)
+                            )
+                    else:
+                        await async_call(nvim, lambda: complete(nvim, col=col, comp=()))
+                        state(inserted=(-1, -1))
 
         async def c1() -> None:
             nonlocal incoming
             while True:
                 with with_suppress():
                     incoming = await run_in_executor(_Q.get)
-                    async with cond:
-                        cond.notify_all()
+                    event.set()
 
         async def c2() -> None:
             nonlocal task
             while True:
                 with with_suppress():
-                    async with cond:
-                        await cond.wait()
+                    await event.wait()
+                    event.clear()
 
                     if task:
                         await cancel(task)
 
                     if incoming:
                         s, manual = incoming
-                        ctx = await async_call(
-                            nvim,
-                            lambda: context(
-                                nvim,
-                                db=stack.bdb,
-                                options=stack.settings.match,
-                                state=s,
-                                manual=manual,
-                            ),
-                        )
-                        should = (
-                            _should_cont(s.inserted, prev=s.context, cur=ctx)
-                            if ctx
-                            else False
-                        )
-
-                        if should:
-                            state(context=ctx)
-                            task = cast(Task, go(nvim, aw=c0(ctx)))
-                        else:
-                            state(inserted=(-1, -1))
+                        task = cast(Task, go(nvim, aw=c0(s, manual=manual)))
 
         await gather(c1(), c2())
 

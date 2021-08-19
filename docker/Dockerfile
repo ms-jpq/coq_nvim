@@ -22,6 +22,5 @@ RUN cd /root/.config/nvim/plugged/coq_nvim || exit 1 && \
     python3 -m coq deps
 
 
-ENV COQ_DEBUG=1 \
-    COQ_DEBUG_DB=1
-# RUN python3 -m coq deps
+# ENV COQ_DEBUG=1 \
+#     COQ_DEBUG_DB=1

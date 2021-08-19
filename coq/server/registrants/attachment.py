@@ -6,7 +6,7 @@ from uuid import uuid4
 from pynvim import Nvim
 from pynvim.api import Buffer, NvimError
 from pynvim_pp.api import buf_filetype, buf_get_option, cur_buf
-from pynvim_pp.lib import async_call, awrite, go
+from pynvim_pp.lib import awrite, go
 from pynvim_pp.logging import with_suppress
 from std2.asyncio import run_in_executor
 
@@ -42,12 +42,11 @@ def _listener(nvim: Nvim, stack: Stack) -> None:
             with with_suppress():
                 thing: _Qmsg = await run_in_executor(q.get)
                 mode, pending, buf, (lo, hi), lines, ft = thing
+                await stack.supervisor.interrupt()
 
                 size = sum(map(len, lines))
                 heavy_bufs = (
-                    {buf.number}
-                    if size > stack.settings.limits.index_cutoff
-                    else set()
+                    {buf.number} if size > stack.settings.limits.index_cutoff else set()
                 )
                 os = state()
                 s = state(change_id=uuid4(), nono_bufs=heavy_bufs)
@@ -71,9 +70,7 @@ def _listener(nvim: Nvim, stack: Stack) -> None:
                     await awrite(nvim, msg)
 
                 if not pending and mode.startswith("i"):
-                    await async_call(
-                        nvim, comp_func, nvim, stack=stack, s=s, manual=False
-                    )
+                    comp_func(nvim, stack=stack, s=s, manual=False)
 
     go(nvim, aw=cont())
 
@@ -91,10 +88,10 @@ def _lines_event(
     lines: Sequence[str],
     pending: bool,
 ) -> None:
-    go(nvim, aw=stack.supervisor.interrupt())
-    filetype = buf_filetype(nvim, buf=buf)
-    mode = nvim.api.get_mode()["mode"]
-    q.put((mode, pending, buf, (lo, hi), lines, filetype))
+    with suppress(NvimError):
+        filetype = buf_filetype(nvim, buf=buf)
+        mode = nvim.api.get_mode()["mode"]
+        q.put((mode, pending, buf, (lo, hi), lines, filetype))
 
 
 BUF_EVENTS = {

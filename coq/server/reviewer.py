@@ -52,7 +52,7 @@ def _join(
     label_width = display_width(completion.label, tabsize=ctx.context.tabstop)
     kind_width = display_width(completion.kind, tabsize=ctx.context.tabstop)
     metric = Metric(
-        istance=instance,
+        instance=instance,
         comp=completion,
         weight=weight,
         label_width=label_width,
