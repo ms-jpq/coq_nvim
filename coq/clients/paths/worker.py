@@ -1,7 +1,18 @@
 from asyncio import as_completed
 from itertools import islice
 from os import X_OK, access
-from os.path import expanduser, expandvars, join, normcase, normpath, sep, split
+from os.path import (
+    altsep,
+    curdir,
+    expanduser,
+    expandvars,
+    join,
+    normcase,
+    normpath,
+    pardir,
+    sep,
+    split,
+)
 from pathlib import Path, PurePath
 from typing import AbstractSet, AsyncIterator, Iterator, MutableSet, Tuple
 
@@ -16,7 +27,7 @@ from ...shared.types import Completion, Context, Edit, Extern
 
 
 def _p_lhs(lhs: str) -> str:
-    for sym in ("..", ".", "~"):
+    for sym in (pardir, curdir, "~"):
         if lhs.endswith(sym):
             return sym
     else:
@@ -29,7 +40,9 @@ def _p_lhs(lhs: str) -> str:
 
 
 def _segments(line: str) -> Iterator[str]:
-    segments = line.split(sep)
+    segments = tuple(
+        s for seg in line.split(sep) for s in (seg.split(altsep) if altsep else (seg,))
+    )
     if len(segments) > 1:
         *rest, front = reversed(segments)
         lhs = _p_lhs(front)
