@@ -1,4 +1,4 @@
-local init = function(args)
+return function(args)
   local seek_rtp = function()
     local name = "coq_nvim"
     for _, rtp in ipairs(vim.api.nvim_list_runtime_paths()) do
