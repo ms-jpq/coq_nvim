@@ -33,8 +33,7 @@ local on_stderr = function(_, msg)
 end
 
 local py3 = vim.g.python3_host_prog or (is_win and "python" or "python3")
-local main =
-  (function()
+local main = function()
   local v_py =
     cwd ..
     (is_win and [[/.vars/runtime/Scripts/python.exe]] or
@@ -54,12 +53,12 @@ local main =
       return {py3}
     end
   end
-end)()
+end
 
 local start = function(deps, ...)
   local args =
     vim.tbl_flatten {
-    deps and py3 or main,
+    deps and py3 or main(),
     {"-m", "coq"},
     {...}
   }
