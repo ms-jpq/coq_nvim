@@ -150,7 +150,4 @@ if settings.auto_start then
   coq.COQnow()
 end
 
-
 return coq
-
-

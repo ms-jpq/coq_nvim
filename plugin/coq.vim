@@ -1,1 +1,1 @@
-" stub
+call luaeval('require("coq")')
