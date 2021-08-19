@@ -1,23 +1,13 @@
+local config = require('coq.config')
+local util = require('coq.util')
+
 local v = vim
 local api = v.api
 local fn = v.fn
 
 local M = {}
 
-local get_script_path = function()
-    local str = debug.getinfo(2, 'S').source:sub(2)
-    return str:match('(.*)/lua')
-end
-
-local seek_rtp = function()
-    local name = 'coq_nvim'
-    for _, rtp in ipairs(vim.api.nvim_list_runtime_paths()) do
-        if string.sub(rtp, -(#name)) == name then return rtp end
-    end
-    assert(false, 'RTP NOT FOUND')
-end
-
-local cwd = get_script_path() or seek_rtp()
+local cwd = util.get_script_path() or util.seek_rtp()
 
 local is_win = api.nvim_call_function('has', {'win32'}) == 1
 
@@ -129,8 +119,18 @@ M.lsp_ensure_capabilities = function(cfg)
     return new
 end
 
-local settings = v.g.coq_settings or {}
+M.setup = function(opts)
+    config = util.merge_tables(config, opts)
 
-if settings.auto_start then M.COQnow() end
+    -- @TODO adding coq_setting for compatibility reasons but
+    -- it is better to keep them locally and configure
+    v.g.coq_settings = config
+
+    if v.g.python3_host_prog ~= nil then
+        v.g.python3_host_prog = config.python3_host_prog
+    end
+
+    if config.auto_start then M.COQnow() end
+end
 
 return M
