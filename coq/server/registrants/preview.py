@@ -261,9 +261,10 @@ def _resolve_comp(
             if en is Extern.lsp and isinstance(item, Mapping):
                 done, _ = await wait((request(nvim, item=item),), timeout=timeout)
                 do = await done.pop() if done else None
-                if do:
-                    stack.lru[state.preview_id] = do
-                doc = do or maybe_doc
+                d = do.doc if do else None
+                if d:
+                    stack.lru[state.preview_id] = d
+                doc = d or maybe_doc
             elif en is Extern.path and isinstance(item, str):
                 doc = await show(
                     cwd=state.cwd,

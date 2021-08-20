@@ -10,6 +10,7 @@ from pynvim_pp.logging import log, with_suppress
 from std2.asyncio import cancel, run_in_executor
 from std2.pickle import DecodeError, new_decoder
 
+from ...lsp.requests.preview import request
 from ...registry import atomic, autocmd, rpc
 from ...shared.timeit import timeit
 from ...shared.types import Context, Extern, NvimPos
@@ -133,8 +134,16 @@ def omnifunc(
 _DECODER = new_decoder(UserData)
 
 
-async def _resolve(user_data: UserData) -> UserData:
-    return user_data
+async def _resolve(nvim: Nvim, stack: Stack, user_data: UserData) -> UserData:
+    if user_data.secondary_edits or not user_data.extern:
+        return user_data
+    else:
+        extern, item = user_data.extern
+        if extern is not Extern.lsp:
+            return user_data
+        else:
+            comp = await request(nvim, item=item)
+            return user_data
 
 
 @rpc(blocking=True)
@@ -150,7 +159,7 @@ def _comp_done(nvim: Nvim, stack: Stack, event: Mapping[str, Any]) -> None:
             async def cont() -> None:
                 s = state()
                 if user_data.change_uid == s.change_id:
-                    ud = await _resolve(user_data)
+                    ud = await _resolve(nvim, stack=stack, user_data=user_data)
                     inserted = await async_call(
                         nvim,
                         lambda: edit(
