@@ -9,7 +9,7 @@ _FUZZY = 0.6
 _LOOK_AHEAD = 3
 
 
-class separate(TestCase):
+class Separate(TestCase):
     def test_1(self) -> None:
         a = tuple(separate({","}, "1,2,3"))
         self.assertEqual(a, ("1", "2", "3"))
