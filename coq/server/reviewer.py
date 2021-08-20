@@ -38,7 +38,7 @@ def _metric(
 
 
 def _sigmoid(priority: float) -> float:
-    return priority / (1 + priority ** 2) ** 0.5
+    return priority / (1 + priority ** 2) ** 0.5 + 1
 
 
 def _join(
