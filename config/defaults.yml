@@ -65,37 +65,37 @@ clients:
   tabnine:
     enabled: False
     short_name: "T9"
-    priority: -16
+    priority: 0
 
   tmux:
     enabled: True
     short_name: "TMUX"
     match_syms: False
-    priority: 06
+    priority: 0
 
   buffers:
     enabled: True
     short_name: "BUF"
     match_syms: False
     same_filetype: False
-    priority: 16
+    priority: 0
 
   tree_sitter:
     enabled: True
     short_name: "TS"
-    priority: 26
+    priority: 0
 
   paths:
     enabled: True
     short_name: "PATH"
     preview_lines: 6
     path_seps: []
-    priority: 36
+    priority: 0
 
   snippets:
     enabled: True
     short_name: "SNIP"
-    priority: 46
+    priority: 0
     sources: []
 
   tags:
@@ -104,10 +104,10 @@ clients:
     match_syms: True
     parent_scope: " ⇊"
     path_sep: " ⇉ "
-    priority: 56
+    priority: 0
 
   lsp:
     enabled: True
     short_name: "LSP"
     resolve_timeout: 0.06
-    priority: 66
+    priority: 0
