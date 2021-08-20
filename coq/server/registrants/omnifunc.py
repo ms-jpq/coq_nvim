@@ -142,16 +142,21 @@ def _comp_done(nvim: Nvim, stack: Stack, event: Mapping[str, Any]) -> None:
         except DecodeError as e:
             log.warn("%s", e)
         else:
-            s = state()
-            if user_data.change_uid == s.change_id:
-                if not user_data.secondary_edits:
-                    user_data = user_data
-                inserted = edit(
-                    nvim, stack=stack, state=s, data=user_data, synthetic=False
-                )
-                state(inserted=inserted, commit_id=uuid4())
-            else:
-                log.warn("%s", "delayed completion")
 
+            def cont() -> None:
+                s = state()
+                if user_data.change_uid == s.change_id:
+                    if not user_data.secondary_edits:
+                        ud = user_data
+                    else:
+                        ud = user_data
+                    inserted = edit(
+                        nvim, stack=stack, state=s, data=ud, synthetic=False
+                    )
+                    state(inserted=inserted, commit_id=uuid4())
+                else:
+                    log.warn("%s", "delayed completion")
+
+            cont()
 
 autocmd("CompleteDone") << f"lua {_comp_done.name}(vim.v.completed_item)"

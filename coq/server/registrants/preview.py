@@ -41,7 +41,6 @@ from ...lsp.requests.preview import request
 from ...lsp.types import CompletionItem
 from ...paths.show import show
 from ...registry import autocmd, rpc
-from ...shared.lru import LRU
 from ...shared.parse import display_width
 from ...shared.settings import PreviewDisplay
 from ...shared.timeit import timeit
@@ -237,9 +236,6 @@ def _show_preview(
 _TASK: Optional[Task] = None
 
 
-_LRU: Optional[LRU[UUID, Doc]] = None
-
-
 def _resolve_comp(
     nvim: Nvim,
     stack: Stack,
@@ -254,14 +250,10 @@ def _resolve_comp(
     en, item = extern
 
     async def cont() -> None:
-        global _LRU
-        if not _LRU:
-            _LRU = LRU(size=stack.settings.match.max_results)
-
         if prev:
             await cancel(prev)
 
-        cached = _LRU.get(state.preview_id)
+        cached = stack.lru.get(state.preview_id)
 
         if cached:
             doc: Optional[Doc] = cached
@@ -270,7 +262,7 @@ def _resolve_comp(
                 done, _ = await wait((request(nvim, item=item),), timeout=timeout)
                 do = await done.pop() if done else None
                 if do:
-                    _LRU[state.preview_id] = do
+                    stack.lru[state.preview_id] = do
                 doc = do or maybe_doc
             elif en is Extern.path and isinstance(item, str):
                 doc = await show(
@@ -280,7 +272,7 @@ def _resolve_comp(
                     height=stack.settings.clients.paths.preview_lines,
                 )
                 if doc:
-                    _LRU[state.preview_id] = doc
+                    stack.lru[state.preview_id] = doc
             else:
                 doc = None
 

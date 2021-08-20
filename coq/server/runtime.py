@@ -24,6 +24,7 @@ from ..databases.snippets.database import SDB
 from ..databases.tags.database import CTDB
 from ..databases.tmux.database import TMDB
 from ..databases.treesitter.database import TDB
+from ..shared.lru import LRU
 from ..shared.runtime import Supervisor, Worker
 from ..shared.settings import Settings
 from .reviewer import Reviewer
@@ -116,6 +117,7 @@ def stack(pool: Executor, nvim: Nvim) -> Stack:
     }
     stack = Stack(
         settings=settings,
+        lru=LRU(size=settings.match.max_results),
         bdb=bdb,
         sdb=sdb,
         idb=idb,
