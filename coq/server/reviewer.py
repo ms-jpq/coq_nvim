@@ -42,6 +42,7 @@ def sigmoid(x: float) -> float:
 
 
 def _join(
+    damper: float,
     instance: UUID,
     ctx: _ReviewCtx,
     completion: Completion,
@@ -58,7 +59,7 @@ def _join(
     metric = Metric(
         instance=instance,
         comp=completion,
-        priority=sigmoid(completion.priority) + 1,
+        priority=sigmoid(completion.priority) * damper + 1,
         weight=weight,
         label_width=label_width,
         kind_width=kind_width,
@@ -103,14 +104,15 @@ class Reviewer(PReviewer):
             instance.bytes, source=assoc.short_name, batch_id=self._ctx.batch.bytes
         )
 
-    def trans(self, instance: UUID, completion: Completion) -> Metric:
+    def trans(self, damper: float, instance: UUID, completion: Completion) -> Metric:
         match_metrics = _metric(
             self._options,
             ctx=self._ctx,
             completion=completion,
         )
         metric = _join(
-            instance,
+            damper,
+            instance=instance,
             ctx=self._ctx,
             completion=completion,
             match_metrics=match_metrics,
