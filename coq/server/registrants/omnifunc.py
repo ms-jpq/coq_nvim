@@ -1,4 +1,5 @@
 from asyncio import Event, Lock, Task, gather, wait
+from dataclasses import replace
 from queue import SimpleQueue
 from typing import Any, Literal, Mapping, Optional, Sequence, Tuple, Union, cast
 from uuid import uuid4
@@ -135,7 +136,14 @@ _DECODER = new_decoder(UserData)
 
 
 async def _resolve(nvim: Nvim, stack: Stack, user_data: UserData) -> UserData:
-    if user_data.secondary_edits or not user_data.extern:
+    comp = stack.lru.get(user_data.uid)
+    if comp:
+        return replace(
+            user_data,
+            primary_edit=comp.primary_edit,
+            secondary_edits=comp.secondary_edits,
+        )
+    elif not user_data.extern:
         return user_data
     else:
         extern, item = user_data.extern
@@ -151,17 +159,11 @@ async def _resolve(nvim: Nvim, stack: Stack, user_data: UserData) -> UserData:
             if not comp:
                 return user_data
             else:
-                user_data = UserData(
-                    uid=user_data.uid,
-                    instance=user_data.instance,
-                    change_uid=user_data.change_uid,
-                    sort_by=user_data.sort_by,
+                return replace(
+                    user_data,
                     primary_edit=comp.primary_edit,
                     secondary_edits=comp.secondary_edits,
-                    doc=user_data.doc,
-                    extern=user_data.extern,
                 )
-                return user_data
 
 
 @rpc(blocking=True)

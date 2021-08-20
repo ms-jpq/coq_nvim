@@ -45,7 +45,7 @@ from ...shared.parse import display_width
 from ...shared.settings import PreviewDisplay
 from ...shared.timeit import timeit
 from ...shared.trans import expand_tabs
-from ...shared.types import Context, Doc, Extern
+from ...shared.types import Completion, Context, Doc, Edit, Extern
 from ..nvim.completions import VimCompletion
 from ..rt_types import Stack
 from ..state import State, state
@@ -256,15 +256,14 @@ def _resolve_comp(
         cached = stack.lru.get(state.preview_id)
 
         if cached:
-            doc: Optional[Doc] = cached
+            doc = cached.doc
         else:
             if en is Extern.lsp and isinstance(item, Mapping):
                 done, _ = await wait((request(nvim, item=item),), timeout=timeout)
-                do = await done.pop() if done else None
-                d = do.doc if do else None
-                if d:
-                    stack.lru[state.preview_id] = d
-                doc = d or maybe_doc
+                comp = (await done.pop()) if done else None
+                if comp:
+                    stack.lru[state.preview_id] = comp
+                doc = maybe_doc
             elif en is Extern.path and isinstance(item, str):
                 doc = await show(
                     cwd=state.cwd,
@@ -273,7 +272,13 @@ def _resolve_comp(
                     height=stack.settings.clients.paths.preview_lines,
                 )
                 if doc:
-                    stack.lru[state.preview_id] = doc
+                    stack.lru[state.preview_id] = Completion(
+                        source="",
+                        tie_breaker=0,
+                        label="",
+                        sort_by="",
+                        primary_edit=Edit(new_text=""),
+                    )
             else:
                 doc = None
 
