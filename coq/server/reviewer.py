@@ -37,6 +37,10 @@ def _metric(
     return metrics(cword, match, look_ahead=options.look_ahead)
 
 
+def _sigmoid(priority: float) -> float:
+    return priority / (1 + priority ** 2) ** 0.5
+
+
 def _join(
     instance: UUID,
     ctx: _ReviewCtx,
@@ -54,6 +58,7 @@ def _join(
     metric = Metric(
         instance=instance,
         comp=completion,
+        priority=_sigmoid(completion.priority),
         weight=weight,
         label_width=label_width,
         kind_width=kind_width,
