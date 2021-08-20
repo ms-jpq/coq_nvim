@@ -39,7 +39,7 @@ class Worker(BaseWorker[BuffersClient, BDB]):
             edit = Edit(new_text=word)
             cmp = Completion(
                 source=self._options.short_name,
-                tie_breaker=self._options.tie_breaker,
+                priority=self._options.priority,
                 label=edit.new_text,
                 sort_by=word,
                 primary_edit=edit,

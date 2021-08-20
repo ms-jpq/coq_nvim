@@ -55,7 +55,7 @@ class Worker(BaseWorker[LSPClient, None], CacheWorker):
                 request(
                     self._supervisor.nvim,
                     short_name=self._options.short_name,
-                    tie_breaker=self._options.tie_breaker,
+                    priority=self._options.priority,
                     context=context,
                 )
                 if do_ask

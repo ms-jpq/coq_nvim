@@ -77,7 +77,7 @@ def _doc(item: CompletionItem) -> Optional[Doc]:
 
 
 def parse_item(
-    short_name: str, tie_breaker: int, item: CompletionItem
+    short_name: str, priority: int, item: CompletionItem
 ) -> Optional[Completion]:
     label = item.get("label")
     if not label:
@@ -86,7 +86,7 @@ def parse_item(
         p_edit = _primary(item)
         cmp = Completion(
             source=short_name,
-            tie_breaker=tie_breaker,
+            priority=priority,
             label=label,
             sort_by=item.get("filterText") or p_edit.new_text,
             primary_edit=p_edit,
@@ -102,7 +102,7 @@ def parse_item(
         return cmp
 
 
-def parse(short_name: str, tie_breaker: int, resp: CompletionResponse) -> LSPcomp:
+def parse(short_name: str, priority: int, resp: CompletionResponse) -> LSPcomp:
     if _falsy(resp):
         return LSPcomp(local_cache=False, items=iter(()))
 
@@ -113,7 +113,7 @@ def parse(short_name: str, tie_breaker: int, resp: CompletionResponse) -> LSPcom
         comps = (
             c
             for c in (
-                parse_item(short_name, tie_breaker=tie_breaker, item=item)
+                parse_item(short_name, priority=priority, item=item)
                 for item in items
             )
             if c
@@ -126,7 +126,7 @@ def parse(short_name: str, tie_breaker: int, resp: CompletionResponse) -> LSPcom
         comps = (
             c
             for c in (
-                parse_item(short_name, tie_breaker=tie_breaker, item=item)
+                parse_item(short_name, priority=priority, item=item)
                 for item in resp
             )
             if c

@@ -193,7 +193,7 @@ class Worker(BaseWorker[PathsClient, None]):
                     edit = Edit(new_text=new_text)
                     completion = Completion(
                         source=self._options.short_name,
-                        tie_breaker=self._options.tie_breaker,
+                        priority=self._options.priority,
                         label=edit.new_text,
                         sort_by=sort_by(
                             self._supervisor.options.unifying_chars, new_text=new_text

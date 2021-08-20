@@ -17,7 +17,7 @@ atomic.exec_lua(_LUA, ())
 async def request(
     nvim: Nvim,
     short_name: str,
-    tie_breaker: int,
+    priority: int,
     context: Context,
 ) -> AsyncIterator[LSPcomp]:
     row, c = context.position
@@ -25,4 +25,4 @@ async def request(
 
     async for reply in async_request(nvim, "COQlsp_comp", (row, col)):
         resp = cast(CompletionResponse, reply)
-        yield parse(short_name, tie_breaker=tie_breaker, resp=resp)
+        yield parse(short_name, priority=priority, resp=resp)

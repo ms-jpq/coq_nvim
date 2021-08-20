@@ -169,7 +169,7 @@ class Worker(BaseWorker[TagsClient, CTDB]):
                 edit = Edit(new_text=name)
                 cmp = Completion(
                     source=self._options.short_name,
-                    tie_breaker=self._options.tie_breaker,
+                    priority=self._options.priority,
                     label=edit.new_text,
                     sort_by=name,
                     primary_edit=edit,

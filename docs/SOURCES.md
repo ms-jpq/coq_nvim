@@ -26,7 +26,7 @@ Source name to display in the completion menu.
 <name>
 ```
 
-##### `coq_settings.clients.<x>.tie_breaker`
+##### `coq_settings.clients.<x>.priority`
 
 Tie breaker for ranking.
 

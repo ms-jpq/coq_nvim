@@ -78,7 +78,7 @@ class KeyMapping:
 class BaseClient:
     enabled: bool
     short_name: str
-    tie_breaker: int
+    priority: int
 
 
 @dataclass(frozen=True)
