@@ -278,6 +278,7 @@ def _resolve_comp(
                         label="",
                         sort_by="",
                         primary_edit=Edit(new_text=""),
+                        doc=doc,
                     )
             else:
                 doc = None
