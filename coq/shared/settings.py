@@ -84,7 +84,7 @@ class BaseClient:
 @dataclass(frozen=True)
 class PathsClient(BaseClient):
     preview_lines: int
-    sep: AbstractSet[str]
+    path_seps: AbstractSet[str]
 
 
 @dataclass(frozen=True)

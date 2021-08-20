@@ -89,7 +89,7 @@ clients:
     enabled: True
     short_name: "PATH"
     preview_lines: 6
-    sep: []
+    path_seps: []
     tie_breaker: 36
 
   snippets:
