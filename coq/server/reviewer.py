@@ -37,8 +37,8 @@ def _metric(
     return metrics(cword, match, look_ahead=options.look_ahead)
 
 
-def _sigmoid(priority: float) -> float:
-    return priority / (1 + priority ** 2) ** 0.5 + 1
+def sigmoid(x: float) -> float:
+    return x / (1 + x ** 2) ** 0.5
 
 
 def _join(
@@ -58,7 +58,7 @@ def _join(
     metric = Metric(
         instance=instance,
         comp=completion,
-        priority=_sigmoid(completion.priority),
+        priority=sigmoid(completion.priority) + 1,
         weight=weight,
         label_width=label_width,
         kind_width=kind_width,
