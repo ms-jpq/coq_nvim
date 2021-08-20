@@ -1,4 +1,4 @@
-from asyncio import Event, Lock, Task, gather
+from asyncio import Event, Lock, Task, gather, wait
 from queue import SimpleQueue
 from typing import Any, Literal, Mapping, Optional, Sequence, Tuple, Union, cast
 from uuid import uuid4
@@ -142,8 +142,26 @@ async def _resolve(nvim: Nvim, stack: Stack, user_data: UserData) -> UserData:
         if extern is not Extern.lsp:
             return user_data
         else:
-            comp = await request(nvim, item=item)
-            return user_data
+            done, not_done = await wait(
+                (go(nvim, aw=request(nvim, item=item)),),
+                timeout=0.1,
+            )
+            await cancel(gather(*not_done))
+            comp = (await done.pop()) if done else None
+            if not comp:
+                return user_data
+            else:
+                user_data = UserData(
+                    uid=user_data.uid,
+                    instance=user_data.instance,
+                    change_uid=user_data.change_uid,
+                    sort_by=user_data.sort_by,
+                    primary_edit=comp.primary_edit,
+                    secondary_edits=comp.secondary_edits,
+                    doc=user_data.doc,
+                    extern=user_data.extern,
+                )
+                return user_data
 
 
 @rpc(blocking=True)
