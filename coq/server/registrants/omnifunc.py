@@ -12,7 +12,7 @@ from std2.pickle import DecodeError, new_decoder
 
 from ...registry import atomic, autocmd, rpc
 from ...shared.timeit import timeit
-from ...shared.types import Context, NvimPos
+from ...shared.types import Context, Extern, NvimPos
 from ..context import context
 from ..edit import edit
 from ..nvim.completions import UserData, complete
@@ -133,6 +133,10 @@ def omnifunc(
 _DECODER = new_decoder(UserData)
 
 
+async def _resolve(user_data: UserData) -> UserData:
+    return user_data
+
+
 @rpc(blocking=True)
 def _comp_done(nvim: Nvim, stack: Stack, event: Mapping[str, Any]) -> None:
     data = event.get("user_data")
@@ -143,20 +147,21 @@ def _comp_done(nvim: Nvim, stack: Stack, event: Mapping[str, Any]) -> None:
             log.warn("%s", e)
         else:
 
-            def cont() -> None:
+            async def cont() -> None:
                 s = state()
                 if user_data.change_uid == s.change_id:
-                    if not user_data.secondary_edits:
-                        ud = user_data
-                    else:
-                        ud = user_data
-                    inserted = edit(
-                        nvim, stack=stack, state=s, data=ud, synthetic=False
+                    ud = await _resolve(user_data)
+                    inserted = await async_call(
+                        nvim,
+                        lambda: edit(
+                            nvim, stack=stack, state=s, data=ud, synthetic=False
+                        ),
                     )
                     state(inserted=inserted, commit_id=uuid4())
                 else:
                     log.warn("%s", "delayed completion")
 
-            cont()
+            go(nvim, aw=cont())
+
 
 autocmd("CompleteDone") << f"lua {_comp_done.name}(vim.v.completed_item)"
