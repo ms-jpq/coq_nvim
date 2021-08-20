@@ -263,7 +263,7 @@ def _resolve_comp(
                 comp = (await done.pop()) if done else None
                 if comp:
                     stack.lru[state.preview_id] = comp
-                doc = maybe_doc
+                doc = (comp.doc if comp else None) or maybe_doc
             elif en is Extern.path and isinstance(item, str):
                 doc = await show(
                     cwd=state.cwd,
