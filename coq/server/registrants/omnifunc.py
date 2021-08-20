@@ -136,34 +136,35 @@ _DECODER = new_decoder(UserData)
 
 
 async def _resolve(nvim: Nvim, stack: Stack, user_data: UserData) -> UserData:
-    comp = stack.lru.get(user_data.uid)
-    if comp:
-        return replace(
-            user_data,
-            primary_edit=comp.primary_edit,
-            secondary_edits=comp.secondary_edits,
-        )
-    elif not user_data.extern:
+    if not user_data.extern:
         return user_data
     else:
         extern, item = user_data.extern
         if extern is not Extern.lsp:
             return user_data
         else:
-            done, not_done = await wait(
-                (go(nvim, aw=request(nvim, item=item)),),
-                timeout=stack.settings.clients.lsp.resolve_timeout,
-            )
-            await cancel(gather(*not_done))
-            comp = (await done.pop()) if done else None
-            if not comp:
-                return user_data
-            else:
+            comp = stack.lru.get(user_data.uid)
+            if comp:
                 return replace(
                     user_data,
                     primary_edit=comp.primary_edit,
                     secondary_edits=comp.secondary_edits,
                 )
+            else:
+                done, not_done = await wait(
+                    (go(nvim, aw=request(nvim, item=item)),),
+                    timeout=stack.settings.clients.lsp.resolve_timeout,
+                )
+                await cancel(gather(*not_done))
+                comp = (await done.pop()) if done else None
+                if not comp:
+                    return user_data
+                else:
+                    return replace(
+                        user_data,
+                        primary_edit=comp.primary_edit,
+                        secondary_edits=comp.secondary_edits,
+                    )
 
 
 @rpc(blocking=True)
