@@ -162,7 +162,7 @@ class Worker(BaseWorker[PathsClient, None]):
     ) -> None:
         super().__init__(supervisor, options=options, misc=misc)
         seps = {sep, altsep} if altsep else {sep}
-        self._seps = {sep for sep in options.sep if sep in seps} or seps
+        self._seps = {sep for sep in options.path_seps if sep in seps} or seps
 
     async def work(self, context: Context) -> AsyncIterator[Completion]:
         line = context.line_before + context.words_after

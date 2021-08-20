@@ -92,6 +92,16 @@ Take a look at [compilation.yml](https://github.com/ms-jpq/coq_nvim/blob/coq/con
 
 #### coq_settings.clients.paths
 
+##### `coq_settings.clients.paths.path_seps`
+
+Which separator chars to use. Empty for default. Must be `/` under unix and `/` or `\` for windows.
+
+**default:**
+
+```json
+[]
+```
+
 ##### `coq_settings.clients.paths.preview_lines`
 
 Try to preview this many lines.
