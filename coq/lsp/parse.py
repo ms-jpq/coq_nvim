@@ -113,8 +113,7 @@ def parse(short_name: str, priority: int, resp: CompletionResponse) -> LSPcomp:
         comps = (
             c
             for c in (
-                parse_item(short_name, priority=priority, item=item)
-                for item in items
+                parse_item(short_name, priority=priority, item=item) for item in items
             )
             if c
         )
@@ -126,8 +125,7 @@ def parse(short_name: str, priority: int, resp: CompletionResponse) -> LSPcomp:
         comps = (
             c
             for c in (
-                parse_item(short_name, priority=priority, item=item)
-                for item in resp
+                parse_item(short_name, priority=priority, item=item) for item in resp
             )
             if c
         )

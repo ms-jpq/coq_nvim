@@ -10,6 +10,6 @@ class Sigmoid(TestCase):
         self.assertEqual(y, 0)
 
     def test_2(self) -> None:
-        for _ in range(0, 1000):
+        for _ in range(0, 10000):
             y = sigmoid(uniform(-(2 ** 63), 2 ** 63))
-            self.assertTrue(y > -1 and y < 1)
+            self.assertTrue(y >= -1 and y <= 1)
