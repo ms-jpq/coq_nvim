@@ -10,13 +10,13 @@ from ..databases.tmux.database import TMDB
 from ..databases.treesitter.database import TDB
 from ..shared.runtime import Supervisor, Worker
 from ..shared.settings import Settings
-from ..shared.types import Doc
+from ..shared.types import Completion
 
 
 @dataclass(frozen=True)
 class Stack:
     settings: Settings
-    lru: MutableMapping[UUID, Doc]
+    lru: MutableMapping[UUID, Completion]
     bdb: BDB
     idb: IDB
     tdb: TDB
