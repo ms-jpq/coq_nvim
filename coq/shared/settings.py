@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import AbstractSet, Literal, Optional, Tuple, Union
+from typing import AbstractSet, Literal, Optional, Sequence, Tuple, Union
 
 
 @dataclass(frozen=True)
@@ -84,6 +84,7 @@ class BaseClient:
 @dataclass(frozen=True)
 class PathsClient(BaseClient):
     preview_lines: int
+    sep: AbstractSet[str]
 
 
 @dataclass(frozen=True)

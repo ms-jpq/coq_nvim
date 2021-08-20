@@ -2,10 +2,33 @@ from os import sep
 from pathlib import Path
 from unittest import TestCase
 
-from ....coq.clients.paths.worker import parse
+from ....coq.clients.paths.worker import parse, separate
 
+_SEP = {sep}
 _FUZZY = 0.6
 _LOOK_AHEAD = 3
+
+
+class Separate(TestCase):
+    def test_1(self) -> None:
+        a = tuple(separate({","}, "1,2,3"))
+        self.assertEqual(a, ("1", "2", "3"))
+
+    def test_2(self) -> None:
+        a = tuple(separate({",", "$"}, "1,2$3"))
+        self.assertEqual(a, ("1", "2", "3"))
+
+    def test_3(self) -> None:
+        a = tuple(separate({",", "$", "@"}, "1,2$3,4"))
+        self.assertEqual(a, ("1", "2", "3", "4"))
+
+    def test_4(self) -> None:
+        a = tuple(separate({",", "$", "@"}, "1@2$3,4"))
+        self.assertEqual(a, ("1", "2", "3", "4"))
+
+    def test_5(self) -> None:
+        a = tuple(separate(set(), "1,2,3"))
+        self.assertEqual(a, ("1,2,3",))
 
 
 class Parser(TestCase):
@@ -13,7 +36,8 @@ class Parser(TestCase):
         line = "./.gith"
         actual = sorted(
             parse(
-                _LOOK_AHEAD,
+                _SEP,
+                look_ahead=_LOOK_AHEAD,
                 fuzzy_cutoff=_FUZZY,
                 base=Path("."),
                 line=line,
@@ -32,7 +56,8 @@ class Parser(TestCase):
         line = "./.github"
         actual = sorted(
             parse(
-                _LOOK_AHEAD,
+                _SEP,
+                look_ahead=_LOOK_AHEAD,
                 fuzzy_cutoff=_FUZZY,
                 base=Path("."),
                 line=line,
@@ -50,7 +75,8 @@ class Parser(TestCase):
         line = "./.github/"
         actual = sorted(
             parse(
-                _LOOK_AHEAD,
+                _SEP,
+                look_ahead=_LOOK_AHEAD,
                 fuzzy_cutoff=_FUZZY,
                 base=Path("."),
                 line=line,
@@ -68,7 +94,8 @@ class Parser(TestCase):
         line = "abc./.gith"
         actual = sorted(
             parse(
-                _LOOK_AHEAD,
+                _SEP,
+                look_ahead=_LOOK_AHEAD,
                 fuzzy_cutoff=_FUZZY,
                 base=Path("."),
                 line=line,
@@ -87,7 +114,8 @@ class Parser(TestCase):
         line = "abc./.github"
         actual = sorted(
             parse(
-                _LOOK_AHEAD,
+                _SEP,
+                look_ahead=_LOOK_AHEAD,
                 fuzzy_cutoff=_FUZZY,
                 base=Path("."),
                 line=line,
@@ -105,7 +133,8 @@ class Parser(TestCase):
         line = "abc./.github/"
         actual = sorted(
             parse(
-                _LOOK_AHEAD,
+                _SEP,
+                look_ahead=_LOOK_AHEAD,
                 fuzzy_cutoff=_FUZZY,
                 base=Path("."),
                 line=line,
@@ -123,7 +152,8 @@ class Parser(TestCase):
         line = "/h"
         results = {
             *parse(
-                _LOOK_AHEAD,
+                _SEP,
+                look_ahead=_LOOK_AHEAD,
                 fuzzy_cutoff=_FUZZY,
                 base=Path("."),
                 line=line,
@@ -136,7 +166,8 @@ class Parser(TestCase):
         line = "~/.c"
         results = {
             *parse(
-                _LOOK_AHEAD,
+                _SEP,
+                look_ahead=_LOOK_AHEAD,
                 fuzzy_cutoff=_FUZZY,
                 base=Path("."),
                 line=line,
@@ -149,7 +180,8 @@ class Parser(TestCase):
         line = "$a$PWD/.gith"
         actual = sorted(
             parse(
-                _LOOK_AHEAD,
+                _SEP,
+                look_ahead=_LOOK_AHEAD,
                 fuzzy_cutoff=_FUZZY,
                 base=Path("."),
                 line=line,
@@ -168,7 +200,8 @@ class Parser(TestCase):
         line = "$a${PWD}/.gith"
         actual = sorted(
             parse(
-                _LOOK_AHEAD,
+                _SEP,
+                look_ahead=_LOOK_AHEAD,
                 fuzzy_cutoff=_FUZZY,
                 base=Path("."),
                 line=line,

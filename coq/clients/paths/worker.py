@@ -20,6 +20,7 @@ from std2.asyncio import run_in_executor
 
 from ...shared.fuzzy import quick_ratio
 from ...shared.parse import is_word, lower
+from ...shared.runtime import Supervisor
 from ...shared.runtime import Worker as BaseWorker
 from ...shared.settings import PathsClient
 from ...shared.sql import BIGGEST_INT
@@ -39,10 +40,17 @@ def _p_lhs(lhs: str) -> str:
             return s + r if s else ""
 
 
-def _segments(line: str) -> Iterator[str]:
-    segments = tuple(
-        s for seg in line.split(sep) for s in (seg.split(altsep) if altsep else (seg,))
-    )
+def separate(seps: AbstractSet[str], line: str) -> Iterator[str]:
+    if not seps:
+        yield line
+    else:
+        sep = next(iter(seps))
+        for l in line.split(sep):
+            yield from separate(seps - {sep}, l)
+
+
+def _segments(seps: AbstractSet[str], line: str) -> Iterator[str]:
+    segments = tuple(separate(seps, line=line))
     if len(segments) > 1:
         *rest, front = reversed(segments)
         lhs = _p_lhs(front)
@@ -57,12 +65,13 @@ def _join(lhs: str, rhs: str) -> str:
 
 
 def parse(
+    seps: AbstractSet[str],
     look_ahead: int,
     fuzzy_cutoff: float,
     base: Path,
     line: str,
 ) -> Iterator[Tuple[PurePath, str]]:
-    segments = reversed(tuple(_segments(line)))
+    segments = reversed(tuple(_segments(seps, line=line)))
     for segment in segments:
 
         s1 = segment
@@ -105,6 +114,7 @@ def parse(
 async def _parse(
     base: Path,
     line: str,
+    seps: AbstractSet[str],
     limit: int,
     look_ahead: int,
     fuzzy_cutoff: float,
@@ -113,7 +123,8 @@ async def _parse(
         return {
             *islice(
                 parse(
-                    look_ahead,
+                    seps,
+                    look_ahead=look_ahead,
                     fuzzy_cutoff=fuzzy_cutoff,
                     base=base,
                     line=line,
@@ -146,6 +157,13 @@ def sort_by(unifying_chars: AbstractSet[str], new_text: str) -> str:
 
 
 class Worker(BaseWorker[PathsClient, None]):
+    def __init__(
+        self, supervisor: Supervisor, options: PathsClient, misc: None
+    ) -> None:
+        super().__init__(supervisor, options=options, misc=misc)
+        seps = {sep, altsep} if altsep else {sep}
+        self._seps = {sep for sep in options.sep if sep in seps} or seps
+
     async def work(self, context: Context) -> AsyncIterator[Completion]:
         line = context.line_before + context.words_after
         base_paths = {Path(context.filename).parent, Path(context.cwd)}
@@ -155,6 +173,7 @@ class Worker(BaseWorker[PathsClient, None]):
             _parse(
                 p,
                 line=line,
+                seps=self._seps,
                 limit=limit,
                 look_ahead=self._supervisor.options.look_ahead,
                 fuzzy_cutoff=self._supervisor.options.fuzzy_cutoff,
