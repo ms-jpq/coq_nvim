@@ -59,7 +59,7 @@ def _primary(item: CompletionItem) -> Edit:
         return Edit(new_text=fall_back)
 
 
-def doc(item: CompletionItem) -> Optional[Doc]:
+def _doc(item: CompletionItem) -> Optional[Doc]:
     doc = item.get("documentation")
     detail = item.get("detail")
     if isinstance(doc, Mapping):
@@ -76,7 +76,7 @@ def doc(item: CompletionItem) -> Optional[Doc]:
         return None
 
 
-def _parse_item(
+def parse_item(
     short_name: str, tie_breaker: int, item: CompletionItem
 ) -> Optional[Completion]:
     label = item.get("label")
@@ -96,7 +96,7 @@ def _parse_item(
                 if re
             ),
             kind=PROTOCOL.CompletionItemKind.get(item.get("kind"), ""),
-            doc=doc(item),
+            doc=_doc(item),
             extern=(Extern.lsp, item),
         )
         return cmp
@@ -113,7 +113,7 @@ def parse(short_name: str, tie_breaker: int, resp: CompletionResponse) -> LSPcom
         comps = (
             c
             for c in (
-                _parse_item(short_name, tie_breaker=tie_breaker, item=item)
+                parse_item(short_name, tie_breaker=tie_breaker, item=item)
                 for item in items
             )
             if c
@@ -126,7 +126,7 @@ def parse(short_name: str, tie_breaker: int, resp: CompletionResponse) -> LSPcom
         comps = (
             c
             for c in (
-                _parse_item(short_name, tie_breaker=tie_breaker, item=item)
+                parse_item(short_name, tie_breaker=tie_breaker, item=item)
                 for item in resp
             )
             if c

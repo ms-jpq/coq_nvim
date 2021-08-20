@@ -1,4 +1,4 @@
-from asyncio import Event, Lock, Task, gather
+from asyncio import Event, Lock, Task, gather, wait
 from queue import SimpleQueue
 from typing import Any, Literal, Mapping, Optional, Sequence, Tuple, Union, cast
 from uuid import uuid4
@@ -10,9 +10,10 @@ from pynvim_pp.logging import log, with_suppress
 from std2.asyncio import cancel, run_in_executor
 from std2.pickle import DecodeError, new_decoder
 
+from ...lsp.requests.preview import request
 from ...registry import atomic, autocmd, rpc
 from ...shared.timeit import timeit
-from ...shared.types import Context, NvimPos
+from ...shared.types import Context, Extern, NvimPos
 from ..context import context
 from ..edit import edit
 from ..nvim.completions import UserData, complete
@@ -133,6 +134,36 @@ def omnifunc(
 _DECODER = new_decoder(UserData)
 
 
+async def _resolve(nvim: Nvim, stack: Stack, user_data: UserData) -> UserData:
+    if user_data.secondary_edits or not user_data.extern:
+        return user_data
+    else:
+        extern, item = user_data.extern
+        if extern is not Extern.lsp:
+            return user_data
+        else:
+            done, not_done = await wait(
+                (go(nvim, aw=request(nvim, item=item)),),
+                timeout=0.1,
+            )
+            await cancel(gather(*not_done))
+            comp = (await done.pop()) if done else None
+            if not comp:
+                return user_data
+            else:
+                user_data = UserData(
+                    uid=user_data.uid,
+                    instance=user_data.instance,
+                    change_uid=user_data.change_uid,
+                    sort_by=user_data.sort_by,
+                    primary_edit=comp.primary_edit,
+                    secondary_edits=comp.secondary_edits,
+                    doc=user_data.doc,
+                    extern=user_data.extern,
+                )
+                return user_data
+
+
 @rpc(blocking=True)
 def _comp_done(nvim: Nvim, stack: Stack, event: Mapping[str, Any]) -> None:
     data = event.get("user_data")
@@ -142,16 +173,22 @@ def _comp_done(nvim: Nvim, stack: Stack, event: Mapping[str, Any]) -> None:
         except DecodeError as e:
             log.warn("%s", e)
         else:
-            s = state()
-            if user_data.change_uid == s.change_id:
-                if not user_data.secondary_edits:
-                    user_data = user_data
-                inserted = edit(
-                    nvim, stack=stack, state=s, data=user_data, synthetic=False
-                )
-                state(inserted=inserted, commit_id=uuid4())
-            else:
-                log.warn("%s", "delayed completion")
+
+            async def cont() -> None:
+                s = state()
+                if user_data.change_uid == s.change_id:
+                    ud = await _resolve(nvim, stack=stack, user_data=user_data)
+                    inserted = await async_call(
+                        nvim,
+                        lambda: edit(
+                            nvim, stack=stack, state=s, data=ud, synthetic=False
+                        ),
+                    )
+                    state(inserted=inserted, commit_id=uuid4())
+                else:
+                    log.warn("%s", "delayed completion")
+
+            go(nvim, aw=cont())
 
 
 autocmd("CompleteDone") << f"lua {_comp_done.name}(vim.v.completed_item)"

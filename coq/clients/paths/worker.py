@@ -93,7 +93,9 @@ def parse(
                             ratio = quick_ratio(
                                 rhs, lower(path.name), look_ahead=look_ahead
                             )
-                            if ratio >= fuzzy_cutoff and len(path.name) * 2 >= len(rhs):
+                            if ratio >= fuzzy_cutoff and len(
+                                path.name
+                            ) + look_ahead >= len(rhs):
                                 term = sep if path.is_dir() else ""
                                 line = _join(lseg, path.name) + term
                                 yield path, line
