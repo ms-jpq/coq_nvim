@@ -40,17 +40,17 @@ def _p_lhs(lhs: str) -> str:
             return s + r if s else ""
 
 
-def seperate(seps: AbstractSet[str], line: str) -> Iterator[str]:
+def separate(seps: AbstractSet[str], line: str) -> Iterator[str]:
     if not seps:
         yield line
     else:
         sep = next(iter(seps))
         for l in line.split(sep):
-            yield from seperate(seps - {sep}, l)
+            yield from separate(seps - {sep}, l)
 
 
 def _segments(seps: AbstractSet[str], line: str) -> Iterator[str]:
-    segments = tuple(seperate(seps, line=line))
+    segments = tuple(separate(seps, line=line))
     if len(segments) > 1:
         *rest, front = reversed(segments)
         lhs = _p_lhs(front)

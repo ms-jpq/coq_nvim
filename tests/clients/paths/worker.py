@@ -2,32 +2,32 @@ from os import sep
 from pathlib import Path
 from unittest import TestCase
 
-from ....coq.clients.paths.worker import parse, seperate
+from ....coq.clients.paths.worker import parse, separate
 
 _SEP = {sep}
 _FUZZY = 0.6
 _LOOK_AHEAD = 3
 
 
-class Seperate(TestCase):
+class separate(TestCase):
     def test_1(self) -> None:
-        a = tuple(seperate({","}, "1,2,3"))
+        a = tuple(separate({","}, "1,2,3"))
         self.assertEqual(a, ("1", "2", "3"))
 
     def test_2(self) -> None:
-        a = tuple(seperate({",", "$"}, "1,2$3"))
+        a = tuple(separate({",", "$"}, "1,2$3"))
         self.assertEqual(a, ("1", "2", "3"))
 
     def test_3(self) -> None:
-        a = tuple(seperate({",", "$", "@"}, "1,2$3,4"))
+        a = tuple(separate({",", "$", "@"}, "1,2$3,4"))
         self.assertEqual(a, ("1", "2", "3", "4"))
 
     def test_4(self) -> None:
-        a = tuple(seperate({",", "$", "@"}, "1@2$3,4"))
+        a = tuple(separate({",", "$", "@"}, "1@2$3,4"))
         self.assertEqual(a, ("1", "2", "3", "4"))
 
     def test_5(self) -> None:
-        a = tuple(seperate(set(), "1,2,3"))
+        a = tuple(separate(set(), "1,2,3"))
         self.assertEqual(a, ("1,2,3",))
 
 
