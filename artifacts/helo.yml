@@ -26,14 +26,18 @@ helo:
   - "Hello" # English
   - "Hola" # Spanish
   - "Kwīingu-néewul" # Lunaapeew
+  - "Merhaba" # Turkish
   - "Olá" # Portuguese
   - "Sekoh" # Mohawk
+  - "Szia" # Hungarian
   - "Ullaqut" # Inuktitut
   - "Waajiiye" # Oji-Cree
   - "Wâciyê" # Cree
+  - "tena koutou" # Maori
   - "γεια" # Greek
   - "Здраво" # Serbian
   - "Привет" # Russian
+  - "העלא" # Yiddish
   - "שלום" # Hebrew
   - "سلام" # Persian
   - "مرحبا" # Arabic
