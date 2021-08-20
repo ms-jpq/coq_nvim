@@ -4,7 +4,7 @@ FROM words
 WHERE
   :word <> ''
   AND 
-  LENGTH(word) * 2 >= LENGTH(:word)
+  LENGTH(word) + :look_ahead >= LENGTH(:word)
   AND
   pane_id <> :pane_id
   AND
