@@ -94,7 +94,7 @@ Take a look at [compilation.yml](https://github.com/ms-jpq/coq_nvim/blob/coq/con
 
 ##### `coq_settings.clients.paths.path_seps`
 
-Which seperator chars to use. Empty for default. Must be `/` under unix and `/` or `\` for windows.
+Which separator chars to use. Empty for default. Must be `/` under unix and `/` or `\` for windows.
 
 **default:**
 
