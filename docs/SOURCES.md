@@ -44,7 +44,15 @@ This is fairly low on the rank algorithm. It will usually not take effect.
 
 #### coq_settings.clients.lsp
 
-No special conf.
+#### `coq_settings.clients.lsp.resolve_timeout`
+
+Time it takes to wait for LSP servers to respond with header import before edit is applied.
+
+**default:**
+
+```json
+0.06
+```
 
 #### coq_settings.clients.tags
 
