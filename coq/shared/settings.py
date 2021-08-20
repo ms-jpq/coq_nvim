@@ -108,9 +108,14 @@ class SnippetClient(BaseClient):
 
 
 @dataclass(frozen=True)
+class LSPClient(BaseClient):
+    resolve_timeout: float
+
+
+@dataclass(frozen=True)
 class Clients:
     buffers: BuffersClient
-    lsp: BaseClient
+    lsp: LSPClient
     paths: PathsClient
     snippets: SnippetClient
     tags: TagsClient

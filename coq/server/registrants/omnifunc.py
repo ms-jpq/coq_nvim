@@ -144,7 +144,7 @@ async def _resolve(nvim: Nvim, stack: Stack, user_data: UserData) -> UserData:
         else:
             done, not_done = await wait(
                 (go(nvim, aw=request(nvim, item=item)),),
-                timeout=0.1,
+                timeout=stack.settings.clients.lsp.resolve_timeout,
             )
             await cancel(gather(*not_done))
             comp = (await done.pop()) if done else None
