@@ -14,6 +14,22 @@ class Seperate(TestCase):
         a = tuple(seperate({","}, "1,2,3"))
         self.assertEqual(a, ("1", "2", "3"))
 
+    def test_2(self) -> None:
+        a = tuple(seperate({",", "$"}, "1,2$3"))
+        self.assertEqual(a, ("1", "2", "3"))
+
+    def test_3(self) -> None:
+        a = tuple(seperate({",", "$", "@"}, "1,2$3,4"))
+        self.assertEqual(a, ("1", "2", "3", "4"))
+
+    def test_4(self) -> None:
+        a = tuple(seperate({",", "$", "@"}, "1@2$3,4"))
+        self.assertEqual(a, ("1", "2", "3", "4"))
+
+    def test_5(self) -> None:
+        a = tuple(seperate(set(), "1,2,3"))
+        self.assertEqual(a, ("1,2,3",))
+
 
 class Parser(TestCase):
     def test_1(self) -> None:
