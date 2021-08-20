@@ -286,6 +286,12 @@ Annoying! And the manual completion also has a timeout `coq_settings.limits.comp
 
 Some LSP servers will still fail to respond within the default `.66` seconds, in that case pressing `<c-space>` multiple times might actually help some LSP servers catch up, depending on their implementation.
 
+#### LSP sometimes not importing
+
+Increase `coq_settings.clients.lsp.resolve_timeout`
+
+This will however, make applying edits slower.
+
 #### Missing Results
 
 On keystroke only a max of `coq_settings.match.max_results` are shown.
