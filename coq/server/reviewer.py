@@ -1,6 +1,7 @@
 from collections import Counter
 from dataclasses import dataclass
 from itertools import chain
+from math import e
 from typing import Mapping
 from uuid import UUID, uuid4
 
@@ -38,11 +39,10 @@ def _metric(
 
 
 def sigmoid(x: float) -> float:
-    return x / (1 + x ** 2) ** 0.5
+    return 1 / (1 + e ** -x) + 0.5
 
 
 def _join(
-    damper: float,
     instance: UUID,
     ctx: _ReviewCtx,
     completion: Completion,
@@ -59,7 +59,7 @@ def _join(
     metric = Metric(
         instance=instance,
         comp=completion,
-        priority=sigmoid(completion.priority) * damper + 1,
+        priority=sigmoid(completion.priority),
         weight=weight,
         label_width=label_width,
         kind_width=kind_width,
@@ -104,15 +104,14 @@ class Reviewer(PReviewer):
             instance.bytes, source=assoc.short_name, batch_id=self._ctx.batch.bytes
         )
 
-    def trans(self, damper: float, instance: UUID, completion: Completion) -> Metric:
+    def trans(self, instance: UUID, completion: Completion) -> Metric:
         match_metrics = _metric(
             self._options,
             ctx=self._ctx,
             completion=completion,
         )
         metric = _join(
-            damper,
-            instance=instance,
+            instance,
             ctx=self._ctx,
             completion=completion,
             match_metrics=match_metrics,

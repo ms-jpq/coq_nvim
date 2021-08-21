@@ -63,7 +63,7 @@ class PReviewer(Protocol):
     async def s_begin(self, assoc: BaseClient, instance: UUID) -> None:
         ...
 
-    def trans(self, damper: float, instance: UUID, completion: Completion) -> Metric:
+    def trans(self, instance: UUID, completion: Completion) -> Metric:
         ...
 
     async def s_end(
@@ -132,7 +132,7 @@ class Supervisor:
                     async for completion in worker.work(context):
                         if not done and completion:
                             metric = self._reviewer.trans(
-                                damper=0.66, instance=instance, completion=completion
+                                instance, completion=completion
                             )
                             acc.append(metric)
                             items += 1
