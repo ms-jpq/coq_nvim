@@ -70,10 +70,12 @@ def parse(
     unifying_chars: AbstractSet[str],
     context: Context,
     snippet: SnippetEdit,
-    sort_by: str,
     visual: str,
 ) -> Tuple[ContextualEdit, Sequence[Mark]]:
     parser = lsp_parser if snippet.grammar == "lsp" else snu_parser
+    sort_by = parser(
+        context, snippet=snippet.new_text, info=ParseInfo(visual=visual)
+    ).text
 
     old_prefix = (
         context.words_before
