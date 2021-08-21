@@ -363,7 +363,6 @@ def edit(
                 stack.settings.match.unifying_chars,
                 context=state.context,
                 snippet=data.primary_edit,
-                sort_by=data.sort_by,
                 visual=visual,
             )
             primary, marks = parsed

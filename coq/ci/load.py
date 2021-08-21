@@ -93,7 +93,6 @@ async def load_parsable() -> Any:
                         set(),
                         context=EMPTY_CONTEXT,
                         snippet=edit,
-                        sort_by="",
                         visual="",
                     )
                     acc.append(snip)
