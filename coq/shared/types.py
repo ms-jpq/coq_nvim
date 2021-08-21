@@ -121,7 +121,7 @@ class Extern(Enum):
 @dataclass(frozen=True)
 class Completion:
     source: str
-    priority: float
+    weight_adjust: float
     label: str
     sort_by: str
     primary_edit: PrimaryEdit

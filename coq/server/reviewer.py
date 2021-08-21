@@ -63,7 +63,7 @@ def _join(
     metric = Metric(
         instance=instance,
         comp=completion,
-        priority=sigmoid(completion.priority),
+        weight_adjust=sigmoid(completion.weight_adjust),
         weight=weight,
         label_width=label_width,
         kind_width=kind_width,

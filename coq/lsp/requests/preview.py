@@ -24,6 +24,6 @@ async def request(nvim: Nvim, item: CompletionItem) -> Optional[Completion]:
 
     if reply:
         resp = cast(CompletionItem, reply)
-        return parse_item("", priority=0, item=resp)
+        return parse_item("", weight_adjust=0, item=resp)
     else:
         return None

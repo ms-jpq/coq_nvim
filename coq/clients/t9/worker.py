@@ -66,7 +66,7 @@ def _decode(client: BaseClient, reply: Any) -> Iterator[Completion]:
             )[0]
             cmp = Completion(
                 source=client.short_name,
-                priority=client.priority,
+                weight_adjust=client.weight_adjust,
                 label=label,
                 sort_by=edit.new_text,
                 primary_edit=edit,

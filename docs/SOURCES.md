@@ -26,11 +26,11 @@ Source name to display in the completion menu.
 <name>
 ```
 
-##### `coq_settings.clients.<x>.priority`
+##### `coq_settings.clients.<x>.weight_adjust`
 
-Priority adjustment for ranking, normalized to `[0.5, 1.5]` using `S(x) = 1 / (1 + e^-x) + 0.5`
+Weight adjustment for ranking, normalized to `[0.5, 1.5]` using `S(x) = 1 / (1 + e^-x) + 0.5`
 
-Ideally pick a number between `[-2, 2]`
+Ideally pick a number between `[-2, 2]`.
 
 **default:**
 

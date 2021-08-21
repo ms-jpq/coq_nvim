@@ -14,7 +14,7 @@ _GLOBAL_START = "global"
 _GLOBAL_END = "globalend"
 
 _IGNORE_STARTS = {
-    "priority",
+    "weight_adjust",
     "iclearsnippets",
     "pre_expand",
     "post_expand",
