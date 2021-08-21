@@ -28,7 +28,9 @@ Source name to display in the completion menu.
 
 ##### `coq_settings.clients.<x>.priority`
 
-Priority for ranking, normalized to `[0.5, 1.5]` using `1 / (1 + e^-x) + 0.5`
+Priority adjustment for ranking, normalized to `[0.5, 1.5]` using `S(x) = 1 / (1 + e^-x) + 0.5`
+
+Ideally pick a number between `[-2, 2]`
 
 **default:**
 
