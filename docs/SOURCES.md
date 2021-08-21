@@ -28,16 +28,12 @@ Source name to display in the completion menu.
 
 ##### `coq_settings.clients.<x>.priority`
 
-Tie breaker for ranking.
-
-This is fairly low on the rank algorithm. It will usually not take effect.
-
-**Must be unique**
+Priority for ranking, normalized to `[0.5, 1.5]` using `1 / (1 + e^-x) + 0.5`
 
 **default:**
 
 ```json
-<name>
+<preset float>
 ```
 
 ---

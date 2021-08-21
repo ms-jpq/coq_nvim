@@ -11,5 +11,5 @@ class Sigmoid(TestCase):
 
     def test_2(self) -> None:
         for _ in range(0, 10000):
-            y = sigmoid(uniform(-100, 100))
-            self.assertTrue(y >= 0 and y <= 2)
+            y = sigmoid(uniform(-10, 10))
+            self.assertTrue(y >= 0.5 and y <= 1.5)
