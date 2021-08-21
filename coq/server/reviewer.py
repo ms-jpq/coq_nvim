@@ -39,6 +39,10 @@ def _metric(
 
 
 def sigmoid(x: float) -> float:
+    """
+    x -> y ∈ (0.5, 1.5)
+    """
+
     return 1 / (1 + e ** -x) + 0.5
 
 
