@@ -47,12 +47,12 @@ def _version(timeout: float) -> str:
 
 def _uri(timeout: float) -> Optional[str]:
     triple = _triple()
-    if triple:
+    if not triple:
+        return None
+    else:
         ver = _version(timeout)
         uri = _DOWN.substitute(version=ver, triple=triple)
         return uri
-    else:
-        return None
 
 
 def _update(timeout: float) -> bool:
