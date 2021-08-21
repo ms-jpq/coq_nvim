@@ -26,18 +26,18 @@ Source name to display in the completion menu.
 <name>
 ```
 
-##### `coq_settings.clients.<x>.tie_breaker`
+##### `coq_settings.clients.<x>.weight_adjust`
 
-Tie breaker for ranking.
+Weight adjustment for ranking, normalized to `[0.5, 1.5]` using `S(x) = 1 / (1 + e^-x) + 0.5`
 
-This is fairly low on the rank algorithm. It will usually not take effect.
+Ideally pick a number between `[-2, 2]`.
 
-**Must be unique**
+`S(0) = 1`, `S(-2) ~= 0.6`, `S(2) ~= 1.4`
 
 **default:**
 
 ```json
-<name>
+<preset float>
 ```
 
 ---

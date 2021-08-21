@@ -1,6 +1,7 @@
 from collections import Counter
 from dataclasses import dataclass
 from itertools import chain
+from math import e
 from typing import Mapping
 from uuid import UUID, uuid4
 
@@ -37,6 +38,14 @@ def _metric(
     return metrics(cword, match, look_ahead=options.look_ahead)
 
 
+def sigmoid(x: float) -> float:
+    """
+    x -> y ∈ (0.5, 1.5)
+    """
+
+    return 1 / (1 + e ** -x) + 0.5
+
+
 def _join(
     instance: UUID,
     ctx: _ReviewCtx,
@@ -54,6 +63,7 @@ def _join(
     metric = Metric(
         instance=instance,
         comp=completion,
+        weight_adjust=sigmoid(completion.weight_adjust),
         weight=weight,
         label_width=label_width,
         kind_width=kind_width,

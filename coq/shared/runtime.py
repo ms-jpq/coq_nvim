@@ -47,6 +47,7 @@ O_co = TypeVar("O_co", contravariant=True, bound=BaseClient)
 class Metric:
     instance: UUID
     comp: Completion
+    weight_adjust: float
     weight: Weights
     label_width: int
     kind_width: int

@@ -65,37 +65,37 @@ clients:
   tabnine:
     enabled: False
     short_name: "T9"
-    tie_breaker: -16
+    weight_adjust: 0
 
   tmux:
     enabled: True
     short_name: "TMUX"
     match_syms: False
-    tie_breaker: 06
+    weight_adjust: 0
 
   buffers:
     enabled: True
     short_name: "BUF"
     match_syms: False
     same_filetype: False
-    tie_breaker: 16
+    weight_adjust: 0
 
   tree_sitter:
     enabled: True
     short_name: "TS"
-    tie_breaker: 26
+    weight_adjust: 0
 
   paths:
     enabled: True
     short_name: "PATH"
     preview_lines: 6
     path_seps: []
-    tie_breaker: 36
+    weight_adjust: 0
 
   snippets:
     enabled: True
     short_name: "SNIP"
-    tie_breaker: 46
+    weight_adjust: 0
     sources: []
 
   tags:
@@ -104,10 +104,10 @@ clients:
     match_syms: True
     parent_scope: " ⇊"
     path_sep: " ⇉ "
-    tie_breaker: 56
+    weight_adjust: 0
 
   lsp:
     enabled: True
     short_name: "LSP"
     resolve_timeout: 0.06
-    tie_breaker: 66
+    weight_adjust: 0

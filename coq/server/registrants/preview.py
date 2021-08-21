@@ -274,7 +274,7 @@ def _resolve_comp(
                 if doc:
                     stack.lru[state.preview_id] = Completion(
                         source="",
-                        tie_breaker=0,
+                        weight_adjust=0,
                         label="",
                         sort_by="",
                         primary_edit=Edit(new_text=""),
