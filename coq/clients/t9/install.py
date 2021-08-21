@@ -7,6 +7,7 @@ from shutil import which
 from socket import timeout as TimeoutE
 from string import Template
 from tempfile import NamedTemporaryFile
+from typing import Optional
 from urllib.error import URLError
 
 from pynvim_pp.logging import log
@@ -26,7 +27,7 @@ _DOWN = Template(f"https://update.tabnine.com/$version/$triple/{_EXEC}")
 T9_BIN = T9_DIR / _EXEC
 
 
-def _triple() -> str:
+def _triple() -> Optional[str]:
     arch = machine()
     if os is OS.linux:
         libc = "musl" if which("apk") else "gnu"
@@ -36,7 +37,7 @@ def _triple() -> str:
     elif os is OS.windows:
         return f"{arch}-pc-windows-gnu"
     else:
-        assert False
+        return None
 
 
 def _version(timeout: float) -> str:
@@ -44,14 +45,17 @@ def _version(timeout: float) -> str:
         return resp.read().decode()
 
 
-def _uri(timeout: float) -> str:
+def _uri(timeout: float) -> Optional[str]:
     triple = _triple()
-    ver = _version(timeout)
-    uri = _DOWN.substitute(version=ver, triple=triple)
-    return uri
+    if triple:
+        ver = _version(timeout)
+        uri = _DOWN.substitute(version=ver, triple=triple)
+        return uri
+    else:
+        return None
 
 
-def _update(timeout: float) -> None:
+def _update(timeout: float) -> bool:
     T9_DIR.mkdir(parents=True, exist_ok=True)
     try:
         p_uri = _LOCK.read_text()
@@ -59,29 +63,36 @@ def _update(timeout: float) -> None:
         p_uri = ""
 
     uri = _uri(timeout)
-    if not access(T9_BIN, X_OK) or uri != p_uri:
-        with urlopen(uri, timeout=timeout) as resp:
-            buf = resp.read()
+    if not uri:
+        return False
+    else:
+        if not access(T9_BIN, X_OK) or uri != p_uri:
+            with urlopen(uri, timeout=timeout) as resp:
+                buf = resp.read()
 
-        TMP_DIR.mkdir(parents=True, exist_ok=True)
-        with suppress(FileNotFoundError), NamedTemporaryFile(dir=TMP_DIR) as fd:
-            fd.write(buf)
-            fd.flush()
-            Path(fd.name).replace(T9_BIN)
+            TMP_DIR.mkdir(parents=True, exist_ok=True)
+            with suppress(FileNotFoundError), NamedTemporaryFile(dir=TMP_DIR) as fd:
+                fd.write(buf)
+                fd.flush()
+                Path(fd.name).replace(T9_BIN)
 
-        T9_BIN.chmod(0o755)
-        _LOCK.write_text(uri)
+            T9_BIN.chmod(0o755)
+            _LOCK.write_text(uri)
+
+        return True
 
 
 async def ensure_updated(retries: int, timeout: float) -> bool:
     for _ in range(retries):
         try:
-            await run_in_executor(_update, timeout=timeout)
+            cont = await run_in_executor(_update, timeout=timeout)
         except (URLError, TimeoutE) as e:
             log.warn("%s", e)
             await sleep(timeout)
         else:
-            if access(T9_BIN, X_OK):
+            if not cont:
+                return False
+            elif access(T9_BIN, X_OK):
                 return True
     else:
         return False
