@@ -32,7 +32,11 @@ Weight adjustment for ranking, normalized to `[0.5, 1.5]` using `S(x) = 1 / (1 +
 
 Ideally pick a number between `[-2, 2]`.
 
-`S(0) = 1`, `S(-2) ~= 0.6`, `S(2) ~= 1.4`
+`S(0) = 1` no adjustment
+
+`S(-2) ~= 0.6` anything smaller has diminishing returns
+
+`S(+2) ~= 1.4` anything bigger has diminishing returns
 
 **default:**
 
