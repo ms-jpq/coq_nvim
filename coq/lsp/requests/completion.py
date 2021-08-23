@@ -17,7 +17,7 @@ atomic.exec_lua(_LUA, ())
 async def request(
     nvim: Nvim,
     short_name: str,
-    weight_adjust: int,
+    weight_adjust: float,
     context: Context,
 ) -> AsyncIterator[LSPcomp]:
     row, c = context.position
