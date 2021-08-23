@@ -78,7 +78,7 @@ class KeyMapping:
 class BaseClient:
     enabled: bool
     short_name: str
-    weight_adjust: int
+    weight_adjust: float
 
 
 @dataclass(frozen=True)
