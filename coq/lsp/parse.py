@@ -77,7 +77,7 @@ def _doc(item: CompletionItem) -> Optional[Doc]:
 
 
 def parse_item(
-    short_name: str, weight_adjust: int, item: CompletionItem
+    short_name: str, weight_adjust: float, item: CompletionItem
 ) -> Optional[Completion]:
     label = item.get("label")
     if not label:
@@ -102,7 +102,7 @@ def parse_item(
         return cmp
 
 
-def parse(short_name: str, weight_adjust: int, resp: CompletionResponse) -> LSPcomp:
+def parse(short_name: str, weight_adjust: float, resp: CompletionResponse) -> LSPcomp:
     if _falsy(resp):
         return LSPcomp(local_cache=False, items=iter(()))
 
