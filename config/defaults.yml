@@ -110,4 +110,4 @@ clients:
     enabled: True
     short_name: "LSP"
     resolve_timeout: 0.06
-    weight_adjust: 0
+    weight_adjust: 0.3
