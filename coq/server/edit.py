@@ -13,6 +13,7 @@ from typing import (
 )
 
 from pynvim import Nvim
+from pynvim.api.buffer import Buffer
 from pynvim.api.common import NvimError
 from pynvim_pp.api import buf_get_lines, cur_win, win_get_buf, win_set_cursor
 from pynvim_pp.lib import write
@@ -43,7 +44,7 @@ from .state import State
 
 
 @dataclass(frozen=True)
-class _EditInstruction:
+class EditInstruction:
     primary: bool
     primary_shift: bool
     begin: NvimPos
@@ -101,7 +102,7 @@ def _rows_to_fetch(
 
 def _contextual_edit_trans(
     ctx: Context, lines: _Lines, edit: ContextualEdit
-) -> _EditInstruction:
+) -> EditInstruction:
     row, col = ctx.position
     old_prefix_lines = edit.old_prefix.split(ctx.linefeed)
     old_suffix_lines = edit.old_suffix.split(ctx.linefeed)
@@ -134,7 +135,7 @@ def _contextual_edit_trans(
         + len(new_prefix_lines[0].encode(UTF8))
     )
 
-    inst = _EditInstruction(
+    inst = EditInstruction(
         primary=True,
         primary_shift=True,
         begin=begin,
@@ -151,7 +152,7 @@ def _edit_trans(
     ctx: Context,
     lines: _Lines,
     edit: Edit,
-) -> _EditInstruction:
+) -> EditInstruction:
 
     adjusted = trans_adjusted(unifying_chars, ctx=ctx, edit=edit)
     inst = _contextual_edit_trans(ctx, lines=lines, edit=adjusted)
@@ -164,7 +165,7 @@ def _range_edit_trans(
     primary: bool,
     lines: _Lines,
     edit: RangeEdit,
-) -> _EditInstruction:
+) -> EditInstruction:
     new_lines = edit.new_text.split(ctx.linefeed)
 
     if primary and len(new_lines) <= 1 and edit.begin == edit.end:
@@ -195,7 +196,7 @@ def _range_edit_trans(
             else -1
         )
 
-        inst = _EditInstruction(
+        inst = EditInstruction(
             primary=primary,
             primary_shift=False,
             begin=begin,
@@ -213,7 +214,7 @@ def _instructions(
     lines: _Lines,
     primary: ApplicableEdit,
     secondary: Sequence[RangeEdit],
-) -> Iterator[_EditInstruction]:
+) -> Iterator[EditInstruction]:
     if isinstance(primary, RangeEdit):
         inst = _range_edit_trans(
             unifying_chars,
@@ -246,11 +247,11 @@ def _instructions(
 
 
 def _consolidate(
-    instruction: _EditInstruction, *instructions: _EditInstruction
-) -> Sequence[_EditInstruction]:
+    instruction: EditInstruction, *instructions: EditInstruction
+) -> Sequence[EditInstruction]:
     edits = sorted(chain((instruction,), instructions), key=lambda i: (i.begin, i.end))
     pivot = 0, 0
-    stack: MutableSequence[_EditInstruction] = []
+    stack: MutableSequence[EditInstruction] = []
 
     for edit in edits:
         if edit.begin >= pivot:
@@ -271,13 +272,13 @@ def _consolidate(
     return stack
 
 
-def _trans(instructions: Iterable[_EditInstruction]) -> Iterator[_EditInstruction]:
+def trans(instructions: Iterable[EditInstruction]) -> Iterator[EditInstruction]:
     row_shift = 0
     col_shift: MutableMapping[int, int] = {}
 
     for inst in instructions:
         (r1, c1), (r2, c2) = inst.begin, inst.end
-        yield _EditInstruction(
+        yield EditInstruction(
             primary=inst.primary,
             primary_shift=inst.primary_shift,
             begin=(r1 + row_shift, c1 + col_shift.get(r1, 0)),
@@ -291,7 +292,16 @@ def _trans(instructions: Iterable[_EditInstruction]) -> Iterator[_EditInstructio
         col_shift[r2] = -(c2 - c1) + f_length if r1 == r2 else -c2 + f_length
 
 
-def _cursor(cursor: NvimPos, instructions: Iterable[_EditInstruction]) -> NvimPos:
+def apply(nvim: Nvim, buf: Buffer, instructions: Iterable[EditInstruction]) -> None:
+    for inst in trans(instructions):
+        (r1, c1), (r2, c2) = inst.begin, inst.end
+        try:
+            nvim.api.buf_set_text(buf, r1, c1, r2, c2, inst.new_lines)
+        except NvimError as e:
+            log.warn(f"%s{linesep}%s", e, inst)
+
+
+def _cursor(cursor: NvimPos, instructions: Iterable[EditInstruction]) -> NvimPos:
     row, _ = cursor
     col = -1
 
@@ -318,9 +328,7 @@ def _parse(stack: Stack, state: State, data: UserData) -> Tuple[Edit, Sequence[M
         return data.primary_edit, ()
 
 
-def edit(
-    nvim: Nvim, stack: Stack, state: State, data: UserData, synthetic: bool
-) -> Tuple[int, int]:
+def edit(nvim: Nvim, stack: Stack, state: State, data: UserData) -> Tuple[int, int]:
     try:
         primary, marks = _parse(stack, state=state, data=data)
     except ParseError as e:
@@ -357,24 +365,17 @@ def edit(
             state.context.position,
             instructions=instructions,
         )
+
+        apply(nvim, buf=buf, instructions=instructions)
+        win_set_cursor(nvim, win=win, row=n_row, col=n_col)
+
+        stack.idb.inserted(data.instance.bytes, sort_by=data.sort_by)
+        if marks:
+            mark(nvim, settings=stack.settings, buf=buf, marks=marks)
+
         if DEBUG:
             log.debug(
                 "%s",
                 pformat(((data.primary_edit, *data.secondary_edits), instructions)),
             )
-
-        for inst in _trans(instructions):
-            (r1, c1), (r2, c2) = inst.begin, inst.end
-            try:
-                nvim.api.buf_set_text(buf, r1, c1, r2, c2, inst.new_lines)
-            except NvimError as e:
-                log.warn(f"%s{linesep}%s", e, inst)
-
-        win_set_cursor(nvim, win=win, row=n_row, col=n_col)
-
-        if not synthetic:
-            stack.idb.inserted(data.instance.bytes, sort_by=data.sort_by)
-            if marks:
-                mark(nvim, settings=stack.settings, buf=buf, marks=marks)
-
         return n_row, n_col
