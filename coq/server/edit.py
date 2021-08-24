@@ -286,7 +286,7 @@ def _trans(instructions: Iterable[_EditInstruction]) -> Iterator[_EditInstructio
         )
         row_shift += (r2 - r1) + len(inst.new_lines) - 1
         f_length = len(inst.new_lines[-1].encode(UTF8)) if inst.new_lines else 0
-        col_shift[r2] = c2 - c1 + f_length if r1 == r2 else c2 - f_length
+        col_shift[r2] = c2 - c1 + f_length if r1 == r2 else -c2 + f_length
 
 
 def _cursor(cursor: NvimPos, instructions: Iterable[_EditInstruction]) -> NvimPos:
