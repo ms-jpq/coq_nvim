@@ -272,7 +272,7 @@ def _consolidate(
     return stack
 
 
-def trans(instructions: Iterable[EditInstruction]) -> Iterator[EditInstruction]:
+def _trans(instructions: Iterable[EditInstruction]) -> Iterator[EditInstruction]:
     row_shift = 0
     col_shift: MutableMapping[int, int] = {}
 
@@ -293,7 +293,7 @@ def trans(instructions: Iterable[EditInstruction]) -> Iterator[EditInstruction]:
 
 
 def apply(nvim: Nvim, buf: Buffer, instructions: Iterable[EditInstruction]) -> None:
-    for inst in trans(instructions):
+    for inst in _trans(instructions):
         (r1, c1), (r2, c2) = inst.begin, inst.end
         try:
             nvim.api.buf_set_text(buf, r1, c1, r2, c2, inst.new_lines)

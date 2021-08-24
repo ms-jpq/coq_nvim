@@ -23,7 +23,7 @@ from ...lang import LANG
 from ...registry import rpc
 from ...shared.types import UTF8, Mark
 from ...snippets.consts import MOD_PAD
-from ..edit import EditInstruction, apply, trans
+from ..edit import EditInstruction, apply
 from ..mark import NS
 from ..rt_types import Stack
 from ..state import state
@@ -88,19 +88,16 @@ def _single_mark(
 
 
 def _trans(new_text: str, marks: Sequence[Mark]) -> Iterator[EditInstruction]:
-    def cont() -> Iterator[EditInstruction]:
-        for mark in marks:
-            yield EditInstruction(
-                primary=False,
-                primary_shift=False,
-                begin=mark.begin,
-                end=mark.end,
-                cursor_yoffset=0,
-                cursor_xpos=-1,
-                new_lines=new_text.splitlines(),
-            )
-
-    yield from trans(cont())
+    for mark in marks:
+        yield EditInstruction(
+            primary=False,
+            primary_shift=False,
+            begin=mark.begin,
+            end=mark.end,
+            cursor_yoffset=0,
+            cursor_xpos=-1,
+            new_lines=new_text.splitlines(),
+        )
 
 
 def _linked_marks(
