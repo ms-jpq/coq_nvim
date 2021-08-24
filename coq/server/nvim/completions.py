@@ -51,7 +51,8 @@ _LUA = """
       if #items ~= 0 then
         vim.fn.complete(col, items)
       elseif mode == "ic" then
-        vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes("<c-e>", true, true, true), "n", true)
+        local esc = vim.api.nvim_replace_termcodes("<c-e>", true, true, true)
+        vim.api.nvim_feedkeys(esc, "n", true)
       else
         vim.fn.complete(col, items)
       end
