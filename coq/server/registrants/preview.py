@@ -136,7 +136,7 @@ def _positions(
 
     ns_col = left - 1
     n = _Pos(
-        row=top - 1 - n_height,
+        row=top - 3 - n_height,
         col=ns_col,
         height=n_height,
         width=ns_width,
@@ -159,7 +159,7 @@ def _positions(
 
     w = _Pos(
         row=top,
-        col=left - w_width - 2,
+        col=left - w_width - 4,
         height=we_height,
         width=w_width,
     )
@@ -183,10 +183,12 @@ def _set_win(nvim: Nvim, buf: Buffer, pos: _Pos) -> None:
         "relative": "editor",
         "anchor": "NW",
         "style": "minimal",
+        "noautocmd": True,
         "width": pos.width,
         "height": pos.height,
         "row": pos.row,
         "col": pos.col,
+        "border": "rounded",
     }
     win: Window = nvim.api.open_win(buf, False, opts)
     win_set_option(nvim, win=win, key="wrap", val=True)
