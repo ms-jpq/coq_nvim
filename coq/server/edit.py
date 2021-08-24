@@ -362,7 +362,9 @@ def _parse(stack: Stack, state: State, data: UserData) -> Tuple[Edit, Sequence[M
         return data.primary_edit, ()
 
 
-def edit(nvim: Nvim, stack: Stack, state: State, data: UserData) -> Tuple[int, int]:
+def edit(
+    nvim: Nvim, stack: Stack, state: State, data: UserData, synthetic: bool
+) -> Tuple[int, int]:
     try:
         primary, marks = _parse(stack, state=state, data=data)
     except ParseError as e:
