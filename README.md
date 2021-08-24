@@ -102,8 +102,6 @@ lsp.<server>.setup(coq.lsp_ensure_capabilities(<stuff...>)) -- after
 
 _The `%` statistic comes from compiling the 10,000 snippets_
 
-**See FAQ to see limitations due to upstream bug**
-
 ### CTags
 
 - **LSP like**
@@ -307,12 +305,6 @@ To eliminate `a-z` bias, `coq` does a random sort on the resultset and process a
 So if some results are not in the SQLite cache, and have yet to be processed, they will be missing. They might however still show up on later keystrokes.
 
 Use the manual hotkey if you need to see everything.
-
-#### Auto completion mess up snippet regions (the ones you can jump to)
-
-This is an [upstream nvim issue](https://github.com/neovim/neovim/issues/13816).
-
-Theoretically I can work around this by writing my own nvim `extmark` reconciliator, or I can go and cuddle my puppy and let upstream fix it.
 
 #### My vim crashed!
 
