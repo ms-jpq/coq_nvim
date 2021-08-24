@@ -183,9 +183,7 @@ def _comp_done(nvim: Nvim, stack: Stack, event: Mapping[str, Any]) -> None:
                     ud = await _resolve(nvim, stack=stack, user_data=user_data)
                     inserted = await async_call(
                         nvim,
-                        lambda: edit(
-                            nvim, stack=stack, state=s, data=ud, synthetic=False
-                        ),
+                        lambda: edit(nvim, stack=stack, state=s, data=ud),
                     )
                     state(inserted=inserted, commit_id=uuid4())
                 else:

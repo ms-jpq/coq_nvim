@@ -71,7 +71,7 @@ def parse(
     context: Context,
     snippet: SnippetEdit,
     visual: str,
-) -> Tuple[ContextualEdit, Sequence[Mark]]:
+) -> Tuple[Edit, Sequence[Mark]]:
     parser = lsp_parser if snippet.grammar == "lsp" else snu_parser
     sort_by = parser(
         context, snippet=snippet.new_text, info=ParseInfo(visual=visual)
