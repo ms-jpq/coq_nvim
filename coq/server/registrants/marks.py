@@ -2,7 +2,6 @@ from collections import deque
 from itertools import chain
 from textwrap import dedent
 from typing import Iterator, Sequence, Tuple, TypedDict
-from uuid import uuid4
 
 from pynvim.api.common import NvimError
 from pynvim.api.nvim import Buffer, Nvim
