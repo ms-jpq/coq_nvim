@@ -415,8 +415,10 @@ def edit(
             buf_set_lines(nvim, buf=buf, lo=lo, hi=hi, lines=send_lines)
 
         win_set_cursor(nvim, win=win, row=n_row, col=n_col)
-        stack.idb.inserted(data.instance.bytes, sort_by=data.sort_by)
-        if marks:
-            mark(nvim, settings=stack.settings, buf=buf, marks=marks)
+
+        if not synthetic:
+            stack.idb.inserted(data.instance.bytes, sort_by=data.sort_by)
+            if marks:
+                mark(nvim, settings=stack.settings, buf=buf, marks=marks)
 
         return n_row, n_col
