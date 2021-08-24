@@ -10,6 +10,7 @@ from pynvim_pp.api import (
     buf_set_lines,
     cur_win,
     win_get_buf,
+    win_get_cursor,
     win_set_cursor,
 )
 from pynvim_pp.lib import write
@@ -351,10 +352,15 @@ def _cursor(cursor: NvimPos, instructions: Sequence[_EditInstruction]) -> NvimPo
 
 
 def edit(
-    nvim: Nvim, stack: Stack, state: State, data: UserData, synthetic: bool
+    nvim: Nvim,
+    stack: Stack,
+    state: State,
+    data: UserData,
+    current_line: str,
 ) -> Tuple[int, int]:
     win = cur_win(nvim)
     buf = win_get_buf(nvim, win=win)
+    row, _ = state.context.position
 
     if isinstance(data.primary_edit, SnippetEdit):
         visual = ""
@@ -384,7 +390,8 @@ def edit(
         return -1, -1
     else:
         limited_lines = buf_get_lines(nvim, buf=buf, lo=lo, hi=hi)
-        lines = tuple(chain(repeat("", times=lo), limited_lines))
+        lines = [*chain(repeat("", times=lo), limited_lines)]
+        lines[row : row + 1] = current_line
         view = _lines(lines)
 
         instructions = _instructions(
@@ -394,20 +401,22 @@ def edit(
             primary=primary,
             secondary=data.secondary_edits,
         )
-        new_lines = _new_lines(view, instructions=instructions)
+        # new_lines = _new_lines(view, instructions=instructions)
         n_row, n_col = _cursor(state.context.position, instructions=instructions)
-        send_lines = new_lines[lo:]
+        # send_lines = new_lines[lo:]
 
-        if DEBUG:
-            msg = pformat((data, instructions, (n_row + 1, n_col + 1), send_lines))
-            log.debug("%s", msg)
+        # if DEBUG:
+        #     msg = pformat((data, instructions, (n_row + 1, n_col + 1), send_lines))
+        #     log.debug("%s", msg)
 
-        buf_set_lines(nvim, buf=buf, lo=lo, hi=hi, lines=send_lines)
+        # buf_set_lines(nvim, buf=buf, lo=lo, hi=hi, lines=send_lines)
+        for inst in instructions:
+            (r1, c1), (r2, c2) = inst.begin, inst.end
+            nvim.api.nvim_buf_set_text(buf, r1, c1, r2, c2, (inst.new_lines,))
         win_set_cursor(nvim, win=win, row=n_row, col=n_col)
 
-        if not synthetic:
-            stack.idb.inserted(data.instance.bytes, sort_by=data.sort_by)
-            if marks:
-                mark(nvim, settings=stack.settings, buf=buf, marks=marks)
+        stack.idb.inserted(data.instance.bytes, sort_by=data.sort_by)
+        if marks:
+            mark(nvim, settings=stack.settings, buf=buf, marks=marks)
 
         return n_row, n_col
