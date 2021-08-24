@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 from itertools import chain, repeat
+from os import linesep
 from pprint import pformat
 from typing import (
     AbstractSet,
@@ -18,6 +19,7 @@ from pynvim_pp.lib import write
 from pynvim_pp.logging import log
 from std2.types import never
 
+from ..consts import DEBUG
 from ..lang import LANG
 from ..shared.trans import trans_adjusted
 from ..shared.types import (
@@ -355,13 +357,15 @@ def edit(
             state.context.position,
             instructions=instructions,
         )
+        if DEBUG:
+            log.debug("%s", pformat(instructions))
 
         for inst in _trans(instructions):
             (r1, c1), (r2, c2) = inst.begin, inst.end
             try:
                 nvim.api.buf_set_text(buf, r1, c1, r2, c2, inst.new_lines)
             except NvimError as e:
-                log.warn("%s", e)
+                log.warn(f"%s{linesep}%s", e, inst)
 
         win_set_cursor(nvim, win=win, row=n_row, col=n_col)
 
