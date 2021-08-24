@@ -295,10 +295,10 @@ def _trans(instructions: Iterable[EditInstruction]) -> Iterator[EditInstruction]
 def apply(nvim: Nvim, buf: Buffer, instructions: Iterable[EditInstruction]) -> None:
     mode = nvim.api.get_mode()["mode"]
     if mode == "i":
-        key = nvim.api.replace_termcodes("i<c-g>u", True, True, True)
+        key = nvim.api.replace_termcodes("<c-g>u", True, True, True)
         nvim.api.feedkeys(key, "n", True)
     else:
-        key = nvim.api.replace_termcodes("<c-g>u", True, True, True)
+        key = nvim.api.replace_termcodes("i<c-g>u", True, True, True)
         nvim.command(f"normal! {key}")
 
     for inst in _trans(instructions):
