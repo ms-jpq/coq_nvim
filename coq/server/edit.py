@@ -12,6 +12,7 @@ from typing import (
 )
 
 from pynvim import Nvim
+from pynvim.api.common import NvimError
 from pynvim_pp.api import buf_get_lines, cur_win, win_get_buf, win_set_cursor
 from pynvim_pp.lib import write
 from pynvim_pp.logging import log
@@ -149,6 +150,7 @@ def _edit_trans(
     lines: _Lines,
     edit: Edit,
 ) -> _EditInstruction:
+
     adjusted = trans_adjusted(unifying_chars, ctx=ctx, edit=edit)
     inst = _contextual_edit_trans(ctx, lines=lines, edit=adjusted)
     return inst
@@ -356,8 +358,10 @@ def edit(
 
         for inst in _trans(instructions):
             (r1, c1), (r2, c2) = inst.begin, inst.end
-            print(inst, flush=True)
-            nvim.api.buf_set_text(buf, r1, c1, r2, c2, inst.new_lines)
+            try:
+                nvim.api.buf_set_text(buf, r1, c1, r2, c2, inst.new_lines)
+            except NvimError as e:
+                log.warn("%s", e)
 
         win_set_cursor(nvim, win=win, row=n_row, col=n_col)
 
