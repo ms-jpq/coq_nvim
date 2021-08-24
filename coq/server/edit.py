@@ -293,8 +293,7 @@ def _trans(instructions: Iterable[EditInstruction]) -> Iterator[EditInstruction]
 
 
 def apply(nvim: Nvim, buf: Buffer, instructions: Iterable[EditInstruction]) -> None:
-    key = nvim.api.replace_termcodes("i<c-g>u<space><bs>", True, True, True)
-    nvim.command(f"normal! {key}")
+    nvim.options["undolevels"] = nvim.options["undolevels"]
 
     for inst in _trans(instructions):
         (r1, c1), (r2, c2) = inst.begin, inst.end
