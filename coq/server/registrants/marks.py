@@ -131,24 +131,14 @@ def _linked_marks(
         else:
             return ""
 
-    try:
-        resp = ask(nvim, question=LANG("expand marks"), default=place_holder())
-        if resp is not None:
-            apply(nvim, buf=buf, instructions=_trans(resp, marks=marks))
-            return True
-        else:
-            return False
-    except NvimError as e:
-        msg = f"""
-        bad mark locations {marks}
-
-        {e}
-        """
-        log.warn("%s", dedent(msg))
-        return False
-    finally:
+    resp = ask(nvim, question=LANG("expand marks"), default=place_holder())
+    if resp is not None:
+        apply(nvim, buf=buf, instructions=_trans(resp, marks=marks))
         for mark in marks:
             nvim.api.buf_del_extmark(buf, ns, mark.idx)
+        return True
+    else:
+        return False
 
 
 @rpc(blocking=True)
