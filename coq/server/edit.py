@@ -2,17 +2,10 @@ from collections import deque
 from dataclasses import dataclass
 from itertools import chain, repeat
 from pprint import pformat
-from typing import AbstractSet, Iterator, MutableSequence, Optional, Sequence, Tuple
+from typing import AbstractSet, Iterable, Iterator, MutableSequence, Optional, Sequence, Tuple
 
 from pynvim import Nvim
-from pynvim_pp.api import (
-    buf_get_lines,
-    buf_set_lines,
-    cur_win,
-    win_get_buf,
-    win_get_cursor,
-    win_set_cursor,
-)
+from pynvim_pp.api import buf_get_lines, cur_win, win_get_buf, win_set_cursor,buf_set_lines
 from pynvim_pp.lib import write
 from pynvim_pp.logging import log
 from std2.itertools import deiter
@@ -238,7 +231,7 @@ def _instructions(
     lines: _Lines,
     primary: ApplicableEdit,
     secondary: Sequence[RangeEdit],
-) -> Sequence[_EditInstruction]:
+) -> Tuple[Sequence[_EditInstruction], Sequence[_EditInstruction]]:
     def cont() -> Iterator[_EditInstruction]:
         if isinstance(primary, RangeEdit):
             inst = _range_edit_trans(
@@ -262,7 +255,7 @@ def _instructions(
             never(primary)
 
         for edit in secondary:
-            i = _range_edit_trans(
+            yield _range_edit_trans(
                 unifying_chars,
                 ctx=ctx,
                 primary=False,
@@ -270,14 +263,14 @@ def _instructions(
                 edit=edit,
             )
 
-            if inst.primary_shift and i.begin >= inst.begin:
-                # TODO -- The PrimaryEdit need a shift factor
-                yield i
-            else:
-                yield i
-
-    instructions = _consolidate(*cont())
-    return instructions
+    s1: MutableSequence[_EditInstruction] = []
+    s2: MutableSequence[_EditInstruction] = []
+    for inst in cont():
+        if inst.primary_shift:
+            s1.append(inst)
+        else:
+            s2.append(inst)
+    return s1, s2
 
 
 def _new_lines(
@@ -337,7 +330,7 @@ def _new_lines(
     return tuple(cont())
 
 
-def _cursor(cursor: NvimPos, instructions: Sequence[_EditInstruction]) -> NvimPos:
+def _cursor(cursor: NvimPos, instructions: Iterable[_EditInstruction]) -> NvimPos:
     row, _ = cursor
     col = -1
 
@@ -351,34 +344,25 @@ def _cursor(cursor: NvimPos, instructions: Sequence[_EditInstruction]) -> NvimPo
     return row, col
 
 
-def edit(
-    nvim: Nvim,
-    stack: Stack,
-    state: State,
-    data: UserData,
-    current_line: str,
-) -> Tuple[int, int]:
-    win = cur_win(nvim)
-    buf = win_get_buf(nvim, win=win)
-    row, _ = state.context.position
-
+def _parse(stack: Stack, state: State, data: UserData) -> Tuple[Edit, Sequence[Mark]]:
     if isinstance(data.primary_edit, SnippetEdit):
         visual = ""
-        try:
-            parsed: Tuple[Edit, Sequence[Mark]] = parse(
-                stack.settings.match.unifying_chars,
-                context=state.context,
-                snippet=data.primary_edit,
-                visual=visual,
-            )
-            primary, marks = parsed
-        except ParseError as e:
-            primary, marks = data.primary_edit, ()
-            log.warn("%s", e)
-            msg = LANG("failed to parse snippet")
-            write(nvim, msg)
+        return parse(
+            stack.settings.match.unifying_chars,
+            context=state.context,
+            snippet=data.primary_edit,
+            visual=visual,
+        )
     else:
+        return data.primary_edit, ()
+
+
+def edit(nvim: Nvim, stack: Stack, state: State, data: UserData) -> Tuple[int, int]:
+    try:
+        primary, marks = _parse(stack, state=state, data=data)
+    except ParseError as e:
         primary, marks = data.primary_edit, ()
+        write(nvim, e)
 
     lo, hi = _rows_to_fetch(
         state.context,
@@ -389,30 +373,32 @@ def edit(
         log.warn("%s", pformat(("OUT OF BOUNDS", (lo, hi), data)))
         return -1, -1
     else:
+        win = cur_win(nvim)
+        buf = win_get_buf(nvim, win=win)
+
         limited_lines = buf_get_lines(nvim, buf=buf, lo=lo, hi=hi)
         lines = [*chain(repeat("", times=lo), limited_lines)]
-        lines[row : row + 1] = current_line
         view = _lines(lines)
 
-        instructions = _instructions(
+        inst_1, inst_2 = _instructions(
             state.context,
             unifying_chars=stack.settings.match.unifying_chars,
             lines=view,
             primary=primary,
             secondary=data.secondary_edits,
         )
-        # new_lines = _new_lines(view, instructions=instructions)
-        n_row, n_col = _cursor(state.context.position, instructions=instructions)
-        # send_lines = new_lines[lo:]
+        n_row, n_col = _cursor(state.context.position, instructions=chain(inst_1, inst_2))
+        nl_1 = _new_lines(view, instructions=inst_1)
+        nl_2 = _new_lines(_lines(nl_1), instructions=inst_2)
+        send_lines = nl_2[lo:]
 
-        # if DEBUG:
-        #     msg = pformat((data, instructions, (n_row + 1, n_col + 1), send_lines))
-        #     log.debug("%s", msg)
+        # msg = pformat((data, [inst_1, inst_2], (n_row + 1, n_col + 1), send_lines))
+        # log.info("%s", msg)
 
-        # buf_set_lines(nvim, buf=buf, lo=lo, hi=hi, lines=send_lines)
-        for inst in instructions:
-            (r1, c1), (r2, c2) = inst.begin, inst.end
-            nvim.api.nvim_buf_set_text(buf, r1, c1, r2, c2, (inst.new_lines,))
+        buf_set_lines(nvim, buf=buf, lo=lo, hi=hi, lines=send_lines)
+        # for inst in instructions:
+        #     (r1, c1), (r2, c2) = inst.begin, inst.end
+        #     nvim.api.buf_set_text(buf, r1, c1, r2, c2, inst.new_lines)
         win_set_cursor(nvim, win=win, row=n_row, col=n_col)
 
         stack.idb.inserted(data.instance.bytes, sort_by=data.sort_by)
