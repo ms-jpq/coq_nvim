@@ -1,23 +1,22 @@
-from collections import deque
 from dataclasses import dataclass
 from itertools import chain, repeat
 from pprint import pformat
-from typing import AbstractSet, Iterable, Iterator, MutableSequence, Sequence, Tuple
+from typing import (
+    AbstractSet,
+    Iterable,
+    Iterator,
+    MutableMapping,
+    MutableSequence,
+    Sequence,
+    Tuple,
+)
 
 from pynvim import Nvim
-from pynvim_pp.api import (
-    buf_get_lines,
-    buf_set_lines,
-    cur_win,
-    win_get_buf,
-    win_set_cursor,
-)
+from pynvim_pp.api import buf_get_lines, cur_win, win_get_buf, win_set_cursor
 from pynvim_pp.lib import write
 from pynvim_pp.logging import log
-from std2.itertools import deiter
 from std2.types import never
 
-from ..consts import DEBUG
 from ..lang import LANG
 from ..shared.trans import trans_adjusted
 from ..shared.types import (
@@ -204,6 +203,44 @@ def _range_edit_trans(
         return inst
 
 
+def _instructions(
+    ctx: Context,
+    unifying_chars: AbstractSet[str],
+    lines: _Lines,
+    primary: ApplicableEdit,
+    secondary: Sequence[RangeEdit],
+) -> Iterator[_EditInstruction]:
+    if isinstance(primary, RangeEdit):
+        inst = _range_edit_trans(
+            unifying_chars,
+            ctx=ctx,
+            primary=True,
+            lines=lines,
+            edit=primary,
+        )
+        yield inst
+
+    elif isinstance(primary, ContextualEdit):
+        inst = _contextual_edit_trans(ctx, lines=lines, edit=primary)
+        yield inst
+
+    elif isinstance(primary, Edit):
+        inst = _edit_trans(unifying_chars, ctx=ctx, lines=lines, edit=primary)
+        yield inst
+
+    else:
+        never(primary)
+
+    for edit in secondary:
+        yield _range_edit_trans(
+            unifying_chars,
+            ctx=ctx,
+            primary=False,
+            lines=lines,
+            edit=edit,
+        )
+
+
 def _consolidate(
     instruction: _EditInstruction, *instructions: _EditInstruction
 ) -> Sequence[_EditInstruction]:
@@ -230,109 +267,24 @@ def _consolidate(
     return stack
 
 
-def _instructions(
-    ctx: Context,
-    unifying_chars: AbstractSet[str],
-    lines: _Lines,
-    primary: ApplicableEdit,
-    secondary: Sequence[RangeEdit],
-) -> Tuple[Sequence[_EditInstruction], Sequence[_EditInstruction]]:
-    def cont() -> Iterator[_EditInstruction]:
-        if isinstance(primary, RangeEdit):
-            inst = _range_edit_trans(
-                unifying_chars,
-                ctx=ctx,
-                primary=True,
-                lines=lines,
-                edit=primary,
-            )
-            yield inst
+def _trans(instructions: Iterable[_EditInstruction]) -> Iterator[_EditInstruction]:
+    row_shift = 0
+    col_shift: MutableMapping[int, int] = {}
 
-        elif isinstance(primary, ContextualEdit):
-            inst = _contextual_edit_trans(ctx, lines=lines, edit=primary)
-            yield inst
-
-        elif isinstance(primary, Edit):
-            inst = _edit_trans(unifying_chars, ctx=ctx, lines=lines, edit=primary)
-            yield inst
-
-        else:
-            never(primary)
-
-        for edit in secondary:
-            yield _range_edit_trans(
-                unifying_chars,
-                ctx=ctx,
-                primary=False,
-                lines=lines,
-                edit=edit,
-            )
-
-    s1: MutableSequence[_EditInstruction] = []
-    s2: MutableSequence[_EditInstruction] = []
-    for inst in _consolidate(*cont()):
-        if inst.primary_shift:
-            s1.append(inst)
-        else:
-            s2.append(inst)
-    return s1, s2
-
-
-def _new_lines(
-    lines: _Lines, instructions: Sequence[_EditInstruction]
-) -> Sequence[str]:
-    it = deiter(range(len(lines.b_lines8)))
-    insts = deque(instructions)
-
-    def cont() -> Iterator[str]:
-        inst = None
-
-        for idx in it:
-            if insts and not inst:
-                inst = insts.popleft()
-
-            if inst:
-                (r1, c1), (r2, c2) = inst.begin, inst.end
-                if idx >= r1 and idx <= r2:
-                    it.push_back(idx)
-                    lit = iter(inst.new_lines)
-
-                    for idx, new_line in zip(it, lit):
-                        if idx == r1 and idx == r2:
-                            new_lines = tuple(lit)
-                            if new_lines:
-                                *body, tail = new_lines
-                                yield lines.b_lines8[r1][:c1].decode(UTF8) + new_line
-                                yield from body
-                                yield tail + lines.b_lines8[r2][c2:].decode(UTF8)
-                            else:
-                                yield (
-                                    lines.b_lines8[r1][:c1].decode(UTF8)
-                                    + new_line
-                                    + lines.b_lines8[r2][c2:].decode(UTF8)
-                                )
-                            break
-                        elif idx == r1:
-                            yield lines.b_lines8[r1][:c1].decode(UTF8) + new_line
-                        elif idx == r2:
-                            new_lines = tuple(lit)
-                            if new_lines:
-                                *body, tail = new_lines
-                                yield new_line
-                                yield from body
-                                yield tail + lines.b_lines8[r2][c2:].decode(UTF8)
-                            else:
-                                yield new_line + lines.b_lines8[r2][c2:].decode(UTF8)
-                            break
-                        else:
-                            yield new_line
-                    inst = None
-                else:
-                    yield lines.lines[idx]
-            else:
-                yield lines.lines[idx]
-
-    return tuple(cont())
+    for inst in instructions:
+        (r1, c1), (r2, c2) = inst.begin, inst.end
+        yield _EditInstruction(
+            primary=inst.primary,
+            primary_shift=inst.primary_shift,
+            begin=(r1 + row_shift, c1 + col_shift.get(r1, 0)),
+            end=(r2 + row_shift, c2 + col_shift.get(r2, 0)),
+            cursor_yoffset=inst.cursor_yoffset,
+            cursor_xpos=inst.cursor_xpos,
+            new_lines=inst.new_lines,
+        )
+        row_shift += (r2 - r1) + len(inst.new_lines) - 1
+        f_length = len(inst.new_lines[-1].encode(UTF8)) if inst.new_lines else 0
+        col_shift[r2] = c2 - c1 + f_length if r1 == r2 else c2 - f_length
 
 
 def _cursor(cursor: NvimPos, instructions: Iterable[_EditInstruction]) -> NvimPos:
@@ -388,30 +340,24 @@ def edit(
         lines = [*chain(repeat("", times=lo), limited_lines)]
         view = _lines(lines)
 
-        inst_1, inst_2 = _instructions(
-            state.context,
-            unifying_chars=stack.settings.match.unifying_chars,
-            lines=view,
-            primary=primary,
-            secondary=data.secondary_edits,
+        instructions = _consolidate(
+            *_instructions(
+                state.context,
+                unifying_chars=stack.settings.match.unifying_chars,
+                lines=view,
+                primary=primary,
+                secondary=data.secondary_edits,
+            )
         )
         n_row, n_col = _cursor(
-            state.context.position, instructions=chain(inst_1, inst_2)
+            state.context.position,
+            instructions=instructions,
         )
 
-        if len(inst_1) == 1 and not inst_2:
-            inst, *_ = inst_1
+        for inst in _trans(instructions):
             (r1, c1), (r2, c2) = inst.begin, inst.end
+            print(inst, flush=True)
             nvim.api.buf_set_text(buf, r1, c1, r2, c2, inst.new_lines)
-        else:
-            nl_1 = _new_lines(view, instructions=inst_1)
-            nl_2 = _new_lines(_lines(nl_1), instructions=inst_2)
-            send_lines = nl_2[lo:]
-            buf_set_lines(nvim, buf=buf, lo=lo, hi=hi, lines=send_lines)
-
-        if DEBUG:
-            msg = pformat((data, [inst_1, inst_2], (n_row + 1, n_col + 1)))
-            log.debug("%s", msg)
 
         win_set_cursor(nvim, win=win, row=n_row, col=n_col)
 
