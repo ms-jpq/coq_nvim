@@ -402,7 +402,6 @@ def edit(
         if len(inst_1) == 1 and not inst_2:
             inst, *_ = inst_1
             (r1, c1), (r2, c2) = inst.begin, inst.end
-            send_lines = ()
             nvim.api.buf_set_text(buf, r1, c1, r2, c2, inst.new_lines)
         else:
             nl_1 = _new_lines(view, instructions=inst_1)
@@ -411,8 +410,9 @@ def edit(
             buf_set_lines(nvim, buf=buf, lo=lo, hi=hi, lines=send_lines)
 
         if DEBUG:
-            msg = pformat((data, [inst_1, inst_2], (n_row + 1, n_col + 1), send_lines))
+            msg = pformat((data, [inst_1, inst_2], (n_row + 1, n_col + 1)))
             log.debug("%s", msg)
+
         win_set_cursor(nvim, win=win, row=n_row, col=n_col)
 
         if not synthetic:
