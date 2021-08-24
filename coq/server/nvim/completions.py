@@ -50,8 +50,10 @@ _LUA = """
     if mode == "i" or mode == "ic" or mode == "ix" then
       if #items ~= 0 then
         vim.fn.complete(col, items)
-      elseif mode == "ic" or mode == "ix" then
+      elseif mode == "ic" then
         vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes("<c-e>", true, true, true), "n", true)
+      else
+        vim.fn.complete(col, items)
       end
     end
   end)
