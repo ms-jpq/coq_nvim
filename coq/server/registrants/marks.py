@@ -87,6 +87,7 @@ def _single_mark(
 
 
 def _trans(new_text: str, marks: Sequence[Mark]) -> Iterator[EditInstruction]:
+    new_lines = new_text.splitlines()
     for mark in marks:
         yield EditInstruction(
             primary=False,
@@ -95,7 +96,7 @@ def _trans(new_text: str, marks: Sequence[Mark]) -> Iterator[EditInstruction]:
             end=mark.end,
             cursor_yoffset=0,
             cursor_xpos=-1,
-            new_lines=new_text.splitlines(),
+            new_lines=new_lines,
         )
 
 
