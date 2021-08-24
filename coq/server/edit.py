@@ -2,10 +2,16 @@ from collections import deque
 from dataclasses import dataclass
 from itertools import chain, repeat
 from pprint import pformat
-from typing import AbstractSet, Iterable, Iterator, MutableSequence, Optional, Sequence, Tuple
+from typing import AbstractSet, Iterable, Iterator, MutableSequence, Sequence, Tuple
 
 from pynvim import Nvim
-from pynvim_pp.api import buf_get_lines, cur_win, win_get_buf, win_set_cursor,buf_set_lines
+from pynvim_pp.api import (
+    buf_get_lines,
+    buf_set_lines,
+    cur_win,
+    win_get_buf,
+    win_set_cursor,
+)
 from pynvim_pp.lib import write
 from pynvim_pp.logging import log
 from std2.itertools import deiter
@@ -37,7 +43,7 @@ from .state import State
 @dataclass(frozen=True)
 class _EditInstruction:
     primary: bool
-    primary_shift: Optional[Tuple[int, int]]
+    primary_shift: bool
     begin: NvimPos
     end: NvimPos
     cursor_yoffset: int
@@ -114,7 +120,6 @@ def _contextual_edit_trans(
 
     begin = r1, c1
     end = r2, c2
-    primary_shift = r2 - r1, c2 - c1 if r1 == r2 else 0
 
     new_lines = edit.new_text.split(ctx.linefeed)
     new_prefix_lines = edit.new_prefix.split(ctx.linefeed)
@@ -129,7 +134,7 @@ def _contextual_edit_trans(
 
     inst = _EditInstruction(
         primary=True,
-        primary_shift=primary_shift,
+        primary_shift=True,
         begin=begin,
         end=end,
         cursor_yoffset=cursor_yoffset,
@@ -189,7 +194,7 @@ def _range_edit_trans(
 
         inst = _EditInstruction(
             primary=primary,
-            primary_shift=None,
+            primary_shift=False,
             begin=begin,
             end=end,
             cursor_yoffset=cursor_yoffset,
@@ -265,7 +270,7 @@ def _instructions(
 
     s1: MutableSequence[_EditInstruction] = []
     s2: MutableSequence[_EditInstruction] = []
-    for inst in cont():
+    for inst in _consolidate(*cont()):
         if inst.primary_shift:
             s1.append(inst)
         else:
@@ -362,7 +367,8 @@ def edit(nvim: Nvim, stack: Stack, state: State, data: UserData) -> Tuple[int, i
         primary, marks = _parse(stack, state=state, data=data)
     except ParseError as e:
         primary, marks = data.primary_edit, ()
-        write(nvim, e)
+        write(nvim, LANG("failed to parse snippet"))
+        log.info("%s", e)
 
     lo, hi = _rows_to_fetch(
         state.context,
@@ -387,20 +393,26 @@ def edit(nvim: Nvim, stack: Stack, state: State, data: UserData) -> Tuple[int, i
             primary=primary,
             secondary=data.secondary_edits,
         )
-        n_row, n_col = _cursor(state.context.position, instructions=chain(inst_1, inst_2))
-        nl_1 = _new_lines(view, instructions=inst_1)
-        nl_2 = _new_lines(_lines(nl_1), instructions=inst_2)
-        send_lines = nl_2[lo:]
+        n_row, n_col = _cursor(
+            state.context.position, instructions=chain(inst_1, inst_2)
+        )
 
-        # msg = pformat((data, [inst_1, inst_2], (n_row + 1, n_col + 1), send_lines))
-        # log.info("%s", msg)
+        if len(inst_1) == 1 and not inst_2:
+            inst, *_ = inst_1
+            (r1, c1), (r2, c2) = inst.begin, inst.end
+            nvim.api.buf_set_text(buf, r1, c1, r2, c2, inst.new_lines)
+        else:
+            nl_1 = _new_lines(view, instructions=inst_1)
+            nl_2 = _new_lines(_lines(nl_1), instructions=inst_2)
+            send_lines = nl_2[lo:]
+            if DEBUG:
+                msg = pformat(
+                    (data, [inst_1, inst_2], (n_row + 1, n_col + 1), send_lines)
+                )
+                log.debug("%s", msg)
+            buf_set_lines(nvim, buf=buf, lo=lo, hi=hi, lines=send_lines)
 
-        buf_set_lines(nvim, buf=buf, lo=lo, hi=hi, lines=send_lines)
-        # for inst in instructions:
-        #     (r1, c1), (r2, c2) = inst.begin, inst.end
-        #     nvim.api.buf_set_text(buf, r1, c1, r2, c2, inst.new_lines)
         win_set_cursor(nvim, win=win, row=n_row, col=n_col)
-
         stack.idb.inserted(data.instance.bytes, sort_by=data.sort_by)
         if marks:
             mark(nvim, settings=stack.settings, buf=buf, marks=marks)
