@@ -1,8 +1,7 @@
 from collections import deque
 from itertools import chain
 from textwrap import dedent
-from typing import Iterator, Optional, Sequence, Tuple, TypedDict
-from uuid import uuid4
+from typing import Iterator, Sequence, Tuple, TypedDict
 
 from pynvim.api.common import NvimError
 from pynvim.api.nvim import Buffer, Nvim
@@ -21,11 +20,10 @@ from pynvim_pp.operators import set_visual_selection
 
 from ...lang import LANG
 from ...registry import rpc
-from ...shared.types import UTF8, Mark, RangeEdit
+from ...shared.types import UTF8, Mark
 from ...snippets.consts import MOD_PAD
-from ..edit import edit
+from ..edit import EditInstruction, apply
 from ..mark import NS
-from ..nvim.completions import UserData
 from ..rt_types import Stack
 from ..state import state
 
@@ -88,33 +86,23 @@ def _single_mark(
         nvim.api.buf_del_extmark(buf, ns, mark.idx)
 
 
-def _trans(new_text: str, marks: Sequence[Mark]) -> UserData:
-    def one(mark: Mark) -> RangeEdit:
-        edit = RangeEdit(
-            new_text=new_text,
+def _trans(new_text: str, marks: Sequence[Mark]) -> Iterator[EditInstruction]:
+    new_lines = new_text.splitlines()
+    for mark in marks:
+        yield EditInstruction(
+            primary=False,
+            primary_shift=False,
             begin=mark.begin,
             end=mark.end,
-            encoding=UTF8,
+            cursor_yoffset=0,
+            cursor_xpos=-1,
+            new_lines=new_lines,
         )
-        return edit
-
-    primary_edit, *secondary_edits = map(one, marks)
-    data = UserData(
-        uid=uuid4(),
-        instance=uuid4(),
-        sort_by="",
-        change_uid=uuid4(),
-        primary_edit=primary_edit,
-        secondary_edits=secondary_edits,
-        doc=None,
-        extern=None,
-    )
-    return data
 
 
 def _linked_marks(
     nvim: Nvim, mark: Mark, linked: Sequence[Mark], ns: int, buf: Buffer
-) -> Optional[UserData]:
+) -> bool:
     marks = tuple(chain((mark,), linked))
 
     def preview(mark: Mark) -> str:
@@ -143,26 +131,14 @@ def _linked_marks(
         else:
             return ""
 
-    try:
-        resp = ask(nvim, question=LANG("expand marks"), default=place_holder())
-        if resp is not None:
-            data = _trans(resp, marks=marks)
-            return data
-        else:
-            return None
-    except NvimError as e:
-        msg = f"""
-        bad mark locations {marks}
-
-        {e}
-        """
-        log.warn("%s", dedent(msg))
-        return None
-    finally:
-        # TODO -- Need to delete all marks due to extmark not shifting
-        # Need to translate extmarks to correct location
+    resp = ask(nvim, question=LANG("expand marks"), default=place_holder())
+    if resp is not None:
+        apply(nvim, buf=buf, instructions=_trans(resp, marks=marks))
         for mark in marks:
             nvim.api.buf_del_extmark(buf, ns, mark.idx)
+        return True
+    else:
+        return False
 
 
 @rpc(blocking=True)
@@ -183,10 +159,8 @@ def nav_mark(nvim: Nvim, stack: Stack) -> None:
         if not linked:
             single()
         else:
-            data = _linked_marks(nvim, mark=mark, linked=linked, ns=ns, buf=buf)
-            if data:
-                edit(nvim, stack=stack, state=state(), data=data, synthetic=True)
-            else:
+            edited = _linked_marks(nvim, mark=mark, linked=linked, ns=ns, buf=buf)
+            if not edited:
                 single()
 
     else:
