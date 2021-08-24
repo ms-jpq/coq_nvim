@@ -48,7 +48,11 @@ _LUA = """
   vim.schedule(function()
     local mode = vim.api.nvim_get_mode().mode
     if mode == "i" or mode == "ic" or mode == "ix" then
-      vim.fn.complete(col, items)
+      if #items ~= 0 then
+        vim.fn.complete(col, items)
+      elseif mode == "ic" then
+        vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes("<C-e>", true, true, true), "n", true)
+      end
     end
   end)
 end)(...)
