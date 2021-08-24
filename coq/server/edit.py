@@ -358,7 +358,10 @@ def edit(
             instructions=instructions,
         )
         if DEBUG:
-            log.debug("%s", pformat(instructions))
+            log.debug(
+                "%s",
+                pformat(((data.primary_edit, *data.secondary_edits), instructions)),
+            )
 
         for inst in _trans(instructions):
             (r1, c1), (r2, c2) = inst.begin, inst.end
