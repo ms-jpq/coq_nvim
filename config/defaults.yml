@@ -42,6 +42,8 @@ display:
       - "「"
       - "」"
 
+    icons: null
+
   preview:
     x_max_len: 88
     resolve_timeout: 0.09

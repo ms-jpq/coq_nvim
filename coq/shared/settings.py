@@ -27,6 +27,8 @@ class PumDisplay:
     kind_context: Tuple[str, str]
     source_context: Tuple[str, str]
 
+    icons: Literal[None]
+
 
 @dataclass(frozen=True)
 class PreviewPositions:
