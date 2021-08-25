@@ -20,7 +20,7 @@ Vim calls the completion popup menu _`pum`_.
 
 The popup menu will be closed on each keystroke, and re-opened when results coming in.
 
-Disabling this will lead to more smooth completion, but also the stale results will be shown until the new one comes in.
+Disabling this will lead to more smooth menu animation, but also the stale results will be shown until the new one comes in.
 
 **default:**
 
