@@ -65,5 +65,4 @@ def set_options(nvim: Nvim, mapping: KeyMapping, fast_close: bool) -> None:
     settings["completeopt"] += ("noinsert", "noselect", "menuone")
     if fast_close:
         settings["shortmess"] += "c"
-        settings["noshowmode"] = True
     (settings.drain() + keymap.drain(buf=None)).commit(nvim)
