@@ -1,5 +1,4 @@
 from dataclasses import dataclass
-from enum import Enum
 from typing import Any, Iterable, Optional, Sequence, Tuple
 from uuid import UUID
 
@@ -7,14 +6,6 @@ from pynvim import Nvim
 from std2.pickle import new_encoder
 
 from ...shared.types import Doc, Extern, PrimaryEdit, RangeEdit
-
-
-class VimCompKind(Enum):
-    variable = "v"
-    function = "f"
-    member = "m"
-    typedef = "t"
-    define = "d"
 
 
 @dataclass(frozen=True)
@@ -45,10 +36,14 @@ class VimCompletion:
 
 _LUA = """
 (function(col, items)
+  local t1 = vim.loop.now()
   vim.schedule(function()
     local mode = vim.api.nvim_get_mode().mode
     if mode == "i" or mode == "ic" or mode == "ix" then
       vim.fn.complete(col, items)
+    end
+    if #items then
+      print(vim.loop.now() - t1)
     end
   end)
 end)(...)
