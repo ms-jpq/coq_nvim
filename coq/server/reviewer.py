@@ -24,6 +24,10 @@ class _ReviewCtx:
     is_lower: bool
 
 
+def _iconify(completion: Completion) -> Completion:
+    return completion
+
+
 def _metric(
     options: Options,
     ctx: _ReviewCtx,
@@ -47,8 +51,8 @@ def sigmoid(x: float) -> float:
 
 
 def _join(
-    instance: UUID,
     ctx: _ReviewCtx,
+    instance: UUID,
     completion: Completion,
     match_metrics: MatchMetrics,
 ) -> Metric:
@@ -109,15 +113,16 @@ class Reviewer(PReviewer):
         )
 
     def trans(self, instance: UUID, completion: Completion) -> Metric:
+        new_completion = _iconify(completion)
         match_metrics = _metric(
             self._options,
             ctx=self._ctx,
-            completion=completion,
+            completion=new_completion,
         )
         metric = _join(
-            instance,
-            ctx=self._ctx,
-            completion=completion,
+            self._ctx,
+            instance=instance,
+            completion=new_completion,
             match_metrics=match_metrics,
         )
         return metric
