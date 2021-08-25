@@ -1,4 +1,4 @@
-from asyncio import Event, Lock, Task, gather, wait
+from asyncio import Event, Lock, Task, gather, sleep, wait
 from dataclasses import replace
 from queue import SimpleQueue
 from typing import Any, Literal, Mapping, Optional, Sequence, Tuple, Union, cast
@@ -71,7 +71,9 @@ def _launch_loop(nvim: Nvim, stack: Stack) -> None:
                         await stack.supervisor.interrupt()
                         metrics, _ = await gather(
                             stack.supervisor.collect(ctx),
-                            async_call(nvim, lambda: complete(nvim, col=col, comp=())),
+                            async_call(nvim, lambda: complete(nvim, col=col, comp=()))
+                            if stack.settings.display.pum.fast_close
+                            else sleep(0),
                         )
                         s = state()
                         if s.change_id == ctx.change_id:

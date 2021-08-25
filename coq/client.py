@@ -76,7 +76,11 @@ class CoqClient(Client):
 
             self._stack = stack(self._pool, nvim=nvim)
             (rpc_atomic + autocmd.drain() + atomic).commit(nvim)
-            set_options(nvim, mapping=self._stack.settings.keymap)
+            set_options(
+                nvim,
+                mapping=self._stack.settings.keymap,
+                fast_close=self._stack.settings.display.pum.fast_close,
+            )
 
         try:
             threadsafe_call(nvim, cont)

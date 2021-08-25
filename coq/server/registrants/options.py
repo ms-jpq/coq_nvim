@@ -28,7 +28,7 @@ atomic.exec_lua(f"{_update_pumheight.name}()", ())
 autocmd("VimResized") << f"lua {_update_pumheight.name}()"
 
 
-def set_options(nvim: Nvim, mapping: KeyMapping) -> None:
+def set_options(nvim: Nvim, mapping: KeyMapping, fast_close: bool) -> None:
     settings = Settings()
     keymap = Keymap()
 
@@ -63,6 +63,7 @@ def set_options(nvim: Nvim, mapping: KeyMapping) -> None:
         keymap.i("<s-tab>", expr=True) << "pumvisible() ? '<c-p>' : '<bs>'"
 
     settings["completeopt"] += ("noinsert", "noselect", "menuone")
-    settings["shortmess"] += "c"
-    settings["noshowmode"] = True
+    if fast_close:
+        settings["shortmess"] += "c"
+        settings["noshowmode"] = True
     (settings.drain() + keymap.drain(buf=None)).commit(nvim)

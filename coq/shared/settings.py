@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import AbstractSet, Literal, Optional, Sequence, Tuple, Union
+from typing import AbstractSet, Literal, Optional, Tuple, Union
 
 
 @dataclass(frozen=True)
@@ -14,6 +14,8 @@ class Limits:
 
 @dataclass(frozen=True)
 class PumDisplay:
+    fast_close: bool
+
     y_ratio: float
     y_max_len: int
 

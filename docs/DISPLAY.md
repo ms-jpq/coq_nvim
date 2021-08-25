@@ -16,6 +16,18 @@ The highlight group alias for snippet regions that you can navigate around using
 
 Vim calls the completion popup menu _`pum`_.
 
+##### `coq_settings.display.pum.fast_close`
+
+The popup menu will be closed on each keystroke, and re-opened when results coming in.
+
+Disabling this will lead to more smooth menu animation, but also the stale results will be shown until the new one comes in.
+
+**default:**
+
+```json
+True
+```
+
 ##### `coq_settings.display.pum.y_max_len`
 
 Maximum height of the popup menu.

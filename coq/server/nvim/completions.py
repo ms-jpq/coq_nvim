@@ -1,5 +1,4 @@
 from dataclasses import dataclass
-from enum import Enum
 from typing import Any, Iterable, Optional, Sequence, Tuple
 from uuid import UUID
 
@@ -7,14 +6,6 @@ from pynvim import Nvim
 from std2.pickle import new_encoder
 
 from ...shared.types import Doc, Extern, PrimaryEdit, RangeEdit
-
-
-class VimCompKind(Enum):
-    variable = "v"
-    function = "f"
-    member = "m"
-    typedef = "t"
-    define = "d"
 
 
 @dataclass(frozen=True)
