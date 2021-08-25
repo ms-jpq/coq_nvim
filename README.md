@@ -266,6 +266,14 @@ When completion menu is open:
 
 This is a vim thing, I have zero control over :(
 
+#### Flickering
+
+By default, the old results are cleared on each keystroke.
+
+`let g:coq_settings = { 'display.pum.fast_close': v:false }`
+
+You can disable this: at the cost of having stale results shown until the new ones come in.
+
 #### Autostart COQ
 
 `let g:coq_settings = { 'auto_start': v:true | 'shut-up' }` (or the lua way)
