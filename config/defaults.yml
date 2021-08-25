@@ -26,6 +26,7 @@ weights:
 
 display:
   pum:
+    fast_close: False
     y_max_len: 16
     y_ratio: 0.3
 

@@ -36,14 +36,10 @@ class VimCompletion:
 
 _LUA = """
 (function(col, items)
-  local t1 = vim.loop.now()
   vim.schedule(function()
     local mode = vim.api.nvim_get_mode().mode
     if mode == "i" or mode == "ic" or mode == "ix" then
       vim.fn.complete(col, items)
-    end
-    if #items then
-      print(vim.loop.now() - t1)
     end
   end)
 end)(...)
