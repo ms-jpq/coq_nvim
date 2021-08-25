@@ -268,7 +268,7 @@ This is a vim thing, I have zero control over :(
 
 #### Flickering
 
-By default, the old results are cleared on each keystroke.
+By default, the old results are cleared on each keystroke, so the popup menu is closed.
 
 `let g:coq_settings = { 'display.pum.fast_close': v:false }`
 
