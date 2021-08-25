@@ -268,11 +268,13 @@ This is a vim thing, I have zero control over :(
 
 #### Flickering
 
-By default, the old results are cleared on each keystroke, so the popup menu is closed.
+By default, the old results are cleared on each keystroke, so the popup menu is closed right away.
+
+You can disable this: at the cost of having stale results shown until the new ones come in.
 
 `let g:coq_settings = { 'display.pum.fast_close': v:false }`
 
-You can disable this: at the cost of having stale results shown until the new ones come in.
+This is not the default because some LSP servers are very slow (ie. tailwindcss), leading to stale results being shown for too long.
 
 #### Autostart COQ
 
