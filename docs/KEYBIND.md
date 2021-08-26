@@ -76,12 +76,14 @@ set shortmess+=c
 let g:coq_settings = { "keymap.recommended": v:false }
 
 " Keybindings
-ino <silent><expr> <Esc>   pumvisible() ? "\<C-e><Esc>" : "\<Esc>"
-ino <silent><expr> <C-c>   pumvisible() ? "\<C-e><C-c>" : "\<C-c>"
-ino <silent><expr> <BS>    pumvisible() ? "\<C-e><BS>"  : "\<BS>"
-ino <silent><expr> <CR>    pumvisible() ? (complete_info().selected == -1 ? "\<C-e><CR>" : "\<C-y>") : "\<CR>"
-ino <silent><expr> <Tab>   pumvisible() ? "\<C-n>" : "\<Tab>"
-ino <silent><expr> <S-Tab> pumvisible() ? "\<C-p>" : "\<BS>"
+ino <silent><expr> <Esc>   coq#pumvisible() ? "\<C-e><Esc>" : "\<Esc>"
+ino <silent><expr> <C-c>   coq#pumvisible() ? "\<C-e><C-c>" : "\<C-c>"
+ino <silent><expr> <BS>    coq#pumvisible() ? "\<C-e><BS>"  : "\<BS>"
+ino <silent><expr> <CR>    coq#pumvisible() ? (complete_info().selected == -1 ? "\<C-e><CR>" : "\<C-y>") : "\<CR>"
+ino <silent><expr> <Tab>   coq#pumvisible() ? "\<C-n>" : "\<Tab>"
+ino <silent><expr> <S-Tab> coq#pumvisible() ? "\<C-p>" : "\<BS>"
 ```
+
+`coq#pumvisible()` returns `1` if a popup menu is visible and the popup menu is created by `coq`.
 
 #
