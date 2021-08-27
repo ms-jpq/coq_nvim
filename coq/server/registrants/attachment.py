@@ -1,4 +1,5 @@
 from contextlib import suppress
+from dataclasses import dataclass
 from queue import SimpleQueue
 from typing import Sequence, Tuple
 from uuid import uuid4
@@ -32,7 +33,16 @@ autocmd("BufEnter", "InsertEnter") << f"lua {_buf_enter.name}()"
 
 q: SimpleQueue = SimpleQueue()
 
-_Qmsg = Tuple[str, bool, Buffer, Tuple[int, int], Sequence[str], str]
+
+@dataclass(frozen=True)
+class _Qmsg:
+    mode: str
+    comp_mode: str
+    pending: bool
+    buf: Buffer
+    range: Tuple[int, int]
+    lines: Sequence[str]
+    filetype: str
 
 
 @rpc(blocking=True)
@@ -40,28 +50,33 @@ def _listener(nvim: Nvim, stack: Stack) -> None:
     async def cont() -> None:
         while True:
             with with_suppress():
-                thing: _Qmsg = await run_in_executor(q.get)
-                mode, pending, buf, (lo, hi), lines, ft = thing
+                qmsg: _Qmsg = await run_in_executor(q.get)
+                lo, hi = qmsg.range
                 await stack.supervisor.interrupt()
 
-                size = sum(map(len, lines))
+                size = sum(map(len, qmsg.lines))
                 heavy_bufs = (
-                    {buf.number} if size > stack.settings.limits.index_cutoff else set()
+                    {qmsg.buf.number}
+                    if size > stack.settings.limits.index_cutoff
+                    else set()
                 )
                 os = state()
                 s = state(change_id=uuid4(), nono_bufs=heavy_bufs)
 
-                if buf.number not in s.nono_bufs:
+                if qmsg.buf.number not in s.nono_bufs:
                     await stack.bdb.set_lines(
-                        buf.number,
-                        filetype=ft,
+                        qmsg.buf.number,
+                        filetype=qmsg.filetype,
                         lo=lo,
                         hi=hi,
-                        lines=lines,
+                        lines=qmsg.lines,
                         unifying_chars=stack.settings.match.unifying_chars,
                     )
 
-                if buf.number in s.nono_bufs and buf.number not in os.nono_bufs:
+                if (
+                    qmsg.buf.number in s.nono_bufs
+                    and qmsg.buf.number not in os.nono_bufs
+                ):
                     msg = LANG(
                         "buf 2 fat",
                         size=size,
@@ -69,7 +84,11 @@ def _listener(nvim: Nvim, stack: Stack) -> None:
                     )
                     await awrite(nvim, msg)
 
-                if not pending and mode.startswith("i"):
+                if (
+                    not qmsg.pending
+                    and qmsg.mode.startswith("i")
+                    and qmsg.comp_mode in {"", "eval", "function", "ctrl_x"}
+                ):
                     comp_func(nvim, stack=stack, s=s, manual=False)
 
     go(nvim, aw=cont())
@@ -91,7 +110,17 @@ def _lines_event(
     with suppress(NvimError):
         filetype = buf_filetype(nvim, buf=buf)
         mode = nvim.api.get_mode()["mode"]
-        q.put((mode, pending, buf, (lo, hi), lines, filetype))
+        comp_mode = nvim.funcs.complete_info(("mode",))["mode"]
+        msg = _Qmsg(
+            mode=mode,
+            comp_mode=comp_mode,
+            pending=pending,
+            buf=buf,
+            range=(lo, hi),
+            lines=lines,
+            filetype=filetype,
+        )
+        q.put(msg)
 
 
 BUF_EVENTS = {

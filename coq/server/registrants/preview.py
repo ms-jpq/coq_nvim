@@ -211,7 +211,7 @@ def _go_show(
             nvim, listed=False, scratch=True, wipe=True, nofile=True, noswap=True
         )
         buf_set_preview(nvim, buf=buf, syntax=syntax, preview=preview)
-        _set_win(nvim, stack.settings.display.preview, buf=buf, pos=pos)
+        _set_win(nvim, display=stack.settings.display.preview, buf=buf, pos=pos)
 
 
 def _show_preview(
