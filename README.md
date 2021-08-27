@@ -278,7 +278,7 @@ This is not the default because some LSP servers are very slow (ie. tailwindcss)
 
 #### Autostart COQ
 
-`let g:coq_settings = { 'auto_start': v:true | 'shut-up' }` (or the lua way)
+`let g:coq_settings = { 'auto_start': v:true }` or `let g:coq_settings = { 'auto_start': 'shut-up' }`
 
 #### LSP too slow to show up on keystroke.
 
