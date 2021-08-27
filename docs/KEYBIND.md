@@ -58,7 +58,7 @@ Pressing `<c-c>` to resume to edit as normal.
 "<c-h>"
 ```
 
-# Custom keybindings
+## Custom keybindings
 
 If you would like to set your own keybindings, add the following to your
 init.vim and edit them to your liking.
@@ -83,7 +83,3 @@ ino <silent><expr> <CR>    pumvisible() ? (complete_info().selected == -1 ? "\<C
 ino <silent><expr> <Tab>   pumvisible() ? "\<C-n>" : "\<Tab>"
 ino <silent><expr> <S-Tab> pumvisible() ? "\<C-p>" : "\<BS>"
 ```
-
-`coq#pumvisible()` returns `1` if a popup menu is visible and the popup menu is created by `coq`.
-
-#
