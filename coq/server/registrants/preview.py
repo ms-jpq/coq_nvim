@@ -160,7 +160,7 @@ def _positions(
 
     w = _Pos(
         row=top,
-        col=left - w_width - 4,
+        col=left - 2 - w_width - b_width,
         height=we_height,
         width=w_width,
     )
