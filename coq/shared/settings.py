@@ -42,6 +42,7 @@ class PreviewPositions:
 class PreviewDisplay:
     x_max_len: int
     positions: PreviewPositions
+    border: Union[str, Sequence[Union[str, Sequence[str]]]]
     resolve_timeout: float
 
 

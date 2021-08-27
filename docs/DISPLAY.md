@@ -124,6 +124,31 @@ Bit niche, if a completion has documentation, but still be be looked up for furt
 0.09
 ```
 
+##### `coq_settings.display.preview.border`
+
+The border of the preview window. See `:help nvim_open_win()` for possible values.
+
+To make it look like Neovim builtin hover window, use:
+
+```json
+[
+  [ "", "NormalFloat" ],
+  [ "", "NormalFloat" ],
+  [ "", "NormalFloat" ],
+  [ " ", "NormalFloat" ],
+  [ "", "NormalFloat" ],
+  [ "", "NormalFloat" ],
+  [ "", "NormalFloat" ],
+  [ " ", "NormalFloat" ]
+]
+```
+
+**default:**
+
+```json
+"rounded"
+```
+
 ##### `coq_settings.display.preview.positions`
 
 Preferred ordering of preview window.

@@ -32,6 +32,7 @@ from pynvim_pp.api import (
 )
 from pynvim_pp.lib import async_call, display_width, go
 from pynvim_pp.preview import buf_set_preview, set_preview
+from pynvim_pp.float_win import get_border_size
 from std2 import clamp
 from std2.asyncio import cancel
 from std2.pickle import DecodeError, new_decoder
@@ -135,7 +136,7 @@ def _positions(
 
     ns_col = left - 1
     n = _Pos(
-        row=top - 3 - n_height,
+        row=top - 1 - get_border_size(display.border)[0] - n_height,
         col=ns_col,
         height=n_height,
         width=ns_width,
@@ -177,7 +178,7 @@ def _positions(
         yield 4, display.positions.east, e
 
 
-def _set_win(nvim: Nvim, buf: Buffer, pos: _Pos) -> None:
+def _set_win(nvim: Nvim, display: PreviewDisplay, buf: Buffer, pos: _Pos) -> None:
     opts = {
         "relative": "editor",
         "anchor": "NW",
@@ -187,7 +188,7 @@ def _set_win(nvim: Nvim, buf: Buffer, pos: _Pos) -> None:
         "height": pos.height,
         "row": pos.row,
         "col": pos.col,
-        "border": "rounded",
+        "border": display.border,
     }
     win: Window = nvim.api.open_win(buf, False, opts)
     win_set_option(nvim, win=win, key="wrap", val=True)
@@ -209,7 +210,7 @@ def _go_show(
             nvim, listed=False, scratch=True, wipe=True, nofile=True, noswap=True
         )
         buf_set_preview(nvim, buf=buf, syntax=syntax, preview=preview)
-        _set_win(nvim, buf=buf, pos=pos)
+        _set_win(nvim, stack.settings.display.preview, buf=buf, pos=pos)
 
 
 def _show_preview(
