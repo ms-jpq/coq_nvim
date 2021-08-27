@@ -41,7 +41,7 @@ def set_options(nvim: Nvim, mapping: KeyMapping, fast_close: bool) -> None:
     if mapping.bigger_preview:
         (
             keymap.i(mapping.bigger_preview, expr=True)
-            << f"pumvisible() && complete_info(['mode']).mode ==# 'eval' ? {preview_preview.name}() : '{mapping.bigger_preview}'"
+            << f"(pumvisible() && complete_info(['mode']).mode ==# 'eval') ? {preview_preview.name}() : '{mapping.bigger_preview}'"
         )
 
     if mapping.manual_complete:
