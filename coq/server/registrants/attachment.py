@@ -87,7 +87,7 @@ def _listener(nvim: Nvim, stack: Stack) -> None:
                 if (
                     not qmsg.pending
                     and qmsg.mode.startswith("i")
-                    and qmsg.comp_mode in ("", "ctrl_x", "function", "eval")
+                    and qmsg.comp_mode in {"", "eval", "function", "ctrl_x"}
                 ):
                     comp_func(nvim, stack=stack, s=s, manual=False)
 
