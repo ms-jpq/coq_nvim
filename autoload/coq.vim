@@ -31,3 +31,7 @@ function! coq#complete_now(arg_lead, cmd_line, cursor_pos) abort
 
   return s:filter_completions(a:arg_lead, l:args)
 endfunction
+
+function! coq#pumvisible() abort
+  return pumvisible() && complete_info(['mode']).mode ==# 'eval'
+endfunction

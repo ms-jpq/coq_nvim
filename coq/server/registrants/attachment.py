@@ -32,7 +32,7 @@ autocmd("BufEnter", "InsertEnter") << f"lua {_buf_enter.name}()"
 
 q: SimpleQueue = SimpleQueue()
 
-_Qmsg = Tuple[str, bool, Buffer, Tuple[int, int], Sequence[str], str]
+_Qmsg = Tuple[str, str, bool, Buffer, Tuple[int, int], Sequence[str], str]
 
 
 @rpc(blocking=True)
@@ -41,7 +41,7 @@ def _listener(nvim: Nvim, stack: Stack) -> None:
         while True:
             with with_suppress():
                 thing: _Qmsg = await run_in_executor(q.get)
-                mode, pending, buf, (lo, hi), lines, ft = thing
+                mode, comp_mode, pending, buf, (lo, hi), lines, ft = thing
                 await stack.supervisor.interrupt()
 
                 size = sum(map(len, lines))
@@ -69,7 +69,11 @@ def _listener(nvim: Nvim, stack: Stack) -> None:
                     )
                     await awrite(nvim, msg)
 
-                if not pending and mode.startswith("i"):
+                if (
+                    not pending
+                    and mode.startswith("i")
+                    and comp_mode in ("", "ctrl_x", "function", "eval")
+                ):
                     comp_func(nvim, stack=stack, s=s, manual=False)
 
     go(nvim, aw=cont())
@@ -91,7 +95,8 @@ def _lines_event(
     with suppress(NvimError):
         filetype = buf_filetype(nvim, buf=buf)
         mode = nvim.api.get_mode()["mode"]
-        q.put((mode, pending, buf, (lo, hi), lines, filetype))
+        comp_mode = nvim.funcs.complete_info(("mode",))["mode"]
+        q.put((mode, comp_mode, pending, buf, (lo, hi), lines, filetype))
 
 
 BUF_EVENTS = {

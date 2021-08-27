@@ -41,7 +41,7 @@ def set_options(nvim: Nvim, mapping: KeyMapping, fast_close: bool) -> None:
     if mapping.bigger_preview:
         (
             keymap.i(mapping.bigger_preview, expr=True)
-            << f"pumvisible() ? {preview_preview.name}() : '{mapping.bigger_preview}'"
+            << f"coq#pumvisible() ? {preview_preview.name}() : '{mapping.bigger_preview}'"
         )
 
     if mapping.manual_complete:
@@ -52,15 +52,15 @@ def set_options(nvim: Nvim, mapping: KeyMapping, fast_close: bool) -> None:
         keymap.nv(mapping.manual_complete) << "<esc>i<c-x><c-u>"
 
     if mapping.recommended:
-        keymap.i("<esc>", expr=True) << "pumvisible() ? '<c-e><esc>' : '<esc>'"
-        keymap.i("<c-c>", expr=True) << "pumvisible() ? '<c-e><c-c>' : '<c-c>'"
-        keymap.i("<bs>", expr=True) << "pumvisible() ? '<c-e><bs>' : '<bs>'"
+        keymap.i("<esc>", expr=True) << "coq#pumvisible() ? '<c-e><esc>' : '<esc>'"
+        keymap.i("<c-c>", expr=True) << "coq#pumvisible() ? '<c-e><c-c>' : '<c-c>'"
+        keymap.i("<bs>", expr=True) << "coq#pumvisible() ? '<c-e><bs>' : '<bs>'"
         (
             keymap.i("<cr>", expr=True)
-            << "pumvisible() ? (complete_info().selected == -1 ? '<c-e><cr>' : '<c-y>') : '<cr>'"
+            << "coq#pumvisible() ? (complete_info(['selected']).selected == -1 ? '<c-e><cr>' : '<c-y>') : '<cr>'"
         )
-        keymap.i("<tab>", expr=True) << "pumvisible() ? '<c-n>' : '<tab>'"
-        keymap.i("<s-tab>", expr=True) << "pumvisible() ? '<c-p>' : '<bs>'"
+        keymap.i("<tab>", expr=True) << "coq#pumvisible() ? '<c-n>' : '<tab>'"
+        keymap.i("<s-tab>", expr=True) << "coq#pumvisible() ? '<c-p>' : '<bs>'"
 
     settings["completeopt"] += ("noinsert", "noselect", "menuone")
     if fast_close:
