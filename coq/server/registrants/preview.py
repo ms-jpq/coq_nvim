@@ -30,9 +30,9 @@ from pynvim_pp.api import (
     win_set_option,
     win_set_var,
 )
+from pynvim_pp.float_win import border_w_h
 from pynvim_pp.lib import async_call, display_width, go
 from pynvim_pp.preview import buf_set_preview, set_preview
-from pynvim_pp.float_win import get_border_size
 from std2 import clamp
 from std2.asyncio import cancel
 from std2.pickle import DecodeError, new_decoder
@@ -133,10 +133,11 @@ def _positions(
 
     ns_width = limit_w(scr_width - left)
     n_height = limit_h(top - 1)
+    b_width, b_height = border_w_h(display.border)
 
     ns_col = left - 1
     n = _Pos(
-        row=top - 1 - get_border_size(display.border)[0] - n_height,
+        row=top - 1 - n_height - b_height,
         col=ns_col,
         height=n_height,
         width=ns_width,
