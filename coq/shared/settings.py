@@ -1,6 +1,8 @@
 from dataclasses import dataclass
 from typing import AbstractSet, Literal, Optional, Tuple, Union
 
+from pynvim_pp.float_win import Border
+
 
 @dataclass(frozen=True)
 class Limits:
@@ -42,6 +44,7 @@ class PreviewPositions:
 class PreviewDisplay:
     x_max_len: int
     positions: PreviewPositions
+    border: Border
     resolve_timeout: float
 
 

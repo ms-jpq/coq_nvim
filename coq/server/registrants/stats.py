@@ -7,13 +7,13 @@ from typing import Iterable, Iterator, Mapping, Sequence, Tuple
 from pynvim import Nvim
 from pynvim_pp.api import buf_set_lines, buf_set_option, create_buf, win_close
 from pynvim_pp.float_win import list_floatwins, open_float_win
+from pynvim_pp.lib import display_width
 from std2.locale import si_prefixed_smol
 
 from ...consts import MD_STATS
 from ...databases.insertions.database import Statistics
 from ...lang import LANG
 from ...registry import rpc
-from ...shared.parse import display_width
 from ..rt_types import Stack
 
 _TAB_SIZE = 2

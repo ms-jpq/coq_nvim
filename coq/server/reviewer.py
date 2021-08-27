@@ -5,10 +5,12 @@ from math import e
 from typing import Mapping
 from uuid import UUID, uuid4
 
+from pynvim_pp.lib import display_width
+
 from ..databases.insertions.database import IDB
 from ..shared.context import EMPTY_CONTEXT
 from ..shared.fuzzy import MatchMetrics, metrics
-from ..shared.parse import coalesce, display_width, is_word, lower
+from ..shared.parse import coalesce, is_word, lower
 from ..shared.runtime import Metric, PReviewer
 from ..shared.settings import BaseClient, Options, Weights
 from ..shared.types import Completion, Context
