@@ -30,7 +30,7 @@ from pynvim_pp.api import (
     win_set_option,
     win_set_var,
 )
-from pynvim_pp.lib import async_call, go
+from pynvim_pp.lib import async_call, display_width, go
 from pynvim_pp.preview import buf_set_preview, set_preview
 from std2 import clamp
 from std2.asyncio import cancel
@@ -41,7 +41,6 @@ from ...lsp.requests.preview import request
 from ...lsp.types import CompletionItem
 from ...paths.show import show
 from ...registry import autocmd, rpc
-from ...shared.parse import display_width
 from ...shared.settings import PreviewDisplay
 from ...shared.timeit import timeit
 from ...shared.trans import expand_tabs

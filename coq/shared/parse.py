@@ -1,27 +1,4 @@
 from typing import AbstractSet, Iterable, Iterator, MutableSequence
-from unicodedata import east_asian_width
-
-_UNICODE_WIDTH_LOOKUP = {
-    "W": 2,  # CJK
-    "N": 2,  # Non printable
-}
-
-_SPECIAL = {"\n", "\r", "\0"}
-
-
-def display_width(text: str, tabsize: int) -> int:
-    def cont() -> Iterator[int]:
-
-        for char in text:
-            if char == "\t":
-                yield tabsize
-            elif char in _SPECIAL:
-                yield 2
-            else:
-                code = east_asian_width(char)
-                yield _UNICODE_WIDTH_LOOKUP.get(code, 1)
-
-    return sum(cont())
 
 
 def lower(text: str) -> str:

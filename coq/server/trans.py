@@ -3,9 +3,10 @@ from itertools import chain
 from locale import strxfrm
 from typing import Any, Callable, Iterable, Iterator, MutableSet, Sequence
 
+from pynvim_pp.lib import display_width
 from std2 import clamp
 
-from ..shared.parse import display_width, lower
+from ..shared.parse import lower
 from ..shared.runtime import Metric
 from ..shared.settings import PumDisplay, Weights
 from ..shared.types import Context
