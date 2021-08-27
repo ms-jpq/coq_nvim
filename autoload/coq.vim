@@ -1,3 +1,7 @@
+function! coq#pumvisible() abort
+  return pumvisible() && complete_info(['mode']).mode ==# 'eval'
+endfunction
+
 function! s:filter_completions(arg_lead, completions) abort
   let l:lead = escape(a:arg_lead, '\\')
   return filter(a:completions, {_, val -> val =~# "^" . l:lead})
@@ -30,8 +34,4 @@ function! coq#complete_now(arg_lead, cmd_line, cursor_pos) abort
         \ ]
 
   return s:filter_completions(a:arg_lead, l:args)
-endfunction
-
-function! coq#pumvisible() abort
-  return pumvisible() && complete_info(['mode']).mode ==# 'eval'
 endfunction
