@@ -18,6 +18,7 @@ from pynvim.api.common import NvimError
 from pynvim_pp.api import buf_get_lines, cur_win, win_get_buf, win_set_cursor
 from pynvim_pp.lib import write
 from pynvim_pp.logging import log
+from std2.difflib import trans_inplace
 from std2.types import never
 
 from ..consts import DEBUG
@@ -331,14 +332,14 @@ def _parse(stack: Stack, state: State, data: UserData) -> Tuple[Edit, Sequence[M
 
 
 def _correct(nvim: Nvim, buf: Buffer, pos: NvimPos, before: str) -> None:
-    row, col = pos
+    row, _ = pos
     after: str = nvim.api.get_current_line()
-    if after.startswith(before):
-        new_chars = after[len(before) :]
-        if new_chars:
-            nvim.api.buf_set_text(
-                buf, row, col, row, col + len(new_chars.encode(UTF8)), ()
-            )
+    src, dest = after.encode(UTF8), before.encode(UTF8)
+    for (l1, h1), (l2, h2) in trans_inplace(
+        src=tuple(src), dest=tuple(dest), unifying=0
+    ):
+        replace = dest[l2:h2].decode(UTF8, errors="ignore")
+        nvim.api.buf_set_text(buf, row, l1, row, h1, (replace,))
 
 
 def edit(
