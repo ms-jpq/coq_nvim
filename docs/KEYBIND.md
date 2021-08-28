@@ -67,7 +67,6 @@ init.vim and edit them to your liking.
 " NOTE: You may already have these in your configuration somewhere.
 " Autocomplete menu options
 set completeopt=menuone,noselect,noinsert
-set noshowmode
 set shortmess+=c
 
 " 🐓 Coq completion settings
