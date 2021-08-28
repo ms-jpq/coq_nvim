@@ -19,7 +19,11 @@
       local row, col = unpack(pos)
       local position = {line = row, character = col}
       local text_doc = vim.lsp.util.make_text_document_params()
-      local params = {position = position, textDocument = text_doc}
+      local params = {
+        position = position,
+        textDocument = text_doc,
+        context = {triggerKind = vim.lsp.protocol.CompletionTriggerKind.Invoked}
+      }
 
       local ids = {}
       ids, cancel =
@@ -37,4 +41,3 @@
     end
   end
 end)(...)
-
