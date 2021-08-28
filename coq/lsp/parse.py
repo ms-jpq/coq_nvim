@@ -3,7 +3,16 @@ from typing import Any, Mapping, MutableSequence, Optional, Sequence, cast
 
 from pynvim_pp.logging import log
 
-from ..shared.types import UTF16, Completion, Doc, Edit, Extern, RangeEdit, SnippetEdit
+from ..shared.types import (
+    UTF16,
+    Completion,
+    Doc,
+    Edit,
+    Extern,
+    RangeEdit,
+    SnippetEdit,
+    SnippetRangeEdit,
+)
 from .protocol import PROTOCOL
 from .types import CompletionItem, CompletionResponse, LSPcomp, TextEdit
 
@@ -38,10 +47,19 @@ def _primary(item: CompletionItem) -> Edit:
 
     if PROTOCOL.InsertTextFormat.get(item.get("insertTextFormat")) == "Snippet":
         if isinstance(text_edit, Mapping) and "range" in text_edit:
-            new_text = text_edit.get("newText") or fall_back
+            re = _range_edit(cast(TextEdit, text_edit))
+            if re:
+                return SnippetRangeEdit(
+                    grammar="lsp",
+                    new_text=re.new_text,
+                    begin=re.begin,
+                    end=re.end,
+                    encoding=re.encoding,
+                )
+            else:
+                return SnippetEdit(grammar="lsp", new_text=fall_back)
         else:
-            new_text = fall_back
-        return SnippetEdit(grammar="lsp", new_text=new_text)
+            return SnippetEdit(grammar="lsp", new_text=fall_back)
 
     elif isinstance(text_edit, Mapping):
         # TODO -- InsertReplaceEdit
