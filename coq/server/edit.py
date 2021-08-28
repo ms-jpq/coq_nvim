@@ -330,7 +330,20 @@ def _parse(stack: Stack, state: State, data: UserData) -> Tuple[Edit, Sequence[M
         return data.primary_edit, ()
 
 
-def edit(nvim: Nvim, stack: Stack, state: State, data: UserData) -> Tuple[int, int]:
+def _correct(nvim: Nvim, buf: Buffer, pos: NvimPos, before: str) -> None:
+    row, col = pos
+    after: str = nvim.api.get_current_line()
+    if after.startswith(before):
+        new_chars = after[len(before) :]
+        if new_chars:
+            nvim.api.buf_set_text(
+                buf, row, col, row, col + len(new_chars.encode(UTF8)), ()
+            )
+
+
+def edit(
+    nvim: Nvim, stack: Stack, state: State, data: UserData, before: str
+) -> Tuple[int, int]:
     try:
         primary, marks = _parse(stack, state=state, data=data)
     except ParseError as e:
@@ -368,6 +381,7 @@ def edit(nvim: Nvim, stack: Stack, state: State, data: UserData) -> Tuple[int, i
             instructions=instructions,
         )
 
+        _correct(nvim, buf=buf, pos=state.context.position, before=before)
         apply(nvim, buf=buf, instructions=instructions)
         win_set_cursor(nvim, win=win, row=n_row, col=n_col)
 

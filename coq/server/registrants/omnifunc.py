@@ -178,6 +178,7 @@ def _comp_done(nvim: Nvim, stack: Stack, event: Mapping[str, Any]) -> None:
         except DecodeError as e:
             log.warn("%s", e)
         else:
+            before = nvim.api.get_current_line()
 
             async def cont() -> None:
                 s = state()
@@ -185,7 +186,9 @@ def _comp_done(nvim: Nvim, stack: Stack, event: Mapping[str, Any]) -> None:
                     ud = await _resolve(nvim, stack=stack, user_data=user_data)
                     inserted = await async_call(
                         nvim,
-                        lambda: edit(nvim, stack=stack, state=s, data=ud),
+                        lambda: edit(
+                            nvim, stack=stack, state=s, data=ud, before=before
+                        ),
                     )
                     state(inserted=inserted, commit_id=uuid4())
                 else:
