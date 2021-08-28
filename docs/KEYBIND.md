@@ -64,11 +64,6 @@ If you would like to set your own keybindings, add the following to your
 init.vim and edit them to your liking.
 
 ```vim
-" NOTE: You may already have these in your configuration somewhere.
-" Autocomplete menu options
-set completeopt=menuone,noselect,noinsert
-set shortmess+=c
-
 " 🐓 Coq completion settings
 
 " Set recommended to false
