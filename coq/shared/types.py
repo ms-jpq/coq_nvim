@@ -96,6 +96,11 @@ class SnippetEdit(Edit):
 
 
 @dataclass(frozen=True)
+class SnippetRangeEdit(SnippetEdit, RangeEdit):
+    ...
+
+
+@dataclass(frozen=True)
 class Mark:
     idx: int
     begin: NvimPos
