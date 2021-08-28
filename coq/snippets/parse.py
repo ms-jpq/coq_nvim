@@ -108,7 +108,7 @@ def parse(
     )
 
     if isinstance(snippet, SnippetRangeEdit):
-        edit = RangeEdit(
+        edit: Edit = RangeEdit(
             new_text=parsed.text,
             begin=snippet.begin,
             end=snippet.end,
