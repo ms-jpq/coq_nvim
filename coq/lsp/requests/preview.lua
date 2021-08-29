@@ -1,6 +1,15 @@
 (function(...)
   local cancel, cur_session = nil, nil
 
+  local on_resp_old = function(err, _, resp, client_id)
+    if session_id == cur_session then
+      n_clients = n_clients - 1
+      COQlsp_notify(name, session_id, n_clients == 0, resp or vim.NIL)
+    end
+  end
+
+  local on_resp = on_resp_old
+
   COQlsp_preview = function(name, session_id, item)
     cur_session = session_id
 
@@ -18,18 +27,7 @@
     else
       local ids = {}
       ids, cancel =
-        vim.lsp.buf_request(
-        0,
-        "completionItem/resolve",
-        item,
-        function(err, _, resp, client_id)
-          if session_id == cur_session then
-            n_clients = n_clients - 1
-            COQlsp_notify(name, session_id, n_clients == 0, resp or vim.NIL)
-          end
-        end
-      )
+        vim.lsp.buf_request(0, "completionItem/resolve", item, on_resp)
     end
   end
 end)(...)
-
