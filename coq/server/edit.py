@@ -18,6 +18,7 @@ from pynvim.api.common import NvimError
 from pynvim_pp.api import buf_get_lines, cur_win, win_get_buf, win_set_cursor
 from pynvim_pp.lib import write
 from pynvim_pp.logging import log
+from std2.difflib import trans_inplace
 from std2.types import never
 
 from ..consts import DEBUG
@@ -35,7 +36,7 @@ from ..shared.types import (
     RangeEdit,
     SnippetEdit,
 )
-from ..snippets.parse import parse
+from ..snippets.parse import ParsedEdit, parse
 from ..snippets.parsers.types import ParseError
 from .mark import mark
 from .nvim.completions import UserData
@@ -168,8 +169,14 @@ def _range_edit_trans(
 ) -> EditInstruction:
     new_lines = edit.new_text.split(ctx.linefeed)
 
-    if primary and len(new_lines) <= 1 and edit.begin == edit.end:
+    if (
+        primary
+        and not isinstance(edit, ParsedEdit)
+        and len(new_lines) <= 1
+        and edit.begin == edit.end
+    ):
         return _edit_trans(unifying_chars, ctx=ctx, lines=lines, edit=edit)
+
     else:
         (r1, ec1), (r2, ec2) = sorted((edit.begin, edit.end))
 
@@ -185,12 +192,17 @@ def _range_edit_trans(
         begin = r1, c1
         end = r2, c2
 
-        cursor_yoffset = (r2 - r1) + (len(new_lines) - 1)
+        lines_before = (
+            edit.new_prefix.split(ctx.linefeed)
+            if isinstance(edit, ParsedEdit)
+            else new_lines
+        )
+        cursor_yoffset = (r2 - r1) + (len(lines_before) - 1)
         cursor_xpos = (
             (
-                len(new_lines[-1].encode(UTF8))
-                if len(new_lines) > 1
-                else len(lines.b_lines8[r2][:c1]) + len(new_lines[0].encode(UTF8))
+                len(lines_before[-1].encode(UTF8))
+                if len(lines_before) > 1
+                else len(lines.b_lines8[r2][:c1]) + len(lines_before[0].encode(UTF8))
             )
             if primary
             else -1
@@ -331,19 +343,23 @@ def _parse(stack: Stack, state: State, data: UserData) -> Tuple[Edit, Sequence[M
 
 
 def _correct(nvim: Nvim, buf: Buffer, pos: NvimPos, before: str) -> None:
-    row, col = pos
+    row, _ = pos
     after: str = nvim.api.get_current_line()
-    if after.startswith(before):
-        new_chars = after[len(before) :]
-        if new_chars:
-            nvim.api.buf_set_text(
-                buf, row, col, row, col + len(new_chars.encode(UTF8)), ()
-            )
+    src, dest = after.encode(UTF8), before.encode(UTF8)
+    for (l1, h1), (l2, h2) in trans_inplace(
+        src=tuple(src), dest=tuple(dest), unifying=0
+    ):
+        replace = dest[l2:h2].decode(UTF8, errors="ignore")
+        nvim.api.buf_set_text(buf, row, l1, row, h1, (replace,))
 
 
 def edit(
     nvim: Nvim, stack: Stack, state: State, data: UserData, before: str
 ) -> Tuple[int, int]:
+    win = cur_win(nvim)
+    buf = win_get_buf(nvim, win=win)
+    _correct(nvim, buf=buf, pos=state.context.position, before=before)
+
     try:
         primary, marks = _parse(stack, state=state, data=data)
     except ParseError as e:
@@ -360,9 +376,6 @@ def edit(
         log.warn("%s", pformat(("OUT OF BOUNDS", (lo, hi), data)))
         return -1, -1
     else:
-        win = cur_win(nvim)
-        buf = win_get_buf(nvim, win=win)
-
         limited_lines = buf_get_lines(nvim, buf=buf, lo=lo, hi=hi)
         lines = [*chain(repeat("", times=lo), limited_lines)]
         view = _lines(lines)
@@ -381,7 +394,6 @@ def edit(
             instructions=instructions,
         )
 
-        _correct(nvim, buf=buf, pos=state.context.position, before=before)
         apply(nvim, buf=buf, instructions=instructions)
         win_set_cursor(nvim, win=win, row=n_row, col=n_col)
 
