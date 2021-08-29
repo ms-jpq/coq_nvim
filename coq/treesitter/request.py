@@ -38,8 +38,9 @@ def _ts_notify(nvim: Nvim, stack: Stack, ses: int, reply: Sequence[RawPayload]) 
 
 def _vaildate(resp: Sequence[RawPayload]) -> Iterator[Payload]:
     for payload in resp:
-        text = payload["text"].encode(errors="ignore").decode()
-        yield Payload(text=text, kind=payload["kind"])
+        text = payload.get("text", "").encode(errors="ignore").decode()
+        if text:
+            yield Payload(text=text, kind=payload.get("kind", ""))
 
 
 async def async_request(nvim: Nvim) -> AsyncIterator[Payload]:
