@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 from itertools import accumulate, chain, repeat
 from pprint import pformat
 from typing import AbstractSet, Iterable, Iterator, Sequence, Tuple
@@ -7,10 +8,24 @@ from pynvim_pp.logging import log
 from ..consts import DEBUG
 from ..shared.parse import is_word
 from ..shared.trans import expand_tabs
-from ..shared.types import UTF8, Context, ContextualEdit, Edit, Mark, SnippetEdit
+from ..shared.types import (
+    UTF8,
+    Context,
+    ContextualEdit,
+    Edit,
+    Mark,
+    RangeEdit,
+    SnippetEdit,
+    SnippetRangeEdit,
+)
 from .parsers.lsp import parser as lsp_parser
 from .parsers.snu import parser as snu_parser
 from .parsers.types import ParseInfo, Region
+
+
+@dataclass(frozen=True)
+class ParsedEdit(RangeEdit):
+    new_prefix: str
 
 
 def _indent(ctx: Context, old_prefix: str, line_before: str) -> Tuple[int, str]:
@@ -98,12 +113,22 @@ def parse(
         else ""
     )
 
-    edit = ContextualEdit(
-        new_text=parsed.text,
-        old_prefix=old_prefix,
-        old_suffix=old_suffix,
-        new_prefix=parsed.text.encode(UTF8)[: parsed.cursor].decode(),
-    )
+    new_prefix = parsed.text.encode(UTF8)[: parsed.cursor].decode()
+    if isinstance(snippet, SnippetRangeEdit):
+        edit: Edit = ParsedEdit(
+            new_text=parsed.text,
+            begin=snippet.begin,
+            end=snippet.end,
+            encoding=snippet.encoding,
+            new_prefix=new_prefix,
+        )
+    else:
+        edit = ContextualEdit(
+            new_text=parsed.text,
+            old_prefix=old_prefix,
+            old_suffix=old_suffix,
+            new_prefix=new_prefix,
+        )
 
     marks = tuple(
         _marks(
