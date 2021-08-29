@@ -118,7 +118,15 @@ Try to preview this many lines.
 
 #### coq_settings.clients.tree_sitter
 
-No special conf.
+##### `coq_settings.clients.tree_sitter.path_sep`
+
+Aesthetics only, path separator.
+
+**default:**
+
+```json
+" ⇊"
+```
 
 #### coq_settings.clients.buffers
 
