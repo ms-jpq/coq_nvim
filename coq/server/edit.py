@@ -365,7 +365,6 @@ def edit(
         log.warn("%s", pformat(("OUT OF BOUNDS", (lo, hi), data)))
         return -1, -1
     else:
-
         limited_lines = buf_get_lines(nvim, buf=buf, lo=lo, hi=hi)
         lines = [*chain(repeat("", times=lo), limited_lines)]
         view = _lines(lines)
