@@ -41,7 +41,7 @@
           local query = vim.treesitter.get_query(parser:lang(), "highlights")
           if query then
             for _, tree in pairs(parser:parse()) do
-              for capture, node in query:iter_captures(tree:root()) do
+              for capture, node in query:iter_captures(tree:root(), 0) do
                 local pl = payload(node, query.captures[capture])
                 if pl then
                   coroutine.yield(pl)
