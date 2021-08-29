@@ -41,9 +41,8 @@
         method_or_result,
         result_or_ctx,
         client_id_or_config,
-        _,
-        maybe_config)
-        if maybe_config then
+        maybe_bufnr)
+        if maybe_bufnr then
           on_resp_old(err, nil, result_or_ctx, client_id_or_config)
         else
           on_resp_new(err, method_or_result, result_or_ctx)
