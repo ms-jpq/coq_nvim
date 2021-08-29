@@ -33,7 +33,7 @@
 
   local text_for = function(node)
     local r1, c1, r2, c2 = node:range()
-    local lines = vim.api.nvim_buf_get_lines(0, r1, r2 + 1, true)
+    local lines = vim.api.nvim_buf_get_lines(0, r1, r2 + 1, false)
     local len = #lines
     if len == 1 then
       local word = unpack(lines)
@@ -53,7 +53,6 @@
     vim.schedule(
       function()
         for node in iter_nodes() do
-          print(text_for(node), node:type())
         end
         COQts_notify(session, acc)
       end
