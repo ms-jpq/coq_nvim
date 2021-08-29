@@ -23,18 +23,18 @@ class Worker(BaseWorker[BaseClient, TDB]):
 
     async def work(self, context: Context) -> AsyncIterator[Completion]:
         match = context.words or context.syms
-        words = await self._misc.select(
+        payloads = await self._misc.select(
             self._supervisor.options, word=match, limitless=context.manual
         )
 
-        for word, kind in words:
-            edit = Edit(new_text=word)
+        for payload in payloads:
+            edit = Edit(new_text=payload.text)
             cmp = Completion(
                 source=self._options.short_name,
                 weight_adjust=self._options.weight_adjust,
                 label=edit.new_text,
-                sort_by=word,
+                sort_by=payload.text,
                 primary_edit=edit,
-                kind=kind
+                kind=payload.kind,
             )
             yield cmp
