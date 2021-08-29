@@ -7,6 +7,20 @@ from ...shared.runtime import Supervisor
 from ...shared.runtime import Worker as BaseWorker
 from ...shared.settings import BaseClient
 from ...shared.types import Completion, Context, Edit
+from ...treesitter.types import Payload
+
+
+def _trans(client: BaseClient, payload: Payload) -> Completion:
+    edit = Edit(new_text=payload.text)
+    cmp = Completion(
+        source=client.short_name,
+        weight_adjust=client.weight_adjust,
+        label=edit.new_text,
+        sort_by=payload.text,
+        primary_edit=edit,
+        kind=payload.kind,
+    )
+    return cmp
 
 
 class Worker(BaseWorker[BaseClient, TDB]):
@@ -28,13 +42,4 @@ class Worker(BaseWorker[BaseClient, TDB]):
         )
 
         for payload in payloads:
-            edit = Edit(new_text=payload.text)
-            cmp = Completion(
-                source=self._options.short_name,
-                weight_adjust=self._options.weight_adjust,
-                label=edit.new_text,
-                sort_by=payload.text,
-                primary_edit=edit,
-                kind=payload.kind,
-            )
-            yield cmp
+            yield _trans(self._options, payload=payload)
