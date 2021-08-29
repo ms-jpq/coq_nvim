@@ -36,7 +36,7 @@ from ..shared.types import (
     RangeEdit,
     SnippetEdit,
 )
-from ..snippets.parse import parse
+from ..snippets.parse import ParsedEdit, parse
 from ..snippets.parsers.types import ParseError
 from .mark import mark
 from .nvim.completions import UserData
@@ -169,8 +169,14 @@ def _range_edit_trans(
 ) -> EditInstruction:
     new_lines = edit.new_text.split(ctx.linefeed)
 
-    if primary and len(new_lines) <= 1 and edit.begin == edit.end:
+    if (
+        primary
+        and not isinstance(edit, ParsedEdit)
+        and len(new_lines) <= 1
+        and edit.begin == edit.end
+    ):
         return _edit_trans(unifying_chars, ctx=ctx, lines=lines, edit=edit)
+
     else:
         (r1, ec1), (r2, ec2) = sorted((edit.begin, edit.end))
 
@@ -186,12 +192,17 @@ def _range_edit_trans(
         begin = r1, c1
         end = r2, c2
 
-        cursor_yoffset = (r2 - r1) + (len(new_lines) - 1)
+        lines_before = (
+            edit.new_prefix.split(ctx.linefeed)
+            if isinstance(edit, ParsedEdit)
+            else new_lines
+        )
+        cursor_yoffset = (r2 - r1) + (len(lines_before) - 1)
         cursor_xpos = (
             (
-                len(new_lines[-1].encode(UTF8))
-                if len(new_lines) > 1
-                else len(lines.b_lines8[r2][:c1]) + len(new_lines[0].encode(UTF8))
+                len(lines_before[-1].encode(UTF8))
+                if len(lines_before) > 1
+                else len(lines.b_lines8[r2][:c1]) + len(lines_before[0].encode(UTF8))
             )
             if primary
             else -1
