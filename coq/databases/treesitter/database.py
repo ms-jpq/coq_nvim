@@ -3,7 +3,7 @@ from concurrent.futures import Executor
 from contextlib import closing
 from sqlite3 import Connection, OperationalError
 from threading import Lock
-from typing import Iterator, Mapping, Tuple
+from typing import Iterable, Iterator, Mapping
 
 from std2.asyncio import run_in_executor
 from std2.sqlite3 import with_transaction
@@ -13,11 +13,8 @@ from ...shared.executor import SingleThreadExecutor
 from ...shared.settings import Options
 from ...shared.sql import BIGGEST_INT, init_db
 from ...shared.timeit import timeit
+from ...treesitter.types import Payload, SimplePayload
 from .sql import sql
-
-_Word = str
-_Kind = str
-_Double = Tuple[_Word, _Kind]
 
 
 def _init() -> Connection:
@@ -38,10 +35,17 @@ class TDB:
         with self._lock:
             self._conn.interrupt()
 
-    async def new_nodes(self, nodes: Mapping[str, str]) -> None:
+    async def new_nodes(self, nodes: Iterable[Payload]) -> None:
         def m1() -> Iterator[Mapping]:
-            for text, kind in nodes.items():
-                yield {"word": text, "kind": kind}
+            for node in nodes:
+                yield {
+                    "word": node.text,
+                    "kind": node.kind,
+                    "pword": node.parent.text if node.parent else None,
+                    "pkind": node.parent.kind if node.parent else None,
+                    "gpword": node.grandparent.text if node.grandparent else None,
+                    "gpkind": node.grandparent.kind if node.grandparent else None,
+                }
 
         def cont() -> None:
             with self._lock, closing(self._conn.cursor()) as cursor:
@@ -53,8 +57,8 @@ class TDB:
 
     async def select(
         self, opts: Options, word: str, limitless: int
-    ) -> Iterator[_Double]:
-        def cont() -> Iterator[_Double]:
+    ) -> Iterator[Payload]:
+        def cont() -> Iterator[Payload]:
             try:
                 with closing(self._conn.cursor()) as cursor:
                     with with_transaction(cursor):
@@ -69,11 +73,33 @@ class TDB:
                             },
                         )
                         rows = cursor.fetchall()
-                        return ((row["word"], row["kind"]) for row in rows)
+
+                        def c2() -> Iterator[Payload]:
+                            for row in rows:
+                                grandparent = (
+                                    SimplePayload(
+                                        text=row["gpword"], kind=row["gpkind"]
+                                    )
+                                    if row["gpword"] and row["gpkind"]
+                                    else None
+                                )
+                                parent = (
+                                    SimplePayload(text=row["pword"], kind=row["pkind"])
+                                    if row["pword"] and row["pkind"]
+                                    else None
+                                )
+                                yield Payload(
+                                    text=row["word"],
+                                    kind=row["kind"],
+                                    parent=parent,
+                                    grandparent=grandparent,
+                                )
+
+                        return c2()
             except OperationalError:
                 return iter(())
 
-        def step() -> Iterator[_Double]:
+        def step() -> Iterator[Payload]:
             self._interrupt()
             return self._ex.submit(cont)
 

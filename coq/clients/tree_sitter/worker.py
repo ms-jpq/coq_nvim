@@ -1,17 +1,61 @@
-from string import capwords
-from typing import AsyncIterator
+from os import linesep
+from typing import AsyncIterator, Iterator, Optional
 
 from pynvim_pp.lib import go
 
 from ...databases.treesitter.database import TDB
 from ...shared.runtime import Supervisor
 from ...shared.runtime import Worker as BaseWorker
-from ...shared.settings import BaseClient
-from ...shared.types import Completion, Context, Edit
+from ...shared.settings import TSClient
+from ...shared.types import Completion, Context, Doc, Edit
+from ...treesitter.types import Payload
 
 
-class Worker(BaseWorker[BaseClient, TDB]):
-    def __init__(self, supervisor: Supervisor, options: BaseClient, misc: TDB) -> None:
+def _doc(client: TSClient, context: Context, payload: Payload) -> Optional[Doc]:
+    clhs, crhs = context.comment
+
+    def cont() -> Iterator[str]:
+        if payload.grandparent:
+            yield clhs
+            yield payload.grandparent.kind
+            yield linesep
+            yield payload.grandparent.text
+            yield crhs
+
+        if payload.grandparent and payload.parent:
+            yield linesep
+            yield clhs
+            yield client.path_sep
+            yield crhs
+            yield linesep
+
+        if payload.parent:
+            yield clhs
+            yield payload.parent.kind
+            yield linesep
+            yield payload.parent.text
+            yield crhs
+
+    doc = Doc(syntax=context.filetype, text="".join(cont()))
+    return doc
+
+
+def _trans(client: TSClient, context: Context, payload: Payload) -> Completion:
+    edit = Edit(new_text=payload.text)
+    cmp = Completion(
+        source=client.short_name,
+        weight_adjust=client.weight_adjust,
+        label=edit.new_text,
+        sort_by=payload.text,
+        primary_edit=edit,
+        kind=payload.kind,
+        doc=_doc(client, context=context, payload=payload),
+    )
+    return cmp
+
+
+class Worker(BaseWorker[TSClient, TDB]):
+    def __init__(self, supervisor: Supervisor, options: TSClient, misc: TDB) -> None:
         super().__init__(supervisor, options=options, misc=misc)
         go(supervisor.nvim, aw=self._poll())
 
@@ -24,18 +68,9 @@ class Worker(BaseWorker[BaseClient, TDB]):
 
     async def work(self, context: Context) -> AsyncIterator[Completion]:
         match = context.words or context.syms
-        words = await self._misc.select(
+        payloads = await self._misc.select(
             self._supervisor.options, word=match, limitless=context.manual
         )
 
-        for word, kind in words:
-            edit = Edit(new_text=word)
-            cmp = Completion(
-                source=self._options.short_name,
-                weight_adjust=self._options.weight_adjust,
-                label=edit.new_text,
-                sort_by=word,
-                primary_edit=edit,
-                kind=capwords(kind.replace("_", " ")),
-            )
-            yield cmp
+        for payload in payloads:
+            yield _trans(self._options, context=context, payload=payload)

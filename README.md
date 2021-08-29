@@ -54,7 +54,7 @@ Error correction: `cour` -> `colour_space`, `flgr` -> `flag_group`, `nasp` -> `N
 
 - [Customizable location](https://github.com/ms-jpq/coq_nvim/tree/coq/docs/DISPLAY.md): n, s, w, e
 
-- Ubiquitous: Tags, LSP, Paths, Snippets
+- Ubiquitous: Tags, LSP, TreeSitter, Paths, Snippets
 
 ![doc_popup.img](https://raw.githubusercontent.com/ms-jpq/coq.artifacts/artifacts/preview/preview.gif)
 
@@ -142,9 +142,11 @@ apt install universal-ctags    # good
 
 ### TreeSitter
 
+- **Shows context**
+
 - Unicode ready
 
-- I don't have a picture, it's boring
+![treesitter.img](https://raw.githubusercontent.com/ms-jpq/coq.artifacts/artifacts/preview/treesitter.gif)
 
 **Treesitter is still unstable in nvim0.5: slow and crash prone**
 

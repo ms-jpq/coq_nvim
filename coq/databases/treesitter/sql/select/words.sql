@@ -1,6 +1,10 @@
 SELECT DISTINCT
   word,
-  kind
+  kind,
+  pword,
+  pkind,
+  gpword,
+  gpkind
 FROM words
 WHERE
   :word <> ''

@@ -88,6 +88,7 @@ clients:
   tree_sitter:
     enabled: True
     short_name: "TS"
+    path_sep: " ⇊"
     weight_adjust: 0
 
   paths:

@@ -111,6 +111,10 @@ class TagsClient(WordbankClient):
 
 
 @dataclass(frozen=True)
+class TSClient(BaseClient):
+    path_sep : str
+
+@dataclass(frozen=True)
 class SnippetClient(BaseClient):
     sources: AbstractSet[str]
 
@@ -128,7 +132,7 @@ class Clients:
     snippets: SnippetClient
     tags: TagsClient
     tmux: WordbankClient
-    tree_sitter: BaseClient
+    tree_sitter: TSClient
     tabnine: BaseClient
 
 
