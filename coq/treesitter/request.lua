@@ -53,6 +53,7 @@
     vim.schedule(
       function()
         for node in iter_nodes() do
+          table.insert(acc, {text = text_for(node), kind = node:type()})
         end
         COQts_notify(session, acc)
       end
