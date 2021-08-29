@@ -32,7 +32,23 @@
         end
       end
 
-      local on_resp = on_resp_old
+      local on_resp_new = function(err, resp, ctx)
+        on_resp_old(err, nil, resp, ctx.client_id)
+      end
+
+      local on_resp = function(
+        err,
+        method_or_result,
+        result_or_ctx,
+        client_id_or_config,
+        _,
+        maybe_config)
+        if maybe_config then
+          on_resp_old(err, nil, result_or_ctx, client_id_or_config)
+        else
+          on_resp_new(err, method_or_result, result_or_ctx)
+        end
+      end
 
       local ids = {}
       ids, cancel =
