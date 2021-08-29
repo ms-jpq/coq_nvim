@@ -1,7 +1,6 @@
 from asyncio import Condition
 from itertools import count
 from pathlib import Path
-from string import capwords
 from typing import AsyncIterator, Iterator, Optional, Sequence, Tuple
 
 from pynvim.api.nvim import Nvim
@@ -40,8 +39,7 @@ def _ts_notify(nvim: Nvim, stack: Stack, ses: int, reply: Sequence[RawPayload]) 
 def _vaildate(resp: Sequence[RawPayload]) -> Iterator[Payload]:
     for payload in resp:
         text = payload["text"].encode(errors="ignore").decode()
-        kind = capwords(payload["kind"])
-        yield Payload(text=text, kind=kind)
+        yield Payload(text=text, kind=payload["kind"])
 
 
 async def async_request(nvim: Nvim) -> AsyncIterator[Payload]:
