@@ -142,9 +142,11 @@ apt install universal-ctags    # good
 
 ### TreeSitter
 
+- **Shows context**
+
 - Unicode ready
 
-- I don't have a picture, it's boring
+![treesitter.img](https://raw.githubusercontent.com/ms-jpq/coq.artifacts/artifacts/preview/treesitter.gif)
 
 **Treesitter is still unstable in nvim0.5: slow and crash prone**
 
