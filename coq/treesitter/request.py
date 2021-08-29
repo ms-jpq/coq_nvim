@@ -45,7 +45,7 @@ def _parse(load: Optional[SimpleRawPayload]) -> Optional[SimplePayload]:
         if not text:
             return None
         else:
-            kind = capwords(load.get("kind", "").replace("_", " "))
+            kind = capwords(load.get("kind", ""), sep=".")
             return SimplePayload(text=text, kind=kind)
 
 
