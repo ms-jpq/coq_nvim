@@ -45,7 +45,7 @@
       local pre = string.sub(head, c1 + 1, #head)
       local post = string.sub(tail, 1, c2)
       lines[1], lines[len] = unpack({pre, post})
-      local word = table.concat(lines, "")
+      local word = table.concat(lines, "\n")
       return word
     end
   end
@@ -55,7 +55,9 @@
       function()
         local acc = {}
         for node in iter_nodes() do
-          table.insert(acc, {text = text_for(node), kind = node:type()})
+          if not node:missing() and not node:has_error() then
+            table.insert(acc, {text = text_for(node), kind = node:type()})
+          end
         end
         COQts_notify(session, acc)
       end
