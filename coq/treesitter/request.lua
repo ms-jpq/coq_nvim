@@ -33,6 +33,14 @@
     )
   end
 
+  local kind = function(node)
+    if node:named() then
+      return node:type()
+    else
+      return ""
+    end
+  end
+
   COQts_req = function(session, pos)
     vim.schedule(
       function()
@@ -47,17 +55,17 @@
                 acc,
                 {
                   text = text,
-                  kind = node:type(),
+                  kind = kind(node),
                   parent = parent and
                     {
                       text = vim.treesitter.get_node_text(parent, 0),
-                      kind = parent:type()
+                      kind = kind(parent)
                     } or
                     nil,
                   grandparent = grandparent and
                     {
                       text = vim.treesitter.get_node_text(grandparent, 0),
-                      kind = grandparent:type()
+                      kind = kind(grandparent)
                     } or
                     nil
                 }
