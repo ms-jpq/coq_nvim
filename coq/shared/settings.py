@@ -111,7 +111,7 @@ class TagsClient(WordbankClient):
 
 
 @dataclass(frozen=True)
-class TSClient(WordbankClient):
+class TSClient(BaseClient):
     path_sep : str
 
 @dataclass(frozen=True)
