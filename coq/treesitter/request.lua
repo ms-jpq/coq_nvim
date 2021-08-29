@@ -42,7 +42,7 @@
           local trees = parser:parse()
 
           for _, tree in pairs(trees) do
-            for capture, node in query:iter_captures(tree:root(), 0) do
+            for capture, node in query:iter_captures(tree:root()) do
               local pl = payload(node, query.captures[capture])
               if pl then
                 coroutine.yield(pl)
