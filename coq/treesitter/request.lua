@@ -51,9 +51,9 @@
   end
 
   COQts_req = function(session, pos)
-    local acc = {}
     vim.schedule(
       function()
+        local acc = {}
         for node in iter_nodes() do
           table.insert(acc, {text = text_for(node), kind = node:type()})
         end
