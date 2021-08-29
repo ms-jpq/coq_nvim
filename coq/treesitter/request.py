@@ -1,6 +1,7 @@
 from asyncio import Condition
 from itertools import count
 from pathlib import Path
+from string import capwords
 from typing import AsyncIterator, Iterator, Optional, Sequence, Tuple
 
 from pynvim.api.nvim import Nvim
@@ -44,7 +45,8 @@ def _parse(load: Optional[SimpleRawPayload]) -> Optional[SimplePayload]:
         if not text:
             return None
         else:
-            return SimplePayload(text=text, kind=load.get("kind", ""))
+            kind = capwords(load.get("kind", "").replace("_", " "))
+            return SimplePayload(text=text, kind=kind)
 
 
 def _vaildate(resp: Sequence[RawPayload]) -> Iterator[Payload]:

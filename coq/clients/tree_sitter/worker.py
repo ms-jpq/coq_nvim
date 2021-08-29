@@ -1,4 +1,3 @@
-from string import capwords
 from typing import AsyncIterator
 
 from pynvim_pp.lib import go
@@ -36,6 +35,6 @@ class Worker(BaseWorker[BaseClient, TDB]):
                 label=edit.new_text,
                 sort_by=word,
                 primary_edit=edit,
-                kind=capwords(kind.replace("_", " ")),
+                kind=kind
             )
             yield cmp
