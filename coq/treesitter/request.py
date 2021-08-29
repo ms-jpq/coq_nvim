@@ -14,7 +14,7 @@ from .types import Payload, RawPayload
 
 _UIDS = count()
 _COND: Optional[Condition] = None
-_SESSION: Tuple[int, Sequence[RawPayload]] = -1, ()
+_SESSION: Tuple[int, bool, Sequence[RawPayload]] = -1, True, ()
 
 
 _LUA = (Path(__file__).resolve().parent / "request.lua").read_text("UTF-8")
@@ -27,9 +27,9 @@ def _ts_notify(nvim: Nvim, stack: Stack, ses: int, reply: Sequence[RawPayload]) 
         global _COND, _SESSION
         _COND = _COND or Condition()
 
-        session, _ = _SESSION
+        session, _, _ = _SESSION
         if ses == session:
-            _SESSION = ses, reply
+            _SESSION = ses, True, reply
 
         async with _COND:
             _COND.notify_all()
@@ -49,7 +49,7 @@ async def async_request(nvim: Nvim) -> AsyncIterator[Payload]:
     _COND = _COND or Condition()
 
     with timeit("TS"):
-        _SESSION = session, _ = next(_UIDS), ()
+        _SESSION = session, _, _ = next(_UIDS), False, ()
 
         async with _COND:
             _COND.notify_all()
@@ -60,11 +60,12 @@ async def async_request(nvim: Nvim) -> AsyncIterator[Payload]:
         await async_call(nvim, cont)
 
         while True:
-            ses, reply = _SESSION
+            ses, done, reply = _SESSION
             if ses == session:
                 for payload in _vaildate(reply):
                     yield payload
-                break
+                if done:
+                    break
             elif ses > session:
                 break
 
