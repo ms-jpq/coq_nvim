@@ -1,27 +1,27 @@
 (function(...)
+  local iter = nil
+  iter = function(root)
+    return coroutine.wrap(
+      function()
+        if root:child_count() == 0 then
+          coroutine.yield(root)
+        else
+          for node in root:iter_children() do
+            for n in iter(node) do
+              coroutine.yield(n)
+            end
+          end
+        end
+      end
+    )
+  end
+
   local iter_nodes = function()
     return coroutine.wrap(
       function()
         local go, parser = pcall(vim.treesitter.get_parser)
         if go then
           local trees = parser:parse()
-
-          local iter = nil
-          iter = function(root)
-            return coroutine.wrap(
-              function()
-                if root:child_count() == 0 then
-                  coroutine.yield(root)
-                else
-                  for node in root:iter_children() do
-                    for n in iter(node) do
-                      coroutine.yield(n)
-                    end
-                  end
-                end
-              end
-            )
-          end
 
           for _, tree in ipairs(trees) do
             for node in iter(tree:root()) do
