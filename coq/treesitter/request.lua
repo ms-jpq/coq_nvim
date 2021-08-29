@@ -39,13 +39,13 @@
         local go, parser = pcall(vim.treesitter.get_parser)
         if go then
           local query = vim.treesitter.get_query(parser:lang(), "highlights")
-          local trees = parser:parse()
-
-          for _, tree in pairs(trees) do
-            for capture, node in query:iter_captures(tree:root()) do
-              local pl = payload(node, query.captures[capture])
-              if pl then
-                coroutine.yield(pl)
+          if query then
+            for _, tree in pairs(parser:parse()) do
+              for capture, node in query:iter_captures(tree:root()) do
+                local pl = payload(node, query.captures[capture])
+                if pl then
+                  coroutine.yield(pl)
+                end
               end
             end
           end
