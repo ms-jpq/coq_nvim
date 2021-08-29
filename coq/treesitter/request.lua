@@ -40,8 +40,28 @@
         for node in iter_nodes() do
           if not node:missing() and not node:has_error() then
             local text = vim.treesitter.get_node_text(node, 0)
+            local parent = node:parent()
+            local grandparent = parent and parent:parent() or nil
             if text then
-              table.insert(acc, {text = text, kind = node:type()})
+              table.insert(
+                acc,
+                {
+                  text = text,
+                  kind = node:type(),
+                  parent = parent and
+                    {
+                      text = vim.treesitter.get_node_text(parent, 0),
+                      kind = parent:type()
+                    } or
+                    nil,
+                  grandparent = grandparent and
+                    {
+                      text = vim.treesitter.get_node_text(grandparent, 0),
+                      kind = grandparent:type()
+                    } or
+                    nil
+                }
+              )
             end
           end
         end
