@@ -345,6 +345,10 @@ def _correct(nvim: Nvim, buf: Buffer, pos: NvimPos, before: str) -> None:
 def edit(
     nvim: Nvim, stack: Stack, state: State, data: UserData, before: str
 ) -> Tuple[int, int]:
+    win = cur_win(nvim)
+    buf = win_get_buf(nvim, win=win)
+    _correct(nvim, buf=buf, pos=state.context.position, before=before)
+
     try:
         primary, marks = _parse(stack, state=state, data=data)
     except ParseError as e:
@@ -361,8 +365,6 @@ def edit(
         log.warn("%s", pformat(("OUT OF BOUNDS", (lo, hi), data)))
         return -1, -1
     else:
-        win = cur_win(nvim)
-        buf = win_get_buf(nvim, win=win)
 
         limited_lines = buf_get_lines(nvim, buf=buf, lo=lo, hi=hi)
         lines = [*chain(repeat("", times=lo), limited_lines)]
@@ -382,7 +384,6 @@ def edit(
             instructions=instructions,
         )
 
-        _correct(nvim, buf=buf, pos=state.context.position, before=before)
         apply(nvim, buf=buf, instructions=instructions)
         win_set_cursor(nvim, win=win, row=n_row, col=n_col)
 
