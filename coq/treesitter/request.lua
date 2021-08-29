@@ -39,10 +39,10 @@
         local acc = {}
         for node in iter_nodes() do
           if not node:missing() and not node:has_error() then
-            table.insert(
-              acc,
-              {text = vim.treesitter.get_node_text(node, 0), kind = node:type()}
-            )
+            local text = vim.treesitter.get_node_text(node, 0)
+            if text then
+              table.insert(acc, {text = text, kind = node:type()})
+            end
           end
         end
         COQts_notify(session, acc)
