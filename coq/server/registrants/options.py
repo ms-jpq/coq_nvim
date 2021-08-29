@@ -36,7 +36,7 @@ def set_options(nvim: Nvim, mapping: KeyMapping, fast_close: bool) -> None:
 
     if mapping.jump_to_mark:
         keymap.n(mapping.jump_to_mark) << f"<cmd>lua {nav_mark.name}()<cr>"
-        keymap.iv(mapping.jump_to_mark) << f"<c-bslash><c-n><cmd>lua {nav_mark.name}()<cr>"
+        keymap.iv(mapping.jump_to_mark) << rf"<c-\><c-n><cmd>lua {nav_mark.name}()<cr>"
 
     if mapping.bigger_preview:
         (
@@ -49,7 +49,7 @@ def set_options(nvim: Nvim, mapping: KeyMapping, fast_close: bool) -> None:
             keymap.i(mapping.manual_complete, expr=True)
             << "pumvisible() ? '<c-e><c-x><c-u>' : '<c-x><c-u>'"
         )
-        keymap.nv(mapping.manual_complete) << "<c-bslash><c-n>i<c-x><c-u>"
+        keymap.nv(mapping.manual_complete) << r"<c-\><c-n>i<c-x><c-u>"
 
     if mapping.recommended:
         keymap.i("<esc>", expr=True) << "pumvisible() ? '<c-e><esc>' : '<esc>'"
