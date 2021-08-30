@@ -18,7 +18,7 @@ def iconify(icons: Icons, completion: Completion) -> Completion:
             if icons.mode is IconMode.none:
                 return completion
             elif icons.mode is IconMode.decorate:
-                new_kind = f"{kind} {completion.kind}"
+                new_kind = f"{kind} {completion.kind}" if completion.kind else kind
                 return replace(completion, kind=new_kind)
             elif icons.mode is IconMode.replace:
                 return replace(completion, kind=kind)
