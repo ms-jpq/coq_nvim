@@ -65,7 +65,7 @@ local start = function(deps, ...)
   local is_xdg = (vim.g.coq_settings or {}).xdg
   local args =
     vim.tbl_flatten {
-    deps and py3 or main(),
+    deps and py3 or main(is_xdg),
     {"-m", "coq"},
     {...},
     (is_xdg and {"--xdg", xdg_dir} or {})
