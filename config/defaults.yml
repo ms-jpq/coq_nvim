@@ -61,7 +61,31 @@ display:
     mode: long
     aliases: {}
     mappings:
-      "": ""
+      Class: ""
+      Color: ""
+      Constant: ""
+      Constructor: ""
+      Enum: ""
+      EnumMember: ""
+      Event: ""
+      Field: ""
+      File: ""
+      Folder: ""
+      Function: ""
+      Interface: ""
+      Keyword: ""
+      Method: ""
+      Module: ""
+      Operator: ""
+      Property: ""
+      Reference: ""
+      Snippet: ""
+      Struct: ""
+      Text: ""
+      TypeParameter: ""
+      Unit: ""
+      Value: ""
+      Variable: ""
 
 limits:
   index_cutoff: 333333
@@ -101,8 +125,11 @@ clients:
   paths:
     enabled: True
     short_name: "PATH"
-    preview_lines: 6
+    resolution:
+      - cwd
+      - file
     path_seps: []
+    preview_lines: 6
     weight_adjust: 0
 
   snippets:

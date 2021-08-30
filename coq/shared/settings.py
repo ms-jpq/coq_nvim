@@ -103,8 +103,14 @@ class BaseClient:
     weight_adjust: float
 
 
+class PathResolution(Enum):
+    cwd = auto()
+    file = auto()
+
+
 @dataclass(frozen=True)
 class PathsClient(BaseClient):
+    resolution: AbstractSet[PathResolution]
     preview_lines: int
     path_seps: AbstractSet[str]
 
