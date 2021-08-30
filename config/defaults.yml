@@ -70,8 +70,8 @@ display:
       Type: TypeParameter
     mappings:
       Boolean: ""
-      Character: "ﮜ"
-      Class: ""
+      Character: ""
+      Class: ""
       Color: ""
       Constant: ""
       Constructor: ""
@@ -88,7 +88,7 @@ display:
       Module: ""
       Number: ""
       Operator: "Ψ"
-      Parameter: ""
+      Parameter: ""
       Property: "ﭬ"
       Reference: ""
       Snippet: ""
