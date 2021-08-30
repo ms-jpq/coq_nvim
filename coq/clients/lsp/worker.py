@@ -17,7 +17,7 @@ from ...shared.runtime import Worker as BaseWorker
 from ...shared.settings import LSPClient
 from ...shared.sql import BIGGEST_INT
 from ...shared.types import Completion, Context
-from ..cache.worker import CacheWorker
+from ..cache.worker import CacheWorker, sanitize_cached
 
 
 class _Src(Enum):
@@ -41,12 +41,12 @@ class Worker(BaseWorker[LSPClient, None], CacheWorker):
             self._local_cached.clear()
 
         async def cached_iters() -> Tuple[_Src, LSPcomp]:
-            items = chain(*self._local_cached)
+            items = map(sanitize_cached, chain(*self._local_cached))
             self._local_cached.clear()
             return _Src.lit, LSPcomp(local_cache=True, items=items)
 
         async def cached_items() -> Tuple[_Src, LSPcomp]:
-            items = await cached or iter(())
+            items = await cached
             return _Src.dab, LSPcomp(local_cache=False, items=items)
 
         async def stream() -> AsyncIterator[Tuple[_Src, LSPcomp]]:

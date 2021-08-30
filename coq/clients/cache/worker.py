@@ -28,13 +28,14 @@ def _use_cache(cache: _CacheCtx, ctx: Context) -> bool:
     return use_cache
 
 
-def _trans(comp: Completion) -> Completion:
+def sanitize_cached(comp: Completion) -> Completion:
     p_edit = comp.primary_edit
     if isinstance(p_edit, SnippetEdit):
         edit: Edit = SnippetEdit(grammar=p_edit.grammar, new_text=p_edit.new_text)
     else:
         edit = Edit(new_text=p_edit.new_text)
-    return replace(comp, primary_edit=edit, secondary_edits=())
+    cached = replace(comp, primary_edit=edit, secondary_edits=())
+    return cached
 
 
 class CacheWorker:
@@ -80,10 +81,10 @@ class CacheWorker:
                     limitless=context.manual,
                 )
                 comps = (self._cached.get(sort_by) for sort_by in words)
-                return (c for c in comps if c)
+                return (sanitize_cached(c) for c in comps if c)
 
         async def set(completions: Sequence[Completion]) -> None:
-            new_comps = {c.sort_by: c for c in map(_trans, completions)}
+            new_comps = {c.sort_by: c for c in completions}
             await self._db.insert(new_comps.keys())
             self._cached.update(new_comps)
 
