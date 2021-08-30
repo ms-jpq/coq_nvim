@@ -36,19 +36,23 @@ class VimCompletion:
 
 _LUA = """
 (function(col, items)
-  vim.schedule(function()
-    local mode = vim.api.nvim_get_mode().mode
-    if mode == "i" or mode == "ic" or mode == "ix" then
-      local comp_mode = vim.fn.complete_info({ "mode" }).mode
-      if ({ [""] = 1, ["eval"] = 1, ["function"] = 1, ["ctrl_x"] = 1 })[comp_mode] then
-        -- when `#items ~= 0` there is something to show
-        -- when `#items == 0` but `comp_mode == "eval"` there is something to close
-        if #items ~= 0 or comp_mode == "eval" then
-          vim.fn.complete(col, items)
+  vim.schedule(
+    function()
+      local mode = vim.api.nvim_get_mode().mode
+      if mode == "i" or mode == "ic" or mode == "ix" then
+        local comp_mode = vim.fn.complete_info({"mode"}).mode
+        if
+          ({[""] = 1, ["eval"] = 1, ["function"] = 1, ["ctrl_x"] = 1})[comp_mode]
+         then
+          -- when `#items ~= 0` there is something to show
+          -- when `#items == 0` but `comp_mode == "eval"` there is something to close
+          if #items ~= 0 or comp_mode == "eval" then
+            vim.fn.complete(col, items)
+          end
         end
       end
     end
-  end)
+  )
 end)(...)
 """
 
