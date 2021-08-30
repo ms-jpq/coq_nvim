@@ -70,7 +70,7 @@ if command == "deps":
                 upgrade=True,
                 symlinks=not IS_WIN,
                 clear=True,
-            ).create(RT_DIR)
+            ).create(_RT_DIR)
     except (ImportError, SystemExit, CalledProcessError):
         msg = "Please install python3-venv separately. (apt, yum, apk, etc)"
         print(msg, file=stderr)
@@ -78,7 +78,7 @@ if command == "deps":
     else:
         proc = run(
             (
-                RT_PY,
+                _RT_PY,
                 "-m",
                 "pip",
                 "install",
@@ -94,7 +94,7 @@ if command == "deps":
             exit(proc.returncode)
         proc = run(
             (
-                RT_PY,
+                _RT_PY,
                 "-m",
                 "pip",
                 "install",
