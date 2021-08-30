@@ -34,7 +34,8 @@ def sanitze_cached(comp: Completion) -> Completion:
         edit: Edit = SnippetEdit(grammar=p_edit.grammar, new_text=p_edit.new_text)
     else:
         edit = Edit(new_text=p_edit.new_text)
-    return replace(comp, primary_edit=edit, secondary_edits=())
+    cached = replace(comp, primary_edit=edit, secondary_edits=())
+    return cached
 
 
 class CacheWorker:
