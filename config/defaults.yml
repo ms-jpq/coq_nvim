@@ -58,7 +58,7 @@ display:
   mark_highlight_group: Pmenu
 
   icons:
-    mode: decorate
+    mode: long
     aliases: {}
     mappings:
       "": ""
