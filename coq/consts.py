@@ -27,7 +27,6 @@ COMPILATION_YML = _CONF_DIR / "compilation.yml"
 _ART_DIR = TOP_LEVEL / "artifacts"
 HELO_ARTIFACTS = _ART_DIR / "helo.yml"
 LSP_ARTIFACTS = _ART_DIR / "lsp.json"
-ICON_ARTIFACTS = _ART_DIR / "icons.json"
 
 
 TMP_DIR = VARS / "tmp"

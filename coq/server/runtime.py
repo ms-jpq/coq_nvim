@@ -95,6 +95,7 @@ def stack(pool: Executor, nvim: Nvim) -> Stack:
         TMDB(pool),
     )
     reviewer = Reviewer(
+        icons=settings.display.icons,
         options=settings.match,
         db=idb,
     )
