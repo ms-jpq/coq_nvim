@@ -117,7 +117,7 @@ class Worker(BaseWorker[BaseClient, None]):
         if not installed:
             for _ in range(9):
                 await sleep(0)
-                await awrite(self._supervisor.nvim, LANG("begin T9 download"))
+            await awrite(self._supervisor.nvim, LANG("begin T9 download"))
 
         self._bin = await ensure_updated(
             vars_dir,
