@@ -164,7 +164,8 @@ async def _resolve(nvim: Nvim, stack: Stack, user_data: UserData) -> UserData:
                 else:
                     return replace(
                         user_data,
-                        primary_edit=comp.primary_edit,
+                        # TODO -- some LSPS have bad caching here
+                        # primary_edit=comp.primary_edit,
                         secondary_edits=comp.secondary_edits,
                     )
 
