@@ -197,6 +197,24 @@ One of: `none`, `short`, `long`
 "long"
 ```
 
+##### `coq_settings.display.icons.aliases`
+
+Alias for mappings
+
+`<from_*>` gets the same icon as `<to_*>`
+
+```json
+{ "<from_1>": "<to_1>", "<from_2>": "<to_2>" }
+```
+
+ie. `{ "EnumMember": "Enum" }`, makes `EnumMember` have the same icon as `Enum`
+
+**default:**
+
+```json
+{}
+```
+
 ##### `coq_settings.display.icons.mappings`
 
 `<kind_*>` gets mapped to `<icon_*>`
@@ -212,15 +230,3 @@ For a (mostly exhaustive) list of `kind` keys: `:lua print(vim.inspect(vim.lsp.p
 For `ctags` do `ctags --list-kinds-full`.
 
 The defaults do not cover `ctags`, as there are too many to find unique icons for.
-
-##### `coq_settings.display.icons.aliases`
-
-Alias for mappings
-
-`<from_*>` gets the same icon as `<to_*>`
-
-```json
-{ "<from_1>": "<to_1>", "<from_2>": "<to_2>" }
-```
-
-ie. `{ "EnumMember": "Enum" }`, makes `EnumMember` have the same icon as `Enum`
