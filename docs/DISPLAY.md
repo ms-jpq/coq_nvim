@@ -205,17 +205,13 @@ Alias for mappings
 
 `<from_*>` gets the same icon as `<to_*>`
 
+If `<to_*>` is null, the mapping is nullified
+
 ```json
-{ "<from_1>": "<to_1>", "<from_2>": "<to_2>" }
+{ "<from_1>": "<to_1>", "<from_2>": "<to_2>", "<from_3>": null }
 ```
 
 ie. `{ "EnumMember": "Enum" }`, makes `EnumMember` have the same icon as `Enum`
-
-**default:**
-
-```json
-{}
-```
 
 ##### `coq_settings.display.icons.mappings`
 

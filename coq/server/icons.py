@@ -10,7 +10,7 @@ def iconify(icons: Icons, completion: Completion) -> Completion:
     if not completion.icon_match:
         return completion
     else:
-        alias = icons.aliases.get(completion.icon_match, completion.icon_match)
+        alias = icons.aliases.get(completion.icon_match) or completion.icon_match
         kind = icons.mappings.get(alias)
         if not kind:
             return completion

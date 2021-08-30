@@ -59,8 +59,18 @@ display:
 
   icons:
     mode: long
-    aliases: {}
+    aliases:
+      Conditional: Keyword
+      Float: Number
+      Include: Property
+      Label: Keyword
+      Member: Property
+      Repeat: Keyword
+      Structure: Struct
+      Type: TypeParameter
     mappings:
+      Boolean: ""
+      Character: "ﮜ"
       Class: ""
       Color: ""
       Constant: ""
@@ -74,17 +84,19 @@ display:
       Function: "ﬦ"
       Interface: ""
       Keyword: ""
-      Member: "ﭬ"
       Method: ""
       Module: ""
+      Number: ""
       Operator: "Ψ"
+      Parameter: ""
       Property: "ﭬ"
-      Reference: ""
+      Reference: ""
       Snippet: ""
+      String: ""
       Struct: "ﯟ"
       Text: ""
       TypeParameter: ""
-      Unit: ""
+      Unit: ""
       Value: ""
       Variable: "ﳛ"
 
