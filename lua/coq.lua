@@ -35,13 +35,15 @@ end
 local py3 = vim.g.python3_host_prog or (is_win and "python" or "python3")
 local xdg_dir = vim.fn.stdpath({"data"})
 
-local main = function()
+local main = function(is_xdg)
   local v_py =
     cwd ..
     (is_win and [[/.vars/runtime/Scripts/python.exe]] or
       "/.vars/runtime/bin/python3")
 
   if is_win then
+    local v_py_xdg = xdg_dir .. "/coqrt/Scripts/python"
+    local v_py = is_xdg and v_py_xdg or v_py
     if vim.fn.filereadable(v_py) == 1 then
       return {v_py}
     else
@@ -49,6 +51,8 @@ local main = function()
       return {win_proxy, py3}
     end
   else
+    local v_py_xdg = xdg_dir .. "/coqrt/bin/python3"
+    local v_py = is_xdg and v_py_xdg or v_py
     if vim.fn.filereadable(v_py) == 1 then
       return {v_py}
     else
@@ -58,11 +62,13 @@ local main = function()
 end
 
 local start = function(deps, ...)
+  local is_xdg = (vim.g.coq_settings or {}).xdg
   local args =
     vim.tbl_flatten {
     deps and py3 or main(),
     {"-m", "coq"},
-    {...}
+    {...},
+    (is_xdg and {"--xdg", xdg_dir} or {})
   }
 
   local params = {
