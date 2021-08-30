@@ -43,7 +43,7 @@
             for _, tree in pairs(parser:parse()) do
               for capture, node in query:iter_captures(tree:root(), 0) do
                 local pl = payload(node, query.captures[capture])
-                if pl then
+                if pl and pl.kind ~= "comment" then
                   coroutine.yield(pl)
                 end
               end

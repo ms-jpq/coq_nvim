@@ -62,7 +62,10 @@ def _join(
         proximity=ctx.proximity.get(completion.sort_by, 0),
     )
     label_width = display_width(completion.label, tabsize=ctx.context.tabstop)
-    kind_width = display_width(completion.kind, tabsize=ctx.context.tabstop)
+    # !! WARN
+    # Use UTF8 len for icon support
+    # !! WARN
+    kind_width = len(completion.kind)
     metric = Metric(
         instance=instance,
         comp=completion,

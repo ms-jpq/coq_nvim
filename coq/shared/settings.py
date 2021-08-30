@@ -58,7 +58,7 @@ class IconMode(Enum):
 @dataclass(frozen=True)
 class Icons:
     mode: IconMode
-    aliases: Mapping[str, str]
+    aliases: Mapping[str, Optional[str]]
     mappings: Mapping[str, str]
 
 

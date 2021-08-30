@@ -102,6 +102,20 @@ lsp.<server>.setup(coq.lsp_ensure_capabilities(<stuff...>)) -- after
 
 _The `%` statistic comes from compiling the 10,000 snippets_
 
+### TreeSitter
+
+- **Shows context**
+
+- Unicode ready
+
+![treesitter.img](https://raw.githubusercontent.com/ms-jpq/coq.artifacts/artifacts/preview/treesitter.gif)
+
+**Treesitter is still unstable in nvim0.5: slow and crash prone**
+
+The promise is that Treesitter will have real time parsing on every keystroke, but it's actually too slow on big files.
+
+The Treesitter source only parses on `Idle` events due to unrealized performance promises.
+
 ### CTags
 
 - **LSP like**
@@ -140,20 +154,6 @@ apt install universal-ctags    # good
 
 ![buffers.img](https://raw.githubusercontent.com/ms-jpq/coq.artifacts/artifacts/preview/buffers.gif)
 
-### TreeSitter
-
-- **Shows context**
-
-- Unicode ready
-
-![treesitter.img](https://raw.githubusercontent.com/ms-jpq/coq.artifacts/artifacts/preview/treesitter.gif)
-
-**Treesitter is still unstable in nvim0.5: slow and crash prone**
-
-The promise is that Treesitter will have real time parsing on every keystroke, but it's actually too slow on big files.
-
-The Treesitter source only parses on `Idle` events due to unrealized performance promises.
-
 ### Tmux
 
 ![tmux.img](https://raw.githubusercontent.com/ms-jpq/coq.artifacts/artifacts/preview/tmux.gif)
@@ -183,6 +183,10 @@ Enable via: `coq_settings.clients.tabnine.enabled=true`
 Here I make a type error on purpose inputting `string` instead of an `integer`.
 
 ![conf_demo.img](https://raw.githubusercontent.com/ms-jpq/coq.artifacts/artifacts/preview/conf.png)
+
+### Pretty icons
+
+![icons.img](https://raw.githubusercontent.com/ms-jpq/coq.artifacts/artifacts/preview/icons.png)
 
 ## Install
 
@@ -267,6 +271,10 @@ When completion menu is open:
 **When hovering over a result, entering any key [a-z] will select it**
 
 This is a vim thing, I have zero control over :(
+
+#### Improper Icons
+
+Either set `let g:coq_settings = { 'display.icons.mode': 'none' }` to disable icons, or [install a supported font](https://www.nerdfonts.com/#home)
 
 #### Flickering
 

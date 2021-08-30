@@ -59,33 +59,46 @@ display:
 
   icons:
     mode: long
-    aliases: {}
+    aliases:
+      Conditional: Keyword
+      Float: Number
+      Include: Property
+      Label: Keyword
+      Member: Property
+      Repeat: Keyword
+      Structure: Struct
+      Type: TypeParameter
     mappings:
-      Class: ""
-      Color: ""
-      Constant: ""
-      Constructor: ""
-      Enum: ""
-      EnumMember: ""
-      Event: ""
-      Field: ""
-      File: ""
-      Folder: ""
-      Function: ""
-      Interface: ""
-      Keyword: ""
-      Method: ""
-      Module: ""
-      Operator: ""
-      Property: ""
-      Reference: ""
-      Snippet: ""
-      Struct: ""
-      Text: ""
-      TypeParameter: ""
-      Unit: ""
-      Value: ""
-      Variable: ""
+      Boolean: ""
+      Character: ""
+      Class: ""
+      Color: ""
+      Constant: ""
+      Constructor: ""
+      Enum: ""
+      EnumMember: ""
+      Event: "ﳅ"
+      Field: ""
+      File: ""
+      Folder: "ﱮ"
+      Function: "ﬦ"
+      Interface: ""
+      Keyword: ""
+      Method: ""
+      Module: ""
+      Number: ""
+      Operator: "Ψ"
+      Parameter: ""
+      Property: "ﭬ"
+      Reference: ""
+      Snippet: ""
+      String: ""
+      Struct: "ﯟ"
+      Text: ""
+      TypeParameter: ""
+      Unit: ""
+      Value: ""
+      Variable: "ﳛ"
 
 limits:
   index_cutoff: 333333
