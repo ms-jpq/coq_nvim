@@ -2,6 +2,7 @@ from asyncio import gather
 from contextlib import suppress
 from os import linesep
 from pathlib import Path, PurePath
+from string import capwords
 from typing import (
     AbstractSet,
     AsyncIterator,
@@ -173,7 +174,7 @@ class Worker(BaseWorker[TagsClient, CTDB]):
                     label=edit.new_text,
                     sort_by=name,
                     primary_edit=edit,
-                    kind=tag["kind"],
+                    kind=capwords(tag["kind"]),
                     doc=_doc(self._options, context=context, tag=tag),
                 )
                 yield cmp
