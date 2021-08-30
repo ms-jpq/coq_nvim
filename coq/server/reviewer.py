@@ -14,6 +14,7 @@ from ..shared.parse import coalesce, is_word, lower
 from ..shared.runtime import Metric, PReviewer
 from ..shared.settings import BaseClient, Options, Weights
 from ..shared.types import Completion, Context
+from .icons import iconify
 
 
 @dataclass(frozen=True)
@@ -24,10 +25,6 @@ class _ReviewCtx:
     inserted: Mapping[str, int]
 
     is_lower: bool
-
-
-def _iconify(completion: Completion) -> Completion:
-    return completion
 
 
 def _metric(
@@ -115,7 +112,7 @@ class Reviewer(PReviewer):
         )
 
     def trans(self, instance: UUID, completion: Completion) -> Metric:
-        new_completion = _iconify(completion)
+        new_completion = iconify(completion)
         match_metrics = _metric(
             self._options,
             ctx=self._ctx,

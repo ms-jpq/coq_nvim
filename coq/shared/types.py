@@ -135,3 +135,4 @@ class Completion:
     doc: Optional[Doc] = None
     uid: UUID = field(default_factory=uuid4)
     extern: Optional[Tuple[Extern, Any]] = None
+    icon_match: Optional[str] = None
