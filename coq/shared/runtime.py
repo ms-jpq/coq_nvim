@@ -14,6 +14,7 @@ from asyncio import (
 from concurrent.futures import Executor
 from dataclasses import dataclass
 from itertools import chain
+from pathlib import Path
 from time import monotonic
 from typing import (
     AbstractSet,
@@ -77,11 +78,13 @@ class Supervisor:
         self,
         pool: Executor,
         nvim: Nvim,
+        vars_dir: Path,
         options: Options,
         limits: Limits,
         reviewer: PReviewer,
     ) -> None:
         self.pool = pool
+        self.vars_dir = vars_dir
         self.options, self.limits = options, limits
         self.nvim, self._reviewer = nvim, reviewer
 

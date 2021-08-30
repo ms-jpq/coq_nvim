@@ -3,7 +3,7 @@ from concurrent.futures import Executor
 from contextlib import closing
 from hashlib import md5
 from os.path import normcase
-from pathlib import PurePath
+from pathlib import Path, PurePath
 from sqlite3 import Connection, OperationalError
 from threading import Lock
 from typing import AbstractSet, Iterator, Mapping, cast
@@ -11,7 +11,6 @@ from typing import AbstractSet, Iterator, Mapping, cast
 from std2.asyncio import run_in_executor
 from std2.sqlite3 import with_transaction
 
-from ...consts import CLIENTS_DIR
 from ...shared.executor import SingleThreadExecutor
 from ...shared.settings import Options
 from ...shared.sql import BIGGEST_INT, init_db
@@ -19,7 +18,6 @@ from ...shared.timeit import timeit
 from ...tags.types import Tag, Tags
 from .sql import sql
 
-_TAGS_DIR = CLIENTS_DIR / "tags"
 _SCHEMA = "v1"
 
 _NIL_TAG = Tag(
@@ -36,10 +34,10 @@ _NIL_TAG = Tag(
 )
 
 
-def _init(cwd: PurePath) -> Connection:
+def _init(db_dir: Path, cwd: PurePath) -> Connection:
     ncwd = normcase(cwd)
     name = f"{md5(ncwd.encode()).hexdigest()}-{_SCHEMA}"
-    db = (_TAGS_DIR / name).with_suffix(".sqlite3")
+    db = (db_dir / name).with_suffix(".sqlite3")
     db.parent.mkdir(parents=True, exist_ok=True)
     conn = Connection(str(db), isolation_level=None)
     init_db(conn)
@@ -49,10 +47,11 @@ def _init(cwd: PurePath) -> Connection:
 
 
 class CTDB:
-    def __init__(self, pool: Executor, cwd: PurePath) -> None:
+    def __init__(self, pool: Executor, vars_dir: Path, cwd: PurePath) -> None:
         self._lock = Lock()
         self._ex = SingleThreadExecutor(pool)
-        self._conn: Connection = self._ex.submit(_init, cwd)
+        self._vars_dir = vars_dir / "clients" / "tags"
+        self._conn: Connection = self._ex.submit(_init, self._vars_dir, cwd)
 
     def _interrupt(self) -> None:
         with self._lock:
@@ -62,7 +61,7 @@ class CTDB:
         def cont() -> None:
             with self._lock:
                 self._conn.close()
-                self._conn = _init(cwd)
+                self._conn = _init(self._vars_dir, cwd=cwd)
 
         await run_in_executor(self._ex.submit, cont)
 

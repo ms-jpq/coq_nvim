@@ -1,17 +1,18 @@
 from os import environ, name
 from pathlib import Path
 
+IS_WIN = name == "nt"
+
 TOP_LEVEL = Path(__file__).resolve().parent.parent
 REQUIREMENTS = TOP_LEVEL / "requirements.txt"
 
 TIMEOUT = 1
 
+
 VARS = TOP_LEVEL / ".vars"
 
 RT_DIR = VARS / "runtime"
-RT_PY = (
-    RT_DIR / "Scripts" / "python.exe" if name == "nt" else RT_DIR / "bin" / "python3"
-)
+RT_PY = RT_DIR / "Scripts" / "python.exe" if IS_WIN else RT_DIR / "bin" / "python3"
 
 _CONF_DIR = TOP_LEVEL / "config"
 LANG_ROOT = TOP_LEVEL / "locale"
@@ -23,13 +24,13 @@ CONFIG_YML = _CONF_DIR / "defaults.yml"
 COMPILATION_YML = _CONF_DIR / "compilation.yml"
 
 
-TMP_DIR = VARS / "tmp"
-CLIENTS_DIR = VARS / "clients"
-
-
 _ART_DIR = TOP_LEVEL / "artifacts"
 HELO_ARTIFACTS = _ART_DIR / "helo.yml"
 LSP_ARTIFACTS = _ART_DIR / "lsp.json"
+
+ 
+
+TMP_DIR = VARS / "tmp"
 
 
 SETTINGS_VAR = "coq_settings"

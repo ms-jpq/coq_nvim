@@ -8,7 +8,7 @@ from json.decoder import JSONDecodeError
 from os import X_OK, access, linesep
 from pathlib import PurePath
 from subprocess import DEVNULL, PIPE
-from typing import Any, AsyncIterator, Iterator, Optional, Tuple
+from typing import Any, AsyncIterator, Iterator, Optional
 
 from pynvim_pp.lib import awrite, go
 from pynvim_pp.logging import log
@@ -19,7 +19,7 @@ from ...shared.runtime import Supervisor
 from ...shared.runtime import Worker as BaseWorker
 from ...shared.settings import BaseClient, Options
 from ...shared.types import Completion, Context, ContextualEdit
-from .install import T9_BIN, ensure_updated
+from .install import ensure_updated, t9_bin
 from .types import ReqL1, ReqL2, Request, Response
 
 _VERSION = "3.2.28"
@@ -74,24 +74,25 @@ def _decode(client: BaseClient, reply: Any) -> Iterator[Completion]:
             yield cmp
 
 
-async def _proc(cwd: PurePath) -> Tuple[Optional[PurePath], Optional[Process]]:
+async def _proc(bin: PurePath, cwd: PurePath) -> Optional[Process]:
     try:
         proc = await create_subprocess_exec(
-            T9_BIN,
+            bin,
             stdin=PIPE,
             stdout=PIPE,
             stderr=DEVNULL,
             cwd=cwd,
         )
     except FileNotFoundError:
-        return None, None
+        return None
     else:
-        return cwd, proc
+        return proc
 
 
 class Worker(BaseWorker[BaseClient, None]):
     def __init__(self, supervisor: Supervisor, options: BaseClient, misc: None) -> None:
-        self._lock, self._installed = Lock(), False
+        self._lock = Lock()
+        self._bin: Optional[PurePath] = None
         self._proc: Optional[Process] = None
         self._cwd: Optional[PurePath] = None
         super().__init__(supervisor, options=options, misc=misc)
@@ -101,29 +102,32 @@ class Worker(BaseWorker[BaseClient, None]):
     async def _poll(self) -> None:
         try:
             while True:
-                await sleep(10)
+                await sleep(9)
         finally:
-            if self._proc:
+            proc = self._proc
+            if proc:
                 with suppress(ProcessLookupError):
-                    self._proc.kill()
-                await self._proc.wait()
+                    proc.kill()
+                await proc.wait()
 
     async def _install(self) -> None:
-        self._installed = installed = access(T9_BIN, X_OK)
+        vars_dir = self._supervisor.vars_dir / "clients" / "t9"
+        installed = access(t9_bin(vars_dir), X_OK)
 
-        if not self._installed:
+        if not installed:
             for _ in range(9):
                 await sleep(0)
-                await awrite(self._supervisor.nvim, LANG("begin T9 download"))
+            await awrite(self._supervisor.nvim, LANG("begin T9 download"))
 
-        self._installed = await ensure_updated(
-            self._supervisor.limits.download_retries,
+        self._bin = await ensure_updated(
+            vars_dir,
+            retries=self._supervisor.limits.download_retries,
             timeout=self._supervisor.limits.download_timeout,
         )
 
-        if not self._installed:
+        if not self._bin:
             await awrite(self._supervisor.nvim, LANG("failed T9 download"))
-        elif self._installed and not installed:
+        elif self._bin and not installed:
             await awrite(self._supervisor.nvim, LANG("end T9 download"))
 
     async def _clean(self) -> None:
@@ -137,8 +141,10 @@ class Worker(BaseWorker[BaseClient, None]):
     async def _comm(self, cwd: PurePath, json: str) -> Optional[str]:
         async def cont() -> Optional[str]:
             async with self._lock:
-                if not self._proc:
-                    self._cwd, self._proc = await _proc(cwd)
+                if self._bin and not self._proc:
+                    self._proc = await _proc(self._bin, cwd=cwd)
+                    if self._proc:
+                        self._cwd = cwd
                 if not self._proc:
                     return None
                 else:
@@ -162,7 +168,7 @@ class Worker(BaseWorker[BaseClient, None]):
         if self._cwd != context.cwd:
             await self._clean()
 
-        if self._installed:
+        if self._bin:
             req = _encode(
                 self._supervisor.options,
                 context=context,
