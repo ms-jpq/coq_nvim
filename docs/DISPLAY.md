@@ -185,6 +185,12 @@ One of: `none`, `short`, `long`
 
 - long: show icons + text
 
+**default:**
+
+```json
+"long"
+```
+
 ##### `coq_settings.display.icons.mappings`
 
 `<kind_*>` gets mapped to `<icon_*>`
