@@ -179,7 +179,9 @@ Setting everything to `null` will disable previews.
 
 #### coq_settings.display.icons
 
-Which icons to show
+To see icons, you need to install a [supported front](https://www.nerdfonts.com/#home).
+
+See [cheat sheet](https://www.nerdfonts.com/cheat-sheet) for list of icons.
 
 ##### `coq_settings.display.icons.mode`
 
