@@ -211,7 +211,7 @@ For a (mostly exhaustive) list of `kind` keys: `:lua print(vim.inspect(vim.lsp.p
 
 For `ctags` do `ctags --list-kinds-full`.
 
-The defaults do not cover `ctags`, as there are too many to count.
+The defaults do not cover `ctags`, as there are too many to find unique icons for.
 
 ##### `coq_settings.display.icons.aliases`
 
