@@ -110,15 +110,6 @@ if command == "deps":
         if proc.returncode:
             print("Installation failed, check :message", file=stderr)
             exit(proc.returncode)
-        proc = run(
-            ("git", "submodule", "update", "--recursive"),
-            cwd=TOP_LEVEL,
-            stdin=DEVNULL,
-            stderr=STDOUT,
-        )
-        if proc.returncode:
-            print("Installation failed, check :message", file=stderr)
-            exit(proc.returncode)
         else:
             _LOCK_FILE.write_text(_REQ)
             msg = """
