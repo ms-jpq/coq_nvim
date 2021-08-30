@@ -12,6 +12,8 @@ The highlight group alias for snippet regions that you can navigate around using
 "Pmenu"
 ```
 
+---
+
 #### coq_settings.display.pum
 
 Vim calls the completion popup menu _`pum`_.
@@ -100,6 +102,8 @@ For item `<source>` show `「<source>」`, purely for aesthetics.
 ["「", "」"]
 ```
 
+---
+
 #### coq_settings.display.preview
 
 Used for the preview window.
@@ -170,6 +174,8 @@ Setting everything to `null` will disable previews.
 ```json
 { "north": 1, "south": 2, "west": 3, "east": 4 }
 ```
+
+---
 
 #### coq_settings.display.icons
 
