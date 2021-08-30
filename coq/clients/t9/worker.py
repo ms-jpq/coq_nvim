@@ -143,6 +143,8 @@ class Worker(BaseWorker[BaseClient, None]):
             async with self._lock:
                 if self._bin and not self._proc:
                     self._proc = await _proc(self._bin, cwd=cwd)
+                    if self._proc:
+                        self._cwd = cwd
                 if not self._proc:
                     return None
                 else:
