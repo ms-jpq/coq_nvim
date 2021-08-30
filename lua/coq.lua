@@ -33,7 +33,7 @@ local on_stderr = function(_, msg)
 end
 
 local py3 = vim.g.python3_host_prog or (is_win and "python" or "python3")
-local xdg_dir = vim.fn.stdpath({"data"})
+local xdg_dir = vim.fn.stdpath("data")
 
 local main = function(is_xdg)
   local v_py =
