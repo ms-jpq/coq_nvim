@@ -84,13 +84,14 @@ def _from_each_according_to_their_ability(
 
 def stack(pool: Executor, nvim: Nvim) -> Stack:
     settings = _settings(nvim)
+    vars_dir = Path(nvim.api.stdpath("cache")) if settings.xdg else VARS
     s = state(cwd=PurePath(get_cwd(nvim)))
     bdb, sdb, idb, tdb, ctdb, tmdb = (
         BDB(pool),
         SDB(pool),
         IDB(pool),
         TDB(pool),
-        CTDB(pool, cwd=s.cwd),
+        CTDB(pool, vars_dir=vars_dir, cwd=s.cwd),
         TMDB(pool),
     )
     reviewer = Reviewer(
@@ -100,7 +101,7 @@ def stack(pool: Executor, nvim: Nvim) -> Stack:
     supervisor = Supervisor(
         pool=pool,
         nvim=nvim,
-        vars_dir=Path(nvim.api.stdpath("cache")) if settings.xdg else VARS,
+        vars_dir=vars_dir,
         options=settings.match,
         limits=settings.limits,
         reviewer=reviewer,
