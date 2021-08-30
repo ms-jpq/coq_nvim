@@ -19,7 +19,7 @@ try:
     if version_info < (3, 8, 2):
         raise ImportError()
 except ImportError:
-    print("⛔️ python < 3.8.2", end="", file=stderr)
+    print("⛔️ python < 3.8.2", file=stderr)
     exit(1)
 
 
