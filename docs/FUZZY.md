@@ -34,6 +34,8 @@ Lexicographical sorting is then applied with secondary metrics such as `presence
 
 `coq_settings.weights`
 
+---
+
 ### coq_settings.match
 
 These control the matching & scoring algorithms
@@ -99,6 +101,8 @@ What is the minimum similarity score, for a word to be proposed by the algorithm
 ```json
 0.6
 ```
+
+---
 
 ### coq_settings.weights
 
