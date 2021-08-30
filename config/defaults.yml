@@ -101,8 +101,11 @@ clients:
   paths:
     enabled: True
     short_name: "PATH"
-    preview_lines: 6
+    resolution:
+      - cwd
+      - file
     path_seps: []
+    preview_lines: 6
     weight_adjust: 0
 
   snippets:
