@@ -1,5 +1,6 @@
 from dataclasses import dataclass
-from typing import AbstractSet, Literal, Optional, Tuple, Union
+from enum import Enum, auto
+from typing import AbstractSet, Literal, Mapping, Optional, Tuple, Union
 
 from pynvim_pp.float_win import Border
 
@@ -48,10 +49,24 @@ class PreviewDisplay:
     resolve_timeout: float
 
 
+class IconMode(Enum):
+    none = auto()
+    short = auto()
+    long = auto()
+
+
+@dataclass(frozen=True)
+class Icons:
+    mode: IconMode
+    aliases: Mapping[str, str]
+    mappings: Mapping[str, str]
+
+
 @dataclass(frozen=True)
 class Display:
     pum: PumDisplay
     preview: PreviewDisplay
+    icons: Icons
     mark_highlight_group: str
 
 
@@ -112,7 +127,8 @@ class TagsClient(WordbankClient):
 
 @dataclass(frozen=True)
 class TSClient(BaseClient):
-    path_sep : str
+    path_sep: str
+
 
 @dataclass(frozen=True)
 class SnippetClient(BaseClient):

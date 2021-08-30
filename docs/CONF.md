@@ -67,6 +67,8 @@ Will give you the following error message:
 
 Set `coq_settings.auto_start` to `true | 'shut-up'` to auto start.
 
+Set `coq_settings.xdg` to `true` to use `XDG`.
+
 - [:COQhelp keybind](https://github.com/ms-jpq/coq_nvim/tree/coq/docs/KEYBIND.md)
 
 Key bindings

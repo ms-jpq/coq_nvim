@@ -130,6 +130,7 @@ class Completion:
     label: str
     sort_by: str
     primary_edit: PrimaryEdit
+    icon_match: Optional[str]
     secondary_edits: Sequence[RangeEdit] = ()
     kind: str = ""
     doc: Optional[Doc] = None

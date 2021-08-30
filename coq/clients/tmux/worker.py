@@ -50,5 +50,6 @@ class Worker(BaseWorker[WordbankClient, TMDB]):
                 label=edit.new_text,
                 sort_by=word,
                 primary_edit=edit,
+                icon_match="Text",
             )
             yield cmp

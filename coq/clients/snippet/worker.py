@@ -39,5 +39,6 @@ class Worker(BaseWorker[SnippetClient, SDB]):
                 label=label,
                 doc=doc,
                 kind=snip["prefix"],
+                icon_match="Snippet",
             )
             yield completion

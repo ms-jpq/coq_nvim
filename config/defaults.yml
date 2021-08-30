@@ -57,6 +57,12 @@ display:
 
   mark_highlight_group: Pmenu
 
+  icons:
+    mode: long
+    aliases: {}
+    mappings:
+      "": ""
+
 limits:
   index_cutoff: 333333
   idle_timeout: 1.88
