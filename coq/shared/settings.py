@@ -139,6 +139,7 @@ class Clients:
 @dataclass(frozen=True)
 class Settings:
     auto_start: Union[bool, Literal["shut-up"]]
+    xdg: bool
     limits: Limits
     display: Display
     match: Options
