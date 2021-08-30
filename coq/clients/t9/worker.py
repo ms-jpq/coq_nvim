@@ -102,7 +102,7 @@ class Worker(BaseWorker[BaseClient, None]):
     async def _poll(self) -> None:
         try:
             while True:
-                await sleep(10)
+                await sleep(9)
         finally:
             proc = self._proc
             if proc:
