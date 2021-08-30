@@ -1,5 +1,5 @@
 from concurrent.futures import Executor
-from pathlib import PurePath
+from pathlib import Path, PurePath
 from typing import Iterator
 
 from pynvim import Nvim
@@ -17,7 +17,7 @@ from ..clients.t9.worker import Worker as T9Worker
 from ..clients.tags.worker import Worker as TagsWorker
 from ..clients.tmux.worker import Worker as TmuxWorker
 from ..clients.tree_sitter.worker import Worker as TreeWorker
-from ..consts import CONFIG_YML, SETTINGS_VAR
+from ..consts import CONFIG_YML, SETTINGS_VAR, VARS
 from ..databases.buffers.database import BDB
 from ..databases.insertions.database import IDB
 from ..databases.snippets.database import SDB
@@ -100,6 +100,7 @@ def stack(pool: Executor, nvim: Nvim) -> Stack:
     supervisor = Supervisor(
         pool=pool,
         nvim=nvim,
+        vars_dir=Path(nvim.api.stdpath("cache")) if settings.xdg else VARS,
         options=settings.match,
         limits=settings.limits,
         reviewer=reviewer,
