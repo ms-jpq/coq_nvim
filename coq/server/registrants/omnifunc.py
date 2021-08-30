@@ -33,7 +33,7 @@ def _should_cont(inserted: Optional[NvimPos], prev: Context, cur: Context) -> bo
     elif cur.position == inserted:
         return False
     else:
-        return (cur.words_before or cur.syms_before) != ""
+        return cur.syms_before != ""
 
 
 @rpc(blocking=True)
