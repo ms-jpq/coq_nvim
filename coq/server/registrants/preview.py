@@ -282,6 +282,7 @@ def _resolve_comp(
                         sort_by="",
                         primary_edit=Edit(new_text=""),
                         doc=doc,
+                        icon_match=None,
                     )
             else:
                 doc = None

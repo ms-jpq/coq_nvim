@@ -200,5 +200,6 @@ class Worker(BaseWorker[PathsClient, None]):
                         ),
                         primary_edit=edit,
                         extern=(Extern.path, normcase(path)),
+                        icon_match="Folder" if new_text.endswith(sep) else "File",
                     )
                     yield completion

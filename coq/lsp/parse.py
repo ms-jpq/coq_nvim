@@ -103,6 +103,7 @@ def parse_item(
         return None
     else:
         p_edit = _primary(item)
+        kind = PROTOCOL.CompletionItemKind.get(item.get("kind"), "")
         cmp = Completion(
             source=short_name,
             weight_adjust=weight_adjust,
@@ -114,9 +115,10 @@ def parse_item(
                 for re in map(_range_edit, item.get("additionalTextEdits") or ())
                 if re
             ),
-            kind=PROTOCOL.CompletionItemKind.get(item.get("kind"), ""),
+            kind=kind,
             doc=_doc(item),
             extern=(Extern.lsp, item),
+            icon_match=kind,
         )
         return cmp
 

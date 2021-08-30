@@ -130,9 +130,9 @@ class Completion:
     label: str
     sort_by: str
     primary_edit: PrimaryEdit
+    icon_match: Optional[str]
     secondary_edits: Sequence[RangeEdit] = ()
     kind: str = ""
     doc: Optional[Doc] = None
     uid: UUID = field(default_factory=uuid4)
     extern: Optional[Tuple[Extern, Any]] = None
-    icon_match: Optional[str] = None

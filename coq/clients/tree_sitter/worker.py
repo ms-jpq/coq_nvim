@@ -42,6 +42,7 @@ def _doc(client: TSClient, context: Context, payload: Payload) -> Optional[Doc]:
 
 def _trans(client: TSClient, context: Context, payload: Payload) -> Completion:
     edit = Edit(new_text=payload.text)
+    icon_match, _, _ = payload.kind.partition(".")
     cmp = Completion(
         source=client.short_name,
         weight_adjust=client.weight_adjust,
@@ -50,6 +51,7 @@ def _trans(client: TSClient, context: Context, payload: Payload) -> Completion:
         primary_edit=edit,
         kind=payload.kind,
         doc=_doc(client, context=context, payload=payload),
+        icon_match=icon_match,
     )
     return cmp
 

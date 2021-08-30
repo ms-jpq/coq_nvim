@@ -70,6 +70,7 @@ def _decode(client: BaseClient, reply: Any) -> Iterator[Completion]:
                 label=label,
                 sort_by=edit.new_text,
                 primary_edit=edit,
+                icon_match=None,
             )
             yield cmp
 

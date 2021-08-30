@@ -168,13 +168,15 @@ class Worker(BaseWorker[TagsClient, CTDB]):
             if name not in seen:
                 seen.add(name)
                 edit = Edit(new_text=name)
+                kind = capwords(tag["kind"])
                 cmp = Completion(
                     source=self._options.short_name,
                     weight_adjust=self._options.weight_adjust,
                     label=edit.new_text,
                     sort_by=name,
                     primary_edit=edit,
-                    kind=capwords(tag["kind"]),
+                    kind=kind,
                     doc=_doc(self._options, context=context, tag=tag),
+                    icon_match=kind,
                 )
                 yield cmp
