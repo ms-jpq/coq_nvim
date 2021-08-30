@@ -186,6 +186,8 @@ Here I make a type error on purpose inputting `string` instead of an `integer`.
 
 ### Pretty icons
 
+- [Customizable](https://github.com/ms-jpq/coq_nvim/tree/coq/docs/DISPLAY.md)
+
 ![icons.img](https://raw.githubusercontent.com/ms-jpq/coq.artifacts/artifacts/preview/icons.png)
 
 ## Install
