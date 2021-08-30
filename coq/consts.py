@@ -24,13 +24,12 @@ CONFIG_YML = _CONF_DIR / "defaults.yml"
 COMPILATION_YML = _CONF_DIR / "compilation.yml"
 
 
-TMP_DIR = VARS / "tmp"
-CLIENTS_DIR = VARS / "clients"
-
-
 _ART_DIR = TOP_LEVEL / "artifacts"
 HELO_ARTIFACTS = _ART_DIR / "helo.yml"
 LSP_ARTIFACTS = _ART_DIR / "lsp.json"
+
+
+TMP_DIR = VARS / "tmp"
 
 
 SETTINGS_VAR = "coq_settings"
