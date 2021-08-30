@@ -207,6 +207,12 @@ One of: `none`, `short`, `long`
 
 ie. `{ "Keyword": "🔑", "Constructor": "👷" }`
 
+For a (mostly exhaustive) list of `kind` keys: `:lua print(vim.inspect(vim.lsp.protocol.CompletionItemKind))`
+
+For `ctags` do `ctags --list-kinds-full`.
+
+The defaults do not cover `ctags`, as there are too many to count.
+
 ##### `coq_settings.display.icons.aliases`
 
 Alias for mappings
