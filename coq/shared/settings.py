@@ -51,8 +51,8 @@ class PreviewDisplay:
 
 class IconMode(Enum):
     none = auto()
-    decorate = auto()
-    replace = auto()
+    short = auto()
+    long = auto()
 
 
 @dataclass(frozen=True)

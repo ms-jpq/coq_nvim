@@ -170,3 +170,19 @@ Setting everything to `null` will disable previews.
 ```json
 { "north": 1, "south": 2, "west": 3, "east": 4 }
 ```
+
+#### coq_settings.display.icons
+
+Which icons to show
+
+##### `coq_settings.display.icons.mode`
+
+One of: `none`, `short`, `long`
+
+- short: show icons only
+
+- long: show icons + text
+
+##### `coq_settings.display.icons.aliases`
+
+##### `coq_settings.display.icons.mappings`
