@@ -36,16 +36,11 @@
         on_resp_old(err, nil, resp, ctx.client_id)
       end
 
-      local on_resp = function(
-        err,
-        method_or_result,
-        result_or_ctx,
-        client_id_or_config,
-        maybe_bufnr)
-        if maybe_bufnr then
-          on_resp_old(err, nil, result_or_ctx, client_id_or_config)
+      local on_resp = function(...)
+        if true then
+          on_resp_old(...)
         else
-          on_resp_new(err, method_or_result, result_or_ctx)
+          on_resp_new(...)
         end
       end
 
