@@ -109,7 +109,8 @@ clients:
     enabled: True
     short_name: "SNIP"
     weight_adjust: 0
-    sources: []
+    compiled_sources: []
+    load_from: "user_defined_snippets"
 
   tags:
     enabled: True

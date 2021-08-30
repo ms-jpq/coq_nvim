@@ -132,7 +132,8 @@ class TSClient(BaseClient):
 
 @dataclass(frozen=True)
 class SnippetClient(BaseClient):
-    sources: AbstractSet[str]
+    compiled_sources: AbstractSet[str]
+    load_from: Literal['compiled_sources', 'user_defined_snippets']
 
 
 @dataclass(frozen=True)

@@ -5,6 +5,7 @@ from itertools import repeat
 from json import loads
 from json.decoder import JSONDecodeError
 from pathlib import Path, PurePath
+from socket import AF_SNA
 from typing import (
     AbstractSet,
     Iterable,
@@ -30,6 +31,7 @@ from ...databases.snippets.database import SDB
 from ...lang import LANG
 from ...registry import atomic, autocmd, rpc
 from ...snippets.types import ASnips, ParsedSnippet
+from ...snippets.loaders.load import load as load_snips_from_paths
 from ...tmux.parse import snapshot
 from ...treesitter.request import async_request
 from ..rt_types import Stack
@@ -61,6 +63,9 @@ def _new_cwd(nvim: Nvim, stack: Stack) -> None:
 autocmd("DirChanged") << f"lua {_new_cwd.name}()"
 
 
+_DECODER = new_decoder(ASnips)
+
+
 async def _load_snip_raw(paths: Iterable[Path]) -> ASnips:
     def cont() -> ASnips:
         for path in paths:
@@ -71,7 +76,8 @@ async def _load_snip_raw(paths: Iterable[Path]) -> ASnips:
                 pass
             else:
                 try:
-                    snips: ASnips = loads(json)
+                    snips = _DECODER(loads(json))
+
                 except JSONDecodeError as e:
                     log.warn("%s", e)
                 else:
@@ -86,12 +92,10 @@ _LOCK: Optional[Lock] = None
 _EXTS: Mapping[str, AbstractSet[str]] = {}
 _SNIPPETS: Mapping[str, Sequence[ParsedSnippet]] = {}
 _SEEN_SNIP_TYPES: MutableSet[str] = set()
-_DECODER = new_decoder(Sequence[ParsedSnippet])
 
 
-@rpc(blocking=True)
-def _load_snips(nvim: Nvim, stack: Stack) -> None:
-    srcs = stack.settings.clients.snippets.sources
+def _load_compiled_snips(nvim: Nvim, stack: Stack) -> None:
+    srcs = stack.settings.clients.snippets.compiled_sources
     paths = tuple(map(Path, nvim.list_runtime_paths()))
 
     async def cont() -> None:
@@ -126,6 +130,61 @@ def _load_snips(nvim: Nvim, stack: Stack) -> None:
         go(nvim, aw=cont())
 
 
+
+
+def _load_user_defined_snips(nvim: Nvim, stack: Stack) -> None:
+    ultisnips_paths = []
+    neosnippet_paths = []
+    for path_str in nvim.list_runtime_paths():
+        path = Path(path_str)
+        if (neosnippet_path := path / "neosnippets").exists():
+            neosnippet_paths.append(neosnippet_path)
+        if (ultisnips_path := path / "UltiSnips").exists():
+            ultisnips_paths.append(ultisnips_path)
+        if (ultisnips_path := path / "snippets").exists():
+            ultisnips_paths.append(ultisnips_path)
+
+    async def cont() -> None:
+        global _LOCK, _EXTS, _SNIPPETS
+        assert not _LOCK
+        _LOCK = Lock()
+
+        async with _LOCK:
+            snippets = await run_in_executor(
+                lambda: load_snips_from_paths(
+                    lsp={},
+                    neosnippet={str(path): path for path in neosnippet_paths},
+                    ultisnip={str(path): path for path in ultisnips_paths},
+                )
+            )
+
+            exts: MutableMapping[str, MutableSet[str]] = {}
+            s_acc: MutableMapping[str, MutableSequence[ParsedSnippet]] = {}
+            for ets, snips in snippets.values():
+                for src, dests in ets.items():
+                    acc = exts.setdefault(src, set())
+                    for d in dests:
+                        acc.add(d)
+
+                for ext, snps in snips.items():
+                    ac = s_acc.setdefault(ext, [])
+                    ac.extend(snps)
+
+            _EXTS, _SNIPPETS = exts, s_acc
+            await stack.sdb.add_exts(exts)
+
+    if stack.settings.clients.snippets.enabled:
+        go(nvim, aw=cont())
+
+
+@rpc(blocking=True)
+def _load_snips(nvim: Nvim, stack: Stack) -> None:
+    if stack.settings.clients.snippets.load_from == 'compiled_sources':
+        _load_compiled_snips(nvim, stack)
+    else:
+        _load_user_defined_snips(nvim, stack)
+
+
 atomic.exec_lua(f"{_load_snips.name}()", ())
 
 
@@ -147,8 +206,7 @@ async def _add_snips(ft: str, db: SDB) -> None:
                             stack.append(et)
 
                     snippets = _SNIPPETS.get(ext, ())
-                    snips: Sequence[ParsedSnippet] = _DECODER(snippets)
-                    yield from zip(repeat(ext), snips)
+                    yield from zip(repeat(ext), snippets)
 
             snips: MutableMapping[str, MutableSequence[ParsedSnippet]] = {}
 
