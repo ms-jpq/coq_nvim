@@ -179,10 +179,30 @@ Which icons to show
 
 One of: `none`, `short`, `long`
 
+- none : show text only
+
 - short: show icons only
 
 - long: show icons + text
 
+##### `coq_settings.display.icons.mappings`
+
+`<kind_*>` gets mapped to `<icon_*>`
+
+```json
+{ "<kind_1>": "<icon_1>", "<kind_2>": "<icon_2>" }
+```
+
+ie. `{ "Keyword": "🔑", "Constructor": "👷" }`
+
 ##### `coq_settings.display.icons.aliases`
 
-##### `coq_settings.display.icons.mappings`
+Alias for mappings
+
+`<from_*>` gets the same icon as `<to_*>`
+
+```json
+{ "<from_1>": "<to_1>", "<from_2>": "<to_2>" }
+```
+
+ie. `{ "EnumMember": "Enum" }`, makes `EnumMember` have the same icon as `Enum`
