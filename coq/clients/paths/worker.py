@@ -169,7 +169,7 @@ class Worker(BaseWorker[PathsClient, None]):
 
         def cont() -> Iterator[Path]:
             if PathResolution.cwd in self._options.resolution:
-                Path(context.cwd)
+                yield Path(context.cwd)
 
             if PathResolution.file in self._options.resolution:
                 yield Path(context.filename).parent
