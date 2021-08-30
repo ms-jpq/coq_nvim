@@ -30,9 +30,7 @@ def _use_cache(cache: _CacheCtx, ctx: Context) -> bool:
 
 def _trans(comp: Completion) -> Completion:
     p_edit = comp.primary_edit
-    if type(p_edit) is Edit:
-        edit = p_edit
-    elif isinstance(p_edit, SnippetEdit):
+    if isinstance(p_edit, SnippetEdit):
         edit = SnippetEdit(grammar=p_edit.grammar, new_text=p_edit.new_text)
     else:
         edit = Edit(new_text=p_edit.new_text)
