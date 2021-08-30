@@ -50,6 +50,7 @@ class PreviewDisplay:
 
 
 class IconMode(Enum):
+    none = auto()
     decorate = auto()
     replace = auto()
 

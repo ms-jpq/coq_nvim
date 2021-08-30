@@ -60,7 +60,8 @@ display:
   icons:
     mode: decorate
     aliases: {}
-    mappings: {}
+    mappings:
+      "": ""
 
 limits:
   index_cutoff: 333333
