@@ -1,17 +1,18 @@
 from os import environ, name
 from pathlib import Path
 
+IS_WIN = name == "nt"
+
 TOP_LEVEL = Path(__file__).resolve().parent.parent
 REQUIREMENTS = TOP_LEVEL / "requirements.txt"
 
 TIMEOUT = 1
 
+
 VARS = TOP_LEVEL / ".vars"
 
 RT_DIR = VARS / "runtime"
-RT_PY = (
-    RT_DIR / "Scripts" / "python.exe" if name == "nt" else RT_DIR / "bin" / "python3"
-)
+RT_PY = RT_DIR / "Scripts" / "python.exe" if IS_WIN else RT_DIR / "bin" / "python3"
 
 _CONF_DIR = TOP_LEVEL / "config"
 LANG_ROOT = TOP_LEVEL / "locale"
