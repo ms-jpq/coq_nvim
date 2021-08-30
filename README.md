@@ -268,6 +268,10 @@ When completion menu is open:
 
 This is a vim thing, I have zero control over :(
 
+#### Improper Icons
+
+Either set `let g:coq_settings = { 'display.icons.mode': 'none' }` to disable icons, or [install a supported font](https://www.nerdfonts.com/#home)
+
 #### Flickering
 
 By default, the old results are cleared on each keystroke, so the popup menu is closed right away.
