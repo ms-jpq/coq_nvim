@@ -58,6 +58,8 @@ Time it takes to wait for LSP servers to respond with header import before edit 
 0.06
 ```
 
+---
+
 #### coq_settings.clients.tags
 
 ##### `coq_settings.clients.tags.parent_scope`
@@ -80,6 +82,8 @@ Aesthetics only, path separator.
 " ⇉ "
 ```
 
+---
+
 #### coq_settings.clients.snippets
 
 ##### `coq_settings.clients.snippets.sources`
@@ -93,6 +97,8 @@ Take a look at [compilation.yml](https://github.com/ms-jpq/coq_nvim/blob/coq/con
 ```json
 []
 ```
+
+---
 
 #### coq_settings.clients.paths
 
@@ -130,6 +136,8 @@ Try to preview this many lines.
 6
 ```
 
+---
+
 #### coq_settings.clients.tree_sitter
 
 ##### `coq_settings.clients.tree_sitter.path_sep`
@@ -141,6 +149,8 @@ Aesthetics only, path separator.
 ```json
 " ⇊"
 ```
+
+---
 
 #### coq_settings.clients.buffers
 
@@ -164,6 +174,8 @@ Restrict matching to buffers of the same filetype
 false
 ```
 
+---
+
 #### coq_settings.clients.tmux
 
 ##### `coq_settings.clients.tmux.match_syms`
@@ -175,6 +187,8 @@ Also match symbols in addition to words.
 ```json
 false
 ```
+
+---
 
 #### coq_settings.clients.tabnine
 
