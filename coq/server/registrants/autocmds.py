@@ -104,7 +104,7 @@ def _load_snips(nvim: Nvim, stack: Stack) -> None:
             if not snippets:
                 for _ in range(9):
                     await sleep(0)
-                    await awrite(nvim, LANG("no snippets found"))
+                await awrite(nvim, LANG("no snippets found"))
 
             exts: MutableMapping[str, MutableSet[str]] = {}
             s_acc: MutableMapping[str, MutableSequence[ParsedSnippet]] = {}
