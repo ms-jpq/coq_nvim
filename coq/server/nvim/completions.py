@@ -39,6 +39,11 @@ _LUA = """
   vim.schedule(
     function()
       local legal_modes = {
+        ["i"] = true,
+        ["ic"] = true,
+        ["ix"] = true
+      }
+      local legal_cmodes = {
         [""] = true,
         ["eval"] = true,
         ["function"] = true,
@@ -46,9 +51,7 @@ _LUA = """
       }
       local mode = vim.api.nvim_get_mode().mode
       local comp_mode = vim.fn.complete_info({"mode"}).mode
-      if
-        (mode == "i" or mode == "ic" or mode == "ix") and legal_modes[comp_mode]
-       then
+      if legal_modes[mode] and legal_cmodes[comp_mode] then
         -- when `#items ~= 0` there is something to show
         -- when `#items == 0` but `comp_mode == "eval"` there is something to close
         if #items ~= 0 or comp_mode == "eval" then
