@@ -22,7 +22,7 @@ from ...shared.fuzzy import quick_ratio
 from ...shared.parse import is_word, lower
 from ...shared.runtime import Supervisor
 from ...shared.runtime import Worker as BaseWorker
-from ...shared.settings import PathsClient
+from ...shared.settings import PathResolution, PathsClient
 from ...shared.sql import BIGGEST_INT
 from ...shared.types import Completion, Context, Edit, Extern
 
@@ -166,7 +166,15 @@ class Worker(BaseWorker[PathsClient, None]):
 
     async def work(self, context: Context) -> AsyncIterator[Completion]:
         line = context.line_before + context.words_after
-        base_paths = {Path(context.filename).parent, Path(context.cwd)}
+
+        def cont() -> Iterator[Path]:
+            if PathResolution.cwd in self._options.resolution:
+                yield Path(context.cwd)
+
+            if PathResolution.file in self._options.resolution:
+                yield Path(context.filename).parent
+
+        base_paths = {*cont()}
 
         limit = BIGGEST_INT if context.manual else self._supervisor.options.max_results
         aw = tuple(

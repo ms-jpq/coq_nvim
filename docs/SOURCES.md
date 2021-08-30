@@ -96,6 +96,20 @@ Take a look at [compilation.yml](https://github.com/ms-jpq/coq_nvim/blob/coq/con
 
 #### coq_settings.clients.paths
 
+##### `coq_settings.clients.paths.resolution`
+
+For relative paths, what should their potential base path(s) be.
+
+- `cwd`: current working directory
+
+- `file`: the current file's parent directory
+
+**default:**
+
+```json
+["cwd", "file"]
+```
+
 ##### `coq_settings.clients.paths.path_seps`
 
 Which separator chars to use. Empty for default. Must be `/` under unix and `/` or `\` for windows.
