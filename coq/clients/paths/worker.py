@@ -17,6 +17,7 @@ from pathlib import Path, PurePath
 from typing import AbstractSet, AsyncIterator, Iterator, MutableSet, Tuple
 
 from std2.asyncio import run_in_executor
+from std2.platform import OS, os
 
 from ...shared.fuzzy import quick_ratio
 from ...shared.parse import is_word, lower
@@ -32,12 +33,19 @@ def _p_lhs(lhs: str) -> str:
         if lhs.endswith(sym):
             return sym
     else:
-        if lhs.endswith("}"):
-            _, s, r = lhs.rpartition("${")
-            return s + r if s else ""
+        if os is OS.windows:
+            if lhs.endswith("%"):
+                _, s, r = lhs.rpartition("%")
+                return s + r if s else ""
+            else:
+                return ""
         else:
-            _, s, r = lhs.rpartition("$")
-            return s + r if s else ""
+            if lhs.endswith("}"):
+                _, s, r = lhs.rpartition("${")
+                return s + r if s else ""
+            else:
+                _, s, r = lhs.rpartition("$")
+                return s + r if s else ""
 
 
 def separate(seps: AbstractSet[str], line: str) -> Iterator[str]:
