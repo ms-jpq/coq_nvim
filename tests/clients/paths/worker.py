@@ -12,19 +12,19 @@ _LOOK_AHEAD = 3
 class Separate(TestCase):
     def test_1(self) -> None:
         a = tuple(separate({","}, "1,2,3"))
-        self.assertEqual(a, ("1", "2", "3"))
+        self.assertEqual(a, ("1", ",2", ",3"))
 
     def test_2(self) -> None:
         a = tuple(separate({",", "$"}, "1,2$3"))
-        self.assertEqual(a, ("1", "2", "3"))
+        self.assertEqual(a, ("1", ",2", "$3"))
 
     def test_3(self) -> None:
         a = tuple(separate({",", "$", "@"}, "1,2$3,4"))
-        self.assertEqual(a, ("1", "2", "3", "4"))
+        self.assertEqual(a, ("1", ",2", "$3", ",4"))
 
     def test_4(self) -> None:
         a = tuple(separate({",", "$", "@"}, "1@2$3,4"))
-        self.assertEqual(a, ("1", "2", "3", "4"))
+        self.assertEqual(a, ("1", "@2", "$3", ",4"))
 
     def test_5(self) -> None:
         a = tuple(separate(set(), "1,2,3"))

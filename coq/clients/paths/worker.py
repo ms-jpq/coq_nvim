@@ -15,7 +15,14 @@ from os.path import (
 )
 from pathlib import Path, PurePath
 from string import ascii_letters, digits
-from typing import AbstractSet, AsyncIterator, Iterator, MutableSet, Tuple
+from typing import (
+    AbstractSet,
+    AsyncIterator,
+    Iterator,
+    MutableSequence,
+    MutableSet,
+    Tuple,
+)
 
 from std2.asyncio import run_in_executor
 from std2.platform import OS, os
@@ -52,12 +59,23 @@ def _p_lhs(lhs: str) -> str:
             return s + r if s and {*r}.issubset(_SH_VAR_CHARS) else ""
 
 
+def _split(sep: str, text: str) -> Iterator[str]:
+    acc: MutableSequence[str] = []
+    for char in text:
+        if char == sep:
+            yield "".join(acc)
+            acc.clear()
+        acc.append(char)
+    if acc:
+        yield "".join(acc)
+
+
 def separate(seps: AbstractSet[str], line: str) -> Iterator[str]:
     if not seps:
         yield line
     else:
         sep = next(iter(seps))
-        for l in line.split(sep):
+        for l in _split(sep, line):
             yield from separate(seps - {sep}, l)
 
 
@@ -65,8 +83,8 @@ def segs(seps: AbstractSet[str], line: str) -> Iterator[str]:
     segments = tuple(separate(seps, line=line))
     for idx in range(1, len(segments)):
         lhs, rhs = segments[idx - 1 : idx], segments[idx:]
-        l = _p_lhs(sep.join(lhs))
-        yield sep.join(chain((l,), rhs))
+        l = _p_lhs("".join(lhs))
+        yield "".join(chain((l,), rhs))
 
 
 def _join(lhs: str, rhs: str) -> str:
