@@ -49,7 +49,7 @@ def separate(seps: AbstractSet[str], line: str) -> Iterator[str]:
             yield from separate(seps - {sep}, l)
 
 
-def _segments(seps: AbstractSet[str], line: str) -> Iterator[str]:
+def segs(seps: AbstractSet[str], line: str) -> Iterator[str]:
     segments = tuple(separate(seps, line=line))
     if len(segments) > 1:
         *rest, front = reversed(segments)
@@ -71,7 +71,7 @@ def parse(
     base: Path,
     line: str,
 ) -> Iterator[Tuple[PurePath, str]]:
-    segments = reversed(tuple(_segments(seps, line=line)))
+    segments = reversed(tuple(segs(seps, line=line)))
     for segment in segments:
 
         s1 = segment
