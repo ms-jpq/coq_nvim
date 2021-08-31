@@ -1,5 +1,6 @@
 from difflib import unified_diff
 from os import linesep
+from os.path import normcase
 from typing import Literal, Tuple, cast
 
 from pynvim import Nvim
@@ -78,7 +79,7 @@ def context(
         commit_id=state.commit_id,
         cwd=state.cwd,
         buf_id=buf.number,
-        filename=filename,
+        filename=normcase(filename),
         filetype=filetype,
         line_count=buf_line_count,
         linefeed=linefeed,
