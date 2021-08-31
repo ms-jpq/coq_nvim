@@ -1,5 +1,5 @@
 from asyncio import as_completed
-from itertools import islice
+from itertools import chain, islice
 from os import X_OK, access
 from os.path import (
     altsep,
@@ -49,14 +49,12 @@ def separate(seps: AbstractSet[str], line: str) -> Iterator[str]:
             yield from separate(seps - {sep}, l)
 
 
-def _segments(seps: AbstractSet[str], line: str) -> Iterator[str]:
+def segs(seps: AbstractSet[str], line: str) -> Iterator[str]:
     segments = tuple(separate(seps, line=line))
-    if len(segments) > 1:
-        *rest, front = reversed(segments)
-        lhs = _p_lhs(front)
-        segs = (*rest, lhs)
-        for idx in range(1, len(segs) + 1):
-            yield sep.join(reversed(segs[:idx]))
+    for idx in range(1, len(segments)):
+        lhs, rhs = segments[idx - 1 : idx], segments[idx:]
+        l = _p_lhs(sep.join(lhs))
+        yield sep.join(chain((l,), rhs))
 
 
 def _join(lhs: str, rhs: str) -> str:
@@ -71,9 +69,7 @@ def parse(
     base: Path,
     line: str,
 ) -> Iterator[Tuple[PurePath, str]]:
-    segments = reversed(tuple(_segments(seps, line=line)))
-    for segment in segments:
-
+    for segment in segs(seps, line=line):
         s1 = segment
         s2 = expanduser(s1)
         s3 = expandvars(s2)
