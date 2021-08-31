@@ -39,10 +39,10 @@ def _p_lhs(lhs: str) -> str:
     else:
         if os is OS.windows and lhs.endswith("%"):
             _, s, r = removesuffix(lhs, suffix="%").rpartition("%")
-            return s + r + s if s else ""
+            return s + r + s if s and {*r}.issubset(_SH_VAR_CHARS) else ""
         elif lhs.endswith("}"):
             _, s, r = lhs.rpartition("${")
-            return s + r if s else ""
+            return s + r if s and {*r}.issubset(_SH_VAR_CHARS) else ""
         else:
             _, s, r = lhs.rpartition("$")
             return s + r if s and {*r}.issubset(_SH_VAR_CHARS) else ""
