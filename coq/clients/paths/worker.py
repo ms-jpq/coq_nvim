@@ -1,5 +1,5 @@
 from asyncio import as_completed
-from itertools import islice
+from itertools import chain, islice
 from os import X_OK, access
 from os.path import (
     altsep,
@@ -50,16 +50,11 @@ def separate(seps: AbstractSet[str], line: str) -> Iterator[str]:
 
 
 def segs(seps: AbstractSet[str], line: str) -> Iterator[str]:
-    def cont() -> Iterator[str]:
-        segments = tuple(separate(seps, line=line))
-        if len(segments) > 1:
-            *rest, front = reversed(segments)
-            lhs = _p_lhs(front)
-            segs = (*rest, lhs)
-            for idx in range(1, len(segs) + 1):
-                yield sep.join(reversed(segs[:idx]))
-
-    return reversed(tuple(cont()))
+    segments = tuple(separate(seps, line=line))
+    for idx in range(1, len(segments)):
+        lhs, rhs = segments[idx - 1 : idx], segments[idx:]
+        l = _p_lhs(sep.join(lhs))
+        yield sep.join(chain((l,), rhs))
 
 
 def _join(lhs: str, rhs: str) -> str:

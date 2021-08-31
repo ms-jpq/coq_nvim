@@ -1,8 +1,8 @@
 from os import sep
 from pathlib import Path
-from unittest import TestCase
+from unittest import TestCase, skip
 
-from ....coq.clients.paths.worker import parse, separate
+from ....coq.clients.paths.worker import parse, segs, separate
 
 _SEP = {sep}
 _FUZZY = 0.6
@@ -29,6 +29,28 @@ class Separate(TestCase):
     def test_5(self) -> None:
         a = tuple(separate(set(), "1,2,3"))
         self.assertEqual(a, ("1,2,3",))
+
+
+class Segs(TestCase):
+    def test_1(self) -> None:
+        line = "1/2"
+        s = tuple(segs(_SEP, line))
+        self.assertEqual(s, ("/2",))
+
+    def test_2(self) -> None:
+        line = "./2"
+        s = tuple(segs(_SEP, line))
+        self.assertEqual(s, ("./2",))
+
+    def test_3(self) -> None:
+        line = "1./2"
+        s = tuple(segs(_SEP, line))
+        self.assertEqual(s, ("./2",))
+
+    def test_4(self) -> None:
+        line = "/1./2"
+        s = tuple(segs(_SEP, line))
+        self.assertEqual(s, ("/1./2", "./2"))
 
 
 class Parser(TestCase):
