@@ -1,5 +1,6 @@
 from functools import lru_cache
 from json import dumps
+from os.path import normcase
 from pathlib import Path
 from sqlite3.dbapi2 import Connection
 from typing import (
@@ -73,6 +74,7 @@ def init_db(conn: Connection) -> None:
     add_functions(conn)
     conn.create_function("X_LIKE_ESC", narg=1, func=_like_esc, deterministic=True)
     conn.create_function("X_SIMILARITY", narg=3, func=quick_ratio, deterministic=True)
+    conn.create_function("X_NORM_CASE", narg=1, func=normcase, deterministic=True)
     conn.create_aggregate(
         "X_QUANTILES", n_arg=-1, aggregate_class=cast(Any, _Quantiles)
     )
