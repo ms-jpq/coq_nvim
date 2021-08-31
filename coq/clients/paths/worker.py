@@ -14,9 +14,19 @@ from os.path import (
     split,
 )
 from pathlib import Path, PurePath
-from typing import AbstractSet, AsyncIterator, Iterator, MutableSet, Tuple
+from string import ascii_letters, digits
+from typing import (
+    AbstractSet,
+    AsyncIterator,
+    Iterator,
+    MutableSequence,
+    MutableSet,
+    Tuple,
+)
 
 from std2.asyncio import run_in_executor
+from std2.platform import OS, os
+from std2.string import removesuffix
 
 from ...shared.fuzzy import quick_ratio
 from ...shared.parse import is_word, lower
@@ -26,18 +36,38 @@ from ...shared.settings import PathResolution, PathsClient
 from ...shared.sql import BIGGEST_INT
 from ...shared.types import Completion, Context, Edit, Extern
 
+_SH_VAR_CHARS = {*ascii_letters, *digits, "_"}
+
 
 def _p_lhs(lhs: str) -> str:
     for sym in (pardir, curdir, "~"):
         if lhs.endswith(sym):
             return sym
     else:
-        if lhs.endswith("}"):
+        if os is OS.windows and lhs.endswith("%"):
+            _, s, r = removesuffix(lhs, suffix="%").rpartition("%")
+            return s + r + s if s and {*r}.issubset(_SH_VAR_CHARS) else ""
+        elif lhs.endswith("}"):
             _, s, r = lhs.rpartition("${")
-            return s + r if s else ""
+            return (
+                s + r
+                if s and {*removesuffix(r, suffix="}")}.issubset(_SH_VAR_CHARS)
+                else ""
+            )
         else:
             _, s, r = lhs.rpartition("$")
-            return s + r if s else ""
+            return s + r if s and {*r}.issubset(_SH_VAR_CHARS) else ""
+
+
+def _split(sep: str, text: str) -> Iterator[str]:
+    acc: MutableSequence[str] = []
+    for char in text:
+        if char == sep:
+            yield "".join(acc)
+            acc.clear()
+        acc.append(char)
+    if acc:
+        yield "".join(acc)
 
 
 def separate(seps: AbstractSet[str], line: str) -> Iterator[str]:
@@ -45,7 +75,7 @@ def separate(seps: AbstractSet[str], line: str) -> Iterator[str]:
         yield line
     else:
         sep = next(iter(seps))
-        for l in line.split(sep):
+        for l in _split(sep, line):
             yield from separate(seps - {sep}, l)
 
 
@@ -53,8 +83,8 @@ def segs(seps: AbstractSet[str], line: str) -> Iterator[str]:
     segments = tuple(separate(seps, line=line))
     for idx in range(1, len(segments)):
         lhs, rhs = segments[idx - 1 : idx], segments[idx:]
-        l = _p_lhs(sep.join(lhs))
-        yield sep.join(chain((l,), rhs))
+        l = _p_lhs("".join(lhs))
+        yield "".join(chain((l,), rhs))
 
 
 def _join(lhs: str, rhs: str) -> str:
@@ -74,37 +104,40 @@ def parse(
         s2 = expanduser(s1)
         s3 = expandvars(s2)
 
-        for s0 in (s1, s2, s3):
-            p = Path(s0)
-            entire = p if p.is_absolute() else base / p
-            if entire.is_dir() and access(entire, mode=X_OK):
-                for path in entire.iterdir():
-                    term = sep if path.is_dir() else ""
-                    line = _join(segment, path.name) + term
-                    yield path, line
-                return
-
+        for idx, s0 in enumerate((s1, s2, s3)):
+            if idx and s0 == s1:
+                pass
             else:
-                lft, go, rhs = s0.rpartition(sep)
-                if go:
-                    lp, sp, _ = segment.rpartition(sep)
-                    lseg = lp + sp
+                p = Path(s0)
+                entire = p if p.is_absolute() else base / p
+                if entire.is_dir() and access(entire, mode=X_OK):
+                    for path in entire.iterdir():
+                        term = sep if path.is_dir() else ""
+                        line = _join(segment, path.name) + term
+                        yield path, line
+                    return
 
-                    lhs = lft + go
-                    p = Path(lhs)
-                    left = p if p.is_absolute() else base / p
-                    if left.is_dir() and access(left, mode=X_OK):
-                        for path in left.iterdir():
-                            ratio = quick_ratio(
-                                rhs, lower(path.name), look_ahead=look_ahead
-                            )
-                            if ratio >= fuzzy_cutoff and len(
-                                path.name
-                            ) + look_ahead >= len(rhs):
-                                term = sep if path.is_dir() else ""
-                                line = _join(lseg, path.name) + term
-                                yield path, line
-                        return
+                else:
+                    lft, go, rhs = s0.rpartition(sep)
+                    if go:
+                        lp, sp, _ = segment.rpartition(sep)
+                        lseg = lp + sp
+
+                        lhs = lft + go
+                        p = Path(lhs)
+                        left = p if p.is_absolute() else base / p
+                        if left.is_dir() and access(left, mode=X_OK):
+                            for path in left.iterdir():
+                                ratio = quick_ratio(
+                                    rhs, lower(path.name), look_ahead=look_ahead
+                                )
+                                if ratio >= fuzzy_cutoff and len(
+                                    path.name
+                                ) + look_ahead >= len(rhs):
+                                    term = sep if path.is_dir() else ""
+                                    line = _join(lseg, path.name) + term
+                                    yield path, line
+                            return
 
 
 async def _parse(
