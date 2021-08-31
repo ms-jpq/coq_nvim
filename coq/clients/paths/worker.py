@@ -129,7 +129,7 @@ def parse(
                         if left.is_dir() and access(left, mode=X_OK):
                             for path in left.iterdir():
                                 ratio = quick_ratio(
-                                    rhs, lower(path.name), look_ahead=look_ahead
+                                    lower(rhs), lower(path.name), look_ahead=look_ahead
                                 )
                                 if ratio >= fuzzy_cutoff and len(
                                     path.name
