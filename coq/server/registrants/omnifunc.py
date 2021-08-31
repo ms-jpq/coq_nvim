@@ -32,8 +32,11 @@ def _should_cont(inserted: Optional[NvimPos], prev: Context, cur: Context) -> bo
         return False
     elif cur.position == inserted:
         return False
+    elif cur.syms_before != "":
+        return True
     else:
-        return cur.syms_before != ""
+        stripped = cur.line_before.rstrip()
+        return bool(stripped) and len(cur.line_before) - len(stripped) <= 1
 
 
 @rpc(blocking=True)
