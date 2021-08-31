@@ -190,6 +190,10 @@ Here I make a type error on purpose inputting `string` instead of an `integer`.
 
 ![icons.img](https://raw.githubusercontent.com/ms-jpq/coq.artifacts/artifacts/preview/icons.png)
 
+**If you can't see icons properly**:
+
+Either set `let g:coq_settings = { 'display.icons.mode': 'none' }` to disable icons, or [install a supported font](https://www.nerdfonts.com/#home)
+
 ## Install
 
 Needs python virtual env
@@ -273,10 +277,6 @@ When completion menu is open:
 **When hovering over a result, entering any key [a-z] will select it**
 
 This is a vim thing, I have zero control over :(
-
-#### Improper Icons
-
-Either set `let g:coq_settings = { 'display.icons.mode': 'none' }` to disable icons, or [install a supported font](https://www.nerdfonts.com/#home)
 
 #### Flickering
 
