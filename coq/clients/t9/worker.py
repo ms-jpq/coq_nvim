@@ -49,7 +49,7 @@ def _encode(options: Options, context: Context, limit: int) -> Any:
     return _ENCODER(req)
 
 
-def _sort_by(unifying_chars: AbstractSet[str], new_text: str) -> str:
+def sort_by(unifying_chars: AbstractSet[str], new_text: str) -> str:
     def cont() -> Iterator[str]:
         seen_syms = False
         for char in reversed(new_text):
@@ -88,7 +88,7 @@ def _decode(
                 source=client.short_name,
                 weight_adjust=client.weight_adjust,
                 label=label,
-                sort_by=_sort_by(unifying_chars, new_text=edit.old_prefix),
+                sort_by=sort_by(unifying_chars, new_text=edit.old_prefix),
                 primary_edit=edit,
                 icon_match=None,
             )
