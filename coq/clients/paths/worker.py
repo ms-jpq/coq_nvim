@@ -14,6 +14,7 @@ from os.path import (
     split,
 )
 from pathlib import Path, PurePath
+from string import ascii_letters, digits
 from typing import AbstractSet, AsyncIterator, Iterator, MutableSet, Tuple
 
 from std2.asyncio import run_in_executor
@@ -27,6 +28,8 @@ from ...shared.runtime import Worker as BaseWorker
 from ...shared.settings import PathResolution, PathsClient
 from ...shared.sql import BIGGEST_INT
 from ...shared.types import Completion, Context, Edit, Extern
+
+_SH_VAR_CHARS = {*ascii_letters, *digits, "_"}
 
 
 def _p_lhs(lhs: str) -> str:
@@ -46,7 +49,7 @@ def _p_lhs(lhs: str) -> str:
                 return s + r if s else ""
             else:
                 _, s, r = lhs.rpartition("$")
-                return s + r if s else ""
+                return s + r if s and {*r}.issubset(_SH_VAR_CHARS) else ""
 
 
 def separate(seps: AbstractSet[str], line: str) -> Iterator[str]:

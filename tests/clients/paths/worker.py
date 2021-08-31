@@ -62,6 +62,11 @@ class Segs(TestCase):
         s = tuple(segs(_SEP, line))
         self.assertEqual(s, ("${PWD}/2",))
 
+    def test_7(self) -> None:
+        line = "$POW /2"
+        s = tuple(segs(_SEP, line))
+        self.assertEqual(s, ("/2",))
+
 
 class Parser(TestCase):
     def test_1(self) -> None:
