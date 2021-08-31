@@ -1,4 +1,4 @@
-from asyncio import create_subprocess_exec, shield, sleep
+from asyncio import LimitOverrunError, create_subprocess_exec, shield, sleep
 from asyncio.locks import Lock
 from asyncio.subprocess import Process
 from contextlib import suppress
@@ -175,7 +175,7 @@ class Worker(BaseWorker[BaseClient, None]):
                         self._proc.stdin.write(b"\n")
                         await self._proc.stdin.drain()
                         out = await self._proc.stdout.readline()
-                    except ConnectionError:
+                    except (ConnectionError, LimitOverrunError):
                         return await self._clean()
                     else:
                         return out.decode()
