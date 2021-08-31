@@ -1,6 +1,6 @@
 from os import sep
 from pathlib import Path
-from unittest import TestCase, skip
+from unittest import TestCase
 
 from ....coq.clients.paths.worker import parse, segs, separate
 
