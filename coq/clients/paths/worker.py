@@ -86,37 +86,40 @@ def parse(
         s2 = expanduser(s1)
         s3 = expandvars(s2)
 
-        for s0 in (s1, s2, s3):
-            p = Path(s0)
-            entire = p if p.is_absolute() else base / p
-            if entire.is_dir() and access(entire, mode=X_OK):
-                for path in entire.iterdir():
-                    term = sep if path.is_dir() else ""
-                    line = _join(segment, path.name) + term
-                    yield path, line
-                return
-
+        for idx, s0 in enumerate((s1, s2, s3)):
+            if idx and s0 == s1:
+                pass
             else:
-                lft, go, rhs = s0.rpartition(sep)
-                if go:
-                    lp, sp, _ = segment.rpartition(sep)
-                    lseg = lp + sp
+                p = Path(s0)
+                entire = p if p.is_absolute() else base / p
+                if entire.is_dir() and access(entire, mode=X_OK):
+                    for path in entire.iterdir():
+                        term = sep if path.is_dir() else ""
+                        line = _join(segment, path.name) + term
+                        yield path, line
+                    return
 
-                    lhs = lft + go
-                    p = Path(lhs)
-                    left = p if p.is_absolute() else base / p
-                    if left.is_dir() and access(left, mode=X_OK):
-                        for path in left.iterdir():
-                            ratio = quick_ratio(
-                                rhs, lower(path.name), look_ahead=look_ahead
-                            )
-                            if ratio >= fuzzy_cutoff and len(
-                                path.name
-                            ) + look_ahead >= len(rhs):
-                                term = sep if path.is_dir() else ""
-                                line = _join(lseg, path.name) + term
-                                yield path, line
-                        return
+                else:
+                    lft, go, rhs = s0.rpartition(sep)
+                    if go:
+                        lp, sp, _ = segment.rpartition(sep)
+                        lseg = lp + sp
+
+                        lhs = lft + go
+                        p = Path(lhs)
+                        left = p if p.is_absolute() else base / p
+                        if left.is_dir() and access(left, mode=X_OK):
+                            for path in left.iterdir():
+                                ratio = quick_ratio(
+                                    rhs, lower(path.name), look_ahead=look_ahead
+                                )
+                                if ratio >= fuzzy_cutoff and len(
+                                    path.name
+                                ) + look_ahead >= len(rhs):
+                                    term = sep if path.is_dir() else ""
+                                    line = _join(lseg, path.name) + term
+                                    yield path, line
+                            return
 
 
 async def _parse(
