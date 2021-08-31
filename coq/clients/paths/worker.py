@@ -18,6 +18,7 @@ from typing import AbstractSet, AsyncIterator, Iterator, MutableSet, Tuple
 
 from std2.asyncio import run_in_executor
 from std2.platform import OS, os
+from std2.string import removesuffix
 
 from ...shared.fuzzy import quick_ratio
 from ...shared.parse import is_word, lower
@@ -35,8 +36,8 @@ def _p_lhs(lhs: str) -> str:
     else:
         if os is OS.windows:
             if lhs.endswith("%"):
-                _, s, r = lhs.rpartition("%")
-                return s + r if s else ""
+                _, s, r = removesuffix(lhs, suffix="%").rpartition("%")
+                return s + r + s if s else ""
             else:
                 return ""
         else:
