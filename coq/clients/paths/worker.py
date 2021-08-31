@@ -50,13 +50,16 @@ def separate(seps: AbstractSet[str], line: str) -> Iterator[str]:
 
 
 def segs(seps: AbstractSet[str], line: str) -> Iterator[str]:
-    segments = tuple(separate(seps, line=line))
-    if len(segments) > 1:
-        *rest, front = reversed(segments)
-        lhs = _p_lhs(front)
-        segs = (*rest, lhs)
-        for idx in range(1, len(segs) + 1):
-            yield sep.join(reversed(segs[:idx]))
+    def cont() -> Iterator[str]:
+        segments = tuple(separate(seps, line=line))
+        if len(segments) > 1:
+            *rest, front = reversed(segments)
+            lhs = _p_lhs(front)
+            segs = (*rest, lhs)
+            for idx in range(1, len(segs) + 1):
+                yield sep.join(reversed(segs[:idx]))
+
+    return reversed(tuple(cont()))
 
 
 def _join(lhs: str, rhs: str) -> str:
@@ -71,9 +74,7 @@ def parse(
     base: Path,
     line: str,
 ) -> Iterator[Tuple[PurePath, str]]:
-    segments = reversed(tuple(segs(seps, line=line)))
-    for segment in segments:
-
+    for segment in segs(seps, line=line):
         s1 = segment
         s2 = expanduser(s1)
         s3 = expandvars(s2)
