@@ -42,7 +42,11 @@ def _p_lhs(lhs: str) -> str:
             return s + r + s if s and {*r}.issubset(_SH_VAR_CHARS) else ""
         elif lhs.endswith("}"):
             _, s, r = lhs.rpartition("${")
-            return s + r if s and {*r}.issubset(_SH_VAR_CHARS) else ""
+            return (
+                s + r
+                if s and {*removesuffix(r, suffix="}")}.issubset(_SH_VAR_CHARS)
+                else ""
+            )
         else:
             _, s, r = lhs.rpartition("$")
             return s + r if s and {*r}.issubset(_SH_VAR_CHARS) else ""
