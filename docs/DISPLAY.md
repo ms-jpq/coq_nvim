@@ -183,6 +183,8 @@ To see icons, you need to install a [supported front](https://www.nerdfonts.com/
 
 See [cheat sheet](https://www.nerdfonts.com/cheat-sheet) for list of icons.
 
+See [config/defaults.yml](https://github.com/ms-jpq/coq_nvim/blob/coq/config/defaults.yml) for defaults.
+
 ##### `coq_settings.display.icons.mode`
 
 One of: `none`, `short`, `long`
