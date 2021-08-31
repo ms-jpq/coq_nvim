@@ -37,19 +37,15 @@ def _p_lhs(lhs: str) -> str:
         if lhs.endswith(sym):
             return sym
     else:
-        if os is OS.windows:
-            if lhs.endswith("%"):
-                _, s, r = removesuffix(lhs, suffix="%").rpartition("%")
-                return s + r + s if s else ""
-            else:
-                return ""
+        if os is OS.windows and lhs.endswith("%"):
+            _, s, r = removesuffix(lhs, suffix="%").rpartition("%")
+            return s + r + s if s else ""
+        elif lhs.endswith("}"):
+            _, s, r = lhs.rpartition("${")
+            return s + r if s else ""
         else:
-            if lhs.endswith("}"):
-                _, s, r = lhs.rpartition("${")
-                return s + r if s else ""
-            else:
-                _, s, r = lhs.rpartition("$")
-                return s + r if s and {*r}.issubset(_SH_VAR_CHARS) else ""
+            _, s, r = lhs.rpartition("$")
+            return s + r if s and {*r}.issubset(_SH_VAR_CHARS) else ""
 
 
 def separate(seps: AbstractSet[str], line: str) -> Iterator[str]:
