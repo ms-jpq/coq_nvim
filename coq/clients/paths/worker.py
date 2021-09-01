@@ -37,6 +37,7 @@ from ...shared.settings import PathResolution, PathsClient
 from ...shared.sql import BIGGEST_INT
 from ...shared.types import Completion, Context, Edit, Extern
 
+_DRIVE_LETTERS = {*ascii_letters}
 _SH_VAR_CHARS = {*ascii_letters, *digits, "_"}
 
 
@@ -45,7 +46,10 @@ def _p_lhs(lhs: str) -> str:
         if lhs.endswith(sym):
             return sym
     else:
-        if os is OS.windows and lhs.endswith("%"):
+        if os is OS.windows and lhs.endswith(":"):
+            maybe_drive = removesuffix(lhs, suffix=":")[-1:]
+            return maybe_drive + ":" if maybe_drive in _DRIVE_LETTERS else ""
+        elif os is OS.windows and lhs.endswith("%"):
             _, s, r = removesuffix(lhs, suffix="%").rpartition("%")
             return s + r + s if s and {*r}.issubset(_SH_VAR_CHARS) else ""
         elif lhs.endswith("}"):
