@@ -406,9 +406,12 @@ def edit(
             )
 
             apply(nvim, buf=buf, instructions=instructions)
-            win_set_cursor(nvim, win=win, row=n_row, col=n_col)
             if inserted:
+                nn_col = n_col + len(inserted.encode(UTF8))
                 nvim.api.buf_set_text(buf, n_row, n_col, n_row, n_col, (inserted,))
+            else:
+                nn_col = n_col
+            win_set_cursor(nvim, win=win, row=n_row, col=nn_col)
 
             stack.idb.inserted(data.instance.bytes, sort_by=data.sort_by)
             if marks:
