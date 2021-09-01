@@ -225,6 +225,9 @@ def _parse_variable_decorated(context: ParserCtx, var: str) -> TokenStream:
         elif char == "/":
             if not level:
                 seen += 1
+            else:
+                push(char)
+
             if seen >= 3:
                 for pos, char in context:
                     if char in _REGEX_FLAG_CHARS:
