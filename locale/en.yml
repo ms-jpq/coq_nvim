@@ -27,7 +27,7 @@
   [<binary>]
 
 "treesitter slow": |-
-  ❌ TreeSitter took ${elapsed}ms to parse document, consider disabling it!
+  ❌ TreeSitter took ${elapsed}s to parse document, consider disabling it!
 
 "no snippets found": |-
   ⚠️  No snippets loaded
