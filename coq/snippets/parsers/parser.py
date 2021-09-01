@@ -35,6 +35,8 @@ from .types import (
     Unparsed,
 )
 
+_LINE_SEP = "\n"
+
 
 def raise_err(
     text: str, pos: Index, condition: str, expected: Iterable[str], actual: str
@@ -77,14 +79,13 @@ def pushback_chars(context: ParserCtx, *vals: EChar) -> None:
 
 
 def _gen_iter(src: str) -> Iterator[EChar]:
-    linesep = "\n"
     row, col = 1, 1
     for i, c in enumerate(
-        chain.from_iterable(interleave(src.splitlines(), val=(linesep,)))
+        chain.from_iterable(interleave(src.splitlines(), val=(_LINE_SEP,)))
     ):
         yield Index(i=i, row=row, col=col), c
         col += 1
-        if c == linesep:
+        if c == _LINE_SEP:
             row += 1
             col = 0
 
