@@ -42,13 +42,13 @@ text        ::= .*
 """
 
 
-_escapable_chars = {"\\", "$", "}"}
-_regex_escape_chars = {"\\", "/"}
-_choice_escapable_chars = _escapable_chars | {",", "|"}
-_int_chars = {*digits}
-_var_begin_chars = {*ascii_letters}
-_var_chars = {*digits, *ascii_letters, "_"}
-_regex_flag_chars = {*ascii_lowercase}
+_ESC_CHARS = {"\\", "$", "}"}
+_REGEX_ESC_CHARS = {"\\", "/"}
+_CHOICE_ESC_CHARS = _ESC_CHARS | {",", "|"}
+_INT_CHARS = {*digits}
+_VAR_BEGIN_CHARS = {*ascii_letters}
+_VAR_CHARS = {*digits, *ascii_letters, "_"}
+_REGEX_FLAG_CHARS = {*ascii_lowercase}
 
 
 def _parse_escape(context: ParserCtx, *, escapable_chars: AbstractSet[str]) -> str:
@@ -77,7 +77,7 @@ def _half_parse_choice(context: ParserCtx) -> TokenStream:
     for pos, char in context:
         if char == "\\":
             pushback_chars(context, (pos, char))
-            yield _parse_escape(context, escapable_chars=_choice_escapable_chars)
+            yield _parse_escape(context, escapable_chars=_CHOICE_ESC_CHARS)
         elif char == "|":
             pos, char = next_char(context)
             if char == "}":
@@ -104,7 +104,7 @@ def _parse_tcp(context: ParserCtx) -> TokenStream:
     idx_acc: MutableSequence[str] = []
 
     for pos, char in context:
-        if char in _int_chars:
+        if char in _INT_CHARS:
             idx_acc.append(char)
         else:
             yield Begin(idx=int("".join(idx_acc)))
@@ -172,7 +172,7 @@ def _parse_variable_naked(context: ParserCtx) -> TokenStream:
     name_acc: MutableSequence[str] = []
 
     for pos, char in context:
-        if char in _var_chars:
+        if char in _VAR_CHARS:
             name_acc.append(char)
         else:
             name = "".join(name_acc)
@@ -201,13 +201,13 @@ def _parse_variable_decorated(context: ParserCtx, var: str) -> TokenStream:
     for pos, char in context:
         if char == "\\":
             pushback_chars(context, (pos, char))
-            char = _parse_escape(context, escapable_chars=_regex_escape_chars)
+            char = _parse_escape(context, escapable_chars=_REGEX_ESC_CHARS)
             decoration_acc.append(char)
         elif char == "/":
             seen += 1
             if seen >= 3:
                 for pos, char in context:
-                    if char in _regex_flag_chars:
+                    if char in _REGEX_FLAG_CHARS:
                         decoration_acc.append(char)
                     elif char == "}":
                         decoration = "".join(decoration_acc)
@@ -234,7 +234,7 @@ def _parse_variable_nested(context: ParserCtx) -> TokenStream:
     name_acc: MutableSequence[str] = []
 
     for pos, char in context:
-        if char in _var_chars:
+        if char in _VAR_CHARS:
             name_acc.append(char)
         elif char == "}":
             # '${' var }'
@@ -276,11 +276,11 @@ def _parse_inner_scope(context: ParserCtx) -> TokenStream:
     assert char == "{"
 
     pos, char = next_char(context)
-    if char in _int_chars:
+    if char in _INT_CHARS:
         # tabstop | placeholder | choice
         pushback_chars(context, (pos, char))
         yield from _parse_tcp(context)
-    elif char in _var_begin_chars:
+    elif char in _VAR_BEGIN_CHARS:
         # variable
         pushback_chars(context, (pos, char))
         yield from _parse_variable_nested(context)
@@ -303,18 +303,18 @@ def _parse_scope(context: ParserCtx) -> TokenStream:
     if char == "{":
         pushback_chars(context, (pos, char))
         yield from _parse_inner_scope(context)
-    elif char in _int_chars:
+    elif char in _INT_CHARS:
         idx_acc = [char]
         # tabstop     ::= '$' int
         for pos, char in context:
-            if char in _int_chars:
+            if char in _INT_CHARS:
                 idx_acc.append(char)
             else:
                 yield Begin(idx=int("".join(idx_acc)))
                 yield End()
                 pushback_chars(context, (pos, char))
                 break
-    elif char in _var_begin_chars:
+    elif char in _VAR_BEGIN_CHARS:
         pushback_chars(context, (pos, char))
         yield from _parse_variable_naked(context)
     else:
@@ -332,7 +332,7 @@ def _parse(context: ParserCtx, shallow: bool) -> TokenStream:
     for pos, char in context:
         if char == "\\":
             pushback_chars(context, (pos, char))
-            yield _parse_escape(context, escapable_chars=_escapable_chars)
+            yield _parse_escape(context, escapable_chars=_ESC_CHARS)
         elif context.state.depth and char == "}":
             yield End()
             context.state.depth -= 1
