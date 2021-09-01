@@ -185,7 +185,7 @@ def _parse_variable_naked(context: ParserCtx) -> TokenStream:
 
 # /' regex '/' (format | text)+ '/'
 def _variable_decoration(
-    context: ParserCtx, *, var: str, decor: str, flags: str
+    context: ParserCtx, *, var: str, capture: str, decor: str, flags: str
 ) -> TokenStream:
     lo = lower(var)
     if decor == "/downcase":
@@ -195,7 +195,7 @@ def _variable_decoration(
     elif decor == "/upcase":
         yield lo.upper()
     else:
-        yield Unparsed(text=f"{var}/{decor}/{flags}")
+        yield Unparsed(text=f"{var}/{capture}/{decor}/{flags}")
 
 
 # | '${' var '/' regex '/' (format | text)+ '/' options '}'
@@ -203,27 +203,38 @@ def _parse_variable_decorated(context: ParserCtx, var: str) -> TokenStream:
     pos, char = next_char(context)
     assert char == "/"
 
-    decoration_acc: MutableSequence[str] = []
+    capture_acc: MutableSequence[str] = []
+    decor_acc: MutableSequence[str] = []
+    flags_acc: MutableSequence[str] = []
+
     level, seen = 0, 1
+
+    def push(char: str) -> None:
+        if seen <= 1:
+            capture_acc.append(char)
+        elif seen == 2:
+            decor_acc.append(char)
+        elif seen >= 3:
+            flags_acc.append(char)
 
     for pos, char in context:
         if char == "\\":
             pushback_chars(context, (pos, char))
             char = _parse_escape(context, escapable_chars=_REGEX_ESC_CHARS)
-            decoration_acc.append(char)
+            push(char)
         elif char == "/":
             if not level:
                 seen += 1
             if seen >= 3:
-                flags_acc: MutableSequence[str] = []
                 for pos, char in context:
                     if char in _REGEX_FLAG_CHARS:
-                        flags_acc.append(char)
+                        push(char)
                     elif char == "}":
                         yield from _variable_decoration(
                             context,
                             var=var,
-                            decor="".join(decoration_acc),
+                            capture="".join(capture_acc),
+                            decor="".join(decor_acc),
                             flags="".join(flags_acc),
                         )
                         return
@@ -237,7 +248,7 @@ def _parse_variable_decorated(context: ParserCtx, var: str) -> TokenStream:
                         )
         else:
             level += {"{": 1, "}": -1}.get(char, 0)
-            decoration_acc.append(char)
+            push(char)
 
 
 # variable    ::= '$' var | '${' var }'
