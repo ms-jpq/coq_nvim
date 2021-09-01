@@ -144,3 +144,4 @@ def parse(
         log.debug("%s", msg)
 
     return edit, marks
+
