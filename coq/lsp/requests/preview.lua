@@ -28,10 +28,10 @@
       end
 
       local on_resp = function(...)
-        if true then
-          on_resp_old(...)
-        else
+        if type(({...})[4]) == "table" then
           on_resp_new(...)
+        else
+          on_resp_old(...)
         end
       end
 
