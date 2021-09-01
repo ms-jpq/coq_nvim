@@ -106,7 +106,7 @@ _The `%` statistic comes from compiling the 10,000 snippets_
 
 - **Shows context**
 
-- Partial document parsing
+- **Partial document parsing**
 
 - Auto-disable if document is too big
 
