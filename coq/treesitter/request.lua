@@ -36,9 +36,10 @@
   local iter_nodes = function(ctx)
     return coroutine.wrap(
       function()
+        local lines = vim.api.nvim_buf_line_count()
         local row, col = unpack(vim.api.nvim_win_get_cursor(0))
         row = row - 1
-        local lo, hi = row - ctx, row + ctx + 1
+        local lo, hi = math.max(0, row - ctx), math.min(lines, row + ctx + 1)
 
         local go, parser = pcall(vim.treesitter.get_parser)
         if go then
