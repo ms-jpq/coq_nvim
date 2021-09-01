@@ -1,8 +1,8 @@
 from pathlib import PurePath
 from re import RegexFlag, compile
 from re import error as RegexError
-from string import ascii_letters, ascii_lowercase, digits
-from typing import AbstractSet, MutableSequence, Optional, Pattern, Sequence
+from string import ascii_letters, digits
+from typing import AbstractSet, Match, MutableSequence, Optional, Pattern, Sequence
 
 from ...shared.types import Context
 from .parser import context_from, next_char, pushback_chars, raise_err, token_parser
@@ -224,8 +224,8 @@ def _regex(
 #                 | '${' int ':+' if '}'
 #                 | '${' int ':?' if ':' else '}'
 #                 | '${' int ':-' else '}' | '${' int ':' else '}'
-def _fmt(fmt: str, val: str) -> str:
-    return val
+def _fmt(fmt: Sequence[EChar], match: Match[str]) -> str:
+    return ""
 
 
 # /' regex '/' (format | text)+ '/'
@@ -240,7 +240,11 @@ def _variable_decoration(
 ) -> str:
     subst = _variable_substitution(context, var_name=var_name) or ""
     rexpr = _regex(context, origin=origin, regex=regex, flags=flags)
-    return subst
+    match = rexpr.match(subst)
+    if not match:
+        return subst
+    else:
+        return _fmt(fmt, match=match)
 
 
 # | '${' var '/' regex '/' (format | text)+ '/' options '}'
