@@ -185,10 +185,13 @@ def _insert_enter(nvim: Nvim, stack: Stack) -> None:
         await stack.bdb.del_bufs(nono_bufs)
 
     async def c2() -> None:
-        payloads = (
-            () if buf.number in nono_bufs else [p async for p in async_request(nvim)]
-        )
-        await stack.tdb.new_nodes(payloads)
+        if stack.settings.clients.tree_sitter.enabled:
+            payloads = (
+                ()
+                if buf.number in nono_bufs
+                else [p async for p in async_request(nvim)]
+            )
+            await stack.tdb.new_nodes(payloads)
 
     go(nvim, aw=gather(c1(), c2()))
 
