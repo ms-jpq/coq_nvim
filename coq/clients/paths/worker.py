@@ -42,6 +42,7 @@ _SH_VAR_CHARS = {*ascii_letters, *digits, "_"}
 
 
 def p_lhs(os: OS, lhs: str) -> str:
+    # TODO -- expand ~user
     for sym in (pardir, curdir, "~"):
         if lhs.endswith(sym):
             return sym
