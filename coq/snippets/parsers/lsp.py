@@ -1,6 +1,7 @@
+from locale import strxfrm
 from pathlib import PurePath
 from string import ascii_letters, ascii_lowercase, digits
-from typing import AbstractSet, MutableSequence, Optional
+from typing import AbstractSet, MutableSequence, MutableSet, Optional
 
 from ...shared.types import Context
 from .parser import context_from, next_char, pushback_chars, raise_err, token_parser
@@ -184,11 +185,20 @@ def _parse_variable_naked(context: ParserCtx) -> TokenStream:
 
 # /' regex '/' (format | text)+ '/'
 def _variable_decoration(
-    context: ParserCtx, *, var_name: str, regex: str, fmt: str, flags: str
+    context: ParserCtx, *, var_name: str, regex: str, fmt: str, flags: AbstractSet[str]
 ) -> TokenStream:
-    subst = _variable_substitution(context, var_name=var_name)
-    subst = var_name if subst is None else subst
-    yield Unparsed(text=f"{subst}/{regex}/{fmt}/{flags}")
+    subst = _variable_substitution(context, var_name=var_name) or ""
+    flgs = "".join(sorted(flags, key=strxfrm))
+    yield Unparsed(text=f"{subst}/{regex}/{fmt}/{flgs}")
+
+
+# format      ::= '$' int | '${' int '}'
+#                 | '${' int ':' '/upcase' | '/downcase' | '/capitalize' '}'
+#                 | '${' int ':+' if '}'
+#                 | '${' int ':?' if ':' else '}'
+#                 | '${' int ':-' else '}' | '${' int ':' else '}'
+def _fmt(fmt: str) -> None:
+    pass
 
 
 # | '${' var '/' regex '/' (format | text)+ '/' options '}'
@@ -198,7 +208,7 @@ def _parse_variable_decorated(context: ParserCtx, var_name: str) -> TokenStream:
 
     regex_acc: MutableSequence[str] = []
     fmt_acc: MutableSequence[str] = []
-    flags_acc: MutableSequence[str] = []
+    flags: MutableSet[str] = set()
 
     level, seen = 0, 1
 
@@ -208,7 +218,7 @@ def _parse_variable_decorated(context: ParserCtx, var_name: str) -> TokenStream:
         elif seen == 2:
             fmt_acc.append(char)
         elif seen >= 3:
-            flags_acc.append(char)
+            flags.add(char)
 
     for pos, char in context:
         if char == "\\":
@@ -231,7 +241,7 @@ def _parse_variable_decorated(context: ParserCtx, var_name: str) -> TokenStream:
                             var_name=var_name,
                             regex="".join(regex_acc),
                             fmt="".join(fmt_acc),
-                            flags="".join(flags_acc),
+                            flags=flags,
                         )
                         return
                     else:
