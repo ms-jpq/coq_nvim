@@ -106,7 +106,6 @@ class Parser(TestCase):
         )
         expected = sorted(
             (
-                (Path(".git"), "./.git/"),
                 (Path(".gitignore"), "./.gitignore"),
                 (Path(".github"), "./.github/"),
             ),
@@ -164,7 +163,6 @@ class Parser(TestCase):
         )
         expected = sorted(
             (
-                (Path(".git"), "./.git/"),
                 (Path(".gitignore"), "./.gitignore"),
                 (Path(".github"), "./.github/"),
             ),
@@ -250,7 +248,6 @@ class Parser(TestCase):
         )
         expected = sorted(
             (
-                (Path.cwd() / ".git", "$PWD/.git/"),
                 (Path.cwd() / ".gitignore", "$PWD/.gitignore"),
                 (Path.cwd() / ".github", "$PWD/.github/"),
             ),
@@ -270,7 +267,6 @@ class Parser(TestCase):
         )
         expected = sorted(
             (
-                (Path.cwd() / ".git", "${PWD}/.git/"),
                 (Path.cwd() / ".gitignore", "${PWD}/.gitignore"),
                 (Path.cwd() / ".github", "${PWD}/.github/"),
             ),
