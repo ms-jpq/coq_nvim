@@ -406,8 +406,8 @@ def _parse_variable_nested(context: ParserCtx) -> TokenStream:
             name = "".join(name_acc)
             var = _variable_substitution(context, var_name=name)
             yield var if var is not None else name
-
             break
+
         elif char == ":":
             # '${' var ':' any '}'
             name = "".join(name_acc)
