@@ -216,6 +216,9 @@ def _parse_regex(context: ParserCtx) -> Iterator[EChar]:
             pushback_chars(context, (pos, char))
             break
 
+        else:
+            yield pos, char
+
 
 # options
 def _parse_options(context: ParserCtx) -> RegexFlag:
@@ -368,9 +371,9 @@ def _compile(
         raise_err(
             text=context.text,
             pos=pos,
-            condition="while compiling regex",
+            condition=f"while compiling regex -- {re}",
             expected=(),
-            actual=e.msg,
+            actual=str(e),
         )
 
 
