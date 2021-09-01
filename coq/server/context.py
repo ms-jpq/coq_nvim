@@ -38,7 +38,7 @@ def context(
     row = r - 1
     pos = (row, col)
     buf_line_count = ns.line_count
-    filename = cast(str, ns.name)
+    filename = normcase(ns.name)
     filetype = cast(str, ns.filetype)
     comment_str = cast(str, ns.commentstring)
     tabstop = ns.tabstop
@@ -79,7 +79,7 @@ def context(
         commit_id=state.commit_id,
         cwd=state.cwd,
         buf_id=buf.number,
-        filename=normcase(filename),
+        filename=filename,
         filetype=filetype,
         line_count=buf_line_count,
         linefeed=linefeed,
