@@ -8,6 +8,7 @@ from typing import (
     Iterator,
     MutableMapping,
     MutableSequence,
+    Optional,
     Sequence,
     Tuple,
 )
@@ -342,68 +343,83 @@ def _parse(stack: Stack, state: State, data: UserData) -> Tuple[Edit, Sequence[M
         return data.primary_edit, ()
 
 
-def _restore(nvim: Nvim, buf: Buffer, pos: NvimPos, before: str) -> None:
-    row, _ = pos
+def _restore(nvim: Nvim, buf: Buffer, pos: NvimPos, before: str) -> Optional[str]:
+    row, col = pos
     after: str = nvim.api.get_current_line()
     src, dest = after.encode(UTF8), before.encode(UTF8)
+
+    inserted = ""
     for (l1, h1), (l2, h2) in trans_inplace(
         src=tuple(src), dest=tuple(dest), unifying=0
     ):
         replace = dest[l2:h2].decode(UTF8, errors="ignore")
         nvim.api.buf_set_text(buf, row, l1, row, h1, (replace,))
+        if l1 == col:
+            inserted = src[l1:h1].decode(UTF8, errors="ignore")
+
+    return inserted
 
 
 def edit(
     nvim: Nvim, stack: Stack, state: State, data: UserData, before: str
-) -> Tuple[int, int]:
+) -> Optional[Tuple[int, int]]:
     win = cur_win(nvim)
     buf = win_get_buf(nvim, win=win)
-    _restore(nvim, buf=buf, pos=state.context.position, before=before)
-
-    try:
-        primary, marks = _parse(stack, state=state, data=data)
-    except ParseError as e:
-        primary, marks = data.primary_edit, ()
-        write(nvim, LANG("failed to parse snippet"))
-        log.info("%s", e)
-
-    lo, hi = _rows_to_fetch(
-        state.context,
-        primary,
-        *data.secondary_edits,
-    )
-    if lo < 0 or hi > state.context.line_count + 1:
-        log.warn("%s", pformat(("OUT OF BOUNDS", (lo, hi), data)))
-        return -1, -1
+    if buf.number != state.context.buf_id:
+        log.warn("%s", "stale buffer")
+        return None
     else:
-        limited_lines = buf_get_lines(nvim, buf=buf, lo=lo, hi=hi)
-        lines = [*chain(repeat("", times=lo), limited_lines)]
-        view = _lines(lines)
+        inserted = _restore(nvim, buf=buf, pos=state.context.position, before=before)
 
-        instructions = _consolidate(
-            *_instructions(
-                state.context,
-                unifying_chars=stack.settings.match.unifying_chars,
-                lines=view,
-                primary=primary,
-                secondary=data.secondary_edits,
-            )
+        try:
+            primary, marks = _parse(stack, state=state, data=data)
+        except ParseError as e:
+            primary, marks = data.primary_edit, ()
+            write(nvim, LANG("failed to parse snippet"))
+            log.info("%s", e)
+
+        lo, hi = _rows_to_fetch(
+            state.context,
+            primary,
+            *data.secondary_edits,
         )
-        n_row, n_col = _cursor(
-            state.context.position,
-            instructions=instructions,
-        )
+        if lo < 0 or hi > state.context.line_count + 1:
+            log.warn("%s", pformat(("OUT OF BOUNDS", (lo, hi), data)))
+            return None
+        else:
+            limited_lines = buf_get_lines(nvim, buf=buf, lo=lo, hi=hi)
+            lines = [*chain(repeat("", times=lo), limited_lines)]
+            view = _lines(lines)
 
-        apply(nvim, buf=buf, instructions=instructions)
-        win_set_cursor(nvim, win=win, row=n_row, col=n_col)
-
-        stack.idb.inserted(data.instance.bytes, sort_by=data.sort_by)
-        if marks:
-            mark(nvim, settings=stack.settings, buf=buf, marks=marks)
-
-        if DEBUG:
-            log.debug(
-                "%s",
-                pformat(((data.primary_edit, *data.secondary_edits), instructions)),
+            instructions = _consolidate(
+                *_instructions(
+                    state.context,
+                    unifying_chars=stack.settings.match.unifying_chars,
+                    lines=view,
+                    primary=primary,
+                    secondary=data.secondary_edits,
+                )
             )
-        return n_row, n_col
+            n_row, n_col = _cursor(
+                state.context.position,
+                instructions=instructions,
+            )
+
+            apply(nvim, buf=buf, instructions=instructions)
+            if inserted:
+                nn_col = n_col + len(inserted.encode(UTF8))
+                nvim.api.buf_set_text(buf, n_row, n_col, n_row, n_col, (inserted,))
+            else:
+                nn_col = n_col
+            win_set_cursor(nvim, win=win, row=n_row, col=nn_col)
+
+            stack.idb.inserted(data.instance.bytes, sort_by=data.sort_by)
+            if marks:
+                mark(nvim, settings=stack.settings, buf=buf, marks=marks)
+
+            if DEBUG:
+                log.debug(
+                    "%s",
+                    pformat(((data.primary_edit, *data.secondary_edits), instructions)),
+                )
+            return n_row, n_col

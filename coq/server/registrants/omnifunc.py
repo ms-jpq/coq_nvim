@@ -192,7 +192,8 @@ def _comp_done(nvim: Nvim, stack: Stack, event: Mapping[str, Any]) -> None:
                             nvim, stack=stack, state=s, data=ud, before=before
                         ),
                     )
-                    state(inserted=inserted, commit_id=uuid4())
+                    ins = inserted or (-1, -1)
+                    state(inserted=ins, commit_id=uuid4())
                 else:
                     log.warn("%s", "delayed completion")
 
