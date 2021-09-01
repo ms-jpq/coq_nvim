@@ -326,7 +326,7 @@ def _parse_fmt(context: ParserCtx) -> Tuple[int, None]:
                         actual=char,
                     )
 
-            group = int("".join(idx_acc))
+            group = int("".join(idx_acc)) if idx_acc else 0
             _parse_fmt_back(context)
             return group, None
 
