@@ -343,15 +343,21 @@ def _parse(stack: Stack, state: State, data: UserData) -> Tuple[Edit, Sequence[M
         return data.primary_edit, ()
 
 
-def _restore(nvim: Nvim, buf: Buffer, pos: NvimPos, before: str) -> None:
-    row, _ = pos
+def _restore(nvim: Nvim, buf: Buffer, pos: NvimPos, before: str) -> Optional[str]:
+    row, col = pos
     after: str = nvim.api.get_current_line()
     src, dest = after.encode(UTF8), before.encode(UTF8)
+
+    inserted = ""
     for (l1, h1), (l2, h2) in trans_inplace(
         src=tuple(src), dest=tuple(dest), unifying=0
     ):
         replace = dest[l2:h2].decode(UTF8, errors="ignore")
         nvim.api.buf_set_text(buf, row, l1, row, h1, (replace,))
+        if l1 == col:
+            inserted = src[l1:h1].decode(UTF8, errors="ignore")
+
+    return inserted
 
 
 def edit(
@@ -363,7 +369,7 @@ def edit(
         log.warn("%s", "stale buffer")
         return None
     else:
-        _restore(nvim, buf=buf, pos=state.context.position, before=before)
+        inserted = _restore(nvim, buf=buf, pos=state.context.position, before=before)
 
         try:
             primary, marks = _parse(stack, state=state, data=data)
@@ -401,6 +407,8 @@ def edit(
 
             apply(nvim, buf=buf, instructions=instructions)
             win_set_cursor(nvim, win=win, row=n_row, col=n_col)
+            if inserted:
+                nvim.api.buf_set_text(buf, n_row, n_col, n_row, n_col, (inserted,))
 
             stack.idb.inserted(data.instance.bytes, sort_by=data.sort_by)
             if marks:
