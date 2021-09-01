@@ -1,4 +1,5 @@
 from argparse import ArgumentParser, Namespace
+from pprint import pprint
 from sys import stdin
 
 from ..shared.context import EMPTY_CONTEXT
@@ -16,4 +17,4 @@ def main() -> None:
     args = _parse_args()
     edit = SnippetEdit(grammar=args.grammar, new_text=stdin.read())
     parsed = parse(set(), context=EMPTY_CONTEXT, snippet=edit, visual="")
-    print(parsed)
+    pprint(parsed, indent=2)
