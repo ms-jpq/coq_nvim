@@ -257,6 +257,7 @@ def _parse_fmt_back(context: ParserCtx) -> None:
     pos, char = next_char(context)
     if char == "/":
         pushback_chars(context, (pos, char))
+        return None
     else:
         raise_err(
             text=context.text,
