@@ -50,7 +50,7 @@ def raise_err(
     Unexpected char found :: `${condition}`:
     row:  ${row}
     col:  ${col}
-    Expected one of: {${expected_chars}}
+    Expected one of: | ${expected_chars} |
     Found:           ${char}
     Context: |-
     ${ctx}
