@@ -106,6 +106,8 @@ _The `%` statistic comes from compiling the 10,000 snippets_
 
 - **Shows context**
 
+- Auto-disable if document is too big
+
 - Unicode ready
 
 ![treesitter.img](https://raw.githubusercontent.com/ms-jpq/coq.artifacts/artifacts/preview/treesitter.gif)
