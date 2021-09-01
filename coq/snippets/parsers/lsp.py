@@ -227,7 +227,7 @@ def _parse_options(context: ParserCtx) -> RegexFlag:
         if char in _REGEX_FLAG_CHARS:
             flag = flag | _RE_FLAGS.get(char, 0)
 
-        elif char == "/":
+        elif char == "}":
             break
 
         else:
@@ -255,7 +255,9 @@ def _parse_fmt_back(context: ParserCtx) -> None:
             break
 
     pos, char = next_char(context)
-    if char != "/":
+    if char == "/":
+        pushback_chars(context, (pos, char))
+    else:
         raise_err(
             text=context.text,
             pos=pos,
@@ -372,9 +374,6 @@ def _parse_variable_decorated(context: ParserCtx, var_name: str) -> TokenStream:
     regex = tuple(_parse_regex(context))
     group, _ = _parse_fmt(context)
     flag = _parse_options(context)
-
-    _, char = next_char(context)
-    assert char == "/"
 
     subst = _variable_substitution(context, var_name=var_name) or ""
     re = _compile(context, origin=pos, regex=regex, flag=flag)
