@@ -1,7 +1,10 @@
-from pathlib import PurePath
+from os.path import normcase
+from pathlib import Path, PurePath
 from uuid import uuid4
 
 from .types import Context
+
+_FILE = Path(__file__).resolve()
 
 EMPTY_CONTEXT = Context(
     manual=True,
@@ -9,7 +12,7 @@ EMPTY_CONTEXT = Context(
     commit_id=uuid4(),
     cwd=PurePath(),
     buf_id=0,
-    filename="",
+    filename=normcase(_FILE),
     filetype="",
     line_count=0,
     linefeed="\n",

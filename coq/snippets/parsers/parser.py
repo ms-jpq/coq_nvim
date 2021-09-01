@@ -1,4 +1,4 @@
-from os import linesep
+from itertools import chain
 from string import Template
 from textwrap import dedent
 from typing import (
@@ -10,11 +10,10 @@ from typing import (
     NoReturn,
     Sequence,
     Tuple,
-    TypeVar,
     Union,
 )
 
-from std2.itertools import deiter
+from std2.itertools import deiter, interleave
 from std2.types import never
 
 from ...shared.types import UTF8, Context
@@ -36,7 +35,7 @@ from .types import (
     Unparsed,
 )
 
-T = TypeVar("T")
+_LINE_SEP = "\n"
 
 
 def raise_err(
@@ -47,10 +46,10 @@ def raise_err(
     expected_chars = ", ".join(map(lambda c: f"'{c}'", expected))
     ctx = "" if pos.i == -1 else text[pos.i - band : pos.i + band + 1]
     tpl = """
-    Unexpected char found @ ${condition}:
+    Unexpected char found :: `${condition}`:
     row:  ${row}
     col:  ${col}
-    Expected one of: ${expected_chars}
+    Expected one of: > ${expected_chars} <
     Found:           ${char}
     Context: |-
     ${ctx}
@@ -69,8 +68,8 @@ def raise_err(
     raise ParseError(msg)
 
 
-def next_char(context: ParserCtx) -> EChar:
-    return next(context, (Index(i=-1, row=-1, col=-1), ""))
+def next_char(it: Iterator[EChar]) -> EChar:
+    return next(it, (Index(i=-1, row=-1, col=-1), ""))
 
 
 def pushback_chars(context: ParserCtx, *vals: EChar) -> None:
@@ -81,10 +80,12 @@ def pushback_chars(context: ParserCtx, *vals: EChar) -> None:
 
 def _gen_iter(src: str) -> Iterator[EChar]:
     row, col = 1, 1
-    for i, c in enumerate(src):
+    for i, c in enumerate(
+        chain.from_iterable(interleave(src.splitlines(), val=(_LINE_SEP,)))
+    ):
         yield Index(i=i, row=row, col=col), c
         col += 1
-        if c == linesep:
+        if c == _LINE_SEP:
             row += 1
             col = 0
 

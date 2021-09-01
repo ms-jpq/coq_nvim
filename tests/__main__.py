@@ -1,5 +1,6 @@
 from argparse import ArgumentParser, Namespace
 from pathlib import Path
+from sys import exit
 from unittest import defaultTestLoader
 from unittest.runner import TextTestRunner
 from unittest.signals import installHandler
@@ -17,7 +18,7 @@ def _parse_args() -> Namespace:
     return parser.parse_args()
 
 
-def main() -> None:
+def main() -> int:
     args = _parse_args()
     suite = defaultTestLoader.discover(
         str(_TESTS), top_level_dir=str(_TOP_LV.parent), pattern=args.pattern
@@ -29,8 +30,9 @@ def main() -> None:
     )
 
     installHandler()
-    runner.run(suite)
+    r = runner.run(suite)
+    return not r.wasSuccessful()
 
 
 if __name__ == "__main__":
-    main()
+    exit(main())

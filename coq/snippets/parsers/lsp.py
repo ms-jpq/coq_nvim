@@ -1,18 +1,31 @@
-from os.path import basename, dirname, splitext
-from string import ascii_letters, ascii_lowercase, digits
-from typing import AbstractSet, MutableSequence, Optional, Sequence
+from pathlib import PurePath
+from re import RegexFlag, compile
+from re import error as RegexError
+from string import ascii_letters, digits
+from typing import (
+    AbstractSet,
+    Iterator,
+    Match,
+    MutableSequence,
+    Optional,
+    Pattern,
+    Sequence,
+    Tuple,
+    cast,
+)
 
 from ...shared.types import Context
 from .parser import context_from, next_char, pushback_chars, raise_err, token_parser
 from .types import (
     Begin,
     DummyBegin,
+    EChar,
     End,
+    Index,
     Parsed,
     ParseInfo,
     ParserCtx,
     TokenStream,
-    Unparsed,
 )
 
 #
@@ -42,13 +55,19 @@ text        ::= .*
 """
 
 
-_escapable_chars = {"\\", "$", "}"}
-_regex_escape_chars = {"\\", "/"}
-_choice_escapable_chars = _escapable_chars | {",", "|"}
-_int_chars = {*digits}
-_var_begin_chars = {*ascii_letters}
-_var_chars = {*digits, *ascii_letters, "_"}
-_regex_flag_chars = {*ascii_lowercase}
+_ESC_CHARS = {"\\", "$", "}"}
+_REGEX_ESC_CHARS = {"\\", "/"}
+_CHOICE_ESC_CHARS = _ESC_CHARS | {",", "|"}
+_INT_CHARS = {*digits}
+_VAR_BEGIN_CHARS = {*ascii_letters}
+_VAR_CHARS = {*digits, *ascii_letters, "_"}
+_RE_FLAGS = {
+    "i": RegexFlag.IGNORECASE,
+    "m": RegexFlag.MULTILINE,
+    "s": RegexFlag.DOTALL,
+    "u": RegexFlag.UNICODE,
+}
+_REGEX_FLAG_CHARS = {*_RE_FLAGS, "g"}
 
 
 def _parse_escape(context: ParserCtx, *, escapable_chars: AbstractSet[str]) -> str:
@@ -77,7 +96,7 @@ def _half_parse_choice(context: ParserCtx) -> TokenStream:
     for pos, char in context:
         if char == "\\":
             pushback_chars(context, (pos, char))
-            yield _parse_escape(context, escapable_chars=_choice_escapable_chars)
+            yield _parse_escape(context, escapable_chars=_CHOICE_ESC_CHARS)
         elif char == "|":
             pos, char = next_char(context)
             if char == "}":
@@ -104,7 +123,7 @@ def _parse_tcp(context: ParserCtx) -> TokenStream:
     idx_acc: MutableSequence[str] = []
 
     for pos, char in context:
-        if char in _int_chars:
+        if char in _INT_CHARS:
             idx_acc.append(char)
         else:
             yield Begin(idx=int("".join(idx_acc)))
@@ -131,37 +150,37 @@ def _parse_tcp(context: ParserCtx) -> TokenStream:
                 )
 
 
-def _variable_substitution(context: ParserCtx, *, name: str) -> Optional[str]:
+def _variable_substitution(context: ParserCtx, *, var_name: str) -> Optional[str]:
     ctx = context.ctx
     row, _ = ctx.position
+    path = PurePath(ctx.filename)
 
-    if name == "TM_SELECTED_TEXT":
+    if var_name == "TM_SELECTED_TEXT":
         return context.info.visual
 
-    elif name == "TM_CURRENT_LINE":
+    elif var_name == "TM_CURRENT_LINE":
         return ctx.line
 
-    elif name == "TM_CURRENT_WORD":
+    elif var_name == "TM_CURRENT_WORD":
         return ctx.words
 
-    elif name == "TM_LINE_INDEX":
+    elif var_name == "TM_LINE_INDEX":
         return str(row)
 
-    elif name == "TM_LINE_NUMBER":
+    elif var_name == "TM_LINE_NUMBER":
         return str(row + 1)
 
-    elif name == "TM_FILENAME":
-        return basename(ctx.filename)
+    elif var_name == "TM_FILENAME":
+        return path.name
 
-    elif name == "TM_FILENAME_BASE":
-        fn, _ = splitext(basename(ctx.filename))
-        return fn
+    elif var_name == "TM_FILENAME_BASE":
+        return path.stem
 
-    elif name == "TM_DIRECTORY":
-        return dirname(ctx.filename)
+    elif var_name == "TM_DIRECTORY":
+        return str(path.parent)
 
-    elif name == "TM_FILEPATH":
-        return ctx.filename
+    elif var_name == "TM_FILEPATH":
+        return str(path)
 
     else:
         return None
@@ -172,59 +191,205 @@ def _parse_variable_naked(context: ParserCtx) -> TokenStream:
     name_acc: MutableSequence[str] = []
 
     for pos, char in context:
-        if char in _var_chars:
+        if char in _VAR_CHARS:
             name_acc.append(char)
         else:
             name = "".join(name_acc)
-            var = _variable_substitution(context, name=name)
+            var = _variable_substitution(context, var_name=name)
             yield var if var is not None else name
             pushback_chars(context, (pos, char))
             break
 
 
-# /' regex '/' (format | text)+ '/'
-def _variable_decoration(
-    context: ParserCtx, *, var: str, decoration: Sequence[str]
-) -> TokenStream:
-    text = "".join(decoration)
-    yield var
-    yield Unparsed(text=text)
-
-
-# | '${' var '/' regex '/' (format | text)+ '/' options '}'
-def _parse_variable_decorated(context: ParserCtx, var: str) -> TokenStream:
-    pos, char = next_char(context)
+# regex
+def _parse_regex(context: ParserCtx) -> Iterator[EChar]:
+    _, char = next_char(context)
     assert char == "/"
 
-    decoration_acc = [char]
-    seen = 1
     for pos, char in context:
         if char == "\\":
             pushback_chars(context, (pos, char))
-            char = _parse_escape(context, escapable_chars=_regex_escape_chars)
-            decoration_acc.append(char)
+            char = _parse_escape(context, escapable_chars=_REGEX_ESC_CHARS)
+            yield pos, char
+
         elif char == "/":
-            seen += 1
-            if seen >= 3:
-                for pos, char in context:
-                    if char in _regex_flag_chars:
-                        decoration_acc.append(char)
-                    elif char == "}":
-                        decoration = "".join(decoration_acc)
-                        yield from _variable_decoration(
-                            context, var=var, decoration=decoration
-                        )
-                        return
-                    else:
-                        raise_err(
-                            text=context.text,
-                            pos=pos,
-                            condition="after /../../",
-                            expected=("[a-z]"),
-                            actual=char,
-                        )
+            pushback_chars(context, (pos, char))
+            break
+
+
+# options
+def _parse_options(context: ParserCtx) -> RegexFlag:
+    pos, char = next_char(context)
+    assert char == "/"
+
+    flag = 0
+    for pos, char in context:
+        if char in _REGEX_FLAG_CHARS:
+            flag = flag | _RE_FLAGS.get(char, 0)
+
+        elif char == "}":
+            break
+
         else:
-            pass
+            raise_err(
+                text=context.text,
+                pos=pos,
+                condition="while parsing regex flags",
+                expected=_REGEX_FLAG_CHARS,
+                actual=char,
+            )
+
+    pushback_chars(context, (pos, char))
+    return cast(RegexFlag, flag)
+
+
+def _parse_fmt_back(context: ParserCtx) -> None:
+    pos, char = next_char(context)
+    assert char == ":"
+
+    for pos, char in context:
+        if char == "\\":
+            pushback_chars(context, (pos, char))
+            _ = _parse_escape(context, escapable_chars=_REGEX_ESC_CHARS)
+        elif char == "}":
+            break
+
+    pos, char = next_char(context)
+    if char == "/":
+        pushback_chars(context, (pos, char))
+        return None
+    else:
+        raise_err(
+            text=context.text,
+            pos=pos,
+            condition="after }",
+            expected=("/",),
+            actual=char,
+        )
+
+
+# format      ::= '$' int | '${' int '}'
+#                 | '${' int ':' '/upcase' | '/downcase' | '/capitalize' '}'
+#                 | '${' int ':+' if '}'
+#                 | '${' int ':?' if ':' else '}'
+#                 | '${' int ':-' else '}' | '${' int ':' else '}'
+def _parse_fmt(context: ParserCtx) -> Tuple[int, None]:
+    pos, char = next_char(context)
+    assert char == "/"
+
+    pos, char = next_char(context)
+    if char != "$":
+        raise_err(
+            text=context.text,
+            pos=pos,
+            condition="while parsing format",
+            expected=("$",),
+            actual=char,
+        )
+
+    else:
+        pos, char = next_char(context)
+        if char in _INT_CHARS:
+            idx_acc = [char]
+            for pos, char in context:
+                if char in _INT_CHARS:
+                    idx_acc.append(char)
+                elif char == "/":
+                    pushback_chars(context, (pos, char))
+                    break
+                else:
+                    raise_err(
+                        text=context.text,
+                        pos=pos,
+                        condition="while parsing format",
+                        expected=("[0-9]",),
+                        actual=char,
+                    )
+            group = int("".join(idx_acc))
+            return group, None
+
+        elif char == "{":
+            idx_acc = []
+            for pos, char in context:
+                if char in _INT_CHARS:
+                    idx_acc.append(char)
+
+                elif char == ":":
+                    pushback_chars(context, (pos, char))
+                    break
+
+                else:
+                    raise_err(
+                        text=context.text,
+                        pos=pos,
+                        condition="while parsing format",
+                        expected=("[0-9]", ":"),
+                        actual=char,
+                    )
+
+            group = int("".join(idx_acc))
+            _parse_fmt_back(context)
+            return group, None
+
+        else:
+            raise_err(
+                text=context.text,
+                pos=pos,
+                condition="while parsing format",
+                expected=("[0-9]", "$"),
+                actual=char,
+            )
+
+
+def _compile(
+    context: ParserCtx,
+    *,
+    origin: Index,
+    regex: Sequence[EChar],
+    flag: RegexFlag,
+) -> Pattern[str]:
+    re = "".join(c for _, c in regex)
+    try:
+        return compile(re, flags=flag)
+    except RegexError as e:
+        if regex:
+            (head_idx, _), *_ = regex
+        else:
+            head_idx = origin
+        positions = {i: pos for i, (pos, _) in enumerate(regex)}
+        pos = positions.get(e.pos, head_idx) if e.pos is not None else head_idx
+        raise_err(
+            text=context.text,
+            pos=pos,
+            condition="while compiling regex",
+            expected=(),
+            actual=e.msg,
+        )
+
+
+# | '${' var '/' regex '/' (format | text)+ '/' options '}'
+def _parse_variable_decorated(context: ParserCtx, var_name: str) -> TokenStream:
+    pos, char = next_char(context)
+    assert char == "/"
+
+    pushback_chars(context, (pos, char))
+    regex = tuple(_parse_regex(context))
+    group, _ = _parse_fmt(context)
+    flag = _parse_options(context)
+
+    subst = _variable_substitution(context, var_name=var_name) or ""
+    re = _compile(context, origin=pos, regex=regex, flag=flag)
+    match = re.match(subst)
+
+    if match:
+        try:
+            matched = match.group(group)
+        except IndexError:
+            yield from subst
+        else:
+            yield from matched
+    else:
+        yield from subst
 
 
 # variable    ::= '$' var | '${' var }'
@@ -234,18 +399,18 @@ def _parse_variable_nested(context: ParserCtx) -> TokenStream:
     name_acc: MutableSequence[str] = []
 
     for pos, char in context:
-        if char in _var_chars:
+        if char in _VAR_CHARS:
             name_acc.append(char)
         elif char == "}":
             # '${' var }'
             name = "".join(name_acc)
-            var = _variable_substitution(context, name=name)
+            var = _variable_substitution(context, var_name=name)
             yield var if var is not None else name
             break
         elif char == ":":
             # '${' var ':' any '}'
             name = "".join(name_acc)
-            var = _variable_substitution(context, name=name)
+            var = _variable_substitution(context, var_name=name)
             if var is not None:
                 yield var
                 context.state.depth += 1
@@ -258,7 +423,7 @@ def _parse_variable_nested(context: ParserCtx) -> TokenStream:
             # '${' var '/' regex '/' (format | text)+ '/' options '}'
             name = "".join(name_acc)
             pushback_chars(context, (pos, char))
-            yield from _parse_variable_decorated(context, var=name)
+            yield from _parse_variable_decorated(context, var_name=name)
             break
         else:
             raise_err(
@@ -276,11 +441,11 @@ def _parse_inner_scope(context: ParserCtx) -> TokenStream:
     assert char == "{"
 
     pos, char = next_char(context)
-    if char in _int_chars:
+    if char in _INT_CHARS:
         # tabstop | placeholder | choice
         pushback_chars(context, (pos, char))
         yield from _parse_tcp(context)
-    elif char in _var_begin_chars:
+    elif char in _VAR_BEGIN_CHARS:
         # variable
         pushback_chars(context, (pos, char))
         yield from _parse_variable_nested(context)
@@ -303,18 +468,18 @@ def _parse_scope(context: ParserCtx) -> TokenStream:
     if char == "{":
         pushback_chars(context, (pos, char))
         yield from _parse_inner_scope(context)
-    elif char in _int_chars:
+    elif char in _INT_CHARS:
         idx_acc = [char]
         # tabstop     ::= '$' int
         for pos, char in context:
-            if char in _int_chars:
+            if char in _INT_CHARS:
                 idx_acc.append(char)
             else:
                 yield Begin(idx=int("".join(idx_acc)))
                 yield End()
                 pushback_chars(context, (pos, char))
                 break
-    elif char in _var_begin_chars:
+    elif char in _VAR_BEGIN_CHARS:
         pushback_chars(context, (pos, char))
         yield from _parse_variable_naked(context)
     else:
@@ -332,7 +497,7 @@ def _parse(context: ParserCtx, shallow: bool) -> TokenStream:
     for pos, char in context:
         if char == "\\":
             pushback_chars(context, (pos, char))
-            yield _parse_escape(context, escapable_chars=_escapable_chars)
+            yield _parse_escape(context, escapable_chars=_ESC_CHARS)
         elif context.state.depth and char == "}":
             yield End()
             context.state.depth -= 1
