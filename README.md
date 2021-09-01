@@ -118,7 +118,7 @@ _The `%` statistic comes from compiling the 10,000 snippets_
 
 The promise is that Treesitter will have real time parsing on every keystroke, but it's actually too slow on big files.
 
-The Treesitter source only parses on `Idle` events due to unrealized performance promises.
+The Treesitter source only parses a limited number of lines about the cursor and only on `Idle` events due to unrealized performance promises.
 
 ### CTags
 
