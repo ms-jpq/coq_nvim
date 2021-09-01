@@ -15,6 +15,7 @@ from pynvim_pp.logging import log
 from std2.pickle import DecodeError, new_decoder, new_encoder
 
 from ...lang import LANG
+from ...lsp.protocol import PROTOCOL
 from ...shared.parse import is_word
 from ...shared.runtime import Supervisor
 from ...shared.runtime import Worker as BaseWorker
@@ -84,13 +85,15 @@ def _decode(
             label = (result.new_prefix.splitlines() or ("",))[-1] + (
                 result.new_suffix.splitlines() or ("",)
             )[0]
+            kind = PROTOCOL.CompletionItemKind.get(result.kind)
             cmp = Completion(
                 source=client.short_name,
                 weight_adjust=client.weight_adjust,
                 label=label,
                 sort_by=sort_by(unifying_chars, new_text=edit.old_prefix),
                 primary_edit=edit,
-                icon_match=None,
+                kind=kind or "",
+                icon_match=kind,
             )
             yield cmp
 

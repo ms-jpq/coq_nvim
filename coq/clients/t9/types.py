@@ -28,6 +28,7 @@ class _RespL1:
     new_prefix: str
     old_suffix: str
     new_suffix: str
+    kind: Optional[int] = None
 
 
 @dataclass(frozen=True)
