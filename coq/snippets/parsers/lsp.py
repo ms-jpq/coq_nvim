@@ -247,7 +247,7 @@ def _parse_options(context: ParserCtx) -> RegexFlag:
 
 def _parse_fmt_back(context: ParserCtx) -> None:
     pos, char = next_char(context)
-    if char == ":":
+    if char != ":":
         raise_err(
             text=context.text,
             pos=pos,
