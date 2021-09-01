@@ -133,6 +133,7 @@ clients:
     enabled: True
     short_name: "TS"
     path_sep: " ⇊"
+    search_context: 333
     slow_threshold: 0.188
     weight_adjust: 0
 

@@ -33,15 +33,20 @@
     end
   end
 
-  local iter_nodes = function()
+  local iter_nodes = function(ctx)
     return coroutine.wrap(
       function()
+        local lines = vim.api.nvim_buf_line_count(0)
+        local row, col = unpack(vim.api.nvim_win_get_cursor(0))
+        row = row - 1
+        local lo, hi = math.max(0, row - ctx), math.min(lines, row + ctx + 1)
+
         local go, parser = pcall(vim.treesitter.get_parser)
         if go then
           local query = vim.treesitter.get_query(parser:lang(), "highlights")
           if query then
             for _, tree in pairs(parser:parse()) do
-              for capture, node in query:iter_captures(tree:root(), 0) do
+              for capture, node in query:iter_captures(tree:root(), 0, lo, hi) do
                 local pl = payload(node, query.captures[capture])
                 if pl and pl.kind ~= "comment" then
                   coroutine.yield(pl)
@@ -54,12 +59,12 @@
     )
   end
 
-  COQts_req = function(session, pos)
+  COQts_req = function(session, ctx)
     vim.schedule(
       function()
         local t1 = vim.loop.now()
         local acc = {}
-        for payload in iter_nodes() do
+        for payload in iter_nodes(ctx) do
           table.insert(acc, payload)
         end
         local t2 = vim.loop.now()
