@@ -2,6 +2,7 @@ from pathlib import PurePath
 from string import ascii_letters, ascii_lowercase, digits
 from typing import AbstractSet, MutableSequence, Optional, Sequence
 
+from ...shared.parse import lower
 from ...shared.types import Context
 from .parser import context_from, next_char, pushback_chars, raise_err, token_parser
 from .types import (
@@ -186,9 +187,16 @@ def _parse_variable_naked(context: ParserCtx) -> TokenStream:
 def _variable_decoration(
     context: ParserCtx, *, var: str, decoration: Sequence[str]
 ) -> TokenStream:
-    text = "".join(decoration)
-    yield var
-    yield Unparsed(text=text)
+    decor = "".join(decoration)
+    lo = lower(var)
+    if decor == "/downcase":
+        yield lo
+    elif decor == "/capitalize":
+        yield lo.capitalize()
+    elif decor == "/upcase":
+        yield lo.upper()
+    else:
+        yield Unparsed(text=var + "/" + decor)
 
 
 # | '${' var '/' regex '/' (format | text)+ '/' options '}'
