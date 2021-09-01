@@ -215,7 +215,7 @@ def _regex(
                 pos=pos,
                 condition="while compiling regex",
                 expected=(),
-                actual="",
+                actual=e.msg,
             )
 
 
@@ -224,15 +224,72 @@ def _regex(
 #                 | '${' int ':+' if '}'
 #                 | '${' int ':?' if ':' else '}'
 #                 | '${' int ':-' else '}' | '${' int ':' else '}'
-def _fmt(
-    context: ParserCtx, *, origin: Index, fmt: Sequence[EChar], match: Match[str]
-) -> str:
-    if fmt:
-        (head_idx, _), *_ = fmt
-    else:
-        head_idx = origin
+def _fmt(context: ParserCtx, *, origin: Index, fmt: Sequence[EChar]) -> int:
+    stream = iter(fmt)
+    pos, char = next(stream, (origin, ""))
+    if char != "$":
+        raise_err(
+            text=context.text,
+            pos=pos,
+            condition="while parsing format",
+            expected=("$",),
+            actual=char,
+        )
 
-    return ""
+    else:
+        pos, char = next(stream, (pos, "/"))
+        if char in _INT_CHARS:
+            idx_acc = [char]
+            for pos, char in stream:
+                if char in _INT_CHARS:
+                    idx_acc.append(char)
+                else:
+                    raise_err(
+                        text=context.text,
+                        pos=pos,
+                        condition="while parsing format",
+                        expected=("[0-9]",),
+                        actual=char,
+                    )
+            else:
+                return int("".join(idx_acc))
+
+        elif char == "$":
+            pos, char = next(stream, (pos, "/"))
+            if char != "{":
+                raise_err(
+                    text=context.text,
+                    pos=pos,
+                    condition="after $",
+                    expected=("{",),
+                    actual=char,
+                )
+            else:
+                idx_acc = []
+                for pos, char in stream:
+                    if char in _INT_CHARS:
+                        idx_acc.append(char)
+                    elif char == ":":
+                        pass
+                    else:
+                        raise_err(
+                            text=context.text,
+                            pos=pos,
+                            condition="while parsing format",
+                            expected=("[0-9]",),
+                            actual=char,
+                        )
+                else:
+                    return int("".join(idx_acc))
+
+        else:
+            raise_err(
+                text=context.text,
+                pos=pos,
+                condition="while parsing format",
+                expected=("[0-9]", "$"),
+                actual=char,
+            )
 
 
 # /' regex '/' (format | text)+ '/'
@@ -251,7 +308,9 @@ def _variable_decoration(
     if not match:
         return subst
     else:
-        return _fmt(context, origin=origin, fmt=fmt, match=match)
+        group = _fmt(context, origin=origin, fmt=fmt)
+        matched = match[group]
+        return matched
 
 
 # | '${' var '/' regex '/' (format | text)+ '/' options '}'

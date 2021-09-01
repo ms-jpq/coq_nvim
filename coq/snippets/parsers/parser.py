@@ -68,8 +68,8 @@ def raise_err(
     raise ParseError(msg)
 
 
-def next_char(context: ParserCtx) -> EChar:
-    return next(context, (Index(i=-1, row=-1, col=-1), ""))
+def next_char(it: Iterator[EChar]) -> EChar:
+    return next(it, (Index(i=-1, row=-1, col=-1), ""))
 
 
 def pushback_chars(context: ParserCtx, *vals: EChar) -> None:
