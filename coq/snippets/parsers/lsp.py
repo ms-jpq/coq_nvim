@@ -328,7 +328,8 @@ def _parse_fmt(context: ParserCtx) -> Tuple[int, None]:
                     )
 
             group = int("".join(idx_acc))
-            return group, _parse_fmt_back(context)
+            _parse_fmt_back(context)
+            return group, None
 
         else:
             raise_err(
