@@ -244,27 +244,35 @@ def _parse_options(context: ParserCtx) -> RegexFlag:
 
 def _parse_fmt_back(context: ParserCtx) -> None:
     pos, char = next_char(context)
-    assert char == ":"
-
-    for pos, char in context:
-        if char == "\\":
-            pushback_chars(context, (pos, char))
-            _ = _parse_escape(context, escapable_chars=_REGEX_ESC_CHARS)
-        elif char == "}":
-            break
-
-    pos, char = next_char(context)
-    if char == "/":
-        pushback_chars(context, (pos, char))
-        return None
-    else:
+    if char == ":":
         raise_err(
             text=context.text,
             pos=pos,
-            condition="after }",
-            expected=("/",),
+            condition="after ${'int'",
+            expected=(":",),
             actual=char,
         )
+
+    else:
+        for pos, char in context:
+            if char == "\\":
+                pushback_chars(context, (pos, char))
+                _ = _parse_escape(context, escapable_chars=_REGEX_ESC_CHARS)
+            elif char == "}":
+                break
+
+        pos, char = next_char(context)
+        if char == "/":
+            pushback_chars(context, (pos, char))
+            return None
+        else:
+            raise_err(
+                text=context.text,
+                pos=pos,
+                condition="after }",
+                expected=("/",),
+                actual=char,
+            )
 
 
 # format      ::= '$' int | '${' int '}'
