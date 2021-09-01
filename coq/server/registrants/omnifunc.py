@@ -171,6 +171,53 @@ async def _resolve(nvim: Nvim, stack: Stack, user_data: UserData) -> UserData:
                     )
 
 
+accumulating = False
+accumulated_keys = ""
+last_key = ""
+
+
+def _accumulate_keystoke(nvim: Nvim, key: str) -> None:
+    global accumulated_keys
+    if not accumulated_keys and last_key not in {
+        "\n",
+        "\r",
+        nvim.api.replace_termcodes("<c-e>", True, False, True),
+        nvim.api.replace_termcodes("<c-y>", True, False, True),
+        nvim.api.replace_termcodes("<c-z>", True, False, True),
+    }:
+        # The key that finished completion
+        accumulated_keys = last_key
+    accumulated_keys += key
+
+
+@rpc(blocking=True)
+def _keystroke_callback(nvim: Nvim, stack: Stack, key: str) -> None:
+    if accumulating:
+        _accumulate_keystoke(nvim, key)
+    global last_key
+    last_key = key
+
+
+atomic.exec_lua(f"vim.register_keystroke_callback({_keystroke_callback.name})", ())
+
+
+def _stop_accumulating(nvim: Nvim) -> None:
+    global accumulating, accumulated_keys
+    if accumulating:
+        accumulating = False
+        # Needed if the user only pressed the key that finished completion
+        _accumulate_keystoke(nvim, "")
+        if not nvim.api.get_mode()["mode"].startswith("i"):
+            # Needed if the user pressed Ctrl-O or a mapping that leaves Insert mode
+            nvim.api.feedkeys(
+                nvim.api.replace_termcodes(r"<c-\><c-n>i", True, False, True),
+                "n",
+                False,
+            )
+        nvim.api.feedkeys(accumulated_keys, "n", False)
+        accumulated_keys = ""
+
+
 @rpc(blocking=True)
 def _comp_done(nvim: Nvim, stack: Stack, event: Mapping[str, Any]) -> None:
     data = event.get("user_data")
@@ -180,6 +227,8 @@ def _comp_done(nvim: Nvim, stack: Stack, event: Mapping[str, Any]) -> None:
         except DecodeError as e:
             log.warn("%s", e)
         else:
+            global accumulating
+            accumulating = True
             before = nvim.api.get_current_line()
 
             async def cont() -> None:
@@ -195,6 +244,7 @@ def _comp_done(nvim: Nvim, stack: Stack, event: Mapping[str, Any]) -> None:
                     state(inserted=inserted, commit_id=uuid4())
                 else:
                     log.warn("%s", "delayed completion")
+                await async_call(nvim, lambda: _stop_accumulating(nvim))
 
             go(nvim, aw=cont())
 
