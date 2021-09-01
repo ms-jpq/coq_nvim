@@ -146,7 +146,7 @@ apt install universal-ctags    # good
 
 - **Preview contents**
 
-- `$VARIABLE` expansion, (`%EVEN_UNDER_WINDOWS%`)
+- `$VARIABLE` expansion, `%EVEN_UNDER_WINDOWS%`
 
 - Relative to both `cwd` and file path
 
