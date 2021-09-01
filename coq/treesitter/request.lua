@@ -36,7 +36,7 @@
   local iter_nodes = function(ctx)
     return coroutine.wrap(
       function()
-        local lines = vim.api.nvim_buf_line_count()
+        local lines = vim.api.nvim_buf_line_count(0)
         local row, col = unpack(vim.api.nvim_win_get_cursor(0))
         row = row - 1
         local lo, hi = math.max(0, row - ctx), math.min(lines, row + ctx + 1)
