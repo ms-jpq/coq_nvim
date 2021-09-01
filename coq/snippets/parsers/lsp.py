@@ -211,6 +211,7 @@ def _parse_regex(context: ParserCtx) -> Iterator[EChar]:
             pushback_chars(context, (pos, char))
             char = _parse_escape(context, escapable_chars=_REGEX_ESC_CHARS)
             yield pos, char
+
         elif char == "/":
             pushback_chars(context, (pos, char))
             break
@@ -225,8 +226,10 @@ def _parse_options(context: ParserCtx) -> RegexFlag:
     for pos, char in context:
         if char in _REGEX_FLAG_CHARS:
             flag = flag | _RE_FLAGS.get(char, 0)
+
         elif char == "/":
             break
+
         else:
             raise_err(
                 text=context.text,
@@ -238,6 +241,28 @@ def _parse_options(context: ParserCtx) -> RegexFlag:
 
     pushback_chars(context, (pos, char))
     return cast(RegexFlag, flag)
+
+
+def _parse_fmt_back(context: ParserCtx) -> None:
+    pos, char = next_char(context)
+    assert char == ":"
+
+    for pos, char in context:
+        if char == "\\":
+            pushback_chars(context, (pos, char))
+            _ = _parse_escape(context, escapable_chars=_REGEX_ESC_CHARS)
+        elif char == "}":
+            break
+
+    pos, char = next_char(context)
+    if char != "/":
+        raise_err(
+            text=context.text,
+            pos=pos,
+            condition="after }",
+            expected=("/",),
+            actual=char,
+        )
 
 
 # format      ::= '$' int | '${' int '}'
@@ -261,7 +286,6 @@ def _parse_fmt(context: ParserCtx) -> Tuple[int, None]:
 
     else:
         pos, char = next_char(context)
-
         if char in _INT_CHARS:
             idx_acc = [char]
             for pos, char in context:
@@ -286,18 +310,22 @@ def _parse_fmt(context: ParserCtx) -> Tuple[int, None]:
             for pos, char in context:
                 if char in _INT_CHARS:
                     idx_acc.append(char)
+
                 elif char == ":":
+                    pushback_chars(context, (pos, char))
                     break
+
                 else:
                     raise_err(
                         text=context.text,
                         pos=pos,
                         condition="while parsing format",
-                        expected=("[0-9]",),
+                        expected=("[0-9]", ":"),
                         actual=char,
                     )
+
             group = int("".join(idx_acc))
-            return group, None
+            return group, _parse_fmt_back(context)
 
         else:
             raise_err(
