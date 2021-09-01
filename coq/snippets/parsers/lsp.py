@@ -239,7 +239,6 @@ def _parse_options(context: ParserCtx) -> RegexFlag:
                 actual=char,
             )
 
-    pushback_chars(context, (pos, char))
     return cast(RegexFlag, flag)
 
 
