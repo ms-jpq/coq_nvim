@@ -244,27 +244,35 @@ def _parse_options(context: ParserCtx) -> RegexFlag:
 
 def _parse_fmt_back(context: ParserCtx) -> None:
     pos, char = next_char(context)
-    assert char == ":"
-
-    for pos, char in context:
-        if char == "\\":
-            pushback_chars(context, (pos, char))
-            _ = _parse_escape(context, escapable_chars=_REGEX_ESC_CHARS)
-        elif char == "}":
-            break
-
-    pos, char = next_char(context)
-    if char == "/":
-        pushback_chars(context, (pos, char))
-        return None
-    else:
+    if char == ":":
         raise_err(
             text=context.text,
             pos=pos,
-            condition="after }",
-            expected=("/",),
+            condition="after ${'int'",
+            expected=(":",),
             actual=char,
         )
+
+    else:
+        for pos, char in context:
+            if char == "\\":
+                pushback_chars(context, (pos, char))
+                _ = _parse_escape(context, escapable_chars=_REGEX_ESC_CHARS)
+            elif char == "}":
+                break
+
+        pos, char = next_char(context)
+        if char == "/":
+            pushback_chars(context, (pos, char))
+            return None
+        else:
+            raise_err(
+                text=context.text,
+                pos=pos,
+                condition="after }",
+                expected=("/",),
+                actual=char,
+            )
 
 
 # format      ::= '$' int | '${' int '}'
@@ -326,7 +334,7 @@ def _parse_fmt(context: ParserCtx) -> Tuple[int, None]:
                         actual=char,
                     )
 
-            group = int("".join(idx_acc))
+            group = int("".join(idx_acc)) if idx_acc else 0
             _parse_fmt_back(context)
             return group, None
 
@@ -400,12 +408,14 @@ def _parse_variable_nested(context: ParserCtx) -> TokenStream:
     for pos, char in context:
         if char in _VAR_CHARS:
             name_acc.append(char)
+
         elif char == "}":
             # '${' var }'
             name = "".join(name_acc)
             var = _variable_substitution(context, var_name=name)
             yield var if var is not None else name
             break
+
         elif char == ":":
             # '${' var ':' any '}'
             name = "".join(name_acc)
@@ -418,12 +428,14 @@ def _parse_variable_nested(context: ParserCtx) -> TokenStream:
                 yield DummyBegin()
                 context.state.depth += 1
             break
+
         elif char == "/":
             # '${' var '/' regex '/' (format | text)+ '/' options '}'
             name = "".join(name_acc)
             pushback_chars(context, (pos, char))
             yield from _parse_variable_decorated(context, var_name=name)
             break
+
         else:
             raise_err(
                 text=context.text,
