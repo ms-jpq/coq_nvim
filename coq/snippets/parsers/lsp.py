@@ -2,7 +2,17 @@ from pathlib import PurePath
 from re import RegexFlag, compile
 from re import error as RegexError
 from string import ascii_letters, digits
-from typing import AbstractSet, Match, MutableSequence, Optional, Pattern, Sequence
+from typing import (
+    AbstractSet,
+    Iterator,
+    Match,
+    MutableSequence,
+    Optional,
+    Pattern,
+    Sequence,
+    Tuple,
+    cast,
+)
 
 from ...shared.types import Context
 from .parser import context_from, next_char, pushback_chars, raise_err, token_parser
@@ -191,32 +201,49 @@ def _parse_variable_naked(context: ParserCtx) -> TokenStream:
             break
 
 
-def _regex(
-    context: ParserCtx, *, origin: Index, regex: Sequence[EChar], flags: Sequence[EChar]
-) -> Pattern[str]:
+# regex
+def _parse_regex(context: ParserCtx) -> Iterator[EChar]:
+    _, char = next_char(context)
+    assert char == "/"
+
+    for pos, char in context:
+        if char == "\\":
+            pushback_chars(context, (pos, char))
+            char = _parse_escape(context, escapable_chars=_REGEX_ESC_CHARS)
+            yield pos, char
+        elif char == "/":
+            pushback_chars(context, (pos, char))
+            break
+
+
+# options
+def _parse_options(context: ParserCtx) -> RegexFlag:
+    pos, char = next_char(context)
+    assert char == "/"
+
     flag = 0
-    for _, char in flags:
-        assert char in _REGEX_FLAG_CHARS
-        if char in _RE_FLAGS:
-            flag = flag | _RE_FLAGS[char]
-    else:
-        re = "".join(c for _, c in regex)
-        try:
-            return compile(re, flags=flag)
-        except RegexError as e:
-            if regex:
-                (head_idx, _), *_ = regex
-            else:
-                head_idx = origin
-            positions = {i: pos for i, (pos, _) in enumerate(regex)}
-            pos = positions.get(e.pos, head_idx) if e.pos is not None else head_idx
+    for pos, char in context:
+        if char in _REGEX_FLAG_CHARS:
+            flag = flag | _RE_FLAGS.get(char, 0)
+        elif char == "/":
+            pushback_chars(context, (pos, char))
+            return cast(RegexFlag, flag)
+        else:
             raise_err(
                 text=context.text,
                 pos=pos,
-                condition="while compiling regex",
-                expected=(),
-                actual=e.msg,
+                condition="while parsing regex flags",
+                expected=_REGEX_FLAG_CHARS,
+                actual=char,
             )
+    else:
+        raise_err(
+            text=context.text,
+            pos=pos,
+            condition="while parsing regex flags",
+            expected=_REGEX_FLAG_CHARS,
+            actual="",
+        )
 
 
 # format      ::= '$' int | '${' int '}'
@@ -224,9 +251,11 @@ def _regex(
 #                 | '${' int ':+' if '}'
 #                 | '${' int ':?' if ':' else '}'
 #                 | '${' int ':-' else '}' | '${' int ':' else '}'
-def _fmt(context: ParserCtx, *, origin: Index, fmt: Sequence[EChar]) -> int:
-    stream = iter(fmt)
-    pos, char = next(stream, (origin, ""))
+def _parse_fmt(context: ParserCtx) -> Tuple[int, None]:
+    pos, char = next_char(context)
+    assert char == "/"
+
+    pos, char = next_char(context)
     if char != "$":
         raise_err(
             text=context.text,
@@ -237,10 +266,11 @@ def _fmt(context: ParserCtx, *, origin: Index, fmt: Sequence[EChar]) -> int:
         )
 
     else:
-        pos, char = next(stream, (pos, "/"))
+        pos, char = next_char(context)
+
         if char in _INT_CHARS:
             idx_acc = [char]
-            for pos, char in stream:
+            for pos, char in context:
                 if char in _INT_CHARS:
                     idx_acc.append(char)
                 else:
@@ -252,11 +282,12 @@ def _fmt(context: ParserCtx, *, origin: Index, fmt: Sequence[EChar]) -> int:
                         actual=char,
                     )
             else:
-                return int("".join(idx_acc))
+                group = int("".join(idx_acc))
+                return group, None
 
         elif char == "{":
             idx_acc = []
-            for pos, char in stream:
+            for pos, char in context:
                 if char in _INT_CHARS:
                     idx_acc.append(char)
                 elif char == ":":
@@ -269,7 +300,8 @@ def _fmt(context: ParserCtx, *, origin: Index, fmt: Sequence[EChar]) -> int:
                         expected=("[0-9]",),
                         actual=char,
                     )
-            return int("".join(idx_acc))
+            group = int("".join(idx_acc))
+            return group, None
 
         else:
             raise_err(
@@ -281,88 +313,59 @@ def _fmt(context: ParserCtx, *, origin: Index, fmt: Sequence[EChar]) -> int:
             )
 
 
-# /' regex '/' (format | text)+ '/'
-def _variable_decoration(
+def _compile(
     context: ParserCtx,
     *,
     origin: Index,
-    var_name: str,
     regex: Sequence[EChar],
-    fmt: Sequence[EChar],
-    flags: Sequence[EChar],
-) -> str:
-    subst = _variable_substitution(context, var_name=var_name) or ""
-    rexpr = _regex(context, origin=origin, regex=regex, flags=flags)
-    match = rexpr.match(subst)
-    if not match:
-        return subst
-    else:
-        group = _fmt(context, origin=origin, fmt=fmt)
-        try:
-            matched = match.group(group)
-        except IndexError:
-            return subst
+    flag: RegexFlag,
+) -> Pattern[str]:
+
+    re = "".join(c for _, c in regex)
+    try:
+        return compile(re, flags=flag)
+    except RegexError as e:
+        if regex:
+            (head_idx, _), *_ = regex
         else:
-            return matched
+            head_idx = origin
+        positions = {i: pos for i, (pos, _) in enumerate(regex)}
+        pos = positions.get(e.pos, head_idx) if e.pos is not None else head_idx
+        raise_err(
+            text=context.text,
+            pos=pos,
+            condition="while compiling regex",
+            expected=(),
+            actual=e.msg,
+        )
 
 
 # | '${' var '/' regex '/' (format | text)+ '/' options '}'
 def _parse_variable_decorated(context: ParserCtx, var_name: str) -> TokenStream:
-    origin, char = next_char(context)
+    pos, char = next_char(context)
     assert char == "/"
 
-    regex_acc: MutableSequence[EChar] = []
-    fmt_acc: MutableSequence[EChar] = []
-    flags_acc: MutableSequence[EChar] = []
+    pushback_chars(context, (pos, char))
+    regex = tuple(_parse_regex(context))
+    group, _ = _parse_fmt(context)
+    flag = _parse_options(context)
 
-    level, seen = 0, 1
+    _, char = next_char(context)
+    assert char == "/"
 
-    def push(pos: Index, char: str) -> None:
-        if seen <= 1:
-            regex_acc.append((pos, char))
-        elif seen == 2:
-            fmt_acc.append((pos, char))
-        elif seen >= 3:
-            flags_acc.append((pos, char))
+    subst = _variable_substitution(context, var_name=var_name) or ""
+    re = _compile(context, origin=pos, regex=regex, flag=flag)
+    match = re.match(subst)
 
-    for pos, char in context:
-        if char == "\\":
-            pushback_chars(context, (pos, char))
-            char = _parse_escape(context, escapable_chars=_REGEX_ESC_CHARS)
-            push(pos, char=char)
-        elif char == "/":
-            if not level:
-                seen += 1
-            else:
-                push(pos, char=char)
-
-            if seen >= 3:
-                for pos, char in context:
-                    if char in _REGEX_FLAG_CHARS:
-                        push(pos, char=char)
-
-                    elif char == "}":
-                        yield _variable_decoration(
-                            context,
-                            origin=origin,
-                            var_name=var_name,
-                            regex=regex_acc,
-                            fmt=fmt_acc,
-                            flags=flags_acc,
-                        )
-                        return
-
-                    else:
-                        raise_err(
-                            text=context.text,
-                            pos=pos,
-                            condition="after /../../",
-                            expected=("[a-z]"),
-                            actual=char,
-                        )
+    if match:
+        try:
+            matched = match.group(group)
+        except IndexError:
+            yield from subst
         else:
-            level += {"{": 1, "}": -1}.get(char, 0)
-            push(pos, char=char)
+            yield from matched
+    else:
+        yield from subst
 
 
 # variable    ::= '$' var | '${' var }'
