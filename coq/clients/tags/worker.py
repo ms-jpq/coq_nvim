@@ -1,6 +1,7 @@
 from asyncio import gather
 from contextlib import suppress
 from os import linesep
+from os.path import normcase
 from pathlib import Path, PurePath
 from string import capwords
 from typing import (
@@ -46,7 +47,7 @@ async def _mtimes(paths: AbstractSet[str]) -> Mapping[str, float]:
                 stat = path.stat()
                 yield path, stat.st_mtime
 
-    c2 = lambda: {str(key): val for key, val in c1()}
+    c2 = lambda: {normcase(key): val for key, val in c1()}
     return await run_in_executor(c2)
 
 
