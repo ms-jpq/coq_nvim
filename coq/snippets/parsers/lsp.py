@@ -1,8 +1,7 @@
 from pathlib import PurePath
 from string import ascii_letters, ascii_lowercase, digits
-from typing import AbstractSet, MutableSequence, Optional, Sequence
+from typing import AbstractSet, MutableSequence, Optional
 
-from ...shared.parse import lower
 from ...shared.types import Context
 from .parser import context_from, next_char, pushback_chars, raise_err, token_parser
 from .types import (
@@ -185,17 +184,9 @@ def _parse_variable_naked(context: ParserCtx) -> TokenStream:
 
 # /' regex '/' (format | text)+ '/'
 def _variable_decoration(
-    context: ParserCtx, *, var: str, capture: str, decor: str, flags: str
+    context: ParserCtx, *, var: str, regex: str, fmt: str, flags: str
 ) -> TokenStream:
-    lo = lower(var)
-    if decor == "/downcase":
-        yield lo
-    elif decor == "/capitalize":
-        yield lo.capitalize()
-    elif decor == "/upcase":
-        yield lo.upper()
-    else:
-        yield Unparsed(text=f"{var}/{capture}/{decor}/{flags}")
+    yield Unparsed(text=f"{var}/{regex}/{fmt}/{flags}")
 
 
 # | '${' var '/' regex '/' (format | text)+ '/' options '}'
@@ -203,17 +194,17 @@ def _parse_variable_decorated(context: ParserCtx, var: str) -> TokenStream:
     pos, char = next_char(context)
     assert char == "/"
 
-    capture_acc: MutableSequence[str] = []
-    decor_acc: MutableSequence[str] = []
+    regex_acc: MutableSequence[str] = []
+    fmt_acc: MutableSequence[str] = []
     flags_acc: MutableSequence[str] = []
 
     level, seen = 0, 1
 
     def push(char: str) -> None:
         if seen <= 1:
-            capture_acc.append(char)
+            regex_acc.append(char)
         elif seen == 2:
-            decor_acc.append(char)
+            fmt_acc.append(char)
         elif seen >= 3:
             flags_acc.append(char)
 
@@ -236,8 +227,8 @@ def _parse_variable_decorated(context: ParserCtx, var: str) -> TokenStream:
                         yield from _variable_decoration(
                             context,
                             var=var,
-                            capture="".join(capture_acc),
-                            decor="".join(decor_acc),
+                            regex="".join(regex_acc),
+                            fmt="".join(fmt_acc),
                             flags="".join(flags_acc),
                         )
                         return
