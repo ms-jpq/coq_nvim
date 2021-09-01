@@ -10,7 +10,6 @@ from typing import (
     NoReturn,
     Sequence,
     Tuple,
-    TypeVar,
     Union,
 )
 
@@ -35,8 +34,6 @@ from .types import (
     TokenStream,
     Unparsed,
 )
-
-T = TypeVar("T")
 
 
 def raise_err(
