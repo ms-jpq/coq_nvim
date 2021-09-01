@@ -185,9 +185,8 @@ def _parse_variable_naked(context: ParserCtx) -> TokenStream:
 
 # /' regex '/' (format | text)+ '/'
 def _variable_decoration(
-    context: ParserCtx, *, var: str, decoration: Sequence[str]
+    context: ParserCtx, *, var: str, decor: str, flags: str
 ) -> TokenStream:
-    decor = "".join(decoration)
     lo = lower(var)
     if decor == "/downcase":
         yield lo
@@ -196,7 +195,7 @@ def _variable_decoration(
     elif decor == "/upcase":
         yield lo.upper()
     else:
-        yield Unparsed(text=var + decor)
+        yield Unparsed(text=f"{var}/{decor}/{flags}")
 
 
 # | '${' var '/' regex '/' (format | text)+ '/' options '}'
@@ -216,13 +215,16 @@ def _parse_variable_decorated(context: ParserCtx, var: str) -> TokenStream:
             if not level:
                 seen += 1
             if seen >= 3:
+                flags_acc: MutableSequence[str] = []
                 for pos, char in context:
                     if char in _REGEX_FLAG_CHARS:
-                        decoration_acc.append(char)
+                        flags_acc.append(char)
                     elif char == "}":
-                        decoration = "".join(decoration_acc)
                         yield from _variable_decoration(
-                            context, var=var, decoration=decoration
+                            context,
+                            var=var,
+                            decor="".join(decoration_acc),
+                            flags="".join(flags_acc),
                         )
                         return
                     else:
