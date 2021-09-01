@@ -1,5 +1,4 @@
 from itertools import chain
-from os import linesep
 from string import Template
 from textwrap import dedent
 from typing import (
@@ -78,6 +77,7 @@ def pushback_chars(context: ParserCtx, *vals: EChar) -> None:
 
 
 def _gen_iter(src: str) -> Iterator[EChar]:
+    linesep = "\n"
     row, col = 1, 1
     for i, c in enumerate(
         chain.from_iterable(interleave(src.splitlines(), val=(linesep,)))
