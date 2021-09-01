@@ -1,6 +1,7 @@
 from asyncio import as_completed
+from contextlib import suppress
 from itertools import chain, islice
-from os import X_OK, access
+from os import scandir
 from os.path import (
     altsep,
     curdir,
@@ -92,6 +93,9 @@ def _join(lhs: str, rhs: str) -> str:
     return join(l, normpath(join(r, rhs)))
 
 
+_cman = suppress(FileNotFoundError, NotADirectoryError, PermissionError)
+
+
 def parse(
     seps: AbstractSet[str],
     look_ahead: int,
@@ -110,12 +114,13 @@ def parse(
             else:
                 p = Path(s0)
                 entire = p if p.is_absolute() else base / p
-                if entire.is_dir() and access(entire, mode=X_OK):
-                    for path in entire.iterdir():
-                        term = sep if path.is_dir() else ""
-                        line = _join(segment, path.name) + term
-                        yield path, line
-                    return
+                if entire.is_dir():
+                    with _cman:
+                        for path in scandir(entire):
+                            term = sep if path.is_dir() else ""
+                            line = _join(segment, path.name) + term
+                            yield PurePath(path.name), line
+                        return
 
                 else:
                     lft, go, rhs = s0.rpartition(sep)
@@ -126,18 +131,21 @@ def parse(
                         lhs = lft + go
                         p = Path(lhs)
                         left = p if p.is_absolute() else base / p
-                        if left.is_dir() and access(left, mode=X_OK):
-                            for path in left.iterdir():
-                                ratio = quick_ratio(
-                                    lower(rhs), lower(path.name), look_ahead=look_ahead
-                                )
-                                if ratio >= fuzzy_cutoff and len(
-                                    path.name
-                                ) + look_ahead >= len(rhs):
-                                    term = sep if path.is_dir() else ""
-                                    line = _join(lseg, path.name) + term
-                                    yield path, line
-                            return
+                        if left.is_dir():
+                            with _cman:
+                                for path in scandir(left):
+                                    ratio = quick_ratio(
+                                        lower(rhs),
+                                        lower(path.name),
+                                        look_ahead=look_ahead,
+                                    )
+                                    if ratio >= fuzzy_cutoff and len(
+                                        path.name
+                                    ) + look_ahead >= len(rhs):
+                                        term = sep if path.is_dir() else ""
+                                        line = _join(lseg, path.name) + term
+                                        yield PurePath(path.name), line
+                                return
 
 
 async def _parse(
