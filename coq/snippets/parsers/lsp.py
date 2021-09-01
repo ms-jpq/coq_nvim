@@ -226,8 +226,7 @@ def _parse_options(context: ParserCtx) -> RegexFlag:
         if char in _REGEX_FLAG_CHARS:
             flag = flag | _RE_FLAGS.get(char, 0)
         elif char == "/":
-            pushback_chars(context, (pos, char))
-            return cast(RegexFlag, flag)
+            break
         else:
             raise_err(
                 text=context.text,
@@ -236,14 +235,9 @@ def _parse_options(context: ParserCtx) -> RegexFlag:
                 expected=_REGEX_FLAG_CHARS,
                 actual=char,
             )
-    else:
-        raise_err(
-            text=context.text,
-            pos=pos,
-            condition="while parsing regex flags",
-            expected=_REGEX_FLAG_CHARS,
-            actual="",
-        )
+
+    pushback_chars(context, (pos, char))
+    return cast(RegexFlag, flag)
 
 
 # format      ::= '$' int | '${' int '}'
@@ -273,6 +267,9 @@ def _parse_fmt(context: ParserCtx) -> Tuple[int, None]:
             for pos, char in context:
                 if char in _INT_CHARS:
                     idx_acc.append(char)
+                elif char == "/":
+                    pushback_chars(context, (pos, char))
+                    break
                 else:
                     raise_err(
                         text=context.text,
@@ -281,9 +278,8 @@ def _parse_fmt(context: ParserCtx) -> Tuple[int, None]:
                         expected=("[0-9]",),
                         actual=char,
                     )
-            else:
-                group = int("".join(idx_acc))
-                return group, None
+            group = int("".join(idx_acc))
+            return group, None
 
         elif char == "{":
             idx_acc = []
@@ -320,7 +316,6 @@ def _compile(
     regex: Sequence[EChar],
     flag: RegexFlag,
 ) -> Pattern[str]:
-
     re = "".join(c for _, c in regex)
     try:
         return compile(re, flags=flag)
