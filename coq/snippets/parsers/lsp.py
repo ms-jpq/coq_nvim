@@ -131,36 +131,36 @@ def _parse_tcp(context: ParserCtx) -> TokenStream:
                 )
 
 
-def _variable_substitution(context: ParserCtx, *, name: str) -> Optional[str]:
+def _variable_substitution(context: ParserCtx, *, var_name: str) -> Optional[str]:
     ctx = context.ctx
     row, _ = ctx.position
     path = PurePath(ctx.filename)
 
-    if name == "TM_SELECTED_TEXT":
+    if var_name == "TM_SELECTED_TEXT":
         return context.info.visual
 
-    elif name == "TM_CURRENT_LINE":
+    elif var_name == "TM_CURRENT_LINE":
         return ctx.line
 
-    elif name == "TM_CURRENT_WORD":
+    elif var_name == "TM_CURRENT_WORD":
         return ctx.words
 
-    elif name == "TM_LINE_INDEX":
+    elif var_name == "TM_LINE_INDEX":
         return str(row)
 
-    elif name == "TM_LINE_NUMBER":
+    elif var_name == "TM_LINE_NUMBER":
         return str(row + 1)
 
-    elif name == "TM_FILENAME":
+    elif var_name == "TM_FILENAME":
         return path.name
 
-    elif name == "TM_FILENAME_BASE":
+    elif var_name == "TM_FILENAME_BASE":
         return path.stem
 
-    elif name == "TM_DIRECTORY":
+    elif var_name == "TM_DIRECTORY":
         return str(path.parent)
 
-    elif name == "TM_FILEPATH":
+    elif var_name == "TM_FILEPATH":
         return str(path)
 
     else:
@@ -176,7 +176,7 @@ def _parse_variable_naked(context: ParserCtx) -> TokenStream:
             name_acc.append(char)
         else:
             name = "".join(name_acc)
-            var = _variable_substitution(context, name=name)
+            var = _variable_substitution(context, var_name=name)
             yield var if var is not None else name
             pushback_chars(context, (pos, char))
             break
@@ -184,13 +184,14 @@ def _parse_variable_naked(context: ParserCtx) -> TokenStream:
 
 # /' regex '/' (format | text)+ '/'
 def _variable_decoration(
-    context: ParserCtx, *, var: str, regex: str, fmt: str, flags: str
+    context: ParserCtx, *, var_name: str, regex: str, fmt: str, flags: str
 ) -> TokenStream:
-    yield Unparsed(text=f"{var}/{regex}/{fmt}/{flags}")
+    subst = _variable_substitution(context, var_name=var_name) or var_name
+    yield Unparsed(text=f"{subst}/{regex}/{fmt}/{flags}")
 
 
 # | '${' var '/' regex '/' (format | text)+ '/' options '}'
-def _parse_variable_decorated(context: ParserCtx, var: str) -> TokenStream:
+def _parse_variable_decorated(context: ParserCtx, var_name: str) -> TokenStream:
     pos, char = next_char(context)
     assert char == "/"
 
@@ -226,7 +227,7 @@ def _parse_variable_decorated(context: ParserCtx, var: str) -> TokenStream:
                     elif char == "}":
                         yield from _variable_decoration(
                             context,
-                            var=var,
+                            var_name=var_name,
                             regex="".join(regex_acc),
                             fmt="".join(fmt_acc),
                             flags="".join(flags_acc),
@@ -257,13 +258,13 @@ def _parse_variable_nested(context: ParserCtx) -> TokenStream:
         elif char == "}":
             # '${' var }'
             name = "".join(name_acc)
-            var = _variable_substitution(context, name=name)
+            var = _variable_substitution(context, var_name=name)
             yield var if var is not None else name
             break
         elif char == ":":
             # '${' var ':' any '}'
             name = "".join(name_acc)
-            var = _variable_substitution(context, name=name)
+            var = _variable_substitution(context, var_name=name)
             if var is not None:
                 yield var
                 context.state.depth += 1
@@ -276,7 +277,7 @@ def _parse_variable_nested(context: ParserCtx) -> TokenStream:
             # '${' var '/' regex '/' (format | text)+ '/' options '}'
             name = "".join(name_acc)
             pushback_chars(context, (pos, char))
-            yield from _parse_variable_decorated(context, var=name)
+            yield from _parse_variable_decorated(context, var_name=name)
             break
         else:
             raise_err(
