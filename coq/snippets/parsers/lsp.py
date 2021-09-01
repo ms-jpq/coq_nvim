@@ -192,7 +192,7 @@ def _parse_variable_naked(context: ParserCtx) -> TokenStream:
 
 
 def _regex(
-    context: ParserCtx, origin: Index, regex: Sequence[EChar], flags: Sequence[EChar]
+    context: ParserCtx, *, origin: Index, regex: Sequence[EChar], flags: Sequence[EChar]
 ) -> Pattern[str]:
     flag = 0
     for _, char in flags:
@@ -224,7 +224,14 @@ def _regex(
 #                 | '${' int ':+' if '}'
 #                 | '${' int ':?' if ':' else '}'
 #                 | '${' int ':-' else '}' | '${' int ':' else '}'
-def _fmt(fmt: Sequence[EChar], match: Match[str]) -> str:
+def _fmt(
+    context: ParserCtx, *, origin: Index, fmt: Sequence[EChar], match: Match[str]
+) -> str:
+    if fmt:
+        (head_idx, _), *_ = fmt
+    else:
+        head_idx = origin
+
     return ""
 
 
@@ -244,7 +251,7 @@ def _variable_decoration(
     if not match:
         return subst
     else:
-        return _fmt(fmt, match=match)
+        return _fmt(context, origin=origin, fmt=fmt, match=match)
 
 
 # | '${' var '/' regex '/' (format | text)+ '/' options '}'
