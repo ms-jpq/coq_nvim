@@ -146,6 +146,8 @@ apt install universal-ctags    # good
 
 - **Preview contents**
 
+- `$VARIABLE` expansion, (`%EVEN_UNDER_WINDOWS%`)
+
 - Relative to both `cwd` and file path
 
 ![paths.img](https://raw.githubusercontent.com/ms-jpq/coq.artifacts/artifacts/preview/paths.gif)
