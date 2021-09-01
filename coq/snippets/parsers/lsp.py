@@ -400,11 +400,13 @@ def _parse_variable_nested(context: ParserCtx) -> TokenStream:
     for pos, char in context:
         if char in _VAR_CHARS:
             name_acc.append(char)
+
         elif char == "}":
             # '${' var }'
             name = "".join(name_acc)
             var = _variable_substitution(context, var_name=name)
             yield var if var is not None else name
+
             break
         elif char == ":":
             # '${' var ':' any '}'
@@ -418,12 +420,14 @@ def _parse_variable_nested(context: ParserCtx) -> TokenStream:
                 yield DummyBegin()
                 context.state.depth += 1
             break
+
         elif char == "/":
             # '${' var '/' regex '/' (format | text)+ '/' options '}'
             name = "".join(name_acc)
             pushback_chars(context, (pos, char))
             yield from _parse_variable_decorated(context, var_name=name)
             break
+
         else:
             raise_err(
                 text=context.text,
