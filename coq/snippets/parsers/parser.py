@@ -47,7 +47,7 @@ def raise_err(
     expected_chars = ", ".join(map(lambda c: f"'{c}'", expected))
     ctx = "" if pos.i == -1 else text[pos.i - band : pos.i + band + 1]
     tpl = """
-    Unexpected char found at `${condition}`:
+    Unexpected char found :: `${condition}`:
     row:  ${row}
     col:  ${col}
     Expected one of: {${expected_chars}}
