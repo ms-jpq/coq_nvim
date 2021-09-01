@@ -189,7 +189,9 @@ def _insert_enter(nvim: Nvim, stack: Stack) -> None:
     async def c2() -> None:
         if ts.enabled:
             payloads, elapsed = (
-                ((), 0) if buf.number in nono_bufs else await async_request(nvim)
+                ((), 0)
+                if buf.number in nono_bufs
+                else await async_request(nvim, lines_around=ts.search_context)
             )
             await stack.tdb.new_nodes(payloads)
             if elapsed > ts.slow_threshold:

@@ -65,7 +65,9 @@ def _vaildate(resp: Sequence[RawPayload]) -> Iterator[Payload]:
             )
 
 
-async def async_request(nvim: Nvim) -> Tuple[Iterator[Payload], float]:
+async def async_request(
+    nvim: Nvim, lines_around: int
+) -> Tuple[Iterator[Payload], float]:
     global _COND, _SESSION
     _COND = _COND or Condition()
 
@@ -76,7 +78,7 @@ async def async_request(nvim: Nvim) -> Tuple[Iterator[Payload], float]:
             _COND.notify_all()
 
         def cont() -> None:
-            nvim.api.exec_lua("COQts_req(...)", (session,))
+            nvim.api.exec_lua("COQts_req(...)", (session, lines_around))
 
         await async_call(nvim, cont)
 
