@@ -57,11 +57,13 @@
   COQts_req = function(session, pos)
     vim.schedule(
       function()
+        local t1 = vim.loop.now()
         local acc = {}
         for payload in iter_nodes() do
           table.insert(acc, payload)
         end
-        COQts_notify(session, acc)
+        local t2 = vim.loop.now()
+        COQts_notify(session, acc, (t2 - t1) / 1000)
       end
     )
   end

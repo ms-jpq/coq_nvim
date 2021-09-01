@@ -134,6 +134,7 @@ class TagsClient(WordbankClient):
 @dataclass(frozen=True)
 class TSClient(BaseClient):
     path_sep: str
+    slow_threshold: float
 
 
 @dataclass(frozen=True)

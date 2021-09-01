@@ -24,6 +24,7 @@ from pynvim_pp.float_win import list_floatwins
 from pynvim_pp.lib import async_call, awrite, go
 from pynvim_pp.logging import log
 from std2.asyncio import run_in_executor
+from std2.locale import si_prefixed_smol
 from std2.pickle import new_decoder
 
 from ...databases.snippets.database import SDB
@@ -186,12 +187,13 @@ def _insert_enter(nvim: Nvim, stack: Stack) -> None:
 
     async def c2() -> None:
         if stack.settings.clients.tree_sitter.enabled:
-            payloads = (
-                ()
-                if buf.number in nono_bufs
-                else [p async for p in async_request(nvim)]
+            payloads, elapsed = (
+                ((), 0) if buf.number in nono_bufs else await async_request(nvim)
             )
             await stack.tdb.new_nodes(payloads)
+            if elapsed > stack.settings.clients.tree_sitter.slow_threshold:
+                t = si_prefixed_smol(elapsed, precision=0)
+                await awrite(nvim, LANG("treesitter slow", elapsed=t), error=True)
 
     go(nvim, aw=gather(c1(), c2()))
 
