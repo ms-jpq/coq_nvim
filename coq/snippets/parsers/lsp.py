@@ -254,33 +254,22 @@ def _fmt(context: ParserCtx, *, origin: Index, fmt: Sequence[EChar]) -> int:
             else:
                 return int("".join(idx_acc))
 
-        elif char == "$":
-            pos, char = next(stream, (pos, "/"))
-            if char != "{":
-                raise_err(
-                    text=context.text,
-                    pos=pos,
-                    condition="after $",
-                    expected=("{",),
-                    actual=char,
-                )
-            else:
-                idx_acc = []
-                for pos, char in stream:
-                    if char in _INT_CHARS:
-                        idx_acc.append(char)
-                    elif char == ":":
-                        pass
-                    else:
-                        raise_err(
-                            text=context.text,
-                            pos=pos,
-                            condition="while parsing format",
-                            expected=("[0-9]",),
-                            actual=char,
-                        )
+        elif char == "{":
+            idx_acc = []
+            for pos, char in stream:
+                if char in _INT_CHARS:
+                    idx_acc.append(char)
+                elif char == ":":
+                    break
                 else:
-                    return int("".join(idx_acc))
+                    raise_err(
+                        text=context.text,
+                        pos=pos,
+                        condition="while parsing format",
+                        expected=("[0-9]",),
+                        actual=char,
+                    )
+            return int("".join(idx_acc))
 
         else:
             raise_err(
@@ -309,8 +298,10 @@ def _variable_decoration(
         return subst
     else:
         group = _fmt(context, origin=origin, fmt=fmt)
-        matched = match[group]
-        return matched
+        try:
+            return match.group(group)
+        except IndexError:
+            return subst
 
 
 # | '${' var '/' regex '/' (format | text)+ '/' options '}'
