@@ -205,14 +205,16 @@ def _parse_variable_decorated(context: ParserCtx, var: str) -> TokenStream:
     assert char == "/"
 
     decoration_acc = [char]
-    seen = 1
+    level, seen = 0, 1
+
     for pos, char in context:
         if char == "\\":
             pushback_chars(context, (pos, char))
             char = _parse_escape(context, escapable_chars=_REGEX_ESC_CHARS)
             decoration_acc.append(char)
         elif char == "/":
-            seen += 1
+            if not level:
+                seen += 1
             if seen >= 3:
                 for pos, char in context:
                     if char in _REGEX_FLAG_CHARS:
@@ -232,7 +234,8 @@ def _parse_variable_decorated(context: ParserCtx, var: str) -> TokenStream:
                             actual=char,
                         )
         else:
-            pass
+            level += {"{": 1, "}": -1}.get(char, 0)
+            decoration_acc.append(char)
 
 
 # variable    ::= '$' var | '${' var }'
