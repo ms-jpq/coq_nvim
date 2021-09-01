@@ -186,7 +186,8 @@ def _parse_variable_naked(context: ParserCtx) -> TokenStream:
 def _variable_decoration(
     context: ParserCtx, *, var_name: str, regex: str, fmt: str, flags: str
 ) -> TokenStream:
-    subst = _variable_substitution(context, var_name=var_name) or var_name
+    subst = _variable_substitution(context, var_name=var_name)
+    subst = var_name if subst is None else subst
     yield Unparsed(text=f"{subst}/{regex}/{fmt}/{flags}")
 
 
