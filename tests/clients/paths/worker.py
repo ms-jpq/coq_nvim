@@ -2,11 +2,35 @@ from os import sep
 from pathlib import Path
 from unittest import TestCase
 
-from ....coq.clients.paths.worker import parse, segs, separate
+from std2.platform import OS
+
+from ....coq.clients.paths.worker import p_lhs, parse, segs, separate
 
 _SEP = {sep}
 _FUZZY = 0.6
 _LOOK_AHEAD = 3
+
+
+class Plhs(TestCase):
+    def test_1(self) -> None:
+        lhs = "${PWD}"
+        l = p_lhs(OS.windows, lhs=lhs)
+        self.assertEqual(l, "${PWD}")
+
+    def test_2(self) -> None:
+        lhs = "%PWD%"
+        l = p_lhs(OS.windows, lhs=lhs)
+        self.assertEqual(l, "%PWD%")
+
+    def test_3(self) -> None:
+        lhs = "%P WD%"
+        l = p_lhs(OS.windows, lhs=lhs)
+        self.assertEqual(l, "")
+
+    def test_4(self) -> None:
+        lhs = "D:"
+        l = p_lhs(OS.windows, lhs=lhs)
+        self.assertEqual(l, "D:")
 
 
 class Separate(TestCase):

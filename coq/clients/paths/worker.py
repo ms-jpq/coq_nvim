@@ -41,7 +41,7 @@ _DRIVE_LETTERS = {*ascii_letters}
 _SH_VAR_CHARS = {*ascii_letters, *digits, "_"}
 
 
-def _p_lhs(lhs: str) -> str:
+def p_lhs(os: OS, lhs: str) -> str:
     for sym in (pardir, curdir, "~"):
         if lhs.endswith(sym):
             return sym
@@ -88,7 +88,7 @@ def segs(seps: AbstractSet[str], line: str) -> Iterator[str]:
     segments = tuple(separate(seps, line=line))
     for idx in range(1, len(segments)):
         lhs, rhs = segments[idx - 1 : idx], segments[idx:]
-        l = _p_lhs("".join(lhs))
+        l = p_lhs(os, lhs="".join(lhs))
         yield "".join(chain((l,), rhs))
 
 
