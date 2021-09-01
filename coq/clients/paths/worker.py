@@ -123,7 +123,7 @@ def parse(
                         for path in scandir(entire):
                             term = sep if path.is_dir() else ""
                             line = _join(segment, path.name) + term
-                            yield PurePath(path.name), line
+                            yield PurePath(path.path), line
                         return
 
                 else:
@@ -148,7 +148,7 @@ def parse(
                                     ) + look_ahead >= len(rhs):
                                         term = sep if path.is_dir() else ""
                                         line = _join(lseg, path.name) + term
-                                        yield PurePath(path.name), line
+                                        yield PurePath(path.path), line
                                 return
 
 
