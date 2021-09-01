@@ -1,4 +1,4 @@
-from os.path import basename, dirname, splitext
+from pathlib import PurePath
 from string import ascii_letters, ascii_lowercase, digits
 from typing import AbstractSet, MutableSequence, Optional, Sequence
 
@@ -134,6 +134,7 @@ def _parse_tcp(context: ParserCtx) -> TokenStream:
 def _variable_substitution(context: ParserCtx, *, name: str) -> Optional[str]:
     ctx = context.ctx
     row, _ = ctx.position
+    path = PurePath(ctx.filename)
 
     if name == "TM_SELECTED_TEXT":
         return context.info.visual
@@ -151,17 +152,16 @@ def _variable_substitution(context: ParserCtx, *, name: str) -> Optional[str]:
         return str(row + 1)
 
     elif name == "TM_FILENAME":
-        return basename(ctx.filename)
+        return path.name
 
     elif name == "TM_FILENAME_BASE":
-        fn, _ = splitext(basename(ctx.filename))
-        return fn
+        return path.stem
 
     elif name == "TM_DIRECTORY":
-        return dirname(ctx.filename)
+        return str(path.parent)
 
     elif name == "TM_FILEPATH":
-        return ctx.filename
+        return str(path)
 
     else:
         return None
