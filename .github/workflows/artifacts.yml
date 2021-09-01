@@ -3,8 +3,8 @@ name: Artifacts
 
 on:
   push:
-    branches:
-      - coq
+    # branches:
+    #   - coq
   schedule:
     - cron: "0 0 * * *" # daily
 
