@@ -139,9 +139,11 @@ def parse(
                                         lower(path.name),
                                         look_ahead=look_ahead,
                                     )
-                                    if ratio >= fuzzy_cutoff and len(
-                                        path.name
-                                    ) + look_ahead >= len(rhs):
+                                    if (
+                                        ratio >= fuzzy_cutoff
+                                        and len(path.name) + look_ahead >= len(rhs)
+                                        and not rhs.startswith(path.name)
+                                    ):
                                         term = sep if path.is_dir() else ""
                                         line = _join(lseg, path.name) + term
                                         yield PurePath(path.path), line
