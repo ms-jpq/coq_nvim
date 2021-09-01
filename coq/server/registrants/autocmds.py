@@ -179,6 +179,7 @@ atomic.exec_lua(f"{_ft_changed.name}()", ())
 
 @rpc(blocking=True)
 def _insert_enter(nvim: Nvim, stack: Stack) -> None:
+    ts = stack.settings.clients.tree_sitter
     nono_bufs = state().nono_bufs
     buf = cur_buf(nvim)
 
@@ -186,14 +187,19 @@ def _insert_enter(nvim: Nvim, stack: Stack) -> None:
         await stack.bdb.del_bufs(nono_bufs)
 
     async def c2() -> None:
-        if stack.settings.clients.tree_sitter.enabled:
+        if ts.enabled:
             payloads, elapsed = (
                 ((), 0) if buf.number in nono_bufs else await async_request(nvim)
             )
             await stack.tdb.new_nodes(payloads)
-            if elapsed > stack.settings.clients.tree_sitter.slow_threshold:
-                t = si_prefixed_smol(elapsed, precision=0)
-                await awrite(nvim, LANG("treesitter slow", elapsed=t), error=True)
+            if elapsed > ts.slow_threshold:
+                state(nono_bufs={buf.number})
+                msg = LANG(
+                    "source slow",
+                    source=ts.short_name,
+                    elapsed=si_prefixed_smol(elapsed, precision=0),
+                )
+                await awrite(nvim, msg, error=True)
 
     go(nvim, aw=gather(c1(), c2()))
 
