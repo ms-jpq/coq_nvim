@@ -1,5 +1,5 @@
 from concurrent.futures import Executor
-from pathlib import Path, PurePath
+from pathlib import Path
 from typing import Iterator
 
 from pynvim import Nvim
@@ -85,7 +85,7 @@ def _from_each_according_to_their_ability(
 def stack(pool: Executor, nvim: Nvim) -> Stack:
     settings = _settings(nvim)
     vars_dir = Path(nvim.funcs.stdpath("cache")) / "coq" if settings.xdg else VARS
-    s = state(cwd=PurePath(get_cwd(nvim)))
+    s = state(cwd=get_cwd(nvim))
     bdb, sdb, idb, tdb, ctdb, tmdb = (
         BDB(pool),
         SDB(pool),
