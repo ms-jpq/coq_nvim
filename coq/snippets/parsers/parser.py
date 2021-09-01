@@ -1,3 +1,4 @@
+from itertools import chain
 from os import linesep
 from string import Template
 from textwrap import dedent
@@ -13,7 +14,7 @@ from typing import (
     Union,
 )
 
-from std2.itertools import deiter
+from std2.itertools import deiter, interleave
 from std2.types import never
 
 from ...shared.types import UTF8, Context
@@ -78,7 +79,9 @@ def pushback_chars(context: ParserCtx, *vals: EChar) -> None:
 
 def _gen_iter(src: str) -> Iterator[EChar]:
     row, col = 1, 1
-    for i, c in enumerate(src):
+    for i, c in enumerate(
+        chain.from_iterable(interleave(src.splitlines(), val=(linesep,)))
+    ):
         yield Index(i=i, row=row, col=col), c
         col += 1
         if c == linesep:
