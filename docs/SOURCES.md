@@ -147,7 +147,7 @@ Only query this many lines about the cursor
 **default:**
 
 ```json
-666
+333
 ```
 
 ##### `coq_settings.clients.tree_sitter.slow_threshold`
