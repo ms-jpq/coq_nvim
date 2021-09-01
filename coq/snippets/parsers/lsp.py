@@ -1,19 +1,21 @@
-from locale import strxfrm
 from pathlib import PurePath
+from re import RegexFlag, compile
+from re import error as RegexError
 from string import ascii_letters, ascii_lowercase, digits
-from typing import AbstractSet, MutableSequence, MutableSet, Optional
+from typing import AbstractSet, MutableSequence, Optional, Pattern, Sequence
 
 from ...shared.types import Context
 from .parser import context_from, next_char, pushback_chars, raise_err, token_parser
 from .types import (
     Begin,
     DummyBegin,
+    EChar,
     End,
+    Index,
     Parsed,
     ParseInfo,
     ParserCtx,
     TokenStream,
-    Unparsed,
 )
 
 #
@@ -49,7 +51,13 @@ _CHOICE_ESC_CHARS = _ESC_CHARS | {",", "|"}
 _INT_CHARS = {*digits}
 _VAR_BEGIN_CHARS = {*ascii_letters}
 _VAR_CHARS = {*digits, *ascii_letters, "_"}
-_REGEX_FLAG_CHARS = {*ascii_lowercase}
+_RE_FLAGS = {
+    "i": RegexFlag.IGNORECASE,
+    "m": RegexFlag.MULTILINE,
+    "s": RegexFlag.DOTALL,
+    "u": RegexFlag.UNICODE,
+}
+_REGEX_FLAG_CHARS = {*_RE_FLAGS, "g"}
 
 
 def _parse_escape(context: ParserCtx, *, escapable_chars: AbstractSet[str]) -> str:
@@ -183,13 +191,32 @@ def _parse_variable_naked(context: ParserCtx) -> TokenStream:
             break
 
 
-# /' regex '/' (format | text)+ '/'
-def _variable_decoration(
-    context: ParserCtx, *, var_name: str, regex: str, fmt: str, flags: AbstractSet[str]
-) -> TokenStream:
-    subst = _variable_substitution(context, var_name=var_name) or ""
-    flgs = "".join(sorted(flags, key=strxfrm))
-    yield Unparsed(text=f"{subst}/{regex}/{fmt}/{flgs}")
+def _regex(
+    context: ParserCtx, origin: Index, regex: Sequence[EChar], flags: Sequence[EChar]
+) -> Pattern[str]:
+    flag = 0
+    for _, char in flags:
+        assert char in _REGEX_FLAG_CHARS
+        if char in _RE_FLAGS:
+            flag = flag | _RE_FLAGS[char]
+    else:
+        re = "".join(c for _, c in regex)
+        try:
+            return compile(re, flags=flag)
+        except RegexError as e:
+            if regex:
+                (head_idx, _), *_ = regex
+            else:
+                head_idx = origin
+            positions = {i: pos for i, (pos, _) in enumerate(regex)}
+            pos = positions.get(e.pos, head_idx) if e.pos is not None else head_idx
+            raise_err(
+                text=context.text,
+                pos=pos,
+                condition="while compiling regex",
+                expected=(),
+                actual="",
+            )
 
 
 # format      ::= '$' int | '${' int '}'
@@ -197,53 +224,71 @@ def _variable_decoration(
 #                 | '${' int ':+' if '}'
 #                 | '${' int ':?' if ':' else '}'
 #                 | '${' int ':-' else '}' | '${' int ':' else '}'
-def _fmt(fmt: str) -> None:
-    pass
+def _fmt(fmt: str, val: str) -> str:
+    return val
+
+
+# /' regex '/' (format | text)+ '/'
+def _variable_decoration(
+    context: ParserCtx,
+    *,
+    origin: Index,
+    var_name: str,
+    regex: Sequence[EChar],
+    fmt: Sequence[EChar],
+    flags: Sequence[EChar],
+) -> str:
+    subst = _variable_substitution(context, var_name=var_name) or ""
+    rexpr = _regex(context, origin=origin, regex=regex, flags=flags)
+    return subst
 
 
 # | '${' var '/' regex '/' (format | text)+ '/' options '}'
 def _parse_variable_decorated(context: ParserCtx, var_name: str) -> TokenStream:
-    pos, char = next_char(context)
+    origin, char = next_char(context)
     assert char == "/"
 
-    regex_acc: MutableSequence[str] = []
-    fmt_acc: MutableSequence[str] = []
-    flags: MutableSet[str] = set()
+    regex_acc: MutableSequence[EChar] = []
+    fmt_acc: MutableSequence[EChar] = []
+    flags_acc: MutableSequence[EChar] = []
 
     level, seen = 0, 1
 
-    def push(char: str) -> None:
+    def push(pos: Index, char: str) -> None:
         if seen <= 1:
-            regex_acc.append(char)
+            regex_acc.append((pos, char))
         elif seen == 2:
-            fmt_acc.append(char)
+            fmt_acc.append((pos, char))
         elif seen >= 3:
-            flags.add(char)
+            flags_acc.append((pos, char))
 
     for pos, char in context:
         if char == "\\":
             pushback_chars(context, (pos, char))
             char = _parse_escape(context, escapable_chars=_REGEX_ESC_CHARS)
-            push(char)
+            push(pos, char=char)
         elif char == "/":
             if not level:
                 seen += 1
             else:
-                push(char)
+                push(pos, char=char)
 
             if seen >= 3:
                 for pos, char in context:
                     if char in _REGEX_FLAG_CHARS:
-                        push(char)
+                        push(pos, char=char)
+
                     elif char == "}":
-                        yield from _variable_decoration(
+                        yield _variable_decoration(
                             context,
+                            origin=origin,
                             var_name=var_name,
-                            regex="".join(regex_acc),
-                            fmt="".join(fmt_acc),
-                            flags=flags,
+                            regex=regex_acc,
+                            fmt=fmt_acc,
+                            flags=flags_acc,
                         )
                         return
+
                     else:
                         raise_err(
                             text=context.text,
@@ -254,7 +299,7 @@ def _parse_variable_decorated(context: ParserCtx, var_name: str) -> TokenStream:
                         )
         else:
             level += {"{": 1, "}": -1}.get(char, 0)
-            push(char)
+            push(pos, char=char)
 
 
 # variable    ::= '$' var | '${' var }'
