@@ -97,9 +97,6 @@ def _join(lhs: str, rhs: str) -> str:
     return join(l, normpath(join(r, rhs)))
 
 
-_cman = suppress(FileNotFoundError, NotADirectoryError, PermissionError)
-
-
 def parse(
     seps: AbstractSet[str],
     look_ahead: int,
@@ -118,34 +115,35 @@ def parse(
             else:
                 p = Path(s0)
                 entire = p if p.is_absolute() else base / p
-                if entire.is_dir():
-                    with _cman:
+                with suppress(FileNotFoundError, NotADirectoryError, PermissionError):
+                    if entire.is_dir():
                         for path in scandir(entire):
                             term = sep if path.is_dir() else ""
                             line = _join(segment, path.name) + term
                             yield PurePath(path.path), line
                         return
 
-                else:
-                    lft, go, rhs = s0.rpartition(sep)
-                    if go:
-                        lp, sp, _ = segment.rpartition(sep)
-                        lseg = lp + sp
+                    else:
+                        lft, go, rhs = s0.rpartition(sep)
+                        if go:
+                            lp, sp, _ = segment.rpartition(sep)
+                            lseg = lp + sp
 
-                        lhs = lft + go
-                        p = Path(lhs)
-                        left = p if p.is_absolute() else base / p
-                        if left.is_dir():
-                            with _cman:
+                            lhs = lft + go
+                            p = Path(lhs)
+                            left = p if p.is_absolute() else base / p
+                            if left.is_dir():
                                 for path in scandir(left):
                                     ratio = quick_ratio(
                                         lower(rhs),
                                         lower(path.name),
                                         look_ahead=look_ahead,
                                     )
-                                    if ratio >= fuzzy_cutoff and len(
-                                        path.name
-                                    ) + look_ahead >= len(rhs):
+                                    if (
+                                        ratio >= fuzzy_cutoff
+                                        and len(path.name) + look_ahead >= len(rhs)
+                                        and not rhs.startswith(path.name)
+                                    ):
                                         term = sep if path.is_dir() else ""
                                         line = _join(lseg, path.name) + term
                                         yield PurePath(path.path), line

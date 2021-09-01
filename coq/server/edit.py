@@ -342,7 +342,7 @@ def _parse(stack: Stack, state: State, data: UserData) -> Tuple[Edit, Sequence[M
         return data.primary_edit, ()
 
 
-def _correct(nvim: Nvim, buf: Buffer, pos: NvimPos, before: str) -> None:
+def _restore(nvim: Nvim, buf: Buffer, pos: NvimPos, before: str) -> None:
     row, _ = pos
     after: str = nvim.api.get_current_line()
     src, dest = after.encode(UTF8), before.encode(UTF8)
@@ -358,7 +358,7 @@ def edit(
 ) -> Tuple[int, int]:
     win = cur_win(nvim)
     buf = win_get_buf(nvim, win=win)
-    _correct(nvim, buf=buf, pos=state.context.position, before=before)
+    _restore(nvim, buf=buf, pos=state.context.position, before=before)
 
     try:
         primary, marks = _parse(stack, state=state, data=data)
