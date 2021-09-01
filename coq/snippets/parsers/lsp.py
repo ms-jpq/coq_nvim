@@ -196,7 +196,7 @@ def _variable_decoration(
     elif decor == "/upcase":
         yield lo.upper()
     else:
-        yield Unparsed(text=var + "/" + decor)
+        yield Unparsed(text=var + decor)
 
 
 # | '${' var '/' regex '/' (format | text)+ '/' options '}'
