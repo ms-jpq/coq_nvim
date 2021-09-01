@@ -299,9 +299,11 @@ def _variable_decoration(
     else:
         group = _fmt(context, origin=origin, fmt=fmt)
         try:
-            return match.group(group)
+            matched = match.group(group)
         except IndexError:
             return subst
+        else:
+            return matched
 
 
 # | '${' var '/' regex '/' (format | text)+ '/' options '}'
