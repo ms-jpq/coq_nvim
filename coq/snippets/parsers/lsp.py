@@ -203,7 +203,7 @@ def _parse_variable_decorated(context: ParserCtx, var: str) -> TokenStream:
     pos, char = next_char(context)
     assert char == "/"
 
-    decoration_acc = [char]
+    decoration_acc: MutableSequence[str] = []
     level, seen = 0, 1
 
     for pos, char in context:
