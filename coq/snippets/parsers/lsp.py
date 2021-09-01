@@ -368,9 +368,9 @@ def _compile(
         raise_err(
             text=context.text,
             pos=pos,
-            condition="while compiling regex",
+            condition=f"while compiling regex -- {re}",
             expected=(),
-            actual=e.msg,
+            actual=str(e)
         )
 
 
