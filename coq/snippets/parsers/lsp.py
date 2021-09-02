@@ -324,13 +324,17 @@ def _parse_fmt(context: ParserCtx) -> Tuple[int, Callable[[str], str]]:
                 if char in _INT_CHARS:
                     idx_acc.append(char)
 
+                # '${' int '}'
                 elif char == "}":
                     group = int("".join(idx_acc)) if idx_acc else 0
                     return group, lambda x: x
 
+                # ...
                 elif char == ":":
                     pushback_chars(context, (pos, char))
-                    break
+                    group = int("".join(idx_acc)) if idx_acc else 0
+                    trans = _parse_fmt_back(context)
+                    return group, trans
 
                 else:
                     raise_err(
@@ -340,20 +344,14 @@ def _parse_fmt(context: ParserCtx) -> Tuple[int, Callable[[str], str]]:
                         expected=("[0-9]", ":"),
                         actual=char,
                     )
-
-            if char != ":":
+            else:
                 raise_err(
                     text=context.text,
                     pos=pos,
                     condition="after ${'int'",
-                    expected=(":",),
+                    expected=("}", ":"),
                     actual=char,
                 )
-            else:
-                pushback_chars(context, (pos, char))
-                group = int("".join(idx_acc)) if idx_acc else 0
-                trans = _parse_fmt_back(context)
-                return group, trans
 
         else:
             raise_err(
