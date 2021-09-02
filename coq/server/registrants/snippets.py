@@ -22,7 +22,7 @@ def eval_snips(nvim: Nvim, stack: Stack, visual: bool) -> None:
 
     if visual:
         (lo, _), (hi, _) = operator_marks(nvim, buf=buf, visual_type=None)
-        hi = min(line_count, hi)
+        hi = min(line_count, hi + 1)
     else:
         lo, hi = 0, line_count
 
