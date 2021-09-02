@@ -1,4 +1,3 @@
-from itertools import chain
 from json import dumps
 from locale import strxfrm
 from os import linesep

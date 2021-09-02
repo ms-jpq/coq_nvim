@@ -53,7 +53,6 @@ def parse(
                 doc=values.description,
                 label=label,
                 matches=_prefix(values.prefix),
-                options=set(),
             )
             yield snippet
 

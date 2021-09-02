@@ -93,11 +93,6 @@ class SDB:
                                     sql("insert", "match"),
                                     {"snippet_id": row_id, "match": match},
                                 )
-                            for option in snippet.options:
-                                cursor.execute(
-                                    sql("insert", "option"),
-                                    {"snippet_id": row_id, "option": option},
-                                )
 
         await run_in_executor(self._ex.submit, cont)
 

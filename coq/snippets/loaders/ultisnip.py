@@ -1,3 +1,4 @@
+from difflib import get_close_matches
 from enum import Enum, auto
 from os import linesep
 from pathlib import PurePath
@@ -8,17 +9,25 @@ from .parse import raise_err
 
 _COMMENT_START = "#"
 _EXTENDS_START = "extends"
-_SNIPPET_START = "snippet"
-_SNIPPET_END = "endsnippet"
-_GLOBAL_START = "global"
 _GLOBAL_END = "globalend"
+_GLOBAL_START = "global"
+_SNIPPET_END = "endsnippet"
+_SNIPPET_START = "snippet"
 
 _IGNORE_STARTS = {
-    "priority",
     "iclearsnippets",
-    "pre_expand",
     "post_expand",
     "post_jump",
+    "pre_expand",
+    "priority",
+}
+
+_LEGAL_STARTS = {
+    _EXTENDS_START,
+    _GLOBAL_END,
+    _GLOBAL_START,
+    _SNIPPET_END,
+    _SNIPPET_START,
 }
 
 
@@ -28,15 +37,14 @@ class _State(Enum):
     pglobal = auto()
 
 
-def _start(line: str) -> Tuple[str, str, MutableSet[str]]:
+def _start(line: str) -> Tuple[str, str]:
     rest = line[len(_SNIPPET_START) :].strip()
     name, _, label = rest.partition(" ")
     if label.startswith('"') and label[1:].count('"') == 1:
-        quoted, _, opts = label[1:].partition('"')
-        options = {*opts.strip()}
-        return name, quoted, options
+        quoted, _, _ = label[1:].partition('"')
+        return name, quoted
     else:
-        return name, label, set()
+        return name, label
 
 
 def parse(
@@ -49,7 +57,6 @@ def parse(
     state = _State.normal
     current_label: str = ""
     current_lines: MutableSequence[str] = []
-    current_opts: AbstractSet[str] = frozenset()
 
     for lineno, line in lines:
         if state == _State.normal:
@@ -69,13 +76,21 @@ def parse(
             elif line.startswith(_SNIPPET_START):
                 state = _State.snippet
 
-                current_name, current_label, current_opts = _start(line)
+                current_name, current_label = _start(line)
 
             elif line.startswith(_GLOBAL_START):
                 state = _State.pglobal
 
             else:
-                reason = "Unexpected line start"
+                start, _, _ = line.partition(" ")
+                close = get_close_matches(start, _LEGAL_STARTS, n=1)
+                if close:
+                    maybe_start, *_ = close
+                    addendum = f" :: did you mean -- {maybe_start}"
+                else:
+                    addendum = ""
+
+                reason = "Unexpected line start" + addendum
                 raise_err(path, lineno=lineno, line=line, reason=reason)
 
         elif state == _State.snippet:
@@ -89,7 +104,6 @@ def parse(
                     label=current_label,
                     doc="",
                     matches={current_name},
-                    options=current_opts - {""},
                 )
                 snippets.append(snippet)
                 current_lines.clear()

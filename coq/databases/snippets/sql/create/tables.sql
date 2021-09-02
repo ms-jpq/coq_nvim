@@ -35,13 +35,6 @@ CREATE INDEX IF NOT EXISTS matches_match      ON matches (match);
 CREATE INDEX IF NOT EXISTS matches_lmatch     ON matches (lmatch);
 
 
-CREATE TABLE IF NOT EXISTS options (
-  snippet_id BLOB NOT NULL REFERENCES snippets (rowid) ON UPDATE CASCADE ON DELETE CASCADE,
-  option     TEXT NOT NULL,
-  UNIQUE(snippet_id, option)
-);
-
-
 CREATE VIEW IF NOT EXISTS extensions_view AS
 WITH RECURSIVE all_exts AS (
   SELECT
