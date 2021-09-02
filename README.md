@@ -284,6 +284,12 @@ When completion menu is open:
 | `<tab>`       | next result                   |
 | `<s-tab>`     | prev result                   |
 
+Unbound:
+
+| key      | function                                  |
+| -------- | ----------------------------------------- |
+| `<null>` | evulate snippet in file / under selection |
+
 **When hovering over a result, entering any key [a-z] will select it**
 
 This is a vim thing, I have zero control over :(
