@@ -66,4 +66,10 @@ alias muda
   }
 ```
 
+### Document locations
+
+pass
+
 ## Repl
+
+Say you want `<leader>j` as your eval button `let g:coq_settings = { 'keymap.eval_snips': '<leader>j' }`
