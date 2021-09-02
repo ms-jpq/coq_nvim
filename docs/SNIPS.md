@@ -46,6 +46,8 @@ body       :: .*
 
 1. Every line is parsed according to a prefix, and what comes after are parsed as args
 
+2. Doesn't matter what Indentation is used, as long as it's consistent
+
 #### Example document
 
 ```vim-snippet
