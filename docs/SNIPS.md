@@ -48,7 +48,7 @@ body       :: .*
 
 #### Example document
 
-```vimsnip
+```vim-snippet
 # typescript-react.snip
 
 extends typescript, typescript.jsx
