@@ -286,9 +286,9 @@ When completion menu is open:
 
 Unbound:
 
-| key      | function                                  |
-| -------- | ----------------------------------------- |
-| `<null>` | evulate snippet in file / under selection |
+| key      | function                                      |
+| -------- | --------------------------------------------- |
+| `<null>` | evulate snippet in document / under selection |
 
 **When hovering over a result, entering any key [a-z] will select it**
 
