@@ -46,7 +46,7 @@ INSERT_DB = str(TMP_DIR / "inserts.sqlite3") if DEBUG_DB else ":memory:"
 TMUX_DB = str(TMP_DIR / "tmux.sqlite3") if DEBUG_DB else ":memory:"
 
 
-_URI_BASE = "https://github.com/ms-jpq/coq_nvim/tree/bwaaak/docs/"
+_URI_BASE = "https://github.com/ms-jpq/coq_nvim/tree/coq/docs/"
 
 MD_README = _DOC_DIR / "README.md"
 URI_README = _URI_BASE + MD_README.name
