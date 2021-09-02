@@ -288,7 +288,7 @@ def _parse_fmt_back(context: ParserCtx) -> Callable[[Optional[str]], str]:
         replace = "".join(tuple(cont("}", init=None)))
 
         def trans(var: Optional[str]) -> str:
-            return replace if var else (var or "")
+            return replace if var is None else var
 
     elif char == "?":
         replace_a = "".join(tuple(cont(":", init=None)))
@@ -307,7 +307,7 @@ def _parse_fmt_back(context: ParserCtx) -> Callable[[Optional[str]], str]:
         replace = "".join(tuple(cont(":", init=None)))
 
         def trans(var: Optional[str]) -> str:
-            return var if var is not None else replace
+            return var if var else replace
 
     pos, char = next_char(context)
     if char == "/":
