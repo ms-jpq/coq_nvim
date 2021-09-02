@@ -32,6 +32,15 @@
 "no snippets found": |-
   ⚠️  No snippets loaded
 
+"snippet load fail": |-
+  ❌
+
+"snippet parse fail": |-
+  ❌
+
+"snippet parse succ": |-
+  ✅
+
 "begin T9 download": |-
   ⏳ Downloading T9 ...
 
