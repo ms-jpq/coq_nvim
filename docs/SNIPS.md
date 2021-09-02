@@ -30,7 +30,7 @@ Basically a subset of [`neosnippet`](https://github.com/Shougo/neosnippet.vim)
 
 ```ebnf
 comment ::= '#' .*
-include ::= 'include' match
+extends ::= 'extends' match (',' match)*
 snippet ::= snipstart alias* snipbody
 
 snipstart ::= 'snippet' match
