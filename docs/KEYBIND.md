@@ -58,6 +58,16 @@ Pressing `<c-c>` to resume to edit as normal.
 "<c-h>"
 ```
 
+#### `coq_settings.keymap.eval_snips`
+
+Evaluate current visual selection or buffer as user defined snippets.
+
+**default:**
+
+```json
+null
+```
+
 ## Custom keybindings
 
 If you would like to set your own keybindings, add the following to your

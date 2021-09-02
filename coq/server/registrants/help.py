@@ -18,6 +18,7 @@ from ...consts import (
     MD_MISC,
     MD_PREF,
     MD_README,
+    MD_SNIPS,
     MD_SOURCES,
     MD_STATS,
     URI_CONF,
@@ -27,6 +28,7 @@ from ...consts import (
     URI_MISC,
     URI_PREF,
     URI_README,
+    URI_SNIPS,
     URI_SOURCES,
     URI_STATISTICS,
 )
@@ -38,6 +40,7 @@ class _Topics(Enum):
     index = auto()
     config = auto()
     keybind = auto()
+    snips = auto()
     fuzzy = auto()
     display = auto()
     sources = auto()
@@ -53,6 +56,8 @@ def _directory(topic: _Topics) -> Tuple[Path, str]:
         return MD_CONF, URI_CONF
     elif topic is _Topics.keybind:
         return MD_KEYBIND, URI_KEYBIND
+    elif topic is _Topics.snips:
+        return MD_SNIPS, URI_SNIPS
     elif topic is _Topics.fuzzy:
         return MD_FUZZY, URI_FUZZY
     elif topic is _Topics.display:
