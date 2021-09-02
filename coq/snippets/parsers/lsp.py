@@ -245,6 +245,10 @@ def _parse_options(context: ParserCtx) -> RegexFlag:
     return cast(RegexFlag, flag)
 
 
+# ':' '/upcase' | '/downcase' | '/capitalize' '}'
+# ':+' if '}'
+# ':?' if ':' else '}'
+# ':-' else '}' | '${' int ':' else '}'
 def _parse_fmt_back(context: ParserCtx) -> Callable[[str], str]:
     pos, char = next_char(context)
     assert char == ":"
@@ -255,6 +259,8 @@ def _parse_fmt_back(context: ParserCtx) -> Callable[[str], str]:
             _ = _parse_escape(context, escapable_chars=_REGEX_ESC_CHARS)
         elif char == "}":
             break
+        else:
+            pass
 
     pos, char = next_char(context)
     if char == "/":
@@ -291,6 +297,7 @@ def _parse_fmt(context: ParserCtx) -> Tuple[int, Callable[[str], str]]:
 
     else:
         pos, char = next_char(context)
+        # '$' int
         if char in _INT_CHARS:
             idx_acc = [char]
             for pos, char in context:
@@ -310,11 +317,16 @@ def _parse_fmt(context: ParserCtx) -> Tuple[int, Callable[[str], str]]:
             group = int("".join(idx_acc))
             return group, lambda x: x
 
+        # ${ int
         elif char == "{":
             idx_acc = []
             for pos, char in context:
                 if char in _INT_CHARS:
                     idx_acc.append(char)
+
+                elif char == "}":
+                    group = int("".join(idx_acc)) if idx_acc else 0
+                    return group, lambda x: x
 
                 elif char == ":":
                     pushback_chars(context, (pos, char))
