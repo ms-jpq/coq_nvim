@@ -247,35 +247,27 @@ def _parse_options(context: ParserCtx) -> RegexFlag:
 
 def _parse_fmt_back(context: ParserCtx) -> Callable[[str], str]:
     pos, char = next_char(context)
-    if char != ":":
+    assert char == ":"
+
+    for pos, char in context:
+        if char == "\\":
+            pushback_chars(context, (pos, char))
+            _ = _parse_escape(context, escapable_chars=_REGEX_ESC_CHARS)
+        elif char == "}":
+            break
+
+    pos, char = next_char(context)
+    if char == "/":
+        pushback_chars(context, (pos, char))
+        return lambda x: x
+    else:
         raise_err(
             text=context.text,
             pos=pos,
-            condition="after ${'int'",
-            expected=(":",),
+            condition="after }",
+            expected=("/",),
             actual=char,
         )
-
-    else:
-        for pos, char in context:
-            if char == "\\":
-                pushback_chars(context, (pos, char))
-                _ = _parse_escape(context, escapable_chars=_REGEX_ESC_CHARS)
-            elif char == "}":
-                break
-
-        pos, char = next_char(context)
-        if char == "/":
-            pushback_chars(context, (pos, char))
-            return lambda x: x
-        else:
-            raise_err(
-                text=context.text,
-                pos=pos,
-                condition="after }",
-                expected=("/",),
-                actual=char,
-            )
 
 
 # format      ::= '$' int | '${' int '}'
@@ -337,9 +329,19 @@ def _parse_fmt(context: ParserCtx) -> Tuple[int, Callable[[str], str]]:
                         actual=char,
                     )
 
-            group = int("".join(idx_acc)) if idx_acc else 0
-            trans = _parse_fmt_back(context)
-            return group, trans
+            if char != ":":
+                raise_err(
+                    text=context.text,
+                    pos=pos,
+                    condition="after ${'int'",
+                    expected=(":",),
+                    actual=char,
+                )
+            else:
+                pushback_chars(context, (pos, char))
+                group = int("".join(idx_acc)) if idx_acc else 0
+                trans = _parse_fmt_back(context)
+                return group, trans
 
         else:
             raise_err(
