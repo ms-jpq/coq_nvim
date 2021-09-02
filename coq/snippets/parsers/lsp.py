@@ -552,6 +552,9 @@ def _parse_scope(context: ParserCtx) -> TokenStream:
                 yield End()
                 pushback_chars(context, (pos, char))
                 break
+        else:
+            yield Begin(idx=int("".join(idx_acc)))
+            yield End()
     elif char in _VAR_BEGIN_CHARS:
         pushback_chars(context, (pos, char))
         yield from _parse_variable_naked(context)
