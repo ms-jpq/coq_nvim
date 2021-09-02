@@ -87,7 +87,7 @@ _LOCK: Optional[Lock] = None
 _EXTS: Mapping[str, AbstractSet[str]] = {}
 _SNIPPETS: Mapping[str, Sequence[ParsedSnippet]] = {}
 _SEEN_SNIP_TYPES: MutableSet[str] = set()
-_DECODER = new_decoder(Sequence[ParsedSnippet])
+_DECODER = new_decoder(Sequence[ParsedSnippet], strict=False)
 
 
 @rpc(blocking=True)
