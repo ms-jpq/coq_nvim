@@ -66,9 +66,8 @@ _RE_FLAGS = {
     "i": RegexFlag.IGNORECASE,
     "m": RegexFlag.MULTILINE,
     "s": RegexFlag.DOTALL,
-    "u": RegexFlag.UNICODE,
 }
-_REGEX_FLAG_CHARS = {*_RE_FLAGS, "g"}
+_REGEX_FLAG_CHARS = {*_RE_FLAGS, "g", "u"}
 
 
 def _parse_escape(context: ParserCtx, *, escapable_chars: AbstractSet[str]) -> str:
