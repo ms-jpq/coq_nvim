@@ -55,6 +55,8 @@ def set_options(nvim: Nvim, mapping: KeyMapping, fast_close: bool) -> None:
         keymap.i("<esc>", expr=True) << "pumvisible() ? '<c-e><esc>' : '<esc>'"
         keymap.i("<c-c>", expr=True) << "pumvisible() ? '<c-e><c-c>' : '<c-c>'"
         keymap.i("<bs>", expr=True) << "pumvisible() ? '<c-e><bs>' : '<bs>'"
+        keymap.i("<c-w>", expr=True) << "pumvisible() ? '<c-e><c-w>' : '<c-w>'"
+        keymap.i("<c-u>", expr=True) << "pumvisible() ? '<c-e><c-u>' : '<c-u>'"
         (
             keymap.i("<cr>", expr=True)
             << "pumvisible() ? (complete_info(['selected']).selected == -1 ? '<c-e><cr>' : '<c-y>') : '<cr>'"
