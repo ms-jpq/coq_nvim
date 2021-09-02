@@ -49,7 +49,8 @@ def load(
         for parser, spec in specs.items():
             for label, sp in spec.items():
                 for ext, path in sp:
-                    parsed = parser(path)
+                    with path.open(encoding="UTF-8") as fd:
+                        parsed = parser(path, enumerate(fd, start=1))
                     yield label, ext, *parsed
 
     meta: MutableMapping[

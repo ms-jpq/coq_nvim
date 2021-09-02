@@ -35,6 +35,7 @@ def eval_snips(nvim: Nvim, stack: Stack, visual: bool) -> None:
     )
     lines = buf_get_lines(nvim, buf=buf, lo=lo, hi=hi)
     snip = SnippetEdit(grammar="lsp", new_text=linesep.join(lines))
+
     try:
         parsed = parse(
             stack.settings.match.unifying_chars,

@@ -1,9 +1,9 @@
 from os import linesep
 from os.path import splitext
-from pathlib import Path
+from pathlib import PurePath
 from string import whitespace
 from textwrap import dedent
-from typing import AbstractSet, MutableSequence, MutableSet, Sequence, Tuple
+from typing import AbstractSet, Iterable, MutableSequence, MutableSet, Sequence, Tuple
 
 from ..types import ParsedSnippet
 from .parse import raise_err
@@ -30,7 +30,9 @@ def _start(line: str) -> Tuple[str, str, MutableSet[str]]:
         return name, label, set()
 
 
-def parse(path: Path) -> Tuple[AbstractSet[str], Sequence[ParsedSnippet]]:
+def parse(
+    path: PurePath, lines: Iterable[Tuple[int, str]]
+) -> Tuple[AbstractSet[str], Sequence[ParsedSnippet]]:
     snippets: MutableSequence[ParsedSnippet] = []
     extends: MutableSet[str] = set()
 
@@ -53,8 +55,7 @@ def parse(path: Path) -> Tuple[AbstractSet[str], Sequence[ParsedSnippet]]:
             )
             snippets.append(snippet)
 
-    lines = path.read_text().splitlines()
-    for lineno, line in enumerate(lines, 1):
+    for lineno, line in lines:
         if (
             not line
             or line.isspace()

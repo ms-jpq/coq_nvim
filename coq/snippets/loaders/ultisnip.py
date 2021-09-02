@@ -1,7 +1,7 @@
 from enum import Enum, auto
 from os import linesep
-from pathlib import Path
-from typing import AbstractSet, MutableSequence, MutableSet, Sequence, Tuple
+from pathlib import PurePath
+from typing import AbstractSet, Iterable, MutableSequence, MutableSet, Sequence, Tuple
 
 from ..types import ParsedSnippet
 from .parse import raise_err
@@ -39,7 +39,9 @@ def _start(line: str) -> Tuple[str, str, MutableSet[str]]:
         return name, label, set()
 
 
-def parse(path: Path) -> Tuple[AbstractSet[str], Sequence[ParsedSnippet]]:
+def parse(
+    path: PurePath, lines: Iterable[Tuple[int, str]]
+) -> Tuple[AbstractSet[str], Sequence[ParsedSnippet]]:
     snippets: MutableSequence[ParsedSnippet] = []
     extends: MutableSet[str] = set()
 
@@ -49,8 +51,7 @@ def parse(path: Path) -> Tuple[AbstractSet[str], Sequence[ParsedSnippet]]:
     current_lines: MutableSequence[str] = []
     current_opts: AbstractSet[str] = frozenset()
 
-    lines = path.read_text().splitlines()
-    for lineno, line in enumerate(lines, 1):
+    for lineno, line in lines:
         if state == _State.normal:
             if (
                 not line
