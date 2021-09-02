@@ -2,9 +2,9 @@
 
 There are two important hotkeys
 
-- `coq_settings.keymap.jump_to_mark`: jump to next mark
+- `coq_settings.keymap.jump_to_mark`: jump to next mark. (default `<c-h>`)
 
-- `coq_settings.keymap.eval_snips`: evaluate document / visual seleciton as snippets
+- `coq_settings.keymap.eval_snips`: evaluate document / visual seleciton as snippets (default unbound)
 
 ## Pre-compiled sources
 
