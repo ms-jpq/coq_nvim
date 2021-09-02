@@ -17,11 +17,18 @@ def iconify(icons: Icons, completion: Completion) -> Completion:
         else:
             if icons.mode is IconMode.none:
                 return completion
+
             elif icons.mode is IconMode.short:
-                return replace(completion, kind=kind)
+                return replace(completion, kind=kind + (icons.spacing - 1) * " ")
+
             elif icons.mode is IconMode.long:
                 spc = max(1, icons.spacing) * " "
-                new_kind = f"{kind}{spc}{completion.kind}" if completion.kind else kind
+                new_kind = (
+                    f"{kind}{spc}{completion.kind}"
+                    if completion.kind
+                    else kind + (icons.spacing - 1) * " "
+                )
                 return replace(completion, kind=new_kind)
+
             else:
                 never(icons.mode)
