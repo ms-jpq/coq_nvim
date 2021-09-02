@@ -30,8 +30,6 @@ class PumDisplay:
     kind_context: Tuple[str, str]
     source_context: Tuple[str, str]
 
-    icons: Literal[None]
-
 
 @dataclass(frozen=True)
 class PreviewPositions:
@@ -58,6 +56,7 @@ class IconMode(Enum):
 @dataclass(frozen=True)
 class Icons:
     mode: IconMode
+    spacing: int
     aliases: Mapping[str, Optional[str]]
     mappings: Mapping[str, str]
 

@@ -201,6 +201,18 @@ One of: `none`, `short`, `long`
 "long"
 ```
 
+##### `coq_settings.display.icons.spacing`
+
+How many ` ` of padding to use after icon.
+
+Increase this if your icons are too close to each other.
+
+**default:**
+
+```json
+1
+```
+
 ##### `coq_settings.display.icons.aliases`
 
 Alias for mappings

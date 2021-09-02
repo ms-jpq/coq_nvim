@@ -43,8 +43,6 @@ display:
       - "「"
       - "」"
 
-    icons: null
-
   preview:
     x_max_len: 88
     resolve_timeout: 0.09
@@ -59,6 +57,7 @@ display:
 
   icons:
     mode: long
+    spacing: 1
     aliases:
       Conditional: Keyword
       Float: Number
