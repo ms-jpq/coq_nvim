@@ -41,6 +41,19 @@ ${marks}
 """
 _SNIP_T = Template(_SNIP)
 
+_SNIPS = """
+## Extends
+
+```json
+${exts}
+```
+
+## Snippets
+
+${snips}
+"""
+_SNIPS_T = Template(_SNIPS)
+
 
 def _trans(
     stack: Stack, path: PurePath, snips: Iterable[ParsedSnippet]
@@ -81,23 +94,30 @@ def eval_snips(nvim: Nvim, stack: Stack, visual: bool) -> None:
     lines = buf_get_lines(nvim, buf=buf, lo=lo, hi=hi)
 
     try:
-        _, snips = parse_neosnippets(path, lines=enumerate(lines, start=lo + 1))
+        ext, snips = parse_neosnippets(path, lines=enumerate(lines, start=lo + 1))
     except LoadError as e:
         preview = str(e).splitlines()
         with hold_win_pos(nvim, win=win):
             set_preview(nvim, syntax="", preview=preview)
         write(nvim, "snip load fail")
+
     else:
+        exts = dumps(
+            sorted(ext, key=strxfrm), check_circular=False, ensure_ascii=False, indent=2
+        )
 
         try:
-            parsed = linesep.join(s for s in _trans(stack, path=path, snips=snips))
+            snippets = linesep.join(s for s in _trans(stack, path=path, snips=snips))
         except ParseError as e:
             preview = str(e).splitlines()
-
             with hold_win_pos(nvim, win=win):
                 set_preview(nvim, syntax="", preview=preview)
             write(nvim, "snip parse fail")
         else:
+            parsed = _SNIPS_T.substitute(
+                exts=exts,
+                snips=snippets,
+            )
             preview = str(parsed).splitlines()
             with hold_win_pos(nvim, win=win):
                 set_preview(nvim, syntax="markdown", preview=preview)
