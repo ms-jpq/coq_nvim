@@ -116,7 +116,7 @@ def parse(
             else:
                 p = Path(s0)
                 entire = p if p.is_absolute() else base / p
-                with suppress(FileNotFoundError, NotADirectoryError, PermissionError):
+                with suppress(OSError):
                     if entire.is_dir():
                         for path in scandir(entire):
                             term = sep if path.is_dir() else ""
