@@ -4,8 +4,8 @@ from re import error as RegexError
 from string import ascii_letters, digits
 from typing import (
     AbstractSet,
+    Callable,
     Iterator,
-    Match,
     MutableSequence,
     Optional,
     Pattern,
@@ -245,7 +245,7 @@ def _parse_options(context: ParserCtx) -> RegexFlag:
     return cast(RegexFlag, flag)
 
 
-def _parse_fmt_back(context: ParserCtx) -> None:
+def _parse_fmt_back(context: ParserCtx) -> Callable[[str], str]:
     pos, char = next_char(context)
     if char != ":":
         raise_err(
@@ -267,7 +267,7 @@ def _parse_fmt_back(context: ParserCtx) -> None:
         pos, char = next_char(context)
         if char == "/":
             pushback_chars(context, (pos, char))
-            return None
+            return lambda x: x
         else:
             raise_err(
                 text=context.text,
@@ -283,7 +283,7 @@ def _parse_fmt_back(context: ParserCtx) -> None:
 #                 | '${' int ':+' if '}'
 #                 | '${' int ':?' if ':' else '}'
 #                 | '${' int ':-' else '}' | '${' int ':' else '}'
-def _parse_fmt(context: ParserCtx) -> Tuple[int, None]:
+def _parse_fmt(context: ParserCtx) -> Tuple[int, Callable[[str], str]]:
     pos, char = next_char(context)
     assert char == "/"
 
@@ -316,7 +316,7 @@ def _parse_fmt(context: ParserCtx) -> Tuple[int, None]:
                         actual=char,
                     )
             group = int("".join(idx_acc))
-            return group, None
+            return group, lambda x: x
 
         elif char == "{":
             idx_acc = []
@@ -338,8 +338,8 @@ def _parse_fmt(context: ParserCtx) -> Tuple[int, None]:
                     )
 
             group = int("".join(idx_acc)) if idx_acc else 0
-            _parse_fmt_back(context)
-            return group, None
+            trans = _parse_fmt_back(context)
+            return group, trans
 
         else:
             raise_err(
@@ -384,10 +384,11 @@ def _parse_variable_decorated(context: ParserCtx, var_name: str) -> TokenStream:
 
     pushback_chars(context, (pos, char))
     regex = tuple(_parse_regex(context))
-    group, _ = _parse_fmt(context)
+    group, trans = _parse_fmt(context)
     flag = _parse_options(context)
 
-    subst = _variable_substitution(context, var_name=var_name) or ""
+    subst = _variable_substitution(context, var_name=var_name)
+    subst = var_name if subst is None else subst
     re = _compile(context, origin=pos, regex=regex, flag=flag)
     match = re.match(subst)
 
@@ -395,11 +396,11 @@ def _parse_variable_decorated(context: ParserCtx, var_name: str) -> TokenStream:
         try:
             matched = match.group(group)
         except IndexError:
-            yield from subst
+            yield from trans(subst)
         else:
-            yield from matched
+            yield from trans(matched)
     else:
-        yield from subst
+        yield from trans(subst)
 
 
 # variable    ::= '$' var | '${' var }'
