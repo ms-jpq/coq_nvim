@@ -295,7 +295,7 @@ def _parse_fmt_back(context: ParserCtx) -> Callable[[Optional[str]], str]:
         replace_b = "".join(tuple(cont("}", init=None)))
 
         def trans(var: Optional[str]) -> str:
-            return replace_a if var else replace_b
+            return replace_a if var is not None else replace_b
 
     elif char == "-":
         replace = "".join(tuple(cont(":", init=None)))
