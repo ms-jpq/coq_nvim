@@ -171,6 +171,9 @@ async def _resolve(nvim: Nvim, stack: Stack, user_data: UserData) -> UserData:
                     )
 
 
+NS = uuid4().hex
+
+
 @rpc(blocking=True)
 def _comp_done(nvim: Nvim, stack: Stack, event: Mapping[str, Any]) -> None:
     data = event.get("user_data")
@@ -180,22 +183,30 @@ def _comp_done(nvim: Nvim, stack: Stack, event: Mapping[str, Any]) -> None:
         except DecodeError as e:
             log.warn("%s", e)
         else:
-            before = nvim.api.get_current_line()
+            s = state()
+            ns: int = nvim.api.create_namespace(NS)
+            mark_id: int = nvim.api.buf_set_extmark(0, ns, *s.context.position, ())
+            before: str = nvim.api.get_current_line()
 
             async def cont() -> None:
-                s = state()
                 if user_data.change_uid == s.change_id:
                     ud = await _resolve(nvim, stack=stack, user_data=user_data)
                     inserted = await async_call(
                         nvim,
                         lambda: edit(
-                            nvim, stack=stack, state=s, data=ud, before=before
+                            nvim,
+                            stack=stack,
+                            state=s,
+                            data=ud,
+                            cur_mark=(ns, mark_id),
+                            before=before,
                         ),
                     )
                     ins = inserted or (-1, -1)
                     state(inserted=ins, commit_id=uuid4())
                 else:
                     log.warn("%s", "delayed completion")
+                await async_call(nvim, lambda: nvim.api.buf_del_extmark(0, ns, mark_id))
 
             go(nvim, aw=cont())
 

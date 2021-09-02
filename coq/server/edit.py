@@ -14,9 +14,15 @@ from typing import (
 )
 
 from pynvim import Nvim
-from pynvim.api.buffer import Buffer
+from pynvim.api import Window, Buffer
 from pynvim.api.common import NvimError
-from pynvim_pp.api import buf_get_lines, cur_win, win_get_buf, win_set_cursor
+from pynvim_pp.api import (
+    buf_get_lines,
+    cur_win,
+    win_get_buf,
+    win_get_cursor,
+    win_set_cursor,
+)
 from pynvim_pp.lib import write
 from pynvim_pp.logging import log
 from std2.difflib import trans_inplace
@@ -343,25 +349,51 @@ def _parse(stack: Stack, state: State, data: UserData) -> Tuple[Edit, Sequence[M
         return data.primary_edit, ()
 
 
-def _restore(nvim: Nvim, buf: Buffer, pos: NvimPos, before: str) -> Optional[str]:
+def _restore(
+    nvim: Nvim,
+    win: Window,
+    buf: Buffer,
+    pos: NvimPos,
+    cur_mark: Tuple[int, int],
+    before: str,
+) -> Tuple[str, int]:
     row, col = pos
-    after: str = nvim.api.get_current_line()
-    src, dest = after.encode(UTF8), before.encode(UTF8)
+    new_row, new_col = nvim.api.buf_get_extmark_by_id(buf, *cur_mark, ())
+    if new_row != row:
+        return ("", 0)
+    cur_row, cur_col = win_get_cursor(nvim, win)
+    after: str = buf_get_lines(nvim, buf=buf, lo=row, hi=row + 1)[0]
+    inserted = after[col:new_col] if new_col > col else ""
+    movement = (
+        cur_col - col if cur_row == row and col <= cur_col <= new_col else len(inserted)
+    )
+    if new_col >= col and len(before) + len(inserted) == len(after):
+        if new_col != col:
+            nvim.api.buf_set_text(buf, row, col, row, new_col, ("",))
+    else:
+        # This case is very rare: the line is changed elsewhere
 
-    inserted = ""
-    for (l1, h1), (l2, h2) in trans_inplace(
-        src=tuple(src), dest=tuple(dest), unifying=0
-    ):
-        replace = dest[l2:h2].decode(UTF8, errors="ignore")
-        nvim.api.buf_set_text(buf, row, l1, row, h1, (replace,))
-        if l1 == col:
-            inserted = src[l1:h1].decode(UTF8, errors="ignore")
+        if len(after) <= 333:
+            # This preserves extmarks, but is slow in a very long line
 
-    return inserted
+            src, dest = after.encode(UTF8), before.encode(UTF8)
+            for (l1, h1), (l2, h2) in trans_inplace(
+                src=tuple(src), dest=tuple(dest), unifying=0
+            ):
+                replace = dest[l2:h2].decode(UTF8, errors="ignore")
+                nvim.api.buf_set_text(buf, row, l1, row, h1, (replace,))
+        else:
+            nvim.api.buf_set_text(buf, row, 0, row, len(after), (before,))
+    return (inserted, movement)
 
 
 def edit(
-    nvim: Nvim, stack: Stack, state: State, data: UserData, before: str
+    nvim: Nvim,
+    stack: Stack,
+    state: State,
+    data: UserData,
+    cur_mark: Tuple[int, int],
+    before: str,
 ) -> Optional[Tuple[int, int]]:
     win = cur_win(nvim)
     buf = win_get_buf(nvim, win=win)
@@ -369,7 +401,14 @@ def edit(
         log.warn("%s", "stale buffer")
         return None
     else:
-        inserted = _restore(nvim, buf=buf, pos=state.context.position, before=before)
+        inserted, movement = _restore(
+            nvim,
+            win=win,
+            buf=buf,
+            pos=state.context.position,
+            cur_mark=cur_mark,
+            before=before,
+        )
 
         try:
             primary, marks = _parse(stack, state=state, data=data)
@@ -407,11 +446,8 @@ def edit(
 
             apply(nvim, buf=buf, instructions=instructions)
             if inserted:
-                nn_col = n_col + len(inserted.encode(UTF8))
                 nvim.api.buf_set_text(buf, n_row, n_col, n_row, n_col, (inserted,))
-            else:
-                nn_col = n_col
-            win_set_cursor(nvim, win=win, row=n_row, col=nn_col)
+            win_set_cursor(nvim, win=win, row=n_row, col=n_col + movement)
 
             stack.idb.inserted(data.instance.bytes, sort_by=data.sort_by)
             if marks:
