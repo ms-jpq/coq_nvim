@@ -9,7 +9,7 @@ from std2 import clamp
 from ..shared.parse import lower
 from ..shared.runtime import Metric
 from ..shared.settings import PumDisplay, Weights
-from ..shared.types import Context
+from ..shared.types import Context, SnippetEdit
 from .nvim.completions import UserData, VimCompletion
 from .rt_types import Stack
 from .state import state
@@ -62,10 +62,12 @@ def _prune(
 ) -> Iterator[Metric]:
     seen: MutableSet[str] = set()
     for metric in ranked:
+        p_edit = metric.comp.primary_edit
         if not context.manual and len(seen) > stack.settings.match.max_results:
             break
-        elif metric.comp.primary_edit.new_text not in seen:
-            seen.add(metric.comp.primary_edit.new_text)
+        elif p_edit.new_text not in seen:
+            if not isinstance(p_edit, SnippetEdit):
+                seen.add(p_edit.new_text)
             yield metric
 
 
