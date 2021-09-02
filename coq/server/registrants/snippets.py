@@ -14,6 +14,7 @@ from pynvim_pp.operators import operator_marks
 from pynvim_pp.preview import set_preview
 from std2.itertools import group_by
 
+from ...lang import LANG
 from ...registry import rpc
 from ...shared.context import EMPTY_CONTEXT
 from ...shared.types import SnippetEdit
@@ -99,7 +100,7 @@ def eval_snips(nvim: Nvim, stack: Stack, visual: bool) -> None:
         preview = str(e).splitlines()
         with hold_win_pos(nvim, win=win):
             set_preview(nvim, syntax="", preview=preview)
-        write(nvim, "snip load fail")
+        write(nvim, LANG("snip load fail"))
 
     else:
         exts = dumps(
@@ -112,7 +113,7 @@ def eval_snips(nvim: Nvim, stack: Stack, visual: bool) -> None:
             preview = str(e).splitlines()
             with hold_win_pos(nvim, win=win):
                 set_preview(nvim, syntax="", preview=preview)
-            write(nvim, "snip parse fail")
+            write(nvim, LANG("snip parse fail"))
         else:
             parsed = _SNIPS_T.substitute(
                 exts=exts,
@@ -121,4 +122,4 @@ def eval_snips(nvim: Nvim, stack: Stack, visual: bool) -> None:
             preview = str(parsed).splitlines()
             with hold_win_pos(nvim, win=win):
                 set_preview(nvim, syntax="markdown", preview=preview)
-            write(nvim, "snip parse succ")
+            write(nvim, LANG("snip parse succ"))
