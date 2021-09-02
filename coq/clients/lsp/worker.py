@@ -21,9 +21,9 @@ from ..cache.worker import CacheWorker, sanitize_cached
 
 
 class _Src(Enum):
-    dab = auto()
-    lit = auto()
-    lsp = auto()
+    from_db = auto()
+    from_stored = auto()
+    from_query = auto()
 
 
 class Worker(BaseWorker[LSPClient, None], CacheWorker):
@@ -43,11 +43,11 @@ class Worker(BaseWorker[LSPClient, None], CacheWorker):
         async def cached_iters() -> Tuple[_Src, LSPcomp]:
             items = map(sanitize_cached, chain(*self._local_cached))
             self._local_cached.clear()
-            return _Src.lit, LSPcomp(local_cache=True, items=items)
+            return _Src.from_stored, LSPcomp(local_cache=True, items=items)
 
-        async def cached_items() -> Tuple[_Src, LSPcomp]:
+        async def cached_db_items() -> Tuple[_Src, LSPcomp]:
             items = await cached
-            return _Src.dab, LSPcomp(local_cache=False, items=items)
+            return _Src.from_db, LSPcomp(local_cache=False, items=items)
 
         async def stream() -> AsyncIterator[Tuple[_Src, LSPcomp]]:
             do_ask = context.manual or not use_cache
@@ -65,9 +65,9 @@ class Worker(BaseWorker[LSPClient, None], CacheWorker):
             for fut in as_completed(
                 (
                     cached_iters(),
-                    cached_items(),
+                    cached_db_items(),
                     gather(
-                        pure(_Src.lsp),
+                        pure(_Src.from_query),
                         anext(stream, LSPcomp(local_cache=False, items=iter(()))),
                     ),
                 )
@@ -75,7 +75,7 @@ class Worker(BaseWorker[LSPClient, None], CacheWorker):
                 yield await fut
 
             async for lc in stream:
-                yield _Src.lsp, lc
+                yield _Src.from_query, lc
 
         seen = 0
         async for src, lsp_comps in stream():
@@ -86,7 +86,7 @@ class Worker(BaseWorker[LSPClient, None], CacheWorker):
                 lsp_comps.items, n=self._supervisor.options.max_results
             ):
                 if seen <= limit:
-                    if src is _Src.dab:
+                    if src is _Src.from_db:
                         for c in chunked:
                             yield c
                             seen += 1
@@ -105,7 +105,12 @@ class Worker(BaseWorker[LSPClient, None], CacheWorker):
                                 lower(c.sort_by),
                                 look_ahead=self._supervisor.options.look_ahead,
                             )
-                            if ratio >= self._supervisor.options.fuzzy_cutoff:
+                            if (
+                                ratio >= self._supervisor.options.fuzzy_cutoff
+                                and len(c.sort_by) + self._supervisor.options.look_ahead
+                                >= len(cword)
+                                and not cword.startswith(c.sort_by)
+                            ):
                                 yield c
                                 seen += 1
 
