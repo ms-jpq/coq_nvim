@@ -59,6 +59,8 @@ def parse(
     current_lines: MutableSequence[str] = []
 
     for lineno, line in lines:
+        line = line.rstrip()
+
         if state == _State.normal:
             if (
                 not line

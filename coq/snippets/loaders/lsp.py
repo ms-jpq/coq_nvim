@@ -41,7 +41,7 @@ def _body(body: Union[str, Sequence[str]]) -> str:
 def parse(
     _: PurePath, lines: Iterable[Tuple[int, str]]
 ) -> Tuple[AbstractSet[str], Sequence[ParsedSnippet]]:
-    text = linesep.join(line for _, line in lines)
+    text = linesep.join(line.rstrip() for _, line in lines)
     json = loads(text)
     fmt: _FMT = _DECODER(json)
 

@@ -66,6 +66,7 @@ def parse(
             snippets.append(snippet)
 
     for lineno, line in lines:
+        line = line.rstrip()
         if (
             not line
             or line.isspace()
