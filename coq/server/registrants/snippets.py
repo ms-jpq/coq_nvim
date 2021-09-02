@@ -4,7 +4,7 @@ from os import linesep
 from os.path import normcase
 from pathlib import PurePath
 from string import Template
-from typing import Iterable, Iterator
+from typing import AbstractSet, Iterable, Iterator, Sequence
 
 from pynvim.api.nvim import Nvim
 from pynvim_pp.api import buf_get_lines, buf_line_count, buf_name, cur_win, win_get_buf
@@ -28,11 +28,13 @@ from ..rt_types import Stack
 _SNIP = """
 ---
 
-#### `${matches}`
+#### 👀 `${matches}`
 
 ```${syntax}
 ${body}
 ```
+
+#### 🔖
 
 ```json
 ${marks}
@@ -42,14 +44,17 @@ ${marks}
 """
 _SNIP_T = Template(_SNIP)
 
-_SNIPS = """
-## Extends
+_EXTS = """
+## ✈️
 
 ```json
 ${exts}
 ```
+"""
+_EXTS_T = Template(_EXTS)
 
-## Snippets
+_SNIPS = """
+## ✂️
 
 ${snips}
 """
@@ -79,6 +84,16 @@ def _trans(
         )
 
 
+def _pprn(ext: AbstractSet[str], snips: str) -> Iterator[str]:
+    if ext:
+        exts = dumps(
+            sorted(ext, key=strxfrm), check_circular=False, ensure_ascii=False, indent=2
+        )
+        yield from _EXTS_T.substitute(exts=exts).splitlines()
+    if snips:
+        yield from _SNIPS_T.substitute(snips=snips).splitlines()
+
+
 @rpc(blocking=True)
 def eval_snips(nvim: Nvim, stack: Stack, visual: bool) -> None:
     win = cur_win(nvim)
@@ -103,9 +118,6 @@ def eval_snips(nvim: Nvim, stack: Stack, visual: bool) -> None:
         write(nvim, LANG("snip load fail"))
 
     else:
-        exts = dumps(
-            sorted(ext, key=strxfrm), check_circular=False, ensure_ascii=False, indent=2
-        )
 
         try:
             snippets = linesep.join(s for s in _trans(stack, path=path, snips=snips))
@@ -115,11 +127,7 @@ def eval_snips(nvim: Nvim, stack: Stack, visual: bool) -> None:
                 set_preview(nvim, syntax="", preview=preview)
             write(nvim, LANG("snip parse fail"))
         else:
-            parsed = _SNIPS_T.substitute(
-                exts=exts,
-                snips=snippets,
-            )
-            preview = str(parsed).splitlines()
+            preview = tuple(_pprn(ext, snips=snippets))
             with hold_win_pos(nvim, win=win):
                 set_preview(nvim, syntax="markdown", preview=preview)
             write(nvim, LANG("snip parse succ"))
