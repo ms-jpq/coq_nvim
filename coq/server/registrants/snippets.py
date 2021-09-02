@@ -112,7 +112,7 @@ def eval_snips(nvim: Nvim, stack: Stack, visual: bool) -> None:
     try:
         ext, snips = parse_neosnippets(path, lines=enumerate(lines, start=lo + 1))
     except LoadError as e:
-        preview = str(e).splitlines()
+        preview: Sequence[str] = str(e).splitlines()
         with hold_win_pos(nvim, win=win):
             set_preview(nvim, syntax="", preview=preview)
         write(nvim, LANG("snip load fail"))
@@ -130,4 +130,7 @@ def eval_snips(nvim: Nvim, stack: Stack, visual: bool) -> None:
             preview = tuple(_pprn(ext, snips=snippets))
             with hold_win_pos(nvim, win=win):
                 set_preview(nvim, syntax="markdown", preview=preview)
-            write(nvim, LANG("snip parse succ"))
+            if preview:
+                write(nvim, LANG("snip parse succ"))
+            else:
+                write(nvim, LANG("snip parse empty"))

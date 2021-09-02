@@ -33,13 +33,16 @@
   ⚠️  No snippets loaded
 
 "snip load fail": |-
-  ❌
+  ❌ Failed to load snippets
 
 "snip parse fail": |-
-  ❌
+  ❌ Failed to parse snippets
 
 "snip parse succ": |-
-  ✅
+  ✅ Snippets parsed
+
+"snip parse empty": |-
+  ⚠️  No snippets found
 
 "begin T9 download": |-
   ⏳ Downloading T9 ...
