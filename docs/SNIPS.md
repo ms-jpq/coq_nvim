@@ -30,7 +30,7 @@ Basically a subset of [`neosnippet`](https://github.com/Shougo/neosnippet.vim)
 
 ```ebnf
 comment ::= '#' .*
-extends ::= 'extends' match (',' match)*
+extends ::= 'extends' match (', ' match)*
 snippet ::= snipstart alias* snipbody
 
 snipstart ::= 'snippet' match
@@ -51,12 +51,13 @@ body       :: .*
 ```vimsnip
 # typescript-react.snip
 
-include typescript
+extends typescript, typescript.jsx
 
 snippet clg
   console.log($0)
 
 snippet ora
+alias dora
 alias muda
   export const jojo = async () => {
     console.log($0)
