@@ -100,6 +100,8 @@ lsp.<server>.setup(coq.lsp_ensure_capabilities(<stuff...>)) -- after
 
 ![snippet_expand.img](https://raw.githubusercontent.com/ms-jpq/coq.artifacts/artifacts/preview/expand_snippet.gif)
 
+- [Live Repl](https://github.com/ms-jpq/coq_nvim/tree/coq/docs/SNIPS.md)
+
 _The `%` statistic comes from compiling the 10,000 snippets_
 
 ### TreeSitter
@@ -246,6 +248,8 @@ There is built-in [help command](https://github.com/ms-jpq/coq_nvim/tree/coq/doc
 
 - [:COQhelp keybind](https://github.com/ms-jpq/coq_nvim/tree/coq/docs/KEYBIND.md)
 
+- [:COQhelp snips](https://github.com/ms-jpq/coq_nvim/tree/coq/docs/SNIPS.md)
+
 - [:COQhelp fuzzy](https://github.com/ms-jpq/coq_nvim/tree/coq/docs/FUZZY.md)
 
 - [:COQhelp display](https://github.com/ms-jpq/coq_nvim/tree/coq/docs/DISPLAY.md)
@@ -279,6 +283,12 @@ When completion menu is open:
 | `<enter>`     | select completion             |
 | `<tab>`       | next result                   |
 | `<s-tab>`     | prev result                   |
+
+Unbound:
+
+| key      | function                                      |
+| -------- | --------------------------------------------- |
+| `<null>` | evulate snippet in document / under selection |
 
 **When hovering over a result, entering any key [a-z] will select it**
 

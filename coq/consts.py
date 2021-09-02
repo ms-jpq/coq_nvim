@@ -46,7 +46,7 @@ INSERT_DB = str(TMP_DIR / "inserts.sqlite3") if DEBUG_DB else ":memory:"
 TMUX_DB = str(TMP_DIR / "tmux.sqlite3") if DEBUG_DB else ":memory:"
 
 
-_URI_BASE = "https://github.com/ms-jpq/coq_nvim/tree/bwaaak/docs/"
+_URI_BASE = "https://github.com/ms-jpq/coq_nvim/tree/coq/docs/"
 
 MD_README = _DOC_DIR / "README.md"
 URI_README = _URI_BASE + MD_README.name
@@ -56,6 +56,9 @@ URI_CONF = _URI_BASE + MD_CONF.name
 
 MD_KEYBIND = _DOC_DIR / "KEYBIND.md"
 URI_KEYBIND = _URI_BASE + MD_KEYBIND.name
+
+MD_SNIPS = _DOC_DIR / "SNIPS.md"
+URI_SNIPS = _URI_BASE + MD_SNIPS.name
 
 MD_FUZZY = _DOC_DIR / "FUZZY.md"
 URI_FUZZY = _URI_BASE + MD_FUZZY.name
