@@ -20,7 +20,8 @@ def iconify(icons: Icons, completion: Completion) -> Completion:
             elif icons.mode is IconMode.short:
                 return replace(completion, kind=kind)
             elif icons.mode is IconMode.long:
-                new_kind = f"{kind} {completion.kind}" if completion.kind else kind
+                spc = max(1, icons.spacing) * " "
+                new_kind = f"{kind}{spc}{completion.kind}" if completion.kind else kind
                 return replace(completion, kind=new_kind)
             else:
                 never(icons.mode)
