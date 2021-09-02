@@ -93,6 +93,7 @@ class KeyMapping:
     manual_complete: Optional[str]
     jump_to_mark: Optional[str]
     bigger_preview: Optional[str]
+    eval_snips: Optional[str]
 
 
 @dataclass(frozen=True)
