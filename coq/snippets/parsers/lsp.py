@@ -455,11 +455,11 @@ def _parse_variable_decorated(context: ParserCtx, var_name: str) -> TokenStream:
         try:
             matched = match.group(group)
         except IndexError:
-            yield from trans(subst)
+            yield from trans(None)
         else:
             yield from trans(matched)
     else:
-        yield from trans(subst)
+        yield from trans(None)
 
 
 # variable    ::= '$' var | '${' var }'
