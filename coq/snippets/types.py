@@ -13,7 +13,6 @@ class ParsedSnippet:
     label: str
     doc: str
     matches: AbstractSet[str]
-    options: AbstractSet[str]
 
 
 _Label = str

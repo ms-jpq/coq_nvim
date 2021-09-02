@@ -1,43 +1,57 @@
+from difflib import get_close_matches
 from os import linesep
 from os.path import splitext
-from pathlib import Path
+from pathlib import PurePath
 from string import whitespace
 from textwrap import dedent
-from typing import AbstractSet, MutableSequence, MutableSet, Sequence, Tuple
+from typing import AbstractSet, Iterable, MutableSequence, MutableSet, Sequence, Tuple
 
 from ..types import ParsedSnippet
 from .parse import raise_err
 
+_ALIAS_START = "alias"
 _COMMENT_START = "#"
 _EXTENDS_START = "extends"
 _INCLUDES_START = "include"
-_SNIPPET_START = "snippet"
-_ALIAS_START = "alias"
 _LABEL_START = "abbr"
-_OPTIONS_START = "options"
-_IGNORED_STARTS = ("source", "delete", "regexp")
 _SNIPPET_LINE_STARTS = {*whitespace}
+_SNIPPET_START = "snippet"
+
+_IGNORED_STARTS = (
+    "delete",
+    "options",
+    "regexp",
+    "source",
+)
+
+_LEGAL_STARTS = {
+    _ALIAS_START,
+    _EXTENDS_START,
+    _INCLUDES_START,
+    _LABEL_START,
+    _SNIPPET_START,
+}
 
 
-def _start(line: str) -> Tuple[str, str, MutableSet[str]]:
+def _start(line: str) -> Tuple[str, str]:
     rest = line[len(_SNIPPET_START) :].strip()
     name, _, label = rest.partition(" ")
     if label.startswith('"') and label[1:].count('"') == 1:
-        quoted, _, opts = label[1:].partition('"')
-        options = {*opts.strip().split(" ")}
-        return name, quoted, options
+        quoted, _, _ = label[1:].partition('"')
+        return name, quoted
     else:
-        return name, label, set()
+        return name, label
 
 
-def parse(path: Path) -> Tuple[AbstractSet[str], Sequence[ParsedSnippet]]:
+def parse(
+    path: PurePath, lines: Iterable[Tuple[int, str]]
+) -> Tuple[AbstractSet[str], Sequence[ParsedSnippet]]:
     snippets: MutableSequence[ParsedSnippet] = []
     extends: MutableSet[str] = set()
 
     current_name = ""
     current_label: str = ""
     current_aliases: MutableSequence[str] = []
-    current_options: MutableSet[str] = set()
     current_lines: MutableSequence[str] = []
 
     def push() -> None:
@@ -49,12 +63,10 @@ def parse(path: Path) -> Tuple[AbstractSet[str], Sequence[ParsedSnippet]]:
                 label=current_label,
                 doc="",
                 matches={*current_aliases},
-                options=current_options - {""},
             )
             snippets.append(snippet)
 
-    lines = path.read_text().splitlines()
-    for lineno, line in enumerate(lines, 1):
+    for lineno, line in lines:
         if (
             not line
             or line.isspace()
@@ -75,7 +87,7 @@ def parse(path: Path) -> Tuple[AbstractSet[str], Sequence[ParsedSnippet]]:
 
         elif line.startswith(_SNIPPET_START):
             push()
-            current_name, current_label, current_options = _start(line=line)
+            current_name, current_label = _start(line=line)
             current_lines.clear()
             current_aliases.clear()
             current_aliases.append(current_name)
@@ -86,10 +98,6 @@ def parse(path: Path) -> Tuple[AbstractSet[str], Sequence[ParsedSnippet]]:
         elif line.startswith(_LABEL_START):
             current_label = line[len(_LABEL_START) :].strip()
 
-        elif line.startswith(_OPTIONS_START):
-            for opt in line[len(_OPTIONS_START) :].strip().split(","):
-                current_options.add(opt)
-
         elif any(line.startswith(c) for c in _SNIPPET_LINE_STARTS):
             if current_name:
                 current_lines.append(line)
@@ -98,7 +106,15 @@ def parse(path: Path) -> Tuple[AbstractSet[str], Sequence[ParsedSnippet]]:
                 raise_err(path, lineno=lineno, line=line, reason=reason)
 
         else:
-            reason = "Unexpected line start"
+            start, _, _ = line.partition(" ")
+            close = get_close_matches(start, _LEGAL_STARTS, n=1)
+            if close:
+                maybe_start, *_ = close
+                addendum = f" :: did you mean -- {maybe_start}"
+            else:
+                addendum = ""
+
+            reason = "Unexpected line start" + addendum
             raise_err(path, lineno=lineno, line=line, reason=reason)
 
     push()

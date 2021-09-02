@@ -1,8 +1,8 @@
 from dataclasses import dataclass
 from json import loads
 from os import linesep
-from pathlib import Path
-from typing import AbstractSet, Iterator, Mapping, Sequence, Tuple, Union
+from pathlib import PurePath
+from typing import AbstractSet, Iterable, Iterator, Mapping, Sequence, Tuple, Union
 
 from std2.pickle import new_decoder
 
@@ -38,8 +38,10 @@ def _body(body: Union[str, Sequence[str]]) -> str:
         raise ValueError(body)
 
 
-def parse(path: Path) -> Tuple[AbstractSet[str], Sequence[ParsedSnippet]]:
-    text = path.read_text("UTF-8") if path.exists() else ""
+def parse(
+    _: PurePath, lines: Iterable[Tuple[int, str]]
+) -> Tuple[AbstractSet[str], Sequence[ParsedSnippet]]:
+    text = linesep.join(line for _, line in lines)
     json = loads(text)
     fmt: _FMT = _DECODER(json)
 
@@ -51,7 +53,6 @@ def parse(path: Path) -> Tuple[AbstractSet[str], Sequence[ParsedSnippet]]:
                 doc=values.description,
                 label=label,
                 matches=_prefix(values.prefix),
-                options=set(),
             )
             yield snippet
 

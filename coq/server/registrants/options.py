@@ -9,6 +9,7 @@ from ..state import state
 from .marks import nav_mark
 from .omnifunc import omnifunc
 from .preview import preview_preview
+from .snippets import eval_snips
 
 
 @rpc(blocking=True)
@@ -34,15 +35,22 @@ def set_options(nvim: Nvim, mapping: KeyMapping, fast_close: bool) -> None:
 
     settings["completefunc"] = omnifunc.name
 
-    if mapping.jump_to_mark:
-        keymap.n(mapping.jump_to_mark) << f"<cmd>lua {nav_mark.name}()<cr>"
-        keymap.iv(mapping.jump_to_mark) << rf"<c-\><c-n><cmd>lua {nav_mark.name}()<cr>"
+    if mapping.eval_snips:
+        keymap.n(mapping.eval_snips) << f"<cmd>lua {eval_snips.name}(false)<cr>"
+        (
+            keymap.v(mapping.eval_snips)
+            << rf"<c-\><c-n><cmd>lua {eval_snips.name}(true)<cr>"
+        )
 
     if mapping.bigger_preview:
         (
             keymap.i(mapping.bigger_preview, expr=True)
             << f"(pumvisible() && complete_info(['mode']).mode ==# 'eval') ? {preview_preview.name}() : '{mapping.bigger_preview}'"
         )
+
+    if mapping.jump_to_mark:
+        keymap.n(mapping.jump_to_mark) << f"<cmd>lua {nav_mark.name}()<cr>"
+        keymap.iv(mapping.jump_to_mark) << rf"<c-\><c-n><cmd>lua {nav_mark.name}()<cr>"
 
     if mapping.manual_complete:
         (
