@@ -14,6 +14,7 @@ from typing import (
     cast,
 )
 
+from ...shared.parse import lower
 from ...shared.types import Context
 from .parser import context_from, next_char, pushback_chars, raise_err, token_parser
 from .types import (
@@ -249,23 +250,69 @@ def _parse_options(context: ParserCtx) -> RegexFlag:
 # ':+' if '}'
 # ':?' if ':' else '}'
 # ':-' else '}' | '${' int ':' else '}'
-def _parse_fmt_back(context: ParserCtx) -> Callable[[str], str]:
+def _parse_fmt_back(context: ParserCtx) -> Callable[[Optional[str]], str]:
     pos, char = next_char(context)
     assert char == ":"
 
-    for pos, char in context:
-        if char == "\\":
-            pushback_chars(context, (pos, char))
-            _ = _parse_escape(context, escapable_chars=_REGEX_ESC_CHARS)
-        elif char == "}":
-            break
-        else:
-            pass
+    def cont(stop: str, init: Optional[str]) -> Iterator[str]:
+        if init:
+            yield init
+        for pos, char in context:
+            if char == "\\":
+                pushback_chars(context, (pos, char))
+                _ = _parse_escape(context, escapable_chars=_REGEX_ESC_CHARS)
+            elif char == stop:
+                break
+            else:
+                yield char
+
+    pos, char = next_char(context)
+    if char == "/":
+        action = "".join(tuple(cont("}", init=None)))
+
+        def trans(var: Optional[str]) -> str:
+            lo = lower(var or "")
+            if action == "downcase":
+                return lo
+
+            elif action == "upcase":
+                return lo.upper()
+
+            elif action == "capitalize":
+                return lo.capitalize()
+
+            else:
+                return var or ""
+
+    elif char == "+":
+        replace = "".join(tuple(cont("}", init=None)))
+
+        def trans(var: Optional[str]) -> str:
+            return replace if var else (var or "")
+
+    elif char == "?":
+        replace_a = "".join(tuple(cont(":", init=None)))
+        replace_b = "".join(tuple(cont("}", init=None)))
+
+        def trans(var: Optional[str]) -> str:
+            return replace_a if var else replace_b
+
+    elif char == "-":
+        replace = "".join(tuple(cont(":", init=None)))
+
+        def trans(var: Optional[str]) -> str:
+            return var if var is not None else replace
+
+    else:
+        replace = "".join(tuple(cont(":", init=None)))
+
+        def trans(var: Optional[str]) -> str:
+            return var if var is not None else replace
 
     pos, char = next_char(context)
     if char == "/":
         pushback_chars(context, (pos, char))
-        return lambda x: x
+        return trans
     else:
         raise_err(
             text=context.text,
@@ -281,7 +328,7 @@ def _parse_fmt_back(context: ParserCtx) -> Callable[[str], str]:
 #                 | '${' int ':+' if '}'
 #                 | '${' int ':?' if ':' else '}'
 #                 | '${' int ':-' else '}' | '${' int ':' else '}'
-def _parse_fmt(context: ParserCtx) -> Tuple[int, Callable[[str], str]]:
+def _parse_fmt(context: ParserCtx) -> Tuple[int, Callable[[Optional[str]], str]]:
     pos, char = next_char(context)
     assert char == "/"
 
@@ -315,7 +362,7 @@ def _parse_fmt(context: ParserCtx) -> Tuple[int, Callable[[str], str]]:
                         actual=char,
                     )
             group = int("".join(idx_acc))
-            return group, lambda x: x
+            return group, lambda x: x or ""
 
         # ${ int
         elif char == "{":
@@ -327,7 +374,7 @@ def _parse_fmt(context: ParserCtx) -> Tuple[int, Callable[[str], str]]:
                 # '${' int '}'
                 elif char == "}":
                     group = int("".join(idx_acc)) if idx_acc else 0
-                    return group, lambda x: x
+                    return group, lambda x: x or ""
 
                 # ...
                 elif char == ":":
