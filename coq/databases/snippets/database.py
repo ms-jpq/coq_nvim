@@ -65,7 +65,7 @@ class SDB:
                             )
 
                     for uid, snippet in loaded.snippets.items():
-                        source_id = uuid3(UUID(int=0), normcase(snippet.source))
+                        source_id = uuid3(UUID(int=0), normcase(snippet.source)).bytes
                         cursor.execute(sql("insert", "source"), {"rowid": source_id})
                         cursor.execute(
                             sql("insert", "filetype"), {"filetype": snippet.filetype}
