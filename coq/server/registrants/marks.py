@@ -159,7 +159,9 @@ def nav_mark(nvim: Nvim, stack: Stack) -> None:
         if not linked:
             single()
         else:
-            edited = _linked_marks(nvim, mark=mark, linked=linked, ns=ns, buf=buf)
+            edited = _linked_marks(
+                nvim, mark=mark, linked=linked, ns=ns, win=win, buf=buf
+            )
             if not edited:
                 single()
 
