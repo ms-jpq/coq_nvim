@@ -35,11 +35,11 @@ snippet ::= snipstart alias* snipbody
 
 snipstart ::= 'snippet' match
 alias     ::= 'alias' match
-snipbody  ::= ((whitespace)+ body)*
+snipbody  ::= indent body ('\n' indent body)*
 
-whitespace ::= \s | \t
-match      ::= [^\s]+
-body       :: .*
+indent ::= (\s | \t)+
+match  ::= [^\s]+
+body   :: .*
 ```
 
 0. For `<filename>.snip`, the snippets' filetype is `<filename>`
