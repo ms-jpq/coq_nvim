@@ -1,7 +1,7 @@
 from asyncio import CancelledError
 from concurrent.futures import Executor
 from contextlib import closing
-from pathlib import Path
+from pathlib import Path, normcase
 from sqlite3 import Connection, OperationalError
 from threading import Lock
 from typing import Iterator, TypedDict, cast
@@ -63,7 +63,9 @@ class SDB:
                             )
 
                     for hashed, snippet in loaded.snippets.items():
+                        source_id = normcase(snippet.source).encode("UTF-8")
                         row_id = hashed.encode("UTF-8")
+                        cursor.execute(sql("insert", "source"), {"rowid": source_id})
                         cursor.execute(
                             sql("insert", "filetype"), {"filetype": snippet.filetype}
                         )
@@ -71,6 +73,7 @@ class SDB:
                             sql("insert", "snippet"),
                             {
                                 "rowid": row_id,
+                                "source_id": source_id,
                                 "filetype": snippet.filetype,
                                 "grammar": snippet.grammar,
                                 "content": snippet.content,
