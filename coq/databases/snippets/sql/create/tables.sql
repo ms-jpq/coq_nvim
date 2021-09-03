@@ -2,8 +2,7 @@ BEGIN;
 
 
 CREATE TABLE IF NOT EXISTS sources (
-  rowid BLOB NOT NULL PRIMARY KEY,
-  name  TEXT NOT NULL UNIQUE
+  rowid BLOB NOT NULL PRIMARY KEY
 ) WITHOUT rowid;
 
 
@@ -81,6 +80,7 @@ WHERE
 CREATE VIEW IF NOT EXISTS snippets_view AS
 SELECT
   snippets.rowid       AS snippet_id,
+  snippets.source      AS source,
   snippets.grammar     AS grammar,
   matches.match        AS prefix,
   matches.lmatch       AS lprefix,
@@ -98,4 +98,3 @@ ON
 
 
 END;
-
