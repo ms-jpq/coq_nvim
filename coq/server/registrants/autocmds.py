@@ -93,7 +93,7 @@ _DECODER = new_decoder(Sequence[ParsedSnippet], strict=False)
 @rpc(blocking=True)
 def _load_snips(nvim: Nvim, stack: Stack) -> None:
     srcs = stack.settings.clients.snippets.sources
-    paths = tuple(map(Path, nvim.list_runtime_paths()))
+    paths = map(Path, nvim.list_runtime_paths())
 
     async def cont() -> None:
         global _LOCK, _EXTS, _SNIPPETS

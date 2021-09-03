@@ -85,7 +85,6 @@ def _trans(new_text: str, marks: Sequence[ExtMark]) -> Iterator[EditInstruction]
     for mark in marks:
         yield EditInstruction(
             primary=False,
-            primary_shift=False,
             begin=mark.begin,
             end=mark.end,
             cursor_yoffset=0,

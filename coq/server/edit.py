@@ -57,7 +57,6 @@ NS = uuid4()
 @dataclass(frozen=True)
 class EditInstruction:
     primary: bool
-    primary_shift: bool
     begin: NvimPos
     end: NvimPos
     cursor_yoffset: int
@@ -148,7 +147,6 @@ def _contextual_edit_trans(
 
     inst = EditInstruction(
         primary=True,
-        primary_shift=True,
         begin=begin,
         end=end,
         cursor_yoffset=cursor_yoffset,
@@ -220,7 +218,6 @@ def _range_edit_trans(
 
         inst = EditInstruction(
             primary=primary,
-            primary_shift=False,
             begin=begin,
             end=end,
             cursor_yoffset=cursor_yoffset,
@@ -302,7 +299,6 @@ def _shift(instructions: Iterable[EditInstruction]) -> Iterator[EditInstruction]
         (r1, c1), (r2, c2) = inst.begin, inst.end
         yield EditInstruction(
             primary=inst.primary,
-            primary_shift=inst.primary_shift,
             begin=(r1 + row_shift, c1 + col_shift.get(r1, 0)),
             end=(r2 + row_shift, c2 + col_shift.get(r2, 0)),
             cursor_yoffset=inst.cursor_yoffset,
