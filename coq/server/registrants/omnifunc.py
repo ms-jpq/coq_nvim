@@ -1,4 +1,5 @@
 from asyncio import Event, Lock, Task, gather, sleep, wait
+from asyncio.events import AbstractEventLoop
 from dataclasses import replace
 from queue import SimpleQueue
 from typing import Any, Literal, Mapping, Optional, Sequence, Tuple, Union, cast
@@ -56,7 +57,7 @@ def _launch_loop(nvim: Nvim, stack: Stack) -> None:
         lock, event = Lock(), Event()
 
         async def c0(s: State, manual: bool) -> None:
-            with timeit("**OVERALL**"):
+            with with_suppress(), timeit("**OVERALL**"):
                 if lock.locked():
                     log.warn("%s", "SHOULD NOT BE LOCKED <><> OODA")
                 async with lock:
@@ -116,8 +117,9 @@ def _launch_loop(nvim: Nvim, stack: Stack) -> None:
                         await cancel(task)
 
                     if incoming:
+                        assert isinstance(nvim.loop, AbstractEventLoop)
                         s, manual = incoming
-                        task = cast(Task, go(nvim, aw=c0(s, manual=manual)))
+                        task = nvim.loop.create_task(c0(s, manual=manual))
 
         await gather(c1(), c2())
 
