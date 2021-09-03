@@ -47,7 +47,7 @@ local main = function(is_xdg)
     if vim.fn.filereadable(v_py) == 1 then
       return {v_py}
     else
-      local win_proxy = cwd .. [[/win.bat]]
+      local win_proxy = cwd .. [[/venv.bat]]
       return {win_proxy, py3}
     end
   else
