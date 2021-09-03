@@ -1,7 +1,8 @@
 from asyncio import CancelledError
 from concurrent.futures import Executor
 from contextlib import closing
-from pathlib import Path, normcase
+from os.path import normcase
+from pathlib import Path
 from sqlite3 import Connection, OperationalError
 from threading import Lock
 from typing import Iterator, TypedDict, cast
