@@ -2,7 +2,7 @@ from asyncio import Event, Lock, Task, gather, sleep, wait
 from asyncio.events import AbstractEventLoop
 from dataclasses import replace
 from queue import SimpleQueue
-from typing import Any, Literal, Mapping, Optional, Sequence, Tuple, Union, cast
+from typing import Any, Literal, Mapping, Optional, Sequence, Tuple, Union
 from uuid import uuid4
 
 from pynvim import Nvim

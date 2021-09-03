@@ -192,11 +192,11 @@ Here I make a type error on purpose inputting `string` instead of an `integer`.
 
 ![conf_demo.img](https://raw.githubusercontent.com/ms-jpq/coq.artifacts/artifacts/preview/conf.png)
 
-### Pretty icons
+### Pretty
 
 - [Customizable](https://github.com/ms-jpq/coq_nvim/tree/coq/docs/DISPLAY.md)
 
-![icons.img](https://raw.githubusercontent.com/ms-jpq/coq.artifacts/artifacts/preview/icons.png)
+![pretty.gif](https://raw.githubusercontent.com/ms-jpq/coq.artifacts/artifacts/preview/pretty.gif)
 
 **If you can't see icons properly**:
 
