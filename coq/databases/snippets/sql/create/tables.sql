@@ -84,7 +84,7 @@ WHERE
 CREATE VIEW IF NOT EXISTS snippets_view AS
 SELECT
   snippets.rowid       AS snippet_id,
-  snippets.source      AS source,
+  snippets.source_id   AS source_id,
   snippets.grammar     AS grammar,
   matches.match        AS prefix,
   matches.lmatch       AS lprefix,
