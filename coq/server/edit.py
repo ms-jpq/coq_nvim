@@ -294,7 +294,7 @@ def _consolidate(
     return stack
 
 
-def _trans(instructions: Iterable[EditInstruction]) -> Iterator[EditInstruction]:
+def _shift(instructions: Iterable[EditInstruction]) -> Iterator[EditInstruction]:
     row_shift = 0
     col_shift: MutableMapping[int, int] = {}
 
@@ -317,7 +317,7 @@ def _trans(instructions: Iterable[EditInstruction]) -> Iterator[EditInstruction]
 def apply(nvim: Nvim, buf: Buffer, instructions: Iterable[EditInstruction]) -> None:
     nvim.options["undolevels"] = nvim.options["undolevels"]
 
-    for inst in _trans(instructions):
+    for inst in _shift(instructions):
         (r1, c1), (r2, c2) = inst.begin, inst.end
         try:
             nvim.api.buf_set_text(buf, r1, c1, r2, c2, inst.new_lines)
