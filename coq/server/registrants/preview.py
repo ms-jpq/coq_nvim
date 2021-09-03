@@ -20,12 +20,19 @@ from uuid import UUID, uuid4
 from pynvim import Nvim
 from pynvim.api import Buffer, Window
 from pynvim_pp.api import (
+    ExtMark,
     buf_get_lines,
     buf_get_option,
+    buf_set_extmarks,
+    clear_ns,
     create_buf,
+    create_ns,
+    cur_buf,
+    cur_win,
     list_wins,
     win_close,
     win_get_buf,
+    win_get_cursor,
     win_get_var,
     win_set_option,
     win_set_var,
@@ -51,6 +58,7 @@ from ..rt_types import Stack
 from ..state import State, state
 
 _FLOAT_WIN_UUID = uuid4().hex
+_NS = uuid4()
 
 
 @dataclass(frozen=True)
@@ -82,6 +90,10 @@ def _ls(nvim: Nvim) -> Iterator[Window]:
 def _kill_win(nvim: Nvim, stack: Stack, reset: bool) -> None:
     if reset:
         state(pum_location=None, preview_id=uuid4())
+
+    buf = cur_buf(nvim)
+    ns = create_ns(nvim, ns=_NS)
+    clear_ns(nvim, buf=buf, id=ns)
 
     for win in _ls(nvim):
         win_close(nvim, win=win)
@@ -302,6 +314,27 @@ def _resolve_comp(
     _TASK = cast(Task, go(nvim, aw=cont()))
 
 
+def _virt_text(nvim: Nvim, text: str) -> None:
+    overlay, *_ = text.splitlines() or ("",)
+    virt_text = f"  {overlay}"
+
+    ns = create_ns(nvim, ns=_NS)
+    win = cur_win(nvim)
+    buf = win_get_buf(nvim, win=win)
+    row, col = win_get_cursor(nvim, win=win)
+    mark = ExtMark(
+        idx=1,
+        begin=(row, col),
+        end=(row, col),
+        meta={
+            "virt_text_pos": "overlay",
+            "virt_text": ((virt_text, "comment"),),
+        },
+    )
+    clear_ns(nvim, buf=buf, id=ns)
+    buf_set_extmarks(nvim, buf=buf, id=ns, marks=(mark,))
+
+
 _DECODER = new_decoder(_Event)
 
 
@@ -335,6 +368,7 @@ def _cmp_changed(nvim: Nvim, stack: Stack, event: Mapping[str, Any] = {}) -> Non
                         maybe_doc=data.doc,
                         state=s,
                     )
+                _virt_text(nvim, text=data.primary_edit.new_text)
 
 
 autocmd("CompleteChanged") << f"lua {_cmp_changed.name}(vim.v.event)"
