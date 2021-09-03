@@ -1,3 +1,4 @@
+from asyncio import sleep
 from json import JSONDecodeError, loads
 from pathlib import Path
 from textwrap import dedent
@@ -50,6 +51,7 @@ def compile_snips(nvim: Nvim, stack: Stack) -> None:
     async def cont() -> None:
         loaded = await _load(paths)
         if not loaded:
+            await sleep(0)
             await awrite(nvim, LANG("snip parse empty"))
         for l in loaded:
             await stack.sdb.populate(l)
