@@ -82,7 +82,6 @@ class SDB:
                                 "doc": snippet.doc,
                             },
                         )
-
                         for match in snippet.matches:
                             cursor.execute(
                                 sql("insert", "match"),
