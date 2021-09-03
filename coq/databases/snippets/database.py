@@ -2,10 +2,9 @@ from asyncio import CancelledError
 from concurrent.futures import Executor
 from contextlib import closing
 from pathlib import Path
-from sqlite3 import Connection, Cursor, OperationalError
+from sqlite3 import Connection, OperationalError
 from threading import Lock
-from typing import AbstractSet, Iterable, Iterator, Mapping, TypedDict, cast
-from uuid import uuid4
+from typing import Iterator, TypedDict, cast
 
 from std2.asyncio import run_in_executor
 from std2.sqlite3 import with_transaction
@@ -14,7 +13,7 @@ from ...shared.executor import SingleThreadExecutor
 from ...shared.settings import Options
 from ...shared.sql import BIGGEST_INT, init_db
 from ...shared.timeit import timeit
-from ...snippets.types import ParsedSnippet
+from ...snippets.types import LoadedSnips
 from .sql import sql
 
 _SCHEMA = "v0"
@@ -38,14 +37,6 @@ def _init(db_dir: Path) -> Connection:
     return conn
 
 
-def _ensure_ft(cursor: Cursor, filetypes: Iterable[str]) -> None:
-    def it() -> Iterator[Mapping]:
-        for ft in filetypes:
-            yield {"filetype": ft}
-
-    cursor.executemany(sql("insert", "filetype"), it())
-
-
 class SDB:
     def __init__(self, pool: Executor, vars_dir: Path) -> None:
         db_dir = vars_dir / "clients" / "snippets"
@@ -57,47 +48,42 @@ class SDB:
         with self._lock:
             self._conn.interrupt()
 
-    async def add_exts(self, exts: Mapping[str, AbstractSet[str]]) -> None:
-        fts = exts.keys() | {v for vs in exts.values() for v in vs}
-
-        def it() -> Iterator[Mapping]:
-            for src, dests in exts.items():
-                for dest in dests:
-                    yield {"src": src, "dest": dest}
-
+    async def populate(self, loaded: LoadedSnips) -> None:
         def cont() -> None:
             with self._lock, closing(self._conn.cursor()) as cursor:
                 with with_transaction(cursor):
-                    _ensure_ft(cursor, filetypes=fts)
-                    cursor.executemany(sql("insert", "extension"), it())
-
-        await run_in_executor(self._ex.submit, cont)
-
-    async def populate(self, mapping: Mapping[str, Iterable[ParsedSnippet]]) -> None:
-        def cont() -> None:
-            with self._lock, closing(self._conn.cursor()) as cursor:
-                with with_transaction(cursor):
-                    for filetype, snippets in mapping.items():
-                        _ensure_ft(cursor, filetypes=(filetype,))
-                        for snippet in snippets:
-                            row_id = uuid4().bytes
+                    for src, dests in loaded.exts.items():
+                        for dest in dests:
+                            cursor.executemany(
+                                sql("insert", "filetype"),
+                                ({"filetype": src}, {"filetype": dest}),
+                            )
                             cursor.execute(
-                                sql("insert", "snippet"),
-                                {
-                                    "rowid": row_id,
-                                    "filetype": filetype,
-                                    "grammar": snippet.grammar,
-                                    "content": snippet.content,
-                                    "label": snippet.label,
-                                    "doc": snippet.doc,
-                                },
+                                sql("insert", "extension"), {"src": src, "dest": dest}
                             )
 
-                            for match in snippet.matches:
-                                cursor.execute(
-                                    sql("insert", "match"),
-                                    {"snippet_id": row_id, "match": match},
-                                )
+                    for snippet in loaded.snippets.values():
+                        row_id = snippet.hash.encode("UTF-8")
+                        cursor.execute(
+                            sql("insert", "filetype"), {"filetype": snippet.filetype}
+                        )
+                        cursor.execute(
+                            sql("insert", "snippet"),
+                            {
+                                "rowid": row_id,
+                                "filetype": snippet.filetype,
+                                "grammar": snippet.grammar,
+                                "content": snippet.content,
+                                "label": snippet.label,
+                                "doc": snippet.doc,
+                            },
+                        )
+
+                        for match in snippet.matches:
+                            cursor.execute(
+                                sql("insert", "match"),
+                                {"snippet_id": row_id, "match": match},
+                            )
 
         await run_in_executor(self._ex.submit, cont)
 

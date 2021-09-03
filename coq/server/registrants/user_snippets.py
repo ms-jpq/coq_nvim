@@ -116,7 +116,6 @@ def eval_snips(nvim: Nvim, stack: Stack, visual: bool) -> None:
         write(nvim, LANG("snip load fail"))
 
     else:
-
         try:
             snippets = linesep.join(s for s in _trans(stack, snips=snips))
         except ParseError as e:

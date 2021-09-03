@@ -42,7 +42,7 @@
   ✅ Snippets parsed
 
 "snip parse empty": |-
-  ⚠️  No snippets found
+  ⚠️  No compatible snippets found, try updating `coq.artifacts`
 
 "begin T9 download": |-
   ⏳ Downloading T9 ...
