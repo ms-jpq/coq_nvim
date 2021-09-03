@@ -30,8 +30,8 @@ display:
   ghost_text:
     enabled: True
     context:
-      - "  ["
-      - "]  "
+      - " 〈 "
+      - " 〉"
     highlight_group: Comment
 
   pum:
