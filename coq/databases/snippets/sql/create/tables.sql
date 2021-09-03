@@ -1,6 +1,12 @@
 BEGIN;
 
 
+CREATE TABLE IF NOT EXISTS sources (
+  rowid BLOB NOT NULL PRIMARY KEY,
+  name  TEXT NOT NULL UNIQUE
+) WITHOUT rowid;
+
+
 CREATE TABLE IF NOT EXISTS filetypes (
   filetype TEXT NOT NULL PRIMARY KEY
 ) WITHOUT ROWID;
@@ -15,13 +21,15 @@ CREATE INDEX IF NOT EXISTS extensions_src ON extensions (src);
 
 
 CREATE TABLE IF NOT EXISTS snippets (
-  rowid    BLOB NOT NULL PRIMARY KEY,
-  filetype TEXT NOT NULL REFERENCES filetypes (filetype) ON UPDATE CASCADE ON DELETE CASCADE,
-  grammar  TEXT NOT NULL,
-  content  TEXT NOT NULL,
-  label    TEXT NOT NULL,
-  doc      TEXT NOT NULL
+  rowid     BLOB NOT NULL PRIMARY KEY,
+  source_id BLOB NOT NULL REFERENCES sources   (rowid)    ON UPDATE CASCADE ON DELETE CASCADE,
+  filetype  TEXT NOT NULL REFERENCES filetypes (filetype) ON UPDATE CASCADE ON DELETE CASCADE,
+  grammar   TEXT NOT NULL,
+  content   TEXT NOT NULL,
+  label     TEXT NOT NULL,
+  doc       TEXT NOT NULL
 ) WITHOUT ROWID;
+CREATE INDEX IF NOT EXISTS snippets_source_id ON snippets (source_id);
 
 
 CREATE TABLE IF NOT EXISTS matches (
@@ -33,6 +41,11 @@ CREATE TABLE IF NOT EXISTS matches (
 CREATE INDEX IF NOT EXISTS matches_snippet_id ON matches (snippet_id);
 CREATE INDEX IF NOT EXISTS matches_match      ON matches (match);
 CREATE INDEX IF NOT EXISTS matches_lmatch     ON matches (lmatch);
+
+
+CREATE TEMP TABLE enabled_sources (
+  source BLOB NOT NULL PRIMARY KEY REFERENCES sources (rowid) ON UPDATE CASCADE ON DELETE CASCADE
+) WITHOUT ROWID;
 
 
 CREATE VIEW IF NOT EXISTS extensions_view AS
