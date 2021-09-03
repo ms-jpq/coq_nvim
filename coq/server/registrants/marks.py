@@ -1,15 +1,19 @@
 from collections import deque
 from itertools import chain
 from textwrap import dedent
-from typing import Iterator, Sequence, Tuple, TypedDict
+from typing import Iterator, Sequence
 
 from pynvim.api.common import NvimError
 from pynvim.api.nvim import Buffer, Nvim
 from pynvim.api.window import Window
 from pynvim_pp.api import (
+    ExtMark,
     ask,
+    buf_del_extmarks,
+    buf_get_extmarks,
     buf_get_lines,
     buf_linefeed,
+    create_ns,
     cur_win,
     win_get_buf,
     win_set_cursor,
@@ -20,7 +24,7 @@ from pynvim_pp.operators import set_visual_selection
 
 from ...lang import LANG
 from ...registry import rpc
-from ...shared.types import UTF8, Mark
+from ...shared.types import UTF8
 from ...snippets.consts import MOD_PAD
 from ..edit import EditInstruction, apply
 from ..mark import NS
@@ -28,24 +32,9 @@ from ..rt_types import Stack
 from ..state import state
 
 
-class _MarkDetail(TypedDict):
-    end_row: int
-    end_col: int
-
-
-def _ls_marks(nvim: Nvim, ns: str, buf: Buffer) -> Sequence[Mark]:
-    marks: Sequence[Tuple[int, int, int, _MarkDetail]] = nvim.api.buf_get_extmarks(
-        buf, ns, 0, -1, {"details": True}
-    )
-
-    def cont() -> Iterator[Mark]:
-        for idx, r1, c1, details in marks:
-            r2, c2 = details["end_row"], details["end_col"]
-            m = Mark(idx=idx, begin=(r1, c1), end=(r2, c2), text="")
-            yield m
-
+def _ls_marks(nvim: Nvim, ns: int, buf: Buffer) -> Sequence[ExtMark]:
     ordered = sorted(
-        cont(),
+        buf_get_extmarks(nvim, id=ns, buf=buf),
         key=lambda m: (
             m.idx % MOD_PAD,
             m.begin,
@@ -56,7 +45,12 @@ def _ls_marks(nvim: Nvim, ns: str, buf: Buffer) -> Sequence[Mark]:
 
 
 def _single_mark(
-    nvim: Nvim, mark: Mark, marks: Sequence[Mark], ns: int, win: Window, buf: Buffer
+    nvim: Nvim,
+    mark: ExtMark,
+    marks: Sequence[ExtMark],
+    ns: int,
+    win: Window,
+    buf: Buffer,
 ) -> None:
     (r1, c1), (r2, c2) = mark.begin, mark.end
     try:
@@ -83,10 +77,10 @@ def _single_mark(
         msg = LANG("applied mark", marks_left=len(marks))
         write(nvim, msg)
     finally:
-        nvim.api.buf_del_extmark(buf, ns, mark.idx)
+        buf_del_extmarks(nvim, buf=buf, id=ns, marks=(mark,))
 
 
-def _trans(new_text: str, marks: Sequence[Mark]) -> Iterator[EditInstruction]:
+def _trans(new_text: str, marks: Sequence[ExtMark]) -> Iterator[EditInstruction]:
     new_lines = new_text.splitlines()
     for mark in marks:
         yield EditInstruction(
@@ -101,11 +95,16 @@ def _trans(new_text: str, marks: Sequence[Mark]) -> Iterator[EditInstruction]:
 
 
 def _linked_marks(
-    nvim: Nvim, mark: Mark, linked: Sequence[Mark], ns: int, buf: Buffer
+    nvim: Nvim,
+    mark: ExtMark,
+    linked: Sequence[ExtMark],
+    ns: int,
+    win: Window,
+    buf: Buffer,
 ) -> bool:
     marks = tuple(chain((mark,), linked))
 
-    def preview(mark: Mark) -> str:
+    def preview(mark: ExtMark) -> str:
         linesep = buf_linefeed(nvim, buf=buf)
         (r1, c1), (r2, c2) = mark.begin, mark.end
         lo, hi = min(r1, r2), max(r1, r2) + 1
@@ -134,8 +133,9 @@ def _linked_marks(
     resp = ask(nvim, question=LANG("expand marks"), default=place_holder())
     if resp is not None:
         apply(nvim, buf=buf, instructions=_trans(resp, marks=marks))
-        for mark in marks:
-            nvim.api.buf_del_extmark(buf, ns, mark.idx)
+        buf_del_extmarks(nvim, buf=buf, id=ns, marks=marks)
+        row, col = mark.begin
+        win_set_cursor(nvim, win=win, row=row, col=col)
         return True
     else:
         return False
@@ -143,7 +143,7 @@ def _linked_marks(
 
 @rpc(blocking=True)
 def nav_mark(nvim: Nvim, stack: Stack) -> None:
-    ns = nvim.api.create_namespace(NS)
+    ns = create_ns(nvim, ns=NS)
     win = cur_win(nvim)
     buf = win_get_buf(nvim, win=win)
     marks = deque(_ls_marks(nvim, ns=ns, buf=buf))
@@ -159,7 +159,9 @@ def nav_mark(nvim: Nvim, stack: Stack) -> None:
         if not linked:
             single()
         else:
-            edited = _linked_marks(nvim, mark=mark, linked=linked, ns=ns, buf=buf)
+            edited = _linked_marks(
+                nvim, mark=mark, linked=linked, ns=ns, win=win, buf=buf
+            )
             if not edited:
                 single()
 
