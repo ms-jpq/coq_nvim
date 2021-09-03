@@ -427,4 +427,4 @@ def edit(
                     "%s",
                     pformat(((data.primary_edit, *data.secondary_edits), instructions)),
                 )
-            return n_row, n_col
+            return n_row, nn_col
