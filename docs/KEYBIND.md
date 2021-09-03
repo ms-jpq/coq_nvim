@@ -10,6 +10,10 @@ Set up modern keybinds:
 
 - `<bs>` -> backspace always, even when completion menu is open
 
+- `<c-w>` -> delete word before the cursor, even when completion menu is open
+
+- `<c-u>` -> delete all entered characters before the cursor, even when completion menu is open
+
 - `<cr>` -> used to select completion if completion menu is open
 
 - `<tab>` -> if completion menu is open: select next item
