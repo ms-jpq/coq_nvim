@@ -1,2 +1,2 @@
-INSERT INTO sources (rowid)
-VALUES              (:rowid)
+INSERT OR IGNORE INTO sources ( rowid)
+VALUES                        (:rowid)
