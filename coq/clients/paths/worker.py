@@ -1,7 +1,7 @@
 from asyncio import as_completed
 from contextlib import suppress
 from itertools import chain, islice
-from os import scandir
+from os import environ, scandir
 from os.path import (
     altsep,
     curdir,
@@ -62,7 +62,7 @@ def p_lhs(os: OS, lhs: str) -> str:
             )
         else:
             _, s, r = lhs.rpartition("$")
-            return s + r if s and {*r}.issubset(_SH_VAR_CHARS) else ""
+            return s + r if s and {*r}.issubset(_SH_VAR_CHARS) and r in environ else ""
 
 
 def _split(sep: str, text: str) -> Iterator[str]:
@@ -96,6 +96,14 @@ def segs(seps: AbstractSet[str], line: str) -> Iterator[str]:
 def _join(lhs: str, rhs: str) -> str:
     l, r = split(lhs)
     return join(l, normpath(join(r, rhs)))
+
+
+def _p_term(line_pre: str, is_dir: bool) -> str:
+    if not is_dir:
+        return ""
+    else:
+        i1, i2 = line_pre.rfind(sep), line_pre.rfind(altsep or sep)
+        return (altsep or sep) if i2 > i1 else sep
 
 
 def parse(
@@ -145,8 +153,10 @@ def parse(
                                         and len(path.name) + look_ahead >= len(rhs)
                                         and not rhs.startswith(path.name)
                                     ):
-                                        term = sep if path.is_dir() else ""
-                                        line = _join(lseg, path.name) + term
+                                        line_pre = _join(lseg, path.name)
+                                        line = line_pre + _p_term(
+                                            line_pre, is_dir=path.is_dir()
+                                        )
                                         yield PurePath(path.path), line
                                 return
 
