@@ -9,7 +9,7 @@ from ..state import state
 from .marks import nav_mark
 from .omnifunc import omnifunc
 from .preview import preview_preview
-from .snippets import eval_snips
+from .user_snippets import eval_snips
 
 
 @rpc(blocking=True)
