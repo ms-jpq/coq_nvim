@@ -31,7 +31,7 @@ Basically a subset of [`neosnippet`](https://github.com/Shougo/neosnippet.vim)
 ```ebnf
 comment ::= '#' .*
 extends ::= 'extends' match (', ' match)*
-snippet ::= snipstart alias* snipbody
+snippet ::= snipstart ('\n' alias*)* '\n' snipbody
 
 snipstart ::= 'snippet' match
 alias     ::= 'alias' match
@@ -44,9 +44,9 @@ body   :: .*
 
 0. For `<filename>.snip`, the snippets' filetype is `<filename>`
 
-1. Every line is parsed according to a prefix, and what comes after are parsed as args
+1. Every line is parsed according to a prefix
 
-2. Doesn't matter what Indentation is used, as long as it's consistent
+2. Doesn't matter what indentation is used, as long as it's consistent
 
 #### Example document
 
