@@ -13,6 +13,7 @@ from std2.pickle import DecodeError, new_decoder
 
 from ...lang import LANG
 from ...registry import atomic, rpc
+from ...shared.timeit import timeit
 from ...snippets.types import LoadedSnips
 from ..rt_types import Stack
 
@@ -49,12 +50,13 @@ def compile_snips(nvim: Nvim, stack: Stack) -> None:
     paths = tuple(iter_rtps(nvim))
 
     async def cont() -> None:
-        loaded = await _load(paths)
-        if not loaded:
-            await sleep(0)
-            await awrite(nvim, LANG("snip parse empty"))
-        for l in loaded:
-            await stack.sdb.populate(l)
+        with timeit("LOAD SNIPS", force=True):
+            loaded = await _load(paths)
+            if not loaded:
+                await sleep(0)
+                await awrite(nvim, LANG("snip parse empty"))
+            for l in loaded:
+                await stack.sdb.populate(l)
 
     go(nvim, aw=cont())
 
