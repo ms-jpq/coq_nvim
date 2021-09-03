@@ -405,20 +405,17 @@ def edit(
                     secondary=data.secondary_edits,
                 )
             )
-            n_row, n_col = _cursor(
+            n_row, maybe_col = _cursor(
                 state.context.position,
                 instructions=instructions,
             )
-            if inserted:
-                nn_col = n_col + len(inserted.encode(UTF8))
-            else:
-                nn_col = n_col
+            n_col = maybe_col + len(inserted.encode(UTF8)) if inserted else maybe_col
 
             stack.idb.inserted(data.instance.bytes, sort_by=data.sort_by)
 
             apply(nvim, buf=buf, instructions=instructions)
-            nvim.api.buf_set_text(buf, n_row, n_col, n_row, n_col, (inserted,))
-            win_set_cursor(nvim, win=win, row=n_row, col=nn_col)
+            nvim.api.buf_set_text(buf, n_row, maybe_col, n_row, maybe_col, (inserted,))
+            win_set_cursor(nvim, win=win, row=n_row, col=n_col)
             if marks:
                 mark(nvim, settings=stack.settings, buf=buf, marks=marks)
 
@@ -427,4 +424,4 @@ def edit(
                     "%s",
                     pformat(((data.primary_edit, *data.secondary_edits), instructions)),
                 )
-            return n_row, nn_col
+            return n_row, n_col
