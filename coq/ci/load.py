@@ -4,6 +4,7 @@ from multiprocessing import cpu_count
 from pathlib import Path
 from typing import Any, Iterator, Tuple
 from urllib.parse import urlparse
+from uuid import UUID
 
 from std2.asyncio.subprocess import call
 from std2.pickle import new_decoder, new_encoder
@@ -71,8 +72,8 @@ async def load() -> LoadedSnips:
 async def load_parsable() -> Any:
     loaded = await load()
 
-    def cont() -> Iterator[Tuple[str, ParsedSnippet]]:
-        for hashed, snip in loaded.snippets.items():
+    def cont() -> Iterator[Tuple[UUID, ParsedSnippet]]:
+        for uid, snip in loaded.snippets.items():
             edit = SnippetEdit(
                 new_text=snip.content,
                 grammar=snip.grammar,
@@ -84,7 +85,7 @@ async def load_parsable() -> Any:
                     snippet=edit,
                     visual="",
                 )
-                yield hashed, snip
+                yield uid, snip
 
     snippets = {hashed: snip for hashed, snip in cont()}
     safe = LoadedSnips(exts=loaded.exts, snippets=snippets)

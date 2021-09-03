@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from pathlib import PurePath
 from typing import AbstractSet, Mapping
+from uuid import UUID
 
 
 class LoadError(Exception):
@@ -21,4 +22,4 @@ class ParsedSnippet:
 @dataclass(frozen=True)
 class LoadedSnips:
     exts: Mapping[str, AbstractSet[str]]
-    snippets: Mapping[str, ParsedSnippet]
+    snippets: Mapping[UUID, ParsedSnippet]

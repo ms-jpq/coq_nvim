@@ -1,10 +1,12 @@
-from hashlib import md5
+from dataclasses import asdict
 from os.path import normcase
 from pathlib import Path
 from typing import AbstractSet, Iterable, Iterator, MutableMapping, MutableSet, Sequence
+from uuid import UUID, uuid3
 
 from std2.locale import pathsort_key
 from std2.pathlib import walk
+from std2.tree import recur_sort
 
 from ..types import LoadedSnips, ParsedSnippet
 from .lsp import parse as parse_lsp
@@ -22,6 +24,11 @@ def _load_paths(search: Iterable[Path], exts: AbstractSet[str]) -> Sequence[Path
     return sorted(cont(), key=pathsort_key)
 
 
+def _key(snip: ParsedSnippet) -> UUID:
+    name = str(recur_sort(asdict(snip)))
+    return uuid3(UUID(int=0), name=name)
+
+
 def load(
     lsp: Iterable[Path],
     neosnippet: Iterable[Path],
@@ -34,7 +41,7 @@ def load(
     }
 
     extensions: MutableMapping[str, MutableSet[str]] = {}
-    snippets: MutableMapping[str, ParsedSnippet] = {}
+    snippets: MutableMapping[UUID, ParsedSnippet] = {}
 
     for parser, paths in specs.items():
         for path in paths:
@@ -44,8 +51,8 @@ def load(
                 for ext in exts:
                     ext_acc.add(ext)
                 for snip in snips:
-                    hashed = md5(str(snip).encode("UTF-8")).hexdigest()
-                    snippets[hashed] = snip
+                    uid = _key(snip)
+                    snippets[uid] = snip
 
     loaded = LoadedSnips(exts=extensions, snippets=snippets)
     return loaded

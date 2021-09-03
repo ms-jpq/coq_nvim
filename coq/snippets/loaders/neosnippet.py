@@ -46,7 +46,7 @@ def parse(
     path: PurePath, lines: Iterable[Tuple[int, str]]
 ) -> Tuple[str, AbstractSet[str], Sequence[ParsedSnippet]]:
     source = PurePath(path.parent.parent.name) / path.parent.name
-    filetype = path.stem
+    filetype = path.stem.strip()
 
     snippets: MutableSequence[ParsedSnippet] = []
     extends: MutableSet[str] = set()
@@ -82,13 +82,12 @@ def parse(
 
         elif line.startswith(_EXTENDS_START):
             filetypes = line[len(_EXTENDS_START) :].strip()
-            for filetype in filetypes.split(","):
-                extends.add(filetype.strip())
+            for ft in filetypes.split(","):
+                extends.add(ft.strip())
 
         elif line.startswith(_INCLUDES_START):
-            ft = line[len(_INCLUDES_START) :].strip()
-            filetype, _ = splitext(ft)
-            extends.add(filetype)
+            ft = PurePath(line[len(_INCLUDES_START) :]).stem.strip()
+            extends.add(ft)
 
         elif line.startswith(_SNIPPET_START):
             push()

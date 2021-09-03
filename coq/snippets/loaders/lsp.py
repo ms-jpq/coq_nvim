@@ -42,7 +42,7 @@ def parse(
     path: PurePath, lines: Iterable[Tuple[int, str]]
 ) -> Tuple[str, AbstractSet[str], Sequence[ParsedSnippet]]:
     source = PurePath(path.parent.parent.name) / path.parent.name
-    filetype = path.stem
+    filetype = path.stem.strip()
 
     text = linesep.join(line.rstrip() for _, line in lines)
     json = loads(text)

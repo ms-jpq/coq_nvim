@@ -6,6 +6,7 @@ from pathlib import Path
 from sqlite3 import Connection, OperationalError
 from threading import Lock
 from typing import Iterator, TypedDict, cast
+from uuid import UUID, uuid3
 
 from std2.asyncio import run_in_executor
 from std2.sqlite3 import with_transaction
@@ -63,9 +64,8 @@ class SDB:
                                 sql("insert", "extension"), {"src": src, "dest": dest}
                             )
 
-                    for hashed, snippet in loaded.snippets.items():
-                        source_id = normcase(snippet.source).encode("UTF-8")
-                        row_id = hashed.encode("UTF-8")
+                    for uid, snippet in loaded.snippets.items():
+                        source_id = uuid3(UUID(int=0), normcase(snippet.source))
                         cursor.execute(sql("insert", "source"), {"rowid": source_id})
                         cursor.execute(
                             sql("insert", "filetype"), {"filetype": snippet.filetype}
@@ -73,7 +73,7 @@ class SDB:
                         cursor.execute(
                             sql("insert", "snippet"),
                             {
-                                "rowid": row_id,
+                                "rowid": uid.bytes,
                                 "source_id": source_id,
                                 "filetype": snippet.filetype,
                                 "grammar": snippet.grammar,
@@ -85,7 +85,7 @@ class SDB:
                         for match in snippet.matches:
                             cursor.execute(
                                 sql("insert", "match"),
-                                {"snippet_id": row_id, "match": match},
+                                {"snippet_id": uid.bytes, "match": match},
                             )
 
         await run_in_executor(self._ex.submit, cont)
