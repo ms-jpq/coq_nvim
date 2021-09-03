@@ -1,3 +1,4 @@
+from hashlib import md5
 from pathlib import Path
 from typing import AbstractSet, Iterable, Iterator, MutableMapping, MutableSet, Sequence
 
@@ -42,7 +43,8 @@ def load(
                 for ext in exts:
                     ext_acc.add(ext)
                 for snip in snips:
-                    snippets[snip.hash] = snip
+                    hashed = md5(str(snip).encode("UTF-8")).hexdigest()
+                    snippets[hashed] = snip
 
     loaded = LoadedSnips(exts=extensions, snippets=snippets)
     return loaded

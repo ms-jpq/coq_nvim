@@ -9,7 +9,6 @@ class LoadError(Exception):
 
 @dataclass(frozen=True)
 class ParsedSnippet:
-    hash: str
     source: PurePath
     filetype: str
     grammar: str

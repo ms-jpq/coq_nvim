@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Iterator, Mapping, Sequence, Tuple, Union
+from typing import Iterator, Sequence, Tuple, Union
 
 from std2.itertools import deiter
 

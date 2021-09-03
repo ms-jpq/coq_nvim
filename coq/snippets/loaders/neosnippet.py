@@ -1,5 +1,4 @@
 from difflib import get_close_matches
-from hashlib import md5
 from os import linesep
 from os.path import splitext
 from pathlib import PurePath
@@ -61,7 +60,6 @@ def parse(
         if current_name:
             content = dedent(linesep.join(current_lines))
             snippet = ParsedSnippet(
-                hash=md5(content.encode("UTF-8")).hexdigest(),
                 source=source,
                 grammar="snu",
                 filetype=filetype,

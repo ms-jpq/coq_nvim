@@ -1,6 +1,5 @@
 from difflib import get_close_matches
 from enum import Enum, auto
-from hashlib import md5
 from os import linesep
 from pathlib import PurePath
 from typing import AbstractSet, Iterable, MutableSequence, MutableSet, Sequence, Tuple
@@ -105,7 +104,6 @@ def parse(
 
                 content = linesep.join(current_lines)
                 snippet = ParsedSnippet(
-                    hash=md5(content.encode("UTF-8")).hexdigest(),
                     source=source,
                     grammar="snu",
                     filetype=filetype,

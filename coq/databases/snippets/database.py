@@ -62,8 +62,8 @@ class SDB:
                                 sql("insert", "extension"), {"src": src, "dest": dest}
                             )
 
-                    for snippet in loaded.snippets.values():
-                        row_id = snippet.hash.encode("UTF-8")
+                    for hashed, snippet in loaded.snippets.items():
+                        row_id = hashed.encode("UTF-8")
                         cursor.execute(
                             sql("insert", "filetype"), {"filetype": snippet.filetype}
                         )

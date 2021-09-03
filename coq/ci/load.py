@@ -2,7 +2,7 @@ from asyncio import Semaphore, gather
 from contextlib import suppress
 from multiprocessing import cpu_count
 from pathlib import Path
-from typing import Any, Iterator
+from typing import Any, Iterator, Tuple
 from urllib.parse import urlparse
 
 from std2.asyncio.subprocess import call
@@ -71,8 +71,8 @@ async def load() -> LoadedSnips:
 async def load_parsable() -> Any:
     loaded = await load()
 
-    def cont() -> Iterator[ParsedSnippet]:
-        for snip in loaded.snippets.values():
+    def cont() -> Iterator[Tuple[str, ParsedSnippet]]:
+        for hashed, snip in loaded.snippets.items():
             edit = SnippetEdit(
                 new_text=snip.content,
                 grammar=snip.grammar,
@@ -84,9 +84,9 @@ async def load_parsable() -> Any:
                     snippet=edit,
                     visual="",
                 )
-                yield snip
+                yield hashed, snip
 
-    snippets = {snip.hash: snip for snip in cont()}
+    snippets = {hashed: snip for hashed, snip in cont()}
     safe = LoadedSnips(exts=loaded.exts, snippets=snippets)
 
     coder = new_encoder(LoadedSnips)

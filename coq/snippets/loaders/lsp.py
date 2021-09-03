@@ -1,5 +1,4 @@
 from dataclasses import dataclass
-from hashlib import md5
 from json import loads
 from os import linesep
 from pathlib import PurePath
@@ -53,7 +52,6 @@ def parse(
         for label, values in fmt.items():
             content = _body(values.body)
             snippet = ParsedSnippet(
-                hash=md5(content.encode("UTF-8")).hexdigest(),
                 source=source,
                 grammar="lsp",
                 filetype=filetype,
