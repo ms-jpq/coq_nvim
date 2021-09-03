@@ -86,7 +86,7 @@ class CoqClient(Client):
             threadsafe_call(nvim, cont)
         except DecodeError as e:
             tpl = """
-            Some options may hanve changed.
+            Some options may have changed.
             See help doc on Github under [docs/CONFIGURATION.md]
 
 
