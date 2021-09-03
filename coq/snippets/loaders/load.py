@@ -1,4 +1,5 @@
 from hashlib import md5
+from os.path import normcase
 from pathlib import Path
 from typing import AbstractSet, Iterable, Iterator, MutableMapping, MutableSet, Sequence
 
@@ -16,7 +17,7 @@ def _load_paths(search: Iterable[Path], exts: AbstractSet[str]) -> Sequence[Path
         for search_path in search:
             for path in walk(search_path):
                 if path.suffix in exts:
-                    yield path
+                    yield Path(normcase(path))
 
     return sorted(cont(), key=pathsort_key)
 
