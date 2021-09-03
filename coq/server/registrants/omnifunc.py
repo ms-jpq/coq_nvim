@@ -6,7 +6,14 @@ from uuid import uuid4
 
 from pynvim import Nvim
 from pynvim.api.nvim import Nvim
-from pynvim_pp.api import buf_get_lines, cur_buf
+from pynvim_pp.api import (
+    ExtMark,
+    buf_get_lines,
+    buf_set_extmarks,
+    clear_ns,
+    create_ns,
+    cur_buf,
+)
 from pynvim_pp.lib import async_call, go
 from pynvim_pp.logging import log, with_suppress
 from std2.asyncio import cancel, run_in_executor
@@ -15,7 +22,7 @@ from std2.pickle import DecodeError, new_decoder
 from ...lsp.requests.preview import request
 from ...registry import atomic, autocmd, rpc
 from ...shared.timeit import timeit
-from ...shared.types import Context, Extern, NvimPos
+from ...shared.types import UTF8, Context, Extern, NvimPos
 from ..context import context
 from ..edit import NS, edit
 from ..nvim.completions import UserData, complete
@@ -184,10 +191,23 @@ def _comp_done(nvim: Nvim, stack: Stack, event: Mapping[str, Any]) -> None:
             s = state()
             if user_data.change_uid == s.change_id:
                 row, col = s.context.position
-                ns: int = nvim.api.create_namespace(NS)
                 buf = cur_buf(nvim)
-                nvim.api.buf_clear_namespace(buf, ns, 0, -1)
+                ns = create_ns(nvim, ns=NS)
+                clear_ns(nvim, buf=buf, id=ns)
                 before, *_ = buf_get_lines(nvim, buf=buf, lo=row, hi=row + 1)
+                e1 = ExtMark(
+                    idx=1,
+                    begin=(row, 0),
+                    end=(row, col),
+                    meta={},
+                )
+                e2 = ExtMark(
+                    idx=2,
+                    begin=(row, col),
+                    end=(row, len(before.encode(UTF8))),
+                    meta={},
+                )
+                buf_set_extmarks(nvim, buf=buf, id=ns, marks=(e1, e2))
 
                 async def cont() -> None:
                     s = state()

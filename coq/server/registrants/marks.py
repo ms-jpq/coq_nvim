@@ -9,9 +9,11 @@ from pynvim.api.window import Window
 from pynvim_pp.api import (
     ExtMark,
     ask,
+    buf_del_extmarks,
     buf_get_extmarks,
     buf_get_lines,
     buf_linefeed,
+    create_ns,
     cur_win,
     win_get_buf,
     win_set_cursor,
@@ -75,7 +77,7 @@ def _single_mark(
         msg = LANG("applied mark", marks_left=len(marks))
         write(nvim, msg)
     finally:
-        nvim.api.buf_del_extmark(buf, ns, mark.idx)
+        buf_del_extmarks(nvim, buf=buf, id=ns, marks=(mark,))
 
 
 def _trans(new_text: str, marks: Sequence[ExtMark]) -> Iterator[EditInstruction]:
@@ -126,8 +128,7 @@ def _linked_marks(
     resp = ask(nvim, question=LANG("expand marks"), default=place_holder())
     if resp is not None:
         apply(nvim, buf=buf, instructions=_trans(resp, marks=marks))
-        for mark in marks:
-            nvim.api.buf_del_extmark(buf, ns, mark.idx)
+        buf_del_extmarks(nvim, buf=buf, id=ns, marks=marks)
         return True
     else:
         return False
@@ -135,7 +136,7 @@ def _linked_marks(
 
 @rpc(blocking=True)
 def nav_mark(nvim: Nvim, stack: Stack) -> None:
-    ns = nvim.api.create_namespace(NS)
+    ns = create_ns(nvim, ns=NS)
     win = cur_win(nvim)
     buf = win_get_buf(nvim, win=win)
     marks = deque(_ls_marks(nvim, ns=ns, buf=buf))
