@@ -25,4 +25,5 @@ async def main() -> None:
     j_snippets = _json(snippets)
     bj_snippets = j_snippets.encode()
 
+    _SNIPPET_ARTIFACTS.parent.mkdir(parents=True, exist_ok=True)
     _SNIPPET_ARTIFACTS.write_bytes(bj_snippets)
