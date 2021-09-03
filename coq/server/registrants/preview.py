@@ -316,7 +316,6 @@ def _resolve_comp(
 
 def _virt_text(nvim: Nvim, text: str) -> None:
     overlay, *_ = text.splitlines() or ("",)
-    virt_text = f"  {overlay}"
 
     ns = create_ns(nvim, ns=_NS)
     win = cur_win(nvim)
@@ -324,11 +323,12 @@ def _virt_text(nvim: Nvim, text: str) -> None:
     row, col = win_get_cursor(nvim, win=win)
     mark = ExtMark(
         idx=1,
-        begin=(row, col),
-        end=(row, col),
+        begin=(row, 0),
+        end=(row, 0),
         meta={
             "virt_text_pos": "overlay",
-            "virt_text": ((virt_text, "comment"),),
+            "virt_text_win_col": col + 2,
+            "virt_text": ((overlay, "comment"),),
         },
     )
     clear_ns(nvim, buf=buf, id=ns)
