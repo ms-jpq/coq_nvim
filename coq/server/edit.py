@@ -294,7 +294,7 @@ def _consolidate(
     return stack
 
 
-def _trans(instructions: Iterable[EditInstruction]) -> Iterator[EditInstruction]:
+def _shift(instructions: Iterable[EditInstruction]) -> Iterator[EditInstruction]:
     row_shift = 0
     col_shift: MutableMapping[int, int] = {}
 
@@ -317,7 +317,7 @@ def _trans(instructions: Iterable[EditInstruction]) -> Iterator[EditInstruction]
 def apply(nvim: Nvim, buf: Buffer, instructions: Iterable[EditInstruction]) -> None:
     nvim.options["undolevels"] = nvim.options["undolevels"]
 
-    for inst in _trans(instructions):
+    for inst in _shift(instructions):
         (r1, c1), (r2, c2) = inst.begin, inst.end
         try:
             nvim.api.buf_set_text(buf, r1, c1, r2, c2, inst.new_lines)
@@ -352,7 +352,7 @@ def _parse(stack: Stack, state: State, data: UserData) -> Tuple[Edit, Sequence[M
         return data.primary_edit, ()
 
 
-def _restore(nvim: Nvim, buf: Buffer, pos: NvimPos, before: str) -> Optional[str]:
+def _restore(nvim: Nvim, buf: Buffer, pos: NvimPos) -> Optional[str]:
     row, _ = pos
     ns = create_ns(nvim, ns=NS)
     m1, m2 = buf_get_extmarks(nvim, buf=buf, id=ns)
@@ -366,7 +366,7 @@ def _restore(nvim: Nvim, buf: Buffer, pos: NvimPos, before: str) -> Optional[str
 
 
 def edit(
-    nvim: Nvim, stack: Stack, state: State, data: UserData, before: str
+    nvim: Nvim, stack: Stack, state: State, data: UserData
 ) -> Optional[Tuple[int, int]]:
     win = cur_win(nvim)
     buf = win_get_buf(nvim, win=win)
@@ -374,7 +374,7 @@ def edit(
         log.warn("%s", "stale buffer")
         return None
     else:
-        inserted = _restore(nvim, buf=buf, pos=state.context.position, before=before)
+        inserted = _restore(nvim, buf=buf, pos=state.context.position)
 
         try:
             primary, marks = _parse(stack, state=state, data=data)
@@ -405,20 +405,17 @@ def edit(
                     secondary=data.secondary_edits,
                 )
             )
-            n_row, n_col = _cursor(
+            n_row, p_col = _cursor(
                 state.context.position,
                 instructions=instructions,
             )
-
-            apply(nvim, buf=buf, instructions=instructions)
-            if inserted:
-                nn_col = n_col + len(inserted.encode(UTF8))
-                nvim.api.buf_set_text(buf, n_row, n_col, n_row, n_col, (inserted,))
-            else:
-                nn_col = n_col
-            win_set_cursor(nvim, win=win, row=n_row, col=nn_col)
+            n_col = p_col + len(inserted.encode(UTF8)) if inserted else p_col
 
             stack.idb.inserted(data.instance.bytes, sort_by=data.sort_by)
+
+            apply(nvim, buf=buf, instructions=instructions)
+            nvim.api.buf_set_text(buf, n_row, p_col, n_row, p_col, (inserted,))
+            win_set_cursor(nvim, win=win, row=n_row, col=n_col)
             if marks:
                 mark(nvim, settings=stack.settings, buf=buf, marks=marks)
 
