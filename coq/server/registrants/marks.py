@@ -95,7 +95,12 @@ def _trans(new_text: str, marks: Sequence[ExtMark]) -> Iterator[EditInstruction]
 
 
 def _linked_marks(
-    nvim: Nvim, mark: ExtMark, linked: Sequence[ExtMark], ns: int, buf: Buffer
+    nvim: Nvim,
+    mark: ExtMark,
+    linked: Sequence[ExtMark],
+    ns: int,
+    win: Window,
+    buf: Buffer,
 ) -> bool:
     marks = tuple(chain((mark,), linked))
 
@@ -129,6 +134,8 @@ def _linked_marks(
     if resp is not None:
         apply(nvim, buf=buf, instructions=_trans(resp, marks=marks))
         buf_del_extmarks(nvim, buf=buf, id=ns, marks=marks)
+        row, col = mark.begin
+        win_set_cursor(nvim, win=win, row=row, col=col)
         return True
     else:
         return False
