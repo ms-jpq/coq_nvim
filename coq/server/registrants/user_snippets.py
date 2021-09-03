@@ -61,9 +61,7 @@ ${snips}
 _SNIPS_T = Template(_SNIPS)
 
 
-def _trans(
-    stack: Stack, path: PurePath, snips: Iterable[ParsedSnippet]
-) -> Iterator[str]:
+def _trans(stack: Stack, snips: Iterable[ParsedSnippet]) -> Iterator[str]:
     for snip in snips:
         edit = SnippetEdit(grammar="lsp", new_text=snip.content)
         matches = dumps(
@@ -77,7 +75,7 @@ def _trans(
         )
         ms = group_by(marks, key=lambda m: m.idx % MOD_PAD, val=lambda m: m.text)
         yield _SNIP_T.substitute(
-            syntax=path.stem,
+            syntax=snip.filetype,
             matches=matches,
             body=parsed.new_text,
             marks=ms,
@@ -110,7 +108,7 @@ def eval_snips(nvim: Nvim, stack: Stack, visual: bool) -> None:
     lines = buf_get_lines(nvim, buf=buf, lo=lo, hi=hi)
 
     try:
-        ext, snips = parse_neosnippets(path, lines=enumerate(lines, start=lo + 1))
+        _, ext, snips = parse_neosnippets(path, lines=enumerate(lines, start=lo + 1))
     except LoadError as e:
         preview: Sequence[str] = str(e).splitlines()
         with hold_win_pos(nvim, win=win):
@@ -120,7 +118,7 @@ def eval_snips(nvim: Nvim, stack: Stack, visual: bool) -> None:
     else:
 
         try:
-            snippets = linesep.join(s for s in _trans(stack, path=path, snips=snips))
+            snippets = linesep.join(s for s in _trans(stack, snips=snips))
         except ParseError as e:
             preview = str(e).splitlines()
             with hold_win_pos(nvim, win=win):

@@ -1,82 +1,48 @@
 from pathlib import Path
-from typing import (
-    AbstractSet,
-    Iterator,
-    Literal,
-    Mapping,
-    MutableMapping,
-    MutableSequence,
-    MutableSet,
-    Sequence,
-    Tuple,
-    cast,
-)
+from typing import AbstractSet, Iterable, Iterator, MutableMapping, MutableSet, Sequence
 
+from std2.locale import pathsort_key
 from std2.pathlib import walk
 
-from ..types import ASnips, ParsedSnippet
+from ..types import LoadedSnips, ParsedSnippet
 from .lsp import parse as parse_lsp
 from .neosnippet import parse as parse_neosnippets
 from .ultisnip import parse as parse_ultisnip
 
 
-def _load_paths(
-    search: Mapping[str, Path], exts: AbstractSet[str]
-) -> Mapping[str, AbstractSet[Tuple[str, Path]]]:
-    meta: MutableMapping[str, MutableSet[Tuple[str, Path]]] = {}
+def _load_paths(search: Iterable[Path], exts: AbstractSet[str]) -> Sequence[Path]:
+    def cont() -> Iterator[Path]:
+        for search_path in search:
+            for path in walk(search_path):
+                if path.suffix in exts:
+                    yield path
 
-    for label, search_path in search.items():
-        acc = meta.setdefault(label, set())
-        for path in walk(search_path):
-            if path.suffix in exts:
-                acc.add((path.stem, path))
-
-    return meta
+    return sorted(cont(), key=pathsort_key)
 
 
 def load(
-    lsp: Mapping[str, Path],
-    neosnippet: Mapping[str, Path],
-    ultisnip: Mapping[str, Path],
-) -> ASnips:
+    lsp: Iterable[Path],
+    neosnippet: Iterable[Path],
+    ultisnip: Iterable[Path],
+) -> LoadedSnips:
     specs = {
         parse_lsp: _load_paths(lsp, exts={".json"}),
         parse_neosnippets: _load_paths(neosnippet, exts={".snippets", ".snip"}),
         parse_ultisnip: _load_paths(ultisnip, exts={".snippets", ".snip"}),
     }
 
-    def c1() -> Iterator[Tuple[str, str, AbstractSet[str], Sequence[ParsedSnippet]]]:
-        for parser, spec in specs.items():
-            for label, sp in spec.items():
-                for ext, path in sp:
-                    with path.open(encoding="UTF-8") as fd:
-                        parsed = parser(path, enumerate(fd, start=1))
-                    yield label, ext, *parsed
+    extensions: MutableMapping[str, MutableSet[str]] = {}
+    snippets: MutableMapping[str, ParsedSnippet] = {}
 
-    meta: MutableMapping[
-        str,
-        Tuple[
-            MutableMapping[str, MutableSet[str]],
-            MutableMapping[str, MutableSequence[ParsedSnippet]],
-        ],
-    ] = {}
-    for label, ext, extends, snippets in c1():
-        exts, snips = meta.setdefault(label, ({}, {}))
-        e_acc = exts.setdefault(ext, set())
-        s_acc = snips.setdefault(ext, [])
-        for e in extends:
-            e_acc.add(e)
-        for s in snippets:
-            s_acc.append(s)
+    for parser, paths in specs.items():
+        for path in paths:
+            with path.open(encoding="UTF-8") as fd:
+                filetype, exts, snips = parser(path, enumerate(fd, start=1))
+                ext_acc = extensions.setdefault(filetype, set())
+                for ext in exts:
+                    ext_acc.add(ext)
+                for snip in snips:
+                    snippets[snip.hash] = snip
 
-    fin = {
-        label: (
-            {
-                k: cast(Mapping[str, Literal[True]], {e: True for e in v})
-                for k, v in exts.items()
-            },
-            snips,
-        )
-        for label, (exts, snips) in meta.items()
-    }
-    return fin
+    loaded = LoadedSnips(exts=extensions, snippets=snippets)
+    return loaded

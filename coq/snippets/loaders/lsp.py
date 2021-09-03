@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from hashlib import md5
 from json import loads
 from os import linesep
 from pathlib import PurePath
@@ -39,21 +40,28 @@ def _body(body: Union[str, Sequence[str]]) -> str:
 
 
 def parse(
-    _: PurePath, lines: Iterable[Tuple[int, str]]
-) -> Tuple[AbstractSet[str], Sequence[ParsedSnippet]]:
+    path: PurePath, lines: Iterable[Tuple[int, str]]
+) -> Tuple[str, AbstractSet[str], Sequence[ParsedSnippet]]:
+    source = PurePath(path.parent.parent.name) / path.parent.name
+    filetype = path.stem
+
     text = linesep.join(line.rstrip() for _, line in lines)
     json = loads(text)
     fmt: _FMT = _DECODER(json)
 
     def cont() -> Iterator[ParsedSnippet]:
         for label, values in fmt.items():
+            content = _body(values.body)
             snippet = ParsedSnippet(
+                hash=md5(content.encode("UTF-8")).hexdigest(),
+                source=source,
                 grammar="lsp",
-                content=_body(values.body),
+                filetype=filetype,
+                content=content,
                 doc=values.description,
                 label=label,
                 matches=_prefix(values.prefix),
             )
             yield snippet
 
-    return set(), tuple(cont())
+    return filetype, set(), tuple(cont())

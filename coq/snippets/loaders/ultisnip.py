@@ -1,5 +1,6 @@
 from difflib import get_close_matches
 from enum import Enum, auto
+from hashlib import md5
 from os import linesep
 from pathlib import PurePath
 from typing import AbstractSet, Iterable, MutableSequence, MutableSet, Sequence, Tuple
@@ -49,13 +50,16 @@ def _start(line: str) -> Tuple[str, str]:
 
 def parse(
     path: PurePath, lines: Iterable[Tuple[int, str]]
-) -> Tuple[AbstractSet[str], Sequence[ParsedSnippet]]:
+) -> Tuple[str, AbstractSet[str], Sequence[ParsedSnippet]]:
+    source = PurePath(path.parent.parent.name) / path.parent.name
+    filetype = path.stem
+
     snippets: MutableSequence[ParsedSnippet] = []
     extends: MutableSet[str] = set()
 
     current_name = ""
     state = _State.normal
-    current_label: str = ""
+    current_label = ""
     current_lines: MutableSequence[str] = []
 
     for lineno, line in lines:
@@ -101,7 +105,10 @@ def parse(
 
                 content = linesep.join(current_lines)
                 snippet = ParsedSnippet(
+                    hash=md5(content.encode("UTF-8")).hexdigest(),
+                    source=source,
                     grammar="snu",
+                    filetype=filetype,
                     content=content,
                     label=current_label,
                     doc="",
@@ -122,4 +129,4 @@ def parse(
         else:
             assert False
 
-    return extends, snippets
+    return filetype, extends, snippets

@@ -1,5 +1,6 @@
 from dataclasses import dataclass
-from typing import AbstractSet, Literal, Mapping, Sequence, Tuple
+from pathlib import PurePath
+from typing import AbstractSet, Mapping
 
 
 class LoadError(Exception):
@@ -8,6 +9,9 @@ class LoadError(Exception):
 
 @dataclass(frozen=True)
 class ParsedSnippet:
+    hash: str
+    source: PurePath
+    filetype: str
     grammar: str
     content: str
     label: str
@@ -15,13 +19,7 @@ class ParsedSnippet:
     matches: AbstractSet[str]
 
 
-_Label = str
-_Type = str
-
-ASnips = Mapping[
-    _Label,
-    Tuple[
-        Mapping[_Type, Mapping[_Type, Literal[True]]],
-        Mapping[_Type, Sequence[ParsedSnippet]],
-    ],
-]
+@dataclass(frozen=True)
+class LoadedSnips:
+    exts: Mapping[str, AbstractSet[str]]
+    snippets: Mapping[str, ParsedSnippet]

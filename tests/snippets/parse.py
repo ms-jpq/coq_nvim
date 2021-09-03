@@ -15,15 +15,13 @@ _THRESHOLD = 0.95
 
 
 def _edits() -> Iterator[SnippetEdit]:
-    specs = run(load())
-    for _, (_, snippets) in specs.items():
-        for _, snips in snippets.items():
-            for snip in snips:
-                edit = SnippetEdit(
-                    new_text=snip.content,
-                    grammar=snip.grammar,
-                )
-                yield edit
+    loaded = run(load())
+    for snip in loaded.snippets.values():
+        edit = SnippetEdit(
+            new_text=snip.content,
+            grammar=snip.grammar,
+        )
+        yield edit
 
 
 class Parser(TestCase):
