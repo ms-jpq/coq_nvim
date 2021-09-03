@@ -215,14 +215,15 @@ def _comp_done(nvim: Nvim, stack: Stack, event: Mapping[str, Any]) -> None:
                     s = state()
                     if user_data.change_uid == s.change_id:
                         ud = await _resolve(nvim, stack=stack, user_data=user_data)
-                        inserted = await async_call(
-                            nvim,
-                            lambda: edit(
+
+                        def cont() -> None:
+                            inserted = edit(
                                 nvim, stack=stack, state=s, data=ud, before=before
-                            ),
-                        )
-                        ins = inserted or (-1, -1)
-                        state(inserted=ins, commit_id=uuid4())
+                            )
+                            ins = inserted or (-1, -1)
+                            state(inserted=ins, commit_id=uuid4())
+
+                        await async_call(nvim, cont)
                     else:
                         log.warn("%s", "delayed completion")
 
