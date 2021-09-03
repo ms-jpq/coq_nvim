@@ -217,9 +217,7 @@ def _comp_done(nvim: Nvim, stack: Stack, event: Mapping[str, Any]) -> None:
                         ud = await _resolve(nvim, stack=stack, user_data=user_data)
 
                         def cont() -> None:
-                            inserted = edit(
-                                nvim, stack=stack, state=s, data=ud, before=before
-                            )
+                            inserted = edit(nvim, stack=stack, state=s, data=ud)
                             ins = inserted or (-1, -1)
                             state(inserted=ins, commit_id=uuid4())
 

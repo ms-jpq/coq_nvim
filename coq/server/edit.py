@@ -352,7 +352,7 @@ def _parse(stack: Stack, state: State, data: UserData) -> Tuple[Edit, Sequence[M
         return data.primary_edit, ()
 
 
-def _restore(nvim: Nvim, buf: Buffer, pos: NvimPos, before: str) -> Optional[str]:
+def _restore(nvim: Nvim, buf: Buffer, pos: NvimPos) -> Optional[str]:
     row, _ = pos
     ns = create_ns(nvim, ns=NS)
     m1, m2 = buf_get_extmarks(nvim, buf=buf, id=ns)
@@ -366,7 +366,7 @@ def _restore(nvim: Nvim, buf: Buffer, pos: NvimPos, before: str) -> Optional[str
 
 
 def edit(
-    nvim: Nvim, stack: Stack, state: State, data: UserData, before: str
+    nvim: Nvim, stack: Stack, state: State, data: UserData
 ) -> Optional[Tuple[int, int]]:
     win = cur_win(nvim)
     buf = win_get_buf(nvim, win=win)
@@ -374,7 +374,7 @@ def edit(
         log.warn("%s", "stale buffer")
         return None
     else:
-        inserted = _restore(nvim, buf=buf, pos=state.context.position, before=before)
+        inserted = _restore(nvim, buf=buf, pos=state.context.position)
 
         try:
             primary, marks = _parse(stack, state=state, data=data)
