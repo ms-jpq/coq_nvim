@@ -54,6 +54,8 @@ WITH RECURSIVE all_exts AS (
     e1.src,
     e1.dest
   FROM extensions AS e1
+  WHERE
+    e1.dest <> e1.src
   UNION ALL
   SELECT
     all_exts.lvl + 1 AS lvl,
@@ -63,6 +65,8 @@ WITH RECURSIVE all_exts AS (
   JOIN all_exts
   ON
     all_exts.dest = e2.src
+  WHERE
+    e2.dest <> e2.src
 )
 SELECT
   filetypes.filetype AS src,

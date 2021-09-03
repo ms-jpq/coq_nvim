@@ -29,7 +29,7 @@ class _Snip(TypedDict):
 
 
 def _init(db_dir: Path) -> Connection:
-    db = db_dir / _SCHEMA
+    db = (db_dir / _SCHEMA).with_suffix(".sqlite3")
     db.parent.mkdir(parents=True, exist_ok=True)
     conn = Connection(db, isolation_level=None)
     init_db(conn)
