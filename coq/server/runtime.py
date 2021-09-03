@@ -88,7 +88,7 @@ def stack(pool: Executor, nvim: Nvim) -> Stack:
     s = state(cwd=get_cwd(nvim))
     bdb, sdb, idb, tdb, ctdb, tmdb = (
         BDB(pool),
-        SDB(pool),
+        SDB(pool, vars_dir=vars_dir),
         IDB(pool),
         TDB(pool),
         CTDB(pool, vars_dir=vars_dir, cwd=s.cwd),

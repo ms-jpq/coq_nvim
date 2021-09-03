@@ -1,6 +1,7 @@
 from asyncio import CancelledError
 from concurrent.futures import Executor
 from contextlib import closing
+from pathlib import Path
 from sqlite3 import Connection, Cursor, OperationalError
 from threading import Lock
 from typing import AbstractSet, Iterable, Iterator, Mapping, TypedDict, cast
@@ -9,13 +10,14 @@ from uuid import uuid4
 from std2.asyncio import run_in_executor
 from std2.sqlite3 import with_transaction
 
-from ...consts import SNIPPET_DB
 from ...shared.executor import SingleThreadExecutor
 from ...shared.settings import Options
 from ...shared.sql import BIGGEST_INT, init_db
 from ...shared.timeit import timeit
 from ...snippets.types import ParsedSnippet
 from .sql import sql
+
+_SCHEMA = "v0"
 
 
 class _Snip(TypedDict):
@@ -26,8 +28,10 @@ class _Snip(TypedDict):
     doc: str
 
 
-def _init() -> Connection:
-    conn = Connection(SNIPPET_DB, isolation_level=None)
+def _init(db_dir: Path) -> Connection:
+    db = db_dir / _SCHEMA
+    db.parent.mkdir(parents=True, exist_ok=True)
+    conn = Connection(db, isolation_level=None)
     init_db(conn)
     conn.executescript(sql("create", "pragma"))
     conn.executescript(sql("create", "tables"))
@@ -43,10 +47,11 @@ def _ensure_ft(cursor: Cursor, filetypes: Iterable[str]) -> None:
 
 
 class SDB:
-    def __init__(self, pool: Executor) -> None:
+    def __init__(self, pool: Executor, vars_dir: Path) -> None:
+        db_dir = vars_dir / "clients" / "snippets"
         self._lock = Lock()
         self._ex = SingleThreadExecutor(pool)
-        self._conn: Connection = self._ex.submit(_init)
+        self._conn: Connection = self._ex.submit(_init, db_dir)
 
     def _interrupt(self) -> None:
         with self._lock:
