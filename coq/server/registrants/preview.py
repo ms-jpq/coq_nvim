@@ -49,7 +49,7 @@ from ...lsp.requests.preview import request
 from ...lsp.types import CompletionItem
 from ...paths.show import show
 from ...registry import autocmd, rpc
-from ...shared.settings import PreviewDisplay
+from ...shared.settings import GhostText, PreviewDisplay
 from ...shared.timeit import timeit
 from ...shared.trans import expand_tabs
 from ...shared.types import Completion, Context, Doc, Edit, Extern
@@ -314,9 +314,10 @@ def _resolve_comp(
     _TASK = cast(Task, go(nvim, aw=cont()))
 
 
-def _virt_text(nvim: Nvim, text: str) -> None:
+def _virt_text(nvim: Nvim, ghost: GhostText, text: str) -> None:
+    lhs, rhs = ghost.context
     overlay, *_ = text.splitlines() or ("",)
-    virt_text = f"  [{overlay}]  "
+    virt_text = lhs + overlay + rhs
 
     ns = create_ns(nvim, ns=_NS)
     win = cur_win(nvim)
@@ -329,7 +330,7 @@ def _virt_text(nvim: Nvim, text: str) -> None:
         meta={
             "virt_text_pos": "overlay",
             "virt_text_win_col": col,
-            "virt_text": ((virt_text, "comment"),),
+            "virt_text": ((virt_text, ghost.highlight_group),),
         },
     )
     clear_ns(nvim, buf=buf, id=ns)
@@ -369,7 +370,12 @@ def _cmp_changed(nvim: Nvim, stack: Stack, event: Mapping[str, Any] = {}) -> Non
                         maybe_doc=data.doc,
                         state=s,
                     )
-                _virt_text(nvim, text=data.primary_edit.new_text)
+                if stack.settings.display.ghost_text.enabled:
+                    _virt_text(
+                        nvim,
+                        ghost=stack.settings.display.ghost_text,
+                        text=data.primary_edit.new_text,
+                    )
 
 
 autocmd("CompleteChanged") << f"lua {_cmp_changed.name}(vim.v.event)"

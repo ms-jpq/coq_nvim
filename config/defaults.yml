@@ -27,6 +27,13 @@ weights:
   proximity: 0.5
 
 display:
+  ghost_text:
+    enabled: True
+    context:
+      - "  ["
+      - "]  "
+    highlight_group: Comment
+
   pum:
     fast_close: True
 

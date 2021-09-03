@@ -16,6 +16,13 @@ class Limits:
 
 
 @dataclass(frozen=True)
+class GhostText:
+    enabled: bool
+    context: Tuple[str, str]
+    highlight_group: str
+
+
+@dataclass(frozen=True)
 class PumDisplay:
     fast_close: bool
 
@@ -63,6 +70,7 @@ class Icons:
 
 @dataclass(frozen=True)
 class Display:
+    ghost_text: GhostText
     pum: PumDisplay
     preview: PreviewDisplay
     icons: Icons
