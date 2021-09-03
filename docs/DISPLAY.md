@@ -14,6 +14,36 @@ The highlight group alias for snippet regions that you can navigate around using
 
 ---
 
+#### coq_settings.display.ghost_text
+
+The virtual text previewing selected completion
+
+##### `coq_settings.display.ghost_text.enabled`
+
+**default:**
+
+```json
+True
+```
+
+##### `coq_settings.display.ghost_text.context`
+
+Surrounding decoration around ghost text
+
+```json
+[" 〈 ", " 〉"]
+```
+
+##### `coq_settings.display.ghost_text.highlight_group`
+
+Ghost text colours
+
+```json
+Comment
+```
+
+---
+
 #### coq_settings.display.pum
 
 Vim calls the completion popup menu _`pum`_.
