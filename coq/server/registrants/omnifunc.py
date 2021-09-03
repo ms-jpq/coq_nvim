@@ -6,6 +6,7 @@ from uuid import uuid4
 
 from pynvim import Nvim
 from pynvim.api.nvim import Nvim
+from pynvim_pp.api import buf_get_lines, cur_buf
 from pynvim_pp.lib import async_call, go
 from pynvim_pp.logging import log, with_suppress
 from std2.asyncio import cancel, run_in_executor
@@ -16,7 +17,7 @@ from ...registry import atomic, autocmd, rpc
 from ...shared.timeit import timeit
 from ...shared.types import Context, Extern, NvimPos
 from ..context import context
-from ..edit import edit
+from ..edit import NS, edit
 from ..nvim.completions import UserData, complete
 from ..rt_types import Stack
 from ..state import State, state
@@ -180,24 +181,30 @@ def _comp_done(nvim: Nvim, stack: Stack, event: Mapping[str, Any]) -> None:
         except DecodeError as e:
             log.warn("%s", e)
         else:
-            before = nvim.api.get_current_line()
+            s = state()
+            if user_data.change_uid == s.change_id:
+                row, col = s.context.position
+                ns: int = nvim.api.create_namespace(NS)
+                buf = cur_buf(nvim)
+                nvim.api.buf_clear_namespace(buf, ns, 0, -1)
+                before, *_ = buf_get_lines(nvim, buf=buf, lo=row, hi=row + 1)
 
-            async def cont() -> None:
-                s = state()
-                if user_data.change_uid == s.change_id:
-                    ud = await _resolve(nvim, stack=stack, user_data=user_data)
-                    inserted = await async_call(
-                        nvim,
-                        lambda: edit(
-                            nvim, stack=stack, state=s, data=ud, before=before
-                        ),
-                    )
-                    ins = inserted or (-1, -1)
-                    state(inserted=ins, commit_id=uuid4())
-                else:
-                    log.warn("%s", "delayed completion")
+                async def cont() -> None:
+                    s = state()
+                    if user_data.change_uid == s.change_id:
+                        ud = await _resolve(nvim, stack=stack, user_data=user_data)
+                        inserted = await async_call(
+                            nvim,
+                            lambda: edit(
+                                nvim, stack=stack, state=s, data=ud, before=before
+                            ),
+                        )
+                        ins = inserted or (-1, -1)
+                        state(inserted=ins, commit_id=uuid4())
+                    else:
+                        log.warn("%s", "delayed completion")
 
-            go(nvim, aw=cont())
+                go(nvim, aw=cont())
 
 
 autocmd("CompleteDone") << f"lua {_comp_done.name}(vim.v.completed_item)"

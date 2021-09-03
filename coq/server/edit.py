@@ -12,6 +12,7 @@ from typing import (
     Sequence,
     Tuple,
 )
+from uuid import uuid4
 
 from pynvim import Nvim
 from pynvim.api.buffer import Buffer
@@ -43,6 +44,8 @@ from .mark import mark
 from .nvim.completions import UserData
 from .rt_types import Stack
 from .state import State
+
+NS = uuid4().hex
 
 
 @dataclass(frozen=True)
