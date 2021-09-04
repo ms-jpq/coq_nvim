@@ -14,7 +14,7 @@ from uuid import UUID, uuid3
 
 from std2.locale import pathsort_key
 from std2.pathlib import walk
-from std2.tree import recur_sort
+from std2.graphlib import recur_sort
 
 from ..types import LoadedSnips, ParsedSnippet
 from .lsp import parse as parse_lsp

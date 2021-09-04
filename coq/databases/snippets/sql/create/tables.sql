@@ -2,7 +2,9 @@ BEGIN;
 
 
 CREATE TABLE IF NOT EXISTS sources (
-  rowid BLOB NOT NULL PRIMARY KEY
+  rowid    BLOB NOT NULL PRIMARY KEY,
+  filename TEXT NOT NULL UNIQUE,
+  mtime    REAL NOT NULL
 ) WITHOUT rowid;
 
 
@@ -40,11 +42,6 @@ CREATE TABLE IF NOT EXISTS matches (
 CREATE INDEX IF NOT EXISTS matches_snippet_id ON matches (snippet_id);
 CREATE INDEX IF NOT EXISTS matches_match      ON matches (match);
 CREATE INDEX IF NOT EXISTS matches_lmatch     ON matches (lmatch);
-
-
-CREATE TEMP TABLE enabled_sources (
-  source BLOB NOT NULL PRIMARY KEY REFERENCES sources (rowid) ON UPDATE CASCADE ON DELETE CASCADE
-) WITHOUT ROWID;
 
 
 CREATE VIEW IF NOT EXISTS extensions_view AS

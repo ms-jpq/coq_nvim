@@ -1,2 +1,2 @@
-INSERT OR IGNORE INTO sources ( rowid)
-VALUES                        (:rowid)
+INSERT INTO sources ( rowid,         filename,   mtime)
+VALUES              (:rowid  X_NORM(:filename), :mtime)

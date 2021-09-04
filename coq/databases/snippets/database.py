@@ -1,11 +1,10 @@
 from asyncio import CancelledError
 from concurrent.futures import Executor
-from contextlib import closing
 from os.path import normcase
-from pathlib import Path
+from pathlib import Path, PurePath
 from sqlite3 import Connection, OperationalError
 from threading import Lock
-from typing import Iterator, TypedDict, cast
+from typing import Iterator, Mapping, TypedDict, cast
 from uuid import UUID, uuid3
 
 from std2.asyncio import run_in_executor
@@ -50,43 +49,49 @@ class SDB:
         with self._lock:
             self._conn.interrupt()
 
-    async def populate(self, loaded: LoadedSnips) -> None:
+    async def mtimes(self) -> Mapping[PurePath, float]:
         def cont() -> None:
-            with self._lock, closing(self._conn.cursor()) as cursor:
-                with with_transaction(cursor):
-                    for src, dests in loaded.exts.items():
-                        for dest in dests:
-                            cursor.executemany(
-                                sql("insert", "filetype"),
-                                ({"filetype": src}, {"filetype": dest}),
-                            )
-                            cursor.execute(
-                                sql("insert", "extension"), {"src": src, "dest": dest}
-                            )
+            with self._lock, with_transaction(self._conn.cursor()) as cursor:
+                pass
 
-                    for uid, snippet in loaded.snippets.items():
-                        source_id = uuid3(UUID(int=0), normcase(snippet.source)).bytes
-                        cursor.execute(sql("insert", "source"), {"rowid": source_id})
-                        cursor.execute(
-                            sql("insert", "filetype"), {"filetype": snippet.filetype}
+        await run_in_executor(self._ex.submit, cont)
+
+    async def populate(self, path: PurePath, mtime: float, loaded: LoadedSnips) -> None:
+        def cont() -> None:
+            with self._lock, with_transaction(self._conn.cursor()) as cursor:
+                for src, dests in loaded.exts.items():
+                    for dest in dests:
+                        cursor.executemany(
+                            sql("insert", "filetype"),
+                            ({"filetype": src}, {"filetype": dest}),
                         )
                         cursor.execute(
-                            sql("insert", "snippet"),
-                            {
-                                "rowid": uid.bytes,
-                                "source_id": source_id,
-                                "filetype": snippet.filetype,
-                                "grammar": snippet.grammar,
-                                "content": snippet.content,
-                                "label": snippet.label,
-                                "doc": snippet.doc,
-                            },
+                            sql("insert", "extension"), {"src": src, "dest": dest}
                         )
-                        for match in snippet.matches:
-                            cursor.execute(
-                                sql("insert", "match"),
-                                {"snippet_id": uid.bytes, "match": match},
-                            )
+
+                for uid, snippet in loaded.snippets.items():
+                    source_id = uuid3(UUID(int=0), normcase(snippet.source)).bytes
+                    cursor.execute(sql("insert", "source"), {"rowid": source_id})
+                    cursor.execute(
+                        sql("insert", "filetype"), {"filetype": snippet.filetype}
+                    )
+                    cursor.execute(
+                        sql("insert", "snippet"),
+                        {
+                            "rowid": uid.bytes,
+                            "source_id": source_id,
+                            "filetype": snippet.filetype,
+                            "grammar": snippet.grammar,
+                            "content": snippet.content,
+                            "label": snippet.label,
+                            "doc": snippet.doc,
+                        },
+                    )
+                    for match in snippet.matches:
+                        cursor.execute(
+                            sql("insert", "match"),
+                            {"snippet_id": uid.bytes, "match": match},
+                        )
 
         await run_in_executor(self._ex.submit, cont)
 
@@ -95,21 +100,20 @@ class SDB:
     ) -> Iterator[_Snip]:
         def cont() -> Iterator[_Snip]:
             try:
-                with closing(self._conn.cursor()) as cursor:
-                    with with_transaction(cursor):
-                        cursor.execute(
-                            sql("select", "snippets"),
-                            {
-                                "exact": opts.exact_matches,
-                                "cut_off": opts.fuzzy_cutoff,
-                                "look_ahead": opts.look_ahead,
-                                "limit": BIGGEST_INT if limitless else opts.max_results,
-                                "filetype": filetype,
-                                "word": word,
-                            },
-                        )
-                        rows = cursor.fetchall()
-                        return (cast(_Snip, row) for row in rows)
+                with with_transaction(self._conn.cursor()) as cursor:
+                    cursor.execute(
+                        sql("select", "snippets"),
+                        {
+                            "exact": opts.exact_matches,
+                            "cut_off": opts.fuzzy_cutoff,
+                            "look_ahead": opts.look_ahead,
+                            "limit": BIGGEST_INT if limitless else opts.max_results,
+                            "filetype": filetype,
+                            "word": word,
+                        },
+                    )
+                    rows = cursor.fetchall()
+                    return (cast(_Snip, row) for row in rows)
             except OperationalError:
                 return iter(())
 

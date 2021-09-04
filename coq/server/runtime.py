@@ -6,7 +6,7 @@ from pynvim import Nvim
 from pynvim_pp.api import get_cwd
 from std2.configparser import hydrate
 from std2.pickle import new_decoder
-from std2.tree import merge
+from std2.graphlib import merge
 from yaml import safe_load
 
 from ..clients.buffers.worker import Worker as BuffersWorker

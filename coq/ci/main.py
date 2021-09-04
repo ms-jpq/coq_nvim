@@ -2,7 +2,7 @@ from asyncio.tasks import gather
 from json import dumps
 from typing import Any
 
-from std2.tree import recur_sort
+from std2.graphlib import recur_sort
 
 from ..consts import LSP_ARTIFACTS, VARS
 from .load import load_parsable

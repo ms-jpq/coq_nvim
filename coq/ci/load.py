@@ -8,7 +8,7 @@ from uuid import UUID
 
 from std2.asyncio.subprocess import call
 from std2.pickle import new_decoder, new_encoder
-from std2.tree import recur_sort
+from std2.graphlib import recur_sort
 from yaml import safe_load
 
 from ..consts import COMPILATION_YML, TMP_DIR

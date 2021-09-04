@@ -1,6 +1,5 @@
 from asyncio import CancelledError
 from concurrent.futures import Executor
-from contextlib import closing
 from sqlite3 import Connection, OperationalError
 from threading import Lock
 from typing import Iterable, Iterator, Mapping
@@ -48,15 +47,12 @@ class TMDB:
                     }
 
         def cont() -> None:
-            with self._lock, closing(self._conn.cursor()) as cursor:
-                with with_transaction(cursor):
-                    cursor.execute(sql("select", "panes"))
-                    existing = {row["pane_id"] for row in cursor.fetchall()}
-                    cursor.executemany(
-                        sql("delete", "pane"), m1(existing - panes.keys())
-                    )
-                    cursor.executemany(sql("insert", "pane"), m1(panes.keys()))
-                    cursor.executemany(sql("insert", "word"), m2())
+            with self._lock, with_transaction(self._conn.cursor()) as cursor:
+                cursor.execute(sql("select", "panes"))
+                existing = {row["pane_id"] for row in cursor.fetchall()}
+                cursor.executemany(sql("delete", "pane"), m1(existing - panes.keys()))
+                cursor.executemany(sql("insert", "pane"), m1(panes.keys()))
+                cursor.executemany(sql("insert", "word"), m2())
 
         await run_in_executor(self._ex.submit, cont)
 
@@ -65,21 +61,20 @@ class TMDB:
     ) -> Iterator[str]:
         def cont() -> Iterator[str]:
             try:
-                with closing(self._conn.cursor()) as cursor:
-                    with with_transaction(cursor):
-                        cursor.execute(
-                            sql("select", "words"),
-                            {
-                                "exact": opts.exact_matches,
-                                "cut_off": opts.fuzzy_cutoff,
-                                "look_ahead": opts.look_ahead,
-                                "limit": BIGGEST_INT if limitless else opts.max_results,
-                                "pane_id": active_pane,
-                                "word": word,
-                            },
-                        )
-                        rows = cursor.fetchall()
-                        return (row["word"] for row in rows)
+                with with_transaction(self._conn.cursor()) as cursor:
+                    cursor.execute(
+                        sql("select", "words"),
+                        {
+                            "exact": opts.exact_matches,
+                            "cut_off": opts.fuzzy_cutoff,
+                            "look_ahead": opts.look_ahead,
+                            "limit": BIGGEST_INT if limitless else opts.max_results,
+                            "pane_id": active_pane,
+                            "word": word,
+                        },
+                    )
+                    rows = cursor.fetchall()
+                    return (row["word"] for row in rows)
             except OperationalError:
                 return iter(())
 

@@ -1,7 +1,9 @@
-from asyncio import sleep
+from asyncio import sleep, gather
+from contextlib import suppress
 from json import JSONDecodeError, loads
+from os import scandir
 from pathlib import Path
-from typing import Iterator, Sequence, Tuple
+from typing import Iterable, Iterator, MutableSequence, Sequence, Tuple
 
 from pynvim.api.nvim import Nvim
 from pynvim_pp.api import iter_rtps
@@ -16,7 +18,34 @@ from ...shared.timeit import timeit
 from ...snippets.types import LoadedSnips
 from ..rt_types import Stack
 
+_Times = Tuple[Path, float]
 _DECODER = new_decoder(LoadedSnips)
+
+
+async def _pre_load(
+    paths: Iterable[Path],
+) -> Tuple[Sequence[_Times], Sequence[_Times]]:
+    pre_compiled: MutableSequence[_Times] = []
+    user_defined: MutableSequence[_Times] = []
+
+    def cont() -> None:
+        for p in paths:
+            pre = p / "coq+snippets+v2.json"
+            user = p / "coq+snippets+v1"
+
+            with suppress(OSError):
+                mtime = pre.stat().st_mtime
+                pre_compiled.append((pre, mtime))
+
+            with suppress(OSError):
+                for p in scandir(user):
+                    path = Path(p.path)
+                    if path.suffix in {".snip"} and p.is_file():
+                        mtime = p.stat().st_mtime
+                        user_defined.append((path, mtime))
+
+    await run_in_executor(cont)
+    return pre_compiled, user_defined
 
 
 async def _load(paths: Sequence[Path]) -> Sequence[Tuple[float, LoadedSnips]]:
@@ -50,12 +79,13 @@ def compile_snips(nvim: Nvim, stack: Stack) -> None:
 
     async def cont() -> None:
         with timeit("LOAD SNIPS", force=True):
-            loaded = await _load(paths)
-            if not loaded:
-                await sleep(0)
-                await awrite(nvim, LANG("snip parse empty"))
-            for _, l in loaded:
-                await stack.sdb.populate(l)
+            pass
+            # loaded = await _load(paths)
+            # if not loaded:
+            #     await sleep(0)
+            #     await awrite(nvim, LANG("snip parse empty"))
+            # for _, l in loaded:
+            #     await stack.sdb.populate(l)
 
     go(nvim, aw=cont())
 
