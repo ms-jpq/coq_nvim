@@ -1,6 +1,5 @@
 from difflib import get_close_matches
 from os import linesep
-from os.path import splitext
 from pathlib import PurePath
 from string import whitespace
 from textwrap import dedent
@@ -45,7 +44,6 @@ def _start(line: str) -> Tuple[str, str]:
 def parse(
     path: PurePath, lines: Iterable[Tuple[int, str]]
 ) -> Tuple[str, AbstractSet[str], Sequence[ParsedSnippet]]:
-    source = PurePath(path.parent.parent.name) / path.parent.name
     filetype = path.stem.strip()
 
     snippets: MutableSequence[ParsedSnippet] = []
@@ -60,7 +58,7 @@ def parse(
         if current_name:
             content = dedent(linesep.join(current_lines))
             snippet = ParsedSnippet(
-                source=source,
+                source=path,
                 grammar="snu",
                 filetype=filetype,
                 content=content,

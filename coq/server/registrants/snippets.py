@@ -1,7 +1,7 @@
 from asyncio import sleep
 from json import JSONDecodeError, loads
 from pathlib import Path
-from typing import Iterator, Sequence
+from typing import Iterator, Sequence, Tuple
 
 from pynvim.api.nvim import Nvim
 from pynvim_pp.api import iter_rtps
@@ -19,12 +19,13 @@ from ..rt_types import Stack
 _DECODER = new_decoder(LoadedSnips)
 
 
-async def _load(paths: Sequence[Path]) -> Sequence[LoadedSnips]:
-    def cont() -> Iterator[LoadedSnips]:
+async def _load(paths: Sequence[Path]) -> Sequence[Tuple[float, LoadedSnips]]:
+    def cont() -> Iterator[Tuple[float, LoadedSnips]]:
         for path in paths:
             pre_compiled = path / "coq+snippets+v2.json"
 
             try:
+                mtime = pre_compiled.stat().st_mtime
                 raw = pre_compiled.read_text("UTF-8")
             except FileNotFoundError:
                 pass
@@ -38,7 +39,7 @@ async def _load(paths: Sequence[Path]) -> Sequence[LoadedSnips]:
                     msg = f"failed to parse :: {e} -- {pre_compiled}"
                     log.warn("%s", msg)
                 else:
-                    yield loaded
+                    yield mtime, loaded
 
     return await run_in_executor(lambda: tuple(cont()))
 
@@ -53,7 +54,7 @@ def compile_snips(nvim: Nvim, stack: Stack) -> None:
             if not loaded:
                 await sleep(0)
                 await awrite(nvim, LANG("snip parse empty"))
-            for l in loaded:
+            for _, l in loaded:
                 await stack.sdb.populate(l)
 
     go(nvim, aw=cont())

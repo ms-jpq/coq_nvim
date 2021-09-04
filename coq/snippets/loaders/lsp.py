@@ -41,7 +41,6 @@ def _body(body: Union[str, Sequence[str]]) -> str:
 def parse(
     path: PurePath, lines: Iterable[Tuple[int, str]]
 ) -> Tuple[str, AbstractSet[str], Sequence[ParsedSnippet]]:
-    source = PurePath(path.parent.parent.name) / path.parent.name
     filetype = path.stem.strip()
 
     text = linesep.join(line.rstrip() for _, line in lines)
@@ -52,7 +51,7 @@ def parse(
         for label, values in fmt.items():
             content = _body(values.body)
             snippet = ParsedSnippet(
-                source=source,
+                source=path,
                 grammar="lsp",
                 filetype=filetype,
                 content=content,

@@ -1,7 +1,15 @@
 from dataclasses import asdict
 from os.path import normcase
-from pathlib import Path
-from typing import AbstractSet, Iterable, Iterator, MutableMapping, MutableSet, Sequence
+from pathlib import Path, PurePath
+from typing import (
+    AbstractSet,
+    Iterable,
+    Iterator,
+    MutableMapping,
+    MutableSet,
+    Sequence,
+    Tuple,
+)
 from uuid import UUID, uuid3
 
 from std2.locale import pathsort_key
@@ -14,14 +22,17 @@ from .neosnippet import parse as parse_neosnippets
 from .ultisnip import parse as parse_ultisnip
 
 
-def _load_paths(search: Iterable[Path], exts: AbstractSet[str]) -> Sequence[Path]:
-    def cont() -> Iterator[Path]:
+def _load_paths(
+    search: Iterable[Path], exts: AbstractSet[str]
+) -> Sequence[Tuple[Path, PurePath]]:
+    def cont() -> Iterator[Tuple[Path, PurePath]]:
         for search_path in search:
             for path in walk(search_path):
                 if path.suffix in exts:
-                    yield Path(normcase(path))
+                    p = Path(normcase(path))
+                    yield p, p.relative_to(search_path)
 
-    return sorted(cont(), key=pathsort_key)
+    return sorted(cont(), key=lambda ps: pathsort_key(ps[0]))
 
 
 def _key(snip: ParsedSnippet) -> UUID:
@@ -44,9 +55,9 @@ def load(
     snippets: MutableMapping[UUID, ParsedSnippet] = {}
 
     for parser, paths in specs.items():
-        for path in paths:
+        for path, pure in paths:
             with path.open(encoding="UTF-8") as fd:
-                filetype, exts, snips = parser(path, enumerate(fd, start=1))
+                filetype, exts, snips = parser(pure, enumerate(fd, start=1))
                 ext_acc = extensions.setdefault(filetype, set())
                 for ext in exts:
                     ext_acc.add(ext)

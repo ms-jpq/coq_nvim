@@ -50,7 +50,6 @@ def _start(line: str) -> Tuple[str, str]:
 def parse(
     path: PurePath, lines: Iterable[Tuple[int, str]]
 ) -> Tuple[str, AbstractSet[str], Sequence[ParsedSnippet]]:
-    source = PurePath(path.parent.parent.name) / path.parent.name
     filetype = path.stem.strip()
 
     snippets: MutableSequence[ParsedSnippet] = []
@@ -104,7 +103,7 @@ def parse(
 
                 content = linesep.join(current_lines)
                 snippet = ParsedSnippet(
-                    source=source,
+                    source=path,
                     grammar="snu",
                     filetype=filetype,
                     content=content,
