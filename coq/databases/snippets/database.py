@@ -4,8 +4,8 @@ from os.path import normcase
 from pathlib import Path, PurePath
 from sqlite3 import Connection, OperationalError
 from threading import Lock
-from typing import Iterator, Mapping, TypedDict, cast
-from uuid import UUID, uuid3
+from typing import AbstractSet, Iterator, Mapping, TypedDict, cast
+from uuid import uuid4
 
 from std2.asyncio import run_in_executor
 from std2.sqlite3 import with_transaction
@@ -49,6 +49,16 @@ class SDB:
         with self._lock:
             self._conn.interrupt()
 
+    async def clean(self, paths: AbstractSet[PurePath]) -> None:
+        def cont() -> None:
+            with self._lock, with_transaction(self._conn.cursor()) as cursor:
+                cursor.executemany(
+                    sql("delete", "source"),
+                    ({"filename": normcase(path)} for path in paths),
+                )
+
+        await run_in_executor(self._ex.submit, cont)
+
     async def mtimes(self) -> Mapping[PurePath, float]:
         def cont() -> Mapping[PurePath, float]:
             with self._lock, with_transaction(self._conn.cursor()) as cursor:
@@ -58,16 +68,18 @@ class SDB:
                     for row in cursor.fetchall()
                 }
 
-        def step() -> Mapping[PurePath, float]:
-            self._interrupt()
-            return self._ex.submit(cont)
-
-        return await run_in_executor(step)
+        return await run_in_executor(lambda: self._ex.submit(cont))
 
     async def populate(self, path: PurePath, mtime: float, loaded: LoadedSnips) -> None:
         def cont() -> None:
             with self._lock, with_transaction(self._conn.cursor()) as cursor:
-                cursor.execute(sql("delete", "source"), {"filename": normcase(path)})
+                filename, source_id = normcase(path), uuid4()
+                cursor.execute(sql("delete", "source"), {"filename": filename})
+                cursor.execute(
+                    sql("insert", "source"),
+                    {"rowid": source_id, "filename": filename, "mtime": mtime},
+                )
+
                 for src, dests in loaded.exts.items():
                     for dest in dests:
                         cursor.executemany(
@@ -79,8 +91,6 @@ class SDB:
                         )
 
                 for uid, snippet in loaded.snippets.items():
-                    source_id = uuid3(UUID(int=0), normcase(snippet.source)).bytes
-                    cursor.execute(sql("insert", "source"), {"rowid": source_id})
                     cursor.execute(
                         sql("insert", "filetype"), {"filetype": snippet.filetype}
                     )
