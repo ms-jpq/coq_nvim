@@ -7,8 +7,8 @@ from urllib.parse import urlparse
 from uuid import UUID
 
 from std2.asyncio.subprocess import call
-from std2.pickle import new_decoder, new_encoder
 from std2.graphlib import recur_sort
+from std2.pickle import new_decoder, new_encoder
 from yaml import safe_load
 
 from ..consts import COMPILATION_YML, TMP_DIR
@@ -88,7 +88,7 @@ async def load_parsable() -> Any:
                 yield uid, snip
 
     snippets = {hashed: snip for hashed, snip in cont()}
-    safe = LoadedSnips(exts=loaded.exts, snippets=snippets)
+    safe = LoadedSnips(mtimes={}, exts=loaded.exts, snippets=snippets)
 
     coder = new_encoder(LoadedSnips)
     return recur_sort(coder(safe))

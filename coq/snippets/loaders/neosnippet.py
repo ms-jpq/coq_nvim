@@ -58,7 +58,6 @@ def load_neosnippet(
         if current_name:
             content = dedent(linesep.join(current_lines))
             snippet = ParsedSnippet(
-                source=path,
                 grammar="snu",
                 filetype=filetype,
                 content=content,

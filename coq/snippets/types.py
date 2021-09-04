@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from pathlib import PurePath
+from pathlib import Path
 from typing import AbstractSet, Mapping
 from uuid import UUID
 
@@ -20,6 +20,6 @@ class ParsedSnippet:
 
 @dataclass(frozen=True)
 class LoadedSnips:
-    mtimes: Mapping[PurePath, float]
+    mtimes: Mapping[Path, float]
     exts: Mapping[str, AbstractSet[str]]
     snippets: Mapping[UUID, ParsedSnippet]

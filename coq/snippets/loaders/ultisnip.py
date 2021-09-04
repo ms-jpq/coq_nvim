@@ -103,7 +103,6 @@ def load_ultisnip(
 
                 content = linesep.join(current_lines)
                 snippet = ParsedSnippet(
-                    source=path,
                     grammar="snu",
                     filetype=filetype,
                     content=content,

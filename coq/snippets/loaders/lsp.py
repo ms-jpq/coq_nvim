@@ -51,7 +51,6 @@ def load_lsp(
         for label, values in fmt.items():
             content = _body(values.body)
             snippet = ParsedSnippet(
-                source=path,
                 grammar="lsp",
                 filetype=filetype,
                 content=content,
