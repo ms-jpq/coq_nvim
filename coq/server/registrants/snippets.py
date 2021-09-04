@@ -1,7 +1,6 @@
 from asyncio import sleep
 from json import JSONDecodeError, loads
 from pathlib import Path
-from textwrap import dedent
 from typing import Iterator, Sequence
 
 from pynvim.api.nvim import Nvim
@@ -27,18 +26,17 @@ async def _load(paths: Sequence[Path]) -> Sequence[LoadedSnips]:
 
             try:
                 raw = pre_compiled.read_text("UTF-8")
-            except OSError:
+            except FileNotFoundError:
                 pass
+            except OSError as e:
+                log.warn("%s", f"{e} :: -- {pre_compiled}")
             else:
                 try:
                     json = loads(raw)
                     loaded: LoadedSnips = _DECODER(json)
                 except (JSONDecodeError, DecodeError) as e:
-                    msg = f"""
-                    failed to load: {pre_compiled}
-                    {e}
-                    """
-                    log.warn("%s", dedent(msg))
+                    msg = f"failed to parse :: {e} -- {pre_compiled}"
+                    log.warn("%s", msg)
                 else:
                     yield loaded
 
