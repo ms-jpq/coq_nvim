@@ -19,11 +19,21 @@ from ...registry import rpc
 from ...shared.context import EMPTY_CONTEXT
 from ...shared.types import SnippetEdit
 from ...snippets.consts import MOD_PAD
-from ...snippets.loaders.neosnippet import parse as parse_neosnippets
+from ...snippets.loaders.neosnippet import load_neosnippet
 from ...snippets.parse import parse
 from ...snippets.parsers.types import ParseError
 from ...snippets.types import LoadError, ParsedSnippet
 from ..rt_types import Stack
+
+_MARKS = """
+#### 🔖
+
+```json
+${marks}
+
+```
+"""
+_MARKS_T = Template(_MARKS)
 
 _SNIP = """
 ---
@@ -33,16 +43,11 @@ _SNIP = """
 ```${syntax}
 ${body}
 ```
-
-#### 🔖
-
-```json
 ${marks}
-```
-
 ---
 """
 _SNIP_T = Template(_SNIP)
+
 
 _EXTS = """
 ## ✈️
@@ -74,11 +79,13 @@ def _trans(stack: Stack, snips: Iterable[ParsedSnippet]) -> Iterator[str]:
             visual="",
         )
         ms = group_by(marks, key=lambda m: m.idx % MOD_PAD, val=lambda m: m.text)
+        mks = _MARKS_T.substitute(marks=ms) if ms else ""
+
         yield _SNIP_T.substitute(
             syntax=snip.filetype,
             matches=matches,
             body=parsed.new_text,
-            marks=ms,
+            marks=mks,
         )
 
 
@@ -108,7 +115,7 @@ def eval_snips(nvim: Nvim, stack: Stack, visual: bool) -> None:
     lines = buf_get_lines(nvim, buf=buf, lo=lo, hi=hi)
 
     try:
-        _, ext, snips = parse_neosnippets(path, lines=enumerate(lines, start=lo + 1))
+        _, ext, snips = load_neosnippet(path, lines=enumerate(lines, start=lo + 1))
     except LoadError as e:
         preview: Sequence[str] = str(e).splitlines()
         with hold_win_pos(nvim, win=win):

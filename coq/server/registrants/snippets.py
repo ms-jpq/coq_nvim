@@ -3,26 +3,27 @@ from contextlib import suppress
 from json import JSONDecodeError, loads
 from math import inf
 from os import scandir
-from pathlib import Path, PurePath
-from typing import Iterable, Iterator, Mapping, MutableMapping, Sequence, Tuple
+from pathlib import Path
+from typing import Iterable,  Mapping, MutableMapping,  Tuple
 
 from pynvim.api.nvim import Nvim
 from pynvim_pp.api import iter_rtps
 from pynvim_pp.lib import awrite, go
-from pynvim_pp.logging import log
 from std2.asyncio import run_in_executor
 from std2.pickle import DecodeError, new_decoder
 
 from ...lang import LANG
 from ...registry import atomic, rpc
 from ...shared.timeit import timeit
+from ...snippets.loaders.load import load_direct
+from ...snippets.parse import parse
 from ...snippets.types import LoadedSnips
 from ..rt_types import Stack
 
 _DECODER = new_decoder(LoadedSnips)
 
 
-async def _pre_load(
+async def _load_paths(
     paths: Iterable[Path],
 ) -> Tuple[Mapping[Path, float], Mapping[Path, float]]:
     pre_compiled: MutableMapping[Path, float] = {}
@@ -46,29 +47,28 @@ async def _pre_load(
     return pre_compiled, user_defined
 
 
-async def _load(paths: Sequence[Path]) -> Sequence[Tuple[float, LoadedSnips]]:
-    def cont() -> Iterator[Tuple[float, LoadedSnips]]:
-        for path in paths:
-            pre_compiled = path / "coq+snippets+v2.json"
+async def _load_compiled(path: Path, mtime: float) -> LoadedSnips:
+    def cont() -> LoadedSnips:
+        raw = path.read_text("UTF-8")
+        json = loads(raw)
+        loaded: LoadedSnips = _DECODER(json)
+        return loaded
 
-            try:
-                mtime = pre_compiled.stat().st_mtime
-                raw = pre_compiled.read_text("UTF-8")
-            except FileNotFoundError:
-                pass
-            except OSError as e:
-                log.warn("%s", f"{e} :: -- {pre_compiled}")
-            else:
-                try:
-                    json = loads(raw)
-                    loaded: LoadedSnips = _DECODER(json)
-                except (JSONDecodeError, DecodeError) as e:
-                    msg = f"failed to parse :: {e} -- {pre_compiled}"
-                    log.warn("%s", msg)
-                else:
-                    yield mtime, loaded
+    try:
+        loaded = await run_in_executor(cont)
+    except OSError as e:
+        pass
+    except JSONDecodeError as e:
+        pass
+    except DecodeError as e:
+        pass
+    else:
+        return loaded
 
-    return await run_in_executor(lambda: tuple(cont()))
+
+async def _load_user(path: Path, mtime: float) -> LoadedSnips:
+    def cont() -> str:
+        load_direct(lsp=(), neosnippet=(), ultisnip=() )
 
 
 @rpc(blocking=True)
@@ -78,7 +78,7 @@ def compile_snips(nvim: Nvim, stack: Stack) -> None:
     async def cont() -> None:
         with timeit("LOAD SNIPS", force=True):
             (pre_compiled, user_defined), mtimes = await gather(
-                _pre_load(paths), stack.sdb.mtimes()
+                _load_paths(paths), stack.sdb.mtimes()
             )
             compiled = {
                 path: mtime
@@ -92,10 +92,13 @@ def compile_snips(nvim: Nvim, stack: Stack) -> None:
             }
 
             stale = mtimes.keys() - (pre_compiled.keys() | user_defined.keys())
+            await stack.sdb.clean(stale)
 
-            # if not loaded:
-            #     await sleep(0)
-            #     await awrite(nvim, LANG("snip parse empty"))
+            if not (compiled or user):
+                await sleep(0)
+                await awrite(nvim, LANG("snip parse empty"))
+            else:
+                pass
             # for _, l in loaded:
             #     await stack.sdb.populate(l)
 

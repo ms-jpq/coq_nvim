@@ -10,7 +10,6 @@ class LoadError(Exception):
 
 @dataclass(frozen=True)
 class ParsedSnippet:
-    source: PurePath
     filetype: str
     grammar: str
     content: str
@@ -21,5 +20,6 @@ class ParsedSnippet:
 
 @dataclass(frozen=True)
 class LoadedSnips:
+    mtimes: Mapping[PurePath, float]
     exts: Mapping[str, AbstractSet[str]]
     snippets: Mapping[UUID, ParsedSnippet]

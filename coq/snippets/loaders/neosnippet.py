@@ -41,7 +41,7 @@ def _start(line: str) -> Tuple[str, str]:
         return name, label
 
 
-def parse(
+def load_neosnippet(
     path: PurePath, lines: Iterable[Tuple[int, str]]
 ) -> Tuple[str, AbstractSet[str], Sequence[ParsedSnippet]]:
     filetype = path.stem.strip()

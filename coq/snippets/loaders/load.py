@@ -1,38 +1,23 @@
 from dataclasses import asdict
 from os.path import normcase
-from pathlib import Path, PurePath
-from typing import (
-    AbstractSet,
-    Iterable,
-    Iterator,
-    MutableMapping,
-    MutableSet,
-    Sequence,
-    Tuple,
-)
+from pathlib import Path
+from typing import AbstractSet, Iterable, Iterator, MutableMapping, MutableSet
 from uuid import UUID, uuid3
 
-from std2.locale import pathsort_key
-from std2.pathlib import walk
 from std2.graphlib import recur_sort
+from std2.pathlib import walk
 
 from ..types import LoadedSnips, ParsedSnippet
-from .lsp import parse as parse_lsp
-from .neosnippet import parse as parse_neosnippets
-from .ultisnip import parse as parse_ultisnip
+from .lsp import load_lsp
+from .neosnippet import load_neosnippet
+from .ultisnip import load_ultisnip
 
 
-def _load_paths(
-    search: Iterable[Path], exts: AbstractSet[str]
-) -> Sequence[Tuple[Path, PurePath]]:
-    def cont() -> Iterator[Tuple[Path, PurePath]]:
-        for search_path in search:
-            for path in walk(search_path):
-                if path.suffix in exts:
-                    p = Path(normcase(path))
-                    yield p, p.relative_to(search_path)
-
-    return sorted(cont(), key=lambda ps: pathsort_key(ps[0]))
+def _load_paths(search: Iterable[Path], exts: AbstractSet[str]) -> Iterator[Path]:
+    for search_path in search:
+        for path in walk(search_path):
+            if path.suffix in exts:
+                yield Path(normcase(path))
 
 
 def _key(snip: ParsedSnippet) -> UUID:
@@ -40,30 +25,40 @@ def _key(snip: ParsedSnippet) -> UUID:
     return uuid3(UUID(int=0), name=name)
 
 
-def load(
+def load_direct(
     lsp: Iterable[Path],
     neosnippet: Iterable[Path],
     ultisnip: Iterable[Path],
 ) -> LoadedSnips:
-    specs = {
-        parse_lsp: _load_paths(lsp, exts={".json"}),
-        parse_neosnippets: _load_paths(neosnippet, exts={".snippets", ".snip"}),
-        parse_ultisnip: _load_paths(ultisnip, exts={".snippets", ".snip"}),
-    }
+    specs = {load_lsp: lsp, load_neosnippet: neosnippet, load_ultisnip: ultisnip}
 
     extensions: MutableMapping[str, MutableSet[str]] = {}
     snippets: MutableMapping[UUID, ParsedSnippet] = {}
 
     for parser, paths in specs.items():
-        for path, pure in paths:
+        for path in paths:
             with path.open(encoding="UTF-8") as fd:
-                filetype, exts, snips = parser(pure, enumerate(fd, start=1))
-                ext_acc = extensions.setdefault(filetype, set())
-                for ext in exts:
-                    ext_acc.add(ext)
-                for snip in snips:
-                    uid = _key(snip)
-                    snippets[uid] = snip
+                filetype, exts, snips = parser(path, enumerate(fd, start=1))
+            ext_acc = extensions.setdefault(filetype, set())
+            for ext in exts:
+                ext_acc.add(ext)
+            for snip in snips:
+                uid = _key(snip)
+                snippets[uid] = snip
 
     loaded = LoadedSnips(exts=extensions, snippets=snippets)
     return loaded
+
+
+def load_ci(
+    lsp: Iterable[Path],
+    neosnippet: Iterable[Path],
+    ultisnip: Iterable[Path],
+) -> LoadedSnips:
+    loaded = load_direct(
+        lsp=_load_paths(lsp, exts={".json"}),
+        neosnippet=_load_paths(neosnippet, exts={".snippets", ".snip"}),
+        ultisnip=_load_paths(ultisnip, exts={".snippets", ".snip"}),
+    )
+
+    return LoadedSnips(exts=loaded.exts, snippets=loaded.snippets)

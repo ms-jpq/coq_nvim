@@ -38,7 +38,7 @@ def _body(body: Union[str, Sequence[str]]) -> str:
         raise ValueError(body)
 
 
-def parse(
+def load_lsp(
     path: PurePath, lines: Iterable[Tuple[int, str]]
 ) -> Tuple[str, AbstractSet[str], Sequence[ParsedSnippet]]:
     filetype = path.stem.strip()
