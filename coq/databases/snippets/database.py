@@ -50,15 +50,24 @@ class SDB:
             self._conn.interrupt()
 
     async def mtimes(self) -> Mapping[PurePath, float]:
-        def cont() -> None:
+        def cont() -> Mapping[PurePath, float]:
             with self._lock, with_transaction(self._conn.cursor()) as cursor:
-                pass
+                cursor.execute(sql("select", "sources"), ())
+                return {
+                    PurePath(row["filename"]): row["mtimes"]
+                    for row in cursor.fetchall()
+                }
 
-        await run_in_executor(self._ex.submit, cont)
+        def step() -> Mapping[PurePath, float]:
+            self._interrupt()
+            return self._ex.submit(cont)
+
+        return await run_in_executor(step)
 
     async def populate(self, path: PurePath, mtime: float, loaded: LoadedSnips) -> None:
         def cont() -> None:
             with self._lock, with_transaction(self._conn.cursor()) as cursor:
+                cursor.execute(sql("delete", "source"), {"filename": normcase(path)})
                 for src, dests in loaded.exts.items():
                     for dest in dests:
                         cursor.executemany(
