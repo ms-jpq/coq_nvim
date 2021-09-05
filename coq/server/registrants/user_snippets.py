@@ -6,7 +6,7 @@ from typing import AbstractSet, Any, Iterable, Iterator, Mapping, Sequence, Tupl
 from pynvim.api.nvim import Nvim
 from pynvim_pp.api import buf_get_lines, buf_line_count, buf_name, cur_win, win_get_buf
 from pynvim_pp.hold import hold_win_pos
-from pynvim_pp.lib import write
+from pynvim_pp.lib import display_width, write
 from pynvim_pp.operators import operator_marks
 from pynvim_pp.preview import set_preview
 from std2.itertools import group_by
@@ -24,22 +24,33 @@ from ...snippets.parsers.types import ParseError
 from ...snippets.types import LoadError, ParsedSnippet
 from ..rt_types import Stack
 
+_WIDTH = 80
+_TAB = 2
+
 
 def _repr(dumper: SafeDumper, data: str) -> ScalarNode:
-    node: ScalarNode = dumper.represent_scalar("tag:yaml.org,2002:str", data, style="|")
+    if len(data.splitlines()) > 1:
+        style = "|"
+    elif display_width(data, tabsize=_TAB) > _WIDTH:
+        style = ">"
+    else:
+        style = ""
+    node: ScalarNode = dumper.represent_scalar(
+        "tag:yaml.org,2002:str", data, style=style
+    )
     return node
 
 
 add_representer(str, _repr, Dumper=SafeDumper)
 
 
-def _fmt_yaml(data: Sequence[Any], width: int, indent: int) -> str:
+def _fmt_yaml(data: Sequence[Any]) -> str:
     yaml = safe_dump_all(
         data,
         allow_unicode=True,
         explicit_start=True,
-        width=width,
-        indent=indent,
+        width=_WIDTH,
+        indent=_TAB,
     )
     return str(yaml)
 
@@ -71,11 +82,11 @@ def _pprn(
                 "marks": group_by(
                     marks, key=lambda m: str(m.idx % MOD_PAD), val=lambda m: m.text
                 ),
-                "expanded": edit.new_text,
+                "expanded": edit.new_text.expandtabs(_TAB),
             }
             yield mapping
 
-    return _fmt_yaml(tuple(cont()), width=80, indent=2)
+    return _fmt_yaml(tuple(cont()))
 
 
 @rpc(blocking=True)
