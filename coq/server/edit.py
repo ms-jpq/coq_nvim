@@ -20,6 +20,7 @@ from pynvim.api.common import NvimError
 from pynvim_pp.api import (
     buf_get_extmarks,
     buf_get_lines,
+    buf_set_text,
     create_ns,
     cur_win,
     win_get_buf,
@@ -314,9 +315,10 @@ def apply(nvim: Nvim, buf: Buffer, instructions: Iterable[EditInstruction]) -> N
     nvim.options["undolevels"] = nvim.options["undolevels"]
 
     for inst in _shift(instructions):
-        (r1, c1), (r2, c2) = inst.begin, inst.end
         try:
-            nvim.api.buf_set_text(buf, r1, c1, r2, c2, inst.new_lines)
+            buf_set_text(
+                nvim, buf=buf, begin=inst.begin, end=inst.end, text=inst.new_lines
+            )
         except NvimError as e:
             log.warn(f"%s{linesep}%s", e, inst)
 
@@ -356,7 +358,7 @@ def _restore(nvim: Nvim, buf: Buffer, pos: NvimPos) -> Optional[str]:
     (_, lo), (_, hi) = m1.end, m2.begin
     inserted = after.encode(UTF8)[lo:hi].decode(UTF8, errors="ignore")
     if inserted:
-        nvim.api.buf_set_text(buf, *m1.end, *m2.begin, ("",))
+        buf_set_text(nvim, buf=buf, begin=m1.end, end=m2.begin, text=("",))
 
     return inserted
 
@@ -410,7 +412,13 @@ def edit(
             stack.idb.inserted(data.instance.bytes, sort_by=data.sort_by)
 
             apply(nvim, buf=buf, instructions=instructions)
-            nvim.api.buf_set_text(buf, n_row, p_col, n_row, p_col, (inserted,))
+            buf_set_text(
+                nvim,
+                buf=buf,
+                begin=(n_row, p_col),
+                end=(n_row, p_col),
+                text=(inserted,) if inserted else (),
+            )
             win_set_cursor(nvim, win=win, row=n_row, col=n_col)
             if marks:
                 mark(nvim, settings=stack.settings, buf=buf, marks=marks)
