@@ -74,8 +74,9 @@ def load_ultisnip(
 
             elif line.startswith(_EXTENDS_START):
                 filetypes = line[len(_EXTENDS_START) :].strip()
-                for ft in filetypes.split(","):
-                    extends.add(ft.strip())
+                for ft in (f.strip() for f in filetypes.split(",")):
+                    if ft:
+                        extends.add(ft)
 
             elif line.startswith(_SNIPPET_START):
                 state = _State.snippet
