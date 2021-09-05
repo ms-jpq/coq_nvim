@@ -96,7 +96,7 @@ def compile_snips(nvim: Nvim, stack: Stack) -> None:
                         Failed to load compiled snips
                         ${e}
                         """
-                        log.warn("%s", Template(dedent(tpl)).substitute(e=e))
+                        log.warn("%s", Template(dedent(tpl)).substitute(e=type(e)))
                     else:
                         await stack.sdb.populate(path, mtime=mtime, loaded=loaded)
                         await awrite(
