@@ -83,7 +83,12 @@ async def _user_mtimes(nvim: Nvim, user_path: Optional[Path]) -> Mapping[Path, f
 
     def cont() -> Iterator[Tuple[Path, float]]:
         if user_path:
-            yield from seek(user_path)
+            resolved = (
+                user_path
+                if user_path.is_absolute()
+                else Path(nvim.funcs.stdpath("config")) / user_path
+            )
+            yield from seek(resolved)
         for path in rtp:
             yield from seek(path / "coq+user+snippets")
 
@@ -180,9 +185,7 @@ def compile_one(
     return compiled
 
 
-def compile(
-    unifying_chars: AbstractSet[str], paths: Iterable[Path]
-) -> Iterator[Compiled]:
+def compile_user_snippets(unifying_chars: AbstractSet[str]) -> Iterator[Compiled]:
     for path in paths:
         with path.open(encoding="UTF-8") as fd:
             yield compile_one(unifying_chars, path=path, lines=enumerate(fd, start=1))
@@ -245,7 +248,8 @@ def _load_snips(nvim: Nvim, stack: Stack) -> None:
 
             if updated_user_snips:
                 paths = linesep.join(
-                    fmt_path(s.cwd, path=p, is_dir=False) for p in updated_user_snips
+                    f"{fmt_path(s.cwd, path=p, is_dir=False)} -- {m.strftime(stack.settings.display.time_fmt)}"
+                    for p, m in updated_user_snips.items()
                 )
                 await awrite(nvim, LANG("fs snip needs compile", paths=paths))
 

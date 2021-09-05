@@ -16,12 +16,11 @@ from yaml.nodes import ScalarNode, SequenceNode
 
 from ...lang import LANG
 from ...registry import rpc
-from ...shared.types import Edit, Mark
 from ...snippets.consts import MOD_PAD
 from ...snippets.parsers.types import ParseError
-from ...snippets.types import LoadError, ParsedSnippet
+from ...snippets.types import LoadError
 from ..rt_types import Stack
-from .snippets import Compiled, compile, compile_one
+from .snippets import Compiled, compile_user_snippets, compile_one
 
 _WIDTH = 80
 _TAB = 2

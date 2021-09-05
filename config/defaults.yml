@@ -61,6 +61,7 @@ display:
       west: 3
       east: 4
 
+  time_fmt: "%Y-%m-%d %H:%M"
   mark_highlight_group: Pmenu
 
   icons:

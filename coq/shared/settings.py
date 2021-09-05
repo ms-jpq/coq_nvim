@@ -74,6 +74,7 @@ class Display:
     pum: PumDisplay
     preview: PreviewDisplay
     icons: Icons
+    time_fmt: str
     mark_highlight_group: str
 
 
