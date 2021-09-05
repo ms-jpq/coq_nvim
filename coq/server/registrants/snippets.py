@@ -33,7 +33,7 @@ async def _load_bundled(nvim: Nvim) -> Mapping[Path, float]:
         for path in paths:
             json = path / f"coq+snippets+{SCHEMA}.json"
             with suppress(OSError):
-                mtime = path.stat().st_mtime
+                mtime = json.stat().st_mtime
                 yield json, mtime
 
     return {p: m for p, m in await run_in_executor(lambda: tuple(cont()))}
