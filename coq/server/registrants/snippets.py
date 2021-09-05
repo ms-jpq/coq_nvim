@@ -37,6 +37,7 @@ from ...registry import atomic, rpc
 from ...shared.context import EMPTY_CONTEXT
 from ...shared.timeit import timeit
 from ...shared.types import Edit, Mark, SnippetEdit
+from ...snippets.loaders.load import load_direct
 from ...snippets.loaders.neosnippet import load_neosnippet
 from ...snippets.parse import parse
 from ...snippets.types import SCHEMA, LoadedSnips, ParsedSnippet
@@ -129,7 +130,7 @@ async def _load_user_compiled(
             raw = meta.read_text("UTF-8")
             try:
                 json = loads(raw)
-                m2 = new_encoder(Mapping[Path, float])(json)
+                m2 = new_decoder(Mapping[Path, float])(json)
             except (JSONDecodeError, DecodeError):
                 meta.unlink()
 
@@ -143,11 +144,11 @@ def jsonify(o: Any) -> str:
     return json
 
 
-async def dump_compiled(
-    vars_dir: Path, mtimes: Mapping[Path, float], snip: LoadedSnips
+async def _dump_compiled(
+    vars_dir: Path, mtimes: Mapping[Path, float], loaded: LoadedSnips
 ) -> None:
     m_json = jsonify(new_encoder(Mapping[Path, float])(mtimes))
-    s_json = jsonify(new_encoder(LoadedSnips)(snip))
+    s_json = jsonify(new_encoder(LoadedSnips)(loaded))
 
     paths = _paths(vars_dir)
     compiled, meta = paths
@@ -165,30 +166,44 @@ async def dump_compiled(
         Path(fd.name).replace(meta)
 
 
+def _trans(
+    unifying_chars: AbstractSet[str], snips: Iterable[ParsedSnippet]
+) -> Iterator[Tuple[ParsedSnippet, Edit, Sequence[Mark]]]:
+    for snip in snips:
+        edit = SnippetEdit(grammar=snip.grammar, new_text=snip.content)
+        parsed, marks = parse(
+            unifying_chars,
+            context=EMPTY_CONTEXT,
+            snippet=edit,
+            visual="",
+        )
+        yield snip, parsed, marks
+
+
 def compile_one(
-    unifying_chars: AbstractSet[str], path: PurePath, lines: Iterable[Tuple[int, str]]
+    stack: Stack, path: PurePath, lines: Iterable[Tuple[int, str]]
 ) -> Compiled:
     filetype, exts, snips = load_neosnippet(path, lines=lines)
+    parsed = tuple(_trans(stack.settings.match.unifying_chars, snips=snips))
 
-    def cont() -> Iterator[Tuple[ParsedSnippet, Edit, Sequence[Mark]]]:
-        for snip in snips:
-            edit = SnippetEdit(grammar=snip.grammar, new_text=snip.content)
-            parsed, marks = parse(
-                unifying_chars,
-                context=EMPTY_CONTEXT,
-                snippet=edit,
-                visual="",
-            )
-            yield snip, parsed, marks
-
-    compiled = Compiled(path=path, filetype=filetype, exts=exts, parsed=tuple(cont()))
+    compiled = Compiled(
+        path=path,
+        filetype=filetype,
+        exts=exts,
+        parsed=parsed,
+    )
     return compiled
 
 
-def compile_user_snippets(unifying_chars: AbstractSet[str]) -> Iterator[Compiled]:
-    for path in paths:
-        with path.open(encoding="UTF-8") as fd:
-            yield compile_one(unifying_chars, path=path, lines=enumerate(fd, start=1))
+async def compile_user_snippets(nvim: Nvim, stack: Stack) -> None:
+    mtimes = await _user_mtimes(nvim, user_path=None)
+    loaded = await run_in_executor(
+        lambda: load_direct(lsp=(), neosnippet=mtimes, ultisnip=())
+    )
+    _ = tuple(
+        _trans(stack.settings.match.unifying_chars, snips=loaded.snippets.values())
+    )
+    await _dump_compiled(stack.supervisor.vars_dir, mtimes=mtimes, loaded=loaded)
 
 
 @rpc(blocking=True)

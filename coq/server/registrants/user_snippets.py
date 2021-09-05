@@ -2,12 +2,12 @@ from argparse import Namespace
 from locale import strxfrm
 from os.path import normcase
 from pathlib import PurePath
-from typing import AbstractSet, Any, Iterable, Iterator, Mapping, Sequence, Tuple
+from typing import Any, Iterator, Mapping, Sequence
 
 from pynvim.api.nvim import Nvim
 from pynvim_pp.api import buf_get_lines, buf_line_count, buf_name, cur_win, win_get_buf
 from pynvim_pp.hold import hold_win_pos
-from pynvim_pp.lib import display_width, write
+from pynvim_pp.lib import awrite, display_width, go, write
 from pynvim_pp.operators import operator_marks
 from pynvim_pp.preview import set_preview
 from std2.argparse import ArgparseError, ArgParser
@@ -20,7 +20,7 @@ from ...snippets.consts import MOD_PAD
 from ...snippets.parsers.types import ParseError
 from ...snippets.types import LoadError
 from ..rt_types import Stack
-from .snippets import Compiled, compile_user_snippets, compile_one
+from .snippets import Compiled, compile_one, compile_user_snippets
 
 _WIDTH = 80
 _TAB = 2
@@ -102,11 +102,7 @@ def eval_snips(nvim: Nvim, stack: Stack, visual: bool) -> None:
     lines = buf_get_lines(nvim, buf=buf, lo=lo, hi=hi)
 
     try:
-        compiled = compile_one(
-            stack.settings.match.unifying_chars,
-            path=path,
-            lines=enumerate(lines, start=lo + 1),
-        )
+        compiled = compile_one(stack, path=path, lines=enumerate(lines, start=lo + 1))
     except LoadError as e:
         preview: Sequence[str] = str(e).splitlines()
         with hold_win_pos(nvim, win=win):
@@ -128,10 +124,6 @@ def eval_snips(nvim: Nvim, stack: Stack, visual: bool) -> None:
             write(nvim, LANG("no snippets found"))
 
 
-def _compile(nvim: Nvim) -> None:
-    pass
-
-
 def _parse_args(args: Sequence[str]) -> Namespace:
     parser = ArgParser()
     sub_parsers = parser.add_subparsers(dest="action", required=True)
@@ -147,6 +139,15 @@ def snips(nvim: Nvim, stack: Stack, args: Sequence[str]) -> None:
         write(nvim, e, error=True)
     else:
         if ns.action == "compile":
-            _compile(nvim)
+
+            async def cont() -> None:
+                try:
+                    await compile_user_snippets(nvim, stack=stack)
+                except LoadError as e:
+                    await awrite(nvim, e)
+                except ParseError as e:
+                    await awrite(nvim, e)
+
+            go(nvim, aw=cont())
         else:
             assert False
