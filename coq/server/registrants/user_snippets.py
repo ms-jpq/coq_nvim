@@ -10,7 +10,7 @@ from pynvim_pp.lib import write
 from pynvim_pp.operators import operator_marks
 from pynvim_pp.preview import set_preview
 from std2.itertools import group_by
-from yaml import SafeDumper, add_representer, dump
+from yaml import SafeDumper, add_representer, safe_dump_all
 from yaml.nodes import ScalarNode
 
 from ...lang import LANG
@@ -33,8 +33,8 @@ def _repr(dumper: SafeDumper, data: str) -> ScalarNode:
 add_representer(str, _repr, Dumper=SafeDumper)
 
 
-def _fmt_yaml(data: Any, width: int, indent: int) -> str:
-    yaml = dump(
+def _fmt_yaml(data: Sequence[Any], width: int, indent: int) -> str:
+    yaml = safe_dump_all(
         data,
         allow_unicode=True,
         explicit_start=True,
@@ -63,19 +63,19 @@ def _pprn(
     snippets: Iterable[Tuple[AbstractSet[str], Edit, Sequence[Mark]]],
 ) -> str:
     def cont() -> Iterator[Mapping[str, Any]]:
+        mapping = {"extensions": sorted(exts, key=strxfrm)}
+        yield mapping
         for matches, edit, marks in snippets:
             mapping = {
                 "matches": sorted(matches, key=strxfrm),
                 "marks": group_by(
-                    marks, key=lambda m: m.idx % MOD_PAD, val=lambda m: m.text
+                    marks, key=lambda m: str(m.idx % MOD_PAD), val=lambda m: m.text
                 ),
                 "expanded": edit.new_text,
             }
-            print(edit.new_text, flush=True)
             yield mapping
 
-    mapping = {"extensions": sorted(exts, key=strxfrm), "snippets": [*cont()]}
-    return _fmt_yaml(mapping, width=80, indent=2)
+    return _fmt_yaml(tuple(cont()), width=80, indent=2)
 
 
 @rpc(blocking=True)
