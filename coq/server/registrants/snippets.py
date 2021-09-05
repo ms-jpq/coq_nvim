@@ -41,7 +41,12 @@ async def _load_bundled(nvim: Nvim) -> Mapping[Path, float]:
 
 async def _load_user_compiled(vars_dir: Path) -> Mapping[Path, float]:
     def cont() -> Mapping[Path, float]:
-        return {}
+        path = vars_dir / "clients" / "snippets" / f"users+{SCHEMA}.json"
+        try:
+            mtime = path.stat().st_mtime
+            return {path: mtime}
+        except OSError:
+            return {}
 
     return await run_in_executor(cont)
 
@@ -80,7 +85,9 @@ def compile_snips(nvim: Nvim, stack: Stack) -> None:
                 }
 
                 for fut in as_completed(
-                    (_load_compiled(path, mtime) for path, mtime in compiled.items())
+                    tuple(
+                        _load_compiled(path, mtime) for path, mtime in compiled.items()
+                    )
                 ):
                     try:
                         path, mtime, loaded = await fut
