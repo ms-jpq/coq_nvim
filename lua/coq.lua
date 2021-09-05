@@ -16,8 +16,7 @@ local err_exit = false
 local on_exit = function(_, code)
   if not (code == 0 or code == 143) then
     err_exit = true
-  local msg = "COQ EXITED - " .. code
-  vim.api.nvim_echo({{msg, "ErrorMsg"}}, true, {})
+    vim.api.nvim_err_writeln("COQ EXITED - " .. code)
   else
     err_exit = false
   end
