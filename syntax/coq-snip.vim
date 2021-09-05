@@ -12,7 +12,7 @@ syntax match Delimiter   '\V,'
 
 syntax match Label       '\v^abbr\s'
 syntax match Keyword     '\v^snippet\s|^alias\s'
-syntax match Error       '\v^snippet\s+[^s]+\s+.*$'
+syntax match Error       '\v(^snippet\s+[^s]+\s+)@<=.*$'
 
 
 syntax match String      '\v^\s+.*$' contains=Special
