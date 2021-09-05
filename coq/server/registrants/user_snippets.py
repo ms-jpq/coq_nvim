@@ -62,7 +62,7 @@ def _fmt_yaml(data: Sequence[Any]) -> str:
 
 def _trans(
     stack: Stack, snippets: Iterable[ParsedSnippet]
-) -> Iterator[Tuple[AbstractSet[str], Edit, Sequence[Mark]]]:
+) -> Iterator[Tuple[ParsedSnippet, Edit, Sequence[Mark]]]:
     for snippet in snippets:
         edit = SnippetEdit(grammar="lsp", new_text=snippet.content)
         parsed, marks = parse(
@@ -71,12 +71,12 @@ def _trans(
             snippet=edit,
             visual="",
         )
-        yield snippet.matches, parsed, marks
+        yield snippet, parsed, marks
 
 
 def _pprn(
     exts: AbstractSet[str],
-    snippets: Iterable[Tuple[AbstractSet[str], Edit, Sequence[Mark]]],
+    snippets: Iterable[Tuple[ParsedSnippet, Edit, Sequence[Mark]]],
 ) -> str:
     def cont() -> Iterator[Mapping[str, Any]]:
         sorted_exts = sorted(exts, key=strxfrm)
@@ -84,14 +84,17 @@ def _pprn(
             mapping: Mapping[str, Any] = {"extends": sorted_exts}
             yield mapping
 
-        for matches, edit, marks in snippets:
+        for parsed, edit, marks in snippets:
             sorted_marks = group_by(
                 marks, key=lambda m: str(m.idx % MOD_PAD), val=lambda m: m.text
             )
-            mapping = {
-                "matches": sorted(matches, key=strxfrm),
-                "expanded": edit.new_text.expandtabs(_TAB),
-            }
+            mapping = {}
+            if parsed.label:
+                mapping.update(label=parsed.label)
+            mapping.update(
+                matches=sorted(parsed.matches, key=strxfrm),
+                expanded=edit.new_text.expandtabs(_TAB),
+            )
             if sorted_marks:
                 mapping.update(marks=sorted_marks)
             yield mapping
