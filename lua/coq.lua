@@ -14,10 +14,10 @@ local job_id = nil
 local err_exit = false
 
 local on_exit = function(_, code)
-  local msg = " | COQ EXITED - " .. code
   if not (code == 0 or code == 143) then
     err_exit = true
-    vim.api.nvim_err_writeln(msg)
+  local msg = "COQ EXITED - " .. code
+  vim.api.nvim_echo({{msg, "ErrorMsg"}}, true, {})
   else
     err_exit = false
   end
@@ -29,7 +29,7 @@ local on_stdout = function(_, msg)
 end
 
 local on_stderr = function(_, msg)
-  vim.api.nvim_echo({{table.concat(msg, ""), "ErrorMsg"}}, true, {})
+  vim.api.nvim_echo({{table.concat(msg, linesep), "ErrorMsg"}}, true, {})
 end
 
 local py3 = vim.g.python3_host_prog or (is_win and "python" or "python3")
