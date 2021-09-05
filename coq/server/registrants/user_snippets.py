@@ -11,7 +11,7 @@ from pynvim_pp.operators import operator_marks
 from pynvim_pp.preview import set_preview
 from std2.itertools import group_by
 from yaml import SafeDumper, add_representer, safe_dump_all
-from yaml.nodes import ScalarNode
+from yaml.nodes import ScalarNode, SequenceNode
 
 from ...lang import LANG
 from ...registry import rpc
@@ -28,20 +28,24 @@ _WIDTH = 80
 _TAB = 2
 
 
-def _repr(dumper: SafeDumper, data: str) -> ScalarNode:
+def _repr_str(dumper: SafeDumper, data: str) -> ScalarNode:
     if len(data.splitlines()) > 1:
         style = "|"
     elif display_width(data, tabsize=_TAB) > _WIDTH:
         style = ">"
     else:
         style = ""
-    node: ScalarNode = dumper.represent_scalar(
-        "tag:yaml.org,2002:str", data, style=style
-    )
+    node = dumper.represent_scalar("tag:yaml.org,2002:str", data, style=style)
     return node
 
 
-add_representer(str, _repr, Dumper=SafeDumper)
+def _repr_seq(dumper: SafeDumper, data: Sequence[Any]) -> SequenceNode:
+    node = dumper.represent_sequence("tag:yaml.org,2002:seq", data, flow_style=True)
+    return node
+
+
+add_representer(str, _repr_str, Dumper=SafeDumper)
+add_representer(list, _repr_seq, Dumper=SafeDumper)
 
 
 def _fmt_yaml(data: Sequence[Any]) -> str:
@@ -74,16 +78,21 @@ def _pprn(
     snippets: Iterable[Tuple[AbstractSet[str], Edit, Sequence[Mark]]],
 ) -> str:
     def cont() -> Iterator[Mapping[str, Any]]:
-        mapping: Mapping[str, Any] = {"extensions": sorted(exts, key=strxfrm)}
-        yield mapping
+        sorted_exts = sorted(exts, key=strxfrm)
+        if sorted_exts:
+            mapping: Mapping[str, Any] = {"extends": sorted_exts}
+            yield mapping
+
         for matches, edit, marks in snippets:
+            sorted_marks = group_by(
+                marks, key=lambda m: str(m.idx % MOD_PAD), val=lambda m: m.text
+            )
             mapping = {
                 "matches": sorted(matches, key=strxfrm),
-                "marks": group_by(
-                    marks, key=lambda m: str(m.idx % MOD_PAD), val=lambda m: m.text
-                ),
                 "expanded": edit.new_text.expandtabs(_TAB),
             }
+            if sorted_marks:
+                mapping.update(marks=sorted_marks)
             yield mapping
 
     return _fmt_yaml(tuple(cont()))
