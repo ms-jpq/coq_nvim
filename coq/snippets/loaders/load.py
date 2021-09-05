@@ -1,15 +1,7 @@
 from dataclasses import asdict
 from os.path import normcase
 from pathlib import Path
-from typing import (
-    AbstractSet,
-    Iterable,
-    Iterator,
-    Mapping,
-    MutableMapping,
-    MutableSet,
-    Tuple,
-)
+from typing import AbstractSet, Iterable, Iterator, MutableMapping, MutableSet
 from uuid import UUID, uuid3
 
 from std2.graphlib import recur_sort
@@ -21,14 +13,11 @@ from .neosnippet import load_neosnippet
 from .ultisnip import load_ultisnip
 
 
-def _load_paths(search: Iterable[Path], exts: AbstractSet[str]) -> Mapping[Path, float]:
-    def cont() -> Iterator[Tuple[Path, float]]:
-        for search_path in search:
-            for path in walk(search_path):
-                if path.suffix in exts:
-                    yield Path(normcase(path)), 0
-
-    return {p: m for p, m in cont()}
+def _load_paths(search: Iterable[Path], exts: AbstractSet[str]) -> Iterator[Path]:
+    for search_path in search:
+        for path in walk(search_path):
+            if path.suffix in exts:
+                yield Path(normcase(path))
 
 
 def _key(snip: ParsedSnippet) -> UUID:
@@ -37,9 +26,9 @@ def _key(snip: ParsedSnippet) -> UUID:
 
 
 def load_direct(
-    lsp: Mapping[Path, float],
-    neosnippet: Mapping[Path, float],
-    ultisnip: Mapping[Path, float],
+    lsp: Iterable[Path],
+    neosnippet: Iterable[Path],
+    ultisnip: Iterable[Path],
 ) -> LoadedSnips:
     specs = {load_lsp: lsp, load_neosnippet: neosnippet, load_ultisnip: ultisnip}
 
@@ -57,8 +46,7 @@ def load_direct(
                 uid = _key(snip)
                 snippets[uid] = snip
 
-    mtimes = {**lsp, **neosnippet, **ultisnip}
-    loaded = LoadedSnips(mtimes=mtimes, exts=extensions, snippets=snippets)
+    loaded = LoadedSnips(exts=extensions, snippets=snippets)
     return loaded
 
 

@@ -88,7 +88,7 @@ async def load_parsable() -> Any:
                 yield uid, snip
 
     snippets = {hashed: snip for hashed, snip in cont()}
-    safe = LoadedSnips(mtimes={}, exts=loaded.exts, snippets=snippets)
+    safe = LoadedSnips(exts=loaded.exts, snippets=snippets)
 
     coder = new_encoder(LoadedSnips)
     return recur_sort(coder(safe))
