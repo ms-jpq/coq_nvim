@@ -21,12 +21,8 @@ class Worker(BaseWorker[SnippetClient, SDB]):
                 new_text=snip["snippet"],
                 grammar=snip["grammar"],
             )
-            label = (
-                (snip["label"] or edit.new_text or " ")
-                .splitlines()[0]
-                .strip()
-                .replace("\t", "  ")
-            )
+            label_line, *_ = (snip["label"] or edit.new_text or " ").splitlines()
+            label = label_line.strip().expandtabs(2)
             doc = Doc(
                 text=snip["doc"] or edit.new_text,
                 syntax="",
