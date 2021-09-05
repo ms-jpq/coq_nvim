@@ -3,7 +3,8 @@ if exists('b:current_syntax')
 endif
 
 
-syntax match Error       '\v^.*$'
+syntax match Error       '\v^.+$'
+syntax match Error       '\v\s+$'
 syntax match Comment     '\v^\#.*$'
 
 
