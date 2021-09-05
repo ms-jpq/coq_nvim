@@ -12,7 +12,7 @@ syntax match Include     '\v^extends\s'
 
 
 syntax match Keyword     '\v^snippet\s'
-syntax match Error       '\v(^snippet\s[^s]+\s+)@<=.*$'
+syntax match Error       '\v(\v^snippet\s\s*[^\s]+\s+)@<=.+$'
 syntax match Keyword     '\v^alias\s'
 syntax match Label       '\v^abbr\s'
 
