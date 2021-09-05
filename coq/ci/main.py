@@ -5,10 +5,10 @@ from typing import Any
 from std2.graphlib import recur_sort
 
 from ..consts import LSP_ARTIFACTS, VARS
+from ..server.registrants.snippets import BUNDLED_PATH_TPL
+from ..snippets.types import SCHEMA
 from .load import load_parsable
 from .lsp import lsp
-
-_SNIPPET_ARTIFACTS = VARS / "snippets" / "coq+snippets+v2.json"
 
 
 def _json(o: Any) -> str:
@@ -25,5 +25,6 @@ async def main() -> None:
     j_snippets = _json(snippets)
     bj_snippets = j_snippets.encode()
 
-    _SNIPPET_ARTIFACTS.parent.mkdir(parents=True, exist_ok=True)
-    _SNIPPET_ARTIFACTS.write_bytes(bj_snippets)
+    snip_art = VARS / "snippets" / BUNDLED_PATH_TPL.substitute(schema=SCHEMA)
+    snip_art.parent.mkdir(parents=True, exist_ok=True)
+    snip_art.write_bytes(bj_snippets)

@@ -25,13 +25,16 @@ from ..rt_types import Stack
 
 _DECODER = new_decoder(LoadedSnips)
 
+BUNDLED_PATH_TPL = Template("coq+snippets+${schema}.json")
+USER_PATH_TPL = Template("users+${schema}.json")
+
 
 async def _load_bundled(nvim: Nvim) -> Mapping[Path, float]:
     paths = await async_call(nvim, lambda: tuple(iter_rtps(nvim)))
 
     def cont() -> Iterator[Tuple[Path, float]]:
         for path in paths:
-            json = path / f"coq+snippets+{SCHEMA}.json"
+            json = path / BUNDLED_PATH_TPL.substitute(schema=SCHEMA)
             with suppress(OSError):
                 mtime = json.stat().st_mtime
                 yield json, mtime
@@ -41,7 +44,9 @@ async def _load_bundled(nvim: Nvim) -> Mapping[Path, float]:
 
 async def _load_user_compiled(vars_dir: Path) -> Mapping[Path, float]:
     def cont() -> Mapping[Path, float]:
-        path = vars_dir / "clients" / "snippets" / f"users+{SCHEMA}.json"
+        path = (
+            vars_dir / "clients" / "snippets" / USER_PATH_TPL.substitute(schema=SCHEMA)
+        )
         try:
             mtime = path.stat().st_mtime
             return {path: mtime}

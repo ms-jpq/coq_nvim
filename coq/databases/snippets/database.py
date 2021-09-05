@@ -62,7 +62,7 @@ class SDB:
             with self._lock, with_transaction(self._conn.cursor()) as cursor:
                 cursor.execute(sql("select", "sources"), ())
                 return {
-                    PurePath(row["filename"]): row["mtimes"]
+                    PurePath(row["filename"]): row["mtime"]
                     for row in cursor.fetchall()
                 }
 
@@ -71,7 +71,7 @@ class SDB:
     async def populate(self, path: PurePath, mtime: float, loaded: LoadedSnips) -> None:
         def cont() -> None:
             with self._lock, with_transaction(self._conn.cursor()) as cursor:
-                filename, source_id = normcase(path), uuid4()
+                filename, source_id = normcase(path), uuid4().bytes
                 cursor.execute(sql("delete", "source"), {"filename": filename})
                 cursor.execute(
                     sql("insert", "source"),
