@@ -134,9 +134,9 @@ async def dump_compiled(
 
 
 @rpc(blocking=True)
-def compile_snips(nvim: Nvim, stack: Stack) -> None:
+def _load_snips(nvim: Nvim, stack: Stack) -> None:
     async def cont() -> None:
-        with timeit("LOAD SNIPS", force=True):
+        with timeit("LOAD SNIPS"):
             (
                 (bundled, user_snips_mtimes),
                 (user_compiled, user_compiled_mtimes),
@@ -185,4 +185,4 @@ def compile_snips(nvim: Nvim, stack: Stack) -> None:
     go(nvim, aw=cont())
 
 
-atomic.exec_lua(f"{compile_snips.name}()", ())
+atomic.exec_lua(f"{_load_snips.name}()", ())
