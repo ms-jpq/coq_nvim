@@ -1,7 +1,7 @@
 from locale import strxfrm
 from os.path import normcase
 from pathlib import PurePath
-from typing import AbstractSet, Callable, Iterable, Iterator, Mapping, Sequence, Tuple
+from typing import AbstractSet, Any, Iterable, Iterator, Mapping, Sequence, Tuple
 
 from pynvim.api.nvim import Nvim
 from pynvim_pp.api import buf_get_lines, buf_line_count, buf_name, cur_win, win_get_buf
@@ -10,8 +10,8 @@ from pynvim_pp.lib import write
 from pynvim_pp.operators import operator_marks
 from pynvim_pp.preview import set_preview
 from std2.itertools import group_by
-from yaml import SafeDumper, add_representer, dump_all
-from yaml.nodes import Node, ScalarNode
+from yaml import SafeDumper, add_representer, dump
+from yaml.nodes import ScalarNode
 
 from ...lang import LANG
 from ...registry import rpc
@@ -25,24 +25,15 @@ from ...snippets.types import LoadError, ParsedSnippet
 from ..rt_types import Stack
 
 
-def _repr_str(break_pt: int) -> Callable[[SafeDumper, str], Node]:
-    def repr_str(dumper: SafeDumper, data: str) -> ScalarNode:
-        style = ">" if len(data) > break_pt else ""
+def _fmt_yaml(data: Any, width: int, indent: int) -> str:
+    def repr(dumper: SafeDumper, data: str) -> ScalarNode:
         node: ScalarNode = dumper.represent_scalar(
-            "tag:yaml.org,2002:str", data, style=style
+            "tag:yaml.org,2002:str", data, style="|"
         )
         return node
 
-    return repr_str
-
-
-from typing import Any
-
-
-def _fmt_yaml(data: Any, width: int, indent: int) -> str:
-    fold_pt = width // 2
-    add_representer(str, _repr_str(fold_pt), Dumper=SafeDumper)
-    yaml = dump_all(
+    add_representer(str, repr, Dumper=SafeDumper)
+    yaml = dump(
         data,
         allow_unicode=True,
         explicit_start=True,
@@ -79,9 +70,10 @@ def _pprn(
                 ),
                 "expanded": edit.new_text,
             }
+            print(edit.new_text, flush=True)
             yield mapping
 
-    mapping = {"extensions": sorted(exts, key=strxfrm), "snippets": tuple(cont())}
+    mapping = {"extensions": sorted(exts, key=strxfrm), "snippets": [*cont()]}
     return _fmt_yaml(mapping, width=80, indent=2)
 
 
@@ -119,7 +111,7 @@ def eval_snips(nvim: Nvim, stack: Stack, visual: bool) -> None:
         else:
             preview = _pprn(exts, snippets=snippets).splitlines()
             with hold_win_pos(nvim, win=win):
-                set_preview(nvim, syntax="markdown", preview=preview)
+                set_preview(nvim, syntax="yaml", preview=preview)
             if preview:
                 write(nvim, LANG("snip parse succ"))
             else:
