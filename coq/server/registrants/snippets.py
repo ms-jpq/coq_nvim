@@ -5,12 +5,12 @@ from datetime import datetime
 from itertools import chain
 from json import JSONDecodeError, dumps, loads
 from math import inf
+from os import linesep
 from pathlib import Path, PurePath
-from posixpath import normcase
 from string import Template
 from tempfile import NamedTemporaryFile
 from textwrap import dedent
-from typing import Any, Iterable, Iterator, Mapping, Optional, Tuple
+from typing import Any, Iterator, Mapping, Optional, Tuple
 
 from pynvim.api.nvim import Nvim
 from pynvim_pp.api import iter_rtps
@@ -22,10 +22,12 @@ from std2.pathlib import walk
 from std2.pickle import DecodeError, new_decoder, new_encoder
 
 from ...lang import LANG
+from ...paths.show import fmt_path
 from ...registry import atomic, rpc
 from ...shared.timeit import timeit
 from ...snippets.types import SCHEMA, LoadedSnips
 from ..rt_types import Stack
+from ..state import state
 
 BUNDLED_PATH_TPL = Template("coq+snippets+${schema}.json")
 _USER_PATH_TPL = Template("users+${schema}.json")
@@ -159,7 +161,7 @@ def _load_snips(nvim: Nvim, stack: Stack) -> None:
                 if mtime > mtimes.get(path, -inf)
             }
             updated_user_snips = {
-                normcase(path): datetime.fromtimestamp(mtime)
+                path: datetime.fromtimestamp(mtime)
                 for path, mtime in user_snips_mtimes.items()
                 if mtime > user_compiled_mtimes.get(path, -inf)
             }
@@ -169,6 +171,7 @@ def _load_snips(nvim: Nvim, stack: Stack) -> None:
                 await sleep(0)
                 await awrite(nvim, LANG("fs snip load empty"))
 
+            s = state()
             for fut in as_completed(
                 tuple(_load_compiled(path, mtime) for path, mtime in compiled.items())
             ):
@@ -182,10 +185,19 @@ def _load_snips(nvim: Nvim, stack: Stack) -> None:
                     log.warn("%s", Template(dedent(tpl)).substitute(e=type(e)))
                 else:
                     await stack.sdb.populate(path, mtime=mtime, loaded=loaded)
-                    await awrite(nvim, LANG("fs snip load succ", path=normcase(path)))
+                    await awrite(
+                        nvim,
+                        LANG(
+                            "fs snip load succ",
+                            path=fmt_path(s.cwd, path=path, is_dir=False),
+                        ),
+                    )
 
             if updated_user_snips:
-                await awrite(nvim, LANG("fs snip needs compile"))
+                paths = linesep.join(
+                    fmt_path(s.cwd, path=p, is_dir=False) for p in updated_user_snips
+                )
+                await awrite(nvim, LANG("fs snip needs compile", paths=paths))
 
     go(nvim, aw=cont())
 

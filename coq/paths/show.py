@@ -15,7 +15,7 @@ _KB = 1000
 _HOME = Path.home()
 
 
-def show_path(cwd: PurePath, path: PurePath, is_dir: bool) -> str:
+def fmt_path(cwd: PurePath, path: PurePath, is_dir: bool) -> str:
     posfix = sep if is_dir else ""
     with suppress(ValueError):
         rel = path.relative_to(cwd)
@@ -35,7 +35,7 @@ async def _show_dir(cwd: PurePath, path: Path, ellipsis: str, height: int) -> Do
             if idx >= height and len(ordered) > height:
                 yield ellipsis
             else:
-                yield show_path(cwd, path=child, is_dir=child.is_dir())
+                yield fmt_path(cwd, path=child, is_dir=child.is_dir())
 
     def cont() -> Doc:
         text = linesep.join(lines())
