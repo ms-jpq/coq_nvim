@@ -19,7 +19,7 @@ class Worker(BaseWorker[SnippetClient, SDB]):
         for snip in snippets:
             edit = SnippetEdit(
                 new_text=snip["snippet"],
-                grammar=snip["grammar"],
+                grammar=snip["grammar"]
             )
             label_line, *_ = (snip["label"] or edit.new_text or " ").splitlines()
             label = label_line.strip().expandtabs(2)

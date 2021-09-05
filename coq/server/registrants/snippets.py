@@ -1,6 +1,7 @@
 from asyncio import gather, sleep
 from asyncio.tasks import as_completed
 from contextlib import suppress
+from dataclasses import dataclass
 from datetime import datetime
 from itertools import chain
 from json import JSONDecodeError, dumps, loads
@@ -10,7 +11,16 @@ from pathlib import Path, PurePath
 from string import Template
 from tempfile import NamedTemporaryFile
 from textwrap import dedent
-from typing import Any, Iterator, Mapping, Optional, Tuple
+from typing import (
+    AbstractSet,
+    Any,
+    Iterable,
+    Iterator,
+    Mapping,
+    Optional,
+    Sequence,
+    Tuple,
+)
 
 from pynvim.api.nvim import Nvim
 from pynvim_pp.api import iter_rtps
@@ -24,14 +34,26 @@ from std2.pickle import DecodeError, new_decoder, new_encoder
 from ...lang import LANG
 from ...paths.show import fmt_path
 from ...registry import atomic, rpc
+from ...shared.context import EMPTY_CONTEXT
 from ...shared.timeit import timeit
-from ...snippets.types import SCHEMA, LoadedSnips
+from ...shared.types import Edit, Mark, SnippetEdit
+from ...snippets.loaders.neosnippet import load_neosnippet
+from ...snippets.parse import parse
+from ...snippets.types import SCHEMA, LoadedSnips, ParsedSnippet
 from ..rt_types import Stack
 from ..state import state
 
 BUNDLED_PATH_TPL = Template("coq+snippets+${schema}.json")
 _USER_PATH_TPL = Template("users+${schema}.json")
 _SUB_PATH = PurePath("clients", "snippets")
+
+
+@dataclass(frozen=True)
+class Compiled:
+    path: PurePath
+    filetype: str
+    exts: AbstractSet[str]
+    parsed: Sequence[Tuple[ParsedSnippet, Edit, Sequence[Mark]]]
 
 
 async def _bundled_mtimes(
@@ -136,6 +158,34 @@ async def dump_compiled(
         fd.write(m_json.encode("UTF-8"))
         fd.flush()
         Path(fd.name).replace(meta)
+
+
+def compile_one(
+    unifying_chars: AbstractSet[str], path: PurePath, lines: Iterable[Tuple[int, str]]
+) -> Compiled:
+    filetype, exts, snips = load_neosnippet(path, lines=lines)
+
+    def cont() -> Iterator[Tuple[ParsedSnippet, Edit, Sequence[Mark]]]:
+        for snip in snips:
+            edit = SnippetEdit(grammar=snip.grammar, new_text=snip.content)
+            parsed, marks = parse(
+                unifying_chars,
+                context=EMPTY_CONTEXT,
+                snippet=edit,
+                visual="",
+            )
+            yield snip, parsed, marks
+
+    compiled = Compiled(path=path, filetype=filetype, exts=exts, parsed=tuple(cont()))
+    return compiled
+
+
+def compile(
+    unifying_chars: AbstractSet[str], paths: Iterable[Path]
+) -> Iterator[Compiled]:
+    for path in paths:
+        with path.open(encoding="UTF-8") as fd:
+            yield compile_one(unifying_chars, path=path, lines=enumerate(fd, start=1))
 
 
 @rpc(blocking=True)

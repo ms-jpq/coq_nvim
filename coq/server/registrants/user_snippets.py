@@ -1,3 +1,4 @@
+from argparse import Namespace
 from locale import strxfrm
 from os.path import normcase
 from pathlib import PurePath
@@ -9,19 +10,18 @@ from pynvim_pp.hold import hold_win_pos
 from pynvim_pp.lib import display_width, write
 from pynvim_pp.operators import operator_marks
 from pynvim_pp.preview import set_preview
+from std2.argparse import ArgparseError, ArgParser
 from yaml import SafeDumper, add_representer, safe_dump_all
 from yaml.nodes import ScalarNode, SequenceNode
 
 from ...lang import LANG
 from ...registry import rpc
-from ...shared.context import EMPTY_CONTEXT
-from ...shared.types import Edit, Mark, SnippetEdit
+from ...shared.types import Edit, Mark
 from ...snippets.consts import MOD_PAD
-from ...snippets.loaders.neosnippet import load_neosnippet
-from ...snippets.parse import parse
 from ...snippets.parsers.types import ParseError
 from ...snippets.types import LoadError, ParsedSnippet
 from ..rt_types import Stack
+from .snippets import Compiled, compile, compile_one
 
 _WIDTH = 80
 _TAB = 2
@@ -59,31 +59,16 @@ def _fmt_yaml(data: Sequence[Any]) -> str:
     return str(yaml)
 
 
-def _trans(
-    stack: Stack, snippets: Iterable[ParsedSnippet]
-) -> Iterator[Tuple[ParsedSnippet, Edit, Sequence[Mark]]]:
-    for snippet in snippets:
-        edit = SnippetEdit(grammar="lsp", new_text=snippet.content)
-        parsed, marks = parse(
-            stack.settings.match.unifying_chars,
-            context=EMPTY_CONTEXT,
-            snippet=edit,
-            visual="",
-        )
-        yield snippet, parsed, marks
-
-
 def _pprn(
-    exts: AbstractSet[str],
-    snippets: Iterable[Tuple[ParsedSnippet, Edit, Sequence[Mark]]],
+    compiled: Compiled,
 ) -> str:
     def cont() -> Iterator[Mapping[str, Any]]:
-        sorted_exts = sorted(exts, key=strxfrm)
+        sorted_exts = sorted(compiled.exts, key=strxfrm)
         if sorted_exts:
             mapping: Mapping[str, Any] = {"extends": sorted_exts}
             yield mapping
 
-        for parsed, edit, marks in snippets:
+        for parsed, edit, marks in compiled.parsed:
             sorted_marks = [
                 [str(m.idx % MOD_PAD), m.text]
                 for m in sorted(marks, key=lambda m: (m.begin, m.end))
@@ -118,26 +103,51 @@ def eval_snips(nvim: Nvim, stack: Stack, visual: bool) -> None:
     lines = buf_get_lines(nvim, buf=buf, lo=lo, hi=hi)
 
     try:
-        _, exts, snips = load_neosnippet(path, lines=enumerate(lines, start=lo + 1))
+        compiled = compile_one(
+            stack.settings.match.unifying_chars,
+            path=path,
+            lines=enumerate(lines, start=lo + 1),
+        )
     except LoadError as e:
         preview: Sequence[str] = str(e).splitlines()
         with hold_win_pos(nvim, win=win):
             set_preview(nvim, syntax="", preview=preview)
         write(nvim, LANG("snip load fail"))
+    except ParseError as e:
+        preview = str(e).splitlines()
+        with hold_win_pos(nvim, win=win):
+            set_preview(nvim, syntax="", preview=preview)
+        write(nvim, LANG("snip parse fail"))
 
     else:
-        try:
-            snippets = tuple(_trans(stack, snippets=snips))
-        except ParseError as e:
-            preview = str(e).splitlines()
-            with hold_win_pos(nvim, win=win):
-                set_preview(nvim, syntax="", preview=preview)
-            write(nvim, LANG("snip parse fail"))
+        preview = _pprn(compiled).splitlines()
+        with hold_win_pos(nvim, win=win):
+            set_preview(nvim, syntax="yaml", preview=preview)
+        if preview:
+            write(nvim, LANG("snip parse succ"))
         else:
-            preview = _pprn(exts, snippets=snippets).splitlines()
-            with hold_win_pos(nvim, win=win):
-                set_preview(nvim, syntax="yaml", preview=preview)
-            if preview:
-                write(nvim, LANG("snip parse succ"))
-            else:
-                write(nvim, LANG("snip parse empty"))
+            write(nvim, LANG("no snippets found"))
+
+
+def _compile(nvim: Nvim) -> None:
+    pass
+
+
+def _parse_args(args: Sequence[str]) -> Namespace:
+    parser = ArgParser()
+    sub_parsers = parser.add_subparsers(dest="action", required=True)
+    sub_parsers.add_parser("compile")
+    return parser.parse_args(args)
+
+
+@rpc(blocking=True)
+def snips(nvim: Nvim, stack: Stack, args: Sequence[str]) -> None:
+    try:
+        ns = _parse_args(args)
+    except ArgparseError as e:
+        write(nvim, e, error=True)
+    else:
+        if ns.action == "compile":
+            _compile(nvim)
+        else:
+            assert False

@@ -41,6 +41,7 @@
 "snip parse succ": |-
   ✅ Snippets parsed
 
+
 "fs snip load empty": |-
   ⚠️  No compatible snippets found, try updating `coq.artifacts`
 

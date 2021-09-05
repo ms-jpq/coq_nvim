@@ -17,10 +17,7 @@ _THRESHOLD = 0.95
 def _edits() -> Iterator[SnippetEdit]:
     loaded = run(load())
     for snip in loaded.snippets.values():
-        edit = SnippetEdit(
-            new_text=snip.content,
-            grammar=snip.grammar,
-        )
+        edit = SnippetEdit(new_text=snip.content, grammar=snip.grammar)
         yield edit
 
 
