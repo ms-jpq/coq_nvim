@@ -9,7 +9,6 @@ from pynvim_pp.hold import hold_win_pos
 from pynvim_pp.lib import display_width, write
 from pynvim_pp.operators import operator_marks
 from pynvim_pp.preview import set_preview
-from std2.itertools import group_by
 from yaml import SafeDumper, add_representer, safe_dump_all
 from yaml.nodes import ScalarNode, SequenceNode
 
@@ -85,9 +84,10 @@ def _pprn(
             yield mapping
 
         for parsed, edit, marks in snippets:
-            sorted_marks = group_by(
-                marks, key=lambda m: str(m.idx % MOD_PAD), val=lambda m: m.text
-            )
+            sorted_marks = [
+                [str(m.idx % MOD_PAD), m.text]
+                for m in sorted(marks, key=lambda m: (m.begin, m.end))
+            ]
             mapping = {}
             if parsed.label:
                 mapping.update(label=parsed.label)
