@@ -53,6 +53,7 @@ def _fmt_yaml(data: Sequence[Any]) -> str:
         data,
         allow_unicode=True,
         explicit_start=True,
+        sort_keys=False,
         width=_WIDTH,
         indent=_TAB,
     )
