@@ -41,7 +41,7 @@ def _fmt_yaml(data: Sequence[Any], width: int, indent: int) -> str:
         width=width,
         indent=indent,
     )
-    return yaml
+    return str(yaml)
 
 
 def _trans(
@@ -63,7 +63,7 @@ def _pprn(
     snippets: Iterable[Tuple[AbstractSet[str], Edit, Sequence[Mark]]],
 ) -> str:
     def cont() -> Iterator[Mapping[str, Any]]:
-        mapping = {"extensions": sorted(exts, key=strxfrm)}
+        mapping: Mapping[str, Any] = {"extensions": sorted(exts, key=strxfrm)}
         yield mapping
         for matches, edit, marks in snippets:
             mapping = {
