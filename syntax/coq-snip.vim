@@ -16,7 +16,8 @@ syntax match Error       '\v(^snippet\s+[^s]+\s+)@<=.*$'
 
 
 syntax match String      '\v^\s+.*$' contains=Special
-syntax match Special     '\v\$\{[^\}]+\}' contains=Conditional
+syntax match Special     '\v\$\{[^\}]+\}' contains=Number,Conditional
+syntax match Number      '\v\d+'
 syntax match Conditional '\V:'
 
 
