@@ -29,7 +29,7 @@ local on_stdout = function(_, msg)
 end
 
 local on_stderr = function(_, msg)
-  vim.api.nvim_err_write(table.concat(msg, linesep))
+  vim.api.nvim_echo({{table.concat(msg, ""), "ErrorMsg"}}, true, {})
 end
 
 local py3 = vim.g.python3_host_prog or (is_win and "python" or "python3")

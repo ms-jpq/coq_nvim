@@ -38,11 +38,15 @@
 "snip parse fail": |-
   ❌ Failed to parse snippets
 
+"fs snip load empty": |-
+  ⚠️  No compatible snippets found, try updating `coq.artifacts`
+
 "fs snip load succ": |-
   ✅ Snippets updated -- ${path}
 
-"fs snip load empty": |-
-  ⚠️  No compatible snippets found, try updating `coq.artifacts`
+"fs snip needs compile": |-
+  ⚠️  Snippets require manual compilation:
+  ${paths}
 
 "begin T9 download": |-
   ⏳ Downloading T9 ...

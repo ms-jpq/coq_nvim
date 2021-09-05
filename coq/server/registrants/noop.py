@@ -3,10 +3,11 @@ from dataclasses import dataclass
 from itertools import chain
 from os import linesep
 from random import choice, sample
-from sys import stderr, stdout
+from sys import stdout
 from typing import Sequence, Tuple
 
 from pynvim import Nvim
+from pynvim_pp.lib import write
 from std2.argparse import ArgparseError, ArgParser
 from std2.pickle import new_decoder
 from yaml import safe_load
@@ -38,7 +39,7 @@ def now(nvim: Nvim, stack: Stack, args: Sequence[str]) -> None:
     try:
         ns = _parse_args(args)
     except ArgparseError as e:
-        print(e, file=stderr, flush=True)
+        write(nvim, e, error=True)
     else:
         if not ns.shut_up:
             lo, hi = _HELO.chars

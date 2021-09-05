@@ -1,6 +1,7 @@
 from asyncio import gather, sleep
 from asyncio.tasks import as_completed
 from contextlib import suppress
+from datetime import datetime
 from itertools import chain
 from json import JSONDecodeError, dumps, loads
 from math import inf
@@ -35,7 +36,7 @@ def user_snip_paths(rtp: Iterable[Path], user_path: Optional[Path]) -> Iterator[
     if user_path:
         yield user_path
     for path in rtp:
-        yield path / "coq+snippet"
+        yield path / "coq+user+snippets"
 
 
 async def _load_bundled(
@@ -138,7 +139,7 @@ def compile_snips(nvim: Nvim, stack: Stack) -> None:
         with timeit("LOAD SNIPS", force=True):
             (
                 (bundled, user_snips_mtimes),
-                (user_compiled, user_mtimes),
+                (user_compiled, user_compiled_mtimes),
                 mtimes,
             ) = await gather(
                 _load_bundled(nvim, user_path=None),
@@ -147,36 +148,39 @@ def compile_snips(nvim: Nvim, stack: Stack) -> None:
             )
 
             stale = mtimes.keys() - (bundled.keys() | user_compiled.keys())
-            await stack.sdb.clean(stale)
+            compiled = {
+                path: mtime
+                for path, mtime in chain(bundled.items(), user_compiled.items())
+                if mtime > mtimes.get(path, -inf)
+            }
+            updated_user_snips = {
+                normcase(path): datetime.fromtimestamp(mtime)
+                for path, mtime in user_snips_mtimes.items()
+                if mtime > user_compiled_mtimes.get(path, -inf)
+            }
 
+            await stack.sdb.clean(stale)
             if not (bundled or user_compiled):
                 await sleep(0)
                 await awrite(nvim, LANG("fs snip load empty"))
-            else:
-                compiled = {
-                    path: mtime
-                    for path, mtime in chain(bundled.items(), user_compiled.items())
-                    if mtime > mtimes.get(path, -inf)
-                }
 
-                for fut in as_completed(
-                    tuple(
-                        _load_compiled(path, mtime) for path, mtime in compiled.items()
-                    )
-                ):
-                    try:
-                        path, mtime, loaded = await fut
-                    except (OSError, JSONDecodeError, DecodeError) as e:
-                        tpl = """
-                        Failed to load compiled snips
-                        ${e}
-                        """
-                        log.warn("%s", Template(dedent(tpl)).substitute(e=type(e)))
-                    else:
-                        await stack.sdb.populate(path, mtime=mtime, loaded=loaded)
-                        await awrite(
-                            nvim, LANG("fs snip load succ", path=normcase(path))
-                        )
+            for fut in as_completed(
+                tuple(_load_compiled(path, mtime) for path, mtime in compiled.items())
+            ):
+                try:
+                    path, mtime, loaded = await fut
+                except (OSError, JSONDecodeError, DecodeError) as e:
+                    tpl = """
+                    Failed to load compiled snips
+                    ${e}
+                    """
+                    log.warn("%s", Template(dedent(tpl)).substitute(e=type(e)))
+                else:
+                    await stack.sdb.populate(path, mtime=mtime, loaded=loaded)
+                    await awrite(nvim, LANG("fs snip load succ", path=normcase(path)))
+
+            if updated_user_snips:
+                await awrite(nvim, LANG("fs snip needs compile"))
 
     go(nvim, aw=cont())
 
