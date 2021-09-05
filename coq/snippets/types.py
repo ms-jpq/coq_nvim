@@ -3,6 +3,8 @@ from pathlib import Path
 from typing import AbstractSet, Mapping
 from uuid import UUID
 
+SCHEMA = "v2"
+
 
 class LoadError(Exception):
     ...
