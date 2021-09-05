@@ -25,14 +25,15 @@ from ...snippets.types import LoadError, ParsedSnippet
 from ..rt_types import Stack
 
 
-def _fmt_yaml(data: Any, width: int, indent: int) -> str:
-    def repr(dumper: SafeDumper, data: str) -> ScalarNode:
-        node: ScalarNode = dumper.represent_scalar(
-            "tag:yaml.org,2002:str", data, style="|"
-        )
-        return node
+def _repr(dumper: SafeDumper, data: str) -> ScalarNode:
+    node: ScalarNode = dumper.represent_scalar("tag:yaml.org,2002:str", data, style="|")
+    return node
 
-    add_representer(str, repr, Dumper=SafeDumper)
+
+add_representer(str, _repr, Dumper=SafeDumper)
+
+
+def _fmt_yaml(data: Any, width: int, indent: int) -> str:
     yaml = dump(
         data,
         allow_unicode=True,
