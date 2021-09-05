@@ -2,6 +2,7 @@ if exists('b:current_syntax')
   finish
 endif
 
+
 syntax match Error       '^.*$'
 syntax match Comment     '\v^\#.*$'
 
