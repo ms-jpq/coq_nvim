@@ -9,7 +9,7 @@ from posixpath import normcase
 from string import Template
 from tempfile import NamedTemporaryFile
 from textwrap import dedent
-from typing import Any, Iterator, Mapping, Tuple
+from typing import Any, Iterable, Iterator, Mapping, Optional, Tuple
 
 from pynvim.api.nvim import Nvim
 from pynvim_pp.api import iter_rtps
@@ -17,6 +17,7 @@ from pynvim_pp.lib import async_call, awrite, go
 from pynvim_pp.logging import log
 from std2.asyncio import run_in_executor
 from std2.graphlib import recur_sort
+from std2.pathlib import walk
 from std2.pickle import DecodeError, new_decoder, new_encoder
 
 from ...lang import LANG
@@ -30,17 +31,35 @@ _USER_PATH_TPL = Template("users+${schema}.json")
 _SUB_PATH = PurePath("clients", "snippets")
 
 
-async def _load_bundled(nvim: Nvim) -> Mapping[Path, float]:
-    paths = await async_call(nvim, lambda: tuple(iter_rtps(nvim)))
+def user_snip_paths(rtp: Iterable[Path], user_path: Optional[Path]) -> Iterator[Path]:
+    if user_path:
+        yield user_path
+    for path in rtp:
+        yield path / "coq+snippet"
 
-    def cont() -> Iterator[Tuple[Path, float]]:
-        for path in paths:
+
+async def _load_bundled(
+    nvim: Nvim, user_path: Optional[Path]
+) -> Tuple[Mapping[Path, float], Mapping[Path, float]]:
+    rtp = await async_call(nvim, lambda: tuple(iter_rtps(nvim)))
+
+    def c1() -> Iterator[Tuple[Path, float]]:
+        for path in rtp:
             json = path / BUNDLED_PATH_TPL.substitute(schema=SCHEMA)
             with suppress(OSError):
                 mtime = json.stat().st_mtime
                 yield json, mtime
 
-    return {p: m for p, m in await run_in_executor(lambda: tuple(cont()))}
+    def c2() -> Iterator[Tuple[Path, float]]:
+        for path in user_snip_paths(rtp, user_path=user_path):
+            with suppress(OSError):
+                for p in walk(path):
+                    mtime = p.stat().st_mtime
+                    yield p, mtime
+
+    m1 = {p: m for p, m in await run_in_executor(lambda: tuple(c1()))}
+    m2 = {p: m for p, m in await run_in_executor(lambda: tuple(c2()))}
+    return m1, m2
 
 
 def _paths(vars_dir: Path) -> Tuple[Path, Path]:
@@ -117,8 +136,12 @@ async def dump_compiled(
 def compile_snips(nvim: Nvim, stack: Stack) -> None:
     async def cont() -> None:
         with timeit("LOAD SNIPS", force=True):
-            bundled, (user_compiled, user_mtimes), mtimes = await gather(
-                _load_bundled(nvim),
+            (
+                (bundled, user_snips_mtimes),
+                (user_compiled, user_mtimes),
+                mtimes,
+            ) = await gather(
+                _load_bundled(nvim, user_path=None),
                 _load_user_compiled(stack.supervisor.vars_dir),
                 stack.sdb.mtimes(),
             )
