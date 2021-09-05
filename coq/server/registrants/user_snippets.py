@@ -1,10 +1,7 @@
-from json import dumps
 from locale import strxfrm
-from os import linesep
 from os.path import normcase
 from pathlib import PurePath
-from string import Template
-from typing import AbstractSet, Iterable, Iterator, Sequence
+from typing import AbstractSet, Callable, Iterable, Iterator, Mapping, Sequence, Tuple
 
 from pynvim.api.nvim import Nvim
 from pynvim_pp.api import buf_get_lines, buf_line_count, buf_name, cur_win, win_get_buf
@@ -13,11 +10,13 @@ from pynvim_pp.lib import write
 from pynvim_pp.operators import operator_marks
 from pynvim_pp.preview import set_preview
 from std2.itertools import group_by
+from yaml import SafeDumper, add_representer, dump_all
+from yaml.nodes import Node, ScalarNode
 
 from ...lang import LANG
 from ...registry import rpc
 from ...shared.context import EMPTY_CONTEXT
-from ...shared.types import SnippetEdit
+from ...shared.types import Edit, Mark, SnippetEdit
 from ...snippets.consts import MOD_PAD
 from ...snippets.loaders.neosnippet import load_neosnippet
 from ...snippets.parse import parse
@@ -25,78 +24,65 @@ from ...snippets.parsers.types import ParseError
 from ...snippets.types import LoadError, ParsedSnippet
 from ..rt_types import Stack
 
-_MARKS = """
-#### 🔖
 
-```json
-${marks}
-
-```
-"""
-_MARKS_T = Template(_MARKS)
-
-_SNIP = """
----
-
-#### 👀 `${matches}`
-
-```${syntax}
-${body}
-```
-${marks}
----
-"""
-_SNIP_T = Template(_SNIP)
-
-
-_EXTS = """
-## ✈️
-
-```json
-${exts}
-```
-"""
-_EXTS_T = Template(_EXTS)
-
-_SNIPS = """
-## ✂️
-
-${snips}
-"""
-_SNIPS_T = Template(_SNIPS)
-
-
-def _trans(stack: Stack, snips: Iterable[ParsedSnippet]) -> Iterator[str]:
-    for snip in snips:
-        edit = SnippetEdit(grammar="lsp", new_text=snip.content)
-        matches = dumps(
-            sorted(snip.matches, key=strxfrm), check_circular=False, ensure_ascii=False
+def _repr_str(break_pt: int) -> Callable[[SafeDumper, str], Node]:
+    def repr_str(dumper: SafeDumper, data: str) -> ScalarNode:
+        style = ">" if len(data) > break_pt else ""
+        node: ScalarNode = dumper.represent_scalar(
+            "tag:yaml.org,2002:str", data, style=style
         )
+        return node
+
+    return repr_str
+
+
+from typing import Any
+
+
+def _fmt_yaml(data: Any, width: int, indent: int) -> str:
+    fold_pt = width // 2
+    add_representer(str, _repr_str(fold_pt), Dumper=SafeDumper)
+    yaml = dump_all(
+        data,
+        allow_unicode=True,
+        explicit_start=True,
+        width=width,
+        indent=indent,
+    )
+    return yaml
+
+
+def _trans(
+    stack: Stack, snippets: Iterable[ParsedSnippet]
+) -> Iterator[Tuple[AbstractSet[str], Edit, Sequence[Mark]]]:
+    for snippet in snippets:
+        edit = SnippetEdit(grammar="lsp", new_text=snippet.content)
         parsed, marks = parse(
             stack.settings.match.unifying_chars,
             context=EMPTY_CONTEXT,
             snippet=edit,
             visual="",
         )
-        ms = group_by(marks, key=lambda m: m.idx % MOD_PAD, val=lambda m: m.text)
-        mks = _MARKS_T.substitute(marks=ms) if ms else ""
-
-        yield _SNIP_T.substitute(
-            syntax=snip.filetype,
-            matches=matches,
-            body=parsed.new_text,
-            marks=mks,
-        )
+        yield snippet.matches, parsed, marks
 
 
-def _pprn(ext: AbstractSet[str], snips: str) -> Iterator[str]:
-    if ext:
-        exts = dumps(
-            sorted(ext, key=strxfrm), check_circular=False, ensure_ascii=False, indent=2
-        )
-        yield from _EXTS_T.substitute(exts=exts).splitlines()
-    if snips:
-        yield from _SNIPS_T.substitute(snips=snips).splitlines()
+def _pprn(
+    exts: AbstractSet[str],
+    snippets: Iterable[Tuple[AbstractSet[str], Edit, Sequence[Mark]]],
+) -> str:
+    def cont() -> Iterator[Mapping[str, Any]]:
+        for matches, edit, marks in snippets:
+            mapping = {
+                "matches": sorted(matches, key=strxfrm),
+                "marks": group_by(
+                    marks, key=lambda m: m.idx % MOD_PAD, val=lambda m: m.text
+                ),
+                "expanded": edit.new_text,
+            }
+            yield mapping
+
+    mapping = {"extensions": sorted(exts, key=strxfrm), "snippets": tuple(cont())}
+    return _fmt_yaml(mapping, width=80, indent=2)
 
 
 @rpc(blocking=True)
@@ -115,7 +101,7 @@ def eval_snips(nvim: Nvim, stack: Stack, visual: bool) -> None:
     lines = buf_get_lines(nvim, buf=buf, lo=lo, hi=hi)
 
     try:
-        _, ext, snips = load_neosnippet(path, lines=enumerate(lines, start=lo + 1))
+        _, exts, snips = load_neosnippet(path, lines=enumerate(lines, start=lo + 1))
     except LoadError as e:
         preview: Sequence[str] = str(e).splitlines()
         with hold_win_pos(nvim, win=win):
@@ -124,14 +110,14 @@ def eval_snips(nvim: Nvim, stack: Stack, visual: bool) -> None:
 
     else:
         try:
-            snippets = linesep.join(s for s in _trans(stack, snips=snips))
+            snippets = tuple(_trans(stack, snippets=snips))
         except ParseError as e:
             preview = str(e).splitlines()
             with hold_win_pos(nvim, win=win):
                 set_preview(nvim, syntax="", preview=preview)
             write(nvim, LANG("snip parse fail"))
         else:
-            preview = tuple(_pprn(ext, snips=snippets))
+            preview = _pprn(exts, snippets=snippets).splitlines()
             with hold_win_pos(nvim, win=win):
                 set_preview(nvim, syntax="markdown", preview=preview)
             if preview:
