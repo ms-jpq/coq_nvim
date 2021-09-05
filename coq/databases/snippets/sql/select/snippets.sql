@@ -7,6 +7,8 @@ SELECT
 FROM snippets_view
 WHERE
   :word <> ''
+  AND
+  snippet <> ''
   AND 
   LENGTH(prefix) + :look_ahead >= LENGTH(:word)
   AND
