@@ -32,16 +32,9 @@ _USER_PATH_TPL = Template("users+${schema}.json")
 _SUB_PATH = PurePath("clients", "snippets")
 
 
-def user_snip_paths(rtp: Iterable[Path], user_path: Optional[Path]) -> Iterator[Path]:
-    if user_path:
-        yield user_path
-    for path in rtp:
-        yield path / "coq+user+snippets"
-
-
-async def _load_bundled(
-    nvim: Nvim, user_path: Optional[Path]
-) -> Tuple[Mapping[Path, float], Mapping[Path, float]]:
+async def _bundled_mtimes(
+    nvim: Nvim,
+) -> Mapping[Path, float]:
     rtp = await async_call(nvim, lambda: tuple(iter_rtps(nvim)))
 
     def c1() -> Iterator[Tuple[Path, float]]:
@@ -51,22 +44,44 @@ async def _load_bundled(
                 mtime = json.stat().st_mtime
                 yield json, mtime
 
-    def c2() -> Iterator[Tuple[Path, float]]:
-        for path in user_snip_paths(rtp, user_path=user_path):
-            with suppress(OSError):
-                for p in walk(path):
+    return {p: m for p, m in await run_in_executor(lambda: tuple(c1()))}
+
+
+async def _user_mtimes(nvim: Nvim, user_path: Optional[Path]) -> Mapping[Path, float]:
+    rtp = await async_call(nvim, lambda: tuple(iter_rtps(nvim)))
+
+    def seek(path: Path) -> Iterator[Tuple[Path, float]]:
+        with suppress(OSError):
+            for p in walk(path):
+                if p.suffix in {".snip"}:
                     mtime = p.stat().st_mtime
                     yield p, mtime
 
-    m1 = {p: m for p, m in await run_in_executor(lambda: tuple(c1()))}
-    m2 = {p: m for p, m in await run_in_executor(lambda: tuple(c2()))}
-    return m1, m2
+    def cont() -> Iterator[Tuple[Path, float]]:
+        if user_path:
+            yield from seek(user_path)
+        for path in rtp:
+            yield from seek(path / "coq+user+snippets")
+
+    return {p: m for p, m in await run_in_executor(cont)}
 
 
 def _paths(vars_dir: Path) -> Tuple[Path, Path]:
     compiled = vars_dir / _SUB_PATH / _USER_PATH_TPL.substitute(schema=SCHEMA)
     meta = vars_dir / _SUB_PATH / "meta.json"
     return compiled, meta
+
+
+async def _load_compiled(path: Path, mtime: float) -> Tuple[Path, float, LoadedSnips]:
+    decoder = new_decoder(LoadedSnips)
+
+    def cont() -> LoadedSnips:
+        raw = path.read_text("UTF-8")
+        json = loads(raw)
+        loaded: LoadedSnips = decoder(json)
+        return loaded
+
+    return path, mtime, await run_in_executor(cont)
 
 
 async def _load_user_compiled(
@@ -92,18 +107,6 @@ async def _load_user_compiled(
         return m1, m2
 
     return await run_in_executor(cont)
-
-
-async def _load_compiled(path: Path, mtime: float) -> Tuple[Path, float, LoadedSnips]:
-    decoder = new_decoder(LoadedSnips)
-
-    def cont() -> LoadedSnips:
-        raw = path.read_text("UTF-8")
-        json = loads(raw)
-        loaded: LoadedSnips = decoder(json)
-        return loaded
-
-    return path, mtime, await run_in_executor(cont)
 
 
 def jsonify(o: Any) -> str:
@@ -138,12 +141,14 @@ def _load_snips(nvim: Nvim, stack: Stack) -> None:
     async def cont() -> None:
         with timeit("LOAD SNIPS"):
             (
-                (bundled, user_snips_mtimes),
+                bundled,
                 (user_compiled, user_compiled_mtimes),
+                user_snips_mtimes,
                 mtimes,
             ) = await gather(
-                _load_bundled(nvim, user_path=None),
+                _bundled_mtimes(nvim),
                 _load_user_compiled(stack.supervisor.vars_dir),
+                _user_mtimes(nvim, user_path=None),
                 stack.sdb.mtimes(),
             )
 
