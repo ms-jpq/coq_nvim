@@ -9,27 +9,24 @@
 
   local payload = function(node, type)
     if not node:missing() and not node:has_error() then
-      local text = vim.treesitter.get_node_text(node, 0)
       local parent = node:parent()
       local grandparent = parent and parent:parent() or nil
-      if text then
-        return {
-          text = text,
-          kind = type,
-          parent = parent and
-            {
-              text = vim.treesitter.get_node_text(parent, 0),
-              kind = kind(parent)
-            } or
-            nil,
-          grandparent = grandparent and
-            {
-              text = vim.treesitter.get_node_text(grandparent, 0),
-              kind = kind(grandparent)
-            } or
-            nil
-        }
-      end
+      return {
+        text = vim.treesitter.get_node_text(node, 0),
+        kind = type,
+        parent = parent and
+          {
+            text = vim.treesitter.get_node_text(parent, 0),
+            kind = kind(parent)
+          } or
+          nil,
+        grandparent = grandparent and
+          {
+            text = vim.treesitter.get_node_text(grandparent, 0),
+            kind = kind(grandparent)
+          } or
+          nil
+      }
     end
   end
 
