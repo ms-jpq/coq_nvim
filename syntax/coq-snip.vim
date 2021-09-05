@@ -7,7 +7,8 @@ syntax match Error       '^.*$'
 syntax match Comment     '\v^\#.*$'
 
 
-syntax match Include     '\v^extends\s'
+syntax match Include     '\v^extends\s' nextgroup=Delimiter
+syntax match Delimiter   '\v([^,]*)@<=\,' contained
 
 
 syntax match Label       '\v^abbr\s'
@@ -16,7 +17,7 @@ syntax match Error       '\v(^snippet\s[^s]+\s+)@<=.*$'
 
 
 syntax match String      '\v^\s+.*$' contains=Special
-syntax match Special     '\v\$\{[^\}]+\}' contains=Number,Conditional
+syntax match Special     '\v\$\{[^\}]+\}' contained contains=Number,Conditional
 syntax match Number      '\v\d+'
 syntax match Conditional '\V:'
 
