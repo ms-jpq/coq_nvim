@@ -7,8 +7,8 @@ syntax match Error       '^.*$'
 syntax match Comment     '\v^\#.*$'
 
 
-syntax match Include     '\v^extends\s' nextgroup=Delimiter
-syntax match Delimiter   '\v([^,]*)@<=\,' contained
+syntax match Include     '\v^extends\s'
+"syntax match Delimiter   '\v([^,]*)@<=\,' contained
 
 
 syntax match Label       '\v^abbr\s'
@@ -23,4 +23,3 @@ syntax match Conditional '\V:'
 
 
 let b:current_syntax = expand('<sfile>:t:r')
-echom b:current_syntax
