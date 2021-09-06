@@ -4,15 +4,13 @@ There are two important hotkeys
 
 - `coq_settings.keymap.jump_to_mark`: jump to next mark. (default `<c-h>`)
 
-- `coq_settings.keymap.eval_snips`: evaluate document / visual seleciton as snippets (default unbound)
+- `coq_settings.keymap.eval_snips`: evaluate document / visual seleciton as snippets (unbound by default)
 
 ## Pre-compiled sources
 
 `coq.nvim` comes with a [ridiculous amount of snippets](https://raw.githubusercontent.com/ms-jpq/coq.artifacts/artifacts/coq%2Bsnippets.json) by default.
 
-If you only want a subset of the snippets, setting `coq_settings.clients.snippets.sources` to a non-empty array will limit snippets to only load those sources.
-
-For a list of pre-compiled sources take a look at [compilation.yml](https://github.com/ms-jpq/coq_nvim/blob/coq/config/compilation.yml) under `paths.<x>.[<names>]`, where the `[<names>]` are the sources.
+Do not install `coq.artifacts` if you prefer writing your own.
 
 ## Custom source
 
@@ -48,22 +46,17 @@ body   :: .*
 
 2. Doesn't matter what indentation is used, as long as it's consistent
 
-#### Example document
+#### Example
 
 ```vim-snippet
-# typescript-react.snip
+# a comment
 
-extends typescript, typescript.jsx
+snippet snip
+alias s
+  snippet ${0:name}
+  alias ${1:altname}
+    ${2:snippet}
 
-snippet clg
-  console.log($0)
-
-snippet ora
-alias dora
-alias muda
-  export const jojo = async () => {
-    console.log($0)
-  }
 ```
 
 ### Document locations

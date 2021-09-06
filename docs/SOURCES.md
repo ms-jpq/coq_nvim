@@ -86,20 +86,6 @@ Aesthetics only, path separator.
 
 #### coq_settings.clients.snippets
 
-##### `coq_settings.clients.snippets.sources`
-
-Which snippets to load. When empty, load all snippets.
-
-Take a look at [compilation.yml](https://github.com/ms-jpq/coq_nvim/blob/coq/config/compilation.yml) under `paths.<x>.[<names>]`, the `[<names>]` are the keys.
-
-**default:**
-
-```json
-[]
-```
-
----
-
 #### coq_settings.clients.paths
 
 ##### `coq_settings.clients.paths.resolution`
