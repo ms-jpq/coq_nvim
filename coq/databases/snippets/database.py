@@ -97,7 +97,7 @@ class SDB:
                             "rowid": uid.bytes,
                             "source_id": source_id,
                             "filetype": snippet.filetype,
-                            "grammar": snippet.grammar,
+                            "grammar": snippet.grammar.name,
                             "content": snippet.content,
                             "label": snippet.label,
                             "doc": snippet.doc,
