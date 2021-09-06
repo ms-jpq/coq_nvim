@@ -209,10 +209,13 @@ async def _slurp(nvim: Nvim, stack: Stack, warn_outdated: bool) -> None:
             for path, mtime in chain(bundled.items(), user_compiled.items())
             if mtime > mtimes.get(path, -inf)
         }
-        updated_user_snips = {
-            fmt_path(cwd, path=path, is_dir=False): datetime.fromtimestamp(
-                mtime
-            ).strftime(stack.settings.display.time_fmt)
+        new_user_snips = {
+            fmt_path(cwd, path=path, is_dir=False): (
+                datetime.fromtimestamp(mtime).strftime(stack.settings.display.time_fmt),
+                datetime.fromtimestamp(prev).strftime(stack.settings.display.time_fmt)
+                if (prev := mtimes.get(path))
+                else "??",
+            )
             for path, mtime in user_snips_mtimes.items()
             if mtime > user_compiled_mtimes.get(path, -inf)
         }
@@ -243,8 +246,11 @@ async def _slurp(nvim: Nvim, stack: Stack, warn_outdated: bool) -> None:
                     ),
                 )
 
-        if warn_outdated and updated_user_snips:
-            paths = linesep.join(f"{p} -- {m}" for p, m in updated_user_snips.items())
+        if warn_outdated and new_user_snips:
+            paths = linesep.join(
+                f"{path} -- {prev} -> {cur}"
+                for path, (cur, prev) in new_user_snips.items()
+            )
             await awrite(nvim, LANG("fs snip needs compile", paths=paths))
 
 
