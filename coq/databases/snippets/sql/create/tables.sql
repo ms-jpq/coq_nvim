@@ -21,6 +21,7 @@ CREATE TABLE IF NOT EXISTS extensions (
 );
 CREATE INDEX IF NOT EXISTS extensions_source_id ON extensions (source_id);
 CREATE INDEX IF NOT EXISTS extensions_src       ON extensions (src);
+CREATE INDEX IF NOT EXISTS extensions_dest      ON extensions (dest);
 
 
 CREATE TABLE IF NOT EXISTS snippets (
