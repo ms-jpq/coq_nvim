@@ -55,7 +55,7 @@ snippet ::= snipstart ('\n' alias)* '\n' snipbody
 
 snipstart ::= 'snippet' match
 label     ::= 'abbr' body
-alias     ::= 'alias' match
+alias     ::= 'alias' body
 snipbody  ::= indent body ('\n' indent body)*
 
 indent ::= (\s | \t)+
