@@ -138,7 +138,7 @@ async def _load_user_compiled(
                 json = loads(raw)
                 m2 = new_decoder(Mapping[Path, float])(json)
             except (JSONDecodeError, DecodeError):
-                meta.unlink()
+                meta.unlink(missing_ok=True)
 
         return m1, m2
 
