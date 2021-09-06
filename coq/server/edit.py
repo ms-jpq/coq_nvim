@@ -313,8 +313,6 @@ def _shift(instructions: Iterable[EditInstruction]) -> Iterator[EditInstruction]
 
 
 def apply(nvim: Nvim, buf: Buffer, instructions: Iterable[EditInstruction]) -> None:
-    nvim.options["undolevels"] = nvim.options["undolevels"]
-
     for inst in _shift(instructions):
         try:
             buf_set_text(
@@ -351,7 +349,7 @@ def _parse(stack: Stack, state: State, data: UserData) -> Tuple[Edit, Sequence[M
         return data.primary_edit, ()
 
 
-def _restore(nvim: Nvim, win: Window, buf: Buffer, pos: NvimPos) -> Tuple[str, int]:
+def _restore(nvim: Nvim, buf: Buffer, pos: NvimPos) -> Tuple[str, int]:
     row, _ = pos
     ns = create_ns(nvim, ns=NS)
     m1, m2 = buf_get_extmarks(nvim, buf=buf, id=ns)
@@ -377,8 +375,9 @@ def edit(
         log.warn("%s", "stale buffer")
         return None
     else:
+        nvim.options["undolevels"] = nvim.options["undolevels"]
         inserted, movement = _restore(
-            nvim, win=win, buf=buf, pos=state.context.position
+            nvim, buf=buf, pos=state.context.position
         )
 
         try:

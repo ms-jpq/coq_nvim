@@ -51,7 +51,7 @@ Basically a subset of [`neosnippet`](https://github.com/Shougo/neosnippet.vim)
 ```ebnf
 comment ::= '#' .*
 extends ::= 'extends' match (', ' match)*
-snippet ::= snipstart ('\n' alias)* '\n' snipbody
+snippet ::= snipstart ('\n' label)? ('\n' alias)* '\n' snipbody
 
 snipstart ::= 'snippet' match
 label     ::= 'abbr' body

@@ -89,13 +89,14 @@ class SDB:
                         )
 
                 for uid, snippet in loaded.snippets.items():
+                    snippet_id = uid.bytes
                     cursor.execute(
                         sql("insert", "filetype"), {"filetype": snippet.filetype}
                     )
                     cursor.execute(
                         sql("insert", "snippet"),
                         {
-                            "rowid": uid.bytes,
+                            "rowid": snippet_id,
                             "source_id": source_id,
                             "filetype": snippet.filetype,
                             "grammar": snippet.grammar.name,
@@ -107,7 +108,7 @@ class SDB:
                     for match in snippet.matches:
                         cursor.execute(
                             sql("insert", "match"),
-                            {"snippet_id": uid.bytes, "match": match},
+                            {"snippet_id": snippet_id, "match": match},
                         )
 
         await run_in_executor(self._ex.submit, cont)
