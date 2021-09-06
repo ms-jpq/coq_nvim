@@ -34,6 +34,7 @@ TMP_DIR = VARS / "tmp"
 
 SETTINGS_VAR = "coq_settings"
 
+REPL_GRAMMAR = environ.get("COQ_GRAMMAR", "lsp")
 
 DEBUG = "COQ_DEBUG" in environ
 DEBUG_METRICS = "COQ_DEBUG_METRICS" in environ

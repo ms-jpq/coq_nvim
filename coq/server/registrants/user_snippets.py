@@ -15,6 +15,7 @@ from pynvim_pp.api import (
 )
 from pynvim_pp.hold import hold_win_pos
 from pynvim_pp.lib import async_call, awrite, display_width, go, write
+from pynvim_pp.logging import log
 from pynvim_pp.operators import operator_marks
 from pynvim_pp.preview import set_preview
 from std2.argparse import ArgparseError, ArgParser
@@ -22,6 +23,7 @@ from std2.locale import pathsort_key
 from yaml import SafeDumper, add_representer, safe_dump_all
 from yaml.nodes import ScalarNode, SequenceNode
 
+from ...consts import REPL_GRAMMAR
 from ...lang import LANG
 from ...paths.show import fmt_path
 from ...registry import rpc
@@ -98,12 +100,16 @@ def _pprn(
 
 @rpc(blocking=True)
 def eval_snips(
-    nvim: Nvim, stack: Stack, visual: bool, maybe_grammar: str = "lsp"
+    nvim: Nvim,
+    stack: Stack,
+    visual: bool,
+    maybe_grammar: str = REPL_GRAMMAR,
 ) -> None:
     try:
         grammar = SnippetGrammar[maybe_grammar]
     except KeyError:
         grammar = SnippetGrammar.lsp
+        log.warn("%s", "bad snippet grammar -- reverting to LSP")
 
     win = cur_win(nvim)
     buf = win_get_buf(nvim, win=win)
