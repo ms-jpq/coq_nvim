@@ -5,6 +5,7 @@ from string import whitespace
 from textwrap import dedent
 from typing import AbstractSet, Iterable, MutableSequence, MutableSet, Sequence, Tuple
 
+from ...shared.types import SnippetGrammar
 from ..types import ParsedSnippet
 from .parse import raise_err
 
@@ -42,7 +43,7 @@ def _start(line: str) -> Tuple[str, str]:
 
 
 def load_neosnippet(
-    path: PurePath, lines: Iterable[Tuple[int, str]]
+    grammar: SnippetGrammar, path: PurePath, lines: Iterable[Tuple[int, str]]
 ) -> Tuple[str, AbstractSet[str], Sequence[ParsedSnippet]]:
     filetype = path.stem.strip()
 
@@ -58,7 +59,7 @@ def load_neosnippet(
         if current_name:
             content = dedent(linesep.join(current_lines))
             snippet = ParsedSnippet(
-                grammar="snu",
+                grammar=grammar,
                 filetype=filetype,
                 content=content,
                 label=current_label,

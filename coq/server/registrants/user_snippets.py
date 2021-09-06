@@ -25,6 +25,7 @@ from yaml.nodes import ScalarNode, SequenceNode
 from ...lang import LANG
 from ...paths.show import fmt_path
 from ...registry import rpc
+from ...shared.types import SnippetGrammar
 from ...snippets.consts import MOD_PAD
 from ...snippets.parsers.types import ParseError
 from ...snippets.types import LoadError
@@ -96,7 +97,14 @@ def _pprn(
 
 
 @rpc(blocking=True)
-def eval_snips(nvim: Nvim, stack: Stack, visual: bool) -> None:
+def eval_snips(
+    nvim: Nvim, stack: Stack, visual: bool, maybe_grammar: str = "lsp"
+) -> None:
+    try:
+        grammar = SnippetGrammar[maybe_grammar]
+    except KeyError:
+        grammar = SnippetGrammar.lsp
+
     win = cur_win(nvim)
     buf = win_get_buf(nvim, win=win)
     line_count = buf_line_count(nvim, buf=buf)
@@ -111,7 +119,9 @@ def eval_snips(nvim: Nvim, stack: Stack, visual: bool) -> None:
     lines = buf_get_lines(nvim, buf=buf, lo=lo, hi=hi)
 
     try:
-        compiled = compile_one(stack, path=path, lines=enumerate(lines, start=lo + 1))
+        compiled = compile_one(
+            stack, grammar=grammar, path=path, lines=enumerate(lines, start=lo + 1)
+        )
     except (LoadError, ParseError) as e:
         preview: Sequence[str] = str(e).splitlines()
         with hold_win_pos(nvim, win=win):

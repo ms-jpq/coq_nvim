@@ -4,6 +4,7 @@ from os import linesep
 from pathlib import PurePath
 from typing import AbstractSet, Iterable, MutableSequence, MutableSet, Sequence, Tuple
 
+from ...shared.types import SnippetGrammar
 from ..types import ParsedSnippet
 from .parse import raise_err
 
@@ -48,7 +49,7 @@ def _start(line: str) -> Tuple[str, str]:
 
 
 def load_ultisnip(
-    path: PurePath, lines: Iterable[Tuple[int, str]]
+    grammar: SnippetGrammar, path: PurePath, lines: Iterable[Tuple[int, str]]
 ) -> Tuple[str, AbstractSet[str], Sequence[ParsedSnippet]]:
     filetype = path.stem.strip()
 
@@ -104,7 +105,7 @@ def load_ultisnip(
 
                 content = linesep.join(current_lines)
                 snippet = ParsedSnippet(
-                    grammar="snu",
+                    grammar=grammar,
                     filetype=filetype,
                     content=content,
                     label=current_label,

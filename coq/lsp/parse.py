@@ -11,6 +11,7 @@ from ..shared.types import (
     Extern,
     RangeEdit,
     SnippetEdit,
+    SnippetGrammar,
     SnippetRangeEdit,
 )
 from .protocol import PROTOCOL
@@ -46,21 +47,20 @@ def _primary(item: CompletionItem) -> Edit:
     fall_back = item.get("insertText") or item.get("label") or ""
 
     if PROTOCOL.InsertTextFormat.get(item.get("insertTextFormat")) == "Snippet":
-        grammar = "lsp"
         if isinstance(text_edit, Mapping) and "range" in text_edit:
             re = _range_edit(cast(TextEdit, text_edit))
             if re:
                 return SnippetRangeEdit(
-                    grammar=grammar,
+                    grammar=SnippetGrammar.lsp,
                     new_text=re.new_text,
                     begin=re.begin,
                     end=re.end,
                     encoding=re.encoding,
                 )
             else:
-                return SnippetEdit(grammar=grammar, new_text=fall_back)
+                return SnippetEdit(grammar=SnippetGrammar.lsp, new_text=fall_back)
         else:
-            return SnippetEdit(grammar=grammar, new_text=fall_back)
+            return SnippetEdit(grammar=SnippetGrammar.lsp, new_text=fall_back)
 
     elif isinstance(text_edit, Mapping):
         # TODO -- InsertReplaceEdit

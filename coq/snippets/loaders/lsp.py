@@ -6,6 +6,7 @@ from typing import AbstractSet, Iterable, Iterator, Mapping, Sequence, Tuple, Un
 
 from std2.pickle import new_decoder
 
+from ...shared.types import SnippetGrammar
 from ..types import ParsedSnippet
 
 
@@ -39,7 +40,7 @@ def _body(body: Union[str, Sequence[str]]) -> str:
 
 
 def load_lsp(
-    path: PurePath, lines: Iterable[Tuple[int, str]]
+    grammar: SnippetGrammar, path: PurePath, lines: Iterable[Tuple[int, str]]
 ) -> Tuple[str, AbstractSet[str], Sequence[ParsedSnippet]]:
     filetype = path.stem.strip()
 
@@ -51,7 +52,7 @@ def load_lsp(
         for label, values in fmt.items():
             content = _body(values.body)
             snippet = ParsedSnippet(
-                grammar="lsp",
+                grammar=grammar,
                 filetype=filetype,
                 content=content,
                 doc=values.description,

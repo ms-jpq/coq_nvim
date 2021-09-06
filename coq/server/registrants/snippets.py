@@ -37,7 +37,7 @@ from ...paths.show import fmt_path
 from ...registry import atomic, rpc
 from ...shared.context import EMPTY_CONTEXT
 from ...shared.timeit import timeit
-from ...shared.types import Edit, Mark, SnippetEdit
+from ...shared.types import Edit, Mark, SnippetEdit, SnippetGrammar
 from ...snippets.loaders.load import load_direct
 from ...snippets.loaders.neosnippet import load_neosnippet
 from ...snippets.parse import parse
@@ -258,9 +258,12 @@ atomic.exec_lua(f"{_load_snips.name}()", ())
 
 
 def compile_one(
-    stack: Stack, path: PurePath, lines: Iterable[Tuple[int, str]]
+    stack: Stack,
+    grammar: SnippetGrammar,
+    path: PurePath,
+    lines: Iterable[Tuple[int, str]],
 ) -> Compiled:
-    filetype, exts, snips = load_neosnippet(path, lines=lines)
+    filetype, exts, snips = load_neosnippet(grammar, path=path, lines=lines)
     parsed = tuple(_trans(stack.settings.match.unifying_chars, snips=snips))
 
     compiled = Compiled(

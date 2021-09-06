@@ -7,7 +7,7 @@ from uuid import UUID, uuid3
 from std2.graphlib import recur_sort
 from std2.pathlib import walk
 
-from ..types import LoadedSnips, ParsedSnippet
+from ..types import LoadedSnips, ParsedSnippet, SnippetGrammar
 from .lsp import load_lsp
 from .neosnippet import load_neosnippet
 from .ultisnip import load_ultisnip
@@ -29,16 +29,25 @@ def load_direct(
     lsp: Iterable[Path],
     neosnippet: Iterable[Path],
     ultisnip: Iterable[Path],
+    lsp_grammar: SnippetGrammar = SnippetGrammar.lsp,
+    neosnippet_grammar: SnippetGrammar = SnippetGrammar.snu,
+    ultisnip_grammar: SnippetGrammar = SnippetGrammar.snu,
 ) -> LoadedSnips:
-    specs = {load_lsp: lsp, load_neosnippet: neosnippet, load_ultisnip: ultisnip}
+    specs = {
+        load_lsp: (lsp_grammar, lsp),
+        load_neosnippet: (neosnippet_grammar, neosnippet),
+        load_ultisnip: (ultisnip_grammar, ultisnip),
+    }
 
     extensions: MutableMapping[str, MutableSet[str]] = {}
     snippets: MutableMapping[UUID, ParsedSnippet] = {}
 
-    for parser, paths in specs.items():
+    for parser, (grammar, paths) in specs.items():
         for path in paths:
             with path.open(encoding="UTF-8") as fd:
-                filetype, exts, snips = parser(path, enumerate(fd, start=1))
+                filetype, exts, snips = parser(
+                    grammar, path=path, lines=enumerate(fd, start=1)
+                )
             ext_acc = extensions.setdefault(filetype, set())
             for ext in exts:
                 ext_acc.add(ext)
