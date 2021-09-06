@@ -91,9 +91,12 @@ $NVIM_HOME
 |- ./coq-user-snippets/*.snip
 ```
 
-``
+You can also set `coq_settings.clients.snippets.user_path` to load from a custom location
 
+There is a convenience command:
 
 ```viml
-:COQsnip edit
+:COQsnip edit <filetype>
 ```
+
+To edit snippets for a particular filetype. It is normally under `$NVIM_HOME/coq-user-snippets/`, but if `coq_settings.clients.snippets.user_path` is set, that is used instead.

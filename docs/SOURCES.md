@@ -86,6 +86,18 @@ Aesthetics only, path separator.
 
 #### coq_settings.clients.snippets
 
+##### `coq_settings.clients.snippets.user_path`
+
+Additional snippet load path, if relative, resolves under nvim config dir.
+
+**default:**
+
+```json
+null
+```
+
+---
+
 #### coq_settings.clients.paths
 
 ##### `coq_settings.clients.paths.resolution`
