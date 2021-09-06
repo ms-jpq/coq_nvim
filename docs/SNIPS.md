@@ -102,3 +102,9 @@ There is a convenience command:
 ```
 
 To edit snippets for a particular filetype. It is normally under `$NVIM_HOME/coq-user-snippets/`, but if `coq_settings.clients.snippets.user_path` is set, that is used instead.
+
+To see where snippets are currently stored, there is also
+
+```viml
+:COQsnips ls
+```
