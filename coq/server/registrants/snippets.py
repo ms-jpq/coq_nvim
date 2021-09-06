@@ -213,7 +213,7 @@ async def _slurp(nvim: Nvim, stack: Stack, warn_outdated: bool) -> None:
             fmt_path(cwd, path=path, is_dir=False): (
                 datetime.fromtimestamp(mtime).strftime(stack.settings.display.time_fmt),
                 datetime.fromtimestamp(prev).strftime(stack.settings.display.time_fmt)
-                if (prev := mtimes.get(path))
+                if (prev := user_compiled_mtimes.get(path))
                 else "??",
             )
             for path, mtime in user_snips_mtimes.items()
