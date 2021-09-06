@@ -147,8 +147,8 @@ def eval_snips(
 def _parse_args(args: Sequence[str]) -> Namespace:
     parser = ArgParser()
     sub_parsers = parser.add_subparsers(dest="action", required=True)
-    sub_parsers.add_parser("compile")
     sub_parsers.add_parser("ls")
+    sub_parsers.add_parser("compile")
     p = sub_parsers.add_parser("edit")
     p.add_argument("filetype")
     return parser.parse_args(args)
