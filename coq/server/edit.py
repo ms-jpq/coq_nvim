@@ -15,7 +15,7 @@ from typing import (
 from uuid import uuid4
 
 from pynvim import Nvim
-from pynvim.api import Window, Buffer
+from pynvim.api import Buffer, Window
 from pynvim.api.common import NvimError
 from pynvim_pp.api import (
     buf_get_extmarks,
@@ -349,16 +349,17 @@ def _parse(stack: Stack, state: State, data: UserData) -> Tuple[Edit, Sequence[M
         return data.primary_edit, ()
 
 
-def _restore(nvim: Nvim, buf: Buffer, pos: NvimPos) -> Tuple[str, int]:
+def _restore(nvim: Nvim, win: Window, buf: Buffer, pos: NvimPos) -> Tuple[str, int]:
     row, _ = pos
     ns = create_ns(nvim, ns=NS)
     m1, m2 = buf_get_extmarks(nvim, buf=buf, id=ns)
     after, *_ = buf_get_lines(nvim, buf=buf, lo=row, hi=row + 1)
     (_, lo), (_, hi) = m1.end, m2.begin
     inserted = after.encode(UTF8)[lo:hi].decode(UTF8, errors="ignore")
-    movement = len(inserted.encode(UTF8)) if inserted else 0
+
+    movement = len(inserted.encode(UTF8))
     if inserted:
-        cur_row, cur_col = win_get_cursor(nvim, win)
+        cur_row, cur_col = win_get_cursor(nvim, win=win)
         if cur_row == row and lo <= cur_col <= hi:
             movement = cur_col - lo
         buf_set_text(nvim, buf=buf, begin=m1.end, end=m2.begin, text=("",))
@@ -377,7 +378,7 @@ def edit(
     else:
         nvim.options["undolevels"] = nvim.options["undolevels"]
         inserted, movement = _restore(
-            nvim, buf=buf, pos=state.context.position
+            nvim, win=win, buf=buf, pos=state.context.position
         )
 
         try:
