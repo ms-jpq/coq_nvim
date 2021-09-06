@@ -51,7 +51,9 @@ CREATE VIEW IF NOT EXISTS uniq_extensions_view AS
 SELECT DISTINCT
   src,
   dest
-FROM extensions;
+FROM extensions
+WHERE 
+  src <> dest;
 
 
 CREATE VIEW IF NOT EXISTS extensions_view AS
@@ -61,8 +63,6 @@ WITH RECURSIVE all_exts AS (
     e1.src,
     e1.dest
   FROM uniq_extensions_view AS e1
-  WHERE
-    e1.dest <> e1.src
   UNION ALL
   SELECT
     all_exts.lvl + 1 AS lvl,
@@ -72,8 +72,6 @@ WITH RECURSIVE all_exts AS (
   JOIN all_exts
   ON
     all_exts.dest = e2.src
-  WHERE
-    e2.dest <> e2.src
 )
 SELECT
   filetypes.filetype AS src,
