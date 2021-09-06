@@ -84,7 +84,8 @@ class SDB:
                             ({"filetype": src}, {"filetype": dest}),
                         )
                         cursor.execute(
-                            sql("insert", "extension"), {"src": src, "dest": dest}
+                            sql("insert", "extension"),
+                            {"source_id": source_id, "src": src, "dest": dest},
                         )
 
                 for uid, snippet in loaded.snippets.items():

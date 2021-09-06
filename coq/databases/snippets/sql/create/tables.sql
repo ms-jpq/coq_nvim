@@ -46,12 +46,11 @@ CREATE INDEX IF NOT EXISTS matches_match      ON matches (match);
 CREATE INDEX IF NOT EXISTS matches_lmatch     ON matches (lmatch);
 
 
-CREATE VIEW IF NOT EXISTS uniq_extensions_view AS (
-  SELECT DISTINCT
-    src,
-    dest
-  FROM extensions
-);
+CREATE VIEW IF NOT EXISTS uniq_extensions_view AS
+SELECT DISTINCT
+  src,
+  dest
+FROM extensions;
 
 
 CREATE VIEW IF NOT EXISTS extensions_view AS
