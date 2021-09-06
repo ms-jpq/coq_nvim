@@ -102,6 +102,8 @@ lsp.<server>.setup(coq.lsp_ensure_capabilities(<stuff...>)) -- after
 
 - [Live Repl](https://github.com/ms-jpq/coq_nvim/tree/coq/docs/SNIPS.md)
 
+![snip_load.img](https://raw.githubusercontent.com/ms-jpq/coq.artifacts/artifacts/preview/snip_load.gif)
+
 _The `%` statistic comes from compiling the 10,000 snippets_
 
 ### TreeSitter
