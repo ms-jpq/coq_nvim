@@ -1,13 +1,13 @@
 from argparse import Namespace
 from locale import strxfrm
 from os.path import normcase
-from pathlib import PurePath
+from pathlib import Path, PurePath
 from typing import Any, Iterator, Mapping, Sequence
 
 from pynvim.api.nvim import Nvim
 from pynvim_pp.api import buf_get_lines, buf_line_count, buf_name, cur_win, win_get_buf
 from pynvim_pp.hold import hold_win_pos
-from pynvim_pp.lib import awrite, display_width, go, write
+from pynvim_pp.lib import async_call, awrite, display_width, go, write
 from pynvim_pp.operators import operator_marks
 from pynvim_pp.preview import set_preview
 from std2.argparse import ArgparseError, ArgParser
@@ -103,13 +103,8 @@ def eval_snips(nvim: Nvim, stack: Stack, visual: bool) -> None:
 
     try:
         compiled = compile_one(stack, path=path, lines=enumerate(lines, start=lo + 1))
-    except LoadError as e:
+    except (LoadError, ParseError) as e:
         preview: Sequence[str] = str(e).splitlines()
-        with hold_win_pos(nvim, win=win):
-            set_preview(nvim, syntax="", preview=preview)
-        write(nvim, LANG("snip load fail"))
-    except ParseError as e:
-        preview = str(e).splitlines()
         with hold_win_pos(nvim, win=win):
             set_preview(nvim, syntax="", preview=preview)
         write(nvim, LANG("snip parse fail"))
@@ -128,6 +123,9 @@ def _parse_args(args: Sequence[str]) -> Namespace:
     parser = ArgParser()
     sub_parsers = parser.add_subparsers(dest="action", required=True)
     sub_parsers.add_parser("compile")
+    p = sub_parsers.add_parser("edit")
+    p.add_argument("file", nargs="?")
+
     return parser.parse_args(args)
 
 
@@ -141,13 +139,27 @@ def snips(nvim: Nvim, stack: Stack, args: Sequence[str]) -> None:
         if ns.action == "compile":
 
             async def cont() -> None:
+                await awrite(nvim, LANG("waiting..."))
                 try:
                     await compile_user_snippets(nvim, stack=stack)
-                except LoadError as e:
-                    await awrite(nvim, e)
-                except ParseError as e:
-                    await awrite(nvim, e)
+                except (LoadError, ParseError) as e:
+
+                    def c1() -> None:
+                        win = cur_win(nvim)
+                        preview = str(e).splitlines()
+                        with hold_win_pos(nvim, win=win):
+                            set_preview(nvim, syntax="", preview=preview)
+                        write(nvim, LANG("snip parse fail"))
+
+                    await async_call(nvim, c1)
+                else:
+                    await awrite(nvim, LANG("snip parse succ"))
 
             go(nvim, aw=cont())
+
+        elif ns.action == "edit":
+            path = Path(ns.file) if ns.file else None
+            path = (path if path.is_absolute() else path) if path else None
+
         else:
             assert False
