@@ -286,7 +286,7 @@ def compile_one(
 
 
 async def compile_user_snippets(nvim: Nvim, stack: Stack) -> None:
-    with timeit("COMPILE SNIPS", force=True):
+    with timeit("COMPILE SNIPS"):
         _, mtimes = await user_mtimes(
             nvim, user_path=stack.settings.clients.snippets.user_path
         )
