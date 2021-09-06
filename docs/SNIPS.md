@@ -10,7 +10,7 @@ There are two important hotkeys
 
 `coq.nvim` comes with a [ridiculous amount of snippets](https://raw.githubusercontent.com/ms-jpq/coq.artifacts/artifacts/coq%2Bsnippets.json) by default.
 
-Do not install `coq.artifacts` if you prefer writing your own.
+To disable: simply do not install `coq.artifacts`.
 
 ## Custom snippets
 
