@@ -1,4 +1,7 @@
 ---
+"waiting...": |-
+  ⏳⌛️ ...
+
 "buf 2 fat": |-
   ❌ Buffer will not be indexed: size ${size} > ${limit}
 
@@ -30,10 +33,7 @@
   ❌ ${source} took ${elapsed}s to parse document, will be disabled for current file.
 
 "no snippets found": |-
-  ⚠️  No snippets loaded
-
-"snip load fail": |-
-  ❌ Failed to load snippets
+  ⚠️  No snippets found
 
 "snip parse fail": |-
   ❌ Failed to parse snippets
@@ -41,8 +41,15 @@
 "snip parse succ": |-
   ✅ Snippets parsed
 
-"snip parse empty": |-
-  ⚠️  No snippets found
+"fs snip load empty": |-
+  ⚠️  No compatible snippets found, try updating `coq.artifacts`
+
+"fs snip load succ": |-
+  ✅ Snippets updated -- ${path}
+
+"fs snip needs compile": |-
+  ⚠️  Snippets require manual compilation :: -- `:COQsnips compile`
+  ${paths}
 
 "begin T9 download": |-
   ⏳ Downloading T9 ...

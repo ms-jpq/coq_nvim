@@ -1,36 +1,15 @@
-from asyncio import Handle, get_running_loop, sleep
-from asyncio.locks import Lock
+from asyncio import Handle, get_running_loop
 from asyncio.tasks import gather
-from itertools import repeat
-from json import loads
-from json.decoder import JSONDecodeError
-from pathlib import Path
-from typing import (
-    AbstractSet,
-    Iterable,
-    Iterator,
-    Mapping,
-    MutableMapping,
-    MutableSequence,
-    MutableSet,
-    Optional,
-    Sequence,
-    Tuple,
-)
+from typing import Optional
 
 from pynvim.api.nvim import Nvim
 from pynvim_pp.api import buf_filetype, buf_get_option, cur_buf, get_cwd, win_close
 from pynvim_pp.float_win import list_floatwins
 from pynvim_pp.lib import async_call, awrite, go
-from pynvim_pp.logging import log
-from std2.asyncio import run_in_executor
 from std2.locale import si_prefixed_smol
-from std2.pickle import new_decoder
 
-from ...databases.snippets.database import SDB
 from ...lang import LANG
 from ...registry import atomic, autocmd, rpc
-from ...snippets.types import ASnips, ParsedSnippet
 from ...tmux.parse import snapshot
 from ...treesitter.request import async_request
 from ..rt_types import Stack
@@ -62,104 +41,6 @@ def _new_cwd(nvim: Nvim, stack: Stack) -> None:
 autocmd("DirChanged") << f"lua {_new_cwd.name}()"
 
 
-async def _load_snip_raw(paths: Iterable[Path]) -> ASnips:
-    def cont() -> ASnips:
-        for path in paths:
-            candidate = path / "coq+snippets.json"
-            try:
-                json = candidate.read_text("UTF8")
-            except (FileNotFoundError, PermissionError):
-                pass
-            else:
-                try:
-                    snips: ASnips = loads(json)
-                except JSONDecodeError as e:
-                    log.warn("%s", e)
-                else:
-                    return snips
-        else:
-            return {}
-
-    return await run_in_executor(cont)
-
-
-_LOCK: Optional[Lock] = None
-_EXTS: Mapping[str, AbstractSet[str]] = {}
-_SNIPPETS: Mapping[str, Sequence[ParsedSnippet]] = {}
-_SEEN_SNIP_TYPES: MutableSet[str] = set()
-_DECODER = new_decoder(Sequence[ParsedSnippet], strict=False)
-
-
-@rpc(blocking=True)
-def _load_snips(nvim: Nvim, stack: Stack) -> None:
-    srcs = stack.settings.clients.snippets.sources
-    paths = tuple(map(Path, nvim.list_runtime_paths()))
-
-    async def cont() -> None:
-        global _LOCK, _EXTS, _SNIPPETS
-        assert not _LOCK
-        _LOCK = Lock()
-
-        async with _LOCK:
-            snippets = await _load_snip_raw(paths)
-            if not snippets:
-                for _ in range(9):
-                    await sleep(0)
-                await awrite(nvim, LANG("no snippets found"))
-
-            exts: MutableMapping[str, MutableSet[str]] = {}
-            s_acc: MutableMapping[str, MutableSequence[ParsedSnippet]] = {}
-            for label, (ets, snips) in snippets.items():
-                if not srcs or label in srcs:
-                    for src, dests in ets.items():
-                        acc = exts.setdefault(src, set())
-                        for d in dests:
-                            acc.add(d)
-
-                    for ext, snps in snips.items():
-                        ac = s_acc.setdefault(ext, [])
-                        ac.extend(snps)
-
-            _EXTS, _SNIPPETS = exts, s_acc
-            await stack.sdb.add_exts(exts)
-
-    if stack.settings.clients.snippets.enabled:
-        go(nvim, aw=cont())
-
-
-atomic.exec_lua(f"{_load_snips.name}()", ())
-
-
-async def _add_snips(ft: str, db: SDB) -> None:
-    while not _LOCK:
-        await sleep(0)
-
-    async with _LOCK:
-        if ft not in _SEEN_SNIP_TYPES:
-            _SEEN_SNIP_TYPES.add(ft)
-
-            def cont() -> Iterator[Tuple[str, ParsedSnippet]]:
-                stack, seen = [ft], {ft}
-                while stack:
-                    ext = stack.pop()
-                    for et in _EXTS.get(ft, ()):
-                        if et not in seen:
-                            seen.add(et)
-                            stack.append(et)
-
-                    snippets = _SNIPPETS.get(ext, ())
-                    snips: Sequence[ParsedSnippet] = _DECODER(snippets)
-                    yield from zip(repeat(ext), snips)
-
-            snips: MutableMapping[str, MutableSequence[ParsedSnippet]] = {}
-
-            for filetype, snip in cont():
-                acc = snips.setdefault(filetype, [])
-                acc.append(snip)
-
-            await db.populate(snips)
-
-
 @rpc(blocking=True)
 def _ft_changed(nvim: Nvim, stack: Stack) -> None:
     buf = cur_buf(nvim)
@@ -167,8 +48,6 @@ def _ft_changed(nvim: Nvim, stack: Stack) -> None:
 
     async def cont() -> None:
         await stack.bdb.ft_update(buf.number, filetype=ft)
-        if stack.settings.clients.snippets.enabled:
-            await _add_snips(ft, db=stack.sdb)
 
     go(nvim, aw=cont())
 

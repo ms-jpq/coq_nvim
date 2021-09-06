@@ -5,8 +5,8 @@ from typing import Iterator
 from pynvim import Nvim
 from pynvim_pp.api import get_cwd
 from std2.configparser import hydrate
+from std2.graphlib import merge
 from std2.pickle import new_decoder
-from std2.tree import merge
 from yaml import safe_load
 
 from ..clients.buffers.worker import Worker as BuffersWorker
@@ -88,7 +88,7 @@ def stack(pool: Executor, nvim: Nvim) -> Stack:
     s = state(cwd=get_cwd(nvim))
     bdb, sdb, idb, tdb, ctdb, tmdb = (
         BDB(pool),
-        SDB(pool),
+        SDB(pool, vars_dir=vars_dir),
         IDB(pool),
         TDB(pool),
         CTDB(pool, vars_dir=vars_dir, cwd=s.cwd),

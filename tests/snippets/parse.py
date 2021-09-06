@@ -6,8 +6,8 @@ from typing import Iterator
 from unittest import TestCase
 
 from ...coq.ci.load import load
+from ...coq.shared.context import EMPTY_CONTEXT
 from ...coq.shared.types import SnippetEdit
-from ...coq.snippets.main import EMPTY_CONTEXT
 from ...coq.snippets.parse import parse
 from ...coq.snippets.parsers.types import ParseError
 
@@ -15,15 +15,10 @@ _THRESHOLD = 0.95
 
 
 def _edits() -> Iterator[SnippetEdit]:
-    specs = run(load())
-    for _, (_, snippets) in specs.items():
-        for _, snips in snippets.items():
-            for snip in snips:
-                edit = SnippetEdit(
-                    new_text=snip.content,
-                    grammar=snip.grammar,
-                )
-                yield edit
+    loaded = run(load())
+    for snip in loaded.snippets.values():
+        edit = SnippetEdit(new_text=snip.content, grammar=snip.grammar)
+        yield edit
 
 
 class Parser(TestCase):

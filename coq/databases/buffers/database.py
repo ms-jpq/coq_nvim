@@ -1,6 +1,5 @@
 from asyncio import CancelledError
 from concurrent.futures import Executor
-from contextlib import closing
 from sqlite3 import Connection, OperationalError
 from sqlite3.dbapi2 import Cursor
 from threading import Lock
@@ -55,15 +54,14 @@ class BDB:
     async def vacuum(self, buf_ids: AbstractSet[int]) -> None:
         def cont() -> None:
             try:
-                with closing(self._conn.cursor()) as cursor:
-                    with with_transaction(cursor):
-                        cursor.execute(sql("select", "buffers"), ())
-                        existing = {row["rowid"] for row in cursor.fetchall()}
-                        cursor.execute(
-                            sql("delete", "buffers"),
-                            ({"buf_id": buf_id} for buf_id in existing - buf_ids),
-                        )
-                        cursor.execute(sql("delete", "buffers"), ())
+                with with_transaction(self._conn.cursor()) as cursor:
+                    cursor.execute(sql("select", "buffers"), ())
+                    existing = {row["rowid"] for row in cursor.fetchall()}
+                    cursor.execute(
+                        sql("delete", "buffers"),
+                        ({"buf_id": buf_id} for buf_id in existing - buf_ids),
+                    )
+                    cursor.execute(sql("delete", "buffers"), ())
             except OperationalError:
                 pass
 
@@ -72,13 +70,12 @@ class BDB:
     async def del_bufs(self, buf_ids: AbstractSet[int]) -> None:
         def cont() -> None:
             try:
-                with closing(self._conn.cursor()) as cursor:
-                    with with_transaction(cursor):
-                        cursor.execute(
-                            sql("delete", "buffers"),
-                            ({"buf_id": buf_id} for buf_id in buf_ids),
-                        )
-                        cursor.execute(sql("delete", "buffers"), ())
+                with with_transaction(self._conn.cursor()) as cursor:
+                    cursor.execute(
+                        sql("delete", "buffers"),
+                        ({"buf_id": buf_id} for buf_id in buf_ids),
+                    )
+                    cursor.execute(sql("delete", "buffers"), ())
             except OperationalError:
                 pass
 
@@ -86,9 +83,8 @@ class BDB:
 
     async def ft_update(self, buf_id: int, filetype: str) -> None:
         def cont() -> None:
-            with self._lock, closing(self._conn.cursor()) as cursor:
-                with with_transaction(cursor):
-                    _ensure_buffer(cursor, buf_id=buf_id, filetype=filetype)
+            with self._lock, with_transaction(self._conn.cursor()) as cursor:
+                _ensure_buffer(cursor, buf_id=buf_id, filetype=filetype)
 
         await run_in_executor(self._ex.submit, cont)
 
@@ -124,48 +120,46 @@ class BDB:
                     yield {"line_id": line_id, "word": word, "line_num": line_num}
 
         def cont() -> None:
-            with self._lock, closing(self._conn.cursor()) as cursor:
-                with with_transaction(cursor):
-                    _ensure_buffer(cursor, buf_id=buf_id, filetype=filetype)
+            with self._lock, with_transaction(self._conn.cursor()) as cursor:
+                _ensure_buffer(cursor, buf_id=buf_id, filetype=filetype)
+                cursor.execute(
+                    sql("delete", "lines"),
+                    {"buffer_id": buf_id, "lo": lo, "hi": hi},
+                )
+                shift = len(lines) - (hi - lo)
+                cursor.execute(
+                    sql("update", "lines"),
+                    {"buffer_id": buf_id, "lo": lo, "shift": shift},
+                )
+                cursor.executemany(sql("insert", "line"), m1())
+                cursor.executemany(sql("insert", "word"), m2())
+                cursor.execute(sql("select", "line_count"), {"buffer_id": buf_id})
+                count = cursor.fetchone()["line_count"]
+                if not count:
                     cursor.execute(
-                        sql("delete", "lines"),
-                        {"buffer_id": buf_id, "lo": lo, "hi": hi},
+                        sql("insert", "line"),
+                        {
+                            "rowid": uuid4().bytes,
+                            "line": "",
+                            "buffer_id": buf_id,
+                            "line_num": 0,
+                        },
                     )
-                    shift = len(lines) - (hi - lo)
-                    cursor.execute(
-                        sql("update", "lines"),
-                        {"buffer_id": buf_id, "lo": lo, "shift": shift},
-                    )
-                    cursor.executemany(sql("insert", "line"), m1())
-                    cursor.executemany(sql("insert", "word"), m2())
-                    cursor.execute(sql("select", "line_count"), {"buffer_id": buf_id})
-                    count = cursor.fetchone()["line_count"]
-                    if not count:
-                        cursor.execute(
-                            sql("insert", "line"),
-                            {
-                                "rowid": uuid4().bytes,
-                                "line": "",
-                                "buffer_id": buf_id,
-                                "line_num": 0,
-                            },
-                        )
 
         await run_in_executor(self._ex.submit, cont)
 
     def lines(self, buf_id: int, lo: int, hi: int) -> Tuple[int, Iterator[str]]:
         def cont() -> Tuple[int, Iterator[str]]:
-            with self._lock, closing(self._conn.cursor()) as cursor:
-                with with_transaction(cursor):
-                    cursor.execute(sql("select", "line_count"), {"buffer_id": buf_id})
-                    count = cursor.fetchone()["line_count"]
-                    cursor.execute(
-                        sql("select", "lines"),
-                        {"buffer_id": buf_id, "lo": lo, "hi": hi},
-                    )
-                    rows = cursor.fetchall()
-                    lines = (row["line"] for row in rows)
-                    return count, lines
+            with self._lock, with_transaction(self._conn.cursor()) as cursor:
+                cursor.execute(sql("select", "line_count"), {"buffer_id": buf_id})
+                count = cursor.fetchone()["line_count"]
+                cursor.execute(
+                    sql("select", "lines"),
+                    {"buffer_id": buf_id, "lo": lo, "hi": hi},
+                )
+                rows = cursor.fetchall()
+                lines = (row["line"] for row in rows)
+                return count, lines
 
         return self._ex.submit(cont)
 
@@ -174,21 +168,20 @@ class BDB:
     ) -> Iterator[str]:
         def cont() -> Iterator[str]:
             try:
-                with closing(self._conn.cursor()) as cursor:
-                    with with_transaction(cursor):
-                        cursor.execute(
-                            sql("select", "words"),
-                            {
-                                "exact": opts.exact_matches,
-                                "cut_off": opts.fuzzy_cutoff,
-                                "look_ahead": opts.look_ahead,
-                                "limit": BIGGEST_INT if limitless else opts.max_results,
-                                "filetype": filetype,
-                                "word": word,
-                            },
-                        )
-                        rows = cursor.fetchall()
-                        return (row["word"] for row in rows)
+                with with_transaction(self._conn.cursor()) as cursor:
+                    cursor.execute(
+                        sql("select", "words"),
+                        {
+                            "exact": opts.exact_matches,
+                            "cut_off": opts.fuzzy_cutoff,
+                            "look_ahead": opts.look_ahead,
+                            "limit": BIGGEST_INT if limitless else opts.max_results,
+                            "filetype": filetype,
+                            "word": word,
+                        },
+                    )
+                    rows = cursor.fetchall()
+                    return (row["word"] for row in rows)
             except OperationalError:
                 return iter(())
 

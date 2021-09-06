@@ -92,27 +92,29 @@ class Worker(BaseWorker[LSPClient, None], CacheWorker):
                             seen += 1
                     else:
                         for c in chunked:
-                            cword = (
-                                w_before
-                                if is_word(
-                                    c.sort_by[:1],
-                                    unifying_chars=self._supervisor.options.unifying_chars,
+                            if c.primary_edit.new_text:
+                                cword = (
+                                    w_before
+                                    if is_word(
+                                        c.sort_by[:1],
+                                        unifying_chars=self._supervisor.options.unifying_chars,
+                                    )
+                                    else sw_before
                                 )
-                                else sw_before
-                            )
-                            ratio = multi_set_ratio(
-                                cword,
-                                lower(c.sort_by),
-                                look_ahead=self._supervisor.options.look_ahead,
-                            )
-                            if (
-                                ratio >= self._supervisor.options.fuzzy_cutoff
-                                and len(c.sort_by) + self._supervisor.options.look_ahead
-                                >= len(cword)
-                                and not cword.startswith(c.sort_by)
-                            ):
-                                yield c
-                                seen += 1
+                                ratio = multi_set_ratio(
+                                    cword,
+                                    lower(c.sort_by),
+                                    look_ahead=self._supervisor.options.look_ahead,
+                                )
+                                if (
+                                    ratio >= self._supervisor.options.fuzzy_cutoff
+                                    and len(c.sort_by)
+                                    + self._supervisor.options.look_ahead
+                                    >= len(cword)
+                                    and not cword.startswith(c.sort_by)
+                                ):
+                                    yield c
+                                    seen += 1
 
                 if lsp_comps.local_cache and chunked:
                     await set_cache(chunked)

@@ -1,11 +1,11 @@
 from difflib import get_close_matches
 from os import linesep
-from os.path import splitext
 from pathlib import PurePath
 from string import whitespace
 from textwrap import dedent
 from typing import AbstractSet, Iterable, MutableSequence, MutableSet, Sequence, Tuple
 
+from ...shared.types import SnippetGrammar
 from ..types import ParsedSnippet
 from .parse import raise_err
 
@@ -42,14 +42,16 @@ def _start(line: str) -> Tuple[str, str]:
         return name, label
 
 
-def parse(
-    path: PurePath, lines: Iterable[Tuple[int, str]]
-) -> Tuple[AbstractSet[str], Sequence[ParsedSnippet]]:
+def load_neosnippet(
+    grammar: SnippetGrammar, path: PurePath, lines: Iterable[Tuple[int, str]]
+) -> Tuple[str, AbstractSet[str], Sequence[ParsedSnippet]]:
+    filetype = path.stem.strip()
+
     snippets: MutableSequence[ParsedSnippet] = []
     extends: MutableSet[str] = set()
 
     current_name = ""
-    current_label: str = ""
+    current_label = ""
     current_aliases: MutableSequence[str] = []
     current_lines: MutableSequence[str] = []
 
@@ -57,7 +59,8 @@ def parse(
         if current_name:
             content = dedent(linesep.join(current_lines))
             snippet = ParsedSnippet(
-                grammar="snu",
+                grammar=grammar,
+                filetype=filetype,
                 content=content,
                 label=current_label,
                 doc="",
@@ -77,13 +80,14 @@ def parse(
 
         elif line.startswith(_EXTENDS_START):
             filetypes = line[len(_EXTENDS_START) :].strip()
-            for filetype in filetypes.split(","):
-                extends.add(filetype.strip())
+            for ft in (f.strip() for f in filetypes.split(",")):
+                if ft:
+                    extends.add(ft)
 
         elif line.startswith(_INCLUDES_START):
-            ft = line[len(_INCLUDES_START) :].strip()
-            filetype, _ = splitext(ft)
-            extends.add(filetype)
+            ft = PurePath(line[len(_INCLUDES_START) :]).stem.strip()
+            if ft:
+                extends.add(ft)
 
         elif line.startswith(_SNIPPET_START):
             push()
@@ -119,4 +123,4 @@ def parse(
 
     push()
 
-    return extends, snippets
+    return filetype, extends, snippets

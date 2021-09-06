@@ -3,7 +3,7 @@ from typing import AsyncIterator
 from ...databases.snippets.database import SDB
 from ...shared.runtime import Worker as BaseWorker
 from ...shared.settings import SnippetClient
-from ...shared.types import Completion, Context, Doc, SnippetEdit
+from ...shared.types import Completion, Context, Doc, SnippetEdit, SnippetGrammar
 
 
 class Worker(BaseWorker[SnippetClient, SDB]):
@@ -19,14 +19,10 @@ class Worker(BaseWorker[SnippetClient, SDB]):
         for snip in snippets:
             edit = SnippetEdit(
                 new_text=snip["snippet"],
-                grammar=snip["grammar"],
+                grammar=SnippetGrammar[snip["grammar"]],
             )
-            label = (
-                (snip["label"] or edit.new_text or " ")
-                .splitlines()[0]
-                .strip()
-                .replace("\t", "  ")
-            )
+            label_line, *_ = (snip["label"] or edit.new_text or " ").splitlines()
+            label = label_line.strip().expandtabs(context.tabstop)
             doc = Doc(
                 text=snip["doc"] or edit.new_text,
                 syntax="",

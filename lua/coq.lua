@@ -14,10 +14,9 @@ local job_id = nil
 local err_exit = false
 
 local on_exit = function(_, code)
-  local msg = " | COQ EXITED - " .. code
   if not (code == 0 or code == 143) then
     err_exit = true
-    vim.api.nvim_err_writeln(msg)
+    vim.api.nvim_err_writeln("COQ EXITED - " .. code)
   else
     err_exit = false
   end
@@ -29,7 +28,7 @@ local on_stdout = function(_, msg)
 end
 
 local on_stderr = function(_, msg)
-  vim.api.nvim_err_write(table.concat(msg, linesep))
+  vim.api.nvim_echo({{table.concat(msg, linesep), "ErrorMsg"}}, true, {})
 end
 
 local py3 = vim.g.python3_host_prog or (is_win and "python" or "python3")
@@ -117,6 +116,9 @@ vim.api.nvim_command [[command! -complete=customlist,coq#complete_now -nargs=* C
 
 set_coq_call("COQstats")
 vim.api.nvim_command [[command! -nargs=* COQstats lua coq.COQstats(<f-args>)]]
+
+set_coq_call("COQsnips")
+vim.api.nvim_command [[command! -complete=customlist,coq#complete_snips -nargs=* COQsnips lua coq.COQsnips(<f-args>)]]
 
 set_coq_call("COQhelp")
 vim.api.nvim_command [[command! -complete=customlist,coq#complete_help  -nargs=* COQhelp lua coq.COQhelp(<f-args>)]]

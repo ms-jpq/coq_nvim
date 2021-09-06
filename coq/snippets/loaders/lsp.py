@@ -6,6 +6,7 @@ from typing import AbstractSet, Iterable, Iterator, Mapping, Sequence, Tuple, Un
 
 from std2.pickle import new_decoder
 
+from ...shared.types import SnippetGrammar
 from ..types import ParsedSnippet
 
 
@@ -38,22 +39,26 @@ def _body(body: Union[str, Sequence[str]]) -> str:
         raise ValueError(body)
 
 
-def parse(
-    _: PurePath, lines: Iterable[Tuple[int, str]]
-) -> Tuple[AbstractSet[str], Sequence[ParsedSnippet]]:
+def load_lsp(
+    grammar: SnippetGrammar, path: PurePath, lines: Iterable[Tuple[int, str]]
+) -> Tuple[str, AbstractSet[str], Sequence[ParsedSnippet]]:
+    filetype = path.stem.strip()
+
     text = linesep.join(line.rstrip() for _, line in lines)
     json = loads(text)
     fmt: _FMT = _DECODER(json)
 
     def cont() -> Iterator[ParsedSnippet]:
         for label, values in fmt.items():
+            content = _body(values.body)
             snippet = ParsedSnippet(
-                grammar="lsp",
-                content=_body(values.body),
+                grammar=grammar,
+                filetype=filetype,
+                content=content,
                 doc=values.description,
                 label=label,
                 matches=_prefix(values.prefix),
             )
             yield snippet
 
-    return set(), tuple(cont())
+    return filetype, set(), tuple(cont())

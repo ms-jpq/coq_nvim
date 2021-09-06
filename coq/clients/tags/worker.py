@@ -20,7 +20,7 @@ from pynvim_pp.lib import async_call, go
 from std2.asyncio import run_in_executor
 
 from ...databases.tags.database import CTDB
-from ...paths.show import show_path
+from ...paths.show import fmt_path
 from ...shared.runtime import Supervisor
 from ...shared.runtime import Worker as BaseWorker
 from ...shared.settings import TagsClient
@@ -58,7 +58,7 @@ def _doc(client: TagsClient, context: Context, tag: Tag) -> Doc:
         if path == cfn:
             pos = "."
         else:
-            pos = show_path(context.cwd, path=path, is_dir=False)
+            pos = fmt_path(context.cwd, path=path, is_dir=False)
 
         yield lc
         yield pos

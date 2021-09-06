@@ -90,9 +90,14 @@ class RangeEdit(Edit):
     encoding: str
 
 
+class SnippetGrammar(Enum):
+    lsp = auto()
+    snu = auto()
+
+
 @dataclass(frozen=True)
 class SnippetEdit(Edit):
-    grammar: str  # ie. LSP, Texmate, Ultisnip, etc
+    grammar: SnippetGrammar
 
 
 @dataclass(frozen=True)

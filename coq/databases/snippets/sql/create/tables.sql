@@ -1,27 +1,39 @@
 BEGIN;
 
 
+CREATE TABLE IF NOT EXISTS sources (
+  rowid    BLOB NOT NULL PRIMARY KEY,
+  filename TEXT NOT NULL UNIQUE,
+  mtime    REAL NOT NULL
+) WITHOUT rowid;
+
+
 CREATE TABLE IF NOT EXISTS filetypes (
   filetype TEXT NOT NULL PRIMARY KEY
 ) WITHOUT ROWID;
 
 
 CREATE TABLE IF NOT EXISTS extensions (
-  src  TEXT NOT NULL REFERENCES filetypes (filetype) ON UPDATE CASCADE ON DELETE CASCADE,
-  dest TEXT NOT NULL REFERENCES filetypes (filetype) ON UPDATE CASCADE ON DELETE CASCADE,
-  UNIQUE (src, dest)
+  source_id BLOB NOT NULL REFERENCES sources   (rowid)    ON UPDATE CASCADE ON DELETE CASCADE,
+  src       TEXT NOT NULL REFERENCES filetypes (filetype) ON UPDATE CASCADE ON DELETE CASCADE,
+  dest      TEXT NOT NULL REFERENCES filetypes (filetype) ON UPDATE CASCADE ON DELETE CASCADE,
+  UNIQUE (source_id, src, dest)
 );
-CREATE INDEX IF NOT EXISTS extensions_src ON extensions (src);
+CREATE INDEX IF NOT EXISTS extensions_source_id ON extensions (source_id);
+CREATE INDEX IF NOT EXISTS extensions_src       ON extensions (src);
+CREATE INDEX IF NOT EXISTS extensions_dest      ON extensions (dest);
 
 
 CREATE TABLE IF NOT EXISTS snippets (
-  rowid    BLOB NOT NULL PRIMARY KEY,
-  filetype TEXT NOT NULL REFERENCES filetypes (filetype) ON UPDATE CASCADE ON DELETE CASCADE,
-  grammar  TEXT NOT NULL,
-  content  TEXT NOT NULL,
-  label    TEXT NOT NULL,
-  doc      TEXT NOT NULL
+  rowid     BLOB NOT NULL PRIMARY KEY,
+  source_id BLOB NOT NULL REFERENCES sources   (rowid)    ON UPDATE CASCADE ON DELETE CASCADE,
+  filetype  TEXT NOT NULL REFERENCES filetypes (filetype) ON UPDATE CASCADE ON DELETE CASCADE,
+  grammar   TEXT NOT NULL,
+  content   TEXT NOT NULL,
+  label     TEXT NOT NULL,
+  doc       TEXT NOT NULL
 ) WITHOUT ROWID;
+CREATE INDEX IF NOT EXISTS snippets_source_id ON snippets (source_id);
 
 
 CREATE TABLE IF NOT EXISTS matches (
@@ -35,19 +47,28 @@ CREATE INDEX IF NOT EXISTS matches_match      ON matches (match);
 CREATE INDEX IF NOT EXISTS matches_lmatch     ON matches (lmatch);
 
 
+CREATE VIEW IF NOT EXISTS uniq_extensions_view AS
+SELECT DISTINCT
+  src,
+  dest
+FROM extensions
+WHERE 
+  src <> dest;
+
+
 CREATE VIEW IF NOT EXISTS extensions_view AS
 WITH RECURSIVE all_exts AS (
   SELECT
     1 AS lvl,
     e1.src,
     e1.dest
-  FROM extensions AS e1
+  FROM uniq_extensions_view AS e1
   UNION ALL
   SELECT
     all_exts.lvl + 1 AS lvl,
     all_exts.src,
     e2.dest
-  FROM extensions AS e2
+  FROM uniq_extensions_view AS e2
   JOIN all_exts
   ON
     all_exts.dest = e2.src
@@ -68,6 +89,7 @@ WHERE
 CREATE VIEW IF NOT EXISTS snippets_view AS
 SELECT
   snippets.rowid       AS snippet_id,
+  snippets.source_id   AS source_id,
   snippets.grammar     AS grammar,
   matches.match        AS prefix,
   matches.lmatch       AS lprefix,
@@ -85,4 +107,3 @@ ON
 
 
 END;
-

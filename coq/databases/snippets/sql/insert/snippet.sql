@@ -1,3 +1,2 @@
-INSERT OR IGNORE INTO snippets ( rowid,  filetype,  grammar,  content,  label,  doc)
-VALUES                         (:rowid, :filetype, :grammar, :content, :label, :doc)
-
+INSERT OR IGNORE INTO snippets ( rowid,  source_id,  filetype,  grammar,  content,  label,  doc)
+VALUES                         (:rowid, :source_id, :filetype, :grammar, :content, :label, :doc)

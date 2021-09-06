@@ -34,6 +34,7 @@ TMP_DIR = VARS / "tmp"
 
 SETTINGS_VAR = "coq_settings"
 
+REPL_GRAMMAR = environ.get("COQ_GRAMMAR", "lsp")
 
 DEBUG = "COQ_DEBUG" in environ
 DEBUG_METRICS = "COQ_DEBUG_METRICS" in environ
@@ -41,7 +42,6 @@ DEBUG_DB = "COQ_DEBUG_DB" in environ
 
 BUFFER_DB = str(TMP_DIR / "buffers.sqlite3") if DEBUG_DB else ":memory:"
 TREESITTER_DB = str(TMP_DIR / "treesitter.sqlite3") if DEBUG_DB else ":memory:"
-SNIPPET_DB = str(TMP_DIR / "snippets.sqlite3") if DEBUG_DB else ":memory:"
 INSERT_DB = str(TMP_DIR / "inserts.sqlite3") if DEBUG_DB else ":memory:"
 TMUX_DB = str(TMP_DIR / "tmux.sqlite3") if DEBUG_DB else ":memory:"
 

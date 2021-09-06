@@ -1,6 +1,5 @@
 from asyncio import CancelledError
 from concurrent.futures import Executor
-from contextlib import closing
 from sqlite3 import Connection, OperationalError
 from threading import Lock
 from typing import Iterable, Iterator, Mapping
@@ -48,10 +47,9 @@ class TDB:
                 }
 
         def cont() -> None:
-            with self._lock, closing(self._conn.cursor()) as cursor:
-                with with_transaction(cursor):
-                    cursor.execute(sql("delete", "words"))
-                    cursor.executemany(sql("insert", "word"), m1())
+            with self._lock, with_transaction(self._conn.cursor()) as cursor:
+                cursor.execute(sql("delete", "words"))
+                cursor.executemany(sql("insert", "word"), m1())
 
         await run_in_executor(self._ex.submit, cont)
 
@@ -60,42 +58,39 @@ class TDB:
     ) -> Iterator[Payload]:
         def cont() -> Iterator[Payload]:
             try:
-                with closing(self._conn.cursor()) as cursor:
-                    with with_transaction(cursor):
-                        cursor.execute(
-                            sql("select", "words"),
-                            {
-                                "exact": opts.exact_matches,
-                                "cut_off": opts.fuzzy_cutoff,
-                                "look_ahead": opts.look_ahead,
-                                "limit": BIGGEST_INT if limitless else opts.max_results,
-                                "word": word,
-                            },
-                        )
-                        rows = cursor.fetchall()
+                with with_transaction(self._conn.cursor()) as cursor:
+                    cursor.execute(
+                        sql("select", "words"),
+                        {
+                            "exact": opts.exact_matches,
+                            "cut_off": opts.fuzzy_cutoff,
+                            "look_ahead": opts.look_ahead,
+                            "limit": BIGGEST_INT if limitless else opts.max_results,
+                            "word": word,
+                        },
+                    )
+                    rows = cursor.fetchall()
 
-                        def c2() -> Iterator[Payload]:
-                            for row in rows:
-                                grandparent = (
-                                    SimplePayload(
-                                        text=row["gpword"], kind=row["gpkind"]
-                                    )
-                                    if row["gpword"] and row["gpkind"]
-                                    else None
-                                )
-                                parent = (
-                                    SimplePayload(text=row["pword"], kind=row["pkind"])
-                                    if row["pword"] and row["pkind"]
-                                    else None
-                                )
-                                yield Payload(
-                                    text=row["word"],
-                                    kind=row["kind"],
-                                    parent=parent,
-                                    grandparent=grandparent,
-                                )
+                    def c2() -> Iterator[Payload]:
+                        for row in rows:
+                            grandparent = (
+                                SimplePayload(text=row["gpword"], kind=row["gpkind"])
+                                if row["gpword"] and row["gpkind"]
+                                else None
+                            )
+                            parent = (
+                                SimplePayload(text=row["pword"], kind=row["pkind"])
+                                if row["pword"] and row["pkind"]
+                                else None
+                            )
+                            yield Payload(
+                                text=row["word"],
+                                kind=row["kind"],
+                                parent=parent,
+                                grandparent=grandparent,
+                            )
 
-                        return c2()
+                    return c2()
             except OperationalError:
                 return iter(())
 

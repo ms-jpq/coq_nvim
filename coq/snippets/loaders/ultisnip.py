@@ -4,6 +4,7 @@ from os import linesep
 from pathlib import PurePath
 from typing import AbstractSet, Iterable, MutableSequence, MutableSet, Sequence, Tuple
 
+from ...shared.types import SnippetGrammar
 from ..types import ParsedSnippet
 from .parse import raise_err
 
@@ -47,15 +48,17 @@ def _start(line: str) -> Tuple[str, str]:
         return name, label
 
 
-def parse(
-    path: PurePath, lines: Iterable[Tuple[int, str]]
-) -> Tuple[AbstractSet[str], Sequence[ParsedSnippet]]:
+def load_ultisnip(
+    grammar: SnippetGrammar, path: PurePath, lines: Iterable[Tuple[int, str]]
+) -> Tuple[str, AbstractSet[str], Sequence[ParsedSnippet]]:
+    filetype = path.stem.strip()
+
     snippets: MutableSequence[ParsedSnippet] = []
     extends: MutableSet[str] = set()
 
     current_name = ""
     state = _State.normal
-    current_label: str = ""
+    current_label = ""
     current_lines: MutableSequence[str] = []
 
     for lineno, line in lines:
@@ -72,8 +75,9 @@ def parse(
 
             elif line.startswith(_EXTENDS_START):
                 filetypes = line[len(_EXTENDS_START) :].strip()
-                for filetype in filetypes.split(","):
-                    extends.add(filetype.strip())
+                for ft in (f.strip() for f in filetypes.split(",")):
+                    if ft:
+                        extends.add(ft)
 
             elif line.startswith(_SNIPPET_START):
                 state = _State.snippet
@@ -101,7 +105,8 @@ def parse(
 
                 content = linesep.join(current_lines)
                 snippet = ParsedSnippet(
-                    grammar="snu",
+                    grammar=grammar,
+                    filetype=filetype,
                     content=content,
                     label=current_label,
                     doc="",
@@ -122,4 +127,4 @@ def parse(
         else:
             assert False
 
-    return extends, snippets
+    return filetype, extends, snippets

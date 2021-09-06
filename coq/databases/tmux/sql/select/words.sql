@@ -3,6 +3,8 @@ SELECT DISTINCT
 FROM words
 WHERE
   :word <> ''
+  AND
+  word <> ''
   AND 
   LENGTH(word) + :look_ahead >= LENGTH(:word)
   AND

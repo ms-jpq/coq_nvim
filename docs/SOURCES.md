@@ -86,16 +86,14 @@ Aesthetics only, path separator.
 
 #### coq_settings.clients.snippets
 
-##### `coq_settings.clients.snippets.sources`
+##### `coq_settings.clients.snippets.user_path`
 
-Which snippets to load. When empty, load all snippets.
-
-Take a look at [compilation.yml](https://github.com/ms-jpq/coq_nvim/blob/coq/config/compilation.yml) under `paths.<x>.[<names>]`, the `[<names>]` are the keys.
+Additional snippet load path, if relative, resolves under nvim config dir.
 
 **default:**
 
 ```json
-[]
+null
 ```
 
 ---

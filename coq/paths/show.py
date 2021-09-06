@@ -1,12 +1,12 @@
 from contextlib import suppress
 from itertools import islice
-from locale import strxfrm
 from os import linesep, sep
 from os.path import normcase
 from pathlib import Path, PurePath
 from typing import Iterator, Optional
 
 from std2.asyncio import run_in_executor
+from std2.locale import pathsort_key
 
 from ..lang import LANG
 from ..shared.types import Doc
@@ -15,7 +15,7 @@ _KB = 1000
 _HOME = Path.home()
 
 
-def show_path(cwd: PurePath, path: PurePath, is_dir: bool) -> str:
+def fmt_path(cwd: PurePath, path: PurePath, is_dir: bool) -> str:
     posfix = sep if is_dir else ""
     with suppress(ValueError):
         rel = path.relative_to(cwd)
@@ -30,12 +30,12 @@ def show_path(cwd: PurePath, path: PurePath, is_dir: bool) -> str:
 
 async def _show_dir(cwd: PurePath, path: Path, ellipsis: str, height: int) -> Doc:
     def lines() -> Iterator[str]:
-        ordered = sorted(path.iterdir(), key=lambda p: strxfrm(str(p)))
+        ordered = sorted(path.iterdir(), key=pathsort_key)
         for idx, child in enumerate(islice(ordered, height), start=1):
             if idx >= height and len(ordered) > height:
                 yield ellipsis
             else:
-                yield show_path(cwd, path=child, is_dir=child.is_dir())
+                yield fmt_path(cwd, path=child, is_dir=child.is_dir())
 
     def cont() -> Doc:
         text = linesep.join(lines())

@@ -14,6 +14,8 @@ JOIN files
 ON files.filename = tags.`path`
 WHERE
   :word <> ''
+  AND
+  tags.name <> ''
   AND 
   LENGTH(tags.name) + :look_ahead >= LENGTH(:word)
   AND

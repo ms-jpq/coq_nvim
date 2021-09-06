@@ -315,27 +315,28 @@ def _resolve_comp(
 
 
 def _virt_text(nvim: Nvim, ghost: GhostText, text: str) -> None:
-    lhs, rhs = ghost.context
-    overlay, *_ = text.splitlines() or ("",)
-    virt_text = lhs + overlay + rhs
+    if ghost.enabled:
+        lhs, rhs = ghost.context
+        overlay, *_ = text.splitlines() or ("",)
+        virt_text = lhs + overlay + rhs
 
-    ns = create_ns(nvim, ns=_NS)
-    win = cur_win(nvim)
-    buf = win_get_buf(nvim, win=win)
-    row, col = win_get_cursor(nvim, win=win)
-    mark = ExtMark(
-        idx=1,
-        begin=(row, 0),
-        end=(row, 0),
-        meta={
-            "virt_text_pos": "overlay",
-            "hl_mode": "blend",
-            "virt_text_win_col": col,
-            "virt_text": ((virt_text, ghost.highlight_group),),
-        },
-    )
-    clear_ns(nvim, buf=buf, id=ns)
-    buf_set_extmarks(nvim, buf=buf, id=ns, marks=(mark,))
+        ns = create_ns(nvim, ns=_NS)
+        win = cur_win(nvim)
+        buf = win_get_buf(nvim, win=win)
+        row, col = win_get_cursor(nvim, win=win)
+        mark = ExtMark(
+            idx=1,
+            begin=(row, 0),
+            end=(row, 0),
+            meta={
+                "virt_text_pos": "overlay",
+                "hl_mode": "blend",
+                "virt_text_win_col": col,
+                "virt_text": ((virt_text, ghost.highlight_group),),
+            },
+        )
+        clear_ns(nvim, buf=buf, id=ns)
+        buf_set_extmarks(nvim, buf=buf, id=ns, marks=(mark,))
 
 
 _DECODER = new_decoder(_Event)
@@ -371,12 +372,11 @@ def _cmp_changed(nvim: Nvim, stack: Stack, event: Mapping[str, Any] = {}) -> Non
                         maybe_doc=data.doc,
                         state=s,
                     )
-                if stack.settings.display.ghost_text.enabled:
-                    _virt_text(
-                        nvim,
-                        ghost=stack.settings.display.ghost_text,
-                        text=data.primary_edit.new_text,
-                    )
+                _virt_text(
+                    nvim,
+                    ghost=stack.settings.display.ghost_text,
+                    text=data.primary_edit.new_text,
+                )
 
 
 autocmd("CompleteChanged") << f"lua {_cmp_changed.name}(vim.v.event)"
