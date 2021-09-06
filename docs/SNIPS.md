@@ -81,12 +81,19 @@ alias s
 
 ```
 
-## Repl
+## Where to put snippets
+
+Inside all `coq-user-snippets/` folders in your `runtimepath`. AKA first it will lookup where your `init.vim` is stored, then it will look inside each of your plugins.
+
+```text
+$NVIM_HOME
+|- ./init.vim
+|- ./coq-user-snippets/*.snip
+```
+
+``
+
 
 ```viml
 :COQsnip edit
-```
-
-```
-
 ```

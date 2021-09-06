@@ -159,7 +159,7 @@ clients:
     enabled: True
     short_name: "SNIP"
     weight_adjust: 0
-    sources: []
+    user_path: null
 
   tags:
     enabled: True

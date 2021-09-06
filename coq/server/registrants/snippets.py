@@ -8,6 +8,7 @@ from json import JSONDecodeError, dumps, loads
 from math import inf
 from os import linesep
 from pathlib import Path, PurePath
+from posixpath import expandvars, normcase
 from string import Template
 from tempfile import NamedTemporaryFile
 from textwrap import dedent
@@ -72,28 +73,34 @@ async def _bundled_mtimes(
     return {p: m for p, m in await run_in_executor(lambda: tuple(c1()))}
 
 
-async def _user_mtimes(nvim: Nvim, user_path: Optional[Path]) -> Mapping[Path, float]:
-    rtp = await async_call(nvim, lambda: tuple(iter_rtps(nvim)))
+async def _snippet_paths(nvim: Nvim, user_path: Optional[Path]) -> Sequence[Path]:
+    def cont() -> Iterator[Path]:
+        if user_path:
+            usp = Path(expandvars(user_path))
+            resolved = (
+                usp if usp.is_absolute() else Path(nvim.funcs.stdpath("config")) / usp
+            )
+            yield Path(normcase(resolved))
+        for path in iter_rtps(nvim):
+            yield path / "coq-user-snippets"
 
-    def seek(path: Path) -> Iterator[Tuple[Path, float]]:
-        with suppress(OSError):
-            for p in walk(path):
-                if p.suffix in {".snip"}:
-                    mtime = p.stat().st_mtime
-                    yield p, mtime
+    return await async_call(nvim, lambda: tuple(cont()))
+
+
+async def user_mtimes(
+    nvim: Nvim, user_path: Optional[Path]
+) -> Tuple[Sequence[Path], Mapping[Path, float]]:
+    paths = await _snippet_paths(nvim, user_path=user_path)
 
     def cont() -> Iterator[Tuple[Path, float]]:
-        if user_path:
-            resolved = (
-                user_path
-                if user_path.is_absolute()
-                else Path(nvim.funcs.stdpath("config")) / user_path
-            )
-            yield from seek(resolved)
-        for path in rtp:
-            yield from seek(path / "coq+user+snippets")
+        for path in paths:
+            with suppress(OSError):
+                for p in walk(path):
+                    if p.suffix in {".snip"}:
+                        mtime = p.stat().st_mtime
+                        yield p, mtime
 
-    return {p: m for p, m in await run_in_executor(cont)}
+    return paths, {p: m for p, m in await run_in_executor(cont)}
 
 
 def _paths(vars_dir: Path) -> Tuple[Path, Path]:
@@ -196,7 +203,7 @@ def compile_one(
 
 
 async def compile_user_snippets(nvim: Nvim, stack: Stack) -> None:
-    mtimes = await _user_mtimes(nvim, user_path=None)
+    _, mtimes = await user_mtimes(nvim, user_path=None)
     loaded = await run_in_executor(
         lambda: load_direct(lsp=(), neosnippet=mtimes, ultisnip=())
     )
@@ -213,12 +220,12 @@ def _load_snips(nvim: Nvim, stack: Stack) -> None:
             (
                 bundled,
                 (user_compiled, user_compiled_mtimes),
-                user_snips_mtimes,
+                (_, user_snips_mtimes),
                 mtimes,
             ) = await gather(
                 _bundled_mtimes(nvim),
                 _load_user_compiled(stack.supervisor.vars_dir),
-                _user_mtimes(nvim, user_path=None),
+                user_mtimes(nvim, user_path=stack.settings.clients.snippets.user_path),
                 stack.sdb.mtimes(),
             )
 

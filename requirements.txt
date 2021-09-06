@@ -1,4 +1,4 @@
 std2@https://github.com/ms-jpq/std2/archive/fa4e74ad7c926a67e2cf4711b130b9cf7d5bb339.tar.gz
-pynvim_pp@https://github.com/ms-jpq/pynvim_pp/archive/70b508ea0f154f604963f2dcb6ae0a73388305d0.tar.gz
+pynvim_pp@https://github.com/ms-jpq/pynvim_pp/archive/25af8678672e671f670496101b5f88788a72e709.tar.gz
 pynvim==0.4.3
 PyYAML==5.4.1

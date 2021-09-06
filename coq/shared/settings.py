@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 from enum import Enum, auto
+from pathlib import Path
 from typing import AbstractSet, Literal, Mapping, Optional, Tuple, Union
 
 from pynvim_pp.float_win import Border
@@ -149,7 +150,7 @@ class TSClient(BaseClient):
 
 @dataclass(frozen=True)
 class SnippetClient(BaseClient):
-    sources: AbstractSet[str]
+    user_path: Optional[Path]
 
 
 @dataclass(frozen=True)
