@@ -15,7 +15,7 @@ ON files.filename = tags.`path`
 WHERE
   :word <> ''
   AND
-  tag.name <> ''
+  tags.name <> ''
   AND 
   LENGTH(tags.name) + :look_ahead >= LENGTH(:word)
   AND
