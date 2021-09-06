@@ -282,7 +282,9 @@ def compile_one(
 
 
 async def compile_user_snippets(nvim: Nvim, stack: Stack) -> None:
-    _, mtimes = await user_mtimes(nvim, user_path=None)
+    _, mtimes = await user_mtimes(
+        nvim, user_path=stack.settings.clients.snippets.user_path
+    )
     loaded = await run_in_executor(
         lambda: load_direct(
             lsp=(),
