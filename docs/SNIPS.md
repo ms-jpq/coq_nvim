@@ -54,6 +54,7 @@ extends ::= 'extends' match (', ' match)*
 snippet ::= snipstart ('\n' alias)* '\n' snipbody
 
 snipstart ::= 'snippet' match
+label     ::= 'abbr' body
 alias     ::= 'alias' match
 snipbody  ::= indent body ('\n' indent body)*
 
