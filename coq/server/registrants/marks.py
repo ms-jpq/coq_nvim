@@ -131,6 +131,7 @@ def _linked_marks(
 
     resp = ask(nvim, question=LANG("expand marks"), default=place_holder())
     if resp is not None:
+        nvim.options["undolevels"] = nvim.options["undolevels"]
         apply(nvim, buf=buf, instructions=_trans(resp, marks=marks))
         buf_del_extmarks(nvim, buf=buf, id=ns, marks=marks)
         row, col = mark.begin

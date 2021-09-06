@@ -312,8 +312,6 @@ def _shift(instructions: Iterable[EditInstruction]) -> Iterator[EditInstruction]
 
 
 def apply(nvim: Nvim, buf: Buffer, instructions: Iterable[EditInstruction]) -> None:
-    nvim.options["undolevels"] = nvim.options["undolevels"]
-
     for inst in _shift(instructions):
         try:
             buf_set_text(
@@ -372,6 +370,7 @@ def edit(
         log.warn("%s", "stale buffer")
         return None
     else:
+        nvim.options["undolevels"] = nvim.options["undolevels"]
         inserted = _restore(nvim, buf=buf, pos=state.context.position)
 
         try:
