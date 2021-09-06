@@ -33,7 +33,7 @@
   ❌ ${source} took ${elapsed}s to parse document, will be disabled for current file.
 
 "no snippets found": |-
-  ⚠️  No snippets loaded
+  ⚠️  No snippets found
 
 "snip parse fail": |-
   ❌ Failed to parse snippets
