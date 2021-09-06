@@ -24,7 +24,7 @@ from typing import (
 )
 
 from pynvim.api.nvim import Nvim
-from pynvim_pp.api import iter_rtps
+from pynvim_pp.api import get_cwd, iter_rtps
 from pynvim_pp.lib import async_call, awrite, go
 from pynvim_pp.logging import log
 from std2.asyncio import run_in_executor
@@ -187,14 +187,16 @@ def _trans(
         yield snip, parsed, marks
 
 
-async def _slurp(nvim: Nvim, stack: Stack) -> None:
+async def _slurp(nvim: Nvim, stack: Stack, warn_outdated: bool) -> None:
     with timeit("LOAD SNIPS"):
         (
+            cwd,
             bundled,
             (user_compiled, user_compiled_mtimes),
             (_, user_snips_mtimes),
             mtimes,
         ) = await gather(
+            async_call(nvim, get_cwd, nvim),
             _bundled_mtimes(nvim),
             _load_user_compiled(stack.supervisor.vars_dir),
             user_mtimes(nvim, user_path=stack.settings.clients.snippets.user_path),
@@ -208,7 +210,9 @@ async def _slurp(nvim: Nvim, stack: Stack) -> None:
             if mtime > mtimes.get(path, -inf)
         }
         updated_user_snips = {
-            path: datetime.fromtimestamp(mtime)
+            fmt_path(cwd, path=path, is_dir=False): datetime.fromtimestamp(
+                mtime
+            ).strftime(stack.settings.display.time_fmt)
             for path, mtime in user_snips_mtimes.items()
             if mtime > user_compiled_mtimes.get(path, -inf)
         }
@@ -218,7 +222,6 @@ async def _slurp(nvim: Nvim, stack: Stack) -> None:
             await sleep(0)
             await awrite(nvim, LANG("fs snip load empty"))
 
-        s = state()
         for fut in as_completed(
             tuple(_load_compiled(path, mtime) for path, mtime in compiled.items())
         ):
@@ -236,22 +239,19 @@ async def _slurp(nvim: Nvim, stack: Stack) -> None:
                     nvim,
                     LANG(
                         "fs snip load succ",
-                        path=fmt_path(s.cwd, path=path, is_dir=False),
+                        path=fmt_path(cwd, path=path, is_dir=False),
                     ),
                 )
 
-        if updated_user_snips:
-            paths = linesep.join(
-                f"{fmt_path(s.cwd, path=p, is_dir=False)} -- {m.strftime(stack.settings.display.time_fmt)}"
-                for p, m in updated_user_snips.items()
-            )
+        if warn_outdated and updated_user_snips:
+            paths = linesep.join(f"{p} -- {m}" for p, m in updated_user_snips.items())
             await awrite(nvim, LANG("fs snip needs compile", paths=paths))
 
 
 @rpc(blocking=True)
 def _load_snips(nvim: Nvim, stack: Stack) -> None:
 
-    go(nvim, aw=_slurp(nvim, stack=stack))
+    go(nvim, aw=_slurp(nvim, stack=stack, warn_outdated=True))
 
 
 atomic.exec_lua(f"{_load_snips.name}()", ())
@@ -289,4 +289,4 @@ async def compile_user_snippets(nvim: Nvim, stack: Stack) -> None:
         _trans(stack.settings.match.unifying_chars, snips=loaded.snippets.values())
     )
     await _dump_compiled(stack.supervisor.vars_dir, mtimes=mtimes, loaded=loaded)
-    await _slurp(nvim, stack=stack)
+    await _slurp(nvim, stack=stack, warn_outdated=False)
