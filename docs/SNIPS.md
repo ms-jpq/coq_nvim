@@ -2,7 +2,7 @@
 
 There are two important hotkeys
 
-- `coq_settings.keymap.jump_to_mark`: jump to next mark. (default `<c-h>`)
+- `coq_settings.keymap.jump_to_mark`: jump to next edit region. (default `<c-h>`)
 
 - `coq_settings.keymap.eval_snips`: evaluate document / visual seleciton as snippets (unbound by default)
 
@@ -23,6 +23,18 @@ Do not install `coq.artifacts` if you prefer writing your own.
 `coq.nvim` requires you to compile the snippets before they can be loaded. This is to ensure no broken / invalid snippets during runtime.
 
 `coq` will only accept snippets with valid grammar, and has built-in repl to help you on that.
+
+![snip_load.img](https://raw.githubusercontent.com/ms-jpq/coq.artifacts/artifacts/preview/snip_load.gif)
+
+### Repl
+
+You need to bound `coq_settings.keymap.eval_snips` to a key first.
+
+ie. `let g:coq_settings = { 'keymap.eval_snips': '<leader>j' }`
+
+Now entering `<leader>j` under normal mode will evaluate current document, and under visual mode will evaluate only the visual seleciton.
+
+![snip_parse.img](https://raw.githubusercontent.com/ms-jpq/coq.artifacts/artifacts/preview/snip_parse.gif)
 
 ### Grammar
 
@@ -74,8 +86,6 @@ alias s
 ```viml
 :COQsnip edit
 ```
-
-Say you want `<leader>j` as your eval button `let g:coq_settings = { 'keymap.eval_snips': '<leader>j' }`
 
 ```
 
