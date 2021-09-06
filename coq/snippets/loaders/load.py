@@ -1,9 +1,10 @@
-from locale import strxfrm
+from dataclasses import asdict
 from os.path import normcase
 from pathlib import Path
 from typing import AbstractSet, Iterable, Iterator, MutableMapping, MutableSet
 from uuid import UUID, uuid3
 
+from std2.graphlib import recur_sort
 from std2.pathlib import walk
 
 from ..types import LoadedSnips, ParsedSnippet
@@ -20,14 +21,7 @@ def _load_paths(search: Iterable[Path], exts: AbstractSet[str]) -> Iterator[Path
 
 
 def _key(snip: ParsedSnippet) -> UUID:
-    name = (
-        snip.grammar
-        + snip.filetype
-        + snip.content
-        + snip.label
-        + snip.doc
-        + "".join(sorted(snip.matches, key=strxfrm))
-    )
+    name = str(recur_sort(asdict(snip)))
     return uuid3(UUID(int=0), name=name)
 
 
