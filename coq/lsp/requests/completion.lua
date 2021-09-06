@@ -37,7 +37,7 @@
       end
 
       local on_resp = function(...)
-        if type(({...})[4]) == "table" then
+        if type(({...})[2]) ~= "string" then
           on_resp_new(...)
         else
           on_resp_old(...)
