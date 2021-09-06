@@ -19,8 +19,8 @@ syntax match Label       '\v^abbr\s'
 
 syntax match String      '\v^\s+.*$' contains=Special
 syntax match Special     '\v\$\{[^\}]+\}' contained contains=Number,Conditional
-syntax match Number      '\v\d+'
-syntax match Conditional '\V:'
+syntax match Number      '\v\d+' contained
+syntax match Conditional '\V:' contained
 
 
 let b:current_syntax = expand('<sfile>:t:r')

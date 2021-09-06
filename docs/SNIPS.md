@@ -6,13 +6,23 @@ There are two important hotkeys
 
 - `coq_settings.keymap.eval_snips`: evaluate document / visual seleciton as snippets (unbound by default)
 
-## Pre-compiled sources
+## Pre-compiled snippets
 
 `coq.nvim` comes with a [ridiculous amount of snippets](https://raw.githubusercontent.com/ms-jpq/coq.artifacts/artifacts/coq%2Bsnippets.json) by default.
 
 Do not install `coq.artifacts` if you prefer writing your own.
 
-## Custom source
+## Custom snippets
+
+### Compilation
+
+```viml
+:COQsnip compile
+```
+
+`coq.nvim` requires you to compile the snippets before they can be loaded. This is to ensure no broken / invalid snippets during runtime.
+
+`coq` will only accept snippets with valid grammar, and has built-in repl to help you on that.
 
 ### Grammar
 
@@ -40,11 +50,11 @@ match  ::= [^\s]+
 body   :: .*
 ```
 
-0. For `<filename>.snip`, the snippets' filetype is `<filename>`
-
-1. Every line is parsed according to a prefix
+1. For `<dirname>/<filename>.snip`, the snippets' filetype is `<filename>`
 
 2. Doesn't matter what indentation is used, as long as it's consistent
+
+3. **The syntax highlighter comes with error highlights**
 
 #### Example
 
@@ -59,10 +69,14 @@ alias s
 
 ```
 
-### Document locations
-
-pass
-
 ## Repl
 
+```viml
+:COQsnip edit
+```
+
 Say you want `<leader>j` as your eval button `let g:coq_settings = { 'keymap.eval_snips': '<leader>j' }`
+
+```
+
+```
