@@ -46,13 +46,21 @@ CREATE INDEX IF NOT EXISTS matches_match      ON matches (match);
 CREATE INDEX IF NOT EXISTS matches_lmatch     ON matches (lmatch);
 
 
+CREATE VIEW IF NOT EXISTS uniq_extensions_view AS (
+  SELECT DISTINCT
+    src,
+    dest
+  FROM extensions
+);
+
+
 CREATE VIEW IF NOT EXISTS extensions_view AS
 WITH RECURSIVE all_exts AS (
   SELECT
     1 AS lvl,
     e1.src,
     e1.dest
-  FROM extensions AS e1
+  FROM uniq_extensions_view AS e1
   WHERE
     e1.dest <> e1.src
   UNION ALL
@@ -60,7 +68,7 @@ WITH RECURSIVE all_exts AS (
     all_exts.lvl + 1 AS lvl,
     all_exts.src,
     e2.dest
-  FROM extensions AS e2
+  FROM uniq_extensions_view AS e2
   JOIN all_exts
   ON
     all_exts.dest = e2.src
