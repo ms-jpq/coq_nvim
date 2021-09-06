@@ -187,6 +187,76 @@ def _trans(
         yield snip, parsed, marks
 
 
+async def _slurp(nvim: Nvim, stack: Stack) -> None:
+    with timeit("LOAD SNIPS"):
+        (
+            bundled,
+            (user_compiled, user_compiled_mtimes),
+            (_, user_snips_mtimes),
+            mtimes,
+        ) = await gather(
+            _bundled_mtimes(nvim),
+            _load_user_compiled(stack.supervisor.vars_dir),
+            user_mtimes(nvim, user_path=stack.settings.clients.snippets.user_path),
+            stack.sdb.mtimes(),
+        )
+
+        stale = mtimes.keys() - (bundled.keys() | user_compiled.keys())
+        compiled = {
+            path: mtime
+            for path, mtime in chain(bundled.items(), user_compiled.items())
+            if mtime > mtimes.get(path, -inf)
+        }
+        updated_user_snips = {
+            path: datetime.fromtimestamp(mtime)
+            for path, mtime in user_snips_mtimes.items()
+            if mtime > user_compiled_mtimes.get(path, -inf)
+        }
+
+        await stack.sdb.clean(stale)
+        if not (bundled or user_compiled):
+            await sleep(0)
+            await awrite(nvim, LANG("fs snip load empty"))
+
+        s = state()
+        for fut in as_completed(
+            tuple(_load_compiled(path, mtime) for path, mtime in compiled.items())
+        ):
+            try:
+                path, mtime, loaded = await fut
+            except (OSError, JSONDecodeError, DecodeError) as e:
+                tpl = """
+                Failed to load compiled snips
+                ${e}
+                """.rstrip()
+                log.warn("%s", Template(dedent(tpl)).substitute(e=type(e)))
+            else:
+                await stack.sdb.populate(path, mtime=mtime, loaded=loaded)
+                await awrite(
+                    nvim,
+                    LANG(
+                        "fs snip load succ",
+                        path=fmt_path(s.cwd, path=path, is_dir=False),
+                    ),
+                )
+
+        if updated_user_snips:
+            paths = linesep.join(
+                f"{fmt_path(s.cwd, path=p, is_dir=False)} -- {m.strftime(stack.settings.display.time_fmt)}"
+                for p, m in updated_user_snips.items()
+            )
+            await awrite(nvim, LANG("fs snip needs compile", paths=paths))
+
+
+@rpc(blocking=True)
+def _load_snips(nvim: Nvim, stack: Stack) -> None:
+
+    go(nvim, aw=_slurp(nvim, stack=stack))
+
+
+atomic.exec_lua(f"{_load_snips.name}()", ())
+
+
 def compile_one(
     stack: Stack, path: PurePath, lines: Iterable[Tuple[int, str]]
 ) -> Compiled:
@@ -211,71 +281,4 @@ async def compile_user_snippets(nvim: Nvim, stack: Stack) -> None:
         _trans(stack.settings.match.unifying_chars, snips=loaded.snippets.values())
     )
     await _dump_compiled(stack.supervisor.vars_dir, mtimes=mtimes, loaded=loaded)
-
-
-@rpc(blocking=True)
-def _load_snips(nvim: Nvim, stack: Stack) -> None:
-    async def cont() -> None:
-        with timeit("LOAD SNIPS"):
-            (
-                bundled,
-                (user_compiled, user_compiled_mtimes),
-                (_, user_snips_mtimes),
-                mtimes,
-            ) = await gather(
-                _bundled_mtimes(nvim),
-                _load_user_compiled(stack.supervisor.vars_dir),
-                user_mtimes(nvim, user_path=stack.settings.clients.snippets.user_path),
-                stack.sdb.mtimes(),
-            )
-
-            stale = mtimes.keys() - (bundled.keys() | user_compiled.keys())
-            compiled = {
-                path: mtime
-                for path, mtime in chain(bundled.items(), user_compiled.items())
-                if mtime > mtimes.get(path, -inf)
-            }
-            updated_user_snips = {
-                path: datetime.fromtimestamp(mtime)
-                for path, mtime in user_snips_mtimes.items()
-                if mtime > user_compiled_mtimes.get(path, -inf)
-            }
-
-            await stack.sdb.clean(stale)
-            if not (bundled or user_compiled):
-                await sleep(0)
-                await awrite(nvim, LANG("fs snip load empty"))
-
-            s = state()
-            for fut in as_completed(
-                tuple(_load_compiled(path, mtime) for path, mtime in compiled.items())
-            ):
-                try:
-                    path, mtime, loaded = await fut
-                except (OSError, JSONDecodeError, DecodeError) as e:
-                    tpl = """
-                    Failed to load compiled snips
-                    ${e}
-                    """.rstrip()
-                    log.warn("%s", Template(dedent(tpl)).substitute(e=type(e)))
-                else:
-                    await stack.sdb.populate(path, mtime=mtime, loaded=loaded)
-                    await awrite(
-                        nvim,
-                        LANG(
-                            "fs snip load succ",
-                            path=fmt_path(s.cwd, path=path, is_dir=False),
-                        ),
-                    )
-
-            if updated_user_snips:
-                paths = linesep.join(
-                    f"{fmt_path(s.cwd, path=p, is_dir=False)} -- {m.strftime(stack.settings.display.time_fmt)}"
-                    for p, m in updated_user_snips.items()
-                )
-                await awrite(nvim, LANG("fs snip needs compile", paths=paths))
-
-    go(nvim, aw=cont())
-
-
-atomic.exec_lua(f"{_load_snips.name}()", ())
+    await _slurp(nvim, stack=stack)
