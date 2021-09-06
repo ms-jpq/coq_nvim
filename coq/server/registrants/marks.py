@@ -57,11 +57,19 @@ def _trans(new_text: str, marks: Sequence[ExtMark]) -> Iterator[EditInstruction]
 
 
 def _single_mark(
-    nvim: Nvim, mark: ExtMark, marks: Sequence[ExtMark], ns: int, buf: Buffer
+    nvim: Nvim,
+    mark: ExtMark,
+    marks: Sequence[ExtMark],
+    ns: int,
+    win: Window,
+    buf: Buffer,
 ) -> None:
+    row, col = mark.begin
+    nvim.options["undolevels"] = nvim.options["undolevels"]
     try:
-        nvim.options["undolevels"] = nvim.options["undolevels"]
         apply(nvim, buf=buf, instructions=_trans("", marks=(mark,)))
+        win_set_cursor(nvim, win=win, row=row, col=col)
+        nvim.command("startinsert")
     except NvimError as e:
         msg = f"""
         bad mark location {mark}
@@ -71,7 +79,7 @@ def _single_mark(
         log.warn("%s", dedent(msg))
     else:
         nvim.command("startinsert")
-        state(inserted=mark.begin)
+        state(inserted=(row, col))
         msg = LANG("applied mark", marks_left=len(marks))
         write(nvim, msg)
     finally:
@@ -140,7 +148,7 @@ def nav_mark(nvim: Nvim, stack: Stack) -> None:
         linked = tuple(m for m in marks if m.idx % MOD_PAD == base_idx)
 
         def single() -> None:
-            _single_mark(nvim, mark=mark, marks=marks, ns=ns, buf=buf)
+            _single_mark(nvim, mark=mark, marks=marks, ns=ns, win=win, buf=buf)
 
         if not linked:
             single()
