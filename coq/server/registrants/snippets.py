@@ -282,19 +282,20 @@ def compile_one(
 
 
 async def compile_user_snippets(nvim: Nvim, stack: Stack) -> None:
-    _, mtimes = await user_mtimes(
-        nvim, user_path=stack.settings.clients.snippets.user_path
-    )
-    loaded = await run_in_executor(
-        lambda: load_direct(
-            lsp=(),
-            neosnippet=mtimes,
-            ultisnip=(),
-            neosnippet_grammar=SnippetGrammar.lsp,
+    with timeit("COMPILE SNIPS"):
+        _, mtimes = await user_mtimes(
+            nvim, user_path=stack.settings.clients.snippets.user_path
         )
-    )
-    _ = tuple(
-        _trans(stack.settings.match.unifying_chars, snips=loaded.snippets.values())
-    )
-    await _dump_compiled(stack.supervisor.vars_dir, mtimes=mtimes, loaded=loaded)
-    await _slurp(nvim, stack=stack, warn_outdated=False)
+        loaded = await run_in_executor(
+            lambda: load_direct(
+                lsp=(),
+                neosnippet=mtimes,
+                ultisnip=(),
+                neosnippet_grammar=SnippetGrammar.lsp,
+            )
+        )
+        _ = tuple(
+            _trans(stack.settings.match.unifying_chars, snips=loaded.snippets.values())
+        )
+        await _dump_compiled(stack.supervisor.vars_dir, mtimes=mtimes, loaded=loaded)
+        await _slurp(nvim, stack=stack, warn_outdated=False)
