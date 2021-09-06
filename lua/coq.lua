@@ -118,7 +118,7 @@ set_coq_call("COQstats")
 vim.api.nvim_command [[command! -nargs=* COQstats lua coq.COQstats(<f-args>)]]
 
 set_coq_call("COQsnips")
-vim.api.nvim_command [[command! -nargs=* COQsnips lua coq.COQsnips(<f-args>)]]
+vim.api.nvim_command [[command! -complete=customlist,coq#complete_snips -nargs=* COQsnips lua coq.COQsnips(<f-args>)]]
 
 set_coq_call("COQhelp")
 vim.api.nvim_command [[command! -complete=customlist,coq#complete_help  -nargs=* COQhelp lua coq.COQhelp(<f-args>)]]

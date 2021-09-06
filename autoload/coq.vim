@@ -3,6 +3,25 @@ function! s:filter_completions(arg_lead, completions) abort
   return filter(a:completions, {_, val -> val =~# "^" . l:lead})
 endfunction
 
+function! coq#complete_now(arg_lead, cmd_line, cursor_pos) abort
+  let l:args = [
+        \ '-s',
+        \ '--shut-up',
+        \ ]
+
+  return s:filter_completions(a:arg_lead, l:args)
+endfunction
+
+function! coq#complete_snips(arg_lead, cmd_line, cursor_pos) abort
+  let l:args = [
+        \ 'ls',
+        \ 'compile',
+        \ 'edit',
+        \ ]
+
+  return s:filter_completions(a:arg_lead, l:args)
+endfunction
+
 function! coq#complete_help(arg_lead, cmd_line, cursor_pos) abort
   let l:topics = [
         \ 'index',
@@ -24,11 +43,3 @@ function! coq#complete_help(arg_lead, cmd_line, cursor_pos) abort
   return s:filter_completions(a:arg_lead, insert(l:topics, '--web'))
 endfunction
 
-function! coq#complete_now(arg_lead, cmd_line, cursor_pos) abort
-  let l:args = [
-        \ '-s',
-        \ '--shut-up',
-        \ ]
-
-  return s:filter_completions(a:arg_lead, l:args)
-endfunction
