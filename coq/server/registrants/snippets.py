@@ -278,7 +278,12 @@ def compile_one(
 async def compile_user_snippets(nvim: Nvim, stack: Stack) -> None:
     _, mtimes = await user_mtimes(nvim, user_path=None)
     loaded = await run_in_executor(
-        lambda: load_direct(lsp=(), neosnippet=mtimes, ultisnip=())
+        lambda: load_direct(
+            lsp=(),
+            neosnippet=mtimes,
+            ultisnip=(),
+            neosnippet_grammar=SnippetGrammar.lsp,
+        )
     )
     _ = tuple(
         _trans(stack.settings.match.unifying_chars, snips=loaded.snippets.values())
