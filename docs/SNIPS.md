@@ -17,7 +17,7 @@ To disable: simply do not install `coq.artifacts`.
 ### Compilation
 
 ```viml
-:COQsnip compile
+:COQsnips compile
 ```
 
 `coq.nvim` requires you to compile the snippets before they can be loaded. This is to ensure no broken / invalid snippets during runtime.
@@ -96,7 +96,7 @@ You can also set `coq_settings.clients.snippets.user_path` to load from a custom
 There is a convenience command:
 
 ```viml
-:COQsnip edit <filetype>
+:COQsnips edit <filetype>
 ```
 
 To edit snippets for a particular filetype. It is normally under `$NVIM_HOME/coq-user-snippets/`, but if `coq_settings.clients.snippets.user_path` is set, that is used instead.
