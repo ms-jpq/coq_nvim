@@ -162,13 +162,17 @@ async def _dump_compiled(
     for p in paths:
         p.parent.mkdir(parents=True, exist_ok=True)
 
-    with suppress(FileNotFoundError), NamedTemporaryFile(dir=compiled.parent) as fd:
-        fd.write(s_json.encode("UTF-8"))
+    with suppress(FileNotFoundError), NamedTemporaryFile(
+        dir=compiled.parent, mode="w", encoding="UTF-8"
+    ) as fd:
+        fd.write(s_json)
         fd.flush()
         Path(fd.name).replace(compiled)
 
-    with suppress(FileNotFoundError), NamedTemporaryFile(dir=meta.parent) as fd:
-        fd.write(m_json.encode("UTF-8"))
+    with suppress(FileNotFoundError), NamedTemporaryFile(
+        dir=meta.parent, mode="w", encoding="UTF-8"
+    ) as fd:
+        fd.write(m_json)
         fd.flush()
         Path(fd.name).replace(meta)
 
@@ -282,7 +286,7 @@ def compile_one(
 
 
 async def compile_user_snippets(nvim: Nvim, stack: Stack) -> None:
-    with timeit("COMPILE SNIPS"):
+    with timeit("COMPILE SNIPS", force=True):
         _, mtimes = await user_mtimes(
             nvim, user_path=stack.settings.clients.snippets.user_path
         )
