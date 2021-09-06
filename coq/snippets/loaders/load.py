@@ -21,7 +21,14 @@ def _load_paths(search: Iterable[Path], exts: AbstractSet[str]) -> Iterator[Path
 
 
 def _key(snip: ParsedSnippet) -> UUID:
-    name = str(recur_sort(asdict(snip)))
+    name = (
+        snip.grammar
+        + snip.filetype
+        + snip.content
+        + snip.label
+        + snip.doc
+        + "".join(sorted(snip.matches))
+    )
     return uuid3(UUID(int=0), name=name)
 
 

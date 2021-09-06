@@ -11,8 +11,8 @@ class LoadError(Exception):
 
 @dataclass(frozen=True)
 class ParsedSnippet:
-    filetype: str
     grammar: str
+    filetype: str
     content: str
     label: str
     doc: str
