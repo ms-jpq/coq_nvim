@@ -18,6 +18,7 @@ from pynvim_pp.lib import async_call, awrite, display_width, go, write
 from pynvim_pp.operators import operator_marks
 from pynvim_pp.preview import set_preview
 from std2.argparse import ArgparseError, ArgParser
+from std2.locale import pathsort_key
 from yaml import SafeDumper, add_representer, safe_dump_all
 from yaml.nodes import ScalarNode, SequenceNode
 
@@ -172,7 +173,8 @@ def snips(nvim: Nvim, stack: Stack, args: Sequence[str]) -> None:
                     nvim, user_path=stack.settings.clients.snippets.user_path
                 )
                 preview = tuple(
-                    fmt_path(cwd, path=path, is_dir=False) for path in mtimes
+                    fmt_path(cwd, path=path, is_dir=False)
+                    for path in sorted(mtimes, key=pathsort_key)
                 )
 
                 def cont() -> None:
@@ -188,9 +190,10 @@ def snips(nvim: Nvim, stack: Stack, args: Sequence[str]) -> None:
         elif ns.action == "edit":
 
             async def c2() -> None:
-                (path, *_), mtimes = await user_mtimes(
+                paths, mtimes = await user_mtimes(
                     nvim, user_path=stack.settings.clients.snippets.user_path
                 )
+                path, *_ = paths
                 exts = {path.stem: path for path in mtimes}
                 snip_path = exts.get(ns.filetype, path / f"{ns.filetype}.snip")
                 snip_path.parent.mkdir(parents=True, exist_ok=True)
