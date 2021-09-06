@@ -62,8 +62,7 @@ class SDB:
             with self._lock, with_transaction(self._conn.cursor()) as cursor:
                 cursor.execute(sql("select", "sources"), ())
                 return {
-                    PurePath(row["filename"]): row["mtime"]
-                    for row in cursor.fetchall()
+                    PurePath(row["filename"]): row["mtime"] for row in cursor.fetchall()
                 }
 
         return await run_in_executor(lambda: self._ex.submit(cont))
