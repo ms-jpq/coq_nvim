@@ -14,11 +14,13 @@ CREATE TABLE IF NOT EXISTS filetypes (
 
 
 CREATE TABLE IF NOT EXISTS extensions (
-  src  TEXT NOT NULL REFERENCES filetypes (filetype) ON UPDATE CASCADE ON DELETE CASCADE,
-  dest TEXT NOT NULL REFERENCES filetypes (filetype) ON UPDATE CASCADE ON DELETE CASCADE,
-  UNIQUE (src, dest)
+  source_id BLOB NOT NULL REFERENCES sources   (rowid)    ON UPDATE CASCADE ON DELETE CASCADE,
+  src       TEXT NOT NULL REFERENCES filetypes (filetype) ON UPDATE CASCADE ON DELETE CASCADE,
+  dest      TEXT NOT NULL REFERENCES filetypes (filetype) ON UPDATE CASCADE ON DELETE CASCADE,
+  UNIQUE (source_id, src, dest)
 );
-CREATE INDEX IF NOT EXISTS extensions_src ON extensions (src);
+CREATE INDEX IF NOT EXISTS extensions_source_id ON extensions (source_id);
+CREATE INDEX IF NOT EXISTS extensions_src       ON extensions (src);
 
 
 CREATE TABLE IF NOT EXISTS snippets (
