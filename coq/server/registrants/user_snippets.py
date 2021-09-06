@@ -1,11 +1,18 @@
 from argparse import Namespace
 from locale import strxfrm
 from os.path import normcase
-from pathlib import Path, PurePath
+from pathlib import PurePath
 from typing import Any, Iterator, Mapping, Sequence
 
 from pynvim.api.nvim import Nvim
-from pynvim_pp.api import buf_get_lines, buf_line_count, buf_name, cur_win, win_get_buf
+from pynvim_pp.api import (
+    buf_get_lines,
+    buf_line_count,
+    buf_name,
+    cur_win,
+    get_cwd,
+    win_get_buf,
+)
 from pynvim_pp.hold import hold_win_pos
 from pynvim_pp.lib import async_call, awrite, display_width, go, write
 from pynvim_pp.operators import operator_marks
@@ -15,12 +22,13 @@ from yaml import SafeDumper, add_representer, safe_dump_all
 from yaml.nodes import ScalarNode, SequenceNode
 
 from ...lang import LANG
+from ...paths.show import fmt_path
 from ...registry import rpc
 from ...snippets.consts import MOD_PAD
 from ...snippets.parsers.types import ParseError
 from ...snippets.types import LoadError
 from ..rt_types import Stack
-from .snippets import Compiled, compile_one, compile_user_snippets
+from .snippets import Compiled, compile_one, compile_user_snippets, user_mtimes
 
 _WIDTH = 80
 _TAB = 2
@@ -123,9 +131,9 @@ def _parse_args(args: Sequence[str]) -> Namespace:
     parser = ArgParser()
     sub_parsers = parser.add_subparsers(dest="action", required=True)
     sub_parsers.add_parser("compile")
+    sub_parsers.add_parser("ls")
     p = sub_parsers.add_parser("edit")
-    p.add_argument("file", nargs="?")
-
+    p.add_argument("filetype")
     return parser.parse_args(args)
 
 
@@ -135,31 +143,65 @@ def snips(nvim: Nvim, stack: Stack, args: Sequence[str]) -> None:
         ns = _parse_args(args)
     except ArgparseError as e:
         write(nvim, e, error=True)
+
     else:
         if ns.action == "compile":
 
-            async def cont() -> None:
+            async def c0() -> None:
                 await awrite(nvim, LANG("waiting..."))
                 try:
                     await compile_user_snippets(nvim, stack=stack)
                 except (LoadError, ParseError) as e:
+                    preview = str(e).splitlines()
 
-                    def c1() -> None:
-                        win = cur_win(nvim)
-                        preview = str(e).splitlines()
-                        with hold_win_pos(nvim, win=win):
-                            set_preview(nvim, syntax="", preview=preview)
+                    def cont() -> None:
+                        set_preview(nvim, syntax="", preview=preview)
                         write(nvim, LANG("snip parse fail"))
 
-                    await async_call(nvim, c1)
+                    await async_call(nvim, cont)
                 else:
                     await awrite(nvim, LANG("snip parse succ"))
 
-            go(nvim, aw=cont())
+            go(nvim, aw=c0())
+
+        elif ns.action == "ls":
+            cwd = get_cwd(nvim)
+
+            async def c1() -> None:
+                _, mtimes = await user_mtimes(
+                    nvim, user_path=stack.settings.clients.snippets.user_path
+                )
+                preview = tuple(
+                    fmt_path(cwd, path=path, is_dir=False) for path in mtimes
+                )
+
+                def cont() -> None:
+                    if mtimes:
+                        set_preview(nvim, syntax="", preview=preview)
+                    else:
+                        write(nvim, LANG("no snippets found"))
+
+                await async_call(nvim, cont)
+
+            go(nvim, aw=c1())
 
         elif ns.action == "edit":
-            path = Path(ns.file) if ns.file else None
-            path = (path if path.is_absolute() else path) if path else None
+
+            async def c2() -> None:
+                (path, *_), mtimes = await user_mtimes(
+                    nvim, user_path=stack.settings.clients.snippets.user_path
+                )
+                exts = {path.stem: path for path in mtimes}
+                snip_path = exts.get(ns.filetype, path / f"{ns.filetype}.snip")
+                snip_path.parent.mkdir(parents=True, exist_ok=True)
+
+                def cont() -> None:
+                    escaped = nvim.funcs.fnameescape(normcase(snip_path))
+                    nvim.feedkeys(f":edit {escaped}", "n", False)
+
+                await async_call(nvim, cont)
+
+            go(nvim, aw=c2())
 
         else:
             assert False
