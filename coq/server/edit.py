@@ -15,7 +15,7 @@ from typing import (
 from uuid import uuid4
 
 from pynvim import Nvim
-from pynvim.api.buffer import Buffer
+from pynvim.api import Window, Buffer
 from pynvim.api.common import NvimError
 from pynvim_pp.api import (
     buf_get_extmarks,
@@ -24,6 +24,7 @@ from pynvim_pp.api import (
     create_ns,
     cur_win,
     win_get_buf,
+    win_get_cursor,
     win_set_cursor,
 )
 from pynvim_pp.lib import write
@@ -348,17 +349,21 @@ def _parse(stack: Stack, state: State, data: UserData) -> Tuple[Edit, Sequence[M
         return data.primary_edit, ()
 
 
-def _restore(nvim: Nvim, buf: Buffer, pos: NvimPos) -> Optional[str]:
+def _restore(nvim: Nvim, buf: Buffer, pos: NvimPos) -> Tuple[str, int]:
     row, _ = pos
     ns = create_ns(nvim, ns=NS)
     m1, m2 = buf_get_extmarks(nvim, buf=buf, id=ns)
     after, *_ = buf_get_lines(nvim, buf=buf, lo=row, hi=row + 1)
     (_, lo), (_, hi) = m1.end, m2.begin
     inserted = after.encode(UTF8)[lo:hi].decode(UTF8, errors="ignore")
+    movement = len(inserted.encode(UTF8)) if inserted else 0
     if inserted:
+        cur_row, cur_col = win_get_cursor(nvim, win)
+        if cur_row == row and lo <= cur_col <= hi:
+            movement = cur_col - lo
         buf_set_text(nvim, buf=buf, begin=m1.end, end=m2.begin, text=("",))
 
-    return inserted
+    return (inserted, movement)
 
 
 def edit(
@@ -371,7 +376,9 @@ def edit(
         return None
     else:
         nvim.options["undolevels"] = nvim.options["undolevels"]
-        inserted = _restore(nvim, buf=buf, pos=state.context.position)
+        inserted, movement = _restore(
+            nvim, buf=buf, pos=state.context.position
+        )
 
         try:
             primary, marks = _parse(stack, state=state, data=data)
@@ -406,7 +413,7 @@ def edit(
                 state.context.position,
                 instructions=instructions,
             )
-            n_col = p_col + len(inserted.encode(UTF8)) if inserted else p_col
+            n_col = p_col + movement
 
             stack.idb.inserted(data.instance.bytes, sort_by=data.sort_by)
 
