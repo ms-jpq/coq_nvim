@@ -8,7 +8,7 @@ from json import JSONDecodeError, dumps, loads
 from math import inf
 from os import linesep
 from pathlib import Path, PurePath
-from posixpath import expandvars, normcase
+from posixpath import normcase
 from string import Template
 from tempfile import NamedTemporaryFile
 from textwrap import dedent
@@ -43,7 +43,6 @@ from ...snippets.loaders.neosnippet import load_neosnippet
 from ...snippets.parse import parse
 from ...snippets.types import SCHEMA, LoadedSnips, ParsedSnippet
 from ..rt_types import Stack
-from ..state import state
 
 BUNDLED_PATH_TPL = Template("coq+snippets+${schema}.json")
 _USER_PATH_TPL = Template("users+${schema}.json")
@@ -76,7 +75,7 @@ async def _bundled_mtimes(
 async def _snippet_paths(nvim: Nvim, user_path: Optional[Path]) -> Sequence[Path]:
     def cont() -> Iterator[Path]:
         if user_path:
-            usp = Path(expandvars(user_path))
+            usp = Path(user_path)
             resolved = (
                 usp if usp.is_absolute() else Path(nvim.funcs.stdpath("config")) / usp
             )

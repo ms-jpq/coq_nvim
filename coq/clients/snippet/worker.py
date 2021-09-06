@@ -22,7 +22,7 @@ class Worker(BaseWorker[SnippetClient, SDB]):
                 grammar=SnippetGrammar[snip["grammar"]],
             )
             label_line, *_ = (snip["label"] or edit.new_text or " ").splitlines()
-            label = label_line.strip().expandtabs(2)
+            label = label_line.strip().expandtabs(context.tabstop)
             doc = Doc(
                 text=snip["doc"] or edit.new_text,
                 syntax="",
