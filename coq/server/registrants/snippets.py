@@ -99,11 +99,12 @@ async def _snippet_paths(nvim: Nvim, user_path: Optional[Path]) -> Sequence[Path
         if user_path:
             std_conf = Path(nvim.funcs.stdpath("config"))
             if resolved := _resolve(std_conf, path=user_path):
-                return resolved
+                yield resolved
         for path in iter_rtps(nvim):
             yield path / "coq-user-snippets"
 
-    return await async_call(nvim, lambda: tuple(cont()))
+    paths = await async_call(nvim, lambda: tuple(cont()))
+    return paths
 
 
 async def user_mtimes(
@@ -119,7 +120,7 @@ async def user_mtimes(
                         mtime = p.stat().st_mtime
                         yield p, mtime
 
-    return paths, {p: m for p, m in await run_in_executor(cont)}
+    return paths, {p: m for p, m in await run_in_executor(lambda: tuple(cont()))}
 
 
 def _paths(vars_dir: Path) -> Tuple[Path, Path]:
