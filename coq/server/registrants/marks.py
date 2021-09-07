@@ -128,7 +128,7 @@ def _linked_marks(
         row, col = mark.begin
         win_set_cursor(nvim, win=win, row=row, col=col)
         nvim.command("startinsert")
-        state(inserted=(row, col))
+        state(inserted=(row, col - 1))
         return True
     else:
         return False
