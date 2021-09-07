@@ -1,10 +1,10 @@
 from difflib import get_close_matches
 from enum import Enum, auto
-from os import linesep
 from pathlib import PurePath
 from typing import AbstractSet, Iterable, MutableSequence, MutableSet, Sequence, Tuple
 
 from ...shared.types import SnippetGrammar
+from ..consts import SNIP_LINE_SEP
 from ..types import ParsedSnippet
 from .parse import raise_err
 
@@ -103,7 +103,7 @@ def load_ultisnip(
             if line.startswith(_SNIPPET_END):
                 state = _State.normal
 
-                content = linesep.join(current_lines)
+                content = SNIP_LINE_SEP.join(current_lines)
                 snippet = ParsedSnippet(
                     grammar=grammar,
                     filetype=filetype,
