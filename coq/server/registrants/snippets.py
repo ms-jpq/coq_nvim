@@ -33,12 +33,11 @@ from std2.graphlib import recur_sort
 from std2.pathlib import walk
 from std2.pickle import DecodeError, new_decoder, new_encoder
 
-from coq.shared.settings import SnippetWarnings
-
 from ...lang import LANG
 from ...paths.show import fmt_path
 from ...registry import atomic, rpc
 from ...shared.context import EMPTY_CONTEXT
+from ...shared.settings import SnippetWarnings
 from ...shared.timeit import timeit
 from ...shared.types import Edit, Mark, SnippetEdit, SnippetGrammar
 from ...snippets.loaders.load import load_direct
