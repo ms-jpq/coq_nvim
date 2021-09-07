@@ -66,6 +66,7 @@ def _single_mark(
 ) -> None:
     row, col = mark.begin
     nvim.options["undolevels"] = nvim.options["undolevels"]
+
     try:
         apply(nvim, buf=buf, instructions=_trans("", marks=(mark,)))
         win_set_cursor(nvim, win=win, row=row, col=col)

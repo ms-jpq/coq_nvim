@@ -364,7 +364,7 @@ def _restore(nvim: Nvim, win: Window, buf: Buffer, pos: NvimPos) -> Tuple[str, i
             movement = cur_col - lo
         buf_set_text(nvim, buf=buf, begin=m1.end, end=m2.begin, text=("",))
 
-    return (inserted, movement)
+    return inserted, movement
 
 
 def edit(
