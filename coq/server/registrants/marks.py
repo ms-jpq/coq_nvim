@@ -20,7 +20,6 @@ from pynvim_pp.api import (
 )
 from pynvim_pp.lib import write
 from pynvim_pp.logging import log
-from pynvim_pp.operators import set_visual_selection
 
 from ...lang import LANG
 from ...registry import rpc
@@ -44,6 +43,19 @@ def _ls_marks(nvim: Nvim, ns: int, buf: Buffer) -> Sequence[ExtMark]:
     return ordered
 
 
+def _trans(new_text: str, marks: Sequence[ExtMark]) -> Iterator[EditInstruction]:
+    new_lines = new_text.splitlines()
+    for mark in marks:
+        yield EditInstruction(
+            primary=False,
+            begin=mark.begin,
+            end=mark.end,
+            cursor_yoffset=0,
+            cursor_xpos=-1,
+            new_lines=new_lines,
+        )
+
+
 def _single_mark(
     nvim: Nvim,
     mark: ExtMark,
@@ -52,18 +64,13 @@ def _single_mark(
     win: Window,
     buf: Buffer,
 ) -> None:
-    (r1, c1), (r2, c2) = mark.begin, mark.end
+    row, col = mark.begin
+    nvim.options["undolevels"] = nvim.options["undolevels"]
+
     try:
-        if r1 == r2 and abs(c2 - c1) == 0:
-            row, col = r1, min(c1, c2)
-            win_set_cursor(nvim, win=win, row=row, col=col)
-        else:
-            row, col = r1, c1
-            set_visual_selection(
-                nvim, win=win, mode="v", mark1=(r1, c1), mark2=(r2, c2 - 1)
-            )
-            nvim.command("norm! c")
-            win_set_cursor(nvim, win=win, row=r1, col=c1)
+        apply(nvim, buf=buf, instructions=_trans("", marks=(mark,)))
+        win_set_cursor(nvim, win=win, row=row, col=col)
+        nvim.command("startinsert")
     except NvimError as e:
         msg = f"""
         bad mark location {mark}
@@ -78,19 +85,6 @@ def _single_mark(
         write(nvim, msg)
     finally:
         buf_del_extmarks(nvim, buf=buf, id=ns, marks=(mark,))
-
-
-def _trans(new_text: str, marks: Sequence[ExtMark]) -> Iterator[EditInstruction]:
-    new_lines = new_text.splitlines()
-    for mark in marks:
-        yield EditInstruction(
-            primary=False,
-            begin=mark.begin,
-            end=mark.end,
-            cursor_yoffset=0,
-            cursor_xpos=-1,
-            new_lines=new_lines,
-        )
 
 
 def _linked_marks(
@@ -136,6 +130,7 @@ def _linked_marks(
         buf_del_extmarks(nvim, buf=buf, id=ns, marks=marks)
         row, col = mark.begin
         win_set_cursor(nvim, win=win, row=row, col=col)
+        nvim.command("startinsert")
         return True
     else:
         return False

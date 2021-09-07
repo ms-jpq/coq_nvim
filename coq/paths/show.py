@@ -1,7 +1,7 @@
 from contextlib import suppress
 from itertools import islice
 from os import linesep, sep
-from os.path import normcase
+from os.path import curdir, normcase
 from pathlib import Path, PurePath
 from typing import Iterator, Optional
 
@@ -19,7 +19,7 @@ def fmt_path(cwd: PurePath, path: PurePath, is_dir: bool) -> str:
     posfix = sep if is_dir else ""
     with suppress(ValueError):
         rel = path.relative_to(cwd)
-        return f".{sep}{normcase(rel)}{posfix}"
+        return f"{curdir}{sep}{normcase(rel)}{posfix}"
 
     with suppress(ValueError):
         rel = path.relative_to(_HOME)
