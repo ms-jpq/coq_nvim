@@ -122,7 +122,6 @@ def _parse_tp(context: ParserCtx) -> TokenStream:
 
 
 def _variable_substitution(context: ParserCtx, *, name: str) -> Optional[str]:
-    ctx = context.ctx
     if name == "VISUAL":
         return context.info.visual
     else:
