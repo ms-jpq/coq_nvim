@@ -2,7 +2,7 @@ from argparse import Namespace
 from locale import strxfrm
 from os.path import normcase
 from pathlib import PurePath
-from typing import Any, Iterator, Mapping, Optional, Sequence
+from typing import Any, Iterator, Mapping, Optional, Sequence, cast
 
 from pynvim.api.nvim import Nvim
 from pynvim_pp.api import (
@@ -152,7 +152,9 @@ def _parse_args(args: Sequence[str], filetype: Optional[str]) -> Namespace:
     sub_parsers.add_parser("ls")
     sub_parsers.add_parser("compile")
     p = sub_parsers.add_parser("edit")
-    p.add_argument("filetype", nargs="?" if filetype else 1, default=filetype)
+    p.add_argument(
+        "filetype", nargs="?" if filetype else cast(int, None), default=filetype
+    )
     return parser.parse_args(args)
 
 

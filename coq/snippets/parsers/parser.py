@@ -172,12 +172,12 @@ def token_parser(context: ParserCtx, stream: TokenStream) -> Parsed:
 
     if bad_tokens:
         tpl = """
-        Bad tokens - ${bad_tokens}
+        Bad tokens :: Most likely unbalanced `{…}` - ${bad_tokens}
         Parsed: |-
         ${text}
         Original: |-
         ${ctx}
-        """
+        """.strip()
         msg = Template(dedent(tpl)).substitute(
             bad_tokens=bad_tokens, text=text, ctx=context.text
         )
