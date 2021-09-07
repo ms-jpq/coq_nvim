@@ -112,7 +112,7 @@ def parse(
 ) -> Iterator[Tuple[PurePath, str]]:
     for segment in segs(seps, line=line):
         s1 = segment
-        s2 = expanduser(s1)
+        s2 = expanduser(s1) if s1.startswith("~") else s1
         s3 = expandvars(s2)
 
         for idx, s0 in enumerate((s1, s2, s3)):
