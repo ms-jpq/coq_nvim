@@ -99,10 +99,13 @@ To avoid ambiguity, you must replace `~` with `vim.env.HOME` and so on.
 There is a convenience command:
 
 ```viml
+" <filetype> can be omitted if current document has a filetype
 :COQsnips edit <filetype>
 ```
 
-To edit snippets for a particular filetype. It is normally under `$NVIM_HOME/coq-user-snippets/`, but if `coq_settings.clients.snippets.user_path` is set, that is used instead.
+To edit snippets for a particular filetype.
+
+The default path is normally under `$NVIM_HOME/coq-user-snippets/`, but if `coq_settings.clients.snippets.user_path` is set, that is used instead.
 
 To see where snippets are currently stored, there is also
 
