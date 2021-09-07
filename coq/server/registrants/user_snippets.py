@@ -2,13 +2,15 @@ from argparse import Namespace
 from locale import strxfrm
 from os.path import normcase
 from pathlib import PurePath
-from typing import Any, Iterator, Mapping, Sequence
+from typing import Any, Iterator, Mapping, Optional, Sequence
 
 from pynvim.api.nvim import Nvim
 from pynvim_pp.api import (
+    buf_filetype,
     buf_get_lines,
     buf_line_count,
     buf_name,
+    cur_buf,
     cur_win,
     get_cwd,
     win_get_buf,
@@ -144,20 +146,23 @@ def eval_snips(
             write(nvim, LANG("no snippets found"))
 
 
-def _parse_args(args: Sequence[str]) -> Namespace:
+def _parse_args(args: Sequence[str], filetype: Optional[str]) -> Namespace:
     parser = ArgParser()
     sub_parsers = parser.add_subparsers(dest="action", required=True)
     sub_parsers.add_parser("ls")
     sub_parsers.add_parser("compile")
     p = sub_parsers.add_parser("edit")
-    p.add_argument("filetype")
+    p.add_argument("filetype", nargs="?" if filetype else 1, default=filetype)
     return parser.parse_args(args)
 
 
 @rpc(blocking=True)
 def snips(nvim: Nvim, stack: Stack, args: Sequence[str]) -> None:
+    buf = cur_buf(nvim)
+    ft = buf_filetype(nvim, buf=buf)
+
     try:
-        ns = _parse_args(args)
+        ns = _parse_args(args, filetype=ft)
     except ArgparseError as e:
         write(nvim, e, error=True)
 
