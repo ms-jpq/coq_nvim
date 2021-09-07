@@ -56,7 +56,7 @@ async def _git_pull(sem: Semaphore, uri: str) -> None:
 async def load() -> LoadedSnips:
     TMP_DIR.mkdir(parents=True, exist_ok=True)
     yaml = safe_load(COMPILATION_YML.read_bytes())
-    specs: Compilation = new_decoder(Compilation)(yaml)
+    specs = new_decoder[Compilation](Compilation)(yaml)
 
     sem = Semaphore(value=cpu_count())
     await gather(*(_git_pull(sem, uri=uri) for uri in specs.git))
@@ -90,5 +90,5 @@ async def load_parsable() -> Any:
     snippets = {hashed: snip for hashed, snip in cont()}
     safe = LoadedSnips(exts=loaded.exts, snippets=snippets)
 
-    coder = new_encoder(LoadedSnips)
+    coder = new_encoder[LoadedSnips](LoadedSnips)
     return recur_sort(coder(safe))

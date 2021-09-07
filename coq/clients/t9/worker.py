@@ -26,8 +26,8 @@ from .types import ReqL1, ReqL2, Request, Response
 
 _VERSION = "3.2.28"
 
-_DECODER = new_decoder(Response, strict=False)
-_ENCODER = new_encoder(Request)
+_DECODER = new_decoder[Response](Response, strict=False)
+_ENCODER = new_encoder[Request](Request)
 
 
 def _encode(options: Options, context: Context, limit: int) -> Any:
@@ -71,7 +71,7 @@ def _decode(
     unifying_chars: AbstractSet[str], client: BaseClient, reply: Any
 ) -> Iterator[Completion]:
     try:
-        resp: Response = _DECODER(reply)
+        resp = _DECODER(reply)
     except DecodeError as e:
         log.warn("%s", e)
     else:
