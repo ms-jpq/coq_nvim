@@ -69,6 +69,8 @@ body   :: .*
 
 3. **The syntax highlighter comes with error highlights**
 
+Note: `_abbr_` is label only, does not affect suggestions, `_alias_` is suggestion only, does not affect label
+
 #### Example
 
 ```vim-snippet
