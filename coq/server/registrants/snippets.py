@@ -89,7 +89,7 @@ def _resolve(stdp: Path, path: Path) -> Optional[Path]:
                     return None
     else:
         if normcase(path).startswith("~"):
-            return _resolve(stdp, path=path)
+            return _resolve(stdp, path=Path(expanduser(path)))
         else:
             return _resolve(stdp, path=stdp / path)
 
