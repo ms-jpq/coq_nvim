@@ -112,3 +112,7 @@ To see where snippets are currently stored, there is also
 ```viml
 :COQsnips ls
 ```
+
+### et al.
+
+[My personal snippets](https://github.com/ms-jpq/snips)
