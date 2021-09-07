@@ -131,7 +131,7 @@ def eval_snips(
             stack, grammar=grammar, path=path, lines=enumerate(lines, start=lo + 1)
         )
     except (LoadError, ParseError) as e:
-        preview: Sequence[str] = str(e).splitlines()
+        preview = str(e).splitlines()
         with hold_win_pos(nvim, win=win):
             set_preview(nvim, syntax="", preview=preview)
         write(nvim, LANG("snip parse fail"))
