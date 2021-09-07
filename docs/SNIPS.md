@@ -14,6 +14,14 @@ To disable: simply do not install `coq.artifacts`.
 
 ## Custom snippets
 
+### Workflow
+
+1. `:COQsnips edit` -- edits snippet for current file
+
+2. `<eval_snips>` -- live repl to ensure snippet is what you want
+
+3. `:COQsnips compile` -- done, you are good to do
+
 ### Compilation
 
 ```viml
