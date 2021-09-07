@@ -7,7 +7,6 @@ from os.path import (
     curdir,
     expanduser,
     expandvars,
-    join,
     normcase,
     normpath,
     pardir,
@@ -39,6 +38,7 @@ from ...shared.types import Completion, Context, Edit, Extern
 
 _DRIVE_LETTERS = {*ascii_letters}
 _SH_VAR_CHARS = {*ascii_letters, *digits, "_"}
+_SEP_CHARS = sep + altsep if altsep else sep
 
 
 def p_lhs(os: OS, lhs: str) -> str:
@@ -98,9 +98,15 @@ def _p_sep(line_pre: str) -> str:
     return (altsep or sep) if i2 > i1 else sep
 
 
-def _join(lhs: str, rhs: str) -> str:
+def _join(local_sep: str, lhs: str, rhs: str) -> str:
     l, r = split(lhs)
-    return join(l, normpath(join(r, rhs)))
+    return (
+        l.rstrip(_SEP_CHARS)
+        + local_sep
+        + normpath(r.rstrip(_SEP_CHARS) + local_sep + rhs.lstrip(_SEP_CHARS)).lstrip(
+            _SEP_CHARS
+        )
+    )
 
 
 def parse(
@@ -119,22 +125,22 @@ def parse(
             if idx and s0 == s1:
                 pass
             else:
-                lsep = _p_sep(s0)
+                local_sep = _p_sep(s0)
 
                 p = Path(s0)
                 entire = p if p.is_absolute() else base / p
                 with suppress(OSError):
                     if entire.is_dir():
                         for path in scandir(entire):
-                            term = lsep if path.is_dir() else ""
-                            line = _join(segment, path.name) + term
+                            term = local_sep if path.is_dir() else ""
+                            line = _join(local_sep, lhs=segment, rhs=path.name) + term
                             yield PurePath(path.path), line
                         return
 
                     else:
-                        lft, go, rhs = s0.rpartition(lsep)
+                        lft, go, rhs = s0.rpartition(local_sep)
                         if go:
-                            lp, sp, _ = segment.rpartition(lsep)
+                            lp, sp, _ = segment.rpartition(local_sep)
                             lseg = lp + sp
 
                             lhs = lft + go
@@ -153,8 +159,11 @@ def parse(
                                         and not rhs.startswith(path.name)
                                     ):
 
-                                        term = lsep if path.is_dir() else ""
-                                        line = _join(lseg, path.name) + term
+                                        term = local_sep if path.is_dir() else ""
+                                        line = (
+                                            _join(local_sep, lhs=lseg, rhs=path.name)
+                                            + term
+                                        )
                                         yield PurePath(path.path), line
                                 return
 
