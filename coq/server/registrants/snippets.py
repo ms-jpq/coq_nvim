@@ -7,6 +7,7 @@ from itertools import chain
 from json import JSONDecodeError, dumps, loads
 from math import inf
 from os import linesep
+from os.path import expanduser, expandvars
 from pathlib import Path, PurePath
 from posixpath import normcase
 from string import Template
@@ -72,14 +73,33 @@ async def _bundled_mtimes(
     return {p: m for p, m in await run_in_executor(lambda: tuple(c1()))}
 
 
+def _resolve(stdp: Path, path: Path) -> Optional[Path]:
+    if path.is_absolute():
+        if path.exists():
+            return path
+        else:
+            u_p = Path(expanduser(path))
+            if u_p != path and u_p.exists():
+                return u_p
+            else:
+                v_p = Path(expandvars(path))
+                if v_p != path and v_p.exists():
+                    return v_p
+                else:
+                    return None
+    else:
+        if normcase(path).startswith("~"):
+            return _resolve(stdp, path=path)
+        else:
+            return _resolve(stdp, path=stdp / path)
+
+
 async def _snippet_paths(nvim: Nvim, user_path: Optional[Path]) -> Sequence[Path]:
     def cont() -> Iterator[Path]:
         if user_path:
-            usp = Path(user_path)
-            resolved = (
-                usp if usp.is_absolute() else Path(nvim.funcs.stdpath("config")) / usp
-            )
-            yield Path(normcase(resolved))
+            std_conf = Path(nvim.funcs.stdpath("config"))
+            if resolved := _resolve(std_conf, path=user_path):
+                return resolved
         for path in iter_rtps(nvim):
             yield path / "coq-user-snippets"
 
@@ -300,5 +320,11 @@ async def compile_user_snippets(nvim: Nvim, stack: Stack) -> None:
         _ = tuple(
             _trans(stack.settings.match.unifying_chars, snips=loaded.snippets.values())
         )
-        await _dump_compiled(stack.supervisor.vars_dir, mtimes=mtimes, loaded=loaded)
-        await _slurp(nvim, stack=stack, warn_outdated=False)
+        try:
+            await _dump_compiled(
+                stack.supervisor.vars_dir, mtimes=mtimes, loaded=loaded
+            )
+        except OSError as e:
+            await awrite(nvim, e)
+        else:
+            await _slurp(nvim, stack=stack, warn_outdated=False)
