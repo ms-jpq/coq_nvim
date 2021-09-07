@@ -124,9 +124,10 @@ def parse(
     )
 
     new_prefix = parsed.text.encode(UTF8)[: parsed.cursor].decode()
+    new_text = context.linefeed.join(new_prefix.splitlines())
     if isinstance(snippet, SnippetRangeEdit):
         edit: Edit = ParsedEdit(
-            new_text=parsed.text,
+            new_text=new_text,
             begin=snippet.begin,
             end=snippet.end,
             encoding=snippet.encoding,
@@ -134,7 +135,7 @@ def parse(
         )
     else:
         edit = ContextualEdit(
-            new_text=parsed.text,
+            new_text=new_text,
             old_prefix=old_prefix,
             old_suffix=old_suffix,
             new_prefix=new_prefix,
