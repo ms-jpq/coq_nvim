@@ -4,6 +4,7 @@ from pprint import pformat
 from typing import AbstractSet, Iterable, Iterator, Sequence, Tuple
 
 from pynvim_pp.logging import log
+from std2.types import never
 
 from ..consts import DEBUG
 from ..shared.parse import is_word
@@ -16,6 +17,7 @@ from ..shared.types import (
     Mark,
     RangeEdit,
     SnippetEdit,
+    SnippetGrammar,
     SnippetRangeEdit,
 )
 from .parsers.lsp import parser as lsp_parser
@@ -87,7 +89,13 @@ def parse(
     snippet: SnippetEdit,
     visual: str,
 ) -> Tuple[Edit, Sequence[Mark]]:
-    parser = lsp_parser if snippet.grammar == "lsp" else snu_parser
+    if snippet.grammar is SnippetGrammar.lsp:
+        parser = lsp_parser
+    elif snippet.grammar is SnippetGrammar.snu:
+        parser = snu_parser
+    else:
+        never(snippet.grammar)
+
     sort_by = parser(
         context, snippet=snippet.new_text, info=ParseInfo(visual=visual)
     ).text
