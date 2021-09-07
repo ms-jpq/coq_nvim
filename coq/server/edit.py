@@ -419,13 +419,17 @@ def edit(
             stack.idb.inserted(data.instance.bytes, sort_by=data.sort_by)
 
             apply(nvim, buf=buf, instructions=instructions)
-            buf_set_text(
-                nvim,
-                buf=buf,
-                begin=(n_row, p_col),
-                end=(n_row, p_col),
-                text=(inserted,) if inserted else (),
-            )
+            try:
+                buf_set_text(
+                    nvim,
+                    buf=buf,
+                    begin=(n_row, p_col),
+                    end=(n_row, p_col),
+                    text=(inserted,) if inserted else (),
+                )
+            except NvimError as e:
+                log.warn("%s", e)
+
             win_set_cursor(nvim, win=win, row=n_row, col=n_col)
             if marks:
                 mark(nvim, settings=stack.settings, buf=buf, marks=marks)
