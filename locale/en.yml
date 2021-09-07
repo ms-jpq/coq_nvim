@@ -12,7 +12,7 @@
   🎯 Marks added: ${regions}
 
 "expand marks": |-
-  ✏️  Expand marks:
+  ✏️  Expand marks ${texts}:
 
 "no more marks": |-
   ⛔️ No more marks available

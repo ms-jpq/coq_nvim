@@ -1,5 +1,7 @@
 from collections import deque
+from contextlib import suppress
 from itertools import chain
+from json import dumps
 from textwrap import dedent
 from typing import Iterator, Sequence
 
@@ -34,11 +36,7 @@ from ..state import state
 def _ls_marks(nvim: Nvim, ns: int, buf: Buffer) -> Sequence[ExtMark]:
     ordered = sorted(
         buf_get_extmarks(nvim, id=ns, buf=buf),
-        key=lambda m: (
-            m.idx % MOD_PAD,
-            m.begin,
-            m.end,
-        ),
+        key=lambda m: (m.idx % MOD_PAD, m.begin, m.end),
     )
     return ordered
 
@@ -116,14 +114,14 @@ def _linked_marks(
 
         return linesep.join(cont())
 
-    def place_holder() -> str:
-        for p in map(preview, marks):
-            if p:
-                return p
-        else:
-            return ""
+    def place_holders() -> Iterator[str]:
+        for mark in marks:
+            with suppress(NvimError):
+                if p := preview(mark):
+                    yield p
 
-    resp = ask(nvim, question=LANG("expand marks"), default=place_holder())
+    texts = dumps(tuple(place_holders()), check_circular=False, ensure_ascii=False)
+    resp = ask(nvim, question=LANG("expand marks", texts=texts), default="")
     if resp is not None:
         nvim.options["undolevels"] = nvim.options["undolevels"]
         apply(nvim, buf=buf, instructions=_trans(resp, marks=marks))
@@ -131,6 +129,7 @@ def _linked_marks(
         row, col = mark.begin
         win_set_cursor(nvim, win=win, row=row, col=col)
         nvim.command("startinsert")
+        state(inserted=(row, col))
         return True
     else:
         return False
