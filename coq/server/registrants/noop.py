@@ -25,7 +25,7 @@ class _Helo:
     helo: Sequence[str]
 
 
-_HELO: _Helo = new_decoder(_Helo)(safe_load(HELO_ARTIFACTS.read_text("UTF-8")))
+_HELO = new_decoder[_Helo](_Helo)(safe_load(HELO_ARTIFACTS.read_text("UTF-8")))
 
 
 def _parse_args(args: Sequence[str]) -> Namespace:

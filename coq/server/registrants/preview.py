@@ -1,4 +1,5 @@
 from asyncio import Task, wait
+from contextlib import suppress
 from dataclasses import asdict, dataclass
 from itertools import chain
 from math import ceil
@@ -339,18 +340,15 @@ def _virt_text(nvim: Nvim, ghost: GhostText, text: str) -> None:
         buf_set_extmarks(nvim, buf=buf, id=ns, marks=(mark,))
 
 
-_DECODER = new_decoder(_Event)
+_DECODER = new_decoder[_Event](_Event)
 
 
 @rpc(blocking=True, schedule=True)
 def _cmp_changed(nvim: Nvim, stack: Stack, event: Mapping[str, Any] = {}) -> None:
     _kill_win(nvim, stack=stack, reset=False)
     with timeit("PREVIEW"):
-        try:
-            ev: _Event = _DECODER(event)
-        except DecodeError:
-            pass
-        else:
+        with suppress(DecodeError):
+            ev = _DECODER(event)
             data = ev.completed_item.user_data
             if data:
                 s = state(preview_id=data.uid)

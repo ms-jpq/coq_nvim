@@ -31,8 +31,6 @@ from .reviewer import Reviewer
 from .rt_types import Stack
 from .state import state
 
-_DECODER = new_decoder(Settings)
-
 
 def _settings(nvim: Nvim) -> Settings:
     user_config = nvim.vars.get(SETTINGS_VAR, {})
@@ -42,7 +40,7 @@ def _settings(nvim: Nvim) -> Settings:
         replace=True,
     )
 
-    config: Settings = _DECODER(merged)
+    config = new_decoder[Settings](Settings)(merged)
     return config
 
 

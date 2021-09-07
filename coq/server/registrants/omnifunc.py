@@ -147,9 +147,6 @@ def omnifunc(
         return ()
 
 
-_DECODER = new_decoder(UserData)
-
-
 async def _resolve(nvim: Nvim, stack: Stack, user_data: UserData) -> UserData:
     if not user_data.extern:
         return user_data
@@ -181,12 +178,15 @@ async def _resolve(nvim: Nvim, stack: Stack, user_data: UserData) -> UserData:
                     )
 
 
+_DECODER = new_decoder[UserData](UserData)
+
+
 @rpc(blocking=True)
 def _comp_done(nvim: Nvim, stack: Stack, event: Mapping[str, Any]) -> None:
     data = event.get("user_data")
     if data:
         try:
-            user_data: UserData = _DECODER(data)
+            user_data = _DECODER(data)
         except DecodeError as e:
             log.warn("%s", e)
         else:

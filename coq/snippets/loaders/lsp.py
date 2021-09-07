@@ -17,8 +17,7 @@ class _Unit:
     description: str = ""
 
 
-_FMT = Mapping[str, _Unit]
-_DECODER = new_decoder(_FMT, strict=False)
+_DECODER = new_decoder[Mapping[str, _Unit]](Mapping[str, _Unit], strict=False)
 
 
 def _prefix(prefix: Union[str, Sequence[str]]) -> AbstractSet[str]:
@@ -46,7 +45,7 @@ def load_lsp(
 
     text = linesep.join(line.rstrip() for _, line in lines)
     json = loads(text)
-    fmt: _FMT = _DECODER(json)
+    fmt = _DECODER(json)
 
     def cont() -> Iterator[ParsedSnippet]:
         for label, values in fmt.items():

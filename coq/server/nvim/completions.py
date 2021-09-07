@@ -63,7 +63,7 @@ _LUA = """
 end)(...)
 """
 
-_ENCODER = new_encoder(Sequence[VimCompletion])
+_ENCODER = new_encoder[Iterable[VimCompletion]](Iterable[VimCompletion])
 
 
 def complete(nvim: Nvim, col: int, comp: Iterable[VimCompletion]) -> None:

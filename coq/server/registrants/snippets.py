@@ -109,12 +109,12 @@ def _paths(vars_dir: Path) -> Tuple[Path, Path]:
 
 
 async def _load_compiled(path: Path, mtime: float) -> Tuple[Path, float, LoadedSnips]:
-    decoder = new_decoder(LoadedSnips)
+    decoder = new_decoder[LoadedSnips](LoadedSnips)
 
     def cont() -> LoadedSnips:
         raw = path.read_text("UTF-8")
         json = loads(raw)
-        loaded: LoadedSnips = decoder(json)
+        loaded = decoder(json)
         return loaded
 
     return path, mtime, await run_in_executor(cont)
@@ -136,7 +136,7 @@ async def _load_user_compiled(
             raw = meta.read_text("UTF-8")
             try:
                 json = loads(raw)
-                m2 = new_decoder(Mapping[Path, float])(json)
+                m2 = new_decoder[Mapping[Path, float]](Mapping[Path, float])(json)
             except (JSONDecodeError, DecodeError):
                 meta.unlink(missing_ok=True)
 
@@ -153,8 +153,8 @@ def jsonify(o: Any) -> str:
 async def _dump_compiled(
     vars_dir: Path, mtimes: Mapping[Path, float], loaded: LoadedSnips
 ) -> None:
-    m_json = jsonify(new_encoder(Mapping[Path, float])(mtimes))
-    s_json = jsonify(new_encoder(LoadedSnips)(loaded))
+    m_json = jsonify(new_encoder[Mapping[Path, float]](Mapping[Path, float])(mtimes))
+    s_json = jsonify(new_encoder[LoadedSnips](LoadedSnips)(loaded))
 
     paths = _paths(vars_dir)
     compiled, meta = paths
