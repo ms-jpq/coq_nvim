@@ -94,8 +94,6 @@ $NVIM_HOME
 
 You can also set `coq_settings.clients.snippets.user_path` to load from a custom location.
 
-To avoid ambiguity, you must replace `~` with `vim.env.HOME` and so on.
-
 There is a convenience command:
 
 ```viml
@@ -114,5 +112,7 @@ To see where snippets are currently stored, there is also
 ```
 
 ### et al.
+
+Set `coq_settings.clients.snippets.warn` to `[]` to disable warnings.
 
 [My personal snippets](https://github.com/ms-jpq/snips)
