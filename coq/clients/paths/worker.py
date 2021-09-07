@@ -132,9 +132,9 @@ def parse(
                         return
 
                     else:
-                        lft, go, rhs = s0.rpartition(sep)
+                        lft, go, rhs = s0.rpartition(lsep)
                         if go:
-                            lp, sp, _ = segment.rpartition(sep)
+                            lp, sp, _ = segment.rpartition(lsep)
                             lseg = lp + sp
 
                             lhs = lft + go
