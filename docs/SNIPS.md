@@ -28,7 +28,7 @@ To disable: simply do not install `coq.artifacts`.
 :COQsnips compile
 ```
 
-`coq.nvim` requires you to compile the snippets before they can be loaded. This is to ensure no broken / invalid snippets during runtime.
+`coq.nvim` requires you to compile the snippets before they can be loaded. This is to ensure **zero snippet errors** during runtime.
 
 `coq` will only accept snippets with valid grammar, and has built-in repl to help you on that.
 
