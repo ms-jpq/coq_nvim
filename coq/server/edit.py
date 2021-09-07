@@ -354,14 +354,17 @@ def _restore(nvim: Nvim, win: Window, buf: Buffer, pos: NvimPos) -> Tuple[str, i
     ns = create_ns(nvim, ns=NS)
     m1, m2 = buf_get_extmarks(nvim, buf=buf, id=ns)
     after, *_ = buf_get_lines(nvim, buf=buf, lo=row, hi=row + 1)
+    cur_row, cur_col = win_get_cursor(nvim, win=win)
+
     (_, lo), (_, hi) = m1.end, m2.begin
     inserted = after.encode(UTF8)[lo:hi].decode(UTF8, errors="ignore")
 
-    movement = len(inserted.encode(UTF8))
+    if cur_row == row and lo <= cur_col <= hi:
+        movement = cur_col - lo
+    else:
+        movement = len(inserted.encode(UTF8))
+
     if inserted:
-        cur_row, cur_col = win_get_cursor(nvim, win=win)
-        if cur_row == row and lo <= cur_col <= hi:
-            movement = cur_col - lo
         buf_set_text(nvim, buf=buf, begin=m1.end, end=m2.begin, text=("",))
 
     return inserted, movement
