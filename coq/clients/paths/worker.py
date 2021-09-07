@@ -93,6 +93,19 @@ def segs(seps: AbstractSet[str], line: str) -> Iterator[str]:
         yield "".join(chain((l,), rhs))
 
 
+def _iter_segs(seps: AbstractSet[str], line: str) -> Iterator[Tuple[str, str]]:
+    for segment in segs(seps, line=line):
+        s1 = segment
+        s2 = expanduser(s1) if s1.startswith("~") else s1
+        s3 = expandvars(s2)
+
+        for idx, s0 in enumerate((s1, s2, s3)):
+            if idx and s0 == s1:
+                pass
+            else:
+                yield segment, s0
+
+
 def _p_sep(line_pre: str) -> str:
     i1, i2 = line_pre.rfind(sep), line_pre.rfind(altsep or sep)
     return (altsep or sep) if i2 > i1 else sep
@@ -116,56 +129,45 @@ def parse(
     base: Path,
     line: str,
 ) -> Iterator[Tuple[PurePath, str]]:
-    for segment in segs(seps, line=line):
-        s1 = segment
-        s2 = expanduser(s1) if s1.startswith("~") else s1
-        s3 = expandvars(s2)
+    for segment, s0 in _iter_segs(seps, line=line):
+        local_sep = _p_sep(s0)
+        p = Path(s0)
+        entire = p if p.is_absolute() else base / p
 
-        for idx, s0 in enumerate((s1, s2, s3)):
-            if idx and s0 == s1:
-                pass
+        with suppress(OSError):
+            if entire.is_dir():
+                for path in scandir(entire):
+                    term = local_sep if path.is_dir() else ""
+                    line = _join(local_sep, lhs=segment, rhs=path.name) + term
+                    yield PurePath(path.path), line
+                return
+
             else:
-                local_sep = _p_sep(s0)
+                lft, go, rhs = s0.rpartition(local_sep)
+                if go:
+                    lp, sp, _ = segment.rpartition(local_sep)
+                    lseg = lp + sp
 
-                p = Path(s0)
-                entire = p if p.is_absolute() else base / p
-                with suppress(OSError):
-                    if entire.is_dir():
-                        for path in scandir(entire):
-                            term = local_sep if path.is_dir() else ""
-                            line = _join(local_sep, lhs=segment, rhs=path.name) + term
-                            yield PurePath(path.path), line
+                    lhs = lft + go
+                    p = Path(lhs)
+                    left = p if p.is_absolute() else base / p
+                    if left.is_dir():
+                        for path in scandir(left):
+                            ratio = quick_ratio(
+                                lower(rhs),
+                                lower(path.name),
+                                look_ahead=look_ahead,
+                            )
+                            if (
+                                ratio >= fuzzy_cutoff
+                                and len(path.name) + look_ahead >= len(rhs)
+                                and not rhs.startswith(path.name)
+                            ):
+
+                                term = local_sep if path.is_dir() else ""
+                                line = _join(local_sep, lhs=lseg, rhs=path.name) + term
+                                yield PurePath(path.path), line
                         return
-
-                    else:
-                        lft, go, rhs = s0.rpartition(local_sep)
-                        if go:
-                            lp, sp, _ = segment.rpartition(local_sep)
-                            lseg = lp + sp
-
-                            lhs = lft + go
-                            p = Path(lhs)
-                            left = p if p.is_absolute() else base / p
-                            if left.is_dir():
-                                for path in scandir(left):
-                                    ratio = quick_ratio(
-                                        lower(rhs),
-                                        lower(path.name),
-                                        look_ahead=look_ahead,
-                                    )
-                                    if (
-                                        ratio >= fuzzy_cutoff
-                                        and len(path.name) + look_ahead >= len(rhs)
-                                        and not rhs.startswith(path.name)
-                                    ):
-
-                                        term = local_sep if path.is_dir() else ""
-                                        line = (
-                                            _join(local_sep, lhs=lseg, rhs=path.name)
-                                            + term
-                                        )
-                                        yield PurePath(path.path), line
-                                return
 
 
 async def _parse(
