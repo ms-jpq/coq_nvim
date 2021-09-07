@@ -40,6 +40,12 @@ _CompletionItemTag = int
 _InsertTextMode = int
 
 
+class Command(TypedDict):
+    title: str
+    command: str
+    arguments: Optional[str]
+
+
 class CompletionItem(TypedDict):
     label: str
     kind: Optional[_CompletionItemKind]
@@ -57,6 +63,7 @@ class CompletionItem(TypedDict):
     additionalTextEdits: Optional[Sequence[TextEdit]]
     textEdit: Union[TextEdit, InsertReplaceEdit, None]
 
+    command: Command
     data: Optional[Any]
 
 
