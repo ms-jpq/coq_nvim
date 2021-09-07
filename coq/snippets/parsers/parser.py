@@ -177,7 +177,7 @@ def token_parser(context: ParserCtx, stream: TokenStream) -> Parsed:
         ${text}
         Original: |-
         ${ctx}
-        """.strip()
+        """
         msg = Template(dedent(tpl)).substitute(
             bad_tokens=bad_tokens, text=text, ctx=context.text
         )
