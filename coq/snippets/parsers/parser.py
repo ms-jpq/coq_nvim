@@ -17,7 +17,7 @@ from std2.itertools import deiter, interleave
 from std2.types import never
 
 from ...shared.types import UTF8, Context
-from ..consts import MOD_PAD
+from ..consts import MOD_PAD, SNIP_LINE_SEP
 from .types import (
     Begin,
     DummyBegin,
@@ -34,8 +34,6 @@ from .types import (
     TokenStream,
     Unparsed,
 )
-
-_LINE_SEP = "\n"
 
 
 def raise_err(
@@ -81,11 +79,11 @@ def pushback_chars(context: ParserCtx, *vals: EChar) -> None:
 def _gen_iter(src: str) -> Iterator[EChar]:
     row, col = 1, 1
     for i, c in enumerate(
-        chain.from_iterable(interleave(src.splitlines(), val=(_LINE_SEP,)))
+        chain.from_iterable(interleave(src.splitlines(), val=(SNIP_LINE_SEP,)))
     ):
         yield Index(i=i, row=row, col=col), c
         col += 1
-        if c == _LINE_SEP:
+        if c == SNIP_LINE_SEP:
             row += 1
             col = 0
 

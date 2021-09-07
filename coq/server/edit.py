@@ -1,7 +1,8 @@
 from dataclasses import dataclass
 from itertools import chain, repeat
-from os import linesep
 from pprint import pformat
+from string import Template
+from textwrap import dedent
 from typing import (
     AbstractSet,
     Iterable,
@@ -319,7 +320,12 @@ def apply(nvim: Nvim, buf: Buffer, instructions: Iterable[EditInstruction]) -> N
                 nvim, buf=buf, begin=inst.begin, end=inst.end, text=inst.new_lines
             )
         except NvimError as e:
-            log.warn(f"%s{linesep}%s", e, inst)
+            tpl = """
+            ${e}
+            ${inst}
+            """
+            msg = Template(dedent(tpl)).substitute(e=e, inst=inst)
+            log.warn(f"%s", msg)
 
 
 def _cursor(cursor: NvimPos, instructions: Iterable[EditInstruction]) -> NvimPos:

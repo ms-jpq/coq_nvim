@@ -5,7 +5,7 @@ from contextlib import suppress
 from itertools import chain
 from json import dumps, loads
 from json.decoder import JSONDecodeError
-from os import X_OK, access, linesep
+from os import X_OK, access
 from pathlib import PurePath
 from subprocess import DEVNULL, PIPE
 from typing import AbstractSet, Any, AsyncIterator, Iterator, Optional
@@ -32,8 +32,8 @@ _ENCODER = new_encoder[Request](Request)
 
 def _encode(options: Options, context: Context, limit: int) -> Any:
     row, _ = context.position
-    before = linesep.join(chain(context.lines_before, (context.line_before,)))
-    after = linesep.join(chain((context.line_after,), context.lines_after))
+    before = context.linefeed.join(chain(context.lines_before, (context.line_before,)))
+    after = context.linefeed.join(chain((context.line_after,), context.lines_after))
     ibg = row - options.proximate_lines <= 0
     ieof = row + options.proximate_lines >= context.line_count
 
