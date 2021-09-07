@@ -122,10 +122,10 @@ def _linked_marks(
     texts = dumps(tuple(place_holders()), check_circular=False, ensure_ascii=False)
     resp = ask(nvim, question=LANG("expand marks", texts=texts), default="")
     if resp is not None:
+        row, col = mark.begin
         nvim.options["undolevels"] = nvim.options["undolevels"]
         apply(nvim, buf=buf, instructions=_trans(resp, marks=marks))
         buf_del_extmarks(nvim, buf=buf, id=ns, marks=marks)
-        row, col = mark.begin
         win_set_cursor(nvim, win=win, row=row, col=col)
         nvim.command("startinsert")
         state(inserted=(row, col - 1))
