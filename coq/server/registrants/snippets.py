@@ -33,6 +33,8 @@ from std2.graphlib import recur_sort
 from std2.pathlib import walk
 from std2.pickle import DecodeError, new_decoder, new_encoder
 
+from coq.shared.settings import SnippetWarnings
+
 from ...lang import LANG
 from ...paths.show import fmt_path
 from ...registry import atomic, rpc
@@ -280,8 +282,9 @@ async def _slurp(nvim: Nvim, stack: Stack, warn_outdated: bool) -> None:
 
 @rpc(blocking=True)
 def _load_snips(nvim: Nvim, stack: Stack) -> None:
+    warn_outdated = SnippetWarnings.outdated in stack.settings.clients.snippets.warn
 
-    go(nvim, aw=_slurp(nvim, stack=stack, warn_outdated=True))
+    go(nvim, aw=_slurp(nvim, stack=stack, warn_outdated=warn_outdated))
 
 
 atomic.exec_lua(f"{_load_snips.name}()", ())

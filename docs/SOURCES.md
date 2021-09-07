@@ -96,6 +96,18 @@ Additional snippet load path, if relative, resolves under nvim config dir.
 null
 ```
 
+##### `coq_settings.clients.snippets.warn`
+
+List of things to issue an warning about.
+
+Default is to nag about out of date snippets.
+
+**default:**
+
+```json
+["outdated"]
+```
+
 ---
 
 #### coq_settings.clients.paths

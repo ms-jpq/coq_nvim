@@ -160,6 +160,8 @@ clients:
     short_name: "SNIP"
     weight_adjust: 0
     user_path: null
+    warn:
+      - outdated
 
   tags:
     enabled: True

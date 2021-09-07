@@ -148,9 +148,14 @@ class TSClient(BaseClient):
     slow_threshold: float
 
 
+class SnippetWarnings(Enum):
+    outdated = auto()
+
+
 @dataclass(frozen=True)
 class SnippetClient(BaseClient):
     user_path: Optional[Path]
+    warn: AbstractSet[SnippetWarnings]
 
 
 @dataclass(frozen=True)
