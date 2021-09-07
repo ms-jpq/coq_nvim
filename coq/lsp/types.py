@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Iterator, Literal, Optional, Sequence, TypedDict, Union
+from typing import Any, Iterator, Literal, Optional, Sequence, TypedDict, Union
 
 from ..shared.types import Completion
 
@@ -36,18 +36,28 @@ class _MarkupContent(TypedDict):
 
 
 _InsertTextFormat = int
+_CompletionItemTag = int
+_InsertTextMode = int
 
 
 class CompletionItem(TypedDict):
     label: str
-    additionalTextEdits: Optional[Sequence[TextEdit]]
+    kind: Optional[_CompletionItemKind]
+    tags: Optional[Sequence[_CompletionItemTag]]
+
     detail: Optional[str]
     documentation: Union[str, _MarkupContent, None]
+
+    preselect: Optional[bool]
     filterText: Optional[str]
     insertText: Optional[str]
     insertTextFormat: Optional[_InsertTextFormat]
-    kind: Optional[_CompletionItemKind]
+    insertTextMode: Optional[_InsertTextMode]
+
+    additionalTextEdits: Optional[Sequence[TextEdit]]
     textEdit: Union[TextEdit, InsertReplaceEdit, None]
+
+    data: Optional[Any]
 
 
 class _CompletionList(TypedDict):
