@@ -93,17 +93,14 @@ def segs(seps: AbstractSet[str], line: str) -> Iterator[str]:
         yield "".join(chain((l,), rhs))
 
 
+def _p_sep(line_pre: str) -> str:
+    i1, i2 = line_pre.rfind(sep), line_pre.rfind(altsep or sep)
+    return (altsep or sep) if i2 > i1 else sep
+
+
 def _join(lhs: str, rhs: str) -> str:
     l, r = split(lhs)
     return join(l, normpath(join(r, rhs)))
-
-
-def _p_term(line_pre: str, is_dir: bool) -> str:
-    if not is_dir:
-        return ""
-    else:
-        i1, i2 = line_pre.rfind(sep), line_pre.rfind(altsep or sep)
-        return (altsep or sep) if i2 > i1 else sep
 
 
 def parse(
@@ -122,12 +119,14 @@ def parse(
             if idx and s0 == s1:
                 pass
             else:
+                lsep = _p_sep(s0)
+
                 p = Path(s0)
                 entire = p if p.is_absolute() else base / p
                 with suppress(OSError):
                     if entire.is_dir():
                         for path in scandir(entire):
-                            term = sep if path.is_dir() else ""
+                            term = lsep if path.is_dir() else ""
                             line = _join(segment, path.name) + term
                             yield PurePath(path.path), line
                         return
@@ -153,10 +152,9 @@ def parse(
                                         and len(path.name) + look_ahead >= len(rhs)
                                         and not rhs.startswith(path.name)
                                     ):
-                                        line_pre = _join(lseg, path.name)
-                                        line = line_pre + _p_term(
-                                            line_pre, is_dir=path.is_dir()
-                                        )
+
+                                        term = lsep if path.is_dir() else ""
+                                        line = _join(lseg, path.name) + term
                                         yield PurePath(path.path), line
                                 return
 
