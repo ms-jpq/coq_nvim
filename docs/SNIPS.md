@@ -20,7 +20,7 @@ To disable: simply do not install `coq.artifacts`.
 
 2. `<eval_snips>` -- live repl to ensure snippet is what you want
 
-3. `:COQsnips compile` -- done, you are good to do
+3. `:COQsnips compile` -- boom, you are good to do
 
 ### Compilation
 
