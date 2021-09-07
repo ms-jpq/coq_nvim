@@ -92,7 +92,7 @@ $NVIM_HOME
 |- ./coq-user-snippets/*.snip
 ```
 
-You can also set `coq_settings.clients.snippets.user_path` to load from a custom location, note `coq.nvim` **does not** perform path expansion in any of the user settings.
+You can also set `coq_settings.clients.snippets.user_path` to load from a custom location.
 
 To avoid ambiguity, you must replace `~` with `vim.env.HOME` and so on.
 
