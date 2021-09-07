@@ -16,7 +16,7 @@ To disable: simply do not install `coq.artifacts`.
 
 ### Workflow
 
-1. `:COQsnips edit` -- edits snippet for current file
+1. `:COQsnips edit` -- edits snippet for current filetype
 
 2. `<eval_snips>` -- live repl to ensure snippet is what you want
 
