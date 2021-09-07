@@ -7,7 +7,6 @@ from os.path import (
     curdir,
     expanduser,
     expandvars,
-    join,
     normcase,
     normpath,
     pardir,
@@ -39,6 +38,7 @@ from ...shared.types import Completion, Context, Edit, Extern
 
 _DRIVE_LETTERS = {*ascii_letters}
 _SH_VAR_CHARS = {*ascii_letters, *digits, "_"}
+_SEP_CHARS = sep + altsep if altsep else sep
 
 
 def p_lhs(os: OS, lhs: str) -> str:
@@ -93,17 +93,20 @@ def segs(seps: AbstractSet[str], line: str) -> Iterator[str]:
         yield "".join(chain((l,), rhs))
 
 
-def _join(lhs: str, rhs: str) -> str:
+def _p_sep(line_pre: str) -> str:
+    i1, i2 = line_pre.rfind(sep), line_pre.rfind(altsep or sep)
+    return (altsep or sep) if i2 > i1 else sep
+
+
+def _join(local_sep: str, lhs: str, rhs: str) -> str:
     l, r = split(lhs)
-    return join(l, normpath(join(r, rhs)))
-
-
-def _p_term(line_pre: str, is_dir: bool) -> str:
-    if not is_dir:
-        return ""
-    else:
-        i1, i2 = line_pre.rfind(sep), line_pre.rfind(altsep or sep)
-        return (altsep or sep) if i2 > i1 else sep
+    return (
+        l.rstrip(_SEP_CHARS)
+        + local_sep
+        + normpath(r.rstrip(_SEP_CHARS) + local_sep + rhs.lstrip(_SEP_CHARS)).lstrip(
+            _SEP_CHARS
+        )
+    )
 
 
 def parse(
@@ -115,27 +118,29 @@ def parse(
 ) -> Iterator[Tuple[PurePath, str]]:
     for segment in segs(seps, line=line):
         s1 = segment
-        s2 = expanduser(s1)
+        s2 = expanduser(s1) if s1.startswith("~") else s1
         s3 = expandvars(s2)
 
         for idx, s0 in enumerate((s1, s2, s3)):
             if idx and s0 == s1:
                 pass
             else:
+                local_sep = _p_sep(s0)
+
                 p = Path(s0)
                 entire = p if p.is_absolute() else base / p
                 with suppress(OSError):
                     if entire.is_dir():
                         for path in scandir(entire):
-                            term = sep if path.is_dir() else ""
-                            line = _join(segment, path.name) + term
+                            term = local_sep if path.is_dir() else ""
+                            line = _join(local_sep, lhs=segment, rhs=path.name) + term
                             yield PurePath(path.path), line
                         return
 
                     else:
-                        lft, go, rhs = s0.rpartition(sep)
+                        lft, go, rhs = s0.rpartition(local_sep)
                         if go:
-                            lp, sp, _ = segment.rpartition(sep)
+                            lp, sp, _ = segment.rpartition(local_sep)
                             lseg = lp + sp
 
                             lhs = lft + go
@@ -153,9 +158,11 @@ def parse(
                                         and len(path.name) + look_ahead >= len(rhs)
                                         and not rhs.startswith(path.name)
                                     ):
-                                        line_pre = _join(lseg, path.name)
-                                        line = line_pre + _p_term(
-                                            line_pre, is_dir=path.is_dir()
+
+                                        term = local_sep if path.is_dir() else ""
+                                        line = (
+                                            _join(local_sep, lhs=lseg, rhs=path.name)
+                                            + term
                                         )
                                         yield PurePath(path.path), line
                                 return
