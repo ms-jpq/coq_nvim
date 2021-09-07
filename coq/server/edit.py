@@ -359,7 +359,7 @@ def _restore(nvim: Nvim, win: Window, buf: Buffer, pos: NvimPos) -> Tuple[str, i
     (_, lo), (_, hi) = m1.end, m2.begin
     inserted = after.encode(UTF8)[lo:hi].decode(UTF8, errors="ignore")
 
-    if cur_row == row and lo <= cur_col <= hi:
+    if inserted and cur_row == row and lo <= cur_col <= hi:
         movement = cur_col - lo
     else:
         movement = len(inserted.encode(UTF8))
