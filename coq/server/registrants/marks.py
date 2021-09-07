@@ -117,8 +117,7 @@ def _linked_marks(
     def place_holders() -> Iterator[str]:
         for mark in marks:
             with suppress(NvimError):
-                if p := preview(mark):
-                    yield p
+                yield preview(mark)
 
     texts = dumps(tuple(place_holders()), check_circular=False, ensure_ascii=False)
     resp = ask(nvim, question=LANG("expand marks", texts=texts), default="")
