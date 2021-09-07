@@ -20,6 +20,7 @@ from ..shared.types import (
     SnippetGrammar,
     SnippetRangeEdit,
 )
+from .consts import SNIP_LINE_SEP
 from .parsers.lsp import parser as lsp_parser
 from .parsers.snu import parser as snu_parser
 from .parsers.types import ParseInfo, Region
@@ -113,7 +114,7 @@ def parse(
         lhs + rhs
         for lhs, rhs in zip(chain(("",), repeat(indent)), expanded_text.splitlines())
     )
-    indented_text = context.linefeed.join(indented_lines)
+    indented_text = SNIP_LINE_SEP.join(indented_lines)
     parsed = parser(context, snippet=indented_text, info=ParseInfo(visual=visual))
     old_suffix = (
         context.words_after
