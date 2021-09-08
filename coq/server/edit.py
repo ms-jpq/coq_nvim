@@ -440,7 +440,11 @@ def edit(
                 except NvimError as e:
                     log.warn("%s", e)
 
-            win_set_cursor(nvim, win=win, row=n_row, col=n_col)
+            try:
+                win_set_cursor(nvim, win=win, row=n_row, col=n_col)
+            except NvimError as e:
+                log.warn("%s", e)
+
             if marks:
                 mark(nvim, settings=stack.settings, buf=buf, marks=marks)
 
