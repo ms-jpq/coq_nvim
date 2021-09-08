@@ -15,6 +15,7 @@ from ..shared.types import (
     ContextualEdit,
     Edit,
     Mark,
+    NvimPos,
     RangeEdit,
     SnippetEdit,
     SnippetGrammar,
@@ -41,12 +42,12 @@ def _indent(ctx: Context, old_prefix: str, line_before: str) -> Tuple[int, str]:
 
 
 def _marks(
-    context: Context,
+    pos: NvimPos,
     indent_len: int,
     new_lines: Sequence[str],
     regions: Iterable[Tuple[int, Region]],
 ) -> Iterator[Mark]:
-    row, _ = context.position
+    row, _ = pos
     l0_before = indent_len
     len8 = tuple(accumulate(len(line.encode(UTF8)) + _NL for line in new_lines))
 
@@ -144,7 +145,7 @@ def parse(
 
     marks = tuple(
         _marks(
-            context,
+            context.position,
             indent_len=indent_len,
             new_lines=new_lines,
             regions=parsed.regions,
