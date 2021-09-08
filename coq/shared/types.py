@@ -136,8 +136,10 @@ class Completion:
     sort_by: str
     primary_edit: PrimaryEdit
     icon_match: Optional[str]
+
+    uid: UUID = field(default_factory=uuid4)
     secondary_edits: Sequence[RangeEdit] = ()
     kind: str = ""
     doc: Optional[Doc] = None
-    uid: UUID = field(default_factory=uuid4)
+    client: Optional[str] = None
     extern: Optional[Tuple[Extern, Any]] = None

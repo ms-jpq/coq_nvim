@@ -9,8 +9,10 @@
     end
 
     local n_clients = 0
-    for _ in pairs(vim.lsp.buf_get_clients(0)) do
+    local client_names = {}
+    for id, info in pairs(vim.lsp.buf_get_clients(0)) do
       n_clients = n_clients + 1
+      client_names[id] = info.name
     end
 
     if n_clients == 0 then
@@ -28,7 +30,13 @@
       local on_resp_old = function(err, _, resp, client_id)
         if session_id == cur_session then
           n_clients = n_clients - 1
-          COQlsp_notify(name, session_id, n_clients == 0, resp or vim.NIL)
+          COQlsp_notify(
+            name,
+            session_id,
+            client_names[client_id] or vim.NIL,
+            n_clients == 0,
+            resp or vim.NIL
+          )
         end
       end
 

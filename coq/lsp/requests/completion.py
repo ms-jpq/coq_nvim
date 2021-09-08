@@ -23,6 +23,6 @@ async def request(
     row, c = context.position
     col = len(context.line_before[:c].encode(UTF16)) // 2
 
-    async for reply in async_request(nvim, "COQlsp_comp", (row, col)):
+    async for client, reply in async_request(nvim, "COQlsp_comp", (row, col)):
         resp = cast(CompletionResponse, reply)
-        yield parse(short_name, weight_adjust=weight_adjust, resp=resp)
+        yield parse(short_name, weight_adjust=weight_adjust, client=client, resp=resp)
