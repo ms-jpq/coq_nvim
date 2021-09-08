@@ -112,7 +112,9 @@ def parse(
     expanded_text = expand_tabs(context, text=snippet.new_text)
     indented_lines = tuple(
         lhs + rhs
-        for lhs, rhs in zip(chain(("",), repeat(indent)), expanded_text.splitlines())
+        for lhs, rhs in zip(
+            chain(("",), repeat(indent)), expanded_text.split(SNIP_LINE_SEP)
+        )
     )
     indented_text = SNIP_LINE_SEP.join(indented_lines)
     parsed = parser(context, snippet=indented_text, info=ParseInfo(visual=visual))
@@ -123,7 +125,7 @@ def parse(
     )
 
     new_prefix = parsed.text.encode(UTF8)[: parsed.cursor].decode()
-    new_text = context.linefeed.join(new_prefix.splitlines())
+    new_text = context.linefeed.join(new_prefix.split(SNIP_LINE_SEP))
 
     if isinstance(snippet, SnippetRangeEdit):
         edit: Edit = ParsedEdit(
