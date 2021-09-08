@@ -30,6 +30,6 @@ async def request(
         resp = cast(CompletionResponse, reply)
         if DEBUG:
             thing = len(resp) if isinstance(resp, Sized) else resp
-            msg = f"{client} {thing}"
+            msg = f"LSP !! {client} {thing}"
             log.info("%s", msg)
         yield parse(short_name, weight_adjust=weight_adjust, resp=resp)
