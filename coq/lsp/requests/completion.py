@@ -4,6 +4,7 @@ from typing import AsyncIterator, cast
 
 from pynvim.api.nvim import Nvim
 from pynvim_pp.logging import log
+from std2.types import is_iterable_not_str
 
 from ...consts import DEBUG
 from ...registry import atomic
@@ -29,7 +30,11 @@ async def request(
     async for client, reply in async_request(nvim, "COQlsp_comp", (row, col)):
         resp = cast(CompletionResponse, reply)
         if DEBUG:
-            thing = len(resp) if isinstance(resp, Sized) else resp
+            thing = (
+                len(resp)
+                if isinstance(resp, Sized) and is_iterable_not_str(resp)
+                else resp
+            )
             msg = f"LSP !! {client} {thing}"
             log.info("%s", msg)
         yield parse(short_name, weight_adjust=weight_adjust, resp=resp)
