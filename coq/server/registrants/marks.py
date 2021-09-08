@@ -35,7 +35,11 @@ from ..state import state
 
 def _ls_marks(nvim: Nvim, ns: int, buf: Buffer) -> Sequence[ExtMark]:
     ordered = sorted(
-        buf_get_extmarks(nvim, id=ns, buf=buf),
+        (
+            mark
+            for mark in buf_get_extmarks(nvim, id=ns, buf=buf)
+            if mark.end >= mark.begin
+        ),
         key=lambda m: (m.idx % MOD_PAD, m.begin, m.end),
     )
     return ordered
