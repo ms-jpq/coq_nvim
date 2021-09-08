@@ -1,6 +1,6 @@
 coq = coq or {}
 
-local is_win = vim.api.nvim_call_function("has", {"win32"}) == 1
+local is_win = vim.fn.has("win32") == 1
 local linesep = "\n"
 local POLLING_RATE = 10
 
