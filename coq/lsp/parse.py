@@ -123,7 +123,11 @@ def parse_item(
         return cmp
 
 
-def parse(short_name: str, weight_adjust: float, resp: CompletionResponse) -> LSPcomp:
+def parse(
+    short_name: str,
+    weight_adjust: float,
+    resp: CompletionResponse,
+) -> LSPcomp:
     if _falsy(resp):
         return LSPcomp(local_cache=False, items=iter(()))
 

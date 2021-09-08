@@ -16,7 +16,7 @@ atomic.exec_lua(_LUA, ())
 
 async def request(nvim: Nvim, item: CompletionItem) -> Optional[Completion]:
     stream = async_request(nvim, "COQlsp_preview", item)
-    async for reply in stream:
+    async for _, reply in stream:
         if reply:
             break
     else:
