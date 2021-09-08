@@ -32,6 +32,9 @@ class ParsedEdit(RangeEdit):
     new_prefix: str
 
 
+_NL = len(SNIP_LINE_SEP.encode(UTF8))
+
+
 def _indent(ctx: Context, old_prefix: str, line_before: str) -> Tuple[int, str]:
     l = len(line_before.encode(UTF8)) - len(old_prefix.encode(UTF8))
     spaces = " " * ctx.tabstop
@@ -47,7 +50,7 @@ def _marks(
     row, _ = position
     l0_before = indent_len
     len8 = tuple(
-        accumulate(len(line.encode(UTF8)) for line in edit.new_text.splitlines(True))
+        accumulate(len(line.encode(UTF8)) + _NL for line in edit.new_text.splitlines())
     )
 
     for r_idx, region in regions:
