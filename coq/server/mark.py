@@ -31,7 +31,7 @@ def mark(nvim: Nvim, settings: Settings, buf: Buffer, marks: Sequence[Mark]) -> 
     try:
         buf_set_extmarks(nvim, buf=buf, id=ns, marks=emarks)
     except NvimError:
-        log.warn("%s", f"bad mark location {mark}")
+        log.warn("%s", f"bad mark locations {marks}")
 
     msg = LANG("added marks", regions=" ".join(f"[{mark.text}]" for mark in marks))
     write(nvim, msg)

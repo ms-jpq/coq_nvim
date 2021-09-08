@@ -1,12 +1,12 @@
 from dataclasses import dataclass
 from json import loads
-from os import linesep
 from pathlib import PurePath
 from typing import AbstractSet, Iterable, Iterator, Mapping, Sequence, Tuple, Union
 
 from std2.pickle import new_decoder
 
 from ...shared.types import SnippetGrammar
+from ..consts import SNIP_LINE_SEP
 from ..types import ParsedSnippet
 
 
@@ -33,7 +33,7 @@ def _body(body: Union[str, Sequence[str]]) -> str:
     if isinstance(body, str):
         return body
     elif isinstance(body, Sequence):
-        return linesep.join(body)
+        return SNIP_LINE_SEP.join(body)
     else:
         raise ValueError(body)
 
@@ -43,7 +43,7 @@ def load_lsp(
 ) -> Tuple[str, AbstractSet[str], Sequence[ParsedSnippet]]:
     filetype = path.stem.strip()
 
-    text = linesep.join(line.rstrip() for _, line in lines)
+    text = SNIP_LINE_SEP.join(line.rstrip() for _, line in lines)
     json = loads(text)
     fmt = _DECODER(json)
 

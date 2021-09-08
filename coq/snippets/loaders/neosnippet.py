@@ -1,11 +1,11 @@
 from difflib import get_close_matches
-from os import linesep
 from pathlib import PurePath
 from string import whitespace
 from textwrap import dedent
 from typing import AbstractSet, Iterable, MutableSequence, MutableSet, Sequence, Tuple
 
 from ...shared.types import SnippetGrammar
+from ..consts import SNIP_LINE_SEP
 from ..types import ParsedSnippet
 from .parse import raise_err
 
@@ -57,7 +57,7 @@ def load_neosnippet(
 
     def push() -> None:
         if current_name:
-            content = dedent(linesep.join(current_lines))
+            content = dedent(SNIP_LINE_SEP.join(current_lines))
             snippet = ParsedSnippet(
                 grammar=grammar,
                 filetype=filetype,

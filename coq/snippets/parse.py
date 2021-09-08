@@ -15,11 +15,13 @@ from ..shared.types import (
     ContextualEdit,
     Edit,
     Mark,
+    NvimPos,
     RangeEdit,
     SnippetEdit,
     SnippetGrammar,
     SnippetRangeEdit,
 )
+from .consts import SNIP_LINE_SEP
 from .parsers.lsp import parser as lsp_parser
 from .parsers.snu import parser as snu_parser
 from .parsers.types import ParseInfo, Region
@@ -30,6 +32,9 @@ class ParsedEdit(RangeEdit):
     new_prefix: str
 
 
+_NL = len(SNIP_LINE_SEP.encode(UTF8))
+
+
 def _indent(ctx: Context, old_prefix: str, line_before: str) -> Tuple[int, str]:
     l = len(line_before.encode(UTF8)) - len(old_prefix.encode(UTF8))
     spaces = " " * ctx.tabstop
@@ -37,19 +42,14 @@ def _indent(ctx: Context, old_prefix: str, line_before: str) -> Tuple[int, str]:
 
 
 def _marks(
-    ctx: Context,
+    pos: NvimPos,
     indent_len: int,
-    edit: Edit,
+    new_lines: Sequence[str],
     regions: Iterable[Tuple[int, Region]],
 ) -> Iterator[Mark]:
-    row, _ = ctx.position
+    row, _ = pos
     l0_before = indent_len
-    len8 = tuple(
-        accumulate(
-            len(line.encode(UTF8)) + len(ctx.linefeed)
-            for line in edit.new_text.split(ctx.linefeed)
-        )
-    )
+    len8 = tuple(accumulate(len(line.encode(UTF8)) + _NL for line in new_lines))
 
     for r_idx, region in regions:
         r1, c1, r2, c2 = None, None, None, None
@@ -76,7 +76,7 @@ def _marks(
 
         assert (r1 is not None and c1 is not None) and (
             r2 is not None and c2 is not None
-        ), pformat((region, edit.new_text))
+        ), pformat((region, new_lines))
         begin = r1, c1
         end = r2, c2
         mark = Mark(idx=r_idx, begin=begin, end=end, text=region.text)
@@ -111,9 +111,11 @@ def parse(
     expanded_text = expand_tabs(context, text=snippet.new_text)
     indented_lines = tuple(
         lhs + rhs
-        for lhs, rhs in zip(chain(("",), repeat(indent)), expanded_text.splitlines())
+        for lhs, rhs in zip(
+            chain(("",), repeat(indent)), expanded_text.splitlines(True)
+        )
     )
-    indented_text = context.linefeed.join(indented_lines)
+    indented_text = "".join(indented_lines)
     parsed = parser(context, snippet=indented_text, info=ParseInfo(visual=visual))
     old_suffix = (
         context.words_after
@@ -122,9 +124,12 @@ def parse(
     )
 
     new_prefix = parsed.text.encode(UTF8)[: parsed.cursor].decode()
+    new_lines = parsed.text.split(SNIP_LINE_SEP)
+    new_text = context.linefeed.join(new_lines)
+
     if isinstance(snippet, SnippetRangeEdit):
         edit: Edit = ParsedEdit(
-            new_text=parsed.text,
+            new_text=new_text,
             begin=snippet.begin,
             end=snippet.end,
             encoding=snippet.encoding,
@@ -132,7 +137,7 @@ def parse(
         )
     else:
         edit = ContextualEdit(
-            new_text=parsed.text,
+            new_text=new_text,
             old_prefix=old_prefix,
             old_suffix=old_suffix,
             new_prefix=new_prefix,
@@ -140,9 +145,9 @@ def parse(
 
     marks = tuple(
         _marks(
-            context,
+            context.position,
             indent_len=indent_len,
-            edit=edit,
+            new_lines=new_lines,
             regions=parsed.regions,
         )
     )
