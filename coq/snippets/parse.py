@@ -21,6 +21,7 @@ from ..shared.types import (
     SnippetGrammar,
     SnippetRangeEdit,
 )
+from .consts import SNIP_LINE_SEP
 from .parsers.lsp import parser as lsp_parser
 from .parsers.snu import parser as snu_parser
 from .parsers.types import ParseInfo, Region
@@ -122,7 +123,7 @@ def parse(
     )
 
     new_prefix = parsed.text.encode(UTF8)[: parsed.cursor].decode()
-    new_text = context.linefeed.join(parsed.text.splitlines())
+    new_text = context.linefeed.join(parsed.text.split(SNIP_LINE_SEP))
 
     if isinstance(snippet, SnippetRangeEdit):
         edit: Edit = ParsedEdit(
