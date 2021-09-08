@@ -25,4 +25,5 @@ async def request(
 
     async for client, reply in async_request(nvim, "COQlsp_comp", (row, col)):
         resp = cast(CompletionResponse, reply)
-        yield parse(short_name, weight_adjust=weight_adjust, client=client, resp=resp)
+        print(client, type(reply), flush=True)
+        yield parse(short_name, weight_adjust=weight_adjust,  resp=resp)

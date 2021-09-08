@@ -141,5 +141,4 @@ class Completion:
     secondary_edits: Sequence[RangeEdit] = ()
     kind: str = ""
     doc: Optional[Doc] = None
-    client: Optional[str] = None
     extern: Optional[Tuple[Extern, Any]] = None
