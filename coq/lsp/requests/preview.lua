@@ -16,7 +16,7 @@
     end
 
     if n_clients == 0 then
-      COQlsp_notify(name, session_id, true, vim.NIL)
+      COQlsp_notify(name, session_id, vim.NIL, true, vim.NIL)
     else
       local on_resp_old = function(err, _, resp, client_id)
         if session_id == cur_session then
