@@ -15,7 +15,6 @@ from ..shared.types import (
     ContextualEdit,
     Edit,
     Mark,
-    NvimPos,
     RangeEdit,
     SnippetEdit,
     SnippetGrammar,
@@ -42,16 +41,14 @@ def _indent(ctx: Context, old_prefix: str, line_before: str) -> Tuple[int, str]:
 
 
 def _marks(
-    position: NvimPos,
+    context: Context,
     indent_len: int,
-    edit: Edit,
+    new_lines: Sequence[str],
     regions: Iterable[Tuple[int, Region]],
 ) -> Iterator[Mark]:
-    row, _ = position
+    row, _ = context.position
     l0_before = indent_len
-    len8 = tuple(
-        accumulate(len(line.encode(UTF8)) + _NL for line in edit.new_text.splitlines())
-    )
+    len8 = tuple(accumulate(len(line.encode(UTF8)) + _NL for line in new_lines))
 
     for r_idx, region in regions:
         r1, c1, r2, c2 = None, None, None, None
@@ -78,7 +75,7 @@ def _marks(
 
         assert (r1 is not None and c1 is not None) and (
             r2 is not None and c2 is not None
-        ), pformat((region, edit.new_text))
+        ), pformat((region, new_lines))
         begin = r1, c1
         end = r2, c2
         mark = Mark(idx=r_idx, begin=begin, end=end, text=region.text)
@@ -126,7 +123,8 @@ def parse(
     )
 
     new_prefix = parsed.text.encode(UTF8)[: parsed.cursor].decode()
-    new_text = context.linefeed.join(parsed.text.split(SNIP_LINE_SEP))
+    new_lines = parsed.text.split(SNIP_LINE_SEP)
+    new_text = context.linefeed.join(new_lines)
 
     if isinstance(snippet, SnippetRangeEdit):
         edit: Edit = ParsedEdit(
@@ -146,9 +144,9 @@ def parse(
 
     marks = tuple(
         _marks(
-            context.position,
+            context,
             indent_len=indent_len,
-            edit=edit,
+            new_lines=new_lines,
             regions=parsed.regions,
         )
     )
