@@ -1,5 +1,4 @@
 from collections import deque
-from contextlib import suppress
 from itertools import chain
 from json import dumps
 from textwrap import dedent
@@ -13,8 +12,6 @@ from pynvim_pp.api import (
     ask,
     buf_del_extmarks,
     buf_get_extmarks,
-    buf_get_lines,
-    buf_linefeed,
     create_ns,
     cur_win,
     extmarks_text,
@@ -23,6 +20,7 @@ from pynvim_pp.api import (
 )
 from pynvim_pp.lib import write
 from pynvim_pp.logging import log
+from std2.itertools import snd
 
 from ...lang import LANG
 from ...registry import rpc
@@ -98,7 +96,7 @@ def _linked_marks(
     buf: Buffer,
 ) -> bool:
     marks = tuple(chain((mark,), linked))
-    place_holders = tuple(extmarks_text(nvim, buf=buf, marks=marks).values())
+    place_holders = tuple(map(snd, extmarks_text(nvim, buf=buf, marks=marks)))
     texts = dumps(place_holders, check_circular=False, ensure_ascii=False)
     resp = ask(nvim, question=LANG("expand marks", texts=texts), default="")
     if resp is not None:
