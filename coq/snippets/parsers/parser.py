@@ -17,7 +17,7 @@ from pynvim_pp.lib import encode
 from std2.itertools import deiter, interleave
 from std2.types import never
 
-from ...shared.types import UTF8, Context
+from ...shared.types import Context
 from ..consts import MOD_PAD, SNIP_LINE_SEP
 from .types import (
     Begin,
