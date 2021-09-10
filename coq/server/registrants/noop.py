@@ -7,7 +7,7 @@ from sys import stdout
 from typing import Sequence, Tuple
 
 from pynvim import Nvim
-from pynvim_pp.lib import write
+from pynvim_pp.lib import encode, write
 from std2.argparse import ArgparseError, ArgParser
 from std2.pickle import new_decoder
 from yaml import safe_load
@@ -48,6 +48,6 @@ def now(nvim: Nvim, stack: Stack, args: Sequence[str]) -> None:
             birds = " ".join(chain(star, sample(_HELO.cocks, k=chars), star))
             helo = choice(_HELO.helo)
             msg = f"{birds}  {helo}{linesep}"
-            encoded = msg.encode("UTF-8")
+            encoded = encode(msg)
             stdout.buffer.write(encoded)
             stdout.buffer.flush()

@@ -10,6 +10,7 @@ from tempfile import NamedTemporaryFile
 from typing import Optional
 from urllib.error import URLError
 
+from pynvim_pp.lib import decode
 from pynvim_pp.logging import log
 from std2.asyncio import run_in_executor
 from std2.platform import OS, os
@@ -35,7 +36,7 @@ def _triple() -> Optional[str]:
 
 def _version(timeout: float) -> str:
     with urlopen(_VER, timeout=timeout) as resp:
-        return resp.read().decode()
+        return decode(resp.read())
 
 
 def _uri(timeout: float) -> Optional[str]:

@@ -7,6 +7,7 @@ from sqlite3 import Connection, OperationalError
 from threading import Lock
 from typing import AbstractSet, Iterator, Mapping, cast
 
+from pynvim_pp.lib import encode
 from std2.asyncio import run_in_executor
 from std2.sqlite3 import with_transaction
 
@@ -35,7 +36,7 @@ _NIL_TAG = Tag(
 
 def _init(db_dir: Path, cwd: PurePath) -> Connection:
     ncwd = normcase(cwd)
-    name = f"{md5(ncwd.encode()).hexdigest()}-{_SCHEMA}"
+    name = f"{md5(encode(ncwd)).hexdigest()}-{_SCHEMA}"
     db = (db_dir / name).with_suffix(".sqlite3")
     db.parent.mkdir(parents=True, exist_ok=True)
     conn = Connection(str(db), isolation_level=None)

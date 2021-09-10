@@ -28,7 +28,7 @@ from pynvim_pp.api import (
     win_get_cursor,
     win_set_cursor,
 )
-from pynvim_pp.lib import write
+from pynvim_pp.lib import decode, encode, write
 from pynvim_pp.logging import log
 from std2.types import never
 
@@ -76,11 +76,11 @@ class _Lines:
 
 
 def _lines(lines: Sequence[str]) -> _Lines:
-    b_lines8 = tuple(line.encode(UTF8) for line in lines)
+    b_lines8 = tuple(map(encode, lines))
     return _Lines(
         lines=lines,
         b_lines8=b_lines8,
-        b_lines16=tuple(line.encode(UTF16) for line in lines),
+        b_lines16=tuple(encode(line, encoding=UTF16) for line in lines),
         len8=tuple(len(line) for line in b_lines8),
     )
 
@@ -124,14 +124,14 @@ def _contextual_edit_trans(
     r2 = row + (len(old_suffix_lines) - 1)
 
     c1 = (
-        lines.len8[r1] - len(old_prefix_lines[0].encode(UTF8))
+        lines.len8[r1] - len(encode(old_prefix_lines[0]))
         if len(old_prefix_lines) > 1
-        else col - len(old_prefix_lines[0].encode(UTF8))
+        else col - len(encode(old_prefix_lines[0]))
     )
     c2 = (
-        len(old_suffix_lines[-1].encode(UTF8))
+        len(encode(old_suffix_lines[-1]))
         if len(old_prefix_lines) > 1
-        else col + len(old_suffix_lines[0].encode(UTF8))
+        else col + len(encode(old_suffix_lines[0]))
     )
 
     begin = r1, c1
@@ -141,11 +141,11 @@ def _contextual_edit_trans(
     new_prefix_lines = edit.new_prefix.split(ctx.linefeed)
     cursor_yoffset = -len(old_prefix_lines) + len(new_prefix_lines)
     cursor_xpos = (
-        len(new_prefix_lines[-1].encode(UTF8))
+        len(encode(new_prefix_lines[-1]))
         if len(new_prefix_lines) > 1
-        else len(ctx.line_before.encode(UTF8))
-        - len(old_prefix_lines[-1].encode(UTF8))
-        + len(new_prefix_lines[0].encode(UTF8))
+        else len(encode(ctx.line_before))
+        - len(encode(old_prefix_lines[-1]))
+        + len(encode(new_prefix_lines[0]))
     )
 
     inst = EditInstruction(
@@ -192,8 +192,8 @@ def _range_edit_trans(
         (r1, ec1), (r2, ec2) = sorted((edit.begin, edit.end))
 
         if edit.encoding == UTF16:
-            c1 = len(lines.b_lines16[r1][: ec1 * 2].decode(UTF16).encode(UTF8))
-            c2 = len(lines.b_lines16[r2][: ec2 * 2].decode(UTF16).encode(UTF8))
+            c1 = len(encode(decode(lines.b_lines16[r1][: ec1 * 2], encoding=UTF16)))
+            c2 = len(encode(decode(lines.b_lines16[r2][: ec2 * 2], encoding=UTF16)))
         elif edit.encoding == UTF8:
             c1 = len(lines.b_lines8[r1][:ec1])
             c2 = len(lines.b_lines8[r2][:ec2])
@@ -211,9 +211,9 @@ def _range_edit_trans(
         cursor_yoffset = (r2 - r1) + (len(lines_before) - 1)
         cursor_xpos = (
             (
-                len(lines_before[-1].encode(UTF8))
+                len(encode(lines_before[-1]))
                 if len(lines_before) > 1
-                else len(lines.b_lines8[r2][:c1]) + len(lines_before[0].encode(UTF8))
+                else len(lines.b_lines8[r2][:c1]) + len(encode(lines_before[0]))
             )
             if primary
             else -1
@@ -309,7 +309,7 @@ def _shift(instructions: Iterable[EditInstruction]) -> Iterator[EditInstruction]
             new_lines=inst.new_lines,
         )
         row_shift += (r2 - r1) + len(inst.new_lines) - 1
-        f_length = len(inst.new_lines[-1].encode(UTF8)) if inst.new_lines else 0
+        f_length = len(encode(inst.new_lines[-1])) if inst.new_lines else 0
         col_shift[r2] = -(c2 - c1) + f_length if r1 == r2 else -c2 + f_length
 
 
@@ -363,12 +363,12 @@ def _restore(nvim: Nvim, win: Window, buf: Buffer, pos: NvimPos) -> Tuple[str, i
     cur_row, cur_col = win_get_cursor(nvim, win=win)
 
     (_, lo), (_, hi) = m1.end, m2.begin
-    inserted = after.encode(UTF8)[lo:hi].decode(UTF8, errors="ignore")
+    inserted = decode(encode(after)[lo:hi])
 
     if inserted and cur_row == row and lo <= cur_col <= hi:
         movement = cur_col - lo
     else:
-        movement = len(inserted.encode(UTF8))
+        movement = len(encode(inserted))
 
     if inserted:
         buf_set_text(nvim, buf=buf, begin=m1.end, end=m2.begin, text=("",))

@@ -10,7 +10,7 @@ from pathlib import PurePath
 from subprocess import DEVNULL, PIPE
 from typing import AbstractSet, Any, AsyncIterator, Iterator, Optional
 
-from pynvim_pp.lib import awrite, go
+from pynvim_pp.lib import awrite, decode, encode, go
 from pynvim_pp.logging import log
 from std2.pickle import DecodeError, new_decoder, new_encoder
 
@@ -174,14 +174,14 @@ class Worker(BaseWorker[BaseClient, None]):
                 else:
                     assert self._proc.stdin and self._proc.stdout
                     try:
-                        self._proc.stdin.write(json.encode())
+                        self._proc.stdin.write(encode(json))
                         self._proc.stdin.write(b"\n")
                         await self._proc.stdin.drain()
                         out = await self._proc.stdout.readline()
                     except (ConnectionError, LimitOverrunError):
                         return await self._clean()
                     else:
-                        return out.decode()
+                        return decode(out)
 
         if self._lock.locked():
             return None

@@ -2,6 +2,7 @@ from asyncio import gather
 from dataclasses import dataclass
 from typing import AbstractSet, Iterator, Mapping, Optional, Tuple
 
+from pynvim_pp.lib import decode
 from std2.asyncio.subprocess import call
 
 from ..shared.parse import coalesce
@@ -32,7 +33,7 @@ async def _panes() -> Iterator[_Pane]:
         else:
 
             def cont() -> Iterator[_Pane]:
-                for line in proc.out.decode().strip().splitlines():
+                for line in decode(proc.out).strip().splitlines():
                     pane_id, pane_active, window_active = line.split(" ")
                     pane = _Pane(
                         uid=pane_id,
@@ -70,7 +71,7 @@ async def _screenshot(
         if proc.code:
             return uid, iter(())
         else:
-            words = coalesce(proc.out.decode(), unifying_chars=unifying_chars)
+            words = coalesce(decode(proc.out), unifying_chars=unifying_chars)
             return uid, words
 
 

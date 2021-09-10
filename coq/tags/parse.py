@@ -2,6 +2,7 @@ from json import loads
 from json.decoder import JSONDecodeError
 from typing import Iterator, Mapping, MutableMapping, MutableSequence, Tuple
 
+from pynvim_pp.lib import decode
 from pynvim_pp.logging import log
 from std2.asyncio.subprocess import call
 from std2.string import removeprefix, removesuffix
@@ -42,7 +43,7 @@ async def run(*args: str) -> str:
         except FileNotFoundError:
             return ""
         else:
-            return proc.out.decode()
+            return decode(proc.out)
 
 
 def _unescape(pattern: str) -> str:

@@ -13,6 +13,7 @@ from typing import (
     Union,
 )
 
+from pynvim_pp.lib import encode
 from std2.itertools import deiter, interleave
 from std2.types import never
 
@@ -144,7 +145,7 @@ def token_parser(context: ParserCtx, stream: TokenStream) -> Parsed:
             token = token
             bad_tokens.append((idx, token))
         elif isinstance(token, str):
-            idx += len(token.encode(UTF8))
+            idx += len(encode(token))
             slices.append(token)
         elif isinstance(token, Begin):
             begins.append((idx, token))
@@ -165,7 +166,7 @@ def token_parser(context: ParserCtx, stream: TokenStream) -> Parsed:
     text = "".join(slices)
     cursor = next(
         iter(raw_regions.get(0, ())),
-        Region(begin=len(text.encode(UTF8)), end=0, text=""),
+        Region(begin=len(encode(text)), end=0, text=""),
     ).begin
 
     if bad_tokens:

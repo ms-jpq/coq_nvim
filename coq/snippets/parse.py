@@ -3,6 +3,7 @@ from itertools import accumulate, chain, repeat
 from pprint import pformat
 from typing import AbstractSet, Iterable, Iterator, Sequence, Tuple
 
+from pynvim_pp.lib import decode, encode
 from pynvim_pp.logging import log
 from std2.types import never
 
@@ -10,7 +11,6 @@ from ..consts import DEBUG
 from ..shared.parse import is_word
 from ..shared.trans import expand_tabs
 from ..shared.types import (
-    UTF8,
     Context,
     ContextualEdit,
     Edit,
@@ -32,11 +32,11 @@ class ParsedEdit(RangeEdit):
     new_prefix: str
 
 
-_NL = len(SNIP_LINE_SEP.encode(UTF8))
+_NL = len(encode(SNIP_LINE_SEP))
 
 
 def _indent(ctx: Context, old_prefix: str, line_before: str) -> Tuple[int, str]:
-    l = len(line_before.encode(UTF8)) - len(old_prefix.encode(UTF8))
+    l = len(encode(line_before)) - len(encode(old_prefix))
     spaces = " " * ctx.tabstop
     return l, " " * l if ctx.expandtab else (" " * l).replace(spaces, "\t")
 
@@ -49,7 +49,7 @@ def _marks(
 ) -> Iterator[Mark]:
     row, _ = pos
     l0_before = indent_len
-    len8 = tuple(accumulate(len(line.encode(UTF8)) + _NL for line in new_lines))
+    len8 = tuple(accumulate(len(encode(line)) + _NL for line in new_lines))
 
     for r_idx, region in regions:
         r1, c1, r2, c2 = None, None, None, None
@@ -123,7 +123,7 @@ def parse(
         else ""
     )
 
-    new_prefix = parsed.text.encode(UTF8)[: parsed.cursor].decode()
+    new_prefix = decode(encode(parsed.text)[: parsed.cursor])
     new_lines = parsed.text.split(SNIP_LINE_SEP)
     new_text = context.linefeed.join(new_lines)
 
