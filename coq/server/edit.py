@@ -358,24 +358,28 @@ def _parse(stack: Stack, state: State, data: UserData) -> Tuple[Edit, Sequence[M
 def _restore(nvim: Nvim, win: Window, buf: Buffer, pos: NvimPos) -> Tuple[str, int]:
     row, _ = pos
     ns = create_ns(nvim, ns=NS)
-    m1, m2 = buf_get_extmarks(nvim, buf=buf, id=ns)
-    after, *_ = buf_get_lines(nvim, buf=buf, lo=row, hi=row + 1)
-    cur_row, cur_col = win_get_cursor(nvim, win=win)
-
-    (_, lo), (_, hi) = m1.end, m2.begin
-
-    binserted = encode(after)[lo:hi]
-    inserted = decode(binserted)
-
-    if inserted and cur_row == row and lo <= cur_col <= hi:
-        movement = cur_col - lo
+    marks = tuple(buf_get_extmarks(nvim, buf=buf, id=ns))
+    if len(marks) != 2:
+        return "", 0
     else:
-        movement = len(binserted)
+        m1, m2 = marks
+        after, *_ = buf_get_lines(nvim, buf=buf, lo=row, hi=row + 1)
+        cur_row, cur_col = win_get_cursor(nvim, win=win)
 
-    if inserted:
-        buf_set_text(nvim, buf=buf, begin=m1.end, end=m2.begin, text=("",))
+        (_, lo), (_, hi) = m1.end, m2.begin
 
-    return inserted, movement
+        binserted = encode(after)[lo:hi]
+        inserted = decode(binserted)
+
+        if inserted and cur_row == row and lo <= cur_col <= hi:
+            movement = cur_col - lo
+        else:
+            movement = len(binserted)
+
+        if inserted:
+            buf_set_text(nvim, buf=buf, begin=m1.end, end=m2.begin, text=("",))
+
+        return inserted, movement
 
 
 def edit(
