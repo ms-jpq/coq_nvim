@@ -363,12 +363,14 @@ def _restore(nvim: Nvim, win: Window, buf: Buffer, pos: NvimPos) -> Tuple[str, i
     cur_row, cur_col = win_get_cursor(nvim, win=win)
 
     (_, lo), (_, hi) = m1.end, m2.begin
-    inserted = decode(encode(after)[lo:hi])
+
+    binserted = encode(after)[lo:hi]
+    inserted = decode(binserted)
 
     if inserted and cur_row == row and lo <= cur_col <= hi:
         movement = cur_col - lo
     else:
-        movement = len(encode(inserted))
+        movement = len(binserted)
 
     if inserted:
         buf_set_text(nvim, buf=buf, begin=m1.end, end=m2.begin, text=("",))
