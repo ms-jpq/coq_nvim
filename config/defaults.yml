@@ -5,6 +5,7 @@ auto_start: False
 keymap:
   recommended: True
 
+  dot_repeat: .
   manual_complete: <c-space>
   bigger_preview: <c-k>
   jump_to_mark: <c-h>
