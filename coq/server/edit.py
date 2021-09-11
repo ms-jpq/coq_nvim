@@ -21,7 +21,6 @@ from pynvim.api.common import NvimError
 from pynvim_pp.api import (
     buf_get_extmarks,
     buf_get_lines,
-    buf_get_text,
     buf_set_text,
     create_ns,
     cur_win,
@@ -39,6 +38,7 @@ from ..shared.trans import trans_adjusted
 from ..shared.types import (
     UTF8,
     UTF16,
+    ApplicableEdit,
     Context,
     ContextualEdit,
     Edit,
@@ -85,7 +85,11 @@ def _lines(lines: Sequence[str]) -> _Lines:
     )
 
 
-def _rows_to_fetch(ctx: Context, edit: Edit, *edits: Edit) -> Tuple[int, int]:
+def _rows_to_fetch(
+    ctx: Context,
+    edit: ApplicableEdit,
+    *edits: ApplicableEdit,
+) -> Tuple[int, int]:
     row, _ = ctx.position
 
     def cont() -> Iterator[int]:
@@ -230,7 +234,7 @@ def _instructions(
     ctx: Context,
     unifying_chars: AbstractSet[str],
     lines: _Lines,
-    primary: Edit,
+    primary: ApplicableEdit,
     secondary: Sequence[RangeEdit],
 ) -> Iterator[EditInstruction]:
     if isinstance(primary, RangeEdit):
@@ -359,15 +363,18 @@ def _restore(nvim: Nvim, win: Window, buf: Buffer, pos: NvimPos) -> Tuple[str, i
         return "", 0
     else:
         m1, m2 = marks
-        inserted = buf_get_text(nvim, buf=buf, begin=m1.end, end=m2.begin)
+        after, *_ = buf_get_lines(nvim, buf=buf, lo=row, hi=row + 1)
         cur_row, cur_col = win_get_cursor(nvim, win=win)
 
         (_, lo), (_, hi) = m1.end, m2.begin
 
+        binserted = encode(after)[lo:hi]
+        inserted = decode(binserted)
+
         if inserted and cur_row == row and lo <= cur_col <= hi:
             movement = cur_col - lo
         else:
-            movement = len(encode(inserted))
+            movement = len(binserted)
 
         if inserted:
             buf_set_text(nvim, buf=buf, begin=m1.end, end=m2.begin, text=("",))
