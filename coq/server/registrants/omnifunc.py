@@ -195,22 +195,26 @@ def _store_inserted(
 
             if isinstance(edit, RangeEdit):
                 pre = reversed(buf_get_text(nvim, buf=buf, begin=m1.begin, end=m1.end))
-                r = (
-                    takewhile(
-                        lambda c: is_word(c, unifying_chars=unifying_chars),
-                        pre,
-                    )
-                    if is_word(text[:1], unifying_chars=unifying_chars)
-                    else takewhile(
-                        lambda c: not is_word(c, unifying_chars=unifying_chars),
-                        pre,
+                prefix = "".join(
+                    reversed(
+                        tuple(
+                            takewhile(
+                                lambda c: is_word(c, unifying_chars=unifying_chars),
+                                pre,
+                            )
+                            if is_word(text[:1], unifying_chars=unifying_chars)
+                            else takewhile(
+                                lambda c: not is_word(c, unifying_chars=unifying_chars),
+                                pre,
+                            )
+                        )
                     )
                 )
-                ins = "".join(reversed(tuple(r))) + text
+                inserted = prefix + text
             else:
-                ins = text
+                inserted = text
 
-            state(repeat=ins)
+            state(repeat=inserted)
 
 
 _DECODER = new_decoder[UserData](UserData)
