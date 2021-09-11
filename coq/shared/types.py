@@ -113,9 +113,6 @@ class Mark:
     text: str
 
 
-Edits = Union[SnippetEdit, SnippetRangeEdit, ContextualEdit, RangeEdit, Edit]
-
-
 @dataclass(frozen=True)
 class Doc:
     text: str
@@ -133,7 +130,7 @@ class Completion:
     weight_adjust: float
     label: str
     sort_by: str
-    primary_edit: Edits
+    primary_edit: Edit
     icon_match: Optional[str]
 
     uid: UUID = field(default_factory=uuid4)

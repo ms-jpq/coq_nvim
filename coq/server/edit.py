@@ -42,7 +42,6 @@ from ..shared.types import (
     Context,
     ContextualEdit,
     Edit,
-    Edits,
     Mark,
     NvimPos,
     RangeEdit,
@@ -86,7 +85,7 @@ def _lines(lines: Sequence[str]) -> _Lines:
     )
 
 
-def _rows_to_fetch(ctx: Context, edit: Edits, *edits: Edits) -> Tuple[int, int]:
+def _rows_to_fetch(ctx: Context, edit: Edit, *edits: Edit) -> Tuple[int, int]:
     row, _ = ctx.position
 
     def cont() -> Iterator[int]:
@@ -231,7 +230,7 @@ def _instructions(
     ctx: Context,
     unifying_chars: AbstractSet[str],
     lines: _Lines,
-    primary: Edits,
+    primary: Edit,
     secondary: Sequence[RangeEdit],
 ) -> Iterator[EditInstruction]:
     if isinstance(primary, RangeEdit):
