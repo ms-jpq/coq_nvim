@@ -5,7 +5,7 @@ from uuid import UUID
 from pynvim import Nvim
 from std2.pickle import new_encoder
 
-from ...shared.types import Doc, Extern, PrimaryEdit, RangeEdit
+from ...shared.types import Doc, Extern, Edits, RangeEdit
 
 
 @dataclass(frozen=True)
@@ -14,7 +14,7 @@ class UserData:
     instance: UUID
     sort_by: str
     change_uid: UUID
-    primary_edit: PrimaryEdit
+    primary_edit: Edits
     secondary_edits: Sequence[RangeEdit]
     doc: Optional[Doc]
     extern: Optional[Tuple[Extern, Any]]

@@ -1,15 +1,19 @@
 from asyncio import Event, Lock, Task, gather, sleep, wait
 from asyncio.events import AbstractEventLoop
+from contextlib import suppress
 from dataclasses import replace
+from itertools import takewhile
 from queue import SimpleQueue
-from typing import Any, Literal, Mapping, Optional, Sequence, Tuple, Union
+from typing import AbstractSet, Any, Literal, Mapping, Optional, Sequence, Tuple, Union
 from uuid import uuid4
 
-from pynvim import Nvim
-from pynvim.api.nvim import Nvim
+from pynvim.api import Buffer, Nvim
+from pynvim.api.common import NvimError
 from pynvim_pp.api import (
     ExtMark,
+    buf_get_extmarks,
     buf_get_lines,
+    buf_get_text,
     buf_set_extmarks,
     clear_ns,
     create_ns,
@@ -22,8 +26,9 @@ from std2.pickle import DecodeError, new_decoder
 
 from ...lsp.requests.preview import request
 from ...registry import atomic, autocmd, rpc
+from ...shared.parse import is_word
 from ...shared.timeit import timeit
-from ...shared.types import Context, Extern, NvimPos
+from ...shared.types import Context, Edit, Extern, NvimPos, RangeEdit
 from ..context import context
 from ..edit import NS, edit
 from ..nvim.completions import UserData, complete
@@ -178,6 +183,36 @@ async def _resolve(nvim: Nvim, stack: Stack, user_data: UserData) -> UserData:
                     )
 
 
+def _store_inserted(
+    nvim: Nvim, unifying_chars: AbstractSet[str], buf: Buffer, edit: Edit
+) -> None:
+    ns = create_ns(nvim, ns=NS)
+    marks = tuple(buf_get_extmarks(nvim, buf=buf, id=ns))
+    if len(marks) == 2:
+        with suppress(NvimError):
+            m1, m2 = marks
+            text = buf_get_text(nvim, buf=buf, begin=m1.end, end=m2.begin)
+
+            if isinstance(edit, RangeEdit):
+                pre = buf_get_text(nvim, buf=buf, begin=m1.begin, end=m1.end)
+                r = (
+                    takewhile(
+                        lambda c: is_word(c, unifying_chars=unifying_chars),
+                        reversed(pre),
+                    )
+                    if is_word(text[:1], unifying_chars=unifying_chars)
+                    else takewhile(
+                        lambda c: not is_word(c, unifying_chars=unifying_chars),
+                        reversed(pre),
+                    )
+                )
+                ins = "".join(reversed(tuple(r))) + text
+            else:
+                ins = text
+
+            state(repeat=ins)
+
+
 _DECODER = new_decoder[UserData](UserData)
 
 
@@ -219,6 +254,13 @@ def _comp_done(nvim: Nvim, stack: Stack, event: Mapping[str, Any]) -> None:
                         def cont() -> None:
                             inserted = edit(nvim, stack=stack, state=s, data=ud)
                             ins = inserted or (-1, -1)
+                            if inserted:
+                                _store_inserted(
+                                    nvim,
+                                    unifying_chars=stack.settings.match.unifying_chars,
+                                    edit=ud.primary_edit,
+                                    buf=buf,
+                                )
                             state(inserted=ins, commit_id=uuid4())
 
                         await async_call(nvim, cont)
