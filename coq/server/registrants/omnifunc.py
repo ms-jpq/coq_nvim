@@ -191,12 +191,14 @@ def _store_inserted(
     tick: int = buf_get_var(nvim, buf=buf, key="changedtick") or -1
     marks = tuple(buf_get_extmarks(nvim, buf=buf, id=ns))
     if len(marks) == 2:
+        m1, m2 = marks
         try:
-            m1, m2 = marks
             text = buf_get_text(nvim, buf=buf, begin=m1.end, end=m2.begin)
-
+            pre = reversed(buf_get_text(nvim, buf=buf, begin=m1.begin, end=m1.end))
+        except NvimError as e:
+            log.warn("%s", e)
+        else:
             if isinstance(edit, RangeEdit):
-                pre = reversed(buf_get_text(nvim, buf=buf, begin=m1.begin, end=m1.end))
                 prefix = "".join(
                     reversed(
                         tuple(
@@ -218,8 +220,6 @@ def _store_inserted(
 
             rep = Repeat(buf=buf.number, tick=tick, text=rep_text)
             state(repeat=rep)
-        except NvimError as e:
-            log.warn("%s", e)
 
 
 _DECODER = new_decoder[UserData](UserData)
