@@ -40,7 +40,7 @@ async def run(*args: str) -> str:
                 *args,
                 check_returncode=set(),
             )
-        except FileNotFoundError:
+        except (FileNotFoundError, PermissionError):
             return ""
         else:
             return decode(proc.out)
