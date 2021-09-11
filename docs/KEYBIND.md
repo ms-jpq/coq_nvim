@@ -26,16 +26,6 @@ Set up modern keybinds:
 true
 ```
 
-#### `coq_settings.keymap.dot_repeat`
-
-Like `.`, will insert last edit
-
-**default:**
-
-```json
-"."
-```
-
 #### `coq_settings.keymap.manual_complete`
 
 Manually trigger completions, with a longer timeout.
