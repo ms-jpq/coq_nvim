@@ -199,7 +199,9 @@ def sort_by(unifying_chars: AbstractSet[str], new_text: str) -> str:
     def cont() -> Iterator[str]:
         seen_syms = False
         for idx, char in enumerate(reversed(new_text)):
-            if is_word(char, unifying_chars=unifying_chars):
+            if char.isspace():
+                break
+            elif is_word(char, unifying_chars=unifying_chars):
                 if seen_syms:
                     break
                 else:
@@ -211,7 +213,7 @@ def sort_by(unifying_chars: AbstractSet[str], new_text: str) -> str:
                 else:
                     seen_syms = True
 
-    sort_by = "".join(reversed(tuple(cont())))
+    sort_by = "".join(reversed(tuple(cont()))) or new_text
     return sort_by
 
 
