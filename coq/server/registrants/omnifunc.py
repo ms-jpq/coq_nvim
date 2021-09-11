@@ -1,6 +1,5 @@
 from asyncio import Event, Lock, Task, gather, sleep, wait
 from asyncio.events import AbstractEventLoop
-from contextlib import suppress
 from dataclasses import replace
 from itertools import takewhile
 from queue import SimpleQueue
@@ -27,7 +26,7 @@ from std2.pickle import DecodeError, new_decoder
 
 from ...lsp.requests.preview import request
 from ...registry import atomic, autocmd, rpc
-from ...shared.parse import is_word
+from ...shared.parse import is_sym, is_word
 from ...shared.timeit import timeit
 from ...shared.types import Context, Edit, Extern, NvimPos, RangeEdit
 from ..context import context
@@ -208,7 +207,7 @@ def _store_inserted(
                             )
                             if is_word(text[:1], unifying_chars=unifying_chars)
                             else takewhile(
-                                lambda c: not is_word(c, unifying_chars=unifying_chars),
+                                lambda c: is_sym(c, unifying_chars=unifying_chars),
                                 pre,
                             )
                         )
