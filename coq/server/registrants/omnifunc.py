@@ -194,16 +194,16 @@ def _store_inserted(
             text = buf_get_text(nvim, buf=buf, begin=m1.end, end=m2.begin)
 
             if isinstance(edit, RangeEdit):
-                pre = buf_get_text(nvim, buf=buf, begin=m1.begin, end=m1.end)
+                pre = reversed(buf_get_text(nvim, buf=buf, begin=m1.begin, end=m1.end))
                 r = (
                     takewhile(
                         lambda c: is_word(c, unifying_chars=unifying_chars),
-                        reversed(pre),
+                        pre,
                     )
                     if is_word(text[:1], unifying_chars=unifying_chars)
                     else takewhile(
                         lambda c: not is_word(c, unifying_chars=unifying_chars),
-                        reversed(pre),
+                        pre,
                     )
                 )
                 ins = "".join(reversed(tuple(r))) + text
