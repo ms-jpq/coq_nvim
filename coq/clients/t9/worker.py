@@ -63,7 +63,7 @@ def sort_by(unifying_chars: AbstractSet[str], new_text: str) -> str:
                 yield char
                 seen_syms = True
 
-    sort_by = "".join(reversed(tuple(cont()))) or new_text
+    sort_by = "".join(reversed(tuple(cont())))
     return sort_by
 
 
