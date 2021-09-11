@@ -14,6 +14,7 @@ from pynvim_pp.api import (
     buf_get_extmarks,
     buf_get_lines,
     buf_get_text,
+    buf_get_var,
     buf_set_extmarks,
     clear_ns,
     create_ns,
@@ -33,7 +34,7 @@ from ..context import context
 from ..edit import NS, edit
 from ..nvim.completions import UserData, complete
 from ..rt_types import Stack
-from ..state import State, state
+from ..state import Repeat, State, state
 from ..trans import trans
 
 _Q: SimpleQueue = SimpleQueue()
@@ -187,6 +188,7 @@ def _store_inserted(
     nvim: Nvim, unifying_chars: AbstractSet[str], buf: Buffer, edit: Edit
 ) -> None:
     ns = create_ns(nvim, ns=NS)
+    tick: int = buf_get_var(nvim, buf=buf, key="changedtick") or -1
     marks = tuple(buf_get_extmarks(nvim, buf=buf, id=ns))
     if len(marks) == 2:
         with suppress(NvimError):
@@ -210,11 +212,12 @@ def _store_inserted(
                         )
                     )
                 )
-                inserted = prefix + text
+                rep_text = prefix + text
             else:
-                inserted = text
+                rep_text = text
 
-            state(repeat=inserted)
+            rep = Repeat(buf=buf.number, tick=tick, text=rep_text)
+            state(repeat=rep)
 
 
 _DECODER = new_decoder[UserData](UserData)

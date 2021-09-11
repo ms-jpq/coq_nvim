@@ -12,13 +12,20 @@ from ..shared.types import Context, NvimPos
 
 
 @dataclass(frozen=True)
+class Repeat:
+    buf: int
+    tick: int
+    text: str
+
+
+@dataclass(frozen=True)
 class State:
     cwd: PurePath
     screen: Tuple[int, int]
     change_id: UUID
     commit_id: UUID
     preview_id: UUID
-    repeat: str
+    repeat: Repeat
     nono_bufs: AbstractSet[int]
     context: Context
     inserted: NvimPos
@@ -34,7 +41,7 @@ _state = State(
     change_id=uuid4(),
     commit_id=uuid4(),
     preview_id=uuid4(),
-    repeat="",
+    repeat=Repeat(buf=-1, tick=-1, text=""),
     nono_bufs=set(),
     context=EMPTY_CONTEXT,
     inserted=(-1, -1),
@@ -48,7 +55,7 @@ def state(
     change_id: Optional[UUID] = None,
     commit_id: Optional[UUID] = None,
     preview_id: Optional[UUID] = None,
-    repeat: Optional[str] = None,
+    repeat: Optional[Repeat] = None,
     nono_bufs: AbstractSet[int] = frozenset(),
     context: Optional[Context] = None,
     inserted: Optional[NvimPos] = None,
@@ -63,7 +70,7 @@ def state(
             change_id=change_id or _state.change_id,
             commit_id=commit_id or _state.commit_id,
             preview_id=preview_id or _state.preview_id,
-            repeat=repeat if repeat is not None else _state.repeat,
+            repeat=repeat if repeat else _state.repeat,
             nono_bufs=_state.nono_bufs | nono_bufs,
             context=context or _state.context,
             inserted=inserted or _state.inserted,
