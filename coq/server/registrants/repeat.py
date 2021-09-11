@@ -16,4 +16,4 @@ def dot_repeat(nvim: Nvim, stack: Stack) -> None:
         new_rep = Repeat(buf=rep.buf, tick=tick + 1, text=rep.text)
         state(repeat=new_rep)
     else:
-        nvim.command("norm! .")
+        nvim.api.feedkeys(".", "n", False)
