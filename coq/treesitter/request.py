@@ -5,7 +5,7 @@ from string import capwords
 from typing import Iterator, Optional, Sequence, Tuple
 
 from pynvim.api.nvim import Nvim
-from pynvim_pp.lib import async_call, go
+from pynvim_pp.lib import async_call, go, recode
 
 from ..registry import atomic, rpc
 from ..server.rt_types import Stack
@@ -43,7 +43,7 @@ def _parse(load: Optional[SimpleRawPayload]) -> Optional[SimplePayload]:
     if not load:
         return None
     else:
-        text = load.get("text", "").encode(errors="ignore").decode()
+        text = recode(load.get("text", ""))
         if not text:
             return None
         else:

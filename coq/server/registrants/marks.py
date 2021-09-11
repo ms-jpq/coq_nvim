@@ -1,5 +1,4 @@
 from collections import deque
-from contextlib import suppress
 from itertools import chain
 from json import dumps
 from textwrap import dedent
@@ -13,10 +12,9 @@ from pynvim_pp.api import (
     ask,
     buf_del_extmarks,
     buf_get_extmarks,
-    buf_get_lines,
-    buf_linefeed,
     create_ns,
     cur_win,
+    extmarks_text,
     win_get_buf,
     win_set_cursor,
 )
@@ -25,7 +23,6 @@ from pynvim_pp.logging import log
 
 from ...lang import LANG
 from ...registry import rpc
-from ...shared.types import UTF8
 from ...snippets.consts import MOD_PAD
 from ..edit import EditInstruction, apply
 from ..mark import NS
@@ -35,7 +32,11 @@ from ..state import state
 
 def _ls_marks(nvim: Nvim, ns: int, buf: Buffer) -> Sequence[ExtMark]:
     ordered = sorted(
-        buf_get_extmarks(nvim, id=ns, buf=buf),
+        (
+            mark
+            for mark in buf_get_extmarks(nvim, id=ns, buf=buf)
+            if mark.end >= mark.begin
+        ),
         key=lambda m: (m.idx % MOD_PAD, m.begin, m.end),
     )
     return ordered
@@ -94,32 +95,8 @@ def _linked_marks(
     buf: Buffer,
 ) -> bool:
     marks = tuple(chain((mark,), linked))
-
-    def preview(mark: ExtMark) -> str:
-        linesep = buf_linefeed(nvim, buf=buf)
-        (r1, c1), (r2, c2) = mark.begin, mark.end
-        lo, hi = min(r1, r2), max(r1, r2) + 1
-        lines = buf_get_lines(nvim, buf=buf, lo=lo, hi=hi)
-
-        def cont() -> Iterator[str]:
-            for idx, line in enumerate(lines, start=lo):
-                if idx == r1 and idx == r2:
-                    yield line.encode(UTF8)[c1:c2].decode(UTF8)
-                elif idx == r1:
-                    yield line.encode(UTF8)[c1:].decode(UTF8)
-                elif idx == r2:
-                    yield line.encode(UTF8)[:c2].decode(UTF8)
-                else:
-                    yield line
-
-        return linesep.join(cont())
-
-    def place_holders() -> Iterator[str]:
-        for mark in marks:
-            with suppress(NvimError):
-                yield preview(mark)
-
-    texts = dumps(tuple(place_holders()), check_circular=False, ensure_ascii=False)
+    place_holders = tuple(text for _, text in extmarks_text(nvim, buf=buf, marks=marks))
+    texts = dumps(place_holders, check_circular=False, ensure_ascii=False)
     resp = ask(nvim, question=LANG("expand marks", texts=texts), default="")
     if resp is not None:
         row, col = mark.begin

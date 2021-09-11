@@ -1,6 +1,6 @@
 from argparse import ArgumentParser, Namespace
 from concurrent.futures import ThreadPoolExecutor
-from contextlib import redirect_stderr, redirect_stdout
+from contextlib import nullcontext, redirect_stderr, redirect_stdout
 from io import StringIO
 from multiprocessing import cpu_count
 from pathlib import Path
@@ -27,12 +27,12 @@ def parse_args() -> Namespace:
 
     sub_parsers = parser.add_subparsers(dest="command", required=True)
 
-    s_run = sub_parsers.add_parser("run")
-    s_run.add_argument("--socket", required=True)
-    s_run.add_argument("--xdg")
+    with nullcontext(sub_parsers.add_parser("run")) as p:
+        p.add_argument("--socket", required=True)
+        p.add_argument("--xdg")
 
-    s_deps = sub_parsers.add_parser("deps")
-    s_deps.add_argument("--xdg")
+    with nullcontext(sub_parsers.add_parser("deps")) as p:
+        p.add_argument("--xdg")
 
     return parser.parse_args()
 

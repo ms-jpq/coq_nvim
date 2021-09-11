@@ -7,6 +7,7 @@ from pynvim import Nvim
 from pynvim.api import Buffer
 from pynvim_pp.api import LFfmt, buf_get_lines
 from pynvim_pp.atomic import Atomic
+from pynvim_pp.lib import decode, encode
 from pynvim_pp.text_object import gen_split
 
 from ..consts import DEBUG
@@ -69,8 +70,8 @@ def context(
     lines_before, lines_after = lines[:r], lines[r + 1 :]
 
     lhs, _, rhs = comment_str.partition("%s")
-    b_line = line.encode()
-    before, after = b_line[:col].decode(), b_line[col:].decode()
+    b_line = encode(line)
+    before, after = decode(b_line[:col]), decode(b_line[col:])
     split = gen_split(lhs=before, rhs=after, unifying_chars=options.unifying_chars)
 
     ctx = Context(

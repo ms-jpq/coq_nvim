@@ -15,7 +15,7 @@ from pynvim_pp.api import (
     create_ns,
     cur_buf,
 )
-from pynvim_pp.lib import async_call, go
+from pynvim_pp.lib import async_call, encode, go
 from pynvim_pp.logging import log, with_suppress
 from std2.asyncio import cancel, run_in_executor
 from std2.pickle import DecodeError, new_decoder
@@ -23,7 +23,7 @@ from std2.pickle import DecodeError, new_decoder
 from ...lsp.requests.preview import request
 from ...registry import atomic, autocmd, rpc
 from ...shared.timeit import timeit
-from ...shared.types import UTF8, Context, Extern, NvimPos
+from ...shared.types import Context, Extern, NvimPos
 from ..context import context
 from ..edit import NS, edit
 from ..nvim.completions import UserData, complete
@@ -206,7 +206,7 @@ def _comp_done(nvim: Nvim, stack: Stack, event: Mapping[str, Any]) -> None:
                 e2 = ExtMark(
                     idx=2,
                     begin=(row, col),
-                    end=(row, len(before.encode(UTF8))),
+                    end=(row, len(encode(before))),
                     meta={},
                 )
                 buf_set_extmarks(nvim, buf=buf, id=ns, marks=(e1, e2))

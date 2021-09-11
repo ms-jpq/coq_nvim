@@ -2,6 +2,7 @@ from json import loads
 from pathlib import Path
 from typing import Any
 
+from pynvim_pp.lib import decode
 from std2.asyncio.subprocess import call
 
 _TOP_LV = Path(__file__).resolve().parent
@@ -34,7 +35,7 @@ async def _build(dockerfile: Path) -> str:
         cwd=_TOP_LV,
         capture_stderr=False,
     )
-    return proc.out.decode()
+    return decode(proc.out)
 
 
 async def lsp() -> Any:

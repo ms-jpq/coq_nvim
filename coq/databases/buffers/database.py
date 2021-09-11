@@ -6,6 +6,7 @@ from threading import Lock
 from typing import AbstractSet, Iterator, Mapping, Optional, Sequence, Tuple
 from uuid import uuid4
 
+from pynvim_pp.lib import recode
 from std2.asyncio import run_in_executor
 from std2.sqlite3 import with_transaction
 
@@ -100,8 +101,7 @@ class BDB:
         def m0() -> Iterator[Tuple[int, str, bytes]]:
             for line_num, line in enumerate(lines, start=lo):
                 line_id = uuid4().bytes
-                safe_line = line.encode(errors="ignore").decode(errors="ignore")
-                yield line_num, safe_line, line_id
+                yield line_num, recode(line), line_id
 
         line_info = tuple(m0())
 

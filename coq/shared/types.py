@@ -4,8 +4,8 @@ from pathlib import PurePath
 from typing import Any, Literal, Optional, Sequence, Tuple, Union
 from uuid import UUID, uuid4
 
-UTF8 = "UTF-8"
-UTF16 = "UTF-16-LE"
+UTF8: Literal["UTF-8"] = "UTF-8"
+UTF16: Literal["UTF-16-LE"] = "UTF-16-LE"
 
 # In nvim, the col is a ut8 byte offset
 NvimPos = Tuple[int, int]

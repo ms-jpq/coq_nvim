@@ -3,6 +3,7 @@ from pathlib import Path
 from typing import AsyncIterator, cast
 
 from pynvim.api.nvim import Nvim
+from pynvim_pp.lib import encode
 from pynvim_pp.logging import log
 from std2.types import is_iterable_not_str
 
@@ -25,7 +26,7 @@ async def request(
     context: Context,
 ) -> AsyncIterator[LSPcomp]:
     row, c = context.position
-    col = len(context.line_before[:c].encode(UTF16)) // 2
+    col = len(encode(context.line_before[:c], encoding=UTF16)) // 2
 
     async for client, reply in async_request(nvim, "COQlsp_comp", (row, col)):
         resp = cast(CompletionResponse, reply)
