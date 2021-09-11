@@ -9,7 +9,6 @@ from ..state import state
 from .marks import nav_mark
 from .omnifunc import omnifunc
 from .preview import preview_preview
-from .repeat import dot_repeat
 from .user_snippets import eval_snips
 
 
@@ -59,9 +58,6 @@ def set_options(nvim: Nvim, mapping: KeyMapping, fast_close: bool) -> None:
             << "pumvisible() ? '<c-e><c-x><c-u>' : '<c-x><c-u>'"
         )
         keymap.nv(mapping.manual_complete) << r"<c-\><c-n>i<c-x><c-u>"
-
-    if mapping.dot_repeat:
-        keymap.n(mapping.dot_repeat) << f"<cmd>lua {dot_repeat.name}()<cr>"
 
     if mapping.recommended:
         keymap.i("<esc>", expr=True) << "pumvisible() ? '<c-e><esc>' : '<esc>'"
