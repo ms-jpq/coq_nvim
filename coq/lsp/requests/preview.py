@@ -1,17 +1,11 @@
-from pathlib import Path
 from typing import Optional, cast
 
 from pynvim import Nvim
 
 from ...lsp.types import CompletionItem
-from ...registry import atomic
 from ..parse import parse_item
 from ..types import Completion
 from .request import async_request
-
-_LUA = (Path(__file__).resolve().parent / "preview.lua").read_text("UTF-8")
-
-atomic.exec_lua(_LUA, ())
 
 
 async def request(nvim: Nvim, item: CompletionItem) -> Optional[Completion]:

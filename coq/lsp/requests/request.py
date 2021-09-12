@@ -2,13 +2,14 @@ from asyncio import Condition
 from collections import defaultdict
 from dataclasses import dataclass
 from itertools import count
+from pathlib import Path
 from typing import Any, AsyncIterator, MutableMapping, Optional, Sequence, Tuple
 
 from pynvim.api.nvim import Nvim
 from pynvim_pp.lib import async_call, go
 from std2.pickle import new_decoder
 
-from ...registry import rpc
+from ...registry import atomic, rpc
 from ...server.rt_types import Stack
 from ...shared.timeit import timeit
 
@@ -29,11 +30,15 @@ class _Payload:
     reply: Any
 
 
+_LUA = (Path(__file__).resolve().parent / "lsp.lua").read_text("UTF-8")
+atomic.exec_lua(_LUA, ())
+
 _UIDS = count()
 _CONDS: MutableMapping[str, Condition] = {}
 _STATE: MutableMapping[str, _Session] = defaultdict(
     lambda: _Session(uid=-1, done=True, acc=())
 )
+
 
 _DECODER = new_decoder[_Payload](_Payload)
 
