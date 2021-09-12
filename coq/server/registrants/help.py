@@ -11,6 +11,7 @@ from std2.argparse import ArgparseError, ArgParser
 from std2.types import never
 
 from ...consts import (
+    MD_C_SOURCES,
     MD_CONF,
     MD_DISPLAY,
     MD_FUZZY,
@@ -21,6 +22,7 @@ from ...consts import (
     MD_SNIPS,
     MD_SOURCES,
     MD_STATS,
+    URI_C_SOURCES,
     URI_CONF,
     URI_DISPLAY,
     URI_FUZZY,
@@ -47,6 +49,7 @@ class _Topics(Enum):
     misc = auto()
     stats = auto()
     perf = auto()
+    custom_sources = auto()
 
 
 def _directory(topic: _Topics) -> Tuple[Path, str]:
@@ -70,6 +73,8 @@ def _directory(topic: _Topics) -> Tuple[Path, str]:
         return MD_STATS, URI_STATISTICS
     elif topic is _Topics.perf:
         return MD_PREF, URI_PREF
+    elif topic is _Topics.custom_sources:
+        return MD_C_SOURCES, URI_C_SOURCES
     else:
         never(topic)
 
