@@ -120,6 +120,7 @@
           local go, maybe_cancel =
             pcall(
             fn,
+            pos,
             function(resp)
               on_resp(nil, "", resp, id)
             end
