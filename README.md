@@ -268,6 +268,8 @@ There is built-in [help command](https://github.com/ms-jpq/coq_nvim/tree/coq/doc
 
 - [:COQhelp stats](https://github.com/ms-jpq/coq_nvim/tree/coq/docs/STATS.md)
 
+- [:COQhelp custom_sources](https://github.com/ms-jpq/coq_nvim/tree/coq/docs/CUSTOM_SOURCES.md)
+
 ## FAQ
 
 #### Default hotkeys?
