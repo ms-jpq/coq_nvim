@@ -12,21 +12,23 @@ from ..types import ParsedSnippet
 
 @dataclass
 class _Unit:
-    prefix: Union[str, Sequence[str]]
     body: Union[str, Sequence[str]]
+    prefix: Union[str, Sequence[str], None] = None
     description: Union[str, Sequence[str]] = ""
 
 
 _DECODER = new_decoder[Mapping[str, _Unit]](Mapping[str, _Unit], strict=False)
 
 
-def _prefix(prefix: Union[str, Sequence[str]]) -> AbstractSet[str]:
-    if isinstance(prefix, str):
+def _prefix(prefix: Union[str, Sequence[str], None], content: str) -> AbstractSet[str]:
+    if prefix is None:
+        return {content}
+    elif isinstance(prefix, str):
         return {prefix}
     elif isinstance(prefix, Sequence):
         return {*prefix}
     else:
-        raise ValueError(prefix)
+        assert False
 
 
 def _body(body: Union[str, Sequence[str]]) -> str:
@@ -35,7 +37,7 @@ def _body(body: Union[str, Sequence[str]]) -> str:
     elif isinstance(body, Sequence):
         return SNIP_LINE_SEP.join(body)
     else:
-        raise ValueError(body)
+        assert False
 
 
 def load_lsp(
@@ -50,13 +52,15 @@ def load_lsp(
     def cont() -> Iterator[ParsedSnippet]:
         for label, values in fmt.items():
             content = _body(values.body)
+            matches = _prefix(values.prefix, content=content)
+            doc = _body(values.description)
             snippet = ParsedSnippet(
                 grammar=grammar,
                 filetype=filetype,
                 content=content,
-                doc=_body(values.description),
+                doc=doc,
                 label=label,
-                matches=_prefix(values.prefix),
+                matches=matches,
             )
             yield snippet
 
