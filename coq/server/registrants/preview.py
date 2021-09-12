@@ -338,6 +338,7 @@ def _virt_text(nvim: Nvim, ghost: GhostText, text: str) -> None:
 
 
 _DECODER = new_decoder[_Event](_Event)
+_UDECODER = new_decoder[UUID](UUID)
 
 
 @rpc(blocking=True, schedule=True)
@@ -347,8 +348,8 @@ def _cmp_changed(nvim: Nvim, stack: Stack, event: Mapping[str, Any] = {}) -> Non
         try:
             ev = _DECODER(event)
             user_data = ev.completed_item.get("user_data", "")
-            uid = UUID(user_data)
-        except (DecodeError, ValueError):
+            uid = _UDECODER(user_data)
+        except DecodeError:
             pass
         else:
             if metric := stack.metrics.get(uid):
