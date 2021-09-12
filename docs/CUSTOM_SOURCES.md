@@ -6,6 +6,8 @@ The adapters turn various vim plugin's output into [LSP](https://microsoft.githu
 
 ## How to write a source:
 
+It's brain dead:
+
 ```lua
 -- `COQsources` is a global registry of sources
 COQsources = COQsources or {}

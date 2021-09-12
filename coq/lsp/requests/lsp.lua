@@ -39,7 +39,7 @@
         end
       end
 
-      local ids, cancel = callback(on_resp)
+      local _, cancel = callback(on_resp)
       cancels[name] = cancel
     end
   end
@@ -100,15 +100,25 @@
       end
     end
 
+    local cancels = {}
+    local cancel = function()
+      for _, cont in ipairs(cancels) do
+        pcall(cont)
+      end
+    end
+
     req(
       name,
       session_id,
       {#client_fns, client_names},
       function(on_resp)
         for _, fn in ipairs(client_fns) do
-          client_fns(on_resp)
+          local maybe_cancel = client_fns(on_resp)
+          if type(maybe_cancel) == "function" then
+            table.insert(cancels, maybe_cancel)
+          end
         end
-        return {}, nil
+        return {}, cancel
       end
     )
   end
