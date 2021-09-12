@@ -19,6 +19,7 @@ from pynvim_pp.lib import async_call, encode, go
 from pynvim_pp.logging import log, with_suppress
 from std2.asyncio import cancel, run_in_executor
 from std2.pickle import new_decoder
+from std2.pickle.types import DecodeError
 
 from ...lsp.requests.preview import request
 from ...registry import atomic, autocmd, rpc
@@ -194,7 +195,7 @@ def _comp_done(nvim: Nvim, stack: Stack, event: Mapping[str, Any]) -> None:
     if data:
         try:
             uid = _UDECODER(data)
-        except ValueError:
+        except DecodeError:
             pass
         else:
             s = state()
