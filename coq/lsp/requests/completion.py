@@ -13,7 +13,7 @@ from ..types import CompletionResponse, LSPcomp
 from .request import async_request
 
 
-async def request(
+async def request_lsp(
     nvim: Nvim,
     short_name: str,
     weight_adjust: float,
@@ -33,3 +33,15 @@ async def request(
             msg = f"LSP !! {client} {thing}"
             log.info("%s", msg)
         yield parse(short_name, weight_adjust=weight_adjust, resp=resp)
+
+
+async def request_thirdparty(
+    nvim: Nvim,
+    short_name: str,
+    weight_adjust: float,
+    context: Context,
+) -> AsyncIterator[LSPcomp]:
+    row, col = context.position
+    async for client, reply in async_request(nvim, "COQlsp_third_party", (row, col)):
+        resp = cast(CompletionResponse, reply)
+        yield parse(client or short_name, weight_adjust=weight_adjust, resp=resp)
