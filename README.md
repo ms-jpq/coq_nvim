@@ -180,6 +180,10 @@ _T9 is disabled by default, I might remove it, if they do not improve the CPU us
 
 Enable via: `coq_settings.clients.tabnine.enabled=true`
 
+### Third Party
+
+- [Brain dead simple to write](https://github.com/ms-jpq/coq_nvim/tree/coq/docs/CUSTOM_SOURCES.md)
+
 ### Statistics
 
 `:COQstats`
