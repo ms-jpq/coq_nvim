@@ -43,5 +43,6 @@ async def request_thirdparty(
 ) -> AsyncIterator[LSPcomp]:
     row, col = context.position
     async for client, reply in async_request(nvim, "COQlsp_third_party", (row, col)):
+        name = client or short_name
         resp = cast(CompletionResponse, reply)
-        yield parse(client or short_name, weight_adjust=weight_adjust, resp=resp)
+        yield parse(name, weight_adjust=weight_adjust, resp=resp)
