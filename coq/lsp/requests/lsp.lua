@@ -88,4 +88,16 @@
       end
     )
   end
+
+  COQlsp_third_party = function(name, session_id, pos)
+    local sources = COQsources or {}
+    req(
+      name,
+      session_id,
+      {0, {}},
+      function(on_resp)
+        return {}, nil
+      end
+    )
+  end
 end)(...)
