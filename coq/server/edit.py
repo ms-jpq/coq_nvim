@@ -383,7 +383,7 @@ def _restore(nvim: Nvim, win: Window, buf: Buffer, pos: NvimPos) -> Tuple[str, i
 
 
 def edit(
-    nvim: Nvim, stack: Stack, state: State, data: UserData
+    nvim: Nvim, stack: Stack, state: State, data: UserData, synthetic: bool
 ) -> Optional[Tuple[int, int]]:
     win = cur_win(nvim)
     buf = win_get_buf(nvim, win=win)
@@ -431,7 +431,8 @@ def edit(
             )
             n_col = p_col + movement
 
-            stack.idb.inserted(data.instance.bytes, sort_by=data.sort_by)
+            if not synthetic:
+                stack.idb.inserted(data.instance.bytes, sort_by=data.sort_by)
 
             apply(nvim, buf=buf, instructions=instructions)
             if inserted:

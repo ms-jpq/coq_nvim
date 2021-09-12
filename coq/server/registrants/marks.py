@@ -79,7 +79,7 @@ def _single_mark(
         log.warn("%s", dedent(msg))
     else:
         nvim.command("startinsert")
-        state(inserted=(row, col))
+        state(inserted_pos=(row, col))
         msg = LANG("applied mark", marks_left=len(marks))
         write(nvim, msg)
     finally:
@@ -105,7 +105,7 @@ def _linked_marks(
         buf_del_extmarks(nvim, buf=buf, id=ns, marks=marks)
         win_set_cursor(nvim, win=win, row=row, col=col)
         nvim.command("startinsert")
-        state(inserted=(row, col - 1))
+        state(inserted_pos=(row, col - 1))
         return True
     else:
         return False

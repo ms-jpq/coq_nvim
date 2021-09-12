@@ -72,7 +72,7 @@ def _launch_loop(nvim: Nvim, stack: Stack) -> None:
                         ),
                     )
                     should = (
-                        _should_cont(s.inserted, prev=s.context, cur=ctx)
+                        _should_cont(s.inserted_pos, prev=s.context, cur=ctx)
                         if ctx
                         else False
                     )
@@ -97,7 +97,7 @@ def _launch_loop(nvim: Nvim, stack: Stack) -> None:
                             )
                     else:
                         await async_call(nvim, lambda: complete(nvim, col=col, comp=()))
-                        state(inserted=(-1, -1))
+                        state(inserted_pos=(-1, -1))
 
         async def c1() -> None:
             nonlocal incoming
@@ -217,9 +217,15 @@ def _comp_done(nvim: Nvim, stack: Stack, event: Mapping[str, Any]) -> None:
                         ud = await _resolve(nvim, stack=stack, user_data=user_data)
 
                         def cont() -> None:
-                            inserted = edit(nvim, stack=stack, state=s, data=ud)
-                            ins = inserted or (-1, -1)
-                            state(inserted=ins, commit_id=uuid4())
+                            inserted_at = edit(
+                                nvim, stack=stack, state=s, data=ud, synthetic=False
+                            )
+                            ins_pos = inserted_at or (-1, -1)
+                            state(
+                                inserted_pos=ins_pos,
+                                last_edit=user_data.primary_edit,
+                                commit_id=uuid4(),
+                            )
 
                         await async_call(nvim, cont)
                     else:
