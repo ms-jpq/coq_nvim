@@ -8,10 +8,9 @@ from ..databases.snippets.database import SDB
 from ..databases.tags.database import CTDB
 from ..databases.tmux.database import TMDB
 from ..databases.treesitter.database import TDB
-from ..shared.runtime import Supervisor, Worker
+from ..shared.runtime import Metric, Supervisor, Worker
 from ..shared.settings import Settings
 from ..shared.types import Completion
-from .trans import Metric
 
 
 @dataclass(frozen=True)

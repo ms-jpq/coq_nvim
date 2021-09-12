@@ -21,6 +21,7 @@ from std2.asyncio import cancel, run_in_executor
 
 from ...lsp.requests.preview import request
 from ...registry import atomic, autocmd, rpc
+from ...shared.runtime import Metric
 from ...shared.timeit import timeit
 from ...shared.types import Context, Extern, NvimPos
 from ..completions import complete
@@ -28,7 +29,7 @@ from ..context import context
 from ..edit import NS, edit
 from ..rt_types import Stack
 from ..state import State, state
-from ..trans import Metric, trans
+from ..trans import trans
 
 _Q: SimpleQueue = SimpleQueue()
 

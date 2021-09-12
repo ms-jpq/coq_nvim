@@ -34,6 +34,7 @@ from std2.types import never
 
 from ..consts import DEBUG
 from ..lang import LANG
+from ..shared.runtime import Metric
 from ..shared.trans import trans_adjusted
 from ..shared.types import (
     UTF8,
@@ -52,7 +53,6 @@ from ..snippets.parsers.types import ParseError
 from .mark import mark
 from .rt_types import Stack
 from .state import State
-from .trans import Metric
 
 NS = uuid4()
 

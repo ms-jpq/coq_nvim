@@ -4,8 +4,8 @@ from typing import Any, Iterable, MutableSequence, Optional, Tuple
 from pynvim import Nvim
 from std2.pickle import new_encoder
 
+from ..shared.runtime import Metric
 from .rt_types import Stack
-from .trans import Metric
 
 
 @dataclass(frozen=True)
