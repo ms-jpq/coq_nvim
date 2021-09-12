@@ -35,3 +35,11 @@ COQsources["<random uid>"] = {
 The caching semantics is identical to LSP specification, you will need to read how `CompletionItem[] | CompletionList` affects caching.
 
 If at least one source specifically request no caching, no sources will be cached.
+
+## Known sources
+
+#### [coq.thirdparty](https://google.ca)
+
+"Official" unoffical sources
+
+Really more of a reference implementation than anything else
