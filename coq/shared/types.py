@@ -1,7 +1,7 @@
 from dataclasses import dataclass, field
 from enum import Enum, auto
 from pathlib import PurePath
-from typing import Any, Literal, Optional, Sequence, Tuple, Union
+from typing import Any, Literal, Optional, Sequence, Tuple
 from uuid import UUID, uuid4
 
 UTF8: Literal["UTF-8"] = "UTF-8"
@@ -85,6 +85,7 @@ class RangeEdit(Edit):
     End exclusve, like LSP
     """
 
+    fallback: str
     begin: WTF8Pos
     end: WTF8Pos
     encoding: str
@@ -113,10 +114,6 @@ class Mark:
     text: str
 
 
-ApplicableEdit = Union[ContextualEdit, RangeEdit, Edit]
-PrimaryEdit = Union[SnippetEdit, ApplicableEdit]
-
-
 @dataclass(frozen=True)
 class Doc:
     text: str
@@ -134,7 +131,7 @@ class Completion:
     weight_adjust: float
     label: str
     sort_by: str
-    primary_edit: PrimaryEdit
+    primary_edit: Edit
     icon_match: Optional[str]
 
     uid: UUID = field(default_factory=uuid4)

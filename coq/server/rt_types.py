@@ -8,7 +8,7 @@ from ..databases.snippets.database import SDB
 from ..databases.tags.database import CTDB
 from ..databases.tmux.database import TMDB
 from ..databases.treesitter.database import TDB
-from ..shared.runtime import Supervisor, Worker
+from ..shared.runtime import Metric, Supervisor, Worker
 from ..shared.settings import Settings
 from ..shared.types import Completion
 
@@ -17,6 +17,7 @@ from ..shared.types import Completion
 class Stack:
     settings: Settings
     lru: MutableMapping[UUID, Completion]
+    metrics: MutableMapping[UUID, Metric]
     bdb: BDB
     idb: IDB
     tdb: TDB

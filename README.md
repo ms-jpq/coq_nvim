@@ -290,11 +290,18 @@ Unbound:
 
 | key      | function                                      |
 | -------- | --------------------------------------------- |
+| `<null>` | repeat last edit                              |
 | `<null>` | evulate snippet in document / under selection |
 
 **When hovering over a result, entering any key [a-z] will select it**
 
 This is a vim thing, I have zero control over :(
+
+#### `.` Repeat
+
+Set `coq_settings.keymap.repeat` to a hotkey.
+
+See `:COQhelp keybind` for details
 
 #### Flickering
 
@@ -395,6 +402,8 @@ The snippets are compiled from the following open source projects:
 - [xabikos/vscode-javascript](https://github.com/xabikos/vscode-javascript)
 
 - [xabikos/vscode-react](https://github.com/xabikos/vscode-react)
+
+- [rafamadriz/friendly-snippets](https://github.com/rafamadriz/friendly-snippets)
 
 Super special thanks goes to [Typescript LSP](https://github.com/typescript-language-server/typescript-language-server).
 

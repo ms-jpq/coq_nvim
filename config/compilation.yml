@@ -10,6 +10,7 @@ git:
   - https://github.com/Rocketseat/rocketseat-vscode-react-native-snippets
   - https://github.com/dsznajder/vscode-es7-javascript-react-snippets
   - https://github.com/johnpapa/vscode-angular-snippets
+  - https://github.com/rafamadriz/friendly-snippets
   - https://github.com/sdras/vue-vscode-snippets
   - https://github.com/snipsnapdev/snipsnap
   - https://github.com/xabikos/vscode-javascript
@@ -17,6 +18,7 @@ git:
 
 paths:
   lsp:
+    - friendly-snippets/snippets
     - rocketseat-vscode-react-native-snippets/snippets
     - snipsnap/snippets
     - vscode-R/snippets

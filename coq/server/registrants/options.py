@@ -9,6 +9,7 @@ from ..state import state
 from .marks import nav_mark
 from .omnifunc import omnifunc
 from .preview import preview_preview
+from .repeat import repeat
 from .user_snippets import eval_snips
 
 
@@ -51,6 +52,9 @@ def set_options(nvim: Nvim, mapping: KeyMapping, fast_close: bool) -> None:
     if mapping.jump_to_mark:
         keymap.n(mapping.jump_to_mark) << f"<cmd>lua {nav_mark.name}()<cr>"
         keymap.iv(mapping.jump_to_mark) << rf"<c-\><c-n><cmd>lua {nav_mark.name}()<cr>"
+
+    if mapping.repeat:
+        keymap.n(mapping.repeat) << f"<cmd>lua {repeat.name}()<cr>"
 
     if mapping.manual_complete:
         (

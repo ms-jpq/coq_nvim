@@ -6,6 +6,7 @@ keymap:
   recommended: True
 
   manual_complete: <c-space>
+  repeat: null
   bigger_preview: <c-k>
   jump_to_mark: <c-h>
   eval_snips: null

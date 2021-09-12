@@ -1,5 +1,4 @@
 from asyncio import Task, wait
-from contextlib import suppress
 from dataclasses import asdict, dataclass
 from itertools import chain
 from math import ceil
@@ -54,7 +53,6 @@ from ...shared.settings import GhostText, PreviewDisplay
 from ...shared.timeit import timeit
 from ...shared.trans import expand_tabs
 from ...shared.types import Completion, Context, Doc, Edit, Extern
-from ..nvim.completions import VimCompletion
 from ..rt_types import Stack
 from ..state import State, state
 
@@ -64,7 +62,7 @@ _NS = uuid4()
 
 @dataclass(frozen=True)
 class _Event:
-    completed_item: VimCompletion
+    completed_item: Mapping[str, Any]
     row: int
     col: int
     height: int
@@ -276,8 +274,7 @@ def _resolve_comp(
         else:
             if en is Extern.lsp and isinstance(item, Mapping):
                 done, _ = await wait((request(nvim, item=item),), timeout=timeout)
-                comp = (await done.pop()) if done else None
-                if comp:
+                if comp := (await done.pop()) if done else None:
                     stack.lru[state.preview_id] = comp
                 doc = (comp.doc if comp else None) or maybe_doc
             elif en is Extern.path and isinstance(item, str):
@@ -347,33 +344,37 @@ _DECODER = new_decoder[_Event](_Event)
 def _cmp_changed(nvim: Nvim, stack: Stack, event: Mapping[str, Any] = {}) -> None:
     _kill_win(nvim, stack=stack, reset=False)
     with timeit("PREVIEW"):
-        with suppress(DecodeError):
+        try:
             ev = _DECODER(event)
-            data = ev.completed_item.user_data
-            if data:
-                s = state(preview_id=data.uid)
-                if data.doc and data.doc.text:
+            user_data = ev.completed_item.get("user_data", "")
+            uid = UUID(user_data)
+        except (DecodeError, ValueError):
+            pass
+        else:
+            if metric := stack.metrics.get(uid):
+                s = state(preview_id=uid)
+                if metric.comp.doc and metric.comp.doc.text:
                     _show_preview(
                         nvim,
                         stack=stack,
                         event=ev,
-                        doc=data.doc,
+                        doc=metric.comp.doc,
                         s=s,
                         preview_id=s.preview_id,
                     )
-                elif data.extern:
+                elif metric.comp.extern:
                     _resolve_comp(
                         nvim,
                         stack=stack,
                         event=ev,
-                        extern=data.extern,
-                        maybe_doc=data.doc,
+                        extern=metric.comp.extern,
+                        maybe_doc=metric.comp.doc,
                         state=s,
                     )
                 _virt_text(
                     nvim,
                     ghost=stack.settings.display.ghost_text,
-                    text=data.primary_edit.new_text,
+                    text=metric.comp.primary_edit.new_text,
                 )
 
 

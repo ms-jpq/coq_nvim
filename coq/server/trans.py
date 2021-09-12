@@ -1,7 +1,7 @@
 from dataclasses import asdict
 from itertools import chain
 from locale import strxfrm
-from typing import Any, Callable, Iterable, Iterator, MutableSet, Sequence
+from typing import Any, Callable, Iterable, Iterator, MutableSet, Sequence, Tuple
 
 from pynvim_pp.lib import display_width
 from std2 import clamp
@@ -10,7 +10,7 @@ from ..shared.parse import lower
 from ..shared.runtime import Metric
 from ..shared.settings import PumDisplay, Weights
 from ..shared.types import Context, SnippetEdit
-from .nvim.completions import UserData, VimCompletion
+from .completions import VimCompletion
 from .rt_types import Stack
 from .state import state
 
@@ -80,7 +80,6 @@ def _max_width(metrics: Sequence[Metric]) -> int:
 
 def _cmp_to_vcmp(
     pum: PumDisplay,
-    context: Context,
     kind_dead_width: int,
     ellipsis_width: int,
     truncate: int,
@@ -110,31 +109,13 @@ def _cmp_to_vcmp(
 
     menu = f"{sl}{metric.comp.source}{sr}"
 
-    user_data = UserData(
-        uid=metric.comp.uid,
-        instance=metric.instance,
-        change_uid=context.change_id,
-        sort_by=metric.comp.sort_by,
-        primary_edit=metric.comp.primary_edit,
-        secondary_edits=metric.comp.secondary_edits,
-        doc=metric.comp.doc,
-        extern=metric.comp.extern,
-    )
-    vcmp = VimCompletion(
-        word="",
-        empty=1,
-        dup=1,
-        equal=1,
-        abbr=abbr,
-        menu=menu,
-        user_data=user_data,
-    )
+    vcmp = VimCompletion(abbr=abbr, menu=menu, user_data=metric.comp.uid)
     return vcmp
 
 
 def trans(
     stack: Stack, context: Context, metrics: Sequence[Metric]
-) -> Iterator[VimCompletion]:
+) -> Iterator[Tuple[Metric, VimCompletion]]:
     s = state()
     scr_width, _ = s.screen
 
@@ -153,9 +134,8 @@ def trans(
     pruned = tuple(_prune(stack, context=context, ranked=ranked))
     max_width = _max_width(pruned)
     for metric in pruned:
-        yield _cmp_to_vcmp(
+        yield metric, _cmp_to_vcmp(
             display.pum,
-            context=context,
             ellipsis_width=ellipsis_width,
             kind_dead_width=kind_dead_width,
             truncate=truncate,

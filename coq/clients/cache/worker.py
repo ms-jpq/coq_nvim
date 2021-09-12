@@ -2,9 +2,10 @@ from dataclasses import dataclass, replace
 from typing import Awaitable, Callable, Iterator, MutableMapping, Sequence, Tuple
 from uuid import UUID, uuid4
 
+from ...shared.repeat import sanitize
 from ...shared.runtime import Supervisor
 from ...shared.timeit import timeit
-from ...shared.types import Completion, Context, Edit, SnippetEdit
+from ...shared.types import Completion, Context
 from .database import Database
 
 
@@ -29,11 +30,7 @@ def _use_cache(cache: _CacheCtx, ctx: Context) -> bool:
 
 
 def sanitize_cached(comp: Completion) -> Completion:
-    p_edit = comp.primary_edit
-    if isinstance(p_edit, SnippetEdit):
-        edit: Edit = SnippetEdit(grammar=p_edit.grammar, new_text=p_edit.new_text)
-    else:
-        edit = Edit(new_text=p_edit.new_text)
+    edit = sanitize(comp.primary_edit)
     cached = replace(comp, primary_edit=edit, secondary_edits=())
     return cached
 
@@ -80,8 +77,12 @@ class CacheWorker:
                     word=match,
                     limitless=context.manual,
                 )
-                comps = (self._cached.get(sort_by) for sort_by in words)
-                return (sanitize_cached(c) for c in comps if c)
+                comps = (
+                    sanitize_cached(comp)
+                    for sort_by in words
+                    if (comp := self._cached.get(sort_by))
+                )
+                return comps
 
         async def set(completions: Sequence[Completion]) -> None:
             new_comps = {c.sort_by: c for c in completions}

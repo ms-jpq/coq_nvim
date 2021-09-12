@@ -119,6 +119,7 @@ def stack(pool: Executor, nvim: Nvim) -> Stack:
     stack = Stack(
         settings=settings,
         lru=LRU(size=settings.match.max_results),
+        metrics={},
         bdb=bdb,
         sdb=sdb,
         idb=idb,

@@ -34,11 +34,12 @@ from std2.types import never
 
 from ..consts import DEBUG
 from ..lang import LANG
+from ..shared.runtime import Metric
 from ..shared.trans import trans_adjusted
 from ..shared.types import (
     UTF8,
     UTF16,
-    ApplicableEdit,
+    Completion,
     Context,
     ContextualEdit,
     Edit,
@@ -50,7 +51,6 @@ from ..shared.types import (
 from ..snippets.parse import ParsedEdit, parse
 from ..snippets.parsers.types import ParseError
 from .mark import mark
-from .nvim.completions import UserData
 from .rt_types import Stack
 from .state import State
 
@@ -85,11 +85,7 @@ def _lines(lines: Sequence[str]) -> _Lines:
     )
 
 
-def _rows_to_fetch(
-    ctx: Context,
-    edit: ApplicableEdit,
-    *edits: ApplicableEdit,
-) -> Tuple[int, int]:
+def _rows_to_fetch(ctx: Context, edit: Edit, *edits: Edit) -> Tuple[int, int]:
     row, _ = ctx.position
 
     def cont() -> Iterator[int]:
@@ -234,7 +230,7 @@ def _instructions(
     ctx: Context,
     unifying_chars: AbstractSet[str],
     lines: _Lines,
-    primary: ApplicableEdit,
+    primary: Edit,
     secondary: Sequence[RangeEdit],
 ) -> Iterator[EditInstruction]:
     if isinstance(primary, RangeEdit):
@@ -342,17 +338,17 @@ def _cursor(cursor: NvimPos, instructions: Iterable[EditInstruction]) -> NvimPos
     return row, col
 
 
-def _parse(stack: Stack, state: State, data: UserData) -> Tuple[Edit, Sequence[Mark]]:
-    if isinstance(data.primary_edit, SnippetEdit):
+def _parse(stack: Stack, state: State, comp: Completion) -> Tuple[Edit, Sequence[Mark]]:
+    if isinstance(comp.primary_edit, SnippetEdit):
         visual = ""
         return parse(
             stack.settings.match.unifying_chars,
             context=state.context,
-            snippet=data.primary_edit,
+            snippet=comp.primary_edit,
             visual=visual,
         )
     else:
-        return data.primary_edit, ()
+        return comp.primary_edit, ()
 
 
 def _restore(nvim: Nvim, win: Window, buf: Buffer, pos: NvimPos) -> Tuple[str, int]:
@@ -383,7 +379,7 @@ def _restore(nvim: Nvim, win: Window, buf: Buffer, pos: NvimPos) -> Tuple[str, i
 
 
 def edit(
-    nvim: Nvim, stack: Stack, state: State, data: UserData
+    nvim: Nvim, stack: Stack, state: State, metric: Metric, synthetic: bool
 ) -> Optional[Tuple[int, int]]:
     win = cur_win(nvim)
     buf = win_get_buf(nvim, win=win)
@@ -392,24 +388,28 @@ def edit(
         return None
     else:
         nvim.options["undolevels"] = nvim.options["undolevels"]
-        inserted, movement = _restore(
-            nvim, win=win, buf=buf, pos=state.context.position
-        )
+
+        if synthetic:
+            inserted, movement = "", 0
+        else:
+            inserted, movement = _restore(
+                nvim, win=win, buf=buf, pos=state.context.position
+            )
 
         try:
-            primary, marks = _parse(stack, state=state, data=data)
+            primary, marks = _parse(stack, state=state, comp=metric.comp)
         except ParseError as e:
-            primary, marks = data.primary_edit, ()
+            primary, marks = metric.comp.primary_edit, ()
             write(nvim, LANG("failed to parse snippet"))
             log.info("%s", e)
 
         lo, hi = _rows_to_fetch(
             state.context,
             primary,
-            *data.secondary_edits,
+            *metric.comp.secondary_edits,
         )
         if lo < 0 or hi > state.context.line_count + 1:
-            log.warn("%s", pformat(("OUT OF BOUNDS", (lo, hi), data)))
+            log.warn("%s", pformat(("OUT OF BOUNDS", (lo, hi), metric)))
             return None
         else:
             limited_lines = buf_get_lines(nvim, buf=buf, lo=lo, hi=hi)
@@ -422,7 +422,7 @@ def edit(
                     unifying_chars=stack.settings.match.unifying_chars,
                     lines=view,
                     primary=primary,
-                    secondary=data.secondary_edits,
+                    secondary=metric.comp.secondary_edits,
                 )
             )
             n_row, p_col = _cursor(
@@ -431,7 +431,8 @@ def edit(
             )
             n_col = p_col + movement
 
-            stack.idb.inserted(data.instance.bytes, sort_by=data.sort_by)
+            if not synthetic:
+                stack.idb.inserted(metric.instance.bytes, sort_by=metric.comp.sort_by)
 
             apply(nvim, buf=buf, instructions=instructions)
             if inserted:
@@ -457,6 +458,11 @@ def edit(
             if DEBUG:
                 log.debug(
                     "%s",
-                    pformat(((data.primary_edit, *data.secondary_edits), instructions)),
+                    pformat(
+                        (
+                            (metric.comp.primary_edit, *metric.comp.secondary_edits),
+                            instructions,
+                        )
+                    ),
                 )
             return n_row, n_col
