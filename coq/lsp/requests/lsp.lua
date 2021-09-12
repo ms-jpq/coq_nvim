@@ -103,7 +103,10 @@
     local cancels = {}
     local cancel = function()
       for _, cont in ipairs(cancels) do
-        pcall(cont)
+        local go, err = pcall(cont)
+        if not go then
+          vim.api.nvim_err_writeln(err)
+        end
       end
     end
 
@@ -121,8 +124,12 @@
               on_resp(nil, "", resp, id)
             end
           )
-          if go and type(maybe_cancel) == "function" then
-            table.insert(cancels, maybe_cancel)
+          if go then
+            if type(maybe_cancel) == "function" then
+              table.insert(cancels, maybe_cancel)
+            end
+          else
+            vim.api.nvim_err_writeln(maybe_cancel)
           end
         end
         return {}, cancel
