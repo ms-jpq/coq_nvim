@@ -38,4 +38,4 @@ def complete(
         s = _ENCODER(c)
         serialized.append(s)
 
-    nvim.api.exec_lua(_LUA, (col + 1, serialized))
+    nvim.api.exec_lua("COQsend_comp(...)", (col + 1, serialized))
