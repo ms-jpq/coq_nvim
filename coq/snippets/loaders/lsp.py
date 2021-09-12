@@ -14,7 +14,7 @@ from ..types import ParsedSnippet
 class _Unit:
     prefix: Union[str, Sequence[str]]
     body: Union[str, Sequence[str]]
-    description: str = ""
+    description: Union[str, Sequence[str]] = ""
 
 
 _DECODER = new_decoder[Mapping[str, _Unit]](Mapping[str, _Unit], strict=False)
@@ -54,7 +54,7 @@ def load_lsp(
                 grammar=grammar,
                 filetype=filetype,
                 content=content,
-                doc=values.description,
+                doc=_body(values.description),
                 label=label,
                 matches=_prefix(values.prefix),
             )
