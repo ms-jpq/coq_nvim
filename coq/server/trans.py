@@ -1,7 +1,7 @@
 from dataclasses import asdict
 from itertools import chain
 from locale import strxfrm
-from typing import Any, Callable, Iterable, Iterator, MutableSet, Sequence
+from typing import Any, Callable, Iterable, Iterator, MutableSet, Sequence, Tuple
 
 from pynvim_pp.lib import display_width
 from std2 import clamp
@@ -123,7 +123,7 @@ def _cmp_to_vcmp(
 
 def trans(
     stack: Stack, context: Context, metrics: Sequence[Metric]
-) -> Iterator[VimCompletion]:
+) -> Iterator[Tuple[Metric, VimCompletion]]:
     s = state()
     scr_width, _ = s.screen
 
@@ -142,7 +142,7 @@ def trans(
     pruned = tuple(_prune(stack, context=context, ranked=ranked))
     max_width = _max_width(pruned)
     for metric in pruned:
-        yield _cmp_to_vcmp(
+        yield metric, _cmp_to_vcmp(
             display.pum,
             ellipsis_width=ellipsis_width,
             kind_dead_width=kind_dead_width,
