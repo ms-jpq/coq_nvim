@@ -38,13 +38,13 @@ Manually trigger completions, with a longer timeout.
 
 #### `coq_settings.keymap.repeat`
 
-Repeat last edit.
+Repeat last edit performed by `coq`.
 
-Note: this is not the same as `.` key in Vim. Vim's `.` key is pretty "dumb" as it simply stores and replays keystrokes, while `coq` performs arbitrary edits. 
+Note: this is not the same as `.` key in Vim. Vim's `.` key is pretty "dumb" as it simply stores and replays keystrokes, while `coq` performs arbitrary edits.
 
 ie. typo correction, some LSP requests, multi-line Tabnine edits etc
 
-It is not feasible to get `coq` to translate any arbitrary edit into a sequence of `.` keystrokes without substantial edgecases. 
+It is not feasible to get `coq` to translate any arbitrary edit into a sequence of `.` keystrokes without substantial edgecases.
 
 ie. `coq` cannot realistically reproduce Vim's "unique" interpertion of unicode grapheme clusters bug for bug.
 
