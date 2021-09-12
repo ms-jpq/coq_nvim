@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Iterable, MutableSequence, Tuple
+from uuid import UUID
 
 from pynvim import Nvim
 from std2.pickle import new_encoder
@@ -15,7 +16,7 @@ atomic.exec_lua(_LUA, ())
 
 @dataclass(frozen=True)
 class VimCompletion:
-    user_data: str
+    user_data: UUID
     abbr: str
     menu: str
     kind: str = ""

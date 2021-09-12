@@ -109,11 +109,7 @@ def _cmp_to_vcmp(
 
     menu = f"{sl}{metric.comp.source}{sr}"
 
-    vcmp = VimCompletion(
-        abbr=abbr,
-        menu=menu,
-        user_data=str(metric.comp.uid),
-    )
+    vcmp = VimCompletion(abbr=abbr, menu=menu, user_data=metric.comp.uid)
     return vcmp
 
 
