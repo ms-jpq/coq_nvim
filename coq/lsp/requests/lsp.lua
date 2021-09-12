@@ -96,7 +96,7 @@
     for id, source in pairs(COQsources or {}) do
       if type(source.name) == "string" and type(source.fn) == "function" then
         client_names[id] = source.name
-        table.insert(client_fns, source.fn)
+        table.insert(client_fns, {id, source.fn})
       end
     end
 
@@ -112,9 +112,16 @@
       session_id,
       {#client_fns, client_names},
       function(on_resp)
-        for _, fn in ipairs(client_fns) do
-          local maybe_cancel = client_fns(on_resp)
-          if type(maybe_cancel) == "function" then
+        for _, spec in ipairs(client_fns) do
+          local id, fn = unpack(spec)
+          local go, maybe_cancel =
+            pcall(
+            fn,
+            function(resp)
+              on_resp(nil, "", resp, id)
+            end
+          )
+          if go and type(maybe_cancel) == "function" then
             table.insert(cancels, maybe_cancel)
           end
         end
