@@ -163,8 +163,7 @@ async def _resolve(nvim: Nvim, stack: Stack, metric: Metric) -> Metric:
         if extern is not Extern.lsp:
             return metric
         else:
-            comp = stack.lru.get(metric.comp.uid)
-            if comp:
+            if comp := stack.lru.get(metric.comp.uid):
                 return replace(
                     metric,
                     comp=replace(metric.comp, secondary_edits=comp.secondary_edits),
