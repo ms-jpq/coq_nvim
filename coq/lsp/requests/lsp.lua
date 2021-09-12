@@ -66,7 +66,7 @@
     req(
       name,
       session_id,
-      clients(),
+      {clients()},
       function(on_resp)
         return vim.lsp.buf_request(
           0,
