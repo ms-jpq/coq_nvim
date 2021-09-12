@@ -1,11 +1,19 @@
 from dataclasses import dataclass
-from typing import Any, Iterable, Optional, Sequence, Tuple
+from typing import Any, Iterable, Optional, Sequence, Tuple, Union
 from uuid import UUID
 
 from pynvim import Nvim
 from std2.pickle import new_encoder
 
-from ...shared.types import Doc, Edit, Extern, RangeEdit
+from ...shared.types import (
+    ContextualEdit,
+    Doc,
+    Edit,
+    Extern,
+    RangeEdit,
+    SnippetEdit,
+    SnippetRangeEdit,
+)
 
 
 @dataclass(frozen=True)
@@ -14,7 +22,7 @@ class UserData:
     instance: UUID
     sort_by: str
     change_uid: UUID
-    primary_edit: Edit
+    primary_edit: Union[SnippetRangeEdit, SnippetEdit, RangeEdit, ContextualEdit, Edit]
     secondary_edits: Sequence[RangeEdit]
     doc: Optional[Doc]
     extern: Optional[Tuple[Extern, Any]]
