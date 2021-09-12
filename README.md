@@ -397,6 +397,8 @@ The snippets are compiled from the following open source projects:
 
 - [xabikos/vscode-react](https://github.com/xabikos/vscode-react)
 
+- [rafamadriz/friendly-snippets](https://github.com/rafamadriz/friendly-snippets)
+
 Super special thanks goes to [Typescript LSP](https://github.com/typescript-language-server/typescript-language-server).
 
 Nothing like good motivation to improve my design than dumping 1000 results on my client every other keystroke.
