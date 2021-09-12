@@ -13,9 +13,12 @@ COQsources = COQsources or {}
 COQsources["<random uid>"] = {
   name = "<name>"
   fn = function (callback)
+    ...
     -- callback(<LSP completion items>) at some point
+
+
     local cancel = function ()
-      ...
+      -- optionally support cancellation
     end
     return cancel
   end
