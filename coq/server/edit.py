@@ -387,9 +387,13 @@ def edit(
         return None
     else:
         nvim.options["undolevels"] = nvim.options["undolevels"]
-        inserted, movement = _restore(
-            nvim, win=win, buf=buf, pos=state.context.position
-        )
+
+        if synthetic:
+            inserted, movement = "", 0
+        else:
+            inserted, movement = _restore(
+                nvim, win=win, buf=buf, pos=state.context.position
+            )
 
         try:
             primary, marks = _parse(stack, state=state, data=data)
