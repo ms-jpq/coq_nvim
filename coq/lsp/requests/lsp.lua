@@ -110,6 +110,8 @@
       end
     end
 
+    local args = {pos = pos}
+
     req(
       name,
       session_id,
@@ -120,7 +122,7 @@
           local go, maybe_cancel =
             pcall(
             fn,
-            pos,
+            args,
             function(resp)
               on_resp(nil, "", resp, id)
             end
