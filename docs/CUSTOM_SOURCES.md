@@ -40,6 +40,6 @@ If at least one source specifically request no caching, no sources will be cache
 
 #### [coq.thirdparty](https://google.ca)
 
-"Official" unoffical sources
+"Official" unofficial sources
 
 Really more of a reference implementation than anything else
