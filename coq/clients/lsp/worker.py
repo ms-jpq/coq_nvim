@@ -41,7 +41,11 @@ class Worker(BaseWorker[LSPClient, None], CacheWorker):
             self._local_cached.clear()
 
         async def cached_iters() -> Tuple[_Src, LSPcomp]:
-            items = map(sanitize_cached, chain(*self._local_cached))
+            items = (
+                c
+                for cached in chain(*self._local_cached)
+                if (c := sanitize_cached(cached))
+            )
             self._local_cached.clear()
             return _Src.from_stored, LSPcomp(local_cache=True, items=items)
 

@@ -134,6 +134,7 @@ def parse(
             end=snippet.end,
             encoding=snippet.encoding,
             new_prefix=new_prefix,
+            fallback=snippet.fallback,
         )
     else:
         edit = ContextualEdit(

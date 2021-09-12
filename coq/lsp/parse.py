@@ -22,7 +22,7 @@ def _falsy(thing: Any) -> bool:
     return thing is None or thing == False or thing == 0 or thing == "" or thing == b""
 
 
-def _range_edit(edit: TextEdit) -> Optional[RangeEdit]:
+def _range_edit(fallback: Optional[str], edit: TextEdit) -> Optional[RangeEdit]:
     rg = edit.get("range", {})
     s, e = rg.get("start", {}), rg.get("end", {})
     b_r, b_c = s.get("line"), s.get("character")
@@ -37,22 +37,31 @@ def _range_edit(edit: TextEdit) -> Optional[RangeEdit]:
     ):
         begin = b_r, b_c
         end = e_r, e_c
-        return RangeEdit(new_text=new_text, begin=begin, end=end, encoding=UTF16)
+        re = RangeEdit(
+            new_text=new_text,
+            fallback=fallback,
+            begin=begin,
+            end=end,
+            encoding=UTF16,
+        )
+        return re
     else:
         return None
 
 
 def _primary(item: CompletionItem) -> Edit:
     text_edit = item.get("textEdit")
-    fall_back = item.get("insertText") or item.get("label") or ""
+    label = item.get("label")
+    fall_back = item.get("insertText") or label or ""
 
     if PROTOCOL.InsertTextFormat.get(item.get("insertTextFormat")) == "Snippet":
         if isinstance(text_edit, Mapping) and "range" in text_edit:
-            re = _range_edit(cast(TextEdit, text_edit))
+            re = _range_edit(label, edit=cast(TextEdit, text_edit))
             if re:
                 return SnippetRangeEdit(
                     grammar=SnippetGrammar.lsp,
                     new_text=re.new_text,
+                    fallback=None,
                     begin=re.begin,
                     end=re.end,
                     encoding=re.encoding,
@@ -67,7 +76,7 @@ def _primary(item: CompletionItem) -> Edit:
         # if "insert" in text_edit:
         #     return Edit(new_text=fall_back)
         if "range" in text_edit:
-            re = _range_edit(cast(TextEdit, text_edit))
+            re = _range_edit(label, edit=cast(TextEdit, text_edit))
             if re:
                 return re
             else:
@@ -112,8 +121,8 @@ def parse_item(
             primary_edit=p_edit,
             secondary_edits=tuple(
                 re
-                for re in map(_range_edit, item.get("additionalTextEdits") or ())
-                if re
+                for edit in (item.get("additionalTextEdits") or ())
+                if (re := _range_edit(None, edit=edit))
             ),
             kind=kind,
             doc=_doc(item),

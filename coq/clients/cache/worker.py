@@ -1,10 +1,25 @@
 from dataclasses import dataclass, replace
-from typing import Awaitable, Callable, Iterator, MutableMapping, Sequence, Tuple
+from typing import (
+    Awaitable,
+    Callable,
+    Iterator,
+    MutableMapping,
+    Optional,
+    Sequence,
+    Tuple,
+)
 from uuid import UUID, uuid4
 
 from ...shared.runtime import Supervisor
 from ...shared.timeit import timeit
-from ...shared.types import Completion, Context, Edit, SnippetEdit
+from ...shared.types import (
+    Completion,
+    Context,
+    Edit,
+    RangeEdit,
+    SnippetEdit,
+    SnippetRangeEdit,
+)
 from .database import Database
 
 
@@ -28,12 +43,21 @@ def _use_cache(cache: _CacheCtx, ctx: Context) -> bool:
     return use_cache
 
 
-def sanitize_cached(comp: Completion) -> Completion:
+def sanitize_cached(comp: Completion) -> Optional[Completion]:
     p_edit = comp.primary_edit
-    if isinstance(p_edit, SnippetEdit):
-        edit: Edit = SnippetEdit(grammar=p_edit.grammar, new_text=p_edit.new_text)
+    if isinstance(p_edit, SnippetRangeEdit):
+        return None
+    elif isinstance(p_edit, RangeEdit):
+        if not p_edit.fallback:
+            return None
+        else:
+            edit = Edit(new_text=p_edit.fallback)
+    elif isinstance(p_edit, SnippetEdit):
+        edit = p_edit
     else:
         edit = Edit(new_text=p_edit.new_text)
+
+    assert not isinstance(edit, RangeEdit)
     cached = replace(comp, primary_edit=edit, secondary_edits=())
     return cached
 
@@ -80,8 +104,8 @@ class CacheWorker:
                     word=match,
                     limitless=context.manual,
                 )
-                comps = (self._cached.get(sort_by) for sort_by in words)
-                return (sanitize_cached(c) for c in comps if c)
+                comps = (c for sort_by in words if (c := self._cached.get(sort_by)))
+                return (s for c in comps if (s := sanitize_cached(c)))
 
         async def set(completions: Sequence[Completion]) -> None:
             new_comps = {c.sort_by: c for c in completions}
