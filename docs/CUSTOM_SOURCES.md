@@ -7,12 +7,17 @@ The adapters turn various vim plugin's output into [LSP](https://microsoft.githu
 ## How to write a source:
 
 ```lua
--- Special
+-- `COQsources` is a global registry of sources
 COQsources = COQsources or {}
+
 COQsources["<random uid>"] = {
   name = "<name>"
   fn = function (callback)
-    callback("<LSP completion items>")
+    -- callback(<LSP completion items>) at some point
+    local cancel = function ()
+      ...
+    end
+    return cancel
   end
 }
 ```
