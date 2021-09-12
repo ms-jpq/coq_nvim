@@ -82,7 +82,7 @@
     req(
       name,
       session_id,
-      clients(),
+      {clients()},
       function(on_resp)
         return vim.lsp.buf_request(0, "completionItem/resolve", item, on_resp)
       end
