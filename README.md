@@ -297,6 +297,12 @@ Unbound:
 
 This is a vim thing, I have zero control over :(
 
+#### `.` Repeat
+
+Set `coq_settings.keymap.repeat` to a hotkey.
+
+See `:COQhelp keybind` for details
+
 #### Flickering
 
 By default, the old results are cleared on each keystroke, so the popup menu is closed right away.
