@@ -125,6 +125,11 @@ clients:
     short_name: "T9"
     weight_adjust: -0.1
 
+  # custom:
+  #   enabled: True
+  #   short_name: "USER"
+  #   weight_adjust: 0
+
   tmux:
     enabled: True
     short_name: "TMUX"

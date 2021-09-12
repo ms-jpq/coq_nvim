@@ -14,7 +14,7 @@ from ...shared.fuzzy import multi_set_ratio
 from ...shared.parse import is_word, lower
 from ...shared.runtime import Supervisor
 from ...shared.runtime import Worker as BaseWorker
-from ...shared.settings import LSPClient
+from ...shared.settings import BaseClient
 from ...shared.sql import BIGGEST_INT
 from ...shared.types import Completion, Context
 from ..cache.worker import CacheWorker, sanitize_cached
@@ -26,11 +26,19 @@ class _Src(Enum):
     from_query = auto()
 
 
-class Worker(BaseWorker[LSPClient, None], CacheWorker):
-    def __init__(self, supervisor: Supervisor, options: LSPClient, misc: None) -> None:
+class Worker(BaseWorker[BaseClient, None], CacheWorker):
+    def __init__(self, supervisor: Supervisor, options: BaseClient, misc: None) -> None:
         self._local_cached: MutableSequence[Iterator[Completion]] = []
         CacheWorker.__init__(self, supervisor=supervisor)
         BaseWorker.__init__(self, supervisor=supervisor, options=options, misc=misc)
+
+    def _request(self, context: Context) -> AsyncIterator[LSPcomp]:
+        return request(
+            self._supervisor.nvim,
+            short_name=self._options.short_name,
+            weight_adjust=self._options.weight_adjust,
+            context=context,
+        )
 
     async def work(self, context: Context) -> AsyncIterator[Optional[Completion]]:
         w_before, sw_before = lower(context.words_before), lower(context.syms_before)
@@ -51,16 +59,7 @@ class Worker(BaseWorker[LSPClient, None], CacheWorker):
 
         async def stream() -> AsyncIterator[Tuple[_Src, LSPcomp]]:
             do_ask = context.manual or not use_cache
-            stream = (
-                request(
-                    self._supervisor.nvim,
-                    short_name=self._options.short_name,
-                    weight_adjust=self._options.weight_adjust,
-                    context=context,
-                )
-                if do_ask
-                else to_async(())
-            )
+            stream = self._request(context) if do_ask else to_async(())
 
             for fut in as_completed(
                 (
