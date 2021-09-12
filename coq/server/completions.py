@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Any, Iterable, MutableSequence, Optional, Tuple
+from typing import Any, Iterable, MutableSequence, Tuple
 
 from pynvim import Nvim
 from std2.pickle import new_encoder
@@ -11,15 +11,13 @@ from .rt_types import Stack
 @dataclass(frozen=True)
 class VimCompletion:
     user_data: str
-    word: Optional[str] = None
-    abbr: Optional[str] = None
-    menu: Optional[str] = None
-    info: Optional[str] = None
-    kind: Optional[str] = None
-    icase: Optional[int] = None
-    equal: Optional[int] = None
-    dup: Optional[int] = None
-    empty: Optional[int] = None
+    abbr: str
+    menu: str
+    kind: str = ""
+    word: str = ""
+    equal: int = 1
+    dup: int = 1
+    empty: int = 1
 
 
 _LUA = """

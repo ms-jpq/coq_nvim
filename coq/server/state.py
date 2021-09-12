@@ -8,9 +8,9 @@ from uuid import UUID, uuid4
 from std2.types import Void, VoidType
 
 from ..shared.context import EMPTY_CONTEXT
+from ..shared.runtime import Metric
 from ..shared.settings import Weights
 from ..shared.types import Completion, Context, Edit, NvimPos
-from .trans import Metric
 
 
 @dataclass(frozen=True)
