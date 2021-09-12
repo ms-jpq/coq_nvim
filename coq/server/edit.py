@@ -38,7 +38,6 @@ from ..shared.trans import trans_adjusted
 from ..shared.types import (
     UTF8,
     UTF16,
-    ApplicableEdit,
     Context,
     ContextualEdit,
     Edit,
@@ -85,11 +84,7 @@ def _lines(lines: Sequence[str]) -> _Lines:
     )
 
 
-def _rows_to_fetch(
-    ctx: Context,
-    edit: ApplicableEdit,
-    *edits: ApplicableEdit,
-) -> Tuple[int, int]:
+def _rows_to_fetch(ctx: Context, edit: Edit, *edits: Edit) -> Tuple[int, int]:
     row, _ = ctx.position
 
     def cont() -> Iterator[int]:
@@ -234,7 +229,7 @@ def _instructions(
     ctx: Context,
     unifying_chars: AbstractSet[str],
     lines: _Lines,
-    primary: ApplicableEdit,
+    primary: Edit,
     secondary: Sequence[RangeEdit],
 ) -> Iterator[EditInstruction]:
     if isinstance(primary, RangeEdit):
