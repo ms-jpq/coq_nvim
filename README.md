@@ -288,10 +288,10 @@ When completion menu is open:
 
 Unbound:
 
-| key      | function                                      |
-| -------- | --------------------------------------------- |
-| `<null>` | repeat last edit                              |
-| `<null>` | evulate snippet in document / under selection |
+| keymap                           | function                                      |
+| -------------------------------- | --------------------------------------------- |
+| `coq_settings.keymap.repeat`     | repeat last edit                              |
+| `coq_settings.keymap.eval_snips` | evulate snippet in document / under selection |
 
 **When hovering over a result, entering any key [a-z] will select it**
 
