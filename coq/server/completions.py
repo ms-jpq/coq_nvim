@@ -1,11 +1,16 @@
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any, Iterable, MutableSequence, Tuple
 
 from pynvim import Nvim
 from std2.pickle import new_encoder
 
+from ..registry import atomic
 from ..shared.runtime import Metric
 from .rt_types import Stack
+
+_LUA = (Path(__file__).resolve().parent / "completion.lua").read_text("UTF-8")
+atomic.exec_lua(_LUA, ())
 
 
 @dataclass(frozen=True)
@@ -19,35 +24,6 @@ class VimCompletion:
     dup: int = 1
     empty: int = 1
 
-
-_LUA = """
-(function(col, items)
-  vim.schedule(
-    function()
-      local legal_modes = {
-        ["i"] = true,
-        ["ic"] = true,
-        ["ix"] = true
-      }
-      local legal_cmodes = {
-        [""] = true,
-        ["eval"] = true,
-        ["function"] = true,
-        ["ctrl_x"] = true
-      }
-      local mode = vim.api.nvim_get_mode().mode
-      local comp_mode = vim.fn.complete_info({"mode"}).mode
-      if legal_modes[mode] and legal_cmodes[comp_mode] then
-        -- when `#items ~= 0` there is something to show
-        -- when `#items == 0` but `comp_mode == "eval"` there is something to close
-        if #items ~= 0 or comp_mode == "eval" then
-          vim.fn.complete(col, items)
-        end
-      end
-    end
-  )
-end)(...)
-"""
 
 _ENCODER = new_encoder[VimCompletion](VimCompletion)
 
