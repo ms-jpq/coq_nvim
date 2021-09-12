@@ -123,7 +123,7 @@ clients:
   tabnine:
     enabled: False
     short_name: "T9"
-    weight_adjust: -0.5
+    weight_adjust: -0.1
 
   tmux:
     enabled: True

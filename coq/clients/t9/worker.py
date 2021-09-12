@@ -8,7 +8,7 @@ from json.decoder import JSONDecodeError
 from os import X_OK, access
 from pathlib import PurePath
 from subprocess import DEVNULL, PIPE
-from typing import AbstractSet, Any, AsyncIterator, Iterator, Optional
+from typing import Any, AsyncIterator, Iterator, Optional
 
 from pynvim_pp.lib import awrite, decode, encode, go
 from pynvim_pp.logging import log
@@ -16,7 +16,6 @@ from std2.pickle import DecodeError, new_decoder, new_encoder
 
 from ...lang import LANG
 from ...lsp.protocol import PROTOCOL
-from ...shared.parse import is_word
 from ...shared.runtime import Supervisor
 from ...shared.runtime import Worker as BaseWorker
 from ...shared.settings import BaseClient, Options
@@ -50,26 +49,7 @@ def _encode(options: Options, context: Context, limit: int) -> Any:
     return _ENCODER(req)
 
 
-def sort_by(unifying_chars: AbstractSet[str], new_text: str) -> str:
-    def cont() -> Iterator[str]:
-        seen_syms = False
-        for char in reversed(new_text):
-            if is_word(char, unifying_chars=unifying_chars):
-                if seen_syms:
-                    break
-                else:
-                    yield char
-            else:
-                yield char
-                seen_syms = True
-
-    sort_by = "".join(reversed(tuple(cont())))
-    return sort_by
-
-
-def _decode(
-    unifying_chars: AbstractSet[str], client: BaseClient, reply: Any
-) -> Iterator[Completion]:
+def _decode(client: BaseClient, reply: Any) -> Iterator[Completion]:
     try:
         resp = _DECODER(reply)
     except DecodeError as e:
@@ -90,7 +70,7 @@ def _decode(
                 source=client.short_name,
                 weight_adjust=client.weight_adjust,
                 label=label,
-                sort_by=sort_by(unifying_chars, new_text=edit.old_prefix),
+                sort_by=edit.new_text,
                 primary_edit=edit,
                 kind=kind or "",
                 icon_match=kind,
@@ -206,9 +186,5 @@ class Worker(BaseWorker[BaseClient, None]):
                 except JSONDecodeError as e:
                     log.warn("%s", e)
                 else:
-                    for comp in _decode(
-                        self._supervisor.options.unifying_chars,
-                        client=self._options,
-                        reply=resp,
-                    ):
+                    for comp in _decode(self._options, reply=resp):
                         yield comp
