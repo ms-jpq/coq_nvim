@@ -30,13 +30,14 @@ _ENCODER = new_encoder[VimCompletion](VimCompletion)
 
 
 def complete(
-    nvim: Nvim, stack: Stack, col: int, comp: Iterable[Tuple[Metric, VimCompletion]]
+    nvim: Nvim, stack: Stack, col: int, comps: Iterable[Tuple[Metric, VimCompletion]]
 ) -> None:
     stack.metrics.clear()
-    serialized: MutableSequence[Any] = []
-    for m, c in comp:
-        stack.metrics[m.comp.uid] = m
-        s = _ENCODER(c)
-        serialized.append(s)
 
-    nvim.api.exec_lua("COQsend_comp(...)", (col + 1, serialized))
+    acc: MutableSequence[Any] = []
+    for metric, comp in comps:
+        stack.metrics[metric.comp.uid] = metric
+        encoded = _ENCODER(comp)
+        acc.append(encoded)
+
+    nvim.api.exec_lua("COQsend_comp(...)", (col + 1, acc))

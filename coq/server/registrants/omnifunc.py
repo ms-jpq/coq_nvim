@@ -85,7 +85,7 @@ def _launch_loop(nvim: Nvim, stack: Stack) -> None:
                             stack.supervisor.collect(ctx),
                             async_call(
                                 nvim,
-                                lambda: complete(nvim, stack=stack, col=col, comp=()),
+                                lambda: complete(nvim, stack=stack, col=col, comps=()),
                             )
                             if stack.settings.display.pum.fast_close
                             else sleep(0),
@@ -98,12 +98,12 @@ def _launch_loop(nvim: Nvim, stack: Stack) -> None:
                             await async_call(
                                 nvim,
                                 lambda: complete(
-                                    nvim, stack=stack, col=col, comp=vim_comps
+                                    nvim, stack=stack, col=col, comps=vim_comps
                                 ),
                             )
                     else:
                         await async_call(
-                            nvim, lambda: complete(nvim, stack=stack, col=col, comp=())
+                            nvim, lambda: complete(nvim, stack=stack, col=col, comps=())
                         )
                         state(inserted_pos=(-1, -1))
 
