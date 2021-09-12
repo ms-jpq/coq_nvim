@@ -1,5 +1,4 @@
 from asyncio import Task, wait
-from contextlib import suppress
 from dataclasses import asdict, dataclass
 from itertools import chain
 from math import ceil
@@ -54,7 +53,6 @@ from ...shared.settings import GhostText, PreviewDisplay
 from ...shared.timeit import timeit
 from ...shared.trans import expand_tabs
 from ...shared.types import Completion, Context, Doc, Edit, Extern
-from ..completions import VimCompletion
 from ..rt_types import Stack
 from ..state import State, state
 
@@ -64,7 +62,7 @@ _NS = uuid4()
 
 @dataclass(frozen=True)
 class _Event:
-    completed_item: VimCompletion
+    completed_item: Mapping[str, Any]
     row: int
     col: int
     height: int
@@ -349,7 +347,8 @@ def _cmp_changed(nvim: Nvim, stack: Stack, event: Mapping[str, Any] = {}) -> Non
     with timeit("PREVIEW"):
         try:
             ev = _DECODER(event)
-            uid = UUID(ev.completed_item.user_data)
+            user_data = ev.completed_item.get("user_data", "")
+            uid = UUID(user_data)
         except (DecodeError, ValueError):
             pass
         else:
