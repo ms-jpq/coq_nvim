@@ -36,6 +36,18 @@ Manually trigger completions, with a longer timeout.
 "<c-space>"
 ```
 
+#### `coq_settings.keymap.repeat`
+
+Repeat last edit.
+
+Note: this is not the same as `.` key in vim.
+
+**default:**
+
+```json
+null
+```
+
 #### `coq_settings.keymap.bigger_preview`
 
 When floating preview window is open, move the preview from floating window to fixed window.

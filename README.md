@@ -290,6 +290,7 @@ Unbound:
 
 | key      | function                                      |
 | -------- | --------------------------------------------- |
+| `<null>` | repeat last edit                              |
 | `<null>` | evulate snippet in document / under selection |
 
 **When hovering over a result, entering any key [a-z] will select it**
