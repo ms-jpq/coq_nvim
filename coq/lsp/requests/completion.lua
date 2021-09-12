@@ -15,8 +15,16 @@
       client_names[id] = info.name
     end
 
+    local payload = {
+      method = name,
+      uid = session_id,
+      client = vim.NIL,
+      done = true,
+      reply = vim.NIL
+    }
+
     if n_clients == 0 then
-      COQlsp_notify(name, session_id, vim.NIL, true, vim.NIL)
+      COQlsp_notify(payload)
     else
       local row, col = unpack(pos)
       local position = {line = row, character = col}
@@ -30,13 +38,10 @@
       local on_resp_old = function(err, _, resp, client_id)
         if session_id == cur_session then
           n_clients = n_clients - 1
-          COQlsp_notify(
-            name,
-            session_id,
-            client_names[client_id] or vim.NIL,
-            n_clients == 0,
-            resp or vim.NIL
-          )
+          payload.client = client_names[client_id] or vim.NIL
+          payload.done = n_clients == 0
+          payload.reply = resp or vim.NIL
+          COQlsp_notify(payload)
         end
       end
 
