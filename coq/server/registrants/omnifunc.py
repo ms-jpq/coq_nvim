@@ -3,7 +3,7 @@ from asyncio.events import AbstractEventLoop
 from dataclasses import replace
 from queue import SimpleQueue
 from typing import Any, Literal, Mapping, Optional, Sequence, Tuple, Union
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 from pynvim import Nvim
 from pynvim.api.nvim import Nvim
@@ -18,18 +18,17 @@ from pynvim_pp.api import (
 from pynvim_pp.lib import async_call, encode, go
 from pynvim_pp.logging import log, with_suppress
 from std2.asyncio import cancel, run_in_executor
-from std2.pickle import DecodeError, new_decoder
 
 from ...lsp.requests.preview import request
 from ...registry import atomic, autocmd, rpc
 from ...shared.timeit import timeit
 from ...shared.types import Context, Extern, NvimPos
+from ..completions import complete
 from ..context import context
 from ..edit import NS, edit
-from ..nvim.completions import UserData, complete
 from ..rt_types import Stack
 from ..state import State, state
-from ..trans import trans
+from ..trans import Metric, trans
 
 _Q: SimpleQueue = SimpleQueue()
 
@@ -83,7 +82,10 @@ def _launch_loop(nvim: Nvim, stack: Stack) -> None:
                         await stack.supervisor.interrupt()
                         metrics, _ = await gather(
                             stack.supervisor.collect(ctx),
-                            async_call(nvim, lambda: complete(nvim, col=col, comp=()))
+                            async_call(
+                                nvim,
+                                lambda: complete(nvim, stack=stack, col=col, comp=()),
+                            )
                             if stack.settings.display.pum.fast_close
                             else sleep(0),
                         )
@@ -93,10 +95,15 @@ def _launch_loop(nvim: Nvim, stack: Stack) -> None:
                                 trans(stack, context=ctx, metrics=metrics)
                             )
                             await async_call(
-                                nvim, lambda: complete(nvim, col=col, comp=vim_comps)
+                                nvim,
+                                lambda: complete(
+                                    nvim, stack=stack, col=col, comp=vim_comps
+                                ),
                             )
                     else:
-                        await async_call(nvim, lambda: complete(nvim, col=col, comp=()))
+                        await async_call(
+                            nvim, lambda: complete(nvim, stack=stack, col=col, comp=())
+                        )
                         state(inserted_pos=(-1, -1))
 
         async def c1() -> None:
@@ -147,20 +154,19 @@ def omnifunc(
         return ()
 
 
-async def _resolve(nvim: Nvim, stack: Stack, user_data: UserData) -> UserData:
-    if not user_data.extern:
-        return user_data
+async def _resolve(nvim: Nvim, stack: Stack, metric: Metric) -> Metric:
+    if not metric.comp.extern:
+        return metric
     else:
-        extern, item = user_data.extern
+        extern, item = metric.comp.extern
         if extern is not Extern.lsp:
-            return user_data
+            return metric
         else:
-            comp = stack.lru.get(user_data.uid)
+            comp = stack.lru.get(metric.comp.uid)
             if comp:
                 return replace(
-                    user_data,
-                    primary_edit=comp.primary_edit,
-                    secondary_edits=comp.secondary_edits,
+                    metric,
+                    comp=replace(metric.comp, secondary_edits=comp.secondary_edits),
                 )
             else:
                 done, not_done = await wait(
@@ -170,15 +176,12 @@ async def _resolve(nvim: Nvim, stack: Stack, user_data: UserData) -> UserData:
                 await cancel(gather(*not_done))
                 comp = (await done.pop()) if done else None
                 if not comp:
-                    return user_data
+                    return metric
                 else:
                     return replace(
-                        user_data,
-                        secondary_edits=comp.secondary_edits,
+                        metric,
+                        comp=replace(metric.comp, secondary_edits=comp.secondary_edits),
                     )
-
-
-_DECODER = new_decoder[UserData](UserData)
 
 
 @rpc(blocking=True)
@@ -186,12 +189,12 @@ def _comp_done(nvim: Nvim, stack: Stack, event: Mapping[str, Any]) -> None:
     data = event.get("user_data")
     if data:
         try:
-            user_data = _DECODER(data)
-        except DecodeError as e:
-            log.warn("%s", e)
+            uid = UUID(data)
+        except ValueError:
+            pass
         else:
             s = state()
-            if user_data.change_uid == s.change_id:
+            if metric := stack.metrics.get(uid):
                 row, col = s.context.position
                 buf = cur_buf(nvim)
                 ns = create_ns(nvim, ns=NS)
@@ -212,24 +215,28 @@ def _comp_done(nvim: Nvim, stack: Stack, event: Mapping[str, Any]) -> None:
                 buf_set_extmarks(nvim, buf=buf, id=ns, marks=(e1, e2))
 
                 async def cont() -> None:
-                    s = state()
-                    if user_data.change_uid == s.change_id:
-                        ud = await _resolve(nvim, stack=stack, user_data=user_data)
+                    if metric:
+                        new_metric = await _resolve(nvim, stack=stack, metric=metric)
 
                         def cont() -> None:
-                            inserted_at = edit(
-                                nvim, stack=stack, state=s, data=ud, synthetic=False
-                            )
-                            ins_pos = inserted_at or (-1, -1)
-                            state(
-                                inserted_pos=ins_pos,
-                                last_edit=user_data.primary_edit,
-                                commit_id=uuid4(),
-                            )
+                            if new_metric.comp.uid in stack.metrics:
+                                inserted_at = edit(
+                                    nvim,
+                                    stack=stack,
+                                    state=s,
+                                    metric=new_metric,
+                                    synthetic=False,
+                                )
+                                ins_pos = inserted_at or (-1, -1)
+                                state(
+                                    inserted_pos=ins_pos,
+                                    last_edit=new_metric,
+                                    commit_id=uuid4(),
+                                )
+                            else:
+                                log.warn("%s", "delayed completion")
 
                         await async_call(nvim, cont)
-                    else:
-                        log.warn("%s", "delayed completion")
 
                 go(nvim, aw=cont())
 

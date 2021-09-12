@@ -1,35 +1,16 @@
 from dataclasses import dataclass
-from typing import Any, Iterable, Optional, Sequence, Tuple, Union
-from uuid import UUID
+from typing import Any, Iterable, MutableSequence, Optional, Tuple
 
 from pynvim import Nvim
 from std2.pickle import new_encoder
 
-from ...shared.types import (
-    ContextualEdit,
-    Doc,
-    Edit,
-    Extern,
-    RangeEdit,
-    SnippetEdit,
-    SnippetRangeEdit,
-)
-
-
-@dataclass(frozen=True)
-class UserData:
-    uid: UUID
-    instance: UUID
-    sort_by: str
-    change_uid: UUID
-    primary_edit: Union[SnippetRangeEdit, SnippetEdit, RangeEdit, ContextualEdit, Edit]
-    secondary_edits: Sequence[RangeEdit]
-    doc: Optional[Doc]
-    extern: Optional[Tuple[Extern, Any]]
+from .rt_types import Stack
+from .trans import Metric
 
 
 @dataclass(frozen=True)
 class VimCompletion:
+    user_data: str
     word: Optional[str] = None
     abbr: Optional[str] = None
     menu: Optional[str] = None
@@ -39,7 +20,6 @@ class VimCompletion:
     equal: Optional[int] = None
     dup: Optional[int] = None
     empty: Optional[int] = None
-    user_data: Optional[UserData] = None
 
 
 _LUA = """
@@ -71,11 +51,17 @@ _LUA = """
 end)(...)
 """
 
-_ENCODER = new_encoder[Iterable[VimCompletion]](Iterable[VimCompletion])
+_ENCODER = new_encoder[VimCompletion](VimCompletion)
 
 
-def complete(nvim: Nvim, col: int, comp: Iterable[VimCompletion]) -> None:
-    serialized = tuple(
-        {k: v for k, v in cmp.items() if v is not None} for cmp in _ENCODER(comp)
-    )
+def complete(
+    nvim: Nvim, stack: Stack, col: int, comp: Iterable[Tuple[Metric, VimCompletion]]
+) -> None:
+    stack.metrics.clear()
+    serialized: MutableSequence[Any] = []
+    for m, c in comp:
+        stack.metrics[m.comp.uid] = m
+        s = _ENCODER(c)
+        serialized.append(s)
+
     nvim.api.exec_lua(_LUA, (col + 1, serialized))

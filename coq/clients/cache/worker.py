@@ -1,26 +1,11 @@
 from dataclasses import dataclass, replace
-from typing import (
-    Awaitable,
-    Callable,
-    Iterator,
-    MutableMapping,
-    Optional,
-    Sequence,
-    Tuple,
-)
+from typing import Awaitable, Callable, Iterator, MutableMapping, Sequence, Tuple
 from uuid import UUID, uuid4
 
 from ...shared.repeat import sanitize
 from ...shared.runtime import Supervisor
 from ...shared.timeit import timeit
-from ...shared.types import (
-    Completion,
-    Context,
-    Edit,
-    RangeEdit,
-    SnippetEdit,
-    SnippetRangeEdit,
-)
+from ...shared.types import Completion, Context
 from .database import Database
 
 

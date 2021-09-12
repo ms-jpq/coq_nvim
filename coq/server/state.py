@@ -8,7 +8,9 @@ from uuid import UUID, uuid4
 from std2.types import Void, VoidType
 
 from ..shared.context import EMPTY_CONTEXT
-from ..shared.types import Context, Edit, NvimPos
+from ..shared.settings import Weights
+from ..shared.types import Completion, Context, Edit, NvimPos
+from .trans import Metric
 
 
 @dataclass(frozen=True)
@@ -20,7 +22,7 @@ class State:
     preview_id: UUID
     nono_bufs: AbstractSet[int]
     context: Context
-    last_edit: Edit
+    last_edit: Metric
     inserted_pos: NvimPos
     pum_location: Optional[int]
 
@@ -36,7 +38,26 @@ _state = State(
     preview_id=uuid4(),
     nono_bufs=set(),
     context=EMPTY_CONTEXT,
-    last_edit=Edit(new_text=""),
+    last_edit=Metric(
+        instance=uuid4(),
+        label_width=0,
+        kind_width=0,
+        weight=Weights(
+            prefix_matches=0,
+            edit_distance=0,
+            recency=0,
+            proximity=0,
+        ),
+        weight_adjust=0,
+        comp=Completion(
+            source="",
+            primary_edit=Edit(new_text=""),
+            weight_adjust=0,
+            label="",
+            sort_by="",
+            icon_match="",
+        ),
+    ),
     inserted_pos=(-1, -1),
     pum_location=None,
 )
@@ -50,7 +71,7 @@ def state(
     preview_id: Optional[UUID] = None,
     nono_bufs: AbstractSet[int] = frozenset(),
     context: Optional[Context] = None,
-    last_edit: Optional[Edit] = None,
+    last_edit: Optional[Metric] = None,
     inserted_pos: Optional[NvimPos] = None,
     pum_location: Union[VoidType, Optional[int]] = Void,
 ) -> State:

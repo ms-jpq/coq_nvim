@@ -10,7 +10,7 @@ from ..shared.parse import lower
 from ..shared.runtime import Metric
 from ..shared.settings import PumDisplay, Weights
 from ..shared.types import Context, SnippetEdit
-from .nvim.completions import UserData, VimCompletion
+from .completions import VimCompletion
 from .rt_types import Stack
 from .state import state
 
@@ -80,7 +80,6 @@ def _max_width(metrics: Sequence[Metric]) -> int:
 
 def _cmp_to_vcmp(
     pum: PumDisplay,
-    context: Context,
     kind_dead_width: int,
     ellipsis_width: int,
     truncate: int,
@@ -110,16 +109,6 @@ def _cmp_to_vcmp(
 
     menu = f"{sl}{metric.comp.source}{sr}"
 
-    user_data = UserData(
-        uid=metric.comp.uid,
-        instance=metric.instance,
-        change_uid=context.change_id,
-        sort_by=metric.comp.sort_by,
-        primary_edit=metric.comp.primary_edit,
-        secondary_edits=metric.comp.secondary_edits,
-        doc=metric.comp.doc,
-        extern=metric.comp.extern,
-    )
     vcmp = VimCompletion(
         word="",
         empty=1,
@@ -127,7 +116,7 @@ def _cmp_to_vcmp(
         equal=1,
         abbr=abbr,
         menu=menu,
-        user_data=user_data,
+        user_data=str(metric.comp.uid),
     )
     return vcmp
 
@@ -155,7 +144,6 @@ def trans(
     for metric in pruned:
         yield _cmp_to_vcmp(
             display.pum,
-            context=context,
             ellipsis_width=ellipsis_width,
             kind_dead_width=kind_dead_width,
             truncate=truncate,

@@ -1,4 +1,4 @@
-from uuid import uuid4
+from dataclasses import replace
 
 from pynvim.api.nvim import Nvim
 
@@ -7,7 +7,6 @@ from ...shared.repeat import sanitize
 from ...shared.types import ContextualEdit, Edit
 from ..context import context
 from ..edit import edit
-from ..nvim.completions import UserData
 from ..runtime import Stack
 from ..state import state
 
@@ -30,15 +29,9 @@ def repeat(nvim: Nvim, stack: Stack) -> None:
         nvim, db=stack.bdb, options=stack.settings.match, state=state(), manual=True
     )
     s = state(context=ctx)
-    sanitized = _edit(s.last_edit)
-    data = UserData(
-        uid=uuid4(),
-        instance=uuid4(),
-        sort_by="",
-        change_uid=uuid4(),
-        primary_edit=sanitized,
-        secondary_edits=(),
-        doc=None,
-        extern=None,
+    metric = s.last_edit
+    sanitized = _edit(metric.comp.primary_edit)
+    new_metric = replace(
+        metric, comp=replace(metric.comp, primary_edit=sanitized, secondary_edits=())
     )
-    edit(nvim, stack=stack, state=s, data=data, synthetic=True)
+    edit(nvim, stack=stack, state=s, metric=new_metric, synthetic=True)

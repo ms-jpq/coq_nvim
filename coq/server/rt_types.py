@@ -11,12 +11,14 @@ from ..databases.treesitter.database import TDB
 from ..shared.runtime import Supervisor, Worker
 from ..shared.settings import Settings
 from ..shared.types import Completion
+from .trans import Metric
 
 
 @dataclass(frozen=True)
 class Stack:
     settings: Settings
     lru: MutableMapping[UUID, Completion]
+    metrics: MutableMapping[UUID, Metric]
     bdb: BDB
     idb: IDB
     tdb: TDB

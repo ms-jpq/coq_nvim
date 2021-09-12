@@ -54,7 +54,7 @@ from ...shared.settings import GhostText, PreviewDisplay
 from ...shared.timeit import timeit
 from ...shared.trans import expand_tabs
 from ...shared.types import Completion, Context, Doc, Edit, Extern
-from ..nvim.completions import VimCompletion
+from ..completions import VimCompletion
 from ..rt_types import Stack
 from ..state import State, state
 
@@ -349,32 +349,36 @@ def _cmp_changed(nvim: Nvim, stack: Stack, event: Mapping[str, Any] = {}) -> Non
     with timeit("PREVIEW"):
         with suppress(DecodeError):
             ev = _DECODER(event)
-            data = ev.completed_item.user_data
-            if data:
-                s = state(preview_id=data.uid)
-                if data.doc and data.doc.text:
-                    _show_preview(
+            try:
+                uid = UUID(ev.completed_item.user_data)
+            except ValueError:
+                pass
+            else:
+                if metric := stack.metrics.get(uid):
+                    s = state(preview_id=uid)
+                    if metric.comp.doc and metric.comp.doc.text:
+                        _show_preview(
+                            nvim,
+                            stack=stack,
+                            event=ev,
+                            doc=metric.comp.doc,
+                            s=s,
+                            preview_id=s.preview_id,
+                        )
+                    elif metric.comp.extern:
+                        _resolve_comp(
+                            nvim,
+                            stack=stack,
+                            event=ev,
+                            extern=metric.comp.extern,
+                            maybe_doc=metric.comp.doc,
+                            state=s,
+                        )
+                    _virt_text(
                         nvim,
-                        stack=stack,
-                        event=ev,
-                        doc=data.doc,
-                        s=s,
-                        preview_id=s.preview_id,
+                        ghost=stack.settings.display.ghost_text,
+                        text=metric.comp.primary_edit.new_text,
                     )
-                elif data.extern:
-                    _resolve_comp(
-                        nvim,
-                        stack=stack,
-                        event=ev,
-                        extern=data.extern,
-                        maybe_doc=data.doc,
-                        state=s,
-                    )
-                _virt_text(
-                    nvim,
-                    ghost=stack.settings.display.ghost_text,
-                    text=data.primary_edit.new_text,
-                )
 
 
 autocmd("CompleteChanged") << f"lua {_cmp_changed.name}(vim.v.event)"
