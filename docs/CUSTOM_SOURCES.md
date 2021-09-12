@@ -44,6 +44,6 @@ If at least one source specifically request no caching, no sources will be cache
 
 Really more of a reference implementation than anything else.
 
-Because maintaining compatibility with arbitrary upstreams is alot of work, I will only be able to maintain this with community support.
+Because maintaining compatibility with arbitrary upstreams is a lot of work, I will only be able to maintain this with community support.
 
 Hopefully once there is enough community sources, I can deprecate this.
