@@ -1,7 +1,7 @@
 from dataclasses import dataclass, field
 from enum import Enum, auto
 from pathlib import PurePath
-from typing import Any, Literal, Optional, Sequence, Tuple, Union
+from typing import Any, Literal, Optional, Sequence, Tuple
 from uuid import UUID, uuid4
 
 UTF8: Literal["UTF-8"] = "UTF-8"
