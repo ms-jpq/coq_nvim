@@ -1,5 +1,6 @@
 from asyncio import Condition
 from collections import defaultdict
+from dataclasses import dataclass
 from itertools import count
 from typing import Any, AsyncIterator, MutableMapping, Optional, Sequence, Tuple
 
@@ -10,11 +11,19 @@ from ...registry import rpc
 from ...server.rt_types import Stack
 from ...shared.timeit import timeit
 
+
+@dataclass(frozen=True)
+class _Acc:
+    session: int
+    done: bool
+    acc: Sequence[Tuple[Optional[str], Any]]
+
+
 _UIDS = count()
 _CONDS: MutableMapping[str, Condition] = {}
-_STATE: MutableMapping[
-    str, Tuple[int, bool, Sequence[Tuple[Optional[str], Any]]]
-] = defaultdict(lambda: (-1, True, ()))
+_STATE: MutableMapping[str, _Acc] = defaultdict(
+    lambda: _Acc(session=-1, done=True, acc=())
+)
 
 
 @rpc(blocking=False)
@@ -22,16 +31,18 @@ def _lsp_notify(
     nvim: Nvim,
     stack: Stack,
     method: str,
-    ses: int,
+    session: int,
     client: Optional[str],
     done: bool,
     reply: Any,
 ) -> None:
     async def cont() -> None:
         cond = _CONDS.setdefault(method, Condition())
-        session, _, acc = _STATE[method]
-        if ses == session:
-            _STATE[method] = (ses, done, (*acc, (client, reply)))
+        acc = _STATE[method]
+        if session == acc.session:
+            _STATE[method] = _Acc(
+                session=session, done=done, acc=(*acc.acc, (client, reply))
+            )
         async with cond:
             cond.notify_all()
 
@@ -45,7 +56,7 @@ async def async_request(
         session, done = next(_UIDS), False
         cond = _CONDS.setdefault(method, Condition())
 
-        _STATE[method] = (session, done, ())
+        _STATE[method] = _Acc(session=session, done=done, acc=())
         async with cond:
             cond.notify_all()
 
@@ -55,13 +66,13 @@ async def async_request(
         await async_call(nvim, cont)
 
         while True:
-            ses, done, acc = _STATE[method]
-            if ses == session:
-                for client, a in acc:
+            acc = _STATE[method]
+            if acc.session == session:
+                for client, a in acc.acc:
                     yield client, a
                 if done:
                     break
-            elif ses > session:
+            elif acc.session > session:
                 break
 
             async with cond:
