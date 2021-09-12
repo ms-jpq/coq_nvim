@@ -6,15 +6,18 @@ The adapters turn various vim plugin's output into [LSP](https://microsoft.githu
 
 ## How to write a source:
 
-It's brain dead:
+All the sources are, are just simple functions that feed LSP completion items via a callback, they can optionally support cancellation.
 
 ```lua
 -- `COQsources` is a global registry of sources
 COQsources = COQsources or {}
 
 COQsources["<random uid>"] = {
-  name = "<name>"
-  fn = function (callback)
+  name = "<name>", -- this is displayed to the client
+  fn = function (args, callback)
+    -- 0 based
+    local row, col = unpack(args.pos)
+
     ...
     -- callback(<LSP completion items>) at some point
 
@@ -26,3 +29,9 @@ COQsources["<random uid>"] = {
   end
 }
 ```
+
+### Gotchas
+
+The caching semantics is identical to LSP specification, you will need to read how `CompletionItem[] | CompletionList` affects caching.
+
+If at least one source specifically request no caching, no sources will be cached.
