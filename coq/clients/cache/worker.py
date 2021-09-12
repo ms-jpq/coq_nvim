@@ -10,6 +10,7 @@ from typing import (
 )
 from uuid import UUID, uuid4
 
+from ...shared.repeat import sanitize
 from ...shared.runtime import Supervisor
 from ...shared.timeit import timeit
 from ...shared.types import (
@@ -43,21 +44,8 @@ def _use_cache(cache: _CacheCtx, ctx: Context) -> bool:
     return use_cache
 
 
-def sanitize_cached(comp: Completion) -> Optional[Completion]:
-    p_edit = comp.primary_edit
-    if isinstance(p_edit, SnippetRangeEdit):
-        return None
-    elif isinstance(p_edit, RangeEdit):
-        if not p_edit.fallback:
-            return None
-        else:
-            edit = Edit(new_text=p_edit.fallback)
-    elif isinstance(p_edit, SnippetEdit):
-        edit = p_edit
-    else:
-        edit = Edit(new_text=p_edit.new_text)
-
-    assert not isinstance(edit, RangeEdit)
+def sanitize_cached(comp: Completion) -> Completion:
+    edit = sanitize(comp.primary_edit)
     cached = replace(comp, primary_edit=edit, secondary_edits=())
     return cached
 
@@ -104,8 +92,12 @@ class CacheWorker:
                     word=match,
                     limitless=context.manual,
                 )
-                comps = (c for sort_by in words if (c := self._cached.get(sort_by)))
-                return (s for c in comps if (s := sanitize_cached(c)))
+                comps = (
+                    sanitize_cached(comp)
+                    for sort_by in words
+                    if (comp := self._cached.get(sort_by))
+                )
+                return comps
 
         async def set(completions: Sequence[Completion]) -> None:
             new_comps = {c.sort_by: c for c in completions}

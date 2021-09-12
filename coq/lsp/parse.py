@@ -22,7 +22,7 @@ def _falsy(thing: Any) -> bool:
     return thing is None or thing == False or thing == 0 or thing == "" or thing == b""
 
 
-def _range_edit(fallback: Optional[str], edit: TextEdit) -> Optional[RangeEdit]:
+def _range_edit(fallback: str, edit: TextEdit) -> Optional[RangeEdit]:
     rg = edit.get("range", {})
     s, e = rg.get("start", {}), rg.get("end", {})
     b_r, b_c = s.get("line"), s.get("character")
@@ -52,39 +52,40 @@ def _range_edit(fallback: Optional[str], edit: TextEdit) -> Optional[RangeEdit]:
 def _primary(item: CompletionItem) -> Edit:
     text_edit = item.get("textEdit")
     label = item.get("label")
-    fall_back = item.get("insertText") or label or ""
+    fallback = item.get("insertText") or label or ""
+    re_fallback = label or fallback
 
     if PROTOCOL.InsertTextFormat.get(item.get("insertTextFormat")) == "Snippet":
         if isinstance(text_edit, Mapping) and "range" in text_edit:
-            re = _range_edit(label, edit=cast(TextEdit, text_edit))
+            re = _range_edit(re_fallback, edit=cast(TextEdit, text_edit))
             if re:
                 return SnippetRangeEdit(
                     grammar=SnippetGrammar.lsp,
                     new_text=re.new_text,
-                    fallback=None,
+                    fallback=re.fallback,
                     begin=re.begin,
                     end=re.end,
                     encoding=re.encoding,
                 )
             else:
-                return SnippetEdit(grammar=SnippetGrammar.lsp, new_text=fall_back)
+                return SnippetEdit(grammar=SnippetGrammar.lsp, new_text=fallback)
         else:
-            return SnippetEdit(grammar=SnippetGrammar.lsp, new_text=fall_back)
+            return SnippetEdit(grammar=SnippetGrammar.lsp, new_text=fallback)
 
     elif isinstance(text_edit, Mapping):
         # TODO -- InsertReplaceEdit
         # if "insert" in text_edit:
         #     return Edit(new_text=fall_back)
         if "range" in text_edit:
-            re = _range_edit(label, edit=cast(TextEdit, text_edit))
+            re = _range_edit(re_fallback, edit=cast(TextEdit, text_edit))
             if re:
                 return re
             else:
-                return Edit(new_text=fall_back)
+                return Edit(new_text=fallback)
         else:
-            return Edit(new_text=fall_back)
+            return Edit(new_text=fallback)
     else:
-        return Edit(new_text=fall_back)
+        return Edit(new_text=fallback)
 
 
 def _doc(item: CompletionItem) -> Optional[Doc]:
@@ -122,7 +123,7 @@ def parse_item(
             secondary_edits=tuple(
                 re
                 for edit in (item.get("additionalTextEdits") or ())
-                if (re := _range_edit(None, edit=edit))
+                if (re := _range_edit("", edit=edit))
             ),
             kind=kind,
             doc=_doc(item),

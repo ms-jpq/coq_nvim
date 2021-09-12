@@ -85,7 +85,7 @@ class RangeEdit(Edit):
     End exclusve, like LSP
     """
 
-    fallback: Optional[str]
+    fallback: str
     begin: WTF8Pos
     end: WTF8Pos
     encoding: str
