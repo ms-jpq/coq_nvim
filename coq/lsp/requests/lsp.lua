@@ -90,12 +90,24 @@
   end
 
   COQlsp_third_party = function(name, session_id, pos)
-    local sources = COQsources or {}
+    local client_names = {}
+    local client_fns = {}
+
+    for id, source in pairs(COQsources or {}) do
+      if type(source.name) == "string" and type(source.fn) == "function" then
+        client_names[id] = source.name
+        table.insert(client_fns, source.fn)
+      end
+    end
+
     req(
       name,
       session_id,
-      {0, {}},
+      {#client_fns, client_names},
       function(on_resp)
+        for _, fn in ipairs(client_fns) do
+          client_fns(on_resp)
+        end
         return {}, nil
       end
     )
