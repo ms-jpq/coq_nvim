@@ -59,7 +59,7 @@ end
 
 ### Gotchas
 
-The caching semantics is identical to LSP specification, you will need to read how `CompletionItem[] | CompletionList` affects caching.
+The caching semantics is identical to LSP specification. ie. `items[]...` is cached, `{ isIncomplete = false, items = ... }` is also cached, only the example above is NOT cached.
 
 If at least one source specifically request no caching, no sources will be cached.
 
