@@ -39,7 +39,7 @@ def _ts_notify(
         global _COND, _SESSION
         _COND = _COND or Condition()
 
-        if session == _SESSION.uid:
+        if session >= _SESSION.uid:
             _SESSION = _Session(uid=session, done=True, payloads=reply, elapsed=elapsed)
 
         async with _COND:
