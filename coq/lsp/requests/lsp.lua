@@ -16,29 +16,29 @@
       reply = vim.NIL
     }
 
+    local on_resp_old = function(err, _, resp, client_id)
+      n_clients = n_clients - 1
+      payload.client = client_names[client_id] or vim.NIL
+      payload.done = n_clients == 0
+      payload.reply = resp or vim.NIL
+      COQlsp_notify(payload)
+    end
+
+    local on_resp_new = function(err, resp, ctx)
+      on_resp_old(err, nil, resp, ctx.client_id)
+    end
+
+    local on_resp = function(...)
+      if type(({...})[2]) ~= "string" then
+        on_resp_new(...)
+      else
+        on_resp_old(...)
+      end
+    end
+
     if n_clients == 0 then
       COQlsp_notify(payload)
     else
-      local on_resp_old = function(err, _, resp, client_id)
-        n_clients = n_clients - 1
-        payload.client = client_names[client_id] or vim.NIL
-        payload.done = n_clients == 0
-        payload.reply = resp or vim.NIL
-        COQlsp_notify(payload)
-      end
-
-      local on_resp_new = function(err, resp, ctx)
-        on_resp_old(err, nil, resp, ctx.client_id)
-      end
-
-      local on_resp = function(...)
-        if type(({...})[2]) ~= "string" then
-          on_resp_new(...)
-        else
-          on_resp_old(...)
-        end
-      end
-
       local _, cancel = callback(on_resp)
       cancels[name] = cancel
     end
