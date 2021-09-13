@@ -121,7 +121,7 @@
     req(
       name,
       session_id,
-      {client_names, client_fns},
+      {#client_fns, client_names},
       function(on_resp)
         for _, spec in ipairs(client_fns) do
           local id, fn = unpack(spec)
