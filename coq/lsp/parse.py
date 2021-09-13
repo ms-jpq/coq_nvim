@@ -106,7 +106,7 @@ def _doc(item: CompletionItem) -> Optional[Doc]:
 
 
 def parse_item(
-    short_name: str, weight_adjust: float, item: CompletionItem
+    include_extern: bool, short_name: str, weight_adjust: float, item: CompletionItem
 ) -> Optional[Completion]:
     label = item.get("label")
     if not label:
@@ -127,13 +127,14 @@ def parse_item(
             ),
             kind=kind,
             doc=_doc(item),
-            extern=(Extern.lsp, item),
+            extern=(Extern.lsp, item) if include_extern else None,
             icon_match=kind,
         )
         return cmp
 
 
 def parse(
+    include_extern: bool,
     short_name: str,
     weight_adjust: float,
     resp: CompletionResponse,
@@ -148,7 +149,12 @@ def parse(
         comps = (
             c
             for c in (
-                parse_item(short_name, weight_adjust=weight_adjust, item=item)
+                parse_item(
+                    include_extern,
+                    short_name=short_name,
+                    weight_adjust=weight_adjust,
+                    item=item,
+                )
                 for item in items
             )
             if c
@@ -161,7 +167,12 @@ def parse(
         comps = (
             c
             for c in (
-                parse_item(short_name, weight_adjust=weight_adjust, item=item)
+                parse_item(
+                    include_extern,
+                    short_name,
+                    weight_adjust=weight_adjust,
+                    item=item,
+                )
                 for item in resp
             )
             if c

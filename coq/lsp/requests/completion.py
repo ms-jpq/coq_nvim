@@ -32,7 +32,7 @@ async def request_lsp(
             )
             msg = f"LSP !! {client} {thing}"
             log.info("%s", msg)
-        yield parse(short_name, weight_adjust=weight_adjust, resp=resp)
+        yield parse(True, short_name=short_name, weight_adjust=weight_adjust, resp=resp)
 
 
 async def request_thirdparty(
@@ -46,4 +46,4 @@ async def request_thirdparty(
     ):
         name = client or short_name
         resp = cast(CompletionResponse, reply)
-        yield parse(name, weight_adjust=weight_adjust, resp=resp)
+        yield parse(False, short_name=name, weight_adjust=weight_adjust, resp=resp)
