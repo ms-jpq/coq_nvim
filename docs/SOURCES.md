@@ -225,3 +225,11 @@ false
 No special conf.
 
 But _Disabled by default_. Need `coq_settings.clients.tabnine=true` to enable.
+
+---
+
+#### coq_settings.clients.third_party
+
+No special conf.
+
+See [:COQhelp custom_sources](https://github.com/ms-jpq/coq_nvim/tree/coq/docs/CUSTOM_SOURCES.md)
