@@ -18,7 +18,7 @@ COQsources["<random uid>"] = {
     -- 0 based
     local row, col = unpack(args.pos)
 
-    ...
+    -- ...
     -- callback(<LSP completion items>) at some point
 
 
