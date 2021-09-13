@@ -106,15 +106,18 @@
       return names, fns
     end)()
 
-    local cancels = {}
-    local cancel = function()
-      for _, cont in ipairs(cancels) do
-        local go, err = pcall(cont)
-        if not go then
-          vim.api.nvim_err_writeln(err)
+    local cancels, cancel = (function()
+      local acc = {}
+      local cancel = function()
+        for _, cont in ipairs(acc) do
+          local go, err = pcall(cont)
+          if not go then
+            vim.api.nvim_err_writeln(err)
+          end
         end
       end
-    end
+      return acc, cancel
+    end)()
 
     local args = {pos = pos}
 
