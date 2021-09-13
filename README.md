@@ -182,7 +182,7 @@ Enable via: `coq_settings.clients.tabnine.enabled=true`
 
 ### Third Party Sources
 
-- Even **faster** than the original! (transparent caching)
+- **Even faster** than the original! (transparent caching)
 
 - [Easy to write](https://github.com/ms-jpq/coq_nvim/tree/coq/docs/CUSTOM_SOURCES.md)
 
