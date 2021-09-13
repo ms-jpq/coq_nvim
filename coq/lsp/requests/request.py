@@ -84,7 +84,7 @@ async def async_request(
             if acc.uid == uid:
                 for client, a in acc.acc:
                     yield client, a
-                if done:
+                if acc.done:
                     break
             elif acc.uid > uid:
                 break
