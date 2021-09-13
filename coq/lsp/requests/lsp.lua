@@ -90,7 +90,7 @@
   end
 
   COQlsp_third_party = function(name, session_id, pos)
-    local third_party_clients = function()
+    local client_names, client_fns = (function()
       local sources = COQsources or {}
       local names, fns = {}, {}
 
@@ -104,7 +104,7 @@
       end
 
       return names, fns
-    end
+    end)()
 
     local cancels = {}
     local cancel = function()
@@ -121,7 +121,7 @@
     req(
       name,
       session_id,
-      {third_party_clients()},
+      {client_names, client_fns},
       function(on_resp)
         for _, spec in ipairs(client_fns) do
           local id, fn = unpack(spec)
