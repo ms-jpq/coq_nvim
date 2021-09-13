@@ -147,17 +147,16 @@ def parse(
         items = resp.get("items", [])
         shuffle(cast(MutableSequence, items))
         comps = (
-            c
-            for c in (
-                parse_item(
+            comp
+            for item in items
+            if (
+                comp := parse_item(
                     include_extern,
                     short_name=short_name,
                     weight_adjust=weight_adjust,
                     item=item,
                 )
-                for item in items
             )
-            if c
         )
         lc = LSPcomp(local_cache=is_complete, items=comps)
         return lc
@@ -165,17 +164,16 @@ def parse(
     elif isinstance(resp, Sequence) and not isinstance(cast(Any, resp), str):
         shuffle(cast(MutableSequence, resp))
         comps = (
-            c
-            for c in (
-                parse_item(
+            comp
+            for item in resp
+            if (
+                comp := parse_item(
                     include_extern,
                     short_name,
                     weight_adjust=weight_adjust,
                     item=item,
                 )
-                for item in resp
             )
-            if c
         )
         return LSPcomp(local_cache=True, items=comps)
 
