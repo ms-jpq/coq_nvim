@@ -45,7 +45,6 @@ _DECODER = new_decoder[_Payload](_Payload)
 
 @rpc(blocking=False)
 def _lsp_notify(nvim: Nvim, stack: Stack, rpayload: _Payload) -> None:
-
     async def cont() -> None:
         payload = _DECODER(rpayload)
         cond = _CONDS.setdefault(payload.method, Condition())
@@ -69,8 +68,8 @@ async def async_request(
     with timeit(f"LSP :: {method}"):
         cond = _CONDS.setdefault(method, Condition())
 
-        uid, done = next(_UIDS), False
-        _STATE[method] = _Session(uid=uid, done=done, acc=())
+        uid = next(_UIDS)
+        _STATE[method] = _Session(uid=uid, done=False, acc=())
         async with cond:
             cond.notify_all()
 
