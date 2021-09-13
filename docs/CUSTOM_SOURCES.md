@@ -65,7 +65,7 @@ If at least one source specifically request no caching, no sources will be cache
 
 ## Known sources
 
-#### [coq.thirdparty](https://google.ca)
+#### [coq.thirdparty](https://github.com/ms-jpq/coq.thirdparty)
 
 "Official" unofficial sources
 
