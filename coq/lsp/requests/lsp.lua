@@ -44,7 +44,7 @@
     end
   end
 
-  local clients = function()
+  local lsp_clients = function()
     local n_clients = 0
     local client_names = {}
     for id, info in pairs(vim.lsp.buf_get_clients(0)) do
@@ -66,7 +66,7 @@
     req(
       name,
       session_id,
-      {clients()},
+      {lsp_clients()},
       function(on_resp)
         return vim.lsp.buf_request(
           0,
@@ -82,7 +82,7 @@
     req(
       name,
       session_id,
-      {clients()},
+      {lsp_clients()},
       function(on_resp)
         return vim.lsp.buf_request(0, "completionItem/resolve", item, on_resp)
       end
@@ -90,14 +90,20 @@
   end
 
   COQlsp_third_party = function(name, session_id, pos)
-    local client_names = {}
-    local client_fns = {}
+    local third_party_clients = function()
+      local sources = COQsources or {}
+      local names, fns = {}, {}
 
-    for id, source in pairs(COQsources or {}) do
-      if type(source.name) == "string" and type(source.fn) == "function" then
-        client_names[id] = source.name
-        table.insert(client_fns, {id, source.fn})
+      if type(sources) == "table" then
+        for id, source in pairs(sources) do
+          if type(source.name) == "string" and type(source.fn) == "function" then
+            names[id] = source.name
+            table.insert(fns, {id, source.fn})
+          end
+        end
       end
+
+      return names, fns
     end
 
     local cancels = {}
@@ -115,7 +121,7 @@
     req(
       name,
       session_id,
-      {#client_fns, client_names},
+      {third_party_clients()},
       function(on_resp)
         for _, spec in ipairs(client_fns) do
           local id, fn = unpack(spec)
