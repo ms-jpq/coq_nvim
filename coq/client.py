@@ -19,7 +19,7 @@ from std2.types import AnyFun
 
 from ._registry import ____
 from .consts import DEBUG, DEBUG_DB, DEBUG_METRICS, TMP_DIR
-from .registry import NAMESPACE, atomic, autocmd, rpc
+from .registry import atomic, autocmd, rpc
 from .server.registrants.attachment import BUF_EVENTS
 from .server.registrants.options import set_options
 from .server.rt_types import Stack
