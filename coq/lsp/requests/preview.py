@@ -11,13 +11,9 @@ from .request import async_request
 async def request(nvim: Nvim, item: CompletionItem) -> Optional[Completion]:
     stream = async_request(nvim, "lsp_preview", item)
     async for _, reply in stream:
-        if reply:
-            break
-    else:
-        reply = None
-
-    if reply:
         resp = cast(CompletionItem, reply)
-        return parse_item(True, short_name="", weight_adjust=0, item=resp)
+        comp = parse_item(True, short_name="", weight_adjust=0, item=resp)
+        if comp and comp.doc:
+            return comp
     else:
         return None
