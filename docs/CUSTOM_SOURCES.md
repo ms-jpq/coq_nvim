@@ -69,6 +69,8 @@ If at least one source specifically request no caching, no sources will be cache
 
 "Official" unofficial sources **(PR welcome)**!
 
+- nvim lua
+
 - vimtex
 
 - orgmode
