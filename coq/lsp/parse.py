@@ -143,7 +143,7 @@ def parse(
     resp: CompletionResponse,
 ) -> LSPcomp:
     if _falsy(resp):
-        return LSPcomp(local_cache=False, items=iter(()))
+        return LSPcomp(local_cache=True, items=iter(()))
 
     elif isinstance(resp, Mapping):
         is_complete = _falsy(resp.get("isIncomplete"))
