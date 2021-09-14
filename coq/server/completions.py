@@ -40,4 +40,4 @@ def complete(
         encoded = _ENCODER(comp)
         acc.append(encoded)
 
-    nvim.api.exec_lua("COQsend_comp(...)", (col + 1, acc))
+    nvim.api.exec_lua(f"{NAMESPACE}.send_comp(...)", (col + 1, acc))

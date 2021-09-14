@@ -74,7 +74,7 @@ async def async_request(
             cond.notify_all()
 
         def cont() -> None:
-            nvim.api.exec_lua(f"{method}(...)", (method, uid, *args))
+            nvim.api.exec_lua(f"{NAMESPACE}.{method}(...)", (method, uid, *args))
 
         await async_call(nvim, cont)
 

@@ -9,7 +9,7 @@ from .request import async_request
 
 
 async def request(nvim: Nvim, item: CompletionItem) -> Optional[Completion]:
-    stream = async_request(nvim, "COQlsp_preview", item)
+    stream = async_request(nvim, "lsp_preview", item)
     async for _, reply in stream:
         if reply:
             break

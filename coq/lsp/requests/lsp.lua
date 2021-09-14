@@ -54,7 +54,7 @@
     return n_clients, client_names
   end
 
-  COQlsp_comp = function(name, session_id, pos)
+  COQ.lsp_comp = function(name, session_id, pos)
     local row, col = unpack(pos)
     local position = {line = row, character = col}
     local text_doc = vim.lsp.util.make_text_document_params()
@@ -78,7 +78,7 @@
     )
   end
 
-  COQlsp_preview = function(name, session_id, item)
+  COQ.lsp_preview = function(name, session_id, item)
     req(
       name,
       session_id,
@@ -89,7 +89,7 @@
     )
   end
 
-  COQlsp_third_party = function(name, session_id, pos)
+  COQ.lsp_third_party = function(name, session_id, pos)
     local client_names, client_fns = (function()
       local sources = COQsources or {}
       local names, fns = {}, {}

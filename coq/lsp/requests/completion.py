@@ -22,7 +22,7 @@ async def request_lsp(
     row, c = context.position
     col = len(encode(context.line_before[:c], encoding=UTF16)) // 2
 
-    async for client, reply in async_request(nvim, "COQlsp_comp", (row, col)):
+    async for client, reply in async_request(nvim, "lsp_comp", (row, col)):
         resp = cast(CompletionResponse, reply)
         if DEBUG:
             thing = (
@@ -42,7 +42,7 @@ async def request_thirdparty(
     context: Context,
 ) -> AsyncIterator[LSPcomp]:
     async for client, reply in async_request(
-        nvim, "COQlsp_third_party", context.position
+        nvim, "lsp_third_party", context.position
     ):
         name = client or short_name
         resp = cast(CompletionResponse, reply)

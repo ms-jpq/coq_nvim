@@ -56,7 +56,7 @@
     )
   end
 
-  COQts_req = function(session, ctx)
+  COQ.ts_req = function(session, ctx)
     vim.schedule(
       function()
         local t1 = vim.loop.now()

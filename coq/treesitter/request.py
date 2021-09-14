@@ -88,7 +88,7 @@ async def async_request(
             _COND.notify_all()
 
         def cont() -> None:
-            nvim.api.exec_lua("COQts_req(...)", (uid, lines_around))
+            nvim.api.exec_lua(f"{NAMESPACE}.ts_req(...)", (uid, lines_around))
 
         await async_call(nvim, cont)
 
