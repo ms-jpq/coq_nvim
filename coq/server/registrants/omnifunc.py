@@ -145,9 +145,9 @@ def comp_func(nvim: Nvim, stack: Stack, s: State, manual: bool) -> None:
 
 @rpc(blocking=True)
 def omnifunc(
-    nvim: Nvim, stack: Stack, args: Tuple[Tuple[Literal[0, 1], str]]
+    nvim: Nvim, stack: Stack, args: Tuple[Literal[0, 1], str]
 ) -> Union[int, Sequence[Mapping[str, Any]]]:
-    (op, _), *_ = args
+    op, _ = args
 
     if op == 1:
         return -1
