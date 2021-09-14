@@ -184,7 +184,7 @@ Enable via: `coq_settings.clients.tabnine.enabled=true`
 
 - **Even faster** than the original sources! (transparent caching)
 
-- [Many](https://raw.githubusercontent.com/ms-jpq/coq.artifacts/artifacts/preview/bc.gif) | [out of](https://raw.githubusercontent.com/ms-jpq/coq.artifacts/artifacts/preview/figlet.gif) | [the box](https://raw.githubusercontent.com/ms-jpq/coq.artifacts/artifacts/preview/cowsay.gif)
+- [Many sources](https://raw.githubusercontent.com/ms-jpq/coq.artifacts/artifacts/preview/bc.gif) | [out of](https://raw.githubusercontent.com/ms-jpq/coq.artifacts/artifacts/preview/figlet.gif) | [the box](https://raw.githubusercontent.com/ms-jpq/coq.artifacts/artifacts/preview/cowsay.gif)
 
 - [Thirdparty integrations](https://github.com/ms-jpq/coq.thirdparty)
 
