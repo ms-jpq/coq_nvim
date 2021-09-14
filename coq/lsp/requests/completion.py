@@ -1,5 +1,4 @@
-from collections.abc import Sized
-from typing import AsyncIterator, cast
+from typing import Any, AsyncIterator, Mapping, Sized, cast
 
 from pynvim.api.nvim import Nvim
 from pynvim_pp.lib import encode
@@ -25,11 +24,12 @@ async def request_lsp(
     async for client, reply in async_request(nvim, "lsp_comp", (row, col)):
         resp = cast(CompletionResponse, reply)
         if DEBUG:
-            thing = (
-                len(resp)
-                if isinstance(resp, Sized) and is_iterable_not_str(resp)
-                else resp
-            )
+            if isinstance(resp, Mapping):
+                thing: Any = len(resp.get("items") or ())
+            elif isinstance(resp, Sized) and is_iterable_not_str(resp):
+                thing = len(resp)
+            else:
+                thing = resp
             msg = f"LSP !! {client} {thing}"
             log.info("%s", msg)
         yield parse(True, short_name=short_name, weight_adjust=weight_adjust, resp=resp)
@@ -41,9 +41,7 @@ async def request_thirdparty(
     weight_adjust: float,
     context: Context,
 ) -> AsyncIterator[LSPcomp]:
-    async for client, reply in async_request(
-        nvim, "lsp_third_party", context.position
-    ):
+    async for client, reply in async_request(nvim, "lsp_third_party", context.position):
         name = client or short_name
         resp = cast(CompletionResponse, reply)
         yield parse(False, short_name=name, weight_adjust=weight_adjust, resp=resp)
