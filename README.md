@@ -233,12 +233,9 @@ Install the usual way, ie. VimPlug, Vundle, etc
 Plug 'ms-jpq/coq_nvim', {'branch': 'coq'}
 " 9000+ Snippets
 Plug 'ms-jpq/coq.artifacts', {'branch': 'artifacts'}
-```
 
-```lua
--- packer
-use { 'ms-jpq/coq_nvim', branch = 'coq'} -- main one
-use { 'ms-jpq/coq.artifacts', branch= 'artifacts'} -- 9000+ Snippets
+" Third party sources -- See https://github.com/ms-jpq/coq.thirdparty
+Plug 'ms-jpq/coq.artifacts', {'branch': 'artifacts'}
 ```
 
 ## Documentation
