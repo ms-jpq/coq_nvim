@@ -98,7 +98,7 @@ All code paths must invoke `callback`, or else `coq.nvim` will end up waiting fo
 
 ![lua.img](https://raw.githubusercontent.com/ms-jpq/coq.artifacts/artifacts/preview/nvim_lua.gif)
 
-- math
+- scientific calculator
 
 ![bc.img](https://raw.githubusercontent.com/ms-jpq/coq.artifacts/artifacts/preview/bc.gif)
 
