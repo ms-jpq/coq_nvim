@@ -67,9 +67,13 @@ If at least one source specifically request no caching, no sources will be cache
 
 #### [coq.thirdparty](https://github.com/ms-jpq/coq.thirdparty)
 
-"Official" unofficial sources **(PR welcome)**!
+**First party lua** and _external third party integrations_
+
+##### First party
 
 - nvim lua
+
+##### Third party
 
 - vimtex
 
