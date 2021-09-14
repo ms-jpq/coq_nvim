@@ -67,6 +67,8 @@ If at least one source specifically request no caching, no sources will be cache
 
 #### [coq.thirdparty](https://github.com/ms-jpq/coq.thirdparty)
 
-"Official" unofficial sources
+"Official" unofficial sources **(PR welcome)**!
 
-Because maintaining compatibility with arbitrary upstreams is a lot of work, I will only be able to maintain this with community support.
+- vimtex
+
+- orgmode
