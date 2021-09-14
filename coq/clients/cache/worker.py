@@ -15,7 +15,7 @@ class _CacheCtx:
     commit_id: UUID
     buf_id: int
     row: int
-    line_before: str
+    text_before: str
 
 
 def _use_cache(cache: _CacheCtx, ctx: Context) -> bool:
@@ -24,7 +24,7 @@ def _use_cache(cache: _CacheCtx, ctx: Context) -> bool:
         cache.commit_id == ctx.commit_id
         and ctx.buf_id == cache.buf_id
         and row == cache.row
-        and ctx.line_before.startswith(cache.line_before)
+        and ctx.syms_before.startswith(cache.text_before)
     )
     return use_cache
 
@@ -44,7 +44,7 @@ class CacheWorker:
             commit_id=uuid4(),
             buf_id=-1,
             row=-1,
-            line_before="",
+            text_before="",
         )
         self._cached: MutableMapping[str, Completion] = {}
 
@@ -62,7 +62,7 @@ class CacheWorker:
             commit_id=context.commit_id,
             buf_id=context.buf_id,
             row=row,
-            line_before=context.line_before[: -len(context.syms_before)],
+            text_before=context.syms_before,
         )
         use_cache = _use_cache(cache_ctx, ctx=context) and bool(self._cached)
         if not use_cache:
