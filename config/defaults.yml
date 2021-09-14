@@ -127,7 +127,7 @@ clients:
 
   third_party:
     enabled: True
-    short_name: "3RD"
+    short_name: "3P"
     weight_adjust: 0
 
   tmux:
