@@ -2,7 +2,7 @@
 
 ---
 
-**Known sources at bottom of page**
+⬇️  **Known sources at bottom of page** ⬇️
 
 ---
 
