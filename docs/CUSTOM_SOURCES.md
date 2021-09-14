@@ -80,9 +80,16 @@ If at least one source specifically request no caching, no sources will be cache
 
 - nvim lua
 
+![lua.img](https://raw.githubusercontent.com/ms-jpq/coq.artifacts/artifacts/preview/nvim_lua.gif)
+
+
 - cowsay
 
+![cowsay.img](https://raw.githubusercontent.com/ms-jpq/coq.artifacts/artifacts/preview/cowsay.gif)
+
 - banner
+
+requires - [`figlet`](https://linux.die.net/man/6/figlet)
 
 ##### Third party
 
