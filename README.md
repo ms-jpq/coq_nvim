@@ -186,7 +186,9 @@ Enable via: `coq_settings.clients.tabnine.enabled=true`
 
 - [Easy to write](https://github.com/ms-jpq/coq_nvim/tree/coq/docs/CUSTOM_SOURCES.md)
 
-- [Official thirdparty integrations](https://github.com/ms-jpq/coq.thirdparty)
+- [Many](https://raw.githubusercontent.com/ms-jpq/coq.artifacts/artifacts/preview/bc.gif) [out of](https://raw.githubusercontent.com/ms-jpq/coq.artifacts/artifacts/preview/figlet.gif) [the box](https://raw.githubusercontent.com/ms-jpq/coq.artifacts/artifacts/preview/cowsay.gif)
+
+- [Thirdparty integrations](https://github.com/ms-jpq/coq.thirdparty)
 
 ![lua.img](https://raw.githubusercontent.com/ms-jpq/coq.artifacts/artifacts/preview/nvim_lua.gif)
 
