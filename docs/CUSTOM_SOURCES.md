@@ -89,7 +89,7 @@ If at least one source specifically request no caching, no sources will be cache
 
 - banner
 
-requires - [`figlet`](https://linux.die.net/man/6/figlet)
+![figlet.img](https://raw.githubusercontent.com/ms-jpq/coq.artifacts/artifacts/preview/figlet.gif)
 
 ##### Third party
 
