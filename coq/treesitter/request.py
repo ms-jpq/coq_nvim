@@ -8,7 +8,7 @@ from typing import Iterator, Optional, Sequence, Tuple
 from pynvim.api.nvim import Nvim
 from pynvim_pp.lib import async_call, go, recode
 
-from ..registry import atomic, rpc
+from ..registry import NAMESPACE, atomic, rpc
 from ..server.rt_types import Stack
 from ..shared.timeit import timeit
 from .types import Payload, RawPayload, SimplePayload, SimpleRawPayload
@@ -88,7 +88,7 @@ async def async_request(
             _COND.notify_all()
 
         def cont() -> None:
-            nvim.api.exec_lua("COQts_req(...)", (uid, lines_around))
+            nvim.api.exec_lua(f"{NAMESPACE}.ts_req(...)", (uid, lines_around))
 
         await async_call(nvim, cont)
 

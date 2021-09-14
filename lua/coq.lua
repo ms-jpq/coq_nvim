@@ -1,3 +1,4 @@
+COQ = COQ or {}
 coq = coq or {}
 
 local is_win = vim.fn.has("win32") == 1
@@ -80,11 +81,11 @@ local start = function(deps, ...)
   return job_id
 end
 
-coq.COQdeps = function()
+coq.deps = function()
   start(true, "deps")
 end
 
-vim.api.nvim_command [[command! -nargs=0 COQdeps lua coq.COQdeps()]]
+vim.api.nvim_command [[command! -nargs=0 COQdeps lua coq.deps()]]
 
 local set_coq_call = function(cmd)
   coq[cmd] = function(...)
@@ -94,8 +95,8 @@ local set_coq_call = function(cmd)
       job_id = start(false, "run", "--socket", vim.fn.serverstart())
     end
 
-    if not err_exit and _G[cmd] then
-      _G[cmd](args)
+    if not err_exit and COQ[cmd] then
+      COQ[cmd](args)
     else
       vim.defer_fn(
         function()
@@ -111,17 +112,17 @@ local set_coq_call = function(cmd)
   end
 end
 
-set_coq_call("COQnow")
-vim.api.nvim_command [[command! -complete=customlist,coq#complete_now -nargs=* COQnow lua coq.COQnow(<f-args>)]]
+set_coq_call("Now")
+vim.api.nvim_command [[command! -complete=customlist,coq#complete_now -nargs=* COQnow lua coq.Now(<f-args>)]]
 
-set_coq_call("COQstats")
-vim.api.nvim_command [[command! -nargs=* COQstats lua coq.COQstats(<f-args>)]]
+set_coq_call("Stats")
+vim.api.nvim_command [[command! -nargs=* COQstats lua coq.Stats(<f-args>)]]
 
-set_coq_call("COQsnips")
-vim.api.nvim_command [[command! -complete=customlist,coq#complete_snips -nargs=* COQsnips lua coq.COQsnips(<f-args>)]]
+set_coq_call("Snips")
+vim.api.nvim_command [[command! -complete=customlist,coq#complete_snips -nargs=* COQsnips lua coq.Snips(<f-args>)]]
 
-set_coq_call("COQhelp")
-vim.api.nvim_command [[command! -complete=customlist,coq#complete_help  -nargs=* COQhelp lua coq.COQhelp(<f-args>)]]
+set_coq_call("Help")
+vim.api.nvim_command [[command! -complete=customlist,coq#complete_help -nargs=* COQhelp lua coq.Help(<f-args>)]]
 
 coq.lsp_ensure_capabilities = function(cfg)
   local spec1 = {
@@ -147,7 +148,7 @@ end
 local settings = vim.g.coq_settings or {}
 if settings.auto_start then
   local args = settings.auto_start == "shut-up" and {"--shut-up"} or {}
-  coq.COQnow(unpack(args))
+  coq.Now(unpack(args))
 end
 
 setmetatable(

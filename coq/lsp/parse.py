@@ -108,29 +108,32 @@ def _doc(item: CompletionItem) -> Optional[Doc]:
 def parse_item(
     include_extern: bool, short_name: str, weight_adjust: float, item: CompletionItem
 ) -> Optional[Completion]:
-    label = item.get("label")
-    if not label:
+    if not isinstance(item, Mapping):
         return None
     else:
-        p_edit = _primary(item)
-        kind = PROTOCOL.CompletionItemKind.get(item.get("kind"), "")
-        cmp = Completion(
-            source=short_name,
-            weight_adjust=weight_adjust,
-            label=label,
-            sort_by=item.get("filterText") or p_edit.new_text,
-            primary_edit=p_edit,
-            secondary_edits=tuple(
-                re
-                for edit in (item.get("additionalTextEdits") or ())
-                if (re := _range_edit("", edit=edit))
-            ),
-            kind=kind,
-            doc=_doc(item),
-            extern=(Extern.lsp, item) if include_extern else None,
-            icon_match=kind,
-        )
-        return cmp
+        label = item.get("label")
+        if not label:
+            return None
+        else:
+            p_edit = _primary(item)
+            kind = PROTOCOL.CompletionItemKind.get(item.get("kind"), "")
+            cmp = Completion(
+                source=short_name,
+                weight_adjust=weight_adjust,
+                label=label,
+                sort_by=item.get("filterText") or p_edit.new_text,
+                primary_edit=p_edit,
+                secondary_edits=tuple(
+                    re
+                    for edit in (item.get("additionalTextEdits") or ())
+                    if (re := _range_edit("", edit=edit))
+                ),
+                kind=kind,
+                doc=_doc(item),
+                extern=(Extern.lsp, item) if include_extern else None,
+                icon_match=kind,
+            )
+            return cmp
 
 
 def parse(

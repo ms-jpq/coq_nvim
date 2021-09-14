@@ -21,7 +21,7 @@
       payload.client = client_names[client_id] or vim.NIL
       payload.done = n_clients == 0
       payload.reply = resp or vim.NIL
-      COQlsp_notify(payload)
+      COQ.Lsp_notify(payload)
     end
 
     local on_resp_new = function(err, resp, ctx)
@@ -37,7 +37,7 @@
     end
 
     if n_clients == 0 then
-      COQlsp_notify(payload)
+      COQ.Lsp_notify(payload)
     else
       local _, cancel = callback(on_resp)
       cancels[name] = cancel
@@ -54,7 +54,7 @@
     return n_clients, client_names
   end
 
-  COQlsp_comp = function(name, session_id, pos)
+  COQ.lsp_comp = function(name, session_id, pos)
     local row, col = unpack(pos)
     local position = {line = row, character = col}
     local text_doc = vim.lsp.util.make_text_document_params()
@@ -78,7 +78,7 @@
     )
   end
 
-  COQlsp_preview = function(name, session_id, item)
+  COQ.lsp_preview = function(name, session_id, item)
     req(
       name,
       session_id,
@@ -89,7 +89,7 @@
     )
   end
 
-  COQlsp_third_party = function(name, session_id, pos)
+  COQ.lsp_third_party = function(name, session_id, pos)
     local client_names, client_fns = (function()
       local sources = COQsources or {}
       local names, fns = {}, {}

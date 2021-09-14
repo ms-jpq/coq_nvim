@@ -12,7 +12,7 @@ from pynvim_pp.logging import with_suppress
 from std2.asyncio import run_in_executor
 
 from ...lang import LANG
-from ...registry import atomic, autocmd, rpc
+from ...registry import NAMESPACE, atomic, autocmd, rpc
 from ..rt_types import Stack
 from ..state import state
 from .omnifunc import comp_func
@@ -29,7 +29,7 @@ def _buf_enter(nvim: Nvim, stack: Stack) -> None:
             nvim.api.buf_attach(buf, True, {})
 
 
-autocmd("BufEnter", "InsertEnter") << f"lua {_buf_enter.name}()"
+autocmd("BufEnter", "InsertEnter") << f"lua {NAMESPACE}.{_buf_enter.name}()"
 
 q: SimpleQueue = SimpleQueue()
 
@@ -94,7 +94,7 @@ def _listener(nvim: Nvim, stack: Stack) -> None:
     go(nvim, aw=cont())
 
 
-atomic.exec_lua(f"{_listener.name}()", ())
+atomic.exec_lua(f"{NAMESPACE}.{_listener.name}()", ())
 
 
 def _lines_event(

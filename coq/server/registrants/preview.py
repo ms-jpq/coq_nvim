@@ -48,7 +48,7 @@ from std2.string import removeprefix
 from ...lsp.requests.preview import request
 from ...lsp.types import CompletionItem
 from ...paths.show import show
-from ...registry import autocmd, rpc
+from ...registry import NAMESPACE, autocmd, rpc
 from ...shared.settings import GhostText, PreviewDisplay
 from ...shared.timeit import timeit
 from ...shared.trans import expand_tabs
@@ -98,7 +98,7 @@ def _kill_win(nvim: Nvim, stack: Stack, reset: bool) -> None:
         win_close(nvim, win=win)
 
 
-autocmd("CompleteDone", "InsertLeave") << f"lua {_kill_win.name}(true)"
+autocmd("CompleteDone", "InsertLeave") << f"lua {NAMESPACE}.{_kill_win.name}(true)"
 
 
 def _preprocess(context: Context, doc: Doc) -> Doc:
@@ -242,7 +242,7 @@ def _show_preview(
         (pum_location, _, pos), *__ = ordered
         state(pum_location=pum_location)
         nvim.api.exec_lua(
-            f"{_go_show.name}(...)",
+            f"{NAMESPACE}.{_go_show.name}(...)",
             (preview_id.hex, new_doc.syntax, lines, asdict(pos)),
         )
 
@@ -379,7 +379,7 @@ def _cmp_changed(nvim: Nvim, stack: Stack, event: Mapping[str, Any] = {}) -> Non
                 )
 
 
-autocmd("CompleteChanged") << f"lua {_cmp_changed.name}(vim.v.event)"
+autocmd("CompleteChanged") << f"lua {NAMESPACE}.{_cmp_changed.name}(vim.v.event)"
 
 
 @rpc(blocking=True, schedule=True)
@@ -396,7 +396,7 @@ def preview_preview(nvim: Nvim, stack: Stack, *_: str) -> str:
         buf = win_get_buf(nvim, win=win)
         syntax = buf_get_option(nvim, buf=buf, key="syntax")
         lines = buf_get_lines(nvim, buf=buf, lo=0, hi=-1)
-        nvim.exec_lua(f"{_bigger_preview.name}(...)", (syntax, lines))
+        nvim.exec_lua(f"{NAMESPACE}.{_bigger_preview.name}(...)", (syntax, lines))
 
     escaped: str = nvim.api.replace_termcodes("<c-e>", True, False, True)
     return escaped

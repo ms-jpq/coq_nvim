@@ -35,7 +35,7 @@ from std2.pickle import DecodeError, new_decoder, new_encoder
 
 from ...lang import LANG
 from ...paths.show import fmt_path
-from ...registry import atomic, rpc
+from ...registry import NAMESPACE, atomic, rpc
 from ...shared.context import EMPTY_CONTEXT
 from ...shared.settings import SnippetWarnings
 from ...shared.timeit import timeit
@@ -286,7 +286,7 @@ def _load_snips(nvim: Nvim, stack: Stack) -> None:
     go(nvim, aw=_slurp(nvim, stack=stack, warn_outdated=warn_outdated))
 
 
-atomic.exec_lua(f"{_load_snips.name}()", ())
+atomic.exec_lua(f"{NAMESPACE}.{_load_snips.name}()", ())
 
 
 def compile_one(

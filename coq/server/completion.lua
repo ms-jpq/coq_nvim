@@ -1,5 +1,5 @@
 (function(...)
-  COQsend_comp = function(col, items)
+  COQ.send_comp = function(col, items)
     vim.schedule(
       function()
         local legal_modes = {

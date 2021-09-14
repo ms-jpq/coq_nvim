@@ -2,7 +2,7 @@ from pynvim import Nvim
 from pynvim_pp.keymap import Keymap
 from pynvim_pp.settings import Settings
 
-from ...registry import atomic, autocmd, rpc
+from ...registry import NAMESPACE, atomic, autocmd, rpc
 from ...shared.settings import KeyMapping
 from ..rt_types import Stack
 from ..state import state
@@ -26,8 +26,8 @@ def _update_pumheight(nvim: Nvim, stack: Stack) -> None:
     nvim.options["pumheight"] = pumheight
 
 
-atomic.exec_lua(f"{_update_pumheight.name}()", ())
-autocmd("VimResized") << f"lua {_update_pumheight.name}()"
+atomic.exec_lua(f"{NAMESPACE}.{_update_pumheight.name}()", ())
+autocmd("VimResized") << f"lua {NAMESPACE}.{_update_pumheight.name}()"
 
 
 def set_options(nvim: Nvim, mapping: KeyMapping, fast_close: bool) -> None:
@@ -37,10 +37,13 @@ def set_options(nvim: Nvim, mapping: KeyMapping, fast_close: bool) -> None:
     settings["completefunc"] = omnifunc.name
 
     if mapping.eval_snips:
-        keymap.n(mapping.eval_snips) << f"<cmd>lua {eval_snips.name}(false)<cr>"
+        (
+            keymap.n(mapping.eval_snips)
+            << f"<cmd>lua {NAMESPACE}.{eval_snips.name}(false)<cr>"
+        )
         (
             keymap.v(mapping.eval_snips)
-            << rf"<c-\><c-n><cmd>lua {eval_snips.name}(true)<cr>"
+            << rf"<c-\><c-n><cmd>lua {NAMESPACE}.{eval_snips.name}(true)<cr>"
         )
 
     if mapping.bigger_preview:
@@ -50,11 +53,14 @@ def set_options(nvim: Nvim, mapping: KeyMapping, fast_close: bool) -> None:
         )
 
     if mapping.jump_to_mark:
-        keymap.n(mapping.jump_to_mark) << f"<cmd>lua {nav_mark.name}()<cr>"
-        keymap.iv(mapping.jump_to_mark) << rf"<c-\><c-n><cmd>lua {nav_mark.name}()<cr>"
+        keymap.n(mapping.jump_to_mark) << f"<cmd>lua {NAMESPACE}.{nav_mark.name}()<cr>"
+        (
+            keymap.iv(mapping.jump_to_mark)
+            << rf"<c-\><c-n><cmd>lua {NAMESPACE}.{nav_mark.name}()<cr>"
+        )
 
     if mapping.repeat:
-        keymap.n(mapping.repeat) << f"<cmd>lua {repeat.name}()<cr>"
+        keymap.n(mapping.repeat) << f"<cmd>lua {NAMESPACE}.{repeat.name}()<cr>"
 
     if mapping.manual_complete:
         (

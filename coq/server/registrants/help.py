@@ -34,7 +34,7 @@ from ...consts import (
     URI_SOURCES,
     URI_STATISTICS,
 )
-from ...registry import rpc
+from ...registry import NAMESPACE, rpc
 from ..rt_types import Stack
 
 

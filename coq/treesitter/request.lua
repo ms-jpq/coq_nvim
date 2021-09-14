@@ -56,7 +56,7 @@
     )
   end
 
-  COQts_req = function(session, ctx)
+  COQ.ts_req = function(session, ctx)
     vim.schedule(
       function()
         local t1 = vim.loop.now()
@@ -65,7 +65,7 @@
           table.insert(acc, payload)
         end
         local t2 = vim.loop.now()
-        COQts_notify(session, acc, (t2 - t1) / 1000)
+        COQ.Ts_notify(session, acc, (t2 - t1) / 1000)
       end
     )
   end
