@@ -102,13 +102,13 @@ All code paths must invoke `callback`, or else `coq.nvim` will end up waiting fo
 
 ![bc.img](https://raw.githubusercontent.com/ms-jpq/coq.artifacts/artifacts/preview/bc.gif)
 
-- cowsay
-
-![cowsay.img](https://raw.githubusercontent.com/ms-jpq/coq.artifacts/artifacts/preview/cowsay.gif)
-
 - banner
 
 ![figlet.img](https://raw.githubusercontent.com/ms-jpq/coq.artifacts/artifacts/preview/figlet.gif)
+
+- moo
+
+![cowsay.img](https://raw.githubusercontent.com/ms-jpq/coq.artifacts/artifacts/preview/cowsay.gif)
 
 ##### Third party
 
