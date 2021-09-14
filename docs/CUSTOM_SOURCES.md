@@ -94,6 +94,10 @@ All code paths must invoke `callback`, or else `coq.nvim` will end up waiting fo
 
 ![lua.img](https://raw.githubusercontent.com/ms-jpq/coq.artifacts/artifacts/preview/nvim_lua.gif)
 
+- math
+
+![bc.img](https://raw.githubusercontent.com/ms-jpq/coq.artifacts/artifacts/preview/bc.gif)
+
 - cowsay
 
 ![cowsay.img](https://raw.githubusercontent.com/ms-jpq/coq.artifacts/artifacts/preview/cowsay.gif)
