@@ -22,7 +22,7 @@ from pynvim_pp.lib import write
 from pynvim_pp.logging import log
 
 from ...lang import LANG
-from ...registry import NAMESPACE, rpc
+from ...registry import rpc
 from ...snippets.consts import MOD_PAD
 from ..edit import EditInstruction, apply
 from ..mark import NS

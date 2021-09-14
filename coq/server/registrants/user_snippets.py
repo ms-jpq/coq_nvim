@@ -28,7 +28,7 @@ from yaml.nodes import ScalarNode, SequenceNode
 from ...consts import REPL_GRAMMAR
 from ...lang import LANG
 from ...paths.show import fmt_path
-from ...registry import NAMESPACE, rpc
+from ...registry import rpc
 from ...shared.types import SnippetGrammar
 from ...snippets.consts import MOD_PAD
 from ...snippets.parsers.types import ParseError

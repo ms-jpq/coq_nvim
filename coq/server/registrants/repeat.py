@@ -2,7 +2,7 @@ from dataclasses import replace
 
 from pynvim.api.nvim import Nvim
 
-from ...registry import NAMESPACE, rpc
+from ...registry import rpc
 from ...shared.repeat import sanitize
 from ...shared.types import ContextualEdit, Edit
 from ..context import context
