@@ -1,3 +1,4 @@
+COQ = COQ or {}
 coq = coq or {}
 
 local is_win = vim.fn.has("win32") == 1
