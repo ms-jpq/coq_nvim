@@ -80,6 +80,10 @@ If at least one source specifically request no caching, no sources will be cache
 
 - nvim lua
 
+- cowsay
+
+- banner
+
 ##### Third party
 
 - vimtex
