@@ -58,7 +58,7 @@ return function(args, callback)
   end
 
   callback {
-    isIncomplete = true, -- isIncomplete = True -> no caching
+    isIncomplete = true, -- :: isIncomplete = True :: -->> **NO CACHING** <<--
     items = items
   }
 end
@@ -66,9 +66,21 @@ end
 
 ### Gotchas
 
+Pitfalls that can **DESTROY performance**!!
+
+#### Caching
+
 The caching semantics is identical to LSP specification. ie. `items[]...` is cached, `{ isIncomplete = false, items = ... }` is also cached, only the example above is NOT cached.
 
-If at least one source specifically request no caching, no sources will be cached.
+If at least one source specifically request no caching, _no sources will be cached_.
+
+Not caching thirdparty plugins is a BAD IDEA, sure `coq.nvim` is designed to handle much bigger json spams, but `nvim` itself is likely to crawl under a flood of vimscript.
+
+#### Dangling callbacks
+
+All code paths must invoke `callback`, or else `coq.nvim` will end up waiting for `callback` and timing out on every keystroke.
+
+**`:COQstats`** is your best friend. It's super obvious if one source is slowing everybody down.
 
 ## Known sources
 
@@ -81,7 +93,6 @@ If at least one source specifically request no caching, no sources will be cache
 - nvim lua
 
 ![lua.img](https://raw.githubusercontent.com/ms-jpq/coq.artifacts/artifacts/preview/nvim_lua.gif)
-
 
 - cowsay
 
