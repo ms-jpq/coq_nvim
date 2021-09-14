@@ -40,13 +40,14 @@ Offers suggestions of `vim.lsp.protocol.CompletionItemKind`
 function(args, callback)
   local items = {}
 
-  -- label :: text to insert if insertText = None
-  -- kind  :: int ∈ `vim.lsp.protocol.CompletionItemKind`
+  -- label      :: text to insert if insertText = None
+  -- kind       :: int ∈ `vim.lsp.protocol.CompletionItemKind`
   -- insertText :: string | None, text to insert
+  -- detail     :: doc popup
 
   for key, val in pairs(vim.lsp.protocol.CompletionItemKind) do
     if type(key) == "string" and type(val) == "number" then
-      table.insert(items, {label = key, kind = val})
+      table.insert(items, {label = key, kind = val, detail = tostring(math.random()) })
     end
   end
 
