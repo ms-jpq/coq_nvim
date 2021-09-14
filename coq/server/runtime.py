@@ -15,6 +15,7 @@ from ..clients.paths.worker import Worker as PathsWorker
 from ..clients.snippet.worker import Worker as SnippetWorker
 from ..clients.t9.worker import Worker as T9Worker
 from ..clients.tags.worker import Worker as TagsWorker
+from ..clients.third_party.worker import Worker as ThirdPartyWorker
 from ..clients.tmux.worker import Worker as TmuxWorker
 from ..clients.tree_sitter.worker import Worker as TreeWorker
 from ..consts import CONFIG_YML, SETTINGS_VAR, VARS
@@ -66,6 +67,9 @@ def _from_each_according_to_their_ability(
 
     if clients.lsp.enabled:
         yield LspWorker(supervisor, options=clients.lsp, misc=None)
+
+    if clients.third_party.enabled:
+        yield ThirdPartyWorker(supervisor, options=clients.third_party, misc=None)
 
     if clients.snippets.enabled:
         yield SnippetWorker(supervisor, options=clients.snippets, misc=sdb)

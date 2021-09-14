@@ -34,6 +34,7 @@ function! coq#complete_help(arg_lead, cmd_line, cursor_pos) abort
         \ 'misc',
         \ 'stats',
         \ 'perf',
+        \ 'custom_sources',
         \ ]
 
   if a:cmd_line[a:cursor_pos - 7 : a:cursor_pos] ==# ' --web '

@@ -180,6 +180,14 @@ _T9 is disabled by default, I might remove it, if they do not improve the CPU us
 
 Enable via: `coq_settings.clients.tabnine.enabled=true`
 
+### Third Party Sources
+
+- **Even faster** than the original sources! (transparent caching)
+
+- [Easy to write](https://github.com/ms-jpq/coq_nvim/tree/coq/docs/CUSTOM_SOURCES.md)
+
+- [Official integrations](https://github.com/ms-jpq/coq.thirdparty)
+
 ### Statistics
 
 `:COQstats`
@@ -263,6 +271,8 @@ There is built-in [help command](https://github.com/ms-jpq/coq_nvim/tree/coq/doc
 - [:COQhelp perf](https://github.com/ms-jpq/coq_nvim/tree/coq/docs/PERF.md)
 
 - [:COQhelp stats](https://github.com/ms-jpq/coq_nvim/tree/coq/docs/STATS.md)
+
+- [:COQhelp custom_sources](https://github.com/ms-jpq/coq_nvim/tree/coq/docs/CUSTOM_SOURCES.md)
 
 ## FAQ
 

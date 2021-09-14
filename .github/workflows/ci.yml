@@ -32,7 +32,7 @@ jobs:
         run: sudo apt install -y universal-ctags
 
       - name: Codespell
-        run: codespell --ignore-words-list="alo,wit"
+        run: codespell --skip ./artifacts/helo.yml
 
       - name: Lint
         run: mypy -- .

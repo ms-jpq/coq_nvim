@@ -1,4 +1,5 @@
 from asyncio import Condition
+from dataclasses import dataclass
 from itertools import count
 from pathlib import Path
 from string import capwords
@@ -12,9 +13,18 @@ from ..server.rt_types import Stack
 from ..shared.timeit import timeit
 from .types import Payload, RawPayload, SimplePayload, SimpleRawPayload
 
+
+@dataclass(frozen=True)
+class _Session:
+    uid: int
+    done: bool
+    payloads: Sequence[RawPayload]
+    elapsed: float
+
+
 _UIDS = count()
 _COND: Optional[Condition] = None
-_SESSION: Tuple[int, bool, Sequence[RawPayload], float] = -1, True, (), 0
+_SESSION = _Session(uid=-1, done=True, payloads=(), elapsed=0)
 
 
 _LUA = (Path(__file__).resolve().parent / "request.lua").read_text("UTF-8")
@@ -23,15 +33,14 @@ atomic.exec_lua(_LUA, ())
 
 @rpc(blocking=False)
 def _ts_notify(
-    nvim: Nvim, stack: Stack, ses: int, reply: Sequence[RawPayload], elapsed: float
+    nvim: Nvim, stack: Stack, session: int, reply: Sequence[RawPayload], elapsed: float
 ) -> None:
     async def cont() -> None:
         global _COND, _SESSION
         _COND = _COND or Condition()
 
-        session, _, _, _ = _SESSION
-        if ses == session:
-            _SESSION = ses, True, reply, elapsed
+        if session >= _SESSION.uid:
+            _SESSION = _Session(uid=session, done=True, payloads=reply, elapsed=elapsed)
 
         async with _COND:
             _COND.notify_all()
@@ -72,22 +81,22 @@ async def async_request(
     _COND = _COND or Condition()
 
     with timeit("TS"):
-        _SESSION = session, _, _, _ = next(_UIDS), False, (), 0
+        uid = next(_UIDS)
+        _SESSION = _Session(uid=uid, done=False, payloads=(), elapsed=0)
 
         async with _COND:
             _COND.notify_all()
 
         def cont() -> None:
-            nvim.api.exec_lua("COQts_req(...)", (session, lines_around))
+            nvim.api.exec_lua("COQts_req(...)", (uid, lines_around))
 
         await async_call(nvim, cont)
 
         while True:
-            ses, done, reply, elapsed = _SESSION
-            if ses == session and done:
-                return _vaildate(reply), elapsed
+            if _SESSION.uid == uid and _SESSION.done:
+                return _vaildate(_SESSION.payloads), _SESSION.elapsed
 
-            elif ses > session:
+            elif _SESSION.uid > uid:
                 return iter(()), -1
 
             else:

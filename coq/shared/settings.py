@@ -170,10 +170,11 @@ class Clients:
     lsp: LSPClient
     paths: PathsClient
     snippets: SnippetClient
+    tabnine: BaseClient
     tags: TagsClient
     tmux: WordbankClient
     tree_sitter: TSClient
-    tabnine: BaseClient
+    third_party: BaseClient
 
 
 @dataclass(frozen=True)

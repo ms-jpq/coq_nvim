@@ -26,6 +26,8 @@ Use `:COQhelp {topic}` or `:COQhelp {topic} --web` to visit a particular topic f
 
 - [:COQhelp stats](https://github.com/ms-jpq/coq_nvim/tree/coq/docs/STATS.md)
 
+- [:COQhelp custom_sources](https://github.com/ms-jpq/coq_nvim/tree/coq/docs/CUSTOM_SOURCES.md)
+
 ---
 
 ## Commands
