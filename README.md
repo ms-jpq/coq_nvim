@@ -190,7 +190,7 @@ Enable via: `coq_settings.clients.tabnine.enabled=true`
 
 ![lua.img](https://raw.githubusercontent.com/ms-jpq/coq.artifacts/artifacts/preview/nvim_lua.gif)
 
-I wrote a nvim-lua source in about 30 minutes, super easy!
+I wrote a `nvim-lua` source in about 30 minutes, super easy!
 
 ### Statistics
 
