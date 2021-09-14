@@ -43,7 +43,7 @@ async def _ls(nvim: Nvim) -> AbstractSet[str]:
 async def _mtimes(paths: AbstractSet[str]) -> Mapping[str, float]:
     def c1() -> Iterable[Tuple[Path, float]]:
         for path in map(Path, paths):
-            with suppress(FileNotFoundError):
+            with suppress(OSError):
                 stat = path.stat()
                 yield path, stat.st_mtime
 
