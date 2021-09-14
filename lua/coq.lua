@@ -82,7 +82,7 @@ local start = function(deps, ...)
 end
 
 coq.deps = function()
-  start(true, "Deps")
+  start(true, "deps")
 end
 
 vim.api.nvim_command [[command! -nargs=0 COQdeps lua coq.deps()]]
