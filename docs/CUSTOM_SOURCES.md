@@ -37,17 +37,23 @@ Simple case:
 Offers suggestions of `vim.lsp.protocol.CompletionItemKind`
 
 ```lua
-function(args, callback)
+return function(args, callback)
   local items = {}
 
-  -- label      :: text to insert if insertText = None
+  -- label      :: display label
+  -- insertText :: string | null, default to `label` if null
   -- kind       :: int ∈ `vim.lsp.protocol.CompletionItemKind`
-  -- insertText :: string | None, text to insert
   -- detail     :: doc popup
 
   for key, val in pairs(vim.lsp.protocol.CompletionItemKind) do
     if type(key) == "string" and type(val) == "number" then
-      table.insert(items, {label = key, kind = val, detail = tostring(math.random()) })
+      local item = {
+        label = "label .. " .. key,
+        insertText = key,
+        kind = val,
+        detail = tostring(math.random())
+      }
+      table.insert(items, item)
     end
   end
 
