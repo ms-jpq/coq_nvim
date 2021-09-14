@@ -180,7 +180,7 @@ _T9 is disabled by default, I might remove it, if they do not improve the CPU us
 
 Enable via: `coq_settings.clients.tabnine.enabled=true`
 
-### Lua sources & external third party integrations
+### Scriptable lua sources & external third party integrations
 
 - **Even faster** than the original sources! (transparent caching)
 
@@ -189,6 +189,8 @@ Enable via: `coq_settings.clients.tabnine.enabled=true`
 - [Official integrations](https://github.com/ms-jpq/coq.thirdparty)
 
 ![lua.img](https://raw.githubusercontent.com/ms-jpq/coq.artifacts/artifacts/preview/nvim_lua.gif)
+
+I wrote a nvim-lua source in about 30 minutes, super easy!
 
 ### Statistics
 
