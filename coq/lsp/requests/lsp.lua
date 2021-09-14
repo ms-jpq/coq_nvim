@@ -89,7 +89,7 @@
     )
   end
 
-  COQ.lsp_third_party = function(name, session_id, pos)
+  COQ.lsp_third_party = function(name, session_id, pos, line)
     local client_names, client_fns = (function()
       local sources = COQsources or {}
       local names, fns = {}, {}
@@ -119,7 +119,7 @@
       return acc, cancel
     end)()
 
-    local args = {pos = pos}
+    local args = {pos = pos, line=line}
 
     req(
       name,

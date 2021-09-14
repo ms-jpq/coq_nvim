@@ -41,7 +41,9 @@ async def request_thirdparty(
     weight_adjust: float,
     context: Context,
 ) -> AsyncIterator[LSPcomp]:
-    async for client, reply in async_request(nvim, "lsp_third_party", context.position):
+    async for client, reply in async_request(
+        nvim, "lsp_third_party", context.position, context.line
+    ):
         name = client or short_name
         resp = cast(CompletionResponse, reply)
         yield parse(False, short_name=name, weight_adjust=weight_adjust, resp=resp)
