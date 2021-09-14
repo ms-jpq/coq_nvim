@@ -1,6 +1,10 @@
 # Custom Sources
 
+---
+
 **Known sources at bottom of page**
+
+---
 
 The idea is simple: custom `coq` sources are implemented via simple adapters.
 
