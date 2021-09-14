@@ -82,7 +82,7 @@ local start = function(deps, ...)
 end
 
 coq.deps = function()
-  start(true, "deps")
+  start(true, "Deps")
 end
 
 vim.api.nvim_command [[command! -nargs=0 COQdeps lua coq.deps()]]
@@ -112,17 +112,17 @@ local set_coq_call = function(cmd)
   end
 end
 
-set_coq_call("now")
-vim.api.nvim_command [[command! -complete=customlist,coq#complete_now -nargs=* COQnow lua coq.now(<f-args>)]]
+set_coq_call("Now")
+vim.api.nvim_command [[command! -complete=customlist,coq#complete_now -nargs=* COQnow lua coq.Now(<f-args>)]]
 
-set_coq_call("stats")
-vim.api.nvim_command [[command! -nargs=* COQstats lua coq.COQstats(<f-args>)]]
+set_coq_call("Stats")
+vim.api.nvim_command [[command! -nargs=* COQstats lua coq.Stats(<f-args>)]]
 
-set_coq_call("snips")
-vim.api.nvim_command [[command! -complete=customlist,coq#complete_snips -nargs=* COQsnips lua coq.snips(<f-args>)]]
+set_coq_call("Snips")
+vim.api.nvim_command [[command! -complete=customlist,coq#complete_snips -nargs=* COQsnips lua coq.Snips(<f-args>)]]
 
-set_coq_call("help")
-vim.api.nvim_command [[command! -complete=customlist,coq#complete_help  -nargs=* COQhelp lua coq.help(<f-args>)]]
+set_coq_call("Help")
+vim.api.nvim_command [[command! -complete=customlist,coq#complete_help -nargs=* COQhelp lua coq.Help(<f-args>)]]
 
 coq.lsp_ensure_capabilities = function(cfg)
   local spec1 = {
@@ -148,7 +148,7 @@ end
 local settings = vim.g.coq_settings or {}
 if settings.auto_start then
   local args = settings.auto_start == "shut-up" and {"--shut-up"} or {}
-  coq.COQnow(unpack(args))
+  coq.Now(unpack(args))
 end
 
 setmetatable(
