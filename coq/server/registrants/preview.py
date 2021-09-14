@@ -242,7 +242,7 @@ def _show_preview(
         (pum_location, _, pos), *__ = ordered
         state(pum_location=pum_location)
         nvim.api.exec_lua(
-            f"{_go_show.name}(...)",
+            f"{NAMESPACE}.{_go_show.name}(...)",
             (preview_id.hex, new_doc.syntax, lines, asdict(pos)),
         )
 
