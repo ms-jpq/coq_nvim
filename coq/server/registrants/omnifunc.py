@@ -22,7 +22,7 @@ from std2.pickle import new_decoder
 from std2.pickle.types import DecodeError
 
 from ...lsp.requests.preview import request
-from ...registry import atomic, autocmd, rpc
+from ...registry import NAMESPACE, atomic, autocmd, rpc
 from ...shared.runtime import Metric
 from ...shared.timeit import timeit
 from ...shared.types import Context, Extern, NvimPos
@@ -136,7 +136,7 @@ def _launch_loop(nvim: Nvim, stack: Stack) -> None:
     go(nvim, aw=cont())
 
 
-atomic.exec_lua(f"{_launch_loop.name}()", ())
+atomic.exec_lua(f"{NAMESPACE}.{_launch_loop.name}()", ())
 
 
 def comp_func(nvim: Nvim, stack: Stack, s: State, manual: bool) -> None:
@@ -246,4 +246,4 @@ def _comp_done(nvim: Nvim, stack: Stack, event: Mapping[str, Any]) -> None:
                 go(nvim, aw=cont())
 
 
-autocmd("CompleteDone") << f"lua {_comp_done.name}(vim.v.completed_item)"
+autocmd("CompleteDone") << f"lua {NAMESPACE}.{_comp_done.name}(vim.v.completed_item)"

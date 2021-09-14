@@ -21,7 +21,7 @@
       payload.client = client_names[client_id] or vim.NIL
       payload.done = n_clients == 0
       payload.reply = resp or vim.NIL
-      COQlsp_notify(payload)
+      COQ.Lsp_notify(payload)
     end
 
     local on_resp_new = function(err, resp, ctx)
@@ -37,7 +37,7 @@
     end
 
     if n_clients == 0 then
-      COQlsp_notify(payload)
+      COQ.Lsp_notify(payload)
     else
       local _, cancel = callback(on_resp)
       cancels[name] = cancel

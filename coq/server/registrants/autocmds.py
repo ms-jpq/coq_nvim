@@ -9,7 +9,7 @@ from pynvim_pp.lib import async_call, awrite, go
 from std2.locale import si_prefixed_smol
 
 from ...lang import LANG
-from ...registry import atomic, autocmd, rpc
+from ...registry import NAMESPACE, atomic, autocmd, rpc
 from ...tmux.parse import snapshot
 from ...treesitter.request import async_request
 from ..rt_types import Stack
@@ -24,7 +24,7 @@ def _kill_float_wins(nvim: Nvim, stack: Stack) -> None:
             win_close(nvim, win=win)
 
 
-autocmd("WinEnter") << f"lua {_kill_float_wins.name}()"
+autocmd("WinEnter") << f"lua {NAMESPACE}.{_kill_float_wins.name}()"
 
 
 @rpc(blocking=True)
@@ -38,7 +38,7 @@ def _new_cwd(nvim: Nvim, stack: Stack) -> None:
     go(nvim, aw=cont())
 
 
-autocmd("DirChanged") << f"lua {_new_cwd.name}()"
+autocmd("DirChanged") << f"lua {NAMESPACE}.{_new_cwd.name}()"
 
 
 @rpc(blocking=True)
@@ -52,8 +52,8 @@ def _ft_changed(nvim: Nvim, stack: Stack) -> None:
     go(nvim, aw=cont())
 
 
-autocmd("FileType") << f"lua {_ft_changed.name}()"
-atomic.exec_lua(f"{_ft_changed.name}()", ())
+autocmd("FileType") << f"lua {NAMESPACE}.{_ft_changed.name}()"
+atomic.exec_lua(f"{NAMESPACE}.{_ft_changed.name}()", ())
 
 
 @rpc(blocking=True)
@@ -85,7 +85,7 @@ def _insert_enter(nvim: Nvim, stack: Stack) -> None:
     go(nvim, aw=gather(c1(), c2()))
 
 
-autocmd("InsertEnter") << f"lua {_insert_enter.name}()"
+autocmd("InsertEnter") << f"lua {NAMESPACE}.{_insert_enter.name}()"
 
 
 @rpc(blocking=True)
@@ -97,7 +97,7 @@ def _on_focus(nvim: Nvim, stack: Stack) -> None:
     go(nvim, aw=cont())
 
 
-autocmd("FocusGained") << f"lua {_on_focus.name}()"
+autocmd("FocusGained") << f"lua {NAMESPACE}.{_on_focus.name}()"
 
 _HANDLE: Optional[Handle] = None
 
@@ -124,4 +124,4 @@ def _when_idle(nvim: Nvim, stack: Stack) -> None:
     )
 
 
-autocmd("CursorHold", "CursorHoldI") << f"lua {_when_idle.name}()"
+autocmd("CursorHold", "CursorHoldI") << f"lua {NAMESPACE}.{_when_idle.name}()"

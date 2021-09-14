@@ -6,7 +6,7 @@ from uuid import UUID
 from pynvim import Nvim
 from std2.pickle import new_encoder
 
-from ..registry import atomic
+from ..registry import NAMESPACE, atomic
 from ..shared.runtime import Metric
 from .rt_types import Stack
 

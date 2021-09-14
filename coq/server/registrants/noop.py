@@ -13,7 +13,7 @@ from std2.pickle import new_decoder
 from yaml import safe_load
 
 from ...consts import HELO_ARTIFACTS
-from ...registry import rpc
+from ...registry import NAMESPACE, rpc
 from ..rt_types import Stack
 
 

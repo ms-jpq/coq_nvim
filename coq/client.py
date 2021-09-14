@@ -19,7 +19,7 @@ from std2.types import AnyFun
 
 from ._registry import ____
 from .consts import DEBUG, DEBUG_DB, DEBUG_METRICS, TMP_DIR
-from .registry import atomic, autocmd, rpc
+from .registry import NAMESPACE, atomic, autocmd, rpc
 from .server.registrants.attachment import BUF_EVENTS
 from .server.registrants.options import set_options
 from .server.rt_types import Stack
@@ -53,8 +53,7 @@ class CoqClient(Client):
             return handler(nvim, self._stack, *args)
         else:
             handler = cast(AnyFun[None], self._handlers.get(name, nil_handler(name)))
-            a, *_ = args
-            return handler(nvim, self._stack, *a)
+            return handler(nvim, self._stack, *args)
 
     def on_msg(self, nvim: Nvim, msg: RpcMsg) -> Any:
         name, _ = msg

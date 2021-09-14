@@ -13,7 +13,7 @@ from std2.locale import si_prefixed_smol
 from ...consts import MD_STATS
 from ...databases.insertions.database import Statistics
 from ...lang import LANG
-from ...registry import rpc
+from ...registry import NAMESPACE, rpc
 from ..rt_types import Stack
 
 _TAB_SIZE = 2
