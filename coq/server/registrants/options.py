@@ -34,7 +34,7 @@ def set_options(nvim: Nvim, mapping: KeyMapping, fast_close: bool) -> None:
     settings = Settings()
     keymap = Keymap()
 
-    settings["completefunc"] = omnifunc.name
+    settings["completefunc"] = f"v:lua.{NAMESPACE}.{omnifunc.name}"
 
     if mapping.eval_snips:
         (

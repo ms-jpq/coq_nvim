@@ -145,11 +145,9 @@ def comp_func(nvim: Nvim, stack: Stack, s: State, manual: bool) -> None:
 
 @rpc(blocking=True)
 def omnifunc(
-    nvim: Nvim, stack: Stack, args: Tuple[Literal[0, 1], str]
+    nvim: Nvim, stack: Stack, findstart: Literal[0, 1], base: str
 ) -> Union[int, Sequence[Mapping[str, Any]]]:
-    op, _ = args
-
-    if op == 1:
+    if findstart:
         return -1
     else:
         s = state(commit_id=uuid4())
