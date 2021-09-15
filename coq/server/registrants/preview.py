@@ -328,7 +328,7 @@ def _virt_text(nvim: Nvim, ghost: GhostText, text: str) -> None:
             end=(row, 0),
             meta={
                 "virt_text_pos": "overlay",
-                "hl_mode": "blend",
+                "hl_mode": "combine",
                 "virt_text_win_col": col,
                 "virt_text": ((virt_text, ghost.highlight_group),),
             },
