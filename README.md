@@ -180,7 +180,7 @@ _T9 is disabled by default, I might remove it, if they do not improve the CPU us
 
 Enable via: `coq_settings.clients.tabnine.enabled=true`
 
-### Scriptable lua sources & external third party integrations
+### Modular lua sources & external third party integrations
 
 - **Even faster** than the original sources! (transparent caching)
 
