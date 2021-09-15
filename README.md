@@ -184,13 +184,15 @@ Enable via: `coq_settings.clients.tabnine.enabled=true`
 
 - **Even faster** than the original sources! (transparent caching)
 
-- [Easy to write](https://github.com/ms-jpq/coq_nvim/tree/coq/docs/CUSTOM_SOURCES.md)
+- [Many sources](https://raw.githubusercontent.com/ms-jpq/coq.artifacts/artifacts/preview/bc.gif) | [out of](https://raw.githubusercontent.com/ms-jpq/coq.artifacts/artifacts/preview/figlet.gif) | [the box](https://raw.githubusercontent.com/ms-jpq/coq.artifacts/artifacts/preview/cowsay.gif)
 
-- [Official thirdparty integrations](https://github.com/ms-jpq/coq.thirdparty)
+- [Thirdparty integrations](https://github.com/ms-jpq/coq.thirdparty)
+
+- [Easy to write](https://github.com/ms-jpq/coq_nvim/tree/coq/docs/CUSTOM_SOURCES.md)
 
 ![lua.img](https://raw.githubusercontent.com/ms-jpq/coq.artifacts/artifacts/preview/nvim_lua.gif)
 
-I wrote a `nvim-lua` source in about 30 minutes, super easy!
+Pic above is `nvim`'s lua API completion.
 
 ### Statistics
 
