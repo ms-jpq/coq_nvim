@@ -71,7 +71,7 @@ def _update(vars_dir: Path, timeout: float) -> bool:
             with urlopen(uri, timeout=timeout) as resp:
                 buf = resp.read()
 
-            with suppress(FileNotFoundError), NamedTemporaryFile(dir=vars_dir) as fd:
+            with NamedTemporaryFile(dir=vars_dir, delete=False) as fd:
                 fd.write(buf)
                 fd.flush()
                 Path(fd.name).replace(bin)

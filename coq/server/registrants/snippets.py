@@ -178,24 +178,15 @@ async def _dump_compiled(
     m_json = jsonify(new_encoder[Mapping[Path, float]](Mapping[Path, float])(mtimes))
     s_json = jsonify(new_encoder[LoadedSnips](LoadedSnips)(loaded))
 
-    paths = _paths(vars_dir)
-    compiled, meta = paths
-    for p in paths:
-        p.parent.mkdir(parents=True, exist_ok=True)
-
-    with suppress(FileNotFoundError), NamedTemporaryFile(
-        dir=compiled.parent, mode="w", encoding="UTF-8"
-    ) as fd:
-        fd.write(s_json)
-        fd.flush()
-        Path(fd.name).replace(compiled)
-
-    with suppress(FileNotFoundError), NamedTemporaryFile(
-        dir=meta.parent, mode="w", encoding="UTF-8"
-    ) as fd:
-        fd.write(m_json)
-        fd.flush()
-        Path(fd.name).replace(meta)
+    compiled, meta = _paths(vars_dir)
+    for path, json in ((compiled, s_json), (meta, m_json)):
+        path.parent.mkdir(parents=True, exist_ok=True)
+        with NamedTemporaryFile(
+            dir=path.parent, mode="w", encoding="UTF-8", delete=False
+        ) as fd:
+            fd.write(json)
+            fd.flush()
+            Path(fd.name).replace(path)
 
 
 def _trans(
