@@ -73,8 +73,7 @@ def _update(vars_dir: Path, timeout: float) -> bool:
 
             with NamedTemporaryFile(dir=vars_dir, delete=False) as fd:
                 fd.write(buf)
-                fd.flush()
-                Path(fd.name).replace(bin)
+            Path(fd.name).replace(bin)
 
             bin.chmod(0o755)
             lock.write_text(uri)

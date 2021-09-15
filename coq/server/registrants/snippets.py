@@ -185,8 +185,7 @@ async def _dump_compiled(
             dir=path.parent, mode="w", encoding="UTF-8", delete=False
         ) as fd:
             fd.write(json)
-            fd.flush()
-            Path(fd.name).replace(path)
+        Path(fd.name).replace(path)
 
 
 def _trans(
