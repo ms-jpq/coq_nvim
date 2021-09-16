@@ -41,7 +41,7 @@ EMPTY_CONTEXT = Context(
 )
 
 
-def cword(
+def cword_before(
     unifying_chars: AbstractSet[str], lower: bool, context: Context, sort_by: str
 ) -> str:
     char = sort_by[:1]

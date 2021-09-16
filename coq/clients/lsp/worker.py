@@ -10,7 +10,7 @@ from std2.itertools import chunk
 
 from ...lsp.requests.completion import request_lsp
 from ...lsp.types import LSPcomp
-from ...shared.context import cword as _cword
+from ...shared.context import cword_before
 from ...shared.fuzzy import multi_set_ratio
 from ...shared.parse import lower
 from ...shared.runtime import Supervisor
@@ -92,7 +92,7 @@ class Worker(BaseWorker[BaseClient, None], CacheWorker):
                     else:
                         for c in chunked:
                             if c.primary_edit.new_text:
-                                cword = _cword(
+                                cword = cword_before(
                                     unifying_chars=self._supervisor.options.unifying_chars,
                                     lower=True,
                                     context=context,

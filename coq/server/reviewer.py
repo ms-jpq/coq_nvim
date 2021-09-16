@@ -8,8 +8,7 @@ from uuid import UUID, uuid4
 from pynvim_pp.lib import display_width
 
 from ..databases.insertions.database import IDB
-from ..shared.context import EMPTY_CONTEXT
-from ..shared.context import cword as _cword
+from ..shared.context import EMPTY_CONTEXT, cword_before
 from ..shared.fuzzy import MatchMetrics, metrics
 from ..shared.parse import coalesce, lower
 from ..shared.runtime import Metric, PReviewer
@@ -34,7 +33,7 @@ def _metric(
     completion: Completion,
 ) -> MatchMetrics:
     match = lower(completion.sort_by) if ctx.is_lower else completion.sort_by
-    cword = _cword(
+    cword = cword_before(
         options.unifying_chars, lower=ctx.is_lower, context=ctx.context, sort_by=match
     )
     return metrics(cword, match, look_ahead=options.look_ahead)

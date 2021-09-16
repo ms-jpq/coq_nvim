@@ -1,7 +1,7 @@
 from itertools import accumulate
 from typing import AbstractSet
 
-from .context import cword, cword_after
+from .context import cword_before, cword_after
 from .parse import coalesce, lower
 from .types import Context, ContextualEdit, Edit
 
@@ -40,7 +40,7 @@ def trans_adjusted(
 ) -> ContextualEdit:
     c_edit = trans(line_before=ctx.line_before, line_after=ctx.line_after, edit=edit)
     new_syms = len(tuple(coalesce(edit.new_text, unifying_chars=unifying_chars)))
-    simple_before = cword(
+    simple_before = cword_before(
         unifying_chars, lower=False, context=ctx, sort_by=c_edit.new_text
     )
     simple_after = cword_after(
