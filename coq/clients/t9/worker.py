@@ -72,7 +72,7 @@ def _decode(client: BaseClient, reply: Response) -> Iterator[Completion]:
                 label_pre, *_ = resp.new_prefix.splitlines() or ("",)
                 *_, label_post = resp.new_suffix.splitlines() or ("",)
                 label = label_pre + label_post
-                kind = PROTOCOL.CompletionItemKind.get(result.kind)
+                kind = PROTOCOL.CompletionItemKind.get(resp.kind)
                 cmp = Completion(
                     source=client.short_name,
                     weight_adjust=client.weight_adjust,
