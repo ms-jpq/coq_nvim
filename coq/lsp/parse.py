@@ -84,6 +84,7 @@ def parse_item(
         )
         kind = PROTOCOL.CompletionItemKind.get(item.get("kind"), "")
         doc = _doc(parsed)
+        extern = (Extern.lsp, item) if include_extern else None
         comp = Completion(
             source=short_name,
             weight_adjust=weight_adjust,
@@ -94,7 +95,7 @@ def parse_item(
             kind=kind,
             doc=doc,
             icon_match=kind,
-            extern=(Extern.lsp, item) if include_extern else None,
+            extern=extern,
         )
         return comp
 
