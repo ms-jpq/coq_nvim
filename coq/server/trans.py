@@ -80,6 +80,7 @@ def _max_width(metrics: Sequence[Metric]) -> int:
 
 def _cmp_to_vcmp(
     pum: PumDisplay,
+    label_width: int,
     kind_dead_width: int,
     ellipsis_width: int,
     truncate: int,
@@ -104,7 +105,7 @@ def _cmp_to_vcmp(
         abbr = label_lhs + kind
     else:
         truncated_to = min(max_width + kind_dead_width, truncate) - kind_width
-        label_lhs = metric.comp.label.ljust(truncated_to)
+        label_lhs = metric.comp.label + (truncated_to - label_width) * " "
         abbr = label_lhs + kind
 
     menu = f"{sl}{metric.comp.source}{sr}"
@@ -136,6 +137,7 @@ def trans(
     for metric in pruned:
         yield metric, _cmp_to_vcmp(
             display.pum,
+            label_width=metric.label_width,
             ellipsis_width=ellipsis_width,
             kind_dead_width=kind_dead_width,
             truncate=truncate,
