@@ -74,6 +74,7 @@ def parse_item(
 ) -> Optional[Completion]:
     go, parsed = _item_parser(item)
     if not go:
+        log.warn("%s", parsed)
         return None
     else:
         assert isinstance(parsed, CompletionItem)
