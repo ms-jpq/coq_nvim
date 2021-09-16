@@ -113,6 +113,7 @@ def parse(
         is_complete = _falsy(resp.get("isIncomplete"))
 
         if not isinstance((items := resp.get("items")), MutableSequence):
+            log.warn("%s", f"Unknown LSP resp -- {type(resp)}")
             return LSPcomp(local_cache=is_complete, items=iter(()))
 
         else:
@@ -149,7 +150,5 @@ def parse(
         return LSPcomp(local_cache=True, items=comps)
 
     else:
-        msg = f"Unknown LSP resp -- {type(resp)}"
-        log.warn("%s", msg)
-
+        log.warn("%s", f"Unknown LSP resp -- {type(resp)}")
         return LSPcomp(local_cache=False, items=iter(()))
