@@ -1,4 +1,5 @@
 from difflib import unified_diff
+from itertools import takewhile
 from os import linesep
 from os.path import normcase
 from typing import Literal, Tuple, cast
@@ -73,6 +74,10 @@ def context(
     b_line = encode(line)
     before, after = decode(b_line[:col]), decode(b_line[col:])
     split = gen_split(lhs=before, rhs=after, unifying_chars=options.unifying_chars)
+    ws_before = "".join(
+        reversed(tuple(takewhile(lambda c: c.isspace(), reversed(before))))
+    )
+    ws_after = "".join(takewhile(lambda c: c.isspace(), after))
 
     ctx = Context(
         manual=manual,
@@ -101,5 +106,7 @@ def context(
         syms=split.syms_lhs + split.syms_rhs,
         syms_before=split.syms_lhs,
         syms_after=split.syms_rhs,
+        ws_before=ws_before,
+        ws_after=ws_after,
     )
     return ctx

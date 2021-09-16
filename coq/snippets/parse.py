@@ -8,7 +8,7 @@ from pynvim_pp.logging import log
 from std2.types import never
 
 from ..consts import DEBUG
-from ..shared.parse import is_word
+from ..shared.context import cword_before, cword_after
 from ..shared.trans import expand_tabs
 from ..shared.types import (
     Context,
@@ -107,10 +107,8 @@ def parse(
         )
     else:
         sort_by = parser(context, ParseInfo(visual=visual), snippet.new_text).text
-        old_prefix = (
-            context.words_before
-            if is_word(sort_by[:1], unifying_chars=unifying_chars)
-            else context.syms_before
+        old_prefix = cword_before(
+            unifying_chars, lower=False, context=context, sort_by=sort_by
         )
         indent_len, indent = _indent(
             context, old_prefix=old_prefix, line_before=line_before
@@ -125,10 +123,8 @@ def parse(
     )
     indented_text = "".join(indented_lines)
     parsed = parser(context, ParseInfo(visual=visual), indented_text)
-    old_suffix = (
-        context.words_after
-        if is_word(parsed.text[-1:], unifying_chars=unifying_chars)
-        else ""
+    old_suffix = cword_after(
+        unifying_chars, lower=False, context=context, sort_by=parsed.text
     )
 
     new_prefix = decode(encode(parsed.text)[: parsed.cursor])

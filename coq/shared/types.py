@@ -62,6 +62,9 @@ class Context:
     syms_before: str
     syms_after: str
 
+    ws_before: str
+    ws_after: str
+
 
 @dataclass(frozen=True)
 class Edit:
