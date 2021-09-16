@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from itertools import accumulate, chain, repeat
 from pprint import pformat
-from typing import AbstractSet, Iterable, Iterator, Sequence, Tuple
+from typing import AbstractSet, Callable, Iterable, Iterator, Sequence, Tuple
 
 from pynvim_pp.lib import decode, encode
 from pynvim_pp.logging import log
@@ -24,7 +24,7 @@ from ..shared.types import (
 from .consts import SNIP_LINE_SEP
 from .parsers.lsp import parser as lsp_parser
 from .parsers.snu import parser as snu_parser
-from .parsers.types import ParseInfo, Region
+from .parsers.types import Parsed, ParseInfo, Region
 
 
 @dataclass(frozen=True)
@@ -37,8 +37,7 @@ _NL = len(encode(SNIP_LINE_SEP))
 
 def _indent(ctx: Context, old_prefix: str, line_before: str) -> Tuple[int, str]:
     l = len(encode(line_before)) - len(encode(old_prefix))
-    spaces = " " * ctx.tabstop
-    return l, " " * l if ctx.expandtab else (" " * l).replace(spaces, "\t")
+    return l, " " * l if ctx.expandtab else (" " * l).replace(" " * ctx.tabstop, "\t")
 
 
 def _marks(
@@ -83,31 +82,40 @@ def _marks(
         yield mark
 
 
+def _parser(grammar: SnippetGrammar) -> Callable[[Context, ParseInfo, str], Parsed]:
+    if grammar is SnippetGrammar.lsp:
+        return lsp_parser
+    elif grammar is SnippetGrammar.snu:
+        return snu_parser
+    else:
+        never(grammar)
+
+
 def parse(
     unifying_chars: AbstractSet[str],
     context: Context,
+    line_before: str,
     snippet: SnippetEdit,
     visual: str,
 ) -> Tuple[Edit, Sequence[Mark]]:
-    if snippet.grammar is SnippetGrammar.lsp:
-        parser = lsp_parser
-    elif snippet.grammar is SnippetGrammar.snu:
-        parser = snu_parser
+    parser = _parser(snippet.grammar)
+
+    if isinstance(snippet, SnippetRangeEdit):
+        old_prefix = ""
+        indent_len, indent = _indent(
+            context, old_prefix=old_prefix, line_before=line_before
+        )
     else:
-        never(snippet.grammar)
+        sort_by = parser(context, ParseInfo(visual=visual), snippet.new_text).text
+        old_prefix = (
+            context.words_before
+            if is_word(sort_by[:1], unifying_chars=unifying_chars)
+            else context.syms_before
+        )
+        indent_len, indent = _indent(
+            context, old_prefix=old_prefix, line_before=line_before
+        )
 
-    sort_by = parser(
-        context, snippet=snippet.new_text, info=ParseInfo(visual=visual)
-    ).text
-
-    old_prefix = (
-        context.words_before
-        if is_word(sort_by[:1], unifying_chars=unifying_chars)
-        else context.syms_before
-    )
-    indent_len, indent = _indent(
-        context, old_prefix=old_prefix, line_before=context.line_before
-    )
     expanded_text = expand_tabs(context, text=snippet.new_text)
     indented_lines = tuple(
         lhs + rhs
@@ -116,7 +124,7 @@ def parse(
         )
     )
     indented_text = "".join(indented_lines)
-    parsed = parser(context, snippet=indented_text, info=ParseInfo(visual=visual))
+    parsed = parser(context, ParseInfo(visual=visual), indented_text)
     old_suffix = (
         context.words_after
         if is_word(parsed.text[-1:], unifying_chars=unifying_chars)
