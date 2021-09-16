@@ -190,7 +190,7 @@ def parse(
             if (
                 co2 := parse_item(
                     include_extern,
-                    short_name,
+                    short_name=short_name,
                     weight_adjust=weight_adjust,
                     item=item,
                 )
