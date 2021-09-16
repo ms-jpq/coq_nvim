@@ -49,7 +49,7 @@ _InsertTextMode = int
 class Command:
     title: str
     command: str
-    arguments: Optional[str]
+    arguments: Optional[str] = None
 
 
 @dataclass(frozen=True)
