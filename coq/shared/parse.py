@@ -9,10 +9,6 @@ def is_word(char: str, unifying_chars: AbstractSet[str]) -> bool:
     return char in unifying_chars or char.isalnum()
 
 
-def is_sym(char: str, unifying_chars: AbstractSet[str]) -> bool:
-    return not char.isspace() and not is_word(char, unifying_chars=unifying_chars)
-
-
 def coalesce(chars: Iterable[str], unifying_chars: AbstractSet[str]) -> Iterator[str]:
     words: MutableSequence[str] = []
     syms: MutableSequence[str] = []

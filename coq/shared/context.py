@@ -1,7 +1,10 @@
 from os.path import normcase
 from pathlib import Path, PurePath
+from typing import AbstractSet
 from uuid import uuid4
 
+from .parse import is_word
+from .parse import lower as _lower
 from .types import Context
 
 _FILE = Path(__file__).resolve()
@@ -33,4 +36,32 @@ EMPTY_CONTEXT = Context(
     syms="",
     syms_before="",
     syms_after="",
+    ws_before="",
+    ws_after="",
 )
+
+
+def cword(
+    unifying_chars: AbstractSet[str], lower: bool, context: Context, sort_by: str
+) -> str:
+    char = sort_by[:1]
+    trans = _lower if lower else lambda c: c
+    if char.isspace():
+        return context.ws_before
+    elif is_word(char, unifying_chars=unifying_chars):
+        return trans(context.words_before)
+    else:
+        return trans(context.syms_before)
+
+
+def cword_after(
+    unifying_chars: AbstractSet[str], lower: bool, context: Context, sort_by: str
+) -> str:
+    char = sort_by[-1:]
+    trans = _lower if lower else lambda c: c
+    if char.isspace():
+        return context.ws_after
+    elif is_word(char, unifying_chars=unifying_chars):
+        return trans(context.words_after)
+    else:
+        return ""

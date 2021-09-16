@@ -10,8 +10,9 @@ from std2.itertools import chunk
 
 from ...lsp.requests.completion import request_lsp
 from ...lsp.types import LSPcomp
+from ...shared.context import cword as _cword
 from ...shared.fuzzy import multi_set_ratio
-from ...shared.parse import is_word, lower
+from ...shared.parse import lower
 from ...shared.runtime import Supervisor
 from ...shared.runtime import Worker as BaseWorker
 from ...shared.settings import BaseClient
@@ -41,7 +42,6 @@ class Worker(BaseWorker[BaseClient, None], CacheWorker):
         )
 
     async def work(self, context: Context) -> AsyncIterator[Optional[Completion]]:
-        w_before, sw_before = lower(context.words_before), lower(context.syms_before)
         limit = BIGGEST_INT if context.manual else self._supervisor.options.max_results
 
         use_cache, cached, set_cache = self._use_cache(context)
@@ -92,13 +92,11 @@ class Worker(BaseWorker[BaseClient, None], CacheWorker):
                     else:
                         for c in chunked:
                             if c.primary_edit.new_text:
-                                cword = (
-                                    w_before
-                                    if is_word(
-                                        c.sort_by[:1],
-                                        unifying_chars=self._supervisor.options.unifying_chars,
-                                    )
-                                    else sw_before
+                                cword = _cword(
+                                    unifying_chars=self._supervisor.options.unifying_chars,
+                                    lower=True,
+                                    context=context,
+                                    sort_by=c.sort_by,
                                 )
                                 ratio = multi_set_ratio(
                                     cword,

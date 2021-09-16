@@ -9,8 +9,9 @@ from pynvim_pp.lib import display_width
 
 from ..databases.insertions.database import IDB
 from ..shared.context import EMPTY_CONTEXT
+from ..shared.context import cword as _cword
 from ..shared.fuzzy import MatchMetrics, metrics
-from ..shared.parse import coalesce, is_word, lower
+from ..shared.parse import coalesce, lower
 from ..shared.runtime import Metric, PReviewer
 from ..shared.settings import BaseClient, Icons, Options, Weights
 from ..shared.types import Completion, Context
@@ -33,10 +34,8 @@ def _metric(
     completion: Completion,
 ) -> MatchMetrics:
     match = lower(completion.sort_by) if ctx.is_lower else completion.sort_by
-    cword = (
-        ctx.context.words_before
-        if is_word(match[:1], unifying_chars=options.unifying_chars)
-        else ctx.context.syms_before
+    cword = _cword(
+        options.unifying_chars, lower=ctx.is_lower, context=ctx.context, sort_by=match
     )
     return metrics(cword, match, look_ahead=options.look_ahead)
 
