@@ -119,18 +119,17 @@ def parse_item(
     if not isinstance(item, Mapping):
         return None
     else:
-        label = item.get("label")
-        if not isinstance(label, str):
+        if not isinstance((label := item.get("label")), str):
             return None
         else:
-            p_edit = _primary(item, label=label)
-            if not p_edit:
+            if not (p_edit := _primary(item, label=label)):
                 return None
             else:
                 kind = PROTOCOL.CompletionItemKind.get(item.get("kind"), "")
-                filter_text = item.get("filterText")
                 sort_by = (
-                    filter_text if isinstance(filter_text, str) else p_edit.new_text
+                    filter_text
+                    if isinstance((filter_text := item.get("filterText")), str)
+                    else p_edit.new_text
                 )
 
                 cmp = Completion(
