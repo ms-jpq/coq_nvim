@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Optional, Sequence
+from typing import Any, Optional, Sequence, TypedDict
 
 
 @dataclass(frozen=True)
@@ -24,15 +24,13 @@ class Request:
 
 
 @dataclass(frozen=True)
-class _RespL1:
+class RespL1:
     new_prefix: str
     old_suffix: str
     new_suffix: str
     kind: Optional[int] = None
 
 
-@dataclass(frozen=True)
-class Response:
+class Response(TypedDict):
     old_prefix: str
-    results: Sequence[_RespL1]
-    user_message: Sequence[str]
+    results: Sequence[Any]

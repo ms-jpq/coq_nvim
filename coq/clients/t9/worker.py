@@ -8,7 +8,7 @@ from json.decoder import JSONDecodeError
 from os import X_OK, access
 from pathlib import PurePath
 from subprocess import DEVNULL, PIPE
-from typing import Any, AsyncIterator, Iterator, Optional
+from typing import Any, AsyncIterator, Iterator, Mapping, Optional, Sequence
 
 from pynvim_pp.lib import awrite, decode, encode, go
 from pynvim_pp.logging import log
@@ -21,11 +21,11 @@ from ...shared.runtime import Worker as BaseWorker
 from ...shared.settings import BaseClient, Options
 from ...shared.types import Completion, Context, ContextualEdit
 from .install import ensure_updated, t9_bin
-from .types import ReqL1, ReqL2, Request, Response
+from .types import ReqL1, ReqL2, Request, RespL1, Response
 
 _VERSION = "3.2.28"
 
-_DECODER = new_decoder[Response](Response, strict=False)
+_DECODER = new_decoder[RespL1](RespL1, strict=False)
 _ENCODER = new_encoder[Request](Request)
 
 
@@ -49,33 +49,40 @@ def _encode(options: Options, context: Context, limit: int) -> Any:
     return _ENCODER(req)
 
 
-def _decode(client: BaseClient, reply: Any) -> Iterator[Completion]:
-    try:
-        resp = _DECODER(reply)
-    except DecodeError as e:
-        log.warn("%s", e)
+def _decode(client: BaseClient, reply: Response) -> Iterator[Completion]:
+    if (
+        not isinstance(reply, Mapping)
+        or not isinstance((old_prefix := reply.get("old_prefix")), str)
+        or not isinstance((results := reply.get("results")), Sequence)
+    ):
+        log.warn("%s", reply)
     else:
-        for result in resp.results:
-            edit = ContextualEdit(
-                old_prefix=resp.old_prefix,
-                new_prefix=result.new_prefix,
-                old_suffix=result.old_suffix,
-                new_text=result.new_prefix + result.new_suffix,
-            )
-            label = (result.new_prefix.splitlines() or ("",))[-1] + (
-                result.new_suffix.splitlines() or ("",)
-            )[0]
-            kind = PROTOCOL.CompletionItemKind.get(result.kind)
-            cmp = Completion(
-                source=client.short_name,
-                weight_adjust=client.weight_adjust,
-                label=label,
-                sort_by=edit.new_text,
-                primary_edit=edit,
-                kind=kind or "",
-                icon_match=kind,
-            )
-            yield cmp
+        for result in results:
+            try:
+                resp = _DECODER(result)
+            except DecodeError as e:
+                log.warn("%s", e)
+            else:
+                edit = ContextualEdit(
+                    old_prefix=old_prefix,
+                    new_prefix=resp.new_prefix,
+                    old_suffix=resp.old_suffix,
+                    new_text=resp.new_prefix + resp.new_suffix,
+                )
+                label_pre, *_ = resp.new_prefix.splitlines() or ("",)
+                *_, label_post = resp.new_suffix.splitlines() or ("",)
+                label = label_pre + label_post
+                kind = PROTOCOL.CompletionItemKind.get(resp.kind)
+                cmp = Completion(
+                    source=client.short_name,
+                    weight_adjust=client.weight_adjust,
+                    label=label,
+                    sort_by=edit.new_text,
+                    primary_edit=edit,
+                    kind=kind or "",
+                    icon_match=kind,
+                )
+                yield cmp
 
 
 async def _proc(bin: PurePath, cwd: PurePath) -> Optional[Process]:
