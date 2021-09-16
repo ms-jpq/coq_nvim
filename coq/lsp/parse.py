@@ -23,42 +23,50 @@ def _falsy(thing: Any) -> bool:
 
 
 def _range_edit(fallback: str, edit: TextEdit) -> Optional[RangeEdit]:
-    rg = edit.get("range", {})
-    s, e = rg.get("start", {}), rg.get("end", {})
-    b_r, b_c = s.get("line"), s.get("character")
-    e_r, e_c = e.get("line"), e.get("character")
-    new_text = edit.get("newText")
-    if (
-        new_text
-        and b_r is not None
-        and b_c is not None
-        and e_r is not None
-        and e_c is not None
-    ):
-        begin = b_r, b_c
-        end = e_r, e_c
-        re = RangeEdit(
-            new_text=new_text,
-            fallback=fallback,
-            begin=begin,
-            end=end,
-            encoding=UTF16,
-        )
-        return re
-    else:
+    if not isinstance(fallback, str) or not isinstance(edit, Mapping):
         return None
+    else:
+        rg = edit.get("range", {})
+        s, e = rg.get("start", {}), rg.get("end", {})
+        b_r, b_c = s.get("line"), s.get("character")
+        e_r, e_c = e.get("line"), e.get("character")
+        new_text = edit.get("newText")
+        if (
+            isinstance(new_text, str)
+            and isinstance(b_r, int)
+            and isinstance(b_c, int)
+            and isinstance(e_r, int)
+            and isinstance(e_c, int)
+        ):
+            begin = b_r, b_c
+            end = e_r, e_c
+            re = RangeEdit(
+                new_text=new_text,
+                fallback=fallback,
+                begin=begin,
+                end=end,
+                encoding=UTF16,
+            )
+            return re
+        else:
+            return None
 
 
-def _primary(item: CompletionItem) -> Edit:
+def _primary(item: CompletionItem) -> Optional[Edit]:
     text_edit = item.get("textEdit")
     label = item.get("label")
     fallback = item.get("insertText") or label or ""
-    re_fallback = label or fallback
+    fallback_edit = Edit(new_text=fallback) if isinstance(fallback, str) else None
 
     if PROTOCOL.InsertTextFormat.get(item.get("insertTextFormat")) == "Snippet":
+        fallback_edit_s = (
+            SnippetEdit(grammar=SnippetGrammar.lsp, new_text=fallback_edit.new_text)
+            if fallback_edit
+            else None
+        )
+
         if isinstance(text_edit, Mapping) and "range" in text_edit:
-            re = _range_edit(re_fallback, edit=cast(TextEdit, text_edit))
-            if re:
+            if re := _range_edit(fallback, edit=cast(TextEdit, text_edit)):
                 return SnippetRangeEdit(
                     grammar=SnippetGrammar.lsp,
                     new_text=re.new_text,
@@ -68,24 +76,23 @@ def _primary(item: CompletionItem) -> Edit:
                     encoding=re.encoding,
                 )
             else:
-                return SnippetEdit(grammar=SnippetGrammar.lsp, new_text=fallback)
+                return fallback_edit_s
         else:
-            return SnippetEdit(grammar=SnippetGrammar.lsp, new_text=fallback)
+            return fallback_edit_s
 
     elif isinstance(text_edit, Mapping):
         # TODO -- InsertReplaceEdit
         # if "insert" in text_edit:
         #     return Edit(new_text=fall_back)
         if "range" in text_edit:
-            re = _range_edit(re_fallback, edit=cast(TextEdit, text_edit))
-            if re:
+            if re := _range_edit(fallback, edit=cast(TextEdit, text_edit)):
                 return re
             else:
-                return Edit(new_text=fallback)
+                return fallback_edit
         else:
-            return Edit(new_text=fallback)
+            return fallback_edit
     else:
-        return Edit(new_text=fallback)
+        return fallback_edit
 
 
 def _doc(item: CompletionItem) -> Optional[Doc]:
@@ -93,13 +100,13 @@ def _doc(item: CompletionItem) -> Optional[Doc]:
     detail = item.get("detail")
     if isinstance(doc, Mapping):
         markup, kind = doc.get("value"), doc.get("kind")
-        if markup and kind:
+        if isinstance(markup, str) and isinstance(kind, str):
             return Doc(text=markup, syntax=kind)
         else:
             return None
     elif isinstance(doc, str):
         return Doc(text=doc, syntax="")
-    elif detail:
+    elif isinstance(detail, str):
         return Doc(text=detail, syntax="")
     else:
         return None
@@ -112,28 +119,36 @@ def parse_item(
         return None
     else:
         label = item.get("label")
-        if not label:
+        if not isinstance(label, str):
             return None
         else:
             p_edit = _primary(item)
-            kind = PROTOCOL.CompletionItemKind.get(item.get("kind"), "")
-            cmp = Completion(
-                source=short_name,
-                weight_adjust=weight_adjust,
-                label=label,
-                sort_by=item.get("filterText") or p_edit.new_text,
-                primary_edit=p_edit,
-                secondary_edits=tuple(
-                    re
-                    for edit in (item.get("additionalTextEdits") or ())
-                    if (re := _range_edit("", edit=edit))
-                ),
-                kind=kind,
-                doc=_doc(item),
-                extern=(Extern.lsp, item) if include_extern else None,
-                icon_match=kind,
-            )
-            return cmp
+            if not p_edit:
+                return None
+            else:
+                kind = PROTOCOL.CompletionItemKind.get(item.get("kind"), "")
+                filter_text = item.get("filterText")
+                sort_by = (
+                    filter_text if isinstance(filter_text, str) else p_edit.new_text
+                )
+
+                cmp = Completion(
+                    source=short_name,
+                    weight_adjust=weight_adjust,
+                    label=label,
+                    sort_by=sort_by,
+                    primary_edit=p_edit,
+                    secondary_edits=tuple(
+                        re
+                        for edit in (item.get("additionalTextEdits") or ())
+                        if (re := _range_edit("", edit=edit))
+                    ),
+                    kind=kind,
+                    doc=_doc(item),
+                    extern=(Extern.lsp, item) if include_extern else None,
+                    icon_match=kind,
+                )
+                return cmp
 
 
 def parse(
