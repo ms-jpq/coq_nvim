@@ -6,22 +6,26 @@ from ..shared.types import Completion
 # https://microsoft.github.io/language-server-protocol/specification
 
 
-class _Position(TypedDict):
+@dataclass(frozen=True)
+class _Position:
     line: int
     character: int
 
 
-class _Range(TypedDict):
+@dataclass(frozen=True)
+class _Range:
     start: _Position
     end: _Position
 
 
-class TextEdit(TypedDict):
+@dataclass(frozen=True)
+class TextEdit:
     newText: str
     range: _Range
 
 
-class InsertReplaceEdit(TypedDict):
+@dataclass(frozen=True)
+class _InsertReplaceEdit:
     newText: str
     insert: _Range
     replace: _Range
@@ -30,7 +34,8 @@ class InsertReplaceEdit(TypedDict):
 _CompletionItemKind = int
 
 
-class _MarkupContent(TypedDict):
+@dataclass(frozen=True)
+class MarkupContent:
     kind: Union[Literal["plaintext", "markdown"], str]
     value: str
 
@@ -40,19 +45,21 @@ _CompletionItemTag = int
 _InsertTextMode = int
 
 
-class Command(TypedDict):
+@dataclass(frozen=True)
+class Command:
     title: str
     command: str
     arguments: Optional[str]
 
 
-class CompletionItem(TypedDict):
+@dataclass(frozen=True)
+class CompletionItem:
     label: str
     kind: Optional[_CompletionItemKind]
     tags: Optional[Sequence[_CompletionItemTag]]
 
     detail: Optional[str]
-    documentation: Union[str, _MarkupContent, None]
+    documentation: Union[str, MarkupContent, None]
 
     preselect: Optional[bool]
     filterText: Optional[str]
@@ -61,7 +68,7 @@ class CompletionItem(TypedDict):
     insertTextMode: Optional[_InsertTextMode]
 
     additionalTextEdits: Optional[Sequence[TextEdit]]
-    textEdit: Union[TextEdit, InsertReplaceEdit, None]
+    textEdit: Union[TextEdit, _InsertReplaceEdit, None]
 
     command: Command
     data: Optional[Any]

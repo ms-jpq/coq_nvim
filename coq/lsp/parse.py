@@ -2,6 +2,7 @@ from random import shuffle
 from typing import Any, Mapping, MutableSequence, Optional, Sequence, cast
 
 from pynvim_pp.logging import log
+from std2.pickle.decoder import _new_parser
 
 from ..shared.types import (
     UTF16,
@@ -15,140 +16,86 @@ from ..shared.types import (
     SnippetRangeEdit,
 )
 from .protocol import PROTOCOL
-from .types import CompletionItem, CompletionResponse, LSPcomp, TextEdit
+from .types import CompletionItem, CompletionResponse, LSPcomp, MarkupContent, TextEdit
 
 
 def _falsy(thing: Any) -> bool:
     return thing is None or thing == False or thing == 0 or thing == "" or thing == b""
 
 
-def _range_edit(fallback: str, edit: TextEdit) -> Optional[RangeEdit]:
-    if not isinstance(fallback, str) or not isinstance(edit, Mapping):
-        return None
-    else:
-        new_text = edit.get("newText")
+_item_parser = _new_parser(CompletionItem, path=(), strict=False, decoders=())
 
-        rg = edit.get("range", {})
-        s, e = rg.get("start", {}), rg.get("end", {})
-        b_r, b_c = s.get("line"), s.get("character")
-        e_r, e_c = e.get("line"), e.get("character")
 
-        if (
-            isinstance(new_text, str)
-            and isinstance(b_r, int)
-            and isinstance(b_c, int)
-            and isinstance(e_r, int)
-            and isinstance(e_c, int)
-        ):
-            begin = b_r, b_c
-            end = e_r, e_c
-            re = RangeEdit(
-                new_text=new_text,
-                fallback=fallback,
-                begin=begin,
-                end=end,
-                encoding=UTF16,
+def _range_edit(fallback: str, edit: TextEdit) -> RangeEdit:
+    begin = edit.range.start.line, edit.range.start.character
+    end = edit.range.end.line, edit.range.end.character
+    re = RangeEdit(
+        new_text=edit.newText, fallback=fallback, begin=begin, end=end, encoding=UTF16
+    )
+    return re
+
+
+def _primary(item: CompletionItem) -> Edit:
+    fallback = Edit(new_text=item.insertText or item.label)
+    if PROTOCOL.InsertTextFormat.get(item.insertTextFormat) == "Snippet":
+        if isinstance(item.textEdit, TextEdit):
+            re = _range_edit(fallback.new_text, edit=item.textEdit)
+
+            return SnippetRangeEdit(
+                grammar=SnippetGrammar.lsp,
+                new_text=re.new_text,
+                fallback=re.fallback,
+                begin=re.begin,
+                end=re.end,
+                encoding=re.encoding,
             )
-            return re
         else:
-            return None
-
-
-def _primary(item: CompletionItem, label: str) -> Optional[Edit]:
-    text_edit = item.get("textEdit")
-    fallback = item.get("insertText") or label or ""
-    fallback_edit = Edit(new_text=fallback) if isinstance(fallback, str) else None
-
-    if PROTOCOL.InsertTextFormat.get(item.get("insertTextFormat")) == "Snippet":
-        fallback_edit_s = (
-            SnippetEdit(grammar=SnippetGrammar.lsp, new_text=fallback_edit.new_text)
-            if fallback_edit
-            else None
-        )
-
-        if isinstance(text_edit, Mapping) and "range" in text_edit:
-            if re := _range_edit(fallback, edit=cast(TextEdit, text_edit)):
-                return SnippetRangeEdit(
-                    grammar=SnippetGrammar.lsp,
-                    new_text=re.new_text,
-                    fallback=re.fallback,
-                    begin=re.begin,
-                    end=re.end,
-                    encoding=re.encoding,
-                )
-            else:
-                return fallback_edit_s
-        else:
-            return fallback_edit_s
-
-    elif isinstance(text_edit, Mapping):
-        # TODO -- InsertReplaceEdit
-        # if "insert" in text_edit:
-        #     return Edit(new_text=fall_back)
-        if "range" in text_edit:
-            if re := _range_edit(fallback, edit=cast(TextEdit, text_edit)):
-                return re
-            else:
-                return fallback_edit
-        else:
-            return fallback_edit
+            return SnippetEdit(grammar=SnippetGrammar.lsp, new_text=fallback.new_text)
     else:
-        return fallback_edit
+        if isinstance(item.textEdit, TextEdit):
+            return _range_edit(fallback.new_text, edit=item.textEdit)
+        else:
+            return fallback
 
 
 def _doc(item: CompletionItem) -> Optional[Doc]:
-    doc = item.get("documentation")
-    detail = item.get("detail")
-    if isinstance(doc, Mapping):
-        markup, kind = doc.get("value"), doc.get("kind")
-        if isinstance(markup, str) and isinstance(kind, str):
-            return Doc(text=markup, syntax=kind)
-        else:
-            return None
-    elif isinstance(doc, str):
-        return Doc(text=doc, syntax="")
-    elif isinstance(detail, str):
-        return Doc(text=detail, syntax="")
+    if isinstance(item.documentation, MarkupContent):
+        return Doc(text=item.documentation.value, syntax=item.documentation.kind)
+    elif isinstance(item.documentation, str):
+        return Doc(text=item.documentation, syntax="")
+    elif item.detail:
+        return Doc(text=item.detail, syntax="")
     else:
         return None
 
 
 def parse_item(
-    include_extern: bool, short_name: str, weight_adjust: float, item: CompletionItem
+    include_extern: bool, short_name: str, weight_adjust: float, item: Any
 ) -> Optional[Completion]:
-    if not isinstance(item, Mapping):
+    go, parsed = _item_parser(item)
+    if not go:
         return None
     else:
-        if not isinstance((label := item.get("label")), str):
-            return None
-        else:
-            if not (p_edit := _primary(item, label=label)):
-                return None
-            else:
-                kind = PROTOCOL.CompletionItemKind.get(item.get("kind"), "")
-                sort_by = (
-                    filter_text
-                    if isinstance((filter_text := item.get("filterText")), str)
-                    else p_edit.new_text
-                )
-
-                cmp = Completion(
-                    source=short_name,
-                    weight_adjust=weight_adjust,
-                    label=label,
-                    sort_by=sort_by,
-                    primary_edit=p_edit,
-                    secondary_edits=tuple(
-                        re
-                        for edit in (item.get("additionalTextEdits") or ())
-                        if (re := _range_edit("", edit=edit))
-                    ),
-                    kind=kind,
-                    doc=_doc(item),
-                    extern=(Extern.lsp, item) if include_extern else None,
-                    icon_match=kind,
-                )
-                return cmp
+        assert isinstance(parsed, CompletionItem)
+        p_edit = _primary(parsed)
+        r_edits = tuple(
+            _range_edit("", edit=edit) for edit in (parsed.additionalTextEdits or ())
+        )
+        kind = PROTOCOL.CompletionItemKind.get(item.get("kind"), "")
+        doc = _doc(parsed)
+        comp = Completion(
+            source=short_name,
+            weight_adjust=weight_adjust,
+            label=parsed.label,
+            primary_edit=p_edit,
+            secondary_edits=r_edits,
+            sort_by=parsed.filterText or p_edit.new_text,
+            kind=kind,
+            doc=doc,
+            icon_match=kind,
+            extern=(Extern.lsp, item) if include_extern else None,
+        )
+        return comp
 
 
 def parse(
