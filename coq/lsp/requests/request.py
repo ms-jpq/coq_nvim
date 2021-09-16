@@ -81,6 +81,7 @@ async def async_request(
         while True:
             acc = _STATE[method]
             if acc.uid == uid:
+                _STATE[method] = _Session(uid=acc.uid, done=acc.done, acc=())
                 for client, a in acc.acc:
                     yield client, a
                 if acc.done:
