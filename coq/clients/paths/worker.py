@@ -28,8 +28,9 @@ from std2.asyncio import run_in_executor
 from std2.platform import OS, os
 from std2.string import removesuffix
 
+from ...shared.context import cword_before
 from ...shared.fuzzy import quick_ratio
-from ...shared.parse import is_word, lower
+from ...shared.parse import lower
 from ...shared.runtime import Supervisor
 from ...shared.runtime import Worker as BaseWorker
 from ...shared.settings import PathResolution, PathsClient
@@ -195,23 +196,16 @@ async def _parse(
     return await run_in_executor(cont)
 
 
-def sort_by(unifying_chars: AbstractSet[str], new_text: str) -> str:
-    def cont() -> Iterator[str]:
-        seen_syms = False
-        for idx, char in enumerate(reversed(new_text)):
-            if is_word(char, unifying_chars=unifying_chars):
-                if seen_syms:
-                    break
-                else:
-                    yield char
-            else:
-                yield char
-                if not idx and char == sep:
-                    pass
-                else:
-                    seen_syms = True
+def _sort_by(unifying_chars: AbstractSet[str], context: Context, new_text: str) -> str:
+    chars = [*new_text]
+    if new_text.endswith(sep) or (altsep and new_text.endswith(altsep)):
+        end = chars.pop()
+    else:
+        end = ""
 
-    sort_by = "".join(reversed(tuple(cont())))
+    tmp = "".join(chars)
+    cword = cword_before(unifying_chars, lower=False, context=context, sort_by=tmp)
+    sort_by= f"{cword}{end}"
     return sort_by
 
 
@@ -262,8 +256,10 @@ class Worker(BaseWorker[PathsClient, None]):
                         source=self._options.short_name,
                         weight_adjust=self._options.weight_adjust,
                         label=edit.new_text,
-                        sort_by=sort_by(
-                            self._supervisor.options.unifying_chars, new_text=new_text
+                        sort_by=_sort_by(
+                            self._supervisor.options.unifying_chars,
+                            context=context,
+                            new_text=new_text,
                         ),
                         primary_edit=edit,
                         extern=(Extern.path, normcase(path)),
