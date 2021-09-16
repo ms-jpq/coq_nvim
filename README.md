@@ -182,17 +182,19 @@ Enable via: `coq_settings.clients.tabnine.enabled=true`
 
 ### Modular lua sources & external third party integrations
 
-- **Even faster** than the original sources! (transparent caching)
+- **Even faster than lua**! (transparent `sqlite` caching)
 
-- [Many sources](https://raw.githubusercontent.com/ms-jpq/coq.artifacts/artifacts/preview/bc.gif) | [out of](https://raw.githubusercontent.com/ms-jpq/coq.artifacts/artifacts/preview/figlet.gif) | [the box](https://raw.githubusercontent.com/ms-jpq/coq.artifacts/artifacts/preview/cowsay.gif)
+- [Tons of built-in sources](https://github.com/ms-jpq/coq.thirdparty)
 
-- [Thirdparty integrations](https://github.com/ms-jpq/coq.thirdparty)
+- External third party plugins too
 
-- [Easy to write](https://github.com/ms-jpq/coq_nvim/tree/coq/docs/CUSTOM_SOURCES.md)
+- [Easy to hack](https://github.com/ms-jpq/coq_nvim/tree/coq/docs/CUSTOM_SOURCES.md)
 
-![lua.img](https://raw.githubusercontent.com/ms-jpq/coq.artifacts/artifacts/preview/nvim_lua.gif)
+![repl.img](https://raw.githubusercontent.com/ms-jpq/coq.artifacts/artifacts/preview/repl.gif)
 
-Pic above is `nvim`'s lua API completion.
+Shown above: shell repl.
+
+Other built-ins: nvim lua API, scientific calculator, comment banners, moo!
 
 ### Statistics
 
