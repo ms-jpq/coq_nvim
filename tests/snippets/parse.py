@@ -30,6 +30,7 @@ class Parser(TestCase):
                 try:
                     parse(
                         set(),
+                        line_before="",
                         context=EMPTY_CONTEXT,
                         snippet=edit,
                         visual="",

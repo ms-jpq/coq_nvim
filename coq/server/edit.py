@@ -47,6 +47,7 @@ from ..shared.types import (
     NvimPos,
     RangeEdit,
     SnippetEdit,
+    SnippetRangeEdit,
 )
 from ..snippets.parse import ParsedEdit, parse
 from ..snippets.parsers.types import ParseError
@@ -338,11 +339,22 @@ def _cursor(cursor: NvimPos, instructions: Iterable[EditInstruction]) -> NvimPos
     return row, col
 
 
-def _parse(stack: Stack, state: State, comp: Completion) -> Tuple[Edit, Sequence[Mark]]:
+def _parse(
+    nvim: Nvim, buf: Buffer, stack: Stack, state: State, comp: Completion
+) -> Tuple[Edit, Sequence[Mark]]:
     if isinstance(comp.primary_edit, SnippetEdit):
         visual = ""
+        if isinstance(comp.primary_edit, SnippetRangeEdit):
+            row, col = comp.primary_edit.begin
+            line, *_ = buf_get_lines(nvim, buf=buf, lo=row, hi=row + 1)
+            line_before = decode(
+                encode(line, encoding=comp.primary_edit.encoding)[:col]
+            )
+        else:
+            line_before = state.context.line_before
         return parse(
             stack.settings.match.unifying_chars,
+            line_before=line_before,
             context=state.context,
             snippet=comp.primary_edit,
             visual=visual,
@@ -397,8 +409,10 @@ def edit(
             )
 
         try:
-            primary, marks = _parse(stack, state=state, comp=metric.comp)
-        except ParseError as e:
+            primary, marks = _parse(
+                nvim, buf=buf, stack=stack, state=state, comp=metric.comp
+            )
+        except (NvimError, ParseError) as e:
             primary, marks = metric.comp.primary_edit, ()
             write(nvim, LANG("failed to parse snippet"))
             log.info("%s", e)

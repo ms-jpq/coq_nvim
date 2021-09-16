@@ -1,7 +1,7 @@
 from dataclasses import dataclass, field
 from enum import Enum, auto
 from pathlib import PurePath
-from typing import Any, Literal, Optional, Sequence, Tuple
+from typing import Any, Literal, Optional, Sequence, Tuple, Union
 from uuid import UUID, uuid4
 
 UTF8: Literal["UTF-8"] = "UTF-8"
@@ -88,7 +88,7 @@ class RangeEdit(Edit):
     fallback: str
     begin: WTF8Pos
     end: WTF8Pos
-    encoding: str
+    encoding: Literal["UTF-8", "UTF-16-LE"]
 
 
 class SnippetGrammar(Enum):
