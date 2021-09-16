@@ -26,11 +26,13 @@ def _range_edit(fallback: str, edit: TextEdit) -> Optional[RangeEdit]:
     if not isinstance(fallback, str) or not isinstance(edit, Mapping):
         return None
     else:
+        new_text = edit.get("newText")
+
         rg = edit.get("range", {})
         s, e = rg.get("start", {}), rg.get("end", {})
         b_r, b_c = s.get("line"), s.get("character")
         e_r, e_c = e.get("line"), e.get("character")
-        new_text = edit.get("newText")
+
         if (
             isinstance(new_text, str)
             and isinstance(b_r, int)
@@ -52,9 +54,8 @@ def _range_edit(fallback: str, edit: TextEdit) -> Optional[RangeEdit]:
             return None
 
 
-def _primary(item: CompletionItem) -> Optional[Edit]:
+def _primary(item: CompletionItem, label: str) -> Optional[Edit]:
     text_edit = item.get("textEdit")
-    label = item.get("label")
     fallback = item.get("insertText") or label or ""
     fallback_edit = Edit(new_text=fallback) if isinstance(fallback, str) else None
 
@@ -122,7 +123,7 @@ def parse_item(
         if not isinstance(label, str):
             return None
         else:
-            p_edit = _primary(item)
+            p_edit = _primary(item, label=label)
             if not p_edit:
                 return None
             else:
