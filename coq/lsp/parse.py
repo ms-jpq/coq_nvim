@@ -162,22 +162,25 @@ def parse(
 
     elif isinstance(resp, Mapping):
         is_complete = _falsy(resp.get("isIncomplete"))
-        items = resp.get("items", [])
-        shuffle(cast(MutableSequence, items))
-        comps = (
-            co1
-            for item in items
-            if (
-                co1 := parse_item(
-                    include_extern,
-                    short_name=short_name,
-                    weight_adjust=weight_adjust,
-                    item=item,
+
+        if not isinstance((items := resp.get("items")), Sequence):
+            return LSPcomp(local_cache=is_complete, items=iter(()))
+
+        else:
+            shuffle(cast(MutableSequence, items))
+            comps = (
+                co1
+                for item in items
+                if (
+                    co1 := parse_item(
+                        include_extern,
+                        short_name=short_name,
+                        weight_adjust=weight_adjust,
+                        item=item,
+                    )
                 )
             )
-        )
-        lc = LSPcomp(local_cache=is_complete, items=comps)
-        return lc
+            return LSPcomp(local_cache=is_complete, items=comps)
 
     elif isinstance(resp, Sequence) and not isinstance(cast(Any, resp), str):
         shuffle(cast(MutableSequence, resp))
@@ -193,9 +196,11 @@ def parse(
                 )
             )
         )
+
         return LSPcomp(local_cache=True, items=comps)
 
     else:
         msg = f"Unknown LSP resp -- {type(resp)}"
         log.warn("%s", msg)
+
         return LSPcomp(local_cache=False, items=iter(()))
