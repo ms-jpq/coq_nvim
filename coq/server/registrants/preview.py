@@ -254,14 +254,14 @@ def _resolve_comp(
     nvim: Nvim,
     stack: Stack,
     event: _Event,
-    extern: Tuple[Extern, Union[CompletionItem, str]],
+    extern: Tuple[Extern, Union[Mapping, str]],
     maybe_doc: Optional[Doc],
     state: State,
 ) -> None:
     global _TASK
     prev = _TASK
     timeout = stack.settings.display.preview.resolve_timeout if maybe_doc else None
-    en, item = extern
+    extern_type, item = extern
 
     async def cont() -> None:
         if prev:
@@ -272,12 +272,12 @@ def _resolve_comp(
         if cached:
             doc = cached.doc
         else:
-            if en is Extern.lsp and isinstance(item, Mapping):
+            if extern_type is Extern.lsp and isinstance(item, Mapping):
                 done, _ = await wait((request(nvim, item=item),), timeout=timeout)
                 if comp := (await done.pop()) if done else None:
                     stack.lru[state.preview_id] = comp
                 doc = (comp.doc if comp else None) or maybe_doc
-            elif en is Extern.path and isinstance(item, str):
+            elif extern_type is Extern.path and isinstance(item, str):
                 doc = await show(
                     cwd=state.cwd,
                     path=Path(item),

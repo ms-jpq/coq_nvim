@@ -6,22 +6,26 @@ from ..shared.types import Completion
 # https://microsoft.github.io/language-server-protocol/specification
 
 
-class _Position(TypedDict):
+@dataclass(frozen=True)
+class _Position:
     line: int
     character: int
 
 
-class _Range(TypedDict):
+@dataclass(frozen=True)
+class _Range:
     start: _Position
     end: _Position
 
 
-class TextEdit(TypedDict):
+@dataclass(frozen=True)
+class TextEdit:
     newText: str
     range: _Range
 
 
-class InsertReplaceEdit(TypedDict):
+@dataclass(frozen=True)
+class _InsertReplaceEdit:
     newText: str
     insert: _Range
     replace: _Range
@@ -30,7 +34,8 @@ class InsertReplaceEdit(TypedDict):
 _CompletionItemKind = int
 
 
-class _MarkupContent(TypedDict):
+@dataclass(frozen=True)
+class MarkupContent:
     kind: Union[Literal["plaintext", "markdown"], str]
     value: str
 
@@ -40,31 +45,35 @@ _CompletionItemTag = int
 _InsertTextMode = int
 
 
-class Command(TypedDict):
+@dataclass(frozen=True)
+class Command:
     title: str
     command: str
-    arguments: Optional[str]
+    arguments: Optional[str] = None
 
 
-class CompletionItem(TypedDict):
+@dataclass(frozen=True)
+class CompletionItem:
     label: str
-    kind: Optional[_CompletionItemKind]
-    tags: Optional[Sequence[_CompletionItemTag]]
 
-    detail: Optional[str]
-    documentation: Union[str, _MarkupContent, None]
+    kind: Optional[_CompletionItemKind] = None
+    tags: Optional[Sequence[_CompletionItemTag]] = None
 
-    preselect: Optional[bool]
-    filterText: Optional[str]
-    insertText: Optional[str]
-    insertTextFormat: Optional[_InsertTextFormat]
-    insertTextMode: Optional[_InsertTextMode]
+    detail: Optional[str] = None
+    documentation: Union[str, MarkupContent, None] = None
 
-    additionalTextEdits: Optional[Sequence[TextEdit]]
-    textEdit: Union[TextEdit, InsertReplaceEdit, None]
+    preselect: Optional[bool] = None
+    filterText: Optional[str] = None
 
-    command: Command
-    data: Optional[Any]
+    insertText: Optional[str] = None
+    insertTextFormat: Optional[_InsertTextFormat] = None
+    insertTextMode: Optional[_InsertTextMode] = None
+
+    textEdit: Union[TextEdit, _InsertReplaceEdit, None] = None
+    additionalTextEdits: Optional[Sequence[TextEdit]] = None
+
+    command: Optional[Command] = None
+    data: Optional[Any] = None
 
 
 class _CompletionList(TypedDict):
