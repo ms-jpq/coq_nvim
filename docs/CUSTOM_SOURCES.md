@@ -2,7 +2,7 @@
 
 ---
 
-⬇️  **Known sources at bottom of page** ⬇️
+⬇️ **Known sources at bottom of page** ⬇️
 
 ---
 
@@ -93,6 +93,10 @@ All code paths must invoke `callback`, or else `coq.nvim` will end up waiting fo
 **First party lua** and _external third party integrations_
 
 ##### First party
+
+- shell repl
+
+![repl.img](https://raw.githubusercontent.com/ms-jpq/coq.artifacts/artifacts/preview/repl.gif)
 
 - nvim lua
 
