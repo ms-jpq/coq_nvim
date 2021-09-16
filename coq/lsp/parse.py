@@ -1,5 +1,5 @@
 from random import shuffle
-from typing import Any, Mapping, MutableSequence, Optional, Sequence, cast
+from typing import Any, Mapping, MutableSequence, Optional
 
 from pynvim_pp.logging import log
 from std2.pickle.decoder import _new_parser
@@ -112,11 +112,11 @@ def parse(
     elif isinstance(resp, Mapping):
         is_complete = _falsy(resp.get("isIncomplete"))
 
-        if not isinstance((items := resp.get("items")), Sequence):
+        if not isinstance((items := resp.get("items")), MutableSequence):
             return LSPcomp(local_cache=is_complete, items=iter(()))
 
         else:
-            shuffle(cast(MutableSequence, items))
+            shuffle(items)
             comps = (
                 co1
                 for item in items
@@ -131,8 +131,8 @@ def parse(
             )
             return LSPcomp(local_cache=is_complete, items=comps)
 
-    elif isinstance(resp, Sequence) and not isinstance(cast(Any, resp), str):
-        shuffle(cast(MutableSequence, resp))
+    elif isinstance(resp, MutableSequence):
+        shuffle(resp)
         comps = (
             co2
             for item in resp
