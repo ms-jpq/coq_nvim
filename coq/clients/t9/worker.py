@@ -69,8 +69,8 @@ def _decode(client: BaseClient, reply: Response) -> Iterator[Completion]:
                     old_suffix=resp.old_suffix,
                     new_text=resp.new_prefix + resp.new_suffix,
                 )
-                label_pre, *_ = result.new_prefix.splitlines() or ("",)
-                *_, label_post = result.new_suffix.splitlines() or ("",)
+                label_pre, *_ = resp.new_prefix.splitlines() or ("",)
+                *_, label_post = resp.new_suffix.splitlines() or ("",)
                 label = label_pre + label_post
                 kind = PROTOCOL.CompletionItemKind.get(result.kind)
                 cmp = Completion(
