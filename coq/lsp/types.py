@@ -55,23 +55,22 @@ class Command:
 @dataclass(frozen=True)
 class CompletionItem:
     label: str
-    kind: Optional[_CompletionItemKind]
-    tags: Optional[Sequence[_CompletionItemTag]]
+    kind: Optional[_CompletionItemKind] = None
+    tags: Optional[Sequence[_CompletionItemTag]] = None
 
-    detail: Optional[str]
-    documentation: Union[str, MarkupContent, None]
+    detail: Optional[str] = None
+    documentation: Union[str, MarkupContent, None] = None
 
-    preselect: Optional[bool]
-    filterText: Optional[str]
-    insertText: Optional[str]
-    insertTextFormat: Optional[_InsertTextFormat]
-    insertTextMode: Optional[_InsertTextMode]
+    preselect: Optional[bool] = None
+    filterText: Optional[str] = None
+    insertText: Optional[str] = None
+    insertTextFormat: Optional[_InsertTextFormat] = None
+    insertTextMode: Optional[_InsertTextMode] = None
 
-    additionalTextEdits: Optional[Sequence[TextEdit]]
-    textEdit: Union[TextEdit, _InsertReplaceEdit, None]
-
-    command: Command
-    data: Optional[Any]
+    textEdit: Union[TextEdit, _InsertReplaceEdit, None] = None
+    additionalTextEdits: Optional[Sequence[TextEdit]] = None
+    command: Optional[Command] = None
+    data: Optional[Any] = None
 
 
 class _CompletionList(TypedDict):
