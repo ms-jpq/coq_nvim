@@ -36,7 +36,6 @@ def _metric(
     cword = cword_before(
         options.unifying_chars, lower=ctx.is_lower, context=ctx.context, sort_by=match
     )
-    print([ctx.context.words, ctx.context.syms],[match, cword], flush=True)
     return metrics(cword, match, look_ahead=options.look_ahead)
 
 
