@@ -55,6 +55,7 @@ class Command:
 @dataclass(frozen=True)
 class CompletionItem:
     label: str
+
     kind: Optional[_CompletionItemKind] = None
     tags: Optional[Sequence[_CompletionItemTag]] = None
 
@@ -63,12 +64,14 @@ class CompletionItem:
 
     preselect: Optional[bool] = None
     filterText: Optional[str] = None
+
     insertText: Optional[str] = None
     insertTextFormat: Optional[_InsertTextFormat] = None
     insertTextMode: Optional[_InsertTextMode] = None
 
     textEdit: Union[TextEdit, _InsertReplaceEdit, None] = None
     additionalTextEdits: Optional[Sequence[TextEdit]] = None
+
     command: Optional[Command] = None
     data: Optional[Any] = None
 
