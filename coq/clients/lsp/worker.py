@@ -103,12 +103,12 @@ class Worker(BaseWorker[BaseClient, None], CacheWorker):
                                     lower(c.sort_by),
                                     look_ahead=self._supervisor.options.look_ahead,
                                 )
+
                                 if (
                                     ratio >= self._supervisor.options.fuzzy_cutoff
                                     and len(c.sort_by)
                                     + self._supervisor.options.look_ahead
                                     >= len(cword)
-                                    and not cword.startswith(c.sort_by)
                                 ):
                                     yield c
                                     seen += 1
