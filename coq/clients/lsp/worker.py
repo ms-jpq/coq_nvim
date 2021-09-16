@@ -17,7 +17,7 @@ from ...shared.runtime import Supervisor
 from ...shared.runtime import Worker as BaseWorker
 from ...shared.settings import BaseClient
 from ...shared.sql import BIGGEST_INT
-from ...shared.types import Completion, Context
+from ...shared.types import Completion, Context, SnippetEdit
 from ..cache.worker import CacheWorker, sanitize_cached
 
 
@@ -109,6 +109,10 @@ class Worker(BaseWorker[BaseClient, None], CacheWorker):
                                     and len(c.sort_by)
                                     + self._supervisor.options.look_ahead
                                     >= len(cword)
+                                    and (
+                                        isinstance(c.primary_edit, SnippetEdit)
+                                        or not cword.startswith(c.primary_edit.new_text)
+                                    )
                                 ):
                                     yield c
                                     seen += 1
