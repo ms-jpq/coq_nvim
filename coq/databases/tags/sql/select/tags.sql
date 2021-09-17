@@ -15,15 +15,15 @@ ON files.filename = tags.`path`
 WHERE
   tags.name <> ''
   AND
-  IIF(tags.word_start, :word, :sym) <> ''
+  CASE WHEN tags.word_start THEN :word ELSE :sym END <> ''
   AND 
-  LENGTH(tags.name) + :look_ahead >= LENGTH(IIF(tags.word_start, :word, :sym))
+  LENGTH(tags.name) + :look_ahead >= LENGTH(CASE WHEN tags.word_start THEN :word ELSE :sym END)
   AND
   files.filetype = :filetype
   AND
-  tags.lname LIKE X_LIKE_ESC(SUBSTR(LOWER(IIF(tags.word_start, :word, :sym)), 1, :exact)) ESCAPE '!'
+  tags.lname LIKE X_LIKE_ESC(SUBSTR(LOWER(CASE WHEN tags.word_start THEN :word ELSE :sym END), 1, :exact)) ESCAPE '!'
   AND
-  NOT INSTR(IIF(tags.word_start, :word, :sym), tags.name)
+  NOT INSTR(CASE WHEN tags.word_start THEN :word ELSE :sym END, tags.name)
   AND
-  X_SIMILARITY(LOWER(IIF(tags.word_start, :word, :sym)), tags.lname, :look_ahead) > :cut_off
+  X_SIMILARITY(LOWER(CASE WHEN tags.word_start THEN :word ELSE :sym END), tags.lname, :look_ahead) > :cut_off
 LIMIT :limit
