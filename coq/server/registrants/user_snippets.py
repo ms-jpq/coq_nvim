@@ -1,4 +1,5 @@
 from argparse import Namespace
+from contextlib import nullcontext
 from locale import strxfrm
 from os.path import normcase
 from pathlib import PurePath
@@ -34,7 +35,13 @@ from ...snippets.consts import MOD_PAD
 from ...snippets.parsers.types import ParseError
 from ...snippets.types import LoadError
 from ..rt_types import Stack
-from .snippets import Compiled, compile_one, compile_user_snippets, user_mtimes
+from .snippets import (
+    Compiled,
+    compile_one,
+    compile_user_snippets,
+    snippet_paths,
+    user_mtimes,
+)
 
 _WIDTH = 80
 _TAB = 2
@@ -149,12 +156,16 @@ def eval_snips(
 def _parse_args(args: Sequence[str], filetype: Optional[str]) -> Namespace:
     parser = ArgParser()
     sub_parsers = parser.add_subparsers(dest="action", required=True)
+
     sub_parsers.add_parser("ls")
+    sub_parsers.add_parser("cd")
     sub_parsers.add_parser("compile")
-    p = sub_parsers.add_parser("edit")
-    p.add_argument(
-        "filetype", nargs="?" if filetype else cast(int, None), default=filetype
-    )
+
+    with nullcontext(sub_parsers.add_parser("edit")) as p:
+        p.add_argument(
+            "filetype", nargs="?" if filetype else cast(int, None), default=filetype
+        )
+
     return parser.parse_args(args)
 
 
@@ -169,26 +180,7 @@ def snips(nvim: Nvim, stack: Stack, args: Sequence[str]) -> None:
         write(nvim, e, error=True)
 
     else:
-        if ns.action == "compile":
-
-            async def c0() -> None:
-                await awrite(nvim, LANG("waiting..."))
-                try:
-                    await compile_user_snippets(nvim, stack=stack)
-                except (LoadError, ParseError) as e:
-                    preview = str(e).splitlines()
-
-                    def cont() -> None:
-                        set_preview(nvim, syntax="", preview=preview)
-                        write(nvim, LANG("snip parse fail"))
-
-                    await async_call(nvim, cont)
-                else:
-                    await awrite(nvim, LANG("snip parse succ"))
-
-            go(nvim, aw=c0())
-
-        elif ns.action == "ls":
+        if ns.action == "ls":
             cwd = get_cwd(nvim)
 
             async def c1() -> None:
@@ -210,9 +202,47 @@ def snips(nvim: Nvim, stack: Stack, args: Sequence[str]) -> None:
 
             go(nvim, aw=c1())
 
-        elif ns.action == "edit":
+        elif ns.action == "cd":
 
             async def c2() -> None:
+                paths = await snippet_paths(
+                    nvim, user_path=stack.settings.clients.snippets.user_path
+                )
+                if paths:
+                    path, *_ = paths
+
+                    def cont() -> None:
+                        focus = nvim.funcs.fnameescape(normcase(path))
+                        nvim.command(f"chdir {focus}")
+
+                    await async_call(nvim, cont)
+                else:
+                    assert False
+
+            go(nvim, aw=c2())
+
+        elif ns.action == "compile":
+
+            async def c3() -> None:
+                await awrite(nvim, LANG("waiting..."))
+                try:
+                    await compile_user_snippets(nvim, stack=stack)
+                except (LoadError, ParseError) as e:
+                    preview = str(e).splitlines()
+
+                    def cont() -> None:
+                        set_preview(nvim, syntax="", preview=preview)
+                        write(nvim, LANG("snip parse fail"))
+
+                    await async_call(nvim, cont)
+                else:
+                    await awrite(nvim, LANG("snip parse succ"))
+
+            go(nvim, aw=c3())
+
+        elif ns.action == "edit":
+
+            async def c4() -> None:
                 paths, mtimes = await user_mtimes(
                     nvim, user_path=stack.settings.clients.snippets.user_path
                 )
@@ -227,7 +257,7 @@ def snips(nvim: Nvim, stack: Stack, args: Sequence[str]) -> None:
 
                 await async_call(nvim, cont)
 
-            go(nvim, aw=c2())
+            go(nvim, aw=c4())
 
         else:
             assert False

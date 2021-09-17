@@ -15,6 +15,7 @@ endfunction
 function! coq#complete_snips(arg_lead, cmd_line, cursor_pos) abort
   let l:args = [
         \ 'ls',
+        \ 'cd',
         \ 'compile',
         \ 'edit',
         \ ]
