@@ -42,7 +42,7 @@ class Database:
         await run_in_executor(self._ex.submit, cont)
 
     async def select(
-        self, clear: bool, options: Options, word: str, limitless: int
+        self, clear: bool, options: Options, word: str, sym: str, limitless: int
     ) -> Iterator[str]:
         def cont() -> Iterator[str]:
             try:
@@ -61,6 +61,7 @@ class Database:
                                 if limitless
                                 else options.max_results,
                                 "word": word,
+                                "sym": sym,
                             },
                         )
                         rows = cursor.fetchall()

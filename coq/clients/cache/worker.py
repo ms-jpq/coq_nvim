@@ -70,11 +70,11 @@ class CacheWorker:
 
         async def get() -> Iterator[Completion]:
             with timeit("CACHE -- GET"):
-                match = context.words_before or context.syms_before
                 words = await self._db.select(
                     not use_cache,
                     options=self._soup.options,
-                    word=match,
+                    word=context.words_before,
+                    sym=context.syms_before,
                     limitless=context.manual,
                 )
                 comps = (
