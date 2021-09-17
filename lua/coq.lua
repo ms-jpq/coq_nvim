@@ -159,7 +159,7 @@ if settings.auto_start then
   coq.Now(unpack(args))
 end
 
-setmetatable(
+return setmetatable(
   coq,
   {
     __call = function()
@@ -167,5 +167,3 @@ setmetatable(
     end
   }
 )
-
-return coq
