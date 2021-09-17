@@ -104,7 +104,13 @@ class CTDB:
         await run_in_executor(self._ex.submit, cont)
 
     async def select(
-        self, opts: Options, filename: str, line_num: int, word: str, limitless: int
+        self,
+        opts: Options,
+        filename: str,
+        line_num: int,
+        word: str,
+        sym: str,
+        limitless: int,
     ) -> Iterator[Tag]:
         def cont() -> Iterator[Tag]:
             try:
@@ -125,6 +131,7 @@ class CTDB:
                             "filename": filename,
                             "line_num": line_num,
                             "word": word,
+                            "sym": sym
                         },
                     )
                     rows = cursor.fetchall()

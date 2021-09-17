@@ -54,7 +54,7 @@ class TDB:
         await run_in_executor(self._ex.submit, cont)
 
     async def select(
-        self, opts: Options, word: str, limitless: int
+        self, opts: Options, word: str, sym: str, limitless: int
     ) -> Iterator[Payload]:
         def cont() -> Iterator[Payload]:
             try:
@@ -67,6 +67,7 @@ class TDB:
                             "look_ahead": opts.look_ahead,
                             "limit": BIGGEST_INT if limitless else opts.max_results,
                             "word": word,
+                            "sym": sym,
                         },
                     )
                     rows = cursor.fetchall()

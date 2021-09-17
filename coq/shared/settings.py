@@ -137,7 +137,7 @@ class BuffersClient(WordbankClient):
 
 
 @dataclass(frozen=True)
-class TagsClient(WordbankClient):
+class TagsClient(BaseClient):
     parent_scope: str
     path_sep: str
 

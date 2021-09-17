@@ -114,7 +114,7 @@ class SDB:
         await run_in_executor(self._ex.submit, cont)
 
     async def select(
-        self, opts: Options, filetype: str, word: str, limitless: int
+        self, opts: Options, filetype: str, word: str, sym: str, limitless: int
     ) -> Iterator[_Snip]:
         def cont() -> Iterator[_Snip]:
             try:
@@ -128,6 +128,7 @@ class SDB:
                             "limit": BIGGEST_INT if limitless else opts.max_results,
                             "filetype": filetype,
                             "word": word,
+                            "sym": sym,
                         },
                     )
                     rows = cursor.fetchall()

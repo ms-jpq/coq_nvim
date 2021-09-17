@@ -57,7 +57,7 @@ class TMDB:
         await run_in_executor(self._ex.submit, cont)
 
     async def select(
-        self, opts: Options, active_pane: str, word: str, limitless: int
+        self, opts: Options, active_pane: str, word: str, sym: str, limitless: int
     ) -> Iterator[str]:
         def cont() -> Iterator[str]:
             try:
@@ -71,6 +71,7 @@ class TMDB:
                             "limit": BIGGEST_INT if limitless else opts.max_results,
                             "pane_id": active_pane,
                             "word": word,
+                            "sym": sym,
                         },
                     )
                     rows = cursor.fetchall()

@@ -73,8 +73,8 @@ class CacheWorker:
                 words = await self._db.select(
                     not use_cache,
                     options=self._soup.options,
-                    word=context.words_before,
-                    sym=context.syms_before,
+                    word=context.words,
+                    sym=context.syms,
                     limitless=context.manual,
                 )
                 comps = (
