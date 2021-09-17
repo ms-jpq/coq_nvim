@@ -123,23 +123,24 @@ class Worker(BaseWorker[BaseClient, None]):
 
     async def _install(self) -> None:
         vars_dir = self._supervisor.vars_dir / "clients" / "t9"
-        installed = access(t9_bin(vars_dir), X_OK)
-
-        if not installed:
+        bin_path = t9_bin(vars_dir)
+        if access(bin_path, X_OK):
+            self._bin = bin_path
+        else:
             for _ in range(9):
                 await sleep(0)
             await awrite(self._supervisor.nvim, LANG("begin T9 download"))
 
-        self._bin = await ensure_updated(
-            vars_dir,
-            retries=self._supervisor.limits.download_retries,
-            timeout=self._supervisor.limits.download_timeout,
-        )
+            self._bin = await ensure_updated(
+                vars_dir,
+                retries=self._supervisor.limits.download_retries,
+                timeout=self._supervisor.limits.download_timeout,
+            )
 
-        if not self._bin:
-            await awrite(self._supervisor.nvim, LANG("failed T9 download"))
-        elif self._bin and not installed:
-            await awrite(self._supervisor.nvim, LANG("end T9 download"))
+            if not self._bin:
+                await awrite(self._supervisor.nvim, LANG("failed T9 download"))
+            else:
+                await awrite(self._supervisor.nvim, LANG("end T9 download"))
 
     async def _clean(self) -> None:
         proc = self._proc
