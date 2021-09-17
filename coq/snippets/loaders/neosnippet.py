@@ -70,13 +70,13 @@ def load_neosnippet(
 
     for lineno, line in lines:
         line = line.rstrip()
-        if (
-            not line
-            or line.isspace()
-            or line.startswith(_COMMENT_START)
-            or any(line.startswith(i) for i in _IGNORED_STARTS)
+        if line.startswith(_COMMENT_START) or any(
+            line.startswith(i) for i in _IGNORED_STARTS
         ):
             pass
+
+        elif not line or line.isspace():
+            current_lines.append("")
 
         elif line.startswith(_EXTENDS_START):
             filetypes = line[len(_EXTENDS_START) :].strip()
