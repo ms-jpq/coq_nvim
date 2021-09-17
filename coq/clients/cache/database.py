@@ -51,15 +51,14 @@ class Database:
                         cursor.execute(sql("delete", "words"))
                         return iter(())
                     else:
+                        limit = BIGGEST_INT if limitless else options.max_results
                         cursor.execute(
                             sql("select", "words"),
                             {
                                 "exact": options.exact_matches,
                                 "cut_off": options.fuzzy_cutoff,
                                 "look_ahead": options.look_ahead,
-                                "limit": BIGGEST_INT
-                                if limitless
-                                else options.max_results,
+                                "limit": limit,
                                 "word": word,
                                 "sym": sym,
                             },
