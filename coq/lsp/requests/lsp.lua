@@ -158,7 +158,14 @@
     end)()
 
     local args =
-      freeze("coq_3p args", {uid = session_id, pos = pos, line = line})
+      freeze(
+      "coq_3p.args",
+      {
+        uid = session_id,
+        pos = freeze("coq_3p.args.pos", pos),
+        line = line
+      }
+    )
 
     req(
       name,
