@@ -172,7 +172,6 @@ clients:
   tags:
     enabled: True
     short_name: "TAG"
-    match_syms: True
     parent_scope: " ⇊"
     path_sep: " ⇉ "
     weight_adjust: 0
