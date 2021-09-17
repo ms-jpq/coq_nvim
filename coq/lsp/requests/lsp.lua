@@ -1,13 +1,14 @@
 (function(...)
-  local freeze = function(name, original)
+  local freeze = function(name, is_list, original)
     vim.validate {
       name = {name, "string"},
+      is_list = {is_list, "boolean"},
       original = {original, "table"}
     }
 
     local proxy =
       setmetatable(
-      {},
+      is_list and original or {},
       {
         __index = function(_, key)
           if original[key] == nil then
@@ -160,9 +161,10 @@
     local args =
       freeze(
       "coq_3p.args",
+      false,
       {
         uid = session_id,
-        pos = freeze("coq_3p.args.pos", pos),
+        pos = freeze("coq_3p.args.pos", true, pos),
         line = line
       }
     )
