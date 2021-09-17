@@ -239,6 +239,7 @@ Plug 'ms-jpq/coq_nvim', {'branch': 'coq'}
 Plug 'ms-jpq/coq.artifacts', {'branch': 'artifacts'}
 
 " Third party sources -- See https://github.com/ms-jpq/coq.thirdparty
+" Need to configure separately
 Plug 'ms-jpq/coq.thirdparty', {'branch': '3p'}
 ```
 
