@@ -27,12 +27,12 @@ class Worker(BaseWorker[BuffersClient, BDB]):
                 await self._supervisor.idling.wait()
 
     async def work(self, context: Context) -> AsyncIterator[Completion]:
-        match = context.words or (context.syms if self._options.match_syms else "")
         filetype = context.filetype if self._options.same_filetype else None
         words = await self._misc.words(
             self._supervisor.options,
             filetype=filetype,
-            word=match,
+            word=context.words,
+            sym=context.syms if self._options.match_syms else "",
             limitless=context.manual,
         )
         for word in words:

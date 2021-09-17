@@ -164,7 +164,12 @@ class BDB:
         return self._ex.submit(cont)
 
     async def words(
-        self, opts: Options, filetype: Optional[str], word: str, limitless: int
+        self,
+        opts: Options,
+        filetype: Optional[str],
+        word: str,
+        sym: str,
+        limitless: int,
     ) -> Iterator[str]:
         def cont() -> Iterator[str]:
             try:
@@ -178,6 +183,7 @@ class BDB:
                             "limit": BIGGEST_INT if limitless else opts.max_results,
                             "filetype": filetype,
                             "word": word,
+                            "sym": sym,
                         },
                     )
                     rows = cursor.fetchall()
