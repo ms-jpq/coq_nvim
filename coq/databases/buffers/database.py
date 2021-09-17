@@ -188,8 +188,7 @@ class BDB:
                     )
                     rows = cursor.fetchall()
                     return (row["word"] for row in rows)
-            except OperationalError as e:
-                print(e, flush=True)
+            except OperationalError:
                 return iter(())
 
         def step() -> Iterator[str]:
