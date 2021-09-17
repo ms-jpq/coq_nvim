@@ -4,7 +4,7 @@ from uuid import UUID
 
 from ..shared.types import SnippetGrammar
 
-SCHEMA = "v2"
+SCHEMA = "v3"
 
 
 class LoadError(Exception):

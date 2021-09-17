@@ -18,7 +18,7 @@ from ...shared.timeit import timeit
 from ...tags.types import Tag, Tags
 from .sql import sql
 
-_SCHEMA = "v2"
+_SCHEMA = "v3"
 
 _NIL_TAG = Tag(
     language="",
