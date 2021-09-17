@@ -210,6 +210,7 @@ def snips(nvim: Nvim, stack: Stack, args: Sequence[str]) -> None:
                 )
                 if paths:
                     path, *_ = paths
+                    path.mkdir(parents=True, exist_ok=True)
 
                     def cont() -> None:
                         focus = nvim.funcs.fnameescape(normcase(path))
