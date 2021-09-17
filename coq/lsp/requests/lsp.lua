@@ -119,7 +119,7 @@
       return acc, cancel
     end)()
 
-    local args = {pos = pos, line=line}
+    local args = {uid = session_id, pos = pos, line = line}
 
     req(
       name,
