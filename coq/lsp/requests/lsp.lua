@@ -1,6 +1,36 @@
 (function(...)
   local cancels = {}
 
+  local freeze = function(name, original)
+    vim.validate {
+      name = {name, "string"},
+      original = {original, "table"}
+    }
+
+    local proxy =
+      setmetatable(
+      {},
+      {
+        __index = function(_, key)
+          if ctx[key] == nil then
+            error("NotImplementedError :: " .. name .. "->" .. key)
+          else
+            return ctx[key]
+          end
+        end
+      },
+      {
+        __newindex = function(_, key, val)
+          error(
+            "TypeError :: " ..
+              vim.inspect {key, val} .. "->frozen<" .. name .. ">"
+          )
+        end
+      }
+    )
+    return proxy
+  end
+
   local req = function(name, session_id, clients, callback)
     local n_clients, client_names = unpack(clients)
 
@@ -119,7 +149,8 @@
       return acc, cancel
     end)()
 
-    local args = {uid = session_id, pos = pos, line = line}
+    local args =
+      freeze("coq_3p args", {uid = session_id, pos = pos, line = line})
 
     req(
       name,
