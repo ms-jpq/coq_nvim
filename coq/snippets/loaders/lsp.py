@@ -24,9 +24,9 @@ def _prefix(prefix: Union[str, Sequence[str], None], content: str) -> AbstractSe
     if prefix is None:
         return {content}
     elif isinstance(prefix, str):
-        return {prefix}
+        return {prefix.strip()}
     elif isinstance(prefix, Sequence):
-        return {*prefix}
+        return {p.strip() for p in prefix}
     else:
         assert False
 
@@ -51,9 +51,9 @@ def load_lsp(
 
     def cont() -> Iterator[ParsedSnippet]:
         for label, values in fmt.items():
-            content = _body(values.body)
+            content = _body(values.body).strip()
             matches = _prefix(values.prefix, content=content)
-            doc = _body(values.description)
+            doc = _body(values.description).strip()
             snippet = ParsedSnippet(
                 grammar=grammar,
                 filetype=filetype,
