@@ -9,13 +9,13 @@ FROM words
 WHERE
   word <> ''
   AND
-  X_PICK_WS(word, :word, :sym) <> ''
+  IIF(word_start, :word, :sym) <> ''
   AND 
-  LENGTH(word) + :look_ahead >= LENGTH(X_PICK_WS(word, :word, :sym))
+  LENGTH(word) + :look_ahead >= LENGTH(IIF(word_start, :word, :sym))
   AND
-  lword LIKE X_LIKE_ESC(SUBSTR(LOWER(X_PICK_WS(word, :word, :sym)), 1, :exact)) ESCAPE '!'
+  lword LIKE X_LIKE_ESC(SUBSTR(LOWER(IIF(word_start, :word, :sym)), 1, :exact)) ESCAPE '!'
   AND
-  NOT INSTR(X_PICK_WS(word, :word, :sym), word)
+  NOT INSTR(IIF(word_start, :word, :sym), word)
   AND
-  X_SIMILARITY(LOWER(X_PICK_WS(word, :word, :sym)), lword, :look_ahead) > :cut_off
+  X_SIMILARITY(LOWER(IIF(word_start, :word, :sym)), lword, :look_ahead) > :cut_off
 LIMIT :limit

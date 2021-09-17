@@ -76,7 +76,6 @@ class _Quantiles:
 def _word_start(
     unifying_chars: AbstractSet[str],
 ) -> Callable[[Optional[str]], Optional[bool]]:
-
     def cont(word: Optional[str]) -> Optional[bool]:
         if word is None:
             return None
