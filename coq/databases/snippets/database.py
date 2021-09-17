@@ -17,7 +17,7 @@ from ...shared.timeit import timeit
 from ...snippets.types import LoadedSnips
 from .sql import sql
 
-_SCHEMA = "v2"
+_SCHEMA = "v3"
 
 
 class _Snip(TypedDict):
