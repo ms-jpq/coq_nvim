@@ -32,10 +32,18 @@
     local cancels = {}
     return function(name, session_id, clients, callback)
       local n_clients, client_names = unpack(clients)
+      vim.validate {
+        name = {name, "string"},
+        session_id = {session_id, "number"},
+        n_clients = {n_clients, "number"},
+        client_names = {client_names, "table"},
+        callback = {callback, "function"}
+      }
 
-      if cancels[name] then
-        pcall(cancels[name])
-      end
+      pcall(
+        cancels[name] or function()
+          end
+      )
 
       local payload = {
         method = name,
