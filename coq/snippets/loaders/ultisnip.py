@@ -103,7 +103,7 @@ def load_ultisnip(
             if line.startswith(_SNIPPET_END):
                 state = _State.normal
 
-                content = SNIP_LINE_SEP.join(current_lines)
+                content = SNIP_LINE_SEP.join(current_lines).strip()
                 snippet = ParsedSnippet(
                     grammar=grammar,
                     filetype=filetype,
