@@ -1,7 +1,7 @@
 from asyncio.tasks import gather
 from difflib import unified_diff
 
-from ..consts import LSP_ARTIFACTS, VARS
+from ..consts import DEBUG, LSP_ARTIFACTS, VARS
 from ..server.registrants.snippets import BUNDLED_PATH_TPL, jsonify
 from ..snippets.types import SCHEMA
 from .load import load_parsable
@@ -16,7 +16,7 @@ async def main() -> None:
     snip_art = VARS / "snippets" / BUNDLED_PATH_TPL.substitute(schema=SCHEMA)
     snip_art.parent.mkdir(parents=True, exist_ok=True)
 
-    if snip_art.exists():
+    if DEBUG and snip_art.exists():
         for line in unified_diff(
             snip_art.read_text().splitlines(), j_snippets.splitlines()
         ):
