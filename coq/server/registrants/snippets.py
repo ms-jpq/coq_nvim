@@ -95,7 +95,7 @@ def _resolve(stdp: Path, path: Path) -> Optional[Path]:
             return _resolve(stdp, path=stdp / path)
 
 
-async def _snippet_paths(nvim: Nvim, user_path: Optional[Path]) -> Sequence[Path]:
+async def snippet_paths(nvim: Nvim, user_path: Optional[Path]) -> Sequence[Path]:
     def cont() -> Iterator[Path]:
         if user_path:
             std_conf = Path(nvim.funcs.stdpath("config"))
@@ -111,7 +111,7 @@ async def _snippet_paths(nvim: Nvim, user_path: Optional[Path]) -> Sequence[Path
 async def user_mtimes(
     nvim: Nvim, user_path: Optional[Path]
 ) -> Tuple[Sequence[Path], Mapping[Path, float]]:
-    paths = await _snippet_paths(nvim, user_path=user_path)
+    paths = await snippet_paths(nvim, user_path=user_path)
 
     def cont() -> Iterator[Tuple[Path, float]]:
         for path in paths:

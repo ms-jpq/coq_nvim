@@ -118,6 +118,7 @@ The default path is normally under `$NVIM_HOME/coq-user-snippets/`, but if `coq_
 To see where snippets are currently stored, there is also
 
 ```viml
+:COQsnips cd
 :COQsnips ls
 ```
 
