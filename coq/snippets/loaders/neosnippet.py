@@ -57,7 +57,7 @@ def load_neosnippet(
 
     def push() -> None:
         if current_name:
-            content = dedent(SNIP_LINE_SEP.join(current_lines).strip())
+            content = dedent(SNIP_LINE_SEP.join(current_lines)).strip()
             snippet = ParsedSnippet(
                 grammar=grammar,
                 filetype=filetype,
