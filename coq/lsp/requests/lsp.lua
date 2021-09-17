@@ -12,14 +12,12 @@
       {},
       {
         __index = function(_, key)
-          if ctx[key] == nil then
+          if original[key] == nil then
             error("NotImplementedError :: " .. name .. "->" .. key)
           else
-            return ctx[key]
+            return original[key]
           end
-        end
-      },
-      {
+        end,
         __newindex = function(_, key, val)
           error(
             "TypeError :: " ..
