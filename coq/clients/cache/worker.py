@@ -38,7 +38,9 @@ def sanitize_cached(comp: Completion) -> Completion:
 class CacheWorker:
     def __init__(self, supervisor: Supervisor) -> None:
         self._soup = supervisor
-        self._db = Database(supervisor.pool)
+        self._db = Database(
+            supervisor.pool, unifying_chars=supervisor.options.unifying_chars
+        )
         self._cache_ctx = _CacheCtx(
             change_id=uuid4(),
             commit_id=uuid4(),

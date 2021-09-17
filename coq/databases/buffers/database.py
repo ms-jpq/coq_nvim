@@ -34,19 +34,19 @@ def _ensure_buffer(cursor: Cursor, buf_id: int, filetype: str) -> None:
         )
 
 
-def _init() -> Connection:
+def _init(unifying_chars: AbstractSet[str]) -> Connection:
     conn = Connection(BUFFER_DB, isolation_level=None)
-    init_db(conn)
+    init_db(conn, unifying_chars=unifying_chars)
     conn.executescript(sql("create", "pragma"))
     conn.executescript(sql("create", "tables"))
     return conn
 
 
 class BDB:
-    def __init__(self, pool: Executor) -> None:
+    def __init__(self, pool: Executor, unifying_chars: AbstractSet[str]) -> None:
         self._lock = Lock()
         self._ex = SingleThreadExecutor(pool)
-        self._conn: Connection = self._ex.submit(_init)
+        self._conn: Connection = self._ex.submit(lambda: _init(unifying_chars))
 
     def _interrupt(self) -> None:
         with self._lock:
