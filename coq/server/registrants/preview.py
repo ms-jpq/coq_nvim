@@ -324,12 +324,11 @@ def _virt_text(nvim: Nvim, ghost: GhostText, text: str) -> None:
         row, col = win_get_cursor(nvim, win=win)
         mark = ExtMark(
             idx=1,
-            begin=(row, 0),
-            end=(row, 0),
+            begin=(row, col),
+            end=(row, col),
             meta={
                 "virt_text_pos": "overlay",
                 "hl_mode": "combine",
-                "virt_text_win_col": col,
                 "virt_text": ((virt_text, ghost.highlight_group),),
             },
         )
