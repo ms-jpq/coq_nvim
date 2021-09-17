@@ -14,8 +14,10 @@ from ...shared.executor import SingleThreadExecutor
 from ...shared.settings import Options
 from ...shared.sql import BIGGEST_INT, init_db
 from ...shared.timeit import timeit
-from ...snippets.types import SCHEMA, LoadedSnips
+from ...snippets.types import LoadedSnips
 from .sql import sql
+
+_SCHEMA = "v2"
 
 
 class _Snip(TypedDict):
@@ -27,7 +29,7 @@ class _Snip(TypedDict):
 
 
 def _init(db_dir: Path, unifying_chars: AbstractSet[str]) -> Connection:
-    db = (db_dir / SCHEMA).with_suffix(".sqlite3")
+    db = (db_dir / _SCHEMA).with_suffix(".sqlite3")
     db.parent.mkdir(parents=True, exist_ok=True)
     conn = Connection(db, isolation_level=None)
     init_db(conn, unifying_chars=unifying_chars)
