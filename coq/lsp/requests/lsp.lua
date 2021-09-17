@@ -1,6 +1,4 @@
 (function(...)
-  local cancels = {}
-
   local freeze = function(name, original)
     vim.validate {
       name = {name, "string"},
@@ -29,48 +27,52 @@
     return proxy
   end
 
-  local req = function(name, session_id, clients, callback)
-    local n_clients, client_names = unpack(clients)
+  local req =
+    (function()
+    local cancels = {}
+    return function(name, session_id, clients, callback)
+      local n_clients, client_names = unpack(clients)
 
-    if cancels[name] then
-      pcall(cancels[name])
-    end
+      if cancels[name] then
+        pcall(cancels[name])
+      end
 
-    local payload = {
-      method = name,
-      uid = session_id,
-      client = vim.NIL,
-      done = true,
-      reply = vim.NIL
-    }
+      local payload = {
+        method = name,
+        uid = session_id,
+        client = vim.NIL,
+        done = true,
+        reply = vim.NIL
+      }
 
-    local on_resp_old = function(err, _, resp, client_id)
-      n_clients = n_clients - 1
-      payload.client = client_names[client_id] or vim.NIL
-      payload.done = n_clients == 0
-      payload.reply = resp or vim.NIL
-      COQ.Lsp_notify(payload)
-    end
+      local on_resp_old = function(err, _, resp, client_id)
+        n_clients = n_clients - 1
+        payload.client = client_names[client_id] or vim.NIL
+        payload.done = n_clients == 0
+        payload.reply = resp or vim.NIL
+        COQ.Lsp_notify(payload)
+      end
 
-    local on_resp_new = function(err, resp, ctx)
-      on_resp_old(err, nil, resp, ctx.client_id)
-    end
+      local on_resp_new = function(err, resp, ctx)
+        on_resp_old(err, nil, resp, ctx.client_id)
+      end
 
-    local on_resp = function(...)
-      if type(({...})[2]) ~= "string" then
-        on_resp_new(...)
+      local on_resp = function(...)
+        if type(({...})[2]) ~= "string" then
+          on_resp_new(...)
+        else
+          on_resp_old(...)
+        end
+      end
+
+      if n_clients == 0 then
+        COQ.Lsp_notify(payload)
       else
-        on_resp_old(...)
+        local _, cancel = callback(on_resp)
+        cancels[name] = cancel
       end
     end
-
-    if n_clients == 0 then
-      COQ.Lsp_notify(payload)
-    else
-      local _, cancel = callback(on_resp)
-      cancels[name] = cancel
-    end
-  end
+  end)()
 
   local lsp_clients = function()
     local n_clients = 0
