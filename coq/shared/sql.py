@@ -73,9 +73,15 @@ class _Quantiles:
         return json
 
 
-def _pick(unifying_chars: AbstractSet[str]) -> Callable[[str, str, str], str]:
-    def cont(match: str, word: str, sym: str) -> str:
-        return word if is_word(match[:1], unifying_chars=unifying_chars) else sym
+def _word_start(
+    unifying_chars: AbstractSet[str],
+) -> Callable[[Optional[str]], Optional[bool]]:
+
+    def cont(word: Optional[str]) -> Optional[bool]:
+        if word is None:
+            return None
+        else:
+            return is_word(word[:1], unifying_chars=unifying_chars)
 
     return cont
 
@@ -83,7 +89,7 @@ def _pick(unifying_chars: AbstractSet[str]) -> Callable[[str, str, str], str]:
 def init_db(conn: Connection, unifying_chars: AbstractSet[str]) -> None:
     add_functions(conn)
     conn.create_function(
-        "X_PICK_WS", narg=3, func=_pick(unifying_chars), deterministic=True
+        "X_WORD_START", narg=1, func=_word_start(unifying_chars), deterministic=True
     )
     conn.create_function("X_LIKE_ESC", narg=1, func=_like_esc, deterministic=True)
     conn.create_function("X_SIMILARITY", narg=3, func=quick_ratio, deterministic=True)

@@ -25,7 +25,7 @@ async def _panes() -> Iterator[_Pane]:
             "#{pane_id} #{pane_active} #{window_active}",
             check_returncode=set(),
         )
-    except (FileNotFoundError, PermissionError):
+    except OSError:
         return iter(())
     else:
         if proc.code:
@@ -65,7 +65,7 @@ async def _screenshot(
             uid,
             check_returncode=set(),
         )
-    except (FileNotFoundError, PermissionError):
+    except OSError:
         return uid, iter(())
     else:
         if proc.code:
