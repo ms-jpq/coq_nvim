@@ -37,9 +37,10 @@ CREATE INDEX IF NOT EXISTS snippets_source_id ON snippets (source_id);
 
 
 CREATE TABLE IF NOT EXISTS matches (
-  snippet_id BLOB NOT NULL REFERENCES snippets (rowid) ON UPDATE CASCADE ON DELETE CASCADE,
-  match      TEXT NOT NULL,
-  lmatch     TEXT NOT NULL,
+  snippet_id BLOB    NOT NULL REFERENCES snippets (rowid) ON UPDATE CASCADE ON DELETE CASCADE,
+  match      TEXT    NOT NULL,
+  word_start INTEGER NOT NULL,
+  lmatch     TEXT    NOT NULL,
   UNIQUE(snippet_id, match)
 );
 CREATE INDEX IF NOT EXISTS matches_snippet_id ON matches (snippet_id);
@@ -92,6 +93,7 @@ SELECT
   snippets.source_id   AS source_id,
   snippets.grammar     AS grammar,
   matches.match        AS prefix,
+  matches.word_start   AS word_start,
   matches.lmatch       AS lprefix,
   snippets.content     AS snippet,
   snippets.label       AS label,
