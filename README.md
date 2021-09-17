@@ -180,11 +180,11 @@ _T9 is disabled by default, I might remove it, if they do not improve the CPU us
 
 Enable via: `coq_settings.clients.tabnine.enabled=true`
 
-### Modular lua sources & external third party integrations
+### [Modular lua sources](https://github.com/ms-jpq/coq.thirdparty) & external third party integrations
 
 - **Even faster than lua**! (transparent `sqlite` caching)
 
-- [Tons of built-in sources](https://github.com/ms-jpq/coq.thirdparty)
+- [**Tons of built-ins**](https://github.com/ms-jpq/coq.thirdparty)
 
 - External third party plugins too
 
