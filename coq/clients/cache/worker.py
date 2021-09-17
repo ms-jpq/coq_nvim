@@ -38,7 +38,9 @@ def sanitize_cached(comp: Completion) -> Completion:
 class CacheWorker:
     def __init__(self, supervisor: Supervisor) -> None:
         self._soup = supervisor
-        self._db = Database(supervisor.pool)
+        self._db = Database(
+            supervisor.pool, unifying_chars=supervisor.options.unifying_chars
+        )
         self._cache_ctx = _CacheCtx(
             change_id=uuid4(),
             commit_id=uuid4(),
@@ -70,11 +72,11 @@ class CacheWorker:
 
         async def get() -> Iterator[Completion]:
             with timeit("CACHE -- GET"):
-                match = context.words_before or context.syms_before
                 words = await self._db.select(
                     not use_cache,
                     options=self._soup.options,
-                    word=match,
+                    word=context.words,
+                    sym=context.syms,
                     limitless=context.manual,
                 )
                 comps = (

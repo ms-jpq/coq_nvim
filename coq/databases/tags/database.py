@@ -18,7 +18,7 @@ from ...shared.timeit import timeit
 from ...tags.types import Tag, Tags
 from .sql import sql
 
-_SCHEMA = "v2"
+_SCHEMA = "v3"
 
 _NIL_TAG = Tag(
     language="",
@@ -34,34 +34,47 @@ _NIL_TAG = Tag(
 )
 
 
-def _init(db_dir: Path, cwd: PurePath) -> Connection:
+from typing import AbstractSet
+
+
+def _init(db_dir: Path, cwd: PurePath, unifying_chars: AbstractSet[str]) -> Connection:
     ncwd = normcase(cwd)
     name = f"{md5(encode(ncwd)).hexdigest()}-{_SCHEMA}"
     db = (db_dir / name).with_suffix(".sqlite3")
     db.parent.mkdir(parents=True, exist_ok=True)
     conn = Connection(str(db), isolation_level=None)
-    init_db(conn)
+    init_db(conn, unifying_chars=unifying_chars)
     conn.executescript(sql("create", "pragma"))
     conn.executescript(sql("create", "tables"))
     return conn
 
 
 class CTDB:
-    def __init__(self, pool: Executor, vars_dir: Path, cwd: PurePath) -> None:
+    def __init__(
+        self,
+        pool: Executor,
+        vars_dir: Path,
+        cwd: PurePath,
+        unifying_chars: AbstractSet[str],
+    ) -> None:
         self._lock = Lock()
         self._ex = SingleThreadExecutor(pool)
         self._vars_dir = vars_dir / "clients" / "tags"
-        self._conn: Connection = self._ex.submit(_init, self._vars_dir, cwd)
+        self._conn: Connection = self._ex.submit(
+            lambda: _init(self._vars_dir, cwd=cwd, unifying_chars=unifying_chars)
+        )
 
     def _interrupt(self) -> None:
         with self._lock:
             self._conn.interrupt()
 
-    async def swap(self, cwd: PurePath) -> None:
+    async def swap(self, cwd: PurePath, unifying_chars: AbstractSet[str]) -> None:
         def cont() -> None:
             with self._lock:
                 self._conn.close()
-                self._conn = _init(self._vars_dir, cwd=cwd)
+                self._conn = _init(
+                    self._vars_dir, cwd=cwd, unifying_chars=unifying_chars
+                )
 
         await run_in_executor(self._ex.submit, cont)
 
@@ -104,7 +117,13 @@ class CTDB:
         await run_in_executor(self._ex.submit, cont)
 
     async def select(
-        self, opts: Options, filename: str, line_num: int, word: str, limitless: int
+        self,
+        opts: Options,
+        filename: str,
+        line_num: int,
+        word: str,
+        sym: str,
+        limitless: int,
     ) -> Iterator[Tag]:
         def cont() -> Iterator[Tag]:
             try:
@@ -125,6 +144,7 @@ class CTDB:
                             "filename": filename,
                             "line_num": line_num,
                             "word": word,
+                            "sym": sym,
                         },
                     )
                     rows = cursor.fetchall()

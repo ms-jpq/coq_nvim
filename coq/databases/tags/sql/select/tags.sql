@@ -13,17 +13,17 @@ FROM tags
 JOIN files
 ON files.filename = tags.`path`
 WHERE
-  :word <> ''
-  AND
   tags.name <> ''
+  AND
+  CASE WHEN tags.word_start THEN :word ELSE :sym END <> ''
   AND 
-  LENGTH(tags.name) + :look_ahead >= LENGTH(:word)
+  LENGTH(tags.name) + :look_ahead >= LENGTH(CASE WHEN tags.word_start THEN :word ELSE :sym END)
   AND
   files.filetype = :filetype
   AND
-  tags.lname LIKE X_LIKE_ESC(SUBSTR(LOWER(:word), 1, :exact)) ESCAPE '!'
+  tags.lname LIKE X_LIKE_ESC(SUBSTR(LOWER(CASE WHEN tags.word_start THEN :word ELSE :sym END), 1, :exact)) ESCAPE '!'
   AND
-  NOT INSTR(:word, tags.name)
+  NOT INSTR(CASE WHEN tags.word_start THEN :word ELSE :sym END, tags.name)
   AND
-  X_SIMILARITY(LOWER(:word), tags.lname, :look_ahead) > :cut_off
+  X_SIMILARITY(LOWER(CASE WHEN tags.word_start THEN :word ELSE :sym END), tags.lname, :look_ahead) > :cut_off
 LIMIT :limit

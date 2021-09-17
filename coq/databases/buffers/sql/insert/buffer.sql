@@ -1,2 +1,2 @@
-INSERT INTO buffers ( rowid,  filetype)
+INSERT INTO buffers (rowid,  filetype)
 VALUES              (:rowid, :filetype)

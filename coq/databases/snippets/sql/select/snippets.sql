@@ -6,17 +6,17 @@ SELECT
   doc
 FROM snippets_view
 WHERE
-  :word <> ''
-  AND
   snippet <> ''
+  AND
+  CASE WHEN word_start THEN :word ELSE :sym END <> ''
   AND 
-  LENGTH(prefix) + :look_ahead >= LENGTH(:word)
+  LENGTH(prefix) + :look_ahead >= LENGTH(CASE WHEN word_start THEN :word ELSE :sym END)
   AND
   ft_src = :filetype
   AND
-  lprefix LIKE X_LIKE_ESC(SUBSTR(LOWER(:word), 1, :exact)) ESCAPE '!'
+  lprefix LIKE X_LIKE_ESC(SUBSTR(LOWER(CASE WHEN word_start THEN :word ELSE :sym END), 1, :exact)) ESCAPE '!'
   AND
-  X_SIMILARITY(LOWER(:word), lprefix, :look_ahead) > :cut_off
+  X_SIMILARITY(LOWER(CASE WHEN word_start THEN :word ELSE :sym END), lprefix, :look_ahead) > :cut_off
 GROUP BY
   snippet_id
 LIMIT :limit

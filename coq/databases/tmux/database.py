@@ -2,7 +2,7 @@ from asyncio import CancelledError
 from concurrent.futures import Executor
 from sqlite3 import Connection, OperationalError
 from threading import Lock
-from typing import Iterable, Iterator, Mapping
+from typing import AbstractSet, Iterable, Iterator, Mapping
 
 from std2.asyncio import run_in_executor
 from std2.sqlite3 import with_transaction
@@ -15,19 +15,19 @@ from ...shared.timeit import timeit
 from .sql import sql
 
 
-def _init() -> Connection:
+def _init(unifying_chars: AbstractSet[str]) -> Connection:
     conn = Connection(TMUX_DB, isolation_level=None)
-    init_db(conn)
+    init_db(conn, unifying_chars=unifying_chars)
     conn.executescript(sql("create", "pragma"))
     conn.executescript(sql("create", "tables"))
     return conn
 
 
 class TMDB:
-    def __init__(self, pool: Executor) -> None:
+    def __init__(self, pool: Executor, unifying_chars: AbstractSet[str]) -> None:
         self._lock = Lock()
         self._ex = SingleThreadExecutor(pool)
-        self._conn: Connection = self._ex.submit(_init)
+        self._conn: Connection = self._ex.submit(lambda: _init(unifying_chars))
 
     def _interrupt(self) -> None:
         with self._lock:
@@ -57,7 +57,7 @@ class TMDB:
         await run_in_executor(self._ex.submit, cont)
 
     async def select(
-        self, opts: Options, active_pane: str, word: str, limitless: int
+        self, opts: Options, active_pane: str, word: str, sym: str, limitless: int
     ) -> Iterator[str]:
         def cont() -> Iterator[str]:
             try:
@@ -71,6 +71,7 @@ class TMDB:
                             "limit": BIGGEST_INT if limitless else opts.max_results,
                             "pane_id": active_pane,
                             "word": word,
+                            "sym": sym,
                         },
                     )
                     rows = cursor.fetchall()

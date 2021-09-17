@@ -1,4 +1,3 @@
-from shutil import which
 from typing import AsyncIterator
 
 from pynvim_pp.lib import go
@@ -29,13 +28,13 @@ class Worker(BaseWorker[WordbankClient, TMDB]):
                 await self._supervisor.idling.wait()
 
     async def work(self, context: Context) -> AsyncIterator[Completion]:
-        match = context.words or (context.syms if self._options.match_syms else "")
         active = await cur()
         words = (
             await self._misc.select(
                 self._supervisor.options,
                 active_pane=active.uid,
-                word=match,
+                word=context.words,
+                sym=(context.syms if self._options.match_syms else ""),
                 limitless=context.manual,
             )
             if active

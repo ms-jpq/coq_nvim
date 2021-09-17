@@ -21,9 +21,10 @@ CREATE INDEX IF NOT EXISTS lines_line_num   ON lines (line_num);
 
 
 CREATE TABLE IF NOT EXISTS words (
-  line_id BLOB NOT NULL REFERENCES lines (rowid) ON UPDATE CASCADE ON DELETE CASCADE,
-  word    TEXT NOT NULL,
-  lword   TEXT NOT NULL,
+  line_id         BLOB    NOT NULL REFERENCES lines (rowid) ON UPDATE CASCADE ON DELETE CASCADE,
+  word            TEXT    NOT NULL,
+  word_start      INTEGER NOT NULL,
+  lword           TEXT    NOT NULL,
   UNIQUE(line_id, word)
 );
 CREATE INDEX IF NOT EXISTS words_line_id ON words (line_id);

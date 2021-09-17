@@ -69,9 +69,11 @@ class Worker(BaseWorker[TSClient, TDB]):
                 await self._supervisor.idling.wait()
 
     async def work(self, context: Context) -> AsyncIterator[Completion]:
-        match = context.words or context.syms
         payloads = await self._misc.select(
-            self._supervisor.options, word=match, limitless=context.manual
+            self._supervisor.options,
+            word=context.words,
+            sym=context.syms,
+            limitless=context.manual,
         )
 
         for payload in payloads:
