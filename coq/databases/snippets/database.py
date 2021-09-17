@@ -26,22 +26,26 @@ class _Snip(TypedDict):
     doc: str
 
 
-def _init(db_dir: Path) -> Connection:
+def _init(db_dir: Path, unifying_chars: AbstractSet[str]) -> Connection:
     db = (db_dir / SCHEMA).with_suffix(".sqlite3")
     db.parent.mkdir(parents=True, exist_ok=True)
     conn = Connection(db, isolation_level=None)
-    init_db(conn)
+    init_db(conn, unifying_chars=unifying_chars)
     conn.executescript(sql("create", "pragma"))
     conn.executescript(sql("create", "tables"))
     return conn
 
 
 class SDB:
-    def __init__(self, pool: Executor, vars_dir: Path) -> None:
+    def __init__(
+        self, pool: Executor, vars_dir: Path, unifying_chars: AbstractSet[str]
+    ) -> None:
         db_dir = vars_dir / "clients" / "snippets"
         self._lock = Lock()
         self._ex = SingleThreadExecutor(pool)
-        self._conn: Connection = self._ex.submit(_init, db_dir)
+        self._conn: Connection = self._ex.submit(
+            lambda: _init(db_dir, unifying_chars=unifying_chars)
+        )
 
     def _interrupt(self) -> None:
         with self._lock:
@@ -114,7 +118,7 @@ class SDB:
         await run_in_executor(self._ex.submit, cont)
 
     async def select(
-        self, opts: Options, filetype: str, word: str, limitless: int
+        self, opts: Options, filetype: str, word: str, sym: str, limitless: int
     ) -> Iterator[_Snip]:
         def cont() -> Iterator[_Snip]:
             try:
@@ -128,6 +132,7 @@ class SDB:
                             "limit": BIGGEST_INT if limitless else opts.max_results,
                             "filetype": filetype,
                             "word": word,
+                            "sym": sym,
                         },
                     )
                     rows = cursor.fetchall()

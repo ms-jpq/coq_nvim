@@ -4,7 +4,9 @@ from os.path import normcase
 from pathlib import Path
 from sqlite3.dbapi2 import Connection
 from typing import (
+    AbstractSet,
     Any,
+    Callable,
     Iterator,
     MutableSequence,
     MutableSet,
@@ -18,6 +20,7 @@ from std2.pathlib import AnyPath
 from std2.sqlite3 import add_functions, escape
 
 from .fuzzy import quick_ratio
+from .parse import is_word
 
 BIGGEST_INT = 2 ** 63 - 1
 
@@ -70,8 +73,18 @@ class _Quantiles:
         return json
 
 
-def init_db(conn: Connection) -> None:
+def _pick(unifying_chars: AbstractSet[str]) -> Callable[[str, str, str], str]:
+    def cont(match: str, word: str, sym: str) -> str:
+        return word if is_word(match[:1], unifying_chars=unifying_chars) else sym
+
+    return cont
+
+
+def init_db(conn: Connection, unifying_chars: AbstractSet[str]) -> None:
     add_functions(conn)
+    conn.create_function(
+        "X_PICK_WS", narg=3, func=_pick(unifying_chars), deterministic=True
+    )
     conn.create_function("X_LIKE_ESC", narg=1, func=_like_esc, deterministic=True)
     conn.create_function("X_SIMILARITY", narg=3, func=quick_ratio, deterministic=True)
     conn.create_function("X_NORM_CASE", narg=1, func=normcase, deterministic=True)

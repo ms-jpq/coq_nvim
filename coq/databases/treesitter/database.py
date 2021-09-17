@@ -2,7 +2,7 @@ from asyncio import CancelledError
 from concurrent.futures import Executor
 from sqlite3 import Connection, OperationalError
 from threading import Lock
-from typing import Iterable, Iterator, Mapping
+from typing import AbstractSet, Iterable, Iterator, Mapping
 
 from std2.asyncio import run_in_executor
 from std2.sqlite3 import with_transaction
@@ -16,19 +16,19 @@ from ...treesitter.types import Payload, SimplePayload
 from .sql import sql
 
 
-def _init() -> Connection:
+def _init(unifying_chars: AbstractSet[str]) -> Connection:
     conn = Connection(TREESITTER_DB, isolation_level=None)
-    init_db(conn)
+    init_db(conn, unifying_chars=unifying_chars)
     conn.executescript(sql("create", "pragma"))
     conn.executescript(sql("create", "tables"))
     return conn
 
 
 class TDB:
-    def __init__(self, pool: Executor) -> None:
+    def __init__(self, pool: Executor, unifying_chars: AbstractSet[str]) -> None:
         self._lock = Lock()
         self._ex = SingleThreadExecutor(pool)
-        self._conn: Connection = self._ex.submit(_init)
+        self._conn: Connection = self._ex.submit(lambda: _init(unifying_chars))
 
     def _interrupt(self) -> None:
         with self._lock:
@@ -54,7 +54,7 @@ class TDB:
         await run_in_executor(self._ex.submit, cont)
 
     async def select(
-        self, opts: Options, word: str, limitless: int
+        self, opts: Options, word: str, sym: str, limitless: int
     ) -> Iterator[Payload]:
         def cont() -> Iterator[Payload]:
             try:
@@ -67,6 +67,7 @@ class TDB:
                             "look_ahead": opts.look_ahead,
                             "limit": BIGGEST_INT if limitless else opts.max_results,
                             "word": word,
+                            "sym": sym,
                         },
                     )
                     rows = cursor.fetchall()
