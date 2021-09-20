@@ -173,21 +173,9 @@
     return acc, cancel
   end
 
-  COQ.lsp_third_party = function(name, session_id, pos, line)
+  local lua_req = function(method, args)
     local client_names, client_fns = lua_clients()
     local cancels, cancel = lua_cancel()
-
-    local args =
-      freeze(
-      "coq_3p.args",
-      false,
-      {
-        uid = session_id,
-        pos = freeze("coq_3p.args.pos", true, pos),
-        line = line
-      }
-    )
-
     req(
       name,
       session_id,
@@ -200,7 +188,7 @@
             fn,
             args,
             function(resp)
-              on_resp(nil, "<coq - lua :: comp>", resp, id)
+              on_resp(nil, method, resp, id)
             end
           )
           if go then
@@ -214,5 +202,20 @@
         return {}, cancel
       end
     )
+  end
+
+  COQ.lsp_third_party = function(name, session_id, pos, line)
+    local args =
+      freeze(
+      "coq_3p.args",
+      false,
+      {
+        uid = session_id,
+        pos = freeze("coq_3p.args.pos", true, pos),
+        line = line
+      }
+    )
+
+    lua_req("< lua :: comp >", args)
   end
 end)(...)
