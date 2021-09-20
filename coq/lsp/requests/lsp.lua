@@ -175,7 +175,6 @@
 
   COQ.lsp_third_party = function(name, session_id, pos, line)
     local client_names, client_fns = lua_clients()
-
     local cancels, cancel = lua_cancel()
 
     local args =
@@ -201,7 +200,7 @@
             fn,
             args,
             function(resp)
-              on_resp(nil, "<coq - lua>", resp, id)
+              on_resp(nil, "<coq - lua :: comp>", resp, id)
             end
           )
           if go then
