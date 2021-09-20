@@ -50,14 +50,7 @@ from ...registry import NAMESPACE, autocmd, rpc
 from ...shared.settings import GhostText, PreviewDisplay
 from ...shared.timeit import timeit
 from ...shared.trans import expand_tabs
-from ...shared.types import (
-    Completion,
-    Context,
-    Doc,
-    Edit,
-    ExternLSP,
-    ExternPath,
-)
+from ...shared.types import Completion, Context, Doc, Edit, ExternLSP, ExternPath
 from ..rt_types import Stack
 from ..state import State, state
 
@@ -304,17 +297,18 @@ def _resolve_comp(
             else:
                 assert False
 
-        if doc:
-            await async_call(
-                nvim,
-                _show_preview,
-                nvim,
-                stack=stack,
-                event=event,
-                doc=doc,
-                s=state,
-                preview_id=state.preview_id,
-            )
+            def cont() -> None:
+                if doc:
+                    _show_preview(
+                        nvim,
+                        stack=stack,
+                        event=event,
+                        doc=doc,
+                        s=state,
+                        preview_id=state.preview_id,
+                    )
+
+            await async_call(nvim, cont)
 
     _TASK = cast(Task, go(nvim, aw=cont()))
 
@@ -360,16 +354,7 @@ def _cmp_changed(nvim: Nvim, stack: Stack, event: Mapping[str, Any] = {}) -> Non
         else:
             if metric := stack.metrics.get(uid):
                 s = state(preview_id=uid)
-                if metric.comp.doc and metric.comp.doc.text:
-                    _show_preview(
-                        nvim,
-                        stack=stack,
-                        event=ev,
-                        doc=metric.comp.doc,
-                        s=s,
-                        preview_id=s.preview_id,
-                    )
-                elif metric.comp.extern:
+                if metric.comp.extern:
                     _resolve_comp(
                         nvim,
                         stack=stack,
@@ -377,6 +362,15 @@ def _cmp_changed(nvim: Nvim, stack: Stack, event: Mapping[str, Any] = {}) -> Non
                         extern=metric.comp.extern,
                         maybe_doc=metric.comp.doc,
                         state=s,
+                    )
+                elif metric.comp.doc and metric.comp.doc.text:
+                    _show_preview(
+                        nvim,
+                        stack=stack,
+                        event=ev,
+                        doc=metric.comp.doc,
+                        s=s,
+                        preview_id=s.preview_id,
                     )
                 _virt_text(
                     nvim,

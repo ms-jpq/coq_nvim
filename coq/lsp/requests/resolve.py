@@ -9,13 +9,11 @@ from .request import async_request
 
 
 async def resolve(nvim: Nvim, extern: ExternLSP) -> Optional[Completion]:
-    if isinstance(extern, ExternLUA):
-        return None
+    name = "lsp_third_party_resolve" if isinstance(extern, ExternLUA) else "lsp_resolve"
+
+    async for _, resp in async_request(nvim, name, extern.item):
+        comp = parse_item(type(extern), short_name="", weight_adjust=0, item=resp)
+        if comp and comp.doc:
+            return comp
     else:
-        stream = async_request(nvim, "lsp_resolve", extern.item)
-        async for _, resp in stream:
-            comp = parse_item(ExternLSP, short_name="", weight_adjust=0, item=resp)
-            if comp and comp.doc:
-                return comp
-        else:
-            return None
+        return None
