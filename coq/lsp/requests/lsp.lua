@@ -160,21 +160,23 @@
     return names, fns
   end
 
+  local lua_cancel = function()
+    local acc = {}
+    local cancel = function()
+      for _, cont in ipairs(acc) do
+        local go, err = pcall(cont)
+        if not go then
+          vim.api.nvim_err_writeln(err)
+        end
+      end
+    end
+    return acc, cancel
+  end
+
   COQ.lsp_third_party = function(name, session_id, pos, line)
     local client_names, client_fns = lua_clients()
 
-    local cancels, cancel = (function()
-      local acc = {}
-      local cancel = function()
-        for _, cont in ipairs(acc) do
-          local go, err = pcall(cont)
-          if not go then
-            vim.api.nvim_err_writeln(err)
-          end
-        end
-      end
-      return acc, cancel
-    end)()
+    local cancels, cancel = lua_cancel()
 
     local args =
       freeze(
