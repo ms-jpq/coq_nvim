@@ -228,14 +228,15 @@
     lua_req(name, session_id, "fn", "< lua :: comp >", args)
   end
 
-  COQ.lsp_third_party_cmd = function(name, cmd)
+  COQ.lsp_third_party_cmd = function(name, session_id, cmd)
     local args =
       freeze(
       "coq_3p.args",
       false,
       {
-        cmd.command,
-        cmd.arguments
+        uid = session_id,
+        command = cmd.command,
+        arguments = cmd.arguments
       }
     )
 
