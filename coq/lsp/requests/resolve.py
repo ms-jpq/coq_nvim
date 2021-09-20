@@ -12,9 +12,8 @@ async def resolve(nvim: Nvim, extern: ExternLSP) -> Optional[Completion]:
     name = "lsp_third_party_resolve" if isinstance(extern, ExternLUA) else "lsp_resolve"
 
     async for _, resp in async_request(nvim, name, extern.item):
-        if resp:
-            comp = parse_item(type(extern), short_name="", weight_adjust=0, item=resp)
-            if comp and comp.doc:
-                return comp
+        comp = parse_item(type(extern), short_name="", weight_adjust=0, item=resp)
+        if comp and comp.doc:
+            return comp
     else:
         return None

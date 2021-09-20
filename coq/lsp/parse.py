@@ -76,32 +76,34 @@ def parse_item(
     weight_adjust: float,
     item: Any,
 ) -> Optional[Completion]:
-    go, parsed = _item_parser(item)
-    if not go:
-        log.warn("%s", parsed)
-        return None
-    else:
-        assert isinstance(parsed, CompletionItem)
-        p_edit = _primary(parsed)
-        r_edits = tuple(
-            _range_edit("", edit=edit) for edit in (parsed.additionalTextEdits or ())
-        )
-        kind = PROTOCOL.CompletionItemKind.get(item.get("kind"), "")
-        doc = _doc(parsed)
-        extern = extern_type(item=item, command=parsed.command)
-        comp = Completion(
-            source=short_name,
-            weight_adjust=weight_adjust,
-            label=parsed.label,
-            primary_edit=p_edit,
-            secondary_edits=r_edits,
-            sort_by=parsed.filterText or p_edit.new_text,
-            kind=kind,
-            doc=doc,
-            icon_match=kind,
-            extern=extern,
-        )
-        return comp
+    if item:
+        go, parsed = _item_parser(item)
+        if not go:
+            log.warn("%s", parsed)
+            return None
+        else:
+            assert isinstance(parsed, CompletionItem)
+            p_edit = _primary(parsed)
+            r_edits = tuple(
+                _range_edit("", edit=edit)
+                for edit in (parsed.additionalTextEdits or ())
+            )
+            kind = PROTOCOL.CompletionItemKind.get(item.get("kind"), "")
+            doc = _doc(parsed)
+            extern = extern_type(item=item, command=parsed.command)
+            comp = Completion(
+                source=short_name,
+                weight_adjust=weight_adjust,
+                label=parsed.label,
+                primary_edit=p_edit,
+                secondary_edits=r_edits,
+                sort_by=parsed.filterText or p_edit.new_text,
+                kind=kind,
+                doc=doc,
+                icon_match=kind,
+                extern=extern,
+            )
+            return comp
 
 
 def parse(
