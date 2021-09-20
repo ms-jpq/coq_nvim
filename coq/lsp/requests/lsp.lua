@@ -60,11 +60,11 @@
 
       local on_resp_old = function(err, method, resp, client_id)
         vim.validate {
-          method = {method, "string"},
+          method = {method, "string", true},
           client_id = {client_id, "number", true}
         }
         n_clients = n_clients - 1
-        payload.method = method
+        payload.method = method or vim.NIL
         payload.client = client_names[client_id] or vim.NIL
         payload.done = n_clients == 0
         payload.reply = resp or vim.NIL
