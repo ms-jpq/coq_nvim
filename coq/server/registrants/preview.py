@@ -45,8 +45,7 @@ from std2.asyncio import cancel
 from std2.pickle import DecodeError, new_decoder
 from std2.string import removeprefix
 
-from ...lsp.requests.preview import request
-from ...lsp.types import CompletionItem
+from ...lsp.requests.resolve import request
 from ...paths.show import show
 from ...registry import NAMESPACE, autocmd, rpc
 from ...shared.settings import GhostText, PreviewDisplay

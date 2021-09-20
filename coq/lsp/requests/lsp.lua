@@ -117,7 +117,7 @@
     )
   end
 
-  COQ.lsp_preview = function(name, session_id, item)
+  COQ.lsp_resolve = function(name, session_id, item)
     req(
       name,
       session_id,

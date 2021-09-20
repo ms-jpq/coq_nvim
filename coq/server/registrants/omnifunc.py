@@ -21,7 +21,7 @@ from std2.asyncio import cancel, run_in_executor
 from std2.pickle import new_decoder
 from std2.pickle.types import DecodeError
 
-from ...lsp.requests.preview import request
+from ...lsp.requests.resolve import request
 from ...registry import NAMESPACE, atomic, autocmd, rpc
 from ...shared.runtime import Metric
 from ...shared.timeit import timeit
