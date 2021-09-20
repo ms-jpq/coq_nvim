@@ -13,7 +13,7 @@ from std2.sqlite3 import with_transaction
 
 from ...shared.executor import SingleThreadExecutor
 from ...shared.settings import Options
-from ...shared.sql import BIGGEST_INT, init_db
+from ...shared.sql import BIGGEST_INT, init_db, like_esc
 from ...shared.timeit import timeit
 from ...tags.types import Tag, Tags
 from .sql import sql
@@ -136,7 +136,6 @@ class CTDB:
                     cursor.execute(
                         sql("select", "tags"),
                         {
-                            "exact": opts.exact_matches,
                             "cut_off": opts.fuzzy_cutoff,
                             "look_ahead": opts.look_ahead,
                             "limit": BIGGEST_INT if limitless else opts.max_results,
@@ -145,6 +144,8 @@ class CTDB:
                             "line_num": line_num,
                             "word": word,
                             "sym": sym,
+                            "like_word": like_esc(word[: opts.exact_matches]),
+                            "like_sym": like_esc(sym[: opts.exact_matches]),
                         },
                     )
                     rows = cursor.fetchall()

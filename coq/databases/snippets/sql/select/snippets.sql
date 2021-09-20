@@ -14,7 +14,7 @@ WHERE
   AND
   ft_src = :filetype
   AND
-  lprefix LIKE X_LIKE_ESC(SUBSTR(LOWER(CASE WHEN word_start THEN :word ELSE :sym END), 1, :exact)) ESCAPE '!'
+  lprefix LIKE CASE WHEN word_start THEN :like_word ELSE :like_sym END ESCAPE '!'
   AND
   X_SIMILARITY(LOWER(CASE WHEN word_start THEN :word ELSE :sym END), lprefix, :look_ahead) > :cut_off
 GROUP BY

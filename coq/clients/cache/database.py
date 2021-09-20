@@ -9,7 +9,7 @@ from std2.sqlite3 import with_transaction
 
 from ...shared.executor import SingleThreadExecutor
 from ...shared.settings import Options
-from ...shared.sql import BIGGEST_INT, init_db
+from ...shared.sql import BIGGEST_INT, init_db, like_esc
 from ...shared.timeit import timeit
 from .sql import sql
 
@@ -42,7 +42,7 @@ class Database:
         await run_in_executor(self._ex.submit, cont)
 
     async def select(
-        self, clear: bool, options: Options, word: str, sym: str, limitless: int
+        self, clear: bool, opts: Options, word: str, sym: str, limitless: int
     ) -> Iterator[str]:
         def cont() -> Iterator[str]:
             try:
@@ -51,16 +51,18 @@ class Database:
                         cursor.execute(sql("delete", "words"))
                         return iter(())
                     else:
-                        limit = BIGGEST_INT if limitless else options.max_results
+                        limit = BIGGEST_INT if limitless else opts.max_results
                         cursor.execute(
                             sql("select", "words"),
                             {
-                                "exact": options.exact_matches,
-                                "cut_off": options.fuzzy_cutoff,
-                                "look_ahead": options.look_ahead,
+                                "exact": opts.exact_matches,
+                                "cut_off": opts.fuzzy_cutoff,
+                                "look_ahead": opts.look_ahead,
                                 "limit": limit,
                                 "word": word,
                                 "sym": sym,
+                                "like_word": like_esc(word[: opts.exact_matches]),
+                                "like_sym": like_esc(sym[: opts.exact_matches]),
                             },
                         )
                         rows = cursor.fetchall()
