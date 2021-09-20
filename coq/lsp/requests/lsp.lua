@@ -156,12 +156,13 @@
 
     if type(sources) == "table" then
       for id, source in pairs(sources) do
+        local name, fn = source.name, source[key]
         if
-          type(source) == "table" and type(source.name) == "string" and
-            type(source[key]) == "function"
+          type(source) == "table" and type(name) == "string" and
+            type(fn) == "function"
          then
-          names[id] = source.name
-          table.insert(fns, {id, source.fn})
+          names[id] = name
+          table.insert(fns, {id, fn})
         end
       end
     end
