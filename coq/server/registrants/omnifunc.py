@@ -22,7 +22,7 @@ from std2.pickle import new_decoder
 from std2.pickle.types import DecodeError
 
 from ...lsp.requests.command import cmd_lsp
-from ...lsp.requests.resolve import resolve_lsp
+from ...lsp.requests.resolve import resolve
 from ...registry import NAMESPACE, atomic, autocmd, rpc
 from ...shared.runtime import Metric
 from ...shared.timeit import timeit
@@ -167,7 +167,7 @@ async def _resolve(nvim: Nvim, stack: Stack, metric: Metric) -> Metric:
             )
         else:
             done, not_done = await wait(
-                (go(nvim, aw=resolve_lsp(nvim, item=extern.item)),),
+                (go(nvim, aw=resolve(nvim, item=extern.item)),),
                 timeout=stack.settings.clients.lsp.resolve_timeout,
             )
             await cancel(gather(*not_done))

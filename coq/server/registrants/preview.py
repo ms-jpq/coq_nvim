@@ -3,7 +3,6 @@ from dataclasses import asdict, dataclass
 from itertools import chain
 from math import ceil
 from os import linesep
-from pathlib import Path
 from typing import (
     Any,
     Callable,
@@ -45,13 +44,20 @@ from std2.asyncio import cancel
 from std2.pickle import DecodeError, new_decoder
 from std2.string import removeprefix
 
-from ...lsp.requests.resolve import resolve_lsp
+from ...lsp.requests.resolve import resolve
 from ...paths.show import show
 from ...registry import NAMESPACE, autocmd, rpc
 from ...shared.settings import GhostText, PreviewDisplay
 from ...shared.timeit import timeit
 from ...shared.trans import expand_tabs
-from ...shared.types import Completion, Context, Doc, Edit, ExternLSP, ExternPath
+from ...shared.types import (
+    Completion,
+    Context,
+    Doc,
+    Edit,
+    ExternLSP,
+    ExternPath,
+)
 from ..rt_types import Stack
 from ..state import State, state
 
@@ -272,7 +278,7 @@ def _resolve_comp(
         else:
             if isinstance(extern, ExternLSP):
                 done, _ = await wait(
-                    (resolve_lsp(nvim, item=extern.item),),
+                    (resolve(nvim, item=extern.item),),
                     timeout=timeout,
                 )
                 if comp := (await done.pop()) if done else None:
