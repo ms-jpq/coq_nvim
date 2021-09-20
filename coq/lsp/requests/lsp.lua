@@ -183,6 +183,14 @@
   end
 
   local lua_req = function(name, session_id, key, method, args)
+    vim.validate {
+      name = {name, "string"},
+      session_id = {session_id, "number"},
+      key = {key, "string"},
+      method = {method, "string"},
+      args = {args, "table"}
+    }
+
     local client_names, client_fns = lua_clients(key)
     local cancels, cancel = lua_cancel()
     req(
