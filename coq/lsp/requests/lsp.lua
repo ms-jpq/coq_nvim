@@ -32,6 +32,9 @@
     (function()
     local cancels = {}
     return function(name, session_id, clients, callback)
+      vim.validate {
+        clients = {clients, "table"}
+      }
       local n_clients, client_names = unpack(clients)
       vim.validate {
         name = {name, "string"},
@@ -47,15 +50,21 @@
       )
 
       local payload = {
-        method = name,
+        name = name,
+        method = vim.NIL,
         uid = session_id,
         client = vim.NIL,
         done = true,
         reply = vim.NIL
       }
 
-      local on_resp_old = function(err, _, resp, client_id)
+      local on_resp_old = function(err, method, resp, client_id)
+        vim.validate {
+          method = {method, "string"},
+          client_id = {client_id, "number"}
+        }
         n_clients = n_clients - 1
+        payload.method = method
         payload.client = client_names[client_id] or vim.NIL
         payload.done = n_clients == 0
         payload.reply = resp or vim.NIL
@@ -63,7 +72,7 @@
       end
 
       local on_resp_new = function(err, resp, ctx)
-        on_resp_old(err, nil, resp, ctx.client_id)
+        on_resp_old(err, ctx.method, resp, ctx.client_id)
       end
 
       local on_resp = function(...)
@@ -117,7 +126,7 @@
     )
   end
 
-  COQ.lsp_preview = function(name, session_id, item)
+  COQ.lsp_resolve = function(name, session_id, item)
     req(
       name,
       session_id,
@@ -128,51 +137,54 @@
     )
   end
 
-  COQ.lsp_third_party = function(name, session_id, pos, line)
-    local client_names, client_fns =
-      (function()
-      local sources = COQsources or {}
-      local names, fns = {}, {}
-
-      if type(sources) == "table" then
-        for id, source in pairs(sources) do
-          if
-            type(source) == "table" and type(source.name) == "string" and
-              type(source.fn) == "function"
-           then
-            names[id] = source.name
-            table.insert(fns, {id, source.fn})
-          end
-        end
+  COQ.lsp_command = function(name, session_id, cmd)
+    req(
+      name,
+      session_id,
+      {lsp_clients()},
+      function(on_resp)
+        return vim.lsp.buf_request(0, "workspace/executeCommand", cmd, on_resp)
       end
-
-      return names, fns
-    end)()
-
-    local cancels, cancel = (function()
-      local acc = {}
-      local cancel = function()
-        for _, cont in ipairs(acc) do
-          local go, err = pcall(cont)
-          if not go then
-            vim.api.nvim_err_writeln(err)
-          end
-        end
-      end
-      return acc, cancel
-    end)()
-
-    local args =
-      freeze(
-      "coq_3p.args",
-      false,
-      {
-        uid = session_id,
-        pos = freeze("coq_3p.args.pos", true, pos),
-        line = line
-      }
     )
+  end
 
+  local lua_clients = function(key)
+    vim.validate {key = {key, "string"}}
+
+    local sources = COQsources or {}
+    local names, fns = {}, {}
+
+    if type(sources) == "table" then
+      for id, source in pairs(sources) do
+        if
+          type(source) == "table" and type(source.name) == "string" and
+            type(source[key]) == "function"
+         then
+          names[id] = source.name
+          table.insert(fns, {id, source.fn})
+        end
+      end
+    end
+
+    return names, fns
+  end
+
+  local lua_cancel = function()
+    local acc = {}
+    local cancel = function()
+      for _, cont in ipairs(acc) do
+        local go, err = pcall(cont)
+        if not go then
+          vim.api.nvim_err_writeln(err)
+        end
+      end
+    end
+    return acc, cancel
+  end
+
+  local lua_req = function(name, session_id, key, method, args)
+    local client_names, client_fns = lua_clients(key)
+    local cancels, cancel = lua_cancel()
     req(
       name,
       session_id,
@@ -185,7 +197,7 @@
             fn,
             args,
             function(resp)
-              on_resp(nil, "", resp, id)
+              on_resp(nil, method, resp, id)
             end
           )
           if go then
@@ -199,5 +211,34 @@
         return {}, cancel
       end
     )
+  end
+
+  COQ.lsp_third_party = function(name, session_id, pos, line)
+    local args =
+      freeze(
+      "coq_3p.args",
+      false,
+      {
+        uid = session_id,
+        pos = freeze("coq_3p.args.pos", true, pos),
+        line = line
+      }
+    )
+
+    lua_req(name, session_id, "fn", "< lua :: comp >", args)
+  end
+
+  COQ.lsp_third_party_cmd = function(name, cmd)
+    local args =
+      freeze(
+      "coq_3p.args",
+      false,
+      {
+        cmd.command,
+        cmd.arguments
+      }
+    )
+
+    lua_req(name, session_id, "fn", "< lua :: cmd >", args)
   end
 end)(...)

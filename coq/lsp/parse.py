@@ -1,5 +1,5 @@
 from random import shuffle
-from typing import Any, Mapping, MutableSequence, Optional
+from typing import Any, Mapping, MutableSequence, Optional, Type, Union
 
 from pynvim_pp.logging import log
 from std2.pickle.decoder import _new_parser
@@ -9,7 +9,8 @@ from ..shared.types import (
     Completion,
     Doc,
     Edit,
-    Extern,
+    ExternLSP,
+    ExternLUA,
     RangeEdit,
     SnippetEdit,
     SnippetGrammar,
@@ -70,7 +71,10 @@ def _doc(item: CompletionItem) -> Optional[Doc]:
 
 
 def parse_item(
-    include_extern: bool, short_name: str, weight_adjust: float, item: Any
+    extern_type: Union[Type[ExternLSP], Type[ExternLUA]],
+    short_name: str,
+    weight_adjust: float,
+    item: Any,
 ) -> Optional[Completion]:
     go, parsed = _item_parser(item)
     if not go:
@@ -84,7 +88,7 @@ def parse_item(
         )
         kind = PROTOCOL.CompletionItemKind.get(item.get("kind"), "")
         doc = _doc(parsed)
-        extern = (Extern.lsp, item) if include_extern else None
+        extern = extern_type(item=item, command=parsed.command)
         comp = Completion(
             source=short_name,
             weight_adjust=weight_adjust,
@@ -101,7 +105,7 @@ def parse_item(
 
 
 def parse(
-    include_extern: bool,
+    extern_type: Union[Type[ExternLSP], Type[ExternLUA]],
     short_name: str,
     weight_adjust: float,
     resp: CompletionResponse,
@@ -123,7 +127,7 @@ def parse(
                 for item in items
                 if (
                     co1 := parse_item(
-                        include_extern,
+                        extern_type,
                         short_name=short_name,
                         weight_adjust=weight_adjust,
                         item=item,
@@ -139,7 +143,7 @@ def parse(
             for item in resp
             if (
                 co2 := parse_item(
-                    include_extern,
+                    extern_type,
                     short_name=short_name,
                     weight_adjust=weight_adjust,
                     item=item,

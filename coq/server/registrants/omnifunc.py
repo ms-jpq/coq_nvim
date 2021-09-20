@@ -21,11 +21,12 @@ from std2.asyncio import cancel, run_in_executor
 from std2.pickle import new_decoder
 from std2.pickle.types import DecodeError
 
-from ...lsp.requests.preview import request
+from ...lsp.requests.command import cmd_lsp
+from ...lsp.requests.resolve import resolve
 from ...registry import NAMESPACE, atomic, autocmd, rpc
 from ...shared.runtime import Metric
 from ...shared.timeit import timeit
-from ...shared.types import Context, Extern, NvimPos
+from ...shared.types import Context, ExternLSP, NvimPos
 from ..completions import complete
 from ..context import context
 from ..edit import NS, edit
@@ -156,32 +157,28 @@ def omnifunc(
 
 
 async def _resolve(nvim: Nvim, stack: Stack, metric: Metric) -> Metric:
-    if not metric.comp.extern:
+    if not isinstance((extern := metric.comp.extern), ExternLSP):
         return metric
     else:
-        extern, item = metric.comp.extern
-        if extern is not Extern.lsp:
-            return metric
+        if comp := stack.lru.get(metric.comp.uid):
+            return replace(
+                metric,
+                comp=replace(metric.comp, secondary_edits=comp.secondary_edits),
+            )
         else:
-            if comp := stack.lru.get(metric.comp.uid):
+            done, not_done = await wait(
+                (go(nvim, aw=resolve(nvim, extern=extern)),),
+                timeout=stack.settings.clients.lsp.resolve_timeout,
+            )
+            await cancel(gather(*not_done))
+            comp = (await done.pop()) if done else None
+            if not comp:
+                return metric
+            else:
                 return replace(
                     metric,
                     comp=replace(metric.comp, secondary_edits=comp.secondary_edits),
                 )
-            else:
-                done, not_done = await wait(
-                    (go(nvim, aw=request(nvim, item=item)),),
-                    timeout=stack.settings.clients.lsp.resolve_timeout,
-                )
-                await cancel(gather(*not_done))
-                comp = (await done.pop()) if done else None
-                if not comp:
-                    return metric
-                else:
-                    return replace(
-                        metric,
-                        comp=replace(metric.comp, secondary_edits=comp.secondary_edits),
-                    )
 
 
 _UDECODER = new_decoder[UUID](UUID)
@@ -221,7 +218,13 @@ def _comp_done(nvim: Nvim, stack: Stack, event: Mapping[str, Any]) -> None:
                     if metric:
                         new_metric = await _resolve(nvim, stack=stack, metric=metric)
 
-                        def cont() -> None:
+                        async def c2() -> None:
+                            if isinstance(
+                                (extern := new_metric.comp.extern), ExternLSP
+                            ) and (cmd := extern.command):
+                                await cmd_lsp(nvim, cmd=cmd)
+
+                        def c1() -> None:
                             if new_metric.comp.uid in stack.metrics:
                                 inserted_at = edit(
                                     nvim,
@@ -236,10 +239,11 @@ def _comp_done(nvim: Nvim, stack: Stack, event: Mapping[str, Any]) -> None:
                                     last_edit=new_metric,
                                     commit_id=uuid4(),
                                 )
+                                go(nvim, aw=c2())
                             else:
                                 log.warn("%s", "delayed completion")
 
-                        await async_call(nvim, cont)
+                        await async_call(nvim, c1)
 
                 go(nvim, aw=cont())
 

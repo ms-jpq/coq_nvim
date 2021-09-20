@@ -6,13 +6,13 @@ from pynvim_pp.logging import log
 from std2.types import is_iterable_not_str
 
 from ...consts import DEBUG
-from ...shared.types import UTF16, Context
+from ...shared.types import UTF16, Context, ExternLSP, ExternLUA
 from ..parse import parse
 from ..types import CompletionResponse, LSPcomp
 from .request import async_request
 
 
-async def request_lsp(
+async def comp_lsp(
     nvim: Nvim,
     short_name: str,
     weight_adjust: float,
@@ -32,10 +32,12 @@ async def request_lsp(
                 thing = resp
             msg = f"LSP !! {client} {thing}"
             log.info("%s", msg)
-        yield parse(True, short_name=short_name, weight_adjust=weight_adjust, resp=resp)
+        yield parse(
+            ExternLSP, short_name=short_name, weight_adjust=weight_adjust, resp=resp
+        )
 
 
-async def request_thirdparty(
+async def comp_thirdparty(
     nvim: Nvim,
     short_name: str,
     weight_adjust: float,
@@ -46,4 +48,4 @@ async def request_thirdparty(
     ):
         name = client or short_name
         resp = cast(CompletionResponse, reply)
-        yield parse(False, short_name=name, weight_adjust=weight_adjust, resp=resp)
+        yield parse(ExternLUA, short_name=name, weight_adjust=weight_adjust, resp=resp)

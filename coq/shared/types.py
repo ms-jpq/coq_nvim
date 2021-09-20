@@ -1,7 +1,7 @@
 from dataclasses import dataclass, field
 from enum import Enum, auto
-from pathlib import PurePath
-from typing import Any, Literal, Optional, Sequence, Tuple, Union
+from pathlib import Path, PurePath
+from typing import Any, Literal, Mapping, Optional, Sequence, Tuple, Union
 from uuid import UUID, uuid4
 
 UTF8: Literal["UTF-8"] = "UTF-8"
@@ -123,9 +123,20 @@ class Doc:
     syntax: str
 
 
-class Extern(Enum):
-    lsp = auto()
-    path = auto()
+@dataclass(frozen=True)
+class ExternLSP:
+    item: Mapping
+    command: Optional[Any]
+
+
+@dataclass(frozen=True)
+class ExternLUA(ExternLSP):
+    ...
+
+
+@dataclass(frozen=True)
+class ExternPath:
+    path: Path
 
 
 @dataclass(frozen=True)
@@ -141,4 +152,4 @@ class Completion:
     secondary_edits: Sequence[RangeEdit] = ()
     kind: str = ""
     doc: Optional[Doc] = None
-    extern: Optional[Tuple[Extern, Any]] = None
+    extern: Union[ExternLSP, ExternLUA, ExternPath, None] = None

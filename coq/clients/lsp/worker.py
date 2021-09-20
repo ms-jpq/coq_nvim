@@ -8,7 +8,7 @@ from std2.aitertools import to_async
 from std2.asyncio import pure
 from std2.itertools import chunk
 
-from ...lsp.requests.completion import request_lsp
+from ...lsp.requests.completion import comp_lsp
 from ...lsp.types import LSPcomp
 from ...shared.context import cword_before
 from ...shared.fuzzy import multi_set_ratio
@@ -34,7 +34,7 @@ class Worker(BaseWorker[BaseClient, None], CacheWorker):
         BaseWorker.__init__(self, supervisor=supervisor, options=options, misc=misc)
 
     def _request(self, context: Context) -> AsyncIterator[LSPcomp]:
-        return request_lsp(
+        return comp_lsp(
             self._supervisor.nvim,
             short_name=self._options.short_name,
             weight_adjust=self._options.weight_adjust,
