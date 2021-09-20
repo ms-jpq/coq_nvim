@@ -264,9 +264,7 @@ def _resolve_comp(
         if prev:
             await cancel(prev)
 
-        cached = stack.lru.get(state.preview_id)
-
-        if cached:
+        if cached := stack.lru.get(state.preview_id):
             doc = cached.doc
         else:
             if isinstance(extern, ExternLSP):
@@ -297,18 +295,18 @@ def _resolve_comp(
             else:
                 assert False
 
-            def cont() -> None:
-                if doc:
-                    _show_preview(
-                        nvim,
-                        stack=stack,
-                        event=event,
-                        doc=doc,
-                        s=state,
-                        preview_id=state.preview_id,
-                    )
+        def cont() -> None:
+            if doc:
+                _show_preview(
+                    nvim,
+                    stack=stack,
+                    event=event,
+                    doc=doc,
+                    s=state,
+                    preview_id=state.preview_id,
+                )
 
-            await async_call(nvim, cont)
+        await async_call(nvim, cont)
 
     _TASK = cast(Task, go(nvim, aw=cont()))
 

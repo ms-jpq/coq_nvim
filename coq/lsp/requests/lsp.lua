@@ -103,7 +103,18 @@
   end
 
   COQ.lsp_comp = function(name, session_id, pos)
+    vim.validate {
+      name = {name, "string"},
+      session_id = {session_id, "number"},
+      pos = {pos, "table"}
+    }
+
     local row, col = unpack(pos)
+    vim.validate {
+      row = {row, "number"},
+      col = {col, "number"}
+    }
+
     local position = {line = row, character = col}
     local text_doc = vim.lsp.util.make_text_document_params()
     local params = {
@@ -127,6 +138,12 @@
   end
 
   COQ.lsp_resolve = function(name, session_id, item)
+    vim.validate {
+      name = {name, "string"},
+      session_id = {session_id, "number"},
+      item = {item, "table"}
+    }
+
     req(
       name,
       session_id,
@@ -138,6 +155,15 @@
   end
 
   COQ.lsp_command = function(name, session_id, cmd)
+    vim.validate {
+      name = {name, "string"},
+      session_id = {session_id, "number"},
+      cmd = {cmd, "table"}
+    }
+    vim.validate {
+      command = {cmd.command, "string"}
+    }
+
     req(
       name,
       session_id,
