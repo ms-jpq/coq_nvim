@@ -6,6 +6,7 @@ CREATE TABLE IF NOT EXISTS sources (
   filename TEXT NOT NULL UNIQUE,
   mtime    REAL NOT NULL
 ) WITHOUT rowid;
+CREATE INDEX IF NOT EXISTS sources_filename ON sources (filename);
 
 
 CREATE TABLE IF NOT EXISTS filetypes (
@@ -22,6 +23,8 @@ CREATE TABLE IF NOT EXISTS extensions (
 CREATE INDEX IF NOT EXISTS extensions_source_id ON extensions (source_id);
 CREATE INDEX IF NOT EXISTS extensions_src       ON extensions (src);
 CREATE INDEX IF NOT EXISTS extensions_dest      ON extensions (dest);
+CREATE INDEX IF NOT EXISTS extensions_src_dest  ON extensions (src, dest);
+CREATE INDEX IF NOT EXISTS extensions_dest_src  ON extensions (dest, src);
 
 
 CREATE TABLE IF NOT EXISTS snippets (
@@ -34,6 +37,7 @@ CREATE TABLE IF NOT EXISTS snippets (
   doc       TEXT NOT NULL
 ) WITHOUT ROWID;
 CREATE INDEX IF NOT EXISTS snippets_source_id ON snippets (source_id);
+CREATE INDEX IF NOT EXISTS snippets_filetype  ON snippets (filetype);
 
 
 CREATE TABLE IF NOT EXISTS matches (

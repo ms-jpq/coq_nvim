@@ -39,7 +39,8 @@ def loader(base: Path) -> _Loader:
     return cast(_Loader, cont)
 
 
-def _like_esc(like: str) -> str:
+@lru_cache
+def like_esc(like: str) -> str:
     escaped = escape(nono={"%", "_", "["}, escape="!", param=like)
     return f"{escaped}%"
 
@@ -90,7 +91,6 @@ def init_db(conn: Connection, unifying_chars: AbstractSet[str]) -> None:
     conn.create_function(
         "X_WORD_START", narg=1, func=_word_start(unifying_chars), deterministic=True
     )
-    conn.create_function("X_LIKE_ESC", narg=1, func=_like_esc, deterministic=True)
     conn.create_function("X_SIMILARITY", narg=3, func=quick_ratio, deterministic=True)
     conn.create_function("X_NORM_CASE", narg=1, func=normcase, deterministic=True)
     conn.create_aggregate(

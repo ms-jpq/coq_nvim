@@ -10,7 +10,7 @@ WHERE
   AND
   pane_id <> :pane_id
   AND
-  lword LIKE X_LIKE_ESC(SUBSTR(LOWER(CASE WHEN word_start THEN :word ELSE :sym END), 1, :exact)) ESCAPE '!'
+  lword LIKE CASE WHEN word_start THEN :like_word ELSE :like_sym END ESCAPE '!'
   AND
   NOT INSTR(CASE WHEN word_start THEN :word ELSE :sym END, word)
   AND

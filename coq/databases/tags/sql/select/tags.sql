@@ -21,7 +21,7 @@ WHERE
   AND
   files.filetype = :filetype
   AND
-  tags.lname LIKE X_LIKE_ESC(SUBSTR(LOWER(CASE WHEN tags.word_start THEN :word ELSE :sym END), 1, :exact)) ESCAPE '!'
+  tags.lname LIKE CASE WHEN tags.word_start THEN :like_word ELSE :like_sym END ESCAPE '!'
   AND
   NOT INSTR(CASE WHEN tags.word_start THEN :word ELSE :sym END, tags.name)
   AND

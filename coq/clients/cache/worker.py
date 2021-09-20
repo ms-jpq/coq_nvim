@@ -74,7 +74,7 @@ class CacheWorker:
             with timeit("CACHE -- GET"):
                 words = await self._db.select(
                     not use_cache,
-                    options=self._soup.options,
+                    opts=self._soup.options,
                     word=context.words,
                     sym=context.syms,
                     limitless=context.manual,

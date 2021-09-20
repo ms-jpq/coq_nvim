@@ -10,7 +10,7 @@ from std2.sqlite3 import with_transaction
 from ...consts import TMUX_DB
 from ...shared.executor import SingleThreadExecutor
 from ...shared.settings import Options
-from ...shared.sql import BIGGEST_INT, init_db
+from ...shared.sql import BIGGEST_INT, init_db, like_esc
 from ...shared.timeit import timeit
 from .sql import sql
 
@@ -65,13 +65,14 @@ class TMDB:
                     cursor.execute(
                         sql("select", "words"),
                         {
-                            "exact": opts.exact_matches,
                             "cut_off": opts.fuzzy_cutoff,
                             "look_ahead": opts.look_ahead,
                             "limit": BIGGEST_INT if limitless else opts.max_results,
                             "pane_id": active_pane,
                             "word": word,
                             "sym": sym,
+                            "like_word": like_esc(word[: opts.exact_matches]),
+                            "like_sym": like_esc(sym[: opts.exact_matches]),
                         },
                     )
                     rows = cursor.fetchall()
