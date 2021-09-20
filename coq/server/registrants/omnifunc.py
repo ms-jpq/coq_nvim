@@ -170,7 +170,7 @@ async def _resolve(nvim: Nvim, stack: Stack, metric: Metric) -> Metric:
                 )
             else:
                 done, not_done = await wait(
-                    (go(nvim, aw=request(nvim, item=item)),),
+                    (go(nvim, aw=request(nvim, extern, item=item)),),
                     timeout=stack.settings.clients.lsp.resolve_timeout,
                 )
                 await cancel(gather(*not_done))

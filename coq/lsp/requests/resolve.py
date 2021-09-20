@@ -8,10 +8,12 @@ from ..types import Completion
 from .request import async_request
 
 
-async def request(nvim: Nvim, item: Mapping) -> Optional[Completion]:
+async def request(
+    nvim: Nvim, extern_type: Extern, item: Mapping
+) -> Optional[Completion]:
     stream = async_request(nvim, "lsp_resolve", item)
     async for _, resp in stream:
-        comp = parse_item(Extern.lsp, short_name="", weight_adjust=0, item=resp)
+        comp = parse_item(extern_type, short_name="", weight_adjust=0, item=resp)
         if comp and comp.doc:
             return comp
     else:

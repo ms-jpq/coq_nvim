@@ -272,7 +272,10 @@ def _resolve_comp(
             doc = cached.doc
         else:
             if extern_type is Extern.lsp and isinstance(item, Mapping):
-                done, _ = await wait((request(nvim, item=item),), timeout=timeout)
+                done, _ = await wait(
+                    (request(nvim, extern_type=extern_type, item=item),),
+                    timeout=timeout,
+                )
                 if comp := (await done.pop()) if done else None:
                     stack.lru[state.preview_id] = comp
                 doc = (comp.doc if comp else None) or maybe_doc
