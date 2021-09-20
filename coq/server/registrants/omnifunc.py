@@ -219,7 +219,10 @@ def _comp_done(nvim: Nvim, stack: Stack, event: Mapping[str, Any]) -> None:
                         new_metric = await _resolve(nvim, stack=stack, metric=metric)
 
                         async def c2() -> None:
-                            pass
+                            if isinstance(
+                                (extern := new_metric.comp.extern), ExternLSP
+                            ) and (cmd := extern.command):
+                                await cmd_lsp(nvim, cmd=cmd)
 
                         def c1() -> None:
                             if new_metric.comp.uid in stack.metrics:
@@ -236,6 +239,7 @@ def _comp_done(nvim: Nvim, stack: Stack, event: Mapping[str, Any]) -> None:
                                     last_edit=new_metric,
                                     commit_id=uuid4(),
                                 )
+                                go(nvim, aw=c2())
                             else:
                                 log.warn("%s", "delayed completion")
 
