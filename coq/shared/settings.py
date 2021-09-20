@@ -150,6 +150,7 @@ class TSClient(BaseClient):
 
 
 class SnippetWarnings(Enum):
+    missing = auto()
     outdated = auto()
 
 

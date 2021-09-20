@@ -204,7 +204,7 @@ def _trans(
         yield snip, parsed, marks
 
 
-async def _slurp(nvim: Nvim, stack: Stack, warn_outdated: bool) -> None:
+async def _slurp(nvim: Nvim, stack: Stack, warn: AbstractSet[SnippetWarnings]) -> None:
     with timeit("LOAD SNIPS"):
         (
             cwd,
@@ -238,7 +238,7 @@ async def _slurp(nvim: Nvim, stack: Stack, warn_outdated: bool) -> None:
         }
 
         await stack.sdb.clean(stale)
-        if not (bundled or user_compiled):
+        if SnippetWarnings.missing in warn and not (bundled or user_compiled):
             await sleep(0)
             await awrite(nvim, LANG("fs snip load empty"))
 
@@ -263,7 +263,7 @@ async def _slurp(nvim: Nvim, stack: Stack, warn_outdated: bool) -> None:
                     ),
                 )
 
-        if warn_outdated and new_user_snips:
+        if SnippetWarnings.outdated in warn and new_user_snips:
             paths = linesep.join(
                 f"{path} -- {prev} -> {cur}"
                 for path, (cur, prev) in new_user_snips.items()
@@ -273,9 +273,7 @@ async def _slurp(nvim: Nvim, stack: Stack, warn_outdated: bool) -> None:
 
 @rpc(blocking=True)
 def _load_snips(nvim: Nvim, stack: Stack) -> None:
-    warn_outdated = SnippetWarnings.outdated in stack.settings.clients.snippets.warn
-
-    go(nvim, aw=_slurp(nvim, stack=stack, warn_outdated=warn_outdated))
+    go(nvim, aw=_slurp(nvim, stack=stack, warn=stack.settings.clients.snippets.warn))
 
 
 atomic.exec_lua(f"{NAMESPACE}.{_load_snips.name}()", ())
@@ -328,4 +326,4 @@ async def compile_user_snippets(nvim: Nvim, stack: Stack) -> None:
         except OSError as e:
             await awrite(nvim, e)
         else:
-            await _slurp(nvim, stack=stack, warn_outdated=False)
+            await _slurp(nvim, stack=stack, warn={SnippetWarnings.missing})

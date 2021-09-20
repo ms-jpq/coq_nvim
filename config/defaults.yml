@@ -167,6 +167,7 @@ clients:
     weight_adjust: 0
     user_path: null
     warn:
+      - missing
       - outdated
 
   tags:
