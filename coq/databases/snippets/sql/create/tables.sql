@@ -36,6 +36,7 @@ CREATE TABLE IF NOT EXISTS snippets (
   doc       TEXT NOT NULL
 ) WITHOUT ROWID;
 CREATE INDEX IF NOT EXISTS snippets_source_id ON snippets (source_id);
+CREATE INDEX IF NOT EXISTS snippets_filetype  ON snippets (filetype);
 
 
 CREATE TABLE IF NOT EXISTS matches (
