@@ -10,6 +10,5 @@ _ENCODER = new_encoder[Command](Command)
 async def cmd_lsp(nvim: Nvim, cmd: Command) -> None:
     command = _ENCODER(cmd)
     stream = async_request(nvim, "lsp_command", command)
-    async for resp in stream:
-        print(resp, flush=True)
+    async for _ in stream:
         pass
