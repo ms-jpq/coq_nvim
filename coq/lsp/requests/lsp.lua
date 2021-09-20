@@ -161,7 +161,7 @@
             type(source[key]) == "function"
          then
           names[id] = source.name
-          table.insert(fns, {id, source.fn})
+          table.insert(fns, {id, source[key]})
         end
       end
     end

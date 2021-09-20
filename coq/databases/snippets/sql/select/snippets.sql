@@ -8,6 +8,8 @@ FROM snippets_view
 WHERE
   snippet <> ''
   AND
+  prefix <> ''
+  AND
   CASE WHEN word_start THEN :word ELSE :sym END <> ''
   AND 
   LENGTH(prefix) + :look_ahead >= LENGTH(CASE WHEN word_start THEN :word ELSE :sym END)
