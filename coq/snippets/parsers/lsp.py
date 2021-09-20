@@ -255,7 +255,7 @@ def _variable_substitution(context: ParserCtx, *, var_name: str) -> Optional[str
         return c_rhs if c_lhs and c_rhs else None
 
     elif var_name == "LINE_COMMENT":
-        return c_lhs or None
+        return (c_lhs or None) if not c_rhs else None
 
     else:
         return None
