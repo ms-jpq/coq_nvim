@@ -141,26 +141,27 @@
     )
   end
 
-  COQ.lsp_third_party = function(name, session_id, pos, line)
-    local client_names, client_fns =
-      (function()
-      local sources = COQsources or {}
-      local names, fns = {}, {}
+  local lua_clients = function()
+    local sources = COQsources or {}
+    local names, fns = {}, {}
 
-      if type(sources) == "table" then
-        for id, source in pairs(sources) do
-          if
-            type(source) == "table" and type(source.name) == "string" and
-              type(source.fn) == "function"
-           then
-            names[id] = source.name
-            table.insert(fns, {id, source.fn})
-          end
+    if type(sources) == "table" then
+      for id, source in pairs(sources) do
+        if
+          type(source) == "table" and type(source.name) == "string" and
+            type(source.fn) == "function"
+         then
+          names[id] = source.name
+          table.insert(fns, {id, source.fn})
         end
       end
+    end
 
-      return names, fns
-    end)()
+    return names, fns
+  end
+
+  COQ.lsp_third_party = function(name, session_id, pos, line)
+    local client_names, client_fns = lua_clients()
 
     local cancels, cancel = (function()
       local acc = {}
