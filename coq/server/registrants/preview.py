@@ -278,7 +278,7 @@ def _resolve_comp(
         else:
             if isinstance(extern, ExternLSP):
                 done, _ = await wait(
-                    (resolve(nvim, item=extern.item),),
+                    (resolve(nvim, extern=extern),),
                     timeout=timeout,
                 )
                 if comp := (await done.pop()) if done else None:
