@@ -39,6 +39,7 @@ def loader(base: Path) -> _Loader:
     return cast(_Loader, cont)
 
 
+@lru_cache
 def like_esc(like: str) -> str:
     escaped = escape(nono={"%", "_", "["}, escape="!", param=like)
     return f"{escaped}%"
