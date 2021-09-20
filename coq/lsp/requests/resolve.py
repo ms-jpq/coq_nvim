@@ -11,10 +11,11 @@ from .request import async_request
 async def resolve(
     nvim: Nvim, extern_type: Type[ExternLSP], item: Mapping
 ) -> Optional[Completion]:
-    stream = async_request(nvim, "lsp_resolve", item)
-    async for _, resp in stream:
-        comp = parse_item(ExternLSP, short_name="", weight_adjust=0, item=resp)
-        if comp and comp.doc:
-            return comp
-    else:
-        return None
+    if extern_type is ExternLSP:
+        stream = async_request(nvim, "lsp_resolve", item)
+        async for _, resp in stream:
+            comp = parse_item(ExternLSP, short_name="", weight_adjust=0, item=resp)
+            if comp and comp.doc:
+                return comp
+        else:
+            return None
