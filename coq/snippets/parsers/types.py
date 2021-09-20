@@ -25,6 +25,8 @@ EChar = Tuple[Index, str]
 @dataclass(frozen=True)
 class ParseInfo:
     visual: str
+    clipboard: str
+    comment_str: Tuple[str, str]
 
 
 @dataclass(frozen=False)

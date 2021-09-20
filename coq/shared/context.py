@@ -3,8 +3,6 @@ from pathlib import Path, PurePath
 from typing import AbstractSet
 from uuid import uuid4
 
-from pynvim_pp.comment import CommentStrings
-
 from .parse import is_word
 from .parse import lower as _lower
 from .types import Context
@@ -23,7 +21,7 @@ EMPTY_CONTEXT = Context(
     linefeed="\n",
     tabstop=2,
     expandtab=True,
-    comment_strings=CommentStrings(None, None),
+    comment=("", ""),
     position=(0, 0),
     scr_col=0,
     line="",
@@ -40,7 +38,6 @@ EMPTY_CONTEXT = Context(
     syms_after="",
     ws_before="",
     ws_after="",
-    clipboard=None
 )
 
 

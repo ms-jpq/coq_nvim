@@ -19,6 +19,7 @@ from pynvim import Nvim
 from pynvim.api import Buffer, Window
 from pynvim.api.common import NvimError
 from pynvim_pp.api import (
+    buf_commentstr,
     buf_get_extmarks,
     buf_get_lines,
     buf_set_text,
@@ -50,7 +51,7 @@ from ..shared.types import (
     SnippetRangeEdit,
 )
 from ..snippets.parse import ParsedEdit, parse
-from ..snippets.parsers.types import ParseError
+from ..snippets.parsers.types import ParseError, ParseInfo
 from .mark import mark
 from .rt_types import Stack
 from .state import State
@@ -343,7 +344,6 @@ def _parse(
     nvim: Nvim, buf: Buffer, stack: Stack, state: State, comp: Completion
 ) -> Tuple[Edit, Sequence[Mark]]:
     if isinstance(comp.primary_edit, SnippetEdit):
-        visual = ""
         if isinstance(comp.primary_edit, SnippetRangeEdit):
             row, col = comp.primary_edit.begin
             line, *_ = buf_get_lines(nvim, buf=buf, lo=row, hi=row + 1)
@@ -352,12 +352,14 @@ def _parse(
             )
         else:
             line_before = state.context.line_before
+        comment_str = buf_commentstr(nvim, buf=buf)
+        clipboard = nvim.funcs.getreg("*")
         return parse(
             stack.settings.match.unifying_chars,
             line_before=line_before,
             context=state.context,
             snippet=comp.primary_edit,
-            visual=visual,
+            info=ParseInfo(visual="", clipboard=clipboard, comment_str=comment_str),
         )
     else:
         return comp.primary_edit, ()

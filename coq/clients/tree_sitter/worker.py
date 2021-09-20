@@ -12,15 +12,7 @@ from ...treesitter.types import Payload
 
 
 def _doc(client: TSClient, context: Context, payload: Payload) -> Optional[Doc]:
-    if context.comment_strings.block:
-        clhs, crhs = (
-            context.comment_strings.block.start,
-            context.comment_strings.block.end,
-        )
-    elif context.comment_strings.line:
-        clhs, crhs = context.comment_strings.line, ""
-    else:
-        clhs, crhs = "", ""
+    clhs, crhs = context.comment
 
     def cont() -> Iterator[str]:
         if payload.grandparent:

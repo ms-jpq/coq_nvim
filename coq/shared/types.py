@@ -1,10 +1,8 @@
 from dataclasses import dataclass, field
 from enum import Enum, auto
 from pathlib import PurePath
-from typing import Any, Literal, Optional, Sequence, Tuple
+from typing import Any, Literal, Optional, Sequence, Tuple, Union
 from uuid import UUID, uuid4
-
-from pynvim_pp.comment import CommentStrings
 
 UTF8: Literal["UTF-8"] = "UTF-8"
 UTF16: Literal["UTF-16-LE"] = "UTF-16-LE"
@@ -43,7 +41,7 @@ class Context:
     linefeed: Literal["\r\n", "\n", "\r"]
     tabstop: int
     expandtab: bool
-    comment_strings: CommentStrings
+    comment: Tuple[str, str]
 
     position: NvimPos
     scr_col: int
@@ -66,8 +64,6 @@ class Context:
 
     ws_before: str
     ws_after: str
-
-    clipboard: Optional[str]
 
 
 @dataclass(frozen=True)

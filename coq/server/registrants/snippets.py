@@ -43,6 +43,7 @@ from ...shared.types import Edit, Mark, SnippetEdit, SnippetGrammar
 from ...snippets.loaders.load import load_direct
 from ...snippets.loaders.neosnippet import load_neosnippet
 from ...snippets.parse import parse
+from ...snippets.parsers.types import ParseInfo
 from ...snippets.types import SCHEMA, LoadedSnips, ParsedSnippet
 from ..rt_types import Stack
 
@@ -198,7 +199,7 @@ def _trans(
             line_before="",
             context=EMPTY_CONTEXT,
             snippet=edit,
-            visual="",
+            info=ParseInfo(visual="", clipboard="", comment_str=("", "")),
         )
         yield snip, parsed, marks
 

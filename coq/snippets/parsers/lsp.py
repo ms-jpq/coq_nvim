@@ -1,10 +1,9 @@
 from datetime import datetime
 from pathlib import PurePath
+from random import choices
 from re import RegexFlag, compile
 from re import error as RegexError
-from random import Random
-from string import ascii_letters, digits
-from uuid import uuid4
+from string import ascii_letters, digits, hexdigits
 from typing import (
     AbstractSet,
     Callable,
@@ -16,6 +15,7 @@ from typing import (
     Tuple,
     cast,
 )
+from uuid import uuid4
 
 from ...shared.parse import lower
 from ...shared.types import Context
@@ -71,8 +71,6 @@ _RE_FLAGS = {
     "s": RegexFlag.DOTALL,
 }
 _REGEX_FLAG_CHARS = {*_RE_FLAGS, "g", "u"}
-RANDOM = Random()
-HEXDIGITS = digits + "ABCDEF"
 
 
 def _parse_escape(context: ParserCtx, *, escapable_chars: AbstractSet[str]) -> str:
@@ -158,6 +156,7 @@ def _parse_tcp(context: ParserCtx) -> TokenStream:
 def _variable_substitution(context: ParserCtx, *, var_name: str) -> Optional[str]:
     ctx = context.ctx
     row, _ = ctx.position
+    c_lhs, c_rhs = context.info.comment_str
     path = PurePath(ctx.filename)
 
     if var_name == "TM_SELECTED_TEXT":
@@ -194,7 +193,7 @@ def _variable_substitution(context: ParserCtx, *, var_name: str) -> Optional[str
             return None
 
     elif var_name == "CLIPBOARD":
-        return ctx.clipboard
+        return context.info.clipboard
 
     elif var_name == "WORKSPACE_NAME":
         return ctx.cwd.name
@@ -204,10 +203,10 @@ def _variable_substitution(context: ParserCtx, *, var_name: str) -> Optional[str
 
     # Randomv value related
     elif var_name == "RANDOM":
-        return "".join(RANDOM.choices(digits, k=6))
+        return "".join(choices(digits, k=6))
 
     elif var_name == "RANDOM_HEX":
-        return "".join(RANDOM.choices(HEXDIGITS, k=6))
+        return "".join(choices(tuple({*hexdigits.upper()}), k=6))
 
     elif var_name == "UUID":
         return str(uuid4())
@@ -249,15 +248,14 @@ def _variable_substitution(context: ParserCtx, *, var_name: str) -> Optional[str
     elif var_name == "CURRENT_SECONDS_UNIX":
         return str(round(datetime.now().timestamp()))
 
-    # Inserting line or block comments
     elif var_name == "BLOCK_COMMENT_START":
-        return ctx.comment_strings.block.start if ctx.comment_strings.block else ""
+        return c_lhs if c_lhs and c_rhs else None
 
     elif var_name == "BLOCK_COMMENT_END":
-        return ctx.comment_strings.block.end if ctx.comment_strings.block else ""
+        return c_rhs if c_lhs and c_rhs else None
 
     elif var_name == "LINE_COMMENT":
-        return ctx.comment_strings.line or ""
+        return c_lhs or None
 
     else:
         return None

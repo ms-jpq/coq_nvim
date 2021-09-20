@@ -6,8 +6,7 @@ from typing import Literal, Tuple, cast
 
 from pynvim import Nvim
 from pynvim.api import Buffer
-from pynvim_pp.api import LFfmt, buf_get_lines, getreg
-from pynvim_pp.comment import get_comment_strings
+from pynvim_pp.api import LFfmt, buf_get_lines
 from pynvim_pp.atomic import Atomic
 from pynvim_pp.lib import decode, encode
 from pynvim_pp.text_object import gen_split
@@ -43,6 +42,7 @@ def context(
     buf_line_count = ns.line_count
     filename = normcase(cast(str, ns.name))
     filetype = cast(str, ns.filetype)
+    comment_str = cast(str, ns.commentstring)
     tabstop = ns.tabstop
     expandtab = cast(bool, ns.expandtab)
     linefeed = cast(Literal["\n", "\r", "\r\n"], LFfmt[cast(str, ns.fileformat)].value)
@@ -70,7 +70,7 @@ def context(
     line = lines[r]
     lines_before, lines_after = lines[:r], lines[r + 1 :]
 
-    comment_strings = get_comment_strings(nvim)
+    lhs, _, rhs = comment_str.partition("%s")
     b_line = encode(line)
     before, after = decode(b_line[:col]), decode(b_line[col:])
     split = gen_split(lhs=before, rhs=after, unifying_chars=options.unifying_chars)
@@ -78,8 +78,6 @@ def context(
         reversed(tuple(takewhile(lambda c: c.isspace(), reversed(before))))
     )
     ws_after = "".join(takewhile(lambda c: c.isspace(), after))
-
-    clipboard = getreg(nvim, "+")
 
     ctx = Context(
         manual=manual,
@@ -93,7 +91,7 @@ def context(
         linefeed=linefeed,
         tabstop=tabstop,
         expandtab=expandtab,
-        comment_strings=comment_strings,
+        comment=(lhs, rhs),
         position=pos,
         scr_col=scr_col,
         line=split.lhs + split.rhs,
@@ -110,6 +108,5 @@ def context(
         syms_after=split.syms_rhs,
         ws_before=ws_before,
         ws_after=ws_after,
-        clipboard=clipboard
     )
     return ctx
