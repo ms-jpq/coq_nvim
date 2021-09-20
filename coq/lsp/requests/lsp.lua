@@ -141,7 +141,9 @@
     )
   end
 
-  local lua_clients = function()
+  local lua_clients = function(key)
+    vim.validate {key = {key, "string"}}
+
     local sources = COQsources or {}
     local names, fns = {}, {}
 
@@ -149,7 +151,7 @@
       for id, source in pairs(sources) do
         if
           type(source) == "table" and type(source.name) == "string" and
-            type(source.fn) == "function"
+            type(source[key]) == "function"
          then
           names[id] = source.name
           table.insert(fns, {id, source.fn})
@@ -173,7 +175,7 @@
     return acc, cancel
   end
 
-  local lua_req = function(method, args)
+  local lua_req = function(name, session_id, key, method, args)
     local client_names, client_fns = lua_clients()
     local cancels, cancel = lua_cancel()
     req(
@@ -216,6 +218,20 @@
       }
     )
 
-    lua_req("< lua :: comp >", args)
+    lua_req(name, session_id, "fn", "< lua :: comp >", args)
+  end
+
+  COQ.lsp_third_party_cmd = function(name, cmd)
+    local args =
+      freeze(
+      "coq_3p.args",
+      false,
+      {
+        cmd.command,
+        cmd.arguments
+      }
+    )
+
+    lua_req(name, session_id, "fn", "< lua :: comp >", args)
   end
 end)(...)
