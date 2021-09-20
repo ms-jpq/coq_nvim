@@ -21,7 +21,7 @@ from std2.asyncio import cancel, run_in_executor
 from std2.pickle import new_decoder
 from std2.pickle.types import DecodeError
 
-from ...lsp.requests.resolve import request
+from ...lsp.requests.resolve import resolve_lsp
 from ...registry import NAMESPACE, atomic, autocmd, rpc
 from ...shared.runtime import Metric
 from ...shared.timeit import timeit
@@ -170,7 +170,7 @@ async def _resolve(nvim: Nvim, stack: Stack, metric: Metric) -> Metric:
                 )
             else:
                 done, not_done = await wait(
-                    (go(nvim, aw=request(nvim, extern, item=item)),),
+                    (go(nvim, aw=resolve_lsp(nvim, extern, item=item)),),
                     timeout=stack.settings.clients.lsp.resolve_timeout,
                 )
                 await cancel(gather(*not_done))
@@ -221,7 +221,10 @@ def _comp_done(nvim: Nvim, stack: Stack, event: Mapping[str, Any]) -> None:
                     if metric:
                         new_metric = await _resolve(nvim, stack=stack, metric=metric)
 
-                        def cont() -> None:
+                        async def c2() -> None:
+                            pass
+
+                        def c1() -> None:
                             if new_metric.comp.uid in stack.metrics:
                                 inserted_at = edit(
                                     nvim,
@@ -239,7 +242,7 @@ def _comp_done(nvim: Nvim, stack: Stack, event: Mapping[str, Any]) -> None:
                             else:
                                 log.warn("%s", "delayed completion")
 
-                        await async_call(nvim, cont)
+                        await async_call(nvim, c1)
 
                 go(nvim, aw=cont())
 

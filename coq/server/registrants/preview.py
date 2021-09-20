@@ -45,7 +45,7 @@ from std2.asyncio import cancel
 from std2.pickle import DecodeError, new_decoder
 from std2.string import removeprefix
 
-from ...lsp.requests.resolve import request
+from ...lsp.requests.resolve import resolve_lsp
 from ...paths.show import show
 from ...registry import NAMESPACE, autocmd, rpc
 from ...shared.settings import GhostText, PreviewDisplay
@@ -273,7 +273,7 @@ def _resolve_comp(
         else:
             if extern_type is Extern.lsp and isinstance(item, Mapping):
                 done, _ = await wait(
-                    (request(nvim, extern_type=extern_type, item=item),),
+                    (resolve_lsp(nvim, extern_type=extern_type, item=item),),
                     timeout=timeout,
                 )
                 if comp := (await done.pop()) if done else None:

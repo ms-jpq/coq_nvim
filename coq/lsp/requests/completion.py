@@ -12,7 +12,7 @@ from ..types import CompletionResponse, LSPcomp
 from .request import async_request
 
 
-async def request_lsp(
+async def comp_lsp(
     nvim: Nvim,
     short_name: str,
     weight_adjust: float,
@@ -37,7 +37,7 @@ async def request_lsp(
         )
 
 
-async def request_thirdparty(
+async def comp_thirdparty(
     nvim: Nvim,
     short_name: str,
     weight_adjust: float,

@@ -8,7 +8,7 @@ from ..types import Completion
 from .request import async_request
 
 
-async def request(
+async def resolve_lsp(
     nvim: Nvim, extern_type: Extern, item: Mapping
 ) -> Optional[Completion]:
     stream = async_request(nvim, "lsp_resolve", item)
