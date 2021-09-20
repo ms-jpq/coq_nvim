@@ -7,6 +7,7 @@ from typing import Any, Iterator, Mapping, Optional, Sequence, cast
 
 from pynvim.api.nvim import Nvim
 from pynvim_pp.api import (
+    buf_commentstr,
     buf_filetype,
     buf_get_lines,
     buf_line_count,
@@ -32,7 +33,7 @@ from ...paths.show import fmt_path
 from ...registry import rpc
 from ...shared.types import SnippetGrammar
 from ...snippets.consts import MOD_PAD
-from ...snippets.parsers.types import ParseError
+from ...snippets.parsers.types import ParseError, ParseInfo
 from ...snippets.types import LoadError
 from ..rt_types import Stack
 from .snippets import (
@@ -124,6 +125,9 @@ def eval_snips(
     buf = win_get_buf(nvim, win=win)
     line_count = buf_line_count(nvim, buf=buf)
     path = PurePath(normcase(buf_name(nvim, buf=buf)))
+    comment_str = buf_commentstr(nvim, buf=buf)
+    clipboard = nvim.funcs.getreg()
+    info = ParseInfo(visual="", clipboard=clipboard, comment_str=comment_str)
 
     if visual:
         (lo, _), (hi, _) = operator_marks(nvim, buf=buf, visual_type=None)
@@ -135,7 +139,11 @@ def eval_snips(
 
     try:
         compiled = compile_one(
-            stack, grammar=grammar, path=path, lines=enumerate(lines, start=lo + 1)
+            stack,
+            grammar=grammar,
+            path=path,
+            info=info,
+            lines=enumerate(lines, start=lo + 1),
         )
     except (LoadError, ParseError) as e:
         preview = str(e).splitlines()

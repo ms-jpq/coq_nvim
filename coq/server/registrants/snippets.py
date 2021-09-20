@@ -190,7 +190,7 @@ async def _dump_compiled(
 
 
 def _trans(
-    unifying_chars: AbstractSet[str], snips: Iterable[ParsedSnippet]
+    unifying_chars: AbstractSet[str], info: ParseInfo, snips: Iterable[ParsedSnippet]
 ) -> Iterator[Tuple[ParsedSnippet, Edit, Sequence[Mark]]]:
     for snip in snips:
         edit = SnippetEdit(grammar=snip.grammar, new_text=snip.content)
@@ -199,7 +199,7 @@ def _trans(
             line_before="",
             context=EMPTY_CONTEXT,
             snippet=edit,
-            info=ParseInfo(visual="", clipboard="", comment_str=("", "")),
+            info=info,
         )
         yield snip, parsed, marks
 
@@ -285,10 +285,11 @@ def compile_one(
     stack: Stack,
     grammar: SnippetGrammar,
     path: PurePath,
+    info: ParseInfo,
     lines: Iterable[Tuple[int, str]],
 ) -> Compiled:
     filetype, exts, snips = load_neosnippet(grammar, path=path, lines=lines)
-    parsed = tuple(_trans(stack.settings.match.unifying_chars, snips=snips))
+    parsed = tuple(_trans(stack.settings.match.unifying_chars, info=info, snips=snips))
 
     compiled = Compiled(
         path=path,
@@ -301,6 +302,7 @@ def compile_one(
 
 async def compile_user_snippets(nvim: Nvim, stack: Stack) -> None:
     with timeit("COMPILE SNIPS"):
+        info = ParseInfo(visual="", clipboard="", comment_str=("", ""))
         _, mtimes = await user_mtimes(
             nvim, user_path=stack.settings.clients.snippets.user_path
         )
@@ -313,7 +315,11 @@ async def compile_user_snippets(nvim: Nvim, stack: Stack) -> None:
             )
         )
         _ = tuple(
-            _trans(stack.settings.match.unifying_chars, snips=loaded.snippets.values())
+            _trans(
+                stack.settings.match.unifying_chars,
+                info=info,
+                snips=loaded.snippets.values(),
+            )
         )
         try:
             await _dump_compiled(
