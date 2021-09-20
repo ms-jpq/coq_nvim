@@ -32,6 +32,9 @@
     (function()
     local cancels = {}
     return function(name, session_id, clients, callback)
+      vim.validate {
+        clients = {clients, "table"}
+      }
       local n_clients, client_names = unpack(clients)
       vim.validate {
         name = {name, "string"},
@@ -56,6 +59,10 @@
       }
 
       local on_resp_old = function(err, method, resp, client_id)
+        vim.validate {
+          method = {method, "string"},
+          client_id = {client_id, "number"}
+        }
         n_clients = n_clients - 1
         payload.method = method
         payload.client = client_names[client_id] or vim.NIL
@@ -65,7 +72,7 @@
       end
 
       local on_resp_new = function(err, resp, ctx)
-        on_resp_old(err, nil, resp, ctx.client_id)
+        on_resp_old(err, ctx.method, resp, ctx.client_id)
       end
 
       local on_resp = function(...)
@@ -176,7 +183,7 @@
   end
 
   local lua_req = function(name, session_id, key, method, args)
-    local client_names, client_fns = lua_clients()
+    local client_names, client_fns = lua_clients(key)
     local cancels, cancel = lua_cancel()
     req(
       name,
