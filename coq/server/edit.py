@@ -353,7 +353,7 @@ def _parse(
         else:
             line_before = state.context.line_before
         comment_str = buf_commentstr(nvim, buf=buf)
-        clipboard = nvim.funcs.getreg("*")
+        clipboard = nvim.funcs.getreg()
         return parse(
             stack.settings.match.unifying_chars,
             line_before=line_before,
