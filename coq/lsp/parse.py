@@ -76,7 +76,9 @@ def parse_item(
     weight_adjust: float,
     item: Any,
 ) -> Optional[Completion]:
-    if item:
+    if not item:
+        return None
+    else:
         go, parsed = _item_parser(item)
         if not go:
             log.warn("%s", parsed)
