@@ -26,7 +26,7 @@ from ...lsp.requests.resolve import resolve
 from ...registry import NAMESPACE, atomic, autocmd, rpc
 from ...shared.runtime import Metric
 from ...shared.timeit import timeit
-from ...shared.types import Context, ExternLSP, ExternLUA, NvimPos
+from ...shared.types import Context, ExternLSP, NvimPos
 from ..completions import complete
 from ..context import context
 from ..edit import NS, edit
