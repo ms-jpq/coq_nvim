@@ -70,7 +70,7 @@ def _doc(item: CompletionItem) -> Optional[Doc]:
 
 
 def parse_item(
-    include_extern: bool, short_name: str, weight_adjust: float, item: Any
+    extern_type: Extern, short_name: str, weight_adjust: float, item: Any
 ) -> Optional[Completion]:
     go, parsed = _item_parser(item)
     if not go:
@@ -84,7 +84,6 @@ def parse_item(
         )
         kind = PROTOCOL.CompletionItemKind.get(item.get("kind"), "")
         doc = _doc(parsed)
-        extern = (Extern.lsp, item) if include_extern else None
         comp = Completion(
             source=short_name,
             weight_adjust=weight_adjust,
@@ -95,13 +94,13 @@ def parse_item(
             kind=kind,
             doc=doc,
             icon_match=kind,
-            extern=extern,
+            extern=(extern_type, item),
         )
         return comp
 
 
 def parse(
-    include_extern: bool,
+    extern_type: Extern,
     short_name: str,
     weight_adjust: float,
     resp: CompletionResponse,
@@ -123,7 +122,7 @@ def parse(
                 for item in items
                 if (
                     co1 := parse_item(
-                        include_extern,
+                        extern_type,
                         short_name=short_name,
                         weight_adjust=weight_adjust,
                         item=item,
@@ -139,7 +138,7 @@ def parse(
             for item in resp
             if (
                 co2 := parse_item(
-                    include_extern,
+                    extern_type,
                     short_name=short_name,
                     weight_adjust=weight_adjust,
                     item=item,

@@ -125,6 +125,7 @@ class Doc:
 
 class Extern(Enum):
     lsp = auto()
+    lua = auto()
     path = auto()
 
 
