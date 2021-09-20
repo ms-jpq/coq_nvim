@@ -130,6 +130,17 @@
     )
   end
 
+  COQ.lsp_command = function(name, session_id, cmd)
+    req(
+      name,
+      session_id,
+      {lsp_clients()},
+      function(on_resp)
+        return vim.lsp.buf_request(0, "workspace/executeCommand", cmd, on_resp)
+      end
+    )
+  end
+
   COQ.lsp_third_party = function(name, session_id, pos, line)
     local client_names, client_fns =
       (function()
