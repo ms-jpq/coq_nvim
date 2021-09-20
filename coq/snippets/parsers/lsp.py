@@ -1,5 +1,6 @@
 from datetime import datetime
 from pathlib import PurePath
+from posixpath import normcase
 from random import choices
 from re import RegexFlag, compile
 from re import error as RegexError
@@ -181,14 +182,14 @@ def _variable_substitution(context: ParserCtx, *, var_name: str) -> Optional[str
         return path.stem
 
     elif var_name == "TM_DIRECTORY":
-        return str(path.parent)
+        return normcase(path.parent)
 
     elif var_name == "TM_FILEPATH":
-        return str(path)
+        return normcase(path)
 
     elif var_name == "RELATIVE_FILEPATH":
         try:
-            return str(path.relative_to(ctx.cwd))
+            return normcase(path.relative_to(ctx.cwd))
         except ValueError:
             return None
 
