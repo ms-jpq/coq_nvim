@@ -23,7 +23,8 @@ class _Session:
 
 @dataclass(frozen=True)
 class _Payload:
-    method: str
+    name: str
+    method: Optional[str]
     uid: int
     client: Optional[str]
     done: bool
@@ -47,11 +48,11 @@ _DECODER = new_decoder[_Payload](_Payload)
 def _lsp_notify(nvim: Nvim, stack: Stack, rpayload: _Payload) -> None:
     async def cont() -> None:
         payload = _DECODER(rpayload)
-        cond = _CONDS.setdefault(payload.method, Condition())
+        cond = _CONDS.setdefault(payload.name, Condition())
 
-        acc = _STATE[payload.method]
+        acc = _STATE[payload.name]
         if payload.uid >= acc.uid:
-            _STATE[payload.method] = _Session(
+            _STATE[payload.name] = _Session(
                 uid=payload.uid,
                 done=payload.done,
                 acc=(*acc.acc, (payload.client, payload.reply)),
@@ -63,25 +64,25 @@ def _lsp_notify(nvim: Nvim, stack: Stack, rpayload: _Payload) -> None:
 
 
 async def async_request(
-    nvim: Nvim, method: str, *args: Any
+    nvim: Nvim, name: str, *args: Any
 ) -> AsyncIterator[Tuple[Optional[str], Any]]:
-    with timeit(f"LSP :: {method}"):
-        cond = _CONDS.setdefault(method, Condition())
+    with timeit(f"LSP :: {name}"):
+        cond = _CONDS.setdefault(name, Condition())
 
         uid = next(_UIDS)
-        _STATE[method] = _Session(uid=uid, done=False, acc=())
+        _STATE[name] = _Session(uid=uid, done=False, acc=())
         async with cond:
             cond.notify_all()
 
         def cont() -> None:
-            nvim.api.exec_lua(f"{NAMESPACE}.{method}(...)", (method, uid, *args))
+            nvim.api.exec_lua(f"{NAMESPACE}.{name}(...)", (name, uid, *args))
 
         await async_call(nvim, cont)
 
         while True:
-            acc = _STATE[method]
+            acc = _STATE[name]
             if acc.uid == uid:
-                _STATE[method] = _Session(uid=acc.uid, done=acc.done, acc=())
+                _STATE[name] = _Session(uid=acc.uid, done=acc.done, acc=())
                 for client, a in acc.acc:
                     yield client, a
                 if acc.done:

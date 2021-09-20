@@ -47,15 +47,17 @@
       )
 
       local payload = {
-        method = name,
+        name = name,
+        method = vim.NIL,
         uid = session_id,
         client = vim.NIL,
         done = true,
         reply = vim.NIL
       }
 
-      local on_resp_old = function(err, _, resp, client_id)
+      local on_resp_old = function(err, method, resp, client_id)
         n_clients = n_clients - 1
+        payload.method = method
         payload.client = client_names[client_id] or vim.NIL
         payload.done = n_clients == 0
         payload.reply = resp or vim.NIL
@@ -185,7 +187,7 @@
             fn,
             args,
             function(resp)
-              on_resp(nil, "", resp, id)
+              on_resp(nil, "<coq - lua>", resp, id)
             end
           )
           if go then
