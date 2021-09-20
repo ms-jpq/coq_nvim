@@ -200,7 +200,7 @@ def _variable_substitution(context: ParserCtx, *, var_name: str) -> Optional[str
         return ctx.cwd.name
 
     elif var_name == "WORKSPACE_FOLDER":
-        return str(ctx.cwd)
+        return normcase(ctx.cwd)
 
     # Randomv value related
     elif var_name == "RANDOM":
