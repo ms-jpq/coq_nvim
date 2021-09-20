@@ -2,18 +2,8 @@ from asyncio import as_completed
 from contextlib import suppress
 from itertools import chain, islice
 from os import environ, scandir
-from os.path import (
-    altsep,
-    curdir,
-    expanduser,
-    expandvars,
-    normcase,
-    normpath,
-    pardir,
-    sep,
-    split,
-)
-from pathlib import Path, PurePath
+from os.path import altsep, curdir, expanduser, expandvars, normpath, pardir, sep, split
+from pathlib import Path
 from string import ascii_letters, digits
 from typing import (
     AbstractSet,
@@ -35,7 +25,7 @@ from ...shared.runtime import Supervisor
 from ...shared.runtime import Worker as BaseWorker
 from ...shared.settings import PathResolution, PathsClient
 from ...shared.sql import BIGGEST_INT
-from ...shared.types import Completion, Context, Edit, Extern
+from ...shared.types import Completion, Context, Edit, ExternPath
 
 _DRIVE_LETTERS = {*ascii_letters}
 _SH_VAR_CHARS = {*ascii_letters, *digits, "_"}
@@ -129,7 +119,7 @@ def parse(
     fuzzy_cutoff: float,
     base: Path,
     line: str,
-) -> Iterator[Tuple[PurePath, str]]:
+) -> Iterator[Tuple[Path, str]]:
     for segment, s0 in _iter_segs(seps, line=line):
         local_sep = _p_sep(s0)
         p = Path(s0)
@@ -140,7 +130,7 @@ def parse(
                 for path in scandir(entire):
                     term = local_sep if path.is_dir() else ""
                     line = _join(local_sep, lhs=segment, rhs=path.name) + term
-                    yield PurePath(path.path), line
+                    yield Path(path.path), line
                 return
 
             else:
@@ -167,7 +157,7 @@ def parse(
 
                                 term = local_sep if path.is_dir() else ""
                                 line = _join(local_sep, lhs=lseg, rhs=path.name) + term
-                                yield PurePath(path.path), line
+                                yield Path(path.path), line
                         return
 
 
@@ -178,8 +168,8 @@ async def _parse(
     limit: int,
     look_ahead: int,
     fuzzy_cutoff: float,
-) -> AbstractSet[Tuple[PurePath, str]]:
-    def cont() -> AbstractSet[Tuple[PurePath, str]]:
+) -> AbstractSet[Tuple[Path, str]]:
+    def cont() -> AbstractSet[Tuple[Path, str]]:
         return {
             *islice(
                 parse(
@@ -205,7 +195,7 @@ def _sort_by(unifying_chars: AbstractSet[str], context: Context, new_text: str) 
 
     tmp = "".join(chars)
     cword = cword_before(unifying_chars, lower=False, context=context, sort_by=tmp)
-    sort_by= f"{cword}{end}"
+    sort_by = f"{cword}{end}"
     return sort_by
 
 
@@ -262,7 +252,7 @@ class Worker(BaseWorker[PathsClient, None]):
                             new_text=new_text,
                         ),
                         primary_edit=edit,
-                        extern=(Extern.path, normcase(path)),
+                        extern=ExternPath(path=path),
                         icon_match="Folder" if new_text.endswith(sep) else "File",
                     )
                     yield completion

@@ -1,5 +1,5 @@
 from random import shuffle
-from typing import Any, Mapping, MutableSequence, Optional
+from typing import Any, Mapping, MutableSequence, Optional, Type, Union
 
 from pynvim_pp.logging import log
 from std2.pickle.decoder import _new_parser
@@ -9,7 +9,8 @@ from ..shared.types import (
     Completion,
     Doc,
     Edit,
-    Extern,
+    ExternLSP,
+    ExternLUA,
     RangeEdit,
     SnippetEdit,
     SnippetGrammar,
@@ -70,7 +71,10 @@ def _doc(item: CompletionItem) -> Optional[Doc]:
 
 
 def parse_item(
-    extern_type: Extern, short_name: str, weight_adjust: float, item: Any
+    extern_type: Union[Type[ExternLSP], Type[ExternLUA]],
+    short_name: str,
+    weight_adjust: float,
+    item: Any,
 ) -> Optional[Completion]:
     go, parsed = _item_parser(item)
     if not go:
@@ -84,6 +88,7 @@ def parse_item(
         )
         kind = PROTOCOL.CompletionItemKind.get(item.get("kind"), "")
         doc = _doc(parsed)
+        extern = extern_type(item=item, command=parsed.command)
         comp = Completion(
             source=short_name,
             weight_adjust=weight_adjust,
@@ -94,13 +99,13 @@ def parse_item(
             kind=kind,
             doc=doc,
             icon_match=kind,
-            extern=(extern_type, item),
+            extern=extern,
         )
         return comp
 
 
 def parse(
-    extern_type: Extern,
+    extern_type: Union[Type[ExternLSP], Type[ExternLUA]],
     short_name: str,
     weight_adjust: float,
     resp: CompletionResponse,

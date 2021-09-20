@@ -21,11 +21,12 @@ from std2.asyncio import cancel, run_in_executor
 from std2.pickle import new_decoder
 from std2.pickle.types import DecodeError
 
+from ...lsp.requests.command import cmd_lsp
 from ...lsp.requests.resolve import resolve_lsp
 from ...registry import NAMESPACE, atomic, autocmd, rpc
 from ...shared.runtime import Metric
 from ...shared.timeit import timeit
-from ...shared.types import Context, Extern, NvimPos
+from ...shared.types import Context, ExternLSP, NvimPos
 from ..completions import complete
 from ..context import context
 from ..edit import NS, edit
@@ -156,32 +157,28 @@ def omnifunc(
 
 
 async def _resolve(nvim: Nvim, stack: Stack, metric: Metric) -> Metric:
-    if not metric.comp.extern:
+    if not isinstance((extern := metric.comp.extern), ExternLSP):
         return metric
     else:
-        extern, item = metric.comp.extern
-        if extern is not Extern.lsp:
-            return metric
+        if comp := stack.lru.get(metric.comp.uid):
+            return replace(
+                metric,
+                comp=replace(metric.comp, secondary_edits=comp.secondary_edits),
+            )
         else:
-            if comp := stack.lru.get(metric.comp.uid):
+            done, not_done = await wait(
+                (go(nvim, aw=resolve_lsp(nvim, item=extern.item)),),
+                timeout=stack.settings.clients.lsp.resolve_timeout,
+            )
+            await cancel(gather(*not_done))
+            comp = (await done.pop()) if done else None
+            if not comp:
+                return metric
+            else:
                 return replace(
                     metric,
                     comp=replace(metric.comp, secondary_edits=comp.secondary_edits),
                 )
-            else:
-                done, not_done = await wait(
-                    (go(nvim, aw=resolve_lsp(nvim, extern, item=item)),),
-                    timeout=stack.settings.clients.lsp.resolve_timeout,
-                )
-                await cancel(gather(*not_done))
-                comp = (await done.pop()) if done else None
-                if not comp:
-                    return metric
-                else:
-                    return replace(
-                        metric,
-                        comp=replace(metric.comp, secondary_edits=comp.secondary_edits),
-                    )
 
 
 _UDECODER = new_decoder[UUID](UUID)

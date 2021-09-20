@@ -51,7 +51,7 @@ from ...registry import NAMESPACE, autocmd, rpc
 from ...shared.settings import GhostText, PreviewDisplay
 from ...shared.timeit import timeit
 from ...shared.trans import expand_tabs
-from ...shared.types import Completion, Context, Doc, Edit, Extern
+from ...shared.types import Completion, Context, Doc, Edit, ExternLSP, ExternPath
 from ..rt_types import Stack
 from ..state import State, state
 
@@ -253,14 +253,13 @@ def _resolve_comp(
     nvim: Nvim,
     stack: Stack,
     event: _Event,
-    extern: Tuple[Extern, Union[Mapping, str]],
+    extern: Union[ExternLSP, ExternPath],
     maybe_doc: Optional[Doc],
     state: State,
 ) -> None:
     global _TASK
     prev = _TASK
     timeout = stack.settings.display.preview.resolve_timeout if maybe_doc else None
-    extern_type, item = extern
 
     async def cont() -> None:
         if prev:
@@ -271,18 +270,18 @@ def _resolve_comp(
         if cached:
             doc = cached.doc
         else:
-            if extern_type is Extern.lsp and isinstance(item, Mapping):
+            if isinstance(extern, ExternLSP):
                 done, _ = await wait(
-                    (resolve_lsp(nvim, extern_type=extern_type, item=item),),
+                    (resolve_lsp(nvim, item=extern.item),),
                     timeout=timeout,
                 )
                 if comp := (await done.pop()) if done else None:
                     stack.lru[state.preview_id] = comp
                 doc = (comp.doc if comp else None) or maybe_doc
-            elif extern_type is Extern.path and isinstance(item, str):
+            elif isinstance(extern, ExternPath):
                 doc = await show(
                     cwd=state.cwd,
-                    path=Path(item),
+                    path=extern.path,
                     ellipsis=stack.settings.display.pum.ellipsis,
                     height=stack.settings.clients.paths.preview_lines,
                 )
@@ -297,7 +296,7 @@ def _resolve_comp(
                         icon_match=None,
                     )
             else:
-                doc = None
+                assert False
 
         if doc:
             await async_call(

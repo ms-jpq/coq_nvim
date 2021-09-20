@@ -6,7 +6,7 @@ from pynvim_pp.logging import log
 from std2.types import is_iterable_not_str
 
 from ...consts import DEBUG
-from ...shared.types import UTF16, Context, Extern
+from ...shared.types import UTF16, Context, ExternLSP, ExternLUA
 from ..parse import parse
 from ..types import CompletionResponse, LSPcomp
 from .request import async_request
@@ -33,7 +33,7 @@ async def comp_lsp(
             msg = f"LSP !! {client} {thing}"
             log.info("%s", msg)
         yield parse(
-            Extern.lsp, short_name=short_name, weight_adjust=weight_adjust, resp=resp
+            ExternLSP, short_name=short_name, weight_adjust=weight_adjust, resp=resp
         )
 
 
@@ -48,4 +48,4 @@ async def comp_thirdparty(
     ):
         name = client or short_name
         resp = cast(CompletionResponse, reply)
-        yield parse(Extern.lua, short_name=name, weight_adjust=weight_adjust, resp=resp)
+        yield parse(ExternLUA, short_name=name, weight_adjust=weight_adjust, resp=resp)

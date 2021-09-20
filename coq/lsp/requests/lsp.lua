@@ -232,6 +232,6 @@
       }
     )
 
-    lua_req(name, session_id, "fn", "< lua :: comp >", args)
+    lua_req(name, session_id, "fn", "< lua :: cmd >", args)
   end
 end)(...)
