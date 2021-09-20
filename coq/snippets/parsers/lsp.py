@@ -1,7 +1,10 @@
+from datetime import datetime
 from pathlib import PurePath
 from re import RegexFlag, compile
 from re import error as RegexError
+from random import Random
 from string import ascii_letters, digits
+from uuid import uuid4
 from typing import (
     AbstractSet,
     Callable,
@@ -68,6 +71,8 @@ _RE_FLAGS = {
     "s": RegexFlag.DOTALL,
 }
 _REGEX_FLAG_CHARS = {*_RE_FLAGS, "g", "u"}
+RANDOM = Random()
+HEXDIGITS = digits + "ABCDEF"
 
 
 def _parse_escape(context: ParserCtx, *, escapable_chars: AbstractSet[str]) -> str:
@@ -181,6 +186,78 @@ def _variable_substitution(context: ParserCtx, *, var_name: str) -> Optional[str
 
     elif var_name == "TM_FILEPATH":
         return str(path)
+
+    elif var_name == "RELATIVE_FILEPATH":
+        try:
+            return str(path.relative_to(ctx.cwd))
+        except ValueError:
+            return None
+
+    elif var_name == "CLIPBOARD":
+        return ctx.clipboard
+
+    elif var_name == "WORKSPACE_NAME":
+        return ctx.cwd.name
+
+    elif var_name == "WORKSPACE_FOLDER":
+        return str(ctx.cwd)
+
+    # Randomv value related
+    elif var_name == "RANDOM":
+        return "".join(RANDOM.choices(digits, k=6))
+
+    elif var_name == "RANDOM_HEX":
+        return "".join(RANDOM.choices(HEXDIGITS, k=6))
+
+    elif var_name == "UUID":
+        return str(uuid4())
+
+    # Date/time related
+    elif var_name == "CURRENT_YEAR":
+        return datetime.now().strftime("%Y")
+
+    elif var_name == "CURRENT_YEAR_SHORT":
+        return datetime.now().strftime("%y")
+
+    elif var_name == "CURRENT_MONTH":
+        return datetime.now().strftime("%m")
+
+    elif var_name == "CURRENT_MONTH_NAME":
+        return datetime.now().strftime("%B")
+
+    elif var_name == "CURRENT_MONTH_NAME_SHORT":
+        return datetime.now().strftime("%b")
+
+    elif var_name == "CURRENT_DATE":
+        return datetime.now().strftime("%d")
+
+    elif var_name == "CURRENT_DAY_NAME":
+        return datetime.now().strftime("%A")
+
+    elif var_name == "CURRENT_DAY_NAME_SHORT":
+        return datetime.now().strftime("%a")
+
+    elif var_name == "CURRENT_HOUR":
+        return datetime.now().strftime("%H")
+
+    elif var_name == "CURRENT_MINUTE":
+        return datetime.now().strftime("%M")
+
+    elif var_name == "CURRENT_SECOND":
+        return datetime.now().strftime("%S")
+
+    elif var_name == "CURRENT_SECONDS_UNIX":
+        return str(round(datetime.now().timestamp()))
+
+    # Inserting line or block comments
+    elif var_name == "BLOCK_COMMENT_START":
+        return ctx.comment_strings.block.start if ctx.comment_strings.block else ""
+
+    elif var_name == "BLOCK_COMMENT_END":
+        return ctx.comment_strings.block.end if ctx.comment_strings.block else ""
+
+    elif var_name == "LINE_COMMENT":
+        return ctx.comment_strings.line or ""
 
     else:
         return None
