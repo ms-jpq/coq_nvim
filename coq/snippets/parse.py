@@ -8,7 +8,7 @@ from pynvim_pp.logging import log
 from std2.types import never
 
 from ..consts import DEBUG
-from ..shared.context import cword_before, cword_after
+from ..shared.context import cword_after, cword_before
 from ..shared.trans import expand_tabs
 from ..shared.types import (
     Context,
@@ -96,7 +96,7 @@ def parse(
     context: Context,
     line_before: str,
     snippet: SnippetEdit,
-    visual: str,
+    info: ParseInfo,
 ) -> Tuple[Edit, Sequence[Mark]]:
     parser = _parser(snippet.grammar)
 
@@ -106,7 +106,7 @@ def parse(
             context, old_prefix=old_prefix, line_before=line_before
         )
     else:
-        sort_by = parser(context, ParseInfo(visual=visual), snippet.new_text).text
+        sort_by = parser(context, info, snippet.new_text).text
         old_prefix = cword_before(
             unifying_chars, lower=False, context=context, sort_by=sort_by
         )
@@ -122,7 +122,7 @@ def parse(
         )
     )
     indented_text = "".join(indented_lines)
-    parsed = parser(context, ParseInfo(visual=visual), indented_text)
+    parsed = parser(context, info, indented_text)
     old_suffix = cword_after(
         unifying_chars, lower=False, context=context, sort_by=parsed.text
     )

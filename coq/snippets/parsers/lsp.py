@@ -1,7 +1,10 @@
+from datetime import datetime
 from pathlib import PurePath
+from posixpath import normcase
+from random import choices
 from re import RegexFlag, compile
 from re import error as RegexError
-from string import ascii_letters, digits
+from string import ascii_letters, digits, hexdigits
 from typing import (
     AbstractSet,
     Callable,
@@ -13,6 +16,7 @@ from typing import (
     Tuple,
     cast,
 )
+from uuid import uuid4
 
 from ...shared.parse import lower
 from ...shared.types import Context
@@ -153,6 +157,7 @@ def _parse_tcp(context: ParserCtx) -> TokenStream:
 def _variable_substitution(context: ParserCtx, *, var_name: str) -> Optional[str]:
     ctx = context.ctx
     row, _ = ctx.position
+    c_lhs, c_rhs = context.info.comment_str
     path = PurePath(ctx.filename)
 
     if var_name == "TM_SELECTED_TEXT":
@@ -177,10 +182,81 @@ def _variable_substitution(context: ParserCtx, *, var_name: str) -> Optional[str
         return path.stem
 
     elif var_name == "TM_DIRECTORY":
-        return str(path.parent)
+        return normcase(path.parent)
 
     elif var_name == "TM_FILEPATH":
-        return str(path)
+        return normcase(path)
+
+    elif var_name == "RELATIVE_FILEPATH":
+        try:
+            return normcase(path.relative_to(ctx.cwd))
+        except ValueError:
+            return None
+
+    elif var_name == "CLIPBOARD":
+        return context.info.clipboard
+
+    elif var_name == "WORKSPACE_NAME":
+        return ctx.cwd.name
+
+    elif var_name == "WORKSPACE_FOLDER":
+        return normcase(ctx.cwd)
+
+    # Randomv value related
+    elif var_name == "RANDOM":
+        return "".join(choices(digits, k=6))
+
+    elif var_name == "RANDOM_HEX":
+        return "".join(choices(tuple({*hexdigits.upper()}), k=6))
+
+    elif var_name == "UUID":
+        return str(uuid4())
+
+    # Date/time related
+    elif var_name == "CURRENT_YEAR":
+        return datetime.now().strftime("%Y")
+
+    elif var_name == "CURRENT_YEAR_SHORT":
+        return datetime.now().strftime("%y")
+
+    elif var_name == "CURRENT_MONTH":
+        return datetime.now().strftime("%m")
+
+    elif var_name == "CURRENT_MONTH_NAME":
+        return datetime.now().strftime("%B")
+
+    elif var_name == "CURRENT_MONTH_NAME_SHORT":
+        return datetime.now().strftime("%b")
+
+    elif var_name == "CURRENT_DATE":
+        return datetime.now().strftime("%d")
+
+    elif var_name == "CURRENT_DAY_NAME":
+        return datetime.now().strftime("%A")
+
+    elif var_name == "CURRENT_DAY_NAME_SHORT":
+        return datetime.now().strftime("%a")
+
+    elif var_name == "CURRENT_HOUR":
+        return datetime.now().strftime("%H")
+
+    elif var_name == "CURRENT_MINUTE":
+        return datetime.now().strftime("%M")
+
+    elif var_name == "CURRENT_SECOND":
+        return datetime.now().strftime("%S")
+
+    elif var_name == "CURRENT_SECONDS_UNIX":
+        return str(round(datetime.now().timestamp()))
+
+    elif var_name == "BLOCK_COMMENT_START":
+        return c_lhs if c_lhs and c_rhs else None
+
+    elif var_name == "BLOCK_COMMENT_END":
+        return c_rhs if c_lhs and c_rhs else None
+
+    elif var_name == "LINE_COMMENT":
+        return (c_lhs or None) if not c_rhs else None
 
     else:
         return None

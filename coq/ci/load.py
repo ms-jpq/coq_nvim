@@ -18,6 +18,7 @@ from ..snippets.loaders.load import LoadedSnips
 from ..snippets.loaders.load import load_ci as load_from_paths
 from ..snippets.parse import parse
 from ..snippets.parsers.parser import ParseError
+from ..snippets.parsers.types import ParseInfo
 from ..snippets.types import ParsedSnippet
 from .types import Compilation
 
@@ -84,7 +85,7 @@ async def load_parsable() -> Any:
                     line_before="",
                     context=EMPTY_CONTEXT,
                     snippet=edit,
-                    visual="",
+                    info=ParseInfo(visual="", clipboard="", comment_str=("", "")),
                 )
                 yield uid, snip
 

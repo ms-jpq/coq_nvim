@@ -43,6 +43,7 @@ from ...shared.types import Edit, Mark, SnippetEdit, SnippetGrammar
 from ...snippets.loaders.load import load_direct
 from ...snippets.loaders.neosnippet import load_neosnippet
 from ...snippets.parse import parse
+from ...snippets.parsers.types import ParseInfo
 from ...snippets.types import SCHEMA, LoadedSnips, ParsedSnippet
 from ..rt_types import Stack
 
@@ -189,7 +190,7 @@ async def _dump_compiled(
 
 
 def _trans(
-    unifying_chars: AbstractSet[str], snips: Iterable[ParsedSnippet]
+    unifying_chars: AbstractSet[str], info: ParseInfo, snips: Iterable[ParsedSnippet]
 ) -> Iterator[Tuple[ParsedSnippet, Edit, Sequence[Mark]]]:
     for snip in snips:
         edit = SnippetEdit(grammar=snip.grammar, new_text=snip.content)
@@ -198,12 +199,12 @@ def _trans(
             line_before="",
             context=EMPTY_CONTEXT,
             snippet=edit,
-            visual="",
+            info=info,
         )
         yield snip, parsed, marks
 
 
-async def _slurp(nvim: Nvim, stack: Stack, warn_outdated: bool) -> None:
+async def _slurp(nvim: Nvim, stack: Stack, warn: AbstractSet[SnippetWarnings]) -> None:
     with timeit("LOAD SNIPS"):
         (
             cwd,
@@ -237,7 +238,7 @@ async def _slurp(nvim: Nvim, stack: Stack, warn_outdated: bool) -> None:
         }
 
         await stack.sdb.clean(stale)
-        if not (bundled or user_compiled):
+        if SnippetWarnings.missing in warn and not (bundled or user_compiled):
             await sleep(0)
             await awrite(nvim, LANG("fs snip load empty"))
 
@@ -262,7 +263,7 @@ async def _slurp(nvim: Nvim, stack: Stack, warn_outdated: bool) -> None:
                     ),
                 )
 
-        if warn_outdated and new_user_snips:
+        if SnippetWarnings.outdated in warn and new_user_snips:
             paths = linesep.join(
                 f"{path} -- {prev} -> {cur}"
                 for path, (cur, prev) in new_user_snips.items()
@@ -272,9 +273,7 @@ async def _slurp(nvim: Nvim, stack: Stack, warn_outdated: bool) -> None:
 
 @rpc(blocking=True)
 def _load_snips(nvim: Nvim, stack: Stack) -> None:
-    warn_outdated = SnippetWarnings.outdated in stack.settings.clients.snippets.warn
-
-    go(nvim, aw=_slurp(nvim, stack=stack, warn_outdated=warn_outdated))
+    go(nvim, aw=_slurp(nvim, stack=stack, warn=stack.settings.clients.snippets.warn))
 
 
 atomic.exec_lua(f"{NAMESPACE}.{_load_snips.name}()", ())
@@ -284,10 +283,11 @@ def compile_one(
     stack: Stack,
     grammar: SnippetGrammar,
     path: PurePath,
+    info: ParseInfo,
     lines: Iterable[Tuple[int, str]],
 ) -> Compiled:
     filetype, exts, snips = load_neosnippet(grammar, path=path, lines=lines)
-    parsed = tuple(_trans(stack.settings.match.unifying_chars, snips=snips))
+    parsed = tuple(_trans(stack.settings.match.unifying_chars, info=info, snips=snips))
 
     compiled = Compiled(
         path=path,
@@ -300,6 +300,7 @@ def compile_one(
 
 async def compile_user_snippets(nvim: Nvim, stack: Stack) -> None:
     with timeit("COMPILE SNIPS"):
+        info = ParseInfo(visual="", clipboard="", comment_str=("", ""))
         _, mtimes = await user_mtimes(
             nvim, user_path=stack.settings.clients.snippets.user_path
         )
@@ -312,7 +313,11 @@ async def compile_user_snippets(nvim: Nvim, stack: Stack) -> None:
             )
         )
         _ = tuple(
-            _trans(stack.settings.match.unifying_chars, snips=loaded.snippets.values())
+            _trans(
+                stack.settings.match.unifying_chars,
+                info=info,
+                snips=loaded.snippets.values(),
+            )
         )
         try:
             await _dump_compiled(
@@ -321,4 +326,4 @@ async def compile_user_snippets(nvim: Nvim, stack: Stack) -> None:
         except OSError as e:
             await awrite(nvim, e)
         else:
-            await _slurp(nvim, stack=stack, warn_outdated=False)
+            await _slurp(nvim, stack=stack, warn={SnippetWarnings.missing})

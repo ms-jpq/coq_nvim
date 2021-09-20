@@ -9,7 +9,7 @@ from ...coq.ci.load import load
 from ...coq.shared.context import EMPTY_CONTEXT
 from ...coq.shared.types import SnippetEdit
 from ...coq.snippets.parse import parse
-from ...coq.snippets.parsers.types import ParseError
+from ...coq.snippets.parsers.types import ParseError, ParseInfo
 
 _THRESHOLD = 0.95
 
@@ -33,7 +33,7 @@ class Parser(TestCase):
                         line_before="",
                         context=EMPTY_CONTEXT,
                         snippet=edit,
-                        visual="",
+                        info=ParseInfo(visual="", clipboard="", comment_str=("", "")),
                     )
                 except ParseError as e:
                     yield e
