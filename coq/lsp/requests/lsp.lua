@@ -160,7 +160,6 @@
       session_id = {session_id, "number"},
       cmd = {cmd, "table"}
     }
-
     vim.validate {
       command = {cmd.command, "string"}
     }
