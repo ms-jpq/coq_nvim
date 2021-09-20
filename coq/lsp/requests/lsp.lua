@@ -236,6 +236,20 @@
     lua_req(name, session_id, "fn", "< lua :: comp >", args)
   end
 
+  COQ.lsp_third_party_resolve = function(name, session_id, item)
+    local args =
+      freeze(
+      "coq_3p.args",
+      false,
+      {
+        uid = session_id,
+        item = item
+      }
+    )
+
+    lua_req(name, session_id, "resolve", "< lua :: resolve >", args)
+  end
+
   COQ.lsp_third_party_cmd = function(name, session_id, cmd)
     local args =
       freeze(

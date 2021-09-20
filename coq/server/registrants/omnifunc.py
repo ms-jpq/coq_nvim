@@ -21,12 +21,12 @@ from std2.asyncio import cancel, run_in_executor
 from std2.pickle import new_decoder
 from std2.pickle.types import DecodeError
 
-from ...lsp.requests.command import cmd_lsp
+from ...lsp.requests.command import cmd
 from ...lsp.requests.resolve import resolve
 from ...registry import NAMESPACE, atomic, autocmd, rpc
 from ...shared.runtime import Metric
 from ...shared.timeit import timeit
-from ...shared.types import Context, ExternLSP, NvimPos
+from ...shared.types import Context, ExternLSP, ExternLUA, NvimPos
 from ..completions import complete
 from ..context import context
 from ..edit import NS, edit
@@ -221,8 +221,8 @@ def _comp_done(nvim: Nvim, stack: Stack, event: Mapping[str, Any]) -> None:
                         async def c2() -> None:
                             if isinstance(
                                 (extern := new_metric.comp.extern), ExternLSP
-                            ) and (cmd := extern.command):
-                                await cmd_lsp(nvim, cmd=cmd)
+                            ):
+                                await cmd(nvim, extern=extern)
 
                         def c1() -> None:
                             if new_metric.comp.uid in stack.metrics:
