@@ -96,9 +96,10 @@ class CacheWorker:
                 def cont() -> Iterator[Completion]:
                     seen: MutableSet[UUID] = set()
                     for sort_by in words:
-                        if (comp := self._cached.get(sort_by)) and comp.uid not in seen:
-                            seen.add(comp.uid)
-                            yield sanitize_cached(comp)
+                        if comp := self._cached.get(sort_by):
+                            if comp.uid not in seen:
+                                seen.add(comp.uid)
+                                yield sanitize_cached(comp)
 
                 return cont()
 
