@@ -164,7 +164,7 @@ def _edit_trans(
     edit: Edit,
 ) -> EditInstruction:
 
-    adjusted = trans_adjusted(unifying_chars, ctx=ctx, edit=edit)
+    adjusted = trans_adjusted(unifying_chars, ctx=ctx, new_text=edit.new_text)
     inst = _contextual_edit_trans(ctx, lines=lines, edit=adjusted)
     return inst
 
