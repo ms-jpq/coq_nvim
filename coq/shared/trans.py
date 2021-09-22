@@ -49,8 +49,8 @@ def trans_adjusted(
         unifying_chars, lower=False, context=ctx, sort_by=edit.new_text
     )
 
-    old_prefix = simple_before if new_syms <= 1 else edit.old_prefix or simple_before
-    old_suffix = simple_after if new_syms <= 1 else edit.old_suffix or simple_after
+    old_prefix = simple_before if new_syms <= 1 else (edit.old_prefix or simple_before)
+    old_suffix = simple_after if new_syms <= 1 else (edit.old_suffix or simple_after)
 
     adjusted = ContextualEdit(
         new_text=edit.new_text,
