@@ -40,13 +40,13 @@ def trans(line_before: str, line_after: str, new_text: str) -> ContextualEdit:
     l_match = _line_match(True, existing=line_before, insertion=new_text)
     rest = new_text[len(l_match) :]
     r_match = _line_match(False, existing=line_after, insertion=rest)
-    c_edit = ContextualEdit(
+    edit = ContextualEdit(
         new_text=new_text,
         new_prefix=new_text,
         old_prefix=line_before[-len(l_match) :] if l_match else "",
         old_suffix=line_after[: len(r_match)],
     )
-    return c_edit
+    return edit
 
 
 def trans_adjusted(
