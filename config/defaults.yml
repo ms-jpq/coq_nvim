@@ -4,6 +4,7 @@ auto_start: False
 
 keymap:
   recommended: True
+  pre_select: False
 
   manual_complete: <c-space>
   repeat: null

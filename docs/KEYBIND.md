@@ -26,6 +26,16 @@ Set up modern keybinds:
 true
 ```
 
+### coq_settings.keymap.pre_select
+
+Always select first result. Will need to frequently hit manual exit completion with `<c-e>` if chosen.
+
+**default:**
+
+```json
+false
+```
+
 #### `coq_settings.keymap.manual_complete`
 
 Manually trigger completions, with a longer timeout.

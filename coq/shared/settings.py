@@ -100,6 +100,7 @@ class Weights:
 @dataclass(frozen=True)
 class KeyMapping:
     recommended: bool
+    pre_select: bool
     manual_complete: Optional[str]
     repeat: Optional[str]
     jump_to_mark: Optional[str]
