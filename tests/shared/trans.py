@@ -1,6 +1,32 @@
+from itertools import accumulate, islice
+from random import randint
 from unittest import TestCase
 
-from ...coq.shared.trans import trans
+from ...coq.shared.trans import reverse_acc, trans
+
+
+class ReverseAcc(TestCase):
+    def test_1(self) -> None:
+        seq = ""
+        lhs = tuple(reverse_acc(seq))
+        rhs = tuple(reversed(tuple(accumulate(seq))))
+        self.assertEquals(lhs, rhs)
+
+    def test_2(self) -> None:
+        seq = "".join(map(str, range(1, 5)))
+
+        lhs = tuple(reverse_acc(seq))
+        rhs = tuple(reversed(tuple(accumulate(seq))))
+        self.assertEquals(lhs, rhs)
+
+    def test_3(self) -> None:
+        gen = iter(lambda: str(randint(0, 88)), None)
+
+        for _ in range(20):
+            seq = "".join(islice(gen, 20))
+            lhs = tuple(reverse_acc(seq))
+            rhs = tuple(reversed(tuple(accumulate(seq))))
+            self.assertEquals(lhs, rhs)
 
 
 class Trans(TestCase):

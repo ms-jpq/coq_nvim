@@ -1,4 +1,3 @@
-from itertools import accumulate
 from typing import AbstractSet, Iterator
 
 from .context import cword_after, cword_before
@@ -6,16 +5,23 @@ from .parse import coalesce, lower
 from .types import Context, ContextualEdit
 
 
+def reverse_acc(seq: str) -> Iterator[str]:
+    if seq:
+        yield seq
+        for i in range(1, len(seq)):
+            yield seq[:-i]
+
+
 def _line_match(lhs: bool, existing: str, insertion: str) -> str:
     existing, insertion = lower(existing), lower(insertion)
     if lhs:
-        for match in reversed(tuple(accumulate(insertion))):
+        for match in reverse_acc(insertion):
             if match == existing[-len(match) :]:
                 return match
         else:
             return ""
     else:
-        for match in reversed(tuple(accumulate(reversed(insertion)))):
+        for match in reverse_acc("".join(reversed(insertion))):
             if match == existing[: len(match) :]:
                 return match
         else:
