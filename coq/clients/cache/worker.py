@@ -32,7 +32,8 @@ class _CacheCtx:
 def _use_cache(cache: _CacheCtx, ctx: Context) -> bool:
     row, _ = ctx.position
     use_cache = (
-        cache.commit_id == ctx.commit_id
+        not ctx.manual
+        and cache.commit_id == ctx.commit_id
         and ctx.buf_id == cache.buf_id
         and row == cache.row
         and ctx.syms_before.startswith(cache.syms_before)
