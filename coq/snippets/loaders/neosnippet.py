@@ -1,4 +1,5 @@
 from difflib import get_close_matches
+from os.path import normcase
 from pathlib import PurePath
 from string import whitespace
 from textwrap import dedent
@@ -45,7 +46,7 @@ def _start(line: str) -> Tuple[str, str]:
 def load_neosnippet(
     grammar: SnippetGrammar, path: PurePath, lines: Iterable[Tuple[int, str]]
 ) -> Tuple[str, AbstractSet[str], Sequence[ParsedSnippet]]:
-    filetype = path.stem.strip()
+    filetype = normcase(path.stem.strip())
 
     snippets: MutableSequence[ParsedSnippet] = []
     extends: MutableSet[str] = set()
@@ -80,12 +81,12 @@ def load_neosnippet(
 
         elif line.startswith(_EXTENDS_START):
             filetypes = line[len(_EXTENDS_START) :].strip()
-            for ft in (f.strip() for f in filetypes.split(",")):
+            for ft in (normcase(f.strip()) for f in filetypes.split(",")):
                 if ft:
                     extends.add(ft)
 
         elif line.startswith(_INCLUDES_START):
-            ft = PurePath(line[len(_INCLUDES_START) :]).stem.strip()
+            ft = normcase(PurePath(line[len(_INCLUDES_START) :]).stem.strip())
             if ft:
                 extends.add(ft)
 

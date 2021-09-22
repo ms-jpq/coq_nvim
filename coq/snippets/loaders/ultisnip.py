@@ -1,5 +1,6 @@
 from difflib import get_close_matches
 from enum import Enum, auto
+from os.path import normcase
 from pathlib import PurePath
 from typing import AbstractSet, Iterable, MutableSequence, MutableSet, Sequence, Tuple
 
@@ -51,7 +52,7 @@ def _start(line: str) -> Tuple[str, str]:
 def load_ultisnip(
     grammar: SnippetGrammar, path: PurePath, lines: Iterable[Tuple[int, str]]
 ) -> Tuple[str, AbstractSet[str], Sequence[ParsedSnippet]]:
-    filetype = path.stem.strip()
+    filetype = normcase(path.stem.strip())
 
     snippets: MutableSequence[ParsedSnippet] = []
     extends: MutableSet[str] = set()
@@ -75,7 +76,7 @@ def load_ultisnip(
 
             elif line.startswith(_EXTENDS_START):
                 filetypes = line[len(_EXTENDS_START) :].strip()
-                for ft in (f.strip() for f in filetypes.split(",")):
+                for ft in (normcase(f.strip()) for f in filetypes.split(",")):
                     if ft:
                         extends.add(ft)
 

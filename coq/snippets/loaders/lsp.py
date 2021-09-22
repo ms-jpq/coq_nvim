@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 from json import loads
+from os.path import normcase
 from pathlib import PurePath
 from typing import AbstractSet, Iterable, Iterator, Mapping, Sequence, Tuple, Union
 
@@ -43,7 +44,7 @@ def _body(body: Union[str, Sequence[str]]) -> str:
 def load_lsp(
     grammar: SnippetGrammar, path: PurePath, lines: Iterable[Tuple[int, str]]
 ) -> Tuple[str, AbstractSet[str], Sequence[ParsedSnippet]]:
-    filetype = path.stem.strip()
+    filetype = normcase(path.stem.strip())
 
     text = SNIP_LINE_SEP.join(line.rstrip() for _, line in lines)
     json = loads(text)
