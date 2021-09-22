@@ -100,6 +100,7 @@ def parse_item(
                 primary_edit=p_edit,
                 secondary_edits=r_edits,
                 sort_by=parsed.filterText or p_edit.new_text,
+                preselect=parsed.preselect or False,
                 kind=kind,
                 doc=doc,
                 icon_match=kind,
