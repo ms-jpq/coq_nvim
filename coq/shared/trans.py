@@ -32,8 +32,8 @@ def more_sortby(line_before: str, sort_by: str) -> Iterator[str]:
     if sort_by:
         yield sort_by
         if l_match := _line_match(True, existing=line_before, insertion=sort_by):
-            trimmed = sort_by[len(l_match) :]
-            yield trimmed
+            if trimmed := sort_by[len(l_match) :]:
+                yield trimmed
 
 
 def trans(line_before: str, line_after: str, new_text: str) -> ContextualEdit:
