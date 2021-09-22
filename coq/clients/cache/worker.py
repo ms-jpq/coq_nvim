@@ -10,6 +10,8 @@ from typing import (
 )
 from uuid import UUID, uuid4
 
+from std2.string import removeprefix
+
 from ...shared.repeat import sanitize
 from ...shared.runtime import Supervisor
 from ...shared.timeit import timeit
@@ -23,7 +25,8 @@ class _CacheCtx:
     commit_id: UUID
     buf_id: int
     row: int
-    text_before: str
+    words_before: str
+    syms_before: str
 
 
 def _use_cache(cache: _CacheCtx, ctx: Context) -> bool:
@@ -32,7 +35,7 @@ def _use_cache(cache: _CacheCtx, ctx: Context) -> bool:
         cache.commit_id == ctx.commit_id
         and ctx.buf_id == cache.buf_id
         and row == cache.row
-        and ctx.syms_before.startswith(cache.text_before)
+        and ctx.syms_before.startswith(cache.syms_before)
     )
     return use_cache
 
@@ -54,7 +57,8 @@ class CacheWorker:
             commit_id=uuid4(),
             buf_id=-1,
             row=-1,
-            text_before="",
+            words_before="",
+            syms_before="",
         )
         self._cached: MutableMapping[str, Completion] = {}
 
@@ -72,7 +76,8 @@ class CacheWorker:
             commit_id=context.commit_id,
             buf_id=context.buf_id,
             row=row,
-            text_before=context.syms_before,
+            words_before=context.words_before,
+            syms_before=context.syms_before,
         )
         use_cache = _use_cache(cache_ctx, ctx=context) and bool(self._cached)
         if not use_cache:
@@ -99,9 +104,20 @@ class CacheWorker:
 
                 return cont()
 
-        async def set(completions: Sequence[Completion]) -> None:
-            new_comps = {c.sort_by: c for c in completions}
+        async def set_cache(completions: Sequence[Completion]) -> None:
+            new_comps: MutableMapping[str, Completion] = {}
+            for comp in completions:
+                new_comps[comp.sort_by] = comp
+                if (
+                    key := removeprefix(comp.sort_by, cache_ctx.words_before)
+                ) != comp.sort_by:
+                    new_comps[key] = comp
+                if (
+                    key := removeprefix(comp.sort_by, cache_ctx.syms_before)
+                ) != comp.sort_by:
+                    new_comps[key] = comp
+
             await self._db.insert(new_comps.keys())
             self._cached.update(new_comps)
 
-        return use_cache, get(), set
+        return use_cache, get(), set_cache
