@@ -16,11 +16,11 @@ from typing import (
     cast,
 )
 
+from pynvim_pp.text_object import is_word
 from std2.pathlib import AnyPath
 from std2.sqlite3 import add_functions, escape
 
 from .fuzzy import quick_ratio
-from .parse import is_word
 
 BIGGEST_INT = 2 ** 63 - 1
 

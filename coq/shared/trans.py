@@ -1,12 +1,12 @@
 from itertools import accumulate
-from typing import AbstractSet
+from typing import AbstractSet, Iterator
 
 from .context import cword_after, cword_before
 from .parse import coalesce, lower
 from .types import Context, ContextualEdit
 
 
-def _match(lhs: bool, existing: str, insertion: str) -> str:
+def _line_match(lhs: bool, existing: str, insertion: str) -> str:
     existing, insertion = lower(existing), lower(insertion)
     if lhs:
         for match in reversed(tuple(accumulate(insertion))):
@@ -22,10 +22,18 @@ def _match(lhs: bool, existing: str, insertion: str) -> str:
             return ""
 
 
+def more_sortby(line_before: str, sort_by: str) -> Iterator[str]:
+    if sort_by:
+        yield sort_by
+        if l_match := _line_match(True, existing=line_before, insertion=sort_by):
+            trimmed = sort_by[len(l_match) :]
+            yield trimmed
+
+
 def trans(line_before: str, line_after: str, new_text: str) -> ContextualEdit:
-    l_match = _match(True, existing=line_before, insertion=new_text)
+    l_match = _line_match(True, existing=line_before, insertion=new_text)
     rest = new_text[len(l_match) :]
-    r_match = _match(False, existing=line_after, insertion=rest)
+    r_match = _line_match(False, existing=line_after, insertion=rest)
     c_edit = ContextualEdit(
         new_text=new_text,
         new_prefix=new_text,

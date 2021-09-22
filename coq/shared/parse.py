@@ -1,12 +1,10 @@
 from typing import AbstractSet, Iterable, Iterator, MutableSequence
 
+from pynvim_pp.text_object import is_word
+
 
 def lower(text: str) -> str:
     return text.casefold()
-
-
-def is_word(char: str, unifying_chars: AbstractSet[str]) -> bool:
-    return char in unifying_chars or char.isalnum()
 
 
 def coalesce(chars: Iterable[str], unifying_chars: AbstractSet[str]) -> Iterator[str]:
