@@ -1,6 +1,16 @@
 from dataclasses import dataclass, replace
-from typing import Awaitable, Callable, Iterator, MutableMapping, Sequence, Tuple
+from typing import (
+    Awaitable,
+    Callable,
+    Iterator,
+    MutableMapping,
+    MutableSet,
+    Sequence,
+    Tuple,
+)
 from uuid import UUID, uuid4
+
+from std2.string import removeprefix
 
 from ...shared.repeat import sanitize
 from ...shared.runtime import Supervisor
@@ -15,16 +25,18 @@ class _CacheCtx:
     commit_id: UUID
     buf_id: int
     row: int
-    text_before: str
+    words_before: str
+    syms_before: str
 
 
 def _use_cache(cache: _CacheCtx, ctx: Context) -> bool:
     row, _ = ctx.position
     use_cache = (
-        cache.commit_id == ctx.commit_id
+        not ctx.manual
+        and cache.commit_id == ctx.commit_id
         and ctx.buf_id == cache.buf_id
         and row == cache.row
-        and ctx.syms_before.startswith(cache.text_before)
+        and ctx.syms_before.startswith(cache.syms_before)
     )
     return use_cache
 
@@ -46,7 +58,8 @@ class CacheWorker:
             commit_id=uuid4(),
             buf_id=-1,
             row=-1,
-            text_before="",
+            words_before="",
+            syms_before="",
         )
         self._cached: MutableMapping[str, Completion] = {}
 
@@ -64,7 +77,8 @@ class CacheWorker:
             commit_id=context.commit_id,
             buf_id=context.buf_id,
             row=row,
-            text_before=context.syms_before,
+            words_before=context.words_before,
+            syms_before=context.syms_before,
         )
         use_cache = _use_cache(cache_ctx, ctx=context) and bool(self._cached)
         if not use_cache:
@@ -79,16 +93,31 @@ class CacheWorker:
                     sym=context.syms,
                     limitless=context.manual,
                 )
-                comps = (
-                    sanitize_cached(comp)
-                    for sort_by in words
-                    if (comp := self._cached.get(sort_by))
-                )
-                return comps
 
-        async def set(completions: Sequence[Completion]) -> None:
-            new_comps = {c.sort_by: c for c in completions}
+                def cont() -> Iterator[Completion]:
+                    seen: MutableSet[UUID] = set()
+                    for sort_by in words:
+                        if comp := self._cached.get(sort_by):
+                            if comp.uid not in seen:
+                                seen.add(comp.uid)
+                                yield sanitize_cached(comp)
+
+                return cont()
+
+        async def set_cache(completions: Sequence[Completion]) -> None:
+            new_comps: MutableMapping[str, Completion] = {}
+            for comp in completions:
+                new_comps[comp.sort_by] = comp
+                if (
+                    key := removeprefix(comp.sort_by, cache_ctx.words_before)
+                ) != comp.sort_by:
+                    new_comps[key] = comp
+                if (
+                    key := removeprefix(comp.sort_by, cache_ctx.syms_before)
+                ) != comp.sort_by:
+                    new_comps[key] = comp
+
             await self._db.insert(new_comps.keys())
             self._cached.update(new_comps)
 
-        return use_cache, get(), set
+        return use_cache, get(), set_cache

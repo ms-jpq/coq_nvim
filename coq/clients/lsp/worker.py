@@ -87,8 +87,9 @@ class Worker(BaseWorker[BaseClient, None], CacheWorker):
                 if seen <= limit:
                     if src is _Src.from_db:
                         for c in chunked:
-                            yield c
-                            seen += 1
+                            if c.primary_edit.new_text:
+                                yield c
+                                seen += 1
                     else:
                         for c in chunked:
                             if c.primary_edit.new_text:
