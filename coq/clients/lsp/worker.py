@@ -1,16 +1,8 @@
 from asyncio import as_completed, gather
 from enum import Enum, auto
-from itertools import chain, dropwhile
-from typing import (
-    AbstractSet,
-    AsyncIterator,
-    Iterator,
-    MutableSequence,
-    Optional,
-    Tuple,
-)
+from itertools import chain
+from typing import AsyncIterator, Iterator, MutableSequence, Optional, Tuple
 
-from pynvim_pp.text_object import is_word
 from std2 import anext
 from std2.aitertools import to_async
 from std2.asyncio import pure
@@ -25,6 +17,7 @@ from ...shared.runtime import Supervisor
 from ...shared.runtime import Worker as BaseWorker
 from ...shared.settings import BaseClient
 from ...shared.sql import BIGGEST_INT
+from ...shared.trans import more_sortby
 from ...shared.types import Completion, Context, SnippetEdit
 from ..cache.worker import CacheWorker, sanitize_cached
 
@@ -33,33 +26,6 @@ class _Src(Enum):
     from_db = auto()
     from_stored = auto()
     from_query = auto()
-
-
-def _more(unifying_chars: AbstractSet[str], sort_by: str) -> Iterator[str]:
-    if sort_by:
-        yield sort_by
-
-        begin = sort_by[:1]
-        if begin.isspace():
-            yield sort_by.lstrip()
-        elif is_word(begin, unifying_chars=unifying_chars):
-            rhs = "".join(
-                dropwhile(lambda c: is_word(c, unifying_chars=unifying_chars), sort_by)
-            )
-            yield rhs
-            yield "".join(
-                dropwhile(lambda c: not is_word(c, unifying_chars=unifying_chars), rhs)
-            )
-        else:
-            rhs = "".join(
-                dropwhile(
-                    lambda c: not is_word(c, unifying_chars=unifying_chars), sort_by
-                )
-            )
-            yield rhs
-            yield "".join(
-                dropwhile(lambda c: is_word(c, unifying_chars=unifying_chars), rhs)
-            )
 
 
 class Worker(BaseWorker[BaseClient, None], CacheWorker):
@@ -126,9 +92,8 @@ class Worker(BaseWorker[BaseClient, None], CacheWorker):
                             seen += 1
                     else:
                         for c in chunked:
-                            for sort_by in _more(
-                                self._supervisor.options.unifying_chars,
-                                sort_by=c.sort_by,
+                            for sort_by in more_sortby(
+                                context.line_before, sort_by=c.sort_by
                             ):
                                 cword = cword_before(
                                     self._supervisor.options.unifying_chars,
