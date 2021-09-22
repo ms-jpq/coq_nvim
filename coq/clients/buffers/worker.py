@@ -20,7 +20,8 @@ class Worker(BaseWorker[BuffersClient, BDB]):
     async def _poll(self) -> None:
         while True:
             bufs = await async_call(
-                self._supervisor.nvim, list_bufs, self._supervisor.nvim, listed=True
+                self._supervisor.nvim,
+                lambda: list_bufs(self._supervisor.nvim, listed=True),
             )
             await self._misc.vacuum({buf.number for buf in bufs})
             async with self._supervisor.idling:
