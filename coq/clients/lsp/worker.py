@@ -1,8 +1,16 @@
 from asyncio import as_completed, gather
 from enum import Enum, auto
-from itertools import chain
-from typing import AsyncIterator, Iterator, MutableSequence, Optional, Tuple
+from itertools import chain, dropwhile
+from typing import (
+    AbstractSet,
+    AsyncIterator,
+    Iterator,
+    MutableSequence,
+    Optional,
+    Tuple,
+)
 
+from pynvim_pp.text_object import is_word
 from std2 import anext
 from std2.aitertools import to_async
 from std2.asyncio import pure
@@ -27,8 +35,31 @@ class _Src(Enum):
     from_query = auto()
 
 
-def _strip(sort_by: str) -> Optional[str]:
-    pass
+def _more(unifying_chars: AbstractSet[str], sort_by: str) -> Iterator[str]:
+    if sort_by:
+        yield sort_by
+
+        begin = sort_by[:1]
+        if begin.isspace():
+            yield sort_by.lstrip()
+        elif is_word(begin, unifying_chars=unifying_chars):
+            rhs = "".join(
+                dropwhile(lambda c: is_word(c, unifying_chars=unifying_chars), sort_by)
+            )
+            yield rhs
+            yield "".join(
+                dropwhile(lambda c: not is_word(c, unifying_chars=unifying_chars), rhs)
+            )
+        else:
+            rhs = "".join(
+                dropwhile(
+                    lambda c: not is_word(c, unifying_chars=unifying_chars), sort_by
+                )
+            )
+            yield rhs
+            yield "".join(
+                dropwhile(lambda c: is_word(c, unifying_chars=unifying_chars), rhs)
+            )
 
 
 class Worker(BaseWorker[BaseClient, None], CacheWorker):
@@ -95,35 +126,35 @@ class Worker(BaseWorker[BaseClient, None], CacheWorker):
                             seen += 1
                     else:
                         for c in chunked:
-                            for sort_by in (c.sort_by, _strip(c.sort_by)):
-                                if sort_by:
-                                    cword = cword_before(
-                                        unifying_chars=self._supervisor.options.unifying_chars,
-                                        lower=True,
-                                        context=context,
-                                        sort_by=sort_by,
-                                    )
-                                    ratio = multi_set_ratio(
-                                        cword,
-                                        lower(sort_by),
-                                        look_ahead=self._supervisor.options.look_ahead,
-                                    )
+                            for sort_by in _more(
+                                self._supervisor.options.unifying_chars,
+                                sort_by=c.sort_by,
+                            ):
+                                cword = cword_before(
+                                    self._supervisor.options.unifying_chars,
+                                    lower=True,
+                                    context=context,
+                                    sort_by=sort_by,
+                                )
+                                ratio = multi_set_ratio(
+                                    cword,
+                                    lower(sort_by),
+                                    look_ahead=self._supervisor.options.look_ahead,
+                                )
 
-                                    if (
-                                        ratio >= self._supervisor.options.fuzzy_cutoff
-                                        and len(sort_by)
-                                        + self._supervisor.options.look_ahead
-                                        >= len(cword)
-                                        and (
-                                            isinstance(c.primary_edit, SnippetEdit)
-                                            or not cword.startswith(
-                                                c.primary_edit.new_text
-                                            )
-                                        )
-                                    ):
-                                        yield c
-                                        seen += 1
-                                        break
+                                if (
+                                    ratio >= self._supervisor.options.fuzzy_cutoff
+                                    and len(sort_by)
+                                    + self._supervisor.options.look_ahead
+                                    >= len(cword)
+                                    and (
+                                        isinstance(c.primary_edit, SnippetEdit)
+                                        or not cword.startswith(c.primary_edit.new_text)
+                                    )
+                                ):
+                                    yield c
+                                    seen += 1
+                                    break
 
                 if lsp_comps.local_cache and chunked:
                     await set_cache(chunked)

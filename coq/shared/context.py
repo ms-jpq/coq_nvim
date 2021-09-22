@@ -3,7 +3,8 @@ from pathlib import Path, PurePath
 from typing import AbstractSet
 from uuid import uuid4
 
-from .parse import is_word
+from pynvim_pp.text_object import is_word
+
 from .parse import lower as _lower
 from .types import Context
 
