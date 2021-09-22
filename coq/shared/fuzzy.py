@@ -1,5 +1,7 @@
+from array import array
 from collections import Counter
 from dataclasses import dataclass
+from itertools import repeat
 from typing import Iterable, MutableMapping
 
 
@@ -69,7 +71,7 @@ def dl_distance(lhs: str, rhs: str) -> int:
 
     da: MutableMapping[str, int] = {}
 
-    d = [[0 for _ in range(len_r + 2)] for _ in range(len_l + 2)]
+    d = [array("I", repeat(0, len_r + 2)) for _ in range(len_l + 2)]
 
     d[0][0] = max_d
     for i in range(0, len_l + 1):
