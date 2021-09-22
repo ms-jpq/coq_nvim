@@ -141,6 +141,8 @@ coq.lsp_ensure_capabilities = function(cfg)
       textDocument = {
         completion = {
           completionItem = {
+            insertReplaceSupport = true,
+            preselectSupport = true,
             snippetSupport = true
           }
         }
