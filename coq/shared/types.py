@@ -150,6 +150,7 @@ class Completion:
 
     uid: UUID = field(default_factory=uuid4)
     secondary_edits: Sequence[RangeEdit] = ()
+    preselect: bool = False
     kind: str = ""
     doc: Optional[Doc] = None
     extern: Union[ExternLSP, ExternLUA, ExternPath, None] = None

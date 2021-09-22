@@ -43,6 +43,7 @@ def _sort_by(is_lower: bool, adjustment: Weights) -> Callable[[Metric], Any]:
             for key, val in asdict(metric.weight).items()
         )
         key = (
+            -(metric.comp.preselect),
             -round(tot * metric.weight_adjust * 1000),
             -len(metric.comp.secondary_edits),
             -(metric.comp.kind != ""),
