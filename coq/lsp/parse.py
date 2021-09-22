@@ -17,7 +17,14 @@ from ..shared.types import (
     SnippetRangeEdit,
 )
 from .protocol import PROTOCOL
-from .types import CompletionItem, CompletionResponse, LSPcomp, MarkupContent, TextEdit
+from .types import (
+    CompletionItem,
+    CompletionResponse,
+    InsertReplaceEdit,
+    LSPcomp,
+    MarkupContent,
+    TextEdit,
+)
 
 
 def _falsy(thing: Any) -> bool:
@@ -27,9 +34,17 @@ def _falsy(thing: Any) -> bool:
 _item_parser = _new_parser(CompletionItem, path=(), strict=False, decoders=())
 
 
-def _range_edit(fallback: str, edit: TextEdit) -> RangeEdit:
-    begin = edit.range.start.line, edit.range.start.character
-    end = edit.range.end.line, edit.range.end.character
+def _range_edit(fallback: str, edit: Union[TextEdit, InsertReplaceEdit]) -> RangeEdit:
+    if isinstance(edit, TextEdit):
+        ra_start = edit.range.start
+        ra_end = edit.range.end
+    else:
+        ra_start = edit.replace.start
+        ra_end = edit.replace.end
+
+    begin = ra_start.line, ra_start.character
+    end = ra_end.line, ra_end.character
+
     re = RangeEdit(
         new_text=edit.newText, fallback=fallback, begin=begin, end=end, encoding=UTF16
     )
@@ -39,7 +54,7 @@ def _range_edit(fallback: str, edit: TextEdit) -> RangeEdit:
 def _primary(item: CompletionItem) -> Edit:
     fallback = Edit(new_text=item.insertText or item.label)
     if PROTOCOL.InsertTextFormat.get(item.insertTextFormat) == "Snippet":
-        if isinstance(item.textEdit, TextEdit):
+        if isinstance(item.textEdit, (TextEdit, InsertReplaceEdit)):
             re = _range_edit(fallback.new_text, edit=item.textEdit)
 
             return SnippetRangeEdit(
@@ -53,7 +68,7 @@ def _primary(item: CompletionItem) -> Edit:
         else:
             return SnippetEdit(grammar=SnippetGrammar.lsp, new_text=fallback.new_text)
     else:
-        if isinstance(item.textEdit, TextEdit):
+        if isinstance(item.textEdit, (TextEdit, InsertReplaceEdit)):
             return _range_edit(fallback.new_text, edit=item.textEdit)
         else:
             return fallback
