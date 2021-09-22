@@ -69,6 +69,12 @@ def set_options(nvim: Nvim, mapping: KeyMapping, fast_close: bool) -> None:
         )
         keymap.nv(mapping.manual_complete) << r"<c-\><c-n>i<c-x><c-u>"
 
+    settings["completeopt"] += (
+        "noinsert",
+        "menuone",
+        *(() if mapping.pre_select else ("noselect",)),
+    )
+
     if mapping.recommended:
         keymap.i("<esc>", expr=True) << "pumvisible() ? '<c-e><esc>' : '<esc>'"
         keymap.i("<c-c>", expr=True) << "pumvisible() ? '<c-e><c-c>' : '<c-c>'"
@@ -82,7 +88,6 @@ def set_options(nvim: Nvim, mapping: KeyMapping, fast_close: bool) -> None:
         keymap.i("<tab>", expr=True) << "pumvisible() ? '<c-n>' : '<tab>'"
         keymap.i("<s-tab>", expr=True) << "pumvisible() ? '<c-p>' : '<bs>'"
 
-    settings["completeopt"] += ("noinsert", "noselect", "menuone")
     if fast_close:
         settings["shortmess"] += "c"
     (settings.drain() + keymap.drain(buf=None)).commit(nvim)
