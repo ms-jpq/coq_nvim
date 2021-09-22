@@ -8,7 +8,7 @@ There are two important hotkeys
 
 ## Pre-compiled snippets
 
-`coq.nvim` comes with a [ridiculous amount of snippets](https://raw.githubusercontent.com/ms-jpq/coq.artifacts/artifacts/coq%2Bsnippets.json) by default.
+`coq.nvim` comes with a [ridiculous amount of snippets](https://raw.githubusercontent.com/ms-jpq/coq.artifacts/artifacts/coq%2Bsnippets%2Bv2.json) by default.
 
 To disable: simply do not install `coq.artifacts`.
 
