@@ -1,4 +1,3 @@
-from itertools import accumulate
 from typing import AbstractSet, Iterator
 
 from .context import cword_after, cword_before
