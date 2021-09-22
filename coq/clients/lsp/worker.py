@@ -1,4 +1,5 @@
 from asyncio import as_completed, gather
+from dataclasses import replace
 from enum import Enum, auto
 from itertools import chain
 from typing import AsyncIterator, Iterator, MutableSequence, Optional, Tuple
@@ -117,7 +118,8 @@ class Worker(BaseWorker[BaseClient, None], CacheWorker):
                                         or not cword.startswith(c.primary_edit.new_text)
                                     )
                                 ):
-                                    yield c
+                                    replaced = replace(c, sort_by=sort_by)
+                                    yield replaced
                                     seen += 1
                                     break
 

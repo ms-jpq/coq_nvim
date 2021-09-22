@@ -96,7 +96,8 @@ class CacheWorker:
                         if comp := self._cached.get(sort_by):
                             if comp.uid not in seen:
                                 seen.add(comp.uid)
-                                yield sanitize_cached(comp)
+                                replaced = replace(comp, sort_by=sort_by)
+                                yield sanitize_cached(replaced)
 
                 return cont()
 
