@@ -27,6 +27,10 @@ class _Src(Enum):
     from_query = auto()
 
 
+def _strip(sort_by: str) -> Optional[str]:
+    pass
+
+
 class Worker(BaseWorker[BaseClient, None], CacheWorker):
     def __init__(self, supervisor: Supervisor, options: BaseClient, misc: None) -> None:
         self._local_cached: MutableSequence[Iterator[Completion]] = []
@@ -87,36 +91,39 @@ class Worker(BaseWorker[BaseClient, None], CacheWorker):
                 if seen <= limit:
                     if src is _Src.from_db:
                         for c in chunked:
-                            if c.primary_edit.new_text:
-                                yield c
-                                seen += 1
+                            yield c
+                            seen += 1
                     else:
                         for c in chunked:
-                            if c.primary_edit.new_text:
-                                cword = cword_before(
-                                    unifying_chars=self._supervisor.options.unifying_chars,
-                                    lower=True,
-                                    context=context,
-                                    sort_by=c.sort_by,
-                                )
-                                ratio = multi_set_ratio(
-                                    cword,
-                                    lower(c.sort_by),
-                                    look_ahead=self._supervisor.options.look_ahead,
-                                )
-
-                                if (
-                                    ratio >= self._supervisor.options.fuzzy_cutoff
-                                    and len(c.sort_by)
-                                    + self._supervisor.options.look_ahead
-                                    >= len(cword)
-                                    and (
-                                        isinstance(c.primary_edit, SnippetEdit)
-                                        or not cword.startswith(c.primary_edit.new_text)
+                            for sort_by in (c.sort_by, _strip(c.sort_by)):
+                                if sort_by:
+                                    cword = cword_before(
+                                        unifying_chars=self._supervisor.options.unifying_chars,
+                                        lower=True,
+                                        context=context,
+                                        sort_by=sort_by,
                                     )
-                                ):
-                                    yield c
-                                    seen += 1
+                                    ratio = multi_set_ratio(
+                                        cword,
+                                        lower(sort_by),
+                                        look_ahead=self._supervisor.options.look_ahead,
+                                    )
+
+                                    if (
+                                        ratio >= self._supervisor.options.fuzzy_cutoff
+                                        and len(sort_by)
+                                        + self._supervisor.options.look_ahead
+                                        >= len(cword)
+                                        and (
+                                            isinstance(c.primary_edit, SnippetEdit)
+                                            or not cword.startswith(
+                                                c.primary_edit.new_text
+                                            )
+                                        )
+                                    ):
+                                        yield c
+                                        seen += 1
+                                        break
 
                 if lsp_comps.local_cache and chunked:
                     await set_cache(chunked)
