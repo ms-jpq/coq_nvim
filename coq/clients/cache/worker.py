@@ -1,5 +1,13 @@
 from dataclasses import dataclass, replace
-from typing import Awaitable, Callable, Iterator, MutableMapping, Sequence, Tuple
+from typing import (
+    Awaitable,
+    Callable,
+    Iterator,
+    MutableMapping,
+    MutableSet,
+    Sequence,
+    Tuple,
+)
 from uuid import UUID, uuid4
 
 from ...shared.repeat import sanitize
@@ -79,12 +87,17 @@ class CacheWorker:
                     sym=context.syms,
                     limitless=context.manual,
                 )
-                comps = (
-                    sanitize_cached(comp)
-                    for sort_by in words
-                    if (comp := self._cached.get(sort_by))
-                )
-                return comps
+
+                def cont() -> Iterator[Completion]:
+                    seen: MutableSet[UUID] = set()
+
+                    for sort_by in words:
+                        if comp := self._cached.get(sort_by):
+                            if comp.uid not in seen:
+                                seen.add(comp.uid)
+                                yield sanitize_cached(comp)
+
+                return cont()
 
         async def set(completions: Sequence[Completion]) -> None:
             new_comps = {c.sort_by: c for c in completions}
