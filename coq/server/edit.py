@@ -424,7 +424,7 @@ def edit(
             primary,
             *metric.comp.secondary_edits,
         )
-        if lo < 0 or hi > state.context.line_count + 1:
+        if lo < 0 or hi > state.context.line_count:
             log.warn("%s", pformat(("OUT OF BOUNDS", (lo, hi), metric)))
             return None
         else:
