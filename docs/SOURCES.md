@@ -30,8 +30,6 @@ Source name to display in the completion menu.
 
 Weight adjustment for ranking, normalized to `[0.5, 1.5]` using `S(x) = 1 / (1 + e^-x) + 0.5` (bigger weight -> sorted higher up)
 
-Ideally pick a number between `[-2, 2]`.
-
 `S(0) = 1` no adjustment
 
 `S(-2) ~= 0.6` anything smaller has diminishing returns
