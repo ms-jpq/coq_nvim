@@ -1,7 +1,6 @@
 from collections import Counter
 from dataclasses import dataclass
 from itertools import chain
-from math import e
 from typing import Mapping
 from uuid import UUID, uuid4
 
@@ -44,7 +43,7 @@ def sigmoid(x: float) -> float:
     x -> y ∈ (0.5, 1.5)
     """
 
-    return 1 / (1 + e ** -x) + 0.5
+    return x / (1 + abs(x)) / 2 + 1
 
 
 def _join(
