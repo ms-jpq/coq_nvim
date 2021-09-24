@@ -84,7 +84,7 @@ def _trans(stat: Statistics) -> Iterator[Tuple[str, Mapping[str, str]]]:
 
     m2 = {
         "Avg Duration": f"{si_prefixed_smol(stat.avg_duration, precision=0)}s",
-        "Q0 Duration": f"{si_prefixed_smol(stat.q50_duration, precision=0)}s",
+        "Q0 Duration": f"{si_prefixed_smol(stat.q0_duration, precision=0)}s",
         "Q50 Duration": f"{si_prefixed_smol(stat.q50_duration, precision=0)}s",
         "Q95 Duration": f"{si_prefixed_smol(stat.q95_duration, precision=0)}s",
         "Q100 Duration": f"{si_prefixed_smol(stat.q100_duration, precision=0)}s",
