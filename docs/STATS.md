@@ -23,7 +23,7 @@ Mean `min`, `median`, `1 in 20`, `max`, respectively.
 
 Without assuming any statistical distribution:
 
-`Q50` is a more robust measure than `avg`, and `Q95` is a decent measure of a common `bad` value.
+**`Q50` is a more robust measure than `avg`**, and `Q95` is a decent measure of a common `bad` value.
 
 ### What does each column mean?
 
