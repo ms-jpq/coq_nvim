@@ -4,9 +4,10 @@ from pprint import pformat
 from typing import AbstractSet, Callable, Iterable, Iterator, Sequence, Tuple
 
 from pynvim_pp.lib import encode
+from std2.string import removeprefix
 from std2.types import never
 
-from ..shared.trans import expand_tabs, trans_adjusted
+from ..shared.trans import expand_tabs, indent_to_line, trans_adjusted
 from ..shared.types import (
     Context,
     ContextualEdit,
@@ -32,26 +33,14 @@ class ParsedEdit(RangeEdit):
 _NL = len(encode(SNIP_LINE_SEP))
 
 
-def _indent(ctx: Context, old_prefix: str, line_before: str) -> Tuple[int, str]:
-    indent_len = len(line_before) - len(old_prefix)
-    indent_blen = len(encode(line_before)) - len(encode(old_prefix))
-    indent = (
-        " " * indent_len
-        if ctx.expandtab
-        else (" " * indent_len).replace(" " * ctx.tabstop, "\t")
-    )
-    return indent_blen, indent
-
-
 def _marks(
     pos: NvimPos,
-    indent_blen: int,
+    l0_before: str,
     new_lines: Sequence[str],
     regions: Iterable[Tuple[int, Region]],
 ) -> Sequence[Mark]:
     def cont() -> Iterator[Mark]:
         row, _ = pos
-        l0_before = indent_blen
         len8 = tuple(accumulate(len(encode(line)) + _NL for line in new_lines))
 
         for r_idx, region in regions:
@@ -59,7 +48,7 @@ def _marks(
             last_len = 0
 
             for idx, l8 in enumerate(len8):
-                x_shift = 0 if idx else l0_before
+                x_shift = 0 if idx else len(encode(l0_before))
                 if r1 is None:
                     if l8 > region.begin:
                         r1, c1 = idx + row, region.begin - last_len + x_shift
@@ -105,8 +94,7 @@ def parse_range(
 ) -> Tuple[Edit, Sequence[Mark]]:
     parser = _parser(snippet.grammar)
 
-    indent_blen, indent = _indent(context, old_prefix="", line_before=line_before)
-
+    indent = indent_to_line(context, line_before=line_before)
     expanded_text = expand_tabs(context, text=snippet.new_text)
     indented_lines = tuple(
         lhs + rhs
@@ -132,7 +120,7 @@ def parse_range(
 
     marks = _marks(
         context.position,
-        indent_blen=indent_blen,
+        l0_before=line_before,
         new_lines=new_lines,
         regions=parsed.regions,
     )
@@ -151,9 +139,7 @@ def parse_norm(
     trans_ctx = trans_adjusted(unifying_chars, ctx=context, new_text=sort_by)
     old_prefix, old_suffix = trans_ctx.old_prefix, trans_ctx.old_suffix
 
-    indent_blen, indent = _indent(
-        context, old_prefix=old_prefix, line_before=context.line_before
-    )
+    indent = indent_to_line(context, line_before=context.line_before)
     expanded_text = expand_tabs(context, text=snippet.new_text)
     indented_lines = tuple(
         lhs + rhs
@@ -175,9 +161,10 @@ def parse_norm(
         new_prefix=new_prefix,
     )
 
+    l0_before = removeprefix(context.line_before, old_prefix)
     marks = _marks(
         context.position,
-        indent_blen=indent_blen,
+        l0_before=l0_before,
         new_lines=new_lines,
         regions=parsed.regions,
     )
