@@ -12,6 +12,7 @@ from pynvim_pp.api import (
     buf_get_lines,
     buf_line_count,
     buf_name,
+    chdir,
     cur_buf,
     cur_win,
     get_cwd,
@@ -219,12 +220,7 @@ def snips(nvim: Nvim, stack: Stack, args: Sequence[str]) -> None:
                 if paths:
                     path, *_ = paths
                     path.mkdir(parents=True, exist_ok=True)
-
-                    def cont() -> None:
-                        focus = nvim.funcs.fnameescape(normcase(path))
-                        nvim.command(f"chdir {focus}")
-
-                    await async_call(nvim, cont)
+                    await async_call(nvim, lambda: chdir(nvim, path))
                 else:
                     assert False
 
