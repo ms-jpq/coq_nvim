@@ -80,8 +80,8 @@ def _marks(
             assert (r1 is not None and c1 is not None) and (
                 r2 is not None and c2 is not None
             ), pformat((region, new_lines))
-            begin = r1, c1
-            end = r2, c2
+
+            begin, end = (r1, c1), (r2, c2)
             mark = Mark(idx=r_idx, begin=begin, end=end, text=region.text)
             yield mark
 
