@@ -138,8 +138,9 @@ def parse_norm(
     sort_by = parser(context, info, snippet.new_text).text
     trans_ctx = trans_adjusted(unifying_chars, ctx=context, new_text=sort_by)
     old_prefix, old_suffix = trans_ctx.old_prefix, trans_ctx.old_suffix
+    line_before = removesuffix(context.line_before, suffix=old_prefix)
 
-    indent = indent_to_line(context, line_before=context.line_before)
+    indent = indent_to_line(context, line_before=line_before)
     expanded_text = expand_tabs(context, text=snippet.new_text)
     indented_lines = tuple(
         lhs + rhs
@@ -161,10 +162,9 @@ def parse_norm(
         new_prefix=new_prefix,
     )
 
-    l0_before = removesuffix(context.line_before, suffix=old_prefix)
     marks = _marks(
         context.position,
-        l0_before=l0_before,
+        l0_before=line_before,
         new_lines=new_lines,
         regions=parsed.regions,
     )
