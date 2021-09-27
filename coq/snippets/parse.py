@@ -42,41 +42,44 @@ def _marks(
     indent_len: int,
     new_lines: Sequence[str],
     regions: Iterable[Tuple[int, Region]],
-) -> Iterator[Mark]:
-    row, _ = pos
-    l0_before = indent_len
-    len8 = tuple(accumulate(len(encode(line)) + _NL for line in new_lines))
+) -> Sequence[Mark]:
+    def cont() -> Iterator[Mark]:
+        row, _ = pos
+        l0_before = indent_len
+        len8 = tuple(accumulate(len(encode(line)) + _NL for line in new_lines))
 
-    for r_idx, region in regions:
-        r1, c1, r2, c2 = None, None, None, None
-        last_len = 0
+        for r_idx, region in regions:
+            r1, c1, r2, c2 = None, None, None, None
+            last_len = 0
 
-        for idx, l8 in enumerate(len8):
-            x_shift = 0 if idx else l0_before
-            if r1 is None:
-                if l8 > region.begin:
-                    r1, c1 = idx + row, region.begin - last_len + x_shift
-                elif l8 == region.begin:
-                    r1, c1 = idx + row + 1, x_shift
+            for idx, l8 in enumerate(len8):
+                x_shift = 0 if idx else l0_before
+                if r1 is None:
+                    if l8 > region.begin:
+                        r1, c1 = idx + row, region.begin - last_len + x_shift
+                    elif l8 == region.begin:
+                        r1, c1 = idx + row + 1, x_shift
 
-            if r2 is None:
-                if l8 > region.end:
-                    r2, c2 = idx + row, region.end - last_len + x_shift
-                elif l8 == region.end:
-                    r2, c2 = idx + row + 1, x_shift
+                if r2 is None:
+                    if l8 > region.end:
+                        r2, c2 = idx + row, region.end - last_len + x_shift
+                    elif l8 == region.end:
+                        r2, c2 = idx + row + 1, x_shift
 
-            if r1 is not None and r2 is not None:
-                break
+                if r1 is not None and r2 is not None:
+                    break
 
-            last_len = l8
+                last_len = l8
 
-        assert (r1 is not None and c1 is not None) and (
-            r2 is not None and c2 is not None
-        ), pformat((region, new_lines))
-        begin = r1, c1
-        end = r2, c2
-        mark = Mark(idx=r_idx, begin=begin, end=end, text=region.text)
-        yield mark
+            assert (r1 is not None and c1 is not None) and (
+                r2 is not None and c2 is not None
+            ), pformat((region, new_lines))
+            begin = r1, c1
+            end = r2, c2
+            mark = Mark(idx=r_idx, begin=begin, end=end, text=region.text)
+            yield mark
+
+    return tuple(cont())
 
 
 def _parser(grammar: SnippetGrammar) -> Callable[[Context, ParseInfo, str], Parsed]:
@@ -110,13 +113,11 @@ def parse_range(
         fallback=snippet.fallback,
     )
 
-    marks = tuple(
-        _marks(
-            context.position,
-            indent_len=0,
-            new_lines=new_lines,
-            regions=parsed.regions,
-        )
+    marks = _marks(
+        context.position,
+        indent_len=0,
+        new_lines=new_lines,
+        regions=parsed.regions,
     )
     return edit, marks
 
@@ -157,12 +158,10 @@ def parse_norm(
         new_prefix=new_prefix,
     )
 
-    marks = tuple(
-        _marks(
-            context.position,
-            indent_len=indent_len,
-            new_lines=new_lines,
-            regions=parsed.regions,
-        )
+    marks = _marks(
+        context.position,
+        indent_len=indent_len,
+        new_lines=new_lines,
+        regions=parsed.regions,
     )
     return edit, marks
