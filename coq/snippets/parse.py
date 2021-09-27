@@ -3,7 +3,7 @@ from itertools import accumulate, chain, repeat
 from pprint import pformat
 from typing import AbstractSet, Callable, Iterable, Iterator, Sequence, Tuple
 
-from pynvim_pp.lib import decode, encode
+from pynvim_pp.lib import encode
 from std2.types import never
 
 from ..shared.trans import expand_tabs, trans_adjusted
@@ -33,19 +33,25 @@ _NL = len(encode(SNIP_LINE_SEP))
 
 
 def _indent(ctx: Context, old_prefix: str, line_before: str) -> Tuple[int, str]:
-    l = len(encode(line_before)) - len(encode(old_prefix))
-    return l, " " * l if ctx.expandtab else (" " * l).replace(" " * ctx.tabstop, "\t")
+    indent_len = len(line_before) - len(old_prefix)
+    indent_blen = len(encode(line_before)) - len(encode(old_prefix))
+    indent = (
+        " " * indent_len
+        if ctx.expandtab
+        else (" " * indent_len).replace(" " * ctx.tabstop, "\t")
+    )
+    return indent_blen, indent
 
 
 def _marks(
     pos: NvimPos,
-    indent_len: int,
+    indent_blen: int,
     new_lines: Sequence[str],
     regions: Iterable[Tuple[int, Region]],
 ) -> Sequence[Mark]:
     def cont() -> Iterator[Mark]:
         row, _ = pos
-        l0_before = indent_len
+        l0_before = indent_blen
         len8 = tuple(accumulate(len(encode(line)) + _NL for line in new_lines))
 
         for r_idx, region in regions:
@@ -95,8 +101,10 @@ def parse_range(
     context: Context,
     snippet: SnippetRangeEdit,
     info: ParseInfo,
+    line_before: str,
 ) -> Tuple[Edit, Sequence[Mark]]:
     parser = _parser(snippet.grammar)
+    indent_blen = len(encode(line_before))
     expanded_text = expand_tabs(context, text=snippet.new_text)
     parsed = parser(context, info, expanded_text)
 
@@ -115,7 +123,7 @@ def parse_range(
 
     marks = _marks(
         context.position,
-        indent_len=0,
+        indent_blen=indent_blen,
         new_lines=new_lines,
         regions=parsed.regions,
     )
@@ -160,7 +168,7 @@ def parse_norm(
 
     marks = _marks(
         context.position,
-        indent_len=indent_len,
+        indent_blen=indent_len,
         new_lines=new_lines,
         regions=parsed.regions,
     )

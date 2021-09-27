@@ -354,7 +354,10 @@ def _parse(
                 encode(line, encoding=comp.primary_edit.encoding)[:col]
             )
             edit, marks = parse_range(
-                context=state.context, snippet=comp.primary_edit, info=info
+                context=state.context,
+                snippet=comp.primary_edit,
+                info=info,
+                line_before=line_before,
             )
         else:
             edit, marks = parse_norm(
