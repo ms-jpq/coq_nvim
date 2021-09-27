@@ -33,6 +33,17 @@ class ParsedEdit(RangeEdit):
 _NL = len(encode(SNIP_LINE_SEP))
 
 
+def _indent(context: Context, line_before: str, snippet: str) -> str:
+    indent = indent_to_line(context, line_before=line_before)
+    expanded = expand_tabs(context, text=snippet)
+    lines = tuple(
+        lhs + rhs
+        for lhs, rhs in zip(chain(("",), repeat(indent)), expanded.splitlines(True))
+    )
+    indented = "".join(lines)
+    return indented
+
+
 def _marks(
     pos: NvimPos,
     l0_before: str,
@@ -93,18 +104,9 @@ def parse_range(
     line_before: str,
 ) -> Tuple[Edit, Sequence[Mark]]:
     parser = _parser(snippet.grammar)
+    indented = _indent(context, line_before=line_before, snippet=snippet.new_text)
 
-    indent = indent_to_line(context, line_before=line_before)
-    expanded_text = expand_tabs(context, text=snippet.new_text)
-    indented_lines = tuple(
-        lhs + rhs
-        for lhs, rhs in zip(
-            chain(("",), repeat(indent)), expanded_text.splitlines(True)
-        )
-    )
-    indented_text = "".join(indented_lines)
-
-    parsed = parser(context, info, indented_text)
+    parsed = parser(context, info, indented)
     new_prefix = parsed.text[: parsed.cursor]
     new_lines = parsed.text.split(SNIP_LINE_SEP)
     new_text = context.linefeed.join(new_lines)
@@ -138,19 +140,11 @@ def parse_norm(
     sort_by = parser(context, info, snippet.new_text).text
     trans_ctx = trans_adjusted(unifying_chars, ctx=context, new_text=sort_by)
     old_prefix, old_suffix = trans_ctx.old_prefix, trans_ctx.old_suffix
+
     line_before = removesuffix(context.line_before, suffix=old_prefix)
+    indented = _indent(context, line_before=line_before, snippet=snippet.new_text)
 
-    indent = indent_to_line(context, line_before=line_before)
-    expanded_text = expand_tabs(context, text=snippet.new_text)
-    indented_lines = tuple(
-        lhs + rhs
-        for lhs, rhs in zip(
-            chain(("",), repeat(indent)), expanded_text.splitlines(True)
-        )
-    )
-    indented_text = "".join(indented_lines)
-
-    parsed = parser(context, info, indented_text)
+    parsed = parser(context, info, indented)
     new_prefix = parsed.text[: parsed.cursor]
     new_lines = parsed.text.split(SNIP_LINE_SEP)
     new_text = context.linefeed.join(new_lines)
