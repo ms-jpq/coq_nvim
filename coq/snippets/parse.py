@@ -104,10 +104,19 @@ def parse_range(
     line_before: str,
 ) -> Tuple[Edit, Sequence[Mark]]:
     parser = _parser(snippet.grammar)
-    indent_blen = len(encode(line_before))
-    expanded_text = expand_tabs(context, text=snippet.new_text)
-    parsed = parser(context, info, expanded_text)
 
+    indent_blen, indent = _indent(context, old_prefix="", line_before=line_before)
+
+    expanded_text = expand_tabs(context, text=snippet.new_text)
+    indented_lines = tuple(
+        lhs + rhs
+        for lhs, rhs in zip(
+            chain(("",), repeat(indent)), expanded_text.splitlines(True)
+        )
+    )
+    indented_text = "".join(indented_lines)
+
+    parsed = parser(context, info, indented_text)
     new_prefix = parsed.text[: parsed.cursor]
     new_lines = parsed.text.split(SNIP_LINE_SEP)
     new_text = context.linefeed.join(new_lines)
@@ -142,7 +151,7 @@ def parse_norm(
     trans_ctx = trans_adjusted(unifying_chars, ctx=context, new_text=sort_by)
     old_prefix, old_suffix = trans_ctx.old_prefix, trans_ctx.old_suffix
 
-    indent_len, indent = _indent(
+    indent_blen, indent = _indent(
         context, old_prefix=old_prefix, line_before=context.line_before
     )
     expanded_text = expand_tabs(context, text=snippet.new_text)
@@ -168,7 +177,7 @@ def parse_norm(
 
     marks = _marks(
         context.position,
-        indent_blen=indent_len,
+        indent_blen=indent_blen,
         new_lines=new_lines,
         regions=parsed.regions,
     )
