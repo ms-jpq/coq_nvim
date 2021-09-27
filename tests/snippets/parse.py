@@ -30,7 +30,6 @@ class Parser(TestCase):
                 try:
                     parse_norm(
                         set(),
-                        line_before="",
                         context=EMPTY_CONTEXT,
                         snippet=edit,
                         info=ParseInfo(visual="", clipboard="", comment_str=("", "")),

@@ -196,7 +196,6 @@ def _trans(
         edit = SnippetEdit(grammar=snip.grammar, new_text=snip.content)
         parsed, marks = parse_norm(
             unifying_chars,
-            line_before="",
             context=EMPTY_CONTEXT,
             snippet=edit,
             info=info,

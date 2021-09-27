@@ -82,7 +82,6 @@ async def load_parsable() -> Any:
             with suppress(ParseError):
                 parse_norm(
                     set(),
-                    line_before="",
                     context=EMPTY_CONTEXT,
                     snippet=edit,
                     info=ParseInfo(visual="", clipboard="", comment_str=("", "")),

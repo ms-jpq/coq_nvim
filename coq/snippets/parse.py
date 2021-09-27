@@ -4,10 +4,8 @@ from pprint import pformat
 from typing import AbstractSet, Callable, Iterable, Iterator, Sequence, Tuple
 
 from pynvim_pp.lib import decode, encode
-from pynvim_pp.logging import log
 from std2.types import never
 
-from ..consts import DEBUG
 from ..shared.trans import expand_tabs, trans_adjusted
 from ..shared.types import (
     Context,
