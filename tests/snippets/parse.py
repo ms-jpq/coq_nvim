@@ -8,7 +8,7 @@ from unittest import TestCase
 from ...coq.ci.load import load
 from ...coq.shared.context import EMPTY_CONTEXT
 from ...coq.shared.types import SnippetEdit
-from ...coq.snippets.parse import parse
+from ...coq.snippets.parse import parse_norm
 from ...coq.snippets.parsers.types import ParseError, ParseInfo
 
 _THRESHOLD = 0.95
@@ -28,9 +28,8 @@ class Parser(TestCase):
         def errs() -> Iterator[Exception]:
             for edit in edits:
                 try:
-                    parse(
+                    parse_norm(
                         set(),
-                        line_before="",
                         context=EMPTY_CONTEXT,
                         snippet=edit,
                         info=ParseInfo(visual="", clipboard="", comment_str=("", "")),

@@ -3,12 +3,11 @@ from itertools import accumulate, chain, repeat
 from pprint import pformat
 from typing import AbstractSet, Callable, Iterable, Iterator, Sequence, Tuple
 
-from pynvim_pp.lib import decode, encode
-from pynvim_pp.logging import log
+from pynvim_pp.lib import encode
+from std2.string import removesuffix
 from std2.types import never
 
-from ..consts import DEBUG
-from ..shared.trans import expand_tabs, trans_adjusted
+from ..shared.trans import expand_tabs, indent_to_line, trans_adjusted
 from ..shared.types import (
     Context,
     ContextualEdit,
@@ -34,51 +33,60 @@ class ParsedEdit(RangeEdit):
 _NL = len(encode(SNIP_LINE_SEP))
 
 
-def _indent(ctx: Context, old_prefix: str, line_before: str) -> Tuple[int, str]:
-    l = len(encode(line_before)) - len(encode(old_prefix))
-    return l, " " * l if ctx.expandtab else (" " * l).replace(" " * ctx.tabstop, "\t")
+def _indent(context: Context, line_before: str, snippet: str) -> str:
+    indent = indent_to_line(context, line_before=line_before)
+    expanded = expand_tabs(context, text=snippet)
+    lines = tuple(
+        lhs + rhs
+        for lhs, rhs in zip(chain(("",), repeat(indent)), expanded.splitlines(True))
+    )
+    indented = "".join(lines)
+    return indented
 
 
 def _marks(
     pos: NvimPos,
-    indent_len: int,
+    l0_before: str,
     new_lines: Sequence[str],
     regions: Iterable[Tuple[int, Region]],
-) -> Iterator[Mark]:
-    row, _ = pos
-    l0_before = indent_len
-    len8 = tuple(accumulate(len(encode(line)) + _NL for line in new_lines))
+) -> Sequence[Mark]:
+    def cont() -> Iterator[Mark]:
+        row, _ = pos
+        len8 = tuple(accumulate(len(encode(line)) + _NL for line in new_lines))
 
-    for r_idx, region in regions:
-        r1, c1, r2, c2 = None, None, None, None
-        last_len = 0
+        for r_idx, region in regions:
+            r1, c1, r2, c2 = None, None, None, None
+            last_len = 0
 
-        for idx, l8 in enumerate(len8):
-            x_shift = 0 if idx else l0_before
-            if r1 is None:
-                if l8 > region.begin:
-                    r1, c1 = idx + row, region.begin - last_len + x_shift
-                elif l8 == region.begin:
-                    r1, c1 = idx + row + 1, x_shift
+            for idx, l8 in enumerate(len8):
+                x_shift = 0 if idx else len(encode(l0_before))
 
-            if r2 is None:
-                if l8 > region.end:
-                    r2, c2 = idx + row, region.end - last_len + x_shift
-                elif l8 == region.end:
-                    r2, c2 = idx + row + 1, x_shift
+                if r1 is None:
+                    if l8 > region.begin:
+                        r1, c1 = idx + row, region.begin - last_len + x_shift
+                    elif l8 == region.begin:
+                        r1, c1 = idx + row + 1, x_shift
 
-            if r1 is not None and r2 is not None:
-                break
+                if r2 is None:
+                    if l8 > region.end:
+                        r2, c2 = idx + row, region.end - last_len + x_shift
+                    elif l8 == region.end:
+                        r2, c2 = idx + row + 1, x_shift
 
-            last_len = l8
+                if r1 is not None and r2 is not None:
+                    break
 
-        assert (r1 is not None and c1 is not None) and (
-            r2 is not None and c2 is not None
-        ), pformat((region, new_lines))
-        begin = r1, c1
-        end = r2, c2
-        mark = Mark(idx=r_idx, begin=begin, end=end, text=region.text)
-        yield mark
+                last_len = l8
+
+            assert (r1 is not None and c1 is not None) and (
+                r2 is not None and c2 is not None
+            ), pformat((region, new_lines))
+
+            begin, end = (r1, c1), (r2, c2)
+            mark = Mark(idx=r_idx, begin=begin, end=end, text=region.text)
+            yield mark
+
+    return tuple(cont())
 
 
 def _parser(grammar: SnippetGrammar) -> Callable[[Context, ParseInfo, str], Parsed]:
@@ -90,70 +98,69 @@ def _parser(grammar: SnippetGrammar) -> Callable[[Context, ParseInfo, str], Pars
         never(grammar)
 
 
-def parse(
+def parse_range(
+    context: Context,
+    snippet: SnippetRangeEdit,
+    info: ParseInfo,
+    line_before: str,
+) -> Tuple[Edit, Sequence[Mark]]:
+    parser = _parser(snippet.grammar)
+    indented = _indent(context, line_before=line_before, snippet=snippet.new_text)
+
+    parsed = parser(context, info, indented)
+    new_prefix = parsed.text[: parsed.cursor]
+    new_lines = parsed.text.split(SNIP_LINE_SEP)
+    new_text = context.linefeed.join(new_lines)
+
+    edit = ParsedEdit(
+        new_text=new_text,
+        begin=snippet.begin,
+        end=snippet.end,
+        encoding=snippet.encoding,
+        new_prefix=new_prefix,
+        fallback=snippet.fallback,
+    )
+
+    marks = _marks(
+        context.position,
+        l0_before=line_before,
+        new_lines=new_lines,
+        regions=parsed.regions,
+    )
+    return edit, marks
+
+
+def parse_norm(
     unifying_chars: AbstractSet[str],
     context: Context,
-    line_before: str,
     snippet: SnippetEdit,
     info: ParseInfo,
 ) -> Tuple[Edit, Sequence[Mark]]:
     parser = _parser(snippet.grammar)
 
-    if isinstance(snippet, SnippetRangeEdit):
-        old_prefix, old_suffix = "", ""
-        indent_len, indent = _indent(
-            context, old_prefix=old_prefix, line_before=line_before
-        )
-    else:
-        sort_by = parser(context, info, snippet.new_text).text
-        trans_ctx = trans_adjusted(unifying_chars, ctx=context, new_text=sort_by)
-        old_prefix, old_suffix = trans_ctx.old_prefix, trans_ctx.old_suffix
-        indent_len, indent = _indent(
-            context, old_prefix=old_prefix, line_before=line_before
-        )
+    sort_by = parser(context, info, snippet.new_text).text
+    trans_ctx = trans_adjusted(unifying_chars, ctx=context, new_text=sort_by)
+    old_prefix, old_suffix = trans_ctx.old_prefix, trans_ctx.old_suffix
 
-    expanded_text = expand_tabs(context, text=snippet.new_text)
-    indented_lines = tuple(
-        lhs + rhs
-        for lhs, rhs in zip(
-            chain(("",), repeat(indent)), expanded_text.splitlines(True)
-        )
-    )
-    indented_text = "".join(indented_lines)
-    parsed = parser(context, info, indented_text)
+    line_before = removesuffix(context.line_before, suffix=old_prefix)
+    indented = _indent(context, line_before=line_before, snippet=snippet.new_text)
 
-    new_prefix = decode(encode(parsed.text)[: parsed.cursor])
+    parsed = parser(context, info, indented)
+    new_prefix = parsed.text[: parsed.cursor]
     new_lines = parsed.text.split(SNIP_LINE_SEP)
     new_text = context.linefeed.join(new_lines)
 
-    if isinstance(snippet, SnippetRangeEdit):
-        edit: Edit = ParsedEdit(
-            new_text=new_text,
-            begin=snippet.begin,
-            end=snippet.end,
-            encoding=snippet.encoding,
-            new_prefix=new_prefix,
-            fallback=snippet.fallback,
-        )
-    else:
-        edit = ContextualEdit(
-            new_text=new_text,
-            old_prefix=old_prefix,
-            old_suffix=old_suffix,
-            new_prefix=new_prefix,
-        )
-
-    marks = tuple(
-        _marks(
-            context.position,
-            indent_len=indent_len,
-            new_lines=new_lines,
-            regions=parsed.regions,
-        )
+    edit = ContextualEdit(
+        new_text=new_text,
+        old_prefix=old_prefix,
+        old_suffix=old_suffix,
+        new_prefix=new_prefix,
     )
 
-    if DEBUG:
-        msg = pformat((snippet, parsed, edit, marks))
-        log.debug("%s", msg)
-
+    marks = _marks(
+        context.position,
+        l0_before=line_before,
+        new_lines=new_lines,
+        regions=parsed.regions,
+    )
     return edit, marks

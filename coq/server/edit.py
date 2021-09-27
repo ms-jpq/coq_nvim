@@ -50,7 +50,7 @@ from ..shared.types import (
     SnippetEdit,
     SnippetRangeEdit,
 )
-from ..snippets.parse import ParsedEdit, parse
+from ..snippets.parse import ParsedEdit, parse_norm, parse_range
 from ..snippets.parsers.types import ParseError, ParseInfo
 from .mark import mark
 from .rt_types import Stack
@@ -75,6 +75,12 @@ class _Lines:
     b_lines8: Sequence[bytes]
     b_lines16: Sequence[bytes]
     len8: Sequence[int]
+
+
+# TODO -- column too
+@dataclass(frozen=True)
+class _MarkShift:
+    row: int
 
 
 def _lines(lines: Sequence[str]) -> _Lines:
@@ -292,27 +298,41 @@ def _consolidate(
     return stack
 
 
-def _shift(instructions: Iterable[EditInstruction]) -> Iterator[EditInstruction]:
+def _shift(
+    instructions: Iterable[EditInstruction],
+) -> Tuple[Sequence[EditInstruction], _MarkShift]:
     row_shift = 0
-    col_shift: MutableMapping[int, int] = {}
+    cols_shift: MutableMapping[int, int] = {}
 
+    m_shift = _MarkShift(row=0)
+    new_insts: MutableSequence[EditInstruction] = []
     for inst in instructions:
         (r1, c1), (r2, c2) = inst.begin, inst.end
-        yield EditInstruction(
+        new_inst = EditInstruction(
             primary=inst.primary,
-            begin=(r1 + row_shift, c1 + col_shift.get(r1, 0)),
-            end=(r2 + row_shift, c2 + col_shift.get(r2, 0)),
+            begin=(r1 + row_shift, c1 + cols_shift.get(r1, 0)),
+            end=(r2 + row_shift, c2 + cols_shift.get(r2, 0)),
             cursor_yoffset=inst.cursor_yoffset,
             cursor_xpos=inst.cursor_xpos,
             new_lines=inst.new_lines,
         )
+        if new_inst.primary:
+            m_shift = _MarkShift(row=row_shift)
+
         row_shift += (r2 - r1) + len(inst.new_lines) - 1
         f_length = len(encode(inst.new_lines[-1])) if inst.new_lines else 0
-        col_shift[r2] = -(c2 - c1) + f_length if r1 == r2 else -c2 + f_length
+        cols_shift[r2] = -(c2 - c1) + f_length if r1 == r2 else -c2 + f_length
+
+        new_insts.append(new_inst)
+
+    return new_insts, m_shift
 
 
-def apply(nvim: Nvim, buf: Buffer, instructions: Iterable[EditInstruction]) -> None:
-    for inst in _shift(instructions):
+def apply(
+    nvim: Nvim, buf: Buffer, instructions: Iterable[EditInstruction]
+) -> _MarkShift:
+    insts, m_shift = _shift(instructions)
+    for inst in insts:
         try:
             buf_set_text(
                 nvim, buf=buf, begin=inst.begin, end=inst.end, text=inst.new_lines
@@ -324,6 +344,20 @@ def apply(nvim: Nvim, buf: Buffer, instructions: Iterable[EditInstruction]) -> N
             """
             msg = Template(dedent(tpl)).substitute(e=e, inst=inst)
             log.warn(f"%s", msg)
+
+    return m_shift
+
+
+def _shift_marks(shift: _MarkShift, marks: Iterable[Mark]) -> Iterator[Mark]:
+    for mark in marks:
+        (r1, c1), (r2, c2) = mark.begin, mark.end
+        new_mark = Mark(
+            idx=mark.idx,
+            begin=(r1 + shift.row, c1),
+            end=(r2 + shift.row, c2),
+            text=mark.text,
+        )
+        yield new_mark
 
 
 def _cursor(cursor: NvimPos, instructions: Iterable[EditInstruction]) -> NvimPos:
@@ -344,25 +378,32 @@ def _parse(
     nvim: Nvim, buf: Buffer, stack: Stack, state: State, comp: Completion
 ) -> Tuple[Edit, Sequence[Mark]]:
     if isinstance(comp.primary_edit, SnippetEdit):
+        comment_str = buf_commentstr(nvim, buf=buf)
+        clipboard = nvim.funcs.getreg()
+        info = ParseInfo(visual="", clipboard=clipboard, comment_str=comment_str)
         if isinstance(comp.primary_edit, SnippetRangeEdit):
             row, col = comp.primary_edit.begin
             line, *_ = buf_get_lines(nvim, buf=buf, lo=row, hi=row + 1)
             line_before = decode(
                 encode(line, encoding=comp.primary_edit.encoding)[:col]
             )
+            edit, marks = parse_range(
+                context=state.context,
+                snippet=comp.primary_edit,
+                info=info,
+                line_before=line_before,
+            )
         else:
-            line_before = state.context.line_before
-        comment_str = buf_commentstr(nvim, buf=buf)
-        clipboard = nvim.funcs.getreg()
-        return parse(
-            stack.settings.match.unifying_chars,
-            line_before=line_before,
-            context=state.context,
-            snippet=comp.primary_edit,
-            info=ParseInfo(visual="", clipboard=clipboard, comment_str=comment_str),
-        )
+            edit, marks = parse_norm(
+                stack.settings.match.unifying_chars,
+                context=state.context,
+                snippet=comp.primary_edit,
+                info=info,
+            )
     else:
-        return comp.primary_edit, ()
+        edit, marks = comp.primary_edit, ()
+
+    return edit, marks
 
 
 def _restore(nvim: Nvim, win: Window, buf: Buffer, pos: NvimPos) -> Tuple[str, int]:
@@ -450,7 +491,7 @@ def edit(
             if not synthetic:
                 stack.idb.inserted(metric.instance.bytes, sort_by=metric.comp.sort_by)
 
-            apply(nvim, buf=buf, instructions=instructions)
+            m_shift = apply(nvim, buf=buf, instructions=instructions)
             if inserted:
                 try:
                     buf_set_text(
@@ -469,7 +510,8 @@ def edit(
                 log.warn("%s", e)
 
             if marks:
-                mark(nvim, settings=stack.settings, buf=buf, marks=marks)
+                new_marks = tuple(_shift_marks(m_shift, marks=marks))
+                mark(nvim, settings=stack.settings, buf=buf, marks=new_marks)
 
             if DEBUG:
                 log.debug(

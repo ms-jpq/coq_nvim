@@ -80,3 +80,13 @@ def expand_tabs(context: Context, text: str) -> str:
         else text.replace(" " * context.tabstop, "\t")
     )
     return new_text
+
+
+def indent_to_line(context: Context, line_before: str) -> str:
+    indent_len = len(line_before)
+    indent = (
+        " " * indent_len
+        if context.expandtab
+        else (" " * indent_len).replace(" " * context.tabstop, "\t")
+    )
+    return indent

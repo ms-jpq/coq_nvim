@@ -16,7 +16,7 @@ from ..shared.context import EMPTY_CONTEXT
 from ..shared.types import SnippetEdit
 from ..snippets.loaders.load import LoadedSnips
 from ..snippets.loaders.load import load_ci as load_from_paths
-from ..snippets.parse import parse
+from ..snippets.parse import parse_norm
 from ..snippets.parsers.parser import ParseError
 from ..snippets.parsers.types import ParseInfo
 from ..snippets.types import ParsedSnippet
@@ -80,9 +80,8 @@ async def load_parsable() -> Any:
                 grammar=snip.grammar,
             )
             with suppress(ParseError):
-                parse(
+                parse_norm(
                     set(),
-                    line_before="",
                     context=EMPTY_CONTEXT,
                     snippet=edit,
                     info=ParseInfo(visual="", clipboard="", comment_str=("", "")),
