@@ -4,7 +4,7 @@ from pprint import pformat
 from typing import AbstractSet, Callable, Iterable, Iterator, Sequence, Tuple
 
 from pynvim_pp.lib import encode
-from std2.string import removeprefix
+from std2.string import removesuffix
 from std2.types import never
 
 from ..shared.trans import expand_tabs, indent_to_line, trans_adjusted
@@ -161,7 +161,7 @@ def parse_norm(
         new_prefix=new_prefix,
     )
 
-    l0_before = removeprefix(context.line_before, old_prefix)
+    l0_before = removesuffix(context.line_before, suffix=old_prefix)
     marks = _marks(
         context.position,
         l0_before=l0_before,
