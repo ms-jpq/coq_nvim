@@ -100,7 +100,7 @@ def parse_range(
     expanded_text = expand_tabs(context, text=snippet.new_text)
     parsed = parser(context, info, expanded_text)
 
-    new_prefix = decode(encode(parsed.text)[: parsed.cursor])
+    new_prefix = parsed.text[: parsed.cursor]
     new_lines = parsed.text.split(SNIP_LINE_SEP)
     new_text = context.linefeed.join(new_lines)
 
@@ -147,7 +147,7 @@ def parse_norm(
     indented_text = "".join(indented_lines)
 
     parsed = parser(context, info, indented_text)
-    new_prefix = decode(encode(parsed.text)[: parsed.cursor])
+    new_prefix = parsed.text[: parsed.cursor]
     new_lines = parsed.text.split(SNIP_LINE_SEP)
     new_text = context.linefeed.join(new_lines)
 
