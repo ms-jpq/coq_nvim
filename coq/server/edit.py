@@ -50,7 +50,7 @@ from ..shared.types import (
     SnippetEdit,
     SnippetRangeEdit,
 )
-from ..snippets.parse import ParsedEdit, parse
+from ..snippets.parse import ParsedEdit, parse_norm, parse_range
 from ..snippets.parsers.types import ParseError, ParseInfo
 from .mark import mark
 from .rt_types import Stack
@@ -344,25 +344,29 @@ def _parse(
     nvim: Nvim, buf: Buffer, stack: Stack, state: State, comp: Completion
 ) -> Tuple[Edit, Sequence[Mark]]:
     if isinstance(comp.primary_edit, SnippetEdit):
+        comment_str = buf_commentstr(nvim, buf=buf)
+        clipboard = nvim.funcs.getreg()
+        info = ParseInfo(visual="", clipboard=clipboard, comment_str=comment_str)
         if isinstance(comp.primary_edit, SnippetRangeEdit):
             row, col = comp.primary_edit.begin
             line, *_ = buf_get_lines(nvim, buf=buf, lo=row, hi=row + 1)
             line_before = decode(
                 encode(line, encoding=comp.primary_edit.encoding)[:col]
             )
+            edit, marks = parse_range(
+                context=state.context, snippet=comp.primary_edit, info=info
+            )
         else:
-            line_before = state.context.line_before
-        comment_str = buf_commentstr(nvim, buf=buf)
-        clipboard = nvim.funcs.getreg()
-        return parse(
-            stack.settings.match.unifying_chars,
-            line_before=line_before,
-            context=state.context,
-            snippet=comp.primary_edit,
-            info=ParseInfo(visual="", clipboard=clipboard, comment_str=comment_str),
-        )
+            edit, marks = parse_norm(
+                stack.settings.match.unifying_chars,
+                context=state.context,
+                snippet=comp.primary_edit,
+                info=info,
+            )
     else:
-        return comp.primary_edit, ()
+        edit, marks = comp.primary_edit, ()
+
+    return edit, marks
 
 
 def _restore(nvim: Nvim, win: Window, buf: Buffer, pos: NvimPos) -> Tuple[str, int]:

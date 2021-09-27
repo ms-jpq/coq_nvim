@@ -90,28 +90,54 @@ def _parser(grammar: SnippetGrammar) -> Callable[[Context, ParseInfo, str], Pars
         never(grammar)
 
 
-def parse(
+def parse_range(
+    context: Context,
+    snippet: SnippetRangeEdit,
+    info: ParseInfo,
+) -> Tuple[Edit, Sequence[Mark]]:
+    parser = _parser(snippet.grammar)
+    expanded_text = expand_tabs(context, text=snippet.new_text)
+    parsed = parser(context, info, expanded_text)
+
+    new_prefix = decode(encode(parsed.text)[: parsed.cursor])
+    new_lines = parsed.text.split(SNIP_LINE_SEP)
+    new_text = context.linefeed.join(new_lines)
+
+    edit = ParsedEdit(
+        new_text=new_text,
+        begin=snippet.begin,
+        end=snippet.end,
+        encoding=snippet.encoding,
+        new_prefix=new_prefix,
+        fallback=snippet.fallback,
+    )
+
+    marks = tuple(
+        _marks(
+            context.position,
+            indent_len=0,
+            new_lines=new_lines,
+            regions=parsed.regions,
+        )
+    )
+    return edit, marks
+
+
+def parse_norm(
     unifying_chars: AbstractSet[str],
     context: Context,
-    line_before: str,
     snippet: SnippetEdit,
     info: ParseInfo,
 ) -> Tuple[Edit, Sequence[Mark]]:
     parser = _parser(snippet.grammar)
 
-    if isinstance(snippet, SnippetRangeEdit):
-        old_prefix, old_suffix = "", ""
-        indent_len, indent = _indent(
-            context, old_prefix=old_prefix, line_before=line_before
-        )
-    else:
-        sort_by = parser(context, info, snippet.new_text).text
-        trans_ctx = trans_adjusted(unifying_chars, ctx=context, new_text=sort_by)
-        old_prefix, old_suffix = trans_ctx.old_prefix, trans_ctx.old_suffix
-        indent_len, indent = _indent(
-            context, old_prefix=old_prefix, line_before=line_before
-        )
+    sort_by = parser(context, info, snippet.new_text).text
+    trans_ctx = trans_adjusted(unifying_chars, ctx=context, new_text=sort_by)
+    old_prefix, old_suffix = trans_ctx.old_prefix, trans_ctx.old_suffix
 
+    indent_len, indent = _indent(
+        context, old_prefix=old_prefix, line_before=context.line_before
+    )
     expanded_text = expand_tabs(context, text=snippet.new_text)
     indented_lines = tuple(
         lhs + rhs
@@ -120,28 +146,18 @@ def parse(
         )
     )
     indented_text = "".join(indented_lines)
-    parsed = parser(context, info, indented_text)
 
+    parsed = parser(context, info, indented_text)
     new_prefix = decode(encode(parsed.text)[: parsed.cursor])
     new_lines = parsed.text.split(SNIP_LINE_SEP)
     new_text = context.linefeed.join(new_lines)
 
-    if isinstance(snippet, SnippetRangeEdit):
-        edit: Edit = ParsedEdit(
-            new_text=new_text,
-            begin=snippet.begin,
-            end=snippet.end,
-            encoding=snippet.encoding,
-            new_prefix=new_prefix,
-            fallback=snippet.fallback,
-        )
-    else:
-        edit = ContextualEdit(
-            new_text=new_text,
-            old_prefix=old_prefix,
-            old_suffix=old_suffix,
-            new_prefix=new_prefix,
-        )
+    edit = ContextualEdit(
+        new_text=new_text,
+        old_prefix=old_prefix,
+        old_suffix=old_suffix,
+        new_prefix=new_prefix,
+    )
 
     marks = tuple(
         _marks(
@@ -151,9 +167,4 @@ def parse(
             regions=parsed.regions,
         )
     )
-
-    if DEBUG:
-        msg = pformat((snippet, parsed, edit, marks))
-        log.debug("%s", msg)
-
     return edit, marks
