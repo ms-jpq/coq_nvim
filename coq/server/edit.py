@@ -7,7 +7,6 @@ from typing import (
     AbstractSet,
     Iterable,
     Iterator,
-    Mapping,
     MutableMapping,
     MutableSequence,
     Optional,
@@ -78,10 +77,10 @@ class _Lines:
     len8: Sequence[int]
 
 
+# TODO -- column too
 @dataclass(frozen=True)
 class _MarkShift:
     row: int
-    cols: Mapping[int, int]
 
 
 def _lines(lines: Sequence[str]) -> _Lines:
@@ -305,7 +304,7 @@ def _shift(
     row_shift = 0
     cols_shift: MutableMapping[int, int] = {}
 
-    m_shift = _MarkShift(row=0, cols={})
+    m_shift = _MarkShift(row=0)
     new_insts: MutableSequence[EditInstruction] = []
     for inst in instructions:
         (r1, c1), (r2, c2) = inst.begin, inst.end
@@ -318,7 +317,7 @@ def _shift(
             new_lines=inst.new_lines,
         )
         if new_inst.primary:
-            m_shift = _MarkShift(row=row_shift, cols=cols_shift)
+            m_shift = _MarkShift(row=row_shift)
 
         row_shift += (r2 - r1) + len(inst.new_lines) - 1
         f_length = len(encode(inst.new_lines[-1])) if inst.new_lines else 0
@@ -354,8 +353,8 @@ def _shift_marks(shift: _MarkShift, marks: Iterable[Mark]) -> Iterator[Mark]:
         (r1, c1), (r2, c2) = mark.begin, mark.end
         new_mark = Mark(
             idx=mark.idx,
-            begin=(r1 + shift.row, c1 + shift.cols.get(r1, 0)),
-            end=(r2 + shift.row, c2 + shift.cols.get(r2, 0)),
+            begin=(r1 + shift.row, c1),
+            end=(r2 + shift.row, c2),
             text=mark.text,
         )
         yield new_mark
