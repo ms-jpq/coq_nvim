@@ -60,6 +60,7 @@ def _marks(
 
             for idx, l8 in enumerate(len8):
                 x_shift = 0 if idx else len(encode(l0_before))
+
                 if r1 is None:
                     if l8 > region.begin:
                         r1, c1 = idx + row, region.begin - last_len + x_shift
