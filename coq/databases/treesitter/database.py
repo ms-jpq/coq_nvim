@@ -40,11 +40,10 @@ class TDB:
                 with with_transaction(self._conn.cursor()) as cursor:
                     cursor.execute(sql("select", "buffers"), ())
                     existing = {row["rowid"] for row in cursor.fetchall()}
-                    cursor.execute(
-                        sql("delete", "buffers"),
+                    cursor.executemany(
+                        sql("delete", "buffer"),
                         ({"buf_id": buf_id} for buf_id in existing - buf_ids),
                     )
-                    cursor.execute(sql("delete", "buffers"), ())
             except OperationalError:
                 pass
 
@@ -65,7 +64,7 @@ class TDB:
 
         def cont() -> None:
             with self._lock, with_transaction(self._conn.cursor()) as cursor:
-                cursor.execute(sql("delete", "buffers"), {"buffer_id": buf})
+                cursor.execute(sql("delete", "buffer"), {"buffer_id": buf})
                 cursor.execute(
                     sql("insert", "buffer"), {"rowid": buf, "filetype": filetype}
                 )
