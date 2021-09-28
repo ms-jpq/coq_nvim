@@ -66,14 +66,20 @@ class TDB:
             with self._lock, with_transaction(self._conn.cursor()) as cursor:
                 cursor.execute(sql("delete", "buffer"), {"buffer_id": buf})
                 cursor.execute(
-                    sql("insert", "buffer"), {"rowid": buf, "filetype": filetype}
+                    sql("insert", "buffer"),
+                    {"rowid": buf, "filetype": filetype},
                 )
                 cursor.executemany(sql("insert", "word"), m1())
 
         await run_in_executor(self._ex.submit, cont)
 
     async def select(
-        self, opts: Options, filetype: str, word: str, sym: str, limitless: int
+        self,
+        opts: Options,
+        buf_id: int,
+        word: str,
+        sym: str,
+        limitless: int,
     ) -> Iterator[Payload]:
         def cont() -> Iterator[Payload]:
             try:
@@ -84,7 +90,7 @@ class TDB:
                             "cut_off": opts.fuzzy_cutoff,
                             "look_ahead": opts.look_ahead,
                             "limit": BIGGEST_INT if limitless else opts.max_results,
-                            "filetype": filetype,
+                            "buf_id": buf_id,
                             "word": word,
                             "sym": sym,
                             "like_word": like_esc(word[: opts.exact_matches]),

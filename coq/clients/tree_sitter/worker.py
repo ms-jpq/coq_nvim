@@ -13,9 +13,9 @@ from ...treesitter.types import Payload
 
 
 def _doc(client: TSClient, context: Context, payload: Payload) -> Optional[Doc]:
-    clhs, crhs = context.comment
-
     def cont() -> Iterator[str]:
+        clhs, crhs = context.comment
+
         if payload.grandparent:
             yield clhs
             yield payload.grandparent.kind
@@ -75,7 +75,7 @@ class Worker(BaseWorker[TSClient, TDB]):
     async def work(self, context: Context) -> AsyncIterator[Completion]:
         payloads = await self._misc.select(
             self._supervisor.options,
-            filetype=context.filetype,
+            buf_id=context.buf_id,
             word=context.words,
             sym=context.syms,
             limitless=context.manual,

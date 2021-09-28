@@ -1,5 +1,4 @@
 from asyncio import Handle, get_running_loop
-from asyncio.tasks import gather
 from typing import Optional
 
 from pynvim.api.nvim import Nvim
@@ -67,7 +66,9 @@ def _insert_enter(nvim: Nvim, stack: Stack) -> None:
             if buf.number not in nono_bufs:
                 if payload := await async_request(nvim, lines_around=ts.search_context):
                     await stack.tdb.populate(
-                        payload.buf, payload.filetype, nodes=payload.payloads
+                        payload.buf,
+                        filetype=payload.filetype,
+                        nodes=payload.payloads,
                     )
                     if payload.elapsed > ts.slow_threshold:
                         state(nono_bufs={buf.number})

@@ -5,12 +5,9 @@ SELECT DISTINCT
   pkind,
   gpword,
   gpkind
-FROM words
-JOIN buffers
-ON
-  buffers.rowid = words.buffer_id
+FROM words_view
 WHERE
-  buffers.filetype = :filetype
+  buf_id = :buf_id
   AND
   word <> ''
   AND
