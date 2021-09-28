@@ -15,19 +15,19 @@ from ...shared.timeit import timeit
 from .sql import sql
 
 
-def _init(unifying_chars: AbstractSet[str]) -> Connection:
+def _init() -> Connection:
     conn = Connection(TMUX_DB, isolation_level=None)
-    init_db(conn, unifying_chars=unifying_chars)
+    init_db(conn)
     conn.executescript(sql("create", "pragma"))
     conn.executescript(sql("create", "tables"))
     return conn
 
 
 class TMDB:
-    def __init__(self, pool: Executor, unifying_chars: AbstractSet[str]) -> None:
+    def __init__(self, pool: Executor) -> None:
         self._lock = Lock()
         self._ex = SingleThreadExecutor(pool)
-        self._conn: Connection = self._ex.submit(lambda: _init(unifying_chars))
+        self._conn: Connection = self._ex.submit(_init)
 
     def _interrupt(self) -> None:
         with self._lock:

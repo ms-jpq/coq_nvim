@@ -3,7 +3,6 @@ BEGIN;
 
 CREATE TABLE IF NOT EXISTS words (
   word       TEXT    NOT NULL PRIMARY KEY,
-  word_start INTEGER NOT NULL,
   lword      TEXT    NOT NULL,
   kind       TEXT    NOT NULL,
   pword      TEXT,

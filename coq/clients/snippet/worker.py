@@ -31,10 +31,10 @@ class Worker(BaseWorker[SnippetClient, SDB]):
                 source=self._options.short_name,
                 weight_adjust=self._options.weight_adjust,
                 primary_edit=edit,
-                sort_by=snip["prefix"],
+                sort_by=snip["word"],
                 label=label,
                 doc=doc,
-                kind=snip["prefix"],
+                kind=snip["word"],
                 icon_match="Snippet",
             )
             yield completion

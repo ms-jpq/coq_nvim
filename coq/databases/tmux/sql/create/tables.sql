@@ -9,7 +9,6 @@ CREATE TABLE IF NOT EXISTS panes (
 CREATE TABLE IF NOT EXISTS words (
   pane_id    TEXT      NOT NULL REFERENCES panes (pane_id) ON UPDATE CASCADE ON DELETE CASCADE,
   word       TEXT      NOT NULL,
-  word_start INTEGER   NOT NULL,
   lword      TEXT      NOT NULL,
   UNIQUE     (pane_id, word)
 );

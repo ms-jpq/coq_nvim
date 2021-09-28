@@ -41,15 +41,14 @@ CREATE INDEX IF NOT EXISTS snippets_filetype  ON snippets (filetype);
 
 
 CREATE TABLE IF NOT EXISTS matches (
-  snippet_id BLOB    NOT NULL REFERENCES snippets (rowid) ON UPDATE CASCADE ON DELETE CASCADE,
-  match      TEXT    NOT NULL,
-  word_start INTEGER NOT NULL,
-  lmatch     TEXT    NOT NULL,
-  UNIQUE(snippet_id, match)
+  snippet_id BLOB NOT NULL REFERENCES snippets (rowid) ON UPDATE CASCADE ON DELETE CASCADE,
+  word       TEXT NOT NULL,
+  lword      TEXT NOT NULL,
+  UNIQUE(snippet_id, word)
 );
 CREATE INDEX IF NOT EXISTS matches_snippet_id ON matches (snippet_id);
-CREATE INDEX IF NOT EXISTS matches_match      ON matches (match);
-CREATE INDEX IF NOT EXISTS matches_lmatch     ON matches (lmatch);
+CREATE INDEX IF NOT EXISTS matches_word       ON matches (word);
+CREATE INDEX IF NOT EXISTS matches_lword      ON matches (lword);
 
 
 CREATE VIEW IF NOT EXISTS uniq_extensions_view AS
@@ -96,9 +95,8 @@ SELECT
   snippets.rowid       AS snippet_id,
   snippets.source_id   AS source_id,
   snippets.grammar     AS grammar,
-  matches.match        AS prefix,
-  matches.word_start   AS word_start,
-  matches.lmatch       AS lprefix,
+  matches.word         AS word,
+  matches.lword        AS lword,
   snippets.content     AS snippet,
   snippets.label       AS label,
   snippets.doc         AS doc,

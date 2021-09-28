@@ -88,14 +88,13 @@ def stack(pool: Executor, nvim: Nvim) -> Stack:
     settings = _settings(nvim)
     vars_dir = Path(nvim.funcs.stdpath("cache")) / "coq" if settings.xdg else VARS
     s = state(cwd=get_cwd(nvim))
-    unifying_chars = settings.match.unifying_chars
     bdb, sdb, idb, tdb, ctdb, tmdb = (
-        BDB(pool, unifying_chars=unifying_chars),
-        SDB(pool, vars_dir=vars_dir, unifying_chars=unifying_chars),
-        IDB(pool, unifying_chars=unifying_chars),
-        TDB(pool, unifying_chars=unifying_chars),
-        CTDB(pool, vars_dir=vars_dir, cwd=s.cwd, unifying_chars=unifying_chars),
-        TMDB(pool, unifying_chars=unifying_chars),
+        BDB(pool),
+        SDB(pool, vars_dir=vars_dir),
+        IDB(pool),
+        TDB(pool),
+        CTDB(pool, vars_dir=vars_dir, cwd=s.cwd),
+        TMDB(pool),
     )
     reviewer = Reviewer(
         icons=settings.display.icons,
