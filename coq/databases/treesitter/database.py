@@ -54,7 +54,6 @@ class TDB:
             for node in nodes:
                 yield {
                     "buffer_id": buf,
-                    "filename": node.filename,
                     "word": node.text,
                     "kind": node.kind,
                     "pword": node.parent.text if node.parent else None,
@@ -113,7 +112,6 @@ class TDB:
                                 else None
                             )
                             yield Payload(
-                                filename=row["filename"],
                                 text=row["word"],
                                 kind=row["kind"],
                                 parent=parent,
