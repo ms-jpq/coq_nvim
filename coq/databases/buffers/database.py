@@ -67,20 +67,6 @@ class BDB:
 
         await run_in_executor(self._ex.submit, cont)
 
-    async def del_bufs(self, buf_ids: AbstractSet[int]) -> None:
-        def cont() -> None:
-            try:
-                with with_transaction(self._conn.cursor()) as cursor:
-                    cursor.execute(
-                        sql("delete", "buffers"),
-                        ({"buf_id": buf_id} for buf_id in buf_ids),
-                    )
-                    cursor.execute(sql("delete", "buffers"), ())
-            except OperationalError:
-                pass
-
-        await run_in_executor(self._ex.submit, cont)
-
     async def ft_update(self, buf_id: int, filetype: str) -> None:
         def cont() -> None:
             with self._lock, with_transaction(self._conn.cursor()) as cursor:

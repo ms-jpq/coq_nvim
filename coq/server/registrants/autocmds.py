@@ -62,10 +62,7 @@ def _insert_enter(nvim: Nvim, stack: Stack) -> None:
     nono_bufs = state().nono_bufs
     buf = cur_buf(nvim)
 
-    async def c1() -> None:
-        await stack.bdb.del_bufs(nono_bufs)
-
-    async def c2() -> None:
+    async def cont() -> None:
         if ts.enabled:
             if buf.number not in nono_bufs:
                 if payload := await async_request(nvim, lines_around=ts.search_context):
@@ -81,7 +78,7 @@ def _insert_enter(nvim: Nvim, stack: Stack) -> None:
                         )
                         await awrite(nvim, msg, error=True)
 
-    go(nvim, aw=gather(c1(), c2()))
+    go(nvim, aw=cont())
 
 
 autocmd("InsertEnter") << f"lua {NAMESPACE}.{_insert_enter.name}()"

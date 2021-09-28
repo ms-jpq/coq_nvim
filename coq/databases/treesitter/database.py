@@ -2,7 +2,7 @@ from asyncio import CancelledError
 from concurrent.futures import Executor
 from sqlite3 import Connection, OperationalError
 from threading import Lock
-from typing import Iterable, Iterator, Mapping
+from typing import AbstractSet, Iterable, Iterator, Mapping
 
 from std2.asyncio import run_in_executor
 from std2.sqlite3 import with_transaction
@@ -33,6 +33,22 @@ class TDB:
     def _interrupt(self) -> None:
         with self._lock:
             self._conn.interrupt()
+
+    async def vacuum(self, buf_ids: AbstractSet[int]) -> None:
+        def cont() -> None:
+            try:
+                with with_transaction(self._conn.cursor()) as cursor:
+                    cursor.execute(sql("select", "buffers"), ())
+                    existing = {row["rowid"] for row in cursor.fetchall()}
+                    cursor.execute(
+                        sql("delete", "buffers"),
+                        ({"buf_id": buf_id} for buf_id in existing - buf_ids),
+                    )
+                    cursor.execute(sql("delete", "buffers"), ())
+            except OperationalError:
+                pass
+
+        await run_in_executor(self._ex.submit, cont)
 
     async def populate(self, buf: int, filetype: str, nodes: Iterable[Payload]) -> None:
         def m1() -> Iterator[Mapping]:

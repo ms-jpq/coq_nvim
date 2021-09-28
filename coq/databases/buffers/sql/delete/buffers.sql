@@ -1,3 +1,3 @@
 DELETE FROM buffers
 WHERE
-  rowid := buffer_id
+  rowid = :buffer_id
