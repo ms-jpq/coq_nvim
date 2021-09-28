@@ -53,6 +53,7 @@ class TMDB:
                 cursor.executemany(sql("delete", "pane"), m1(existing - panes.keys()))
                 cursor.executemany(sql("insert", "pane"), m1(panes.keys()))
                 cursor.executemany(sql("insert", "word"), m2())
+                cursor.execute("PRAGMA optimize", ())
 
         await run_in_executor(self._ex.submit, cont)
 

@@ -61,6 +61,7 @@ class BDB:
                         sql("delete", "buffer"),
                         ({"buffer_id": buf_id} for buf_id in existing - buf_ids),
                     )
+                    cursor.execute("PRAGMA optimize", ())
             except OperationalError:
                 pass
 
