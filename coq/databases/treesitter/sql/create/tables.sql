@@ -26,6 +26,7 @@ CREATE INDEX IF NOT EXISTS words_lword ON words (lword);
 
 CREATE VIEW IF NOT EXISTS words_view AS
 SELECT
+  buffers.rowid AS buf_id,
   words.filename,
   words.word,
   words.lword,
@@ -33,8 +34,7 @@ SELECT
   words.pword,
   words.pkind,
   words.gpword,
-  words.gpkind,
-  buffers.filetype
+  words.gpkind
 FROM words
 JOIN buffers 
 ON

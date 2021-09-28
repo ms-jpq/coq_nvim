@@ -8,7 +8,7 @@ SELECT DISTINCT
   gpkind
 FROM words_view
 WHERE
-  filetype = :filetype
+  buf_id = :buf_id
   AND
   word <> ''
   AND
