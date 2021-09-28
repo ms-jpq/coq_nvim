@@ -85,16 +85,17 @@ def _parse(load: Optional[SimpleRawPayload]) -> Optional[SimplePayload]:
 def _vaildate(r_playload: _Payload[RawPayload]) -> _Payload[Payload]:
     def cont() -> Iterator[Payload]:
         for load in r_playload.payloads:
-            payload = _parse(load)
-            parent = _parse(load.get("parent"))
-            grandparent = _parse(load.get("grandparent"))
-            if payload:
-                yield Payload(
-                    text=payload.text,
-                    kind=payload.kind,
-                    parent=parent,
-                    grandparent=grandparent,
-                )
+            if filename := load.get("filename"):
+                if payload := _parse(load):
+                    parent = _parse(load.get("parent"))
+                    grandparent = _parse(load.get("grandparent"))
+                    yield Payload(
+                        filename=filename,
+                        text=payload.text,
+                        kind=payload.kind,
+                        parent=parent,
+                        grandparent=grandparent,
+                    )
 
     payload = _Payload(
         buf=r_playload.buf,

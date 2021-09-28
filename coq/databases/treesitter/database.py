@@ -54,6 +54,7 @@ class TDB:
             for node in nodes:
                 yield {
                     "buffer_id": buf,
+                    "filename": node.filename,
                     "word": node.text,
                     "kind": node.kind,
                     "pword": node.parent.text if node.parent else None,
@@ -66,7 +67,8 @@ class TDB:
             with self._lock, with_transaction(self._conn.cursor()) as cursor:
                 cursor.execute(sql("delete", "buffer"), {"buffer_id": buf})
                 cursor.execute(
-                    sql("insert", "buffer"), {"rowid": buf, "filetype": filetype}
+                    sql("insert", "buffer"),
+                    {"rowid": buf, "filetype": filetype},
                 )
                 cursor.executemany(sql("insert", "word"), m1())
 
@@ -106,6 +108,7 @@ class TDB:
                                 else None
                             )
                             yield Payload(
+                                filename=row["filename"],
                                 text=row["word"],
                                 kind=row["kind"],
                                 parent=parent,

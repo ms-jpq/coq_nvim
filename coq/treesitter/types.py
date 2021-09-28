@@ -10,6 +10,7 @@ class SimpleRawPayload(TypedDict, total=False):
 
 
 class RawPayload(SimpleRawPayload, TypedDict, total=False):
+    filename: str
     parent: SimpleRawPayload
     grandparent: SimpleRawPayload
 
@@ -22,5 +23,6 @@ class SimplePayload:
 
 @dataclass(frozen=True)
 class Payload(SimplePayload):
+    filename: str
     parent: Optional[SimplePayload]
     grandparent: Optional[SimplePayload]

@@ -2,14 +2,15 @@ BEGIN;
 
 
 CREATE TABLE IF NOT EXISTS buffers (
-  rowid     INTEGER NOT NULL PRIMARY KEY,
-  filetype  TEXT    NOT NULL
+  rowid    INTEGER NOT NULL PRIMARY KEY,
+  filetype TEXT    NOT NULL
 ) WITHOUT ROWID;
 CREATE INDEX IF NOT EXISTS buffers_filetype ON buffers (filetype);
 
 
 CREATE TABLE IF NOT EXISTS words (
   buffer_id INTEGER NOT NULL REFERENCES buffers (rowid) ON UPDATE CASCADE ON DELETE CASCADE,
+  filename  TEXT    NOT NULL,
   word      TEXT    NOT NULL,
   lword     TEXT    NOT NULL,
   kind      TEXT    NOT NULL,
@@ -21,6 +22,23 @@ CREATE TABLE IF NOT EXISTS words (
 );
 CREATE INDEX IF NOT EXISTS words_word ON  words (word);
 CREATE INDEX IF NOT EXISTS words_lword ON words (lword);
+
+
+CREATE VIEW IF NOT EXISTS words_view AS
+SELECT
+  buffers.filename,
+  words.word,
+  words.lword,
+  words.kind,
+  words.pword,
+  words.pkind,
+  words.gpword,
+  words.gpkind,
+  buffers.filetype
+FROM words
+JOIN buffers 
+ON
+  buffers.rowid = words.buffer_id;
 
 
 END;

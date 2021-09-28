@@ -1,16 +1,14 @@
 SELECT DISTINCT
+  filename,
   word,
   kind,
   pword,
   pkind,
   gpword,
   gpkind
-FROM words
-JOIN buffers
-ON
-  buffers.rowid = words.buffer_id
+FROM words_view
 WHERE
-  buffers.filetype = :filetype
+  filetype = :filetype
   AND
   word <> ''
   AND

@@ -1,10 +1,12 @@
 from os import linesep
+from pathlib import PurePath
 from typing import AsyncIterator, Iterator, Optional
 
 from pynvim_pp.api import list_bufs
 from pynvim_pp.lib import async_call, go
 
 from ...databases.treesitter.database import TDB
+from ...paths.show import fmt_path
 from ...shared.runtime import Supervisor
 from ...shared.runtime import Worker as BaseWorker
 from ...shared.settings import TSClient
@@ -13,9 +15,18 @@ from ...treesitter.types import Payload
 
 
 def _doc(client: TSClient, context: Context, payload: Payload) -> Optional[Doc]:
-    clhs, crhs = context.comment
-
     def cont() -> Iterator[str]:
+        clhs, crhs = context.comment
+        path, cfn = PurePath(payload.filename), PurePath(context.filename)
+        if path == cfn:
+            pos = "."
+        else:
+            pos = fmt_path(context.cwd, path=path, is_dir=False)
+
+        yield clhs
+        yield pos
+        yield crhs
+
         if payload.grandparent:
             yield clhs
             yield payload.grandparent.kind
