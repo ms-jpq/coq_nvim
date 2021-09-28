@@ -1,7 +1,8 @@
 from os import linesep
 from typing import AsyncIterator, Iterator, Optional
 
-from pynvim_pp.lib import go
+from pynvim_pp.api import list_bufs
+from pynvim_pp.lib import async_call, go
 
 from ...databases.treesitter.database import TDB
 from ...shared.runtime import Supervisor
@@ -63,14 +64,18 @@ class Worker(BaseWorker[TSClient, TDB]):
 
     async def _poll(self) -> None:
         while True:
-            pass
-
+            bufs = await async_call(
+                self._supervisor.nvim,
+                lambda: list_bufs(self._supervisor.nvim, listed=True),
+            )
+            await self._misc.vacuum({buf.number for buf in bufs})
             async with self._supervisor.idling:
                 await self._supervisor.idling.wait()
 
     async def work(self, context: Context) -> AsyncIterator[Completion]:
         payloads = await self._misc.select(
             self._supervisor.options,
+            filetype=context.filetype,
             word=context.words,
             sym=context.syms,
             limitless=context.manual,

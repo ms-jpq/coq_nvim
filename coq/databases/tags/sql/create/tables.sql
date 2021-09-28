@@ -16,7 +16,6 @@ CREATE TABLE IF NOT EXISTS tags (
   line       INTEGER NOT NULL,
   kind       TEXT    NOT NULL,
   name       TEXT    NOT NULL,
-  word_start INTEGER NOT NULL,
   lname      TEXT    NOT NULL,
   pattern    TEXT    NOT NULL,
   typeref    TEXT,

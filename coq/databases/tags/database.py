@@ -18,7 +18,7 @@ from ...shared.timeit import timeit
 from ...tags.types import Tag, Tags
 from .sql import sql
 
-_SCHEMA = "v3"
+_SCHEMA = "v4"
 
 _NIL_TAG = Tag(
     language="",
@@ -37,44 +37,34 @@ _NIL_TAG = Tag(
 from typing import AbstractSet
 
 
-def _init(db_dir: Path, cwd: PurePath, unifying_chars: AbstractSet[str]) -> Connection:
+def _init(db_dir: Path, cwd: PurePath) -> Connection:
     ncwd = normcase(cwd)
     name = f"{md5(encode(ncwd)).hexdigest()}-{_SCHEMA}"
     db = (db_dir / name).with_suffix(".sqlite3")
     db.parent.mkdir(parents=True, exist_ok=True)
     conn = Connection(str(db), isolation_level=None)
-    init_db(conn, unifying_chars=unifying_chars)
+    init_db(conn)
     conn.executescript(sql("create", "pragma"))
     conn.executescript(sql("create", "tables"))
     return conn
 
 
 class CTDB:
-    def __init__(
-        self,
-        pool: Executor,
-        vars_dir: Path,
-        cwd: PurePath,
-        unifying_chars: AbstractSet[str],
-    ) -> None:
+    def __init__(self, pool: Executor, vars_dir: Path, cwd: PurePath) -> None:
         self._lock = Lock()
         self._ex = SingleThreadExecutor(pool)
         self._vars_dir = vars_dir / "clients" / "tags"
-        self._conn: Connection = self._ex.submit(
-            lambda: _init(self._vars_dir, cwd=cwd, unifying_chars=unifying_chars)
-        )
+        self._conn: Connection = self._ex.submit(lambda: _init(self._vars_dir, cwd=cwd))
 
     def _interrupt(self) -> None:
         with self._lock:
             self._conn.interrupt()
 
-    async def swap(self, cwd: PurePath, unifying_chars: AbstractSet[str]) -> None:
+    async def swap(self, cwd: PurePath) -> None:
         def cont() -> None:
             with self._lock:
                 self._conn.close()
-                self._conn = _init(
-                    self._vars_dir, cwd=cwd, unifying_chars=unifying_chars
-                )
+                self._conn = _init(self._vars_dir, cwd=cwd)
 
         await run_in_executor(self._ex.submit, cont)
 
@@ -129,17 +119,11 @@ class CTDB:
             try:
                 with with_transaction(self._conn.cursor()) as cursor:
                     cursor.execute(
-                        sql("select", "files_filetype"), {"filename": filename}
-                    )
-                    row = cursor.fetchone()
-                    filetype = row["filetype"] if row else None
-                    cursor.execute(
                         sql("select", "tags"),
                         {
                             "cut_off": opts.fuzzy_cutoff,
                             "look_ahead": opts.look_ahead,
                             "limit": BIGGEST_INT if limitless else opts.max_results,
-                            "filetype": filetype,
                             "filename": filename,
                             "line_num": line_num,
                             "word": word,

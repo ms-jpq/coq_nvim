@@ -16,28 +16,44 @@ from ...treesitter.types import Payload, SimplePayload
 from .sql import sql
 
 
-def _init(unifying_chars: AbstractSet[str]) -> Connection:
+def _init() -> Connection:
     conn = Connection(TREESITTER_DB, isolation_level=None)
-    init_db(conn, unifying_chars=unifying_chars)
+    init_db(conn)
     conn.executescript(sql("create", "pragma"))
     conn.executescript(sql("create", "tables"))
     return conn
 
 
 class TDB:
-    def __init__(self, pool: Executor, unifying_chars: AbstractSet[str]) -> None:
+    def __init__(self, pool: Executor) -> None:
         self._lock = Lock()
         self._ex = SingleThreadExecutor(pool)
-        self._conn: Connection = self._ex.submit(lambda: _init(unifying_chars))
+        self._conn: Connection = self._ex.submit(_init)
 
     def _interrupt(self) -> None:
         with self._lock:
             self._conn.interrupt()
 
-    async def new_nodes(self, nodes: Iterable[Payload]) -> None:
+    async def vacuum(self, buf_ids: AbstractSet[int]) -> None:
+        def cont() -> None:
+            try:
+                with with_transaction(self._conn.cursor()) as cursor:
+                    cursor.execute(sql("select", "buffers"), ())
+                    existing = {row["rowid"] for row in cursor.fetchall()}
+                    cursor.executemany(
+                        sql("delete", "buffer"),
+                        ({"buffer_id": buf_id} for buf_id in existing - buf_ids),
+                    )
+            except OperationalError:
+                pass
+
+        await run_in_executor(self._ex.submit, cont)
+
+    async def populate(self, buf: int, filetype: str, nodes: Iterable[Payload]) -> None:
         def m1() -> Iterator[Mapping]:
             for node in nodes:
                 yield {
+                    "buffer_id": buf,
                     "word": node.text,
                     "kind": node.kind,
                     "pword": node.parent.text if node.parent else None,
@@ -48,13 +64,16 @@ class TDB:
 
         def cont() -> None:
             with self._lock, with_transaction(self._conn.cursor()) as cursor:
-                cursor.execute(sql("delete", "words"))
+                cursor.execute(sql("delete", "buffer"), {"buffer_id": buf})
+                cursor.execute(
+                    sql("insert", "buffer"), {"rowid": buf, "filetype": filetype}
+                )
                 cursor.executemany(sql("insert", "word"), m1())
 
         await run_in_executor(self._ex.submit, cont)
 
     async def select(
-        self, opts: Options, word: str, sym: str, limitless: int
+        self, opts: Options, filetype: str, word: str, sym: str, limitless: int
     ) -> Iterator[Payload]:
         def cont() -> Iterator[Payload]:
             try:
@@ -65,6 +84,7 @@ class TDB:
                             "cut_off": opts.fuzzy_cutoff,
                             "look_ahead": opts.look_ahead,
                             "limit": BIGGEST_INT if limitless else opts.max_results,
+                            "filetype": filetype,
                             "word": word,
                             "sym": sym,
                             "like_word": like_esc(word[: opts.exact_matches]),

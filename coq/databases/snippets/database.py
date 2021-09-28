@@ -17,37 +17,33 @@ from ...shared.timeit import timeit
 from ...snippets.types import LoadedSnips
 from .sql import sql
 
-_SCHEMA = "v3"
+_SCHEMA = "v4"
 
 
 class _Snip(TypedDict):
     grammar: str
-    prefix: str
+    word: str
     snippet: str
     label: str
     doc: str
 
 
-def _init(db_dir: Path, unifying_chars: AbstractSet[str]) -> Connection:
+def _init(db_dir: Path) -> Connection:
     db = (db_dir / _SCHEMA).with_suffix(".sqlite3")
     db.parent.mkdir(parents=True, exist_ok=True)
     conn = Connection(db, isolation_level=None)
-    init_db(conn, unifying_chars=unifying_chars)
+    init_db(conn)
     conn.executescript(sql("create", "pragma"))
     conn.executescript(sql("create", "tables"))
     return conn
 
 
 class SDB:
-    def __init__(
-        self, pool: Executor, vars_dir: Path, unifying_chars: AbstractSet[str]
-    ) -> None:
+    def __init__(self, pool: Executor, vars_dir: Path) -> None:
         db_dir = vars_dir / "clients" / "snippets"
         self._lock = Lock()
         self._ex = SingleThreadExecutor(pool)
-        self._conn: Connection = self._ex.submit(
-            lambda: _init(db_dir, unifying_chars=unifying_chars)
-        )
+        self._conn: Connection = self._ex.submit(lambda: _init(db_dir))
 
     def _interrupt(self) -> None:
         with self._lock:
@@ -114,7 +110,7 @@ class SDB:
                     for match in snippet.matches:
                         cursor.execute(
                             sql("insert", "match"),
-                            {"snippet_id": snippet_id, "match": match},
+                            {"snippet_id": snippet_id, "word": match},
                         )
 
         await run_in_executor(self._ex.submit, cont)

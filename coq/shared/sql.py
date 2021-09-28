@@ -74,23 +74,8 @@ class _Quantiles:
         return json
 
 
-def _word_start(
-    unifying_chars: AbstractSet[str],
-) -> Callable[[Optional[str]], Optional[bool]]:
-    def cont(word: Optional[str]) -> Optional[bool]:
-        if word is None:
-            return None
-        else:
-            return is_word(word[:1], unifying_chars=unifying_chars)
-
-    return cont
-
-
-def init_db(conn: Connection, unifying_chars: AbstractSet[str]) -> None:
+def init_db(conn: Connection) -> None:
     add_functions(conn)
-    conn.create_function(
-        "X_WORD_START", narg=1, func=_word_start(unifying_chars), deterministic=True
-    )
     conn.create_function("X_SIMILARITY", narg=3, func=quick_ratio, deterministic=True)
     conn.create_function("X_NORM_CASE", narg=1, func=normcase, deterministic=True)
     conn.create_aggregate(

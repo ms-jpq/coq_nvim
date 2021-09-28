@@ -33,7 +33,7 @@ def _new_cwd(nvim: Nvim, stack: Stack) -> None:
 
     async def cont() -> None:
         s = state(cwd=cwd)
-        await stack.ctdb.swap(s.cwd, unifying_chars=stack.settings.match.unifying_chars)
+        await stack.ctdb.swap(s.cwd)
 
     go(nvim, aw=cont())
 
@@ -62,27 +62,23 @@ def _insert_enter(nvim: Nvim, stack: Stack) -> None:
     nono_bufs = state().nono_bufs
     buf = cur_buf(nvim)
 
-    async def c1() -> None:
-        await stack.bdb.del_bufs(nono_bufs)
-
-    async def c2() -> None:
+    async def cont() -> None:
         if ts.enabled:
-            payloads, elapsed = (
-                ((), 0)
-                if buf.number in nono_bufs
-                else await async_request(nvim, lines_around=ts.search_context)
-            )
-            await stack.tdb.new_nodes(payloads)
-            if elapsed > ts.slow_threshold:
-                state(nono_bufs={buf.number})
-                msg = LANG(
-                    "source slow",
-                    source=ts.short_name,
-                    elapsed=si_prefixed_smol(elapsed, precision=0),
-                )
-                await awrite(nvim, msg, error=True)
+            if buf.number not in nono_bufs:
+                if payload := await async_request(nvim, lines_around=ts.search_context):
+                    await stack.tdb.populate(
+                        payload.buf, payload.filetype, nodes=payload.payloads
+                    )
+                    if payload.elapsed > ts.slow_threshold:
+                        state(nono_bufs={buf.number})
+                        msg = LANG(
+                            "source slow",
+                            source=ts.short_name,
+                            elapsed=si_prefixed_smol(payload.elapsed, precision=0),
+                        )
+                        await awrite(nvim, msg, error=True)
 
-    go(nvim, aw=gather(c1(), c2()))
+    go(nvim, aw=cont())
 
 
 autocmd("InsertEnter") << f"lua {NAMESPACE}.{_insert_enter.name}()"

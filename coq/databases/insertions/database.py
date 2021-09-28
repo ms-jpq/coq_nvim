@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from json import loads
 from sqlite3 import Connection, OperationalError
 from threading import Lock
-from typing import AbstractSet, Iterator, Mapping, Optional
+from typing import Iterator, Mapping, Optional
 
 from std2.asyncio import run_in_executor
 from std2.sqlite3 import with_transaction
@@ -33,19 +33,19 @@ class Statistics:
     q100_items: int
 
 
-def _init(unifying_chars: AbstractSet[str]) -> Connection:
+def _init() -> Connection:
     conn = Connection(INSERT_DB, isolation_level=None)
-    init_db(conn, unifying_chars=unifying_chars)
+    init_db(conn)
     conn.executescript(sql("create", "pragma"))
     conn.executescript(sql("create", "tables"))
     return conn
 
 
 class IDB:
-    def __init__(self, pool: Executor, unifying_chars: AbstractSet[str]) -> None:
+    def __init__(self, pool: Executor) -> None:
         self._lock = Lock()
         self._ex = SingleThreadExecutor(pool)
-        self._conn: Connection = self._ex.submit(lambda: _init(unifying_chars))
+        self._conn: Connection = self._ex.submit(_init)
 
     def _interrupt(self) -> None:
         with self._lock:

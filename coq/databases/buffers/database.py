@@ -21,8 +21,7 @@ from .sql import sql
 
 def _ensure_buffer(cursor: Cursor, buf_id: int, filetype: str) -> None:
     cursor.execute(sql("select", "buffer_by_id"), {"rowid": buf_id})
-    row = cursor.fetchone()
-    if row:
+    if cursor.fetchone():
         cursor.execute(
             sql("update", "buffer"),
             {"rowid": buf_id, "filetype": filetype},
@@ -34,19 +33,19 @@ def _ensure_buffer(cursor: Cursor, buf_id: int, filetype: str) -> None:
         )
 
 
-def _init(unifying_chars: AbstractSet[str]) -> Connection:
+def _init() -> Connection:
     conn = Connection(BUFFER_DB, isolation_level=None)
-    init_db(conn, unifying_chars=unifying_chars)
+    init_db(conn)
     conn.executescript(sql("create", "pragma"))
     conn.executescript(sql("create", "tables"))
     return conn
 
 
 class BDB:
-    def __init__(self, pool: Executor, unifying_chars: AbstractSet[str]) -> None:
+    def __init__(self, pool: Executor) -> None:
         self._lock = Lock()
         self._ex = SingleThreadExecutor(pool)
-        self._conn: Connection = self._ex.submit(lambda: _init(unifying_chars))
+        self._conn: Connection = self._ex.submit(_init)
 
     def _interrupt(self) -> None:
         with self._lock:
@@ -58,25 +57,10 @@ class BDB:
                 with with_transaction(self._conn.cursor()) as cursor:
                     cursor.execute(sql("select", "buffers"), ())
                     existing = {row["rowid"] for row in cursor.fetchall()}
-                    cursor.execute(
-                        sql("delete", "buffers"),
-                        ({"buf_id": buf_id} for buf_id in existing - buf_ids),
+                    cursor.executemany(
+                        sql("delete", "buffer"),
+                        ({"buffer_id": buf_id} for buf_id in existing - buf_ids),
                     )
-                    cursor.execute(sql("delete", "buffers"), ())
-            except OperationalError:
-                pass
-
-        await run_in_executor(self._ex.submit, cont)
-
-    async def del_bufs(self, buf_ids: AbstractSet[int]) -> None:
-        def cont() -> None:
-            try:
-                with with_transaction(self._conn.cursor()) as cursor:
-                    cursor.execute(
-                        sql("delete", "buffers"),
-                        ({"buf_id": buf_id} for buf_id in buf_ids),
-                    )
-                    cursor.execute(sql("delete", "buffers"), ())
             except OperationalError:
                 pass
 

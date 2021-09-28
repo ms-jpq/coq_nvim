@@ -1,2 +1,2 @@
-INSERT OR IGNORE INTO words (word,  word_start,          lword,        kind,  pword,  pkind,  gpword,  gpkind)
-VALUES                      (:word, X_WORD_START(:word), LOWER(:word), :kind, :pword, :pkind, :gpword, :gpkind)
+INSERT OR IGNORE INTO words (buffer_id,   word, lword,        kind,  pword,  pkind,  gpword,  gpkind)
+VALUES                      (:buffer_id, :word, LOWER(:word), :kind, :pword, :pkind, :gpword, :gpkind)
