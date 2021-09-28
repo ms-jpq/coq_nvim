@@ -11,7 +11,8 @@ SELECT
   tags.`access`
 FROM tags
 JOIN files
-ON files.filename = tags.`path`
+ON 
+  files.filename = tags.`path`
 WHERE
   files.filetype = :filetype
   AND
