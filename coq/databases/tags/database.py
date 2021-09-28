@@ -103,6 +103,7 @@ class CTDB:
                 )
                 cursor.executemany(sql("insert", "file"), m1())
                 cursor.executemany(sql("insert", "tag"), m2())
+                cursor.execute("PRAGMA optimize", ())
 
         await run_in_executor(self._ex.submit, cont)
 

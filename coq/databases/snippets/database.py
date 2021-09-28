@@ -112,6 +112,7 @@ class SDB:
                             sql("insert", "match"),
                             {"snippet_id": snippet_id, "word": match},
                         )
+                cursor.execute("PRAGMA optimize", ())
 
         await run_in_executor(self._ex.submit, cont)
 
