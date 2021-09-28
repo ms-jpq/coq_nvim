@@ -67,20 +67,19 @@ def _insert_enter(nvim: Nvim, stack: Stack) -> None:
 
     async def c2() -> None:
         if ts.enabled:
-            payloads, elapsed = (
-                ((), 0)
-                if buf.number in nono_bufs
-                else await async_request(nvim, lines_around=ts.search_context)
-            )
-            await stack.tdb.new_nodes(payloads)
-            if elapsed > ts.slow_threshold:
-                state(nono_bufs={buf.number})
-                msg = LANG(
-                    "source slow",
-                    source=ts.short_name,
-                    elapsed=si_prefixed_smol(elapsed, precision=0),
-                )
-                await awrite(nvim, msg, error=True)
+            if buf.number not in nono_bufs:
+                if payload := await async_request(nvim, lines_around=ts.search_context):
+                    await stack.tdb.populate(
+                        payload.buf, payload.filetype, nodes=payload.payloads
+                    )
+                    if payload.elapsed > ts.slow_threshold:
+                        state(nono_bufs={buf.number})
+                        msg = LANG(
+                            "source slow",
+                            source=ts.short_name,
+                            elapsed=si_prefixed_smol(payload.elapsed, precision=0),
+                        )
+                        await awrite(nvim, msg, error=True)
 
     go(nvim, aw=gather(c1(), c2()))
 

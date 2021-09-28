@@ -6,7 +6,12 @@ SELECT DISTINCT
   gpword,
   gpkind
 FROM words
+JOIN buffers
+ON
+  buffers.rowid = words.buffer_id
 WHERE
+  buffers.filetype = :filetype
+  AND
   word <> ''
   AND
   (

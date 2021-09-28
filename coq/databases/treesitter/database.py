@@ -34,10 +34,11 @@ class TDB:
         with self._lock:
             self._conn.interrupt()
 
-    async def new_nodes(self, nodes: Iterable[Payload]) -> None:
+    async def populate(self, buf: int, filetype: str, nodes: Iterable[Payload]) -> None:
         def m1() -> Iterator[Mapping]:
             for node in nodes:
                 yield {
+                    "buffer_id": buf,
                     "word": node.text,
                     "kind": node.kind,
                     "pword": node.parent.text if node.parent else None,
@@ -48,13 +49,16 @@ class TDB:
 
         def cont() -> None:
             with self._lock, with_transaction(self._conn.cursor()) as cursor:
-                cursor.execute(sql("delete", "words"))
+                cursor.execute(sql("delete", "buffers"), {"buffer_id": buf})
+                cursor.execute(
+                    sql("insert", "buffer"), {"row_id": buf, "filetype": filetype}
+                )
                 cursor.executemany(sql("insert", "word"), m1())
 
         await run_in_executor(self._ex.submit, cont)
 
     async def select(
-        self, opts: Options, word: str, sym: str, limitless: int
+        self, opts: Options, filetype: str, word: str, sym: str, limitless: int
     ) -> Iterator[Payload]:
         def cont() -> Iterator[Payload]:
             try:
@@ -65,6 +69,7 @@ class TDB:
                             "cut_off": opts.fuzzy_cutoff,
                             "look_ahead": opts.look_ahead,
                             "limit": BIGGEST_INT if limitless else opts.max_results,
+                            "filetype": filetype,
                             "word": word,
                             "sym": sym,
                             "like_word": like_esc(word[: opts.exact_matches]),

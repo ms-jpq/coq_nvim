@@ -21,8 +21,7 @@ from .sql import sql
 
 def _ensure_buffer(cursor: Cursor, buf_id: int, filetype: str) -> None:
     cursor.execute(sql("select", "buffer_by_id"), {"rowid": buf_id})
-    row = cursor.fetchone()
-    if row:
+    if cursor.fetchone():
         cursor.execute(
             sql("update", "buffer"),
             {"rowid": buf_id, "filetype": filetype},
