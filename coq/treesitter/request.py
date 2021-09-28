@@ -33,7 +33,7 @@ class _Session:
 
 _UIDS = count()
 _COND: Optional[Condition] = None
-_NIL_P = _Payload(buf=-1, filetype="", payloads=(), elapsed=-1)
+_NIL_P = _Payload[RawPayload](buf=-1, filetype="", payloads=(), elapsed=-1)
 _SESSION = _Session(uid=-1, done=True, payload=_NIL_P)
 
 
