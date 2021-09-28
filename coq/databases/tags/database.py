@@ -119,17 +119,11 @@ class CTDB:
             try:
                 with with_transaction(self._conn.cursor()) as cursor:
                     cursor.execute(
-                        sql("select", "files_filetype"), {"filename": filename}
-                    )
-                    row = cursor.fetchone()
-                    filetype = row["filetype"] if row else None
-                    cursor.execute(
                         sql("select", "tags"),
                         {
                             "cut_off": opts.fuzzy_cutoff,
                             "look_ahead": opts.look_ahead,
                             "limit": BIGGEST_INT if limitless else opts.max_results,
-                            "filetype": filetype,
                             "filename": filename,
                             "line_num": line_num,
                             "word": word,

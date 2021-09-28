@@ -1,3 +1,10 @@
+WITH fts AS (
+  SELECT
+    filetype
+  FROM files
+  WHERE
+    filename = :filename
+)
 SELECT
   tags.`path`,
   tags.line,
@@ -13,9 +20,10 @@ FROM tags
 JOIN files
 ON 
   files.filename = tags.`path`
+JOIN fts
+ON
+  fts.filetype = files.filetype
 WHERE
-  files.filetype = :filetype
-  AND
   tags.name <> ''
   AND
   (
