@@ -33,7 +33,7 @@ def _new_cwd(nvim: Nvim, stack: Stack) -> None:
 
     async def cont() -> None:
         s = state(cwd=cwd)
-        await stack.ctdb.swap(s.cwd, unifying_chars=stack.settings.match.unifying_chars)
+        await stack.ctdb.swap(s.cwd)
 
     go(nvim, aw=cont())
 

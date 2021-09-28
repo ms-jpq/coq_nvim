@@ -60,13 +60,11 @@ class CTDB:
         with self._lock:
             self._conn.interrupt()
 
-    async def swap(self, cwd: PurePath, unifying_chars: AbstractSet[str]) -> None:
+    async def swap(self, cwd: PurePath) -> None:
         def cont() -> None:
             with self._lock:
                 self._conn.close()
-                self._conn = _init(
-                    self._vars_dir, cwd=cwd, unifying_chars=unifying_chars
-                )
+                self._conn = _init(self._vars_dir, cwd=cwd)
 
         await run_in_executor(self._ex.submit, cont)
 
