@@ -42,7 +42,7 @@ class TDB:
                     existing = {row["rowid"] for row in cursor.fetchall()}
                     cursor.executemany(
                         sql("delete", "buffer"),
-                        ({"buf_id": buf_id} for buf_id in existing - buf_ids),
+                        ({"buffer_id": buf_id} for buf_id in existing - buf_ids),
                     )
             except OperationalError:
                 pass
