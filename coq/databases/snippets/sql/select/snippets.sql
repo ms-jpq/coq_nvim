@@ -6,6 +6,8 @@ SELECT
   doc
 FROM snippets_view
 WHERE
+  ft_src = :filetype
+  AND
   snippet <> ''
   AND
   word <> ''

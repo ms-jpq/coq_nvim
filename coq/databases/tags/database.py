@@ -140,7 +140,7 @@ class CTDB:
                     )
                     rows = cursor.fetchall()
                     return (cast(Tag, {**row}) for row in rows)
-            except OperationalError:
+            except OperationalError as e:
                 return iter(())
 
         def step() -> Iterator[Tag]:

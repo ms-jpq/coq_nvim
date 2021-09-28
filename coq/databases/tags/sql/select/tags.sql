@@ -13,6 +13,8 @@ FROM tags
 JOIN files
 ON files.filename = tags.`path`
 WHERE
+  files.filetype = :filetype
+  AND
   tags.name <> ''
   AND
   (
@@ -21,7 +23,7 @@ WHERE
       AND 
       tags.lname LIKE :like_word ESCAPE '!'
       AND 
-      LENGTH(word) + :look_ahead >= LENGTH(:word)
+      LENGTH(tags.name) + :look_ahead >= LENGTH(:word)
       AND
       NOT INSTR(:word, tags.name)
       AND
@@ -33,7 +35,7 @@ WHERE
       AND 
       tags.lname LIKE :like_sym ESCAPE '!'
       AND 
-      LENGTH(word) + :look_ahead >= LENGTH(:sym)
+      LENGTH(tags.name) + :look_ahead >= LENGTH(:sym)
       AND
       NOT INSTR(:sym, tags.name)
       AND
