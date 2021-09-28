@@ -63,8 +63,6 @@ class Worker(BaseWorker[TSClient, TDB]):
 
     async def _poll(self) -> None:
         while True:
-            pass
-
             async with self._supervisor.idling:
                 await self._supervisor.idling.wait()
 

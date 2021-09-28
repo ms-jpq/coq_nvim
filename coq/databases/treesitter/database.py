@@ -51,7 +51,7 @@ class TDB:
             with self._lock, with_transaction(self._conn.cursor()) as cursor:
                 cursor.execute(sql("delete", "buffers"), {"buffer_id": buf})
                 cursor.execute(
-                    sql("insert", "buffer"), {"row_id": buf, "filetype": filetype}
+                    sql("insert", "buffer"), {"rowid": buf, "filetype": filetype}
                 )
                 cursor.executemany(sql("insert", "word"), m1())
 
