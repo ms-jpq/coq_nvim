@@ -26,7 +26,7 @@ CREATE INDEX IF NOT EXISTS words_lword ON words (lword);
 
 CREATE VIEW IF NOT EXISTS words_view AS
 SELECT
-  buffers.filename,
+  words.filename,
   words.word,
   words.lword,
   words.kind,

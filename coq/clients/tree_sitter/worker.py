@@ -26,6 +26,7 @@ def _doc(client: TSClient, context: Context, payload: Payload) -> Optional[Doc]:
         yield clhs
         yield pos
         yield crhs
+        yield linesep
 
         if payload.grandparent:
             yield clhs
