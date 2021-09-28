@@ -1,5 +1,4 @@
 SELECT DISTINCT
-  filename,
   word,
   kind,
   pword,
