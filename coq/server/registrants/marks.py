@@ -37,8 +37,9 @@ def _ls_marks(nvim: Nvim, ns: int, buf: Buffer) -> Sequence[ExtMark]:
             for mark in buf_get_extmarks(nvim, id=ns, buf=buf)
             if mark.end >= mark.begin
         ),
-        key=lambda m: (m.idx % MOD_PAD == 0, m.idx % MOD_PAD, m.begin, m.end),
+        key=lambda m: (m.idx % MOD_PAD, m.begin, m.end),
     )
+
     return ordered
 
 
