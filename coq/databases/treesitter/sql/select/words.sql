@@ -19,7 +19,7 @@ WHERE
       AND 
       LENGTH(word) + :look_ahead >= LENGTH(:word)
       AND
-      NOT INSTR(:word, word)
+      word <> SUBSTR(:word, 1, LENGTH(word))
       AND
       X_SIMILARITY(LOWER(:word), lword, :look_ahead) > :cut_off
     )
@@ -31,7 +31,7 @@ WHERE
       AND 
       LENGTH(word) + :look_ahead >= LENGTH(:sym)
       AND
-      NOT INSTR(:sym, word)
+      word <> SUBSTR(:sym, 1, LENGTH(word))
       AND
       X_SIMILARITY(LOWER(:sym), lword, :look_ahead) > :cut_off
     )
