@@ -34,7 +34,7 @@ WHERE
       AND 
       LENGTH(tags.name) + :look_ahead >= LENGTH(:word)
       AND
-      NOT INSTR(:word, tags.name)
+      tags.name <> SUBSTR(:word, 1, LENGTH(tags.name))
       AND
       X_SIMILARITY(LOWER(:word), tags.lname, :look_ahead) > :cut_off
     )
@@ -46,7 +46,7 @@ WHERE
       AND 
       LENGTH(tags.name) + :look_ahead >= LENGTH(:sym)
       AND
-      NOT INSTR(:sym, tags.name)
+      tags.name <> SUBSTR(:sym, 1, LENGTH(tags.name))
       AND
       X_SIMILARITY(LOWER(:sym), tags.lname, :look_ahead) > :cut_off
     )
