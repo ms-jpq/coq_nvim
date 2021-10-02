@@ -9,7 +9,7 @@ from std2.sqlite3 import with_transaction
 
 from ...consts import TMUX_DB
 from ...shared.executor import SingleThreadExecutor
-from ...shared.settings import Options
+from ...shared.settings import MatchOptions
 from ...shared.sql import BIGGEST_INT, init_db, like_esc
 from ...shared.timeit import timeit
 from .sql import sql
@@ -58,7 +58,7 @@ class TMDB:
         await run_in_executor(self._ex.submit, cont)
 
     async def select(
-        self, opts: Options, active_pane: str, word: str, sym: str, limitless: int
+        self, opts: MatchOptions, active_pane: str, word: str, sym: str, limitless: int
     ) -> Iterator[str]:
         def cont() -> Iterator[str]:
             try:

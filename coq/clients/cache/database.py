@@ -2,13 +2,13 @@ from asyncio import CancelledError
 from concurrent.futures import Executor
 from sqlite3 import Connection, OperationalError
 from threading import Lock
-from typing import Iterable, Iterator, Sequence
+from typing import Iterable, Sequence
 
 from std2.asyncio import run_in_executor
 from std2.sqlite3 import with_transaction
 
 from ...shared.executor import SingleThreadExecutor
-from ...shared.settings import Options
+from ...shared.settings import MatchOptions
 from ...shared.sql import BIGGEST_INT, init_db, like_esc
 from ...shared.timeit import timeit
 from .sql import sql
@@ -42,7 +42,7 @@ class Database:
         await run_in_executor(self._ex.submit, cont)
 
     async def select(
-        self, clear: bool, opts: Options, word: str, sym: str, limitless: int
+        self, clear: bool, opts: MatchOptions, word: str, sym: str, limitless: int
     ) -> Sequence[str]:
         def cont() -> Sequence[str]:
             try:

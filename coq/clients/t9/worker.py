@@ -18,7 +18,7 @@ from ...lang import LANG
 from ...lsp.protocol import PROTOCOL
 from ...shared.runtime import Supervisor
 from ...shared.runtime import Worker as BaseWorker
-from ...shared.settings import BaseClient, Options
+from ...shared.settings import BaseClient, MatchOptions
 from ...shared.types import Completion, Context, ContextualEdit
 from .install import ensure_updated, t9_bin
 from .types import ReqL1, ReqL2, Request, RespL1, Response
@@ -29,7 +29,7 @@ _DECODER = new_decoder[RespL1](RespL1, strict=False)
 _ENCODER = new_encoder[Request](Request)
 
 
-def _encode(options: Options, context: Context, limit: int) -> Any:
+def _encode(options: MatchOptions, context: Context, limit: int) -> Any:
     row, _ = context.position
     before = context.linefeed.join(chain(context.lines_before, (context.line_before,)))
     after = context.linefeed.join(chain((context.line_after,), context.lines_after))
@@ -182,9 +182,9 @@ class Worker(BaseWorker[BaseClient, None]):
 
         if self._bin:
             req = _encode(
-                self._supervisor.options,
+                self._supervisor.match,
                 context=context,
-                limit=self._supervisor.options.max_results,
+                limit=self._supervisor.match.max_results,
             )
             json = dumps(req, check_circular=False, ensure_ascii=False)
             reply = await self._comm(context.cwd, json=json)

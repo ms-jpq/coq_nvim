@@ -13,13 +13,13 @@ from pynvim_pp.text_object import gen_split
 
 from ..consts import DEBUG
 from ..databases.buffers.database import BDB
-from ..shared.settings import Options
+from ..shared.settings import MatchOptions
 from ..shared.types import Context
 from .state import State
 
 
 def context(
-    nvim: Nvim, db: BDB, options: Options, state: State, manual: bool
+    nvim: Nvim, db: BDB, options: MatchOptions, state: State, manual: bool
 ) -> Context:
     with Atomic() as (atomic, ns):
         ns.scr_col = atomic.call_function("screencol", ())

@@ -36,7 +36,7 @@ from pynvim_pp.lib import go
 from pynvim_pp.logging import log, with_suppress
 from std2.asyncio import cancel
 
-from .settings import BaseClient, Limits, Options, Weights
+from .settings import BaseClient, Limits, MatchOptions, Weights
 from .timeit import timeit
 from .types import Completion, Context
 
@@ -79,13 +79,13 @@ class Supervisor:
         pool: Executor,
         nvim: Nvim,
         vars_dir: Path,
-        options: Options,
+        match: MatchOptions,
         limits: Limits,
         reviewer: PReviewer,
     ) -> None:
         self.pool = pool
         self.vars_dir = vars_dir
-        self.options, self.limits = options, limits
+        self.match, self.limits = match, limits
         self.nvim, self._reviewer = nvim, reviewer
 
         self.idling = Condition()

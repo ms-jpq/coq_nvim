@@ -80,7 +80,7 @@ class Display:
 
 
 @dataclass(frozen=True)
-class Options:
+class MatchOptions:
     unifying_chars: AbstractSet[str]
     max_results: int
     proximate_lines: int
@@ -185,7 +185,7 @@ class Settings:
     xdg: bool
     limits: Limits
     display: Display
-    match: Options
+    match: MatchOptions
     weights: Weights
     keymap: KeyMapping
     clients: Clients

@@ -2,10 +2,14 @@ from dataclasses import dataclass, replace
 from typing import Awaitable, Callable, Iterator, MutableMapping, Sequence, Tuple
 from uuid import UUID, uuid4
 
+from ...shared.fuzzy import multi_set_ratio
+from ...shared.parse import lower
 from ...shared.repeat import sanitize
 from ...shared.runtime import Supervisor
+from ...shared.settings import MatchOptions
 from ...shared.timeit import timeit
-from ...shared.types import Completion, Context
+from ...shared.trans import cword_before
+from ...shared.types import Completion, Context, SnippetEdit
 from .database import Database
 
 
@@ -34,6 +38,30 @@ def sanitize_cached(comp: Completion) -> Completion:
     edit = sanitize(comp.primary_edit)
     cached = replace(comp, primary_edit=edit, secondary_edits=())
     return cached
+
+
+def use_comp(match: MatchOptions, context: Context, comp: Completion) -> bool:
+    cword = cword_before(
+        match.unifying_chars,
+        lower=True,
+        context=context,
+        sort_by=comp.sort_by,
+    )
+    if len(comp.sort_by) + match.look_ahead >= len(cword):
+        ratio = multi_set_ratio(
+            cword,
+            lower(comp.sort_by),
+            look_ahead=match.look_ahead,
+        )
+        if ratio >= match.fuzzy_cutoff and (
+            isinstance(comp.primary_edit, SnippetEdit)
+            or not cword.startswith(comp.primary_edit.new_text)
+        ):
+            return True
+        else:
+            return False
+    else:
+        return False
 
 
 class CacheWorker:
@@ -73,16 +101,23 @@ class CacheWorker:
             with timeit("CACHE -- GET"):
                 words = await self._db.select(
                     not use_cache,
-                    opts=self._soup.options,
+                    opts=self._soup.match,
                     word=context.words,
                     sym=context.syms,
                     limitless=context.manual,
                 )
                 if not words:
-                    comps = iter(self._cached.values())
+
+                    def cont() -> Iterator[Completion]:
+                        for sort_by, comp in {**self._cached}.items():
+                            yield comp
+
+                    comps = cont()
                 else:
                     comps = (
-                        comp for sort_by in words if (comp := self._cached.get(sort_by))
+                        sanitize_cached(comp)
+                        for sort_by in words
+                        if (comp := self._cached.get(sort_by))
                     )
                 return comps
 

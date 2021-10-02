@@ -13,7 +13,7 @@ from std2.sqlite3 import with_transaction
 from ...consts import BUFFER_DB, DEBUG
 from ...shared.executor import SingleThreadExecutor
 from ...shared.parse import coalesce
-from ...shared.settings import Options
+from ...shared.settings import MatchOptions
 from ...shared.sql import BIGGEST_INT, init_db, like_esc
 from ...shared.timeit import timeit
 from .sql import sql
@@ -150,7 +150,7 @@ class BDB:
 
     async def words(
         self,
-        opts: Options,
+        opts: MatchOptions,
         filetype: Optional[str],
         word: str,
         sym: str,

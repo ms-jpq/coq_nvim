@@ -219,15 +219,15 @@ class Worker(BaseWorker[PathsClient, None]):
 
         base_paths = {*cont()}
 
-        limit = BIGGEST_INT if context.manual else self._supervisor.options.max_results
+        limit = BIGGEST_INT if context.manual else self._supervisor.match.max_results
         aw = tuple(
             _parse(
                 p,
                 line=line,
                 seps=self._seps,
                 limit=limit,
-                look_ahead=self._supervisor.options.look_ahead,
-                fuzzy_cutoff=self._supervisor.options.fuzzy_cutoff,
+                look_ahead=self._supervisor.match.look_ahead,
+                fuzzy_cutoff=self._supervisor.match.fuzzy_cutoff,
             )
             for p in base_paths
         )
@@ -247,7 +247,7 @@ class Worker(BaseWorker[PathsClient, None]):
                         weight_adjust=self._options.weight_adjust,
                         label=edit.new_text,
                         sort_by=_sort_by(
-                            self._supervisor.options.unifying_chars,
+                            self._supervisor.match.unifying_chars,
                             context=context,
                             new_text=new_text,
                         ),

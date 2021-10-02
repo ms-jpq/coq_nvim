@@ -105,7 +105,7 @@ def stack(pool: Executor, nvim: Nvim) -> Stack:
         pool=pool,
         nvim=nvim,
         vars_dir=vars_dir,
-        options=settings.match,
+        match=settings.match,
         limits=settings.limits,
         reviewer=reviewer,
     )
