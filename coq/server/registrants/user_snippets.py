@@ -3,7 +3,7 @@ from contextlib import nullcontext
 from locale import strxfrm
 from os.path import normcase
 from pathlib import PurePath
-from typing import Any, Iterator, Mapping, Optional, Sequence, cast
+from typing import Any, Iterator, Mapping, Sequence
 
 from pynvim.api.nvim import Nvim
 from pynvim_pp.api import (
@@ -162,7 +162,7 @@ def eval_snips(
             write(nvim, LANG("no snippets found"))
 
 
-def _parse_args(args: Sequence[str], filetype: Optional[str]) -> Namespace:
+def _parse_args(args: Sequence[str], filetype: str) -> Namespace:
     parser = ArgParser()
     sub_parsers = parser.add_subparsers(dest="action", required=True)
 
@@ -171,9 +171,7 @@ def _parse_args(args: Sequence[str], filetype: Optional[str]) -> Namespace:
     sub_parsers.add_parser("compile")
 
     with nullcontext(sub_parsers.add_parser("edit")) as p:
-        p.add_argument(
-            "filetype", nargs="?" if filetype else cast(int, None), default=filetype
-        )
+        p.add_argument("filetype", nargs="?", default=filetype)
 
     return parser.parse_args(args)
 
@@ -184,7 +182,7 @@ def snips(nvim: Nvim, stack: Stack, args: Sequence[str]) -> None:
     ft = buf_filetype(nvim, buf=buf)
 
     try:
-        ns = _parse_args(args, filetype=ft)
+        ns = _parse_args(args, filetype=ft or "*")
     except ArgparseError as e:
         write(nvim, e, error=True)
 
