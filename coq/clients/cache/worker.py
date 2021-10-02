@@ -1,11 +1,11 @@
 from dataclasses import dataclass, replace
-from itertools import takewhile
 from typing import (
     AbstractSet,
     Awaitable,
     Callable,
     Iterator,
     MutableMapping,
+    Optional,
     Sequence,
     Tuple,
 )
@@ -74,16 +74,21 @@ def use_comp(match: MatchOptions, context: Context, sort_by: str, edit: Edit) ->
         return False
 
 
-def _hard_sort(
-    unifying_chars: AbstractSet[str], context: Context, lhs: str, rhs: str
-) -> str:
-    split = gen_split(lhs=lhs, rhs=rhs, unifying_chars=unifying_chars)
-    if context.ws_before:
-        return split.ws_lhs + split.ws_rhs
-    elif context.syms_before != context.words_before:
-        return split.syms_lhs + split.syms_rhs
+def hard_sortby(
+    unifying_chars: AbstractSet[str], context: Context, sort_by: str
+) -> Optional[str]:
+    if (lhs := l_match(context.line_before, sort_by=sort_by)) and (
+        rhs := sort_by[len(lhs) :]
+    ):
+        split = gen_split(lhs=lhs, rhs=rhs, unifying_chars=unifying_chars)
+        if context.ws_before:
+            return split.ws_lhs + split.ws_rhs
+        elif context.syms_before != context.words_before:
+            return split.syms_lhs + split.syms_rhs
+        else:
+            return split.word_lhs + split.word_rhs
     else:
-        return split.word_lhs + split.word_rhs
+        return None
 
 
 class CacheWorker:
@@ -132,23 +137,18 @@ class CacheWorker:
 
                     def cont() -> Iterator[Completion]:
                         for comp in tuple(self._cached.values()):
-                            if lhs := l_match(
-                                context.line_before, sort_by=comp.sort_by
+                            if sort_by := hard_sortby(
+                                self._soup.match.unifying_chars,
+                                context=context,
+                                sort_by=comp.sort_by,
                             ):
-                                if rhs := comp.sort_by[len(lhs) :]:
-                                    sort_by = _hard_sort(
-                                        self._soup.match.unifying_chars,
-                                        context=context,
-                                        lhs=lhs,
-                                        rhs=rhs,
-                                    )
-                                    if use_comp(
-                                        self._soup.match,
-                                        context=context,
-                                        sort_by=sort_by,
-                                        edit=comp.primary_edit,
-                                    ):
-                                        yield sanitize_cached(comp)
+                                if use_comp(
+                                    self._soup.match,
+                                    context=context,
+                                    sort_by=sort_by,
+                                    edit=comp.primary_edit,
+                                ):
+                                    yield sanitize_cached(comp)
 
                     comps = cont()
                 else:
