@@ -111,7 +111,7 @@ class CacheWorker:
                     def cont() -> Iterator[Completion]:
                         for comp in tuple(self._cached.values()):
                             if use_comp(self._soup.match, context=context, comp=comp):
-                                yield comp
+                                yield sanitize_cached(comp)
 
                     comps = cont()
                 else:
