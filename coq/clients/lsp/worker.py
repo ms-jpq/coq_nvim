@@ -84,33 +84,34 @@ class Worker(BaseWorker[BaseClient, None], CacheWorker):
             for chunked in chunk(
                 lsp_comps.items, n=self._supervisor.options.max_results
             ):
-                if seen < limit:
-                    if src is _Src.from_db:
-                        for comp in chunked:
-                            yield comp
+                if src is _Src.from_db:
+                    for comp in chunked:
+                        if seen < limit:
                             seen += 1
-                    else:
-                        for comp in chunked:
-                            cword = cword_before(
-                                self._supervisor.options.unifying_chars,
-                                lower=True,
-                                context=context,
-                                sort_by=comp.sort_by,
+                            yield comp
+                else:
+                    for comp in chunked:
+                        cword = cword_before(
+                            self._supervisor.options.unifying_chars,
+                            lower=True,
+                            context=context,
+                            sort_by=comp.sort_by,
+                        )
+                        if len(
+                            comp.sort_by
+                        ) + self._supervisor.options.look_ahead >= len(cword):
+                            ratio = multi_set_ratio(
+                                cword,
+                                lower(comp.sort_by),
+                                look_ahead=self._supervisor.options.look_ahead,
                             )
-                            if len(
-                                comp.sort_by
-                            ) + self._supervisor.options.look_ahead >= len(cword):
-                                ratio = multi_set_ratio(
-                                    cword,
-                                    lower(comp.sort_by),
-                                    look_ahead=self._supervisor.options.look_ahead,
-                                )
-                                if ratio >= self._supervisor.options.fuzzy_cutoff and (
-                                    isinstance(comp.primary_edit, SnippetEdit)
-                                    or not cword.startswith(comp.primary_edit.new_text)
-                                ):
-                                    yield comp
+                            if ratio >= self._supervisor.options.fuzzy_cutoff and (
+                                isinstance(comp.primary_edit, SnippetEdit)
+                                or not cword.startswith(comp.primary_edit.new_text)
+                            ):
+                                if seen < limit:
                                     seen += 1
+                                    yield comp
 
                 if lsp_comps.local_cache and chunked:
                     await set_cache(chunked)
