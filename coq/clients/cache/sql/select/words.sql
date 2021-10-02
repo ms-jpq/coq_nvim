@@ -28,18 +28,5 @@ WHERE
       AND
       X_SIMILARITY(LOWER(:sym), lword, :look_ahead) > :cut_off
     )
-    OR
-    (
-      :non_ws <> ''
-      AND 
-      lword LIKE :like_non_ws ESCAPE '!'
-      AND 
-      LENGTH(word) + :look_ahead >= LENGTH(:non_ws)
-      AND
-      word <> SUBSTR(:non_ws, 1, LENGTH(word))
-      AND
-      X_SIMILARITY(LOWER(:non_ws), lword, :look_ahead) > :cut_off
-    )
   )
-
 LIMIT :limit

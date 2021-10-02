@@ -37,8 +37,6 @@ EMPTY_CONTEXT = Context(
     syms="",
     syms_before="",
     syms_after="",
-    non_ws_before="",
-    non_ws_after="",
     ws_before="",
     ws_after="",
 )
@@ -52,9 +50,9 @@ def cword_before(
     if char.isspace():
         return context.ws_before
     elif is_word(char, unifying_chars=unifying_chars):
-        return trans(context.words_before) or context.non_ws_before
+        return trans(context.words_before)
     else:
-        return trans(context.syms_before) or context.non_ws_before
+        return trans(context.syms_before)
 
 
 def cword_after(

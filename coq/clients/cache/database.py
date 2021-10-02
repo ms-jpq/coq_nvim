@@ -47,7 +47,6 @@ class Database:
         opts: Options,
         word: str,
         sym: str,
-        non_ws: str,
         limitless: int,
     ) -> Iterator[str]:
         def cont() -> Iterator[str]:
@@ -67,10 +66,8 @@ class Database:
                                 "limit": limit,
                                 "word": word,
                                 "sym": sym,
-                                "non_ws": non_ws,
                                 "like_word": like_esc(word[: opts.exact_matches]),
                                 "like_sym": like_esc(sym[: opts.exact_matches]),
-                                "like_non_ws": like_esc(non_ws[: opts.exact_matches]),
                             },
                         )
                         rows = cursor.fetchall()

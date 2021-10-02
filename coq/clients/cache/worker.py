@@ -84,7 +84,6 @@ class CacheWorker:
                     opts=self._soup.options,
                     word=context.words,
                     sym=context.syms,
-                    non_ws=context.non_ws_before,
                     limitless=context.manual,
                 )
                 comps = (

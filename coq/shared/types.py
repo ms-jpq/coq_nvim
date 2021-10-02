@@ -62,9 +62,6 @@ class Context:
     syms_before: str
     syms_after: str
 
-    non_ws_before: str
-    non_ws_after: str
-
     ws_before: str
     ws_after: str
 
