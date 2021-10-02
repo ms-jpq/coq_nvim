@@ -52,9 +52,9 @@ def cword_before(
     if char.isspace():
         return context.ws_before
     elif is_word(char, unifying_chars=unifying_chars):
-        return trans(context.words_before)
+        return trans(context.words_before) or context.non_ws_before
     else:
-        return trans(context.syms_before)
+        return trans(context.syms_before) or context.non_ws_before
 
 
 def cword_after(

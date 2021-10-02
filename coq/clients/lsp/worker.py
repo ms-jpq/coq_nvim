@@ -97,28 +97,20 @@ class Worker(BaseWorker[BaseClient, None], CacheWorker):
                                 context=context,
                                 sort_by=comp.sort_by,
                             )
-                            for match in (cword, context.non_ws_before):
-                                if len(
-                                    comp.sort_by
-                                ) + self._supervisor.options.look_ahead >= len(match):
-                                    ratio = multi_set_ratio(
-                                        match,
-                                        lower(comp.sort_by),
-                                        look_ahead=self._supervisor.options.look_ahead,
-                                    )
-
-                                    if (
-                                        ratio >= self._supervisor.options.fuzzy_cutoff
-                                        and (
-                                            isinstance(comp.primary_edit, SnippetEdit)
-                                            or not match.startswith(
-                                                comp.primary_edit.new_text
-                                            )
-                                        )
-                                    ):
-                                        yield comp
-                                        seen += 1
-                                        break
+                            if len(
+                                comp.sort_by
+                            ) + self._supervisor.options.look_ahead >= len(cword):
+                                ratio = multi_set_ratio(
+                                    cword,
+                                    lower(comp.sort_by),
+                                    look_ahead=self._supervisor.options.look_ahead,
+                                )
+                                if ratio >= self._supervisor.options.fuzzy_cutoff and (
+                                    isinstance(comp.primary_edit, SnippetEdit)
+                                    or not cword.startswith(comp.primary_edit.new_text)
+                                ):
+                                    yield comp
+                                    seen += 1
 
                 if lsp_comps.local_cache and chunked:
                     await set_cache(chunked)
