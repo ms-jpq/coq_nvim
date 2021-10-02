@@ -164,8 +164,9 @@ def token_parser(context: ParserCtx, stream: TokenStream) -> Parsed:
 
     bad_tokens.extend(begins)
     text = "".join(slices)
+    min_key = min(raw_regions.keys(), key=lambda i: (i == 0, i)) if raw_regions else -1
     cursor = next(
-        iter(raw_regions.get(0, ())),
+        iter(raw_regions.get(min_key, ())),
         Region(begin=len(encode(text)), end=0, text=""),
     ).begin
 
