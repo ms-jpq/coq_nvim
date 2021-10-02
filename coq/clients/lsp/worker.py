@@ -87,7 +87,10 @@ class Worker(BaseWorker[BaseClient, None], CacheWorker):
                 else:
                     for comp in chunked:
                         if seen < limit and use_comp(
-                            self._supervisor.match, context=context, comp=comp
+                            self._supervisor.match,
+                            context=context,
+                            sort_by=comp.sort_by,
+                            edit=comp.primary_edit,
                         ):
                             seen += 1
                             yield comp

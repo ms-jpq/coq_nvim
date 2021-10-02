@@ -1,6 +1,17 @@
 from dataclasses import dataclass, replace
-from typing import Awaitable, Callable, Iterator, MutableMapping, Sequence, Tuple
+from itertools import takewhile
+from typing import (
+    AbstractSet,
+    Awaitable,
+    Callable,
+    Iterator,
+    MutableMapping,
+    Sequence,
+    Tuple,
+)
 from uuid import UUID, uuid4
+
+from pynvim_pp.text_object import gen_split
 
 from ...shared.fuzzy import multi_set_ratio
 from ...shared.parse import lower
@@ -8,8 +19,8 @@ from ...shared.repeat import sanitize
 from ...shared.runtime import Supervisor
 from ...shared.settings import MatchOptions
 from ...shared.timeit import timeit
-from ...shared.trans import cword_before
-from ...shared.types import Completion, Context, SnippetEdit
+from ...shared.trans import cword_before, l_match
+from ...shared.types import Completion, Context, Edit, SnippetEdit
 from .database import Database
 
 
@@ -40,28 +51,39 @@ def sanitize_cached(comp: Completion) -> Completion:
     return cached
 
 
-def use_comp(match: MatchOptions, context: Context, comp: Completion) -> bool:
+def use_comp(match: MatchOptions, context: Context, sort_by: str, edit: Edit) -> bool:
     cword = cword_before(
         match.unifying_chars,
         lower=True,
         context=context,
-        sort_by=comp.sort_by,
+        sort_by=sort_by,
     )
-    if len(comp.sort_by) + match.look_ahead >= len(cword):
+    if len(sort_by) + match.look_ahead >= len(cword):
         ratio = multi_set_ratio(
             cword,
-            lower(comp.sort_by),
+            lower(sort_by),
             look_ahead=match.look_ahead,
         )
         if ratio >= match.fuzzy_cutoff and (
-            isinstance(comp.primary_edit, SnippetEdit)
-            or not cword.startswith(comp.primary_edit.new_text)
+            isinstance(edit, SnippetEdit) or not cword.startswith(edit.new_text)
         ):
             return True
         else:
             return False
     else:
         return False
+
+
+def _hard_sort(
+    unifying_chars: AbstractSet[str], context: Context, lhs: str, rhs: str
+) -> str:
+    split = gen_split(lhs=lhs, rhs=rhs, unifying_chars=unifying_chars)
+    if context.ws_before:
+        return split.ws_lhs + split.ws_rhs
+    elif context.syms_before != context.words_before:
+        return split.syms_lhs + split.syms_rhs
+    else:
+        return split.word_lhs + split.word_rhs
 
 
 class CacheWorker:
@@ -110,8 +132,18 @@ class CacheWorker:
 
                     def cont() -> Iterator[Completion]:
                         for comp in tuple(self._cached.values()):
-                            if use_comp(self._soup.match, context=context, comp=comp):
-                                yield sanitize_cached(comp)
+                            if lhs := l_match(
+                                context.line_before, sort_by=comp.sort_by
+                            ):
+                                if rhs := comp.sort_by[len(lhs) :]:
+                                    sort_by = _hard_sort(context, lhs=lhs, rhs=rhs)
+                                    if use_comp(
+                                        self._soup.match,
+                                        context=context,
+                                        sort_by=sort_by,
+                                        edit=comp.primary_edit,
+                                    ):
+                                        yield sanitize_cached(comp)
 
                     comps = cont()
                 else:

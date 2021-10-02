@@ -75,11 +75,6 @@ def context(
     before, after = decode(b_line[:col]), decode(b_line[col:])
     split = gen_split(lhs=before, rhs=after, unifying_chars=options.unifying_chars)
 
-    ws_before = "".join(
-        reversed(tuple(takewhile(lambda c: c.isspace(), reversed(before))))
-    )
-    ws_after = "".join(takewhile(lambda c: c.isspace(), after))
-
     ctx = Context(
         manual=manual,
         change_id=state.change_id,
@@ -107,7 +102,7 @@ def context(
         syms=split.syms_lhs + split.syms_rhs,
         syms_before=split.syms_lhs,
         syms_after=split.syms_rhs,
-        ws_before=ws_before,
-        ws_after=ws_after,
+        ws_before=split.ws_lhs,
+        ws_after=split.ws_rhs,
     )
     return ctx
