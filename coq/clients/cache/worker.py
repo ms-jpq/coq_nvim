@@ -136,7 +136,12 @@ class CacheWorker:
                                 context.line_before, sort_by=comp.sort_by
                             ):
                                 if rhs := comp.sort_by[len(lhs) :]:
-                                    sort_by = _hard_sort(context, lhs=lhs, rhs=rhs)
+                                    sort_by = _hard_sort(
+                                        self._soup.match.unifying_chars,
+                                        context=context,
+                                        lhs=lhs,
+                                        rhs=rhs,
+                                    )
                                     if use_comp(
                                         self._soup.match,
                                         context=context,
