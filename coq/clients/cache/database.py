@@ -2,7 +2,7 @@ from asyncio import CancelledError
 from concurrent.futures import Executor
 from sqlite3 import Connection, OperationalError
 from threading import Lock
-from typing import Iterable, Iterator
+from typing import Iterable, Iterator, Sequence
 
 from std2.asyncio import run_in_executor
 from std2.sqlite3 import with_transaction
@@ -42,19 +42,14 @@ class Database:
         await run_in_executor(self._ex.submit, cont)
 
     async def select(
-        self,
-        clear: bool,
-        opts: Options,
-        word: str,
-        sym: str,
-        limitless: int,
-    ) -> Iterator[str]:
-        def cont() -> Iterator[str]:
+        self, clear: bool, opts: Options, word: str, sym: str, limitless: int
+    ) -> Sequence[str]:
+        def cont() -> Sequence[str]:
             try:
                 with with_transaction(self._conn.cursor()) as cursor:
                     if clear:
                         cursor.execute(sql("delete", "words"))
-                        return iter(())
+                        return ()
                     else:
                         limit = BIGGEST_INT if limitless else opts.max_results
                         cursor.execute(
@@ -71,11 +66,11 @@ class Database:
                             },
                         )
                         rows = cursor.fetchall()
-                        return (row["word"] for row in rows)
+                        return tuple(row["word"] for row in rows)
             except OperationalError:
-                return iter(())
+                return ()
 
-        def step() -> Iterator[str]:
+        def step() -> Sequence[str]:
             self._interrupt()
             return self._ex.submit(cont)
 

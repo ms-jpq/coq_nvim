@@ -78,9 +78,12 @@ class CacheWorker:
                     sym=context.syms,
                     limitless=context.manual,
                 )
-                comps = (
-                    comp for sort_by in words if (comp := self._cached.get(sort_by))
-                )
+                if not words:
+                    comps = iter(self._cached.values())
+                else:
+                    comps = (
+                        comp for sort_by in words if (comp := self._cached.get(sort_by))
+                    )
                 return comps
 
         async def set_cache(completions: Sequence[Completion]) -> None:
