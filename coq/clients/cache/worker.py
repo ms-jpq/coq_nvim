@@ -109,8 +109,9 @@ class CacheWorker:
                 if not words:
 
                     def cont() -> Iterator[Completion]:
-                        for sort_by, comp in {**self._cached}.items():
-                            yield comp
+                        for comp in tuple(self._cached.values()):
+                            if use_comp(self._soup.match, context=context, comp=comp):
+                                yield comp
 
                     comps = cont()
                 else:
