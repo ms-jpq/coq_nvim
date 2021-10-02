@@ -114,6 +114,7 @@ def _consolidate(
     new_regions = (
         (
             r.end - r.begin,
+            idx == 0,
             idx,
             Region(begin=r.begin, end=r.end, text=text[r.begin : r.end]),
         )
@@ -123,7 +124,7 @@ def _consolidate(
     ordered = sorted(new_regions, key=lambda t: t[:-1])
 
     acc: MutableMapping[int, MutableSequence[Region]] = {}
-    for _, idx, region in ordered:
+    for _, _, idx, region in ordered:
         if not any(_overlap(region, r) for rs in acc.values() for r in rs):
             a = acc.setdefault(idx, [])
             a.append(region)
