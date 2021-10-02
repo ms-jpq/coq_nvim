@@ -1,13 +1,5 @@
 from dataclasses import dataclass, replace
-from typing import (
-    Awaitable,
-    Callable,
-    Iterator,
-    MutableMapping,
-    MutableSet,
-    Sequence,
-    Tuple,
-)
+from typing import Awaitable, Callable, Iterator, MutableMapping, Sequence, Tuple
 from uuid import UUID, uuid4
 
 from ...shared.repeat import sanitize
@@ -92,10 +84,7 @@ class CacheWorker:
                 return comps
 
         async def set_cache(completions: Sequence[Completion]) -> None:
-            new_comps: MutableMapping[str, Completion] = {}
-            for comp in completions:
-                new_comps[comp.sort_by] = comp
-
+            new_comps = {comp.sort_by: comp for comp in completions}
             await self._db.insert(new_comps.keys())
             self._cached.update(new_comps)
 
