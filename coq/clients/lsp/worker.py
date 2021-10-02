@@ -84,7 +84,7 @@ class Worker(BaseWorker[BaseClient, None], CacheWorker):
             for chunked in chunk(
                 lsp_comps.items, n=self._supervisor.options.max_results
             ):
-                if seen <= limit:
+                if seen < limit:
                     if src is _Src.from_db:
                         for comp in chunked:
                             yield comp
