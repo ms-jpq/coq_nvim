@@ -18,7 +18,6 @@ from ...shared.runtime import Supervisor
 from ...shared.runtime import Worker as BaseWorker
 from ...shared.settings import BaseClient
 from ...shared.sql import BIGGEST_INT
-from ...shared.trans import more_sortby
 from ...shared.types import Completion, Context, SnippetEdit
 from ..cache.worker import CacheWorker, sanitize_cached
 
@@ -88,40 +87,36 @@ class Worker(BaseWorker[BaseClient, None], CacheWorker):
             ):
                 if seen <= limit:
                     if src is _Src.from_db:
-                        for c in chunked:
-                            yield c
+                        for comp in chunked:
+                            yield comp
                             seen += 1
                     else:
-                        for c in chunked:
-                            for sort_by in more_sortby(
-                                context.line_before, sort_by=c.sort_by
-                            ):
-                                cword = cword_before(
-                                    self._supervisor.options.unifying_chars,
-                                    lower=True,
-                                    context=context,
-                                    sort_by=sort_by,
-                                )
-                                ratio = multi_set_ratio(
-                                    cword,
-                                    lower(sort_by),
-                                    look_ahead=self._supervisor.options.look_ahead,
-                                )
+                        for comp in chunked:
+                            sort_by = comp.sort_by
+                            cword = cword_before(
+                                self._supervisor.options.unifying_chars,
+                                lower=True,
+                                context=context,
+                                sort_by=sort_by,
+                            )
+                            ratio = multi_set_ratio(
+                                cword,
+                                lower(sort_by),
+                                look_ahead=self._supervisor.options.look_ahead,
+                            )
 
-                                if (
-                                    ratio >= self._supervisor.options.fuzzy_cutoff
-                                    and len(sort_by)
-                                    + self._supervisor.options.look_ahead
-                                    >= len(cword)
-                                    and (
-                                        isinstance(c.primary_edit, SnippetEdit)
-                                        or not cword.startswith(c.primary_edit.new_text)
-                                    )
-                                ):
-                                    replaced = replace(c, sort_by=sort_by)
-                                    yield replaced
-                                    seen += 1
-                                    break
+                            if (
+                                ratio >= self._supervisor.options.fuzzy_cutoff
+                                and len(sort_by) + self._supervisor.options.look_ahead
+                                >= len(cword)
+                                and (
+                                    isinstance(comp.primary_edit, SnippetEdit)
+                                    or not cword.startswith(comp.primary_edit.new_text)
+                                )
+                            ):
+                                replaced = replace(comp, sort_by=sort_by)
+                                yield replaced
+                                seen += 1
 
                 if lsp_comps.local_cache and chunked:
                     await set_cache(chunked)

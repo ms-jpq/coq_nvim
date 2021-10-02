@@ -13,7 +13,6 @@ from uuid import UUID, uuid4
 from ...shared.repeat import sanitize
 from ...shared.runtime import Supervisor
 from ...shared.timeit import timeit
-from ...shared.trans import more_sortby
 from ...shared.types import Completion, Context
 from .database import Database
 
@@ -102,8 +101,7 @@ class CacheWorker:
         async def set_cache(completions: Sequence[Completion]) -> None:
             new_comps: MutableMapping[str, Completion] = {}
             for comp in completions:
-                for sort_by in more_sortby(context.line_before, sort_by=comp.sort_by):
-                    new_comps[sort_by] = comp
+                new_comps[comp.sort_by] = comp
 
             await self._db.insert(new_comps.keys())
             self._cached.update(new_comps)
