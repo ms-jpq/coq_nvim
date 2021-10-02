@@ -14,6 +14,8 @@ To disable: simply do not install `coq.artifacts`.
 
 ## Custom snippets
 
+Note: `*` is a special wildcard filetype.
+
 ### Workflow
 
 1. `:COQsnips edit` -- edits snippet for current filetype
