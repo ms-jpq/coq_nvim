@@ -87,7 +87,7 @@ SELECT
   all_exts.dest
 FROM all_exts
 WHERE
-  lvl < 10;
+  lvl < 9;
 
 
 CREATE VIEW IF NOT EXISTS snippets_view AS
