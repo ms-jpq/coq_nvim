@@ -74,6 +74,12 @@ def context(
     b_line = encode(line)
     before, after = decode(b_line[:col]), decode(b_line[col:])
     split = gen_split(lhs=before, rhs=after, unifying_chars=options.unifying_chars)
+
+    non_ws_before = "".join(
+        reversed(tuple(takewhile(lambda c: not c.isspace(), reversed(before))))
+    )
+    non_ws_after = "".join(takewhile(lambda c: not c.isspace(), after))
+
     ws_before = "".join(
         reversed(tuple(takewhile(lambda c: c.isspace(), reversed(before))))
     )
@@ -106,6 +112,8 @@ def context(
         syms=split.syms_lhs + split.syms_rhs,
         syms_before=split.syms_lhs,
         syms_after=split.syms_rhs,
+        non_ws_before=non_ws_before,
+        non_ws_after=non_ws_after,
         ws_before=ws_before,
         ws_after=ws_after,
     )

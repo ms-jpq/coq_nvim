@@ -1,5 +1,4 @@
 from asyncio import as_completed, gather
-from dataclasses import replace
 from enum import Enum, auto
 from itertools import chain
 from typing import AsyncIterator, Iterator, MutableSequence, Optional, Tuple
@@ -92,31 +91,34 @@ class Worker(BaseWorker[BaseClient, None], CacheWorker):
                             seen += 1
                     else:
                         for comp in chunked:
-                            sort_by = comp.sort_by
                             cword = cword_before(
                                 self._supervisor.options.unifying_chars,
                                 lower=True,
                                 context=context,
-                                sort_by=sort_by,
+                                sort_by=comp.sort_by,
                             )
-                            ratio = multi_set_ratio(
-                                cword,
-                                lower(sort_by),
-                                look_ahead=self._supervisor.options.look_ahead,
-                            )
+                            for match in (cword, context.non_ws_before):
+                                if len(
+                                    comp.sort_by
+                                ) + self._supervisor.options.look_ahead >= len(match):
+                                    ratio = multi_set_ratio(
+                                        match,
+                                        lower(comp.sort_by),
+                                        look_ahead=self._supervisor.options.look_ahead,
+                                    )
 
-                            if (
-                                ratio >= self._supervisor.options.fuzzy_cutoff
-                                and len(sort_by) + self._supervisor.options.look_ahead
-                                >= len(cword)
-                                and (
-                                    isinstance(comp.primary_edit, SnippetEdit)
-                                    or not cword.startswith(comp.primary_edit.new_text)
-                                )
-                            ):
-                                replaced = replace(comp, sort_by=sort_by)
-                                yield replaced
-                                seen += 1
+                                    if (
+                                        ratio >= self._supervisor.options.fuzzy_cutoff
+                                        and (
+                                            isinstance(comp.primary_edit, SnippetEdit)
+                                            or not match.startswith(
+                                                comp.primary_edit.new_text
+                                            )
+                                        )
+                                    ):
+                                        yield comp
+                                        seen += 1
+                                        break
 
                 if lsp_comps.local_cache and chunked:
                     await set_cache(chunked)

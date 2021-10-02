@@ -42,7 +42,13 @@ class Database:
         await run_in_executor(self._ex.submit, cont)
 
     async def select(
-        self, clear: bool, opts: Options, word: str, sym: str, limitless: int
+        self,
+        clear: bool,
+        opts: Options,
+        word: str,
+        sym: str,
+        non_ws: str,
+        limitless: int,
     ) -> Iterator[str]:
         def cont() -> Iterator[str]:
             try:
@@ -61,8 +67,10 @@ class Database:
                                 "limit": limit,
                                 "word": word,
                                 "sym": sym,
+                                "non_ws": non_ws,
                                 "like_word": like_esc(word[: opts.exact_matches]),
                                 "like_sym": like_esc(sym[: opts.exact_matches]),
+                                "like_non_ws": like_esc(non_ws[: opts.exact_matches]),
                             },
                         )
                         rows = cursor.fetchall()

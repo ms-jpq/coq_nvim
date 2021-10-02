@@ -37,6 +37,8 @@ EMPTY_CONTEXT = Context(
     syms="",
     syms_before="",
     syms_after="",
+    non_ws_before="",
+    non_ws_after="",
     ws_before="",
     ws_after="",
 )

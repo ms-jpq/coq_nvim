@@ -84,19 +84,13 @@ class CacheWorker:
                     opts=self._soup.options,
                     word=context.words,
                     sym=context.syms,
+                    non_ws=context.non_ws_before,
                     limitless=context.manual,
                 )
-
-                def cont() -> Iterator[Completion]:
-                    seen: MutableSet[UUID] = set()
-                    for sort_by in words:
-                        if comp := self._cached.get(sort_by):
-                            if comp.uid not in seen:
-                                seen.add(comp.uid)
-                                replaced = replace(comp, sort_by=sort_by)
-                                yield sanitize_cached(replaced)
-
-                return cont()
+                comps = (
+                    comp for sort_by in words if (comp := self._cached.get(sort_by))
+                )
+                return comps
 
         async def set_cache(completions: Sequence[Completion]) -> None:
             new_comps: MutableMapping[str, Completion] = {}
