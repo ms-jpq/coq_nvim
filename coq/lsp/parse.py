@@ -105,6 +105,9 @@ def parse_item(
                 _range_edit("", edit=edit)
                 for edit in (parsed.additionalTextEdits or ())
             )
+            sort_by = parsed.filterText or (
+                parsed.label if isinstance(p_edit, SnippetEdit) else p_edit.new_text
+            )
             kind = PROTOCOL.CompletionItemKind.get(item.get("kind"), "")
             doc = _doc(parsed)
             extern = extern_type(item=item, command=parsed.command)
@@ -114,7 +117,7 @@ def parse_item(
                 label=parsed.label,
                 primary_edit=p_edit,
                 secondary_edits=r_edits,
-                sort_by=parsed.filterText or p_edit.new_text,
+                sort_by=sort_by,
                 preselect=parsed.preselect or False,
                 kind=kind,
                 doc=doc,
