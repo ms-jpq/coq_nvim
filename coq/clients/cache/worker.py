@@ -148,7 +148,10 @@ class CacheWorker:
                                     sort_by=sort_by,
                                     edit=comp.primary_edit,
                                 ):
-                                    yield sanitize_cached(comp)
+                                    new_comp = sanitize_cached(
+                                        replace(comp, sort_by=sort_by)
+                                    )
+                                    yield new_comp
 
                     comps = cont()
                 else:
