@@ -103,7 +103,7 @@ class CacheWorker:
         self._cached: MutableMapping[str, Completion] = {}
 
     def _use_cache(
-        self, context: Context
+        self, enable_correction: bool, context: Context
     ) -> Tuple[
         bool,
         Awaitable[Iterator[Completion]],
@@ -131,7 +131,7 @@ class CacheWorker:
                     sym=context.syms,
                     limitless=context.manual,
                 )
-                if not words:
+                if enable_correction and not words:
 
                     def cont() -> Iterator[Completion]:
                         for comp in tuple(self._cached.values()):
