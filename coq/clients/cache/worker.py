@@ -64,17 +64,15 @@ def use_comp(match: MatchOptions, context: Context, sort_by: str, edit: Edit) ->
             lower(sort_by),
             look_ahead=match.look_ahead,
         )
-        if ratio >= match.fuzzy_cutoff and (
+        use = ratio >= match.fuzzy_cutoff and (
             isinstance(edit, SnippetEdit) or not cword.startswith(edit.new_text)
-        ):
-            return True
-        else:
-            return False
+        )
+        return use
     else:
         return False
 
 
-def hard_sortby(
+def _hard_sortby(
     unifying_chars: AbstractSet[str], context: Context, sort_by: str
 ) -> Optional[str]:
     if (lhs := l_match(context.line_before, sort_by=sort_by)) and (
@@ -137,7 +135,7 @@ class CacheWorker:
 
                     def cont() -> Iterator[Completion]:
                         for comp in tuple(self._cached.values()):
-                            if sort_by := hard_sortby(
+                            if sort_by := _hard_sortby(
                                 self._soup.match.unifying_chars,
                                 context=context,
                                 sort_by=comp.sort_by,
