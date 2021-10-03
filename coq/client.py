@@ -4,7 +4,6 @@ from logging import DEBUG as DEBUG_LV
 from logging import INFO
 from queue import SimpleQueue
 from string import Template
-from sys import stderr
 from textwrap import dedent
 from typing import Any, MutableMapping, Optional, cast
 

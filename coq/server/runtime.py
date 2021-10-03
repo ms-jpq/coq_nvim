@@ -41,10 +41,11 @@ def _settings(nvim: Nvim) -> Settings:
     if isinstance(u_conf, Mapping):
         if isinstance(display := u_conf.get("display"), Mapping):
             if isinstance(icons := display.get("icons"), Mapping):
-                if aliases := icons.get("aliases"):
-                    yml["display"]["icons"] = aliases
-                if mappings := icons.get("mappings"):
-                    yml["display"]["icons"] = mappings
+                yml_icons = yml["display"]["icons"]
+                if (aliases := icons.get("aliases")) is not None:
+                    yml_icons["aliases"] = aliases
+                if (mappings := icons.get("mappings")) is not None:
+                    yml_icons["mappings"] = mappings
 
     merged = merge(yml, u_conf, replace=True)
     config = new_decoder[Settings](Settings)(merged)
