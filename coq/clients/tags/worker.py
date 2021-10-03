@@ -155,7 +155,7 @@ class Worker(BaseWorker[TagsClient, CTDB]):
     async def work(self, context: Context) -> AsyncIterator[Completion]:
         row, _ = context.position
         tags = await self._misc.select(
-            self._supervisor.options,
+            self._supervisor.match,
             filename=context.filename,
             line_num=row,
             word=context.words,

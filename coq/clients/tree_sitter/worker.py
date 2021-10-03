@@ -74,7 +74,7 @@ class Worker(BaseWorker[TSClient, TDB]):
 
     async def work(self, context: Context) -> AsyncIterator[Completion]:
         payloads = await self._misc.select(
-            self._supervisor.options,
+            self._supervisor.match,
             buf_id=context.buf_id,
             word=context.words,
             sym=context.syms,

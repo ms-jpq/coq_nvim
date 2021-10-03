@@ -1,4 +1,4 @@
-from typing import AbstractSet, Iterator
+from typing import AbstractSet, Iterator, Optional
 
 from .context import cword_after, cword_before
 from .parse import coalesce, lower
@@ -28,12 +28,9 @@ def _line_match(lhs: bool, existing: str, insertion: str) -> str:
             return ""
 
 
-def more_sortby(line_before: str, sort_by: str) -> Iterator[str]:
-    if sort_by:
-        yield sort_by
-        if l_match := _line_match(True, existing=line_before, insertion=sort_by):
-            if trimmed := sort_by[len(l_match) :]:
-                yield trimmed
+def l_match(line_before: str, sort_by: str) -> Optional[str]:
+    l_match = _line_match(True, existing=line_before, insertion=sort_by)
+    return l_match or None
 
 
 def trans(line_before: str, line_after: str, new_text: str) -> ContextualEdit:

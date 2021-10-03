@@ -9,7 +9,7 @@ from ...shared.types import Completion, Context, Doc, SnippetEdit, SnippetGramma
 class Worker(BaseWorker[SnippetClient, SDB]):
     async def work(self, context: Context) -> AsyncIterator[Completion]:
         snippets = await self._misc.select(
-            self._supervisor.options,
+            self._supervisor.match,
             filetype=context.filetype,
             word=context.words,
             sym=context.syms,

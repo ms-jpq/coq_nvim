@@ -13,13 +13,13 @@ from pynvim_pp.text_object import gen_split
 
 from ..consts import DEBUG
 from ..databases.buffers.database import BDB
-from ..shared.settings import Options
+from ..shared.settings import MatchOptions
 from ..shared.types import Context
 from .state import State
 
 
 def context(
-    nvim: Nvim, db: BDB, options: Options, state: State, manual: bool
+    nvim: Nvim, db: BDB, options: MatchOptions, state: State, manual: bool
 ) -> Context:
     with Atomic() as (atomic, ns):
         ns.scr_col = atomic.call_function("screencol", ())
@@ -74,10 +74,6 @@ def context(
     b_line = encode(line)
     before, after = decode(b_line[:col]), decode(b_line[col:])
     split = gen_split(lhs=before, rhs=after, unifying_chars=options.unifying_chars)
-    ws_before = "".join(
-        reversed(tuple(takewhile(lambda c: c.isspace(), reversed(before))))
-    )
-    ws_after = "".join(takewhile(lambda c: c.isspace(), after))
 
     ctx = Context(
         manual=manual,
@@ -106,7 +102,7 @@ def context(
         syms=split.syms_lhs + split.syms_rhs,
         syms_before=split.syms_lhs,
         syms_after=split.syms_rhs,
-        ws_before=ws_before,
-        ws_after=ws_after,
+        ws_before=split.ws_lhs,
+        ws_after=split.ws_rhs,
     )
     return ctx

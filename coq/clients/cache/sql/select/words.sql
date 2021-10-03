@@ -29,5 +29,4 @@ WHERE
       X_SIMILARITY(LOWER(:sym), lword, :look_ahead) > :cut_off
     )
   )
-
 LIMIT :limit

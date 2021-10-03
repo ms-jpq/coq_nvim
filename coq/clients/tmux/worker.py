@@ -21,7 +21,7 @@ class Worker(BaseWorker[WordbankClient, TMDB]):
     async def _poll(self) -> None:
         while True:
             with timeit("IDLE :: TMUX"):
-                snap = await snapshot(self._supervisor.options.unifying_chars)
+                snap = await snapshot(self._supervisor.match.unifying_chars)
                 await self._misc.periodical(snap)
 
             async with self._supervisor.idling:
@@ -31,7 +31,7 @@ class Worker(BaseWorker[WordbankClient, TMDB]):
         active = await cur()
         words = (
             await self._misc.select(
-                self._supervisor.options,
+                self._supervisor.match,
                 active_pane=active.uid,
                 word=context.words,
                 sym=(context.syms if self._options.match_syms else ""),

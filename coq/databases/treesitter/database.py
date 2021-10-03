@@ -9,7 +9,7 @@ from std2.sqlite3 import with_transaction
 
 from ...consts import TREESITTER_DB
 from ...shared.executor import SingleThreadExecutor
-from ...shared.settings import Options
+from ...shared.settings import MatchOptions
 from ...shared.sql import BIGGEST_INT, init_db, like_esc
 from ...shared.timeit import timeit
 from ...treesitter.types import Payload, SimplePayload
@@ -76,7 +76,7 @@ class TDB:
 
     async def select(
         self,
-        opts: Options,
+        opts: MatchOptions,
         buf_id: int,
         word: str,
         sym: str,

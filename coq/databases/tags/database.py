@@ -12,7 +12,7 @@ from std2.asyncio import run_in_executor
 from std2.sqlite3 import with_transaction
 
 from ...shared.executor import SingleThreadExecutor
-from ...shared.settings import Options
+from ...shared.settings import MatchOptions
 from ...shared.sql import BIGGEST_INT, init_db, like_esc
 from ...shared.timeit import timeit
 from ...tags.types import Tag, Tags
@@ -109,7 +109,7 @@ class CTDB:
 
     async def select(
         self,
-        opts: Options,
+        opts: MatchOptions,
         filename: str,
         line_num: int,
         word: str,

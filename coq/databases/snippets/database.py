@@ -11,7 +11,7 @@ from std2.asyncio import run_in_executor
 from std2.sqlite3 import with_transaction
 
 from ...shared.executor import SingleThreadExecutor
-from ...shared.settings import Options
+from ...shared.settings import MatchOptions
 from ...shared.sql import BIGGEST_INT, init_db, like_esc
 from ...shared.timeit import timeit
 from ...snippets.types import LoadedSnips
@@ -117,7 +117,7 @@ class SDB:
         await run_in_executor(self._ex.submit, cont)
 
     async def select(
-        self, opts: Options, filetype: str, word: str, sym: str, limitless: int
+        self, opts: MatchOptions, filetype: str, word: str, sym: str, limitless: int
     ) -> Iterator[_Snip]:
         def cont() -> Iterator[_Snip]:
             try:

@@ -11,7 +11,7 @@ from ..shared.context import EMPTY_CONTEXT, cword_before
 from ..shared.fuzzy import MatchMetrics, metrics
 from ..shared.parse import coalesce, lower
 from ..shared.runtime import Metric, PReviewer
-from ..shared.settings import BaseClient, Icons, Options, Weights
+from ..shared.settings import BaseClient, Icons, MatchOptions, Weights
 from ..shared.types import Completion, Context
 from .icons import iconify
 
@@ -27,7 +27,7 @@ class _ReviewCtx:
 
 
 def _metric(
-    options: Options,
+    options: MatchOptions,
     ctx: _ReviewCtx,
     completion: Completion,
 ) -> MatchMetrics:
@@ -75,7 +75,7 @@ def _join(
 
 
 class Reviewer(PReviewer):
-    def __init__(self, options: Options, icons: Icons, db: IDB) -> None:
+    def __init__(self, options: MatchOptions, icons: Icons, db: IDB) -> None:
         self._options, self._icons, self._db = options, icons, db
         self._ctx = _ReviewCtx(
             batch=uuid4(),

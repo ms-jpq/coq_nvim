@@ -30,7 +30,7 @@ class Worker(BaseWorker[BuffersClient, BDB]):
     async def work(self, context: Context) -> AsyncIterator[Completion]:
         filetype = context.filetype if self._options.same_filetype else None
         words = await self._misc.words(
-            self._supervisor.options,
+            self._supervisor.match,
             filetype=filetype,
             word=context.words,
             sym=context.syms if self._options.match_syms else "",
