@@ -43,7 +43,6 @@ class Worker(BaseWorker[BaseClient, None], CacheWorker):
     async def work(self, context: Context) -> AsyncIterator[Optional[Completion]]:
         limit = BIGGEST_INT if context.manual else self._supervisor.match.max_results
 
-        print(self._enable_correction, flush=True)
         use_cache, cached, set_cache = self._use_cache(self._enable_correction, context)
         if not use_cache:
             self._local_cached.clear()
