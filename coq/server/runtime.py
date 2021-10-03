@@ -1,6 +1,6 @@
 from concurrent.futures import Executor
 from pathlib import Path
-from typing import Iterator
+from typing import Iterator, Mapping
 
 from pynvim import Nvim
 from pynvim_pp.api import get_cwd
@@ -34,13 +34,19 @@ from .state import state
 
 
 def _settings(nvim: Nvim) -> Settings:
+    yml = safe_load(CONFIG_YML.read_text("UTF-8"))
     user_config = nvim.vars.get(SETTINGS_VAR, {})
-    merged = merge(
-        safe_load(CONFIG_YML.read_text("UTF-8")),
-        hydrate(user_config),
-        replace=True,
-    )
+    u_conf = hydrate(user_config)
 
+    if isinstance(u_conf, Mapping):
+        if isinstance(display := u_conf.get("display"), Mapping):
+            if isinstance(icons := display.get("icons"), Mapping):
+                if aliases := icons.get("aliases"):
+                    yml["display"]["icons"] = aliases
+                if mappings := icons.get("mappings"):
+                    yml["display"]["icons"] = mappings
+
+    merged = merge(yml, u_conf, replace=True)
     config = new_decoder[Settings](Settings)(merged)
     return config
 
