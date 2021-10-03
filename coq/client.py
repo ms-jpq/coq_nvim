@@ -10,7 +10,7 @@ from typing import Any, MutableMapping, Optional, cast
 
 from pynvim import Nvim
 from pynvim_pp.client import Client
-from pynvim_pp.lib import threadsafe_call
+from pynvim_pp.lib import threadsafe_call, write
 from pynvim_pp.logging import log, with_suppress
 from pynvim_pp.rpc import RpcCallable, RpcMsg, nil_handler
 from std2.functools import constantly
@@ -69,34 +69,40 @@ class CoqClient(Client):
         nvim.loop.set_debug(DEBUG)
         nvim.loop.set_default_executor(self._pool)
 
-        def cont() -> None:
+        def cont() -> bool:
             rpc_atomic, specs = rpc.drain(nvim.channel_id)
             self._handlers.update(specs)
 
-            self._stack = stack(self._pool, nvim=nvim)
-            (rpc_atomic + autocmd.drain() + atomic).commit(nvim)
-            set_options(
-                nvim,
-                mapping=self._stack.settings.keymap,
-                fast_close=self._stack.settings.display.pum.fast_close,
-            )
+            try:
+                self._stack = stack(self._pool, nvim=nvim)
+            except DecodeError as e:
+                tpl = """
+                Some options may have changed.
+                See help doc on Github under [docs/CONFIGURATION.md]
+
+
+                ${e}
+                """
+                msg = Template(dedent(tpl)).substitute(e=e)
+                write(nvim, msg, error=True)
+                return False
+            else:
+                (rpc_atomic + autocmd.drain() + atomic).commit(nvim)
+                set_options(
+                    nvim,
+                    mapping=self._stack.settings.keymap,
+                    fast_close=self._stack.settings.display.pum.fast_close,
+                )
+                return True
 
         try:
-            threadsafe_call(nvim, cont)
-        except DecodeError as e:
-            tpl = """
-            Some options may have changed.
-            See help doc on Github under [docs/CONFIGURATION.md]
-
-
-            ${e}
-            """
-            ms = Template(dedent(tpl)).substitute(e=e)
-            print(ms, file=stderr)
-            return 1
+            succ = threadsafe_call(nvim, cont)
         except Exception as e:
             log.exception("%s", e)
             return 1
+        else:
+            if not succ:
+                return 1
 
         while True:
             msg: RpcMsg = self._event_queue.get()
