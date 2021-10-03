@@ -65,7 +65,7 @@ class IconMode(Enum):
 class Icons:
     mode: IconMode
     spacing: int
-    aliases: Mapping[str, Optional[str]]
+    aliases: Mapping[str, str]
     mappings: Mapping[str, str]
 
 
