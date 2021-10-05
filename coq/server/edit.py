@@ -406,7 +406,7 @@ def _parse(
     return edit, marks
 
 
-def _restore(nvim: Nvim, win: Window, buf: Buffer, pos: NvimPos) -> Tuple[str, int]:
+def _restore(nvim: Nvim, win: Window, buf: Buffer, pos: NvimPos) -> Tuple[str, Optional[int]]:
     row, _ = pos
     ns = create_ns(nvim, ns=NS)
     marks = tuple(buf_get_extmarks(nvim, buf=buf, id=ns))
@@ -422,10 +422,10 @@ def _restore(nvim: Nvim, win: Window, buf: Buffer, pos: NvimPos) -> Tuple[str, i
         binserted = encode(after)[lo:hi]
         inserted = decode(binserted)
 
-        if inserted and cur_row == row and lo <= cur_col <= hi:
+        if cur_row == row and lo <= cur_col <= hi:
             movement = cur_col - lo
         else:
-            movement = len(binserted)
+            movement = None
 
         if inserted:
             buf_set_text(nvim, buf=buf, begin=m1.end, end=m2.begin, text=("",))
@@ -482,11 +482,10 @@ def edit(
                     secondary=metric.comp.secondary_edits,
                 )
             )
-            n_row, p_col = _cursor(
+            n_row, n_col = _cursor(
                 state.context.position,
                 instructions=instructions,
             )
-            n_col = p_col + movement
 
             if not synthetic:
                 stack.idb.inserted(metric.instance.bytes, sort_by=metric.comp.sort_by)
@@ -497,17 +496,18 @@ def edit(
                     buf_set_text(
                         nvim,
                         buf=buf,
-                        begin=(n_row, p_col),
-                        end=(n_row, p_col),
+                        begin=(n_row, n_col),
+                        end=(n_row, n_col),
                         text=(inserted,),
                     )
                 except NvimError as e:
                     log.warn("%s", e)
 
-            try:
-                win_set_cursor(nvim, win=win, row=n_row, col=n_col)
-            except NvimError as e:
-                log.warn("%s", e)
+            if movement is not None:
+                try:
+                    win_set_cursor(nvim, win=win, row=n_row, col=n_col + movement)
+                except NvimError as e:
+                    log.warn("%s", e)
 
             if marks:
                 new_marks = tuple(_shift_marks(m_shift, marks=marks))
