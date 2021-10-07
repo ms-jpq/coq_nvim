@@ -44,6 +44,7 @@ class Context:
     comment: Tuple[str, str]
 
     position: NvimPos
+    pumwidth: int
     scr_col: int
 
     line: str
