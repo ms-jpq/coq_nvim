@@ -4,7 +4,7 @@ There are two parts to `coq.nvim`'s performance:
 
 Human computer interactions (HCI) and raw execution speed.
 
-The design of `coq.nvim` puts alot of thought into both. In particular, **raw execution speed enables HCI optimizations**.
+The design of `coq.nvim` puts a lot of thought into both. In particular, **raw execution speed enables HCI optimizations**.
 
 ---
 
@@ -12,7 +12,7 @@ The design of `coq.nvim` puts alot of thought into both. In particular, **raw ex
 
 **Humans are much slower than computers**, therefore when we think about performance, we not only need to think about the cost to compute.
 
-Below a certain threshold, **the cost to humans**, ie. reading and decision time will dominate most HCI senarios.
+Below a certain threshold, **the cost to humans**, ie. reading and decision time will dominate most HCI scenarios.
 
 ### Ranking
 
