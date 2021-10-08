@@ -6,7 +6,7 @@ from pynvim import Nvim
 from pynvim_pp.api import get_cwd
 from std2.configparser import hydrate
 from std2.graphlib import merge
-from std2.pickle import new_decoder
+from std2.pickle.decoder import new_decoder
 from yaml import safe_load
 
 from ..clients.buffers.worker import Worker as BuffersWorker
@@ -93,8 +93,9 @@ def _from_each_according_to_their_ability(
 
 def stack(pool: Executor, nvim: Nvim) -> Stack:
     settings = _settings(nvim)
+    pum_width = nvim.options["pumwidth"]
     vars_dir = Path(nvim.funcs.stdpath("cache")) / "coq" if settings.xdg else VARS
-    s = state(cwd=get_cwd(nvim))
+    s = state(cwd=get_cwd(nvim), pum_width=pum_width)
     bdb, sdb, idb, tdb, ctdb, tmdb = (
         BDB(pool),
         SDB(pool, vars_dir=vars_dir),

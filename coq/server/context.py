@@ -1,5 +1,4 @@
 from difflib import unified_diff
-from itertools import takewhile
 from os import linesep
 from os.path import normcase
 from typing import Literal, Tuple, cast

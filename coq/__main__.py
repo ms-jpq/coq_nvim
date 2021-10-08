@@ -5,11 +5,20 @@ from io import StringIO
 from multiprocessing import cpu_count
 from pathlib import Path
 from subprocess import DEVNULL, STDOUT, CalledProcessError, run
-from sys import executable, exit, stderr, version_info
+from sys import (
+    executable,
+    exit,
+    getswitchinterval,
+    setswitchinterval,
+    stderr,
+    version_info,
+)
 from textwrap import dedent
 from typing import Union
 
 from .consts import IS_WIN, REQUIREMENTS, RT_DIR, RT_PY, TOP_LEVEL, VARS
+
+setswitchinterval(min(getswitchinterval(), 0.001))
 
 try:
     from shlex import join
