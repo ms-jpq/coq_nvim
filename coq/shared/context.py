@@ -25,7 +25,6 @@ EMPTY_CONTEXT = Context(
     comment=("", ""),
     position=(0, 0),
     scr_col=0,
-    pumwidth=1,
     line="",
     line_before="",
     line_after="",

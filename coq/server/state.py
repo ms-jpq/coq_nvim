@@ -16,6 +16,7 @@ from ..shared.types import Completion, Context, Edit, NvimPos
 @dataclass(frozen=True)
 class State:
     cwd: PurePath
+    pum_width: int
     screen: Tuple[int, int]
     change_id: UUID
     commit_id: UUID
@@ -32,6 +33,7 @@ _LOCK = Lock()
 
 _state = State(
     cwd=PurePath(sep),
+    pum_width=0,
     screen=(0, 0),
     change_id=uuid4(),
     commit_id=uuid4(),
@@ -65,6 +67,7 @@ _state = State(
 
 def state(
     cwd: Optional[PurePath] = None,
+    pum_width: Optional[int] = None,
     screen: Optional[Tuple[int, int]] = None,
     change_id: Optional[UUID] = None,
     commit_id: Optional[UUID] = None,
@@ -80,6 +83,7 @@ def state(
     with _LOCK:
         state = State(
             cwd=cwd or _state.cwd,
+            pum_width=pum_width or _state.pum_width,
             screen=screen or _state.screen,
             change_id=change_id or _state.change_id,
             commit_id=commit_id or _state.commit_id,

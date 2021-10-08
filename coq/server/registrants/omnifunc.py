@@ -18,7 +18,7 @@ from pynvim_pp.api import (
 from pynvim_pp.lib import async_call, encode, go
 from pynvim_pp.logging import log, with_suppress
 from std2.asyncio import cancel, run_in_executor
-from std2.pickle import new_decoder
+from std2.pickle.decoder import new_decoder
 from std2.pickle.types import DecodeError
 
 from ...lsp.requests.command import cmd
@@ -96,7 +96,12 @@ def _launch_loop(nvim: Nvim, stack: Stack) -> None:
                         s = state()
                         if s.change_id == ctx.change_id:
                             vim_comps = tuple(
-                                trans(stack, context=ctx, metrics=metrics)
+                                trans(
+                                    stack,
+                                    pum_width=s.pum_width,
+                                    context=ctx,
+                                    metrics=metrics,
+                                )
                             )
                             await async_call(
                                 nvim,

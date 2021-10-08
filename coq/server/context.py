@@ -1,5 +1,4 @@
 from difflib import unified_diff
-from itertools import takewhile
 from os import linesep
 from os.path import normcase
 from typing import Literal, Tuple, cast
@@ -23,7 +22,6 @@ def context(
 ) -> Context:
     with Atomic() as (atomic, ns):
         ns.scr_col = atomic.call_function("screencol", ())
-        ns.pumwidth = atomic.get_option("pumwidth")
         ns.buf = atomic.get_current_buf()
         ns.name = atomic.buf_get_name(0)
         ns.line_count = atomic.buf_line_count(0)
@@ -36,7 +34,6 @@ def context(
         atomic.commit(nvim)
 
     scr_col = ns.scr_col
-    pumwidth = ns.pumwidth
     buf = cast(Buffer, ns.buf)
     (r, col) = cast(Tuple[int, int], ns.cursor)
     row = r - 1
@@ -91,7 +88,6 @@ def context(
         expandtab=expandtab,
         comment=(lhs, rhs),
         position=pos,
-        pumwidth=pumwidth,
         scr_col=scr_col,
         line=split.lhs + split.rhs,
         line_before=split.lhs,
