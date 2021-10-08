@@ -1,54 +1,86 @@
 # Performance
 
-My objective from the beginning was to write something that can keep up with **every keystroke**, and generate _good results_ within **tens of milliseconds**.
+## Humans are slow
 
-And quite a bit of optimization has gone into making `coq.nvim` in accordance with that goal.
+Humans are much slower than computers, therefore when we think about performance, we not only need to think about the cost to compute.
 
-## Responsiveness
+Below a certain threshold, **the cost to humans**, ie. reading and decision time will dominate most human computer interactions.
 
-### Moving heavy lifting off of UI thread
+Therefore `coq.nvim` put a high degree of emphasis on providing not only fast completion times, but also [high quality fuzzy search](https://github.com/ms-jpq/coq_nvim/tree/coq/docs/FUZZY.md)
 
-self explanatory
+The fuzzy algorithms focus on **tolerance for typographical errors**, because humans are also error prone.
 
-### Incremental completion
+## Throughput vs latency
 
-On the python end, this is done via collaborative multi-tasking similar to [React's new concurrent mode](https://reactjs.org/docs/concurrent-mode-intro.html).
+**Perceived performance** has much more to do with responsiveness rather than overall time elapsed.
 
-Instead of projecting the entirety of the result-set, rows are computed incrementally, in an interruptible fashion.
+At every level of `coq.nvim`, the design is to explicitly trade better throughput for better latency.
 
-More interestingly, on the SQLite end:
+This is the same design decision behind many "fast" garbage collectors.
 
-`coq.nvim` launches half a dozen independent in memory SQLite virtual machines in their own threads.
+In broad strokes, this means making `coq.nvim` **concurrent**, which introduces costs to throughput, but enables **other optimizations** detailed below.
 
-This is done in part because it allows the SQLite VMs to each progress without having to block on unrelated operations.
+## SQLite
 
-### Soft Deadlines
+`coq.nvim` spins up over half a dozen independent SQLite VMs.
 
-At the end of day, I can make `coq.nvim` as fast as possible, but the `LSP` servers can still take forever to respond.
+Not only are `sqlite3` VMs fast af due to `C`, and `btrees`, and countless hours of optimizations.
 
-Normally, this is handled by a deadline, where If the `LSP` servers do not respond in time, other completion sources will be shown after a timeout.
+They also provide **even futher speed ups**, these will be elaborated futher in later parts of this document.
 
-Actually this is a lie, the timeout is only in effect if other sources find matches, if no matches are found before the deadline. Each source is polled for completion incrementally until they are all done, or some matches are found from one of the sources.
+## Parallelism
 
-## Speed
+There is this persistent myth that _cpython programs_ cannot take advantage of threading for non-io tasks.
 
-In general, there are two ways to make a program faster.
+In fact, _cpython code_ cannot run in parallel due to the [`GIL`](https://docs.python.org/3/c-api/init.html), but _c code_ can!
 
-### Pick a faster language
+Assuming that they use the `Py_BEGIN_ALLOW_THREADS`, `Py_END_ALLOW_THREADS` macro, which releases the `GIL`.
 
-The storage & query engine in `coq.nvim` is written in SQL.
+**`sqlite3`** is one of those special stdlibs using these two macros, hence it is exploited to provide compute.
 
-SQLite comes natively with python, and it is about as battle tested as anything out there.
+## Concurrency
 
-### Write code that does less work
+`coq.nvim` takes advantage of concurrency via two main avenues:
 
-This is the interesting part. We all know the _**data structures and algorithms**_ spiel. This is in part handled by SQLite.
+1. Threading, for io and sqlite3
 
-But that is not enough!
+2. Coroutines, wherever possible
 
-#### Flow Control
+### Threading
 
-In a naive network with limited capacity, if the rate of ingress exceeds the capacity of egress, the network will eventually enter a doom spiral, where the incoming traffic piling up in congestion.
+Interestingly, `coq.nvim` actually **performs better**, when cpython is tuned to **switch threads more often**.
+
+This is the opposite of many toy parallelism examples, whereby adding threads to a numerical problem slows down computation.
+
+That is because `coq.nvim` is not just performing numerical compute.
+
+When mixing io and compute, cpython introduces a deliberate and significant overhead to GIL acquisition.
+
+Through GIL tuning, `coq.nvim` is able to mostly ignore this cost, but man, none of this is at all obvious.
+
+### Coroutines
+
+Coroutines are used ubiquitously in `coq.nvim`. Unlike pthreads, coroutines are scheduled collaboratively instead of preemptively.
+
+In other words, instead of the runtime (ie. cpython, OS), `coq.nvim` **performs its own task scheduling**.
+
+What it means is that `coq.nvim` has total control over both **when and _if_** tasks are scheduled.
+
+Notably, **`sqlite3` VMs can be manually preempted**, and therefore we can schedule them like coroutines.
+
+## Task scheduling
+
+`coq.nvim` probably has the most **advanced task scheduler** out of any completion engine, not just for vim.
+
+### Do nothing
+
+By definition, the **fastest thing to do is to do nothing**.
+
+Half the battle is figuring out what tasks can be optimizated away to nil.
+
+#### Flow control
+
+In a naive network with limited capacity, if the rate of ingress exceeds the capacity of egress, the network will eventually enter a doom spiral, where the incoming traffic piling up in congestion. This phenomenon is refered to as [bufferbloat](https://en.wikipedia.org/wiki/Bufferbloat)
 
 For `coq.nvim`, this issue is solved akin to how the linux packet queue [`tc-cake`](https://man7.org/linux/man-pages/man8/tc-cake.8.html) works on a basic level for TCP traffic sharping.
 
@@ -58,22 +90,27 @@ Since TCP already ensures packet ordering on a protocol level, this is totally s
 
 Likewise, for `coq.nvim`, user events that have guaranteed ordering are basically treated the same way.
 
-#### Cancel Culture
+#### Cancel culture
 
 If something is outdated, we cancel it.
 
-For every keystroke, `coq.nvim` will require 10s of ms worth of work. What happens if you hold down the keyboard? With flow control, you might assume that time it takes is (10s of ms) \* 2.
+_Manual preemption_ of not just coroutines but also `sqlite3`, takes place on each keystroke.
 
-Wrong.
+In fact, in `coq.nvim`: before any new tasks can be scheduled, all previous tasks must be interrupted.
 
-It is actually (minor overhead of cancellation + 10s of ms). The heavy lifting code of `coq.nvim` is executed collaboratively, via generator functions. Basically at every implicit or explicit `yield` in the codebase, `coq.nvim` will be able to interrupt unnecessary work.
+### Background Processing
 
-It goes further than that.
+There is a certain down time between after completion results are shown to users, and the next keystroke.
 
-Not only does work in python get cancelled, the same thing is done for SQLite too. Each SQLite VM have its own lock protecting the critical operations, and outside of those locked sections, interrupts are fired into the VMs and terminate execution.
+`coq.nvim` takes advantage of this by processing additional rows of data into the `sqlite3` cache.
 
-## Background Processing
+Naturally, these background tasks are also interruptable.
 
-Even after the results are shown to the user, work can still be done!
+### Deadline optimization
 
-As a consequence of being able to resume and interrupt most parts of the data pipeline, it then becomes possible to process and shove unused results into the cache, so on the next keystroke, more results are instantly available.
+`coq.nvim` can as fast as possible, but the `LSP` servers can still take forever to respond.
+
+Normally, this is handled by a deadline, where If the `LSP` servers do not respond in time, other completion sources will be shown after a timeout.
+
+Actually this is a lie, the timeout is only in effect if other sources find matches, if no matches are found before the deadline. Each source is polled for completion incrementally until they are all done, or some matches are found from one of the sources.
+
