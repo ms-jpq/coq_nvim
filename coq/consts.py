@@ -1,12 +1,12 @@
 from os import environ, name
 from pathlib import Path
 
+GIL_SWITCH = 0.001
+
 IS_WIN = name == "nt"
 
 TOP_LEVEL = Path(__file__).resolve().parent.parent
 REQUIREMENTS = TOP_LEVEL / "requirements.txt"
-
-TIMEOUT = 1
 
 
 VARS = TOP_LEVEL / ".vars"

@@ -16,9 +16,9 @@ from sys import (
 from textwrap import dedent
 from typing import Union
 
-from .consts import IS_WIN, REQUIREMENTS, RT_DIR, RT_PY, TOP_LEVEL, VARS
+from .consts import GIL_SWITCH, IS_WIN, REQUIREMENTS, RT_DIR, RT_PY, TOP_LEVEL, VARS
 
-setswitchinterval(min(getswitchinterval(), 0.001))
+setswitchinterval(min(getswitchinterval(), GIL_SWITCH))
 
 try:
     from shlex import join
