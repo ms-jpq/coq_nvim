@@ -26,7 +26,7 @@ In broad strokes, this means making `coq.nvim` **concurrent**, which introduces 
 
 Not only are `sqlite3` VMs fast af due to `C`, and `btrees`, and countless hours of optimizations.
 
-They also provide **even futher speed ups**, these will be elaborated futher in later parts of this document.
+They also provide **even further speed ups**, these will be elaborated further in later parts of this document.
 
 ## Parallelism
 
@@ -80,7 +80,7 @@ Half the battle is figuring out what tasks can be optimizated away to nil.
 
 #### Flow control
 
-In a naive network with limited capacity, if the rate of ingress exceeds the capacity of egress, the network will eventually enter a doom spiral, where the incoming traffic piling up in congestion. This phenomenon is refered to as [bufferbloat](https://en.wikipedia.org/wiki/Bufferbloat)
+In a naive network with limited capacity, if the rate of ingress exceeds the capacity of egress, the network will eventually enter a doom spiral, where the incoming traffic piling up in congestion. This phenomenon is referred to as [bufferbloat](https://en.wikipedia.org/wiki/Bufferbloat)
 
 For `coq.nvim`, this issue is solved akin to how the linux packet queue [`tc-cake`](https://man7.org/linux/man-pages/man8/tc-cake.8.html) works on a basic level for TCP traffic sharping.
 
@@ -104,7 +104,7 @@ There is a certain down time between after completion results are shown to users
 
 `coq.nvim` takes advantage of this by processing additional rows of data into the `sqlite3` cache.
 
-Naturally, these background tasks are also interruptable.
+Naturally, these background tasks are also interruptible.
 
 ### Deadline optimization
 
@@ -112,5 +112,4 @@ Naturally, these background tasks are also interruptable.
 
 Normally, this is handled by a deadline, where If the `LSP` servers do not respond in time, other completion sources will be shown after a timeout.
 
-Actually this is a lie, the timeout is only in effect if other sources find matches, if no matches are found before the deadline. Each source is polled for completion incrementally until they are all done, or some matches are found from one of the sources.
-
+A secret optimization is put into place such that if no results are shown yet, `coq.nvim` will keep on waiting on the slower sources.
