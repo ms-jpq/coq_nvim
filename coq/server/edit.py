@@ -406,7 +406,9 @@ def _parse(
     return edit, marks
 
 
-def _restore(nvim: Nvim, win: Window, buf: Buffer, pos: NvimPos) -> Tuple[str, Optional[int]]:
+def _restore(
+    nvim: Nvim, win: Window, buf: Buffer, pos: NvimPos
+) -> Tuple[str, Optional[int]]:
     row, _ = pos
     ns = create_ns(nvim, ns=NS)
     marks = tuple(buf_get_extmarks(nvim, buf=buf, id=ns))
@@ -422,10 +424,7 @@ def _restore(nvim: Nvim, win: Window, buf: Buffer, pos: NvimPos) -> Tuple[str, O
         binserted = encode(after)[lo:hi]
         inserted = decode(binserted)
 
-        if cur_row == row and lo <= cur_col <= hi:
-            movement = cur_col - lo
-        else:
-            movement = None
+        movement = cur_col - lo if cur_row == row and lo <= cur_col <= hi else None
 
         if inserted:
             buf_set_text(nvim, buf=buf, begin=m1.end, end=m2.begin, text=("",))
@@ -445,7 +444,7 @@ def edit(
         nvim.options["undolevels"] = nvim.options["undolevels"]
 
         if synthetic:
-            inserted, movement = "", 0
+            inserted, movement = "", None
         else:
             inserted, movement = _restore(
                 nvim, win=win, buf=buf, pos=state.context.position
