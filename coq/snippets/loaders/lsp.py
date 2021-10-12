@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 from json import loads
+from json.decoder import JSONDecodeError
 from os.path import normcase
 from pathlib import PurePath
 from typing import AbstractSet, Iterable, Iterator, Mapping, Sequence, Tuple, Union
@@ -9,6 +10,7 @@ from std2.pickle import new_decoder
 from ...shared.types import SnippetGrammar
 from ..consts import SNIP_LINE_SEP
 from ..types import ParsedSnippet
+from .parse import raise_err
 
 
 @dataclass
@@ -47,22 +49,26 @@ def load_lsp(
     filetype = normcase(path.stem.strip())
 
     text = SNIP_LINE_SEP.join(line.rstrip() for _, line in lines)
-    json = loads(text)
-    fmt = _DECODER(json)
+    try:
+        json = loads(text)
+    except JSONDecodeError as e:
+        raise_err(path, lineno=e.lineno, line=text, reason=e.msg)
+    else:
+        fmt = _DECODER(json)
 
-    def cont() -> Iterator[ParsedSnippet]:
-        for label, values in fmt.items():
-            content = _body(values.body).strip()
-            matches = _prefix(values.prefix, content=content)
-            doc = _body(values.description).strip()
-            snippet = ParsedSnippet(
-                grammar=grammar,
-                filetype=filetype,
-                content=content,
-                doc=doc,
-                label=label,
-                matches=matches,
-            )
-            yield snippet
+        def cont() -> Iterator[ParsedSnippet]:
+            for label, values in fmt.items():
+                content = _body(values.body).strip()
+                matches = _prefix(values.prefix, content=content)
+                doc = _body(values.description).strip()
+                snippet = ParsedSnippet(
+                    grammar=grammar,
+                    filetype=filetype,
+                    content=content,
+                    doc=doc,
+                    label=label,
+                    matches=matches,
+                )
+                yield snippet
 
-    return filetype, set(), tuple(cont())
+        return filetype, set(), tuple(cont())
