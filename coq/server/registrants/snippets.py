@@ -305,6 +305,7 @@ async def compile_user_snippets(nvim: Nvim, stack: Stack) -> None:
         )
         loaded = await run_in_executor(
             lambda: load_direct(
+                False,
                 lsp=(),
                 neosnippet=mtimes,
                 ultisnip=(),
