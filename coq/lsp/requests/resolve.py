@@ -20,10 +20,10 @@ async def resolve(nvim: Nvim, extern: ExternLSP) -> Optional[Completion]:
             weight_adjust=0,
             item=resp,
         )
-        if comp:
-            comps.append(comp)
         if extern.client and client == extern.client:
             return comp
+        elif comp:
+            comps.append(comp)
     else:
         for comp in comps:
             if comp.doc:
