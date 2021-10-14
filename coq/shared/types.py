@@ -125,6 +125,7 @@ class Doc:
 
 @dataclass(frozen=True)
 class ExternLSP:
+    client: Optional[str]
     item: Mapping
     command: Optional[Any]
 

@@ -87,6 +87,7 @@ def _doc(item: CompletionItem) -> Optional[Doc]:
 
 def parse_item(
     extern_type: Union[Type[ExternLSP], Type[ExternLUA]],
+    client: Optional[str],
     short_name: str,
     weight_adjust: float,
     item: Any,
@@ -110,7 +111,7 @@ def parse_item(
             )
             kind = PROTOCOL.CompletionItemKind.get(item.get("kind"), "")
             doc = _doc(parsed)
-            extern = extern_type(item=item, command=parsed.command)
+            extern = extern_type(client=client, item=item, command=parsed.command)
             comp = Completion(
                 source=short_name,
                 weight_adjust=weight_adjust,
@@ -129,6 +130,7 @@ def parse_item(
 
 def parse(
     extern_type: Union[Type[ExternLSP], Type[ExternLUA]],
+    client: Optional[str],
     short_name: str,
     weight_adjust: float,
     resp: CompletionResponse,
@@ -151,6 +153,7 @@ def parse(
                 if (
                     co1 := parse_item(
                         extern_type,
+                        client=client,
                         short_name=short_name,
                         weight_adjust=weight_adjust,
                         item=item,
@@ -167,6 +170,7 @@ def parse(
             if (
                 co2 := parse_item(
                     extern_type,
+                    client=client,
                     short_name=short_name,
                     weight_adjust=weight_adjust,
                     item=item,

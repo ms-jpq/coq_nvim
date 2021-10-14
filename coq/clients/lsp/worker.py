@@ -25,8 +25,6 @@ class _Src(Enum):
 
 
 class Worker(BaseWorker[BaseClient, None], CacheWorker):
-    _enable_correction = False
-
     def __init__(self, supervisor: Supervisor, options: BaseClient, misc: None) -> None:
         self._local_cached: MutableSequence[Iterator[Completion]] = []
         CacheWorker.__init__(self, supervisor=supervisor)
@@ -43,7 +41,7 @@ class Worker(BaseWorker[BaseClient, None], CacheWorker):
     async def work(self, context: Context) -> AsyncIterator[Optional[Completion]]:
         limit = BIGGEST_INT if context.manual else self._supervisor.match.max_results
 
-        use_cache, cached, set_cache = self._use_cache(self._enable_correction, context)
+        use_cache, cached, set_cache = self._use_cache(context)
         if not use_cache:
             self._local_cached.clear()
 
