@@ -2,7 +2,7 @@ from asyncio import CancelledError
 from concurrent.futures import Executor
 from sqlite3 import Connection, OperationalError
 from threading import Lock
-from typing import Iterable, Sequence
+from typing import Iterable, Iterator, Sequence
 
 from std2.asyncio import run_in_executor
 from std2.sqlite3 import with_transaction
@@ -43,13 +43,13 @@ class Database:
 
     async def select(
         self, clear: bool, opts: MatchOptions, word: str, sym: str, limitless: int
-    ) -> Sequence[str]:
-        def cont() -> Sequence[str]:
+    ) -> Iterator[str]:
+        def cont() -> Iterator[str]:
             try:
                 with with_transaction(self._conn.cursor()) as cursor:
                     if clear:
                         cursor.execute(sql("delete", "words"))
-                        return ()
+                        return iter(())
                     else:
                         limit = BIGGEST_INT if limitless else opts.max_results
                         cursor.execute(
@@ -66,11 +66,25 @@ class Database:
                             },
                         )
                         rows = cursor.fetchall()
-                        return tuple(row["word"] for row in rows)
+                        if rows:
+                            return (row["word"] for row in rows)
+                        else:
+                            cursor.execute(
+                                sql("select", "backup_words"),
+                                {
+                                    "exact": opts.exact_matches,
+                                    "cut_off": opts.fuzzy_cutoff,
+                                    "look_ahead": opts.look_ahead,
+                                    "limit": limit,
+                                    "word": word,
+                                },
+                            )
+                            rows = cursor.fetchall()
+                            return (row["word"] for row in rows)
             except OperationalError:
-                return ()
+                return iter(())
 
-        def step() -> Sequence[str]:
+        def step() -> Iterator[str]:
             self._interrupt()
             return self._ex.submit(cont)
 
