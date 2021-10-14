@@ -1,14 +1,5 @@
 from dataclasses import dataclass, replace
-from typing import (
-    AbstractSet,
-    Awaitable,
-    Callable,
-    Iterator,
-    MutableMapping,
-    Optional,
-    Sequence,
-    Tuple,
-)
+from typing import Awaitable, Callable, Iterator, MutableMapping, Sequence, Tuple
 from uuid import UUID, uuid4
 
 from ...shared.fuzzy import multi_set_ratio
@@ -116,10 +107,9 @@ class CacheWorker:
 
                     def cont() -> Iterator[Completion]:
                         for comp in tuple(self._cached.values()):
-                            idx = comp.sort_by.find(cache_ctx.text_before)
+                            idx = comp.sort_by.find(context.words_before)
                             if idx >= 0:
-                                sep = idx + len(cache_ctx.text_before)
-                                sort_by = comp.sort_by[sep:]
+                                sort_by = comp.sort_by[idx:]
                                 if use_comp(
                                     self._soup.match,
                                     context=context,
