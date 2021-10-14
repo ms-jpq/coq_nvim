@@ -1,10 +1,17 @@
+WITH short_words AS (
+  SELECT
+    SUBSTR(lword, INSTR(lword, LOWER(:word))) as short_word
+  FROM words
+  WHERE
+    word <> ''
+    AND
+    short_word <> word
+)
 SELECT
-  word
-FROM words
+  short_word
+FROM short_words
 WHERE
-  word <> ''
-  AND
   :word <> ''
   AND
-  X_SIMILARITY(LOWER(:word), SUBSTR(lword, INSTR(lword, LOWER(:word))), :look_ahead) > :cut_off
+  X_SIMILARITY(LOWER(:word), short_word, :look_ahead) > :cut_off
 LIMIT :limit
