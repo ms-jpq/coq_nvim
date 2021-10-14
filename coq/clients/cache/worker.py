@@ -11,15 +11,13 @@ from typing import (
 )
 from uuid import UUID, uuid4
 
-from pynvim_pp.text_object import gen_split
-
 from ...shared.fuzzy import multi_set_ratio
 from ...shared.parse import lower
 from ...shared.repeat import sanitize
 from ...shared.runtime import Supervisor
 from ...shared.settings import MatchOptions
 from ...shared.timeit import timeit
-from ...shared.trans import cword_before, l_match
+from ...shared.trans import cword_before
 from ...shared.types import Completion, Context, Edit, SnippetEdit
 from .database import Database
 
@@ -72,23 +70,6 @@ def use_comp(match: MatchOptions, context: Context, sort_by: str, edit: Edit) ->
         return False
 
 
-def _hard_sortby(
-    unifying_chars: AbstractSet[str], context: Context, sort_by: str
-) -> Optional[str]:
-    if (lhs := l_match(context.line_before, sort_by=sort_by)) and (
-        rhs := sort_by[len(lhs) :]
-    ):
-        split = gen_split(lhs=lhs, rhs=rhs, unifying_chars=unifying_chars)
-        if context.ws_before:
-            return split.ws_lhs + split.ws_rhs
-        elif context.syms_before != context.words_before:
-            return split.syms_lhs + split.syms_rhs
-        else:
-            return split.word_lhs + split.word_rhs
-    else:
-        return None
-
-
 class CacheWorker:
     def __init__(self, supervisor: Supervisor) -> None:
         self._soup = supervisor
@@ -135,11 +116,9 @@ class CacheWorker:
 
                     def cont() -> Iterator[Completion]:
                         for comp in tuple(self._cached.values()):
-                            if sort_by := _hard_sortby(
-                                self._soup.match.unifying_chars,
-                                context=context,
-                                sort_by=comp.sort_by,
-                            ):
+                            idx = comp.sort_by.find(cache_ctx.text_before)
+                            if idx >= 0:
+                                sort_by = comp.sort_by[idx:]
                                 if use_comp(
                                     self._soup.match,
                                     context=context,
