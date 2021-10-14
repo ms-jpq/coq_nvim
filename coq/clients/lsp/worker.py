@@ -25,7 +25,7 @@ class _Src(Enum):
 
 
 class Worker(BaseWorker[BaseClient, None], CacheWorker):
-    _enable_correction = True
+    _enable_correction = False
 
     def __init__(self, supervisor: Supervisor, options: BaseClient, misc: None) -> None:
         self._local_cached: MutableSequence[Iterator[Completion]] = []
