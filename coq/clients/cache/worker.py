@@ -118,7 +118,8 @@ class CacheWorker:
                         for comp in tuple(self._cached.values()):
                             idx = comp.sort_by.find(cache_ctx.text_before)
                             if idx >= 0:
-                                sort_by = comp.sort_by[idx:]
+                                sep = idx + len(cache_ctx.text_before)
+                                sort_by = comp.sort_by[sep:]
                                 if use_comp(
                                     self._soup.match,
                                     context=context,
