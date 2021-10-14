@@ -103,7 +103,7 @@ class CacheWorker:
                     sym=context.syms,
                     limitless=context.manual,
                 )
-                if not words:
+                if not words and context.words_before:
 
                     def cont() -> Iterator[Completion]:
                         for comp in tuple(self._cached.values()):
