@@ -2,14 +2,10 @@ from dataclasses import dataclass, replace
 from typing import Awaitable, Callable, Iterator, MutableMapping, Sequence, Tuple
 from uuid import UUID, uuid4
 
-from ...shared.fuzzy import multi_set_ratio
-from ...shared.parse import lower
 from ...shared.repeat import sanitize
 from ...shared.runtime import Supervisor
-from ...shared.settings import MatchOptions
 from ...shared.timeit import timeit
-from ...shared.trans import cword_before
-from ...shared.types import Completion, Context, Edit, SnippetEdit
+from ...shared.types import Completion, Context
 from .database import Database
 
 
@@ -38,27 +34,6 @@ def sanitize_cached(comp: Completion) -> Completion:
     edit = sanitize(comp.primary_edit)
     cached = replace(comp, primary_edit=edit, secondary_edits=())
     return cached
-
-
-def use_comp(match: MatchOptions, context: Context, sort_by: str, edit: Edit) -> bool:
-    cword = cword_before(
-        match.unifying_chars,
-        lower=True,
-        context=context,
-        sort_by=sort_by,
-    )
-    if len(sort_by) + match.look_ahead >= len(cword):
-        ratio = multi_set_ratio(
-            cword,
-            lower(sort_by),
-            look_ahead=match.look_ahead,
-        )
-        use = ratio >= match.fuzzy_cutoff and (
-            isinstance(edit, SnippetEdit) or not cword.startswith(edit.new_text)
-        )
-        return use
-    else:
-        return False
 
 
 class CacheWorker:
@@ -103,31 +78,11 @@ class CacheWorker:
                     sym=context.syms,
                     limitless=context.manual,
                 )
-                if not words and context.words_before:
-
-                    def cont() -> Iterator[Completion]:
-                        for comp in tuple(self._cached.values()):
-                            idx = comp.sort_by.find(context.words_before)
-                            if idx >= 0:
-                                sort_by = comp.sort_by[idx:]
-                                if use_comp(
-                                    self._soup.match,
-                                    context=context,
-                                    sort_by=sort_by,
-                                    edit=comp.primary_edit,
-                                ):
-                                    new_comp = sanitize_cached(
-                                        replace(comp, sort_by=sort_by)
-                                    )
-                                    yield new_comp
-
-                    comps = cont()
-                else:
-                    comps = (
-                        sanitize_cached(comp)
-                        for sort_by in words
-                        if (comp := self._cached.get(sort_by))
-                    )
+                comps = (
+                    sanitize_cached(comp)
+                    for sort_by in words
+                    if (comp := self._cached.get(sort_by))
+                )
                 return comps
 
         async def set_cache(completions: Sequence[Completion]) -> None:

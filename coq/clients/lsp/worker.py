@@ -10,18 +10,42 @@ from std2.itertools import chunk
 
 from ...lsp.requests.completion import comp_lsp
 from ...lsp.types import LSPcomp
+from ...shared.fuzzy import multi_set_ratio
+from ...shared.parse import lower
 from ...shared.runtime import Supervisor
 from ...shared.runtime import Worker as BaseWorker
-from ...shared.settings import BaseClient
+from ...shared.settings import BaseClient, MatchOptions
 from ...shared.sql import BIGGEST_INT
-from ...shared.types import Completion, Context
-from ..cache.worker import CacheWorker, sanitize_cached, use_comp
+from ...shared.trans import cword_before
+from ...shared.types import Completion, Context, Edit, SnippetEdit
+from ..cache.worker import CacheWorker, sanitize_cached
 
 
 class _Src(Enum):
     from_db = auto()
     from_stored = auto()
     from_query = auto()
+
+
+def _use_comp(match: MatchOptions, context: Context, sort_by: str, edit: Edit) -> bool:
+    cword = cword_before(
+        match.unifying_chars,
+        lower=True,
+        context=context,
+        sort_by=sort_by,
+    )
+    if len(sort_by) + match.look_ahead >= len(cword):
+        ratio = multi_set_ratio(
+            cword,
+            lower(sort_by),
+            look_ahead=match.look_ahead,
+        )
+        use = ratio >= match.fuzzy_cutoff and (
+            isinstance(edit, SnippetEdit) or not cword.startswith(edit.new_text)
+        )
+        return use
+    else:
+        return False
 
 
 class Worker(BaseWorker[BaseClient, None], CacheWorker):
@@ -86,7 +110,7 @@ class Worker(BaseWorker[BaseClient, None], CacheWorker):
                             yield comp
                 else:
                     for comp in chunked:
-                        if seen < limit and use_comp(
+                        if seen < limit and _use_comp(
                             self._supervisor.match,
                             context=context,
                             sort_by=comp.sort_by,
