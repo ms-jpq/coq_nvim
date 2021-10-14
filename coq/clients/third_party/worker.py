@@ -7,8 +7,6 @@ from ..lsp.worker import Worker as LSPWorker
 
 
 class Worker(LSPWorker):
-    _enable_correction = False
-
     def _request(self, context: Context) -> AsyncIterator[LSPcomp]:
         return comp_thirdparty(
             self._supervisor.nvim,

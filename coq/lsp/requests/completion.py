@@ -18,10 +18,14 @@ async def comp_lsp(
     row, c = context.position
     col = len(encode(context.line_before[:c], encoding=UTF16)) // 2
 
-    async for _, reply in async_request(nvim, "lsp_comp", (row, col)):
+    async for client, reply in async_request(nvim, "lsp_comp", (row, col)):
         resp = cast(CompletionResponse, reply)
         yield parse(
-            ExternLSP, short_name=short_name, weight_adjust=weight_adjust, resp=resp
+            ExternLSP,
+            client=client,
+            short_name=short_name,
+            weight_adjust=weight_adjust,
+            resp=resp,
         )
 
 
@@ -36,4 +40,10 @@ async def comp_thirdparty(
     ):
         name = client or short_name
         resp = cast(CompletionResponse, reply)
-        yield parse(ExternLUA, short_name=name, weight_adjust=weight_adjust, resp=resp)
+        yield parse(
+            ExternLUA,
+            client=client,
+            short_name=name,
+            weight_adjust=weight_adjust,
+            resp=resp,
+        )

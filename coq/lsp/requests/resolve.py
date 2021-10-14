@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import MutableSequence, Optional
 
 from pynvim import Nvim
 
@@ -10,10 +10,23 @@ from .request import async_request
 
 async def resolve(nvim: Nvim, extern: ExternLSP) -> Optional[Completion]:
     name = "lsp_third_party_resolve" if isinstance(extern, ExternLUA) else "lsp_resolve"
+    comps: MutableSequence[Completion] = []
 
-    async for _, resp in async_request(nvim, name, extern.item):
-        comp = parse_item(type(extern), short_name="", weight_adjust=0, item=resp)
-        if comp and comp.doc:
+    async for client, resp in async_request(nvim, name, extern.item):
+        comp = parse_item(
+            type(extern),
+            client=client,
+            short_name="",
+            weight_adjust=0,
+            item=resp,
+        )
+        if extern.client and client == extern.client:
             return comp
+        elif comp:
+            comps.append(comp)
     else:
-        return None
+        for comp in comps:
+            if comp.doc:
+                return comp
+        else:
+            return None
