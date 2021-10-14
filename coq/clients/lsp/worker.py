@@ -70,8 +70,9 @@ class Worker(BaseWorker[BaseClient, None], CacheWorker):
             self._local_cached.clear()
 
         async def cached_iters() -> Tuple[_Src, LSPcomp]:
-            items = map(sanitize_cached, chain(*self._local_cached))
+            chained = chain(*self._local_cached)
             self._local_cached.clear()
+            items = (sanitize_cached(item, sort_by=None) for item in chained)
             return _Src.from_stored, LSPcomp(local_cache=True, items=items)
 
         async def cached_db_items() -> Tuple[_Src, LSPcomp]:

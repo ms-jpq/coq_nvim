@@ -2,7 +2,7 @@ from asyncio import CancelledError
 from concurrent.futures import Executor
 from sqlite3 import Connection, OperationalError
 from threading import Lock
-from typing import Iterable, Iterator
+from typing import Iterable, Iterator, Optional, Tuple
 
 from std2.asyncio import run_in_executor
 from std2.sqlite3 import with_transaction
@@ -43,8 +43,8 @@ class Database:
 
     async def select(
         self, clear: bool, opts: MatchOptions, word: str, sym: str, limitless: int
-    ) -> Iterator[str]:
-        def cont() -> Iterator[str]:
+    ) -> Iterator[Tuple[str, Optional[str]]]:
+        def cont() -> Iterator[Tuple[str, Optional[str]]]:
             if clear:
                 with self._lock, with_transaction(self._conn.cursor()) as cursor:
                     cursor.execute(sql("delete", "words"))
@@ -68,7 +68,7 @@ class Database:
                         )
                         rows = cursor.fetchall()
                         if rows:
-                            return (row["word"] for row in rows)
+                            return ((row["word"], None) for row in rows)
                         else:
                             cursor.execute(
                                 sql("select", "backup_words"),
@@ -81,11 +81,11 @@ class Database:
                                 },
                             )
                             rows = cursor.fetchall()
-                            return (row["word"] for row in rows)
+                            return ((row["word"], row["sort_by"]) for row in rows)
                 except OperationalError:
                     return iter(())
 
-        def step() -> Iterator[str]:
+        def step() -> Iterator[Tuple[str, Optional[str]]]:
             self._interrupt()
             return self._ex.submit(cont)
 

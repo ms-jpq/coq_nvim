@@ -1,5 +1,13 @@
 from dataclasses import dataclass, replace
-from typing import Awaitable, Callable, Iterator, MutableMapping, Sequence, Tuple
+from typing import (
+    Awaitable,
+    Callable,
+    Iterator,
+    MutableMapping,
+    Optional,
+    Sequence,
+    Tuple,
+)
 from uuid import UUID, uuid4
 
 from ...shared.repeat import sanitize
@@ -30,9 +38,14 @@ def _use_cache(cache: _CacheCtx, ctx: Context) -> bool:
     return use_cache
 
 
-def sanitize_cached(comp: Completion) -> Completion:
+def sanitize_cached(comp: Completion, sort_by: Optional[str]) -> Completion:
     edit = sanitize(comp.primary_edit)
-    cached = replace(comp, primary_edit=edit, secondary_edits=())
+    cached = replace(
+        comp,
+        primary_edit=edit,
+        secondary_edits=(),
+        sort_by=sort_by or comp.sort_by,
+    )
     return cached
 
 
@@ -79,9 +92,9 @@ class CacheWorker:
                     limitless=context.manual,
                 )
                 comps = (
-                    sanitize_cached(comp)
-                    for sort_by in words
-                    if (comp := self._cached.get(sort_by))
+                    sanitize_cached(comp, sort_by=sort_by)
+                    for word, sort_by in words
+                    if (comp := self._cached.get(word))
                 )
                 return comps
 

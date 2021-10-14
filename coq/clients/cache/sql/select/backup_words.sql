@@ -1,10 +1,19 @@
+WITH sort_bys AS (
+  SELECT
+    word,
+    SUBSTR(lword, INSTR(lword, LOWER(:word))) as sort_by
+  FROM words
+  WHERE
+    word <> ''
+    AND
+    sort_by <> word
+)
 SELECT
-  word
-FROM words
+  word,
+  sort_by
+FROM sort_bys
 WHERE
-  word <> ''
-  AND
   :word <> ''
   AND
-  X_SIMILARITY(LOWER(:word), SUBSTR(lword, INSTR(lword, LOWER(:word))), :look_ahead) > :cut_off
+  X_SIMILARITY(LOWER(:word), sort_by, :look_ahead) > :cut_off
 LIMIT :limit
