@@ -24,7 +24,7 @@ Below a certain threshold, **the cost to humans**, ie. reading and decision time
 
 - sorting: comprehensive
 
-In particular, the stages takes cues from data science, and applies `feature scaling`, `ensemble method`, as well as `sigmoid smoothing`.
+In particular, the stages borrows ideas from data science, to process and normalize inputs and weights.
 
 ### Fuzziness
 
