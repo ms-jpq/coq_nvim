@@ -68,11 +68,12 @@ _IN_VENV = _RT_PY == _EXEC_PATH
 if command == "deps":
     assert not _IN_VENV
 
+    io_out = StringIO()
     try:
         from venv import EnvBuilder
 
         print("...", flush=True)
-        with redirect_stdout(StringIO()), redirect_stderr(StringIO()):
+        with redirect_stdout(io_out), redirect_stderr(io_out):
             EnvBuilder(
                 system_site_packages=False,
                 with_pip=True,
@@ -82,7 +83,7 @@ if command == "deps":
             ).create(_RT_DIR)
     except (ImportError, CalledProcessError):
         msg = "Please install python3-venv separately. (apt, yum, apk, etc)"
-        print(msg, file=stderr)
+        print(msg, io_out, file=stderr)
         exit(1)
     else:
         proc = run(
