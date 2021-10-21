@@ -36,7 +36,7 @@ Weight adjustment for ranking, normalized to `[0.5, 1.5]` using `S(x) = 1 / (1 +
 
 `S(+2) ~= 1.4` anything bigger has diminishing returns
 
-**[default](/config/defaults.yml):**
+**[default:](https://github.com/ms-jpq/coq_nvim/blob/coq/config/defaults.yml)**
 
 ```json
 <preset float>
