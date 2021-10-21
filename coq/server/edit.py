@@ -44,7 +44,6 @@ from ..shared.types import (
     Context,
     ContextualEdit,
     Edit,
-    ExternPath,
     Mark,
     NvimPos,
     RangeEdit,
@@ -434,8 +433,12 @@ def _restore(
 
 
 def edit(
-    nvim: Nvim, stack: Stack, state: State, metric: Metric, synthetic: bool
-) -> Optional[Tuple[int, int]]:
+    nvim: Nvim,
+    stack: Stack,
+    state: State,
+    metric: Metric,
+    synthetic: bool,
+) -> Optional[NvimPos]:
     win = cur_win(nvim)
     buf = win_get_buf(nvim, win=win)
     if buf.number != state.context.buf_id:
@@ -492,14 +495,6 @@ def edit(
 
             m_shift = apply(nvim, buf=buf, instructions=instructions)
             if inserted:
-                path_cont = False
-                if (
-                    inserted[0] == "/"
-                    and isinstance(metric.comp.extern, ExternPath) 
-                    and metric.comp.extern.path.is_dir()
-                ):
-                    inserted = inserted[1:]
-                    path_cont = True
                 try:
                     buf_set_text(
                         nvim,
@@ -510,9 +505,6 @@ def edit(
                     )
                 except NvimError as e:
                     log.warn("%s", e)
-                finally:
-                    if path_cont and movement is not None:
-                        n_col -= 1
 
             if movement is not None:
                 try:
@@ -534,4 +526,5 @@ def edit(
                         )
                     ),
                 )
+
             return n_row, n_col
