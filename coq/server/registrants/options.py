@@ -19,7 +19,7 @@ def _update_pumheight(nvim: Nvim, stack: Stack) -> None:
     scr_height: int = nvim.options["lines"]
     state(screen=(scr_width, scr_height))
 
-    pumheight = max(
+    pumheight = min(
         round(scr_height * stack.settings.display.pum.y_ratio),
         stack.settings.display.pum.y_max_len,
     )
