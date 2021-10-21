@@ -106,8 +106,8 @@ class Parser(TestCase):
         )
         expected = sorted(
             (
-                (Path(".gitignore"), "./.gitignore"),
-                (Path(".github"), "./.github/"),
+                (Path(".gitignore"), False, "./.gitignore"),
+                (Path(".github"), True, "./.github/"),
             ),
         )
         self.assertEqual(actual, expected)
@@ -125,8 +125,8 @@ class Parser(TestCase):
         )
         expected = sorted(
             (
-                (Path(".github", ".agp"), "./.github/.agp"),
-                (Path(".github", "workflows"), "./.github/workflows/"),
+                (Path(".github", ".agp"), False, "./.github/.agp"),
+                (Path(".github", "workflows"), True, "./.github/workflows/"),
             )
         )
         self.assertEqual(actual, expected)
@@ -144,8 +144,8 @@ class Parser(TestCase):
         )
         expected = sorted(
             (
-                (Path(".github", ".agp"), "./.github/.agp"),
-                (Path(".github", "workflows"), "./.github/workflows/"),
+                (Path(".github", ".agp"), False, "./.github/.agp"),
+                (Path(".github", "workflows"), True, "./.github/workflows/"),
             )
         )
         self.assertEqual(actual, expected)
@@ -163,8 +163,8 @@ class Parser(TestCase):
         )
         expected = sorted(
             (
-                (Path(".gitignore"), "./.gitignore"),
-                (Path(".github"), "./.github/"),
+                (Path(".gitignore"), False, "./.gitignore"),
+                (Path(".github"), True, "./.github/"),
             ),
         )
         self.assertEqual(actual, expected)
@@ -182,8 +182,8 @@ class Parser(TestCase):
         )
         expected = sorted(
             (
-                (Path(".github", ".agp"), "./.github/.agp"),
-                (Path(".github", "workflows"), "./.github/workflows/"),
+                (Path(".github", ".agp"), False, "./.github/.agp"),
+                (Path(".github", "workflows"), True, "./.github/workflows/"),
             )
         )
         self.assertEqual(actual, expected)
@@ -201,8 +201,8 @@ class Parser(TestCase):
         )
         expected = sorted(
             (
-                (Path(".github", ".agp"), "./.github/.agp"),
-                (Path(".github", "workflows"), "./.github/workflows/"),
+                (Path(".github", ".agp"), False, "./.github/.agp"),
+                (Path(".github", "workflows"), True, "./.github/workflows/"),
             )
         )
         self.assertEqual(actual, expected)
@@ -218,7 +218,7 @@ class Parser(TestCase):
                 line=line,
             )
         }
-        expected = (Path(sep, "home"), "/home/")
+        expected = (Path(sep, "home"), True, "/home/")
         self.assertIn(expected, results)
 
     def test_8(self) -> None:
@@ -232,7 +232,7 @@ class Parser(TestCase):
                 line=line,
             )
         }
-        expected = (Path.home() / ".config", "~/.config/")
+        expected = (Path.home() / ".config", True, "~/.config/")
         self.assertIn(expected, results)
 
     def test_9(self) -> None:
@@ -248,8 +248,8 @@ class Parser(TestCase):
         )
         expected = sorted(
             (
-                (Path.cwd() / ".gitignore", "$PWD/.gitignore"),
-                (Path.cwd() / ".github", "$PWD/.github/"),
+                (Path.cwd() / ".gitignore", False, "$PWD/.gitignore"),
+                (Path.cwd() / ".github", True, "$PWD/.github/"),
             ),
         )
         self.assertEqual(actual, expected)
@@ -267,8 +267,8 @@ class Parser(TestCase):
         )
         expected = sorted(
             (
-                (Path.cwd() / ".gitignore", "${PWD}/.gitignore"),
-                (Path.cwd() / ".github", "${PWD}/.github/"),
+                (Path.cwd() / ".gitignore", False, "${PWD}/.gitignore"),
+                (Path.cwd() / ".github", True, "${PWD}/.github/"),
             ),
         )
         self.assertEqual(actual, expected)

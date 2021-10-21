@@ -433,8 +433,12 @@ def _restore(
 
 
 def edit(
-    nvim: Nvim, stack: Stack, state: State, metric: Metric, synthetic: bool
-) -> Optional[Tuple[int, int]]:
+    nvim: Nvim,
+    stack: Stack,
+    state: State,
+    metric: Metric,
+    synthetic: bool,
+) -> Optional[NvimPos]:
     win = cur_win(nvim)
     buf = win_get_buf(nvim, win=win)
     if buf.number != state.context.buf_id:
@@ -522,4 +526,5 @@ def edit(
                         )
                     ),
                 )
+
             return n_row, n_col

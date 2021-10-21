@@ -119,7 +119,7 @@ def parse(
     fuzzy_cutoff: float,
     base: Path,
     line: str,
-) -> Iterator[Tuple[Path, str]]:
+) -> Iterator[Tuple[Path, bool, str]]:
     for segment, s0 in _iter_segs(seps, line=line):
         local_sep = _p_sep(s0)
         p = Path(s0)
@@ -128,9 +128,10 @@ def parse(
         with suppress(OSError):
             if entire.is_dir():
                 for path in scandir(entire):
-                    term = local_sep if path.is_dir() else ""
+                    is_dir = path.is_dir()
+                    term = local_sep if is_dir else ""
                     line = _join(local_sep, lhs=segment, rhs=path.name) + term
-                    yield Path(path.path), line
+                    yield Path(path.path), is_dir, line
                 return
 
             else:
@@ -154,10 +155,10 @@ def parse(
                                 and len(path.name) + look_ahead >= len(rhs)
                                 and not rhs.startswith(path.name)
                             ):
-
-                                term = local_sep if path.is_dir() else ""
+                                is_dir = path.is_dir()
+                                term = local_sep if is_dir else ""
                                 line = _join(local_sep, lhs=lseg, rhs=path.name) + term
-                                yield Path(path.path), line
+                                yield Path(path.path), is_dir, line
                         return
 
 
@@ -168,8 +169,8 @@ async def _parse(
     limit: int,
     look_ahead: int,
     fuzzy_cutoff: float,
-) -> AbstractSet[Tuple[Path, str]]:
-    def cont() -> AbstractSet[Tuple[Path, str]]:
+) -> AbstractSet[Tuple[Path, bool, str]]:
+    def cont() -> AbstractSet[Tuple[Path, bool, str]]:
         return {
             *islice(
                 parse(
@@ -234,9 +235,7 @@ class Worker(BaseWorker[PathsClient, None]):
         seen: MutableSet[str] = set()
 
         for co in as_completed(aw):
-            seq = await co
-
-            for path, new_text in seq:
+            for path, is_dir, new_text in await co:
                 if len(seen) >= limit:
                     break
                 elif new_text not in seen:
@@ -252,7 +251,7 @@ class Worker(BaseWorker[PathsClient, None]):
                             new_text=new_text,
                         ),
                         primary_edit=edit,
-                        extern=ExternPath(path=path),
+                        extern=ExternPath(is_dir=is_dir, path=path),
                         icon_match="Folder" if new_text.endswith(sep) else "File",
                     )
                     yield completion

@@ -26,7 +26,7 @@ from ...lsp.requests.resolve import resolve
 from ...registry import NAMESPACE, atomic, autocmd, rpc
 from ...shared.runtime import Metric
 from ...shared.timeit import timeit
-from ...shared.types import Context, ExternLSP, NvimPos
+from ...shared.types import Context, ExternLSP, ExternPath
 from ..completions import complete
 from ..context import context
 from ..edit import NS, edit
@@ -37,13 +37,16 @@ from ..trans import trans
 _Q: SimpleQueue = SimpleQueue()
 
 
-def _should_cont(inserted: Optional[NvimPos], prev: Context, cur: Context) -> bool:
+def _should_cont(state: State, prev: Context, cur: Context) -> bool:
     if cur.manual:
         return True
     elif prev.change_id == cur.change_id:
         return False
-    elif cur.position == inserted:
-        return False
+    elif cur.position == state.inserted_pos:
+        if isinstance(extern := state.last_edit.comp.extern, ExternPath):
+            return extern.is_dir
+        else:
+            return False
     elif cur.syms_before != "":
         return True
     else:
@@ -74,11 +77,7 @@ def _launch_loop(nvim: Nvim, stack: Stack) -> None:
                             manual=manual,
                         ),
                     )
-                    should = (
-                        _should_cont(s.inserted_pos, prev=s.context, cur=ctx)
-                        if ctx
-                        else False
-                    )
+                    should = _should_cont(s, prev=s.context, cur=ctx) if ctx else False
                     _, col = ctx.position
 
                     if should:

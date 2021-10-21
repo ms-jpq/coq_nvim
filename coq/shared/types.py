@@ -137,6 +137,7 @@ class ExternLUA(ExternLSP):
 
 @dataclass(frozen=True)
 class ExternPath:
+    is_dir: bool
     path: Path
 
 
