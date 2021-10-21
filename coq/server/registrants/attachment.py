@@ -30,6 +30,7 @@ def _buf_enter(nvim: Nvim, stack: Stack) -> None:
 
 
 autocmd("BufEnter", "InsertEnter") << f"lua {NAMESPACE}.{_buf_enter.name}()"
+atomic.exec_lua(f"{NAMESPACE}.{_buf_enter.name}()", ())
 
 q: SimpleQueue = SimpleQueue()
 
