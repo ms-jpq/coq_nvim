@@ -9,7 +9,7 @@ from typing import Sequence, Tuple
 from pynvim import Nvim
 from pynvim_pp.lib import encode, write
 from std2.argparse import ArgparseError, ArgParser
-from std2.pickle import new_decoder
+from std2.pickle.decoder import new_decoder
 from yaml import safe_load
 
 from ...consts import HELO_ARTIFACTS
