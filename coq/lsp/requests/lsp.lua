@@ -96,8 +96,10 @@
     local n_clients = 0
     local client_names = {}
     for id, info in pairs(vim.lsp.buf_get_clients(0)) do
-      n_clients = n_clients + 1
-      client_names[id] = info.name
+      if info.supports_method("textDocument/completion") then
+        n_clients = n_clients + 1
+        client_names[id] = info.name
+      end
     end
     return n_clients, client_names
   end
