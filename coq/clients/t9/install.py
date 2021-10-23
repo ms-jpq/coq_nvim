@@ -1,13 +1,14 @@
 from asyncio import sleep
+from io import BytesIO
 from os import X_OK, access
 from pathlib import Path, PurePath
 from platform import machine
 from shutil import which
 from socket import timeout as TimeoutE
 from string import Template
-from tempfile import NamedTemporaryFile
 from typing import Optional
 from urllib.error import URLError
+from zipfile import ZipFile
 
 from pynvim_pp.lib import decode
 from pynvim_pp.logging import log
@@ -15,9 +16,9 @@ from std2.asyncio import run_in_executor
 from std2.platform import OS, os
 from std2.urllib import urlopen
 
-_VER = "https://update.tabnine.com/version"
-_EXEC = "TabNine.exe" if os is OS.windows else "TabNine"
-_DOWN = Template(f"https://update.tabnine.com/$version/$triple/{_EXEC}")
+_VER = "https://update.tabnine.com/bundles/version"
+_DOWN = Template(f"https://update.tabnine.com/bundles/$version/$triple/TabNine.zip")
+_T9_EXEC = PurePath("TabNine").with_suffix(".exe" if os is OS.windows else "")
 
 
 def _triple() -> Optional[str]:
@@ -50,7 +51,7 @@ def _uri(timeout: float) -> Optional[str]:
 
 
 def t9_bin(vars_dir: Path) -> Path:
-    return vars_dir / _EXEC
+    return vars_dir / _T9_EXEC
 
 
 def _update(vars_dir: Path, timeout: float) -> bool:
@@ -69,11 +70,9 @@ def _update(vars_dir: Path, timeout: float) -> bool:
     else:
         if not access(bin, X_OK) or uri != p_uri:
             with urlopen(uri, timeout=timeout) as resp:
-                buf = resp.read()
-
-            with NamedTemporaryFile(dir=vars_dir, delete=False) as fd:
-                fd.write(buf)
-            Path(fd.name).replace(bin)
+                buf = BytesIO(resp.read())
+                with ZipFile(buf) as zip:
+                    zip.extractall(path=vars_dir)
 
             bin.chmod(0o755)
             lock.write_text(uri)
