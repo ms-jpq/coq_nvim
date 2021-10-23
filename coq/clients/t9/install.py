@@ -1,5 +1,4 @@
 from asyncio import sleep
-from contextlib import suppress
 from os import X_OK, access
 from pathlib import Path, PurePath
 from platform import machine
@@ -22,7 +21,8 @@ _DOWN = Template(f"https://update.tabnine.com/$version/$triple/{_EXEC}")
 
 
 def _triple() -> Optional[str]:
-    arch = machine()
+    cpu = machine()
+    arch = {"arm64": "aarch64"}.get(cpu, cpu)
     if os is OS.linux:
         libc = "musl" if which("apk") else "gnu"
         return f"{arch}-unknown-linux-{libc}"
