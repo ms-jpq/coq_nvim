@@ -1,6 +1,6 @@
 from argparse import ArgumentParser, Namespace
 from concurrent.futures import ThreadPoolExecutor
-from contextlib import nullcontext, redirect_stderr, redirect_stdout
+from contextlib import redirect_stderr, redirect_stdout
 from io import StringIO
 from multiprocessing import cpu_count
 from pathlib import Path
@@ -21,6 +21,7 @@ from .consts import GIL_SWITCH, IS_WIN, REQUIREMENTS, RT_DIR, RT_PY, TOP_LEVEL, 
 setswitchinterval(min(getswitchinterval(), GIL_SWITCH))
 
 try:
+    from contextlib import nullcontext
     from shlex import join
     from typing import Literal
 
