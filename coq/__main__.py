@@ -134,11 +134,14 @@ elif command == "run":
     try:
         lock = _LOCK_FILE.read_text()
     except Exception:
+        print("cannot read lock", end="", file=stderr)
         lock = ""
     try:
         if not _IN_VENV:
+            print("not in venv", end="", file=stderr)
             raise ImportError()
         elif lock != _REQ:
+            print("not locked", end="", file=stderr)
             raise ImportError()
         else:
             import pynvim
