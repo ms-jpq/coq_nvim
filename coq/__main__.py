@@ -3,6 +3,7 @@ from concurrent.futures import ThreadPoolExecutor
 from contextlib import redirect_stderr, redirect_stdout
 from io import StringIO
 from multiprocessing import cpu_count
+from os import linesep
 from pathlib import Path
 from subprocess import DEVNULL, STDOUT, CalledProcessError, run
 from sys import (
@@ -148,7 +149,7 @@ elif command == "run":
             import pynvim_pp
             import std2
             import yaml
-    except ImportError:
+    except ImportError as e:
         msg = f"""
         Please update dependencies using :COQdeps
         -
@@ -157,7 +158,7 @@ elif command == "run":
         `{join(("rm", "-rf", str(TOP_LEVEL.name)))}` will cleanly remove everything
         """
         msg = dedent(msg)
-        print(msg, end="", file=stderr)
+        print(e, msg, sep=linesep, end="", file=stderr)
         exit(1)
     else:
         from pynvim import attach
