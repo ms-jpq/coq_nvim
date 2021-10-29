@@ -138,7 +138,7 @@ elif command == "run":
         lock = ""
     try:
         if not _IN_VENV:
-            raise ImportError()
+            assert False
         elif lock != _REQ:
             raise ImportError()
         else:
