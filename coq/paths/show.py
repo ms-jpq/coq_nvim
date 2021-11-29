@@ -77,5 +77,5 @@ async def show(cwd: PurePath, path: Path, ellipsis: str, height: int) -> Optiona
             return await _show_file(path, ellipsis=ellipsis, height=height)
         else:
             return None
-    except OSError:
+    except (OSError, ValueError):
         return None
