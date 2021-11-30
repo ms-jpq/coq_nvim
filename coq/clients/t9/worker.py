@@ -166,7 +166,7 @@ class Worker(BaseWorker[BaseClient, None]):
                         self._proc.stdin.write(b"\n")
                         await self._proc.stdin.drain()
                         out = await self._proc.stdout.readline()
-                    except (ConnectionError, LimitOverrunError):
+                    except (ConnectionError, LimitOverrunError, ValueError):
                         return await self._clean()
                     else:
                         return decode(out)
