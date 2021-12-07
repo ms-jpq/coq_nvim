@@ -92,11 +92,12 @@
     end
   end)()
 
-  local lsp_clients = function()
+  local lsp_clients = function(required_support)
+    vim.validate {required_support = {required_support, "string"}}
     local n_clients = 0
     local client_names = {}
     for id, info in pairs(vim.lsp.buf_get_clients(0)) do
-      if info.supports_method("textDocument/completion") then
+      if info.supports_method(required_support) then
         n_clients = n_clients + 1
         client_names[id] = info.name
       end
@@ -124,17 +125,13 @@
       textDocument = text_doc,
       context = {triggerKind = vim.lsp.protocol.CompletionTriggerKind.Invoked}
     }
+    local lsp_method = "textDocument/completion"
     req(
       name,
       session_id,
-      {lsp_clients()},
+      {lsp_clients(lsp_method)},
       function(on_resp)
-        return vim.lsp.buf_request(
-          0,
-          "textDocument/completion",
-          params,
-          on_resp
-        )
+        return vim.lsp.buf_request(0, lsp_method, params, on_resp)
       end
     )
   end
@@ -145,13 +142,13 @@
       session_id = {session_id, "number"},
       item = {item, "table"}
     }
-
+    local lsp_method = "completionItem/resolve"
     req(
       name,
       session_id,
-      {lsp_clients()},
+      {lsp_clients(lsp_method)},
       function(on_resp)
-        return vim.lsp.buf_request(0, "completionItem/resolve", item, on_resp)
+        return vim.lsp.buf_request(0, lsp_method, item, on_resp)
       end
     )
   end
@@ -166,12 +163,13 @@
       command = {cmd.command, "string"}
     }
 
+    local lsp_method = "workspace/executeCommand"
     req(
       name,
       session_id,
-      {lsp_clients()},
+      {lsp_clients(lsp_method)},
       function(on_resp)
-        return vim.lsp.buf_request(0, "workspace/executeCommand", cmd, on_resp)
+        return vim.lsp.buf_request(0, lsp_method, cmd, on_resp)
       end
     )
   end
