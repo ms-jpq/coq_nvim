@@ -69,7 +69,7 @@ def parse(mtimes: Mapping[str, float], raw: str) -> Tags:
             try:
                 json = loads(line)
             except JSONDecodeError:
-                log.exception("%s", line)
+                log.warning("%s", line)
             else:
                 if json["_type"] == "tag":
                     path = json["path"]
