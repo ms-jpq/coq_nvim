@@ -1,6 +1,7 @@
 ---
-title: coq.nvim 🐔
+title: "coq.nvim 🐔"
 
 showcase: True
 
-images: []
+images:
+  - https://raw.githubusercontent.com/ms-jpq/coq.artifacts/artifacts/preview/pretty.gif
