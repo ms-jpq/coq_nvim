@@ -28,8 +28,11 @@
     return proxy
   end
 
-  local lsp_clients = function(client_names, buf, lsp_method)
-    vim.validate {client_names = {client_names, "table"}}
+  local lsp_clients = function(include_clients, client_names, buf, lsp_method)
+    vim.validate {
+      include_clients = {include_clients, "boolean"},
+      client_names = {client_names, "table"}
+    }
 
     local filter = (function()
       if #client_names <= 0 then
@@ -45,7 +48,8 @@
 
         return function(client_name)
           vim.validate {client_name = {client_name, "string"}}
-          return acc[client_name]
+          local includes = acc[client_name]
+          return include_clients and includes or not includes
         end
       end
     end)()
@@ -196,7 +200,7 @@
 
     local buf = vim.api.nvim_get_current_buf()
     local lsp_method = "textDocument/completion"
-    local n_clients, clients = lsp_clients({}, buf, lsp_method)
+    local n_clients, clients = lsp_clients(false, client_names, buf, lsp_method)
 
     req(
       name,
@@ -218,7 +222,7 @@
 
     local buf = vim.api.nvim_get_current_buf()
     local lsp_method = "completionItem/resolve"
-    local n_clients, clients = lsp_clients(client_names, buf, lsp_method)
+    local n_clients, clients = lsp_clients(true, client_names, buf, lsp_method)
 
     req(
       name,
@@ -243,7 +247,7 @@
 
     local buf = vim.api.nvim_get_current_buf()
     local lsp_method = "workspace/executeCommand"
-    local n_clients, clients = lsp_clients({}, buf, lsp_method)
+    local n_clients, clients = lsp_clients(true, client_names, buf, lsp_method)
 
     req(
       name,
