@@ -31,7 +31,9 @@
   local lsp_clients = function(include_clients, client_names, buf, lsp_method)
     vim.validate {
       include_clients = {include_clients, "boolean"},
-      client_names = {client_names, "table"}
+      client_names = {client_names, "table"},
+      buf = {buf, "number"},
+      lsp_method = {lsp_method, "string"}
     }
 
     local filter = (function()
@@ -53,12 +55,6 @@
         end
       end
     end)()
-
-    vim.validate {
-      buf = {buf, "number"},
-      lsp_method = {lsp_method, "string"},
-      filter = {filter, "function"}
-    }
 
     local n_clients = 0
     local clients = {}
@@ -89,9 +85,7 @@
     end
 
     for _, client in pairs(clients) do
-      vim.validate {
-        client = {client, "table"}
-      }
+      vim.validate {client = {client, "table"}}
 
       local go, cancel_handle = client.request(lsp_method, params, handler, buf)
       if not go then
@@ -113,9 +107,7 @@
     (function()
     local cancels = {}
     return function(name, session_id, clients, callback)
-      vim.validate {
-        clients = {clients, "table"}
-      }
+      vim.validate {clients = {clients, "table"}}
       local n_clients, client_map = unpack(clients)
       vim.validate {
         name = {name, "string"},
@@ -177,15 +169,12 @@
   end)()
 
   COQ.lsp_comp = function(name, session_id, client_names, pos)
+    vim.validate {pos = {pos, "table"}}
+    local row, col = unpack(pos)
     vim.validate {
       name = {name, "string"},
       session_id = {session_id, "number"},
       client_names = {client_names, "table"},
-      pos = {pos, "table"}
-    }
-
-    local row, col = unpack(pos)
-    vim.validate {
       row = {row, "number"},
       col = {col, "number"}
     }
@@ -235,13 +224,11 @@
   end
 
   COQ.lsp_command = function(name, session_id, client_names, cmd)
+    vim.validate {cmd = {cmd, "table"}}
     vim.validate {
       name = {name, "string"},
       session_id = {session_id, "number"},
       client_names = {client_names, "table"},
-      cmd = {cmd, "table"}
-    }
-    vim.validate {
       command = {cmd.command, "string"}
     }
 

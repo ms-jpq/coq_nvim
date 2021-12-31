@@ -1,6 +1,4 @@
-from asyncio import as_completed, gather
 from enum import Enum, auto
-from itertools import chain
 from typing import (
     AbstractSet,
     AsyncIterator,
@@ -10,9 +8,7 @@ from typing import (
     Tuple,
 )
 
-from std2 import anext
-from std2.aitertools import to_async
-from std2.asyncio import pure
+from std2.aitertools import merge
 from std2.itertools import chunk
 
 from ...lsp.requests.completion import comp_lsp
@@ -81,44 +77,30 @@ class Worker(BaseWorker[BaseClient, None], CacheWorker):
         if not use_cache:
             self._local_cached.clear()
 
-        # async def cached_iters() -> Tuple[_Src, LSPcomp]:
-        #     chained: Iterator[Tuple[Optional[str], ]] = chain(*self._local_cached)
-        #     self._local_cached.clear()
-        #     items = (sanitize_cached(item, sort_by=None) for _, item in chained)
-        #     return _Src.from_stored, LSPcomp(client=None, local_cache=True, items=items)
-
-        async def cached_db_items() -> Tuple[_Src, LSPcomp]:
+        async def cached_db_items() -> AsyncIterator[Tuple[_Src, LSPcomp]]:
             items = await cached
-            return _Src.from_db, LSPcomp(client=None, local_cache=False, items=items)
+            yield _Src.from_db, LSPcomp(client=None, local_cache=False, items=items)
 
-        async def stream() -> AsyncIterator[Tuple[_Src, LSPcomp]]:
-            do_ask = context.manual or not use_cache
-            stream = (
-                self._request(context, cached_clients=cached_clients)
-                if do_ask
-                else to_async(())
-            )
-
-            for fut in as_completed(
-                (
-                    # cached_iters(),
-                    cached_db_items(),
-                    gather(
-                        pure(_Src.from_query),
-                        anext(
-                            stream,
-                            LSPcomp(client=None, local_cache=False, items=iter(())),
-                        ),
-                    ),
+        async def cached_iters() -> AsyncIterator[Tuple[_Src, LSPcomp]]:
+            acc = tuple(self._local_cached)
+            self._local_cached.clear()
+            for client, cached_items in acc:
+                items = (sanitize_cached(item, sort_by=None) for item in cached_items)
+                yield _Src.from_stored, LSPcomp(
+                    client=client, local_cache=True, items=items
                 )
-            ):
-                yield await fut
 
-            async for lc in stream:
-                yield _Src.from_query, lc
+        async def lsp_items() -> AsyncIterator[Tuple[_Src, LSPcomp]]:
+            do_ask = context.manual or not use_cache
+            if do_ask:
+                async for lsp_comps in self._request(
+                    context, cached_clients=cached_clients
+                ):
+                    yield _Src.from_query, lsp_comps
 
+        stream = merge(cached_db_items(), cached_iters(), lsp_items())
         seen = 0
-        async for src, lsp_comps in stream():
+        async for src, lsp_comps in stream:
             if lsp_comps.local_cache:
                 self._local_cached.append((lsp_comps.client, lsp_comps.items))
 
