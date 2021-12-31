@@ -60,6 +60,7 @@ class Worker(BaseWorker[BaseClient, None], CacheWorker):
             short_name=self._options.short_name,
             weight_adjust=self._options.weight_adjust,
             context=context,
+            clients=set(),
         )
 
     async def work(self, context: Context) -> AsyncIterator[Optional[Completion]]:
@@ -70,14 +71,14 @@ class Worker(BaseWorker[BaseClient, None], CacheWorker):
             self._local_cached.clear()
 
         async def cached_iters() -> Tuple[_Src, LSPcomp]:
-            chained = chain(*self._local_cached)
+            chained = tuple(chain(*self._local_cached))
             self._local_cached.clear()
             items = (sanitize_cached(item, sort_by=None) for item in chained)
-            return _Src.from_stored, LSPcomp(local_cache=True, items=items)
+            return _Src.from_stored, LSPcomp(client=None, local_cache=True, items=items)
 
         async def cached_db_items() -> Tuple[_Src, LSPcomp]:
             items = await cached
-            return _Src.from_db, LSPcomp(local_cache=False, items=items)
+            return _Src.from_db, LSPcomp(client=None, local_cache=False, items=items)
 
         async def stream() -> AsyncIterator[Tuple[_Src, LSPcomp]]:
             do_ask = context.manual or not use_cache
@@ -89,7 +90,10 @@ class Worker(BaseWorker[BaseClient, None], CacheWorker):
                     cached_db_items(),
                     gather(
                         pure(_Src.from_query),
-                        anext(stream, LSPcomp(local_cache=False, items=iter(()))),
+                        anext(
+                            stream,
+                            LSPcomp(client=None, local_cache=False, items=iter(())),
+                        ),
                     ),
                 )
             ):

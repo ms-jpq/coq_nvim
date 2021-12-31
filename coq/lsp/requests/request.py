@@ -3,7 +3,15 @@ from collections import defaultdict
 from dataclasses import dataclass
 from itertools import count
 from pathlib import Path
-from typing import Any, AsyncIterator, MutableMapping, Optional, Sequence, Tuple
+from typing import (
+    AbstractSet,
+    Any,
+    AsyncIterator,
+    MutableMapping,
+    Optional,
+    Sequence,
+    Tuple,
+)
 
 from pynvim.api.nvim import Nvim
 from pynvim_pp.lib import async_call, go
@@ -64,7 +72,7 @@ def _lsp_notify(nvim: Nvim, stack: Stack, rpayload: _Payload) -> None:
 
 
 async def async_request(
-    nvim: Nvim, name: str, *args: Any
+    nvim: Nvim, name: str, clients: AbstractSet[str], *args: Any
 ) -> AsyncIterator[Tuple[Optional[str], Any]]:
     with timeit(f"LSP :: {name}"):
         cond = _CONDS.setdefault(name, Condition())
@@ -75,7 +83,10 @@ async def async_request(
             cond.notify_all()
 
         def cont() -> None:
-            nvim.api.exec_lua(f"{NAMESPACE}.{name}(...)", (name, uid, *args))
+            nvim.api.exec_lua(
+                f"{NAMESPACE}.{name}(...)",
+                (name, uid, tuple(clients), *args),
+            )
 
         await async_call(nvim, cont)
 

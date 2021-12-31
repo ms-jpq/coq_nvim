@@ -165,7 +165,7 @@ elif command == "run":
 
         nvim = attach("socket", path=args.socket)
 
-        with ThreadPoolExecutor(max_workers=min(16, cpu_count() + 10)) as pool:
+        with ThreadPoolExecutor(max_workers=min(64, max(32, cpu_count() + 10))) as pool:
             code = run_client(nvim, pool=pool, client=CoqClient(pool=pool))
             exit(code)
 

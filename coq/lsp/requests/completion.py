@@ -1,4 +1,4 @@
-from typing import AsyncIterator, cast
+from typing import AbstractSet, AsyncIterator, cast
 
 from pynvim.api.nvim import Nvim
 from pynvim_pp.lib import encode
@@ -14,11 +14,12 @@ async def comp_lsp(
     short_name: str,
     weight_adjust: float,
     context: Context,
+    clients: AbstractSet[str],
 ) -> AsyncIterator[LSPcomp]:
     row, c = context.position
     col = len(encode(context.line_before[:c], encoding=UTF16)) // 2
 
-    async for client, reply in async_request(nvim, "lsp_comp", (row, col)):
+    async for client, reply in async_request(nvim, "lsp_comp", clients, (row, col)):
         resp = cast(CompletionResponse, reply)
         yield parse(
             ExternLSP,
@@ -34,9 +35,10 @@ async def comp_thirdparty(
     short_name: str,
     weight_adjust: float,
     context: Context,
+    clients: AbstractSet[str],
 ) -> AsyncIterator[LSPcomp]:
     async for client, reply in async_request(
-        nvim, "lsp_third_party", context.position, context.line
+        nvim, "lsp_third_party", clients, context.position, context.line
     ):
         name = client or short_name
         resp = cast(CompletionResponse, reply)

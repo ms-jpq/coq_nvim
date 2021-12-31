@@ -88,5 +88,6 @@ CompletionResponse = Union[
 
 @dataclass(frozen=True)
 class LSPcomp:
+    client: Optional[str]
     local_cache: bool
     items: Iterator[Completion]

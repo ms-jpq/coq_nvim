@@ -12,7 +12,8 @@ async def resolve(nvim: Nvim, extern: ExternLSP) -> Optional[Completion]:
     name = "lsp_third_party_resolve" if isinstance(extern, ExternLUA) else "lsp_resolve"
     comps: MutableSequence[Completion] = []
 
-    async for client, resp in async_request(nvim, name, extern.item):
+    clients = {extern.client} if extern.client else set()
+    async for client, resp in async_request(nvim, name, clients, extern.item):
         comp = parse_item(
             type(extern),
             client=client,
