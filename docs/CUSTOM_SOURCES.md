@@ -76,10 +76,6 @@ Pitfalls that can **DESTROY performance**!!
 
 The caching semantics is identical to LSP specification. ie. `items[]...` is cached, `{ isIncomplete = false, items = ... }` is also cached, only the example above is NOT cached.
 
-If at least one source specifically request no caching, _no sources will be cached_.
-
-Not caching thirdparty plugins is a BAD IDEA, sure `coq.nvim` is designed to handle much bigger json spams, but `nvim` itself is likely to crawl under a flood of vimscript.
-
 #### Dangling callbacks
 
 All code paths must invoke `callback`, or else `coq.nvim` will end up waiting for `callback` and timing out on every keystroke.

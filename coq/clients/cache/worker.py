@@ -1,9 +1,11 @@
 from dataclasses import dataclass, replace
 from typing import (
+    AbstractSet,
     Awaitable,
     Callable,
     Iterator,
     MutableMapping,
+    MutableSet,
     Optional,
     Sequence,
     Tuple,
@@ -60,14 +62,16 @@ class CacheWorker:
             row=-1,
             text_before="",
         )
+        self._clients: MutableSet[str] = set()
         self._cached: MutableMapping[str, Completion] = {}
 
     def _use_cache(
         self, context: Context
     ) -> Tuple[
         bool,
+        AbstractSet[str],
         Awaitable[Iterator[Completion]],
-        Callable[[Sequence[Completion]], Awaitable[None]],
+        Callable[[Optional[str], Sequence[Completion]], Awaitable[None]],
     ]:
         cache_ctx = self._cache_ctx
         row, _ = context.position
@@ -80,6 +84,7 @@ class CacheWorker:
         )
         use_cache = _use_cache(cache_ctx, ctx=context) and bool(self._cached)
         if not use_cache:
+            self._clients.clear()
             self._cached.clear()
 
         async def get() -> Iterator[Completion]:
@@ -98,9 +103,13 @@ class CacheWorker:
                 )
                 return comps
 
-        async def set_cache(completions: Sequence[Completion]) -> None:
+        async def set_cache(
+            client: Optional[str], completions: Sequence[Completion]
+        ) -> None:
             new_comps = {comp.sort_by: comp for comp in completions}
             await self._db.insert(new_comps.keys())
+            if client:
+                self._clients.add(client)
             self._cached.update(new_comps)
 
-        return use_cache, get(), set_cache
+        return use_cache, {*self._clients}, get(), set_cache

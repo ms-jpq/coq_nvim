@@ -28,19 +28,92 @@
     return proxy
   end
 
+  local lsp_clients = function(include_clients, client_names, buf, lsp_method)
+    vim.validate {
+      include_clients = {include_clients, "boolean"},
+      client_names = {client_names, "table"},
+      buf = {buf, "number"},
+      lsp_method = {lsp_method, "string"}
+    }
+
+    local filter = (function()
+      if #client_names <= 0 then
+        return function()
+          return true
+        end
+      else
+        local acc = {}
+        for _, client_name in ipairs(client_names) do
+          vim.validate {client_name = {client_name, "string"}}
+          acc[client_name] = true
+        end
+
+        return function(client_name)
+          vim.validate {client_name = {client_name, "string"}}
+          local includes = acc[client_name]
+          return include_clients and includes or not includes
+        end
+      end
+    end)()
+
+    local n_clients = 0
+    local clients = {}
+
+    for id, client in pairs(vim.lsp.buf_get_clients(buf)) do
+      if filter(client.name) and client.supports_method(lsp_method) then
+        n_clients = n_clients + 1
+        clients[id] = client
+      end
+    end
+
+    return n_clients, clients
+  end
+
+  local lsp_request_all = function(clients, buf, lsp_method, params, handler)
+    vim.validate {
+      buf = {buf, "number"},
+      clients = {clients, "table"},
+      lsp_method = {lsp_method, "string"},
+      handler = {handler, "function"}
+    }
+
+    local cancels = {}
+    local cancel_all = function()
+      for _, cancel in ipairs(cancels) do
+        cancel()
+      end
+    end
+
+    for _, client in pairs(clients) do
+      vim.validate {client = {client, "table"}}
+
+      local go, cancel_handle = client.request(lsp_method, params, handler, buf)
+      if not go then
+        handler("<>FAILED<>", nil, {client_id = client.id, method = lsp_method})
+      else
+        table.insert(
+          cancels,
+          function()
+            client.cancel_request(cancel_handle)
+          end
+        )
+      end
+    end
+
+    return cancel_all
+  end
+
   local req =
     (function()
     local cancels = {}
     return function(name, session_id, clients, callback)
-      vim.validate {
-        clients = {clients, "table"}
-      }
-      local n_clients, client_names = unpack(clients)
+      vim.validate {clients = {clients, "table"}}
+      local n_clients, client_map = unpack(clients)
       vim.validate {
         name = {name, "string"},
         session_id = {session_id, "number"},
         n_clients = {n_clients, "number"},
-        client_names = {client_names, "table"},
+        client_map = {client_map, "table"},
         callback = {callback, "function"}
       }
 
@@ -63,9 +136,13 @@
           method = {method, "string", true},
           client_id = {client_id, "number", true}
         }
+
         n_clients = n_clients - 1
         payload.method = method or vim.NIL
-        payload.client = client_names[client_id] or vim.NIL
+        payload.client = (function()
+          local client = client_map[client_id]
+          return client and client.name or vim.NIL
+        end)()
         payload.done = n_clients == 0
         payload.reply = resp or vim.NIL
         COQ.Lsp_notify(payload)
@@ -86,34 +163,18 @@
       if n_clients == 0 then
         COQ.Lsp_notify(payload)
       else
-        local _, cancel = callback(on_resp)
-        cancels[name] = cancel
+        cancels[name] = callback(on_resp)
       end
     end
   end)()
 
-  local lsp_clients = function(required_support)
-    vim.validate {required_support = {required_support, "string"}}
-    local n_clients = 0
-    local client_names = {}
-    for id, info in pairs(vim.lsp.buf_get_clients(0)) do
-      if info.supports_method(required_support) then
-        n_clients = n_clients + 1
-        client_names[id] = info.name
-      end
-    end
-    return n_clients, client_names
-  end
-
-  COQ.lsp_comp = function(name, session_id, pos)
+  COQ.lsp_comp = function(name, session_id, client_names, pos)
+    vim.validate {pos = {pos, "table"}}
+    local row, col = unpack(pos)
     vim.validate {
       name = {name, "string"},
       session_id = {session_id, "number"},
-      pos = {pos, "table"}
-    }
-
-    local row, col = unpack(pos)
-    vim.validate {
+      client_names = {client_names, "table"},
       row = {row, "number"},
       col = {col, "number"}
     }
@@ -125,51 +186,62 @@
       textDocument = text_doc,
       context = {triggerKind = vim.lsp.protocol.CompletionTriggerKind.Invoked}
     }
+
+    local buf = vim.api.nvim_get_current_buf()
     local lsp_method = "textDocument/completion"
+    local n_clients, clients = lsp_clients(false, client_names, buf, lsp_method)
+
     req(
       name,
       session_id,
-      {lsp_clients(lsp_method)},
+      {n_clients, clients},
       function(on_resp)
-        return vim.lsp.buf_request(0, lsp_method, params, on_resp)
+        return lsp_request_all(clients, buf, lsp_method, params, on_resp)
       end
     )
   end
 
-  COQ.lsp_resolve = function(name, session_id, item)
+  COQ.lsp_resolve = function(name, session_id, client_names, item)
     vim.validate {
       name = {name, "string"},
       session_id = {session_id, "number"},
+      client_names = {client_names, "table"},
       item = {item, "table"}
     }
+
+    local buf = vim.api.nvim_get_current_buf()
     local lsp_method = "completionItem/resolve"
+    local n_clients, clients = lsp_clients(true, client_names, buf, lsp_method)
+
     req(
       name,
       session_id,
-      {lsp_clients(lsp_method)},
+      {n_clients, clients},
       function(on_resp)
-        return vim.lsp.buf_request(0, lsp_method, item, on_resp)
+        return lsp_request_all(clients, buf, lsp_method, item, on_resp)
       end
     )
   end
 
-  COQ.lsp_command = function(name, session_id, cmd)
+  COQ.lsp_command = function(name, session_id, client_names, cmd)
+    vim.validate {cmd = {cmd, "table"}}
     vim.validate {
       name = {name, "string"},
       session_id = {session_id, "number"},
-      cmd = {cmd, "table"}
-    }
-    vim.validate {
+      client_names = {client_names, "table"},
       command = {cmd.command, "string"}
     }
 
+    local buf = vim.api.nvim_get_current_buf()
     local lsp_method = "workspace/executeCommand"
+    local n_clients, clients = lsp_clients(true, client_names, buf, lsp_method)
+
     req(
       name,
       session_id,
-      {lsp_clients(lsp_method)},
+      {n_clients, clients},
       function(on_resp)
-        return vim.lsp.buf_request(0, lsp_method, cmd, on_resp)
+        return lsp_request_all(clients, buf, lsp_method, cmd, on_resp)
       end
     )
   end
@@ -186,7 +258,7 @@
           type(source) == "table" and type(source.name) == "string" and
             type(source[key]) == "function"
          then
-          names[id] = source.name
+          names[id] = {name = source.name}
           table.insert(fns, {id, source[key]})
         end
       end
@@ -219,6 +291,7 @@
 
     local client_names, client_fns = lua_clients(key)
     local cancels, cancel = lua_cancel()
+
     req(
       name,
       session_id,
@@ -242,12 +315,12 @@
             vim.api.nvim_err_writeln(maybe_cancel)
           end
         end
-        return {}, cancel
+        return cancel
       end
     )
   end
 
-  COQ.lsp_third_party = function(name, session_id, pos, line)
+  COQ.lsp_third_party = function(name, session_id, client_names, pos, line)
     local args =
       freeze(
       "coq_3p.args",
@@ -262,7 +335,7 @@
     lua_req(name, session_id, "fn", "< lua :: comp >", args)
   end
 
-  COQ.lsp_third_party_resolve = function(name, session_id, item)
+  COQ.lsp_third_party_resolve = function(name, session_id, client_names, item)
     local args =
       freeze(
       "coq_3p.args",
@@ -276,7 +349,7 @@
     lua_req(name, session_id, "resolve", "< lua :: resolve >", args)
   end
 
-  COQ.lsp_third_party_cmd = function(name, session_id, cmd)
+  COQ.lsp_third_party_cmd = function(name, session_id, client_names, cmd)
     local args =
       freeze(
       "coq_3p.args",
