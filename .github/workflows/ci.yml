@@ -11,9 +11,11 @@ jobs:
     strategy:
       matrix:
         python_ver:
-          - 3.8
-          - 3.9
-          - 3.8.2
+          - "3.x"
+          - "3.10"
+          - "3.9"
+          - "3.8"
+          - "3.8.2"
     runs-on: ubuntu-latest
 
     steps:
