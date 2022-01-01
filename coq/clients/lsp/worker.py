@@ -67,7 +67,7 @@ class Worker(BaseWorker[BaseClient, None], CacheWorker):
             short_name=self._options.short_name,
             weight_adjust=self._options.weight_adjust,
             context=context,
-            clients=cached_clients,
+            clients=set() if context.manual else cached_clients,
         )
 
     async def work(self, context: Context) -> AsyncIterator[Optional[Completion]]:
