@@ -82,7 +82,10 @@ class CacheWorker:
             row=row,
             text_before=context.syms_before,
         )
+
         use_cache = _use_cache(cache_ctx, ctx=context) and bool(self._cached)
+        cached_clients = {*self._clients}
+
         if not use_cache:
             self._clients.clear()
             self._cached.clear()
@@ -112,4 +115,4 @@ class CacheWorker:
                 self._clients.add(client)
             self._cached.update(new_comps)
 
-        return use_cache, {*self._clients}, get(), set_cache
+        return use_cache, cached_clients, get(), set_cache
