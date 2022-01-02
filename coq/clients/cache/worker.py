@@ -3,15 +3,16 @@ from typing import (
     AbstractSet,
     Awaitable,
     Callable,
+    Iterable,
     Iterator,
     MutableMapping,
     MutableSet,
     Optional,
-    Sequence,
     Tuple,
 )
 from uuid import UUID, uuid4
 
+from ...shared.parse import coalesce
 from ...shared.repeat import sanitize
 from ...shared.runtime import Supervisor
 from ...shared.timeit import timeit
@@ -53,7 +54,7 @@ def sanitize_cached(comp: Completion, sort_by: Optional[str]) -> Completion:
 
 class CacheWorker:
     def __init__(self, supervisor: Supervisor) -> None:
-        self._soup = supervisor
+        self._supervisor = supervisor
         self._db = Database(supervisor.pool)
         self._cache_ctx = _CacheCtx(
             change_id=uuid4(),
@@ -63,15 +64,15 @@ class CacheWorker:
             text_before="",
         )
         self._clients: MutableSet[str] = set()
-        self._cached: MutableMapping[str, Completion] = {}
+        self._cached: MutableMapping[bytes, Completion] = {}
 
-    def _use_cache(
+    def _use(
         self, context: Context
     ) -> Tuple[
         bool,
         AbstractSet[str],
         Awaitable[Iterator[Completion]],
-        Callable[[Optional[str], Sequence[Completion]], Awaitable[None]],
+        Callable[[Optional[str], Iterable[Completion]], Awaitable[None]],
     ]:
         cache_ctx = self._cache_ctx
         row, _ = context.position
@@ -92,25 +93,35 @@ class CacheWorker:
 
         async def get() -> Iterator[Completion]:
             with timeit("CACHE -- GET"):
-                words = await self._db.select(
+                keys = await self._db.select(
                     not use_cache,
-                    opts=self._soup.match,
+                    opts=self._supervisor.match,
                     word=context.words,
                     sym=context.syms,
                     limitless=context.manual,
                 )
                 comps = (
                     sanitize_cached(comp, sort_by=sort_by)
-                    for word, sort_by in words
-                    if (comp := self._cached.get(word))
+                    for key, sort_by in keys
+                    if (comp := self._cached.get(key))
                 )
                 return comps
 
         async def set_cache(
-            client: Optional[str], completions: Sequence[Completion]
+            client: Optional[str], completions: Iterable[Completion]
         ) -> None:
-            new_comps = {comp.sort_by: comp for comp in completions}
-            await self._db.insert(new_comps.keys())
+            new_comps = {comp.uid.bytes: comp for comp in completions}
+
+            def cont() -> Iterator[Tuple[bytes, str]]:
+                for key, val in new_comps.items():
+                    for word in coalesce(
+                        val.sort_by,
+                        unifying_chars=self._supervisor.match.unifying_chars,
+                    ):
+                        yield key, word
+
+            await self._db.insert(cont())
+
             if client:
                 self._clients.add(client)
             self._cached.update(new_comps)

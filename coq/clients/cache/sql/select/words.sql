@@ -1,4 +1,5 @@
 SELECT
+  key,
   word
 FROM words
 WHERE
