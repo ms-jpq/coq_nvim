@@ -31,7 +31,9 @@ from pynvim_pp.logging import log
 from std2.asyncio import run_in_executor
 from std2.graphlib import recur_sort
 from std2.pathlib import walk
-from std2.pickle import DecodeError, new_decoder, new_encoder
+from std2.pickle.decoder import new_decoder
+from std2.pickle.encoder import new_encoder
+from std2.pickle.types import DecodeError
 
 from ...lang import LANG
 from ...paths.show import fmt_path
@@ -190,12 +192,16 @@ async def _dump_compiled(
 
 
 def _trans(
-    unifying_chars: AbstractSet[str], info: ParseInfo, snips: Iterable[ParsedSnippet]
+    unifying_chars: AbstractSet[str],
+    smart: bool,
+    info: ParseInfo,
+    snips: Iterable[ParsedSnippet],
 ) -> Iterator[Tuple[ParsedSnippet, Edit, Sequence[Mark]]]:
     for snip in snips:
         edit = SnippetEdit(grammar=snip.grammar, new_text=snip.content)
         parsed, marks = parse_norm(
             unifying_chars,
+            smart=smart,
             context=EMPTY_CONTEXT,
             snippet=edit,
             info=info,
@@ -286,7 +292,14 @@ def compile_one(
     lines: Iterable[Tuple[int, str]],
 ) -> Compiled:
     filetype, exts, snips = load_neosnippet(grammar, path=path, lines=lines)
-    parsed = tuple(_trans(stack.settings.match.unifying_chars, info=info, snips=snips))
+    parsed = tuple(
+        _trans(
+            stack.settings.match.unifying_chars,
+            smart=stack.settings.completion.smart,
+            info=info,
+            snips=snips,
+        )
+    )
 
     compiled = Compiled(
         path=path,
@@ -315,6 +328,7 @@ async def compile_user_snippets(nvim: Nvim, stack: Stack) -> None:
         _ = tuple(
             _trans(
                 stack.settings.match.unifying_chars,
+                smart=stack.settings.completion.smart,
                 info=info,
                 snips=loaded.snippets.values(),
             )

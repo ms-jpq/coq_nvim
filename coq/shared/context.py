@@ -47,12 +47,13 @@ def cword_before(
 ) -> str:
     char = sort_by[:1]
     trans = _lower if lower else lambda c: c
+
     if char.isspace():
         return context.ws_before
     elif is_word(char, unifying_chars=unifying_chars):
         return trans(context.words_before)
     else:
-        return trans(context.syms_before)
+        return context.syms_before
 
 
 def cword_after(
@@ -60,9 +61,10 @@ def cword_after(
 ) -> str:
     char = sort_by[-1:]
     trans = _lower if lower else lambda c: c
+
     if char.isspace():
         return context.ws_after
     elif is_word(char, unifying_chars=unifying_chars):
         return trans(context.words_after)
     else:
-        return ""
+        return context.syms_after

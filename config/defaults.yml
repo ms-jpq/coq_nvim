@@ -12,6 +12,9 @@ keymap:
   jump_to_mark: <c-h>
   eval_snips: null
 
+completion:
+  smart: True
+
 match:
   unifying_chars:
     - "_"
