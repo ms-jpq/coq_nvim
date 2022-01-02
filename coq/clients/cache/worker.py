@@ -114,11 +114,14 @@ class CacheWorker:
 
             def cont() -> Iterator[Tuple[bytes, str]]:
                 for key, val in new_comps.items():
-                    for word in coalesce(
-                        val.sort_by,
-                        unifying_chars=self._supervisor.match.unifying_chars,
-                    ):
-                        yield key, word
+                    if self._supervisor.comp.smart:
+                        for word in coalesce(
+                            val.sort_by,
+                            unifying_chars=self._supervisor.match.unifying_chars,
+                        ):
+                            yield key, word
+                    else:
+                        yield key, val.sort_by
 
             await self._db.insert(cont())
 
