@@ -1,10 +1,10 @@
 # Misc
 
-### coq.limits
+### coq_settings.limits
 
 Various timeouts and retry limits
 
-#### `coq.limits.index_cutoff`
+#### `coq_settings.limits.index_cutoff`
 
 Buffers above this size will not be indexed.
 

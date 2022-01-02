@@ -144,7 +144,7 @@ def _launch_loop(nvim: Nvim, stack: Stack) -> None:
 atomic.exec_lua(f"{NAMESPACE}.{_launch_loop.name}()", ())
 
 
-def comp_func(nvim: Nvim, stack: Stack, s: State, manual: bool) -> None:
+def comp_func(nvim: Nvim, s: State, manual: bool) -> None:
     _Q.put((s, manual))
 
 
@@ -156,7 +156,7 @@ def omnifunc(
         return -1
     else:
         s = state(commit_id=uuid4())
-        comp_func(nvim, stack=stack, manual=True, s=s)
+        comp_func(nvim, manual=True, s=s)
         return ()
 
 

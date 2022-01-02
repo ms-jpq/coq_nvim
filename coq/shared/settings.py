@@ -99,6 +99,7 @@ class Weights:
 
 @dataclass(frozen=True)
 class CompleteOptions:
+    always: bool
     smart: bool
 
 
