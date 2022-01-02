@@ -5,7 +5,7 @@ from unittest import defaultTestLoader
 from unittest.runner import TextTestRunner
 from unittest.signals import installHandler
 
-_TESTS = Path(__file__).resolve().parent
+_TESTS = Path(__file__).resolve(strict=True).parent
 _TOP_LV = _TESTS.parent
 
 

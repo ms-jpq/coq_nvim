@@ -8,7 +8,7 @@ from pynvim_pp.text_object import is_word
 from .parse import lower as _lower
 from .types import Context
 
-_FILE = Path(__file__).resolve()
+_FILE = Path(__file__).resolve(strict=True)
 
 EMPTY_CONTEXT = Context(
     manual=True,

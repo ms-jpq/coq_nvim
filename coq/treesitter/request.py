@@ -37,7 +37,7 @@ _NIL_P = _Payload[RawPayload](buf=-1, filetype="", payloads=(), elapsed=-1)
 _SESSION = _Session(uid=-1, done=True, payload=_NIL_P)
 
 
-_LUA = (Path(__file__).resolve().parent / "request.lua").read_text("UTF-8")
+_LUA = (Path(__file__).resolve(strict=True).parent / "request.lua").read_text("UTF-8")
 atomic.exec_lua(_LUA, ())
 
 

@@ -66,8 +66,7 @@ class Database:
                                 "like_sym": like_esc(sym[: opts.exact_matches]),
                             },
                         )
-                        rows = cursor.fetchall()
-                        if rows:
+                        if rows := cursor.fetchall():
                             return ((row["word"], None) for row in rows)
                         else:
                             cursor.execute(

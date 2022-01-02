@@ -5,7 +5,7 @@ GIL_SWITCH = 1 / (10 ** 3)
 
 IS_WIN = name == "nt"
 
-TOP_LEVEL = Path(__file__).resolve().parent.parent
+TOP_LEVEL = Path(__file__).resolve(strict=True).parent.parent
 REQUIREMENTS = TOP_LEVEL / "requirements.txt"
 
 

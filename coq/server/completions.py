@@ -10,7 +10,7 @@ from ..registry import NAMESPACE, atomic
 from ..shared.runtime import Metric
 from .rt_types import Stack
 
-_LUA = (Path(__file__).resolve().parent / "completion.lua").read_text("UTF-8")
+_LUA = (Path(__file__).resolve(strict=True).parent / "completion.lua").read_text("UTF-8")
 atomic.exec_lua(_LUA, ())
 
 

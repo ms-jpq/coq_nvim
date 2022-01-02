@@ -61,7 +61,7 @@ _RT_PY = (
 )
 _LOCK_FILE = _RT_DIR / "requirements.lock"
 _EXEC_PATH = Path(executable)
-_EXEC_PATH = _EXEC_PATH.parent.resolve() / _EXEC_PATH.name
+_EXEC_PATH = _EXEC_PATH.parent.resolve(strict=True) / _EXEC_PATH.name
 _REQ = REQUIREMENTS.read_text()
 
 _IN_VENV = _RT_PY == _EXEC_PATH
