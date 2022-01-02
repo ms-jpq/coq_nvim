@@ -41,7 +41,8 @@ from pynvim_pp.lib import async_call, display_width, go
 from pynvim_pp.preview import buf_set_preview, set_preview
 from std2 import clamp
 from std2.asyncio import cancel
-from std2.pickle import DecodeError, new_decoder
+from std2.pickle.decoder import new_decoder
+from std2.pickle.types import DecodeError
 from std2.string import removeprefix
 
 from ...lsp.requests.resolve import resolve

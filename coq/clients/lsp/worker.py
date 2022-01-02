@@ -51,13 +51,13 @@ def _use_comp(match: MatchOptions, context: Context, sort_by: str, edit: Edit) -
         return False
 
 
-class Worker(BaseWorker[BaseClient, None], CacheWorker):
+class Worker(BaseWorker[BaseClient, None]):
     def __init__(self, supervisor: Supervisor, options: BaseClient, misc: None) -> None:
+        super().__init__(supervisor, options=options, misc=misc)
+        self._cache = CacheWorker(supervisor)
         self._local_cached: MutableSequence[
             Tuple[Optional[str], Iterator[Completion]]
         ] = []
-        CacheWorker.__init__(self, supervisor=supervisor)
-        BaseWorker.__init__(self, supervisor=supervisor, options=options, misc=misc)
 
     def _request(
         self, context: Context, cached_clients: AbstractSet[str]
@@ -73,7 +73,7 @@ class Worker(BaseWorker[BaseClient, None], CacheWorker):
     async def work(self, context: Context) -> AsyncIterator[Optional[Completion]]:
         limit = BIGGEST_INT if context.manual else self._supervisor.match.max_results
 
-        use_cache, cached_clients, cached, set_cache = self._use_cache(context)
+        use_cache, cached_clients, cached, set_cache = self._cache._use(context)
         if not use_cache:
             self._local_cached.clear()
 
@@ -84,6 +84,7 @@ class Worker(BaseWorker[BaseClient, None], CacheWorker):
         async def cached_iters() -> AsyncIterator[Tuple[_Src, LSPcomp]]:
             acc = tuple(self._local_cached)
             self._local_cached.clear()
+
             for client, cached_items in acc:
                 items = (sanitize_cached(item, sort_by=None) for item in cached_items)
                 yield _Src.from_stored, LSPcomp(
@@ -91,8 +92,7 @@ class Worker(BaseWorker[BaseClient, None], CacheWorker):
                 )
 
         async def lsp_items() -> AsyncIterator[Tuple[_Src, LSPcomp]]:
-            do_ask = context.manual or not use_cache
-            if do_ask:
+            if context.manual or not use_cache:
                 async for lsp_comps in self._request(
                     context, cached_clients=cached_clients
                 ):

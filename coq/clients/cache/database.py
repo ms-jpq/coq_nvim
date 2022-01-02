@@ -2,7 +2,7 @@ from asyncio import CancelledError
 from concurrent.futures import Executor
 from sqlite3 import Connection, OperationalError
 from threading import Lock
-from typing import Iterable, Iterator, Optional, Tuple
+from typing import Iterable, Iterator, Mapping, Tuple
 
 from std2.asyncio import run_in_executor
 from std2.sqlite3 import with_transaction
@@ -32,19 +32,21 @@ class Database:
         with self._lock:
             self._conn.interrupt()
 
-    async def insert(self, words: Iterable[str]) -> None:
+    async def insert(self, keys: Iterable[Tuple[bytes, str]]) -> None:
+        def m1() -> Iterator[Mapping]:
+            for key, word in keys:
+                yield {"key": key, "word": word}
+
         def cont() -> None:
             with self._lock, with_transaction(self._conn.cursor()) as cursor:
-                cursor.executemany(
-                    sql("insert", "word"), ({"word": word} for word in words)
-                )
+                cursor.executemany(sql("insert", "word"), m1())
 
         await run_in_executor(self._ex.submit, cont)
 
     async def select(
         self, clear: bool, opts: MatchOptions, word: str, sym: str, limitless: int
-    ) -> Iterator[Tuple[str, Optional[str]]]:
-        def cont() -> Iterator[Tuple[str, Optional[str]]]:
+    ) -> Iterator[Tuple[bytes, str]]:
+        def cont() -> Iterator[Tuple[bytes, str]]:
             if clear:
                 with self._lock, with_transaction(self._conn.cursor()) as cursor:
                     cursor.execute(sql("delete", "words"))
@@ -66,25 +68,12 @@ class Database:
                                 "like_sym": like_esc(sym[: opts.exact_matches]),
                             },
                         )
-                        if rows := cursor.fetchall():
-                            return ((row["word"], None) for row in rows)
-                        else:
-                            cursor.execute(
-                                sql("select", "backup_words"),
-                                {
-                                    "exact": opts.exact_matches,
-                                    "cut_off": opts.fuzzy_cutoff,
-                                    "look_ahead": opts.look_ahead,
-                                    "limit": limit,
-                                    "word": word,
-                                },
-                            )
-                            rows = cursor.fetchall()
-                            return ((row["word"], row["sort_by"]) for row in rows)
+                        rows = cursor.fetchall()
+                        return ((row["key"], row["word"]) for row in rows)
                 except OperationalError:
                     return iter(())
 
-        def step() -> Iterator[Tuple[str, Optional[str]]]:
+        def step() -> Iterator[Tuple[bytes, str]]:
             self._interrupt()
             return self._ex.submit(cont)
 

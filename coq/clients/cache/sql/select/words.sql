@@ -1,4 +1,5 @@
 SELECT
+  key,
   word
 FROM words
 WHERE
@@ -29,4 +30,6 @@ WHERE
       X_SIMILARITY(LOWER(:sym), lword, :look_ahead) > :cut_off
     )
   )
+GROUP BY
+  key
 LIMIT :limit
