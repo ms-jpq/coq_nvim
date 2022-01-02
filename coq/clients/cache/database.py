@@ -2,7 +2,7 @@ from asyncio import CancelledError
 from concurrent.futures import Executor
 from sqlite3 import Connection, OperationalError
 from threading import Lock
-from typing import Iterable, Iterator, Mapping, MutableSet, Tuple
+from typing import Iterable, Iterator, Mapping, Tuple
 
 from std2.asyncio import run_in_executor
 from std2.sqlite3 import with_transaction
@@ -69,16 +69,7 @@ class Database:
                             },
                         )
                         rows = cursor.fetchall()
-
-                        def cont() -> Iterator[Tuple[bytes, str]]:
-                            seen: MutableSet[bytes] = set()
-                            for row in rows:
-                                key = row["key"]
-                                if key not in seen:
-                                    seen.add(key)
-                                    yield key, row["word"]
-
-                        return cont()
+                        return ((row["key"], row["word"]) for row in rows)
                 except OperationalError:
                     return iter(())
 

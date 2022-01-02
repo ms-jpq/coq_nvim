@@ -92,8 +92,7 @@ class Worker(BaseWorker[BaseClient, None]):
                 )
 
         async def lsp_items() -> AsyncIterator[Tuple[_Src, LSPcomp]]:
-            do_ask = context.manual or not use_cache
-            if do_ask:
+            if context.manual or not use_cache:
                 async for lsp_comps in self._request(
                     context, cached_clients=cached_clients
                 ):
