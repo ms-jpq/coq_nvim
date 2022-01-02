@@ -98,6 +98,12 @@ class Weights:
 
 
 @dataclass(frozen=True)
+class CompleteOptions:
+    always: bool
+    smart: bool
+
+
+@dataclass(frozen=True)
 class KeyMapping:
     recommended: bool
     pre_select: bool
@@ -187,5 +193,6 @@ class Settings:
     display: Display
     match: MatchOptions
     weights: Weights
+    completion: CompleteOptions
     keymap: KeyMapping
     clients: Clients

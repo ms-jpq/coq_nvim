@@ -12,6 +12,7 @@ from std2.types import never
 
 from ...consts import (
     MD_C_SOURCES,
+    MD_COMPLETION,
     MD_CONF,
     MD_DISPLAY,
     MD_FUZZY,
@@ -23,6 +24,7 @@ from ...consts import (
     MD_SOURCES,
     MD_STATS,
     URI_C_SOURCES,
+    URI_COMPLETION,
     URI_CONF,
     URI_DISPLAY,
     URI_FUZZY,
@@ -44,6 +46,7 @@ class _Topics(Enum):
     keybind = auto()
     snips = auto()
     fuzzy = auto()
+    comp = auto()
     display = auto()
     sources = auto()
     misc = auto()
@@ -63,6 +66,8 @@ def _directory(topic: _Topics) -> Tuple[Path, str]:
         return MD_SNIPS, URI_SNIPS
     elif topic is _Topics.fuzzy:
         return MD_FUZZY, URI_FUZZY
+    elif topic is _Topics.comp:
+        return MD_COMPLETION, URI_COMPLETION
     elif topic is _Topics.display:
         return MD_DISPLAY, URI_DISPLAY
     elif topic is _Topics.sources:

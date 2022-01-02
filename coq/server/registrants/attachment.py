@@ -86,11 +86,12 @@ def _listener(nvim: Nvim, stack: Stack) -> None:
                     await awrite(nvim, msg)
 
                 if (
-                    not qmsg.pending
+                    stack.settings.completion.always
+                    and not qmsg.pending
                     and qmsg.mode.startswith("i")
                     and qmsg.comp_mode in {"", "eval", "function", "ctrl_x"}
                 ):
-                    comp_func(nvim, stack=stack, s=s, manual=False)
+                    comp_func(nvim, s=s, manual=False)
 
     go(nvim, aw=cont())
 

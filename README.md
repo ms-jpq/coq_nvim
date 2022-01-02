@@ -274,6 +274,8 @@ There is built-in [help command](https://github.com/ms-jpq/coq_nvim/tree/coq/doc
 
 - [:COQhelp fuzzy](https://github.com/ms-jpq/coq_nvim/tree/coq/docs/FUZZY.md)
 
+- [:COQhelp comp](https://github.com/ms-jpq/coq_nvim/tree/coq/docs/COMPLETION.md)
+
 - [:COQhelp display](https://github.com/ms-jpq/coq_nvim/tree/coq/docs/DISPLAY.md)
 
 - [:COQhelp sources](https://github.com/ms-jpq/coq_nvim/tree/coq/docs/SOURCES.md)

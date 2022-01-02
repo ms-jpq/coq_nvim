@@ -5,7 +5,7 @@ GIL_SWITCH = 1 / (10 ** 3)
 
 IS_WIN = name == "nt"
 
-TOP_LEVEL = Path(__file__).resolve().parent.parent
+TOP_LEVEL = Path(__file__).resolve(strict=True).parent.parent
 REQUIREMENTS = TOP_LEVEL / "requirements.txt"
 
 
@@ -77,6 +77,9 @@ URI_STATISTICS = _URI_BASE + MD_STATS.name
 
 MD_PREF = _DOC_DIR / "PERF.md"
 URI_PREF = _URI_BASE + MD_PREF.name
+
+MD_COMPLETION = _DOC_DIR / "COMPLETION.md"
+URI_COMPLETION = _URI_BASE + MD_COMPLETION.name
 
 MD_C_SOURCES = _DOC_DIR / "CUSTOM_SOURCES.md"
 URI_C_SOURCES = _URI_BASE + MD_C_SOURCES.name

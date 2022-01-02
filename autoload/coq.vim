@@ -30,6 +30,7 @@ function! coq#complete_help(arg_lead, cmd_line, cursor_pos) abort
         \ 'keybind',
         \ 'snips',
         \ 'fuzzy',
+        \ 'comp',
         \ 'display',
         \ 'sources',
         \ 'misc',

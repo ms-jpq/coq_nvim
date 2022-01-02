@@ -39,7 +39,7 @@ class _Payload:
     reply: Any
 
 
-_LUA = (Path(__file__).resolve().parent / "lsp.lua").read_text("UTF-8")
+_LUA = (Path(__file__).resolve(strict=True).parent / "lsp.lua").read_text("UTF-8")
 atomic.exec_lua(_LUA, ())
 
 _UIDS = count()

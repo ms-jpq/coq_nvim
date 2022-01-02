@@ -4,7 +4,7 @@ from typing import Any
 
 from std2.asyncio.subprocess import call
 
-_TOP_LV = Path(__file__).resolve().parent
+_TOP_LV = Path(__file__).resolve(strict=True).parent
 _DOCKER_FILE = _TOP_LV / "Dockerfile"
 
 

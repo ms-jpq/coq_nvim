@@ -42,19 +42,25 @@ def trans(line_before: str, line_after: str, new_text: str) -> ContextualEdit:
 
 
 def trans_adjusted(
-    unifying_chars: AbstractSet[str], ctx: Context, new_text: str
+    unifying_chars: AbstractSet[str], smart: bool, ctx: Context, new_text: str
 ) -> ContextualEdit:
     edit = trans(
         line_before=ctx.line_before, line_after=ctx.line_after, new_text=new_text
     )
-    new_syms = len(tuple(coalesce(new_text, unifying_chars=unifying_chars)))
+
     simple_before = cword_before(
         unifying_chars, lower=False, context=ctx, sort_by=edit.new_text
     )
-    old_prefix = simple_before if new_syms <= 1 else (edit.old_prefix or simple_before)
-    old_suffix = cword_after(
+    simple_after = cword_after(
         unifying_chars, lower=False, context=ctx, sort_by=edit.new_text
     )
+
+    tokens = len(tuple(coalesce(new_text, unifying_chars=unifying_chars)))
+    old_prefix = simple_before if tokens <= 1 else (edit.old_prefix or simple_before)
+    if smart:
+        old_suffix = simple_after if tokens <= 1 else (edit.old_suffix or simple_after)
+    else:
+        old_suffix = simple_after if tokens <= 1 else ""
 
     adjusted = ContextualEdit(
         new_text=edit.new_text,

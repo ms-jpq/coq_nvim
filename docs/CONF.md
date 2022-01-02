@@ -77,6 +77,10 @@ Key bindings
 
 Fuzzy ranking
 
+- [:COQhelp comp](https://github.com/ms-jpq/coq_nvim/tree/coq/docs/COMPLETION.md)
+
+Completion options
+
 - [:COQhelp display](https://github.com/ms-jpq/coq_nvim/tree/coq/docs/DISPLAY.md)
 
 Appearances

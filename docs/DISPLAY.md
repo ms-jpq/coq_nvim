@@ -23,7 +23,7 @@ The virtual text previewing selected completion
 **default:**
 
 ```json
-True
+true
 ```
 
 ##### `coq_settings.display.ghost_text.context`

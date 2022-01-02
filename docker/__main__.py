@@ -3,7 +3,7 @@ from pathlib import Path
 
 from std2.asyncio.subprocess import call
 
-_PARENT = Path(__file__).resolve().parent
+_PARENT = Path(__file__).resolve(strict=True).parent
 _TOP_LEVEL = _PARENT.parent
 
 

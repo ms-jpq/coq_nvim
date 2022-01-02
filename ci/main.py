@@ -5,7 +5,7 @@ from shutil import rmtree
 from subprocess import check_call, check_output, run
 from typing import Iterator
 
-_TOP_LV = Path(__file__).resolve().parent.parent
+_TOP_LV = Path(__file__).resolve(strict=True).parent.parent
 
 
 def _git_identity() -> None:

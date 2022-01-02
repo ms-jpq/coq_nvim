@@ -1,6 +1,6 @@
 # Keybind
 
-`coq_settings.keymap`
+## coq_settings.keymap
 
 ### coq_settings.keymap.recommended
 
