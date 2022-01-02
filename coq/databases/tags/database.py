@@ -34,9 +34,6 @@ _NIL_TAG = Tag(
 )
 
 
-from typing import AbstractSet
-
-
 def _init(db_dir: Path, cwd: PurePath) -> Connection:
     ncwd = normcase(cwd)
     name = f"{md5(encode(ncwd)).hexdigest()}-{_SCHEMA}"
