@@ -1,6 +1,8 @@
 from asyncio.tasks import gather
 from difflib import unified_diff
 
+from pynvim_pp.logging import log
+
 from ..consts import DEBUG, LSP_ARTIFACTS, VARS
 from ..server.registrants.snippets import BUNDLED_PATH_TPL, jsonify
 from ..snippets.types import SCHEMA
@@ -20,6 +22,6 @@ async def main() -> None:
         for line in unified_diff(
             snip_art.read_text().splitlines(), j_snippets.splitlines()
         ):
-            print(line)
+            log.debug("%s", line)
 
     snip_art.write_text(j_snippets, encoding="UTF-8")

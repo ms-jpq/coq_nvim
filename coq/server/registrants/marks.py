@@ -1,4 +1,5 @@
 from collections import deque
+from dataclasses import replace
 from itertools import chain
 from json import dumps
 from textwrap import dedent
@@ -23,7 +24,7 @@ from pynvim_pp.logging import log
 
 from ...lang import LANG
 from ...registry import rpc
-from ...snippets.consts import MOD_PAD
+from ...snippets.parsers.parser import decode_mark_idx
 from ..edit import EditInstruction, apply
 from ..mark import NS
 from ..rt_types import Stack
@@ -33,11 +34,11 @@ from ..state import state
 def _ls_marks(nvim: Nvim, ns: int, buf: Buffer) -> Sequence[ExtMark]:
     ordered = sorted(
         (
-            mark
+            replace(mark, idx=decode_mark_idx(mark.idx))
             for mark in buf_get_extmarks(nvim, id=ns, buf=buf)
             if mark.end >= mark.begin
         ),
-        key=lambda m: (m.idx % MOD_PAD == 1, m.idx % MOD_PAD, m.begin, m.end),
+        key=lambda m: (m.idx == 1, m.idx, m.begin, m.end),
     )
 
     return ordered
@@ -117,12 +118,10 @@ def nav_mark(nvim: Nvim, stack: Stack) -> None:
     ns = create_ns(nvim, ns=NS)
     win = cur_win(nvim)
     buf = win_get_buf(nvim, win=win)
-    marks = deque(_ls_marks(nvim, ns=ns, buf=buf))
 
-    if marks:
+    if marks := deque(_ls_marks(nvim, ns=ns, buf=buf)):
         mark = marks.popleft()
-        base_idx = mark.idx % MOD_PAD
-        linked = tuple(m for m in marks if m.idx % MOD_PAD == base_idx)
+        linked = tuple(m for m in marks if m.idx == mark.idx)
 
         def single() -> None:
             _single_mark(nvim, mark=mark, marks=marks, ns=ns, win=win, buf=buf)
