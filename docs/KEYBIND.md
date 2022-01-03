@@ -1,5 +1,7 @@
 # Keybind
 
+To unbind specific keys, set their values to `null`.
+
 ## coq_settings.keymap
 
 ### coq_settings.keymap.recommended

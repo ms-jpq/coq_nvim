@@ -103,7 +103,7 @@ Default is to nag about out of date snippets.
 **default:**
 
 ```json
-["outdated"]
+["missing", "outdated"]
 ```
 
 ---
