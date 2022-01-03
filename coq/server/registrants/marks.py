@@ -34,11 +34,11 @@ from ..state import state
 def _ls_marks(nvim: Nvim, ns: int, buf: Buffer) -> Sequence[ExtMark]:
     ordered = sorted(
         (
-            replace(mark, idx=decode_mark_idx(mark.idx))
+            replace(mark, idx=decode_mark_idx(mark.idx) - 1)
             for mark in buf_get_extmarks(nvim, id=ns, buf=buf)
             if mark.end >= mark.begin
         ),
-        key=lambda m: (m.idx == 1, m.idx, m.begin, m.end),
+        key=lambda m: (m.idx == 0, m.idx, m.begin, m.end),
     )
 
     return ordered
@@ -121,19 +121,18 @@ def nav_mark(nvim: Nvim, stack: Stack) -> None:
 
     if marks := deque(_ls_marks(nvim, ns=ns, buf=buf)):
         mark = marks.popleft()
-        linked = tuple(m for m in marks if m.idx == mark.idx)
 
         def single() -> None:
             _single_mark(nvim, mark=mark, marks=marks, ns=ns, win=win, buf=buf)
 
-        if not linked:
-            single()
-        else:
+        if linked := tuple(m for m in marks if m.idx == mark.idx):
             edited = _linked_marks(
                 nvim, mark=mark, linked=linked, ns=ns, win=win, buf=buf
             )
             if not edited:
                 single()
+        else:
+            single()
 
     else:
         msg = LANG("no more marks")
