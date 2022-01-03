@@ -4,9 +4,7 @@ from os.path import normcase
 from pathlib import Path
 from sqlite3.dbapi2 import Connection
 from typing import (
-    AbstractSet,
     Any,
-    Callable,
     Iterator,
     MutableSequence,
     MutableSet,
@@ -16,7 +14,6 @@ from typing import (
     cast,
 )
 
-from pynvim_pp.text_object import is_word
 from std2.pathlib import AnyPath
 from std2.sqlite3 import add_functions, escape
 

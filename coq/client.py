@@ -21,7 +21,7 @@ from .consts import DEBUG, DEBUG_DB, DEBUG_METRICS, TMP_DIR
 from .registry import atomic, autocmd, rpc
 from .server.registrants.attachment import BUF_EVENTS
 from .server.registrants.options import set_options
-from .server.rt_types import Stack
+from .server.rt_types import Stack, ValidationError
 from .server.runtime import stack
 from .shared.timeit import timeit
 
@@ -74,13 +74,13 @@ class CoqClient(Client):
 
             try:
                 self._stack = stack(self._pool, nvim=nvim)
-            except DecodeError as e:
+            except (DecodeError, ValidationError) as e:
                 tpl = """
                 Some options may have changed.
                 See help doc on Github under [docs/CONFIGURATION.md]
 
 
-                ${e}
+                ⚠️  ${e}
                 """
                 msg = Template(dedent(tpl)).substitute(e=e)
                 write(nvim, msg, error=True)
