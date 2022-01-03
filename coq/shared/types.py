@@ -83,15 +83,19 @@ class ContextualEdit(Edit):
 
 
 @dataclass(frozen=True)
-class RangeEdit(Edit):
+class BaseRangeEdit(Edit):
     """
     End exclusve, like LSP
     """
 
-    fallback: str
     begin: WTF8Pos
     end: WTF8Pos
     encoding: Literal["UTF-8", "UTF-16-LE"]
+
+
+@dataclass(frozen=True)
+class RangeEdit(BaseRangeEdit):
+    fallback: str
 
 
 class SnippetGrammar(Enum):
@@ -105,8 +109,8 @@ class SnippetEdit(Edit):
 
 
 @dataclass(frozen=True)
-class SnippetRangeEdit(SnippetEdit, RangeEdit):
-    ...
+class SnippetRangeEdit(SnippetEdit, BaseRangeEdit):
+    fallback: Optional[str]
 
 
 @dataclass(frozen=True)
