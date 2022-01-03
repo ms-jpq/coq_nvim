@@ -14,6 +14,7 @@ from typing import (
 )
 
 from pynvim_pp.lib import encode
+from pynvim_pp.logging import log
 from std2.itertools import deiter, interleave
 from std2.types import never
 
@@ -103,9 +104,9 @@ def context_from(snippet: str, context: Context, info: ParseInfo) -> ParserCtx:
 
 
 def _overlap(r1: Region, r2: Region) -> bool:
-    return (r1.begin >= r2.begin and r1.end <= r2.end) or (
-        r2.begin >= r1.begin and r2.end <= r1.end
-    )
+    r1_inside_r2 = r1.begin >= r2.begin and r1.end <= r2.end
+    r2_inside_r1 = r2.begin >= r1.begin and r2.end <= r1.end
+    return r1_inside_r2 or r2_inside_r1
 
 
 def _consolidate(
@@ -125,7 +126,13 @@ def _consolidate(
 
     acc: MutableMapping[int, MutableSequence[Region]] = {}
     for _, _, idx, region in ordered:
-        if not any(_overlap(region, r) for rs in acc.values() for r in rs):
+        if overlapped := tuple(
+            (region, reg)
+            for reg in chain.from_iterable(acc.values())
+            if _overlap(region, reg)
+        ):
+            log.warn("%s", f"snippet region overlapped -- {overlapped}")
+        else:
             a = acc.setdefault(idx, [])
             a.append(region)
 
