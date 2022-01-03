@@ -9,12 +9,12 @@ from std2.types import never
 
 from ..shared.trans import expand_tabs, indent_to_line, trans_adjusted
 from ..shared.types import (
+    BaseRangeEdit,
     Context,
     ContextualEdit,
     Edit,
     Mark,
     NvimPos,
-    RangeEdit,
     SnippetEdit,
     SnippetGrammar,
     SnippetRangeEdit,
@@ -26,7 +26,7 @@ from .parsers.types import Parsed, ParseInfo, Region
 
 
 @dataclass(frozen=True)
-class ParsedEdit(RangeEdit):
+class ParsedEdit(BaseRangeEdit):
     new_prefix: str
 
 
@@ -118,7 +118,6 @@ def parse_range(
         end=snippet.end,
         encoding=snippet.encoding,
         new_prefix=new_prefix,
-        fallback=snippet.fallback,
     )
 
     marks = _marks(

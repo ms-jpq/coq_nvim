@@ -60,7 +60,7 @@ def _primary(item: CompletionItem) -> Edit:
             return SnippetRangeEdit(
                 grammar=SnippetGrammar.lsp,
                 new_text=re.new_text,
-                fallback=re.fallback,
+                fallback=item.insertText,
                 begin=re.begin,
                 end=re.end,
                 encoding=re.encoding,
