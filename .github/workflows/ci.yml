@@ -39,5 +39,8 @@ jobs:
       - name: Lint
         run: mypy -- .
 
+      - name: Install
+        run: python3 -m coq deps
+
       - name: Test
         run: python3 -m tests
