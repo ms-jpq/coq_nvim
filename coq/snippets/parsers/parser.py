@@ -134,6 +134,10 @@ def _consolidate(
             yield idx + MOD_PAD * i, region
 
 
+def decode_mark_idx(idx: int) -> int:
+    return idx % MOD_PAD
+
+
 def token_parser(context: ParserCtx, stream: TokenStream) -> Parsed:
     idx = 0
     raw_regions: MutableMapping[int, MutableSequence[Region]] = {}

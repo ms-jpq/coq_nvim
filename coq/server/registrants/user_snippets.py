@@ -33,7 +33,7 @@ from ...lang import LANG
 from ...paths.show import fmt_path
 from ...registry import rpc
 from ...shared.types import SnippetGrammar
-from ...snippets.consts import MOD_PAD
+from ...snippets.parsers.parser import decode_mark_idx
 from ...snippets.parsers.types import ParseError, ParseInfo
 from ...snippets.types import LoadError
 from ..rt_types import Stack
@@ -91,19 +91,21 @@ def _pprn(
             yield mapping
 
         for parsed, edit, marks in compiled.parsed:
-            sorted_marks = [
-                [str(m.idx % MOD_PAD), m.text]
-                for m in sorted(marks, key=lambda m: (m.begin, m.end))
-            ]
             mapping = {}
             if parsed.label:
                 mapping.update(label=parsed.label)
+
             mapping.update(
                 matches=sorted(parsed.matches, key=strxfrm),
                 expanded=edit.new_text.expandtabs(_TAB),
             )
-            if sorted_marks:
+
+            if sorted_marks := tuple(
+                [decode_mark_idx(m.idx), m.text]
+                for m in sorted(marks, key=lambda m: (m.begin, m.end))
+            ):
                 mapping.update(marks=sorted_marks)
+
             yield mapping
 
     return _fmt_yaml(tuple(cont()))

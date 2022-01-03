@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from json import loads
 from typing import Mapping, Optional
 
-from std2.pickle import new_decoder
+from std2.pickle.decoder import new_decoder
 
 from ..consts import LSP_ARTIFACTS
 

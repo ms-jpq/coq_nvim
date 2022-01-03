@@ -22,8 +22,7 @@ def mark(nvim: Nvim, settings: Settings, buf: Buffer, marks: Sequence[Mark]) -> 
             end=mark.end,
             meta={"hl_group": settings.display.mark_highlight_group},
         )
-        for idx, mark in enumerate(marks)
-        if idx or mark.text
+        for mark in marks
     )
     ns = create_ns(nvim, ns=NS)
     clear_ns(nvim, buf=buf, id=ns)
