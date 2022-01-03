@@ -13,6 +13,10 @@ from ..shared.settings import Settings
 from ..shared.types import Completion
 
 
+class ValidationError(Exception):
+    ...
+
+
 @dataclass(frozen=True)
 class Stack:
     settings: Settings

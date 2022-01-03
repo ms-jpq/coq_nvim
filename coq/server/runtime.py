@@ -29,7 +29,7 @@ from ..shared.lru import LRU
 from ..shared.runtime import Supervisor, Worker
 from ..shared.settings import Settings
 from .reviewer import Reviewer
-from .rt_types import Stack
+from .rt_types import Stack, ValidationError
 from .state import state
 
 
@@ -49,6 +49,10 @@ def _settings(nvim: Nvim) -> Settings:
 
     merged = merge(yml, u_conf, replace=True)
     config = new_decoder[Settings](Settings)(merged)
+
+    if config.match.max_results <= 0:
+        raise ValidationError("match.max_results <= 0")
+
     return config
 
 
