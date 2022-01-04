@@ -100,10 +100,10 @@ def _pprn(
                 expanded=edit.new_text.expandtabs(_TAB),
             )
 
-            if sorted_marks := tuple(
+            if sorted_marks := [
                 [decode_mark_idx(m.idx), m.text]
                 for m in sorted(marks, key=lambda m: (m.begin, m.end))
-            ):
+            ]:
                 mapping.update(marks=sorted_marks)
 
             yield mapping
