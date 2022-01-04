@@ -20,8 +20,8 @@ from ..shared.types import (
     SnippetRangeEdit,
 )
 from .consts import SNIP_LINE_SEP
-from .parsers.lsp import parser as lsp_parser
-from .parsers.snu import parser as snu_parser
+from .parsers.lsp import tokenizer as lsp_tokenizer
+from .parsers.snu import tokenizer as snu_tokenizer
 from .parsers.types import Parsed, ParseInfo, Region
 
 
@@ -91,9 +91,9 @@ def _marks(
 
 def _parser(grammar: SnippetGrammar) -> Callable[[Context, ParseInfo, str], Parsed]:
     if grammar is SnippetGrammar.lsp:
-        return lsp_parser
+        return lsp_tokenizer
     elif grammar is SnippetGrammar.snu:
-        return snu_parser
+        return snu_tokenizer
     else:
         never(grammar)
 

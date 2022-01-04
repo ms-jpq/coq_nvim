@@ -662,7 +662,7 @@ def _parse(context: ParserCtx, shallow: bool) -> TokenStream:
             yield char
 
 
-def parser(context: Context, info: ParseInfo, snippet: str) -> Parsed:
+def tokenizer(context: Context, info: ParseInfo, snippet: str) -> Parsed:
     ctx = context_from(snippet, context=context, info=info)
     tokens = _parse(ctx, shallow=False)
     parsed = token_parser(ctx, stream=tokens)
