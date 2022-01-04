@@ -14,7 +14,7 @@ CREATE TABLE IF NOT EXISTS lines (
   line_num  INTEGER NOT NULL,
   line      TEXT    NOT NULL
   -- TODO -- How to update line_num from back -> front in a single query
-  -- UNIQUE(filename, line_num)
+  -- UNIQUE(buffer_id, line_num)
 ) WITHOUT ROWID;
 CREATE INDEX IF NOT EXISTS liness_buffer_id ON lines (buffer_id);
 CREATE INDEX IF NOT EXISTS lines_line_num   ON lines (line_num);
