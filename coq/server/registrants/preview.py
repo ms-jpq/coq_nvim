@@ -1,5 +1,6 @@
 from asyncio import Task, wait
 from dataclasses import asdict, dataclass
+from html import unescape
 from itertools import chain
 from math import ceil
 from os import linesep
@@ -103,7 +104,9 @@ autocmd("CompleteDone", "InsertLeave") << f"lua {NAMESPACE}.{_kill_win.name}(tru
 def _preprocess(context: Context, doc: Doc) -> Doc:
     sep = "```"
     if doc.syntax == "markdown":
-        split = doc.text.splitlines()
+        esc_text = unescape(doc.text)
+        split = esc_text.splitlines()
+
         if (
             split
             and split[0].startswith(sep)
@@ -115,7 +118,7 @@ def _preprocess(context: Context, doc: Doc) -> Doc:
             syntax = ft if ft.isalnum() else context.filetype
             return Doc(text=text, syntax=syntax)
         else:
-            return doc
+            return Doc(text=esc_text, syntax=doc.syntax)
     else:
         return doc
 
@@ -277,13 +280,12 @@ def _resolve_comp(
                     stack.lru[state.preview_id] = comp
                 doc = (comp.doc if comp else None) or maybe_doc
             elif isinstance(extern, ExternPath):
-                doc = await show(
+                if doc := await show(
                     cwd=state.cwd,
                     path=extern.path,
                     ellipsis=stack.settings.display.pum.ellipsis,
                     height=stack.settings.clients.paths.preview_lines,
-                )
-                if doc:
+                ):
                     stack.lru[state.preview_id] = Completion(
                         source="",
                         weight_adjust=0,
