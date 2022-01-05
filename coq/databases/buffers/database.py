@@ -113,9 +113,10 @@ class BDB:
                 )
                 shift = len(lines) - (hi - lo)
                 cursor.execute(
-                    sql("update", "lines"),
+                    sql("update", "lines_shift_1"),
                     {"buffer_id": buf_id, "lo": lo, "shift": shift},
                 )
+                cursor.execute(sql("update", "lines_shift_2"), {"buffer_id": buf_id})
                 cursor.executemany(sql("insert", "line"), m1())
                 cursor.executemany(sql("insert", "word"), m2())
                 cursor.execute(sql("select", "line_count"), {"buffer_id": buf_id})

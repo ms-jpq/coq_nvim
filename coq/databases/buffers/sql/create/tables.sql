@@ -12,9 +12,8 @@ CREATE TABLE IF NOT EXISTS lines (
   rowid     BLOB    NOT NULL PRIMARY KEY,
   buffer_id INTEGER NOT NULL REFERENCES buffers (rowid) ON UPDATE CASCADE ON DELETE CASCADE,
   line_num  INTEGER NOT NULL,
-  line      TEXT    NOT NULL
-  -- TODO -- How to update line_num from back -> front in a single query
-  -- UNIQUE(filename, line_num)
+  line      TEXT    NOT NULL,
+  UNIQUE(buffer_id, line_num)
 ) WITHOUT ROWID;
 CREATE INDEX IF NOT EXISTS liness_buffer_id ON lines (buffer_id);
 CREATE INDEX IF NOT EXISTS lines_line_num   ON lines (line_num);
