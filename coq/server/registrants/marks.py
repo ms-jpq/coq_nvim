@@ -59,8 +59,8 @@ def _del_marks(nvim: Nvim, buf: Buffer, id: int, marks: Iterable[ExtMark]) -> No
 
 def _marks(nvim: Nvim, ns: int, win: Window, buf: Buffer) -> Iterator[ExtMark]:
     cursor = win_get_cursor(nvim, win=win)
-    for mark in _ls_marks(nvim, ns=ns, buf=buf):
-        if mark.begin == cursor and mark.end == cursor:
+    for idx, mark in enumerate(_ls_marks(nvim, ns=ns, buf=buf)):
+        if not idx and mark.begin == cursor and mark.end == cursor:
             _del_marks(nvim, buf=buf, id=ns, marks=(mark,))
         else:
             yield mark
