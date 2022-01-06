@@ -18,6 +18,7 @@ from pynvim_pp.api import (
     cur_win,
     extmarks_text,
     win_get_buf,
+    win_get_cursor,
     win_set_cursor,
 )
 from pynvim_pp.lib import write
@@ -54,6 +55,15 @@ def _ls_marks(nvim: Nvim, ns: int, buf: Buffer) -> Sequence[ExtMark]:
 def _del_marks(nvim: Nvim, buf: Buffer, id: int, marks: Iterable[ExtMark]) -> None:
     it = (replace(mark, idx=mark.meta[_OG_IDX]) for mark in marks)
     buf_del_extmarks(nvim, buf=buf, id=id, marks=it)
+
+
+def _marks(nvim: Nvim, ns: int, win: Window, buf: Buffer) -> Iterator[ExtMark]:
+    cursor = win_get_cursor(nvim, win=win)
+    for idx, mark in enumerate(_ls_marks(nvim, ns=ns, buf=buf)):
+        if not idx and mark.begin == cursor and mark.end == cursor:
+            _del_marks(nvim, buf=buf, id=ns, marks=(mark,))
+        else:
+            yield mark
 
 
 def _trans(new_text: str, marks: Sequence[ExtMark]) -> Iterator[EditInstruction]:
@@ -131,7 +141,7 @@ def nav_mark(nvim: Nvim, stack: Stack) -> None:
     win = cur_win(nvim)
     buf = win_get_buf(nvim, win=win)
 
-    if marks := deque(_ls_marks(nvim, ns=ns, buf=buf)):
+    if marks := deque(_marks(nvim, ns=ns, win=win, buf=buf)):
         mark = marks.popleft()
 
         def single() -> None:
