@@ -3,7 +3,8 @@ from dataclasses import replace
 from itertools import chain
 from json import dumps
 from textwrap import dedent
-from typing import Iterator, Sequence
+from typing import Iterable, Iterator, Sequence
+from uuid import uuid4
 
 from pynvim.api.common import NvimError
 from pynvim.api.nvim import Buffer, Nvim
@@ -30,11 +31,17 @@ from ..mark import NS
 from ..rt_types import Stack
 from ..state import state
 
+_OG_IDX = str(uuid4())
+
 
 def _ls_marks(nvim: Nvim, ns: int, buf: Buffer) -> Sequence[ExtMark]:
     ordered = sorted(
         (
-            replace(mark, idx=decode_mark_idx(mark.idx) - 1)
+            replace(
+                mark,
+                idx=decode_mark_idx(mark.idx) - 1,
+                meta={**mark.meta, _OG_IDX: mark.idx},
+            )
             for mark in buf_get_extmarks(nvim, id=ns, buf=buf)
             if mark.end >= mark.begin
         ),
@@ -42,6 +49,11 @@ def _ls_marks(nvim: Nvim, ns: int, buf: Buffer) -> Sequence[ExtMark]:
     )
 
     return ordered
+
+
+def _del_marks(nvim: Nvim, buf: Buffer, id: int, marks: Iterable[ExtMark]) -> None:
+    it = (replace(mark, idx=mark.meta[_OG_IDX]) for mark in marks)
+    buf_del_extmarks(nvim, buf=buf, id=id, marks=it)
 
 
 def _trans(new_text: str, marks: Sequence[ExtMark]) -> Iterator[EditInstruction]:
@@ -85,7 +97,7 @@ def _single_mark(
         msg = LANG("applied mark", marks_left=len(marks))
         write(nvim, msg)
     finally:
-        buf_del_extmarks(nvim, buf=buf, id=ns, marks=(mark,))
+        _del_marks(nvim, buf=buf, id=ns, marks=(mark,))
 
 
 def _linked_marks(
@@ -104,7 +116,7 @@ def _linked_marks(
         row, col = mark.begin
         nvim.options["undolevels"] = nvim.options["undolevels"]
         apply(nvim, buf=buf, instructions=_trans(resp, marks=marks))
-        buf_del_extmarks(nvim, buf=buf, id=ns, marks=marks)
+        _del_marks(nvim, buf=buf, id=ns, marks=marks)
         win_set_cursor(nvim, win=win, row=row, col=col)
         nvim.command("startinsert")
         state(inserted_pos=(row, col - 1))
