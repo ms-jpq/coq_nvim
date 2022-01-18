@@ -23,7 +23,7 @@ paths:
     - snipsnap/snippets
     - vscode-R/snippets
     - vscode-angular-snippets/snippets
-    - vscode-es7-javascript-react-snippets/snippets
+    - vscode-es7-javascript-react-snippets/src/snippets
     - vscode-javascript/snippets
     - vscode-react/snippets
     - vue-vscode-snippets/snippets
