@@ -89,6 +89,7 @@ async def _proc(bin: PurePath, cwd: PurePath) -> Optional[Process]:
     try:
         proc = await create_subprocess_exec(
             bin,
+            "--client=coq.nvim",
             stdin=PIPE,
             stdout=PIPE,
             stderr=DEVNULL,
