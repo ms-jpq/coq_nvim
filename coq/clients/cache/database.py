@@ -4,7 +4,7 @@ from sqlite3 import Connection, OperationalError
 from threading import Lock
 from typing import Iterable, Iterator, Mapping, Tuple
 
-from std2.asyncio import run_in_executor
+from std2.asyncio import to_thread
 from std2.sqlite3 import with_transaction
 
 from ...shared.executor import SingleThreadExecutor
@@ -41,7 +41,7 @@ class Database:
             with self._lock, with_transaction(self._conn.cursor()) as cursor:
                 cursor.executemany(sql("insert", "word"), m1())
 
-        await run_in_executor(self._ex.submit, cont)
+        await to_thread(self._ex.submit, cont)
 
     async def select(
         self, clear: bool, opts: MatchOptions, word: str, sym: str, limitless: int
@@ -78,8 +78,8 @@ class Database:
             return self._ex.submit(cont)
 
         try:
-            return await run_in_executor(step)
+            return await to_thread(step)
         except CancelledError:
             with timeit("INTERRUPT !! CACHE"):
-                await run_in_executor(self._interrupt)
+                await to_thread(self._interrupt)
             raise

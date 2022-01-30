@@ -7,7 +7,7 @@ from typing import AbstractSet, Iterator, Mapping, Optional, Sequence, Tuple
 from uuid import uuid4
 
 from pynvim_pp.lib import recode
-from std2.asyncio import run_in_executor
+from std2.asyncio import to_thread
 from std2.sqlite3 import with_transaction
 
 from ...consts import BUFFER_DB, DEBUG
@@ -65,14 +65,14 @@ class BDB:
             except OperationalError:
                 pass
 
-        await run_in_executor(self._ex.submit, cont)
+        await to_thread(self._ex.submit, cont)
 
     async def ft_update(self, buf_id: int, filetype: str) -> None:
         def cont() -> None:
             with self._lock, with_transaction(self._conn.cursor()) as cursor:
                 _ensure_buffer(cursor, buf_id=buf_id, filetype=filetype)
 
-        await run_in_executor(self._ex.submit, cont)
+        await to_thread(self._ex.submit, cont)
 
     async def set_lines(
         self,
@@ -132,7 +132,7 @@ class BDB:
                         },
                     )
 
-        await run_in_executor(self._ex.submit, cont)
+        await to_thread(self._ex.submit, cont)
 
     def lines(self, buf_id: int, lo: int, hi: int) -> Tuple[int, Iterator[str]]:
         def cont() -> Tuple[int, Iterator[str]]:
@@ -183,8 +183,8 @@ class BDB:
             return self._ex.submit(cont)
 
         try:
-            return await run_in_executor(step)
+            return await to_thread(step)
         except CancelledError:
             with timeit("INTERRUPT !! BUFFERS"):
-                await run_in_executor(self._interrupt)
+                await to_thread(self._interrupt)
             raise

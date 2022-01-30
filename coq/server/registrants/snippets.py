@@ -28,7 +28,7 @@ from pynvim.api.nvim import Nvim
 from pynvim_pp.api import get_cwd, iter_rtps
 from pynvim_pp.lib import async_call, awrite, go
 from pynvim_pp.logging import log
-from std2.asyncio import run_in_executor
+from std2.asyncio import to_thread
 from std2.graphlib import recur_sort
 from std2.pathlib import walk
 from std2.pickle.decoder import new_decoder
@@ -74,7 +74,7 @@ async def _bundled_mtimes(
                 mtime = json.stat().st_mtime
                 yield json, mtime
 
-    return {p: m for p, m in await run_in_executor(lambda: tuple(c1()))}
+    return {p: m for p, m in await to_thread(lambda: tuple(c1()))}
 
 
 def _resolve(stdp: Path, path: Path) -> Optional[Path]:
@@ -124,7 +124,7 @@ async def user_mtimes(
                         mtime = p.stat().st_mtime
                         yield p, mtime
 
-    return paths, {p: m for p, m in await run_in_executor(lambda: tuple(cont()))}
+    return paths, {p: m for p, m in await to_thread(lambda: tuple(cont()))}
 
 
 def _paths(vars_dir: Path) -> Tuple[Path, Path]:
@@ -142,7 +142,7 @@ async def _load_compiled(path: Path, mtime: float) -> Tuple[Path, float, LoadedS
         loaded = decoder(json)
         return loaded
 
-    return path, mtime, await run_in_executor(cont)
+    return path, mtime, await to_thread(cont)
 
 
 async def _load_user_compiled(
@@ -167,7 +167,7 @@ async def _load_user_compiled(
 
         return m1, m2
 
-    return await run_in_executor(cont)
+    return await to_thread(cont)
 
 
 def jsonify(o: Any) -> str:
@@ -316,7 +316,7 @@ async def compile_user_snippets(nvim: Nvim, stack: Stack) -> None:
         _, mtimes = await user_mtimes(
             nvim, user_path=stack.settings.clients.snippets.user_path
         )
-        loaded = await run_in_executor(
+        loaded = await to_thread(
             lambda: load_direct(
                 False,
                 lsp=(),

@@ -8,7 +8,7 @@ from threading import Lock
 from typing import AbstractSet, Iterator, Mapping, cast
 
 from pynvim_pp.lib import encode
-from std2.asyncio import run_in_executor
+from std2.asyncio import to_thread
 from std2.sqlite3 import with_transaction
 
 from ...shared.executor import SingleThreadExecutor
@@ -63,7 +63,7 @@ class CTDB:
                 self._conn.close()
                 self._conn = _init(self._vars_dir, cwd=cwd)
 
-        await run_in_executor(self._ex.submit, cont)
+        await to_thread(self._ex.submit, cont)
 
     async def paths(self) -> Mapping[str, float]:
         def cont() -> Mapping[str, float]:
@@ -75,7 +75,7 @@ class CTDB:
         def step() -> Mapping[str, float]:
             return self._ex.submit(cont)
 
-        return await run_in_executor(step)
+        return await to_thread(step)
 
     async def reconciliate(self, dead: AbstractSet[str], new: Tags) -> None:
         def cont() -> None:
@@ -102,7 +102,7 @@ class CTDB:
                 cursor.executemany(sql("insert", "tag"), m2())
                 cursor.execute("PRAGMA optimize", ())
 
-        await run_in_executor(self._ex.submit, cont)
+        await to_thread(self._ex.submit, cont)
 
     async def select(
         self,
@@ -140,8 +140,8 @@ class CTDB:
             return self._ex.submit(cont)
 
         try:
-            return await run_in_executor(step)
+            return await to_thread(step)
         except CancelledError:
             with timeit("INTERRUPT !! TAGS"):
-                await run_in_executor(self._interrupt)
+                await to_thread(self._interrupt)
             raise

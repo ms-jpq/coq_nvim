@@ -14,7 +14,7 @@ from typing import (
     Tuple,
 )
 
-from std2.asyncio import run_in_executor
+from std2.asyncio import to_thread
 from std2.platform import OS, os
 from std2.string import removesuffix
 
@@ -184,7 +184,7 @@ async def _parse(
             )
         }
 
-    return await run_in_executor(cont)
+    return await to_thread(cont)
 
 
 def _sort_by(unifying_chars: AbstractSet[str], context: Context, new_text: str) -> str:

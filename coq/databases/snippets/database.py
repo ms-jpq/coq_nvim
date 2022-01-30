@@ -7,7 +7,7 @@ from threading import Lock
 from typing import AbstractSet, Iterator, Mapping, TypedDict, cast
 from uuid import uuid4
 
-from std2.asyncio import run_in_executor
+from std2.asyncio import to_thread
 from std2.sqlite3 import with_transaction
 
 from ...shared.executor import SingleThreadExecutor
@@ -57,7 +57,7 @@ class SDB:
                     ({"filename": normcase(path)} for path in paths),
                 )
 
-        await run_in_executor(self._ex.submit, cont)
+        await to_thread(self._ex.submit, cont)
 
     async def mtimes(self) -> Mapping[PurePath, float]:
         def cont() -> Mapping[PurePath, float]:
@@ -67,7 +67,7 @@ class SDB:
                     PurePath(row["filename"]): row["mtime"] for row in cursor.fetchall()
                 }
 
-        return await run_in_executor(lambda: self._ex.submit(cont))
+        return await to_thread(lambda: self._ex.submit(cont))
 
     async def populate(self, path: PurePath, mtime: float, loaded: LoadedSnips) -> None:
         def cont() -> None:
@@ -114,7 +114,7 @@ class SDB:
                         )
                 cursor.execute("PRAGMA optimize", ())
 
-        await run_in_executor(self._ex.submit, cont)
+        await to_thread(self._ex.submit, cont)
 
     async def select(
         self, opts: MatchOptions, filetype: str, word: str, sym: str, limitless: int
@@ -145,8 +145,8 @@ class SDB:
             return self._ex.submit(cont)
 
         try:
-            return await run_in_executor(step)
+            return await to_thread(step)
         except CancelledError:
             with timeit("INTERRUPT !! SNIPPETS"):
-                await run_in_executor(self._interrupt)
+                await to_thread(self._interrupt)
             raise

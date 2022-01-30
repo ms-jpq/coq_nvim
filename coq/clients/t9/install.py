@@ -12,7 +12,7 @@ from zipfile import ZipFile
 
 from pynvim_pp.lib import decode
 from pynvim_pp.logging import log
-from std2.asyncio import run_in_executor
+from std2.asyncio import to_thread
 from std2.platform import OS, os
 from std2.urllib import urlopen
 
@@ -89,7 +89,7 @@ async def ensure_updated(
     bin = t9_bin(vars_dir)
     for _ in range(retries):
         try:
-            cont = await run_in_executor(_update, vars_dir=vars_dir, timeout=timeout)
+            cont = await to_thread(_update, vars_dir=vars_dir, timeout=timeout)
         except (URLError, TimeoutE) as e:
             log.warn("%s", e)
             await sleep(timeout)

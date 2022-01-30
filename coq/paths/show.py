@@ -5,7 +5,7 @@ from os.path import curdir, normcase
 from pathlib import Path, PurePath
 from typing import Iterator, Optional
 
-from std2.asyncio import run_in_executor
+from std2.asyncio import to_thread
 from std2.locale import pathsort_key
 
 from ..lang import LANG
@@ -42,7 +42,7 @@ async def _show_dir(cwd: PurePath, path: Path, ellipsis: str, height: int) -> Do
         doc = Doc(text=text, syntax="")
         return doc
 
-    return await run_in_executor(cont)
+    return await to_thread(cont)
 
 
 async def _show_file(path: Path, ellipsis: str, height: int) -> Doc:
@@ -66,7 +66,7 @@ async def _show_file(path: Path, ellipsis: str, height: int) -> Doc:
         doc = Doc(text=t, syntax="")
         return doc
 
-    return await run_in_executor(cont)
+    return await to_thread(cont)
 
 
 async def show(cwd: PurePath, path: Path, ellipsis: str, height: int) -> Optional[Doc]:

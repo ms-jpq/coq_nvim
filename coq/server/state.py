@@ -6,6 +6,7 @@ from typing import AbstractSet, Optional, Tuple, Union
 from uuid import UUID, uuid4
 
 from std2.types import Void, VoidType
+from std2.pathlib import POSIX_ROOT
 
 from ..shared.context import EMPTY_CONTEXT
 from ..shared.runtime import Metric
@@ -32,7 +33,7 @@ _LOCK = Lock()
 
 
 _state = State(
-    cwd=PurePath(sep),
+    cwd=POSIX_ROOT,
     pum_width=0,
     screen=(0, 0),
     change_id=uuid4(),

@@ -4,7 +4,7 @@ from sqlite3 import Connection, OperationalError
 from threading import Lock
 from typing import AbstractSet, Iterable, Iterator, Mapping
 
-from std2.asyncio import run_in_executor
+from std2.asyncio import to_thread
 from std2.sqlite3 import with_transaction
 
 from ...consts import TREESITTER_DB
@@ -48,7 +48,7 @@ class TDB:
             except OperationalError:
                 pass
 
-        await run_in_executor(self._ex.submit, cont)
+        await to_thread(self._ex.submit, cont)
 
     async def populate(self, buf: int, filetype: str, nodes: Iterable[Payload]) -> None:
         def m1() -> Iterator[Mapping]:
@@ -72,7 +72,7 @@ class TDB:
                 )
                 cursor.executemany(sql("insert", "word"), m1())
 
-        await run_in_executor(self._ex.submit, cont)
+        await to_thread(self._ex.submit, cont)
 
     async def select(
         self,
@@ -128,8 +128,8 @@ class TDB:
             return self._ex.submit(cont)
 
         try:
-            return await run_in_executor(step)
+            return await to_thread(step)
         except CancelledError:
             with timeit("INTERRUPT !! TREESITTER"):
-                await run_in_executor(self._interrupt)
+                await to_thread(self._interrupt)
             raise

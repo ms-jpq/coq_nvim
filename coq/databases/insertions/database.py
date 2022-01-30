@@ -6,7 +6,7 @@ from sqlite3 import Connection, OperationalError
 from threading import Lock
 from typing import Iterator, Mapping, Optional
 
-from std2.asyncio import run_in_executor
+from std2.asyncio import to_thread
 from std2.sqlite3 import with_transaction
 
 from ...consts import INSERT_DB
@@ -63,7 +63,7 @@ class IDB:
             with self._lock, with_transaction(self._conn.cursor()) as cursor:
                 cursor.execute(sql("insert", "batch"), {"rowid": batch_id})
 
-        await run_in_executor(self._ex.submit, cont)
+        await to_thread(self._ex.submit, cont)
 
     async def new_instance(self, instance: bytes, source: str, batch_id: bytes) -> None:
         def cont() -> None:
@@ -73,7 +73,7 @@ class IDB:
                     {"rowid": instance, "source_id": source, "batch_id": batch_id},
                 )
 
-        await run_in_executor(self._ex.submit, cont)
+        await to_thread(self._ex.submit, cont)
 
     async def new_stat(
         self, instance: bytes, interrupted: bool, duration: float, items: int
@@ -90,7 +90,7 @@ class IDB:
                     },
                 )
 
-        await run_in_executor(self._ex.submit, cont)
+        await to_thread(self._ex.submit, cont)
 
     async def insertion_order(self, n_rows: int) -> Mapping[str, int]:
         def cont() -> Mapping[str, int]:
@@ -109,10 +109,10 @@ class IDB:
             return self._ex.submit(cont)
 
         try:
-            return await run_in_executor(step)
+            return await to_thread(step)
         except CancelledError:
             with timeit("INTERRUPT !! INSERTED"):
-                await run_in_executor(self._interrupt)
+                await to_thread(self._interrupt)
             raise
 
     def inserted(self, instance_id: bytes, sort_by: str) -> None:

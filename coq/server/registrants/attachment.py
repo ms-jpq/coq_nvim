@@ -9,7 +9,7 @@ from pynvim.api import Buffer, NvimError
 from pynvim_pp.api import buf_filetype, buf_get_option, cur_buf
 from pynvim_pp.lib import awrite, go
 from pynvim_pp.logging import with_suppress
-from std2.asyncio import run_in_executor
+from std2.asyncio import to_thread
 
 from ...lang import LANG
 from ...registry import NAMESPACE, atomic, autocmd, rpc
@@ -51,7 +51,7 @@ def _listener(nvim: Nvim, stack: Stack) -> None:
     async def cont() -> None:
         while True:
             with with_suppress():
-                qmsg: _Qmsg = await run_in_executor(q.get)
+                qmsg: _Qmsg = await to_thread(q.get)
                 lo, hi = qmsg.range
                 await stack.supervisor.interrupt()
 

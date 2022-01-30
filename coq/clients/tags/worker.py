@@ -17,7 +17,7 @@ from typing import (
 from pynvim.api.nvim import Nvim, NvimError
 from pynvim_pp.api import buf_name, list_bufs
 from pynvim_pp.lib import async_call, go
-from std2.asyncio import run_in_executor
+from std2.asyncio import to_thread
 
 from ...databases.tags.database import CTDB
 from ...paths.show import fmt_path
@@ -48,7 +48,7 @@ async def _mtimes(paths: AbstractSet[str]) -> Mapping[str, float]:
                 yield path, stat.st_mtime
 
     c2 = lambda: {normcase(key): val for key, val in c1()}
-    return await run_in_executor(c2)
+    return await to_thread(c2)
 
 
 def _doc(client: TagsClient, context: Context, tag: Tag) -> Doc:
