@@ -56,7 +56,7 @@ def trans_adjusted(
     )
 
     tokens = len(tuple(coalesce(new_text, unifying_chars=unifying_chars)))
-    old_prefix = simple_before if tokens <= 1 else edit.old_prefix
+    old_prefix = simple_before if tokens <= 1 else (edit.old_prefix or simple_before)
     old_suffix = simple_after if tokens <= 1 else ""
 
     adjusted = ContextualEdit(
