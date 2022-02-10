@@ -71,7 +71,7 @@ def dl_distance(lhs: str, rhs: str) -> int:
 
     da: MutableMapping[str, int] = {}
 
-    d = [array("I", repeat(0, len_r + 2)) for _ in range(len_l + 2)]
+    d = tuple(array("I", repeat(0, len_r + 2)) for _ in range(len_l + 2))
 
     d[0][0] = max_d
     for i in range(0, len_l + 1):
