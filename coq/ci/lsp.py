@@ -34,7 +34,7 @@ async def _build(dockerfile: Path) -> str:
         cwd=_TOP_LV,
         capture_stderr=False,
     )
-    return proc.out.decode()
+    return proc.stdout.decode()
 
 
 async def lsp() -> Any:

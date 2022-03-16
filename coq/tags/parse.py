@@ -43,7 +43,7 @@ async def run(*args: str) -> str:
         except (FileNotFoundError, PermissionError):
             return ""
         else:
-            return decode(proc.out)
+            return decode(proc.stdout)
 
 
 def _unescape(pattern: str) -> str:

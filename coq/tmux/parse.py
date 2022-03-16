@@ -28,12 +28,12 @@ async def _panes() -> Iterator[_Pane]:
     except OSError:
         return iter(())
     else:
-        if proc.code:
+        if proc.returncode:
             return iter(())
         else:
 
             def cont() -> Iterator[_Pane]:
-                for line in decode(proc.out).strip().splitlines():
+                for line in decode(proc.stdout).strip().splitlines():
                     pane_id, pane_active, window_active = line.split(" ")
                     pane = _Pane(
                         uid=pane_id,
@@ -68,10 +68,10 @@ async def _screenshot(
     except OSError:
         return uid, iter(())
     else:
-        if proc.code:
+        if proc.returncode:
             return uid, iter(())
         else:
-            words = coalesce(decode(proc.out), unifying_chars=unifying_chars)
+            words = coalesce(decode(proc.stdout), unifying_chars=unifying_chars)
             return uid, words
 
 

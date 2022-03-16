@@ -46,7 +46,7 @@ from ..shared.types import (
     Edit,
     Mark,
     NvimPos,
-    RangeEdit,
+    BaseRangeEdit,
     SnippetEdit,
     SnippetRangeEdit,
 )
@@ -103,7 +103,7 @@ def _rows_to_fetch(ctx: Context, edit: Edit, *edits: Edit) -> Tuple[int, int]:
                 hi = row + (len(e.old_suffix.split(ctx.linefeed)) - 1)
                 yield from (lo, hi)
 
-            elif isinstance(e, RangeEdit):
+            elif isinstance(e, BaseRangeEdit):
                 (lo, _), (hi, _) = e.begin, e.end
                 yield from (lo, hi)
 
@@ -184,7 +184,7 @@ def _range_edit_trans(
     ctx: Context,
     primary: bool,
     lines: _Lines,
-    edit: RangeEdit,
+    edit: BaseRangeEdit,
 ) -> EditInstruction:
     new_lines = edit.new_text.split(ctx.linefeed)
 
@@ -244,9 +244,9 @@ def _instructions(
     smart: bool,
     lines: _Lines,
     primary: Edit,
-    secondary: Sequence[RangeEdit],
+    secondary: Sequence[BaseRangeEdit],
 ) -> Iterator[EditInstruction]:
-    if isinstance(primary, RangeEdit):
+    if isinstance(primary, BaseRangeEdit):
         inst = _range_edit_trans(
             unifying_chars,
             smart=smart,
