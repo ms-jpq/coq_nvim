@@ -195,8 +195,8 @@ class Clients:
 
 
 class Ranking(Enum):
-    clever = auto()
-    simple = auto()
+    uniform = auto()
+    stratified = auto()
 
 
 @dataclass(frozen=True)
