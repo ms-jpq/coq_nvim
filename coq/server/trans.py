@@ -43,7 +43,7 @@ def _sort_by(is_lower: bool, adjustment: Weights, ranking: Ranking) -> Callable[
             for key, val in asdict(metric.weight).items()
         )
 
-    def _tail(metric: Metric) -> Any:
+    def _rest(metric: Metric) -> Any:
         return (
             -len(metric.comp.secondary_edits),
             -(metric.comp.kind != ""),
@@ -54,25 +54,28 @@ def _sort_by(is_lower: bool, adjustment: Weights, ranking: Ranking) -> Callable[
             ),
         )
 
-    def _simple_key_by(metric: Metric) -> Any:
+    # stratified ranking: first sort by weight (proxy for client) and then
+    # by total and the rest
+    def _stratified_key_by(metric: Metric) -> Any:
         return (
             -(metric.comp.preselect),
             -(metric.weight_adjust),
             -round(_tot(metric) * 1000),
-            *_tail(metric)
+            *_rest(metric)
         )
 
-    def _clever_key_by(metric: Metric) -> Any:
+    # uniform ranking (original): sort by weighted total and the rest
+    def _uniform_key_by(metric: Metric) -> Any:
         return (
             -(metric.comp.preselect),
             -round(_tot(metric) * metric.weight_adjust * 1000),
-            *_tail(metric)
+            *_rest(metric)
         )
 
-    if ranking == Ranking.clever:
-        return _clever_key_by
+    if ranking == Ranking.uniform:
+        return _uniform_key_by
     else:
-        return _simple_key_by
+        return _stratified_key_by
 
 
 def _prune(

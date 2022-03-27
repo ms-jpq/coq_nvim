@@ -32,7 +32,7 @@ weights:
   recency: 1.0
   proximity: 0.5
 
-ranking: clever
+ranking: uniform
 
 display:
   ghost_text:
