@@ -194,6 +194,11 @@ class Clients:
     third_party: BaseClient
 
 
+class Ranking(Enum):
+    clever = auto()
+    simple = auto()
+
+
 @dataclass(frozen=True)
 class Settings:
     auto_start: Union[bool, Literal["shut-up"]]
@@ -205,3 +210,4 @@ class Settings:
     completion: CompleteOptions
     keymap: KeyMapping
     clients: Clients
+    ranking: Ranking
