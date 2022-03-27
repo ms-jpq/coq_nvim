@@ -32,6 +32,8 @@ weights:
   recency: 1.0
   proximity: 0.5
 
+ranking: clever
+
 display:
   ghost_text:
     enabled: True

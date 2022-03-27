@@ -8,7 +8,7 @@ from std2 import clamp
 
 from ..shared.parse import lower
 from ..shared.runtime import Metric
-from ..shared.settings import PumDisplay, Weights
+from ..shared.settings import PumDisplay, Ranking, Weights
 from ..shared.types import Context, SnippetEdit
 from .completions import VimCompletion
 from .rt_types import Stack
@@ -34,17 +34,17 @@ def _cum(adjustment: Weights, metrics: Iterable[Metric]) -> Weights:
     return Weights(**acc)
 
 
-def _sort_by(is_lower: bool, adjustment: Weights) -> Callable[[Metric], Any]:
+def _sort_by(is_lower: bool, adjustment: Weights, ranking: Ranking) -> Callable[[Metric], Any]:
     adjust = asdict(adjustment)
 
-    def key_by(metric: Metric) -> Any:
-        tot = sum(
+    def _tot(metric: Metric) -> int:
+        return sum(
             val / adjust[key] if adjust[key] else 0
             for key, val in asdict(metric.weight).items()
         )
-        key = (
-            -(metric.comp.preselect),
-            -round(tot * metric.weight_adjust * 1000),
+
+    def _tail(metric: Metric) -> Any:
+        return (
             -len(metric.comp.secondary_edits),
             -(metric.comp.kind != ""),
             -(metric.comp.doc is not None),
@@ -53,9 +53,26 @@ def _sort_by(is_lower: bool, adjustment: Weights) -> Callable[[Metric], Any]:
                 metric.comp.sort_by.swapcase() if is_lower else metric.comp.sort_by
             ),
         )
-        return key
 
-    return key_by
+    def _simple_key_by(metric: Metric) -> Any:
+        return (
+            -(metric.comp.preselect),
+            -(metric.weight_adjust),
+            -round(_tot(metric) * 1000),
+            *_tail(metric)
+        )
+
+    def _clever_key_by(metric: Metric) -> Any:
+        return (
+            -(metric.comp.preselect),
+            -round(_tot(metric) * metric.weight_adjust * 1000),
+            *_tail(metric)
+        )
+
+    if ranking == Ranking.clever:
+        return _clever_key_by
+    else:
+        return _simple_key_by
 
 
 def _prune(
@@ -122,6 +139,8 @@ def trans(
     scr_width, _ = s.screen
 
     display = stack.settings.display
+    ranking = stack.settings.ranking
+
     is_lower = lower(context.words_before) == context.words_before
 
     kind_dead_width = sum(
@@ -131,7 +150,7 @@ def trans(
     truncate = clamp(pum_width, scr_width - context.scr_col, display.pum.x_max_len)
 
     w_adjust = _cum(stack.settings.weights, metrics=metrics)
-    sortby = _sort_by(is_lower, adjustment=w_adjust)
+    sortby = _sort_by(is_lower, adjustment=w_adjust, ranking=ranking)
     ranked = sorted(metrics, key=sortby)
     pruned = tuple(_prune(stack, context=context, ranked=ranked))
     max_width = _max_width(pruned)
