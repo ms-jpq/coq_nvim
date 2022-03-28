@@ -1,6 +1,7 @@
+import sys
 from json import loads
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from std2.asyncio.subprocess import call
 
@@ -34,7 +35,12 @@ async def _build(dockerfile: Path) -> str:
         cwd=_TOP_LV,
         capture_stderr=False,
     )
-    return proc.stdout.decode()
+
+    out = proc.stdout.decode()
+    if sys.version_info < (3, 9):
+        return cast(str, out)
+    else:
+        return out
 
 
 async def lsp() -> Any:
