@@ -3,7 +3,9 @@ from contextlib import suppress
 from queue import SimpleQueue
 from typing import Any, Callable, TypeVar, cast
 
-T = TypeVar("T")
+from std2.asyncio import to_thread
+
+_T = TypeVar("_T")
 
 
 class SingleThreadExecutor:
@@ -16,7 +18,7 @@ class SingleThreadExecutor:
             f = self._q.get()
             f()
 
-    def submit(self, f: Callable[..., T], *args: Any, **kwargs: Any) -> T:
+    def submit(self, f: Callable[..., _T], *args: Any, **kwargs: Any) -> _T:
         fut: Future = Future()
 
         def cont() -> None:
@@ -30,4 +32,7 @@ class SingleThreadExecutor:
                     fut.set_result(ret)
 
         self._q.put(cont)
-        return cast(T, fut.result())
+        return cast(_T, fut.result())
+
+    async def asubmit(self, f: Callable[..., _T], *args: Any, **kwargs: Any) -> _T:
+        return await to_thread(cast(Any, self.submit), f, *args, **kwargs)

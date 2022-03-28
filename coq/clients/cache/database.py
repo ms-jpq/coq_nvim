@@ -41,7 +41,7 @@ class Database:
             with self._lock, with_transaction(self._conn.cursor()) as cursor:
                 cursor.executemany(sql("insert", "word"), m1())
 
-        await to_thread(self._ex.submit, cont)
+        await self._ex.asubmit(cont)
 
     async def select(
         self, clear: bool, opts: MatchOptions, word: str, sym: str, limitless: int

@@ -63,17 +63,17 @@ class IDB:
             with self._lock, with_transaction(self._conn.cursor()) as cursor:
                 cursor.execute(sql("insert", "batch"), {"rowid": batch_id})
 
-        await to_thread(self._ex.submit, cont)
+        await self._ex.asubmit(cont)
 
     async def new_instance(self, instance: bytes, source: str, batch_id: bytes) -> None:
-        def cont() -> None:
+        def cont(_: None = None) -> None:
             with self._lock, with_transaction(self._conn.cursor()) as cursor:
                 cursor.execute(
                     sql("insert", "instance"),
                     {"rowid": instance, "source_id": source, "batch_id": batch_id},
                 )
 
-        await to_thread(self._ex.submit, cont)
+        await self._ex.asubmit(cont)
 
     async def new_stat(
         self, instance: bytes, interrupted: bool, duration: float, items: int
@@ -90,7 +90,7 @@ class IDB:
                     },
                 )
 
-        await to_thread(self._ex.submit, cont)
+        await self._ex.asubmit(cont)
 
     async def insertion_order(self, n_rows: int) -> Mapping[str, int]:
         def cont() -> Mapping[str, int]:

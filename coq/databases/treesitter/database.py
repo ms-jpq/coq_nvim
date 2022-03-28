@@ -48,7 +48,7 @@ class TDB:
             except OperationalError:
                 pass
 
-        await to_thread(self._ex.submit, cont)
+        await self._ex.asubmit(cont)
 
     async def populate(self, buf: int, filetype: str, nodes: Iterable[Payload]) -> None:
         def m1() -> Iterator[Mapping]:
@@ -72,7 +72,7 @@ class TDB:
                 )
                 cursor.executemany(sql("insert", "word"), m1())
 
-        await to_thread(self._ex.submit, cont)
+        await self._ex.asubmit(cont)
 
     async def select(
         self,
