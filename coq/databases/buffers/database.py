@@ -65,14 +65,14 @@ class BDB:
             except OperationalError:
                 pass
 
-        await to_thread(self._ex.submit, cont)
+        await self._ex.asubmit(cont)
 
     async def ft_update(self, buf_id: int, filetype: str) -> None:
         def cont() -> None:
             with self._lock, with_transaction(self._conn.cursor()) as cursor:
                 _ensure_buffer(cursor, buf_id=buf_id, filetype=filetype)
 
-        await to_thread(self._ex.submit, cont)
+        await self._ex.asubmit(cont)
 
     async def set_lines(
         self,
@@ -132,7 +132,7 @@ class BDB:
                         },
                     )
 
-        await to_thread(self._ex.submit, cont)
+        await self._ex.asubmit(cont)
 
     def lines(self, buf_id: int, lo: int, hi: int) -> Tuple[int, Iterator[str]]:
         def cont() -> Tuple[int, Iterator[str]]:

@@ -63,7 +63,7 @@ class CTDB:
                 self._conn.close()
                 self._conn = _init(self._vars_dir, cwd=cwd)
 
-        await to_thread(self._ex.submit, cont)
+        await self._ex.asubmit(cont)
 
     async def paths(self) -> Mapping[str, float]:
         def cont() -> Mapping[str, float]:
@@ -102,7 +102,7 @@ class CTDB:
                 cursor.executemany(sql("insert", "tag"), m2())
                 cursor.execute("PRAGMA optimize", ())
 
-        await to_thread(self._ex.submit, cont)
+        await self._ex.asubmit(cont)
 
     async def select(
         self,

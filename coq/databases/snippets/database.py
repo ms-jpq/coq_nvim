@@ -57,7 +57,7 @@ class SDB:
                     ({"filename": normcase(path)} for path in paths),
                 )
 
-        await to_thread(self._ex.submit, cont)
+        await self._ex.asubmit(cont)
 
     async def mtimes(self) -> Mapping[PurePath, float]:
         def cont() -> Mapping[PurePath, float]:
@@ -114,7 +114,7 @@ class SDB:
                         )
                 cursor.execute("PRAGMA optimize", ())
 
-        await to_thread(self._ex.submit, cont)
+        await self._ex.asubmit(cont)
 
     async def select(
         self, opts: MatchOptions, filetype: str, word: str, sym: str, limitless: int

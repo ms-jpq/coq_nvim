@@ -55,7 +55,7 @@ class TMDB:
                 cursor.executemany(sql("insert", "word"), m2())
                 cursor.execute("PRAGMA optimize", ())
 
-        await to_thread(self._ex.submit, cont)
+        await self._ex.asubmit(cont)
 
     async def select(
         self, opts: MatchOptions, active_pane: str, word: str, sym: str, limitless: int
