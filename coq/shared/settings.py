@@ -101,6 +101,7 @@ class Weights:
 class CompleteOptions:
     always: bool
     smart: bool
+    stop_syms: AbstractSet[str]
 
 
 @dataclass(frozen=True)

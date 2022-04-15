@@ -2,7 +2,7 @@ from asyncio import Event, Lock, Task, gather, sleep, wait
 from asyncio.events import AbstractEventLoop
 from dataclasses import replace
 from queue import SimpleQueue
-from typing import Any, Literal, Mapping, Optional, Sequence, Tuple, Union
+from typing import AbstractSet, Any, Literal, Mapping, Optional, Sequence, Tuple, Union
 from uuid import UUID, uuid4
 
 from pynvim import Nvim
@@ -37,7 +37,7 @@ from ..trans import trans
 _Q: SimpleQueue = SimpleQueue()
 
 
-def _should_cont(state: State, prev: Context, cur: Context) -> bool:
+def _should_cont(state: State, prev: Context, cur: Context, stop_syms: AbstractSet[str]) -> bool:
     if cur.manual:
         return True
     elif prev.change_id == cur.change_id:
@@ -47,6 +47,8 @@ def _should_cont(state: State, prev: Context, cur: Context) -> bool:
             return extern.is_dir
         else:
             return False
+    elif cur.syms_before in stop_syms:
+        return False
     elif cur.syms_before != "":
         return True
     else:
@@ -77,7 +79,7 @@ def _launch_loop(nvim: Nvim, stack: Stack) -> None:
                             manual=manual,
                         ),
                     )
-                    should = _should_cont(s, prev=s.context, cur=ctx) if ctx else False
+                    should = _should_cont(s, prev=s.context, cur=ctx, stop_syms=stack.settings.completion.stop_syms) if ctx else False
                     _, col = ctx.position
 
                     if should:

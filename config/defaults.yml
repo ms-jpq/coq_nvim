@@ -15,6 +15,7 @@ keymap:
 completion:
   always: True
   smart: True
+  stop_syms: ['{', '}', '(', ')', '[', ']', '']
 
 match:
   unifying_chars:
