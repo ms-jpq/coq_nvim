@@ -216,7 +216,7 @@ def _range_edit_trans(
             if isinstance(edit, ParsedEdit)
             else new_lines
         )
-        cursor_yoffset = (r2 - r1) + (len(lines_before) - 1)
+        cursor_yoffset = (r2 - r1) + (len("".join(lines_before).splitlines()) - 1)
         cursor_xpos = (
             (
                 len(encode(lines_before[-1]))
@@ -328,7 +328,7 @@ def _shift(
         if new_inst.primary:
             m_shift = _MarkShift(row=row_shift)
 
-        row_shift += (r2 - r1) + len(inst.new_lines) - 1
+        row_shift += inst.cursor_yoffset
         f_length = len(encode(inst.new_lines[-1])) if inst.new_lines else 0
         cols_shift[r2] = -(c2 - c1) + f_length if r1 == r2 else -c2 + f_length
 
