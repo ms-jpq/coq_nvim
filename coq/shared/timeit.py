@@ -17,7 +17,7 @@ def timeit(
     if DEBUG or force or warn is not None:
         with _timeit() as t:
             yield None
-        delta = t()
+        delta = t().total_seconds()
         if DEBUG or delta >= (warn or 0):
             times, cum = _RECORDS.get(name, (0, 0))
             tt, c = times + 1, cum + delta
