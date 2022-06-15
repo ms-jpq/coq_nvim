@@ -1,12 +1,13 @@
 from contextlib import suppress
 from dataclasses import dataclass
 from queue import SimpleQueue
-from typing import Sequence, Tuple
+from typing import Mapping, Sequence, Tuple, cast
 from uuid import uuid4
 
 from pynvim import Nvim
 from pynvim.api import Buffer, NvimError
-from pynvim_pp.api import buf_filetype, buf_get_option, cur_buf
+from pynvim_pp.api import buf_get_option, cur_buf
+from pynvim_pp.atomic import Atomic
 from pynvim_pp.lib import awrite, go
 from pynvim_pp.logging import with_suppress
 from std2.asyncio import to_thread
@@ -110,9 +111,25 @@ def _lines_event(
     pending: bool,
 ) -> None:
     with suppress(NvimError):
-        filetype = buf_filetype(nvim, buf=buf)
-        mode = nvim.api.get_mode()["mode"]
-        comp_mode = nvim.funcs.complete_info(("mode",))["mode"]
+        with Atomic() as (atomic, ns):
+            ns.filetype = atomic.buf_get_option(buf, "filetype")
+            ns.mode = atomic.get_mode()
+            ns.complete_info = atomic.call_function("complete_info", (("mode",),))
+            atomic.commit(nvim)
+
+        filetype = cast(
+            str,
+            ns.filetype,
+        )
+        mode = cast(
+            Mapping[str, str],
+            ns.mode,
+        )["mode"]
+        comp_mode = cast(
+            Mapping[str, str],
+            ns.complete_info,
+        )["mode"]
+
         msg = _Qmsg(
             mode=mode,
             comp_mode=comp_mode,

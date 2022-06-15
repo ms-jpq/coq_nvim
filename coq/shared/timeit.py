@@ -27,6 +27,6 @@ def timeit(
             time = f"{si_prefixed_smol(delta, precision=0)}s".ljust(8)
             ttime = f"{si_prefixed_smol(c / tt, precision=0)}s".ljust(8)
             msg = f"TIME -- {label} :: {time} @ {ttime} {' '.join(map(str, args))}"
-            log.info("%s", msg)
+            log.debug("%s", msg)
     else:
         yield None
