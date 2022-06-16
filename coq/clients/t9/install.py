@@ -23,17 +23,15 @@ _T9_EXEC = PurePath("TabNine").with_suffix(".exe" if os is OS.windows else "")
 
 def _triple() -> Optional[str]:
     cpu = machine()
-    arch = {"arm64": "aarch64"}.get(cpu, cpu)
     if os is OS.linux:
         libc = "musl" if which("apk") else "gnu"
-        return f"{arch}-unknown-linux-{libc}"
+        return f"{cpu}-unknown-linux-{libc}"
     elif os is OS.macos:
-        if arch == "arm64":
-            return None
-        else:
-            return f"{arch}-apple-darwin"
+        arch = {"arm64": "aarch64"}.get(cpu)
+        return f"{arch}-apple-darwin"
     elif os is OS.windows:
-        return f"{arch}-pc-windows-gnu"
+        arch = {"arm64": "aarch64"}.get(cpu)
+        return f"{arch}-pc-windows-msvc"
     else:
         return None
 
@@ -44,13 +42,12 @@ def _version(timeout: float) -> str:
 
 
 def _uri(timeout: float) -> Optional[str]:
-    triple = _triple()
-    if not triple:
-        return None
-    else:
+    if triple := _triple():
         ver = _version(timeout)
         uri = _DOWN.substitute(version=ver, triple=triple)
         return uri
+    else:
+        return None
 
 
 def t9_bin(vars_dir: Path) -> Path:
