@@ -27,10 +27,10 @@ def _triple() -> Optional[str]:
         libc = "musl" if which("apk") else "gnu"
         return f"{cpu}-unknown-linux-{libc}"
     elif os is OS.macos:
-        arch = {"arm64": "aarch64"}.get(cpu)
+        arch = cpu if cpu != "arm64" else "aarch64"
         return f"{arch}-apple-darwin"
     elif os is OS.windows:
-        arch = {"arm64": "aarch64"}.get(cpu)
+        arch = cpu if cpu != "arm64" else "aarch64"
         return f"{arch}-pc-windows-msvc"
     else:
         return None
