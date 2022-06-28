@@ -1,6 +1,7 @@
-from typing import AsyncIterator
+from typing import AsyncIterator, Mapping
 
-from pynvim_pp.api import list_bufs
+from pynvim.api.buffer import Buffer
+from pynvim_pp.api import buf_line_count, list_bufs
 from pynvim_pp.lib import async_call, go
 
 from ...databases.buffers.database import BDB
@@ -18,12 +19,26 @@ class Worker(BaseWorker[BuffersClient, BDB]):
         go(supervisor.nvim, aw=self._poll())
 
     async def _poll(self) -> None:
+        def c1() -> Mapping[Buffer, int]:
+            bufs = {
+                buf: buf_line_count(self._supervisor.nvim, buf=buf)
+                for buf in list_bufs(self._supervisor.nvim, listed=True)
+            }
+            return bufs
+
         while True:
-            bufs = await async_call(
-                self._supervisor.nvim,
-                lambda: list_bufs(self._supervisor.nvim, listed=True),
+            bufs = await async_call(self._supervisor.nvim, c1)
+            dead = await self._misc.vacuum(
+                {buf.number: rows for buf, rows in bufs.items()}
             )
-            await self._misc.vacuum({buf.number for buf in bufs})
+
+            def c2() -> None:
+                buffers = {buf.number: buf for buf in bufs}
+                for buf_id in dead:
+                    if buf := buffers.get(buf_id):
+                        self._supervisor.nvim.api.buf_detach(buf)
+
+            await async_call(self._supervisor.nvim, c2)
             async with self._supervisor.idling:
                 await self._supervisor.idling.wait()
 

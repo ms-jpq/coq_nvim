@@ -3,7 +3,7 @@ from concurrent.futures import Executor
 from sqlite3 import Connection, OperationalError
 from sqlite3.dbapi2 import Cursor
 from threading import Lock
-from typing import AbstractSet, Iterator, Mapping, Optional, Sequence, Tuple
+from typing import AbstractSet, Iterator, Mapping, MutableSet, Optional, Sequence, Tuple
 from uuid import uuid4
 
 from pynvim_pp.lib import recode
@@ -51,21 +51,30 @@ class BDB:
         with self._lock:
             self._conn.interrupt()
 
-    async def vacuum(self, buf_ids: AbstractSet[int]) -> None:
-        def cont() -> None:
+    async def vacuum(self, current_bufs: Mapping[int, int]) -> AbstractSet[int]:
+        def cont() -> AbstractSet[int]:
             try:
                 with with_transaction(self._conn.cursor()) as cursor:
                     cursor.execute(sql("select", "buffers"), ())
-                    existing = {row["rowid"] for row in cursor.fetchall()}
+                    existing = {
+                        row["rowid"]: row["line_count"] for row in cursor.fetchall()
+                    }
+                    dead = {
+                        buf_id
+                        for buf_id, line_count in existing.items()
+                        if buf_id not in current_bufs
+                        or line_count != current_bufs.get(buf_id)
+                    }
                     cursor.executemany(
                         sql("delete", "buffer"),
-                        ({"buffer_id": buf_id} for buf_id in existing - buf_ids),
+                        ({"buffer_id": buf_id} for buf_id in dead),
                     )
                     cursor.execute("PRAGMA optimize", ())
+                    return dead
             except OperationalError:
-                pass
+                return set()
 
-        await self._ex.asubmit(cont)
+        return await self._ex.asubmit(cont)
 
     async def ft_update(self, buf_id: int, filetype: str) -> None:
         def cont() -> None:
