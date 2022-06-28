@@ -1,6 +1,8 @@
+from contextlib import suppress
 from typing import AsyncIterator, Mapping
 
 from pynvim.api.buffer import Buffer
+from pynvim.api.common import NvimError
 from pynvim_pp.api import buf_line_count, list_bufs
 from pynvim_pp.lib import async_call, go
 
@@ -36,7 +38,8 @@ class Worker(BaseWorker[BuffersClient, BDB]):
                 buffers = {buf.number: buf for buf in bufs}
                 for buf_id in dead:
                     if buf := buffers.get(buf_id):
-                        self._supervisor.nvim.api.buf_detach(buf)
+                        with suppress(NvimError):
+                            self._supervisor.nvim.api.buf_detach(buf)
 
             await async_call(self._supervisor.nvim, c2)
             async with self._supervisor.idling:
