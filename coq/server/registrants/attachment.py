@@ -1,3 +1,4 @@
+from asyncio import gather
 from contextlib import suppress
 from dataclasses import dataclass
 from queue import SimpleQueue
@@ -79,9 +80,9 @@ def _listener(nvim: Nvim, stack: Stack) -> None:
                 qmsg: _Qmsg = await to_thread(q.get)
                 with suppress(NvimError):
                     with timeit("POLL"):
-                        mode, comp_mode, filetype = await _status(nvim, qmsg.buf)
-
-                        await stack.supervisor.interrupt()
+                        (mode, comp_mode, filetype), _ = await gather(
+                            _status(nvim, qmsg.buf), stack.supervisor.interrupt()
+                        )
 
                         lo, hi = qmsg.range
                         size = sum(map(len, qmsg.lines))
