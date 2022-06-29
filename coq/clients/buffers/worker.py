@@ -29,19 +29,20 @@ class Worker(BaseWorker[BuffersClient, BDB]):
             return bufs
 
         while True:
-            bufs = await async_call(self._supervisor.nvim, c1)
-            dead = await self._misc.vacuum(
-                {buf.number: rows for buf, rows in bufs.items()}
-            )
+            with suppress(NvimError):
+                bufs = await async_call(self._supervisor.nvim, c1)
+                dead = await self._misc.vacuum(
+                    {buf.number: rows for buf, rows in bufs.items()}
+                )
 
-            def c2() -> None:
-                buffers = {buf.number: buf for buf in bufs}
-                for buf_id in dead:
-                    if buf := buffers.get(buf_id):
-                        with suppress(NvimError):
-                            self._supervisor.nvim.api.buf_detach(buf)
+                def c2() -> None:
+                    buffers = {buf.number: buf for buf in bufs}
+                    for buf_id in dead:
+                        if buf := buffers.get(buf_id):
+                            with suppress(NvimError):
+                                self._supervisor.nvim.api.buf_detach(buf)
 
-            await async_call(self._supervisor.nvim, c2)
+                await async_call(self._supervisor.nvim, c2)
             async with self._supervisor.idling:
                 await self._supervisor.idling.wait()
 
