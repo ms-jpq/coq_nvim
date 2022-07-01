@@ -1,4 +1,5 @@
 from contextlib import contextmanager
+from time import process_time
 from typing import Any, Iterator, MutableMapping, Optional, Tuple
 
 from pynvim_pp.logging import log
@@ -18,7 +19,7 @@ def timeit(
         with _timeit() as t:
             yield None
         delta = t().total_seconds()
-        if DEBUG or delta >= (warn or 0):
+        if DEBUG or force or delta >= (warn or 0):
             times, cum = _RECORDS.get(name, (0, 0))
             tt, c = times + 1, cum + delta
             _RECORDS[name] = tt, c
@@ -27,6 +28,21 @@ def timeit(
             time = f"{si_prefixed_smol(delta, precision=0)}s".ljust(8)
             ttime = f"{si_prefixed_smol(c / tt, precision=0)}s".ljust(8)
             msg = f"TIME -- {label} :: {time} @ {ttime} {' '.join(map(str, args))}"
-            log.debug("%s", msg)
+            if force:
+                log.info("%s", msg)
+            else:
+                log.debug("%s", msg)
     else:
         yield None
+
+
+@contextmanager
+def cpu_timeit() -> Iterator[None]:
+    t1 = process_time()
+    with _timeit() as t:
+        yield None
+    t2 = process_time()
+    delta = t().total_seconds()
+    cpu = (t2 - t1) / delta
+    msg = f"CPU :: {cpu}"
+    log.info("%s", msg)

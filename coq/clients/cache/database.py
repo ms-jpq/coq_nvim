@@ -45,12 +45,12 @@ class Database:
 
     async def select(
         self, clear: bool, opts: MatchOptions, word: str, sym: str, limitless: int
-    ) -> Iterator[Tuple[bytes, str]]:
-        def cont() -> Iterator[Tuple[bytes, str]]:
+    ) -> Tuple[Iterator[Tuple[bytes, str]], int]:
+        def cont() -> Tuple[Iterator[Tuple[bytes, str]], int]:
             if clear:
                 with self._lock, with_transaction(self._conn.cursor()) as cursor:
                     cursor.execute(sql("delete", "words"))
-                    return iter(())
+                    return iter(()), 0
             else:
                 try:
                     with with_transaction(self._conn.cursor()) as cursor:
@@ -69,11 +69,11 @@ class Database:
                             },
                         )
                         rows = cursor.fetchall()
-                        return ((row["key"], row["word"]) for row in rows)
+                        return ((row["key"], row["word"]) for row in rows), len(rows)
                 except OperationalError:
-                    return iter(())
+                    return iter(()), 0
 
-        def step() -> Iterator[Tuple[bytes, str]]:
+        def step() -> Tuple[Iterator[Tuple[bytes, str]], int]:
             self._interrupt()
             return self._ex.submit(cont)
 

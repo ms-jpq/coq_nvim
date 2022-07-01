@@ -141,7 +141,7 @@ class Supervisor:
                             acc.append(metric)
                             items += 1
                         else:
-                            await sleep(0)
+                            await sleep(1)
                 finally:
                     elapsed = monotonic() - t1
                     await self._reviewer.s_end(

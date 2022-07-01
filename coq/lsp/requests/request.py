@@ -15,7 +15,7 @@ from typing import (
 
 from pynvim.api.nvim import Nvim
 from pynvim_pp.lib import async_call, go
-from std2.pickle import new_decoder
+from std2.pickle.decoder import new_decoder
 
 from ...registry import NAMESPACE, atomic, rpc
 from ...server.rt_types import Stack

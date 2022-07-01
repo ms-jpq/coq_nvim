@@ -71,7 +71,7 @@ class CacheWorker:
     ) -> Tuple[
         bool,
         AbstractSet[str],
-        Awaitable[Iterator[Completion]],
+        Awaitable[Tuple[Iterator[Completion], int]],
         Callable[[Optional[str], Iterable[Completion]], Awaitable[None]],
     ]:
         cache_ctx = self._cache_ctx
@@ -91,9 +91,9 @@ class CacheWorker:
             self._clients.clear()
             self._cached.clear()
 
-        async def get() -> Iterator[Completion]:
+        async def get() -> Tuple[Iterator[Completion], int]:
             with timeit("CACHE -- GET"):
-                keys = await self._db.select(
+                keys, length = await self._db.select(
                     not use_cache,
                     opts=self._supervisor.match,
                     word=context.words,
@@ -105,7 +105,7 @@ class CacheWorker:
                     for key, sort_by in keys
                     if (comp := self._cached.get(key))
                 )
-                return comps
+                return comps, length
 
         async def set_cache(
             client: Optional[str], completions: Iterable[Completion]
