@@ -12,6 +12,9 @@ from typing import (
 )
 from uuid import UUID, uuid4
 
+from coq.shared.settings import MatchOptions
+
+from ...shared.fuzzy import multi_set_ratio
 from ...shared.parse import coalesce
 from ...shared.repeat import sanitize
 from ...shared.runtime import Supervisor
@@ -26,17 +29,20 @@ class _CacheCtx:
     commit_id: UUID
     buf_id: int
     row: int
-    text_before: str
+    syms_before: str
 
 
-def _use_cache(cache: _CacheCtx, ctx: Context) -> bool:
+def _use_cache(match: MatchOptions, cache: _CacheCtx, ctx: Context) -> bool:
     row, _ = ctx.position
     use_cache = (
         not ctx.manual
         and cache.commit_id == ctx.commit_id
         and ctx.buf_id == cache.buf_id
         and row == cache.row
-        and ctx.syms_before.startswith(cache.text_before)
+        and multi_set_ratio(
+            ctx.syms_before, cache.syms_before, look_ahead=match.look_ahead
+        )
+        >= match.fuzzy_cutoff
     )
     return use_cache
 
@@ -61,7 +67,7 @@ class CacheWorker:
             commit_id=uuid4(),
             buf_id=-1,
             row=-1,
-            text_before="",
+            syms_before="",
         )
         self._clients: MutableSet[str] = set()
         self._cached: MutableMapping[bytes, Completion] = {}
@@ -81,10 +87,12 @@ class CacheWorker:
             commit_id=context.commit_id,
             buf_id=context.buf_id,
             row=row,
-            text_before=context.syms_before,
+            syms_before=context.syms_before,
         )
 
-        use_cache = _use_cache(cache_ctx, ctx=context) and bool(self._cached)
+        use_cache = _use_cache(
+            self._supervisor.match, cache=cache_ctx, ctx=context
+        ) and bool(self._cached)
         cached_clients = {*self._clients}
 
         if not use_cache:

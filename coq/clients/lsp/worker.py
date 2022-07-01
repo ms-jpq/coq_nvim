@@ -1,5 +1,4 @@
 from enum import Enum, auto
-from string import ascii_letters, digits
 from typing import AbstractSet, AsyncIterator, Iterator, MutableMapping, Optional, Tuple
 
 from std2.aitertools import merge
@@ -18,7 +17,6 @@ from ...shared.types import Completion, Context, Edit, SnippetEdit
 from ..cache.worker import CacheWorker, sanitize_cached
 
 _CHUNK_SIZE = 9
-_WORDS = {*ascii_letters, *digits, "_", "-"}
 
 
 class _Src(Enum):
