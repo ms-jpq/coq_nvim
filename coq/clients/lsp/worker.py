@@ -107,7 +107,8 @@ class Worker(BaseWorker[BaseClient, None]):
                         lsp_comps.length,
                     )
 
-            for chunked in chunk(lsp_comps.items, n=self._supervisor.match.max_results):
+            n = self._supervisor.match.max_results // 2 + 1 if seen < limit else 9
+            for chunked in chunk(lsp_comps.items, n=n):
                 if src is _Src.from_db:
                     for comp in chunked:
                         if seen < limit:

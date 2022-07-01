@@ -148,7 +148,7 @@ def parse(
             )
 
         else:
-            # shuffle(items)
+            shuffle(items)
             length = len(items)
             comps = (
                 co1
@@ -168,7 +168,7 @@ def parse(
             )
 
     elif isinstance(resp, MutableSequence):
-        # shuffle(resp)
+        shuffle(resp)
         length = len(resp)
         comps = (
             co2
