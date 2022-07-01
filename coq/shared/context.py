@@ -46,11 +46,11 @@ def cword_before(
     unifying_chars: AbstractSet[str], lower: bool, context: Context, sort_by: str
 ) -> str:
     char = sort_by[:1]
-    trans = _lower if lower else lambda c: c
 
     if char.isspace():
         return context.ws_before
     elif is_word(char, unifying_chars=unifying_chars):
+        trans = _lower if lower else lambda c: c
         return trans(context.words_before)
     else:
         return context.syms_before
@@ -60,11 +60,11 @@ def cword_after(
     unifying_chars: AbstractSet[str], lower: bool, context: Context, sort_by: str
 ) -> str:
     char = sort_by[-1:]
-    trans = _lower if lower else lambda c: c
 
     if char.isspace():
         return context.ws_after
     elif is_word(char, unifying_chars=unifying_chars):
+        trans = _lower if lower else lambda c: c
         return trans(context.words_after)
     else:
         return context.syms_after

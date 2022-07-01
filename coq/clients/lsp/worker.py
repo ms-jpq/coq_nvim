@@ -1,4 +1,5 @@
 from enum import Enum, auto
+from string import ascii_letters, digits
 from typing import AbstractSet, AsyncIterator, Iterator, MutableMapping, Optional, Tuple
 
 from std2.aitertools import merge
@@ -17,6 +18,7 @@ from ...shared.types import Completion, Context, Edit, SnippetEdit
 from ..cache.worker import CacheWorker, sanitize_cached
 
 _CHUNK_SIZE = 9
+_WORDS = {*ascii_letters, *digits, "_", "-"}
 
 
 class _Src(Enum):
@@ -47,17 +49,16 @@ def _use_comp(match: MatchOptions, context: Context, sort_by: str, edit: Edit) -
 
 
 def _fast_comp(
-    look_ahead: int, prefixes: AbstractSet[str], sort_by: str, edit: Edit
+    look_ahead: int,
+    lower_word_prefix: str,
+    sort_by: str,
 ) -> bool:
-    if short_sort := lower(sort_by[:look_ahead]):
-        if short_sort in prefixes:
-            return True
-
-    elif short_sort := lower(edit.new_text[:look_ahead]):
-        if short_sort in prefixes:
-            return True
-
-    return False
+    if not lower_word_prefix:
+        return True
+    elif lower(sort_by[:look_ahead]) in lower_word_prefix:
+        return True
+    else:
+        return False
 
 
 class Worker(BaseWorker[BaseClient, None]):
@@ -83,10 +84,9 @@ class Worker(BaseWorker[BaseClient, None]):
         limit = BIGGEST_INT if context.manual else self._supervisor.match.max_results
         chunk_size = self._supervisor.match.max_results // 2 + 1
         fast_limit = self._supervisor.match.max_results * 3
-        lower_prefixes = {
-            lower(context.words_before[: self._supervisor.match.look_ahead]),
-            lower(context.syms_before[: self._supervisor.match.look_ahead]),
-        }
+        lower_word_prefix = lower(
+            context.words_before[: self._supervisor.match.look_ahead]
+        )
 
         use_cache, cached_clients, cached, set_cache = self._cache._use(context)
         if not use_cache:
@@ -141,9 +141,8 @@ class Worker(BaseWorker[BaseClient, None]):
                             if (
                                 _fast_comp(
                                     self._supervisor.match.look_ahead,
-                                    prefixes=lower_prefixes,
+                                    lower_word_prefix=lower_word_prefix,
                                     sort_by=comp.sort_by,
-                                    edit=comp.primary_edit,
                                 )
                                 if fast_search
                                 else _use_comp(
