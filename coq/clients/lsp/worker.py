@@ -1,8 +1,7 @@
-from asyncio import sleep
 from enum import Enum, auto
 from typing import AbstractSet, AsyncIterator, Iterator, MutableMapping, Optional, Tuple
 
-from std2.aitertools import atake, merge
+from std2.aitertools import merge
 from std2.itertools import chunk
 
 from ...lsp.requests.completion import comp_lsp
@@ -16,6 +15,8 @@ from ...shared.sql import BIGGEST_INT
 from ...shared.trans import cword_before
 from ...shared.types import Completion, Context, Edit, SnippetEdit
 from ..cache.worker import CacheWorker, sanitize_cached
+
+_CHUNK_SIZE = 9
 
 
 class _Src(Enum):
@@ -45,6 +46,20 @@ def _use_comp(match: MatchOptions, context: Context, sort_by: str, edit: Edit) -
         return False
 
 
+def _fast_comp(
+    look_ahead: int, prefixes: AbstractSet[str], sort_by: str, edit: Edit
+) -> bool:
+    if short_sort := lower(sort_by[:look_ahead]):
+        if short_sort in prefixes:
+            return True
+
+    elif short_sort := lower(edit.new_text[:look_ahead]):
+        if short_sort in prefixes:
+            return True
+
+    return False
+
+
 class Worker(BaseWorker[BaseClient, None]):
     def __init__(self, supervisor: Supervisor, options: BaseClient, misc: None) -> None:
         super().__init__(supervisor, options=options, misc=misc)
@@ -66,6 +81,12 @@ class Worker(BaseWorker[BaseClient, None]):
 
     async def work(self, context: Context) -> AsyncIterator[Optional[Completion]]:
         limit = BIGGEST_INT if context.manual else self._supervisor.match.max_results
+        chunk_size = self._supervisor.match.max_results // 2 + 1
+        fast_limit = self._supervisor.match.max_results * 3
+        lower_prefixes = {
+            lower(context.words_before[: self._supervisor.match.look_ahead]),
+            lower(context.syms_before[: self._supervisor.match.look_ahead]),
+        }
 
         use_cache, cached_clients, cached, set_cache = self._cache._use(context)
         if not use_cache:
@@ -88,12 +109,9 @@ class Worker(BaseWorker[BaseClient, None]):
                 )
 
         async def lsp_items() -> AsyncIterator[Tuple[_Src, LSPcomp]]:
-            lsp_limit = (
-                2**16 if context.manual else self._supervisor.match.max_results * 2
-            )
             if context.manual or not use_cache:
-                async for lsp_comps in atake(
-                    self._request(context, cached_clients=cached_clients), lsp_limit
+                async for lsp_comps in self._request(
+                    context, cached_clients=cached_clients
                 ):
                     yield _Src.from_query, lsp_comps
 
@@ -107,7 +125,7 @@ class Worker(BaseWorker[BaseClient, None]):
                         lsp_comps.length,
                     )
 
-            n = self._supervisor.match.max_results // 2 + 1 if seen < limit else 9
+            n = chunk_size if seen < limit else _CHUNK_SIZE
             for chunked in chunk(lsp_comps.items, n=n):
                 if src is _Src.from_db:
                     for comp in chunked:
@@ -115,15 +133,28 @@ class Worker(BaseWorker[BaseClient, None]):
                             seen += 1
                             yield comp
                 else:
+                    fast_search = (
+                        src is _Src.from_query and lsp_comps.length > fast_limit
+                    )
                     for comp in chunked:
-                        if seen < limit and _use_comp(
-                            self._supervisor.match,
-                            context=context,
-                            sort_by=comp.sort_by,
-                            edit=comp.primary_edit,
-                        ):
-                            seen += 1
-                            yield comp
+                        if seen < limit:
+                            if (
+                                _fast_comp(
+                                    self._supervisor.match.look_ahead,
+                                    prefixes=lower_prefixes,
+                                    sort_by=comp.sort_by,
+                                    edit=comp.primary_edit,
+                                )
+                                if fast_search
+                                else _use_comp(
+                                    self._supervisor.match,
+                                    context=context,
+                                    sort_by=comp.sort_by,
+                                    edit=comp.primary_edit,
+                                )
+                            ):
+                                seen += 1
+                                yield comp
 
                 if lsp_comps.local_cache and chunked:
                     await set_cache(lsp_comps.client, chunked)
