@@ -12,12 +12,11 @@ from typing import (
 )
 from uuid import UUID, uuid4
 
-from coq.shared.settings import MatchOptions
-
 from ...shared.fuzzy import multi_set_ratio
 from ...shared.parse import coalesce
 from ...shared.repeat import sanitize
 from ...shared.runtime import Supervisor
+from ...shared.settings import MatchOptions
 from ...shared.timeit import timeit
 from ...shared.types import Completion, Context
 from .database import Database
