@@ -1,6 +1,7 @@
 from typing import AsyncIterator
 
 from pynvim_pp.lib import go
+from pynvim_pp.logging import with_suppress
 
 from ...databases.tmux.database import TMDB
 from ...shared.runtime import Supervisor
@@ -20,12 +21,13 @@ class Worker(BaseWorker[WordbankClient, TMDB]):
 
     async def _poll(self) -> None:
         while True:
-            with timeit("IDLE :: TMUX"):
-                snap = await snapshot(self._supervisor.match.unifying_chars)
-                await self._misc.periodical(snap)
+            with with_suppress():
+                with timeit("IDLE :: TMUX"):
+                    snap = await snapshot(self._supervisor.match.unifying_chars)
+                    await self._misc.periodical(snap)
 
-            async with self._supervisor.idling:
-                await self._supervisor.idling.wait()
+                async with self._supervisor.idling:
+                    await self._supervisor.idling.wait()
 
     async def work(self, context: Context) -> AsyncIterator[Completion]:
         active = await cur()

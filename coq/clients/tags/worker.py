@@ -17,6 +17,7 @@ from typing import (
 from pynvim.api.nvim import Nvim, NvimError
 from pynvim_pp.api import buf_name, list_bufs
 from pynvim_pp.lib import async_call, go
+from pynvim_pp.logging import with_suppress
 from std2.asyncio import to_thread
 
 from ...databases.tags.database import CTDB
@@ -133,24 +134,25 @@ class Worker(BaseWorker[TagsClient, CTDB]):
 
     async def _poll(self) -> None:
         while True:
-            with timeit("IDLE :: TAGS"):
-                buf_names, existing = await gather(
-                    _ls(self._supervisor.nvim), self._misc.paths()
-                )
-                paths = buf_names | existing.keys()
-                mtimes = await _mtimes(paths)
-                query_paths = tuple(
-                    path
-                    for path, mtime in mtimes.items()
-                    if mtime > existing.get(path, 0)
-                )
-                raw = await run(*query_paths) if query_paths else ""
-                new = parse(mtimes, raw=raw)
-                dead = existing.keys() - mtimes.keys()
-                await self._misc.reconciliate(dead, new=new)
+            with with_suppress():
+                with timeit("IDLE :: TAGS"):
+                    buf_names, existing = await gather(
+                        _ls(self._supervisor.nvim), self._misc.paths()
+                    )
+                    paths = buf_names | existing.keys()
+                    mtimes = await _mtimes(paths)
+                    query_paths = tuple(
+                        path
+                        for path, mtime in mtimes.items()
+                        if mtime > existing.get(path, 0)
+                    )
+                    raw = await run(*query_paths) if query_paths else ""
+                    new = parse(mtimes, raw=raw)
+                    dead = existing.keys() - mtimes.keys()
+                    await self._misc.reconciliate(dead, new=new)
 
-            async with self._supervisor.idling:
-                await self._supervisor.idling.wait()
+                async with self._supervisor.idling:
+                    await self._supervisor.idling.wait()
 
     async def work(self, context: Context) -> AsyncIterator[Completion]:
         row, _ = context.position

@@ -5,6 +5,7 @@ from pynvim.api.buffer import Buffer
 from pynvim.api.common import NvimError
 from pynvim_pp.api import buf_line_count, list_bufs
 from pynvim_pp.lib import async_call, go
+from pynvim_pp.logging import with_suppress
 
 from ...databases.buffers.database import BDB
 from ...shared.runtime import Supervisor
@@ -29,22 +30,23 @@ class Worker(BaseWorker[BuffersClient, BDB]):
             return bufs
 
         while True:
-            with suppress(NvimError):
-                bufs = await async_call(self._supervisor.nvim, c1)
-                dead = await self._misc.vacuum(
-                    {buf.number: rows for buf, rows in bufs.items()}
-                )
+            with with_suppress():
+                with suppress(NvimError):
+                    bufs = await async_call(self._supervisor.nvim, c1)
+                    dead = await self._misc.vacuum(
+                        {buf.number: rows for buf, rows in bufs.items()}
+                    )
 
-                def c2() -> None:
-                    buffers = {buf.number: buf for buf in bufs}
-                    for buf_id in dead:
-                        if buf := buffers.get(buf_id):
-                            with suppress(NvimError):
-                                self._supervisor.nvim.api.buf_detach(buf)
+                    def c2() -> None:
+                        buffers = {buf.number: buf for buf in bufs}
+                        for buf_id in dead:
+                            if buf := buffers.get(buf_id):
+                                with suppress(NvimError):
+                                    self._supervisor.nvim.api.buf_detach(buf)
 
-                await async_call(self._supervisor.nvim, c2)
-            async with self._supervisor.idling:
-                await self._supervisor.idling.wait()
+                    await async_call(self._supervisor.nvim, c2)
+                async with self._supervisor.idling:
+                    await self._supervisor.idling.wait()
 
     async def work(self, context: Context) -> AsyncIterator[Completion]:
         filetype = context.filetype if self._options.same_filetype else None
