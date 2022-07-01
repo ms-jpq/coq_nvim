@@ -1,7 +1,9 @@
-from asyncio import Handle, get_running_loop
+from asyncio import Handle
+from asyncio.events import AbstractEventLoop
+from contextlib import suppress
 from typing import Optional
 
-from pynvim.api.nvim import Nvim
+from pynvim.api.nvim import Nvim, NvimError
 from pynvim_pp.api import buf_filetype, buf_get_option, cur_buf, get_cwd, win_close
 from pynvim_pp.float_win import list_floatwins
 from pynvim_pp.lib import async_call, awrite, go
@@ -105,16 +107,18 @@ def _when_idle(nvim: Nvim, stack: Stack) -> None:
         _HANDLE.cancel()
 
     def cont() -> None:
-        buf = cur_buf(nvim)
-        buf_type: str = buf_get_option(nvim, buf=buf, key="buftype")
-        if buf_type == "terminal":
-            nvim.api.buf_detach(buf)
-            state(nono_bufs={buf.number})
+        with suppress(NvimError):
+            buf = cur_buf(nvim)
+            buf_type: str = buf_get_option(nvim, buf=buf, key="buftype")
+            if buf_type == "terminal":
+                nvim.api.buf_detach(buf)
+                state(nono_bufs={buf.number})
 
         _insert_enter(nvim, stack=stack)
         stack.supervisor.notify_idle()
 
-    get_running_loop().call_later(
+    assert isinstance(nvim.loop, AbstractEventLoop)
+    nvim.loop.call_later(
         stack.settings.limits.idle_timeout,
         lambda: go(nvim, aw=async_call(nvim, cont)),
     )
