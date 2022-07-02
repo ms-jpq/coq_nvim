@@ -101,7 +101,7 @@ class Reviewer(PReviewer):
             context=context,
             proximity=proximity,
             inserted=inserted,
-            is_lower=lower(context.words_before) == context.words_before,
+            is_lower=context.is_lower
         )
         self._ctx = ctx
         await self._db.new_batch(ctx.batch.bytes)

@@ -65,6 +65,14 @@ class Context:
     ws_before: str
     ws_after: str
 
+    l_words_before: str
+    l_words_after: str
+
+    l_syms_before: str
+    l_syms_after: str
+
+    is_lower: bool
+
 
 @dataclass(frozen=True)
 class Edit:
