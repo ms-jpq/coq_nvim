@@ -163,6 +163,7 @@ def parse(
                     )
                 )
             )
+
             return LSPcomp(
                 client=client, local_cache=is_complete, items=comps, length=length
             )

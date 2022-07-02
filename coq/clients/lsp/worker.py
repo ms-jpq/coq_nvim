@@ -49,15 +49,15 @@ def _use_comp(match: MatchOptions, context: Context, sort_by: str, edit: Edit) -
 
 def _fast_comp(
     look_ahead: int,
+    lower_word: str,
     lower_word_prefix: str,
     sort_by: str,
 ) -> bool:
     if not lower_word_prefix:
         return True
-    elif lower(sort_by[:look_ahead]) in lower_word_prefix:
-        return True
     else:
-        return False
+        lo = lower(sort_by)
+        return lo[:look_ahead] == lower_word_prefix and not lower_word.startswith(lo)
 
 
 class Worker(BaseWorker[BaseClient, None]):
@@ -137,6 +137,7 @@ class Worker(BaseWorker[BaseClient, None]):
                                 if (
                                     _fast_comp(
                                         self._supervisor.match.look_ahead,
+                                        lower_word=context.l_words_before,
                                         lower_word_prefix=lower_word_prefix,
                                         sort_by=comp.sort_by,
                                     )
