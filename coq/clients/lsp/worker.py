@@ -152,7 +152,7 @@ class Worker(BaseWorker[BaseClient, None]):
                                     seen += 1
                                     yield comp
                 else:
-                    await sleep(1 / 1000)
+                    await sleep(1 / 100)
 
                 if lsp_comps.local_cache and chunked:
                     await set_cache(lsp_comps.client, chunked)
