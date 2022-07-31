@@ -5,7 +5,7 @@ from os.path import normcase
 from pathlib import PurePath
 from typing import AbstractSet, Iterable, Iterator, Mapping, Sequence, Tuple, Union
 
-from std2.pickle import new_decoder
+from std2.pickle.decoder import new_decoder
 
 from ...shared.types import SnippetGrammar
 from ..consts import SNIP_LINE_SEP
