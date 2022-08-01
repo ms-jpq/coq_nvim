@@ -40,8 +40,8 @@ from .settings import BaseClient, CompleteOptions, Limits, MatchOptions, Weights
 from .timeit import timeit
 from .types import Completion, Context
 
-T_co = TypeVar("T_co", contravariant=True)
-O_co = TypeVar("O_co", contravariant=True, bound=BaseClient)
+_T_co = TypeVar("_T_co", contravariant=True)
+_O_co = TypeVar("_O_co", contravariant=True, bound=BaseClient)
 
 
 @dataclass(frozen=True)
@@ -93,8 +93,7 @@ class Supervisor:
         self._workers: MutableMapping[Worker, BaseClient] = WeakKeyDictionary()
 
         self._lock = Lock()
-        self._task: Optional[Task] = None
-        self._tasks: Sequence[Task] = ()
+        self._tasks: MutableSequence[Task] = []
 
     @property
     def clients(self) -> AbstractSet[BaseClient]:
@@ -112,8 +111,8 @@ class Supervisor:
         go(self.nvim, aw=cont())
 
     async def interrupt(self) -> None:
-        g = gather(*chain(((self._task,) if self._task else ()), self._tasks))
-        self._task, self._tasks = None, ()
+        g = gather(*self._tasks)
+        self._tasks.clear()
         await cancel(g)
 
     def collect(self, context: Context) -> Awaitable[Sequence[Metric]]:
@@ -159,10 +158,11 @@ class Supervisor:
                     log.warn("%s", "SHOULD NOT BE LOCKED <><> supervisor")
                 async with self._lock:
                     await self._reviewer.begin(context)
-                    self._tasks = tasks = tuple(
+                    tasks = tuple(
                         loop.create_task(supervise(worker, assoc=assoc))
                         for worker, assoc in self._workers.items()
                     )
+                    self._tasks.extend(tasks)
                     try:
                         if not tasks:
                             return ()
@@ -177,12 +177,13 @@ class Supervisor:
                     finally:
                         done = True
 
-        self._task = loop.create_task(cont())
-        return self._task
+        task = loop.create_task(cont())
+        self._tasks.append(task)
+        return task
 
 
-class Worker(Generic[O_co, T_co]):
-    def __init__(self, supervisor: Supervisor, options: O_co, misc: T_co) -> None:
+class Worker(Generic[_O_co, _T_co]):
+    def __init__(self, supervisor: Supervisor, options: _O_co, misc: _T_co) -> None:
         self._supervisor, self._options, self._misc = supervisor, options, misc
         self._supervisor.register(self, assoc=options)
 

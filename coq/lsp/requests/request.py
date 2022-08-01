@@ -7,6 +7,7 @@ from typing import (
     AbstractSet,
     Any,
     AsyncIterator,
+    Mapping,
     MutableMapping,
     Optional,
     Sequence,
@@ -15,6 +16,7 @@ from typing import (
 
 from pynvim.api.nvim import Nvim
 from pynvim_pp.lib import async_call, go
+from pynvim_pp.logging import log
 from std2.pickle.decoder import new_decoder
 
 from ...registry import NAMESPACE, atomic, rpc
@@ -42,7 +44,7 @@ class _Payload:
 _LUA = (Path(__file__).resolve(strict=True).parent / "lsp.lua").read_text("UTF-8")
 atomic.exec_lua(_LUA, ())
 
-_UIDS = count()
+_UIDS: Mapping[str, count] = defaultdict(count)
 _CONDS: MutableMapping[str, Condition] = {}
 _STATE: MutableMapping[str, _Session] = defaultdict(
     lambda: _Session(uid=-1, done=True, acc=())
@@ -77,7 +79,7 @@ async def async_request(
     with timeit(f"LSP :: {name}"):
         cond = _CONDS.setdefault(name, Condition())
 
-        uid = next(_UIDS)
+        uid = next(_UIDS[name])
         _STATE[name] = _Session(uid=uid, done=False, acc=())
         async with cond:
             cond.notify_all()
@@ -93,13 +95,15 @@ async def async_request(
         while True:
             acc = _STATE[name]
             if acc.uid == uid:
-                _STATE[name] = _Session(uid=acc.uid, done=acc.done, acc=())
+                _STATE.pop(name)
                 for client, a in acc.acc:
                     yield client, a
                 if acc.done:
                     break
             elif acc.uid > uid:
-                break
+                assert False
+            else:
+                log.warn("%s", f"<><> DELAYED LSP RESP <><> :: {acc.uid} {uid}")
 
             async with cond:
                 await cond.wait()

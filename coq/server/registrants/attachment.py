@@ -85,50 +85,49 @@ def _listener(nvim: Nvim, stack: Stack) -> None:
                 if qmsg.id != _current_id:
                     pass
                 else:
-                    with suppress(NvimError):
-                        with timeit("POLL"):
-                            (mode, comp_mode, filetype), _ = await gather(
-                                _status(nvim, qmsg.buf), stack.supervisor.interrupt()
+                    with timeit("POLL"), suppress(NvimError):
+                        (mode, comp_mode, filetype), _ = await gather(
+                            _status(nvim, qmsg.buf), stack.supervisor.interrupt()
+                        )
+
+                        lo, hi = qmsg.range
+                        size = sum(map(len, qmsg.lines))
+                        heavy_bufs = (
+                            {qmsg.buf.number}
+                            if size > stack.settings.limits.index_cutoff
+                            else set()
+                        )
+                        os = state()
+                        s = state(change_id=uuid4(), nono_bufs=heavy_bufs)
+
+                        if qmsg.buf.number not in s.nono_bufs:
+                            await stack.bdb.set_lines(
+                                qmsg.buf.number,
+                                filetype=filetype,
+                                lo=lo,
+                                hi=hi,
+                                lines=qmsg.lines,
+                                unifying_chars=stack.settings.match.unifying_chars,
                             )
 
-                            lo, hi = qmsg.range
-                            size = sum(map(len, qmsg.lines))
-                            heavy_bufs = (
-                                {qmsg.buf.number}
-                                if size > stack.settings.limits.index_cutoff
-                                else set()
+                        if (
+                            qmsg.buf.number in s.nono_bufs
+                            and qmsg.buf.number not in os.nono_bufs
+                        ):
+                            msg = LANG(
+                                "buf 2 fat",
+                                size=size,
+                                limit=stack.settings.limits.index_cutoff,
                             )
-                            os = state()
-                            s = state(change_id=uuid4(), nono_bufs=heavy_bufs)
+                            await awrite(nvim, msg)
 
-                            if qmsg.buf.number not in s.nono_bufs:
-                                await stack.bdb.set_lines(
-                                    qmsg.buf.number,
-                                    filetype=filetype,
-                                    lo=lo,
-                                    hi=hi,
-                                    lines=qmsg.lines,
-                                    unifying_chars=stack.settings.match.unifying_chars,
-                                )
-
-                            if (
-                                qmsg.buf.number in s.nono_bufs
-                                and qmsg.buf.number not in os.nono_bufs
-                            ):
-                                msg = LANG(
-                                    "buf 2 fat",
-                                    size=size,
-                                    limit=stack.settings.limits.index_cutoff,
-                                )
-                                await awrite(nvim, msg)
-
-                            if (
-                                stack.settings.completion.always
-                                and not qmsg.pending
-                                and mode.startswith("i")
-                                and comp_mode in {"", "eval", "function", "ctrl_x"}
-                            ):
-                                comp_func(nvim, s=s, manual=False)
+                        if (
+                            stack.settings.completion.always
+                            and not qmsg.pending
+                            and mode.startswith("i")
+                            and comp_mode in {"", "eval", "function", "ctrl_x"}
+                        ):
+                            comp_func(nvim, s=s, manual=False)
 
     go(nvim, aw=cont())
 

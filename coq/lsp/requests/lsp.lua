@@ -26,7 +26,7 @@
 
   local req =
     (function()
-    local current_session = -1
+    local current_sessions = {}
     local cancels = {}
     return function(name, session_id, clients, callback)
       vim.validate {clients = {clients, "table"}}
@@ -38,7 +38,7 @@
         client_map = {client_map, "table"},
         callback = {callback, "function"}
       }
-      current_session = session_id
+      current_sessions[name] = session_id
 
       pcall(
         cancels[name] or function()
@@ -68,7 +68,8 @@
         end)()
         payload.done = n_clients == 0
 
-        if current_session > session_id + 1 then
+        local current_session = current_sessions[name] or -1
+        if current_session > session_id then
           payload.reply = vim.NIL
         else
           payload.reply = resp or vim.NIL
