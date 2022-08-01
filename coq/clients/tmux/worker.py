@@ -30,27 +30,29 @@ class Worker(BaseWorker[WordbankClient, TMDB]):
                     await self._supervisor.idling.wait()
 
     async def work(self, context: Context) -> AsyncIterator[Completion]:
-        active = await cur()
-        words = (
-            await self._misc.select(
-                self._supervisor.match,
-                active_pane=active.uid,
-                word=context.words,
-                sym=(context.syms if self._options.match_syms else ""),
-                limitless=context.manual,
+        self._check_locked()
+        async with self._work_lock:
+            active = await cur()
+            words = (
+                await self._misc.select(
+                    self._supervisor.match,
+                    active_pane=active.uid,
+                    word=context.words,
+                    sym=(context.syms if self._options.match_syms else ""),
+                    limitless=context.manual,
+                )
+                if active
+                else ()
             )
-            if active
-            else ()
-        )
 
-        for word in words:
-            edit = Edit(new_text=word)
-            cmp = Completion(
-                source=self._options.short_name,
-                weight_adjust=self._options.weight_adjust,
-                label=edit.new_text,
-                sort_by=word,
-                primary_edit=edit,
-                icon_match="Text",
-            )
-            yield cmp
+            for word in words:
+                edit = Edit(new_text=word)
+                cmp = Completion(
+                    source=self._options.short_name,
+                    weight_adjust=self._options.weight_adjust,
+                    label=edit.new_text,
+                    sort_by=word,
+                    primary_edit=edit,
+                    icon_match="Text",
+                )
+                yield cmp

@@ -80,80 +80,88 @@ class Worker(BaseWorker[BaseClient, None]):
         )
 
     async def work(self, context: Context) -> AsyncIterator[Optional[Completion]]:
-        limit = BIGGEST_INT if context.manual else self._supervisor.match.max_results
-        chunk_size = self._supervisor.match.max_results // 2 + 1
-        fast_limit = self._supervisor.match.max_results * 3
-        lower_word_prefix = context.l_words_before[: self._supervisor.match.look_ahead]
-
-        use_cache, cached_clients, cached, set_cache = self._cache._use(context)
-        if not use_cache:
-            self._local_cached.clear()
-
-        async def cached_db_items() -> AsyncIterator[Tuple[_Src, LSPcomp]]:
-            items, length = await cached
-            yield _Src.from_db, LSPcomp(
-                client=None, local_cache=False, items=items, length=length
+        self._check_locked()
+        async with self._work_lock:
+            limit = (
+                BIGGEST_INT if context.manual else self._supervisor.match.max_results
             )
+            chunk_size = self._supervisor.match.max_results // 3 + 1
+            fast_limit = self._supervisor.match.max_results * 3
+            lower_word_prefix = context.l_words_before[
+                : self._supervisor.match.look_ahead
+            ]
 
-        async def cached_iters() -> AsyncIterator[Tuple[_Src, LSPcomp]]:
-            acc = {**self._local_cached}
-            self._local_cached.clear()
+            use_cache, cached_clients, cached, set_cache = self._cache._use(context)
+            if not use_cache:
+                self._local_cached.clear()
 
-            for client, (cached_items, length) in acc.items():
-                items = (sanitize_cached(item, sort_by=None) for item in cached_items)
-                yield _Src.from_stored, LSPcomp(
-                    client=client, local_cache=True, items=items, length=length
+            async def cached_db_items() -> AsyncIterator[Tuple[_Src, LSPcomp]]:
+                items, length = await cached
+                yield _Src.from_db, LSPcomp(
+                    client=None, local_cache=False, items=items, length=length
                 )
 
-        async def lsp_items() -> AsyncIterator[Tuple[_Src, LSPcomp]]:
-            if context.manual or not use_cache:
-                async for lsp_comps in self._request(
-                    context, cached_clients=cached_clients
-                ):
-                    yield _Src.from_query, lsp_comps
+            async def cached_iters() -> AsyncIterator[Tuple[_Src, LSPcomp]]:
+                acc = {**self._local_cached}
+                self._local_cached.clear()
 
-        stream = merge(cached_db_items(), cached_iters(), lsp_items())
-        seen = 0
-        async for src, lsp_comps in stream:
-            if lsp_comps.local_cache:
-                if lsp_comps.length:
-                    self._local_cached[lsp_comps.client] = (
-                        lsp_comps.items,
-                        lsp_comps.length,
+                for client, (cached_items, length) in acc.items():
+                    items = (
+                        sanitize_cached(item, sort_by=None) for item in cached_items
+                    )
+                    yield _Src.from_stored, LSPcomp(
+                        client=client, local_cache=True, items=items, length=length
                     )
 
-            n = chunk_size if seen < limit else _CHUNK_SIZE
-            for chunked in chunk(lsp_comps.items, n=n):
-                if seen < limit:
-                    if src is _Src.from_db:
-                        for comp in chunked:
-                            if seen < limit:
-                                seen += 1
-                                yield comp
-                    else:
-                        fast_search = lsp_comps.length > fast_limit
-                        for comp in chunked:
-                            if seen < limit:
-                                if (
-                                    _fast_comp(
-                                        self._supervisor.match.look_ahead,
-                                        lower_word=context.l_words_before,
-                                        lower_word_prefix=lower_word_prefix,
-                                        sort_by=comp.sort_by,
-                                    )
-                                    if fast_search
-                                    else _use_comp(
-                                        self._supervisor.match,
-                                        context=context,
-                                        sort_by=comp.sort_by,
-                                        edit=comp.primary_edit,
-                                    )
-                                ):
+            async def lsp_items() -> AsyncIterator[Tuple[_Src, LSPcomp]]:
+                if context.manual or not use_cache:
+                    async for lsp_comps in self._request(
+                        context, cached_clients=cached_clients
+                    ):
+                        yield _Src.from_query, lsp_comps
+
+            stream = merge(cached_db_items(), cached_iters(), lsp_items())
+            seen = 0
+            async for src, lsp_comps in stream:
+                if lsp_comps.local_cache:
+                    if lsp_comps.length:
+                        self._local_cached[lsp_comps.client] = (
+                            lsp_comps.items,
+                            lsp_comps.length,
+                        )
+
+                n = chunk_size if seen < limit else _CHUNK_SIZE
+                for chunked in chunk(lsp_comps.items, n=n):
+                    if seen < limit:
+                        if src is _Src.from_db:
+                            for comp in chunked:
+                                if seen < limit:
                                     seen += 1
                                     yield comp
-                else:
-                    await sleep(1 / 100)
+                        else:
+                            fast_search = lsp_comps.length > fast_limit
+                            for comp in chunked:
+                                if seen < limit:
+                                    if (
+                                        _fast_comp(
+                                            self._supervisor.match.look_ahead,
+                                            lower_word=context.l_words_before,
+                                            lower_word_prefix=lower_word_prefix,
+                                            sort_by=comp.sort_by,
+                                        )
+                                        if fast_search
+                                        else _use_comp(
+                                            self._supervisor.match,
+                                            context=context,
+                                            sort_by=comp.sort_by,
+                                            edit=comp.primary_edit,
+                                        )
+                                    ):
+                                        seen += 1
+                                        yield comp
+                    else:
+                        await sleep(1 / 100)
 
-                if lsp_comps.local_cache and chunked:
-                    await set_cache(lsp_comps.client, chunked)
-                    yield None
+                    if lsp_comps.local_cache and chunked:
+                        await set_cache(lsp_comps.client, chunked)
+                        yield None

@@ -184,8 +184,13 @@ class Supervisor:
 
 class Worker(Generic[_O_co, _T_co]):
     def __init__(self, supervisor: Supervisor, options: _O_co, misc: _T_co) -> None:
+        self._work_lock = Lock()
         self._supervisor, self._options, self._misc = supervisor, options, misc
         self._supervisor.register(self, assoc=options)
+
+    def _check_locked(self) -> None:
+        if self._work_lock.locked():
+            log.warn("%s", f"LOCKED :: {self._options.short_name}")
 
     @abstractmethod
     def work(self, context: Context) -> AsyncIterator[Optional[Completion]]:

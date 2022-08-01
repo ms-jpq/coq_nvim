@@ -155,31 +155,33 @@ class Worker(BaseWorker[TagsClient, CTDB]):
                     await self._supervisor.idling.wait()
 
     async def work(self, context: Context) -> AsyncIterator[Completion]:
-        row, _ = context.position
-        tags = await self._misc.select(
-            self._supervisor.match,
-            filename=context.filename,
-            line_num=row,
-            word=context.words,
-            sym=context.syms,
-            limitless=context.manual,
-        )
+        self._check_locked()
+        async with self._work_lock:
+            row, _ = context.position
+            tags = await self._misc.select(
+                self._supervisor.match,
+                filename=context.filename,
+                line_num=row,
+                word=context.words,
+                sym=context.syms,
+                limitless=context.manual,
+            )
 
-        seen: MutableSet[str] = set()
-        for tag in tags:
-            name = tag["name"]
-            if name not in seen:
-                seen.add(name)
-                edit = Edit(new_text=name)
-                kind = capwords(tag["kind"])
-                cmp = Completion(
-                    source=self._options.short_name,
-                    weight_adjust=self._options.weight_adjust,
-                    label=edit.new_text,
-                    sort_by=name,
-                    primary_edit=edit,
-                    kind=kind,
-                    doc=_doc(self._options, context=context, tag=tag),
-                    icon_match=kind,
-                )
-                yield cmp
+            seen: MutableSet[str] = set()
+            for tag in tags:
+                name = tag["name"]
+                if name not in seen:
+                    seen.add(name)
+                    edit = Edit(new_text=name)
+                    kind = capwords(tag["kind"])
+                    cmp = Completion(
+                        source=self._options.short_name,
+                        weight_adjust=self._options.weight_adjust,
+                        label=edit.new_text,
+                        sort_by=name,
+                        primary_edit=edit,
+                        kind=kind,
+                        doc=_doc(self._options, context=context, tag=tag),
+                        icon_match=kind,
+                    )
+                    yield cmp

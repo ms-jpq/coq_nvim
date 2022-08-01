@@ -182,22 +182,24 @@ class Worker(BaseWorker[BaseClient, None]):
             return await shield(cont())
 
     async def work(self, context: Context) -> AsyncIterator[Completion]:
-        if self._cwd != context.cwd:
-            await self._clean()
+        self._check_locked()
+        async with self._work_lock:
+            if self._cwd != context.cwd:
+                await self._clean()
 
-        if self._bin:
-            req = _encode(
-                self._supervisor.match,
-                context=context,
-                limit=self._supervisor.match.max_results,
-            )
-            json = dumps(req, check_circular=False, ensure_ascii=False)
-            reply = await self._comm(context.cwd, json=json)
-            if reply:
-                try:
-                    resp = loads(reply)
-                except JSONDecodeError as e:
-                    log.warn("%s", e)
-                else:
-                    for comp in _decode(self._options, reply=resp):
-                        yield comp
+            if self._bin:
+                req = _encode(
+                    self._supervisor.match,
+                    context=context,
+                    limit=self._supervisor.match.max_results,
+                )
+                json = dumps(req, check_circular=False, ensure_ascii=False)
+                reply = await self._comm(context.cwd, json=json)
+                if reply:
+                    try:
+                        resp = loads(reply)
+                    except JSONDecodeError as e:
+                        log.warn("%s", e)
+                    else:
+                        for comp in _decode(self._options, reply=resp):
+                            yield comp

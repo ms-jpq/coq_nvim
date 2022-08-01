@@ -75,13 +75,15 @@ class Worker(BaseWorker[TSClient, TDB]):
                     await self._supervisor.idling.wait()
 
     async def work(self, context: Context) -> AsyncIterator[Completion]:
-        payloads = await self._misc.select(
-            self._supervisor.match,
-            buf_id=context.buf_id,
-            word=context.words,
-            sym=context.syms,
-            limitless=context.manual,
-        )
+        self._check_locked()
+        async with self._work_lock:
+            payloads = await self._misc.select(
+                self._supervisor.match,
+                buf_id=context.buf_id,
+                word=context.words,
+                sym=context.syms,
+                limitless=context.manual,
+            )
 
-        for payload in payloads:
-            yield _trans(self._options, context=context, payload=payload)
+            for payload in payloads:
+                yield _trans(self._options, context=context, payload=payload)
