@@ -69,7 +69,7 @@
         payload.done = n_clients == 0
 
         local current_session = current_sessions[name] or -1
-        if current_session > session_id then
+        if current_session ~= session_id then
           payload.reply = vim.NIL
         else
           payload.reply = resp or vim.NIL
