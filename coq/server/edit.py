@@ -40,13 +40,13 @@ from ..shared.trans import trans_adjusted
 from ..shared.types import (
     UTF8,
     UTF16,
+    BaseRangeEdit,
     Completion,
     Context,
     ContextualEdit,
     Edit,
     Mark,
     NvimPos,
-    BaseRangeEdit,
     SnippetEdit,
     SnippetRangeEdit,
 )
@@ -430,6 +430,7 @@ def _restore(
         cur_row, cur_col = win_get_cursor(nvim, win=win)
 
         (_, lo), (_, hi) = m1.end, m2.begin
+        lo = max(0, lo - 1)
 
         binserted = encode(after)[lo:hi]
         inserted = decode(binserted)
