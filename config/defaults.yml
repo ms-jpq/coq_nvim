@@ -139,6 +139,7 @@ clients:
     enabled: True
     short_name: "TMUX"
     match_syms: False
+    all_sessions: True
     weight_adjust: 0
 
   buffers:

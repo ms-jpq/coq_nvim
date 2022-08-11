@@ -6,16 +6,14 @@ from pynvim_pp.logging import with_suppress
 from ...databases.tmux.database import TMDB
 from ...shared.runtime import Supervisor
 from ...shared.runtime import Worker as BaseWorker
-from ...shared.settings import WordbankClient
+from ...shared.settings import TmuxClient
 from ...shared.timeit import timeit
 from ...shared.types import Completion, Context, Edit
 from ...tmux.parse import cur, snapshot
 
 
-class Worker(BaseWorker[WordbankClient, TMDB]):
-    def __init__(
-        self, supervisor: Supervisor, options: WordbankClient, misc: TMDB
-    ) -> None:
+class Worker(BaseWorker[TmuxClient, TMDB]):
+    def __init__(self, supervisor: Supervisor, options: TmuxClient, misc: TMDB) -> None:
         super().__init__(supervisor, options=options, misc=misc)
         go(supervisor.nvim, aw=self._poll())
 
@@ -23,7 +21,10 @@ class Worker(BaseWorker[WordbankClient, TMDB]):
         while True:
             with with_suppress():
                 with timeit("IDLE :: TMUX"):
-                    snap = await snapshot(self._supervisor.match.unifying_chars)
+                    snap = await snapshot(
+                        self._options.all_sessions,
+                        unifying_chars=self._supervisor.match.unifying_chars,
+                    )
                     await self._misc.periodical(snap)
 
                 async with self._supervisor.idling:
@@ -32,7 +33,7 @@ class Worker(BaseWorker[WordbankClient, TMDB]):
     async def work(self, context: Context) -> AsyncIterator[Completion]:
         self._check_locked()
         async with self._work_lock:
-            active = await cur()
+            active = await cur(self._options.all_sessions)
             words = (
                 await self._misc.select(
                     self._supervisor.match,

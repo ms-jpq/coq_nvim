@@ -139,6 +139,11 @@ class WordbankClient(BaseClient):
 
 
 @dataclass(frozen=True)
+class TmuxClient(WordbankClient):
+    all_sessions: bool
+
+
+@dataclass(frozen=True)
 class BuffersClient(WordbankClient):
     same_filetype: bool
 
@@ -180,7 +185,7 @@ class Clients:
     snippets: SnippetClient
     tabnine: BaseClient
     tags: TagsClient
-    tmux: WordbankClient
+    tmux: TmuxClient
     tree_sitter: TSClient
     third_party: BaseClient
 
