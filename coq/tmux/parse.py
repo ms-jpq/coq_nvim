@@ -39,10 +39,10 @@ async def _panes() -> Iterator[_Pane]:
 
             def cont() -> Iterator[_Pane]:
                 for line in decode(proc.stdout).strip().splitlines():
-                    session, pane, pane_active, window_active = line.split(" ")
+                    session, pane_id, pane_active, window_active = line.split(" ")
                     pane = _Pane(
                         session=session,
-                        pane=pane,
+                        pane=pane_id,
                         pane_active=bool(int(pane_active)),
                         window_active=bool(int(window_active)),
                     )
