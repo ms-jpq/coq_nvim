@@ -104,6 +104,5 @@ async def snapshot(unifying_chars: AbstractSet[str]) -> Mapping[str, Iterator[st
             for pane in await _panes()
         )
     )
-    print(shots, flush=True)
     snapshot = {uid: words for uid, words in shots}
     return snapshot
