@@ -25,7 +25,7 @@ def _kill_float_wins(nvim: Nvim, stack: Stack) -> None:
             win_close(nvim, win=win)
 
 
-autocmd("WinEnter") << f"lua {NAMESPACE}.{_kill_float_wins.name}()"
+_= autocmd("WinEnter") << f"lua {NAMESPACE}.{_kill_float_wins.name}()"
 
 
 @rpc(blocking=True)
@@ -39,7 +39,7 @@ def _new_cwd(nvim: Nvim, stack: Stack) -> None:
     go(nvim, aw=cont())
 
 
-autocmd("DirChanged") << f"lua {NAMESPACE}.{_new_cwd.name}()"
+_= autocmd("DirChanged") << f"lua {NAMESPACE}.{_new_cwd.name}()"
 
 
 @rpc(blocking=True)
@@ -53,7 +53,7 @@ def _ft_changed(nvim: Nvim, stack: Stack) -> None:
     go(nvim, aw=cont())
 
 
-autocmd("FileType") << f"lua {NAMESPACE}.{_ft_changed.name}()"
+_= autocmd("FileType") << f"lua {NAMESPACE}.{_ft_changed.name}()"
 atomic.exec_lua(f"{NAMESPACE}.{_ft_changed.name}()", ())
 
 
@@ -83,7 +83,7 @@ def _insert_enter(nvim: Nvim, stack: Stack) -> None:
     go(nvim, aw=cont())
 
 
-autocmd("InsertEnter") << f"lua {NAMESPACE}.{_insert_enter.name}()"
+_= autocmd("InsertEnter") << f"lua {NAMESPACE}.{_insert_enter.name}()"
 
 
 @rpc(blocking=True)
@@ -95,7 +95,7 @@ def _on_focus(nvim: Nvim, stack: Stack) -> None:
     go(nvim, aw=cont())
 
 
-autocmd("FocusGained") << f"lua {NAMESPACE}.{_on_focus.name}()"
+_= autocmd("FocusGained") << f"lua {NAMESPACE}.{_on_focus.name}()"
 
 _HANDLE: Optional[Handle] = None
 
@@ -124,4 +124,4 @@ def _when_idle(nvim: Nvim, stack: Stack) -> None:
     )
 
 
-autocmd("CursorHold", "CursorHoldI") << f"lua {NAMESPACE}.{_when_idle.name}()"
+_= autocmd("CursorHold", "CursorHoldI") << f"lua {NAMESPACE}.{_when_idle.name}()"
