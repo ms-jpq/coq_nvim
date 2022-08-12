@@ -33,27 +33,23 @@ class Worker(BaseWorker[TmuxClient, TMDB]):
     async def work(self, context: Context) -> AsyncIterator[Completion]:
         self._check_locked()
         async with self._work_lock:
-            active = await cur(self._options.all_sessions)
-            words = (
-                await self._misc.select(
+            if active := await cur(self._options.all_sessions):
+                words = await self._misc.select(
                     self._supervisor.match,
                     active_pane=active.uid,
                     word=context.words,
                     sym=(context.syms if self._options.match_syms else ""),
                     limitless=context.manual,
                 )
-                if active
-                else ()
-            )
 
-            for word in words:
-                edit = Edit(new_text=word)
-                cmp = Completion(
-                    source=self._options.short_name,
-                    weight_adjust=self._options.weight_adjust,
-                    label=edit.new_text,
-                    sort_by=word,
-                    primary_edit=edit,
-                    icon_match="Text",
-                )
-                yield cmp
+                for word in words:
+                    edit = Edit(new_text=word)
+                    cmp = Completion(
+                        source=self._options.short_name,
+                        weight_adjust=self._options.weight_adjust,
+                        label=edit.new_text,
+                        sort_by=word,
+                        primary_edit=edit,
+                        icon_match="Text",
+                    )
+                    yield cmp
