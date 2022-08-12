@@ -13,7 +13,6 @@ from asyncio import (
 )
 from concurrent.futures import Executor
 from dataclasses import dataclass
-from itertools import chain
 from pathlib import Path
 from time import monotonic
 from typing import (
@@ -21,11 +20,13 @@ from typing import (
     AsyncIterator,
     Awaitable,
     Generic,
+    Iterator,
     MutableMapping,
     MutableSequence,
     Optional,
     Protocol,
     Sequence,
+    Tuple,
     TypeVar,
 )
 from uuid import UUID, uuid4
@@ -73,6 +74,9 @@ class PReviewer(Protocol):
         ...
 
 
+_SUPERVISOR_ID = uuid4()
+
+
 class Supervisor:
     def __init__(
         self,
@@ -93,7 +97,7 @@ class Supervisor:
         self._workers: MutableMapping[Worker, BaseClient] = WeakKeyDictionary()
 
         self._lock = Lock()
-        self._tasks: MutableSequence[Task] = []
+        self._tasks: MutableMapping[UUID, Task] = {}
 
     @property
     def clients(self) -> AbstractSet[BaseClient]:
@@ -110,10 +114,13 @@ class Supervisor:
 
         go(self.nvim, aw=cont())
 
-    async def interrupt(self) -> None:
-        g = gather(*self._tasks)
+    def _consume_tasks(self) -> MutableMapping[UUID, Task]:
+        tasks = {**self._tasks}
         self._tasks.clear()
-        await cancel(g)
+        return tasks
+
+    async def interrupt(self) -> None:
+        await cancel(*self._consume_tasks().values())
 
     def collect(self, context: Context) -> Awaitable[Sequence[Metric]]:
         loop: AbstractEventLoop = self.nvim.loop
@@ -126,10 +133,17 @@ class Supervisor:
 
         acc: MutableSequence[Metric] = []
 
-        async def supervise(worker: Worker, assoc: BaseClient) -> None:
+        async def supervise(
+            worker: Worker, assoc: BaseClient, prev: Optional[Task]
+        ) -> None:
             instance, items = uuid4(), 0
 
+            with timeit(f"CANCEL WORKER -- {assoc.short_name}"):
+                if prev:
+                    await cancel(prev)
+
             with with_suppress(), timeit(f"WORKER -- {assoc.short_name}"):
+
                 await self._reviewer.s_begin(assoc, instance=instance)
                 try:
                     async for completion in worker.work(context):
@@ -150,24 +164,38 @@ class Supervisor:
                         items=items,
                     )
 
-        async def cont() -> Sequence[Metric]:
+        async def cont(prev: MutableMapping[UUID, Task]) -> Sequence[Metric]:
             nonlocal done
 
+            with timeit("CANCEL -- ALL"):
+                if p := prev.pop(_SUPERVISOR_ID, None):
+                    await cancel(p)
+
             with with_suppress(), timeit("COLLECTED -- ALL"):
+
                 if self._lock.locked():
                     log.warn("%s", "SHOULD NOT BE LOCKED <><> supervisor")
                 async with self._lock:
                     await self._reviewer.begin(context)
-                    tasks = tuple(
-                        loop.create_task(supervise(worker, assoc=assoc))
+                    tasks = {
+                        worker._uid: loop.create_task(
+                            supervise(
+                                worker,
+                                assoc=assoc,
+                                prev=prev.pop(worker._uid, None),
+                            )
+                        )
                         for worker, assoc in self._workers.items()
-                    )
-                    self._tasks.extend(tasks)
+                    }
+                    self._tasks.update(tasks)
+
                     try:
                         if not tasks:
                             return ()
                         else:
-                            _, pending = await wait(tasks, timeout=timeout)
+                            _, pending = await wait(
+                                tuple(tasks.values()), timeout=timeout
+                            )
                             if not acc:
                                 for fut in as_completed(pending):
                                     await fut
@@ -177,13 +205,14 @@ class Supervisor:
                     finally:
                         done = True
 
-        task = loop.create_task(cont())
-        self._tasks.append(task)
+        task = loop.create_task(cont(self._consume_tasks()))
+        self._tasks[_SUPERVISOR_ID] = task
         return task
 
 
 class Worker(Generic[_O_co, _T_co]):
     def __init__(self, supervisor: Supervisor, options: _O_co, misc: _T_co) -> None:
+        self._uid = uuid4()
         self._work_lock = Lock()
         self._supervisor, self._options, self._misc = supervisor, options, misc
         self._supervisor.register(self, assoc=options)

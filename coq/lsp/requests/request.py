@@ -101,7 +101,7 @@ async def async_request(
                 if acc.done:
                     break
             elif acc.uid > uid:
-                assert False
+                break
             else:
                 log.warn("%s", f"<><> DELAYED LSP RESP <><> :: {acc.uid} {uid}")
 

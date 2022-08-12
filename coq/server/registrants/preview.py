@@ -98,7 +98,7 @@ def _kill_win(nvim: Nvim, stack: Stack, reset: bool) -> None:
         win_close(nvim, win=win)
 
 
-autocmd("CompleteDone", "InsertLeave") << f"lua {NAMESPACE}.{_kill_win.name}(true)"
+_ = autocmd("CompleteDone", "InsertLeave") << f"lua {NAMESPACE}.{_kill_win.name}(true)"
 
 
 def _preprocess(context: Context, doc: Doc) -> Doc:
@@ -380,7 +380,7 @@ def _cmp_changed(nvim: Nvim, stack: Stack, event: Mapping[str, Any] = {}) -> Non
                 )
 
 
-autocmd("CompleteChanged") << f"lua {NAMESPACE}.{_cmp_changed.name}(vim.v.event)"
+_ = autocmd("CompleteChanged") << f"lua {NAMESPACE}.{_cmp_changed.name}(vim.v.event)"
 
 
 @rpc(blocking=True, schedule=True)

@@ -82,7 +82,6 @@ def _launch_loop(nvim: Nvim, stack: Stack) -> None:
 
                     if should:
                         state(context=ctx)
-                        await stack.supervisor.interrupt()
                         metrics, _ = await gather(
                             stack.supervisor.collect(ctx),
                             async_call(
@@ -174,7 +173,7 @@ async def _resolve(nvim: Nvim, stack: Stack, metric: Metric) -> Metric:
                 (go(nvim, aw=resolve(nvim, extern=extern)),),
                 timeout=stack.settings.clients.lsp.resolve_timeout,
             )
-            await cancel(gather(*not_done))
+            await cancel(*not_done)
             comp = (await done.pop()) if done else None
             if not comp:
                 return metric
@@ -252,4 +251,7 @@ def _comp_done(nvim: Nvim, stack: Stack, event: Mapping[str, Any]) -> None:
                 go(nvim, aw=cont())
 
 
-autocmd("CompleteDone") << f"lua {NAMESPACE}.{_comp_done.name}(vim.v.completed_item)"
+_ = (
+    autocmd("CompleteDone")
+    << f"lua {NAMESPACE}.{_comp_done.name}(vim.v.completed_item)"
+)
