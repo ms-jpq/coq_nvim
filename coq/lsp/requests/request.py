@@ -103,7 +103,7 @@ async def async_request(
             elif acc.uid > uid:
                 break
             else:
-                log.warn("%s", f"<><> DELAYED LSP RESP <><> :: {acc.uid} {uid}")
+                log.info("%s", f"<><> DELAYED LSP RESP <><> :: {acc.uid} {uid}")
 
             async with cond:
                 await cond.wait()
