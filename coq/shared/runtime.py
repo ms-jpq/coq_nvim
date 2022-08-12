@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from abc import abstractmethod
-from asyncio import AbstractEventLoop, Condition, Task, as_completed, sleep, wait
+from asyncio import AbstractEventLoop, Condition, Event, Task, as_completed, sleep, wait
 from concurrent.futures import Executor
 from dataclasses import dataclass
 from pathlib import Path
@@ -63,9 +63,6 @@ class PReviewer(Protocol):
         ...
 
 
-_SUPERVISOR_ID = uuid4()
-
-
 class Supervisor:
     def __init__(
         self,
@@ -86,7 +83,7 @@ class Supervisor:
         self._workers: MutableMapping[Worker, BaseClient] = WeakKeyDictionary()
 
         self._lock = TracingLocker(name="Supervisor", force=True)
-        self._tasks: MutableMapping[UUID, Task] = {}
+        self._work_task: Optional[Task] = None
 
     @property
     def clients(self) -> AbstractSet[BaseClient]:
@@ -103,84 +100,41 @@ class Supervisor:
 
         go(self.nvim, aw=cont())
 
-    def _consume_tasks(self) -> MutableMapping[UUID, Task]:
-        tasks = {**self._tasks}
-        self._tasks.clear()
-        return tasks
-
     async def interrupt(self) -> None:
-        await cancel(*self._consume_tasks().values())
+        task = self._work_task
+        self._work_task = None
+        if task:
+            await cancel(task)
 
     def collect(self, context: Context) -> Awaitable[Sequence[Metric]]:
         loop: AbstractEventLoop = self.nvim.loop
-        t1, done = monotonic(), False
+        now, done = monotonic(), Event()
         timeout = (
             self.limits.completion_manual_timeout
             if context.manual
             else self.limits.completion_auto_timeout
         )
 
-        acc: MutableSequence[Metric] = []
-
-        async def supervise(
-            worker: Worker, assoc: BaseClient, prev: Optional[Task]
-        ) -> None:
-            instance, items = uuid4(), 0
-
-            with timeit(f"CANCEL WORKER -- {assoc.short_name}"):
+        async def cont(prev: Optional[Task]) -> Sequence[Metric]:
+            with timeit("CANCEL -- ALL"):
                 if prev:
                     await cancel(prev)
 
-            with with_suppress(), timeit(f"WORKER -- {assoc.short_name}"):
-                await self._reviewer.s_begin(assoc, instance=instance)
-                try:
-                    async for completion in worker.work(context):
-                        if not done and completion:
-                            metric = self._reviewer.trans(
-                                instance, completion=completion
-                            )
-                            acc.append(metric)
-                            items += 1
-                        else:
-                            await sleep(0)
-                finally:
-                    elapsed = monotonic() - t1
-                    await self._reviewer.s_end(
-                        instance,
-                        interrupted=done,
-                        elapsed=elapsed,
-                        items=items,
-                    )
-
-        async def cont(prev: MutableMapping[UUID, Task]) -> Sequence[Metric]:
-            nonlocal done
-
-            with timeit("CANCEL -- ALL"):
-                if p := prev.pop(_SUPERVISOR_ID, None):
-                    await cancel(p)
-
             with with_suppress(), timeit("COLLECTED -- ALL"):
                 async with self._lock:
+                    acc: MutableSequence[Metric] = []
+
                     await self._reviewer.begin(context)
-                    tasks = {
-                        worker._uid: loop.create_task(
-                            supervise(
-                                worker,
-                                assoc=assoc,
-                                prev=prev.pop(worker._uid, None),
-                            )
-                        )
-                        for worker, assoc in self._workers.items()
-                    }
-                    self._tasks.update(tasks)
+                    tasks = tuple(
+                        worker.supervised(context, done=done, now=now, acc=acc)
+                        for worker in self._workers
+                    )
 
                     try:
                         if not tasks:
                             return ()
                         else:
-                            _, pending = await wait(
-                                tuple(tasks.values()), timeout=timeout
-                            )
+                            _, pending = await wait(tasks, timeout=timeout)
                             if not acc:
                                 for fut in as_completed(pending):
                                     await fut
@@ -188,16 +142,15 @@ class Supervisor:
                                         break
                             return acc
                     finally:
-                        done = True
+                        done.set()
 
-        task = loop.create_task(cont(self._consume_tasks()))
-        self._tasks[_SUPERVISOR_ID] = task
+        self._work_task = task = loop.create_task(cont(self._work_task))
         return task
 
 
 class Worker(Generic[_O_co, _T_co]):
     def __init__(self, supervisor: Supervisor, options: _O_co, misc: _T_co) -> None:
-        self._uid = uuid4()
+        self._work_task: Optional[Task] = None
         self._work_lock = TracingLocker(name=options.short_name, force=True)
         self._supervisor, self._options, self._misc = supervisor, options, misc
         self._supervisor.register(self, assoc=options)
@@ -205,3 +158,41 @@ class Worker(Generic[_O_co, _T_co]):
     @abstractmethod
     def work(self, context: Context) -> AsyncIterator[Optional[Completion]]:
         ...
+
+    def supervised(
+        self, context: Context, done: Event, now: float, acc: MutableSequence[Metric]
+    ) -> Task:
+        prev = self._work_task
+
+        async def cont() -> None:
+            instance, items = uuid4(), 0
+
+            with timeit(f"CANCEL WORKER -- {self._options.short_name}"):
+                if prev:
+                    await cancel(prev)
+
+            with with_suppress(), timeit(f"WORKER -- {self._options.short_name}"):
+                await self._supervisor._reviewer.s_begin(
+                    self._options, instance=instance
+                )
+                try:
+                    async for completion in self.work(context):
+                        if not done.is_set() and completion:
+                            metric = self._supervisor._reviewer.trans(
+                                instance, completion=completion
+                            )
+                            acc.append(metric)
+                            items += 1
+                        else:
+                            await sleep(0)
+                finally:
+                    elapsed = monotonic() - now
+                    await self._supervisor._reviewer.s_end(
+                        instance,
+                        interrupted=done.is_set(),
+                        elapsed=elapsed,
+                        items=items,
+                    )
+
+        self._work_task = task = self._supervisor.nvim.loop.create_task(cont())
+        return task
