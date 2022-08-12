@@ -7,7 +7,7 @@ from uuid import UUID, uuid4
 from pynvim_pp.lib import display_width
 
 from ..databases.insertions.database import IDB
-from ..shared.context import EMPTY_CONTEXT, cword_before
+from ..shared.context import cword_before
 from ..shared.fuzzy import MatchMetrics, metrics
 from ..shared.parse import coalesce, lower
 from ..shared.runtime import Metric, PReviewer
@@ -17,7 +17,7 @@ from .icons import iconify
 
 
 @dataclass(frozen=True)
-class _ReviewCtx:
+class ReviewCtx:
     batch: UUID
     context: Context
     proximity: Mapping[str, int]
@@ -28,7 +28,7 @@ class _ReviewCtx:
 
 def _metric(
     options: MatchOptions,
-    ctx: _ReviewCtx,
+    ctx: ReviewCtx,
     completion: Completion,
 ) -> MatchMetrics:
     match = lower(completion.sort_by) if ctx.is_lower else completion.sort_by
@@ -47,7 +47,7 @@ def sigmoid(x: float) -> float:
 
 
 def _join(
-    ctx: _ReviewCtx,
+    ctx: ReviewCtx,
     instance: UUID,
     completion: Completion,
     match_metrics: MatchMetrics,
@@ -74,21 +74,14 @@ def _join(
     return metric
 
 
-class Reviewer(PReviewer):
+class Reviewer(PReviewer[ReviewCtx]):
     def __init__(self, options: MatchOptions, icons: Icons, db: IDB) -> None:
         self._options, self._icons, self._db = options, icons, db
-        self._ctx = _ReviewCtx(
-            batch=uuid4(),
-            context=EMPTY_CONTEXT,
-            proximity={},
-            inserted={},
-            is_lower=True,
-        )
 
     def register(self, assoc: BaseClient) -> None:
         self._db.new_source(assoc.short_name)
 
-    async def begin(self, context: Context) -> None:
+    async def begin(self, context: Context) -> ReviewCtx:
         inserted = await self._db.insertion_order(n_rows=100)
         words = coalesce(
             chain.from_iterable(context.lines),
@@ -96,30 +89,32 @@ class Reviewer(PReviewer):
         )
         proximity = Counter(words)
 
-        ctx = _ReviewCtx(
+        ctx = ReviewCtx(
             batch=uuid4(),
             context=context,
             proximity=proximity,
             inserted=inserted,
-            is_lower=context.is_lower
+            is_lower=context.is_lower,
         )
-        self._ctx = ctx
         await self._db.new_batch(ctx.batch.bytes)
+        return ctx
 
-    async def s_begin(self, assoc: BaseClient, instance: UUID) -> None:
+    async def s_begin(
+        self, token: ReviewCtx, assoc: BaseClient, instance: UUID
+    ) -> None:
         await self._db.new_instance(
-            instance.bytes, source=assoc.short_name, batch_id=self._ctx.batch.bytes
+            instance.bytes, source=assoc.short_name, batch_id=token.batch.bytes
         )
 
-    def trans(self, instance: UUID, completion: Completion) -> Metric:
+    def trans(self, token: ReviewCtx, instance: UUID, completion: Completion) -> Metric:
         new_completion = iconify(self._icons, completion=completion)
         match_metrics = _metric(
             self._options,
-            ctx=self._ctx,
+            ctx=token,
             completion=new_completion,
         )
         metric = _join(
-            self._ctx,
+            token,
             instance=instance,
             completion=new_completion,
             match_metrics=match_metrics,

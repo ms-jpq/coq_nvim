@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from time import monotonic
 from typing import (
-    AbstractSet,
+    Any,
     AsyncIterator,
     Awaitable,
     Generic,
@@ -29,6 +29,7 @@ from .settings import BaseClient, CompleteOptions, Limits, MatchOptions, Weights
 from .timeit import TracingLocker, timeit
 from .types import Completion, Context
 
+_T = TypeVar("_T")
 _T_co = TypeVar("_T_co", contravariant=True)
 _O_co = TypeVar("_O_co", contravariant=True, bound=BaseClient)
 
@@ -43,17 +44,17 @@ class Metric:
     kind_width: int
 
 
-class PReviewer(Protocol):
+class PReviewer(Protocol[_T]):
     def register(self, assoc: BaseClient) -> None:
         ...
 
-    async def begin(self, context: Context) -> None:
+    async def begin(self, context: Context) -> _T:
         ...
 
-    async def s_begin(self, assoc: BaseClient, instance: UUID) -> None:
+    async def s_begin(self, token: _T, assoc: BaseClient, instance: UUID) -> None:
         ...
 
-    def trans(self, instance: UUID, completion: Completion) -> Metric:
+    def trans(self, token: _T, instance: UUID, completion: Completion) -> Metric:
         ...
 
     async def s_end(
@@ -119,9 +120,11 @@ class Supervisor:
                 async with self._lock:
                     acc: MutableSequence[Metric] = []
 
-                    await self._reviewer.begin(context)
+                    token = await self._reviewer.begin(context)
                     tasks = tuple(
-                        worker.supervised(context, done=done, now=now, acc=acc)
+                        worker.supervised(
+                            context, token=token, done=done, now=now, acc=acc
+                        )
                         for worker in self._workers
                     )
 
@@ -155,7 +158,12 @@ class Worker(Generic[_O_co, _T_co]):
         ...
 
     def supervised(
-        self, context: Context, done: Event, now: float, acc: MutableSequence[Metric]
+        self,
+        context: Context,
+        token: Any,
+        done: Event,
+        now: float,
+        acc: MutableSequence[Metric],
     ) -> Task:
         loop: AbstractEventLoop = self._supervisor.nvim.loop
         prev = self._work_task
@@ -169,13 +177,13 @@ class Worker(Generic[_O_co, _T_co]):
 
             with with_suppress(), timeit(f"WORKER -- {self._options.short_name}"):
                 await self._supervisor._reviewer.s_begin(
-                    self._options, instance=instance
+                    token, assoc=self._options, instance=instance
                 )
                 try:
                     async for completion in self.work(context):
                         if not done.is_set():
                             metric = self._supervisor._reviewer.trans(
-                                instance, completion=completion
+                                token, instance=instance, completion=completion
                             )
                             acc.append(metric)
                             items += 1
