@@ -11,7 +11,6 @@ from typing import (
     AsyncIterator,
     Awaitable,
     Generic,
-    MutableMapping,
     MutableSequence,
     Optional,
     Protocol,
@@ -19,7 +18,7 @@ from typing import (
     TypeVar,
 )
 from uuid import UUID, uuid4
-from weakref import WeakKeyDictionary
+from weakref import WeakSet
 
 from pynvim import Nvim
 from pynvim_pp.lib import go
@@ -80,18 +79,18 @@ class Supervisor:
         self.nvim, self._reviewer = nvim, reviewer
 
         self.idling = Condition()
-        self._workers: MutableMapping[Worker, BaseClient] = WeakKeyDictionary()
+        self._workers: WeakSet[Worker] = WeakSet()
 
         self._lock = TracingLocker(name="Supervisor", force=True)
         self._work_task: Optional[Task] = None
 
     @property
-    def clients(self) -> AbstractSet[BaseClient]:
-        return {*self._workers.values()}
+    def clients(self) -> WeakSet[Worker]:
+        return self._workers
 
     def register(self, worker: Worker, assoc: BaseClient) -> None:
         self._reviewer.register(assoc)
-        self._workers[worker] = assoc
+        self._workers.add(worker)
 
     def notify_idle(self) -> None:
         async def cont() -> None:
