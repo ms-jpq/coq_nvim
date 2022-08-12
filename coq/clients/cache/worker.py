@@ -1,10 +1,11 @@
 from dataclasses import dataclass, replace
+from itertools import chain
 from typing import (
     AbstractSet,
     Awaitable,
-    Callable,
     Iterable,
     Iterator,
+    Mapping,
     MutableMapping,
     MutableSet,
     Optional,
@@ -71,14 +72,35 @@ class CacheWorker:
         self._clients: MutableSet[str] = set()
         self._cached: MutableMapping[bytes, Completion] = {}
 
-    def _use(
+    async def set_cache(
+        self,
+        items: Mapping[Optional[str], Iterable[Completion]],
+    ) -> None:
+        new_comps = {
+            comp.uid.bytes: comp for comp in chain.from_iterable(items.values())
+        }
+
+        def cont() -> Iterator[Tuple[bytes, str]]:
+            for key, val in new_comps.items():
+                if self._supervisor.comp.smart:
+                    for word in coalesce(
+                        val.sort_by,
+                        unifying_chars=self._supervisor.match.unifying_chars,
+                    ):
+                        yield key, word
+                else:
+                    yield key, val.sort_by
+
+        await self._db.insert(cont())
+
+        for client in items:
+            if client:
+                self._clients.add(client)
+        self._cached.update(new_comps)
+
+    def apply_cache(
         self, context: Context
-    ) -> Tuple[
-        bool,
-        AbstractSet[str],
-        Awaitable[Tuple[Iterator[Completion], int]],
-        Callable[[Optional[str], Iterable[Completion]], Awaitable[None]],
-    ]:
+    ) -> Tuple[bool, AbstractSet[str], Awaitable[Tuple[Iterator[Completion], int]]]:
         cache_ctx = self._cache_ctx
         row, _ = context.position
         self._cache_ctx = _CacheCtx(
@@ -114,26 +136,4 @@ class CacheWorker:
                 )
                 return comps, length
 
-        async def set_cache(
-            client: Optional[str], completions: Iterable[Completion]
-        ) -> None:
-            new_comps = {comp.uid.bytes: comp for comp in completions}
-
-            def cont() -> Iterator[Tuple[bytes, str]]:
-                for key, val in new_comps.items():
-                    if self._supervisor.comp.smart:
-                        for word in coalesce(
-                            val.sort_by,
-                            unifying_chars=self._supervisor.match.unifying_chars,
-                        ):
-                            yield key, word
-                    else:
-                        yield key, val.sort_by
-
-            await self._db.insert(cont())
-
-            if client:
-                self._clients.add(client)
-            self._cached.update(new_comps)
-
-        return use_cache, cached_clients, get(), set_cache
+        return use_cache, cached_clients, get()

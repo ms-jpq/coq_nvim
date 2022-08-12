@@ -156,12 +156,13 @@ class Worker(Generic[_O_co, _T_co]):
         self._supervisor.register(self, assoc=options)
 
     @abstractmethod
-    def work(self, context: Context) -> AsyncIterator[Optional[Completion]]:
+    def work(self, context: Context) -> AsyncIterator[Completion]:
         ...
 
     def supervised(
         self, context: Context, done: Event, now: float, acc: MutableSequence[Metric]
     ) -> Task:
+        loop: AbstractEventLoop = self._supervisor.nvim.loop
         prev = self._work_task
 
         async def cont() -> None:
@@ -177,7 +178,7 @@ class Worker(Generic[_O_co, _T_co]):
                 )
                 try:
                     async for completion in self.work(context):
-                        if not done.is_set() and completion:
+                        if not done.is_set():
                             metric = self._supervisor._reviewer.trans(
                                 instance, completion=completion
                             )
@@ -194,5 +195,5 @@ class Worker(Generic[_O_co, _T_co]):
                         items=items,
                     )
 
-        self._work_task = task = self._supervisor.nvim.loop.create_task(cont())
+        self._work_task = task = loop.create_task(cont())
         return task
