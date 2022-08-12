@@ -19,8 +19,9 @@ CREATE TABLE IF NOT EXISTS words (
   gpkind    TEXT,
   UNIQUE (buffer_id, word)
 );
-CREATE INDEX IF NOT EXISTS words_word ON  words (word);
-CREATE INDEX IF NOT EXISTS words_lword ON words (lword);
+CREATE INDEX IF NOT EXISTS words_buffer_id ON words (buffer_id);
+CREATE INDEX IF NOT EXISTS words_word      ON words (word);
+CREATE INDEX IF NOT EXISTS words_lword     ON words (lword);
 
 
 CREATE VIEW IF NOT EXISTS words_view AS

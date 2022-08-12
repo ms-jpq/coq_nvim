@@ -15,8 +15,8 @@ CREATE TABLE IF NOT EXISTS lines (
   line      TEXT    NOT NULL,
   UNIQUE(buffer_id, line_num)
 ) WITHOUT ROWID;
-CREATE INDEX IF NOT EXISTS liness_buffer_id ON lines (buffer_id);
-CREATE INDEX IF NOT EXISTS lines_line_num   ON lines (line_num);
+CREATE INDEX IF NOT EXISTS lines_buffer_id ON lines (buffer_id);
+CREATE INDEX IF NOT EXISTS lines_line_num  ON lines (line_num);
 
 
 CREATE TABLE IF NOT EXISTS words (
