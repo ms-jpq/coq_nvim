@@ -169,41 +169,39 @@ class Worker(BaseWorker[BaseClient, None]):
             try:
                 seen = 0
                 async for src, lsp_comps in stream():
-                    acc = self._local_cached.post.setdefault(lsp_comps.client, [])
+                    if seen >= limit:
+                        break
 
-                    if lsp_comps.local_cache:
-                        if lsp_comps.length:
-                            self._local_cached.pre[lsp_comps.client] = (
-                                lsp_comps.items,
-                                lsp_comps.length,
-                            )
+                    acc = self._local_cached.post.setdefault(lsp_comps.client, [])
+                    if lsp_comps.local_cache and lsp_comps.length:
+                        self._local_cached.pre[lsp_comps.client] = (
+                            lsp_comps.items,
+                            lsp_comps.length,
+                        )
 
                     for comp in lsp_comps.items:
                         if src is _Src.from_db:
-                            if seen < limit:
-                                seen += 1
-                                yield comp
+                            seen += 1
+                            yield comp
                         else:
                             acc.append(comp)
-
                             fast_search = lsp_comps.length > fast_limit
-                            if seen < limit:
-                                if (
-                                    _fast_comp(
-                                        self._supervisor.match.look_ahead,
-                                        lower_word=context.l_words_before,
-                                        lower_word_prefix=lower_word_prefix,
-                                        sort_by=comp.sort_by,
-                                    )
-                                    if fast_search
-                                    else _use_comp(
-                                        self._supervisor.match,
-                                        context=context,
-                                        sort_by=comp.sort_by,
-                                        edit=comp.primary_edit,
-                                    )
-                                ):
-                                    seen += 1
-                                    yield comp
+                            if (
+                                _fast_comp(
+                                    self._supervisor.match.look_ahead,
+                                    lower_word=context.l_words_before,
+                                    lower_word_prefix=lower_word_prefix,
+                                    sort_by=comp.sort_by,
+                                )
+                                if fast_search
+                                else _use_comp(
+                                    self._supervisor.match,
+                                    context=context,
+                                    sort_by=comp.sort_by,
+                                    edit=comp.primary_edit,
+                                )
+                            ):
+                                seen += 1
+                                yield comp
             finally:
                 self._poll_task = cast(Task, go(self._supervisor.nvim, aw=self._poll()))
