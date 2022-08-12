@@ -1,6 +1,16 @@
-from contextlib import contextmanager
+from asyncio import Lock
+from contextlib import contextmanager, nullcontext
 from time import process_time
-from typing import Any, Iterator, MutableMapping, Optional, Tuple
+from types import TracebackType
+from typing import (
+    Any,
+    AsyncContextManager,
+    Iterator,
+    MutableMapping,
+    Optional,
+    Tuple,
+    Type,
+)
 
 from pynvim_pp.logging import log
 from std2.locale import si_prefixed_smol
@@ -34,6 +44,29 @@ def timeit(
                 log.debug("%s", msg)
     else:
         yield None
+
+
+class TracingLocker(AsyncContextManager):
+    def __init__(self, name: str, force: bool = False) -> None:
+        self._lock = Lock()
+        self._name, self._force = name, force
+
+    async def __aenter__(self) -> None:
+        mgr = (
+            timeit(f"LOCKED -- {self._name}", force=self._force)
+            if self._lock.locked()
+            else nullcontext()
+        )
+        with mgr:
+            await self._lock.__aenter__()
+
+    async def __aexit__(
+        self,
+        exc_type: Optional[Type[BaseException]],
+        exc: Optional[BaseException],
+        tb: Optional[TracebackType],
+    ) -> None:
+        await self._lock.__aexit__(exc_type, exc, tb)
 
 
 @contextmanager

@@ -155,7 +155,6 @@ class Worker(BaseWorker[TagsClient, CTDB]):
                     await self._supervisor.idling.wait()
 
     async def work(self, context: Context) -> AsyncIterator[Completion]:
-        self._check_locked()
         async with self._work_lock:
             row, _ = context.position
             tags = await self._misc.select(

@@ -75,7 +75,6 @@ class Worker(BaseWorker[TSClient, TDB]):
                     await self._supervisor.idling.wait()
 
     async def work(self, context: Context) -> AsyncIterator[Completion]:
-        self._check_locked()
         async with self._work_lock:
             payloads = await self._misc.select(
                 self._supervisor.match,

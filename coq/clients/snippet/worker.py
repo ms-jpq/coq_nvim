@@ -8,7 +8,6 @@ from ...shared.types import Completion, Context, Doc, SnippetEdit, SnippetGramma
 
 class Worker(BaseWorker[SnippetClient, SDB]):
     async def work(self, context: Context) -> AsyncIterator[Completion]:
-        self._check_locked()
         async with self._work_lock:
             snippets = await self._misc.select(
                 self._supervisor.match,

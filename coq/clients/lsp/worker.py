@@ -80,7 +80,6 @@ class Worker(BaseWorker[BaseClient, None]):
         )
 
     async def work(self, context: Context) -> AsyncIterator[Optional[Completion]]:
-        self._check_locked()
         async with self._work_lock:
             limit = (
                 BIGGEST_INT if context.manual else self._supervisor.match.max_results

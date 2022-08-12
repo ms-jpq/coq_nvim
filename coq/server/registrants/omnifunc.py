@@ -1,4 +1,4 @@
-from asyncio import Event, Lock, Task, gather, sleep, wait
+from asyncio import Event, Task, gather, sleep, wait
 from asyncio.events import AbstractEventLoop
 from dataclasses import replace
 from queue import SimpleQueue
@@ -25,7 +25,7 @@ from ...lsp.requests.command import cmd
 from ...lsp.requests.resolve import resolve
 from ...registry import NAMESPACE, atomic, autocmd, rpc
 from ...shared.runtime import Metric
-from ...shared.timeit import timeit
+from ...shared.timeit import TracingLocker, timeit
 from ...shared.types import Context, ExternLSP, ExternPath
 from ..completions import complete
 from ..context import context
@@ -60,12 +60,10 @@ def _launch_loop(nvim: Nvim, stack: Stack) -> None:
     incoming: Optional[Tuple[State, bool]] = None
 
     async def cont() -> None:
-        lock, event = Lock(), Event()
+        lock, event = TracingLocker(name="OODA", force=True), Event()
 
         async def c0(s: State, manual: bool) -> None:
             with with_suppress(), timeit("**OVERALL**"):
-                if lock.locked():
-                    log.warn("%s", "SHOULD NOT BE LOCKED <><> OODA")
                 async with lock:
                     ctx = await async_call(
                         nvim,

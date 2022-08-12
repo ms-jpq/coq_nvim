@@ -1,16 +1,7 @@
 from __future__ import annotations
 
 from abc import abstractmethod
-from asyncio import (
-    AbstractEventLoop,
-    Condition,
-    Lock,
-    Task,
-    as_completed,
-    gather,
-    sleep,
-    wait,
-)
+from asyncio import AbstractEventLoop, Condition, Task, as_completed, sleep, wait
 from concurrent.futures import Executor
 from dataclasses import dataclass
 from pathlib import Path
@@ -20,13 +11,11 @@ from typing import (
     AsyncIterator,
     Awaitable,
     Generic,
-    Iterator,
     MutableMapping,
     MutableSequence,
     Optional,
     Protocol,
     Sequence,
-    Tuple,
     TypeVar,
 )
 from uuid import UUID, uuid4
@@ -34,11 +23,11 @@ from weakref import WeakKeyDictionary
 
 from pynvim import Nvim
 from pynvim_pp.lib import go
-from pynvim_pp.logging import log, with_suppress
+from pynvim_pp.logging import with_suppress
 from std2.asyncio import cancel
 
 from .settings import BaseClient, CompleteOptions, Limits, MatchOptions, Weights
-from .timeit import timeit
+from .timeit import TracingLocker, timeit
 from .types import Completion, Context
 
 _T_co = TypeVar("_T_co", contravariant=True)
@@ -96,7 +85,7 @@ class Supervisor:
         self.idling = Condition()
         self._workers: MutableMapping[Worker, BaseClient] = WeakKeyDictionary()
 
-        self._lock = Lock()
+        self._lock = TracingLocker(name="Supervisor", force=True)
         self._tasks: MutableMapping[UUID, Task] = {}
 
     @property
@@ -171,8 +160,6 @@ class Supervisor:
                     await cancel(p)
 
             with with_suppress(), timeit("COLLECTED -- ALL"):
-                if self._lock.locked():
-                    log.warn("%s", "SHOULD NOT BE LOCKED <><> supervisor")
                 async with self._lock:
                     await self._reviewer.begin(context)
                     tasks = {
@@ -211,16 +198,9 @@ class Supervisor:
 class Worker(Generic[_O_co, _T_co]):
     def __init__(self, supervisor: Supervisor, options: _O_co, misc: _T_co) -> None:
         self._uid = uuid4()
-        self._work_lock = Lock()
+        self._work_lock = TracingLocker(name=options.short_name, force=True)
         self._supervisor, self._options, self._misc = supervisor, options, misc
         self._supervisor.register(self, assoc=options)
-
-    def _check_locked(self) -> bool:
-        locked = self._work_lock.locked()
-        if locked:
-            log.warn("%s", f"LOCKED :: {self._options.short_name}")
-        return locked
-
 
     @abstractmethod
     def work(self, context: Context) -> AsyncIterator[Optional[Completion]]:

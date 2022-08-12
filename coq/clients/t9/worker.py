@@ -182,7 +182,6 @@ class Worker(BaseWorker[BaseClient, None]):
             return await shield(cont())
 
     async def work(self, context: Context) -> AsyncIterator[Completion]:
-        self._check_locked()
         async with self._work_lock:
             if self._cwd != context.cwd:
                 await self._clean()

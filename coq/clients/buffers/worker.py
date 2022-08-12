@@ -49,7 +49,6 @@ class Worker(BaseWorker[BuffersClient, BDB]):
                     await self._supervisor.idling.wait()
 
     async def work(self, context: Context) -> AsyncIterator[Completion]:
-        self._check_locked()
         async with self._work_lock:
             filetype = context.filetype if self._options.same_filetype else None
             words = await self._misc.words(

@@ -31,7 +31,6 @@ class Worker(BaseWorker[TmuxClient, TMDB]):
                     await self._supervisor.idling.wait()
 
     async def work(self, context: Context) -> AsyncIterator[Completion]:
-        self._check_locked()
         async with self._work_lock:
             if active := await cur(self._options.all_sessions):
                 words = await self._misc.select(
