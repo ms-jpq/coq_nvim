@@ -143,7 +143,6 @@ class Supervisor:
                     await cancel(prev)
 
             with with_suppress(), timeit(f"WORKER -- {assoc.short_name}"):
-
                 await self._reviewer.s_begin(assoc, instance=instance)
                 try:
                     async for completion in worker.work(context):
@@ -172,7 +171,6 @@ class Supervisor:
                     await cancel(p)
 
             with with_suppress(), timeit("COLLECTED -- ALL"):
-
                 if self._lock.locked():
                     log.warn("%s", "SHOULD NOT BE LOCKED <><> supervisor")
                 async with self._lock:
@@ -217,9 +215,12 @@ class Worker(Generic[_O_co, _T_co]):
         self._supervisor, self._options, self._misc = supervisor, options, misc
         self._supervisor.register(self, assoc=options)
 
-    def _check_locked(self) -> None:
-        if self._work_lock.locked():
+    def _check_locked(self) -> bool:
+        locked = self._work_lock.locked()
+        if locked:
             log.warn("%s", f"LOCKED :: {self._options.short_name}")
+        return locked
+
 
     @abstractmethod
     def work(self, context: Context) -> AsyncIterator[Optional[Completion]]:
