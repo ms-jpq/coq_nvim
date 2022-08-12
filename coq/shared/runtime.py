@@ -84,10 +84,6 @@ class Supervisor:
         self._lock = TracingLocker(name="Supervisor", force=True)
         self._work_task: Optional[Task] = None
 
-    @property
-    def clients(self) -> WeakSet[Worker]:
-        return self._workers
-
     def register(self, worker: Worker, assoc: BaseClient) -> None:
         self._reviewer.register(assoc)
         self._workers.add(worker)
