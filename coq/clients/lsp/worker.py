@@ -169,6 +169,8 @@ class Worker(BaseWorker[BaseClient, None]):
             try:
                 seen = 0
                 async for src, lsp_comps in stream():
+                    acc = self._local_cached.post.setdefault(lsp_comps.client, [])
+
                     if lsp_comps.local_cache:
                         if lsp_comps.length:
                             self._local_cached.pre[lsp_comps.client] = (
@@ -182,9 +184,6 @@ class Worker(BaseWorker[BaseClient, None]):
                                 seen += 1
                                 yield comp
                         else:
-                            acc = self._local_cached.post.setdefault(
-                                lsp_comps.client, []
-                            )
                             acc.append(comp)
 
                             fast_search = lsp_comps.length > fast_limit
