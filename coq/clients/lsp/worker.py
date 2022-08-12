@@ -14,6 +14,7 @@ from typing import (
 
 from pynvim_pp.lib import go
 from pynvim_pp.logging import with_suppress
+from std2 import anext
 from std2.asyncio import cancel
 from std2.itertools import chunk
 
@@ -140,12 +141,10 @@ class Worker(BaseWorker[BaseClient, None]):
                 )
 
             async def lsp() -> Optional[Tuple[_Src, LSPcomp]]:
-                try:
-                    comps = await lsp_stream.__anext__()
-                except StopAsyncIteration:
-                    return None
-                else:
+                if comps := await anext(lsp_stream, None):
                     return _Src.from_query, comps
+                else:
+                    return None
 
             async def stream() -> AsyncIterator[Tuple[_Src, LSPcomp]]:
                 acc = {**self._local_cached.pre}
