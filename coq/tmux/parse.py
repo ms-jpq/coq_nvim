@@ -1,6 +1,6 @@
 from asyncio import gather
 from dataclasses import dataclass
-from typing import AbstractSet, Iterator, Mapping, Optional, Tuple
+from typing import AbstractSet, Iterator, Mapping, Optional, Sequence, Tuple
 
 from pynvim_pp.lib import decode
 from std2.asyncio.subprocess import call
@@ -16,7 +16,7 @@ class _Pane:
     window_active: bool
 
 
-async def _panes(all_sessions: bool) -> Iterator[_Pane]:
+async def _panes(all_sessions: bool) -> Sequence[_Pane]:
     try:
         proc = await call(
             "tmux",
@@ -27,10 +27,10 @@ async def _panes(all_sessions: bool) -> Iterator[_Pane]:
             check_returncode=set(),
         )
     except OSError:
-        return iter(())
+        return ()
     else:
         if proc.returncode:
-            return iter(())
+            return ()
         else:
 
             def cont() -> Iterator[_Pane]:
@@ -44,30 +44,22 @@ async def _panes(all_sessions: bool) -> Iterator[_Pane]:
                     )
                     yield pane
 
-            return cont()
+            return tuple(cont())
 
 
-async def cur(all_sessions: bool) -> Optional[_Pane]:
-    async def cont() -> Optional[str]:
-        try:
-            proc = await call(
-                "tmux", "display-message", "-p", "#{session_id}", check_returncode=set()
-            )
-        except OSError:
+async def _session() -> Optional[str]:
+    try:
+        proc = await call(
+            "tmux", "display-message", "-p", "#{session_id}", check_returncode=set()
+        )
+    except OSError:
+        return None
+    else:
+        if proc.returncode:
             return None
         else:
-            if proc.returncode:
-                return None
-            else:
-                session = decode(proc.stdout).strip()
-                return session
-
-    session, panes = await gather(cont(), _panes(all_sessions))
-    for pane in panes:
-        if pane.session == session and pane.window_active and pane.pane_active:
-            return pane
-    else:
-        return None
+            session = decode(proc.stdout).strip()
+            return session
 
 
 async def _screenshot(
@@ -95,12 +87,18 @@ async def _screenshot(
 
 async def snapshot(
     all_sessions: bool, unifying_chars: AbstractSet[str]
-) -> Mapping[str, Iterator[str]]:
+) -> Tuple[Optional[str], Mapping[str, Iterator[str]]]:
+    session, panes = await gather(_session(), _panes(all_sessions))
     shots = await gather(
-        *(
-            _screenshot(unifying_chars=unifying_chars, uid=pane.uid)
-            for pane in await _panes(all_sessions)
-        )
+        *(_screenshot(unifying_chars=unifying_chars, uid=pane.uid) for pane in panes)
+    )
+    current = next(
+        (
+            pane
+            for pane in panes
+            if pane.session == session and pane.window_active and pane.pane_active
+        ),
+        None,
     )
     snapshot = {uid: words for uid, words in shots}
-    return snapshot
+    return current.uid if current else None, snapshot

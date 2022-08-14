@@ -9,7 +9,7 @@ from ...shared.runtime import Worker as BaseWorker
 from ...shared.settings import TmuxClient
 from ...shared.timeit import timeit
 from ...shared.types import Completion, Context, Edit
-from ...tmux.parse import cur, snapshot
+from ...tmux.parse import snapshot
 
 
 class Worker(BaseWorker[TmuxClient, TMDB]):
@@ -21,34 +21,32 @@ class Worker(BaseWorker[TmuxClient, TMDB]):
         while True:
             with with_suppress():
                 with timeit("IDLE :: TMUX"):
-                    snap = await snapshot(
+                    current, snap = await snapshot(
                         self._options.all_sessions,
                         unifying_chars=self._supervisor.match.unifying_chars,
                     )
-                    await self._misc.periodical(snap)
+                    await self._misc.periodical(current, panes=snap)
 
                 async with self._supervisor.idling:
                     await self._supervisor.idling.wait()
 
     async def work(self, context: Context) -> AsyncIterator[Completion]:
         async with self._work_lock:
-            if active := await cur(self._options.all_sessions):
-                words = await self._misc.select(
-                    self._supervisor.match,
-                    active_pane=active.uid,
-                    word=context.words,
-                    sym=(context.syms if self._options.match_syms else ""),
-                    limitless=context.manual,
-                )
+            words = await self._misc.select(
+                self._supervisor.match,
+                word=context.words,
+                sym=(context.syms if self._options.match_syms else ""),
+                limitless=context.manual,
+            )
 
-                for word in words:
-                    edit = Edit(new_text=word)
-                    cmp = Completion(
-                        source=self._options.short_name,
-                        weight_adjust=self._options.weight_adjust,
-                        label=edit.new_text,
-                        sort_by=word,
-                        primary_edit=edit,
-                        icon_match="Text",
-                    )
-                    yield cmp
+            for word in words:
+                edit = Edit(new_text=word)
+                cmp = Completion(
+                    source=self._options.short_name,
+                    weight_adjust=self._options.weight_adjust,
+                    label=edit.new_text,
+                    sort_by=word,
+                    primary_edit=edit,
+                    icon_match="Text",
+                )
+                yield cmp

@@ -9,6 +9,7 @@ from pynvim_pp.float_win import list_floatwins
 from pynvim_pp.lib import async_call, awrite, go
 from std2.locale import si_prefixed_smol
 
+from ...clients.tmux.worker import Worker as TmuxWorker
 from ...lang import LANG
 from ...registry import NAMESPACE, atomic, autocmd, rpc
 from ...tmux.parse import snapshot
@@ -89,11 +90,11 @@ _ = autocmd("InsertEnter") << f"lua {NAMESPACE}.{_insert_enter.name}()"
 @rpc(blocking=True)
 def _on_focus(nvim: Nvim, stack: Stack) -> None:
     async def cont() -> None:
-        snap = await snapshot(
+        current, snap = await snapshot(
             stack.settings.clients.tmux.all_sessions,
             unifying_chars=stack.settings.match.unifying_chars,
         )
-        await stack.tmdb.periodical(snap)
+        await stack.tmdb.periodical(current, panes=snap)
 
     go(nvim, aw=cont())
 

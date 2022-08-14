@@ -2,7 +2,7 @@ from asyncio import CancelledError
 from concurrent.futures import Executor
 from sqlite3 import Connection, OperationalError
 from threading import Lock
-from typing import Iterable, Iterator, Mapping
+from typing import Iterable, Iterator, Mapping, Optional
 
 from std2.asyncio import to_thread
 from std2.sqlite3 import with_transaction
@@ -27,13 +27,18 @@ class TMDB:
     def __init__(self, pool: Executor) -> None:
         self._lock = Lock()
         self._ex = SingleThreadExecutor(pool)
+        self._current_pane = Optional[str]
         self._conn: Connection = self._ex.submit(_init)
 
     def _interrupt(self) -> None:
         with self._lock:
             self._conn.interrupt()
 
-    async def periodical(self, panes: Mapping[str, Iterable[str]]) -> None:
+    async def periodical(
+        self, current: Optional[str], panes: Mapping[str, Iterable[str]]
+    ) -> None:
+        self._current_pane = current
+
         def m1(panes: Iterable[str]) -> Iterator[Mapping]:
             for pane_id in panes:
                 yield {"pane_id": pane_id}
@@ -58,27 +63,30 @@ class TMDB:
         await self._ex.asubmit(cont)
 
     async def select(
-        self, opts: MatchOptions, active_pane: str, word: str, sym: str, limitless: int
+        self, opts: MatchOptions, word: str, sym: str, limitless: int
     ) -> Iterator[str]:
         def cont() -> Iterator[str]:
-            try:
-                with with_transaction(self._conn.cursor()) as cursor:
-                    cursor.execute(
-                        sql("select", "words"),
-                        {
-                            "cut_off": opts.fuzzy_cutoff,
-                            "look_ahead": opts.look_ahead,
-                            "limit": BIGGEST_INT if limitless else opts.max_results,
-                            "pane_id": active_pane,
-                            "word": word,
-                            "sym": sym,
-                            "like_word": like_esc(word[: opts.exact_matches]),
-                            "like_sym": like_esc(sym[: opts.exact_matches]),
-                        },
-                    )
-                    rows = cursor.fetchall()
-                    return (row["word"] for row in rows)
-            except OperationalError:
+            if active_pane := self._current_pane:
+                try:
+                    with with_transaction(self._conn.cursor()) as cursor:
+                        cursor.execute(
+                            sql("select", "words"),
+                            {
+                                "cut_off": opts.fuzzy_cutoff,
+                                "look_ahead": opts.look_ahead,
+                                "limit": BIGGEST_INT if limitless else opts.max_results,
+                                "pane_id": active_pane,
+                                "word": word,
+                                "sym": sym,
+                                "like_word": like_esc(word[: opts.exact_matches]),
+                                "like_sym": like_esc(sym[: opts.exact_matches]),
+                            },
+                        )
+                        rows = cursor.fetchall()
+                        return (row["word"] for row in rows)
+                except OperationalError:
+                    return iter(())
+            else:
                 return iter(())
 
         def step() -> Iterator[str]:

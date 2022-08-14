@@ -34,6 +34,7 @@ from ..cache.worker import CacheWorker, sanitize_cached
 _CACHE_PERIOD = 1 / 100
 _CACHE_CHUNK = 9
 
+
 class _Src(Enum):
     from_db = auto()
     from_stored = auto()
