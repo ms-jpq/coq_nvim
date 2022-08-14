@@ -31,6 +31,8 @@ from ...shared.trans import cword_before
 from ...shared.types import Completion, Context, Edit, SnippetEdit
 from ..cache.worker import CacheWorker, sanitize_cached
 
+_CACHE_PERIOD = 1 / 100
+
 
 class _Src(Enum):
     from_db = auto()
@@ -101,15 +103,15 @@ class Worker(BaseWorker[BaseClient, None]):
         )
 
     async def _poll(self) -> None:
-        with with_suppress():
+        with with_suppress(), timeit("LSP CACHE"):
             acc = {**self._local_cached.post}
             await self._cache.set_cache(acc)
-            await sleep(0)
+            await sleep(_CACHE_PERIOD)
 
             for client, (comps, _) in self._local_cached.pre.items():
                 for chunked in chunk(comps, n=9):
                     await self._cache.set_cache({client: chunked})
-                    await sleep(0)
+                    await sleep(_CACHE_PERIOD)
 
     async def work(self, context: Context) -> AsyncIterator[Completion]:
         poll = self._poll_task
