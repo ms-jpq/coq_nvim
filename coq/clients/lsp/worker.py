@@ -32,7 +32,7 @@ from ...shared.types import Completion, Context, Edit, SnippetEdit
 from ..cache.worker import CacheWorker, sanitize_cached
 
 _CACHE_PERIOD = 1 / 100
-
+_CACHE_CHUNK = 9
 
 class _Src(Enum):
     from_db = auto()
@@ -109,7 +109,7 @@ class Worker(BaseWorker[BaseClient, None]):
             await sleep(_CACHE_PERIOD)
 
             for client, (comps, _) in self._local_cached.pre.items():
-                for chunked in chunk(comps, n=9):
+                for chunked in chunk(comps, n=_CACHE_CHUNK):
                     await self._cache.set_cache({client: chunked})
                     await sleep(_CACHE_PERIOD)
 
