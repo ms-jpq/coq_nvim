@@ -1,11 +1,16 @@
-SELECT DISTINCT
-  word
-FROM words
+SELECT
+  words.word,
+  buffers.filetype,
+  buffers.filename,
+  lines.line_num
+FROM buffers
 JOIN lines
-ON lines.rowid = words.line_id
-JOIN buffers
-ON buffers.rowid = lines.buffer_id
-WHERE
+  ON lines.buffer_id = buffers.rowid
+JOIN words
+  ON words.line_id = lines.rowid
+GROUP BY
+  words.word
+HAVING
   CASE
     WHEN :filetype <> NULL THEN buffers.filetype = :filetype
     ELSE 1

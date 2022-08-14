@@ -1,9 +1,10 @@
 from asyncio import CancelledError
 from concurrent.futures import Executor
+from dataclasses import dataclass
 from sqlite3 import Connection, OperationalError
 from sqlite3.dbapi2 import Cursor
 from threading import Lock
-from typing import AbstractSet, Iterator, Mapping, MutableSet, Optional, Sequence, Tuple
+from typing import AbstractSet, Iterator, Mapping, Optional, Sequence, Tuple
 from uuid import uuid4
 
 from pynvim_pp.lib import recode
@@ -19,18 +20,21 @@ from ...shared.timeit import timeit
 from .sql import sql
 
 
-def _ensure_buffer(cursor: Cursor, buf_id: int, filetype: str) -> None:
+@dataclass(frozen=True)
+class BufferWord:
+    text: str
+    filetype: str
+    filename: str
+    line_num: int
+
+
+def _ensure_buffer(cursor: Cursor, buf_id: int, filetype: str, filename: str) -> None:
     cursor.execute(sql("select", "buffer_by_id"), {"rowid": buf_id})
+    row = {"rowid": buf_id, "filetype": filetype, "filename": filename}
     if cursor.fetchone():
-        cursor.execute(
-            sql("update", "buffer"),
-            {"rowid": buf_id, "filetype": filetype},
-        )
+        cursor.execute(sql("update", "buffer"), row)
     else:
-        cursor.execute(
-            sql("insert", "buffer"),
-            {"rowid": buf_id, "filetype": filetype},
-        )
+        cursor.execute(sql("insert", "buffer"), row)
 
 
 def _init() -> Connection:
@@ -76,10 +80,12 @@ class BDB:
 
         return await self._ex.asubmit(cont)
 
-    async def ft_update(self, buf_id: int, filetype: str) -> None:
+    async def buf_update(self, buf_id: int, filetype: str, filename: str) -> None:
         def cont() -> None:
             with self._lock, with_transaction(self._conn.cursor()) as cursor:
-                _ensure_buffer(cursor, buf_id=buf_id, filetype=filetype)
+                _ensure_buffer(
+                    cursor, buf_id=buf_id, filetype=filetype, filename=filename
+                )
 
         await self._ex.asubmit(cont)
 
@@ -87,6 +93,7 @@ class BDB:
         self,
         buf_id: int,
         filetype: str,
+        filename: str,
         lo: int,
         hi: int,
         lines: Sequence[str],
@@ -115,7 +122,9 @@ class BDB:
 
         def cont() -> None:
             with self._lock, with_transaction(self._conn.cursor()) as cursor:
-                _ensure_buffer(cursor, buf_id=buf_id, filetype=filetype)
+                _ensure_buffer(
+                    cursor, buf_id=buf_id, filetype=filetype, filename=filename
+                )
                 cursor.execute(
                     sql("delete", "lines"),
                     {"buffer_id": buf_id, "lo": lo, "hi": hi},
@@ -165,8 +174,8 @@ class BDB:
         word: str,
         sym: str,
         limitless: int,
-    ) -> Iterator[str]:
-        def cont() -> Iterator[str]:
+    ) -> Iterator[BufferWord]:
+        def cont() -> Iterator[BufferWord]:
             try:
                 with with_transaction(self._conn.cursor()) as cursor:
                     cursor.execute(
@@ -183,11 +192,19 @@ class BDB:
                         },
                     )
                     rows = cursor.fetchall()
-                    return (row["word"] for row in rows)
+                    return (
+                        BufferWord(
+                            text=row["word"],
+                            filetype=row["filetype"],
+                            filename=row["filename"],
+                            line_num=row["line_num"] + 1,
+                        )
+                        for row in rows
+                    )
             except OperationalError:
                 return iter(())
 
-        def step() -> Iterator[str]:
+        def step() -> Iterator[BufferWord]:
             self._interrupt()
             return self._ex.submit(cont)
 

@@ -55,11 +55,10 @@ async def _mtimes(paths: AbstractSet[str]) -> Mapping[str, float]:
 def _doc(client: TagsClient, context: Context, tag: Tag) -> Doc:
     def cont() -> Iterator[str]:
         lc, rc = context.comment
-        path, cfn = PurePath(tag["path"]), PurePath(context.filename)
-        if path == cfn:
-            pos = "."
-        else:
-            pos = fmt_path(context.cwd, path=path, is_dir=False)
+        path = PurePath(tag["path"])
+        pos = fmt_path(
+            context.cwd, path=path, is_dir=False, current=PurePath(context.filename)
+        )
 
         yield lc
         yield pos

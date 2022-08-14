@@ -13,12 +13,12 @@ from ...shared.types import Completion, Context, Doc, Edit
 from ...tmux.parse import snapshot
 
 
-def _doc(options: TmuxClient, word: TmuxWord) -> Doc:
+def _doc(client: TmuxClient, word: TmuxWord) -> Doc:
     def cont() -> Iterator[str]:
-        if options.all_sessions:
-            yield f"S: {word.session_name}{options.parent_scope}"
-        yield f"W: #{word.window_index}{options.path_sep}{word.window_name}{options.parent_scope}"
-        yield f"P: #{word.pane_index}{options.path_sep}{word.pane_title}"
+        if client.all_sessions:
+            yield f"S: {word.session_name}{client.parent_scope}"
+        yield f"W: #{word.window_index}{client.path_sep}{word.window_name}{client.parent_scope}"
+        yield f"P: #{word.pane_index}{client.path_sep}{word.pane_title}"
 
     return Doc(text=linesep.join(cont()), syntax="")
 

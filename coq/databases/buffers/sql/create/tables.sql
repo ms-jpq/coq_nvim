@@ -3,7 +3,8 @@ BEGIN;
 
 CREATE TABLE IF NOT EXISTS buffers (
   rowid     INTEGER NOT NULL PRIMARY KEY,
-  filetype  TEXT    NOT NULL
+  filetype  TEXT    NOT NULL,
+  filename  TEXT    NOT NULL
 ) WITHOUT ROWID;
 CREATE INDEX IF NOT EXISTS buffers_filetype ON buffers (filetype);
 

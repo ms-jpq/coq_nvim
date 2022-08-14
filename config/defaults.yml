@@ -149,6 +149,7 @@ clients:
     short_name: "BUF"
     match_syms: False
     same_filetype: False
+    parent_scope: " ⇊"
     weight_adjust: 0
 
   tree_sitter:

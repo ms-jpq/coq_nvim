@@ -4,7 +4,14 @@ from contextlib import suppress
 from typing import Optional
 
 from pynvim.api.nvim import Nvim, NvimError
-from pynvim_pp.api import buf_filetype, buf_get_option, cur_buf, get_cwd, win_close
+from pynvim_pp.api import (
+    buf_filetype,
+    buf_get_option,
+    buf_name,
+    cur_buf,
+    get_cwd,
+    win_close,
+)
 from pynvim_pp.float_win import list_floatwins
 from pynvim_pp.lib import async_call, awrite, go
 from std2.locale import si_prefixed_smol
@@ -46,9 +53,10 @@ _ = autocmd("DirChanged") << f"lua {NAMESPACE}.{_new_cwd.name}()"
 def _ft_changed(nvim: Nvim, stack: Stack) -> None:
     buf = cur_buf(nvim)
     ft = buf_filetype(nvim, buf=buf)
+    filename = buf_name(nvim, buf=buf)
 
     async def cont() -> None:
-        await stack.bdb.ft_update(buf.number, filetype=ft)
+        await stack.bdb.buf_update(buf.number, filetype=ft, filename=filename)
 
     go(nvim, aw=cont())
 

@@ -1,5 +1,7 @@
 from contextlib import suppress
-from typing import AsyncIterator, Mapping
+from os import linesep
+from pathlib import PurePath
+from typing import AsyncIterator, Iterator, Mapping
 
 from pynvim.api.buffer import Buffer
 from pynvim.api.common import NvimError
@@ -7,11 +9,26 @@ from pynvim_pp.api import buf_line_count, list_bufs
 from pynvim_pp.lib import async_call, go
 from pynvim_pp.logging import with_suppress
 
-from ...databases.buffers.database import BDB
+from ...databases.buffers.database import BDB, BufferWord
+from ...paths.show import fmt_path
 from ...shared.runtime import Supervisor
 from ...shared.runtime import Worker as BaseWorker
 from ...shared.settings import BuffersClient
-from ...shared.types import Completion, Context, Edit
+from ...shared.types import Completion, Context, Doc, Edit
+
+
+def _doc(client: BuffersClient, context: Context, word: BufferWord) -> Doc:
+    def cont() -> Iterator[str]:
+        if not client.same_filetype and word.filetype:
+            yield f"{word.filetype}{client.parent_scope}"
+
+        path = PurePath(word.filename)
+        pos = fmt_path(
+            context.cwd, path=path, is_dir=False, current=PurePath(context.filename)
+        )
+        yield f"{pos}:{word.line_num}"
+
+    return Doc(text=linesep.join(cont()), syntax="")
 
 
 class Worker(BaseWorker[BuffersClient, BDB]):
@@ -59,13 +76,14 @@ class Worker(BaseWorker[BuffersClient, BDB]):
                 limitless=context.manual,
             )
             for word in words:
-                edit = Edit(new_text=word)
+                edit = Edit(new_text=word.text)
                 cmp = Completion(
                     source=self._options.short_name,
                     weight_adjust=self._options.weight_adjust,
                     label=edit.new_text,
-                    sort_by=word,
+                    sort_by=word.text,
                     primary_edit=edit,
+                    doc=_doc(self._options, context=context, word=word),
                     icon_match="Text",
                 )
                 yield cmp

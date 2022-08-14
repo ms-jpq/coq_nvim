@@ -50,28 +50,21 @@ class _Qmsg:
     lines: Sequence[str]
 
 
-async def _status(nvim: Nvim, buf: Buffer) -> Tuple[str, str, str]:
-    def cont() -> Tuple[str, str, str]:
+async def _status(nvim: Nvim, buf: Buffer) -> Tuple[str, str, str, str]:
+    def cont() -> Tuple[str, str, str, str]:
         with Atomic() as (atomic, ns):
             ns.filetype = atomic.buf_get_option(buf, "filetype")
             ns.mode = atomic.get_mode()
             ns.complete_info = atomic.call_function("complete_info", (("mode",),))
+            ns.filename = atomic.buf_get_name(buf)
             atomic.commit(nvim)
 
-        filetype = cast(
-            str,
-            ns.filetype,
-        )
-        mode = cast(
-            Mapping[str, str],
-            ns.mode,
-        )["mode"]
-        comp_mode = cast(
-            Mapping[str, str],
-            ns.complete_info,
-        )["mode"]
+        filetype = cast(str, ns.filetype)
+        filename = cast(str, ns.filename)
+        mode = cast(Mapping[str, str], ns.mode)["mode"]
+        comp_mode = cast(Mapping[str, str], ns.complete_info)["mode"]
 
-        return mode, comp_mode, filetype
+        return mode, comp_mode, filetype, filename
 
     return await async_call(nvim, cont)
 
@@ -86,7 +79,7 @@ def _listener(nvim: Nvim, stack: Stack) -> None:
                     pass
                 else:
                     with timeit("POLL"), suppress(NvimError):
-                        (mode, comp_mode, filetype), _ = await gather(
+                        (mode, comp_mode, filetype, filename), _ = await gather(
                             _status(nvim, qmsg.buf), stack.supervisor.interrupt()
                         )
 
@@ -104,6 +97,7 @@ def _listener(nvim: Nvim, stack: Stack) -> None:
                             await stack.bdb.set_lines(
                                 qmsg.buf.number,
                                 filetype=filetype,
+                                filename=filename,
                                 lo=lo,
                                 hi=hi,
                                 lines=qmsg.lines,

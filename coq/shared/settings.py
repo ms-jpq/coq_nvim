@@ -121,6 +121,11 @@ class BaseClient:
     weight_adjust: float
 
 
+@dataclass(frozen=True)
+class _WordbankClient(BaseClient):
+    match_syms: bool
+
+
 class PathResolution(Enum):
     cwd = auto()
     file = auto()
@@ -134,13 +139,9 @@ class PathsClient(BaseClient):
 
 
 @dataclass(frozen=True)
-class WordbankClient(BaseClient):
-    match_syms: bool
-
-
-@dataclass(frozen=True)
-class BuffersClient(WordbankClient):
+class BuffersClient(_WordbankClient):
     same_filetype: bool
+    parent_scope: str
 
 
 @dataclass(frozen=True)
@@ -150,7 +151,7 @@ class TagsClient(BaseClient):
 
 
 @dataclass(frozen=True)
-class TmuxClient(WordbankClient, TagsClient):
+class TmuxClient(_WordbankClient, TagsClient):
     all_sessions: bool
 
 
