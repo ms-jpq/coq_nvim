@@ -17,8 +17,8 @@ def _doc(options: TmuxClient, word: TmuxWord) -> Doc:
     def cont() -> Iterator[str]:
         if options.all_sessions:
             yield f"S: {word.session_name}{options.parent_scope}"
-        yield f"W: {word.window_index}{options.path_sep}{word.window_name}{options.parent_scope}"
-        yield f"P: {word.pane_index}"
+        yield f"W: #{word.window_index}{options.path_sep}{word.window_name}{options.parent_scope}"
+        yield f"P: #{word.pane_index}{options.path_sep}{word.pane_title}"
 
     return Doc(text=linesep.join(cont()), syntax="")
 

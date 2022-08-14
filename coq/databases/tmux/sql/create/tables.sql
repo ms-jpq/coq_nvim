@@ -6,7 +6,8 @@ CREATE TABLE IF NOT EXISTS panes (
   session_name TEXT    NOT NULL,
   window_index INTEGER NOT NULL,
   window_name  TEXT    NOT NULL,
-  pane_index   INTEGER NOT NULL
+  pane_index   INTEGER NOT NULL,
+  pane_title   TEXT    NOT NULL
 ) WITHOUT ROWID;
 
 

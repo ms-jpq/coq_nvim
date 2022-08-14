@@ -1,8 +1,8 @@
 from asyncio import CancelledError
 from concurrent.futures import Executor
+from contextlib import suppress
 from dataclasses import dataclass
 from sqlite3 import Connection, OperationalError
-from threading import Lock
 from typing import AbstractSet, Iterable, Iterator, Mapping, Optional
 
 from std2.asyncio import to_thread
@@ -24,6 +24,7 @@ class TmuxWord:
     window_index: int
     window_name: str
     pane_index: int
+    pane_title: str
 
 
 def _init() -> Connection:
@@ -36,14 +37,12 @@ def _init() -> Connection:
 
 class TMDB:
     def __init__(self, pool: Executor) -> None:
-        self._lock = Lock()
         self._ex = SingleThreadExecutor(pool)
         self._current_pane = Optional[str]
         self._conn: Connection = self._ex.submit(_init)
 
     def _interrupt(self) -> None:
-        with self._lock:
-            self._conn.interrupt()
+        self._conn.interrupt()
 
     async def periodical(
         self, current: Optional[str], panes: Mapping[Pane, Iterable[str]]
@@ -62,6 +61,7 @@ class TMDB:
                     "window_index": pane.window_index,
                     "window_name": pane.window_name,
                     "pane_index": pane.pane_index,
+                    "pane_title": pane.pane_title,
                 }
 
         def m3() -> Iterator[Mapping]:
@@ -73,13 +73,14 @@ class TMDB:
                     }
 
         def cont() -> None:
-            with self._lock, with_transaction(self._conn.cursor()) as cursor:
-                cursor.execute(sql("select", "panes"))
-                existing = {row["pane_id"] for row in cursor.fetchall()}
-                cursor.executemany(sql("delete", "pane"), m1(existing))
-                cursor.executemany(sql("insert", "pane"), m2(panes))
-                cursor.executemany(sql("insert", "word"), m3())
-                cursor.execute("PRAGMA optimize", ())
+            with suppress(OperationalError):
+                with with_transaction(self._conn.cursor()) as cursor:
+                    cursor.execute(sql("select", "panes"))
+                    existing = {row["pane_id"] for row in cursor.fetchall()}
+                    cursor.executemany(sql("delete", "pane"), m1(existing))
+                    cursor.executemany(sql("insert", "pane"), m2(panes))
+                    cursor.executemany(sql("insert", "word"), m3())
+                    cursor.execute("PRAGMA optimize", ())
 
         await self._ex.asubmit(cont)
 
@@ -111,6 +112,7 @@ class TMDB:
                                 window_index=row["window_index"],
                                 window_name=row["window_name"],
                                 pane_index=row["pane_index"],
+                                pane_title=row["pane_title"],
                             )
                             for row in rows
                         )

@@ -21,6 +21,7 @@ class Pane:
     window_index: int
     window_name: str
     pane_index: int
+    pane_title: str
 
 
 async def _panes(all_sessions: bool) -> Sequence[Pane]:
@@ -40,6 +41,7 @@ async def _panes(all_sessions: bool) -> Sequence[Pane]:
                     "#{window_index}",
                     "#{window_name}",
                     "#{pane_index}",
+                    "#{pane_title}",
                 )
             ),
             check_returncode=set(),
@@ -62,6 +64,7 @@ async def _panes(all_sessions: bool) -> Sequence[Pane]:
                         window_index,
                         window_name,
                         pane_index,
+                        pane_title,
                     ) = line.split(_SEP)
                     pane = Pane(
                         session=session,
@@ -72,6 +75,7 @@ async def _panes(all_sessions: bool) -> Sequence[Pane]:
                         window_index=int(window_index),
                         window_name=window_name,
                         pane_index=int(pane_index),
+                        pane_title=pane_title,
                     )
                     yield pane
 
