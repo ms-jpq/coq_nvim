@@ -2,7 +2,11 @@ BEGIN;
 
 
 CREATE TABLE IF NOT EXISTS panes (
-  pane_id TEXT NOT NULL PRIMARY KEY
+  pane_id      TEXT    NOT NULL PRIMARY KEY,
+  session_name TEXT    NOT NULL,
+  window_index INTEGER NOT NULL,
+  window_name  TEXT    NOT NULL,
+  pane_index   INTEGER NOT NULL
 ) WITHOUT ROWID;
 
 

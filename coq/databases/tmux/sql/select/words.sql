@@ -1,8 +1,16 @@
-SELECT DISTINCT
-  word
-FROM words
-WHERE
-  pane_id <> :pane_id
+SELECT
+  words.word,
+  panes.session_name,
+  panes.window_index,
+  panes.window_name,
+  panes.pane_index
+FROM panes
+JOIN words
+ON words.pane_id = panes.pane_id
+GROUP BY
+  words.word
+HAVING
+  panes.pane_id <> :pane_id
   AND
   word <> ''
   AND

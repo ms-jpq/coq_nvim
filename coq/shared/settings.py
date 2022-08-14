@@ -139,11 +139,6 @@ class WordbankClient(BaseClient):
 
 
 @dataclass(frozen=True)
-class TmuxClient(WordbankClient):
-    all_sessions: bool
-
-
-@dataclass(frozen=True)
 class BuffersClient(WordbankClient):
     same_filetype: bool
 
@@ -152,6 +147,11 @@ class BuffersClient(WordbankClient):
 class TagsClient(BaseClient):
     parent_scope: str
     path_sep: str
+
+
+@dataclass(frozen=True)
+class TmuxClient(WordbankClient, TagsClient):
+    all_sessions: bool
 
 
 @dataclass(frozen=True)

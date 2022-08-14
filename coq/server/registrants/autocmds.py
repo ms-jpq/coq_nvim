@@ -89,11 +89,11 @@ _ = autocmd("InsertEnter") << f"lua {NAMESPACE}.{_insert_enter.name}()"
 @rpc(blocking=True)
 def _on_focus(nvim: Nvim, stack: Stack) -> None:
     async def cont() -> None:
-        current, snap = await snapshot(
+        current, panes = await snapshot(
             stack.settings.clients.tmux.all_sessions,
             unifying_chars=stack.settings.match.unifying_chars,
         )
-        await stack.tmdb.periodical(current, panes=snap)
+        await stack.tmdb.periodical(current, panes=panes)
 
     go(nvim, aw=cont())
 

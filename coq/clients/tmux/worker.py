@@ -1,15 +1,26 @@
-from typing import AsyncIterator
+from os import linesep
+from typing import AsyncIterator, Iterator
 
 from pynvim_pp.lib import go
 from pynvim_pp.logging import with_suppress
 
-from ...databases.tmux.database import TMDB
+from ...databases.tmux.database import TMDB, TmuxWord
 from ...shared.runtime import Supervisor
 from ...shared.runtime import Worker as BaseWorker
 from ...shared.settings import TmuxClient
 from ...shared.timeit import timeit
-from ...shared.types import Completion, Context, Edit
+from ...shared.types import Completion, Context, Doc, Edit
 from ...tmux.parse import snapshot
+
+
+def _doc(options: TmuxClient, word: TmuxWord) -> Doc:
+    def cont() -> Iterator[str]:
+        if options.all_sessions:
+            yield f"S: {word.session_name}{options.parent_scope}"
+        yield f"W: {word.window_index}{options.path_sep}{word.window_name}{options.parent_scope}"
+        yield f"P: {word.pane_index}"
+
+    return Doc(text=linesep.join(cont()), syntax="")
 
 
 class Worker(BaseWorker[TmuxClient, TMDB]):
@@ -21,11 +32,11 @@ class Worker(BaseWorker[TmuxClient, TMDB]):
         while True:
             with with_suppress():
                 with timeit("IDLE :: TMUX"):
-                    current, snap = await snapshot(
+                    current, panes = await snapshot(
                         self._options.all_sessions,
                         unifying_chars=self._supervisor.match.unifying_chars,
                     )
-                    await self._misc.periodical(current, panes=snap)
+                    await self._misc.periodical(current, panes=panes)
 
                 async with self._supervisor.idling:
                     await self._supervisor.idling.wait()
@@ -40,13 +51,14 @@ class Worker(BaseWorker[TmuxClient, TMDB]):
             )
 
             for word in words:
-                edit = Edit(new_text=word)
+                edit = Edit(new_text=word.text)
                 cmp = Completion(
                     source=self._options.short_name,
                     weight_adjust=self._options.weight_adjust,
                     label=edit.new_text,
-                    sort_by=word,
+                    sort_by=word.text,
                     primary_edit=edit,
+                    doc=_doc(self._options, word=word),
                     icon_match="Text",
                 )
                 yield cmp
