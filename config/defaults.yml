@@ -173,7 +173,7 @@ clients:
   snippets:
     enabled: True
     short_name: "SNIP"
-    weight_adjust: 0
+    weight_adjust: 0.1
     user_path: null
     warn:
       - missing
@@ -184,7 +184,7 @@ clients:
     short_name: "TAG"
     parent_scope: " ⇊"
     path_sep: " ⇉ "
-    weight_adjust: 0
+    weight_adjust: 0.1
 
   lsp:
     enabled: True
