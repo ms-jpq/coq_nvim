@@ -22,5 +22,6 @@ class SimplePayload:
 
 @dataclass(frozen=True)
 class Payload(SimplePayload):
+    filename: str
     parent: Optional[SimplePayload]
     grandparent: Optional[SimplePayload]

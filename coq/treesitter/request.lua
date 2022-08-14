@@ -62,12 +62,13 @@
         local t1 = vim.loop.now()
         local buf = vim.api.nvim_get_current_buf()
         local filetype = vim.api.nvim_buf_get_option(buf, "filetype")
+        local filename = vim.api.nvim_buf_get_name(buf)
         local acc = {}
         for payload in iter_nodes(buf, ctx) do
           table.insert(acc, payload)
         end
         local t2 = vim.loop.now()
-        COQ.Ts_notify(session, buf, filetype, acc, (t2 - t1) / 1000)
+        COQ.Ts_notify(session, buf, filetype, filename, acc, (t2 - t1) / 1000)
       end
     )
   end

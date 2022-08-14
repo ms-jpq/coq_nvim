@@ -1,7 +1,7 @@
 from asyncio import CancelledError
 from concurrent.futures import Executor
+from contextlib import suppress
 from sqlite3 import Connection, OperationalError
-from threading import Lock
 from typing import AbstractSet, Iterable, Iterator, Mapping
 
 from std2.asyncio import to_thread
@@ -26,17 +26,15 @@ def _init() -> Connection:
 
 class TDB:
     def __init__(self, pool: Executor) -> None:
-        self._lock = Lock()
         self._ex = SingleThreadExecutor(pool)
         self._conn: Connection = self._ex.submit(_init)
 
     def _interrupt(self) -> None:
-        with self._lock:
-            self._conn.interrupt()
+        self._conn.interrupt()
 
     async def vacuum(self, buf_ids: AbstractSet[int]) -> None:
         def cont() -> None:
-            try:
+            with suppress(OperationalError):
                 with with_transaction(self._conn.cursor()) as cursor:
                     cursor.execute(sql("select", "buffers"), ())
                     existing = {row["rowid"] for row in cursor.fetchall()}
@@ -45,12 +43,12 @@ class TDB:
                         ({"buffer_id": buf_id} for buf_id in existing - buf_ids),
                     )
                     cursor.execute("PRAGMA optimize", ())
-            except OperationalError:
-                pass
 
         await self._ex.asubmit(cont)
 
-    async def populate(self, buf: int, filetype: str, nodes: Iterable[Payload]) -> None:
+    async def populate(
+        self, buf: int, filetype: str, filename: str, nodes: Iterable[Payload]
+    ) -> None:
         def m1() -> Iterator[Mapping]:
             for node in nodes:
                 yield {
@@ -64,11 +62,10 @@ class TDB:
                 }
 
         def cont() -> None:
-            with self._lock, with_transaction(self._conn.cursor()) as cursor:
-                cursor.execute(sql("delete", "buffer"), {"buffer_id": buf})
+            with with_transaction(self._conn.cursor()) as cursor:
                 cursor.execute(
                     sql("insert", "buffer"),
-                    {"rowid": buf, "filetype": filetype},
+                    {"rowid": buf, "filetype": filetype, "filename": filename},
                 )
                 cursor.executemany(sql("insert", "word"), m1())
 
@@ -77,7 +74,7 @@ class TDB:
     async def select(
         self,
         opts: MatchOptions,
-        buf_id: int,
+        filetype: str,
         word: str,
         sym: str,
         limitless: int,
@@ -91,7 +88,7 @@ class TDB:
                             "cut_off": opts.fuzzy_cutoff,
                             "look_ahead": opts.look_ahead,
                             "limit": BIGGEST_INT if limitless else opts.max_results,
-                            "buf_id": buf_id,
+                            "filetype": filetype,
                             "word": word,
                             "sym": sym,
                             "like_word": like_esc(word[: opts.exact_matches]),
@@ -113,6 +110,7 @@ class TDB:
                                 else None
                             )
                             yield Payload(
+                                filename=row["filename"],
                                 text=row["word"],
                                 kind=row["kind"],
                                 parent=parent,

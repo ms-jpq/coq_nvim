@@ -1,4 +1,5 @@
 from os import linesep
+from pathlib import PurePath
 from typing import AsyncIterator, Iterator, Optional
 
 from pynvim_pp.api import list_bufs
@@ -6,6 +7,7 @@ from pynvim_pp.lib import async_call, go
 from pynvim_pp.logging import with_suppress
 
 from ...databases.treesitter.database import TDB
+from ...paths.show import fmt_path
 from ...shared.runtime import Supervisor
 from ...shared.runtime import Worker as BaseWorker
 from ...shared.settings import TSClient
@@ -16,6 +18,17 @@ from ...treesitter.types import Payload
 def _doc(client: TSClient, context: Context, payload: Payload) -> Optional[Doc]:
     def cont() -> Iterator[str]:
         clhs, crhs = context.comment
+
+        path = PurePath(context.filename)
+        pos = fmt_path(
+            context.cwd, path=PurePath(payload.filename), is_dir=False, current=path
+        )
+
+        yield clhs
+        yield pos
+        yield client.path_sep
+        yield crhs
+        yield linesep
 
         if payload.grandparent:
             yield clhs
@@ -78,7 +91,7 @@ class Worker(BaseWorker[TSClient, TDB]):
         async with self._work_lock:
             payloads = await self._misc.select(
                 self._supervisor.match,
-                buf_id=context.buf_id,
+                filetype=context.filetype,
                 word=context.words,
                 sym=context.syms,
                 limitless=context.manual,

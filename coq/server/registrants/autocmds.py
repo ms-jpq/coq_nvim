@@ -77,6 +77,7 @@ def _insert_enter(nvim: Nvim, stack: Stack) -> None:
                 await stack.tdb.populate(
                     payload.buf,
                     filetype=payload.filetype,
+                    filename=payload.filename,
                     nodes=payload.payloads,
                 )
                 if payload.elapsed > ts.slow_threshold:
