@@ -41,7 +41,9 @@ JOIN words
 ON
   words.buffer_id = buffers.rowid
 GROUP BY
-  words.word;
+  words.word
+HAVING
+  words.word <> '';
 
 
 END;

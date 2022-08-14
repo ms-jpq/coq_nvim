@@ -142,7 +142,7 @@ clients:
     all_sessions: True
     parent_scope: " ⇊"
     path_sep: " ⇉ "
-    weight_adjust: 0
+    weight_adjust: -0.1
 
   buffers:
     enabled: True
@@ -158,7 +158,7 @@ clients:
     path_sep: " ⇊"
     search_context: 168
     slow_threshold: 0.168
-    weight_adjust: 0
+    weight_adjust: 0.1
 
   paths:
     enabled: True

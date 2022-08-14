@@ -1,22 +1,14 @@
 SELECT
-  words.word,
-  buffers.filetype,
-  buffers.filename,
-  lines.line_num
-FROM buffers
-JOIN lines
-  ON lines.buffer_id = buffers.rowid
-JOIN words
-  ON words.line_id = lines.rowid
-GROUP BY
-  words.word
-HAVING
+  word,
+  filetype,
+  filename,
+  line_num
+FROM words_view
+WHERE
   CASE
-    WHEN :filetype <> NULL THEN buffers.filetype = :filetype
+    WHEN :filetype <> NULL THEN filetype = :filetype
     ELSE 1
   END
-  AND
-  word <> ''
   AND
   (
     (

@@ -10,8 +10,6 @@ FROM words_view
 WHERE
   filetype = :filetype
   AND
-  word <> ''
-  AND
   (
     (
       :word <> ''

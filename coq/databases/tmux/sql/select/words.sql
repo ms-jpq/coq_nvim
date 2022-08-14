@@ -1,31 +1,25 @@
 SELECT
-  words.word,
-  panes.session_name,
-  panes.window_index,
-  panes.window_name,
-  panes.pane_index,
-  panes.pane_title
-FROM panes
-JOIN words
-ON words.pane_id = panes.pane_id
-GROUP BY
-  words.word
-HAVING
-  panes.pane_id <> :pane_id
-  AND
-  words.word <> ''
+  word,
+  session_name,
+  window_index,
+  window_name,
+  pane_index,
+  pane_title
+FROM words_view
+WHERE
+  pane_id <> :pane_id
   AND
   (
     (
       :word <> ''
       AND 
-      words.lword LIKE :like_word ESCAPE '!'
+      lword LIKE :like_word ESCAPE '!'
       AND 
-      LENGTH(words.word) + :look_ahead >= LENGTH(:word)
+      LENGTH(word) + :look_ahead >= LENGTH(:word)
       AND
-      words.word <> SUBSTR(:word, 1, LENGTH(words.word))
+      word <> SUBSTR(:word, 1, LENGTH(word))
       AND
-      X_SIMILARITY(LOWER(:word), words.lword, :look_ahead) > :cut_off
+      X_SIMILARITY(LOWER(:word), lword, :look_ahead) > :cut_off
     )
     OR
     (
@@ -33,11 +27,11 @@ HAVING
       AND 
       lword LIKE :like_sym ESCAPE '!'
       AND 
-      LENGTH(words.word) + :look_ahead >= LENGTH(:sym)
+      LENGTH(word) + :look_ahead >= LENGTH(:sym)
       AND
-      words.word <> SUBSTR(:sym, 1, LENGTH(words.word))
+      word <> SUBSTR(:sym, 1, LENGTH(word))
       AND
-      X_SIMILARITY(LOWER(:sym), words.lword, :look_ahead) > :cut_off
+      X_SIMILARITY(LOWER(:sym), lword, :look_ahead) > :cut_off
     )
   )
 LIMIT :limit
