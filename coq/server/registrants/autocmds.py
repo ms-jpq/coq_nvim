@@ -9,7 +9,6 @@ from pynvim_pp.float_win import list_floatwins
 from pynvim_pp.lib import async_call, awrite, go
 from std2.locale import si_prefixed_smol
 
-from ...clients.tmux.worker import Worker as TmuxWorker
 from ...lang import LANG
 from ...registry import NAMESPACE, atomic, autocmd, rpc
 from ...tmux.parse import snapshot
