@@ -62,12 +62,13 @@ class TDB:
                 }
 
         def cont() -> None:
-            with with_transaction(self._conn.cursor()) as cursor:
-                cursor.execute(
-                    sql("insert", "buffer"),
-                    {"rowid": buf, "filetype": filetype, "filename": filename},
-                )
-                cursor.executemany(sql("insert", "word"), m1())
+            with suppress(OperationalError):
+                with with_transaction(self._conn.cursor()) as cursor:
+                    cursor.execute(
+                        sql("insert", "buffer"),
+                        {"rowid": buf, "filetype": filetype, "filename": filename},
+                    )
+                    cursor.executemany(sql("insert", "word"), m1())
 
         await self._ex.asubmit(cont)
 
@@ -121,12 +122,9 @@ class TDB:
             except OperationalError:
                 return iter(())
 
-        def step() -> Iterator[Payload]:
-            self._interrupt()
-            return self._ex.submit(cont)
-
+        await to_thread(self._interrupt)
         try:
-            return await to_thread(step)
+            return await self._ex.asubmit(cont)
         except CancelledError:
             with timeit("INTERRUPT !! TREESITTER"):
                 await to_thread(self._interrupt)

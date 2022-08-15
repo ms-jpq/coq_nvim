@@ -67,7 +67,7 @@ class SDB:
                     PurePath(row["filename"]): row["mtime"] for row in cursor.fetchall()
                 }
 
-        return await to_thread(lambda: self._ex.submit(cont))
+        return await self._ex.asubmit(cont)
 
     async def populate(self, path: PurePath, mtime: float, loaded: LoadedSnips) -> None:
         def cont() -> None:
@@ -140,12 +140,9 @@ class SDB:
             except OperationalError:
                 return iter(())
 
-        def step() -> Iterator[_Snip]:
-            self._interrupt()
-            return self._ex.submit(cont)
-
+        await to_thread(self._interrupt)
         try:
-            return await to_thread(step)
+            return await self._ex.asubmit(cont)
         except CancelledError:
             with timeit("INTERRUPT !! SNIPPETS"):
                 await to_thread(self._interrupt)

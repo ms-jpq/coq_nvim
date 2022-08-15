@@ -1,9 +1,8 @@
+from asyncio import wrap_future
 from concurrent.futures import Executor, Future, InvalidStateError
 from contextlib import suppress
 from queue import SimpleQueue
-from typing import Any, Callable, TypeVar, cast
-
-from std2.asyncio import to_thread
+from typing import Any, Awaitable, Callable, TypeVar, cast
 
 _T = TypeVar("_T")
 
@@ -18,7 +17,7 @@ class SingleThreadExecutor:
             f = self._q.get()
             f()
 
-    def submit(self, f: Callable[..., _T], *args: Any, **kwargs: Any) -> _T:
+    def _submit(self, f: Callable[..., Any], *args: Any, **kwargs: Any) -> Future:
         fut: Future = Future()
 
         def cont() -> None:
@@ -32,7 +31,11 @@ class SingleThreadExecutor:
                     fut.set_result(ret)
 
         self._q.put(cont)
+        return fut
+
+    def submit(self, f: Callable[..., _T], *args: Any, **kwargs: Any) -> _T:
+        fut = self._submit(f, *args, **kwargs)
         return cast(_T, fut.result())
 
-    async def asubmit(self, f: Callable[..., _T], *args: Any, **kwargs: Any) -> _T:
-        return await to_thread(cast(Any, self.submit), f, *args, **kwargs)
+    def asubmit(self, f: Callable[..., _T], *args: Any, **kwargs: Any) -> Awaitable[_T]:
+        return wrap_future(self._submit(f, *args, **kwargs))

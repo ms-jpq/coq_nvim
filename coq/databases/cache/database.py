@@ -75,12 +75,9 @@ class Database:
                 except OperationalError:
                     return iter(()), 0
 
-        def step() -> Tuple[Iterator[Tuple[bytes, str]], int]:
-            self._interrupt()
-            return self._ex.submit(cont)
-
+        await to_thread(self._interrupt)
         try:
-            return await to_thread(step)
+            return await self._ex.asubmit(cont)
         except CancelledError:
             with timeit("INTERRUPT !! CACHE"):
                 await to_thread(self._interrupt)

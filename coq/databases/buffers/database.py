@@ -204,12 +204,9 @@ class BDB:
             except OperationalError:
                 return iter(())
 
-        def step() -> Iterator[BufferWord]:
-            self._interrupt()
-            return self._ex.submit(cont)
-
+        await to_thread(self._interrupt)
         try:
-            return await to_thread(step)
+            return await self._ex.asubmit(cont)
         except CancelledError:
             with timeit("INTERRUPT !! BUFFERS"):
                 await to_thread(self._interrupt)

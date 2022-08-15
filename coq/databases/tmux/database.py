@@ -1,4 +1,4 @@
-from asyncio import CancelledError
+from asyncio import CancelledError, wrap_future
 from concurrent.futures import Executor
 from contextlib import suppress
 from dataclasses import dataclass
@@ -121,12 +121,9 @@ class TMDB:
             else:
                 return iter(())
 
-        def step() -> Iterator[TmuxWord]:
-            self._interrupt()
-            return self._ex.submit(cont)
-
+        await to_thread(self._interrupt)
         try:
-            return await to_thread(step)
+            return await self._ex.asubmit(cont)
         except CancelledError:
             with timeit("INTERRUPT !! TMUX"):
                 await to_thread(self._interrupt)
