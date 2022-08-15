@@ -9,7 +9,7 @@ from ...shared.types import Context
 
 
 class ParseError(Exception):
-    pass
+    ...
 
 
 @dataclass(frozen=True)
@@ -61,12 +61,12 @@ class Begin:
 
 @dataclass(frozen=True)
 class DummyBegin:
-    pass
+    ...
 
 
 @dataclass(frozen=True)
 class End:
-    pass
+    ...
 
 
 Token = Union[Unparsed, Begin, DummyBegin, End, str]

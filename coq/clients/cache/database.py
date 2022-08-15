@@ -1,5 +1,6 @@
 from asyncio import CancelledError
 from concurrent.futures import Executor
+from contextlib import suppress
 from sqlite3 import Connection, OperationalError
 from threading import Lock
 from typing import Iterable, Iterator, Mapping, Tuple
@@ -38,8 +39,9 @@ class Database:
                 yield {"key": key, "word": word}
 
         def cont() -> None:
-            with self._lock, with_transaction(self._conn.cursor()) as cursor:
-                cursor.executemany(sql("insert", "word"), m1())
+            with suppress(OperationalError):
+                with with_transaction(self._conn.cursor()) as cursor:
+                    cursor.executemany(sql("insert", "word"), m1())
 
         await self._ex.asubmit(cont)
 

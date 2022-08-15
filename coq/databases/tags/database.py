@@ -1,5 +1,6 @@
 from asyncio import CancelledError
 from concurrent.futures import Executor
+from contextlib import suppress
 from hashlib import md5
 from os.path import normcase
 from pathlib import Path, PurePath
@@ -79,28 +80,29 @@ class CTDB:
 
     async def reconciliate(self, dead: AbstractSet[str], new: Tags) -> None:
         def cont() -> None:
-            with self._lock, with_transaction(self._conn.cursor()) as cursor:
+            with suppress(OperationalError):
+                with with_transaction(self._conn.cursor()) as cursor:
 
-                def m1() -> Iterator[Mapping]:
-                    for filename, (lang, mtime, _) in new.items():
-                        yield {
-                            "filename": filename,
-                            "filetype": lang,
-                            "mtime": mtime,
-                        }
+                    def m1() -> Iterator[Mapping]:
+                        for filename, (lang, mtime, _) in new.items():
+                            yield {
+                                "filename": filename,
+                                "filetype": lang,
+                                "mtime": mtime,
+                            }
 
-                def m2() -> Iterator[Mapping]:
-                    for _, _, tags in new.values():
-                        for tag in tags:
-                            yield {**_NIL_TAG, **tag}
+                    def m2() -> Iterator[Mapping]:
+                        for _, _, tags in new.values():
+                            for tag in tags:
+                                yield {**_NIL_TAG, **tag}
 
-                cursor.executemany(
-                    sql("delete", "file"),
-                    ({"filename": f} for f in dead | new.keys()),
-                )
-                cursor.executemany(sql("insert", "file"), m1())
-                cursor.executemany(sql("insert", "tag"), m2())
-                cursor.execute("PRAGMA optimize", ())
+                    cursor.executemany(
+                        sql("delete", "file"),
+                        ({"filename": f} for f in dead | new.keys()),
+                    )
+                    cursor.executemany(sql("insert", "file"), m1())
+                    cursor.executemany(sql("insert", "tag"), m2())
+                    cursor.execute("PRAGMA optimize", ())
 
         await self._ex.asubmit(cont)
 
