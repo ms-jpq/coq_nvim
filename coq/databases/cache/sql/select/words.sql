@@ -7,8 +7,6 @@ WHERE
   AND
   (
     (
-      :word <> ''
-      AND 
       lword LIKE :like_word ESCAPE '!'
       AND 
       LENGTH(word) + :look_ahead >= LENGTH(:word)
@@ -19,8 +17,6 @@ WHERE
     )
     OR
     (
-      :sym <> ''
-      AND 
       lword LIKE :like_sym ESCAPE '!'
       AND 
       LENGTH(word) + :look_ahead >= LENGTH(:sym)

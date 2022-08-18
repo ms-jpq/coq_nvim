@@ -50,8 +50,11 @@ def _should_cont(state: State, prev: Context, cur: Context) -> bool:
     elif cur.syms_before != "":
         return True
     else:
-        stripped = cur.line_before.rstrip()
-        return bool(stripped) and len(cur.line_before) - len(stripped) <= 1
+        have_space = (
+            bool(stripped := cur.line_before.rstrip())
+            and len(cur.line_before) - len(stripped) <= 1
+        )
+        return have_space
 
 
 @rpc(blocking=True)
