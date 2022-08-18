@@ -74,9 +74,9 @@ async def load() -> LoadedSnips:
     for key, values in exts.items():
         exts.setdefault(key, {*values})
 
-    for key, values in specs.remaps.items():
+    for key, vals in specs.remaps.items():
         acc = exts.setdefault(key, set())
-        for value in values:
+        for value in vals:
             acc.add(value)
 
     merged = LoadedSnips(snippets=parsed.snippets, exts=exts)
