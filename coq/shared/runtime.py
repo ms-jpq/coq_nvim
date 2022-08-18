@@ -1,7 +1,14 @@
 from __future__ import annotations
 
 from abc import abstractmethod
-from asyncio import AbstractEventLoop, Condition, Event, Task, as_completed, sleep, wait
+from asyncio import (
+    AbstractEventLoop,
+    CancelledError,
+    Condition,
+    Task,
+    as_completed,
+    wait,
+)
 from concurrent.futures import Executor
 from dataclasses import dataclass
 from pathlib import Path
@@ -23,6 +30,7 @@ from weakref import WeakSet
 from pynvim import Nvim
 from pynvim_pp.lib import go
 from pynvim_pp.logging import with_suppress
+from std2.aitertools import aenumerate
 from std2.asyncio import cancel
 
 from .settings import BaseClient, CompleteOptions, Limits, MatchOptions, Weights
@@ -104,7 +112,7 @@ class Supervisor:
 
     def collect(self, context: Context) -> Awaitable[Sequence[Metric]]:
         loop: AbstractEventLoop = self.nvim.loop
-        now, done = monotonic(), Event()
+        now = monotonic()
         timeout = (
             self.limits.completion_manual_timeout
             if context.manual
@@ -122,25 +130,19 @@ class Supervisor:
 
                     token = await self._reviewer.begin(context)
                     tasks = tuple(
-                        worker.supervised(
-                            context, token=token, done=done, now=now, acc=acc
-                        )
+                        worker.supervised(context, token=token, now=now, acc=acc)
                         for worker in self._workers
                     )
 
-                    try:
-                        if not tasks:
-                            return ()
-                        else:
-                            _, pending = await wait(tasks, timeout=timeout)
-                            if not acc:
-                                for fut in as_completed(pending):
-                                    await fut
-                                    if acc:
-                                        break
-                            return acc
-                    finally:
-                        done.set()
+                    _, pending = await wait(tasks, timeout=timeout)
+                    if not acc:
+                        for fut in as_completed(pending):
+                            await fut
+                            if acc:
+                                break
+
+                    await cancel(*pending)
+                    return acc
 
         self._work_task = task = loop.create_task(cont(self._work_task))
         return task
@@ -161,7 +163,6 @@ class Worker(Generic[_O_co, _T_co]):
         self,
         context: Context,
         token: Any,
-        done: Event,
         now: float,
         acc: MutableSequence[Metric],
     ) -> Task:
@@ -170,6 +171,7 @@ class Worker(Generic[_O_co, _T_co]):
 
         async def cont() -> None:
             instance, items = uuid4(), 0
+            interrupted = False
 
             with timeit(f"CANCEL WORKER -- {self._options.short_name}"):
                 if prev:
@@ -180,20 +182,21 @@ class Worker(Generic[_O_co, _T_co]):
                     token, assoc=self._options, instance=instance
                 )
                 try:
-                    async for completion in self.work(context):
-                        if not done.is_set():
-                            metric = self._supervisor._reviewer.trans(
-                                token, instance=instance, completion=completion
-                            )
-                            acc.append(metric)
-                            items += 1
-                        else:
-                            await sleep(0)
+                    async for items, completion in aenumerate(
+                        self.work(context), start=1
+                    ):
+                        metric = self._supervisor._reviewer.trans(
+                            token, instance=instance, completion=completion
+                        )
+                        acc.append(metric)
+                except CancelledError:
+                    interrupted = True
+                    raise
                 finally:
                     elapsed = monotonic() - now
                     await self._supervisor._reviewer.s_end(
                         instance,
-                        interrupted=done.is_set(),
+                        interrupted=interrupted,
                         elapsed=elapsed,
                         items=items,
                     )
