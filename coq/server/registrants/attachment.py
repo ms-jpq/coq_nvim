@@ -70,7 +70,7 @@ async def _status(nvim: Nvim, buf: Buffer) -> Tuple[str, str, str, str]:
 
 
 @rpc(blocking=True)
-def _listener(nvim: Nvim, stack: Stack) -> None:
+def _coq_listener(nvim: Nvim, stack: Stack) -> None:
     async def cont() -> None:
         while True:
             with with_suppress():
@@ -126,7 +126,7 @@ def _listener(nvim: Nvim, stack: Stack) -> None:
     go(nvim, aw=cont())
 
 
-atomic.exec_lua(f"{NAMESPACE}.{_listener.name}()", ())
+atomic.exec_lua(f"{NAMESPACE}.{_coq_listener.name}()", ())
 
 
 def _lines_event(
