@@ -62,19 +62,6 @@ def _use_comp(match: MatchOptions, context: Context, sort_by: str, edit: Edit) -
         return False
 
 
-def _fast_comp(
-    look_ahead: int,
-    lower_word: str,
-    lower_word_prefix: str,
-    sort_by: str,
-) -> bool:
-    if not lower_word_prefix:
-        return True
-    else:
-        lo = lower(sort_by)
-        return lo[:look_ahead] == lower_word_prefix and not lower_word.startswith(lo)
-
-
 @dataclass(frozen=True)
 class _LocalCache:
     pre: MutableMapping[Optional[str], Tuple[Iterator[Completion], int]] = field(
@@ -175,7 +162,6 @@ class Worker(BaseWorker[BaseClient, None]):
                     if seen >= limit:
                         break
 
-                    fast_search = lsp_comps.length > fast_limit
                     acc = self._local_cached.post.setdefault(lsp_comps.client, [])
 
                     if lsp_comps.local_cache and lsp_comps.length:
@@ -190,20 +176,11 @@ class Worker(BaseWorker[BaseClient, None]):
                             yield comp
                         else:
                             acc.append(comp)
-                            if (
-                                _fast_comp(
-                                    self._supervisor.match.look_ahead,
-                                    lower_word=context.l_words_before,
-                                    lower_word_prefix=lower_word_prefix,
-                                    sort_by=comp.sort_by,
-                                )
-                                if fast_search
-                                else _use_comp(
-                                    self._supervisor.match,
-                                    context=context,
-                                    sort_by=comp.sort_by,
-                                    edit=comp.primary_edit,
-                                )
+                            if _use_comp(
+                                self._supervisor.match,
+                                context=context,
+                                sort_by=comp.sort_by,
+                                edit=comp.primary_edit,
                             ):
                                 seen += 1
                                 yield comp
