@@ -101,6 +101,7 @@ class Weights:
 class CompleteOptions:
     always: bool
     smart: bool
+    replace_prefix_threshold: int
 
 
 @dataclass(frozen=True)

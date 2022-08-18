@@ -17,6 +17,7 @@ keymap:
 completion:
   always: True
   smart: True
+  replace_prefix_threshold: 3
 
 match:
   unifying_chars:
@@ -192,4 +193,4 @@ clients:
     enabled: True
     short_name: "LSP"
     resolve_timeout: 0.06
-    weight_adjust: 0.3
+    weight_adjust: 0.5

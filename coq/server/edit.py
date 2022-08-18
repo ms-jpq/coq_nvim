@@ -165,14 +165,14 @@ def _contextual_edit_trans(
 
 def _edit_trans(
     unifying_chars: AbstractSet[str],
-    smart: bool,
+    replace_prefix_threshold: int,
     ctx: Context,
     lines: _Lines,
     edit: Edit,
 ) -> EditInstruction:
 
     adjusted = trans_adjusted(
-        unifying_chars, smart=smart, ctx=ctx, new_text=edit.new_text
+        unifying_chars, replace_prefix_threshold=replace_prefix_threshold, ctx=ctx, new_text=edit.new_text
     )
     inst = _contextual_edit_trans(ctx, lines=lines, edit=adjusted)
     return inst
@@ -180,7 +180,7 @@ def _edit_trans(
 
 def _range_edit_trans(
     unifying_chars: AbstractSet[str],
-    smart: bool,
+    replace_prefix_threshold: int,
     ctx: Context,
     primary: bool,
     lines: _Lines,
@@ -194,7 +194,9 @@ def _range_edit_trans(
         and len(new_lines) <= 1
         and edit.begin == edit.end
     ):
-        return _edit_trans(unifying_chars, smart=smart, ctx=ctx, lines=lines, edit=edit)
+        return _edit_trans(
+            unifying_chars, replace_prefix_threshold=replace_prefix_threshold, ctx=ctx, lines=lines, edit=edit
+        )
 
     else:
         (r1, ec1), (r2, ec2) = sorted((edit.begin, edit.end))
@@ -241,7 +243,7 @@ def _range_edit_trans(
 def _instructions(
     ctx: Context,
     unifying_chars: AbstractSet[str],
-    smart: bool,
+    replace_prefix_threshold: int,
     lines: _Lines,
     primary: Edit,
     secondary: Sequence[BaseRangeEdit],
@@ -249,7 +251,7 @@ def _instructions(
     if isinstance(primary, BaseRangeEdit):
         inst = _range_edit_trans(
             unifying_chars,
-            smart=smart,
+            replace_prefix_threshold=replace_prefix_threshold,
             ctx=ctx,
             primary=True,
             lines=lines,
@@ -263,7 +265,11 @@ def _instructions(
 
     elif isinstance(primary, Edit):
         inst = _edit_trans(
-            unifying_chars, smart=smart, ctx=ctx, lines=lines, edit=primary
+            unifying_chars,
+            replace_prefix_threshold=replace_prefix_threshold,
+            ctx=ctx,
+            lines=lines,
+            edit=primary,
         )
         yield inst
 
@@ -273,7 +279,7 @@ def _instructions(
     for edit in secondary:
         yield _range_edit_trans(
             unifying_chars,
-            smart=smart,
+            replace_prefix_threshold=replace_prefix_threshold,
             ctx=ctx,
             primary=False,
             lines=lines,
@@ -405,7 +411,7 @@ def _parse(
         else:
             edit, marks = parse_norm(
                 stack.settings.match.unifying_chars,
-                smart=stack.settings.completion.smart,
+                replace_prefix_threshold=stack.settings.completion.replace_prefix_threshold,
                 context=state.context,
                 snippet=comp.primary_edit,
                 info=info,
@@ -491,7 +497,7 @@ def edit(
                 *_instructions(
                     state.context,
                     unifying_chars=stack.settings.match.unifying_chars,
-                    smart=stack.settings.completion.smart,
+                    replace_prefix_threshold=stack.settings.completion.replace_prefix_threshold,
                     lines=view,
                     primary=primary,
                     secondary=metric.comp.secondary_edits,

@@ -193,7 +193,7 @@ async def _dump_compiled(
 
 def _trans(
     unifying_chars: AbstractSet[str],
-    smart: bool,
+    replace_prefix_threshold: int,
     info: ParseInfo,
     snips: Iterable[ParsedSnippet],
 ) -> Iterator[Tuple[ParsedSnippet, Edit, Sequence[Mark]]]:
@@ -201,7 +201,7 @@ def _trans(
         edit = SnippetEdit(grammar=snip.grammar, new_text=snip.content)
         parsed, marks = parse_norm(
             unifying_chars,
-            smart=smart,
+            replace_prefix_threshold=replace_prefix_threshold,
             context=EMPTY_CONTEXT,
             snippet=edit,
             info=info,
@@ -295,7 +295,7 @@ def compile_one(
     parsed = tuple(
         _trans(
             stack.settings.match.unifying_chars,
-            smart=stack.settings.completion.smart,
+            replace_prefix_threshold=stack.settings.completion.replace_prefix_threshold,
             info=info,
             snips=snips,
         )
@@ -328,7 +328,7 @@ async def compile_user_snippets(nvim: Nvim, stack: Stack) -> None:
         _ = tuple(
             _trans(
                 stack.settings.match.unifying_chars,
-                smart=stack.settings.completion.smart,
+                replace_prefix_threshold=stack.settings.completion.replace_prefix_threshold,
                 info=info,
                 snips=loaded.snippets.values(),
             )
