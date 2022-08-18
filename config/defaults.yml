@@ -12,6 +12,8 @@ keymap:
   jump_to_mark: <c-h>
   eval_snips: null
 
+  only_insert: False
+
 completion:
   always: True
   smart: True
