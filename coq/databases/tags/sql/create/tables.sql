@@ -17,7 +17,7 @@ CREATE TABLE IF NOT EXISTS tags (
   kind       TEXT    NOT NULL,
   name       TEXT    NOT NULL,
   lname      TEXT    NOT NULL,
-  pattern    TEXT    NOT NULL,
+  pattern    TEXT,
   typeref    TEXT,
   scope      TEXT,
   scopeKind  TEXT,

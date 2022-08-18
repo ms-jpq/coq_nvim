@@ -73,7 +73,11 @@ def parse(mtimes: Mapping[str, float], raw: str) -> Tags:
             else:
                 if json["_type"] == "tag":
                     path = json["path"]
-                    json["pattern"] = _unescape(json.get("pattern", ""))
+                    if pattern := json.get("pattern"):
+                        new_pattern = _unescape(pattern)
+                    else:
+                        new_pattern = None
+                    json["pattern"] = new_pattern
                     _, _, acc = tags.setdefault(
                         path, (json["language"], mtimes.get(path, 0), [])
                     )

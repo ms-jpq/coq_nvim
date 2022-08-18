@@ -117,7 +117,10 @@ def _doc(client: TagsClient, context: Context, tag: Tag) -> Doc:
             yield rc
             yield linesep
 
-        yield tag["pattern"]
+        if pattern := tag["pattern"]:
+            yield pattern
+        else:
+            yield tag["name"]
 
     doc = Doc(
         text="".join(cont()),

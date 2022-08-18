@@ -19,7 +19,7 @@ from ...shared.timeit import timeit
 from ...tags.types import Tag, Tags
 from .sql import sql
 
-_SCHEMA = "v4"
+_SCHEMA = "v5"
 
 _NIL_TAG = Tag(
     language="",
@@ -27,7 +27,7 @@ _NIL_TAG = Tag(
     line=0,
     kind="",
     name="",
-    pattern="",
+    pattern=None,
     typeref=None,
     scope=None,
     scopeKind=None,
