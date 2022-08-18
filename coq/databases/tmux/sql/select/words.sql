@@ -1,10 +1,13 @@
-SELECT DISTINCT
-  word
-FROM words
+SELECT
+  word,
+  session_name,
+  window_index,
+  window_name,
+  pane_index,
+  pane_title
+FROM words_view
 WHERE
   pane_id <> :pane_id
-  AND
-  word <> ''
   AND
   (
     (

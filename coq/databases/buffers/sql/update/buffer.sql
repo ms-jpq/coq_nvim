@@ -1,5 +1,6 @@
 UPDATE buffers
 SET 
-  filetype = :filetype
+  filetype = :filetype,
+  filename = :filename
 WHERE
   rowid = :rowid

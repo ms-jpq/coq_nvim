@@ -1,3 +1,2 @@
-INSERT OR IGNORE INTO panes ( pane_id)
-VALUES                      (:pane_id)
-
+INSERT OR IGNORE INTO panes ( pane_id,  session_name,  window_index,  window_name,  pane_index,  pane_title)
+VALUES                      (:pane_id, :session_name, :window_index, :window_name, :pane_index, :pane_title)

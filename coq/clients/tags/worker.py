@@ -17,6 +17,7 @@ from typing import (
 from pynvim.api.nvim import Nvim, NvimError
 from pynvim_pp.api import buf_name, list_bufs
 from pynvim_pp.lib import async_call, go
+from pynvim_pp.logging import with_suppress
 from std2.asyncio import to_thread
 
 from ...databases.tags.database import CTDB
@@ -54,11 +55,10 @@ async def _mtimes(paths: AbstractSet[str]) -> Mapping[str, float]:
 def _doc(client: TagsClient, context: Context, tag: Tag) -> Doc:
     def cont() -> Iterator[str]:
         lc, rc = context.comment
-        path, cfn = PurePath(tag["path"]), PurePath(context.filename)
-        if path == cfn:
-            pos = "."
-        else:
-            pos = fmt_path(context.cwd, path=path, is_dir=False)
+        path = PurePath(tag["path"])
+        pos = fmt_path(
+            context.cwd, path=path, is_dir=False, current=PurePath(context.filename)
+        )
 
         yield lc
         yield pos
@@ -133,51 +133,53 @@ class Worker(BaseWorker[TagsClient, CTDB]):
 
     async def _poll(self) -> None:
         while True:
-            with timeit("IDLE :: TAGS"):
-                buf_names, existing = await gather(
-                    _ls(self._supervisor.nvim), self._misc.paths()
-                )
-                paths = buf_names | existing.keys()
-                mtimes = await _mtimes(paths)
-                query_paths = tuple(
-                    path
-                    for path, mtime in mtimes.items()
-                    if mtime > existing.get(path, 0)
-                )
-                raw = await run(*query_paths) if query_paths else ""
-                new = parse(mtimes, raw=raw)
-                dead = existing.keys() - mtimes.keys()
-                await self._misc.reconciliate(dead, new=new)
+            with with_suppress():
+                with timeit("IDLE :: TAGS"):
+                    buf_names, existing = await gather(
+                        _ls(self._supervisor.nvim), self._misc.paths()
+                    )
+                    paths = buf_names | existing.keys()
+                    mtimes = await _mtimes(paths)
+                    query_paths = tuple(
+                        path
+                        for path, mtime in mtimes.items()
+                        if mtime > existing.get(path, 0)
+                    )
+                    raw = await run(*query_paths) if query_paths else ""
+                    new = parse(mtimes, raw=raw)
+                    dead = existing.keys() - mtimes.keys()
+                    await self._misc.reconciliate(dead, new=new)
 
-            async with self._supervisor.idling:
-                await self._supervisor.idling.wait()
+                async with self._supervisor.idling:
+                    await self._supervisor.idling.wait()
 
     async def work(self, context: Context) -> AsyncIterator[Completion]:
-        row, _ = context.position
-        tags = await self._misc.select(
-            self._supervisor.match,
-            filename=context.filename,
-            line_num=row,
-            word=context.words,
-            sym=context.syms,
-            limitless=context.manual,
-        )
+        async with self._work_lock:
+            row, _ = context.position
+            tags = await self._misc.select(
+                self._supervisor.match,
+                filename=context.filename,
+                line_num=row,
+                word=context.words,
+                sym=context.syms,
+                limitless=context.manual,
+            )
 
-        seen: MutableSet[str] = set()
-        for tag in tags:
-            name = tag["name"]
-            if name not in seen:
-                seen.add(name)
-                edit = Edit(new_text=name)
-                kind = capwords(tag["kind"])
-                cmp = Completion(
-                    source=self._options.short_name,
-                    weight_adjust=self._options.weight_adjust,
-                    label=edit.new_text,
-                    sort_by=name,
-                    primary_edit=edit,
-                    kind=kind,
-                    doc=_doc(self._options, context=context, tag=tag),
-                    icon_match=kind,
-                )
-                yield cmp
+            seen: MutableSet[str] = set()
+            for tag in tags:
+                name = tag["name"]
+                if name not in seen:
+                    seen.add(name)
+                    edit = Edit(new_text=name)
+                    kind = capwords(tag["kind"])
+                    cmp = Completion(
+                        source=self._options.short_name,
+                        weight_adjust=self._options.weight_adjust,
+                        label=edit.new_text,
+                        sort_by=name,
+                        primary_edit=edit,
+                        kind=kind,
+                        doc=_doc(self._options, context=context, tag=tag),
+                        icon_match=kind,
+                    )
+                    yield cmp

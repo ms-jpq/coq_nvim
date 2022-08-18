@@ -34,3 +34,20 @@ paths:
   ultisnip:
     - vim-go/gosnippets/UltiSnips
     - vim-snippets/UltiSnips
+
+remaps:
+  dart:
+    - dart-flutter
+    - flutter
+  django:
+    - djangohtml
+  dotenv:
+    - dotenv-safe
+  vue:
+    - javascript
+    - vue-pug
+    - vue-script
+    - vue-script-router
+    - vue-script-vuex
+    - vue-template
+    - vuex

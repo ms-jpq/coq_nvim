@@ -209,49 +209,50 @@ class Worker(BaseWorker[PathsClient, None]):
         self._seps = {sep for sep in options.path_seps if sep in seps} or seps
 
     async def work(self, context: Context) -> AsyncIterator[Completion]:
-        line = context.line_before + context.words_after
+        async with self._work_lock:
+            line = context.line_before + context.words_after
 
-        def cont() -> Iterator[Path]:
-            if PathResolution.cwd in self._options.resolution:
-                yield Path(context.cwd)
+            def cont() -> Iterator[Path]:
+                if PathResolution.cwd in self._options.resolution:
+                    yield Path(context.cwd)
 
-            if PathResolution.file in self._options.resolution:
-                yield Path(context.filename).parent
+                if PathResolution.file in self._options.resolution:
+                    yield Path(context.filename).parent
 
-        base_paths = {*cont()}
+            base_paths = {*cont()}
 
-        limit = BIGGEST_INT if context.manual else self._supervisor.match.max_results
-        aw = tuple(
-            _parse(
-                p,
-                line=line,
-                seps=self._seps,
-                limit=limit,
-                look_ahead=self._supervisor.match.look_ahead,
-                fuzzy_cutoff=self._supervisor.match.fuzzy_cutoff,
+            limit = BIGGEST_INT if context.manual else self._supervisor.match.max_results
+            aw = tuple(
+                _parse(
+                    p,
+                    line=line,
+                    seps=self._seps,
+                    limit=limit,
+                    look_ahead=self._supervisor.match.look_ahead,
+                    fuzzy_cutoff=self._supervisor.match.fuzzy_cutoff,
+                )
+                for p in base_paths
             )
-            for p in base_paths
-        )
-        seen: MutableSet[str] = set()
+            seen: MutableSet[str] = set()
 
-        for co in as_completed(aw):
-            for path, is_dir, new_text in await co:
-                if len(seen) >= limit:
-                    break
-                elif new_text not in seen:
-                    seen.add(new_text)
-                    edit = Edit(new_text=new_text)
-                    completion = Completion(
-                        source=self._options.short_name,
-                        weight_adjust=self._options.weight_adjust,
-                        label=edit.new_text,
-                        sort_by=_sort_by(
-                            self._supervisor.match.unifying_chars,
-                            context=context,
-                            new_text=new_text,
-                        ),
-                        primary_edit=edit,
-                        extern=ExternPath(is_dir=is_dir, path=path),
-                        icon_match="Folder" if new_text.endswith(sep) else "File",
-                    )
-                    yield completion
+            for co in as_completed(aw):
+                for path, is_dir, new_text in await co:
+                    if len(seen) >= limit:
+                        break
+                    elif new_text not in seen:
+                        seen.add(new_text)
+                        edit = Edit(new_text=new_text)
+                        completion = Completion(
+                            source=self._options.short_name,
+                            weight_adjust=self._options.weight_adjust,
+                            label=edit.new_text,
+                            sort_by=_sort_by(
+                                self._supervisor.match.unifying_chars,
+                                context=context,
+                                new_text=new_text,
+                            ),
+                            primary_edit=edit,
+                            extern=ExternPath(is_dir=is_dir, path=path),
+                            icon_match="Folder" if new_text.endswith(sep) else "File",
+                        )
+                        yield completion

@@ -107,7 +107,11 @@ JOIN matches
 ON matches.snippet_id = snippets.rowid
 JOIN extensions_view
 ON
-  snippets.filetype = extensions_view.dest;
+  snippets.filetype = extensions_view.dest
+WHERE
+  matches.word <> ''
+  AND
+  snippets.content <> '';
 
 
 END;

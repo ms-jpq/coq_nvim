@@ -5,7 +5,6 @@ from uuid import uuid4
 
 from pynvim_pp.text_object import is_word
 
-from .parse import lower as _lower
 from .types import Context
 
 _FILE = Path(__file__).resolve(strict=True)
@@ -39,6 +38,11 @@ EMPTY_CONTEXT = Context(
     syms_after="",
     ws_before="",
     ws_after="",
+    l_words_before="",
+    l_words_after="",
+    l_syms_before="",
+    l_syms_after="",
+    is_lower=True,
 )
 
 
@@ -46,25 +50,23 @@ def cword_before(
     unifying_chars: AbstractSet[str], lower: bool, context: Context, sort_by: str
 ) -> str:
     char = sort_by[:1]
-    trans = _lower if lower else lambda c: c
 
     if char.isspace():
         return context.ws_before
     elif is_word(char, unifying_chars=unifying_chars):
-        return trans(context.words_before)
+        return context.l_words_before if lower else context.words_before
     else:
-        return context.syms_before
+        return context.l_syms_before if lower else context.syms_before
 
 
 def cword_after(
     unifying_chars: AbstractSet[str], lower: bool, context: Context, sort_by: str
 ) -> str:
     char = sort_by[-1:]
-    trans = _lower if lower else lambda c: c
 
     if char.isspace():
         return context.ws_after
     elif is_word(char, unifying_chars=unifying_chars):
-        return trans(context.words_after)
+        return context.l_words_after if lower else context.words_after
     else:
-        return context.syms_after
+        return context.l_syms_after if lower else context.syms_after

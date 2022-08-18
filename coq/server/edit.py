@@ -40,13 +40,13 @@ from ..shared.trans import trans_adjusted
 from ..shared.types import (
     UTF8,
     UTF16,
+    BaseRangeEdit,
     Completion,
     Context,
     ContextualEdit,
     Edit,
     Mark,
     NvimPos,
-    BaseRangeEdit,
     SnippetEdit,
     SnippetRangeEdit,
 )
@@ -328,7 +328,7 @@ def _shift(
         if new_inst.primary:
             m_shift = _MarkShift(row=row_shift)
 
-        row_shift += (r2 - r1) + len(inst.new_lines) - 1
+        row_shift += inst.cursor_yoffset
         f_length = len(encode(inst.new_lines[-1])) if inst.new_lines else 0
         cols_shift[r2] = -(c2 - c1) + f_length if r1 == r2 else -c2 + f_length
 
@@ -430,6 +430,7 @@ def _restore(
         cur_row, cur_col = win_get_cursor(nvim, win=win)
 
         (_, lo), (_, hi) = m1.end, m2.begin
+        lo = max(0, lo - 1)
 
         binserted = encode(after)[lo:hi]
         inserted = decode(binserted)

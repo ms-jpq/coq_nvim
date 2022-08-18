@@ -1,5 +1,6 @@
 from asyncio import CancelledError
 from concurrent.futures import Executor
+from dataclasses import dataclass
 from sqlite3 import Connection, OperationalError
 from sqlite3.dbapi2 import Cursor
 from threading import Lock
@@ -19,18 +20,21 @@ from ...shared.timeit import timeit
 from .sql import sql
 
 
-def _ensure_buffer(cursor: Cursor, buf_id: int, filetype: str) -> None:
+@dataclass(frozen=True)
+class BufferWord:
+    text: str
+    filetype: str
+    filename: str
+    line_num: int
+
+
+def _ensure_buffer(cursor: Cursor, buf_id: int, filetype: str, filename: str) -> None:
     cursor.execute(sql("select", "buffer_by_id"), {"rowid": buf_id})
+    row = {"rowid": buf_id, "filetype": filetype, "filename": filename}
     if cursor.fetchone():
-        cursor.execute(
-            sql("update", "buffer"),
-            {"rowid": buf_id, "filetype": filetype},
-        )
+        cursor.execute(sql("update", "buffer"), row)
     else:
-        cursor.execute(
-            sql("insert", "buffer"),
-            {"rowid": buf_id, "filetype": filetype},
-        )
+        cursor.execute(sql("insert", "buffer"), row)
 
 
 def _init() -> Connection:
@@ -51,26 +55,37 @@ class BDB:
         with self._lock:
             self._conn.interrupt()
 
-    async def vacuum(self, buf_ids: AbstractSet[int]) -> None:
-        def cont() -> None:
+    async def vacuum(self, current_bufs: Mapping[int, int]) -> AbstractSet[int]:
+        def cont() -> AbstractSet[int]:
             try:
                 with with_transaction(self._conn.cursor()) as cursor:
                     cursor.execute(sql("select", "buffers"), ())
-                    existing = {row["rowid"] for row in cursor.fetchall()}
+                    existing = {
+                        row["rowid"]: row["line_count"] for row in cursor.fetchall()
+                    }
+                    dead = {
+                        buf_id
+                        for buf_id, line_count in existing.items()
+                        if buf_id not in current_bufs
+                        or line_count != current_bufs.get(buf_id)
+                    }
                     cursor.executemany(
                         sql("delete", "buffer"),
-                        ({"buffer_id": buf_id} for buf_id in existing - buf_ids),
+                        ({"buffer_id": buf_id} for buf_id in dead),
                     )
                     cursor.execute("PRAGMA optimize", ())
+                    return dead
             except OperationalError:
-                pass
+                return set()
 
-        await self._ex.asubmit(cont)
+        return await self._ex.asubmit(cont)
 
-    async def ft_update(self, buf_id: int, filetype: str) -> None:
+    async def buf_update(self, buf_id: int, filetype: str, filename: str) -> None:
         def cont() -> None:
             with self._lock, with_transaction(self._conn.cursor()) as cursor:
-                _ensure_buffer(cursor, buf_id=buf_id, filetype=filetype)
+                _ensure_buffer(
+                    cursor, buf_id=buf_id, filetype=filetype, filename=filename
+                )
 
         await self._ex.asubmit(cont)
 
@@ -78,6 +93,7 @@ class BDB:
         self,
         buf_id: int,
         filetype: str,
+        filename: str,
         lo: int,
         hi: int,
         lines: Sequence[str],
@@ -106,7 +122,9 @@ class BDB:
 
         def cont() -> None:
             with self._lock, with_transaction(self._conn.cursor()) as cursor:
-                _ensure_buffer(cursor, buf_id=buf_id, filetype=filetype)
+                _ensure_buffer(
+                    cursor, buf_id=buf_id, filetype=filetype, filename=filename
+                )
                 cursor.execute(
                     sql("delete", "lines"),
                     {"buffer_id": buf_id, "lo": lo, "hi": hi},
@@ -156,8 +174,8 @@ class BDB:
         word: str,
         sym: str,
         limitless: int,
-    ) -> Iterator[str]:
-        def cont() -> Iterator[str]:
+    ) -> Iterator[BufferWord]:
+        def cont() -> Iterator[BufferWord]:
             try:
                 with with_transaction(self._conn.cursor()) as cursor:
                     cursor.execute(
@@ -174,16 +192,21 @@ class BDB:
                         },
                     )
                     rows = cursor.fetchall()
-                    return (row["word"] for row in rows)
+                    return (
+                        BufferWord(
+                            text=row["word"],
+                            filetype=row["filetype"],
+                            filename=row["filename"],
+                            line_num=row["line_num"] + 1,
+                        )
+                        for row in rows
+                    )
             except OperationalError:
                 return iter(())
 
-        def step() -> Iterator[str]:
-            self._interrupt()
-            return self._ex.submit(cont)
-
+        await to_thread(self._interrupt)
         try:
-            return await to_thread(step)
+            return await self._ex.asubmit(cont)
         except CancelledError:
             with timeit("INTERRUPT !! BUFFERS"):
                 await to_thread(self._interrupt)

@@ -216,6 +216,16 @@ Also match symbols in addition to words.
 false
 ```
 
+##### `coq_settings.clients.tmux.all_sessions`
+
+Pull words & symbols from not just current session.
+
+**default:**
+
+```json
+true
+```
+
 ---
 
 #### coq_settings.clients.tabnine

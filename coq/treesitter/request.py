@@ -20,6 +20,7 @@ _T = TypeVar("_T")
 class _Payload(Generic[_T]):
     buf: int
     filetype: str
+    filename: str
     payloads: Iterable[_T]
     elapsed: float
 
@@ -33,7 +34,7 @@ class _Session:
 
 _UIDS = count()
 _COND: Optional[Condition] = None
-_NIL_P = _Payload[RawPayload](buf=-1, filetype="", payloads=(), elapsed=-1)
+_NIL_P = _Payload[RawPayload](buf=-1, filetype="", filename="", payloads=(), elapsed=-1)
 _SESSION = _Session(uid=-1, done=True, payload=_NIL_P)
 
 
@@ -48,6 +49,7 @@ def _ts_notify(
     session: int,
     buf: int,
     filetype: str,
+    filename: str,
     reply: Sequence[RawPayload],
     elapsed: float,
 ) -> None:
@@ -59,6 +61,7 @@ def _ts_notify(
             payload = _Payload(
                 buf=buf,
                 filetype=filetype,
+                filename=filename,
                 payloads=reply,
                 elapsed=elapsed,
             )
@@ -89,6 +92,7 @@ def _vaildate(r_playload: _Payload[RawPayload]) -> _Payload[Payload]:
                 parent = _parse(load.get("parent"))
                 grandparent = _parse(load.get("grandparent"))
                 yield Payload(
+                    filename="",
                     text=payload.text,
                     kind=payload.kind,
                     parent=parent,
@@ -98,6 +102,7 @@ def _vaildate(r_playload: _Payload[RawPayload]) -> _Payload[Payload]:
     payload = _Payload(
         buf=r_playload.buf,
         filetype=r_playload.filetype,
+        filename=r_playload.filename,
         elapsed=r_playload.elapsed,
         payloads=cont(),
     )

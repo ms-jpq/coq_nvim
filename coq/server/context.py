@@ -12,6 +12,7 @@ from pynvim_pp.text_object import gen_split
 
 from ..consts import DEBUG
 from ..databases.buffers.database import BDB
+from ..shared.parse import lower
 from ..shared.settings import MatchOptions
 from ..shared.types import Context
 from .state import State
@@ -74,6 +75,9 @@ def context(
     before, after = decode(b_line[:col]), decode(b_line[col:])
     split = gen_split(lhs=before, rhs=after, unifying_chars=options.unifying_chars)
 
+    l_words_before, l_words_after = lower(split.word_lhs), lower(split.word_rhs)
+    l_syms_before, l_syms_after = lower(split.syms_lhs), lower(split.syms_rhs)
+    is_lower = l_words_before + l_words_after == split.word_lhs + split.word_rhs
     ctx = Context(
         manual=manual,
         change_id=state.change_id,
@@ -103,5 +107,10 @@ def context(
         syms_after=split.syms_rhs,
         ws_before=split.ws_lhs,
         ws_after=split.ws_rhs,
+        l_words_before=l_words_before,
+        l_words_after=l_words_after,
+        l_syms_before=l_syms_before,
+        l_syms_after=l_syms_after,
+        is_lower=is_lower,
     )
     return ctx

@@ -6,7 +6,6 @@ from typing import Any, Callable, Iterable, Iterator, MutableSet, Sequence, Tupl
 from pynvim_pp.lib import display_width
 from std2 import clamp
 
-from ..shared.parse import lower
 from ..shared.runtime import Metric
 from ..shared.settings import PumDisplay, Weights
 from ..shared.types import Context, SnippetEdit
@@ -122,7 +121,6 @@ def trans(
     scr_width, _ = s.screen
 
     display = stack.settings.display
-    is_lower = lower(context.words_before) == context.words_before
 
     kind_dead_width = sum(
         display_width(s, tabsize=context.tabstop) for s in display.pum.kind_context
@@ -131,7 +129,7 @@ def trans(
     truncate = clamp(pum_width, scr_width - context.scr_col, display.pum.x_max_len)
 
     w_adjust = _cum(stack.settings.weights, metrics=metrics)
-    sortby = _sort_by(is_lower, adjustment=w_adjust)
+    sortby = _sort_by(context.is_lower, adjustment=w_adjust)
     ranked = sorted(metrics, key=sortby)
     pruned = tuple(_prune(stack, context=context, ranked=ranked))
     max_width = _max_width(pruned)
