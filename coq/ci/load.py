@@ -71,7 +71,7 @@ async def load() -> LoadedSnips:
 
     exts: MutableMapping[str, MutableSet[str]] = {}
 
-    for key, values in exts.items():
+    for key, values in parsed.exts.items():
         exts.setdefault(key, {*values})
 
     for key, vals in specs.remaps.items():
