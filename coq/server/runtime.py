@@ -1,5 +1,6 @@
 from concurrent.futures import Executor
 from pathlib import Path
+from shutil import which
 from typing import Iterator, Mapping
 
 from pynvim import Nvim
@@ -85,8 +86,8 @@ def _from_each_according_to_their_ability(
     if clients.snippets.enabled:
         yield SnippetWorker(supervisor, options=clients.snippets, misc=sdb)
 
-    if clients.tags.enabled:
-        yield TagsWorker(supervisor, options=clients.tags, misc=ctdb)
+    if clients.tags.enabled and (ctags := which("ctags")):
+        yield TagsWorker(supervisor, options=clients.tags, misc=(ctdb, Path(ctags)))
 
     if clients.tmux.enabled:
         yield TmuxWorker(supervisor, options=clients.tmux, misc=tmdb)

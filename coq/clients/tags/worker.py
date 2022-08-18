@@ -130,8 +130,11 @@ def _doc(client: TagsClient, context: Context, tag: Tag) -> Doc:
 
 
 class Worker(BaseWorker[TagsClient, CTDB]):
-    def __init__(self, supervisor: Supervisor, options: TagsClient, misc: CTDB) -> None:
-        super().__init__(supervisor, options=options, misc=misc)
+    def __init__(
+        self, supervisor: Supervisor, options: TagsClient, misc: Tuple[CTDB, Path]
+    ) -> None:
+        db, self._exec = misc
+        super().__init__(supervisor, options=options, misc=db)
         go(supervisor.nvim, aw=self._poll())
 
     async def _poll(self) -> None:
@@ -148,7 +151,7 @@ class Worker(BaseWorker[TagsClient, CTDB]):
                         for path, mtime in mtimes.items()
                         if mtime > existing.get(path, 0)
                     )
-                    raw = await run(*query_paths) if query_paths else ""
+                    raw = await run(self._exec, *query_paths) if query_paths else ""
                     new = parse(mtimes, raw=raw)
                     dead = existing.keys() - mtimes.keys()
                     await self._misc.reconciliate(dead, new=new)

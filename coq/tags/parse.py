@@ -1,5 +1,6 @@
 from json import loads
 from json.decoder import JSONDecodeError
+from pathlib import Path
 from typing import Iterator, Mapping, MutableMapping, MutableSequence, Tuple
 
 from pynvim_pp.lib import decode
@@ -27,13 +28,13 @@ _FIELDS = "".join(
 )
 
 
-async def run(*args: str) -> str:
+async def run(ctags: Path, *args: str) -> str:
     if not args:
         return ""
     else:
         try:
             proc = await call(
-                "ctags",
+                ctags,
                 "--sort=no",
                 "--output-format=json",
                 f"--fields={_FIELDS}",
