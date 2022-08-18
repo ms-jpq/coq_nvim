@@ -216,7 +216,7 @@ def _range_edit_trans(
             if isinstance(edit, ParsedEdit)
             else new_lines
         )
-        cursor_yoffset = (r2 - r1) + (len("".join(lines_before).splitlines()) - 1)
+        cursor_yoffset = (r2 - r1) + (len(lines_before) - 1)
         cursor_xpos = (
             (
                 len(encode(lines_before[-1]))
