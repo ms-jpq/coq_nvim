@@ -5,6 +5,8 @@ from .parse import coalesce, lower
 from .types import Context, ContextualEdit
 
 
+MIN_MATCH_LEN = 3
+
 def reverse_acc(seq: str) -> Iterator[str]:
     if seq:
         yield seq
@@ -16,12 +18,17 @@ def _line_match(lhs: bool, existing: str, insertion: str) -> str:
     existing, insertion = lower(existing), lower(insertion)
     if lhs:
         for match in reverse_acc(insertion):
+            # Matching for pattern too short could result in sub-optimal matches, see issue #491
+            if len(match) < MIN_MATCH_LEN:
+                return ""
             if match == existing[-len(match) :]:
                 return match
         else:
             return ""
     else:
         for match in reverse_acc("".join(reversed(insertion))):
+            if len(match) < MIN_MATCH_LEN:
+                return ""
             if match == existing[: len(match) :]:
                 return match
         else:
