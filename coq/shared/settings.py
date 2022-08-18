@@ -112,7 +112,7 @@ class KeyMapping:
     jump_to_mark: Optional[str]
     bigger_preview: Optional[str]
     eval_snips: Optional[str]
-    only_insert: Optional[bool]
+    manual_complete_insertion_only: Optional[bool]
 
 
 @dataclass(frozen=True)

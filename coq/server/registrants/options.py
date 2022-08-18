@@ -70,7 +70,7 @@ def set_options(nvim: Nvim, mapping: KeyMapping, fast_close: bool) -> None:
             keymap.i(mapping.manual_complete, expr=True)
             << "pumvisible() ? '<c-e><c-x><c-u>' : '<c-x><c-u>'"
         )
-        if not mapping.only_insert:
+        if not mapping.manual_complete_insertion_only:
             keymap.nv(mapping.manual_complete) << r"<c-\><c-n>i<c-x><c-u>"
 
 

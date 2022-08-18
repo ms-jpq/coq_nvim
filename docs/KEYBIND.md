@@ -102,7 +102,7 @@ Evaluate current visual selection or buffer as user defined snippets.
 null
 ```
 
-#### coq_settings.keymap.only_insert
+#### coq_settings.keymap.manual_complete_insertion_only
 
 Map the manual keybinding trigger only in `INSERT` mode.
 
