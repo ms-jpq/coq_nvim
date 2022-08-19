@@ -38,9 +38,7 @@ _OG_IDX = str(uuid4())
 def _ls_marks(nvim: Nvim, ns: int, buf: Buffer) -> Sequence[ExtMark]:
     def ls() -> Iterator[ExtMark]:
         for mark in buf_get_extmarks(nvim, id=ns, buf=buf):
-            r, c = mark.end
-            c = max(0, c - 1)
-            yield replace(mark, end=(r, c))
+            yield replace(mark, end=mark.end)
 
     ordered = sorted(
         (

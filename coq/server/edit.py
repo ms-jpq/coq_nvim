@@ -442,9 +442,7 @@ def _restore(
         after, *_ = buf_get_lines(nvim, buf=buf, lo=row, hi=row + 1)
         cur_row, cur_col = win_get_cursor(nvim, win=win)
 
-        (_, lo), (r, hi) = m1.end, m2.begin
-        lo = max(0, lo - 1)
-        hi = max(0, hi)
+        (_, lo), (_, hi) = m1.end, m2.begin
 
         binserted = encode(after)[lo:hi]
         inserted = decode(binserted)
@@ -452,7 +450,7 @@ def _restore(
         movement = cur_col - lo if cur_row == row and lo <= cur_col <= hi else None
 
         if inserted:
-            buf_set_text(nvim, buf=buf, begin=(r, lo), end=(r, hi), text=("",))
+            buf_set_text(nvim, buf=buf, begin=m1.end, end=m2.begin, text=("",))
 
         return inserted, movement
 
