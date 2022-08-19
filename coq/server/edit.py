@@ -444,7 +444,7 @@ def _restore(
 
         (_, lo), (r, hi) = m1.end, m2.begin
         lo = max(0, lo - 1)
-        hi = max(0, hi - 1)
+        hi = max(0, hi)
 
         binserted = encode(after)[lo:hi]
         inserted = decode(binserted)
