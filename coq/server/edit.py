@@ -172,7 +172,10 @@ def _edit_trans(
 ) -> EditInstruction:
 
     adjusted = trans_adjusted(
-        unifying_chars, replace_prefix_threshold=replace_prefix_threshold, ctx=ctx, new_text=edit.new_text
+        unifying_chars,
+        replace_prefix_threshold=replace_prefix_threshold,
+        ctx=ctx,
+        new_text=edit.new_text,
     )
     inst = _contextual_edit_trans(ctx, lines=lines, edit=adjusted)
     return inst
@@ -195,7 +198,11 @@ def _range_edit_trans(
         and edit.begin == edit.end
     ):
         return _edit_trans(
-            unifying_chars, replace_prefix_threshold=replace_prefix_threshold, ctx=ctx, lines=lines, edit=edit
+            unifying_chars,
+            replace_prefix_threshold=replace_prefix_threshold,
+            ctx=ctx,
+            lines=lines,
+            edit=edit,
         )
 
     else:
@@ -435,8 +442,9 @@ def _restore(
         after, *_ = buf_get_lines(nvim, buf=buf, lo=row, hi=row + 1)
         cur_row, cur_col = win_get_cursor(nvim, win=win)
 
-        (_, lo), (_, hi) = m1.end, m2.begin
+        (_, lo), (r, hi) = m1.end, m2.begin
         lo = max(0, lo - 1)
+        hi = max(0, hi - 1)
 
         binserted = encode(after)[lo:hi]
         inserted = decode(binserted)
@@ -444,7 +452,7 @@ def _restore(
         movement = cur_col - lo if cur_row == row and lo <= cur_col <= hi else None
 
         if inserted:
-            buf_set_text(nvim, buf=buf, begin=m1.end, end=m2.begin, text=("",))
+            buf_set_text(nvim, buf=buf, begin=(r, lo), end=(r, hi), text=("",))
 
         return inserted, movement
 
