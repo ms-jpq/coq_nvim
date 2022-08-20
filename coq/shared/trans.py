@@ -17,13 +17,19 @@ def reverse_acc(replace_prefix_threshold: int, seq: str) -> Iterator[str]:
 
 
 def _line_match(
-    replace_prefix_threshold: int, lhs: bool, existing: str, insertion: str
+    replace_prefix_threshold: int,
+    unifying_chars: AbstractSet[str],
+    lhs: bool,
+    existing: str,
+    insertion: str,
 ) -> str:
     existing, insertion = lower(existing), lower(insertion)
     if lhs:
-        for match in reverse_acc(replace_prefix_threshold, seq=insertion):
+        prefix = next(coalesce(insertion, unifying_chars=unifying_chars), "")
+        for match in reverse_acc(0, seq=insertion):
             if match == existing[-len(match) :]:
-                return match
+                if match == prefix or len(match) >= replace_prefix_threshold:
+                    return match
         else:
             return ""
     else:
@@ -37,14 +43,26 @@ def _line_match(
 
 
 def trans(
-    replace_prefix_threshold: int, line_before: str, line_after: str, new_text: str
+    replace_prefix_threshold: int,
+    unifying_chars: AbstractSet[str],
+    line_before: str,
+    line_after: str,
+    new_text: str,
 ) -> ContextualEdit:
     l_match = _line_match(
-        replace_prefix_threshold, lhs=True, existing=line_before, insertion=new_text
+        replace_prefix_threshold,
+        unifying_chars=unifying_chars,
+        lhs=True,
+        existing=line_before,
+        insertion=new_text,
     )
     rest = new_text[len(l_match) :]
     r_match = _line_match(
-        replace_prefix_threshold, lhs=False, existing=line_after, insertion=rest
+        replace_prefix_threshold,
+        unifying_chars=unifying_chars,
+        lhs=False,
+        existing=line_after,
+        insertion=rest,
     )
     edit = ContextualEdit(
         new_text=new_text,
@@ -63,6 +81,7 @@ def trans_adjusted(
 ) -> ContextualEdit:
     edit = trans(
         replace_prefix_threshold,
+        unifying_chars=unifying_chars,
         line_before=ctx.line_before,
         line_after=ctx.line_after,
         new_text=new_text,
@@ -76,7 +95,7 @@ def trans_adjusted(
     )
 
     tokens = len(tuple(coalesce(new_text, unifying_chars=unifying_chars)))
-    old_prefix = simple_before if tokens <= 1 else edit.old_prefix
+    old_prefix = simple_before if tokens <= 1 else edit.old_prefix or simple_before
     old_suffix = simple_after if tokens <= 1 else edit.old_suffix
 
     adjusted = ContextualEdit(

@@ -40,7 +40,11 @@ class Trans(TestCase):
         new_prefix = ""
 
         actual = trans(
-            _MIN_MATCH_LEN, line_before=lhs, line_after=rhs, new_text=new_text
+            _MIN_MATCH_LEN,
+            unifying_chars=set(),
+            line_before=lhs,
+            line_after=rhs,
+            new_text=new_text,
         )
         self.assertEquals((actual.old_prefix, actual.old_suffix), old_fixes)
         self.assertEquals(actual.new_prefix, new_prefix)
@@ -53,7 +57,11 @@ class Trans(TestCase):
         new_prefix = "ab"
 
         actual = trans(
-            _MIN_MATCH_LEN, line_before=lhs, line_after=rhs, new_text=new_text
+            _MIN_MATCH_LEN,
+            unifying_chars=set(),
+            line_before=lhs,
+            line_after=rhs,
+            new_text=new_text,
         )
         self.assertEquals((actual.old_prefix, actual.old_suffix), old_fixes)
         self.assertEquals(actual.new_prefix, new_prefix)
@@ -66,7 +74,11 @@ class Trans(TestCase):
         new_prefix = "cd"
 
         actual = trans(
-            _MIN_MATCH_LEN, line_before=lhs, line_after=rhs, new_text=new_text
+            _MIN_MATCH_LEN,
+            unifying_chars=set(),
+            line_before=lhs,
+            line_after=rhs,
+            new_text=new_text,
         )
         self.assertEquals((actual.old_prefix, actual.old_suffix), old_fixes)
         self.assertEquals(actual.new_prefix, new_prefix)
@@ -79,7 +91,11 @@ class Trans(TestCase):
         new_prefix = "bb"
 
         actual = trans(
-            _MIN_MATCH_LEN, line_before=lhs, line_after=rhs, new_text=new_text
+            _MIN_MATCH_LEN,
+            unifying_chars=set(),
+            line_before=lhs,
+            line_after=rhs,
+            new_text=new_text,
         )
         self.assertEquals((actual.old_prefix, actual.old_suffix), old_fixes)
         self.assertEquals(actual.new_prefix, new_prefix)
@@ -92,7 +108,11 @@ class Trans(TestCase):
         new_prefix = "bde"
 
         actual = trans(
-            _MIN_MATCH_LEN, line_before=lhs, line_after=rhs, new_text=new_text
+            _MIN_MATCH_LEN,
+            unifying_chars=set(),
+            line_before=lhs,
+            line_after=rhs,
+            new_text=new_text,
         )
         self.assertEquals((actual.old_prefix, actual.old_suffix), old_fixes)
         self.assertEquals(actual.new_prefix, new_prefix)
@@ -105,7 +125,11 @@ class Trans(TestCase):
         new_prefix = "bbcde"
 
         actual = trans(
-            _MIN_MATCH_LEN, line_before=lhs, line_after=rhs, new_text=new_text
+            _MIN_MATCH_LEN,
+            unifying_chars=set(),
+            line_before=lhs,
+            line_after=rhs,
+            new_text=new_text,
         )
         self.assertEquals((actual.old_prefix, actual.old_suffix), old_fixes)
         self.assertEquals(actual.new_prefix, new_prefix)
@@ -118,7 +142,11 @@ class Trans(TestCase):
         new_prefix = "abecf"
 
         actual = trans(
-            _MIN_MATCH_LEN, line_before=lhs, line_after=rhs, new_text=new_text
+            _MIN_MATCH_LEN,
+            unifying_chars=set(),
+            line_before=lhs,
+            line_after=rhs,
+            new_text=new_text,
         )
         self.assertEquals((actual.old_prefix, actual.old_suffix), old_fixes)
         self.assertEquals(actual.new_prefix, new_prefix)
