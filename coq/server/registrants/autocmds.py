@@ -130,7 +130,7 @@ def _when_idle(nvim: Nvim, stack: Stack) -> None:
         stack.supervisor.notify_idle()
 
     assert isinstance(nvim.loop, AbstractEventLoop)
-    nvim.loop.call_later(
+    _HANDLE = nvim.loop.call_later(
         stack.settings.limits.idle_timeout,
         lambda: go(nvim, aw=async_call(nvim, cont)),
     )
