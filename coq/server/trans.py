@@ -7,7 +7,7 @@ from pynvim_pp.lib import display_width
 from std2 import clamp
 
 from ..shared.runtime import Metric
-from ..shared.settings import PumDisplay, Ranking, Weights
+from ..shared.settings import PumDisplay, Weights
 from ..shared.types import Context, SnippetEdit
 from .completions import VimCompletion
 from .rt_types import Stack
@@ -33,17 +33,18 @@ def _cum(adjustment: Weights, metrics: Iterable[Metric]) -> Weights:
     return Weights(**acc)
 
 
-def _sort_by(is_lower: bool, adjustment: Weights, ranking: Ranking) -> Callable[[Metric], Any]:
+def _sort_by(is_lower: bool, adjustment: Weights) -> Callable[[Metric], Any]:
     adjust = asdict(adjustment)
 
-    def _tot(metric: Metric) -> int:
-        return sum(
+    def key_by(metric: Metric) -> Any:
+        tot = sum(
             val / adjust[key] if adjust[key] else 0
             for key, val in asdict(metric.weight).items()
         )
-
-    def _rest(metric: Metric) -> Any:
-        return (
+        key = (
+            -(metric.comp.always_on_top),
+            -(metric.comp.preselect),
+            -round(tot * metric.weight_adjust * 1000),
             -len(metric.comp.secondary_edits),
             -(metric.comp.kind != ""),
             -(metric.comp.doc is not None),
@@ -52,29 +53,9 @@ def _sort_by(is_lower: bool, adjustment: Weights, ranking: Ranking) -> Callable[
                 metric.comp.sort_by.swapcase() if is_lower else metric.comp.sort_by
             ),
         )
+        return key
 
-    # stratified ranking: first sort by weight (proxy for client) and then
-    # by total and the rest
-    def _stratified_key_by(metric: Metric) -> Any:
-        return (
-            -(metric.comp.preselect),
-            -(metric.weight_adjust),
-            -round(_tot(metric) * 1000),
-            *_rest(metric)
-        )
-
-    # uniform ranking (original): sort by weighted total and the rest
-    def _uniform_key_by(metric: Metric) -> Any:
-        return (
-            -(metric.comp.preselect),
-            -round(_tot(metric) * metric.weight_adjust * 1000),
-            *_rest(metric)
-        )
-
-    if ranking == Ranking.uniform:
-        return _uniform_key_by
-    else:
-        return _stratified_key_by
+    return key_by
 
 
 def _prune(

@@ -54,6 +54,7 @@ class Worker(BaseWorker[TmuxClient, TMDB]):
                 edit = Edit(new_text=word.text)
                 cmp = Completion(
                     source=self._options.short_name,
+                    always_on_top=self._options.always_on_top,
                     weight_adjust=self._options.weight_adjust,
                     label=edit.new_text,
                     sort_by=word.text,

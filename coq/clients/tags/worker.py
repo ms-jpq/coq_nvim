@@ -180,6 +180,7 @@ class Worker(BaseWorker[TagsClient, CTDB]):
                     kind = capwords(tag["kind"])
                     cmp = Completion(
                         source=self._options.short_name,
+                        always_on_top=self._options.always_on_top,
                         weight_adjust=self._options.weight_adjust,
                         label=edit.new_text,
                         sort_by=name,

@@ -42,6 +42,30 @@ Weight adjustment for ranking, normalized to `[0.5, 1.5]` using `S(x) = 1 / (1 +
 <preset float>
 ```
 
+##### `coq_settings.clients.<x>.always_on_top`
+
+Alright you guys keep asking this:
+
+This setting will override all ranking metrics and keep the source always on top.
+
+For sources other than `LSP` and `third_party`, the config is a boolean value.
+
+**default**
+
+```json
+false
+```
+
+For `LSP` and `third_party`, the config is either `null` or `["<lsp/client_name_1>", "<lsp/client_name_2>", ...]`.
+
+The empty `[]` will keep all clients on top regardless of lsp client names.
+
+**default**
+
+```json
+null
+```
+
 ---
 
 #### coq_settings.clients.lsp

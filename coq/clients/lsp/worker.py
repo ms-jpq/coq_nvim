@@ -24,7 +24,7 @@ from ...shared.fuzzy import multi_set_ratio
 from ...shared.parse import lower
 from ...shared.runtime import Supervisor
 from ...shared.runtime import Worker as BaseWorker
-from ...shared.settings import BaseClient, MatchOptions
+from ...shared.settings import LSPClient, MatchOptions
 from ...shared.sql import BIGGEST_INT
 from ...shared.timeit import timeit
 from ...shared.trans import cword_before
@@ -72,8 +72,8 @@ class _LocalCache:
     )
 
 
-class Worker(BaseWorker[BaseClient, None]):
-    def __init__(self, supervisor: Supervisor, options: BaseClient, misc: None) -> None:
+class Worker(BaseWorker[LSPClient, None]):
+    def __init__(self, supervisor: Supervisor, options: LSPClient, misc: None) -> None:
         super().__init__(supervisor, options=options, misc=misc)
         self._cache = CacheWorker(supervisor)
         self._local_cached = _LocalCache()
@@ -85,6 +85,7 @@ class Worker(BaseWorker[BaseClient, None]):
         return comp_lsp(
             self._supervisor.nvim,
             short_name=self._options.short_name,
+            always_on_top=self._options.always_on_top,
             weight_adjust=self._options.weight_adjust,
             context=context,
             clients=set() if context.manual else cached_clients,
@@ -112,10 +113,6 @@ class Worker(BaseWorker[BaseClient, None]):
             limit = (
                 BIGGEST_INT if context.manual else self._supervisor.match.max_results
             )
-            fast_limit = self._supervisor.match.max_results * 3
-            lower_word_prefix = context.l_words_before[
-                : self._supervisor.match.look_ahead
-            ]
 
             use_cache, cached_clients, cached = self._cache.apply_cache(context)
             if not use_cache:

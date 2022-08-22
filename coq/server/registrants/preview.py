@@ -288,6 +288,7 @@ def _resolve_comp(
                 ):
                     stack.lru[state.preview_id] = Completion(
                         source="",
+                        always_on_top=False,
                         weight_adjust=0,
                         label="",
                         sort_by="",

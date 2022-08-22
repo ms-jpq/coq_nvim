@@ -36,8 +36,6 @@ weights:
   recency: 1.0
   proximity: 0.5
 
-ranking: uniform
-
 display:
   ghost_text:
     enabled: True
@@ -131,40 +129,21 @@ limits:
   download_timeout: 66.0
 
 clients:
-  tabnine:
-    enabled: False
-    short_name: "T9"
-    weight_adjust: -0.1
-
-  third_party:
-    enabled: True
-    short_name: "3P"
-    weight_adjust: 0
-
-  tmux:
-    enabled: True
-    short_name: "TMUX"
-    match_syms: False
-    all_sessions: True
-    parent_scope: " ⇊"
-    path_sep: " ⇉ "
-    weight_adjust: -0.1
-
   buffers:
     enabled: True
     short_name: "BUF"
     match_syms: False
     same_filetype: False
     parent_scope: " ⇊"
+    always_on_top: False
     weight_adjust: 0
 
-  tree_sitter:
+  lsp:
     enabled: True
-    short_name: "TS"
-    path_sep: " ⇊"
-    search_context: 168
-    slow_threshold: 0.168
-    weight_adjust: 0.1
+    short_name: "LSP"
+    resolve_timeout: 0.06
+    always_on_top: null
+    weight_adjust: 0.5
 
   paths:
     enabled: True
@@ -174,26 +153,54 @@ clients:
       - file
     path_seps: []
     preview_lines: 6
+    always_on_top: False
     weight_adjust: 0
 
   snippets:
     enabled: True
     short_name: "SNIP"
-    weight_adjust: 0.1
     user_path: null
     warn:
       - missing
       - outdated
+    always_on_top: False
+    weight_adjust: 0.1
+
+  tabnine:
+    enabled: False
+    short_name: "T9"
+    always_on_top: False
+    weight_adjust: -0.1
 
   tags:
     enabled: True
     short_name: "TAG"
     parent_scope: " ⇊"
     path_sep: " ⇉ "
+    always_on_top: False
     weight_adjust: 0.1
 
-  lsp:
+  third_party:
     enabled: True
-    short_name: "LSP"
-    resolve_timeout: 0.06
-    weight_adjust: 0.5
+    short_name: "3P"
+    always_on_top: null
+    weight_adjust: 0
+
+  tmux:
+    enabled: True
+    short_name: "TMUX"
+    match_syms: False
+    all_sessions: True
+    parent_scope: " ⇊"
+    path_sep: " ⇉ "
+    always_on_top: False
+    weight_adjust: -0.1
+
+  tree_sitter:
+    enabled: True
+    short_name: "TS"
+    path_sep: " ⇊"
+    search_context: 168
+    slow_threshold: 0.168
+    always_on_top: False
+    weight_adjust: 0.1
