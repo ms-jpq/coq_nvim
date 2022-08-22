@@ -1,5 +1,6 @@
 from asyncio import CancelledError
 from concurrent.futures import Executor
+from contextlib import suppress
 from hashlib import md5
 from os.path import normcase
 from pathlib import Path, PurePath
@@ -18,7 +19,7 @@ from ...shared.timeit import timeit
 from ...tags.types import Tag, Tags
 from .sql import sql
 
-_SCHEMA = "v4"
+_SCHEMA = "v5"
 
 _NIL_TAG = Tag(
     language="",
@@ -26,7 +27,7 @@ _NIL_TAG = Tag(
     line=0,
     kind="",
     name="",
-    pattern="",
+    pattern=None,
     typeref=None,
     scope=None,
     scopeKind=None,
@@ -79,28 +80,29 @@ class CTDB:
 
     async def reconciliate(self, dead: AbstractSet[str], new: Tags) -> None:
         def cont() -> None:
-            with self._lock, with_transaction(self._conn.cursor()) as cursor:
+            with suppress(OperationalError):
+                with with_transaction(self._conn.cursor()) as cursor:
 
-                def m1() -> Iterator[Mapping]:
-                    for filename, (lang, mtime, _) in new.items():
-                        yield {
-                            "filename": filename,
-                            "filetype": lang,
-                            "mtime": mtime,
-                        }
+                    def m1() -> Iterator[Mapping]:
+                        for filename, (lang, mtime, _) in new.items():
+                            yield {
+                                "filename": filename,
+                                "filetype": lang,
+                                "mtime": mtime,
+                            }
 
-                def m2() -> Iterator[Mapping]:
-                    for _, _, tags in new.values():
-                        for tag in tags:
-                            yield {**_NIL_TAG, **tag}
+                    def m2() -> Iterator[Mapping]:
+                        for _, _, tags in new.values():
+                            for tag in tags:
+                                yield {**_NIL_TAG, **tag}
 
-                cursor.executemany(
-                    sql("delete", "file"),
-                    ({"filename": f} for f in dead | new.keys()),
-                )
-                cursor.executemany(sql("insert", "file"), m1())
-                cursor.executemany(sql("insert", "tag"), m2())
-                cursor.execute("PRAGMA optimize", ())
+                    cursor.executemany(
+                        sql("delete", "file"),
+                        ({"filename": f} for f in dead | new.keys()),
+                    )
+                    cursor.executemany(sql("insert", "file"), m1())
+                    cursor.executemany(sql("insert", "tag"), m2())
+                    cursor.execute("PRAGMA optimize", ())
 
         await self._ex.asubmit(cont)
 
@@ -135,12 +137,9 @@ class CTDB:
             except OperationalError:
                 return iter(())
 
-        def step() -> Iterator[Tag]:
-            self._interrupt()
-            return self._ex.submit(cont)
-
+        await to_thread(self._interrupt)
         try:
-            return await to_thread(step)
+            return await self._ex.asubmit(cont)
         except CancelledError:
             with timeit("INTERRUPT !! TAGS"):
                 await to_thread(self._interrupt)

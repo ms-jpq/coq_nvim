@@ -4,12 +4,11 @@ SELECT DISTINCT
   pword,
   pkind,
   gpword,
-  gpkind
+  gpkind,
+  filename
 FROM words_view
 WHERE
-  buf_id = :buf_id
-  AND
-  word <> ''
+  filetype = :filetype
   AND
   (
     (

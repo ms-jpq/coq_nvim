@@ -101,6 +101,7 @@ class Weights:
 class CompleteOptions:
     always: bool
     smart: bool
+    replace_prefix_threshold: int
     stop_syms: AbstractSet[str]
 
 
@@ -113,6 +114,7 @@ class KeyMapping:
     jump_to_mark: Optional[str]
     bigger_preview: Optional[str]
     eval_snips: Optional[str]
+    manual_complete_insertion_only: Optional[bool]
 
 
 @dataclass(frozen=True)
@@ -120,6 +122,11 @@ class BaseClient:
     enabled: bool
     short_name: str
     weight_adjust: float
+
+
+@dataclass(frozen=True)
+class _WordbankClient(BaseClient):
+    match_syms: bool
 
 
 class PathResolution(Enum):
@@ -135,19 +142,20 @@ class PathsClient(BaseClient):
 
 
 @dataclass(frozen=True)
-class WordbankClient(BaseClient):
-    match_syms: bool
-
-
-@dataclass(frozen=True)
-class BuffersClient(WordbankClient):
+class BuffersClient(_WordbankClient):
     same_filetype: bool
+    parent_scope: str
 
 
 @dataclass(frozen=True)
 class TagsClient(BaseClient):
     parent_scope: str
     path_sep: str
+
+
+@dataclass(frozen=True)
+class TmuxClient(_WordbankClient, TagsClient):
+    all_sessions: bool
 
 
 @dataclass(frozen=True)
@@ -181,7 +189,7 @@ class Clients:
     snippets: SnippetClient
     tabnine: BaseClient
     tags: TagsClient
-    tmux: WordbankClient
+    tmux: TmuxClient
     tree_sitter: TSClient
     third_party: BaseClient
 

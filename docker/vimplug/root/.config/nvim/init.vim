@@ -11,7 +11,7 @@ set shortmess+=I
 
 
 call plug#begin('~/.config/nvim/plugged')
-Plug 'ms-jpq/coq_nvim', {'branch': 'coq'}
+Plug 'ms-jpq/coq_nvim', {'branch': 'dev'}
 Plug 'ms-jpq/coq.artifacts', {'branch': 'artifacts'}
 Plug 'ms-jpq/chadtree', {'branch': 'chad'}
 call plug#end()

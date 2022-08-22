@@ -15,7 +15,12 @@ _KB = 1000
 _HOME = Path.home()
 
 
-def fmt_path(cwd: PurePath, path: PurePath, is_dir: bool) -> str:
+def fmt_path(
+    cwd: PurePath, path: PurePath, is_dir: bool, current: Optional[PurePath] = None
+) -> str:
+    if path == current:
+        return curdir
+
     posfix = sep if is_dir else ""
     with suppress(ValueError):
         rel = path.relative_to(cwd)

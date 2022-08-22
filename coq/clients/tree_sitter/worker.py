@@ -1,10 +1,13 @@
 from os import linesep
+from pathlib import PurePath
 from typing import AsyncIterator, Iterator, Optional
 
 from pynvim_pp.api import list_bufs
 from pynvim_pp.lib import async_call, go
+from pynvim_pp.logging import with_suppress
 
 from ...databases.treesitter.database import TDB
+from ...paths.show import fmt_path
 from ...shared.runtime import Supervisor
 from ...shared.runtime import Worker as BaseWorker
 from ...shared.settings import TSClient
@@ -15,6 +18,17 @@ from ...treesitter.types import Payload
 def _doc(client: TSClient, context: Context, payload: Payload) -> Optional[Doc]:
     def cont() -> Iterator[str]:
         clhs, crhs = context.comment
+
+        path = PurePath(context.filename)
+        pos = fmt_path(
+            context.cwd, path=PurePath(payload.filename), is_dir=False, current=path
+        )
+
+        yield clhs
+        yield pos
+        yield client.path_sep
+        yield crhs
+        yield linesep
 
         if payload.grandparent:
             yield clhs
@@ -64,22 +78,24 @@ class Worker(BaseWorker[TSClient, TDB]):
 
     async def _poll(self) -> None:
         while True:
-            bufs = await async_call(
-                self._supervisor.nvim,
-                lambda: list_bufs(self._supervisor.nvim, listed=True),
-            )
-            await self._misc.vacuum({buf.number for buf in bufs})
-            async with self._supervisor.idling:
-                await self._supervisor.idling.wait()
+            with with_suppress():
+                bufs = await async_call(
+                    self._supervisor.nvim,
+                    lambda: list_bufs(self._supervisor.nvim, listed=True),
+                )
+                await self._misc.vacuum({buf.number for buf in bufs})
+                async with self._supervisor.idling:
+                    await self._supervisor.idling.wait()
 
     async def work(self, context: Context) -> AsyncIterator[Completion]:
-        payloads = await self._misc.select(
-            self._supervisor.match,
-            buf_id=context.buf_id,
-            word=context.words,
-            sym=context.syms,
-            limitless=context.manual,
-        )
+        async with self._work_lock:
+            payloads = await self._misc.select(
+                self._supervisor.match,
+                filetype=context.filetype,
+                word=context.words,
+                sym=context.syms,
+                limitless=context.manual,
+            )
 
-        for payload in payloads:
-            yield _trans(self._options, context=context, payload=payload)
+            for payload in payloads:
+                yield _trans(self._options, context=context, payload=payload)

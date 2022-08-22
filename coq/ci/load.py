@@ -2,13 +2,14 @@ from asyncio import Semaphore, gather
 from contextlib import suppress
 from multiprocessing import cpu_count
 from pathlib import Path
-from typing import Any, Iterator, Tuple
+from typing import Any, Iterator, MutableMapping, MutableSet, Tuple
 from urllib.parse import urlparse
 from uuid import UUID
 
 from std2.asyncio.subprocess import call
 from std2.graphlib import recur_sort
-from std2.pickle import new_decoder, new_encoder
+from std2.pickle.decoder import new_decoder
+from std2.pickle.encoder import new_encoder
 from yaml import safe_load
 
 from ..consts import COMPILATION_YML, TMP_DIR
@@ -67,7 +68,19 @@ async def load() -> LoadedSnips:
         neosnippet=(TMP_DIR / path for path in specs.paths.neosnippet),
         ultisnip=(TMP_DIR / path for path in specs.paths.ultisnip),
     )
-    return parsed
+
+    exts: MutableMapping[str, MutableSet[str]] = {}
+
+    for key, values in parsed.exts.items():
+        exts.setdefault(key, {*values})
+
+    for key, vals in specs.remaps.items():
+        acc = exts.setdefault(key, set())
+        for value in vals:
+            acc.add(value)
+
+    merged = LoadedSnips(snippets=parsed.snippets, exts=exts)
+    return merged
 
 
 async def load_parsable() -> Any:
@@ -82,7 +95,7 @@ async def load_parsable() -> Any:
             with suppress(ParseError):
                 parse_norm(
                     set(),
-                    smart=True,
+                    replace_prefix_threshold=0,
                     context=EMPTY_CONTEXT,
                     snippet=edit,
                     info=ParseInfo(visual="", clipboard="", comment_str=("", "")),

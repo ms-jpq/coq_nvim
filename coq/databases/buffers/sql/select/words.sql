@@ -1,17 +1,14 @@
-SELECT DISTINCT
-  word
-FROM words
-JOIN lines
-ON lines.rowid = words.line_id
-JOIN buffers
-ON buffers.rowid = lines.buffer_id
+SELECT
+  word,
+  filetype,
+  filename,
+  line_num
+FROM words_view
 WHERE
   CASE
-    WHEN :filetype <> NULL THEN buffers.filetype = :filetype
+    WHEN :filetype <> NULL THEN filetype = :filetype
     ELSE 1
   END
-  AND
-  word <> ''
   AND
   (
     (

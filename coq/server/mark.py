@@ -1,3 +1,4 @@
+from string import whitespace
 from typing import Sequence
 from uuid import uuid4
 
@@ -12,6 +13,16 @@ from ..shared.settings import Settings
 from ..shared.types import Mark
 
 NS = uuid4()
+
+_WS = {*whitespace}
+
+
+def _encode_for_display(text: str) -> str:
+    encoded = "".join(
+        char.encode("unicode_escape").decode("utf-8") if char in _WS else char
+        for char in text
+    )
+    return encoded
 
 
 def mark(nvim: Nvim, settings: Settings, buf: Buffer, marks: Sequence[Mark]) -> None:
@@ -32,5 +43,6 @@ def mark(nvim: Nvim, settings: Settings, buf: Buffer, marks: Sequence[Mark]) -> 
     except NvimError:
         log.warn("%s", f"bad mark locations {marks}")
     else:
-        msg = LANG("added marks", regions=" ".join(f"[{mark.text}]" for mark in marks))
+        regions = _encode_for_display(" ".join(f"[{mark.text}]" for mark in marks))
+        msg = LANG("added marks", regions=regions)
         write(nvim, msg)

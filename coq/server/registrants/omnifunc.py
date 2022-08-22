@@ -1,4 +1,4 @@
-from asyncio import Event, Lock, Task, gather, sleep, wait
+from asyncio import Event, Task, gather, sleep, wait
 from asyncio.events import AbstractEventLoop
 from dataclasses import replace
 from queue import SimpleQueue
@@ -25,7 +25,7 @@ from ...lsp.requests.command import cmd
 from ...lsp.requests.resolve import resolve
 from ...registry import NAMESPACE, atomic, autocmd, rpc
 from ...shared.runtime import Metric
-from ...shared.timeit import timeit
+from ...shared.timeit import TracingLocker, timeit
 from ...shared.types import Context, ExternLSP, ExternPath
 from ..completions import complete
 from ..context import context
@@ -52,8 +52,11 @@ def _should_cont(state: State, prev: Context, cur: Context, stop_syms: AbstractS
     elif cur.syms_before != "":
         return True
     else:
-        stripped = cur.line_before.rstrip()
-        return bool(stripped) and len(cur.line_before) - len(stripped) <= 1
+        have_space = (
+            bool(stripped := cur.line_before.rstrip())
+            and len(cur.line_before) - len(stripped) <= 1
+        )
+        return have_space
 
 
 @rpc(blocking=True)
@@ -62,12 +65,10 @@ def _launch_loop(nvim: Nvim, stack: Stack) -> None:
     incoming: Optional[Tuple[State, bool]] = None
 
     async def cont() -> None:
-        lock, event = Lock(), Event()
+        lock, event = TracingLocker(name="OODA", force=True), Event()
 
         async def c0(s: State, manual: bool) -> None:
             with with_suppress(), timeit("**OVERALL**"):
-                if lock.locked():
-                    log.warn("%s", "SHOULD NOT BE LOCKED <><> OODA")
                 async with lock:
                     ctx = await async_call(
                         nvim,
@@ -84,7 +85,6 @@ def _launch_loop(nvim: Nvim, stack: Stack) -> None:
 
                     if should:
                         state(context=ctx)
-                        await stack.supervisor.interrupt()
                         metrics, _ = await gather(
                             stack.supervisor.collect(ctx),
                             async_call(
@@ -176,7 +176,7 @@ async def _resolve(nvim: Nvim, stack: Stack, metric: Metric) -> Metric:
                 (go(nvim, aw=resolve(nvim, extern=extern)),),
                 timeout=stack.settings.clients.lsp.resolve_timeout,
             )
-            await cancel(gather(*not_done))
+            await cancel(*not_done)
             comp = (await done.pop()) if done else None
             if not comp:
                 return metric
@@ -254,4 +254,7 @@ def _comp_done(nvim: Nvim, stack: Stack, event: Mapping[str, Any]) -> None:
                 go(nvim, aw=cont())
 
 
-autocmd("CompleteDone") << f"lua {NAMESPACE}.{_comp_done.name}(vim.v.completed_item)"
+_ = (
+    autocmd("CompleteDone")
+    << f"lua {NAMESPACE}.{_comp_done.name}(vim.v.completed_item)"
+)

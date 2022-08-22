@@ -3,7 +3,8 @@ BEGIN;
 
 CREATE TABLE IF NOT EXISTS buffers (
   rowid    INTEGER NOT NULL PRIMARY KEY,
-  filetype TEXT    NOT NULL
+  filetype TEXT    NOT NULL,
+  filename TEXT    NOT NULL
 ) WITHOUT ROWID;
 CREATE INDEX IF NOT EXISTS buffers_filetype ON buffers (filetype);
 
@@ -19,13 +20,15 @@ CREATE TABLE IF NOT EXISTS words (
   gpkind    TEXT,
   UNIQUE (buffer_id, word)
 );
-CREATE INDEX IF NOT EXISTS words_word ON  words (word);
-CREATE INDEX IF NOT EXISTS words_lword ON words (lword);
+CREATE INDEX IF NOT EXISTS words_buffer_id ON words (buffer_id);
+CREATE INDEX IF NOT EXISTS words_word      ON words (word);
+CREATE INDEX IF NOT EXISTS words_lword     ON words (lword);
 
 
 CREATE VIEW IF NOT EXISTS words_view AS
 SELECT
-  buffers.rowid AS buf_id,
+  buffers.filetype,
+  buffers.filename,
   words.word,
   words.lword,
   words.kind,
@@ -33,10 +36,14 @@ SELECT
   words.pkind,
   words.gpword,
   words.gpkind
-FROM words
-JOIN buffers 
+FROM buffers
+JOIN words 
 ON
-  buffers.rowid = words.buffer_id;
+  words.buffer_id = buffers.rowid
+GROUP BY
+  words.word
+HAVING
+  words.word <> '';
 
 
 END;

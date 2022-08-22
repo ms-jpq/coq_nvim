@@ -8,10 +8,6 @@ FROM snippets_view
 WHERE
   ft_src IN (:filetype, '*')
   AND
-  snippet <> ''
-  AND
-  word <> ''
-  AND
   (
     (
       :word <> ''

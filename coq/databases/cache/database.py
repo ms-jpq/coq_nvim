@@ -1,5 +1,6 @@
 from asyncio import CancelledError
 from concurrent.futures import Executor
+from contextlib import suppress
 from sqlite3 import Connection, OperationalError
 from threading import Lock
 from typing import Iterable, Iterator, Mapping, Tuple
@@ -38,19 +39,20 @@ class Database:
                 yield {"key": key, "word": word}
 
         def cont() -> None:
-            with self._lock, with_transaction(self._conn.cursor()) as cursor:
-                cursor.executemany(sql("insert", "word"), m1())
+            with suppress(OperationalError):
+                with with_transaction(self._conn.cursor()) as cursor:
+                    cursor.executemany(sql("insert", "word"), m1())
 
         await self._ex.asubmit(cont)
 
     async def select(
         self, clear: bool, opts: MatchOptions, word: str, sym: str, limitless: int
-    ) -> Iterator[Tuple[bytes, str]]:
-        def cont() -> Iterator[Tuple[bytes, str]]:
+    ) -> Tuple[Iterator[Tuple[bytes, str]], int]:
+        def cont() -> Tuple[Iterator[Tuple[bytes, str]], int]:
             if clear:
                 with self._lock, with_transaction(self._conn.cursor()) as cursor:
                     cursor.execute(sql("delete", "words"))
-                    return iter(())
+                    return iter(()), 0
             else:
                 try:
                     with with_transaction(self._conn.cursor()) as cursor:
@@ -69,16 +71,13 @@ class Database:
                             },
                         )
                         rows = cursor.fetchall()
-                        return ((row["key"], row["word"]) for row in rows)
+                        return ((row["key"], row["word"]) for row in rows), len(rows)
                 except OperationalError:
-                    return iter(())
+                    return iter(()), 0
 
-        def step() -> Iterator[Tuple[bytes, str]]:
-            self._interrupt()
-            return self._ex.submit(cont)
-
+        await to_thread(self._interrupt)
         try:
-            return await to_thread(step)
+            return await self._ex.asubmit(cont)
         except CancelledError:
             with timeit("INTERRUPT !! CACHE"):
                 await to_thread(self._interrupt)

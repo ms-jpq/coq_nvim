@@ -1,54 +1,64 @@
-from typing import AsyncIterator
+from os import linesep
+from typing import AsyncIterator, Iterator
 
 from pynvim_pp.lib import go
+from pynvim_pp.logging import with_suppress
 
-from ...databases.tmux.database import TMDB
+from ...databases.tmux.database import TMDB, TmuxWord
 from ...shared.runtime import Supervisor
 from ...shared.runtime import Worker as BaseWorker
-from ...shared.settings import WordbankClient
+from ...shared.settings import TmuxClient
 from ...shared.timeit import timeit
-from ...shared.types import Completion, Context, Edit
-from ...tmux.parse import cur, snapshot
+from ...shared.types import Completion, Context, Doc, Edit
+from ...tmux.parse import snapshot
 
 
-class Worker(BaseWorker[WordbankClient, TMDB]):
-    def __init__(
-        self, supervisor: Supervisor, options: WordbankClient, misc: TMDB
-    ) -> None:
+def _doc(client: TmuxClient, word: TmuxWord) -> Doc:
+    def cont() -> Iterator[str]:
+        if client.all_sessions:
+            yield f"S: {word.session_name}{client.parent_scope}"
+        yield f"W: #{word.window_index}{client.path_sep}{word.window_name}{client.parent_scope}"
+        yield f"P: #{word.pane_index}{client.path_sep}{word.pane_title}"
+
+    return Doc(text=linesep.join(cont()), syntax="")
+
+
+class Worker(BaseWorker[TmuxClient, TMDB]):
+    def __init__(self, supervisor: Supervisor, options: TmuxClient, misc: TMDB) -> None:
         super().__init__(supervisor, options=options, misc=misc)
         go(supervisor.nvim, aw=self._poll())
 
     async def _poll(self) -> None:
         while True:
-            with timeit("IDLE :: TMUX"):
-                snap = await snapshot(self._supervisor.match.unifying_chars)
-                await self._misc.periodical(snap)
+            with with_suppress():
+                with timeit("IDLE :: TMUX"):
+                    current, panes = await snapshot(
+                        self._options.all_sessions,
+                        unifying_chars=self._supervisor.match.unifying_chars,
+                    )
+                    await self._misc.periodical(current, panes=panes)
 
-            async with self._supervisor.idling:
-                await self._supervisor.idling.wait()
+                async with self._supervisor.idling:
+                    await self._supervisor.idling.wait()
 
     async def work(self, context: Context) -> AsyncIterator[Completion]:
-        active = await cur()
-        words = (
-            await self._misc.select(
+        async with self._work_lock:
+            words = await self._misc.select(
                 self._supervisor.match,
-                active_pane=active.uid,
                 word=context.words,
                 sym=(context.syms if self._options.match_syms else ""),
                 limitless=context.manual,
             )
-            if active
-            else ()
-        )
 
-        for word in words:
-            edit = Edit(new_text=word)
-            cmp = Completion(
-                source=self._options.short_name,
-                weight_adjust=self._options.weight_adjust,
-                label=edit.new_text,
-                sort_by=word,
-                primary_edit=edit,
-                icon_match="Text",
-            )
-            yield cmp
+            for word in words:
+                edit = Edit(new_text=word.text)
+                cmp = Completion(
+                    source=self._options.short_name,
+                    weight_adjust=self._options.weight_adjust,
+                    label=edit.new_text,
+                    sort_by=word.text,
+                    primary_edit=edit,
+                    doc=_doc(self._options, word=word),
+                    icon_match="Text",
+                )
+                yield cmp

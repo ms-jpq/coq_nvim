@@ -136,17 +136,20 @@ def parse(
     resp: CompletionResponse,
 ) -> LSPcomp:
     if _falsy(resp):
-        return LSPcomp(client=client, local_cache=True, items=iter(()))
+        return LSPcomp(client=client, local_cache=True, items=iter(()), length=0)
 
     elif isinstance(resp, Mapping):
         is_complete = _falsy(resp.get("isIncomplete"))
 
         if not isinstance((items := resp.get("items")), MutableSequence):
             log.warn("%s", f"Unknown LSP resp -- {type(resp)}")
-            return LSPcomp(client=client, local_cache=is_complete, items=iter(()))
+            return LSPcomp(
+                client=client, local_cache=is_complete, items=iter(()), length=0
+            )
 
         else:
             shuffle(items)
+            length = len(items)
             comps = (
                 co1
                 for item in items
@@ -160,10 +163,14 @@ def parse(
                     )
                 )
             )
-            return LSPcomp(client=client, local_cache=is_complete, items=comps)
+
+            return LSPcomp(
+                client=client, local_cache=is_complete, items=comps, length=length
+            )
 
     elif isinstance(resp, MutableSequence):
         shuffle(resp)
+        length = len(resp)
         comps = (
             co2
             for item in resp
@@ -178,8 +185,8 @@ def parse(
             )
         )
 
-        return LSPcomp(client=client, local_cache=True, items=comps)
+        return LSPcomp(client=client, local_cache=True, items=comps, length=length)
 
     else:
         log.warn("%s", f"Unknown LSP resp -- {type(resp)}")
-        return LSPcomp(client=client, local_cache=False, items=iter(()))
+        return LSPcomp(client=client, local_cache=False, items=iter(()), length=0)

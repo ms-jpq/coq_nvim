@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from pathlib import Path
-from typing import AbstractSet
+from typing import AbstractSet, Mapping
 
 
 @dataclass
@@ -14,3 +14,4 @@ class _CompilationPaths:
 class Compilation:
     git: AbstractSet[str]
     paths: _CompilationPaths
+    remaps: Mapping[str, AbstractSet[str]]

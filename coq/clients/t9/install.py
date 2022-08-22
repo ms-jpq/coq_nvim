@@ -1,12 +1,13 @@
 from asyncio import sleep
+from collections.abc import Callable
+from contextlib import suppress
 from io import BytesIO
-from os import X_OK, access
+from os import X_OK, access, sep
 from pathlib import Path, PurePath
-from platform import machine
-from shutil import which
+from platform import uname
 from socket import timeout as TimeoutE
 from string import Template
-from typing import Optional
+from typing import Mapping, Optional, Tuple
 from urllib.error import URLError
 from zipfile import ZipFile
 
@@ -21,19 +22,32 @@ _DOWN = Template(f"https://update.tabnine.com/bundles/$version/$triple/TabNine.z
 _T9_EXEC = PurePath("TabNine").with_suffix(".exe" if os is OS.windows else "")
 
 
+def _is_linux_musl() -> bool:
+    path = Path(sep) / "etc" / "os-release"
+    with suppress(OSError):
+        with path.open("rb") as io:
+            for line in io:
+                if b"alpine" in line:
+                    return True
+
+    return False
+
+
 def _triple() -> Optional[str]:
-    cpu = machine()
-    arch = {"arm64": "aarch64"}.get(cpu, cpu)
-    if os is OS.linux:
-        libc = "musl" if which("apk") else "gnu"
-        return f"{arch}-unknown-linux-{libc}"
-    elif os is OS.macos:
-        if arch == "arm64":
-            return None
-        else:
-            return f"{arch}-apple-darwin"
-    elif os is OS.windows:
-        return f"{arch}-pc-windows-gnu"
+    u = uname()
+    triples: Mapping[Tuple[str, str], Callable[[], Optional[str]]] = {
+        ("arm64", "darwin"): lambda: "aarch64-apple-darwin",
+        ("x86_64", "darwin"): lambda: "x86_64-apple-darwin",
+        ("aarch64", "linux"): lambda: None,
+        ("x86_64", "linux"): lambda: (
+            "x86_64-unknown-linux-musl"
+            if _is_linux_musl()
+            else "x86_64-unknown-linux-gnu"
+        ),
+        ("amd64", "windows"): lambda: "x86_64-pc-windows-gnu",
+    }
+    if triple := triples.get((u.machine.casefold(), u.system.casefold())):
+        return triple()
     else:
         return None
 
@@ -44,13 +58,12 @@ def _version(timeout: float) -> str:
 
 
 def _uri(timeout: float) -> Optional[str]:
-    triple = _triple()
-    if not triple:
-        return None
-    else:
+    if triple := _triple():
         ver = _version(timeout)
         uri = _DOWN.substitute(version=ver, triple=triple)
         return uri
+    else:
+        return None
 
 
 def t9_bin(vars_dir: Path) -> Path:

@@ -26,6 +26,7 @@
 
   local req =
     (function()
+    local current_sessions = {}
     local cancels = {}
     return function(name, session_id, clients, callback)
       vim.validate {clients = {clients, "table"}}
@@ -37,6 +38,7 @@
         client_map = {client_map, "table"},
         callback = {callback, "function"}
       }
+      current_sessions[name] = session_id
 
       pcall(
         cancels[name] or function()
@@ -54,8 +56,7 @@
 
       local on_resp_old = function(err, method, resp, client_id)
         vim.validate {
-          method = {method, "string", true},
-          client_id = {client_id, "number", true}
+          method = {method, "string", true}
         }
 
         n_clients = n_clients - 1
@@ -65,7 +66,14 @@
           return client and client.name or vim.NIL
         end)()
         payload.done = n_clients == 0
-        payload.reply = resp or vim.NIL
+
+        local current_session = current_sessions[name] or -1
+        if current_session ~= session_id then
+          payload.reply = vim.NIL
+        else
+          payload.reply = resp or vim.NIL
+        end
+
         COQ.Lsp_notify(payload)
       end
 

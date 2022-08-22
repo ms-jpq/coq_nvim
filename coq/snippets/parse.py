@@ -131,7 +131,7 @@ def parse_range(
 
 def parse_norm(
     unifying_chars: AbstractSet[str],
-    smart: bool,
+    replace_prefix_threshold: int,
     context: Context,
     snippet: SnippetEdit,
     info: ParseInfo,
@@ -140,7 +140,7 @@ def parse_norm(
 
     sort_by = parser(context, info, snippet.new_text).text
     trans_ctx = trans_adjusted(
-        unifying_chars, smart=smart, ctx=context, new_text=sort_by
+        unifying_chars, replace_prefix_threshold=replace_prefix_threshold, ctx=context, new_text=sort_by
     )
     old_prefix, old_suffix = trans_ctx.old_prefix, trans_ctx.old_suffix
 

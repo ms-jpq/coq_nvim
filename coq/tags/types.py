@@ -8,7 +8,7 @@ class Tag(TypedDict):
 
     line: int
     name: str
-    pattern: str
+    pattern: Optional[str]
     kind: str
 
     typeref: Optional[str]

@@ -4,18 +4,20 @@ from unittest import TestCase
 
 from ...coq.shared.trans import reverse_acc, trans
 
+_MIN_MATCH_LEN = 2
+
 
 class ReverseAcc(TestCase):
     def test_1(self) -> None:
         seq = ""
-        lhs = tuple(reverse_acc(seq))
+        lhs = tuple(reverse_acc(0, seq=seq))
         rhs = tuple(reversed(tuple(accumulate(seq))))
         self.assertEquals(lhs, rhs)
 
     def test_2(self) -> None:
         seq = "".join(map(str, range(1, 5)))
 
-        lhs = tuple(reverse_acc(seq))
+        lhs = tuple(reverse_acc(0, seq=seq))
         rhs = tuple(reversed(tuple(accumulate(seq))))
         self.assertEquals(lhs, rhs)
 
@@ -24,7 +26,7 @@ class ReverseAcc(TestCase):
 
         for _ in range(20):
             seq = "".join(islice(gen, 20))
-            lhs = tuple(reverse_acc(seq))
+            lhs = tuple(reverse_acc(0, seq=seq))
             rhs = tuple(reversed(tuple(accumulate(seq))))
             self.assertEquals(lhs, rhs)
 
@@ -33,48 +35,118 @@ class Trans(TestCase):
     def test_1(self) -> None:
         lhs, rhs = "", ""
         new_text = ""
-        expected = "", ""
-        actual = trans(lhs, rhs, new_text=new_text)
-        self.assertEquals((actual.old_prefix, actual.old_suffix), expected)
+
+        old_fixes = "", ""
+        new_prefix = ""
+
+        actual = trans(
+            _MIN_MATCH_LEN,
+            unifying_chars=set(),
+            line_before=lhs,
+            line_after=rhs,
+            new_text=new_text,
+        )
+        self.assertEquals((actual.old_prefix, actual.old_suffix), old_fixes)
+        self.assertEquals(actual.new_prefix, new_prefix)
 
     def test_2(self) -> None:
         lhs, rhs = "a", "b"
         new_text = "ab"
-        expected = "a", "b"
-        actual = trans(lhs, rhs, new_text=new_text)
-        self.assertEquals((actual.old_prefix, actual.old_suffix), expected)
+
+        old_fixes = "", ""
+        new_prefix = "ab"
+
+        actual = trans(
+            _MIN_MATCH_LEN,
+            unifying_chars=set(),
+            line_before=lhs,
+            line_after=rhs,
+            new_text=new_text,
+        )
+        self.assertEquals((actual.old_prefix, actual.old_suffix), old_fixes)
+        self.assertEquals(actual.new_prefix, new_prefix)
 
     def test_3(self) -> None:
-        lhs, rhs = "ab", "c"
-        new_text = "bc"
-        expected = "b", "c"
-        actual = trans(lhs, rhs, new_text=new_text)
-        self.assertEquals((actual.old_prefix, actual.old_suffix), expected)
+        lhs, rhs = "abc", "de"
+        new_text = "cd"
+
+        old_fixes = "", ""
+        new_prefix = "cd"
+
+        actual = trans(
+            _MIN_MATCH_LEN,
+            unifying_chars=set(),
+            line_before=lhs,
+            line_after=rhs,
+            new_text=new_text,
+        )
+        self.assertEquals((actual.old_prefix, actual.old_suffix), old_fixes)
+        self.assertEquals(actual.new_prefix, new_prefix)
 
     def test_4(self) -> None:
-        lhs, rhs = "ab", "c"
+        lhs, rhs = "abb", "c"
         new_text = "bb"
-        expected = "b", ""
-        actual = trans(lhs, rhs, new_text=new_text)
-        self.assertEquals((actual.old_prefix, actual.old_suffix), expected)
+
+        old_fixes = "bb", ""
+        new_prefix = "bb"
+
+        actual = trans(
+            _MIN_MATCH_LEN,
+            unifying_chars=set(),
+            line_before=lhs,
+            line_after=rhs,
+            new_text=new_text,
+        )
+        self.assertEquals((actual.old_prefix, actual.old_suffix), old_fixes)
+        self.assertEquals(actual.new_prefix, new_prefix)
 
     def test_5(self) -> None:
-        lhs, rhs = "abd", "efc"
-        new_text = "bd"
-        expected = "bd", ""
-        actual = trans(lhs, rhs, new_text=new_text)
-        self.assertEquals((actual.old_prefix, actual.old_suffix), expected)
+        lhs, rhs = "abde", "fcg"
+        new_text = "bde"
+
+        old_fixes = "bde", ""
+        new_prefix = "bde"
+
+        actual = trans(
+            _MIN_MATCH_LEN,
+            unifying_chars=set(),
+            line_before=lhs,
+            line_after=rhs,
+            new_text=new_text,
+        )
+        self.assertEquals((actual.old_prefix, actual.old_suffix), old_fixes)
+        self.assertEquals(actual.new_prefix, new_prefix)
 
     def test_6(self) -> None:
-        lhs, rhs = "ab", "c"
-        new_text = "bbc"
-        expected = "b", "c"
-        actual = trans(lhs, rhs, new_text=new_text)
-        self.assertEquals((actual.old_prefix, actual.old_suffix), expected)
+        lhs, rhs = "ab", "cdef"
+        new_text = "bbcde"
+
+        old_fixes = "", "cde"
+        new_prefix = "bbcde"
+
+        actual = trans(
+            _MIN_MATCH_LEN,
+            unifying_chars=set(),
+            line_before=lhs,
+            line_after=rhs,
+            new_text=new_text,
+        )
+        self.assertEquals((actual.old_prefix, actual.old_suffix), old_fixes)
+        self.assertEquals(actual.new_prefix, new_prefix)
 
     def test_7(self) -> None:
         lhs, rhs = "abe", "cd"
-        new_text = "becf"
-        expected = "be", ""
-        actual = trans(lhs, rhs, new_text=new_text)
-        self.assertEquals((actual.old_prefix, actual.old_suffix), expected)
+        new_text = "abecf"
+
+        old_fixes = "abe", ""
+        new_prefix = "abecf"
+
+        actual = trans(
+            _MIN_MATCH_LEN,
+            unifying_chars=set(),
+            line_before=lhs,
+            line_after=rhs,
+            new_text=new_text,
+        )
+        self.assertEquals((actual.old_prefix, actual.old_suffix), old_fixes)
+        self.assertEquals(actual.new_prefix, new_prefix)

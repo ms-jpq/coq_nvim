@@ -102,6 +102,15 @@ Evaluate current visual selection or buffer as user defined snippets.
 null
 ```
 
+#### coq_settings.keymap.manual_complete_insertion_only
+
+Map the manual keybinding trigger only in `INSERT` mode.
+
+**default**:
+```json
+False
+```
+
 ## Custom keybindings
 
 If you would like to set your own keybindings, add the following to your

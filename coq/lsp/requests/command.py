@@ -1,5 +1,5 @@
 from pynvim import Nvim
-from std2.pickle import new_encoder
+from std2.pickle.encoder import new_encoder
 
 from ...shared.types import ExternLSP, ExternLUA
 from ..types import Command

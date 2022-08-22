@@ -11,8 +11,10 @@ from subprocess import DEVNULL, PIPE
 from typing import Any, AsyncIterator, Iterator, Mapping, Optional, Sequence
 
 from pynvim_pp.lib import awrite, decode, encode, go
-from pynvim_pp.logging import log
-from std2.pickle import DecodeError, new_decoder, new_encoder
+from pynvim_pp.logging import log, with_suppress
+from std2.pickle.decoder import new_decoder
+from std2.pickle.encoder import new_encoder
+from std2.pickle.types import DecodeError
 
 from ...lang import LANG
 from ...lsp.protocol import PROTOCOL
@@ -112,15 +114,16 @@ class Worker(BaseWorker[BaseClient, None]):
         go(supervisor.nvim, aw=self._poll())
 
     async def _poll(self) -> None:
-        try:
-            while True:
-                await sleep(9)
-        finally:
-            proc = self._proc
-            if proc:
-                with suppress(ProcessLookupError):
-                    proc.kill()
-                await proc.wait()
+        with with_suppress():
+            try:
+                while True:
+                    await sleep(9)
+            finally:
+                proc = self._proc
+                if proc:
+                    with suppress(ProcessLookupError):
+                        proc.kill()
+                    await proc.wait()
 
     async def _install(self) -> None:
         vars_dir = self._supervisor.vars_dir / "clients" / "t9"
@@ -168,7 +171,8 @@ class Worker(BaseWorker[BaseClient, None]):
                         await self._proc.stdin.drain()
                         out = await self._proc.stdout.readline()
                     except (ConnectionError, LimitOverrunError, ValueError):
-                        return await self._clean()
+                        await self._clean()
+                        return None
                     else:
                         return decode(out)
 
@@ -178,22 +182,23 @@ class Worker(BaseWorker[BaseClient, None]):
             return await shield(cont())
 
     async def work(self, context: Context) -> AsyncIterator[Completion]:
-        if self._cwd != context.cwd:
-            await self._clean()
+        async with self._work_lock:
+            if self._cwd != context.cwd:
+                await self._clean()
 
-        if self._bin:
-            req = _encode(
-                self._supervisor.match,
-                context=context,
-                limit=self._supervisor.match.max_results,
-            )
-            json = dumps(req, check_circular=False, ensure_ascii=False)
-            reply = await self._comm(context.cwd, json=json)
-            if reply:
-                try:
-                    resp = loads(reply)
-                except JSONDecodeError as e:
-                    log.warn("%s", e)
-                else:
-                    for comp in _decode(self._options, reply=resp):
-                        yield comp
+            if self._bin:
+                req = _encode(
+                    self._supervisor.match,
+                    context=context,
+                    limit=self._supervisor.match.max_results,
+                )
+                json = dumps(req, check_circular=False, ensure_ascii=False)
+                reply = await self._comm(context.cwd, json=json)
+                if reply:
+                    try:
+                        resp = loads(reply)
+                    except JSONDecodeError as e:
+                        log.warn("%s", e)
+                    else:
+                        for comp in _decode(self._options, reply=resp):
+                            yield comp
