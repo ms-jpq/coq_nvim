@@ -156,6 +156,7 @@ class ExternPath:
 @dataclass(frozen=True)
 class Completion:
     source: str
+    always_on_top: bool
     weight_adjust: float
     label: str
     sort_by: str

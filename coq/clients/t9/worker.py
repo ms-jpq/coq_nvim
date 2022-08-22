@@ -20,7 +20,7 @@ from ...lang import LANG
 from ...lsp.protocol import PROTOCOL
 from ...shared.runtime import Supervisor
 from ...shared.runtime import Worker as BaseWorker
-from ...shared.settings import BaseClient, MatchOptions
+from ...shared.settings import MatchOptions, T9Client
 from ...shared.types import Completion, Context, ContextualEdit
 from .install import ensure_updated, t9_bin
 from .types import ReqL1, ReqL2, Request, RespL1, Response
@@ -51,7 +51,7 @@ def _encode(options: MatchOptions, context: Context, limit: int) -> Any:
     return _ENCODER(req)
 
 
-def _decode(client: BaseClient, reply: Response) -> Iterator[Completion]:
+def _decode(client: T9Client, reply: Response) -> Iterator[Completion]:
     if (
         not isinstance(reply, Mapping)
         or not isinstance((old_prefix := reply.get("old_prefix")), str)
@@ -77,6 +77,7 @@ def _decode(client: BaseClient, reply: Response) -> Iterator[Completion]:
                 kind = PROTOCOL.CompletionItemKind.get(resp.kind)
                 cmp = Completion(
                     source=client.short_name,
+                    always_on_top=client.always_on_top,
                     weight_adjust=client.weight_adjust,
                     label=label,
                     sort_by=edit.new_text,
@@ -103,8 +104,8 @@ async def _proc(bin: PurePath, cwd: PurePath) -> Optional[Process]:
         return proc
 
 
-class Worker(BaseWorker[BaseClient, None]):
-    def __init__(self, supervisor: Supervisor, options: BaseClient, misc: None) -> None:
+class Worker(BaseWorker[T9Client, None]):
+    def __init__(self, supervisor: Supervisor, options: T9Client, misc: None) -> None:
         self._lock = Lock()
         self._bin: Optional[PurePath] = None
         self._proc: Optional[Process] = None

@@ -1,5 +1,5 @@
 from random import shuffle
-from typing import Any, Mapping, MutableSequence, Optional, Type, Union
+from typing import AbstractSet, Any, Mapping, MutableSequence, Optional, Type, Union
 
 from pynvim_pp.logging import log
 from std2.pickle.decoder import _new_parser
@@ -87,6 +87,7 @@ def _doc(item: CompletionItem) -> Optional[Doc]:
 
 def parse_item(
     extern_type: Union[Type[ExternLSP], Type[ExternLUA]],
+    always_on_top: Optional[AbstractSet[Optional[str]]],
     client: Optional[str],
     short_name: str,
     weight_adjust: float,
@@ -101,6 +102,11 @@ def parse_item(
             return None
         else:
             assert isinstance(parsed, CompletionItem)
+            on_top = (
+                False
+                if always_on_top is None
+                else (not always_on_top or client in always_on_top)
+            )
             p_edit = _primary(parsed)
             r_edits = tuple(
                 _range_edit("", edit=edit)
@@ -114,6 +120,7 @@ def parse_item(
             extern = extern_type(client=client, item=item, command=parsed.command)
             comp = Completion(
                 source=short_name,
+                always_on_top=on_top,
                 weight_adjust=weight_adjust,
                 label=parsed.label,
                 primary_edit=p_edit,
@@ -130,6 +137,7 @@ def parse_item(
 
 def parse(
     extern_type: Union[Type[ExternLSP], Type[ExternLUA]],
+    always_on_top: Optional[AbstractSet[Optional[str]]],
     client: Optional[str],
     short_name: str,
     weight_adjust: float,
@@ -157,6 +165,7 @@ def parse(
                     co1 := parse_item(
                         extern_type,
                         client=client,
+                        always_on_top=always_on_top,
                         short_name=short_name,
                         weight_adjust=weight_adjust,
                         item=item,
@@ -177,6 +186,7 @@ def parse(
             if (
                 co2 := parse_item(
                     extern_type,
+                    always_on_top=always_on_top,
                     client=client,
                     short_name=short_name,
                     weight_adjust=weight_adjust,

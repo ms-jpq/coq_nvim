@@ -1,4 +1,4 @@
-from typing import AbstractSet, AsyncIterator, cast
+from typing import AbstractSet, AsyncIterator, Optional, cast
 
 from pynvim.api.nvim import Nvim
 from pynvim_pp.lib import encode
@@ -12,6 +12,7 @@ from .request import async_request
 async def comp_lsp(
     nvim: Nvim,
     short_name: str,
+    always_on_top: Optional[AbstractSet[Optional[str]]],
     weight_adjust: float,
     context: Context,
     clients: AbstractSet[str],
@@ -25,6 +26,7 @@ async def comp_lsp(
             ExternLSP,
             client=client,
             short_name=short_name,
+            always_on_top=always_on_top,
             weight_adjust=weight_adjust,
             resp=resp,
         )
@@ -33,6 +35,7 @@ async def comp_lsp(
 async def comp_thirdparty(
     nvim: Nvim,
     short_name: str,
+    always_on_top: Optional[AbstractSet[Optional[str]]],
     weight_adjust: float,
     context: Context,
     clients: AbstractSet[str],
@@ -46,6 +49,7 @@ async def comp_thirdparty(
             ExternLUA,
             client=client,
             short_name=name,
+            always_on_top=always_on_top,
             weight_adjust=weight_adjust,
             resp=resp,
         )

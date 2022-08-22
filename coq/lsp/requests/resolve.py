@@ -18,6 +18,7 @@ async def resolve(nvim: Nvim, extern: ExternLSP) -> Optional[Completion]:
             type(extern),
             client=client,
             short_name="",
+            always_on_top=None,
             weight_adjust=0,
             item=resp,
         )

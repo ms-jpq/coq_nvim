@@ -1,7 +1,7 @@
 from concurrent.futures import Executor
 from pathlib import Path
 from shutil import which
-from typing import Iterator, Mapping
+from typing import Iterator, Mapping, cast
 
 from pynvim import Nvim
 from pynvim_pp.api import get_cwd
@@ -28,7 +28,7 @@ from ..databases.tmux.database import TMDB
 from ..databases.treesitter.database import TDB
 from ..shared.lru import LRU
 from ..shared.runtime import Supervisor, Worker
-from ..shared.settings import Settings
+from ..shared.settings import LSPClient, Settings
 from .reviewer import Reviewer
 from .rt_types import Stack, ValidationError
 from .state import state
@@ -81,7 +81,9 @@ def _from_each_according_to_their_ability(
         yield LspWorker(supervisor, options=clients.lsp, misc=None)
 
     if clients.third_party.enabled:
-        yield ThirdPartyWorker(supervisor, options=clients.third_party, misc=None)
+        yield ThirdPartyWorker(
+            supervisor, options=cast(LSPClient, clients.third_party), misc=None
+        )
 
     if clients.snippets.enabled:
         yield SnippetWorker(supervisor, options=clients.snippets, misc=sdb)
