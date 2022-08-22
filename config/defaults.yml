@@ -18,6 +18,7 @@ completion:
   always: True
   smart: True
   replace_prefix_threshold: 3
+  stop_syms: ['{', '}', '(', ')', '[', ']', '']
 
 match:
   unifying_chars:
