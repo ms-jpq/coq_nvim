@@ -102,7 +102,7 @@ class CompleteOptions:
     always: bool
     smart: bool
     replace_prefix_threshold: int
-    stop_syms: AbstractSet[str]
+    skip_after: AbstractSet[str]
 
 
 @dataclass(frozen=True)

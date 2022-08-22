@@ -37,7 +37,9 @@ from ..trans import trans
 _Q: SimpleQueue = SimpleQueue()
 
 
-def _should_cont(state: State, prev: Context, cur: Context, stop_syms: AbstractSet[str]) -> bool:
+def _should_cont(
+    state: State, prev: Context, cur: Context, skip_after: AbstractSet[str]
+) -> bool:
     if cur.manual:
         return True
     elif prev.change_id == cur.change_id:
@@ -47,7 +49,7 @@ def _should_cont(state: State, prev: Context, cur: Context, stop_syms: AbstractS
             return extern.is_dir
         else:
             return False
-    elif cur.syms_before in stop_syms:
+    elif any(cur.line_before.endswith(token) for token in skip_after):
         return False
     elif cur.syms_before != "":
         return True
@@ -80,7 +82,16 @@ def _launch_loop(nvim: Nvim, stack: Stack) -> None:
                             manual=manual,
                         ),
                     )
-                    should = _should_cont(s, prev=s.context, cur=ctx, stop_syms=stack.settings.completion.stop_syms) if ctx else False
+                    should = (
+                        _should_cont(
+                            s,
+                            prev=s.context,
+                            cur=ctx,
+                            skip_after=stack.settings.completion.skip_after,
+                        )
+                        if ctx
+                        else False
+                    )
                     _, col = ctx.position
 
                     if should:

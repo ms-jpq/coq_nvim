@@ -39,3 +39,17 @@ Currently used only for slower but better cache algorithm for certain LSPs.
 ```json
 true
 ```
+
+#### coq_settings.completion.skip_after
+
+Set of tokens that should prevent auto completion, when found directly before the cursor.
+
+ie `["{", "}", "[", "]"]`, etc
+
+Setting this to `[""]` will disable auto complete.
+
+**default:**
+
+```json
+[]
+```
