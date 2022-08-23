@@ -185,6 +185,7 @@ class Worker(BaseWorker[TagsClient, CTDB]):
                         label=edit.new_text,
                         sort_by=name,
                         primary_edit=edit,
+                        adjust_indent=False,
                         kind=kind,
                         doc=_doc(self._options, context=context, tag=tag),
                         icon_match=kind,

@@ -44,7 +44,7 @@ from ...shared.timeit import timeit
 from ...shared.types import Edit, Mark, SnippetEdit, SnippetGrammar
 from ...snippets.loaders.load import load_direct
 from ...snippets.loaders.neosnippet import load_neosnippet
-from ...snippets.parse import parse_norm
+from ...snippets.parse import parse_basic
 from ...snippets.parsers.types import ParseInfo
 from ...snippets.types import SCHEMA, LoadedSnips, ParsedSnippet
 from ..rt_types import Stack
@@ -199,9 +199,10 @@ def _trans(
 ) -> Iterator[Tuple[ParsedSnippet, Edit, Sequence[Mark]]]:
     for snip in snips:
         edit = SnippetEdit(grammar=snip.grammar, new_text=snip.content)
-        parsed, marks = parse_norm(
+        parsed, marks = parse_basic(
             unifying_chars,
             replace_prefix_threshold=replace_prefix_threshold,
+            adjust_indent=False,
             context=EMPTY_CONTEXT,
             snippet=edit,
             info=info,

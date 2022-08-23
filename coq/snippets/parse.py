@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from itertools import accumulate, chain, repeat
+from itertools import accumulate
 from pprint import pformat
 from typing import AbstractSet, Callable, Iterable, Iterator, Sequence, Tuple
 
@@ -7,7 +7,7 @@ from pynvim_pp.lib import encode
 from std2.string import removesuffix
 from std2.types import never
 
-from ..shared.trans import expand_tabs, indent_to_line, trans_adjusted
+from ..shared.trans import indent_adjusted, trans_adjusted
 from ..shared.types import (
     BaseRangeEdit,
     Context,
@@ -31,17 +31,6 @@ class ParsedEdit(BaseRangeEdit):
 
 
 _NL = len(encode(SNIP_LINE_SEP))
-
-
-def _indent(context: Context, line_before: str, snippet: str) -> str:
-    indent = indent_to_line(context, line_before=line_before)
-    expanded = expand_tabs(context, text=snippet)
-    lines = tuple(
-        lhs + rhs
-        for lhs, rhs in zip(chain(("",), repeat(indent)), expanded.splitlines(True))
-    )
-    indented = "".join(lines)
-    return indented
 
 
 def _marks(
@@ -98,14 +87,23 @@ def _parser(grammar: SnippetGrammar) -> Callable[[Context, ParseInfo, str], Pars
         never(grammar)
 
 
-def parse_range(
+def parse_ranged(
     context: Context,
+    adjust_indent: bool,
     snippet: SnippetRangeEdit,
     info: ParseInfo,
     line_before: str,
 ) -> Tuple[Edit, Sequence[Mark]]:
     parser = _parser(snippet.grammar)
-    indented = _indent(context, line_before=line_before, snippet=snippet.new_text)
+    indented = (
+        SNIP_LINE_SEP.join(
+            indent_adjusted(
+                context, line_before=line_before, lines=snippet.new_text.splitlines()
+            )
+        )
+        if adjust_indent
+        else snippet.new_text
+    )
 
     parsed = parser(context, info, indented)
     new_prefix = parsed.text[: parsed.cursor]
@@ -129,9 +127,10 @@ def parse_range(
     return edit, marks
 
 
-def parse_norm(
+def parse_basic(
     unifying_chars: AbstractSet[str],
     replace_prefix_threshold: int,
+    adjust_indent: bool,
     context: Context,
     snippet: SnippetEdit,
     info: ParseInfo,
@@ -140,12 +139,23 @@ def parse_norm(
 
     sort_by = parser(context, info, snippet.new_text).text
     trans_ctx = trans_adjusted(
-        unifying_chars, replace_prefix_threshold=replace_prefix_threshold, ctx=context, new_text=sort_by
+        unifying_chars,
+        replace_prefix_threshold=replace_prefix_threshold,
+        ctx=context,
+        new_text=sort_by,
     )
     old_prefix, old_suffix = trans_ctx.old_prefix, trans_ctx.old_suffix
 
     line_before = removesuffix(context.line_before, suffix=old_prefix)
-    indented = _indent(context, line_before=line_before, snippet=snippet.new_text)
+    indented = (
+        SNIP_LINE_SEP.join(
+            indent_adjusted(
+                context, line_before=line_before, lines=snippet.new_text.splitlines()
+            )
+        )
+        if adjust_indent
+        else snippet.new_text
+    )
 
     parsed = parser(context, info, indented)
     new_prefix = parsed.text[: parsed.cursor]

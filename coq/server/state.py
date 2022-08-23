@@ -55,6 +55,7 @@ _state = State(
         comp=Completion(
             source="",
             primary_edit=Edit(new_text=""),
+            adjust_indent=False,
             always_on_top=False,
             weight_adjust=0,
             label="",

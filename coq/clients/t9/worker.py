@@ -82,6 +82,7 @@ def _decode(client: T9Client, reply: Response) -> Iterator[Completion]:
                     label=label,
                     sort_by=edit.new_text,
                     primary_edit=edit,
+                    adjust_indent=False,
                     kind=kind or "",
                     icon_match=kind,
                 )

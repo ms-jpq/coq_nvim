@@ -36,7 +36,7 @@ from std2.types import never
 from ..consts import DEBUG
 from ..lang import LANG
 from ..shared.runtime import Metric
-from ..shared.trans import trans_adjusted
+from ..shared.trans import indent_adjusted, trans_adjusted
 from ..shared.types import (
     UTF8,
     UTF16,
@@ -50,7 +50,7 @@ from ..shared.types import (
     SnippetEdit,
     SnippetRangeEdit,
 )
-from ..snippets.parse import ParsedEdit, parse_norm, parse_range
+from ..snippets.parse import ParsedEdit, parse_basic, parse_ranged
 from ..snippets.parsers.types import ParseError, ParseInfo
 from .mark import mark
 from .rt_types import Stack
@@ -118,7 +118,7 @@ def _rows_to_fetch(ctx: Context, edit: Edit, *edits: Edit) -> Tuple[int, int]:
 
 
 def _contextual_edit_trans(
-    ctx: Context, lines: _Lines, edit: ContextualEdit
+    ctx: Context, adjust_indent: bool, lines: _Lines, edit: ContextualEdit
 ) -> EditInstruction:
     row, col = ctx.position
     old_prefix_lines = edit.old_prefix.split(ctx.linefeed)
@@ -141,7 +141,14 @@ def _contextual_edit_trans(
     begin = r1, c1
     end = r2, c2
 
-    new_lines = edit.new_text.split(ctx.linefeed)
+    split_lines = edit.new_text.split(ctx.linefeed)
+    if adjust_indent:
+        new_lines: Sequence[str] = tuple(
+            indent_adjusted(ctx, line_before=ctx.line_before, lines=split_lines)
+        )
+    else:
+        new_lines = split_lines
+
     new_prefix_lines = edit.new_prefix.split(ctx.linefeed)
     cursor_yoffset = -len(old_prefix_lines) + len(new_prefix_lines)
     cursor_xpos = (
@@ -165,40 +172,37 @@ def _contextual_edit_trans(
 
 def _edit_trans(
     unifying_chars: AbstractSet[str],
+    adjust_indent: bool,
     replace_prefix_threshold: int,
     ctx: Context,
     lines: _Lines,
     edit: Edit,
 ) -> EditInstruction:
-
     adjusted = trans_adjusted(
         unifying_chars,
         replace_prefix_threshold=replace_prefix_threshold,
         ctx=ctx,
         new_text=edit.new_text,
     )
-    inst = _contextual_edit_trans(ctx, lines=lines, edit=adjusted)
+    inst = _contextual_edit_trans(
+        ctx, adjust_indent=adjust_indent, lines=lines, edit=adjusted
+    )
     return inst
 
 
 def _range_edit_trans(
     unifying_chars: AbstractSet[str],
     replace_prefix_threshold: int,
+    adjust_indent: bool,
     ctx: Context,
     primary: bool,
     lines: _Lines,
     edit: BaseRangeEdit,
 ) -> EditInstruction:
-    new_lines = edit.new_text.split(ctx.linefeed)
-
-    if (
-        primary
-        and not isinstance(edit, ParsedEdit)
-        and len(new_lines) <= 1
-        and edit.begin == edit.end
-    ):
+    if primary and not isinstance(edit, ParsedEdit) and edit.begin == edit.end:
         return _edit_trans(
             unifying_chars,
+            adjust_indent=adjust_indent,
             replace_prefix_threshold=replace_prefix_threshold,
             ctx=ctx,
             lines=lines,
@@ -207,6 +211,8 @@ def _range_edit_trans(
 
     else:
         (r1, ec1), (r2, ec2) = sorted((edit.begin, edit.end))
+        already_parsed = isinstance(edit, ParsedEdit)
+        split_lines = edit.new_text.split(ctx.linefeed)
 
         if edit.encoding == UTF16:
             c1 = len(encode(decode(lines.b_lines16[r1][: ec1 * 2], encoding=UTF16)))
@@ -220,10 +226,16 @@ def _range_edit_trans(
         begin = r1, c1
         end = r2, c2
 
+        if primary and not already_parsed and adjust_indent:
+            line_before = ctx.line_before[:c1]
+            new_lines: Sequence[str] = tuple(
+                indent_adjusted(ctx, line_before=line_before, lines=split_lines)
+            )
+        else:
+            new_lines = split_lines
+
         lines_before = (
-            edit.new_prefix.split(ctx.linefeed)
-            if isinstance(edit, ParsedEdit)
-            else new_lines
+            edit.new_prefix.split(ctx.linefeed) if already_parsed else new_lines
         )
         cursor_yoffset = (r2 - r1) + (len(lines_before) - 1)
         cursor_xpos = (
@@ -251,6 +263,7 @@ def _instructions(
     ctx: Context,
     unifying_chars: AbstractSet[str],
     replace_prefix_threshold: int,
+    adjust_indent: bool,
     lines: _Lines,
     primary: Edit,
     secondary: Sequence[BaseRangeEdit],
@@ -259,6 +272,7 @@ def _instructions(
         inst = _range_edit_trans(
             unifying_chars,
             replace_prefix_threshold=replace_prefix_threshold,
+            adjust_indent=adjust_indent,
             ctx=ctx,
             primary=True,
             lines=lines,
@@ -267,13 +281,16 @@ def _instructions(
         yield inst
 
     elif isinstance(primary, ContextualEdit):
-        inst = _contextual_edit_trans(ctx, lines=lines, edit=primary)
+        inst = _contextual_edit_trans(
+            ctx, adjust_indent=adjust_indent, lines=lines, edit=primary
+        )
         yield inst
 
     elif isinstance(primary, Edit):
         inst = _edit_trans(
             unifying_chars,
             replace_prefix_threshold=replace_prefix_threshold,
+            adjust_indent=adjust_indent,
             ctx=ctx,
             lines=lines,
             edit=primary,
@@ -287,6 +304,7 @@ def _instructions(
         yield _range_edit_trans(
             unifying_chars,
             replace_prefix_threshold=replace_prefix_threshold,
+            adjust_indent=adjust_indent,
             ctx=ctx,
             primary=False,
             lines=lines,
@@ -409,16 +427,18 @@ def _parse(
             line_before = decode(
                 encode(line, encoding=comp.primary_edit.encoding)[:col]
             )
-            edit, marks = parse_range(
+            edit, marks = parse_ranged(
                 context=state.context,
+                adjust_indent=comp.adjust_indent,
                 snippet=comp.primary_edit,
                 info=info,
                 line_before=line_before,
             )
         else:
-            edit, marks = parse_norm(
+            edit, marks = parse_basic(
                 stack.settings.match.unifying_chars,
                 replace_prefix_threshold=stack.settings.completion.replace_prefix_threshold,
+                adjust_indent=comp.adjust_indent,
                 context=state.context,
                 snippet=comp.primary_edit,
                 info=info,
@@ -503,6 +523,7 @@ def edit(
                 *_instructions(
                     state.context,
                     unifying_chars=stack.settings.match.unifying_chars,
+                    adjust_indent=metric.comp.adjust_indent,
                     replace_prefix_threshold=stack.settings.completion.replace_prefix_threshold,
                     lines=view,
                     primary=primary,
