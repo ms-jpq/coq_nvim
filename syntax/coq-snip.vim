@@ -3,21 +3,21 @@ if exists('b:current_syntax')
 endif
 
 
-syntax match Error              '\v^.+$'
-syntax match Comment            '\v^\#.*$'
+syntax match  Error             '\v^.+$'
+syntax match  Comment           '\v^\#.*$'
 
 
-syntax match Include            '\v^extends\s'
+syntax match  Include           '\v^extends\s'
 
 
-syntax match Keyword            '\v^snippet\s'
-syntax match Error              '\v(^snippet\s\s*[^\s]+)@<=\s+.+$'
-syntax match Keyword            '\v^alias\s'
-syntax match Label              '\v^abbr\s'
+syntax match  Keyword           '\v^snippet\s'
+syntax match  Error             '\v(^snippet\s\s*[^\s]+)@<=\s+.+$'
+syntax match  Keyword           '\v^alias\s'
+syntax match  Label             '\v^abbr\s'
 
 
-syntax match String             '\v^\s+.*$'                             contains=Special,csTrailingWS
-syntax match csTrailingWS       '\v\s+$'
+syntax match  String            '\v^\s+.*$'                             contains=Special,csTrailingWS
+syntax match  csTrailingWS      '\v\s+$'
 
 syntax region Special           start="\V${" end="\V}"        contained contains=Number,Macro,Operator,csContainedString
 syntax match  Special           '\v\$\d+'                     contained contains=Number
