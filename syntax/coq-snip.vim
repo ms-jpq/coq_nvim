@@ -21,7 +21,7 @@ syntax match csTrailingWS      '\v\s+$'
 
 syntax match Special           '\v\$\{.{-1,}\}|(\$\d+)' contained contains=Number,Conditional,csContainedString
 syntax match Number            '\v\d+'                  contained
-syntax match Conditional       '\V:'                    contained nextgroup=csContainedString
+syntax match Conditional       '\V:'                    contained                                               nextgroup=csContainedString
 syntax match csContainedString '\v(\:)@<=.{-1,}(\})@='  contained contains=Special
 
 
