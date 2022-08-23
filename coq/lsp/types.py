@@ -16,9 +16,20 @@ from ..shared.types import Completion
 
 
 @dataclass(frozen=True)
+class _CompletionItemLabelDetails:
+    detail: Optional[str] = None
+    description: Optional[str] = None
+
+
+@dataclass(frozen=True)
 class _Position:
     line: int
     character: int
+
+
+@dataclass(frozen=True)
+class _TextEdit:
+    newText: str
 
 
 @dataclass(frozen=True)
@@ -34,14 +45,13 @@ class _InsertReplaceRange:
 
 
 @dataclass(frozen=True)
-class TextEdit:
-    newText: str
+class TextEdit(_TextEdit):
     range: _Range
 
 
 @dataclass(frozen=True)
-class InsertReplaceEdit(_InsertReplaceRange):
-    newText: str
+class InsertReplaceEdit(_TextEdit, _InsertReplaceRange):
+    ...
 
 
 _CompletionItemKind = int
@@ -68,6 +78,7 @@ class Command:
 @dataclass(frozen=True)
 class CompletionItem:
     label: str
+    labelDetails: Optional[_CompletionItemLabelDetails] = None
 
     kind: Optional[_CompletionItemKind] = None
     tags: Optional[Sequence[_CompletionItemTag]] = None

@@ -1,8 +1,18 @@
+from dataclasses import asdict
 from random import shuffle
-from typing import AbstractSet, Any, Mapping, MutableSequence, Optional, Type, Union
+from typing import (
+    AbstractSet,
+    Any,
+    Mapping,
+    MutableMapping,
+    MutableSequence,
+    Optional,
+    Type,
+    Union,
+)
 
 from pynvim_pp.logging import log
-from std2.pickle.decoder import _new_parser
+from std2.pickle.decoder import _new_parser, new_decoder
 
 from ..shared.types import (
     UTF16,
@@ -21,6 +31,7 @@ from .types import (
     CompletionItem,
     CompletionResponse,
     InsertReplaceEdit,
+    ItemDefaults,
     LSPcomp,
     MarkupContent,
     TextEdit,
@@ -31,7 +42,26 @@ def _falsy(thing: Any) -> bool:
     return thing is None or thing == False or thing == 0 or thing == "" or thing == b""
 
 
+_defaults_parser = new_decoder[Optional[ItemDefaults]](
+    Optional[ItemDefaults], strict=False, decoders=()
+)
 _item_parser = _new_parser(CompletionItem, path=(), strict=False, decoders=())
+
+
+def _with_defaults(defaults: ItemDefaults, item: Any) -> Any:
+    if not isinstance(item, MutableMapping):
+        pass
+    else:
+        item.setdefault("insertTextFormat", defaults.insertTextFormat)
+        item.setdefault("insertTextMode", defaults.insertTextMode)
+        item.setdefault("data", defaults.data)
+
+        if isinstance(text := item.get("insertText") or item.get("label"), str) and (
+            edit_range := defaults.editRange
+        ):
+            item.setdefault("textEdit", {"new_text": text, **asdict(edit_range)})
+
+    return item
 
 
 def _range_edit(fallback: str, edit: Union[TextEdit, InsertReplaceEdit]) -> RangeEdit:
@@ -156,6 +186,7 @@ def parse(
             )
 
         else:
+            defaults = _defaults_parser(resp.get("itemDefaults")) or ItemDefaults()
             shuffle(items)
             length = len(items)
             comps = (
@@ -168,7 +199,7 @@ def parse(
                         always_on_top=always_on_top,
                         short_name=short_name,
                         weight_adjust=weight_adjust,
-                        item=item,
+                        item=_with_defaults(defaults, item=item),
                     )
                 )
             )
@@ -178,6 +209,7 @@ def parse(
             )
 
     elif isinstance(resp, MutableSequence):
+        defaults = ItemDefaults()
         shuffle(resp)
         length = len(resp)
         comps = (
@@ -190,7 +222,7 @@ def parse(
                     client=client,
                     short_name=short_name,
                     weight_adjust=weight_adjust,
-                    item=item,
+                    item=_with_defaults(defaults, item=item),
                 )
             )
         )

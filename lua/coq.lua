@@ -141,9 +141,15 @@ coq.lsp_ensure_capabilities = function(cfg)
       textDocument = {
         completion = {
           completionItem = {
+            deprecatedSupport = true,
             insertReplaceSupport = true,
+            insertTextModeSupport = {valueSet = {1, 2}},
+            labelDetailsSupport = true,
+            labelDetailsSupport = true,
             preselectSupport = true,
-            snippetSupport = true
+            resolveSupport = {properties = {}},
+            snippetSupport = true,
+            tagSupport = {valueSet = {1}}
           }
         }
       }
