@@ -108,7 +108,7 @@ Map the manual keybinding trigger only in `INSERT` mode.
 
 **default**:
 ```json
-False
+false
 ```
 
 ## Custom keybindings
