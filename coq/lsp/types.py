@@ -1,5 +1,14 @@
 from dataclasses import dataclass
-from typing import Any, Iterator, Literal, Optional, Sequence, TypedDict, Union
+from typing import (
+    AbstractSet,
+    Any,
+    Iterator,
+    Literal,
+    Optional,
+    Sequence,
+    TypedDict,
+    Union,
+)
 
 from ..shared.types import Completion
 
@@ -19,16 +28,20 @@ class _Range:
 
 
 @dataclass(frozen=True)
+class _InsertReplaceRange:
+    insert: _Range
+    replace: _Range
+
+
+@dataclass(frozen=True)
 class TextEdit:
     newText: str
     range: _Range
 
 
 @dataclass(frozen=True)
-class InsertReplaceEdit:
+class InsertReplaceEdit(_InsertReplaceRange):
     newText: str
-    insert: _Range
-    replace: _Range
 
 
 _CompletionItemKind = int
@@ -76,9 +89,19 @@ class CompletionItem:
     data: Optional[Any] = None
 
 
+@dataclass(frozen=True)
+class ItemDefaults:
+    commitCharacters: Optional[AbstractSet[str]] = frozenset()
+    editRange: Union[_Range, _InsertReplaceRange, None] = None
+    insertTextFormat: Optional[_InsertTextFormat] = None
+    insertTextMode: Optional[_InsertTextMode] = None
+    data: Optional[Any] = None
+
+
 class _CompletionList(TypedDict):
     isIncomplete: bool
     items: Sequence[CompletionItem]
+    itemDefaults: Optional[ItemDefaults]
 
 
 CompletionResponse = Union[
