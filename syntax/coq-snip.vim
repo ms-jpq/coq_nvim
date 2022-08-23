@@ -19,7 +19,7 @@ syntax match  Label             '\v^abbr\s'
 syntax match  String            '\v^\s+\_.*$'                           contains=Special,csTrailingWS
 syntax match  csTrailingWS      '\v\s+$'
 
-syntax region Special           start="\V${" end="\V}"        contained contains=Number,Macro,Operator,csContainedString
+syntax region Special           start='\V${' end='\V}'        contained contains=Number,Macro,Operator,csContainedString
 syntax match  Special           '\v\$\d+'                     contained contains=Number
 
 syntax match  Macro             '\v(\$\{)@<=[^\d]{-1,}(\:)@=' contained                                                  nextgroup=Operator
