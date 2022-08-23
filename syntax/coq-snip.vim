@@ -25,7 +25,7 @@ syntax match  Special           '\v\$\d+'                     contained contains
 syntax match  Macro             '\v(\$\{)@<=[^\d]{-1,}(\:)@=' contained                                                  nextgroup=Operator
 syntax match  Number            '\v\d+'                       contained
 syntax match  Operator          '\V:'                         contained                                                  nextgroup=csContainedString
-syntax match  csContainedString '\v(\:)@<=\_.{-1,}(\})@='     contained contains=Special
+syntax match  csContainedString '\v(\:)@<=\_.{-1,}(\})@='     contained contains=Special,csTrailingWS
 
 
 highlight default link csTrailingWS Error
