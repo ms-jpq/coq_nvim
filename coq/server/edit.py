@@ -570,7 +570,7 @@ def edit(
                     "%s",
                     pformat(
                         (
-                            (metric.comp.primary_edit, *metric.comp.secondary_edits),
+                            metric,
                             instructions,
                         )
                     ),

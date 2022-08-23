@@ -6,7 +6,7 @@ Named after the [famous theorem prover](https://coq.inria.fr/)
 
 Fast as FUCK and loads of features.
 
-## Faster Than Lua
+## Faster Than Pure Lua
 
 - Native C in-memory B-trees
 
@@ -182,7 +182,7 @@ Enable via: `coq_settings.clients.tabnine.enabled=true`
 
 ### [Modular lua sources](https://github.com/ms-jpq/coq.thirdparty) & external third party integrations
 
-- **Even faster than lua**! (transparent `sqlite` caching)
+- **Even faster than pure lua**! (transparent `sqlite` caching)
 
 - [**Tons of built-ins**](https://github.com/ms-jpq/coq.thirdparty)
 
@@ -194,7 +194,25 @@ Enable via: `coq_settings.clients.tabnine.enabled=true`
 
 Shown above: shell repl.
 
-Other built-ins: nvim lua API, scientific calculator, comment banners, moo!
+Some other built-ins:
+
+- nvim lua API
+
+- [vim runtime](https://github.com/neovim/neovim/tree/master/runtime/autoload): `ada, c, clojure, css, haskell, html, js, php, syntax`
+
+- [scientific calculator](https://linux.die.net/man/1/bc)
+
+- [comment banners](https://linux.die.net/man/6/figlet)
+
+- [moo!](https://linux.die.net/man/1/cowsay)
+
+- [vimtex](https://github.com/lervag/vimtex)
+
+- [orgmode.nvim](https://github.com/kristijanhusak/orgmode.nvim)
+
+- [vim dadbod](https://github.com/kristijanhusak/vim-dadbod-completion)
+
+- [nvim-dap](https://github.com/mfussenegger/nvim-dap)
 
 ### Statistics
 
