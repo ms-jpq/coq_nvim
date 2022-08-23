@@ -84,6 +84,7 @@ class Worker(BaseWorker[BuffersClient, BDB]):
                     label=edit.new_text,
                     sort_by=word.text,
                     primary_edit=edit,
+                    adjust_indent=False,
                     doc=_doc(self._options, context=context, word=word),
                     icon_match="Text",
                 )

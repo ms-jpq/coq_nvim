@@ -293,6 +293,7 @@ def _resolve_comp(
                         label="",
                         sort_by="",
                         primary_edit=Edit(new_text=""),
+                        adjust_indent=False,
                         doc=doc,
                         icon_match=None,
                     )

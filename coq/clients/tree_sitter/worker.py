@@ -65,6 +65,7 @@ def _trans(client: TSClient, context: Context, payload: Payload) -> Completion:
         label=edit.new_text,
         sort_by=payload.text,
         primary_edit=edit,
+        adjust_indent=False,
         kind=payload.kind,
         doc=_doc(client, context=context, payload=payload),
         icon_match=icon_match,

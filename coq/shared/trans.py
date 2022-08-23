@@ -1,4 +1,5 @@
-from typing import AbstractSet, Iterator
+from itertools import chain, repeat
+from typing import AbstractSet, Iterable, Iterator
 
 from .context import cword_after, cword_before
 from .parse import coalesce, lower
@@ -115,7 +116,7 @@ def expand_tabs(context: Context, text: str) -> str:
     return new_text
 
 
-def indent_to_line(context: Context, line_before: str) -> str:
+def _indent_to_line(context: Context, line_before: str) -> str:
     indent_len = len(line_before)
     indent = (
         " " * indent_len
@@ -123,3 +124,12 @@ def indent_to_line(context: Context, line_before: str) -> str:
         else (" " * indent_len).replace(" " * context.tabstop, "\t")
     )
     return indent
+
+
+def indent_adjusted(
+    context: Context, line_before: str, lines: Iterable[str]
+) -> Iterator[str]:
+    indent = _indent_to_line(context, line_before=line_before)
+    expanded = (expand_tabs(context, text=line) for line in lines)
+    for lhs, rhs in zip(chain(("",), repeat(indent)), expanded):
+        yield lhs + rhs

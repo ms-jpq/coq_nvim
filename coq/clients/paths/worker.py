@@ -255,6 +255,7 @@ class Worker(BaseWorker[PathsClient, None]):
                                 new_text=new_text,
                             ),
                             primary_edit=edit,
+                            adjust_indent=False,
                             extern=ExternPath(is_dir=is_dir, path=path),
                             icon_match="Folder" if new_text.endswith(sep) else "File",
                         )

@@ -71,8 +71,7 @@ def set_options(nvim: Nvim, mapping: KeyMapping, fast_close: bool) -> None:
             << "pumvisible() ? '<c-e><c-x><c-u>' : '<c-x><c-u>'"
         )
         if not mapping.manual_complete_insertion_only:
-            keymap.nv(mapping.manual_complete) << r"<c-\><c-n>i<c-x><c-u>"
-
+            _ = keymap.nv(mapping.manual_complete) << r"<c-\><c-n>i<c-x><c-u>"
 
     settings["completeopt"] += (
         "noinsert",

@@ -104,6 +104,10 @@ def _primary(item: CompletionItem) -> Edit:
             return fallback
 
 
+def _adjust_indent(mode: Optional[int], edit: Edit) -> bool:
+    return mode == 2 or isinstance(edit, SnippetEdit)
+
+
 def _doc(item: CompletionItem) -> Optional[Doc]:
     if isinstance(item.documentation, MarkupContent):
         return Doc(text=item.documentation.value, syntax=item.documentation.kind)
@@ -137,7 +141,13 @@ def parse_item(
                 if always_on_top is None
                 else (not always_on_top or client in always_on_top)
             )
+            label = (
+                parsed.label + (label_detail.detail or "")
+                if (label_detail := parsed.labelDetails)
+                else parsed.label
+            )
             p_edit = _primary(parsed)
+            adjust_indent = _adjust_indent(parsed.insertTextMode, edit=p_edit)
             r_edits = tuple(
                 _range_edit("", edit=edit)
                 for edit in (parsed.additionalTextEdits or ())
@@ -148,12 +158,14 @@ def parse_item(
             kind = PROTOCOL.CompletionItemKind.get(item.get("kind"), "")
             doc = _doc(parsed)
             extern = extern_type(client=client, item=item, command=parsed.command)
+
             comp = Completion(
                 source=short_name,
                 always_on_top=on_top,
                 weight_adjust=weight_adjust,
-                label=parsed.label,
+                label=label,
                 primary_edit=p_edit,
+                adjust_indent=adjust_indent,
                 secondary_edits=r_edits,
                 sort_by=sort_by,
                 preselect=parsed.preselect or False,
