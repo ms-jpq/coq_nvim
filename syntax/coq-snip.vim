@@ -16,14 +16,17 @@ syntax match Keyword      '\v^alias\s'
 syntax match Label        '\v^abbr\s'
 
 
-syntax match String       '\v^\s+.*$'                        contains=Special,csTrailingWS
-syntax match Special      '\v\$\{[^\}]+\}|(\$\d+)' contained contains=Number,Conditional
-syntax match Number       '\v\d+'                  contained
-syntax match Conditional  '\V:'                    contained
-syntax match csTrailingWS '\v\s+$'
+syntax match String            '\v^\s+.*$'                        contains=Special,csTrailingWS
+syntax match csTrailingWS      '\v\s+$'
+
+syntax match Special           '\v\$\{[^\}]+\}|(\$\d+)' contained contains=Number,Conditional,csContainedString
+syntax match Number            '\v\d+'                  contained
+syntax match Conditional       '\V:'                    contained nextgroup=csContainedString
+syntax match csContainedString '\v(\:)@<=.+(\})@='      contained contains=Special
 
 
 highlight default link csTrailingWS Error
+highlight default link csContainedString String
 
 
 let b:current_syntax = expand('<sfile>:t:r')
