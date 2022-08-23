@@ -16,7 +16,7 @@ syntax match  Keyword           '\v^alias\s'
 syntax match  Label             '\v^abbr\s'
 
 
-syntax match  String            '\v^\s+\_.*$'                           contains=Special,csTrailingWS
+syntax match  String            '\v^\s+\_.{-1,}$'                       contains=Special,csTrailingWS
 syntax match  csTrailingWS      '\v\s+$'
 
 syntax region Special           start='\V${' end='\V}'        contained contains=Number,Macro,Operator,csContainedString
