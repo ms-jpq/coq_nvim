@@ -19,10 +19,10 @@ syntax match Label        '\v^abbr\s'
 syntax match String            '\v^\s+.*$'                        contains=Special,csTrailingWS
 syntax match csTrailingWS      '\v\s+$'
 
-syntax match Special           '\v\$\{[^\}]+\}|(\$\d+)' contained contains=Number,Conditional,csContainedString
+syntax match Special           '\v\$\{.{-1,}\}|(\$\d+)' contained contains=Number,Conditional,csContainedString
 syntax match Number            '\v\d+'                  contained
 syntax match Conditional       '\V:'                    contained nextgroup=csContainedString
-syntax match csContainedString '\v(\:)@<=.+(\})@='      contained contains=Special
+syntax match csContainedString '\v(\:)@<=.{-1,}(\})@='      contained contains=Special
 
 
 highlight default link csTrailingWS Error
