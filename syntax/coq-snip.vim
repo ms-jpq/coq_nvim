@@ -16,7 +16,7 @@ syntax match  Keyword           '\v^alias\s'
 syntax match  Label             '\v^abbr\s'
 
 
-syntax match  String            '\v^\s+.*$'                             contains=Special,csTrailingWS
+syntax match  String            '\v^\s+\_.*$'                           contains=Special,csTrailingWS
 syntax match  csTrailingWS      '\v\s+$'
 
 syntax region Special           start="\V${" end="\V}"        contained contains=Number,Macro,Operator,csContainedString
@@ -25,7 +25,7 @@ syntax match  Special           '\v\$\d+'                     contained contains
 syntax match  Macro             '\v(\$\{)@<=[^\d]{-1,}(\:)@=' contained                                                  nextgroup=Operator
 syntax match  Number            '\v\d+'                       contained
 syntax match  Operator          '\V:'                         contained                                                  nextgroup=csContainedString
-syntax match  csContainedString '\v(\:)@<=.{-1,}(\})@='       contained contains=Special
+syntax match  csContainedString '\v(\:)@<=\_.{-1,}(\})@='     contained contains=Special
 
 
 highlight default link csTrailingWS Error
