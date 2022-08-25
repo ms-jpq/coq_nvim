@@ -12,9 +12,9 @@ class Worker(LSPWorker):
     ) -> AsyncIterator[LSPcomp]:
         return comp_thirdparty(
             self._supervisor.nvim,
-            short_name=self._options.short_name,
-            always_on_top=self._options.always_on_top,
-            weight_adjust=self._options.weight_adjust,
+            short_name=self.options.short_name,
+            always_on_top=self.options.always_on_top,
+            weight_adjust=self.options.weight_adjust,
             context=context,
             clients=set() if context.manual else cached_clients,
         )

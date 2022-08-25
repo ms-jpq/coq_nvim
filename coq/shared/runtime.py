@@ -152,7 +152,7 @@ class Worker(Generic[_O_co, _T_co]):
     def __init__(self, supervisor: Supervisor, options: _O_co, misc: _T_co) -> None:
         self._work_task: Optional[Task] = None
         self._work_lock = TracingLocker(name=options.short_name, force=True)
-        self._supervisor, self._options, self._misc = supervisor, options, misc
+        self._supervisor, self.options, self._misc = supervisor, options, misc
         self._supervisor.register(self, assoc=options)
 
     @abstractmethod
@@ -173,13 +173,13 @@ class Worker(Generic[_O_co, _T_co]):
             instance, items = uuid4(), 0
             interrupted = False
 
-            with timeit(f"CANCEL WORKER -- {self._options.short_name}"):
+            with timeit(f"CANCEL WORKER -- {self.options.short_name}"):
                 if prev:
                     await cancel(prev)
 
-            with with_suppress(), timeit(f"WORKER -- {self._options.short_name}"):
+            with with_suppress(), timeit(f"WORKER -- {self.options.short_name}"):
                 await self._supervisor._reviewer.s_begin(
-                    token, assoc=self._options, instance=instance
+                    token, assoc=self.options, instance=instance
                 )
                 try:
                     async for items, completion in aenumerate(

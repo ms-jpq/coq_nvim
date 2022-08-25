@@ -213,10 +213,10 @@ class Worker(BaseWorker[PathsClient, None]):
             line = context.line_before + context.words_after
 
             def cont() -> Iterator[Path]:
-                if PathResolution.cwd in self._options.resolution:
+                if PathResolution.cwd in self.options.resolution:
                     yield Path(context.cwd)
 
-                if PathResolution.file in self._options.resolution:
+                if PathResolution.file in self.options.resolution:
                     yield Path(context.filename).parent
 
             base_paths = {*cont()}
@@ -245,9 +245,9 @@ class Worker(BaseWorker[PathsClient, None]):
                         seen.add(new_text)
                         edit = Edit(new_text=new_text)
                         completion = Completion(
-                            source=self._options.short_name,
-                            always_on_top=self._options.always_on_top,
-                            weight_adjust=self._options.weight_adjust,
+                            source=self.options.short_name,
+                            always_on_top=self.options.always_on_top,
+                            weight_adjust=self.options.weight_adjust,
                             label=edit.new_text,
                             sort_by=_sort_by(
                                 self._supervisor.match.unifying_chars,

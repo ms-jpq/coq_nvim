@@ -202,5 +202,5 @@ class Worker(BaseWorker[T9Client, None]):
                     except JSONDecodeError as e:
                         log.warn("%s", e)
                     else:
-                        for comp in _decode(self._options, reply=resp):
+                        for comp in _decode(self.options, reply=resp):
                             yield comp

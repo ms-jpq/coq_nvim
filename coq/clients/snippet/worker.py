@@ -40,9 +40,9 @@ class Worker(BaseWorker[SnippetClient, SDB]):
                     syntax="",
                 )
                 completion = Completion(
-                    source=self._options.short_name,
-                    always_on_top=self._options.always_on_top,
-                    weight_adjust=self._options.weight_adjust,
+                    source=self.options.short_name,
+                    always_on_top=self.options.always_on_top,
+                    weight_adjust=self.options.weight_adjust,
                     primary_edit=edit,
                     adjust_indent=True,
                     sort_by=snip["word"],

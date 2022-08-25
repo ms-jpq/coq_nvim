@@ -78,7 +78,7 @@ def _insert_enter(nvim: Nvim, stack: Stack) -> None:
                 state(nono_bufs={buf.number})
                 msg = LANG(
                     "source slow",
-                    source=worker._options.short_name,
+                    source=worker.options.short_name,
                     elapsed=si_prefixed_smol(elapsed, precision=0),
                 )
                 await awrite(nvim, msg, error=True)

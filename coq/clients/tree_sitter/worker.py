@@ -92,9 +92,9 @@ class Worker(BaseWorker[TSClient, TDB]):
 
     async def populate(self) -> Optional[Tuple[bool, float]]:
         if payload := await async_request(
-            self._supervisor.nvim, lines_around=self._options.search_context
+            self._supervisor.nvim, lines_around=self.options.search_context
         ):
-            keep_going = payload.elapsed <= self._options.slow_threshold
+            keep_going = payload.elapsed <= self.options.slow_threshold
             await self._misc.populate(
                 payload.buf,
                 filetype=payload.filetype,
@@ -116,4 +116,4 @@ class Worker(BaseWorker[TSClient, TDB]):
             )
 
             for payload in payloads:
-                yield _trans(self._options, context=context, payload=payload)
+                yield _trans(self.options, context=context, payload=payload)

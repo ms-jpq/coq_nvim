@@ -67,25 +67,25 @@ class Worker(BaseWorker[BuffersClient, BDB]):
 
     async def work(self, context: Context) -> AsyncIterator[Completion]:
         async with self._work_lock:
-            filetype = context.filetype if self._options.same_filetype else None
+            filetype = context.filetype if self.options.same_filetype else None
             words = await self._misc.words(
                 self._supervisor.match,
                 filetype=filetype,
                 word=context.words,
-                sym=context.syms if self._options.match_syms else "",
+                sym=context.syms if self.options.match_syms else "",
                 limitless=context.manual,
             )
             for word in words:
                 edit = Edit(new_text=word.text)
                 cmp = Completion(
-                    source=self._options.short_name,
-                    always_on_top=self._options.always_on_top,
-                    weight_adjust=self._options.weight_adjust,
+                    source=self.options.short_name,
+                    always_on_top=self.options.always_on_top,
+                    weight_adjust=self.options.weight_adjust,
                     label=edit.new_text,
                     sort_by=word.text,
                     primary_edit=edit,
                     adjust_indent=False,
-                    doc=_doc(self._options, context=context, word=word),
+                    doc=_doc(self.options, context=context, word=word),
                     icon_match="Text",
                 )
                 yield cmp
