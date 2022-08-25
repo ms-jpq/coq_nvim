@@ -1,12 +1,23 @@
-from typing import AsyncIterator
+from pathlib import PurePath
+from typing import AbstractSet, AsyncIterator, Mapping
 
 from ...databases.snippets.database import SDB
 from ...shared.runtime import Worker as BaseWorker
 from ...shared.settings import SnippetClient
 from ...shared.types import Completion, Context, Doc, SnippetEdit, SnippetGrammar
+from ...snippets.types import LoadedSnips
 
 
 class Worker(BaseWorker[SnippetClient, SDB]):
+    async def mtimes(self) -> Mapping[PurePath, float]:
+        return await self._misc.mtimes()
+
+    async def clean(self, stale: AbstractSet[PurePath]) -> None:
+        await self._misc.clean(stale)
+
+    async def populate(self, path: PurePath, mtime: float, loaded: LoadedSnips) -> None:
+        await self._misc.populate(path, mtime=mtime, loaded=loaded)
+
     async def work(self, context: Context) -> AsyncIterator[Completion]:
         async with self._work_lock:
             snippets = await self._misc.select(

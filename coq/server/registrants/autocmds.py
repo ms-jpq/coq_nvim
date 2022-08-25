@@ -16,10 +16,11 @@ from pynvim_pp.float_win import list_floatwins
 from pynvim_pp.lib import async_call, awrite, go
 from std2.locale import si_prefixed_smol
 
+from ...clients.tags.worker import Worker as TagsWorker
+from ...clients.tmux.worker import Worker as TmuxWorker
+from ...clients.tree_sitter.worker import Worker as TSWorker
 from ...lang import LANG
 from ...registry import NAMESPACE, atomic, autocmd, rpc
-from ...tmux.parse import snapshot
-from ...treesitter.request import async_request
 from ..rt_types import Stack
 from ..state import state
 
@@ -41,7 +42,9 @@ def _new_cwd(nvim: Nvim, stack: Stack) -> None:
 
     async def cont() -> None:
         s = state(cwd=cwd)
-        await stack.ctdb.swap(s.cwd)
+        for worker in stack.workers:
+            if isinstance(worker, TagsWorker):
+                await worker.swap(s.cwd)
 
     go(nvim, aw=cont())
 
@@ -67,29 +70,25 @@ atomic.exec_lua(f"{NAMESPACE}.{_ft_changed.name}()", ())
 
 @rpc(blocking=True)
 def _insert_enter(nvim: Nvim, stack: Stack) -> None:
-    ts = stack.settings.clients.tree_sitter
-    nono_bufs = state().nono_bufs
-    buf = cur_buf(nvim)
+    async def cont(worker: TSWorker) -> None:
+        if populated := await worker.populate():
+            keep_going, elapsed = populated
 
-    async def cont() -> None:
-        if ts.enabled and buf.number not in nono_bufs:
-            if payload := await async_request(nvim, lines_around=ts.search_context):
-                await stack.tdb.populate(
-                    payload.buf,
-                    filetype=payload.filetype,
-                    filename=payload.filename,
-                    nodes=payload.payloads,
+            if not keep_going:
+                state(nono_bufs={buf.number})
+                msg = LANG(
+                    "source slow",
+                    source=worker._options.short_name,
+                    elapsed=si_prefixed_smol(elapsed, precision=0),
                 )
-                if payload.elapsed > ts.slow_threshold:
-                    state(nono_bufs={buf.number})
-                    msg = LANG(
-                        "source slow",
-                        source=ts.short_name,
-                        elapsed=si_prefixed_smol(payload.elapsed, precision=0),
-                    )
-                    await awrite(nvim, msg, error=True)
+                await awrite(nvim, msg, error=True)
 
-    go(nvim, aw=cont())
+    for worker in stack.workers:
+        if isinstance(worker, TSWorker):
+            buf = cur_buf(nvim)
+            nono_bufs = state().nono_bufs
+            if buf.number not in nono_bufs:
+                go(nvim, aw=cont(worker))
 
 
 _ = autocmd("InsertEnter") << f"lua {NAMESPACE}.{_insert_enter.name}()"
@@ -97,14 +96,9 @@ _ = autocmd("InsertEnter") << f"lua {NAMESPACE}.{_insert_enter.name}()"
 
 @rpc(blocking=True)
 def _on_focus(nvim: Nvim, stack: Stack) -> None:
-    async def cont() -> None:
-        current, panes = await snapshot(
-            stack.settings.clients.tmux.all_sessions,
-            unifying_chars=stack.settings.match.unifying_chars,
-        )
-        await stack.tmdb.periodical(current, panes=panes)
-
-    go(nvim, aw=cont())
+    for worker in stack.workers:
+        if isinstance(worker, TmuxWorker):
+            go(nvim, aw=worker.periodical())
 
 
 _ = autocmd("FocusGained") << f"lua {NAMESPACE}.{_on_focus.name}()"

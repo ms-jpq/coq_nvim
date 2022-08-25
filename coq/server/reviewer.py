@@ -86,6 +86,7 @@ class Reviewer(PReviewer[ReviewCtx]):
         words = coalesce(
             chain.from_iterable(context.lines),
             unifying_chars=self._options.unifying_chars,
+            include_syms=True,
         )
         proximity = Counter(words)
 

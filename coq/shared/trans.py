@@ -26,7 +26,7 @@ def _line_match(
 ) -> str:
     existing, insertion = lower(existing), lower(insertion)
     if lhs:
-        prefix = next(coalesce(insertion, unifying_chars=unifying_chars), "")
+        prefix = next(coalesce(insertion, unifying_chars=unifying_chars, include_syms=True), "")
         for match in reverse_acc(0, seq=insertion):
             if match == existing[-len(match) :]:
                 if match == prefix or len(match) >= replace_prefix_threshold:
@@ -95,7 +95,7 @@ def trans_adjusted(
         unifying_chars, lower=False, context=ctx, sort_by=edit.new_text
     )
 
-    tokens = len(tuple(coalesce(new_text, unifying_chars=unifying_chars)))
+    tokens = len(tuple(coalesce(new_text, unifying_chars=unifying_chars, include_syms=True)))
     old_prefix = simple_before if tokens <= 1 else edit.old_prefix or simple_before
     old_suffix = simple_after if tokens <= 1 else edit.old_suffix
 

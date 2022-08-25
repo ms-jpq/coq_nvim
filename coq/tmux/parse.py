@@ -1,5 +1,6 @@
 from asyncio import gather
 from dataclasses import dataclass
+from pathlib import Path
 from typing import AbstractSet, Iterator, Mapping, Optional, Sequence, Tuple
 
 from pynvim_pp.lib import decode
@@ -24,10 +25,10 @@ class Pane:
     pane_title: str
 
 
-async def _panes(all_sessions: bool) -> Sequence[Pane]:
+async def _panes(tmux: Path, all_sessions: bool) -> Sequence[Pane]:
     try:
         proc = await call(
-            "tmux",
+            tmux,
             "list-panes",
             ("-a" if all_sessions else "-s"),
             "-F",
@@ -82,10 +83,10 @@ async def _panes(all_sessions: bool) -> Sequence[Pane]:
             return tuple(cont())
 
 
-async def _session() -> Optional[str]:
+async def _session(tmux: Path) -> Optional[str]:
     try:
         proc = await call(
-            "tmux", "display-message", "-p", "#{session_id}", check_returncode=set()
+            tmux, "display-message", "-p", "#{session_id}", check_returncode=set()
         )
     except OSError:
         return None
@@ -99,6 +100,7 @@ async def _session() -> Optional[str]:
 
 async def _screenshot(
     unifying_chars: AbstractSet[str],
+    include_syms: bool,
     pane: Pane,
 ) -> Tuple[Pane, Iterator[str]]:
     try:
@@ -116,16 +118,27 @@ async def _screenshot(
         if proc.returncode:
             return pane, iter(())
         else:
-            words = coalesce(decode(proc.stdout), unifying_chars=unifying_chars)
+            words = coalesce(
+                decode(proc.stdout),
+                unifying_chars=unifying_chars,
+                include_syms=include_syms,
+            )
             return pane, words
 
 
 async def snapshot(
-    all_sessions: bool, unifying_chars: AbstractSet[str]
+    tmux: Path, all_sessions: bool, include_syms: bool, unifying_chars: AbstractSet[str]
 ) -> Tuple[Optional[str], Mapping[Pane, Iterator[str]]]:
-    session, panes = await gather(_session(), _panes(all_sessions))
+    session, panes = await gather(
+        _session(tmux), _panes(tmux, all_sessions=all_sessions)
+    )
     shots = await gather(
-        *(_screenshot(unifying_chars=unifying_chars, pane=pane) for pane in panes)
+        *(
+            _screenshot(
+                unifying_chars=unifying_chars, pane=pane, include_syms=include_syms
+            )
+            for pane in panes
+        )
     )
     current = next(
         (

@@ -1,5 +1,5 @@
 from asyncio import sleep
-from collections.abc import Callable
+from typing import Callable
 from contextlib import suppress
 from io import BytesIO
 from os import X_OK, access, sep

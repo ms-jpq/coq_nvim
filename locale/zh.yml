@@ -33,6 +33,9 @@
 "source slow": |-
   ❌ 已消耗${elapsed}秒解析 ${source} 文档, 将在选中文件中禁用。
 
+"snip source not enabled": |-
+  ❌ 没有开启代码资源
+
 "no snippets found": |-
   ⚠️  未找到代码片段
 

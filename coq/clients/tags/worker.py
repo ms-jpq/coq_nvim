@@ -131,9 +131,9 @@ def _doc(client: TagsClient, context: Context, tag: Tag) -> Doc:
 
 class Worker(BaseWorker[TagsClient, CTDB]):
     def __init__(
-        self, supervisor: Supervisor, options: TagsClient, misc: Tuple[CTDB, Path]
+        self, supervisor: Supervisor, options: TagsClient, misc: Tuple[Path, CTDB]
     ) -> None:
-        db, self._exec = misc
+        self._exec, db = misc
         super().__init__(supervisor, options=options, misc=db)
         go(supervisor.nvim, aw=self._poll())
 
@@ -158,6 +158,9 @@ class Worker(BaseWorker[TagsClient, CTDB]):
 
                 async with self._supervisor.idling:
                     await self._supervisor.idling.wait()
+
+    async def swap(self, cwd: PurePath) -> None:
+        await self._misc.swap(cwd)
 
     async def work(self, context: Context) -> AsyncIterator[Completion]:
         async with self._work_lock:

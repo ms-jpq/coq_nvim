@@ -1,5 +1,5 @@
 from concurrent.futures import Executor
-from pathlib import Path
+from pathlib import Path, PurePath
 from shutil import which
 from typing import Iterator, Mapping, cast
 
@@ -59,11 +59,10 @@ def _settings(nvim: Nvim) -> Settings:
 
 def _from_each_according_to_their_ability(
     settings: Settings,
+    pool: Executor,
+    vars_dir: Path,
+    cwd: PurePath,
     bdb: BDB,
-    sdb: SDB,
-    tdb: TDB,
-    ctdb: CTDB,
-    tmdb: TMDB,
     supervisor: Supervisor,
 ) -> Iterator[Worker]:
     clients = settings.clients
@@ -75,6 +74,7 @@ def _from_each_according_to_their_ability(
         yield PathsWorker(supervisor, options=clients.paths, misc=None)
 
     if clients.tree_sitter.enabled:
+        tdb = TDB(pool)
         yield TreeWorker(supervisor, options=clients.tree_sitter, misc=tdb)
 
     if clients.lsp.enabled:
@@ -86,13 +86,16 @@ def _from_each_according_to_their_ability(
         )
 
     if clients.snippets.enabled:
+        sdb = SDB(pool, vars_dir=vars_dir)
         yield SnippetWorker(supervisor, options=clients.snippets, misc=sdb)
 
     if clients.tags.enabled and (ctags := which("ctags")):
-        yield TagsWorker(supervisor, options=clients.tags, misc=(ctdb, Path(ctags)))
+        ctdb = CTDB(pool, vars_dir=vars_dir, cwd=cwd)
+        yield TagsWorker(supervisor, options=clients.tags, misc=(Path(ctags), ctdb))
 
-    if clients.tmux.enabled:
-        yield TmuxWorker(supervisor, options=clients.tmux, misc=tmdb)
+    if clients.tmux.enabled and (tmux := which("tmux")):
+        tmdb = TMDB(pool)
+        yield TmuxWorker(supervisor, options=clients.tmux, misc=(Path(tmux), tmdb))
 
     if clients.tabnine.enabled:
         yield T9Worker(supervisor, options=clients.tabnine, misc=None)
@@ -103,13 +106,9 @@ def stack(pool: Executor, nvim: Nvim) -> Stack:
     pum_width = nvim.options["pumwidth"]
     vars_dir = Path(nvim.funcs.stdpath("cache")) / "coq" if settings.xdg else VARS
     s = state(cwd=get_cwd(nvim), pum_width=pum_width)
-    bdb, sdb, idb, tdb, ctdb, tmdb = (
+    bdb, idb = (
         BDB(pool),
-        SDB(pool, vars_dir=vars_dir),
         IDB(pool),
-        TDB(pool),
-        CTDB(pool, vars_dir=vars_dir, cwd=s.cwd),
-        TMDB(pool),
     )
     reviewer = Reviewer(
         icons=settings.display.icons,
@@ -128,11 +127,10 @@ def stack(pool: Executor, nvim: Nvim) -> Stack:
     workers = {
         *_from_each_according_to_their_ability(
             settings,
+            pool=pool,
+            vars_dir=vars_dir,
+            cwd=s.cwd,
             bdb=bdb,
-            sdb=sdb,
-            tdb=tdb,
-            ctdb=ctdb,
-            tmdb=tmdb,
             supervisor=supervisor,
         )
     }
@@ -141,11 +139,7 @@ def stack(pool: Executor, nvim: Nvim) -> Stack:
         lru=LRU(size=settings.match.max_results),
         metrics={},
         bdb=bdb,
-        sdb=sdb,
         idb=idb,
-        tdb=tdb,
-        ctdb=ctdb,
-        tmdb=tmdb,
         supervisor=supervisor,
         workers=workers,
     )

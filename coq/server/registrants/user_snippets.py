@@ -28,6 +28,7 @@ from std2.locale import pathsort_key
 from yaml import SafeDumper, add_representer, safe_dump_all
 from yaml.nodes import ScalarNode, SequenceNode
 
+from ...clients.snippet.worker import Worker as SnipWorker
 from ...consts import REPL_GRAMMAR
 from ...lang import LANG
 from ...paths.show import fmt_path
@@ -228,10 +229,11 @@ def snips(nvim: Nvim, stack: Stack, args: Sequence[str]) -> None:
 
         elif ns.action == "compile":
 
-            async def c3() -> None:
+            async def c3(worker: SnipWorker) -> None:
+
                 await awrite(nvim, LANG("waiting..."))
                 try:
-                    await compile_user_snippets(nvim, stack=stack)
+                    await compile_user_snippets(nvim, stack=stack, worker=worker)
                 except (LoadError, ParseError) as e:
                     preview = str(e).splitlines()
 
@@ -243,7 +245,11 @@ def snips(nvim: Nvim, stack: Stack, args: Sequence[str]) -> None:
                 else:
                     await awrite(nvim, LANG("snip parse succ"))
 
-            go(nvim, aw=c3())
+            for worker in stack.workers:
+                if isinstance(worker, SnipWorker):
+                    go(nvim, aw=c3(worker))
+            else:
+                write(nvim, LANG("snip source not enabled"))
 
         elif ns.action == "edit":
 

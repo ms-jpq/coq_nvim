@@ -7,7 +7,7 @@ def lower(text: str) -> str:
     return text.casefold()
 
 
-def coalesce(chars: Iterable[str], unifying_chars: AbstractSet[str]) -> Iterator[str]:
+def coalesce(chars: Iterable[str], unifying_chars: AbstractSet[str], include_syms: bool) -> Iterator[str]:
     words: MutableSequence[str] = []
     syms: MutableSequence[str] = []
 
@@ -28,7 +28,8 @@ def coalesce(chars: Iterable[str], unifying_chars: AbstractSet[str]) -> Iterator
             words.append(char)
             yield from s_it()
         elif not char.isspace():
-            syms.append(char)
+            if include_syms:
+                syms.append(char)
             yield from w_it()
         else:
             yield from w_it()

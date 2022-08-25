@@ -102,6 +102,7 @@ def _coq_listener(nvim: Nvim, stack: Stack) -> None:
                                 hi=hi,
                                 lines=qmsg.lines,
                                 unifying_chars=stack.settings.match.unifying_chars,
+                                include_syms=True
                             )
 
                         if (

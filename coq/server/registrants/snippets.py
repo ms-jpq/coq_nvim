@@ -35,6 +35,7 @@ from std2.pickle.decoder import new_decoder
 from std2.pickle.encoder import new_encoder
 from std2.pickle.types import DecodeError
 
+from ...clients.snippet.worker import Worker as SnipWorker
 from ...lang import LANG
 from ...paths.show import fmt_path
 from ...registry import NAMESPACE, atomic, rpc
@@ -210,7 +211,9 @@ def _trans(
         yield snip, parsed, marks
 
 
-async def _slurp(nvim: Nvim, stack: Stack, warn: AbstractSet[SnippetWarnings]) -> None:
+async def _slurp(
+    nvim: Nvim, stack: Stack, warn: AbstractSet[SnippetWarnings], worker: SnipWorker
+) -> None:
     with timeit("LOAD SNIPS"):
         (
             cwd,
@@ -223,7 +226,7 @@ async def _slurp(nvim: Nvim, stack: Stack, warn: AbstractSet[SnippetWarnings]) -
             _bundled_mtimes(nvim),
             _load_user_compiled(stack.supervisor.vars_dir),
             user_mtimes(nvim, user_path=stack.settings.clients.snippets.user_path),
-            stack.sdb.mtimes(),
+            worker.mtimes(),
         )
 
         stale = mtimes.keys() - (bundled.keys() | user_compiled.keys())
@@ -243,7 +246,7 @@ async def _slurp(nvim: Nvim, stack: Stack, warn: AbstractSet[SnippetWarnings]) -
             if mtime > user_compiled_mtimes.get(path, -inf)
         }
 
-        await stack.sdb.clean(stale)
+        await worker.clean(stale)
         if SnippetWarnings.missing in warn and not (bundled or user_compiled):
             await sleep(0)
             await awrite(nvim, LANG("fs snip load empty"))
@@ -260,7 +263,7 @@ async def _slurp(nvim: Nvim, stack: Stack, warn: AbstractSet[SnippetWarnings]) -
                 """.rstrip()
                 log.warn("%s", Template(dedent(tpl)).substitute(e=type(e)))
             else:
-                await stack.sdb.populate(path, mtime=mtime, loaded=loaded)
+                await worker.populate(path, mtime=mtime, loaded=loaded)
                 await awrite(
                     nvim,
                     LANG(
@@ -279,7 +282,17 @@ async def _slurp(nvim: Nvim, stack: Stack, warn: AbstractSet[SnippetWarnings]) -
 
 @rpc(blocking=True)
 def _load_snips(nvim: Nvim, stack: Stack) -> None:
-    go(nvim, aw=_slurp(nvim, stack=stack, warn=stack.settings.clients.snippets.warn))
+    for worker in stack.workers:
+        if isinstance(worker, SnipWorker):
+            go(
+                nvim,
+                aw=_slurp(
+                    nvim,
+                    stack=stack,
+                    warn=stack.settings.clients.snippets.warn,
+                    worker=worker,
+                ),
+            )
 
 
 atomic.exec_lua(f"{NAMESPACE}.{_load_snips.name}()", ())
@@ -311,7 +324,7 @@ def compile_one(
     return compiled
 
 
-async def compile_user_snippets(nvim: Nvim, stack: Stack) -> None:
+async def compile_user_snippets(nvim: Nvim, stack: Stack, worker: SnipWorker) -> None:
     with timeit("COMPILE SNIPS"):
         info = ParseInfo(visual="", clipboard="", comment_str=("", ""))
         _, mtimes = await user_mtimes(
@@ -341,4 +354,6 @@ async def compile_user_snippets(nvim: Nvim, stack: Stack) -> None:
         except OSError as e:
             await awrite(nvim, e)
         else:
-            await _slurp(nvim, stack=stack, warn={SnippetWarnings.missing})
+            await _slurp(
+                nvim, stack=stack, warn={SnippetWarnings.missing}, worker=worker
+            )

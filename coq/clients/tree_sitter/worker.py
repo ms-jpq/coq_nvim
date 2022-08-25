@@ -1,6 +1,6 @@
 from os import linesep
 from pathlib import PurePath
-from typing import AsyncIterator, Iterator, Optional
+from typing import AsyncIterator, Iterator, Optional, Tuple
 
 from pynvim_pp.api import list_bufs
 from pynvim_pp.lib import async_call, go
@@ -12,6 +12,7 @@ from ...shared.runtime import Supervisor
 from ...shared.runtime import Worker as BaseWorker
 from ...shared.settings import TSClient
 from ...shared.types import Completion, Context, Doc, Edit
+from ...treesitter.request import async_request
 from ...treesitter.types import Payload
 
 
@@ -88,6 +89,21 @@ class Worker(BaseWorker[TSClient, TDB]):
                 await self._misc.vacuum({buf.number for buf in bufs})
                 async with self._supervisor.idling:
                     await self._supervisor.idling.wait()
+
+    async def populate(self) -> Optional[Tuple[bool, float]]:
+        if payload := await async_request(
+            self._supervisor.nvim, lines_around=self._options.search_context
+        ):
+            keep_going = payload.elapsed <= self._options.slow_threshold
+            await self._misc.populate(
+                payload.buf,
+                filetype=payload.filetype,
+                filename=payload.filename,
+                nodes=payload.payloads,
+            )
+            return keep_going, payload.elapsed
+        else:
+            return None
 
     async def work(self, context: Context) -> AsyncIterator[Completion]:
         async with self._work_lock:
