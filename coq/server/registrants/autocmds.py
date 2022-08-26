@@ -5,6 +5,7 @@ from typing import Optional
 
 from pynvim.api.nvim import Nvim, NvimError
 from pynvim_pp.api import (
+    buf_change_tick,
     buf_filetype,
     buf_get_option,
     buf_name,
@@ -57,9 +58,12 @@ def _ft_changed(nvim: Nvim, stack: Stack) -> None:
     buf = cur_buf(nvim)
     ft = buf_filetype(nvim, buf=buf)
     filename = buf_name(nvim, buf=buf)
+    change_tick = buf_change_tick(nvim, buf=buf)
 
     async def cont() -> None:
-        await stack.bdb.buf_update(buf.number, filetype=ft, filename=filename)
+        await stack.bdb.buf_update(
+            buf.number, filetype=ft, filename=filename, change_tick=change_tick
+        )
 
     go(nvim, aw=cont())
 

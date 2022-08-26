@@ -1,5 +1,3 @@
-from difflib import unified_diff
-from os import linesep
 from os.path import normcase
 from typing import Literal, Tuple, cast
 
@@ -10,17 +8,13 @@ from pynvim_pp.atomic import Atomic
 from pynvim_pp.lib import decode, encode
 from pynvim_pp.text_object import gen_split
 
-from ..consts import DEBUG
-from ..databases.buffers.database import BDB
 from ..shared.parse import lower
 from ..shared.settings import MatchOptions
 from ..shared.types import Context
 from .state import State
 
 
-def context(
-    nvim: Nvim, db: BDB, options: MatchOptions, state: State, manual: bool
-) -> Context:
+def context(nvim: Nvim, options: MatchOptions, state: State, manual: bool) -> Context:
     with Atomic() as (atomic, ns):
         ns.scr_col = atomic.call_function("screencol", ())
         ns.buf = atomic.get_current_buf()
@@ -50,21 +44,6 @@ def context(
     lo = max(0, row - options.proximate_lines)
     hi = min(buf_line_count, row + options.proximate_lines + 1)
     lines = buf_get_lines(nvim, buf=buf, lo=lo, hi=hi)
-    if DEBUG:
-        db_line_count, db_lit = db.lines(buf.number, lo=lo, hi=hi)
-        db_lines = tuple(db_lit)
-        assert db_line_count in {
-            buf_line_count - 1,
-            buf_line_count,
-            buf_line_count + 1,
-        }, (db_line_count, buf_line_count)
-        assert tuple(
-            "" if idx == row else line for idx, line in enumerate(db_lines, start=lo)
-        ) == tuple(
-            "" if idx == row else line for idx, line in enumerate(lines, start=lo)
-        ), linesep.join(
-            unified_diff(lines, db_lines)
-        )
 
     r = row - lo
     line = lines[r]

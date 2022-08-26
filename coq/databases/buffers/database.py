@@ -28,9 +28,16 @@ class BufferWord:
     line_num: int
 
 
-def _ensure_buffer(cursor: Cursor, buf_id: int, filetype: str, filename: str) -> None:
+def _ensure_buffer(
+    cursor: Cursor, buf_id: int, filetype: str, filename: str, change_tick: int
+) -> None:
     cursor.execute(sql("select", "buffer_by_id"), {"rowid": buf_id})
-    row = {"rowid": buf_id, "filetype": filetype, "filename": filename}
+    row = {
+        "rowid": buf_id,
+        "filetype": filetype,
+        "filename": filename,
+        "change_tick": change_tick,
+    }
     if cursor.fetchone():
         cursor.execute(sql("update", "buffer"), row)
     else:
@@ -61,14 +68,9 @@ class BDB:
                 with with_transaction(self._conn.cursor()) as cursor:
                     cursor.execute(sql("select", "buffers"), ())
                     existing = {
-                        row["rowid"]: row["line_count"] for row in cursor.fetchall()
+                        row["rowid"]: row["change_tick"] for row in cursor.fetchall()
                     }
-                    dead = {
-                        buf_id
-                        for buf_id, line_count in existing.items()
-                        if buf_id not in current_bufs
-                        or line_count != current_bufs.get(buf_id)
-                    }
+                    dead = existing.keys() - current_bufs.keys()
                     cursor.executemany(
                         sql("delete", "buffer"),
                         ({"buffer_id": buf_id} for buf_id in dead),
@@ -80,11 +82,17 @@ class BDB:
 
         return await self._ex.asubmit(cont)
 
-    async def buf_update(self, buf_id: int, filetype: str, filename: str) -> None:
+    async def buf_update(
+        self, buf_id: int, filetype: str, filename: str, change_tick: int
+    ) -> None:
         def cont() -> None:
             with self._lock, with_transaction(self._conn.cursor()) as cursor:
                 _ensure_buffer(
-                    cursor, buf_id=buf_id, filetype=filetype, filename=filename
+                    cursor,
+                    buf_id=buf_id,
+                    filetype=filetype,
+                    filename=filename,
+                    change_tick=change_tick,
                 )
 
         await self._ex.asubmit(cont)
@@ -94,11 +102,12 @@ class BDB:
         buf_id: int,
         filetype: str,
         filename: str,
+        change_tick: int,
         lo: int,
         hi: int,
         lines: Sequence[str],
         unifying_chars: AbstractSet[str],
-        include_syms: bool
+        include_syms: bool,
     ) -> None:
         def m0() -> Iterator[Tuple[int, str, bytes]]:
             for line_num, line in enumerate(lines, start=lo):
@@ -118,13 +127,19 @@ class BDB:
 
         def m2() -> Iterator[Mapping]:
             for line_num, line, line_id in line_info:
-                for word in coalesce(line, unifying_chars=unifying_chars, include_syms=include_syms):
+                for word in coalesce(
+                    line, unifying_chars=unifying_chars, include_syms=include_syms
+                ):
                     yield {"line_id": line_id, "word": word, "line_num": line_num}
 
         def cont() -> None:
             with self._lock, with_transaction(self._conn.cursor()) as cursor:
                 _ensure_buffer(
-                    cursor, buf_id=buf_id, filetype=filetype, filename=filename
+                    cursor,
+                    buf_id=buf_id,
+                    filetype=filetype,
+                    filename=filename,
+                    change_tick=change_tick,
                 )
                 cursor.execute(
                     sql("delete", "lines"),

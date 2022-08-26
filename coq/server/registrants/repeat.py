@@ -25,9 +25,7 @@ def _edit(prev: Edit) -> Edit:
 
 @rpc(blocking=True)
 def repeat(nvim: Nvim, stack: Stack) -> None:
-    ctx = context(
-        nvim, db=stack.bdb, options=stack.settings.match, state=state(), manual=True
-    )
+    ctx = context(nvim, options=stack.settings.match, state=state(), manual=True)
     s = state(context=ctx)
     metric = s.last_edit
     sanitized = _edit(metric.comp.primary_edit)

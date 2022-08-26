@@ -1,8 +1,6 @@
-from asyncio import Event, Task, gather, sleep, wait
-from asyncio.events import AbstractEventLoop
+from asyncio import gather, sleep, wait
 from dataclasses import replace
-from queue import SimpleQueue
-from typing import AbstractSet, Any, Literal, Mapping, Optional, Sequence, Tuple, Union
+from typing import AbstractSet, Any, Literal, Mapping, Sequence, Union
 from uuid import UUID, uuid4
 
 from pynvim import Nvim
@@ -16,16 +14,16 @@ from pynvim_pp.api import (
     cur_buf,
 )
 from pynvim_pp.lib import async_call, encode, go
-from pynvim_pp.logging import log, with_suppress
-from std2.asyncio import cancel, to_thread
+from pynvim_pp.logging import log
+from std2.asyncio import cancel
 from std2.pickle.decoder import new_decoder
 from std2.pickle.types import DecodeError
 
 from ...lsp.requests.command import cmd
 from ...lsp.requests.resolve import resolve
-from ...registry import NAMESPACE, atomic, autocmd, rpc
+from ...registry import NAMESPACE, autocmd, rpc
 from ...shared.runtime import Metric
-from ...shared.timeit import TracingLocker, timeit
+from ...shared.timeit import timeit
 from ...shared.types import Context, ExternLSP, ExternPath
 from ..completions import complete
 from ..context import context
@@ -33,8 +31,6 @@ from ..edit import NS, edit
 from ..rt_types import Stack
 from ..state import State, state
 from ..trans import trans
-
-_Q: SimpleQueue = SimpleQueue()
 
 
 def _should_cont(
@@ -61,104 +57,59 @@ def _should_cont(
         return have_space
 
 
-@rpc(blocking=True)
-def _launch_loop(nvim: Nvim, stack: Stack) -> None:
-    task: Optional[Task] = None
-    incoming: Optional[Tuple[State, bool]] = None
+async def comp_func(nvim: Nvim, stack: Stack, s: State, manual: bool) -> None:
+    with timeit("**OVERALL**"):
+        ctx = await async_call(
+            nvim,
+            lambda: context(
+                nvim,
+                options=stack.settings.match,
+                state=s,
+                manual=manual,
+            ),
+        )
+        should = (
+            _should_cont(
+                s,
+                prev=s.context,
+                cur=ctx,
+                skip_after=stack.settings.completion.skip_after,
+            )
+            if ctx
+            else False
+        )
+        _, col = ctx.position
 
-    async def cont() -> None:
-        lock, event = TracingLocker(name="OODA", force=True), Event()
-
-        async def c0(s: State, manual: bool) -> None:
-            with with_suppress(), timeit("**OVERALL**"):
-                async with lock:
-                    ctx = await async_call(
-                        nvim,
-                        lambda: context(
-                            nvim,
-                            db=stack.bdb,
-                            options=stack.settings.match,
-                            state=s,
-                            manual=manual,
-                        ),
+        if should:
+            state(context=ctx)
+            metrics, _ = await gather(
+                stack.supervisor.collect(ctx),
+                async_call(
+                    nvim,
+                    lambda: complete(nvim, stack=stack, col=col, comps=()),
+                )
+                if stack.settings.display.pum.fast_close
+                else sleep(0),
+            )
+            s = state()
+            if s.change_id == ctx.change_id:
+                vim_comps = tuple(
+                    trans(
+                        stack,
+                        pum_width=s.pum_width,
+                        context=ctx,
+                        metrics=metrics,
                     )
-                    should = (
-                        _should_cont(
-                            s,
-                            prev=s.context,
-                            cur=ctx,
-                            skip_after=stack.settings.completion.skip_after,
-                        )
-                        if ctx
-                        else False
-                    )
-                    _, col = ctx.position
-
-                    if should:
-                        state(context=ctx)
-                        metrics, _ = await gather(
-                            stack.supervisor.collect(ctx),
-                            async_call(
-                                nvim,
-                                lambda: complete(nvim, stack=stack, col=col, comps=()),
-                            )
-                            if stack.settings.display.pum.fast_close
-                            else sleep(0),
-                        )
-                        s = state()
-                        if s.change_id == ctx.change_id:
-                            vim_comps = tuple(
-                                trans(
-                                    stack,
-                                    pum_width=s.pum_width,
-                                    context=ctx,
-                                    metrics=metrics,
-                                )
-                            )
-                            await async_call(
-                                nvim,
-                                lambda: complete(
-                                    nvim, stack=stack, col=col, comps=vim_comps
-                                ),
-                            )
-                    else:
-                        await async_call(
-                            nvim, lambda: complete(nvim, stack=stack, col=col, comps=())
-                        )
-                        state(inserted_pos=(-1, -1))
-
-        async def c1() -> None:
-            nonlocal incoming
-            while True:
-                with with_suppress():
-                    incoming = await to_thread(_Q.get)
-                    event.set()
-
-        async def c2() -> None:
-            nonlocal task
-            while True:
-                with with_suppress():
-                    await event.wait()
-                    event.clear()
-
-                    if task:
-                        await cancel(task)
-
-                    if incoming:
-                        assert isinstance(nvim.loop, AbstractEventLoop)
-                        s, manual = incoming
-                        task = nvim.loop.create_task(c0(s, manual=manual))
-
-        await gather(c1(), c2())
-
-    go(nvim, aw=cont())
-
-
-atomic.exec_lua(f"{NAMESPACE}.{_launch_loop.name}()", ())
-
-
-def comp_func(nvim: Nvim, s: State, manual: bool) -> None:
-    _Q.put((s, manual))
+                )
+                await async_call(
+                    nvim,
+                    lambda: complete(nvim, stack=stack, col=col, comps=vim_comps),
+                )
+        else:
+            await async_call(
+                nvim, lambda: complete(nvim, stack=stack, col=col, comps=())
+            )
+            state(inserted_pos=(-1, -1))
 
 
 @rpc(blocking=True)
@@ -169,7 +120,7 @@ def omnifunc(
         return -1
     else:
         s = state(commit_id=uuid4())
-        comp_func(nvim, manual=True, s=s)
+        go(nvim, aw=comp_func(nvim, stack=stack, manual=True, s=s))
         return ()
 
 

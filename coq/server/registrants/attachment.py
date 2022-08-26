@@ -1,9 +1,6 @@
-from asyncio import gather
+from asyncio import Task, gather
 from contextlib import suppress
-from dataclasses import dataclass
-from itertools import count
-from queue import SimpleQueue
-from typing import Mapping, Sequence, Tuple, cast
+from typing import Mapping, Optional, Sequence, Tuple, cast
 from uuid import uuid4
 
 from pynvim import Nvim
@@ -11,8 +8,7 @@ from pynvim.api import Buffer, NvimError
 from pynvim_pp.api import buf_get_option, cur_buf
 from pynvim_pp.atomic import Atomic
 from pynvim_pp.lib import async_call, awrite, go
-from pynvim_pp.logging import with_suppress
-from std2.asyncio import to_thread
+from std2.asyncio import cancel
 
 from ...lang import LANG
 from ...registry import NAMESPACE, atomic, autocmd, rpc
@@ -36,19 +32,6 @@ def _buf_enter(nvim: Nvim, stack: Stack) -> None:
 _ = autocmd("BufEnter", "InsertEnter") << f"lua {NAMESPACE}.{_buf_enter.name}()"
 atomic.exec_lua(f"{NAMESPACE}.{_buf_enter.name}()", ())
 
-_q: SimpleQueue = SimpleQueue()
-_id_gen = count()
-_current_id = -1
-
-
-@dataclass(frozen=True)
-class _Qmsg:
-    id: int
-    pending: bool
-    buf: Buffer
-    range: Tuple[int, int]
-    lines: Sequence[str]
-
 
 async def _status(nvim: Nvim, buf: Buffer) -> Tuple[str, str, str, str]:
     def cont() -> Tuple[str, str, str, str]:
@@ -69,87 +52,70 @@ async def _status(nvim: Nvim, buf: Buffer) -> Tuple[str, str, str, str]:
     return await async_call(nvim, cont)
 
 
-@rpc(blocking=True)
-def _coq_listener(nvim: Nvim, stack: Stack) -> None:
-    async def cont() -> None:
-        while True:
-            with with_suppress():
-                qmsg: _Qmsg = await to_thread(_q.get)
-                if qmsg.id != _current_id:
-                    pass
-                else:
-                    with timeit("POLL"), suppress(NvimError):
-                        (mode, comp_mode, filetype, filename), _ = await gather(
-                            _status(nvim, qmsg.buf), stack.supervisor.interrupt()
-                        )
-
-                        lo, hi = qmsg.range
-                        size = sum(map(len, qmsg.lines))
-                        heavy_bufs = (
-                            {qmsg.buf.number}
-                            if size > stack.settings.limits.index_cutoff
-                            else set()
-                        )
-                        os = state()
-                        s = state(change_id=uuid4(), nono_bufs=heavy_bufs)
-
-                        if qmsg.buf.number not in s.nono_bufs:
-                            await stack.bdb.set_lines(
-                                qmsg.buf.number,
-                                filetype=filetype,
-                                filename=filename,
-                                lo=lo,
-                                hi=hi,
-                                lines=qmsg.lines,
-                                unifying_chars=stack.settings.match.unifying_chars,
-                                include_syms=True
-                            )
-
-                        if (
-                            qmsg.buf.number in s.nono_bufs
-                            and qmsg.buf.number not in os.nono_bufs
-                        ):
-                            msg = LANG(
-                                "buf 2 fat",
-                                size=size,
-                                limit=stack.settings.limits.index_cutoff,
-                            )
-                            await awrite(nvim, msg)
-
-                        if (
-                            stack.settings.completion.always
-                            and not qmsg.pending
-                            and mode.startswith("i")
-                            and comp_mode in {"", "eval", "function", "ctrl_x"}
-                        ):
-                            comp_func(nvim, s=s, manual=False)
-
-    go(nvim, aw=cont())
-
-
-atomic.exec_lua(f"{NAMESPACE}.{_coq_listener.name}()", ())
+_TASK: Optional[Task] = None
 
 
 def _lines_event(
     nvim: Nvim,
     stack: Stack,
     buf: Buffer,
-    tick: int,
+    change_tick: Optional[int],
     lo: int,
     hi: int,
     lines: Sequence[str],
     pending: bool,
 ) -> None:
-    global _current_id
-    _current_id = next(_id_gen)
-    msg = _Qmsg(
-        id=_current_id,
-        pending=pending,
-        buf=buf,
-        range=(lo, hi),
-        lines=lines,
-    )
-    _q.put(msg)
+    global _TASK
+
+    task = _TASK
+
+    async def cont(tick: int) -> None:
+        if task:
+            await cancel(task)
+
+        with timeit("POLL"), suppress(NvimError):
+            (mode, comp_mode, filetype, filename), _ = await gather(
+                _status(nvim, buf), stack.supervisor.interrupt()
+            )
+
+            size = sum(map(len, lines))
+            heavy_bufs = (
+                {buf.number} if size > stack.settings.limits.index_cutoff else set()
+            )
+            os = state()
+            s = state(change_id=uuid4(), nono_bufs=heavy_bufs)
+
+            if buf.number not in s.nono_bufs:
+                await stack.bdb.set_lines(
+                    buf.number,
+                    filetype=filetype,
+                    filename=filename,
+                    lo=lo,
+                    hi=hi,
+                    change_tick=tick,
+                    lines=lines,
+                    unifying_chars=stack.settings.match.unifying_chars,
+                    include_syms=True,
+                )
+
+            if buf.number in s.nono_bufs and buf.number not in os.nono_bufs:
+                msg = LANG(
+                    "buf 2 fat",
+                    size=size,
+                    limit=stack.settings.limits.index_cutoff,
+                )
+                await awrite(nvim, msg)
+
+            if (
+                stack.settings.completion.always
+                and not pending
+                and mode.startswith("i")
+                and comp_mode in {"", "eval", "function", "ctrl_x"}
+            ):
+                await comp_func(nvim, stack=stack, s=s, manual=False)
+
+    if change_tick is not None:
+        _TASK = cast(Task, go(nvim, aw=cont(change_tick)))
 
 
 BUF_EVENTS = {

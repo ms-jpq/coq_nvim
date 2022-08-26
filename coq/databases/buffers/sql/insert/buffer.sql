@@ -1,2 +1,2 @@
-INSERT INTO buffers ( rowid,  filetype,  filename)
-VALUES              (:rowid, :filetype, :filename)
+INSERT INTO buffers ( rowid,  filetype,  filename,  change_tick)
+VALUES              (:rowid, :filetype, :filename, :change_tick)

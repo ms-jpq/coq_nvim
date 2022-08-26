@@ -5,7 +5,7 @@ from typing import AsyncIterator, Iterator, Mapping
 
 from pynvim.api.buffer import Buffer
 from pynvim.api.common import NvimError
-from pynvim_pp.api import buf_line_count, list_bufs
+from pynvim_pp.api import buf_change_tick, list_bufs
 from pynvim_pp.lib import async_call, go
 from pynvim_pp.logging import with_suppress
 
@@ -41,7 +41,7 @@ class Worker(BaseWorker[BuffersClient, BDB]):
     async def _poll(self) -> None:
         def c1() -> Mapping[Buffer, int]:
             bufs = {
-                buf: buf_line_count(self._supervisor.nvim, buf=buf)
+                buf: buf_change_tick(self._supervisor.nvim, buf=buf)
                 for buf in list_bufs(self._supervisor.nvim, listed=True)
             }
             return bufs
@@ -51,7 +51,7 @@ class Worker(BaseWorker[BuffersClient, BDB]):
                 with suppress(NvimError):
                     bufs = await async_call(self._supervisor.nvim, c1)
                     dead = await self._misc.vacuum(
-                        {buf.number: rows for buf, rows in bufs.items()}
+                        {buf.number: change_tick for buf, change_tick in bufs.items()}
                     )
 
                     def c2() -> None:

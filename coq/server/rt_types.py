@@ -4,7 +4,6 @@ from uuid import UUID
 
 from ..databases.buffers.database import BDB
 from ..databases.insertions.database import IDB
-from ..databases.snippets.database import SDB
 from ..shared.runtime import Metric, Supervisor, Worker
 from ..shared.settings import Settings
 from ..shared.types import Completion
