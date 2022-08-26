@@ -17,6 +17,7 @@ from .state import State
 def context(nvim: Nvim, options: MatchOptions, state: State, manual: bool) -> Context:
     with Atomic() as (atomic, ns):
         ns.scr_col = atomic.call_function("screencol", ())
+        ns.win_height = atomic.win_get_height(0)
         ns.buf = atomic.get_current_buf()
         ns.name = atomic.buf_get_name(0)
         ns.line_count = atomic.buf_line_count(0)
@@ -29,6 +30,7 @@ def context(nvim: Nvim, options: MatchOptions, state: State, manual: bool) -> Co
         atomic.commit(nvim)
 
     scr_col = ns.scr_col
+    win_size = ns.win_height // 2
     buf = cast(Buffer, ns.buf)
     (r, col) = cast(Tuple[int, int], ns.cursor)
     row = r - 1
@@ -41,8 +43,8 @@ def context(nvim: Nvim, options: MatchOptions, state: State, manual: bool) -> Co
     expandtab = cast(bool, ns.expandtab)
     linefeed = cast(Literal["\n", "\r", "\r\n"], LFfmt[cast(str, ns.fileformat)].value)
 
-    lo = max(0, row - options.proximate_lines)
-    hi = min(buf_line_count, row + options.proximate_lines + 1)
+    lo = max(0, row - win_size)
+    hi = min(buf_line_count, row + win_size + 1)
     lines = buf_get_lines(nvim, buf=buf, lo=lo, hi=hi)
 
     r = row - lo
@@ -72,6 +74,7 @@ def context(nvim: Nvim, options: MatchOptions, state: State, manual: bool) -> Co
         comment=(lhs, rhs),
         position=pos,
         scr_col=scr_col,
+        win_size=win_size,
         line=split.lhs + split.rhs,
         line_before=split.lhs,
         line_after=split.rhs,

@@ -56,11 +56,13 @@
     )
   end
 
-  COQ.ts_req = function(session, ctx)
+  COQ.ts_req = function(session)
     vim.schedule(
       function()
         local t1 = vim.loop.now()
-        local buf = vim.api.nvim_get_current_buf()
+        local win = vim.api.nvim_get_current_win()
+        local buf = vim.api.nvim_win_get_buf(win)
+        local ctx = vim.api.nvim_win_get_height(win)
         local filetype = vim.api.nvim_buf_get_option(buf, "filetype")
         local filename = vim.api.nvim_buf_get_name(buf)
         local acc = {}

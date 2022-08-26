@@ -44,9 +44,9 @@ class Worker(BaseWorker[TmuxClient, TMDB]):
     async def periodical(self) -> None:
         current, panes = await snapshot(
             self._exec,
-            all_sessions=self.options.all_sessions,
+            all_sessions=self._options.all_sessions,
             unifying_chars=self._supervisor.match.unifying_chars,
-            include_syms=self.options.match_syms,
+            include_syms=self._options.match_syms,
         )
         await self._misc.periodical(current, panes=panes)
 
@@ -55,21 +55,21 @@ class Worker(BaseWorker[TmuxClient, TMDB]):
             words = await self._misc.select(
                 self._supervisor.match,
                 word=context.words,
-                sym=(context.syms if self.options.match_syms else ""),
+                sym=(context.syms if self._options.match_syms else ""),
                 limitless=context.manual,
             )
 
             for word in words:
                 edit = Edit(new_text=word.text)
                 cmp = Completion(
-                    source=self.options.short_name,
-                    always_on_top=self.options.always_on_top,
-                    weight_adjust=self.options.weight_adjust,
+                    source=self._options.short_name,
+                    always_on_top=self._options.always_on_top,
+                    weight_adjust=self._options.weight_adjust,
                     label=edit.new_text,
                     sort_by=word.text,
                     primary_edit=edit,
                     adjust_indent=False,
-                    doc=_doc(self.options, word=word),
+                    doc=_doc(self._options, word=word),
                     icon_match="Text",
                 )
                 yield cmp

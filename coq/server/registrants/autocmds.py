@@ -5,7 +5,6 @@ from typing import Optional
 
 from pynvim.api.nvim import Nvim, NvimError
 from pynvim_pp.api import (
-    buf_change_tick,
     buf_filetype,
     buf_get_option,
     buf_name,
@@ -17,6 +16,7 @@ from pynvim_pp.float_win import list_floatwins
 from pynvim_pp.lib import async_call, awrite, go
 from std2.locale import si_prefixed_smol
 
+from ...clients.buffers.worker import Worker as BufWorker
 from ...clients.tags.worker import Worker as TagsWorker
 from ...clients.tmux.worker import Worker as TmuxWorker
 from ...clients.tree_sitter.worker import Worker as TSWorker
@@ -55,17 +55,13 @@ _ = autocmd("DirChanged") << f"lua {NAMESPACE}.{_new_cwd.name}()"
 
 @rpc(blocking=True)
 def _ft_changed(nvim: Nvim, stack: Stack) -> None:
-    buf = cur_buf(nvim)
-    ft = buf_filetype(nvim, buf=buf)
-    filename = buf_name(nvim, buf=buf)
-    change_tick = buf_change_tick(nvim, buf=buf)
 
-    async def cont() -> None:
-        await stack.bdb.buf_update(
-            buf.number, filetype=ft, filename=filename, change_tick=change_tick
-        )
-
-    go(nvim, aw=cont())
+    for worker in stack.workers:
+        if isinstance(worker, BufWorker):
+            buf = cur_buf(nvim)
+            ft = buf_filetype(nvim, buf=buf)
+            filename = buf_name(nvim, buf=buf)
+            go(nvim, aw=worker.buf_update(buf.number, filetype=ft, filename=filename))
 
 
 _ = autocmd("FileType") << f"lua {NAMESPACE}.{_ft_changed.name}()"
@@ -82,7 +78,7 @@ def _insert_enter(nvim: Nvim, stack: Stack) -> None:
                 state(nono_bufs={buf.number})
                 msg = LANG(
                     "source slow",
-                    source=worker.options.short_name,
+                    source=stack.settings.clients.tree_sitter.short_name,
                     elapsed=si_prefixed_smol(elapsed, precision=0),
                 )
                 await awrite(nvim, msg, error=True)

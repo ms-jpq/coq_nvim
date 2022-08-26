@@ -4,14 +4,14 @@
 
 Various timeouts and retry limits
 
-#### `coq_settings.limits.index_cutoff`
+#### `coq_settings.limits.tokenization_limit`
 
-Buffers above this size will not be indexed.
+`coq.nvim` when performing tokenization, will parse at most this many tokens before yielding.
 
 **default:**
 
 ```json
-333333
+999
 ```
 
 #### `coq_settings.limits.idle_timeout`

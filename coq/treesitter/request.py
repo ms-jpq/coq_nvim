@@ -109,7 +109,7 @@ def _vaildate(r_playload: _Payload[RawPayload]) -> _Payload[Payload]:
     return payload
 
 
-async def async_request(nvim: Nvim, lines_around: int) -> Optional[_Payload[Payload]]:
+async def async_request(nvim: Nvim) -> Optional[_Payload[Payload]]:
     global _COND, _SESSION
     _COND = _COND or Condition()
 
@@ -121,7 +121,7 @@ async def async_request(nvim: Nvim, lines_around: int) -> Optional[_Payload[Payl
             _COND.notify_all()
 
         def cont() -> None:
-            nvim.api.exec_lua(f"{NAMESPACE}.ts_req(...)", (uid, lines_around))
+            nvim.api.exec_lua(f"{NAMESPACE}.ts_req(...)", (uid,))
 
         await async_call(nvim, cont)
 

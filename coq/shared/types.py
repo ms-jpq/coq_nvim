@@ -45,6 +45,7 @@ class Context:
 
     position: NvimPos
     scr_col: int
+    win_size: int
 
     line: str
     line_before: str

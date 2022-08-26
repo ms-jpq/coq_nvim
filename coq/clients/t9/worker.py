@@ -31,12 +31,12 @@ _DECODER = new_decoder[RespL1](RespL1, strict=False)
 _ENCODER = new_encoder[Request](Request)
 
 
-def _encode(options: MatchOptions, context: Context, limit: int) -> Any:
+def _encode(context: Context, limit: int) -> Any:
     row, _ = context.position
     before = context.linefeed.join(chain(context.lines_before, (context.line_before,)))
     after = context.linefeed.join(chain((context.line_after,), context.lines_after))
-    ibg = row - options.proximate_lines <= 0
-    ieof = row + options.proximate_lines >= context.line_count
+    ibg = row - context.win_size <= 0
+    ieof = row + context.win_size >= context.line_count
 
     l2 = ReqL2(
         filename=context.filename,
@@ -190,8 +190,7 @@ class Worker(BaseWorker[T9Client, None]):
 
             if self._bin:
                 req = _encode(
-                    self._supervisor.match,
-                    context=context,
+                    context,
                     limit=self._supervisor.match.max_results,
                 )
                 json = dumps(req, check_circular=False, ensure_ascii=False)
@@ -202,5 +201,5 @@ class Worker(BaseWorker[T9Client, None]):
                     except JSONDecodeError as e:
                         log.warn("%s", e)
                     else:
-                        for comp in _decode(self.options, reply=resp):
+                        for comp in _decode(self._options, reply=resp):
                             yield comp

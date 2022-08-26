@@ -25,7 +25,6 @@ match:
     - "_"
     - "-"
   max_results: 33
-  proximate_lines: 16
   exact_matches: 2
   look_ahead: 2
   fuzzy_cutoff: 0.6
@@ -119,7 +118,7 @@ display:
       Variable: "ﳛ"
 
 limits:
-  index_cutoff: 333333
+  tokenization_limit: 999
   idle_timeout: 1.88
 
   completion_auto_timeout: 0.088
@@ -200,7 +199,6 @@ clients:
     enabled: True
     short_name: "TS"
     path_sep: " ⇊"
-    search_context: 168
     slow_threshold: 0.168
     always_on_top: False
     weight_adjust: 0.1

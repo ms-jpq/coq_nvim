@@ -1,6 +1,8 @@
 from asyncio import CancelledError
 from concurrent.futures import Executor
 from dataclasses import dataclass
+from itertools import islice
+from random import shuffle
 from sqlite3 import Connection, OperationalError
 from sqlite3.dbapi2 import Cursor
 from threading import Lock
@@ -28,15 +30,12 @@ class BufferWord:
     line_num: int
 
 
-def _ensure_buffer(
-    cursor: Cursor, buf_id: int, filetype: str, filename: str, change_tick: int
-) -> None:
+def _ensure_buffer(cursor: Cursor, buf_id: int, filetype: str, filename: str) -> None:
     cursor.execute(sql("select", "buffer_by_id"), {"rowid": buf_id})
     row = {
         "rowid": buf_id,
         "filetype": filetype,
         "filename": filename,
-        "change_tick": change_tick,
     }
     if cursor.fetchone():
         cursor.execute(sql("update", "buffer"), row)
@@ -53,27 +52,41 @@ def _init() -> Connection:
 
 
 class BDB:
-    def __init__(self, pool: Executor) -> None:
+    def __init__(
+        self,
+        pool: Executor,
+        tokenization_limit: int,
+        unifying_chars: AbstractSet[str],
+        include_syms: bool,
+    ) -> None:
         self._lock = Lock()
         self._ex = SingleThreadExecutor(pool)
+        self._tokenization_limit = tokenization_limit
+        self._unifying_chars = unifying_chars
+        self._include_syms = include_syms
         self._conn: Connection = self._ex.submit(_init)
 
     def _interrupt(self) -> None:
         with self._lock:
             self._conn.interrupt()
 
-    async def vacuum(self, current_bufs: Mapping[int, int]) -> AbstractSet[int]:
+    async def vacuum(self, live_bufs: Mapping[int, int]) -> AbstractSet[int]:
         def cont() -> AbstractSet[int]:
             try:
                 with with_transaction(self._conn.cursor()) as cursor:
                     cursor.execute(sql("select", "buffers"), ())
-                    existing = {
-                        row["rowid"]: row["change_tick"] for row in cursor.fetchall()
-                    }
-                    dead = existing.keys() - current_bufs.keys()
+                    existing = {row["rowid"] for row in cursor.fetchall()}
+                    dead = existing - live_bufs.keys()
                     cursor.executemany(
                         sql("delete", "buffer"),
                         ({"buffer_id": buf_id} for buf_id in dead),
+                    )
+                    cursor.executemany(
+                        sql("delete", "lines"),
+                        (
+                            {"buffer_id": buf_id, "lo": line_count, "hi": -1}
+                            for buf_id, line_count in live_bufs.items()
+                        ),
                     )
                     cursor.execute("PRAGMA optimize", ())
                     return dead
@@ -82,9 +95,7 @@ class BDB:
 
         return await self._ex.asubmit(cont)
 
-    async def buf_update(
-        self, buf_id: int, filetype: str, filename: str, change_tick: int
-    ) -> None:
+    async def buf_update(self, buf_id: int, filetype: str, filename: str) -> None:
         def cont() -> None:
             with self._lock, with_transaction(self._conn.cursor()) as cursor:
                 _ensure_buffer(
@@ -92,7 +103,6 @@ class BDB:
                     buf_id=buf_id,
                     filetype=filetype,
                     filename=filename,
-                    change_tick=change_tick,
                 )
 
         await self._ex.asubmit(cont)
@@ -102,19 +112,17 @@ class BDB:
         buf_id: int,
         filetype: str,
         filename: str,
-        change_tick: int,
         lo: int,
         hi: int,
         lines: Sequence[str],
-        unifying_chars: AbstractSet[str],
-        include_syms: bool,
     ) -> None:
         def m0() -> Iterator[Tuple[int, str, bytes]]:
             for line_num, line in enumerate(lines, start=lo):
                 line_id = uuid4().bytes
                 yield line_num, recode(line), line_id
 
-        line_info = tuple(m0())
+        line_info = [*m0()]
+        shuffle(line_info)
 
         def m1() -> Iterator[Mapping]:
             for line_num, line, line_id in line_info:
@@ -128,7 +136,9 @@ class BDB:
         def m2() -> Iterator[Mapping]:
             for line_num, line, line_id in line_info:
                 for word in coalesce(
-                    line, unifying_chars=unifying_chars, include_syms=include_syms
+                    line,
+                    unifying_chars=self._unifying_chars,
+                    include_syms=self._include_syms,
                 ):
                     yield {"line_id": line_id, "word": word, "line_num": line_num}
 
@@ -139,7 +149,6 @@ class BDB:
                     buf_id=buf_id,
                     filetype=filetype,
                     filename=filename,
-                    change_tick=change_tick,
                 )
                 cursor.execute(
                     sql("delete", "lines"),
@@ -152,7 +161,9 @@ class BDB:
                 )
                 cursor.execute(sql("update", "lines_shift_2"), {"buffer_id": buf_id})
                 cursor.executemany(sql("insert", "line"), m1())
-                cursor.executemany(sql("insert", "word"), m2())
+                cursor.executemany(
+                    sql("insert", "word"), islice(m2(), self._tokenization_limit)
+                )
                 cursor.execute(sql("select", "line_count"), {"buffer_id": buf_id})
                 count = cursor.fetchone()["line_count"]
                 if not count:
@@ -167,21 +178,6 @@ class BDB:
                     )
 
         await self._ex.asubmit(cont)
-
-    def lines(self, buf_id: int, lo: int, hi: int) -> Tuple[int, Iterator[str]]:
-        def cont() -> Tuple[int, Iterator[str]]:
-            with self._lock, with_transaction(self._conn.cursor()) as cursor:
-                cursor.execute(sql("select", "line_count"), {"buffer_id": buf_id})
-                count = cursor.fetchone()["line_count"]
-                cursor.execute(
-                    sql("select", "lines"),
-                    {"buffer_id": buf_id, "lo": lo, "hi": hi},
-                )
-                rows = cursor.fetchall()
-                lines = (row["line"] for row in rows)
-                return count, lines
-
-        return self._ex.submit(cont)
 
     async def words(
         self,

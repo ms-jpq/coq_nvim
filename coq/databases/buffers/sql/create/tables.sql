@@ -3,7 +3,6 @@ BEGIN;
 
 CREATE TABLE IF NOT EXISTS buffers (
   rowid       INTEGER NOT NULL PRIMARY KEY,
-  change_tick INTEGER NOT NULL,
   filetype    TEXT    NOT NULL,
   filename    TEXT    NOT NULL
 ) WITHOUT ROWID;

@@ -179,15 +179,15 @@ class Worker(BaseWorker[TagsClient, CTDB]):
                     edit = Edit(new_text=name)
                     kind = capwords(tag["kind"])
                     cmp = Completion(
-                        source=self.options.short_name,
-                        always_on_top=self.options.always_on_top,
-                        weight_adjust=self.options.weight_adjust,
+                        source=self._options.short_name,
+                        always_on_top=self._options.always_on_top,
+                        weight_adjust=self._options.weight_adjust,
                         label=edit.new_text,
                         sort_by=name,
                         primary_edit=edit,
                         adjust_indent=False,
                         kind=kind,
-                        doc=_doc(self.options, context=context, tag=tag),
+                        doc=_doc(self._options, context=context, tag=tag),
                         icon_match=kind,
                     )
                     yield cmp

@@ -62,12 +62,17 @@ def _from_each_according_to_their_ability(
     pool: Executor,
     vars_dir: Path,
     cwd: PurePath,
-    bdb: BDB,
     supervisor: Supervisor,
 ) -> Iterator[Worker]:
     clients = settings.clients
 
     if clients.buffers.enabled:
+        bdb = BDB(
+            pool,
+            tokenization_limit=settings.limits.tokenization_limit,
+            unifying_chars=settings.match.unifying_chars,
+            include_syms=settings.clients.buffers.match_syms,
+        )
         yield BuffersWorker(supervisor, options=clients.buffers, misc=bdb)
 
     if clients.paths.enabled:
@@ -106,10 +111,7 @@ def stack(pool: Executor, nvim: Nvim) -> Stack:
     pum_width = nvim.options["pumwidth"]
     vars_dir = Path(nvim.funcs.stdpath("cache")) / "coq" if settings.xdg else VARS
     s = state(cwd=get_cwd(nvim), pum_width=pum_width)
-    bdb, idb = (
-        BDB(pool),
-        IDB(pool),
-    )
+    idb = IDB(pool)
     reviewer = Reviewer(
         icons=settings.display.icons,
         options=settings.match,
@@ -130,7 +132,6 @@ def stack(pool: Executor, nvim: Nvim) -> Stack:
             pool=pool,
             vars_dir=vars_dir,
             cwd=s.cwd,
-            bdb=bdb,
             supervisor=supervisor,
         )
     }
@@ -138,7 +139,6 @@ def stack(pool: Executor, nvim: Nvim) -> Stack:
         settings=settings,
         lru=LRU(size=settings.match.max_results),
         metrics={},
-        bdb=bdb,
         idb=idb,
         supervisor=supervisor,
         workers=workers,

@@ -8,8 +8,8 @@ from pynvim_pp.float_win import Border
 
 @dataclass(frozen=True)
 class Limits:
+    tokenization_limit: int
     idle_timeout: float
-    index_cutoff: int
     completion_auto_timeout: float
     completion_manual_timeout: float
     download_retries: int
@@ -83,7 +83,6 @@ class Display:
 class MatchOptions:
     unifying_chars: AbstractSet[str]
     max_results: int
-    proximate_lines: int
     look_ahead: int
     exact_matches: int
     fuzzy_cutoff: float
@@ -171,7 +170,6 @@ class TmuxClient(_WordbankClient, TagsClient, _AlwaysTop):
 @dataclass(frozen=True)
 class TSClient(BaseClient, _AlwaysTop):
     path_sep: str
-    search_context: int
     slow_threshold: float
 
 

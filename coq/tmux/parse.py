@@ -122,6 +122,7 @@ async def _screenshot(
                 decode(proc.stdout),
                 unifying_chars=unifying_chars,
                 include_syms=include_syms,
+                reverse=True,
             )
             return pane, words
 

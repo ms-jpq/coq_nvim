@@ -83,10 +83,13 @@ class Reviewer(PReviewer[ReviewCtx]):
 
     async def begin(self, context: Context) -> ReviewCtx:
         inserted = await self._db.insertion_order(n_rows=100)
-        words = coalesce(
-            chain.from_iterable(context.lines),
-            unifying_chars=self._options.unifying_chars,
-            include_syms=True,
+        words = chain.from_iterable(
+            coalesce(
+                line,
+                unifying_chars=self._options.unifying_chars,
+                include_syms=True,
+            )
+            for line in context.lines
         )
         proximity = Counter(words)
 

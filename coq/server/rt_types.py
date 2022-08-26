@@ -2,7 +2,6 @@ from dataclasses import dataclass
 from typing import AbstractSet, MutableMapping
 from uuid import UUID
 
-from ..databases.buffers.database import BDB
 from ..databases.insertions.database import IDB
 from ..shared.runtime import Metric, Supervisor, Worker
 from ..shared.settings import Settings
@@ -18,7 +17,6 @@ class Stack:
     settings: Settings
     lru: MutableMapping[UUID, Completion]
     metrics: MutableMapping[UUID, Metric]
-    bdb: BDB
     idb: IDB
     supervisor: Supervisor
     workers: AbstractSet[Worker]
