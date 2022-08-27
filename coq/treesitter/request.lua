@@ -10,7 +10,7 @@
   local nr = vim.treesitter.get_node_range
   local node_range = function(node, default)
     if nr then
-      local lo, _, hi, _ = node_range and node_range(node) or {}
+      local lo, _, hi, _ = nr(node)
       return lo, hi
     else
       return unpack(default)
