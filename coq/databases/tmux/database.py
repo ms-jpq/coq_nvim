@@ -1,7 +1,8 @@
-from asyncio import CancelledError, wrap_future
+from asyncio import CancelledError
 from concurrent.futures import Executor
 from contextlib import suppress
 from dataclasses import dataclass
+from itertools import islice
 from sqlite3 import Connection, OperationalError
 from typing import AbstractSet, Iterable, Iterator, Mapping, Optional
 
@@ -36,9 +37,10 @@ def _init() -> Connection:
 
 
 class TMDB:
-    def __init__(self, pool: Executor) -> None:
+    def __init__(self, pool: Executor, tokenization_limit: int) -> None:
         self._ex = SingleThreadExecutor(pool)
         self._current_pane = Optional[str]
+        self._tokenization_limit = tokenization_limit
         self._conn: Connection = self._ex.submit(_init)
 
     def _interrupt(self) -> None:
@@ -66,7 +68,7 @@ class TMDB:
 
         def m3() -> Iterator[Mapping]:
             for pane, words in panes.items():
-                for word in words:
+                for word in islice(words, self._tokenization_limit):
                     yield {
                         "pane_id": pane.uid,
                         "word": word,

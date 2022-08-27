@@ -1,6 +1,5 @@
-from collections.abc import Sequence
 from random import choice
-from typing import AbstractSet, Iterator, MutableSequence, Optional
+from typing import AbstractSet, Iterator, MutableSequence, Optional, Sequence
 
 from pynvim_pp.text_object import is_word
 

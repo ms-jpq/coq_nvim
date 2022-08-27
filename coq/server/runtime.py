@@ -99,7 +99,7 @@ def _from_each_according_to_their_ability(
         yield TagsWorker(supervisor, options=clients.tags, misc=(Path(ctags), ctdb))
 
     if clients.tmux.enabled and (tmux := which("tmux")):
-        tmdb = TMDB(pool)
+        tmdb = TMDB(pool, tokenization_limit=settings.limits.tokenization_limit)
         yield TmuxWorker(supervisor, options=clients.tmux, misc=(Path(tmux), tmdb))
 
     if clients.tabnine.enabled:
