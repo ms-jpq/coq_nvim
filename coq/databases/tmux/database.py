@@ -100,7 +100,7 @@ class TMDB:
                                 "cut_off": opts.fuzzy_cutoff,
                                 "look_ahead": opts.look_ahead,
                                 "limit": BIGGEST_INT if limitless else opts.max_results,
-                                "pane_id": active_pane,
+                                "pane_id": active_pane.uid,
                                 "word": word,
                                 "sym": sym,
                                 "like_word": like_esc(word[: opts.exact_matches]),
