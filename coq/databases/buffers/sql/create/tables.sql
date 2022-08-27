@@ -37,7 +37,7 @@ SELECT
   words.lword,
   buffers.filetype,
   buffers.filename,
-  lines.line_num + 1 AS line_num
+  lines.line_num
 FROM buffers
 JOIN lines
   ON lines.buffer_id = buffers.rowid

@@ -98,14 +98,11 @@ def _vaildate(r_playload: _Payload[RawPayload]) -> _Payload[Payload]:
         for load in r_playload.payloads:
             if payload := _parse(load):
                 range = load.get("range")
-                assert range
-                lo, hi = range
                 parent = _parse(load.get("parent"))
                 grandparent = _parse(load.get("grandparent"))
                 yield Payload(
                     filename="",
-                    lo=lo,
-                    hi=hi,
+                    range=range,
                     text=payload.text,
                     kind=payload.kind,
                     parent=parent,

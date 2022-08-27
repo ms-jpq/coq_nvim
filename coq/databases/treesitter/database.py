@@ -78,10 +78,11 @@ class TDB:
     ) -> None:
         def m1() -> Iterator[Mapping]:
             for node in nodes:
+                lo, hi = node.range if node.range else (None, None)
                 yield {
                     "buffer_id": buf_id,
-                    "lo": node.lo,
-                    "hi": node.hi,
+                    "lo": lo,
+                    "hi": hi,
                     "word": node.text,
                     "kind": node.kind,
                     "pword": node.parent.text if node.parent else None,
@@ -132,6 +133,12 @@ class TDB:
 
                     def c2() -> Iterator[Payload]:
                         for row in rows:
+                            range = (
+                                (lo, hi)
+                                if (lo := row["lo"]) is not None
+                                and (hi := row["hi"]) is not None
+                                else None
+                            )
                             grandparent = (
                                 SimplePayload(text=row["gpword"], kind=row["gpkind"])
                                 if row["gpword"] and row["gpkind"]
@@ -144,8 +151,7 @@ class TDB:
                             )
                             yield Payload(
                                 filename=row["filename"],
-                                lo=row["lo"],
-                                hi=row["hi"],
+                                range=range,
                                 text=row["word"],
                                 kind=row["kind"],
                                 parent=parent,
