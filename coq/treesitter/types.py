@@ -10,7 +10,7 @@ class SimpleRawPayload(TypedDict, total=False):
 
 
 class RawPayload(SimpleRawPayload, TypedDict, total=False):
-    range: Optional[Tuple[int, int]]
+    range: Tuple[int, int]
     parent: SimpleRawPayload
     grandparent: SimpleRawPayload
 
@@ -24,6 +24,6 @@ class SimplePayload:
 @dataclass(frozen=True)
 class Payload(SimplePayload):
     filename: str
-    range: Optional[Tuple[int, int]]
+    range: Tuple[int, int]
     parent: Optional[SimplePayload]
     grandparent: Optional[SimplePayload]

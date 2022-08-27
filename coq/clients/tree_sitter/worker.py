@@ -37,12 +37,11 @@ def _doc(client: TSClient, context: Context, payload: Payload) -> Optional[Doc]:
         yield clhs
         yield pos
         yield ":"
-        if range := payload.range:
-            lo, hi = range
-            yield str(lo)
-            if hi != lo:
-                yield "-"
-                yield str(hi)
+        lo, hi = payload.range
+        yield str(lo)
+        if hi != lo:
+            yield "-"
+            yield str(hi)
         yield client.path_sep
         yield crhs
         yield linesep

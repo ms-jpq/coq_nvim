@@ -133,12 +133,7 @@ class TDB:
 
                     def c2() -> Iterator[Payload]:
                         for row in rows:
-                            range = (
-                                (lo, hi)
-                                if (lo := row["lo"]) is not None
-                                and (hi := row["hi"]) is not None
-                                else None
-                            )
+                            range = row["lo"], row["hi"]
                             grandparent = (
                                 SimplePayload(text=row["gpword"], kind=row["gpkind"])
                                 if row["gpword"] and row["gpkind"]

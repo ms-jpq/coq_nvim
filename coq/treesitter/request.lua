@@ -7,21 +7,11 @@
     end
   end
 
-  local nr = vim.treesitter.get_node_range
-  local node_range = function(node, default)
-    if nr then
-      local lo, _, hi, _ = nr(node)
-      return lo, hi
-    else
-      return unpack(default)
-    end
-  end
-
-  local payload = function(buf, node, type, range)
+  local payload = function(buf, node, type)
     if not node:missing() and not node:has_error() then
       local parent = node:parent()
       local grandparent = parent and parent:parent() or nil
-      local lo, hi = node_range(node, range)
+      local lo, _, hi, _ = node:range()
       return {
         text = vim.treesitter.get_node_text(node, buf),
         range = {lo, hi},
@@ -51,7 +41,7 @@
           if query then
             for _, tree in pairs(parser:parse()) do
               for capture, node in query:iter_captures(tree:root(), buf, lo, hi) do
-                local pl = payload(buf, node, query.captures[capture], {lo, hi})
+                local pl = payload(buf, node, query.captures[capture])
                 if pl and pl.kind ~= "comment" then
                   coroutine.yield(pl)
                 end
