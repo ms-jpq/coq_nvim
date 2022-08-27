@@ -21,7 +21,7 @@
     if not node:missing() and not node:has_error() then
       local parent = node:parent()
       local grandparent = parent and parent:parent() or nil
-      local lo, hi = node_range(node)
+      local lo, hi = node_range(node, range)
       return {
         text = vim.treesitter.get_node_text(node, buf),
         range = {lo, hi},
