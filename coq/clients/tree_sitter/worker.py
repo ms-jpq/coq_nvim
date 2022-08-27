@@ -1,8 +1,9 @@
 from os import linesep
 from pathlib import PurePath
-from typing import AsyncIterator, Iterator, Optional, Tuple
+from typing import AsyncIterator, Iterator, Mapping, Optional, Tuple
 
-from pynvim_pp.api import list_bufs
+from pynvim import Nvim
+from pynvim_pp.api import buf_line_count, list_bufs
 from pynvim_pp.lib import async_call, go
 from pynvim_pp.logging import with_suppress
 
@@ -16,6 +17,14 @@ from ...treesitter.request import async_request
 from ...treesitter.types import Payload
 
 
+def _bufs(nvim: Nvim) -> Mapping[int, int]:
+    bufs = {
+        buf.number: buf_line_count(nvim, buf=buf)
+        for buf in list_bufs(nvim, listed=True)
+    }
+    return bufs
+
+
 def _doc(client: TSClient, context: Context, payload: Payload) -> Optional[Doc]:
     def cont() -> Iterator[str]:
         clhs, crhs = context.comment
@@ -27,6 +36,11 @@ def _doc(client: TSClient, context: Context, payload: Payload) -> Optional[Doc]:
 
         yield clhs
         yield pos
+        yield ":"
+        yield str(payload.lo)
+        if payload.hi != payload.lo:
+            yield "-"
+            yield str(payload.hi)
         yield client.path_sep
         yield crhs
         yield linesep
@@ -83,10 +97,9 @@ class Worker(BaseWorker[TSClient, TDB]):
         while True:
             with with_suppress():
                 bufs = await async_call(
-                    self._supervisor.nvim,
-                    lambda: list_bufs(self._supervisor.nvim, listed=True),
+                    self._supervisor.nvim, _bufs, self._supervisor.nvim
                 )
-                await self._misc.vacuum({buf.number for buf in bufs})
+                await self._misc.vacuum(bufs)
                 async with self._supervisor.idling:
                     await self._supervisor.idling.wait()
 
@@ -95,6 +108,8 @@ class Worker(BaseWorker[TSClient, TDB]):
             keep_going = payload.elapsed <= self._options.slow_threshold
             await self._misc.populate(
                 payload.buf,
+                lo=payload.lo,
+                hi=payload.hi,
                 filetype=payload.filetype,
                 filename=payload.filename,
                 nodes=payload.payloads,

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Optional, TypedDict
+from typing import Optional, Tuple, TypedDict
 
 
 class SimpleRawPayload(TypedDict, total=False):
@@ -10,6 +10,7 @@ class SimpleRawPayload(TypedDict, total=False):
 
 
 class RawPayload(SimpleRawPayload, TypedDict, total=False):
+    range: Tuple[int, int]
     parent: SimpleRawPayload
     grandparent: SimpleRawPayload
 
@@ -23,5 +24,7 @@ class SimplePayload:
 @dataclass(frozen=True)
 class Payload(SimplePayload):
     filename: str
+    lo: int
+    hi: int
     parent: Optional[SimplePayload]
     grandparent: Optional[SimplePayload]

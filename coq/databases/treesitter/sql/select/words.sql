@@ -1,5 +1,7 @@
 SELECT DISTINCT
   word,
+  lo,
+  hi,
   kind,
   pword,
   pkind,

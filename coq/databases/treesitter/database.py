@@ -1,8 +1,8 @@
 from asyncio import CancelledError
 from concurrent.futures import Executor
 from contextlib import suppress
-from sqlite3 import Connection, OperationalError
-from typing import AbstractSet, Iterable, Iterator, Mapping
+from sqlite3 import Connection, Cursor, OperationalError
+from typing import Iterable, Iterator, Mapping
 
 from std2.asyncio import to_thread
 from std2.sqlite3 import with_transaction
@@ -24,6 +24,19 @@ def _init() -> Connection:
     return conn
 
 
+def _ensure_buffer(cursor: Cursor, buf_id: int, filetype: str, filename: str) -> None:
+    cursor.execute(sql("select", "buffer_by_id"), {"rowid": buf_id})
+    row = {
+        "rowid": buf_id,
+        "filetype": filetype,
+        "filename": filename,
+    }
+    if cursor.fetchone():
+        cursor.execute(sql("update", "buffer"), row)
+    else:
+        cursor.execute(sql("insert", "buffer"), row)
+
+
 class TDB:
     def __init__(self, pool: Executor) -> None:
         self._ex = SingleThreadExecutor(pool)
@@ -32,27 +45,43 @@ class TDB:
     def _interrupt(self) -> None:
         self._conn.interrupt()
 
-    async def vacuum(self, buf_ids: AbstractSet[int]) -> None:
+    async def vacuum(self, live_bufs: Mapping[int, int]) -> None:
         def cont() -> None:
             with suppress(OperationalError):
                 with with_transaction(self._conn.cursor()) as cursor:
                     cursor.execute(sql("select", "buffers"), ())
                     existing = {row["rowid"] for row in cursor.fetchall()}
+                    dead = existing - live_bufs.keys()
                     cursor.executemany(
                         sql("delete", "buffer"),
-                        ({"buffer_id": buf_id} for buf_id in existing - buf_ids),
+                        ({"buffer_id": buf_id} for buf_id in dead),
+                    )
+                    cursor.executemany(
+                        sql("delete", "words"),
+                        (
+                            {"buffer_id": buf_id, "lo": line_count, "hi": -1}
+                            for buf_id, line_count in live_bufs.items()
+                        ),
                     )
                     cursor.execute("PRAGMA optimize", ())
 
         await self._ex.asubmit(cont)
 
     async def populate(
-        self, buf: int, filetype: str, filename: str, nodes: Iterable[Payload]
+        self,
+        buf_id: int,
+        filetype: str,
+        filename: str,
+        lo: int,
+        hi: int,
+        nodes: Iterable[Payload],
     ) -> None:
         def m1() -> Iterator[Mapping]:
             for node in nodes:
                 yield {
-                    "buffer_id": buf,
+                    "buffer_id": buf_id,
+                    "lo": node.lo,
+                    "hi": node.hi,
                     "word": node.text,
                     "kind": node.kind,
                     "pword": node.parent.text if node.parent else None,
@@ -64,9 +93,12 @@ class TDB:
         def cont() -> None:
             with suppress(OperationalError):
                 with with_transaction(self._conn.cursor()) as cursor:
+                    _ensure_buffer(
+                        cursor, buf_id=buf_id, filetype=filetype, filename=filename
+                    )
                     cursor.execute(
-                        sql("insert", "buffer"),
-                        {"rowid": buf, "filetype": filetype, "filename": filename},
+                        sql("delete", "words"),
+                        {"buffer_id": buf_id, "lo": lo, "hi": hi},
                     )
                     cursor.executemany(sql("insert", "word"), m1())
 
@@ -112,6 +144,8 @@ class TDB:
                             )
                             yield Payload(
                                 filename=row["filename"],
+                                lo=row["lo"],
+                                hi=row["hi"],
                                 text=row["word"],
                                 kind=row["kind"],
                                 parent=parent,

@@ -19,6 +19,8 @@ _T = TypeVar("_T")
 @dataclass(frozen=True)
 class _Payload(Generic[_T]):
     buf: int
+    lo: int
+    hi: int
     filetype: str
     filename: str
     payloads: Iterable[_T]
@@ -34,7 +36,9 @@ class _Session:
 
 _UIDS = count()
 _COND: Optional[Condition] = None
-_NIL_P = _Payload[RawPayload](buf=-1, filetype="", filename="", payloads=(), elapsed=-1)
+_NIL_P = _Payload[RawPayload](
+    buf=-1, lo=-1, hi=-1, filetype="", filename="", payloads=(), elapsed=-1
+)
 _SESSION = _Session(uid=-1, done=True, payload=_NIL_P)
 
 
@@ -48,6 +52,8 @@ def _ts_notify(
     stack: Stack,
     session: int,
     buf: int,
+    lo: int,
+    hi: int,
     filetype: str,
     filename: str,
     reply: Sequence[RawPayload],
@@ -60,6 +66,8 @@ def _ts_notify(
         if session >= _SESSION.uid:
             payload = _Payload(
                 buf=buf,
+                lo=lo,
+                hi=hi,
                 filetype=filetype,
                 filename=filename,
                 payloads=reply,
@@ -89,10 +97,15 @@ def _vaildate(r_playload: _Payload[RawPayload]) -> _Payload[Payload]:
     def cont() -> Iterator[Payload]:
         for load in r_playload.payloads:
             if payload := _parse(load):
+                range = load.get("range")
+                assert range
+                lo, hi = range
                 parent = _parse(load.get("parent"))
                 grandparent = _parse(load.get("grandparent"))
                 yield Payload(
                     filename="",
+                    lo=lo,
+                    hi=hi,
                     text=payload.text,
                     kind=payload.kind,
                     parent=parent,
@@ -101,6 +114,8 @@ def _vaildate(r_playload: _Payload[RawPayload]) -> _Payload[Payload]:
 
     payload = _Payload(
         buf=r_playload.buf,
+        lo=r_playload.lo,
+        hi=r_playload.hi,
         filetype=r_playload.filetype,
         filename=r_playload.filename,
         elapsed=r_playload.elapsed,

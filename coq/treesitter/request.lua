@@ -11,8 +11,10 @@
     if not node:missing() and not node:has_error() then
       local parent = node:parent()
       local grandparent = parent and parent:parent() or nil
+      local lo, _, hi, _ = vim.treesitter.get_node_range(node)
       return {
         text = vim.treesitter.get_node_text(node, buf),
+        range = {lo, hi},
         kind = type,
         parent = parent and
           {
@@ -30,14 +32,9 @@
     end
   end
 
-  local iter_nodes = function(buf, ctx)
+  local iter_nodes = function(buf, lo, hi)
     return coroutine.wrap(
       function()
-        local lines = vim.api.nvim_buf_line_count(buf)
-        local row, col = unpack(vim.api.nvim_win_get_cursor(0))
-        row = row - 1
-        local lo, hi = math.max(0, row - ctx), math.min(lines, row + ctx + 1)
-
         local go, parser = pcall(vim.treesitter.get_parser)
         if go then
           local query = vim.treesitter.get_query(parser:lang(), "highlights")
@@ -62,15 +59,32 @@
         local t1 = vim.loop.now()
         local win = vim.api.nvim_get_current_win()
         local buf = vim.api.nvim_win_get_buf(win)
-        local ctx = vim.api.nvim_win_get_height(win)
+        local height = vim.api.nvim_win_get_height(win)
         local filetype = vim.api.nvim_buf_get_option(buf, "filetype")
         local filename = vim.api.nvim_buf_get_name(buf)
+
+        local lines = vim.api.nvim_buf_line_count(buf)
+        local row, col = unpack(vim.api.nvim_win_get_cursor(win))
+        row = row - 1
+        local lo, hi =
+          math.max(0, row - height),
+          math.min(lines, row + height + 1)
+
         local acc = {}
-        for payload in iter_nodes(buf, ctx) do
+        for payload in iter_nodes(buf, lo, hi) do
           table.insert(acc, payload)
         end
         local t2 = vim.loop.now()
-        COQ.Ts_notify(session, buf, filetype, filename, acc, (t2 - t1) / 1000)
+        COQ.Ts_notify(
+          session,
+          buf,
+          lo,
+          hi,
+          filetype,
+          filename,
+          acc,
+          (t2 - t1) / 1000
+        )
       end
     )
   end
