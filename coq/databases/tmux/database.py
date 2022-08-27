@@ -4,13 +4,14 @@ from contextlib import suppress
 from dataclasses import dataclass
 from itertools import islice
 from sqlite3 import Connection, OperationalError
-from typing import AbstractSet, Iterable, Iterator, Mapping, Optional
+from typing import AbstractSet, Iterable, Iterator, Mapping, MutableMapping, Optional
 
 from std2.asyncio import to_thread
 from std2.sqlite3 import with_transaction
 
 from ...consts import TMUX_DB
 from ...shared.executor import SingleThreadExecutor
+from ...shared.parse import coalesce
 from ...shared.settings import MatchOptions
 from ...shared.sql import BIGGEST_INT, init_db, like_esc
 from ...shared.timeit import timeit
@@ -36,27 +37,62 @@ def _init() -> Connection:
     return conn
 
 
+def _tokenize(
+    tokenization_limit: int,
+    unifying_chars: AbstractSet[str],
+    include_syms: bool,
+    text: str,
+) -> Iterator[str]:
+    words = coalesce(
+        text,
+        unifying_chars=unifying_chars,
+        include_syms=include_syms,
+        reverse=True,
+    )
+    return islice(words, tokenization_limit)
+
+
 class TMDB:
-    def __init__(self, pool: Executor, tokenization_limit: int) -> None:
+    def __init__(
+        self,
+        pool: Executor,
+        tokenization_limit: int,
+        unifying_chars: AbstractSet[str],
+        include_syms: bool,
+    ) -> None:
         self._ex = SingleThreadExecutor(pool)
         self._current: Optional[Pane] = None
         self._tokenization_limit = tokenization_limit
+        self._unifying_chars = unifying_chars
+        self._include_syms = include_syms
+        self._cache: MutableMapping[str, str] = {}
         self._conn: Connection = self._ex.submit(_init)
 
     def _interrupt(self) -> None:
         self._conn.interrupt()
 
     async def periodical(
-        self, current: Optional[Pane], panes: Mapping[Pane, Iterable[str]]
+        self, current: Optional[Pane], panes: Mapping[Pane, str]
     ) -> None:
         self._current = current
+        live_panes = {pane.uid for pane in panes}
+        self._cache = {
+            pane_id: text
+            for pane_id, text in self._cache.items()
+            if pane_id in live_panes
+        }
+        not_cached = {
+            pane: text
+            for pane, text in panes.items()
+            if pane != current and text != self._cache.get(pane.uid)
+        }
 
         def m1(existing: AbstractSet[str]) -> Iterator[Mapping]:
-            for uid in existing - {pane.uid for pane in panes}:
+            for uid in existing - live_panes:
                 yield {"pane_id": uid}
 
-        def m2(panes: Iterable[Pane]) -> Iterator[Mapping]:
-            for pane in panes:
+        def m2() -> Iterator[Mapping]:
+            for pane in not_cached:
                 yield {
                     "pane_id": pane.uid,
                     "session_name": pane.session_name,
@@ -67,13 +103,19 @@ class TMDB:
                 }
 
         def m3() -> Iterator[Mapping]:
-            for pane, words in panes.items():
-                if not current or pane.uid != current.uid:
-                    for word in islice(words, self._tokenization_limit):
-                        yield {
-                            "pane_id": pane.uid,
-                            "word": word,
-                        }
+            for pane, text in not_cached.items():
+                for word in _tokenize(
+                    self._tokenization_limit,
+                    unifying_chars=self._unifying_chars,
+                    include_syms=self._include_syms,
+                    text=text,
+                ):
+                    yield {
+                        "pane_id": pane.uid,
+                        "word": word,
+                    }
+                else:
+                    self._cache[pane.uid] = text
 
         def cont() -> None:
             with suppress(OperationalError):
@@ -81,7 +123,7 @@ class TMDB:
                     cursor.execute(sql("select", "panes"))
                     existing = {row["pane_id"] for row in cursor.fetchall()}
                     cursor.executemany(sql("delete", "pane"), m1(existing))
-                    cursor.executemany(sql("insert", "pane"), m2(panes))
+                    cursor.executemany(sql("insert", "pane"), m2())
                     cursor.executemany(sql("insert", "word"), m3())
                     cursor.execute("PRAGMA optimize", ())
 
@@ -91,37 +133,34 @@ class TMDB:
         self, opts: MatchOptions, word: str, sym: str, limitless: int
     ) -> Iterator[TmuxWord]:
         def cont() -> Iterator[TmuxWord]:
-            if active_pane := self._current:
-                try:
-                    with with_transaction(self._conn.cursor()) as cursor:
-                        cursor.execute(
-                            sql("select", "words"),
-                            {
-                                "cut_off": opts.fuzzy_cutoff,
-                                "look_ahead": opts.look_ahead,
-                                "limit": BIGGEST_INT if limitless else opts.max_results,
-                                "pane_id": active_pane.uid,
-                                "word": word,
-                                "sym": sym,
-                                "like_word": like_esc(word[: opts.exact_matches]),
-                                "like_sym": like_esc(sym[: opts.exact_matches]),
-                            },
+            try:
+                with with_transaction(self._conn.cursor()) as cursor:
+                    cursor.execute(
+                        sql("select", "words"),
+                        {
+                            "cut_off": opts.fuzzy_cutoff,
+                            "look_ahead": opts.look_ahead,
+                            "limit": BIGGEST_INT if limitless else opts.max_results,
+                            "pane_id": self._current.uid if self._current else None,
+                            "word": word,
+                            "sym": sym,
+                            "like_word": like_esc(word[: opts.exact_matches]),
+                            "like_sym": like_esc(sym[: opts.exact_matches]),
+                        },
+                    )
+                    rows = cursor.fetchall()
+                    return (
+                        TmuxWord(
+                            text=row["word"],
+                            session_name=row["session_name"],
+                            window_index=row["window_index"],
+                            window_name=row["window_name"],
+                            pane_index=row["pane_index"],
+                            pane_title=row["pane_title"],
                         )
-                        rows = cursor.fetchall()
-                        return (
-                            TmuxWord(
-                                text=row["word"],
-                                session_name=row["session_name"],
-                                window_index=row["window_index"],
-                                window_name=row["window_name"],
-                                pane_index=row["pane_index"],
-                                pane_title=row["pane_title"],
-                            )
-                            for row in rows
-                        )
-                except OperationalError:
-                    return iter(())
-            else:
+                        for row in rows
+                    )
+            except OperationalError:
                 return iter(())
 
         await to_thread(self._interrupt)

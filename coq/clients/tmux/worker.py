@@ -43,10 +43,7 @@ class Worker(BaseWorker[TmuxClient, TMDB]):
 
     async def periodical(self) -> None:
         current, panes = await snapshot(
-            self._exec,
-            all_sessions=self._options.all_sessions,
-            unifying_chars=self._supervisor.match.unifying_chars,
-            include_syms=self._options.match_syms,
+            self._exec, all_sessions=self._options.all_sessions
         )
         await self._misc.periodical(current, panes=panes)
 

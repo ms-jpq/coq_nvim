@@ -1,12 +1,10 @@
 from asyncio import gather
 from dataclasses import dataclass
 from pathlib import Path
-from typing import AbstractSet, Iterator, Mapping, Optional, Sequence, Tuple
+from typing import Iterator, Mapping, Optional, Sequence, Tuple
 
 from pynvim_pp.lib import decode
 from std2.asyncio.subprocess import call
-
-from ..shared.parse import coalesce
 
 _SEP = "\x1f"
 
@@ -98,11 +96,7 @@ async def _session(tmux: Path) -> Optional[str]:
             return session
 
 
-async def _screenshot(
-    unifying_chars: AbstractSet[str],
-    include_syms: bool,
-    pane: Pane,
-) -> Tuple[Pane, Iterator[str]]:
+async def _screenshot(pane: Pane) -> Tuple[Pane, str]:
     try:
         proc = await call(
             "tmux",
@@ -113,34 +107,22 @@ async def _screenshot(
             check_returncode=set(),
         )
     except OSError:
-        return pane, iter(())
+        return pane, ""
     else:
         if proc.returncode:
-            return pane, iter(())
+            return pane, ""
         else:
-            words = coalesce(
-                decode(proc.stdout),
-                unifying_chars=unifying_chars,
-                include_syms=include_syms,
-                reverse=True,
-            )
-            return pane, words
+            text = decode(proc.stdout)
+            return pane, text
 
 
 async def snapshot(
-    tmux: Path, all_sessions: bool, include_syms: bool, unifying_chars: AbstractSet[str]
-) -> Tuple[Optional[Pane], Mapping[Pane, Iterator[str]]]:
+    tmux: Path, all_sessions: bool
+) -> Tuple[Optional[Pane], Mapping[Pane, str]]:
     session, panes = await gather(
         _session(tmux), _panes(tmux, all_sessions=all_sessions)
     )
-    shots = await gather(
-        *(
-            _screenshot(
-                unifying_chars=unifying_chars, pane=pane, include_syms=include_syms
-            )
-            for pane in panes
-        )
-    )
+    shots = await gather(*map(_screenshot, panes))
     current = next(
         (
             pane
@@ -149,5 +131,5 @@ async def snapshot(
         ),
         None,
     )
-    snapshot = {pane: words for pane, words in shots}
-    return current if current else None, snapshot
+    snapshot = {pane: text for pane, text in shots}
+    return current, snapshot
