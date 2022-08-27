@@ -44,7 +44,7 @@ def _sort_by(is_lower: bool, adjustment: Weights) -> Callable[[Metric], Any]:
         key = (
             -(metric.comp.always_on_top),
             -(metric.comp.preselect),
-            -round(tot * metric.weight_adjust * 1000),
+            -round(tot * metric.weight_adjust * 10000),
             -len(metric.comp.secondary_edits),
             -(metric.comp.kind != ""),
             -(metric.comp.doc is not None),
