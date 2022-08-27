@@ -39,7 +39,7 @@ def _init() -> Connection:
 class TMDB:
     def __init__(self, pool: Executor, tokenization_limit: int) -> None:
         self._ex = SingleThreadExecutor(pool)
-        self._current = Optional[Pane]
+        self._current: Optional[Pane] = None
         self._tokenization_limit = tokenization_limit
         self._conn: Connection = self._ex.submit(_init)
 
