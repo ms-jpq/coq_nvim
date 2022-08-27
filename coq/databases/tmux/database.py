@@ -39,7 +39,7 @@ def _init() -> Connection:
 class TMDB:
     def __init__(self, pool: Executor, tokenization_limit: int) -> None:
         self._ex = SingleThreadExecutor(pool)
-        self._current_pane = Optional[str]
+        self._current = Optional[Pane]
         self._tokenization_limit = tokenization_limit
         self._conn: Connection = self._ex.submit(_init)
 
@@ -47,9 +47,9 @@ class TMDB:
         self._conn.interrupt()
 
     async def periodical(
-        self, current: Optional[str], panes: Mapping[Pane, Iterable[str]]
+        self, current: Optional[Pane], panes: Mapping[Pane, Iterable[str]]
     ) -> None:
-        self._current_pane = current
+        self._current = current
 
         def m1(existing: AbstractSet[str]) -> Iterator[Mapping]:
             for uid in existing - {pane.uid for pane in panes}:
@@ -68,11 +68,12 @@ class TMDB:
 
         def m3() -> Iterator[Mapping]:
             for pane, words in panes.items():
-                for word in islice(words, self._tokenization_limit):
-                    yield {
-                        "pane_id": pane.uid,
-                        "word": word,
-                    }
+                if not current or pane.uid != current.uid:
+                    for word in islice(words, self._tokenization_limit):
+                        yield {
+                            "pane_id": pane.uid,
+                            "word": word,
+                        }
 
         def cont() -> None:
             with suppress(OperationalError):
@@ -90,7 +91,7 @@ class TMDB:
         self, opts: MatchOptions, word: str, sym: str, limitless: int
     ) -> Iterator[TmuxWord]:
         def cont() -> Iterator[TmuxWord]:
-            if active_pane := self._current_pane:
+            if active_pane := self._current:
                 try:
                     with with_transaction(self._conn.cursor()) as cursor:
                         cursor.execute(

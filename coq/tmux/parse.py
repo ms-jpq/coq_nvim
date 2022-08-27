@@ -129,7 +129,7 @@ async def _screenshot(
 
 async def snapshot(
     tmux: Path, all_sessions: bool, include_syms: bool, unifying_chars: AbstractSet[str]
-) -> Tuple[Optional[str], Mapping[Pane, Iterator[str]]]:
+) -> Tuple[Optional[Pane], Mapping[Pane, Iterator[str]]]:
     session, panes = await gather(
         _session(tmux), _panes(tmux, all_sessions=all_sessions)
     )
@@ -150,4 +150,4 @@ async def snapshot(
         None,
     )
     snapshot = {pane: words for pane, words in shots}
-    return current.uid if current else None, snapshot
+    return current if current else None, snapshot
