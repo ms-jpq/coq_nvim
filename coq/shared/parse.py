@@ -9,12 +9,9 @@ def lower(text: str) -> str:
 
 
 def coalesce(
-    chars: Sequence[str],
-    unifying_chars: AbstractSet[str],
-    include_syms: bool,
-    reverse: Optional[bool] = None,
+    chars: Sequence[str], unifying_chars: AbstractSet[str], include_syms: bool
 ) -> Iterator[str]:
-    backwards = choice((True, False)) if reverse is None else reverse
+    backwards = choice((True, False))
 
     words: MutableSequence[str] = []
     syms: MutableSequence[str] = []

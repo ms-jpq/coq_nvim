@@ -4,7 +4,7 @@ from contextlib import suppress
 from dataclasses import dataclass
 from itertools import islice
 from sqlite3 import Connection, OperationalError
-from typing import AbstractSet, Iterable, Iterator, Mapping, MutableMapping, Optional
+from typing import AbstractSet, Iterator, Mapping, MutableMapping, Optional
 
 from std2.asyncio import to_thread
 from std2.sqlite3 import with_transaction
@@ -43,12 +43,7 @@ def _tokenize(
     include_syms: bool,
     text: str,
 ) -> Iterator[str]:
-    words = coalesce(
-        text,
-        unifying_chars=unifying_chars,
-        include_syms=include_syms,
-        reverse=True,
-    )
+    words = coalesce(text, unifying_chars=unifying_chars, include_syms=include_syms)
     return islice(words, tokenization_limit)
 
 

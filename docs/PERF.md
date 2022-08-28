@@ -62,6 +62,12 @@ This is the same design decision behind many "fast" garbage collectors.
 
 In broad strokes, this means making `coq.nvim` **concurrent**, which introduces costs to throughput, but enables **other optimizations** detailed below.
 
+### Randomization
+
+`coq.nvim` actually performs randomization of data ingestion order.
+
+This is to ensure fairness in senarios in which `coq.nvim` is unable to chew through the incoming text /events.
+
 ### SQLite
 
 `coq.nvim` spins up over half a dozen independent SQLite VMs.
