@@ -63,7 +63,7 @@ _ARRAY_CACHE: MutableMapping[Tuple[int, int], MutableSequence[int]] = {}
 _DA: MutableMapping[str, int] = {}
 
 
-def dl_distance_2(lhs: str, rhs: str) -> int:
+def dl_distance(lhs: str, rhs: str) -> int:
     """
     Modified from
     https://github.com/jamesturk/jellyfish/blob/main/LICENSE
