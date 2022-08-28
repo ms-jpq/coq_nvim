@@ -1,4 +1,3 @@
-from array import array
 from collections import Counter
 from dataclasses import dataclass
 from itertools import repeat
@@ -76,7 +75,7 @@ def dl_distance(lhs: str, rhs: str) -> int:
     _DA.clear()
 
     if not (d := _ARRAY_CACHE.get((len_l, len_r))):
-        d = array("I", repeat(0, row_size * (len_l + 2)))
+        d = [*repeat(0, row_size * (len_l + 2))]
 
     d[0] = max_d
     for i in range(0, len_l + 1):
