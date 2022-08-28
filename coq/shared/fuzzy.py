@@ -2,7 +2,7 @@ from array import array
 from collections import Counter
 from dataclasses import dataclass
 from itertools import repeat
-from typing import Iterable, MutableMapping, MutableSequence, Sequence, Tuple
+from typing import Iterable, MutableMapping, MutableSequence, Tuple
 
 
 @dataclass(frozen=True)
@@ -59,10 +59,11 @@ def quick_ratio(lhs: str, rhs: str, look_ahead: int) -> float:
         return l_ratio + r_ratio * 0.5
 
 
-_ARRAY_CACHE: MutableMapping[Tuple[int, int], Sequence[MutableSequence[int]]] = {}
+_ARRAY_CACHE: MutableMapping[Tuple[int, int], MutableSequence[int]] = {}
+_DA: MutableMapping[str, int] = {}
 
 
-def dl_distance(lhs: str, rhs: str) -> int:
+def dl_distance_2(lhs: str, rhs: str) -> int:
     """
     Modified from
     https://github.com/jamesturk/jellyfish/blob/main/LICENSE
@@ -70,27 +71,27 @@ def dl_distance(lhs: str, rhs: str) -> int:
     """
 
     len_l, len_r = len(lhs), len(rhs)
+    row_size = len_r + 2
     max_d = len_l + len_r
+    _DA.clear()
 
-    da: MutableMapping[str, int] = {}
+    if not (d := _ARRAY_CACHE.get((len_l, len_r))):
+        d = array("I", repeat(0, row_size * (len_l + 2)))
 
-    key = (len_l, len_r)
-    if (d := _ARRAY_CACHE.get(key)) is None:
-        d = tuple(array("I", repeat(0, len_r + 2)) for _ in range(len_l + 2))
-        _ARRAY_CACHE[key] = d
-
-    d[0][0] = max_d
+    d[0] = max_d
     for i in range(0, len_l + 1):
-        d[i + 1][0] = max_d
-        d[i + 1][1] = i
+        i1 = i + 1
+        d[row_size * i1] = max_d
+        d[row_size * i1 + 1] = i
+
     for j in range(0, len_r + 1):
-        d[0][j + 1] = max_d
-        d[1][j + 1] = j
+        d[j + 1] = max_d
+        d[row_size + j + 1] = j
 
     for i in range(1, len_l + 1):
         db = 0
         for j in range(1, len_r + 1):
-            i1 = da.get(rhs[j - 1], 0)
+            i1 = _DA.get(rhs[j - 1], 0)
             j1 = db
 
             if lhs[i - 1] == rhs[j - 1]:
@@ -99,15 +100,15 @@ def dl_distance(lhs: str, rhs: str) -> int:
             else:
                 cost = 1
 
-            d[i + 1][j + 1] = min(
-                d[i][j] + cost,
-                d[i + 1][j] + 1,
-                d[i][j + 1] + 1,
-                d[i1][j1] + (i - i1 - 1) + 1 + (j - j1 - 1),
+            d[row_size * (i + 1) + j + 1] = min(
+                d[row_size * i + j] + cost,
+                d[row_size * (i + 1) + j] + 1,
+                d[row_size * i + j + 1] + 1,
+                d[row_size * i1 + j1] + (i - i1 - 1) + 1 + (j - j1 - 1),
             )
-        da[lhs[i - 1]] = i
+        _DA[lhs[i - 1]] = i
 
-    return d[len_l + 1][len_r + 1]
+    return d[row_size * (len_l + 1) + len_r + 1]
 
 
 def metrics(lhs: str, rhs: str, look_ahead: int) -> MatchMetrics:
