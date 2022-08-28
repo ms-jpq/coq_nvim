@@ -75,11 +75,7 @@ def dl_distance(lhs: str, rhs: str) -> int:
     da: MutableMapping[str, int] = {}
 
     key = (len_l, len_r)
-    if d := _ARRAY_CACHE.get(key):
-        for a in d:
-            for i in range(len(a)):
-                a[i] = 0
-    else:
+    if (d := _ARRAY_CACHE.get(key)) is None:
         d = tuple(array("I", repeat(0, len_r + 2)) for _ in range(len_l + 2))
         _ARRAY_CACHE[key] = d
 
