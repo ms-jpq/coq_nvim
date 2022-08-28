@@ -23,14 +23,14 @@ class Statistics:
     inserted: int
 
     avg_duration: float
-    q0_duration: float
+    q01_duration: float
     q50_duration: float
     q95_duration: float
-    q100_duration: float
+    q99_duration: float
 
     avg_items: float
     q50_items: int
-    q100_items: int
+    q99_items: int
 
 
 def _init() -> Connection:
@@ -138,12 +138,12 @@ class IDB:
                         inserted=row["inserted"],
                         avg_duration=row["avg_duration"],
                         avg_items=row["avg_items"],
-                        q0_duration=q_duration.get("q0") or 0,
+                        q01_duration=q_duration.get("q1") or 0,
                         q50_duration=q_duration.get("q50") or 0,
                         q95_duration=q_duration.get("q95") or 0,
-                        q100_duration=q_duration.get("q100") or 0,
+                        q99_duration=q_duration.get("q99") or 0,
                         q50_items=q_items.get("q50") or 0,
-                        q100_items=q_items.get("q100") or 0,
+                        q99_items=q_items.get("q99") or 0,
                     )
                     yield stat
 

@@ -58,12 +58,12 @@ ON
 
 CREATE VIEW IF NOT EXISTS stats_quantiles_view AS
 SELECT
-  source                                                 AS source,
-  COALESCE(SUM(interrupted), 0)                          AS interrupted,
-  COALESCE(AVG(duration), 0)                             AS avg_duration,
-  COALESCE(X_QUANTILES(duration, 0, 0.5, 0.95, 1), '{}') AS q_duration,
-  COALESCE(AVG(items), 0)                                AS avg_items,
-  COALESCE(X_QUANTILES(items, 0.5, 1.0), '{}')           AS q_items
+  source                                                       AS source,
+  COALESCE(SUM(interrupted), 0)                                AS interrupted,
+  COALESCE(AVG(duration), 0)                                   AS avg_duration,
+  COALESCE(X_QUANTILES(duration, 0.01, 0.5, 0.95, 0.99), '{}') AS q_duration,
+  COALESCE(AVG(items), 0)                                      AS avg_items,
+  COALESCE(X_QUANTILES(items, 0.5, 0.99), '{}')                AS q_items
 FROM instance_stats_view
 GROUP BY
   source;
