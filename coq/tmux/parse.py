@@ -102,6 +102,7 @@ async def _screenshot(pane: Pane) -> Tuple[Pane, str]:
             "tmux",
             "capture-pane",
             "-p",
+            "-J",
             "-t",
             pane.uid,
             check_returncode=set(),
