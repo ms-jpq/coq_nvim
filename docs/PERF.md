@@ -66,7 +66,7 @@ In broad strokes, this means making `coq.nvim` **concurrent**, which introduces 
 
 `coq.nvim` actually performs randomization of data ingestion order.
 
-This is to ensure fairness in senarios in which `coq.nvim` is unable to chew through the incoming text /events.
+This is to ensure fairness in scenarios in which `coq.nvim` is unable to chew through the incoming text /events.
 
 ### SQLite
 

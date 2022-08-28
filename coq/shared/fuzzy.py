@@ -2,7 +2,7 @@ from array import array
 from collections import Counter
 from dataclasses import dataclass
 from itertools import repeat
-from typing import Iterable, MutableMapping
+from typing import Iterable, MutableMapping, MutableSequence, Sequence, Tuple
 
 
 @dataclass(frozen=True)
@@ -59,6 +59,9 @@ def quick_ratio(lhs: str, rhs: str, look_ahead: int) -> float:
         return l_ratio + r_ratio * 0.5
 
 
+_ARRAY_CACHE: MutableMapping[Tuple[int, int], Sequence[MutableSequence[int]]] = {}
+
+
 def dl_distance(lhs: str, rhs: str) -> int:
     """
     Modified from
@@ -71,7 +74,14 @@ def dl_distance(lhs: str, rhs: str) -> int:
 
     da: MutableMapping[str, int] = {}
 
-    d = tuple(array("I", repeat(0, len_r + 2)) for _ in range(len_l + 2))
+    key = (len_l, len_r)
+    if d := _ARRAY_CACHE.get(key):
+        for a in d:
+            for i in range(len(a)):
+                a[i] = 0
+    else:
+        d = tuple(array("I", repeat(0, len_r + 2)) for _ in range(len_l + 2))
+        _ARRAY_CACHE[key] = d
 
     d[0][0] = max_d
     for i in range(0, len_l + 1):
