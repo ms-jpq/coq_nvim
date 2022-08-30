@@ -7,7 +7,7 @@ from ...shared.repeat import sanitize
 from ...shared.types import ContextualEdit, Edit
 from ..context import context
 from ..edit import edit
-from ..runtime import Stack
+from ..rt_types import Stack
 from ..state import state
 
 

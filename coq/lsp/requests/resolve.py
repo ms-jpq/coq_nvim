@@ -2,9 +2,8 @@ from typing import MutableSequence, Optional
 
 from pynvim import Nvim
 
-from ...shared.types import ExternLSP, ExternLUA
+from ...shared.types import Completion, ExternLSP, ExternLUA
 from ..parse import parse_item
-from ..types import Completion
 from .request import async_request
 
 

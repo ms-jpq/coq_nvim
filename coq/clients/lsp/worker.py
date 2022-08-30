@@ -20,6 +20,7 @@ from std2.itertools import chunk
 
 from ...lsp.requests.completion import comp_lsp
 from ...lsp.types import LSPcomp
+from ...shared.context import cword_before
 from ...shared.fuzzy import multi_set_ratio
 from ...shared.parse import lower
 from ...shared.runtime import Supervisor
@@ -27,7 +28,6 @@ from ...shared.runtime import Worker as BaseWorker
 from ...shared.settings import LSPClient, MatchOptions
 from ...shared.sql import BIGGEST_INT
 from ...shared.timeit import timeit
-from ...shared.trans import cword_before
 from ...shared.types import Completion, Context, Edit, SnippetEdit
 from ..cache.worker import CacheWorker, sanitize_cached
 

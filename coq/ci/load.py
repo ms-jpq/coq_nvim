@@ -15,12 +15,10 @@ from yaml import safe_load
 from ..consts import COMPILATION_YML, TMP_DIR
 from ..shared.context import EMPTY_CONTEXT
 from ..shared.types import SnippetEdit
-from ..snippets.loaders.load import LoadedSnips
 from ..snippets.loaders.load import load_ci as load_from_paths
 from ..snippets.parse import parse_basic
-from ..snippets.parsers.parser import ParseError
-from ..snippets.parsers.types import ParseInfo
-from ..snippets.types import ParsedSnippet
+from ..snippets.parsers.types import ParseError, ParseInfo
+from ..snippets.types import LoadedSnips, ParsedSnippet
 from .types import Compilation
 
 

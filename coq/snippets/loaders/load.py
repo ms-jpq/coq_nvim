@@ -8,7 +8,8 @@ from pynvim_pp.logging import log
 from std2.graphlib import recur_sort
 from std2.pathlib import walk
 
-from ..types import LoadedSnips, LoadError, ParsedSnippet, SnippetGrammar
+from ...shared.types import SnippetGrammar
+from ..types import LoadedSnips, LoadError, ParsedSnippet
 from .lsp import load_lsp
 from .neosnippet import load_neosnippet
 from .ultisnip import load_ultisnip
