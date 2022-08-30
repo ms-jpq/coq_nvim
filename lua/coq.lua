@@ -145,7 +145,6 @@ coq.lsp_ensure_capabilities = function(cfg)
             insertReplaceSupport = true,
             insertTextModeSupport = {valueSet = {1, 2}},
             labelDetailsSupport = true,
-            labelDetailsSupport = true,
             preselectSupport = true,
             resolveSupport = {properties = {}},
             snippetSupport = true,
