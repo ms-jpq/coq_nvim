@@ -1,8 +1,10 @@
 from itertools import chain, repeat
 from typing import AbstractSet, Iterable, Iterator
 
+from pynvim_pp.text_object import is_word
+
 from .context import cword_after, cword_before
-from .parse import coalesce, is_word, lower
+from .parse import coalesce, lower
 from .types import Context, ContextualEdit
 
 
