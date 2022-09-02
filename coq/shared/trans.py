@@ -105,7 +105,12 @@ def trans_adjusted(
     old_prefix = (
         simple_before
         if tokens <= 1
-        else edit.old_prefix or (simple_before if is_word(simple_before) else "")
+        else edit.old_prefix
+        or (
+            simple_before
+            if is_word(simple_before, unifying_chars=unifying_chars)
+            else ""
+        )
     )
     old_suffix = simple_after if tokens <= 1 else edit.old_suffix
 
