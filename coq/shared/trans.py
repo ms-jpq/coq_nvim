@@ -2,7 +2,7 @@ from itertools import chain, repeat
 from typing import AbstractSet, Iterable, Iterator
 
 from .context import cword_after, cword_before
-from .parse import coalesce, lower
+from .parse import coalesce, is_word, lower
 from .types import Context, ContextualEdit
 
 
@@ -26,7 +26,9 @@ def _line_match(
 ) -> str:
     existing, insertion = lower(existing), lower(insertion)
     if lhs:
-        prefix = next(coalesce(insertion, unifying_chars=unifying_chars, include_syms=True), "")
+        prefix = next(
+            coalesce(insertion, unifying_chars=unifying_chars, include_syms=True), ""
+        )
         for match in reverse_acc(0, seq=insertion):
             if match == existing[-len(match) :]:
                 if match == prefix or len(match) >= replace_prefix_threshold:
@@ -95,8 +97,14 @@ def trans_adjusted(
         unifying_chars, lower=False, context=ctx, sort_by=edit.new_text
     )
 
-    tokens = len(tuple(coalesce(new_text, unifying_chars=unifying_chars, include_syms=True)))
-    old_prefix = simple_before if tokens <= 1 else edit.old_prefix or simple_before
+    tokens = len(
+        tuple(coalesce(new_text, unifying_chars=unifying_chars, include_syms=True))
+    )
+    old_prefix = (
+        simple_before
+        if tokens <= 1
+        else edit.old_prefix or (simple_before if is_word(simple_before) else "")
+    )
     old_suffix = simple_after if tokens <= 1 else edit.old_suffix
 
     adjusted = ContextualEdit(
