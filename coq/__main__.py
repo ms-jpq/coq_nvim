@@ -83,6 +83,14 @@ if command == "deps":
                 symlinks=not IS_WIN,
                 clear=True,
             ).create(_RT_DIR)
+            # Detect if python executable is a symlink to /nix/store, and fix it
+            pythonPath = _RT_DIR / "bin" / "python{0.major}.{0.minor}".format(version_info)
+            if "/nix/store" in str(pythonPath.resolve(strict=True)):
+                print("/nix/store path detected! Fixing symlink..")
+                from shutil import which
+                from os import remove
+                remove(pythonPath)
+                pythonPath.symlink_to(which(pythonPath.name))
     except (ImportError, CalledProcessError):
         msg = "Please install python3-venv separately. (apt, yum, apk, etc)"
         io_out.seek(0)
