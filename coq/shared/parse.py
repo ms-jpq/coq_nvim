@@ -28,13 +28,13 @@ def coalesce(
             syms.clear()
             yield sym
 
-    for char in reversed(chars) if backwards else chars:
-        if is_word(char, unifying_chars=unifying_chars):
-            words.append(char)
+    for chr in reversed(chars) if backwards else chars:
+        if is_word(unifying_chars, chr=chr):
+            words.append(chr)
             yield from s_it()
-        elif not char.isspace():
+        elif not chr.isspace():
             if include_syms:
-                syms.append(char)
+                syms.append(chr)
             yield from w_it()
         else:
             yield from w_it()

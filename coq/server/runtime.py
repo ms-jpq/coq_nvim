@@ -1,10 +1,10 @@
 from concurrent.futures import Executor
 from pathlib import Path, PurePath
 from shutil import which
-from typing import Iterator, Mapping, cast
+from typing import Any, Iterator, Mapping, cast
 
-from pynvim import Nvim
-from pynvim_pp.api import get_cwd
+from pynvim_pp.nvim import Nvim
+from pynvim_pp.types import NoneType
 from std2.configparser import hydrate
 from std2.graphlib import merge
 from std2.pickle.decoder import new_decoder
@@ -34,9 +34,9 @@ from .rt_types import Stack, ValidationError
 from .state import state
 
 
-def _settings(nvim: Nvim) -> Settings:
+async def _settings() -> Settings:
     yml = safe_load(CONFIG_YML.read_text("UTF-8"))
-    user_config = nvim.vars.get(SETTINGS_VAR, {})
+    user_config = cast(Any, (await Nvim.vars.get(NoneType, SETTINGS_VAR)) or {})
     u_conf = hydrate(user_config)
 
     if isinstance(u_conf, Mapping):
@@ -111,11 +111,13 @@ def _from_each_according_to_their_ability(
         yield T9Worker(supervisor, options=clients.tabnine, misc=None)
 
 
-def stack(pool: Executor, nvim: Nvim) -> Stack:
-    settings = _settings(nvim)
-    pum_width = nvim.options["pumwidth"]
-    vars_dir = Path(nvim.funcs.stdpath("cache")) / "coq" if settings.xdg else VARS
-    s = state(cwd=get_cwd(nvim), pum_width=pum_width)
+async def stack(pool: Executor) -> Stack:
+    settings = await _settings()
+    pum_width = await Nvim.opts.get(int, "pumwidth")
+    vars_dir = (
+        Path(await Nvim.fn.stdpath(str, "cache")) / "coq" if settings.xdg else VARS
+    )
+    s = state(cwd=await Nvim.getcwd(), pum_width=pum_width)
     idb = IDB(pool)
     reviewer = Reviewer(
         icons=settings.display.icons,
@@ -124,7 +126,6 @@ def stack(pool: Executor, nvim: Nvim) -> Stack:
     )
     supervisor = Supervisor(
         pool=pool,
-        nvim=nvim,
         vars_dir=vars_dir,
         match=settings.match,
         comp=settings.completion,

@@ -1,4 +1,10 @@
-from asyncio import LimitOverrunError, create_subprocess_exec, shield, sleep
+from asyncio import (
+    LimitOverrunError,
+    create_subprocess_exec,
+    create_task,
+    shield,
+    sleep,
+)
 from asyncio.locks import Lock
 from asyncio.subprocess import Process
 from contextlib import suppress
@@ -10,8 +16,9 @@ from pathlib import PurePath
 from subprocess import DEVNULL, PIPE
 from typing import Any, AsyncIterator, Iterator, Mapping, Optional, Sequence
 
-from pynvim_pp.lib import awrite, decode, encode, go
-from pynvim_pp.logging import log, with_suppress
+from pynvim_pp.lib import decode, encode
+from pynvim_pp.logging import log, suppress_and_log
+from pynvim_pp.nvim import Nvim
 from std2.pickle.decoder import new_decoder
 from std2.pickle.encoder import new_encoder
 from std2.pickle.types import DecodeError
@@ -20,7 +27,7 @@ from ...lang import LANG
 from ...lsp.protocol import PROTOCOL
 from ...shared.runtime import Supervisor
 from ...shared.runtime import Worker as BaseWorker
-from ...shared.settings import MatchOptions, T9Client
+from ...shared.settings import T9Client
 from ...shared.types import Completion, Context, ContextualEdit
 from .install import ensure_updated, t9_bin
 from .types import ReqL1, ReqL2, Request, RespL1, Response
@@ -112,11 +119,11 @@ class Worker(BaseWorker[T9Client, None]):
         self._proc: Optional[Process] = None
         self._cwd: Optional[PurePath] = None
         super().__init__(supervisor, options=options, misc=misc)
-        go(supervisor.nvim, aw=self._install())
-        go(supervisor.nvim, aw=self._poll())
+        create_task(self._install())
+        create_task(self._poll())
 
     async def _poll(self) -> None:
-        with with_suppress():
+        with suppress_and_log():
             try:
                 while True:
                     await sleep(9)
@@ -135,7 +142,7 @@ class Worker(BaseWorker[T9Client, None]):
         else:
             for _ in range(9):
                 await sleep(0)
-            await awrite(self._supervisor.nvim, LANG("begin T9 download"))
+            await Nvim.write(LANG("begin T9 download"))
 
             self._bin = await ensure_updated(
                 vars_dir,
@@ -144,9 +151,9 @@ class Worker(BaseWorker[T9Client, None]):
             )
 
             if not self._bin:
-                await awrite(self._supervisor.nvim, LANG("failed T9 download"))
+                await Nvim.write(LANG("failed T9 download"))
             else:
-                await awrite(self._supervisor.nvim, LANG("end T9 download"))
+                await Nvim.write(LANG("end T9 download"))
 
     async def _clean(self) -> None:
         proc = self._proc

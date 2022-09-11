@@ -1,47 +1,22 @@
-from asyncio import Task, wait
-from dataclasses import asdict, dataclass
+from asyncio import Task, create_task, wait
+from dataclasses import dataclass
+from functools import lru_cache
 from html import unescape
 from itertools import chain
 from math import ceil
 from os import linesep
-from typing import (
-    Any,
-    Callable,
-    Iterator,
-    Mapping,
-    Optional,
-    Sequence,
-    Tuple,
-    Union,
-    cast,
-)
+from typing import Any, Callable, Iterator, Mapping, Optional, Sequence, Tuple, Union
 from uuid import UUID, uuid4
 
-from pynvim import Nvim
-from pynvim.api import Buffer, Window
-from pynvim_pp.api import (
-    ExtMark,
-    buf_get_lines,
-    buf_get_option,
-    buf_set_extmarks,
-    clear_ns,
-    create_buf,
-    create_ns,
-    cur_buf,
-    cur_win,
-    list_wins,
-    win_close,
-    win_get_buf,
-    win_get_cursor,
-    win_get_var,
-    win_set_option,
-    win_set_var,
-)
-from pynvim_pp.float_win import border_w_h
-from pynvim_pp.lib import async_call, display_width, go
+from pynvim_pp.buffer import Buffer, ExtMark, ExtMarker
+from pynvim_pp.float_win import border_w_h, list_floatwins
+from pynvim_pp.lib import display_width
+from pynvim_pp.nvim import Nvim
 from pynvim_pp.preview import buf_set_preview, set_preview
-from std2 import clamp
+from pynvim_pp.window import Window
+from std2 import anext, clamp
 from std2.asyncio import cancel
+from std2.cell import RefCell
 from std2.pickle.decoder import new_decoder
 from std2.pickle.types import DecodeError
 from std2.string import removeprefix
@@ -56,8 +31,10 @@ from ...shared.types import Completion, Context, Doc, Edit, ExternLSP, ExternPat
 from ..rt_types import Stack
 from ..state import State, state
 
-_FLOAT_WIN_UUID = uuid4().hex
+_FLOAT_WIN_UUID = uuid4()
 _NS = uuid4()
+
+_CELL = RefCell[Optional[Task]](None)
 
 
 @dataclass(frozen=True)
@@ -79,26 +56,23 @@ class _Pos:
     width: int
 
 
-def _ls(nvim: Nvim) -> Iterator[Window]:
-    for win in list_wins(nvim):
-        if win_get_var(nvim, win=win, key=_FLOAT_WIN_UUID):
-            yield win
-
-
-@rpc(blocking=True)
-def _kill_win(nvim: Nvim, stack: Stack, reset: bool) -> None:
+@rpc()
+async def _kill_win(stack: Stack, reset: bool) -> None:
     if reset:
         state(pum_location=None, preview_id=uuid4())
 
-    buf = cur_buf(nvim)
-    ns = create_ns(nvim, ns=_NS)
-    clear_ns(nvim, buf=buf, id=ns)
+    buf = await Buffer.get_current()
+    ns = await Nvim.create_namespace(_NS)
+    await buf.clear_namespace(ns)
 
-    for win in _ls(nvim):
-        win_close(nvim, win=win)
+    async for win in list_floatwins(_FLOAT_WIN_UUID):
+        await win.close()
 
 
-_ = autocmd("CompleteDone", "InsertLeave") << f"lua {NAMESPACE}.{_kill_win.name}(true)"
+_ = (
+    autocmd("CompleteDone", "InsertLeave")
+    << f"lua {NAMESPACE}.{_kill_win.method}(true)"
+)
 
 
 def _preprocess(context: Context, doc: Doc) -> Doc:
@@ -192,7 +166,7 @@ def _positions(
         yield 4, display.positions.east, e
 
 
-def _set_win(nvim: Nvim, display: PreviewDisplay, buf: Buffer, pos: _Pos) -> None:
+async def _set_win(display: PreviewDisplay, buf: Buffer, pos: _Pos) -> None:
     opts = {
         "relative": "editor",
         "anchor": "NW",
@@ -204,32 +178,12 @@ def _set_win(nvim: Nvim, display: PreviewDisplay, buf: Buffer, pos: _Pos) -> Non
         "col": pos.col,
         "border": display.border,
     }
-    win: Window = nvim.api.open_win(buf, False, opts)
-    win_set_option(nvim, win=win, key="wrap", val=True)
-    win_set_var(nvim, win=win, key=_FLOAT_WIN_UUID, val=True)
+    win = await Nvim.api.open_win(Window, buf, False, opts)
+    await win.opts.set("wrap", val=True)
+    await win.vars.set(str(_FLOAT_WIN_UUID), val=True)
 
 
-@rpc(blocking=True, schedule=True)
-def _go_show(
-    nvim: Nvim,
-    stack: Stack,
-    preview_id: str,
-    syntax: str,
-    preview: Sequence[str],
-    _pos: Mapping[str, int],
-) -> None:
-    if preview_id == state().preview_id.hex:
-        pos = _Pos(**_pos)
-        buf = create_buf(
-            nvim, listed=False, scratch=True, wipe=True, nofile=True, noswap=True
-        )
-        buf_set_preview(nvim, buf=buf, syntax=syntax, preview=preview)
-        _set_win(nvim, display=stack.settings.display.preview, buf=buf, pos=pos)
-
-
-def _show_preview(
-    nvim: Nvim, stack: Stack, event: _Event, doc: Doc, s: State, preview_id: UUID
-) -> None:
+async def _show_preview(stack: Stack, event: _Event, doc: Doc, s: State) -> None:
     new_doc = _preprocess(s.context, doc=doc)
     text = expand_tabs(s.context, text=new_doc.text)
     lines = text.splitlines()
@@ -243,25 +197,21 @@ def _show_preview(
     if ordered:
         (pum_location, _, pos), *__ = ordered
         state(pum_location=pum_location)
-        nvim.api.exec_lua(
-            f"{NAMESPACE}.{_go_show.name}(...)",
-            (preview_id.hex, new_doc.syntax, lines, asdict(pos)),
+        buf = await Buffer.create(
+            listed=False, scratch=True, wipe=True, nofile=True, noswap=True
         )
+        await buf_set_preview(buf=buf, syntax=new_doc.syntax, preview=lines)
+        await _set_win(display=stack.settings.display.preview, buf=buf, pos=pos)
 
 
-_TASK: Optional[Task] = None
-
-
-def _resolve_comp(
-    nvim: Nvim,
+async def _resolve_comp(
     stack: Stack,
     event: _Event,
     extern: Union[ExternLSP, ExternPath],
     maybe_doc: Optional[Doc],
     state: State,
 ) -> None:
-    global _TASK
-    prev = _TASK
+    prev = _CELL.val
     timeout = stack.settings.display.preview.resolve_timeout if maybe_doc else None
 
     async def cont() -> None:
@@ -273,7 +223,7 @@ def _resolve_comp(
         else:
             if isinstance(extern, ExternLSP):
                 done, _ = await wait(
-                    (resolve(nvim, extern=extern),),
+                    (resolve(extern=extern),),
                     timeout=timeout,
                 )
                 if comp := (await done.pop()) if done else None:
@@ -300,34 +250,30 @@ def _resolve_comp(
             else:
                 assert False
 
-        def cont() -> None:
             if doc:
-                _show_preview(
-                    nvim,
+                await _show_preview(
                     stack=stack,
                     event=event,
                     doc=doc,
                     s=state,
-                    preview_id=state.preview_id,
                 )
 
-        await async_call(nvim, cont)
-
-    _TASK = cast(Task, go(nvim, aw=cont()))
+    _CELL.val = create_task(cont())
 
 
-def _virt_text(nvim: Nvim, ghost: GhostText, text: str) -> None:
+async def _virt_text(ghost: GhostText, text: str) -> None:
     if ghost.enabled:
         lhs, rhs = ghost.context
         overlay, *_ = text.splitlines() or ("",)
         virt_text = lhs + overlay + rhs
 
-        ns = create_ns(nvim, ns=_NS)
-        win = cur_win(nvim)
-        buf = win_get_buf(nvim, win=win)
-        row, col = win_get_cursor(nvim, win=win)
+        ns = await Nvim.create_namespace(_NS)
+        win = await Window.get_current()
+        buf = await win.get_buf()
+        row, col = await win.get_cursor()
         mark = ExtMark(
-            idx=1,
+            buf=buf,
+            marker=ExtMarker(1),
             begin=(row, col),
             end=(row, col),
             meta={
@@ -336,17 +282,17 @@ def _virt_text(nvim: Nvim, ghost: GhostText, text: str) -> None:
                 "virt_text": ((virt_text, ghost.highlight_group),),
             },
         )
-        clear_ns(nvim, buf=buf, id=ns)
-        buf_set_extmarks(nvim, buf=buf, id=ns, marks=(mark,))
+        await buf.clear_namespace(ns)
+        await buf.set_extmarks(ns, extmarks=(mark,))
 
 
 _DECODER = new_decoder[_Event](_Event)
 _UDECODER = new_decoder[UUID](UUID)
 
 
-@rpc(blocking=True, schedule=True)
-def _cmp_changed(nvim: Nvim, stack: Stack, event: Mapping[str, Any] = {}) -> None:
-    _kill_win(nvim, stack=stack, reset=False)
+@rpc(schedule=True)
+async def _cmp_changed(stack: Stack, event: Mapping[str, Any] = {}) -> None:
+    await _kill_win(stack=stack, reset=False)
     with timeit("PREVIEW"):
         try:
             ev = _DECODER(event)
@@ -358,8 +304,7 @@ def _cmp_changed(nvim: Nvim, stack: Stack, event: Mapping[str, Any] = {}) -> Non
             if metric := stack.metrics.get(uid):
                 s = state(preview_id=uid)
                 if metric.comp.extern:
-                    _resolve_comp(
-                        nvim,
+                    await _resolve_comp(
                         stack=stack,
                         event=ev,
                         extern=metric.comp.extern,
@@ -367,39 +312,33 @@ def _cmp_changed(nvim: Nvim, stack: Stack, event: Mapping[str, Any] = {}) -> Non
                         state=s,
                     )
                 elif metric.comp.doc and metric.comp.doc.text:
-                    _show_preview(
-                        nvim,
+                    await _show_preview(
                         stack=stack,
                         event=ev,
                         doc=metric.comp.doc,
                         s=s,
-                        preview_id=s.preview_id,
                     )
-                _virt_text(
-                    nvim,
+                await _virt_text(
                     ghost=stack.settings.display.ghost_text,
                     text=metric.comp.primary_edit.new_text,
                 )
 
 
-_ = autocmd("CompleteChanged") << f"lua {NAMESPACE}.{_cmp_changed.name}(vim.v.event)"
+_ = autocmd("CompleteChanged") << f"lua {NAMESPACE}.{_cmp_changed.method}(vim.v.event)"
 
 
-@rpc(blocking=True, schedule=True)
-def _bigger_preview(nvim: Nvim, stack: Stack, args: Tuple[str, Sequence[str]]) -> None:
-    syntax, lines = args
-    nvim.command("stopinsert")
-    set_preview(nvim, syntax=syntax, preview=lines)
+@lru_cache
+async def _escaped() -> str:
+    return await Nvim.api.replace_termcodes(str, "<c-e>", True, False, True)
 
 
-@rpc(blocking=True)
-def preview_preview(nvim: Nvim, stack: Stack, *_: str) -> str:
-    win = next(_ls(nvim), None)
-    if win:
-        buf = win_get_buf(nvim, win=win)
-        syntax = buf_get_option(nvim, buf=buf, key="syntax")
-        lines = buf_get_lines(nvim, buf=buf, lo=0, hi=-1)
-        nvim.exec_lua(f"{NAMESPACE}.{_bigger_preview.name}(...)", (syntax, lines))
+@rpc()
+async def preview_preview(stack: Stack, *_: str) -> str:
+    if win := await anext(list_floatwins(_FLOAT_WIN_UUID), None):
+        buf = await win.get_buf()
+        syntax = await buf.opts.get(str, "syntax")
+        lines = await buf.get_lines()
+        await Nvim.exec("stopinsert")
+        await set_preview(syntax=syntax, preview=lines)
 
-    escaped: str = nvim.api.replace_termcodes("<c-e>", True, False, True)
-    return escaped
+    return await _escaped()

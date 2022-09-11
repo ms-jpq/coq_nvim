@@ -1,18 +1,15 @@
-from asyncio.exceptions import CancelledError
 from concurrent.futures import Executor
 from dataclasses import dataclass
 from json import loads
 from sqlite3 import Connection, OperationalError
-from threading import Lock
 from typing import Iterator, Mapping, Optional
 
-from std2.asyncio import to_thread
 from std2.sqlite3 import with_transaction
 
 from ...consts import INSERT_DB
 from ...shared.executor import SingleThreadExecutor
 from ...shared.sql import init_db
-from ...shared.timeit import timeit
+from ..types import Interruptible
 from .sql import sql
 
 
@@ -41,15 +38,10 @@ def _init() -> Connection:
     return conn
 
 
-class IDB:
+class IDB(Interruptible):
     def __init__(self, pool: Executor) -> None:
-        self._lock = Lock()
         self._ex = SingleThreadExecutor(pool)
-        self._conn: Connection = self._ex.submit(_init)
-
-    def _interrupt(self) -> None:
-        with self._lock:
-            self._conn.interrupt()
+        self._conn: Connection = self._ex.ssubmit(_init)
 
     def new_source(self, source: str) -> None:
         def cont() -> None:
@@ -63,7 +55,7 @@ class IDB:
             with self._lock, with_transaction(self._conn.cursor()) as cursor:
                 cursor.execute(sql("insert", "batch"), {"rowid": batch_id})
 
-        await self._ex.asubmit(cont)
+        await self._ex.submit(cont)
 
     async def new_instance(self, instance: bytes, source: str, batch_id: bytes) -> None:
         def cont(_: None = None) -> None:
@@ -73,7 +65,7 @@ class IDB:
                     {"rowid": instance, "source_id": source, "batch_id": batch_id},
                 )
 
-        await self._ex.asubmit(cont)
+        await self._ex.submit(cont)
 
     async def new_stat(
         self, instance: bytes, interrupted: bool, duration: float, items: int
@@ -90,7 +82,7 @@ class IDB:
                     },
                 )
 
-        await self._ex.asubmit(cont)
+        await self._ex.submit(cont)
 
     async def insertion_order(self, n_rows: int) -> Mapping[str, int]:
         def cont() -> Mapping[str, int]:
@@ -104,13 +96,8 @@ class IDB:
             except OperationalError:
                 return {}
 
-        await to_thread(self._interrupt)
-        try:
-            return await self._ex.asubmit(cont)
-        except CancelledError:
-            with timeit("INTERRUPT !! INSERTED"):
-                await to_thread(self._interrupt)
-            raise
+        with self._interruption(lock=True):
+            return await self._ex.submit(cont)
 
     def inserted(self, instance_id: bytes, sort_by: str) -> None:
         def cont() -> None:
@@ -122,7 +109,7 @@ class IDB:
 
         self._ex.submit(cont)
 
-    def stats(self) -> Iterator[Statistics]:
+    async def stats(self) -> Iterator[Statistics]:
         def cont() -> Iterator[Statistics]:
             with self._lock, with_transaction(self._conn.cursor()) as cursor:
                 cursor.execute(sql("select", "stats"), ())
@@ -149,4 +136,4 @@ class IDB:
 
             return c1()
 
-        return self._ex.submit(cont)
+        return await self._ex.submit(cont)

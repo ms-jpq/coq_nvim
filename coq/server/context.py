@@ -1,12 +1,11 @@
 from os.path import normcase
-from typing import Literal, Tuple, cast
+from typing import Tuple, cast
 
-from pynvim import Nvim
-from pynvim.api import Buffer
-from pynvim_pp.api import LFfmt, buf_get_lines
 from pynvim_pp.atomic import Atomic
+from pynvim_pp.buffer import Buffer, linefeed
 from pynvim_pp.lib import decode, encode
 from pynvim_pp.text_object import gen_split
+from pynvim_pp.types import NoneType
 
 from ..shared.parse import lower
 from ..shared.settings import MatchOptions
@@ -14,7 +13,7 @@ from ..shared.types import Context
 from .state import State
 
 
-def context(nvim: Nvim, options: MatchOptions, state: State, manual: bool) -> Context:
+async def context(options: MatchOptions, state: State, manual: bool) -> Context:
     with Atomic() as (atomic, ns):
         ns.scr_col = atomic.call_function("screencol", ())
         ns.win_height = atomic.win_get_height(0)
@@ -27,25 +26,25 @@ def context(nvim: Nvim, options: MatchOptions, state: State, manual: bool) -> Co
         ns.tabstop = atomic.buf_get_option(0, "tabstop")
         ns.expandtab = atomic.buf_get_option(0, "expandtab")
         ns.cursor = atomic.win_get_cursor(0)
-        atomic.commit(nvim)
+        await atomic.commit(NoneType)
 
-    scr_col = ns.scr_col
-    win_size = ns.win_height // 2
-    buf = cast(Buffer, ns.buf)
-    (r, col) = cast(Tuple[int, int], ns.cursor)
+    scr_col = ns.scr_col(int)
+    win_size = ns.win_height(int) // 2
+    buf = ns.buf(Buffer)
+    (r, col) = cast(Tuple[int, int], ns.cursor(NoneType))
     row = r - 1
     pos = (row, col)
-    buf_line_count = ns.line_count
-    filename = normcase(cast(str, ns.name))
-    filetype = cast(str, ns.filetype)
-    comment_str = cast(str, ns.commentstring)
-    tabstop = ns.tabstop
-    expandtab = cast(bool, ns.expandtab)
-    linefeed = cast(Literal["\n", "\r", "\r\n"], LFfmt[cast(str, ns.fileformat)].value)
+    buf_line_count = ns.line_count(int)
+    filename = normcase(ns.name(str))
+    filetype = ns.filetype(str)
+    comment_str = ns.commentstring(str)
+    tabstop = ns.tabstop(int)
+    expandtab = ns.expandtab(bool)
+    linesep = linefeed(ns.fileformat(str))
 
     lo = max(0, row - win_size)
     hi = min(buf_line_count, row + win_size + 1)
-    lines = buf_get_lines(nvim, buf=buf, lo=lo, hi=hi)
+    lines = await buf.get_lines(lo=lo, hi=hi)
 
     r = row - lo
     line = lines[r]
@@ -68,7 +67,7 @@ def context(nvim: Nvim, options: MatchOptions, state: State, manual: bool) -> Co
         filename=filename,
         filetype=filetype,
         line_count=buf_line_count,
-        linefeed=linefeed,
+        linefeed=linesep,
         tabstop=tabstop,
         expandtab=expandtab,
         comment=(lhs, rhs),

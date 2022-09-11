@@ -86,7 +86,7 @@ class CacheWorker:
                     for word in coalesce(
                         val.sort_by,
                         unifying_chars=self._supervisor.match.unifying_chars,
-                        include_syms=True
+                        include_syms=True,
                     ):
                         yield key, word
                 else:

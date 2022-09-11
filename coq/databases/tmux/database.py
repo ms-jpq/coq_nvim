@@ -1,4 +1,3 @@
-from asyncio import CancelledError
 from concurrent.futures import Executor
 from contextlib import suppress
 from dataclasses import dataclass
@@ -6,7 +5,6 @@ from itertools import islice
 from sqlite3 import Connection, OperationalError
 from typing import AbstractSet, Iterator, Mapping, MutableMapping, Optional
 
-from std2.asyncio import to_thread
 from std2.sqlite3 import with_transaction
 
 from ...consts import TMUX_DB
@@ -14,8 +12,8 @@ from ...shared.executor import SingleThreadExecutor
 from ...shared.parse import coalesce
 from ...shared.settings import MatchOptions
 from ...shared.sql import BIGGEST_INT, init_db, like_esc
-from ...shared.timeit import timeit
 from ...tmux.parse import Pane
+from ..types import Interruptible
 from .sql import sql
 
 
@@ -47,7 +45,7 @@ def _tokenize(
     return islice(words, tokenization_limit)
 
 
-class TMDB:
+class TMDB(Interruptible):
     def __init__(
         self,
         pool: Executor,
@@ -61,10 +59,7 @@ class TMDB:
         self._unifying_chars = unifying_chars
         self._include_syms = include_syms
         self._cache: MutableMapping[str, str] = {}
-        self._conn: Connection = self._ex.submit(_init)
-
-    def _interrupt(self) -> None:
-        self._conn.interrupt()
+        self._conn: Connection = self._ex.ssubmit(_init)
 
     async def periodical(
         self, current: Optional[Pane], panes: Mapping[Pane, str]
@@ -122,7 +117,7 @@ class TMDB:
                     cursor.executemany(sql("insert", "word"), m3())
                     cursor.execute("PRAGMA optimize", ())
 
-        await self._ex.asubmit(cont)
+        await self._ex.submit(cont)
 
     async def select(
         self, opts: MatchOptions, word: str, sym: str, limitless: int
@@ -158,10 +153,5 @@ class TMDB:
             except OperationalError:
                 return iter(())
 
-        await to_thread(self._interrupt)
-        try:
-            return await self._ex.asubmit(cont)
-        except CancelledError:
-            with timeit("INTERRUPT !! TMUX"):
-                await to_thread(self._interrupt)
-            raise
+        with self._interruption():
+            return await self._ex.submit(cont)

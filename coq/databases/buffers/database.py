@@ -1,16 +1,13 @@
-from asyncio import CancelledError
 from concurrent.futures import Executor
 from dataclasses import dataclass
 from itertools import islice
 from random import shuffle
 from sqlite3 import Connection, OperationalError
 from sqlite3.dbapi2 import Cursor
-from threading import Lock
 from typing import AbstractSet, Iterator, Mapping, Optional, Sequence, Tuple
 from uuid import uuid4
 
 from pynvim_pp.lib import recode
-from std2.asyncio import to_thread
 from std2.sqlite3 import with_transaction
 
 from ...consts import BUFFER_DB, DEBUG
@@ -18,7 +15,7 @@ from ...shared.executor import SingleThreadExecutor
 from ...shared.parse import coalesce
 from ...shared.settings import MatchOptions
 from ...shared.sql import BIGGEST_INT, init_db, like_esc
-from ...shared.timeit import timeit
+from ..types import Interruptible
 from .sql import sql
 
 
@@ -51,7 +48,7 @@ def _init() -> Connection:
     return conn
 
 
-class BDB:
+class BDB(Interruptible):
     def __init__(
         self,
         pool: Executor,
@@ -59,16 +56,12 @@ class BDB:
         unifying_chars: AbstractSet[str],
         include_syms: bool,
     ) -> None:
-        self._lock = Lock()
+
         self._ex = SingleThreadExecutor(pool)
         self._tokenization_limit = tokenization_limit
         self._unifying_chars = unifying_chars
         self._include_syms = include_syms
-        self._conn: Connection = self._ex.submit(_init)
-
-    def _interrupt(self) -> None:
-        with self._lock:
-            self._conn.interrupt()
+        self._conn: Connection = self._ex.ssubmit(_init)
 
     async def vacuum(self, live_bufs: Mapping[int, int]) -> AbstractSet[int]:
         def cont() -> AbstractSet[int]:
@@ -93,7 +86,7 @@ class BDB:
             except OperationalError:
                 return set()
 
-        return await self._ex.asubmit(cont)
+        return await self._ex.submit(cont)
 
     async def buf_update(self, buf_id: int, filetype: str, filename: str) -> None:
         def cont() -> None:
@@ -105,7 +98,7 @@ class BDB:
                     filename=filename,
                 )
 
-        await self._ex.asubmit(cont)
+        await self._ex.submit(cont)
 
     async def set_lines(
         self,
@@ -177,7 +170,7 @@ class BDB:
                         },
                     )
 
-        await self._ex.asubmit(cont)
+        await self._ex.submit(cont)
 
     async def words(
         self,
@@ -216,10 +209,5 @@ class BDB:
             except OperationalError:
                 return iter(())
 
-        await to_thread(self._interrupt)
-        try:
-            return await self._ex.asubmit(cont)
-        except CancelledError:
-            with timeit("INTERRUPT !! BUFFERS"):
-                await to_thread(self._interrupt)
-            raise
+        with self._interruption(lock=True):
+            return await self._ex.submit(cont)

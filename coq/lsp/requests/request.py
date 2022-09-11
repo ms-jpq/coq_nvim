@@ -14,9 +14,9 @@ from typing import (
     Tuple,
 )
 
-from pynvim.api.nvim import Nvim
-from pynvim_pp.lib import async_call, go
 from pynvim_pp.logging import log
+from pynvim_pp.nvim import Nvim
+from pynvim_pp.types import NoneType
 from std2.pickle.decoder import new_decoder
 
 from ...registry import NAMESPACE, atomic, rpc
@@ -55,26 +55,23 @@ _DECODER = new_decoder[_Payload](_Payload)
 
 
 @rpc(blocking=False)
-def _lsp_notify(nvim: Nvim, stack: Stack, rpayload: _Payload) -> None:
-    async def cont() -> None:
-        payload = _DECODER(rpayload)
-        cond = _CONDS.setdefault(payload.name, Condition())
+async def _lsp_notify(stack: Stack, rpayload: _Payload) -> None:
+    payload = _DECODER(rpayload)
+    cond = _CONDS.setdefault(payload.name, Condition())
 
-        acc = _STATE[payload.name]
-        if payload.uid >= acc.uid:
-            _STATE[payload.name] = _Session(
-                uid=payload.uid,
-                done=payload.done,
-                acc=(*acc.acc, (payload.client, payload.reply)),
-            )
-        async with cond:
-            cond.notify_all()
-
-    go(nvim, aw=cont())
+    acc = _STATE[payload.name]
+    if payload.uid >= acc.uid:
+        _STATE[payload.name] = _Session(
+            uid=payload.uid,
+            done=payload.done,
+            acc=(*acc.acc, (payload.client, payload.reply)),
+        )
+    async with cond:
+        cond.notify_all()
 
 
 async def async_request(
-    nvim: Nvim, name: str, clients: AbstractSet[str], *args: Any
+    name: str, clients: AbstractSet[str], *args: Any
 ) -> AsyncIterator[Tuple[Optional[str], Any]]:
     with timeit(f"LSP :: {name}"):
         cond = _CONDS.setdefault(name, Condition())
@@ -84,13 +81,11 @@ async def async_request(
         async with cond:
             cond.notify_all()
 
-        def cont() -> None:
-            nvim.api.exec_lua(
+            await Nvim.api.exec_lua(
+                NoneType,
                 f"{NAMESPACE}.{name}(...)",
                 (name, uid, tuple(clients), *args),
             )
-
-        await async_call(nvim, cont)
 
         while True:
             acc = _STATE[name]

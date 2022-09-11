@@ -1,4 +1,4 @@
-from asyncio import gather, sleep
+from asyncio import gather
 from asyncio.tasks import as_completed
 from contextlib import suppress
 from dataclasses import dataclass
@@ -16,6 +16,7 @@ from textwrap import dedent
 from typing import (
     AbstractSet,
     Any,
+    AsyncIterator,
     Iterable,
     Iterator,
     Mapping,
@@ -24,10 +25,8 @@ from typing import (
     Tuple,
 )
 
-from pynvim.api.nvim import Nvim
-from pynvim_pp.api import get_cwd, iter_rtps
-from pynvim_pp.lib import async_call, awrite, go
 from pynvim_pp.logging import log
+from pynvim_pp.nvim import Nvim
 from std2.asyncio import to_thread
 from std2.graphlib import recur_sort
 from std2.pathlib import walk
@@ -63,10 +62,8 @@ class Compiled:
     parsed: Sequence[Tuple[ParsedSnippet, Edit, Sequence[Mark]]]
 
 
-async def _bundled_mtimes(
-    nvim: Nvim,
-) -> Mapping[Path, float]:
-    rtp = await async_call(nvim, lambda: tuple(iter_rtps(nvim)))
+async def _bundled_mtimes() -> Mapping[Path, float]:
+    rtp = await Nvim.list_runtime_paths()
 
     def c1() -> Iterator[Tuple[Path, float]]:
         for path in rtp:
@@ -99,23 +96,23 @@ def _resolve(stdp: Path, path: Path) -> Optional[Path]:
             return _resolve(stdp, path=stdp / path)
 
 
-async def snippet_paths(nvim: Nvim, user_path: Optional[Path]) -> Sequence[Path]:
-    def cont() -> Iterator[Path]:
+async def snippet_paths(user_path: Optional[Path]) -> Sequence[Path]:
+    async def cont() -> AsyncIterator[Path]:
+
         if user_path:
-            std_conf = Path(nvim.funcs.stdpath("config"))
+            std_conf = Path(await Nvim.fn.stdpath(str, "config"))
             if resolved := _resolve(std_conf, path=user_path):
                 yield resolved
-        for path in iter_rtps(nvim):
+        for path in await Nvim.list_runtime_paths():
             yield path / "coq-user-snippets"
 
-    paths = await async_call(nvim, lambda: tuple(cont()))
-    return paths
+    return [p async for p in cont()]
 
 
 async def user_mtimes(
-    nvim: Nvim, user_path: Optional[Path]
+    user_path: Optional[Path],
 ) -> Tuple[Sequence[Path], Mapping[Path, float]]:
-    paths = await snippet_paths(nvim, user_path=user_path)
+    paths = await snippet_paths(user_path=user_path)
 
     def cont() -> Iterator[Tuple[Path, float]]:
         for path in paths:
@@ -212,7 +209,7 @@ def _trans(
 
 
 async def _slurp(
-    nvim: Nvim, stack: Stack, warn: AbstractSet[SnippetWarnings], worker: SnipWorker
+    stack: Stack, warn: AbstractSet[SnippetWarnings], worker: SnipWorker
 ) -> None:
     with timeit("LOAD SNIPS"):
         (
@@ -222,10 +219,10 @@ async def _slurp(
             (_, user_snips_mtimes),
             mtimes,
         ) = await gather(
-            async_call(nvim, get_cwd, nvim),
-            _bundled_mtimes(nvim),
+            Nvim.getcwd(),
+            _bundled_mtimes(),
             _load_user_compiled(stack.supervisor.vars_dir),
-            user_mtimes(nvim, user_path=stack.settings.clients.snippets.user_path),
+            user_mtimes(user_path=stack.settings.clients.snippets.user_path),
             worker.mtimes(),
         )
 
@@ -248,8 +245,7 @@ async def _slurp(
 
         await worker.clean(stale)
         if SnippetWarnings.missing in warn and not (bundled or user_compiled):
-            await sleep(0)
-            await awrite(nvim, LANG("fs snip load empty"))
+            await Nvim.write(LANG("fs snip load empty"))
 
         for fut in as_completed(
             tuple(_load_compiled(path, mtime) for path, mtime in compiled.items())
@@ -264,12 +260,10 @@ async def _slurp(
                 log.warn("%s", Template(dedent(tpl)).substitute(e=type(e)))
             else:
                 await worker.populate(path, mtime=mtime, loaded=loaded)
-                await awrite(
-                    nvim,
+                await Nvim.write(
                     LANG(
-                        "fs snip load succ",
-                        path=fmt_path(cwd, path=path, is_dir=False),
-                    ),
+                        "fs snip load succ", path=fmt_path(cwd, path=path, is_dir=False)
+                    )
                 )
 
         if SnippetWarnings.outdated in warn and new_user_snips:
@@ -277,25 +271,20 @@ async def _slurp(
                 f"{path} -- {prev} -> {cur}"
                 for path, (cur, prev) in new_user_snips.items()
             )
-            await awrite(nvim, LANG("fs snip needs compile", paths=paths))
+            await Nvim.write(LANG("fs snip needs compile", paths=paths))
 
 
-@rpc(blocking=True)
-def _load_snips(nvim: Nvim, stack: Stack) -> None:
+@rpc()
+async def _load_snips(stack: Stack) -> None:
     for worker in stack.workers:
         if isinstance(worker, SnipWorker):
-            go(
-                nvim,
-                aw=_slurp(
-                    nvim,
-                    stack=stack,
-                    warn=stack.settings.clients.snippets.warn,
-                    worker=worker,
-                ),
+            await _slurp(
+                stack=stack, warn=stack.settings.clients.snippets.warn, worker=worker
             )
+            break
 
 
-atomic.exec_lua(f"{NAMESPACE}.{_load_snips.name}()", ())
+atomic.exec_lua(f"{NAMESPACE}.{_load_snips.method}()", ())
 
 
 def compile_one(
@@ -324,11 +313,11 @@ def compile_one(
     return compiled
 
 
-async def compile_user_snippets(nvim: Nvim, stack: Stack, worker: SnipWorker) -> None:
+async def compile_user_snippets(stack: Stack, worker: SnipWorker) -> None:
     with timeit("COMPILE SNIPS"):
         info = ParseInfo(visual="", clipboard="", comment_str=("", ""))
         _, mtimes = await user_mtimes(
-            nvim, user_path=stack.settings.clients.snippets.user_path
+            user_path=stack.settings.clients.snippets.user_path
         )
         loaded = await to_thread(
             lambda: load_direct(
@@ -352,8 +341,6 @@ async def compile_user_snippets(nvim: Nvim, stack: Stack, worker: SnipWorker) ->
                 stack.supervisor.vars_dir, mtimes=mtimes, loaded=loaded
             )
         except OSError as e:
-            await awrite(nvim, e)
+            await Nvim.write(e)
         else:
-            await _slurp(
-                nvim, stack=stack, warn={SnippetWarnings.missing}, worker=worker
-            )
+            await _slurp(stack=stack, warn={SnippetWarnings.missing}, worker=worker)

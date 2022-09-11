@@ -7,7 +7,7 @@ from uuid import UUID, uuid4
 UTF8: Literal["UTF-8"] = "UTF-8"
 UTF16: Literal["UTF-16-LE"] = "UTF-16-LE"
 
-# In nvim, the col is a ut8 byte offset
+# In  the col is a ut8 byte offset
 NvimPos = Tuple[int, int]
 # Depends on `OffsetEncoding`
 WTF8Pos = Tuple[int, int]
@@ -28,7 +28,7 @@ class Context:
 
     manual: bool
 
-    # CHANGE ID <-> Triggered by NVIM, ie lines changes
+    # CHANGE ID <-> Triggered by  ie lines changes
     change_id: UUID
     # COMMIT ID <-> Triggered by COQ
     commit_id: UUID

@@ -4,6 +4,8 @@ from contextlib import suppress
 from queue import SimpleQueue
 from typing import Any, Awaitable, Callable, TypeVar, cast
 
+from pynvim_pp.logging import suppress_and_log
+
 _T = TypeVar("_T")
 
 
@@ -14,8 +16,9 @@ class SingleThreadExecutor:
 
     def _forever(self) -> None:
         while True:
-            f = self._q.get()
-            f()
+            with suppress_and_log():
+                f = self._q.get()
+                f()
 
     def _submit(self, f: Callable[..., Any], *args: Any, **kwargs: Any) -> Future:
         fut: Future = Future()
@@ -33,9 +36,9 @@ class SingleThreadExecutor:
         self._q.put(cont)
         return fut
 
-    def submit(self, f: Callable[..., _T], *args: Any, **kwargs: Any) -> _T:
+    def ssubmit(self, f: Callable[..., _T], *args: Any, **kwargs: Any) -> _T:
         fut = self._submit(f, *args, **kwargs)
         return cast(_T, fut.result())
 
-    def asubmit(self, f: Callable[..., _T], *args: Any, **kwargs: Any) -> Awaitable[_T]:
+    def submit(self, f: Callable[..., _T], *args: Any, **kwargs: Any) -> Awaitable[_T]:
         return wrap_future(self._submit(f, *args, **kwargs))

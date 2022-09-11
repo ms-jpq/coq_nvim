@@ -19,7 +19,7 @@ from std2.sqlite3 import add_functions, escape
 
 from .fuzzy import quick_ratio
 
-BIGGEST_INT = 2 ** 63 - 1
+BIGGEST_INT = 2**63 - 1
 
 
 class _Loader(Protocol):
