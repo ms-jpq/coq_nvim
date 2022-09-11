@@ -80,7 +80,8 @@ async def _single_mark(
     await reset_undolevels()
 
     try:
-        await apply(buf=buf, instructions=_trans("", marks=(mark,)))
+        await apply(buf, instructions=_trans("", marks=(mark,)))
+        await Nvim.exec("startinsert")
         await win.set_cursor(row=row, col=col)
     except NvimError as e:
         msg = f"""
@@ -112,10 +113,10 @@ async def _linked_marks(
     if resp is not None:
         row, col = mark.begin
         await reset_undolevels()
-        shift = await apply(buf=buf, instructions=_trans(resp, marks=marks))
-        await _del_marks(buf=buf, ns=ns, marks=marks)
-        await win.set_cursor(row=row + shift.row, col=col + len(encode(resp)))
+        shift = await apply(buf, instructions=_trans(resp, marks=marks))
+        await _del_marks(buf, ns=ns, marks=marks)
         await Nvim.exec("startinsert")
+        await win.set_cursor(row=row + shift.row, col=col + len(encode(resp)))
         state(inserted_pos=(row, col - 1))
         return True
     else:
