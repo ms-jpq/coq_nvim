@@ -92,8 +92,8 @@ def _single_mark(
 
     try:
         apply(nvim, buf=buf, instructions=_trans("", marks=(mark,)))
-        win_set_cursor(nvim, win=win, row=row, col=col)
         nvim.command("startinsert")
+        win_set_cursor(nvim, win=win, row=row, col=col)
     except NvimError as e:
         msg = f"""
         bad mark location {mark}
@@ -102,7 +102,6 @@ def _single_mark(
         """
         log.warn("%s", dedent(msg))
     else:
-        nvim.command("startinsert")
         state(inserted_pos=(row, col))
         msg = LANG("applied mark", marks_left=len(marks))
         write(nvim, msg)
@@ -127,8 +126,8 @@ def _linked_marks(
         nvim.options["undolevels"] = nvim.options["undolevels"]
         apply(nvim, buf=buf, instructions=_trans(resp, marks=marks))
         _del_marks(nvim, buf=buf, id=ns, marks=marks)
-        win_set_cursor(nvim, win=win, row=row, col=col)
         nvim.command("startinsert")
+        win_set_cursor(nvim, win=win, row=row, col=col)
         state(inserted_pos=(row, col - 1))
         return True
     else:
