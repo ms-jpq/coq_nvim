@@ -40,7 +40,9 @@ def _tokenize(
     include_syms: bool,
     text: str,
 ) -> Iterator[str]:
-    words = coalesce(text, unifying_chars=unifying_chars, include_syms=include_syms)
+    words = coalesce(
+        unifying_chars, include_syms=include_syms, backwards=None, chars=text
+    )
     return islice(words, tokenization_limit)
 
 

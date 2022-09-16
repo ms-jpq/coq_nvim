@@ -7,6 +7,7 @@ from typing import AsyncIterator, Iterable, Iterator, Sequence
 from uuid import uuid4
 
 from pynvim_pp.buffer import Buffer, ExtMark
+from pynvim_pp.lib import encode
 from pynvim_pp.logging import log
 from pynvim_pp.nvim import Nvim
 from pynvim_pp.types import BufNamespace, NvimError
@@ -111,9 +112,9 @@ async def _linked_marks(
     if resp is not None:
         row, col = mark.begin
         await reset_undolevels()
-        await apply(buf=buf, instructions=_trans(resp, marks=marks))
+        shift = await apply(buf=buf, instructions=_trans(resp, marks=marks))
         await _del_marks(buf=buf, ns=ns, marks=marks)
-        await win.set_cursor(row=row, col=col)
+        await win.set_cursor(row=row + shift.row, col=col + len(encode(resp)))
         await Nvim.exec("startinsert")
         state(inserted_pos=(row, col - 1))
         return True

@@ -1,5 +1,5 @@
 from random import choice
-from typing import AbstractSet, Iterator, MutableSequence, Sequence
+from typing import AbstractSet, Iterator, MutableSequence, Optional, Sequence
 
 from pynvim_pp.text_object import is_word
 
@@ -9,9 +9,12 @@ def lower(text: str) -> str:
 
 
 def coalesce(
-    chars: Sequence[str], unifying_chars: AbstractSet[str], include_syms: bool
+    unifying_chars: AbstractSet[str],
+    include_syms: bool,
+    backwards: Optional[bool],
+    chars: Sequence[str],
 ) -> Iterator[str]:
-    backwards = choice((True, False))
+    backwards = choice((True, False)) if backwards is None else backwards
 
     words: MutableSequence[str] = []
     syms: MutableSequence[str] = []

@@ -84,9 +84,10 @@ class CacheWorker:
             for key, val in new_comps.items():
                 if self._supervisor.comp.smart:
                     for word in coalesce(
-                        val.sort_by,
-                        unifying_chars=self._supervisor.match.unifying_chars,
+                        self._supervisor.match.unifying_chars,
                         include_syms=True,
+                        backwards=None,
+                        chars=val.sort_by,
                     ):
                         yield key, word
                 else:

@@ -128,9 +128,10 @@ class BDB(Interruptible):
         def m2() -> Iterator[Mapping]:
             for line_num, line, line_id in line_info:
                 for word in coalesce(
-                    line,
-                    unifying_chars=self._unifying_chars,
+                    self._unifying_chars,
                     include_syms=self._include_syms,
+                    backwards=None,
+                    chars=line,
                 ):
                     yield {"line_id": line_id, "word": word, "line_num": line_num}
 

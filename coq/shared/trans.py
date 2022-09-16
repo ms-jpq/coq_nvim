@@ -29,7 +29,10 @@ def _line_match(
     existing, insertion = lower(existing), lower(insertion)
     if lhs:
         prefix = next(
-            coalesce(insertion, unifying_chars=unifying_chars, include_syms=True), ""
+            coalesce(
+                unifying_chars, include_syms=True, backwards=False, chars=insertion
+            ),
+            "",
         )
         for match in reverse_acc(0, seq=insertion):
             if match == existing[-len(match) :]:
@@ -99,16 +102,33 @@ def trans_adjusted(
         unifying_chars, lower=False, context=ctx, sort_by=edit.new_text
     )
 
-    tokens = len(
-        tuple(coalesce(new_text, unifying_chars=unifying_chars, include_syms=True))
+    tokens = tuple(
+        coalesce(unifying_chars, include_syms=True, backwards=False, chars=new_text)
     )
-    old_prefix = (
-        simple_before
-        if tokens <= 1
-        else edit.old_prefix
-        or (simple_before if is_word(unifying_chars, chr=simple_before) else "")
-    )
-    old_suffix = simple_after if tokens <= 1 else edit.old_suffix
+
+    if len(tokens) <= 1:
+        old_prefix = simple_before
+    elif edit.old_prefix:
+        old_prefix = edit.old_prefix
+    elif is_word(unifying_chars, chr=simple_before):
+        old_prefix = simple_before
+    elif before := next(
+        coalesce(
+            unifying_chars, include_syms=True, backwards=True, chars=ctx.syms_before
+        ),
+        None,
+    ):
+        after, *_ = tokens
+        if not is_word(unifying_chars, chr=before) and not is_word(
+            unifying_chars, chr=after
+        ):
+            old_prefix = before
+        else:
+            old_prefix = ""
+    else:
+        old_prefix = ""
+
+    old_suffix = simple_after if len(tokens) <= 1 else edit.old_suffix
 
     adjusted = ContextualEdit(
         new_text=edit.new_text,

@@ -85,9 +85,10 @@ class Reviewer(PReviewer[ReviewCtx]):
         inserted = await self._db.insertion_order(n_rows=100)
         words = chain.from_iterable(
             coalesce(
-                line,
-                unifying_chars=self._options.unifying_chars,
+                self._options.unifying_chars,
                 include_syms=True,
+                backwards=None,
+                chars=line,
             )
             for line in context.lines
         )
