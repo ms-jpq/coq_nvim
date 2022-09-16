@@ -42,27 +42,29 @@ class SDB(Interruptible):
 
     async def clean(self, paths: AbstractSet[PurePath]) -> None:
         def cont() -> None:
-            with self._lock, with_transaction(self._conn.cursor()) as cursor:
+            with with_transaction(self._conn.cursor()) as cursor:
                 cursor.executemany(
                     sql("delete", "source"),
                     ({"filename": normcase(path)} for path in paths),
                 )
 
-        await self._ex.submit(cont)
+        async with self._lock:
+            await self._ex.submit(cont)
 
     async def mtimes(self) -> Mapping[PurePath, float]:
         def cont() -> Mapping[PurePath, float]:
-            with self._lock, with_transaction(self._conn.cursor()) as cursor:
+            with with_transaction(self._conn.cursor()) as cursor:
                 cursor.execute(sql("select", "sources"), ())
                 return {
                     PurePath(row["filename"]): row["mtime"] for row in cursor.fetchall()
                 }
 
-        return await self._ex.submit(cont)
+        async with self._lock:
+            return await self._ex.submit(cont)
 
     async def populate(self, path: PurePath, mtime: float, loaded: LoadedSnips) -> None:
         def cont() -> None:
-            with self._lock, with_transaction(self._conn.cursor()) as cursor:
+            with with_transaction(self._conn.cursor()) as cursor:
                 filename, source_id = normcase(path), uuid4().bytes
                 cursor.execute(sql("delete", "source"), {"filename": filename})
                 cursor.execute(
@@ -105,7 +107,8 @@ class SDB(Interruptible):
                         )
                 cursor.execute("PRAGMA optimize", ())
 
-        await self._ex.submit(cont)
+        async with self._lock:
+            await self._ex.submit(cont)
 
     async def select(
         self, opts: MatchOptions, filetype: str, word: str, sym: str, limitless: int
@@ -131,5 +134,5 @@ class SDB(Interruptible):
             except OperationalError:
                 return iter(())
 
-        with self._interruption():
+        async with self._interruption():
             return await self._ex.submit(cont)

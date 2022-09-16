@@ -1,9 +1,9 @@
+from asyncio import Lock
 from asyncio.exceptions import CancelledError
-from contextlib import contextmanager
+from contextlib import asynccontextmanager
 from functools import cached_property
 from sqlite3 import Connection
-from threading import Lock
-from typing import Iterator, cast
+from typing import AsyncIterator, cast
 
 
 class Interruptible:
@@ -13,15 +13,15 @@ class Interruptible:
     def _lock(self) -> Lock:
         return Lock()
 
-    def _interrupt(self) -> None:
-        with self._lock:
+    async def _interrupt(self) -> None:
+        async with self._lock:
             self._conn.interrupt()
 
-    @contextmanager
-    def _interruption(self) -> Iterator[None]:
-        self._interrupt()
+    @asynccontextmanager
+    async def _interruption(self) -> AsyncIterator[None]:
+        await self._interrupt()
         try:
             yield None
         except CancelledError:
-            self._interrupt()
+            await self._interrupt()
             raise

@@ -66,5 +66,5 @@ class Database(Interruptible):
                 except OperationalError:
                     return iter(()), 0
 
-        with self._interruption():
+        async with self._interruption():
             return await self._ex.submit(cont)

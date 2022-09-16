@@ -88,7 +88,7 @@ class BDB(Interruptible):
 
     async def buf_update(self, buf_id: int, filetype: str, filename: str) -> None:
         def cont() -> None:
-            with self._lock, with_transaction(self._conn.cursor()) as cursor:
+            with with_transaction(self._conn.cursor()) as cursor:
                 _ensure_buffer(
                     cursor,
                     buf_id=buf_id,
@@ -96,7 +96,8 @@ class BDB(Interruptible):
                     filename=filename,
                 )
 
-        await self._ex.submit(cont)
+        async with self._lock:
+            await self._ex.submit(cont)
 
     async def set_lines(
         self,
@@ -134,7 +135,7 @@ class BDB(Interruptible):
                     yield {"line_id": line_id, "word": word, "line_num": line_num}
 
         def cont() -> None:
-            with self._lock, with_transaction(self._conn.cursor()) as cursor:
+            with with_transaction(self._conn.cursor()) as cursor:
                 _ensure_buffer(
                     cursor,
                     buf_id=buf_id,
@@ -168,7 +169,8 @@ class BDB(Interruptible):
                         },
                     )
 
-        await self._ex.submit(cont)
+        async with self._lock:
+            await self._ex.submit(cont)
 
     async def words(
         self,
@@ -207,5 +209,5 @@ class BDB(Interruptible):
             except OperationalError:
                 return iter(())
 
-        with self._interruption():
+        async with self._interruption():
             return await self._ex.submit(cont)

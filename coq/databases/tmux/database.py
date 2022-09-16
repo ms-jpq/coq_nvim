@@ -151,5 +151,5 @@ class TMDB(Interruptible):
             except OperationalError:
                 return iter(())
 
-        with self._interruption():
+        async with self._interruption():
             return await self._ex.submit(cont)

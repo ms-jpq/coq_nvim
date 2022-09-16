@@ -53,11 +53,11 @@ class CTDB(Interruptible):
 
     async def swap(self, cwd: PurePath) -> None:
         def cont() -> None:
-            with self._lock:
-                self._conn.close()
-                self._conn = _init(self._vars_dir, cwd=cwd)
+            self._conn.close()
+            self._conn = _init(self._vars_dir, cwd=cwd)
 
-        await self._ex.submit(cont)
+        async with self._lock:
+            await self._ex.submit(cont)
 
     async def paths(self) -> Mapping[str, float]:
         def cont() -> Mapping[str, float]:
@@ -130,5 +130,5 @@ class CTDB(Interruptible):
             except OperationalError:
                 return iter(())
 
-        with self._interruption():
+        async with self._interruption():
             return await self._ex.submit(cont)

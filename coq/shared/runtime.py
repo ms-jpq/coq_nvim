@@ -52,7 +52,7 @@ class Metric:
 
 
 class PReviewer(Protocol[_T]):
-    def register(self, assoc: BaseClient) -> None:
+    async def register(self, assoc: BaseClient) -> None:
         ...
 
     async def begin(self, context: Context) -> _T:
@@ -89,8 +89,8 @@ class Supervisor:
         self._lock = TracingLocker(name="Supervisor", force=True)
         self._work_task: Optional[Task] = None
 
-    def register(self, worker: Worker, assoc: BaseClient) -> None:
-        self._reviewer.register(assoc)
+    async def register(self, worker: Worker, assoc: BaseClient) -> None:
+        await self._reviewer.register(assoc)
         self._workers.add(worker)
 
     async def notify_idle(self) -> None:
@@ -151,7 +151,7 @@ class Worker(Generic[_O_co, _T_co]):
         self._work_task: Optional[Task] = None
         self._work_lock = TracingLocker(name=options.short_name, force=True)
         self._supervisor, self._options, self._misc = supervisor, options, misc
-        self._supervisor.register(self, assoc=options)
+        create_task(self._supervisor.register(self, assoc=options))
 
     async def interrupt(self) -> None:
         prev = self._work_task
