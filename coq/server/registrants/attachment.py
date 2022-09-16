@@ -54,7 +54,7 @@ async def _buf_enter(stack: Stack) -> None:
 
 
 _ = autocmd("BufEnter", "InsertEnter") << f"lua {NAMESPACE}.{_buf_enter.method}()"
-atomic.exec_lua(f"{NAMESPACE}.{_buf_enter.method}()", ())
+# atomic.exec_lua(f"{NAMESPACE}.{_buf_enter.method}()", ())
 
 
 async def _status(buf: Buffer) -> Tuple[str, str, str, str]:
