@@ -250,13 +250,13 @@ async def _resolve_comp(
             else:
                 assert False
 
-            if doc:
-                await _show_preview(
-                    stack=stack,
-                    event=event,
-                    doc=doc,
-                    s=state,
-                )
+        if doc:
+            await _show_preview(
+                stack=stack,
+                event=event,
+                doc=doc,
+                s=state,
+            )
 
     _CELL.val = create_task(cont())
 
