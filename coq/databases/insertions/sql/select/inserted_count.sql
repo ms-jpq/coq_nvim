@@ -1,3 +1,4 @@
 SELECT
   COUNT(*)
-FROM inserted
+FROM
+  inserted

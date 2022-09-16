@@ -1,5 +1,6 @@
-UPDATE buffers
-SET 
+UPDATE
+  buffers
+SET
   filetype = :filetype,
   filename = :filename
 WHERE

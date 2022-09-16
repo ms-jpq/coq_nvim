@@ -1,3 +1,4 @@
 SELECT
   *
-FROM stat_inserted_view
+FROM
+  stat_inserted_view

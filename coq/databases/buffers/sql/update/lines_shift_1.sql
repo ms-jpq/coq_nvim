@@ -1,7 +1,7 @@
-UPDATE lines
+UPDATE
+  lines
 SET
-  line_num = -(line_num + :shift)
+  line_num = - (line_num + :shift)
 WHERE
   buffer_id = :buffer_id
-  AND
-  line_num >= :lo
+  AND line_num >= :lo

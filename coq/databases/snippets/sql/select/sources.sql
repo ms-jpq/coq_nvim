@@ -1,5 +1,5 @@
 SELECT
   filename,
   mtime
-FROM sources
-
+FROM
+  sources
