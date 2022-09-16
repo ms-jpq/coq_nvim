@@ -1,4 +1,4 @@
-from asyncio import Task, as_completed, create_task, sleep
+from asyncio import Task, as_completed, create_task, gather, sleep
 from dataclasses import dataclass, field
 from enum import Enum, auto
 from typing import (
@@ -9,7 +9,6 @@ from typing import (
     MutableSequence,
     Optional,
     Tuple,
-    cast,
 )
 
 from pynvim_pp.logging import suppress_and_log
@@ -99,6 +98,15 @@ class Worker(BaseWorker[LSPClient, None]):
                 for chunked in chunk(comps, n=_CACHE_CHUNK):
                     await self._cache.set_cache({client: chunked})
                     await sleep(_CACHE_PERIOD)
+
+    async def interrupt(self) -> None:
+        poll = self._poll_task
+        self._poll_task = None
+
+        if poll:
+            await gather(cancel(poll), super().interrupt())
+        else:
+            await super().interrupt()
 
     async def work(self, context: Context) -> AsyncIterator[Completion]:
         poll = self._poll_task

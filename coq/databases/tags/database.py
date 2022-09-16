@@ -61,10 +61,13 @@ class CTDB(Interruptible):
 
     async def paths(self) -> Mapping[str, float]:
         def cont() -> Mapping[str, float]:
-            with with_transaction(self._conn.cursor()) as cursor:
-                cursor.execute(sql("select", "files"), ())
-                files = {row["filename"]: row["mtime"] for row in cursor.fetchall()}
-                return files
+            try:
+                with with_transaction(self._conn.cursor()) as cursor:
+                    cursor.execute(sql("select", "files"), ())
+                    files = {row["filename"]: row["mtime"] for row in cursor.fetchall()}
+                    return files
+            except OperationalError:
+                return {}
 
         return await self._ex.submit(cont)
 
@@ -127,5 +130,5 @@ class CTDB(Interruptible):
             except OperationalError:
                 return iter(())
 
-        with self._interruption(lock=True):
+        with self._interruption():
             return await self._ex.submit(cont)

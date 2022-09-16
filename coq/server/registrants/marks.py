@@ -28,7 +28,7 @@ async def _ls_marks(ns: BufNamespace, buf: Buffer) -> Sequence[ExtMark]:
         (
             replace(
                 mark,
-                idx=decode_mark_idx(mark.marker) - 1,
+                marker=decode_mark_idx(mark.marker) - 1,
                 meta={**mark.meta, _OG_IDX: mark.marker},
             )
             for mark in await buf.get_extmarks(ns)

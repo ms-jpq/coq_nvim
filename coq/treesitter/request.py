@@ -9,6 +9,7 @@ from typing import Generic, Iterable, Iterator, Optional, Sequence, TypeVar
 from pynvim_pp.lib import recode
 from pynvim_pp.nvim import Nvim
 from pynvim_pp.types import NoneType
+from std2.cell import RefCell
 
 from ..registry import NAMESPACE, atomic, rpc
 from ..server.rt_types import Stack
@@ -36,15 +37,14 @@ class _Session:
     payload: _Payload
 
 
+_LUA = (Path(__file__).resolve(strict=True).parent / "request.lua").read_text("UTF-8")
+atomic.exec_lua(_LUA, ())
+
 _UIDS = count()
 _NIL_P = _Payload[RawPayload](
     buf=-1, lo=-1, hi=-1, filetype="", filename="", payloads=(), elapsed=-1
 )
-_SESSION = _Session(uid=-1, done=True, payload=_NIL_P)
-
-
-_LUA = (Path(__file__).resolve(strict=True).parent / "request.lua").read_text("UTF-8")
-atomic.exec_lua(_LUA, ())
+_CELL = RefCell(_Session(uid=-1, done=True, payload=_NIL_P))
 
 
 @lru_cache(maxsize=None)
@@ -64,10 +64,9 @@ async def _ts_notify(
     reply: Sequence[RawPayload],
     elapsed: float,
 ) -> None:
-    global _SESSION
     cond = _cond()
 
-    if session >= _SESSION.uid:
+    if session >= _CELL.val.uid:
         payload = _Payload(
             buf=buf,
             lo=lo,
@@ -77,7 +76,7 @@ async def _ts_notify(
             payloads=reply,
             elapsed=elapsed,
         )
-        _SESSION = _Session(uid=session, done=True, payload=payload)
+        _CELL.val = _Session(uid=session, done=True, payload=payload)
 
     async with cond:
         cond.notify_all()
@@ -125,12 +124,11 @@ def _vaildate(r_playload: _Payload[RawPayload]) -> _Payload[Payload]:
 
 
 async def async_request() -> Optional[_Payload[Payload]]:
-    global _SESSION
     cond = _cond()
 
     with timeit("TS"):
         uid = next(_UIDS)
-        _SESSION = _Session(uid=uid, done=False, payload=_NIL_P)
+        _CELL.val = _Session(uid=uid, done=False, payload=_NIL_P)
 
         async with cond:
             cond.notify_all()
@@ -138,10 +136,11 @@ async def async_request() -> Optional[_Payload[Payload]]:
         await Nvim.api.exec_lua(NoneType, f"{NAMESPACE}.ts_req(...)", (uid,))
 
         while True:
-            if _SESSION.uid == uid and _SESSION.done:
-                return _vaildate(_SESSION.payload)
+            session = _CELL.val
+            if session.uid == uid and session.done:
+                return _vaildate(session.payload)
 
-            elif _SESSION.uid > uid:
+            elif session.uid > uid:
                 return None
 
             else:

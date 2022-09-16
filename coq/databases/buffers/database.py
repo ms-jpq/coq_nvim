@@ -207,5 +207,5 @@ class BDB(Interruptible):
             except OperationalError:
                 return iter(())
 
-        with self._interruption(lock=True):
+        with self._interruption():
             return await self._ex.submit(cont)

@@ -13,18 +13,15 @@ class Interruptible:
     def _lock(self) -> Lock:
         return Lock()
 
-    def _interrupt(self, *, lock: bool = False) -> None:
-        if lock:
-            with self._lock:
-                self._conn.interrupt()
-        else:
+    def _interrupt(self) -> None:
+        with self._lock:
             self._conn.interrupt()
 
     @contextmanager
-    def _interruption(self, *, lock: bool = False) -> Iterator[None]:
-        self._interrupt(lock=lock)
+    def _interruption(self) -> Iterator[None]:
+        self._interrupt()
         try:
             yield None
         except CancelledError:
-            self._interrupt(lock=lock)
+            self._interrupt()
             raise

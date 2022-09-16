@@ -95,7 +95,7 @@ class IDB(Interruptible):
             except OperationalError:
                 return {}
 
-        with self._interruption(lock=True):
+        with self._interruption():
             return await self._ex.submit(cont)
 
     def inserted(self, instance_id: bytes, sort_by: str) -> None:
