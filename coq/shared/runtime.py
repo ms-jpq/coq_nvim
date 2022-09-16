@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from abc import abstractmethod
 from asyncio import CancelledError, Condition, Task, as_completed, create_task, wait
-from concurrent.futures import Executor
 from dataclasses import dataclass
 from pathlib import Path
 from time import monotonic
@@ -65,14 +64,12 @@ class PReviewer(Protocol[_T]):
 class Supervisor:
     def __init__(
         self,
-        pool: Executor,
         vars_dir: Path,
         match: MatchOptions,
         comp: CompleteOptions,
         limits: Limits,
         reviewer: PReviewer,
     ) -> None:
-        self.pool = pool
         self.vars_dir = vars_dir
         self.match, self.comp, self.limits = match, comp, limits
         self._reviewer = reviewer

@@ -1,17 +1,13 @@
-from abc import abstractmethod
 from asyncio.exceptions import CancelledError
 from contextlib import contextmanager
 from functools import cached_property
 from sqlite3 import Connection
 from threading import Lock
-from typing import Iterator
+from typing import Iterator, cast
 
 
 class Interruptible:
-    @property
-    @abstractmethod
-    def _conn(self) -> Connection:
-        ...
+    _conn: Connection = cast(Connection, None)
 
     @cached_property
     def _lock(self) -> Lock:

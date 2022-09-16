@@ -1,4 +1,3 @@
-from concurrent.futures import Executor
 from contextlib import suppress
 from sqlite3 import Connection, OperationalError
 from typing import Iterable, Iterator, Mapping, Tuple
@@ -21,8 +20,8 @@ def _init() -> Connection:
 
 
 class Database(Interruptible):
-    def __init__(self, pool: Executor) -> None:
-        self._ex = SingleThreadExecutor(pool)
+    def __init__(self) -> None:
+        self._ex = SingleThreadExecutor()
         self._conn: Connection = self._ex.ssubmit(_init)
 
     async def insert(self, keys: Iterable[Tuple[bytes, str]]) -> None:

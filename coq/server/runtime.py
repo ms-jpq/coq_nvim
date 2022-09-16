@@ -1,4 +1,3 @@
-from concurrent.futures import Executor
 from pathlib import Path, PurePath
 from shutil import which
 from typing import Any, Iterator, Mapping, cast
@@ -59,7 +58,6 @@ async def _settings() -> Settings:
 
 def _from_each_according_to_their_ability(
     settings: Settings,
-    pool: Executor,
     vars_dir: Path,
     cwd: PurePath,
     supervisor: Supervisor,
@@ -68,8 +66,7 @@ def _from_each_according_to_their_ability(
 
     if clients.buffers.enabled:
         bdb = BDB(
-            pool,
-            tokenization_limit=settings.limits.tokenization_limit,
+            settings.limits.tokenization_limit,
             unifying_chars=settings.match.unifying_chars,
             include_syms=settings.clients.buffers.match_syms,
         )
@@ -79,7 +76,7 @@ def _from_each_according_to_their_ability(
         yield PathsWorker(supervisor, options=clients.paths, misc=None)
 
     if clients.tree_sitter.enabled:
-        tdb = TDB(pool)
+        tdb = TDB()
         yield TreeWorker(supervisor, options=clients.tree_sitter, misc=tdb)
 
     if clients.lsp.enabled:
@@ -91,17 +88,16 @@ def _from_each_according_to_their_ability(
         )
 
     if clients.snippets.enabled:
-        sdb = SDB(pool, vars_dir=vars_dir)
+        sdb = SDB(vars_dir)
         yield SnippetWorker(supervisor, options=clients.snippets, misc=sdb)
 
     if clients.tags.enabled and (ctags := which("ctags")):
-        ctdb = CTDB(pool, vars_dir=vars_dir, cwd=cwd)
+        ctdb = CTDB(vars_dir, cwd=cwd)
         yield TagsWorker(supervisor, options=clients.tags, misc=(Path(ctags), ctdb))
 
     if clients.tmux.enabled and (tmux := which("tmux")):
         tmdb = TMDB(
-            pool,
-            tokenization_limit=settings.limits.tokenization_limit,
+            settings.limits.tokenization_limit,
             unifying_chars=settings.match.unifying_chars,
             include_syms=settings.clients.buffers.match_syms,
         )
@@ -111,21 +107,20 @@ def _from_each_according_to_their_ability(
         yield T9Worker(supervisor, options=clients.tabnine, misc=None)
 
 
-async def stack(pool: Executor) -> Stack:
+async def stack() -> Stack:
     settings = await _settings()
     pum_width = await Nvim.opts.get(int, "pumwidth")
     vars_dir = (
         Path(await Nvim.fn.stdpath(str, "cache")) / "coq" if settings.xdg else VARS
     )
     s = state(cwd=await Nvim.getcwd(), pum_width=pum_width)
-    idb = IDB(pool)
+    idb = IDB()
     reviewer = Reviewer(
         icons=settings.display.icons,
         options=settings.match,
         db=idb,
     )
     supervisor = Supervisor(
-        pool=pool,
         vars_dir=vars_dir,
         match=settings.match,
         comp=settings.completion,
@@ -135,7 +130,6 @@ async def stack(pool: Executor) -> Stack:
     workers = {
         *_from_each_according_to_their_ability(
             settings,
-            pool=pool,
             vars_dir=vars_dir,
             cwd=s.cwd,
             supervisor=supervisor,

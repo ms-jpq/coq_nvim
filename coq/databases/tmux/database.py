@@ -1,4 +1,3 @@
-from concurrent.futures import Executor
 from contextlib import suppress
 from dataclasses import dataclass
 from itertools import islice
@@ -48,12 +47,11 @@ def _tokenize(
 class TMDB(Interruptible):
     def __init__(
         self,
-        pool: Executor,
         tokenization_limit: int,
         unifying_chars: AbstractSet[str],
         include_syms: bool,
     ) -> None:
-        self._ex = SingleThreadExecutor(pool)
+        self._ex = SingleThreadExecutor()
         self._current: Optional[Pane] = None
         self._tokenization_limit = tokenization_limit
         self._unifying_chars = unifying_chars

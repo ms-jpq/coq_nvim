@@ -1,4 +1,3 @@
-from concurrent.futures import Executor
 from os.path import normcase
 from pathlib import Path, PurePath
 from sqlite3 import Connection, OperationalError
@@ -36,9 +35,9 @@ def _init(db_dir: Path) -> Connection:
 
 
 class SDB(Interruptible):
-    def __init__(self, pool: Executor, vars_dir: Path) -> None:
+    def __init__(self, vars_dir: Path) -> None:
         db_dir = vars_dir / "clients" / "snippets"
-        self._ex = SingleThreadExecutor(pool)
+        self._ex = SingleThreadExecutor()
         self._conn: Connection = self._ex.ssubmit(lambda: _init(db_dir))
 
     async def clean(self, paths: AbstractSet[PurePath]) -> None:

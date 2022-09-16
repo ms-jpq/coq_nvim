@@ -1,4 +1,3 @@
-from concurrent.futures import Executor
 from contextlib import suppress
 from sqlite3 import Connection, Cursor, OperationalError
 from typing import Iterable, Iterator, Mapping
@@ -36,8 +35,8 @@ def _ensure_buffer(cursor: Cursor, buf_id: int, filetype: str, filename: str) ->
 
 
 class TDB(Interruptible):
-    def __init__(self, pool: Executor) -> None:
-        self._ex = SingleThreadExecutor(pool)
+    def __init__(self) -> None:
+        self._ex = SingleThreadExecutor()
         self._conn: Connection = self._ex.ssubmit(_init)
 
     async def vacuum(self, live_bufs: Mapping[int, int]) -> None:

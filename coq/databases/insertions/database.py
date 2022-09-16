@@ -1,4 +1,3 @@
-from concurrent.futures import Executor
 from dataclasses import dataclass
 from json import loads
 from sqlite3 import Connection, OperationalError
@@ -39,8 +38,8 @@ def _init() -> Connection:
 
 
 class IDB(Interruptible):
-    def __init__(self, pool: Executor) -> None:
-        self._ex = SingleThreadExecutor(pool)
+    def __init__(self) -> None:
+        self._ex = SingleThreadExecutor()
         self._conn: Connection = self._ex.ssubmit(_init)
 
     def new_source(self, source: str) -> None:
