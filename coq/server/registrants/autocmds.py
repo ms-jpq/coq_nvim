@@ -32,7 +32,7 @@ async def _kill_float_wins(stack: Stack) -> None:
             await win.close()
 
 
-_ = autocmd("WinEnter") << f"lua {NAMESPACE}.{_kill_float_wins.method}()"
+# _ = autocmd("WinEnter") << f"lua {NAMESPACE}.{_kill_float_wins.method}()"
 
 
 @rpc()
@@ -45,7 +45,7 @@ async def _new_cwd(stack: Stack) -> None:
             break
 
 
-_ = autocmd("DirChanged") << f"lua {NAMESPACE}.{_new_cwd.method}()"
+# _ = autocmd("DirChanged") << f"lua {NAMESPACE}.{_new_cwd.method}()"
 
 
 @rpc()
@@ -59,7 +59,7 @@ async def _ft_changed(stack: Stack) -> None:
             break
 
 
-_ = autocmd("FileType") << f"lua {NAMESPACE}.{_ft_changed.method}()"
+# _ = autocmd("FileType") << f"lua {NAMESPACE}.{_ft_changed.method}()"
 atomic.exec_lua(f"{NAMESPACE}.{_ft_changed.method}()", ())
 
 
@@ -92,7 +92,7 @@ async def _on_focus(stack: Stack) -> None:
             break
 
 
-_ = autocmd("FocusGained") << f"lua {NAMESPACE}.{_on_focus.method}()"
+# _ = autocmd("FocusGained") << f"lua {NAMESPACE}.{_on_focus.method}()"
 
 
 @rpc()
@@ -115,4 +115,4 @@ async def _when_idle(stack: Stack) -> None:
     _CELL.val = create_task(cont())
 
 
-_ = autocmd("CursorHold", "CursorHoldI") << f"lua {NAMESPACE}.{_when_idle.method}()"
+# _ = autocmd("CursorHold", "CursorHoldI") << f"lua {NAMESPACE}.{_when_idle.method}()"

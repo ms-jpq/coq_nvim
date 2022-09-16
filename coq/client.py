@@ -20,13 +20,13 @@ from ._registry import ____
 from .consts import DEBUG, DEBUG_DB, DEBUG_METRICS, TMP_DIR
 from .registry import atomic, autocmd, rpc
 from .server.registrants.options import set_options
-from .server.rt_types import ValidationError
-from .server.runtime import Stack, stack
+from .server.rt_types import Stack, ValidationError
+from .server.runtime import stack
 
 assert ____ or True
 
 _CB = RPCallable[None]
-_CELL = RefCell[Optional[RefCell]](None)
+_CELL = RefCell[Optional[Stack]](None)
 
 
 def _set_debug() -> None:
@@ -46,7 +46,7 @@ def _trans(handler: _CB) -> _CB:
     @wraps(handler)
     async def f(*params: Any) -> None:
         stack = _CELL.val
-        await f(stack, *params)
+        return await f(stack, *params)
 
     return cast(_CB, f)
 
