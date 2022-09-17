@@ -1,15 +1,7 @@
 from __future__ import annotations
 
 from abc import abstractmethod
-from asyncio import (
-    CancelledError,
-    Condition,
-    Task,
-    as_completed,
-    create_task,
-    gather,
-    wait,
-)
+from asyncio import CancelledError, Condition, Task, as_completed, create_task, wait
 from dataclasses import dataclass
 from pathlib import Path
 from time import monotonic
@@ -18,7 +10,6 @@ from typing import (
     AsyncIterator,
     Awaitable,
     Generic,
-    Iterator,
     MutableSequence,
     Optional,
     Protocol,
@@ -100,14 +91,8 @@ class Supervisor:
     async def interrupt(self) -> None:
         task = self._work_task
         self._work_task = None
-
-        def cont() -> Iterator[Awaitable[None]]:
-            if task:
-                yield task
-            for worker in self._workers:
-                yield worker.interrupt()
-
-        await gather(*cont())
+        if task:
+            await cancel(task)
 
     def collect(self, context: Context) -> Awaitable[Sequence[Metric]]:
         now = monotonic()
@@ -152,12 +137,6 @@ class Worker(Generic[_O_co, _T_co]):
         self._work_lock = TracingLocker(name=options.short_name, force=True)
         self._supervisor, self._options, self._misc = supervisor, options, misc
         create_task(self._supervisor.register(self, assoc=options))
-
-    async def interrupt(self) -> None:
-        prev = self._work_task
-        self._work_task = None
-        if prev:
-            await cancel(prev)
 
     @abstractmethod
     def work(self, context: Context) -> AsyncIterator[Completion]:

@@ -99,15 +99,6 @@ class Worker(BaseWorker[LSPClient, None]):
                     await self._cache.set_cache({client: chunked})
                     await sleep(_CACHE_PERIOD)
 
-    async def interrupt(self) -> None:
-        poll = self._poll_task
-        self._poll_task = None
-
-        if poll:
-            await gather(cancel(poll), super().interrupt())
-        else:
-            await super().interrupt()
-
     async def work(self, context: Context) -> AsyncIterator[Completion]:
         poll = self._poll_task
         self._poll_task = None
