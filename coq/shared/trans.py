@@ -163,4 +163,7 @@ def indent_adjusted(
     indent = _indent_to_line(context, line_before=line_before)
     expanded = (expand_tabs(context, text=line) for line in lines)
     for lhs, rhs in zip(chain(("",), repeat(indent)), expanded):
-        yield lhs + rhs
+        if rhs:
+            yield lhs + rhs
+        else:
+            yield rhs
