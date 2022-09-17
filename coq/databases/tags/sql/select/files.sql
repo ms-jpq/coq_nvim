@@ -1,5 +1,5 @@
-SELECT
+SELECT 
   filename,
   mtime
-FROM
-  files
+FROM files
+

@@ -1,4 +1,2 @@
-INSERT INTO
-  batches (rowid)
-VALUES
-  (:rowid)
+INSERT INTO batches ( rowid)
+VALUES              (:rowid)

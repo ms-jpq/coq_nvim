@@ -1,4 +1,2 @@
-INSERT OR IGNORE INTO
-  sources (name)
-VALUES
-  (:name)
+INSERT OR IGNORE INTO sources ( name)
+VALUES                        (:name)

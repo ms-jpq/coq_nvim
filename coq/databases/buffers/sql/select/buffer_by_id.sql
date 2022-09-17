@@ -1,6 +1,5 @@
 SELECT
   rowid
-FROM
-  buffers
+FROM buffers
 WHERE
   rowid = :rowid

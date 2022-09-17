@@ -1,12 +1,10 @@
-WITH
-  fts AS (
-    SELECT
-      filetype
-    FROM
-      files
-    WHERE
-      filename = :filename
-  )
+WITH fts AS (
+  SELECT
+    filetype
+  FROM files
+  WHERE
+    filename = :filename
+)
 SELECT
   tags.`path`,
   tags.line,
@@ -18,27 +16,39 @@ SELECT
   tags.scope,
   tags.scopeKind,
   tags.`access`
-FROM
-  tags
-  JOIN files ON files.filename = tags.`path`
-  JOIN fts ON fts.filetype = files.filetype
+FROM tags
+JOIN files
+ON 
+  files.filename = tags.`path`
+JOIN fts
+ON
+  fts.filetype = files.filetype
 WHERE
   tags.name <> ''
-  AND (
+  AND
+  (
     (
       :word <> ''
-      AND tags.lname LIKE :like_word ESCAPE '!'
-      AND LENGTH(tags.name) + :look_ahead >= LENGTH(:word)
-      AND tags.name <> SUBSTR(:word, 1, LENGTH(tags.name))
-      AND X_SIMILARITY (LOWER(:word), tags.lname, :look_ahead) > :cut_off
+      AND 
+      tags.lname LIKE :like_word ESCAPE '!'
+      AND 
+      LENGTH(tags.name) + :look_ahead >= LENGTH(:word)
+      AND
+      tags.name <> SUBSTR(:word, 1, LENGTH(tags.name))
+      AND
+      X_SIMILARITY(LOWER(:word), tags.lname, :look_ahead) > :cut_off
     )
-    OR (
+    OR
+    (
       :sym <> ''
-      AND tags.lname LIKE :like_sym ESCAPE '!'
-      AND LENGTH(tags.name) + :look_ahead >= LENGTH(:sym)
-      AND tags.name <> SUBSTR(:sym, 1, LENGTH(tags.name))
-      AND X_SIMILARITY (LOWER(:sym), tags.lname, :look_ahead) > :cut_off
+      AND 
+      tags.lname LIKE :like_sym ESCAPE '!'
+      AND 
+      LENGTH(tags.name) + :look_ahead >= LENGTH(:sym)
+      AND
+      tags.name <> SUBSTR(:sym, 1, LENGTH(tags.name))
+      AND
+      X_SIMILARITY(LOWER(:sym), tags.lname, :look_ahead) > :cut_off
     )
   )
-LIMIT
-  :limit
+LIMIT :limit

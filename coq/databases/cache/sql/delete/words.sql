@@ -1,2 +1,1 @@
-DELETE FROM
-  words
+DELETE FROM words
