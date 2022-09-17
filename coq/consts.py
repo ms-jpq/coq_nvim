@@ -1,7 +1,7 @@
 from os import environ, name
 from pathlib import Path
 
-GIL_SWITCH = 1 / (10 ** 3)
+GIL_SWITCH = 1 / (10**3)
 
 IS_WIN = name == "nt"
 

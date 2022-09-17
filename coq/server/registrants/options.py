@@ -1,6 +1,7 @@
-from pynvim import Nvim
 from pynvim_pp.keymap import Keymap
+from pynvim_pp.nvim import Nvim
 from pynvim_pp.settings import Settings
+from pynvim_pp.types import NoneType
 
 from ...registry import NAMESPACE, atomic, autocmd, rpc
 from ...shared.settings import KeyMapping
@@ -13,57 +14,56 @@ from .repeat import repeat
 from .user_snippets import eval_snips
 
 
-@rpc(blocking=True)
-def _update_pumheight(nvim: Nvim, stack: Stack) -> None:
-    scr_width: int = nvim.options["columns"]
-    scr_height: int = nvim.options["lines"]
-    state(screen=(scr_width, scr_height))
+@rpc()
+async def _update_pumheight(stack: Stack) -> None:
+    height, width = await Nvim.size()
+    state(screen=(width, height))
 
     pumheight = min(
-        round(scr_height * stack.settings.display.pum.y_ratio),
+        round(height * stack.settings.display.pum.y_ratio),
         stack.settings.display.pum.y_max_len,
     )
-    nvim.options["pumheight"] = pumheight
+    await Nvim.opts.set("pumheight", val=pumheight)
 
 
-atomic.exec_lua(f"{NAMESPACE}.{_update_pumheight.name}()", ())
-_ = autocmd("VimResized") << f"lua {NAMESPACE}.{_update_pumheight.name}()"
+atomic.exec_lua(f"{NAMESPACE}.{_update_pumheight.method}()", ())
+_ = autocmd("VimResized") << f"lua {NAMESPACE}.{_update_pumheight.method}()"
 
 
-def set_options(nvim: Nvim, mapping: KeyMapping, fast_close: bool) -> None:
+async def set_options(mapping: KeyMapping, fast_close: bool) -> None:
     settings = Settings()
     keymap = Keymap()
 
-    settings["completefunc"] = f"v:lua.{NAMESPACE}.{omnifunc.name}"
+    settings["completefunc"] = f"v:lua.{NAMESPACE}.{omnifunc.method}"
 
     if mapping.eval_snips:
         _ = (
             keymap.n(mapping.eval_snips)
-            << f"<cmd>lua {NAMESPACE}.{eval_snips.name}(false)<cr>"
+            << f"<cmd>lua {NAMESPACE}.{eval_snips.method}(false)<cr>"
         )
         _ = (
             keymap.v(mapping.eval_snips)
-            << rf"<c-\><c-n><cmd>lua {NAMESPACE}.{eval_snips.name}(true)<cr>"
+            << rf"<c-\><c-n><cmd>lua {NAMESPACE}.{eval_snips.method}(true)<cr>"
         )
 
     if mapping.bigger_preview:
         _ = (
             keymap.i(mapping.bigger_preview, expr=True)
-            << f"(pumvisible() && complete_info(['mode']).mode ==# 'eval') ? {preview_preview.name}() : '{mapping.bigger_preview}'"
+            << f"(pumvisible() && complete_info(['mode']).mode ==# 'eval') ? {preview_preview.method}() : '{mapping.bigger_preview}'"
         )
 
     if mapping.jump_to_mark:
         _ = (
             keymap.n(mapping.jump_to_mark)
-            << f"<cmd>lua {NAMESPACE}.{nav_mark.name}()<cr>"
+            << f"<cmd>lua {NAMESPACE}.{nav_mark.method}()<cr>"
         )
         _ = (
             keymap.iv(mapping.jump_to_mark)
-            << rf"<c-\><c-n><cmd>lua {NAMESPACE}.{nav_mark.name}()<cr>"
+            << rf"<c-\><c-n><cmd>lua {NAMESPACE}.{nav_mark.method}()<cr>"
         )
 
     if mapping.repeat:
-        _ = keymap.n(mapping.repeat) << f"<cmd>lua {NAMESPACE}.{repeat.name}()<cr>"
+        _ = keymap.n(mapping.repeat) << f"<cmd>lua {NAMESPACE}.{repeat.method}()<cr>"
 
     if mapping.manual_complete:
         _ = (
@@ -94,4 +94,4 @@ def set_options(nvim: Nvim, mapping: KeyMapping, fast_close: bool) -> None:
 
     if fast_close:
         settings["shortmess"] += "c"
-    (settings.drain() + keymap.drain(buf=None)).commit(nvim)
+    await (settings.drain() + keymap.drain(buf=None)).commit(NoneType)

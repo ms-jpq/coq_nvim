@@ -1,12 +1,15 @@
 from asyncio import Condition
 from dataclasses import dataclass
+from functools import lru_cache
 from itertools import count
 from pathlib import Path
 from string import capwords
 from typing import Generic, Iterable, Iterator, Optional, Sequence, TypeVar
 
-from pynvim.api.nvim import Nvim
-from pynvim_pp.lib import async_call, go, recode
+from pynvim_pp.lib import recode
+from pynvim_pp.nvim import Nvim
+from pynvim_pp.types import NoneType
+from std2.cell import RefCell
 
 from ..registry import NAMESPACE, atomic, rpc
 from ..server.rt_types import Stack
@@ -34,21 +37,23 @@ class _Session:
     payload: _Payload
 
 
-_UIDS = count()
-_COND: Optional[Condition] = None
-_NIL_P = _Payload[RawPayload](
-    buf=-1, lo=-1, hi=-1, filetype="", filename="", payloads=(), elapsed=-1
-)
-_SESSION = _Session(uid=-1, done=True, payload=_NIL_P)
-
-
 _LUA = (Path(__file__).resolve(strict=True).parent / "request.lua").read_text("UTF-8")
 atomic.exec_lua(_LUA, ())
 
+_UIDS = count()
+_NIL_P = _Payload[RawPayload](
+    buf=-1, lo=-1, hi=-1, filetype="", filename="", payloads=(), elapsed=-1
+)
+_CELL = RefCell(_Session(uid=-1, done=True, payload=_NIL_P))
+
+
+@lru_cache(maxsize=None)
+def _cond() -> Condition:
+    return Condition()
+
 
 @rpc(blocking=False)
-def _ts_notify(
-    nvim: Nvim,
+async def _ts_notify(
     stack: Stack,
     session: int,
     buf: int,
@@ -59,26 +64,22 @@ def _ts_notify(
     reply: Sequence[RawPayload],
     elapsed: float,
 ) -> None:
-    async def cont() -> None:
-        global _COND, _SESSION
-        _COND = _COND or Condition()
+    cond = _cond()
 
-        if session >= _SESSION.uid:
-            payload = _Payload(
-                buf=buf,
-                lo=lo,
-                hi=hi,
-                filetype=filetype,
-                filename=filename,
-                payloads=reply,
-                elapsed=elapsed,
-            )
-            _SESSION = _Session(uid=session, done=True, payload=payload)
+    if session >= _CELL.val.uid:
+        payload = _Payload(
+            buf=buf,
+            lo=lo,
+            hi=hi,
+            filetype=filetype,
+            filename=filename,
+            payloads=reply,
+            elapsed=elapsed,
+        )
+        _CELL.val = _Session(uid=session, done=True, payload=payload)
 
-        async with _COND:
-            _COND.notify_all()
-
-    go(nvim, aw=cont())
+    async with cond:
+        cond.notify_all()
 
 
 def _parse(load: Optional[SimpleRawPayload]) -> Optional[SimplePayload]:
@@ -122,29 +123,26 @@ def _vaildate(r_playload: _Payload[RawPayload]) -> _Payload[Payload]:
     return payload
 
 
-async def async_request(nvim: Nvim) -> Optional[_Payload[Payload]]:
-    global _COND, _SESSION
-    _COND = _COND or Condition()
+async def async_request() -> Optional[_Payload[Payload]]:
+    cond = _cond()
 
     with timeit("TS"):
         uid = next(_UIDS)
-        _SESSION = _Session(uid=uid, done=False, payload=_NIL_P)
+        _CELL.val = _Session(uid=uid, done=False, payload=_NIL_P)
 
-        async with _COND:
-            _COND.notify_all()
+        async with cond:
+            cond.notify_all()
 
-        def cont() -> None:
-            nvim.api.exec_lua(f"{NAMESPACE}.ts_req(...)", (uid,))
-
-        await async_call(nvim, cont)
+        await Nvim.api.exec_lua(NoneType, f"{NAMESPACE}.ts_req(...)", (uid,))
 
         while True:
-            if _SESSION.uid == uid and _SESSION.done:
-                return _vaildate(_SESSION.payload)
+            session = _CELL.val
+            if session.uid == uid and session.done:
+                return _vaildate(session.payload)
 
-            elif _SESSION.uid > uid:
+            elif session.uid > uid:
                 return None
 
             else:
-                async with _COND:
-                    await _COND.wait()
+                async with _cond():
+                    await _cond().wait()

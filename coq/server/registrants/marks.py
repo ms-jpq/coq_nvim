@@ -3,31 +3,20 @@ from dataclasses import replace
 from itertools import chain
 from json import dumps
 from textwrap import dedent
-from typing import Iterable, Iterator, Sequence
+from typing import AsyncIterator, Iterable, Iterator, Sequence
 from uuid import uuid4
 
-from pynvim.api.common import NvimError
-from pynvim.api.nvim import Buffer, Nvim
-from pynvim.api.window import Window
-from pynvim_pp.api import (
-    ExtMark,
-    ask,
-    buf_del_extmarks,
-    buf_get_extmarks,
-    create_ns,
-    cur_win,
-    extmarks_text,
-    win_get_buf,
-    win_get_cursor,
-    win_set_cursor,
-)
-from pynvim_pp.lib import write
+from pynvim_pp.buffer import Buffer, ExtMark
+from pynvim_pp.lib import encode
 from pynvim_pp.logging import log
+from pynvim_pp.nvim import Nvim
+from pynvim_pp.types import BufNamespace, NvimError
+from pynvim_pp.window import Window
 
 from ...lang import LANG
 from ...registry import rpc
 from ...snippets.parsers.parser import decode_mark_idx
-from ..edit import EditInstruction, apply
+from ..edit import EditInstruction, apply, reset_undolevels
 from ..mark import NS
 from ..rt_types import Stack
 from ..state import state
@@ -35,33 +24,33 @@ from ..state import state
 _OG_IDX = str(uuid4())
 
 
-def _ls_marks(nvim: Nvim, ns: int, buf: Buffer) -> Sequence[ExtMark]:
+async def _ls_marks(ns: BufNamespace, buf: Buffer) -> Sequence[ExtMark]:
     ordered = sorted(
         (
             replace(
                 mark,
-                idx=decode_mark_idx(mark.idx) - 1,
-                meta={**mark.meta, _OG_IDX: mark.idx},
+                marker=decode_mark_idx(mark.marker) - 1,
+                meta={**mark.meta, _OG_IDX: mark.marker},
             )
-            for mark in buf_get_extmarks(nvim, id=ns, buf=buf)
-            if mark.end >= mark.begin
+            for mark in await buf.get_extmarks(ns)
+            if mark.end and mark.end >= mark.begin
         ),
-        key=lambda m: (m.idx == 0, m.idx, m.begin, m.end),
+        key=lambda m: (m.marker == 0, m.marker, m.begin, m.end),
     )
 
     return ordered
 
 
-def _del_marks(nvim: Nvim, buf: Buffer, id: int, marks: Iterable[ExtMark]) -> None:
-    it = (replace(mark, idx=mark.meta[_OG_IDX]) for mark in marks)
-    buf_del_extmarks(nvim, buf=buf, id=id, marks=it)
+async def _del_marks(buf: Buffer, ns: BufNamespace, marks: Iterable[ExtMark]) -> None:
+    it = (mark.meta[_OG_IDX] for mark in marks)
+    await buf.del_extmarks(ns, markers=it)
 
 
-def _marks(nvim: Nvim, ns: int, win: Window, buf: Buffer) -> Iterator[ExtMark]:
-    cursor = win_get_cursor(nvim, win=win)
-    for idx, mark in enumerate(_ls_marks(nvim, ns=ns, buf=buf)):
+async def _marks(ns: BufNamespace, win: Window, buf: Buffer) -> AsyncIterator[ExtMark]:
+    cursor = await win.get_cursor()
+    for idx, mark in enumerate(await _ls_marks(ns=ns, buf=buf)):
         if not idx and mark.begin == cursor and mark.end == cursor:
-            _del_marks(nvim, buf=buf, id=ns, marks=(mark,))
+            await _del_marks(buf=buf, ns=ns, marks=(mark,))
         else:
             yield mark
 
@@ -69,31 +58,30 @@ def _marks(nvim: Nvim, ns: int, win: Window, buf: Buffer) -> Iterator[ExtMark]:
 def _trans(new_text: str, marks: Sequence[ExtMark]) -> Iterator[EditInstruction]:
     new_lines = new_text.splitlines()
     for mark in marks:
-        yield EditInstruction(
-            primary=False,
-            begin=mark.begin,
-            end=mark.end,
-            cursor_yoffset=0,
-            cursor_xpos=-1,
-            new_lines=new_lines,
-        )
+        if end := mark.end:
+            yield EditInstruction(
+                primary=False,
+                begin=mark.begin,
+                end=end,
+                cursor_yoffset=0,
+                cursor_xpos=-1,
+                new_lines=new_lines,
+            )
 
 
-def _single_mark(
-    nvim: Nvim,
+async def _single_mark(
     mark: ExtMark,
     marks: Sequence[ExtMark],
-    ns: int,
+    ns: BufNamespace,
     win: Window,
     buf: Buffer,
 ) -> None:
     row, col = mark.begin
-    nvim.options["undolevels"] = nvim.options["undolevels"]
+    await reset_undolevels()
 
     try:
-        apply(nvim, buf=buf, instructions=_trans("", marks=(mark,)))
-        win_set_cursor(nvim, win=win, row=row, col=col)
-        nvim.command("startinsert")
+        await apply(buf=buf, instructions=_trans("", marks=(mark,)))
+        await win.set_cursor(row=row, col=col)
     except NvimError as e:
         msg = f"""
         bad mark location {mark}
@@ -102,60 +90,59 @@ def _single_mark(
         """
         log.warn("%s", dedent(msg))
     else:
-        nvim.command("startinsert")
+        await Nvim.exec("startinsert")
         state(inserted_pos=(row, col))
         msg = LANG("applied mark", marks_left=len(marks))
-        write(nvim, msg)
+        await Nvim.write(msg)
     finally:
-        _del_marks(nvim, buf=buf, id=ns, marks=(mark,))
+        await _del_marks(buf=buf, ns=ns, marks=(mark,))
 
 
-def _linked_marks(
-    nvim: Nvim,
+async def _linked_marks(
     mark: ExtMark,
     linked: Sequence[ExtMark],
-    ns: int,
+    ns: BufNamespace,
     win: Window,
     buf: Buffer,
 ) -> bool:
     marks = tuple(chain((mark,), linked))
-    place_holders = tuple(text for _, text in extmarks_text(nvim, buf=buf, marks=marks))
+    place_holders = [await mark.text() for mark in marks]
     texts = dumps(place_holders, check_circular=False, ensure_ascii=False)
-    resp = ask(nvim, question=LANG("expand marks", texts=texts), default="")
+    resp = await Nvim.input(question=LANG("expand marks", texts=texts), default="")
     if resp is not None:
         row, col = mark.begin
-        nvim.options["undolevels"] = nvim.options["undolevels"]
-        apply(nvim, buf=buf, instructions=_trans(resp, marks=marks))
-        _del_marks(nvim, buf=buf, id=ns, marks=marks)
-        win_set_cursor(nvim, win=win, row=row, col=col)
-        nvim.command("startinsert")
+        await reset_undolevels()
+        shift = await apply(buf=buf, instructions=_trans(resp, marks=marks))
+        await _del_marks(buf=buf, ns=ns, marks=marks)
+        await win.set_cursor(row=row + shift.row, col=col + len(encode(resp)))
+        await Nvim.exec("startinsert")
         state(inserted_pos=(row, col - 1))
         return True
     else:
         return False
 
 
-@rpc(blocking=True)
-def nav_mark(nvim: Nvim, stack: Stack) -> None:
-    ns = create_ns(nvim, ns=NS)
-    win = cur_win(nvim)
-    buf = win_get_buf(nvim, win=win)
+@rpc()
+async def nav_mark(stack: Stack) -> None:
+    ns = await Nvim.create_namespace(NS)
+    win = await Window.get_current()
+    buf = await win.get_buf()
 
-    if marks := deque(_marks(nvim, ns=ns, win=win, buf=buf)):
+    if marks := deque([m async for m in _marks(ns=ns, win=win, buf=buf)]):
         mark = marks.popleft()
 
-        def single() -> None:
-            _single_mark(nvim, mark=mark, marks=marks, ns=ns, win=win, buf=buf)
+        async def single() -> None:
+            await _single_mark(mark=mark, marks=marks, ns=ns, win=win, buf=buf)
 
-        if linked := tuple(m for m in marks if m.idx == mark.idx):
-            edited = _linked_marks(
-                nvim, mark=mark, linked=linked, ns=ns, win=win, buf=buf
+        if linked := tuple(m for m in marks if m.marker == mark.marker):
+            edited = await _linked_marks(
+                mark=mark, linked=linked, ns=ns, win=win, buf=buf
             )
             if not edited:
-                single()
+                await single()
         else:
-            single()
+            await single()
 
     else:
         msg = LANG("no more marks")
-        write(nvim, msg)
+        await Nvim.write(msg)

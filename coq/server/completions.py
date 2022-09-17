@@ -3,7 +3,8 @@ from pathlib import Path
 from typing import Any, Iterable, MutableSequence, Tuple
 from uuid import UUID
 
-from pynvim import Nvim
+from pynvim_pp.nvim import Nvim
+from pynvim_pp.types import NoneType
 from std2.pickle.encoder import new_encoder
 
 from ..registry import NAMESPACE, atomic
@@ -31,8 +32,8 @@ class VimCompletion:
 _ENCODER = new_encoder[VimCompletion](VimCompletion)
 
 
-def complete(
-    nvim: Nvim, stack: Stack, col: int, comps: Iterable[Tuple[Metric, VimCompletion]]
+async def complete(
+    stack: Stack, col: int, comps: Iterable[Tuple[Metric, VimCompletion]]
 ) -> None:
     stack.metrics.clear()
 
@@ -42,4 +43,4 @@ def complete(
         encoded = _ENCODER(comp)
         acc.append(encoded)
 
-    nvim.api.exec_lua(f"{NAMESPACE}.send_comp(...)", (col + 1, acc))
+    await Nvim.api.exec_lua(NoneType, f"{NAMESPACE}.send_comp(...)", (col + 1, acc))

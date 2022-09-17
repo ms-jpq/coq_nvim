@@ -1,20 +1,16 @@
-from asyncio import CancelledError
-from concurrent.futures import Executor
 from os.path import normcase
 from pathlib import Path, PurePath
 from sqlite3 import Connection, OperationalError
-from threading import Lock
 from typing import AbstractSet, Iterator, Mapping, TypedDict, cast
 from uuid import uuid4
 
-from std2.asyncio import to_thread
 from std2.sqlite3 import with_transaction
 
 from ...shared.executor import SingleThreadExecutor
 from ...shared.settings import MatchOptions
 from ...shared.sql import BIGGEST_INT, init_db, like_esc
-from ...shared.timeit import timeit
 from ...snippets.types import LoadedSnips
+from ..types import Interruptible
 from .sql import sql
 
 _SCHEMA = "v4"
@@ -38,40 +34,37 @@ def _init(db_dir: Path) -> Connection:
     return conn
 
 
-class SDB:
-    def __init__(self, pool: Executor, vars_dir: Path) -> None:
+class SDB(Interruptible):
+    def __init__(self, vars_dir: Path) -> None:
         db_dir = vars_dir / "clients" / "snippets"
-        self._lock = Lock()
-        self._ex = SingleThreadExecutor(pool)
-        self._conn: Connection = self._ex.submit(lambda: _init(db_dir))
-
-    def _interrupt(self) -> None:
-        with self._lock:
-            self._conn.interrupt()
+        self._ex = SingleThreadExecutor()
+        self._conn: Connection = self._ex.ssubmit(lambda: _init(db_dir))
 
     async def clean(self, paths: AbstractSet[PurePath]) -> None:
         def cont() -> None:
-            with self._lock, with_transaction(self._conn.cursor()) as cursor:
+            with with_transaction(self._conn.cursor()) as cursor:
                 cursor.executemany(
                     sql("delete", "source"),
                     ({"filename": normcase(path)} for path in paths),
                 )
 
-        await self._ex.asubmit(cont)
+        async with self._lock:
+            await self._ex.submit(cont)
 
     async def mtimes(self) -> Mapping[PurePath, float]:
         def cont() -> Mapping[PurePath, float]:
-            with self._lock, with_transaction(self._conn.cursor()) as cursor:
+            with with_transaction(self._conn.cursor()) as cursor:
                 cursor.execute(sql("select", "sources"), ())
                 return {
                     PurePath(row["filename"]): row["mtime"] for row in cursor.fetchall()
                 }
 
-        return await self._ex.asubmit(cont)
+        async with self._lock:
+            return await self._ex.submit(cont)
 
     async def populate(self, path: PurePath, mtime: float, loaded: LoadedSnips) -> None:
         def cont() -> None:
-            with self._lock, with_transaction(self._conn.cursor()) as cursor:
+            with with_transaction(self._conn.cursor()) as cursor:
                 filename, source_id = normcase(path), uuid4().bytes
                 cursor.execute(sql("delete", "source"), {"filename": filename})
                 cursor.execute(
@@ -114,7 +107,8 @@ class SDB:
                         )
                 cursor.execute("PRAGMA optimize", ())
 
-        await self._ex.asubmit(cont)
+        async with self._lock:
+            await self._ex.submit(cont)
 
     async def select(
         self, opts: MatchOptions, filetype: str, word: str, sym: str, limitless: int
@@ -140,10 +134,5 @@ class SDB:
             except OperationalError:
                 return iter(())
 
-        await to_thread(self._interrupt)
-        try:
-            return await self._ex.asubmit(cont)
-        except CancelledError:
-            with timeit("INTERRUPT !! SNIPPETS"):
-                await to_thread(self._interrupt)
-            raise
+        async with self._interruption():
+            return await self._ex.submit(cont)

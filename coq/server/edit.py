@@ -15,22 +15,12 @@ from typing import (
 )
 from uuid import uuid4
 
-from pynvim import Nvim
-from pynvim.api import Buffer, Window
-from pynvim.api.common import NvimError
-from pynvim_pp.api import (
-    buf_commentstr,
-    buf_get_extmarks,
-    buf_get_lines,
-    buf_set_text,
-    create_ns,
-    cur_win,
-    win_get_buf,
-    win_get_cursor,
-    win_set_cursor,
-)
-from pynvim_pp.lib import decode, encode, write
+from pynvim_pp.buffer import Buffer
+from pynvim_pp.lib import decode, encode
 from pynvim_pp.logging import log
+from pynvim_pp.nvim import Nvim
+from pynvim_pp.types import NvimError
+from pynvim_pp.window import Window
 from std2.types import never
 
 from ..consts import DEBUG
@@ -369,15 +359,11 @@ def _shift(
     return new_insts, m_shift
 
 
-def apply(
-    nvim: Nvim, buf: Buffer, instructions: Iterable[EditInstruction]
-) -> _MarkShift:
+async def apply(buf: Buffer, instructions: Iterable[EditInstruction]) -> _MarkShift:
     insts, m_shift = _shift(instructions)
     for inst in insts:
         try:
-            buf_set_text(
-                nvim, buf=buf, begin=inst.begin, end=inst.end, text=inst.new_lines
-            )
+            await buf.set_text(begin=inst.begin, end=inst.end, text=inst.new_lines)
         except NvimError as e:
             tpl = """
             ${e}
@@ -415,16 +401,16 @@ def _cursor(cursor: NvimPos, instructions: Iterable[EditInstruction]) -> NvimPos
     return row, col
 
 
-def _parse(
-    nvim: Nvim, buf: Buffer, stack: Stack, state: State, comp: Completion
+async def _parse(
+    buf: Buffer, stack: Stack, state: State, comp: Completion
 ) -> Tuple[bool, Edit, Sequence[Mark]]:
     if isinstance(comp.primary_edit, SnippetEdit):
-        comment_str = buf_commentstr(nvim, buf=buf)
-        clipboard = nvim.funcs.getreg()
+        comment_str = await buf.commentstr() or ("", "")
+        clipboard = await Nvim.fn.getreg(str)
         info = ParseInfo(visual="", clipboard=clipboard, comment_str=comment_str)
         if isinstance(comp.primary_edit, SnippetRangeEdit):
             row, col = comp.primary_edit.begin
-            line, *_ = buf_get_lines(nvim, buf=buf, lo=row, hi=row + 1)
+            line, *_ = await buf.get_lines(lo=row, hi=row + 1)
             line_before = decode(
                 encode(line, encoding=comp.primary_edit.encoding)[:col]
             )
@@ -452,19 +438,17 @@ def _parse(
     return adjusted, edit, marks
 
 
-def _restore(
-    nvim: Nvim, win: Window, buf: Buffer, pos: NvimPos
-) -> Tuple[str, Optional[int]]:
+async def _restore(win: Window, buf: Buffer, pos: NvimPos) -> Tuple[str, Optional[int]]:
     row, _ = pos
-    ns = create_ns(nvim, ns=NS)
-    marks = tuple(buf_get_extmarks(nvim, buf=buf, id=ns))
+    ns = await Nvim.create_namespace(NS)
+    marks = await buf.get_extmarks(ns)
     if len(marks) != 2:
         return "", 0
     else:
         m1, m2 = marks
-        after, *_ = buf_get_lines(nvim, buf=buf, lo=row, hi=row + 1)
-        cur_row, cur_col = win_get_cursor(nvim, win=win)
-
+        after, *_ = await buf.get_lines(lo=row, hi=row + 1)
+        cur_row, cur_col = await win.get_cursor()
+        assert m1.end
         (_, lo), (_, hi) = m1.end, m2.begin
 
         binserted = encode(after)[lo:hi]
@@ -473,40 +457,44 @@ def _restore(
         movement = cur_col - lo if cur_row == row and lo <= cur_col <= hi else None
 
         if inserted:
-            buf_set_text(nvim, buf=buf, begin=m1.end, end=m2.begin, text=("",))
+            await buf.set_text(begin=m1.end, end=m2.begin, text=("",))
 
         return inserted, movement
 
 
-def edit(
-    nvim: Nvim,
+async def reset_undolevels() -> None:
+    undolevels = await Nvim.opts.get(int, "undolevels")
+    await Nvim.opts.set("undolevels", val=undolevels)
+
+
+async def edit(
     stack: Stack,
     state: State,
     metric: Metric,
     synthetic: bool,
 ) -> Optional[NvimPos]:
-    win = cur_win(nvim)
-    buf = win_get_buf(nvim, win=win)
+    win = await Window.get_current()
+    buf = await win.get_buf()
     if buf.number != state.context.buf_id:
         log.warn("%s", "stale buffer")
         return None
     else:
-        nvim.options["undolevels"] = nvim.options["undolevels"]
+        await reset_undolevels()
 
         if synthetic:
             inserted, movement = "", None
         else:
-            inserted, movement = _restore(
-                nvim, win=win, buf=buf, pos=state.context.position
+            inserted, movement = await _restore(
+                win=win, buf=buf, pos=state.context.position
             )
 
         try:
-            adjusted, primary, marks = _parse(
-                nvim, buf=buf, stack=stack, state=state, comp=metric.comp
+            adjusted, primary, marks = await _parse(
+                buf=buf, stack=stack, state=state, comp=metric.comp
             )
         except (NvimError, ParseError) as e:
             adjusted, primary, marks = False, metric.comp.primary_edit, ()
-            write(nvim, LANG("failed to parse snippet"))
+            await Nvim.write(LANG("failed to parse snippet"))
             log.info("%s", e)
 
         adjust_indent = metric.comp.adjust_indent and not adjusted
@@ -519,7 +507,7 @@ def edit(
             log.warn("%s", pformat(("OUT OF BOUNDS", (lo, hi), metric)))
             return None
         else:
-            limited_lines = buf_get_lines(nvim, buf=buf, lo=lo, hi=hi)
+            limited_lines = await buf.get_lines(lo=lo, hi=hi)
             lines = [*chain(repeat("", times=lo), limited_lines)]
             view = _lines(lines)
 
@@ -540,14 +528,14 @@ def edit(
             )
 
             if not synthetic:
-                stack.idb.inserted(metric.instance.bytes, sort_by=metric.comp.sort_by)
+                await stack.idb.inserted(
+                    metric.instance.bytes, sort_by=metric.comp.sort_by
+                )
 
-            m_shift = apply(nvim, buf=buf, instructions=instructions)
+            m_shift = await apply(buf=buf, instructions=instructions)
             if inserted:
                 try:
-                    buf_set_text(
-                        nvim,
-                        buf=buf,
+                    await buf.set_text(
                         begin=(n_row, n_col),
                         end=(n_row, n_col),
                         text=(inserted,),
@@ -557,13 +545,13 @@ def edit(
 
             if movement is not None:
                 try:
-                    win_set_cursor(nvim, win=win, row=n_row, col=n_col + movement)
+                    await win.set_cursor(row=n_row, col=n_col + movement)
                 except NvimError as e:
                     log.warn("%s", e)
 
             if marks:
                 new_marks = tuple(_shift_marks(m_shift, marks=marks))
-                mark(nvim, settings=stack.settings, buf=buf, marks=new_marks)
+                await mark(settings=stack.settings, buf=buf, marks=new_marks)
 
             if DEBUG:
                 log.debug(

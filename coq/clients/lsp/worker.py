@@ -1,4 +1,4 @@
-from asyncio import Task, as_completed, sleep
+from asyncio import Task, as_completed, create_task, gather, sleep
 from dataclasses import dataclass, field
 from enum import Enum, auto
 from typing import (
@@ -9,11 +9,9 @@ from typing import (
     MutableSequence,
     Optional,
     Tuple,
-    cast,
 )
 
-from pynvim_pp.lib import go
-from pynvim_pp.logging import with_suppress
+from pynvim_pp.logging import suppress_and_log
 from std2 import anext
 from std2.asyncio import cancel
 from std2.itertools import chunk
@@ -83,7 +81,6 @@ class Worker(BaseWorker[LSPClient, None]):
         self, context: Context, cached_clients: AbstractSet[str]
     ) -> AsyncIterator[LSPcomp]:
         return comp_lsp(
-            self._supervisor.nvim,
             short_name=self._options.short_name,
             always_on_top=self._options.always_on_top,
             weight_adjust=self._options.weight_adjust,
@@ -92,7 +89,7 @@ class Worker(BaseWorker[LSPClient, None]):
         )
 
     async def _poll(self) -> None:
-        with with_suppress(), timeit("LSP CACHE"):
+        with suppress_and_log(), timeit("LSP CACHE"):
             acc = {**self._local_cached.post}
             await self._cache.set_cache(acc)
             await sleep(_CACHE_PERIOD)
@@ -101,6 +98,15 @@ class Worker(BaseWorker[LSPClient, None]):
                 for chunked in chunk(comps, n=_CACHE_CHUNK):
                     await self._cache.set_cache({client: chunked})
                     await sleep(_CACHE_PERIOD)
+
+    async def interrupt(self) -> None:
+        poll = self._poll_task
+        self._poll_task = None
+
+        if poll:
+            await gather(cancel(poll), super().interrupt())
+        else:
+            await super().interrupt()
 
     async def work(self, context: Context) -> AsyncIterator[Completion]:
         poll = self._poll_task
@@ -182,4 +188,4 @@ class Worker(BaseWorker[LSPClient, None]):
                                 seen += 1
                                 yield comp
             finally:
-                self._poll_task = cast(Task, go(self._supervisor.nvim, aw=self._poll()))
+                self._poll_task = create_task(self._poll())

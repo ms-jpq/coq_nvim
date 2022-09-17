@@ -1,18 +1,15 @@
-from asyncio import CancelledError
-from concurrent.futures import Executor
 from contextlib import suppress
 from sqlite3 import Connection, Cursor, OperationalError
 from typing import Iterable, Iterator, Mapping
 
-from std2.asyncio import to_thread
 from std2.sqlite3 import with_transaction
 
 from ...consts import TREESITTER_DB
 from ...shared.executor import SingleThreadExecutor
 from ...shared.settings import MatchOptions
 from ...shared.sql import BIGGEST_INT, init_db, like_esc
-from ...shared.timeit import timeit
 from ...treesitter.types import Payload, SimplePayload
+from ..types import Interruptible
 from .sql import sql
 
 
@@ -37,13 +34,10 @@ def _ensure_buffer(cursor: Cursor, buf_id: int, filetype: str, filename: str) ->
         cursor.execute(sql("insert", "buffer"), row)
 
 
-class TDB:
-    def __init__(self, pool: Executor) -> None:
-        self._ex = SingleThreadExecutor(pool)
-        self._conn: Connection = self._ex.submit(_init)
-
-    def _interrupt(self) -> None:
-        self._conn.interrupt()
+class TDB(Interruptible):
+    def __init__(self) -> None:
+        self._ex = SingleThreadExecutor()
+        self._conn: Connection = self._ex.ssubmit(_init)
 
     async def vacuum(self, live_bufs: Mapping[int, int]) -> None:
         def cont() -> None:
@@ -65,7 +59,7 @@ class TDB:
                     )
                     cursor.execute("PRAGMA optimize", ())
 
-        await self._ex.asubmit(cont)
+        await self._ex.submit(cont)
 
     async def populate(
         self,
@@ -92,18 +86,18 @@ class TDB:
                 }
 
         def cont() -> None:
-            with suppress(OperationalError):
-                with with_transaction(self._conn.cursor()) as cursor:
-                    _ensure_buffer(
-                        cursor, buf_id=buf_id, filetype=filetype, filename=filename
-                    )
-                    cursor.execute(
-                        sql("delete", "words"),
-                        {"buffer_id": buf_id, "lo": lo, "hi": hi},
-                    )
-                    cursor.executemany(sql("insert", "word"), m1())
+            with with_transaction(self._conn.cursor()) as cursor:
+                _ensure_buffer(
+                    cursor, buf_id=buf_id, filetype=filetype, filename=filename
+                )
+                cursor.execute(
+                    sql("delete", "words"),
+                    {"buffer_id": buf_id, "lo": lo, "hi": hi},
+                )
+                cursor.executemany(sql("insert", "word"), m1())
 
-        await self._ex.asubmit(cont)
+        with suppress(OperationalError):
+            await self._ex.submit(cont)
 
     async def select(
         self,
@@ -157,10 +151,5 @@ class TDB:
             except OperationalError:
                 return iter(())
 
-        await to_thread(self._interrupt)
-        try:
-            return await self._ex.asubmit(cont)
-        except CancelledError:
-            with timeit("INTERRUPT !! TREESITTER"):
-                await to_thread(self._interrupt)
-            raise
+        async with self._interruption():
+            return await self._ex.submit(cont)

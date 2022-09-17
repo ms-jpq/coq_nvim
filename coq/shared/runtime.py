@@ -2,14 +2,14 @@ from __future__ import annotations
 
 from abc import abstractmethod
 from asyncio import (
-    AbstractEventLoop,
     CancelledError,
     Condition,
     Task,
     as_completed,
+    create_task,
+    gather,
     wait,
 )
-from concurrent.futures import Executor
 from dataclasses import dataclass
 from pathlib import Path
 from time import monotonic
@@ -18,6 +18,7 @@ from typing import (
     AsyncIterator,
     Awaitable,
     Generic,
+    Iterator,
     MutableSequence,
     Optional,
     Protocol,
@@ -27,9 +28,7 @@ from typing import (
 from uuid import UUID, uuid4
 from weakref import WeakSet
 
-from pynvim import Nvim
-from pynvim_pp.lib import go
-from pynvim_pp.logging import with_suppress
+from pynvim_pp.logging import suppress_and_log
 from std2.aitertools import aenumerate
 from std2.asyncio import cancel
 
@@ -53,7 +52,7 @@ class Metric:
 
 
 class PReviewer(Protocol[_T]):
-    def register(self, assoc: BaseClient) -> None:
+    async def register(self, assoc: BaseClient) -> None:
         ...
 
     async def begin(self, context: Context) -> _T:
@@ -74,18 +73,15 @@ class PReviewer(Protocol[_T]):
 class Supervisor:
     def __init__(
         self,
-        pool: Executor,
-        nvim: Nvim,
         vars_dir: Path,
         match: MatchOptions,
         comp: CompleteOptions,
         limits: Limits,
         reviewer: PReviewer,
     ) -> None:
-        self.pool = pool
         self.vars_dir = vars_dir
         self.match, self.comp, self.limits = match, comp, limits
-        self.nvim, self._reviewer = nvim, reviewer
+        self._reviewer = reviewer
 
         self.idling = Condition()
         self._workers: WeakSet[Worker] = WeakSet()
@@ -93,25 +89,27 @@ class Supervisor:
         self._lock = TracingLocker(name="Supervisor", force=True)
         self._work_task: Optional[Task] = None
 
-    def register(self, worker: Worker, assoc: BaseClient) -> None:
-        self._reviewer.register(assoc)
+    async def register(self, worker: Worker, assoc: BaseClient) -> None:
+        await self._reviewer.register(assoc)
         self._workers.add(worker)
 
-    def notify_idle(self) -> None:
-        async def cont() -> None:
-            async with self.idling:
-                self.idling.notify_all()
-
-        go(self.nvim, aw=cont())
+    async def notify_idle(self) -> None:
+        async with self.idling:
+            self.idling.notify_all()
 
     async def interrupt(self) -> None:
         task = self._work_task
         self._work_task = None
-        if task:
-            await cancel(task)
+
+        def cont() -> Iterator[Awaitable[None]]:
+            if task:
+                yield task
+            for worker in self._workers:
+                yield worker.interrupt()
+
+        await gather(*cont())
 
     def collect(self, context: Context) -> Awaitable[Sequence[Metric]]:
-        loop: AbstractEventLoop = self.nvim.loop
         now = monotonic()
         timeout = (
             self.limits.completion_manual_timeout
@@ -124,7 +122,7 @@ class Supervisor:
                 if prev:
                     await cancel(prev)
 
-            with with_suppress(), timeit("COLLECTED -- ALL"):
+            with suppress_and_log(), timeit("COLLECTED -- ALL"):
                 async with self._lock:
                     acc: MutableSequence[Metric] = []
 
@@ -144,7 +142,7 @@ class Supervisor:
                     await cancel(*pending)
                     return acc
 
-        self._work_task = task = loop.create_task(cont(self._work_task))
+        self._work_task = task = create_task(cont(self._work_task))
         return task
 
 
@@ -153,7 +151,13 @@ class Worker(Generic[_O_co, _T_co]):
         self._work_task: Optional[Task] = None
         self._work_lock = TracingLocker(name=options.short_name, force=True)
         self._supervisor, self._options, self._misc = supervisor, options, misc
-        self._supervisor.register(self, assoc=options)
+        create_task(self._supervisor.register(self, assoc=options))
+
+    async def interrupt(self) -> None:
+        prev = self._work_task
+        self._work_task = None
+        if prev:
+            await cancel(prev)
 
     @abstractmethod
     def work(self, context: Context) -> AsyncIterator[Completion]:
@@ -166,7 +170,6 @@ class Worker(Generic[_O_co, _T_co]):
         now: float,
         acc: MutableSequence[Metric],
     ) -> Task:
-        loop: AbstractEventLoop = self._supervisor.nvim.loop
         prev = self._work_task
 
         async def cont() -> None:
@@ -177,7 +180,7 @@ class Worker(Generic[_O_co, _T_co]):
                 if prev:
                     await cancel(prev)
 
-            with with_suppress(), timeit(f"WORKER -- {self._options.short_name}"):
+            with suppress_and_log(), timeit(f"WORKER -- {self._options.short_name}"):
                 await self._supervisor._reviewer.s_begin(
                     token, assoc=self._options, instance=instance
                 )
@@ -201,5 +204,5 @@ class Worker(Generic[_O_co, _T_co]):
                         items=items,
                     )
 
-        self._work_task = task = loop.create_task(cont())
+        self._work_task = task = create_task(cont())
         return task

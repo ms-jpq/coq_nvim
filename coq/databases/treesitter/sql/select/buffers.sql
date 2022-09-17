@@ -1,3 +1,4 @@
 SELECT
   rowid
-FROM buffers
+FROM
+  buffers

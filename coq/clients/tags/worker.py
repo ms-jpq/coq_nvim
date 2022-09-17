@@ -1,4 +1,4 @@
-from asyncio import gather
+from asyncio import create_task, gather
 from contextlib import suppress
 from os import linesep
 from os.path import normcase
@@ -14,10 +14,10 @@ from typing import (
     Tuple,
 )
 
-from pynvim.api.nvim import Nvim, NvimError
-from pynvim_pp.api import buf_name, list_bufs
-from pynvim_pp.lib import async_call, go
-from pynvim_pp.logging import with_suppress
+from pynvim_pp.atomic import Atomic
+from pynvim_pp.buffer import Buffer
+from pynvim_pp.logging import suppress_and_log
+from pynvim_pp.types import NvimError
 from std2.asyncio import to_thread
 
 from ...databases.tags.database import CTDB
@@ -31,14 +31,18 @@ from ...tags.parse import parse, run
 from ...tags.types import Tag
 
 
-async def _ls(nvim: Nvim) -> AbstractSet[str]:
-    def cont() -> Iterator[str]:
-        for buf in list_bufs(nvim, listed=True):
-            with suppress(NvimError):
-                filename = buf_name(nvim, buf=buf)
-                yield filename
+async def _ls() -> AbstractSet[str]:
+    try:
+        bufs = await Buffer.list(listed=True)
+        atomic = Atomic()
 
-    return await async_call(nvim, lambda: {*cont()})
+        for buf in bufs:
+            atomic.buf_get_name(buf)
+        names = await atomic.commit(str)
+    except NvimError:
+        return set()
+    else:
+        return {*names}
 
 
 async def _mtimes(paths: AbstractSet[str]) -> Mapping[str, float]:
@@ -132,15 +136,13 @@ class Worker(BaseWorker[TagsClient, CTDB]):
     ) -> None:
         self._exec, db = misc
         super().__init__(supervisor, options=options, misc=db)
-        go(supervisor.nvim, aw=self._poll())
+        create_task(self._poll())
 
     async def _poll(self) -> None:
         while True:
-            with with_suppress():
+            with suppress_and_log():
                 with timeit("IDLE :: TAGS"):
-                    buf_names, existing = await gather(
-                        _ls(self._supervisor.nvim), self._misc.paths()
-                    )
+                    buf_names, existing = await gather(_ls(), self._misc.paths())
                     paths = buf_names | existing.keys()
                     mtimes = await _mtimes(paths)
                     query_paths = tuple(

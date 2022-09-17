@@ -1,7 +1,5 @@
 from dataclasses import replace
 
-from pynvim.api.nvim import Nvim
-
 from ...registry import rpc
 from ...shared.repeat import sanitize
 from ...shared.types import ContextualEdit, Edit
@@ -23,13 +21,13 @@ def _edit(prev: Edit) -> Edit:
     return new_edit
 
 
-@rpc(blocking=True)
-def repeat(nvim: Nvim, stack: Stack) -> None:
-    ctx = context(nvim, options=stack.settings.match, state=state(), manual=True)
+@rpc()
+async def repeat(stack: Stack) -> None:
+    ctx = await context(options=stack.settings.match, state=state(), manual=True)
     s = state(context=ctx)
     metric = s.last_edit
     sanitized = _edit(metric.comp.primary_edit)
     new_metric = replace(
         metric, comp=replace(metric.comp, primary_edit=sanitized, secondary_edits=())
     )
-    edit(nvim, stack=stack, state=s, metric=new_metric, synthetic=True)
+    await edit(stack=stack, state=s, metric=new_metric, synthetic=True)

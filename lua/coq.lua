@@ -82,11 +82,28 @@ local start = function(deps, ...)
   local params = {
     cwd = cwd,
     on_exit = on_exit,
-    on_stdout = on_stdout,
-    on_stderr = on_stderr
+    on_stdout = (function()
+      if deps then
+        return nil
+      else
+        return on_stdout
+      end
+    end)(),
+    on_stderr = (function()
+      if deps then
+        return nil
+      else
+        return on_stderr
+      end
+    end)()
   }
-  job_id = vim.fn.jobstart(args, params)
-  return job_id
+  if deps then
+    vim.api.nvim_command [[new]]
+    vim.fn.termopen(args, params)
+  else
+    job_id = vim.fn.jobstart(args, params)
+    return job_id
+  end
 end
 
 coq.deps = function()
@@ -100,7 +117,15 @@ local set_coq_call = function(cmd)
     local args = {...}
 
     if not job_id then
-      job_id = start(false, "run", "--socket", vim.fn.serverstart())
+      job_id =
+        start(
+        false,
+        "run",
+        "--ppid",
+        vim.fn.getpid(),
+        "--socket",
+        vim.fn.serverstart()
+      )
     end
 
     if not err_exit and COQ[cmd] then

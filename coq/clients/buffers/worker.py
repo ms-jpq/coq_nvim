@@ -1,23 +1,15 @@
+from asyncio import create_task
 from contextlib import suppress
 from dataclasses import dataclass
 from os import linesep
 from pathlib import PurePath
 from typing import AsyncIterator, Iterator, Mapping, Optional, Sequence, Tuple
 
-from pynvim.api import Buffer, Nvim
-from pynvim.api.common import NvimError
-from pynvim_pp.api import (
-    buf_filetype,
-    buf_get_lines,
-    buf_line_count,
-    buf_name,
-    cur_win,
-    list_bufs,
-    win_get_buf,
-    win_get_cursor,
-)
-from pynvim_pp.lib import async_call, go
-from pynvim_pp.logging import with_suppress
+from pynvim_pp.buffer import Buffer, BufNum
+from pynvim_pp.logging import suppress_and_log
+from pynvim_pp.nvim import Nvim
+from pynvim_pp.types import NoneType, NvimError
+from pynvim_pp.window import Window
 
 from ...databases.buffers.database import BDB, BufferWord
 from ...paths.show import fmt_path
@@ -37,22 +29,22 @@ class _Info:
     buffers: Mapping[Buffer, int]
 
 
-def _info(nvim: Nvim) -> Optional[_Info]:
+async def _info() -> Optional[_Info]:
     try:
-        win = cur_win(nvim)
-        height: int = nvim.api.win_get_height(win)
-        buf = win_get_buf(nvim, win=win)
-        bufs = list_bufs(nvim, listed=True)
-        buffers = {buf: buf_line_count(nvim, buf=buf) for buf in bufs}
+        win = await Window.get_current()
+        height = await win.get_height()
+        buf = await win.get_buf()
+        bufs = await Buffer.list(listed=True)
+        buffers = {buf: await buf.line_count() for buf in bufs}
         if (current_lines := buffers.get(buf)) is None:
             return None
         else:
-            row, _ = win_get_cursor(nvim, win=win)
+            row, _ = await win.get_cursor()
             lo = max(0, row - height)
             hi = min(current_lines, row + height + 1)
-            lines = buf_get_lines(nvim, buf=buf, lo=lo, hi=hi)
-            filetype = buf_filetype(nvim, buf=buf)
-            filename = buf_name(nvim, buf=buf)
+            lines = await buf.get_lines(lo=lo, hi=hi)
+            filetype = await buf.filetype()
+            filename = (await buf.get_name()) or ""
             info = _Info(
                 buf_id=buf.number,
                 filetype=filetype,
@@ -85,20 +77,18 @@ class Worker(BaseWorker[BuffersClient, BDB]):
         self, supervisor: Supervisor, options: BuffersClient, misc: BDB
     ) -> None:
         super().__init__(supervisor, options=options, misc=misc)
-        go(supervisor.nvim, aw=self._poll())
+        create_task(self._poll())
 
     async def _poll(self) -> None:
-        nvim = self._supervisor.nvim
-
         while True:
-            with with_suppress():
-                if info := await async_call(nvim, _info, nvim):
+            with suppress_and_log():
+                if info := await _info():
                     lo, hi = info.range
                     buf_line_counts = {
-                        buf.number: line_count
+                        int(buf.number): line_count
                         for buf, line_count in info.buffers.items()
                     }
-                    dead = await self._misc.vacuum(buf_line_counts)
+                    await self._misc.vacuum(buf_line_counts)
                     await self.set_lines(
                         info.buf_id,
                         filetype=info.filetype,
@@ -107,16 +97,6 @@ class Worker(BaseWorker[BuffersClient, BDB]):
                         hi=hi,
                         lines=info.lines,
                     )
-
-                    bufs = {buf.number: buf for buf in info.buffers}
-
-                    def rm_dead() -> None:
-                        for buf_id in dead:
-                            if buf := bufs.get(buf_id):
-                                with suppress(NvimError):
-                                    nvim.api.buf_detach(buf)
-
-                    await async_call(nvim, rm_dead)
 
                 async with self._supervisor.idling:
                     await self._supervisor.idling.wait()

@@ -1,10 +1,9 @@
-from concurrent.futures import Executor
 from pathlib import Path, PurePath
 from shutil import which
-from typing import Iterator, Mapping, cast
+from typing import Any, Iterator, Mapping, cast
 
-from pynvim import Nvim
-from pynvim_pp.api import get_cwd
+from pynvim_pp.nvim import Nvim
+from pynvim_pp.types import NoneType
 from std2.configparser import hydrate
 from std2.graphlib import merge
 from std2.pickle.decoder import new_decoder
@@ -34,9 +33,9 @@ from .rt_types import Stack, ValidationError
 from .state import state
 
 
-def _settings(nvim: Nvim) -> Settings:
+async def _settings() -> Settings:
     yml = safe_load(CONFIG_YML.read_text("UTF-8"))
-    user_config = nvim.vars.get(SETTINGS_VAR, {})
+    user_config = cast(Any, (await Nvim.vars.get(NoneType, SETTINGS_VAR)) or {})
     u_conf = hydrate(user_config)
 
     if isinstance(u_conf, Mapping):
@@ -59,7 +58,6 @@ def _settings(nvim: Nvim) -> Settings:
 
 def _from_each_according_to_their_ability(
     settings: Settings,
-    pool: Executor,
     vars_dir: Path,
     cwd: PurePath,
     supervisor: Supervisor,
@@ -68,8 +66,7 @@ def _from_each_according_to_their_ability(
 
     if clients.buffers.enabled:
         bdb = BDB(
-            pool,
-            tokenization_limit=settings.limits.tokenization_limit,
+            settings.limits.tokenization_limit,
             unifying_chars=settings.match.unifying_chars,
             include_syms=settings.clients.buffers.match_syms,
         )
@@ -79,7 +76,7 @@ def _from_each_according_to_their_ability(
         yield PathsWorker(supervisor, options=clients.paths, misc=None)
 
     if clients.tree_sitter.enabled:
-        tdb = TDB(pool)
+        tdb = TDB()
         yield TreeWorker(supervisor, options=clients.tree_sitter, misc=tdb)
 
     if clients.lsp.enabled:
@@ -91,17 +88,16 @@ def _from_each_according_to_their_ability(
         )
 
     if clients.snippets.enabled:
-        sdb = SDB(pool, vars_dir=vars_dir)
+        sdb = SDB(vars_dir)
         yield SnippetWorker(supervisor, options=clients.snippets, misc=sdb)
 
     if clients.tags.enabled and (ctags := which("ctags")):
-        ctdb = CTDB(pool, vars_dir=vars_dir, cwd=cwd)
+        ctdb = CTDB(vars_dir, cwd=cwd)
         yield TagsWorker(supervisor, options=clients.tags, misc=(Path(ctags), ctdb))
 
     if clients.tmux.enabled and (tmux := which("tmux")):
         tmdb = TMDB(
-            pool,
-            tokenization_limit=settings.limits.tokenization_limit,
+            settings.limits.tokenization_limit,
             unifying_chars=settings.match.unifying_chars,
             include_syms=settings.clients.buffers.match_syms,
         )
@@ -111,20 +107,20 @@ def _from_each_according_to_their_ability(
         yield T9Worker(supervisor, options=clients.tabnine, misc=None)
 
 
-def stack(pool: Executor, nvim: Nvim) -> Stack:
-    settings = _settings(nvim)
-    pum_width = nvim.options["pumwidth"]
-    vars_dir = Path(nvim.funcs.stdpath("cache")) / "coq" if settings.xdg else VARS
-    s = state(cwd=get_cwd(nvim), pum_width=pum_width)
-    idb = IDB(pool)
+async def stack() -> Stack:
+    settings = await _settings()
+    pum_width = await Nvim.opts.get(int, "pumwidth")
+    vars_dir = (
+        Path(await Nvim.fn.stdpath(str, "cache")) / "coq" if settings.xdg else VARS
+    )
+    s = state(cwd=await Nvim.getcwd(), pum_width=pum_width)
+    idb = IDB()
     reviewer = Reviewer(
         icons=settings.display.icons,
         options=settings.match,
         db=idb,
     )
     supervisor = Supervisor(
-        pool=pool,
-        nvim=nvim,
         vars_dir=vars_dir,
         match=settings.match,
         comp=settings.completion,
@@ -134,7 +130,6 @@ def stack(pool: Executor, nvim: Nvim) -> Stack:
     workers = {
         *_from_each_according_to_their_ability(
             settings,
-            pool=pool,
             vars_dir=vars_dir,
             cwd=s.cwd,
             supervisor=supervisor,

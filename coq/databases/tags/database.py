@@ -1,22 +1,18 @@
-from asyncio import CancelledError
-from concurrent.futures import Executor
 from contextlib import suppress
 from hashlib import md5
 from os.path import normcase
 from pathlib import Path, PurePath
 from sqlite3 import Connection, OperationalError
-from threading import Lock
 from typing import AbstractSet, Iterator, Mapping, cast
 
 from pynvim_pp.lib import encode
-from std2.asyncio import to_thread
 from std2.sqlite3 import with_transaction
 
 from ...shared.executor import SingleThreadExecutor
 from ...shared.settings import MatchOptions
 from ...shared.sql import BIGGEST_INT, init_db, like_esc
-from ...shared.timeit import timeit
 from ...tags.types import Tag, Tags
+from ..types import Interruptible
 from .sql import sql
 
 _SCHEMA = "v5"
@@ -47,36 +43,33 @@ def _init(db_dir: Path, cwd: PurePath) -> Connection:
     return conn
 
 
-class CTDB:
-    def __init__(self, pool: Executor, vars_dir: Path, cwd: PurePath) -> None:
-        self._lock = Lock()
-        self._ex = SingleThreadExecutor(pool)
+class CTDB(Interruptible):
+    def __init__(self, vars_dir: Path, cwd: PurePath) -> None:
+        self._ex = SingleThreadExecutor()
         self._vars_dir = vars_dir / "clients" / "tags"
-        self._conn: Connection = self._ex.submit(lambda: _init(self._vars_dir, cwd=cwd))
-
-    def _interrupt(self) -> None:
-        with self._lock:
-            self._conn.interrupt()
+        self._conn: Connection = self._ex.ssubmit(
+            lambda: _init(self._vars_dir, cwd=cwd)
+        )
 
     async def swap(self, cwd: PurePath) -> None:
         def cont() -> None:
-            with self._lock:
-                self._conn.close()
-                self._conn = _init(self._vars_dir, cwd=cwd)
+            self._conn.close()
+            self._conn = _init(self._vars_dir, cwd=cwd)
 
-        await self._ex.asubmit(cont)
+        async with self._lock:
+            await self._ex.submit(cont)
 
     async def paths(self) -> Mapping[str, float]:
         def cont() -> Mapping[str, float]:
-            with self._lock, with_transaction(self._conn.cursor()) as cursor:
+            with with_transaction(self._conn.cursor()) as cursor:
                 cursor.execute(sql("select", "files"), ())
                 files = {row["filename"]: row["mtime"] for row in cursor.fetchall()}
                 return files
 
-        def step() -> Mapping[str, float]:
-            return self._ex.submit(cont)
-
-        return await to_thread(step)
+        try:
+            return await self._ex.submit(cont)
+        except OperationalError:
+            return {}
 
     async def reconciliate(self, dead: AbstractSet[str], new: Tags) -> None:
         def cont() -> None:
@@ -104,7 +97,7 @@ class CTDB:
                     cursor.executemany(sql("insert", "tag"), m2())
                     cursor.execute("PRAGMA optimize", ())
 
-        await self._ex.asubmit(cont)
+        await self._ex.submit(cont)
 
     async def select(
         self,
@@ -116,31 +109,26 @@ class CTDB:
         limitless: int,
     ) -> Iterator[Tag]:
         def cont() -> Iterator[Tag]:
+            with with_transaction(self._conn.cursor()) as cursor:
+                cursor.execute(
+                    sql("select", "tags"),
+                    {
+                        "cut_off": opts.fuzzy_cutoff,
+                        "look_ahead": opts.look_ahead,
+                        "limit": BIGGEST_INT if limitless else opts.max_results,
+                        "filename": filename,
+                        "line_num": line_num,
+                        "word": word,
+                        "sym": sym,
+                        "like_word": like_esc(word[: opts.exact_matches]),
+                        "like_sym": like_esc(sym[: opts.exact_matches]),
+                    },
+                )
+                rows = cursor.fetchall()
+                return (cast(Tag, {**row}) for row in rows)
+
+        async with self._interruption():
             try:
-                with with_transaction(self._conn.cursor()) as cursor:
-                    cursor.execute(
-                        sql("select", "tags"),
-                        {
-                            "cut_off": opts.fuzzy_cutoff,
-                            "look_ahead": opts.look_ahead,
-                            "limit": BIGGEST_INT if limitless else opts.max_results,
-                            "filename": filename,
-                            "line_num": line_num,
-                            "word": word,
-                            "sym": sym,
-                            "like_word": like_esc(word[: opts.exact_matches]),
-                            "like_sym": like_esc(sym[: opts.exact_matches]),
-                        },
-                    )
-                    rows = cursor.fetchall()
-                    return (cast(Tag, {**row}) for row in rows)
+                return await self._ex.submit(cont)
             except OperationalError:
                 return iter(())
-
-        await to_thread(self._interrupt)
-        try:
-            return await self._ex.asubmit(cont)
-        except CancelledError:
-            with timeit("INTERRUPT !! TAGS"):
-                await to_thread(self._interrupt)
-            raise

@@ -1,12 +1,12 @@
 from enum import Enum, auto
 from pathlib import Path
-from sys import stderr
 from typing import Sequence, Tuple
+from uuid import uuid4
 from webbrowser import open as open_w
 
-from pynvim import Nvim
-from pynvim_pp.api import buf_set_lines, buf_set_option, create_buf, win_close
+from pynvim_pp.buffer import Buffer
 from pynvim_pp.float_win import list_floatwins, open_float_win
+from pynvim_pp.nvim import Nvim
 from std2.argparse import ArgparseError, ArgParser
 from std2.types import never
 
@@ -38,6 +38,8 @@ from ...consts import (
 )
 from ...registry import rpc
 from ..rt_types import Stack
+
+_NS = uuid4()
 
 
 class _Topics(Enum):
@@ -97,23 +99,23 @@ def _parse_args(args: Sequence[str]) -> Tuple[_Topics, bool]:
     return _Topics[ns.topic], ns.web
 
 
-@rpc(blocking=True)
-def _help(nvim: Nvim, stack: Stack, args: Sequence[str]) -> None:
+@rpc()
+async def _help(stack: Stack, args: Sequence[str]) -> None:
     try:
         topic, use_web = _parse_args(args)
     except ArgparseError as e:
-        print(e, file=stderr, flush=True)
+        await Nvim.write(e, error=True)
     else:
         md, uri = _directory(topic)
         web_d = open_w(uri) if use_web else False
         if not web_d:
-            for win in list_floatwins(nvim):
-                win_close(nvim, win=win)
+            async for win in list_floatwins(_NS):
+                await win.close()
             lines = md.read_text("UTF-8").splitlines()
-            buf = create_buf(
-                nvim, listed=False, scratch=True, wipe=True, nofile=True, noswap=True
+            buf = await Buffer.create(
+                listed=False, scratch=True, wipe=True, nofile=True, noswap=True
             )
-            buf_set_lines(nvim, buf=buf, lo=0, hi=-1, lines=lines)
-            buf_set_option(nvim, buf=buf, key="modifiable", val=False)
-            buf_set_option(nvim, buf=buf, key="syntax", val="markdown")
-            open_float_win(nvim, margin=0, relsize=0.95, buf=buf, border="rounded")
+            await buf.set_lines(lines=lines)
+            await buf.opts.set("modifiable", val=False)
+            await buf.opts.set("syntax", val="markdown")
+            await open_float_win(_NS, margin=0, relsize=0.95, buf=buf, border="rounded")

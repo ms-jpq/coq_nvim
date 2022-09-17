@@ -1,9 +1,9 @@
+from asyncio.tasks import create_task
 from os import linesep
 from pathlib import Path
 from typing import AsyncIterator, Iterator, Tuple
 
-from pynvim_pp.lib import go
-from pynvim_pp.logging import with_suppress
+from pynvim_pp.logging import suppress_and_log
 
 from ...databases.tmux.database import TMDB, TmuxWord
 from ...shared.runtime import Supervisor
@@ -30,11 +30,11 @@ class Worker(BaseWorker[TmuxClient, TMDB]):
     ) -> None:
         self._exec, db = misc
         super().__init__(supervisor, options=options, misc=db)
-        go(supervisor.nvim, aw=self._poll())
+        create_task(self._poll())
 
     async def _poll(self) -> None:
         while True:
-            with with_suppress():
+            with suppress_and_log():
                 with timeit("IDLE :: TMUX"):
                     await self.periodical()
 

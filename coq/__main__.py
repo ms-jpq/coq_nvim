@@ -1,8 +1,7 @@
 from argparse import ArgumentParser, Namespace
-from concurrent.futures import ThreadPoolExecutor
+from asyncio import run as arun
 from contextlib import redirect_stderr, redirect_stdout
 from io import StringIO
-from multiprocessing import cpu_count
 from os import linesep
 from pathlib import Path
 from subprocess import DEVNULL, STDOUT, CalledProcessError, run
@@ -39,6 +38,7 @@ def parse_args() -> Namespace:
     sub_parsers = parser.add_subparsers(dest="command", required=True)
 
     with nullcontext(sub_parsers.add_parser("run")) as p:
+        p.add_argument("--ppid", required=True, type=int)
         p.add_argument("--socket", required=True)
         p.add_argument("--xdg")
 
@@ -85,8 +85,7 @@ if command == "deps":
             ).create(_RT_DIR)
     except (ImportError, CalledProcessError):
         msg = "Please install python3-venv separately. (apt, yum, apk, etc)"
-        io_out.seek(0)
-        print(msg, io_out.read(), file=stderr)
+        print(msg, io_out.getvalue(), file=stderr)
         exit(1)
     else:
         proc = run(
@@ -142,10 +141,11 @@ elif command == "run":
         elif lock != _REQ:
             raise ImportError()
         else:
-            import pynvim
             import pynvim_pp
-            import std2
             import yaml
+            from std2.sys import suicide
+
+            from .client import init
     except ImportError as e:
         msg = f"""
         Please update dependencies using :COQdeps
@@ -158,16 +158,12 @@ elif command == "run":
         print(e, msg, sep=linesep, end="", file=stderr)
         exit(1)
     else:
-        from pynvim import attach
-        from pynvim_pp.client import run_client
 
-        from .client import CoqClient
+        async def main() -> None:
+            async with suicide(args.ppid):
+                await init(args.socket)
 
-        nvim = attach("socket", path=args.socket)
-
-        with ThreadPoolExecutor(max_workers=min(64, max(32, cpu_count() + 10))) as pool:
-            code = run_client(nvim, pool=pool, client=CoqClient(pool=pool))
-            exit(code)
+        arun(main())
 
 else:
     assert False

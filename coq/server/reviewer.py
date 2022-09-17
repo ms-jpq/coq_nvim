@@ -78,16 +78,17 @@ class Reviewer(PReviewer[ReviewCtx]):
     def __init__(self, options: MatchOptions, icons: Icons, db: IDB) -> None:
         self._options, self._icons, self._db = options, icons, db
 
-    def register(self, assoc: BaseClient) -> None:
-        self._db.new_source(assoc.short_name)
+    async def register(self, assoc: BaseClient) -> None:
+        await self._db.new_source(assoc.short_name)
 
     async def begin(self, context: Context) -> ReviewCtx:
         inserted = await self._db.insertion_order(n_rows=100)
         words = chain.from_iterable(
             coalesce(
-                line,
-                unifying_chars=self._options.unifying_chars,
+                self._options.unifying_chars,
                 include_syms=True,
+                backwards=None,
+                chars=line,
             )
             for line in context.lines
         )

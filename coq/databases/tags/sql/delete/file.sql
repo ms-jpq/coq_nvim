@@ -1,3 +1,4 @@
-DELETE FROM files
+DELETE FROM
+  files
 WHERE
-  filename = X_NORM_CASE(:filename)
+  filename = X_NORM_CASE (:filename)

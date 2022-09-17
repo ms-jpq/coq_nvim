@@ -61,7 +61,7 @@ def sanitize_cached(comp: Completion, sort_by: Optional[str]) -> Completion:
 class CacheWorker:
     def __init__(self, supervisor: Supervisor) -> None:
         self._supervisor = supervisor
-        self._db = Database(supervisor.pool)
+        self._db = Database()
         self._cache_ctx = _CacheCtx(
             change_id=uuid4(),
             commit_id=uuid4(),
@@ -84,9 +84,10 @@ class CacheWorker:
             for key, val in new_comps.items():
                 if self._supervisor.comp.smart:
                     for word in coalesce(
-                        val.sort_by,
-                        unifying_chars=self._supervisor.match.unifying_chars,
-                        include_syms=True
+                        self._supervisor.match.unifying_chars,
+                        include_syms=True,
+                        backwards=None,
+                        chars=val.sort_by,
                     ):
                         yield key, word
                 else:

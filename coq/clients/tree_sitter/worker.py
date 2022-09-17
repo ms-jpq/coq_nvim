@@ -1,11 +1,11 @@
+from asyncio import create_task
 from os import linesep
 from pathlib import PurePath
 from typing import AsyncIterator, Iterator, Mapping, Optional, Tuple
 
-from pynvim import Nvim
-from pynvim_pp.api import buf_line_count, list_bufs
-from pynvim_pp.lib import async_call, go
-from pynvim_pp.logging import with_suppress
+from pynvim_pp.atomic import Atomic
+from pynvim_pp.buffer import Buffer
+from pynvim_pp.logging import suppress_and_log
 
 from ...databases.treesitter.database import TDB
 from ...paths.show import fmt_path
@@ -17,12 +17,14 @@ from ...treesitter.request import async_request
 from ...treesitter.types import Payload
 
 
-def _bufs(nvim: Nvim) -> Mapping[int, int]:
-    bufs = {
-        buf.number: buf_line_count(nvim, buf=buf)
-        for buf in list_bufs(nvim, listed=True)
-    }
-    return bufs
+async def _bufs() -> Mapping[int, int]:
+    bufs = await Buffer.list(listed=True)
+    atomic = Atomic()
+    for buf in bufs:
+        atomic.buf_line_count(buf)
+    linecounts = await atomic.commit(int)
+    counts = {int(buf.number): linecount for buf, linecount in zip(bufs, linecounts)}
+    return counts
 
 
 def _doc(client: TSClient, context: Context, payload: Payload) -> Optional[Doc]:
@@ -92,20 +94,18 @@ def _trans(client: TSClient, context: Context, payload: Payload) -> Completion:
 class Worker(BaseWorker[TSClient, TDB]):
     def __init__(self, supervisor: Supervisor, options: TSClient, misc: TDB) -> None:
         super().__init__(supervisor, options=options, misc=misc)
-        go(supervisor.nvim, aw=self._poll())
+        create_task(self._poll())
 
     async def _poll(self) -> None:
         while True:
-            with with_suppress():
-                bufs = await async_call(
-                    self._supervisor.nvim, _bufs, self._supervisor.nvim
-                )
+            with suppress_and_log():
+                bufs = await _bufs()
                 await self._misc.vacuum(bufs)
                 async with self._supervisor.idling:
                     await self._supervisor.idling.wait()
 
     async def populate(self) -> Optional[Tuple[bool, float]]:
-        if payload := await async_request(self._supervisor.nvim):
+        if payload := await async_request():
             keep_going = payload.elapsed <= self._options.slow_threshold
             await self._misc.populate(
                 payload.buf,

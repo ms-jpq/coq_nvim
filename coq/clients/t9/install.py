@@ -1,5 +1,4 @@
 from asyncio import sleep
-from typing import Callable
 from contextlib import suppress
 from io import BytesIO
 from os import X_OK, access, sep
@@ -7,7 +6,7 @@ from pathlib import Path, PurePath
 from platform import uname
 from socket import timeout as TimeoutE
 from string import Template
-from typing import Mapping, Optional, Tuple
+from typing import Callable, Mapping, Optional, Tuple
 from urllib.error import URLError
 from zipfile import ZipFile
 
