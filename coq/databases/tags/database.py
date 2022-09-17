@@ -61,15 +61,15 @@ class CTDB(Interruptible):
 
     async def paths(self) -> Mapping[str, float]:
         def cont() -> Mapping[str, float]:
-            try:
-                with with_transaction(self._conn.cursor()) as cursor:
-                    cursor.execute(sql("select", "files"), ())
-                    files = {row["filename"]: row["mtime"] for row in cursor.fetchall()}
-                    return files
-            except OperationalError:
-                return {}
+            with with_transaction(self._conn.cursor()) as cursor:
+                cursor.execute(sql("select", "files"), ())
+                files = {row["filename"]: row["mtime"] for row in cursor.fetchall()}
+                return files
 
-        return await self._ex.submit(cont)
+        try:
+            return await self._ex.submit(cont)
+        except OperationalError:
+            return {}
 
     async def reconciliate(self, dead: AbstractSet[str], new: Tags) -> None:
         def cont() -> None:
@@ -109,26 +109,26 @@ class CTDB(Interruptible):
         limitless: int,
     ) -> Iterator[Tag]:
         def cont() -> Iterator[Tag]:
-            try:
-                with with_transaction(self._conn.cursor()) as cursor:
-                    cursor.execute(
-                        sql("select", "tags"),
-                        {
-                            "cut_off": opts.fuzzy_cutoff,
-                            "look_ahead": opts.look_ahead,
-                            "limit": BIGGEST_INT if limitless else opts.max_results,
-                            "filename": filename,
-                            "line_num": line_num,
-                            "word": word,
-                            "sym": sym,
-                            "like_word": like_esc(word[: opts.exact_matches]),
-                            "like_sym": like_esc(sym[: opts.exact_matches]),
-                        },
-                    )
-                    rows = cursor.fetchall()
-                    return (cast(Tag, {**row}) for row in rows)
-            except OperationalError:
-                return iter(())
+            with with_transaction(self._conn.cursor()) as cursor:
+                cursor.execute(
+                    sql("select", "tags"),
+                    {
+                        "cut_off": opts.fuzzy_cutoff,
+                        "look_ahead": opts.look_ahead,
+                        "limit": BIGGEST_INT if limitless else opts.max_results,
+                        "filename": filename,
+                        "line_num": line_num,
+                        "word": word,
+                        "sym": sym,
+                        "like_word": like_esc(word[: opts.exact_matches]),
+                        "like_sym": like_esc(sym[: opts.exact_matches]),
+                    },
+                )
+                rows = cursor.fetchall()
+                return (cast(Tag, {**row}) for row in rows)
 
         async with self._interruption():
-            return await self._ex.submit(cont)
+            try:
+                return await self._ex.submit(cont)
+            except OperationalError:
+                return iter(())

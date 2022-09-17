@@ -106,7 +106,8 @@ async def snippet_paths(user_path: Optional[Path]) -> Sequence[Path]:
         for path in await Nvim.list_runtime_paths():
             yield path / "coq-user-snippets"
 
-    return [p async for p in cont()]
+    paths = [p async for p in cont()]
+    return paths
 
 
 async def user_mtimes(

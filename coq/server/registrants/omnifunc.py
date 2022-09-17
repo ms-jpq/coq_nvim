@@ -130,56 +130,56 @@ async def _resolve(stack: Stack, metric: Metric) -> Metric:
 
 @rpc()
 async def _comp_done(stack: Stack, event: Mapping[str, Any]) -> None:
-    data = event.get("user_data")
-    if data:
+    if data := event.get("user_data"):
         try:
             uid = _UDECODER(data)
         except DecodeError:
             pass
         else:
             s = state()
-            if metric := stack.metrics.get(uid):
+            if (metric := stack.metrics.get(uid)) and (ctx := s.context):
                 row, col = s.context.position
-                ns = await Nvim.create_namespace(NS)
                 buf = await Buffer.get_current()
-                await buf.clear_namespace(ns)
-                before, *_ = await buf.get_lines(lo=row, hi=row + 1)
+                if ctx.buf_id == buf.number:
+                    ns = await Nvim.create_namespace(NS)
+                    await buf.clear_namespace(ns)
+                    before, *_ = await buf.get_lines(lo=row, hi=row + 1)
 
-                e1 = ExtMark(
-                    buf=buf,
-                    marker=ExtMarker(1),
-                    begin=(row, 0),
-                    end=(row, col),
-                    meta={},
-                )
-                e2 = ExtMark(
-                    buf=buf,
-                    marker=ExtMarker(2),
-                    begin=(row, col),
-                    end=(row, len(encode(before))),
-                    meta={},
-                )
-                await buf.set_extmarks(ns, extmarks=(e1, e2))
-                new_metric = await _resolve(stack=stack, metric=metric)
-
-                if isinstance((extern := new_metric.comp.extern), ExternLSP):
-                    await cmd(extern=extern)
-
-                if new_metric.comp.uid in stack.metrics:
-                    inserted_at = await edit(
-                        stack=stack,
-                        state=s,
-                        metric=new_metric,
-                        synthetic=False,
+                    e1 = ExtMark(
+                        buf=buf,
+                        marker=ExtMarker(1),
+                        begin=(row, 0),
+                        end=(row, col),
+                        meta={},
                     )
-                    ins_pos = inserted_at or (-1, -1)
-                    state(
-                        inserted_pos=ins_pos,
-                        last_edit=new_metric,
-                        commit_id=uuid4(),
+                    e2 = ExtMark(
+                        buf=buf,
+                        marker=ExtMarker(2),
+                        begin=(row, col),
+                        end=(row, len(encode(before))),
+                        meta={},
                     )
-                else:
-                    log.warn("%s", "delayed completion")
+                    await buf.set_extmarks(ns, extmarks=(e1, e2))
+                    new_metric = await _resolve(stack=stack, metric=metric)
+
+                    if isinstance((extern := new_metric.comp.extern), ExternLSP):
+                        await cmd(extern=extern)
+
+                    if new_metric.comp.uid in stack.metrics:
+                        inserted_at = await edit(
+                            stack=stack,
+                            state=s,
+                            metric=new_metric,
+                            synthetic=False,
+                        )
+                        ins_pos = inserted_at or (-1, -1)
+                        state(
+                            inserted_pos=ins_pos,
+                            last_edit=new_metric,
+                            commit_id=uuid4(),
+                        )
+                    else:
+                        log.warn("%s", "delayed completion")
 
 
 _ = (

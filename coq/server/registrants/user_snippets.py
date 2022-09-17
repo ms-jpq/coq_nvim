@@ -219,7 +219,7 @@ async def snips(stack: Stack, args: Sequence[str]) -> None:
 
                     else:
                         await Nvim.write(LANG("snip parse succ"))
-                break
+                    break
             else:
                 await Nvim.write(LANG("snip source not enabled"))
 

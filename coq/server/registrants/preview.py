@@ -5,7 +5,17 @@ from html import unescape
 from itertools import chain
 from math import ceil
 from os import linesep
-from typing import Any, Callable, Iterator, Mapping, Optional, Sequence, Tuple, Union
+from typing import (
+    Any,
+    Awaitable,
+    Callable,
+    Iterator,
+    Mapping,
+    Optional,
+    Sequence,
+    Tuple,
+    Union,
+)
 from uuid import UUID, uuid4
 
 from pynvim_pp.buffer import Buffer, ExtMark, ExtMarker
@@ -193,8 +203,7 @@ async def _show_preview(stack: Stack, event: _Event, doc: Doc, s: State) -> None
         idx, rank, pos = k
         return pos.height * pos.width, idx == s.pum_location, -rank, -idx
 
-    ordered = sorted(pit, key=key, reverse=True)
-    if ordered:
+    if ordered := sorted(pit, key=key, reverse=True):
         (pum_location, _, pos), *__ = ordered
         state(pum_location=pum_location)
         buf = await Buffer.create(
@@ -302,6 +311,10 @@ async def _cmp_changed(stack: Stack, event: Mapping[str, Any] = {}) -> None:
             pass
         else:
             if metric := stack.metrics.get(uid):
+                await _virt_text(
+                    ghost=stack.settings.display.ghost_text,
+                    text=metric.comp.primary_edit.new_text,
+                )
                 s = state(preview_id=uid)
                 if metric.comp.extern:
                     await _resolve_comp(
@@ -318,18 +331,14 @@ async def _cmp_changed(stack: Stack, event: Mapping[str, Any] = {}) -> None:
                         doc=metric.comp.doc,
                         s=s,
                     )
-                await _virt_text(
-                    ghost=stack.settings.display.ghost_text,
-                    text=metric.comp.primary_edit.new_text,
-                )
 
 
 _ = autocmd("CompleteChanged") << f"lua {NAMESPACE}.{_cmp_changed.method}(vim.v.event)"
 
 
-@lru_cache
-async def _escaped() -> str:
-    return await Nvim.api.replace_termcodes(str, "<c-e>", True, False, True)
+@lru_cache(maxsize=None)
+def _escaped() -> Awaitable[str]:
+    return create_task(Nvim.api.replace_termcodes(str, "<c-e>", True, False, True))
 
 
 @rpc()
@@ -339,6 +348,6 @@ async def preview_preview(stack: Stack, *_: str) -> str:
         syntax = await buf.opts.get(str, "syntax")
         lines = await buf.get_lines()
         await Nvim.exec("stopinsert")
-        await set_preview(syntax=syntax, preview=lines)
+        create_task(set_preview(syntax=syntax, preview=lines))
 
     return await _escaped()

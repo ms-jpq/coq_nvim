@@ -107,6 +107,7 @@ async def _lines_event(
                             hi=hi,
                             lines=lines,
                         )
+                    break
 
                 if (
                     stack.settings.completion.always

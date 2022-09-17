@@ -1,3 +1,4 @@
+from contextlib import suppress
 from dataclasses import dataclass
 from itertools import islice
 from random import shuffle
@@ -61,30 +62,27 @@ class BDB(Interruptible):
         self._include_syms = include_syms
         self._conn: Connection = self._ex.ssubmit(_init)
 
-    async def vacuum(self, live_bufs: Mapping[int, int]) -> AbstractSet[int]:
-        def cont() -> AbstractSet[int]:
-            try:
-                with with_transaction(self._conn.cursor()) as cursor:
-                    cursor.execute(sql("select", "buffers"), ())
-                    existing = {row["rowid"] for row in cursor.fetchall()}
-                    dead = existing - live_bufs.keys()
-                    cursor.executemany(
-                        sql("delete", "buffer"),
-                        ({"buffer_id": buf_id} for buf_id in dead),
-                    )
-                    cursor.executemany(
-                        sql("delete", "lines"),
-                        (
-                            {"buffer_id": buf_id, "lo": line_count, "hi": -1}
-                            for buf_id, line_count in live_bufs.items()
-                        ),
-                    )
-                    cursor.execute("PRAGMA optimize", ())
-                    return dead
-            except OperationalError:
-                return set()
+    async def vacuum(self, live_bufs: Mapping[int, int]) -> None:
+        def cont() -> None:
+            with with_transaction(self._conn.cursor()) as cursor:
+                cursor.execute(sql("select", "buffers"), ())
+                existing = {row["rowid"] for row in cursor.fetchall()}
+                dead = existing - live_bufs.keys()
+                cursor.executemany(
+                    sql("delete", "buffer"),
+                    ({"buffer_id": buf_id} for buf_id in dead),
+                )
+                cursor.executemany(
+                    sql("delete", "lines"),
+                    (
+                        {"buffer_id": buf_id, "lo": line_count, "hi": -1}
+                        for buf_id, line_count in live_bufs.items()
+                    ),
+                )
+                cursor.execute("PRAGMA optimize", ())
 
-        return await self._ex.submit(cont)
+        with suppress(OperationalError):
+            await self._ex.submit(cont)
 
     async def buf_update(self, buf_id: int, filetype: str, filename: str) -> None:
         def cont() -> None:
@@ -170,7 +168,7 @@ class BDB(Interruptible):
                         },
                     )
 
-        async with self._lock:
+        with suppress(OperationalError):
             await self._ex.submit(cont)
 
     async def words(
@@ -182,33 +180,33 @@ class BDB(Interruptible):
         limitless: int,
     ) -> Iterator[BufferWord]:
         def cont() -> Iterator[BufferWord]:
-            try:
-                with with_transaction(self._conn.cursor()) as cursor:
-                    cursor.execute(
-                        sql("select", "words"),
-                        {
-                            "cut_off": opts.fuzzy_cutoff,
-                            "look_ahead": opts.look_ahead,
-                            "limit": BIGGEST_INT if limitless else opts.max_results,
-                            "filetype": filetype,
-                            "word": word,
-                            "sym": sym,
-                            "like_word": like_esc(word[: opts.exact_matches]),
-                            "like_sym": like_esc(sym[: opts.exact_matches]),
-                        },
+            with with_transaction(self._conn.cursor()) as cursor:
+                cursor.execute(
+                    sql("select", "words"),
+                    {
+                        "cut_off": opts.fuzzy_cutoff,
+                        "look_ahead": opts.look_ahead,
+                        "limit": BIGGEST_INT if limitless else opts.max_results,
+                        "filetype": filetype,
+                        "word": word,
+                        "sym": sym,
+                        "like_word": like_esc(word[: opts.exact_matches]),
+                        "like_sym": like_esc(sym[: opts.exact_matches]),
+                    },
+                )
+                rows = cursor.fetchall()
+                return (
+                    BufferWord(
+                        text=row["word"],
+                        filetype=row["filetype"],
+                        filename=row["filename"],
+                        line_num=row["line_num"] + 1,
                     )
-                    rows = cursor.fetchall()
-                    return (
-                        BufferWord(
-                            text=row["word"],
-                            filetype=row["filetype"],
-                            filename=row["filename"],
-                            line_num=row["line_num"] + 1,
-                        )
-                        for row in rows
-                    )
-            except OperationalError:
-                return iter(())
+                    for row in rows
+                )
 
         async with self._interruption():
-            return await self._ex.submit(cont)
+            try:
+                return await self._ex.submit(cont)
+            except OperationalError:
+                return iter(())

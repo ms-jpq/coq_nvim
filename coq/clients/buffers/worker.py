@@ -80,7 +80,6 @@ class Worker(BaseWorker[BuffersClient, BDB]):
         create_task(self._poll())
 
     async def _poll(self) -> None:
-
         while True:
             with suppress_and_log():
                 if info := await _info():
@@ -89,7 +88,7 @@ class Worker(BaseWorker[BuffersClient, BDB]):
                         int(buf.number): line_count
                         for buf, line_count in info.buffers.items()
                     }
-                    dead = {*map(BufNum, (await self._misc.vacuum(buf_line_counts)))}
+                    await self._misc.vacuum(buf_line_counts)
                     await self.set_lines(
                         info.buf_id,
                         filetype=info.filetype,
@@ -98,12 +97,6 @@ class Worker(BaseWorker[BuffersClient, BDB]):
                         hi=hi,
                         lines=info.lines,
                     )
-
-                    bufs = {buf.number: buf for buf in info.buffers}
-                    for buf_id in dead:
-                        if buf := bufs.get(buf_id):
-                            with suppress(NvimError):
-                                await Nvim.api.buf_detach(NoneType, buf)
 
                 async with self._supervisor.idling:
                     await self._supervisor.idling.wait()
