@@ -6,6 +6,7 @@ from uuid import uuid4
 
 from pynvim_pp.atomic import Atomic
 from pynvim_pp.buffer import Buffer
+from pynvim_pp.logging import suppress_and_log
 from pynvim_pp.nvim import Nvim
 from pynvim_pp.types import NoneType, NvimError
 from pynvim_pp.window import Window
@@ -90,31 +91,32 @@ async def _lines_event(
     if change_tick is not None:
 
         async def cont() -> None:
-            with timeit("POLL"), suppress(NvimError):
-                (mode, comp_mode, filetype, filename), _ = await gather(
-                    _status(buf), stack.supervisor.interrupt()
-                )
+            with suppress_and_log():
+                with timeit("POLL"), suppress(NvimError):
+                    (mode, comp_mode, filetype, filename), _ = await gather(
+                        _status(buf), stack.supervisor.interrupt()
+                    )
 
-                s = state(change_id=uuid4())
+                    s = state(change_id=uuid4())
 
-                for worker in stack.workers:
-                    if isinstance(worker, BufWorker):
-                        await worker.set_lines(
-                            buf.number,
-                            filetype=filetype,
-                            filename=filename,
-                            lo=lo,
-                            hi=hi,
-                            lines=lines,
-                        )
-                    break
+                    for worker in stack.workers:
+                        if isinstance(worker, BufWorker):
+                            await worker.set_lines(
+                                buf.number,
+                                filetype=filetype,
+                                filename=filename,
+                                lo=lo,
+                                hi=hi,
+                                lines=lines,
+                            )
+                        break
 
-                if (
-                    stack.settings.completion.always
-                    and not pending
-                    and mode.startswith("i")
-                    and comp_mode in {"", "eval", "function", "ctrl_x"}
-                ):
-                    await comp_func(stack=stack, s=s, manual=False)
+                    if (
+                        stack.settings.completion.always
+                        and not pending
+                        and mode.startswith("i")
+                        and comp_mode in {"", "eval", "function", "ctrl_x"}
+                    ):
+                        await comp_func(stack=stack, s=s, manual=False)
 
         _CELL.val = create_task(cont())

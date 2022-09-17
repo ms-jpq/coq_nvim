@@ -5,7 +5,7 @@ from uuid import UUID, uuid4
 
 from pynvim_pp.buffer import Buffer, ExtMark, ExtMarker
 from pynvim_pp.lib import encode
-from pynvim_pp.logging import log
+from pynvim_pp.logging import log, suppress_and_log
 from pynvim_pp.nvim import Nvim
 from std2.asyncio import cancel
 from std2.pickle.decoder import new_decoder
@@ -52,7 +52,7 @@ def _should_cont(
 
 
 async def comp_func(stack: Stack, s: State, manual: bool) -> None:
-    with timeit("**OVERALL**"):
+    with suppress_and_log(), timeit("**OVERALL**"):
 
         ctx = await context(options=stack.settings.match, state=s, manual=manual)
         should = (

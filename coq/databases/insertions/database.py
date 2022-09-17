@@ -1,4 +1,3 @@
-from asyncio.tasks import create_task
 from dataclasses import dataclass
 from json import loads
 from sqlite3 import Connection, OperationalError

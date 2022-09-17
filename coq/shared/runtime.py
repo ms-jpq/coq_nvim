@@ -81,8 +81,9 @@ class Supervisor:
         self._work_task: Optional[Task] = None
 
     async def register(self, worker: Worker, assoc: BaseClient) -> None:
-        await self._reviewer.register(assoc)
-        self._workers.add(worker)
+        with suppress_and_log():
+            await self._reviewer.register(assoc)
+            self._workers.add(worker)
 
     async def notify_idle(self) -> None:
         async with self.idling:

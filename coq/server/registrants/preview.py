@@ -21,6 +21,7 @@ from uuid import UUID, uuid4
 from pynvim_pp.buffer import Buffer, ExtMark, ExtMarker
 from pynvim_pp.float_win import border_w_h, list_floatwins
 from pynvim_pp.lib import display_width
+from pynvim_pp.logging import suppress_and_log
 from pynvim_pp.nvim import Nvim
 from pynvim_pp.preview import buf_set_preview, set_preview
 from pynvim_pp.window import Window
@@ -227,45 +228,46 @@ async def _resolve_comp(
         if prev:
             await cancel(prev)
 
-        if cached := stack.lru.get(state.preview_id):
-            doc = cached.doc
-        else:
-            if isinstance(extern, ExternLSP):
-                done, _ = await wait(
-                    (resolve(extern=extern),),
-                    timeout=timeout,
-                )
-                if comp := (await done.pop()) if done else None:
-                    stack.lru[state.preview_id] = comp
-                doc = (comp.doc if comp else None) or maybe_doc
-            elif isinstance(extern, ExternPath):
-                if doc := await show(
-                    cwd=state.cwd,
-                    path=extern.path,
-                    ellipsis=stack.settings.display.pum.ellipsis,
-                    height=stack.settings.clients.paths.preview_lines,
-                ):
-                    stack.lru[state.preview_id] = Completion(
-                        source="",
-                        always_on_top=False,
-                        weight_adjust=0,
-                        label="",
-                        sort_by="",
-                        primary_edit=Edit(new_text=""),
-                        adjust_indent=False,
-                        doc=doc,
-                        icon_match=None,
-                    )
+        with suppress_and_log():
+            if cached := stack.lru.get(state.preview_id):
+                doc = cached.doc
             else:
-                assert False
+                if isinstance(extern, ExternLSP):
+                    done, _ = await wait(
+                        (resolve(extern=extern),),
+                        timeout=timeout,
+                    )
+                    if comp := (await done.pop()) if done else None:
+                        stack.lru[state.preview_id] = comp
+                    doc = (comp.doc if comp else None) or maybe_doc
+                elif isinstance(extern, ExternPath):
+                    if doc := await show(
+                        cwd=state.cwd,
+                        path=extern.path,
+                        ellipsis=stack.settings.display.pum.ellipsis,
+                        height=stack.settings.clients.paths.preview_lines,
+                    ):
+                        stack.lru[state.preview_id] = Completion(
+                            source="",
+                            always_on_top=False,
+                            weight_adjust=0,
+                            label="",
+                            sort_by="",
+                            primary_edit=Edit(new_text=""),
+                            adjust_indent=False,
+                            doc=doc,
+                            icon_match=None,
+                        )
+                else:
+                    assert False
 
-        if doc:
-            await _show_preview(
-                stack=stack,
-                event=event,
-                doc=doc,
-                s=state,
-            )
+            if doc:
+                await _show_preview(
+                    stack=stack,
+                    event=event,
+                    doc=doc,
+                    s=state,
+                )
 
     _CELL.val = create_task(cont())
 
@@ -348,6 +350,11 @@ async def preview_preview(stack: Stack, *_: str) -> str:
         syntax = await buf.opts.get(str, "syntax")
         lines = await buf.get_lines()
         await Nvim.exec("stopinsert")
-        create_task(set_preview(syntax=syntax, preview=lines))
+
+        async def cont() -> None:
+            with suppress_and_log():
+                await set_preview(syntax=syntax, preview=lines)
+
+        create_task(cont())
 
     return await _escaped()
