@@ -1,5 +1,6 @@
 from asyncio import create_task, gather, sleep, wait
 from dataclasses import replace
+from time import monotonic
 from typing import AbstractSet, Any, Literal, Mapping, Sequence, Union
 from uuid import UUID, uuid4
 
@@ -11,6 +12,7 @@ from std2.asyncio import cancel
 from std2.pickle.decoder import new_decoder
 from std2.pickle.types import DecodeError
 
+from ...consts import DEBUG
 from ...lsp.requests.command import cmd
 from ...lsp.requests.resolve import resolve
 from ...registry import NAMESPACE, autocmd, rpc
@@ -51,7 +53,7 @@ def _should_cont(
         return have_space
 
 
-async def comp_func(stack: Stack, s: State, manual: bool) -> None:
+async def comp_func(stack: Stack, s: State, t0: float, manual: bool) -> None:
     with suppress_and_log(), timeit("**OVERALL**"):
 
         ctx = await context(options=stack.settings.match, state=s, manual=manual)
@@ -86,6 +88,9 @@ async def comp_func(stack: Stack, s: State, manual: bool) -> None:
                     )
                 )
                 await complete(stack=stack, col=col, comps=vim_comps)
+                if DEBUG:
+                    t1 = monotonic()
+                    log.info("%s", t1 - t0)
         else:
             await complete(stack=stack, col=col, comps=())
             state(inserted_pos=(-1, -1))
@@ -95,11 +100,12 @@ async def comp_func(stack: Stack, s: State, manual: bool) -> None:
 async def omnifunc(
     stack: Stack, findstart: Literal[0, 1], base: str
 ) -> Union[int, Sequence[Mapping[str, Any]]]:
+    t0 = monotonic()
     if findstart:
         return -1
     else:
         s = state(commit_id=uuid4())
-        create_task(comp_func(stack=stack, manual=True, s=s))
+        create_task(comp_func(stack=stack, manual=True, t0=t0, s=s))
         return ()
 
 
