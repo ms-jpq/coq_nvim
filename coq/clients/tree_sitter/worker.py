@@ -6,6 +6,7 @@ from typing import AsyncIterator, Iterator, Mapping, Optional, Tuple
 from pynvim_pp.atomic import Atomic
 from pynvim_pp.buffer import Buffer
 from pynvim_pp.logging import suppress_and_log
+from pynvim_pp.types import NvimError
 
 from ...databases.treesitter.database import TDB
 from ...paths.show import fmt_path
@@ -18,13 +19,18 @@ from ...treesitter.types import Payload
 
 
 async def _bufs() -> Mapping[int, int]:
-    bufs = await Buffer.list(listed=True)
-    atomic = Atomic()
-    for buf in bufs:
-        atomic.buf_line_count(buf)
-    linecounts = await atomic.commit(int)
-    counts = {int(buf.number): linecount for buf, linecount in zip(bufs, linecounts)}
-    return counts
+    try:
+        bufs = await Buffer.list(listed=True)
+        atomic = Atomic()
+        for buf in bufs:
+            atomic.buf_line_count(buf)
+        linecounts = await atomic.commit(int)
+        counts = {
+            int(buf.number): linecount for buf, linecount in zip(bufs, linecounts)
+        }
+        return counts
+    except NvimError:
+        return {}
 
 
 def _doc(client: TSClient, context: Context, payload: Payload) -> Optional[Doc]:
@@ -99,10 +105,10 @@ class Worker(BaseWorker[TSClient, TDB]):
     async def _poll(self) -> None:
         while True:
             with suppress_and_log():
-                bufs = await _bufs()
-                await self._misc.vacuum(bufs)
-                async with self._supervisor.idling:
-                    await self._supervisor.idling.wait()
+                if bufs := await _bufs():
+                    await self._misc.vacuum(bufs)
+                    async with self._supervisor.idling:
+                        await self._supervisor.idling.wait()
 
     async def populate(self) -> Optional[Tuple[bool, float]]:
         if payload := await async_request():
