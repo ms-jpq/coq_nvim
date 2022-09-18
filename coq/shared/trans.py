@@ -106,16 +106,16 @@ def trans_adjusted(
         coalesce(unifying_chars, include_syms=True, backwards=False, chars=new_text)
     )
 
-    if len(tokens) <= 1:
+    if edit.new_text.startswith(ctx.syms_before):
+        old_prefix = ctx.syms_before
+    elif edit.new_text.startswith(ctx.words_before):
+        old_prefix = ctx.words_before
+    elif len(tokens) <= 1:
         old_prefix = simple_before
     elif edit.old_prefix:
         old_prefix = edit.old_prefix
     elif is_word(unifying_chars, chr=simple_before):
         old_prefix = simple_before
-    elif edit.new_text.startswith(ctx.words_before):
-        old_prefix = ctx.words_before
-    elif edit.new_text.startswith(ctx.syms_before):
-        old_prefix = ctx.syms_before
     else:
         old_prefix = ""
 
