@@ -1,6 +1,7 @@
 from asyncio import Task, gather
 from asyncio.tasks import create_task
 from contextlib import suppress
+from time import monotonic
 from typing import Mapping, Optional, Sequence, Tuple, cast
 from uuid import uuid4
 
@@ -84,6 +85,7 @@ async def _lines_event(
     lines: Sequence[str],
     pending: bool,
 ) -> None:
+    t0 = monotonic()
     if task := _CELL.val:
         _CELL.val = None
         await cancel(task)
@@ -117,6 +119,6 @@ async def _lines_event(
                         and mode.startswith("i")
                         and comp_mode in {"", "eval", "function", "ctrl_x"}
                     ):
-                        await comp_func(stack=stack, s=s, manual=False)
+                        await comp_func(stack=stack, s=s, t0=t0, manual=False)
 
         _CELL.val = create_task(cont())
