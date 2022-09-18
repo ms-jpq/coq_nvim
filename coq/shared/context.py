@@ -44,6 +44,7 @@ EMPTY_CONTEXT = Context(
     l_syms_before="",
     l_syms_after="",
     is_lower=True,
+    change=None,
 )
 
 

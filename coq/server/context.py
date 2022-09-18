@@ -1,5 +1,5 @@
 from os.path import normcase
-from typing import Tuple, cast
+from typing import Optional, Tuple, cast
 
 from pynvim_pp.atomic import Atomic
 from pynvim_pp.buffer import Buffer, linefeed
@@ -9,11 +9,13 @@ from pynvim_pp.types import NoneType
 
 from ..shared.parse import lower
 from ..shared.settings import MatchOptions
-from ..shared.types import Context
+from ..shared.types import ChangeEvent, Context
 from .state import State
 
 
-async def context(options: MatchOptions, state: State, manual: bool) -> Context:
+async def context(
+    options: MatchOptions, state: State, change: Optional[ChangeEvent], manual: bool
+) -> Context:
     with Atomic() as (atomic, ns):
         ns.scr_col = atomic.call_function("screencol", ())
         ns.win_height = atomic.win_get_height(0)
@@ -93,5 +95,6 @@ async def context(options: MatchOptions, state: State, manual: bool) -> Context:
         l_syms_before=l_syms_before,
         l_syms_after=l_syms_after,
         is_lower=is_lower,
+        change=change,
     )
     return ctx

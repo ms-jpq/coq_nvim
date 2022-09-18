@@ -1,7 +1,7 @@
 from asyncio import create_task, gather, sleep, wait
 from dataclasses import replace
 from time import monotonic
-from typing import AbstractSet, Any, Literal, Mapping, Sequence, Union
+from typing import AbstractSet, Any, Literal, Mapping, Optional, Sequence, Union
 from uuid import UUID, uuid4
 
 from pynvim_pp.buffer import Buffer, ExtMark, ExtMarker
@@ -18,8 +18,7 @@ from ...lsp.requests.command import cmd
 from ...lsp.requests.resolve import resolve
 from ...registry import NAMESPACE, autocmd, rpc
 from ...shared.runtime import Metric
-from ...shared.timeit import timeit
-from ...shared.types import Context, ExternLSP, ExternPath
+from ...shared.types import ChangeEvent, Context, ExternLSP, ExternPath
 from ..completions import complete
 from ..context import context
 from ..edit import NS, edit
@@ -54,9 +53,13 @@ def _should_cont(
         return have_space
 
 
-async def comp_func(stack: Stack, s: State, t0: float, manual: bool) -> None:
+async def comp_func(
+    stack: Stack, s: State, change: Optional[ChangeEvent], t0: float, manual: bool
+) -> None:
     with suppress_and_log():
-        ctx = await context(options=stack.settings.match, state=s, manual=manual)
+        ctx = await context(
+            options=stack.settings.match, state=s, change=change, manual=manual
+        )
         should = (
             _should_cont(
                 s,
@@ -107,7 +110,7 @@ async def omnifunc(
         return -1
     else:
         s = state(commit_id=uuid4())
-        create_task(comp_func(stack=stack, manual=True, t0=t0, s=s))
+        create_task(comp_func(stack=stack, manual=True, change=None, t0=t0, s=s))
         return ()
 
 

@@ -19,6 +19,13 @@ BYTE_TRANS = {
 
 
 @dataclass(frozen=True)
+class ChangeEvent:
+    lo: int
+    hi: int
+    lines: Sequence[str]
+
+
+@dataclass(frozen=True)
 class Context:
     """
     |...                            line                            ...|
@@ -73,6 +80,8 @@ class Context:
     l_syms_after: str
 
     is_lower: bool
+
+    change: Optional[ChangeEvent]
 
 
 @dataclass(frozen=True)

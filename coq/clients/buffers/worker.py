@@ -1,17 +1,15 @@
 from asyncio import create_task
-from contextlib import suppress
 from dataclasses import dataclass
 from os import linesep
 from pathlib import PurePath
 from typing import AsyncIterator, Iterator, Mapping, Optional, Sequence, Tuple
 
-from pynvim_pp.buffer import Buffer, BufNum
+from pynvim_pp.buffer import Buffer
 from pynvim_pp.logging import suppress_and_log
-from pynvim_pp.nvim import Nvim
-from pynvim_pp.types import NoneType, NvimError
+from pynvim_pp.types import NvimError
 from pynvim_pp.window import Window
 
-from ...databases.buffers.database import BDB, BufferWord
+from ...databases.buffers.database import BDB, BufferWord, Update
 from ...paths.show import fmt_path
 from ...shared.runtime import Supervisor
 from ...shared.runtime import Worker as BaseWorker
@@ -125,12 +123,25 @@ class Worker(BaseWorker[BuffersClient, BDB]):
     async def work(self, context: Context) -> AsyncIterator[Completion]:
         async with self._work_lock:
             filetype = context.filetype if self._options.same_filetype else None
+            update = (
+                Update(
+                    buf_id=context.buf_id,
+                    filetype=context.filetype,
+                    filename=context.filename,
+                    lo=change.lo,
+                    hi=change.hi,
+                    lines=change.lines,
+                )
+                if (change := context.change)
+                else None
+            )
             words = await self._misc.words(
                 self._supervisor.match,
                 filetype=filetype,
                 word=context.words,
                 sym=context.syms if self._options.match_syms else "",
                 limitless=context.manual,
+                update=update,
             )
             for word in words:
                 edit = Edit(new_text=word.text)
