@@ -116,19 +116,6 @@ def trans_adjusted(
         old_prefix = ctx.words_before
     elif edit.new_text.startswith(ctx.syms_before):
         old_prefix = ctx.syms_before
-    elif before := next(
-        coalesce(
-            unifying_chars, include_syms=True, backwards=True, chars=ctx.syms_before
-        ),
-        None,
-    ):
-        after, *_ = tokens
-        if not is_word(unifying_chars, chr=before) and not is_word(
-            unifying_chars, chr=after
-        ):
-            old_prefix = before
-        else:
-            old_prefix = ""
     else:
         old_prefix = ""
 
