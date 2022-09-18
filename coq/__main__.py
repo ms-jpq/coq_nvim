@@ -3,7 +3,7 @@ from asyncio import run as arun
 from contextlib import redirect_stderr, redirect_stdout
 from io import StringIO
 from os import linesep
-from pathlib import Path
+from pathlib import Path, PurePath
 from subprocess import DEVNULL, STDOUT, CalledProcessError, run
 from sys import (
     executable,
@@ -14,7 +14,7 @@ from sys import (
     version_info,
 )
 from textwrap import dedent
-from typing import Union
+from typing import Any, Union
 
 from .consts import GIL_SWITCH, IS_WIN, REQUIREMENTS, RT_DIR, RT_PY, TOP_LEVEL, VARS
 
@@ -32,6 +32,14 @@ except ImportError:
     exit(1)
 
 
+def _socket(arg: str) -> Any:
+    if arg.startswith("localhost:"):
+        host, _, port = arg.rpartition(":")
+        return host, int(port)
+    else:
+        return PurePath(arg)
+
+
 def parse_args() -> Namespace:
     parser = ArgumentParser()
 
@@ -39,7 +47,7 @@ def parse_args() -> Namespace:
 
     with nullcontext(sub_parsers.add_parser("run")) as p:
         p.add_argument("--ppid", required=True, type=int)
-        p.add_argument("--socket", required=True)
+        p.add_argument("--socket", required=True, type=_socket)
         p.add_argument("--xdg")
 
     with nullcontext(sub_parsers.add_parser("deps")) as p:

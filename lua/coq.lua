@@ -116,16 +116,12 @@ local set_coq_call = function(cmd)
   coq[cmd] = function(...)
     local args = {...}
 
+    local srv = is_win and {"localhost:0"} or {}
+    local server = vim.fn.serverstart(unpack(srv))
+
     if not job_id then
       job_id =
-        start(
-        false,
-        "run",
-        "--ppid",
-        vim.fn.getpid(),
-        "--socket",
-        vim.fn.serverstart()
-      )
+        start(false, "run", "--ppid", vim.fn.getpid(), "--socket", server)
     end
 
     if not err_exit and COQ[cmd] then

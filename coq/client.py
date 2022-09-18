@@ -4,7 +4,6 @@ from contextlib import suppress
 from functools import wraps
 from logging import DEBUG as DEBUG_LV
 from logging import INFO
-from pathlib import PurePath
 from string import Template
 from sys import exit
 from textwrap import dedent
@@ -12,7 +11,7 @@ from typing import Any, Sequence, cast
 
 from pynvim_pp.logging import log, suppress_and_log
 from pynvim_pp.nvim import Nvim, conn
-from pynvim_pp.rpc import MsgType
+from pynvim_pp.rpc import MsgType, ServerAddr
 from pynvim_pp.types import Method, NoneType, RPCallable
 from std2.pickle.types import DecodeError
 
@@ -54,7 +53,7 @@ def _trans(stack: Stack, handler: _CB) -> _CB:
     return cast(_CB, f)
 
 
-async def init(socket: PurePath) -> None:
+async def init(socket: ServerAddr) -> None:
     _set_debug()
 
     async with conn(socket, default=_default) as client:
