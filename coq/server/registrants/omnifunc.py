@@ -9,6 +9,7 @@ from pynvim_pp.lib import encode
 from pynvim_pp.logging import log, suppress_and_log
 from pynvim_pp.nvim import Nvim
 from std2.asyncio import cancel
+from std2.locale import si_prefixed_smol
 from std2.pickle.decoder import new_decoder
 from std2.pickle.types import DecodeError
 
@@ -54,8 +55,7 @@ def _should_cont(
 
 
 async def comp_func(stack: Stack, s: State, t0: float, manual: bool) -> None:
-    with suppress_and_log(), timeit("**OVERALL**"):
-
+    with suppress_and_log():
         ctx = await context(options=stack.settings.match, state=s, manual=manual)
         should = (
             _should_cont(
@@ -90,7 +90,9 @@ async def comp_func(stack: Stack, s: State, t0: float, manual: bool) -> None:
                 await complete(stack=stack, col=col, comps=vim_comps)
                 if DEBUG:
                     t1 = monotonic()
-                    log.info("%s", t1 - t0)
+                    delta = t1 - t0
+                    msg = f"TOTAL >>> {si_prefixed_smol(delta, precision=0)}s".ljust(8)
+                    log.info("%s", msg)
         else:
             await complete(stack=stack, col=col, comps=())
             state(inserted_pos=(-1, -1))
