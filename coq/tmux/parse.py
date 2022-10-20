@@ -1,5 +1,7 @@
 from asyncio import gather
 from dataclasses import dataclass
+from functools import lru_cache
+from os import environ
 from pathlib import Path
 from typing import Iterator, Mapping, Optional, Sequence, Tuple
 
@@ -13,8 +15,6 @@ _SEP = "\x1f"
 class Pane:
     session: str
     uid: str
-    pane_active: bool
-    window_active: bool
 
     session_name: str
     window_index: int
@@ -34,8 +34,6 @@ async def _panes(tmux: Path, all_sessions: bool) -> Sequence[Pane]:
                 (
                     "#{session_id}",
                     "#{pane_id}",
-                    "#{pane_active}",
-                    "#{window_active}",
                     "#{session_name}",
                     "#{window_index}",
                     "#{window_name}",
@@ -57,8 +55,6 @@ async def _panes(tmux: Path, all_sessions: bool) -> Sequence[Pane]:
                     (
                         session,
                         pane_id,
-                        pane_active,
-                        window_active,
                         session_name,
                         window_index,
                         window_name,
@@ -68,8 +64,6 @@ async def _panes(tmux: Path, all_sessions: bool) -> Sequence[Pane]:
                     pane = Pane(
                         session=session,
                         uid=pane_id,
-                        pane_active=bool(int(pane_active)),
-                        window_active=bool(int(window_active)),
                         session_name=session_name,
                         window_index=int(window_index),
                         window_name=window_name,
@@ -79,21 +73,6 @@ async def _panes(tmux: Path, all_sessions: bool) -> Sequence[Pane]:
                     yield pane
 
             return tuple(cont())
-
-
-async def _session(tmux: Path) -> Optional[str]:
-    try:
-        proc = await call(
-            tmux, "display-message", "-p", "#{session_id}", check_returncode=set()
-        )
-    except OSError:
-        return None
-    else:
-        if proc.returncode:
-            return None
-        else:
-            session = decode(proc.stdout).strip()
-            return session
 
 
 async def _screenshot(pane: Pane) -> Tuple[Pane, str]:
@@ -117,19 +96,18 @@ async def _screenshot(pane: Pane) -> Tuple[Pane, str]:
             return pane, text
 
 
+@lru_cache(maxsize=None)
+def pane_id() -> Optional[str]:
+    return environ.get("TMUX_PANE")
+
+
 async def snapshot(
     tmux: Path, all_sessions: bool
 ) -> Tuple[Optional[Pane], Mapping[Pane, str]]:
-    session, panes = await gather(
-        _session(tmux), _panes(tmux, all_sessions=all_sessions)
-    )
+    panes = await _panes(tmux, all_sessions=all_sessions)
     shots = await gather(*map(_screenshot, panes))
     current = next(
-        (
-            pane
-            for pane in panes
-            if pane.session == session and pane.window_active and pane.pane_active
-        ),
+        (pane for pane in panes if pane.uid == pane_id()),
         None,
     )
     snapshot = {pane: text for pane, text in shots}
