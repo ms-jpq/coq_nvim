@@ -28,6 +28,16 @@ This is the minimum number of characters matched before `coq.nvim` will consider
 3
 ```
 
+#### coq_settings.completion.replace_suffix_threshold
+
+See above.
+
+**default:**
+
+```json
+2
+```
+
 #### coq_settings.completion.smart
 
 Tries (even harder) to reconcile differences between document and modifications.

@@ -52,6 +52,7 @@ def _line_match(
 
 def trans(
     replace_prefix_threshold: int,
+    replace_suffix_threshold: int,
     unifying_chars: AbstractSet[str],
     line_before: str,
     line_after: str,
@@ -66,7 +67,7 @@ def trans(
     )
     rest = new_text[len(l_match) :]
     r_match = _line_match(
-        replace_prefix_threshold,
+        replace_suffix_threshold,
         unifying_chars=unifying_chars,
         lhs=False,
         existing=line_after,
@@ -84,11 +85,13 @@ def trans(
 def trans_adjusted(
     unifying_chars: AbstractSet[str],
     replace_prefix_threshold: int,
+    replace_suffix_threshold: int,
     ctx: Context,
     new_text: str,
 ) -> ContextualEdit:
     edit = trans(
         replace_prefix_threshold,
+        replace_suffix_threshold=replace_suffix_threshold,
         unifying_chars=unifying_chars,
         line_before=ctx.line_before,
         line_after=ctx.line_after,
@@ -96,9 +99,6 @@ def trans_adjusted(
     )
 
     simple_before = cword_before(
-        unifying_chars, lower=False, context=ctx, sort_by=edit.new_text
-    )
-    simple_after = cword_after(
         unifying_chars, lower=False, context=ctx, sort_by=edit.new_text
     )
 
@@ -121,7 +121,15 @@ def trans_adjusted(
     else:
         old_prefix = ""
 
-    old_suffix = simple_after if len(tokens) <= 1 else edit.old_suffix
+    if len(edit.old_suffix) >= replace_suffix_threshold:
+        old_suffix = edit.old_suffix
+    elif len(tokens) <= 1:
+        simple_after = cword_after(
+            unifying_chars, lower=False, context=ctx, sort_by=edit.new_text
+        )
+        old_suffix = simple_after
+    else:
+        old_suffix = edit.old_suffix
 
     adjusted = ContextualEdit(
         new_text=edit.new_text,

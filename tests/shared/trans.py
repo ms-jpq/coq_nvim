@@ -41,6 +41,7 @@ class Trans(TestCase):
 
         actual = trans(
             _MIN_MATCH_LEN,
+            _MIN_MATCH_LEN,
             unifying_chars=set(),
             line_before=lhs,
             line_after=rhs,
@@ -57,6 +58,7 @@ class Trans(TestCase):
         new_prefix = "ab"
 
         actual = trans(
+            _MIN_MATCH_LEN,
             _MIN_MATCH_LEN,
             unifying_chars=set(),
             line_before=lhs,
@@ -75,6 +77,7 @@ class Trans(TestCase):
 
         actual = trans(
             _MIN_MATCH_LEN,
+            _MIN_MATCH_LEN,
             unifying_chars=set(),
             line_before=lhs,
             line_after=rhs,
@@ -91,6 +94,7 @@ class Trans(TestCase):
         new_prefix = "bb"
 
         actual = trans(
+            _MIN_MATCH_LEN,
             _MIN_MATCH_LEN,
             unifying_chars=set(),
             line_before=lhs,
@@ -109,6 +113,7 @@ class Trans(TestCase):
 
         actual = trans(
             _MIN_MATCH_LEN,
+            _MIN_MATCH_LEN,
             unifying_chars=set(),
             line_before=lhs,
             line_after=rhs,
@@ -126,6 +131,7 @@ class Trans(TestCase):
 
         actual = trans(
             _MIN_MATCH_LEN,
+            _MIN_MATCH_LEN,
             unifying_chars=set(),
             line_before=lhs,
             line_after=rhs,
@@ -142,6 +148,7 @@ class Trans(TestCase):
         new_prefix = "abecf"
 
         actual = trans(
+            _MIN_MATCH_LEN,
             _MIN_MATCH_LEN,
             unifying_chars=set(),
             line_before=lhs,

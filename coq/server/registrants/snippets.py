@@ -193,6 +193,7 @@ async def _dump_compiled(
 def _trans(
     unifying_chars: AbstractSet[str],
     replace_prefix_threshold: int,
+    replace_suffix_threshold: int,
     info: ParseInfo,
     snips: Iterable[ParsedSnippet],
 ) -> Iterator[Tuple[ParsedSnippet, Edit, Sequence[Mark]]]:
@@ -201,6 +202,7 @@ def _trans(
         parsed, marks = parse_basic(
             unifying_chars,
             replace_prefix_threshold=replace_prefix_threshold,
+            replace_suffix_threshold=replace_suffix_threshold,
             adjust_indent=False,
             context=EMPTY_CONTEXT,
             snippet=edit,
@@ -300,6 +302,7 @@ def compile_one(
         _trans(
             stack.settings.match.unifying_chars,
             replace_prefix_threshold=stack.settings.completion.replace_prefix_threshold,
+            replace_suffix_threshold=stack.settings.completion.replace_suffix_threshold,
             info=info,
             snips=snips,
         )
@@ -333,6 +336,7 @@ async def compile_user_snippets(stack: Stack, worker: SnipWorker) -> None:
             _trans(
                 stack.settings.match.unifying_chars,
                 replace_prefix_threshold=stack.settings.completion.replace_prefix_threshold,
+                replace_suffix_threshold=stack.settings.completion.replace_suffix_threshold,
                 info=info,
                 snips=loaded.snippets.values(),
             )

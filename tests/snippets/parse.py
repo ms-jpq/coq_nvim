@@ -31,6 +31,7 @@ class Parser(TestCase):
                     parse_basic(
                         set(),
                         replace_prefix_threshold=0,
+                        replace_suffix_threshold=0,
                         adjust_indent=False,
                         context=EMPTY_CONTEXT,
                         snippet=edit,

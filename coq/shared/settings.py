@@ -101,6 +101,7 @@ class CompleteOptions:
     always: bool
     smart: bool
     replace_prefix_threshold: int
+    replace_suffix_threshold: int
     skip_after: AbstractSet[str]
 
 

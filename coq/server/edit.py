@@ -164,6 +164,7 @@ def _edit_trans(
     unifying_chars: AbstractSet[str],
     adjust_indent: bool,
     replace_prefix_threshold: int,
+    replace_suffix_threshold: int,
     ctx: Context,
     lines: _Lines,
     edit: Edit,
@@ -171,6 +172,7 @@ def _edit_trans(
     adjusted = trans_adjusted(
         unifying_chars,
         replace_prefix_threshold=replace_prefix_threshold,
+        replace_suffix_threshold=replace_suffix_threshold,
         ctx=ctx,
         new_text=edit.new_text,
     )
@@ -183,6 +185,7 @@ def _edit_trans(
 def _range_edit_trans(
     unifying_chars: AbstractSet[str],
     replace_prefix_threshold: int,
+    replace_suffix_threshold: int,
     adjust_indent: bool,
     ctx: Context,
     primary: bool,
@@ -194,6 +197,7 @@ def _range_edit_trans(
             unifying_chars,
             adjust_indent=adjust_indent,
             replace_prefix_threshold=replace_prefix_threshold,
+            replace_suffix_threshold=replace_suffix_threshold,
             ctx=ctx,
             lines=lines,
             edit=edit,
@@ -254,6 +258,7 @@ def _instructions(
     ctx: Context,
     unifying_chars: AbstractSet[str],
     replace_prefix_threshold: int,
+    replace_suffix_threshold: int,
     adjust_indent: bool,
     lines: _Lines,
     primary: Edit,
@@ -263,6 +268,7 @@ def _instructions(
         inst = _range_edit_trans(
             unifying_chars,
             replace_prefix_threshold=replace_prefix_threshold,
+            replace_suffix_threshold=replace_suffix_threshold,
             adjust_indent=adjust_indent,
             ctx=ctx,
             primary=True,
@@ -281,6 +287,7 @@ def _instructions(
         inst = _edit_trans(
             unifying_chars,
             replace_prefix_threshold=replace_prefix_threshold,
+            replace_suffix_threshold=replace_suffix_threshold,
             adjust_indent=adjust_indent,
             ctx=ctx,
             lines=lines,
@@ -295,6 +302,7 @@ def _instructions(
         yield _range_edit_trans(
             unifying_chars,
             replace_prefix_threshold=replace_prefix_threshold,
+            replace_suffix_threshold=replace_suffix_threshold,
             adjust_indent=adjust_indent,
             ctx=ctx,
             primary=False,
@@ -425,6 +433,7 @@ async def _parse(
             edit, marks = parse_basic(
                 stack.settings.match.unifying_chars,
                 replace_prefix_threshold=stack.settings.completion.replace_prefix_threshold,
+                replace_suffix_threshold=stack.settings.completion.replace_suffix_threshold,
                 adjust_indent=comp.adjust_indent,
                 context=state.context,
                 snippet=comp.primary_edit,
@@ -517,6 +526,7 @@ async def edit(
                     unifying_chars=stack.settings.match.unifying_chars,
                     adjust_indent=adjust_indent,
                     replace_prefix_threshold=stack.settings.completion.replace_prefix_threshold,
+                    replace_suffix_threshold=stack.settings.completion.replace_suffix_threshold,
                     lines=view,
                     primary=primary,
                     secondary=metric.comp.secondary_edits,

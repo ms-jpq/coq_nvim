@@ -130,6 +130,7 @@ def parse_ranged(
 def parse_basic(
     unifying_chars: AbstractSet[str],
     replace_prefix_threshold: int,
+    replace_suffix_threshold: int,
     adjust_indent: bool,
     context: Context,
     snippet: SnippetEdit,
@@ -141,6 +142,7 @@ def parse_basic(
     trans_ctx = trans_adjusted(
         unifying_chars,
         replace_prefix_threshold=replace_prefix_threshold,
+        replace_suffix_threshold=replace_suffix_threshold,
         ctx=context,
         new_text=sort_by,
     )
