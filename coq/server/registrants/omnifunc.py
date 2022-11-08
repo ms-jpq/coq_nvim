@@ -125,7 +125,7 @@ async def _resolve(stack: Stack, metric: Metric) -> Metric:
             )
         else:
             done, not_done = await wait(
-                (resolve(extern=extern),),
+                (create_task(resolve(extern=extern)),),
                 timeout=stack.settings.clients.lsp.resolve_timeout,
             )
             await cancel(*not_done)

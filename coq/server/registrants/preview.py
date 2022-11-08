@@ -234,7 +234,7 @@ async def _resolve_comp(
             else:
                 if isinstance(extern, ExternLSP):
                     done, _ = await wait(
-                        (resolve(extern=extern),),
+                        (create_task(resolve(extern=extern)),),
                         timeout=timeout,
                     )
                     if comp := (await done.pop()) if done else None:
