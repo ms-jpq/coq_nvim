@@ -25,6 +25,7 @@ from std2.types import never
 
 from ..consts import DEBUG
 from ..lang import LANG
+from ..shared.parse import coalesce
 from ..shared.runtime import Metric
 from ..shared.trans import indent_adjusted, trans_adjusted
 from ..shared.types import (
@@ -192,7 +193,22 @@ def _range_edit_trans(
     lines: _Lines,
     edit: BaseRangeEdit,
 ) -> EditInstruction:
-    if primary and not isinstance(edit, ParsedEdit) and edit.begin == edit.end:
+    if (
+        primary
+        and not isinstance(edit, ParsedEdit)
+        and edit.begin == edit.end
+        and len(
+            tuple(
+                coalesce(
+                    unifying_chars,
+                    include_syms=True,
+                    backwards=True,
+                    chars=edit.new_text,
+                )
+            )
+        )
+        > 1
+    ):
         return _edit_trans(
             unifying_chars,
             adjust_indent=adjust_indent,
