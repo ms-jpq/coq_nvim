@@ -202,7 +202,7 @@ def _range_edit_trans(
                 coalesce(
                     unifying_chars,
                     include_syms=True,
-                    backwards=True,
+                    backwards=None,
                     chars=edit.new_text,
                 )
             )
