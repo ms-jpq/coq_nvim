@@ -168,8 +168,7 @@ elif command == "run":
     else:
 
         async def main() -> None:
-            async with suicide(args.ppid):
-                await init(args.socket)
+            await init(args.socket, ppid=args.ppid)
 
         arun(main())
 
