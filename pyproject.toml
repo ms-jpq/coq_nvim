@@ -1,0 +1,7 @@
+[project]
+name            = "coq_nvim"
+requires-python = ">=3.8.0"
+version         = "0"
+
+[project.optional-dependencies]
+dev = ["mypy", "types-PyYAML"]
