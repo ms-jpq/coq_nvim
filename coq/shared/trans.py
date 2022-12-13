@@ -108,9 +108,9 @@ def trans_adjusted(
 
     if len(edit.old_prefix) >= replace_prefix_threshold:
         old_prefix = edit.old_prefix
-    elif edit.new_text.startswith(ctx.syms_before):
+    elif ctx.syms_before and edit.new_text.startswith(ctx.syms_before):
         old_prefix = ctx.syms_before
-    elif edit.new_text.startswith(ctx.words_before):
+    elif ctx.words_before and edit.new_text.startswith(ctx.words_before):
         old_prefix = ctx.words_before
     elif len(tokens) <= 1:
         old_prefix = simple_before
