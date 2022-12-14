@@ -157,8 +157,7 @@ class Worker(BaseWorker[T9Client, None]):
                     await Nvim.write(LANG("end T9 download"))
 
     async def _clean(self) -> None:
-        proc = self._proc
-        if proc:
+        if proc := self._proc:
             self._proc = None
             with suppress(ProcessLookupError):
                 proc.kill()
