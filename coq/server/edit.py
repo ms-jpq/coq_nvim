@@ -252,7 +252,7 @@ def _range_edit_trans(
         cursor_yoffset = (r2 - r1) + (len(lines_before) - 1)
         cursor_xpos = (
             (
-                len(encode(lines_before[-1])) - 1
+                len(encode(lines_before[-1]))
                 if len(lines_before) > 1
                 else len(lines.b_lines8[r2][:c1]) + len(encode(lines_before[0]))
             )
