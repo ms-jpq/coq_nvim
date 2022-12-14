@@ -125,7 +125,7 @@ def _contextual_edit_trans(
     )
     c2 = (
         len(encode(old_suffix_lines[-1]))
-        if len(old_prefix_lines) > 1
+        if len(old_suffix_lines) > 1
         else col + len(encode(old_suffix_lines[0]))
     )
 
