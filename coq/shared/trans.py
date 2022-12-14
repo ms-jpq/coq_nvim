@@ -2,6 +2,7 @@ from itertools import chain, repeat
 from typing import AbstractSet, Iterable, Iterator
 
 from pynvim_pp.text_object import is_word
+from std2.string import removesuffix
 
 from ..shared.settings import CompleteOptions, MatchOptions
 from .context import cword_after, cword_before
@@ -129,11 +130,14 @@ def trans_adjusted(
                 else ""
             )
         else:
+            first_token = next(iter(tokens), "")
+            pure_sym_before = ctx.syms_before.removesuffix(ctx.words_before)
+            limited_sym_before = pure_sym_before[-len(first_token) :]
+            syms_before = limited_sym_before + ctx.words_before
+
             old_prefix = (
-                ctx.syms_before
-                if multi_set_ratio(
-                    ctx.syms_before, new_text, look_ahead=match.look_ahead
-                )
+                syms_before
+                if multi_set_ratio(syms_before, new_text, look_ahead=match.look_ahead)
                 >= match.fuzzy_cutoff
                 else ""
             )
