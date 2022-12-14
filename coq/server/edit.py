@@ -1,3 +1,4 @@
+from contextlib import suppress
 from dataclasses import dataclass
 from itertools import chain, repeat
 from pprint import pformat
@@ -251,7 +252,7 @@ def _range_edit_trans(
         cursor_yoffset = (r2 - r1) + (len(lines_before) - 1)
         cursor_xpos = (
             (
-                len(encode(lines_before[-1]))
+                len(encode(lines_before[-1])) - 1
                 if len(lines_before) > 1
                 else len(lines.b_lines8[r2][:c1]) + len(encode(lines_before[0]))
             )
@@ -392,8 +393,16 @@ async def apply(buf: Buffer, instructions: Iterable[EditInstruction]) -> _MarkSh
             tpl = """
             ${e}
             ${inst}
+            ${ctx}
             """
-            msg = Template(dedent(tpl)).substitute(e=e, inst=inst)
+
+            (r1, _), (r2, _) = inst.begin, inst.end
+            try:
+                ctx = await buf.get_lines(min(r1, r2), max(r1, r2) + 1)
+            except NvimError:
+                ctx = ""
+
+            msg = Template(dedent(tpl)).substitute(e=e, inst=inst, ctx=ctx)
             log.warn(f"%s", msg)
 
     return m_shift
