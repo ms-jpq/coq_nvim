@@ -1,4 +1,3 @@
-from contextlib import suppress
 from dataclasses import dataclass
 from itertools import chain, repeat
 from pprint import pformat
