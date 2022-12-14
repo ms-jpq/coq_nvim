@@ -38,7 +38,7 @@ _DECODER = new_decoder[RespL1](RespL1, strict=False)
 _ENCODER = new_encoder[Request](Request)
 
 
-def _encode(context: Context, limit: int) -> Any:
+def _encode(context: Context, id: int, limit: int) -> Any:
     row, _ = context.position
     before = context.linefeed.join(chain(context.lines_before, (context.line_before,)))
     after = context.linefeed.join(chain((context.line_after,), context.lines_after))
@@ -46,6 +46,7 @@ def _encode(context: Context, limit: int) -> Any:
     ieof = row + context.win_size >= context.line_count
 
     l2 = ReqL2(
+        correlation_id=id,
         filename=context.filename,
         before=before,
         after=after,
@@ -59,10 +60,11 @@ def _encode(context: Context, limit: int) -> Any:
 
 
 def _decode(
-    client: T9Client, ellipsis: str, syntax: str, reply: Response
+    client: T9Client, ellipsis: str, syntax: str, id: int, reply: Response
 ) -> Iterator[Completion]:
     if (
         not isinstance(reply, Mapping)
+        or not reply.get("correlation_id") == id
         or not isinstance((old_prefix := reply.get("old_prefix")), str)
         or not isinstance((results := reply.get("results")), Sequence)
     ):
@@ -206,13 +208,14 @@ class Worker(BaseWorker[T9Client, None]):
                 await self._clean()
 
             if self._bin:
+                id = 0
                 req = _encode(
                     context,
+                    id=id,
                     limit=self._supervisor.match.max_results,
                 )
                 json = dumps(req, check_circular=False, ensure_ascii=False)
-                reply = await self._comm(context.cwd, json=json)
-                if reply:
+                if reply := await self._comm(context.cwd, json=json):
                     try:
                         resp = loads(reply)
                     except JSONDecodeError as e:
@@ -222,6 +225,7 @@ class Worker(BaseWorker[T9Client, None]):
                             self._options,
                             ellipsis=self._supervisor.display.pum.ellipsis,
                             syntax=context.filetype,
+                            id=id,
                             reply=resp,
                         ):
                             yield comp
