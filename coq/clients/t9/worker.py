@@ -8,7 +8,7 @@ from asyncio import (
 from asyncio.locks import Lock
 from asyncio.subprocess import Process
 from contextlib import suppress
-from itertools import chain
+from itertools import chain, count
 from json import dumps, loads
 from json.decoder import JSONDecodeError
 from os import X_OK, access
@@ -130,6 +130,7 @@ class Worker(BaseWorker[T9Client, None]):
         self._bin: Optional[PurePath] = None
         self._proc: Optional[Process] = None
         self._cwd: Optional[PurePath] = None
+        self._count = count()
         super().__init__(supervisor, options=options, misc=misc)
         create_task(self._install())
         create_task(self._poll())
@@ -208,7 +209,7 @@ class Worker(BaseWorker[T9Client, None]):
                 await self._clean()
 
             if self._bin:
-                id = 0
+                id = next(self._count)
                 req = _encode(
                     context,
                     id=id,
