@@ -125,7 +125,7 @@ def trans_adjusted(
                     ctx.words_before, new_text, look_ahead=match.look_ahead
                 )
                 >= match.fuzzy_cutoff
-                else ""
+                else edit.old_prefix
             )
         else:
             first_token = next(iter(tokens), "")
@@ -137,7 +137,7 @@ def trans_adjusted(
                 syms_before
                 if multi_set_ratio(syms_before, new_text, look_ahead=match.look_ahead)
                 >= match.fuzzy_cutoff
-                else ""
+                else edit.old_prefix
             )
     else:
         old_prefix = edit.old_prefix
