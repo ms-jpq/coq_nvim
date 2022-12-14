@@ -117,8 +117,6 @@ def trans_adjusted(
             match.unifying_chars, lower=False, context=ctx, sort_by=edit.new_text
         )
         old_prefix = simple_before
-    elif edit.old_prefix:
-        old_prefix = edit.old_prefix
     elif chr := next(chain.from_iterable(tokens), ""):
         if is_word(match.unifying_chars, chr=chr):
             old_prefix = (
@@ -142,7 +140,7 @@ def trans_adjusted(
                 else ""
             )
     else:
-        old_prefix = ""
+        old_prefix = edit.old_prefix
 
     if len(edit.old_suffix) >= comp.replace_suffix_threshold:
         old_suffix = edit.old_suffix
