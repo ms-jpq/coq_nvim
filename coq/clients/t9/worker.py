@@ -64,7 +64,7 @@ def _decode(
 ) -> Iterator[Completion]:
     if (
         not isinstance(reply, Mapping)
-        or not reply.get("correlation_id") == id
+        or ((r_id := reply.get("correlation_id")) and r_id != id)
         or not isinstance((old_prefix := reply.get("old_prefix")), str)
         or not isinstance((results := reply.get("results")), Sequence)
     ):
