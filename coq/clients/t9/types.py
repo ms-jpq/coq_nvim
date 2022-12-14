@@ -35,4 +35,5 @@ class RespL1:
 class Response(TypedDict):
     correlation_id: int
     old_prefix: str
+    user_message: Sequence[str]
     results: Sequence[Any]
