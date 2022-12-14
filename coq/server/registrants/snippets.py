@@ -39,7 +39,7 @@ from ...lang import LANG
 from ...paths.show import fmt_path
 from ...registry import NAMESPACE, atomic, rpc
 from ...shared.context import EMPTY_CONTEXT
-from ...shared.settings import SnippetWarnings
+from ...shared.settings import CompleteOptions, MatchOptions, SnippetWarnings
 from ...shared.timeit import timeit
 from ...shared.types import Edit, Mark, SnippetEdit, SnippetGrammar
 from ...snippets.loaders.load import load_direct
@@ -191,18 +191,16 @@ async def _dump_compiled(
 
 
 def _trans(
-    unifying_chars: AbstractSet[str],
-    replace_prefix_threshold: int,
-    replace_suffix_threshold: int,
+    match: MatchOptions,
+    comp: CompleteOptions,
     info: ParseInfo,
     snips: Iterable[ParsedSnippet],
 ) -> Iterator[Tuple[ParsedSnippet, Edit, Sequence[Mark]]]:
     for snip in snips:
         edit = SnippetEdit(grammar=snip.grammar, new_text=snip.content)
         parsed, marks = parse_basic(
-            unifying_chars,
-            replace_prefix_threshold=replace_prefix_threshold,
-            replace_suffix_threshold=replace_suffix_threshold,
+            match,
+            comp=comp,
             adjust_indent=False,
             context=EMPTY_CONTEXT,
             snippet=edit,
@@ -300,9 +298,8 @@ def compile_one(
     filetype, exts, snips = load_neosnippet(grammar, path=path, lines=lines)
     parsed = tuple(
         _trans(
-            stack.settings.match.unifying_chars,
-            replace_prefix_threshold=stack.settings.completion.replace_prefix_threshold,
-            replace_suffix_threshold=stack.settings.completion.replace_suffix_threshold,
+            stack.settings.match,
+            comp=stack.settings.completion,
             info=info,
             snips=snips,
         )
@@ -334,9 +331,8 @@ async def compile_user_snippets(stack: Stack, worker: SnipWorker) -> None:
         )
         _ = tuple(
             _trans(
-                stack.settings.match.unifying_chars,
-                replace_prefix_threshold=stack.settings.completion.replace_prefix_threshold,
-                replace_suffix_threshold=stack.settings.completion.replace_suffix_threshold,
+                stack.settings.match,
+                comp=stack.settings.completion,
                 info=info,
                 snips=loaded.snippets.values(),
             )

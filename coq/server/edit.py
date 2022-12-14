@@ -27,6 +27,7 @@ from ..consts import DEBUG
 from ..lang import LANG
 from ..shared.parse import coalesce
 from ..shared.runtime import Metric
+from ..shared.settings import CompleteOptions, MatchOptions
 from ..shared.trans import indent_adjusted, trans_adjusted
 from ..shared.types import (
     UTF8,
@@ -162,21 +163,14 @@ def _contextual_edit_trans(
 
 
 def _edit_trans(
-    unifying_chars: AbstractSet[str],
+    match: MatchOptions,
+    comp: CompleteOptions,
     adjust_indent: bool,
-    replace_prefix_threshold: int,
-    replace_suffix_threshold: int,
     ctx: Context,
     lines: _Lines,
     edit: Edit,
 ) -> EditInstruction:
-    adjusted = trans_adjusted(
-        unifying_chars,
-        replace_prefix_threshold=replace_prefix_threshold,
-        replace_suffix_threshold=replace_suffix_threshold,
-        ctx=ctx,
-        new_text=edit.new_text,
-    )
+    adjusted = trans_adjusted(match, comp=comp, ctx=ctx, new_text=edit.new_text)
     inst = _contextual_edit_trans(
         ctx, adjust_indent=adjust_indent, lines=lines, edit=adjusted
     )
@@ -184,9 +178,8 @@ def _edit_trans(
 
 
 def _range_edit_trans(
-    unifying_chars: AbstractSet[str],
-    replace_prefix_threshold: int,
-    replace_suffix_threshold: int,
+    match: MatchOptions,
+    comp: CompleteOptions,
     adjust_indent: bool,
     ctx: Context,
     primary: bool,
@@ -200,7 +193,7 @@ def _range_edit_trans(
         and len(
             tuple(
                 coalesce(
-                    unifying_chars,
+                    match.unifying_chars,
                     include_syms=True,
                     backwards=None,
                     chars=edit.new_text,
@@ -210,10 +203,9 @@ def _range_edit_trans(
         > 1
     ):
         return _edit_trans(
-            unifying_chars,
+            match,
+            comp=comp,
             adjust_indent=adjust_indent,
-            replace_prefix_threshold=replace_prefix_threshold,
-            replace_suffix_threshold=replace_suffix_threshold,
             ctx=ctx,
             lines=lines,
             edit=edit,
@@ -272,9 +264,8 @@ def _range_edit_trans(
 
 def _instructions(
     ctx: Context,
-    unifying_chars: AbstractSet[str],
-    replace_prefix_threshold: int,
-    replace_suffix_threshold: int,
+    match: MatchOptions,
+    comp: CompleteOptions,
     adjust_indent: bool,
     lines: _Lines,
     primary: Edit,
@@ -282,9 +273,8 @@ def _instructions(
 ) -> Iterator[EditInstruction]:
     if isinstance(primary, BaseRangeEdit):
         inst = _range_edit_trans(
-            unifying_chars,
-            replace_prefix_threshold=replace_prefix_threshold,
-            replace_suffix_threshold=replace_suffix_threshold,
+            match,
+            comp=comp,
             adjust_indent=adjust_indent,
             ctx=ctx,
             primary=True,
@@ -301,9 +291,8 @@ def _instructions(
 
     elif isinstance(primary, Edit):
         inst = _edit_trans(
-            unifying_chars,
-            replace_prefix_threshold=replace_prefix_threshold,
-            replace_suffix_threshold=replace_suffix_threshold,
+            match,
+            comp=comp,
             adjust_indent=adjust_indent,
             ctx=ctx,
             lines=lines,
@@ -316,9 +305,8 @@ def _instructions(
 
     for edit in secondary:
         yield _range_edit_trans(
-            unifying_chars,
-            replace_prefix_threshold=replace_prefix_threshold,
-            replace_suffix_threshold=replace_suffix_threshold,
+            match,
+            comp=comp,
             adjust_indent=adjust_indent,
             ctx=ctx,
             primary=False,
@@ -455,9 +443,8 @@ async def _parse(
             )
         else:
             edit, marks = parse_basic(
-                stack.settings.match.unifying_chars,
-                replace_prefix_threshold=stack.settings.completion.replace_prefix_threshold,
-                replace_suffix_threshold=stack.settings.completion.replace_suffix_threshold,
+                stack.settings.match,
+                comp=stack.settings.completion,
                 adjust_indent=comp.adjust_indent,
                 context=state.context,
                 snippet=comp.primary_edit,
@@ -547,10 +534,9 @@ async def edit(
             instructions = _consolidate(
                 *_instructions(
                     state.context,
-                    unifying_chars=stack.settings.match.unifying_chars,
+                    match=stack.settings.match,
+                    comp=stack.settings.completion,
                     adjust_indent=adjust_indent,
-                    replace_prefix_threshold=stack.settings.completion.replace_prefix_threshold,
-                    replace_suffix_threshold=stack.settings.completion.replace_suffix_threshold,
                     lines=view,
                     primary=primary,
                     secondary=metric.comp.secondary_edits,

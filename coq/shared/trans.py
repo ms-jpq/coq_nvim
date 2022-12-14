@@ -3,7 +3,9 @@ from typing import AbstractSet, Iterable, Iterator
 
 from pynvim_pp.text_object import is_word
 
+from ..shared.settings import CompleteOptions, MatchOptions
 from .context import cword_after, cword_before
+from .fuzzy import multi_set_ratio
 from .parse import coalesce, lower
 from .types import Context, ContextualEdit
 
@@ -83,49 +85,66 @@ def trans(
 
 
 def trans_adjusted(
-    unifying_chars: AbstractSet[str],
-    replace_prefix_threshold: int,
-    replace_suffix_threshold: int,
+    match: MatchOptions,
+    comp: CompleteOptions,
     ctx: Context,
     new_text: str,
 ) -> ContextualEdit:
     edit = trans(
-        replace_prefix_threshold,
-        replace_suffix_threshold=replace_suffix_threshold,
-        unifying_chars=unifying_chars,
+        comp.replace_prefix_threshold,
+        replace_suffix_threshold=comp.replace_suffix_threshold,
+        unifying_chars=match.unifying_chars,
         line_before=ctx.line_before,
         line_after=ctx.line_after,
         new_text=new_text,
     )
 
-    simple_before = cword_before(
-        unifying_chars, lower=False, context=ctx, sort_by=edit.new_text
-    )
-
     tokens = tuple(
-        coalesce(unifying_chars, include_syms=True, backwards=False, chars=new_text)
+        coalesce(
+            match.unifying_chars, include_syms=True, backwards=False, chars=new_text
+        )
     )
 
-    if len(edit.old_prefix) >= replace_prefix_threshold:
+    if len(edit.old_prefix) >= comp.replace_prefix_threshold:
         old_prefix = edit.old_prefix
     elif ctx.syms_before and edit.new_text.startswith(ctx.syms_before):
         old_prefix = ctx.syms_before
     elif ctx.words_before and edit.new_text.startswith(ctx.words_before):
         old_prefix = ctx.words_before
     elif len(tokens) <= 1:
+        simple_before = cword_before(
+            match.unifying_chars, lower=False, context=ctx, sort_by=edit.new_text
+        )
         old_prefix = simple_before
     elif edit.old_prefix:
         old_prefix = edit.old_prefix
-    elif is_word(unifying_chars, chr=simple_before):
-        old_prefix = simple_before
+    elif chr := next(chain.from_iterable(tokens), ""):
+        if is_word(match.unifying_chars, chr=chr):
+            old_prefix = (
+                ctx.words_before
+                if multi_set_ratio(
+                    ctx.words_before, new_text, look_ahead=match.look_ahead
+                )
+                >= match.fuzzy_cutoff
+                else ""
+            )
+        else:
+            old_prefix = (
+                ctx.syms_before
+                if multi_set_ratio(
+                    ctx.syms_before, new_text, look_ahead=match.look_ahead
+                )
+                >= match.fuzzy_cutoff
+                else ""
+            )
     else:
         old_prefix = ""
 
-    if len(edit.old_suffix) >= replace_suffix_threshold:
+    if len(edit.old_suffix) >= comp.replace_suffix_threshold:
         old_suffix = edit.old_suffix
     elif len(tokens) <= 1:
         simple_after = cword_after(
-            unifying_chars, lower=False, context=ctx, sort_by=edit.new_text
+            match.unifying_chars, lower=False, context=ctx, sort_by=edit.new_text
         )
         old_suffix = simple_after
     else:

@@ -224,3 +224,19 @@ class Settings:
     completion: CompleteOptions
     keymap: KeyMapping
     clients: Clients
+
+
+EMPTY_MATCH = MatchOptions(
+    unifying_chars=set(),
+    max_results=0,
+    look_ahead=0,
+    exact_matches=0,
+    fuzzy_cutoff=0,
+)
+EMPTY_COMP = CompleteOptions(
+    always=False,
+    smart=True,
+    replace_prefix_threshold=0,
+    replace_suffix_threshold=0,
+    skip_after=set(),
+)

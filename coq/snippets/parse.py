@@ -1,12 +1,13 @@
 from dataclasses import dataclass
 from itertools import accumulate
 from pprint import pformat
-from typing import AbstractSet, Callable, Iterable, Iterator, Sequence, Tuple
+from typing import Callable, Iterable, Iterator, Sequence, Tuple
 
 from pynvim_pp.lib import encode
 from std2.string import removesuffix
 from std2.types import never
 
+from ..shared.settings import CompleteOptions, MatchOptions
 from ..shared.trans import indent_adjusted, trans_adjusted
 from ..shared.types import (
     BaseRangeEdit,
@@ -128,9 +129,8 @@ def parse_ranged(
 
 
 def parse_basic(
-    unifying_chars: AbstractSet[str],
-    replace_prefix_threshold: int,
-    replace_suffix_threshold: int,
+    match: MatchOptions,
+    comp: CompleteOptions,
     adjust_indent: bool,
     context: Context,
     snippet: SnippetEdit,
@@ -139,13 +139,7 @@ def parse_basic(
     parser = _parser(snippet.grammar)
 
     sort_by = parser(context, info, snippet.new_text).text
-    trans_ctx = trans_adjusted(
-        unifying_chars,
-        replace_prefix_threshold=replace_prefix_threshold,
-        replace_suffix_threshold=replace_suffix_threshold,
-        ctx=context,
-        new_text=sort_by,
-    )
+    trans_ctx = trans_adjusted(match, comp=comp, ctx=context, new_text=sort_by)
     old_prefix, old_suffix = trans_ctx.old_prefix, trans_ctx.old_suffix
 
     line_before = removesuffix(context.line_before, suffix=old_prefix)

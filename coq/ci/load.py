@@ -14,6 +14,7 @@ from yaml import safe_load
 
 from ..consts import COMPILATION_YML, TMP_DIR
 from ..shared.context import EMPTY_CONTEXT
+from ..shared.settings import EMPTY_COMP, EMPTY_MATCH
 from ..shared.types import SnippetEdit
 from ..snippets.loaders.load import load_ci as load_from_paths
 from ..snippets.parse import parse_basic
@@ -92,9 +93,8 @@ async def load_parsable() -> Any:
             )
             with suppress(ParseError):
                 parse_basic(
-                    set(),
-                    replace_prefix_threshold=0,
-                    replace_suffix_threshold=0,
+                    EMPTY_MATCH,
+                    comp=EMPTY_COMP,
                     adjust_indent=False,
                     context=EMPTY_CONTEXT,
                     snippet=edit,

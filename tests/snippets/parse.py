@@ -7,6 +7,7 @@ from unittest import TestCase
 
 from ...coq.ci.load import load
 from ...coq.shared.context import EMPTY_CONTEXT
+from ...coq.shared.settings import EMPTY_COMP, EMPTY_MATCH
 from ...coq.shared.types import SnippetEdit
 from ...coq.snippets.parse import parse_basic
 from ...coq.snippets.parsers.types import ParseError, ParseInfo
@@ -29,9 +30,8 @@ class Parser(TestCase):
             for edit in edits:
                 try:
                     parse_basic(
-                        set(),
-                        replace_prefix_threshold=0,
-                        replace_suffix_threshold=0,
+                        EMPTY_MATCH,
+                        comp=EMPTY_COMP,
                         adjust_indent=False,
                         context=EMPTY_CONTEXT,
                         snippet=edit,
