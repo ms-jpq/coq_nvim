@@ -84,11 +84,16 @@ def _decode(
                     new_text=new_text,
                 )
 
-                label_pre, *pre = resp.new_prefix.splitlines() or ("",)
-                label_post, *post = resp.new_suffix.splitlines() or ("",)
+                pre_lines = resp.new_prefix.splitlines() or ("",)
+                post_lines = resp.new_suffix.splitlines() or ("",)
+                label_pre, *pre = pre_lines
+                label_post, *post = post_lines
                 e_pre = ellipsis if pre else ""
                 e_post = ellipsis if post else ""
                 label = label_pre + e_pre + label_post + e_post
+                *_, s_pre = pre_lines
+                s_post, *_ = post_lines
+                sort_by = s_pre + s_post
 
                 doc = Doc(text=new_text, syntax=syntax) if e_pre or e_post else None
 
@@ -98,7 +103,7 @@ def _decode(
                     always_on_top=client.always_on_top,
                     weight_adjust=client.weight_adjust,
                     label=label,
-                    sort_by=edit.new_text,
+                    sort_by=sort_by,
                     primary_edit=edit,
                     adjust_indent=False,
                     kind=kind or "",
