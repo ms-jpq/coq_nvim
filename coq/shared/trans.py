@@ -129,7 +129,7 @@ def trans_adjusted(
             )
         else:
             first_token = next(iter(tokens), "")
-            pure_sym_before = ctx.syms_before.removesuffix(ctx.words_before)
+            pure_sym_before = removesuffix(ctx.syms_before, (ctx.words_before))
             limited_sym_before = pure_sym_before[-len(first_token) :]
             syms_before = limited_sym_before + ctx.words_before
 
