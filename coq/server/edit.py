@@ -399,7 +399,7 @@ async def apply(buf: Buffer, instructions: Iterable[EditInstruction]) -> _MarkSh
             try:
                 ctx = await buf.get_lines(min(r1, r2), max(r1, r2) + 1)
             except NvimError:
-                ctx = ""
+                ctx = []
 
             msg = Template(dedent(tpl)).substitute(e=e, inst=inst, ctx=ctx)
             log.warn(f"%s", msg)

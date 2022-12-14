@@ -122,6 +122,7 @@ async def stack() -> Stack:
     )
     supervisor = Supervisor(
         vars_dir=vars_dir,
+        display=settings.display,
         match=settings.match,
         comp=settings.completion,
         limits=settings.limits,

@@ -23,7 +23,14 @@ from pynvim_pp.logging import suppress_and_log
 from std2.aitertools import aenumerate
 from std2.asyncio import cancel
 
-from .settings import BaseClient, CompleteOptions, Limits, MatchOptions, Weights
+from .settings import (
+    BaseClient,
+    CompleteOptions,
+    Display,
+    Limits,
+    MatchOptions,
+    Weights,
+)
 from .timeit import TracingLocker, timeit
 from .types import Completion, Context
 
@@ -65,13 +72,15 @@ class Supervisor:
     def __init__(
         self,
         vars_dir: Path,
+        display: Display,
         match: MatchOptions,
         comp: CompleteOptions,
         limits: Limits,
         reviewer: PReviewer,
     ) -> None:
         self.vars_dir = vars_dir
-        self.match, self.comp, self.limits = match, comp, limits
+        self.match, self.display = match, display
+        self.comp, self.limits = comp, limits
         self._reviewer = reviewer
 
         self.idling = Condition()

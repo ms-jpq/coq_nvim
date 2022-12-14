@@ -28,11 +28,11 @@ from ...lsp.protocol import PROTOCOL
 from ...shared.runtime import Supervisor
 from ...shared.runtime import Worker as BaseWorker
 from ...shared.settings import T9Client
-from ...shared.types import Completion, Context, ContextualEdit
+from ...shared.types import Completion, Context, ContextualEdit, Doc
 from .install import ensure_updated, t9_bin
 from .types import ReqL1, ReqL2, Request, RespL1, Response
 
-_VERSION = "3.2.28"
+_VERSION = "4.4.204"
 
 _DECODER = new_decoder[RespL1](RespL1, strict=False)
 _ENCODER = new_encoder[Request](Request)
@@ -58,7 +58,9 @@ def _encode(context: Context, limit: int) -> Any:
     return _ENCODER(req)
 
 
-def _decode(client: T9Client, reply: Response) -> Iterator[Completion]:
+def _decode(
+    client: T9Client, ellipsis: str, syntax: str, reply: Response
+) -> Iterator[Completion]:
     if (
         not isinstance(reply, Mapping)
         or not isinstance((old_prefix := reply.get("old_prefix")), str)
@@ -72,15 +74,22 @@ def _decode(client: T9Client, reply: Response) -> Iterator[Completion]:
             except DecodeError as e:
                 log.warn("%s", e)
             else:
+                new_text = resp.new_prefix + resp.new_suffix
                 edit = ContextualEdit(
                     old_prefix=old_prefix,
                     new_prefix=resp.new_prefix,
                     old_suffix=resp.old_suffix,
-                    new_text=resp.new_prefix + resp.new_suffix,
+                    new_text=new_text,
                 )
-                label_pre, *_ = resp.new_prefix.splitlines() or ("",)
-                *_, label_post = resp.new_suffix.splitlines() or ("",)
-                label = label_pre + label_post
+
+                label_pre, *pre = resp.new_prefix.splitlines() or ("",)
+                label_post, *post = resp.new_suffix.splitlines() or ("",)
+                e_pre = ellipsis if pre else ""
+                e_post = ellipsis if post else ""
+                label = label_pre + e_pre + label_post + e_post
+
+                doc = Doc(text=new_text, syntax=syntax) if e_pre or e_post else None
+
                 kind = PROTOCOL.CompletionItemKind.get(resp.kind)
                 cmp = Completion(
                     source=client.short_name,
@@ -92,6 +101,7 @@ def _decode(client: T9Client, reply: Response) -> Iterator[Completion]:
                     adjust_indent=False,
                     kind=kind or "",
                     icon_match=kind,
+                    doc=doc,
                 )
                 yield cmp
 
@@ -208,5 +218,10 @@ class Worker(BaseWorker[T9Client, None]):
                     except JSONDecodeError as e:
                         log.warn("%s", e)
                     else:
-                        for comp in _decode(self._options, reply=resp):
+                        for comp in _decode(
+                            self._options,
+                            ellipsis=self._supervisor.display.pum.ellipsis,
+                            syntax=context.filetype,
+                            reply=resp,
+                        ):
                             yield comp
