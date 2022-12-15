@@ -119,14 +119,7 @@ def trans_adjusted(
         old_prefix = simple_before
     elif chr := next(chain.from_iterable(tokens), ""):
         if is_word(match.unifying_chars, chr=chr):
-            old_prefix = (
-                ctx.words_before
-                if multi_set_ratio(
-                    ctx.words_before, new_text, look_ahead=match.look_ahead
-                )
-                >= match.fuzzy_cutoff
-                else edit.old_prefix
-            )
+            old_prefix = edit.old_prefix or ctx.words_before
         else:
             first_token = next(iter(tokens), "")
             pure_sym_before = removesuffix(ctx.syms_before, (ctx.words_before))
