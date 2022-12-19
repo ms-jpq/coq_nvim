@@ -130,7 +130,7 @@ def trans_adjusted(
                 syms_before
                 if multi_set_ratio(syms_before, new_text, look_ahead=match.look_ahead)
                 >= match.fuzzy_cutoff
-                else edit.old_prefix
+                else edit.old_prefix or ctx.words_before
             )
     else:
         old_prefix = edit.old_prefix
