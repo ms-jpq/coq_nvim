@@ -569,8 +569,7 @@ async def edit(
                 except NvimError as e:
                     log.warn("%s", e)
 
-            if marks:
-                new_marks = tuple(_shift_marks(m_shift, marks=marks))
+            if new_marks := tuple(_shift_marks(m_shift, marks=marks)):
                 await mark(settings=stack.settings, buf=buf, marks=new_marks)
 
             if DEBUG:
