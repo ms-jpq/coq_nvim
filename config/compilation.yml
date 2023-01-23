@@ -51,3 +51,5 @@ remaps:
     - vue-script-vuex
     - vue-template
     - vuex
+  liquid:
+    - html
