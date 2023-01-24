@@ -2,11 +2,9 @@ from asyncio import gather
 from asyncio.tasks import as_completed
 from contextlib import suppress
 from dataclasses import dataclass
-from datetime import datetime
 from itertools import chain
 from json import JSONDecodeError, dumps, loads
 from math import inf
-from os import linesep
 from os.path import expanduser, expandvars
 from pathlib import Path, PurePath
 from posixpath import normcase
@@ -28,6 +26,7 @@ from typing import (
 from pynvim_pp.lib import decode
 from pynvim_pp.logging import log
 from pynvim_pp.nvim import Nvim
+from pynvim_pp.preview import set_preview
 from std2.asyncio import to_thread
 from std2.graphlib import recur_sort
 from std2.pathlib import walk
@@ -46,8 +45,8 @@ from ...shared.types import UTF8, Edit, Mark, SnippetEdit, SnippetGrammar
 from ...snippets.loaders.load import load_direct
 from ...snippets.loaders.neosnippet import load_neosnippet
 from ...snippets.parse import parse_basic
-from ...snippets.parsers.types import ParseInfo
-from ...snippets.types import SCHEMA, LoadedSnips, ParsedSnippet
+from ...snippets.parsers.types import ParseError, ParseInfo
+from ...snippets.types import SCHEMA, LoadedSnips, LoadError, ParsedSnippet
 from ..rt_types import Stack
 
 BUNDLED_PATH_TPL = Template("coq+snippets+${schema}.json")
@@ -210,9 +209,30 @@ def _trans(
         yield snip, parsed, marks
 
 
-async def _slurp(
-    stack: Stack, warn: AbstractSet[SnippetWarnings], worker: SnipWorker
+async def _rolling_load(
+    worker: SnipWorker, cwd: PurePath, compiled: Mapping[Path, float]
 ) -> None:
+    for fut in as_completed(
+        tuple(_load_compiled(path, mtime) for path, mtime in compiled.items())
+    ):
+        try:
+            path, mtime, loaded = await fut
+        except (OSError, JSONDecodeError, DecodeError) as e:
+            tpl = """
+                Failed to load compiled snips
+                ${e}
+                """.rstrip()
+            log.warn("%s", Template(dedent(tpl)).substitute(e=type(e)))
+        else:
+            await worker.populate(path, mtime=mtime, loaded=loaded)
+            await Nvim.write(
+                LANG("fs snip load succ", path=fmt_path(cwd, path=path, is_dir=False))
+            )
+
+
+async def slurp_compiled(
+    stack: Stack, warn: AbstractSet[SnippetWarnings], worker: SnipWorker
+) -> Mapping[Path, float]:
     with timeit("LOAD SNIPS"):
         (
             cwd,
@@ -228,61 +248,45 @@ async def _slurp(
             worker.db_mtimes(),
         )
 
-        stale = db_mtimes.keys() - (bundled.keys() | user_compiled.keys())
-        compiled = {
+        if stale := db_mtimes.keys() - (bundled.keys() | user_compiled.keys()):
+            await worker.clean(stale)
+
+        if needs_loading := {
             path: mtime
             for path, mtime in chain(bundled.items(), user_compiled.items())
             if mtime > db_mtimes.get(path, -inf)
-        }
-        new_user_snips = {
-            fmt_path(cwd, path=path, is_dir=False): (
-                datetime.fromtimestamp(mtime).strftime(stack.settings.display.time_fmt),
-                datetime.fromtimestamp(prev).strftime(stack.settings.display.time_fmt)
-                if (prev := user_compiled_mtimes.get(path))
-                else "??",
-            )
+        }:
+            await _rolling_load(worker, cwd=cwd, compiled=needs_loading)
+
+        needs_compilation = {
+            path: mtime
             for path, mtime in user_snips_mtimes.items()
             if mtime > user_compiled_mtimes.get(path, -inf)
         }
 
-        await worker.clean(stale)
         if SnippetWarnings.missing in warn and not (bundled or user_compiled):
             await Nvim.write(LANG("fs snip load empty"))
 
-        for fut in as_completed(
-            tuple(_load_compiled(path, mtime) for path, mtime in compiled.items())
-        ):
-            try:
-                path, mtime, loaded = await fut
-            except (OSError, JSONDecodeError, DecodeError) as e:
-                tpl = """
-                Failed to load compiled snips
-                ${e}
-                """.rstrip()
-                log.warn("%s", Template(dedent(tpl)).substitute(e=type(e)))
-            else:
-                await worker.populate(path, mtime=mtime, loaded=loaded)
-                await Nvim.write(
-                    LANG(
-                        "fs snip load succ", path=fmt_path(cwd, path=path, is_dir=False)
-                    )
-                )
-
-        if SnippetWarnings.outdated in warn and new_user_snips:
-            paths = linesep.join(
-                f"{path} -- {prev} -> {cur}"
-                for path, (cur, prev) in new_user_snips.items()
-            )
-            await Nvim.write(LANG("fs snip needs compile", paths=paths))
+        return needs_compilation
 
 
 @rpc()
 async def _load_snips(stack: Stack) -> None:
     for worker in stack.workers:
         if isinstance(worker, SnipWorker):
-            await _slurp(
-                stack=stack, warn=stack.settings.clients.snippets.warn, worker=worker
-            )
+            try:
+                needs_compilation = await slurp_compiled(
+                    stack=stack,
+                    warn=stack.settings.clients.snippets.warn,
+                    worker=worker,
+                )
+                if needs_compilation:
+                    await compile_user_snippets(stack)
+                    await slurp_compiled(stack, warn=frozenset(), worker=worker)
+            except (LoadError, ParseError) as e:
+                preview = str(e).splitlines()
+                await set_preview(syntax="", preview=preview)
+                await Nvim.write(LANG("snip parse fail"))
             break
 
 
@@ -315,7 +319,7 @@ def compile_one(
     return compiled
 
 
-async def compile_user_snippets(stack: Stack, worker: SnipWorker) -> None:
+async def compile_user_snippets(stack: Stack) -> None:
     with timeit("COMPILE SNIPS"):
         info = ParseInfo(visual="", clipboard="", comment_str=("", ""))
         _, mtimes = await user_mtimes(
@@ -344,5 +348,3 @@ async def compile_user_snippets(stack: Stack, worker: SnipWorker) -> None:
             )
         except OSError as e:
             await Nvim.write(e)
-        else:
-            await _slurp(stack=stack, warn={SnippetWarnings.missing}, worker=worker)

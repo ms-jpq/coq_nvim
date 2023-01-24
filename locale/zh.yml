@@ -51,10 +51,6 @@
 "fs snip load succ": |-
   ✅ 代码片段已更新 —— ${path}
 
-"fs snip needs compile": |-
-  ⚠️  代码片段须使用「:COQsnips compile」手动编译
-  ${paths}
-
 "begin T9 download": |-
   ⏳ 开始下载 T9……
 

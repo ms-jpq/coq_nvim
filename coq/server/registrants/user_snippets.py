@@ -33,6 +33,7 @@ from .snippets import (
     Compiled,
     compile_one,
     compile_user_snippets,
+    slurp_compiled,
     snippet_paths,
     user_mtimes,
 )
@@ -211,7 +212,8 @@ async def snips(stack: Stack, args: Sequence[str]) -> None:
                 if isinstance(worker, SnipWorker):
                     await Nvim.write(LANG("waiting..."))
                     try:
-                        await compile_user_snippets(stack=stack, worker=worker)
+                        await compile_user_snippets(stack)
+                        await slurp_compiled(stack, warn=frozenset(), worker=worker)
                     except (LoadError, ParseError) as e:
                         preview = str(e).splitlines()
                         await set_preview(syntax="", preview=preview)

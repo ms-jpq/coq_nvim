@@ -50,10 +50,6 @@
 "fs snip load succ": |-
   ✅ Snippets updated -- ${path}
 
-"fs snip needs compile": |-
-  ⚠️  Snippets require manual compilation :: -- `:COQsnips compile`
-  ${paths}
-
 "begin T9 download": |-
   ⏳ Downloading T9 ...
 
