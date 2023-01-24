@@ -2,6 +2,7 @@ from pathlib import Path, PurePath
 from shutil import which
 from typing import Any, Iterator, Mapping, cast
 
+from pynvim_pp.lib import decode
 from pynvim_pp.nvim import Nvim
 from pynvim_pp.types import NoneType
 from std2.configparser import hydrate
@@ -34,7 +35,7 @@ from .state import state
 
 
 async def _settings() -> Settings:
-    yml = safe_load(CONFIG_YML.read_text("UTF-8"))
+    yml = safe_load(decode(CONFIG_YML.read_bytes()))
     user_config = cast(Any, (await Nvim.vars.get(NoneType, SETTINGS_VAR)) or {})
     u_conf = hydrate(user_config)
 

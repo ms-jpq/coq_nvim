@@ -9,7 +9,7 @@ from ...snippets.types import LoadedSnips
 
 
 class Worker(BaseWorker[SnippetClient, SDB]):
-    async def mtimes(self) -> Mapping[PurePath, float]:
+    async def db_mtimes(self) -> Mapping[PurePath, float]:
         return await self._misc.mtimes()
 
     async def clean(self, stale: AbstractSet[PurePath]) -> None:

@@ -3,6 +3,7 @@ from typing import Sequence
 from uuid import uuid4
 
 from pynvim_pp.buffer import Buffer, ExtMark, ExtMarker
+from pynvim_pp.lib import decode
 from pynvim_pp.logging import log
 from pynvim_pp.nvim import Nvim
 from pynvim_pp.types import NvimError
@@ -18,8 +19,7 @@ _WS = {*whitespace}
 
 def _encode_for_display(text: str) -> str:
     encoded = "".join(
-        char.encode("unicode_escape").decode("utf-8") if char in _WS else char
-        for char in text
+        decode(char.encode("unicode_escape")) if char in _WS else char for char in text
     )
     return encoded
 

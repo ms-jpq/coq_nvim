@@ -3,6 +3,7 @@ from pathlib import Path
 from typing import Any, Iterable, MutableSequence, Tuple
 from uuid import UUID
 
+from pynvim_pp.lib import decode
 from pynvim_pp.nvim import Nvim
 from pynvim_pp.types import NoneType
 from std2.pickle.encoder import new_encoder
@@ -11,8 +12,8 @@ from ..registry import NAMESPACE, atomic
 from ..shared.runtime import Metric
 from .rt_types import Stack
 
-_LUA = (Path(__file__).resolve(strict=True).parent / "completion.lua").read_text(
-    "UTF-8"
+_LUA = decode(
+    (Path(__file__).resolve(strict=True).parent / "completion.lua").read_bytes()
 )
 atomic.exec_lua(_LUA, ())
 

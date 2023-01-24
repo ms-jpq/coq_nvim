@@ -25,6 +25,7 @@ from typing import (
     Tuple,
 )
 
+from pynvim_pp.lib import decode
 from pynvim_pp.logging import log
 from pynvim_pp.nvim import Nvim
 from std2.asyncio import to_thread
@@ -41,7 +42,7 @@ from ...registry import NAMESPACE, atomic, rpc
 from ...shared.context import EMPTY_CONTEXT
 from ...shared.settings import CompleteOptions, MatchOptions, SnippetWarnings
 from ...shared.timeit import timeit
-from ...shared.types import Edit, Mark, SnippetEdit, SnippetGrammar
+from ...shared.types import UTF8, Edit, Mark, SnippetEdit, SnippetGrammar
 from ...snippets.loaders.load import load_direct
 from ...snippets.loaders.neosnippet import load_neosnippet
 from ...snippets.parse import parse_basic
@@ -136,7 +137,7 @@ async def _load_compiled(path: Path, mtime: float) -> Tuple[Path, float, LoadedS
     decoder = new_decoder[LoadedSnips](LoadedSnips)
 
     def cont() -> LoadedSnips:
-        raw = path.read_text("UTF-8")
+        raw = decode(path.read_bytes())
         json = loads(raw)
         loaded = decoder(json)
         return loaded
@@ -157,7 +158,7 @@ async def _load_user_compiled(
             m1 = {compiled: mtime}
 
         with suppress(OSError):
-            raw = meta.read_text("UTF-8")
+            raw = decode(meta.read_bytes())
             try:
                 json = loads(raw)
                 m2 = new_decoder[Mapping[Path, float]](Mapping[Path, float])(json)
@@ -184,7 +185,7 @@ async def _dump_compiled(
     for path, json in ((compiled, s_json), (meta, m_json)):
         path.parent.mkdir(parents=True, exist_ok=True)
         with NamedTemporaryFile(
-            dir=path.parent, mode="w", encoding="UTF-8", delete=False
+            dir=path.parent, mode="w", encoding=UTF8, delete=False
         ) as fd:
             fd.write(json)
         Path(fd.name).replace(path)
@@ -218,20 +219,20 @@ async def _slurp(
             bundled,
             (user_compiled, user_compiled_mtimes),
             (_, user_snips_mtimes),
-            mtimes,
+            db_mtimes,
         ) = await gather(
             Nvim.getcwd(),
             _bundled_mtimes(),
             _load_user_compiled(stack.supervisor.vars_dir),
             user_mtimes(user_path=stack.settings.clients.snippets.user_path),
-            worker.mtimes(),
+            worker.db_mtimes(),
         )
 
-        stale = mtimes.keys() - (bundled.keys() | user_compiled.keys())
+        stale = db_mtimes.keys() - (bundled.keys() | user_compiled.keys())
         compiled = {
             path: mtime
             for path, mtime in chain(bundled.items(), user_compiled.items())
-            if mtime > mtimes.get(path, -inf)
+            if mtime > db_mtimes.get(path, -inf)
         }
         new_user_snips = {
             fmt_path(cwd, path=path, is_dir=False): (

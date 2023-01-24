@@ -14,6 +14,7 @@ from typing import (
     Tuple,
 )
 
+from pynvim_pp.lib import decode
 from pynvim_pp.logging import log
 from pynvim_pp.nvim import Nvim
 from pynvim_pp.types import NoneType
@@ -41,7 +42,7 @@ class _Payload:
     reply: Any
 
 
-_LUA = (Path(__file__).resolve(strict=True).parent / "lsp.lua").read_text("UTF-8")
+_LUA = decode((Path(__file__).resolve(strict=True).parent / "lsp.lua").read_bytes())
 atomic.exec_lua(_LUA, ())
 
 _STATE: MutableMapping[str, _Session] = {}

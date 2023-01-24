@@ -6,6 +6,7 @@ from webbrowser import open as open_w
 
 from pynvim_pp.buffer import Buffer
 from pynvim_pp.float_win import list_floatwins, open_float_win
+from pynvim_pp.lib import decode
 from pynvim_pp.nvim import Nvim
 from std2.argparse import ArgparseError, ArgParser
 from std2.types import never
@@ -111,7 +112,7 @@ async def _help(stack: Stack, args: Sequence[str]) -> None:
         if not web_d:
             async for win in list_floatwins(_NS):
                 await win.close()
-            lines = md.read_text("UTF-8").splitlines()
+            lines = decode(md.read_bytes()).splitlines()
             buf = await Buffer.create(
                 listed=False, scratch=True, wipe=True, nofile=True, noswap=True
             )

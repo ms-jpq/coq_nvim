@@ -14,6 +14,7 @@ from typing import (
     cast,
 )
 
+from pynvim_pp.lib import decode
 from std2.pathlib import AnyPath
 from std2.sqlite3 import add_functions, escape
 
@@ -31,7 +32,7 @@ def loader(base: Path) -> _Loader:
     @lru_cache(maxsize=None)
     def cont(*paths: AnyPath) -> str:
         path = (base / Path(*paths)).with_suffix(".sql")
-        return path.read_text("UTF-8")
+        return decode(path.read_bytes())
 
     return cast(_Loader, cont)
 

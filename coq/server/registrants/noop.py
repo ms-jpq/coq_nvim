@@ -6,7 +6,7 @@ from random import choice, sample
 from sys import stdout
 from typing import Sequence, Tuple
 
-from pynvim_pp.lib import encode
+from pynvim_pp.lib import decode, encode
 from pynvim_pp.nvim import Nvim
 from std2.argparse import ArgparseError, ArgParser
 from std2.pickle.decoder import new_decoder
@@ -25,7 +25,7 @@ class _Helo:
     helo: Sequence[str]
 
 
-_HELO = new_decoder[_Helo](_Helo)(safe_load(HELO_ARTIFACTS.read_text("UTF-8")))
+_HELO = new_decoder[_Helo](_Helo)(safe_load(decode(HELO_ARTIFACTS.read_bytes())))
 
 
 def _parse_args(args: Sequence[str]) -> Namespace:

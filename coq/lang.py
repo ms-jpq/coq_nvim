@@ -2,6 +2,7 @@ from locale import getdefaultlocale
 from string import Template
 from typing import Mapping, MutableMapping, Optional, Union
 
+from pynvim_pp.lib import decode
 from std2.pickle.decoder import new_decoder
 from yaml import safe_load
 
@@ -41,7 +42,7 @@ def init(code: Optional[str]) -> None:
     )
 
     specs = new_decoder[Mapping[str, str]](Mapping[str, str])(
-        safe_load(yml_path.read_text("UTF-8"))
+        safe_load(decode(yml_path.read_bytes()))
     )
     LANG._specs.update(specs)
 

@@ -6,7 +6,7 @@ from pathlib import Path
 from string import capwords
 from typing import Generic, Iterable, Iterator, Optional, Sequence, TypeVar
 
-from pynvim_pp.lib import recode
+from pynvim_pp.lib import decode, recode
 from pynvim_pp.nvim import Nvim
 from pynvim_pp.types import NoneType
 from std2.cell import RefCell
@@ -37,7 +37,7 @@ class _Session:
     payload: _Payload
 
 
-_LUA = (Path(__file__).resolve(strict=True).parent / "request.lua").read_text("UTF-8")
+_LUA = decode((Path(__file__).resolve(strict=True).parent / "request.lua").read_bytes())
 atomic.exec_lua(_LUA, ())
 
 _UIDS = count()

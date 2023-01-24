@@ -8,7 +8,7 @@ from pynvim_pp.logging import log
 from std2.graphlib import recur_sort
 from std2.pathlib import walk
 
-from ...shared.types import SnippetGrammar
+from ...shared.types import UTF8, SnippetGrammar
 from ..types import LoadedSnips, LoadError, ParsedSnippet
 from .lsp import load_lsp
 from .neosnippet import load_neosnippet
@@ -47,7 +47,7 @@ def load_direct(
 
     for parser, (grammar, paths) in specs.items():
         for path in paths:
-            with path.open(encoding="UTF-8") as fd:
+            with path.open(encoding=UTF8) as fd:
                 try:
                     filetype, exts, snips = parser(
                         grammar, path=path, lines=enumerate(fd, start=1)
