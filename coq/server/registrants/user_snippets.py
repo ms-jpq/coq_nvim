@@ -140,15 +140,11 @@ async def eval_snips(
             info=info,
             lines=enumerate(lines, start=lo + 1),
         )
-        with suppress(NvimError):
-            await Nvim.exec(":silent! write")
-            await compile_user_snippets(stack, filter={path})
     except (LoadError, ParseError) as e:
         preview = str(e).splitlines()
         async with hold_win(win=win):
             await set_preview(syntax="", preview=preview)
         await Nvim.write(LANG("snip parse fail"))
-
     else:
         preview = _pprn(compiled).splitlines()
         async with hold_win(win=win):
@@ -157,6 +153,10 @@ async def eval_snips(
             await Nvim.write(LANG("snip parse succ"))
         else:
             await Nvim.write(LANG("no snippets found"))
+
+        with suppress(NvimError, LoadError, ParseError):
+            await Nvim.exec(":silent! write")
+            await compile_user_snippets(stack)
 
 
 def _parse_args(args: Sequence[str], filetype: str) -> Namespace:
@@ -215,7 +215,7 @@ async def snips(stack: Stack, args: Sequence[str]) -> None:
                 if isinstance(worker, SnipWorker):
                     await Nvim.write(LANG("waiting..."))
                     try:
-                        await compile_user_snippets(stack, filter=frozenset())
+                        await compile_user_snippets(stack)
                         await slurp_compiled(stack, warn=frozenset(), worker=worker)
                     except (LoadError, ParseError) as e:
                         preview = str(e).splitlines()

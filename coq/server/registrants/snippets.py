@@ -281,7 +281,7 @@ async def _load_snips(stack: Stack) -> None:
                     worker=worker,
                 )
                 if needs_compilation:
-                    await compile_user_snippets(stack, filter=frozenset())
+                    await compile_user_snippets(stack)
                     await slurp_compiled(stack, warn=frozenset(), worker=worker)
             except (LoadError, ParseError) as e:
                 preview = str(e).splitlines()
@@ -319,22 +319,17 @@ def compile_one(
     return compiled
 
 
-async def compile_user_snippets(stack: Stack, filter: AbstractSet[PurePath]) -> None:
+async def compile_user_snippets(stack: Stack) -> None:
     with timeit("COMPILE SNIPS"):
         info = ParseInfo(visual="", clipboard="", comment_str=("", ""))
         _, mtimes = await user_mtimes(
             user_path=stack.settings.clients.snippets.user_path
         )
-        neosnippet = (
-            {path: mtime for path, mtime in mtimes.items() if path in filter}
-            if filter
-            else mtimes
-        )
         loaded = await to_thread(
             lambda: load_direct(
                 False,
                 lsp=(),
-                neosnippet=neosnippet,
+                neosnippet=mtimes,
                 ultisnip=(),
                 neosnippet_grammar=SnippetGrammar.lsp,
             )
