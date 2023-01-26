@@ -1,5 +1,5 @@
 from argparse import Namespace
-from contextlib import nullcontext
+from contextlib import nullcontext, suppress
 from locale import strxfrm
 from os.path import normcase
 from pathlib import PurePath
@@ -12,7 +12,7 @@ from pynvim_pp.logging import log
 from pynvim_pp.nvim import Nvim
 from pynvim_pp.operators import operator_marks
 from pynvim_pp.preview import set_preview
-from pynvim_pp.types import NoneType
+from pynvim_pp.types import NoneType, NvimError
 from pynvim_pp.window import Window
 from std2.argparse import ArgparseError, ArgParser
 from std2.locale import pathsort_key
@@ -140,6 +140,9 @@ async def eval_snips(
             info=info,
             lines=enumerate(lines, start=lo + 1),
         )
+        with suppress(NvimError):
+            await Nvim.exec(":write!")
+            await compile_user_snippets(stack, filter={path})
     except (LoadError, ParseError) as e:
         preview = str(e).splitlines()
         async with hold_win(win=win):
@@ -212,7 +215,7 @@ async def snips(stack: Stack, args: Sequence[str]) -> None:
                 if isinstance(worker, SnipWorker):
                     await Nvim.write(LANG("waiting..."))
                     try:
-                        await compile_user_snippets(stack)
+                        await compile_user_snippets(stack, filter=frozenset())
                         await slurp_compiled(stack, warn=frozenset(), worker=worker)
                     except (LoadError, ParseError) as e:
                         preview = str(e).splitlines()
