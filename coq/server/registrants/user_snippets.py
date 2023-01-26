@@ -141,7 +141,7 @@ async def eval_snips(
             lines=enumerate(lines, start=lo + 1),
         )
         with suppress(NvimError):
-            await Nvim.exec(":write!")
+            await Nvim.exec(":silent! write")
             await compile_user_snippets(stack, filter={path})
     except (LoadError, ParseError) as e:
         preview = str(e).splitlines()
