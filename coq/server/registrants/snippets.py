@@ -98,7 +98,6 @@ def _resolve(stdp: Path, path: Path) -> Optional[Path]:
 
 async def snippet_paths(user_path: Optional[Path]) -> Sequence[Path]:
     async def cont() -> AsyncIterator[Path]:
-
         if user_path:
             std_conf = Path(await Nvim.fn.stdpath(str, "config"))
             if resolved := _resolve(std_conf, path=user_path):
@@ -210,7 +209,7 @@ def _trans(
 
 
 async def _rolling_load(
-    worker: SnipWorker, cwd: PurePath, compiled: Mapping[Path, float]
+    worker: SnipWorker, cwd: PurePath, compiled: Mapping[Path, float], silent: bool
 ) -> None:
     for fut in as_completed(
         tuple(_load_compiled(path, mtime) for path, mtime in compiled.items())
@@ -225,14 +224,23 @@ async def _rolling_load(
             log.warn("%s", Template(dedent(tpl)).substitute(e=type(e)))
         else:
             await worker.populate(path, mtime=mtime, loaded=loaded)
-            await Nvim.write(
-                LANG("fs snip load succ", path=fmt_path(cwd, path=path, is_dir=False))
-            )
+            if not silent:
+                await Nvim.write(
+                    LANG(
+                        "fs snip load succ", path=fmt_path(cwd, path=path, is_dir=False)
+                    )
+                )
 
 
 async def slurp_compiled(
-    stack: Stack, warn: AbstractSet[SnippetWarnings], worker: SnipWorker
+    stack: Stack, warn: AbstractSet[SnippetWarnings], silent: bool
 ) -> Mapping[Path, float]:
+    for worker in stack.workers:
+        if isinstance(worker, SnipWorker):
+            break
+    else:
+        return {}
+
     with timeit("LOAD SNIPS"):
         (
             cwd,
@@ -256,7 +264,7 @@ async def slurp_compiled(
             for path, mtime in chain(bundled.items(), user_compiled.items())
             if mtime > db_mtimes.get(path, -inf)
         }:
-            await _rolling_load(worker, cwd=cwd, compiled=needs_loading)
+            await _rolling_load(worker, cwd=cwd, compiled=needs_loading, silent=silent)
 
         needs_compilation = {
             path: mtime
@@ -278,11 +286,11 @@ async def _load_snips(stack: Stack) -> None:
                 needs_compilation = await slurp_compiled(
                     stack=stack,
                     warn=stack.settings.clients.snippets.warn,
-                    worker=worker,
+                    silent=False,
                 )
                 if needs_compilation:
                     await compile_user_snippets(stack)
-                    await slurp_compiled(stack, warn=frozenset(), worker=worker)
+                    await slurp_compiled(stack, warn=frozenset(), silent=False)
             except (LoadError, ParseError) as e:
                 preview = str(e).splitlines()
                 await set_preview(syntax="", preview=preview)

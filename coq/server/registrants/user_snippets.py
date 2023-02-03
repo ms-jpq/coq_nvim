@@ -157,6 +157,7 @@ async def eval_snips(
         with suppress(NvimError, LoadError, ParseError):
             await Nvim.exec(":silent! write")
             await compile_user_snippets(stack)
+            await slurp_compiled(stack, warn=frozenset(), silent=True)
 
 
 def _parse_args(args: Sequence[str], filetype: str) -> Namespace:
@@ -216,7 +217,7 @@ async def snips(stack: Stack, args: Sequence[str]) -> None:
                     await Nvim.write(LANG("waiting..."))
                     try:
                         await compile_user_snippets(stack)
-                        await slurp_compiled(stack, warn=frozenset(), worker=worker)
+                        await slurp_compiled(stack, warn=frozenset(), silent=False)
                     except (LoadError, ParseError) as e:
                         preview = str(e).splitlines()
                         await set_preview(syntax="", preview=preview)
@@ -229,7 +230,6 @@ async def snips(stack: Stack, args: Sequence[str]) -> None:
                 await Nvim.write(LANG("snip source not enabled"))
 
         elif ns.action == "edit":
-
             paths, mtimes = await user_mtimes(
                 user_path=stack.settings.clients.snippets.user_path
             )
