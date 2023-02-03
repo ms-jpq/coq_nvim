@@ -32,13 +32,10 @@ except ImportError:
     exit(1)
 
 
-try:
+with suppress(ImportError, PermissionError):
     from os import nice
 
-    with suppress(PermissionError):
-        nice(-20)
-except ImportError:
-    pass
+    nice(-20)
 
 
 def _socket(arg: str) -> Any:

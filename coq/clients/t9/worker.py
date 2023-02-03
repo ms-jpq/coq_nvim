@@ -113,11 +113,19 @@ def _decode(
                 yield cmp
 
 
+def _nice() -> None:
+    with suppress(ImportError, PermissionError):
+        from os import nice
+
+        nice(-20)
+
+
 async def _proc(bin: PurePath, cwd: PurePath) -> Optional[Process]:
     try:
         proc = await create_subprocess_exec(
             bin,
             "--client=coq.nvim",
+            preexec_fn=_nice,
             stdin=PIPE,
             stdout=PIPE,
             stderr=DEVNULL,
