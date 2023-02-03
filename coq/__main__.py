@@ -32,6 +32,14 @@ except ImportError:
     exit(1)
 
 
+try:
+    from os import nice
+
+    nice(-20)
+except ImportError:
+    pass
+
+
 def _socket(arg: str) -> Any:
     if arg.startswith("localhost:"):
         host, _, port = arg.rpartition(":")
