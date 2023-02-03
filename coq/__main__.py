@@ -1,6 +1,6 @@
 from argparse import ArgumentParser, Namespace
 from asyncio import run as arun
-from contextlib import redirect_stderr, redirect_stdout
+from contextlib import redirect_stderr, redirect_stdout, suppress
 from io import StringIO
 from os import linesep
 from pathlib import Path, PurePath
@@ -35,7 +35,8 @@ except ImportError:
 try:
     from os import nice
 
-    nice(-20)
+    with suppress(PermissionError):
+        nice(-20)
 except ImportError:
     pass
 
