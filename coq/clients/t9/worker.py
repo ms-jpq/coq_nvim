@@ -22,6 +22,7 @@ from pynvim_pp.nvim import Nvim
 from std2.pickle.decoder import new_decoder
 from std2.pickle.encoder import new_encoder
 from std2.pickle.types import DecodeError
+from std2.platform import OS, os
 
 from ...lang import LANG
 from ...lsp.protocol import PROTOCOL
@@ -121,15 +122,16 @@ def _nice() -> None:
 
 
 async def _proc(bin: PurePath, cwd: PurePath) -> Optional[Process]:
+    kwargs = {} if os is OS.windows else {"preexec_fn": _nice}
     try:
         proc = await create_subprocess_exec(
             bin,
             "--client=coq.nvim",
-            preexec_fn=_nice,
             stdin=PIPE,
             stdout=PIPE,
             stderr=DEVNULL,
             cwd=cwd,
+            **kwargs,
         )
     except FileNotFoundError:
         return None
