@@ -118,7 +118,7 @@ def _nice() -> None:
     with suppress(ImportError, PermissionError):
         from os import nice
 
-        nice(-20)
+        nice(19)
 
 
 async def _proc(bin: PurePath, cwd: PurePath) -> Optional[Process]:
