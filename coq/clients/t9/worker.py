@@ -1,4 +1,5 @@
 from asyncio import (
+    IncompleteReadError,
     LimitOverrunError,
     StreamReader,
     create_subprocess_exec,
@@ -38,6 +39,7 @@ _VERSION = "4.4.204"
 
 _DECODER = new_decoder[RespL1](RespL1, strict=False)
 _ENCODER = new_encoder[Request](Request)
+_NL = b"\n"
 
 
 def _encode(context: Context, id: int, limit: int) -> Any:
@@ -144,7 +146,7 @@ async def _readline(stdout: StreamReader) -> bytes:
     acc = bytearray()
     while True:
         try:
-            b = await stdout.readline()
+            b = await stdout.readuntil(_NL)
         except LimitOverrunError as e:
             c = await stdout.readexactly(e.consumed)
             acc.extend(c)
@@ -220,10 +222,10 @@ class Worker(BaseWorker[T9Client, None]):
                     assert self._proc.stdin and self._proc.stdout
                     try:
                         self._proc.stdin.write(encode(json))
-                        self._proc.stdin.write(b"\n")
+                        self._proc.stdin.write(_NL)
                         await self._proc.stdin.drain()
                         out = await _readline(self._proc.stdout)
-                    except (ConnectionError, ValueError):
+                    except (ConnectionError, IncompleteReadError):
                         await self._clean()
                         return None
                     else:
