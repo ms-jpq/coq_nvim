@@ -1,5 +1,6 @@
 from asyncio import (
     LimitOverrunError,
+    StreamReader,
     create_subprocess_exec,
     create_task,
     shield,
@@ -139,6 +140,21 @@ async def _proc(bin: PurePath, cwd: PurePath) -> Optional[Process]:
         return proc
 
 
+async def _readline(stdout: StreamReader) -> bytes:
+    acc = bytearray()
+    while True:
+        try:
+            b = await stdout.readline()
+        except LimitOverrunError as e:
+            c = await stdout.readexactly(e.consumed)
+            acc.extend(c)
+        else:
+            acc.extend(b)
+            break
+
+    return acc
+
+
 class Worker(BaseWorker[T9Client, None]):
     def __init__(self, supervisor: Supervisor, options: T9Client, misc: None) -> None:
         self._lock = Lock()
@@ -206,8 +222,8 @@ class Worker(BaseWorker[T9Client, None]):
                         self._proc.stdin.write(encode(json))
                         self._proc.stdin.write(b"\n")
                         await self._proc.stdin.drain()
-                        out = await self._proc.stdout.readline()
-                    except (ConnectionError, LimitOverrunError, ValueError):
+                        out = await _readline(self._proc.stdout)
+                    except (ConnectionError, ValueError):
                         await self._clean()
                         return None
                     else:
