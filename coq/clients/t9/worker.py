@@ -134,7 +134,7 @@ async def _proc(bin: PurePath, cwd: PurePath) -> Optional[Process]:
             stdout=PIPE,
             stderr=DEVNULL,
             cwd=cwd,
-            **kwargs,
+            **kwargs,  # type: ignore
         )
     except FileNotFoundError:
         return None
