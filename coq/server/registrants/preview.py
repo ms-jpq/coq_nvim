@@ -195,23 +195,24 @@ async def _set_win(display: PreviewDisplay, buf: Buffer, pos: _Pos) -> None:
 
 
 async def _show_preview(stack: Stack, event: _Event, doc: Doc, s: State) -> None:
-    new_doc = _preprocess(s.context, doc=doc)
-    text = expand_tabs(s.context, text=new_doc.text)
-    lines = text.splitlines()
-    pit = _positions(stack.settings.display.preview, event=event, lines=lines, state=s)
+    if stack.settings.display.preview.enabled:
+        new_doc = _preprocess(s.context, doc=doc)
+        text = expand_tabs(s.context, text=new_doc.text)
+        lines = text.splitlines()
+        pit = _positions(stack.settings.display.preview, event=event, lines=lines, state=s)
 
-    def key(k: Tuple[int, int, _Pos]) -> Tuple[int, int, int, int]:
-        idx, rank, pos = k
-        return pos.height * pos.width, idx == s.pum_location, -rank, -idx
+        def key(k: Tuple[int, int, _Pos]) -> Tuple[int, int, int, int]:
+            idx, rank, pos = k
+            return pos.height * pos.width, idx == s.pum_location, -rank, -idx
 
-    if ordered := sorted(pit, key=key, reverse=True):
-        (pum_location, _, pos), *__ = ordered
-        state(pum_location=pum_location)
-        buf = await Buffer.create(
-            listed=False, scratch=True, wipe=True, nofile=True, noswap=True
-        )
-        await buf_set_preview(buf=buf, syntax=new_doc.syntax, preview=lines)
-        await _set_win(display=stack.settings.display.preview, buf=buf, pos=pos)
+        if ordered := sorted(pit, key=key, reverse=True):
+            (pum_location, _, pos), *__ = ordered
+            state(pum_location=pum_location)
+            buf = await Buffer.create(
+                listed=False, scratch=True, wipe=True, nofile=True, noswap=True
+            )
+            await buf_set_preview(buf=buf, syntax=new_doc.syntax, preview=lines)
+            await _set_win(display=stack.settings.display.preview, buf=buf, pos=pos)
 
 
 async def _resolve_comp(

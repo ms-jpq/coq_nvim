@@ -62,6 +62,7 @@ display:
       - "」"
 
   preview:
+    enabled: true
     x_max_len: 88
     resolve_timeout: 0.09
     border: rounded

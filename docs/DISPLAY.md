@@ -138,6 +138,14 @@ For item `<source>` show `「<source>」`, purely for aesthetics.
 
 Used for the preview window.
 
+##### `coq_settings.display.preview.enabled`
+
+**default:**
+
+```json
+true
+```
+
 ##### `coq_settings.display.preview.x_max_len`
 
 Maximum width.
