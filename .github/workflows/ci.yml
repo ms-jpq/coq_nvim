@@ -34,7 +34,7 @@ jobs:
         run: sudo apt install -y universal-ctags
 
       - name: Codespell
-        run: codespell --skip ./artifacts/helo.yml ./tests/shared/fuzzy.py
+        run: codespell --skip ./artifacts/helo.yml --skip ./tests/shared/fuzzy.py
 
       - name: Lint
         run: mypy -- .
