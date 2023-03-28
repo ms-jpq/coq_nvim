@@ -37,7 +37,7 @@
       function()
         local go, parser = pcall(vim.treesitter.get_parser)
         if go then
-          local query = vim.treesitter.get_query(parser:lang(), "highlights")
+          local query = vim.treesitter.query.get(parser:lang(), "highlights")
           if query then
             for _, tree in pairs(parser:parse()) do
               for capture, node in query:iter_captures(tree:root(), buf, lo, hi) do
