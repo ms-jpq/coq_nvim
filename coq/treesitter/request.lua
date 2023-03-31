@@ -33,7 +33,8 @@
   end
 
   local ts_query =
-    vim.fn.has("nvim-0.8") and vim.treesitter.query.get_query or
+    vim.fn.has("nvim-0.8") and
+    (vim.treesitter.query.get or vim.treesitter.query.get_query) or
     vim.treesitter.get_query
 
   local iter_nodes = function(buf, lo, hi)
