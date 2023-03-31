@@ -32,12 +32,16 @@
     end
   end
 
+  local ts_query =
+    vim.fn.has("nvim-0.8") and vim.treesitter.query.get_query or
+    vim.treesitter.get_query
+
   local iter_nodes = function(buf, lo, hi)
     return coroutine.wrap(
       function()
         local go, parser = pcall(vim.treesitter.get_parser)
         if go then
-          local query = vim.treesitter.get_query(parser:lang(), "highlights")
+          local query = ts_query(parser:lang(), "highlights")
           if query then
             for _, tree in pairs(parser:parse()) do
               for capture, node in query:iter_captures(tree:root(), buf, lo, hi) do
