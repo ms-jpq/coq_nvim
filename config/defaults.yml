@@ -140,6 +140,7 @@ display:
 
   preview:
     border: rounded
+    enabled: true
     positions:
       east: 4
       north: 1

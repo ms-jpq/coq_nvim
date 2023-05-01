@@ -49,6 +49,7 @@ class PreviewPositions:
 
 @dataclass(frozen=True)
 class PreviewDisplay:
+    enabled: bool
     x_max_len: int
     positions: PreviewPositions
     border: Border
