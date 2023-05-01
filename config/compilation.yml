@@ -43,6 +43,8 @@ remaps:
     - djangohtml
   dotenv:
     - dotenv-safe
+  liquid:
+    - html
   vue:
     - javascript
     - vue-pug
@@ -51,5 +53,3 @@ remaps:
     - vue-script-vuex
     - vue-template
     - vuex
-  liquid:
-    - html

@@ -1,83 +1,98 @@
 ---
-xdg: False
 auto_start: False
 
-keymap:
-  recommended: True
-  pre_select: False
+clients:
+  buffers:
+    always_on_top: False
+    enabled: True
+    match_syms: False
+    parent_scope: " ⇊"
+    same_filetype: False
+    short_name: "BUF"
+    weight_adjust: 0
 
-  manual_complete: <c-space>
-  manual_complete_insertion_only: False
+  lsp:
+    always_on_top: null
+    enabled: True
+    resolve_timeout: 0.06
+    short_name: "LSP"
+    weight_adjust: 0.5
 
-  repeat: null
-  bigger_preview: <c-k>
-  jump_to_mark: <c-h>
-  eval_snips: null
+  paths:
+    always_on_top: False
+    enabled: True
+    path_seps: []
+    preview_lines: 6
+    resolution:
+      - cwd
+      - file
+    short_name: "PATH"
+    weight_adjust: 0
+
+  snippets:
+    always_on_top: False
+    enabled: True
+    short_name: "SNIP"
+    user_path: null
+    warn:
+      - missing
+      - outdated
+    weight_adjust: 0.1
+
+  tabnine:
+    always_on_top: False
+    enabled: False
+    short_name: "T9"
+    weight_adjust: -0.1
+
+  tags:
+    always_on_top: False
+    enabled: True
+    parent_scope: " ⇊"
+    path_sep: " ⇉ "
+    short_name: "TAG"
+    weight_adjust: 0.1
+
+  third_party:
+    always_on_top: null
+    enabled: True
+    short_name: "3P"
+    weight_adjust: 0
+
+  tmux:
+    all_sessions: True
+    always_on_top: False
+    enabled: True
+    match_syms: False
+    parent_scope: " ⇊"
+    path_sep: " ⇉ "
+    short_name: "TMUX"
+    weight_adjust: -0.1
+
+  tree_sitter:
+    always_on_top: False
+    enabled: True
+    path_sep: " ⇊"
+    short_name: "TS"
+    slow_threshold: 0.168
+    weight_adjust: 0.1
 
 completion:
   always: True
-  smart: True
   replace_prefix_threshold: 3
   replace_suffix_threshold: 2
   skip_after: []
-
-match:
-  unifying_chars:
-    - "_"
-    - "-"
-  max_results: 33
-  exact_matches: 2
-  look_ahead: 2
-  fuzzy_cutoff: 0.6
-
-weights:
-  prefix_matches: 2.0
-  edit_distance: 1.5
-  recency: 1.0
-  proximity: 0.5
+  smart: True
 
 display:
   ghost_text:
-    enabled: True
     context:
       - " 〈 "
       - " 〉"
+    enabled: True
     highlight_group: Comment
 
-  pum:
-    fast_close: True
-
-    y_max_len: 16
-    y_ratio: 0.3
-
-    x_max_len: 66
-    x_truncate_len: 12
-
-    ellipsis: …
-    kind_context:
-      - " ["
-      - "]"
-    source_context:
-      - "「"
-      - "」"
-
-  preview:
-    enabled: true
-    x_max_len: 88
-    resolve_timeout: 0.09
-    border: rounded
-    positions:
-      north: 1
-      south: 2
-      west: 3
-      east: 4
-
-  time_fmt: "%Y-%m-%d %H:%M"
-  mark_highlight_group: Pmenu
-
   icons:
-    mode: long
-    spacing: 1
     aliases:
       Conditional: Keyword
       Float: Number
@@ -118,89 +133,72 @@ display:
       Unit: ""
       Value: ""
       Variable: "ﳛ"
+    mode: long
+    spacing: 1
+
+  mark_highlight_group: Pmenu
+
+  preview:
+    border: rounded
+    enabled: true
+    positions:
+      east: 4
+      north: 1
+      south: 2
+      west: 3
+    resolve_timeout: 0.09
+    x_max_len: 88
+
+  pum:
+    ellipsis: …
+    fast_close: True
+    kind_context:
+      - " ["
+      - "]"
+    source_context:
+      - "「"
+      - "」"
+
+    x_max_len: 66
+    x_truncate_len: 12
+    y_max_len: 16
+    y_ratio: 0.3
+
+  time_fmt: "%Y-%m-%d %H:%M"
+
+keymap:
+  bigger_preview: <c-k>
+  eval_snips: null
+  jump_to_mark: <c-h>
+  manual_complete: <c-space>
+  manual_complete_insertion_only: False
+  pre_select: False
+  recommended: True
+  repeat: null
 
 limits:
-  tokenization_limit: 999
-  idle_timeout: 1.88
-
   completion_auto_timeout: 0.088
   completion_manual_timeout: 0.66
 
   download_retries: 6
   download_timeout: 66.0
 
-clients:
-  buffers:
-    enabled: True
-    short_name: "BUF"
-    match_syms: False
-    same_filetype: False
-    parent_scope: " ⇊"
-    always_on_top: False
-    weight_adjust: 0
+  idle_timeout: 1.88
+  tokenization_limit: 999
 
-  lsp:
-    enabled: True
-    short_name: "LSP"
-    resolve_timeout: 0.06
-    always_on_top: null
-    weight_adjust: 0.5
+match:
+  exact_matches: 2
+  fuzzy_cutoff: 0.6
+  look_ahead: 2
+  max_results: 33
+  unifying_chars:
+    - "_"
+    - "-"
 
-  paths:
-    enabled: True
-    short_name: "PATH"
-    resolution:
-      - cwd
-      - file
-    path_seps: []
-    preview_lines: 6
-    always_on_top: False
-    weight_adjust: 0
+weights:
+  edit_distance: 1.5
+  prefix_matches: 2.0
+  proximity: 0.5
+  recency: 1.0
 
-  snippets:
-    enabled: True
-    short_name: "SNIP"
-    user_path: null
-    warn:
-      - missing
-      - outdated
-    always_on_top: False
-    weight_adjust: 0.1
-
-  tabnine:
-    enabled: False
-    short_name: "T9"
-    always_on_top: False
-    weight_adjust: -0.1
-
-  tags:
-    enabled: True
-    short_name: "TAG"
-    parent_scope: " ⇊"
-    path_sep: " ⇉ "
-    always_on_top: False
-    weight_adjust: 0.1
-
-  third_party:
-    enabled: True
-    short_name: "3P"
-    always_on_top: null
-    weight_adjust: 0
-
-  tmux:
-    enabled: True
-    short_name: "TMUX"
-    match_syms: False
-    all_sessions: True
-    parent_scope: " ⇊"
-    path_sep: " ⇉ "
-    always_on_top: False
-    weight_adjust: -0.1
-
-  tree_sitter:
-    enabled: True
-    short_name: "TS"
-    path_sep: " ⇊"
-    slow_threshold: 0.168
-    always_on_top: False
-    weight_adjust: 0.1
+xdg: False
