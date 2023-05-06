@@ -25,7 +25,7 @@ from ...lang import LANG
 from ...paths.show import fmt_path
 from ...registry import rpc
 from ...shared.types import SnippetGrammar
-from ...snippets.parsers.parser import decode_mark_idx
+from ...snippets.parsers.lexer import decode_mark_idx
 from ...snippets.parsers.types import ParseError, ParseInfo
 from ...snippets.types import LoadError
 from ..rt_types import Stack

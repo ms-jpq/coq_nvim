@@ -15,7 +15,7 @@ from pynvim_pp.window import Window
 
 from ...lang import LANG
 from ...registry import rpc
-from ...snippets.parsers.parser import decode_mark_idx
+from ...snippets.parsers.lexer import decode_mark_idx
 from ..edit import EditInstruction, apply, reset_undolevels
 from ..mark import NS
 from ..rt_types import Stack
