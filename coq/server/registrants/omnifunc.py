@@ -175,7 +175,7 @@ async def _comp_done(stack: Stack, event: Mapping[str, Any]) -> None:
 
                     if isinstance((extern := new_metric.comp.extern), ExternLSP):
                         _, pending = await wait(
-                            (cmd(extern=extern),),
+                            (create_task(cmd(extern=extern)),),
                             timeout=stack.settings.clients.lsp.resolve_timeout,
                         )
                         await cancel(*pending)
