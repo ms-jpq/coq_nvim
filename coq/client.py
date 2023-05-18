@@ -16,7 +16,7 @@ from pynvim_pp.types import Method, NoneType, RPCallable
 from std2.contextlib import nullacontext
 from std2.pickle.types import DecodeError
 from std2.platform import OS, os
-from std2.sys import suicide
+from std2.sys import autodie
 
 from ._registry import ____
 from .consts import DEBUG, DEBUG_DB, DEBUG_METRICS, TMP_DIR
@@ -35,7 +35,7 @@ def _suicide(ppid: int) -> AbstractAsyncContextManager:
     if os is OS.windows:
         return nullacontext(None)
     else:
-        return suicide(ppid)
+        return autodie(ppid)
 
 
 def _set_debug() -> None:

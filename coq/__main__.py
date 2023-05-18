@@ -157,7 +157,7 @@ elif command == "run":
         else:
             import pynvim_pp
             import yaml
-            from std2.sys import suicide
+            from std2.sys import autodie
 
             from .client import init
     except ImportError as e:
