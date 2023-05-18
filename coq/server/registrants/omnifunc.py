@@ -174,7 +174,11 @@ async def _comp_done(stack: Stack, event: Mapping[str, Any]) -> None:
                     new_metric = await _resolve(stack=stack, metric=metric)
 
                     if isinstance((extern := new_metric.comp.extern), ExternLSP):
-                        create_task(cmd(extern=extern))
+                        _, pending = await wait(
+                            (cmd(extern=extern),),
+                            timeout=stack.settings.clients.lsp.resolve_timeout,
+                        )
+                        await cancel(*pending)
 
                     if new_metric.comp.uid in stack.metrics:
                         inserted_at = await edit(
