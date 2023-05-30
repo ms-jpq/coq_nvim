@@ -28,10 +28,13 @@ jobs:
           python-version: ${{ matrix.python_ver }}
 
       - name: Apt Packages
-        run: sudo apt install -y universal-ctags
+        run: |-
+          sudo -- apt install --yes -- universal-ctags
 
       - name: Codespell
-        run: codespell --skip ./artifacts/helo.yml --skip ./tests/shared/fuzzy.py
+        run: |-
+          pip3 install -- codespell
+          codespell --skip ./artifacts/helo.yml --skip ./tests/shared/fuzzy.py
 
       - name: Lint
         run: make lint
