@@ -122,44 +122,47 @@ def parse(
 ) -> Iterator[Tuple[Path, bool, str]]:
     for segment, s0 in _iter_segs(seps, line=line):
         local_sep = _p_sep(s0)
-        p = Path(s0)
-        entire = p if p.is_absolute() else base / p
+        if not {*s0}.issubset({sep, altsep}):
+            p = Path(s0)
+            entire = p if p.is_absolute() else base / p
 
-        with suppress(OSError):
-            if entire.is_dir():
-                for path in scandir(entire):
-                    is_dir = path.is_dir()
-                    term = local_sep if is_dir else ""
-                    line = _join(local_sep, lhs=segment, rhs=path.name) + term
-                    yield Path(path.path), is_dir, line
-                return
+            with suppress(OSError):
+                if entire.is_dir():
+                    for path in scandir(entire):
+                        is_dir = path.is_dir()
+                        term = local_sep if is_dir else ""
+                        line = _join(local_sep, lhs=segment, rhs=path.name) + term
+                        yield Path(path.path), is_dir, line
+                    return
 
-            else:
-                lft, go, rhs = s0.rpartition(local_sep)
-                if go:
-                    lp, sp, _ = segment.rpartition(local_sep)
-                    lseg = lp + sp
+                else:
+                    lft, go, rhs = s0.rpartition(local_sep)
+                    if go:
+                        lp, sp, _ = segment.rpartition(local_sep)
+                        lseg = lp + sp
 
-                    lhs = lft + go
-                    p = Path(lhs)
-                    left = p if p.is_absolute() else base / p
-                    if left.is_dir():
-                        for path in scandir(left):
-                            ratio = quick_ratio(
-                                lower(rhs),
-                                lower(path.name),
-                                look_ahead=look_ahead,
-                            )
-                            if (
-                                ratio >= fuzzy_cutoff
-                                and len(path.name) + look_ahead >= len(rhs)
-                                and not rhs.startswith(path.name)
-                            ):
-                                is_dir = path.is_dir()
-                                term = local_sep if is_dir else ""
-                                line = _join(local_sep, lhs=lseg, rhs=path.name) + term
-                                yield Path(path.path), is_dir, line
-                        return
+                        lhs = lft + go
+                        p = Path(lhs)
+                        left = p if p.is_absolute() else base / p
+                        if left.is_dir():
+                            for path in scandir(left):
+                                ratio = quick_ratio(
+                                    lower(rhs),
+                                    lower(path.name),
+                                    look_ahead=look_ahead,
+                                )
+                                if (
+                                    ratio >= fuzzy_cutoff
+                                    and len(path.name) + look_ahead >= len(rhs)
+                                    and not rhs.startswith(path.name)
+                                ):
+                                    is_dir = path.is_dir()
+                                    term = local_sep if is_dir else ""
+                                    line = (
+                                        _join(local_sep, lhs=lseg, rhs=path.name) + term
+                                    )
+                                    yield Path(path.path), is_dir, line
+                            return
 
 
 async def _parse(
