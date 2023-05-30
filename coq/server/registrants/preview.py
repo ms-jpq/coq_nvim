@@ -199,7 +199,9 @@ async def _show_preview(stack: Stack, event: _Event, doc: Doc, s: State) -> None
         new_doc = _preprocess(s.context, doc=doc)
         text = expand_tabs(s.context, text=new_doc.text)
         lines = text.splitlines()
-        pit = _positions(stack.settings.display.preview, event=event, lines=lines, state=s)
+        pit = _positions(
+            stack.settings.display.preview, event=event, lines=lines, state=s
+        )
 
         def key(k: Tuple[int, int, _Pos]) -> Tuple[int, int, int, int]:
             idx, rank, pos = k

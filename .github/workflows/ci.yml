@@ -27,9 +27,6 @@ jobs:
         with:
           python-version: ${{ matrix.python_ver }}
 
-      - name: Pip Packages
-        run: pip install --upgrade codespell mypy types-PyYAML -r requirements.txt
-
       - name: Apt Packages
         run: sudo apt install -y universal-ctags
 
@@ -37,7 +34,7 @@ jobs:
         run: codespell --skip ./artifacts/helo.yml --skip ./tests/shared/fuzzy.py
 
       - name: Lint
-        run: mypy -- .
+        run: make lint
 
       - name: Install
         run: python3 -m coq deps

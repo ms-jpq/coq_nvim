@@ -19,10 +19,8 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v3
 
-      - name: Pip Packages
-        run: pip install -U -r requirements.txt
-
       - name: Build
         env:
           CI_TOKEN: ${{ secrets.CI_TOKEN }}
-        run: python -m ci
+        run: |-
+          make build

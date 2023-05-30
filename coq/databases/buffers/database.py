@@ -131,7 +131,6 @@ class BDB(Interruptible):
         unifying_chars: AbstractSet[str],
         include_syms: bool,
     ) -> None:
-
         self._ex = SingleThreadExecutor()
         self._tokenization_limit = tokenization_limit
         self._unifying_chars = unifying_chars
