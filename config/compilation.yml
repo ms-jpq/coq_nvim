@@ -45,6 +45,8 @@ remaps:
     - dotenv-safe
   liquid:
     - html
+  ps1:
+    - PowerShell
   vue:
     - javascript
     - vue-pug
