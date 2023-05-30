@@ -43,4 +43,5 @@ jobs:
         run: python3 -m coq deps
 
       - name: Test
-        run: python3 -m tests
+        run: |-
+          make test

@@ -27,6 +27,11 @@ clobber: clean
 lint: .venv/bin/mypy
 	'$<' -- .
 
+.PHONY: test
+
+test: .venv/bin/mypy
+	.venv/bin/python3 -m tests
+
 .PHONY: build
 
 build: .venv/bin/mypy
