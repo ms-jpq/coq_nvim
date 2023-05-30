@@ -3,6 +3,7 @@ from os import environ, sep
 from pathlib import Path
 from shutil import rmtree
 from subprocess import check_call, check_output, run
+from sys import executable
 from typing import Iterator
 
 _TOP_LV = Path(__file__).resolve(strict=True).parent.parent
@@ -25,7 +26,7 @@ def _git_clone(path: Path, repo_name: str) -> None:
 
 
 def _build(cwd: Path) -> None:
-    check_call(("python3", "-m", "coq.ci"), cwd=cwd)
+    check_call((executable, "-m", "coq.ci"), cwd=cwd)
 
 
 def _git_alert(cwd: Path) -> None:
@@ -57,7 +58,8 @@ def _git_alert(cwd: Path) -> None:
 
 def main() -> None:
     snips = _TOP_LV / ".vars" / "snippets"
-    _git_identity()
+    if "CI" in environ:
+        _git_identity()
     _git_clone(snips, repo_name="coq.artifacts")
     _build(_TOP_LV)
     _git_alert(snips)
