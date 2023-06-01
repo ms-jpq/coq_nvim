@@ -4,4 +4,4 @@ requires-python = ">=3.8.0"
 version         = "0"
 
 [project.optional-dependencies]
-dev = ["mypy", "types-PyYAML"]
+dev = ["mypy", "types-PyYAML", "black", "isort"]
