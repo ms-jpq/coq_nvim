@@ -18,7 +18,7 @@ async def comp_lsp(
     row, c = context.position
     col = len(encode(context.line_before[:c], encoding=UTF16)) // 2
 
-    async for client, reply in async_request("lsp_comp", False, clients, (row, col)):
+    async for client, reply in async_request("lsp_comp", None, clients, (row, col)):
         resp = cast(CompletionResponse, reply)
         yield parse(
             ExternLSP,
@@ -38,7 +38,7 @@ async def comp_thirdparty(
     clients: AbstractSet[str],
 ) -> AsyncIterator[LSPcomp]:
     async for client, reply in async_request(
-        "lsp_third_party", False, clients, context.position, context.line
+        "lsp_third_party", None, clients, context.position, context.line
     ):
         name = client or short_name
         resp = cast(CompletionResponse, reply)

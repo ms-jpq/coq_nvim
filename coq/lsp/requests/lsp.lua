@@ -52,13 +52,13 @@
   local lsp_notify = function(payload)
     vim.validate {payload = {payload, "table"}}
     local client = tostring(payload.client)
-    local multipart = payload.multipart
+    local multipart = tonumber(payload.multipart)
     local name = payload.name
     local reply = payload.reply
     local uid = payload.uid
     vim.validate {
       client = {client, "string"},
-      multipart = {multipart, "boolean"},
+      multipart = {multipart, "number", true},
       name = {name, "string"},
       uid = {uid, "number"}
     }
@@ -102,20 +102,24 @@
           end
       )
 
-      local payload = {
-        client = vim.NIL,
-        done = true,
-        method = vim.NIL,
-        multipart = multipart,
-        name = name,
-        reply = vim.NIL,
-        uid = session_id
-      }
+      local new_payload = function()
+        return {
+          client = vim.NIL,
+          done = true,
+          method = vim.NIL,
+          multipart = multipart,
+          name = name,
+          reply = vim.NIL,
+          uid = session_id
+        }
+      end
 
       local on_resp_old = function(err, method, resp, client_id)
         vim.validate {
           method = {method, "string", true}
         }
+
+        local payload = new_payload()
 
         n_clients = n_clients - 1
         payload.method = method or vim.NIL
@@ -148,7 +152,7 @@
       end
 
       if n_clients == 0 then
-        lsp_notify(payload)
+        lsp_notify(new_payload())
       else
         cancels[name] = callback(on_resp)
       end
@@ -225,7 +229,6 @@
       vim.validate {
         client_names = {client_names, "table"},
         col = {col, "number"},
-        multipart = {multipart, "boolean"},
         name = {name, "string"},
         row = {row, "number"},
         session_id = {session_id, "number"}
@@ -391,7 +394,6 @@
         args = {args, "table"},
         key = {key, "string"},
         method = {method, "string"},
-        multipart = {multipart, "boolean"},
         name = {name, "string"},
         session_id = {session_id, "number"}
       }

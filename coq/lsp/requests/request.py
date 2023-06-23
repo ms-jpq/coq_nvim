@@ -35,7 +35,7 @@ class _Session:
 
 @dataclass(frozen=True)
 class _Payload:
-    multipart: bool
+    multipart: Optional[int]
     name: str
     method: Optional[str]
     uid: int
@@ -91,7 +91,7 @@ async def _lsp_notify(stack: Stack, rpayload: _Payload) -> None:
 
 
 async def async_request(
-    name: str, multipart: bool, clients: AbstractSet[str], *args: Any
+    name: str, multipart: Optional[int], clients: AbstractSet[str], *args: Any
 ) -> AsyncIterator[Tuple[Optional[str], Any]]:
     with timeit(f"LSP :: {name}"):
         cond, uid = _conds(name), next(_uids(name))
