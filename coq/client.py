@@ -31,7 +31,7 @@ _CB = RPCallable[None]
 _IGNORE = {"nvim_buf_changedtick_event", "nvim_buf_detach_event"}
 
 
-def _suicide(ppid: int) -> AbstractAsyncContextManager:
+def _autodie(ppid: int) -> AbstractAsyncContextManager:
     if os is OS.windows:
         return nullacontext(None)
     else:
@@ -64,7 +64,7 @@ def _trans(stack: Stack, handler: _CB) -> _CB:
 
 
 async def init(socket: ServerAddr, ppid: int) -> None:
-    async with _suicide(ppid):
+    async with _autodie(ppid):
         _set_debug()
 
         async with conn(socket, default=_default) as client:

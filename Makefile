@@ -8,7 +8,7 @@ SHELL := bash
 
 .DEFAULT_GOAL := help
 
-.PHONY: clean clobber
+.PHONY: clean clobber lint test build fmt
 
 clean:
 	rm -rf -- .mypy_cache/ .venv/
@@ -22,17 +22,11 @@ clobber: clean
 .venv/bin/mypy: .venv/bin/pip
 	'$<' install --upgrade --requirement requirements.txt -- mypy types-PyYAML isort black
 
-.PHONY: lint
-
 lint: .venv/bin/mypy
 	'$<' -- .
 
-.PHONY: test
-
 test: .venv/bin/mypy
 	.venv/bin/python3 -m tests
-
-.PHONY: build
 
 build: .venv/bin/mypy
 	.venv/bin/python3 -m ci
