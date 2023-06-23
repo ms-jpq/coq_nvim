@@ -13,5 +13,5 @@ async def cmd(extern: ExternLSP) -> None:
         command = _ENCODER(extern.command)
 
         clients = {extern.client} if extern.client else set()
-        async for _ in async_request(name, clients, command):
+        async for _ in async_request(name, False, clients, command):
             pass

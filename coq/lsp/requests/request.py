@@ -11,6 +11,7 @@ from typing import (
     MutableMapping,
     MutableSequence,
     Optional,
+    Sequence,
     Tuple,
 )
 
@@ -34,6 +35,7 @@ class _Session:
 
 @dataclass(frozen=True)
 class _Payload:
+    multipart: bool
     name: str
     method: Optional[str]
     uid: int
@@ -62,6 +64,16 @@ def _conds(_: str) -> Condition:
 
 
 @rpc(blocking=False)
+async def _lsp_push(
+    stack: Stack, name: str, client: str, uid: int, acc: Sequence[Any]
+) -> None:
+    cond = _conds(name)
+
+    async with cond:
+        cond.notify_all()
+
+
+@rpc(blocking=False)
 async def _lsp_notify(stack: Stack, rpayload: _Payload) -> None:
     payload = _DECODER(rpayload)
     cond = _conds(payload.name)
@@ -79,7 +91,7 @@ async def _lsp_notify(stack: Stack, rpayload: _Payload) -> None:
 
 
 async def async_request(
-    name: str, clients: AbstractSet[str], *args: Any
+    name: str, multipart: bool, clients: AbstractSet[str], *args: Any
 ) -> AsyncIterator[Tuple[Optional[str], Any]]:
     with timeit(f"LSP :: {name}"):
         cond, uid = _conds(name), next(_uids(name))
@@ -92,7 +104,7 @@ async def async_request(
         await Nvim.api.exec_lua(
             NoneType,
             f"{NAMESPACE}.{name}(...)",
-            (name, uid, tuple(clients), *args),
+            (name, multipart, uid, tuple(clients), *args),
         )
 
         while True:

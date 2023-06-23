@@ -24,11 +24,68 @@
     end
   end
 
+  local cid = -1
+  local acc = {}
+
+  COQ.lsp_pull = function(client, uid, lo, hi)
+    vim.validate {
+      client = {client, "string"},
+      uid = {uid, "number"},
+      lo = {lo, "number"},
+      hi = {hi, "number"}
+    }
+
+    local items = (acc[name] or {})[client] or {}
+    local a = {}
+    for i = lo, hi do
+      local item = items[i]
+      if item then
+        a[i - lo + 1] = item
+      else
+        break
+      end
+    end
+
+    COQ.coq_lsp_push(client, uid, a)
+  end
+
+  local lsp_notify = function(payload)
+    vim.validate {payload = {payload, "table"}}
+    local client = tostring(payload.client)
+    local multipart = payload.multipart
+    local name = payload.name
+    local reply = payload.reply
+    local uid = payload.uid
+    vim.validate {
+      client = {client, "string"},
+      multipart = {multipart, "boolean"},
+      name = {name, "string"},
+      uid = {uid, "number"}
+    }
+
+    if multipart then
+      if uid > cid then
+        acc = {}
+      end
+      if type(reply) == "table" then
+        if type(reply.items) == "table" then
+          acc[client] = reply.items
+          reply.items = {}
+        else
+          acc[client] = reply
+          payload.reply = {}
+        end
+      end
+    end
+
+    COQ.Lsp_notify(payload)
+  end
+
   local req =
     (function()
     local current_sessions = {}
     local cancels = {}
-    return function(name, session_id, clients, callback)
+    return function(name, multipart, session_id, clients, callback)
       vim.validate {clients = {clients, "table"}}
       local n_clients, client_map = unpack(clients)
       vim.validate {
@@ -46,12 +103,13 @@
       )
 
       local payload = {
-        name = name,
-        method = vim.NIL,
-        uid = session_id,
         client = vim.NIL,
         done = true,
-        reply = vim.NIL
+        method = vim.NIL,
+        multipart = multipart,
+        name = name,
+        reply = vim.NIL,
+        uid = session_id
       }
 
       local on_resp_old = function(err, method, resp, client_id)
@@ -74,7 +132,7 @@
           payload.reply = resp or vim.NIL
         end
 
-        COQ.Lsp_notify(payload)
+        lsp_notify(payload)
       end
 
       local on_resp_new = function(err, resp, ctx)
@@ -90,7 +148,7 @@
       end
 
       if n_clients == 0 then
-        COQ.Lsp_notify(payload)
+        lsp_notify(payload)
       else
         cancels[name] = callback(on_resp)
       end
@@ -161,15 +219,16 @@
       return cancel_all
     end
 
-    COQ.lsp_comp = function(name, session_id, client_names, pos)
+    COQ.lsp_comp = function(name, multipart, session_id, client_names, pos)
       vim.validate {pos = {pos, "table"}}
       local row, col = unpack(pos)
       vim.validate {
-        name = {name, "string"},
-        session_id = {session_id, "number"},
         client_names = {client_names, "table"},
+        col = {col, "number"},
+        multipart = {multipart, "boolean"},
+        name = {name, "string"},
         row = {row, "number"},
-        col = {col, "number"}
+        session_id = {session_id, "number"}
       }
 
       local position = {line = row, character = col}
@@ -189,6 +248,7 @@
 
       req(
         name,
+        multipart,
         session_id,
         {n_clients, clients},
         function(on_resp)
@@ -197,7 +257,7 @@
       )
     end
 
-    COQ.lsp_resolve = function(name, session_id, client_names, item)
+    COQ.lsp_resolve = function(name, multipart, session_id, client_names, item)
       vim.validate {
         name = {name, "string"},
         session_id = {session_id, "number"},
@@ -212,6 +272,7 @@
 
       req(
         name,
+        multipart,
         session_id,
         {n_clients, clients},
         function(on_resp)
@@ -220,7 +281,7 @@
       )
     end
 
-    COQ.lsp_command = function(name, session_id, client_names, cmd)
+    COQ.lsp_command = function(name, multipart, session_id, client_names, cmd)
       vim.validate {cmd = {cmd, "table"}}
       vim.validate {
         name = {name, "string"},
@@ -236,6 +297,7 @@
 
       req(
         name,
+        multipart,
         session_id,
         {n_clients, clients},
         function(on_resp)
@@ -318,6 +380,7 @@
 
     local lua_req = function(
       name,
+      multipart,
       session_id,
       key,
       include_clients,
@@ -325,11 +388,12 @@
       method,
       args)
       vim.validate {
-        name = {name, "string"},
-        session_id = {session_id, "number"},
+        args = {args, "table"},
         key = {key, "string"},
         method = {method, "string"},
-        args = {args, "table"}
+        multipart = {multipart, "boolean"},
+        name = {name, "string"},
+        session_id = {session_id, "number"}
       }
 
       local names, client_fns = lua_clients(key, include_clients, client_names)
@@ -337,6 +401,7 @@
 
       req(
         name,
+        multipart,
         session_id,
         {#client_fns, names},
         function(on_resp)
@@ -363,7 +428,13 @@
       )
     end
 
-    COQ.lsp_third_party = function(name, session_id, client_names, pos, line)
+    COQ.lsp_third_party = function(
+      name,
+      multipart,
+      session_id,
+      client_names,
+      pos,
+      line)
       local args =
         freeze(
         "coq_3p.args",
@@ -377,6 +448,7 @@
 
       lua_req(
         name,
+        multipart,
         session_id,
         "fn",
         false,
@@ -386,7 +458,12 @@
       )
     end
 
-    COQ.lsp_third_party_resolve = function(name, session_id, client_names, item)
+    COQ.lsp_third_party_resolve = function(
+      name,
+      multipart,
+      session_id,
+      client_names,
+      item)
       local args =
         freeze(
         "coq_3p.args",
@@ -399,6 +476,7 @@
 
       lua_req(
         name,
+        multipart,
         session_id,
         "resolve",
         true,
@@ -408,7 +486,12 @@
       )
     end
 
-    COQ.lsp_third_party_cmd = function(name, session_id, client_names, cmd)
+    COQ.lsp_third_party_cmd = function(
+      name,
+      multipart,
+      session_id,
+      client_names,
+      cmd)
       local args =
         freeze(
         "coq_3p.args",
@@ -422,6 +505,7 @@
 
       lua_req(
         name,
+        multipart,
         session_id,
         "exec",
         true,
