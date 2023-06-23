@@ -30,7 +30,7 @@ from ...shared.timeit import timeit
 class _Session:
     uid: int
     done: bool
-    acc: MutableSequence[Tuple[Optional[str], Any]]
+    acc: MutableSequence[Tuple[Optional[str], Optional[int], Any]]
 
 
 @dataclass(frozen=True)
@@ -63,14 +63,25 @@ def _conds(_: str) -> Condition:
     return Condition()
 
 
-@rpc(blocking=False)
-async def _lsp_push(
-    stack: Stack, name: str, client: str, uid: int, acc: Sequence[Any]
-) -> None:
-    cond = _conds(name)
+async def _lsp_pull(
+    n: int, client: Optional[str], uid: int
+) -> AsyncIterator[Sequence[Any]]:
+    lo = 1
+    hi = n
+    while True:
+        part = await Nvim.api.exec_lua(
+            NoneType,
+            f"return {NAMESPACE}.lsp_pull(...)",
+            (client, uid, lo, hi),
+        )
+        lo = hi + 1
+        hi = hi + n
+        length = hi - lo + 1
 
-    async with cond:
-        cond.notify_all()
+        assert isinstance(part, Sequence)
+        yield part
+        if len(part) < length:
+            break
 
 
 @rpc(blocking=False)
@@ -82,7 +93,7 @@ async def _lsp_notify(stack: Stack, rpayload: _Payload) -> None:
     if not state or payload.uid >= state.uid:
         acc = [
             *(state.acc if state and payload.uid == state.uid else ()),
-            (payload.client, payload.reply),
+            (payload.client, payload.multipart, payload.reply),
         ]
         _STATE[payload.name] = _Session(uid=payload.uid, done=payload.done, acc=acc)
 
@@ -111,8 +122,14 @@ async def async_request(
             if state := _STATE.get(name):
                 if state.uid == uid:
                     while state.acc:
-                        client, resp = state.acc.pop()
-                        yield client, resp
+                        client, n_parts, resp = state.acc.pop()
+                        if n_parts:
+                            async for part in _lsp_pull(
+                                n_parts, client=client, uid=uid
+                            ):
+                                yield client, part
+                        else:
+                            yield client, resp
                     if state.done:
                         _STATE.pop(name)
                         break

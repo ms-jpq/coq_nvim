@@ -76,6 +76,7 @@ class Worker(BaseWorker[LSPClient, None]):
         self._cache = CacheWorker(supervisor)
         self._local_cached = _LocalCache()
         self._poll_task: Optional[Task] = None
+        self._max_results = self._supervisor.match.max_results
 
     def _request(
         self, context: Context, cached_clients: AbstractSet[str]
@@ -85,6 +86,7 @@ class Worker(BaseWorker[LSPClient, None]):
             always_on_top=self._options.always_on_top,
             weight_adjust=self._options.weight_adjust,
             context=context,
+            chunk=self._max_results * 2,
             clients=set() if context.manual else cached_clients,
         )
 
@@ -107,9 +109,7 @@ class Worker(BaseWorker[LSPClient, None]):
             await cancel(poll)
 
         async with self._work_lock:
-            limit = (
-                BIGGEST_INT if context.manual else self._supervisor.match.max_results
-            )
+            limit = BIGGEST_INT if context.manual else self._max_results
 
             use_cache, cached_clients, cached = self._cache.apply_cache(context)
             if not use_cache:

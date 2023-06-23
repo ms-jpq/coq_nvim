@@ -29,13 +29,16 @@
 
   COQ.lsp_pull = function(client, uid, lo, hi)
     vim.validate {
-      client = {client, "string"},
       uid = {uid, "number"},
       lo = {lo, "number"},
       hi = {hi, "number"}
     }
 
-    local items = (acc[name] or {})[client] or {}
+    if uid > cid then
+      return {}
+    end
+
+    local items = acc[client] or {}
     local a = {}
     for i = lo, hi do
       local item = items[i]
@@ -46,18 +49,17 @@
       end
     end
 
-    COQ.coq_lsp_push(client, uid, a)
+    return a
   end
 
   local lsp_notify = function(payload)
     vim.validate {payload = {payload, "table"}}
-    local client = tostring(payload.client)
+    local client = payload.client
     local multipart = tonumber(payload.multipart)
     local name = payload.name
     local reply = payload.reply
     local uid = payload.uid
     vim.validate {
-      client = {client, "string"},
       multipart = {multipart, "number", true},
       name = {name, "string"},
       uid = {uid, "number"}
@@ -77,6 +79,7 @@
         end
       end
     end
+    cid = uid
 
     COQ.Lsp_notify(payload)
   end

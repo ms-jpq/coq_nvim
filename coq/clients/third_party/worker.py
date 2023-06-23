@@ -15,5 +15,6 @@ class Worker(LSPWorker):
             always_on_top=self._options.always_on_top,
             weight_adjust=self._options.weight_adjust,
             context=context,
+            chunk=self._max_results * 2,
             clients=set() if context.manual else cached_clients,
         )
