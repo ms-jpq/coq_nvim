@@ -1,4 +1,4 @@
-from asyncio import Condition
+from asyncio import Condition, sleep
 from dataclasses import dataclass
 from functools import lru_cache
 from itertools import count
@@ -80,6 +80,7 @@ async def _lsp_pull(
 
         assert isinstance(part, Sequence)
         yield part
+        await sleep(0)
         if len(part) < length:
             break
 
