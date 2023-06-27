@@ -128,7 +128,12 @@ async def async_request(
                             async for part in _lsp_pull(
                                 n_parts, client=client, uid=uid
                             ):
-                                yield client, part
+                                if isinstance(resp, MutableMapping) and isinstance(
+                                    resp.get("items"), Sequence
+                                ):
+                                    yield client, {**resp, "items": part}
+                                else:
+                                    yield client, part
                         else:
                             yield client, resp
                     if state.done:

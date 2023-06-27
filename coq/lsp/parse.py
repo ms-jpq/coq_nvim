@@ -1,12 +1,11 @@
 from dataclasses import asdict
-from random import shuffle
 from typing import (
     AbstractSet,
     Any,
     Mapping,
     MutableMapping,
-    MutableSequence,
     Optional,
+    Sequence,
     Type,
     Union,
 )
@@ -191,7 +190,7 @@ def parse(
     elif isinstance(resp, Mapping):
         is_complete = _falsy(resp.get("isIncomplete"))
 
-        if not isinstance((items := resp.get("items")), MutableSequence):
+        if not isinstance((items := resp.get("items")), Sequence):
             log.warn("%s", f"Unknown LSP resp -- {type(resp)}")
             return LSPcomp(
                 client=client, local_cache=is_complete, items=iter(()), length=0
@@ -199,7 +198,6 @@ def parse(
 
         else:
             defaults = _defaults_parser(resp.get("itemDefaults")) or ItemDefaults()
-            shuffle(items)
             length = len(items)
             comps = (
                 co1
@@ -220,9 +218,8 @@ def parse(
                 client=client, local_cache=is_complete, items=comps, length=length
             )
 
-    elif isinstance(resp, MutableSequence):
+    elif isinstance(resp, Sequence):
         defaults = ItemDefaults()
-        shuffle(resp)
         length = len(resp)
         comps = (
             co2
