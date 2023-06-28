@@ -56,7 +56,7 @@ class SingleThreadExecutor:
 def very_nice() -> Awaitable[Sequence[str]]:
     async def cont() -> Sequence[str]:
         if tp := which("taskpolicy"):
-            run = (tp, "-b", "--")
+            run: Sequence[str] = (tp, "-b", "--")
             try:
                 await call(*run, "true")
             except (OSError, CalledProcessError):
