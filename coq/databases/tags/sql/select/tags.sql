@@ -18,7 +18,7 @@ SELECT
   tags.`access`
 FROM tags
 JOIN files
-ON 
+ON
   files.filename = tags.`path`
 JOIN fts
 ON
@@ -29,9 +29,9 @@ WHERE
   (
     (
       :word <> ''
-      AND 
+      AND
       tags.lname LIKE :like_word ESCAPE '!'
-      AND 
+      AND
       LENGTH(tags.name) + :look_ahead >= LENGTH(:word)
       AND
       tags.name <> SUBSTR(:word, 1, LENGTH(tags.name))
@@ -41,9 +41,9 @@ WHERE
     OR
     (
       :sym <> ''
-      AND 
+      AND
       tags.lname LIKE :like_sym ESCAPE '!'
-      AND 
+      AND
       LENGTH(tags.name) + :look_ahead >= LENGTH(:sym)
       AND
       tags.name <> SUBSTR(:sym, 1, LENGTH(tags.name))

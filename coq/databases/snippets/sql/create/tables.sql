@@ -56,7 +56,7 @@ SELECT DISTINCT
   src,
   dest
 FROM extensions
-WHERE 
+WHERE
   src <> dest;
 
 

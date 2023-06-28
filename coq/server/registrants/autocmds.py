@@ -12,6 +12,7 @@ from std2.cell import RefCell
 from std2.locale import si_prefixed_smol
 
 from ...clients.buffers.worker import Worker as BufWorker
+from ...clients.registers.worker import Worker as RegWorker
 from ...clients.tags.worker import Worker as TagsWorker
 from ...clients.tmux.worker import Worker as TmuxWorker
 from ...clients.tree_sitter.worker import Worker as TSWorker
@@ -116,3 +117,17 @@ async def _when_idle(stack: Stack) -> None:
 
 
 _ = autocmd("CursorHold", "CursorHoldI") << f"lua {NAMESPACE}.{_when_idle.method}()"
+
+
+@rpc()
+async def _on_yank(stack: Stack, operator: str, regname: str) -> None:
+    if operator == "y":
+        for worker in stack.workers:
+            if isinstance(worker, RegWorker):
+                worker.post_yank(regname)
+
+
+_ = (
+    autocmd("TextYankPost")
+    << f"lua {NAMESPACE}.{_on_yank.method}(vim.v.event.operator, vim.v.event.regname)"
+)

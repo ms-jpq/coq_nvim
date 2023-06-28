@@ -218,6 +218,44 @@ false
 
 ---
 
+#### coq_settings.clients.registers
+
+##### `coq_settings.clients.registers.match_syms`
+
+Also match symbols in addition to words.
+
+**default:**
+
+```json
+false
+```
+
+##### `coq_settings.clients.registers.words`
+
+Complete from contents of registers.
+
+`0` is the "last yank" register.
+
+Can also take in named registers `a-z`.
+
+**default:**
+
+```json
+["0"]
+```
+
+##### `coq_settings.clients.registers.lines`
+
+Complete lines from contents of registers.
+
+**default:**
+
+```json
+["l"]
+```
+
+---
+
 #### coq_settings.clients.tmux
 
 ##### `coq_settings.clients.tmux.match_syms`

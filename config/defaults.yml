@@ -29,6 +29,16 @@ clients:
     short_name: "PATH"
     weight_adjust: 0
 
+  registers:
+    always_on_top: False
+    enabled: True
+    lines: ["l"]
+    match_syms: False
+    register_scope: " ⇉ "
+    short_name: "REG"
+    weight_adjust: 0
+    words: ["0"]
+
   snippets:
     always_on_top: False
     enabled: True

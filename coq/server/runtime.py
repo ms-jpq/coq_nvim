@@ -13,6 +13,7 @@ from yaml import safe_load
 from ..clients.buffers.worker import Worker as BuffersWorker
 from ..clients.lsp.worker import Worker as LspWorker
 from ..clients.paths.worker import Worker as PathsWorker
+from ..clients.registers.worker import Worker as RegistersWorker
 from ..clients.snippet.worker import Worker as SnippetWorker
 from ..clients.t9.worker import Worker as T9Worker
 from ..clients.tags.worker import Worker as TagsWorker
@@ -22,6 +23,7 @@ from ..clients.tree_sitter.worker import Worker as TreeWorker
 from ..consts import CONFIG_YML, SETTINGS_VAR, VARS
 from ..databases.buffers.database import BDB
 from ..databases.insertions.database import IDB
+from ..databases.registers.database import RDB
 from ..databases.snippets.database import SDB
 from ..databases.tags.database import CTDB
 from ..databases.tmux.database import TMDB
@@ -82,6 +84,14 @@ def _from_each_according_to_their_ability(
 
     if clients.lsp.enabled:
         yield LspWorker(supervisor, options=clients.lsp, misc=None)
+
+    if clients.registers.enabled:
+        rdb = RDB(
+            settings.limits.tokenization_limit,
+            unifying_chars=settings.match.unifying_chars,
+            include_syms=settings.clients.buffers.match_syms,
+        )
+        yield RegistersWorker(supervisor, options=clients.registers, misc=rdb)
 
     if clients.third_party.enabled:
         yield ThirdPartyWorker(

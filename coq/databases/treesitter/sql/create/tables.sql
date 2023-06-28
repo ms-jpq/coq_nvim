@@ -43,7 +43,7 @@ SELECT
   words.gpword,
   words.gpkind
 FROM buffers
-JOIN words 
+JOIN words
 ON
   words.buffer_id = buffers.rowid
 GROUP BY

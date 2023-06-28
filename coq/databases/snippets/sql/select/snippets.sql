@@ -11,9 +11,9 @@ WHERE
   (
     (
       :word <> ''
-      AND 
+      AND
       lword LIKE :like_word ESCAPE '!'
-      AND 
+      AND
       LENGTH(word) + :look_ahead >= LENGTH(:word)
       AND
       X_SIMILARITY(LOWER(:word), lword, :look_ahead) > :cut_off
@@ -21,9 +21,9 @@ WHERE
     OR
     (
       :sym <> ''
-      AND 
+      AND
       lword LIKE :like_sym ESCAPE '!'
-      AND 
+      AND
       LENGTH(word) + :look_ahead >= LENGTH(:sym)
       AND
       X_SIMILARITY(LOWER(:sym), lword, :look_ahead) > :cut_off

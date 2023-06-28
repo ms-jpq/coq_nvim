@@ -1,6 +1,5 @@
 from contextlib import suppress
 from dataclasses import dataclass
-from itertools import islice
 from sqlite3 import Connection, OperationalError
 from typing import AbstractSet, Iterator, Mapping, MutableMapping, Optional
 
@@ -8,7 +7,7 @@ from std2.sqlite3 import with_transaction
 
 from ...consts import TMUX_DB
 from ...shared.executor import SingleThreadExecutor
-from ...shared.parse import coalesce
+from ...shared.parse import tokenize
 from ...shared.settings import MatchOptions
 from ...shared.sql import BIGGEST_INT, init_db, like_esc
 from ...tmux.parse import Pane
@@ -32,18 +31,6 @@ def _init() -> Connection:
     conn.executescript(sql("create", "pragma"))
     conn.executescript(sql("create", "tables"))
     return conn
-
-
-def _tokenize(
-    tokenization_limit: int,
-    unifying_chars: AbstractSet[str],
-    include_syms: bool,
-    text: str,
-) -> Iterator[str]:
-    words = coalesce(
-        unifying_chars, include_syms=include_syms, backwards=None, chars=text
-    )
-    return islice(words, tokenization_limit)
 
 
 class TMDB(Interruptible):
@@ -94,7 +81,7 @@ class TMDB(Interruptible):
 
         def m3() -> Iterator[Mapping]:
             for pane, text in not_cached.items():
-                for word in _tokenize(
+                for word in tokenize(
                     self._tokenization_limit,
                     unifying_chars=self._unifying_chars,
                     include_syms=self._include_syms,

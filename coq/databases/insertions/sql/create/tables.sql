@@ -40,7 +40,7 @@ CREATE INDEX IF NOT EXISTS inserted_sort_by     ON inserted (sort_by);
 
 
 --
--- VIEWS 
+-- VIEWS
 --
 
 

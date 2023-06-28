@@ -4,7 +4,6 @@ from pprint import pformat
 from string import Template
 from textwrap import dedent
 from typing import (
-    AbstractSet,
     Iterable,
     Iterator,
     MutableMapping,

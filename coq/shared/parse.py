@@ -1,3 +1,4 @@
+from itertools import islice
 from random import choice
 from typing import AbstractSet, Iterator, MutableSequence, Optional, Sequence
 
@@ -45,3 +46,15 @@ def coalesce(
 
     yield from w_it()
     yield from s_it()
+
+
+def tokenize(
+    tokenization_limit: int,
+    unifying_chars: AbstractSet[str],
+    include_syms: bool,
+    text: str,
+) -> Iterator[str]:
+    words = coalesce(
+        unifying_chars, include_syms=include_syms, backwards=None, chars=text
+    )
+    return islice(words, tokenization_limit)

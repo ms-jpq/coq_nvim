@@ -12,9 +12,9 @@ WHERE
   (
     (
       :word <> ''
-      AND 
+      AND
       lword LIKE :like_word ESCAPE '!'
-      AND 
+      AND
       LENGTH(word) + :look_ahead >= LENGTH(:word)
       AND
       word <> SUBSTR(:word, 1, LENGTH(word))
@@ -24,9 +24,9 @@ WHERE
     OR
     (
       :sym <> ''
-      AND 
+      AND
       lword LIKE :like_sym ESCAPE '!'
-      AND 
+      AND
       LENGTH(word) + :look_ahead >= LENGTH(:sym)
       AND
       word <> SUBSTR(:sym, 1, LENGTH(word))

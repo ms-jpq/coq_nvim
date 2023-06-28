@@ -1,4 +1,4 @@
-SELECT 
+SELECT
   filetype
 FROM files
 WHERE

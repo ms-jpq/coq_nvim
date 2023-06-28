@@ -201,11 +201,56 @@ class ThirdPartyClient(BaseClient, _AlwaysTops):
     ...
 
 
+_NamedRegisters = Literal[
+    "a",
+    "b",
+    "c",
+    "d",
+    "e",
+    "f",
+    "g",
+    "h",
+    "i",
+    "j",
+    "k",
+    "l",
+    "m",
+    "n",
+    "o",
+    "p",
+    "q",
+    "r",
+    "s",
+    "t",
+    "u",
+    "v",
+    "w",
+    "x",
+    "y",
+    "z",
+]
+
+
+@dataclass(frozen=True)
+class RegistersClient(_WordbankClient, _AlwaysTop):
+    lines: AbstractSet[_NamedRegisters]
+    register_scope: str
+    words: AbstractSet[Union[Literal["0"], _NamedRegisters]]
+
+
+@dataclass(frozen=True)
+class ExecClient(_WordbankClient, _AlwaysTop):
+    viml: _NamedRegisters
+    lua: _NamedRegisters
+    shell: _NamedRegisters
+
+
 @dataclass(frozen=True)
 class Clients:
     buffers: BuffersClient
     lsp: LSPClient
     paths: PathsClient
+    registers: RegistersClient
     snippets: SnippetClient
     tabnine: T9Client
     tags: TagsClient
