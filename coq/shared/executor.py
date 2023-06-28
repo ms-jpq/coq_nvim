@@ -56,7 +56,13 @@ class SingleThreadExecutor:
 def very_nice() -> Awaitable[Sequence[str]]:
     async def cont() -> Sequence[str]:
         if tp := which("taskpolicy"):
-            return (tp, "-b", "--")
+            run = (tp, "-b", "--")
+            try:
+                await call(*run, "true")
+            except (OSError, CalledProcessError):
+                return ()
+            else:
+                return run
         elif (sd := which("systemd-notify")) and (sr := which("systemd-run")):
             run = (
                 sr,
