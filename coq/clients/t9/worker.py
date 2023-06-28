@@ -13,7 +13,6 @@ from contextlib import suppress
 from itertools import chain, count
 from json import dumps, loads
 from json.decoder import JSONDecodeError
-from os import X_OK, access
 from pathlib import PurePath
 from subprocess import DEVNULL, PIPE
 from typing import Any, AsyncIterator, Iterator, Mapping, Optional, Sequence, cast
@@ -26,6 +25,7 @@ from std2.pickle.encoder import new_encoder
 from std2.pickle.types import DecodeError
 from std2.platform import OS, os
 
+from ...consts import DEBUG
 from ...lang import LANG
 from ...lsp.protocol import PROTOCOL
 from ...shared.executor import very_nice
@@ -33,7 +33,7 @@ from ...shared.runtime import Supervisor
 from ...shared.runtime import Worker as BaseWorker
 from ...shared.settings import T9Client
 from ...shared.types import Completion, Context, ContextualEdit, Doc
-from .install import ensure_updated, t9_bin
+from .install import ensure_updated, t9_bin, x_ok
 from .types import ReqL1, ReqL2, Request, RespL1, Response
 
 _VERSION = "4.5.10"
@@ -128,11 +128,13 @@ def _nice() -> None:
 async def _proc(bin: PurePath, cwd: PurePath) -> Optional[Process]:
     kwargs = {} if os is OS.windows else {"preexec_fn": _nice}
     prefix = await very_nice()
+    log = (f"--log-file-path={cwd / 't9.log'}",) if DEBUG else ()
     try:
         proc = await create_subprocess_exec(
             *prefix,
             bin,
             "--client=coq.nvim",
+            *log,
             stdin=PIPE,
             stdout=PIPE,
             stderr=DEVNULL,
@@ -187,9 +189,8 @@ class Worker(BaseWorker[T9Client, None]):
     async def _install(self) -> None:
         with suppress_and_log():
             vars_dir = self._supervisor.vars_dir / "clients" / "t9"
-            bin_path = t9_bin(vars_dir)
-            if access(bin_path, X_OK):
-                self._bin = bin_path
+            if x_ok(vars_dir):
+                self._bin = t9_bin(vars_dir)
             else:
                 for _ in range(9):
                     await sleep(0)
@@ -229,7 +230,8 @@ class Worker(BaseWorker[T9Client, None]):
                         self._proc.stdin.write(_NL)
                         await self._proc.stdin.drain()
                         out = await _readline(self._proc.stdout)
-                    except (ConnectionError, IncompleteReadError):
+                    except (ConnectionError, IncompleteReadError) as e:
+                        log.warn("%s", e)
                         await self._clean()
                         return None
                     else:
