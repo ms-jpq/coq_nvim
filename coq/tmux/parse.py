@@ -8,6 +8,8 @@ from typing import Iterator, Mapping, Optional, Sequence, Tuple
 from pynvim_pp.lib import decode
 from std2.asyncio.subprocess import call
 
+from ..shared.executor import very_nice
+
 _SEP = "\x1f"
 
 
@@ -24,8 +26,10 @@ class Pane:
 
 
 async def _panes(tmux: Path, all_sessions: bool) -> Sequence[Pane]:
+    prefix = await very_nice()
     try:
         proc = await call(
+            *prefix,
             tmux,
             "list-panes",
             ("-a" if all_sessions else "-s"),
@@ -75,10 +79,12 @@ async def _panes(tmux: Path, all_sessions: bool) -> Sequence[Pane]:
             return tuple(cont())
 
 
-async def _screenshot(pane: Pane) -> Tuple[Pane, str]:
+async def _screenshot(tmux: Path, pane: Pane) -> Tuple[Pane, str]:
+    prefix = await very_nice()
     try:
         proc = await call(
-            "tmux",
+            *prefix,
+            tmux,
             "capture-pane",
             "-p",
             "-J",
@@ -105,7 +111,7 @@ async def snapshot(
     tmux: Path, all_sessions: bool
 ) -> Tuple[Optional[Pane], Mapping[Pane, str]]:
     panes = await _panes(tmux, all_sessions=all_sessions)
-    shots = await gather(*map(_screenshot, panes))
+    shots = await gather(*(_screenshot(tmux, pane=pane) for pane in panes))
     current = next(
         (pane for pane in panes if pane.uid == pane_id()),
         None,
