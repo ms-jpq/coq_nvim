@@ -8,6 +8,7 @@ from pynvim_pp.logging import log
 from std2.asyncio.subprocess import call
 from std2.string import removeprefix, removesuffix
 
+from ..shared.executor import very_nice
 from .types import Tag, Tags
 
 _FIELDS = "".join(
@@ -32,8 +33,10 @@ async def run(ctags: Path, *args: str) -> str:
     if not args:
         return ""
     else:
+        prefix = await very_nice()
         try:
             proc = await call(
+                *prefix,
                 ctags,
                 "--sort=no",
                 "--output-format=json",

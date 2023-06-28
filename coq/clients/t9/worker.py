@@ -28,6 +28,7 @@ from std2.platform import OS, os
 
 from ...lang import LANG
 from ...lsp.protocol import PROTOCOL
+from ...shared.executor import very_nice
 from ...shared.runtime import Supervisor
 from ...shared.runtime import Worker as BaseWorker
 from ...shared.settings import T9Client
@@ -126,8 +127,10 @@ def _nice() -> None:
 
 async def _proc(bin: PurePath, cwd: PurePath) -> Optional[Process]:
     kwargs = {} if os is OS.windows else {"preexec_fn": _nice}
+    prefix = await very_nice()
     try:
         proc = await create_subprocess_exec(
+            *prefix,
             bin,
             "--client=coq.nvim",
             stdin=PIPE,
