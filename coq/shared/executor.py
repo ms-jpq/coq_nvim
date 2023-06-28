@@ -76,7 +76,7 @@ def very_nice() -> Awaitable[Sequence[str]]:
             )
             try:
                 await gather(call(sd, "--booted"), call(*run, "true"))
-            except (FileNotFoundError, PermissionError, CalledProcessError):
+            except (OSError, CalledProcessError):
                 return ()
             else:
                 return run
