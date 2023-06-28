@@ -2,6 +2,7 @@ from asyncio import sleep
 from contextlib import suppress
 from io import BytesIO
 from os import X_OK, access, sep
+from os.path import normpath
 from pathlib import Path, PurePath
 from platform import uname
 from shutil import move
@@ -103,7 +104,7 @@ def _update(vars_dir: Path, timeout: float) -> bool:
                         zip.extractall(path=tmp)
                     for child in Path(tmp).iterdir():
                         child.chmod(_X_MOD)
-                        move(child, vars_dir / child.name)
+                        move(normpath(child), vars_dir / child.name)
 
             lock.write_text(uri)
             lock.chmod(_X_MOD)
