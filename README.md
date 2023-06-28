@@ -174,6 +174,8 @@ apt install universal-ctags    # good
 
 - Auto download & install & update
 
+- Platform specific `cgroupv2` & `taskpolicy` core pinning / CPU management.
+
 ![tabnine.img](https://raw.githubusercontent.com/ms-jpq/coq.artifacts/artifacts/preview/tabnine.gif)
 
 _T9 is disabled by default, I might remove it, if they do not improve the CPU usage. [Their own bug tracker](https://github.com/codota/TabNine/issues/43)._
