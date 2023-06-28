@@ -16,7 +16,7 @@ from json.decoder import JSONDecodeError
 from os import X_OK, access
 from pathlib import PurePath
 from subprocess import DEVNULL, PIPE
-from typing import Any, AsyncIterator, Iterator, Mapping, Optional, Sequence
+from typing import Any, AsyncIterator, Iterator, Mapping, Optional, Sequence, cast
 
 from pynvim_pp.lib import decode, encode
 from pynvim_pp.logging import log, suppress_and_log
@@ -36,7 +36,7 @@ from ...shared.types import Completion, Context, ContextualEdit, Doc
 from .install import ensure_updated, t9_bin
 from .types import ReqL1, ReqL2, Request, RespL1, Response
 
-_VERSION = "4.4.204"
+_VERSION = "4.5.10"
 
 _DECODER = new_decoder[RespL1](RespL1, strict=False)
 _ENCODER = new_encoder[Request](Request)
@@ -167,6 +167,7 @@ class Worker(BaseWorker[T9Client, None]):
         self._proc: Optional[Process] = None
         self._cwd: Optional[PurePath] = None
         self._count = count()
+        self._t9_locked = False
         super().__init__(supervisor, options=options, misc=misc)
         create_task(self._install())
         create_task(self._poll())
@@ -240,6 +241,10 @@ class Worker(BaseWorker[T9Client, None]):
             return await shield(cont())
 
     async def work(self, context: Context) -> AsyncIterator[Completion]:
+        if self._t9_locked:
+            self._t9_locked = False
+            return
+
         async with self._work_lock:
             if self._cwd != context.cwd:
                 await self._clean()
@@ -258,11 +263,14 @@ class Worker(BaseWorker[T9Client, None]):
                     except JSONDecodeError as e:
                         log.warn("%s", e)
                     else:
+                        if isinstance(resp, Mapping):
+                            self._t9_locked = resp.get("is_locked", False)
+
                         for comp in _decode(
                             self._options,
                             ellipsis=self._supervisor.display.pum.ellipsis,
                             syntax=context.filetype,
                             id=id,
-                            reply=resp,
+                            reply=cast(Response, resp),
                         ):
                             yield comp
