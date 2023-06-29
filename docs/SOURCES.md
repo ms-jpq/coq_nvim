@@ -246,14 +246,14 @@ Can also take in named registers `a-z`.
 
 ##### `coq_settings.clients.registers.lines`
 
-Complete lines from contents of registers.
+Complete lines from contents of registers `a-z`.
 
 Will only match at beginning of lines.
 
 **default:**
 
 ```json
-["l"]
+[]
 ```
 
 ---

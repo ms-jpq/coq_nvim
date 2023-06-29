@@ -32,7 +32,7 @@ clients:
   registers:
     always_on_top: False
     enabled: True
-    lines: ["l"]
+    lines: []
     match_syms: False
     register_scope: " ⇉ "
     short_name: "REG"
