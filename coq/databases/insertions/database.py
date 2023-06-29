@@ -1,5 +1,4 @@
 from dataclasses import dataclass
-from json import loads
 from sqlite3 import Connection, OperationalError
 from typing import Iterator, Mapping, Optional
 
@@ -19,7 +18,7 @@ class Statistics:
     inserted: int
 
     avg_duration: float
-    q01_duration: float
+    q10_duration: float
     q50_duration: float
     q95_duration: float
     q99_duration: float
@@ -116,25 +115,23 @@ class IDB(Interruptible):
     async def stats(self) -> Iterator[Statistics]:
         def cont() -> Iterator[Statistics]:
             with with_transaction(self._conn.cursor()) as cursor:
-                cursor.execute(sql("select", "stats"), ())
+                cursor.execute(sql("select", "summaries"), ())
                 rows = cursor.fetchall()
 
             def c1() -> Iterator[Statistics]:
                 for row in rows:
-                    q_duration: Mapping[str, Optional[float]] = loads(row["q_duration"])
-                    q_items: Mapping[str, Optional[int]] = loads(row["q_items"])
                     stat = Statistics(
                         source=row["source"],
                         interrupted=row["interrupted"],
                         inserted=row["inserted"],
                         avg_duration=row["avg_duration"],
                         avg_items=row["avg_items"],
-                        q01_duration=q_duration.get("q1") or 0,
-                        q50_duration=q_duration.get("q50") or 0,
-                        q95_duration=q_duration.get("q95") or 0,
-                        q99_duration=q_duration.get("q99") or 0,
-                        q50_items=q_items.get("q50") or 0,
-                        q99_items=q_items.get("q99") or 0,
+                        q10_duration=row["q10_duration"],
+                        q50_duration=row["q50_duration"],
+                        q95_duration=row["q95_duration"],
+                        q99_duration=row["q99_duration"],
+                        q50_items=row["q50_items"],
+                        q99_items=row["q99_items"],
                     )
                     yield stat
 

@@ -56,14 +56,44 @@ ON
   instance_stats.instance_id = instances.rowid;
 
 
-CREATE VIEW IF NOT EXISTS stats_quantiles_view AS
+CREATE VIEW IF NOT EXISTS quantiles_view AS
 SELECT
-  source                                                       AS source,
-  COALESCE(SUM(interrupted), 0)                                AS interrupted,
-  COALESCE(AVG(duration), 0)                                   AS avg_duration,
-  COALESCE(X_QUANTILES(duration, 0.01, 0.5, 0.95, 0.99), '{}') AS q_duration,
-  COALESCE(AVG(items), 0)                                      AS avg_items,
-  COALESCE(X_QUANTILES(items, 0.5, 0.99), '{}')                AS q_items
+  source                                                  AS source,
+  items,
+  duration,
+  NTILE(100) OVER (PARTITION BY source ORDER BY items)    AS q_items,
+  NTILE(100) OVER (PARTITION BY source ORDER BY duration) AS q_duration
+FROM instance_stats_view;
+
+
+CREATE VIEW IF NOT EXISTS duration_quantiles_view AS
+SELECT
+  source,
+  q_duration,
+  MAX(duration) AS duration
+FROM quantiles_view
+GROUP BY
+  source,
+  q_duration;
+
+
+CREATE VIEW IF NOT EXISTS items_quantiles_view AS
+SELECT
+  source,
+  q_items,
+  MAX(items) AS items
+FROM quantiles_view
+GROUP BY
+  source,
+  q_items;
+
+
+CREATE VIEW IF NOT EXISTS stats_summaries_view AS
+SELECT
+  source                         AS source,
+  COALESCE(SUM(interrupted), 0)  AS interrupted,
+  COALESCE(AVG(duration), 0)     AS avg_duration,
+  COALESCE(AVG(items), 0)        AS avg_items
 FROM instance_stats_view
 GROUP BY
   source;
@@ -83,16 +113,104 @@ GROUP BY
 
 CREATE VIEW IF NOT EXISTS stats_view AS
 SELECT
-  sources.name                                    AS source,
-  COALESCE(stats_quantiles_view.interrupted, 0)   AS interrupted,
-  COALESCE(stats_quantiles_view.avg_items, 0)     AS avg_items,
-  COALESCE(stats_quantiles_view.q_items, '{}')    AS q_items,
-  COALESCE(stats_quantiles_view.avg_duration, 0)  AS avg_duration,
-  COALESCE(stats_quantiles_view.q_duration, '{}') AS q_duration,
-  COALESCE(stats_inserted_view.inserted, 0)       AS inserted
+  sources.name                                   AS source,
+  COALESCE(stats_summaries_view.interrupted, 0)  AS interrupted,
+  COALESCE(stats_summaries_view.avg_items, 0)    AS avg_items,
+  COALESCE(stats_summaries_view.avg_duration, 0) AS avg_duration,
+  COALESCE(stats_inserted_view.inserted, 0)      AS inserted,
+  COALESCE(
+    (
+      SELECT
+        duration
+      FROM
+        duration_quantiles_view
+      WHERE
+        duration_quantiles_view.source = sources.name
+      ORDER BY
+        ABS(q_duration - 10)
+      LIMIT
+        1
+    ),
+    0
+  ) AS q10_duration,
+  COALESCE(
+    (
+      SELECT
+        duration
+      FROM
+        duration_quantiles_view
+      WHERE
+        duration_quantiles_view.source = sources.name
+      ORDER BY
+        ABS(q_duration - 50)
+      LIMIT
+        1
+    ),
+    0
+  ) AS q50_duration,
+  COALESCE(
+    (
+      SELECT
+        duration
+      FROM
+        duration_quantiles_view
+      WHERE
+        duration_quantiles_view.source = sources.name
+      ORDER BY
+        ABS(q_duration - 95)
+      LIMIT
+        1
+    ),
+    0
+  ) AS q95_duration,
+  COALESCE(
+    (
+      SELECT
+        duration
+      FROM
+        duration_quantiles_view
+      WHERE
+        duration_quantiles_view.source = sources.name
+      ORDER BY
+        ABS(q_duration - 99)
+      LIMIT
+        1
+    ),
+    0
+  ) AS q99_duration,
+  COALESCE(
+    (
+      SELECT
+        items
+      FROM
+        items_quantiles_view
+      WHERE
+        items_quantiles_view.source = sources.name
+      ORDER BY
+        ABS(q_items - 50)
+      LIMIT
+        1
+    ),
+    0
+  ) AS q50_items,
+  COALESCE(
+    (
+      SELECT
+        items
+      FROM
+        items_quantiles_view
+      WHERE
+        items_quantiles_view.source = sources.name
+      ORDER BY
+        ABS(q_items - 99)
+      LIMIT
+        1
+    ),
+    0
+  ) AS q99_items
 FROM sources
-LEFT JOIN stats_quantiles_view
-ON stats_quantiles_view.source = sources.name
+LEFT JOIN stats_summaries_view
+ON stats_summaries_view.source = sources.name
 LEFT JOIN stats_inserted_view
 ON stats_inserted_view.source = sources.name;
 
