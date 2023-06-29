@@ -34,6 +34,7 @@ clients:
     enabled: True
     lines: []
     match_syms: False
+    max_yank_size: 8888
     register_scope: " ⇉ "
     short_name: "REG"
     weight_adjust: 0

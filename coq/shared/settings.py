@@ -234,6 +234,7 @@ _NamedRegisters = Literal[
 @dataclass(frozen=True)
 class RegistersClient(_WordbankClient, _AlwaysTop):
     lines: AbstractSet[_NamedRegisters]
+    max_yank_size: int
     register_scope: str
     words: AbstractSet[Union[Literal["0"], _NamedRegisters]]
 

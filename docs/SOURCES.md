@@ -230,6 +230,16 @@ Also match symbols in addition to words.
 false
 ```
 
+##### `coq_settings.clients.registers.max_yank_size`
+
+For the yank register: `0`. Ignore contents if size exceeds limit.
+
+**default:**
+
+```json
+8888
+```
+
 ##### `coq_settings.clients.registers.words`
 
 Complete from contents of registers.
