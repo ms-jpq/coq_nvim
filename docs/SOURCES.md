@@ -248,6 +248,8 @@ Can also take in named registers `a-z`.
 
 Complete lines from contents of registers.
 
+Will only match at beginning of lines.
+
 **default:**
 
 ```json
