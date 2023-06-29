@@ -127,7 +127,17 @@ async def _on_yank(stack: Stack, operator: str, regname: str) -> None:
                 worker.post_yank(regname)
 
 
-_ = (
-    autocmd("TextYankPost")
-    << f"lua {NAMESPACE}.{_on_yank.method}(vim.v.event.operator, vim.v.event.regname)"
-)
+_LUA = f"""
+(function()
+  local acc = 0
+  for _, line in pairs(vim.v.event.regcontents) do
+    acc = acc + #line
+    if acc >= 888 then
+      return
+    end
+  end
+  {NAMESPACE}.{_on_yank.method}(vim.v.event.operator, vim.v.event.regname)
+end)()
+"""
+
+_ = autocmd("TextYankPost") << f"lua {_LUA}"
