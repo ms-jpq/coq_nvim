@@ -164,6 +164,12 @@ apt install universal-ctags    # good
 
 ![buffers.img](https://raw.githubusercontent.com/ms-jpq/coq.artifacts/artifacts/preview/buffers.gif)
 
+### Registers
+
+- **words** Last yank `0` + custom `a-z` `coq_settings.clients.registers.words`
+
+- **lines** `coq_settings.clients.registers.lines`
+
 ### Tmux
 
 ![tmux.img](https://raw.githubusercontent.com/ms-jpq/coq.artifacts/artifacts/preview/tmux.gif)
