@@ -168,7 +168,7 @@ apt install universal-ctags    # good
 
 - **words** Last yank `0` + custom `a-z` `coq_settings.clients.registers.words`
 
-- **lines** `coq_settings.clients.registers.lines`
+- **lines** `coq_settings.clients.registers.lines` (`a-z`)
 
 ### Tmux
 
