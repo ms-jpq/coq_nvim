@@ -117,6 +117,7 @@ class RangeEdit(BaseRangeEdit):
 
 
 class SnippetGrammar(Enum):
+    lit = auto()
     lsp = auto()
     snu = auto()
 

@@ -10,7 +10,7 @@ from ...databases.registers.database import RDB
 from ...shared.runtime import Supervisor
 from ...shared.runtime import Worker as BaseWorker
 from ...shared.settings import RegistersClient
-from ...shared.types import Completion, Context, Doc, Edit
+from ...shared.types import Completion, Context, Doc, Edit, SnippetEdit, SnippetGrammar
 
 
 async def _registers(names: AbstractSet[str]) -> Mapping[str, str]:
@@ -60,16 +60,21 @@ class Worker(BaseWorker[RegistersClient, RDB]):
     async def work(self, context: Context) -> AsyncIterator[Completion]:
         async with self._work_lock:
             before = removesuffix(context.line_before, suffix=context.syms_before)
-            lines = not before or before.isspace()
+            linewise = not before or before.isspace()
             words = await self._misc.select(
-                lines,
+                linewise,
+                match_syms=self._options.match_syms,
                 opts=self._supervisor.match,
                 word=context.words,
-                sym=(context.syms if self._options.match_syms else ""),
+                sym=context.syms,
                 limitless=context.manual,
             )
             for word in words:
-                edit = Edit(new_text=word.text)
+                edit = (
+                    SnippetEdit(new_text=word.text, grammar=SnippetGrammar.lit)
+                    if word.linewise
+                    else Edit(new_text=word.text)
+                )
                 docline = f"{self._options.short_name}{self._options.register_scope}{word.regname}"
                 doc = Doc(
                     text=docline,

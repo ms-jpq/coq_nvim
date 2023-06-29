@@ -1,6 +1,6 @@
 from contextlib import suppress
 from dataclasses import dataclass
-from itertools import chain
+from itertools import chain, repeat
 from sqlite3 import Connection, Cursor, OperationalError
 from typing import AbstractSet, Any, Iterator, Mapping, Sequence
 
@@ -17,9 +17,10 @@ from .sql import sql
 
 @dataclass(frozen=True)
 class RegWord:
-    text: str
+    linewise: bool
     match: str
     regname: str
+    text: str
 
 
 def _init() -> Connection:
@@ -85,17 +86,23 @@ class RDB(Interruptible):
         await self._ex.submit(cont)
 
     async def select(
-        self, lines: bool, opts: MatchOptions, word: str, sym: str, limitless: int
+        self,
+        linewise: bool,
+        match_syms: bool,
+        opts: MatchOptions,
+        word: str,
+        sym: str,
+        limitless: int,
     ) -> Iterator[RegWord]:
-        def fetch(cursor: Cursor, f: str) -> Sequence[Any]:
+        def fetch(cursor: Cursor, match_syms: bool, stmt: str) -> Sequence[Any]:
             cursor.execute(
-                sql("select", f),
+                sql("select", stmt),
                 {
                     "cut_off": opts.fuzzy_cutoff,
                     "look_ahead": opts.look_ahead,
                     "limit": BIGGEST_INT if limitless else opts.max_results,
                     "word": word,
-                    "sym": sym,
+                    "sym": (sym if match_syms else ""),
                     "like_word": like_esc(word[: opts.exact_matches]),
                     "like_sym": like_esc(sym[: opts.exact_matches]),
                 },
@@ -105,16 +112,19 @@ class RDB(Interruptible):
         def cont() -> Iterator[RegWord]:
             try:
                 with with_transaction(self._conn.cursor()) as cursor:
-                    rows = chain(
-                        fetch(cursor, "lines") if lines else (), fetch(cursor, "words")
+                    lines = (
+                        fetch(cursor, match_syms=True, stmt="lines") if linewise else ()
                     )
+                    words = fetch(cursor, match_syms=match_syms, stmt="words")
+                    rows = chain(zip(repeat(True), lines), zip(repeat(False), words))
                     return (
                         RegWord(
+                            linewise=ls,
+                            match=row["word"],
                             regname=row["register"],
                             text=row["text"],
-                            match=row["word"],
                         )
-                        for row in rows
+                        for ls, row in rows
                     )
             except OperationalError:
                 return iter(())
