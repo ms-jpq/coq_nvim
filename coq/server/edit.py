@@ -185,80 +185,63 @@ def _range_edit_trans(
     lines: _Lines,
     edit: BaseRangeEdit,
 ) -> EditInstruction:
-    if (
-        primary
-        and not isinstance(edit, ParsedEdit)
-        and edit.begin == edit.end
-        and len(
-            tuple(
-                coalesce(
-                    match.unifying_chars,
-                    include_syms=True,
-                    backwards=None,
-                    chars=edit.new_text,
-                )
+    if primary and not isinstance(edit, ParsedEdit) and edit.begin == edit.end:
+        adjusted = trans_adjusted(match, comp=comp, ctx=ctx, new_text=edit.new_text)
+        if adjusted.old_prefix:
+            ctx_edit = _contextual_edit_trans(
+                ctx, adjust_indent=adjust_indent, lines=lines, edit=adjusted
             )
-        )
-        > 1
-    ):
-        return _edit_trans(
-            match,
-            comp=comp,
-            adjust_indent=adjust_indent,
-            ctx=ctx,
-            lines=lines,
-            edit=edit,
-        )
 
+            return ctx_edit
+
+    (r1, ec1), (r2, ec2) = sorted((edit.begin, edit.end))
+    split_lines = edit.new_text.split(ctx.linefeed)
+
+    if edit.encoding == UTF16:
+        c1 = len(encode(decode(lines.b_lines16[r1][: ec1 * 2], encoding=UTF16)))
+        c2 = len(encode(decode(lines.b_lines16[r2][: ec2 * 2], encoding=UTF16)))
+    elif edit.encoding == UTF8:
+        c1 = len(lines.b_lines8[r1][:ec1])
+        c2 = len(lines.b_lines8[r2][:ec2])
     else:
-        (r1, ec1), (r2, ec2) = sorted((edit.begin, edit.end))
-        split_lines = edit.new_text.split(ctx.linefeed)
+        raise ValueError(f"Unknown encoding -- {edit.encoding}")
 
-        if edit.encoding == UTF16:
-            c1 = len(encode(decode(lines.b_lines16[r1][: ec1 * 2], encoding=UTF16)))
-            c2 = len(encode(decode(lines.b_lines16[r2][: ec2 * 2], encoding=UTF16)))
-        elif edit.encoding == UTF8:
-            c1 = len(lines.b_lines8[r1][:ec1])
-            c2 = len(lines.b_lines8[r2][:ec2])
-        else:
-            raise ValueError(f"Unknown encoding -- {edit.encoding}")
+    begin = r1, c1
+    end = r2, c2
 
-        begin = r1, c1
-        end = r2, c2
-
-        if primary and adjust_indent:
-            line_before = ctx.line_before[:c1]
-            new_lines: Sequence[str] = tuple(
-                indent_adjusted(ctx, line_before=line_before, lines=split_lines)
-            )
-        else:
-            new_lines = split_lines
-
-        lines_before = (
-            edit.new_prefix.split(ctx.linefeed)
-            if isinstance(edit, ParsedEdit)
-            else new_lines
+    if primary and adjust_indent:
+        line_before = ctx.line_before[:c1]
+        new_lines: Sequence[str] = tuple(
+            indent_adjusted(ctx, line_before=line_before, lines=split_lines)
         )
-        cursor_yoffset = (r2 - r1) + (len(lines_before) - 1)
-        cursor_xpos = (
-            (
-                len(encode(lines_before[-1]))
-                if len(lines_before) > 1
-                else len(lines.b_lines8[r2][:c1]) + len(encode(lines_before[0]))
-            )
-            if primary
-            else -1
-        )
+    else:
+        new_lines = split_lines
 
-        inst = EditInstruction(
-            primary=primary,
-            begin=begin,
-            end=end,
-            cursor_yoffset=cursor_yoffset,
-            cursor_xpos=cursor_xpos,
-            new_lines=new_lines,
+    lines_before = (
+        edit.new_prefix.split(ctx.linefeed)
+        if isinstance(edit, ParsedEdit)
+        else new_lines
+    )
+    cursor_yoffset = (r2 - r1) + (len(lines_before) - 1)
+    cursor_xpos = (
+        (
+            len(encode(lines_before[-1]))
+            if len(lines_before) > 1
+            else len(lines.b_lines8[r2][:c1]) + len(encode(lines_before[0]))
         )
-        return inst
+        if primary
+        else -1
+    )
+
+    inst = EditInstruction(
+        primary=primary,
+        begin=begin,
+        end=end,
+        cursor_yoffset=cursor_yoffset,
+        cursor_xpos=cursor_xpos,
+        new_lines=new_lines,
+    )
+    return inst
 
 
 def _instructions(
