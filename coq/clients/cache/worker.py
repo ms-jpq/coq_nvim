@@ -29,6 +29,8 @@ class _CacheCtx:
     commit_id: UUID
     buf_id: int
     row: int
+    utf8_col: int
+    utf16_col: int
     syms_before: str
 
 
@@ -67,6 +69,8 @@ class CacheWorker:
             commit_id=uuid4(),
             buf_id=-1,
             row=-1,
+            utf8_col=-1,
+            utf16_col=-1,
             syms_before="",
         )
         self._clients: MutableSet[str] = set()
@@ -104,12 +108,14 @@ class CacheWorker:
         self, context: Context
     ) -> Tuple[bool, AbstractSet[str], Awaitable[Tuple[Iterator[Completion], int]]]:
         cache_ctx = self._cache_ctx
-        row, _ = context.position
+        row, col = context.position
         self._cache_ctx = _CacheCtx(
             change_id=context.change_id,
             commit_id=context.commit_id,
             buf_id=context.buf_id,
             row=row,
+            utf8_col=col,
+            utf16_col=context.utf16_col,
             syms_before=context.syms_before,
         )
 

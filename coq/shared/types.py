@@ -20,8 +20,7 @@ BYTE_TRANS = {
 
 @dataclass(frozen=True)
 class ChangeEvent:
-    lo: int
-    hi: int
+    range: range
     lines: Sequence[str]
 
 
@@ -51,6 +50,7 @@ class Context:
     comment: Tuple[str, str]
 
     position: NvimPos
+    utf16_col: int
     scr_col: int
     win_size: int
 

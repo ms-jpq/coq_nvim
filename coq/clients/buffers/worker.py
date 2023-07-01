@@ -128,8 +128,8 @@ class Worker(BaseWorker[BuffersClient, BDB]):
                     buf_id=context.buf_id,
                     filetype=context.filetype,
                     filename=context.filename,
-                    lo=change.lo,
-                    hi=change.hi,
+                    lo=change.range.start,
+                    hi=change.range.stop,
                     lines=change.lines,
                 )
                 if (change := context.change)

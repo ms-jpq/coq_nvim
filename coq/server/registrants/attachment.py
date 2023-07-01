@@ -104,7 +104,7 @@ async def _lines_event(
                         and mode.startswith("i")
                         and comp_mode in {"", "eval", "function", "ctrl_x"}
                     ):
-                        change = ChangeEvent(lo=lo, hi=hi, lines=lines)
+                        change = ChangeEvent(range=range(lo, hi), lines=lines)
                         await comp_func(
                             stack=stack, s=s, change=change, t0=t0, manual=False
                         )
