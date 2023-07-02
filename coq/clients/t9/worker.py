@@ -1,3 +1,4 @@
+import sys
 from asyncio import (
     IncompleteReadError,
     LimitOverrunError,
@@ -35,6 +36,10 @@ from ...shared.settings import T9Client
 from ...shared.types import Completion, Context, ContextualEdit, Doc
 from .install import ensure_updated, t9_bin, x_ok
 from .types import ReqL1, ReqL2, Request, RespL1, Response
+
+if sys.platform == "win32":
+    from subprocess import BELOW_NORMAL_PRIORITY_CLASS
+
 
 _VERSION = "4.5.10"
 
@@ -139,6 +144,7 @@ async def _proc(bin: PurePath, cwd: PurePath) -> Optional[Process]:
             stdout=PIPE,
             stderr=DEVNULL,
             cwd=cwd,
+            startupinfo=None,
             **kwargs,  # type: ignore
         )
     except FileNotFoundError:
