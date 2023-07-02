@@ -136,7 +136,9 @@ class Worker(BaseWorker[LSPClient, None]):
 
                 for client, (cached_items, length) in acc.items():
                     items = (
-                        sanitize_cached(item, sort_by=None) for item in cached_items
+                        cached
+                        for item in cached_items
+                        if (cached := sanitize_cached(item, sort_by=None))
                     )
                     yield _Src.from_stored, LSPcomp(
                         client=client, local_cache=True, items=items, length=length

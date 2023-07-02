@@ -1,4 +1,5 @@
 from dataclasses import replace
+from typing import Optional
 
 from ...registry import rpc
 from ...shared.repeat import sanitize
@@ -9,7 +10,7 @@ from ..rt_types import Stack
 from ..state import state
 
 
-def _edit(prev: Edit) -> Edit:
+def _edit(prev: Edit) -> Optional[Edit]:
     sanitized = sanitize(prev)
     new_edit = (
         ContextualEdit(
@@ -28,8 +29,9 @@ async def repeat(stack: Stack) -> None:
     )
     s = state(context=ctx)
     metric = s.last_edit
-    sanitized = _edit(metric.comp.primary_edit)
-    new_metric = replace(
-        metric, comp=replace(metric.comp, primary_edit=sanitized, secondary_edits=())
-    )
-    await edit(stack=stack, state=s, metric=new_metric, synthetic=True)
+    if sanitized := _edit(metric.comp.primary_edit):
+        new_metric = replace(
+            metric,
+            comp=replace(metric.comp, primary_edit=sanitized, secondary_edits=()),
+        )
+        await edit(stack=stack, state=s, metric=new_metric, synthetic=True)

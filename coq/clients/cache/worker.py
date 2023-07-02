@@ -49,15 +49,17 @@ def _use_cache(match: MatchOptions, cache: _CacheCtx, ctx: Context) -> bool:
     return use_cache
 
 
-def sanitize_cached(comp: Completion, sort_by: Optional[str]) -> Completion:
-    edit = sanitize(comp.primary_edit)
-    cached = replace(
-        comp,
-        primary_edit=edit,
-        secondary_edits=(),
-        sort_by=sort_by or comp.sort_by,
-    )
-    return cached
+def sanitize_cached(comp: Completion, sort_by: Optional[str]) -> Optional[Completion]:
+    if edit := sanitize(comp.primary_edit):
+        cached = replace(
+            comp,
+            primary_edit=edit,
+            secondary_edits=(),
+            sort_by=sort_by or comp.sort_by,
+        )
+        return cached
+    else:
+        return None
 
 
 class CacheWorker:
@@ -138,9 +140,10 @@ class CacheWorker:
                     limitless=context.manual,
                 )
                 comps = (
-                    sanitize_cached(comp, sort_by=sort_by)
+                    cached
                     for key, sort_by in keys
                     if (comp := self._cached.get(key))
+                    and (cached := sanitize_cached(comp, sort_by=sort_by))
                 )
                 return comps, length
 
