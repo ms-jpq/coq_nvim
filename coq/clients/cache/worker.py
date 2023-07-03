@@ -57,7 +57,6 @@ def sanitize_cached(
         cached = replace(
             comp,
             primary_edit=edit,
-            secondary_edits=(),
             sort_by=sort_by or comp.sort_by,
         )
         return cached
