@@ -29,6 +29,7 @@ from .protocol import PROTOCOL
 from .types import (
     CompletionItem,
     CompletionResponse,
+    Cursors,
     InsertReplaceEdit,
     ItemDefaults,
     LSPcomp,
@@ -63,7 +64,11 @@ def _with_defaults(defaults: ItemDefaults, item: Any) -> Any:
     return item
 
 
-def _range_edit(fallback: str, edit: Union[TextEdit, InsertReplaceEdit]) -> RangeEdit:
+def _range_edit(
+    cursors: Cursors, fallback: str, edit: Union[TextEdit, InsertReplaceEdit]
+) -> RangeEdit:
+    _, u16 = cursors
+
     if isinstance(edit, TextEdit):
         ra_start = edit.range.start
         ra_end = edit.range.end
@@ -79,17 +84,17 @@ def _range_edit(fallback: str, edit: Union[TextEdit, InsertReplaceEdit]) -> Rang
         fallback=fallback,
         begin=begin,
         end=end,
-        cursor_pos=0,
+        cursor_pos=u16,
         encoding=UTF16,
     )
     return re
 
 
-def _primary(item: CompletionItem) -> Edit:
+def _primary(cursors: Cursors, item: CompletionItem) -> Edit:
     fallback = Edit(new_text=item.insertText or item.label)
     if PROTOCOL.InsertTextFormat.get(item.insertTextFormat) == "Snippet":
         if isinstance(item.textEdit, (TextEdit, InsertReplaceEdit)):
-            re = _range_edit(fallback.new_text, edit=item.textEdit)
+            re = _range_edit(cursors, fallback=fallback.new_text, edit=item.textEdit)
 
             return SnippetRangeEdit(
                 grammar=SnippetGrammar.lsp,
@@ -104,7 +109,7 @@ def _primary(item: CompletionItem) -> Edit:
             return SnippetEdit(grammar=SnippetGrammar.lsp, new_text=fallback.new_text)
     else:
         if isinstance(item.textEdit, (TextEdit, InsertReplaceEdit)):
-            return _range_edit(fallback.new_text, edit=item.textEdit)
+            return _range_edit(cursors, fallback=fallback.new_text, edit=item.textEdit)
         else:
             return fallback
 
@@ -128,6 +133,7 @@ def parse_item(
     extern_type: Union[Type[ExternLSP], Type[ExternLUA]],
     always_on_top: Optional[AbstractSet[Optional[str]]],
     client: Optional[str],
+    cursors: Cursors,
     short_name: str,
     weight_adjust: float,
     item: Any,
@@ -151,10 +157,10 @@ def parse_item(
                 if (label_detail := parsed.labelDetails)
                 else parsed.label
             )
-            p_edit = _primary(parsed)
+            p_edit = _primary(cursors, item=parsed)
             adjust_indent = _adjust_indent(parsed.insertTextMode, edit=p_edit)
             r_edits = tuple(
-                _range_edit("", edit=edit)
+                _range_edit((-1, -1), fallback="", edit=edit)
                 for edit in (parsed.additionalTextEdits or ())
             )
             sort_by = parsed.filterText or (
@@ -187,6 +193,7 @@ def parse(
     always_on_top: Optional[AbstractSet[Optional[str]]],
     client: Optional[str],
     short_name: str,
+    cursors: Cursors,
     weight_adjust: float,
     resp: CompletionResponse,
 ) -> LSPcomp:
@@ -214,6 +221,7 @@ def parse(
                         client=client,
                         always_on_top=always_on_top,
                         short_name=short_name,
+                        cursors=cursors,
                         weight_adjust=weight_adjust,
                         item=_with_defaults(defaults, item=item),
                     )
@@ -236,6 +244,7 @@ def parse(
                     always_on_top=always_on_top,
                     client=client,
                     short_name=short_name,
+                    cursors=cursors,
                     weight_adjust=weight_adjust,
                     item=_with_defaults(defaults, item=item),
                 )

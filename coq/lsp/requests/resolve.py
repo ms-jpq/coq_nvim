@@ -15,6 +15,7 @@ async def resolve(extern: ExternLSP) -> Optional[Completion]:
             type(extern),
             client=client,
             short_name="",
+            cursors=(-1, -1),
             always_on_top=None,
             weight_adjust=0,
             item=resp,

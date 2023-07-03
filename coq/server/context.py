@@ -61,7 +61,7 @@ async def context(
     l_syms_before, l_syms_after = lower(split.syms_lhs), lower(split.syms_rhs)
     is_lower = l_words_before + l_words_after == split.word_lhs + split.word_rhs
     line_before, line_after = split.lhs, split.rhs
-    utf16_col = len(encode(line_before, encoding=UTF16))
+    utf16_col = len(encode(line_before[:col], encoding=UTF16)) // 2
 
     ctx = Context(
         manual=manual,

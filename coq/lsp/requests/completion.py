@@ -1,8 +1,6 @@
 from typing import AbstractSet, AsyncIterator, Optional, cast
 
-from pynvim_pp.lib import encode
-
-from ...shared.types import UTF16, Context, ExternLSP, ExternLUA
+from ...shared.types import Context, ExternLSP, ExternLUA
 from ..parse import parse
 from ..types import CompletionResponse, LSPcomp
 from .request import async_request
@@ -16,15 +14,17 @@ async def comp_lsp(
     chunk: int,
     clients: AbstractSet[str],
 ) -> AsyncIterator[LSPcomp]:
-    row, c = context.position
-    col = len(encode(context.line_before[:c], encoding=UTF16)) // 2
+    row, utf8_col = context.position
+    lsp_pos = (row, context.utf16_col)
+    cursors = (utf8_col, context.utf16_col)
 
-    async for client, reply in async_request("lsp_comp", chunk, clients, (row, col)):
+    async for client, reply in async_request("lsp_comp", chunk, clients, lsp_pos):
         resp = cast(CompletionResponse, reply)
         yield parse(
             ExternLSP,
             client=client,
             short_name=short_name,
+            cursors=cursors,
             always_on_top=always_on_top,
             weight_adjust=weight_adjust,
             resp=resp,
@@ -39,6 +39,9 @@ async def comp_thirdparty(
     chunk: int,
     clients: AbstractSet[str],
 ) -> AsyncIterator[LSPcomp]:
+    _, utf8_col = context.position
+    cursors = (utf8_col, context.utf16_col)
+
     async for client, reply in async_request(
         "lsp_third_party", chunk, clients, context.position, context.line
     ):
@@ -48,6 +51,7 @@ async def comp_thirdparty(
             ExternLUA,
             client=client,
             short_name=name,
+            cursors=cursors,
             always_on_top=always_on_top,
             weight_adjust=weight_adjust,
             resp=resp,

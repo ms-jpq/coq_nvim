@@ -6,11 +6,14 @@ from typing import (
     Literal,
     Optional,
     Sequence,
+    Tuple,
     TypedDict,
     Union,
 )
 
-from ..shared.types import Completion
+from ..shared.types import Completion, NvimCursor, WTF8Cursor
+
+Cursors = Tuple[NvimCursor, WTF8Cursor]
 
 # https://microsoft.github.io/language-server-protocol/specification
 
