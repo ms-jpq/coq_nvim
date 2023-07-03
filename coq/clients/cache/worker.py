@@ -14,6 +14,7 @@ from typing import (
 from uuid import UUID, uuid4
 
 from ...databases.cache.database import Database
+from ...lsp.types import Cursors
 from ...shared.fuzzy import multi_set_ratio
 from ...shared.parse import coalesce
 from ...shared.repeat import sanitize
@@ -49,8 +50,10 @@ def _use_cache(match: MatchOptions, cache: _CacheCtx, ctx: Context) -> bool:
     return use_cache
 
 
-def sanitize_cached(comp: Completion, sort_by: Optional[str]) -> Optional[Completion]:
-    if edit := sanitize(comp.primary_edit):
+def sanitize_cached(
+    cursors: Cursors, comp: Completion, sort_by: Optional[str]
+) -> Optional[Completion]:
+    if edit := sanitize(cursors, comp.primary_edit):
         cached = replace(
             comp,
             primary_edit=edit,
@@ -131,6 +134,8 @@ class CacheWorker:
             self._cached.clear()
 
         async def get() -> Tuple[Iterator[Completion], int]:
+            _, col = context.position
+            cursors = (col, context.utf16_col)
             with timeit("CACHE -- GET"):
                 keys, length = await self._db.select(
                     not use_cache,
@@ -143,7 +148,7 @@ class CacheWorker:
                     cached
                     for key, sort_by in keys
                     if (comp := self._cached.get(key))
-                    and (cached := sanitize_cached(comp, sort_by=sort_by))
+                    and (cached := sanitize_cached(cursors, comp=comp, sort_by=sort_by))
                 )
                 return comps, length
 

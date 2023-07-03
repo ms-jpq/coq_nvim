@@ -1,9 +1,10 @@
 from typing import Optional
 
+from ..lsp.types import Cursors
 from .types import Edit, RangeEdit, SnippetEdit, SnippetRangeEdit
 
 
-def sanitize(edit: Edit) -> Optional[Edit]:
+def sanitize(cursors: Optional[Cursors], edit: Edit) -> Optional[Edit]:
     if isinstance(edit, SnippetRangeEdit):
         if (
             not edit.fallback

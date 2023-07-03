@@ -11,7 +11,7 @@ from ..state import state
 
 
 def _edit(prev: Edit) -> Optional[Edit]:
-    sanitized = sanitize(prev)
+    sanitized = sanitize(None, edit=prev)
     new_edit = (
         ContextualEdit(
             new_text=sanitized.new_text, old_prefix="", new_prefix=sanitized.new_text
