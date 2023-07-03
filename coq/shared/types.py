@@ -7,10 +7,13 @@ from uuid import UUID, uuid4
 UTF8: Literal["UTF-8"] = "UTF-8"
 UTF16: Literal["UTF-16-LE"] = "UTF-16-LE"
 
+NvimCursor = int
+WTF8Cursor = int
+
 # In nvim, the col is a ut8 byte offset
-NvimPos = Tuple[int, int]
+NvimPos = Tuple[int, NvimCursor]
 # Depends on `OffsetEncoding`
-WTF8Pos = Tuple[int, int]
+WTF8Pos = Tuple[int, WTF8Cursor]
 
 BYTE_TRANS = {
     UTF8: 1,
@@ -50,7 +53,7 @@ class Context:
     comment: Tuple[str, str]
 
     position: NvimPos
-    utf16_col: int
+    utf16_col: WTF8Cursor
     scr_col: int
     win_size: int
 
@@ -108,6 +111,7 @@ class BaseRangeEdit(Edit):
 
     begin: WTF8Pos
     end: WTF8Pos
+    cursor_pos: WTF8Cursor
     encoding: Literal["UTF-8", "UTF-16-LE"]
 
 

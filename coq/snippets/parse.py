@@ -117,6 +117,7 @@ def parse_ranged(
         new_text=new_text,
         begin=snippet.begin,
         end=snippet.end,
+        cursor_pos=snippet.cursor_pos,
         encoding=snippet.encoding,
         new_prefix=new_prefix,
     )

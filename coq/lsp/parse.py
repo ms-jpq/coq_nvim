@@ -75,7 +75,12 @@ def _range_edit(fallback: str, edit: Union[TextEdit, InsertReplaceEdit]) -> Rang
     end = ra_end.line, ra_end.character
 
     re = RangeEdit(
-        new_text=edit.newText, fallback=fallback, begin=begin, end=end, encoding=UTF16
+        new_text=edit.newText,
+        fallback=fallback,
+        begin=begin,
+        end=end,
+        cursor_pos=0,
+        encoding=UTF16,
     )
     return re
 
@@ -92,6 +97,7 @@ def _primary(item: CompletionItem) -> Edit:
                 fallback=item.insertText,
                 begin=re.begin,
                 end=re.end,
+                cursor_pos=re.cursor_pos,
                 encoding=re.encoding,
             )
         else:
