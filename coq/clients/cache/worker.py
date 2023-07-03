@@ -51,9 +51,9 @@ def _use_cache(match: MatchOptions, cache: _CacheCtx, ctx: Context) -> bool:
 
 
 def sanitize_cached(
-    cursors: Cursors, comp: Completion, sort_by: Optional[str]
+    row: int, cursors: Cursors, comp: Completion, sort_by: Optional[str]
 ) -> Optional[Completion]:
-    if edit := sanitize(cursors, comp.primary_edit):
+    if edit := sanitize(row, cursors=cursors, edit=comp.primary_edit):
         cached = replace(
             comp,
             primary_edit=edit,
@@ -134,7 +134,6 @@ class CacheWorker:
             self._cached.clear()
 
         async def get() -> Tuple[Iterator[Completion], int]:
-            _, col = context.position
             cursors = (col, context.utf16_col)
             with timeit("CACHE -- GET"):
                 keys, length = await self._db.select(
@@ -148,7 +147,11 @@ class CacheWorker:
                     cached
                     for key, sort_by in keys
                     if (comp := self._cached.get(key))
-                    and (cached := sanitize_cached(cursors, comp=comp, sort_by=sort_by))
+                    and (
+                        cached := sanitize_cached(
+                            row, cursors=cursors, comp=comp, sort_by=sort_by
+                        )
+                    )
                 )
                 return comps, length
 
