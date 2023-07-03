@@ -62,7 +62,7 @@ def sanitize_cached(
         cached = replace(
             comp,
             primary_edit=edit,
-            secondary_edits=(
+            secondary_edits=tuple(
                 edit for edit in comp.secondary_edits if not _overlap(row, edit=edit)
             ),
             sort_by=sort_by or comp.sort_by,
