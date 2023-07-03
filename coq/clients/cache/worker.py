@@ -21,7 +21,7 @@ from ...shared.repeat import sanitize
 from ...shared.runtime import Supervisor
 from ...shared.settings import MatchOptions
 from ...shared.timeit import timeit
-from ...shared.types import Completion, Context
+from ...shared.types import BaseRangeEdit, Completion, Context
 
 
 @dataclass(frozen=True)
@@ -50,6 +50,11 @@ def _use_cache(match: MatchOptions, cache: _CacheCtx, ctx: Context) -> bool:
     return use_cache
 
 
+def _overlap(row: int, edit: BaseRangeEdit) -> bool:
+    (b_row, _), (e_row, _) = edit.begin, edit.end
+    return b_row == row or e_row == row
+
+
 def sanitize_cached(
     row: int, cursors: Cursors, comp: Completion, sort_by: Optional[str]
 ) -> Optional[Completion]:
@@ -57,6 +62,9 @@ def sanitize_cached(
         cached = replace(
             comp,
             primary_edit=edit,
+            secondary_edits=(
+                edit for edit in comp.secondary_edits if not _overlap(row, edit=edit)
+            ),
             sort_by=sort_by or comp.sort_by,
         )
         return cached
