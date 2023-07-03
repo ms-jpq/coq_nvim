@@ -120,14 +120,14 @@ def _decode(
 
 
 if sys.platform == "win32":
-    from subprocess import BELOW_NORMAL_PRIORITY_CLASS
+    from subprocess import BELOW_NORMAL_PRIORITY_CLASS, STARTUPINFO
 
     nice = lambda _: None
-    startupinfo = None
+    startupinfo = lambda: STARTUPINFO(dwFlags=BELOW_NORMAL_PRIORITY_CLASS)
 else:
     from os import nice
 
-    startupinfo = None
+    startupinfo = lambda: None
 
 
 def _nice() -> None:
@@ -149,7 +149,7 @@ async def _proc(bin: PurePath, cwd: PurePath) -> Optional[Process]:
             stdout=PIPE,
             stderr=DEVNULL,
             cwd=cwd,
-            startupinfo=startupinfo,
+            startupinfo=startupinfo(),
             **kwargs,  # type: ignore
         )
     except FileNotFoundError:
