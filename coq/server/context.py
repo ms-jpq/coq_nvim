@@ -54,15 +54,16 @@ async def context(
 
     lhs, _, rhs = comment_str.partition("%s")
     b_line = encode(line)
-    before, after = decode(b_line[:col]), decode(b_line[col:])
-    split = gen_split(lhs=before, rhs=after, unifying_chars=options.unifying_chars)
+    line_before, line_after = decode(b_line[:col]), decode(b_line[col:])
+    utf16_col = len(encode(line_before, encoding=UTF16)) // 2
+    utf32_col = len(encode(line_before, encoding=UTF32)) // 4
 
+    split = gen_split(
+        lhs=line_before, rhs=line_after, unifying_chars=options.unifying_chars
+    )
     l_words_before, l_words_after = lower(split.word_lhs), lower(split.word_rhs)
     l_syms_before, l_syms_after = lower(split.syms_lhs), lower(split.syms_rhs)
     is_lower = l_words_before + l_words_after == split.word_lhs + split.word_rhs
-    line_before, line_after = split.lhs, split.rhs
-    utf16_col = len(encode(line_before[:col], encoding=UTF16)) // 2
-    utf32_col = len(encode(line_before[:col], encoding=UTF32)) // 4
 
     ctx = Context(
         manual=manual,
