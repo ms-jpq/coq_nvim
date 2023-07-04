@@ -6,6 +6,8 @@ from uuid import UUID, uuid4
 
 UTF8: Literal["UTF-8"] = "UTF-8"
 UTF16: Literal["UTF-16-LE"] = "UTF-16-LE"
+# TODO: utf-32
+UTF32: Literal["UTF-32-LE"] = "UTF-32-LE"
 Encoding = Literal["UTF-8", "UTF-16-LE"]
 
 NvimCursor = int
@@ -19,6 +21,7 @@ WTF8Pos = Tuple[int, WTF8Cursor]
 BYTE_TRANS = {
     UTF8: 1,
     UTF16: 2,
+    UTF32: 4,
 }
 
 
