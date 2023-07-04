@@ -6,7 +6,7 @@ from uuid import UUID, uuid4
 
 UTF8: Literal["UTF-8"] = "UTF-8"
 UTF16: Literal["UTF-16-LE"] = "UTF-16-LE"
-Encoding = Union[Literal["UTF-8"], Literal["UTF-16-LE"]]
+Encoding = Literal["UTF-8", "UTF-16-LE"]
 
 NvimCursor = int
 WTF8Cursor = int
