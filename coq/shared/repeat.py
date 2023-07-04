@@ -51,7 +51,7 @@ def sanitize(row: int, cursors: Cursors, edit: Edit) -> Optional[Edit]:
                 return SnippetEdit(grammar=edit.grammar, new_text=edit.new_text)
             else:
                 return None
-        elif _whitespaced(edit.new_text):
+        elif not _whitespaced(edit.new_text):
             if fallback := edit.fallback:
                 return SnippetEdit(grammar=edit.grammar, new_text=fallback)
             else:
@@ -65,7 +65,7 @@ def sanitize(row: int, cursors: Cursors, edit: Edit) -> Optional[Edit]:
                 return Edit(new_text=edit.new_text)
             else:
                 return None
-        elif _whitespaced(edit.new_text):
+        elif not _whitespaced(edit.new_text):
             return Edit(new_text=edit.fallback)
         else:
             begin, end = _shift(row, cursors=cursors, edit=edit)
