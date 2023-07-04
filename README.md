@@ -66,6 +66,8 @@ Error correction: `cour` -> `colour_space`, `flgr` -> `flag_group`, `nasp` -> `N
 
 - **Multi-server** completion (i.e. `tailwind` + `cssls`)
 
+- **Multi-encoding** `utf-8`, `utf-16`
+
 - Header imports
 
 ![lsp_imports.img](https://raw.githubusercontent.com/ms-jpq/coq.artifacts/artifacts/preview/lsp_import.gif)
