@@ -14,10 +14,12 @@ from pynvim_pp.logging import log
 from std2.pickle.decoder import _new_parser, new_decoder
 
 from ..shared.types import (
+    UTF8,
     UTF16,
     Completion,
     Doc,
     Edit,
+    Encoding,
     ExternLSP,
     ExternLUA,
     RangeEdit,
@@ -36,6 +38,8 @@ from .types import (
     MarkupContent,
     TextEdit,
 )
+
+_ENCODING_MAP: Mapping[Optional[str], Encoding] = {"utf8": UTF8, "utf16": UTF16}
 
 
 def _falsy(thing: Any) -> bool:
@@ -65,9 +69,13 @@ def _with_defaults(defaults: ItemDefaults, item: Any) -> Any:
 
 
 def _range_edit(
-    cursors: Cursors, fallback: str, edit: Union[TextEdit, InsertReplaceEdit]
+    encoding: Encoding,
+    cursors: Cursors,
+    fallback: str,
+    edit: Union[TextEdit, InsertReplaceEdit],
 ) -> RangeEdit:
-    _, u16 = cursors
+    u8, u16 = cursors
+    cursor = u8 if encoding == UTF8 else u16
 
     if isinstance(edit, TextEdit):
         ra_start = edit.range.start
@@ -84,17 +92,22 @@ def _range_edit(
         fallback=fallback,
         begin=begin,
         end=end,
-        cursor_pos=u16,
-        encoding=UTF16,
+        cursor_pos=cursor,
+        encoding=encoding,
     )
     return re
 
 
-def _primary(cursors: Cursors, item: CompletionItem) -> Edit:
+def _primary(encoding: Encoding, cursors: Cursors, item: CompletionItem) -> Edit:
     fallback = Edit(new_text=item.insertText or item.label)
     if PROTOCOL.InsertTextFormat.get(item.insertTextFormat) == "Snippet":
         if isinstance(item.textEdit, (TextEdit, InsertReplaceEdit)):
-            re = _range_edit(cursors, fallback=fallback.new_text, edit=item.textEdit)
+            re = _range_edit(
+                encoding,
+                cursors=cursors,
+                fallback=fallback.new_text,
+                edit=item.textEdit,
+            )
 
             return SnippetRangeEdit(
                 grammar=SnippetGrammar.lsp,
@@ -109,7 +122,12 @@ def _primary(cursors: Cursors, item: CompletionItem) -> Edit:
             return SnippetEdit(grammar=SnippetGrammar.lsp, new_text=fallback.new_text)
     else:
         if isinstance(item.textEdit, (TextEdit, InsertReplaceEdit)):
-            return _range_edit(cursors, fallback=fallback.new_text, edit=item.textEdit)
+            return _range_edit(
+                encoding,
+                cursors=cursors,
+                fallback=fallback.new_text,
+                edit=item.textEdit,
+            )
         else:
             return fallback
 
@@ -133,6 +151,7 @@ def parse_item(
     extern_type: Union[Type[ExternLSP], Type[ExternLUA]],
     always_on_top: Optional[AbstractSet[Optional[str]]],
     client: Optional[str],
+    encoding: Optional[str],
     cursors: Cursors,
     short_name: str,
     weight_adjust: float,
@@ -147,6 +166,7 @@ def parse_item(
             return None
         else:
             assert isinstance(parsed, CompletionItem)
+            coding = _ENCODING_MAP.get(encoding, UTF16)
             on_top = (
                 False
                 if always_on_top is None
@@ -157,10 +177,10 @@ def parse_item(
                 if (label_detail := parsed.labelDetails)
                 else parsed.label
             )
-            p_edit = _primary(cursors, item=parsed)
+            p_edit = _primary(coding, cursors=cursors, item=parsed)
             adjust_indent = _adjust_indent(parsed.insertTextMode, edit=p_edit)
             r_edits = tuple(
-                _range_edit((-1, -1), fallback="", edit=edit)
+                _range_edit(coding, cursors=(-1, -1), fallback="", edit=edit)
                 for edit in (parsed.additionalTextEdits or ())
             )
             sort_by = parsed.filterText or (
@@ -192,6 +212,7 @@ def parse(
     extern_type: Union[Type[ExternLSP], Type[ExternLUA]],
     always_on_top: Optional[AbstractSet[Optional[str]]],
     client: Optional[str],
+    encoding: Optional[str],
     short_name: str,
     cursors: Cursors,
     weight_adjust: float,
@@ -219,6 +240,7 @@ def parse(
                     co1 := parse_item(
                         extern_type,
                         client=client,
+                        encoding=encoding,
                         always_on_top=always_on_top,
                         short_name=short_name,
                         cursors=cursors,
@@ -243,6 +265,7 @@ def parse(
                     extern_type,
                     always_on_top=always_on_top,
                     client=client,
+                    encoding=encoding,
                     short_name=short_name,
                     cursors=cursors,
                     weight_adjust=weight_adjust,

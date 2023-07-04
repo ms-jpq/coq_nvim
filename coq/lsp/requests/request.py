@@ -1,5 +1,5 @@
 from asyncio import Condition, sleep
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from functools import lru_cache
 from itertools import count
 from pathlib import Path
@@ -27,10 +27,17 @@ from ...shared.timeit import timeit
 
 
 @dataclass(frozen=True)
+class _Client:
+    name: Optional[str]
+    offset_encoding: Optional[str]
+    message: Any
+
+
+@dataclass(frozen=True)
 class _Session:
     uid: int
     done: bool
-    acc: MutableSequence[Tuple[Optional[str], Optional[int], Any]]
+    acc: MutableSequence[Tuple[_Client, Optional[int]]]
 
 
 @dataclass(frozen=True)
@@ -39,6 +46,7 @@ class _Payload:
     name: str
     method: Optional[str]
     uid: int
+    offset_encoding: Optional[str]
     client: Optional[str]
     done: bool
     reply: Any
@@ -94,7 +102,16 @@ async def _lsp_notify(stack: Stack, rpayload: _Payload) -> None:
     if not state or payload.uid >= state.uid:
         acc = [
             *(state.acc if state and payload.uid == state.uid else ()),
-            (payload.client, payload.multipart, payload.reply),
+            (
+                _Client(
+                    name=payload.client,
+                    offset_encoding=payload.offset_encoding.casefold().replace("-", "")
+                    if payload.offset_encoding
+                    else None,
+                    message=payload.reply,
+                ),
+                payload.multipart,
+            ),
         ]
         _STATE[payload.name] = _Session(uid=payload.uid, done=payload.done, acc=acc)
 
@@ -104,7 +121,7 @@ async def _lsp_notify(stack: Stack, rpayload: _Payload) -> None:
 
 async def async_request(
     name: str, multipart: Optional[int], clients: AbstractSet[str], *args: Any
-) -> AsyncIterator[Tuple[Optional[str], Any]]:
+) -> AsyncIterator[_Client]:
     with timeit(f"LSP :: {name}"):
         cond, uid = _conds(name), next(_uids(name))
 
@@ -123,19 +140,20 @@ async def async_request(
             if state := _STATE.get(name):
                 if state.uid == uid:
                     while state.acc:
-                        client, n_parts, resp = state.acc.pop()
-                        if n_parts:
+                        client, multipart = state.acc.pop()
+                        if multipart:
                             async for part in _lsp_pull(
-                                n_parts, client=client, uid=uid
+                                multipart, client=client.name, uid=uid
                             ):
-                                if isinstance(resp, MutableMapping) and isinstance(
-                                    resp.get("items"), Sequence
-                                ):
-                                    yield client, {**resp, "items": part}
+                                if isinstance(
+                                    client.message, MutableMapping
+                                ) and isinstance(client.message.get("items"), Sequence):
+                                    message = {**client.message, "items": part}
+                                    yield replace(client, message=message)
                                 else:
-                                    yield client, part
+                                    yield replace(client, message=part)
                         else:
-                            yield client, resp
+                            yield client
                     if state.done:
                         _STATE.pop(name)
                         break

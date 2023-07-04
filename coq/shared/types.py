@@ -6,6 +6,7 @@ from uuid import UUID, uuid4
 
 UTF8: Literal["UTF-8"] = "UTF-8"
 UTF16: Literal["UTF-16-LE"] = "UTF-16-LE"
+Encoding = Union[Literal["UTF-8"], Literal["UTF-16-LE"]]
 
 NvimCursor = int
 WTF8Cursor = int
@@ -112,7 +113,7 @@ class BaseRangeEdit(Edit):
     begin: WTF8Pos
     end: WTF8Pos
     cursor_pos: WTF8Cursor
-    encoding: Literal["UTF-8", "UTF-16-LE"]
+    encoding: Encoding
 
 
 @dataclass(frozen=True)

@@ -10,17 +10,18 @@ async def resolve(extern: ExternLSP) -> Optional[Completion]:
     comps: MutableSequence[Completion] = []
 
     clients = {extern.client} if extern.client else set()
-    async for client, resp in async_request(name, None, clients, extern.item):
+    async for client in async_request(name, None, clients, extern.item):
         comp = parse_item(
             type(extern),
-            client=client,
+            client=client.name,
+            encoding=client.offset_encoding,
             short_name="",
             cursors=(-1, -1),
             always_on_top=None,
             weight_adjust=0,
-            item=resp,
+            item=client.message,
         )
-        if extern.client and client == extern.client:
+        if extern.client and client.name == extern.client:
             return comp
         elif comp:
             comps.append(comp)

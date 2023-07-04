@@ -15,14 +15,15 @@ async def comp_lsp(
     clients: AbstractSet[str],
 ) -> AsyncIterator[LSPcomp]:
     row, utf8_col = context.position
-    lsp_pos = (row, context.utf16_col)
+    lsp_pos = (row, utf8_col, context.utf16_col)
     cursors = (utf8_col, context.utf16_col)
 
-    async for client, reply in async_request("lsp_comp", chunk, clients, lsp_pos):
-        resp = cast(CompletionResponse, reply)
+    async for client in async_request("lsp_comp", chunk, clients, lsp_pos):
+        resp = cast(CompletionResponse, client.message)
         yield parse(
             ExternLSP,
-            client=client,
+            client=client.name,
+            encoding=client.offset_encoding,
             short_name=short_name,
             cursors=cursors,
             always_on_top=always_on_top,
@@ -39,17 +40,19 @@ async def comp_thirdparty(
     chunk: int,
     clients: AbstractSet[str],
 ) -> AsyncIterator[LSPcomp]:
-    _, utf8_col = context.position
+    row, utf8_col = context.position
+    lsp_pos = (row, utf8_col, context.utf16_col)
     cursors = (utf8_col, context.utf16_col)
 
-    async for client, reply in async_request(
-        "lsp_third_party", chunk, clients, context.position, context.line
+    async for client in async_request(
+        "lsp_third_party", chunk, clients, lsp_pos, context.line
     ):
-        name = client or short_name
-        resp = cast(CompletionResponse, reply)
+        name = client.name or short_name
+        resp = cast(CompletionResponse, client.message)
         yield parse(
             ExternLUA,
-            client=client,
+            client=client.name,
+            encoding=client.offset_encoding,
             short_name=name,
             cursors=cursors,
             always_on_top=always_on_top,
