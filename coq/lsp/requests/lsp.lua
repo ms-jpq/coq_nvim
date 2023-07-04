@@ -187,7 +187,12 @@
       return n_clients, clients
     end
 
-    local lsp_request_all = function(clients, buf, lsp_method, make_params, handler)
+    local lsp_request_all = function(
+      clients,
+      buf,
+      lsp_method,
+      make_params,
+      handler)
       vim.validate {
         buf = {buf, "number"},
         make_params = {make_params, "function"},
@@ -205,13 +210,6 @@
 
       for _, client in pairs(clients) do
         vim.validate {client = {client, "table"}}
-        local col = (function()
-          if client.offset_encoding == "utf-8" then
-            return col8
-          else
-            return col16
-          end
-        end)()
 
         local request_params = make_params(client)
 
@@ -256,6 +254,14 @@
         lsp_clients(false, client_names, buf, lsp_method)
 
       local make_params = function(client)
+        local col = (function()
+          if client.offset_encoding == "utf-8" then
+            return col8
+          else
+            return col16
+          end
+        end)()
+
         local position = {line = row, character = col}
         local text_doc = vim.lsp.util.make_text_document_params()
         return {
