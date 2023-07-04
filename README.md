@@ -66,7 +66,7 @@ Error correction: `cour` -> `colour_space`, `flgr` -> `flag_group`, `nasp` -> `N
 
 - **Multi-server** completion (i.e. `tailwind` + `cssls`)
 
-- **Multi-encoding** `utf-8`, `utf-16`
+- **Multi-encoding** `utf-8`, `utf-16`, `utf-32`
 
 - Header imports
 
