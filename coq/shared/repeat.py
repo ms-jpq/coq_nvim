@@ -37,7 +37,7 @@ def _shift(cursors: Cursors, edit: BaseRangeEdit) -> Tuple[WTF8Pos, WTF8Pos]:
     diff = col - prev_col
 
     if b_row == row:
-        if b_col + 1 >= prev_col:
+        if b_col >= prev_col:
             new_b_col = b_col + diff
         else:
             new_b_col = b_col
@@ -45,14 +45,14 @@ def _shift(cursors: Cursors, edit: BaseRangeEdit) -> Tuple[WTF8Pos, WTF8Pos]:
         new_b_col = b_col
 
     if e_row == row:
-        if e_col + 1 >= prev_col:
+        if e_col >= prev_col:
             new_e_col = e_col + diff
         else:
             new_e_col = e_col
     else:
         new_e_col = e_col
 
-    return (b_row, new_b_col), (e_row, new_e_col)
+    return (b_row, max(0, new_b_col)), (e_row, max(0, new_e_col))
 
 
 def sanitize(cursors: Cursors, edit: Edit) -> Optional[Edit]:
