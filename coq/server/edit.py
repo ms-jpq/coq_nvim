@@ -224,8 +224,8 @@ def _range_edit_trans(
             c1 = len(lines.b_lines8[r1][:ec1])
             c2 = len(lines.b_lines8[r2][:ec2])
         elif edit.encoding == UTF32:
-            c1 = len(encode(decode(lines.b_lines16[r1][: ec1 * 4], encoding=UTF32)))
-            c2 = len(encode(decode(lines.b_lines16[r2][: ec2 * 4], encoding=UTF32)))
+            c1 = len(encode(decode(lines.b_lines32[r1][: ec1 * 4], encoding=UTF32)))
+            c2 = len(encode(decode(lines.b_lines32[r2][: ec2 * 4], encoding=UTF32)))
         else:
             never(edit.encoding)
 
