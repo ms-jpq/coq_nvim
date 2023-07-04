@@ -391,7 +391,7 @@
               filter(source.name) and
               type(source[key]) == "function"
            then
-            names[id] = {name = source.name}
+            names[id] = {name = source.name, offset_encoding = "utf-8"}
             table.insert(fns, {id, source[key]})
           end
         end
