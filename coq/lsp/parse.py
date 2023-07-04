@@ -39,8 +39,6 @@ from .types import (
     TextEdit,
 )
 
-_ENCODING_MAP: Mapping[Optional[str], Encoding] = {"utf8": UTF8, "utf16": UTF16}
-
 
 def _falsy(thing: Any) -> bool:
     return thing is None or thing == False or thing == 0 or thing == "" or thing == b""
@@ -151,7 +149,7 @@ def parse_item(
     extern_type: Union[Type[ExternLSP], Type[ExternLUA]],
     always_on_top: Optional[AbstractSet[Optional[str]]],
     client: Optional[str],
-    encoding: Optional[str],
+    encoding: Encoding,
     cursors: Cursors,
     short_name: str,
     weight_adjust: float,
@@ -166,7 +164,6 @@ def parse_item(
             return None
         else:
             assert isinstance(parsed, CompletionItem)
-            coding = _ENCODING_MAP.get(encoding, UTF16)
             on_top = (
                 False
                 if always_on_top is None
@@ -177,10 +174,10 @@ def parse_item(
                 if (label_detail := parsed.labelDetails)
                 else parsed.label
             )
-            p_edit = _primary(coding, cursors=cursors, item=parsed)
+            p_edit = _primary(encoding, cursors=cursors, item=parsed)
             adjust_indent = _adjust_indent(parsed.insertTextMode, edit=p_edit)
             r_edits = tuple(
-                _range_edit(coding, cursors=(-1, -1), fallback="", edit=edit)
+                _range_edit(encoding, cursors=(-1, -1), fallback="", edit=edit)
                 for edit in (parsed.additionalTextEdits or ())
             )
             sort_by = parsed.filterText or (
@@ -212,7 +209,7 @@ def parse(
     extern_type: Union[Type[ExternLSP], Type[ExternLUA]],
     always_on_top: Optional[AbstractSet[Optional[str]]],
     client: Optional[str],
-    encoding: Optional[str],
+    encoding: Encoding,
     short_name: str,
     cursors: Cursors,
     weight_adjust: float,

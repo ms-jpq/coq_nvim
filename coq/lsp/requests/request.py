@@ -8,6 +8,7 @@ from typing import (
     Any,
     AsyncIterator,
     Iterator,
+    Mapping,
     MutableMapping,
     MutableSequence,
     Optional,
@@ -24,12 +25,15 @@ from std2.pickle.decoder import new_decoder
 from ...registry import NAMESPACE, atomic, rpc
 from ...server.rt_types import Stack
 from ...shared.timeit import timeit
+from ...shared.types import UTF8, UTF16, Encoding
+
+_ENCODING_MAP: Mapping[Optional[str], Encoding] = {"utf8": UTF8, "utf16": UTF16}
 
 
 @dataclass(frozen=True)
 class _Client:
     name: Optional[str]
-    offset_encoding: Optional[str]
+    offset_encoding: Encoding
     message: Any
 
 
@@ -100,18 +104,16 @@ async def _lsp_notify(stack: Stack, rpayload: _Payload) -> None:
 
     state = _STATE.get(payload.name)
     if not state or payload.uid >= state.uid:
+        encoding = (payload.offset_encoding or "").casefold().replace("-", "")
+        offset_encoding = _ENCODING_MAP.get(encoding, UTF16)
+        client = _Client(
+            name=payload.client,
+            offset_encoding=offset_encoding,
+            message=payload.reply,
+        )
         acc = [
             *(state.acc if state and payload.uid == state.uid else ()),
-            (
-                _Client(
-                    name=payload.client,
-                    offset_encoding=payload.offset_encoding.casefold().replace("-", "")
-                    if payload.offset_encoding
-                    else None,
-                    message=payload.reply,
-                ),
-                payload.multipart,
-            ),
+            (client, payload.multipart),
         ]
         _STATE[payload.name] = _Session(uid=payload.uid, done=payload.done, acc=acc)
 
