@@ -187,32 +187,13 @@
       return n_clients, clients
     end
 
-    local make_params = function(row, col)
-      local position = {line = row, character = col}
-      local text_doc = vim.lsp.util.make_text_document_params()
-      return {
-        position = position,
-        textDocument = text_doc,
-        context = {
-          triggerKind = vim.lsp.protocol.CompletionTriggerKind.Invoked
-        }
-      }
-    end
-
-    local lsp_request_all = function(clients, buf, lsp_method, pos, handler)
+    local lsp_request_all = function(clients, buf, lsp_method, make_params, handler)
       vim.validate {
         buf = {buf, "number"},
-        pos = {pos, "table"},
+        make_params = {make_params, "function"},
         clients = {clients, "table"},
         lsp_method = {lsp_method, "string"},
         handler = {handler, "function"}
-      }
-      local row, col8, col16 = unpack(pos)
-
-      vim.validate {
-        row = {row, "number"},
-        col8 = {col8, "number"},
-        col16 = {col16, "number"}
       }
 
       local cancels = {}
@@ -232,10 +213,10 @@
           end
         end)()
 
-        local params = make_params(row, col16)
+        local request_params = make_params(client)
 
         local go, cancel_handle =
-          client.request(lsp_method, params, handler, buf)
+          client.request(lsp_method, request_params, handler, buf)
         if not go then
           handler(
             "<>FAILED<>",
@@ -259,7 +240,14 @@
       vim.validate {
         client_names = {client_names, "table"},
         name = {name, "string"},
+        pos = {pos, "table"},
         session_id = {session_id, "number"}
+      }
+      local row, col8, col16 = unpack(pos)
+      vim.validate {
+        row = {row, "number"},
+        col8 = {col8, "number"},
+        col16 = {col16, "number"}
       }
 
       local buf = vim.api.nvim_get_current_buf()
@@ -267,13 +255,25 @@
       local n_clients, clients =
         lsp_clients(false, client_names, buf, lsp_method)
 
+      local make_params = function(client)
+        local position = {line = row, character = col}
+        local text_doc = vim.lsp.util.make_text_document_params()
+        return {
+          position = position,
+          textDocument = text_doc,
+          context = {
+            triggerKind = vim.lsp.protocol.CompletionTriggerKind.Invoked
+          }
+        }
+      end
+
       req(
         name,
         multipart,
         session_id,
         {n_clients, clients},
         function(on_resp)
-          return lsp_request_all(clients, buf, lsp_method, pos, on_resp)
+          return lsp_request_all(clients, buf, lsp_method, make_params, on_resp)
         end
       )
     end
@@ -291,13 +291,17 @@
       local n_clients, clients =
         lsp_clients(true, client_names, buf, lsp_method)
 
+      local make_params = function()
+        return item
+      end
+
       req(
         name,
         multipart,
         session_id,
         {n_clients, clients},
         function(on_resp)
-          return lsp_request_all(clients, buf, lsp_method, item, on_resp)
+          return lsp_request_all(clients, buf, lsp_method, make_params, on_resp)
         end
       )
     end
@@ -316,13 +320,17 @@
       local n_clients, clients =
         lsp_clients(true, client_names, buf, lsp_method)
 
+      local make_params = function()
+        return cmd
+      end
+
       req(
         name,
         multipart,
         session_id,
         {n_clients, clients},
         function(on_resp)
-          return lsp_request_all(clients, buf, lsp_method, cmd, on_resp)
+          return lsp_request_all(clients, buf, lsp_method, make_params, on_resp)
         end
       )
     end
