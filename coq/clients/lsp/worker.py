@@ -131,8 +131,6 @@ class Worker(BaseWorker[LSPClient, None]):
                     return None
 
             async def stream() -> AsyncIterator[Tuple[_Src, LSPcomp]]:
-                row, col = context.position
-                cursors = (col, context.utf16_col)
                 acc = {**self._local_cached.pre}
                 self._local_cached.pre.clear()
 
@@ -142,7 +140,7 @@ class Worker(BaseWorker[LSPClient, None]):
                         for item in cached_items
                         if (
                             cached := sanitize_cached(
-                                row, cursors=cursors, comp=item, sort_by=None
+                                context.cursor, comp=item, sort_by=None
                             )
                         )
                     )

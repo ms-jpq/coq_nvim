@@ -31,6 +31,7 @@ from ..shared.trans import indent_adjusted, trans_adjusted
 from ..shared.types import (
     UTF8,
     UTF16,
+    UTF32,
     BaseRangeEdit,
     Completion,
     Context,
@@ -65,6 +66,7 @@ class _Lines:
     lines: Sequence[str]
     b_lines8: Sequence[bytes]
     b_lines16: Sequence[bytes]
+    b_lines32: Sequence[bytes]
     len8: Sequence[int]
 
 
@@ -80,6 +82,7 @@ def _lines(lines: Sequence[str]) -> _Lines:
         lines=lines,
         b_lines8=b_lines8,
         b_lines16=tuple(encode(line, encoding=UTF16) for line in lines),
+        b_lines32=tuple(encode(line, encoding=UTF32) for line in lines),
         len8=tuple(len(line) for line in b_lines8),
     )
 
@@ -220,8 +223,11 @@ def _range_edit_trans(
         elif edit.encoding == UTF8:
             c1 = len(lines.b_lines8[r1][:ec1])
             c2 = len(lines.b_lines8[r2][:ec2])
+        elif edit.encoding == UTF32:
+            c1 = len(encode(decode(lines.b_lines16[r1][: ec1 * 4], encoding=UTF32)))
+            c2 = len(encode(decode(lines.b_lines16[r2][: ec2 * 4], encoding=UTF32)))
         else:
-            raise ValueError(f"Unknown encoding -- {edit.encoding}")
+            never(edit.encoding)
 
         begin = r1, c1
         end = r2, c2

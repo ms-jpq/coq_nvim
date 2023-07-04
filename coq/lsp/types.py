@@ -11,9 +11,8 @@ from typing import (
     Union,
 )
 
-from ..shared.types import Completion, NvimCursor, WTF8Cursor
+from ..shared.types import Completion, NvimCursor, WTF8Cursor, Cursors
 
-Cursors = Tuple[NvimCursor, WTF8Cursor]
 
 # https://microsoft.github.io/language-server-protocol/specification
 

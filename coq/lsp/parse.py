@@ -12,11 +12,14 @@ from typing import (
 
 from pynvim_pp.logging import log
 from std2.pickle.decoder import _new_parser, new_decoder
+from std2.types import never
 
 from ..shared.types import (
     UTF8,
     UTF16,
+    UTF32,
     Completion,
+    Cursors,
     Doc,
     Edit,
     Encoding,
@@ -31,7 +34,6 @@ from .protocol import PROTOCOL
 from .types import (
     CompletionItem,
     CompletionResponse,
-    Cursors,
     InsertReplaceEdit,
     ItemDefaults,
     LSPcomp,
@@ -72,8 +74,15 @@ def _range_edit(
     fallback: str,
     edit: Union[TextEdit, InsertReplaceEdit],
 ) -> RangeEdit:
-    u8, u16 = cursors
-    cursor = u8 if encoding == UTF8 else u16
+    _, u8, u16, u32 = cursors
+    if encoding == UTF16:
+        cursor = u16
+    elif encoding == UTF8:
+        cursor = u8
+    elif encoding == UTF32:
+        cursor = u32
+    else:
+        never(encoding)
 
     if isinstance(edit, TextEdit):
         ra_start = edit.range.start
@@ -177,7 +186,7 @@ def parse_item(
             p_edit = _primary(encoding, cursors=cursors, item=parsed)
             adjust_indent = _adjust_indent(parsed.insertTextMode, edit=p_edit)
             r_edits = tuple(
-                _range_edit(encoding, cursors=(-1, -1), fallback="", edit=edit)
+                _range_edit(encoding, cursors=(-1, -1, -1, -1), fallback="", edit=edit)
                 for edit in (parsed.additionalTextEdits or ())
             )
             sort_by = parsed.filterText or (

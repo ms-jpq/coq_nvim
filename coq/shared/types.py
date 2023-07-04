@@ -8,7 +8,7 @@ UTF8: Literal["UTF-8"] = "UTF-8"
 UTF16: Literal["UTF-16-LE"] = "UTF-16-LE"
 # TODO: utf-32
 UTF32: Literal["UTF-32-LE"] = "UTF-32-LE"
-Encoding = Literal["UTF-8", "UTF-16-LE"]
+Encoding = Literal["UTF-8", "UTF-16-LE", "UTF-32-LE"]
 
 NvimCursor = int
 WTF8Cursor = int
@@ -29,6 +29,9 @@ BYTE_TRANS = {
 class ChangeEvent:
     range: range
     lines: Sequence[str]
+
+
+Cursors = Tuple[int, NvimCursor, WTF8Cursor, WTF8Cursor]
 
 
 @dataclass(frozen=True)
@@ -57,7 +60,7 @@ class Context:
     comment: Tuple[str, str]
 
     position: NvimPos
-    utf16_col: WTF8Cursor
+    cursor: Cursors
     scr_col: int
     win_size: int
 

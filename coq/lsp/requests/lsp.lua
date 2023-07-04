@@ -241,11 +241,12 @@
         pos = {pos, "table"},
         session_id = {session_id, "number"}
       }
-      local row, col8, col16 = unpack(pos)
+      local row, col8, col16, col32 = unpack(pos)
       vim.validate {
         row = {row, "number"},
         col8 = {col8, "number"},
-        col16 = {col16, "number"}
+        col16 = {col16, "number"},
+        col32 = {col32, "number"}
       }
 
       local buf = vim.api.nvim_get_current_buf()
@@ -255,10 +256,12 @@
 
       local make_params = function(client)
         local col = (function()
-          if client.offset_encoding == "utf-8" then
+          if client.offset_encoding == "utf-16" then
+            return col16
+          elseif client.offset_encoding == "utf-8" then
             return col8
           else
-            return col16
+            return col32
           end
         end)()
 

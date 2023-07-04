@@ -16,7 +16,7 @@ async def resolve(extern: ExternLSP) -> Optional[Completion]:
             client=client.name,
             encoding=client.offset_encoding,
             short_name="",
-            cursors=(-1, -1),
+            cursors=(-1, -1, -1, -1),
             always_on_top=None,
             weight_adjust=0,
             item=client.message,

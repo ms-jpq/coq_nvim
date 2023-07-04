@@ -9,7 +9,7 @@ from pynvim_pp.types import NoneType
 
 from ..shared.parse import lower
 from ..shared.settings import MatchOptions
-from ..shared.types import UTF16, ChangeEvent, Context
+from ..shared.types import UTF16, UTF32, ChangeEvent, Context
 from .state import State
 
 
@@ -62,6 +62,7 @@ async def context(
     is_lower = l_words_before + l_words_after == split.word_lhs + split.word_rhs
     line_before, line_after = split.lhs, split.rhs
     utf16_col = len(encode(line_before[:col], encoding=UTF16)) // 2
+    utf32_col = len(encode(line_before[:col], encoding=UTF32)) // 4
 
     ctx = Context(
         manual=manual,
@@ -77,7 +78,7 @@ async def context(
         expandtab=expandtab,
         comment=(lhs, rhs),
         position=pos,
-        utf16_col=utf16_col,
+        cursor=(row, col, utf16_col, utf32_col),
         scr_col=scr_col,
         win_size=win_size,
         line=split.lhs + split.rhs,

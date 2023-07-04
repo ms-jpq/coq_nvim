@@ -14,18 +14,14 @@ async def comp_lsp(
     chunk: int,
     clients: AbstractSet[str],
 ) -> AsyncIterator[LSPcomp]:
-    row, utf8_col = context.position
-    lsp_pos = (row, utf8_col, context.utf16_col)
-    cursors = (utf8_col, context.utf16_col)
-
-    async for client in async_request("lsp_comp", chunk, clients, lsp_pos):
+    async for client in async_request("lsp_comp", chunk, clients, context.cursor):
         resp = cast(CompletionResponse, client.message)
         yield parse(
             ExternLSP,
             client=client.name,
             encoding=client.offset_encoding,
             short_name=short_name,
-            cursors=cursors,
+            cursors=context.cursor,
             always_on_top=always_on_top,
             weight_adjust=weight_adjust,
             resp=resp,
@@ -40,12 +36,8 @@ async def comp_thirdparty(
     chunk: int,
     clients: AbstractSet[str],
 ) -> AsyncIterator[LSPcomp]:
-    row, utf8_col = context.position
-    lsp_pos = (row, utf8_col, context.utf16_col)
-    cursors = (utf8_col, context.utf16_col)
-
     async for client in async_request(
-        "lsp_third_party", chunk, clients, lsp_pos, context.line
+        "lsp_third_party", chunk, clients, context.cursor, context.line
     ):
         name = client.name or short_name
         resp = cast(CompletionResponse, client.message)
@@ -54,7 +46,7 @@ async def comp_thirdparty(
             client=client.name,
             encoding=client.offset_encoding,
             short_name=name,
-            cursors=cursors,
+            cursors=context.cursor,
             always_on_top=always_on_top,
             weight_adjust=weight_adjust,
             resp=resp,

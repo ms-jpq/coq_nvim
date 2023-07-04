@@ -14,14 +14,13 @@ from typing import (
 from uuid import UUID, uuid4
 
 from ...databases.cache.database import Database
-from ...lsp.types import Cursors
 from ...shared.fuzzy import multi_set_ratio
 from ...shared.parse import coalesce
 from ...shared.repeat import sanitize
 from ...shared.runtime import Supervisor
 from ...shared.settings import MatchOptions
 from ...shared.timeit import timeit
-from ...shared.types import BaseRangeEdit, Completion, Context
+from ...shared.types import BaseRangeEdit, Completion, Context, Cursors
 
 
 @dataclass(frozen=True)
@@ -30,8 +29,7 @@ class _CacheCtx:
     commit_id: UUID
     buf_id: int
     row: int
-    utf8_col: int
-    utf16_col: int
+    col: int
     syms_before: str
 
 
@@ -56,9 +54,10 @@ def _overlap(row: int, edit: BaseRangeEdit) -> bool:
 
 
 def sanitize_cached(
-    row: int, cursors: Cursors, comp: Completion, sort_by: Optional[str]
+    cursor: Cursors, comp: Completion, sort_by: Optional[str]
 ) -> Optional[Completion]:
-    if edit := sanitize(row, cursors=cursors, edit=comp.primary_edit):
+    if edit := sanitize(cursor, edit=comp.primary_edit):
+        row, *_ = cursor
         cached = replace(
             comp,
             primary_edit=edit,
@@ -81,8 +80,7 @@ class CacheWorker:
             commit_id=uuid4(),
             buf_id=-1,
             row=-1,
-            utf8_col=-1,
-            utf16_col=-1,
+            col=-1,
             syms_before="",
         )
         self._clients: MutableSet[str] = set()
@@ -126,8 +124,7 @@ class CacheWorker:
             commit_id=context.commit_id,
             buf_id=context.buf_id,
             row=row,
-            utf8_col=col,
-            utf16_col=context.utf16_col,
+            col=col,
             syms_before=context.syms_before,
         )
 
@@ -141,7 +138,6 @@ class CacheWorker:
             self._cached.clear()
 
         async def get() -> Tuple[Iterator[Completion], int]:
-            cursors = (col, context.utf16_col)
             with timeit("CACHE -- GET"):
                 keys, length = await self._db.select(
                     not use_cache,
@@ -156,7 +152,7 @@ class CacheWorker:
                     if (comp := self._cached.get(key))
                     and (
                         cached := sanitize_cached(
-                            row, cursors=cursors, comp=comp, sort_by=sort_by
+                            context.cursor, comp=comp, sort_by=sort_by
                         )
                     )
                 )

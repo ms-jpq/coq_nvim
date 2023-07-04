@@ -25,9 +25,7 @@ from std2.pickle.decoder import new_decoder
 from ...registry import NAMESPACE, atomic, rpc
 from ...server.rt_types import Stack
 from ...shared.timeit import timeit
-from ...shared.types import UTF8, UTF16, Encoding
-
-_ENCODING_MAP: Mapping[Optional[str], Encoding] = {"utf8": UTF8, "utf16": UTF16}
+from ...shared.types import UTF8, UTF16, UTF32, Encoding
 
 
 @dataclass(frozen=True)
@@ -59,10 +57,14 @@ class _Payload:
 _LUA = decode((Path(__file__).resolve(strict=True).parent / "lsp.lua").read_bytes())
 atomic.exec_lua(_LUA, ())
 
-_STATE: MutableMapping[str, _Session] = {}
-
-
 _DECODER = new_decoder[_Payload](_Payload)
+_ENCODING_MAP: Mapping[Optional[str], Encoding] = {
+    "utf8": UTF8,
+    "utf16": UTF16,
+    "utf32": UTF32,
+}
+
+_STATE: MutableMapping[str, _Session] = {}
 
 
 @lru_cache(maxsize=None)

@@ -1,10 +1,14 @@
 from dataclasses import replace
 from typing import Optional, Tuple
 
-from ..lsp.types import Cursors
+from std2.types import never
+
 from .types import (
     UTF8,
+    UTF16,
+    UTF32,
     BaseRangeEdit,
+    Cursors,
     Edit,
     RangeEdit,
     SnippetEdit,
@@ -17,9 +21,16 @@ def _whitespaced(text: str) -> bool:
     return any(c.isspace() for c in text)
 
 
-def _shift(row: int, cursors: Cursors, edit: BaseRangeEdit) -> Tuple[WTF8Pos, WTF8Pos]:
-    u8, u16 = cursors
-    col = u8 if edit.encoding == UTF8 else u16
+def _shift(cursors: Cursors, edit: BaseRangeEdit) -> Tuple[WTF8Pos, WTF8Pos]:
+    row, u8, u16, u32 = cursors
+    if edit.encoding == UTF16:
+        col = u16
+    elif edit.encoding == UTF8:
+        col = u8
+    elif edit.encoding == UTF32:
+        col = u32
+    else:
+        never(edit.encoding)
 
     prev_col = edit.cursor_pos
     (b_row, b_col), (e_row, e_col) = edit.begin, edit.end
@@ -44,7 +55,8 @@ def _shift(row: int, cursors: Cursors, edit: BaseRangeEdit) -> Tuple[WTF8Pos, WT
     return (b_row, new_b_col), (e_row, new_e_col)
 
 
-def sanitize(row: int, cursors: Cursors, edit: Edit) -> Optional[Edit]:
+def sanitize(cursors: Cursors, edit: Edit) -> Optional[Edit]:
+    row, *_ = cursors
     if isinstance(edit, SnippetRangeEdit):
         if row == -1:
             if edit.fallback == edit.new_text:
@@ -57,7 +69,7 @@ def sanitize(row: int, cursors: Cursors, edit: Edit) -> Optional[Edit]:
             else:
                 return None
         else:
-            begin, end = _shift(row, cursors=cursors, edit=edit)
+            begin, end = _shift(cursors, edit=edit)
             return replace(edit, begin=begin, end=end)
     elif isinstance(edit, RangeEdit):
         if row == -1:
@@ -68,7 +80,7 @@ def sanitize(row: int, cursors: Cursors, edit: Edit) -> Optional[Edit]:
         elif not _whitespaced(edit.new_text):
             return Edit(new_text=edit.fallback)
         else:
-            begin, end = _shift(row, cursors=cursors, edit=edit)
+            begin, end = _shift(cursors, edit=edit)
             return replace(edit, begin=begin, end=end)
     elif isinstance(edit, SnippetEdit):
         return edit
