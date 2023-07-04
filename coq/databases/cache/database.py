@@ -1,8 +1,6 @@
-from contextlib import suppress
+from contextlib import closing, suppress
 from sqlite3 import Connection, OperationalError
 from typing import Iterable, Iterator, Mapping, Tuple
-
-from std2.sqlite3 import with_transaction
 
 from ...shared.executor import SingleThreadExecutor
 from ...shared.settings import MatchOptions
@@ -30,7 +28,7 @@ class Database(Interruptible):
                 yield {"key": key, "word": word}
 
         def cont() -> None:
-            with with_transaction(self._conn.cursor()) as cursor:
+            with self._conn, closing(self._conn.cursor()) as cursor:
                 cursor.executemany(sql("insert", "word"), m1())
 
         with suppress(OperationalError):
@@ -41,12 +39,12 @@ class Database(Interruptible):
     ) -> Tuple[Iterator[Tuple[bytes, str]], int]:
         def cont() -> Tuple[Iterator[Tuple[bytes, str]], int]:
             if clear:
-                with with_transaction(self._conn.cursor()) as cursor:
+                with self._conn, closing(self._conn.cursor()) as cursor:
                     cursor.execute(sql("delete", "words"))
                     return iter(()), 0
             else:
                 try:
-                    with with_transaction(self._conn.cursor()) as cursor:
+                    with self._conn, closing(self._conn.cursor()) as cursor:
                         limit = BIGGEST_INT if limitless else opts.max_results
                         cursor.execute(
                             sql("select", "words"),

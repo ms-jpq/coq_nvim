@@ -1,8 +1,7 @@
+from contextlib import closing
 from dataclasses import dataclass
 from sqlite3 import Connection, OperationalError
-from typing import Iterator, Mapping, Optional
-
-from std2.sqlite3 import with_transaction
+from typing import Iterator, Mapping
 
 from ...consts import INSERT_DB
 from ...shared.executor import SingleThreadExecutor
@@ -43,7 +42,7 @@ class IDB(Interruptible):
 
     async def new_source(self, source: str) -> None:
         def c1() -> None:
-            with with_transaction(self._conn.cursor()) as cursor:
+            with self._conn, closing(self._conn.cursor()) as cursor:
                 cursor.execute(sql("insert", "source"), {"name": source})
 
         async with self._lock:
@@ -51,7 +50,7 @@ class IDB(Interruptible):
 
     async def new_batch(self, batch_id: bytes) -> None:
         def cont() -> None:
-            with with_transaction(self._conn.cursor()) as cursor:
+            with self._conn, closing(self._conn.cursor()) as cursor:
                 cursor.execute(sql("insert", "batch"), {"rowid": batch_id})
 
         async with self._lock:
@@ -59,7 +58,7 @@ class IDB(Interruptible):
 
     async def new_instance(self, instance: bytes, source: str, batch_id: bytes) -> None:
         def cont(_: None = None) -> None:
-            with with_transaction(self._conn.cursor()) as cursor:
+            with self._conn, closing(self._conn.cursor()) as cursor:
                 cursor.execute(
                     sql("insert", "instance"),
                     {"rowid": instance, "source_id": source, "batch_id": batch_id},
@@ -72,7 +71,7 @@ class IDB(Interruptible):
         self, instance: bytes, interrupted: bool, duration: float, items: int
     ) -> None:
         def cont() -> None:
-            with with_transaction(self._conn.cursor()) as cursor:
+            with self._conn, closing(self._conn.cursor()) as cursor:
                 cursor.execute(
                     sql("insert", "instance_stat"),
                     {
@@ -89,7 +88,7 @@ class IDB(Interruptible):
     async def insertion_order(self, n_rows: int) -> Mapping[str, int]:
         def cont() -> Mapping[str, int]:
             try:
-                with with_transaction(self._conn.cursor()) as cursor:
+                with self._conn, closing(self._conn.cursor()) as cursor:
                     cursor.execute(sql("select", "inserted"), {"limit": n_rows})
                     order = {
                         row["sort_by"]: row["insert_order"] for row in cursor.fetchall()
@@ -103,7 +102,7 @@ class IDB(Interruptible):
 
     async def inserted(self, instance_id: bytes, sort_by: str) -> None:
         def cont() -> None:
-            with with_transaction(self._conn.cursor()) as cursor:
+            with self._conn, closing(self._conn.cursor()) as cursor:
                 cursor.execute(
                     sql("insert", "inserted"),
                     {"instance_id": instance_id, "sort_by": sort_by},
@@ -114,7 +113,7 @@ class IDB(Interruptible):
 
     async def stats(self) -> Iterator[Statistics]:
         def cont() -> Iterator[Statistics]:
-            with with_transaction(self._conn.cursor()) as cursor:
+            with self._conn, closing(self._conn.cursor()) as cursor:
                 cursor.execute(sql("select", "summaries"), ())
                 rows = cursor.fetchall()
 

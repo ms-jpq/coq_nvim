@@ -1,10 +1,8 @@
-from contextlib import suppress
+from contextlib import closing, suppress
 from dataclasses import dataclass
 from itertools import chain, repeat
 from sqlite3 import Connection, Cursor, OperationalError
 from typing import AbstractSet, Any, Iterator, Mapping, Sequence
-
-from std2.sqlite3 import with_transaction
 
 from ...consts import REGISTER_DB
 from ...shared.executor import SingleThreadExecutor
@@ -76,7 +74,7 @@ class RDB(Interruptible):
 
         def cont() -> None:
             with suppress(OperationalError):
-                with with_transaction(self._conn.cursor()) as cursor:
+                with self._conn, closing(self._conn.cursor()) as cursor:
                     cursor.executemany(sql("delete", "register"), m1)
                     cursor.executemany(sql("insert", "register"), m1)
                     cursor.executemany(sql("insert", "word"), m2())
@@ -111,7 +109,7 @@ class RDB(Interruptible):
 
         def cont() -> Iterator[RegWord]:
             try:
-                with with_transaction(self._conn.cursor()) as cursor:
+                with self._conn, closing(self._conn.cursor()) as cursor:
                     lines = (
                         fetch(cursor, match_syms=True, stmt="lines") if linewise else ()
                     )

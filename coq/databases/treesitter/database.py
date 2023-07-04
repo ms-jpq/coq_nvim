@@ -1,8 +1,6 @@
-from contextlib import suppress
+from contextlib import closing, suppress
 from sqlite3 import Connection, Cursor, OperationalError
 from typing import Iterable, Iterator, Mapping
-
-from std2.sqlite3 import with_transaction
 
 from ...consts import TREESITTER_DB
 from ...shared.executor import SingleThreadExecutor
@@ -42,7 +40,7 @@ class TDB(Interruptible):
     async def vacuum(self, live_bufs: Mapping[int, int]) -> None:
         def cont() -> None:
             with suppress(OperationalError):
-                with with_transaction(self._conn.cursor()) as cursor:
+                with self._conn, closing(self._conn.cursor()) as cursor:
                     cursor.execute(sql("select", "buffers"), ())
                     existing = {row["rowid"] for row in cursor.fetchall()}
                     dead = existing - live_bufs.keys()
@@ -86,7 +84,7 @@ class TDB(Interruptible):
                 }
 
         def cont() -> None:
-            with with_transaction(self._conn.cursor()) as cursor:
+            with self._conn, closing(self._conn.cursor()) as cursor:
                 _ensure_buffer(
                     cursor, buf_id=buf_id, filetype=filetype, filename=filename
                 )
@@ -109,7 +107,7 @@ class TDB(Interruptible):
     ) -> Iterator[Payload]:
         def cont() -> Iterator[Payload]:
             try:
-                with with_transaction(self._conn.cursor()) as cursor:
+                with self._conn, closing(self._conn.cursor()) as cursor:
                     cursor.execute(
                         sql("select", "words"),
                         {

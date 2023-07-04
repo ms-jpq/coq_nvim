@@ -1,10 +1,9 @@
+from contextlib import closing
 from os.path import normcase
 from pathlib import Path, PurePath
 from sqlite3 import Connection, OperationalError
 from typing import AbstractSet, Iterator, Mapping, TypedDict, cast
 from uuid import uuid4
-
-from std2.sqlite3 import with_transaction
 
 from ...shared.executor import SingleThreadExecutor
 from ...shared.settings import MatchOptions
@@ -42,7 +41,7 @@ class SDB(Interruptible):
 
     async def clean(self, paths: AbstractSet[PurePath]) -> None:
         def cont() -> None:
-            with with_transaction(self._conn.cursor()) as cursor:
+            with self._conn, closing(self._conn.cursor()) as cursor:
                 cursor.executemany(
                     sql("delete", "source"),
                     ({"filename": normcase(path)} for path in paths),
@@ -53,7 +52,7 @@ class SDB(Interruptible):
 
     async def mtimes(self) -> Mapping[PurePath, float]:
         def cont() -> Mapping[PurePath, float]:
-            with with_transaction(self._conn.cursor()) as cursor:
+            with self._conn, closing(self._conn.cursor()) as cursor:
                 cursor.execute(sql("select", "sources"), ())
                 return {
                     PurePath(row["filename"]): row["mtime"] for row in cursor.fetchall()
@@ -64,7 +63,7 @@ class SDB(Interruptible):
 
     async def populate(self, path: PurePath, mtime: float, loaded: LoadedSnips) -> None:
         def cont() -> None:
-            with with_transaction(self._conn.cursor()) as cursor:
+            with self._conn, closing(self._conn.cursor()) as cursor:
                 filename, source_id = normcase(path), uuid4().bytes
                 cursor.execute(sql("delete", "source"), {"filename": filename})
                 cursor.execute(
@@ -115,7 +114,7 @@ class SDB(Interruptible):
     ) -> Iterator[_Snip]:
         def cont() -> Iterator[_Snip]:
             try:
-                with with_transaction(self._conn.cursor()) as cursor:
+                with self._conn, closing(self._conn.cursor()) as cursor:
                     cursor.execute(
                         sql("select", "snippets"),
                         {

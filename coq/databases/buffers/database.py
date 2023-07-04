@@ -1,4 +1,4 @@
-from contextlib import suppress
+from contextlib import closing, suppress
 from dataclasses import dataclass
 from itertools import islice
 from random import shuffle
@@ -8,7 +8,6 @@ from typing import AbstractSet, Iterator, Mapping, Optional, Sequence, Tuple
 from uuid import uuid4
 
 from pynvim_pp.lib import recode
-from std2.sqlite3 import with_transaction
 
 from ...consts import BUFFER_DB, DEBUG
 from ...shared.executor import SingleThreadExecutor
@@ -139,7 +138,7 @@ class BDB(Interruptible):
 
     async def vacuum(self, live_bufs: Mapping[int, int]) -> None:
         def cont() -> None:
-            with with_transaction(self._conn.cursor()) as cursor:
+            with self._conn, closing(self._conn.cursor()) as cursor:
                 cursor.execute(sql("select", "buffers"), ())
                 existing = {row["rowid"] for row in cursor.fetchall()}
                 dead = existing - live_bufs.keys()
@@ -161,7 +160,7 @@ class BDB(Interruptible):
 
     async def buf_update(self, buf_id: int, filetype: str, filename: str) -> None:
         def cont() -> None:
-            with with_transaction(self._conn.cursor()) as cursor:
+            with self._conn, closing(self._conn.cursor()) as cursor:
                 _ensure_buffer(
                     cursor,
                     buf_id=buf_id,
@@ -182,7 +181,7 @@ class BDB(Interruptible):
         lines: Sequence[str],
     ) -> None:
         def cont() -> None:
-            with with_transaction(self._conn.cursor()) as cursor:
+            with self._conn, closing(self._conn.cursor()) as cursor:
                 _setlines(
                     cursor,
                     unifying_chars=self._unifying_chars,
@@ -209,7 +208,7 @@ class BDB(Interruptible):
         update: Optional[Update],
     ) -> Iterator[BufferWord]:
         def cont() -> Iterator[BufferWord]:
-            with with_transaction(self._conn.cursor()) as cursor:
+            with self._conn, closing(self._conn.cursor()) as cursor:
                 if update:
                     _setlines(
                         cursor,

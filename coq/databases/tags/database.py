@@ -1,4 +1,4 @@
-from contextlib import suppress
+from contextlib import closing, suppress
 from hashlib import md5
 from os.path import normcase
 from pathlib import Path, PurePath
@@ -6,7 +6,6 @@ from sqlite3 import Connection, OperationalError
 from typing import AbstractSet, Iterator, Mapping, cast
 
 from pynvim_pp.lib import encode
-from std2.sqlite3 import with_transaction
 
 from ...shared.executor import SingleThreadExecutor
 from ...shared.settings import MatchOptions
@@ -61,7 +60,7 @@ class CTDB(Interruptible):
 
     async def paths(self) -> Mapping[str, float]:
         def cont() -> Mapping[str, float]:
-            with with_transaction(self._conn.cursor()) as cursor:
+            with self._conn, closing(self._conn.cursor()) as cursor:
                 cursor.execute(sql("select", "files"), ())
                 files = {row["filename"]: row["mtime"] for row in cursor.fetchall()}
                 return files
@@ -74,7 +73,7 @@ class CTDB(Interruptible):
     async def reconciliate(self, dead: AbstractSet[str], new: Tags) -> None:
         def cont() -> None:
             with suppress(OperationalError):
-                with with_transaction(self._conn.cursor()) as cursor:
+                with self._conn, closing(self._conn.cursor()) as cursor:
 
                     def m1() -> Iterator[Mapping]:
                         for filename, (lang, mtime, _) in new.items():
@@ -109,7 +108,7 @@ class CTDB(Interruptible):
         limitless: int,
     ) -> Iterator[Tag]:
         def cont() -> Iterator[Tag]:
-            with with_transaction(self._conn.cursor()) as cursor:
+            with self._conn, closing(self._conn.cursor()) as cursor:
                 cursor.execute(
                     sql("select", "tags"),
                     {

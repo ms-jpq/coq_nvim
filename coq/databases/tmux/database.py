@@ -1,9 +1,7 @@
-from contextlib import suppress
+from contextlib import closing, suppress
 from dataclasses import dataclass
 from sqlite3 import Connection, OperationalError
 from typing import AbstractSet, Iterator, Mapping, MutableMapping, Optional
-
-from std2.sqlite3 import with_transaction
 
 from ...consts import TMUX_DB
 from ...shared.executor import SingleThreadExecutor
@@ -96,7 +94,7 @@ class TMDB(Interruptible):
 
         def cont() -> None:
             with suppress(OperationalError):
-                with with_transaction(self._conn.cursor()) as cursor:
+                with self._conn, closing(self._conn.cursor()) as cursor:
                     cursor.execute(sql("select", "panes"))
                     existing = {row["pane_id"] for row in cursor.fetchall()}
                     cursor.executemany(sql("delete", "pane"), m1(existing))
@@ -111,7 +109,7 @@ class TMDB(Interruptible):
     ) -> Iterator[TmuxWord]:
         def cont() -> Iterator[TmuxWord]:
             try:
-                with with_transaction(self._conn.cursor()) as cursor:
+                with self._conn, closing(self._conn.cursor()) as cursor:
                     cursor.execute(
                         sql("select", "words"),
                         {
