@@ -391,7 +391,14 @@
               filter(source.name) and
               type(source[key]) == "function"
            then
-            names[id] = {name = source.name, offset_encoding = "utf-8"}
+            local offset_encoding = source.offset_encoding or "utf-8"
+            vim.validate {
+              offset_encoding = {offset_encoding, "string"}
+            }
+            names[id] = {
+              name = source.name,
+              offset_encoding = offset_encoding
+            }
             table.insert(fns, {id, source[key]})
           end
         end
