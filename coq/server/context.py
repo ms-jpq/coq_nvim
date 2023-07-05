@@ -69,8 +69,11 @@ async def context(
     is_lower = l_words_before + l_words_after == split.word_lhs + split.word_rhs
 
     if DEBUG:
-        u32, u16 = await Nvim.api.exec_lua(
-            Tuple[int, int], "return {vim.str_utfindex(...)}", (line, col)
+        u32, u16 = cast(
+            Tuple[int, int],
+            await Nvim.api.exec_lua(
+                NoneType, "return {vim.str_utfindex(...)}", (line, col)
+            ),
         )
         assert utf16_col == u16
         assert utf32_col == u32
