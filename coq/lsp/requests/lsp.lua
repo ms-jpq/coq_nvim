@@ -261,7 +261,9 @@
           elseif client.offset_encoding == "utf-8" then
             return col8
           else
-            return col32
+            -- see -- coq/server/edit.py
+            -- return col32
+            return col8
           end
         end)()
 

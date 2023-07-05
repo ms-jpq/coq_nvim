@@ -220,12 +220,14 @@ def _range_edit_trans(
         if edit.encoding == UTF16:
             c1 = len(encode(decode(lines.b_lines16[r1][: ec1 * 2], encoding=UTF16)))
             c2 = len(encode(decode(lines.b_lines16[r2][: ec2 * 2], encoding=UTF16)))
-        elif edit.encoding == UTF8:
+        elif edit.encoding == UTF8 or edit.encoding == UTF32:
             c1 = len(lines.b_lines8[r1][:ec1])
             c2 = len(lines.b_lines8[r2][:ec2])
-        elif edit.encoding == UTF32:
+        elif edit.encoding == UTF32:  # type: ignore
+            # ccls says its utf-32, but its utf-8(ish)
             c1 = len(encode(decode(lines.b_lines32[r1][: ec1 * 4], encoding=UTF32)))
             c2 = len(encode(decode(lines.b_lines32[r2][: ec2 * 4], encoding=UTF32)))
+            never(edit.encoding)
         else:
             never(edit.encoding)
 
