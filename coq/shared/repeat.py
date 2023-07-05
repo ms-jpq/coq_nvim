@@ -33,7 +33,7 @@ def _shift(cursor: Cursors, edit: BaseRangeEdit) -> Tuple[WTF8Pos, WTF8Pos]:
         never(edit.encoding)
 
     prev_col = edit.cursor_pos
-    (b_row, b_col), (e_row, e_col) = sorted((edit.begin, edit.end))
+    (b_row, b_col), (e_row, e_col) = edit.begin, edit.end
     diff = col - prev_col
 
     if b_row == row:
