@@ -17,10 +17,6 @@ from .types import (
 )
 
 
-def _whitespaced(text: str) -> bool:
-    return any(c.isspace() for c in text)
-
-
 def _shift(cursor: Cursors, edit: BaseRangeEdit) -> Tuple[WTF8Pos, WTF8Pos]:
     row, u8, u16, u32 = cursor
     if edit.encoding == UTF16:
@@ -64,25 +60,13 @@ def sanitize(cursor: Cursors, edit: Edit) -> Optional[Edit]:
                 return SnippetEdit(grammar=edit.grammar, new_text=edit.new_text)
             else:
                 return None
-        elif not _whitespaced(edit.new_text):
-            if fallback := edit.fallback:
-                return SnippetEdit(grammar=edit.grammar, new_text=fallback)
-            else:
-                return None
+        elif fallback := edit.fallback:
+            return SnippetEdit(grammar=edit.grammar, new_text=fallback)
         else:
             begin, end = _shift(cursor, edit=edit)
             return replace(edit, begin=begin, end=end)
     elif isinstance(edit, RangeEdit):
-        if row == -1:
-            if edit.begin == edit.end:
-                return Edit(new_text=edit.new_text)
-            else:
-                return None
-        elif not _whitespaced(edit.new_text):
-            return Edit(new_text=edit.fallback)
-        else:
-            begin, end = _shift(cursor, edit=edit)
-            return replace(edit, begin=begin, end=end)
+        return Edit(new_text=edit.fallback)
     elif isinstance(edit, SnippetEdit):
         return edit
     else:
