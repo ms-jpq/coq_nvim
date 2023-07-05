@@ -1,12 +1,15 @@
+from os import environ
 from os.path import normcase
 from typing import Optional, Tuple, cast
 
 from pynvim_pp.atomic import Atomic
 from pynvim_pp.buffer import Buffer, linefeed
 from pynvim_pp.lib import decode, encode
+from pynvim_pp.nvim import Nvim
 from pynvim_pp.text_object import gen_split
 from pynvim_pp.types import NoneType
 
+from ..consts import DEBUG
 from ..shared.parse import lower
 from ..shared.settings import MatchOptions
 from ..shared.types import UTF16, UTF32, ChangeEvent, Context
@@ -64,6 +67,13 @@ async def context(
     l_words_before, l_words_after = lower(split.word_lhs), lower(split.word_rhs)
     l_syms_before, l_syms_after = lower(split.syms_lhs), lower(split.syms_rhs)
     is_lower = l_words_before + l_words_after == split.word_lhs + split.word_rhs
+
+    if DEBUG:
+        u32, u16 = await Nvim.api.exec_lua(
+            Tuple[int, int], "return {vim.str_utfindex(...)}", (line, col)
+        )
+        assert utf16_col == u16
+        assert utf32_col == u32
 
     ctx = Context(
         manual=manual,
