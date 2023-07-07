@@ -97,8 +97,8 @@ if command == "deps":
                 symlinks=not IS_WIN,
                 clear=True,
             ).create(_RT_DIR)
-    except (ImportError, CalledProcessError):
-        msg = "Please install python3-venv separately. (apt, yum, apk, etc)"
+    except (ImportError, CalledProcessError, SystemExit):
+        msg = "Please install python3-venv separately. (apt, yum, apk, etc)\n"
         print(msg, io_out.getvalue(), file=stderr)
         exit(1)
     else:
