@@ -12,7 +12,8 @@ from pynvim_pp.logging import log
 from pynvim_pp.nvim import Nvim
 from pynvim_pp.operators import operator_marks
 from pynvim_pp.preview import set_preview
-from pynvim_pp.types import NoneType, NvimError
+from pynvim_pp.rpc_types import NvimError
+from pynvim_pp.types import NoneType
 from pynvim_pp.window import Window
 from std2.argparse import ArgparseError, ArgParser
 from std2.locale import pathsort_key

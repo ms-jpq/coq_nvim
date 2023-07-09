@@ -172,11 +172,7 @@ elif command == "run":
         print(e, msg, sep=linesep, end="", file=stderr)
         exit(1)
     else:
-
-        async def main() -> None:
-            await init(args.socket, ppid=args.ppid)
-
-        arun(main())
+        arun(init(args.socket, ppid=args.ppid))
 
 else:
     assert False

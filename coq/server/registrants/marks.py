@@ -10,7 +10,8 @@ from pynvim_pp.buffer import Buffer, ExtMark
 from pynvim_pp.lib import encode
 from pynvim_pp.logging import log
 from pynvim_pp.nvim import Nvim
-from pynvim_pp.types import BufNamespace, NvimError
+from pynvim_pp.rpc_types import NvimError
+from pynvim_pp.types import BufNamespace
 from pynvim_pp.window import Window
 
 from ...lang import LANG

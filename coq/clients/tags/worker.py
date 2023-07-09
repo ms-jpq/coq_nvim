@@ -17,7 +17,7 @@ from typing import (
 from pynvim_pp.atomic import Atomic
 from pynvim_pp.buffer import Buffer
 from pynvim_pp.logging import suppress_and_log
-from pynvim_pp.types import NvimError
+from pynvim_pp.rpc_types import NvimError
 from std2.asyncio import to_thread
 
 from ...databases.tags.database import CTDB

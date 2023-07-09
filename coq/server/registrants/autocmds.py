@@ -6,7 +6,8 @@ from uuid import uuid4
 from pynvim_pp.buffer import Buffer
 from pynvim_pp.float_win import list_floatwins
 from pynvim_pp.nvim import Nvim
-from pynvim_pp.types import NoneType, NvimError
+from pynvim_pp.rpc_types import NvimError
+from pynvim_pp.types import NoneType
 from std2.asyncio import cancel
 from std2.cell import RefCell
 from std2.locale import si_prefixed_smol

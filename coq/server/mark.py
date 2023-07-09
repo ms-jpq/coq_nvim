@@ -6,7 +6,7 @@ from pynvim_pp.buffer import Buffer, ExtMark, ExtMarker
 from pynvim_pp.lib import decode
 from pynvim_pp.logging import log
 from pynvim_pp.nvim import Nvim
-from pynvim_pp.types import NvimError
+from pynvim_pp.rpc_types import NvimError
 
 from ..lang import LANG
 from ..shared.settings import Settings

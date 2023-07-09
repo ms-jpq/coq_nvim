@@ -11,8 +11,8 @@ from typing import Any, Sequence, cast
 
 from pynvim_pp.logging import log, suppress_and_log
 from pynvim_pp.nvim import Nvim, conn
-from pynvim_pp.rpc import MsgType, ServerAddr
-from pynvim_pp.types import Method, NoneType, RPCallable
+from pynvim_pp.rpc_types import Method, MsgType, RPCallable, ServerAddr
+from pynvim_pp.types import NoneType
 from std2.contextlib import nullacontext
 from std2.pickle.types import DecodeError
 from std2.platform import OS, os
@@ -92,3 +92,4 @@ async def init(socket: ServerAddr, ppid: int) -> None:
                     mapping=stk.settings.keymap,
                     fast_close=stk.settings.display.pum.fast_close,
                 )
+                await get_running_loop().create_future()
