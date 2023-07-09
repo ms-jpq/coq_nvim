@@ -59,4 +59,4 @@ build: .venv/bin/mypy
 
 fmt: .venv/bin/mypy
 	.venv/bin/isort --profile=black --gitignore -- .
-	.venv/bin/black --extend-exclude pack -- .
+	.venv/bin/black -- .

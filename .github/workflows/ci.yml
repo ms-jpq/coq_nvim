@@ -27,21 +27,18 @@ jobs:
         with:
           python-version: ${{ matrix.python_ver }}
 
-      - name: Apt Packages
-        run: |-
+      - run: |-
           sudo -- apt install --yes -- universal-ctags
 
-      - name: Codespell
-        run: |-
+      - run: |-
           pip3 install -- codespell
           codespell --skip ./artifacts/helo.yml --skip ./tests/shared/fuzzy.py
 
-      - name: Lint
-        run: make lint
+      - run: |-
+          make lint
 
-      - name: Install
-        run: python3 -m coq deps
+      - run: |-
+          python3 -m coq deps
 
-      - name: Test
-        run: |-
+      - run: |-
           make test
