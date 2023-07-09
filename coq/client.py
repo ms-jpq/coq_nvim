@@ -92,4 +92,3 @@ async def init(socket: ServerAddr, ppid: int) -> None:
                     mapping=stk.settings.keymap,
                     fast_close=stk.settings.display.pum.fast_close,
                 )
-                await get_running_loop().create_future()
