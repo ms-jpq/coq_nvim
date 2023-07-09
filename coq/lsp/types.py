@@ -11,8 +11,7 @@ from typing import (
     Union,
 )
 
-from ..shared.types import Completion, NvimCursor, WTF8Cursor, Cursors
-
+from ..shared.types import Completion, Cursors, NvimCursor, WTF8Cursor
 
 # https://microsoft.github.io/language-server-protocol/specification
 

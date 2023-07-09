@@ -16,11 +16,37 @@ clean:
 clobber: clean
 	rm -rf -- .vars/
 
-.venv/bin/pip:
+.venv/bin/python3:
 	python3 -m venv -- .venv
 
-.venv/bin/mypy: .venv/bin/pip
-	'$<' install --upgrade --requirement requirements.txt -- mypy types-PyYAML isort black
+define PYDEPS
+from itertools import chain
+from os import execl
+from sys import executable
+
+from tomli import load
+
+with open("pyproject.toml", "rb") as fd:
+    toml = load(fd)
+
+project = toml["project"]
+execl(
+    executable,
+    executable,
+    "-m",
+    "pip",
+    "install",
+    "--upgrade",
+    "--",
+    *project.get("dependencies", ()),
+    *chain.from_iterable(project["optional-dependencies"].values()),
+)
+endef
+export -- PYDEPS
+
+.venv/bin/mypy: .venv/bin/python3
+	'$<' -m pip install --requirement requirements.txt -- tomli
+	'$<' <<< "$$PYDEPS"
 
 lint: .venv/bin/mypy
 	'$<' -- .
