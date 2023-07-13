@@ -1,5 +1,8 @@
+MAKEFLAGS += --check-symlink-times
 MAKEFLAGS += --jobs
 MAKEFLAGS += --no-builtin-rules
+MAKEFLAGS += --no-builtin-variables
+MAKEFLAGS += --shuffle
 MAKEFLAGS += --warn-undefined-variables
 SHELL := bash
 .DELETE_ON_ERROR:
