@@ -50,7 +50,7 @@ async def _new_cwd(stack: Stack) -> None:
 _ = autocmd("DirChanged") << f"lua {NAMESPACE}.{_new_cwd.method}()"
 
 
-@rpc(blocking=False)
+@rpc()
 async def _ft_changed(stack: Stack) -> None:
     for worker in stack.workers:
         if isinstance(worker, BufWorker):
