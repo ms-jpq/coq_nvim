@@ -29,20 +29,19 @@ from sys import executable
 
 from tomli import load
 
-with open("pyproject.toml", "rb") as fd:
-    toml = load(fd)
+toml = load(open("pyproject.toml", "rb"))
 
 project = toml["project"]
 execl(
-    executable,
-    executable,
-    "-m",
-    "pip",
-    "install",
-    "--upgrade",
-    "--",
-    *project.get("dependencies", ()),
-    *chain.from_iterable(project["optional-dependencies"].values()),
+  executable,
+  executable,
+  "-m",
+  "pip",
+  "install",
+  "--upgrade",
+  "--",
+  *project.get("dependencies", ()),
+  *chain.from_iterable(project["optional-dependencies"].values()),
 )
 endef
 export -- PYDEPS
