@@ -65,28 +65,32 @@ _ = autocmd("FileType") << f"lua {NAMESPACE}.{_ft_changed.method}()"
 atomic.exec_lua(f"{NAMESPACE}.{_ft_changed.method}()", ())
 
 
-@rpc(blocking=False)
+@rpc()
 async def _insert_enter(stack: Stack) -> None:
     for worker in stack.workers:
         if isinstance(worker, TSWorker):
             buf = await Buffer.get_current()
             nono_bufs = state().nono_bufs
             if buf.number not in nono_bufs:
-                if populated := await worker.populate():
-                    keep_going, elapsed = populated
 
-                    if not keep_going:
-                        state(nono_bufs={buf.number})
-                        msg = LANG(
-                            "source slow",
-                            source=stack.settings.clients.tree_sitter.short_name,
-                            elapsed=si_prefixed_smol(elapsed, precision=0),
-                        )
-                        await Nvim.write(msg, error=True)
+                async def cont() -> None:
+                    if populated := await worker.populate():
+                        keep_going, elapsed = populated
+
+                        if not keep_going:
+                            state(nono_bufs={buf.number})
+                            msg = LANG(
+                                "source slow",
+                                source=stack.settings.clients.tree_sitter.short_name,
+                                elapsed=si_prefixed_smol(elapsed, precision=0),
+                            )
+                            await Nvim.write(msg, error=True)
+                    create_task(cont())
+
             break
 
 
-@rpc(blocking=False)
+@rpc()
 async def _on_focus(stack: Stack) -> None:
     for worker in stack.workers:
         if isinstance(worker, TmuxWorker):
