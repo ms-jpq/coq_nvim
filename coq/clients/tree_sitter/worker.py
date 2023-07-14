@@ -1,4 +1,4 @@
-from asyncio import create_task
+from asyncio import Lock, create_task
 from os import linesep
 from pathlib import PurePath
 from typing import AsyncIterator, Iterator, Mapping, Optional, Tuple
@@ -99,6 +99,7 @@ def _trans(client: TSClient, context: Context, payload: Payload) -> Completion:
 
 class Worker(BaseWorker[TSClient, TDB]):
     def __init__(self, supervisor: Supervisor, options: TSClient, misc: TDB) -> None:
+        self._lock = Lock()
         super().__init__(supervisor, options=options, misc=misc)
         create_task(self._poll())
 
@@ -111,19 +112,21 @@ class Worker(BaseWorker[TSClient, TDB]):
                         await self._supervisor.idling.wait()
 
     async def populate(self) -> Optional[Tuple[bool, float]]:
-        if payload := await async_request():
-            keep_going = payload.elapsed <= self._options.slow_threshold
-            await self._misc.populate(
-                payload.buf,
-                lo=payload.lo,
-                hi=payload.hi,
-                filetype=payload.filetype,
-                filename=payload.filename,
-                nodes=payload.payloads,
-            )
-            return keep_going, payload.elapsed
-        else:
-            return None
+        if not self._lock.locked():
+            async with self._lock:
+                if payload := await async_request():
+                    keep_going = payload.elapsed <= self._options.slow_threshold
+                    await self._misc.populate(
+                        payload.buf,
+                        lo=payload.lo,
+                        hi=payload.hi,
+                        filetype=payload.filetype,
+                        filename=payload.filename,
+                        nodes=payload.payloads,
+                    )
+                    return keep_going, payload.elapsed
+
+        return None
 
     async def work(self, context: Context) -> AsyncIterator[Completion]:
         async with self._work_lock:
