@@ -1,3 +1,4 @@
+from asyncio import Lock
 from asyncio.tasks import create_task
 from os import linesep
 from pathlib import Path
@@ -29,6 +30,7 @@ class Worker(BaseWorker[TmuxClient, TMDB]):
         self, supervisor: Supervisor, options: TmuxClient, misc: Tuple[Path, TMDB]
     ) -> None:
         self._exec, db = misc
+        self._lock = Lock()
         super().__init__(supervisor, options=options, misc=db)
         create_task(self._poll())
 
@@ -42,10 +44,12 @@ class Worker(BaseWorker[TmuxClient, TMDB]):
                     await self._supervisor.idling.wait()
 
     async def periodical(self) -> None:
-        current, panes = await snapshot(
-            self._exec, all_sessions=self._options.all_sessions
-        )
-        await self._misc.periodical(current, panes=panes)
+        if not self._lock.locked():
+            async with self._lock:
+                current, panes = await snapshot(
+                    self._exec, all_sessions=self._options.all_sessions
+                )
+                await self._misc.periodical(current, panes=panes)
 
     async def work(self, context: Context) -> AsyncIterator[Completion]:
         async with self._work_lock:
