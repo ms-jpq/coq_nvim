@@ -43,21 +43,21 @@ async def _new_cwd(stack: Stack) -> None:
     s = state(cwd=cwd)
     for worker in stack.workers:
         if isinstance(worker, TagsWorker):
-            await worker.swap(s.cwd)
+            create_task(worker.swap(s.cwd))
             break
 
 
 _ = autocmd("DirChanged") << f"lua {NAMESPACE}.{_new_cwd.method}()"
 
 
-@rpc()
+@rpc(blocking=False)
 async def _ft_changed(stack: Stack) -> None:
     for worker in stack.workers:
         if isinstance(worker, BufWorker):
             buf = await Buffer.get_current()
             ft = await buf.filetype()
             filename = await buf.get_name() or ""
-            await worker.buf_update(buf.number, filetype=ft, filename=filename)
+            create_task(worker.buf_update(buf.number, filetype=ft, filename=filename))
             break
 
 
@@ -65,7 +65,7 @@ _ = autocmd("FileType") << f"lua {NAMESPACE}.{_ft_changed.method}()"
 atomic.exec_lua(f"{NAMESPACE}.{_ft_changed.method}()", ())
 
 
-@rpc()
+@rpc(blocking=False)
 async def _insert_enter(stack: Stack) -> None:
     for worker in stack.workers:
         if isinstance(worker, TSWorker):
@@ -86,11 +86,11 @@ async def _insert_enter(stack: Stack) -> None:
             break
 
 
-@rpc()
+@rpc(blocking=False)
 async def _on_focus(stack: Stack) -> None:
     for worker in stack.workers:
         if isinstance(worker, TmuxWorker):
-            await worker.periodical()
+            create_task(worker.periodical())
             break
 
 
