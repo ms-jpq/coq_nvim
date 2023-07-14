@@ -49,7 +49,7 @@ export -- PYDEPS
 
 .venv/bin/mypy: .venv/bin/python3
 	'$<' -m pip install --requirement requirements.txt -- tomli
-	'$<' <<< "$$PYDEPS"
+	'$<' <<< '$(PYDEPS)'
 
 lint: .venv/bin/mypy
 	'$<' -- .
