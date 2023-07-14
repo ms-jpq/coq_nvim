@@ -44,7 +44,6 @@ execl(
   *chain.from_iterable(project["optional-dependencies"].values()),
 )
 endef
-export -- PYDEPS
 
 .venv/bin/mypy: .venv/bin/python3
 	'$<' -m pip install --requirement requirements.txt -- tomli
