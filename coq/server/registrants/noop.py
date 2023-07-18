@@ -41,13 +41,14 @@ async def now(stack: Stack, args: Sequence[str]) -> None:
     except ArgparseError as e:
         await Nvim.write(e, error=True)
     else:
-        if not ns.shut_up:
-            lo, hi = _HELO.chars
-            chars = choice(range(lo, hi))
-            star = (choice(_HELO.stars),)
-            birds = " ".join(chain(star, sample(_HELO.cocks, k=chars), star))
-            helo = choice(_HELO.helo)
-            msg = f"{birds}  {helo}{linesep}"
-            encoded = encode(msg)
-            stdout.buffer.write(encoded)
-            stdout.buffer.flush()
+        if stack.settings.display.statusline.helo:
+            if not ns.shut_up:
+                lo, hi = _HELO.chars
+                chars = choice(range(lo, hi))
+                star = (choice(_HELO.stars),)
+                birds = " ".join(chain(star, sample(_HELO.cocks, k=chars), star))
+                helo = choice(_HELO.helo)
+                msg = f"{birds}  {helo}{linesep}"
+                encoded = encode(msg)
+                stdout.buffer.write(encoded)
+                stdout.buffer.flush()
