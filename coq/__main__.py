@@ -98,7 +98,7 @@ if command == "deps":
                 clear=True,
             ).create(_RT_DIR)
     except (ImportError, CalledProcessError, SystemExit):
-        msg = "Please install python3-venv separately. (apt, yum, apk, etc)\n"
+        msg = "Please install python3-venv separately. (apt, yum, apk, etc)"
         print(msg, io_out.getvalue(), file=stderr)
         exit(1)
     else:
