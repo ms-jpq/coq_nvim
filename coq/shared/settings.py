@@ -71,6 +71,11 @@ class Icons:
 
 
 @dataclass(frozen=True)
+class Statusline:
+    helo: bool
+
+
+@dataclass(frozen=True)
 class Display:
     ghost_text: GhostText
     pum: PumDisplay
@@ -78,6 +83,7 @@ class Display:
     icons: Icons
     time_fmt: str
     mark_highlight_group: str
+    statusline: Statusline
 
 
 @dataclass(frozen=True)

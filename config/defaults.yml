@@ -177,6 +177,9 @@ display:
 
   time_fmt: "%Y-%m-%d %H:%M"
 
+  statusline:
+    helo: True
+
 keymap:
   bigger_preview: <c-k>
   eval_snips: null
