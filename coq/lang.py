@@ -1,4 +1,4 @@
-from locale import getdefaultlocale
+from locale import getlocale
 from string import Template
 from typing import Mapping, MutableMapping, Optional, Union
 
@@ -13,7 +13,7 @@ def _get_lang(code: Optional[str], fallback: str) -> str:
     if code:
         return code.casefold()
     else:
-        tag, _ = getdefaultlocale()
+        tag, _ = getlocale()
         tag = (tag or fallback).casefold()
         primary, _, _ = tag.partition("-")
         lang, _, _ = primary.partition("_")
