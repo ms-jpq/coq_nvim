@@ -1,6 +1,5 @@
 from asyncio import create_task
-from collections.abc import Mapping
-from typing import AbstractSet, AsyncIterator, MutableSet
+from typing import AbstractSet, AsyncIterator, MutableSet, Mapping
 
 from pynvim_pp.atomic import Atomic
 from pynvim_pp.logging import suppress_and_log
