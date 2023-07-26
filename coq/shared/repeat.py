@@ -3,6 +3,7 @@ from typing import Optional, Tuple
 
 from std2.types import never
 
+from ..snippets.parse import requires_snip
 from .types import (
     UTF8,
     UTF16,
@@ -53,20 +54,30 @@ def _shift(cursor: Cursors, edit: BaseRangeEdit) -> Tuple[WTF8Pos, WTF8Pos]:
 
 
 def sanitize(cursor: Cursors, edit: Edit) -> Optional[Edit]:
+    print(edit)
     row, *_ = cursor
     if isinstance(edit, SnippetRangeEdit):
         if row == -1:
             if edit.fallback == edit.new_text:
                 return SnippetEdit(grammar=edit.grammar, new_text=edit.new_text)
+            elif not requires_snip(edit.new_text):
+                return Edit(new_text=edit.new_text)
             else:
                 return None
         elif fallback := edit.fallback:
             return SnippetEdit(grammar=edit.grammar, new_text=fallback)
+        elif not requires_snip(edit.new_text):
+            return Edit(new_text=edit.new_text)
         else:
             begin, end = _shift(cursor, edit=edit)
             return replace(edit, begin=begin, end=end)
     elif isinstance(edit, RangeEdit):
-        return Edit(new_text=edit.fallback)
+        if fallback := edit.fallback:
+            return Edit(new_text=fallback)
+        elif not requires_snip(edit.new_text):
+            return Edit(new_text=edit.new_text)
+        else:
+            return None
     elif isinstance(edit, SnippetEdit):
         return edit
     else:

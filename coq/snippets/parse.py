@@ -34,6 +34,10 @@ class ParsedEdit(BaseRangeEdit):
 _NL = len(encode(SNIP_LINE_SEP))
 
 
+def requires_snip(text: str) -> bool:
+    return "$" in text
+
+
 def _marks(
     pos: NvimPos,
     l0_before: str,

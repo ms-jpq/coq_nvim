@@ -124,7 +124,7 @@ class BaseRangeEdit(Edit):
 
 @dataclass(frozen=True)
 class RangeEdit(BaseRangeEdit):
-    fallback: str
+    fallback: Optional[str]
 
 
 class SnippetGrammar(Enum):

@@ -71,7 +71,7 @@ def _with_defaults(defaults: ItemDefaults, item: Any) -> Any:
 def _range_edit(
     encoding: Encoding,
     cursors: Cursors,
-    fallback: str,
+    fallback: Optional[str],
     edit: Union[TextEdit, InsertReplaceEdit],
 ) -> RangeEdit:
     _, u8, u16, u32 = cursors
@@ -112,14 +112,14 @@ def _primary(encoding: Encoding, cursors: Cursors, item: CompletionItem) -> Edit
             re = _range_edit(
                 encoding,
                 cursors=cursors,
-                fallback=fallback.new_text,
+                fallback=item.insertText,
                 edit=item.textEdit,
             )
 
             return SnippetRangeEdit(
                 grammar=SnippetGrammar.lsp,
                 new_text=re.new_text,
-                fallback=item.insertText,
+                fallback=re.fallback,
                 begin=re.begin,
                 end=re.end,
                 cursor_pos=re.cursor_pos,
@@ -132,7 +132,7 @@ def _primary(encoding: Encoding, cursors: Cursors, item: CompletionItem) -> Edit
             return _range_edit(
                 encoding,
                 cursors=cursors,
-                fallback=fallback.new_text,
+                fallback=item.insertText,
                 edit=item.textEdit,
             )
         else:
@@ -186,7 +186,9 @@ def parse_item(
             p_edit = _primary(encoding, cursors=cursors, item=parsed)
             adjust_indent = _adjust_indent(parsed.insertTextMode, edit=p_edit)
             r_edits = tuple(
-                _range_edit(encoding, cursors=(-1, -1, -1, -1), fallback="", edit=edit)
+                _range_edit(
+                    encoding, cursors=(-1, -1, -1, -1), fallback=None, edit=edit
+                )
                 for edit in (parsed.additionalTextEdits or ())
             )
             sort_by = parsed.filterText or (
