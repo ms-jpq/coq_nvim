@@ -54,7 +54,6 @@ def _shift(cursor: Cursors, edit: BaseRangeEdit) -> Tuple[WTF8Pos, WTF8Pos]:
 
 
 def sanitize(cursor: Cursors, edit: Edit) -> Optional[Edit]:
-    print(edit)
     row, *_ = cursor
     if isinstance(edit, SnippetRangeEdit):
         if row == -1:
