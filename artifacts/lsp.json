@@ -1,5 +1,9 @@
 {
   "CodeActionKind": {},
+  "CodeActionTriggerKind": {
+    "Automatic": 2,
+    "Invoked": 1
+  },
   "CompletionItemKind": {
     "Class": 7,
     "Color": 16,
