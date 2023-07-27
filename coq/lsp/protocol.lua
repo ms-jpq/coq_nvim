@@ -11,7 +11,7 @@ return (function()
 
   local lookup = vim.empty_dict()
 
-  for key, val in pairs(vim.lsp.protocol) do
+  for key, val in pairs(vim.lsp.protocol or {}) do
     if type(val) == "table" then
       lookup[key] = sanitize(val)
     end
