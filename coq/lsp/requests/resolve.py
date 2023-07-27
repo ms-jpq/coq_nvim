@@ -2,6 +2,7 @@ from typing import MutableSequence, Optional
 
 from ...shared.types import Completion, ExternLSP, ExternLUA
 from ..parse import parse_item
+from ..protocol import protocol
 from .request import async_request
 
 
@@ -10,9 +11,12 @@ async def resolve(extern: ExternLSP) -> Optional[Completion]:
     comps: MutableSequence[Completion] = []
 
     clients = {extern.client} if extern.client else set()
+    pc = await protocol()
+
     async for client in async_request(name, None, clients, extern.item):
         comp = parse_item(
-            type(extern),
+            pc,
+            extern_type=type(extern),
             client=client.name,
             encoding=client.offset_encoding,
             short_name="",

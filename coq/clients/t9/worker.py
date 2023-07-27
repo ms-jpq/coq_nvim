@@ -28,7 +28,7 @@ from std2.platform import OS, os
 
 from ...consts import DEBUG
 from ...lang import LANG
-from ...lsp.protocol import PROTOCOL
+from ...lsp.protocol import LSProtocol, protocol
 from ...shared.executor import very_nice
 from ...shared.runtime import Supervisor
 from ...shared.runtime import Worker as BaseWorker
@@ -76,7 +76,12 @@ def _encode(context: Context, id: int, limit: int) -> Any:
 
 
 def _decode(
-    client: T9Client, ellipsis: str, syntax: str, id: int, reply: Response
+    protocol: LSProtocol,
+    client: T9Client,
+    ellipsis: str,
+    syntax: str,
+    id: int,
+    reply: Response,
 ) -> Iterator[Completion]:
     if (
         not isinstance(reply, Mapping)
@@ -113,7 +118,7 @@ def _decode(
 
                 doc = Doc(text=new_text, syntax=syntax) if e_pre or e_post else None
 
-                kind = PROTOCOL.CompletionItemKind.get(resp.kind)
+                kind = protocol.CompletionItemKind.get(resp.kind)
                 cmp = Completion(
                     source=client.short_name,
                     always_on_top=client.always_on_top,
@@ -278,8 +283,10 @@ class Worker(BaseWorker[T9Client, None]):
                         if isinstance(resp, Mapping):
                             self._t9_locked = resp.get("is_locked", False)
 
+                        pc = await protocol()
                         for comp in _decode(
-                            self._options,
+                            pc,
+                            client=self._options,
                             ellipsis=self._supervisor.display.pum.ellipsis,
                             syntax=context.filetype,
                             id=id,

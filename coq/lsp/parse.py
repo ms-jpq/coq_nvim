@@ -30,7 +30,7 @@ from ..shared.types import (
     SnippetGrammar,
     SnippetRangeEdit,
 )
-from .protocol import PROTOCOL
+from .protocol import LSProtocol
 from .types import (
     CompletionItem,
     CompletionResponse,
@@ -105,9 +105,11 @@ def _range_edit(
     return re
 
 
-def _primary(encoding: Encoding, cursors: Cursors, item: CompletionItem) -> Edit:
+def _primary(
+    protocol: LSProtocol, encoding: Encoding, cursors: Cursors, item: CompletionItem
+) -> Edit:
     fallback = Edit(new_text=item.insertText or item.label)
-    if PROTOCOL.InsertTextFormat.get(item.insertTextFormat) == "Snippet":
+    if protocol.InsertTextFormat.get(item.insertTextFormat) == "Snippet":
         if isinstance(item.textEdit, (TextEdit, InsertReplaceEdit)):
             re = _range_edit(
                 encoding,
@@ -155,6 +157,7 @@ def _doc(item: CompletionItem) -> Optional[Doc]:
 
 
 def parse_item(
+    protocol: LSProtocol,
     extern_type: Union[Type[ExternLSP], Type[ExternLUA]],
     always_on_top: Optional[AbstractSet[Optional[str]]],
     client: Optional[str],
@@ -183,7 +186,7 @@ def parse_item(
                 if (label_detail := parsed.labelDetails)
                 else parsed.label
             )
-            p_edit = _primary(encoding, cursors=cursors, item=parsed)
+            p_edit = _primary(protocol, encoding=encoding, cursors=cursors, item=parsed)
             adjust_indent = _adjust_indent(parsed.insertTextMode, edit=p_edit)
             r_edits = tuple(
                 _range_edit(
@@ -194,7 +197,7 @@ def parse_item(
             sort_by = parsed.filterText or (
                 parsed.label if isinstance(p_edit, SnippetEdit) else p_edit.new_text
             )
-            kind = PROTOCOL.CompletionItemKind.get(item.get("kind"), "")
+            kind = protocol.CompletionItemKind.get(item.get("kind"), "")
             doc = _doc(parsed)
             extern = extern_type(client=client, item=item, command=parsed.command)
 
@@ -217,6 +220,7 @@ def parse_item(
 
 
 def parse(
+    protocol: LSProtocol,
     extern_type: Union[Type[ExternLSP], Type[ExternLUA]],
     always_on_top: Optional[AbstractSet[Optional[str]]],
     client: Optional[str],
@@ -246,7 +250,8 @@ def parse(
                 for item in items
                 if (
                     co1 := parse_item(
-                        extern_type,
+                        protocol,
+                        extern_type=extern_type,
                         client=client,
                         encoding=encoding,
                         always_on_top=always_on_top,
@@ -270,7 +275,8 @@ def parse(
             for item in resp
             if (
                 co2 := parse_item(
-                    extern_type,
+                    protocol,
+                    extern_type=extern_type,
                     always_on_top=always_on_top,
                     client=client,
                     encoding=encoding,

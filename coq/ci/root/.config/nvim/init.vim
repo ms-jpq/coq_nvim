@@ -1,1 +1,0 @@
-call luaeval('require("init")()', [])

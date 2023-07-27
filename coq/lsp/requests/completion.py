@@ -2,6 +2,7 @@ from typing import AbstractSet, AsyncIterator, Optional, cast
 
 from ...shared.types import Context, ExternLSP, ExternLUA
 from ..parse import parse
+from ..protocol import protocol
 from ..types import CompletionResponse, LSPcomp
 from .request import async_request
 
@@ -14,10 +15,13 @@ async def comp_lsp(
     chunk: int,
     clients: AbstractSet[str],
 ) -> AsyncIterator[LSPcomp]:
+    pc = await protocol()
+
     async for client in async_request("lsp_comp", chunk, clients, context.cursor):
         resp = cast(CompletionResponse, client.message)
         yield parse(
-            ExternLSP,
+            pc,
+            extern_type=ExternLSP,
             client=client.name,
             encoding=client.offset_encoding,
             short_name=short_name,
@@ -36,13 +40,16 @@ async def comp_thirdparty(
     chunk: int,
     clients: AbstractSet[str],
 ) -> AsyncIterator[LSPcomp]:
+    pc = await protocol()
+
     async for client in async_request(
         "lsp_third_party", chunk, clients, context.cursor, context.line
     ):
         name = client.name or short_name
         resp = cast(CompletionResponse, client.message)
         yield parse(
-            ExternLUA,
+            pc,
+            extern_type=ExternLUA,
             client=client.name,
             encoding=client.offset_encoding,
             short_name=name,
