@@ -157,9 +157,8 @@ class Worker(BaseWorker[LSPClient, None]):
                     if comps := await co:
                         yield comps
 
-                if context.manual or not use_cache:
-                    async for lsp_comps in lsp_stream:
-                        yield _Src.from_query, lsp_comps
+                async for lsp_comps in lsp_stream:
+                    yield _Src.from_query, lsp_comps
 
             seen = 0
             try:
