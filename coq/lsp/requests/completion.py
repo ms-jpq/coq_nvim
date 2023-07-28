@@ -19,7 +19,7 @@ async def comp_lsp(
 
     async for client in async_request("lsp_comp", chunk, clients, context.cursor):
         resp = cast(CompletionResponse, client.message)
-        yield parse(
+        parsed = parse(
             pc,
             extern_type=ExternLSP,
             client=client.name,
@@ -30,6 +30,7 @@ async def comp_lsp(
             weight_adjust=weight_adjust,
             resp=resp,
         )
+        yield parsed
 
 
 async def comp_thirdparty(
@@ -47,7 +48,7 @@ async def comp_thirdparty(
     ):
         name = client.name or short_name
         resp = cast(CompletionResponse, client.message)
-        yield parse(
+        parsed = parse(
             pc,
             extern_type=ExternLUA,
             client=client.name,
@@ -58,3 +59,4 @@ async def comp_thirdparty(
             weight_adjust=weight_adjust,
             resp=resp,
         )
+        yield parsed
