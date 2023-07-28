@@ -1,7 +1,7 @@
 from dataclasses import asdict
 from os.path import normcase
 from pathlib import Path
-from typing import AbstractSet, Iterable, Iterator, MutableMapping, MutableSet
+from typing import AbstractSet, Callable, Iterable, Iterator, MutableMapping, MutableSet
 from uuid import UUID, uuid3
 
 from pynvim_pp.logging import log
@@ -28,6 +28,7 @@ def _key(snip: ParsedSnippet) -> UUID:
 
 
 def load_direct(
+    trans: Callable[[ParsedSnippet], ParsedSnippet],
     ignore_error: bool,
     lsp: Iterable[Path],
     neosnippet: Iterable[Path],
@@ -61,7 +62,7 @@ def load_direct(
                     ext_acc = extensions.setdefault(filetype, set())
                     for ext in exts:
                         ext_acc.add(ext)
-                    for snip in snips:
+                    for snip in map(trans, snips):
                         uid = _key(snip)
                         snippets[uid] = snip
 
@@ -70,11 +71,13 @@ def load_direct(
 
 
 def load_ci(
+    trans: Callable[[ParsedSnippet], ParsedSnippet],
     lsp: Iterable[Path],
     neosnippet: Iterable[Path],
     ultisnip: Iterable[Path],
 ) -> LoadedSnips:
     loaded = load_direct(
+        trans,
         True,
         lsp=_load_paths(lsp, exts={".json"}),
         neosnippet=_load_paths(neosnippet, exts={".snippets", ".snip"}),

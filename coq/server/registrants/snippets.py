@@ -335,7 +335,8 @@ async def compile_user_snippets(stack: Stack) -> None:
         )
         loaded = await to_thread(
             lambda: load_direct(
-                False,
+                lambda x: x,
+                ignore_error=False,
                 lsp=(),
                 neosnippet=mtimes,
                 ultisnip=(),

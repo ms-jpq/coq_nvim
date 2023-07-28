@@ -20,6 +20,7 @@ from ..snippets.loaders.load import load_ci as load_from_paths
 from ..snippets.parse import parse_basic
 from ..snippets.parsers.types import ParseError, ParseInfo
 from ..snippets.types import LoadedSnips, ParsedSnippet
+from .snip_trans import trans
 from .types import Compilation
 
 
@@ -63,6 +64,7 @@ async def load() -> LoadedSnips:
     await gather(*(_git_pull(sem, uri=uri) for uri in specs.git))
 
     parsed = load_from_paths(
+        trans,
         lsp=(TMP_DIR / path for path in specs.paths.lsp),
         neosnippet=(TMP_DIR / path for path in specs.paths.neosnippet),
         ultisnip=(TMP_DIR / path for path in specs.paths.ultisnip),
