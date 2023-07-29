@@ -113,7 +113,7 @@ def trans_adjusted(
     elif ctx.words_before and edit.new_text.startswith(ctx.words_before):
         old_prefix = ctx.words_before
     elif len(tokens) <= 1:
-        simple_before = cword_before(
+        _, simple_before = cword_before(
             match.unifying_chars, lower=False, context=ctx, sort_by=edit.new_text
         )
         old_prefix = simple_before
@@ -138,7 +138,7 @@ def trans_adjusted(
     if len(edit.old_suffix) >= comp.replace_suffix_threshold:
         old_suffix = edit.old_suffix
     elif len(tokens) <= 1:
-        simple_after = cword_after(
+        _, simple_after = cword_after(
             match.unifying_chars, lower=False, context=ctx, sort_by=edit.new_text
         )
         old_suffix = simple_after

@@ -20,7 +20,7 @@ from ...lsp.requests.completion import comp_lsp
 from ...lsp.types import LSPcomp
 from ...shared.context import cword_before
 from ...shared.fuzzy import multi_set_ratio
-from ...shared.parse import coalesce, lower
+from ...shared.parse import lower
 from ...shared.runtime import Supervisor
 from ...shared.runtime import Worker as BaseWorker
 from ...shared.settings import LSPClient, MatchOptions
@@ -40,21 +40,17 @@ class _Src(Enum):
 
 
 def _use_comp(match: MatchOptions, context: Context, sort_by: str, edit: Edit) -> bool:
-    tokens = coalesce(
-        match.unifying_chars, include_syms=True, backwards=True, chars=sort_by
-    )
-    token = next(tokens, sort_by)
-    cword = cword_before(
+    token, cword = cword_before(
         match.unifying_chars,
         lower=True,
         context=context,
-        sort_by=token,
+        sort_by=sort_by,
     )
 
-    if len(sort_by) + match.look_ahead >= len(cword):
+    if len(token) + match.look_ahead >= len(cword):
         ratio = multi_set_ratio(
             cword,
-            lower(sort_by),
+            lower(token),
             look_ahead=match.look_ahead,
         )
         use = ratio >= match.fuzzy_cutoff and (
