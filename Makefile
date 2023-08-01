@@ -14,10 +14,10 @@ SHELL := bash
 .PHONY: clean clobber lint test build fmt
 
 clean:
-	rm -rf -- .mypy_cache/ .venv/
+	rm -v -rf -- .mypy_cache/ .venv/
 
 clobber: clean
-	rm -rf -- .vars/
+	rm -v -rf -- .vars/
 
 .venv/bin/python3:
 	python3 -m venv -- .venv
