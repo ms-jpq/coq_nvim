@@ -1,11 +1,10 @@
 from os.path import normcase
 from pathlib import Path, PurePath
-from typing import AbstractSet, Tuple
+from typing import AbstractSet
 from uuid import uuid4
 
 from pynvim_pp.text_object import is_word
 
-from .parse import coalesce
 from .types import Context
 
 _FILE = Path(__file__).resolve(strict=True)
@@ -52,35 +51,25 @@ EMPTY_CONTEXT = Context(
 
 def cword_before(
     unifying_chars: AbstractSet[str], lower: bool, context: Context, sort_by: str
-) -> Tuple[str, str]:
+) -> str:
     char = sort_by[:1]
 
-    tokens = coalesce(unifying_chars, include_syms=True, backwards=True, chars=sort_by)
-    token = next(tokens, sort_by)
-
     if char.isspace():
-        before = context.ws_before
+        return context.ws_before
     elif is_word(unifying_chars, chr=char):
-        before = context.l_words_before if lower else context.words_before
+        return context.l_words_before if lower else context.words_before
     else:
-        before = context.l_syms_before if lower else context.syms_before
-
-    return token, before
+        return context.l_syms_before if lower else context.syms_before
 
 
 def cword_after(
     unifying_chars: AbstractSet[str], lower: bool, context: Context, sort_by: str
-) -> Tuple[str, str]:
+) -> str:
     char = sort_by[-1:]
 
-    tokens = coalesce(unifying_chars, include_syms=True, backwards=False, chars=sort_by)
-    token = next(tokens, sort_by)
-
     if char.isspace():
-        after = context.ws_after
+        return context.ws_after
     elif is_word(unifying_chars, chr=char):
-        after = context.l_words_after if lower else context.words_after
+        return context.l_words_after if lower else context.words_after
     else:
-        after = context.l_syms_after if lower else context.syms_after
-
-    return token, after
+        return context.l_syms_after if lower else context.syms_after

@@ -197,8 +197,8 @@ def _sort_by(unifying_chars: AbstractSet[str], context: Context, new_text: str) 
     else:
         end = ""
 
-    cs = "".join(chars)
-    _, cword = cword_before(unifying_chars, lower=False, context=context, sort_by=cs)
+    tmp = "".join(chars)
+    cword = cword_before(unifying_chars, lower=False, context=context, sort_by=tmp)
     sort_by = f"{cword}{end}"
     return sort_by
 

@@ -40,17 +40,17 @@ class _Src(Enum):
 
 
 def _use_comp(match: MatchOptions, context: Context, sort_by: str, edit: Edit) -> bool:
-    token, cword = cword_before(
+    cword = cword_before(
         match.unifying_chars,
         lower=True,
         context=context,
         sort_by=sort_by,
     )
 
-    if len(token) + match.look_ahead >= len(cword):
+    if len(sort_by) + match.look_ahead >= len(cword):
         ratio = multi_set_ratio(
             cword,
-            lower(token),
+            lower(sort_by),
             look_ahead=match.look_ahead,
         )
         use = ratio >= match.fuzzy_cutoff and (

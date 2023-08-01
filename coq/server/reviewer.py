@@ -32,10 +32,10 @@ def _metric(
     completion: Completion,
 ) -> MatchMetrics:
     match = lower(completion.sort_by) if ctx.is_lower else completion.sort_by
-    sort_by, cword = cword_before(
+    cword = cword_before(
         options.unifying_chars, lower=ctx.is_lower, context=ctx.context, sort_by=match
     )
-    return metrics(cword, sort_by, look_ahead=options.look_ahead)
+    return metrics(cword, match, look_ahead=options.look_ahead)
 
 
 def sigmoid(x: float) -> float:
