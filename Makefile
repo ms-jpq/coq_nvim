@@ -7,7 +7,7 @@ MAKEFLAGS += --warn-undefined-variables
 SHELL := bash
 .DELETE_ON_ERROR:
 .ONESHELL:
-.SHELLFLAGS := -Eeuo pipefail -O dotglob -O nullglob -O extglob -O failglob -O globstar -c
+.SHELLFLAGS := --norc --noprofile -Eeuo pipefail -O dotglob -O nullglob -O extglob -O failglob -O globstar -c
 
 .DEFAULT_GOAL := help
 
