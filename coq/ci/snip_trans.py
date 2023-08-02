@@ -1,9 +1,9 @@
 from dataclasses import replace
-from re import compile
+from re import RegexFlag, compile
 
 from ..snippets.types import ParsedSnippet
 
-_JS = compile(r";\s?")
+_JS = compile(r";\s?$", flags=RegexFlag.MULTILINE)
 
 
 def trans(snip: ParsedSnippet) -> ParsedSnippet:
