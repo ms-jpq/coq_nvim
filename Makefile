@@ -11,7 +11,7 @@ SHELL := bash
 
 .DEFAULT_GOAL := help
 
-.PHONY: clean clobber lint test build fmt
+.PHONY: clean clobber lint test build fmt ci
 
 clean:
 	rm -v -rf -- .mypy_cache/ .venv/
@@ -61,3 +61,6 @@ build: .venv/bin/mypy
 fmt: .venv/bin/mypy
 	.venv/bin/isort --profile=black --gitignore -- .
 	.venv/bin/black -- .
+
+ci: .venv/bin/mypy
+	.venv/bin/python3 -m coq.ci
