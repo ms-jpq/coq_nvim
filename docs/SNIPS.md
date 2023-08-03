@@ -14,7 +14,7 @@ To disable: simply do not install `coq.artifacts`.
 
 ## Custom snippets
 
-Note: `*` is a special wildcard filetype.
+Note: `*` and `_` is are special wildcard filetypes.
 
 ### Workflow
 

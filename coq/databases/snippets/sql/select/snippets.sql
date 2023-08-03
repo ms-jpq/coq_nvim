@@ -6,7 +6,7 @@ SELECT
   doc
 FROM snippets_view
 WHERE
-  ft_src IN (:filetype, '*')
+  ft_src IN (:filetype, '*', '_')
   AND
   (
     (
