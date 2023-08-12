@@ -6,7 +6,7 @@ from textwrap import dedent
 from typing import AsyncIterator, Iterable, Iterator, Sequence
 from uuid import uuid4
 
-from pynvim_pp.buffer import Buffer, ExtMark
+from pynvim_pp.buffer import Buffer, ExtMark, ExtMarker
 from pynvim_pp.lib import encode
 from pynvim_pp.logging import log
 from pynvim_pp.nvim import Nvim
@@ -30,7 +30,7 @@ async def _ls_marks(ns: BufNamespace, buf: Buffer) -> Sequence[ExtMark]:
         (
             replace(
                 mark,
-                marker=decode_mark_idx(mark.marker) - 1,
+                marker=ExtMarker(decode_mark_idx(mark.marker) - 1),
                 meta={**mark.meta, _OG_IDX: mark.marker},
             )
             for mark in await buf.get_extmarks(ns)
