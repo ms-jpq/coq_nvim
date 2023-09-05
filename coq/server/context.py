@@ -1,4 +1,3 @@
-from os import environ
 from os.path import normcase
 from typing import Optional, Tuple, cast
 
