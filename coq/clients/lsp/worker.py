@@ -14,7 +14,7 @@ from typing import (
 from pynvim_pp.logging import suppress_and_log
 from std2 import anext
 from std2.asyncio import cancel
-from std2.itertools import chunk
+from std2.itertools import batched
 
 from ...lsp.requests.completion import comp_lsp
 from ...lsp.types import LSPcomp
@@ -98,7 +98,7 @@ class Worker(BaseWorker[LSPClient, None]):
             await sleep(_CACHE_PERIOD)
 
             for client, (comps, _) in self._local_cached.pre.items():
-                for chunked in chunk(comps, n=_CACHE_CHUNK):
+                for chunked in batched(comps, n=_CACHE_CHUNK):
                     await self._cache.set_cache({client: chunked})
                     await sleep(_CACHE_PERIOD)
 

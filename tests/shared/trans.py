@@ -12,14 +12,14 @@ class ReverseAcc(TestCase):
         seq = ""
         lhs = tuple(reverse_acc(0, seq=seq))
         rhs = tuple(reversed(tuple(accumulate(seq))))
-        self.assertEquals(lhs, rhs)
+        self.assertEqual(lhs, rhs)
 
     def test_2(self) -> None:
         seq = "".join(map(str, range(1, 5)))
 
         lhs = tuple(reverse_acc(0, seq=seq))
         rhs = tuple(reversed(tuple(accumulate(seq))))
-        self.assertEquals(lhs, rhs)
+        self.assertEqual(lhs, rhs)
 
     def test_3(self) -> None:
         gen = iter(lambda: str(randint(0, 88)), None)
@@ -28,7 +28,7 @@ class ReverseAcc(TestCase):
             seq = "".join(islice(gen, 20))
             lhs = tuple(reverse_acc(0, seq=seq))
             rhs = tuple(reversed(tuple(accumulate(seq))))
-            self.assertEquals(lhs, rhs)
+            self.assertEqual(lhs, rhs)
 
 
 class Trans(TestCase):
@@ -47,8 +47,8 @@ class Trans(TestCase):
             line_after=rhs,
             new_text=new_text,
         )
-        self.assertEquals((actual.old_prefix, actual.old_suffix), old_fixes)
-        self.assertEquals(actual.new_prefix, new_prefix)
+        self.assertEqual((actual.old_prefix, actual.old_suffix), old_fixes)
+        self.assertEqual(actual.new_prefix, new_prefix)
 
     def test_2(self) -> None:
         lhs, rhs = "a", "b"
@@ -65,8 +65,8 @@ class Trans(TestCase):
             line_after=rhs,
             new_text=new_text,
         )
-        self.assertEquals((actual.old_prefix, actual.old_suffix), old_fixes)
-        self.assertEquals(actual.new_prefix, new_prefix)
+        self.assertEqual((actual.old_prefix, actual.old_suffix), old_fixes)
+        self.assertEqual(actual.new_prefix, new_prefix)
 
     def test_3(self) -> None:
         lhs, rhs = "abc", "de"
@@ -83,8 +83,8 @@ class Trans(TestCase):
             line_after=rhs,
             new_text=new_text,
         )
-        self.assertEquals((actual.old_prefix, actual.old_suffix), old_fixes)
-        self.assertEquals(actual.new_prefix, new_prefix)
+        self.assertEqual((actual.old_prefix, actual.old_suffix), old_fixes)
+        self.assertEqual(actual.new_prefix, new_prefix)
 
     def test_4(self) -> None:
         lhs, rhs = "abb", "c"
@@ -101,8 +101,8 @@ class Trans(TestCase):
             line_after=rhs,
             new_text=new_text,
         )
-        self.assertEquals((actual.old_prefix, actual.old_suffix), old_fixes)
-        self.assertEquals(actual.new_prefix, new_prefix)
+        self.assertEqual((actual.old_prefix, actual.old_suffix), old_fixes)
+        self.assertEqual(actual.new_prefix, new_prefix)
 
     def test_5(self) -> None:
         lhs, rhs = "abde", "fcg"
@@ -119,8 +119,8 @@ class Trans(TestCase):
             line_after=rhs,
             new_text=new_text,
         )
-        self.assertEquals((actual.old_prefix, actual.old_suffix), old_fixes)
-        self.assertEquals(actual.new_prefix, new_prefix)
+        self.assertEqual((actual.old_prefix, actual.old_suffix), old_fixes)
+        self.assertEqual(actual.new_prefix, new_prefix)
 
     def test_6(self) -> None:
         lhs, rhs = "ab", "cdef"
@@ -137,8 +137,8 @@ class Trans(TestCase):
             line_after=rhs,
             new_text=new_text,
         )
-        self.assertEquals((actual.old_prefix, actual.old_suffix), old_fixes)
-        self.assertEquals(actual.new_prefix, new_prefix)
+        self.assertEqual((actual.old_prefix, actual.old_suffix), old_fixes)
+        self.assertEqual(actual.new_prefix, new_prefix)
 
     def test_7(self) -> None:
         lhs, rhs = "abe", "cd"
@@ -155,5 +155,5 @@ class Trans(TestCase):
             line_after=rhs,
             new_text=new_text,
         )
-        self.assertEquals((actual.old_prefix, actual.old_suffix), old_fixes)
-        self.assertEquals(actual.new_prefix, new_prefix)
+        self.assertEqual((actual.old_prefix, actual.old_suffix), old_fixes)
+        self.assertEqual(actual.new_prefix, new_prefix)
