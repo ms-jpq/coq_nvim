@@ -14,6 +14,7 @@ from typing import (
     Optional,
     Sequence,
     Tuple,
+    Type,
 )
 
 from pynvim_pp.lib import decode
@@ -83,8 +84,8 @@ async def _lsp_pull(
     lo = 1
     hi = n
     while True:
-        part = await Nvim.api.exec_lua(
-            NoneType,
+        part: Sequence[Any] = await Nvim.api.exec_lua(
+            tuple,
             f"return {NAMESPACE}.lsp_pull(...)",
             (client, uid, lo, hi),
         )
