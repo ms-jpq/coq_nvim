@@ -14,7 +14,6 @@ from typing import (
     Optional,
     Sequence,
     Tuple,
-    Type,
 )
 
 from pynvim_pp.lib import decode
