@@ -78,7 +78,7 @@ _EXEC_PATH = Path(executable)
 _EXEC_PATH = _EXEC_PATH.parent.resolve(strict=True) / _EXEC_PATH.name
 _REQ = REQUIREMENTS.read_text()
 
-_IN_VENV = _RT_PY.parent.resolve(strict=True) / _RT_PY.name == _EXEC_PATH
+_IN_VENV = _RT_PY.parent.resolve() / _RT_PY.name == _EXEC_PATH
 
 
 if command == "deps":
