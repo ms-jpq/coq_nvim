@@ -19,7 +19,14 @@
       return function(client_name)
         vim.validate {client_name = {client_name, "string"}}
         local includes = acc[client_name]
-        return include_clients and includes or not includes
+        local yes = (function()
+          if include_clients then
+            return includes
+          else
+            return not includes
+          end
+        end)()
+        return yes
       end
     end
   end
