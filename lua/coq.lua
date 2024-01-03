@@ -82,6 +82,10 @@ local start = function(deps, ...)
   local params = {
     cwd = cwd,
     on_exit = on_exit,
+    env = {
+      PYTHONSAFEPATH = "1",
+      PYTHONPATH = cwd
+    },
     on_stdout = (function()
       if deps then
         return nil
