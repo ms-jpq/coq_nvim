@@ -90,6 +90,7 @@ def trans_adjusted(
     comp: CompleteOptions,
     ctx: Context,
     new_text: str,
+    match_after: bool,
 ) -> ContextualEdit:
     edit = trans(
         comp.replace_prefix_threshold,
@@ -137,6 +138,10 @@ def trans_adjusted(
 
     if len(edit.old_suffix) >= min(comp.replace_suffix_threshold, len(ctx.line_after)):
         old_suffix = edit.old_suffix
+    elif match_after and ctx.syms_after and edit.new_text.endswith(ctx.syms_after):
+        old_suffix = ctx.syms_after
+    elif match_after and ctx.words_after and edit.new_text.endswith(ctx.words_after):
+        old_suffix = ctx.words_after
     elif len(tokens) <= 1:
         simple_after = cword_after(
             match.unifying_chars, lower=False, context=ctx, sort_by=edit.new_text

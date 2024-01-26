@@ -146,7 +146,9 @@ def parse_basic(
     parser = _parser(snippet.grammar)
 
     sort_by = parser(context, info, snippet.new_text).text
-    trans_ctx = trans_adjusted(match, comp=comp, ctx=context, new_text=sort_by)
+    trans_ctx = trans_adjusted(
+        match, comp=comp, ctx=context, new_text=sort_by, match_after=False
+    )
     old_prefix, old_suffix = trans_ctx.old_prefix, trans_ctx.old_suffix
 
     line_before = removesuffix(context.line_before, suffix=old_prefix)
