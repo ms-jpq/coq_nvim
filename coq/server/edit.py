@@ -171,11 +171,8 @@ def _edit_trans(
     ctx: Context,
     lines: _Lines,
     edit: Edit,
-    match_after: bool,
 ) -> EditInstruction:
-    adjusted = trans_adjusted(
-        match, comp=comp, ctx=ctx, new_text=edit.new_text, match_after=match_after
-    )
+    adjusted = trans_adjusted(match, comp=comp, ctx=ctx, new_text=edit.new_text)
     inst = _contextual_edit_trans(
         ctx, adjust_indent=adjust_indent, lines=lines, edit=adjusted
     )
@@ -214,7 +211,6 @@ def _range_edit_trans(
             ctx=ctx,
             lines=lines,
             edit=edit,
-            match_after=True,
         )
 
     else:
@@ -308,7 +304,6 @@ def _instructions(
             ctx=ctx,
             lines=lines,
             edit=primary,
-            match_after=False,
         )
         yield inst
 
