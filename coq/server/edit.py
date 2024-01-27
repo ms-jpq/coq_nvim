@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from itertools import chain, repeat
 from pprint import pformat
 from string import Template
@@ -206,7 +206,7 @@ def _range_edit_trans(
     ):
         return _edit_trans(
             match,
-            comp=comp,
+            comp=replace(comp, replace_suffix_threshold=1),
             adjust_indent=adjust_indent,
             ctx=ctx,
             lines=lines,
