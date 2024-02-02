@@ -66,13 +66,8 @@ def very_nice() -> Awaitable[Sequence[str]]:
         elif (sd := which("systemd-notify")) and (sr := which("systemd-run")):
             run = (
                 sr,
-                "--quiet",
-                "--collect",
                 "--user",
-                "--pipe",
-                "--same-dir",
-                "--wait",
-                "--service-type",
+                "--scope",
                 "exec",
                 "--nice",
                 "19",
