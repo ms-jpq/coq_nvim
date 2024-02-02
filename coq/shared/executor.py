@@ -68,7 +68,6 @@ def very_nice() -> Awaitable[Sequence[str]]:
                 sr,
                 "--user",
                 "--scope",
-                "exec",
                 "--nice",
                 "19",
                 "--property",
