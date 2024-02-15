@@ -82,7 +82,7 @@ class Worker(BaseWorker[BuffersClient, BDB]):
         super().__init__(ex, supervisor=supervisor, options=options, misc=misc)
         create_task(self._poll())
 
-    async def interrupt(self) -> None:
+    def interrupt(self) -> None:
         raise NotImplementedError()
 
     async def _poll(self) -> None:

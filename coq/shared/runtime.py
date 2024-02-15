@@ -143,7 +143,9 @@ class Worker(Generic[_O_co, _T_co]):
         cls, supervisor: Supervisor, options: _O_co, misc: _T_co
     ) -> Worker[_O_co, _T_co]:
         ex = SingleThreadExecutor()
-        self = cls(ex, supervisor=supervisor, options=options, misc=misc)
+        self = ex.ssubmit(
+            lambda: cls(ex, supervisor=supervisor, options=options, misc=misc)
+        )
         return self
 
     def __init__(
@@ -160,10 +162,13 @@ class Worker(Generic[_O_co, _T_co]):
         create_task(self._supervisor.register(self, assoc=options))
 
     @abstractmethod
-    async def interrupt(self) -> None: ...
+    def interrupt(self) -> None: ...
 
     @abstractmethod
     def work(self, context: Context) -> AsyncIterator[Completion]: ...
+
+    async def supervised_interrupt(self) -> None:
+        await self._ex.submit(self.interrupt)
 
     def supervised_work(
         self,

@@ -195,7 +195,7 @@ class Worker(BaseWorker[T9Client, None]):
         create_task(self._install())
         create_task(self._poll())
 
-    async def interrupt(self) -> None:
+    def interrupt(self) -> None:
         raise NotImplementedError()
 
     async def _poll(self) -> None:
