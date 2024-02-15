@@ -146,7 +146,6 @@ class Worker(Generic[_O_co, _T_co]):
         self = ex.ssubmit(
             lambda: cls(ex, supervisor=supervisor, options=options, misc=misc)
         )
-        ex.run(self.main())
         return self
 
     def __init__(
@@ -161,6 +160,7 @@ class Worker(Generic[_O_co, _T_co]):
         self._work_lock = TracingLocker(name=options.short_name, force=True)
         self._supervisor, self._options, self._misc = supervisor, options, misc
         self._supervisor.register(self, assoc=options)
+        self._ex.run(self.main())
 
     @abstractmethod
     async def main(self) -> None: ...
