@@ -30,10 +30,7 @@ class AsyncExecutor:
             main: Coroutine = await wrap_future(self._fut)
             await main
 
-        def target() -> None:
-            run(cont())
-
-        self._th = Thread(daemon=True, target=target)
+        self._th = Thread(daemon=True, target=lambda: run(cont()))
         self._th.start()
         self._loop: AbstractEventLoop = f.result()
 

@@ -40,13 +40,12 @@ class IDB(Interruptible):
         self._ex = AsyncExecutor()
         self._conn: Connection = self._ex.ssubmit(_init)
 
-    async def new_source(self, source: str) -> None:
+    def new_source(self, source: str) -> None:
         def c1() -> None:
             with self._conn, closing(self._conn.cursor()) as cursor:
                 cursor.execute(sql("insert", "source"), {"name": source})
 
-        async with self._lock:
-            self._ex.submit(c1)
+        self._ex.ssubmit(c1)
 
     async def new_batch(self, batch_id: bytes) -> None:
         def cont() -> None:
