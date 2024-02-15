@@ -9,6 +9,9 @@ from .db.database import SDB
 
 
 class Worker(BaseWorker[SnippetClient, SDB]):
+    async def interrupt(self) -> None:
+        raise NotImplementedError()
+
     async def db_mtimes(self) -> Mapping[PurePath, float]:
         return await self._misc.mtimes()
 

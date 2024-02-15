@@ -144,6 +144,9 @@ class Worker(Generic[_O_co, _T_co]):
         create_task(self._supervisor.register(self, assoc=options))
 
     @abstractmethod
+    async def interrupt(self) -> None: ...
+
+    @abstractmethod
     def work(self, context: Context) -> AsyncIterator[Completion]: ...
 
     def supervised(

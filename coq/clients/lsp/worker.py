@@ -79,6 +79,9 @@ class Worker(BaseWorker[LSPClient, None]):
         self._poll_task: Optional[Task] = None
         self._max_results = self._supervisor.match.max_results
 
+    async def interrupt(self) -> None:
+        raise NotImplementedError()
+
     def _request(
         self, context: Context, cached_clients: AbstractSet[str]
     ) -> AsyncIterator[LSPcomp]:

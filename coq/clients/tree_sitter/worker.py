@@ -103,6 +103,9 @@ class Worker(BaseWorker[TSClient, TDB]):
         super().__init__(supervisor, options=options, misc=misc)
         create_task(self._poll())
 
+    async def interrupt(self) -> None:
+        raise NotImplementedError()
+
     async def _poll(self) -> None:
         while True:
             with suppress_and_log():
