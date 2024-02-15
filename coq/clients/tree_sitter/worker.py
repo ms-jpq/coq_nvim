@@ -1,4 +1,4 @@
-from asyncio import Lock, create_task
+from asyncio import Lock
 from os import linesep
 from pathlib import PurePath
 from typing import AsyncIterator, Iterator, Mapping, Optional, Tuple
@@ -108,16 +108,16 @@ class Worker(BaseWorker[TSClient, TDB]):
     ) -> None:
         self._lock = Lock()
         super().__init__(ex, supervisor=supervisor, options=options, misc=misc)
-        create_task(self._poll())
+        self._ex.run(self._poll())
 
     def interrupt(self) -> None:
-        raise NotImplementedError()
+        self._misc.conn.interrupt()
 
     async def _poll(self) -> None:
         while True:
             with suppress_and_log():
                 if bufs := await _bufs():
-                    await self._misc.vacuum(bufs)
+                    self._misc.vacuum(bufs)
                     async with self._supervisor.idling:
                         await self._supervisor.idling.wait()
 
@@ -126,7 +126,7 @@ class Worker(BaseWorker[TSClient, TDB]):
             async with self._lock:
                 if payload := await async_request():
                     keep_going = payload.elapsed <= self._options.slow_threshold
-                    await self._misc.populate(
+                    self._misc.populate(
                         payload.buf,
                         lo=payload.lo,
                         hi=payload.hi,
@@ -140,7 +140,7 @@ class Worker(BaseWorker[TSClient, TDB]):
 
     async def work(self, context: Context) -> AsyncIterator[Completion]:
         async with self._work_lock:
-            payloads = await self._misc.select(
+            payloads = self._misc.select(
                 self._supervisor.match,
                 filetype=context.filetype,
                 word=context.words,

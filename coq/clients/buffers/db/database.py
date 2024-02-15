@@ -10,8 +10,6 @@ from uuid import uuid4
 from pynvim_pp.lib import recode
 
 from ....consts import BUFFER_DB, DEBUG
-from ....databases.types import Interruptible
-from ....shared.executor import AsyncExecutor
 from ....shared.parse import coalesce
 from ....shared.settings import MatchOptions
 from ....shared.sql import BIGGEST_INT, init_db, like_esc
@@ -123,21 +121,20 @@ def _init() -> Connection:
     return conn
 
 
-class BDB(Interruptible):
+class BDB:
     def __init__(
         self,
         tokenization_limit: int,
         unifying_chars: AbstractSet[str],
         include_syms: bool,
     ) -> None:
-        self._ex = AsyncExecutor()
         self._tokenization_limit = tokenization_limit
         self._unifying_chars = unifying_chars
         self._include_syms = include_syms
-        self._conn: Connection = self._ex.ssubmit(_init)
+        self._conn = _init()
 
-    async def vacuum(self, live_bufs: Mapping[int, int]) -> None:
-        def cont() -> None:
+    def vacuum(self, live_bufs: Mapping[int, int]) -> None:
+        with suppress(OperationalError):
             with self._conn, closing(self._conn.cursor()) as cursor:
                 cursor.execute(sql("select", "buffers"), ())
                 existing = {row["rowid"] for row in cursor.fetchall()}
@@ -155,23 +152,17 @@ class BDB(Interruptible):
                 )
                 cursor.execute("PRAGMA optimize", ())
 
-        with suppress(OperationalError):
-            await self._ex.submit(cont)
+    def buf_update(self, buf_id: int, filetype: str, filename: str) -> None:
+        # TODO: MUST HAPPEN
+        with self._conn, closing(self._conn.cursor()) as cursor:
+            _ensure_buffer(
+                cursor,
+                buf_id=buf_id,
+                filetype=filetype,
+                filename=filename,
+            )
 
-    async def buf_update(self, buf_id: int, filetype: str, filename: str) -> None:
-        def cont() -> None:
-            with self._conn, closing(self._conn.cursor()) as cursor:
-                _ensure_buffer(
-                    cursor,
-                    buf_id=buf_id,
-                    filetype=filetype,
-                    filename=filename,
-                )
-
-        async with self._lock:
-            await self._ex.submit(cont)
-
-    async def set_lines(
+    def set_lines(
         self,
         buf_id: int,
         filetype: str,
@@ -180,7 +171,7 @@ class BDB(Interruptible):
         hi: int,
         lines: Sequence[str],
     ) -> None:
-        def cont() -> None:
+        with suppress(OperationalError):
             with self._conn, closing(self._conn.cursor()) as cursor:
                 _setlines(
                     cursor,
@@ -195,10 +186,7 @@ class BDB(Interruptible):
                     lines=lines,
                 )
 
-        with suppress(OperationalError):
-            await self._ex.submit(cont)
-
-    async def words(
+    def words(
         self,
         opts: MatchOptions,
         filetype: Optional[str],
@@ -207,7 +195,7 @@ class BDB(Interruptible):
         limitless: int,
         update: Optional[Update],
     ) -> Iterator[BufferWord]:
-        def cont() -> Iterator[BufferWord]:
+        with suppress(OperationalError):
             with self._conn, closing(self._conn.cursor()) as cursor:
                 if update:
                     _setlines(
@@ -236,19 +224,10 @@ class BDB(Interruptible):
                         "like_sym": like_esc(sym[: opts.exact_matches]),
                     },
                 )
-                rows = cursor.fetchall()
-                return (
-                    BufferWord(
+                for row in cursor:
+                    yield BufferWord(
                         text=row["word"],
                         filetype=row["filetype"],
                         filename=row["filename"],
                         line_num=row["line_num"] + 1,
                     )
-                    for row in rows
-                )
-
-        async with self._interruption():
-            try:
-                return await self._ex.submit(cont)
-            except OperationalError:
-                return iter(())

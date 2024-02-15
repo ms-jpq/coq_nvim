@@ -1,4 +1,4 @@
-from asyncio import create_task, gather
+from asyncio import gather
 from contextlib import suppress
 from os import linesep
 from os.path import normcase
@@ -141,7 +141,7 @@ class Worker(BaseWorker[TagsClient, CTDB]):
     ) -> None:
         self._exec, db = misc
         super().__init__(ex, supervisor=supervisor, options=options, misc=db)
-        create_task(self._poll())
+        self._ex.run(self._poll())
 
     def interrupt(self) -> None:
         raise NotImplementedError()
@@ -150,7 +150,8 @@ class Worker(BaseWorker[TagsClient, CTDB]):
         while True:
             with suppress_and_log():
                 with timeit("IDLE :: TAGS"):
-                    buf_names, existing = await gather(_ls(), self._misc.paths())
+                    buf_names = await _ls()
+                    existing = self._misc.paths()
                     paths = buf_names | existing.keys()
                     mtimes = await _mtimes(paths)
                     query_paths = tuple(
@@ -161,18 +162,18 @@ class Worker(BaseWorker[TagsClient, CTDB]):
                     raw = await run(self._exec, *query_paths) if query_paths else ""
                     new = parse(mtimes, raw=raw)
                     dead = existing.keys() - mtimes.keys()
-                    await self._misc.reconciliate(dead, new=new)
+                    self._misc.reconciliate(dead, new=new)
 
                 async with self._supervisor.idling:
                     await self._supervisor.idling.wait()
 
     async def swap(self, cwd: PurePath) -> None:
-        await self._misc.swap(cwd)
+        self._misc.swap(cwd)
 
     async def work(self, context: Context) -> AsyncIterator[Completion]:
         async with self._work_lock:
             row, _ = context.position
-            tags = await self._misc.select(
+            tags = self._misc.select(
                 self._supervisor.match,
                 filename=context.filename,
                 line_num=row,

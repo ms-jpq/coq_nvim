@@ -1,4 +1,3 @@
-from asyncio import create_task
 from dataclasses import dataclass
 from os import linesep
 from pathlib import PurePath
@@ -80,7 +79,7 @@ class Worker(BaseWorker[BuffersClient, BDB]):
         misc: BDB,
     ) -> None:
         super().__init__(ex, supervisor=supervisor, options=options, misc=misc)
-        create_task(self._poll())
+        self._ex.run(self._poll())
 
     def interrupt(self) -> None:
         raise NotImplementedError()
@@ -94,7 +93,7 @@ class Worker(BaseWorker[BuffersClient, BDB]):
                         int(buf.number): line_count
                         for buf, line_count in info.buffers.items()
                     }
-                    await self._misc.vacuum(buf_line_counts)
+                    self._misc.vacuum(buf_line_counts)
                     await self.set_lines(
                         info.buf_id,
                         filetype=info.filetype,
@@ -108,7 +107,7 @@ class Worker(BaseWorker[BuffersClient, BDB]):
                     await self._supervisor.idling.wait()
 
     async def buf_update(self, buf_id: int, filetype: str, filename: str) -> None:
-        await self._misc.buf_update(buf_id, filetype=filetype, filename=filename)
+        self._misc.buf_update(buf_id, filetype=filetype, filename=filename)
 
     async def set_lines(
         self,
@@ -119,7 +118,7 @@ class Worker(BaseWorker[BuffersClient, BDB]):
         hi: int,
         lines: Sequence[str],
     ) -> None:
-        await self._misc.set_lines(
+        self._misc.set_lines(
             buf_id,
             filetype=filetype,
             filename=filename,
@@ -143,7 +142,7 @@ class Worker(BaseWorker[BuffersClient, BDB]):
                 if (change := context.change)
                 else None
             )
-            words = await self._misc.words(
+            words = self._misc.words(
                 self._supervisor.match,
                 filetype=filetype,
                 word=context.words,

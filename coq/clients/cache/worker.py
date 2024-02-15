@@ -107,7 +107,7 @@ class CacheWorker:
                 else:
                     yield key, val.sort_by
 
-        await self._db.insert(cont())
+        self._db.insert(cont())
 
         for client in items:
             if client:
@@ -139,7 +139,7 @@ class CacheWorker:
 
         async def get() -> Tuple[Iterator[Completion], int]:
             with timeit("CACHE -- GET"):
-                keys, length = await self._db.select(
+                keys, length = self._db.select(
                     not use_cache,
                     opts=self._supervisor.match,
                     word=context.words,

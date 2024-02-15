@@ -1,7 +1,18 @@
 from __future__ import annotations
 
 from abc import abstractmethod
-from asyncio import CancelledError, Condition, Task, as_completed, create_task, wait
+from asyncio import (
+    CancelledError,
+    Condition,
+    Future,
+    Task,
+    as_completed,
+    create_task,
+    run_coroutine_threadsafe,
+    wait,
+    wrap_future,
+)
+from collections import deque
 from dataclasses import dataclass
 from pathlib import Path
 from time import monotonic
@@ -9,6 +20,7 @@ from typing import (
     Any,
     AsyncIterator,
     Awaitable,
+    Deque,
     Generic,
     MutableSequence,
     Optional,
@@ -97,6 +109,8 @@ class Supervisor:
     async def interrupt(self) -> None:
         task = self._work_task
         self._work_task = None
+        for worker in self._workers:
+            worker.interrupt()
         if task:
             await cancel(task)
 
@@ -115,7 +129,7 @@ class Supervisor:
 
             with suppress_and_log(), timeit("COLLECTED -- ALL"):
                 async with self._lock:
-                    acc: MutableSequence[Metric] = []
+                    acc: Deque[Metric] = deque()
 
                     token = await self._reviewer.begin(context)
                     tasks = tuple(
@@ -160,10 +174,6 @@ class Worker(Generic[_O_co, _T_co]):
         self._work_lock = TracingLocker(name=options.short_name, force=True)
         self._supervisor, self._options, self._misc = supervisor, options, misc
         self._supervisor.register(self, assoc=options)
-        self._ex.run(self.main())
-
-    @abstractmethod
-    async def main(self) -> None: ...
 
     @abstractmethod
     def interrupt(self) -> None: ...
@@ -180,7 +190,7 @@ class Worker(Generic[_O_co, _T_co]):
         token: Any,
         now: float,
         acc: MutableSequence[Metric],
-    ) -> Task:
+    ) -> Future:
         prev = self._work_task
 
         async def cont() -> None:
@@ -188,6 +198,7 @@ class Worker(Generic[_O_co, _T_co]):
             interrupted = False
 
             with timeit(f"CANCEL WORKER -- {self._options.short_name}"):
+                self.interrupt()
                 if prev:
                     await cancel(prev)
 
@@ -216,4 +227,6 @@ class Worker(Generic[_O_co, _T_co]):
                     )
 
         self._work_task = task = create_task(cont())
-        return task
+        f = run_coroutine_threadsafe(task, self._ex._loop)
+        fut = wrap_future(f)
+        return fut

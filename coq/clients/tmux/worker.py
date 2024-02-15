@@ -1,5 +1,4 @@
 from asyncio import Lock
-from asyncio.tasks import create_task
 from os import linesep
 from pathlib import Path
 from typing import AsyncIterator, Iterator, Tuple
@@ -37,7 +36,7 @@ class Worker(BaseWorker[TmuxClient, TMDB]):
         self._exec, db = misc
         self._lock = Lock()
         super().__init__(ex, supervisor=supervisor, options=options, misc=db)
-        create_task(self._poll())
+        self._ex.run(self._poll())
 
     def interrupt(self) -> None:
         raise NotImplementedError()
@@ -57,11 +56,11 @@ class Worker(BaseWorker[TmuxClient, TMDB]):
                 current, panes = await snapshot(
                     self._exec, all_sessions=self._options.all_sessions
                 )
-                await self._misc.periodical(current, panes=panes)
+                self._misc.periodical(current, panes=panes)
 
     async def work(self, context: Context) -> AsyncIterator[Completion]:
         async with self._work_lock:
-            words = await self._misc.select(
+            words = self._misc.select(
                 self._supervisor.match,
                 word=context.words,
                 sym=(context.syms if self._options.match_syms else ""),

@@ -7,8 +7,6 @@ from typing import AbstractSet, Iterator, Mapping, cast
 
 from pynvim_pp.lib import encode
 
-from ....databases.types import Interruptible
-from ....shared.executor import AsyncExecutor
 from ....shared.settings import MatchOptions
 from ....shared.sql import BIGGEST_INT, init_db, like_esc
 from ....tags.types import Tag, Tags
@@ -42,63 +40,49 @@ def _init(db_dir: Path, cwd: PurePath) -> Connection:
     return conn
 
 
-class CTDB(Interruptible):
+class CTDB:
     def __init__(self, vars_dir: Path, cwd: PurePath) -> None:
-        self._ex = AsyncExecutor()
         self._vars_dir = vars_dir / "clients" / "tags"
-        self._conn: Connection = self._ex.ssubmit(
-            lambda: _init(self._vars_dir, cwd=cwd)
-        )
+        self._conn = _init(self._vars_dir, cwd=cwd)
 
-    async def swap(self, cwd: PurePath) -> None:
-        def cont() -> None:
-            self._conn.close()
-            self._conn = _init(self._vars_dir, cwd=cwd)
+    def swap(self, cwd: PurePath) -> None:
+        self._conn.close()
+        self._conn = _init(self._vars_dir, cwd=cwd)
 
-        async with self._lock:
-            await self._ex.submit(cont)
-
-    async def paths(self) -> Mapping[str, float]:
-        def cont() -> Mapping[str, float]:
+    def paths(self) -> Mapping[str, float]:
+        with suppress(OperationalError):
             with self._conn, closing(self._conn.cursor()) as cursor:
                 cursor.execute(sql("select", "files"), ())
                 files = {row["filename"]: row["mtime"] for row in cursor.fetchall()}
                 return files
+        return {}
 
-        try:
-            return await self._ex.submit(cont)
-        except OperationalError:
-            return {}
+    def reconciliate(self, dead: AbstractSet[str], new: Tags) -> None:
+        with suppress(OperationalError):
+            with self._conn, closing(self._conn.cursor()) as cursor:
 
-    async def reconciliate(self, dead: AbstractSet[str], new: Tags) -> None:
-        def cont() -> None:
-            with suppress(OperationalError):
-                with self._conn, closing(self._conn.cursor()) as cursor:
+                def m1() -> Iterator[Mapping]:
+                    for filename, (lang, mtime, _) in new.items():
+                        yield {
+                            "filename": filename,
+                            "filetype": lang,
+                            "mtime": mtime,
+                        }
 
-                    def m1() -> Iterator[Mapping]:
-                        for filename, (lang, mtime, _) in new.items():
-                            yield {
-                                "filename": filename,
-                                "filetype": lang,
-                                "mtime": mtime,
-                            }
+                def m2() -> Iterator[Mapping]:
+                    for _, _, tags in new.values():
+                        for tag in tags:
+                            yield {**_NIL_TAG, **tag}
 
-                    def m2() -> Iterator[Mapping]:
-                        for _, _, tags in new.values():
-                            for tag in tags:
-                                yield {**_NIL_TAG, **tag}
+                cursor.executemany(
+                    sql("delete", "file"),
+                    ({"filename": f} for f in dead | new.keys()),
+                )
+                cursor.executemany(sql("insert", "file"), m1())
+                cursor.executemany(sql("insert", "tag"), m2())
+                cursor.execute("PRAGMA optimize", ())
 
-                    cursor.executemany(
-                        sql("delete", "file"),
-                        ({"filename": f} for f in dead | new.keys()),
-                    )
-                    cursor.executemany(sql("insert", "file"), m1())
-                    cursor.executemany(sql("insert", "tag"), m2())
-                    cursor.execute("PRAGMA optimize", ())
-
-        await self._ex.submit(cont)
-
-    async def select(
+    def select(
         self,
         opts: MatchOptions,
         filename: str,
@@ -107,7 +91,7 @@ class CTDB(Interruptible):
         sym: str,
         limitless: int,
     ) -> Iterator[Tag]:
-        def cont() -> Iterator[Tag]:
+        with suppress(OperationalError):
             with self._conn, closing(self._conn.cursor()) as cursor:
                 cursor.execute(
                     sql("select", "tags"),
@@ -123,11 +107,5 @@ class CTDB(Interruptible):
                         "like_sym": like_esc(sym[: opts.exact_matches]),
                     },
                 )
-                rows = cursor.fetchall()
-                return (cast(Tag, {**row}) for row in rows)
-
-        async with self._interruption():
-            try:
-                return await self._ex.submit(cont)
-            except OperationalError:
-                return iter(())
+                for row in cursor:
+                    yield cast(Tag, {**row})

@@ -3,8 +3,6 @@ from sqlite3 import Connection, Cursor, OperationalError
 from typing import Iterable, Iterator, Mapping
 
 from ....consts import TREESITTER_DB
-from ....databases.types import Interruptible
-from ....shared.executor import AsyncExecutor
 from ....shared.settings import MatchOptions
 from ....shared.sql import BIGGEST_INT, init_db, like_esc
 from ....treesitter.types import Payload, SimplePayload
@@ -32,34 +30,30 @@ def _ensure_buffer(cursor: Cursor, buf_id: int, filetype: str, filename: str) ->
         cursor.execute(sql("insert", "buffer"), row)
 
 
-class TDB(Interruptible):
+class TDB:
     def __init__(self) -> None:
-        self._ex = AsyncExecutor()
-        self._conn: Connection = self._ex.ssubmit(_init)
+        self.conn = _init()
 
-    async def vacuum(self, live_bufs: Mapping[int, int]) -> None:
-        def cont() -> None:
-            with suppress(OperationalError):
-                with self._conn, closing(self._conn.cursor()) as cursor:
-                    cursor.execute(sql("select", "buffers"), ())
-                    existing = {row["rowid"] for row in cursor.fetchall()}
-                    dead = existing - live_bufs.keys()
-                    cursor.executemany(
-                        sql("delete", "buffer"),
-                        ({"buffer_id": buf_id} for buf_id in dead),
-                    )
-                    cursor.executemany(
-                        sql("delete", "words"),
-                        (
-                            {"buffer_id": buf_id, "lo": line_count, "hi": -1}
-                            for buf_id, line_count in live_bufs.items()
-                        ),
-                    )
-                    cursor.execute("PRAGMA optimize", ())
+    def vacuum(self, live_bufs: Mapping[int, int]) -> None:
+        with suppress(OperationalError):
+            with self.conn, closing(self.conn.cursor()) as cursor:
+                cursor.execute(sql("select", "buffers"), ())
+                existing = {row["rowid"] for row in cursor.fetchall()}
+                dead = existing - live_bufs.keys()
+                cursor.executemany(
+                    sql("delete", "buffer"),
+                    ({"buffer_id": buf_id} for buf_id in dead),
+                )
+                cursor.executemany(
+                    sql("delete", "words"),
+                    (
+                        {"buffer_id": buf_id, "lo": line_count, "hi": -1}
+                        for buf_id, line_count in live_bufs.items()
+                    ),
+                )
+                cursor.execute("PRAGMA optimize", ())
 
-        await self._ex.submit(cont)
-
-    async def populate(
+    def populate(
         self,
         buf_id: int,
         filetype: str,
@@ -83,8 +77,8 @@ class TDB(Interruptible):
                     "gpkind": node.grandparent.kind if node.grandparent else None,
                 }
 
-        def cont() -> None:
-            with self._conn, closing(self._conn.cursor()) as cursor:
+        with suppress(OperationalError):
+            with self.conn, closing(self.conn.cursor()) as cursor:
                 _ensure_buffer(
                     cursor, buf_id=buf_id, filetype=filetype, filename=filename
                 )
@@ -94,10 +88,7 @@ class TDB(Interruptible):
                 )
                 cursor.executemany(sql("insert", "word"), m1())
 
-        with suppress(OperationalError):
-            await self._ex.submit(cont)
-
-    async def select(
+    def select(
         self,
         opts: MatchOptions,
         filetype: str,
@@ -105,49 +96,39 @@ class TDB(Interruptible):
         sym: str,
         limitless: int,
     ) -> Iterator[Payload]:
-        def cont() -> Iterator[Payload]:
-            try:
-                with self._conn, closing(self._conn.cursor()) as cursor:
-                    cursor.execute(
-                        sql("select", "words"),
-                        {
-                            "cut_off": opts.fuzzy_cutoff,
-                            "look_ahead": opts.look_ahead,
-                            "limit": BIGGEST_INT if limitless else opts.max_results,
-                            "filetype": filetype,
-                            "word": word,
-                            "sym": sym,
-                            "like_word": like_esc(word[: opts.exact_matches]),
-                            "like_sym": like_esc(sym[: opts.exact_matches]),
-                        },
+        with suppress(OperationalError):
+            with self.conn, closing(self.conn.cursor()) as cursor:
+                cursor.execute(
+                    sql("select", "words"),
+                    {
+                        "cut_off": opts.fuzzy_cutoff,
+                        "look_ahead": opts.look_ahead,
+                        "limit": BIGGEST_INT if limitless else opts.max_results,
+                        "filetype": filetype,
+                        "word": word,
+                        "sym": sym,
+                        "like_word": like_esc(word[: opts.exact_matches]),
+                        "like_sym": like_esc(sym[: opts.exact_matches]),
+                    },
+                )
+
+                for row in cursor:
+                    range = row["lo"], row["hi"]
+                    grandparent = (
+                        SimplePayload(text=row["gpword"], kind=row["gpkind"])
+                        if row["gpword"] and row["gpkind"]
+                        else None
                     )
-                    rows = cursor.fetchall()
-
-                    def c2() -> Iterator[Payload]:
-                        for row in rows:
-                            range = row["lo"], row["hi"]
-                            grandparent = (
-                                SimplePayload(text=row["gpword"], kind=row["gpkind"])
-                                if row["gpword"] and row["gpkind"]
-                                else None
-                            )
-                            parent = (
-                                SimplePayload(text=row["pword"], kind=row["pkind"])
-                                if row["pword"] and row["pkind"]
-                                else None
-                            )
-                            yield Payload(
-                                filename=row["filename"],
-                                range=range,
-                                text=row["word"],
-                                kind=row["kind"],
-                                parent=parent,
-                                grandparent=grandparent,
-                            )
-
-                    return c2()
-            except OperationalError:
-                return iter(())
-
-        async with self._interruption():
-            return await self._ex.submit(cont)
+                    parent = (
+                        SimplePayload(text=row["pword"], kind=row["pkind"])
+                        if row["pword"] and row["pkind"]
+                        else None
+                    )
+                    yield Payload(
+                        filename=row["filename"],
+                        range=range,
+                        text=row["word"],
+                        kind=row["kind"],
+                        parent=parent,
+                        grandparent=grandparent,
+                    )

@@ -1,4 +1,3 @@
-from asyncio import create_task
 from typing import AbstractSet, AsyncIterator, Mapping, MutableSet
 
 from pynvim_pp.atomic import Atomic
@@ -32,7 +31,7 @@ class Worker(BaseWorker[RegistersClient, RDB]):
     ) -> None:
         self._yanked: MutableSet[str] = {*options.words, *options.lines}
         super().__init__(ex, supervisor=supervisor, options=options, misc=misc)
-        create_task(self._poll())
+        self._ex.run(self._poll())
 
     def interrupt(self) -> None:
         assert False
@@ -43,7 +42,7 @@ class Worker(BaseWorker[RegistersClient, RDB]):
                 yanked = {*self._yanked}
                 self._yanked.clear()
                 registers = await _registers(yanked)
-                await self._misc.periodical(
+                self._misc.periodical(
                     wordreg={
                         name: text
                         for name, text in registers.items()
@@ -71,7 +70,7 @@ class Worker(BaseWorker[RegistersClient, RDB]):
         async with self._work_lock:
             before = removesuffix(context.line_before, suffix=context.syms_before)
             linewise = not before or before.isspace()
-            words = await self._misc.select(
+            words = self._misc.select(
                 linewise,
                 match_syms=self._options.match_syms,
                 opts=self._supervisor.match,
