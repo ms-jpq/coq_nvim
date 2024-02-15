@@ -5,11 +5,11 @@ from sqlite3 import Connection, Cursor, OperationalError
 from typing import AbstractSet, Any, Iterator, Mapping, Sequence
 
 from ....consts import REGISTER_DB
+from ....databases.types import Interruptible
 from ....shared.executor import SingleThreadExecutor
 from ....shared.parse import coalesce, tokenize
 from ....shared.settings import MatchOptions
 from ....shared.sql import BIGGEST_INT, init_db, like_esc
-from ...types import Interruptible
 from .sql import sql
 
 

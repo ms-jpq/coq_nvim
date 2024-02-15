@@ -4,12 +4,12 @@ from sqlite3 import Connection, OperationalError
 from typing import AbstractSet, Iterator, Mapping, MutableMapping, Optional
 
 from ....consts import TMUX_DB
+from ....databases.types import Interruptible
 from ....shared.executor import SingleThreadExecutor
 from ....shared.parse import tokenize
 from ....shared.settings import MatchOptions
 from ....shared.sql import BIGGEST_INT, init_db, like_esc
 from ....tmux.parse import Pane
-from ...types import Interruptible
 from .sql import sql
 
 

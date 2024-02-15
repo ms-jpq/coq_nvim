@@ -10,11 +10,11 @@ from uuid import uuid4
 from pynvim_pp.lib import recode
 
 from ....consts import BUFFER_DB, DEBUG
+from ....databases.types import Interruptible
 from ....shared.executor import SingleThreadExecutor
 from ....shared.parse import coalesce
 from ....shared.settings import MatchOptions
 from ....shared.sql import BIGGEST_INT, init_db, like_esc
-from ...types import Interruptible
 from .sql import sql
 
 
