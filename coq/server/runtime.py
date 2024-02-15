@@ -73,17 +73,17 @@ def _from_each_according_to_their_ability(
             unifying_chars=settings.match.unifying_chars,
             include_syms=settings.clients.buffers.match_syms,
         )
-        yield BuffersWorker(supervisor, options=clients.buffers, misc=bdb)
+        yield BuffersWorker.init(supervisor, options=clients.buffers, misc=bdb)
 
     if clients.paths.enabled:
-        yield PathsWorker(supervisor, options=clients.paths, misc=None)
+        yield PathsWorker.init(supervisor, options=clients.paths, misc=None)
 
     if clients.tree_sitter.enabled:
         tdb = TDB()
-        yield TreeWorker(supervisor, options=clients.tree_sitter, misc=tdb)
+        yield TreeWorker.init(supervisor, options=clients.tree_sitter, misc=tdb)
 
     if clients.lsp.enabled:
-        yield LspWorker(supervisor, options=clients.lsp, misc=None)
+        yield LspWorker.init(supervisor, options=clients.lsp, misc=None)
 
     if clients.registers.enabled:
         rdb = RDB(
@@ -91,20 +91,22 @@ def _from_each_according_to_their_ability(
             unifying_chars=settings.match.unifying_chars,
             include_syms=settings.clients.buffers.match_syms,
         )
-        yield RegistersWorker(supervisor, options=clients.registers, misc=rdb)
+        yield RegistersWorker.init(supervisor, options=clients.registers, misc=rdb)
 
     if clients.third_party.enabled:
-        yield ThirdPartyWorker(
+        yield ThirdPartyWorker.init(
             supervisor, options=cast(LSPClient, clients.third_party), misc=None
         )
 
     if clients.snippets.enabled:
         sdb = SDB(vars_dir)
-        yield SnippetWorker(supervisor, options=clients.snippets, misc=sdb)
+        yield SnippetWorker.init(supervisor, options=clients.snippets, misc=sdb)
 
     if clients.tags.enabled and (ctags := which("ctags")):
         ctdb = CTDB(vars_dir, cwd=cwd)
-        yield TagsWorker(supervisor, options=clients.tags, misc=(Path(ctags), ctdb))
+        yield TagsWorker.init(
+            supervisor, options=clients.tags, misc=cast(CTDB, (Path(ctags), ctdb))
+        )
 
     if clients.tmux.enabled and (tmux := which("tmux")):
         tmdb = TMDB(
@@ -112,10 +114,12 @@ def _from_each_according_to_their_ability(
             unifying_chars=settings.match.unifying_chars,
             include_syms=settings.clients.buffers.match_syms,
         )
-        yield TmuxWorker(supervisor, options=clients.tmux, misc=(Path(tmux), tmdb))
+        yield TmuxWorker.init(
+            supervisor, options=clients.tmux, misc=cast(TMDB, (Path(tmux), tmdb))
+        )
 
     if clients.tabnine.enabled:
-        yield T9Worker(supervisor, options=clients.tabnine, misc=None)
+        yield T9Worker.init(supervisor, options=clients.tabnine, misc=None)
 
 
 async def stack() -> Stack:

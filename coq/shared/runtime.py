@@ -23,6 +23,7 @@ from pynvim_pp.logging import suppress_and_log
 from std2.aitertools import aenumerate
 from std2.asyncio import cancel
 
+from .executor import SingleThreadExecutor
 from .settings import (
     BaseClient,
     CompleteOptions,
@@ -118,7 +119,7 @@ class Supervisor:
 
                     token = await self._reviewer.begin(context)
                     tasks = tuple(
-                        worker.supervised(context, token=token, now=now, acc=acc)
+                        worker.supervised_work(context, token=token, now=now, acc=acc)
                         for worker in self._workers
                     )
 
@@ -137,6 +138,13 @@ class Supervisor:
 
 
 class Worker(Generic[_O_co, _T_co]):
+    @classmethod
+    def init(
+        cls, supervisor: Supervisor, options: _O_co, misc: _T_co
+    ) -> Worker[_O_co, _T_co]:
+        self = cls(supervisor=supervisor, options=options, misc=misc)
+        return self
+
     def __init__(self, supervisor: Supervisor, options: _O_co, misc: _T_co) -> None:
         self._work_task: Optional[Task] = None
         self._work_lock = TracingLocker(name=options.short_name, force=True)
@@ -149,7 +157,7 @@ class Worker(Generic[_O_co, _T_co]):
     @abstractmethod
     def work(self, context: Context) -> AsyncIterator[Completion]: ...
 
-    def supervised(
+    def supervised_work(
         self,
         context: Context,
         token: Any,
