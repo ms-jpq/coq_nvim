@@ -12,7 +12,7 @@ from functools import lru_cache
 from shutil import which
 from subprocess import CalledProcessError
 from threading import Thread
-from typing import Any, Awaitable, Callable, Sequence, TypeVar, cast
+from typing import Any, Awaitable, Callable, Coroutine, Sequence, TypeVar, cast
 
 from std2.asyncio.subprocess import call
 
@@ -20,13 +20,15 @@ _T = TypeVar("_T")
 
 
 class AsyncExecutor:
-    def __init__(self, main: Callable[[], Awaitable[None]]) -> None:
+    def __init__(self) -> None:
         f: Future = Future()
+        self._fut: Future = Future()
 
         async def cont() -> None:
             loop = get_running_loop()
             f.set_result(loop)
-            await main()
+            main: Coroutine = await wrap_future(self._fut)
+            await main
 
         def target() -> None:
             run(cont())
@@ -34,6 +36,9 @@ class AsyncExecutor:
         self._th = Thread(daemon=True, target=target)
         self._th.start()
         self._loop: AbstractEventLoop = f.result()
+
+    def run(self, main: Awaitable[None]) -> None:
+        self._fut.set_result(main)
 
     def _submit(self, f: Callable[..., Any], *args: Any, **kwargs: Any) -> Future:
         fut: Future = Future()

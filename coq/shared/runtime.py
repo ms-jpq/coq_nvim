@@ -146,6 +146,7 @@ class Worker(Generic[_O_co, _T_co]):
         self = ex.ssubmit(
             lambda: cls(ex, supervisor=supervisor, options=options, misc=misc)
         )
+        ex.run(self.main())
         return self
 
     def __init__(
