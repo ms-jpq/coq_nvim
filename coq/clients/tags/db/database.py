@@ -7,11 +7,11 @@ from typing import AbstractSet, Iterator, Mapping, cast
 
 from pynvim_pp.lib import encode
 
-from ...shared.executor import SingleThreadExecutor
-from ...shared.settings import MatchOptions
-from ...shared.sql import BIGGEST_INT, init_db, like_esc
-from ...tags.types import Tag, Tags
-from ..types import Interruptible
+from ....shared.executor import SingleThreadExecutor
+from ....shared.settings import MatchOptions
+from ....shared.sql import BIGGEST_INT, init_db, like_esc
+from ....tags.types import Tag, Tags
+from ...types import Interruptible
 from .sql import sql
 
 _SCHEMA = "v5"

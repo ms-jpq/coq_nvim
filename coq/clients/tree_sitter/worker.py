@@ -8,7 +8,6 @@ from pynvim_pp.buffer import Buffer
 from pynvim_pp.logging import suppress_and_log
 from pynvim_pp.rpc_types import NvimError
 
-from ...databases.treesitter.database import TDB
 from ...paths.show import fmt_path
 from ...shared.runtime import Supervisor
 from ...shared.runtime import Worker as BaseWorker
@@ -16,6 +15,7 @@ from ...shared.settings import TSClient
 from ...shared.types import Completion, Context, Doc, Edit
 from ...treesitter.request import async_request
 from ...treesitter.types import Payload
+from .db.database import TDB
 
 
 async def _bufs() -> Mapping[int, int]:

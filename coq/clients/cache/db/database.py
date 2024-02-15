@@ -2,10 +2,10 @@ from contextlib import closing, suppress
 from sqlite3 import Connection, OperationalError
 from typing import Iterable, Iterator, Mapping, Tuple
 
-from ...shared.executor import SingleThreadExecutor
-from ...shared.settings import MatchOptions
-from ...shared.sql import BIGGEST_INT, init_db, like_esc
-from ..types import Interruptible
+from ....shared.executor import SingleThreadExecutor
+from ....shared.settings import MatchOptions
+from ....shared.sql import BIGGEST_INT, init_db, like_esc
+from ...types import Interruptible
 from .sql import sql
 
 

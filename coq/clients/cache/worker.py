@@ -13,7 +13,6 @@ from typing import (
 )
 from uuid import UUID, uuid4
 
-from ...databases.cache.database import Database
 from ...shared.fuzzy import multi_set_ratio
 from ...shared.parse import coalesce
 from ...shared.repeat import sanitize
@@ -21,6 +20,7 @@ from ...shared.runtime import Supervisor
 from ...shared.settings import MatchOptions
 from ...shared.timeit import timeit
 from ...shared.types import BaseRangeEdit, Completion, Context, Cursors
+from .db.database import Database
 
 
 @dataclass(frozen=True)

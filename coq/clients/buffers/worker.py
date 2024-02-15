@@ -9,12 +9,12 @@ from pynvim_pp.logging import suppress_and_log
 from pynvim_pp.rpc_types import NvimError
 from pynvim_pp.window import Window
 
-from ...databases.buffers.database import BDB, BufferWord, Update
 from ...paths.show import fmt_path
 from ...shared.runtime import Supervisor
 from ...shared.runtime import Worker as BaseWorker
 from ...shared.settings import BuffersClient
 from ...shared.types import Completion, Context, Doc, Edit
+from .db.database import BDB, BufferWord, Update
 
 
 @dataclass(frozen=True)

@@ -2,12 +2,12 @@ from contextlib import closing, suppress
 from sqlite3 import Connection, Cursor, OperationalError
 from typing import Iterable, Iterator, Mapping
 
-from ...consts import TREESITTER_DB
-from ...shared.executor import SingleThreadExecutor
-from ...shared.settings import MatchOptions
-from ...shared.sql import BIGGEST_INT, init_db, like_esc
-from ...treesitter.types import Payload, SimplePayload
-from ..types import Interruptible
+from ....consts import TREESITTER_DB
+from ....shared.executor import SingleThreadExecutor
+from ....shared.settings import MatchOptions
+from ....shared.sql import BIGGEST_INT, init_db, like_esc
+from ....treesitter.types import Payload, SimplePayload
+from ...types import Interruptible
 from .sql import sql
 
 

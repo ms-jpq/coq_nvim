@@ -1,15 +1,15 @@
 from asyncio import create_task
-from typing import AbstractSet, AsyncIterator, MutableSet, Mapping
+from typing import AbstractSet, AsyncIterator, Mapping, MutableSet
 
 from pynvim_pp.atomic import Atomic
 from pynvim_pp.logging import suppress_and_log
 from std2.string import removesuffix
 
-from ...databases.registers.database import RDB
 from ...shared.runtime import Supervisor
 from ...shared.runtime import Worker as BaseWorker
 from ...shared.settings import RegistersClient
 from ...shared.types import Completion, Context, Doc, Edit, SnippetEdit, SnippetGrammar
+from .db.database import RDB
 
 
 async def _registers(names: AbstractSet[str]) -> Mapping[str, str]:

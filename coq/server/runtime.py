@@ -10,24 +10,24 @@ from std2.graphlib import merge
 from std2.pickle.decoder import new_decoder
 from yaml import safe_load
 
+from ..clients.buffers.db.database import BDB
 from ..clients.buffers.worker import Worker as BuffersWorker
 from ..clients.lsp.worker import Worker as LspWorker
 from ..clients.paths.worker import Worker as PathsWorker
+from ..clients.registers.db.database import RDB
 from ..clients.registers.worker import Worker as RegistersWorker
+from ..clients.snippet.db.database import SDB
 from ..clients.snippet.worker import Worker as SnippetWorker
 from ..clients.t9.worker import Worker as T9Worker
+from ..clients.tags.db.database import CTDB
 from ..clients.tags.worker import Worker as TagsWorker
 from ..clients.third_party.worker import Worker as ThirdPartyWorker
+from ..clients.tmux.db.database import TMDB
 from ..clients.tmux.worker import Worker as TmuxWorker
+from ..clients.tree_sitter.db.database import TDB
 from ..clients.tree_sitter.worker import Worker as TreeWorker
 from ..consts import CONFIG_YML, SETTINGS_VAR, VARS
-from ..databases.buffers.database import BDB
 from ..databases.insertions.database import IDB
-from ..databases.registers.database import RDB
-from ..databases.snippets.database import SDB
-from ..databases.tags.database import CTDB
-from ..databases.tmux.database import TMDB
-from ..databases.treesitter.database import TDB
 from ..shared.lru import LRU
 from ..shared.runtime import Supervisor, Worker
 from ..shared.settings import LSPClient, Settings

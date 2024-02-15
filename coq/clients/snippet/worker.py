@@ -1,11 +1,11 @@
 from pathlib import PurePath
 from typing import AbstractSet, AsyncIterator, Mapping
 
-from ...databases.snippets.database import SDB
 from ...shared.runtime import Worker as BaseWorker
 from ...shared.settings import SnippetClient
 from ...shared.types import Completion, Context, Doc, SnippetEdit, SnippetGrammar
 from ...snippets.types import LoadedSnips
+from .db.database import SDB
 
 
 class Worker(BaseWorker[SnippetClient, SDB]):

@@ -20,7 +20,6 @@ from pynvim_pp.logging import suppress_and_log
 from pynvim_pp.rpc_types import NvimError
 from std2.asyncio import to_thread
 
-from ...databases.tags.database import CTDB
 from ...paths.show import fmt_path
 from ...shared.runtime import Supervisor
 from ...shared.runtime import Worker as BaseWorker
@@ -29,6 +28,7 @@ from ...shared.timeit import timeit
 from ...shared.types import Completion, Context, Doc, Edit
 from ...tags.parse import parse, run
 from ...tags.types import Tag
+from .db.database import CTDB
 
 
 async def _ls() -> AbstractSet[str]:

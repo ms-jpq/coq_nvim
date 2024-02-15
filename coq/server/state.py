@@ -92,9 +92,11 @@ def state(
         context=context or old_state.context,
         last_edit=last_edit or old_state.last_edit,
         inserted_pos=inserted_pos or old_state.inserted_pos,
-        pum_location=pum_location
-        if not isinstance(pum_location, VoidType)
-        else old_state.pum_location,
+        pum_location=(
+            pum_location
+            if not isinstance(pum_location, VoidType)
+            else old_state.pum_location
+        ),
     )
     _CELL.val = new_state
 

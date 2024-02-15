@@ -165,8 +165,7 @@ class ExternLSP:
 
 
 @dataclass(frozen=True)
-class ExternLUA(ExternLSP):
-    ...
+class ExternLUA(ExternLSP): ...
 
 
 @dataclass(frozen=True)

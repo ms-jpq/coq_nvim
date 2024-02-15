@@ -5,11 +5,11 @@ from sqlite3 import Connection, OperationalError
 from typing import AbstractSet, Iterator, Mapping, TypedDict, cast
 from uuid import uuid4
 
-from ...shared.executor import SingleThreadExecutor
-from ...shared.settings import MatchOptions
-from ...shared.sql import BIGGEST_INT, init_db, like_esc
-from ...snippets.types import LoadedSnips
-from ..types import Interruptible
+from ....shared.executor import SingleThreadExecutor
+from ....shared.settings import MatchOptions
+from ....shared.sql import BIGGEST_INT, init_db, like_esc
+from ....snippets.types import LoadedSnips
+from ...types import Interruptible
 from .sql import sql
 
 _SCHEMA = "v4"

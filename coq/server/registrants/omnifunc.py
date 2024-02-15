@@ -76,9 +76,11 @@ async def comp_func(
             state(context=ctx)
             metrics, _ = await gather(
                 stack.supervisor.collect(ctx),
-                complete(stack=stack, col=col, comps=())
-                if stack.settings.display.pum.fast_close
-                else sleep(0),
+                (
+                    complete(stack=stack, col=col, comps=())
+                    if stack.settings.display.pum.fast_close
+                    else sleep(0)
+                ),
             )
             s = state()
             if s.change_id == ctx.change_id:

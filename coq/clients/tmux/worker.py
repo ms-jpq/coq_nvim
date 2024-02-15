@@ -6,13 +6,13 @@ from typing import AsyncIterator, Iterator, Tuple
 
 from pynvim_pp.logging import suppress_and_log
 
-from ...databases.tmux.database import TMDB, TmuxWord
 from ...shared.runtime import Supervisor
 from ...shared.runtime import Worker as BaseWorker
 from ...shared.settings import TmuxClient
 from ...shared.timeit import timeit
 from ...shared.types import Completion, Context, Doc, Edit
 from ...tmux.parse import snapshot
+from .db.database import TMDB, TmuxWord
 
 
 def _doc(client: TmuxClient, word: TmuxWord) -> Doc:

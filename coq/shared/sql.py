@@ -14,8 +14,7 @@ BIGGEST_INT = 2**63 - 1
 
 
 class _Loader(Protocol):
-    def __call__(self, *paths: AnyPath) -> str:
-        ...
+    def __call__(self, *paths: AnyPath) -> str: ...
 
 
 def loader(base: Path) -> _Loader:
