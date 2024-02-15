@@ -5,7 +5,7 @@ from pynvim_pp.atomic import Atomic
 from pynvim_pp.logging import suppress_and_log
 from std2.string import removesuffix
 
-from ...shared.executor import SingleThreadExecutor
+from ...shared.executor import AsyncExecutor
 from ...shared.runtime import Supervisor
 from ...shared.runtime import Worker as BaseWorker
 from ...shared.settings import RegistersClient
@@ -25,7 +25,7 @@ async def _registers(names: AbstractSet[str]) -> Mapping[str, str]:
 class Worker(BaseWorker[RegistersClient, RDB]):
     def __init__(
         self,
-        ex: SingleThreadExecutor,
+        ex: AsyncExecutor,
         supervisor: Supervisor,
         options: RegistersClient,
         misc: RDB,

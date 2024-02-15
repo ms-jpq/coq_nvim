@@ -10,7 +10,7 @@ from pynvim_pp.rpc_types import NvimError
 from pynvim_pp.window import Window
 
 from ...paths.show import fmt_path
-from ...shared.executor import SingleThreadExecutor
+from ...shared.executor import AsyncExecutor
 from ...shared.runtime import Supervisor
 from ...shared.runtime import Worker as BaseWorker
 from ...shared.settings import BuffersClient
@@ -74,7 +74,7 @@ def _doc(client: BuffersClient, context: Context, word: BufferWord) -> Doc:
 class Worker(BaseWorker[BuffersClient, BDB]):
     def __init__(
         self,
-        ex: SingleThreadExecutor,
+        ex: AsyncExecutor,
         supervisor: Supervisor,
         options: BuffersClient,
         misc: BDB,

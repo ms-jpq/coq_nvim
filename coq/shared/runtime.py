@@ -23,7 +23,7 @@ from pynvim_pp.logging import suppress_and_log
 from std2.aitertools import aenumerate
 from std2.asyncio import cancel
 
-from .executor import SingleThreadExecutor
+from .executor import AsyncExecutor
 from .settings import (
     BaseClient,
     CompleteOptions,
@@ -142,7 +142,7 @@ class Worker(Generic[_O_co, _T_co]):
     def init(
         cls, supervisor: Supervisor, options: _O_co, misc: _T_co
     ) -> Worker[_O_co, _T_co]:
-        ex = SingleThreadExecutor()
+        ex = AsyncExecutor()
         self = ex.ssubmit(
             lambda: cls(ex, supervisor=supervisor, options=options, misc=misc)
         )
@@ -150,7 +150,7 @@ class Worker(Generic[_O_co, _T_co]):
 
     def __init__(
         self,
-        ex: SingleThreadExecutor,
+        ex: AsyncExecutor,
         supervisor: Supervisor,
         options: _O_co,
         misc: _T_co,
@@ -160,6 +160,9 @@ class Worker(Generic[_O_co, _T_co]):
         self._work_lock = TracingLocker(name=options.short_name, force=True)
         self._supervisor, self._options, self._misc = supervisor, options, misc
         create_task(self._supervisor.register(self, assoc=options))
+
+    @abstractmethod
+    async def main(self) -> None: ...
 
     @abstractmethod
     def interrupt(self) -> None: ...

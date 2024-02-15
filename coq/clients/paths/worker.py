@@ -19,7 +19,7 @@ from std2.platform import OS, os
 from std2.string import removesuffix
 
 from ...shared.context import cword_before
-from ...shared.executor import SingleThreadExecutor
+from ...shared.executor import AsyncExecutor
 from ...shared.fuzzy import quick_ratio
 from ...shared.parse import lower
 from ...shared.runtime import Supervisor
@@ -207,7 +207,7 @@ def _sort_by(unifying_chars: AbstractSet[str], context: Context, new_text: str) 
 class Worker(BaseWorker[PathsClient, None]):
     def __init__(
         self,
-        ex: SingleThreadExecutor,
+        ex: AsyncExecutor,
         supervisor: Supervisor,
         options: PathsClient,
         misc: None,

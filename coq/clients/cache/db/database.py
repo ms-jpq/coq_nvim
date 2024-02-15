@@ -3,7 +3,7 @@ from sqlite3 import Connection, OperationalError
 from typing import Iterable, Iterator, Mapping, Tuple
 
 from ....databases.types import Interruptible
-from ....shared.executor import SingleThreadExecutor
+from ....shared.executor import AsyncExecutor
 from ....shared.settings import MatchOptions
 from ....shared.sql import BIGGEST_INT, init_db, like_esc
 from .sql import sql
@@ -19,7 +19,7 @@ def _init() -> Connection:
 
 class Database(Interruptible):
     def __init__(self) -> None:
-        self._ex = SingleThreadExecutor()
+        self._ex = AsyncExecutor()
         self._conn: Connection = self._ex.ssubmit(_init)
 
     async def insert(self, keys: Iterable[Tuple[bytes, str]]) -> None:

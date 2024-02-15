@@ -29,7 +29,7 @@ from std2.platform import OS, os
 from ...consts import DEBUG
 from ...lang import LANG
 from ...lsp.protocol import LSProtocol, protocol
-from ...shared.executor import SingleThreadExecutor, very_nice
+from ...shared.executor import AsyncExecutor, very_nice
 from ...shared.runtime import Supervisor
 from ...shared.runtime import Worker as BaseWorker
 from ...shared.settings import T9Client
@@ -180,7 +180,7 @@ async def _readline(stdout: StreamReader) -> bytes:
 class Worker(BaseWorker[T9Client, None]):
     def __init__(
         self,
-        ex: SingleThreadExecutor,
+        ex: AsyncExecutor,
         supervisor: Supervisor,
         options: T9Client,
         misc: None,

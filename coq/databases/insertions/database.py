@@ -4,7 +4,7 @@ from sqlite3 import Connection, OperationalError
 from typing import Iterator, Mapping
 
 from ...consts import INSERT_DB
-from ...shared.executor import SingleThreadExecutor
+from ...shared.executor import AsyncExecutor
 from ...shared.sql import init_db
 from ..types import Interruptible
 from .sql import sql
@@ -37,7 +37,7 @@ def _init() -> Connection:
 
 class IDB(Interruptible):
     def __init__(self) -> None:
-        self._ex = SingleThreadExecutor()
+        self._ex = AsyncExecutor()
         self._conn: Connection = self._ex.ssubmit(_init)
 
     async def new_source(self, source: str) -> None:

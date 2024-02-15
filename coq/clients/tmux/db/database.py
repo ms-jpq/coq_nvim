@@ -5,7 +5,7 @@ from typing import AbstractSet, Iterator, Mapping, MutableMapping, Optional
 
 from ....consts import TMUX_DB
 from ....databases.types import Interruptible
-from ....shared.executor import SingleThreadExecutor
+from ....shared.executor import AsyncExecutor
 from ....shared.parse import tokenize
 from ....shared.settings import MatchOptions
 from ....shared.sql import BIGGEST_INT, init_db, like_esc
@@ -38,7 +38,7 @@ class TMDB(Interruptible):
         unifying_chars: AbstractSet[str],
         include_syms: bool,
     ) -> None:
-        self._ex = SingleThreadExecutor()
+        self._ex = AsyncExecutor()
         self._current: Optional[Pane] = None
         self._tokenization_limit = tokenization_limit
         self._unifying_chars = unifying_chars

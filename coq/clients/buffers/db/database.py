@@ -11,7 +11,7 @@ from pynvim_pp.lib import recode
 
 from ....consts import BUFFER_DB, DEBUG
 from ....databases.types import Interruptible
-from ....shared.executor import SingleThreadExecutor
+from ....shared.executor import AsyncExecutor
 from ....shared.parse import coalesce
 from ....shared.settings import MatchOptions
 from ....shared.sql import BIGGEST_INT, init_db, like_esc
@@ -130,7 +130,7 @@ class BDB(Interruptible):
         unifying_chars: AbstractSet[str],
         include_syms: bool,
     ) -> None:
-        self._ex = SingleThreadExecutor()
+        self._ex = AsyncExecutor()
         self._tokenization_limit = tokenization_limit
         self._unifying_chars = unifying_chars
         self._include_syms = include_syms

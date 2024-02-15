@@ -4,7 +4,7 @@ from typing import Iterable, Iterator, Mapping
 
 from ....consts import TREESITTER_DB
 from ....databases.types import Interruptible
-from ....shared.executor import SingleThreadExecutor
+from ....shared.executor import AsyncExecutor
 from ....shared.settings import MatchOptions
 from ....shared.sql import BIGGEST_INT, init_db, like_esc
 from ....treesitter.types import Payload, SimplePayload
@@ -34,7 +34,7 @@ def _ensure_buffer(cursor: Cursor, buf_id: int, filetype: str, filename: str) ->
 
 class TDB(Interruptible):
     def __init__(self) -> None:
-        self._ex = SingleThreadExecutor()
+        self._ex = AsyncExecutor()
         self._conn: Connection = self._ex.ssubmit(_init)
 
     async def vacuum(self, live_bufs: Mapping[int, int]) -> None:
