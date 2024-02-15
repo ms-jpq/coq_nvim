@@ -29,7 +29,7 @@ from std2.platform import OS, os
 from ...consts import DEBUG
 from ...lang import LANG
 from ...lsp.protocol import LSProtocol, protocol
-from ...shared.executor import very_nice
+from ...shared.executor import SingleThreadExecutor, very_nice
 from ...shared.runtime import Supervisor
 from ...shared.runtime import Worker as BaseWorker
 from ...shared.settings import T9Client
@@ -178,14 +178,20 @@ async def _readline(stdout: StreamReader) -> bytes:
 
 
 class Worker(BaseWorker[T9Client, None]):
-    def __init__(self, supervisor: Supervisor, options: T9Client, misc: None) -> None:
+    def __init__(
+        self,
+        ex: SingleThreadExecutor,
+        supervisor: Supervisor,
+        options: T9Client,
+        misc: None,
+    ) -> None:
         self._lock = Lock()
         self._bin: Optional[PurePath] = None
         self._proc: Optional[Process] = None
         self._cwd: Optional[PurePath] = None
         self._count = count()
         self._t9_locked = False
-        super().__init__(supervisor, options=options, misc=misc)
+        super().__init__(ex, supervisor=supervisor, options=options, misc=misc)
         create_task(self._install())
         create_task(self._poll())
 

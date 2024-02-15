@@ -142,10 +142,18 @@ class Worker(Generic[_O_co, _T_co]):
     def init(
         cls, supervisor: Supervisor, options: _O_co, misc: _T_co
     ) -> Worker[_O_co, _T_co]:
-        self = cls(supervisor=supervisor, options=options, misc=misc)
+        ex = SingleThreadExecutor()
+        self = cls(ex, supervisor=supervisor, options=options, misc=misc)
         return self
 
-    def __init__(self, supervisor: Supervisor, options: _O_co, misc: _T_co) -> None:
+    def __init__(
+        self,
+        ex: SingleThreadExecutor,
+        supervisor: Supervisor,
+        options: _O_co,
+        misc: _T_co,
+    ) -> None:
+        self._ex = ex
         self._work_task: Optional[Task] = None
         self._work_lock = TracingLocker(name=options.short_name, force=True)
         self._supervisor, self._options, self._misc = supervisor, options, misc

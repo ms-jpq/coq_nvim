@@ -6,6 +6,7 @@ from typing import AsyncIterator, Iterator, Tuple
 
 from pynvim_pp.logging import suppress_and_log
 
+from ...shared.executor import SingleThreadExecutor
 from ...shared.runtime import Supervisor
 from ...shared.runtime import Worker as BaseWorker
 from ...shared.settings import TmuxClient
@@ -27,11 +28,15 @@ def _doc(client: TmuxClient, word: TmuxWord) -> Doc:
 
 class Worker(BaseWorker[TmuxClient, TMDB]):
     def __init__(
-        self, supervisor: Supervisor, options: TmuxClient, misc: Tuple[Path, TMDB]
+        self,
+        ex: SingleThreadExecutor,
+        supervisor: Supervisor,
+        options: TmuxClient,
+        misc: Tuple[Path, TMDB],
     ) -> None:
         self._exec, db = misc
         self._lock = Lock()
-        super().__init__(supervisor, options=options, misc=db)
+        super().__init__(ex, supervisor=supervisor, options=options, misc=db)
         create_task(self._poll())
 
     async def interrupt(self) -> None:

@@ -10,6 +10,7 @@ from pynvim_pp.rpc_types import NvimError
 from pynvim_pp.window import Window
 
 from ...paths.show import fmt_path
+from ...shared.executor import SingleThreadExecutor
 from ...shared.runtime import Supervisor
 from ...shared.runtime import Worker as BaseWorker
 from ...shared.settings import BuffersClient
@@ -72,9 +73,13 @@ def _doc(client: BuffersClient, context: Context, word: BufferWord) -> Doc:
 
 class Worker(BaseWorker[BuffersClient, BDB]):
     def __init__(
-        self, supervisor: Supervisor, options: BuffersClient, misc: BDB
+        self,
+        ex: SingleThreadExecutor,
+        supervisor: Supervisor,
+        options: BuffersClient,
+        misc: BDB,
     ) -> None:
-        super().__init__(supervisor, options=options, misc=misc)
+        super().__init__(ex, supervisor=supervisor, options=options, misc=misc)
         create_task(self._poll())
 
     async def interrupt(self) -> None:

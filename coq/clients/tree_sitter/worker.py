@@ -9,6 +9,7 @@ from pynvim_pp.logging import suppress_and_log
 from pynvim_pp.rpc_types import NvimError
 
 from ...paths.show import fmt_path
+from ...shared.executor import SingleThreadExecutor
 from ...shared.runtime import Supervisor
 from ...shared.runtime import Worker as BaseWorker
 from ...shared.settings import TSClient
@@ -98,9 +99,15 @@ def _trans(client: TSClient, context: Context, payload: Payload) -> Completion:
 
 
 class Worker(BaseWorker[TSClient, TDB]):
-    def __init__(self, supervisor: Supervisor, options: TSClient, misc: TDB) -> None:
+    def __init__(
+        self,
+        ex: SingleThreadExecutor,
+        supervisor: Supervisor,
+        options: TSClient,
+        misc: TDB,
+    ) -> None:
         self._lock = Lock()
-        super().__init__(supervisor, options=options, misc=misc)
+        super().__init__(ex, supervisor=supervisor, options=options, misc=misc)
         create_task(self._poll())
 
     async def interrupt(self) -> None:

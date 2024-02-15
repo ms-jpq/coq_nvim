@@ -19,6 +19,7 @@ from std2.itertools import batched
 from ...lsp.requests.completion import comp_lsp
 from ...lsp.types import LSPcomp
 from ...shared.context import cword_before
+from ...shared.executor import SingleThreadExecutor
 from ...shared.fuzzy import multi_set_ratio
 from ...shared.parse import lower
 from ...shared.runtime import Supervisor
@@ -72,8 +73,14 @@ class _LocalCache:
 
 
 class Worker(BaseWorker[LSPClient, None]):
-    def __init__(self, supervisor: Supervisor, options: LSPClient, misc: None) -> None:
-        super().__init__(supervisor, options=options, misc=misc)
+    def __init__(
+        self,
+        ex: SingleThreadExecutor,
+        supervisor: Supervisor,
+        options: LSPClient,
+        misc: None,
+    ) -> None:
+        super().__init__(ex, supervisor=supervisor, options=options, misc=misc)
         self._cache = CacheWorker(supervisor)
         self._local_cached = _LocalCache()
         self._poll_task: Optional[Task] = None

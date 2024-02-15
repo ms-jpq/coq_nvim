@@ -5,6 +5,7 @@ from pynvim_pp.atomic import Atomic
 from pynvim_pp.logging import suppress_and_log
 from std2.string import removesuffix
 
+from ...shared.executor import SingleThreadExecutor
 from ...shared.runtime import Supervisor
 from ...shared.runtime import Worker as BaseWorker
 from ...shared.settings import RegistersClient
@@ -23,10 +24,14 @@ async def _registers(names: AbstractSet[str]) -> Mapping[str, str]:
 
 class Worker(BaseWorker[RegistersClient, RDB]):
     def __init__(
-        self, supervisor: Supervisor, options: RegistersClient, misc: RDB
+        self,
+        ex: SingleThreadExecutor,
+        supervisor: Supervisor,
+        options: RegistersClient,
+        misc: RDB,
     ) -> None:
         self._yanked: MutableSet[str] = {*options.words, *options.lines}
-        super().__init__(supervisor, options=options, misc=misc)
+        super().__init__(ex, supervisor=supervisor, options=options, misc=misc)
         create_task(self._poll())
 
     async def interrupt(self) -> None:

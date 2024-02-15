@@ -21,6 +21,7 @@ from pynvim_pp.rpc_types import NvimError
 from std2.asyncio import to_thread
 
 from ...paths.show import fmt_path
+from ...shared.executor import SingleThreadExecutor
 from ...shared.runtime import Supervisor
 from ...shared.runtime import Worker as BaseWorker
 from ...shared.settings import TagsClient
@@ -132,10 +133,14 @@ def _doc(client: TagsClient, context: Context, tag: Tag) -> Doc:
 
 class Worker(BaseWorker[TagsClient, CTDB]):
     def __init__(
-        self, supervisor: Supervisor, options: TagsClient, misc: Tuple[Path, CTDB]
+        self,
+        ex: SingleThreadExecutor,
+        supervisor: Supervisor,
+        options: TagsClient,
+        misc: Tuple[Path, CTDB],
     ) -> None:
         self._exec, db = misc
-        super().__init__(supervisor, options=options, misc=db)
+        super().__init__(ex, supervisor=supervisor, options=options, misc=db)
         create_task(self._poll())
 
     async def interrupt(self) -> None:
