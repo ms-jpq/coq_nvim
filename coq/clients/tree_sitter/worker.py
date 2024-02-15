@@ -111,7 +111,8 @@ class Worker(BaseWorker[TSClient, TDB]):
         self._ex.run(self._poll())
 
     def interrupt(self) -> None:
-        self._misc.conn.interrupt()
+        with self._thread_lock:
+            self._misc.conn.interrupt()
 
     async def _poll(self) -> None:
         while True:
@@ -138,7 +139,7 @@ class Worker(BaseWorker[TSClient, TDB]):
 
         return None
 
-    async def work(self, context: Context) -> AsyncIterator[Completion]:
+    async def _work(self, context: Context) -> AsyncIterator[Completion]:
         async with self._work_lock:
             payloads = self._misc.select(
                 self._supervisor.match,

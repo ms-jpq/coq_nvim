@@ -127,7 +127,7 @@ class Worker(BaseWorker[BuffersClient, BDB]):
             lines=lines,
         )
 
-    async def work(self, context: Context) -> AsyncIterator[Completion]:
+    async def _work(self, context: Context) -> AsyncIterator[Completion]:
         async with self._work_lock:
             filetype = context.filetype if self._options.same_filetype else None
             update = (

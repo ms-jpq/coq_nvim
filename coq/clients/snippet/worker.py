@@ -22,7 +22,7 @@ class Worker(BaseWorker[SnippetClient, SDB]):
     async def populate(self, path: PurePath, mtime: float, loaded: LoadedSnips) -> None:
         self._misc.populate(path, mtime=mtime, loaded=loaded)
 
-    async def work(self, context: Context) -> AsyncIterator[Completion]:
+    async def _work(self, context: Context) -> AsyncIterator[Completion]:
         async with self._work_lock:
             snippets = self._misc.select(
                 self._supervisor.match,

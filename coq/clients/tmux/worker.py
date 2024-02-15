@@ -58,7 +58,7 @@ class Worker(BaseWorker[TmuxClient, TMDB]):
                 )
                 self._misc.periodical(current, panes=panes)
 
-    async def work(self, context: Context) -> AsyncIterator[Completion]:
+    async def _work(self, context: Context) -> AsyncIterator[Completion]:
         async with self._work_lock:
             words = self._misc.select(
                 self._supervisor.match,

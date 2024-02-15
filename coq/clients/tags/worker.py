@@ -170,7 +170,7 @@ class Worker(BaseWorker[TagsClient, CTDB]):
     async def swap(self, cwd: PurePath) -> None:
         self._misc.swap(cwd)
 
-    async def work(self, context: Context) -> AsyncIterator[Completion]:
+    async def _work(self, context: Context) -> AsyncIterator[Completion]:
         async with self._work_lock:
             row, _ = context.position
             tags = self._misc.select(

@@ -66,7 +66,7 @@ class Worker(BaseWorker[RegistersClient, RDB]):
         if name in {*self._options.words, *self._options.lines}:
             self._yanked.add(name)
 
-    async def work(self, context: Context) -> AsyncIterator[Completion]:
+    async def _work(self, context: Context) -> AsyncIterator[Completion]:
         async with self._work_lock:
             before = removesuffix(context.line_before, suffix=context.syms_before)
             linewise = not before or before.isspace()

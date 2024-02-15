@@ -219,7 +219,7 @@ class Worker(BaseWorker[PathsClient, None]):
     def interrupt(self) -> None:
         raise NotImplementedError()
 
-    async def work(self, context: Context) -> AsyncIterator[Completion]:
+    async def _work(self, context: Context) -> AsyncIterator[Completion]:
         async with self._work_lock:
             line = context.line_before + context.words_after
 

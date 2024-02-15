@@ -266,7 +266,7 @@ class Worker(BaseWorker[T9Client, None]):
         else:
             return await shield(cont())
 
-    async def work(self, context: Context) -> AsyncIterator[Completion]:
+    async def _work(self, context: Context) -> AsyncIterator[Completion]:
         if self._t9_locked:
             self._t9_locked = False
             return

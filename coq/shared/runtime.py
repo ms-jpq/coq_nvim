@@ -15,6 +15,7 @@ from asyncio import (
 from collections import deque
 from dataclasses import dataclass
 from pathlib import Path
+from threading import Lock
 from time import monotonic
 from typing import (
     Any,
@@ -133,7 +134,7 @@ class Supervisor:
 
                     token = await self._reviewer.begin(context)
                     tasks = tuple(
-                        worker.supervised_work(context, token=token, now=now, acc=acc)
+                        worker.supervised(context, token=token, now=now, acc=acc)
                         for worker in self._workers
                     )
 
@@ -172,6 +173,7 @@ class Worker(Generic[_O_co, _T_co]):
         self._ex = ex
         self._work_task: Optional[Task] = None
         self._work_lock = TracingLocker(name=options.short_name, force=True)
+        self._thread_lock = Lock()
         self._supervisor, self._options, self._misc = supervisor, options, misc
         self._supervisor.register(self, assoc=options)
 
@@ -179,12 +181,9 @@ class Worker(Generic[_O_co, _T_co]):
     def interrupt(self) -> None: ...
 
     @abstractmethod
-    def work(self, context: Context) -> AsyncIterator[Completion]: ...
+    def _work(self, context: Context) -> AsyncIterator[Completion]: ...
 
-    async def supervised_interrupt(self) -> None:
-        await self._ex.submit(self.interrupt)
-
-    def supervised_work(
+    def supervised(
         self,
         context: Context,
         token: Any,
@@ -208,7 +207,7 @@ class Worker(Generic[_O_co, _T_co]):
                 )
                 try:
                     async for items, completion in aenumerate(
-                        self.work(context), start=1
+                        self._work(context), start=1
                     ):
                         metric = self._supervisor._reviewer.trans(
                             token, instance=instance, completion=completion

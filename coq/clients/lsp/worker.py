@@ -112,7 +112,7 @@ class Worker(BaseWorker[LSPClient, None]):
                     await self._cache.set_cache({client: chunked})
                     await sleep(_CACHE_PERIOD)
 
-    async def work(self, context: Context) -> AsyncIterator[Completion]:
+    async def _work(self, context: Context) -> AsyncIterator[Completion]:
         poll = self._poll_task
         self._poll_task = None
 
