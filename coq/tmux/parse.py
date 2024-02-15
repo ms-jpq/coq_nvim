@@ -10,7 +10,7 @@ from std2.asyncio.subprocess import call
 
 from ..shared.executor import very_nice
 
-_SEP = "\t"
+_SEP = "淏"
 
 
 @dataclass(frozen=True)
