@@ -1,1 +1,1 @@
-../../../buffers/sql/create/pragma.sql
+../../../../buffers/db/sql/create/pragma.sql

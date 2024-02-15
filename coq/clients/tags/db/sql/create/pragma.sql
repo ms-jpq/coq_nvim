@@ -1,1 +1,1 @@
-../../../snippets/sql/create/pragma.sql
+../../../../snippet/db/sql/create/pragma.sql
