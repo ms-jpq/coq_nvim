@@ -1,4 +1,3 @@
-from asyncio import create_task, gather
 from contextlib import suppress
 from os import linesep
 from os.path import normcase
@@ -21,6 +20,7 @@ from pynvim_pp.rpc_types import NvimError
 from std2.asyncio import to_thread
 
 from ...paths.show import fmt_path
+from ...shared.executor import AsyncExecutor
 from ...shared.runtime import Supervisor
 from ...shared.runtime import Worker as BaseWorker
 from ...shared.settings import TagsClient
@@ -130,22 +130,29 @@ def _doc(client: TagsClient, context: Context, tag: Tag) -> Doc:
     return doc
 
 
-class Worker(BaseWorker[TagsClient, CTDB]):
+class Worker(BaseWorker[TagsClient, Tuple[Path, Path, PurePath]]):
     def __init__(
-        self, supervisor: Supervisor, options: TagsClient, misc: Tuple[Path, CTDB]
+        self,
+        ex: AsyncExecutor,
+        supervisor: Supervisor,
+        options: TagsClient,
+        misc: Tuple[Path, Path, PurePath],
     ) -> None:
-        self._exec, db = misc
-        super().__init__(supervisor, options=options, misc=db)
-        create_task(self._poll())
+        self._exec, vars_dir, cwd = misc
+        self._db = CTDB(vars_dir, cwd=cwd)
+        super().__init__(ex, supervisor=supervisor, options=options, misc=misc)
+        self._ex.run(self._poll())
 
-    async def interrupt(self) -> None:
-        raise NotImplementedError()
+    def interrupt(self) -> None:
+        with self._interrupt_lock:
+            self._db.interrupt()
 
     async def _poll(self) -> None:
         while True:
             with suppress_and_log():
                 with timeit("IDLE :: TAGS"):
-                    buf_names, existing = await gather(_ls(), self._misc.paths())
+                    buf_names = await _ls()
+                    existing = self._db.paths()
                     paths = buf_names | existing.keys()
                     mtimes = await _mtimes(paths)
                     query_paths = tuple(
@@ -156,18 +163,22 @@ class Worker(BaseWorker[TagsClient, CTDB]):
                     raw = await run(self._exec, *query_paths) if query_paths else ""
                     new = parse(mtimes, raw=raw)
                     dead = existing.keys() - mtimes.keys()
-                    await self._misc.reconciliate(dead, new=new)
+                    self._db.reconciliate(dead, new=new)
 
-                async with self._supervisor.idling:
-                    await self._supervisor.idling.wait()
+                async with self._idle:
+                    await self._idle.wait()
 
     async def swap(self, cwd: PurePath) -> None:
-        await self._misc.swap(cwd)
+        async def cont() -> None:
+            with self._interrupt_lock:
+                self._db.swap(cwd)
 
-    async def work(self, context: Context) -> AsyncIterator[Completion]:
+        await self._ex.submit(cont())
+
+    async def _work(self, context: Context) -> AsyncIterator[Completion]:
         async with self._work_lock:
             row, _ = context.position
-            tags = await self._misc.select(
+            tags = self._db.select(
                 self._supervisor.match,
                 filename=context.filename,
                 line_num=row,

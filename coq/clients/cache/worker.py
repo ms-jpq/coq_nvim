@@ -19,7 +19,7 @@ from ...shared.repeat import sanitize
 from ...shared.runtime import Supervisor
 from ...shared.settings import MatchOptions
 from ...shared.timeit import timeit
-from ...shared.types import BaseRangeEdit, Completion, Context, Cursors
+from ...shared.types import BaseRangeEdit, Completion, Context, Cursors, Interruptible
 from .db.database import Database
 
 
@@ -71,7 +71,7 @@ def sanitize_cached(
         return None
 
 
-class CacheWorker:
+class CacheWorker(Interruptible):
     def __init__(self, supervisor: Supervisor) -> None:
         self._supervisor = supervisor
         self._db = Database()
@@ -86,7 +86,10 @@ class CacheWorker:
         self._clients: MutableSet[str] = set()
         self._cached: MutableMapping[bytes, Completion] = {}
 
-    async def set_cache(
+    def interrupt(self) -> None:
+        self._db.interrupt()
+
+    def set_cache(
         self,
         items: Mapping[Optional[str], Iterable[Completion]],
     ) -> None:
@@ -107,7 +110,7 @@ class CacheWorker:
                 else:
                     yield key, val.sort_by
 
-        await self._db.insert(cont())
+        self._db.insert(cont())
 
         for client in items:
             if client:
@@ -116,7 +119,7 @@ class CacheWorker:
 
     def apply_cache(
         self, context: Context
-    ) -> Tuple[bool, AbstractSet[str], Awaitable[Tuple[Iterator[Completion], int]]]:
+    ) -> Tuple[bool, AbstractSet[str], Tuple[Iterator[Completion], int]]:
         cache_ctx = self._cache_ctx
         row, col = context.position
         self._cache_ctx = _CacheCtx(
@@ -137,9 +140,9 @@ class CacheWorker:
             self._clients.clear()
             self._cached.clear()
 
-        async def get() -> Tuple[Iterator[Completion], int]:
+        def get() -> Tuple[Iterator[Completion], int]:
             with timeit("CACHE -- GET"):
-                keys, length = await self._db.select(
+                keys, length = self._db.select(
                     not use_cache,
                     opts=self._supervisor.match,
                     word=context.words,

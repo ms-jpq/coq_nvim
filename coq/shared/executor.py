@@ -1,60 +1,71 @@
-from asyncio import create_task, gather, wrap_future
-from concurrent.futures import Future, InvalidStateError
+from asyncio import (
+    AbstractEventLoop,
+    create_task,
+    gather,
+    get_running_loop,
+    run,
+    run_coroutine_threadsafe,
+    wrap_future,
+)
+from concurrent.futures import Future, InvalidStateError, ThreadPoolExecutor
 from contextlib import suppress
 from functools import lru_cache
-from queue import SimpleQueue
 from shutil import which
 from subprocess import CalledProcessError
 from threading import Thread
-from typing import Any, Awaitable, Callable, Sequence, TypeVar, cast
+from typing import Any, Awaitable, Callable, Coroutine, Optional, Sequence, TypeVar
 
-from pynvim_pp.logging import suppress_and_log
 from std2.asyncio.subprocess import call
 
 _T = TypeVar("_T")
 
 
-class SingleThreadExecutor:
-    def __init__(self) -> None:
-        self._q: SimpleQueue = SimpleQueue()
+class AsyncExecutor:
+    def __init__(self, threadpool: Optional[ThreadPoolExecutor]) -> None:
+        f: Future = Future()
+        self._fut: Future = Future()
 
-        def cont() -> None:
-            while True:
-                with suppress_and_log():
-                    f = self._q.get()
-                    f()
+        async def cont() -> None:
+            loop = get_running_loop()
+            if threadpool:
+                loop.set_default_executor(threadpool)
+            f.set_result(loop)
+            main: Coroutine = await wrap_future(self._fut)
+            await main
 
-        self._th = Thread(daemon=True, target=cont)
+        self._th = Thread(daemon=True, target=lambda: run(cont()))
         self._th.start()
+        self._loop: AbstractEventLoop = f.result()
 
-    def _submit(self, f: Callable[..., Any], *args: Any, **kwargs: Any) -> Future:
+    def run(self, main: Awaitable[Any]) -> None:
+        self._fut.set_result(main)
+
+    def fsubmit(self, f: Callable[..., Any], *args: Any, **kwargs: Any) -> Future:
         fut: Future = Future()
 
         def cont() -> None:
-            try:
-                ret = f(*args, **kwargs)
-            except BaseException as e:
-                with suppress(InvalidStateError):
-                    fut.set_exception(e)
-            else:
-                with suppress(InvalidStateError):
-                    fut.set_result(ret)
+            if fut.set_running_or_notify_cancel():
+                try:
+                    ret = f(*args, **kwargs)
+                except BaseException as e:
+                    with suppress(InvalidStateError):
+                        fut.set_exception(e)
+                else:
+                    with suppress(InvalidStateError):
+                        fut.set_result(ret)
 
-        self._q.put(cont)
+        self._loop.call_soon_threadsafe(cont)
         return fut
 
-    def ssubmit(self, f: Callable[..., _T], *args: Any, **kwargs: Any) -> _T:
-        fut = self._submit(f, *args, **kwargs)
-        result = cast(_T, fut.result())
-        return result
-
-    def submit(self, f: Callable[..., _T], *args: Any, **kwargs: Any) -> Awaitable[_T]:
-        return wrap_future(self._submit(f, *args, **kwargs))
+    def submit(self, co: Awaitable[_T]) -> Awaitable[_T]:
+        f = run_coroutine_threadsafe(co, loop=self._loop)
+        return wrap_future(f)
 
 
 @lru_cache(maxsize=None)
-def very_nice() -> Awaitable[Sequence[str]]:
-    async def cont() -> Sequence[str]:
+def _very_nice() -> Future:
+
+    async def c1() -> Sequence[str]:
         if tp := which("taskpolicy"):
             run: Sequence[str] = (tp, "-c", "utility", "--")
             try:
@@ -83,4 +94,22 @@ def very_nice() -> Awaitable[Sequence[str]]:
         else:
             return ()
 
-    return create_task(cont())
+    f: Future = Future()
+
+    async def c2() -> None:
+        try:
+            ret = await c1()
+        except BaseException as e:
+            with suppress(InvalidStateError):
+                f.set_exception(e)
+        else:
+            with suppress(InvalidStateError):
+                f.set_result(ret)
+
+    create_task(c2())
+    return f
+
+
+async def very_nice() -> Sequence[str]:
+    f: Future = _very_nice()
+    return await wrap_future(f)

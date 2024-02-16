@@ -1,12 +1,11 @@
-from contextlib import closing
+from contextlib import closing, suppress
 from os.path import normcase
 from pathlib import Path, PurePath
 from sqlite3 import Connection, OperationalError
 from typing import AbstractSet, Iterator, Mapping, TypedDict, cast
 from uuid import uuid4
 
-from ....databases.types import Interruptible
-from ....shared.executor import SingleThreadExecutor
+from ....databases.types import DB
 from ....shared.settings import MatchOptions
 from ....shared.sql import BIGGEST_INT, init_db, like_esc
 from ....snippets.types import LoadedSnips
@@ -33,105 +32,86 @@ def _init(db_dir: Path) -> Connection:
     return conn
 
 
-class SDB(Interruptible):
+class SDB(DB):
     def __init__(self, vars_dir: Path) -> None:
         db_dir = vars_dir / "clients" / "snippets"
-        self._ex = SingleThreadExecutor()
-        self._conn: Connection = self._ex.ssubmit(lambda: _init(db_dir))
+        self._conn = _init(db_dir)
 
-    async def clean(self, paths: AbstractSet[PurePath]) -> None:
-        def cont() -> None:
-            with self._conn, closing(self._conn.cursor()) as cursor:
-                cursor.executemany(
-                    sql("delete", "source"),
-                    ({"filename": normcase(path)} for path in paths),
-                )
+    def clean(self, paths: AbstractSet[PurePath]) -> None:
+        with self._conn, closing(self._conn.cursor()) as cursor:
+            cursor.executemany(
+                sql("delete", "source"),
+                ({"filename": normcase(path)} for path in paths),
+            )
 
-        async with self._lock:
-            await self._ex.submit(cont)
+    def mtimes(self) -> Mapping[PurePath, float]:
+        with self._conn, closing(self._conn.cursor()) as cursor:
+            cursor.execute(sql("select", "sources"), ())
+            return {
+                PurePath(row["filename"]): row["mtime"] for row in cursor.fetchall()
+            }
 
-    async def mtimes(self) -> Mapping[PurePath, float]:
-        def cont() -> Mapping[PurePath, float]:
-            with self._conn, closing(self._conn.cursor()) as cursor:
-                cursor.execute(sql("select", "sources"), ())
-                return {
-                    PurePath(row["filename"]): row["mtime"] for row in cursor.fetchall()
-                }
+    def populate(self, path: PurePath, mtime: float, loaded: LoadedSnips) -> None:
+        with self._conn, closing(self._conn.cursor()) as cursor:
+            filename, source_id = normcase(path), uuid4().bytes
+            cursor.execute(sql("delete", "source"), {"filename": filename})
+            cursor.execute(
+                sql("insert", "source"),
+                {"rowid": source_id, "filename": filename, "mtime": mtime},
+            )
 
-        async with self._lock:
-            return await self._ex.submit(cont)
+            for src, dests in loaded.exts.items():
+                for dest in dests:
+                    cursor.executemany(
+                        sql("insert", "filetype"),
+                        ({"filetype": src}, {"filetype": dest}),
+                    )
+                    cursor.execute(
+                        sql("insert", "extension"),
+                        {"source_id": source_id, "src": src, "dest": dest},
+                    )
 
-    async def populate(self, path: PurePath, mtime: float, loaded: LoadedSnips) -> None:
-        def cont() -> None:
-            with self._conn, closing(self._conn.cursor()) as cursor:
-                filename, source_id = normcase(path), uuid4().bytes
-                cursor.execute(sql("delete", "source"), {"filename": filename})
+            for uid, snippet in loaded.snippets.items():
+                snippet_id = uid.bytes
                 cursor.execute(
-                    sql("insert", "source"),
-                    {"rowid": source_id, "filename": filename, "mtime": mtime},
+                    sql("insert", "filetype"), {"filetype": snippet.filetype}
                 )
-
-                for src, dests in loaded.exts.items():
-                    for dest in dests:
-                        cursor.executemany(
-                            sql("insert", "filetype"),
-                            ({"filetype": src}, {"filetype": dest}),
-                        )
-                        cursor.execute(
-                            sql("insert", "extension"),
-                            {"source_id": source_id, "src": src, "dest": dest},
-                        )
-
-                for uid, snippet in loaded.snippets.items():
-                    snippet_id = uid.bytes
+                cursor.execute(
+                    sql("insert", "snippet"),
+                    {
+                        "rowid": snippet_id,
+                        "source_id": source_id,
+                        "filetype": snippet.filetype,
+                        "grammar": snippet.grammar.name,
+                        "content": snippet.content,
+                        "label": snippet.label,
+                        "doc": snippet.doc,
+                    },
+                )
+                for match in snippet.matches:
                     cursor.execute(
-                        sql("insert", "filetype"), {"filetype": snippet.filetype}
+                        sql("insert", "match"),
+                        {"snippet_id": snippet_id, "word": match},
                     )
-                    cursor.execute(
-                        sql("insert", "snippet"),
-                        {
-                            "rowid": snippet_id,
-                            "source_id": source_id,
-                            "filetype": snippet.filetype,
-                            "grammar": snippet.grammar.name,
-                            "content": snippet.content,
-                            "label": snippet.label,
-                            "doc": snippet.doc,
-                        },
-                    )
-                    for match in snippet.matches:
-                        cursor.execute(
-                            sql("insert", "match"),
-                            {"snippet_id": snippet_id, "word": match},
-                        )
-                cursor.execute("PRAGMA optimize", ())
+            cursor.execute("PRAGMA optimize", ())
 
-        async with self._lock:
-            await self._ex.submit(cont)
-
-    async def select(
+    def select(
         self, opts: MatchOptions, filetype: str, word: str, sym: str, limitless: int
     ) -> Iterator[_Snip]:
-        def cont() -> Iterator[_Snip]:
-            try:
-                with self._conn, closing(self._conn.cursor()) as cursor:
-                    cursor.execute(
-                        sql("select", "snippets"),
-                        {
-                            "cut_off": opts.fuzzy_cutoff,
-                            "look_ahead": opts.look_ahead,
-                            "limit": BIGGEST_INT if limitless else opts.max_results,
-                            "filetype": filetype,
-                            "word": word,
-                            "sym": sym,
-                            "like_word": like_esc(word[: opts.exact_matches]),
-                            "like_sym": like_esc(sym[: opts.exact_matches]),
-                        },
-                    )
-                    rows = cursor.fetchall()
-                    return (cast(_Snip, row) for row in rows)
-            except OperationalError:
-                return iter(())
-
-        async with self._interruption():
-            return await self._ex.submit(cont)
+        with suppress(OperationalError):
+            with self._conn, closing(self._conn.cursor()) as cursor:
+                cursor.execute(
+                    sql("select", "snippets"),
+                    {
+                        "cut_off": opts.fuzzy_cutoff,
+                        "look_ahead": opts.look_ahead,
+                        "limit": BIGGEST_INT if limitless else opts.max_results,
+                        "filetype": filetype,
+                        "word": word,
+                        "sym": sym,
+                        "like_word": like_esc(word[: opts.exact_matches]),
+                        "like_sym": like_esc(sym[: opts.exact_matches]),
+                    },
+                )
+                for row in cursor:
+                    yield cast(_Snip, row)

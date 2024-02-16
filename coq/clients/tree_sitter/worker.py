@@ -1,4 +1,4 @@
-from asyncio import Lock, create_task
+from asyncio import Lock, gather
 from os import linesep
 from pathlib import PurePath
 from typing import AsyncIterator, Iterator, Mapping, Optional, Tuple
@@ -9,6 +9,7 @@ from pynvim_pp.logging import suppress_and_log
 from pynvim_pp.rpc_types import NvimError
 
 from ...paths.show import fmt_path
+from ...shared.executor import AsyncExecutor
 from ...shared.runtime import Supervisor
 from ...shared.runtime import Worker as BaseWorker
 from ...shared.settings import TSClient
@@ -97,29 +98,39 @@ def _trans(client: TSClient, context: Context, payload: Payload) -> Completion:
     return cmp
 
 
-class Worker(BaseWorker[TSClient, TDB]):
-    def __init__(self, supervisor: Supervisor, options: TSClient, misc: TDB) -> None:
+class Worker(BaseWorker[TSClient, None]):
+    def __init__(
+        self,
+        ex: AsyncExecutor,
+        supervisor: Supervisor,
+        options: TSClient,
+        misc: None,
+    ) -> None:
         self._lock = Lock()
-        super().__init__(supervisor, options=options, misc=misc)
-        create_task(self._poll())
+        self._db = TDB()
+        super().__init__(ex, supervisor=supervisor, options=options, misc=misc)
+        self._ex.run(self._poll())
 
-    async def interrupt(self) -> None:
-        raise NotImplementedError()
+    def interrupt(self) -> None:
+        with self._interrupt_lock:
+            self._db.interrupt()
 
     async def _poll(self) -> None:
         while True:
             with suppress_and_log():
-                if bufs := await _bufs():
-                    await self._misc.vacuum(bufs)
-                    async with self._supervisor.idling:
-                        await self._supervisor.idling.wait()
+                async with self._idle:
+                    await self._idle.wait()
 
-    async def populate(self) -> Optional[Tuple[bool, float]]:
+                bufs, _ = await gather(_bufs(), self._populate())
+                if bufs:
+                    self._db.vacuum(bufs)
+
+    async def _populate(self) -> Optional[Tuple[bool, float]]:
         if not self._lock.locked():
             async with self._lock:
                 if payload := await async_request():
                     keep_going = payload.elapsed <= self._options.slow_threshold
-                    await self._misc.populate(
+                    self._db.populate(
                         payload.buf,
                         lo=payload.lo,
                         hi=payload.hi,
@@ -131,9 +142,12 @@ class Worker(BaseWorker[TSClient, TDB]):
 
         return None
 
-    async def work(self, context: Context) -> AsyncIterator[Completion]:
+    async def populate(self) -> Optional[Tuple[bool, float]]:
+        return await self._ex.submit(self._populate())
+
+    async def _work(self, context: Context) -> AsyncIterator[Completion]:
         async with self._work_lock:
-            payloads = await self._misc.select(
+            payloads = self._db.select(
                 self._supervisor.match,
                 filetype=context.filetype,
                 word=context.words,

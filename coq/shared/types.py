@@ -1,7 +1,8 @@
+from abc import abstractmethod
 from dataclasses import dataclass, field
 from enum import Enum, auto
 from pathlib import Path, PurePath
-from typing import Any, Literal, Mapping, Optional, Sequence, Tuple, Union
+from typing import Any, Literal, Mapping, Optional, Protocol, Sequence, Tuple, Union
 from uuid import UUID, uuid4
 
 UTF8: Literal["UTF-8"] = "UTF-8"
@@ -191,3 +192,8 @@ class Completion:
     kind: str = ""
     doc: Optional[Doc] = None
     extern: Union[ExternLSP, ExternLUA, ExternPath, None] = None
+
+
+class Interruptible(Protocol):
+    @abstractmethod
+    def interrupt(self) -> None: ...

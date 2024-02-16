@@ -1,10 +1,10 @@
-from asyncio import create_task
 from typing import AbstractSet, AsyncIterator, Mapping, MutableSet
 
 from pynvim_pp.atomic import Atomic
 from pynvim_pp.logging import suppress_and_log
 from std2.string import removesuffix
 
+from ...shared.executor import AsyncExecutor
 from ...shared.runtime import Supervisor
 from ...shared.runtime import Worker as BaseWorker
 from ...shared.settings import RegistersClient
@@ -21,16 +21,26 @@ async def _registers(names: AbstractSet[str]) -> Mapping[str, str]:
     return {name: txt for name, txt in zip(names, contents)}
 
 
-class Worker(BaseWorker[RegistersClient, RDB]):
+class Worker(BaseWorker[RegistersClient, None]):
     def __init__(
-        self, supervisor: Supervisor, options: RegistersClient, misc: RDB
+        self,
+        ex: AsyncExecutor,
+        supervisor: Supervisor,
+        options: RegistersClient,
+        misc: None,
     ) -> None:
         self._yanked: MutableSet[str] = {*options.words, *options.lines}
-        super().__init__(supervisor, options=options, misc=misc)
-        create_task(self._poll())
+        self._db = RDB(
+            supervisor.limits.tokenization_limit,
+            unifying_chars=supervisor.match.unifying_chars,
+            include_syms=options.match_syms,
+        )
+        super().__init__(ex, supervisor=supervisor, options=options, misc=misc)
+        self._ex.run(self._poll())
 
-    async def interrupt(self) -> None:
-        assert False
+    def interrupt(self) -> None:
+        with self._interrupt_lock:
+            self._db.interrupt()
 
     async def _poll(self) -> None:
         while True:
@@ -38,7 +48,7 @@ class Worker(BaseWorker[RegistersClient, RDB]):
                 yanked = {*self._yanked}
                 self._yanked.clear()
                 registers = await _registers(yanked)
-                await self._misc.periodical(
+                self._db.periodical(
                     wordreg={
                         name: text
                         for name, text in registers.items()
@@ -51,22 +61,25 @@ class Worker(BaseWorker[RegistersClient, RDB]):
                     },
                 )
 
-            async with self._supervisor.idling:
-                await self._supervisor.idling.wait()
+                async with self._idle:
+                    await self._idle.wait()
 
-    def post_yank(self, regname: str, regsize: int) -> None:
-        if not regname and regsize >= self._options.max_yank_size:
-            return
+    async def post_yank(self, regname: str, regsize: int) -> None:
+        async def cont() -> None:
+            if not regname and regsize >= self._options.max_yank_size:
+                return
 
-        name = regname or "0"
-        if name in {*self._options.words, *self._options.lines}:
-            self._yanked.add(name)
+            name = regname or "0"
+            if name in {*self._options.words, *self._options.lines}:
+                self._yanked.add(name)
 
-    async def work(self, context: Context) -> AsyncIterator[Completion]:
+        await self._ex.submit(cont())
+
+    async def _work(self, context: Context) -> AsyncIterator[Completion]:
         async with self._work_lock:
             before = removesuffix(context.line_before, suffix=context.syms_before)
             linewise = not before or before.isspace()
-            words = await self._misc.select(
+            words = self._db.select(
                 linewise,
                 match_syms=self._options.match_syms,
                 opts=self._supervisor.match,

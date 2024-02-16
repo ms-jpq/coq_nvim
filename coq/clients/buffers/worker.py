@@ -1,4 +1,3 @@
-from asyncio import create_task
 from dataclasses import dataclass
 from os import linesep
 from pathlib import PurePath
@@ -10,6 +9,7 @@ from pynvim_pp.rpc_types import NvimError
 from pynvim_pp.window import Window
 
 from ...paths.show import fmt_path
+from ...shared.executor import AsyncExecutor
 from ...shared.runtime import Supervisor
 from ...shared.runtime import Worker as BaseWorker
 from ...shared.settings import BuffersClient
@@ -70,15 +70,25 @@ def _doc(client: BuffersClient, context: Context, word: BufferWord) -> Doc:
     return Doc(text=linesep.join(cont()), syntax="")
 
 
-class Worker(BaseWorker[BuffersClient, BDB]):
+class Worker(BaseWorker[BuffersClient, None]):
     def __init__(
-        self, supervisor: Supervisor, options: BuffersClient, misc: BDB
+        self,
+        ex: AsyncExecutor,
+        supervisor: Supervisor,
+        options: BuffersClient,
+        misc: None,
     ) -> None:
-        super().__init__(supervisor, options=options, misc=misc)
-        create_task(self._poll())
+        self._db = BDB(
+            supervisor.limits.tokenization_limit,
+            unifying_chars=supervisor.match.unifying_chars,
+            include_syms=options.match_syms,
+        )
+        super().__init__(ex, supervisor=supervisor, options=options, misc=misc)
+        self._ex.run(self._poll())
 
-    async def interrupt(self) -> None:
-        raise NotImplementedError()
+    def interrupt(self) -> None:
+        with self._interrupt_lock:
+            self._db.interrupt()
 
     async def _poll(self) -> None:
         while True:
@@ -89,8 +99,8 @@ class Worker(BaseWorker[BuffersClient, BDB]):
                         int(buf.number): line_count
                         for buf, line_count in info.buffers.items()
                     }
-                    await self._misc.vacuum(buf_line_counts)
-                    await self.set_lines(
+                    self._db.vacuum(buf_line_counts)
+                    self._db.set_lines(
                         info.buf_id,
                         filetype=info.filetype,
                         filename=info.filename,
@@ -99,11 +109,15 @@ class Worker(BaseWorker[BuffersClient, BDB]):
                         lines=info.lines,
                     )
 
-                async with self._supervisor.idling:
-                    await self._supervisor.idling.wait()
+                async with self._idle:
+                    await self._idle.wait()
 
     async def buf_update(self, buf_id: int, filetype: str, filename: str) -> None:
-        await self._misc.buf_update(buf_id, filetype=filetype, filename=filename)
+        async def cont() -> None:
+            with self._interrupt_lock:
+                self._db.buf_update(buf_id, filetype=filetype, filename=filename)
+
+        await self._ex.submit(cont())
 
     async def set_lines(
         self,
@@ -114,16 +128,19 @@ class Worker(BaseWorker[BuffersClient, BDB]):
         hi: int,
         lines: Sequence[str],
     ) -> None:
-        await self._misc.set_lines(
-            buf_id,
-            filetype=filetype,
-            filename=filename,
-            lo=lo,
-            hi=hi,
-            lines=lines,
-        )
+        async def cont() -> None:
+            self._db.set_lines(
+                buf_id,
+                filetype=filetype,
+                filename=filename,
+                lo=lo,
+                hi=hi,
+                lines=lines,
+            )
 
-    async def work(self, context: Context) -> AsyncIterator[Completion]:
+        await self._ex.submit(cont())
+
+    async def _work(self, context: Context) -> AsyncIterator[Completion]:
         async with self._work_lock:
             filetype = context.filetype if self._options.same_filetype else None
             update = (
@@ -138,7 +155,7 @@ class Worker(BaseWorker[BuffersClient, BDB]):
                 if (change := context.change)
                 else None
             )
-            words = await self._misc.words(
+            words = self._db.words(
                 self._supervisor.match,
                 filetype=filetype,
                 word=context.words,

@@ -1,14 +1,30 @@
 from __future__ import annotations
 
 from abc import abstractmethod
-from asyncio import CancelledError, Condition, Task, as_completed, create_task, wait
+from asyncio import (
+    Condition,
+    Future,
+    Task,
+    as_completed,
+    create_task,
+    gather,
+    run_coroutine_threadsafe,
+    wait,
+    wrap_future,
+)
+from asyncio.exceptions import CancelledError
+from collections import deque
+from concurrent.futures import Future as CFuture
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from pathlib import Path
+from threading import Lock
 from time import monotonic
 from typing import (
     Any,
     AsyncIterator,
     Awaitable,
+    Deque,
     Generic,
     MutableSequence,
     Optional,
@@ -23,7 +39,7 @@ from pynvim_pp.logging import suppress_and_log
 from std2.aitertools import aenumerate
 from std2.asyncio import cancel
 
-from .executor import SingleThreadExecutor
+from .executor import AsyncExecutor
 from .settings import (
     BaseClient,
     CompleteOptions,
@@ -33,7 +49,7 @@ from .settings import (
     Weights,
 )
 from .timeit import TracingLocker, timeit
-from .types import Completion, Context
+from .types import Completion, Context, Interruptible
 
 _T = TypeVar("_T")
 _T_co = TypeVar("_T_co", contravariant=True)
@@ -51,9 +67,9 @@ class Metric:
 
 
 class PReviewer(Protocol[_T]):
-    async def register(self, assoc: BaseClient) -> None: ...
+    def s_register(self, assoc: BaseClient) -> None: ...
 
-    async def begin(self, context: Context) -> _T: ...
+    def begin(self, context: Context) -> _T: ...
 
     async def s_begin(self, token: _T, assoc: BaseClient, instance: UUID) -> None: ...
 
@@ -79,24 +95,27 @@ class Supervisor:
         self.comp, self.limits = comp, limits
         self._reviewer = reviewer
 
-        self.idling = Condition()
+        self.threadpool = ThreadPoolExecutor()
+        self._thread_lock = Lock()
         self._workers: WeakSet[Worker] = WeakSet()
 
         self._lock = TracingLocker(name="Supervisor", force=True)
         self._work_task: Optional[Task] = None
 
-    async def register(self, worker: Worker, assoc: BaseClient) -> None:
+    def register(self, worker: Worker, assoc: BaseClient) -> None:
         with suppress_and_log():
-            await self._reviewer.register(assoc)
-            self._workers.add(worker)
+            self._reviewer.s_register(assoc)
+            with self._thread_lock:
+                self._workers.add(worker)
 
     async def notify_idle(self) -> None:
-        async with self.idling:
-            self.idling.notify_all()
+        await gather(*(worker.idle() for worker in self._workers))
 
     async def interrupt(self) -> None:
         task = self._work_task
         self._work_task = None
+        for worker in self._workers:
+            worker.interrupt()
         if task:
             await cancel(task)
 
@@ -115,11 +134,11 @@ class Supervisor:
 
             with suppress_and_log(), timeit("COLLECTED -- ALL"):
                 async with self._lock:
-                    acc: MutableSequence[Metric] = []
+                    acc: Deque[Metric] = deque()
 
-                    token = await self._reviewer.begin(context)
+                    token = self._reviewer.begin(context)
                     tasks = tuple(
-                        worker.supervised_work(context, token=token, now=now, acc=acc)
+                        worker.supervised(context, token=token, now=now, acc=acc)
                         for worker in self._workers
                     )
 
@@ -137,34 +156,51 @@ class Supervisor:
         return task
 
 
-class Worker(Generic[_O_co, _T_co]):
+class Worker(Interruptible, Generic[_O_co, _T_co]):
     @classmethod
     def init(
         cls, supervisor: Supervisor, options: _O_co, misc: _T_co
     ) -> Worker[_O_co, _T_co]:
-        self = cls(supervisor=supervisor, options=options, misc=misc)
+        ex = AsyncExecutor(supervisor.threadpool)
+        fut = ex.fsubmit(
+            lambda: cls(ex, supervisor=supervisor, options=options, misc=misc)
+        )
+        self: Worker[_O_co, _T_co] = fut.result()
         return self
 
-    def __init__(self, supervisor: Supervisor, options: _O_co, misc: _T_co) -> None:
-        self._work_task: Optional[Task] = None
+    def __init__(
+        self,
+        ex: AsyncExecutor,
+        supervisor: Supervisor,
+        options: _O_co,
+        misc: _T_co,
+    ) -> None:
+        self._ex = ex
         self._work_lock = TracingLocker(name=options.short_name, force=True)
-        self._supervisor, self._options, self._misc = supervisor, options, misc
-        create_task(self._supervisor.register(self, assoc=options))
+        self._supervisor, self._options = supervisor, options
+        self._work_fut: Optional[CFuture] = None
+        self._idle = Condition()
+        self._interrupt_lock = Lock()
+        self._supervisor.register(self, assoc=options)
 
     @abstractmethod
-    async def interrupt(self) -> None: ...
+    def _work(self, context: Context) -> AsyncIterator[Completion]: ...
 
-    @abstractmethod
-    def work(self, context: Context) -> AsyncIterator[Completion]: ...
+    async def idle(self) -> None:
+        async def cont() -> None:
+            async with self._idle:
+                self._idle.notify_all()
 
-    def supervised_work(
+        await self._ex.submit(cont())
+
+    def supervised(
         self,
         context: Context,
         token: Any,
         now: float,
         acc: MutableSequence[Metric],
-    ) -> Task:
-        prev = self._work_task
+    ) -> Future:
+        prev = self._work_fut
 
         async def cont() -> None:
             instance, items = uuid4(), 0
@@ -172,7 +208,7 @@ class Worker(Generic[_O_co, _T_co]):
 
             with timeit(f"CANCEL WORKER -- {self._options.short_name}"):
                 if prev:
-                    await cancel(prev)
+                    await cancel(wrap_future(prev))
 
             with suppress_and_log(), timeit(f"WORKER -- {self._options.short_name}"):
                 await self._supervisor._reviewer.s_begin(
@@ -180,7 +216,7 @@ class Worker(Generic[_O_co, _T_co]):
                 )
                 try:
                     async for items, completion in aenumerate(
-                        self.work(context), start=1
+                        self._work(context), start=1
                     ):
                         metric = self._supervisor._reviewer.trans(
                             token, instance=instance, completion=completion
@@ -198,5 +234,8 @@ class Worker(Generic[_O_co, _T_co]):
                         items=items,
                     )
 
-        self._work_task = task = create_task(cont())
-        return task
+        self.interrupt()
+        f = run_coroutine_threadsafe(cont(), self._ex._loop)
+        self._work_fut = f
+        fut = wrap_future(f)
+        return fut

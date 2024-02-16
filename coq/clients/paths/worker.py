@@ -19,6 +19,7 @@ from std2.platform import OS, os
 from std2.string import removesuffix
 
 from ...shared.context import cword_before
+from ...shared.executor import AsyncExecutor
 from ...shared.fuzzy import quick_ratio
 from ...shared.parse import lower
 from ...shared.runtime import Supervisor
@@ -205,16 +206,20 @@ def _sort_by(unifying_chars: AbstractSet[str], context: Context, new_text: str) 
 
 class Worker(BaseWorker[PathsClient, None]):
     def __init__(
-        self, supervisor: Supervisor, options: PathsClient, misc: None
+        self,
+        ex: AsyncExecutor,
+        supervisor: Supervisor,
+        options: PathsClient,
+        misc: None,
     ) -> None:
-        super().__init__(supervisor, options=options, misc=misc)
+        super().__init__(ex, supervisor=supervisor, options=options, misc=misc)
         seps = {sep, altsep} if altsep else {sep}
         self._seps = {sep for sep in options.path_seps if sep in seps} or seps
 
-    async def interrupt(self) -> None:
-        raise NotImplementedError()
+    def interrupt(self) -> None:
+        pass
 
-    async def work(self, context: Context) -> AsyncIterator[Completion]:
+    async def _work(self, context: Context) -> AsyncIterator[Completion]:
         async with self._work_lock:
             line = context.line_before + context.words_after
 

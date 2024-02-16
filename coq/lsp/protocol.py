@@ -1,8 +1,11 @@
+from asyncio import wrap_future
 from asyncio.tasks import create_task
+from concurrent.futures import Future, InvalidStateError
+from contextlib import suppress
 from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
-from typing import Any, Awaitable, Mapping, Optional, cast
+from typing import Any, Mapping, Optional, cast
 
 from pynvim_pp.lib import decode
 from pynvim_pp.nvim import Nvim
@@ -21,8 +24,8 @@ class LSProtocol:
 
 
 @lru_cache(maxsize=None)
-def protocol() -> Awaitable[LSProtocol]:
-    async def cont() -> LSProtocol:
+def _protocol() -> Future:
+    async def c1() -> LSProtocol:
         raw: Mapping[str, Mapping[str, int]] = await cast(
             Any, Nvim.api.exec_lua(NoneType, _LUA, ())
         )
@@ -30,4 +33,22 @@ def protocol() -> Awaitable[LSProtocol]:
         protocol = new_decoder[LSProtocol](LSProtocol, strict=False)(trans)
         return protocol
 
-    return create_task(cont())
+    f: Future = Future()
+
+    async def c2() -> None:
+        try:
+            ret = await c1()
+        except BaseException as e:
+            with suppress(InvalidStateError):
+                f.set_exception(e)
+        else:
+            with suppress(InvalidStateError):
+                f.set_result(ret)
+
+    create_task(c2())
+    return f
+
+
+async def protocol() -> LSProtocol:
+    f: Future = _protocol()
+    return await wrap_future(f)

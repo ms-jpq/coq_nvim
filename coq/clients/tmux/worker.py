@@ -1,11 +1,11 @@
 from asyncio import Lock
-from asyncio.tasks import create_task
 from os import linesep
 from pathlib import Path
-from typing import AsyncIterator, Iterator, Tuple
+from typing import AsyncIterator, Iterator
 
 from pynvim_pp.logging import suppress_and_log
 
+from ...shared.executor import AsyncExecutor
 from ...shared.runtime import Supervisor
 from ...shared.runtime import Worker as BaseWorker
 from ...shared.settings import TmuxClient
@@ -25,38 +25,47 @@ def _doc(client: TmuxClient, word: TmuxWord) -> Doc:
     return Doc(text=linesep.join(cont()), syntax="")
 
 
-class Worker(BaseWorker[TmuxClient, TMDB]):
+class Worker(BaseWorker[TmuxClient, Path]):
     def __init__(
-        self, supervisor: Supervisor, options: TmuxClient, misc: Tuple[Path, TMDB]
+        self, ex: AsyncExecutor, supervisor: Supervisor, options: TmuxClient, misc: Path
     ) -> None:
-        self._exec, db = misc
+        self._exec = misc
         self._lock = Lock()
-        super().__init__(supervisor, options=options, misc=db)
-        create_task(self._poll())
+        self._db = TMDB(
+            supervisor.limits.tokenization_limit,
+            unifying_chars=supervisor.match.unifying_chars,
+            include_syms=options.match_syms,
+        )
+        super().__init__(ex, supervisor=supervisor, options=options, misc=misc)
+        self._ex.run(self._poll())
 
-    async def interrupt(self) -> None:
-        raise NotImplementedError()
+    def interrupt(self) -> None:
+        with self._interrupt_lock:
+            self._db.interrupt()
 
     async def _poll(self) -> None:
         while True:
             with suppress_and_log():
                 with timeit("IDLE :: TMUX"):
-                    await self.periodical()
+                    await self._periodical()
 
-                async with self._supervisor.idling:
-                    await self._supervisor.idling.wait()
+                async with self._idle:
+                    await self._idle.wait()
 
-    async def periodical(self) -> None:
+    async def _periodical(self) -> None:
         if not self._lock.locked():
             async with self._lock:
                 current, panes = await snapshot(
                     self._exec, all_sessions=self._options.all_sessions
                 )
-                await self._misc.periodical(current, panes=panes)
+                self._db.periodical(current, panes=panes)
 
-    async def work(self, context: Context) -> AsyncIterator[Completion]:
+    async def periodical(self) -> None:
+        await self._ex.submit(self._periodical())
+
+    async def _work(self, context: Context) -> AsyncIterator[Completion]:
         async with self._work_lock:
-            words = await self._misc.select(
+            words = self._db.select(
                 self._supervisor.match,
                 word=context.words,
                 sym=(context.syms if self._options.match_syms else ""),
