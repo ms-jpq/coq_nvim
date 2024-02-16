@@ -1,8 +1,16 @@
-from asyncio import Condition, sleep
+from asyncio import (
+    AbstractEventLoop,
+    Condition,
+    get_running_loop,
+    run_coroutine_threadsafe,
+    sleep,
+    wrap_future,
+)
 from dataclasses import dataclass, replace
 from functools import lru_cache
 from itertools import count
 from pathlib import Path
+from threading import Lock
 from typing import (
     AbstractSet,
     Any,
@@ -64,6 +72,7 @@ _ENCODING_MAP: Mapping[Optional[str], Encoding] = {
     "utf32": UTF32,
 }
 
+_LOCK = Lock()
 _STATE: MutableMapping[str, _Session] = {}
 
 
@@ -73,8 +82,9 @@ def _uids(_: str) -> Iterator[int]:
 
 
 @lru_cache(maxsize=None)
-def _conds(_: str) -> Condition:
-    return Condition()
+def _conds(_: str) -> Tuple[AbstractEventLoop, Condition]:
+    loop = get_running_loop()
+    return (loop, Condition())
 
 
 async def _lsp_pull(
@@ -102,32 +112,39 @@ async def _lsp_pull(
 @rpc(blocking=False)
 async def _lsp_notify(stack: Stack, rpayload: _Payload) -> None:
     payload = _DECODER(rpayload)
-    cond = _conds(payload.name)
+    origin, cond = _conds(payload.name)
 
-    state = _STATE.get(payload.name)
-    if not state or payload.uid >= state.uid:
-        encoding = (payload.offset_encoding or "").casefold().replace("-", "")
-        offset_encoding = _ENCODING_MAP.get(encoding, UTF16)
-        client = _Client(
-            name=payload.client,
-            offset_encoding=offset_encoding,
-            message=payload.reply,
-        )
-        acc = [
-            *(state.acc if state and payload.uid == state.uid else ()),
-            (client, payload.multipart),
-        ]
-        _STATE[payload.name] = _Session(uid=payload.uid, done=payload.done, acc=acc)
+    async def cont() -> None:
+        state = _STATE.get(payload.name)
+        if not state or payload.uid >= state.uid:
+            encoding = (payload.offset_encoding or "").casefold().replace("-", "")
+            offset_encoding = _ENCODING_MAP.get(encoding, UTF16)
+            client = _Client(
+                name=payload.client,
+                offset_encoding=offset_encoding,
+                message=payload.reply,
+            )
+            acc = [
+                *(state.acc if state and payload.uid == state.uid else ()),
+                (client, payload.multipart),
+            ]
+            _STATE[payload.name] = _Session(uid=payload.uid, done=payload.done, acc=acc)
 
-    async with cond:
-        cond.notify_all()
+        async with cond:
+            cond.notify_all()
+
+    if get_running_loop() == origin:
+        await cont()
+    else:
+        f = run_coroutine_threadsafe(cont(), loop=origin)
+        await wrap_future(f)
 
 
 async def async_request(
     name: str, multipart: Optional[int], clients: AbstractSet[str], *args: Any
 ) -> AsyncIterator[_Client]:
     with timeit(f"LSP :: {name}"):
-        cond, uid = _conds(name), next(_uids(name))
+        (_, cond), uid = _conds(name), next(_uids(name))
 
         _STATE[name] = _Session(uid=uid, done=False, acc=[])
 

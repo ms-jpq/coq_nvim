@@ -13,7 +13,7 @@ clients:
 
   lsp:
     always_on_top: null
-    enabled: False
+    enabled: True
     resolve_timeout: 0.06
     short_name: "LSP"
     weight_adjust: 0.5
