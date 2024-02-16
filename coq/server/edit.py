@@ -555,9 +555,7 @@ async def edit(
             )
 
             if not synthetic:
-                await stack.idb.inserted(
-                    metric.instance.bytes, sort_by=metric.comp.sort_by
-                )
+                stack.idb.inserted(metric.instance.bytes, sort_by=metric.comp.sort_by)
 
             m_shift = await apply(buf=buf, instructions=instructions)
             if inserted:

@@ -114,7 +114,7 @@ def _pprn(stats: Iterable[Statistics]) -> Iterator[str]:
 
 @rpc()
 async def stats(stack: Stack, *_: str) -> None:
-    stats = await stack.idb.stats()
+    stats = stack.idb.stats()
     chart1, chart2, chart3 = _pprn(stats)
     desc = MD_STATS.read_text()
     lines = (

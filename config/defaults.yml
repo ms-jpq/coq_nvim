@@ -13,14 +13,14 @@ clients:
 
   lsp:
     always_on_top: null
-    enabled: True
+    enabled: False
     resolve_timeout: 0.06
     short_name: "LSP"
     weight_adjust: 0.5
 
   paths:
     always_on_top: False
-    enabled: True
+    enabled: False
     path_seps: []
     preview_lines: 6
     resolution:
@@ -31,7 +31,7 @@ clients:
 
   registers:
     always_on_top: False
-    enabled: True
+    enabled: False
     lines: []
     match_syms: False
     max_yank_size: 8888
@@ -42,7 +42,7 @@ clients:
 
   snippets:
     always_on_top: False
-    enabled: True
+    enabled: False
     short_name: "SNIP"
     user_path: null
     warn:
@@ -58,7 +58,7 @@ clients:
 
   tags:
     always_on_top: False
-    enabled: True
+    enabled: False
     parent_scope: " ⇊"
     path_sep: " ⇉ "
     short_name: "TAG"
@@ -66,14 +66,14 @@ clients:
 
   third_party:
     always_on_top: null
-    enabled: True
+    enabled: False
     short_name: "3P"
     weight_adjust: 0
 
   tmux:
     all_sessions: True
     always_on_top: False
-    enabled: True
+    enabled: False
     match_syms: False
     parent_scope: " ⇊"
     path_sep: " ⇉ "
@@ -82,7 +82,7 @@ clients:
 
   tree_sitter:
     always_on_top: False
-    enabled: True
+    enabled: False
     path_sep: " ⇊"
     short_name: "TS"
     slow_threshold: 0.168
@@ -100,7 +100,7 @@ display:
     context:
       - " 〈 "
       - " 〉"
-    enabled: True
+    enabled: False
     highlight_group: Comment
 
   icons:

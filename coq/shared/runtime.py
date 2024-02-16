@@ -203,6 +203,7 @@ class Worker(Interruptible, Generic[_O_co, _T_co]):
         prev = self._work_fut
 
         async def cont() -> None:
+            print("supervised starting")
             instance, items = uuid4(), 0
             interrupted = False
 
@@ -234,7 +235,7 @@ class Worker(Interruptible, Generic[_O_co, _T_co]):
                         items=items,
                     )
 
-        self.interrupt()
+        # self.interrupt()
         f = run_coroutine_threadsafe(cont(), self._ex._loop)
         self._work_fut = f
         fut = wrap_future(f)
