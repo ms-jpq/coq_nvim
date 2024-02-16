@@ -170,7 +170,8 @@ class Worker(BaseWorker[TagsClient, Tuple[Path, Path, PurePath]]):
 
     async def swap(self, cwd: PurePath) -> None:
         async def cont() -> None:
-            self._db.swap(cwd)
+            with self._interrupt_lock:
+                self._db.swap(cwd)
 
         await self._ex.submit(cont())
 
