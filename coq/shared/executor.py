@@ -1,6 +1,5 @@
 from asyncio import (
     AbstractEventLoop,
-    create_task,
     gather,
     get_running_loop,
     run,

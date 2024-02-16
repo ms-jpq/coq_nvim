@@ -14,6 +14,7 @@ from asyncio import (
 )
 from asyncio.exceptions import CancelledError
 from collections import deque
+from concurrent.futures import Future as CFuture
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from pathlib import Path
@@ -66,9 +67,9 @@ class Metric:
 
 
 class PReviewer(Protocol[_T]):
-    def register(self, assoc: BaseClient) -> None: ...
+    def s_register(self, assoc: BaseClient) -> None: ...
 
-    async def begin(self, context: Context) -> _T: ...
+    def begin(self, context: Context) -> _T: ...
 
     async def s_begin(self, token: _T, assoc: BaseClient, instance: UUID) -> None: ...
 
@@ -95,6 +96,7 @@ class Supervisor:
         self._reviewer = reviewer
 
         self.threadpool = ThreadPoolExecutor()
+        self._thread_lock = Lock()
         self._workers: WeakSet[Worker] = WeakSet()
 
         self._lock = TracingLocker(name="Supervisor", force=True)
@@ -102,8 +104,9 @@ class Supervisor:
 
     def register(self, worker: Worker, assoc: BaseClient) -> None:
         with suppress_and_log():
-            self._reviewer.register(assoc)
-            self._workers.add(worker)
+            self._reviewer.s_register(assoc)
+            with self._thread_lock:
+                self._workers.add(worker)
 
     async def notify_idle(self) -> None:
         await gather(*(worker.idle() for worker in self._workers))
@@ -175,7 +178,7 @@ class Worker(Interruptible, Generic[_O_co, _T_co]):
         self._ex = ex
         self._work_lock = TracingLocker(name=options.short_name, force=True)
         self._supervisor, self._options = supervisor, options
-        self._work_task: Optional[Task] = None
+        self._work_fut: Optional[CFuture] = None
         self._idle = Condition()
         self._interrupt_lock = Lock()
         self._supervisor.register(self, assoc=options)
@@ -197,7 +200,7 @@ class Worker(Interruptible, Generic[_O_co, _T_co]):
         now: float,
         acc: MutableSequence[Metric],
     ) -> Future:
-        prev = self._work_task
+        prev = self._work_fut
 
         async def cont() -> None:
             instance, items = uuid4(), 0
@@ -205,7 +208,7 @@ class Worker(Interruptible, Generic[_O_co, _T_co]):
 
             with timeit(f"CANCEL WORKER -- {self._options.short_name}"):
                 if prev:
-                    await cancel(prev)
+                    await cancel(wrap_future(prev))
 
             with suppress_and_log(), timeit(f"WORKER -- {self._options.short_name}"):
                 await self._supervisor._reviewer.s_begin(
@@ -232,7 +235,7 @@ class Worker(Interruptible, Generic[_O_co, _T_co]):
                     )
 
         self.interrupt()
-        self._work_task = task = create_task(cont())
-        f = run_coroutine_threadsafe(task, self._ex._loop)
+        f = run_coroutine_threadsafe(cont(), self._ex._loop)
+        self._work_fut = f
         fut = wrap_future(f)
         return fut

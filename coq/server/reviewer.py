@@ -1,4 +1,6 @@
+from asyncio import get_running_loop, run_coroutine_threadsafe, wrap_future
 from collections import Counter
+from concurrent.futures import Future
 from dataclasses import dataclass
 from itertools import chain
 from typing import Mapping
@@ -77,12 +79,24 @@ def _join(
 class Reviewer(PReviewer[ReviewCtx]):
     def __init__(self, options: MatchOptions, icons: Icons, db: IDB) -> None:
         self._options, self._icons, self._db = options, icons, db
+        self._loop = get_running_loop()
 
-    def register(self, assoc: BaseClient) -> None:
-        self._db.new_source(assoc.short_name)
+    def s_register(self, assoc: BaseClient) -> None:
+        f: Future = Future()
 
-    async def begin(self, context: Context) -> ReviewCtx:
-        inserted = await self._db.insertion_order(n_rows=100)
+        def cont() -> None:
+            try:
+                self._db.new_source(assoc.short_name)
+            except BaseException as e:
+                f.set_exception(e)
+            else:
+                f.set_result(None)
+
+        self._loop.call_soon_threadsafe(cont)
+        f.result()
+
+    def begin(self, context: Context) -> ReviewCtx:
+        inserted = self._db.insertion_order(n_rows=100)
         words = chain.from_iterable(
             coalesce(
                 self._options.unifying_chars,
@@ -101,15 +115,19 @@ class Reviewer(PReviewer[ReviewCtx]):
             inserted=inserted,
             is_lower=context.is_lower,
         )
-        await self._db.new_batch(ctx.batch.bytes)
+        self._db.new_batch(ctx.batch.bytes)
         return ctx
 
     async def s_begin(
         self, token: ReviewCtx, assoc: BaseClient, instance: UUID
     ) -> None:
-        await self._db.new_instance(
-            instance.bytes, source=assoc.short_name, batch_id=token.batch.bytes
-        )
+        async def cont() -> None:
+            self._db.new_instance(
+                instance.bytes, source=assoc.short_name, batch_id=token.batch.bytes
+            )
+
+        f = run_coroutine_threadsafe(cont(), loop=self._loop)
+        await wrap_future(f)
 
     def trans(self, token: ReviewCtx, instance: UUID, completion: Completion) -> Metric:
         new_completion = iconify(self._icons, completion=completion)
@@ -129,6 +147,10 @@ class Reviewer(PReviewer[ReviewCtx]):
     async def s_end(
         self, instance: UUID, interrupted: bool, elapsed: float, items: int
     ) -> None:
-        await self._db.new_stat(
-            instance.bytes, interrupted=interrupted, duration=elapsed, items=items
-        )
+        async def cont() -> None:
+            self._db.new_stat(
+                instance.bytes, interrupted=interrupted, duration=elapsed, items=items
+            )
+
+        f = run_coroutine_threadsafe(cont(), loop=self._loop)
+        await wrap_future(f)
