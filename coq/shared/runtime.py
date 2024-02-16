@@ -172,7 +172,7 @@ class Worker(Interruptible, Generic[_O_co, _T_co]):
     ) -> None:
         self._ex = ex
         self._work_lock = TracingLocker(name=options.short_name, force=True)
-        self._supervisor, self._options, self._misc = supervisor, options, misc
+        self._supervisor, self._options = supervisor, options
         self._work_task: Optional[Task] = None
         self._idle = Condition()
         self._interrupt_lock = Lock()

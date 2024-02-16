@@ -105,12 +105,12 @@ class Worker(BaseWorker[LSPClient, None]):
     async def _poll(self) -> None:
         with suppress_and_log(), timeit("LSP CACHE"):
             acc = {**self._local_cached.post}
-            await self._cache.set_cache(acc)
+            self._cache.set_cache(acc)
             await sleep(_CACHE_PERIOD)
 
             for client, (comps, _) in self._local_cached.pre.items():
                 for chunked in batched(comps, n=_CACHE_CHUNK):
-                    await self._cache.set_cache({client: chunked})
+                    self._cache.set_cache({client: chunked})
                     await sleep(_CACHE_PERIOD)
 
     async def _work(self, context: Context) -> AsyncIterator[Completion]:
@@ -131,7 +131,7 @@ class Worker(BaseWorker[LSPClient, None]):
             lsp_stream = self._request(context, cached_clients=cached_clients)
 
             async def db() -> Tuple[_Src, LSPcomp]:
-                items, length = await cached
+                items, length = cached
                 return _Src.from_db, LSPcomp(
                     client=None, local_cache=False, items=items, length=length
                 )

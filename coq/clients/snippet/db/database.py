@@ -38,7 +38,6 @@ class SDB(DB):
         self._conn = _init(db_dir)
 
     def clean(self, paths: AbstractSet[PurePath]) -> None:
-        # TODO: MUST HAPPEN
         with self._conn, closing(self._conn.cursor()) as cursor:
             cursor.executemany(
                 sql("delete", "source"),
@@ -46,7 +45,6 @@ class SDB(DB):
             )
 
     def mtimes(self) -> Mapping[PurePath, float]:
-        # TODO: MUST HAPPEN
         with self._conn, closing(self._conn.cursor()) as cursor:
             cursor.execute(sql("select", "sources"), ())
             return {
@@ -54,7 +52,6 @@ class SDB(DB):
             }
 
     def populate(self, path: PurePath, mtime: float, loaded: LoadedSnips) -> None:
-        # TODO: MUST HAPPEN
         with self._conn, closing(self._conn.cursor()) as cursor:
             filename, source_id = normcase(path), uuid4().bytes
             cursor.execute(sql("delete", "source"), {"filename": filename})

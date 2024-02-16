@@ -98,50 +98,54 @@ def _trans(client: TSClient, context: Context, payload: Payload) -> Completion:
     return cmp
 
 
-class Worker(BaseWorker[TSClient, TDB]):
+class Worker(BaseWorker[TSClient, None]):
     def __init__(
         self,
         ex: AsyncExecutor,
         supervisor: Supervisor,
         options: TSClient,
-        misc: TDB,
+        misc: None,
     ) -> None:
         self._lock = Lock()
+        self._db = TDB()
         super().__init__(ex, supervisor=supervisor, options=options, misc=misc)
         self._ex.run(self._poll())
 
     def interrupt(self) -> None:
         with self._interrupt_lock:
-            self._misc.interrupt()
+            self._db.interrupt()
 
     async def _poll(self) -> None:
         while True:
             with suppress_and_log():
                 if bufs := await _bufs():
-                    self._misc.vacuum(bufs)
+                    self._db.vacuum(bufs)
                 async with self._idle:
                     await self._idle.wait()
 
     async def populate(self) -> Optional[Tuple[bool, float]]:
-        if not self._lock.locked():
-            async with self._lock:
-                if payload := await async_request():
-                    keep_going = payload.elapsed <= self._options.slow_threshold
-                    self._misc.populate(
-                        payload.buf,
-                        lo=payload.lo,
-                        hi=payload.hi,
-                        filetype=payload.filetype,
-                        filename=payload.filename,
-                        nodes=payload.payloads,
-                    )
-                    return keep_going, payload.elapsed
+        async def cont() -> Optional[Tuple[bool, float]]:
+            if not self._lock.locked():
+                async with self._lock:
+                    if payload := await async_request():
+                        keep_going = payload.elapsed <= self._options.slow_threshold
+                        self._db.populate(
+                            payload.buf,
+                            lo=payload.lo,
+                            hi=payload.hi,
+                            filetype=payload.filetype,
+                            filename=payload.filename,
+                            nodes=payload.payloads,
+                        )
+                        return keep_going, payload.elapsed
 
-        return None
+            return None
+
+        return await self._ex.submit(cont())
 
     async def _work(self, context: Context) -> AsyncIterator[Completion]:
         async with self._work_lock:
-            payloads = self._misc.select(
+            payloads = self._db.select(
                 self._supervisor.match,
                 filetype=context.filetype,
                 word=context.words,

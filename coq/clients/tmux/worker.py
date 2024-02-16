@@ -1,7 +1,7 @@
 from asyncio import Lock
 from os import linesep
 from pathlib import Path
-from typing import AsyncIterator, Iterator, Tuple
+from typing import AsyncIterator, Iterator
 
 from pynvim_pp.logging import suppress_and_log
 
@@ -25,22 +25,23 @@ def _doc(client: TmuxClient, word: TmuxWord) -> Doc:
     return Doc(text=linesep.join(cont()), syntax="")
 
 
-class Worker(BaseWorker[TmuxClient, TMDB]):
+class Worker(BaseWorker[TmuxClient, Path]):
     def __init__(
-        self,
-        ex: AsyncExecutor,
-        supervisor: Supervisor,
-        options: TmuxClient,
-        misc: Tuple[Path, TMDB],
+        self, ex: AsyncExecutor, supervisor: Supervisor, options: TmuxClient, misc: Path
     ) -> None:
-        self._exec, db = misc
+        self._exec = misc
         self._lock = Lock()
-        super().__init__(ex, supervisor=supervisor, options=options, misc=db)
+        self._db = TMDB(
+            supervisor.limits.tokenization_limit,
+            unifying_chars=supervisor.match.unifying_chars,
+            include_syms=options.match_syms,
+        )
+        super().__init__(ex, supervisor=supervisor, options=options, misc=misc)
         self._ex.run(self._poll())
 
     def interrupt(self) -> None:
         with self._interrupt_lock:
-            self._misc.interrupt()
+            self._db.interrupt()
 
     async def _poll(self) -> None:
         while True:
@@ -57,11 +58,11 @@ class Worker(BaseWorker[TmuxClient, TMDB]):
                 current, panes = await snapshot(
                     self._exec, all_sessions=self._options.all_sessions
                 )
-                self._misc.periodical(current, panes=panes)
+                self._db.periodical(current, panes=panes)
 
     async def _work(self, context: Context) -> AsyncIterator[Completion]:
         async with self._work_lock:
-            words = self._misc.select(
+            words = self._db.select(
                 self._supervisor.match,
                 word=context.words,
                 sym=(context.syms if self._options.match_syms else ""),

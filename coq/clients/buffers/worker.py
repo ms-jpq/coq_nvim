@@ -70,20 +70,25 @@ def _doc(client: BuffersClient, context: Context, word: BufferWord) -> Doc:
     return Doc(text=linesep.join(cont()), syntax="")
 
 
-class Worker(BaseWorker[BuffersClient, BDB]):
+class Worker(BaseWorker[BuffersClient, None]):
     def __init__(
         self,
         ex: AsyncExecutor,
         supervisor: Supervisor,
         options: BuffersClient,
-        misc: BDB,
+        misc: None,
     ) -> None:
+        self._db = BDB(
+            supervisor.limits.tokenization_limit,
+            unifying_chars=supervisor.match.unifying_chars,
+            include_syms=options.match_syms,
+        )
         super().__init__(ex, supervisor=supervisor, options=options, misc=misc)
         self._ex.run(self._poll())
 
     def interrupt(self) -> None:
         with self._interrupt_lock:
-            self._misc.interrupt()
+            self._db.interrupt()
 
     async def _poll(self) -> None:
         while True:
@@ -94,8 +99,8 @@ class Worker(BaseWorker[BuffersClient, BDB]):
                         int(buf.number): line_count
                         for buf, line_count in info.buffers.items()
                     }
-                    self._misc.vacuum(buf_line_counts)
-                    await self.set_lines(
+                    self._db.vacuum(buf_line_counts)
+                    self._db.set_lines(
                         info.buf_id,
                         filetype=info.filetype,
                         filename=info.filename,
@@ -110,7 +115,7 @@ class Worker(BaseWorker[BuffersClient, BDB]):
     async def buf_update(self, buf_id: int, filetype: str, filename: str) -> None:
         async def cont() -> None:
             with self._interrupt_lock:
-                self._misc.buf_update(buf_id, filetype=filetype, filename=filename)
+                self._db.buf_update(buf_id, filetype=filetype, filename=filename)
 
         await self._ex.submit(cont())
 
@@ -123,14 +128,18 @@ class Worker(BaseWorker[BuffersClient, BDB]):
         hi: int,
         lines: Sequence[str],
     ) -> None:
-        self._misc.set_lines(
-            buf_id,
-            filetype=filetype,
-            filename=filename,
-            lo=lo,
-            hi=hi,
-            lines=lines,
-        )
+        async def cont() -> None:
+            with self._interrupt_lock:
+                self._db.set_lines(
+                    buf_id,
+                    filetype=filetype,
+                    filename=filename,
+                    lo=lo,
+                    hi=hi,
+                    lines=lines,
+                )
+
+        await self._ex.submit(cont())
 
     async def _work(self, context: Context) -> AsyncIterator[Completion]:
         async with self._work_lock:
@@ -147,7 +156,7 @@ class Worker(BaseWorker[BuffersClient, BDB]):
                 if (change := context.change)
                 else None
             )
-            words = self._misc.words(
+            words = self._db.words(
                 self._supervisor.match,
                 filetype=filetype,
                 word=context.words,

@@ -129,7 +129,7 @@ async def _on_yank(stack: Stack, regsize: int, operator: str, regname: str) -> N
     if operator == "y":
         for worker in stack.workers:
             if isinstance(worker, RegWorker):
-                worker.post_yank(regname, regsize=regsize)
+                await worker.post_yank(regname, regsize=regsize)
 
 
 _LUA = f"""

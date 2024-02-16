@@ -89,7 +89,7 @@ class CacheWorker(Interruptible):
     def interrupt(self) -> None:
         self._db.interrupt()
 
-    async def set_cache(
+    def set_cache(
         self,
         items: Mapping[Optional[str], Iterable[Completion]],
     ) -> None:
@@ -119,7 +119,7 @@ class CacheWorker(Interruptible):
 
     def apply_cache(
         self, context: Context
-    ) -> Tuple[bool, AbstractSet[str], Awaitable[Tuple[Iterator[Completion], int]]]:
+    ) -> Tuple[bool, AbstractSet[str], Tuple[Iterator[Completion], int]]:
         cache_ctx = self._cache_ctx
         row, col = context.position
         self._cache_ctx = _CacheCtx(
@@ -140,7 +140,7 @@ class CacheWorker(Interruptible):
             self._clients.clear()
             self._cached.clear()
 
-        async def get() -> Tuple[Iterator[Completion], int]:
+        def get() -> Tuple[Iterator[Completion], int]:
             with timeit("CACHE -- GET"):
                 keys, length = self._db.select(
                     not use_cache,

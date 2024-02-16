@@ -130,28 +130,29 @@ def _doc(client: TagsClient, context: Context, tag: Tag) -> Doc:
     return doc
 
 
-class Worker(BaseWorker[TagsClient, CTDB]):
+class Worker(BaseWorker[TagsClient, Tuple[Path, Path, PurePath]]):
     def __init__(
         self,
         ex: AsyncExecutor,
         supervisor: Supervisor,
         options: TagsClient,
-        misc: Tuple[Path, CTDB],
+        misc: Tuple[Path, Path, PurePath],
     ) -> None:
-        self._exec, db = misc
-        super().__init__(ex, supervisor=supervisor, options=options, misc=db)
+        self._exec, vars_dir, cwd = misc
+        self._db = CTDB(vars_dir, cwd=cwd)
+        super().__init__(ex, supervisor=supervisor, options=options, misc=misc)
         self._ex.run(self._poll())
 
     def interrupt(self) -> None:
         with self._interrupt_lock:
-            self._misc.interrupt()
+            self._db.interrupt()
 
     async def _poll(self) -> None:
         while True:
             with suppress_and_log():
                 with timeit("IDLE :: TAGS"):
                     buf_names = await _ls()
-                    existing = self._misc.paths()
+                    existing = self._db.paths()
                     paths = buf_names | existing.keys()
                     mtimes = await _mtimes(paths)
                     query_paths = tuple(
@@ -162,18 +163,21 @@ class Worker(BaseWorker[TagsClient, CTDB]):
                     raw = await run(self._exec, *query_paths) if query_paths else ""
                     new = parse(mtimes, raw=raw)
                     dead = existing.keys() - mtimes.keys()
-                    self._misc.reconciliate(dead, new=new)
+                    self._db.reconciliate(dead, new=new)
 
                 async with self._idle:
                     await self._idle.wait()
 
     async def swap(self, cwd: PurePath) -> None:
-        self._misc.swap(cwd)
+        async def cont() -> None:
+            self._db.swap(cwd)
+
+        await self._ex.submit(cont())
 
     async def _work(self, context: Context) -> AsyncIterator[Completion]:
         async with self._work_lock:
             row, _ = context.position
-            tags = self._misc.select(
+            tags = self._db.select(
                 self._supervisor.match,
                 filename=context.filename,
                 line_num=row,
