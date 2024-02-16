@@ -4,6 +4,7 @@ from asyncio import (
     gather,
     get_running_loop,
     run,
+    run_coroutine_threadsafe,
     wrap_future,
 )
 from concurrent.futures import Future, InvalidStateError
@@ -12,7 +13,7 @@ from functools import lru_cache
 from shutil import which
 from subprocess import CalledProcessError
 from threading import Thread
-from typing import Any, Awaitable, Callable, Coroutine, Sequence, TypeVar, cast
+from typing import Any, Awaitable, Callable, Coroutine, Sequence, TypeVar
 
 from std2.asyncio.subprocess import call
 
@@ -37,7 +38,7 @@ class AsyncExecutor:
     def run(self, main: Awaitable[None]) -> None:
         self._fut.set_result(main)
 
-    def _submit(self, f: Callable[..., Any], *args: Any, **kwargs: Any) -> Future:
+    def fsubmit(self, f: Callable[..., _T], *args: Any, **kwargs: Any) -> Future:
         fut: Future = Future()
 
         def cont() -> None:
@@ -54,13 +55,9 @@ class AsyncExecutor:
         self._loop.call_soon_threadsafe(cont)
         return fut
 
-    def ssubmit(self, f: Callable[..., _T], *args: Any, **kwargs: Any) -> _T:
-        fut = self._submit(f, *args, **kwargs)
-        result = cast(_T, fut.result())
-        return result
-
-    def submit(self, f: Callable[..., _T], *args: Any, **kwargs: Any) -> Awaitable[_T]:
-        return wrap_future(self._submit(f, *args, **kwargs))
+    def submit(self, co: Awaitable[_T]) -> Awaitable[_T]:
+        f = run_coroutine_threadsafe(co, loop=self._loop)
+        return wrap_future(f)
 
 
 @lru_cache(maxsize=None)

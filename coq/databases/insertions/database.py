@@ -1,3 +1,4 @@
+from asyncio import wrap_future
 from contextlib import closing
 from dataclasses import dataclass
 from sqlite3 import Connection, OperationalError
@@ -38,14 +39,14 @@ def _init() -> Connection:
 class IDB(Interruptible):
     def __init__(self) -> None:
         self._ex = AsyncExecutor()
-        self._conn: Connection = self._ex.ssubmit(_init)
+        self._conn: Connection = self._ex.fsubmit(_init).result()
 
     def new_source(self, source: str) -> None:
         def c1() -> None:
             with self._conn, closing(self._conn.cursor()) as cursor:
                 cursor.execute(sql("insert", "source"), {"name": source})
 
-        self._ex.ssubmit(c1)
+        self._ex.fsubmit(c1)
 
     async def new_batch(self, batch_id: bytes) -> None:
         def cont() -> None:
@@ -53,7 +54,7 @@ class IDB(Interruptible):
                 cursor.execute(sql("insert", "batch"), {"rowid": batch_id})
 
         async with self._lock:
-            await self._ex.submit(cont)
+            await wrap_future(self._ex.fsubmit(cont))
 
     async def new_instance(self, instance: bytes, source: str, batch_id: bytes) -> None:
         def cont(_: None = None) -> None:
@@ -64,7 +65,7 @@ class IDB(Interruptible):
                 )
 
         async with self._lock:
-            await self._ex.submit(cont)
+            await wrap_future(self._ex.fsubmit(cont))
 
     async def new_stat(
         self, instance: bytes, interrupted: bool, duration: float, items: int
@@ -82,7 +83,7 @@ class IDB(Interruptible):
                 )
 
         async with self._lock:
-            await self._ex.submit(cont)
+            await wrap_future(self._ex.fsubmit(cont))
 
     async def insertion_order(self, n_rows: int) -> Mapping[str, int]:
         def cont() -> Mapping[str, int]:
@@ -97,7 +98,7 @@ class IDB(Interruptible):
                 return {}
 
         async with self._interruption():
-            return await self._ex.submit(cont)
+            return await wrap_future(self._ex.fsubmit(cont))
 
     async def inserted(self, instance_id: bytes, sort_by: str) -> None:
         def cont() -> None:
@@ -108,7 +109,7 @@ class IDB(Interruptible):
                 )
 
         async with self._lock:
-            self._ex.submit(cont)
+            await wrap_future(self._ex.fsubmit(cont))
 
     async def stats(self) -> Iterator[Statistics]:
         def cont() -> Iterator[Statistics]:
@@ -136,4 +137,4 @@ class IDB(Interruptible):
             return c1()
 
         async with self._lock:
-            return await self._ex.submit(cont)
+            return await wrap_future(self._ex.fsubmit(cont))

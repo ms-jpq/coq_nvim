@@ -157,9 +157,10 @@ class Worker(Generic[_O_co, _T_co]):
         cls, supervisor: Supervisor, options: _O_co, misc: _T_co
     ) -> Worker[_O_co, _T_co]:
         ex = AsyncExecutor()
-        self = ex.ssubmit(
+        fut = ex.fsubmit(
             lambda: cls(ex, supervisor=supervisor, options=options, misc=misc)
         )
+        self: Worker[_O_co, _T_co] = fut.result()
         return self
 
     def __init__(
@@ -185,9 +186,10 @@ class Worker(Generic[_O_co, _T_co]):
 
     async def idle(self) -> None:
         async def cont() -> None:
-            self._idle.notify_all()
+            async with self._idle:
+                self._idle.notify_all()
 
-        await self._ex.submit(cont)
+        await self._ex.submit(cont())
 
     def supervised(
         self,
