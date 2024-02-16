@@ -8,8 +8,7 @@ from std2.itertools import deiter
 from ...shared.types import Context
 
 
-class ParseError(Exception):
-    ...
+class ParseError(Exception): ...
 
 
 @dataclass(frozen=True)
@@ -60,13 +59,11 @@ class Begin:
 
 
 @dataclass(frozen=True)
-class DummyBegin:
-    ...
+class DummyBegin: ...
 
 
 @dataclass(frozen=True)
-class End:
-    ...
+class End: ...
 
 
 Token = Union[Unparsed, Begin, DummyBegin, End, str]

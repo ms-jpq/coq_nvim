@@ -166,8 +166,7 @@ class ExternLSP:
 
 
 @dataclass(frozen=True)
-class ExternLUA(ExternLSP):
-    ...
+class ExternLUA(ExternLSP): ...
 
 
 @dataclass(frozen=True)
@@ -197,5 +196,4 @@ class Completion:
 
 class Interruptible(Protocol):
     @abstractmethod
-    def interrupt(self) -> None:
-        ...
+    def interrupt(self) -> None: ...
