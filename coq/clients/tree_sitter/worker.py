@@ -1,4 +1,4 @@
-from asyncio import Lock
+from asyncio import Lock, gather
 from os import linesep
 from pathlib import PurePath
 from typing import AsyncIterator, Iterator, Mapping, Optional, Tuple
@@ -118,30 +118,32 @@ class Worker(BaseWorker[TSClient, None]):
     async def _poll(self) -> None:
         while True:
             with suppress_and_log():
-                if bufs := await _bufs():
+                await self._populate()
+                bufs, _ = await gather(_bufs(), self._populate())
+                if bufs:
                     self._db.vacuum(bufs)
                 async with self._idle:
                     await self._idle.wait()
 
+    async def _populate(self) -> Optional[Tuple[bool, float]]:
+        if not self._lock.locked():
+            async with self._lock:
+                if payload := await async_request():
+                    keep_going = payload.elapsed <= self._options.slow_threshold
+                    self._db.populate(
+                        payload.buf,
+                        lo=payload.lo,
+                        hi=payload.hi,
+                        filetype=payload.filetype,
+                        filename=payload.filename,
+                        nodes=payload.payloads,
+                    )
+                    return keep_going, payload.elapsed
+
+        return None
+
     async def populate(self) -> Optional[Tuple[bool, float]]:
-        async def cont() -> Optional[Tuple[bool, float]]:
-            if not self._lock.locked():
-                async with self._lock:
-                    if payload := await async_request():
-                        keep_going = payload.elapsed <= self._options.slow_threshold
-                        self._db.populate(
-                            payload.buf,
-                            lo=payload.lo,
-                            hi=payload.hi,
-                            filetype=payload.filetype,
-                            filename=payload.filename,
-                            nodes=payload.payloads,
-                        )
-                        return keep_going, payload.elapsed
-
-            return None
-
-        return await self._ex.submit(cont())
+        return await self._ex.submit(self._populate())
 
     async def _work(self, context: Context) -> AsyncIterator[Completion]:
         async with self._work_lock:
