@@ -129,15 +129,14 @@ class Worker(BaseWorker[BuffersClient, None]):
         lines: Sequence[str],
     ) -> None:
         async def cont() -> None:
-            with self._interrupt_lock:
-                self._db.set_lines(
-                    buf_id,
-                    filetype=filetype,
-                    filename=filename,
-                    lo=lo,
-                    hi=hi,
-                    lines=lines,
-                )
+            self._db.set_lines(
+                buf_id,
+                filetype=filetype,
+                filename=filename,
+                lo=lo,
+                hi=hi,
+                lines=lines,
+            )
 
         await self._ex.submit(cont())
 
