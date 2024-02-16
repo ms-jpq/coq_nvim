@@ -6,11 +6,12 @@ from typing import (
     Literal,
     Optional,
     Sequence,
+    Tuple,
     TypedDict,
     Union,
 )
 
-from ..shared.types import Completion
+from ..shared.types import Completion, Cursors, NvimCursor, WTF8Cursor
 
 # https://microsoft.github.io/language-server-protocol/specification
 
@@ -50,7 +51,8 @@ class TextEdit(_TextEdit):
 
 
 @dataclass(frozen=True)
-class InsertReplaceEdit(_TextEdit, _InsertReplaceRange): ...
+class InsertReplaceEdit(_TextEdit, _InsertReplaceRange):
+    ...
 
 
 _CompletionItemKind = int

@@ -41,11 +41,9 @@ from .types import (
     TextEdit,
 )
 
-_FALSY = {None, False, 0, "", b""}
-
 
 def _falsy(thing: Any) -> bool:
-    return thing in _FALSY
+    return thing is None or thing == False or thing == 0 or thing == "" or thing == b""
 
 
 _defaults_parser = new_decoder[Optional[ItemDefaults]](
