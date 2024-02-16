@@ -1,21 +1,14 @@
 from dataclasses import dataclass
-from pathlib import Path
 from typing import Any, Iterable, MutableSequence, Tuple
 from uuid import UUID
 
-from pynvim_pp.lib import decode
 from pynvim_pp.nvim import Nvim
 from pynvim_pp.types import NoneType
 from std2.pickle.encoder import new_encoder
 
-from ..registry import NAMESPACE, atomic
+from ..registry import NAMESPACE
 from ..shared.runtime import Metric
 from .rt_types import Stack
-
-_LUA = decode(
-    (Path(__file__).resolve(strict=True).parent / "completion.lua").read_bytes()
-)
-atomic.exec_lua(_LUA, ())
 
 
 @dataclass(frozen=True)

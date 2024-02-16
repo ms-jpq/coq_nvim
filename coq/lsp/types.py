@@ -6,12 +6,11 @@ from typing import (
     Literal,
     Optional,
     Sequence,
-    Tuple,
     TypedDict,
     Union,
 )
 
-from ..shared.types import Completion, Cursors, NvimCursor, WTF8Cursor
+from ..shared.types import Completion
 
 # https://microsoft.github.io/language-server-protocol/specification
 

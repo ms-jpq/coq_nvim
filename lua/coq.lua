@@ -188,6 +188,10 @@ if settings.auto_start then
   coq.Now(unpack(args))
 end
 
+require("coq.lsp-request")
+require("coq.ts-request")
+require("coq.completion")
+
 return setmetatable(
   coq,
   {

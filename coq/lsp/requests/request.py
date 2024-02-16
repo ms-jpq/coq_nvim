@@ -9,7 +9,6 @@ from asyncio import (
 from dataclasses import dataclass, replace
 from functools import lru_cache
 from itertools import count
-from pathlib import Path
 from threading import Lock
 from typing import (
     AbstractSet,
@@ -24,13 +23,12 @@ from typing import (
     Tuple,
 )
 
-from pynvim_pp.lib import decode
 from pynvim_pp.logging import log
 from pynvim_pp.nvim import Nvim
 from pynvim_pp.types import NoneType
 from std2.pickle.decoder import new_decoder
 
-from ...registry import NAMESPACE, atomic, rpc
+from ...registry import NAMESPACE, rpc
 from ...server.rt_types import Stack
 from ...shared.timeit import timeit
 from ...shared.types import UTF8, UTF16, UTF32, Encoding
@@ -61,9 +59,6 @@ class _Payload:
     done: bool
     reply: Any
 
-
-_LUA = decode((Path(__file__).resolve(strict=True).parent / "lsp.lua").read_bytes())
-atomic.exec_lua(_LUA, ())
 
 _DECODER = new_decoder[_Payload](_Payload)
 _ENCODING_MAP: Mapping[Optional[str], Encoding] = {

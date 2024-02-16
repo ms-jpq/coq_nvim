@@ -2,16 +2,15 @@ from asyncio import Condition
 from dataclasses import dataclass
 from functools import lru_cache
 from itertools import count
-from pathlib import Path
 from string import capwords
 from typing import Generic, Iterable, Iterator, Optional, Sequence, TypeVar
 
-from pynvim_pp.lib import decode, recode
+from pynvim_pp.lib import recode
 from pynvim_pp.nvim import Nvim
 from pynvim_pp.types import NoneType
 from std2.cell import RefCell
 
-from ..registry import NAMESPACE, atomic, rpc
+from ..registry import NAMESPACE, rpc
 from ..server.rt_types import Stack
 from ..shared.timeit import timeit
 from .types import Payload, RawPayload, SimplePayload, SimpleRawPayload
@@ -36,9 +35,6 @@ class _Session:
     done: bool
     payload: _Payload
 
-
-_LUA = decode((Path(__file__).resolve(strict=True).parent / "request.lua").read_bytes())
-atomic.exec_lua(_LUA, ())
 
 _UIDS = count()
 _NIL_P = _Payload[RawPayload](
