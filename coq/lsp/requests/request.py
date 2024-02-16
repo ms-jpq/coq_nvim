@@ -115,7 +115,9 @@ async def _lsp_notify(stack: Stack, rpayload: _Payload) -> None:
     origin, cond = _conds(payload.name)
 
     async def cont() -> None:
-        state = _STATE.get(payload.name)
+        with _LOCK:
+            state = _STATE.get(payload.name)
+
         if not state or payload.uid >= state.uid:
             encoding = (payload.offset_encoding or "").casefold().replace("-", "")
             offset_encoding = _ENCODING_MAP.get(encoding, UTF16)
@@ -128,7 +130,9 @@ async def _lsp_notify(stack: Stack, rpayload: _Payload) -> None:
                 *(state.acc if state and payload.uid == state.uid else ()),
                 (client, payload.multipart),
             ]
-            _STATE[payload.name] = _Session(uid=payload.uid, done=payload.done, acc=acc)
+            session = _Session(uid=payload.uid, done=payload.done, acc=acc)
+            with _LOCK:
+                _STATE[payload.name] = session
 
         async with cond:
             cond.notify_all()
@@ -146,7 +150,8 @@ async def async_request(
     with timeit(f"LSP :: {name}"):
         (_, cond), uid = _conds(name), next(_uids(name))
 
-        _STATE[name] = _Session(uid=uid, done=False, acc=[])
+        with _LOCK:
+            _STATE[name] = _Session(uid=uid, done=False, acc=[])
 
         async with cond:
             cond.notify_all()
@@ -158,7 +163,10 @@ async def async_request(
         )
 
         while True:
-            if state := _STATE.get(name):
+            with _LOCK:
+                state = _STATE.get(name)
+
+            if state:
                 if state.uid == uid:
                     while state.acc:
                         client, multipart = state.acc.pop()
@@ -176,7 +184,8 @@ async def async_request(
                         else:
                             yield client
                     if state.done:
-                        _STATE.pop(name)
+                        with _LOCK:
+                            _STATE.pop(name)
                         break
                 elif state.uid > uid:
                     break
