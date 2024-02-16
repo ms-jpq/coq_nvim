@@ -37,7 +37,7 @@ class AsyncExecutor:
         self._th.start()
         self._loop: AbstractEventLoop = f.result()
 
-    def run(self, main: Awaitable[None]) -> None:
+    def run(self, main: Awaitable[Any]) -> None:
         self._fut.set_result(main)
 
     def fsubmit(self, f: Callable[..., Any], *args: Any, **kwargs: Any) -> Future:

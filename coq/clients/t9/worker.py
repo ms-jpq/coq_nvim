@@ -4,7 +4,7 @@ from asyncio import (
     LimitOverrunError,
     StreamReader,
     create_subprocess_exec,
-    create_task,
+    gather,
     shield,
     sleep,
 )
@@ -192,8 +192,7 @@ class Worker(BaseWorker[T9Client, None]):
         self._count = count()
         self._t9_locked = False
         super().__init__(ex, supervisor=supervisor, options=options, misc=misc)
-        create_task(self._install())
-        create_task(self._poll())
+        self._ex.run(gather(self._install(), self._poll()))
 
     def interrupt(self) -> None:
         pass
