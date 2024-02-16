@@ -2,6 +2,7 @@ from contextlib import closing, suppress
 from sqlite3 import Connection, OperationalError
 from typing import Iterable, Iterator, Mapping, Tuple
 
+from ....databases.types import DB
 from ....shared.settings import MatchOptions
 from ....shared.sql import BIGGEST_INT, init_db, like_esc
 from .sql import sql
@@ -15,7 +16,7 @@ def _init() -> Connection:
     return conn
 
 
-class Database:
+class Database(DB):
     def __init__(self) -> None:
         self._conn = _init()
 

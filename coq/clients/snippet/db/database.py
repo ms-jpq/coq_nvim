@@ -5,6 +5,7 @@ from sqlite3 import Connection, OperationalError
 from typing import AbstractSet, Iterator, Mapping, TypedDict, cast
 from uuid import uuid4
 
+from ....databases.types import DB
 from ....shared.settings import MatchOptions
 from ....shared.sql import BIGGEST_INT, init_db, like_esc
 from ....snippets.types import LoadedSnips
@@ -31,7 +32,7 @@ def _init(db_dir: Path) -> Connection:
     return conn
 
 
-class SDB:
+class SDB(DB):
     def __init__(self, vars_dir: Path) -> None:
         db_dir = vars_dir / "clients" / "snippets"
         self._conn = _init(db_dir)

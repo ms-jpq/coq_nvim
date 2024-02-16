@@ -5,6 +5,8 @@ from functools import cached_property
 from sqlite3 import Connection
 from typing import AsyncIterator, cast
 
+from ..shared.types import Interruptible as IP
+
 
 class Interruptible:
     _conn: Connection = cast(Connection, None)
@@ -25,3 +27,10 @@ class Interruptible:
         except CancelledError:
             await self._interrupt()
             raise
+
+
+class DB(IP):
+    _conn: Connection = cast(Connection, None)
+
+    def interrupt(self) -> None:
+        self._conn.interrupt()

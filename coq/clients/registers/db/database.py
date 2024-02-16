@@ -6,6 +6,7 @@ from typing import AbstractSet, Any, Iterator, Mapping
 from ....consts import REGISTER_DB
 from ....shared.parse import coalesce, tokenize
 from ....shared.settings import MatchOptions
+from ....databases.types import DB
 from ....shared.sql import BIGGEST_INT, init_db, like_esc
 from .sql import sql
 
@@ -26,7 +27,7 @@ def _init() -> Connection:
     return conn
 
 
-class RDB:
+class RDB(DB):
     def __init__(
         self,
         tokenization_limit: int,

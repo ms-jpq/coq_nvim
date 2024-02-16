@@ -82,7 +82,8 @@ class Worker(BaseWorker[BuffersClient, BDB]):
         self._ex.run(self._poll())
 
     def interrupt(self) -> None:
-        raise NotImplementedError()
+        with self._interrupt_lock:
+            self._misc.interrupt()
 
     async def _poll(self) -> None:
         while True:
@@ -107,7 +108,11 @@ class Worker(BaseWorker[BuffersClient, BDB]):
                     await self._idle.wait()
 
     async def buf_update(self, buf_id: int, filetype: str, filename: str) -> None:
-        self._misc.buf_update(buf_id, filetype=filetype, filename=filename)
+        async def cont() -> None:
+            with self._interrupt_lock:
+                self._misc.buf_update(buf_id, filetype=filetype, filename=filename)
+
+        await self._ex.submit(cont())
 
     async def set_lines(
         self,

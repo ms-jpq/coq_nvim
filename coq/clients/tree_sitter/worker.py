@@ -111,8 +111,8 @@ class Worker(BaseWorker[TSClient, TDB]):
         self._ex.run(self._poll())
 
     def interrupt(self) -> None:
-        with self._thread_lock:
-            self._misc.conn.interrupt()
+        with self._interrupt_lock:
+            self._misc.interrupt()
 
     async def _poll(self) -> None:
         while True:

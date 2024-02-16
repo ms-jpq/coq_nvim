@@ -87,7 +87,8 @@ class Worker(BaseWorker[LSPClient, None]):
         self._max_results = self._supervisor.match.max_results
 
     def interrupt(self) -> None:
-        raise NotImplementedError()
+        with self._interrupt_lock:
+            self._cache.interrupt()
 
     def _request(
         self, context: Context, cached_clients: AbstractSet[str]

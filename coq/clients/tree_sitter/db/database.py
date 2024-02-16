@@ -3,6 +3,7 @@ from sqlite3 import Connection, Cursor, OperationalError
 from typing import Iterable, Iterator, Mapping
 
 from ....consts import TREESITTER_DB
+from ....databases.types import DB
 from ....shared.settings import MatchOptions
 from ....shared.sql import BIGGEST_INT, init_db, like_esc
 from ....treesitter.types import Payload, SimplePayload
@@ -30,13 +31,13 @@ def _ensure_buffer(cursor: Cursor, buf_id: int, filetype: str, filename: str) ->
         cursor.execute(sql("insert", "buffer"), row)
 
 
-class TDB:
+class TDB(DB):
     def __init__(self) -> None:
-        self.conn = _init()
+        self._conn = _init()
 
     def vacuum(self, live_bufs: Mapping[int, int]) -> None:
         with suppress(OperationalError):
-            with self.conn, closing(self.conn.cursor()) as cursor:
+            with self._conn, closing(self._conn.cursor()) as cursor:
                 cursor.execute(sql("select", "buffers"), ())
                 existing = {row["rowid"] for row in cursor.fetchall()}
                 dead = existing - live_bufs.keys()
@@ -78,7 +79,7 @@ class TDB:
                 }
 
         with suppress(OperationalError):
-            with self.conn, closing(self.conn.cursor()) as cursor:
+            with self._conn, closing(self._conn.cursor()) as cursor:
                 _ensure_buffer(
                     cursor, buf_id=buf_id, filetype=filetype, filename=filename
                 )
@@ -97,7 +98,7 @@ class TDB:
         limitless: int,
     ) -> Iterator[Payload]:
         with suppress(OperationalError):
-            with self.conn, closing(self.conn.cursor()) as cursor:
+            with self._conn, closing(self._conn.cursor()) as cursor:
                 cursor.execute(
                     sql("select", "words"),
                     {

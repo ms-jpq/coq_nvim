@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from abc import abstractmethod
 from asyncio import (
-    CancelledError,
     Condition,
     Future,
     Task,
@@ -13,6 +12,7 @@ from asyncio import (
     wait,
     wrap_future,
 )
+from asyncio.exceptions import CancelledError
 from collections import deque
 from dataclasses import dataclass
 from pathlib import Path
@@ -47,7 +47,7 @@ from .settings import (
     Weights,
 )
 from .timeit import TracingLocker, timeit
-from .types import Completion, Context
+from .types import Completion, Context, Interruptible
 
 _T = TypeVar("_T")
 _T_co = TypeVar("_T_co", contravariant=True)
@@ -151,7 +151,7 @@ class Supervisor:
         return task
 
 
-class Worker(Generic[_O_co, _T_co]):
+class Worker(Interruptible, Generic[_O_co, _T_co]):
     @classmethod
     def init(
         cls, supervisor: Supervisor, options: _O_co, misc: _T_co
@@ -175,11 +175,8 @@ class Worker(Generic[_O_co, _T_co]):
         self._supervisor, self._options, self._misc = supervisor, options, misc
         self._work_task: Optional[Task] = None
         self._idle = Condition()
-        self._thread_lock = Lock()
+        self._interrupt_lock = Lock()
         self._supervisor.register(self, assoc=options)
-
-    @abstractmethod
-    def interrupt(self) -> None: ...
 
     @abstractmethod
     def _work(self, context: Context) -> AsyncIterator[Completion]: ...
@@ -205,7 +202,6 @@ class Worker(Generic[_O_co, _T_co]):
             interrupted = False
 
             with timeit(f"CANCEL WORKER -- {self._options.short_name}"):
-                self.interrupt()
                 if prev:
                     await cancel(prev)
 
@@ -233,6 +229,7 @@ class Worker(Generic[_O_co, _T_co]):
                         items=items,
                     )
 
+        self.interrupt()
         self._work_task = task = create_task(cont())
         f = run_coroutine_threadsafe(task, self._ex._loop)
         fut = wrap_future(f)

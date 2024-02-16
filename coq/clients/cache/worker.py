@@ -19,7 +19,7 @@ from ...shared.repeat import sanitize
 from ...shared.runtime import Supervisor
 from ...shared.settings import MatchOptions
 from ...shared.timeit import timeit
-from ...shared.types import BaseRangeEdit, Completion, Context, Cursors
+from ...shared.types import BaseRangeEdit, Completion, Context, Cursors, Interruptible
 from .db.database import Database
 
 
@@ -71,7 +71,7 @@ def sanitize_cached(
         return None
 
 
-class CacheWorker:
+class CacheWorker(Interruptible):
     def __init__(self, supervisor: Supervisor) -> None:
         self._supervisor = supervisor
         self._db = Database()
@@ -85,6 +85,9 @@ class CacheWorker:
         )
         self._clients: MutableSet[str] = set()
         self._cached: MutableMapping[bytes, Completion] = {}
+
+    def interrupt(self) -> None:
+        self._db.interrupt()
 
     async def set_cache(
         self,

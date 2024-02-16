@@ -7,6 +7,7 @@ from typing import AbstractSet, Iterator, Mapping, cast
 
 from pynvim_pp.lib import encode
 
+from ....databases.types import DB
 from ....shared.settings import MatchOptions
 from ....shared.sql import BIGGEST_INT, init_db, like_esc
 from ....tags.types import Tag, Tags
@@ -40,7 +41,7 @@ def _init(db_dir: Path, cwd: PurePath) -> Connection:
     return conn
 
 
-class CTDB:
+class CTDB(DB):
     def __init__(self, vars_dir: Path, cwd: PurePath) -> None:
         self._vars_dir = vars_dir / "clients" / "tags"
         self._conn = _init(self._vars_dir, cwd=cwd)

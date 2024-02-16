@@ -10,6 +10,7 @@ from uuid import uuid4
 from pynvim_pp.lib import recode
 
 from ....consts import BUFFER_DB, DEBUG
+from ....databases.types import DB
 from ....shared.parse import coalesce
 from ....shared.settings import MatchOptions
 from ....shared.sql import BIGGEST_INT, init_db, like_esc
@@ -121,7 +122,7 @@ def _init() -> Connection:
     return conn
 
 
-class BDB:
+class BDB(DB):
     def __init__(
         self,
         tokenization_limit: int,
@@ -153,7 +154,6 @@ class BDB:
                 cursor.execute("PRAGMA optimize", ())
 
     def buf_update(self, buf_id: int, filetype: str, filename: str) -> None:
-        # TODO: MUST HAPPEN
         with self._conn, closing(self._conn.cursor()) as cursor:
             _ensure_buffer(
                 cursor,

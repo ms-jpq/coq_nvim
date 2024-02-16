@@ -4,6 +4,7 @@ from sqlite3 import Connection, OperationalError
 from typing import AbstractSet, Iterator, Mapping, MutableMapping, Optional
 
 from ....consts import TMUX_DB
+from ....databases.types import DB
 from ....shared.parse import tokenize
 from ....shared.settings import MatchOptions
 from ....shared.sql import BIGGEST_INT, init_db, like_esc
@@ -29,7 +30,7 @@ def _init() -> Connection:
     return conn
 
 
-class TMDB:
+class TMDB(DB):
     def __init__(
         self,
         tokenization_limit: int,

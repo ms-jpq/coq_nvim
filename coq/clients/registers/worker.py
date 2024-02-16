@@ -34,7 +34,8 @@ class Worker(BaseWorker[RegistersClient, RDB]):
         self._ex.run(self._poll())
 
     def interrupt(self) -> None:
-        assert False
+        with self._interrupt_lock:
+            self._misc.interrupt()
 
     async def _poll(self) -> None:
         while True:

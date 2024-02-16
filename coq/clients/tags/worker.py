@@ -1,4 +1,3 @@
-from asyncio import gather
 from contextlib import suppress
 from os import linesep
 from os.path import normcase
@@ -144,7 +143,8 @@ class Worker(BaseWorker[TagsClient, CTDB]):
         self._ex.run(self._poll())
 
     def interrupt(self) -> None:
-        raise NotImplementedError()
+        with self._interrupt_lock:
+            self._misc.interrupt()
 
     async def _poll(self) -> None:
         while True:
