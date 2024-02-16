@@ -118,11 +118,12 @@ class Worker(BaseWorker[TSClient, None]):
     async def _poll(self) -> None:
         while True:
             with suppress_and_log():
+                async with self._idle:
+                    await self._idle.wait()
+
                 bufs, _ = await gather(_bufs(), self._populate())
                 if bufs:
                     self._db.vacuum(bufs)
-                async with self._idle:
-                    await self._idle.wait()
 
     async def _populate(self) -> Optional[Tuple[bool, float]]:
         if not self._lock.locked():

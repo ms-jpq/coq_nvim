@@ -102,7 +102,7 @@ class Worker(BaseWorker[LSPClient, None]):
             clients=set() if context.manual else cached_clients,
         )
 
-    async def _poll(self) -> None:
+    async def _small_poll(self) -> None:
         with suppress_and_log(), timeit("LSP CACHE"):
             acc = {**self._local_cached.post}
             self._cache.set_cache(acc)
@@ -196,4 +196,4 @@ class Worker(BaseWorker[LSPClient, None]):
                                 seen += 1
                                 yield comp
             finally:
-                self._poll_task = create_task(self._poll())
+                self._poll_task = create_task(self._small_poll())
