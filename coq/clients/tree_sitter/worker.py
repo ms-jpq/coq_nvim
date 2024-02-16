@@ -118,7 +118,6 @@ class Worker(BaseWorker[TSClient, None]):
     async def _poll(self) -> None:
         while True:
             with suppress_and_log():
-                await self._populate()
                 bufs, _ = await gather(_bufs(), self._populate())
                 if bufs:
                     self._db.vacuum(bufs)
