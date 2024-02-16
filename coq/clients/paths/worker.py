@@ -217,7 +217,7 @@ class Worker(BaseWorker[PathsClient, None]):
         self._seps = {sep for sep in options.path_seps if sep in seps} or seps
 
     def interrupt(self) -> None:
-        raise NotImplementedError()
+        pass
 
     async def _work(self, context: Context) -> AsyncIterator[Completion]:
         async with self._work_lock:

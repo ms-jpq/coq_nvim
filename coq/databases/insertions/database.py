@@ -38,7 +38,7 @@ def _init() -> Connection:
 
 class IDB(Interruptible):
     def __init__(self) -> None:
-        self._ex = AsyncExecutor()
+        self._ex = AsyncExecutor(None)
         self._conn: Connection = self._ex.fsubmit(_init).result()
 
     def new_source(self, source: str) -> None:

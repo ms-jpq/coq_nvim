@@ -47,18 +47,21 @@ class Worker(BaseWorker[TmuxClient, Path]):
         while True:
             with suppress_and_log():
                 with timeit("IDLE :: TMUX"):
-                    await self.periodical()
+                    await self._periodical()
 
                 async with self._idle:
                     await self._idle.wait()
 
-    async def periodical(self) -> None:
+    async def _periodical(self) -> None:
         if not self._lock.locked():
             async with self._lock:
                 current, panes = await snapshot(
                     self._exec, all_sessions=self._options.all_sessions
                 )
                 self._db.periodical(current, panes=panes)
+
+    async def periodical(self) -> None:
+        await self._ex.submit(self._periodical())
 
     async def _work(self, context: Context) -> AsyncIterator[Completion]:
         async with self._work_lock:

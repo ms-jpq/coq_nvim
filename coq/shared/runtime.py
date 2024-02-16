@@ -14,6 +14,7 @@ from asyncio import (
 )
 from asyncio.exceptions import CancelledError
 from collections import deque
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from pathlib import Path
 from threading import Lock
@@ -93,6 +94,7 @@ class Supervisor:
         self.comp, self.limits = comp, limits
         self._reviewer = reviewer
 
+        self.threadpool = ThreadPoolExecutor()
         self._workers: WeakSet[Worker] = WeakSet()
 
         self._lock = TracingLocker(name="Supervisor", force=True)
@@ -156,7 +158,7 @@ class Worker(Interruptible, Generic[_O_co, _T_co]):
     def init(
         cls, supervisor: Supervisor, options: _O_co, misc: _T_co
     ) -> Worker[_O_co, _T_co]:
-        ex = AsyncExecutor()
+        ex = AsyncExecutor(supervisor.threadpool)
         fut = ex.fsubmit(
             lambda: cls(ex, supervisor=supervisor, options=options, misc=misc)
         )

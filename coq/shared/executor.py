@@ -7,13 +7,13 @@ from asyncio import (
     run_coroutine_threadsafe,
     wrap_future,
 )
-from concurrent.futures import Future, InvalidStateError
+from concurrent.futures import Future, InvalidStateError, ThreadPoolExecutor
 from contextlib import suppress
 from functools import lru_cache
 from shutil import which
 from subprocess import CalledProcessError
 from threading import Thread
-from typing import Any, Awaitable, Callable, Coroutine, Sequence, TypeVar
+from typing import Any, Awaitable, Callable, Coroutine, Optional, Sequence, TypeVar
 
 from std2.asyncio.subprocess import call
 
@@ -21,12 +21,14 @@ _T = TypeVar("_T")
 
 
 class AsyncExecutor:
-    def __init__(self) -> None:
+    def __init__(self, threadpool: Optional[ThreadPoolExecutor]) -> None:
         f: Future = Future()
         self._fut: Future = Future()
 
         async def cont() -> None:
             loop = get_running_loop()
+            if threadpool:
+                loop.set_default_executor(threadpool)
             f.set_result(loop)
             main: Coroutine = await wrap_future(self._fut)
             await main
@@ -61,7 +63,7 @@ class AsyncExecutor:
 
 
 @lru_cache(maxsize=None)
-def very_nice() -> Awaitable[Sequence[str]]:
+def _very_nice(loop: AbstractEventLoop) -> Awaitable[Sequence[str]]:
     async def cont() -> Sequence[str]:
         if tp := which("taskpolicy"):
             run: Sequence[str] = (tp, "-c", "utility", "--")
@@ -91,4 +93,9 @@ def very_nice() -> Awaitable[Sequence[str]]:
         else:
             return ()
 
-    return create_task(cont())
+    return loop.create_task(cont())
+
+
+def very_nice() -> Awaitable[Sequence[str]]:
+    loop = get_running_loop()
+    return _very_nice(loop)
