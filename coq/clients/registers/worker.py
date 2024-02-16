@@ -55,8 +55,8 @@ class Worker(BaseWorker[RegistersClient, RDB]):
                     },
                 )
 
-            async with self._supervisor.idling:
-                await self._supervisor.idling.wait()
+                async with self._idle:
+                    await self._idle.wait()
 
     def post_yank(self, regname: str, regsize: int) -> None:
         if not regname and regsize >= self._options.max_yank_size:

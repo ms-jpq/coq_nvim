@@ -103,8 +103,8 @@ class Worker(BaseWorker[BuffersClient, BDB]):
                         lines=info.lines,
                     )
 
-                async with self._supervisor.idling:
-                    await self._supervisor.idling.wait()
+                async with self._idle:
+                    await self._idle.wait()
 
     async def buf_update(self, buf_id: int, filetype: str, filename: str) -> None:
         self._misc.buf_update(buf_id, filetype=filetype, filename=filename)

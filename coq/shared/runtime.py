@@ -8,6 +8,7 @@ from asyncio import (
     Task,
     as_completed,
     create_task,
+    gather,
     run_coroutine_threadsafe,
     wait,
     wrap_future,
@@ -92,7 +93,6 @@ class Supervisor:
         self.comp, self.limits = comp, limits
         self._reviewer = reviewer
 
-        self.idling = Condition()
         self._workers: WeakSet[Worker] = WeakSet()
 
         self._lock = TracingLocker(name="Supervisor", force=True)
@@ -104,8 +104,7 @@ class Supervisor:
             self._workers.add(worker)
 
     async def notify_idle(self) -> None:
-        async with self.idling:
-            self.idling.notify_all()
+        await gather(*(worker.idle() for worker in self._workers))
 
     async def interrupt(self) -> None:
         task = self._work_task
@@ -171,10 +170,11 @@ class Worker(Generic[_O_co, _T_co]):
         misc: _T_co,
     ) -> None:
         self._ex = ex
-        self._work_task: Optional[Task] = None
         self._work_lock = TracingLocker(name=options.short_name, force=True)
-        self._thread_lock = Lock()
         self._supervisor, self._options, self._misc = supervisor, options, misc
+        self._work_task: Optional[Task] = None
+        self._idle = Condition()
+        self._thread_lock = Lock()
         self._supervisor.register(self, assoc=options)
 
     @abstractmethod
@@ -182,6 +182,12 @@ class Worker(Generic[_O_co, _T_co]):
 
     @abstractmethod
     def _work(self, context: Context) -> AsyncIterator[Completion]: ...
+
+    async def idle(self) -> None:
+        async def cont() -> None:
+            self._idle.notify_all()
+
+        await self._ex.submit(cont)
 
     def supervised(
         self,

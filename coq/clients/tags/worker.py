@@ -164,8 +164,8 @@ class Worker(BaseWorker[TagsClient, CTDB]):
                     dead = existing.keys() - mtimes.keys()
                     self._misc.reconciliate(dead, new=new)
 
-                async with self._supervisor.idling:
-                    await self._supervisor.idling.wait()
+                async with self._idle:
+                    await self._idle.wait()
 
     async def swap(self, cwd: PurePath) -> None:
         self._misc.swap(cwd)

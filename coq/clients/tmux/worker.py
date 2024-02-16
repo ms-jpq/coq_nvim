@@ -47,8 +47,8 @@ class Worker(BaseWorker[TmuxClient, TMDB]):
                 with timeit("IDLE :: TMUX"):
                     await self.periodical()
 
-                async with self._supervisor.idling:
-                    await self._supervisor.idling.wait()
+                async with self._idle:
+                    await self._idle.wait()
 
     async def periodical(self) -> None:
         if not self._lock.locked():

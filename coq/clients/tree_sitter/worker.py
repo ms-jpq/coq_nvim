@@ -119,8 +119,8 @@ class Worker(BaseWorker[TSClient, TDB]):
             with suppress_and_log():
                 if bufs := await _bufs():
                     self._misc.vacuum(bufs)
-                    async with self._supervisor.idling:
-                        await self._supervisor.idling.wait()
+                async with self._idle:
+                    await self._idle.wait()
 
     async def populate(self) -> Optional[Tuple[bool, float]]:
         if not self._lock.locked():
