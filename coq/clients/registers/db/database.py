@@ -4,9 +4,9 @@ from sqlite3 import Connection, Cursor, OperationalError
 from typing import AbstractSet, Any, Iterator, Mapping
 
 from ....consts import REGISTER_DB
+from ....databases.types import DB
 from ....shared.parse import coalesce, tokenize
 from ....shared.settings import MatchOptions
-from ....databases.types import DB
 from ....shared.sql import BIGGEST_INT, init_db, like_esc
 from .sql import sql
 

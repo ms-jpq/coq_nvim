@@ -182,7 +182,8 @@ class TSClient(BaseClient, _AlwaysTop):
 
 
 @dataclass(frozen=True)
-class T9Client(BaseClient, _AlwaysTop): ...
+class T9Client(BaseClient, _AlwaysTop):
+    ...
 
 
 class SnippetWarnings(Enum):
@@ -202,7 +203,8 @@ class LSPClient(BaseClient, _AlwaysTops):
 
 
 @dataclass(frozen=True)
-class ThirdPartyClient(BaseClient, _AlwaysTops): ...
+class ThirdPartyClient(BaseClient, _AlwaysTops):
+    ...
 
 
 _NamedRegisters = Literal[

@@ -84,7 +84,7 @@ class Worker(BaseWorker[BuffersClient, None]):
             include_syms=options.match_syms,
         )
         super().__init__(ex, supervisor=supervisor, options=options, misc=misc)
-        self._ex.run(self._poll())
+        # self._ex.run(self._poll())
 
     def interrupt(self) -> None:
         with self._interrupt_lock:

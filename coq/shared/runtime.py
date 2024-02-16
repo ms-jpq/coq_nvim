@@ -67,17 +67,22 @@ class Metric:
 
 
 class PReviewer(Protocol[_T]):
-    def s_register(self, assoc: BaseClient) -> None: ...
+    def s_register(self, assoc: BaseClient) -> None:
+        ...
 
-    def begin(self, context: Context) -> _T: ...
+    def begin(self, context: Context) -> _T:
+        ...
 
-    async def s_begin(self, token: _T, assoc: BaseClient, instance: UUID) -> None: ...
+    async def s_begin(self, token: _T, assoc: BaseClient, instance: UUID) -> None:
+        ...
 
-    def trans(self, token: _T, instance: UUID, completion: Completion) -> Metric: ...
+    def trans(self, token: _T, instance: UUID, completion: Completion) -> Metric:
+        ...
 
     async def s_end(
         self, instance: UUID, interrupted: bool, elapsed: float, items: int
-    ) -> None: ...
+    ) -> None:
+        ...
 
 
 class Supervisor:
@@ -136,7 +141,7 @@ class Supervisor:
                 async with self._lock:
                     acc: Deque[Metric] = deque()
 
-                    token = await self._reviewer.begin(context)
+                    token = self._reviewer.begin(context)
                     tasks = tuple(
                         worker.supervised(context, token=token, now=now, acc=acc)
                         for worker in self._workers
@@ -184,7 +189,8 @@ class Worker(Interruptible, Generic[_O_co, _T_co]):
         self._supervisor.register(self, assoc=options)
 
     @abstractmethod
-    def _work(self, context: Context) -> AsyncIterator[Completion]: ...
+    def _work(self, context: Context) -> AsyncIterator[Completion]:
+        ...
 
     async def idle(self) -> None:
         async def cont() -> None:
@@ -203,7 +209,6 @@ class Worker(Interruptible, Generic[_O_co, _T_co]):
         prev = self._work_fut
 
         async def cont() -> None:
-            print("supervised starting")
             instance, items = uuid4(), 0
             interrupted = False
 

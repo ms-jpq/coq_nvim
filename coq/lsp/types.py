@@ -51,7 +51,8 @@ class TextEdit(_TextEdit):
 
 
 @dataclass(frozen=True)
-class InsertReplaceEdit(_TextEdit, _InsertReplaceRange): ...
+class InsertReplaceEdit(_TextEdit, _InsertReplaceRange):
+    ...
 
 
 _CompletionItemKind = int

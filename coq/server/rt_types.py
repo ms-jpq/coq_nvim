@@ -8,7 +8,8 @@ from ..shared.settings import Settings
 from ..shared.types import Completion
 
 
-class ValidationError(Exception): ...
+class ValidationError(Exception):
+    ...
 
 
 @dataclass(frozen=True)

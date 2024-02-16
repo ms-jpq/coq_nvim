@@ -1,6 +1,5 @@
 from asyncio import get_running_loop, run_coroutine_threadsafe, wrap_future
 from collections import Counter
-from concurrent.futures import Future
 from dataclasses import dataclass
 from itertools import chain
 from typing import Mapping
@@ -82,18 +81,10 @@ class Reviewer(PReviewer[ReviewCtx]):
         self._loop = get_running_loop()
 
     def s_register(self, assoc: BaseClient) -> None:
-        f: Future = Future()
-
         def cont() -> None:
-            try:
-                self._db.new_source(assoc.short_name)
-            except BaseException as e:
-                f.set_exception(e)
-            else:
-                f.set_result(None)
+            self._db.new_source(assoc.short_name)
 
         self._loop.call_soon_threadsafe(cont)
-        f.result()
 
     def begin(self, context: Context) -> ReviewCtx:
         inserted = self._db.insertion_order(n_rows=100)

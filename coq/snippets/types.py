@@ -7,7 +7,8 @@ from ..shared.types import SnippetGrammar
 SCHEMA = "v2"
 
 
-class LoadError(Exception): ...
+class LoadError(Exception):
+    ...
 
 
 @dataclass(frozen=True)
