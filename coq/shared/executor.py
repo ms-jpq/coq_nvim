@@ -1,5 +1,6 @@
 from asyncio import (
     AbstractEventLoop,
+    create_task,
     gather,
     get_running_loop,
     run,
@@ -39,7 +40,7 @@ class AsyncExecutor:
     def run(self, main: Awaitable[None]) -> None:
         self._fut.set_result(main)
 
-    def fsubmit(self, f: Callable[..., _T], *args: Any, **kwargs: Any) -> Future:
+    def fsubmit(self, f: Callable[..., Any], *args: Any, **kwargs: Any) -> Future:
         fut: Future = Future()
 
         def cont() -> None:
@@ -62,8 +63,9 @@ class AsyncExecutor:
 
 
 @lru_cache(maxsize=None)
-def _very_nice(loop: AbstractEventLoop) -> Awaitable[Sequence[str]]:
-    async def cont() -> Sequence[str]:
+def _very_nice() -> Future:
+
+    async def c1() -> Sequence[str]:
         if tp := which("taskpolicy"):
             run: Sequence[str] = (tp, "-c", "utility", "--")
             try:
@@ -92,9 +94,22 @@ def _very_nice(loop: AbstractEventLoop) -> Awaitable[Sequence[str]]:
         else:
             return ()
 
-    return loop.create_task(cont())
+    f: Future = Future()
+
+    async def c2() -> None:
+        try:
+            ret = await c1()
+        except BaseException as e:
+            with suppress(InvalidStateError):
+                f.set_exception(e)
+        else:
+            with suppress(InvalidStateError):
+                f.set_result(ret)
+
+    create_task(c2())
+    return f
 
 
-def very_nice() -> Awaitable[Sequence[str]]:
-    loop = get_running_loop()
-    return _very_nice(loop)
+async def very_nice() -> Sequence[str]:
+    f: Future = _very_nice()
+    return await wrap_future(f)
