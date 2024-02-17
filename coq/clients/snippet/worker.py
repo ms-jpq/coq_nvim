@@ -23,7 +23,7 @@ class Worker(BaseWorker[SnippetClient, Path]):
         pass
 
     def interrupt(self) -> None:
-        with self._interrupt_lock:
+        with self._interrupt():
             self._db.interrupt()
 
     async def db_mtimes(self) -> Mapping[PurePath, float]:

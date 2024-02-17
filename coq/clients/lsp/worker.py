@@ -1,4 +1,4 @@
-from asyncio import Task, as_completed, create_task, sleep
+from asyncio import Condition, as_completed, sleep
 from dataclasses import dataclass, field
 from enum import Enum, auto
 from typing import (
@@ -13,7 +13,6 @@ from typing import (
 
 from pynvim_pp.logging import suppress_and_log
 from std2 import anext
-from std2.asyncio import cancel
 from std2.itertools import batched
 
 from ...lsp.requests.completion import comp_lsp
@@ -30,7 +29,6 @@ from ...shared.timeit import timeit
 from ...shared.types import Completion, Context, Edit, SnippetEdit
 from ..cache.worker import CacheWorker, sanitize_cached
 
-_CACHE_PERIOD = 1 / 100
 _CACHE_CHUNK = 9
 
 
@@ -83,11 +81,12 @@ class Worker(BaseWorker[LSPClient, None]):
         super().__init__(ex, supervisor=supervisor, options=options, misc=misc)
         self._cache = CacheWorker(supervisor)
         self._local_cached = _LocalCache()
-        self._poll_task: Optional[Task] = None
+        self._working = Condition()
         self._max_results = self._supervisor.match.max_results
+        self._ex.run(self._poll())
 
     def interrupt(self) -> None:
-        with self._interrupt_lock:
+        with self._interrupt():
             self._cache.interrupt()
 
     def _request(
@@ -102,73 +101,74 @@ class Worker(BaseWorker[LSPClient, None]):
             clients=set() if context.manual else cached_clients,
         )
 
-    async def _small_poll(self) -> None:
-        with suppress_and_log(), timeit("LSP CACHE"):
-            acc = {**self._local_cached.post}
-            self._cache.set_cache(acc)
-            await sleep(_CACHE_PERIOD)
+    async def _poll(self) -> None:
+        while True:
 
-            for client, (comps, _) in self._local_cached.pre.items():
-                for chunked in batched(comps, n=_CACHE_CHUNK):
-                    self._cache.set_cache({client: chunked})
-                    await sleep(_CACHE_PERIOD)
+            async def cont() -> None:
+                with suppress_and_log(), timeit("LSP CACHE"):
+                    acc = {**self._local_cached.post}
+                    self._cache.set_cache(acc)
+                    await sleep(0)
+
+                    for client, (comps, _) in self._local_cached.pre.items():
+                        for chunked in batched(comps, n=_CACHE_CHUNK):
+                            self._cache.set_cache({client: chunked})
+                            await sleep(0)
+
+            await self._with_interrupt(cont())
+            async with self._working:
+                await self._working.wait()
 
     async def _work(self, context: Context) -> AsyncIterator[Completion]:
-        poll = self._poll_task
-        self._poll_task = None
+        async with self._work_lock, self._working:
+            try:
+                limit = BIGGEST_INT if context.manual else self._max_results
 
-        if poll:
-            await cancel(poll)
+                use_cache, cached_clients, cached = self._cache.apply_cache(context)
+                if not use_cache:
+                    self._local_cached.pre.clear()
+                    self._local_cached.post.clear()
 
-        async with self._work_lock:
-            limit = BIGGEST_INT if context.manual else self._max_results
+                lsp_stream = self._request(context, cached_clients=cached_clients)
 
-            use_cache, cached_clients, cached = self._cache.apply_cache(context)
-            if not use_cache:
-                self._local_cached.pre.clear()
-                self._local_cached.post.clear()
+                async def db() -> Tuple[_Src, LSPcomp]:
+                    items, length = cached
+                    return _Src.from_db, LSPcomp(
+                        client=None, local_cache=False, items=items, length=length
+                    )
 
-            lsp_stream = self._request(context, cached_clients=cached_clients)
+                async def lsp() -> Optional[Tuple[_Src, LSPcomp]]:
+                    if comps := await anext(lsp_stream, None):
+                        return _Src.from_query, comps
+                    else:
+                        return None
 
-            async def db() -> Tuple[_Src, LSPcomp]:
-                items, length = cached
-                return _Src.from_db, LSPcomp(
-                    client=None, local_cache=False, items=items, length=length
-                )
+                async def stream() -> AsyncIterator[Tuple[_Src, LSPcomp]]:
+                    acc = {**self._local_cached.pre}
+                    self._local_cached.pre.clear()
 
-            async def lsp() -> Optional[Tuple[_Src, LSPcomp]]:
-                if comps := await anext(lsp_stream, None):
-                    return _Src.from_query, comps
-                else:
-                    return None
-
-            async def stream() -> AsyncIterator[Tuple[_Src, LSPcomp]]:
-                acc = {**self._local_cached.pre}
-                self._local_cached.pre.clear()
-
-                for client, (cached_items, length) in acc.items():
-                    items = (
-                        cached
-                        for item in cached_items
-                        if (
-                            cached := sanitize_cached(
-                                context.cursor, comp=item, sort_by=None
+                    for client, (cached_items, length) in acc.items():
+                        items = (
+                            cached
+                            for item in cached_items
+                            if (
+                                cached := sanitize_cached(
+                                    context.cursor, comp=item, sort_by=None
+                                )
                             )
                         )
-                    )
-                    yield _Src.from_stored, LSPcomp(
-                        client=client, local_cache=True, items=items, length=length
-                    )
+                        yield _Src.from_stored, LSPcomp(
+                            client=client, local_cache=True, items=items, length=length
+                        )
 
-                for co in as_completed((db(), lsp())):
-                    if comps := await co:
-                        yield comps
+                    for co in as_completed((db(), lsp())):
+                        if comps := await co:
+                            yield comps
 
-                async for lsp_comps in lsp_stream:
-                    yield _Src.from_query, lsp_comps
+                    async for lsp_comps in lsp_stream:
+                        yield _Src.from_query, lsp_comps
 
-            seen = 0
-            try:
+                seen = 0
                 async for src, lsp_comps in stream():
                     if seen >= limit:
                         break
@@ -196,4 +196,4 @@ class Worker(BaseWorker[LSPClient, None]):
                                 seen += 1
                                 yield comp
             finally:
-                self._poll_task = create_task(self._small_poll())
+                self._working.notify_all()

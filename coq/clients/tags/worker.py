@@ -144,13 +144,14 @@ class Worker(BaseWorker[TagsClient, Tuple[Path, Path, PurePath]]):
         self._ex.run(self._poll())
 
     def interrupt(self) -> None:
-        with self._interrupt_lock:
+        with self._interrupt():
             self._db.interrupt()
 
     async def _poll(self) -> None:
         while True:
-            with suppress_and_log():
-                with timeit("IDLE :: TAGS"):
+
+            async def cont() -> None:
+                with suppress_and_log(), timeit("IDLE :: TAGS"):
                     buf_names = await _ls()
                     existing = self._db.paths()
                     paths = buf_names | existing.keys()
@@ -165,8 +166,9 @@ class Worker(BaseWorker[TagsClient, Tuple[Path, Path, PurePath]]):
                     dead = existing.keys() - mtimes.keys()
                     self._db.reconciliate(dead, new=new)
 
-                async with self._idle:
-                    await self._idle.wait()
+            await self._with_interrupt(cont())
+            async with self._idle:
+                await self._idle.wait()
 
     async def swap(self, cwd: PurePath) -> None:
         async def cont() -> None:

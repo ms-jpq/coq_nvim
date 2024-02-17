@@ -87,30 +87,33 @@ class Worker(BaseWorker[BuffersClient, None]):
         self._ex.run(self._poll())
 
     def interrupt(self) -> None:
-        with self._interrupt_lock:
+        with self._interrupt():
             self._db.interrupt()
 
     async def _poll(self) -> None:
         while True:
-            with suppress_and_log():
-                if info := await _info():
-                    lo, hi = info.range
-                    buf_line_counts = {
-                        int(buf.number): line_count
-                        for buf, line_count in info.buffers.items()
-                    }
-                    self._db.vacuum(buf_line_counts)
-                    self._db.set_lines(
-                        info.buf_id,
-                        filetype=info.filetype,
-                        filename=info.filename,
-                        lo=lo,
-                        hi=hi,
-                        lines=info.lines,
-                    )
 
-                async with self._idle:
-                    await self._idle.wait()
+            async def cont() -> None:
+                with suppress_and_log():
+                    if info := await _info():
+                        lo, hi = info.range
+                        buf_line_counts = {
+                            int(buf.number): line_count
+                            for buf, line_count in info.buffers.items()
+                        }
+                        self._db.vacuum(buf_line_counts)
+                        self._db.set_lines(
+                            info.buf_id,
+                            filetype=info.filetype,
+                            filename=info.filename,
+                            lo=lo,
+                            hi=hi,
+                            lines=info.lines,
+                        )
+
+            await self._with_interrupt(cont())
+            async with self._idle:
+                await self._idle.wait()
 
     async def buf_update(self, buf_id: int, filetype: str, filename: str) -> None:
         async def cont() -> None:

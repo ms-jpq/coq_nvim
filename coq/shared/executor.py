@@ -35,7 +35,7 @@ class AsyncExecutor:
 
         self._th = Thread(daemon=True, target=lambda: run(cont()))
         self._th.start()
-        self._loop: AbstractEventLoop = f.result()
+        self.loop: AbstractEventLoop = f.result()
 
     def run(self, main: Awaitable[Any]) -> None:
         self._fut.set_result(main)
@@ -54,11 +54,11 @@ class AsyncExecutor:
                     with suppress(InvalidStateError):
                         fut.set_result(ret)
 
-        self._loop.call_soon_threadsafe(cont)
+        self.loop.call_soon_threadsafe(cont)
         return fut
 
     def submit(self, co: Awaitable[_T]) -> Awaitable[_T]:
-        f = run_coroutine_threadsafe(co, loop=self._loop)
+        f = run_coroutine_threadsafe(co, loop=self.loop)
         return wrap_future(f)
 
 

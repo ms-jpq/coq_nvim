@@ -39,30 +39,33 @@ class Worker(BaseWorker[RegistersClient, None]):
         self._ex.run(self._poll())
 
     def interrupt(self) -> None:
-        with self._interrupt_lock:
+        with self._interrupt():
             self._db.interrupt()
 
     async def _poll(self) -> None:
         while True:
-            with suppress_and_log():
-                yanked = {*self._yanked}
-                self._yanked.clear()
-                registers = await _registers(yanked)
-                self._db.periodical(
-                    wordreg={
-                        name: text
-                        for name, text in registers.items()
-                        if name in self._options.words
-                    },
-                    linereg={
-                        name: text
-                        for name, text in registers.items()
-                        if name in self._options.lines
-                    },
-                )
 
-                async with self._idle:
-                    await self._idle.wait()
+            async def cont() -> None:
+                with suppress_and_log():
+                    yanked = {*self._yanked}
+                    self._yanked.clear()
+                    registers = await _registers(yanked)
+                    self._db.periodical(
+                        wordreg={
+                            name: text
+                            for name, text in registers.items()
+                            if name in self._options.words
+                        },
+                        linereg={
+                            name: text
+                            for name, text in registers.items()
+                            if name in self._options.lines
+                        },
+                    )
+
+            await self._with_interrupt(cont())
+            async with self._idle:
+                await self._idle.wait()
 
     async def post_yank(self, regname: str, regsize: int) -> None:
         async def cont() -> None:

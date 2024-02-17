@@ -13,9 +13,11 @@ from asyncio import (
     wrap_future,
 )
 from asyncio.exceptions import CancelledError
+from asyncio.tasks import FIRST_COMPLETED
 from collections import deque
 from concurrent.futures import Future as CFuture
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import InvalidStateError, ThreadPoolExecutor
+from contextlib import contextmanager, suppress
 from dataclasses import dataclass
 from pathlib import Path
 from threading import Lock
@@ -24,8 +26,10 @@ from typing import (
     Any,
     AsyncIterator,
     Awaitable,
+    Coroutine,
     Deque,
     Generic,
+    Iterator,
     MutableSequence,
     Optional,
     Protocol,
@@ -181,7 +185,24 @@ class Worker(Interruptible, Generic[_O_co, _T_co]):
         self._work_fut: Optional[CFuture] = None
         self._idle = Condition()
         self._interrupt_lock = Lock()
+        self._interrupt_fut = CFuture()
+        self._interrupt_token = ()
         self._supervisor.register(self, assoc=options)
+
+    @contextmanager
+    def _interrupt(self) -> Iterator[None]:
+        with self._interrupt_lock:
+            with suppress(InvalidStateError):
+                self._interrupt_fut.set_result(None)
+            self._interrupt_fut = CFuture()
+            yield
+
+    async def _with_interrupt(self, co: Coroutine) -> None:
+        fut = wrap_future(self._interrupt_fut)
+        task = create_task(co)
+        done, _ = await wait((task, fut), return_when=FIRST_COMPLETED)
+        if fut in done:
+            await cancel(task)
 
     @abstractmethod
     def _work(self, context: Context) -> AsyncIterator[Completion]: ...
@@ -235,7 +256,7 @@ class Worker(Interruptible, Generic[_O_co, _T_co]):
                     )
 
         self.interrupt()
-        f = run_coroutine_threadsafe(cont(), self._ex._loop)
+        f = run_coroutine_threadsafe(cont(), self._ex.loop)
         self._work_fut = f
         fut = wrap_future(f)
         return fut

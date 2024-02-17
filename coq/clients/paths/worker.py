@@ -32,6 +32,12 @@ _DRIVE_LETTERS = {*ascii_letters}
 _SH_VAR_CHARS = {*ascii_letters, *digits, "_"}
 _SEP_CHARS = sep + altsep if altsep else sep
 
+# if os is OS.windows:
+#     _USERS = ()
+# else:
+#     from pwd import getpwall
+#     _USERS = {p.pw_name for p in getpwall()}
+
 
 def p_lhs(os: OS, lhs: str) -> str:
     # TODO -- expand ~user
