@@ -108,16 +108,14 @@ class Worker(BaseWorker[LSPClient, None]):
 
             async def cont() -> None:
                 with suppress_and_log(), timeit("LSP CACHE"):
-                    if self._work_lock.locked():
-                        return
-
-                    self._cache.set_cache(self._local_cached.post)
-                    for client, comps in self._local_cached.pre.items():
-                        await sleep(0)
-                        if self._work_lock.locked():
-                            return
-                        for chunked in batched(comps, n=_CACHE_CHUNK):
-                            self._cache.set_cache({client: chunked})
+                    if not self._work_lock.locked():
+                        self._cache.set_cache(self._local_cached.post)
+                        acc = tuple(self._local_cached.pre.items())
+                        for client, comps in acc:
+                            await sleep(0)
+                            if not self._work_lock.locked():
+                                for chunked in batched(comps, n=_CACHE_CHUNK):
+                                    self._cache.set_cache({client: chunked})
 
             await self._with_interrupt(cont())
 
