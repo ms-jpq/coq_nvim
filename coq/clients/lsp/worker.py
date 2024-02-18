@@ -112,12 +112,11 @@ class Worker(BaseWorker[LSPClient, None]):
 
                     acc = {**self._local_cached.post}
                     self._cache.set_cache(acc)
-                    await sleep(0)
 
                     for client, comps in self._local_cached.pre.items():
+                        await sleep(0)
                         for chunked in batched(comps, n=_CACHE_CHUNK):
                             self._cache.set_cache({client: chunked})
-                            await sleep(0)
 
             await self._with_interrupt(cont())
             async with self._working:
