@@ -31,7 +31,7 @@ class Database(DB):
 
     def select(
         self, clear: bool, opts: MatchOptions, word: str, sym: str, limitless: int
-    ) -> Tuple[Iterator[Tuple[bytes, str]], int]:
+    ) -> Iterator[Tuple[bytes, str]]:
         with suppress(OperationalError):
             if clear:
                 with self._conn, closing(self._conn.cursor()) as cursor:
@@ -52,7 +52,7 @@ class Database(DB):
                             "like_sym": like_esc(sym[: opts.exact_matches]),
                         },
                     )
-                    rows = cursor.fetchall()
-                    return ((row["key"], row["word"]) for row in rows), len(rows)
+                    for row in cursor:
+                        yield row["key"], row["word"]
 
         return iter(()), 0

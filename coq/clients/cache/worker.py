@@ -119,7 +119,7 @@ class CacheWorker(Interruptible):
 
     def apply_cache(
         self, context: Context
-    ) -> Tuple[bool, AbstractSet[str], Tuple[Iterator[Completion], int]]:
+    ) -> Tuple[bool, AbstractSet[str], Iterator[Completion]]:
         cache_ctx = self._cache_ctx
         row, col = context.position
         self._cache_ctx = _CacheCtx(
@@ -140,25 +140,20 @@ class CacheWorker(Interruptible):
             self._clients.clear()
             self._cached.clear()
 
-        def get() -> Tuple[Iterator[Completion], int]:
+        def get() -> Iterator[Completion]:
             with timeit("CACHE -- GET"):
-                keys, length = self._db.select(
+                for key, sort_by in self._db.select(
                     not use_cache,
                     opts=self._supervisor.match,
                     word=context.words,
                     sym=context.syms,
                     limitless=context.manual,
-                )
-                comps = (
-                    cached
-                    for key, sort_by in keys
-                    if (comp := self._cached.get(key))
-                    and (
+                ):
+                    if (comp := self._cached.get(key)) and (
                         cached := sanitize_cached(
                             context.cursor, comp=comp, sort_by=sort_by
                         )
-                    )
-                )
-                return comps, length
+                    ):
+                        yield cached
 
         return use_cache, cached_clients, get()

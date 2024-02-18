@@ -62,7 +62,7 @@ def _use_comp(match: MatchOptions, context: Context, sort_by: str, edit: Edit) -
 
 @dataclass(frozen=True)
 class _LocalCache:
-    pre: MutableMapping[Optional[str], Tuple[Iterator[Completion], int]] = field(
+    pre: MutableMapping[Optional[str], Iterator[Completion]] = field(
         default_factory=dict
     )
     post: MutableMapping[Optional[str], MutableSequence[Completion]] = field(
@@ -110,7 +110,7 @@ class Worker(BaseWorker[LSPClient, None]):
                     self._cache.set_cache(acc)
                     await sleep(0)
 
-                    for client, (comps, _) in self._local_cached.pre.items():
+                    for client, comps in self._local_cached.pre.items():
                         for chunked in batched(comps, n=_CACHE_CHUNK):
                             self._cache.set_cache({client: chunked})
                             await sleep(0)
@@ -132,9 +132,8 @@ class Worker(BaseWorker[LSPClient, None]):
                 lsp_stream = self._request(context, cached_clients=cached_clients)
 
                 async def db() -> Tuple[_Src, LSPcomp]:
-                    items, length = cached
                     return _Src.from_db, LSPcomp(
-                        client=None, local_cache=False, items=items, length=length
+                        client=None, local_cache=False, items=cached
                     )
 
                 async def lsp() -> Optional[Tuple[_Src, LSPcomp]]:
@@ -147,7 +146,7 @@ class Worker(BaseWorker[LSPClient, None]):
                     acc = {**self._local_cached.pre}
                     self._local_cached.pre.clear()
 
-                    for client, (cached_items, length) in acc.items():
+                    for client, cached_items in acc.items():
                         items = (
                             cached
                             for item in cached_items
@@ -158,7 +157,7 @@ class Worker(BaseWorker[LSPClient, None]):
                             )
                         )
                         yield _Src.from_stored, LSPcomp(
-                            client=client, local_cache=True, items=items, length=length
+                            client=client, local_cache=True, items=items
                         )
 
                     for co in as_completed((db(), lsp())):
@@ -175,11 +174,8 @@ class Worker(BaseWorker[LSPClient, None]):
 
                     acc = self._local_cached.post.setdefault(lsp_comps.client, [])
 
-                    if lsp_comps.local_cache and lsp_comps.length:
-                        self._local_cached.pre[lsp_comps.client] = (
-                            lsp_comps.items,
-                            lsp_comps.length,
-                        )
+                    if lsp_comps.local_cache and src is not _Src.from_db:
+                        self._local_cached.pre[lsp_comps.client] = lsp_comps.items
 
                     for comp in lsp_comps.items:
                         if src is _Src.from_db:

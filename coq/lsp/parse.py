@@ -43,7 +43,7 @@ from .types import (
 
 
 def _falsy(thing: Any) -> bool:
-    return thing is None or thing == False or thing == 0 or thing == "" or thing == b""
+    return thing is None or thing is False or thing == 0 or thing == "" or thing == b""
 
 
 _defaults_parser = new_decoder[Optional[ItemDefaults]](
@@ -231,20 +231,17 @@ def parse(
     resp: CompletionResponse,
 ) -> LSPcomp:
     if _falsy(resp):
-        return LSPcomp(client=client, local_cache=True, items=iter(()), length=0)
+        return LSPcomp(client=client, local_cache=True, items=iter(()))
 
     elif isinstance(resp, Mapping):
         is_complete = _falsy(resp.get("isIncomplete"))
 
         if not isinstance((items := resp.get("items")), Sequence):
             log.warn("%s", f"Unknown LSP resp -- {type(resp)}")
-            return LSPcomp(
-                client=client, local_cache=is_complete, items=iter(()), length=0
-            )
+            return LSPcomp(client=client, local_cache=is_complete, items=iter(()))
 
         else:
             defaults = _defaults_parser(resp.get("itemDefaults")) or ItemDefaults()
-            length = len(items)
             comps = (
                 co1
                 for item in items
@@ -263,13 +260,10 @@ def parse(
                 )
             )
 
-            return LSPcomp(
-                client=client, local_cache=is_complete, items=comps, length=length
-            )
+            return LSPcomp(client=client, local_cache=is_complete, items=comps)
 
     elif isinstance(resp, Sequence):
         defaults = ItemDefaults()
-        length = len(resp)
         comps = (
             co2
             for item in resp
@@ -288,8 +282,8 @@ def parse(
             )
         )
 
-        return LSPcomp(client=client, local_cache=True, items=comps, length=length)
+        return LSPcomp(client=client, local_cache=True, items=comps)
 
     else:
         log.warn("%s", f"Unknown LSP resp -- {type(resp)}")
-        return LSPcomp(client=client, local_cache=False, items=iter(()), length=0)
+        return LSPcomp(client=client, local_cache=False, items=iter(()))
