@@ -103,6 +103,8 @@ class Worker(BaseWorker[LSPClient, None]):
 
     async def _poll(self) -> None:
         while True:
+            async with self._working:
+                await self._working.wait()
 
             async def cont() -> None:
                 with suppress_and_log(), timeit("LSP CACHE"):
@@ -119,8 +121,6 @@ class Worker(BaseWorker[LSPClient, None]):
                             self._cache.set_cache({client: chunked})
 
             await self._with_interrupt(cont())
-            async with self._working:
-                await self._working.wait()
 
     async def _work(self, context: Context) -> AsyncIterator[Completion]:
         async with self._work_lock, self._working:
