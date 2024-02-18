@@ -185,7 +185,7 @@ class Worker(Interruptible, Generic[_O_co, _T_co]):
         self._work_fut: Optional[CFuture] = None
         self._idle = Condition()
         self._interrupt_lock = Lock()
-        self._interrupt_fut = CFuture()
+        self._interrupt_fut: CFuture = CFuture()
         self._interrupt_token = ()
         self._supervisor.register(self, assoc=options)
 
