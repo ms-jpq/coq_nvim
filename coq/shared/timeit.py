@@ -51,6 +51,10 @@ class TracingLocker(AsyncContextManager):
         self._lock = Lock()
         self._name, self._force = name, force
 
+    @property
+    def locked(self) -> bool:
+        return self._lock.locked()
+
     async def __aenter__(self) -> None:
         mgr = (
             timeit(f"LOCKED -- {self._name}", force=self._force)

@@ -11,7 +11,7 @@ from typing import (
     Tuple,
 )
 
-from pynvim_pp.logging import suppress_and_log
+from pynvim_pp.logging import log, suppress_and_log
 from std2 import anext
 from std2.itertools import batched
 
@@ -106,6 +106,10 @@ class Worker(BaseWorker[LSPClient, None]):
 
             async def cont() -> None:
                 with suppress_and_log(), timeit("LSP CACHE"):
+                    if self._work_lock.locked:
+                        log.warn("%s", "LSP cache / worker contention")
+                        return
+
                     acc = {**self._local_cached.post}
                     self._cache.set_cache(acc)
                     await sleep(0)
