@@ -16,13 +16,13 @@ _GLOBAL_START = "global"
 _SNIPPET_END = "endsnippet"
 _SNIPPET_START = "snippet"
 
-_IGNORE_STARTS = {
+_IGNORE_STARTS = (
     "iclearsnippets",
     "post_expand",
     "post_jump",
     "pre_expand",
     "priority",
-}
+)
 
 _LEGAL_STARTS = {
     _EXTENDS_START,
@@ -66,9 +66,7 @@ def load_ultisnip(
         line = line.rstrip()
 
         if state == _State.normal:
-            if line.startswith(_COMMENT_START) or any(
-                line.startswith(ignore) for ignore in _IGNORE_STARTS
-            ):
+            if line.startswith(_COMMENT_START) or line.startswith(_IGNORE_STARTS):
                 pass
 
             elif not line or line.isspace():

@@ -71,9 +71,7 @@ def load_neosnippet(
 
     for lineno, line in lines:
         line = line.rstrip()
-        if line.startswith(_COMMENT_START) or any(
-            line.startswith(i) for i in _IGNORED_STARTS
-        ):
+        if line.startswith(_COMMENT_START) or line.startswith(_IGNORED_STARTS):
             pass
 
         elif not line or line.isspace():

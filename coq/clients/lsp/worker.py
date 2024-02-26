@@ -11,7 +11,7 @@ from typing import (
     Tuple,
 )
 
-from pynvim_pp.logging import log, suppress_and_log
+from pynvim_pp.logging import suppress_and_log
 from std2 import anext
 from std2.itertools import batched
 
