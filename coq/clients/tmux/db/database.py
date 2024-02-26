@@ -94,7 +94,8 @@ class TMDB(DB):
                 existing = {row["pane_id"] for row in cursor.fetchall()}
                 cursor.executemany(sql("delete", "pane"), m1(existing))
                 cursor.executemany(sql("insert", "pane"), m2())
-                cursor.executemany(sql("insert", "word"), m3())
+                with suppress(UnicodeEncodeError):
+                    cursor.executemany(sql("insert", "word"), m3())
                 cursor.execute("PRAGMA optimize", ())
 
     def select(

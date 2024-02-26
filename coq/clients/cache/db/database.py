@@ -27,7 +27,8 @@ class Database(DB):
 
         with suppress(OperationalError):
             with self._conn, closing(self._conn.cursor()) as cursor:
-                cursor.executemany(sql("insert", "word"), m1())
+                with suppress(UnicodeEncodeError):
+                    cursor.executemany(sql("insert", "word"), m1())
 
     def select(
         self, clear: bool, opts: MatchOptions, word: str, sym: str, limitless: int

@@ -73,8 +73,10 @@ class RDB(DB):
             with self._conn, closing(self._conn.cursor()) as cursor:
                 cursor.executemany(sql("delete", "register"), m1)
                 cursor.executemany(sql("insert", "register"), m1)
-                cursor.executemany(sql("insert", "word"), m2())
-                cursor.executemany(sql("insert", "line"), m3())
+                with suppress(UnicodeEncodeError):
+                    cursor.executemany(sql("insert", "word"), m2())
+                with suppress(UnicodeEncodeError):
+                    cursor.executemany(sql("insert", "line"), m3())
                 cursor.execute("PRAGMA optimize", ())
 
     def select(

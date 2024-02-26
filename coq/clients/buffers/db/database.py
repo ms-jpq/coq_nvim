@@ -103,8 +103,10 @@ def _setlines(
         {"buffer_id": buf_id, "lo": lo, "shift": shift},
     )
     cursor.execute(sql("update", "lines_shift_2"), {"buffer_id": buf_id})
-    cursor.executemany(sql("insert", "line"), m1())
-    cursor.executemany(sql("insert", "word"), islice(m2(), tokenization_limit))
+    with suppress(UnicodeEncodeError):
+        cursor.executemany(sql("insert", "line"), m1())
+    with suppress(UnicodeEncodeError):
+        cursor.executemany(sql("insert", "word"), islice(m2(), tokenization_limit))
     cursor.execute(sql("select", "line_count"), {"buffer_id": buf_id})
     count = cursor.fetchone()["line_count"]
     if not count:

@@ -87,7 +87,8 @@ class TDB(DB):
                     sql("delete", "words"),
                     {"buffer_id": buf_id, "lo": lo, "hi": hi},
                 )
-                cursor.executemany(sql("insert", "word"), m1())
+                with suppress(UnicodeEncodeError):
+                    cursor.executemany(sql("insert", "word"), m1())
 
     def select(
         self,
