@@ -1,9 +1,15 @@
-from asyncio import Condition
+from asyncio import (
+    AbstractEventLoop,
+    Condition,
+    get_running_loop,
+    run_coroutine_threadsafe,
+    wrap_future,
+)
 from dataclasses import dataclass
 from functools import lru_cache
 from itertools import count
 from string import capwords
-from typing import Generic, Iterable, Iterator, Optional, Sequence, TypeVar
+from typing import Generic, Iterable, Iterator, Optional, Sequence, Tuple, TypeVar
 
 from pynvim_pp.lib import recode
 from pynvim_pp.nvim import Nvim
@@ -44,8 +50,9 @@ _CELL = RefCell(_Session(uid=-1, done=True, payload=_NIL_P))
 
 
 @lru_cache(maxsize=None)
-def _cond() -> Condition:
-    return Condition()
+def _cond() -> Tuple[AbstractEventLoop, Condition]:
+    loop = get_running_loop()
+    return (loop, Condition())
 
 
 @rpc(blocking=False)
@@ -60,22 +67,26 @@ async def _ts_notify(
     reply: Sequence[RawPayload],
     elapsed: float,
 ) -> None:
-    cond = _cond()
+    origin, cond = _cond()
 
-    if session >= _CELL.val.uid:
-        payload = _Payload(
-            buf=buf,
-            lo=lo,
-            hi=hi,
-            filetype=filetype,
-            filename=filename,
-            payloads=reply,
-            elapsed=elapsed,
-        )
-        _CELL.val = _Session(uid=session, done=True, payload=payload)
+    async def cont() -> None:
+        if session >= _CELL.val.uid:
+            payload = _Payload(
+                buf=buf,
+                lo=lo,
+                hi=hi,
+                filetype=filetype,
+                filename=filename,
+                payloads=reply,
+                elapsed=elapsed,
+            )
+            _CELL.val = _Session(uid=session, done=True, payload=payload)
 
-    async with cond:
-        cond.notify_all()
+        async with cond:
+            cond.notify_all()
+
+    f = run_coroutine_threadsafe(cont(), loop=origin)
+    await wrap_future(f)
 
 
 def _parse(load: Optional[SimpleRawPayload]) -> Optional[SimplePayload]:
@@ -120,7 +131,7 @@ def _vaildate(r_playload: _Payload[RawPayload]) -> _Payload[Payload]:
 
 
 async def async_request() -> Optional[_Payload[Payload]]:
-    cond = _cond()
+    _, cond = _cond()
 
     with timeit("TS"):
         uid = next(_UIDS)
@@ -140,5 +151,5 @@ async def async_request() -> Optional[_Payload[Payload]]:
                 return None
 
             else:
-                async with _cond():
-                    await _cond().wait()
+                async with cond:
+                    await cond.wait()
