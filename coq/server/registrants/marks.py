@@ -13,6 +13,7 @@ from pynvim_pp.nvim import Nvim
 from pynvim_pp.rpc_types import NvimError
 from pynvim_pp.types import BufNamespace
 from pynvim_pp.window import Window
+from std2.functools import identity
 
 from ...lang import LANG
 from ...registry import rpc
@@ -81,8 +82,18 @@ async def _single_mark(
     row, col = mark.begin
     await reset_undolevels()
 
+    new_resp = ""
+    if xform := st.text_trans.get(mark.marker):
+        resp = await Nvim.input(question=LANG("expand marks", texts=""), default="")
+        if resp is not None:
+            try:
+                new_resp = xform(resp)
+            except Exception as e:
+                log.error("%s", e)
+                new_resp = resp
+
     try:
-        await apply(buf, instructions=_trans("", marks=(mark,)))
+        await apply(buf, instructions=_trans(new_resp, marks=(mark,)))
         await Nvim.exec("startinsert")
         await win.set_cursor(row=row, col=col)
     except NvimError as e:
@@ -115,8 +126,16 @@ async def _linked_marks(
     resp = await Nvim.input(question=LANG("expand marks", texts=texts), default="")
     if resp is not None:
         row, col = mark.begin
+        xform = st.text_trans.get(mark.marker, identity)
+
+        try:
+            new_resp = xform(resp)
+        except Exception as e:
+            log.error("%s", e)
+            new_resp = resp
+
         await reset_undolevels()
-        shift = await apply(buf, instructions=_trans(resp, marks=marks))
+        shift = await apply(buf, instructions=_trans(new_resp, marks=marks))
         await _del_marks(buf, ns=ns, marks=marks)
         await Nvim.exec("startinsert")
         await win.set_cursor(row=row + shift.row, col=col + len(encode(resp)))
