@@ -41,7 +41,14 @@ from ...registry import NAMESPACE, atomic, rpc
 from ...shared.context import EMPTY_CONTEXT
 from ...shared.settings import CompleteOptions, MatchOptions, SnippetWarnings
 from ...shared.timeit import timeit
-from ...shared.types import UTF8, Edit, Mark, SnippetEdit, SnippetGrammar
+from ...shared.types import (
+    UTF8,
+    Edit,
+    Mark,
+    SnippetEdit,
+    SnippetGrammar,
+    TextTransforms,
+)
 from ...snippets.loaders.load import load_direct
 from ...snippets.loaders.neosnippet import load_neosnippet
 from ...snippets.parse import parse_basic
@@ -59,7 +66,7 @@ class Compiled:
     path: PurePath
     filetype: str
     exts: AbstractSet[str]
-    parsed: Sequence[Tuple[ParsedSnippet, Edit, Sequence[Mark]]]
+    parsed: Sequence[Tuple[ParsedSnippet, Edit, Sequence[Mark], TextTransforms]]
 
 
 async def _bundled_mtimes() -> Mapping[Path, float]:
@@ -194,10 +201,10 @@ def _trans(
     comp: CompleteOptions,
     info: ParseInfo,
     snips: Iterable[ParsedSnippet],
-) -> Iterator[Tuple[ParsedSnippet, Edit, Sequence[Mark]]]:
+) -> Iterator[Tuple[ParsedSnippet, Edit, Sequence[Mark], TextTransforms]]:
     for snip in snips:
         edit = SnippetEdit(grammar=snip.grammar, new_text=snip.content)
-        parsed, marks = parse_basic(
+        parsed, marks, text_trans = parse_basic(
             match,
             comp=comp,
             adjust_indent=False,
@@ -205,7 +212,7 @@ def _trans(
             snippet=edit,
             info=info,
         )
-        yield snip, parsed, marks
+        yield snip, parsed, marks, text_trans
 
 
 async def _rolling_load(

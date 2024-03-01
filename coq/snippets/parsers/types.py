@@ -1,20 +1,11 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import (
-    Callable,
-    Iterator,
-    Mapping,
-    MutableSequence,
-    Optional,
-    Sequence,
-    Tuple,
-    Union,
-)
+from typing import Callable, Iterator, MutableSequence, Optional, Sequence, Tuple, Union
 
 from std2.itertools import deiter
 
-from ...shared.types import Context
+from ...shared.types import Context, TextTransforms
 
 
 class ParseError(Exception): ...
@@ -92,4 +83,4 @@ class Parsed:
     text: str
     cursor: int
     regions: Sequence[Tuple[int, Region]]
-    xforms: Mapping[int, Callable[[Optional[str]], str]]
+    xforms: TextTransforms

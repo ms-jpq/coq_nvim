@@ -539,6 +539,7 @@ def _lex_variable_decorated(context: ParserCtx, var_name: str) -> TokenStream:
 
     for idx in reversed(context.stack):
         if isinstance(idx, int):
+            yield subst
             yield Transform(idx=idx, xform=xform)
             break
     else:

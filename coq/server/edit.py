@@ -41,6 +41,7 @@ from ..shared.types import (
     NvimPos,
     SnippetEdit,
     SnippetRangeEdit,
+    TextTransforms,
 )
 from ..snippets.parse import ParsedEdit, parse_basic, parse_ranged
 from ..snippets.parsers.types import ParseError, ParseInfo
@@ -397,7 +398,7 @@ async def apply(buf: Buffer, instructions: Iterable[EditInstruction]) -> _MarkSh
                 ctx = []
 
             msg = Template(dedent(tpl)).substitute(e=e, inst=inst, ctx=ctx)
-            log.warn(f"%s", msg)
+            log.warn("%s", msg)
 
     return m_shift
 
@@ -430,7 +431,7 @@ def _cursor(cursor: NvimPos, instructions: Iterable[EditInstruction]) -> NvimPos
 
 async def _parse(
     buf: Buffer, stack: Stack, state: State, comp: Completion
-) -> Tuple[bool, Edit, Sequence[Mark]]:
+) -> Tuple[bool, Edit, Sequence[Mark], TextTransforms]:
     if isinstance(comp.primary_edit, SnippetEdit):
         comment_str = await buf.commentstr() or ("", "")
         clipboard = await Nvim.fn.getreg(str)
@@ -441,7 +442,7 @@ async def _parse(
             line_before = decode(
                 encode(line, encoding=comp.primary_edit.encoding)[:col]
             )
-            edit, marks = parse_ranged(
+            edit, marks, text_trans = parse_ranged(
                 context=state.context,
                 adjust_indent=comp.adjust_indent,
                 snippet=comp.primary_edit,
@@ -449,7 +450,7 @@ async def _parse(
                 line_before=line_before,
             )
         else:
-            edit, marks = parse_basic(
+            edit, marks, text_trans = parse_basic(
                 stack.settings.match,
                 comp=stack.settings.completion,
                 adjust_indent=comp.adjust_indent,
@@ -460,9 +461,9 @@ async def _parse(
         adjusted = True
     else:
         adjusted = False
-        edit, marks = comp.primary_edit, ()
+        edit, marks, text_trans = comp.primary_edit, (), {}
 
-    return adjusted, edit, marks
+    return adjusted, edit, marks, text_trans
 
 
 async def _restore(win: Window, buf: Buffer, pos: NvimPos) -> Tuple[str, Optional[int]]:
@@ -499,7 +500,7 @@ async def edit(
     state: State,
     metric: Metric,
     synthetic: bool,
-) -> Optional[NvimPos]:
+) -> Optional[Tuple[NvimPos, Optional[TextTransforms]]]:
     win = await Window.get_current()
     buf = await win.get_buf()
     if buf.number != state.context.buf_id:
@@ -516,11 +517,16 @@ async def edit(
             )
 
         try:
-            adjusted, primary, marks = await _parse(
+            adjusted, primary, marks, text_trans = await _parse(
                 buf=buf, stack=stack, state=state, comp=metric.comp
             )
         except (NvimError, ParseError) as e:
-            adjusted, primary, marks = False, metric.comp.primary_edit, ()
+            adjusted, primary, marks, text_trans = (
+                False,
+                metric.comp.primary_edit,
+                (),
+                {},
+            )
             await Nvim.write(LANG("failed to parse snippet"))
             log.info("%s", e)
 
@@ -530,6 +536,7 @@ async def edit(
             primary,
             *metric.comp.secondary_edits,
         )
+
         if lo < 0 or hi > state.context.line_count:
             log.warn("%s", pformat(("OUT OF BOUNDS", (lo, hi), metric)))
             return None
@@ -588,4 +595,4 @@ async def edit(
                     ),
                 )
 
-            return n_row, n_col
+            return (n_row, n_col), text_trans

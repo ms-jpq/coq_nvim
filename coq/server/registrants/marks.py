@@ -20,7 +20,7 @@ from ...snippets.parsers.lexer import decode_mark_idx
 from ..edit import EditInstruction, apply, reset_undolevels
 from ..mark import NS
 from ..rt_types import Stack
-from ..state import state
+from ..state import State, state
 
 _OG_IDX = str(uuid4())
 
@@ -71,6 +71,7 @@ def _trans(new_text: str, marks: Sequence[ExtMark]) -> Iterator[EditInstruction]
 
 
 async def _single_mark(
+    st: State,
     mark: ExtMark,
     marks: Sequence[ExtMark],
     ns: BufNamespace,
@@ -101,6 +102,7 @@ async def _single_mark(
 
 
 async def _linked_marks(
+    st: State,
     mark: ExtMark,
     linked: Sequence[ExtMark],
     ns: BufNamespace,
@@ -131,14 +133,15 @@ async def nav_mark(stack: Stack) -> None:
     buf = await win.get_buf()
 
     if marks := deque([m async for m in _marks(ns=ns, win=win, buf=buf)]):
+        s = state()
         mark = marks.popleft()
 
         async def single() -> None:
-            await _single_mark(mark=mark, marks=marks, ns=ns, win=win, buf=buf)
+            await _single_mark(s, mark=mark, marks=marks, ns=ns, win=win, buf=buf)
 
         if linked := tuple(m for m in marks if m.marker == mark.marker):
             edited = await _linked_marks(
-                mark=mark, linked=linked, ns=ns, win=win, buf=buf
+                s, mark=mark, linked=linked, ns=ns, win=win, buf=buf
             )
             if not edited:
                 await single()

@@ -84,7 +84,7 @@ def _pprn(
             mapping: Mapping[str, Any] = {"extends": sorted_exts}
             yield mapping
 
-        for parsed, edit, marks in compiled.parsed:
+        for parsed, edit, marks, text_trans in compiled.parsed:
             mapping = {}
             if parsed.label:
                 mapping.update(label=parsed.label)
@@ -99,6 +99,9 @@ def _pprn(
                 for m in sorted(marks, key=lambda m: (m.begin, m.end))
             ]:
                 mapping.update(marks=sorted_marks)
+
+            if trans := tuple(f"${{{idx}}}" for idx, _ in sorted(text_trans.items())):
+                mapping.update(filters=trans)
 
             yield mapping
 

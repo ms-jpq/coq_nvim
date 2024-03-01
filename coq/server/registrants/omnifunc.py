@@ -183,15 +183,19 @@ async def _comp_done(stack: Stack, event: Mapping[str, Any]) -> None:
                         await cancel(*pending)
 
                     if new_metric.comp.uid in stack.metrics:
-                        inserted_at = await edit(
+                        if inserted := await edit(
                             stack=stack,
                             state=s,
                             metric=new_metric,
                             synthetic=False,
-                        )
-                        ins_pos = inserted_at or (-1, -1)
+                        ):
+                            inserted_at, text_trans = inserted
+                        else:
+                            inserted_at, text_trans = (-1, -1), None
+
                         state(
-                            inserted_pos=ins_pos,
+                            inserted_pos=inserted_at,
+                            text_trans=text_trans,
                             last_edit=new_metric,
                             commit_id=uuid4(),
                         )

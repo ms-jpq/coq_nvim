@@ -10,7 +10,7 @@ from std2.types import Void, VoidType
 from ..shared.context import EMPTY_CONTEXT
 from ..shared.runtime import Metric
 from ..shared.settings import Weights
-from ..shared.types import Completion, Context, Edit, NvimPos
+from ..shared.types import Completion, Context, Edit, NvimPos, TextTransforms
 
 
 @dataclass(frozen=True)
@@ -24,6 +24,7 @@ class State:
     nono_bufs: AbstractSet[int]
     context: Context
     last_edit: Metric
+    text_trans: TextTransforms
     inserted_pos: NvimPos
     pum_location: Optional[int]
 
@@ -60,6 +61,7 @@ _CELL = RefCell(
                 icon_match="",
             ),
         ),
+        text_trans={},
         inserted_pos=(-1, -1),
         pum_location=None,
     )
@@ -76,6 +78,7 @@ def state(
     nono_bufs: AbstractSet[int] = frozenset(),
     context: Optional[Context] = None,
     last_edit: Optional[Metric] = None,
+    text_trans: Optional[TextTransforms] = None,
     inserted_pos: Optional[NvimPos] = None,
     pum_location: Union[VoidType, Optional[int]] = Void,
 ) -> State:
@@ -91,6 +94,7 @@ def state(
         nono_bufs=old_state.nono_bufs | nono_bufs,
         context=context or old_state.context,
         last_edit=last_edit or old_state.last_edit,
+        text_trans=text_trans if text_trans is not None else old_state.text_trans,
         inserted_pos=inserted_pos or old_state.inserted_pos,
         pum_location=(
             pum_location

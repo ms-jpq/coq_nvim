@@ -19,6 +19,7 @@ from ..shared.types import (
     SnippetEdit,
     SnippetGrammar,
     SnippetRangeEdit,
+    TextTransforms,
 )
 from .consts import SNIP_LINE_SEP
 from .parsers.lsp import tokenizer as lsp_tokenizer
@@ -102,7 +103,7 @@ def parse_ranged(
     snippet: SnippetRangeEdit,
     info: ParseInfo,
     line_before: str,
-) -> Tuple[Edit, Sequence[Mark]]:
+) -> Tuple[Edit, Sequence[Mark], TextTransforms]:
     parser = _parser(snippet.grammar)
     indented = (
         SNIP_LINE_SEP.join(
@@ -134,7 +135,7 @@ def parse_ranged(
         new_lines=new_lines,
         regions=parsed.regions,
     )
-    return edit, marks
+    return edit, marks, parsed.xforms
 
 
 def parse_basic(
@@ -144,7 +145,7 @@ def parse_basic(
     context: Context,
     snippet: SnippetEdit,
     info: ParseInfo,
-) -> Tuple[Edit, Sequence[Mark]]:
+) -> Tuple[Edit, Sequence[Mark], TextTransforms]:
     parser = _parser(snippet.grammar)
 
     sort_by = parser(context, info, snippet.new_text).text
@@ -180,4 +181,4 @@ def parse_basic(
         new_lines=new_lines,
         regions=parsed.regions,
     )
-    return edit, marks
+    return edit, marks, parsed.xforms
