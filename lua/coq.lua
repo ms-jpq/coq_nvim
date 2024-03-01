@@ -74,7 +74,7 @@ local start = function(deps, ...)
   local args =
     vim.tbl_flatten {
     deps and py3 or main(is_xdg),
-    {"-u", "-m", "coq"},
+    {"-s", "-u", "-m", "coq"},
     {...},
     (is_xdg and {"--xdg", xdg_dir} or {})
   }
