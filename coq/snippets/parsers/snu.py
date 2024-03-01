@@ -92,13 +92,14 @@ def _lex_tp(context: ParserCtx) -> TokenStream:
         if char in _INT_CHARS:
             idx_acc.append(char)
         else:
-            yield Begin(idx=int("".join(idx_acc)))
+            idx = int("".join(idx_acc))
+            yield Begin(idx=idx)
             if char == "}":
                 # tabstop     ::= '$' int | '${' int '}'
                 yield End()
                 break
             elif char == ":":
-                context.state.depth += 1
+                context.stack.append(idx)
                 (p1, c1), (p2, c2) = next_char(context), next_char(context)
                 # placeholder  ::= '${' int ':' ('#:'? any | regexreplace) '}'
                 if c1 == "#" and c2 == ":":
@@ -143,11 +144,11 @@ def _lex_variable(context: ParserCtx) -> TokenStream:
             var = _variable_substitution(context, name=name)
             if var is not None:
                 yield var
-                context.state.depth += 1
+                context.stack.append(name)
                 yield from _lex(context, shallow=True)
             else:
                 yield DummyBegin()
-                context.state.depth += 1
+                context.stack.append(name)
             break
         else:
             name_acc.append(char)
@@ -226,9 +227,9 @@ def _lex(context: ParserCtx, shallow: bool) -> TokenStream:
         if char == "\\":
             pushback_chars(context, (pos, char))
             yield _lex_escape(context, escapable_chars=_ESCAPABLE_CHARS)
-        elif context.state.depth and char == "}":
+        elif context.stack and char == "}":
             yield End()
-            context.state.depth -= 1
+            context.stack.pop()
             if shallow:
                 break
         elif char == "$":

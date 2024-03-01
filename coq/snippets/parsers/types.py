@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Iterator, Sequence, Tuple, Union
+from typing import Callable, Iterator, MutableSequence, Optional, Sequence, Tuple, Union
 
 from std2.itertools import deiter
 
@@ -28,18 +28,13 @@ class ParseInfo:
     comment_str: Tuple[str, str]
 
 
-@dataclass(frozen=False)
-class ParserState:
-    depth: int
-
-
 @dataclass(frozen=True)
 class ParserCtx(Iterator):
     ctx: Context
     text: str
     info: ParseInfo
     dit: deiter[EChar]
-    state: ParserState
+    stack: MutableSequence[Union[int, str]]
 
     def __iter__(self) -> ParserCtx:
         return self
@@ -56,6 +51,7 @@ class Unparsed:
 @dataclass(frozen=True)
 class Begin:
     idx: int
+    # trans: Callable[[Optional[str]], str]
 
 
 @dataclass(frozen=True)

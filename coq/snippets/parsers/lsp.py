@@ -129,7 +129,8 @@ def _lex_tcp(context: ParserCtx) -> TokenStream:
         if char in _INT_CHARS:
             idx_acc.append(char)
         else:
-            yield Begin(idx=int("".join(idx_acc)))
+            idx = int("".join(idx_acc))
+            yield Begin(idx=idx)
             if char == "}":
                 # tabstop     ::= '$' int | '${' int '}'
                 yield End()
@@ -141,7 +142,7 @@ def _lex_tcp(context: ParserCtx) -> TokenStream:
                 break
             elif char == ":":
                 # placeholder ::= '${' int ':' any '}'
-                context.state.depth += 1
+                context.stack.append(idx)
                 break
             else:
                 raise_err(
@@ -559,11 +560,11 @@ def _lex_variable_nested(context: ParserCtx) -> TokenStream:
             var = _variable_substitution(context, var_name=name)
             if var is not None:
                 yield var
-                context.state.depth += 1
+                context.stack.append(name)
                 yield from _lex(context, shallow=True)
             else:
                 yield DummyBegin()
-                context.state.depth += 1
+                context.stack.append(name)
             break
 
         elif char == "/":
@@ -649,9 +650,9 @@ def _lex(context: ParserCtx, shallow: bool) -> TokenStream:
         if char == "\\":
             pushback_chars(context, (pos, char))
             yield _lex_escape(context, escapable_chars=_ESC_CHARS)
-        elif context.state.depth and char == "}":
+        elif context.stack and char == "}":
             yield End()
-            context.state.depth -= 1
+            context.stack.pop()
             if shallow:
                 break
         elif char == "$":
