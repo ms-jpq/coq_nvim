@@ -13,7 +13,7 @@ from pynvim_pp.types import NoneType
 from std2.pickle.decoder import new_decoder
 
 _LUA = decode(
-    (Path(__file__).resolve(strict=True).parent / "protocol.lua").read_bytes()
+    Path(__file__).resolve(strict=True).with_name("protocol.lua").read_bytes()
 )
 
 
