@@ -2,14 +2,12 @@ from itertools import chain
 from string import Template
 from textwrap import dedent
 from typing import (
-    Callable,
     Iterable,
     Iterator,
     Mapping,
     MutableMapping,
     MutableSequence,
     NoReturn,
-    Optional,
     Sequence,
     Tuple,
     Union,
@@ -20,7 +18,7 @@ from pynvim_pp.logging import log
 from std2.itertools import deiter, interleave
 from std2.types import never
 
-from ...shared.types import Context
+from ...shared.types import Context, TextTransform
 from ..consts import MOD_PAD, SNIP_LINE_SEP
 from .types import (
     Begin,
@@ -145,7 +143,7 @@ def token_parser(context: ParserCtx, stream: TokenStream) -> Parsed:
     raw_regions: MutableMapping[int, MutableSequence[Region]] = {}
     slices: MutableSequence[str] = []
     begins: MutableSequence[Tuple[int, Union[Begin, DummyBegin]]] = []
-    xforms: MutableMapping[int, Callable[[Optional[str]], str]] = {}
+    xforms: MutableMapping[int, TextTransform] = {}
     bad_tokens: MutableSequence[Tuple[int, Token]] = []
 
     for token in stream:

@@ -19,6 +19,8 @@ from typing import (
 from uuid import uuid4
 
 from std2.functools import identity
+from std2.lex import ParseError as StdLexError
+from std2.lex import split
 
 from ...shared.parse import lower
 from ...shared.types import Context
@@ -94,8 +96,15 @@ def _lex_escape(context: ParserCtx, *, escapable_chars: AbstractSet[str]) -> str
         )
 
 
+def _choice_trans(choice: Optional[str]) -> Sequence[str]:
+    sep, text = "|", choice or ""
+    with suppress(StdLexError):
+        return tuple(split(text, sep=sep, esc="\\"))
+    return text.split(sep)
+
+
 # choice      ::= '${' int '|' text (',' text)* '|}'
-def _half_lex_choice(context: ParserCtx) -> TokenStream:
+def _half_lex_choice(context: ParserCtx, idx: int) -> TokenStream:
     pos, char = next_char(context)
     assert char == "|"
 
@@ -103,11 +112,15 @@ def _half_lex_choice(context: ParserCtx) -> TokenStream:
     for pos, char in context:
         if char == "\\":
             pushback_chars(context, (pos, char))
-            yield _lex_escape(context, escapable_chars=_CHOICE_ESC_CHARS)
+            for char in _lex_escape(context, escapable_chars=_CHOICE_ESC_CHARS):
+                if char in {"\\", "|"}:
+                    yield "\\"
+                yield char
         elif char == "|":
             pos, char = next_char(context)
             if char == "}":
                 yield " "
+                yield Transform(idx=idx, xform=_choice_trans)
                 yield End()
                 break
             else:
@@ -142,7 +155,7 @@ def _lex_tcp(context: ParserCtx) -> TokenStream:
             elif char == "|":
                 # choice      ::= '${' int '|' text (',' text)* '|}'
                 pushback_chars(context, (pos, char))
-                yield from _half_lex_choice(context)
+                yield from _half_lex_choice(context, idx=idx)
                 break
             elif char == ":":
                 # placeholder ::= '${' int ':' any '}'
@@ -537,9 +550,9 @@ def _lex_variable_decorated(context: ParserCtx, var_name: str) -> TokenStream:
                 return trans(matched)
         return trans(subst)
 
+    yield subst
     for idx in reversed(context.stack):
         if isinstance(idx, int):
-            yield subst
             yield Transform(idx=idx, xform=xform)
             break
     else:

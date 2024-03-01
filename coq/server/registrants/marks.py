@@ -3,7 +3,7 @@ from dataclasses import replace
 from itertools import chain
 from json import dumps
 from textwrap import dedent
-from typing import AsyncIterator, Iterable, Iterator, Sequence
+from typing import AsyncIterator, Iterable, Iterator, Optional, Sequence
 from uuid import uuid4
 
 from pynvim_pp.buffer import Buffer, ExtMark, ExtMarker
@@ -13,10 +13,10 @@ from pynvim_pp.nvim import Nvim
 from pynvim_pp.rpc_types import NvimError
 from pynvim_pp.types import BufNamespace
 from pynvim_pp.window import Window
-from std2.functools import identity
 
 from ...lang import LANG
 from ...registry import rpc
+from ...shared.types import TextTransform
 from ...snippets.parsers.lexer import decode_mark_idx
 from ..edit import EditInstruction, apply, reset_undolevels
 from ..mark import NS
@@ -71,6 +71,17 @@ def _trans(new_text: str, marks: Sequence[ExtMark]) -> Iterator[EditInstruction]
             )
 
 
+def _safexform(xform: Optional[TextTransform], text: str) -> str:
+    if not xform:
+        return text
+    else:
+        try:
+            return "".join(chain.from_iterable(xform(text)))
+        except Exception as e:
+            log.warn("%s", e)
+            return text
+
+
 async def _single_mark(
     st: State,
     mark: ExtMark,
@@ -82,15 +93,22 @@ async def _single_mark(
     row, col = mark.begin
     await reset_undolevels()
 
-    new_resp = ""
     if xform := st.text_trans.get(mark.marker):
-        resp = await Nvim.input(question=LANG("expand marks", texts=""), default="")
-        if resp is not None:
-            try:
-                new_resp = xform(resp)
-            except Exception as e:
-                log.error("%s", e)
-                new_resp = resp
+        linesep = await buf.linefeed()
+        init = xform(None)
+        if isinstance(init, str):
+            resp = await Nvim.input(
+                question=LANG("expand marks", texts=init), default=""
+            )
+            text = resp if resp is not None else init
+            new_resp = _safexform(xform, text=text) or linesep.join(await mark.text())
+        else:
+            line = linesep.join(await mark.text())
+            lines = tuple(xform(line))
+            opts = {f"{i}. ": line for i, line in enumerate(lines, start=1)}
+            new_resp = await Nvim.input_list(opts) or ""
+    else:
+        new_resp = ""
 
     try:
         await apply(buf, instructions=_trans(new_resp, marks=(mark,)))
@@ -121,26 +139,33 @@ async def _linked_marks(
     buf: Buffer,
 ) -> bool:
     marks = tuple(chain((mark,), linked))
+    row, col = mark.begin
     place_holders = [await mark.text() for mark in marks]
-    texts = dumps(place_holders, check_circular=False, ensure_ascii=False)
-    resp = await Nvim.input(question=LANG("expand marks", texts=texts), default="")
+
+    if (xform := st.text_trans.get(mark.marker)) and not isinstance(xform(None), str):
+        linesep = await buf.linefeed()
+        if lines := tuple(
+            chain.from_iterable(xform(linesep.join(ls)) for ls in place_holders)
+        ):
+            opts = {f"{i}. ": line for i, line in enumerate(lines, start=1)}
+            resp = await Nvim.input_list(opts)
+        else:
+            resp = None
+    else:
+        texts = dumps(place_holders, check_circular=False, ensure_ascii=False)
+        resp = await Nvim.input(question=LANG("expand marks", texts=texts), default="")
+
     if resp is not None:
-        row, col = mark.begin
-        xform = st.text_trans.get(mark.marker, identity)
-
+        new_resp = _safexform(xform, text=resp)
         try:
-            new_resp = xform(resp)
-        except Exception as e:
-            log.error("%s", e)
-            new_resp = resp
-
-        await reset_undolevels()
-        shift = await apply(buf, instructions=_trans(new_resp, marks=marks))
-        await _del_marks(buf, ns=ns, marks=marks)
-        await Nvim.exec("startinsert")
-        await win.set_cursor(row=row + shift.row, col=col + len(encode(resp)))
-        state(inserted_pos=(row, col - 1))
-        return True
+            await reset_undolevels()
+            shift = await apply(buf, instructions=_trans(new_resp, marks=marks))
+            await Nvim.exec("startinsert")
+            await win.set_cursor(row=row + shift.row, col=col + len(encode(resp)))
+            state(inserted_pos=(row, col - 1))
+            return True
+        finally:
+            await _del_marks(buf, ns=ns, marks=marks)
     else:
         return False
 

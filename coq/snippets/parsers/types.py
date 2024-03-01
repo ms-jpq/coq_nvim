@@ -1,11 +1,11 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Callable, Iterator, MutableSequence, Optional, Sequence, Tuple, Union
+from typing import Iterator, MutableSequence, Sequence, Tuple, Union
 
 from std2.itertools import deiter
 
-from ...shared.types import Context, TextTransforms
+from ...shared.types import Context, TextTransform, TextTransforms
 
 
 class ParseError(Exception): ...
@@ -56,7 +56,7 @@ class Begin:
 @dataclass(frozen=True)
 class Transform:
     idx: int
-    xform: Callable[[Optional[str]], str]
+    xform: TextTransform
 
 
 @dataclass(frozen=True)
