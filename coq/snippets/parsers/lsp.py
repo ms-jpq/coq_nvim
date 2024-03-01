@@ -1,3 +1,4 @@
+from contextlib import suppress
 from datetime import datetime
 from pathlib import PurePath
 from posixpath import normcase
@@ -17,6 +18,8 @@ from typing import (
 )
 from uuid import uuid4
 
+from std2.functools import identity
+
 from ...shared.parse import lower
 from ...shared.types import Context
 from .lexer import context_from, next_char, pushback_chars, raise_err, token_parser
@@ -30,6 +33,7 @@ from .types import (
     ParseInfo,
     ParserCtx,
     TokenStream,
+    Transform,
 )
 
 #
@@ -326,7 +330,7 @@ def _lex_options(context: ParserCtx) -> RegexFlag:
 # ':+' if '}'
 # ':?' if ':' else '}'
 # ':-' else '}' | '${' int ':' else '}'
-def _lex_fmt_back(context: ParserCtx) -> Callable[[Optional[str]], str]:
+def _lex_fmt_back(context: ParserCtx) -> Callable[[str], str]:
     pos, char = next_char(context)
     assert char == ":"
 
@@ -346,43 +350,42 @@ def _lex_fmt_back(context: ParserCtx) -> Callable[[Optional[str]], str]:
     if char == "/":
         action = "".join(tuple(cont("}", init=None)))
 
-        def trans(var: Optional[str]) -> str:
-            lo = lower(var or "")
+        def trans(var: str) -> str:
             if action == "downcase":
-                return lo
+                return lower(var)
 
             elif action == "upcase":
-                return lo.upper()
+                return var.upper()
 
             elif action == "capitalize":
-                return lo.capitalize()
+                return lower(var).capitalize()
 
             else:
-                return var or ""
+                return var
 
     elif char == "+":
         replace = "".join(tuple(cont("}", init=None)))
 
-        def trans(var: Optional[str]) -> str:
-            return replace if var is None else var
+        def trans(var: str) -> str:
+            return replace if not var else var
 
     elif char == "?":
         replace_a = "".join(tuple(cont(":", init=None)))
         replace_b = "".join(tuple(cont("}", init=None)))
 
-        def trans(var: Optional[str]) -> str:
-            return replace_a if var is not None else replace_b
+        def trans(var: str) -> str:
+            return replace_a if var else replace_b
 
     elif char == "-":
         replace = "".join(tuple(cont(":", init=None)))
 
-        def trans(var: Optional[str]) -> str:
-            return var if var is not None else replace
+        def trans(var: str) -> str:
+            return var if var else replace
 
     else:
         replace = "".join(tuple(cont(":", init=None)))
 
-        def trans(var: Optional[str]) -> str:
+        def trans(var: str) -> str:
             return var if var else replace
 
     pos, char = next_char(context)
@@ -404,7 +407,7 @@ def _lex_fmt_back(context: ParserCtx) -> Callable[[Optional[str]], str]:
 #                 | '${' int ':+' if '}'
 #                 | '${' int ':?' if ':' else '}'
 #                 | '${' int ':-' else '}' | '${' int ':' else '}'
-def _lex_fmt(context: ParserCtx) -> Tuple[int, Callable[[Optional[str]], str]]:
+def _lex_fmt(context: ParserCtx) -> Tuple[int, Callable[[str], str]]:
     pos, char = next_char(context)
     assert char == "/"
 
@@ -438,7 +441,7 @@ def _lex_fmt(context: ParserCtx) -> Tuple[int, Callable[[Optional[str]], str]]:
                         actual=char,
                     )
             group = int("".join(idx_acc))
-            return group, lambda x: x or ""
+            return group, identity
 
         # ${ int
         elif char == "{":
@@ -450,7 +453,7 @@ def _lex_fmt(context: ParserCtx) -> Tuple[int, Callable[[Optional[str]], str]]:
                 # '${' int '}'
                 elif char == "}":
                     group = int("".join(idx_acc)) if idx_acc else 0
-                    return group, lambda x: x or ""
+                    return group, identity
 
                 # ...
                 elif char == ":":
@@ -522,19 +525,30 @@ def _lex_variable_decorated(context: ParserCtx, var_name: str) -> TokenStream:
     group, trans = _lex_fmt(context)
     flag = _lex_options(context)
 
-    subst = _variable_substitution(context, var_name=var_name)
-    subst = var_name if subst is None else subst
+    sub = _variable_substitution(context, var_name=var_name)
+    subst = var_name if sub is None else sub
     re = _compile(context, origin=pos, regex=regex, flag=flag)
 
-    if match := re.match(subst):
-        try:
-            matched = match.group(group)
-        except IndexError:
-            yield from trans(None)
-        else:
-            yield from trans(matched)
+    def xform(val: Optional[str]) -> str:
+        text = val or subst
+        if match := re.match(text):
+            with suppress(IndexError):
+                matched = match.group(group)
+                return trans(matched)
+        return trans(subst)
+
+    for idx in reversed(context.stack):
+        if isinstance(idx, int):
+            yield Transform(idx=idx, xform=xform)
+            break
     else:
-        yield from trans(None)
+        raise_err(
+            text=context.text,
+            pos=pos,
+            condition="parsing var",
+            expected=(),
+            actual=char,
+        )
 
 
 # variable    ::= '$' var | '${' var }'

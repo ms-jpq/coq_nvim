@@ -85,7 +85,9 @@ def _marks(
 
 def _parser(grammar: SnippetGrammar) -> Callable[[Context, ParseInfo, str], Parsed]:
     if grammar is SnippetGrammar.lit:
-        return lambda _, __, text: Parsed(text=text, cursor=len(text), regions=())
+        return lambda _, __, text: Parsed(
+            text=text, cursor=len(text), regions=(), xforms={}
+        )
     elif grammar is SnippetGrammar.lsp:
         return lsp_tokenizer
     elif grammar is SnippetGrammar.snu:

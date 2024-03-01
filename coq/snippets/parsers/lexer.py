@@ -2,12 +2,14 @@ from itertools import chain
 from string import Template
 from textwrap import dedent
 from typing import (
+    Callable,
     Iterable,
     Iterator,
     Mapping,
     MutableMapping,
     MutableSequence,
     NoReturn,
+    Optional,
     Sequence,
     Tuple,
     Union,
@@ -33,6 +35,7 @@ from .types import (
     Region,
     Token,
     TokenStream,
+    Transform,
     Unparsed,
 )
 
@@ -142,6 +145,7 @@ def token_parser(context: ParserCtx, stream: TokenStream) -> Parsed:
     raw_regions: MutableMapping[int, MutableSequence[Region]] = {}
     slices: MutableSequence[str] = []
     begins: MutableSequence[Tuple[int, Union[Begin, DummyBegin]]] = []
+    xforms: MutableMapping[int, Callable[[Optional[str]], str]] = {}
     bad_tokens: MutableSequence[Tuple[int, Token]] = []
 
     for token in stream:
@@ -153,6 +157,8 @@ def token_parser(context: ParserCtx, stream: TokenStream) -> Parsed:
             slices.append(token)
         elif isinstance(token, Begin):
             begins.append((idx, token))
+        elif isinstance(token, Transform):
+            xforms[token.idx] = token.xform
         elif isinstance(token, DummyBegin):
             begins.append((idx, token))
         elif isinstance(token, End):
@@ -188,5 +194,5 @@ def token_parser(context: ParserCtx, stream: TokenStream) -> Parsed:
         raise ParseError(msg)
 
     regions = tuple(_consolidate(text, regions=raw_regions))
-    parsed = Parsed(text=text, cursor=cursor, regions=regions)
+    parsed = Parsed(text=text, cursor=cursor, regions=regions, xforms=xforms)
     return parsed

@@ -1,7 +1,16 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Callable, Iterator, MutableSequence, Optional, Sequence, Tuple, Union
+from typing import (
+    Callable,
+    Iterator,
+    Mapping,
+    MutableSequence,
+    Optional,
+    Sequence,
+    Tuple,
+    Union,
+)
 
 from std2.itertools import deiter
 
@@ -51,7 +60,12 @@ class Unparsed:
 @dataclass(frozen=True)
 class Begin:
     idx: int
-    # trans: Callable[[Optional[str]], str]
+
+
+@dataclass(frozen=True)
+class Transform:
+    idx: int
+    xform: Callable[[Optional[str]], str]
 
 
 @dataclass(frozen=True)
@@ -62,7 +76,7 @@ class DummyBegin: ...
 class End: ...
 
 
-Token = Union[Unparsed, Begin, DummyBegin, End, str]
+Token = Union[Unparsed, Begin, Transform, DummyBegin, End, str]
 TokenStream = Iterator[Token]
 
 
@@ -78,3 +92,4 @@ class Parsed:
     text: str
     cursor: int
     regions: Sequence[Tuple[int, Region]]
+    xforms: Mapping[int, Callable[[Optional[str]], str]]
