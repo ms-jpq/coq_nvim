@@ -14,7 +14,6 @@ from typing import (
     Pattern,
     Sequence,
     Tuple,
-    cast,
 )
 from uuid import uuid4
 
@@ -304,7 +303,7 @@ def _lex_options(context: ParserCtx) -> RegexFlag:
     flag = 0
     for pos, char in context:
         if char in _REGEX_FLAG_CHARS:
-            flag = flag | _RE_FLAGS.get(char, 0)
+            flag |= _RE_FLAGS.get(char, 0)
 
         elif char == "}":
             break
@@ -318,7 +317,8 @@ def _lex_options(context: ParserCtx) -> RegexFlag:
                 actual=char,
             )
 
-    return cast(RegexFlag, flag)
+    ref = RegexFlag(flag)
+    return ref
 
 
 # ':' '/upcase' | '/downcase' | '/capitalize' '}'
@@ -524,9 +524,8 @@ def _lex_variable_decorated(context: ParserCtx, var_name: str) -> TokenStream:
     subst = _variable_substitution(context, var_name=var_name)
     subst = var_name if subst is None else subst
     re = _compile(context, origin=pos, regex=regex, flag=flag)
-    match = re.match(subst)
 
-    if match:
+    if match := re.match(subst):
         try:
             matched = match.group(group)
         except IndexError:
