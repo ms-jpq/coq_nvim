@@ -93,7 +93,7 @@ async def _single_mark(
     row, col = mark.begin
     await reset_undolevels()
 
-    picked = False
+    picked, cshift = False, 0
     if xform := st.text_trans.get(mark.marker):
         linesep = await buf.linefeed()
         init = xform(None)
@@ -111,7 +111,7 @@ async def _single_mark(
             opts = {f"{i}: {line}": line for i, line in enumerate(lines, start=1)}
 
             if new_resp := await Nvim.input_list(opts):
-                col += len(encode(new_resp))
+                cshift = len(encode(new_resp))
                 picked = True
     else:
         new_resp = ""
@@ -119,7 +119,7 @@ async def _single_mark(
     try:
         await apply(buf, instructions=_trans(new_resp or "", marks=(mark,)))
         await Nvim.exec("startinsert")
-        await win.set_cursor(row=row, col=col)
+        await win.set_cursor(row=row, col=col + cshift)
     except NvimError as e:
         msg = f"""
         bad mark location {mark}
@@ -155,20 +155,20 @@ async def _linked_marks(
             chain.from_iterable(xform(linesep.join(ls)) for ls in place_holders)
         ):
             opts = {f"{i}: {line}": line for i, line in enumerate(lines, start=1)}
-            resp = await Nvim.input_list(opts)
+            new_resp = await Nvim.input_list(opts)
         else:
-            resp = None
+            new_resp = None
     else:
         texts = dumps(place_holders, check_circular=False, ensure_ascii=False)
         resp = await Nvim.input(question=LANG("expand marks", texts=texts), default="")
+        new_resp = _safexform(xform, text=resp) if resp is not None else None
 
-    if resp is not None:
-        new_resp = _safexform(xform, text=resp)
+    if new_resp is not None:
         try:
             await reset_undolevels()
             shift = await apply(buf, instructions=_trans(new_resp, marks=marks))
             await Nvim.exec("startinsert")
-            await win.set_cursor(row=row + shift.row, col=col + len(encode(resp)))
+            await win.set_cursor(row=row + shift.row, col=col + len(encode(new_resp)))
             state(inserted_pos=(row, col - 1))
             return True
         finally:
