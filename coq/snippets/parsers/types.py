@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Iterator, MutableSequence, Sequence, Tuple, Union
+from typing import Iterator, MutableSequence, Optional, Sequence, Tuple, Union
 
 from std2.itertools import deiter
 
@@ -60,7 +60,7 @@ class VarBegin:
 
 @dataclass(frozen=True)
 class Transform:
-    extension: bool
+    var_subst: Optional[str]
     maybe_idx: int
     xform: TextTransform
 

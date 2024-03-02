@@ -26,16 +26,16 @@ from ...shared.parse import lower
 from ...shared.types import Context
 from .lexer import context_from, next_char, pushback_chars, raise_err, token_parser
 from .types import (
-    IntBegin,
-    VarBegin,
     EChar,
     End,
     Index,
+    IntBegin,
     Parsed,
     ParseInfo,
     ParserCtx,
     TokenStream,
     Transform,
+    VarBegin,
 )
 
 #
@@ -120,7 +120,7 @@ def _half_lex_choice(context: ParserCtx, idx: int) -> TokenStream:
             pos, char = next_char(context)
             if char == "}":
                 yield "]"
-                yield Transform(extension=False, maybe_idx=idx, xform=_choice_trans)
+                yield Transform(var_subst=None, maybe_idx=idx, xform=_choice_trans)
                 yield End()
                 break
             else:
@@ -553,7 +553,7 @@ def _lex_variable_decorated(context: ParserCtx, var_name: str) -> TokenStream:
     yield subst
     for idx in reversed(context.stack):
         if isinstance(idx, int):
-            yield Transform(extension=True, maybe_idx=idx, xform=xform)
+            yield Transform(var_subst=subst, maybe_idx=idx, xform=xform)
             break
 
 

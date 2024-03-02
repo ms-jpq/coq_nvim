@@ -22,11 +22,10 @@ from std2.types import never
 from ...shared.types import Context, TextTransform
 from ..consts import MOD_PAD, SNIP_LINE_SEP
 from .types import (
-    IntBegin,
-    VarBegin,
     EChar,
     End,
     Index,
+    IntBegin,
     Parsed,
     ParseError,
     ParseInfo,
@@ -36,6 +35,7 @@ from .types import (
     TokenStream,
     Transform,
     Unparsed,
+    VarBegin,
 )
 
 
@@ -147,7 +147,7 @@ def token_parser(context: ParserCtx, stream: TokenStream) -> Parsed:
     xforms: MutableMapping[int, TextTransform] = {}
     bad_tokens: MutableSequence[Tuple[int, Token]] = []
 
-    maybe_trans: Optional[Tuple[int, Transform]] = None
+    maybe_trans = -1, Transform(var_subst=None, maybe_idx=-1, xform=lambda _: ())
     for token in stream:
         if isinstance(token, Unparsed):
             token = token
@@ -158,7 +158,7 @@ def token_parser(context: ParserCtx, stream: TokenStream) -> Parsed:
         elif isinstance(token, IntBegin):
             begins.append((idx, token))
         elif isinstance(token, Transform):
-            if token.extension:
+            if token.var_subst is not None:
                 maybe_trans = idx, token
             else:
                 xforms[token.maybe_idx] = token.xform
@@ -168,8 +168,16 @@ def token_parser(context: ParserCtx, stream: TokenStream) -> Parsed:
             if begins:
                 pos, begin = begins.pop()
                 if isinstance(begin, IntBegin):
+                    trans_idx, token = maybe_trans
                     acc = raw_regions.setdefault(begin.idx, [])
                     acc.append(Region(begin=pos, end=idx, text=""))
+
+                    if (
+                        begin.idx == token.maybe_idx
+                        and idx == trans_idx
+                        and pos == trans_idx - len(token.var_subst or "")
+                    ):
+                        xforms[token.maybe_idx] = token.xform
             else:
                 bad_tokens.append((idx, token))
         else:
