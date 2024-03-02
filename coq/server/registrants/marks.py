@@ -102,7 +102,9 @@ async def _single_mark(
                 question=LANG("expand marks", texts=init), default=""
             )
             text = resp if resp is not None else init
-            new_resp = _safexform(xform, text=text) or linesep.join(await mark.text())
+            new_resp = (
+                _safexform(xform, text=text) or linesep.join(await mark.text()) or None
+            )
         else:
             line = linesep.join(await mark.text())
             lines = tuple(xform(line))
