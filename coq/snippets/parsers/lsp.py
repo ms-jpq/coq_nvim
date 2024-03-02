@@ -539,7 +539,6 @@ def _lex_variable_decorated(context: ParserCtx, var_name: str) -> TokenStream:
     flag = _lex_options(context)
 
     sub = _variable_substitution(context, var_name=var_name)
-    subst = var_name if sub is None else sub
     re = _compile(context, origin=pos, regex=regex, flag=flag)
 
     def xform(val: Optional[str]) -> str:
@@ -550,6 +549,7 @@ def _lex_variable_decorated(context: ParserCtx, var_name: str) -> TokenStream:
                 return trans(matched)
         return trans(subst)
 
+    subst = xform(var_name if sub is None else sub)
     yield subst
     for idx in reversed(context.stack):
         if isinstance(idx, int):
