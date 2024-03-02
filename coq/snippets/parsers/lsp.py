@@ -97,7 +97,7 @@ def _lex_escape(context: ParserCtx, *, escapable_chars: AbstractSet[str]) -> str
 
 
 def _choice_trans(choice: Optional[str]) -> Sequence[str]:
-    sep, text = "|", choice or ""
+    sep, text = "|", (choice or "")[1:-1]
     with suppress(StdLexError):
         return tuple(split(text, sep=sep, esc="\\"))
     return text.split(sep)
@@ -108,7 +108,7 @@ def _half_lex_choice(context: ParserCtx, idx: int) -> TokenStream:
     pos, char = next_char(context)
     assert char == "|"
 
-    yield " "
+    yield "["
     for pos, char in context:
         if char == "\\":
             pushback_chars(context, (pos, char))
@@ -119,7 +119,7 @@ def _half_lex_choice(context: ParserCtx, idx: int) -> TokenStream:
         elif char == "|":
             pos, char = next_char(context)
             if char == "}":
-                yield " "
+                yield "]"
                 yield Transform(idx=idx, xform=_choice_trans)
                 yield End()
                 break

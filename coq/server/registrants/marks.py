@@ -93,6 +93,7 @@ async def _single_mark(
     row, col = mark.begin
     await reset_undolevels()
 
+    picked = False
     if xform := st.text_trans.get(mark.marker):
         linesep = await buf.linefeed()
         init = xform(None)
@@ -105,13 +106,16 @@ async def _single_mark(
         else:
             line = linesep.join(await mark.text())
             lines = tuple(xform(line))
-            opts = {f"{i}. ": line for i, line in enumerate(lines, start=1)}
-            new_resp = await Nvim.input_list(opts) or ""
+            opts = {f"{i}: {line}": line for i, line in enumerate(lines, start=1)}
+
+            if new_resp := await Nvim.input_list(opts):
+                col += len(encode(new_resp))
+                picked = True
     else:
         new_resp = ""
 
     try:
-        await apply(buf, instructions=_trans(new_resp, marks=(mark,)))
+        await apply(buf, instructions=_trans(new_resp or "", marks=(mark,)))
         await Nvim.exec("startinsert")
         await win.set_cursor(row=row, col=col)
     except NvimError as e:
@@ -124,8 +128,9 @@ async def _single_mark(
     else:
         await Nvim.exec("startinsert")
         state(inserted_pos=(row, col))
-        msg = LANG("applied mark", marks_left=len(marks))
-        await Nvim.write(msg)
+        if not picked:
+            msg = LANG("applied mark", marks_left=len(marks))
+            await Nvim.write(msg)
     finally:
         await _del_marks(buf=buf, ns=ns, marks=(mark,))
 
@@ -147,7 +152,7 @@ async def _linked_marks(
         if lines := tuple(
             chain.from_iterable(xform(linesep.join(ls)) for ls in place_holders)
         ):
-            opts = {f"{i}. ": line for i, line in enumerate(lines, start=1)}
+            opts = {f"{i}: {line}": line for i, line in enumerate(lines, start=1)}
             resp = await Nvim.input_list(opts)
         else:
             resp = None
