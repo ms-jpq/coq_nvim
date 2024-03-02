@@ -147,7 +147,9 @@ def token_parser(context: ParserCtx, stream: TokenStream) -> Parsed:
     xforms: MutableMapping[int, TextTransform] = {}
     bad_tokens: MutableSequence[Tuple[int, Token]] = []
 
-    maybe_trans = -1, Transform(var_subst=None, maybe_idx=-1, xform=lambda _: ())
+    trans_idx = -1
+    x_token = Transform(var_subst=None, maybe_idx=-1, xform=lambda _: ())
+
     for token in stream:
         if isinstance(token, Unparsed):
             token = token
@@ -159,7 +161,7 @@ def token_parser(context: ParserCtx, stream: TokenStream) -> Parsed:
             begins.append((idx, token))
         elif isinstance(token, Transform):
             if token.var_subst is not None:
-                maybe_trans = idx, token
+                trans_idx, x_token = idx, token
             else:
                 xforms[token.maybe_idx] = token.xform
         elif isinstance(token, VarBegin):
@@ -168,16 +170,15 @@ def token_parser(context: ParserCtx, stream: TokenStream) -> Parsed:
             if begins:
                 pos, begin = begins.pop()
                 if isinstance(begin, IntBegin):
-                    trans_idx, token = maybe_trans
                     acc = raw_regions.setdefault(begin.idx, [])
                     acc.append(Region(begin=pos, end=idx, text=""))
 
                     if (
-                        begin.idx == token.maybe_idx
+                        begin.idx == x_token.maybe_idx
                         and idx == trans_idx
-                        and pos == trans_idx - len(token.var_subst or "")
+                        and pos == trans_idx - len(x_token.var_subst or "")
                     ):
-                        xforms[token.maybe_idx] = token.xform
+                        xforms[x_token.maybe_idx] = x_token.xform
             else:
                 bad_tokens.append((idx, token))
         else:
