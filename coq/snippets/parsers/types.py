@@ -49,25 +49,27 @@ class Unparsed:
 
 
 @dataclass(frozen=True)
-class Begin:
+class IntBegin:
     idx: int
+
+
+@dataclass(frozen=True)
+class VarBegin:
+    name: str
 
 
 @dataclass(frozen=True)
 class Transform:
-    idx: int
+    extension: bool
+    maybe_idx: int
     xform: TextTransform
-
-
-@dataclass(frozen=True)
-class DummyBegin: ...
 
 
 @dataclass(frozen=True)
 class End: ...
 
 
-Token = Union[Unparsed, Begin, Transform, DummyBegin, End, str]
+Token = Union[Unparsed, IntBegin, Transform, VarBegin, End, str]
 TokenStream = Iterator[Token]
 
 

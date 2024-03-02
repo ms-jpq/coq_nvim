@@ -26,8 +26,8 @@ from ...shared.parse import lower
 from ...shared.types import Context
 from .lexer import context_from, next_char, pushback_chars, raise_err, token_parser
 from .types import (
-    Begin,
-    DummyBegin,
+    IntBegin,
+    VarBegin,
     EChar,
     End,
     Index,
@@ -120,7 +120,7 @@ def _half_lex_choice(context: ParserCtx, idx: int) -> TokenStream:
             pos, char = next_char(context)
             if char == "}":
                 yield "]"
-                yield Transform(idx=idx, xform=_choice_trans)
+                yield Transform(extension=False, maybe_idx=idx, xform=_choice_trans)
                 yield End()
                 break
             else:
@@ -147,7 +147,7 @@ def _lex_tcp(context: ParserCtx) -> TokenStream:
             idx_acc.append(char)
         else:
             idx = int("".join(idx_acc))
-            yield Begin(idx=idx)
+            yield IntBegin(idx=idx)
             if char == "}":
                 # tabstop     ::= '$' int | '${' int '}'
                 yield End()
@@ -553,16 +553,8 @@ def _lex_variable_decorated(context: ParserCtx, var_name: str) -> TokenStream:
     yield subst
     for idx in reversed(context.stack):
         if isinstance(idx, int):
-            yield Transform(idx=idx, xform=xform)
+            yield Transform(extension=True, maybe_idx=idx, xform=xform)
             break
-    else:
-        raise_err(
-            text=context.text,
-            pos=pos,
-            condition="parsing var",
-            expected=(),
-            actual=char,
-        )
 
 
 # variable    ::= '$' var | '${' var }'
@@ -591,7 +583,7 @@ def _lex_variable_nested(context: ParserCtx) -> TokenStream:
                 context.stack.append(name)
                 yield from _lex(context, shallow=True)
             else:
-                yield DummyBegin()
+                yield VarBegin(name=name)
                 context.stack.append(name)
             break
 
@@ -652,12 +644,12 @@ def _lex_scope(context: ParserCtx) -> TokenStream:
             if char in _INT_CHARS:
                 idx_acc.append(char)
             else:
-                yield Begin(idx=int("".join(idx_acc)))
+                yield IntBegin(idx=int("".join(idx_acc)))
                 yield End()
                 pushback_chars(context, (pos, char))
                 break
         else:
-            yield Begin(idx=int("".join(idx_acc)))
+            yield IntBegin(idx=int("".join(idx_acc)))
             yield End()
     elif char in _VAR_BEGIN_CHARS:
         pushback_chars(context, (pos, char))

@@ -4,15 +4,15 @@ from typing import AbstractSet, MutableSequence, Optional
 from ...shared.types import Context
 from .lexer import context_from, next_char, pushback_chars, raise_err, token_parser
 from .types import (
-    Begin,
-    DummyBegin,
     End,
+    IntBegin,
     Parsed,
     ParseInfo,
     ParserCtx,
     Token,
     TokenStream,
     Unparsed,
+    VarBegin,
 )
 
 """
@@ -93,7 +93,7 @@ def _lex_tp(context: ParserCtx) -> TokenStream:
             idx_acc.append(char)
         else:
             idx = int("".join(idx_acc))
-            yield Begin(idx=idx)
+            yield IntBegin(idx=idx)
             if char == "}":
                 # tabstop     ::= '$' int | '${' int '}'
                 yield End()
@@ -147,7 +147,7 @@ def _lex_variable(context: ParserCtx) -> TokenStream:
                 context.stack.append(name)
                 yield from _lex(context, shallow=True)
             else:
-                yield DummyBegin()
+                yield VarBegin(name=name)
                 context.stack.append(name)
             break
         else:
@@ -194,7 +194,7 @@ def _lex_scope(context: ParserCtx) -> TokenStream:
             if char in _INT_CHARS:
                 idx_acc.append(char)
             else:
-                yield Begin(idx=int("".join(idx_acc)))
+                yield IntBegin(idx=int("".join(idx_acc)))
                 yield End()
                 pushback_chars(context, (pos, char))
                 break

@@ -8,6 +8,7 @@ from typing import (
     MutableMapping,
     MutableSequence,
     NoReturn,
+    Optional,
     Sequence,
     Tuple,
     Union,
@@ -21,8 +22,8 @@ from std2.types import never
 from ...shared.types import Context, TextTransform
 from ..consts import MOD_PAD, SNIP_LINE_SEP
 from .types import (
-    Begin,
-    DummyBegin,
+    IntBegin,
+    VarBegin,
     EChar,
     End,
     Index,
@@ -142,10 +143,11 @@ def token_parser(context: ParserCtx, stream: TokenStream) -> Parsed:
     idx = 0
     raw_regions: MutableMapping[int, MutableSequence[Region]] = {}
     slices: MutableSequence[str] = []
-    begins: MutableSequence[Tuple[int, Union[Begin, DummyBegin]]] = []
+    begins: MutableSequence[Tuple[int, Union[IntBegin, VarBegin]]] = []
     xforms: MutableMapping[int, TextTransform] = {}
     bad_tokens: MutableSequence[Tuple[int, Token]] = []
 
+    maybe_trans: Optional[Tuple[int, Transform]] = None
     for token in stream:
         if isinstance(token, Unparsed):
             token = token
@@ -153,16 +155,19 @@ def token_parser(context: ParserCtx, stream: TokenStream) -> Parsed:
         elif isinstance(token, str):
             idx += len(encode(token))
             slices.append(token)
-        elif isinstance(token, Begin):
+        elif isinstance(token, IntBegin):
             begins.append((idx, token))
         elif isinstance(token, Transform):
-            xforms[token.idx] = token.xform
-        elif isinstance(token, DummyBegin):
+            if token.extension:
+                maybe_trans = idx, token
+            else:
+                xforms[token.maybe_idx] = token.xform
+        elif isinstance(token, VarBegin):
             begins.append((idx, token))
         elif isinstance(token, End):
             if begins:
                 pos, begin = begins.pop()
-                if isinstance(begin, Begin):
+                if isinstance(begin, IntBegin):
                     acc = raw_regions.setdefault(begin.idx, [])
                     acc.append(Region(begin=pos, end=idx, text=""))
             else:
