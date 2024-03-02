@@ -130,7 +130,7 @@ async def _single_mark(
     else:
         await Nvim.exec("startinsert")
         state(inserted_pos=(row, col))
-        if not picked:
+        if new_resp and not picked:
             msg = LANG("applied mark", marks_left=len(marks))
             await Nvim.write(msg)
     finally:
