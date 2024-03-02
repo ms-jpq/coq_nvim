@@ -540,6 +540,7 @@ def _lex_variable_decorated(context: ParserCtx, var_name: str) -> TokenStream:
 
     sub = _variable_substitution(context, var_name=var_name)
     re = _compile(context, origin=pos, regex=regex, flag=flag)
+    subst = var_name if sub is None else sub
 
     def xform(val: Optional[str]) -> str:
         text = val or subst
@@ -549,11 +550,10 @@ def _lex_variable_decorated(context: ParserCtx, var_name: str) -> TokenStream:
                 return trans(matched)
         return trans(subst)
 
-    subst = xform(var_name if sub is None else sub)
-    yield subst
+    yield (var_subst := xform(None))
     for idx in reversed(context.stack):
         if isinstance(idx, int):
-            yield Transform(var_subst=subst, maybe_idx=idx, xform=xform)
+            yield Transform(var_subst=var_subst, maybe_idx=idx, xform=xform)
             break
 
 
