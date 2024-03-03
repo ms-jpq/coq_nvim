@@ -98,7 +98,7 @@ def _lex_escape(context: ParserCtx, *, escapable_chars: AbstractSet[str]) -> str
 
 
 def _choice_trans(choice: Optional[str]) -> Sequence[str]:
-    sep, text = "|", removesuffix(removeprefix((choice or ""), prefix="["), suffix="]")
+    sep, text = "|", removesuffix(removeprefix(choice or "", prefix="["), suffix="]")
     with suppress(StdLexError):
         return tuple(split(text, sep=sep, esc="\\"))
     return text.split(sep)
