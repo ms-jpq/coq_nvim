@@ -8,7 +8,6 @@ from typing import (
     MutableMapping,
     MutableSequence,
     NoReturn,
-    Optional,
     Sequence,
     Tuple,
     Union,

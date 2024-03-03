@@ -1,3 +1,4 @@
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path, PurePath
 from shutil import which
 from typing import Any, Iterator, Mapping, cast
@@ -96,7 +97,7 @@ def _from_each_according_to_their_ability(
         yield T9Worker.init(supervisor, options=clients.tabnine, misc=None)
 
 
-async def stack() -> Stack:
+async def stack(th: ThreadPoolExecutor) -> Stack:
     settings = await _settings()
     pum_width = await Nvim.opts.get(int, "pumwidth")
     vars_dir = (
@@ -110,6 +111,7 @@ async def stack() -> Stack:
         db=idb,
     )
     supervisor = Supervisor(
+        th=th,
         vars_dir=vars_dir,
         display=settings.display,
         match=settings.match,

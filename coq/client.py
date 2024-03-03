@@ -1,5 +1,6 @@
-from asyncio import get_running_loop
+from asyncio import AbstractEventLoop, get_running_loop
 from asyncio.exceptions import CancelledError
+from concurrent.futures import ThreadPoolExecutor
 from contextlib import AbstractAsyncContextManager, suppress
 from functools import wraps
 from logging import DEBUG as DEBUG_LV
@@ -38,8 +39,7 @@ def _autodie(ppid: int) -> AbstractAsyncContextManager:
         return autodie(ppid)
 
 
-def _set_debug() -> None:
-    loop = get_running_loop()
+def _set_debug(loop: AbstractEventLoop) -> None:
     loop.set_debug(DEBUG)
     if DEBUG or DEBUG_METRICS or DEBUG_DB:
         TMP_DIR.mkdir(parents=True, exist_ok=True)
@@ -63,13 +63,16 @@ def _trans(stack: Stack, handler: _CB) -> _CB:
     return cast(_CB, f)
 
 
-async def init(socket: ServerAddr, ppid: int) -> None:
+async def init(socket: ServerAddr, ppid: int, th: ThreadPoolExecutor) -> None:
+    loop = get_running_loop()
+    loop.set_default_executor(th)
+
     async with _autodie(ppid):
-        _set_debug()
+        _set_debug(loop)
 
         async with conn(socket, default=_default) as client:
             try:
-                stk = await stack()
+                stk = await stack(th=th)
             except (DecodeError, ValidationError) as e:
                 tpl = """
                     Some options may have changed.

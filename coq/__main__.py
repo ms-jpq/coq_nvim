@@ -1,5 +1,6 @@
 from argparse import ArgumentParser, Namespace
 from asyncio import run as arun
+from concurrent.futures import ThreadPoolExecutor
 from contextlib import redirect_stderr, redirect_stdout, suppress
 from io import StringIO
 from os import linesep
@@ -172,7 +173,8 @@ elif command == "run":
         print(e, msg, sep=linesep, end="", file=stderr)
         exit(1)
     else:
-        arun(init(args.socket, ppid=args.ppid))
+        with ThreadPoolExecutor() as th:
+            arun(init(args.socket, ppid=args.ppid, th=th))
 
 else:
     assert False

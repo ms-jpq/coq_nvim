@@ -87,6 +87,7 @@ class PReviewer(Protocol[_T]):
 class Supervisor:
     def __init__(
         self,
+        th: ThreadPoolExecutor,
         vars_dir: Path,
         display: Display,
         match: MatchOptions,
@@ -99,7 +100,7 @@ class Supervisor:
         self.comp, self.limits = comp, limits
         self._reviewer = reviewer
 
-        self.threadpool = ThreadPoolExecutor()
+        self.threadpool = th
         self._thread_lock = Lock()
         self._workers: WeakSet[Worker] = WeakSet()
 

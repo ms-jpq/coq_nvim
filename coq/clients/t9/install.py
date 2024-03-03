@@ -20,7 +20,7 @@ from std2.platform import OS, os
 from std2.urllib import urlopen
 
 _VER = "https://update.tabnine.com/bundles/version"
-_DOWN = Template(f"https://update.tabnine.com/bundles/$version/$triple/TabNine.zip")
+_DOWN = Template("https://update.tabnine.com/bundles/$version/$triple/TabNine.zip")
 _T9_EXEC = PurePath("TabNine").with_suffix(".exe" if os is OS.windows else "")
 _X_MOD = 0o755
 
