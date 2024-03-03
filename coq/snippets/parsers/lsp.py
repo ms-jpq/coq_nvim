@@ -21,6 +21,7 @@ from uuid import uuid4
 from std2.functools import identity
 from std2.lex import ParseError as StdLexError
 from std2.lex import split
+from std2.string import removeprefix, removesuffix
 
 from ...shared.parse import lower
 from ...shared.types import Context
@@ -97,7 +98,7 @@ def _lex_escape(context: ParserCtx, *, escapable_chars: AbstractSet[str]) -> str
 
 
 def _choice_trans(choice: Optional[str]) -> Sequence[str]:
-    sep, text = "|", (choice or "")[1:-1]
+    sep, text = "|", removesuffix(removeprefix((choice or ""), prefix="["), suffix="]")
     with suppress(StdLexError):
         return tuple(split(text, sep=sep, esc="\\"))
     return text.split(sep)
