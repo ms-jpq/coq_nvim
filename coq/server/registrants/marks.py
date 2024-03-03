@@ -106,13 +106,13 @@ async def _single_mark(
                 _safexform(xform, text=text) or linesep.join(await mark.text()) or None
             )
         else:
+            picked = True
             line = linesep.join(await mark.text())
             lines = tuple(xform(line))
             opts = {f"{i}: {line}": line for i, line in enumerate(lines, start=1)}
 
             if new_resp := await Nvim.input_list(opts):
                 cshift = len(encode(new_resp))
-                picked = True
     else:
         new_resp = ""
 
@@ -130,7 +130,7 @@ async def _single_mark(
     else:
         await Nvim.exec("startinsert")
         state(inserted_pos=(row, col))
-        if new_resp and not picked:
+        if not picked:
             msg = LANG("applied mark", marks_left=len(marks))
             await Nvim.write(msg)
     finally:
