@@ -13,7 +13,7 @@ from functools import lru_cache
 from shutil import which
 from subprocess import CalledProcessError
 from threading import Thread
-from typing import Any, Awaitable, Callable, Coroutine, Optional, Sequence, TypeVar
+from typing import Any, Awaitable, Callable, Coroutine, Sequence, TypeVar
 
 from std2.asyncio.subprocess import call
 
@@ -21,7 +21,7 @@ _T = TypeVar("_T")
 
 
 class AsyncExecutor:
-    def __init__(self, threadpool: Optional[ThreadPoolExecutor]) -> None:
+    def __init__(self, threadpool: ThreadPoolExecutor) -> None:
         f: Future = Future()
         self._fut: Future = Future()
 
