@@ -53,7 +53,6 @@ def parse_args() -> Namespace:
     sub_parsers = parser.add_subparsers(dest="command", required=True)
 
     with nullcontext(sub_parsers.add_parser("run")) as p:
-        p.add_argument("--ppid", required=True, type=int)
         p.add_argument("--socket", required=True, type=_socket)
         p.add_argument("--xdg")
 
@@ -174,7 +173,7 @@ elif command == "run":
         exit(1)
     else:
         with ThreadPoolExecutor() as th:
-            arun(init(args.socket, ppid=args.ppid, th=th))
+            arun(init(args.socket, th=th))
 
 else:
     assert False
