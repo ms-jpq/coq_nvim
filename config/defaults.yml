@@ -148,6 +148,7 @@ display:
     spacing: 1
 
   mark_highlight_group: Pmenu
+  mark_applied_notify: True
 
   preview:
     border: rounded
