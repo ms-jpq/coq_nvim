@@ -83,6 +83,7 @@ class Display:
     icons: Icons
     time_fmt: str
     mark_highlight_group: str
+    mark_applied_notify: bool
     statusline: Statusline
 
 
