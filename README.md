@@ -250,9 +250,15 @@ Either set `let g:coq_settings = { 'display.icons.mode': 'none' }` to disable ic
 
 ## Install
 
+**Windows** requires symlinks support in git.
+
+```bash
+git config --global core.symlinks true
+```
+
 Needs python virtual env
 
-```sh
+```bash
 apt install --yes -- python3-venv
 ```
 
