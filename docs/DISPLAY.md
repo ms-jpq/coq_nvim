@@ -14,6 +14,18 @@ The highlight group alias for snippet regions that you can navigate around using
 
 ---
 
+#### `coq_settings.display.mark_applied_notify`
+
+When you go the next edit region (e.g : snippet placeholder) you are notified when a mark is applied if this option is enabled.
+
+**default:**
+
+```json
+true
+```
+
+---
+
 #### coq_settings.display.ghost_text
 
 The virtual text previewing selected completion
@@ -57,7 +69,7 @@ Disabling this will lead to more smooth menu animation, but also the stale resul
 **default:**
 
 ```json
-True
+true
 ```
 
 ##### `coq_settings.display.pum.y_max_len`
