@@ -135,7 +135,7 @@ def trans_adjusted(
     else:
         old_prefix = edit.old_prefix
 
-    if len(edit.old_suffix) >= min(comp.replace_suffix_threshold, len(ctx.line_after)):
+    if len(edit.old_suffix) >= min(comp.replace_suffix_threshold, len(ctx.syms_after)):
         old_suffix = edit.old_suffix
     elif len(tokens) <= 1:
         simple_after = cword_after(
