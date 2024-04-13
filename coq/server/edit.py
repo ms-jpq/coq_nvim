@@ -1,3 +1,4 @@
+from collections import deque
 from dataclasses import dataclass, replace
 from itertools import chain, repeat
 from pprint import pformat
@@ -216,7 +217,7 @@ def _range_edit_trans(
 
     else:
         (r1, ec1), (r2, ec2) = sorted((edit.begin, edit.end))
-        split_lines = edit.new_text.split(ctx.linefeed)
+        split_lines = deque(edit.new_text.split(ctx.linefeed))
 
         if edit.encoding == UTF16:
             c1 = len(encode(decode(lines.b_lines16[r1][: ec1 * 2], encoding=UTF16)))
@@ -232,11 +233,24 @@ def _range_edit_trans(
         else:
             never(edit.encoding)
 
+        b_r1, b_r2 = lines.b_lines8[r1], lines.b_lines8[r2]
+        pox_x, pos_y = c1, r2
+        if c1 >= len(b_r1):
+            r1 += 1
+            c1 = 0
+            if split_lines and not split_lines[0]:
+                split_lines.popleft()
+        if c2 >= len(b_r2):
+            r2 += 1
+            c2 = 0
+            if split_lines and split_lines[-1]:
+                split_lines.append("")
+
         begin = r1, c1
         end = r2, c2
 
         if primary and adjust_indent:
-            line_before = ctx.line_before[:c1]
+            line_before = ctx.line_before[:pox_x]
             new_lines: Sequence[str] = tuple(
                 indent_adjusted(ctx, line_before=line_before, lines=split_lines)
             )
@@ -253,7 +267,7 @@ def _range_edit_trans(
             (
                 len(encode(lines_before[-1]))
                 if len(lines_before) > 1
-                else len(lines.b_lines8[r2][:c1]) + len(encode(lines_before[0]))
+                else len(lines.b_lines8[pos_y][:pox_x]) + len(encode(lines_before[0]))
             )
             if primary
             else -1
@@ -265,7 +279,7 @@ def _range_edit_trans(
             end=end,
             cursor_yoffset=cursor_yoffset,
             cursor_xpos=cursor_xpos,
-            new_lines=new_lines,
+            new_lines=tuple(new_lines),
         )
         return inst
 
@@ -541,6 +555,9 @@ async def edit(
             log.warn("%s", pformat(("OUT OF BOUNDS", (lo, hi), metric)))
             return None
         else:
+            hi = min(
+                state.context.line_count, hi + len(metric.comp.secondary_edits) + 1
+            )
             limited_lines = await buf.get_lines(lo=lo, hi=hi)
             lines = [*chain(repeat("", times=lo), limited_lines)]
             view = _lines(lines)
