@@ -2,6 +2,7 @@ from itertools import islice
 from os import linesep
 from pathlib import Path
 from shutil import get_terminal_size, which
+from sys import stderr
 from unittest import IsolatedAsyncioTestCase
 
 from ...coq.consts import TMP_DIR
@@ -24,4 +25,5 @@ class Parser(IsolatedAsyncioTestCase):
         print(
             *islice((tag for _, _, tags in parsed.values() for tag in tags), 10),
             sep=sep,
+            file=stderr,
         )
