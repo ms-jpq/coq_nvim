@@ -163,12 +163,16 @@ def expand_tabs(context: Context, text: str) -> str:
 
 
 def _indent_to_line(context: Context, line_before: str) -> str:
-    indent_len = len(line_before)
-    indent = (
-        " " * indent_len
-        if context.expandtab
-        else (" " * indent_len).replace(" " * context.tabstop, "\t")
-    )
+    spaces = " " * context.tabstop
+    spaces_before = line_before.replace("\t", spaces)
+    indent_len = len(spaces_before)
+    if context.expandtab:
+        indent = spaces_before
+    else:
+        tabs = indent_len // context.tabstop
+        spaces = indent_len % context.tabstop
+        indent = "\t" * tabs + " " * spaces
+
     return indent
 
 
