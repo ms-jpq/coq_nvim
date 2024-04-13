@@ -169,9 +169,9 @@ def _indent_to_line(context: Context, line_before: str) -> str:
     if context.expandtab:
         indent = spaces_before
     else:
-        tabs = indent_len // context.tabstop
-        spaces = indent_len % context.tabstop
-        indent = "\t" * tabs + " " * spaces
+        tab_len = indent_len // context.tabstop
+        space_len = indent_len % context.tabstop
+        indent = "\t" * tab_len + " " * space_len
 
     return indent
 
