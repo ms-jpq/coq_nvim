@@ -233,24 +233,17 @@ def _range_edit_trans(
         else:
             never(edit.encoding)
 
-        b_r1, b_r2 = lines.b_lines8[r1], lines.b_lines8[r2]
-        pox_x, pos_y = c1, r2
-        if c1 >= len(b_r1):
-            r1 += 1
-            c1 = 0
-            if split_lines and not split_lines[0]:
-                split_lines.popleft()
-        if c2 >= len(b_r2):
-            r2 += 1
-            c2 = 0
-            if split_lines and split_lines[-1]:
-                split_lines.append("")
+        l_r1, l_r2 = len(lines.b_lines8[r1]), len(lines.b_lines8[r2])
+        if c1 >= l_r1:
+            c1 = l_r1
+        if c2 >= l_r2:
+            c2 = l_r2
 
         begin = r1, c1
         end = r2, c2
 
         if primary and adjust_indent:
-            line_before = ctx.line_before[:pox_x]
+            line_before = ctx.line_before[:c1]
             new_lines: Sequence[str] = tuple(
                 indent_adjusted(ctx, line_before=line_before, lines=split_lines)
             )
@@ -267,7 +260,7 @@ def _range_edit_trans(
             (
                 len(encode(lines_before[-1]))
                 if len(lines_before) > 1
-                else len(lines.b_lines8[pos_y][:pox_x]) + len(encode(lines_before[0]))
+                else len(lines.b_lines8[r2][:c1]) + len(encode(lines_before[0]))
             )
             if primary
             else -1
