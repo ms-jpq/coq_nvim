@@ -233,12 +233,8 @@ def _range_edit_trans(
         else:
             never(edit.encoding)
 
-        l_r1, l_r2 = len(lines.b_lines8[r1]), len(lines.b_lines8[r2])
-        if c1 >= l_r1:
-            c1 = l_r1
-        if c2 >= l_r2:
-            c2 = l_r2
-
+        c1 = min(len(lines.b_lines8[r1]), c1)
+        c2 = min(len(lines.b_lines8[r2]), c2)
         begin = r1, c1
         end = r2, c2
 
