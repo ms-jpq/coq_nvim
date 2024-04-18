@@ -125,7 +125,7 @@ class Parser(TestCase):
         )
         expected = sorted(
             (
-                (Path(".github", ".agp"), False, "./.github/.agp"),
+                (Path(".github", "_"), False, "./.github/_"),
                 (Path(".github", "workflows"), True, "./.github/workflows/"),
             )
         )
@@ -144,7 +144,7 @@ class Parser(TestCase):
         )
         expected = sorted(
             (
-                (Path(".github", ".agp"), False, "./.github/.agp"),
+                (Path(".github", "_"), False, "./.github/_"),
                 (Path(".github", "workflows"), True, "./.github/workflows/"),
             )
         )
@@ -182,7 +182,7 @@ class Parser(TestCase):
         )
         expected = sorted(
             (
-                (Path(".github", ".agp"), False, "./.github/.agp"),
+                (Path(".github", "_"), False, "./.github/_"),
                 (Path(".github", "workflows"), True, "./.github/workflows/"),
             )
         )
@@ -201,7 +201,7 @@ class Parser(TestCase):
         )
         expected = sorted(
             (
-                (Path(".github", ".agp"), False, "./.github/.agp"),
+                (Path(".github", "_"), False, "./.github/_"),
                 (Path(".github", "workflows"), True, "./.github/workflows/"),
             )
         )
