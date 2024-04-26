@@ -55,5 +55,3 @@ class Database(DB):
                     )
                     for row in cursor:
                         yield row["key"], row["word"]
-
-        return iter(()), 0
