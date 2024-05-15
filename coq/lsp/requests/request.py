@@ -129,9 +129,8 @@ async def _lsp_notify(stack: Stack, rpayload: _Payload) -> None:
             session = _Session(uid=payload.uid, done=payload.done, acc=acc)
             with _LOCK:
                 _STATE[payload.name] = session
-
-        producer.set()
-        await consumer.wait()
+            producer.set()
+            await consumer.wait()
 
     if get_running_loop() == origin:
         await cont()
