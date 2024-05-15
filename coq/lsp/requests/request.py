@@ -1,6 +1,6 @@
 from asyncio import (
     AbstractEventLoop,
-    Condition,
+    Event,
     get_running_loop,
     run_coroutine_threadsafe,
     sleep,
@@ -77,9 +77,9 @@ def _uids(_: str) -> Iterator[int]:
 
 
 @lru_cache(maxsize=None)
-def _conds(_: str) -> Tuple[AbstractEventLoop, Condition]:
+def _events(_: str) -> Tuple[AbstractEventLoop, Event, Event]:
     loop = get_running_loop()
-    return (loop, Condition())
+    return (loop, Event(), Event())
 
 
 async def _lsp_pull(
@@ -107,9 +107,10 @@ async def _lsp_pull(
 @rpc(blocking=False)
 async def _lsp_notify(stack: Stack, rpayload: _Payload) -> None:
     payload = _DECODER(rpayload)
-    origin, cond = _conds(payload.name)
+    origin, consumer, producer = _events(payload.name)
 
     async def cont() -> None:
+        producer.clear()
         with _LOCK:
             state = _STATE.get(payload.name)
 
@@ -129,8 +130,8 @@ async def _lsp_notify(stack: Stack, rpayload: _Payload) -> None:
             with _LOCK:
                 _STATE[payload.name] = session
 
-        async with cond:
-            cond.notify_all()
+        producer.set()
+        await consumer.wait()
 
     if get_running_loop() == origin:
         await cont()
@@ -143,14 +144,12 @@ async def async_request(
     name: str, multipart: Optional[int], clients: AbstractSet[str], *args: Any
 ) -> AsyncIterator[_Client]:
     with timeit(f"LSP :: {name}"):
-        (_, cond), uid = _conds(name), next(_uids(name))
+        (_, consumer, producer), uid = _events(name), next(_uids(name))
 
         with _LOCK:
             _STATE[name] = _Session(uid=uid, done=False, acc=[])
 
-        async with cond:
-            cond.notify_all()
-
+        producer.clear()
         await Nvim.api.exec_lua(
             NoneType,
             f"{NAMESPACE}.{name}(...)",
@@ -158,6 +157,7 @@ async def async_request(
         )
 
         while True:
+            consumer.clear()
             with _LOCK:
                 state = _STATE.get(name)
 
@@ -189,5 +189,5 @@ async def async_request(
                         "%s", f"<><> DELAYED LSP RESP <><> :: {name} {state.uid} {uid}"
                     )
 
-            async with cond:
-                await cond.wait()
+            consumer.set()
+            await producer.wait()
