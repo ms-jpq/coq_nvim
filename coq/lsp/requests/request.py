@@ -187,7 +187,7 @@ async def async_request(
                         "%s", f"<><> DELAYED LSP RESP <><> :: {name} {state.uid} {uid}"
                     )
 
-            activity.clear()
             await activity.wait()
             # yield to all other generators to avoid blocking their exit
             await sleep(0)
+            activity.clear()
