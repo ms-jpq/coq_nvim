@@ -1,11 +1,6 @@
-from asyncio import (
-    AbstractEventLoop,
-    Event,
-    get_running_loop,
-    run_coroutine_threadsafe,
-    sleep,
-    wrap_future,
-)
+from asyncio import AbstractEventLoop, Event
+from asyncio import Lock as ALock
+from asyncio import get_running_loop, run_coroutine_threadsafe, sleep, wrap_future
 from dataclasses import dataclass, replace
 from functools import lru_cache
 from itertools import count
@@ -77,9 +72,9 @@ def _uids(_: str) -> Iterator[int]:
 
 
 @lru_cache(maxsize=None)
-def _events(_: str) -> Tuple[AbstractEventLoop, Event]:
+def _events(_: str) -> Tuple[AbstractEventLoop, ALock, Event]:
     loop = get_running_loop()
-    return (loop, Event())
+    return (loop, ALock(), Event())
 
 
 async def _lsp_pull(
@@ -107,7 +102,7 @@ async def _lsp_pull(
 @rpc(blocking=False)
 async def _lsp_notify(stack: Stack, rpayload: _Payload) -> None:
     payload = _DECODER(rpayload)
-    origin, activity = _events(payload.name)
+    origin, lock, activity = _events(payload.name)
 
     async def cont() -> None:
         with _LOCK:
@@ -128,7 +123,9 @@ async def _lsp_notify(stack: Stack, rpayload: _Payload) -> None:
             session = _Session(uid=payload.uid, done=payload.done, acc=acc)
             with _LOCK:
                 _STATE[payload.name] = session
-        activity.set()
+
+        async with lock:
+            activity.set()
 
     if get_running_loop() == origin:
         await cont()
@@ -141,7 +138,7 @@ async def async_request(
     name: str, multipart: Optional[int], clients: AbstractSet[str], *args: Any
 ) -> AsyncIterator[_Client]:
     with timeit(f"LSP :: {name}"):
-        (_, activity), uid = _events(name), next(_uids(name))
+        (_, lock, activity), uid = _events(name), next(_uids(name))
 
         with _LOCK:
             _STATE[name] = _Session(uid=uid, done=False, acc=[])
@@ -189,5 +186,6 @@ async def async_request(
 
             await activity.wait()
             # yield to all other generators to avoid blocking their exit
-            await sleep(0)
-            activity.clear()
+            async with lock:
+                await sleep(0)
+                activity.clear()
