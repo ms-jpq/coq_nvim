@@ -148,15 +148,13 @@ async def async_request(
 
         # wake up previous generators
         activity.set()
-        try:
-            # wait for previous generators to exit
-            await Nvim.api.exec_lua(
-                NoneType,
-                f"{NAMESPACE}.{name}(...)",
-                (name, multipart, uid, tuple(clients), *args),
-            )
-        finally:
-            activity.clear()
+        # wait for previous generators to exit
+        await Nvim.api.exec_lua(
+            NoneType,
+            f"{NAMESPACE}.{name}(...)",
+            (name, multipart, uid, tuple(clients), *args),
+        )
+        activity.clear()
 
         while True:
             with _LOCK:
