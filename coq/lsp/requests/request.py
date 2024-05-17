@@ -107,10 +107,9 @@ async def _lsp_pull(
 @rpc(blocking=False)
 async def _lsp_notify(stack: Stack, rpayload: _Payload) -> None:
     payload = _DECODER(rpayload)
-    origin, producer = _events(payload.name)
+    origin, activity = _events(payload.name)
 
     async def cont() -> None:
-        producer.clear()
         with _LOCK:
             state = _STATE.get(payload.name)
 
@@ -129,7 +128,7 @@ async def _lsp_notify(stack: Stack, rpayload: _Payload) -> None:
             session = _Session(uid=payload.uid, done=payload.done, acc=acc)
             with _LOCK:
                 _STATE[payload.name] = session
-        producer.set()
+        activity.set()
 
     if get_running_loop() == origin:
         await cont()
@@ -142,17 +141,22 @@ async def async_request(
     name: str, multipart: Optional[int], clients: AbstractSet[str], *args: Any
 ) -> AsyncIterator[_Client]:
     with timeit(f"LSP :: {name}"):
-        (_, producer), uid = _events(name), next(_uids(name))
+        (_, activity), uid = _events(name), next(_uids(name))
 
         with _LOCK:
             _STATE[name] = _Session(uid=uid, done=False, acc=[])
 
-        producer.clear()
-        await Nvim.api.exec_lua(
-            NoneType,
-            f"{NAMESPACE}.{name}(...)",
-            (name, multipart, uid, tuple(clients), *args),
-        )
+        # wake up previous generators
+        activity.set()
+        try:
+            # wait for previous generators to exit
+            await Nvim.api.exec_lua(
+                NoneType,
+                f"{NAMESPACE}.{name}(...)",
+                (name, multipart, uid, tuple(clients), *args),
+            )
+        finally:
+            activity.clear()
 
         while True:
             with _LOCK:
@@ -186,5 +190,7 @@ async def async_request(
                         "%s", f"<><> DELAYED LSP RESP <><> :: {name} {state.uid} {uid}"
                     )
 
-            await producer.wait()
-            producer.clear()
+            await activity.wait()
+            # yield to all other generators to avoid blocking their exit
+            await sleep(0)
+            activity.clear()
