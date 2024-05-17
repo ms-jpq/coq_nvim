@@ -183,8 +183,15 @@ async def async_request(
                     log.info(
                         "%s", f"<><> DELAYED LSP RESP <><> :: {name} {state.uid} {uid}"
                     )
+                    break
 
             await activity.wait()
+
+            with _LOCK:
+                state = _STATE.get(name)
+            if state and state.uid != uid:
+                break
+
             # yield to all other generators to avoid blocking their exit
             async with lock:
                 await sleep(0)
