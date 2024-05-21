@@ -169,6 +169,19 @@
     end
   end)()
 
+  local get_clients = (function()
+    if vim.lsp.get_clients then
+      return function(bufnr)
+        local clients = {}
+        for _, client in pairs(vim.lsp.get_clients({bufnr = bufnr})) do
+          clients[client.id] = client
+        end
+        return clients
+      end
+    else
+      return vim.lsp.buf_get_clients
+    end
+  end)()
   local _ = nil
 
   (function()
@@ -184,7 +197,7 @@
       local n_clients = 0
       local clients = {}
 
-      for id, client in pairs(vim.lsp.buf_get_clients(buf)) do
+      for id, client in pairs(get_clients(buf)) do
         if filter(client.name) and client.supports_method(lsp_method) then
           n_clients = n_clients + 1
           clients[id] = client
