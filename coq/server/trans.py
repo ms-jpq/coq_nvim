@@ -42,10 +42,11 @@ def _sort_by(is_lower: bool, adjustment: Weights) -> Callable[[Metric], Any]:
             for key, val in asdict(metric.weight).items()
         )
         key = (
-            -(metric.comp.always_on_top),
             -(metric.comp.preselect),
+            -(metric.comp.always_on_top),
             -round(tot * metric.weight_adjust * 10000),
             -len(metric.comp.secondary_edits),
+            -(metric.comp.extern is not None),
             -(metric.comp.kind != ""),
             -(metric.comp.doc is not None),
             -metric.comp.sort_by[:1].isalnum(),
