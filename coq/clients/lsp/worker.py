@@ -26,7 +26,7 @@ from ...shared.runtime import Worker as BaseWorker
 from ...shared.settings import LSPClient, MatchOptions
 from ...shared.sql import BIGGEST_INT
 from ...shared.timeit import timeit
-from ...shared.types import Completion, Context, Edit, SnippetEdit
+from ...shared.types import Completion, Context, SnippetEdit
 from ..cache.worker import CacheWorker, sanitize_cached
 
 _CACHE_CHUNK = 9
@@ -38,7 +38,9 @@ class _Src(Enum):
     from_query = auto()
 
 
-def _use_comp(match: MatchOptions, context: Context, sort_by: str, edit: Edit) -> bool:
+def _use_comp(
+    match: MatchOptions, context: Context, sort_by: str, comp: Completion
+) -> bool:
     cword = cword_before(
         match.unifying_chars,
         lower=True,
@@ -53,7 +55,10 @@ def _use_comp(match: MatchOptions, context: Context, sort_by: str, edit: Edit) -
             look_ahead=match.look_ahead,
         )
         use = ratio >= match.fuzzy_cutoff and (
-            isinstance(edit, SnippetEdit) or not cword.startswith(edit.new_text)
+            isinstance(comp.primary_edit, SnippetEdit)
+            or bool(comp.secondary_edits)
+            or bool(comp.extern)
+            or not cword.startswith(comp.primary_edit.new_text)
         )
         return use
     else:
@@ -187,7 +192,7 @@ class Worker(BaseWorker[LSPClient, None]):
                                 self._supervisor.match,
                                 context=context,
                                 sort_by=comp.sort_by,
-                                edit=comp.primary_edit,
+                                comp=comp,
                             ):
                                 seen += 1
                                 yield comp

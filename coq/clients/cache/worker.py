@@ -2,7 +2,6 @@ from dataclasses import dataclass, replace
 from itertools import chain
 from typing import (
     AbstractSet,
-    Awaitable,
     Iterable,
     Iterator,
     Mapping,
@@ -19,7 +18,14 @@ from ...shared.repeat import sanitize
 from ...shared.runtime import Supervisor
 from ...shared.settings import MatchOptions
 from ...shared.timeit import timeit
-from ...shared.types import BaseRangeEdit, Completion, Context, Cursors, Interruptible
+from ...shared.types import (
+    BaseRangeEdit,
+    Completion,
+    Context,
+    Cursors,
+    Interruptible,
+    SnippetEdit,
+)
 from .db.database import Database
 
 
@@ -154,6 +160,15 @@ class CacheWorker(Interruptible):
                             context.cursor, comp=comp, sort_by=sort_by
                         )
                     ):
+                        if (
+                            context.words.startswith(sort_by)
+                            or context.syms.startswith(sort_by)
+                        ) and not (
+                            isinstance(cached.primary_edit, SnippetEdit)
+                            or cached.secondary_edits
+                            or cached.extern
+                        ):
+                            continue
                         yield cached
 
         return use_cache, cached_clients, get()
