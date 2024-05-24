@@ -33,7 +33,7 @@ jobs:
 
       - run: |-
           pip3 install -- codespell
-          codespell --skip ./artifacts/helo.yml --skip ./tests/shared/fuzzy.py
+          codespell --skip ./artifacts/helo.yml --skip ./tests/shared/fuzzy.py --ignore-words-list assertIn thirdparty
 
       - run: |-
           make lint
