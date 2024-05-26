@@ -51,8 +51,20 @@ Variables will be validated against a schema.
 
 ie.
 
+Vim:
+
 ```vim
 let g:coq_settings = { 'match.look_ahead': 'dog' }
+```
+
+Lua:
+
+```lua
+vim.g.coq_settings = {
+    match = {
+        look_ahead = "dog",
+    },
+}
 ```
 
 Will give you the following error message:
