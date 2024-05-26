@@ -11,7 +11,7 @@ let g:coq_settings = { ... }
 Lua:
 
 ```lua
-local vim.g.coq_settings = { ... }
+vim.g.coq_settings = { ... }
 ```
 
 ---
