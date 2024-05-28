@@ -192,7 +192,7 @@ keymap:
   repeat: null
 
 limits:
-  completion_auto_timeout: 0.366
+  completion_auto_timeout: 0.266
   completion_manual_timeout: 0.966
 
   download_retries: 6
