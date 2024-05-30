@@ -264,24 +264,66 @@ apt install --yes -- python3-venv
 
 **Minimum version**: python:`3.8.2`, nvim: `0.5`, sqlite: `recentish`
 
-Install the usual way, ie. VimPlug, Vundle, etc
+<details>
+  <summary>Vim</summary>
 
-```VimL
-" main one
-Plug 'ms-jpq/coq_nvim', {'branch': 'coq'}
-" 9000+ Snippets
-Plug 'ms-jpq/coq.artifacts', {'branch': 'artifacts'}
+  Install the usual way, ie. VimPlug, Vundle, etc
 
-" lua & third party sources -- See https://github.com/ms-jpq/coq.thirdparty
-" Need to **configure separately**
+  ```VimL
+  " main one
+  Plug 'ms-jpq/coq_nvim', {'branch': 'coq'}
+  " 9000+ Snippets
+  Plug 'ms-jpq/coq.artifacts', {'branch': 'artifacts'}
 
-Plug 'ms-jpq/coq.thirdparty', {'branch': '3p'}
-" - shell repl
-" - nvim lua api
-" - scientific calculator
-" - comment banner
-" - etc
-```
+  " lua & third party sources -- See https://github.com/ms-jpq/coq.thirdparty
+  " Need to **configure separately**
+
+  Plug 'ms-jpq/coq.thirdparty', {'branch': '3p'}
+  " - shell repl
+  " - nvim lua api
+  " - scientific calculator
+  " - comment banner
+  " - etc
+  ```
+</details>
+
+<details>
+  <summary>Neovim</summary>
+
+  ### lazy.nvim
+
+  ```lua
+  {
+    "neovim/nvim-lspconfig", -- REQUIRED: for native Neovim LSP integration
+    lazy = false, -- REQUIRED: tell lazy.nvim to start this plugin at startup
+    dependencies = {
+      -- main one
+      { "ms-jpq/coq_nvim", branch = "coq" },
+  
+      -- 9000+ Snippets
+      { "ms-jpq/coq.artifacts", branch = "artifacts" },
+  
+      -- lua & third party sources -- See https://github.com/ms-jpq/coq.thirdparty
+      -- Need to **configure separately**
+      { 'ms-jpq/coq.thirdparty', branch = "3p" }
+      -- - shell repl
+      -- - nvim lua api
+      -- - scientific calculator
+      -- - comment banner
+      -- - etc
+    },
+    init = function()
+      vim.g.coq_settings = {
+          auto_start = true, -- if you want to start COQ at startup
+          -- Your COQ settings here
+      }
+    end,
+    config = function()
+      -- Your LSP settings here
+    end,
+  }
+  ```
+</details>
 
 ## Documentation
 
