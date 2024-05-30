@@ -290,7 +290,7 @@ apt install --yes -- python3-venv
 <details>
   <summary>Neovim</summary>
 
-  lazy.nvim:
+  ### lazy.nvim
 
   ```lua
   {
