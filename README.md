@@ -309,7 +309,8 @@ Neovim with `lazy.nvim`:
   },
   init = function()
     vim.g.coq_settings = {
-        --- Your COQ settings here
+        auto_start = true, -- if you want to start COQ at startup
+        -- Your COQ settings here
     }
   end,
   config = function()
