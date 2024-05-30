@@ -288,7 +288,9 @@ apt install --yes -- python3-venv
 </details>
 
 <details>
-  <summary>Neovim with `lazy.nvim`</summary>
+  <summary>Neovim</summary>
+
+  lazy.nvim:
 
   ```lua
   {
