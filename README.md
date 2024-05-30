@@ -290,7 +290,7 @@ Neovim with `lazy.nvim`:
 ```lua
 {
   "neovim/nvim-lspconfig", -- REQUIRED: for native Neovim LSP integration
-  lazy = false, -- REQUIRED: tell lazy.nvim to start this plugin on startup
+  lazy = false, -- REQUIRED: tell lazy.nvim to start this plugin at startup
   dependencies = {
     -- main one
     { "ms-jpq/coq_nvim", branch = "coq" },
