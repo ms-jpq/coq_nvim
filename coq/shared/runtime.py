@@ -147,7 +147,11 @@ class Supervisor:
                         for worker in self._workers
                     )
 
-                    _, pending = await wait(tasks, timeout=timeout)
+                    _, pending = await wait(
+                        tasks,
+                        timeout=timeout,
+                        return_when=FIRST_COMPLETED,
+                    )
                     if not acc:
                         for fut in as_completed(pending):
                             await fut
