@@ -39,6 +39,7 @@ from .types import (
     LSPcomp,
     MarkupContent,
     TextEdit,
+    TextEditNonStandard,
 )
 
 
@@ -72,7 +73,7 @@ def _range_edit(
     encoding: Encoding,
     cursors: Cursors,
     fallback: Optional[str],
-    edit: Union[TextEdit, InsertReplaceEdit],
+    edit: Union[TextEdit, TextEditNonStandard, InsertReplaceEdit],
 ) -> RangeEdit:
     _, u8, u16, u32 = cursors
     if encoding == UTF16:
@@ -84,10 +85,16 @@ def _range_edit(
     else:
         never(encoding)
 
-    if isinstance(edit, TextEdit):
+    if isinstance(edit, TextEditNonStandard):
+        text = edit.new_text
+        ra_start = edit.start
+        ra_end = edit.end
+    elif isinstance(edit, TextEdit):
+        text = edit.newText
         ra_start = edit.range.start
         ra_end = edit.range.end
     else:
+        text = edit.newText
         ra_start = edit.replace.start
         ra_end = edit.replace.end
 
@@ -95,7 +102,7 @@ def _range_edit(
     end = ra_end.line, ra_end.character
 
     re = RangeEdit(
-        new_text=edit.newText,
+        new_text=text,
         fallback=fallback,
         begin=begin,
         end=end,
@@ -110,7 +117,9 @@ def _primary(
 ) -> Edit:
     fallback = Edit(new_text=item.insertText or item.label)
     if protocol.InsertTextFormat.get(item.insertTextFormat) == "Snippet":
-        if isinstance(item.textEdit, (TextEdit, InsertReplaceEdit)):
+        if isinstance(
+            item.textEdit, (TextEdit, TextEditNonStandard, InsertReplaceEdit)
+        ):
             re = _range_edit(
                 encoding,
                 cursors=cursors,
@@ -130,7 +139,9 @@ def _primary(
         else:
             return SnippetEdit(grammar=SnippetGrammar.lsp, new_text=fallback.new_text)
     else:
-        if isinstance(item.textEdit, (TextEdit, InsertReplaceEdit)):
+        if isinstance(
+            item.textEdit, (TextEdit, TextEditNonStandard, InsertReplaceEdit)
+        ):
             return _range_edit(
                 encoding,
                 cursors=cursors,

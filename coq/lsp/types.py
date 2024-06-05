@@ -50,6 +50,11 @@ class TextEdit(_TextEdit):
 
 
 @dataclass(frozen=True)
+class TextEditNonStandard(_Range):
+    new_text: str
+
+
+@dataclass(frozen=True)
 class InsertReplaceEdit(_TextEdit, _InsertReplaceRange): ...
 
 
@@ -92,7 +97,7 @@ class CompletionItem:
     insertTextFormat: Optional[_InsertTextFormat] = None
     insertTextMode: Optional[_InsertTextMode] = None
 
-    textEdit: Union[TextEdit, InsertReplaceEdit, None] = None
+    textEdit: Union[TextEditNonStandard, TextEdit, InsertReplaceEdit, None] = None
     additionalTextEdits: Optional[Sequence[TextEdit]] = None
 
     command: Optional[Command] = None
