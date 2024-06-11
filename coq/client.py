@@ -29,7 +29,6 @@ from .server.runtime import stack
 assert ____ or True
 
 _CB = RPCallable[None]
-_IGNORE = {"nvim_buf_changedtick_event", "nvim_buf_detach_event"}
 
 
 def _autodie(ppid: int) -> AbstractAsyncContextManager:
@@ -48,10 +47,7 @@ def _set_debug(loop: AbstractEventLoop) -> None:
         log.setLevel(INFO)
 
 
-async def _default(msg: MsgType, method: Method, params: Sequence[Any]) -> None:
-    if method not in _IGNORE:
-        with suppress_and_log():
-            assert False, (msg, method, params)
+async def _default(msg: MsgType, method: Method, params: Sequence[Any]) -> None: ...
 
 
 def _trans(stack: Stack, handler: _CB) -> _CB:
