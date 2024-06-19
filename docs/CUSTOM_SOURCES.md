@@ -115,3 +115,5 @@ All code paths must invoke `callback`, or else `coq.nvim` will end up waiting fo
 - vimtex
 
 - orgmode
+
+- [Wordpress hooks](https://github.com/Mte90/coq_wordpress)
