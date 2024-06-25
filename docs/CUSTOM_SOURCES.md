@@ -118,4 +118,4 @@ All code paths must invoke `callback`, or else `coq.nvim` will end up waiting fo
 
 - [Wordpress hooks](https://github.com/Mte90/coq_wordpress)
 
-- [Laravel Blade files](https://github.com/Mte90/coq_wordpress)
+- [Laravel Blade files](https://github.com/RicardoRamirezR/blade-nav.nvim)
