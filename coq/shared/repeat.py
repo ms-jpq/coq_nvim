@@ -29,12 +29,12 @@ def _shift(cursor: Cursors, edit: BaseRangeEdit) -> Tuple[WTF8Pos, WTF8Pos]:
     else:
         never(edit.encoding)
 
-    prev_col = edit.cursor_pos
     (b_row, b_col), (e_row, e_col) = edit.begin, edit.end
-    diff = col - prev_col
+    edit_col = edit.cursor_pos
+    diff = col - edit_col
 
     if b_row == row:
-        if b_col > prev_col:
+        if b_col > edit_col and diff < 0:
             new_b_col = b_col + diff
         else:
             new_b_col = b_col
@@ -42,7 +42,7 @@ def _shift(cursor: Cursors, edit: BaseRangeEdit) -> Tuple[WTF8Pos, WTF8Pos]:
         new_b_col = b_col
 
     if e_row == row:
-        if e_col >= prev_col:
+        if diff > 0 and e_col >= edit_col:
             new_e_col = e_col + diff
         else:
             new_e_col = e_col
