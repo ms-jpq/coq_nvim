@@ -182,7 +182,7 @@ display:
     helo: True
 
 keymap:
-  bigger_preview: <c-k>
+  # bigger_preview: <c-k>
   eval_snips: null
   jump_to_mark: <c-h>
   manual_complete: <c-space>
