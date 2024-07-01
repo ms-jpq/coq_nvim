@@ -52,15 +52,15 @@ async def set_options(mapping: KeyMapping, fast_close: bool) -> None:
     #         << f"(pumvisible() && complete_info(['mode']).mode ==# 'eval') ? {preview_preview.method}() : '{mapping.bigger_preview}'"
     #     )
 
-    # if mapping.jump_to_mark:
-    #     _ = (
-    #         keymap.n(mapping.jump_to_mark)
-    #         << f"<cmd>lua {NAMESPACE}.{nav_mark.method}()<cr>"
-    #     )
-    #     _ = (
-    #         keymap.iv(mapping.jump_to_mark)
-    #         << rf"<c-\><c-n><cmd>lua {NAMESPACE}.{nav_mark.method}()<cr>"
-    #     )
+    if mapping.jump_to_mark:
+        _ = (
+            keymap.n(mapping.jump_to_mark)
+            << f"<cmd>lua {NAMESPACE}.{nav_mark.method}()<cr>"
+        )
+        _ = (
+            keymap.iv(mapping.jump_to_mark)
+            << rf"<c-\><c-n><cmd>lua {NAMESPACE}.{nav_mark.method}()<cr>"
+        )
 
     if mapping.repeat:
         _ = keymap.n(mapping.repeat) << f"<cmd>lua {NAMESPACE}.{repeat.method}()<cr>"
