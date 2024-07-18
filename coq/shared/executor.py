@@ -79,6 +79,7 @@ def _very_nice() -> Future:
             run = (
                 sr,
                 "--user",
+                "--expand-environment=no",
                 "--service-type=oneshot",
                 "--collect",
                 "--pipe",
