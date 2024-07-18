@@ -10,6 +10,7 @@ from asyncio import (
 from concurrent.futures import Future, InvalidStateError, ThreadPoolExecutor
 from contextlib import suppress
 from functools import lru_cache
+from os import environ
 from shutil import which
 from subprocess import CalledProcessError
 from threading import Thread
@@ -78,11 +79,14 @@ def _very_nice() -> Future:
             run = (
                 sr,
                 "--user",
-                "--scope",
-                "--nice",
-                "19",
-                "--property",
-                "CPUWeight=69",
+                "--service-type=oneshot",
+                "--collect",
+                "--pipe",
+                "--same-dir",
+                "--property=LogLevelMax=notice",
+                "--property=CPUWeight=69",
+                "--nice=19",
+                *(f"--setenv={k}={v}" for k, v in environ.items()),
                 "--",
             )
             try:
