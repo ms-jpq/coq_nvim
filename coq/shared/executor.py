@@ -78,8 +78,8 @@ def _very_nice() -> Future:
         elif (sd := which("systemd-notify")) and (sr := which("systemd-run")):
             run = (
                 sr,
-                "--user",
                 "--expand-environment=no",
+                "--user",
                 "--service-type=oneshot",
                 "--collect",
                 "--pipe",
