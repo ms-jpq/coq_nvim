@@ -82,8 +82,6 @@ def _very_nice() -> Future:
                 "--nice",
                 "19",
                 "--property",
-                "LogLevelMax=notice",
-                "--property",
                 "CPUWeight=69",
                 "--",
             )
