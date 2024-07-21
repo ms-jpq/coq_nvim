@@ -43,7 +43,7 @@ clients:
   snippets:
     always_on_top: False
     enabled: True
-    short_name: "SN"
+    short_name: "SP"
     user_path: null
     warn:
       - missing
