@@ -312,14 +312,19 @@ def parse_inline(
     weight_adjust: float,
     resp: InLineCompletionResponse,
 ) -> LSPcomp:
+    local_cache = False
     if _falsy(resp):
-        return LSPcomp(client=client, local_cache=False, items=iter(()))
+        return LSPcomp(client=client, local_cache=local_cache, items=iter(()))
 
     elif isinstance(resp, Mapping):
-        pass
+        if not isinstance((items := resp.get("items")), Sequence):
+            log.warn("%s", f"Unknown LSP resp -- {type(resp)}")
+            return LSPcomp(client=client, local_cache=local_cache, items=iter(()))
+        else:
+            pass
     elif isinstance(resp, Sequence):
         pass
     else:
         log.warn("%s", f"Unknown LSP resp -- {type(resp)}")
 
-    return LSPcomp(client=client, local_cache=False, items=iter(()))
+    return LSPcomp(client=client, local_cache=local_cache, items=iter(()))
