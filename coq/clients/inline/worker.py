@@ -16,20 +16,10 @@ class Worker(BaseWorker[LSPClient, None]):
         misc: None,
     ) -> None:
         super().__init__(ex, supervisor=supervisor, options=options, misc=misc)
-        self._ex.run(self._poll())
 
     def interrupt(self) -> None:
         with self._interrupt():
             pass
-
-    async def _poll(self) -> None:
-        while True:
-
-            async def cont() -> None:
-
-                pass
-
-            await self._with_interrupt(cont())
 
     async def _work(self, context: Context) -> AsyncIterator[Completion]:
         async with self._work_lock:
