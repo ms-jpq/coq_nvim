@@ -12,6 +12,7 @@ from std2.pickle.decoder import new_decoder
 from yaml import safe_load
 
 from ..clients.buffers.worker import Worker as BuffersWorker
+from ..clients.inline.worker import Worker as InLineWorker
 from ..clients.lsp.worker import Worker as LspWorker
 from ..clients.paths.worker import Worker as PathsWorker
 from ..clients.registers.worker import Worker as RegistersWorker
@@ -73,6 +74,7 @@ def _from_each_according_to_their_ability(
 
     if clients.lsp.enabled:
         yield LspWorker.init(supervisor, options=clients.lsp, misc=None)
+        yield InLineWorker.init(supervisor, options=clients.lsp, misc=None)
 
     if clients.registers.enabled:
         yield RegistersWorker.init(supervisor, options=clients.registers, misc=None)

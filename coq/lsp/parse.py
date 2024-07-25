@@ -34,6 +34,7 @@ from .protocol import LSProtocol
 from .types import (
     CompletionItem,
     CompletionResponse,
+    InLineCompletionResponse,
     InsertReplaceEdit,
     ItemDefaults,
     LSPcomp,
@@ -298,3 +299,27 @@ def parse(
     else:
         log.warn("%s", f"Unknown LSP resp -- {type(resp)}")
         return LSPcomp(client=client, local_cache=False, items=iter(()))
+
+
+def parse_inline(
+    protocol: LSProtocol,
+    extern_type: Union[Type[ExternLSP], Type[ExternLUA]],
+    always_on_top: Optional[AbstractSet[Optional[str]]],
+    client: Optional[str],
+    encoding: Encoding,
+    short_name: str,
+    cursors: Cursors,
+    weight_adjust: float,
+    resp: InLineCompletionResponse,
+) -> LSPcomp:
+    if _falsy(resp):
+        return LSPcomp(client=client, local_cache=False, items=iter(()))
+
+    elif isinstance(resp, Mapping):
+        pass
+    elif isinstance(resp, Sequence):
+        pass
+    else:
+        log.warn("%s", f"Unknown LSP resp -- {type(resp)}")
+
+    return LSPcomp(client=client, local_cache=False, items=iter(()))

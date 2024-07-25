@@ -119,9 +119,9 @@ class _CompletionList(TypedDict):
     itemDefaults: Optional[ItemDefaults]
 
 
-CompletionResponse = Union[
-    Literal[None, False, 0], Sequence[CompletionItem], _CompletionList
-]
+_NULL = Literal[None, False, 0]
+
+CompletionResponse = Union[_NULL, Sequence[CompletionItem], _CompletionList]
 
 
 @dataclass(frozen=True)
@@ -147,5 +147,10 @@ class _InlineCompletionItem:
 
 # https://microsoft.github.io/language-server-protocol/specifications/lsp/3.18/specification/#textDocument_inlineCompletion
 @dataclass(frozen=True)
-class InlineCompletionList:
+class _InLineCompletionList:
     items: _InlineCompletionItem
+
+
+InLineCompletionResponse = Union[
+    _NULL, Sequence[_InlineCompletionItem], _InLineCompletionList
+]
