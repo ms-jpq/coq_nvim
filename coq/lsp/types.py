@@ -129,3 +129,22 @@ class LSPcomp:
     client: Optional[str]
     local_cache: bool
     items: Iterator[Completion]
+
+
+@dataclass(frozen=True)
+class _StringValue:
+    kind: Literal["snippet"]
+    value: str
+
+
+@dataclass(frozen=True)
+class _InlineCompletionItem:
+    insertText: Union[str, _StringValue]
+    filterText: Optional[str] = None
+    range: Optional[_Range] = None
+    command: Optional[Command] = None
+
+
+@dataclass(frozen=True)
+class InlineCompletionList:
+    items: _InlineCompletionItem
