@@ -255,6 +255,7 @@ class ExecClient(_WordbankClient, _AlwaysTop):
 class Clients:
     buffers: BuffersClient
     lsp: LSPClient
+    lsp_inline: LSPClient
     paths: PathsClient
     registers: RegistersClient
     snippets: SnippetClient

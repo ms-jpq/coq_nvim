@@ -26,6 +26,7 @@ class Worker(BaseWorker[LSPClient, None]):
         while True:
 
             async def cont() -> None:
+
                 pass
 
             await self._with_interrupt(cont())
@@ -43,3 +44,5 @@ class Worker(BaseWorker[LSPClient, None]):
                     adjust_indent=False,
                     icon_match="",
                 )
+            else:
+                return

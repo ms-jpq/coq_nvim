@@ -18,6 +18,13 @@ clients:
     short_name: "LS"
     weight_adjust: 0.5
 
+  lsp_inline:
+    always_on_top: null
+    enabled: True
+    resolve_timeout: 0.06
+    short_name: "IS"
+    weight_adjust: 0.5
+
   paths:
     always_on_top: False
     enabled: True

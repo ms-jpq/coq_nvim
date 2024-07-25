@@ -74,7 +74,9 @@ def _from_each_according_to_their_ability(
 
     if clients.lsp.enabled:
         yield LspWorker.init(supervisor, options=clients.lsp, misc=None)
-        yield InLineWorker.init(supervisor, options=clients.lsp, misc=None)
+
+    if clients.lsp_inline.enabled:
+        yield InLineWorker.init(supervisor, options=clients.lsp_inline, misc=None)
 
     if clients.registers.enabled:
         yield RegistersWorker.init(supervisor, options=clients.registers, misc=None)
