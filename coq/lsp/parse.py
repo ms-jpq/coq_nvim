@@ -393,7 +393,7 @@ def parse(
         return LSPcomp(client=client, local_cache=True, items=comps)
 
     else:
-        log.warn("%s", f"Unknown LSP resp -- {type(resp)}")
+        log.info("%s", f"Unknown LSP resp -- {type(resp)}")
         return LSPcomp(client=client, local_cache=False, items=iter(()))
 
 
