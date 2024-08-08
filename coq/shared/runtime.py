@@ -95,6 +95,7 @@ class Supervisor:
         limits: Limits,
         reviewer: PReviewer,
     ) -> None:
+        self.current_context: Optional[Context] = None
         self.vars_dir = vars_dir
         self.match, self.display = match, display
         self.comp, self.limits = comp, limits
@@ -113,7 +114,8 @@ class Supervisor:
             with self._thread_lock:
                 self._workers.add(worker)
 
-    async def notify_idle(self) -> None:
+    async def notify_idle(self, context: Optional[Context]) -> None:
+        self.current_context = context
         await gather(*(worker.idle() for worker in self._workers))
 
     async def interrupt(self) -> None:
@@ -125,6 +127,7 @@ class Supervisor:
             await cancel(task)
 
     def collect(self, context: Context) -> Awaitable[Sequence[Metric]]:
+        self.current_context = context
         now = monotonic()
         timeout = (
             self.limits.completion_manual_timeout

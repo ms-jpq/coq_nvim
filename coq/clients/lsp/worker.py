@@ -15,6 +15,7 @@ from pynvim_pp.logging import suppress_and_log
 from std2 import anext
 from std2.itertools import batched
 
+from ...consts import CACHE_CHUNK
 from ...lsp.requests.completion import comp_lsp
 from ...lsp.types import LSPcomp
 from ...shared.context import cword_before
@@ -28,8 +29,6 @@ from ...shared.sql import BIGGEST_INT
 from ...shared.timeit import timeit
 from ...shared.types import Completion, Context, SnippetEdit
 from ..cache.worker import CacheWorker, sanitize_cached
-
-_CACHE_CHUNK = 9
 
 
 class _Src(Enum):
@@ -119,7 +118,7 @@ class Worker(BaseWorker[LSPClient, None]):
                         for client, comps in acc:
                             await sleep(0)
                             if not self._work_lock.locked():
-                                for chunked in batched(comps, n=_CACHE_CHUNK):
+                                for chunked in batched(comps, n=CACHE_CHUNK):
                                     self._cache.set_cache({client: chunked})
 
             await self._with_interrupt(cont())

@@ -3,6 +3,7 @@ from os.path import normpath
 from pathlib import Path
 
 GIL_SWITCH = 1 / (10**3)
+CACHE_CHUNK = 9
 
 IS_WIN = name == "nt"
 
