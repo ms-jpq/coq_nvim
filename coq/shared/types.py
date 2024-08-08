@@ -170,6 +170,7 @@ class Doc:
 
 @dataclass(frozen=True)
 class ExternLSP:
+    inline: bool
     client: Optional[str]
     item: Mapping
     command: Optional[Any]

@@ -257,7 +257,9 @@ def parse_item(
             )
             kind = protocol.CompletionItemKind.get(item.get("kind"), "")
             doc = _doc(parsed)
-            extern = extern_type(client=client, item=item, command=parsed.command)
+            extern = extern_type(
+                inline=False, client=client, item=item, command=parsed.command
+            )
 
             comp = Completion(
                 source=short_name,
@@ -306,7 +308,9 @@ def parse_inline_item(
             adjust_indent = _adjust_indent(None, edit=p_edit)
             line, *_ = p_edit.new_text.splitlines()
             sort_by = parsed.filterText or line
-            extern = extern_type(client=client, item=item, command=parsed.command)
+            extern = extern_type(
+                inline=True, client=client, item=item, command=parsed.command
+            )
             label = line
             kind = "text"
             doc = Doc(text=p_edit.new_text, syntax="")
