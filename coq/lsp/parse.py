@@ -422,7 +422,7 @@ def parse_inline(
         else:
             comps = (
                 co1
-                for item in resp
+                for item in items
                 if (
                     co1 := parse_inline_item(
                         protocol,
