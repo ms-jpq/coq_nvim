@@ -303,12 +303,13 @@ def parse_inline_item(
                 else (not always_on_top or client in always_on_top)
             )
             p_edit = _inline_primary(encoding=encoding, cursors=cursors, item=parsed)
+            adjust_indent = _adjust_indent(None, edit=p_edit)
             line, *_ = p_edit.new_text.splitlines()
             sort_by = parsed.filterText or line
             extern = extern_type(client=client, item=item, command=parsed.command)
             label = line
-            kind = ""
-            doc = Doc(text=item.documentation, syntax="")
+            kind = "text"
+            doc = Doc(text=p_edit.new_text, syntax="")
 
             comp = Completion(
                 source=short_name,
@@ -316,7 +317,7 @@ def parse_inline_item(
                 weight_adjust=weight_adjust,
                 label=label,
                 primary_edit=p_edit,
-                adjust_indent=False,
+                adjust_indent=adjust_indent,
                 secondary_edits=(),
                 sort_by=sort_by,
                 preselect=False,
