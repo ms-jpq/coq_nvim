@@ -23,7 +23,7 @@ clients:
     enabled: True
     resolve_timeout: 0.06
     short_name: "IS"
-    weight_adjust: 0.5
+    weight_adjust: 1
 
   paths:
     always_on_top: False
