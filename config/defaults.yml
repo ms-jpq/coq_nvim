@@ -19,7 +19,7 @@ clients:
     weight_adjust: 0.5
 
   lsp_inline:
-    always_on_top: null
+    always_on_top: []
     enabled: True
     resolve_timeout: 0.06
     short_name: "IS"
@@ -77,9 +77,8 @@ clients:
     short_name: "3P"
     weight_adjust: 0
 
-
   third_party_inline:
-    always_on_top: null
+    always_on_top: []
     enabled: True
     short_name: "3L"
     weight_adjust: 0
