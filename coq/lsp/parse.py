@@ -320,7 +320,7 @@ def parse_inline(
         if not isinstance((items := resp.get("items")), Sequence):
             log.warn("%s", f"Unknown LSP resp -- {type(items)}")
         else:
-            assert items
+            pass
     elif isinstance(resp, Sequence):
         pass
     else:

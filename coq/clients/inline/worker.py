@@ -1,5 +1,4 @@
 from asyncio import sleep
-from random import uniform
 from typing import AsyncIterator
 
 from pynvim_pp.logging import suppress_and_log
@@ -10,7 +9,7 @@ from ...shared.runtime import Supervisor
 from ...shared.runtime import Worker as BaseWorker
 from ...shared.settings import LSPClient
 from ...shared.timeit import timeit
-from ...shared.types import Completion, Context, Edit
+from ...shared.types import Completion, Context
 
 
 class Worker(BaseWorker[LSPClient, None]):
@@ -40,9 +39,6 @@ class Worker(BaseWorker[LSPClient, None]):
                 await self._idle.wait()
 
     async def _work(self, context: Context) -> AsyncIterator[Completion]:
-        if uniform(1, 2) != 0:
-            return
-
         async with self._work_lock:
             async for lsp_comp in comp_lsp_inline(
                 short_name=self._options.short_name,
