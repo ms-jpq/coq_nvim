@@ -1,3 +1,4 @@
+from random import uniform
 from typing import AsyncIterator
 
 from ...shared.executor import AsyncExecutor
@@ -21,9 +22,12 @@ class Worker(BaseWorker[LSPClient, None]):
         with self._interrupt():
             pass
 
+    async def idle(self) -> None:
+        pass
+
     async def _work(self, context: Context) -> AsyncIterator[Completion]:
         async with self._work_lock:
-            if 1 + 1 == 0:
+            if uniform(1, 2) == 0:
                 yield Completion(
                     source="IS",
                     always_on_top=True,
