@@ -4,6 +4,7 @@ from typing import AsyncIterator
 
 from pynvim_pp.logging import suppress_and_log
 
+from ...lsp.requests.completion import comp_lsp_inline
 from ...shared.executor import AsyncExecutor
 from ...shared.runtime import Supervisor
 from ...shared.runtime import Worker as BaseWorker
@@ -39,17 +40,17 @@ class Worker(BaseWorker[LSPClient, None]):
                 await self._idle.wait()
 
     async def _work(self, context: Context) -> AsyncIterator[Completion]:
+        if uniform(1, 2) != 0:
+            return
+
         async with self._work_lock:
-            if uniform(1, 2) == 0:
-                yield Completion(
-                    source="IS",
-                    always_on_top=True,
-                    weight_adjust=0,
-                    label="",
-                    sort_by="",
-                    primary_edit=Edit(new_text=""),
-                    adjust_indent=False,
-                    icon_match="",
-                )
-            else:
-                return
+            async for lsp_comp in comp_lsp_inline(
+                short_name=self._options.short_name,
+                always_on_top=self._options.always_on_top,
+                weight_adjust=self._options.weight_adjust,
+                context=context,
+                chunk=self._supervisor.match.max_results * 2,
+                clients=set(),
+            ):
+                for comp in lsp_comp.items:
+                    yield comp

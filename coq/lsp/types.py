@@ -146,9 +146,8 @@ class _InlineCompletionItem:
 
 
 # https://microsoft.github.io/language-server-protocol/specifications/lsp/3.18/specification/#textDocument_inlineCompletion
-@dataclass(frozen=True)
-class _InLineCompletionList:
-    items: _InlineCompletionItem
+class _InLineCompletionList(TypedDict):
+    items: Sequence[_InlineCompletionItem]
 
 
 InLineCompletionResponse = Union[

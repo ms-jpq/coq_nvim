@@ -309,6 +309,66 @@
       )
     end
 
+    COQ.lsp_inline_comp = function(
+      name,
+      multipart,
+      session_id,
+      client_names,
+      pos)
+      vim.validate {
+        client_names = {client_names, "table"},
+        name = {name, "string"},
+        pos = {pos, "table"},
+        session_id = {session_id, "number"}
+      }
+      local row, col8, col16, col32 = unpack(pos)
+      vim.validate {
+        row = {row, "number"},
+        col8 = {col8, "number"},
+        col16 = {col16, "number"},
+        col32 = {col32, "number"}
+      }
+
+      local buf = vim.api.nvim_get_current_buf()
+      local lsp_method = "textDocument/inlineCompletion"
+      local n_clients, clients =
+        lsp_clients(false, client_names, buf, lsp_method)
+
+      local make_params = function(client)
+        local col = (function()
+          if client.offset_encoding == "utf-16" then
+            return col16
+          elseif client.offset_encoding == "utf-8" then
+            return col8
+          else
+            -- see -- coq/server/edit.py
+            -- return col32
+            return col8
+          end
+        end)()
+
+        local position = {line = row, character = col}
+        local text_doc = vim.lsp.util.make_text_document_params()
+        return {
+          position = position,
+          textDocument = text_doc,
+          context = {
+            triggerKind = vim.lsp.protocol.CompletionTriggerKind.Invoked
+          }
+        }
+      end
+
+      req(
+        name,
+        multipart,
+        session_id,
+        {n_clients, clients},
+        function(on_resp)
+          return lsp_request_all(clients, buf, lsp_method, make_params, on_resp)
+        end
+      )
+    end
+
     COQ.lsp_resolve = function(name, multipart, session_id, client_names, item)
       vim.validate {
         name = {name, "string"},

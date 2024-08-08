@@ -249,7 +249,7 @@ def parse(
         is_complete = _falsy(resp.get("isIncomplete"))
 
         if not isinstance((items := resp.get("items")), Sequence):
-            log.warn("%s", f"Unknown LSP resp -- {type(resp)}")
+            log.warn("%s", f"Unknown LSP resp -- {type(items)}")
             return LSPcomp(client=client, local_cache=is_complete, items=iter(()))
 
         else:
@@ -318,10 +318,9 @@ def parse_inline(
 
     elif isinstance(resp, Mapping):
         if not isinstance((items := resp.get("items")), Sequence):
-            log.warn("%s", f"Unknown LSP resp -- {type(resp)}")
-            return LSPcomp(client=client, local_cache=local_cache, items=iter(()))
+            log.warn("%s", f"Unknown LSP resp -- {type(items)}")
         else:
-            pass
+            assert items
     elif isinstance(resp, Sequence):
         pass
     else:
