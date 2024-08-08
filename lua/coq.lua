@@ -173,7 +173,9 @@ coq.lsp_ensure_capabilities = function(cfg)
             tagSupport = {valueSet = {1}}
           }
         },
-        inlineCompletion = {}
+        inlineCompletion = {
+          dynamicRegistration = false
+        }
       }
     }
   }
