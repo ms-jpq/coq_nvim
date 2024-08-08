@@ -132,14 +132,14 @@ class LSPcomp:
 
 
 @dataclass(frozen=True)
-class _StringValue:
+class StringValue:
     kind: Literal["snippet"]
     value: str
 
 
 @dataclass(frozen=True)
-class _InlineCompletionItem:
-    insertText: Union[str, _StringValue]
+class InlineCompletionItem:
+    insertText: Union[str, StringValue]
     filterText: Optional[str] = None
     range: Optional[_Range] = None
     command: Optional[Command] = None
@@ -147,9 +147,9 @@ class _InlineCompletionItem:
 
 # https://microsoft.github.io/language-server-protocol/specifications/lsp/3.18/specification/#textDocument_inlineCompletion
 class _InLineCompletionList(TypedDict):
-    items: Sequence[_InlineCompletionItem]
+    items: Sequence[InlineCompletionItem]
 
 
 InLineCompletionResponse = Union[
-    _NULL, Sequence[_InlineCompletionItem], _InLineCompletionList
+    _NULL, Sequence[InlineCompletionItem], _InLineCompletionList
 ]
