@@ -88,3 +88,32 @@ async def comp_thirdparty(
             resp=resp,
         )
         yield parsed
+
+
+async def comp_thirdparty_inline(
+    short_name: str,
+    always_on_top: Optional[AbstractSet[Optional[str]]],
+    weight_adjust: float,
+    context: Context,
+    chunk: int,
+    clients: AbstractSet[str],
+) -> AsyncIterator[LSPcomp]:
+    pc = await protocol()
+
+    async for client in async_request(
+        "lsp_inline_third_party", chunk, clients, context.cursor, context.line
+    ):
+        name = client.name or short_name
+        resp = cast(InLineCompletionResponse, client.message)
+        parsed = parse_inline(
+            pc,
+            extern_type=ExternLSP,
+            client=name,
+            encoding=client.offset_encoding,
+            short_name=short_name,
+            cursors=context.cursor,
+            always_on_top=always_on_top,
+            weight_adjust=weight_adjust,
+            resp=resp,
+        )
+        yield parsed

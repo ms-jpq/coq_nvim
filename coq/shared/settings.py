@@ -262,6 +262,7 @@ class Clients:
     tabnine: T9Client
     tags: TagsClient
     third_party: ThirdPartyClient
+    third_party_inline: ThirdPartyClient
     tmux: TmuxClient
     tree_sitter: TSClient
 

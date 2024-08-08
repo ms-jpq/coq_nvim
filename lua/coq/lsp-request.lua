@@ -557,6 +557,36 @@
       )
     end
 
+    COQ.lsp_inline_third_party = function(
+      name,
+      multipart,
+      session_id,
+      client_names,
+      pos,
+      line)
+      local args =
+        freeze(
+        "coq_3p.args",
+        false,
+        {
+          uid = session_id,
+          pos = freeze("coq_3p.args.pos", true, pos),
+          line = line
+        }
+      )
+
+      lua_req(
+        name,
+        multipart,
+        session_id,
+        "ln",
+        false,
+        client_names,
+        "< lua :: inline comp >",
+        args
+      )
+    end
+
     COQ.lsp_third_party_resolve = function(
       name,
       multipart,

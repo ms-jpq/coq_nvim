@@ -77,6 +77,13 @@ clients:
     short_name: "3P"
     weight_adjust: 0
 
+
+  third_party_inline:
+    always_on_top: null
+    enabled: True
+    short_name: "3L"
+    weight_adjust: 0
+
   tmux:
     all_sessions: True
     always_on_top: False
