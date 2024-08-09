@@ -275,16 +275,14 @@ async def _resolve_comp(
 
 
 async def _virt_text(context: Context, ghost: GhostText, comp: Completion) -> None:
-    text = comp.primary_edit.new_text
-    if ghost.enabled and text:
+    if ghost.enabled and (lines := comp.primary_edit.new_text.splitlines()):
         lhs, rhs = ghost.context
-        overlay, *rest = text.splitlines() or ("",)
-        virt_text = lhs + overlay.strip() + rhs
-        adjusted = (
-            tuple(indent_adjusted(context, line_before=context.line_before, lines=rest))
+        overlay, *rest = (
+            indent_adjusted(context, line_before=context.line_before, lines=lines)
             if comp.adjust_indent
-            else rest
+            else lines
         )
+        virt_text = lhs + overlay.strip() + rhs
 
         ns = await Nvim.create_namespace(_NS)
         win = await Window.get_current()
@@ -304,8 +302,8 @@ async def _virt_text(context: Context, ghost: GhostText, comp: Completion) -> No
 
         def marks() -> Iterator[ExtMark]:
             yield mark
-            if adjusted:
-                vlines = tuple(((line, ghost.highlight_group),) for line in adjusted)
+            if rest:
+                vlines = tuple(((line, ghost.highlight_group),) for line in rest)
                 yield ExtMark(
                     buf=buf,
                     marker=ExtMarker(2),
