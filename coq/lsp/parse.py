@@ -230,7 +230,7 @@ def parse_item(
     else:
         go, parsed = _item_parser(item)
         if not go:
-            log.warn("%s", parsed)
+            log.warn("%s -> %s", client, parsed)
             return None
         else:
             assert isinstance(parsed, CompletionItem)
@@ -295,7 +295,8 @@ def parse_inline_item(
     else:
         go, parsed = _inline_item_parser(item)
         if not go:
-            log.warn("%s", parsed)
+            if "kind" not in item:
+                log.warn("%s -> %s", client, parsed)
             return None
         else:
             assert isinstance(parsed, InlineCompletionItem)
@@ -397,7 +398,7 @@ def parse(
         return LSPcomp(client=client, local_cache=True, items=comps)
 
     else:
-        log.info("%s", f"Unknown LSP resp -- {type(resp)}")
+        log.warn("%s", f"Unknown LSP resp -- {type(resp)}")
         return LSPcomp(client=client, local_cache=False, items=iter(()))
 
 
