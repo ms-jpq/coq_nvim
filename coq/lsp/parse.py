@@ -18,6 +18,7 @@ from ..shared.types import (
     UTF8,
     UTF16,
     UTF32,
+    BaseRangeEdit,
     Completion,
     Cursors,
     Doc,
@@ -159,7 +160,9 @@ def _primary(
 
 
 def _adjust_indent(mode: Optional[int], edit: Edit) -> bool:
-    return mode == 2 or isinstance(edit, SnippetEdit)
+    return not isinstance(edit, BaseRangeEdit) and (
+        mode == 2 or isinstance(edit, SnippetEdit)
+    )
 
 
 def _doc(item: CompletionItem) -> Optional[Doc]:
