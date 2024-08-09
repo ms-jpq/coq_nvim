@@ -200,9 +200,7 @@ async def _show_preview(stack: Stack, event: _Event, doc: Doc, s: State) -> None
     new_doc = _preprocess(s.context, doc=doc)
     text = expand_tabs(s.context, text=new_doc.text)
     lines = text.splitlines()
-    pit = _positions(
-        stack.settings.display.preview, event=event, lines=lines, state=s
-    )
+    pit = _positions(stack.settings.display.preview, event=event, lines=lines, state=s)
 
     def key(k: Tuple[int, int, _Pos]) -> Tuple[int, int, int, int]:
         idx, rank, pos = k
@@ -277,10 +275,10 @@ async def _resolve_comp(
 
 
 async def _virt_text(ghost: GhostText, text: str) -> None:
-    if ghost.enabled:
+    if ghost.enabled and text:
         lhs, rhs = ghost.context
-        overlay, *_ = text.splitlines() or ("",)
-        virt_text = lhs + overlay + rhs
+        overlay, *rest = text.splitlines() or ("",)
+        virt_text = lhs + overlay.strip() + rhs
 
         ns = await Nvim.create_namespace(_NS)
         win = await Window.get_current()
@@ -297,8 +295,24 @@ async def _virt_text(ghost: GhostText, text: str) -> None:
                 "virt_text": ((virt_text, ghost.highlight_group),),
             },
         )
+
+        def marks() -> Iterator[ExtMark]:
+            yield mark
+            for idx, line in enumerate(rest, start=1):
+                yield ExtMark(
+                    buf=buf,
+                    marker=ExtMarker(idx + 1),
+                    begin=(row + idx, 0),
+                    end=(row + idx, 0),
+                    meta={
+                        "virt_text_pos": "overlay",
+                        "hl_mode": "combine",
+                        "virt_text": ((line, ghost.highlight_group),),
+                    },
+                )
+
         await buf.clear_namespace(ns)
-        await buf.set_extmarks(ns, extmarks=(mark,))
+        await buf.set_extmarks(ns, extmarks=marks())
 
 
 _DECODER = new_decoder[_Event](_Event)
