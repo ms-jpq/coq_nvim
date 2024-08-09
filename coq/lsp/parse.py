@@ -315,8 +315,8 @@ def parse_inline_item(
             extern = extern_type(
                 inline=True, client=client, item=item, command=parsed.command
             )
-            label = line
-            kind = "text"
+            label = line.strip()
+            kind = "Snippet"
             doc = Doc(text=p_edit.new_text, syntax="")
 
             comp = Completion(
