@@ -14,6 +14,7 @@ from pynvim_pp.logging import log
 from std2.pickle.decoder import _new_parser, new_decoder
 from std2.types import never
 
+from ..shared.parse import lower
 from ..shared.types import (
     UTF8,
     UTF16,
@@ -185,7 +186,10 @@ def _inline_primary(
         item.insertText if isinstance(item.insertText, str) else item.insertText.value
     )
     fallback = Edit(new_text=insertText)
-    if isinstance(item.insertText, StringValue) and item.insertText.kind == "snippet":
+    if (
+        isinstance(item.insertText, StringValue)
+        and lower(item.insertText.kind) == "snippet"
+    ):
         if edit_range := item.range:
             re = _range_edit(
                 encoding,
@@ -316,7 +320,7 @@ def parse_inline_item(
                 inline=True, client=client, item=item, command=parsed.command
             )
             label = line.strip()
-            kind = "Snippet"
+            kind = isinstance(p_edit, SnippetEdit) and "Snippet" or "Text"
             doc = Doc(text=p_edit.new_text, syntax="")
 
             comp = Completion(
