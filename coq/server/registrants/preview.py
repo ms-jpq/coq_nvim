@@ -2,7 +2,7 @@ from asyncio import Task, create_task, wait
 from dataclasses import dataclass
 from functools import lru_cache
 from html import unescape
-from itertools import chain
+from itertools import chain, repeat
 from math import ceil
 from os import linesep
 from typing import (
@@ -37,7 +37,7 @@ from ...paths.show import show
 from ...registry import NAMESPACE, autocmd, rpc
 from ...shared.settings import GhostText, PreviewDisplay
 from ...shared.timeit import timeit
-from ...shared.trans import expand_tabs
+from ...shared.trans import expand_tabs, indent_adjusted
 from ...shared.types import Completion, Context, Doc, Edit, ExternLSP, ExternPath
 from ..rt_types import Stack
 from ..state import State, state
@@ -274,11 +274,17 @@ async def _resolve_comp(
     _CELL.val = create_task(cont())
 
 
-async def _virt_text(ghost: GhostText, text: str) -> None:
+async def _virt_text(context: Context, ghost: GhostText, comp: Completion) -> None:
+    text = comp.primary_edit.new_text
     if ghost.enabled and text:
         lhs, rhs = ghost.context
         overlay, *rest = text.splitlines() or ("",)
         virt_text = lhs + overlay.strip() + rhs
+        adjusted = (
+            tuple(indent_adjusted(context, line_before=context.line_before, lines=rest))
+            if comp.adjust_indent
+            else rest
+        )
 
         ns = await Nvim.create_namespace(_NS)
         win = await Window.get_current()
@@ -298,16 +304,17 @@ async def _virt_text(ghost: GhostText, text: str) -> None:
 
         def marks() -> Iterator[ExtMark]:
             yield mark
-            for idx, line in enumerate(rest, start=1):
+            if adjusted:
+                vlines = tuple(((line, ghost.highlight_group),) for line in adjusted)
                 yield ExtMark(
                     buf=buf,
-                    marker=ExtMarker(idx + 1),
-                    begin=(row + idx, 0),
-                    end=(row + idx, 0),
+                    marker=ExtMarker(2),
+                    begin=(row, col),
+                    end=(row, col),
                     meta={
                         "virt_text_pos": "overlay",
                         "hl_mode": "combine",
-                        "virt_text": ((line, ghost.highlight_group),),
+                        "virt_lines": vlines,
                     },
                 )
 
@@ -331,9 +338,11 @@ async def _cmp_changed(stack: Stack, event: Mapping[str, Any] = {}) -> None:
             pass
         else:
             if metric := stack.metrics.get(uid):
+                context = state().context
                 await _virt_text(
+                    context=context,
                     ghost=stack.settings.display.ghost_text,
-                    text=metric.comp.primary_edit.new_text,
+                    comp=metric.comp,
                 )
                 s = state(preview_id=uid)
                 if metric.comp.extern:
