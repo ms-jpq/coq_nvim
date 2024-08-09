@@ -284,6 +284,7 @@ async def _virt_text(context: Context, ghost: GhostText, comp: Completion) -> No
         )
         virt_text = lhs + overlay.strip() + rhs
 
+        supports_vlines = await Nvim.api.has("nvim-0.8")
         ns = await Nvim.create_namespace(_NS)
         win = await Window.get_current()
         buf = await win.get_buf()
@@ -302,7 +303,7 @@ async def _virt_text(context: Context, ghost: GhostText, comp: Completion) -> No
 
         def marks() -> Iterator[ExtMark]:
             yield mark
-            if rest:
+            if supports_vlines and rest:
                 vlines = tuple(((line, ghost.highlight_group),) for line in rest)
                 yield ExtMark(
                     buf=buf,
