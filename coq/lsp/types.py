@@ -119,9 +119,9 @@ class _CompletionList(TypedDict):
     itemDefaults: Optional[ItemDefaults]
 
 
-CompletionResponse = Union[
-    Literal[None, False, 0], Sequence[CompletionItem], _CompletionList
-]
+_NULL = Literal[None, False, 0]
+
+CompletionResponse = Union[_NULL, Sequence[CompletionItem], _CompletionList]
 
 
 @dataclass(frozen=True)
@@ -129,3 +129,27 @@ class LSPcomp:
     client: Optional[str]
     local_cache: bool
     items: Iterator[Completion]
+
+
+@dataclass(frozen=True)
+class StringValue:
+    kind: Literal["snippet"]
+    value: str
+
+
+@dataclass(frozen=True)
+class InlineCompletionItem:
+    insertText: Union[str, StringValue]
+    filterText: Optional[str] = None
+    range: Optional[_Range] = None
+    command: Optional[Command] = None
+
+
+# https://microsoft.github.io/language-server-protocol/specifications/lsp/3.18/specification/#textDocument_inlineCompletion
+class _InLineCompletionList(TypedDict):
+    items: Sequence[InlineCompletionItem]
+
+
+InLineCompletionResponse = Union[
+    _NULL, Sequence[InlineCompletionItem], _InLineCompletionList
+]

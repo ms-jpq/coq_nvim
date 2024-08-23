@@ -172,6 +172,9 @@ coq.lsp_ensure_capabilities = function(cfg)
             snippetSupport = true,
             tagSupport = {valueSet = {1}}
           }
+        },
+        inlineCompletion = {
+          dynamicRegistration = false
         }
       }
     }

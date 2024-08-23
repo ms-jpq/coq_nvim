@@ -175,7 +175,7 @@ async def async_request(
                             yield client
                     if state.done:
                         with _LOCK:
-                            _STATE.pop(name)
+                            _STATE.pop(name, None)
                         break
                 elif state.uid > uid:
                     break

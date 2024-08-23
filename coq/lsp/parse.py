@@ -14,10 +14,12 @@ from pynvim_pp.logging import log
 from std2.pickle.decoder import _new_parser, new_decoder
 from std2.types import never
 
+from ..shared.parse import lower
 from ..shared.types import (
     UTF8,
     UTF16,
     UTF32,
+    BaseRangeEdit,
     Completion,
     Cursors,
     Doc,
@@ -34,10 +36,13 @@ from .protocol import LSProtocol
 from .types import (
     CompletionItem,
     CompletionResponse,
+    InlineCompletionItem,
+    InLineCompletionResponse,
     InsertReplaceEdit,
     ItemDefaults,
     LSPcomp,
     MarkupContent,
+    StringValue,
     TextEdit,
     TextEditNonStandard,
 )
@@ -51,6 +56,9 @@ _defaults_parser = new_decoder[Optional[ItemDefaults]](
     Optional[ItemDefaults], strict=False, decoders=()
 )
 _item_parser = _new_parser(CompletionItem, path=(), strict=False, decoders=())
+_inline_item_parser = _new_parser(
+    InlineCompletionItem, path=(), strict=False, decoders=()
+)
 
 
 def _with_defaults(defaults: ItemDefaults, item: Any) -> Any:
@@ -153,7 +161,9 @@ def _primary(
 
 
 def _adjust_indent(mode: Optional[int], edit: Edit) -> bool:
-    return mode == 2 or isinstance(edit, SnippetEdit)
+    return not isinstance(edit, BaseRangeEdit) and (
+        mode == 2 or isinstance(edit, SnippetEdit)
+    )
 
 
 def _doc(item: CompletionItem) -> Optional[Doc]:
@@ -165,6 +175,50 @@ def _doc(item: CompletionItem) -> Optional[Doc]:
         return Doc(text=item.detail, syntax="")
     else:
         return None
+
+
+def _inline_primary(
+    encoding: Encoding,
+    cursors: Cursors,
+    item: InlineCompletionItem,
+) -> Edit:
+    insertText = (
+        item.insertText if isinstance(item.insertText, str) else item.insertText.value
+    )
+    fallback = Edit(new_text=insertText)
+    if (
+        isinstance(item.insertText, StringValue)
+        and lower(item.insertText.kind) == "snippet"
+    ):
+        if edit_range := item.range:
+            re = _range_edit(
+                encoding,
+                cursors=cursors,
+                fallback=None,
+                edit=TextEdit(newText=insertText, range=edit_range),
+            )
+
+            return SnippetRangeEdit(
+                grammar=SnippetGrammar.lsp,
+                new_text=re.new_text,
+                fallback=re.fallback,
+                begin=re.begin,
+                end=re.end,
+                cursor_pos=re.cursor_pos,
+                encoding=re.encoding,
+            )
+        else:
+            return SnippetEdit(grammar=SnippetGrammar.lsp, new_text=fallback.new_text)
+    else:
+        if edit_range := item.range:
+            return _range_edit(
+                encoding,
+                cursors=cursors,
+                fallback=None,
+                edit=TextEdit(newText=insertText, range=edit_range),
+            )
+        else:
+            return fallback
 
 
 def parse_item(
@@ -183,7 +237,7 @@ def parse_item(
     else:
         go, parsed = _item_parser(item)
         if not go:
-            log.warn("%s", parsed)
+            log.warn("%s -> %s", client, parsed)
             return None
         else:
             assert isinstance(parsed, CompletionItem)
@@ -210,7 +264,9 @@ def parse_item(
             )
             kind = protocol.CompletionItemKind.get(item.get("kind"), "")
             doc = _doc(parsed)
-            extern = extern_type(client=client, item=item, command=parsed.command)
+            extern = extern_type(
+                inline=False, client=client, item=item, command=parsed.command
+            )
 
             comp = Completion(
                 source=short_name,
@@ -222,6 +278,61 @@ def parse_item(
                 secondary_edits=r_edits,
                 sort_by=sort_by,
                 preselect=parsed.preselect or False,
+                kind=kind,
+                doc=doc,
+                icon_match=kind,
+                extern=extern,
+            )
+            return comp
+
+
+def parse_inline_item(
+    protocol: LSProtocol,
+    extern_type: Union[Type[ExternLSP], Type[ExternLUA]],
+    always_on_top: Optional[AbstractSet[Optional[str]]],
+    client: Optional[str],
+    encoding: Encoding,
+    cursors: Cursors,
+    short_name: str,
+    weight_adjust: float,
+    item: Any,
+) -> Optional[Completion]:
+    if not item:
+        return None
+    else:
+        go, parsed = _inline_item_parser(item)
+        if not go:
+            if "kind" not in item:
+                log.warn("%s -> %s", client, parsed)
+            return None
+        else:
+            assert isinstance(parsed, InlineCompletionItem)
+            on_top = (
+                False
+                if always_on_top is None
+                else (not always_on_top or client in always_on_top)
+            )
+            p_edit = _inline_primary(encoding=encoding, cursors=cursors, item=parsed)
+            adjust_indent = _adjust_indent(None, edit=p_edit)
+            line, *_ = p_edit.new_text.splitlines()
+            sort_by = parsed.filterText or line
+            extern = extern_type(
+                inline=True, client=client, item=item, command=parsed.command
+            )
+            label = line.strip()
+            kind = isinstance(p_edit, SnippetEdit) and "Snippet" or "Text"
+            doc = Doc(text=p_edit.new_text, syntax="")
+
+            comp = Completion(
+                source=short_name,
+                always_on_top=on_top,
+                weight_adjust=weight_adjust,
+                label=label,
+                primary_edit=p_edit,
+                adjust_indent=adjust_indent,
+                secondary_edits=(),
+                sort_by=sort_by,
+                preselect=False,
                 kind=kind,
                 doc=doc,
                 icon_match=kind,
@@ -248,7 +359,7 @@ def parse(
         is_complete = _falsy(resp.get("isIncomplete"))
 
         if not isinstance((items := resp.get("items")), Sequence):
-            log.warn("%s", f"Unknown LSP resp -- {type(resp)}")
+            log.warn("%s", f"Unknown LSP resp -- {type(items)}")
             return LSPcomp(client=client, local_cache=is_complete, items=iter(()))
 
         else:
@@ -270,7 +381,6 @@ def parse(
                     )
                 )
             )
-
             return LSPcomp(client=client, local_cache=is_complete, items=comps)
 
     elif isinstance(resp, Sequence):
@@ -292,9 +402,71 @@ def parse(
                 )
             )
         )
-
         return LSPcomp(client=client, local_cache=True, items=comps)
 
     else:
         log.warn("%s", f"Unknown LSP resp -- {type(resp)}")
         return LSPcomp(client=client, local_cache=False, items=iter(()))
+
+
+def parse_inline(
+    protocol: LSProtocol,
+    extern_type: Union[Type[ExternLSP], Type[ExternLUA]],
+    always_on_top: Optional[AbstractSet[Optional[str]]],
+    client: Optional[str],
+    encoding: Encoding,
+    short_name: str,
+    cursors: Cursors,
+    weight_adjust: float,
+    resp: InLineCompletionResponse,
+) -> LSPcomp:
+    local_cache = False
+    if _falsy(resp):
+        return LSPcomp(client=client, local_cache=local_cache, items=iter(()))
+
+    elif isinstance(resp, Mapping):
+        if not isinstance((items := resp.get("items")), Sequence):
+            log.warn("%s", f"Unknown LSP resp -- {type(items)}")
+        else:
+            comps = (
+                co1
+                for item in items
+                if (
+                    co1 := parse_inline_item(
+                        protocol,
+                        extern_type=extern_type,
+                        client=client,
+                        encoding=encoding,
+                        always_on_top=always_on_top,
+                        short_name=short_name,
+                        cursors=cursors,
+                        weight_adjust=weight_adjust,
+                        item=item,
+                    )
+                )
+            )
+            return LSPcomp(client=client, local_cache=False, items=comps)
+
+    elif isinstance(resp, Sequence):
+        comps = (
+            co1
+            for item in resp
+            if (
+                co1 := parse_inline_item(
+                    protocol,
+                    extern_type=extern_type,
+                    client=client,
+                    encoding=encoding,
+                    always_on_top=always_on_top,
+                    short_name=short_name,
+                    cursors=cursors,
+                    weight_adjust=weight_adjust,
+                    item=item,
+                )
+            )
+        )
+        return LSPcomp(client=client, local_cache=False, items=comps)
+    else:
+        log.warn("%s", f"Unknown LSP resp -- {type(resp)}")
+
+    return LSPcomp(client=client, local_cache=local_cache, items=iter(()))

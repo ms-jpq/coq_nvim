@@ -8,15 +8,22 @@ clients:
     match_syms: False
     parent_scope: " ⇊"
     same_filetype: False
-    short_name: "BUF"
+    short_name: "BF"
     weight_adjust: 0
 
   lsp:
     always_on_top: null
     enabled: True
     resolve_timeout: 0.06
-    short_name: "LSP"
+    short_name: "LS"
     weight_adjust: 0.5
+
+  lsp_inline:
+    always_on_top: []
+    enabled: True
+    resolve_timeout: 0.06
+    short_name: "IS"
+    weight_adjust: 1
 
   paths:
     always_on_top: False
@@ -26,7 +33,7 @@ clients:
     resolution:
       - cwd
       - file
-    short_name: "PATH"
+    short_name: "FS"
     weight_adjust: 0
 
   registers:
@@ -36,14 +43,14 @@ clients:
     match_syms: False
     max_yank_size: 8888
     register_scope: " ⇉ "
-    short_name: "REG"
+    short_name: "RS"
     weight_adjust: 0
     words: ["0"]
 
   snippets:
     always_on_top: False
     enabled: True
-    short_name: "SNIP"
+    short_name: "SP"
     user_path: null
     warn:
       - missing
@@ -61,13 +68,19 @@ clients:
     enabled: True
     parent_scope: " ⇊"
     path_sep: " ⇉ "
-    short_name: "TAG"
+    short_name: "TG"
     weight_adjust: 0.1
 
   third_party:
     always_on_top: null
     enabled: True
     short_name: "3P"
+    weight_adjust: 0
+
+  third_party_inline:
+    always_on_top: []
+    enabled: True
+    short_name: "3L"
     weight_adjust: 0
 
   tmux:
@@ -77,7 +90,7 @@ clients:
     match_syms: False
     parent_scope: " ⇊"
     path_sep: " ⇉ "
-    short_name: "TMUX"
+    short_name: "TX"
     weight_adjust: -0.1
 
   tree_sitter:

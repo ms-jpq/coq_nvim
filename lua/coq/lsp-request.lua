@@ -254,8 +254,15 @@
       return cancel_all
     end
 
-    COQ.lsp_comp = function(name, multipart, session_id, client_names, pos)
+    local lsp_comp_base = function(
+      lsp_method,
+      name,
+      multipart,
+      session_id,
+      client_names,
+      pos)
       vim.validate {
+        lsp_method = {lsp_method, "string"},
         client_names = {client_names, "table"},
         name = {name, "string"},
         pos = {pos, "table"},
@@ -270,7 +277,6 @@
       }
 
       local buf = vim.api.nvim_get_current_buf()
-      local lsp_method = "textDocument/completion"
       local n_clients, clients =
         lsp_clients(false, client_names, buf, lsp_method)
 
@@ -306,6 +312,33 @@
         function(on_resp)
           return lsp_request_all(clients, buf, lsp_method, make_params, on_resp)
         end
+      )
+    end
+
+    COQ.lsp_comp = function(name, multipart, session_id, client_names, pos)
+      lsp_comp_base(
+        "textDocument/completion",
+        name,
+        multipart,
+        session_id,
+        client_names,
+        pos
+      )
+    end
+
+    COQ.lsp_inline_comp = function(
+      name,
+      multipart,
+      session_id,
+      client_names,
+      pos)
+      lsp_comp_base(
+        "textDocument/inlineCompletion",
+        name,
+        multipart,
+        session_id,
+        client_names,
+        pos
       )
     end
 
@@ -520,6 +553,36 @@
         false,
         client_names,
         "< lua :: comp >",
+        args
+      )
+    end
+
+    COQ.lsp_inline_third_party = function(
+      name,
+      multipart,
+      session_id,
+      client_names,
+      pos,
+      line)
+      local args =
+        freeze(
+        "coq_3p.args",
+        false,
+        {
+          uid = session_id,
+          pos = freeze("coq_3p.args.pos", true, pos),
+          line = line
+        }
+      )
+
+      lua_req(
+        name,
+        multipart,
+        session_id,
+        "ln",
+        false,
+        client_names,
+        "< lua :: inline comp >",
         args
       )
     end

@@ -12,6 +12,8 @@ from std2.pickle.decoder import new_decoder
 from yaml import safe_load
 
 from ..clients.buffers.worker import Worker as BuffersWorker
+from ..clients.inline.worker import Worker as InLineWorker
+from ..clients.inline_third_party.worker import Worker as InLineThirdPartyWorker
 from ..clients.lsp.worker import Worker as LspWorker
 from ..clients.paths.worker import Worker as PathsWorker
 from ..clients.registers.worker import Worker as RegistersWorker
@@ -74,12 +76,22 @@ def _from_each_according_to_their_ability(
     if clients.lsp.enabled:
         yield LspWorker.init(supervisor, options=clients.lsp, misc=None)
 
+    if clients.lsp_inline.enabled:
+        yield InLineWorker.init(supervisor, options=clients.lsp_inline, misc=None)
+
     if clients.registers.enabled:
         yield RegistersWorker.init(supervisor, options=clients.registers, misc=None)
 
     if clients.third_party.enabled:
         yield ThirdPartyWorker.init(
             supervisor, options=cast(LSPClient, clients.third_party), misc=None
+        )
+
+    if clients.third_party_inline.enabled:
+        yield InLineThirdPartyWorker.init(
+            supervisor,
+            options=cast(LSPClient, clients.third_party_inline),
+            misc=None,
         )
 
     if clients.snippets.enabled:

@@ -2,7 +2,7 @@ from asyncio import Task, create_task, wait
 from dataclasses import dataclass
 from functools import lru_cache
 from html import unescape
-from itertools import chain
+from itertools import chain, repeat
 from math import ceil
 from os import linesep
 from typing import (
@@ -37,7 +37,7 @@ from ...paths.show import show
 from ...registry import NAMESPACE, autocmd, rpc
 from ...shared.settings import GhostText, PreviewDisplay
 from ...shared.timeit import timeit
-from ...shared.trans import expand_tabs
+from ...shared.trans import expand_tabs, indent_adjusted
 from ...shared.types import Completion, Context, Doc, Edit, ExternLSP, ExternPath
 from ..rt_types import Stack
 from ..state import State, state
@@ -195,26 +195,25 @@ async def _set_win(display: PreviewDisplay, buf: Buffer, pos: _Pos) -> None:
 
 
 async def _show_preview(stack: Stack, event: _Event, doc: Doc, s: State) -> None:
-    if stack.settings.display.preview.enabled:
-        new_doc = _preprocess(s.context, doc=doc)
-        text = expand_tabs(s.context, text=new_doc.text)
-        lines = text.splitlines()
-        pit = _positions(
-            stack.settings.display.preview, event=event, lines=lines, state=s
+    if not stack.settings.display.preview.enabled or not doc.text:
+        return
+    new_doc = _preprocess(s.context, doc=doc)
+    text = expand_tabs(s.context, text=new_doc.text)
+    lines = text.splitlines()
+    pit = _positions(stack.settings.display.preview, event=event, lines=lines, state=s)
+
+    def key(k: Tuple[int, int, _Pos]) -> Tuple[int, int, int, int]:
+        idx, rank, pos = k
+        return pos.height * pos.width, idx == s.pum_location, -rank, -idx
+
+    if ordered := sorted(pit, key=key, reverse=True):
+        (pum_location, _, pos), *__ = ordered
+        state(pum_location=pum_location)
+        buf = await Buffer.create(
+            listed=False, scratch=True, wipe=True, nofile=True, noswap=True
         )
-
-        def key(k: Tuple[int, int, _Pos]) -> Tuple[int, int, int, int]:
-            idx, rank, pos = k
-            return pos.height * pos.width, idx == s.pum_location, -rank, -idx
-
-        if ordered := sorted(pit, key=key, reverse=True):
-            (pum_location, _, pos), *__ = ordered
-            state(pum_location=pum_location)
-            buf = await Buffer.create(
-                listed=False, scratch=True, wipe=True, nofile=True, noswap=True
-            )
-            await buf_set_preview(buf=buf, syntax=new_doc.syntax, preview=lines)
-            await _set_win(display=stack.settings.display.preview, buf=buf, pos=pos)
+        await buf_set_preview(buf=buf, syntax=new_doc.syntax, preview=lines)
+        await _set_win(display=stack.settings.display.preview, buf=buf, pos=pos)
 
 
 async def _resolve_comp(
@@ -275,12 +274,17 @@ async def _resolve_comp(
     _CELL.val = create_task(cont())
 
 
-async def _virt_text(ghost: GhostText, text: str) -> None:
-    if ghost.enabled:
+async def _virt_text(context: Context, ghost: GhostText, comp: Completion) -> None:
+    if ghost.enabled and (lines := comp.primary_edit.new_text.splitlines()):
         lhs, rhs = ghost.context
-        overlay, *_ = text.splitlines() or ("",)
-        virt_text = lhs + overlay + rhs
+        overlay, *rest = (
+            indent_adjusted(context, line_before=context.line_before, lines=lines)
+            if comp.adjust_indent
+            else lines
+        )
+        virt_text = lhs + overlay.strip() + rhs
 
+        supports_vlines = await Nvim.api.has("nvim-0.8")
         ns = await Nvim.create_namespace(_NS)
         win = await Window.get_current()
         buf = await win.get_buf()
@@ -296,8 +300,25 @@ async def _virt_text(ghost: GhostText, text: str) -> None:
                 "virt_text": ((virt_text, ghost.highlight_group),),
             },
         )
+
+        def marks() -> Iterator[ExtMark]:
+            yield mark
+            if supports_vlines and rest:
+                vlines = tuple(((line, ghost.highlight_group),) for line in rest)
+                yield ExtMark(
+                    buf=buf,
+                    marker=ExtMarker(2),
+                    begin=(row, col),
+                    end=(row, col),
+                    meta={
+                        "virt_text_pos": "overlay",
+                        "hl_mode": "combine",
+                        "virt_lines": vlines,
+                    },
+                )
+
         await buf.clear_namespace(ns)
-        await buf.set_extmarks(ns, extmarks=(mark,))
+        await buf.set_extmarks(ns, extmarks=marks())
 
 
 _DECODER = new_decoder[_Event](_Event)
@@ -316,9 +337,11 @@ async def _cmp_changed(stack: Stack, event: Mapping[str, Any] = {}) -> None:
             pass
         else:
             if metric := stack.metrics.get(uid):
+                context = state().context
                 await _virt_text(
+                    context=context,
                     ghost=stack.settings.display.ghost_text,
-                    text=metric.comp.primary_edit.new_text,
+                    comp=metric.comp,
                 )
                 s = state(preview_id=uid)
                 if metric.comp.extern:

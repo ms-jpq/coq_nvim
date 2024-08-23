@@ -117,28 +117,27 @@ async def omnifunc(
 
 
 async def _resolve(stack: Stack, metric: Metric) -> Metric:
-    if not isinstance((extern := metric.comp.extern), ExternLSP):
+    if comp := stack.lru.get(metric.comp.uid):
+        return replace(
+            metric,
+            comp=replace(metric.comp, secondary_edits=comp.secondary_edits),
+        )
+    elif not isinstance((extern := metric.comp.extern), ExternLSP) or extern.inline:
         return metric
     else:
-        if comp := stack.lru.get(metric.comp.uid):
+        done, not_done = await wait(
+            (create_task(resolve(extern=extern)),),
+            timeout=stack.settings.clients.lsp.resolve_timeout,
+        )
+        await cancel(*not_done)
+        comp = (await done.pop()) if done else None
+        if not comp:
+            return metric
+        else:
             return replace(
                 metric,
                 comp=replace(metric.comp, secondary_edits=comp.secondary_edits),
             )
-        else:
-            done, not_done = await wait(
-                (create_task(resolve(extern=extern)),),
-                timeout=stack.settings.clients.lsp.resolve_timeout,
-            )
-            await cancel(*not_done)
-            comp = (await done.pop()) if done else None
-            if not comp:
-                return metric
-            else:
-                return replace(
-                    metric,
-                    comp=replace(metric.comp, secondary_edits=comp.secondary_edits),
-                )
 
 
 @rpc()

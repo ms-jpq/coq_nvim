@@ -19,6 +19,7 @@ from ...clients.tmux.worker import Worker as TmuxWorker
 from ...clients.tree_sitter.worker import Worker as TSWorker
 from ...lang import LANG
 from ...registry import NAMESPACE, atomic, autocmd, rpc
+from ..context import context
 from ..rt_types import Stack
 from ..state import state
 
@@ -116,7 +117,17 @@ async def _when_idle(stack: Stack) -> None:
                 await Nvim.api.buf_detach(NoneType, buf)
                 state(nono_bufs={buf.number})
 
-        await gather(_insert_enter(stack=stack), stack.supervisor.notify_idle())
+        async def idle() -> None:
+            s = state()
+            try:
+                ctx = await context(
+                    options=stack.settings.match, state=s, change=None, manual=False
+                )
+            except NvimError:
+                ctx = None
+            await stack.supervisor.notify_idle(ctx)
+
+        await gather(_insert_enter(stack=stack), idle())
 
     _CELL.val = create_task(cont())
 

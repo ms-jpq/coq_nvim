@@ -255,12 +255,14 @@ class ExecClient(_WordbankClient, _AlwaysTop):
 class Clients:
     buffers: BuffersClient
     lsp: LSPClient
+    lsp_inline: LSPClient
     paths: PathsClient
     registers: RegistersClient
     snippets: SnippetClient
     tabnine: T9Client
     tags: TagsClient
     third_party: ThirdPartyClient
+    third_party_inline: ThirdPartyClient
     tmux: TmuxClient
     tree_sitter: TSClient
 
