@@ -346,10 +346,13 @@ def _consolidate(
             pivot = edit.end
 
         elif edit.primary:
+            acc: MutableSequence[EditInstruction] = []
             while stack:
                 conflicting = stack.pop()
+                acc.append(conflicting)
                 if conflicting.end <= edit.begin:
                     break
+            stack.extend(acc)
             stack.append(edit)
             pivot = edit.end
 
@@ -614,7 +617,7 @@ async def edit(
 
         if not (
             parsed := await parse(
-                buf=buf, stack=stack, state=state, cmp=metric.comp, preview=False
+                buf=buf, stack=stack, state=state, comp=metric.comp, preview=False
             )
         ):
             return None
