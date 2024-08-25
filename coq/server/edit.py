@@ -354,7 +354,7 @@ def _consolidate(
                     break
                 else:
                     acc.pop()
-            stack.extend(acc)
+            stack.extend(reversed(acc))
             stack.append(edit)
             pivot = edit.end
 
