@@ -5,6 +5,7 @@ from pprint import pformat
 from string import Template
 from textwrap import dedent
 from typing import (
+    Deque,
     Iterable,
     Iterator,
     MutableMapping,
@@ -346,15 +347,15 @@ def _consolidate(
             pivot = edit.end
 
         elif edit.primary:
-            acc: MutableSequence[EditInstruction] = []
+            acc: Deque[EditInstruction] = deque()
             while stack:
                 conflicting = stack.pop()
-                acc.append(conflicting)
+                acc.appendleft(conflicting)
                 if conflicting.end <= edit.begin:
                     break
                 else:
                     acc.pop()
-            stack.extend(reversed(acc))
+            stack.extend(acc)
             stack.append(edit)
             pivot = edit.end
 
