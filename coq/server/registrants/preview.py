@@ -197,8 +197,6 @@ async def _set_win(display: PreviewDisplay, buf: Buffer, pos: _Pos) -> None:
 
 
 async def _show_preview(stack: Stack, event: _Event, doc: Doc, s: State) -> None:
-    if not stack.settings.display.preview.enabled or not doc.text:
-        return
     new_doc = _preprocess(s.context, doc=doc)
     text = dedent(expand_tabs(s.context, text=new_doc.text))
     lines = text.splitlines()
@@ -239,6 +237,7 @@ async def _resolve_comp(
         if prev:
             await cancel(prev)
 
+        enabled = stack.settings.display.preview.enabled
         timeout = stack.settings.display.preview.resolve_timeout
         with suppress_and_log():
             if cached := stack.lru.get(state.preview_id):
@@ -251,7 +250,7 @@ async def _resolve_comp(
                     ):
                         stack.lru[state.preview_id] = cmp
                     doc = (cmp.doc if cmp else None) or comp.doc
-                elif isinstance(comp.extern, ExternPath):
+                elif isinstance(comp.extern, ExternPath) and enabled:
                     if doc := await with_timeout(
                         timeout,
                         co=show(
@@ -263,16 +262,16 @@ async def _resolve_comp(
                     ):
                         stack.lru[state.preview_id] = replace(comp, doc=doc)
                 else:
-                    assert False
+                    doc = None
 
-            if not doc or not doc.text and comp.secondary_edits:
+            if enabled and (not doc or not doc.text and comp.secondary_edits):
                 doc = await with_timeout(
                     timeout,
                     co=_secondary(stack, state=state, comp=comp),
                 )
                 stack.lru[state.preview_id] = replace(comp, doc=doc)
 
-            if doc:
+            if enabled and doc and doc.text:
                 await _show_preview(
                     stack=stack,
                     event=event,
