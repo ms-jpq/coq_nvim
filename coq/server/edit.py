@@ -225,7 +225,7 @@ def _range_edit_trans(
 
     else:
         (r1, ec1), (r2, ec2) = sorted((edit.begin, edit.end))
-        split_lines = deque(edit.new_text.split(ctx.linefeed))
+        split_lines = edit.new_text.split(ctx.linefeed)
 
         if edit.encoding == UTF16:
             c1 = len(encode(decode(lines.b_lines16[r1][: ec1 * 2], encoding=UTF16)))
