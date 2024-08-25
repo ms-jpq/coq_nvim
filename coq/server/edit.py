@@ -78,6 +78,13 @@ class _MarkShift:
     row: int
 
 
+@dataclass(frozen=True)
+class _Parsed:
+    instructions: Sequence[EditInstruction]
+    marks: Sequence[Mark]
+    text_trans: TextTransforms
+
+
 def _lines(lines: Sequence[str]) -> _Lines:
     b_lines8 = tuple(map(encode, lines))
     return _Lines(
@@ -469,42 +476,35 @@ async def _parse(
     return adjusted, edit, marks, text_trans
 
 
-@dataclass(frozen=True)
-class _Parsed:
-    instructions: Sequence[EditInstruction]
-    marks: Sequence[Mark]
-    text_trans: TextTransforms
-
-
 async def parse(
-    buf: Buffer, stack: Stack, state: State, metric: Metric
+    buf: Buffer, stack: Stack, state: State, comp: Completion
 ) -> Optional[_Parsed]:
     try:
         adjusted, primary, marks, text_trans = await _parse(
-            buf=buf, stack=stack, state=state, comp=metric.comp
+            buf=buf, stack=stack, state=state, comp=comp
         )
     except (NvimError, ParseError) as e:
         adjusted, primary, marks, text_trans = (
             False,
-            metric.comp.primary_edit,
+            comp.primary_edit,
             (),
             {},
         )
         await Nvim.write(LANG("failed to parse snippet"))
         log.info("%s", e)
 
-    adjust_indent = metric.comp.adjust_indent and not adjusted
+    adjust_indent = comp.adjust_indent and not adjusted
     lo, hi = _rows_to_fetch(
         state.context,
         primary,
-        *metric.comp.secondary_edits,
+        *comp.secondary_edits,
     )
 
     if lo < 0 or hi > state.context.line_count:
-        log.warn("%s", pformat(("OUT OF BOUNDS", (lo, hi), metric)))
+        log.warn("%s", pformat(("OUT OF BOUNDS", (lo, hi), comp)))
         return None
     else:
-        hi = min(state.context.line_count, hi + len(metric.comp.secondary_edits) + 1)
+        hi = min(state.context.line_count, hi + len(comp.secondary_edits) + 1)
         limited_lines = await buf.get_lines(lo=lo, hi=hi)
         lines = [*chain(repeat("", times=lo), limited_lines)]
         view = _lines(lines)
@@ -517,7 +517,7 @@ async def parse(
                 adjust_indent=adjust_indent,
                 lines=view,
                 primary=primary,
-                secondary=metric.comp.secondary_edits,
+                secondary=comp.secondary_edits,
             )
         )
 
@@ -579,7 +579,7 @@ async def edit(
             )
 
         if not (
-            parsed := await parse(buf=buf, stack=stack, state=state, metric=metric)
+            parsed := await parse(buf=buf, stack=stack, state=state, comp=metric.comp)
         ):
             return None
 
