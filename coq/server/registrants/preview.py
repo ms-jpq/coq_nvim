@@ -1,4 +1,4 @@
-from asyncio import Task, create_task, wait
+from asyncio import Task, create_task
 from dataclasses import dataclass, replace
 from functools import lru_cache
 from html import unescape
@@ -36,10 +36,19 @@ from std2.string import removeprefix
 from ...lsp.requests.resolve import resolve
 from ...paths.show import show
 from ...registry import NAMESPACE, autocmd, rpc
+from ...shared.aio import with_timeout
 from ...shared.settings import GhostText, PreviewDisplay
 from ...shared.timeit import timeit
 from ...shared.trans import expand_tabs, indent_adjusted
-from ...shared.types import Completion, Context, Doc, Edit, ExternLSP, ExternPath
+from ...shared.types import (
+    Completion,
+    Context,
+    Doc,
+    Edit,
+    ExternLSP,
+    ExternPath,
+    RangeEdit,
+)
 from ..edit import EditInstruction, parse
 from ..rt_types import Stack
 from ..state import State, state
@@ -218,52 +227,54 @@ async def _show_preview(stack: Stack, event: _Event, doc: Doc, s: State) -> None
         await _set_win(display=stack.settings.display.preview, buf=buf, pos=pos)
 
 
+async def _secondary(edits: Sequence[RangeEdit]) -> Doc:
+    text = linesep.join(edit.new_text for edit in edits)
+    return Doc(text=text, syntax="")
+
+
 async def _resolve_comp(
     stack: Stack,
     event: _Event,
-    extern: Union[ExternLSP, ExternPath],
-    maybe_doc: Optional[Doc],
     state: State,
+    comp: Completion,
 ) -> None:
     prev = _CELL.val
-    timeout = stack.settings.display.preview.resolve_timeout if maybe_doc else None
 
     async def cont() -> None:
         if prev:
             await cancel(prev)
 
+        timeout = stack.settings.display.preview.resolve_timeout
         with suppress_and_log():
             if cached := stack.lru.get(state.preview_id):
                 doc = cached.doc
             else:
-                if isinstance(extern, ExternLSP):
-                    done, _ = await wait(
-                        (create_task(resolve(extern=extern)),),
-                        timeout=timeout,
-                    )
-                    if comp := (await done.pop()) if done else None:
-                        stack.lru[state.preview_id] = comp
-                    doc = (comp.doc if comp else None) or maybe_doc
-                elif isinstance(extern, ExternPath):
-                    if doc := await show(
-                        cwd=state.cwd,
-                        path=extern.path,
-                        ellipsis=stack.settings.display.pum.ellipsis,
-                        height=stack.settings.clients.paths.preview_lines,
+                if isinstance(comp.extern, ExternLSP):
+                    if cmp := await with_timeout(
+                        timeout,
+                        co=resolve(extern=comp.extern),
                     ):
-                        stack.lru[state.preview_id] = Completion(
-                            source="",
-                            always_on_top=False,
-                            weight_adjust=0,
-                            label="",
-                            sort_by="",
-                            primary_edit=Edit(new_text=""),
-                            adjust_indent=False,
-                            doc=doc,
-                            icon_match=None,
-                        )
+                        stack.lru[state.preview_id] = cmp
+                    doc = (cmp.doc if cmp else None) or comp.doc
+                elif isinstance(comp.extern, ExternPath):
+                    if doc := await with_timeout(
+                        timeout,
+                        co=show(
+                            cwd=state.cwd,
+                            path=comp.extern.path,
+                            ellipsis=stack.settings.display.pum.ellipsis,
+                            height=stack.settings.clients.paths.preview_lines,
+                        ),
+                    ):
+                        stack.lru[state.preview_id] = replace(comp, doc=doc)
                 else:
                     assert False
+
+            if not doc and comp.secondary_edits:
+                doc = await with_timeout(
+                    timeout, co=_secondary(edits=comp.secondary_edits)
+                )
+                stack.lru[state.preview_id] = replace(comp, doc=doc)
 
             if doc:
                 await _show_preview(
@@ -370,9 +381,10 @@ async def _cmp_changed(stack: Stack, event: Mapping[str, Any] = {}) -> None:
             pass
         else:
             if metric := stack.metrics.get(uid):
+                s = state()
                 await _virt_text(
                     stack,
-                    state=state(),
+                    state=s,
                     ghost=stack.settings.display.ghost_text,
                     comp=metric.comp,
                 )
@@ -381,9 +393,8 @@ async def _cmp_changed(stack: Stack, event: Mapping[str, Any] = {}) -> None:
                     await _resolve_comp(
                         stack=stack,
                         event=ev,
-                        extern=metric.comp.extern,
-                        maybe_doc=metric.comp.doc,
                         state=s,
+                        comp=metric.comp,
                     )
                 elif metric.comp.doc and metric.comp.doc.text:
                     await _show_preview(

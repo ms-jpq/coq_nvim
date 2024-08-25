@@ -17,6 +17,7 @@ from ...consts import DEBUG
 from ...lsp.requests.command import cmd
 from ...lsp.requests.resolve import resolve
 from ...registry import NAMESPACE, autocmd, rpc
+from ...shared.aio import with_timeout
 from ...shared.runtime import Metric
 from ...shared.types import ChangeEvent, Context, ExternLSP, ExternPath
 from ..completions import complete
@@ -105,7 +106,7 @@ async def comp_func(
 
 @rpc()
 async def omnifunc(
-    stack: Stack, findstart: Literal[0, 1], base: str
+    stack: Stack, findstart: Literal[0, 1], _base: str
 ) -> Union[int, Sequence[Mapping[str, Any]]]:
     t0 = monotonic()
     if findstart:
@@ -124,20 +125,16 @@ async def _resolve(stack: Stack, metric: Metric) -> Metric:
         )
     elif not isinstance((extern := metric.comp.extern), ExternLSP) or extern.inline:
         return metric
-    else:
-        done, not_done = await wait(
-            (create_task(resolve(extern=extern)),),
-            timeout=stack.settings.clients.lsp.resolve_timeout,
+    elif comp := await with_timeout(
+        stack.settings.clients.lsp.resolve_timeout, co=resolve(extern=extern)
+    ):
+        return replace(
+            metric,
+            comp=replace(metric.comp, secondary_edits=comp.secondary_edits),
         )
-        await cancel(*not_done)
-        comp = (await done.pop()) if done else None
-        if not comp:
-            return metric
-        else:
-            return replace(
-                metric,
-                comp=replace(metric.comp, secondary_edits=comp.secondary_edits),
-            )
+
+    else:
+        return metric
 
 
 @rpc()
@@ -175,11 +172,10 @@ async def _comp_done(stack: Stack, event: Mapping[str, Any]) -> None:
                     new_metric = await _resolve(stack=stack, metric=metric)
 
                     if isinstance((extern := new_metric.comp.extern), ExternLSP):
-                        _, pending = await wait(
-                            (create_task(cmd(extern=extern)),),
-                            timeout=stack.settings.clients.lsp.resolve_timeout,
+                        await with_timeout(
+                            stack.settings.clients.lsp.resolve_timeout,
+                            co=cmd(extern=extern),
                         )
-                        await cancel(*pending)
 
                     if new_metric.comp.uid in stack.metrics:
                         if inserted := await edit(
