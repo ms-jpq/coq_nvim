@@ -41,14 +41,12 @@ async def comp_lsp_inline(
     chunk: int,
     clients: AbstractSet[str],
 ) -> AsyncIterator[LSPcomp]:
-    pc = await protocol()
-
     async for client in async_request(
         "lsp_inline_comp", chunk, clients, context.cursor
     ):
         resp = cast(InLineCompletionResponse, client.message)
         parsed = parse_inline(
-            pc,
+            filetype=context.filetype,
             extern_type=ExternLSP,
             client=client.name,
             encoding=client.offset_encoding,
@@ -98,15 +96,13 @@ async def comp_thirdparty_inline(
     chunk: int,
     clients: AbstractSet[str],
 ) -> AsyncIterator[LSPcomp]:
-    pc = await protocol()
-
     async for client in async_request(
         "lsp_inline_third_party", chunk, clients, context.cursor, context.line
     ):
         name = client.name or short_name
         resp = cast(InLineCompletionResponse, client.message)
         parsed = parse_inline(
-            pc,
+            filetype=context.filetype,
             extern_type=ExternLSP,
             client=name,
             encoding=client.offset_encoding,

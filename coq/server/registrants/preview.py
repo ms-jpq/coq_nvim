@@ -5,6 +5,7 @@ from html import unescape
 from itertools import chain
 from math import ceil
 from os import linesep
+from textwrap import dedent
 from typing import (
     Any,
     Awaitable,
@@ -199,7 +200,7 @@ async def _show_preview(stack: Stack, event: _Event, doc: Doc, s: State) -> None
     if not stack.settings.display.preview.enabled or not doc.text:
         return
     new_doc = _preprocess(s.context, doc=doc)
-    text = expand_tabs(s.context, text=new_doc.text)
+    text = dedent(expand_tabs(s.context, text=new_doc.text))
     lines = text.splitlines()
     pit = _positions(stack.settings.display.preview, event=event, lines=lines, state=s)
 

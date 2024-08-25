@@ -287,7 +287,7 @@ def parse_item(
 
 
 def parse_inline_item(
-    protocol: LSProtocol,
+    filetype: str,
     extern_type: Union[Type[ExternLSP], Type[ExternLUA]],
     always_on_top: Optional[AbstractSet[Optional[str]]],
     client: Optional[str],
@@ -321,7 +321,7 @@ def parse_inline_item(
             )
             label = line.strip()
             kind = isinstance(p_edit, SnippetEdit) and "Snippet" or "Text"
-            doc = Doc(text=p_edit.new_text, syntax="")
+            doc = Doc(text=p_edit.new_text, syntax=filetype)
 
             comp = Completion(
                 source=short_name,
@@ -410,7 +410,7 @@ def parse(
 
 
 def parse_inline(
-    protocol: LSProtocol,
+    filetype: str,
     extern_type: Union[Type[ExternLSP], Type[ExternLUA]],
     always_on_top: Optional[AbstractSet[Optional[str]]],
     client: Optional[str],
@@ -433,7 +433,7 @@ def parse_inline(
                 for item in items
                 if (
                     co1 := parse_inline_item(
-                        protocol,
+                        filetype=filetype,
                         extern_type=extern_type,
                         client=client,
                         encoding=encoding,
@@ -453,7 +453,7 @@ def parse_inline(
             for item in resp
             if (
                 co1 := parse_inline_item(
-                    protocol,
+                    filetype=filetype,
                     extern_type=extern_type,
                     client=client,
                     encoding=encoding,

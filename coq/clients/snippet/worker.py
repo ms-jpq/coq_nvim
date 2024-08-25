@@ -66,7 +66,7 @@ class Worker(BaseWorker[SnippetClient, Path]):
                 label = label_line.strip().expandtabs(context.tabstop)
                 doc = Doc(
                     text=snip["doc"] or edit.new_text,
-                    syntax="",
+                    syntax=context.filetype
                 )
                 completion = Completion(
                     source=self._options.short_name,
