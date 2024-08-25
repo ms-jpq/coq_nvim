@@ -469,6 +469,65 @@ async def _parse(
     return adjusted, edit, marks, text_trans
 
 
+@dataclass(frozen=True)
+class _Parsed:
+    instructions: Sequence[EditInstruction]
+    marks: Sequence[Mark]
+    text_trans: TextTransforms
+
+
+async def parse(
+    buf: Buffer, stack: Stack, state: State, metric: Metric
+) -> Optional[_Parsed]:
+    try:
+        adjusted, primary, marks, text_trans = await _parse(
+            buf=buf, stack=stack, state=state, comp=metric.comp
+        )
+    except (NvimError, ParseError) as e:
+        adjusted, primary, marks, text_trans = (
+            False,
+            metric.comp.primary_edit,
+            (),
+            {},
+        )
+        await Nvim.write(LANG("failed to parse snippet"))
+        log.info("%s", e)
+
+    adjust_indent = metric.comp.adjust_indent and not adjusted
+    lo, hi = _rows_to_fetch(
+        state.context,
+        primary,
+        *metric.comp.secondary_edits,
+    )
+
+    if lo < 0 or hi > state.context.line_count:
+        log.warn("%s", pformat(("OUT OF BOUNDS", (lo, hi), metric)))
+        return None
+    else:
+        hi = min(state.context.line_count, hi + len(metric.comp.secondary_edits) + 1)
+        limited_lines = await buf.get_lines(lo=lo, hi=hi)
+        lines = [*chain(repeat("", times=lo), limited_lines)]
+        view = _lines(lines)
+
+        instructions = _consolidate(
+            *_instructions(
+                state.context,
+                match=stack.settings.match,
+                comp=stack.settings.completion,
+                adjust_indent=adjust_indent,
+                lines=view,
+                primary=primary,
+                secondary=metric.comp.secondary_edits,
+            )
+        )
+
+        return _Parsed(
+            instructions=instructions,
+            marks=marks,
+            text_trans=text_trans,
+        )
+
+
 async def _restore(win: Window, buf: Buffer, pos: NvimPos) -> Tuple[str, Optional[int]]:
     row, _ = pos
     ns = await Nvim.create_namespace(NS)
@@ -519,86 +578,40 @@ async def edit(
                 win=win, buf=buf, pos=state.context.position
             )
 
-        try:
-            adjusted, primary, marks, text_trans = await _parse(
-                buf=buf, stack=stack, state=state, comp=metric.comp
-            )
-        except (NvimError, ParseError) as e:
-            adjusted, primary, marks, text_trans = (
-                False,
-                metric.comp.primary_edit,
-                (),
-                {},
-            )
-            await Nvim.write(LANG("failed to parse snippet"))
-            log.info("%s", e)
+        if not (
+            parsed := await parse(buf=buf, stack=stack, state=state, metric=metric)
+        ):
+            return None
 
-        adjust_indent = metric.comp.adjust_indent and not adjusted
-        lo, hi = _rows_to_fetch(
-            state.context,
-            primary,
-            *metric.comp.secondary_edits,
+        n_row, n_col = _cursor(
+            state.context.position,
+            instructions=parsed.instructions,
         )
 
-        if lo < 0 or hi > state.context.line_count:
-            log.warn("%s", pformat(("OUT OF BOUNDS", (lo, hi), metric)))
-            return None
-        else:
-            hi = min(
-                state.context.line_count, hi + len(metric.comp.secondary_edits) + 1
-            )
-            limited_lines = await buf.get_lines(lo=lo, hi=hi)
-            lines = [*chain(repeat("", times=lo), limited_lines)]
-            view = _lines(lines)
+        if not synthetic:
+            stack.idb.inserted(metric.instance.bytes, sort_by=metric.comp.sort_by)
 
-            instructions = _consolidate(
-                *_instructions(
-                    state.context,
-                    match=stack.settings.match,
-                    comp=stack.settings.completion,
-                    adjust_indent=adjust_indent,
-                    lines=view,
-                    primary=primary,
-                    secondary=metric.comp.secondary_edits,
+        m_shift = await apply(buf=buf, instructions=parsed.instructions)
+        if inserted:
+            try:
+                await buf.set_text(
+                    begin=(n_row, n_col),
+                    end=(n_row, n_col),
+                    text=(inserted,),
                 )
-            )
-            n_row, n_col = _cursor(
-                state.context.position,
-                instructions=instructions,
-            )
+            except NvimError as e:
+                log.warn("%s", e)
 
-            if not synthetic:
-                stack.idb.inserted(metric.instance.bytes, sort_by=metric.comp.sort_by)
+        if movement is not None:
+            try:
+                await win.set_cursor(row=n_row, col=n_col + movement)
+            except NvimError as e:
+                log.warn("%s", e)
 
-            m_shift = await apply(buf=buf, instructions=instructions)
-            if inserted:
-                try:
-                    await buf.set_text(
-                        begin=(n_row, n_col),
-                        end=(n_row, n_col),
-                        text=(inserted,),
-                    )
-                except NvimError as e:
-                    log.warn("%s", e)
+        if new_marks := tuple(_shift_marks(m_shift, marks=parsed.marks)):
+            await mark(settings=stack.settings, buf=buf, marks=new_marks)
 
-            if movement is not None:
-                try:
-                    await win.set_cursor(row=n_row, col=n_col + movement)
-                except NvimError as e:
-                    log.warn("%s", e)
+        if DEBUG:
+            log.debug("%s", pformat((metric, parsed.instructions)))
 
-            if new_marks := tuple(_shift_marks(m_shift, marks=marks)):
-                await mark(settings=stack.settings, buf=buf, marks=new_marks)
-
-            if DEBUG:
-                log.debug(
-                    "%s",
-                    pformat(
-                        (
-                            metric,
-                            instructions,
-                        )
-                    ),
-                )
-
-            return (n_row, n_col), text_trans
+        return (n_row, n_col), parsed.text_trans
