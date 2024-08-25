@@ -352,6 +352,8 @@ def _consolidate(
                 acc.append(conflicting)
                 if conflicting.end <= edit.begin:
                     break
+                else:
+                    acc.pop()
             stack.extend(acc)
             stack.append(edit)
             pivot = edit.end
