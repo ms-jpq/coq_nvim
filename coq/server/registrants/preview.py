@@ -39,7 +39,7 @@ from ...shared.settings import GhostText, PreviewDisplay
 from ...shared.timeit import timeit
 from ...shared.trans import expand_tabs, indent_adjusted
 from ...shared.types import Completion, Context, Doc, Edit, ExternLSP, ExternPath
-from ..edit import parse
+from ..edit import EditInstruction, parse
 from ..rt_types import Stack
 from ..state import State, state
 
@@ -279,64 +279,58 @@ async def _virt_text(
     stack: Stack, state: State, ghost: GhostText, comp: Completion
 ) -> None:
     context = state.context
-    if ghost.enabled and (lines := comp.primary_edit.new_text.splitlines()):
+    if ghost.enabled and comp.primary_edit.new_text:
         supports_vlines = await Nvim.api.has("nvim-0.8")
-        supports_inline_erase = False
 
         ns = await Nvim.create_namespace(_NS)
         win = await Window.get_current()
         buf = await win.get_buf()
         row, col = await win.get_cursor()
-
-        if (
-            supports_inline_erase
-            and (
-                parsed := await parse(
-                    buf,
-                    stack=stack,
-                    state=state,
-                    comp=replace(comp, secondary_edits=()),
-                )
-            )
+        parsed = await parse(
+            buf,
+            stack=stack,
+            state=state,
+            comp=replace(comp, secondary_edits=()),
+        )
+        instruction, *_ = (
+            parsed
             and parsed.instructions
-        ):
-            edit, *_ = parsed.instructions
-            inline, *rest_lines = edit.new_lines or ("",)
-            _, b_col = edit.begin
-            e_row, e_col = edit.end
-            fin_col = e_col if e_row == row else len(encode(context.line_before))
+            or (
+                EditInstruction(
+                    primary=True,
+                    begin=(row, col),
+                    end=(row, col),
+                    new_lines=tuple(
+                        indent_adjusted(
+                            context,
+                            line_before=context.line_before,
+                            lines=comp.primary_edit.new_text.splitlines(),
+                        )
+                    ),
+                    cursor_xpos=-1,
+                    cursor_yoffset=0,
+                ),
+            )
+        )
+        inline, *rest_lines = instruction.new_lines or ("",)
+        b_row, b_col = instruction.begin
+        e_row, e_col = instruction.end
 
-            mark = ExtMark(
-                buf=buf,
-                marker=ExtMarker(1),
-                begin=(row, b_col),
-                end=(row, fin_col),
-                meta={
-                    "virt_text_pos": "inline",
-                    "hl_mode": "combine",
-                    "virt_text": ((inline, ghost.highlight_group),),
-                },
-            )
-        else:
-            lhs, rhs = ghost.context
-            overlay, *rest_lines = (
-                indent_adjusted(context, line_before=context.line_before, lines=lines)
-                if comp.adjust_indent
-                else lines
-            )
-            virt_text = lhs + overlay.strip() + rhs
+        bb_col = b_col if b_row == row else col
+        ee_col = e_col if e_row == row else len(encode(context.line_before))
+        begin, end = (row, bb_col), (row, ee_col)
 
-            mark = ExtMark(
-                buf=buf,
-                marker=ExtMarker(1),
-                begin=(row, col),
-                end=(row, col),
-                meta={
-                    "virt_text_pos": "overlay",
-                    "hl_mode": "combine",
-                    "virt_text": ((virt_text, ghost.highlight_group),),
-                },
-            )
+        mark = ExtMark(
+            buf=buf,
+            marker=ExtMarker(1),
+            begin=begin,
+            end=end,
+            meta={
+                "virt_text_pos": "overlay",
+                "hl_mode": "combine",
+                "virt_text": ((inline, ghost.highlight_group),),
+            },
+        )
 
         def marks() -> Iterator[ExtMark]:
             yield mark
@@ -345,8 +339,8 @@ async def _virt_text(
                 yield ExtMark(
                     buf=buf,
                     marker=ExtMarker(2),
-                    begin=(row, col),
-                    end=(row, col),
+                    begin=begin,
+                    end=begin,
                     meta={
                         "virt_text_pos": "overlay",
                         "hl_mode": "combine",
