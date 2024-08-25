@@ -440,15 +440,19 @@ def _cursor(cursor: NvimPos, instructions: Iterable[EditInstruction]) -> NvimPos
 
 
 async def _parse(
-    buf: Buffer, stack: Stack, state: State, comp: Completion
+    buf: Buffer, stack: Stack, state: State, comp: Completion, preview: bool
 ) -> Tuple[bool, Edit, Sequence[Mark], TextTransforms]:
     if isinstance(comp.primary_edit, SnippetEdit):
-        comment_str = await buf.commentstr() or ("", "")
-        clipboard = await Nvim.fn.getreg(str)
+        comment_str = (None if preview else await buf.commentstr()) or ("", "")
+        clipboard = "" if preview else await Nvim.fn.getreg(str)
         info = ParseInfo(visual="", clipboard=clipboard, comment_str=comment_str)
         if isinstance(comp.primary_edit, SnippetRangeEdit):
             row, col = comp.primary_edit.begin
-            line, *_ = await buf.get_lines(lo=row, hi=row + 1)
+            line, *_ = (
+                (state.context.line,)
+                if preview
+                else await buf.get_lines(lo=row, hi=row + 1)
+            )
             line_before = decode(
                 encode(line, encoding=comp.primary_edit.encoding)[:col]
             )
@@ -477,11 +481,11 @@ async def _parse(
 
 
 async def parse(
-    buf: Buffer, stack: Stack, state: State, comp: Completion
+    buf: Buffer, stack: Stack, state: State, comp: Completion, preview: bool
 ) -> Optional[_Parsed]:
     try:
         adjusted, primary, marks, text_trans = await _parse(
-            buf=buf, stack=stack, state=state, comp=comp
+            buf=buf, stack=stack, state=state, comp=comp, preview=preview
         )
     except (NvimError, ParseError) as e:
         adjusted, primary, marks, text_trans = (
@@ -579,7 +583,9 @@ async def edit(
             )
 
         if not (
-            parsed := await parse(buf=buf, stack=stack, state=state, comp=metric.comp)
+            parsed := await parse(
+                buf=buf, stack=stack, state=state, comp=metric.comp, preview=False
+            )
         ):
             return None
 

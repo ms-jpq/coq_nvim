@@ -291,6 +291,7 @@ async def _virt_text(
             stack=stack,
             state=state,
             comp=replace(comp, secondary_edits=()),
+            preview=True,
         )
         instruction, *_ = (
             parsed
@@ -318,7 +319,7 @@ async def _virt_text(
 
         bb_col = b_col if b_row == row else col
         ee_col = e_col if e_row == row else len(encode(context.line_before))
-        begin, end = (row, bb_col), (row, ee_col)
+        begin, end = (row, bb_col), (row, max(0, ee_col - 1))
 
         mark = ExtMark(
             buf=buf,
@@ -338,7 +339,7 @@ async def _virt_text(
                 vlines = tuple(((line, ghost.highlight_group),) for line in rest_lines)
                 yield ExtMark(
                     buf=buf,
-                    marker=ExtMarker(2),
+                    marker=ExtMarker(3),
                     begin=begin,
                     end=begin,
                     meta={
