@@ -480,39 +480,48 @@ async def _parse(
     return adjusted, edit, marks, text_trans
 
 
-async def parse(
-    buf: Buffer, stack: Stack, state: State, comp: Completion, preview: bool
-) -> Optional[_Parsed]:
-    try:
-        adjusted, primary, marks, text_trans = await _parse(
-            buf=buf, stack=stack, state=state, comp=comp, preview=preview
-        )
-    except (NvimError, ParseError) as e:
-        adjusted, primary, marks, text_trans = (
-            False,
-            comp.primary_edit,
-            (),
-            {},
-        )
-        await Nvim.write(LANG("failed to parse snippet"))
-        log.info("%s", e)
-
-    adjust_indent = comp.adjust_indent and not adjusted
-    lo, hi = _rows_to_fetch(
-        state.context,
-        primary,
-        *comp.secondary_edits,
-    )
+async def _view(
+    buf: Buffer, state: State, comp: Completion, preview: bool
+) -> Optional[_Lines]:
+    lo, hi = _rows_to_fetch(state.context, comp.primary_edit, *comp.secondary_edits)
 
     if lo < 0 or hi > state.context.line_count:
         log.warn("%s", pformat(("OUT OF BOUNDS", (lo, hi), comp)))
         return None
     else:
         hi = min(state.context.line_count, hi + len(comp.secondary_edits) + 1)
-        limited_lines = await buf.get_lines(lo=lo, hi=hi)
-        lines = [*chain(repeat("", times=lo), limited_lines)]
-        view = _lines(lines)
+        try:
+            limited_lines = await buf.get_lines(lo=lo, hi=hi)
+        except NvimError as e:
+            log.warn("%s", e)
+            return None
+        else:
+            lines = [*chain(repeat("", times=lo), limited_lines)]
+            return _lines(lines)
 
+
+async def parse(
+    buf: Buffer, stack: Stack, state: State, comp: Completion, preview: bool
+) -> Optional[_Parsed]:
+    cmp = replace(comp, secondary_edits=()) if preview else comp
+    try:
+        adjusted, primary, marks, text_trans = await _parse(
+            buf=buf, stack=stack, state=state, comp=cmp, preview=preview
+        )
+    except (NvimError, ParseError) as e:
+        adjusted, primary, marks, text_trans = (
+            False,
+            cmp.primary_edit,
+            (),
+            {},
+        )
+        await Nvim.write(LANG("failed to parse snippet"))
+        log.info("%s", e)
+
+    adjust_indent = cmp.adjust_indent and not adjusted
+    if not (view := await _view(buf, state=state, comp=cmp, preview=preview)):
+        return None
+    else:
         instructions = _consolidate(
             *_instructions(
                 state.context,
@@ -521,7 +530,7 @@ async def parse(
                 adjust_indent=adjust_indent,
                 lines=view,
                 primary=primary,
-                secondary=comp.secondary_edits,
+                secondary=cmp.secondary_edits,
             )
         )
 
@@ -530,6 +539,27 @@ async def parse(
             marks=marks,
             text_trans=text_trans,
         )
+
+
+async def parse_secondary(
+    buf: Buffer, stack: Stack, state: State, comp: Completion
+) -> Iterator[EditInstruction]:
+    cmp = replace(comp, primary_edit=Edit(new_text=""))
+    if not (view := await _view(buf, state=state, comp=cmp, preview=True)):
+        return iter(())
+    else:
+        instructions = _consolidate(
+            *_instructions(
+                state.context,
+                match=stack.settings.match,
+                comp=stack.settings.completion,
+                adjust_indent=True,
+                lines=view,
+                primary=cmp.primary_edit,
+                secondary=comp.secondary_edits,
+            )
+        )
+        return (inst for inst in instructions if not inst.primary)
 
 
 async def _restore(win: Window, buf: Buffer, pos: NvimPos) -> Tuple[str, Optional[int]]:
@@ -584,7 +614,7 @@ async def edit(
 
         if not (
             parsed := await parse(
-                buf=buf, stack=stack, state=state, comp=metric.comp, preview=False
+                buf=buf, stack=stack, state=state, cmp=metric.comp, preview=False
             )
         ):
             return None

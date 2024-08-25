@@ -15,7 +15,6 @@ from typing import (
     Optional,
     Sequence,
     Tuple,
-    Union,
 )
 from uuid import UUID, uuid4
 
@@ -40,16 +39,8 @@ from ...shared.aio import with_timeout
 from ...shared.settings import GhostText, PreviewDisplay
 from ...shared.timeit import timeit
 from ...shared.trans import expand_tabs, indent_adjusted
-from ...shared.types import (
-    Completion,
-    Context,
-    Doc,
-    Edit,
-    ExternLSP,
-    ExternPath,
-    RangeEdit,
-)
-from ..edit import EditInstruction, parse
+from ...shared.types import Completion, Context, Doc, ExternLSP, ExternPath, RangeEdit
+from ..edit import EditInstruction, parse, parse_secondary
 from ..rt_types import Stack
 from ..state import State, state
 
@@ -227,8 +218,12 @@ async def _show_preview(stack: Stack, event: _Event, doc: Doc, s: State) -> None
         await _set_win(display=stack.settings.display.preview, buf=buf, pos=pos)
 
 
-async def _secondary(edits: Sequence[RangeEdit]) -> Doc:
-    text = linesep.join(edit.new_text for edit in edits)
+async def _secondary(stack: Stack, state: State, comp: Completion) -> Doc:
+    buf = await Buffer.get_current()
+    instructions = await parse_secondary(buf, stack=stack, state=state, comp=comp)
+    text = linesep.join(
+        linesep.join(f"+ {line}" for line in inst.new_lines) for inst in instructions
+    )
     return Doc(text=text, syntax="")
 
 
@@ -270,9 +265,10 @@ async def _resolve_comp(
                 else:
                     assert False
 
-            if not doc and comp.secondary_edits:
+            if not doc or not doc.text and comp.secondary_edits:
                 doc = await with_timeout(
-                    timeout, co=_secondary(edits=comp.secondary_edits)
+                    timeout,
+                    co=_secondary(stack, state=state, comp=comp),
                 )
                 stack.lru[state.preview_id] = replace(comp, doc=doc)
 
@@ -302,7 +298,7 @@ async def _virt_text(
             buf,
             stack=stack,
             state=state,
-            comp=replace(comp, secondary_edits=()),
+            comp=comp,
             preview=True,
         )
         instruction, *_ = (
