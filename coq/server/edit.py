@@ -1,6 +1,6 @@
-from collections import deque
+from collections import defaultdict, deque
 from dataclasses import dataclass, replace
-from itertools import chain, repeat
+from itertools import chain
 from pprint import pformat
 from string import Template
 from textwrap import dedent
@@ -13,15 +13,20 @@ from typing import (
     Optional,
     Sequence,
     Tuple,
+    cast,
 )
 from uuid import uuid4
 
+from pynvim_pp.atomic import Atomic
 from pynvim_pp.buffer import Buffer
 from pynvim_pp.lib import decode, encode
 from pynvim_pp.logging import log
 from pynvim_pp.nvim import Nvim
 from pynvim_pp.rpc_types import NvimError
+from pynvim_pp.types import NoneType
 from pynvim_pp.window import Window
+from std2.collections import defaultlist
+from std2.itertools import fuse_ranges
 from std2.types import never
 
 from ..consts import DEBUG
@@ -86,39 +91,58 @@ class _Parsed:
     text_trans: TextTransforms
 
 
-def _lines(lines: Sequence[str]) -> _Lines:
-    b_lines8 = tuple(map(encode, lines))
+def _lines(rows: Iterable[Tuple[range, Sequence[str]]]) -> _Lines:
+    lines: MutableMapping[int, str] = defaultdict(str)
+    b_lines8: MutableMapping[int, bytes] = defaultdict(bytes)
+    b_lines16: MutableMapping[int, bytes] = defaultdict(bytes)
+    b_lines32: MutableMapping[int, bytes] = defaultdict(bytes)
+    len8: MutableMapping[int, int] = defaultdict(int)
+
+    for row, ls in rows:
+        assert len(row) == len(ls)
+        for idx, line in zip(row, ls):
+            b_line8 = encode(line)
+            lines[idx] = line
+            b_lines8[idx] = b_line8
+            b_lines16[idx] = encode(line, encoding=UTF16)
+            b_lines32[idx] = encode(line, encoding=UTF32)
+            len8[idx] = len(b_line8)
+
     return _Lines(
-        lines=lines,
-        b_lines8=b_lines8,
-        b_lines16=tuple(encode(line, encoding=UTF16) for line in lines),
-        b_lines32=tuple(encode(line, encoding=UTF32) for line in lines),
-        len8=tuple(len(line) for line in b_lines8),
+        lines=defaultlist(lines),
+        b_lines8=defaultlist(b_lines8),
+        b_lines16=defaultlist(b_lines16),
+        b_lines32=defaultlist(b_lines32),
+        len8=defaultlist(len8),
     )
 
 
-def _rows_to_fetch(ctx: Context, edit: Edit, *edits: Edit) -> Tuple[int, int]:
+def _rows_to_fetch(ctx: Context, edit: Edit, *edits: Edit) -> Sequence[range]:
     row, _ = ctx.position
 
-    def cont() -> Iterator[int]:
+    def c1() -> Iterator[range]:
         for e in chain((edit,), edits):
             if isinstance(e, ContextualEdit):
                 lo = row - (len(e.old_prefix.split(ctx.linefeed)) - 1)
                 hi = row + (len(e.old_suffix.split(ctx.linefeed)) - 1)
-                yield from (lo, hi)
+                yield range(lo, hi)
 
             elif isinstance(e, BaseRangeEdit):
                 (lo, _), (hi, _) = e.begin, e.end
-                yield from (lo, hi)
+                yield range(lo, hi)
 
             elif isinstance(e, Edit):
-                yield row
+                yield range(row, row + 1)
 
             else:
                 never(e)
 
-    line_nums = tuple(cont())
-    return min(line_nums), max(line_nums) + 1
+    def c2() -> Iterator[range]:
+        for row in c1():
+            stop = min(ctx.line_count, row.stop + len(edits) + 1)
+            yield range(row.start, stop)
+
+    return tuple(fuse_ranges(tuple(c2())))
 
 
 def _contextual_edit_trans(
@@ -489,21 +513,23 @@ async def _parse(
 async def _view(
     buf: Buffer, state: State, comp: Completion, preview: bool
 ) -> Optional[_Lines]:
-    lo, hi = _rows_to_fetch(state.context, comp.primary_edit, *comp.secondary_edits)
+    rows = _rows_to_fetch(state.context, comp.primary_edit, *comp.secondary_edits)
+    atomic = Atomic()
 
-    if lo < 0 or hi > state.context.line_count:
-        log.warn("%s", pformat(("OUT OF BOUNDS", (lo, hi), comp)))
-        return None
-    else:
-        hi = min(state.context.line_count, hi + len(comp.secondary_edits) + 1)
-        try:
-            limited_lines = await buf.get_lines(lo=lo, hi=hi)
-        except NvimError as e:
-            log.warn("%s", e)
+    for row in rows:
+        if row.start < 0 or row.stop > state.context.line_count:
+            log.warn("%s", pformat(("BAD ROW", row, comp)))
             return None
         else:
-            lines = [*chain(repeat("", times=lo), limited_lines)]
-            return _lines(lines)
+            atomic.buf_get_lines(buf, row.start, row.stop, True)
+
+    try:
+        lines = cast(Sequence[Sequence[str]], await atomic.commit(NoneType))
+    except NvimError as e:
+        log.warn("%s", e)
+        return None
+    else:
+        return _lines(zip(rows, lines))
 
 
 async def parse(
