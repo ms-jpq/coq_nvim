@@ -167,11 +167,11 @@ def _adjust_indent(mode: Optional[int], edit: Edit) -> bool:
 
 
 def _doc(item: CompletionItem) -> Optional[Doc]:
-    if isinstance(item.documentation, MarkupContent):
+    if isinstance(item.documentation, MarkupContent) and item.documentation.value:
         return Doc(text=item.documentation.value, syntax=item.documentation.kind)
-    elif isinstance(item.documentation, str):
+    elif isinstance(item.documentation, str) and item.documentation:
         return Doc(text=item.documentation, syntax="")
-    elif item.detail:
+    elif item.detail and item.detail:
         return Doc(text=item.detail, syntax="")
     else:
         return None
