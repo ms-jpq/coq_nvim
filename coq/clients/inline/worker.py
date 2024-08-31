@@ -51,7 +51,9 @@ class Worker(BaseWorker[LSPClient, None]):
                     with suppress_and_log(), timeit("LSP INLINE PULL"):
                         async for comps in self._request(context):
                             for chunked in batched(comps.items, n=CACHE_CHUNK):
-                                self._cache.set_cache({comps.client: chunked})
+                                self._cache.set_cache(
+                                    {comps.client: chunked}, skip_db=True
+                                )
 
             await self._with_interrupt(cont())
             async with self._idle:
@@ -59,7 +61,7 @@ class Worker(BaseWorker[LSPClient, None]):
 
     async def _work(self, context: Context) -> AsyncIterator[Completion]:
         async with self._work_lock:
-            _, _, cached = self._cache.apply_cache(context)
+            _, _, cached = self._cache.apply_cache(context, always=True)
             lsp_stream = self._request(context)
 
             async def db() -> LSPcomp:

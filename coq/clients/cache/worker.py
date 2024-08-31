@@ -98,6 +98,7 @@ class CacheWorker(Interruptible):
     def set_cache(
         self,
         items: Mapping[Optional[str], Iterable[Completion]],
+        skip_db: bool,
     ) -> None:
         new_comps = {
             comp.uid.bytes: comp for comp in chain.from_iterable(items.values())
@@ -116,7 +117,8 @@ class CacheWorker(Interruptible):
                 else:
                     yield key, val.sort_by
 
-        self._db.insert(cont())
+        if not skip_db:
+            self._db.insert(cont())
 
         for client in items:
             if client:
@@ -124,7 +126,7 @@ class CacheWorker(Interruptible):
         self._cached.update(new_comps)
 
     def apply_cache(
-        self, context: Context
+        self, context: Context, always: bool
     ) -> Tuple[bool, AbstractSet[str], Iterator[Completion]]:
         cache_ctx = self._cache_ctx
         row, col = context.position
@@ -146,15 +148,21 @@ class CacheWorker(Interruptible):
             self._clients.clear()
             self._cached.clear()
 
+        selected = (
+            ((key, val.sort_by) for key, val in self._cached.items())
+            if always
+            else self._db.select(
+                not use_cache,
+                opts=self._supervisor.match,
+                word=context.words,
+                sym=context.syms,
+                limitless=context.manual,
+            )
+        )
+
         def get() -> Iterator[Completion]:
             with timeit("CACHE -- GET"):
-                for key, sort_by in self._db.select(
-                    not use_cache,
-                    opts=self._supervisor.match,
-                    word=context.words,
-                    sym=context.syms,
-                    limitless=context.manual,
-                ):
+                for key, sort_by in selected:
                     if (comp := self._cached.get(key)) and (
                         cached := sanitize_cached(
                             context.cursor, comp=comp, sort_by=sort_by
@@ -167,6 +175,7 @@ class CacheWorker(Interruptible):
                             isinstance(cached.primary_edit, SnippetEdit)
                             or cached.secondary_edits
                             or cached.extern
+                            or cached.always_on_top
                         ):
                             continue
                         yield cached
