@@ -1,4 +1,4 @@
-from asyncio import Task, create_task
+from asyncio import create_task
 from dataclasses import dataclass, replace
 from functools import lru_cache
 from html import unescape
@@ -6,16 +6,7 @@ from itertools import chain
 from math import ceil
 from os import linesep
 from textwrap import dedent
-from typing import (
-    Any,
-    Awaitable,
-    Callable,
-    Iterator,
-    Mapping,
-    Optional,
-    Sequence,
-    Tuple,
-)
+from typing import Any, Awaitable, Callable, Iterator, Mapping, Sequence, Tuple
 from uuid import UUID, uuid4
 
 from pynvim_pp.buffer import Buffer, ExtMark, ExtMarker
@@ -26,8 +17,7 @@ from pynvim_pp.nvim import Nvim
 from pynvim_pp.preview import buf_set_preview, set_preview
 from pynvim_pp.window import Window
 from std2 import anext, clamp
-from std2.asyncio import cancel
-from std2.cell import RefCell
+from std2.asyncio import Cancellation
 from std2.pickle.decoder import new_decoder
 from std2.pickle.types import DecodeError
 from std2.string import removeprefix
@@ -39,7 +29,7 @@ from ...shared.aio import with_timeout
 from ...shared.settings import GhostText, PreviewDisplay
 from ...shared.timeit import timeit
 from ...shared.trans import expand_tabs, indent_adjusted
-from ...shared.types import Completion, Context, Doc, ExternLSP, ExternPath, RangeEdit
+from ...shared.types import Completion, Context, Doc, ExternLSP, ExternPath
 from ..edit import EditInstruction, parse, parse_secondary
 from ..rt_types import Stack
 from ..state import State, state
@@ -47,7 +37,7 @@ from ..state import State, state
 _FLOAT_WIN_UUID = uuid4()
 _NS = uuid4()
 
-_CELL = RefCell[Optional[Task]](None)
+_die = Cancellation()
 
 
 @dataclass(frozen=True)
@@ -231,12 +221,8 @@ async def _resolve_comp(
     state: State,
     comp: Completion,
 ) -> None:
-    prev = _CELL.val
-
+    @_die
     async def cont() -> None:
-        if prev:
-            await cancel(prev)
-
         enabled = stack.settings.display.preview.enabled
         timeout = stack.settings.display.preview.resolve_timeout
         with suppress_and_log():
@@ -279,7 +265,7 @@ async def _resolve_comp(
                     s=state,
                 )
 
-    _CELL.val = create_task(cont())
+    create_task(cont())
 
 
 async def _virt_text(

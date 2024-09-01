@@ -1,4 +1,4 @@
-from asyncio import Task, gather
+from asyncio import gather
 from asyncio.tasks import create_task
 from contextlib import suppress
 from time import monotonic
@@ -12,8 +12,7 @@ from pynvim_pp.nvim import Nvim
 from pynvim_pp.rpc_types import NvimError
 from pynvim_pp.types import NoneType
 from pynvim_pp.window import Window
-from std2.asyncio import cancel
-from std2.cell import RefCell
+from std2.asyncio import Cancellation
 
 from ...clients.buffers.worker import Worker as BufWorker
 from ...registry import NAMESPACE, atomic, autocmd, rpc
@@ -23,7 +22,7 @@ from ..rt_types import Stack
 from ..state import state
 from .omnifunc import comp_func
 
-_CELL = RefCell[Optional[Task]](None)
+_die = Cancellation()
 
 
 @rpc()
@@ -83,13 +82,10 @@ async def _lines_event(
     lines: Sequence[str],
     pending: bool,
 ) -> None:
-    t0 = monotonic()
-    if task := _CELL.val:
-        _CELL.val = None
-        await cancel(task)
-
     if change_tick is not None:
+        t0 = monotonic()
 
+        @_die
         async def cont() -> None:
             with suppress_and_log():
                 with timeit("POLL"), suppress(NvimError):
@@ -110,4 +106,4 @@ async def _lines_event(
                             stack=stack, s=s, change=change, t0=t0, manual=False
                         )
 
-        _CELL.val = create_task(cont())
+        create_task(cont())

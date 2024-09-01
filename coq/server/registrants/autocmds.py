@@ -1,6 +1,5 @@
-from asyncio import Task, create_task, gather, sleep
+from asyncio import create_task, gather, sleep
 from contextlib import suppress
-from typing import Optional
 from uuid import uuid4
 
 from pynvim_pp.buffer import Buffer
@@ -8,8 +7,7 @@ from pynvim_pp.float_win import list_floatwins
 from pynvim_pp.nvim import Nvim
 from pynvim_pp.rpc_types import NvimError
 from pynvim_pp.types import NoneType
-from std2.asyncio import cancel
-from std2.cell import RefCell
+from std2.asyncio import Cancellation
 from std2.locale import si_prefixed_smol
 
 from ...clients.buffers.worker import Worker as BufWorker
@@ -24,7 +22,7 @@ from ..rt_types import Stack
 from ..state import state
 
 _NS = uuid4()
-_CELL = RefCell[Optional[Task]](None)
+_die = Cancellation()
 
 
 @rpc()
@@ -104,10 +102,7 @@ _ = autocmd("FocusGained") << f"lua {NAMESPACE}.{_on_focus.method}()"
 
 @rpc()
 async def _when_idle(stack: Stack) -> None:
-    if task := _CELL.val:
-        _CELL.val = None
-        await cancel(task)
-
+    @_die
     async def cont() -> None:
         await sleep(stack.settings.limits.idle_timeout)
         with suppress(NvimError):
@@ -129,7 +124,7 @@ async def _when_idle(stack: Stack) -> None:
 
         await gather(_insert_enter(stack=stack), idle())
 
-    _CELL.val = create_task(cont())
+    create_task(cont())
 
 
 _ = autocmd("CursorHold", "CursorHoldI") << f"lua {NAMESPACE}.{_when_idle.method}()"

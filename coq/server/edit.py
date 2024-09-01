@@ -26,7 +26,7 @@ from pynvim_pp.rpc_types import NvimError
 from pynvim_pp.types import NoneType
 from pynvim_pp.window import Window
 from std2.collections import defaultlist
-from std2.itertools import fuse_ranges
+from std2.itertools import intervals
 from std2.types import never
 
 from ..consts import DEBUG
@@ -142,7 +142,7 @@ def _rows_to_fetch(ctx: Context, edit: Edit, *edits: Edit) -> Sequence[range]:
             stop = min(ctx.line_count, row.stop + len(edits) + 1)
             yield range(row.start, stop)
 
-    return tuple(fuse_ranges(tuple(c2())))
+    return tuple(intervals(tuple(c2())))
 
 
 def _contextual_edit_trans(
