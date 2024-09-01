@@ -202,7 +202,9 @@ class Worker(Interruptible, Generic[_O_co, _T_co]):
             yield
 
     async def _with_interrupt(self, co: Coroutine) -> None:
-        fut = wrap_future(self._interrupt_fut)
+        with self._interrupt_lock:
+            f = self._interrupt_fut
+        fut = wrap_future(f)
         task = create_task(co)
         done, _ = await wait((task, fut), return_when=FIRST_COMPLETED)
         if fut in done:
