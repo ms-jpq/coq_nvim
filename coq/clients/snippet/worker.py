@@ -20,7 +20,6 @@ class Worker(BaseWorker[SnippetClient, Path]):
     ) -> None:
         self._db = SDB(misc)
         super().__init__(ex, supervisor=supervisor, options=options, misc=misc)
-        pass
 
     def interrupt(self) -> None:
         with self._interrupt():
@@ -64,10 +63,7 @@ class Worker(BaseWorker[SnippetClient, Path]):
                 )
                 label_line, *_ = (snip["label"] or edit.new_text or " ").splitlines()
                 label = label_line.strip().expandtabs(context.tabstop)
-                doc = Doc(
-                    text=snip["doc"] or edit.new_text,
-                    syntax=context.filetype
-                )
+                doc = Doc(text=snip["doc"] or edit.new_text, syntax=context.filetype)
                 completion = Completion(
                     source=self._options.short_name,
                     always_on_top=self._options.always_on_top,
