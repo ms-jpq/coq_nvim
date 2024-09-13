@@ -1,4 +1,11 @@
 (function(...)
+  COQ.treesitter_start = function(buf, syntax)
+    vim.validate {buf = {buf, "number"}, syntax = {syntax, "string"}}
+    if vim.treesitter and vim.treesitter.start then
+      vim.treesitter.start(buf, syntax)
+    end
+  end
+
   local kind = function(node)
     if node:named() then
       return node:type()

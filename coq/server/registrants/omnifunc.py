@@ -1,4 +1,4 @@
-from asyncio import create_task, gather, sleep, wait
+from asyncio import create_task, gather, sleep
 from dataclasses import replace
 from time import monotonic
 from typing import AbstractSet, Any, Literal, Mapping, Optional, Sequence, Union
@@ -8,7 +8,6 @@ from pynvim_pp.buffer import Buffer, ExtMark, ExtMarker
 from pynvim_pp.lib import encode
 from pynvim_pp.logging import log, suppress_and_log
 from pynvim_pp.nvim import Nvim
-from std2.asyncio import cancel
 from std2.locale import si_prefixed_smol
 from std2.pickle.decoder import new_decoder
 from std2.pickle.types import DecodeError
