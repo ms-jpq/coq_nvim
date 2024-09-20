@@ -3,7 +3,9 @@
     vim.validate {buf = {buf, "number"}, syntax = {syntax, "string"}}
     if vim.treesitter and vim.treesitter.start then
       local lang = vim.treesitter.language.get_lang(syntax)
-      vim.treesitter.start(buf, lang)
+      if lang then
+        vim.treesitter.start(buf, lang)
+      end
     end
   end
 
