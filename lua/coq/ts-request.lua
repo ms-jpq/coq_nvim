@@ -51,7 +51,7 @@
     return coroutine.wrap(
       function()
         local go, parser = pcall(vim.treesitter.get_parser)
-        if go then
+        if go and parser then
           local query = ts_query(parser:lang(), "highlights")
           if query then
             for _, tree in pairs(parser:parse()) do
