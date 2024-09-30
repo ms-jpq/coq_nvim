@@ -72,12 +72,12 @@ end
 local start = function(deps, ...)
   local is_xdg = (vim.g.coq_settings or {}).xdg
   local args =
-    vim.tbl_flatten {
+    vim.iter {
     deps and py3 or main(is_xdg),
     {"-s", "-u", "-m", "coq"},
     {...},
     (is_xdg and {"--xdg", xdg_dir} or {})
-  }
+  }.flatten().totable()
 
   local params = {
     cwd = cwd,
