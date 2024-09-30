@@ -52,6 +52,16 @@ User snippets must use the [LSP grammar](https://github.com/microsoft/language-s
 
 The LSP grammar is very similar to various VIM snip dialects, but has a formal specification.
 
+#### Example
+
+```vim-snippet
+snippet rubocopde
+  # rubocop:disable Style::MultilineBlockChain
+  $CLIPBOARD
+  # rubocop:enable Style::MultilineBlockChain
+```
+![LSP_variable_snippet.gif](https://github.com/rajaravivarma-r/coq_nvim/assets/1841235/378ce9ca-7e8a-418d-8a38-d3f156630ef1)
+
 ### Document format
 
 The document format is extremely simple:
