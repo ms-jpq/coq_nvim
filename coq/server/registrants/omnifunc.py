@@ -43,14 +43,8 @@ def _should_cont(
             return False
     elif any(cur.line_before.endswith(token) for token in skip_after):
         return False
-    elif cur.syms_before != "":
-        return True
-    else:
-        have_space = (
-            bool(stripped := cur.line_before.rstrip())
-            and len(cur.line_before) - len(stripped) <= 1
-        )
-        return have_space
+
+    return True
 
 
 async def comp_func(
