@@ -12,7 +12,7 @@ Enable source
 true
 ```
 
-except for `tabnine`
+except for `tabnine` and `lsp_inline`
 
 ##### `coq_settings.clients.<x>.short_name`
 
