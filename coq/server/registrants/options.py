@@ -89,8 +89,14 @@ async def set_options(mapping: KeyMapping, fast_close: bool) -> None:
             keymap.i("<cr>", expr=True)
             << "pumvisible() ? (complete_info(['selected']).selected == -1 ? '<c-e><cr>' : '<c-y>') : '<cr>'"
         )
-        _ = keymap.i("<tab>", expr=True) << "pumvisible() ? '<c-n>' : '<tab>'"
-        _ = keymap.i("<s-tab>", expr=True) << "pumvisible() ? '<c-p>' : '<bs>'"
+        _ = (
+            keymap.i("<tab>", expr=True)
+            << "pumvisible() && !empty(trim(strpart(getline('.'), 0, col('.') - 1))) ? '<c-n>' : '<tab>'"
+        )
+        _ = (
+            keymap.i("<s-tab>", expr=True)
+            << "pumvisible() && !empty(trim(strpart(getline('.'), 0, col('.') - 1))) ? '<c-p>' : '<bs>'"
+        )
 
     if fast_close:
         settings["shortmess"] += "c"
