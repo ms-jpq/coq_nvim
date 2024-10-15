@@ -32,7 +32,7 @@ def coalesce(
             syms.clear()
             yield sym
 
-    for chr in reversed(chars) if backwards else chars:
+    for chr in reversed(chars) if backwards else iter(chars):
         if is_word(unifying_chars, chr=chr):
             words.append(chr)
             yield from s_it()
