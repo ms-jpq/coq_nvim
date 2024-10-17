@@ -170,7 +170,7 @@ Maximum width.
 
 ##### `coq_settings.display.preview.resolve_timeout`
 
-Bit niche, if a completion has documentation, but still be be looked up for further documentation, how long to wait for further documentation to show up.
+Bit niche, if a completion has documentation, but still be looked up for further documentation, how long to wait for further documentation to show up.
 
 **default:**
 
