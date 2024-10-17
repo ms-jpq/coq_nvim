@@ -20,7 +20,7 @@ clients:
 
   lsp_inline:
     always_on_top: []
-    enabled: True
+    enabled: False
     resolve_timeout: 0.06
     short_name: "IS"
     weight_adjust: 1
