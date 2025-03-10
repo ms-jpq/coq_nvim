@@ -43,6 +43,7 @@ async def mark(settings: Settings, buf: Buffer, marks: Sequence[Mark]) -> None:
     except NvimError:
         log.warning("%s", f"bad mark locations {marks}")
     else:
-        regions = _encode_for_display(" ".join(f"[{mark.text}]" for mark in marks))
-        msg = LANG("added marks", regions=regions)
-        await Nvim.write(msg)
+        if settings.display.mark_applied_notify:
+            regions = _encode_for_display(" ".join(f"[{mark.text}]" for mark in marks))
+            msg = LANG("added marks", regions=regions)
+            await Nvim.write(msg)
