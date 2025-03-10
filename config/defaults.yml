@@ -1,22 +1,22 @@
 ---
-auto_start: False
+auto_start: false
 
 clients:
   buffers:
-    always_on_top: False
+    always_on_top: false
     always_wait: false
-    enabled: True
-    match_syms: False
+    enabled: true
+    match_syms: false
     max_pulls: null
     parent_scope: " ⇊"
-    same_filetype: False
+    same_filetype: false
     short_name: "BF"
     weight_adjust: 0
 
   lsp:
     always_on_top: null
     always_wait: false
-    enabled: True
+    enabled: true
     max_pulls: 188
     resolve_timeout: 0.06
     short_name: "LS"
@@ -25,7 +25,7 @@ clients:
   lsp_inline:
     always_on_top: []
     always_wait: false
-    enabled: True
+    enabled: true
     live_pulling: false
     max_pulls: null
     resolve_timeout: 0.06
@@ -33,9 +33,9 @@ clients:
     weight_adjust: 1
 
   paths:
-    always_on_top: False
+    always_on_top: false
     always_wait: false
-    enabled: True
+    enabled: true
     max_pulls: null
     path_seps: []
     preview_lines: 6
@@ -46,11 +46,11 @@ clients:
     weight_adjust: 0
 
   registers:
-    always_on_top: False
+    always_on_top: false
     always_wait: false
-    enabled: True
+    enabled: true
     lines: []
-    match_syms: False
+    match_syms: false
     max_pulls: null
     max_yank_size: 8888
     register_scope: " ⇉ "
@@ -59,9 +59,9 @@ clients:
     words: ["0"]
 
   snippets:
-    always_on_top: False
+    always_on_top: false
     always_wait: false
-    enabled: True
+    enabled: true
     max_pulls: null
     short_name: "SP"
     user_path: null
@@ -71,17 +71,17 @@ clients:
     weight_adjust: 0.1
 
   tabnine:
-    always_on_top: False
+    always_on_top: false
     always_wait: false
-    enabled: False
+    enabled: false
     max_pulls: null
     short_name: "T9"
     weight_adjust: -0.1
 
   tags:
-    always_on_top: False
+    always_on_top: false
     always_wait: false
-    enabled: True
+    enabled: true
     max_pulls: null
     parent_scope: " ⇊"
     path_sep: " ⇉ "
@@ -91,7 +91,7 @@ clients:
   third_party:
     always_on_top: null
     always_wait: false
-    enabled: True
+    enabled: true
     max_pulls: null
     short_name: "3P"
     weight_adjust: 0
@@ -99,18 +99,18 @@ clients:
   third_party_inline:
     always_on_top: []
     always_wait: false
-    enabled: True
+    enabled: true
     live_pulling: true
     max_pulls: null
     short_name: "3L"
     weight_adjust: 0
 
   tmux:
-    all_sessions: True
-    always_on_top: False
+    all_sessions: true
+    always_on_top: false
     always_wait: false
-    enabled: True
-    match_syms: False
+    enabled: true
+    match_syms: false
     max_pulls: null
     parent_scope: " ⇊"
     path_sep: " ⇉ "
@@ -118,9 +118,9 @@ clients:
     weight_adjust: -0.1
 
   tree_sitter:
-    always_on_top: False
+    always_on_top: false
     always_wait: false
-    enabled: True
+    enabled: true
     max_pulls: null
     path_sep: " ⇊"
     short_name: "TS"
@@ -128,18 +128,18 @@ clients:
     weight_adjust: 0.1
 
 completion:
-  always: True
+  always: true
   replace_prefix_threshold: 3
   replace_suffix_threshold: 2
   skip_after: []
-  smart: True
+  smart: true
 
 display:
   ghost_text:
     context:
       - " 〈 "
       - " 〉"
-    enabled: True
+    enabled: true
     highlight_group: Comment
 
   icons:
@@ -187,7 +187,7 @@ display:
     spacing: 1
 
   mark_highlight_group: Pmenu
-  mark_applied_notify: True
+  mark_applied_notify: true
 
   preview:
     border: rounded
@@ -202,7 +202,7 @@ display:
 
   pum:
     ellipsis: …
-    fast_close: False
+    fast_close: false
     kind_context:
       - " ["
       - "]"
@@ -218,16 +218,16 @@ display:
   time_fmt: "%Y-%m-%d %H:%M"
 
   statusline:
-    helo: True
+    helo: true
 
 keymap:
   bigger_preview: <c-k>
   eval_snips: null
   jump_to_mark: <c-h>
   manual_complete: <c-space>
-  manual_complete_insertion_only: False
-  pre_select: False
-  recommended: True
+  manual_complete_insertion_only: false
+  pre_select: false
+  recommended: true
   repeat: null
 
 limits:
@@ -255,4 +255,4 @@ weights:
   proximity: 0.5
   recency: 1.0
 
-xdg: False
+xdg: false
