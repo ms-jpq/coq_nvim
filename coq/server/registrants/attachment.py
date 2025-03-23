@@ -96,7 +96,7 @@ async def _lines_event(
                     s = state(change_id=uuid4())
 
                     if (
-                        stack.settings.completion.always
+                        (stack.settings.completion.always or (stack.settings.completion.sticky_manual and s.context.manual))
                         and not pending
                         and mode.startswith("i")
                         and comp_mode in {"", "eval", "function", "ctrl_x"}

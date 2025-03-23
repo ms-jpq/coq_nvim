@@ -107,6 +107,7 @@ class Weights:
 @dataclass(frozen=True)
 class CompleteOptions:
     always: bool
+    sticky_manual : bool
     smart: bool
     replace_prefix_threshold: int
     replace_suffix_threshold: int
@@ -301,6 +302,7 @@ EMPTY_MATCH = MatchOptions(
 )
 EMPTY_COMP = CompleteOptions(
     always=False,
+    sticky_manual=False,
     smart=True,
     replace_prefix_threshold=0,
     replace_suffix_threshold=0,

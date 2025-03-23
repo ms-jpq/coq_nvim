@@ -36,6 +36,7 @@ from ...shared.types import Completion, Context, Doc, ExternLSP, ExternPath
 from ..edit import EditInstruction, parse, parse_secondary
 from ..rt_types import Stack
 from ..state import State, state
+from ..context import context
 
 _FLOAT_WIN_UUID = uuid4()
 _NS = uuid4()
@@ -64,8 +65,15 @@ class _Pos:
 
 @rpc()
 async def _kill_win(stack: Stack, reset: bool) -> None:
+    s = state()
     if reset:
-        state(pum_location=None, preview_id=uuid4())
+        state(
+            pum_location=None,
+            preview_id=uuid4(),
+            context=await context(stack.settings.match, s, s.context.change, manual=False)
+        )
+    else:
+        state(context=await context(stack.settings.match, s, s.context.change, manual=True))
 
     buf = await Buffer.get_current()
     ns = await Nvim.create_namespace(_NS)
