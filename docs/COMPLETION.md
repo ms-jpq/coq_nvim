@@ -14,6 +14,18 @@ true
 
 ---
 
+#### coq_settings.completion.sticky_manual
+
+Trigger completion on every keystroke after manual completion until you leave insert mode.
+
+**default:**
+
+```json
+true
+```
+
+---
+
 #### coq_settings.completion.replace_prefix_threshold
 
 Controls when inexact match occurs between the text under cursor, and the text to be inserted.

@@ -27,6 +27,7 @@ class State:
     text_trans: TextTransforms
     inserted_pos: NvimPos
     pum_location: Optional[int]
+    manual_override: bool
 
 
 _CELL = RefCell(
@@ -64,6 +65,7 @@ _CELL = RefCell(
         text_trans={},
         inserted_pos=(-1, -1),
         pum_location=None,
+        manual_override=False,
     )
 )
 
@@ -81,6 +83,7 @@ def state(
     text_trans: Optional[TextTransforms] = None,
     inserted_pos: Optional[NvimPos] = None,
     pum_location: Union[VoidType, Optional[int]] = Void,
+    manual_override: Optional[bool] = None,
 ) -> State:
     old_state = _CELL.val
 
@@ -100,6 +103,9 @@ def state(
             pum_location
             if not isinstance(pum_location, VoidType)
             else old_state.pum_location
+        ),
+        manual_override=(
+            old_state.manual_override if manual_override is None else manual_override
         ),
     )
     _CELL.val = new_state

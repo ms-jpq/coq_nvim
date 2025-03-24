@@ -97,6 +97,7 @@ async def _lines_event(
 
                     if (
                         stack.settings.completion.always
+                        or s.manual_override
                         and not pending
                         and mode.startswith("i")
                         and comp_mode in {"", "eval", "function", "ctrl_x"}
