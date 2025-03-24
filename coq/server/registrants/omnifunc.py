@@ -32,7 +32,7 @@ _UDECODER = new_decoder[UUID](UUID)
 def _should_cont(
     state: State, prev: Context, cur: Context, skip_after: AbstractSet[str]
 ) -> bool:
-    if cur.manual:
+    if cur.manual or state.manual_override:
         return True
     elif prev.change_id == cur.change_id:
         return False
@@ -52,7 +52,10 @@ async def comp_func(
 ) -> None:
     with suppress_and_log():
         ctx = await context(
-            options=stack.settings.match, state=s, change=change, manual=manual | s.context.manual
+            options=stack.settings.match,
+            state=s,
+            change=change,
+            manual=manual or s.manual_override,
         )
         should = (
             _should_cont(
@@ -105,7 +108,10 @@ async def omnifunc(
     if findstart:
         return -1
     else:
-        s = state(commit_id=uuid4())
+        s = state(
+            commit_id=uuid4(),
+            manual_override=stack.settings.completion.sticky_manual,
+        )
         create_task(comp_func(stack=stack, manual=True, change=None, t0=t0, s=s))
         return ()
 

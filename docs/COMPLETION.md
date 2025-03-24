@@ -16,12 +16,12 @@ true
 
 #### coq_settings.completion.sticky_manual
 
-Trigger completion on every keystroke after manual completion until the window is closed
+Trigger completion on every keystroke after manual completion until you leave insert mode.
 
 **default:**
 
 ```json
-false
+true
 ```
 
 ---

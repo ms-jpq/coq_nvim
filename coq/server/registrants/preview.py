@@ -7,7 +7,17 @@ from itertools import chain
 from math import ceil
 from os import linesep
 from textwrap import dedent
-from typing import Any, Awaitable, Callable, Iterator, Mapping, Sequence, Tuple
+from typing import (
+    Any,
+    Awaitable,
+    Callable,
+    Iterator,
+    Literal,
+    Mapping,
+    Sequence,
+    Tuple,
+    Union,
+)
 from uuid import UUID, uuid4
 
 from pynvim_pp.buffer import Buffer, ExtMark, ExtMarker
@@ -36,7 +46,6 @@ from ...shared.types import Completion, Context, Doc, ExternLSP, ExternPath
 from ..edit import EditInstruction, parse, parse_secondary
 from ..rt_types import Stack
 from ..state import State, state
-from ..context import context
 
 _FLOAT_WIN_UUID = uuid4()
 _NS = uuid4()
@@ -64,16 +73,13 @@ class _Pos:
 
 
 @rpc()
-async def _kill_win(stack: Stack, reset: bool) -> None:
-    s = state()
+async def _kill_win(stack: Stack, reset: Union[bool, Literal["leave"]]) -> None:
     if reset:
         state(
             pum_location=None,
             preview_id=uuid4(),
-            context=await context(stack.settings.match, s, s.context.change, manual=False)
+            manual_override=False if reset == "leave" else None,
         )
-    else:
-        state(context=await context(stack.settings.match, s, s.context.change, manual=True))
 
     buf = await Buffer.get_current()
     ns = await Nvim.create_namespace(_NS)
@@ -83,10 +89,8 @@ async def _kill_win(stack: Stack, reset: bool) -> None:
         await win.close()
 
 
-_ = (
-    autocmd("CompleteDone", "InsertLeave")
-    << f"lua {NAMESPACE}.{_kill_win.method}(true)"
-)
+_ = autocmd("CompleteDone") << f"lua {NAMESPACE}.{_kill_win.method}(true)"
+_ = autocmd("InsertLeave") << f'lua {NAMESPACE}.{_kill_win.method}("leave")'
 
 
 def _preprocess(context: Context, doc: Doc) -> Doc:

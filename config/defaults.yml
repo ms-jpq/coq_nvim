@@ -129,7 +129,7 @@ clients:
 
 completion:
   always: true
-  sticky_manual: false
+  sticky_manual: true
   replace_prefix_threshold: 3
   replace_suffix_threshold: 2
   skip_after: []
