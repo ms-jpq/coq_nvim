@@ -156,4 +156,18 @@ vim.api.nvim_set_keymap(
 )
 vim.api.nvim_set_keymap('i', '<Tab>', [[pumvisible() ? "\<C-n>" : "\<Tab>"]], { expr = true, silent = true })
 vim.api.nvim_set_keymap('i', '<S-Tab>', [[pumvisible() ? "\<C-p>" : "\<BS>"]], { expr = true, silent = true })
+
+local keys = "?!@#$%^&*+-=`\"',./\\:;<>()[]{} "
+for i = 1, #keys do
+  local keymap = keys:sub(i, i)
+  local key = keymap
+  if key == "\\" then
+    key = "\\\\"
+  elseif key == '"' then
+    key = '\\"'
+  end
+
+  local pumstring = string.format('(pumvisible() && complete_info().selected != -1) ? "<c-y>%s"  : "%s"', key, key)
+  map("i", keymap, pumstring, { expr = true, noremap = true })
+end
 ```
