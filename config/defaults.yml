@@ -17,6 +17,7 @@ clients:
     always_on_top: null
     always_wait: false
     enabled: true
+    ignored_servers: []
     max_pulls: 188
     resolve_timeout: 0.06
     short_name: "LS"
@@ -26,6 +27,7 @@ clients:
     always_on_top: []
     always_wait: false
     enabled: true
+    ignored_servers: []
     live_pulling: false
     max_pulls: null
     resolve_timeout: 0.06

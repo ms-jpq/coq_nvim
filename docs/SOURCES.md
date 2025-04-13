@@ -70,6 +70,16 @@ null
 
 #### coq_settings.clients.lsp
 
+##### `coq_settings.clients.lsp.ignored_servers`
+
+Which LSP servers to ignore.
+
+**default:**
+
+```json
+[]
+```
+
 ##### `coq_settings.clients.lsp.resolve_timeout`
 
 Time it takes to wait for LSP servers to respond with header import before edit is applied.
@@ -78,6 +88,20 @@ Time it takes to wait for LSP servers to respond with header import before edit 
 
 ```json
 0.06
+```
+
+---
+
+#### coq_settings.clients.lsp_inline
+
+##### `coq_settings.clients.lsp_inline.ignored_servers`
+
+Which LSP servers to ignore.
+
+**default:**
+
+```json
+[]
 ```
 
 ---

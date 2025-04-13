@@ -107,7 +107,7 @@ class Weights:
 @dataclass(frozen=True)
 class CompleteOptions:
     always: bool
-    sticky_manual : bool
+    sticky_manual: bool
     smart: bool
     replace_prefix_threshold: int
     replace_suffix_threshold: int
@@ -203,6 +203,7 @@ class SnippetClient(BaseClient, _AlwaysTop):
 @dataclass(frozen=True)
 class LSPClient(BaseClient, _AlwaysTops):
     resolve_timeout: float
+    ignored_servers: AbstractSet[str]
 
 
 @dataclass(frozen=True)
