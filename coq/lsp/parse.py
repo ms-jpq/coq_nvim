@@ -39,6 +39,7 @@ from .types import (
     InlineCompletionItem,
     InLineCompletionResponse,
     InsertReplaceEdit,
+    InsertReplaceEditNonStandard,
     ItemDefaults,
     LSPcomp,
     MarkupContent,
@@ -81,7 +82,9 @@ def _range_edit(
     encoding: Encoding,
     cursors: Cursors,
     fallback: Optional[str],
-    edit: Union[TextEdit, TextEditNonStandard, InsertReplaceEdit],
+    edit: Union[
+        TextEdit, TextEditNonStandard, InsertReplaceEdit, InsertReplaceEditNonStandard
+    ],
 ) -> RangeEdit:
     _, u8, u16, u32 = cursors
     if encoding == UTF16:
@@ -101,6 +104,10 @@ def _range_edit(
         text = edit.newText
         ra_start = edit.range.start
         ra_end = edit.range.end
+    elif isinstance(edit, InsertReplaceEditNonStandard):
+        text = edit.new_text
+        ra_start = edit.replace.start
+        ra_end = edit.replace.end
     else:
         text = edit.newText
         ra_start = edit.replace.start
