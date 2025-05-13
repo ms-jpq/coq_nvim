@@ -81,11 +81,16 @@ Install the [Nvim Official LSP integration](https://github.com/neovim/nvim-lspco
 **Requires 2 lines of change to support LSP snippets**
 
 ```lua
-local lsp = require "lspconfig"
 local coq = require "coq" -- add this
 
+-- legacy style
+local lsp = require "lspconfig"
 lsp.<server>.setup(<stuff...>)                              -- before
 lsp.<server>.setup(coq.lsp_ensure_capabilities(<stuff...>)) -- after
+
+-- new style
+vim.lsp.config(<server>, <stuff...>)                              -- before
+vim.lsp.config(<server>, coq.lsp_ensure_capabilities(<stuff...>)) -- after
 ```
 
 ### Snippets
