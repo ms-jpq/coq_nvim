@@ -71,7 +71,8 @@
   COQ.ts_req = function(session)
     vim.schedule(
       function()
-        local t1 = vim.loop.now()
+        local loop = vim.uv or vim.loop
+        local t1 = loop.now()
         local win = vim.api.nvim_get_current_win()
         local buf = vim.api.nvim_win_get_buf(win)
         local height = vim.api.nvim_win_get_height(win)
@@ -89,7 +90,7 @@
         for payload in iter_nodes(buf, lo, hi) do
           table.insert(acc, payload)
         end
-        local t2 = vim.loop.now()
+        local t2 = loop.now()
         COQ.Ts_notify(
           session,
           buf,
