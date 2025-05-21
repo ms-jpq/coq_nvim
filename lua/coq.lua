@@ -25,11 +25,22 @@ end)()
 
 local job_id = nil
 local err_exit = false
+local has_05 = vim.api.nvim_call_function("has", {"nvim-0.5"}) == 1
+
+local echo = function(msg, error)
+  if has_05 then
+    vim.api.nvim_echo({{msg, error and "ErrorMsg" or nil}}, true, {})
+  elseif error then
+    vim.api.nvim_err_write(msg)
+  else
+    vim.api.nvim_out_write(msg)
+  end
+end
 
 local on_exit = function(_, code)
   if not (code == 0 or code == 143) then
     err_exit = true
-    vim.api.nvim_err_writeln("COQ EXITED - " .. code)
+    echo("COQ EXITED - " .. code, true)
   else
     err_exit = false
   end
@@ -37,11 +48,11 @@ local on_exit = function(_, code)
 end
 
 local on_stdout = function(_, msg)
-  vim.api.nvim_out_write(table.concat(msg, linesep))
+  echo(table.concat(msg, linesep), false)
 end
 
 local on_stderr = function(_, msg)
-  vim.api.nvim_echo({{table.concat(msg, linesep), "ErrorMsg"}}, true, {})
+  echo(table.concat(msg, linesep), true)
 end
 
 local py3 = (function()
