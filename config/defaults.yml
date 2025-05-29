@@ -248,9 +248,6 @@ match:
   fuzzy_cutoff: 0.6
   look_ahead: 2
   max_results: 33
-  unifying_chars:
-    - "_"
-    - "-"
 
 weights:
   edit_distance: 1.5

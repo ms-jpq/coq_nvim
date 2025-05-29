@@ -3,21 +3,18 @@ from typing import Optional, Tuple, cast
 
 from pynvim_pp.atomic import Atomic
 from pynvim_pp.buffer import Buffer, linefeed
-from pynvim_pp.lib import decode, encode
+from pynvim_pp.lib import decode, encode, keywordset
 from pynvim_pp.nvim import Nvim
 from pynvim_pp.text_object import gen_split
 from pynvim_pp.types import NoneType
 
 from ..consts import DEBUG
 from ..shared.parse import lower
-from ..shared.settings import MatchOptions
 from ..shared.types import UTF16, UTF32, ChangeEvent, Context
 from .state import State
 
 
-async def context(
-    options: MatchOptions, state: State, change: Optional[ChangeEvent], manual: bool
-) -> Context:
+async def context(state: State, change: Optional[ChangeEvent], manual: bool) -> Context:
     with Atomic() as (atomic, ns):
         ns.scr_col = atomic.call_function("screencol", ())
         ns.win_height = atomic.win_get_height(0)
@@ -30,6 +27,7 @@ async def context(
         ns.tabstop = atomic.buf_get_option(0, "tabstop")
         ns.expandtab = atomic.buf_get_option(0, "expandtab")
         ns.cursor = atomic.win_get_cursor(0)
+        ns.keywords = atomic.buf_get_option(0, "iskeyword")
         await atomic.commit(NoneType)
 
     scr_col = ns.scr_col(int)
@@ -45,6 +43,8 @@ async def context(
     tabstop = ns.tabstop(int)
     expandtab = ns.expandtab(bool)
     linesep = linefeed(ns.fileformat(str))
+    kw = ns.keywords(str)
+    keywords = keywordset(kw)
 
     lo = max(0, row - win_size)
     hi = min(buf_line_count, row + win_size + 1)
@@ -60,9 +60,7 @@ async def context(
     utf16_col = len(encode(line_before, encoding=UTF16)) // 2
     utf32_col = len(encode(line_before, encoding=UTF32)) // 4
 
-    split = gen_split(
-        lhs=line_before, rhs=line_after, unifying_chars=options.unifying_chars
-    )
+    split = gen_split(lhs=line_before, rhs=line_after, keywords=keywords)
     l_words_before, l_words_after = lower(split.word_lhs), lower(split.word_rhs)
     l_syms_before, l_syms_after = lower(split.syms_lhs), lower(split.syms_rhs)
     is_lower = l_words_before + l_words_after == split.word_lhs + split.word_rhs
@@ -86,6 +84,7 @@ async def context(
         filename=filename,
         filetype=filetype,
         line_count=buf_line_count,
+        keywordset=keywords,
         linefeed=linesep,
         tabstop=tabstop,
         expandtab=expandtab,

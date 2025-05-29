@@ -89,7 +89,7 @@ class Display:
 
 @dataclass(frozen=True)
 class MatchOptions:
-    unifying_chars: AbstractSet[str]
+    # unifying_chars: AbstractSet[str]
     max_results: int
     look_ahead: int
     exact_matches: int
@@ -295,7 +295,6 @@ class Settings:
 
 
 EMPTY_MATCH = MatchOptions(
-    unifying_chars=set(),
     max_results=0,
     look_ahead=0,
     exact_matches=0,

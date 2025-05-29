@@ -24,9 +24,7 @@ def _edit(prev: Edit) -> Optional[Edit]:
 
 @rpc()
 async def repeat(stack: Stack) -> None:
-    ctx = await context(
-        options=stack.settings.match, state=state(), change=None, manual=True
-    )
+    ctx = await context(state=state(), change=None, manual=True)
     s = state(context=ctx)
     metric = s.last_edit
     if sanitized := _edit(metric.comp.primary_edit):

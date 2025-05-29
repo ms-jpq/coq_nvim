@@ -13,7 +13,7 @@ from functools import lru_cache
 from shutil import which
 from subprocess import CalledProcessError
 from threading import Thread
-from typing import Any, Awaitable, Callable, Coroutine, Sequence, TypeVar
+from typing import Any, Awaitable, Callable, Coroutine, Sequence, TypeVar, cast
 
 from std2.asyncio.subprocess import call
 
@@ -58,7 +58,7 @@ class AsyncExecutor:
         return fut
 
     def submit(self, co: Awaitable[_T]) -> Awaitable[_T]:
-        f = run_coroutine_threadsafe(co, loop=self.loop)
+        f: Future = run_coroutine_threadsafe(cast(Coroutine, co), loop=self.loop)
         return wrap_future(f)
 
 

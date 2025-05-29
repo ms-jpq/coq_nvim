@@ -2,6 +2,7 @@ from itertools import accumulate, islice
 from random import randint
 from unittest import TestCase
 
+from ...coq.consts import BASIC_KEYWORDS
 from ...coq.shared.trans import reverse_acc, trans
 
 _MIN_MATCH_LEN = 2
@@ -42,7 +43,7 @@ class Trans(TestCase):
         actual = trans(
             _MIN_MATCH_LEN,
             _MIN_MATCH_LEN,
-            unifying_chars=set(),
+            keywords=BASIC_KEYWORDS,
             line_before=lhs,
             line_after=rhs,
             new_text=new_text,
@@ -60,7 +61,7 @@ class Trans(TestCase):
         actual = trans(
             _MIN_MATCH_LEN,
             _MIN_MATCH_LEN,
-            unifying_chars=set(),
+            keywords=BASIC_KEYWORDS,
             line_before=lhs,
             line_after=rhs,
             new_text=new_text,
@@ -78,7 +79,7 @@ class Trans(TestCase):
         actual = trans(
             _MIN_MATCH_LEN,
             _MIN_MATCH_LEN,
-            unifying_chars=set(),
+            keywords=BASIC_KEYWORDS,
             line_before=lhs,
             line_after=rhs,
             new_text=new_text,
@@ -96,7 +97,7 @@ class Trans(TestCase):
         actual = trans(
             _MIN_MATCH_LEN,
             _MIN_MATCH_LEN,
-            unifying_chars=set(),
+            keywords=BASIC_KEYWORDS,
             line_before=lhs,
             line_after=rhs,
             new_text=new_text,
@@ -114,7 +115,7 @@ class Trans(TestCase):
         actual = trans(
             _MIN_MATCH_LEN,
             _MIN_MATCH_LEN,
-            unifying_chars=set(),
+            keywords=BASIC_KEYWORDS,
             line_before=lhs,
             line_after=rhs,
             new_text=new_text,
@@ -132,7 +133,7 @@ class Trans(TestCase):
         actual = trans(
             _MIN_MATCH_LEN,
             _MIN_MATCH_LEN,
-            unifying_chars=set(),
+            keywords=BASIC_KEYWORDS,
             line_before=lhs,
             line_after=rhs,
             new_text=new_text,
@@ -150,7 +151,7 @@ class Trans(TestCase):
         actual = trans(
             _MIN_MATCH_LEN,
             _MIN_MATCH_LEN,
-            unifying_chars=set(),
+            keywords=BASIC_KEYWORDS,
             line_before=lhs,
             line_after=rhs,
             new_text=new_text,

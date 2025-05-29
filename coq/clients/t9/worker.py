@@ -163,7 +163,7 @@ async def _proc(bin: PurePath, cwd: PurePath) -> Optional[Process]:
         return proc
 
 
-async def _readline(stdout: StreamReader) -> bytes:
+async def _readline(stdout: StreamReader) -> bytearray:
     acc = bytearray()
     while True:
         try:
@@ -273,7 +273,9 @@ class Worker(BaseWorker[T9Client, None]):
         else:
             return await shield(cont())
 
-    async def _work(self, context: Context, timeout: float) -> AsyncIterator[Completion]:
+    async def _work(
+        self, context: Context, timeout: float
+    ) -> AsyncIterator[Completion]:
         limit = (
             BIGGEST_INT
             if context.manual

@@ -40,16 +40,6 @@ Lexicographical sorting is then applied with secondary metrics such as `presence
 
 These control the matching & scoring algorithms
 
-#### `coq_settings.match.unifying_chars`
-
-These characters count as part of words.
-
-**default:**
-
-```json
-["-", "_"]
-```
-
 #### `coq_settings.match.max_results`
 
 Maximum number of results to return.

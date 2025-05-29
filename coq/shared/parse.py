@@ -10,7 +10,7 @@ def lower(text: str) -> str:
 
 
 def coalesce(
-    unifying_chars: AbstractSet[str],
+    keywords: AbstractSet[str],
     include_syms: bool,
     backwards: Optional[bool],
     chars: Sequence[str],
@@ -33,7 +33,7 @@ def coalesce(
             yield sym
 
     for chr in reversed(chars) if backwards else iter(chars):
-        if is_word(unifying_chars, chr=chr):
+        if is_word(keywords, chr=chr):
             words.append(chr)
             yield from s_it()
         elif not chr.isspace():
@@ -50,11 +50,9 @@ def coalesce(
 
 def tokenize(
     tokenization_limit: int,
-    unifying_chars: AbstractSet[str],
+    keywords: AbstractSet[str],
     include_syms: bool,
     text: str,
 ) -> Iterator[str]:
-    words = coalesce(
-        unifying_chars, include_syms=include_syms, backwards=None, chars=text
-    )
+    words = coalesce(keywords, include_syms=include_syms, backwards=None, chars=text)
     return islice(words, tokenization_limit)

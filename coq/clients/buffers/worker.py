@@ -1,9 +1,18 @@
 from dataclasses import dataclass
 from os import linesep
 from pathlib import PurePath
-from typing import AsyncIterator, Iterator, Mapping, Optional, Sequence, Tuple
+from typing import (
+    AbstractSet,
+    AsyncIterator,
+    Iterator,
+    Mapping,
+    Optional,
+    Sequence,
+    Tuple,
+)
 
 from pynvim_pp.buffer import Buffer
+from pynvim_pp.lib import keywordset
 from pynvim_pp.logging import suppress_and_log
 from pynvim_pp.rpc_types import NvimError
 from pynvim_pp.window import Window
@@ -21,6 +30,7 @@ from .db.database import BDB, BufferWord, Update
 @dataclass(frozen=True)
 class _Info:
     buf_id: int
+    keywordset: AbstractSet[str]
     filetype: str
     filename: str
     range: Tuple[int, int]
@@ -42,12 +52,15 @@ async def _info() -> Optional[_Info]:
             lo = max(0, row - height)
             hi = min(current_lines, row + height + 1)
             lines = await buf.get_lines(lo=lo, hi=hi)
+            kw = await buf.opts.get(str, "iskeyword")
+            keywords = keywordset(kw)
             filetype = await buf.filetype()
             filename = (await buf.get_name()) or ""
             info = _Info(
                 buf_id=buf.number,
                 filetype=filetype,
                 filename=filename,
+                keywordset=keywords,
                 range=(lo, hi),
                 lines=lines,
                 buffers=buffers,
@@ -81,9 +94,7 @@ class Worker(BaseWorker[BuffersClient, None]):
         misc: None,
     ) -> None:
         self._db = BDB(
-            supervisor.limits.tokenization_limit,
-            unifying_chars=supervisor.match.unifying_chars,
-            include_syms=options.match_syms,
+            supervisor.limits.tokenization_limit, include_syms=options.match_syms
         )
         super().__init__(
             ex,
@@ -112,6 +123,7 @@ class Worker(BaseWorker[BuffersClient, None]):
                         self._db.vacuum(buf_line_counts)
                         self._db.set_lines(
                             info.buf_id,
+                            keywords=info.keywordset,
                             filetype=info.filetype,
                             filename=info.filename,
                             lo=lo,
@@ -133,6 +145,7 @@ class Worker(BaseWorker[BuffersClient, None]):
     async def set_lines(
         self,
         buf_id: int,
+        keywords: AbstractSet[str],
         filetype: str,
         filename: str,
         lo: int,
@@ -142,6 +155,7 @@ class Worker(BaseWorker[BuffersClient, None]):
         async def cont() -> None:
             self._db.set_lines(
                 buf_id,
+                keywords=keywords,
                 filetype=filetype,
                 filename=filename,
                 lo=lo,
@@ -151,7 +165,9 @@ class Worker(BaseWorker[BuffersClient, None]):
 
         await self._ex.submit(cont())
 
-    async def _work(self, context: Context, timeout: float) -> AsyncIterator[Completion]:
+    async def _work(
+        self, context: Context, timeout: float
+    ) -> AsyncIterator[Completion]:
         limit = (
             BIGGEST_INT
             if context.manual
@@ -174,6 +190,7 @@ class Worker(BaseWorker[BuffersClient, None]):
             )
             words = self._db.words(
                 self._supervisor.match,
+                keywords=context.keywordset,
                 filetype=filetype,
                 word=context.words,
                 sym=context.syms if self._options.match_syms else "",

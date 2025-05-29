@@ -185,7 +185,9 @@ class Worker(BaseWorker[TagsClient, Tuple[Path, Path, PurePath]]):
 
         await self._ex.submit(cont())
 
-    async def _work(self, context: Context, timeout: float) -> AsyncIterator[Completion]:
+    async def _work(
+        self, context: Context, timeout: float
+    ) -> AsyncIterator[Completion]:
         limit = (
             BIGGEST_INT
             if context.manual

@@ -229,7 +229,7 @@ def _range_edit_trans(
         and len(
             tuple(
                 coalesce(
-                    match.unifying_chars,
+                    ctx.keywordset,
                     include_syms=True,
                     backwards=None,
                     chars=edit.new_text,

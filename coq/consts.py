@@ -1,6 +1,8 @@
+from itertools import chain
 from os import environ, name
 from os.path import normpath
 from pathlib import Path
+from string import ascii_letters, digits
 
 GIL_SWITCH = 1 / (10**3)
 CACHE_CHUNK = 9
@@ -10,6 +12,7 @@ IS_WIN = name == "nt"
 TOP_LEVEL = Path(__file__).resolve(strict=True).parent.parent
 REQUIREMENTS = TOP_LEVEL / "requirements.txt"
 
+BASIC_KEYWORDS = frozenset(chain(digits, ascii_letters, ("_", "-")))
 
 VARS = TOP_LEVEL / ".vars"
 
