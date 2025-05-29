@@ -197,7 +197,7 @@ async def _parse(
     return await to_thread(cont)
 
 
-def _sort_by(unifying_chars: AbstractSet[str], context: Context, new_text: str) -> str:
+def _sort_by(keywords: AbstractSet[str], context: Context, new_text: str) -> str:
     chars = [*new_text]
     if new_text.endswith(sep) or (altsep and new_text.endswith(altsep)):
         end = chars.pop()
@@ -205,7 +205,7 @@ def _sort_by(unifying_chars: AbstractSet[str], context: Context, new_text: str) 
         end = ""
 
     tmp = "".join(chars)
-    cword = cword_before(unifying_chars, lower=False, context=context, sort_by=tmp)
+    cword = cword_before(keywords, lower=False, context=context, sort_by=tmp)
     sort_by = f"{cword}{end}"
     return sort_by
 
@@ -232,7 +232,9 @@ class Worker(BaseWorker[PathsClient, None]):
     def interrupt(self) -> None:
         pass
 
-    async def _work(self, context: Context, timeout: float) -> AsyncIterator[Completion]:
+    async def _work(
+        self, context: Context, timeout: float
+    ) -> AsyncIterator[Completion]:
         async with self._work_lock:
             line = context.line_before + context.words_after
 
@@ -276,7 +278,7 @@ class Worker(BaseWorker[PathsClient, None]):
                             weight_adjust=self._options.weight_adjust,
                             label=edit.new_text,
                             sort_by=_sort_by(
-                                self._supervisor.match.unifying_chars,
+                                context.keywordset,
                                 context=context,
                                 new_text=new_text,
                             ),

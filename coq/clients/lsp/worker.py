@@ -15,7 +15,7 @@ from pynvim_pp.logging import suppress_and_log
 from std2 import anext
 from std2.itertools import batched
 
-from ...consts import CACHE_CHUNK
+from ...consts import CACHE_CHUNK, BASIC_KEYWORDS
 from ...lsp.requests.completion import comp_lsp
 from ...lsp.types import LSPcomp
 from ...shared.context import cword_before
@@ -42,7 +42,7 @@ def _use_comp(
     match: MatchOptions, context: Context, sort_by: str, comp: Completion
 ) -> bool:
     cword = cword_before(
-        match.unifying_chars,
+        context.keywordset,
         lower=True,
         context=context,
         sort_by=sort_by,
@@ -109,7 +109,7 @@ class Worker(BaseWorker[LSPClient, None]):
             weight_adjust=self._options.weight_adjust,
             context=context,
             chunk=self._max_results,
-            clients={"tabby_ml"}
+            clients={"tabby_ml"},
         )
         async for row, peers, elapsed in rows:
             self._stats.update(peers, client=row.client, elapsed=elapsed)
@@ -123,27 +123,33 @@ class Worker(BaseWorker[LSPClient, None]):
             async def cont() -> None:
                 with suppress_and_log(), timeit("LSP CACHE"):
                     if not self._work_lock.locked():
-                        self._cache.set_cache(self._local_cached.post, skip_db=False)
+                        self._cache.set_cache(
+                            BASIC_KEYWORDS, items=self._local_cached.post, skip_db=False
+                        )
                         acc = tuple(self._local_cached.pre.items())
                         for client, comps in acc:
                             await sleep(0)
                             if not self._work_lock.locked():
                                 for chunked in batched(comps, n=CACHE_CHUNK):
                                     self._cache.set_cache(
-                                        {client: chunked}, skip_db=False
+                                        BASIC_KEYWORDS, items={client: chunked}, skip_db=False
                                     )
                         if context := self._supervisor.current_context:
                             async for lsp_comps in self._request(context):
                                 for chunked in batched(lsp_comps.items, n=CACHE_CHUNK):
                                     if not self._work_lock.locked():
                                         self._cache.set_cache(
-                                            {lsp_comps.client: chunked}, skip_db=False
+                                            BASIC_KEYWORDS,
+                                            items={lsp_comps.client: chunked},
+                                            skip_db=False,
                                         )
                                         await sleep(0)
 
             await self._with_interrupt(cont())
 
-    async def _work(self, context: Context, timeout: float) -> AsyncIterator[Completion]:
+    async def _work(
+        self, context: Context, timeout: float
+    ) -> AsyncIterator[Completion]:
         inline_shift = False
         limit = (
             BIGGEST_INT
@@ -153,7 +159,7 @@ class Worker(BaseWorker[LSPClient, None]):
 
         async with self._work_lock, self._working:
             try:
-                use_cache, cached_clients, cached = self._cache.apply_cache(
+                use_cache, _cached_clients, cached = self._cache.apply_cache(
                     context, always=False, inline_shift=inline_shift
                 )
                 if not use_cache:

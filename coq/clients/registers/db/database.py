@@ -1,9 +1,9 @@
 from contextlib import closing, suppress
 from dataclasses import dataclass
 from sqlite3 import Connection, Cursor, OperationalError
-from typing import AbstractSet, Any, Iterator, Mapping
+from typing import Any, Iterator, Mapping
 
-from ....consts import REGISTER_DB
+from ....consts import BASIC_KEYWORDS, REGISTER_DB
 from ....databases.types import DB
 from ....shared.parse import coalesce, tokenize
 from ....shared.settings import MatchOptions
@@ -28,21 +28,13 @@ def _init() -> Connection:
 
 
 class RDB(DB):
-    def __init__(
-        self,
-        tokenization_limit: int,
-        unifying_chars: AbstractSet[str],
-        include_syms: bool,
-    ) -> None:
+    def __init__(self, tokenization_limit: int, include_syms: bool) -> None:
         self._tokenization_limit = tokenization_limit
-        self._unifying_chars = unifying_chars
         self._include_syms = include_syms
         self._conn = _init()
 
     def periodical(
-        self,
-        wordreg: Mapping[str, str],
-        linereg: Mapping[str, str],
+        self, wordreg: Mapping[str, str], linereg: Mapping[str, str]
     ) -> None:
         m1 = (*wordreg, *linereg)
 
@@ -50,7 +42,7 @@ class RDB(DB):
             for reg, text in wordreg.items():
                 for word in tokenize(
                     self._tokenization_limit,
-                    unifying_chars=self._unifying_chars,
+                    keywords=BASIC_KEYWORDS,
                     include_syms=self._include_syms,
                     text=text,
                 ):
@@ -61,7 +53,7 @@ class RDB(DB):
                 for row in text.splitlines():
                     if line := row.strip():
                         tokens = coalesce(
-                            self._unifying_chars,
+                            BASIC_KEYWORDS,
                             include_syms=True,
                             backwards=False,
                             chars=line,

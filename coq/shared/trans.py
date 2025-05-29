@@ -24,7 +24,7 @@ def reverse_acc(replace_prefix_threshold: int, seq: str) -> Iterator[str]:
 
 def _line_match(
     replace_prefix_threshold: int,
-    unifying_chars: AbstractSet[str],
+    keywords: AbstractSet[str],
     lhs: bool,
     existing: str,
     insertion: str,
@@ -32,9 +32,7 @@ def _line_match(
     existing, insertion = lower(existing), lower(insertion)
     if lhs:
         prefix = next(
-            coalesce(
-                unifying_chars, include_syms=True, backwards=False, chars=insertion
-            ),
+            coalesce(keywords, include_syms=True, backwards=False, chars=insertion),
             "",
         )
         for match in reverse_acc(0, seq=insertion):
@@ -56,14 +54,14 @@ def _line_match(
 def trans(
     replace_prefix_threshold: int,
     replace_suffix_threshold: int,
-    unifying_chars: AbstractSet[str],
+    keywords: AbstractSet[str],
     line_before: str,
     line_after: str,
     new_text: str,
 ) -> ContextualEdit:
     l_match = _line_match(
         replace_prefix_threshold,
-        unifying_chars=unifying_chars,
+        keywords=keywords,
         lhs=True,
         existing=line_before,
         insertion=new_text,
@@ -71,7 +69,7 @@ def trans(
     rest = new_text[len(l_match) :]
     r_match = _line_match(
         replace_suffix_threshold,
-        unifying_chars=unifying_chars,
+        keywords=keywords,
         lhs=False,
         existing=line_after,
         insertion=rest,
@@ -94,16 +92,14 @@ def trans_adjusted(
     edit = trans(
         comp.replace_prefix_threshold,
         replace_suffix_threshold=comp.replace_suffix_threshold,
-        unifying_chars=match.unifying_chars,
+        keywords=ctx.keywordset,
         line_before=ctx.line_before,
         line_after=ctx.line_after,
         new_text=new_text,
     )
 
     tokens = tuple(
-        coalesce(
-            match.unifying_chars, include_syms=True, backwards=False, chars=new_text
-        )
+        coalesce(ctx.keywordset, include_syms=True, backwards=False, chars=new_text)
     )
 
     if len(edit.old_prefix) >= comp.replace_prefix_threshold:
@@ -114,11 +110,11 @@ def trans_adjusted(
         old_prefix = ctx.words_before
     elif len(tokens) <= 1:
         simple_before = cword_before(
-            match.unifying_chars, lower=False, context=ctx, sort_by=edit.new_text
+            keywords=ctx.keywordset, lower=False, context=ctx, sort_by=edit.new_text
         )
         old_prefix = simple_before
     elif chr := next(chain.from_iterable(tokens), ""):
-        if is_word(match.unifying_chars, chr=chr):
+        if is_word(ctx.keywordset, chr=chr):
             old_prefix = edit.old_prefix or ctx.words_before
         else:
             first_token = next(iter(tokens), "")
@@ -139,7 +135,7 @@ def trans_adjusted(
         old_suffix = edit.old_suffix
     elif len(tokens) <= 1:
         simple_after = cword_after(
-            match.unifying_chars, lower=False, context=ctx, sort_by=edit.new_text
+            ctx.keywordset, lower=False, context=ctx, sort_by=edit.new_text
         )
         old_suffix = simple_after
     else:

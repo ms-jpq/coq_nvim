@@ -38,9 +38,7 @@ class Worker(BaseWorker[TmuxClient, Path]):
         self._exec = misc
         self._lock = Lock()
         self._db = TMDB(
-            supervisor.limits.tokenization_limit,
-            unifying_chars=supervisor.match.unifying_chars,
-            include_syms=options.match_syms,
+            supervisor.limits.tokenization_limit, include_syms=options.match_syms
         )
         super().__init__(
             ex,
@@ -77,7 +75,9 @@ class Worker(BaseWorker[TmuxClient, Path]):
     async def periodical(self) -> None:
         await self._ex.submit(self._periodical())
 
-    async def _work(self, context: Context, timeout: float) -> AsyncIterator[Completion]:
+    async def _work(
+        self, context: Context, timeout: float
+    ) -> AsyncIterator[Completion]:
         limit = (
             BIGGEST_INT
             if context.manual

@@ -7,6 +7,7 @@ from uuid import uuid4
 
 from pynvim_pp.atomic import Atomic
 from pynvim_pp.buffer import Buffer
+from pynvim_pp.lib import keywordset
 from pynvim_pp.logging import suppress_and_log
 from pynvim_pp.nvim import Nvim
 from pynvim_pp.rpc_types import NvimError
@@ -41,12 +42,15 @@ async def _buf_enter(stack: Stack) -> None:
                     filename = await buf.get_name() or ""
                     row, _ = await win.get_cursor()
                     height = await win.get_height()
+                    kw = await buf.opts.get(str, "iskeyword")
+                    keywords = keywordset(kw)
                     line_count = await buf.line_count()
                     lo = max(0, row - height)
                     hi = min(line_count, row + height + 1)
                     lines = await buf.get_lines(lo=lo, hi=hi)
                     await worker.set_lines(
                         buf.number,
+                        keywords=keywords,
                         filetype=filetype,
                         filename=filename,
                         lo=lo,

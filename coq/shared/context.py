@@ -18,6 +18,7 @@ EMPTY_CONTEXT = Context(
     filename=normcase(_FILE),
     filetype="",
     line_count=0,
+    keywordset=frozenset(),
     linefeed="\n",
     tabstop=2,
     expandtab=True,
@@ -50,26 +51,26 @@ EMPTY_CONTEXT = Context(
 
 
 def cword_before(
-    unifying_chars: AbstractSet[str], lower: bool, context: Context, sort_by: str
+    keywords: AbstractSet[str], lower: bool, context: Context, sort_by: str
 ) -> str:
     char = sort_by[:1]
 
     if char.isspace():
         return context.ws_before
-    elif is_word(unifying_chars, chr=char):
+    elif is_word(keywords, chr=char):
         return context.l_words_before if lower else context.words_before
     else:
         return context.l_syms_before if lower else context.syms_before
 
 
 def cword_after(
-    unifying_chars: AbstractSet[str], lower: bool, context: Context, sort_by: str
+    keywords: AbstractSet[str], lower: bool, context: Context, sort_by: str
 ) -> str:
     char = sort_by[-1:]
 
     if char.isspace():
         return context.ws_after
-    elif is_word(unifying_chars, chr=char):
+    elif is_word(keywords, chr=char):
         return context.l_words_after if lower else context.words_after
     else:
         return context.l_syms_after if lower else context.syms_after

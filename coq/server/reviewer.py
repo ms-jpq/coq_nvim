@@ -34,7 +34,7 @@ def _metric(
 ) -> MatchMetrics:
     match = lower(completion.sort_by) if ctx.is_lower else completion.sort_by
     cword = cword_before(
-        options.unifying_chars, lower=ctx.is_lower, context=ctx.context, sort_by=match
+        ctx.context.keywordset, lower=ctx.is_lower, context=ctx.context, sort_by=match
     )
     return metrics(cword, match, look_ahead=options.look_ahead)
 
@@ -90,7 +90,7 @@ class Reviewer(PReviewer[ReviewCtx]):
         inserted = self._db.insertion_order(n_rows=100)
         words = chain.from_iterable(
             coalesce(
-                self._options.unifying_chars,
+                context.keywordset,
                 include_syms=True,
                 backwards=None,
                 chars=line,

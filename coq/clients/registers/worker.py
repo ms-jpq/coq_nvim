@@ -33,9 +33,7 @@ class Worker(BaseWorker[RegistersClient, None]):
     ) -> None:
         self._yanked: MutableSet[str] = {*options.words, *options.lines}
         self._db = RDB(
-            supervisor.limits.tokenization_limit,
-            unifying_chars=supervisor.match.unifying_chars,
-            include_syms=options.match_syms,
+            supervisor.limits.tokenization_limit, include_syms=options.match_syms
         )
         super().__init__(
             ex,
@@ -86,7 +84,9 @@ class Worker(BaseWorker[RegistersClient, None]):
 
         await self._ex.submit(cont())
 
-    async def _work(self, context: Context, timeout: float) -> AsyncIterator[Completion]:
+    async def _work(
+        self, context: Context, timeout: float
+    ) -> AsyncIterator[Completion]:
         limit = (
             BIGGEST_INT
             if context.manual

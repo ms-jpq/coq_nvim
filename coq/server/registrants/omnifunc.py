@@ -52,7 +52,6 @@ async def comp_func(
 ) -> None:
     with suppress_and_log():
         ctx = await context(
-            options=stack.settings.match,
             state=s,
             change=change,
             manual=manual or s.manual_override,
