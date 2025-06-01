@@ -14,6 +14,7 @@ from contextlib import suppress
 from itertools import chain, count
 from json import dumps, loads
 from json.decoder import JSONDecodeError
+from os import linesep
 from pathlib import PurePath
 from subprocess import DEVNULL, PIPE
 from typing import Any, AsyncIterator, Iterator, Mapping, Optional, Sequence, cast
@@ -303,6 +304,12 @@ class Worker(BaseWorker[T9Client, None]):
                         if isinstance(resp, Mapping):
                             self._t9_locked = resp.get("is_locked", False)
 
+                        rsp = cast(Response, resp)
+                        if DEBUG and isinstance(
+                            msg := rsp.get("user_message"), Sequence
+                        ):
+                            await Nvim.write(linesep.join(msg))
+
                         pc = await protocol()
                         for comp in _decode(
                             pc,
@@ -310,6 +317,6 @@ class Worker(BaseWorker[T9Client, None]):
                             ellipsis=self._supervisor.display.pum.ellipsis,
                             syntax=context.filetype,
                             id=id,
-                            reply=cast(Response, resp),
+                            reply=rsp,
                         ):
                             yield comp
