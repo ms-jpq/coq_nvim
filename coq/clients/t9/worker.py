@@ -236,8 +236,19 @@ class Worker(BaseWorker[T9Client, None]):
 
                 if not self._bin:
                     await Nvim.write(LANG("failed T9 download"))
+                    return
                 else:
                     await Nvim.write(LANG("end T9 download"))
+
+            req = {
+                "version": _VERSION,
+                "request": {
+                    "LoginWithCustomToken": {"custom_token": self._options.auth_token}
+                },
+            }
+            json = dumps(req, check_circular=False, ensure_ascii=False)
+            line = await self._comm(cwd=vars_dir, json=json)
+            await Nvim.write(f"T9: {line}")
 
     async def _clean(self) -> None:
         if proc := self._proc:

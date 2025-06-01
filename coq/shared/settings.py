@@ -186,7 +186,8 @@ class TSClient(BaseClient, _AlwaysTop):
 
 
 @dataclass(frozen=True)
-class T9Client(BaseClient, _AlwaysTop): ...
+class T9Client(BaseClient, _AlwaysTop):
+    auth_token: Optional[str] = None
 
 
 class SnippetWarnings(Enum):
