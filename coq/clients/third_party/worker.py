@@ -14,5 +14,5 @@ class Worker(LSPWorker):
             weight_adjust=self._options.weight_adjust,
             context=context,
             chunk=self._max_results * 2,
-            clients=self._options.ignored_servers,
+            clients=set()
         )
