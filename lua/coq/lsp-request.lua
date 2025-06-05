@@ -209,7 +209,7 @@
       return false
     end
 
-    return client.supports_method(lsp_capability or lsp_method)
+    return client:supports_method(lsp_capability or lsp_method)
   end
 
   (function()
@@ -271,7 +271,7 @@
         local request_params = make_params(client)
 
         local go, cancel_handle =
-          client.request(lsp_method, request_params, handler, buf)
+          client:request(lsp_method, request_params, handler, buf)
         if not go then
           handler(
             "<>FAILED<>",
@@ -282,7 +282,7 @@
           table.insert(
             cancels,
             function()
-              client.cancel_request(cancel_handle)
+              client:cancel_request(cancel_handle)
             end
           )
         end
