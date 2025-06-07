@@ -51,7 +51,7 @@ async def context(state: State, change: Optional[ChangeEvent], manual: bool) -> 
     lines = await buf.get_lines(lo=lo, hi=hi)
 
     r = row - lo
-    line = lines[r]
+    line = lines[r] if r < len(lines) else ""
     lines_before, lines_after = lines[:r], lines[r + 1 :]
 
     lhs, _, rhs = comment_str.partition("%s")
