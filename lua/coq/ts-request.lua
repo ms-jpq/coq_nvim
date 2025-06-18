@@ -90,17 +90,27 @@
         for payload in iter_nodes(buf, lo, hi) do
           table.insert(acc, payload)
         end
+
         local t2 = loop.now()
-        COQ.Ts_notify(
-          session,
-          buf,
-          lo,
-          hi,
-          filetype,
-          filename,
-          acc,
-          (t2 - t1) / 1000
+        local go, _ =
+          pcall(
+          function()
+            COQ.Ts_notify(
+              session,
+              buf,
+              lo,
+              hi,
+              filetype,
+              filename,
+              acc,
+              (t2 - t1) / 1000
+            )
+          end
         )
+
+        if not go then
+          vim.print(acc)
+        end
       end
     )
   end
