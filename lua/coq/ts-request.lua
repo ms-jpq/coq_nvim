@@ -88,7 +88,7 @@
 
         local acc = {}
         for payload in iter_nodes(buf, lo, hi) do
-          if type(payload) ~= "userdata" then
+          if type(payload) == "table" and type(payload[1]) ~= "userdata" then
             table.insert(acc, payload)
           end
         end
