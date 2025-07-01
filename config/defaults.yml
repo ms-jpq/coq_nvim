@@ -19,7 +19,7 @@ clients:
     enabled: true
     ignored_servers: []
     max_pulls: 188
-    resolve_timeout: 0.36
+    resolve_timeout: 0.09
     short_name: "LS"
     weight_adjust: 0.75
 
