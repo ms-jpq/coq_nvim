@@ -111,7 +111,7 @@
         )
 
         if not go then
-          vim.print(acc)
+          -- vim.print(acc)
         end
       end
     )
