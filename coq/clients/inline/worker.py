@@ -6,7 +6,7 @@ from std2 import anext
 from std2.aitertools import to_async
 from std2.itertools import batched
 
-from ...consts import CACHE_CHUNK, BASIC_KEYWORDS
+from ...consts import BASIC_KEYWORDS, CACHE_CHUNK
 from ...lsp.requests.completion import comp_lsp_inline
 from ...lsp.types import LSPcomp
 from ...shared.executor import AsyncExecutor

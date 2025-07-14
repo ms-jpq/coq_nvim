@@ -15,7 +15,7 @@ from pynvim_pp.logging import suppress_and_log
 from std2 import anext
 from std2.itertools import batched
 
-from ...consts import CACHE_CHUNK, BASIC_KEYWORDS
+from ...consts import BASIC_KEYWORDS, CACHE_CHUNK
 from ...lsp.requests.completion import comp_lsp
 from ...lsp.types import LSPcomp
 from ...shared.context import cword_before
@@ -132,7 +132,9 @@ class Worker(BaseWorker[LSPClient, None]):
                             if not self._work_lock.locked():
                                 for chunked in batched(comps, n=CACHE_CHUNK):
                                     self._cache.set_cache(
-                                        BASIC_KEYWORDS, items={client: chunked}, skip_db=False
+                                        BASIC_KEYWORDS,
+                                        items={client: chunked},
+                                        skip_db=False,
                                     )
                         if context := self._supervisor.current_context:
                             async for lsp_comps in self._request(context):
