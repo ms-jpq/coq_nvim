@@ -322,6 +322,19 @@ def _range_edit_trans(
         return inst
 
 
+def _fix_secondary(edit: BaseRangeEdit) -> BaseRangeEdit:
+    (r1, c1), (r2, c2) = edit.begin, edit.end
+
+    if (r1 >= r2) and c1 > c2:
+        return replace(edit, begin=(r2, c2), end=(r1, c1))
+
+    return edit
+
+
+def _merge_secondary(edits: Iterable[BaseRangeEdit]) -> Iterator[BaseRangeEdit]:
+    yield from edits
+
+
 def _instructions(
     ctx: Context,
     match: MatchOptions,
@@ -365,7 +378,7 @@ def _instructions(
     else:
         never(primary)
 
-    for edit in secondary:
+    for fixed in _merge_secondary(_fix_secondary(edit) for edit in secondary):
         yield _range_edit_trans(
             match,
             comp=comp,
@@ -373,7 +386,7 @@ def _instructions(
             ctx=ctx,
             primary=False,
             lines=lines,
-            edit=edit,
+            edit=fixed,
             editing=editing,
         )
 
