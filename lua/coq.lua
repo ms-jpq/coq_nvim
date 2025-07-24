@@ -199,7 +199,7 @@ coq.lsp_ensure_capabilities = function(cfg)
             insertTextModeSupport = {valueSet = {1, 2}},
             labelDetailsSupport = true,
             preselectSupport = true,
-            resolveSupport = {properties = {}},
+            resolveSupport = {properties = {"additionalTextEdits", "command"}},
             snippetSupport = true,
             tagSupport = {valueSet = {1}}
           }
