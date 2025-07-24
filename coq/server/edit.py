@@ -450,17 +450,23 @@ async def apply(
         (r1, c1), (r2, c2) = inst.begin, inst.end
 
         try:
+            lines = await buf.get_lines(min(r1, r2), max(r1, r2) + 1)
+            if lines:
+                n_c1, n_c2 = min(c1, len(lines[0])), min(c2, len(lines[-1]))
+            else:
+                n_c1, n_c2 = c1, c2
+
             if inst.primary:
                 marks = await buf.get_extmarks(ns)
                 for mark in marks:
                     m1, _ = mark.begin
                     y_shifted = m1 - r1
                     m2 = r2 + y_shifted
-                    inst = replace(inst, begin=(m1, c1), end=(m2, c2))
+                    inst = replace(inst, begin=(m1, n_c1), end=(m2, n_c2))
                     break
-            elif y_shifted:
+            else:
                 inst = replace(
-                    inst, begin=(r1 + y_shifted, c1), end=(r2 + y_shifted, c2)
+                    inst, begin=(r1 + y_shifted, n_c1), end=(r2 + y_shifted, n_c2)
                 )
 
             await buf.set_text(begin=inst.begin, end=inst.end, text=inst.new_lines)
