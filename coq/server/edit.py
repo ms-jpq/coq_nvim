@@ -221,7 +221,7 @@ def _range_edit_trans(
     primary: bool,
     lines: _Lines,
     edit: BaseRangeEdit,
-    editing=False,
+    editing: bool = False,
 ) -> EditInstruction:
     if (
         primary
@@ -443,7 +443,7 @@ def _shift(
 
 async def apply(
     ns: BufNamespace, buf: Buffer, instructions: Iterable[EditInstruction]
-) -> _MarkShift:
+) -> Tuple[_MarkShift, int]:
     insts, m_shift = _shift(instructions)
     y_shifted = 0
     for inst in insts:
@@ -454,13 +454,13 @@ async def apply(
                 marks = await buf.get_extmarks(ns)
                 for mark in marks:
                     m1, _ = mark.begin
-                    y_shifted = r1 - m1
-                    m2 = r2 - y_shifted
+                    y_shifted = m1 - r1
+                    m2 = r2 + y_shifted
                     inst = replace(inst, begin=(m1, c1), end=(m2, c2))
                     break
             elif y_shifted:
                 inst = replace(
-                    inst, begin=(r1 - y_shifted, c1), end=(r2 - y_shifted, c2)
+                    inst, begin=(r1 + y_shifted, c1), end=(r2 + y_shifted, c2)
                 )
 
             await buf.set_text(begin=inst.begin, end=inst.end, text=inst.new_lines)
@@ -478,7 +478,7 @@ async def apply(
             msg = Template(dedent(tpl)).substitute(e=e, inst=inst, ctx=ctx)
             log.warning("%s", msg)
 
-    return m_shift
+    return m_shift, y_shifted
 
 
 def _shift_marks(shift: _MarkShift, marks: Iterable[Mark]) -> Iterator[Mark]:
@@ -694,15 +694,16 @@ async def edit(
         ):
             return None
 
+        if not synthetic:
+            stack.idb.inserted(metric.instance.bytes, sort_by=metric.comp.sort_by)
+
+        m_shift, y_shifted = await apply(ns, buf=buf, instructions=parsed.instructions)
         n_row, n_col = _cursor(
             state.context.position,
             instructions=parsed.instructions,
         )
+        n_row += y_shifted
 
-        if not synthetic:
-            stack.idb.inserted(metric.instance.bytes, sort_by=metric.comp.sort_by)
-
-        m_shift = await apply(ns, buf=buf, instructions=parsed.instructions)
         if inserted:
             try:
                 await buf.set_text(

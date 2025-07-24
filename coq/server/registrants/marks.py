@@ -18,6 +18,7 @@ from ...lang import LANG
 from ...registry import rpc
 from ...shared.types import TextTransform
 from ...snippets.parsers.lexer import decode_mark_idx
+from ..edit import NS as EDIT_NS
 from ..edit import EditInstruction, apply, reset_undolevels
 from ..mark import NS
 from ..rt_types import Stack
@@ -118,7 +119,8 @@ async def _single_mark(
         new_resp = ""
 
     try:
-        await apply(buf, instructions=_trans(new_resp or "", marks=(mark,)))
+        nns = await Nvim.create_namespace(EDIT_NS)
+        await apply(nns, buf, instructions=_trans(new_resp or "", marks=(mark,)))
         await Nvim.exec("startinsert")
         await win.set_cursor(row=row, col=col + cshift)
     except NvimError as e:
@@ -166,10 +168,14 @@ async def _linked_marks(
 
     if new_resp is not None:
         try:
+            nns = await Nvim.create_namespace(EDIT_NS)
             await reset_undolevels()
-            shift = await apply(buf, instructions=_trans(new_resp, marks=marks))
+            shift, y_shifted = await apply(
+                nns, buf, instructions=_trans(new_resp, marks=marks)
+            )
+            n_row = row + shift.row + y_shifted
             await Nvim.exec("startinsert")
-            await win.set_cursor(row=row + shift.row, col=col + len(encode(new_resp)))
+            await win.set_cursor(row=n_row, col=col + len(encode(new_resp)))
             state(inserted_pos=(row, col - 1))
             return True
         finally:
