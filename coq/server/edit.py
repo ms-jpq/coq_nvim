@@ -322,15 +322,6 @@ def _range_edit_trans(
         return inst
 
 
-def _fix_secondary(edit: BaseRangeEdit) -> BaseRangeEdit:
-    (r1, c1), (r2, c2) = edit.begin, edit.end
-
-    if (r1 >= r2) and c1 > c2:
-        return replace(edit, begin=(r2, c2), end=(r1, c1))
-
-    return edit
-
-
 def _instructions(
     ctx: Context,
     match: MatchOptions,
@@ -374,10 +365,7 @@ def _instructions(
     else:
         never(primary)
 
-    fixed = sorted(
-        (_fix_secondary(edit) for edit in secondary), key=lambda e: (e.begin, e.end)
-    )
-    for edit in fixed:
+    for edit in secondary:
         yield _range_edit_trans(
             match,
             comp=comp,
