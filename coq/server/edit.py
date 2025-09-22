@@ -330,7 +330,6 @@ def _instructions(
     lines: _Lines,
     primary: Edit,
     secondary: Sequence[BaseRangeEdit],
-    editing: bool,
 ) -> Iterator[EditInstruction]:
     if isinstance(primary, BaseRangeEdit):
         inst = _range_edit_trans(
@@ -341,7 +340,6 @@ def _instructions(
             primary=True,
             lines=lines,
             edit=primary,
-            editing=editing,
         )
         yield inst
 
@@ -374,7 +372,6 @@ def _instructions(
             primary=False,
             lines=lines,
             edit=edit,
-            editing=editing,
         )
 
 
@@ -419,20 +416,18 @@ def _shift(
     new_insts: MutableSequence[EditInstruction] = []
     for inst in instructions:
         (r1, c1), (r2, c2) = inst.begin, inst.end
-        local_shift = row_shift
         new_inst = EditInstruction(
             primary=inst.primary,
-            begin=(r1 + local_shift, c1 + cols_shift.get(r1, 0)),
-            end=(r2 + local_shift, c2 + cols_shift.get(r2, 0)),
+            begin=(r1 + row_shift, c1 + cols_shift.get(r1, 0)),
+            end=(r2 + row_shift, c2 + cols_shift.get(r2, 0)),
             cursor_yoffset=inst.cursor_yoffset,
             cursor_xpos=inst.cursor_xpos,
             new_lines=inst.new_lines,
         )
-
-        row_shift += inst.cursor_yoffset
         if new_inst.primary:
             m_shift = _MarkShift(row=row_shift)
 
+        row_shift += inst.cursor_yoffset
         f_length = len(encode(inst.new_lines[-1])) if inst.new_lines else 0
         cols_shift[r2] = -(c2 - c1) + f_length if r1 == r2 else -c2 + f_length
 
@@ -601,7 +596,6 @@ async def parse(
                 lines=view,
                 primary=primary,
                 secondary=cmp.secondary_edits,
-                editing=not preview,
             )
         )
 
@@ -628,7 +622,6 @@ async def parse_secondary(
                 lines=view,
                 primary=cmp.primary_edit,
                 secondary=comp.secondary_edits,
-                editing=False,
             )
         )
         return (inst for inst in instructions if not inst.primary)
