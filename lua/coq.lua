@@ -67,10 +67,7 @@ end)()
 local xdg_dir = vim.fn.stdpath("data")
 
 local main = function(is_xdg)
-  local v_py =
-    cwd ..
-    (is_win and [[/.vars/runtime/Scripts/python.exe]] or
-      "/.vars/runtime/bin/python3")
+  local v_py = cwd .. (is_win and [[/.vars/runtime/Scripts/python.exe]] or "/.vars/runtime/bin/python3")
 
   if is_win then
     local v_py_xdg = xdg_dir .. "/coqrt/Scripts/python.exe"
@@ -152,8 +149,7 @@ local set_coq_call = function(cmd)
     local server = vim.fn.serverstart(unpack(srv))
 
     if not job_id then
-      job_id =
-        start(false, "run", "--ppid", vim.fn.getpid(), "--socket", server)
+      job_id = start(false, "run", "--ppid", vim.fn.getpid(), "--socket", server)
     end
 
     if not err_exit and COQ[cmd] then
@@ -211,8 +207,7 @@ coq.lsp_ensure_capabilities = function(cfg)
     }
   }
   local maps = (cfg or {}).capabilities and {spec2} or {spec1, spec2}
-  local new =
-    vim.tbl_deep_extend("force", cfg or vim.empty_dict(), unpack(maps))
+  local new = vim.tbl_deep_extend("force", cfg or vim.empty_dict(), unpack(maps))
   return new
 end
 
