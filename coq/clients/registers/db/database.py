@@ -36,7 +36,7 @@ class RDB(DB):
     def periodical(
         self, wordreg: Mapping[str, str], linereg: Mapping[str, str]
     ) -> None:
-        m1 = (*wordreg, *linereg)
+        m1 = [{"register": r} for r in (*wordreg, *linereg)]
 
         def m2() -> Iterator[Mapping]:
             for reg, text in wordreg.items():
