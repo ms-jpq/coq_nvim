@@ -41,6 +41,8 @@ def _should_cont(
             return extern.is_dir
         else:
             return False
+    elif len(cur.line_before) == 0 and "\n" in skip_after:
+        return False
     elif any(cur.line_before.endswith(token) for token in skip_after):
         return False
 
