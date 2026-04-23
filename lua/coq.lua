@@ -2,7 +2,7 @@ COQ = COQ or {}
 coq = coq or {}
 
 coq.validate = (function()
-  if vim.fn.has("nvim-0.11") == 0 then
+  if vim.fn.has "nvim-0.11" == 0 then
     return vim.validate
   else
     return function(spec)
@@ -13,7 +13,7 @@ coq.validate = (function()
   end
 end)()
 
-local is_win = vim.fn.has("win32") == 1
+local is_win = vim.fn.has "win32" == 1
 local linesep = "\n"
 local POLLING_RATE = 10
 
@@ -25,11 +25,11 @@ end)()
 
 local job_id = nil
 local err_exit = false
-local has_05 = vim.api.nvim_call_function("has", {"nvim-0.5"}) == 1
+local has_05 = vim.api.nvim_call_function("has", { "nvim-0.5" }) == 1
 
 local echo = function(msg, error)
   if has_05 then
-    vim.api.nvim_echo({{msg, error and "ErrorMsg" or nil}}, true, {})
+    vim.api.nvim_echo({ { msg, error and "ErrorMsg" or nil } }, true, {})
   elseif error then
     vim.api.nvim_err_write(msg)
   else
@@ -59,12 +59,12 @@ local py3 = (function()
   if vim.g.python3_host_prog then
     return vim.fn.fnamemodify(vim.g.python3_host_prog, ":p")
   elseif is_win then
-    return vim.fn.exepath("python")
+    return vim.fn.exepath "python"
   else
-    return vim.fn.exepath("python3")
+    return vim.fn.exepath "python3"
   end
 end)()
-local xdg_dir = vim.fn.stdpath("data")
+local xdg_dir = vim.fn.stdpath "data"
 
 local main = function(is_xdg)
   local v_py = cwd .. (is_win and [[/.vars/runtime/Scripts/python.exe]] or "/.vars/runtime/bin/python3")
@@ -73,18 +73,18 @@ local main = function(is_xdg)
     local v_py_xdg = xdg_dir .. "/coqrt/Scripts/python.exe"
     local v_py = is_xdg and v_py_xdg or v_py
     if vim.fn.filereadable(v_py) == 1 then
-      return {v_py}
+      return { v_py }
     else
       -- local win_proxy = cwd .. [[/venv.cmd]]
-      return {py3}
+      return { py3 }
     end
   else
     local v_py_xdg = xdg_dir .. "/coqrt/bin/python3"
     local v_py = is_xdg and v_py_xdg or v_py
     if vim.fn.filereadable(v_py) == 1 then
-      return {v_py}
+      return { v_py }
     else
-      return {py3}
+      return { py3 }
     end
   end
 end
@@ -99,17 +99,16 @@ end
 
 local start = function(deps, ...)
   local is_xdg = (vim.g.coq_settings or {}).xdg
-  local args =
-    flatten {
+  local args = flatten {
     deps and py3 or main(is_xdg),
-    {"-s", "-u", "-m", "coq"},
-    {...},
-    (is_xdg and {"--xdg", xdg_dir} or {})
+    { "-s", "-u", "-m", "coq" },
+    { ... },
+    (is_xdg and { "--xdg", xdg_dir } or {}),
   }
 
   local params = {
     cwd = cwd,
-    env = {PYTHONSAFEPATH = "1", PYTHONPATH = cwd},
+    env = { PYTHONSAFEPATH = "1", PYTHONPATH = cwd },
     on_exit = on_exit,
     on_stdout = (function()
       if deps then
@@ -124,7 +123,7 @@ local start = function(deps, ...)
       else
         return on_stderr
       end
-    end)()
+    end)(),
   }
   if deps then
     vim.api.nvim_command [[new]]
@@ -143,9 +142,9 @@ vim.api.nvim_command [[command! -nargs=0 COQdeps lua coq.deps()]]
 
 local set_coq_call = function(cmd)
   coq[cmd] = function(...)
-    local args = {...}
+    local args = { ... }
 
-    local srv = is_win and {"localhost:0"} or {}
+    local srv = is_win and { "localhost:0" } or {}
     local server = vim.fn.serverstart(unpack(srv))
 
     if not job_id then
@@ -155,35 +154,32 @@ local set_coq_call = function(cmd)
     if not err_exit and COQ[cmd] then
       COQ[cmd](args)
     else
-      vim.defer_fn(
-        function()
-          if err_exit then
-            return
-          else
-            coq[cmd](unpack(args))
-          end
-        end,
-        POLLING_RATE
-      )
+      vim.defer_fn(function()
+        if err_exit then
+          return
+        else
+          coq[cmd](unpack(args))
+        end
+      end, POLLING_RATE)
     end
   end
 end
 
-set_coq_call("Now")
+set_coq_call "Now"
 vim.api.nvim_command [[command! -complete=customlist,coq#complete_now -nargs=* COQnow lua coq.Now(<f-args>)]]
 
-set_coq_call("Stats")
+set_coq_call "Stats"
 vim.api.nvim_command [[command! -nargs=* COQstats lua coq.Stats(<f-args>)]]
 
-set_coq_call("Snips")
+set_coq_call "Snips"
 vim.api.nvim_command [[command! -complete=customlist,coq#complete_snips -nargs=* COQsnips lua coq.Snips(<f-args>)]]
 
-set_coq_call("Help")
+set_coq_call "Help"
 vim.api.nvim_command [[command! -complete=customlist,coq#complete_help -nargs=* COQhelp lua coq.Help(<f-args>)]]
 
 coq.lsp_ensure_capabilities = function(cfg)
   local spec1 = {
-    capabilities = vim.lsp.protocol.make_client_capabilities()
+    capabilities = vim.lsp.protocol.make_client_capabilities(),
   }
   local spec2 = {
     capabilities = {
@@ -192,40 +188,37 @@ coq.lsp_ensure_capabilities = function(cfg)
           completionItem = {
             deprecatedSupport = true,
             insertReplaceSupport = true,
-            insertTextModeSupport = {valueSet = {1, 2}},
+            insertTextModeSupport = { valueSet = { 1, 2 } },
             labelDetailsSupport = true,
             preselectSupport = true,
-            resolveSupport = {properties = {"additionalTextEdits", "command"}},
+            resolveSupport = { properties = { "additionalTextEdits", "command" } },
             snippetSupport = true,
-            tagSupport = {valueSet = {1}}
-          }
+            tagSupport = { valueSet = { 1 } },
+          },
         },
         inlineCompletion = {
-          dynamicRegistration = false
-        }
-      }
-    }
+          dynamicRegistration = false,
+        },
+      },
+    },
   }
-  local maps = (cfg or {}).capabilities and {spec2} or {spec1, spec2}
+  local maps = (cfg or {}).capabilities and { spec2 } or { spec1, spec2 }
   local new = vim.tbl_deep_extend("force", cfg or vim.empty_dict(), unpack(maps))
   return new
 end
 
 local settings = vim.g.coq_settings or {}
 if settings.auto_start then
-  local args = settings.auto_start == "shut-up" and {"--shut-up"} or {}
+  local args = settings.auto_start == "shut-up" and { "--shut-up" } or {}
   coq.Now(unpack(args))
 end
 
-require("coq.lsp-request")
-require("coq.ts-request")
-require("coq.completion")
+require "coq.lsp-request"
+require "coq.ts-request"
+require "coq.completion"
 
-return setmetatable(
-  coq,
-  {
-    __call = function()
-      return coq
-    end
-  }
-)
+return setmetatable(coq, {
+  __call = function()
+    return coq
+  end,
+})
