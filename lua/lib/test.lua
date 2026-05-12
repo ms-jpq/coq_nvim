@@ -19,6 +19,7 @@ return {
     for _, t in ipairs(registry) do
       local done = false
       local err = nil
+
       async.run(function()
         local ok, e = xpcall(t.fn, debug.traceback)
         done = true
@@ -26,18 +27,19 @@ return {
           err = e
         end
       end)
+
       vim.wait(t.timeout, function()
         return done
       end)
 
       if not done then
-        vim.notify("  ✗ " .. t.name .. "\n  timeout", vim.log.levels.ERROR)
+        vim.notify("   ✗ " .. t.name .. "\n  timeout", vim.log.levels.ERROR)
         failed = failed + 1
       elseif err then
-        vim.notify("  ✗ " .. t.name .. "\n" .. err, vim.log.levels.ERROR)
+        vim.notify("   ✗ " .. t.name .. "\n" .. err, vim.log.levels.ERROR)
         failed = failed + 1
       else
-        vim.notify("  ✓ " .. t.name, vim.log.levels.INFO)
+        vim.notify("   ✓ " .. t.name, vim.log.levels.INFO)
       end
     end
 
