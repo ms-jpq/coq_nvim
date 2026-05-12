@@ -1,4 +1,5 @@
 local async = require "lib.async"
+local tbl = require "lib.tbl"
 
 local registry = {}
 
@@ -14,32 +15,54 @@ return {
       error(("eq failed:\n  lhs = %s\n  rhs = %s"):format(vim.inspect(a), vim.inspect(b)), 2)
     end
   end,
-  run = function()
-    local failed = 0
-    for _, t in ipairs(registry) do
-      local done = false
-      local err = nil
+  run = function(seed)
+    seed = seed or vim.uv.hrtime()
+    math.randomseed(seed)
+    tbl.shuffle(registry)
+
+    local start = vim.uv.hrtime()
+    local max_timeout = 0
+
+    for _, t in pairs(registry) do
+      t.done = false
+      t.err = nil
+      t.timed_out = false
+      max_timeout = math.max(max_timeout, t.timeout)
 
       async.run(function()
         local ok, e = xpcall(t.fn, debug.traceback)
-        done = true
+        t.done = true
         if not ok then
-          err = e
+          t.err = e
         end
       end)
+    end
 
-      vim.wait(t.timeout, function()
-        return done
-      end)
+    vim.wait(max_timeout + 100, function()
+      local elapsed_ms = (vim.uv.hrtime() - start) / 1e6
+      local all_done = true
+      for _, t in pairs(registry) do
+        if not t.done then
+          if elapsed_ms > t.timeout then
+            t.timed_out = true
+          else
+            all_done = false
+          end
+        end
+      end
+      return all_done
+    end)
 
-      if not done then
-        vim.notify("   ✗ " .. t.name .. "\n  timeout", vim.log.levels.ERROR)
+    local failed = 0
+    for _, t in ipairs(registry) do
+      if t.timed_out then
+        vim.notify("✗ " .. t.name .. "\n  timeout", vim.log.levels.ERROR)
         failed = failed + 1
-      elseif err then
-        vim.notify("   ✗ " .. t.name .. "\n" .. err, vim.log.levels.ERROR)
+      elseif t.err then
+        vim.notify("✗ " .. t.name .. "\n" .. t.err, vim.log.levels.ERROR)
         failed = failed + 1
       else
-        vim.notify("   ✓ " .. t.name, vim.log.levels.INFO)
+        vim.notify("✓ " .. t.name, vim.log.levels.INFO)
       end
     end
 
