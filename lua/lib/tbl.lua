@@ -4,6 +4,5 @@ return {
       local j = math.random(i)
       t[i], t[j] = t[j], t[i]
     end
-    return t
   end,
 }

@@ -3,12 +3,22 @@ local tbl = require "lib.tbl"
 
 local registry = {}
 
+local function register(prefix, spec, fn)
+  if type(spec) == "string" then
+    spec = { spec }
+  end
+  local name = prefix and (prefix .. " :: " .. spec[1]) or spec[1]
+  table.insert(registry, { name = name, timeout = spec.timeout or 5000, fn = fn })
+end
+
 return {
+  describe = function(prefix, body)
+    body(function(spec, fn)
+      register(prefix, spec, fn)
+    end)
+  end,
   test = function(spec, fn)
-    if type(spec) == "string" then
-      spec = { spec }
-    end
-    table.insert(registry, { name = spec[1], timeout = spec.timeout or 5000, fn = fn })
+    register(nil, spec, fn)
   end,
   eq = function(a, b)
     if not vim.deep_equal(a, b) then
@@ -17,6 +27,7 @@ return {
   end,
   run = function(seed)
     seed = seed or vim.uv.hrtime()
+    vim.notify("🎲 seed " .. seed, vim.log.levels.INFO)
     math.randomseed(seed)
     tbl.shuffle(registry)
 
