@@ -5,6 +5,7 @@ T.describe("async", function(test)
   test("future resolves synchronously", function()
     local resolve, await = async.future()
     resolve "woof"
+
     T.eq(await(), "woof")
   end)
 
@@ -12,6 +13,7 @@ T.describe("async", function(test)
     local bark = async.wrap(function(name, cb)
       cb(name .. ":woof")
     end)
+
     T.eq(bark "rex", "rex:woof")
   end)
 
@@ -20,6 +22,7 @@ T.describe("async", function(test)
       cb("rex", "spot", "fido")
     end)
     local a, b, c = pack()
+
     T.eq({ a, b, c }, { "rex", "spot", "fido" })
   end)
 
@@ -28,6 +31,7 @@ T.describe("async", function(test)
     local later = async(function()
       ran = true
     end)
+
     T.eq(ran, false)
     later()
     T.eq(ran, true)
@@ -39,6 +43,7 @@ T.describe("async", function(test)
         error "rex went missing"
       end)
     end)
+
     T.eq(ok, false)
   end)
 
@@ -46,6 +51,7 @@ T.describe("async", function(test)
     local start = vim.uv.hrtime()
     async.sleep(20)
     local elapsed_ms = (vim.uv.hrtime() - start) / 1e6
+
     assert(elapsed_ms >= 15, ("expected ~20ms, got %.1fms"):format(elapsed_ms))
   end)
 end)

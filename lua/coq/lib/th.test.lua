@@ -6,6 +6,7 @@ T.describe("th", function(test)
     local result = th.run(function(name)
       return name .. ":woof"
     end, { "rex" })
+
     T.eq(result, "rex:woof")
   end)
 
@@ -13,6 +14,7 @@ T.describe("th", function(test)
     local result = th.run(function(a, b)
       return a + b
     end, { 7, 3 })
+
     T.eq(result, 10)
   end)
 
@@ -20,6 +22,7 @@ T.describe("th", function(test)
     local result = th.run(function()
       return { name = "rex", age = 7, sounds = { "woof", "growl" } }
     end, {})
+
     T.eq(result, { name = "rex", age = 7, sounds = { "woof", "growl" } })
   end)
 
@@ -27,6 +30,7 @@ T.describe("th", function(test)
     local has_fn = th.run(function()
       return vim.fn ~= nil
     end, {})
+
     T.eq(has_fn, false)
   end)
 
@@ -34,6 +38,7 @@ T.describe("th", function(test)
     local a, b, c = th.run(function()
       return "rex", 7, true
     end, {})
+
     T.eq(a, "rex")
     T.eq(b, 7)
     T.eq(c, true)
@@ -41,6 +46,7 @@ T.describe("th", function(test)
 
   test("returns no values", function()
     local result = th.run(function() end, {})
+
     T.eq(result, nil)
   end)
 
@@ -48,6 +54,7 @@ T.describe("th", function(test)
     local ok, err = pcall(th.run, function()
       error "rex went missing"
     end, {})
+
     T.eq(ok, false)
     assert(err:find "rex went missing", "expected error message, got: " .. tostring(err))
   end)
