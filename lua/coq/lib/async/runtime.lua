@@ -13,24 +13,29 @@ M.future = function(h)
   assert(thread, "future: must be called inside running coroutine")
   h = h or M.current()
 
+  local done = false
   local resolved = nil
   local resolve = function(...)
-    if coroutine.status(thread) == "running" then
-      resolved = { ... }
-    elseif coroutine.status(thread) == "suspended" then
+    if done then
+      return
+    end
+    done = true
+    if coroutine.status(thread) == "suspended" then
       local ok, msg = coroutine.resume(thread, ...)
       if not ok then
         error(msg, 0)
       end
+    else
+      resolved = { ... }
     end
   end
 
   local await = function()
-    if h and h.cancelled then
-      return
-    end
     if resolved then
       return unpack(resolved)
+    end
+    if h and h.cancelled then
+      return
     end
 
     local unwatch

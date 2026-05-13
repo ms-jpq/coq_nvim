@@ -12,50 +12,21 @@ M.race = function(h, fns)
     fns = h
     h = nil
   end
-  local thread = coroutine.running()
-  assert(thread, "race: must be called inside running coroutine")
   h = h or handle.new(M.current())
-  local resolved = nil
-
-  local resume = function(values)
-    if coroutine.status(thread) == "suspended" then
-      local ok, msg = coroutine.resume(thread, unpack(values))
-      if not ok then
-        error(msg, 0)
-      end
-    end
-  end
-
-  local finish = function(idx)
-    return function(...)
-      if resolved then
-        return
-      end
-      resolved = { idx, ... }
-      h.cancel()
-      resume(resolved)
-    end
-  end
+  local resolve, await = M.future(h)
 
   h.watch(function()
-    if resolved then
-      return
-    end
-    resolved = {}
-    resume(resolved)
+    resolve()
   end)
 
   for idx, fn in ipairs(fns) do
-    local done = finish(idx)
     M.run(h, function()
-      done(fn())
+      resolve(idx, fn())
+      h.cancel()
     end)
   end
 
-  if resolved then
-    return unpack(resolved)
-  end
-  return coroutine.yield()
+  return await()
 end
 
 M.merge = function(parent, fns)
@@ -71,10 +42,8 @@ M.merge = function(parent, fns)
   return function()
     while #iters > 0 do
       local race_fns = {}
-      for i, entry in ipairs(iters) do
-        race_fns[i] = function()
-          return entry.fn()
-        end
+      for _, entry in ipairs(iters) do
+        table.insert(race_fns, entry.fn)
       end
       local race_h
       if parent then
