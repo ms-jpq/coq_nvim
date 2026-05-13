@@ -1,4 +1,5 @@
 local async = require "coq.lib.async"
+local cancel = require "coq.lib.cancel"
 local tbl = require "coq.lib.tbl"
 
 local M = {}
@@ -44,7 +45,7 @@ M.run = function(seed)
     t.timed_out = false
     max_timeout = math.max(max_timeout, t.timeout)
 
-    async.run(function()
+    async.run(cancel.ROOT, function()
       local ok, e = xpcall(t.fn, debug.traceback)
       t.done = true
       if not ok then

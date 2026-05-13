@@ -1,3 +1,5 @@
+local lib = require "coq.lib"
+
 local M = {}
 
 M.token = function(parent)
@@ -13,13 +15,19 @@ M.token = function(parent)
   end
 
   token.cancel = function()
-    if token.cancelled then
-      return
-    end
-    token.cancelled = true
-    for _, watcher in pairs(watchers) do
-      fire(watcher)
-    end
+    lib.scope(function(defer)
+      defer(function()
+        watchers = {}
+      end)
+
+      if token.cancelled then
+        return
+      end
+      token.cancelled = true
+      for _, watcher in pairs(watchers) do
+        fire(watcher)
+      end
+    end)
   end
 
   token.watch = function(watcher)
@@ -39,5 +47,7 @@ M.token = function(parent)
 
   return token
 end
+
+M.ROOT = M.token()
 
 return M

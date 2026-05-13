@@ -34,7 +34,8 @@ M.future = function()
   return resolve, await
 end
 
-M.race = function(fns, parent)
+M.race = function(parent, fns)
+  assert(parent, "race: parent token required")
   local thread = coroutine.running()
   assert(thread, "race: must be called inside running coroutine")
   local resolved = nil
@@ -70,9 +71,9 @@ M.race = function(fns, parent)
 
   for idx, fn in pairs(fns) do
     local done = finish(idx)
-    M.run(function()
+    M.run(token, function()
       done(fn())
-    end, token)
+    end)
   end
 
   if resolved then
@@ -92,15 +93,12 @@ M.wrap = function(fn)
   end
 end
 
-local thunk = function(fn, token)
+M.thunk = function(token, fn)
+  assert(token, "thunk: token required")
   return function(...)
     local parent = threads[coroutine.running()]
-    if token then
-      if parent then
-        parent.watch(token)
-      end
-    else
-      token = parent
+    if parent and parent ~= token then
+      parent.watch(token)
     end
 
     local argv = { ... }
@@ -112,14 +110,13 @@ local thunk = function(fn, token)
 
     local ok, ret = coroutine.resume(thread)
     if not ok then
-      local tb = debug.traceback(thread, ret)
-      error(tb, 0)
+      error(debug.traceback(thread, ret), 0)
     end
   end
 end
 
-M.run = function(fn, token)
-  thunk(fn, token)()
+M.run = function(token, fn)
+  M.thunk(token, fn)()
 end
 
 M.sleep = function(milliseconds)
@@ -133,8 +130,4 @@ M.sleep = function(milliseconds)
   return await()
 end
 
-return setmetatable(M, {
-  __call = function(_, fn, token)
-    return thunk(fn, token)
-  end,
-})
+return M
