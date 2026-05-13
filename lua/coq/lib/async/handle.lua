@@ -3,8 +3,9 @@ local lib = require "coq.lib"
 local M = {}
 
 M.new = function(parent, deadline_ms)
-  local watchers = {}
   local handle = { cancelled = false }
+
+  local watchers = {}
   local unwatch_from_parent
   local timer
 
@@ -45,6 +46,7 @@ M.new = function(parent, deadline_ms)
       fire(watcher)
       return function() end
     end
+
     table.insert(watchers, watcher)
     return function()
       for i, w in pairs(watchers) do

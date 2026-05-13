@@ -1,4 +1,9 @@
+local handle = require "coq.lib.async.handle"
+local lib = require "coq.lib"
+
 local M = {}
+
+M.ROOT = handle.new()
 
 local threads = setmetatable({}, { __mode = "k" })
 
@@ -7,12 +12,11 @@ M.bind = function(thread, h)
 end
 
 M.current = function()
-  return threads[coroutine.running()]
+  return threads[coroutine.running()] or M.ROOT
 end
 
 M.cancelled = function()
-  local h = M.current()
-  return h ~= nil and h.cancelled
+  return M.current().cancelled
 end
 
 M.future = function()
@@ -42,17 +46,15 @@ M.future = function()
     assert(thread, "await: must be called inside running coroutine")
 
     h = h or M.current()
-    if h and h.cancelled then
+    if h.cancelled then
       return
     end
     if not done then
-      local unwatch = h and h.watch(function()
+      local unwatch = h.watch(function()
         finish(nil)
       end)
       coroutine.yield()
-      if unwatch then
-        unwatch()
-      end
+      unwatch()
     end
     return unpack(values or {})
   end
@@ -72,6 +74,10 @@ M.wrap = function(fn)
 end
 
 M.thunk = function(h, fn)
+  if fn == nil then
+    fn = h
+    h = M.current()
+  end
   return function(...)
     assert(coroutine.running() == nil, "thunk: must be called outside a coroutine")
     local argv = { ... }
@@ -90,28 +96,26 @@ end
 
 M.sleep = function(milliseconds)
   local h = M.current()
-  if h and h.cancelled then
+  if h.cancelled then
     milliseconds = 0
   end
 
   local resolve, await = M.future()
   local timer = vim.uv.new_timer()
 
-  local fire = function()
-    if timer:is_closing() then
-      return
-    end
-    timer:stop()
-    timer:close()
-    resolve()
-  end
+  return lib.scope(function(defer)
+    defer(function()
+      if not timer:is_closing() then
+        timer:stop()
+        timer:close()
+      end
+    end)
 
-  timer:start(milliseconds, 0, fire)
-  if h then
-    h.watch(fire)
-  end
+    defer(h.watch(resolve))
 
-  return await()
+    timer:start(milliseconds, 0, resolve)
+    return await()
+  end)
 end
 
 return M

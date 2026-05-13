@@ -97,4 +97,28 @@ T.describe("sleep cancel", function(test)
 
     assert(elapsed_ms and elapsed_ms < 60, ("expected ~10ms, got %s"):format(tostring(elapsed_ms)))
   end)
+
+  test("does not leak watchers on the ambient handle", function()
+    local h = async.handle()
+
+    local live = {}
+    local orig_watch = h.watch
+    h.watch = function(fn)
+      live[fn] = true
+      local unwatch = orig_watch(fn)
+      return function()
+        live[fn] = nil
+        unwatch()
+      end
+    end
+
+    vim.schedule(async.thunk(h, function()
+      for _ = 1, 5 do
+        async.sleep(1)
+      end
+    end))
+    async.sleep(30)
+
+    T.eq(next(live), nil)
+  end)
 end)

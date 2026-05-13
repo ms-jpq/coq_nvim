@@ -2,6 +2,13 @@ local T = require "coq.lib.test"
 local async = require "coq.lib.async"
 
 T.describe("race", function(test)
+  test("returns nil for empty fns list", function()
+    local idx, val = async.race {}
+
+    T.eq(idx, nil)
+    T.eq(val, nil)
+  end)
+
   test("returns winning idx and value on sync task", function()
     local idx, val = async.race {
       function()

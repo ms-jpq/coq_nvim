@@ -23,16 +23,14 @@ M.new = function()
     local sub = { pending = nil, waiter = nil }
     table.insert(subscribers, sub)
 
-    if h then
-      h.watch(function()
-        for i, s in ipairs(subscribers) do
-          if s == sub then
-            table.remove(subscribers, i)
-            break
-          end
+    h.watch(function()
+      for i, s in ipairs(subscribers) do
+        if s == sub then
+          table.remove(subscribers, i)
+          break
         end
-      end)
-    end
+      end
+    end)
 
     return function()
       if sub.pending ~= nil then

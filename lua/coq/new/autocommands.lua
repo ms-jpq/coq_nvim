@@ -11,7 +11,7 @@ vim.api.nvim_create_autocmd({ "InsertCharPre" }, {
   end,
 })
 
-async.thunk(async.ROOT, function()
+async.thunk(function()
   for args in events.subscribe() do
   end
 end)()

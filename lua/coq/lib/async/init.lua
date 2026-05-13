@@ -1,4 +1,5 @@
 local handle = require "coq.lib.async.handle"
+local lib = require "coq.lib"
 local nursery = require "coq.lib.async.nursery"
 local runtime = require "coq.lib.async.runtime"
 
@@ -10,7 +11,6 @@ local M = {
   thunk = runtime.thunk,
   sleep = runtime.sleep,
   handle = handle.new,
-  ROOT = handle.new(),
   nursery = nursery.new,
   scope = nursery.scope,
 }
@@ -20,34 +20,42 @@ M.race = function(h, fns)
     fns = h
     h = nil
   end
+  if #fns == 0 then
+    return
+  end
+
   h = h or handle.new(M.current())
-  local resolve, await = M.future()
-  local race_err
 
-  h.watch(function()
-    resolve()
-  end)
+  return lib.scope(function(defer)
+    defer(h.cancel)
 
-  for idx, fn in ipairs(fns) do
-    local thread = coroutine.create(function()
-      local ok, err = xpcall(function()
-        resolve(idx, fn())
-      end, debug.traceback)
-      if not ok and not race_err then
-        race_err = err
-        h.cancel()
-      end
+    local resolve, await = M.future()
+    local race_err
+
+    h.watch(function()
+      resolve()
     end)
-    runtime.bind(thread, h)
-    coroutine.resume(thread)
-  end
 
-  local ret = { await(h) }
-  h.cancel()
-  if race_err then
-    error(race_err, 0)
-  end
-  return unpack(ret)
+    for idx, fn in ipairs(fns) do
+      local thread = coroutine.create(function()
+        local ok, err = xpcall(function()
+          resolve(idx, fn())
+        end, debug.traceback)
+        if not ok and not race_err then
+          race_err = err
+          h.cancel()
+        end
+      end)
+      runtime.bind(thread, h)
+      coroutine.resume(thread)
+    end
+
+    local ret = { await(h) }
+    if race_err then
+      error(race_err, 0)
+    end
+    return unpack(ret)
+  end)
 end
 
 M.merge = function(parent, fns)

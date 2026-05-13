@@ -5,10 +5,10 @@ local M = {}
 
 M.new = function(parent)
   parent = parent or runtime.current()
+  local nursery = { handle = handle.new(parent), error = nil }
+
   local pending = setmetatable({}, { __mode = "k" })
   local empty_waiters = {}
-
-  local nursery = { handle = handle.new(parent), error = nil }
 
   nursery.spawn = function(fn)
     local thread
@@ -55,15 +55,15 @@ M.scope = function(parent, body)
     parent = nil
   end
 
-  local n = M.new(parent)
-  local ok, err = pcall(body, n)
+  local nursery = M.new(parent)
+  local ok, err = pcall(body, nursery)
   if not ok then
-    if not n.error then
-      n.error = err
+    if not nursery.error then
+      nursery.error = err
     end
-    n.handle.cancel()
+    nursery.handle.cancel()
   end
-  n.join()
+  nursery.join()
 end
 
 return M

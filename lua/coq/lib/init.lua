@@ -4,9 +4,9 @@ M.group = [[coq]]
 
 M.scope = function(fn)
   local defers = {}
-  local ok, ret = pcall(fn, function(defer)
+  local rets = { pcall(fn, function(defer)
     table.insert(defers, defer)
-  end)
+  end) }
 
   for defer in vim.iter(defers):rev() do
     local ok, err = pcall(defer)
@@ -15,10 +15,10 @@ M.scope = function(fn)
     end
   end
 
-  if ok then
-    return ret
+  if rets[1] then
+    return unpack(rets, 2)
   else
-    error(ret, 0)
+    error(rets[2], 0)
   end
 end
 
