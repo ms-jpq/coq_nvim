@@ -32,6 +32,7 @@ T.describe("merge", function(test)
     for _, v in async.merge { iter } do
       table.insert(out, v)
     end
+
     T.eq(out, { 10, 20, 30 })
   end)
 
@@ -46,6 +47,7 @@ T.describe("merge", function(test)
     do
       table.insert(out, v)
     end
+
     T.eq(out, { "a", "b", "c" })
   end)
 
@@ -60,6 +62,7 @@ T.describe("merge", function(test)
     do
       table.insert(out, { idx, v })
     end
+
     T.eq(out, { { 1, "a" }, { 3, "b" }, { 2, "c" } })
   end)
 
@@ -73,8 +76,8 @@ T.describe("merge", function(test)
       end
       got = async.merge { iter }()
     end)
-
     h.cancel()
+
     T.eq(got, nil)
   end)
 
@@ -88,8 +91,8 @@ T.describe("merge", function(test)
       end
       got = async.merge(scope, { iter })()
     end)
-
     scope.cancel()
+
     T.eq(got, nil)
   end)
 end)

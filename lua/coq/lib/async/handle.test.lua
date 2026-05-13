@@ -8,8 +8,8 @@ T.describe("handle", function(test)
     h.watch(function()
       fired = true
     end)
-
     h.cancel()
+
     T.eq(fired, true)
   end)
 
@@ -19,16 +19,15 @@ T.describe("handle", function(test)
     h.watch(function()
       count = count + 1
     end)
+    h.cancel()
+    h.cancel()
 
-    h.cancel()
-    h.cancel()
     T.eq(count, 1)
   end)
 
   test("watch on a cancelled handle fires immediately", function()
     local h = async.handle()
     h.cancel()
-
     local fired = false
     h.watch(function()
       fired = true
@@ -43,16 +42,15 @@ T.describe("handle", function(test)
     local unwatch = h.watch(function()
       fired = true
     end)
-
     unwatch()
     h.cancel()
+
     T.eq(fired, false)
   end)
 
   test("unwatch on a cancelled handle is a noop", function()
     local h = async.handle()
     h.cancel()
-
     local unwatch = h.watch(function() end)
     unwatch()
   end)
@@ -60,25 +58,23 @@ T.describe("handle", function(test)
   test("parent cancel cascades to child", function()
     local parent = async.handle()
     local child = async.handle(parent)
-
     parent.cancel()
+
     T.eq(child.cancelled, true)
   end)
 
   test("child cancel does not cancel parent", function()
     local parent = async.handle()
     local child = async.handle(parent)
-
     child.cancel()
+
     T.eq(parent.cancelled, false)
   end)
 
   test("child cancel releases its slot in parent watchers", function()
     local parent = async.handle()
     local child = async.handle(parent)
-
     child.cancel()
-
     local parent_fired = 0
     parent.watch(function()
       parent_fired = parent_fired + 1
@@ -90,8 +86,11 @@ T.describe("handle", function(test)
 
   test("deadline cancels handle after the elapsed time", function()
     local h = async.handle(nil, 5)
+
     T.eq(h.cancelled, false)
+
     async.sleep(20)
+
     T.eq(h.cancelled, true)
   end)
 
@@ -99,6 +98,7 @@ T.describe("handle", function(test)
     local h = async.handle(nil, 5)
     h.cancel()
     async.sleep(20)
+
     T.eq(h.cancelled, true)
   end)
 
@@ -109,6 +109,7 @@ T.describe("handle", function(test)
       fired = true
     end)
     async.sleep(20)
+
     T.eq(fired, true)
   end)
 
@@ -123,8 +124,8 @@ T.describe("handle", function(test)
     unwatch_late = h.watch(function()
       count = count + 1
     end)
-
     h.cancel()
+
     T.eq(count, 2)
   end)
 end)

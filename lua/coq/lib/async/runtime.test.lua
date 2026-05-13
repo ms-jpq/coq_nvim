@@ -33,7 +33,9 @@ T.describe("async", function(test)
     end)
 
     T.eq(ran, false)
+
     later()
+
     T.eq(ran, true)
   end)
 

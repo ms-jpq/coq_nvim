@@ -126,8 +126,8 @@ T.describe("race", function(test)
         end,
       })
     end)
-
     outer.cancel()
+
     T.eq(cancelled, true)
     T.eq(idx, nil)
   end)

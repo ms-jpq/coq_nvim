@@ -8,6 +8,7 @@ T.describe("future cancel", function(test)
 
     async.run(h, function()
       local _, await = async.future()
+
       T.eq(await(), nil)
     end)
   end)
@@ -15,8 +16,8 @@ T.describe("future cancel", function(test)
   test("await with explicit handle returns nil when that handle cancelled", function()
     local h = async.handle()
     h.cancel()
-
     local _, await = async.future(h)
+
     T.eq(await(), nil)
   end)
 
@@ -24,6 +25,7 @@ T.describe("future cancel", function(test)
     async.run(async.ROOT, function()
       local resolve, await = async.future()
       resolve "woof"
+
       T.eq(await(), "woof")
     end)
   end)
@@ -37,8 +39,8 @@ T.describe("future cancel", function(test)
       got = await()
       awoke = true
     end)
-
     h.cancel()
+
     T.eq(awoke, true)
     T.eq(got, nil)
   end)
@@ -51,9 +53,9 @@ T.describe("future cancel", function(test)
       resolve = _resolve
       await()
     end)
-
     h.cancel()
     local ok = pcall(resolve, "late")
+
     T.eq(ok, true)
   end)
 end)
@@ -67,6 +69,7 @@ T.describe("sleep cancel", function(test)
       local start = vim.uv.hrtime()
       async.sleep(100)
       local elapsed_ms = (vim.uv.hrtime() - start) / 1e6
+
       assert(elapsed_ms < 20, ("expected immediate, got %.1fms"):format(elapsed_ms))
     end)
   end)

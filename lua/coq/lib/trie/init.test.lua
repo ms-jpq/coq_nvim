@@ -13,24 +13,28 @@ T.describe("trie", function(test)
   test("insert then get round-trips", function()
     local t = trie.new()
     t.insert("lil", "good")
+
     T.eq(t.get "lil", "good")
   end)
 
   test("get on missing key returns nil", function()
     local t = trie.new()
     t.insert("lil", "good")
+
     T.eq(t.get "spot", nil)
   end)
 
   test("get on internal node without value returns nil", function()
     local t = trie.new()
     t.insert("lil", "good")
+
     T.eq(t.get "re", nil)
   end)
 
   test("get on extension past a terminal returns nil", function()
     local t = trie.new()
     t.insert("lil", "good")
+
     T.eq(t.get "lilx", nil)
   end)
 
@@ -38,6 +42,7 @@ T.describe("trie", function(test)
     local t = trie.new()
     t.insert("lil", "good")
     t.insert("lil", "bad")
+
     T.eq(t.get "lil", "bad")
   end)
 
@@ -45,6 +50,7 @@ T.describe("trie", function(test)
     local t = trie.new()
     t.insert("lil", "dog")
     t.insert("lilx", "puppy")
+
     T.eq(t.get "lil", "dog")
     T.eq(t.get "lilx", "puppy")
   end)
@@ -55,6 +61,7 @@ T.describe("trie", function(test)
     t.insert("lilx", 2)
     t.insert("liy", 3)
     t.insert("spot", 4)
+
     T.eq(collect(t.prefix "li"), { lil = 1, lilx = 2, liy = 3 })
   end)
 
@@ -62,6 +69,7 @@ T.describe("trie", function(test)
     local t = trie.new()
     t.insert("lil", 1)
     t.insert("lilx", 2)
+
     T.eq(collect(t.prefix "lil"), { lil = 1, lilx = 2 })
   end)
 
@@ -69,17 +77,20 @@ T.describe("trie", function(test)
     local t = trie.new()
     t.insert("lil", 1)
     t.insert("spot", 2)
+
     T.eq(collect(t.prefix ""), { lil = 1, spot = 2 })
   end)
 
   test("prefix on absent prefix yields nothing", function()
     local t = trie.new()
     t.insert("lil", 1)
+
     T.eq(collect(t.prefix "spot"), {})
   end)
 
   test("prefix on empty trie yields nothing", function()
     local t = trie.new()
+
     T.eq(collect(t.prefix ""), {})
   end)
 
@@ -88,6 +99,7 @@ T.describe("trie", function(test)
     local b = trie.new()
     a.insert("lil", "a")
     b.insert("lil", "b")
+
     T.eq(a.get "lil", "a")
     T.eq(b.get "lil", "b")
   end)

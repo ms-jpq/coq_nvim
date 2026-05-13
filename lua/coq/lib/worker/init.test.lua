@@ -20,6 +20,7 @@ T.describe("worker", function(test)
     w.train()
     local n = w.count()
     w.close()
+
     T.eq(n, 3)
   end)
 
@@ -38,6 +39,7 @@ T.describe("worker", function(test)
     w.rename "spot"
     local g = w.greet "hi"
     w.close()
+
     T.eq(g, "hi, spot")
   end)
 
@@ -49,6 +51,7 @@ T.describe("worker", function(test)
     }
     local a, b, c = w.pack()
     w.close()
+
     T.eq(a, "lil")
     T.eq(b, 7)
     T.eq(c, true)
@@ -66,6 +69,7 @@ T.describe("worker", function(test)
     local ok, err = pcall(w.bork)
     local r = w.ok()
     w.close()
+
     T.eq(ok, false)
     assert(err:find "lil went missing", "expected error message, got: " .. tostring(err))
     T.eq(r, "still alive")
@@ -93,6 +97,7 @@ T.describe("worker", function(test)
     local elapsed_ms = (vim.uv.hrtime() - start) / 1e6
     local n = w.count()
     w.close()
+
     T.eq(n, 1)
     assert(elapsed_ms >= 15, ("expected ~20ms, got %.1fms"):format(elapsed_ms))
   end)
@@ -109,6 +114,7 @@ T.describe("worker", function(test)
     }
     local cwd_from_worker = w.get_cwd()
     w.close()
+
     T.eq(cwd_from_worker, expected)
   end)
 
@@ -123,6 +129,7 @@ T.describe("worker", function(test)
     }
     local r = w.add(3, 4)
     w.close()
+
     T.eq(r, 7)
   end)
 
@@ -137,6 +144,7 @@ T.describe("worker", function(test)
     }
     local ok, err = pcall(w.bork)
     w.close()
+
     T.eq(ok, false)
     assert(err:find "lil went missing", "expected main error, got: " .. tostring(err))
   end)
@@ -155,6 +163,7 @@ T.describe("worker", function(test)
     }
     local r = w.slow_cwd()
     w.close()
+
     T.eq(r, expected)
   end)
 
@@ -171,6 +180,7 @@ T.describe("worker", function(test)
       table.insert(seen, dog)
     end
     w.close()
+
     T.eq(seen, { "lil", "spot", "fido" })
   end)
 
@@ -187,6 +197,7 @@ T.describe("worker", function(test)
       table.insert(seen, v)
     end
     w.close()
+
     T.eq(seen, { 1, 2, 3, 4 })
   end)
 
@@ -204,6 +215,7 @@ T.describe("worker", function(test)
       end
     end)
     w.close()
+
     T.eq(seen, { "lil" })
     T.eq(ok, false)
     assert(err:find "leash snapped", "expected leash snapped, got: " .. tostring(err))
@@ -239,6 +251,7 @@ T.describe("worker", function(test)
     end)
     local r = w.ping()
     w.close()
+
     T.eq(seen, { 1, 2, 3, 4 })
     T.eq(r, "pong")
   end)

@@ -21,8 +21,8 @@ T.describe("nursery", function(test)
         async.sleep(20)
         count = count + 1
       end)
-
       n.join()
+
       T.eq(count, 2)
     end)
   end)
@@ -37,8 +37,8 @@ T.describe("nursery", function(test)
       n.spawn(function()
         count = count + 1
       end)
-
       n.join()
+
       T.eq(count, 2)
     end)
   end)
@@ -69,6 +69,7 @@ T.describe("nursery", function(test)
         error "child went missing"
       end)
       local ok, err = pcall(n.join)
+
       T.eq(ok, false)
       assert(err:find "child went missing")
     end)
@@ -89,6 +90,7 @@ T.describe("scope", function(test)
           count = count + 1
         end)
       end)
+
       T.eq(count, 2)
     end)
   end)
@@ -107,6 +109,7 @@ T.describe("scope", function(test)
           error "body went sideways"
         end)
       end)
+
       T.eq(ok, false)
       T.eq(cancelled, true)
       assert(err:find "body went sideways")
@@ -130,6 +133,7 @@ T.describe("scope", function(test)
           end)
         end)
       end)
+
       T.eq(ok, false)
       T.eq(sibling_cancelled, true)
       assert(err:find "child went missing")
