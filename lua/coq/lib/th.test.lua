@@ -30,6 +30,20 @@ T.describe("th", function(test)
     T.eq(has_fn, false)
   end)
 
+  test("returns multiple values", function()
+    local a, b, c = th.run(function()
+      return "rex", 7, true
+    end, {})
+    T.eq(a, "rex")
+    T.eq(b, 7)
+    T.eq(c, true)
+  end)
+
+  test("returns no values", function()
+    local result = th.run(function() end, {})
+    T.eq(result, nil)
+  end)
+
   test("worker errors propagate", function()
     local ok, err = pcall(th.run, function()
       error "rex went missing"
