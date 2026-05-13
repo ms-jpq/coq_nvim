@@ -39,53 +39,6 @@ M.future = function(token)
   return resolve, await
 end
 
-M.race = function(opts)
-  local thread = coroutine.running()
-  assert(thread, "race: must be called inside running coroutine")
-  local token = opts.cancel or cancel.token(M.current_token())
-  local resolved = nil
-
-  local resume = function(values)
-    if coroutine.status(thread) == "suspended" then
-      local ok, msg = coroutine.resume(thread, unpack(values))
-      if not ok then
-        error(msg, 0)
-      end
-    end
-  end
-
-  local finish = function(idx)
-    return function(...)
-      if resolved then
-        return
-      end
-      resolved = { idx, ... }
-      token.cancel()
-      resume(resolved)
-    end
-  end
-
-  token.watch(function()
-    if resolved then
-      return
-    end
-    resolved = {}
-    resume(resolved)
-  end)
-
-  for idx, fn in ipairs(opts) do
-    local done = finish(idx)
-    M.run(token, function()
-      done(fn())
-    end)
-  end
-
-  if resolved then
-    return unpack(resolved)
-  end
-  return coroutine.yield()
-end
-
 M.wrap = function(fn)
   return function(...)
     local resolve, await = M.future()
@@ -142,6 +95,88 @@ M.sleep = function(milliseconds)
   end
 
   return await()
+end
+
+M.race = function(opts)
+  local thread = coroutine.running()
+  assert(thread, "race: must be called inside running coroutine")
+  local token = opts.cancel or cancel.token(M.current_token())
+  local resolved = nil
+
+  local resume = function(values)
+    if coroutine.status(thread) == "suspended" then
+      local ok, msg = coroutine.resume(thread, unpack(values))
+      if not ok then
+        error(msg, 0)
+      end
+    end
+  end
+
+  local finish = function(idx)
+    return function(...)
+      if resolved then
+        return
+      end
+      resolved = { idx, ... }
+      token.cancel()
+      resume(resolved)
+    end
+  end
+
+  token.watch(function()
+    if resolved then
+      return
+    end
+    resolved = {}
+    resume(resolved)
+  end)
+
+  for idx, fn in ipairs(opts) do
+    local done = finish(idx)
+    M.run(token, function()
+      done(fn())
+    end)
+  end
+
+  if resolved then
+    return unpack(resolved)
+  end
+  return coroutine.yield()
+end
+
+M.merge = function(opts)
+  local iters = {}
+  for _, v in ipairs(opts) do
+    table.insert(iters, v)
+  end
+  local parent = opts.cancel
+
+  return function()
+    while #iters > 0 do
+      local fns = {}
+      for i, iter in ipairs(iters) do
+        fns[i] = function()
+          return iter()
+        end
+      end
+      if parent then
+        fns.cancel = cancel.token(parent)
+      end
+
+      local winner, value = M.race(fns)
+
+      if winner == nil then
+        return nil
+      end
+
+      if value == nil then
+        table.remove(iters, winner)
+      else
+        return value
+      end
+    end
+    return nil
+  end
 end
 
 return M
