@@ -18,13 +18,8 @@ return function(req_fd, rsp_fd, raw)
   local iter_resumers = {}
   local tracker = inflight.new()
 
-  local send = function(body)
-    rsp_pipe:write(proto.encode(body))
-  end
-
-  local respond = function(id, ok, n, vals)
-    send { kind = K.RESPONSE, id = id, ok = ok, n = n, values = vals }
-  end
+  local send = proto.sender(rsp_pipe)
+  local respond = proto.responder(send, K.RESPONSE)
 
   local worker = require "coq.lib.worker"
   worker.main = function(fn, ...)

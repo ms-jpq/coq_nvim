@@ -65,6 +65,18 @@ M.pack = function(ok, ...)
   return ok, select("#", ...), { ... }
 end
 
+M.sender = function(pipe)
+  return function(body)
+    pipe:write(M.encode(body))
+  end
+end
+
+M.responder = function(send, kind)
+  return function(id, ok, n, vals)
+    send { kind = kind, id = id, ok = ok, n = n, values = vals }
+  end
+end
+
 M.start_reader = function(pipe, handlers, on_eof)
   local buf = ""
   pipe:read_start(function(err, data)

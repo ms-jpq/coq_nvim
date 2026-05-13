@@ -4,23 +4,14 @@ local async = require "coq.lib.async"
 local config = require "coq.lib.worker.config"
 local errs = require "coq.lib.errs"
 local inflight_mod = require "coq.lib.worker.inflight"
-local iter = require "coq.lib.worker.iter"
 local proto = require "coq.lib.worker.proto"
+local streaming = require "coq.lib.worker.streaming"
 
 local K = proto.KIND
 
 local M = {}
 
-M.streaming = function(fn)
-  return { streaming = true, fn = fn }
-end
-
-local worker_body = function(req_fd, rsp_fd, bootstrap)
-  local raw = vim.mpack.decode(bootstrap)
-  package.path = raw.package_path
-  package.cpath = raw.package_cpath
-  require "coq.lib.worker.run"(req_fd, rsp_fd, raw)
-end
+M.streaming = streaming.wrap
 
 M.spawn = function(definition)
   local req_fds = vim.uv.pipe({ nonblock = true }, { nonblock = true })
@@ -32,15 +23,8 @@ M.spawn = function(definition)
   local inflight = inflight_mod.new()
   local closed = false
 
-  local respond_main = function(id, ok, n, vals)
-    req_write:write(proto.encode {
-      kind = K.MAIN_RESPONSE,
-      id = id,
-      ok = ok,
-      n = n,
-      values = vals,
-    })
-  end
+  local send = proto.sender(req_write)
+  local respond_main = proto.responder(send, K.MAIN_RESPONSE)
 
   local handlers = {
     [K.MAIN_CALL] = function(frame)
@@ -60,16 +44,12 @@ M.spawn = function(definition)
     inflight.drain "worker died"
   end)
 
-  vim.uv.new_thread(worker_body, req_fds.read, rsp_fds.write, config.encode(definition))
+  vim.uv.new_thread(function(req_fd, rsp_fd, bootstrap)
+    require "coq.lib.worker.run"(req_fd, rsp_fd, vim.mpack.decode(bootstrap))
+  end, req_fds.read, rsp_fds.write, config.encode(definition))
 
   local send_request = function(id, method, args, argn)
-    req_write:write(proto.encode {
-      kind = K.REQUEST,
-      id = id,
-      method = method,
-      args = args,
-      argn = argn,
-    })
+    send { kind = K.REQUEST, id = id, method = method, args = args, argn = argn }
   end
 
   local call = async.wrap(function(method, args, argn, cb)
@@ -88,7 +68,7 @@ M.spawn = function(definition)
     send_request(id, method, args, argn)
   end)
 
-  local iter_call = iter.new(req_write, inflight, send_request)
+  local iter_call = streaming.new(send, inflight, send_request)
 
   local bind_rpc = function(name)
     return function(...)
@@ -119,8 +99,7 @@ M.spawn = function(definition)
 
   for name, decl in pairs(definition) do
     if name ~= "init" then
-      local is_stream = type(decl) == "table" and decl.streaming
-      proxy[name] = is_stream and bind_stream(name) or bind_rpc(name)
+      proxy[name] = streaming.is(decl) and bind_stream(name) or bind_rpc(name)
     end
   end
 

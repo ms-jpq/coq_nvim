@@ -6,7 +6,15 @@ local K = proto.KIND
 
 local M = {}
 
-M.new = function(req_write, inflight, send_request)
+M.wrap = function(fn)
+  return { streaming = true, fn = fn }
+end
+
+M.is = function(decl)
+  return type(decl) == "table" and decl.streaming == true
+end
+
+M.new = function(send, inflight, send_request)
   return function(method, args, argn)
     local chan = channel.mpsc()
     local id, release = inflight.reserve(chan.push)
@@ -21,7 +29,7 @@ M.new = function(req_write, inflight, send_request)
       end
       done = true
 
-      req_write:write(proto.encode { kind = K.STOP, id = id })
+      send { kind = K.STOP, id = id }
       release()
     end
 
@@ -31,7 +39,7 @@ M.new = function(req_write, inflight, send_request)
       end
 
       if not first then
-        req_write:write(proto.encode { kind = K.NEXT, id = id })
+        send { kind = K.NEXT, id = id }
       end
       first = false
 
