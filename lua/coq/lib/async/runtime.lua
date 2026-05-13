@@ -16,52 +16,37 @@ M.future = function(h)
   h = h or M.current()
 
   local done = false
-  local resolved = nil
-  local resolve = function(...)
+  local values
+
+  local finish = function(vals)
     if done then
       return
     end
     done = true
+    values = vals
     if coroutine.status(thread) == "suspended" then
-      local ok, msg = coroutine.resume(thread, ...)
+      local ok, msg = coroutine.resume(thread)
       if not ok then
         error(msg, 0)
       end
-    else
-      resolved = { ... }
     end
   end
 
+  local resolve = function(...)
+    finish { ... }
+  end
+
   local await = function()
-    if resolved then
-      return unpack(resolved)
-    end
-    if h and h.cancelled then
-      return
-    end
-
-    local active = true
-    local unwatch
-    if h then
-      unwatch = h.watch(function()
-        if not active then
-          return
-        end
-        if coroutine.status(thread) == "suspended" then
-          local ok, msg = coroutine.resume(thread)
-          if not ok then
-            error(msg, 0)
-          end
-        end
+    if not done and not (h and h.cancelled) then
+      local unwatch = h and h.watch(function()
+        finish(nil)
       end)
+      coroutine.yield()
+      if unwatch then
+        unwatch()
+      end
     end
-
-    local ret = { coroutine.yield() }
-    active = false
-    if unwatch then
-      unwatch()
-    end
-    return unpack(ret)
+    return unpack(values or {})
   end
 
   return resolve, await
