@@ -10,7 +10,7 @@ M.new = function(parent)
   local empty_waiters = {}
 
   local n = {
-    cancel = cs,
+    handle = cs,
     error = nil,
   }
 
@@ -53,14 +53,18 @@ M.new = function(parent)
   return n
 end
 
-M.scope = function(body, parent)
+M.scope = function(parent, body)
+  if body == nil then
+    body = parent
+    parent = nil
+  end
   local n = M.new(parent)
   local ok, err = pcall(body, n)
   if not ok then
     if not n.error then
       n.error = err
     end
-    n.cancel.cancel()
+    n.handle.cancel()
   end
   n.join()
 end
