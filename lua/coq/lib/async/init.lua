@@ -1,4 +1,6 @@
-local future = function()
+local M = {}
+
+M.future = function()
   local thread = coroutine.running()
   assert(thread, "future: must be called inside running coroutine")
 
@@ -24,9 +26,37 @@ local future = function()
   return resolve, await
 end
 
-local wrap = function(fn)
+M.select = function(...)
+  local entries = { ... }
+  local thread = coroutine.running()
+  assert(thread, "select: must be called inside running coroutine")
+  local resolved = nil
+
+  for _, entry in pairs(entries) do
+    local fn, tag = unpack(entry)
+    fn(function(...)
+      if resolved then
+        return
+      end
+      resolved = { tag, ... }
+      if coroutine.status(thread) ~= "running" then
+        local ok, msg = coroutine.resume(thread, unpack(resolved))
+        if not ok then
+          error(msg, 0)
+        end
+      end
+    end)
+  end
+
+  if resolved then
+    return unpack(resolved)
+  end
+  return coroutine.yield()
+end
+
+M.wrap = function(fn)
   return function(...)
-    local resolve, await = future()
+    local resolve, await = M.future()
     local argv = { ... }
     table.insert(argv, resolve)
 
@@ -50,23 +80,22 @@ local thunk = function(fn)
   end
 end
 
-return setmetatable({
-  future = future,
-  wrap = wrap,
-  run = function(fn)
-    thunk(fn)()
-  end,
-  sleep = function(milliseconds)
-    local resolve, await = future()
-    local timer = vim.uv.new_timer()
-    timer:start(milliseconds, 0, function()
-      timer:stop()
-      timer:close()
-      resolve()
-    end)
-    return await()
-  end,
-}, {
+M.run = function(fn)
+  thunk(fn)()
+end
+
+M.sleep = function(milliseconds)
+  local resolve, await = M.future()
+  local timer = vim.uv.new_timer()
+  timer:start(milliseconds, 0, function()
+    timer:stop()
+    timer:close()
+    resolve()
+  end)
+  return await()
+end
+
+return setmetatable(M, {
   __call = function(_, fn)
     return thunk(fn)
   end,

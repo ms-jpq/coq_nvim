@@ -1,13 +1,15 @@
 -- Wire protocol for worker IPC: 4-byte LE length prefix + mpack body.
 
-local encode = function(body)
+local M = {}
+
+M.encode = function(body)
   local payload = vim.mpack.encode(body)
   local n = #payload
   return string.char(n % 256, math.floor(n / 256) % 256, math.floor(n / 65536) % 256, math.floor(n / 16777216) % 256)
     .. payload
 end
 
-local consume = function(buf, on_frame)
+M.consume = function(buf, on_frame)
   local pos = 1
   while pos + 3 <= #buf do
     local b1, b2, b3, b4 = buf:byte(pos, pos + 3)
@@ -21,11 +23,11 @@ local consume = function(buf, on_frame)
   return buf:sub(pos)
 end
 
-local pack = function(ok, ...)
+M.pack = function(ok, ...)
   return ok, select("#", ...), { ... }
 end
 
-local start_reader = function(pipe, handlers, on_eof)
+M.start_reader = function(pipe, handlers, on_eof)
   local buf = ""
   pipe:read_start(function(err, data)
     if err or not data then
@@ -33,23 +35,17 @@ local start_reader = function(pipe, handlers, on_eof)
       on_eof()
       return
     end
-    buf = consume(buf .. data, function(frame)
+    buf = M.consume(buf .. data, function(frame)
       handlers[frame.kind](frame)
     end)
   end)
 end
 
-local unwrap = function(err, ...)
+M.unwrap = function(err, ...)
   if err then
     error(err, 3)
   end
   return ...
 end
 
-return {
-  encode = encode,
-  consume = consume,
-  pack = pack,
-  start_reader = start_reader,
-  unwrap = unwrap,
-}
+return M

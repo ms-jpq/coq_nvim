@@ -1,7 +1,9 @@
 -- Bootstrap config: main encodes a definition; worker parses the raw blob
 -- (after it has set package.path so requires can resolve).
 
-local encode = function(definition)
+local M = {}
+
+M.encode = function(definition)
   local methods = {}
   for name, decl in pairs(definition) do
     if name ~= "init" then
@@ -20,7 +22,7 @@ local encode = function(definition)
   }
 end
 
-local parse = function(raw)
+M.parse = function(raw)
   local state = raw.init and load(raw.init)() or {}
   local methods = {}
   for name, m in pairs(raw.methods) do
@@ -29,4 +31,4 @@ local parse = function(raw)
   return state, methods
 end
 
-return { encode = encode, parse = parse }
+return M

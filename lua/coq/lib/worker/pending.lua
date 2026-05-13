@@ -3,7 +3,9 @@
 --   rpc  — one-shot, cb receives (err, ...vals) decoded from a response frame
 --   raw  — persistent, cb receives the raw frame; caller frees via release()
 
-local make = function()
+local M = {}
+
+M.make = function()
   local map = {}
   local id = 0
   return {
@@ -50,4 +52,4 @@ local make = function()
   }
 end
 
-return { make = make }
+return M

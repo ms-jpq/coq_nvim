@@ -2,7 +2,9 @@
 
 local async = require "coq.lib.async"
 
-local make = function()
+local M = {}
+
+M.make = function()
   local queue, waiter = {}, nil
   return {
     push = function(item)
@@ -25,4 +27,4 @@ local make = function()
   }
 end
 
-return { make = make }
+return M

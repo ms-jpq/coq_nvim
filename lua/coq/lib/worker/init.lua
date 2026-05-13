@@ -6,7 +6,9 @@ local config = require "coq.lib.worker.config"
 local pending_mod = require "coq.lib.worker.pending"
 local proto = require "coq.lib.worker.proto"
 
-local streaming = function(fn)
+local M = {}
+
+M.streaming = function(fn)
   return { streaming = true, fn = fn }
 end
 
@@ -113,7 +115,7 @@ local worker_body = function(req_fd, resp_fd, bootstrap)
   vim.uv.run()
 end
 
-local spawn = function(definition)
+M.spawn = function(definition)
   local req_fds = vim.uv.pipe({ nonblock = true }, { nonblock = true })
   local resp_fds = vim.uv.pipe({ nonblock = true }, { nonblock = true })
   local resp_pipe, req_write = vim.uv.new_pipe(), vim.uv.new_pipe()
@@ -228,4 +230,4 @@ local spawn = function(definition)
   return proxy
 end
 
-return { spawn = spawn, streaming = streaming }
+return M
