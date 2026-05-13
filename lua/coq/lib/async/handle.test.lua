@@ -88,6 +88,30 @@ T.describe("handle", function(test)
     T.eq(parent_fired, 1)
   end)
 
+  test("deadline cancels handle after the elapsed time", function()
+    local h = async.handle(nil, 5)
+    T.eq(h.cancelled, false)
+    async.sleep(20)
+    T.eq(h.cancelled, true)
+  end)
+
+  test("early cancel disarms the deadline timer", function()
+    local h = async.handle(nil, 5)
+    h.cancel()
+    async.sleep(20)
+    T.eq(h.cancelled, true)
+  end)
+
+  test("deadline fires watchers", function()
+    local h = async.handle(nil, 5)
+    local fired = false
+    h.watch(function()
+      fired = true
+    end)
+    async.sleep(20)
+    T.eq(fired, true)
+  end)
+
   test("cancel uses snapshot semantics so mid-fire unwatch is safe", function()
     local h = async.handle()
     local count = 0
