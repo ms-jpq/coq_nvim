@@ -7,10 +7,14 @@ M.handle = handle.new
 M.ROOT = handle.ROOT
 M.channel = require "coq.lib.async.channel"
 
-M.race = function(opts)
+M.race = function(h, fns)
+  if fns == nil then
+    fns = h
+    h = nil
+  end
   local thread = coroutine.running()
   assert(thread, "race: must be called inside running coroutine")
-  local h = opts.handle or handle.new(M.current_handle())
+  h = h or handle.new(M.current())
   local resolved = nil
 
   local resume = function(values)
@@ -41,7 +45,7 @@ M.race = function(opts)
     resume(resolved)
   end)
 
-  for idx, fn in ipairs(opts) do
+  for idx, fn in ipairs(fns) do
     local done = finish(idx)
     M.run(h, function()
       done(fn())
@@ -54,26 +58,30 @@ M.race = function(opts)
   return coroutine.yield()
 end
 
-M.merge = function(opts)
+M.merge = function(parent, fns)
+  if fns == nil then
+    fns = parent
+    parent = nil
+  end
   local iters = {}
-  for idx, fn in ipairs(opts) do
+  for idx, fn in ipairs(fns) do
     table.insert(iters, { idx = idx, fn = fn })
   end
-  local parent = opts.handle
 
   return function()
     while #iters > 0 do
-      local race_opts = {}
+      local race_fns = {}
       for i, entry in ipairs(iters) do
-        race_opts[i] = function()
+        race_fns[i] = function()
           return entry.fn()
         end
       end
+      local race_h
       if parent then
-        race_opts.handle = handle.new(parent)
+        race_h = handle.new(parent)
       end
 
-      local winner, value = M.race(race_opts)
+      local winner, value = M.race(race_h, race_fns)
 
       if winner == nil then
         return nil

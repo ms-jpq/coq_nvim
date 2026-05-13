@@ -8,7 +8,7 @@ local delayed = function(value, delay)
       return nil
     end
     async.sleep(delay)
-    if async.current_handle().cancelled then
+    if async.current().cancelled then
       return nil
     end
     sent = true
@@ -86,7 +86,7 @@ T.describe("merge", function(test)
         async.sleep(100)
         return "never"
       end
-      got = async.merge { handle = scope, iter }()
+      got = async.merge(scope, { iter })()
     end)
 
     scope.cancel()

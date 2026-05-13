@@ -102,7 +102,7 @@ T.describe("race", function(test)
         return "winner"
       end,
       function()
-        async.current_handle().watch(function()
+        async.current().watch(function()
           loser_cancelled = true
         end)
         async.sleep(50)
@@ -117,15 +117,14 @@ T.describe("race", function(test)
     local cancelled = false
     local idx
     async.run(outer, function()
-      idx = async.race {
-        handle = outer,
+      idx = async.race(outer, {
         function()
-          async.current_handle().watch(function()
+          async.current().watch(function()
             cancelled = true
           end)
           async.sleep(50)
         end,
-      }
+      })
     end)
 
     outer.cancel()
@@ -136,13 +135,12 @@ T.describe("race", function(test)
   test("explicit handle is used as the race scope", function()
     local scope = async.handle()
     local seen
-    async.race {
-      handle = scope,
+    async.race(scope, {
       function()
-        seen = async.current_handle()
+        seen = async.current()
         return "ok"
       end,
-    }
+    })
 
     T.eq(seen, scope)
     T.eq(scope.cancelled, true)

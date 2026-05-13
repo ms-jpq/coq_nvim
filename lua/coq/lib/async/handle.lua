@@ -2,41 +2,19 @@ local lib = require "coq.lib"
 
 local M = {}
 
+local pending = setmetatable({}, { __mode = "k" })
+local empty_waiters = setmetatable({}, { __mode = "k" })
+
 M.new = function(parent)
   local watchers = {}
   local handle = { cancelled = false }
   local unwatch_from_parent
-  local pending = setmetatable({}, { __mode = "k" })
-  local empty_waiters = {}
 
   local fire = function(watcher)
     if type(watcher) == "function" then
       watcher()
     else
       watcher.cancel()
-    end
-  end
-
-  handle.register = function(thread)
-    pending[thread] = true
-  end
-
-  handle.deregister = function(thread)
-    pending[thread] = nil
-    if next(pending) == nil and #empty_waiters > 0 then
-      local waiters = empty_waiters
-      empty_waiters = {}
-      for _, cb in ipairs(waiters) do
-        cb()
-      end
-    end
-  end
-
-  handle.on_empty = function(cb)
-    if next(pending) == nil then
-      cb()
-    else
-      table.insert(empty_waiters, cb)
     end
   end
 
@@ -84,6 +62,46 @@ M.new = function(parent)
   end
 
   return handle
+end
+
+M.register = function(h, thread)
+  local set = pending[h]
+  if not set then
+    set = setmetatable({}, { __mode = "k" })
+    pending[h] = set
+  end
+  set[thread] = true
+end
+
+M.deregister = function(h, thread)
+  local set = pending[h]
+  if not set then
+    return
+  end
+  set[thread] = nil
+  if next(set) == nil then
+    local waiters = empty_waiters[h]
+    if waiters then
+      empty_waiters[h] = nil
+      for _, cb in ipairs(waiters) do
+        cb()
+      end
+    end
+  end
+end
+
+M.on_empty = function(h, cb)
+  local set = pending[h]
+  if not set or next(set) == nil then
+    cb()
+    return
+  end
+  local waiters = empty_waiters[h]
+  if not waiters then
+    waiters = {}
+    empty_waiters[h] = waiters
+  end
+  table.insert(waiters, cb)
 end
 
 M.ROOT = M.new()

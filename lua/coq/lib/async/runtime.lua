@@ -1,15 +1,17 @@
+local handle = require "coq.lib.async.handle"
+
 local M = {}
 
 local threads = setmetatable({}, { __mode = "k" })
 
-M.current_handle = function()
+M.current = function()
   return threads[coroutine.running()]
 end
 
 M.future = function(h)
   local thread = coroutine.running()
   assert(thread, "future: must be called inside running coroutine")
-  h = h or M.current_handle()
+  h = h or M.current()
 
   local resolved = nil
   local resolve = function(...)
@@ -73,14 +75,14 @@ M.thunk = function(h, fn)
       local ok, err = xpcall(function()
         fn(unpack(argv))
       end, debug.traceback)
-      h.deregister(thread)
+      handle.deregister(h, thread)
       if not ok then
         error(err, 0)
       end
     end)
 
     threads[thread] = h
-    h.register(thread)
+    handle.register(h, thread)
 
     local ok, ret = coroutine.resume(thread)
     if not ok then
@@ -96,12 +98,12 @@ end
 M.join = function(h)
   assert(h, "join: handle required")
   local resolve, await = M.future()
-  h.on_empty(resolve)
+  handle.on_empty(h, resolve)
   await()
 end
 
 M.sleep = function(milliseconds)
-  local h = M.current_handle()
+  local h = M.current()
   if h and h.cancelled then
     milliseconds = 0
   end
