@@ -1,7 +1,7 @@
 -- https://github.com/luvit/luv/blob/master/docs/docs.md
 
 local async = require "coq.lib.async"
-local channel_mod = require "coq.lib.worker.channel"
+local channel = require "coq.lib.worker.channel"
 local config = require "coq.lib.worker.config"
 local errs = require "coq.lib.errs"
 local inflight_mod = require "coq.lib.worker.inflight"
@@ -30,7 +30,7 @@ local worker_body = function(req_fd, resp_fd, bootstrap)
   req_pipe:open(req_fd)
   resp_pipe:open(resp_fd)
 
-  local state, methods = config.parse(raw)
+  local state, methods = config.decode(raw)
 
   local send = function(body)
     resp_pipe:write(proto.encode(body))
@@ -181,8 +181,8 @@ M.spawn = function(definition)
     if closed then
       error("worker closed", 3)
     end
-    local channel = channel_mod.new()
-    local id, release = inflight.reserve_raw(channel.push)
+    local chan = channel.mpsc()
+    local id, release = inflight.reserve_raw(chan.push)
     send_request(id, method, args, argn)
 
     local done, first = false, true
@@ -204,7 +204,7 @@ M.spawn = function(definition)
         req_write:write(proto.encode { kind = K.NEXT, id = id })
       end
       first = false
-      local frame = channel.pull()
+      local frame = chan.pull()
       if frame.kind == K.YIELD then
         return unpack(frame.values, 1, frame.n)
       end

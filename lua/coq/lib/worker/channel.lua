@@ -1,11 +1,34 @@
--- Single-producer / single-consumer queue with an awaitable pull.
-
 local async = require "coq.lib.async"
 
 local M = {}
 
-M.new = function()
-  local queue, waiter = {}, nil
+local queue = function()
+  local push, pop = {}, {}
+  local q = {}
+
+  q.push = function(val)
+    table.insert(push, val)
+  end
+
+  q.pop = function()
+    if #pop == 0 then
+      while #push ~= 0 do
+        table.insert(pop, table.remove(push))
+      end
+    end
+    return table.remove(pop)
+  end
+
+  return setmetatable(q, {
+    __len = function()
+      return #push + #pop
+    end,
+  })
+end
+
+M.mpsc = function()
+  local q = queue()
+  local waiter = nil
   return {
     push = function(item)
       if waiter then
@@ -13,12 +36,12 @@ M.new = function()
         waiter = nil
         r(item)
       else
-        table.insert(queue, item)
+        q.push(item)
       end
     end,
     pull = function()
-      if #queue > 0 then
-        return table.remove(queue, 1)
+      if #q > 0 then
+        return q.pop()
       end
       local resolve, await = async.future()
       waiter = resolve

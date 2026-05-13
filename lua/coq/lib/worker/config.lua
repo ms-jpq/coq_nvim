@@ -1,14 +1,12 @@
 local proto = require "coq.lib.worker.proto"
 
-local MODE = proto.MODE
-
 local M = {}
 
 local classify = function(decl)
   if type(decl) == "table" and decl.streaming then
-    return { mode = MODE.STREAM, dump = string.dump(decl.fn) }
+    return { mode = proto.MODE.STREAM, dump = string.dump(decl.fn) }
   end
-  return { mode = MODE.RPC, dump = string.dump(decl) }
+  return { mode = proto.MODE.RPC, dump = string.dump(decl) }
 end
 
 M.encode = function(definition)
@@ -26,7 +24,7 @@ M.encode = function(definition)
   }
 end
 
-M.parse = function(raw)
+M.decode = function(raw)
   local state = raw.init and load(raw.init)() or {}
   local methods = {}
   for name, m in pairs(raw.methods) do
