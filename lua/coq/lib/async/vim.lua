@@ -3,7 +3,7 @@
 
 local async = require "coq.lib.async"
 
-return setmetatable({
+return {
   scheduled = async.wrap(vim.schedule),
   system = async.wrap(vim.system),
   fn = {
@@ -16,4 +16,4 @@ return setmetatable({
   ui = {
     select = async.wrap(vim.ui.select),
   },
-}, { __index = async })
+}

@@ -146,9 +146,7 @@ T.describe("worker", function(test)
       slow_cwd = function()
         local worker = require "coq.lib.worker"
         return worker.main(function()
-          local async = require "coq.lib.async"
           local avim = require "coq.lib.async.vim"
-          async.sleep(20)
           avim.scheduled()
           return vim.fn.getcwd()
         end)
