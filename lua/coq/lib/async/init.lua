@@ -13,6 +13,18 @@ local M = {
   scope = nursery.scope,
 }
 
+M.all = function(fns)
+  local results = {}
+  local n = nursery.new()
+  for idx, fn in ipairs(fns) do
+    n.spawn(function()
+      results[idx] = fn()
+    end)
+  end
+  n.join()
+  return results
+end
+
 M.race = function(fns)
   if #fns == 0 then
     return

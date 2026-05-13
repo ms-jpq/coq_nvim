@@ -10,8 +10,15 @@ M.new = function(parent)
   local nursery = { handle = handle.new(parent), errors = {} }
   local pending = setmetatable({}, { __mode = "k" })
   local empty_waiters = {}
+  local closed = false
+
+  nursery.close = function()
+    closed = true
+  end
 
   nursery.spawn = function(fn)
+    assert(not closed, "spawn: nursery is closed")
+
     local thread
     thread = coroutine.create(function()
       local ok, err = xpcall(fn, debug.traceback)
@@ -21,6 +28,7 @@ M.new = function(parent)
           table.insert(nursery.errors, err)
           nursery.handle.cancel()
         end
+
         if next(pending) == nil then
           local waiters = empty_waiters
           empty_waiters = {}
@@ -61,6 +69,7 @@ M.scope = function(parent, body)
 
   local nursery = M.new(parent)
   lib.scope(function(defer)
+    defer(nursery.close)
     defer(nursery.handle.cancel)
     nursery.spawn(function()
       body(nursery)

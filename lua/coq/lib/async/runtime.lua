@@ -30,6 +30,7 @@ M.future = function()
       return
     end
     done = true
+
     values = vals
     if thread and coroutine.status(thread) == "suspended" then
       local t = thread
@@ -55,15 +56,18 @@ M.future = function()
     if h.cancelled then
       return
     end
+
     if not done then
       assert(thread == nil, "future: another coroutine is already awaiting")
       thread = current
+
       local unwatch = h.watch(function()
         finish(nil)
       end)
       coroutine.yield()
       unwatch()
     end
+
     return unpack(values or {})
   end
 

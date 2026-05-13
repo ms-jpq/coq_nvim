@@ -13,7 +13,7 @@ end
 M.new = function(parent, deadline_ms)
   local handle = { cancelled = false }
   local watchers = {}
-  local unwatch_from_parent
+  local unwatch_from_parent = function() end
   local timer
 
   handle.cancel = function()
@@ -24,14 +24,12 @@ M.new = function(parent, deadline_ms)
 
     lib.scope(function(defer)
       defer(function()
-        if unwatch_from_parent then
-          unwatch_from_parent()
-        end
         if timer and not timer:is_closing() then
           timer:stop()
           timer:close()
         end
       end)
+      defer(unwatch_from_parent)
 
       local snapshot = watchers
       watchers = {}
@@ -46,9 +44,10 @@ M.new = function(parent, deadline_ms)
       fire(watcher)
       return function() end
     end
+
     table.insert(watchers, watcher)
     return function()
-      for i, w in ipairs(watchers) do
+      for i, w in pairs(watchers) do
         if w == watcher then
           table.remove(watchers, i)
           return
@@ -57,13 +56,13 @@ M.new = function(parent, deadline_ms)
     end
   end
 
+  if parent then
+    unwatch_from_parent = parent.watch(handle)
+  end
+
   if deadline_ms then
     timer = vim.uv.new_timer()
     timer:start(deadline_ms, 0, handle.cancel)
-  end
-
-  if parent then
-    unwatch_from_parent = parent.watch(handle)
   end
 
   return handle

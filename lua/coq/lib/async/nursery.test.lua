@@ -68,6 +68,15 @@ T.describe("nursery", function(test)
     assert(err:find "child went missing")
   end)
 
+  test("spawn after close raises", function()
+    local n = async.nursery()
+    n.close()
+
+    local ok, err = pcall(n.spawn, function() end)
+    T.eq(ok, false)
+    assert(tostring(err):find "nursery is closed")
+  end)
+
   test("join raises error group when multiple children error", function()
     local errs = require "coq.lib.errs"
     local n = async.nursery()
