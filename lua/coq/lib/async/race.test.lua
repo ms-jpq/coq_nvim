@@ -1,6 +1,5 @@
 local T = require "coq.lib.test"
 local async = require "coq.lib.async"
-local cancel = require "coq.lib.cancel"
 
 T.describe("race", function(test)
   test("returns winning idx and value on sync task", function()
@@ -103,7 +102,7 @@ T.describe("race", function(test)
         return "winner"
       end,
       function()
-        async.current_token().watch(function()
+        async.current_handle().watch(function()
           loser_cancelled = true
         end)
         async.sleep(50)
@@ -114,14 +113,14 @@ T.describe("race", function(test)
   end)
 
   test("external cancel bails race with nil idx", function()
-    local outer = cancel.token()
+    local outer = async.handle()
     local cancelled = false
     local idx
     async.run(outer, function()
       idx = async.race {
-        cancel = outer,
+        handle = outer,
         function()
-          async.current_token().watch(function()
+          async.current_handle().watch(function()
             cancelled = true
           end)
           async.sleep(50)
@@ -134,13 +133,13 @@ T.describe("race", function(test)
     T.eq(idx, nil)
   end)
 
-  test("explicit cancel token is used as the race scope", function()
-    local scope = cancel.token()
+  test("explicit handle is used as the race scope", function()
+    local scope = async.handle()
     local seen
     async.race {
-      cancel = scope,
+      handle = scope,
       function()
-        seen = async.current_token()
+        seen = async.current_handle()
         return "ok"
       end,
     }

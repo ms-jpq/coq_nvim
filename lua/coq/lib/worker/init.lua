@@ -1,7 +1,6 @@
 -- https://github.com/luvit/luv/blob/master/docs/docs.md
 
 local async = require "coq.lib.async"
-local cancel = require "coq.lib.cancel"
 local config = require "coq.lib.worker.config"
 local errs = require "coq.lib.errs"
 local inflight_mod = require "coq.lib.worker.inflight"
@@ -31,7 +30,7 @@ M.spawn = function(definition)
     [K.REQUEST] = function(frame)
       local id, fn_dump = frame.id, frame.fn_dump
       local args, argn = frame.args or {}, frame.argn or 0
-      vim.schedule(async.thunk(cancel.ROOT, function()
+      vim.schedule(async.thunk(async.ROOT, function()
         local fn, err = load(fn_dump)
         if not fn then
           respond_main(id, false, 1, { err or errs.UNKNOWN })

@@ -39,11 +39,11 @@ M.mpsc = function()
         q.push(item)
       end
     end,
-    pull = function(token)
+    pull = function(h)
       if #q > 0 then
         return q.pop()
       end
-      local resolve, await = async.future(token)
+      local resolve, await = async.future(h)
       waiter = resolve
       return await()
     end,

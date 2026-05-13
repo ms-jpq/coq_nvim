@@ -1,6 +1,5 @@
 local T = require "coq.lib.test"
 local async = require "coq.lib.async"
-local cancel = require "coq.lib.cancel"
 
 local delayed = function(value, delay)
   local sent = false
@@ -9,7 +8,7 @@ local delayed = function(value, delay)
       return nil
     end
     async.sleep(delay)
-    if async.current_token().cancelled then
+    if async.current_handle().cancelled then
       return nil
     end
     sent = true
@@ -50,10 +49,10 @@ T.describe("merge", function(test)
     T.eq(out, { "a", "b", "c" })
   end)
 
-  test("returns nil when ambient token cancelled mid-merge", function()
-    local token = cancel.token()
+  test("returns nil when ambient handle cancelled mid-merge", function()
+    local h = async.handle()
     local got
-    async.run(token, function()
+    async.run(h, function()
       local iter = function()
         async.sleep(100)
         return "never"
@@ -61,19 +60,19 @@ T.describe("merge", function(test)
       got = async.merge { iter }()
     end)
 
-    token.cancel()
+    h.cancel()
     T.eq(got, nil)
   end)
 
-  test("explicit cancel token short-circuits the merge", function()
-    local scope = cancel.token()
+  test("explicit handle short-circuits the merge", function()
+    local scope = async.handle()
     local got
-    async.run(cancel.ROOT, function()
+    async.run(async.ROOT, function()
       local iter = function()
         async.sleep(100)
         return "never"
       end
-      got = async.merge { cancel = scope, iter }()
+      got = async.merge { handle = scope, iter }()
     end)
 
     scope.cancel()

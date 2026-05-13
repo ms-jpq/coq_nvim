@@ -2,9 +2,9 @@ local lib = require "coq.lib"
 
 local M = {}
 
-M.token = function(parent)
+M.new = function(parent)
   local watchers = {}
-  local token = { cancelled = false }
+  local handle = { cancelled = false }
   local unwatch_from_parent
 
   local fire = function(watcher)
@@ -15,12 +15,12 @@ M.token = function(parent)
     end
   end
 
-  token.cancel = function()
+  handle.cancel = function()
     lib.scope(function(defer)
-      if token.cancelled then
+      if handle.cancelled then
         return
       end
-      token.cancelled = true
+      handle.cancelled = true
       defer(function()
         if unwatch_from_parent then
           unwatch_from_parent()
@@ -35,8 +35,8 @@ M.token = function(parent)
     end)
   end
 
-  token.watch = function(watcher)
-    if token.cancelled then
+  handle.watch = function(watcher)
+    if handle.cancelled then
       fire(watcher)
       return function() end
     end
@@ -52,15 +52,15 @@ M.token = function(parent)
   end
 
   if parent then
-    unwatch_from_parent = parent.watch(token)
+    unwatch_from_parent = parent.watch(handle)
     if parent.cancelled then
-      token.cancel()
+      handle.cancel()
     end
   end
 
-  return token
+  return handle
 end
 
-M.ROOT = M.token()
+M.ROOT = M.new()
 
 return M

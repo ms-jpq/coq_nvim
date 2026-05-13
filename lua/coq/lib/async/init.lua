@@ -1,23 +1,26 @@
-local cancel = require "coq.lib.cancel"
+local handle = require "coq.lib.async.handle"
 
 local M = {}
 
+M.handle = handle.new
+M.ROOT = handle.ROOT
+
 local threads = setmetatable({}, { __mode = "k" })
 
-M.current_token = function()
+M.current_handle = function()
   return threads[coroutine.running()]
 end
 
-M.future = function(token)
+M.future = function(h)
   local thread = coroutine.running()
   assert(thread, "future: must be called inside running coroutine")
-  token = token or M.current_token()
+  h = h or M.current_handle()
 
   local resolved = nil
   local resolve = function(...)
     if coroutine.status(thread) == "running" then
       resolved = { ... }
-    else
+    elseif coroutine.status(thread) == "suspended" then
       local ok, msg = coroutine.resume(thread, ...)
       if not ok then
         error(msg, 0)
@@ -26,14 +29,30 @@ M.future = function(token)
   end
 
   local await = function()
-    if token and token.cancelled then
+    if h and h.cancelled then
       return
     end
     if resolved then
       return unpack(resolved)
     end
 
-    return coroutine.yield()
+    local unwatch
+    if h then
+      unwatch = h.watch(function()
+        if coroutine.status(thread) == "suspended" then
+          local ok, msg = coroutine.resume(thread)
+          if not ok then
+            error(msg, 0)
+          end
+        end
+      end)
+    end
+
+    local ret = { coroutine.yield() }
+    if unwatch then
+      unwatch()
+    end
+    return unpack(ret)
   end
 
   return resolve, await
@@ -50,15 +69,15 @@ M.wrap = function(fn)
   end
 end
 
-M.thunk = function(token, fn)
-  assert(token, "thunk: token required")
+M.thunk = function(h, fn)
+  assert(h, "thunk: handle required")
   return function(...)
     local argv = { ... }
     local thread = coroutine.create(function()
       fn(unpack(argv))
     end)
 
-    threads[thread] = token
+    threads[thread] = h
 
     local ok, ret = coroutine.resume(thread)
     if not ok then
@@ -67,13 +86,13 @@ M.thunk = function(token, fn)
   end
 end
 
-M.run = function(token, fn)
-  M.thunk(token, fn)()
+M.run = function(h, fn)
+  M.thunk(h, fn)()
 end
 
 M.sleep = function(milliseconds)
-  local token = M.current_token()
-  if token and token.cancelled then
+  local h = M.current_handle()
+  if h and h.cancelled then
     milliseconds = 0
   end
 
@@ -90,8 +109,8 @@ M.sleep = function(milliseconds)
   end
 
   timer:start(milliseconds, 0, fire)
-  if token then
-    token.watch(fire)
+  if h then
+    h.watch(fire)
   end
 
   return await()
@@ -100,7 +119,7 @@ end
 M.race = function(opts)
   local thread = coroutine.running()
   assert(thread, "race: must be called inside running coroutine")
-  local token = opts.cancel or cancel.token(M.current_token())
+  local h = opts.handle or handle.new(M.current_handle())
   local resolved = nil
 
   local resume = function(values)
@@ -118,12 +137,12 @@ M.race = function(opts)
         return
       end
       resolved = { idx, ... }
-      token.cancel()
+      h.cancel()
       resume(resolved)
     end
   end
 
-  token.watch(function()
+  h.watch(function()
     if resolved then
       return
     end
@@ -133,7 +152,7 @@ M.race = function(opts)
 
   for idx, fn in ipairs(opts) do
     local done = finish(idx)
-    M.run(token, function()
+    M.run(h, function()
       done(fn())
     end)
   end
@@ -149,7 +168,7 @@ M.merge = function(opts)
   for _, v in ipairs(opts) do
     table.insert(iters, v)
   end
-  local parent = opts.cancel
+  local parent = opts.handle
 
   return function()
     while #iters > 0 do
@@ -160,7 +179,7 @@ M.merge = function(opts)
         end)
       end
       if parent then
-        race_opts.cancel = cancel.token(parent)
+        race_opts.handle = handle.new(parent)
       end
 
       local winner, value = M.race(race_opts)

@@ -1,6 +1,5 @@
 local T = require "coq.lib.test"
 local async = require "coq.lib.async"
-local cancel = require "coq.lib.cancel"
 
 T.describe("async", function(test)
   test("future resolves synchronously", function()
@@ -29,7 +28,7 @@ T.describe("async", function(test)
 
   test("thunk defers execution", function()
     local ran = false
-    local later = async.thunk(cancel.ROOT, function()
+    local later = async.thunk(async.ROOT, function()
       ran = true
     end)
 
@@ -40,7 +39,7 @@ T.describe("async", function(test)
 
   test("run propagates errors", function()
     local ok = pcall(function()
-      async.run(cancel.ROOT, function()
+      async.run(async.ROOT, function()
         error "lil went missing"
       end)
     end)

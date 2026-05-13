@@ -2,7 +2,6 @@
 -- after package.path has been wired up.
 
 local async = require "coq.lib.async"
-local cancel = require "coq.lib.cancel"
 local config = require "coq.lib.worker.config"
 local errs = require "coq.lib.errs"
 local inflight = require "coq.lib.worker.inflight"
@@ -89,7 +88,7 @@ return function(req_fd, rsp_fd, raw)
     [K.RESPONSE] = tracker.resolve,
     [K.REQUEST] = function(frame)
       local id = frame.id
-      async.run(cancel.ROOT, function()
+      async.run(async.ROOT, function()
         respond(id, invoke(frame.method, id, frame.args or {}, frame.argn or 0))
       end)
     end,
