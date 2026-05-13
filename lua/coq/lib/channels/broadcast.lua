@@ -3,8 +3,8 @@ local async = require "coq.lib.async"
 local M = {}
 
 M.new = function()
-  local subscribers = {}
   local chan = {}
+  local subscribers = {}
 
   chan.push = function(item)
     for _, sub in pairs(subscribers) do
