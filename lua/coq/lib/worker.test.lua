@@ -157,6 +157,57 @@ T.describe("worker", function(test)
     T.eq(r, expected)
   end)
 
+  test("streaming method yields values to a for loop", function()
+    local w = worker.spawn {
+      dogs = worker.streaming(function(yield, _)
+        yield "rex"
+        yield "spot"
+        yield "fido"
+      end),
+    }
+    local seen = {}
+    for dog in w.dogs() do
+      table.insert(seen, dog)
+    end
+    w.close()
+    T.eq(seen, { "rex", "spot", "fido" })
+  end)
+
+  test("streaming method forwards args", function()
+    local w = worker.spawn {
+      counted = worker.streaming(function(yield, _, n)
+        for i = 1, n do
+          yield(i)
+        end
+      end),
+    }
+    local seen = {}
+    for v in w.counted(4) do
+      table.insert(seen, v)
+    end
+    w.close()
+    T.eq(seen, { 1, 2, 3, 4 })
+  end)
+
+  test("streaming method propagates errors", function()
+    local w = worker.spawn {
+      bork = worker.streaming(function(yield, _)
+        yield "rex"
+        error "leash snapped"
+      end),
+    }
+    local seen = {}
+    local ok, err = pcall(function()
+      for v in w.bork() do
+        table.insert(seen, v)
+      end
+    end)
+    w.close()
+    T.eq(seen, { "rex" })
+    T.eq(ok, false)
+    assert(err:find "leash snapped", "expected leash snapped, got: " .. tostring(err))
+  end)
+
   test("unknown method returns error", function()
     local w = worker.spawn {
       known = function()

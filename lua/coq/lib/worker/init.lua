@@ -1,9 +1,14 @@
 -- https://github.com/luvit/luv/blob/master/docs/docs.md
 
 local async = require "coq.lib.async"
+local channel_mod = require "coq.lib.worker.channel"
 local config = require "coq.lib.worker.config"
 local pending_mod = require "coq.lib.worker.pending"
 local proto = require "coq.lib.worker.proto"
+
+local streaming = function(fn)
+  return { streaming = true, fn = fn }
+end
 
 local worker_body = function(req_fd, resp_fd, bootstrap)
   local raw = vim.mpack.decode(bootstrap)
@@ -42,8 +47,33 @@ local worker_body = function(req_fd, resp_fd, bootstrap)
     return proto.unwrap(await())
   end
 
+  local iter_resumers = {}
+
+  local make_yield = function(id)
+    return function(...)
+      local argn = select("#", ...)
+      local args = { ... }
+      send { kind = "yield", id = id, n = argn, values = args }
+      local resolve, await = async.future()
+      iter_resumers[id] = resolve
+      await()
+    end
+  end
+
   local worker_mod = require "coq.lib.worker"
   worker_mod.main = call_main
+
+  local invoke = function(m, id, args, argn)
+    if m.kind == "stream" then
+      local ok, err = pcall(m.fn, make_yield(id), state, unpack(args, 1, argn))
+      iter_resumers[id] = nil
+      if ok then
+        return true, 0, {}
+      end
+      return false, 1, { err }
+    end
+    return proto.pack(pcall(m.fn, state, unpack(args, 1, argn)))
+  end
 
   local handlers = {
     main_response = main_pending.resolve,
@@ -61,9 +91,16 @@ local worker_body = function(req_fd, resp_fd, bootstrap)
       end
       local id, args, argn = frame.id, frame.args or {}, frame.argn or 0
       async.run(function()
-        local ok, rn, vals = proto.pack(pcall(m, state, unpack(args, 1, argn)))
-        send { kind = "response", id = id, ok = ok, n = rn, values = vals }
+        local ok, n, vals = invoke(m, id, args, argn)
+        send { kind = "response", id = id, ok = ok, n = n, values = vals }
       end)
+    end,
+    next = function(frame)
+      local r = iter_resumers[frame.id]
+      iter_resumers[frame.id] = nil
+      if r then
+        r()
+      end
     end,
   }
 
@@ -105,6 +142,7 @@ local spawn = function(definition)
       end)
     end,
     response = pending.resolve,
+    yield = pending.resolve,
   }
 
   proto.start_reader(resp_pipe, handlers, function()
@@ -113,11 +151,7 @@ local spawn = function(definition)
 
   vim.uv.new_thread(worker_body, req_fds.read, resp_fds.write, config.encode(definition))
 
-  local call = async.wrap(function(method, args, argn, cb)
-    if closed then
-      return cb "worker closed"
-    end
-    local id = pending.reserve(cb)
+  local send_request = function(id, method, args, argn)
     req_write:write(proto.encode {
       kind = "request",
       id = id,
@@ -125,7 +159,40 @@ local spawn = function(definition)
       args = args,
       argn = argn,
     })
+  end
+
+  local call = async.wrap(function(method, args, argn, cb)
+    if closed then
+      return cb "worker closed"
+    end
+    send_request(pending.reserve(cb), method, args, argn)
   end)
+
+  local iter_call = function(method, args, argn)
+    if closed then
+      error("worker closed", 3)
+    end
+    local channel = channel_mod.make()
+    local id, release = pending.reserve_raw(channel.push)
+    send_request(id, method, args, argn)
+
+    local first = true
+    return function()
+      if not first then
+        req_write:write(proto.encode { kind = "next", id = id })
+      end
+      first = false
+      local frame = channel.pull()
+      if frame.kind == "yield" then
+        return unpack(frame.values, 1, frame.n)
+      end
+      release()
+      if not frame.ok then
+        error(frame.values[1] or "unknown error", 2)
+      end
+      return nil
+    end
+  end
 
   local proxy = {
     close = function()
@@ -139,16 +206,26 @@ local spawn = function(definition)
     end,
   }
 
-  for name in pairs(definition) do
+  local bind_rpc = function(name)
+    return function(...)
+      return proto.unwrap(call(name, { ... }, select("#", ...)))
+    end
+  end
+
+  local bind_stream = function(name)
+    return function(...)
+      return iter_call(name, { ... }, select("#", ...))
+    end
+  end
+
+  for name, decl in pairs(definition) do
     if name ~= "init" then
-      proxy[name] = function(...)
-        local argn = select("#", ...)
-        return proto.unwrap(call(name, { ... }, argn))
-      end
+      local is_stream = type(decl) == "table" and decl.streaming
+      proxy[name] = is_stream and bind_stream(name) or bind_rpc(name)
     end
   end
 
   return proxy
 end
 
-return { spawn = spawn }
+return { spawn = spawn, streaming = streaming }
