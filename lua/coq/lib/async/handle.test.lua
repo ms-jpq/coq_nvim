@@ -117,13 +117,14 @@ T.describe("handle", function(test)
   test("cancel uses snapshot semantics so mid-fire unwatch is safe", function()
     local h = handle.new()
     local count = 0
-    local unwatch_late
-    h.on_cancel(function()
+    local unwatch_a, unwatch_b
+    unwatch_a = h.on_cancel(function()
       count = count + 1
-      unwatch_late()
+      unwatch_b()
     end)
-    unwatch_late = h.on_cancel(function()
+    unwatch_b = h.on_cancel(function()
       count = count + 1
+      unwatch_a()
     end)
     h.cancel()
 

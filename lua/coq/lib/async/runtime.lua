@@ -51,15 +51,15 @@ M.future = function()
   end
 
   f.await = function(h)
-    local current = coroutine.running()
-    assert(current, "await: must be called inside running coroutine")
-
-    h = h or M.current()
-    if h.cancelled then
-      return
-    end
-
     if not done then
+      local current = coroutine.running()
+      assert(current, "await: must be called inside running coroutine")
+
+      h = h or M.current()
+      if h.cancelled then
+        return
+      end
+
       assert(thread == nil, "future: another coroutine is already awaiting")
       thread = current
 

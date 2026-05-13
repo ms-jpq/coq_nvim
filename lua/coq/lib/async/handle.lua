@@ -33,8 +33,11 @@ M.new = function(parent, deadline_ms)
 
       local snapshot = watchers
       watchers = {}
+
       for _, w in ipairs(snapshot) do
-        fire(w)
+        defer(function()
+          fire(w)
+        end)
       end
     end)
   end
