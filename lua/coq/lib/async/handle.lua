@@ -6,12 +6,37 @@ M.new = function(parent)
   local watchers = {}
   local handle = { cancelled = false }
   local unwatch_from_parent
+  local pending = setmetatable({}, { __mode = "k" })
+  local empty_waiters = {}
 
   local fire = function(watcher)
     if type(watcher) == "function" then
       watcher()
     else
       watcher.cancel()
+    end
+  end
+
+  handle.register = function(thread)
+    pending[thread] = true
+  end
+
+  handle.deregister = function(thread)
+    pending[thread] = nil
+    if next(pending) == nil and #empty_waiters > 0 then
+      local waiters = empty_waiters
+      empty_waiters = {}
+      for _, cb in ipairs(waiters) do
+        cb()
+      end
+    end
+  end
+
+  handle.on_empty = function(cb)
+    if next(pending) == nil then
+      cb()
+    else
+      table.insert(empty_waiters, cb)
     end
   end
 
@@ -27,9 +52,9 @@ M.new = function(parent)
         end
       end)
 
-      local pending = watchers
+      local snapshot = watchers
       watchers = {}
-      for _, watcher in pairs(pending) do
+      for _, watcher in pairs(snapshot) do
         fire(watcher)
       end
     end)
