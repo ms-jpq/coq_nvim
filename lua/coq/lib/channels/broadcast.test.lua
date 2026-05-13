@@ -77,16 +77,20 @@ T.describe("broadcast", function(test)
     T.eq(seen, { "lil", "spot", "fido" })
   end)
 
-  test("subscriber dropped when its handle is cancelled", function()
+  test("iter.close terminates iteration", function()
     local chan = broadcast.new()
+    local iter = chan.subscribe()
+    local exited = false
     async.scope(function(n)
       n.spawn(function()
-        for _ in chan.subscribe() do
+        for _ in iter do
         end
+        exited = true
       end)
-      n.handle.cancel()
+      iter.close()
     end)
-    chan.replace "spot"
+
+    T.eq(exited, true)
   end)
 
   test("late subscriber misses prior pushes", function()

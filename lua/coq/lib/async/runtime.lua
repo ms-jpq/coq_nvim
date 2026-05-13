@@ -12,7 +12,9 @@ M.bind = function(thread, h)
 end
 
 M.current = function()
-  return threads[coroutine.running()] or M.ROOT
+  local thread = coroutine.running()
+  assert(thread ~= nil, "current: must be called inside a coroutine")
+  return threads[thread] or M.ROOT
 end
 
 M.cancelled = function()
@@ -99,6 +101,7 @@ M.sleep = function(milliseconds)
   end
 
   local f = M.future()
+  vim.uv.update_time()
   local timer = vim.uv.new_timer()
 
   return lib.scope(function(defer)
@@ -114,6 +117,10 @@ M.sleep = function(milliseconds)
     timer:start(milliseconds, 0, f.resolve)
     return f.await()
   end)
+end
+
+M.checkpoint = function()
+  return M.sleep(0)
 end
 
 return M

@@ -19,20 +19,25 @@ M.new = function()
   end
 
   chan.subscribe = function()
-    local h = async.current()
     local sub = { pending = nil, waiter = nil }
     table.insert(subscribers, sub)
 
-    h.watch(function()
+    local it = {}
+    it.close = function()
       for i, s in ipairs(subscribers) do
         if s == sub then
           table.remove(subscribers, i)
           break
         end
       end
-    end)
+      if sub.waiter then
+        local r = sub.waiter
+        sub.waiter = nil
+        r(nil)
+      end
+    end
 
-    return function()
+    local next = function()
       if sub.pending ~= nil then
         local v = sub.pending
         sub.pending = nil
@@ -43,6 +48,8 @@ M.new = function()
       sub.waiter = f.resolve
       return f.await()
     end
+
+    return setmetatable(it, { __call = next })
   end
 
   return chan

@@ -1,5 +1,6 @@
 local T = require "coq.lib.test"
 local async = require "coq.lib.async"
+local handle = require "coq.lib.async.handle"
 
 T.describe("race", function(test)
   test("returns nil for empty fns list", function()
@@ -120,7 +121,7 @@ T.describe("race", function(test)
   end)
 
   test("external cancel bails race with nil idx", function()
-    local outer = async.handle()
+    local outer = handle.new()
     local cancelled = false
     local idx
     async.scope(outer, function(n)

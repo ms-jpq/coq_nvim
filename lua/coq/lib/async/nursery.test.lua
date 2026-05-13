@@ -1,5 +1,6 @@
 local T = require "coq.lib.test"
 local async = require "coq.lib.async"
+local handle = require "coq.lib.async.handle"
 
 T.describe("nursery", function(test)
   test("join returns immediately when no tasks spawned", function()
@@ -38,7 +39,7 @@ T.describe("nursery", function(test)
   end)
 
   test("join wakes when ambient cancelled mid-join", function()
-    local outer = async.handle()
+    local outer = handle.new()
     local joined = false
     async.scope(outer, function(n)
       n.spawn(function()
@@ -65,6 +66,24 @@ T.describe("nursery", function(test)
 
     T.eq(ok, false)
     assert(err:find "child went missing")
+  end)
+
+  test("join raises error group when multiple children error", function()
+    local errs = require "coq.lib.errs"
+    local n = async.nursery()
+    n.spawn(function()
+      error "first"
+    end)
+    n.spawn(function()
+      async.sleep(50)
+      error "second"
+    end)
+
+    local ok, err = pcall(n.join)
+    T.eq(ok, false)
+    T.eq(#err.errs, 2)
+    assert(tostring(err.errs[1]):find "first")
+    assert(tostring(err.errs[2]):find "second")
   end)
 end)
 

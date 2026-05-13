@@ -1,3 +1,4 @@
+local errs = require "coq.lib.errs"
 local handle = require "coq.lib.async.handle"
 local lib = require "coq.lib"
 local runtime = require "coq.lib.async.runtime"
@@ -6,7 +7,7 @@ local M = {}
 
 M.new = function(parent)
   parent = parent or runtime.current()
-  local nursery = { handle = handle.new(parent), error = nil }
+  local nursery = { handle = handle.new(parent), errors = {} }
   local pending = setmetatable({}, { __mode = "k" })
   local empty_waiters = {}
 
@@ -16,8 +17,8 @@ M.new = function(parent)
       local ok, err = xpcall(fn, debug.traceback)
       xpcall(function()
         pending[thread] = nil
-        if not ok and not nursery.error then
-          nursery.error = err
+        if not ok then
+          table.insert(nursery.errors, err)
           nursery.handle.cancel()
         end
         if next(pending) == nil then
@@ -44,11 +45,9 @@ M.new = function(parent)
       table.insert(empty_waiters, f.resolve)
       f.await()
     end
-    local err = nursery.error
-    nursery.error = nil
-    if err then
-      error(err, 0)
-    end
+    local errors = nursery.errors
+    nursery.errors = {}
+    errs.raise(errors)
   end
 
   return nursery
@@ -63,11 +62,9 @@ M.scope = function(parent, body)
   local nursery = M.new(parent)
   lib.scope(function(defer)
     defer(nursery.handle.cancel)
-    local ok, err = pcall(body, nursery)
-    if not ok and not nursery.error then
-      nursery.error = err
-      nursery.handle.cancel()
-    end
+    nursery.spawn(function()
+      body(nursery)
+    end)
     nursery.join()
   end)
 end

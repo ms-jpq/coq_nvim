@@ -1,9 +1,10 @@
 local T = require "coq.lib.test"
 local async = require "coq.lib.async"
+local handle = require "coq.lib.async.handle"
 
 T.describe("handle", function(test)
   test("cancel fires registered watchers", function()
-    local h = async.handle()
+    local h = handle.new()
     local fired = false
     h.watch(function()
       fired = true
@@ -14,7 +15,7 @@ T.describe("handle", function(test)
   end)
 
   test("cancel is idempotent", function()
-    local h = async.handle()
+    local h = handle.new()
     local count = 0
     h.watch(function()
       count = count + 1
@@ -26,7 +27,7 @@ T.describe("handle", function(test)
   end)
 
   test("watch on a cancelled handle fires immediately", function()
-    local h = async.handle()
+    local h = handle.new()
     h.cancel()
     local fired = false
     h.watch(function()
@@ -37,7 +38,7 @@ T.describe("handle", function(test)
   end)
 
   test("unwatch removes a function watcher before cancel", function()
-    local h = async.handle()
+    local h = handle.new()
     local fired = false
     local unwatch = h.watch(function()
       fired = true
@@ -49,31 +50,31 @@ T.describe("handle", function(test)
   end)
 
   test("unwatch on a cancelled handle is a noop", function()
-    local h = async.handle()
+    local h = handle.new()
     h.cancel()
     local unwatch = h.watch(function() end)
     unwatch()
   end)
 
   test("parent cancel cascades to child", function()
-    local parent = async.handle()
-    local child = async.handle(parent)
+    local parent = handle.new()
+    local child = handle.new(parent)
     parent.cancel()
 
     T.eq(child.cancelled, true)
   end)
 
   test("child cancel does not cancel parent", function()
-    local parent = async.handle()
-    local child = async.handle(parent)
+    local parent = handle.new()
+    local child = handle.new(parent)
     child.cancel()
 
     T.eq(parent.cancelled, false)
   end)
 
   test("child cancel releases its slot in parent watchers", function()
-    local parent = async.handle()
-    local child = async.handle(parent)
+    local parent = handle.new()
+    local child = handle.new(parent)
     child.cancel()
     local parent_fired = 0
     parent.watch(function()
@@ -85,7 +86,7 @@ T.describe("handle", function(test)
   end)
 
   test("deadline cancels handle after the elapsed time", function()
-    local h = async.handle(nil, 5)
+    local h = handle.new(nil, 5)
 
     T.eq(h.cancelled, false)
 
@@ -95,7 +96,7 @@ T.describe("handle", function(test)
   end)
 
   test("early cancel disarms the deadline timer", function()
-    local h = async.handle(nil, 5)
+    local h = handle.new(nil, 5)
     h.cancel()
     async.sleep(20)
 
@@ -103,7 +104,7 @@ T.describe("handle", function(test)
   end)
 
   test("deadline fires watchers", function()
-    local h = async.handle(nil, 5)
+    local h = handle.new(nil, 5)
     local fired = false
     h.watch(function()
       fired = true
@@ -114,7 +115,7 @@ T.describe("handle", function(test)
   end)
 
   test("cancel uses snapshot semantics so mid-fire unwatch is safe", function()
-    local h = async.handle()
+    local h = handle.new()
     local count = 0
     local unwatch_late
     h.watch(function()

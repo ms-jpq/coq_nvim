@@ -1,15 +1,14 @@
-local handle = require "coq.lib.async.handle"
 local nursery = require "coq.lib.async.nursery"
 local runtime = require "coq.lib.async.runtime"
 
 local M = {
   current = runtime.current,
   cancelled = runtime.cancelled,
+  checkpoint = runtime.checkpoint,
   future = runtime.future,
   wrap = runtime.wrap,
   thunk = runtime.thunk,
   sleep = runtime.sleep,
-  handle = handle.new,
   nursery = nursery.new,
   scope = nursery.scope,
 }

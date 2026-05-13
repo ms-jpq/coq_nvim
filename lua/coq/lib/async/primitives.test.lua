@@ -1,9 +1,10 @@
 local T = require "coq.lib.test"
 local async = require "coq.lib.async"
+local handle = require "coq.lib.async.handle"
 
 T.describe("future cancel", function(test)
   test("await returns nil when ambient handle already cancelled", function()
-    local h = async.handle()
+    local h = handle.new()
     h.cancel()
 
     async.scope(h, function(n)
@@ -16,7 +17,7 @@ T.describe("future cancel", function(test)
   end)
 
   test("await with explicit handle returns nil when that handle cancelled", function()
-    local h = async.handle()
+    local h = handle.new()
     h.cancel()
     local f = async.future()
     f.resolve(2)
@@ -32,7 +33,7 @@ T.describe("future cancel", function(test)
   end)
 
   test("await wakes with nil when cancelled mid-yield", function()
-    local h = async.handle()
+    local h = handle.new()
     local awoke = false
     local got
     async.scope(h, function(n)
@@ -49,7 +50,7 @@ T.describe("future cancel", function(test)
   end)
 
   test("resolve after cancel is silent", function()
-    local h = async.handle()
+    local h = handle.new()
     local resolve
     async.scope(h, function(n)
       n.spawn(function()
@@ -67,7 +68,7 @@ end)
 
 T.describe("sleep cancel", function(test)
   test("returns immediately when ambient handle already cancelled", function()
-    local h = async.handle()
+    local h = handle.new()
     h.cancel()
 
     async.scope(h, function(n)
@@ -82,7 +83,7 @@ T.describe("sleep cancel", function(test)
   end)
 
   test("returns early when cancelled mid-sleep", function()
-    local h = async.handle()
+    local h = handle.new()
     local elapsed_ms
 
     async.scope(h, function(n)

@@ -1,5 +1,6 @@
 local T = require "coq.lib.test"
 local async = require "coq.lib.async"
+local handle = require "coq.lib.async.handle"
 
 local delayed = function(value, delay)
   local sent = false
@@ -67,7 +68,7 @@ T.describe("merge", function(test)
   end)
 
   test("returns nil when ambient handle cancelled mid-merge", function()
-    local h = async.handle()
+    local h = handle.new()
     local got
     async.scope(h, function(n)
       n.spawn(function()
@@ -84,7 +85,7 @@ T.describe("merge", function(test)
   end)
 
   test("explicit handle short-circuits the merge", function()
-    local sh = async.handle()
+    local sh = handle.new()
     local got
     async.scope(sh, function(n)
       n.spawn(function()
