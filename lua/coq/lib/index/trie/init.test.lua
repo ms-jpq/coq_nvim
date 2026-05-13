@@ -1,5 +1,5 @@
 local T = require "coq.lib.test"
-local trie = require "coq.lib.trie"
+local trie = require "coq.lib.index.trie"
 
 local collect = function(iter)
   local out = {}
