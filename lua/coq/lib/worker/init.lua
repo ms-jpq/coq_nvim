@@ -24,17 +24,21 @@ M.spawn = function(definition)
   local closed = false
 
   local send = proto.sender(req_write)
-  local respond_main = proto.responder(send, K.MAIN_RESPONSE)
+  local respond_main = proto.responder(send, K.RESPONSE)
 
   local handlers = {
-    [K.MAIN_CALL] = function(frame)
+    [K.REQUEST] = function(frame)
       local id, fn_dump = frame.id, frame.fn_dump
       local args, argn = frame.args or {}, frame.argn or 0
-      vim.schedule(function()
-        async.run(function()
-          respond_main(id, proto.pack(pcall(load(fn_dump), unpack(args, 1, argn))))
-        end)
-      end)
+      vim.schedule(async(function()
+        local fn, err = load(fn_dump)
+        if not fn then
+          respond_main(id, false, 1, { err or errs.UNKNOWN })
+          return
+        end
+
+        respond_main(id, proto.pack(pcall(fn, unpack(args, 1, argn))))
+      end))
     end,
     [K.RESPONSE] = inflight.resolve,
     [K.YIELD] = inflight.resolve,

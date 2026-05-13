@@ -38,7 +38,7 @@ return function(req_fd, rsp_fd, raw)
     end)
 
     send {
-      kind = K.MAIN_CALL,
+      kind = K.REQUEST,
       id = id,
       fn_dump = string.dump(fn),
       args = args,
@@ -85,7 +85,7 @@ return function(req_fd, rsp_fd, raw)
   end
 
   local handlers = {
-    [K.MAIN_RESPONSE] = tracker.resolve,
+    [K.RESPONSE] = tracker.resolve,
     [K.REQUEST] = function(frame)
       local id = frame.id
       async.run(function()
