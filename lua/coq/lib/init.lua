@@ -1,5 +1,7 @@
 local M = {}
 
+M.group = [[coq]]
+
 M.scope = function(fn)
   local defers = {}
   local ok, ret = pcall(fn, function(defer)

@@ -221,6 +221,32 @@ T.describe("worker", function(test)
     assert(err:find "leash snapped", "expected leash snapped, got: " .. tostring(err))
   end)
 
+  test("vim.ringbuf is available inside the worker", function()
+    local w = worker.spawn {
+      init = function()
+        return { rb = vim.ringbuf(3) }
+      end,
+      push = function(state, v)
+        state.rb:push(v)
+      end,
+      drain = function(state)
+        local out = {}
+        for v in state.rb do
+          table.insert(out, v)
+        end
+        return out
+      end,
+    }
+    w.push "lil"
+    w.push "spot"
+    w.push "fido"
+    w.push "rex"
+    local seen = w.drain()
+    w.close()
+
+    T.eq(seen, { "spot", "fido", "rex" })
+  end)
+
   test("scope + defer pairs cleanly with iter.close", function()
     local w = worker.spawn {
       infinite = worker.streaming(function(yield, _)

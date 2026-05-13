@@ -1,4 +1,4 @@
-local channel = require "coq.lib.async.channel"
+local async = require "coq.lib.async"
 local errs = require "coq.lib.errs"
 local proto = require "coq.lib.worker.proto"
 
@@ -16,8 +16,10 @@ end
 
 M.new = function(send, inflight, send_request)
   return function(method, args, argn)
-    local chan = channel.mpsc()
-    local id, release = inflight.reserve(chan.push)
+    local resolve, await = async.future()
+    local id, release = inflight.reserve(function(frame)
+      resolve(frame)
+    end)
     send_request(id, method, args, argn)
 
     local done, first = false, true
@@ -39,11 +41,12 @@ M.new = function(send, inflight, send_request)
       end
 
       if not first then
+        resolve, await = async.future()
         send { kind = K.NEXT, id = id }
       end
       first = false
 
-      local frame = chan.pull()
+      local frame = await()
       if frame.kind == K.YIELD then
         return unpack(frame.values, 1, frame.n)
       end
