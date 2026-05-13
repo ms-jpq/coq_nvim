@@ -1,6 +1,12 @@
+local cancel = require "coq.lib.cancel"
+
 local M = {}
 
 local threads = setmetatable({}, { __mode = "k" })
+
+M.cancellation = function()
+  return threads[coroutine.running()]
+end
 
 M.future = function()
   local thread = coroutine.running()
@@ -28,10 +34,20 @@ M.future = function()
   return resolve, await
 end
 
-M.race = function(fns)
+M.race = function(fns, parent)
   local thread = coroutine.running()
   assert(thread, "race: must be called inside running coroutine")
   local resolved = nil
+  local token = cancel.token(parent)
+
+  local resume = function(values)
+    if coroutine.status(thread) == "suspended" then
+      local ok, msg = coroutine.resume(thread, unpack(values))
+      if not ok then
+        error(msg, 0)
+      end
+    end
+  end
 
   local finish = function(idx)
     return function(...)
@@ -39,20 +55,24 @@ M.race = function(fns)
         return
       end
       resolved = { idx, ... }
-      if coroutine.status(thread) == "suspended" then
-        local ok, msg = coroutine.resume(thread, unpack(resolved))
-        if not ok then
-          error(msg, 0)
-        end
-      end
+      token.cancel()
+      resume(resolved)
     end
   end
+
+  token.watch(function()
+    if resolved then
+      return
+    end
+    resolved = {}
+    resume(resolved)
+  end)
 
   for idx, fn in pairs(fns) do
     local done = finish(idx)
     M.run(function()
       done(fn())
-    end)
+    end, token)
   end
 
   if resolved then

@@ -1,5 +1,6 @@
 local T = require "coq.lib.test"
 local async = require "coq.lib.async"
+local cancel = require "coq.lib.cancel"
 
 T.describe("race", function(test)
   test("returns winning idx and value on sync task", function()
@@ -93,5 +94,42 @@ T.describe("race", function(test)
 
     T.eq(idx, 1)
     T.eq(async_ran, true)
+  end)
+
+  test("loser sees cancellation when a winner emerges", function()
+    local loser_cancelled = false
+    async.race {
+      function()
+        return "winner"
+      end,
+      function()
+        async.cancellation().watch(function()
+          loser_cancelled = true
+        end)
+        async.sleep(50)
+      end,
+    }
+
+    T.eq(loser_cancelled, true)
+  end)
+
+  test("external cancel bails race with nil idx", function()
+    local outer = cancel.token()
+    local cancelled = false
+    local idx
+    async.run(function()
+      idx = async.race({
+        function()
+          async.cancellation().watch(function()
+            cancelled = true
+          end)
+          async.sleep(50)
+        end,
+      }, outer)
+    end)
+
+    outer.cancel()
+    T.eq(cancelled, true)
+    T.eq(idx, nil)
   end)
 end)
