@@ -40,9 +40,13 @@ M.future = function(h)
       return
     end
 
+    local active = true
     local unwatch
     if h then
       unwatch = h.watch(function()
+        if not active then
+          return
+        end
         if coroutine.status(thread) == "suspended" then
           local ok, msg = coroutine.resume(thread)
           if not ok then
@@ -53,6 +57,7 @@ M.future = function(h)
     end
 
     local ret = { coroutine.yield() }
+    active = false
     if unwatch then
       unwatch()
     end

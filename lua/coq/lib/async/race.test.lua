@@ -145,4 +145,45 @@ T.describe("race", function(test)
     T.eq(seen, scope)
     T.eq(scope.cancelled, true)
   end)
+
+  test("child error propagates and cancels siblings", function()
+    local sibling_cancelled = false
+    local ok, err = pcall(function()
+      async.race {
+        function()
+          async.current().watch(function()
+            sibling_cancelled = true
+          end)
+          async.sleep(100)
+          return "sibling"
+        end,
+        function()
+          async.sleep(5)
+          error "child went missing"
+        end,
+      }
+    end)
+
+    async.sleep(10)
+
+    T.eq(ok, false)
+    T.eq(sibling_cancelled, true)
+    assert(tostring(err):find "child went missing")
+  end)
+
+  test("sync child error propagates from race", function()
+    local ok, err = pcall(function()
+      async.race {
+        function()
+          error "boom"
+        end,
+        function()
+          return "never"
+        end,
+      }
+    end)
+
+    T.eq(ok, false)
+    assert(tostring(err):find "boom")
+  end)
 end)

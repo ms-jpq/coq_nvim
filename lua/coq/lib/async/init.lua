@@ -17,6 +17,7 @@ M.race = function(h, fns)
   end
   h = h or handle.new(M.current())
   local resolve, await = M.future(h)
+  local race_err
 
   h.watch(function()
     resolve()
@@ -24,12 +25,22 @@ M.race = function(h, fns)
 
   for idx, fn in ipairs(fns) do
     M.run(h, function()
-      resolve(idx, fn())
-      h.cancel()
+      local ok, err = xpcall(function()
+        resolve(idx, fn())
+        h.cancel()
+      end, debug.traceback)
+      if not ok and not race_err then
+        race_err = err
+        h.cancel()
+      end
     end)
   end
 
-  return await()
+  local ret = { await() }
+  if race_err then
+    error(race_err, 0)
+  end
+  return unpack(ret)
 end
 
 M.merge = function(parent, fns)
