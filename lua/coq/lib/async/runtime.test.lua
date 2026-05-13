@@ -28,7 +28,7 @@ T.describe("async", function(test)
 
   test("thunk defers execution", function()
     local ran = false
-    local later = async.thunk(async.current(), function()
+    local later = async.thunk(function()
       ran = true
     end)
 
@@ -41,11 +41,10 @@ T.describe("async", function(test)
   end)
 
   test("thunk propagates errors", function()
-    local h = async.current()
     local ok
     vim.schedule(function()
       ok = pcall(function()
-        async.thunk(h, function()
+        async.thunk(function()
           error "lil went missing"
         end)()
       end)

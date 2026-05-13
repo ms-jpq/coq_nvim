@@ -99,7 +99,8 @@ T.describe("sleep cancel", function(test)
   end)
 
   test("does not leak watchers on the ambient handle", function()
-    local h = async.handle()
+    local n = async.nursery()
+    local h = n.handle
 
     local live = {}
     local orig_watch = h.watch
@@ -112,12 +113,12 @@ T.describe("sleep cancel", function(test)
       end
     end
 
-    vim.schedule(async.thunk(h, function()
+    n.spawn(function()
       for _ = 1, 5 do
         async.sleep(1)
       end
-    end))
-    async.sleep(30)
+    end)
+    n.join()
 
     T.eq(next(live), nil)
   end)

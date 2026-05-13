@@ -40,18 +40,18 @@ T.describe("nursery", function(test)
   test("join wakes when ambient cancelled mid-join", function()
     local outer = async.handle()
     local joined = false
-    vim.schedule(async.thunk(outer, function()
-      local n = async.nursery()
+    async.scope(outer, function(n)
       n.spawn(function()
-        async.sleep(200)
+        local inner = async.nursery()
+        inner.spawn(function()
+          async.sleep(200)
+        end)
+        inner.join()
+        joined = true
       end)
-      n.join()
-      joined = true
-    end))
-
-    async.sleep(5)
-    outer.cancel()
-    async.sleep(20)
+      async.sleep(5)
+      outer.cancel()
+    end)
 
     T.eq(joined, true)
   end)

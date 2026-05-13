@@ -73,11 +73,7 @@ M.wrap = function(fn)
   end
 end
 
-M.thunk = function(h, fn)
-  if fn == nil then
-    fn = h
-    h = M.current()
-  end
+M.thunk = function(fn)
   return function(...)
     assert(coroutine.running() == nil, "thunk: must be called outside a coroutine")
     local argv = { ... }
@@ -85,7 +81,7 @@ M.thunk = function(h, fn)
       fn(unpack(argv))
     end)
 
-    threads[thread] = h
+    threads[thread] = M.ROOT
 
     local ok, ret = coroutine.resume(thread)
     if not ok then

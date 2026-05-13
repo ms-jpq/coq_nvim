@@ -30,17 +30,14 @@ M.spawn = function(definition)
     [K.REQUEST] = function(frame)
       local id, fn_dump = frame.id, frame.fn_dump
       local args, argn = frame.args or {}, frame.argn or 0
-      local h = async.handle()
-      vim.schedule(async.thunk(h, function()
+      vim.schedule(async.thunk(function()
         local fn, err = load(fn_dump)
         if not fn then
           respond_main(id, false, 1, { err or errs.UNKNOWN })
-          h.cancel()
           return
         end
 
         respond_main(id, proto.pack(pcall(fn, unpack(args, 1, argn))))
-        h.cancel()
       end))
     end,
     [K.RESPONSE] = inflight.resolve,
