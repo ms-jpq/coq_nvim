@@ -5,6 +5,21 @@ local BYTE = 256
 
 local M = {}
 
+M.KIND = {
+  REQUEST = "request",
+  RESPONSE = "response",
+  MAIN_CALL = "main_call",
+  MAIN_RESPONSE = "main_response",
+  YIELD = "yield",
+  NEXT = "next",
+  STOP = "stop",
+}
+
+M.MODE = {
+  STREAM = "stream",
+  RPC = "rpc",
+}
+
 M.encode = function(body)
   local payload = vim.mpack.encode(body)
   local n = #payload
@@ -25,7 +40,8 @@ local decode = function(buf)
   if #buf < HEADER_SIZE + n then
     return nil
   end
-  return vim.mpack.decode(buf:sub(HEADER_SIZE + 1, HEADER_SIZE + n)), buf:sub(HEADER_SIZE + n + 1)
+  local decoded = vim.mpack.decode(buf:sub(HEADER_SIZE + 1, HEADER_SIZE + n))
+  return decoded, buf:sub(HEADER_SIZE + n + 1)
 end
 
 M.consume = function(buf)

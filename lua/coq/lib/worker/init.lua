@@ -3,8 +3,11 @@
 local async = require "coq.lib.async"
 local channel_mod = require "coq.lib.worker.channel"
 local config = require "coq.lib.worker.config"
-local pending_mod = require "coq.lib.worker.pending"
+local errs = require "coq.lib.errs"
+local inflight_mod = require "coq.lib.worker.inflight"
 local proto = require "coq.lib.worker.proto"
+
+local K = proto.KIND
 
 local M = {}
 
@@ -20,7 +23,8 @@ local worker_body = function(req_fd, resp_fd, bootstrap)
   local async = require "coq.lib.async"
   local proto = require "coq.lib.worker.proto"
   local config = require "coq.lib.worker.config"
-  local pending_mod = require "coq.lib.worker.pending"
+  local inflight_mod = require "coq.lib.worker.inflight"
+  local K = proto.KIND
 
   local req_pipe, resp_pipe = vim.uv.new_pipe(), vim.uv.new_pipe()
   req_pipe:open(req_fd)
@@ -33,18 +37,18 @@ local worker_body = function(req_fd, resp_fd, bootstrap)
   end
 
   local respond = function(id, ok, n, vals)
-    send { kind = "response", id = id, ok = ok, n = n, values = vals }
+    send { kind = K.RESPONSE, id = id, ok = ok, n = n, values = vals }
   end
 
-  local main_pending = pending_mod.make()
+  local main_inflight = inflight_mod.new()
 
   local call_main = function(fn, ...)
     local argn = select("#", ...)
     local args = { ... }
     local resolve, await = async.future()
-    local id = main_pending.reserve(resolve)
+    local id = main_inflight.reserve(resolve)
     send {
-      kind = "main_call",
+      kind = K.MAIN_CALL,
       id = id,
       fn_dump = string.dump(fn),
       args = args,
@@ -59,7 +63,7 @@ local worker_body = function(req_fd, resp_fd, bootstrap)
     return function(...)
       local argn = select("#", ...)
       local args = { ... }
-      send { kind = "yield", id = id, n = argn, values = args }
+      send { kind = K.YIELD, id = id, n = argn, values = args }
       local resolve, await = async.future()
       iter_resumers[id] = resolve
       return await()
@@ -71,7 +75,7 @@ local worker_body = function(req_fd, resp_fd, bootstrap)
     if not m then
       return false, 1, { "unknown method: " .. tostring(name) }
     end
-    if m.kind == "stream" then
+    if m.mode == proto.MODE.STREAM then
       local ok, err = pcall(m.fn, make_yield(id), state, unpack(args, 1, argn))
       iter_resumers[id] = nil
       if ok then
@@ -96,15 +100,15 @@ local worker_body = function(req_fd, resp_fd, bootstrap)
   worker_mod.main = call_main
 
   local handlers = {
-    main_response = main_pending.resolve,
-    request = function(frame)
+    [K.MAIN_RESPONSE] = main_inflight.resolve,
+    [K.REQUEST] = function(frame)
       local id = frame.id
       async.run(function()
         respond(id, invoke(frame.method, id, frame.args or {}, frame.argn or 0))
       end)
     end,
-    next = resume_iter(true),
-    stop = resume_iter(false),
+    [K.NEXT] = resume_iter(true),
+    [K.STOP] = resume_iter(false),
   }
 
   proto.start_reader(req_pipe, handlers, function()
@@ -123,12 +127,12 @@ M.spawn = function(definition)
   resp_pipe:open(resp_fds.read)
   req_write:open(req_fds.write)
 
-  local pending = pending_mod.make()
+  local inflight = inflight_mod.new()
   local closed = false
 
   local respond_main = function(id, ok, n, vals)
     req_write:write(proto.encode {
-      kind = "main_response",
+      kind = K.MAIN_RESPONSE,
       id = id,
       ok = ok,
       n = n,
@@ -137,7 +141,7 @@ M.spawn = function(definition)
   end
 
   local handlers = {
-    main_call = function(frame)
+    [K.MAIN_CALL] = function(frame)
       local id, fn_dump = frame.id, frame.fn_dump
       local args, argn = frame.args or {}, frame.argn or 0
       vim.schedule(function()
@@ -146,19 +150,19 @@ M.spawn = function(definition)
         end)
       end)
     end,
-    response = pending.resolve,
-    yield = pending.resolve,
+    [K.RESPONSE] = inflight.resolve,
+    [K.YIELD] = inflight.resolve,
   }
 
   proto.start_reader(resp_pipe, handlers, function()
-    pending.drain "worker died"
+    inflight.drain "worker died"
   end)
 
   vim.uv.new_thread(worker_body, req_fds.read, resp_fds.write, config.encode(definition))
 
   local send_request = function(id, method, args, argn)
     req_write:write(proto.encode {
-      kind = "request",
+      kind = K.REQUEST,
       id = id,
       method = method,
       args = args,
@@ -170,15 +174,15 @@ M.spawn = function(definition)
     if closed then
       return cb "worker closed"
     end
-    send_request(pending.reserve(cb), method, args, argn)
+    send_request(inflight.reserve(cb), method, args, argn)
   end)
 
   local iter_call = function(method, args, argn)
     if closed then
       error("worker closed", 3)
     end
-    local channel = channel_mod.make()
-    local id, release = pending.reserve_raw(channel.push)
+    local channel = channel_mod.new()
+    local id, release = inflight.reserve_raw(channel.push)
     send_request(id, method, args, argn)
 
     local done, first = false, true
@@ -188,7 +192,7 @@ M.spawn = function(definition)
         return
       end
       done = true
-      req_write:write(proto.encode { kind = "stop", id = id })
+      req_write:write(proto.encode { kind = K.STOP, id = id })
       release()
     end
 
@@ -197,17 +201,17 @@ M.spawn = function(definition)
         return nil
       end
       if not first then
-        req_write:write(proto.encode { kind = "next", id = id })
+        req_write:write(proto.encode { kind = K.NEXT, id = id })
       end
       first = false
       local frame = channel.pull()
-      if frame.kind == "yield" then
+      if frame.kind == K.YIELD then
         return unpack(frame.values, 1, frame.n)
       end
       done = true
       release()
       if not frame.ok then
-        error(frame.values[1] or "unknown error", 2)
+        error(frame.values[1] or errs.UNKNOWN, 2)
       end
       return nil
     end

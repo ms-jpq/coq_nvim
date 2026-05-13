@@ -4,7 +4,7 @@ local async = require "coq.lib.async"
 
 local M = {}
 
-M.make = function()
+M.new = function()
   local queue, waiter = {}, nil
   return {
     push = function(item)
