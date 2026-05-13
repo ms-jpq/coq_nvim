@@ -153,17 +153,17 @@ M.merge = function(opts)
 
   return function()
     while #iters > 0 do
-      local fns = {}
-      for i, iter in ipairs(iters) do
-        fns[i] = function()
+      local race_opts = {}
+      for _, iter in ipairs(iters) do
+        table.insert(race_opts, function()
           return iter()
-        end
+        end)
       end
       if parent then
-        fns.cancel = cancel.token(parent)
+        race_opts.cancel = cancel.token(parent)
       end
 
-      local winner, value = M.race(fns)
+      local winner, value = M.race(race_opts)
 
       if winner == nil then
         return nil
