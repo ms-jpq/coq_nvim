@@ -39,11 +39,11 @@ T.describe("async", function(test)
     T.eq(ran, true)
   end)
 
-  test("run propagates errors", function()
+  test("thunk propagates errors", function()
     local ok = pcall(function()
-      async.run(async.ROOT, function()
+      async.thunk(async.ROOT, function()
         error "lil went missing"
-      end)
+      end)()
     end)
 
     T.eq(ok, false)

@@ -69,29 +69,33 @@ T.describe("merge", function(test)
   test("returns nil when ambient handle cancelled mid-merge", function()
     local h = async.handle()
     local got
-    async.run(h, function()
-      local iter = function()
-        async.sleep(100)
-        return "never"
-      end
-      got = async.merge { iter }()
+    async.scope(h, function(n)
+      n.spawn(function()
+        local iter = function()
+          async.sleep(100)
+          return "never"
+        end
+        got = async.merge { iter }()
+      end)
+      h.cancel()
     end)
-    h.cancel()
 
     T.eq(got, nil)
   end)
 
   test("explicit handle short-circuits the merge", function()
-    local scope = async.handle()
+    local sh = async.handle()
     local got
-    async.run(async.ROOT, function()
-      local iter = function()
-        async.sleep(100)
-        return "never"
-      end
-      got = async.merge(scope, { iter })()
+    async.scope(function(n)
+      n.spawn(function()
+        local iter = function()
+          async.sleep(100)
+          return "never"
+        end
+        got = async.merge(sh, { iter })()
+      end)
+      sh.cancel()
     end)
-    scope.cancel()
 
     T.eq(got, nil)
   end)

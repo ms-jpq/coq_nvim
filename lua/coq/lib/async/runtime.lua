@@ -88,10 +88,6 @@ M.thunk = function(h, fn)
   end
 end
 
-M.run = function(h, fn)
-  M.thunk(h, fn)()
-end
-
 M.sleep = function(milliseconds)
   local h = M.current()
   if h and h.cancelled then

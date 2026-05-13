@@ -44,13 +44,13 @@ M.run = function(seed)
     t.timed_out = false
     max_timeout = math.max(max_timeout, t.timeout)
 
-    async.run(async.ROOT, function()
+    async.thunk(async.ROOT, function()
       local ok, e = xpcall(t.fn, debug.traceback)
       t.done = true
       if not ok then
         t.err = e
       end
-    end)
+    end)()
   end
 
   vim.wait(max_timeout + 100, function()

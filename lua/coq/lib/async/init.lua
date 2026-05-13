@@ -8,7 +8,6 @@ local M = {
   future = runtime.future,
   wrap = runtime.wrap,
   thunk = runtime.thunk,
-  run = runtime.run,
   sleep = runtime.sleep,
   handle = handle.new,
   ROOT = handle.ROOT,
@@ -30,7 +29,7 @@ M.race = function(h, fns)
   end)
 
   for idx, fn in ipairs(fns) do
-    M.run(h, function()
+    runtime.thunk(h, function()
       local ok, err = xpcall(function()
         resolve(idx, fn())
       end, debug.traceback)
@@ -38,7 +37,7 @@ M.race = function(h, fns)
         race_err = err
         h.cancel()
       end
-    end)
+    end)()
   end
 
   local ret = { await(h) }

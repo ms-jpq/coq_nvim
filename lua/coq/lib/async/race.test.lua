@@ -116,17 +116,19 @@ T.describe("race", function(test)
     local outer = async.handle()
     local cancelled = false
     local idx
-    async.run(outer, function()
-      idx = async.race(outer, {
-        function()
-          async.current().watch(function()
-            cancelled = true
-          end)
-          async.sleep(50)
-        end,
-      })
+    async.scope(outer, function(n)
+      n.spawn(function()
+        idx = async.race(outer, {
+          function()
+            async.current().watch(function()
+              cancelled = true
+            end)
+            async.sleep(50)
+          end,
+        })
+      end)
+      outer.cancel()
     end)
-    outer.cancel()
 
     T.eq(cancelled, true)
     T.eq(idx, nil)

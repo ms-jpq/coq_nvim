@@ -88,9 +88,11 @@ return function(req_fd, rsp_fd, raw)
     [K.RESPONSE] = tracker.resolve,
     [K.REQUEST] = function(frame)
       local id = frame.id
-      async.run(async.ROOT, function()
+      local h = async.handle()
+      async.thunk(h, function()
         respond(id, invoke(frame.method, id, frame.args or {}, frame.argn or 0))
-      end)
+        h.cancel()
+      end)()
     end,
     [K.NEXT] = resume_iter(true),
     [K.STOP] = resume_iter(false),
