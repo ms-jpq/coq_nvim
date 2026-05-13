@@ -1,4 +1,4 @@
-local async = require "coq.lib.async"
+local runtime = require "coq.lib.async.runtime"
 
 local M = {}
 
@@ -43,7 +43,7 @@ M.mpsc = function()
       if #q > 0 then
         return q.pop()
       end
-      local resolve, await = async.future(h)
+      local resolve, await = runtime.future(h)
       waiter = resolve
       return await()
     end,

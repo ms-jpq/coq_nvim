@@ -29,7 +29,7 @@ T.describe("merge", function(test)
     end
 
     local out = {}
-    for v in async.merge { iter } do
+    for _, v in async.merge { iter } do
       table.insert(out, v)
     end
     T.eq(out, { 10, 20, 30 })
@@ -37,7 +37,7 @@ T.describe("merge", function(test)
 
   test("returns each iter's value in completion order", function()
     local out = {}
-    for v in
+    for _, v in
       async.merge {
         delayed("a", 5),
         delayed("c", 15),
@@ -47,6 +47,20 @@ T.describe("merge", function(test)
       table.insert(out, v)
     end
     T.eq(out, { "a", "b", "c" })
+  end)
+
+  test("returns the original iter index alongside the value", function()
+    local out = {}
+    for idx, v in
+      async.merge {
+        delayed("a", 5),
+        delayed("c", 15),
+        delayed("b", 10),
+      }
+    do
+      table.insert(out, { idx, v })
+    end
+    T.eq(out, { { 1, "a" }, { 3, "b" }, { 2, "c" } })
   end)
 
   test("returns nil when ambient handle cancelled mid-merge", function()

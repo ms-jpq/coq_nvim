@@ -5,6 +5,7 @@ local M = runtime
 
 M.handle = handle.new
 M.ROOT = handle.ROOT
+M.channel = require "coq.lib.async.channel"
 
 M.race = function(opts)
   local thread = coroutine.running()
@@ -55,18 +56,18 @@ end
 
 M.merge = function(opts)
   local iters = {}
-  for _, v in ipairs(opts) do
-    table.insert(iters, v)
+  for idx, fn in ipairs(opts) do
+    table.insert(iters, { idx = idx, fn = fn })
   end
   local parent = opts.handle
 
   return function()
     while #iters > 0 do
       local race_opts = {}
-      for _, iter in ipairs(iters) do
-        table.insert(race_opts, function()
-          return iter()
-        end)
+      for i, entry in ipairs(iters) do
+        race_opts[i] = function()
+          return entry.fn()
+        end
       end
       if parent then
         race_opts.handle = handle.new(parent)
@@ -81,7 +82,7 @@ M.merge = function(opts)
       if value == nil then
         table.remove(iters, winner)
       else
-        return value
+        return iters[winner].idx, value
       end
     end
     return nil
