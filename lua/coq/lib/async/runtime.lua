@@ -35,6 +35,7 @@ M.future = function()
     if thread and coroutine.status(thread) == "suspended" then
       local t = thread
       thread = nil
+
       local ok, msg = coroutine.resume(t)
       if not ok then
         error(msg, 0)
@@ -61,11 +62,13 @@ M.future = function()
       assert(thread == nil, "future: another coroutine is already awaiting")
       thread = current
 
-      local unwatch = h.watch(function()
-        finish(nil)
+      lib.scope(function(defer)
+        defer(h.on_cancel(function()
+          finish(nil)
+        end))
+
+        coroutine.yield()
       end)
-      coroutine.yield()
-      unwatch()
     end
 
     return unpack(values or {})
@@ -116,7 +119,7 @@ M.sleep = function(milliseconds)
       end
     end)
 
-    defer(h.watch(f.resolve))
+    defer(h.on_cancel(f.resolve))
 
     timer:start(milliseconds, 0, f.resolve)
     return f.await()

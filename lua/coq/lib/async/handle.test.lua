@@ -6,7 +6,7 @@ T.describe("handle", function(test)
   test("cancel fires registered watchers", function()
     local h = handle.new()
     local fired = false
-    h.watch(function()
+    h.on_cancel(function()
       fired = true
     end)
     h.cancel()
@@ -17,7 +17,7 @@ T.describe("handle", function(test)
   test("cancel is idempotent", function()
     local h = handle.new()
     local count = 0
-    h.watch(function()
+    h.on_cancel(function()
       count = count + 1
     end)
     h.cancel()
@@ -30,7 +30,7 @@ T.describe("handle", function(test)
     local h = handle.new()
     h.cancel()
     local fired = false
-    h.watch(function()
+    h.on_cancel(function()
       fired = true
     end)
 
@@ -40,7 +40,7 @@ T.describe("handle", function(test)
   test("unwatch removes a function watcher before cancel", function()
     local h = handle.new()
     local fired = false
-    local unwatch = h.watch(function()
+    local unwatch = h.on_cancel(function()
       fired = true
     end)
     unwatch()
@@ -52,7 +52,7 @@ T.describe("handle", function(test)
   test("unwatch on a cancelled handle is a noop", function()
     local h = handle.new()
     h.cancel()
-    local unwatch = h.watch(function() end)
+    local unwatch = h.on_cancel(function() end)
     unwatch()
   end)
 
@@ -77,7 +77,7 @@ T.describe("handle", function(test)
     local child = handle.new(parent)
     child.cancel()
     local parent_fired = 0
-    parent.watch(function()
+    parent.on_cancel(function()
       parent_fired = parent_fired + 1
     end)
     parent.cancel()
@@ -106,7 +106,7 @@ T.describe("handle", function(test)
   test("deadline fires watchers", function()
     local h = handle.new(nil, 5)
     local fired = false
-    h.watch(function()
+    h.on_cancel(function()
       fired = true
     end)
     async.sleep(20)
@@ -118,11 +118,11 @@ T.describe("handle", function(test)
     local h = handle.new()
     local count = 0
     local unwatch_late
-    h.watch(function()
+    h.on_cancel(function()
       count = count + 1
       unwatch_late()
     end)
-    unwatch_late = h.watch(function()
+    unwatch_late = h.on_cancel(function()
       count = count + 1
     end)
     h.cancel()

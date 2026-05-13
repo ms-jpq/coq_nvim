@@ -32,7 +32,7 @@ M.race = function(fns)
 
   local f = M.future()
   local n = nursery.new()
-  n.handle.watch(f.resolve)
+  n.handle.on_cancel(f.resolve)
 
   for idx, fn in ipairs(fns) do
     n.spawn(function()

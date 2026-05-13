@@ -110,7 +110,7 @@ T.describe("race", function(test)
         return "winner"
       end,
       function()
-        async.current().watch(function()
+        async.current().on_cancel(function()
           loser_cancelled = true
         end)
         async.sleep(50)
@@ -128,7 +128,7 @@ T.describe("race", function(test)
       n.spawn(function()
         idx = async.race {
           function()
-            async.current().watch(function()
+            async.current().on_cancel(function()
               cancelled = true
             end)
             async.sleep(50)
@@ -147,7 +147,7 @@ T.describe("race", function(test)
     local ok, err = pcall(function()
       async.race {
         function()
-          async.current().watch(function()
+          async.current().on_cancel(function()
             sibling_cancelled = true
           end)
           async.sleep(100)

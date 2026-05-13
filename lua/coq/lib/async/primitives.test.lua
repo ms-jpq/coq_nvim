@@ -104,10 +104,10 @@ T.describe("sleep cancel", function(test)
     local h = n.handle
 
     local live = {}
-    local orig_watch = h.watch
-    h.watch = function(fn)
+    local orig_on_cancel = h.on_cancel
+    h.on_cancel = function(fn)
       live[fn] = true
-      local unwatch = orig_watch(fn)
+      local unwatch = orig_on_cancel(fn)
       return function()
         live[fn] = nil
         unwatch()
