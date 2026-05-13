@@ -32,6 +32,10 @@ local worker_body = function(req_fd, resp_fd, bootstrap)
     resp_pipe:write(proto.encode(body))
   end
 
+  local respond = function(id, ok, n, vals)
+    send { kind = "response", id = id, ok = ok, n = n, values = vals }
+  end
+
   local main_pending = pending_mod.make()
 
   local call_main = function(fn, ...)
@@ -58,14 +62,15 @@ local worker_body = function(req_fd, resp_fd, bootstrap)
       send { kind = "yield", id = id, n = argn, values = args }
       local resolve, await = async.future()
       iter_resumers[id] = resolve
-      await()
+      return await()
     end
   end
 
-  local worker_mod = require "coq.lib.worker"
-  worker_mod.main = call_main
-
-  local invoke = function(m, id, args, argn)
+  local invoke = function(name, id, args, argn)
+    local m = methods[name]
+    if not m then
+      return false, 1, { "unknown method: " .. tostring(name) }
+    end
     if m.kind == "stream" then
       local ok, err = pcall(m.fn, make_yield(id), state, unpack(args, 1, argn))
       iter_resumers[id] = nil
@@ -77,33 +82,29 @@ local worker_body = function(req_fd, resp_fd, bootstrap)
     return proto.pack(pcall(m.fn, state, unpack(args, 1, argn)))
   end
 
-  local handlers = {
-    main_response = main_pending.resolve,
-    request = function(frame)
-      local m = methods[frame.method]
-      if not m then
-        send {
-          kind = "response",
-          id = frame.id,
-          ok = false,
-          n = 1,
-          values = { "unknown method: " .. tostring(frame.method) },
-        }
-        return
-      end
-      local id, args, argn = frame.id, frame.args or {}, frame.argn or 0
-      async.run(function()
-        local ok, n, vals = invoke(m, id, args, argn)
-        send { kind = "response", id = id, ok = ok, n = n, values = vals }
-      end)
-    end,
-    next = function(frame)
+  local resume_iter = function(value)
+    return function(frame)
       local r = iter_resumers[frame.id]
       iter_resumers[frame.id] = nil
       if r then
-        r()
+        r(value)
       end
+    end
+  end
+
+  local worker_mod = require "coq.lib.worker"
+  worker_mod.main = call_main
+
+  local handlers = {
+    main_response = main_pending.resolve,
+    request = function(frame)
+      local id = frame.id
+      async.run(function()
+        respond(id, invoke(frame.method, id, frame.args or {}, frame.argn or 0))
+      end)
     end,
+    next = resume_iter(true),
+    stop = resume_iter(false),
   }
 
   proto.start_reader(req_pipe, handlers, function()
@@ -125,21 +126,23 @@ M.spawn = function(definition)
   local pending = pending_mod.make()
   local closed = false
 
+  local respond_main = function(id, ok, n, vals)
+    req_write:write(proto.encode {
+      kind = "main_response",
+      id = id,
+      ok = ok,
+      n = n,
+      values = vals,
+    })
+  end
+
   local handlers = {
     main_call = function(frame)
       local id, fn_dump = frame.id, frame.fn_dump
       local args, argn = frame.args or {}, frame.argn or 0
       vim.schedule(function()
         async.run(function()
-          local fn = load(fn_dump)
-          local ok, rn, vals = proto.pack(pcall(fn, unpack(args, 1, argn)))
-          req_write:write(proto.encode {
-            kind = "main_response",
-            id = id,
-            ok = ok,
-            n = rn,
-            values = vals,
-          })
+          respond_main(id, proto.pack(pcall(load(fn_dump), unpack(args, 1, argn))))
         end)
       end)
     end,
@@ -178,8 +181,21 @@ M.spawn = function(definition)
     local id, release = pending.reserve_raw(channel.push)
     send_request(id, method, args, argn)
 
-    local first = true
-    return function()
+    local done, first = false, true
+
+    local close = function()
+      if done or closed then
+        return
+      end
+      done = true
+      req_write:write(proto.encode { kind = "stop", id = id })
+      release()
+    end
+
+    local next_fn = function()
+      if done then
+        return nil
+      end
       if not first then
         req_write:write(proto.encode { kind = "next", id = id })
       end
@@ -188,11 +204,26 @@ M.spawn = function(definition)
       if frame.kind == "yield" then
         return unpack(frame.values, 1, frame.n)
       end
+      done = true
       release()
       if not frame.ok then
         error(frame.values[1] or "unknown error", 2)
       end
       return nil
+    end
+
+    return setmetatable({ close = close }, { __call = next_fn })
+  end
+
+  local bind_rpc = function(name)
+    return function(...)
+      return proto.unwrap(call(name, { ... }, select("#", ...)))
+    end
+  end
+
+  local bind_stream = function(name)
+    return function(...)
+      return iter_call(name, { ... }, select("#", ...))
     end
   end
 
@@ -207,18 +238,6 @@ M.spawn = function(definition)
       end)
     end,
   }
-
-  local bind_rpc = function(name)
-    return function(...)
-      return proto.unwrap(call(name, { ... }, select("#", ...)))
-    end
-  end
-
-  local bind_stream = function(name)
-    return function(...)
-      return iter_call(name, { ... }, select("#", ...))
-    end
-  end
 
   for name, decl in pairs(definition) do
     if name ~= "init" then
