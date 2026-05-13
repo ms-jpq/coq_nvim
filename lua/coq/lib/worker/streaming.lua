@@ -1,4 +1,4 @@
-local channel = require "coq.lib.worker.channel"
+local channel = require "coq.lib.async.channel"
 local errs = require "coq.lib.errs"
 local proto = require "coq.lib.worker.proto"
 
