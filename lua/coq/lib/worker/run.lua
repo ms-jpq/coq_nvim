@@ -1,0 +1,104 @@
+-- Worker-side dispatch loop. Called by the (string.dump'd) thunk in init.lua
+-- after package.path has been wired up.
+
+local async = require "coq.lib.async"
+local config = require "coq.lib.worker.config"
+local inflight_mod = require "coq.lib.worker.inflight"
+local proto = require "coq.lib.worker.proto"
+
+local K = proto.KIND
+
+return function(req_fd, rsp_fd, raw)
+  local req_pipe, rsp_pipe = vim.uv.new_pipe(), vim.uv.new_pipe()
+  req_pipe:open(req_fd)
+  rsp_pipe:open(rsp_fd)
+
+  local state, methods = config.decode(raw)
+
+  local send = function(body)
+    rsp_pipe:write(proto.encode(body))
+  end
+
+  local respond = function(id, ok, n, vals)
+    send { kind = K.RESPONSE, id = id, ok = ok, n = n, values = vals }
+  end
+
+  local main_inflight = inflight_mod.new()
+
+  local call_main = function(fn, ...)
+    local argn = select("#", ...)
+    local args = { ... }
+    local resolve, await = async.future()
+    local id = main_inflight.reserve(resolve)
+    send {
+      kind = K.MAIN_CALL,
+      id = id,
+      fn_dump = string.dump(fn),
+      args = args,
+      argn = argn,
+    }
+    return proto.unwrap(await())
+  end
+
+  local iter_resumers = {}
+
+  local make_yield = function(id)
+    return function(...)
+      local argn = select("#", ...)
+      local args = { ... }
+      send { kind = K.YIELD, id = id, n = argn, values = args }
+      local resolve, await = async.future()
+      iter_resumers[id] = resolve
+      return await()
+    end
+  end
+
+  local invoke = function(name, id, args, argn)
+    local m = methods[name]
+    if not m then
+      return false, 1, { "unknown method: " .. tostring(name) }
+    end
+    if m.mode == proto.MODE.STREAM then
+      local ok, err = pcall(m.fn, make_yield(id), state, unpack(args, 1, argn))
+      iter_resumers[id] = nil
+      if ok then
+        return true, 0, {}
+      end
+      return false, 1, { err }
+    end
+    return proto.pack(pcall(m.fn, state, unpack(args, 1, argn)))
+  end
+
+  local resume_iter = function(value)
+    return function(frame)
+      local r = iter_resumers[frame.id]
+      iter_resumers[frame.id] = nil
+      if r then
+        r(value)
+      end
+    end
+  end
+
+  local worker_mod = require "coq.lib.worker"
+  worker_mod.main = call_main
+
+  local handlers = {
+    [K.MAIN_RESPONSE] = main_inflight.resolve,
+    [K.REQUEST] = function(frame)
+      local id = frame.id
+      async.run(function()
+        respond(id, invoke(frame.method, id, frame.args or {}, frame.argn or 0))
+      end)
+    end,
+    [K.NEXT] = resume_iter(true),
+    [K.STOP] = resume_iter(false),
+  }
+
+  proto.start_reader(req_pipe, handlers, function()
+    rsp_pipe:shutdown(function()
+      rsp_pipe:close()
+    end)
+  end)
+
+  vim.uv.run()
+end
