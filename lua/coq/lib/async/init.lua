@@ -4,7 +4,7 @@ local M = {}
 
 local threads = setmetatable({}, { __mode = "k" })
 
-M.cancellation = function()
+M.current_token = function()
   return threads[coroutine.running()]
 end
 
@@ -34,12 +34,16 @@ M.future = function()
   return resolve, await
 end
 
-M.race = function(parent, fns)
+M.race = function(parent, token, fns)
   assert(parent, "race: parent token required")
+  if fns == nil then
+    fns = token
+    token = nil
+  end
+  token = token or cancel.token(parent)
   local thread = coroutine.running()
   assert(thread, "race: must be called inside running coroutine")
   local resolved = nil
-  local token = cancel.token(parent)
 
   local resume = function(values)
     if coroutine.status(thread) == "suspended" then
@@ -96,11 +100,6 @@ end
 M.thunk = function(token, fn)
   assert(token, "thunk: token required")
   return function(...)
-    local parent = threads[coroutine.running()]
-    if parent and parent ~= token then
-      parent.watch(token)
-    end
-
     local argv = { ... }
     local thread = coroutine.create(function()
       fn(unpack(argv))

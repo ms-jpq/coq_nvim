@@ -4,7 +4,7 @@ local cancel = require "coq.lib.cancel"
 
 T.describe("race", function(test)
   test("returns winning idx and value on sync task", function()
-    local idx, val = async.race(async.cancellation(), {
+    local idx, val = async.race(async.current_token(), {
       function()
         return "woof"
       end,
@@ -15,7 +15,7 @@ T.describe("race", function(test)
   end)
 
   test("picks first task on simultaneous sync return", function()
-    local idx, val = async.race(async.cancellation(), {
+    local idx, val = async.race(async.current_token(), {
       function()
         return "first"
       end,
@@ -29,7 +29,7 @@ T.describe("race", function(test)
   end)
 
   test("picks fastest sleeper", function()
-    local idx, val = async.race(async.cancellation(), {
+    local idx, val = async.race(async.current_token(), {
       function()
         async.sleep(30)
         return "slow"
@@ -49,7 +49,7 @@ T.describe("race", function(test)
   end)
 
   test("forwards multiple return values", function()
-    local idx, a, b, c = async.race(async.cancellation(), {
+    local idx, a, b, c = async.race(async.current_token(), {
       function()
         return "lil", "fido", "spot"
       end,
@@ -61,7 +61,7 @@ T.describe("race", function(test)
 
   test("ignores losers that finish later", function()
     local late_ran = false
-    local idx, val = async.race(async.cancellation(), {
+    local idx, val = async.race(async.current_token(), {
       function()
         return "winner"
       end,
@@ -84,7 +84,7 @@ T.describe("race", function(test)
 
   test("sync task beats later async task", function()
     local async_ran = false
-    local idx = async.race(async.cancellation(), {
+    local idx = async.race(async.current_token(), {
       function() end,
       function()
         async_ran = true
@@ -98,12 +98,12 @@ T.describe("race", function(test)
 
   test("loser sees cancellation when a winner emerges", function()
     local loser_cancelled = false
-    async.race(async.cancellation(), {
+    async.race(async.current_token(), {
       function()
         return "winner"
       end,
       function()
-        async.cancellation().watch(function()
+        async.current_token().watch(function()
           loser_cancelled = true
         end)
         async.sleep(50)
@@ -120,7 +120,7 @@ T.describe("race", function(test)
     async.run(outer, function()
       idx = async.race(outer, {
         function()
-          async.cancellation().watch(function()
+          async.current_token().watch(function()
             cancelled = true
           end)
           async.sleep(50)
@@ -131,5 +131,19 @@ T.describe("race", function(test)
     outer.cancel()
     T.eq(cancelled, true)
     T.eq(idx, nil)
+  end)
+
+  test("explicit token is used as the race scope", function()
+    local scope = cancel.token()
+    local seen
+    async.race(async.current_token(), scope, {
+      function()
+        seen = async.current_token()
+        return "ok"
+      end,
+    })
+
+    T.eq(seen, scope)
+    T.eq(scope.cancelled, true)
   end)
 end)

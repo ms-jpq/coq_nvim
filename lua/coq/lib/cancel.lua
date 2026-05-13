@@ -5,6 +5,7 @@ local M = {}
 M.token = function(parent)
   local watchers = {}
   local token = { cancelled = false }
+  local unwatch_from_parent
 
   local fire = function(watcher)
     if type(watcher) == "function" then
@@ -16,15 +17,19 @@ M.token = function(parent)
 
   token.cancel = function()
     lib.scope(function(defer)
-      defer(function()
-        watchers = {}
-      end)
-
       if token.cancelled then
         return
       end
       token.cancelled = true
-      for _, watcher in pairs(watchers) do
+      defer(function()
+        if unwatch_from_parent then
+          unwatch_from_parent()
+        end
+      end)
+
+      local pending = watchers
+      watchers = {}
+      for _, watcher in pairs(pending) do
         fire(watcher)
       end
     end)
@@ -33,13 +38,21 @@ M.token = function(parent)
   token.watch = function(watcher)
     if token.cancelled then
       fire(watcher)
-    else
-      table.insert(watchers, watcher)
+      return function() end
+    end
+    table.insert(watchers, watcher)
+    return function()
+      for i, w in pairs(watchers) do
+        if w == watcher then
+          table.remove(watchers, i)
+          return
+        end
+      end
     end
   end
 
   if parent then
-    parent.watch(token)
+    unwatch_from_parent = parent.watch(token)
     if parent.cancelled then
       token.cancel()
     end
