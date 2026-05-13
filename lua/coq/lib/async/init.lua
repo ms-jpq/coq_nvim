@@ -8,9 +8,10 @@ M.current_token = function()
   return threads[coroutine.running()]
 end
 
-M.future = function()
+M.future = function(token)
   local thread = coroutine.running()
   assert(thread, "future: must be called inside running coroutine")
+  token = token or M.current_token()
 
   local resolved = nil
   local resolve = function(...)
@@ -25,24 +26,23 @@ M.future = function()
   end
 
   local await = function()
+    if token and token.cancelled then
+      return
+    end
     if resolved then
       return unpack(resolved)
     end
+
     return coroutine.yield()
   end
 
   return resolve, await
 end
 
-M.race = function(parent, token, fns)
-  assert(parent, "race: parent token required")
-  if fns == nil then
-    fns = token
-    token = nil
-  end
-  token = token or cancel.token(parent)
+M.race = function(opts)
   local thread = coroutine.running()
   assert(thread, "race: must be called inside running coroutine")
+  local token = opts.cancel or cancel.token(M.current_token())
   local resolved = nil
 
   local resume = function(values)
@@ -73,7 +73,7 @@ M.race = function(parent, token, fns)
     resume(resolved)
   end)
 
-  for idx, fn in pairs(fns) do
+  for idx, fn in ipairs(opts) do
     local done = finish(idx)
     M.run(token, function()
       done(fn())
@@ -119,13 +119,28 @@ M.run = function(token, fn)
 end
 
 M.sleep = function(milliseconds)
+  local token = M.current_token()
+  if token and token.cancelled then
+    milliseconds = 0
+  end
+
   local resolve, await = M.future()
   local timer = vim.uv.new_timer()
-  timer:start(milliseconds, 0, function()
+
+  local fire = function()
+    if timer:is_closing() then
+      return
+    end
     timer:stop()
     timer:close()
     resolve()
-  end)
+  end
+
+  timer:start(milliseconds, 0, fire)
+  if token then
+    token.watch(fire)
+  end
+
   return await()
 end
 
