@@ -1,4 +1,3 @@
-local errs = require "coq.lib.errs"
 local proto = require "coq.lib.worker.proto"
 
 local M = {}
@@ -22,32 +21,20 @@ M.new = function()
   return {
     reserve = function(cb)
       local id = next_id()
-      mapping[id] = function(frame)
-        mapping[id] = nil
-        if frame.ok then
-          cb(nil, unpack(frame.values, 1, frame.n))
-        else
-          cb(frame.values[1] or errs.UNKNOWN)
-        end
-      end
-      return id
-    end,
-    reserve_raw = function(cb)
-      local id = next_id()
       mapping[id] = cb
       return id, function()
         mapping[id] = nil
       end
     end,
     resolve = function(frame)
-      local handler = mapping[frame.id]
-      if handler then
-        handler(frame)
+      local cb = mapping[frame.id]
+      if cb then
+        cb(frame)
       end
     end,
     drain = function(reason)
-      for _, handler in pairs(mapping) do
-        handler(DEAD_FRAME(reason))
+      for _, cb in pairs(mapping) do
+        cb(DEAD_FRAME(reason))
       end
       mapping = {}
     end,

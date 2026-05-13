@@ -2,6 +2,7 @@
 
 local async = require "coq.lib.async"
 local config = require "coq.lib.worker.config"
+local errs = require "coq.lib.errs"
 local inflight_mod = require "coq.lib.worker.inflight"
 local iter = require "coq.lib.worker.iter"
 local proto = require "coq.lib.worker.proto"
@@ -14,8 +15,6 @@ M.streaming = function(fn)
   return { streaming = true, fn = fn }
 end
 
--- This thunk is string.dump'd for new_thread, so upvalues are lost.
--- Keep it minimal: bootstrap the require path, then hand off.
 local worker_body = function(req_fd, rsp_fd, bootstrap)
   local raw = vim.mpack.decode(bootstrap)
   package.path = raw.package_path
@@ -77,7 +76,16 @@ M.spawn = function(definition)
     if closed then
       return cb "worker closed"
     end
-    send_request(inflight.reserve(cb), method, args, argn)
+    local id, release
+    id, release = inflight.reserve(function(frame)
+      release()
+      if frame.ok then
+        cb(nil, unpack(frame.values, 1, frame.n))
+      else
+        cb(frame.values[1] or errs.UNKNOWN)
+      end
+    end)
+    send_request(id, method, args, argn)
   end)
 
   local iter_call = iter.new(req_write, inflight, send_request)

@@ -3,7 +3,8 @@
 
 local async = require "coq.lib.async"
 local config = require "coq.lib.worker.config"
-local inflight_mod = require "coq.lib.worker.inflight"
+local errs = require "coq.lib.errs"
+local inflight = require "coq.lib.worker.inflight"
 local proto = require "coq.lib.worker.proto"
 
 local K = proto.KIND
@@ -14,6 +15,8 @@ return function(req_fd, rsp_fd, raw)
   rsp_pipe:open(rsp_fd)
 
   local state, methods = config.decode(raw)
+  local iter_resumers = {}
+  local tracker = inflight.new()
 
   local send = function(body)
     rsp_pipe:write(proto.encode(body))
@@ -23,13 +26,22 @@ return function(req_fd, rsp_fd, raw)
     send { kind = K.RESPONSE, id = id, ok = ok, n = n, values = vals }
   end
 
-  local main_inflight = inflight_mod.new()
-
-  local call_main = function(fn, ...)
+  local worker = require "coq.lib.worker"
+  worker.main = function(fn, ...)
     local argn = select("#", ...)
     local args = { ... }
+    local id, release
     local resolve, await = async.future()
-    local id = main_inflight.reserve(resolve)
+
+    id, release = tracker.reserve(function(frame)
+      release()
+      if frame.ok then
+        resolve(nil, unpack(frame.values, 1, frame.n))
+      else
+        resolve(frame.values[1] or errs.UNKNOWN)
+      end
+    end)
+
     send {
       kind = K.MAIN_CALL,
       id = id,
@@ -39,8 +51,6 @@ return function(req_fd, rsp_fd, raw)
     }
     return proto.unwrap(await())
   end
-
-  local iter_resumers = {}
 
   local make_yield = function(id)
     return function(...)
@@ -79,11 +89,8 @@ return function(req_fd, rsp_fd, raw)
     end
   end
 
-  local worker_mod = require "coq.lib.worker"
-  worker_mod.main = call_main
-
   local handlers = {
-    [K.MAIN_RESPONSE] = main_inflight.resolve,
+    [K.MAIN_RESPONSE] = tracker.resolve,
     [K.REQUEST] = function(frame)
       local id = frame.id
       async.run(function()
