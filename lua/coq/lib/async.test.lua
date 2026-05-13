@@ -1,5 +1,5 @@
-local T = require "lib.test"
-local async = require "lib.async"
+local T = require "coq.lib.test"
+local async = require "coq.lib.async"
 
 T.describe("async", function(test)
   test("future resolves synchronously", function()

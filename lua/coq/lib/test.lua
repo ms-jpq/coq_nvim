@@ -1,5 +1,5 @@
-local async = require "lib.async"
-local tbl = require "lib.tbl"
+local async = require "coq.lib.async"
+local tbl = require "coq.lib.tbl"
 
 local registry = {}
 
