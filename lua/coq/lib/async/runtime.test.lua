@@ -28,23 +28,29 @@ T.describe("async", function(test)
 
   test("thunk defers execution", function()
     local ran = false
-    local later = async.thunk(async.ROOT, function()
+    local later = async.thunk(async.current(), function()
       ran = true
     end)
 
     T.eq(ran, false)
 
-    later()
+    vim.schedule(later)
+    async.sleep(5)
 
     T.eq(ran, true)
   end)
 
   test("thunk propagates errors", function()
-    local ok = pcall(function()
-      async.thunk(async.ROOT, function()
-        error "lil went missing"
-      end)()
+    local h = async.current()
+    local ok
+    vim.schedule(function()
+      ok = pcall(function()
+        async.thunk(h, function()
+          error "lil went missing"
+        end)()
+      end)
     end)
+    async.sleep(5)
 
     T.eq(ok, false)
   end)

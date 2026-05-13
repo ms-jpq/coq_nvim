@@ -5,23 +5,19 @@ local M = {}
 
 M.new = function(parent)
   parent = parent or runtime.current()
-  local cs = handle.new(parent)
   local pending = setmetatable({}, { __mode = "k" })
   local empty_waiters = {}
 
-  local n = {
-    handle = cs,
-    error = nil,
-  }
+  local nursery = { handle = handle.new(parent), error = nil }
 
-  n.spawn = function(fn)
+  nursery.spawn = function(fn)
     local thread
     thread = coroutine.create(function()
       local ok, err = xpcall(fn, debug.traceback)
       pending[thread] = nil
-      if not ok and not n.error then
-        n.error = err
-        cs.cancel()
+      if not ok and not nursery.error then
+        nursery.error = err
+        nursery.handle.cancel()
       end
       if next(pending) == nil then
         local waiters = empty_waiters
@@ -33,24 +29,24 @@ M.new = function(parent)
     end)
 
     pending[thread] = true
-    runtime.bind(thread, cs)
+    runtime.bind(thread, nursery.handle)
     coroutine.resume(thread)
   end
 
-  n.join = function()
+  nursery.join = function()
     if next(pending) ~= nil then
       local resolve, await = runtime.future()
       table.insert(empty_waiters, resolve)
       await()
     end
-    if n.error then
-      local err = n.error
-      n.error = nil
+    if nursery.error then
+      local err = nursery.error
+      nursery.error = nil
       error(err, 0)
     end
   end
 
-  return n
+  return nursery
 end
 
 M.scope = function(parent, body)
@@ -58,6 +54,7 @@ M.scope = function(parent, body)
     body = parent
     parent = nil
   end
+
   local n = M.new(parent)
   local ok, err = pcall(body, n)
   if not ok then

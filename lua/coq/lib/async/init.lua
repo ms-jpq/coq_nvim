@@ -10,7 +10,7 @@ local M = {
   thunk = runtime.thunk,
   sleep = runtime.sleep,
   handle = handle.new,
-  ROOT = handle.ROOT,
+  ROOT = handle.new(),
   nursery = nursery.new,
   scope = nursery.scope,
 }
@@ -29,7 +29,7 @@ M.race = function(h, fns)
   end)
 
   for idx, fn in ipairs(fns) do
-    runtime.thunk(h, function()
+    local thread = coroutine.create(function()
       local ok, err = xpcall(function()
         resolve(idx, fn())
       end, debug.traceback)
@@ -37,7 +37,9 @@ M.race = function(h, fns)
         race_err = err
         h.cancel()
       end
-    end)()
+    end)
+    runtime.bind(thread, h)
+    coroutine.resume(thread)
   end
 
   local ret = { await(h) }

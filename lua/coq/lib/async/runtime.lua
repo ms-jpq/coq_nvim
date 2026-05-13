@@ -72,8 +72,8 @@ M.wrap = function(fn)
 end
 
 M.thunk = function(h, fn)
-  assert(fn, "thunk: handle required")
   return function(...)
+    assert(coroutine.running() == nil, "thunk: must be called outside a coroutine")
     local argv = { ... }
     local thread = coroutine.create(function()
       fn(unpack(argv))
