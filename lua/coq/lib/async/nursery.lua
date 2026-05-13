@@ -32,8 +32,8 @@ M.new = function(parent)
       if next(pending) == nil then
         local acc = waiters
         waiters = {}
-        for _, cb in ipairs(acc) do
-          cb()
+        for _, f in ipairs(acc) do
+          f.resolve()
         end
       end
     end)
@@ -48,13 +48,11 @@ M.new = function(parent)
 
     if next(pending) ~= nil then
       local f = runtime.future()
-      table.insert(waiters, f.resolve)
+      table.insert(waiters, f)
       f.await()
     end
 
-    local errors = nursery.errors
-    nursery.errors = {}
-    errs.raise(errors)
+    errs.raise(nursery.errors)
   end
 
   return nursery
@@ -70,6 +68,7 @@ M.scope = function(parent, body)
   lib.scope(function(defer)
     defer(nursery.close)
     defer(nursery.handle.cancel)
+
     nursery.spawn(function()
       body(nursery)
     end)
