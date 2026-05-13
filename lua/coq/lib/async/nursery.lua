@@ -9,7 +9,7 @@ M.new = function(parent)
   parent = parent or runtime.current()
   local nursery = { handle = handle.new(parent), errors = {} }
   local pending = setmetatable({}, { __mode = "k" })
-  local empty_waiters = {}
+  local waiters = {}
   local closed = false
 
   nursery.close = function()
@@ -23,23 +23,19 @@ M.new = function(parent)
     thread = coroutine.create(function()
       local ok, err = xpcall(fn, debug.traceback)
 
-      xpcall(function()
-        pending[thread] = nil
-        if not ok then
-          table.insert(nursery.errors, err)
-          nursery.handle.cancel()
-        end
+      pending[thread] = nil
+      if not ok then
+        table.insert(nursery.errors, err)
+        nursery.handle.cancel()
+      end
 
-        if next(pending) == nil then
-          local waiters = empty_waiters
-          empty_waiters = {}
-          for _, cb in ipairs(waiters) do
-            cb()
-          end
+      if next(pending) == nil then
+        local acc = waiters
+        waiters = {}
+        for _, cb in ipairs(acc) do
+          cb()
         end
-      end, function(e)
-        vim.notify(e, vim.log.levels.ERROR)
-      end)
+      end
     end)
 
     pending[thread] = true
@@ -49,11 +45,13 @@ M.new = function(parent)
 
   nursery.join = function()
     assert(coroutine.running() ~= nil, "join: must be called inside a coroutine")
+
     if next(pending) ~= nil then
       local f = runtime.future()
-      table.insert(empty_waiters, f.resolve)
+      table.insert(waiters, f.resolve)
       f.await()
     end
+
     local errors = nursery.errors
     nursery.errors = {}
     errs.raise(errors)
