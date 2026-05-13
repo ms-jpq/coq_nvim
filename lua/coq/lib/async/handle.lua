@@ -35,7 +35,7 @@ M.new = function(parent, deadline_ms)
 
       local snapshot = watchers
       watchers = {}
-      for _, watcher in pairs(snapshot) do
+      for _, watcher in ipairs(snapshot) do
         fire(watcher)
       end
     end)
@@ -49,7 +49,7 @@ M.new = function(parent, deadline_ms)
 
     table.insert(watchers, watcher)
     return function()
-      for i, w in pairs(watchers) do
+      for i, w in ipairs(watchers) do
         if w == watcher then
           table.remove(watchers, i)
           return

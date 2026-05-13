@@ -1,4 +1,5 @@
 local handle = require "coq.lib.async.handle"
+local lib = require "coq.lib"
 local runtime = require "coq.lib.async.runtime"
 
 local M = {}
@@ -34,10 +35,11 @@ M.new = function(parent)
   end
 
   nursery.join = function()
+    assert(coroutine.running() ~= nil, "join: must be called inside a coroutine")
     if next(pending) ~= nil then
-      local resolve, await = runtime.future()
-      table.insert(empty_waiters, resolve)
-      await()
+      local f = runtime.future()
+      table.insert(empty_waiters, f.resolve)
+      f.await()
     end
     if nursery.error then
       local err = nursery.error
@@ -56,14 +58,17 @@ M.scope = function(parent, body)
   end
 
   local nursery = M.new(parent)
-  local ok, err = pcall(body, nursery)
-  if not ok then
-    if not nursery.error then
-      nursery.error = err
+  lib.scope(function(defer)
+    defer(nursery.handle.cancel)
+    local ok, err = pcall(body, nursery)
+    if not ok then
+      if not nursery.error then
+        nursery.error = err
+      end
+      nursery.handle.cancel()
     end
-    nursery.handle.cancel()
-  end
-  nursery.join()
+    nursery.join()
+  end)
 end
 
 return M

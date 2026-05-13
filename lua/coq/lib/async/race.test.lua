@@ -143,15 +143,17 @@ T.describe("race", function(test)
 
   test("explicit handle is used as the race scope", function()
     local scope = async.handle()
-    local seen
+    local saw_cancel = false
     async.race(scope, {
       function()
-        seen = async.current()
-        return "ok"
+        async.current().watch(function()
+          saw_cancel = true
+        end)
+        async.sleep(50)
       end,
     })
 
-    T.eq(seen, scope)
+    T.eq(saw_cancel, true)
     T.eq(scope.cancelled, true)
   end)
 

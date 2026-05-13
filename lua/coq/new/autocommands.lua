@@ -7,11 +7,11 @@ local events = broadcast.new()
 vim.api.nvim_create_autocmd({ "InsertCharPre" }, {
   group = lib.group,
   callback = function(args)
-    events.push(args)
+    events.replace(args)
   end,
 })
 
-async.thunk(function()
+async.run(async.ROOT, function()
   for args in events.subscribe() do
   end
-end)()
+end)

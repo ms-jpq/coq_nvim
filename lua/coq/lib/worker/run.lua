@@ -26,14 +26,14 @@ return function(req_fd, rsp_fd, raw)
     local argn = select("#", ...)
     local args = { ... }
     local id, release
-    local resolve, await = async.future()
+    local f = async.future()
 
     id, release = tracker.reserve(function(frame)
       release()
       if frame.ok then
-        resolve(nil, unpack(frame.values, 1, frame.n))
+        f.resolve(nil, unpack(frame.values, 1, frame.n))
       else
-        resolve(frame.values[1] or errs.UNKNOWN)
+        f.resolve(frame.values[1] or errs.UNKNOWN)
       end
     end)
 
@@ -44,7 +44,7 @@ return function(req_fd, rsp_fd, raw)
       args = args,
       argn = argn,
     }
-    return proto.unwrap(await())
+    return proto.unwrap(f.await())
   end
 
   local make_yield = function(id)
@@ -52,9 +52,9 @@ return function(req_fd, rsp_fd, raw)
       local argn = select("#", ...)
       local args = { ... }
       send { kind = K.YIELD, id = id, n = argn, values = args }
-      local resolve, await = async.future()
-      iter_resumers[id] = resolve
-      return await()
+      local f = async.future()
+      iter_resumers[id] = f.resolve
+      return f.await()
     end
   end
 

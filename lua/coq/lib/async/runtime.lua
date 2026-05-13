@@ -30,26 +30,32 @@ M.future = function()
     done = true
     values = vals
     if thread and coroutine.status(thread) == "suspended" then
-      local ok, msg = coroutine.resume(thread)
+      local t = thread
+      thread = nil
+      local ok, msg = coroutine.resume(t)
       if not ok then
         error(msg, 0)
       end
     end
   end
 
-  local resolve = function(...)
+  local f = {}
+
+  f.resolve = function(...)
     finish { ... }
   end
 
-  local await = function(h)
-    thread = coroutine.running()
-    assert(thread, "await: must be called inside running coroutine")
+  f.await = function(h)
+    local current = coroutine.running()
+    assert(current, "await: must be called inside running coroutine")
 
     h = h or M.current()
     if h.cancelled then
       return
     end
     if not done then
+      assert(thread == nil, "future: another coroutine is already awaiting")
+      thread = current
       local unwatch = h.watch(function()
         finish(nil)
       end)
@@ -59,17 +65,17 @@ M.future = function()
     return unpack(values or {})
   end
 
-  return resolve, await
+  return f
 end
 
 M.wrap = function(fn)
   return function(...)
-    local resolve, await = M.future()
+    local f = M.future()
     local argv = { ... }
-    table.insert(argv, resolve)
+    table.insert(argv, f.resolve)
 
     fn(unpack(argv))
-    return await()
+    return f.await()
   end
 end
 
@@ -96,7 +102,7 @@ M.sleep = function(milliseconds)
     milliseconds = 0
   end
 
-  local resolve, await = M.future()
+  local f = M.future()
   local timer = vim.uv.new_timer()
 
   return lib.scope(function(defer)
@@ -107,10 +113,10 @@ M.sleep = function(milliseconds)
       end
     end)
 
-    defer(h.watch(resolve))
+    defer(h.watch(f.resolve))
 
-    timer:start(milliseconds, 0, resolve)
-    return await()
+    timer:start(milliseconds, 0, f.resolve)
+    return f.await()
   end)
 end
 

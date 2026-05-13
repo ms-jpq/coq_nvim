@@ -3,10 +3,10 @@ local async = require "coq.lib.async"
 
 T.describe("async", function(test)
   test("future resolves synchronously", function()
-    local resolve, await = async.future()
-    resolve "woof"
+    local f = async.future()
+    f.resolve "woof"
 
-    T.eq(await(), "woof")
+    T.eq(f.await(), "woof")
   end)
 
   test("wrap returns callback args", function()

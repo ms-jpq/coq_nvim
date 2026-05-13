@@ -8,9 +8,9 @@ T.describe("future cancel", function(test)
 
     async.scope(h, function(n)
       n.spawn(function()
-        local _, await = async.future()
+        local f = async.future()
 
-        T.eq(await(), nil)
+        T.eq(f.await(), nil)
       end)
     end)
   end)
@@ -18,17 +18,17 @@ T.describe("future cancel", function(test)
   test("await with explicit handle returns nil when that handle cancelled", function()
     local h = async.handle()
     h.cancel()
-    local resolve, await = async.future()
-    resolve(2)
+    local f = async.future()
+    f.resolve(2)
 
-    T.eq(await(h), nil)
+    T.eq(f.await(h), nil)
   end)
 
   test("await returns resolved value when not cancelled", function()
-    local resolve, await = async.future()
-    resolve "woof"
+    local f = async.future()
+    f.resolve "woof"
 
-    T.eq(await(), "woof")
+    T.eq(f.await(), "woof")
   end)
 
   test("await wakes with nil when cancelled mid-yield", function()
@@ -37,8 +37,8 @@ T.describe("future cancel", function(test)
     local got
     async.scope(h, function(n)
       n.spawn(function()
-        local _, await = async.future()
-        got = await()
+        local f = async.future()
+        got = f.await()
         awoke = true
       end)
       h.cancel()
@@ -53,9 +53,9 @@ T.describe("future cancel", function(test)
     local resolve
     async.scope(h, function(n)
       n.spawn(function()
-        local _resolve, await = async.future()
-        resolve = _resolve
-        await()
+        local f = async.future()
+        resolve = f.resolve
+        f.await()
       end)
       h.cancel()
     end)

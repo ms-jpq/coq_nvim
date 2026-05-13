@@ -16,9 +16,9 @@ end
 
 M.new = function(send, inflight, send_request)
   return function(method, args, argn)
-    local resolve, await = async.future()
+    local f = async.future()
     local id, release = inflight.reserve(function(frame)
-      resolve(frame)
+      f.resolve(frame)
     end)
     send_request(id, method, args, argn)
 
@@ -41,12 +41,12 @@ M.new = function(send, inflight, send_request)
       end
 
       if not first then
-        resolve, await = async.future()
+        f = async.future()
         send { kind = K.NEXT, id = id }
       end
       first = false
 
-      local frame = await()
+      local frame = f.await()
       if frame.kind == K.YIELD then
         return unpack(frame.values, 1, frame.n)
       end

@@ -6,7 +6,7 @@ M.new = function()
   local chan = {}
   local subscribers = {}
 
-  chan.push = function(item)
+  chan.replace = function(item)
     for _, sub in pairs(subscribers) do
       if sub.waiter then
         local r = sub.waiter
@@ -39,9 +39,9 @@ M.new = function()
         return v
       end
 
-      local resolve, await = async.future()
-      sub.waiter = resolve
-      return await()
+      local f = async.future()
+      sub.waiter = f.resolve
+      return f.await()
     end
   end
 

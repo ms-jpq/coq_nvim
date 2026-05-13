@@ -1,5 +1,4 @@
 local handle = require "coq.lib.async.handle"
-local lib = require "coq.lib"
 local nursery = require "coq.lib.async.nursery"
 local runtime = require "coq.lib.async.runtime"
 
@@ -25,37 +24,34 @@ M.race = function(h, fns)
   end
 
   h = h or handle.new(M.current())
+  local f = M.future()
+  local race_err
 
-  return lib.scope(function(defer)
-    defer(h.cancel)
-
-    local resolve, await = M.future()
-    local race_err
-
-    h.watch(function()
-      resolve()
-    end)
-
-    for idx, fn in ipairs(fns) do
-      local thread = coroutine.create(function()
-        local ok, err = xpcall(function()
-          resolve(idx, fn())
-        end, debug.traceback)
-        if not ok and not race_err then
-          race_err = err
-          h.cancel()
-        end
-      end)
-      runtime.bind(thread, h)
-      coroutine.resume(thread)
-    end
-
-    local ret = { await(h) }
-    if race_err then
-      error(race_err, 0)
-    end
-    return unpack(ret)
+  h.watch(function()
+    f.resolve()
   end)
+
+  local n = nursery.new(h)
+  for idx, fn in ipairs(fns) do
+    n.spawn(function()
+      local ok, err = xpcall(function()
+        f.resolve(idx, fn())
+      end, debug.traceback)
+      if not ok and not race_err then
+        race_err = err
+        h.cancel()
+      end
+    end)
+  end
+
+  local ret = { f.await(h) }
+  h.cancel()
+  n.join()
+
+  if race_err then
+    error(race_err, 0)
+  end
+  return unpack(ret)
 end
 
 M.merge = function(parent, fns)
