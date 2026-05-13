@@ -42,9 +42,6 @@ T.describe("worker", function(test)
 
   test("multi-return from method", function()
     local w = worker.spawn {
-      init = function()
-        return {}
-      end,
       pack = function(_)
         return "rex", 7, true
       end,
@@ -58,9 +55,6 @@ T.describe("worker", function(test)
 
   test("method errors propagate", function()
     local w = worker.spawn {
-      init = function()
-        return {}
-      end,
       bork = function()
         error "rex went missing"
       end,
@@ -102,11 +96,71 @@ T.describe("worker", function(test)
     assert(elapsed_ms >= 15, ("expected ~20ms, got %.1fms"):format(elapsed_ms))
   end)
 
+  test("method can call back to main via worker.main", function()
+    local expected = vim.fn.getcwd()
+    local w = worker.spawn {
+      get_cwd = function()
+        local worker = require "coq.lib.worker"
+        return worker.main(function()
+          return vim.fn.getcwd()
+        end)
+      end,
+    }
+    local cwd_from_worker = w.get_cwd()
+    w.close()
+    T.eq(cwd_from_worker, expected)
+  end)
+
+  test("worker.main forwards args", function()
+    local w = worker.spawn {
+      add = function(_, a, b)
+        local worker = require "coq.lib.worker"
+        return worker.main(function(x, y)
+          return x + y
+        end, a, b)
+      end,
+    }
+    local r = w.add(3, 4)
+    w.close()
+    T.eq(r, 7)
+  end)
+
+  test("worker.main propagates errors from main", function()
+    local w = worker.spawn {
+      bork = function()
+        local worker = require "coq.lib.worker"
+        return worker.main(function()
+          error "rex went missing"
+        end)
+      end,
+    }
+    local ok, err = pcall(w.bork)
+    w.close()
+    T.eq(ok, false)
+    assert(err:find "rex went missing", "expected main error, got: " .. tostring(err))
+  end)
+
+  test("worker.main fn can yield via async", function()
+    local expected = vim.fn.getcwd()
+    local w = worker.spawn {
+      slow_cwd = function()
+        local worker = require "coq.lib.worker"
+        return worker.main(function()
+          local async = require "coq.lib.async"
+          local avim = require "coq.lib.async.vim"
+          async.sleep(20)
+          avim.scheduled()
+          return vim.fn.getcwd()
+        end)
+      end,
+    }
+    local r = w.slow_cwd()
+    w.close()
+    T.eq(r, expected)
+  end)
+
   test("unknown method returns error", function()
     local w = worker.spawn {
-      init = function()
-        return {}
-      end,
       known = function()
         return "ok"
       end,
