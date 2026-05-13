@@ -15,13 +15,9 @@ M.cancelled = function()
   return h ~= nil and h.cancelled
 end
 
-M.future = function(h)
-  local thread = coroutine.running()
-  assert(thread, "future: must be called inside running coroutine")
-  h = h or M.current()
-
+M.future = function()
   local done = false
-  local values
+  local values, thread
 
   local finish = function(vals)
     if done then
@@ -29,7 +25,7 @@ M.future = function(h)
     end
     done = true
     values = vals
-    if coroutine.status(thread) == "suspended" then
+    if thread and coroutine.status(thread) == "suspended" then
       local ok, msg = coroutine.resume(thread)
       if not ok then
         error(msg, 0)
@@ -41,8 +37,15 @@ M.future = function(h)
     finish { ... }
   end
 
-  local await = function()
-    if not done and not (h and h.cancelled) then
+  local await = function(h)
+    thread = coroutine.running()
+    assert(thread, "await: must be called inside running coroutine")
+
+    h = h or M.current()
+    if h and h.cancelled then
+      return
+    end
+    if not done then
       local unwatch = h and h.watch(function()
         finish(nil)
       end)

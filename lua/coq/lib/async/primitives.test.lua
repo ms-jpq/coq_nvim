@@ -16,9 +16,10 @@ T.describe("future cancel", function(test)
   test("await with explicit handle returns nil when that handle cancelled", function()
     local h = async.handle()
     h.cancel()
-    local _, await = async.future(h)
+    local resolve, await = async.future()
+    resolve(2)
 
-    T.eq(await(), nil)
+    T.eq(await(h), nil)
   end)
 
   test("await returns resolved value when not cancelled", function()

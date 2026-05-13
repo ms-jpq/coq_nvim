@@ -16,7 +16,7 @@ M.race = function(h, fns)
     h = nil
   end
   h = h or handle.new(M.current())
-  local resolve, await = M.future(h)
+  local resolve, await = M.future()
   local race_err
 
   h.watch(function()
@@ -27,7 +27,6 @@ M.race = function(h, fns)
     M.run(h, function()
       local ok, err = xpcall(function()
         resolve(idx, fn())
-        h.cancel()
       end, debug.traceback)
       if not ok and not race_err then
         race_err = err
@@ -36,7 +35,8 @@ M.race = function(h, fns)
     end)
   end
 
-  local ret = { await() }
+  local ret = { await(h) }
+  h.cancel()
   if race_err then
     error(race_err, 0)
   end
