@@ -25,4 +25,31 @@ local pack = function(ok, ...)
   return ok, select("#", ...), { ... }
 end
 
-return { encode = encode, consume = consume, pack = pack }
+local start_reader = function(pipe, handlers, on_eof)
+  local buf = ""
+  pipe:read_start(function(err, data)
+    if err or not data then
+      pipe:close()
+      on_eof()
+      return
+    end
+    buf = consume(buf .. data, function(frame)
+      handlers[frame.kind](frame)
+    end)
+  end)
+end
+
+local unwrap = function(err, ...)
+  if err then
+    error(err, 3)
+  end
+  return ...
+end
+
+return {
+  encode = encode,
+  consume = consume,
+  pack = pack,
+  start_reader = start_reader,
+  unwrap = unwrap,
+}
