@@ -16,11 +16,11 @@ M.mpsc = function()
         q.push(item)
       end
     end,
-    pull = function(h)
+    pull = function()
       if #q > 0 then
         return q.pop()
       end
-      local resolve, await = runtime.future(h)
+      local resolve, await = runtime.future()
       waiter = resolve
       return await()
     end,

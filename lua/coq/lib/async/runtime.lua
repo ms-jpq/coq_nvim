@@ -10,6 +10,11 @@ M.current = function()
   return threads[coroutine.running()]
 end
 
+M.cancelled = function()
+  local h = M.current()
+  return h ~= nil and h.cancelled
+end
+
 M.future = function(h)
   local thread = coroutine.running()
   assert(thread, "future: must be called inside running coroutine")
