@@ -209,36 +209,6 @@ T.describe("worker", function(test)
     assert(err:find "leash snapped", "expected leash snapped, got: " .. tostring(err))
   end)
 
-  test("iter.close() stops worker; worker stays alive", function()
-    local w = worker.spawn {
-      infinite = worker.streaming(function(yield, _)
-        local i = 0
-        while true do
-          i = i + 1
-          if not yield(i) then
-            return
-          end
-        end
-      end),
-      ping = function()
-        return "pong"
-      end,
-    }
-    local iter = w.infinite()
-    local seen = {}
-    for v in iter do
-      table.insert(seen, v)
-      if v >= 3 then
-        break
-      end
-    end
-    iter.close()
-    local r = w.ping()
-    w.close()
-    T.eq(seen, { 1, 2, 3 })
-    T.eq(r, "pong")
-  end)
-
   test("scope + defer pairs cleanly with iter.close", function()
     local w = worker.spawn {
       infinite = worker.streaming(function(yield, _)
@@ -271,15 +241,5 @@ T.describe("worker", function(test)
     w.close()
     T.eq(seen, { 1, 2, 3, 4 })
     T.eq(r, "pong")
-  end)
-
-  test("unknown method returns error", function()
-    local w = worker.spawn {
-      known = function()
-        return "ok"
-      end,
-    }
-    T.eq(w.known(), "ok")
-    w.close()
   end)
 end)

@@ -26,19 +26,17 @@ M.future = function()
   return resolve, await
 end
 
-M.select = function(...)
-  local entries = { ... }
+M.race = function(futures)
   local thread = coroutine.running()
-  assert(thread, "select: must be called inside running coroutine")
+  assert(thread, "race: must be called inside running coroutine")
   local resolved = nil
 
-  for _, entry in pairs(entries) do
-    local fn, tag = unpack(entry)
-    fn(function(...)
+  for idx, future in pairs(futures) do
+    future(function(...)
       if resolved then
         return
       end
-      resolved = { tag, ... }
+      resolved = { idx, ... }
       if coroutine.status(thread) ~= "running" then
         local ok, msg = coroutine.resume(thread, unpack(resolved))
         if not ok then
