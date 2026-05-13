@@ -14,16 +14,16 @@ T.describe("async", function(test)
       cb(name .. ":woof")
     end)
 
-    T.eq(bark "rex", "rex:woof")
+    T.eq(bark "lil", "lil:woof")
   end)
 
   test("wrap forwards multiple callback values", function()
     local pack = async.wrap(function(cb)
-      cb("rex", "spot", "fido")
+      cb("lil", "spot", "fido")
     end)
     local a, b, c = pack()
 
-    T.eq({ a, b, c }, { "rex", "spot", "fido" })
+    T.eq({ a, b, c }, { "lil", "spot", "fido" })
   end)
 
   test("thunk defers execution", function()
@@ -40,7 +40,7 @@ T.describe("async", function(test)
   test("run propagates errors", function()
     local ok = pcall(function()
       async.run(function()
-        error "rex went missing"
+        error "lil went missing"
       end)
     end)
 
@@ -74,10 +74,10 @@ T.describe("select", function(test)
       function(resolve)
         resolve "woof"
       end,
-      "rex",
+      "lil",
     }
 
-    T.eq(tag, "rex")
+    T.eq(tag, "lil")
     T.eq(val, "woof")
   end)
 
@@ -112,13 +112,13 @@ T.describe("select", function(test)
   test("forwards multiple values", function()
     local tag, a, b, c = async.select {
       function(resolve)
-        resolve("rex", "fido", "spot")
+        resolve("lil", "fido", "spot")
       end,
       1,
     }
 
     T.eq(tag, 1)
-    T.eq({ a, b, c }, { "rex", "fido", "spot" })
+    T.eq({ a, b, c }, { "lil", "fido", "spot" })
   end)
 
   test("ignores late resolves", function()

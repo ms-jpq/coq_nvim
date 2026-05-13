@@ -26,7 +26,7 @@ T.describe("worker", function(test)
   test("method args pass through", function()
     local w = worker.spawn {
       init = function()
-        return { name = "rex" }
+        return { name = "lil" }
       end,
       rename = function(state, new_name)
         state.name = new_name
@@ -44,12 +44,12 @@ T.describe("worker", function(test)
   test("multi-return from method", function()
     local w = worker.spawn {
       pack = function(_)
-        return "rex", 7, true
+        return "lil", 7, true
       end,
     }
     local a, b, c = w.pack()
     w.close()
-    T.eq(a, "rex")
+    T.eq(a, "lil")
     T.eq(b, 7)
     T.eq(c, true)
   end)
@@ -57,7 +57,7 @@ T.describe("worker", function(test)
   test("method errors propagate", function()
     local w = worker.spawn {
       bork = function()
-        error "rex went missing"
+        error "lil went missing"
       end,
       ok = function()
         return "still alive"
@@ -67,7 +67,7 @@ T.describe("worker", function(test)
     local r = w.ok()
     w.close()
     T.eq(ok, false)
-    assert(err:find "rex went missing", "expected error message, got: " .. tostring(err))
+    assert(err:find "lil went missing", "expected error message, got: " .. tostring(err))
     T.eq(r, "still alive")
   end)
 
@@ -131,14 +131,14 @@ T.describe("worker", function(test)
       bork = function()
         local worker = require "coq.lib.worker"
         return worker.main(function()
-          error "rex went missing"
+          error "lil went missing"
         end)
       end,
     }
     local ok, err = pcall(w.bork)
     w.close()
     T.eq(ok, false)
-    assert(err:find "rex went missing", "expected main error, got: " .. tostring(err))
+    assert(err:find "lil went missing", "expected main error, got: " .. tostring(err))
   end)
 
   test("worker.main fn can yield via async", function()
@@ -161,7 +161,7 @@ T.describe("worker", function(test)
   test("streaming method yields values to a for loop", function()
     local w = worker.spawn {
       dogs = worker.streaming(function(yield, _)
-        yield "rex"
+        yield "lil"
         yield "spot"
         yield "fido"
       end),
@@ -171,7 +171,7 @@ T.describe("worker", function(test)
       table.insert(seen, dog)
     end
     w.close()
-    T.eq(seen, { "rex", "spot", "fido" })
+    T.eq(seen, { "lil", "spot", "fido" })
   end)
 
   test("streaming method forwards args", function()
@@ -193,7 +193,7 @@ T.describe("worker", function(test)
   test("streaming method propagates errors", function()
     local w = worker.spawn {
       bork = worker.streaming(function(yield, _)
-        yield "rex"
+        yield "lil"
         error "leash snapped"
       end),
     }
@@ -204,7 +204,7 @@ T.describe("worker", function(test)
       end
     end)
     w.close()
-    T.eq(seen, { "rex" })
+    T.eq(seen, { "lil" })
     T.eq(ok, false)
     assert(err:find "leash snapped", "expected leash snapped, got: " .. tostring(err))
   end)
