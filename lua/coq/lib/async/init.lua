@@ -1,3 +1,4 @@
+local lib = require "coq.lib"
 local nursery = require "coq.lib.async.nursery"
 local runtime = require "coq.lib.async.runtime"
 
@@ -32,19 +33,22 @@ M.race = function(fns)
 
   local f = M.future()
   local n = nursery.new()
-  n.handle.on_cancel(f.resolve)
 
-  for idx, fn in ipairs(fns) do
-    n.spawn(function()
-      f.resolve(idx, fn())
-    end)
-  end
+  return lib.scope(function(defer)
+    defer(n.handle.cancel)
+    n.handle.on_cancel(f.resolve)
 
-  local ret = { f.await(n.handle) }
-  n.handle.cancel()
-  n.join()
+    for idx, fn in ipairs(fns) do
+      n.spawn(function()
+        f.resolve(idx, fn())
+      end)
+    end
 
-  return unpack(ret)
+    local ret = { f.await(n.handle) }
+    n.handle.cancel()
+    n.join()
+    return unpack(ret)
+  end)
 end
 
 M.merge = function(fns)

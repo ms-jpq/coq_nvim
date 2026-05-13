@@ -78,7 +78,6 @@ T.describe("nursery", function(test)
   end)
 
   test("join raises error group when multiple children error", function()
-    local errs = require "coq.lib.errs"
     local n = async.nursery()
     n.spawn(function()
       error "first"

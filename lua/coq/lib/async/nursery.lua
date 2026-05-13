@@ -22,6 +22,7 @@ M.new = function(parent)
     local thread
     thread = coroutine.create(function()
       local ok, err = xpcall(fn, debug.traceback)
+
       xpcall(function()
         pending[thread] = nil
         if not ok then

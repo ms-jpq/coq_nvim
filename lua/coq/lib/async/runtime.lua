@@ -14,6 +14,7 @@ end
 M.current = function()
   local thread = coroutine.running()
   assert(thread ~= nil, "current: must be called inside a coroutine")
+
   return threads[thread] or M.ROOT
 end
 
