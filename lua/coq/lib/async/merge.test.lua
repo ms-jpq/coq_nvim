@@ -86,13 +86,13 @@ T.describe("merge", function(test)
   test("explicit handle short-circuits the merge", function()
     local sh = async.handle()
     local got
-    async.scope(function(n)
+    async.scope(sh, function(n)
       n.spawn(function()
         local iter = function()
           async.sleep(100)
           return "never"
         end
-        got = async.merge(sh, { iter })()
+        got = async.merge { iter }()
       end)
       sh.cancel()
     end)

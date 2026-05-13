@@ -14,51 +14,29 @@ local M = {
   scope = nursery.scope,
 }
 
-M.race = function(h, fns)
-  if fns == nil then
-    fns = h
-    h = nil
-  end
+M.race = function(fns)
   if #fns == 0 then
     return
   end
 
-  h = h or handle.new(M.current())
   local f = M.future()
-  local race_err
+  local n = nursery.new()
+  n.handle.watch(f.resolve)
 
-  h.watch(function()
-    f.resolve()
-  end)
-
-  local n = nursery.new(h)
   for idx, fn in ipairs(fns) do
     n.spawn(function()
-      local ok, err = xpcall(function()
-        f.resolve(idx, fn())
-      end, debug.traceback)
-      if not ok and not race_err then
-        race_err = err
-        h.cancel()
-      end
+      f.resolve(idx, fn())
     end)
   end
 
-  local ret = { f.await(h) }
-  h.cancel()
+  local ret = { f.await(n.handle) }
+  n.handle.cancel()
   n.join()
 
-  if race_err then
-    error(race_err, 0)
-  end
   return unpack(ret)
 end
 
-M.merge = function(parent, fns)
-  if fns == nil then
-    fns = parent
-    parent = nil
-  end
+M.merge = function(fns)
   local iters = {}
   for idx, fn in ipairs(fns) do
     table.insert(iters, { idx = idx, fn = fn })
@@ -70,24 +48,17 @@ M.merge = function(parent, fns)
       for _, entry in ipairs(iters) do
         table.insert(race_fns, entry.fn)
       end
-      local race_h
-      if parent then
-        race_h = handle.new(parent)
-      end
 
-      local winner, value = M.race(race_h, race_fns)
+      local winner, value = M.race(race_fns)
 
       if winner == nil then
         return nil
       end
-
-      if value == nil then
-        table.remove(iters, winner)
-      else
+      if value ~= nil then
         return iters[winner].idx, value
       end
+      table.remove(iters, winner)
     end
-    return nil
   end
 end
 

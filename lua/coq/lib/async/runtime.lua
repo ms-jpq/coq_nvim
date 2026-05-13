@@ -82,14 +82,10 @@ end
 M.thunk = function(fn)
   return function(...)
     assert(coroutine.running() == nil, "thunk: must be called outside a coroutine")
-    local argv = { ... }
-    local thread = coroutine.create(function()
-      fn(unpack(argv))
-    end)
-
+    local thread = coroutine.create(fn)
     threads[thread] = M.ROOT
 
-    local ok, ret = coroutine.resume(thread)
+    local ok, ret = coroutine.resume(thread, ...)
     if not ok then
       error(debug.traceback(thread, ret), 0)
     end

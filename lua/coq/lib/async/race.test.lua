@@ -125,36 +125,20 @@ T.describe("race", function(test)
     local idx
     async.scope(outer, function(n)
       n.spawn(function()
-        idx = async.race(outer, {
+        idx = async.race {
           function()
             async.current().watch(function()
               cancelled = true
             end)
             async.sleep(50)
           end,
-        })
+        }
       end)
       outer.cancel()
     end)
 
     T.eq(cancelled, true)
     T.eq(idx, nil)
-  end)
-
-  test("explicit handle is used as the race scope", function()
-    local scope = async.handle()
-    local saw_cancel = false
-    async.race(scope, {
-      function()
-        async.current().watch(function()
-          saw_cancel = true
-        end)
-        async.sleep(50)
-      end,
-    })
-
-    T.eq(saw_cancel, true)
-    T.eq(scope.cancelled, true)
   end)
 
   test("child error propagates and cancels siblings", function()

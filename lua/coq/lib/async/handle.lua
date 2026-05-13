@@ -2,27 +2,27 @@ local lib = require "coq.lib"
 
 local M = {}
 
+local fire = function(watcher)
+  if type(watcher) == "function" then
+    watcher()
+  else
+    watcher.cancel()
+  end
+end
+
 M.new = function(parent, deadline_ms)
   local handle = { cancelled = false }
-
   local watchers = {}
   local unwatch_from_parent
   local timer
 
-  local fire = function(watcher)
-    if type(watcher) == "function" then
-      watcher()
-    else
-      watcher.cancel()
-    end
-  end
-
   handle.cancel = function()
+    if handle.cancelled then
+      return
+    end
+    handle.cancelled = true
+
     lib.scope(function(defer)
-      if handle.cancelled then
-        return
-      end
-      handle.cancelled = true
       defer(function()
         if unwatch_from_parent then
           unwatch_from_parent()
@@ -35,8 +35,8 @@ M.new = function(parent, deadline_ms)
 
       local snapshot = watchers
       watchers = {}
-      for _, watcher in ipairs(snapshot) do
-        fire(watcher)
+      for _, w in ipairs(snapshot) do
+        fire(w)
       end
     end)
   end
@@ -46,7 +46,6 @@ M.new = function(parent, deadline_ms)
       fire(watcher)
       return function() end
     end
-
     table.insert(watchers, watcher)
     return function()
       for i, w in ipairs(watchers) do
@@ -65,9 +64,6 @@ M.new = function(parent, deadline_ms)
 
   if parent then
     unwatch_from_parent = parent.watch(handle)
-    if parent.cancelled then
-      handle.cancel()
-    end
   end
 
   return handle
