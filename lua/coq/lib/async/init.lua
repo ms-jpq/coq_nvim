@@ -1,4 +1,5 @@
 local handle = require "coq.lib.async.handle"
+local nursery = require "coq.lib.async.nursery"
 local runtime = require "coq.lib.async.runtime"
 
 local M = runtime
@@ -6,6 +7,8 @@ local M = runtime
 M.handle = handle.new
 M.ROOT = handle.ROOT
 M.channel = require "coq.lib.async.channel"
+M.nursery = nursery.new
+M.scope = nursery.scope
 
 M.race = function(h, fns)
   if fns == nil then

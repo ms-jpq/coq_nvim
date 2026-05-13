@@ -1,8 +1,10 @@
-local handle = require "coq.lib.async.handle"
-
 local M = {}
 
 local threads = setmetatable({}, { __mode = "k" })
+
+M.bind = function(thread, h)
+  threads[thread] = h
+end
 
 M.current = function()
   return threads[coroutine.running()]
@@ -75,36 +77,21 @@ M.thunk = function(h, fn)
   assert(h, "thunk: handle required")
   return function(...)
     local argv = { ... }
-    local thread
-    thread = coroutine.create(function()
-      local ok, err = xpcall(function()
-        fn(unpack(argv))
-      end, debug.traceback)
-      handle.deregister(h, thread)
-      if not ok then
-        error(err, 0)
-      end
+    local thread = coroutine.create(function()
+      fn(unpack(argv))
     end)
 
     threads[thread] = h
-    handle.register(h, thread)
 
     local ok, ret = coroutine.resume(thread)
     if not ok then
-      error(ret, 0)
+      error(debug.traceback(thread, ret), 0)
     end
   end
 end
 
 M.run = function(h, fn)
   M.thunk(h, fn)()
-end
-
-M.join = function(h)
-  assert(h, "join: handle required")
-  local resolve, await = M.future()
-  handle.on_empty(h, resolve)
-  await()
 end
 
 M.sleep = function(milliseconds)

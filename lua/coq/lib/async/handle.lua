@@ -2,9 +2,6 @@ local lib = require "coq.lib"
 
 local M = {}
 
-local pending = setmetatable({}, { __mode = "k" })
-local empty_waiters = setmetatable({}, { __mode = "k" })
-
 M.new = function(parent)
   local watchers = {}
   local handle = { cancelled = false }
@@ -62,46 +59,6 @@ M.new = function(parent)
   end
 
   return handle
-end
-
-M.register = function(h, thread)
-  local set = pending[h]
-  if not set then
-    set = setmetatable({}, { __mode = "k" })
-    pending[h] = set
-  end
-  set[thread] = true
-end
-
-M.deregister = function(h, thread)
-  local set = pending[h]
-  if not set then
-    return
-  end
-  set[thread] = nil
-  if next(set) == nil then
-    local waiters = empty_waiters[h]
-    if waiters then
-      empty_waiters[h] = nil
-      for _, cb in ipairs(waiters) do
-        cb()
-      end
-    end
-  end
-end
-
-M.on_empty = function(h, cb)
-  local set = pending[h]
-  if not set or next(set) == nil then
-    cb()
-    return
-  end
-  local waiters = empty_waiters[h]
-  if not waiters then
-    waiters = {}
-    empty_waiters[h] = waiters
-  end
-  table.insert(waiters, cb)
 end
 
 M.ROOT = M.new()
