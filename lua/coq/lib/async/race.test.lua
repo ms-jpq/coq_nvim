@@ -1,23 +1,11 @@
 local T = require "coq.lib.test"
 local async = require "coq.lib.async"
 
-local after = function(ms, ...)
-  local args = { ... }
-  return function(resolve)
-    local timer = vim.uv.new_timer()
-    timer:start(ms, 0, function()
-      timer:stop()
-      timer:close()
-      resolve(unpack(args))
-    end)
-  end
-end
-
 T.describe("race", function(test)
-  test("returns winning idx and value on sync resolve", function()
+  test("returns winning idx and value on sync task", function()
     local idx, val = async.race {
-      function(resolve)
-        resolve "woof"
+      function()
+        return "woof"
       end,
     }
 
@@ -25,13 +13,13 @@ T.describe("race", function(test)
     T.eq(val, "woof")
   end)
 
-  test("picks first future on simultaneous sync resolve", function()
+  test("picks first task on simultaneous sync return", function()
     local idx, val = async.race {
-      function(resolve)
-        resolve "first"
+      function()
+        return "first"
       end,
-      function(resolve)
-        resolve "second"
+      function()
+        return "second"
       end,
     }
 
@@ -39,21 +27,30 @@ T.describe("race", function(test)
     T.eq(val, "first")
   end)
 
-  test("picks fastest async resolver", function()
+  test("picks fastest sleeper", function()
     local idx, val = async.race {
-      after(30, "slow"),
-      after(5, "fast"),
-      after(60, "slowest"),
+      function()
+        async.sleep(30)
+        return "slow"
+      end,
+      function()
+        async.sleep(5)
+        return "fast"
+      end,
+      function()
+        async.sleep(60)
+        return "slowest"
+      end,
     }
 
     T.eq(idx, 2)
     T.eq(val, "fast")
   end)
 
-  test("forwards multiple values", function()
+  test("forwards multiple return values", function()
     local idx, a, b, c = async.race {
-      function(resolve)
-        resolve("lil", "fido", "spot")
+      function()
+        return "lil", "fido", "spot"
       end,
     }
 
@@ -61,37 +58,36 @@ T.describe("race", function(test)
     T.eq({ a, b, c }, { "lil", "fido", "spot" })
   end)
 
-  test("ignores late resolves", function()
-    local stashed
+  test("ignores losers that finish later", function()
+    local late_ran = false
     local idx, val = async.race {
-      function(resolve)
-        resolve "winner"
+      function()
+        return "winner"
       end,
-      function(resolve)
-        stashed = resolve
+      function()
+        async.sleep(5)
+        late_ran = true
+        return "loser"
       end,
     }
 
     T.eq(idx, 1)
     T.eq(val, "winner")
 
-    stashed "loser"
-    async.sleep(5)
+    async.sleep(10)
+
+    T.eq(late_ran, true)
     T.eq(idx, 1)
     T.eq(val, "winner")
   end)
 
-  test("sync entry beats later async entries", function()
+  test("sync task beats later async task", function()
     local async_ran = false
     local idx = async.race {
-      function(resolve)
-        resolve()
-      end,
-      function(resolve)
+      function() end,
+      function()
         async_ran = true
-        vim.uv.new_timer():start(5, 0, function()
-          resolve()
-        end)
+        async.sleep(5)
       end,
     }
 

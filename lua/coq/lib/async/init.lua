@@ -26,23 +26,30 @@ M.future = function()
   return resolve, await
 end
 
-M.race = function(futures)
+M.race = function(fns)
   local thread = coroutine.running()
   assert(thread, "race: must be called inside running coroutine")
   local resolved = nil
 
-  for idx, future in pairs(futures) do
-    future(function(...)
+  local finish = function(idx)
+    return function(...)
       if resolved then
         return
       end
       resolved = { idx, ... }
-      if coroutine.status(thread) ~= "running" then
+      if coroutine.status(thread) == "suspended" then
         local ok, msg = coroutine.resume(thread, unpack(resolved))
         if not ok then
           error(msg, 0)
         end
       end
+    end
+  end
+
+  for idx, fn in pairs(fns) do
+    local done = finish(idx)
+    M.run(function()
+      done(fn())
     end)
   end
 
