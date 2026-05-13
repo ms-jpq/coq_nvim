@@ -37,12 +37,10 @@ end
 
 local thunk = function(fn)
   return function(...)
-
     local argv = { ... }
     local thread = coroutine.create(function()
       fn(unpack(argv))
     end)
-
 
     local ok, ret = coroutine.resume(thread)
     if not ok then
@@ -60,24 +58,16 @@ return setmetatable({
   end,
   sleep = function(milliseconds)
     local resolve, await = future()
-    vim.defer_fn(resolve, milliseconds)
+    local timer = vim.uv.new_timer()
+    timer:start(milliseconds, 0, function()
+      timer:stop()
+      timer:close()
+      resolve()
+    end)
     return await()
   end,
-  scheduled = wrap(vim.schedule),
-  system = wrap(vim.system),
-  fn = {
-    jobstart = wrap(function(cmd, opts, on_exit)
-      opts = opts or {}
-      opts.on_exit = on_exit
-      vim.fn.jobstart(cmd, opts)
-    end),
-  },
-  ui = {
-    select = wrap(vim.ui.select),
-  },
 }, {
   __call = function(_, fn)
     return thunk(fn)
   end,
 })
-
