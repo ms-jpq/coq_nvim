@@ -1,5 +1,7 @@
 local M = {}
 
+local threads = setmetatable({}, { __mode = "k" })
+
 M.future = function()
   local thread = coroutine.running()
   assert(thread, "future: must be called inside running coroutine")
@@ -70,12 +72,23 @@ M.wrap = function(fn)
   end
 end
 
-local thunk = function(fn)
+local thunk = function(fn, token)
   return function(...)
+    local parent = threads[coroutine.running()]
+    if token then
+      if parent then
+        parent.watch(token)
+      end
+    else
+      token = parent
+    end
+
     local argv = { ... }
     local thread = coroutine.create(function()
       fn(unpack(argv))
     end)
+
+    threads[thread] = token
 
     local ok, ret = coroutine.resume(thread)
     if not ok then
@@ -85,8 +98,8 @@ local thunk = function(fn)
   end
 end
 
-M.run = function(fn)
-  thunk(fn)()
+M.run = function(fn, token)
+  thunk(fn, token)()
 end
 
 M.sleep = function(milliseconds)
@@ -101,7 +114,7 @@ M.sleep = function(milliseconds)
 end
 
 return setmetatable(M, {
-  __call = function(_, fn)
-    return thunk(fn)
+  __call = function(_, fn, token)
+    return thunk(fn, token)
   end,
 })
