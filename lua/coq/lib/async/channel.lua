@@ -1,33 +1,10 @@
+local queue = require "coq.lib.queue"
 local runtime = require "coq.lib.async.runtime"
 
 local M = {}
 
-local queue = function()
-  local push, pop = {}, {}
-  local q = {}
-
-  q.push = function(val)
-    table.insert(push, val)
-  end
-
-  q.pop = function()
-    if #pop == 0 then
-      while #push ~= 0 do
-        table.insert(pop, table.remove(push))
-      end
-    end
-    return table.remove(pop)
-  end
-
-  return setmetatable(q, {
-    __len = function()
-      return #push + #pop
-    end,
-  })
-end
-
 M.mpsc = function()
-  local q = queue()
+  local q = queue.new()
   local waiter = nil
   return {
     push = function(item)
