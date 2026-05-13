@@ -72,7 +72,7 @@ M.wrap = function(fn)
 end
 
 M.thunk = function(h, fn)
-  assert(h, "thunk: handle required")
+  assert(fn, "thunk: handle required")
   return function(...)
     local argv = { ... }
     local thread = coroutine.create(function()

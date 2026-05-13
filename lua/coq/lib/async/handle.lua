@@ -71,6 +71,4 @@ M.new = function(parent, deadline_ms)
   return handle
 end
 
-M.ROOT = M.new()
-
 return M
