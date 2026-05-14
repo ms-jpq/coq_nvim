@@ -1,7 +1,13 @@
 #!/usr/bin/env -S -- nvim -l
 
-if os.getenv "TEST_JIT_OFF" then
-  jit.off()
+do
+  if os.getenv "TEST_JIT_OFF" then
+    jit.off()
+  end
+  local lvl = tonumber(os.getenv "TEST_JIT_OPT")
+  if lvl then
+    jit.opt.start(lvl)
+  end
 end
 
 vim.opt.runtimepath:prepend(vim.fn.getcwd())
