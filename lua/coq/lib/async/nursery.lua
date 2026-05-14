@@ -18,12 +18,11 @@ M.new = function(parent)
   nursery.spawn = function(fn)
     assert(not nursery.closed, "spawn: nursery is closed")
 
-    local thread
-    thread = coroutine.create(function()
+    local thread = coroutine.create(function()
       runtime.sleep(0)
       local ok, err = xpcall(fn, debug.traceback)
+      pending[coroutine.running()] = nil
 
-      pending[thread] = nil
       if not ok then
         table.insert(nursery.errors, err)
         nursery.handle.cancel()
