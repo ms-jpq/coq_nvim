@@ -90,7 +90,7 @@ T.describe("handle", function(test)
 
     T.eq(h.cancelled, false)
 
-    async.sleep(20)
+    async.sleep(10)
 
     T.eq(h.cancelled, true)
   end)
@@ -98,7 +98,7 @@ T.describe("handle", function(test)
   test("early cancel disarms the deadline timer", function()
     local h = handle.new(nil, 5)
     h.cancel()
-    async.sleep(20)
+    async.sleep(10)
 
     T.eq(h.cancelled, true)
   end)
@@ -109,7 +109,7 @@ T.describe("handle", function(test)
     h.on_cancel(function()
       fired = true
     end)
-    async.sleep(20)
+    async.sleep(10)
 
     T.eq(fired, true)
   end)

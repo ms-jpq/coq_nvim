@@ -41,9 +41,9 @@ T.describe("merge", function(test)
     local out = {}
     for _, v in
       async.merge {
-        delayed("a", 5),
-        delayed("c", 15),
-        delayed("b", 10),
+        delayed("a", 2),
+        delayed("c", 6),
+        delayed("b", 4),
       }
     do
       table.insert(out, v)
@@ -56,9 +56,9 @@ T.describe("merge", function(test)
     local out = {}
     for idx, v in
       async.merge {
-        delayed("a", 5),
-        delayed("c", 15),
-        delayed("b", 10),
+        delayed("a", 2),
+        delayed("c", 6),
+        delayed("b", 4),
       }
     do
       table.insert(out, { idx, v })

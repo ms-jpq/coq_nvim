@@ -12,11 +12,11 @@ T.describe("nursery", function(test)
     local n = async.nursery()
     local count = 0
     n.spawn(function()
-      async.sleep(10)
+      async.sleep(2)
       count = count + 1
     end)
     n.spawn(function()
-      async.sleep(20)
+      async.sleep(5)
       count = count + 1
     end)
     n.join()
@@ -100,11 +100,11 @@ T.describe("scope", function(test)
     local count = 0
     async.scope(function(n)
       n.spawn(function()
-        async.sleep(5)
+        async.sleep(2)
         count = count + 1
       end)
       n.spawn(function()
-        async.sleep(10)
+        async.sleep(5)
         count = count + 1
       end)
     end)

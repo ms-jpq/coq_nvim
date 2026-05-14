@@ -8,4 +8,4 @@ for _, f in ipairs(vim.fn.globpath("lua", "**/*.test.lua", false, true)) do
   vim.cmd("source " .. vim.fn.fnameescape(f))
 end
 
-T.run()
+T.run(tonumber(os.getenv "TEST_SEED"))

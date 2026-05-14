@@ -8,10 +8,11 @@ M.new = function()
 
   chan.replace = function(item)
     for _, sub in pairs(subscribers) do
-      if sub.waiter then
-        local r = sub.waiter
-        sub.waiter = nil
-        r(item)
+      local f = sub.waiter
+      sub.waiter = nil
+
+      if f then
+        f.resolve(item)
       else
         sub.pending = item
       end
@@ -28,16 +29,18 @@ M.new = function()
         return
       end
       sub.closed = true
+
       for i, s in ipairs(subscribers) do
         if s == sub then
           table.remove(subscribers, i)
           break
         end
       end
-      if sub.waiter then
-        local r = sub.waiter
-        sub.waiter = nil
-        r(nil)
+
+      local f = sub.waiter
+      sub.waiter = nil
+      if f then
+        f.resolve(nil)
       end
     end
 
@@ -45,6 +48,7 @@ M.new = function()
       if sub.closed then
         return nil
       end
+
       if sub.pending ~= nil then
         local v = sub.pending
         sub.pending = nil
@@ -52,7 +56,7 @@ M.new = function()
       end
 
       local f = async.future()
-      sub.waiter = f.resolve
+      sub.waiter = f
       return f.await()
     end
 

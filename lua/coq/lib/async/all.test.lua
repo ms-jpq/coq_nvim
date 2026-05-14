@@ -9,15 +9,15 @@ T.describe("all", function(test)
   test("collects results in order", function()
     local out = async.all {
       function()
-        async.sleep(15)
+        async.sleep(6)
         return "lil"
       end,
       function()
-        async.sleep(5)
+        async.sleep(2)
         return "spot"
       end,
       function()
-        async.sleep(10)
+        async.sleep(4)
         return "fido"
       end,
     }

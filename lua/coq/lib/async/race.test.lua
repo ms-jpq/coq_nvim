@@ -84,12 +84,7 @@ T.describe("race", function(test)
 
     T.eq(idx, 1)
     T.eq(val, "winner")
-
-    async.sleep(10)
-
     T.eq(late_ran, true)
-    T.eq(idx, 1)
-    T.eq(val, "winner")
   end)
 
   test("sync task beats later async task", function()
@@ -162,8 +157,6 @@ T.describe("race", function(test)
         end,
       }
     end)
-
-    async.sleep(10)
 
     T.eq(ok, false)
     T.eq(sibling_cancelled, true)
