@@ -44,8 +44,11 @@ M.spawn = function(definition)
     [K.YIELD] = inflight.resolve,
   }
 
+  local exited = async.future()
+
   proto.start_reader(rsp_pipe, handlers, function()
     inflight.drain "worker died"
+    exited.resolve()
   end)
 
   vim.uv.new_thread(function(req_fd, rsp_fd, bootstrap)
@@ -91,13 +94,13 @@ M.spawn = function(definition)
 
   local proxy = {
     close = function()
-      if closed then
-        return
+      if not closed then
+        closed = true
+        req_write:shutdown(function()
+          req_write:close()
+        end)
       end
-      closed = true
-      req_write:shutdown(function()
-        req_write:close()
-      end)
+      exited.await()
     end,
   }
 
