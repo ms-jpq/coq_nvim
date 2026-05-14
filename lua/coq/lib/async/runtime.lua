@@ -137,7 +137,7 @@ M.sleep = function(milliseconds)
   end)
 end
 
-M.checkpoint = function()
+M.pass = function()
   return M.sleep(0)
 end
 
