@@ -3,7 +3,7 @@
 local async = require "coq.lib.async"
 local config = require "coq.lib.worker.config_proto"
 local errs = require "coq.lib.errs"
-local inflight_mod = require "coq.lib.worker.inflight"
+local inflight = require "coq.lib.worker.inflight"
 local proto = require "coq.lib.worker.wire_proto"
 
 local encode = proto.encode
@@ -75,27 +75,28 @@ end
 ----------------------------------------------------------------------
 
 local open_duplex = function(read_fd, write_fd)
-  local io = {}
-  io.reader, io.writer = vim.uv.new_pipe(), vim.uv.new_pipe()
-  io.reader:open(read_fd)
-  io.writer:open(write_fd)
+  local duplex = {}
+  duplex.reader, duplex.writer = vim.uv.new_pipe(), vim.uv.new_pipe()
+  duplex.reader:open(read_fd)
+  duplex.writer:open(write_fd)
 
-  io.close = function()
-    io.writer:shutdown(function()
-      io.writer:close()
+  duplex.close = function()
+    duplex.writer:shutdown(function()
+      duplex.writer:close()
     end)
   end
-  return io
+  return duplex
 end
 
-local make_duplex_pair = function()
+local duplex_pair = function()
   local inbound = vim.uv.pipe({ nonblock = true }, { nonblock = true })
   local outbound = vim.uv.pipe({ nonblock = true }, { nonblock = true })
 
-  local io = open_duplex(inbound.read, outbound.write)
+  local duplex = open_duplex(inbound.read, outbound.write)
   local remote = {}
-  remote.read_fd, remote.write_fd = outbound.read, inbound.write
-  return io, remote
+  remote.read_fd = outbound.read
+  remote.write_fd = inbound.write
+  return duplex, remote
 end
 
 local M = {}
@@ -175,9 +176,9 @@ end
 -- Main-side: spawn a worker. Returns a proxy table with the worker's methods
 -- bound, plus `close` to tear it down.
 M.spawn = function(definition)
-  local duplex, remote = make_duplex_pair()
+  local duplex, remote = duplex_pair()
 
-  local inflight = inflight_mod.new()
+  local flights = inflight.new()
   local closed = false
 
   local send = sender(duplex.writer)
@@ -190,14 +191,14 @@ M.spawn = function(definition)
         respond_main(id, invoke_main(frame.fn_dump, frame.args or {}, frame.argn or 0))
       end))
     end,
-    [Kind.RESPONSE] = inflight.resolve,
-    [Kind.YIELD] = inflight.resolve,
+    [Kind.RESPONSE] = flights.resolve,
+    [Kind.YIELD] = flights.resolve,
   }
 
   local exited = async.future()
 
   start_reader(duplex.reader, handlers, function()
-    inflight.drain "worker died"
+    flights.drain "worker died"
     exited.resolve()
   end)
 
@@ -214,14 +215,14 @@ M.spawn = function(definition)
       return cb "worker closed"
     end
     local id, release
-    id, release = inflight.reserve(function(frame)
+    id, release = flights.reserve(function(frame)
       release()
       cb(frame_to_result(frame))
     end)
     send_request(id, method, args, argn)
   end)
 
-  local iter_call = make_iter_call(send, inflight, send_request)
+  local iter_call = make_iter_call(send, flights, send_request)
 
   local bind_rpc = function(name)
     return function(...)
@@ -288,7 +289,7 @@ M.run = function(req_fd, rsp_fd, raw)
 
   local state, methods = config.decode(raw)
   local iter_resumers = {}
-  local tracker = inflight_mod.new()
+  local tracker = inflight.new()
 
   local send = sender(duplex.writer)
   local respond = responder(send, Kind.RESPONSE)
