@@ -118,10 +118,15 @@ M.sleep = function(milliseconds)
     return
   end
 
-  local idle = milliseconds < 0
   local f = M.future()
-  local watcher = idle and vim.uv.new_idle() or vim.uv.new_timer()
-  local wargv = idle and { f.resolve } or { milliseconds, 0, f.resolve }
+  local watcher, wargv = (function()
+    if milliseconds < 0 then
+      return vim.uv.new_idle(), { f.resolve }
+    else
+      vim.uv.update_time()
+      return vim.uv.new_timer(), { milliseconds, 0, f.resolve }
+    end
+  end)()
 
   return lib.scope(function(defer)
     defer(function()

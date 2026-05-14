@@ -9,7 +9,7 @@ local M = {}
 M.all = function(fns)
   local results = {}
   local n = nursery.new()
-  for idx, fn in ipairs(fns) do
+  for idx, fn in pairs(fns) do
     n.spawn(function()
       results[idx] = fn()
     end)
@@ -45,53 +45,47 @@ end
 
 M.preemptible = function(iter)
   return function()
-    local current = runtime.current()
-    if current.cancelled then
+    if runtime.cancelled() then
       return nil
     end
 
-    local h = handle.new(current)
     local f = runtime.future()
-    local err
-    local unwatch = h.on_cancel(f.resolve)
+    local h = handle.new(runtime.current())
+    h.on_cancel(f.resolve)
 
     local thread = coroutine.create(function()
-      local ok, ret = xpcall(iter, debug.traceback)
-      if ok then
-        f.resolve(ret)
-      else
-        err = ret
-        f.resolve()
-      end
+      f.resolve(xpcall(iter, debug.traceback))
     end)
     runtime.bind(thread, h)
     coroutine.resume(thread)
 
-    local v = lib.scope(function(defer)
+    local ok, ret = lib.scope(function(defer)
       defer(h.cancel)
-      defer(unwatch)
       return f.await(h)
     end)
 
-    if err then
-      error(err, 0)
+    if ok == nil then
+      return nil
     end
-    return v
+    if not ok then
+      error(ret, 0)
+    end
+    return ret
   end
 end
 
-M.merge = function(fns)
+M.merge = function(iters)
   local chan = mpsc.new()
   local n = nursery.new()
-  local active = #fns
+  local active = #iters
 
   n.handle.on_cancel(chan.close)
   if active == 0 then
     n.handle.cancel()
   end
 
-  for idx, fn in pairs(fns) do
-    local fn_p = M.preemptible(fn)
+  for idx, iter in pairs(iters) do
+    local fn_p = M.preemptible(iter)
 
     n.spawn(function()
       for v in fn_p do
