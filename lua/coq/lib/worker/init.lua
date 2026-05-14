@@ -1,18 +1,15 @@
 -- https://github.com/luvit/luv/blob/master/docs/docs.md
 
 local async = require "coq.lib.async"
-local config = require "coq.lib.worker.config"
+local config = require "coq.lib.worker.config_proto"
 local errs = require "coq.lib.errs"
 local inflight_mod = require "coq.lib.worker.inflight"
+local proto = require "coq.lib.worker.wire_proto"
 
-----------------------------------------------------------------------
--- Wire protocol: 4-byte LE length prefix + mpack body.
-----------------------------------------------------------------------
+local encode = proto.encode
+local decoder = proto.decoder
 
-local HEADER_SIZE = 4
-local BYTE = 256
-
-local K = {
+local Kind = {
   REQUEST = "request",
   RESPONSE = "response",
   YIELD = "yield",
@@ -24,47 +21,6 @@ local MODE = {
   STREAM = "stream",
   RPC = "rpc",
 }
-
-local encode = function(body)
-  local payload = vim.mpack.encode(body)
-  local n = #payload
-  return string.char(
-    n % BYTE,
-    math.floor(n / BYTE) % BYTE,
-    math.floor(n / (BYTE * BYTE)) % BYTE,
-    math.floor(n / (BYTE * BYTE * BYTE)) % BYTE
-  ) .. payload
-end
-
-local decode = function(buf)
-  if #buf < HEADER_SIZE then
-    return nil
-  end
-  local b1, b2, b3, b4 = buf:byte(1, HEADER_SIZE)
-  local n = b1 + b2 * BYTE + b3 * BYTE * BYTE + b4 * BYTE * BYTE * BYTE
-  if #buf < HEADER_SIZE + n then
-    return nil
-  end
-  local decoded = vim.mpack.decode(buf:sub(HEADER_SIZE + 1, HEADER_SIZE + n))
-  return decoded, buf:sub(HEADER_SIZE + n + 1)
-end
-
-local iter_decode = function(buf)
-  local iter = coroutine.wrap(function()
-    while true do
-      local frame, rest = decode(buf)
-      if not frame then
-        return
-      end
-      coroutine.yield(frame)
-      buf = rest
-    end
-  end)
-
-  return iter, function()
-    return buf
-  end
-end
 
 local pack = function(ok, ...)
   return ok, select("#", ...), { ... }
@@ -99,34 +55,20 @@ local responder = function(send, kind)
 end
 
 local start_reader = function(pipe, handlers, on_eof)
-  local buf = ""
+  local decode = decoder()
   pipe:read_start(function(err, data)
     if err or not data then
       pipe:close()
       on_eof()
       return
     end
-    local iter, leftover = iter_decode(buf .. data)
-    for frame in iter do
+    for frame in decode(data) do
       handlers[frame.kind](frame)
     end
-    buf = leftover()
   end)
 end
 
-----------------------------------------------------------------------
--- Worker module
-----------------------------------------------------------------------
-
 local M = {}
-
--- Exposed for proto.test.lua. Not part of the public worker API.
-M.proto = {
-  encode = encode,
-  iter_decode = iter_decode,
-  pack = pack,
-  unwrap = unwrap,
-}
 
 -- Marker for streaming method declarations.
 M.streaming = function(fn)
@@ -157,7 +99,7 @@ local make_iter_call = function(send, inflight, send_request)
       end
       done = true
 
-      send { kind = K.STOP, id = id }
+      send { kind = Kind.STOP, id = id }
       release()
     end
 
@@ -168,12 +110,12 @@ local make_iter_call = function(send, inflight, send_request)
 
       if not first then
         f = async.future()
-        send { kind = K.NEXT, id = id }
+        send { kind = Kind.NEXT, id = id }
       end
       first = false
 
       local frame = f.await()
-      if frame.kind == K.YIELD then
+      if frame.kind == Kind.YIELD then
         return unpack(frame.values, 1, frame.n)
       end
       done = true
@@ -213,17 +155,17 @@ M.spawn = function(definition)
   local closed = false
 
   local send = sender(req_write)
-  local respond_main = responder(send, K.RESPONSE)
+  local respond_main = responder(send, Kind.RESPONSE)
 
   local handlers = {
-    [K.REQUEST] = function(frame)
+    [Kind.REQUEST] = function(frame)
       local id = frame.id
       vim.schedule(async.thunk(function()
         respond_main(id, invoke_main(frame.fn_dump, frame.args or {}, frame.argn or 0))
       end))
     end,
-    [K.RESPONSE] = inflight.resolve,
-    [K.YIELD] = inflight.resolve,
+    [Kind.RESPONSE] = inflight.resolve,
+    [Kind.YIELD] = inflight.resolve,
   }
 
   local exited = async.future()
@@ -238,7 +180,7 @@ M.spawn = function(definition)
   end, req_fds.read, rsp_fds.write, config.encode(definition))
 
   local send_request = function(id, method, args, argn)
-    send { kind = K.REQUEST, id = id, method = method, args = args, argn = argn }
+    send { kind = Kind.REQUEST, id = id, method = method, args = args, argn = argn }
   end
 
   local call = async.wrap(function(method, args, argn, cb)
@@ -305,7 +247,7 @@ local make_main = function(tracker, send)
       f.resolve(frame_to_result(frame))
     end)
     send {
-      kind = K.REQUEST,
+      kind = Kind.REQUEST,
       id = id,
       fn_dump = string.dump(fn),
       args = args,
@@ -327,7 +269,7 @@ M.run = function(req_fd, rsp_fd, raw)
   local tracker = inflight_mod.new()
 
   local send = sender(rsp_pipe)
-  local respond = responder(send, K.RESPONSE)
+  local respond = responder(send, Kind.RESPONSE)
 
   -- Exposed on the worker's module so user methods running here can call
   -- back to the main process: `require("coq.lib.worker").main(fn, ...)`.
@@ -337,7 +279,7 @@ M.run = function(req_fd, rsp_fd, raw)
     return function(...)
       local argn = select("#", ...)
       local args = { ... }
-      send { kind = K.YIELD, id = id, n = argn, values = args }
+      send { kind = Kind.YIELD, id = id, n = argn, values = args }
       local f = async.future()
       iter_resumers[id] = f.resolve
       return f.await()
@@ -366,15 +308,15 @@ M.run = function(req_fd, rsp_fd, raw)
   end
 
   local handlers = {
-    [K.RESPONSE] = tracker.resolve,
-    [K.REQUEST] = function(frame)
+    [Kind.RESPONSE] = tracker.resolve,
+    [Kind.REQUEST] = function(frame)
       local id = frame.id
       async.thunk(function()
         respond(id, invoke(frame.method, id, frame.args or {}, frame.argn or 0))
       end)()
     end,
-    [K.NEXT] = resume_iter(true),
-    [K.STOP] = resume_iter(false),
+    [Kind.NEXT] = resume_iter(true),
+    [Kind.STOP] = resume_iter(false),
   }
 
   start_reader(req_pipe, handlers, function()

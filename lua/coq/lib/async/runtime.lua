@@ -56,7 +56,7 @@ M.future = function()
       assert(current, "await: must be called inside running coroutine")
 
       if h and h.cancelled then
-        return
+        return nil
       end
 
       assert(thread == nil, "future: another coroutine is already awaiting")

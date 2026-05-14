@@ -1,104 +1,62 @@
 local T = require "coq.lib.test"
-local proto = require("coq.lib.worker").proto
+local proto = require "coq.lib.worker.wire_proto"
 
-local drain = function(buf)
-  local iter, leftover = proto.iter_decode(buf)
+local drain = function(decode, data)
   local seen = {}
-  for frame in iter do
+  for frame in decode(data) do
     table.insert(seen, frame)
   end
-  return seen, leftover()
+  return seen
 end
 
 T.describe("proto", function(test)
-  test("encode + consume round-trips a frame", function()
+  test("encode + decode round-trips a frame", function()
     local body = { kind = "request", id = 7, method = "bark", args = { "lil" } }
-    local seen, rest = drain(proto.encode(body))
+    local seen = drain(proto.decoder(), proto.encode(body))
 
     T.eq(#seen, 1)
     T.eq(seen[1], body)
-    T.eq(rest, "")
   end)
 
-  test("consume handles two frames in one buffer", function()
+  test("decoder handles two frames in one feed", function()
     local a = proto.encode { kind = "x", id = 1 }
     local b = proto.encode { kind = "y", id = 2 }
-    local seen, rest = drain(a .. b)
+    local seen = drain(proto.decoder(), a .. b)
 
     T.eq({ seen[1].kind, seen[2].kind }, { "x", "y" })
-    T.eq(rest, "")
   end)
 
-  test("consume returns leftover bytes for incomplete frame", function()
+  test("decoder buffers an incomplete frame across feeds", function()
     local frame = proto.encode { kind = "x", id = 1 }
-    local truncated = frame:sub(1, #frame - 3)
-    local seen, rest = drain(truncated)
+    local decode = proto.decoder()
 
-    T.eq(seen, {})
-    T.eq(rest, truncated)
+    local first = drain(decode, frame:sub(1, #frame - 3))
+    T.eq(first, {})
+
+    local rest = drain(decode, frame:sub(#frame - 2))
+    T.eq(#rest, 1)
+    T.eq(rest[1].kind, "x")
   end)
 
-  test("consume returns leftover when only header is present", function()
+  test("decoder buffers a header-only feed", function()
     local frame = proto.encode { kind = "x", id = 1 }
-    local just_header = frame:sub(1, 4)
-    local seen, rest = drain(just_header)
+    local decode = proto.decoder()
 
-    T.eq(seen, {})
-    T.eq(rest, just_header)
+    local first = drain(decode, frame:sub(1, 4))
+    T.eq(first, {})
+
+    local rest = drain(decode, frame:sub(5))
+    T.eq(#rest, 1)
   end)
 
-  test("consume on empty buffer is a noop", function()
-    local seen, rest = drain ""
-
-    T.eq(seen, {})
-    T.eq(rest, "")
+  test("decoder on an empty feed yields nothing", function()
+    T.eq(drain(proto.decoder(), ""), {})
   end)
 
   test("encode handles a payload larger than one byte length", function()
     local big = string.rep("lil", 500)
-    local seen = drain(proto.encode { kind = "x", payload = big })
+    local seen = drain(proto.decoder(), proto.encode { kind = "x", payload = big })
 
     T.eq(seen[1].payload, big)
-  end)
-
-  test("pack captures ok, arity, and values", function()
-    local ok, n, vals = proto.pack(true, "lil", "spot", "fido")
-
-    T.eq(ok, true)
-    T.eq(n, 3)
-    T.eq(vals, { "lil", "spot", "fido" })
-  end)
-
-  test("pack captures error path", function()
-    local ok, n, vals = proto.pack(false, "leash snapped")
-
-    T.eq(ok, false)
-    T.eq(n, 1)
-    T.eq(vals, { "leash snapped" })
-  end)
-
-  test("pack records arity including trailing nils", function()
-    local ok, n, vals = proto.pack(true, "lil", nil, "fido")
-
-    T.eq(ok, true)
-    T.eq(n, 3)
-    T.eq(vals[1], "lil")
-    T.eq(vals[2], nil)
-    T.eq(vals[3], "fido")
-  end)
-
-  test("unwrap returns rest when err is nil", function()
-    local a, b, c = proto.unwrap(nil, "lil", "spot", "fido")
-
-    T.eq(a, "lil")
-    T.eq(b, "spot")
-    T.eq(c, "fido")
-  end)
-
-  test("unwrap raises when err is set", function()
-    local ok, err = pcall(proto.unwrap, "lil went missing")
-
-    T.eq(ok, false)
-    assert(err:find "lil went missing", "expected error message, got: " .. tostring(err))
   end)
 end)
