@@ -92,12 +92,22 @@ end
 M.thunk = function(fn)
   return function(...)
     assert(coroutine.running() == nil, "thunk: must be called outside a coroutine")
-    local thread = coroutine.create(fn)
+
+    local argv = { ... }
+    local thread = coroutine.create(function()
+      local ok, err = xpcall(function()
+        fn(unpack(argv))
+      end, debug.traceback)
+
+      if not ok then
+        error(err, 0)
+      end
+    end)
     threads[thread] = M.ROOT
 
-    local ok, ret = coroutine.resume(thread, ...)
+    local ok, ret = coroutine.resume(thread)
     if not ok then
-      error(debug.traceback(thread, ret), 0)
+      error(ret, 0)
     end
   end
 end
@@ -105,7 +115,7 @@ end
 M.sleep = function(milliseconds)
   local h = M.current()
   if h.cancelled then
-    milliseconds = 0
+    return
   end
 
   local f = M.future()
