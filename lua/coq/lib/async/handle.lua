@@ -34,7 +34,7 @@ M.new = function(parent, deadline_ms)
       local snapshot = watchers
       watchers = {}
 
-      for _, w in ipairs(snapshot) do
+      for w in vim.iter(snapshot):rev() do
         defer(function()
           fire(w)
         end)

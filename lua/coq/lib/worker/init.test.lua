@@ -221,6 +221,22 @@ T.describe("worker", function(test)
     assert(err:find "leash snapped", "expected leash snapped, got: " .. tostring(err))
   end)
 
+  test("vim.iter is available inside the worker", function()
+    local w = worker.spawn {
+      reversed = function(_, items)
+        local out = {}
+        for v in vim.iter(items):rev() do
+          table.insert(out, v)
+        end
+        return out
+      end,
+    }
+    local seen = w.reversed { "lil", "spot", "fido" }
+    w.close()
+
+    T.eq(seen, { "fido", "spot", "lil" })
+  end)
+
   test("vim.ringbuf is available inside the worker", function()
     local w = worker.spawn {
       init = function()
