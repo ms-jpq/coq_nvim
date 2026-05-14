@@ -21,6 +21,23 @@ T.describe("race", function(test)
     T.eq(val, "woof")
   end)
 
+  test("returns as soon as winner finishes, not waiting for losers", function()
+    local start = vim.uv.hrtime()
+    async.race {
+      function()
+        async.sleep(5)
+        return "fast"
+      end,
+      function()
+        async.sleep(200)
+        return "slow"
+      end,
+    }
+    local elapsed_ms = (vim.uv.hrtime() - start) / 1e6
+
+    assert(elapsed_ms < 100, ("expected ~5ms, got %.1fms"):format(elapsed_ms))
+  end)
+
   test("picks fastest sleeper", function()
     local idx, val = async.race {
       function()

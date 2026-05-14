@@ -3,6 +3,9 @@ local tbl = require "coq.lib.tbl"
 
 local M = {}
 
+local DEFAULT_TIMEOUT = tonumber(os.getenv "TEST_TIMEOUT") or 5000
+local TOP_N = tonumber(os.getenv "TEST_TOP_N") or 10
+
 local registry = {}
 
 local register = function(prefix, spec, fn)
@@ -10,7 +13,7 @@ local register = function(prefix, spec, fn)
     spec = { spec }
   end
   local name = prefix and (prefix .. " :: " .. spec[1]) or spec[1]
-  table.insert(registry, { name = name, timeout = spec.timeout or 5000, fn = fn })
+  table.insert(registry, { name = name, timeout = spec.timeout or DEFAULT_TIMEOUT, fn = fn })
 end
 
 M.describe = function(prefix, body)
@@ -31,7 +34,7 @@ end
 
 M.run = function(seed)
   seed = seed or vim.uv.hrtime()
-  vim.notify(("🎲 seed %.0f"):format(seed), vim.log.levels.INFO)
+  vim.notify(("🎲 seed %.0f"):format(seed))
   math.randomseed(seed)
   tbl.shuffle(registry)
 
@@ -42,10 +45,13 @@ M.run = function(seed)
     t.done = false
     t.err = nil
     t.timed_out = false
+    t.elapsed_ms = 0
     max_timeout = math.max(max_timeout, t.timeout)
 
     async.thunk(function()
+      local t_start = vim.uv.hrtime()
       local ok, e = xpcall(t.fn, debug.traceback)
+      t.elapsed_ms = (vim.uv.hrtime() - t_start) / 1e6
       t.done = true
       if not ok then
         t.err = e
@@ -60,6 +66,7 @@ M.run = function(seed)
       if not t.done then
         if elapsed_ms > t.timeout then
           t.timed_out = true
+          t.elapsed_ms = t.timeout
         else
           all_done = false
         end
@@ -77,8 +84,19 @@ M.run = function(seed)
       vim.notify("✗ " .. t.name .. "\n" .. t.err, vim.log.levels.ERROR)
       failed = failed + 1
     else
-      vim.notify("✓ " .. t.name, vim.log.levels.INFO)
+      vim.notify("✓ " .. t.name)
     end
+  end
+
+  local slowest = vim.iter(registry):totable()
+  table.sort(slowest, function(a, b)
+    return a.elapsed_ms > b.elapsed_ms
+  end)
+  local n = math.min(#slowest, TOP_N)
+  vim.notify(("── slowest %d/%d tests ──"):format(n, #slowest))
+  for i = 1, n do
+    local t = slowest[i]
+    vim.notify(("%7.1f ms  %s"):format(t.elapsed_ms, t.name))
   end
 
   if failed > 0 then

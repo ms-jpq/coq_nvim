@@ -32,7 +32,9 @@ M.race = function(fns)
       end)
     end
 
-    return f.await(n.handle)
+    local rets = { f.await(n.handle) }
+    n.handle.cancel()
+    return unpack(rets)
   end)
 end
 
@@ -47,10 +49,9 @@ M.merge = function(iters)
   end
 
   for idx, iter in pairs(iters) do
-    local fn_p = runtime.preemptible(iter)
-
+    local p_iter = runtime.preemptible(iter)
     n.spawn(function()
-      for v in fn_p do
+      for v in p_iter do
         chan.push(idx, v)
       end
 
