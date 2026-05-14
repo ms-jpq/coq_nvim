@@ -4,7 +4,7 @@ local async = require "coq.lib.async"
 local config = require "coq.lib.worker.config_proto"
 local errs = require "coq.lib.errs"
 local inflight = require "coq.lib.worker.inflight"
-local proto = require "coq.lib.worker.wire_proto"
+local transport = require "coq.lib.worker.transport"
 
 local Kind = {
   REQUEST = "request",
@@ -30,31 +30,6 @@ local unwrap = function(err, ...)
   return ...
 end
 
-local open_duplex = function(read_fd, write_fd)
-  local duplex = {}
-  duplex.reader, duplex.writer = vim.uv.new_pipe(), vim.uv.new_pipe()
-  duplex.reader:open(read_fd)
-  duplex.writer:open(write_fd)
-
-  duplex.close = function()
-    duplex.writer:shutdown(function()
-      duplex.writer:close()
-    end)
-  end
-  return duplex
-end
-
-local duplex_pair = function()
-  local inbound = vim.uv.pipe({ nonblock = true }, { nonblock = true })
-  local outbound = vim.uv.pipe({ nonblock = true }, { nonblock = true })
-
-  local duplex = open_duplex(inbound.read, outbound.write)
-  local remote = {}
-  remote.read_fd = outbound.read
-  remote.write_fd = inbound.write
-  return duplex, remote
-end
-
 -- A RESPONSE-shaped frame as (err, value1, value2, ...). `err` is nil on
 -- success. Pairs with `pack` on the other end.
 local frame_to_result = function(frame)
@@ -64,30 +39,10 @@ local frame_to_result = function(frame)
   return frame.values[1] or errs.UNKNOWN
 end
 
-local sender = function(pipe)
-  return function(body)
-    pipe:write(proto.encode(body))
-  end
-end
-
 local responder = function(send, kind)
   return function(id, ok, n, vals)
     send { kind = kind, id = id, ok = ok, n = n, values = vals }
   end
-end
-
-local start_reader = function(pipe, handlers, on_eof)
-  local decode = proto.decoder()
-  pipe:read_start(function(err, data)
-    if err or not data then
-      pipe:close()
-      on_eof()
-      return
-    end
-    for frame in decode(data) do
-      handlers[frame.kind](frame)
-    end
-  end)
 end
 
 local M = {}
@@ -114,32 +69,49 @@ local make_endpoint = function(duplex, invoker, opts)
 
   local flights = inflight.new()
 
-  local send = sender(duplex.writer)
+  local send = transport.sender(duplex.writer)
   local respond = responder(send, Kind.RESPONSE)
 
-  local request = function(body)
+  -- A request session: open, then read frames via `next` until terminal
+  -- RESPONSE (which auto-releases the slot), or end early via `close`
+  -- (sends K.STOP). `next` returns raw frames; the first call uses the
+  -- pending REQUEST's reply, subsequent calls send K.NEXT.
+  --
+  -- One-shot RPC is just one `next` call; iteration is many.
+  local open_session = function(body)
     local f = async.future()
     local id, release
     id, release = flights.reserve(function(frame)
-      release()
-      f.resolve(frame_to_result(frame))
+      f.resolve(frame)
     end)
     body.kind, body.id = Kind.REQUEST, id
     send(body)
-    return f.await()
-  end
-
-  local iter_call = function(method, args, argn)
-    local f = async.future()
-    local id, release = flights.reserve(function(frame)
-      f.resolve(frame)
-    end)
-    send { kind = Kind.REQUEST, id = id, method = method, args = args, argn = argn }
 
     local done, first = false, true
-    local it = {}
 
-    it.close = function()
+    local session = {}
+
+    session.next = function()
+      if done then
+        return nil
+      end
+
+      if first then
+        first = false
+      else
+        f = async.future()
+        send { kind = Kind.NEXT, id = id }
+      end
+
+      local frame = f.await()
+      if frame.kind ~= Kind.YIELD then
+        done = true
+        release()
+      end
+      return frame
+    end
+
+    session.close = function()
       if done then
         return
       end
@@ -148,31 +120,35 @@ local make_endpoint = function(duplex, invoker, opts)
       release()
     end
 
-    local next = function()
-      if done then
+    return session
+  end
+
+  -- One-shot RPC: take the session's first (and only) frame as a RESPONSE,
+  -- and return it as `(err, values...)`.
+  local request = function(body)
+    return frame_to_result(open_session(body).next())
+  end
+
+  -- Streaming RPC: expose the session as a for-loop iterator. YIELD frames
+  -- unpack to values; terminal RESPONSE returns nil (or errors).
+  local iter_call = function(method, args, argn)
+    local session = open_session { method = method, args = args, argn = argn }
+    local it = { close = session.close }
+    return setmetatable(it, {
+      __call = function()
+        local frame = session.next()
+        if not frame then
+          return nil
+        end
+        if frame.kind == Kind.YIELD then
+          return unpack(frame.values, 1, frame.n)
+        end
+        if not frame.ok then
+          error(frame.values[1] or errs.UNKNOWN, 2)
+        end
         return nil
-      end
-
-      if not first then
-        f = async.future()
-        send { kind = Kind.NEXT, id = id }
-      end
-      first = false
-
-      local frame = f.await()
-      if frame.kind == Kind.YIELD then
-        return unpack(frame.values, 1, frame.n)
-      end
-      done = true
-
-      release()
-      if not frame.ok then
-        error(frame.values[1] or errs.UNKNOWN, 2)
-      end
-      return nil
-    end
-
-    return setmetatable(it, { __call = next })
+      end,
+    })
   end
 
   local base_handlers = {
@@ -211,7 +187,7 @@ end
 -- Main-side: spawn a worker. Returns a proxy table with the worker's methods
 -- bound, plus `close` to tear it down.
 M.spawn = function(definition)
-  local duplex, remote = duplex_pair()
+  local duplex, remote = transport.duplex_pair()
   local closed = false
 
   local endpoint = make_endpoint(duplex, function(frame)
@@ -219,14 +195,12 @@ M.spawn = function(definition)
   end, { schedule = vim.schedule })
 
   local exited = async.future()
-  start_reader(duplex.reader, endpoint.base_handlers, function()
+  transport.start_reader(duplex.reader, endpoint.base_handlers, function()
     endpoint.flights.drain "worker died"
     exited.resolve()
   end)
 
-  vim.uv.new_thread(function(req_fd, rsp_fd, bootstrap)
-    require("coq.lib.worker").run(req_fd, rsp_fd, vim.mpack.decode(bootstrap))
-  end, remote.read_fd, remote.write_fd, config.encode(definition))
+  transport.spawn_worker("coq.lib.worker", remote, config.encode(definition))
 
   local bind_rpc = function(name)
     return function(...)
@@ -273,7 +247,7 @@ end
 -- Worker-side dispatch loop. Entry point invoked from `vim.uv.new_thread`
 -- in `M.spawn` above. Runs in its own Lua state with its own libuv loop.
 M.run = function(req_fd, rsp_fd, raw)
-  local duplex = open_duplex(req_fd, rsp_fd)
+  local duplex = transport.open_duplex(req_fd, rsp_fd)
   local state, methods = config.decode(raw)
   local iter_resumers = {}
 
@@ -330,7 +304,7 @@ M.run = function(req_fd, rsp_fd, raw)
     })
   end
 
-  start_reader(duplex.reader, handlers, duplex.close)
+  transport.start_reader(duplex.reader, handlers, duplex.close)
   vim.uv.run()
 end
 
