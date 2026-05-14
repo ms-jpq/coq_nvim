@@ -24,22 +24,18 @@ M.race = function(fns)
   end
 
   local f = runtime.future()
-  local ret = {}
 
-  nursery.scope(function(n, defer)
+  return nursery.scope(function(n, defer)
     defer(n.handle.on_cancel(f.resolve))
-    defer(n.handle.cancel)
 
-    for idx, fn in ipairs(fns) do
+    for idx, fn in pairs(fns) do
       n.spawn(function()
         f.resolve(idx, fn())
       end)
     end
 
-    ret = { f.await(n.handle) }
+    return f.await(n.handle)
   end)
-
-  return unpack(ret)
 end
 
 M.preemptible = function(iter)

@@ -93,4 +93,52 @@ T.describe("preemptible", function(test)
     T.eq(ok, false)
     assert(tostring(err):find "kibble crash")
   end)
+
+  test("propagates errors that fire after an async yield", function()
+    local iter = async.preemptible(function()
+      async.sleep(2)
+      error "kibble crash post sleep"
+    end)
+
+    local ok, err = pcall(iter)
+
+    T.eq(ok, false)
+    assert(tostring(err):find "kibble crash post sleep")
+  end)
+
+  test("cancellation fires iter's own on_cancel watcher", function()
+    local h = handle.new()
+    local iter_cancelled = false
+    async.scope(h, function(n)
+      n.spawn(function()
+        local iter = async.preemptible(function()
+          async.current().on_cancel(function()
+            iter_cancelled = true
+          end)
+          async.sleep(100)
+          return "never"
+        end)
+        iter()
+      end)
+      async.sleep(5)
+      h.cancel()
+    end)
+
+    T.eq(iter_cancelled, true)
+  end)
+
+  test("subsequent call works after a caught error", function()
+    local i = 0
+    local iter = async.preemptible(function()
+      i = i + 1
+      if i == 1 then
+        error "first only"
+      end
+      return i
+    end)
+
+    local ok = pcall(iter)
+    T.eq(ok, false)
+    T.eq(iter(), 2)
+  end)
 end)

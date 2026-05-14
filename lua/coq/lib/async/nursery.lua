@@ -7,17 +7,16 @@ local M = {}
 
 M.new = function(parent)
   parent = parent or runtime.current()
-  local nursery = { handle = handle.new(parent), errors = {} }
+  local nursery = { handle = handle.new(parent), errors = {}, closed = false }
   local pending = setmetatable({}, { __mode = "k" })
   local waiters = {}
-  local closed = false
 
   nursery.close = function()
-    closed = true
+    nursery.closed = true
   end
 
   nursery.spawn = function(fn)
-    assert(not closed, "spawn: nursery is closed")
+    assert(not nursery.closed, "spawn: nursery is closed")
 
     local thread
     thread = coroutine.create(function()
@@ -66,14 +65,16 @@ M.scope = function(parent, body)
   end
 
   local nursery = M.new(parent)
-  lib.scope(function(defer)
+  return lib.scope(function(defer)
     defer(nursery.close)
     defer(nursery.handle.cancel)
 
+    local rets = {}
     nursery.spawn(function()
-      body(nursery, defer)
+      rets = { body(nursery, defer) }
     end)
     nursery.join()
+    return unpack(rets)
   end)
 end
 
