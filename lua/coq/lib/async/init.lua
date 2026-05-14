@@ -51,6 +51,16 @@ M.race = function(fns)
   end)
 end
 
+M.preemptible = function(iter)
+  return function()
+    local winner, value = M.race { iter }
+    if winner == nil then
+      return nil
+    end
+    return value
+  end
+end
+
 M.merge = function(fns)
   local iters = {}
   for idx, fn in ipairs(fns) do
