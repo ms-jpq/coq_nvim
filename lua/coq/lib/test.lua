@@ -8,17 +8,30 @@ local TOP_N = tonumber(os.getenv "TEST_TOP_N") or 10
 
 local registry = {}
 
-local register = function(prefix, spec, fn)
+local normalize = function(spec)
   if type(spec) == "string" then
     spec = { spec }
   end
-  local name = prefix and (prefix .. " :: " .. spec[1]) or spec[1]
-  table.insert(registry, { name = name, timeout = spec.timeout or DEFAULT_TIMEOUT, fn = fn })
+  return spec
 end
 
-M.describe = function(prefix, body)
-  body(function(spec, fn)
-    register(prefix, spec, fn)
+local register = function(prefix, spec, fn, group)
+  spec = normalize(spec)
+  group = group or {}
+  local name = prefix and (prefix .. " :: " .. spec[1]) or spec[1]
+
+  table.insert(registry, {
+    name = name,
+    timeout = spec.timeout or group.timeout or DEFAULT_TIMEOUT,
+    only = spec.only or group.only or false,
+    fn = fn,
+  })
+end
+
+M.describe = function(spec, body)
+  spec = normalize(spec)
+  body(function(test_spec, fn)
+    register(spec[1], test_spec, fn, spec)
   end)
 end
 
@@ -33,75 +46,98 @@ M.eq = function(a, b)
 end
 
 M.run = function(seed)
-  seed = seed or vim.uv.hrtime()
-  vim.notify(("🎲 seed %.0f"):format(seed))
-  math.randomseed(seed)
-  tbl.shuffle(registry)
-
-  local start = vim.uv.hrtime()
-  local max_timeout = 0
-
-  for _, t in pairs(registry) do
-    t.done = false
-    t.err = nil
-    t.timed_out = false
-    t.elapsed_ms = 0
-    max_timeout = math.max(max_timeout, t.timeout)
-
-    async.thunk(function()
-      local t_start = vim.uv.hrtime()
-      local ok, e = xpcall(t.fn, debug.traceback)
-      t.elapsed_ms = (vim.uv.hrtime() - t_start) / 1e6
-      t.done = true
-      if not ok then
-        t.err = e
-      end
-    end)()
+  do
+    seed = seed or vim.uv.hrtime()
+    vim.notify(("🎲 seed %.0f"):format(seed))
+    math.randomseed(seed)
   end
 
-  vim.wait(max_timeout + 100, function()
-    local elapsed_ms = (vim.uv.hrtime() - start) / 1e6
-    local all_done = true
+  do
+    local has_only = vim.iter(registry):any(function(t)
+      return t.only
+    end)
+
+    if has_only then
+      registry = vim
+        .iter(registry)
+        :filter(function(t)
+          return t.only
+        end)
+        :totable()
+      vim.notify(("⚑ only mode: %d tests"):format(#registry))
+    end
+
+    tbl.shuffle(registry)
+  end
+
+  do
+    local start = vim.uv.hrtime()
+    local max_timeout = 0
+
     for _, t in pairs(registry) do
-      if not t.done then
-        if elapsed_ms > t.timeout then
-          t.timed_out = true
-          t.elapsed_ms = t.timeout
-        else
-          all_done = false
+      t.done = false
+      t.err = nil
+      t.timed_out = false
+      t.elapsed_ms = 0
+      max_timeout = math.max(max_timeout, t.timeout)
+
+      async.thunk(function()
+        local t_start = vim.uv.hrtime()
+        local ok, e = xpcall(t.fn, debug.traceback)
+        t.elapsed_ms = (vim.uv.hrtime() - t_start) / 1e6
+        t.done = true
+        if not ok then
+          t.err = e
+        end
+      end)()
+    end
+
+    vim.wait(max_timeout + 100, function()
+      local elapsed_ms = (vim.uv.hrtime() - start) / 1e6
+      local all_done = true
+      for _, t in pairs(registry) do
+        if not t.done then
+          if elapsed_ms > t.timeout then
+            t.timed_out = true
+            t.elapsed_ms = t.timeout
+          else
+            all_done = false
+          end
         end
       end
-    end
-    return all_done
-  end)
-
-  local failed = 0
-  for _, t in ipairs(registry) do
-    if t.timed_out then
-      vim.notify("✗ " .. t.name .. "\n  timeout", vim.log.levels.ERROR)
-      failed = failed + 1
-    elseif t.err then
-      vim.notify("✗ " .. t.name .. "\n" .. t.err, vim.log.levels.ERROR)
-      failed = failed + 1
-    else
-      vim.notify("✓ " .. t.name)
-    end
+      return all_done
+    end)
   end
 
-  local slowest = vim.iter(registry):totable()
-  table.sort(slowest, function(a, b)
-    return a.elapsed_ms > b.elapsed_ms
-  end)
-  local n = math.min(#slowest, TOP_N)
-  vim.notify(("── slowest %d/%d tests ──"):format(n, #slowest))
-  for i = 1, n do
-    local t = slowest[i]
-    vim.notify(("%7.1f ms  %s"):format(t.elapsed_ms, t.name))
-  end
+  do
+    local failed = 0
+    for _, t in ipairs(registry) do
+      if t.timed_out then
+        vim.notify("✗ " .. t.name .. "\n  timeout", vim.log.levels.ERROR)
+        failed = failed + 1
+      elseif t.err then
+        vim.notify("✗ " .. t.name .. "\n" .. t.err, vim.log.levels.ERROR)
+        failed = failed + 1
+      else
+        vim.notify("✓ " .. t.name)
+      end
+    end
 
-  if failed > 0 then
-    vim.notify(("%d failed"):format(failed), vim.log.levels.ERROR)
-    os.exit(1)
+    local slowest = vim.iter(registry):totable()
+    table.sort(slowest, function(a, b)
+      return a.elapsed_ms > b.elapsed_ms
+    end)
+    local n = math.min(#slowest, TOP_N)
+    vim.notify(("── slowest %d/%d tests ──"):format(n, #slowest))
+    for i = 1, n do
+      local t = slowest[i]
+      vim.notify(("%7.1f ms  %s"):format(t.elapsed_ms, t.name))
+    end
+
+    if failed > 0 then
+      vim.notify(("%d failed"):format(failed), vim.log.levels.ERROR)
+      os.exit(1)
+    end
   end
 end
 
