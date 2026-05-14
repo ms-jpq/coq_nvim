@@ -31,7 +31,7 @@ end
 
 M.run = function(seed)
   seed = seed or vim.uv.hrtime()
-  vim.notify("🎲 seed " .. seed, vim.log.levels.INFO)
+  vim.notify(("🎲 seed %.0f"):format(seed), vim.log.levels.INFO)
   math.randomseed(seed)
   tbl.shuffle(registry)
 

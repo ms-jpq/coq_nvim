@@ -9,7 +9,7 @@ return {
   future = runtime.future,
   merge = controlflow.merge,
   nursery = nursery.new,
-  preemptible = controlflow.preemptible,
+  preemptible = runtime.preemptible,
   race = controlflow.race,
   scope = nursery.scope,
   sleep = runtime.sleep,

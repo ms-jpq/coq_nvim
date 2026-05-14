@@ -129,6 +129,7 @@ M.sleep = function(milliseconds)
   end)()
 
   return lib.scope(function(defer)
+    defer(h.on_cancel(f.resolve))
     defer(function()
       if not watcher:is_closing() then
         watcher:stop()
@@ -136,11 +137,40 @@ M.sleep = function(milliseconds)
       end
     end)
 
-    defer(h.on_cancel(f.resolve))
-
     watcher:start(unpack(wargv))
     return f.await()
   end)
+end
+
+M.preemptible = function(fn)
+  return function()
+    if M.cancelled() then
+      return nil
+    end
+
+    local f = M.future()
+    local thread = coroutine.create(function()
+      f.resolve(xpcall(fn, debug.traceback))
+    end)
+
+    local h = handle.new(M.current())
+    return lib.scope(function(defer)
+      defer(h.on_cancel(f.resolve))
+      defer(h.cancel)
+
+      M.bind(thread, h)
+      coroutine.resume(thread)
+
+      local ok, ret = f.await(h)
+      if ok == nil then
+        return nil
+      end
+      if not ok then
+        error(ret, 0)
+      end
+      return ret
+    end)
+  end
 end
 
 return M

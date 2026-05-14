@@ -1,5 +1,3 @@
-local handle = require "coq.lib.async.handle"
-local lib = require "coq.lib"
 local mpsc = require "coq.lib.channels.mpsc"
 local nursery = require "coq.lib.async.nursery"
 local runtime = require "coq.lib.async.runtime"
@@ -38,37 +36,6 @@ M.race = function(fns)
   end)
 end
 
-M.preemptible = function(iter)
-  return function()
-    if runtime.cancelled() then
-      return nil
-    end
-
-    local f = runtime.future()
-    local h = handle.new(runtime.current())
-    h.on_cancel(f.resolve)
-
-    local thread = coroutine.create(function()
-      f.resolve(xpcall(iter, debug.traceback))
-    end)
-    runtime.bind(thread, h)
-    coroutine.resume(thread)
-
-    local ok, ret = lib.scope(function(defer)
-      defer(h.cancel)
-      return f.await(h)
-    end)
-
-    if ok == nil then
-      return nil
-    end
-    if not ok then
-      error(ret, 0)
-    end
-    return ret
-  end
-end
-
 M.merge = function(iters)
   local chan = mpsc.new()
   local n = nursery.new()
@@ -80,7 +47,7 @@ M.merge = function(iters)
   end
 
   for idx, iter in pairs(iters) do
-    local fn_p = M.preemptible(iter)
+    local fn_p = runtime.preemptible(iter)
 
     n.spawn(function()
       for v in fn_p do
