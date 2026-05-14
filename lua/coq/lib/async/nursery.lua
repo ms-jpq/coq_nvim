@@ -21,7 +21,7 @@ M.new = function(parent)
 
     local thread
     thread = coroutine.create(function()
-      runtime.sleep(-1)
+      runtime.sleep(0)
       local ok, err = xpcall(fn, debug.traceback)
 
       pending[thread] = nil
@@ -71,7 +71,7 @@ M.scope = function(parent, body)
     defer(nursery.handle.cancel)
 
     nursery.spawn(function()
-      body(nursery)
+      body(nursery, defer)
     end)
     nursery.join()
   end)

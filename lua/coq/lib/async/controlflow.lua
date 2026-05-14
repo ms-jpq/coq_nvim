@@ -8,13 +8,13 @@ local M = {}
 
 M.all = function(fns)
   local results = {}
-  local n = nursery.new()
-  for idx, fn in pairs(fns) do
-    n.spawn(function()
-      results[idx] = fn()
-    end)
-  end
-  n.join()
+  nursery.scope(function(n)
+    for idx, fn in pairs(fns) do
+      n.spawn(function()
+        results[idx] = fn()
+      end)
+    end
+  end)
   return results
 end
 
@@ -24,11 +24,11 @@ M.race = function(fns)
   end
 
   local f = runtime.future()
-  local n = nursery.new()
+  local ret = {}
 
-  return lib.scope(function(defer)
-    defer(n.handle.cancel)
+  nursery.scope(function(n, defer)
     defer(n.handle.on_cancel(f.resolve))
+    defer(n.handle.cancel)
 
     for idx, fn in ipairs(fns) do
       n.spawn(function()
@@ -36,11 +36,10 @@ M.race = function(fns)
       end)
     end
 
-    local ret = { f.await(n.handle) }
-    n.handle.cancel()
-    n.join()
-    return unpack(ret)
+    ret = { f.await(n.handle) }
   end)
+
+  return unpack(ret)
 end
 
 M.preemptible = function(iter)

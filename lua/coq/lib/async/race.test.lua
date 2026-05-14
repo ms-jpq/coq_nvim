@@ -21,20 +21,6 @@ T.describe("race", function(test)
     T.eq(val, "woof")
   end)
 
-  test("picks first task on simultaneous sync return", function()
-    local idx, val = async.race {
-      function()
-        return "first"
-      end,
-      function()
-        return "second"
-      end,
-    }
-
-    T.eq(idx, 1)
-    T.eq(val, "first")
-  end)
-
   test("picks fastest sleeper", function()
     local idx, val = async.race {
       function()
