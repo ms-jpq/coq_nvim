@@ -1,8 +1,8 @@
 local T = require "coq.lib.test"
-local proto = require "coq.lib.worker.proto"
+local proto = require("coq.lib.worker").proto
 
 local drain = function(buf)
-  local iter, leftover = proto.consume(buf)
+  local iter, leftover = proto.iter_decode(buf)
   local seen = {}
   for frame in iter do
     table.insert(seen, frame)

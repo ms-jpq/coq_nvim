@@ -1,5 +1,3 @@
-local proto = require "coq.lib.worker.proto"
-
 local M = {}
 
 local next_id = (function()
@@ -12,7 +10,7 @@ local next_id = (function()
 end)()
 
 local DEAD_FRAME = function(reason)
-  return { kind = proto.KIND.RESPONSE, ok = false, n = 1, values = { reason } }
+  return { kind = "response", ok = false, n = 1, values = { reason } }
 end
 
 M.new = function()

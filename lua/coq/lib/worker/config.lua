@@ -1,13 +1,10 @@
-local proto = require "coq.lib.worker.proto"
-local streaming = require "coq.lib.worker.streaming"
-
 local M = {}
 
 local classify = function(decl)
-  if streaming.is(decl) then
-    return { mode = proto.MODE.STREAM, dump = string.dump(decl.fn) }
+  if type(decl) == "table" and decl.streaming == true then
+    return { mode = "stream", dump = string.dump(decl.fn) }
   end
-  return { mode = proto.MODE.RPC, dump = string.dump(decl) }
+  return { mode = "rpc", dump = string.dump(decl) }
 end
 
 M.encode = function(definition)
