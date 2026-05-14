@@ -1,4 +1,4 @@
-local mpsc = require "coq.lib.channels.mpsc"
+local mpmc = require "coq.lib.channels.mpmc"
 local nursery = require "coq.lib.async.nursery"
 local runtime = require "coq.lib.async.runtime"
 
@@ -39,7 +39,7 @@ M.race = function(fns)
 end
 
 M.merge = function(iters)
-  local chan = mpsc.new()
+  local chan = mpmc.new()
   local n = nursery.new()
   local active = #iters
 

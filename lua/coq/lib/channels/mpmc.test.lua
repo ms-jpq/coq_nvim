@@ -1,18 +1,18 @@
 local T = require "coq.lib.test"
 local async = require "coq.lib.async"
 local handle = require "coq.lib.async.handle"
-local mpsc = require "coq.lib.channels.mpsc"
+local mpmc = require "coq.lib.channels.mpmc"
 
-T.describe("mpsc", function(test)
+T.describe("mpmc", function(test)
   test("push then pull returns the value", function()
-    local chan = mpsc.new()
+    local chan = mpmc.new()
     chan.push "lil"
 
     T.eq(chan.pull(), "lil")
   end)
 
   test("pulls in FIFO order", function()
-    local chan = mpsc.new()
+    local chan = mpmc.new()
     chan.push "lil"
     chan.push "spot"
     chan.push "fido"
@@ -23,7 +23,7 @@ T.describe("mpsc", function(test)
   end)
 
   test("pull blocks until push happens", function()
-    local chan = mpsc.new()
+    local chan = mpmc.new()
     local got
     async.scope(function(n)
       n.spawn(function()
@@ -37,7 +37,7 @@ T.describe("mpsc", function(test)
   end)
 
   test("push and pull forward multiple values", function()
-    local chan = mpsc.new()
+    local chan = mpmc.new()
     chan.push("lil", "spot", "fido")
     local a, b, c = chan.pull()
 
@@ -45,14 +45,14 @@ T.describe("mpsc", function(test)
   end)
 
   test("close on empty makes pull return nil", function()
-    local chan = mpsc.new()
+    local chan = mpmc.new()
     chan.close()
 
     T.eq(chan.pull(), nil)
   end)
 
   test("close drains queued items before nil", function()
-    local chan = mpsc.new()
+    local chan = mpmc.new()
     chan.push "lil"
     chan.push "spot"
     chan.close()
@@ -63,7 +63,7 @@ T.describe("mpsc", function(test)
   end)
 
   test("push after close is silently dropped", function()
-    local chan = mpsc.new()
+    local chan = mpmc.new()
     chan.close()
     chan.push "lil"
 
@@ -71,7 +71,7 @@ T.describe("mpsc", function(test)
   end)
 
   test("close wakes a blocked puller", function()
-    local chan = mpsc.new()
+    local chan = mpmc.new()
     local got
     async.scope(function(n)
       n.spawn(function()
@@ -85,7 +85,7 @@ T.describe("mpsc", function(test)
   end)
 
   test("multiple producers push from coroutines", function()
-    local chan = mpsc.new()
+    local chan = mpmc.new()
     local seen = {}
     async.scope(function(n)
       n.spawn(function()
@@ -119,7 +119,7 @@ T.describe("mpsc", function(test)
     local got
     async.scope(h, function(n)
       n.spawn(function()
-        local chan = mpsc.new()
+        local chan = mpmc.new()
         got = chan.pull()
       end)
       async.sleep(2)
@@ -130,7 +130,7 @@ T.describe("mpsc", function(test)
   end)
 
   test("bounded push blocks until pull frees a slot", function()
-    local chan = mpsc.new(2)
+    local chan = mpmc.new(2)
     local progress = {}
     async.scope(function(n)
       n.spawn(function()
@@ -152,7 +152,7 @@ T.describe("mpsc", function(test)
   end)
 
   test("bounded close wakes blocked producers", function()
-    local chan = mpsc.new(1)
+    local chan = mpmc.new(1)
     local exited = false
     async.scope(function(n)
       n.spawn(function()
@@ -168,7 +168,7 @@ T.describe("mpsc", function(test)
   end)
 
   test("bounded wakes producers one slot at a time", function()
-    local chan = mpsc.new(1)
+    local chan = mpmc.new(1)
     local pushed = {}
     async.scope(function(n)
       for _, dog in ipairs { "lil", "spot", "fido" } do
@@ -190,7 +190,7 @@ T.describe("mpsc", function(test)
   end)
 
   test("callable via for-loop", function()
-    local chan = mpsc.new()
+    local chan = mpmc.new()
     local seen = {}
     async.scope(function(n)
       n.spawn(function()
