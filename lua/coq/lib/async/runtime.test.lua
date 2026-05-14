@@ -56,6 +56,8 @@ T.describe("async", function(test)
 
   test("sleep yields for the requested duration", function()
     local start = vim.uv.hrtime()
+    vim.uv.update_time()
+
     async.sleep(20)
     local elapsed_ms = (vim.uv.hrtime() - start) / 1e6
 

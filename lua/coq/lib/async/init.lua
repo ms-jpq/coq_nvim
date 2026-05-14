@@ -5,7 +5,6 @@ local runtime = require "coq.lib.async.runtime"
 return {
   all = controlflow.all,
   cancelled = runtime.cancelled,
-  pass = runtime.pass,
   current = runtime.current,
   future = runtime.future,
   merge = controlflow.merge,

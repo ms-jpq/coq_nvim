@@ -118,27 +118,24 @@ M.sleep = function(milliseconds)
     return
   end
 
+  local idle = milliseconds < 0
   local f = M.future()
-  vim.uv.update_time()
-  local timer = vim.uv.new_timer()
+  local watcher = idle and vim.uv.new_idle() or vim.uv.new_timer()
+  local wargv = idle and { f.resolve } or { milliseconds, 0, f.resolve }
 
   return lib.scope(function(defer)
     defer(function()
-      if not timer:is_closing() then
-        timer:stop()
-        timer:close()
+      if not watcher:is_closing() then
+        watcher:stop()
+        watcher:close()
       end
     end)
 
     defer(h.on_cancel(f.resolve))
 
-    timer:start(milliseconds, 0, f.resolve)
+    watcher:start(unpack(wargv))
     return f.await()
   end)
-end
-
-M.pass = function()
-  return M.sleep(0)
 end
 
 return M
