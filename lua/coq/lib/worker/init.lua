@@ -68,6 +68,36 @@ local start_reader = function(pipe, handlers, on_eof)
   end)
 end
 
+----------------------------------------------------------------------
+-- Pipe lifecycle: each side of the duplex opens a reader fd and a writer
+-- fd. `close` shuts down the writer (the reader closes itself on EOF
+-- inside `start_reader`).
+----------------------------------------------------------------------
+
+local open_duplex = function(read_fd, write_fd)
+  local io = {}
+  io.reader, io.writer = vim.uv.new_pipe(), vim.uv.new_pipe()
+  io.reader:open(read_fd)
+  io.writer:open(write_fd)
+
+  io.close = function()
+    io.writer:shutdown(function()
+      io.writer:close()
+    end)
+  end
+  return io
+end
+
+local make_duplex_pair = function()
+  local inbound = vim.uv.pipe({ nonblock = true }, { nonblock = true })
+  local outbound = vim.uv.pipe({ nonblock = true }, { nonblock = true })
+
+  local io = open_duplex(inbound.read, outbound.write)
+  local remote = {}
+  remote.read_fd, remote.write_fd = outbound.read, inbound.write
+  return io, remote
+end
+
 local M = {}
 
 -- Marker for streaming method declarations.
@@ -145,16 +175,12 @@ end
 -- Main-side: spawn a worker. Returns a proxy table with the worker's methods
 -- bound, plus `close` to tear it down.
 M.spawn = function(definition)
-  local req_fds = vim.uv.pipe({ nonblock = true }, { nonblock = true })
-  local rsp_fds = vim.uv.pipe({ nonblock = true }, { nonblock = true })
-  local rsp_pipe, req_write = vim.uv.new_pipe(), vim.uv.new_pipe()
-  rsp_pipe:open(rsp_fds.read)
-  req_write:open(req_fds.write)
+  local duplex, remote = make_duplex_pair()
 
   local inflight = inflight_mod.new()
   local closed = false
 
-  local send = sender(req_write)
+  local send = sender(duplex.writer)
   local respond_main = responder(send, Kind.RESPONSE)
 
   local handlers = {
@@ -170,14 +196,14 @@ M.spawn = function(definition)
 
   local exited = async.future()
 
-  start_reader(rsp_pipe, handlers, function()
+  start_reader(duplex.reader, handlers, function()
     inflight.drain "worker died"
     exited.resolve()
   end)
 
   vim.uv.new_thread(function(req_fd, rsp_fd, bootstrap)
     require("coq.lib.worker").run(req_fd, rsp_fd, vim.mpack.decode(bootstrap))
-  end, req_fds.read, rsp_fds.write, config.encode(definition))
+  end, remote.read_fd, remote.write_fd, config.encode(definition))
 
   local send_request = function(id, method, args, argn)
     send { kind = Kind.REQUEST, id = id, method = method, args = args, argn = argn }
@@ -216,9 +242,7 @@ M.spawn = function(definition)
     close = function()
       if not closed then
         closed = true
-        req_write:shutdown(function()
-          req_write:close()
-        end)
+        duplex.close()
       end
 
       exited.await()
@@ -260,15 +284,13 @@ end
 -- Worker-side dispatch loop. Entry point invoked from `vim.uv.new_thread`
 -- in `M.spawn` above. Runs in its own Lua state with its own libuv loop.
 M.run = function(req_fd, rsp_fd, raw)
-  local req_pipe, rsp_pipe = vim.uv.new_pipe(), vim.uv.new_pipe()
-  req_pipe:open(req_fd)
-  rsp_pipe:open(rsp_fd)
+  local duplex = open_duplex(req_fd, rsp_fd)
 
   local state, methods = config.decode(raw)
   local iter_resumers = {}
   local tracker = inflight_mod.new()
 
-  local send = sender(rsp_pipe)
+  local send = sender(duplex.writer)
   local respond = responder(send, Kind.RESPONSE)
 
   -- Exposed on the worker's module so user methods running here can call
@@ -319,11 +341,7 @@ M.run = function(req_fd, rsp_fd, raw)
     [Kind.STOP] = resume_iter(false),
   }
 
-  start_reader(req_pipe, handlers, function()
-    rsp_pipe:shutdown(function()
-      rsp_pipe:close()
-    end)
-  end)
+  start_reader(duplex.reader, handlers, duplex.close)
 
   vim.uv.run()
 end
