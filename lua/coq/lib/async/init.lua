@@ -36,7 +36,7 @@ M.race = function(fns)
 
   return lib.scope(function(defer)
     defer(n.handle.cancel)
-    n.handle.on_cancel(f.resolve)
+    defer(n.handle.on_cancel(f.resolve))
 
     for idx, fn in ipairs(fns) do
       n.spawn(function()
