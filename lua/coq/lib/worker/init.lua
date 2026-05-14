@@ -156,9 +156,15 @@ local make_endpoint = function(duplex, invoker, opts)
     [Kind.YIELD] = flights.resolve,
     [Kind.REQUEST] = function(frame)
       local id = frame.id
-      schedule(async.thunk(function()
-        respond(id, invoker(frame))
-      end))
+      schedule(function()
+        local co = coroutine.create(function()
+          respond(id, invoker(frame))
+        end)
+        local ok, err = coroutine.resume(co)
+        if not ok then
+          error(err, 0)
+        end
+      end)
     end,
   }
 
@@ -195,10 +201,13 @@ M.spawn = function(definition)
   end, { schedule = vim.schedule })
 
   local exited = async.future()
-  transport.start_reader(duplex.reader, endpoint.base_handlers, function()
+  async.thunk(function()
+    for frame in transport.frames(duplex.reader) do
+      endpoint.base_handlers[frame.kind](frame)
+    end
     endpoint.flights.drain "worker died"
     exited.resolve()
-  end)
+  end)()
 
   transport.spawn_worker("coq.lib.worker", remote, config.encode(definition))
 
@@ -304,7 +313,13 @@ M.run = function(req_fd, rsp_fd, raw)
     })
   end
 
-  transport.start_reader(duplex.reader, handlers, duplex.close)
+  async.thunk(function()
+    for frame in transport.frames(duplex.reader) do
+      handlers[frame.kind](frame)
+    end
+    duplex.close()
+  end)()
+
   vim.uv.run()
 end
 

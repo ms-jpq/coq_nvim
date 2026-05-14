@@ -2,6 +2,7 @@
 -- worker-thread bootstrap. Wire framing (encode/decode) is delegated to
 -- `wire_proto`; everything libuv-facing lives here.
 
+local async = require "coq.lib.async"
 local proto = require "coq.lib.worker.wire_proto"
 
 local M = {}
@@ -36,29 +37,53 @@ M.duplex_pair = function()
   return duplex, remote
 end
 
+-- Read-side: a coroutine-yielding iterator over inbound frames. The libuv
+-- read callback drops decoded frames into a queue and resumes the consumer.
+-- EOF closes the pipe and ends iteration; the consumer's post-loop block
+-- runs the on-EOF logic.
+--
+-- Must be consumed from inside a coroutine (e.g. via `async.thunk`).
+M.frames = function(pipe)
+  local decode = proto.decoder()
+  local pending = {}
+  local eof = false
+  local waiter = nil
+
+  local wake = function()
+    local f = waiter
+
+    waiter = nil
+    if f then
+      f.resolve()
+    end
+  end
+
+  pipe:read_start(function(err, data)
+    if err or not data then
+      pipe:close()
+      eof = true
+    else
+      for frame in decode(data) do
+        table.insert(pending, frame)
+      end
+    end
+    wake()
+  end)
+
+  return function()
+    while #pending == 0 and not eof do
+      waiter = async.future()
+      waiter.await()
+    end
+    return table.remove(pending, 1)
+  end
+end
+
 -- Send-side: a function that encodes a frame body and writes it to the pipe.
 M.sender = function(pipe)
   return function(body)
     pipe:write(proto.encode(body))
   end
-end
-
--- Read-side: install a libuv read callback that decodes incoming bytes into
--- frames and routes each to `handlers[frame.kind]`. EOF closes the pipe and
--- fires `on_eof`.
-M.start_reader = function(pipe, handlers, on_eof)
-  local decode = proto.decoder()
-
-  pipe:read_start(function(err, data)
-    if err or not data then
-      pipe:close()
-      on_eof()
-      return
-    end
-    for frame in decode(data) do
-      handlers[frame.kind](frame)
-    end
-  end)
 end
 
 -- Spawn a worker thread that calls `entry_module.run(read_fd, write_fd, decoded)`.
