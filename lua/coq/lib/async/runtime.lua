@@ -55,8 +55,7 @@ M.future = function()
       local current = coroutine.running()
       assert(current, "await: must be called inside running coroutine")
 
-      h = h or M.current()
-      if h.cancelled then
+      if h and h.cancelled then
         return
       end
 
@@ -64,9 +63,11 @@ M.future = function()
       thread = current
 
       lib.scope(function(defer)
-        defer(h.on_cancel(function()
-          finish(nil)
-        end))
+        if h then
+          defer(h.on_cancel(function()
+            finish(nil)
+          end))
+        end
 
         coroutine.yield()
       end)

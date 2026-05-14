@@ -57,7 +57,7 @@ M.new = function()
 
       local f = async.future()
       sub.waiter = f
-      return f.await()
+      return f.await(async.current())
     end
 
     return setmetatable(it, { __call = next })

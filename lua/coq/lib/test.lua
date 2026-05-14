@@ -3,7 +3,7 @@ local tbl = require "coq.lib.tbl"
 
 local M = {}
 
-local DEFAULT_TIMEOUT = tonumber(os.getenv "TEST_TIMEOUT") or 5000
+local DEFAULT_TIMEOUT = tonumber(os.getenv "TEST_TIMEOUT") or 1000
 local TOP_N = tonumber(os.getenv "TEST_TOP_N") or 10
 
 local registry = {}

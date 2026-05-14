@@ -48,7 +48,7 @@ M.new = function(parent)
     if next(pending) ~= nil then
       local f = runtime.future()
       table.insert(waiters, f)
-      f.await()
+      f.await(runtime.current())
     end
 
     errs.raise(nursery.errors)

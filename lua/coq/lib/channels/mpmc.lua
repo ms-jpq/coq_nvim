@@ -20,7 +20,7 @@ M.new = function(capacity)
   local wait = function(waiters)
     local f = runtime.future()
     table.insert(waiters, f)
-    f.await()
+    f.await(runtime.current())
 
     if runtime.cancelled() then
       for i, w in pairs(waiters) do
