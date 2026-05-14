@@ -57,6 +57,26 @@ T.describe("nursery", function(test)
     T.eq(joined, true)
   end)
 
+  test("join bails on joiner cancel even when child hangs", function()
+    local outer = handle.new()
+    local joined = false
+    async.scope(outer, function(n)
+      n.spawn(function()
+        local inner = async.nursery()
+        inner.spawn(function()
+          local f = async.future()
+          f.await()
+        end)
+        inner.join()
+        joined = true
+      end)
+      async.sleep(5)
+      outer.cancel()
+    end)
+
+    T.eq(joined, true)
+  end)
+
   test("join re-raises first child error", function()
     local n = async.nursery()
     n.spawn(function()
