@@ -1,5 +1,9 @@
 #!/usr/bin/env -S -- nvim -l
 
+if os.getenv "TEST_JIT_OFF" then
+  jit.off()
+end
+
 vim.opt.runtimepath:prepend(vim.fn.getcwd())
 
 local T = require "coq.lib.test"

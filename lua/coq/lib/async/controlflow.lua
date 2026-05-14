@@ -50,6 +50,7 @@ M.merge = function(iters)
 
   for idx, iter in pairs(iters) do
     local p_iter = runtime.preemptible(iter)
+
     n.spawn(function()
       for v in p_iter do
         chan.push(idx, v)
