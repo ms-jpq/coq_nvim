@@ -97,6 +97,39 @@ T.describe("nursery", function(test)
     assert(tostring(err):find "nursery is closed")
   end)
 
+  test("spawn fires defers in reverse order on normal exit", function()
+    local n = async.nursery()
+    local order = {}
+    n.spawn(function(defer)
+      defer(function()
+        table.insert(order, "first registered")
+      end)
+      defer(function()
+        table.insert(order, "second registered")
+      end)
+      table.insert(order, "body")
+    end)
+    n.join()
+
+    T.eq(order, { "body", "second registered", "first registered" })
+  end)
+
+  test("spawn fires defers even when body errors", function()
+    local n = async.nursery()
+    local fired = false
+    n.spawn(function(defer)
+      defer(function()
+        fired = true
+      end)
+      error "lil went missing"
+    end)
+    local ok, err = pcall(n.join)
+
+    T.eq(ok, false)
+    T.eq(fired, true)
+    assert(err:find "lil went missing")
+  end)
+
   test("join raises error group when multiple children error", function()
     local n = async.nursery()
     n.spawn(function()
