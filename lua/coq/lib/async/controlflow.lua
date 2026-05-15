@@ -63,7 +63,7 @@ M.merge = function(iters)
     end)
   end
 
-  return chan.pull
+  return setmetatable({ close = n.handle.cancel }, { __call = chan.pull })
 end
 
 return M

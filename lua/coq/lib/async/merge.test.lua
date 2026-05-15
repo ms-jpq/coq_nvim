@@ -100,4 +100,37 @@ T.describe("merge", function(test)
 
     T.eq(got, nil)
   end)
+
+  test("close stops further pulls", function()
+    local m = async.merge {
+      function()
+        async.sleep(100)
+        return "never"
+      end,
+    }
+    m.close()
+
+    T.eq(m(), nil)
+  end)
+
+  test("close cancels in-flight producers", function()
+    local fired = false
+    async.scope(function(n)
+      n.spawn(function()
+        local m = async.merge {
+          function()
+            async.current().on_cancel(function()
+              fired = true
+            end)
+            async.sleep(100)
+            return "never"
+          end,
+        }
+        async.sleep(5)
+        m.close()
+      end)
+    end)
+
+    T.eq(fired, true)
+  end)
 end)

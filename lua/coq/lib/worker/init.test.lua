@@ -263,6 +263,149 @@ T.describe("worker", function(test)
     T.eq(seen, { "spot", "fido", "rex" })
   end)
 
+  test("close before the streaming fn's first yield unblocks it", function()
+    local w = worker.spawn {
+      init = function()
+        return {
+          done = require("coq.lib.async").future(),
+          closed_cleanly = false,
+        }
+      end,
+      delayed = worker.streaming(function(yield, state)
+        require("coq.lib.worker").main(function() end)
+        local cont = yield "lil"
+        if not cont then
+          state.closed_cleanly = true
+        end
+        state.done.resolve()
+      end),
+      wait_done = function(state)
+        state.done.await()
+        return state.closed_cleanly
+      end,
+    }
+
+    local iter = w.delayed()
+    iter.close()
+    local ok = w.wait_done()
+    w.close()
+
+    T.eq(ok, true)
+  end)
+
+  test("yield with no values raises", function()
+    local w = worker.spawn {
+      bork = worker.streaming(function(yield, _)
+        yield()
+      end),
+    }
+    local ok, err = pcall(function()
+      for _ in w.bork() do
+      end
+    end)
+    w.close()
+
+    T.eq(ok, false)
+    assert(err and err:find "yield", "expected yield error, got: " .. tostring(err))
+  end)
+
+  test("proxy close is idempotent", function()
+    local w = worker.spawn {
+      ping = function()
+        return "pong"
+      end,
+    }
+    w.close()
+    w.close()
+  end)
+
+  test("method call after close raises", function()
+    local w = worker.spawn {
+      ping = function()
+        return "pong"
+      end,
+    }
+    w.close()
+    local ok, err = pcall(w.ping)
+
+    T.eq(ok, false)
+    assert(err and err:find "worker closed", "expected worker closed, got: " .. tostring(err))
+  end)
+
+  test("two streaming methods run with independent ids", function()
+    local w = worker.spawn {
+      counts = worker.streaming(function(yield, _, n)
+        for i = 1, n do
+          yield(i)
+        end
+      end),
+    }
+    local a, b = w.counts(3), w.counts(2)
+    local seen_a, seen_b = {}, {}
+    for v in a do
+      table.insert(seen_a, v)
+    end
+    for v in b do
+      table.insert(seen_b, v)
+    end
+    w.close()
+
+    T.eq(seen_a, { 1, 2, 3 })
+    T.eq(seen_b, { 1, 2 })
+  end)
+
+  test("streaming method can call back to main mid-stream", function()
+    local w = worker.spawn {
+      drip = worker.streaming(function(yield, _)
+        local worker = require "coq.lib.worker"
+        for _, name in pairs { "lil", "spot", "fido" } do
+          local upper = worker.main(function(x)
+            return x:upper()
+          end, name)
+          yield(upper)
+        end
+      end),
+    }
+    local seen = {}
+    for v in w.drip() do
+      table.insert(seen, v)
+    end
+    w.close()
+
+    T.eq(seen, { "LIL", "SPOT", "FIDO" })
+  end)
+
+  test("close mid-stream is sticky for subsequent yields", function()
+    local w = worker.spawn {
+      init = function()
+        return {
+          done = require("coq.lib.async").future(),
+          closed_cleanly = false,
+        }
+      end,
+      slow = worker.streaming(function(yield, state)
+        yield "lil"
+        local cont = yield "spot"
+        if not cont then
+          state.closed_cleanly = true
+        end
+        state.done.resolve()
+      end),
+      wait_done = function(state)
+        state.done.await()
+        return state.closed_cleanly
+      end,
+    }
+
+    local iter = w.slow()
+    iter()
+    iter.close()
+    local ok = w.wait_done()
+    w.close()
+
+    T.eq(ok, true)
+  end)
+
   test("scope + defer pairs cleanly with iter.close", function()
     local w = worker.spawn {
       infinite = worker.streaming(function(yield, _)

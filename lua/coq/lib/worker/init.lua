@@ -117,22 +117,33 @@ local make_endpoint = function(duplex, invoker)
     end
   end
 
-  local park = function(id)
-    local chan = mpmc.new(1)
+  local make_control = function(id)
+    local controls = mpmc.new()
+    local stopped = false
     local _, release = parked.reserve(function(rsp)
-      chan.push(rsp.kind == Kind.NEXT)
+      if rsp.kind == Kind.STOP then
+        stopped = true
+      end
+      controls.push(rsp.kind == Kind.NEXT)
     end, id)
-    local v = chan.pull()
-    release()
-    return v
-  end
 
-  local make_yield = function(id)
-    return function(...)
+    local yield_fn = function(...)
+      if select("#", ...) == 0 then
+        error("yield: at least one value required", 2)
+      end
+      if stopped then
+        return false
+      end
       local n_values, values = select("#", ...), { ... }
       write { kind = Kind.YIELD, id = id, n_values = n_values, values = values }
-      return park(id)
+      local v = controls.pull()
+      if not v then
+        stopped = true
+      end
+      return v
     end
+
+    return yield_fn, release
   end
 
   local enter_async = vim.is_thread() and function() end or require("coq.lib.async.vim").scheduled
@@ -142,7 +153,9 @@ local make_endpoint = function(duplex, invoker)
     [Kind.STOP] = dispatch(parked),
     [Kind.REQUEST] = function(frame)
       enter_async()
-      local ok, n_values, values = invoker(frame, make_yield(frame.id))
+      local yield_fn, release = make_control(frame.id)
+      local ok, n_values, values = invoker(frame, yield_fn)
+      release()
       write {
         kind = Kind.YIELD,
         id = frame.id,
