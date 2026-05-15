@@ -2,6 +2,7 @@ local async = require "coq.lib.async"
 local config = require "coq.lib.worker.config_proto"
 local errs = require "coq.lib.errs"
 local inflight = require "coq.lib.worker.inflight"
+local mpmc = require "coq.lib.channels.mpmc"
 local transport = require "coq.lib.worker.frame_transport"
 
 local Kind = {
@@ -36,46 +37,44 @@ local make_endpoint = function(duplex, invoker)
   local write = transport.writer(duplex.writer)
 
   local open = function(body)
-    local handle = async.current()
-    local f = async.future()
-    local id, release = flights.reserve(function(frame)
-      f.resolve(frame)
-    end)
+    local chan = mpmc.new(1)
+    local id, release = flights.reserve(chan.push)
 
     body.kind, body.id = Kind.REQUEST, id
     write(body)
 
-    local first = true
+    local first, done = true, false
 
     local session = {}
 
     session.next = function()
-      if not f then
+      if done then
         return nil
       end
 
       if first then
         first = false
       else
-        f = async.future()
         write { kind = Kind.NEXT, id = id }
       end
 
-      local frame = f.await(handle)
+      local frame = chan.pull()
       if frame == nil or frame.ok ~= nil then
         release()
-        f = nil
+        chan.close()
+        done = true
       end
       return frame
     end
 
     session.close = function()
-      if not f then
+      if done then
         return
       end
+      done = true
       write { kind = Kind.STOP, id = id }
       release()
-      f = nil
+      chan.close()
     end
 
     return session
@@ -119,14 +118,13 @@ local make_endpoint = function(duplex, invoker)
   end
 
   local park = function(id)
-    local f = async.future()
-    local release
-    _, release = parked.reserve(function(rsp)
-      release()
-      f.resolve(rsp.kind == Kind.NEXT)
+    local chan = mpmc.new(1)
+    local _, release = parked.reserve(function(rsp)
+      chan.push(rsp.kind == Kind.NEXT)
     end, id)
-
-    return f.await(async.current())
+    local v = chan.pull()
+    release()
+    return v
   end
 
   local make_yield = function(id)
@@ -202,7 +200,7 @@ M.spawn = function(definition)
 
   local exited = async.future()
 
-  coroutine.resume(coroutine.create(function()
+  async.thunk(function()
     async.scope(function(n, defer)
       defer(n.handle.cancel)
       for frame in transport.reader(duplex.reader) do
@@ -219,7 +217,7 @@ M.spawn = function(definition)
       values = { "worker died" },
     }
     exited.resolve()
-  end))
+  end, false)()
 
   do
     local proxy = {
