@@ -90,11 +90,9 @@ M.wrap = function(fn)
   end
 end
 
-M.thunk = function(fn, root)
+M.thunk = function(fn)
   return function(...)
-    if root ~= false then
-      assert(coroutine.running() == nil, "thunk: must be called outside a coroutine")
-    end
+    assert(coroutine.running() == nil, "thunk: must be called outside a coroutine")
 
     local thread = coroutine.create(fn)
     threads[thread] = M.ROOT

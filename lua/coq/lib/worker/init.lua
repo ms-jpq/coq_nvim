@@ -211,26 +211,20 @@ M.spawn = function(definition)
     end
   end
 
-  local exited = async.future()
-
-  async.thunk(function()
-    async.scope(function(n, defer)
-      defer(n.handle.cancel)
-      for frame in transport.reader(duplex.reader) do
-        n.spawn(function()
-          endpoint.handlers[frame.kind](frame)
-        end)
-      end
-    end)
-
+  local n = async.nursery()
+  n.spawn(function()
+    for frame in transport.reader(duplex.reader) do
+      n.spawn(function()
+        endpoint.handlers[frame.kind](frame)
+      end)
+    end
     endpoint.drain {
       kind = Kind.YIELD,
       ok = false,
       n_values = 1,
       values = { "worker died" },
     }
-    exited.resolve()
-  end, false)()
+  end)
 
   do
     local proxy = {
@@ -240,7 +234,7 @@ M.spawn = function(definition)
           duplex.close()
         end
 
-        exited.await()
+        n.join()
       end,
     }
 
