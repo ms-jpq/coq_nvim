@@ -124,8 +124,10 @@ M.sleep = function(milliseconds)
 end
 
 M.preemptible = function(fn)
+  local h
   return function()
-    if M.cancelled() then
+    h = h or handle.new(M.current())
+    if h.cancelled then
       return nil
     end
 
@@ -134,10 +136,8 @@ M.preemptible = function(fn)
       f.resolve(xpcall(fn, debug.traceback))
     end)
 
-    local h = handle.new(M.current())
     return lib.scope(function(defer)
       defer(h.on_cancel(f.resolve))
-      defer(h.cancel)
 
       M.bind(thread, h)
       coroutine.resume(thread)
