@@ -139,15 +139,13 @@ local make_endpoint = function(duplex, invoker)
     end, id)
 
     local yield_fn = function(...)
-      local n_values, values = select("#", ...), { ... }
-      assert(n_values > 0, "yield: at least one value required")
-
-      for i = 1, n_values do
-        assert(values[i] ~= nil, "yield: nil value at position " .. i)
-      end
-
       if stopped then
         return false
+      end
+      local n_values, values = select("#", ...), { ... }
+      assert(n_values > 0, "yield: at least one value required")
+      for i = 1, n_values do
+        assert(values[i] ~= nil, "yield: nil value at position " .. i)
       end
       write { kind = Kind.YIELD, id = id, n_values = n_values, values = values }
       local v = controls.pull()
