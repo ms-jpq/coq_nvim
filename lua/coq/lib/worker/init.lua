@@ -1,5 +1,3 @@
--- https://github.com/luvit/luv/blob/master/docs/docs.md
-
 local async = require "coq.lib.async"
 local config = require "coq.lib.worker.config_proto"
 local errs = require "coq.lib.errs"

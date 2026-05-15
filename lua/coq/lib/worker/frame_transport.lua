@@ -1,3 +1,5 @@
+-- https://github.com/luvit/luv/blob/master/docs/docs.md
+
 local proto = require "coq.lib.worker.wire_proto"
 
 local M = {}
@@ -35,15 +37,21 @@ M.reader = function(pipe)
   pipe:read_start(function(err, data)
     if err or not data then
       pipe:close()
-      coroutine.resume(thread, nil)
+      coroutine.resume(thread, nil, err)
     else
       for frame in decode(data) do
-        coroutine.resume(thread, frame)
+        coroutine.resume(thread, frame, nil)
       end
     end
   end)
 
-  return coroutine.yield
+  return function()
+    local frame, err = coroutine.yield()
+    if err then
+      error(err, 0)
+    end
+    return frame
+  end
 end
 
 M.writer = function(pipe)
@@ -52,10 +60,10 @@ M.writer = function(pipe)
   end
 end
 
-M.spawn_worker = function(entry_module, remote, payload)
+M.spawn_worker = function(entry_module, remote, encoded)
   vim.uv.new_thread(function(mod, read_fd, write_fd, bytes)
     require(mod).run(read_fd, write_fd, vim.mpack.decode(bytes))
-  end, entry_module, remote.read_fd, remote.write_fd, payload)
+  end, entry_module, remote.read_fd, remote.write_fd, encoded)
 end
 
 return M
