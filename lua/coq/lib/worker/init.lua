@@ -59,6 +59,9 @@ local make_endpoint = function(duplex, invoker)
       end
 
       local frame = chan.pull()
+      if frame == nil then
+        write { kind = Kind.STOP, id = id }
+      end
       if frame == nil or frame.ok ~= nil then
         release()
         chan.close()

@@ -406,6 +406,41 @@ T.describe("worker", function(test)
     T.eq(ok, true)
   end)
 
+  test("ambient cancel mid-call sends STOP to worker", function()
+    local async = require "coq.lib.async"
+    local handle = require "coq.lib.async.handle"
+    local h = handle.new()
+    local w = worker.spawn {
+      init = function()
+        return { got_stop = require("coq.lib.async").future() }
+      end,
+      waiter = worker.streaming(function(yield, state)
+        require("coq.lib.worker").main(function() end)
+        local cont = yield "lil"
+        if not cont then
+          state.got_stop.resolve()
+        end
+      end),
+      wait_got_stop = function(state)
+        state.got_stop.await()
+        return true
+      end,
+    }
+
+    async.scope(h, function(n)
+      n.spawn(function()
+        local iter = w.waiter()
+        iter()
+      end)
+      h.cancel()
+    end)
+
+    local ok = w.wait_got_stop()
+    w.close()
+
+    T.eq(ok, true)
+  end)
+
   test("scope + defer pairs cleanly with iter.close", function()
     local w = worker.spawn {
       infinite = worker.streaming(function(yield, _)
