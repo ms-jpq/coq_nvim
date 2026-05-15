@@ -1,2 +1,1 @@
-(function(...)
-end)(...)
+(function(...) end)(...)

@@ -11,13 +11,24 @@ SHELL := bash
 
 .DEFAULT_GOAL := help
 
+VAR := .vars
+CURL := curl --fail --location --remove-on-error --create-dirs --no-progress-meter
+
+OS := $(shell uname -s | tr '[:upper:]' '[:lower:]' | sed -e 's/darwin/macos/')
+ARCH := $(shell uname -m | sed -e 's/arm64/aarch64/')
+
 .PHONY: clean clobber lint test build fmt ci
 
 clean:
+	shopt -u failglob
 	rm -v -rf -- .mypy_cache/ .venv/
 
 clobber: clean
-	rm -v -rf -- .vars/
+	shopt -u failglob
+	rm -v -rf -- '$(VAR)'
+
+$(VAR) $(VAR)/bin:
+	mkdir -v -p -- '$@'
 
 .venv/bin/python3:
 	python3 -m venv -- .venv
@@ -58,9 +69,13 @@ test: .venv/bin/mypy
 build: .venv/bin/mypy
 	.venv/bin/python3 -m ci
 
-fmt: .venv/bin/mypy
-	.venv/bin/isort --profile=black --gitignore -- .
-	.venv/bin/black -- .
-
 ci: .venv/bin/mypy
 	.venv/bin/python3 -m coq.ci
+
+$(VAR)/bin/stylua: | $(VAR)/bin
+	URI='https://github.com/JohnnyMorganz/StyLua/releases/latest/download/stylua-$(OS)-$(ARCH).zip'
+	$(CURL) -- "$$URI" | bsdtar --extract --file - --directory '$|'
+	chmod +x '$@'
+
+fmt: $(VAR)/bin/stylua
+	git ls-files --deduplicate --stage -- '*.lua' | awk -- '$$1 !~ /^120000/ { print $$4 }' | tr -- '\n' '\0' | xargs -r -0 -n 1 -P 0 -- '$<' --

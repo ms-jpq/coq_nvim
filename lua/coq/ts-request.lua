@@ -1,6 +1,6 @@
 (function(...)
   COQ.treesitter_start = function(buf, syntax)
-    coq.validate {buf = {buf, "number"}, syntax = {syntax, "string"}}
+    coq.validate { buf = { buf, "number" }, syntax = { syntax, "string" } }
     if vim.treesitter and vim.treesitter.start and vim.treesitter.language then
       local lang = vim.treesitter.language.get_lang(syntax)
       if lang then
@@ -24,96 +24,72 @@
       local lo, _, hi, _ = node:range()
       return {
         text = vim.treesitter.get_node_text(node, buf),
-        range = {lo, hi},
+        range = { lo, hi },
         kind = type,
-        parent = parent and
-          {
-            text = vim.treesitter.get_node_text(parent, buf),
-            kind = kind(parent)
-          } or
-          nil,
-        grandparent = grandparent and
-          {
-            text = vim.treesitter.get_node_text(grandparent, buf),
-            kind = kind(grandparent)
-          } or
-          nil
+        parent = parent and {
+          text = vim.treesitter.get_node_text(parent, buf),
+          kind = kind(parent),
+        } or nil,
+        grandparent = grandparent and {
+          text = vim.treesitter.get_node_text(grandparent, buf),
+          kind = kind(grandparent),
+        } or nil,
       }
     end
   end
 
-  local ts_query =
-    vim.fn.has("nvim-0.8") and
-    (vim.treesitter.query.get or vim.treesitter.query.get_query) or
-    vim.treesitter.get_query
+  local ts_query = vim.fn.has "nvim-0.8" and (vim.treesitter.query.get or vim.treesitter.query.get_query)
+    or vim.treesitter.get_query
 
   local iter_nodes = function(buf, lo, hi)
-    return coroutine.wrap(
-      function()
-        local go, parser = pcall(vim.treesitter.get_parser)
-        if go and parser then
-          local query = ts_query(parser:lang(), "highlights")
-          if query then
-            for _, tree in pairs(parser:parse()) do
-              for capture, node in query:iter_captures(tree:root(), buf, lo, hi) do
-                local pl = payload(buf, node, query.captures[capture])
-                if pl and pl.kind ~= "comment" then
-                  coroutine.yield(pl)
-                end
+    return coroutine.wrap(function()
+      local go, parser = pcall(vim.treesitter.get_parser)
+      if go and parser then
+        local query = ts_query(parser:lang(), "highlights")
+        if query then
+          for _, tree in pairs(parser:parse()) do
+            for capture, node in query:iter_captures(tree:root(), buf, lo, hi) do
+              local pl = payload(buf, node, query.captures[capture])
+              if pl and pl.kind ~= "comment" then
+                coroutine.yield(pl)
               end
             end
           end
         end
       end
-    )
+    end)
   end
 
   COQ.ts_req = function(session)
-    vim.schedule(
-      function()
-        local loop = vim.uv or vim.loop
-        local t1 = loop.now()
-        local win = vim.api.nvim_get_current_win()
-        local buf = vim.api.nvim_win_get_buf(win)
-        local height = vim.api.nvim_win_get_height(win)
-        local filetype = vim.api.nvim_buf_get_option(buf, "filetype")
-        local filename = vim.api.nvim_buf_get_name(buf)
+    vim.schedule(function()
+      local loop = vim.uv or vim.loop
+      local t1 = loop.now()
+      local win = vim.api.nvim_get_current_win()
+      local buf = vim.api.nvim_win_get_buf(win)
+      local height = vim.api.nvim_win_get_height(win)
+      local filetype = vim.api.nvim_buf_get_option(buf, "filetype")
+      local filename = vim.api.nvim_buf_get_name(buf)
 
-        local lines = vim.api.nvim_buf_line_count(buf)
-        local row, col = unpack(vim.api.nvim_win_get_cursor(win))
-        row = row - 1
-        local lo, hi =
-          math.max(0, row - height),
-          math.min(lines, row + height + 1)
+      local lines = vim.api.nvim_buf_line_count(buf)
+      local row, col = unpack(vim.api.nvim_win_get_cursor(win))
+      row = row - 1
+      local lo, hi = math.max(0, row - height), math.min(lines, row + height + 1)
 
-        local acc = {}
-        for payload in iter_nodes(buf, lo, hi) do
-          if type(payload) == "table" and type(payload[1]) ~= "userdata" then
-            table.insert(acc, payload)
-          end
-        end
-
-        local t2 = loop.now()
-        local go, _ =
-          pcall(
-          function()
-            COQ.Ts_notify(
-              session,
-              buf,
-              lo,
-              hi,
-              filetype,
-              filename,
-              acc,
-              (t2 - t1) / 1000
-            )
-          end
-        )
-
-        if not go then
-          -- vim.print(acc)
+      local acc = {}
+      for payload in iter_nodes(buf, lo, hi) do
+        if type(payload) == "table" and type(payload[1]) ~= "userdata" then
+          table.insert(acc, payload)
         end
       end
-    )
+
+      local t2 = loop.now()
+      local go, _ = pcall(function()
+        COQ.Ts_notify(session, buf, lo, hi, filetype, filename, acc, (t2 - t1) / 1000)
+      end)
+
+      if not go then
+        -- vim.print(acc)
+      end
+    end)
   end
 end)(...)
