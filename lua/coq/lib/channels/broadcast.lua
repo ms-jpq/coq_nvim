@@ -1,11 +1,11 @@
 local async = require "coq.lib.async"
-local runtime = require "coq.lib.async.runtime"
 
 local M = {}
 
 M.new = function()
-  local chan = {}
   local subscribers = {}
+
+  local chan = {}
 
   chan.replace = function(item)
     for _, sub in pairs(subscribers) do
@@ -20,7 +20,7 @@ M.new = function()
     end
   end
 
-  chan.subscribe = function()
+  chan.subscribe = function(h)
     local sub = { pending = nil, waiter = nil, closed = false }
     table.insert(subscribers, sub)
 
@@ -45,6 +45,10 @@ M.new = function()
       end
     end
 
+    if h then
+      h.on_cancel(it.close)
+    end
+
     local next = function()
       if sub.closed then
         return nil
@@ -58,7 +62,7 @@ M.new = function()
 
       local f = async.future()
       sub.waiter = f
-      return f.await(runtime.current())
+      return f.await(h)
     end
 
     return setmetatable(it, { __call = next })

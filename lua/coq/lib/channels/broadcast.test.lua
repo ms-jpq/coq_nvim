@@ -1,6 +1,7 @@
 local T = require "coq.lib.test"
 local async = require "coq.lib.async"
 local broadcast = require "coq.lib.channels.broadcast"
+local handle = require "coq.lib.async.handle"
 
 T.describe("broadcast", function(test)
   test("push without subscribers is a noop", function()
@@ -65,10 +66,11 @@ T.describe("broadcast", function(test)
         chan.replace "fido"
       end)
       n.spawn(function()
-        for dog in chan.subscribe() do
+        local iter = chan.subscribe()
+        for dog in iter do
           table.insert(seen, dog)
           if #seen >= 3 then
-            n.handle.cancel()
+            iter.close()
           end
         end
       end)
@@ -91,6 +93,46 @@ T.describe("broadcast", function(test)
     end)
 
     T.eq(exited, true)
+  end)
+
+  test("subscribe handle cancel terminates iteration", function()
+    local chan = broadcast.new()
+    local h = handle.new()
+    local seen = {}
+    async.scope(function(n)
+      n.spawn(function()
+        async.sleep(2)
+        chan.replace "lil"
+        async.sleep(2)
+        h.cancel()
+        async.sleep(2)
+        chan.replace "spot"
+      end)
+      n.spawn(function()
+        for dog in chan.subscribe(h) do
+          table.insert(seen, dog)
+        end
+      end)
+    end)
+
+    T.eq(seen, { "lil" })
+  end)
+
+  test("subscribe with already-cancelled handle yields nothing", function()
+    local chan = broadcast.new()
+    local h = handle.new()
+    h.cancel()
+    local seen = {}
+    async.scope(function(n)
+      n.spawn(function()
+        for dog in chan.subscribe(h) do
+          table.insert(seen, dog)
+        end
+      end)
+      chan.replace "lil"
+    end)
+
+    T.eq(seen, {})
   end)
 
   test("late subscriber misses prior pushes", function()
