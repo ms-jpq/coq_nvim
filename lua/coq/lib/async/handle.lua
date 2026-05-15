@@ -11,6 +11,13 @@ local fire = function(watcher)
   end
 end
 
+M.bind_close = function(h, close_fn)
+  if not h then
+    return function() end
+  end
+  return h.on_cancel(close_fn)
+end
+
 M.new = function(parent, deadline_ms)
   local handle = { cancelled = false }
   local watchers = sparse.new()

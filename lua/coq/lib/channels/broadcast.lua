@@ -1,4 +1,5 @@
 local async = require "coq.lib.async"
+local handle = require "coq.lib.async.handle"
 local sparse = require "coq.lib.sparse_table"
 
 local M = {}
@@ -21,17 +22,14 @@ M.new = function(h)
   end
 
   local chan = {}
+  local unwatch = function() end
 
-  local unwatch_h
   chan.close = function()
     if closed then
       return
     end
     closed = true
-
-    if unwatch_h then
-      unwatch_h()
-    end
+    unwatch()
 
     local snapshot = subscribers
     subscribers = sparse.new()
@@ -40,9 +38,7 @@ M.new = function(h)
     end
   end
 
-  if h then
-    unwatch_h = h.on_cancel(chan.close)
-  end
+  unwatch = handle.bind_close(h, chan.close)
 
   chan.replace = function(item)
     if closed then

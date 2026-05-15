@@ -1,3 +1,4 @@
+local handle = require "coq.lib.async.handle"
 local runtime = require "coq.lib.async.runtime"
 local sparse = require "coq.lib.sparse_table"
 
@@ -25,17 +26,14 @@ M.new = function(capacity, h)
   end
 
   local chan = {}
+  local unwatch = function() end
 
-  local unwatch_h
   chan.close = function()
     if closed then
       return
     end
     closed = true
-
-    if unwatch_h then
-      unwatch_h()
-    end
+    unwatch()
 
     local push_snap, pull_snap = push_waiters, pull_waiters
     push_waiters, pull_waiters = sparse.new(), sparse.new()
@@ -48,9 +46,7 @@ M.new = function(capacity, h)
     end
   end
 
-  if h then
-    unwatch_h = h.on_cancel(chan.close)
-  end
+  unwatch = handle.bind_close(h, chan.close)
 
   chan.push = function(...)
     while not closed and #queue >= capacity do
