@@ -1,6 +1,6 @@
-local handle = require "coq.lib.async.handle"
 local runtime = require "coq.lib.async.runtime"
 local sparse = require "coq.lib.sparse_table"
+local util = require "coq.lib.channels.util"
 
 local M = {}
 
@@ -46,7 +46,7 @@ M.new = function(capacity, h)
     end
   end
 
-  unwatch = handle.bind_close(h, chan.close)
+  unwatch = util.bind_close(h, chan.close)
 
   chan.push = function(...)
     while not closed and #queue >= capacity do
@@ -57,7 +57,7 @@ M.new = function(capacity, h)
       return false
     end
 
-    table.insert(queue, { n = select("#", ...), ... })
+    table.insert(queue, util.pack(...))
     notify(pull_waiters)
     return true
   end
@@ -73,7 +73,7 @@ M.new = function(capacity, h)
 
     local packet = table.remove(queue, 1)
     notify(push_waiters)
-    return unpack(packet, 1, packet.n)
+    return util.unpack(packet)
   end
 
   return setmetatable(chan, { __call = chan.pull })

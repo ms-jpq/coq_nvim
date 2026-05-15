@@ -1,6 +1,6 @@
 local async = require "coq.lib.async"
-local handle = require "coq.lib.async.handle"
 local sparse = require "coq.lib.sparse_table"
+local util = require "coq.lib.channels.util"
 
 local M = {}
 
@@ -38,13 +38,13 @@ M.new = function(h)
     end
   end
 
-  unwatch = handle.bind_close(h, chan.close)
+  unwatch = util.bind_close(h, chan.close)
 
   chan.replace = function(...)
     if closed then
       return false
     end
-    local pkt = { n = select("#", ...), ... }
+    local pkt = util.pack(...)
     for _, sub in subscribers.iter() do
       local f = sub.waiter
       sub.waiter = nil
@@ -91,7 +91,7 @@ M.new = function(h)
           return nil
         end
       end
-      return unpack(pkt, 1, pkt.n)
+      return util.unpack(pkt)
     end
 
     return setmetatable(it, { __call = next })
