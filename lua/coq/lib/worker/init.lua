@@ -14,7 +14,7 @@ local Kind = {
   STOP = "stop",
 }
 
-local pack = function(ok, ...)
+local pack_frame = function(ok, ...)
   return ok, select("#", ...), { ... }
 end
 
@@ -38,12 +38,12 @@ local make_endpoint = function(duplex, invoker)
 
   local write = transport.writer(duplex.writer)
 
-  local open = function(body)
+  local open = function(message)
     local chan = mpmc.new(1)
     local id, release = flights.reserve(chan.push)
 
-    body.kind, body.id = Kind.REQUEST, id
-    write(body)
+    message.kind, message.id = Kind.REQUEST, id
+    write(message)
 
     local first, done = true, false
 
@@ -86,7 +86,8 @@ local make_endpoint = function(duplex, invoker)
   end
 
   endpoint.request_oneshot = function(message)
-    local frame = open(message).next()
+    local session = open(message)
+    local frame = session.next()
     if frame == nil then
       return
     end
@@ -196,9 +197,9 @@ M.spawn = function(definition)
   local endpoint = make_endpoint(duplex, function(frame)
     local fn, err = load(frame.fn_bytecode)
     if not fn then
-      return pack(false, err or errs.UNKNOWN)
+      return pack_frame(false, err or errs.UNKNOWN)
     end
-    return pack(pcall(fn, unpack(frame.args or {}, 1, frame.n_args or 0)))
+    return pack_frame(pcall(fn, unpack(frame.args or {}, 1, frame.n_args or 0)))
   end)
 
   transport.spawn_worker(function(...)
@@ -273,13 +274,13 @@ M.run = function(req_fd, rsp_fd, bytes)
   local endpoint = make_endpoint(duplex, function(frame, yield)
     local m = methods[frame.method]
     if not m then
-      return pack(false, "unknown method: " .. tostring(frame.method))
+      return pack_frame(false, "unknown method: " .. tostring(frame.method))
     end
     local args, n_args = frame.args or {}, frame.n_args or 0
     if m.streaming then
-      return pack(pcall(m.fn, yield, state, unpack(args, 1, n_args)))
+      return pack_frame(pcall(m.fn, yield, state, unpack(args, 1, n_args)))
     end
-    return pack(pcall(m.fn, state, unpack(args, 1, n_args)))
+    return pack_frame(pcall(m.fn, state, unpack(args, 1, n_args)))
   end)
 
   M.main = function(fn, ...)
