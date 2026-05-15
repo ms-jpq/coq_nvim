@@ -1,10 +1,18 @@
 local M = {}
 
+M.streaming = function(fn)
+  return { streaming = true, fn = fn }
+end
+
+M.is_streaming = function(decl)
+  return type(decl) == "table" and decl.streaming == true
+end
+
 local classify = function(decl)
-  if type(decl) == "table" and decl.streaming == true then
-    return { mode = "stream", dump = string.dump(decl.fn) }
+  if M.is_streaming(decl) then
+    return { streaming = true, dump = string.dump(decl.fn) }
   end
-  return { mode = "rpc", dump = string.dump(decl) }
+  return { streaming = false, dump = string.dump(decl) }
 end
 
 M.encode = function(definition)
@@ -26,7 +34,7 @@ M.decode = function(raw)
   local state = raw.init and load(raw.init)() or {}
   local methods = {}
   for name, m in pairs(raw.methods) do
-    methods[name] = { mode = m.mode, fn = load(m.dump) }
+    methods[name] = { streaming = m.streaming, fn = load(m.dump) }
   end
   return state, methods
 end

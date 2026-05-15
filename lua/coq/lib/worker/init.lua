@@ -11,11 +11,6 @@ local Kind = {
   STOP = "stop",
 }
 
-local MODE = {
-  STREAM = "stream",
-  RPC = "rpc",
-}
-
 local pack = function(ok, ...)
   return ok, select("#", ...), { ... }
 end
@@ -29,26 +24,21 @@ end
 
 local M = {}
 
-M.streaming = function(fn)
-  return { streaming = true, fn = fn }
-end
-
-local is_streaming = function(decl)
-  return type(decl) == "table" and decl.streaming == true
-end
+M.streaming = config.streaming
 
 local make_endpoint = function(duplex, invoker)
   local endpoint = {}
 
-  endpoint.flights = inflight.new()
+  local flights = inflight.new()
   local parked = inflight.new()
+  endpoint.drain = flights.drain
 
   local write = transport.writer(duplex.writer)
 
   local open = function(body)
     local handle = async.current()
     local f = async.future()
-    local id, release = endpoint.flights.reserve(function(frame)
+    local id, release = flights.reserve(function(frame)
       f.resolve(frame)
     end)
 
@@ -91,8 +81,8 @@ local make_endpoint = function(duplex, invoker)
     return session
   end
 
-  endpoint.request_oneshot = function(body)
-    local frame = open(body).next()
+  endpoint.request_oneshot = function(message)
+    local frame = open(message).next()
     if frame == nil then
       return errs.UNKNOWN
     end
@@ -102,8 +92,8 @@ local make_endpoint = function(duplex, invoker)
     return frame.values[1] or errs.UNKNOWN
   end
 
-  endpoint.request_stream = function(method, args, n_args)
-    local session = open { method = method, args = args, n_args = n_args }
+  endpoint.request_stream = function(message)
+    local session = open(message)
     local it = { close = session.close }
     local next = function()
       local frame = session.next()
@@ -148,7 +138,7 @@ local make_endpoint = function(duplex, invoker)
 
   local enter_async = vim.is_thread() and function() end or require("coq.lib.async.vim").scheduled
   endpoint.handlers = {
-    [Kind.YIELD] = dispatch(endpoint.flights),
+    [Kind.YIELD] = dispatch(flights),
     [Kind.NEXT] = dispatch(parked),
     [Kind.STOP] = dispatch(parked),
     [Kind.REQUEST] = function(frame)
@@ -183,7 +173,7 @@ M.spawn = function(definition)
     require("coq.lib.worker").run(read_fd, write_fd, vim.mpack.decode(bytes))
   end, remote.read_fd, remote.write_fd, config.encode(definition))
 
-  local bind_rpc = function(name)
+  local bind_oneshot = function(name)
     return function(...)
       if closed then
         error("worker closed", 2)
@@ -201,7 +191,11 @@ M.spawn = function(definition)
       if closed then
         error("worker closed", 2)
       end
-      return endpoint.request_stream(name, { ... }, select("#", ...))
+      return endpoint.request_stream {
+        method = name,
+        args = { ... },
+        n_args = select("#", ...),
+      }
     end
   end
 
@@ -216,7 +210,8 @@ M.spawn = function(definition)
         end)
       end
     end)
-    endpoint.flights.drain {
+
+    endpoint.drain {
       kind = Kind.YIELD,
       ok = false,
       n_values = 1,
@@ -239,7 +234,7 @@ M.spawn = function(definition)
 
     for name, decl in pairs(definition) do
       if name ~= "init" then
-        proxy[name] = is_streaming(decl) and bind_stream(name) or bind_rpc(name)
+        proxy[name] = config.is_streaming(decl) and bind_stream(name) or bind_oneshot(name)
       end
     end
 
@@ -257,7 +252,7 @@ M.run = function(req_fd, rsp_fd, raw)
       return pack(false, "unknown method: " .. tostring(frame.method))
     end
     local args, n_args = frame.args or {}, frame.n_args or 0
-    if m.mode == MODE.STREAM then
+    if m.streaming then
       return pack(pcall(m.fn, yield, state, unpack(args, 1, n_args)))
     end
     return pack(pcall(m.fn, state, unpack(args, 1, n_args)))
