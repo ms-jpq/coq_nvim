@@ -43,7 +43,12 @@ local make_endpoint = function(duplex, invoker)
     local id, release = flights.reserve(chan.push)
 
     message.kind, message.id = Kind.REQUEST, id
-    write(message)
+    local ok, err = pcall(write, message)
+    if not ok then
+      release()
+      chan.close()
+      error(err, 0)
+    end
 
     local first, done = true, false
 
@@ -171,12 +176,12 @@ local make_endpoint = function(duplex, invoker)
     local req_handle = handle.new(runtime.current())
     local yield_fn, release = make_control(frame.id, req_handle)
 
-    n.spawn(function()
+    n.spawn(function(defer)
+      defer(req_handle.cancel)
+      defer(release)
       runtime.bind(coroutine.running(), req_handle)
       enter_async()
       local ok, n_values, values = invoker(frame, yield_fn)
-      release()
-      req_handle.cancel()
       write {
         kind = Kind.YIELD,
         id = frame.id,
