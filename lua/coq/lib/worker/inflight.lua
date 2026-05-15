@@ -9,34 +9,34 @@ local next_id = (function()
   end
 end)()
 
-local DEAD_FRAME = function(reason)
-  return { kind = "response", ok = false, n = 1, values = { reason } }
-end
-
 M.new = function()
   local mapping = {}
+  local parker = {}
 
-  return {
-    reserve = function(cb)
-      local id = next_id()
-      mapping[id] = cb
-      return id, function()
-        mapping[id] = nil
-      end
-    end,
-    resolve = function(frame)
-      local cb = mapping[frame.id]
-      if cb then
-        cb(frame)
-      end
-    end,
-    drain = function(reason)
-      for _, cb in pairs(mapping) do
-        cb(DEAD_FRAME(reason))
-      end
-      mapping = {}
-    end,
-  }
+  parker.reserve = function(cb, id)
+    id = id or next_id()
+    mapping[id] = cb
+    return id, function()
+      mapping[id] = nil
+    end
+  end
+
+  parker.resolve = function(id, message)
+    local cb = mapping[id]
+    if cb then
+      cb(message)
+    end
+  end
+
+  parker.drain = function(message)
+    local acc = mapping
+    mapping = {}
+    for _, cb in pairs(acc) do
+      cb(message)
+    end
+  end
+
+  return parker
 end
 
 return M
