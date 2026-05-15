@@ -1,8 +1,10 @@
 local async = require "coq.lib.async"
 local config = require "coq.lib.worker.config_proto"
 local errs = require "coq.lib.errs"
+local handle = require "coq.lib.async.handle"
 local inflight = require "coq.lib.worker.inflight"
 local mpmc = require "coq.lib.channels.mpmc"
+local runtime = require "coq.lib.async.runtime"
 local transport = require "coq.lib.worker.frame_transport"
 
 local Kind = {
@@ -86,7 +88,7 @@ local make_endpoint = function(duplex, invoker)
   endpoint.request_oneshot = function(message)
     local frame = open(message).next()
     if frame == nil then
-      return errs.UNKNOWN
+      return
     end
     if frame.ok then
       return nil, unpack(frame.values, 1, frame.n_values)
@@ -114,18 +116,19 @@ local make_endpoint = function(duplex, invoker)
     return setmetatable(it, { __call = next })
   end
 
-  local dispatch = function(tracker)
+  local to_tracker = function(tracker)
     return function(frame)
       tracker.resolve(frame.id, frame)
     end
   end
 
-  local make_control = function(id)
+  local make_control = function(id, req_handle)
     local controls = mpmc.new()
     local stopped = false
     local _, release = parked.reserve(function(rsp)
       if rsp.kind == Kind.STOP then
         stopped = true
+        req_handle.cancel()
       end
       controls.push(rsp.kind == Kind.NEXT)
     end, id)
@@ -150,15 +153,29 @@ local make_endpoint = function(duplex, invoker)
   end
 
   local enter_async = vim.is_thread() and function() end or require("coq.lib.async.vim").scheduled
-  endpoint.handlers = {
-    [Kind.YIELD] = dispatch(flights),
-    [Kind.NEXT] = dispatch(parked),
-    [Kind.STOP] = dispatch(parked),
-    [Kind.REQUEST] = function(frame)
+  local handlers = {
+    [Kind.YIELD] = to_tracker(flights),
+    [Kind.NEXT] = to_tracker(parked),
+    [Kind.STOP] = to_tracker(parked),
+  }
+
+  endpoint.dispatch = function(n, frame)
+    if frame.kind ~= Kind.REQUEST then
+      n.spawn(function()
+        handlers[frame.kind](frame)
+      end)
+      return
+    end
+
+    local req_handle = handle.new(runtime.current())
+    local yield_fn, release = make_control(frame.id, req_handle)
+
+    n.spawn(function()
+      runtime.bind(coroutine.running(), req_handle)
       enter_async()
-      local yield_fn, release = make_control(frame.id)
       local ok, n_values, values = invoker(frame, yield_fn)
       release()
+      req_handle.cancel()
       write {
         kind = Kind.YIELD,
         id = frame.id,
@@ -166,8 +183,8 @@ local make_endpoint = function(duplex, invoker)
         n_values = n_values,
         values = values,
       }
-    end,
-  }
+    end)
+  end
 
   return endpoint
 end
@@ -226,9 +243,7 @@ M.spawn = function(definition)
     local n = async.nursery()
     n.spawn(function()
       for frame in transport.reader(duplex.reader) do
-        n.spawn(function()
-          endpoint.handlers[frame.kind](frame)
-        end)
+        endpoint.dispatch(n, frame)
       end
       endpoint.drain {
         kind = Kind.YIELD,
@@ -281,9 +296,7 @@ M.run = function(req_fd, rsp_fd, bytes)
       defer(n.handle.cancel)
 
       for frame in transport.reader(duplex.reader) do
-        n.spawn(function()
-          endpoint.handlers[frame.kind](frame)
-        end)
+        endpoint.dispatch(n, frame)
       end
     end)
   end)()

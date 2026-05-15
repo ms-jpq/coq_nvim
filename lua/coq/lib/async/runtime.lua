@@ -24,7 +24,7 @@ end
 
 M.future = function()
   local done = false
-  local values, thread
+  local thread, values
 
   local finish = function(vals)
     if done then
@@ -77,17 +77,6 @@ M.future = function()
   end
 
   return f
-end
-
-M.wrap = function(fn)
-  return function(...)
-    local f = M.future()
-    local argv = { ... }
-    table.insert(argv, f.resolve)
-
-    fn(unpack(argv))
-    return f.await()
-  end
 end
 
 M.thunk = function(fn)
