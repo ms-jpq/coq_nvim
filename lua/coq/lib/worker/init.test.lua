@@ -301,7 +301,7 @@ T.describe("worker", function(test)
     local w = worker.spawn {
       init = function()
         return {
-          done = require("coq.lib.async").future(),
+          done = require("coq.lib.async.event").new(),
           closed_cleanly = false,
         }
       end,
@@ -310,10 +310,10 @@ T.describe("worker", function(test)
         if not cont then
           state.closed_cleanly = true
         end
-        state.done.resolve()
+        state.done.set()
       end),
       wait_done = function(state)
-        state.done.await()
+        state.done.wait()
         return state.closed_cleanly
       end,
     }
@@ -440,7 +440,7 @@ T.describe("worker", function(test)
     local w = worker.spawn {
       init = function()
         return {
-          done = require("coq.lib.async").future(),
+          done = require("coq.lib.async.event").new(),
           closed_cleanly = false,
         }
       end,
@@ -450,10 +450,10 @@ T.describe("worker", function(test)
         if not cont then
           state.closed_cleanly = true
         end
-        state.done.resolve()
+        state.done.set()
       end),
       wait_done = function(state)
-        state.done.await()
+        state.done.wait()
         return state.closed_cleanly
       end,
     }
@@ -473,16 +473,16 @@ T.describe("worker", function(test)
     local h = handle.new()
     local w = worker.spawn {
       init = function()
-        return { got_stop = require("coq.lib.async").future() }
+        return { got_stop = require("coq.lib.async.event").new() }
       end,
       waiter = worker.streaming(function(yield, state)
         local cont = yield "lil"
         if not cont then
-          state.got_stop.resolve()
+          state.got_stop.set()
         end
       end),
       wait_got_stop = function(state)
-        state.got_stop.await()
+        state.got_stop.wait()
         return true
       end,
     }
@@ -507,7 +507,7 @@ T.describe("worker", function(test)
     local h = handle.new()
     local w = worker.spawn {
       init = function()
-        return { got_cancel = require("coq.lib.async").future() }
+        return { got_cancel = require("coq.lib.async.event").new() }
       end,
       waiter = worker.streaming(function(yield, state)
         local r = require("coq.lib.worker").main(function()
@@ -515,11 +515,11 @@ T.describe("worker", function(test)
           return "should not reach"
         end)
         if r == nil then
-          state.got_cancel.resolve()
+          state.got_cancel.set()
         end
       end),
       wait_cancel = function(state)
-        state.got_cancel.await()
+        state.got_cancel.wait()
         return true
       end,
     }

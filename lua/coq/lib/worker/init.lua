@@ -128,19 +128,23 @@ local make_endpoint = function(duplex, invoker)
     end
   end
 
-  local make_control = function(id, req_handle)
-    local controls = mpmc.new()
-    local stopped = false
+  local make_yield = function(id, req_handle)
+    local chan = mpmc.new()
     local _, release = parked.reserve(function(rsp)
       if rsp.kind == Kind.STOP then
-        stopped = true
         req_handle.cancel()
+      else
+        chan.push(true)
       end
-      controls.push(rsp.kind == Kind.NEXT)
     end, id)
 
+    req_handle.on_cancel(release)
+    req_handle.on_cancel(function()
+      chan.push(false)
+    end)
+
     local yield_fn = function(...)
-      if stopped then
+      if req_handle.cancelled then
         return false
       end
       local n_values, values = select("#", ...), { ... }
@@ -149,14 +153,10 @@ local make_endpoint = function(duplex, invoker)
         assert(values[i] ~= nil, "yield: nil value at position " .. i)
       end
       write { kind = Kind.YIELD, id = id, n_values = n_values, values = values }
-      local v = controls.pull()
-      if not v then
-        stopped = true
-      end
-      return v
+      return chan.pull()
     end
 
-    return yield_fn, release
+    return yield_fn
   end
 
   local scheduled = vim.is_thread() and function() end or require("coq.lib.async.vim").scheduled
@@ -175,11 +175,10 @@ local make_endpoint = function(duplex, invoker)
     end
 
     local req_handle = handle.new(runtime.current())
-    local yield_fn, release = make_control(frame.id, req_handle)
+    local yield_fn = make_yield(frame.id, req_handle)
 
     n.spawn(function(defer)
       defer(req_handle.cancel)
-      defer(release)
       runtime.bind(coroutine.running(), req_handle)
       scheduled()
       local ok, n_values, values = invoker(frame, yield_fn)
