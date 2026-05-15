@@ -4,7 +4,7 @@ local async = require "coq.lib.async"
 local config = require "coq.lib.worker.config_proto"
 local errs = require "coq.lib.errs"
 local inflight = require "coq.lib.worker.inflight"
-local transport = require "coq.lib.worker.transport"
+local transport = require "coq.lib.worker.frame_transport"
 
 local Kind = {
   REQUEST = "request",
@@ -69,7 +69,7 @@ local make_endpoint = function(duplex, invoker, opts)
 
   local flights = inflight.new()
 
-  local send = transport.sender(duplex.writer)
+  local send = transport.writer(duplex.writer)
   local respond = responder(send, Kind.RESPONSE)
 
   -- A request session: open, then read frames via `next` until terminal
@@ -201,13 +201,13 @@ M.spawn = function(definition)
   end, { schedule = vim.schedule })
 
   local exited = async.future()
-  async.thunk(function()
-    for frame in transport.frames(duplex.reader) do
+  coroutine.resume(coroutine.create(function()
+    for frame in transport.reader(duplex.reader) do
       endpoint.base_handlers[frame.kind](frame)
     end
     endpoint.flights.drain "worker died"
     exited.resolve()
-  end)()
+  end))
 
   transport.spawn_worker("coq.lib.worker", remote, config.encode(definition))
 
@@ -313,12 +313,12 @@ M.run = function(req_fd, rsp_fd, raw)
     })
   end
 
-  async.thunk(function()
-    for frame in transport.frames(duplex.reader) do
+  coroutine.resume(coroutine.create(function()
+    for frame in transport.reader(duplex.reader) do
       handlers[frame.kind](frame)
     end
     duplex.close()
-  end)()
+  end))
 
   vim.uv.run()
 end
