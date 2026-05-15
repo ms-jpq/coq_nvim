@@ -151,4 +151,28 @@ T.describe("handle", function(test)
 
     T.eq(count, 2)
   end)
+
+  test("cascade through three levels", function()
+    local g = handle.new()
+    local p = handle.new(g)
+    local c = handle.new(p)
+    g.cancel()
+
+    T.eq(p.cancelled, true)
+    T.eq(c.cancelled, true)
+  end)
+
+  test("on_cancel re-entry: watcher registers another watcher mid-fire", function()
+    local h = handle.new()
+    local fired = {}
+    h.on_cancel(function()
+      table.insert(fired, "outer")
+      h.on_cancel(function()
+        table.insert(fired, "inner")
+      end)
+    end)
+    h.cancel()
+
+    T.eq(fired, { "outer", "inner" })
+  end)
 end)

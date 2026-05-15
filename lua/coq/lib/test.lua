@@ -5,6 +5,7 @@ local M = {}
 
 local DEFAULT_TIMEOUT = tonumber(os.getenv "TEST_TIMEOUT") or 1000
 local TOP_N = tonumber(os.getenv "TEST_TOP_N") or 10
+local VERBOSE = os.getenv "TEST_VERBOSE" ~= nil
 
 local registry = {}
 
@@ -111,6 +112,7 @@ M.run = function(seed)
 
   do
     local failed = 0
+    local passed = 0
     for _, t in ipairs(registry) do
       if t.timed_out then
         vim.notify("✗ " .. t.name .. "\n  timeout", vim.log.levels.ERROR)
@@ -119,8 +121,14 @@ M.run = function(seed)
         vim.notify("✗ " .. t.name .. "\n" .. t.err, vim.log.levels.ERROR)
         failed = failed + 1
       else
-        vim.notify("✓ " .. t.name)
+        passed = passed + 1
+        if VERBOSE then
+          vim.notify("✓ " .. t.name)
+        end
       end
+    end
+    if not VERBOSE then
+      vim.notify(("✓ %d passed"):format(passed))
     end
 
     local slowest = vim.iter(registry):totable()

@@ -224,4 +224,49 @@ T.describe("mpmc", function(test)
 
     T.eq(seen, { "lil", "spot", "fido" })
   end)
+
+  test("push synchronously hands off to a waiting puller", function()
+    local chan = mpmc.new()
+    local order = {}
+    async.scope(function(n)
+      n.spawn(function()
+        table.insert(order, "pull_start")
+        chan.pull()
+        table.insert(order, "pull_done")
+      end)
+      async.sleep(2)
+      table.insert(order, "push_start")
+      chan.push "lil"
+      table.insert(order, "push_done")
+    end)
+
+    T.eq(order, { "pull_start", "push_start", "pull_done", "push_done" })
+  end)
+
+  test("bounded close wakes all blocked pushers", function()
+    local chan = mpmc.new(1)
+    local results = {}
+    async.scope(function(n)
+      n.spawn(function()
+        chan.push "lil"
+        results.a = chan.push "spot"
+      end)
+      n.spawn(function()
+        results.b = chan.push "fido"
+      end)
+      async.sleep(5)
+      chan.close()
+    end)
+
+    T.eq(results, { a = false, b = false })
+  end)
+
+  test("chan-level handle pre-cancelled at construction starts closed", function()
+    local h = handle.new()
+    h.cancel()
+    local chan = mpmc.new(nil, h)
+
+    T.eq(chan.pull(), nil)
+    T.eq(chan.push "lil", false)
+  end)
 end)

@@ -75,14 +75,14 @@ M.new = function(h)
     end
 
     local next = function()
-      if sub.closed then
-        return nil
-      end
-
       if sub.pending ~= nil then
         local v = sub.pending
         sub.pending = nil
         return v
+      end
+
+      if sub.closed then
+        return nil
       end
 
       local f = async.future()

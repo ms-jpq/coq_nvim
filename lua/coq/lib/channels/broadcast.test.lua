@@ -190,4 +190,36 @@ T.describe("broadcast", function(test)
       T.eq(sub(), "spot")
     end)
   end)
+
+  test("close drains pending value before nil", function()
+    local chan = broadcast.new()
+    local sub = chan.subscribe()
+    chan.replace "lil"
+    chan.close()
+
+    T.eq(sub(), "lil")
+    T.eq(sub(), nil)
+  end)
+
+  test("replace fans out to many subscribers in one pass", function()
+    local chan = broadcast.new()
+    local subs = {}
+    for i = 1, 5 do
+      subs[i] = chan.subscribe()
+    end
+    chan.replace "lil"
+
+    for i = 1, 5 do
+      T.eq(subs[i](), "lil")
+    end
+  end)
+
+  test("iter.close before first replace cleans up without waking anything", function()
+    local chan = broadcast.new()
+    local sub = chan.subscribe()
+    sub.close()
+    chan.replace "lil"
+
+    T.eq(sub(), nil)
+  end)
 end)

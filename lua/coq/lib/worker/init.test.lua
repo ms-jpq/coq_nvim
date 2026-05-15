@@ -606,4 +606,67 @@ T.describe("worker", function(test)
     T.eq(seen, { 1, 2, 3, 4 })
     T.eq(r, "pong")
   end)
+
+  test("streaming method that never yields returns nil immediately", function()
+    local w = worker.spawn {
+      silent = worker.streaming(function(_, _)
+        -- never calls yield
+      end),
+    }
+    local iter = w.silent()
+    local first = iter()
+    w.close()
+
+    T.eq(first, nil)
+  end)
+
+  test("concurrent oneshot calls do not cross-talk", function()
+    local async = require "coq.lib.async"
+    local w = worker.spawn {
+      echo = function(_, delay_ms, label)
+        local async = require "coq.lib.async"
+        async.sleep(delay_ms)
+        return label
+      end,
+    }
+    local results = {}
+    async.scope(function(n)
+      for i = 1, 5 do
+        n.spawn(function()
+          results[i] = w.echo(i * 2, "dog_" .. i)
+        end)
+      end
+    end)
+    w.close()
+
+    T.eq(results, { "dog_1", "dog_2", "dog_3", "dog_4", "dog_5" })
+  end)
+
+  test("two streaming iters from same method interleave independently", function()
+    local async = require "coq.lib.async"
+    local w = worker.spawn {
+      counted = worker.streaming(function(yield, _, n, prefix)
+        for i = 1, n do
+          yield(prefix .. i)
+        end
+      end),
+    }
+    local seen_a, seen_b = {}, {}
+    async.scope(function(n)
+      n.spawn(function()
+        for v in w.counted(3, "a") do
+          table.insert(seen_a, v)
+        end
+      end)
+      n.spawn(function()
+        for v in w.counted(3, "b") do
+          table.insert(seen_b, v)
+        end
+      end)
+    end)
+    w.close()
+
+    T.eq(seen_a, { "a1", "a2", "a3" })
+    T.eq(seen_b, { "b1", "b2", "b3" })
+  end)
 end)
