@@ -119,13 +119,14 @@ local make_endpoint = function(duplex, invoker)
   end
 
   local park = function(id)
-    local fu = async.future()
+    local f = async.future()
     local release
     _, release = parked.reserve(function(rsp)
       release()
-      fu.resolve(rsp.kind == Kind.NEXT)
+      f.resolve(rsp.kind == Kind.NEXT)
     end, id)
-    return fu.await(async.current())
+
+    return f.await(async.current())
   end
 
   local make_yield = function(id)
@@ -169,8 +170,8 @@ M.spawn = function(definition)
     return pack(pcall(fn, unpack(frame.args or {}, 1, frame.n_args or 0)))
   end)
 
-  transport.spawn_worker(function(read_fd, write_fd, bytes)
-    require("coq.lib.worker").run(read_fd, write_fd, vim.mpack.decode(bytes))
+  transport.spawn_worker(function(...)
+    require("coq.lib.worker").run(...)
   end, remote.read_fd, remote.write_fd, config.encode(definition))
 
   local bind_oneshot = function(name)
@@ -242,9 +243,9 @@ M.spawn = function(definition)
   end
 end
 
-M.run = function(req_fd, rsp_fd, raw)
+M.run = function(req_fd, rsp_fd, bytes)
   local duplex = transport.open_duplex(req_fd, rsp_fd)
-  local state, methods = config.decode(raw)
+  local state, methods = config.decode(vim.mpack.decode(bytes))
 
   local endpoint = make_endpoint(duplex, function(frame, yield)
     local m = methods[frame.method]
