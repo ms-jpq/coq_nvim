@@ -27,13 +27,6 @@ local unwrap = function(err, ...)
   return ...
 end
 
-local frame_to_result = function(frame)
-  if frame.ok then
-    return nil, unpack(frame.values, 1, frame.n)
-  end
-  return frame.values[1] or errs.UNKNOWN
-end
-
 local M = {}
 
 M.streaming = function(fn)
@@ -45,7 +38,6 @@ local is_streaming = function(decl)
 end
 
 local make_endpoint = function(duplex, invoker)
-  local enter = not vim.is_thread() and vim.schedule or nil
   local endpoint = {}
 
   endpoint.flights = inflight.new()
@@ -99,16 +91,19 @@ local make_endpoint = function(duplex, invoker)
     return session
   end
 
-  endpoint.request = function(body)
+  endpoint.request_oneshot = function(body)
     local frame = open(body).next()
     if frame == nil then
       return errs.UNKNOWN
     end
-    return frame_to_result(frame)
+    if frame.ok then
+      return nil, unpack(frame.values, 1, frame.n_values)
+    end
+    return frame.values[1] or errs.UNKNOWN
   end
 
-  endpoint.request_stream = function(method, args, argn)
-    local session = open { method = method, args = args, argn = argn }
+  endpoint.request_stream = function(method, args, n_args)
+    local session = open { method = method, args = args, n_args = n_args }
     local it = { close = session.close }
     local next = function()
       local frame = session.next()
@@ -116,7 +111,7 @@ local make_endpoint = function(duplex, invoker)
         return nil
       end
       if frame.ok == nil then
-        return unpack(frame.values, 1, frame.n)
+        return unpack(frame.values, 1, frame.n_values)
       end
       if not frame.ok then
         error(frame.values[1] or errs.UNKNOWN, 2)
@@ -133,29 +128,39 @@ local make_endpoint = function(duplex, invoker)
     end
   end
 
+  local park = function(id)
+    local fu = async.future()
+    local release
+    _, release = parked.reserve(function(rsp)
+      release()
+      fu.resolve(rsp.kind == Kind.NEXT)
+    end, id)
+    return fu.await(async.current())
+  end
+
+  local make_yield = function(id)
+    return function(...)
+      local n_values, values = select("#", ...), { ... }
+      write { kind = Kind.YIELD, id = id, n_values = n_values, values = values }
+      return park(id)
+    end
+  end
+
+  local enter_async = vim.is_thread() and function() end or require("coq.lib.async.vim").scheduled
   endpoint.handlers = {
     [Kind.YIELD] = dispatch(endpoint.flights),
     [Kind.NEXT] = dispatch(parked),
     [Kind.STOP] = dispatch(parked),
     [Kind.REQUEST] = function(frame)
-      if enter then
-        local f = async.future()
-        enter(f.resolve)
-        f.await(async.current())
-      end
-      local yield = function(...)
-        local argn, args = select("#", ...), { ... }
-        write { kind = Kind.YIELD, id = frame.id, n = argn, values = args }
-        local fu = async.future()
-        local release
-        _, release = parked.reserve(function(rsp)
-          release()
-          fu.resolve(rsp.kind == Kind.NEXT)
-        end, frame.id)
-        return fu.await(async.current())
-      end
-      local ok, n, vals = invoker(frame, yield)
-      write { kind = Kind.YIELD, id = frame.id, ok = ok, n = n, values = vals }
+      enter_async()
+      local ok, n_values, values = invoker(frame, make_yield(frame.id))
+      write {
+        kind = Kind.YIELD,
+        id = frame.id,
+        ok = ok,
+        n_values = n_values,
+        values = values,
+      }
     end,
   }
 
@@ -167,12 +172,38 @@ M.spawn = function(definition)
   local closed = false
 
   local endpoint = make_endpoint(duplex, function(frame)
-    local fn, err = load(frame.fn_dump)
+    local fn, err = load(frame.fn_bytecode)
     if not fn then
       return pack(false, err or errs.UNKNOWN)
     end
-    return pack(pcall(fn, unpack(frame.args or {}, 1, frame.argn or 0)))
+    return pack(pcall(fn, unpack(frame.args or {}, 1, frame.n_args or 0)))
   end)
+
+  transport.spawn_worker(function(read_fd, write_fd, bytes)
+    require("coq.lib.worker").run(read_fd, write_fd, vim.mpack.decode(bytes))
+  end, remote.read_fd, remote.write_fd, config.encode(definition))
+
+  local bind_rpc = function(name)
+    return function(...)
+      if closed then
+        error("worker closed", 2)
+      end
+      return unwrap(endpoint.request_oneshot {
+        method = name,
+        args = { ... },
+        n_args = select("#", ...),
+      })
+    end
+  end
+
+  local bind_stream = function(name)
+    return function(...)
+      if closed then
+        error("worker closed", 2)
+      end
+      return endpoint.request_stream(name, { ... }, select("#", ...))
+    end
+  end
 
   local exited = async.future()
 
@@ -188,56 +219,32 @@ M.spawn = function(definition)
     endpoint.flights.drain {
       kind = Kind.YIELD,
       ok = false,
-      n = 1,
+      n_values = 1,
       values = { "worker died" },
     }
     exited.resolve()
   end))
 
-  transport.spawn_worker(function(read_fd, write_fd, bytes)
-    require("coq.lib.worker").run(read_fd, write_fd, vim.mpack.decode(bytes))
-  end, remote.read_fd, remote.write_fd, config.encode(definition))
+  do
+    local proxy = {
+      close = function()
+        if not closed then
+          closed = true
+          duplex.close()
+        end
 
-  local bind_rpc = function(name)
-    return function(...)
-      if closed then
-        error("worker closed", 2)
+        exited.await()
+      end,
+    }
+
+    for name, decl in pairs(definition) do
+      if name ~= "init" then
+        proxy[name] = is_streaming(decl) and bind_stream(name) or bind_rpc(name)
       end
-      return unwrap(endpoint.request {
-        method = name,
-        args = { ... },
-        argn = select("#", ...),
-      })
     end
+
+    return proxy
   end
-
-  local bind_stream = function(name)
-    return function(...)
-      if closed then
-        error("worker closed", 2)
-      end
-      return endpoint.request_stream(name, { ... }, select("#", ...))
-    end
-  end
-
-  local proxy = {
-    close = function()
-      if not closed then
-        closed = true
-        duplex.close()
-      end
-
-      exited.await()
-    end,
-  }
-
-  for name, decl in pairs(definition) do
-    if name ~= "init" then
-      proxy[name] = is_streaming(decl) and bind_stream(name) or bind_rpc(name)
-    end
-  end
-
-  return proxy
 end
 
 M.run = function(req_fd, rsp_fd, raw)
@@ -249,18 +256,18 @@ M.run = function(req_fd, rsp_fd, raw)
     if not m then
       return pack(false, "unknown method: " .. tostring(frame.method))
     end
-    local args, argn = frame.args or {}, frame.argn or 0
+    local args, n_args = frame.args or {}, frame.n_args or 0
     if m.mode == MODE.STREAM then
-      return pack(pcall(m.fn, yield, state, unpack(args, 1, argn)))
+      return pack(pcall(m.fn, yield, state, unpack(args, 1, n_args)))
     end
-    return pack(pcall(m.fn, state, unpack(args, 1, argn)))
+    return pack(pcall(m.fn, state, unpack(args, 1, n_args)))
   end)
 
   M.main = function(fn, ...)
-    return unwrap(endpoint.request {
-      fn_dump = string.dump(fn),
+    return unwrap(endpoint.request_oneshot {
+      fn_bytecode = string.dump(fn),
       args = { ... },
-      argn = select("#", ...),
+      n_args = select("#", ...),
     })
   end
 
