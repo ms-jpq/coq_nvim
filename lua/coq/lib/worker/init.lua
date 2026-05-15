@@ -14,15 +14,14 @@ local Kind = {
   STOP = "stop",
 }
 
+local STATE = {
+  INITIAL = "initial",
+  STREAMING = "streaming",
+  DONE = "done",
+}
+
 local pack_frame = function(ok, ...)
   return ok, select("#", ...), { ... }
-end
-
-local unwrap = function(err, ...)
-  if err then
-    error(err, 3)
-  end
-  return ...
 end
 
 local M = {}
@@ -50,18 +49,16 @@ local make_endpoint = function(duplex, invoker)
       error(err, 0)
     end
 
-    local first, done = true, false
+    local state = STATE.INITIAL
 
     local session = {}
 
     session.next = function()
-      if done then
+      if state == STATE.DONE then
         return nil
       end
 
-      if first then
-        first = false
-      else
+      if state == STATE.STREAMING then
         write { kind = Kind.NEXT, id = id }
       end
 
@@ -72,16 +69,18 @@ local make_endpoint = function(duplex, invoker)
       if frame == nil or frame.ok ~= nil then
         release()
         chan.close()
-        done = true
+        state = STATE.DONE
+      else
+        state = STATE.STREAMING
       end
       return frame
     end
 
     session.close = function()
-      if done then
+      if state == STATE.DONE then
         return
       end
-      done = true
+      state = STATE.DONE
       write { kind = Kind.STOP, id = id }
       release()
       chan.close()
@@ -97,9 +96,9 @@ local make_endpoint = function(duplex, invoker)
       return
     end
     if frame.ok then
-      return nil, unpack(frame.values, 1, frame.n_values)
+      return unpack(frame.values, 1, frame.n_values)
     end
-    return frame.values[1] or errs.UNKNOWN
+    error(frame.values[1] or errs.UNKNOWN, 3)
   end
 
   endpoint.request_stream = function(message)
@@ -211,25 +210,12 @@ M.spawn = function(definition)
     require("coq.lib.worker").run(...)
   end, remote.read_fd, remote.write_fd, config.encode(definition))
 
-  local bind_oneshot = function(name)
+  local bind = function(request, name)
     return function(...)
       if closed then
         error("worker closed", 2)
       end
-      return unwrap(endpoint.request_oneshot {
-        method = name,
-        args = { ... },
-        n_args = select("#", ...),
-      })
-    end
-  end
-
-  local bind_stream = function(name)
-    return function(...)
-      if closed then
-        error("worker closed", 2)
-      end
-      return endpoint.request_stream {
+      return request {
         method = name,
         args = { ... },
         n_args = select("#", ...),
@@ -242,7 +228,8 @@ M.spawn = function(definition)
 
     for name, decl in pairs(definition) do
       if name ~= "init" then
-        proxy[name] = config.is_streaming(decl) and bind_stream(name) or bind_oneshot(name)
+        local request = config.is_streaming(decl) and endpoint.request_stream or endpoint.request_oneshot
+        proxy[name] = bind(request, name)
       end
     end
 
@@ -289,11 +276,11 @@ M.run = function(req_fd, rsp_fd, bytes)
   end)
 
   M.main = function(fn, ...)
-    return unwrap(endpoint.request_oneshot {
+    return endpoint.request_oneshot {
       fn_bytecode = string.dump(fn),
       args = { ... },
       n_args = select("#", ...),
-    })
+    }
   end
 
   async.thunk(function()
