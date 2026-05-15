@@ -139,13 +139,16 @@ local make_endpoint = function(duplex, invoker)
     end, id)
 
     local yield_fn = function(...)
-      if select("#", ...) == 0 then
-        error("yield: at least one value required", 2)
+      local n_values, values = select("#", ...), { ... }
+      assert(n_values > 0, "yield: at least one value required")
+
+      for i = 1, n_values do
+        assert(values[i] ~= nil, "yield: nil value at position " .. i)
       end
+
       if stopped then
         return false
       end
-      local n_values, values = select("#", ...), { ... }
       write { kind = Kind.YIELD, id = id, n_values = n_values, values = values }
       local v = controls.pull()
       if not v then
@@ -195,6 +198,8 @@ local make_endpoint = function(duplex, invoker)
 end
 
 M.spawn = function(definition)
+  assert(definition.close == nil, "worker.spawn: 'close' is reserved by the proxy")
+
   local duplex, remote = transport.duplex_pair()
   local closed = false
 
