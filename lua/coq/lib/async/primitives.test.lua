@@ -1,6 +1,8 @@
 local T = require "coq.lib.test"
 local async = require "coq.lib.async"
 local handle = require "coq.lib.async.handle"
+local nursery = require "coq.lib.async.nursery"
+local runtime = require "coq.lib.async.runtime"
 
 T.describe("future cancel", function(test)
   test("await returns nil when ambient handle already cancelled", function()
@@ -11,7 +13,7 @@ T.describe("future cancel", function(test)
       n.spawn(function()
         local f = async.future()
 
-        T.eq(f.await(async.current()), nil)
+        T.eq(f.await(runtime.current()), nil)
       end)
     end)
   end)
@@ -39,7 +41,7 @@ T.describe("future cancel", function(test)
     async.scope(h, function(n)
       n.spawn(function()
         local f = async.future()
-        got = f.await(async.current())
+        got = f.await(runtime.current())
         awoke = true
       end)
       h.cancel()
@@ -56,7 +58,7 @@ T.describe("future cancel", function(test)
       n.spawn(function()
         local f = async.future()
         resolve = f.resolve
-        f.await(async.current())
+        f.await(runtime.current())
       end)
       h.cancel()
     end)
@@ -100,7 +102,7 @@ T.describe("sleep cancel", function(test)
   end)
 
   test("does not leak watchers on the ambient handle", function()
-    local n = async.nursery()
+    local n = nursery.new()
     local h = n.handle
 
     local live = {}

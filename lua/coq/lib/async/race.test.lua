@@ -1,6 +1,7 @@
 local T = require "coq.lib.test"
 local async = require "coq.lib.async"
 local handle = require "coq.lib.async.handle"
+local runtime = require "coq.lib.async.runtime"
 
 T.describe("race", function(test)
   test("returns nil for empty fns list", function()
@@ -108,7 +109,7 @@ T.describe("race", function(test)
         return "winner"
       end,
       function()
-        async.current().on_cancel(function()
+        runtime.current().on_cancel(function()
           loser_cancelled = true
         end)
         async.sleep(50)
@@ -126,7 +127,7 @@ T.describe("race", function(test)
       n.spawn(function()
         idx = async.race {
           function()
-            async.current().on_cancel(function()
+            runtime.current().on_cancel(function()
               cancelled = true
             end)
             async.sleep(50)
@@ -145,7 +146,7 @@ T.describe("race", function(test)
     local ok, err = pcall(function()
       async.race {
         function()
-          async.current().on_cancel(function()
+          runtime.current().on_cancel(function()
             sibling_cancelled = true
           end)
           async.sleep(100)

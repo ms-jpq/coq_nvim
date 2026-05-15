@@ -4,6 +4,7 @@ local errs = require "coq.lib.errs"
 local handle = require "coq.lib.async.handle"
 local inflight = require "coq.lib.worker.inflight"
 local mpmc = require "coq.lib.channels.mpmc"
+local nursery = require "coq.lib.async.nursery"
 local runtime = require "coq.lib.async.runtime"
 local transport = require "coq.lib.worker.frame_transport"
 
@@ -236,7 +237,7 @@ M.spawn = function(definition)
       end
     end
 
-    local n = async.nursery()
+    local n = nursery.new()
     n.spawn(function()
       for frame in transport.reader(duplex.reader) do
         endpoint.dispatch(n, frame)

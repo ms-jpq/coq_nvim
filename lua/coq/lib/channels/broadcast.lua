@@ -1,4 +1,5 @@
 local async = require "coq.lib.async"
+local runtime = require "coq.lib.async.runtime"
 
 local M = {}
 
@@ -57,7 +58,7 @@ M.new = function()
 
       local f = async.future()
       sub.waiter = f
-      return f.await(async.current())
+      return f.await(runtime.current())
     end
 
     return setmetatable(it, { __call = next })

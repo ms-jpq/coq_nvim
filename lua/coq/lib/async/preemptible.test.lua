@@ -1,6 +1,7 @@
 local T = require "coq.lib.test"
 local async = require "coq.lib.async"
 local handle = require "coq.lib.async.handle"
+local runtime = require "coq.lib.async.runtime"
 
 T.describe("preemptible", function(test)
   test("forwards values from underlying iter", function()
@@ -112,7 +113,7 @@ T.describe("preemptible", function(test)
     async.scope(h, function(n)
       n.spawn(function()
         local iter = async.preemptible(function()
-          async.current().on_cancel(function()
+          runtime.current().on_cancel(function()
             iter_cancelled = true
           end)
           async.sleep(100)

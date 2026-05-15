@@ -1,15 +1,17 @@
 local T = require "coq.lib.test"
 local async = require "coq.lib.async"
 local handle = require "coq.lib.async.handle"
+local nursery = require "coq.lib.async.nursery"
+local runtime = require "coq.lib.async.runtime"
 
 T.describe("nursery", function(test)
   test("join returns immediately when no tasks spawned", function()
-    local n = async.nursery()
+    local n = nursery.new()
     n.join()
   end)
 
   test("join awaits all spawned children", function()
-    local n = async.nursery()
+    local n = nursery.new()
     local count = 0
     n.spawn(function()
       async.sleep(2)
@@ -25,7 +27,7 @@ T.describe("nursery", function(test)
   end)
 
   test("join returns immediately for synchronous children", function()
-    local n = async.nursery()
+    local n = nursery.new()
     local count = 0
     n.spawn(function()
       count = count + 1
@@ -43,7 +45,7 @@ T.describe("nursery", function(test)
     local joined = false
     async.scope(outer, function(n)
       n.spawn(function()
-        local inner = async.nursery()
+        local inner = nursery.new()
         inner.spawn(function()
           async.sleep(200)
         end)
@@ -62,7 +64,7 @@ T.describe("nursery", function(test)
     local joined = false
     async.scope(outer, function(n)
       n.spawn(function()
-        local inner = async.nursery()
+        local inner = nursery.new()
         inner.spawn(function()
           local f = async.future()
           f.await()
@@ -78,7 +80,7 @@ T.describe("nursery", function(test)
   end)
 
   test("join re-raises first child error", function()
-    local n = async.nursery()
+    local n = nursery.new()
     n.spawn(function()
       error "child went missing"
     end)
@@ -89,7 +91,7 @@ T.describe("nursery", function(test)
   end)
 
   test("spawn after join raises", function()
-    local n = async.nursery()
+    local n = nursery.new()
     n.join()
 
     local ok, err = pcall(n.spawn, function() end)
@@ -98,7 +100,7 @@ T.describe("nursery", function(test)
   end)
 
   test("spawn fires defers in reverse order on normal exit", function()
-    local n = async.nursery()
+    local n = nursery.new()
     local order = {}
     n.spawn(function(defer)
       defer(function()
@@ -115,7 +117,7 @@ T.describe("nursery", function(test)
   end)
 
   test("spawn fires defers even when body errors", function()
-    local n = async.nursery()
+    local n = nursery.new()
     local fired = false
     n.spawn(function(defer)
       defer(function()
@@ -131,7 +133,7 @@ T.describe("nursery", function(test)
   end)
 
   test("join raises error group when multiple children error", function()
-    local n = async.nursery()
+    local n = nursery.new()
     n.spawn(function()
       error "first"
     end)
@@ -170,7 +172,7 @@ T.describe("scope", function(test)
     local ok, err = pcall(function()
       async.scope(function(n)
         n.spawn(function()
-          async.current().on_cancel(function()
+          runtime.current().on_cancel(function()
             cancelled = true
           end)
           async.sleep(100)
@@ -189,7 +191,7 @@ T.describe("scope", function(test)
     local ok, err = pcall(function()
       async.scope(function(n)
         n.spawn(function()
-          async.current().on_cancel(function()
+          runtime.current().on_cancel(function()
             sibling_cancelled = true
           end)
           async.sleep(100)

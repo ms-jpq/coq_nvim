@@ -1,6 +1,7 @@
 local T = require "coq.lib.test"
 local async = require "coq.lib.async"
 local handle = require "coq.lib.async.handle"
+local runtime = require "coq.lib.async.runtime"
 
 local delayed = function(value, delay)
   local sent = false
@@ -9,7 +10,7 @@ local delayed = function(value, delay)
       return nil
     end
     async.sleep(delay)
-    if async.current().cancelled then
+    if runtime.current().cancelled then
       return nil
     end
     sent = true
@@ -119,7 +120,7 @@ T.describe("merge", function(test)
       n.spawn(function()
         local m = async.merge {
           function()
-            async.current().on_cancel(function()
+            runtime.current().on_cancel(function()
               fired = true
             end)
             async.sleep(100)

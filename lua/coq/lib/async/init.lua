@@ -6,12 +6,9 @@ local runtime = require "coq.lib.async.runtime"
 local M = {}
 
 M.all = controlflow.all
-M.cancelled = runtime.cancelled
-M.current = runtime.current
 M.event = event.new
 M.future = runtime.future
 M.merge = controlflow.merge
-M.nursery = nursery.new
 M.preemptible = runtime.preemptible
 M.race = controlflow.race
 M.scope = nursery.scope
