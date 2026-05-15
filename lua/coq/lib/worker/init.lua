@@ -3,7 +3,6 @@ local config = require "coq.lib.worker.config_proto"
 local errs = require "coq.lib.errs"
 local handle = require "coq.lib.async.handle"
 local inflight = require "coq.lib.worker.inflight"
-local lib = require "coq.lib"
 local mpmc = require "coq.lib.channels.mpmc"
 local nursery = require "coq.lib.async.nursery"
 local runtime = require "coq.lib.async.runtime"
@@ -22,8 +21,14 @@ local STATE = {
   DONE = "done",
 }
 
-local pack_frame = function(ok, ...)
-  return ok, select("#", ...), { ... }
+local response = function(id, ok, ...)
+  return {
+    kind = Kind.YIELD,
+    id = id,
+    ok = ok,
+    n_values = select("#", ...),
+    values = { ... },
+  }
 end
 
 local M = {}
@@ -52,8 +57,18 @@ local make_endpoint = function(duplex, invoker)
     end
 
     local state = STATE.INITIAL
-
     local session = {}
+    local unwatch
+
+    local cleanup = function()
+      state = STATE.DONE
+      if unwatch then
+        unwatch()
+        unwatch = nil
+      end
+      release()
+      chan.close()
+    end
 
     session.next = function()
       if state == STATE.DONE then
@@ -69,9 +84,7 @@ local make_endpoint = function(duplex, invoker)
         write { kind = Kind.STOP, id = id }
       end
       if frame == nil or frame.ok ~= nil then
-        release()
-        chan.close()
-        state = STATE.DONE
+        cleanup()
       else
         state = STATE.STREAMING
       end
@@ -82,28 +95,25 @@ local make_endpoint = function(duplex, invoker)
       if state == STATE.DONE then
         return
       end
-      state = STATE.DONE
       write { kind = Kind.STOP, id = id }
-      release()
-      chan.close()
+      cleanup()
     end
+
+    unwatch = runtime.current().on_cancel(session.close)
 
     return session
   end
 
   endpoint.request_oneshot = function(message)
     local session = open(message)
-    return lib.scope(function(defer)
-      defer(runtime.current().on_cancel(session.close))
-      local frame = session.next()
-      if frame == nil then
-        return
-      end
-      if frame.ok then
-        return unpack(frame.values, 1, frame.n_values)
-      end
-      error(frame.values[1] or errs.UNKNOWN, 3)
-    end)
+    local frame = session.next()
+    if frame == nil then
+      return
+    end
+    if frame.ok then
+      return unpack(frame.values, 1, frame.n_values)
+    end
+    error(frame.values[1] or errs.UNKNOWN, 3)
   end
 
   endpoint.request_stream = function(message)
@@ -142,8 +152,8 @@ local make_endpoint = function(duplex, invoker)
       end
     end, id)
 
-    req_handle.on_cancel(release)
     req_handle.on_cancel(function()
+      release()
       chan.push(false)
     end)
 
@@ -185,14 +195,7 @@ local make_endpoint = function(duplex, invoker)
       defer(req_handle.cancel)
       runtime.bind(coroutine.running(), req_handle)
       scheduled()
-      local ok, n_values, values = invoker(frame, yield_fn)
-      write {
-        kind = Kind.YIELD,
-        id = frame.id,
-        ok = ok,
-        n_values = n_values,
-        values = values,
-      }
+      write(invoker(frame, yield_fn))
     end)
   end
 
@@ -208,9 +211,9 @@ M.spawn = function(definition)
   local endpoint = make_endpoint(duplex, function(frame)
     local fn, err = load(frame.fn_bytecode)
     if not fn then
-      return pack_frame(false, err or errs.UNKNOWN)
+      return response(frame.id, false, err or errs.UNKNOWN)
     end
-    return pack_frame(pcall(fn, unpack(frame.args or {}, 1, frame.n_args or 0)))
+    return response(frame.id, pcall(fn, unpack(frame.args or {}, 1, frame.n_args or 0)))
   end)
 
   transport.spawn_worker(function(...)
@@ -273,13 +276,13 @@ M.run = function(req_fd, rsp_fd, bytes)
   local endpoint = make_endpoint(duplex, function(frame, yield)
     local m = methods[frame.method]
     if not m then
-      return pack_frame(false, "unknown method: " .. tostring(frame.method))
+      return response(frame.id, false, "unknown method: " .. tostring(frame.method))
     end
     local args, n_args = frame.args or {}, frame.n_args or 0
     if m.streaming then
-      return pack_frame(pcall(m.fn, yield, state, unpack(args, 1, n_args)))
+      return response(frame.id, pcall(m.fn, yield, state, unpack(args, 1, n_args)))
     end
-    return pack_frame(pcall(m.fn, state, unpack(args, 1, n_args)))
+    return response(frame.id, pcall(m.fn, state, unpack(args, 1, n_args)))
   end)
 
   M.main = function(fn, ...)

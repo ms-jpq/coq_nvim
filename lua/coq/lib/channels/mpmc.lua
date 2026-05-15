@@ -26,32 +26,6 @@ M.new = function(capacity, h)
 
   local chan = {}
 
-  chan.push = function(...)
-    while not closed and #queue >= capacity do
-      wait(push_waiters)
-    end
-
-    if closed then
-      return false
-    end
-    table.insert(queue, { n = select("#", ...), ... })
-    notify(pull_waiters)
-    return true
-  end
-
-  chan.pull = function()
-    while #queue == 0 do
-      if closed then
-        return nil
-      end
-      wait(pull_waiters)
-    end
-
-    local pkt = table.remove(queue, 1)
-    notify(push_waiters)
-    return unpack(pkt, 1, pkt.n)
-  end
-
   local unwatch_h
   chan.close = function()
     if closed then
@@ -76,6 +50,34 @@ M.new = function(capacity, h)
 
   if h then
     unwatch_h = h.on_cancel(chan.close)
+  end
+
+  chan.push = function(...)
+    while not closed and #queue >= capacity do
+      wait(push_waiters)
+    end
+
+    if closed then
+      return false
+    end
+
+    table.insert(queue, { n = select("#", ...), ... })
+    notify(pull_waiters)
+    return true
+  end
+
+  chan.pull = function()
+    while not closed and #queue == 0 do
+      wait(pull_waiters)
+    end
+
+    if #queue == 0 then
+      return nil
+    end
+
+    local packet = table.remove(queue, 1)
+    notify(push_waiters)
+    return unpack(packet, 1, packet.n)
   end
 
   return setmetatable(chan, { __call = chan.pull })

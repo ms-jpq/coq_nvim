@@ -7,7 +7,42 @@ M.new = function(h)
   local subscribers = sparse.new()
   local closed = false
 
+  local close_sub = function(sub)
+    if sub.closed then
+      return
+    end
+    sub.closed = true
+
+    local f = sub.waiter
+    sub.waiter = nil
+    if f then
+      f.resolve(nil)
+    end
+  end
+
   local chan = {}
+
+  local unwatch_h
+  chan.close = function()
+    if closed then
+      return
+    end
+    closed = true
+
+    if unwatch_h then
+      unwatch_h()
+    end
+
+    local snapshot = subscribers
+    subscribers = sparse.new()
+    for _, sub in snapshot.iter() do
+      close_sub(sub)
+    end
+  end
+
+  if h then
+    unwatch_h = h.on_cancel(chan.close)
+  end
 
   chan.replace = function(item)
     if closed then
@@ -25,58 +60,22 @@ M.new = function(h)
     end
   end
 
-  local unwatch_h
-  chan.close = function()
-    if closed then
-      return
-    end
-    closed = true
-
-    if unwatch_h then
-      unwatch_h()
-    end
-
-    local snapshot = subscribers
-    subscribers = sparse.new()
-    for _, sub in snapshot.iter() do
-      if not sub.closed then
-        sub.closed = true
-        local f = sub.waiter
-        sub.waiter = nil
-        if f then
-          f.resolve(nil)
-        end
-      end
-    end
-  end
-
   chan.subscribe = function()
-    if closed then
-      local it = { close = function() end }
-      return setmetatable(it, {
-        __call = function()
-          return nil
-        end,
-      })
+    local sub = { pending = nil, waiter = nil, closed = closed }
+    local key
+    if not closed then
+      key = subscribers.push(sub)
     end
-
-    local sub = { pending = nil, waiter = nil, closed = false }
-    local key = subscribers.push(sub)
 
     local it = {}
     it.close = function()
       if sub.closed then
         return
       end
-      sub.closed = true
-
-      subscribers.remove(key)
-
-      local f = sub.waiter
-      sub.waiter = nil
-      if f then
-        f.resolve(nil)
+      if key then
+        subscribers.remove(key)
       end
+      close_sub(sub)
     end
 
     local next = function()
@@ -96,10 +95,6 @@ M.new = function(h)
     end
 
     return setmetatable(it, { __call = next })
-  end
-
-  if h then
-    unwatch_h = h.on_cancel(chan.close)
   end
 
   return chan

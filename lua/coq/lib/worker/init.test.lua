@@ -470,7 +470,6 @@ T.describe("worker", function(test)
   test("ambient cancel mid-call sends STOP to worker", function()
     local async = require "coq.lib.async"
     local handle = require "coq.lib.async.handle"
-    local runtime = require "coq.lib.async.runtime"
     local h = handle.new()
     local w = worker.spawn {
       init = function()
@@ -491,8 +490,39 @@ T.describe("worker", function(test)
     async.scope(h, function(n)
       n.spawn(function()
         local iter = w.waiter()
-        runtime.current().on_cancel(iter.close)
         iter()
+      end)
+      h.cancel()
+    end)
+
+    local ok = w.wait_got_stop()
+    w.close()
+
+    T.eq(ok, true)
+  end)
+
+  test("uniterated stream is cleaned up on ambient cancel", function()
+    local async = require "coq.lib.async"
+    local handle = require "coq.lib.async.handle"
+    local h = handle.new()
+    local w = worker.spawn {
+      init = function()
+        return { got_stop = require("coq.lib.async.event").new() }
+      end,
+      forever = worker.streaming(function(yield, state)
+        while yield "tick" do
+        end
+        state.got_stop.set()
+      end),
+      wait_got_stop = function(state)
+        state.got_stop.wait()
+        return true
+      end,
+    }
+
+    async.scope(h, function(n)
+      n.spawn(function()
+        local _iter = w.forever()
       end)
       h.cancel()
     end)
