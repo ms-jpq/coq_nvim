@@ -157,7 +157,7 @@ local make_endpoint = function(duplex, invoker)
     return yield_fn, release
   end
 
-  local enter_async = vim.is_thread() and function() end or require("coq.lib.async.vim").scheduled
+  local scheduled = vim.is_thread() and function() end or require("coq.lib.async.vim").scheduled
   local handlers = {
     [Kind.YIELD] = to_tracker(flights),
     [Kind.NEXT] = to_tracker(parked),
@@ -179,7 +179,7 @@ local make_endpoint = function(duplex, invoker)
       defer(req_handle.cancel)
       defer(release)
       runtime.bind(coroutine.running(), req_handle)
-      enter_async()
+      scheduled()
       local ok, n_values, values = invoker(frame, yield_fn)
       write {
         kind = Kind.YIELD,

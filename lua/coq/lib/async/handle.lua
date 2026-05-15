@@ -55,13 +55,13 @@ M.new = function(parent, deadline_ms)
     end
   end
 
-  if parent then
-    unwatch_from_parent = parent.on_cancel(handle)
-  end
-
   if deadline_ms then
     timer = vim.uv.new_timer()
     timer:start(deadline_ms, 0, handle.cancel)
+  end
+
+  if parent then
+    unwatch_from_parent = parent.on_cancel(handle)
   end
 
   return handle

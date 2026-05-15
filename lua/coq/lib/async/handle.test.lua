@@ -103,6 +103,27 @@ T.describe("handle", function(test)
     T.eq(h.cancelled, true)
   end)
 
+  test("deadline timer is disarmed when parent already cancelled at construction", function()
+    local count_live_timers = function()
+      local n = 0
+      vim.uv.walk(function(uv_handle)
+        if uv_handle:get_type() == "timer" and not uv_handle:is_closing() then
+          n = n + 1
+        end
+      end)
+      return n
+    end
+
+    local parent = handle.new()
+    parent.cancel()
+
+    local before = count_live_timers()
+    local h = handle.new(parent, 5)
+
+    T.eq(h.cancelled, true)
+    T.eq(count_live_timers(), before)
+  end)
+
   test("deadline fires watchers", function()
     local h = handle.new(nil, 5)
     local fired = false
