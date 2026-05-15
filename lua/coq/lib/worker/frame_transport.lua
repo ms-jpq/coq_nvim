@@ -34,12 +34,12 @@ M.reader = function(pipe)
   local decode = proto.decoder()
   local thread = coroutine.running()
 
-  pipe:read_start(function(err, data)
-    if err or not data then
+  pipe:read_start(function(err, bytes)
+    if err or not bytes then
       pipe:close()
       coroutine.resume(thread, nil, err)
     else
-      for frame in decode(data) do
+      for frame in decode(bytes) do
         coroutine.resume(thread, frame, nil)
       end
     end
