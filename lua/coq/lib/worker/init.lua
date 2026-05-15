@@ -37,9 +37,9 @@ local frame_to_result = function(frame)
   return frame.values[1] or errs.UNKNOWN
 end
 
-local responder = function(send, kind)
+local responder = function(write, kind)
   return function(id, ok, n, vals)
-    send { kind = kind, id = id, ok = ok, n = n, values = vals }
+    write { kind = kind, id = id, ok = ok, n = n, values = vals }
   end
 end
 
@@ -60,48 +60,46 @@ end
 -- today. Side-specific inbound kinds (NEXT/STOP on worker) are layered onto
 -- `base_handlers` by the caller via `vim.tbl_extend`.
 local make_endpoint = function(duplex, invoker, opts)
-  opts = opts or {}
   local schedule = opts.schedule or function(thunk)
     thunk()
   end
 
   local flights = inflight.new()
 
-  local send = transport.writer(duplex.writer)
-  local respond = responder(send, Kind.RESPONSE)
+  local write = transport.writer(duplex.writer)
+  local respond = responder(write, Kind.RESPONSE)
 
   -- A request session: open, then read frames via `next` until terminal
   -- RESPONSE (which auto-releases the slot), or end early via `close`
-  -- (sends K.STOP). `next` returns raw frames; the first call uses the
-  -- pending REQUEST's reply, subsequent calls send K.NEXT.
+  -- (sends K.STOP). The reserve callback resumes the consumer directly with
+  -- the frame; `next` is just `coroutine.yield`.
   --
   -- One-shot RPC is just one `next` call; iteration is many.
   local open_session = function(body)
-    local f = async.future()
+    local thread = coroutine.running()
     local id, release
     id, release = flights.reserve(function(frame)
-      f.resolve(frame)
+      coroutine.resume(thread, frame)
     end)
     body.kind, body.id = Kind.REQUEST, id
-    send(body)
+    write(body)
 
     local done, first = false, true
-
     local session = {}
 
     session.next = function()
       if done then
         return nil
       end
+      assert(coroutine.running() == thread, "session.next called from a different coroutine")
 
       if first then
         first = false
       else
-        f = async.future()
-        send { kind = Kind.NEXT, id = id }
+        write { kind = Kind.NEXT, id = id }
       end
 
-      local frame = f.await()
+      local frame = coroutine.yield()
       if frame.kind ~= Kind.YIELD then
         done = true
         release()
@@ -114,7 +112,7 @@ local make_endpoint = function(duplex, invoker, opts)
         return
       end
       done = true
-      send { kind = Kind.STOP, id = id }
+      write { kind = Kind.STOP, id = id }
       release()
     end
 
@@ -168,7 +166,7 @@ local make_endpoint = function(duplex, invoker, opts)
 
   return {
     duplex = duplex,
-    send = send,
+    send = write,
     respond = respond,
     flights = flights,
     request = request,
@@ -207,7 +205,9 @@ M.spawn = function(definition)
     exited.resolve()
   end))
 
-  transport.spawn_worker("coq.lib.worker", remote, config.encode(definition))
+  transport.spawn_worker(function(read_fd, write_fd, bytes)
+    require("coq.lib.worker").run(read_fd, write_fd, vim.mpack.decode(bytes))
+  end, remote.read_fd, remote.write_fd, config.encode(definition))
 
   local bind_rpc = function(name)
     return function(...)
@@ -251,8 +251,6 @@ M.spawn = function(definition)
   return proxy
 end
 
--- Worker-side dispatch loop. Entry point invoked from `vim.uv.new_thread`
--- in `M.spawn` above. Runs in its own Lua state with its own libuv loop.
 M.run = function(req_fd, rsp_fd, raw)
   local duplex = transport.open_duplex(req_fd, rsp_fd)
   local state, methods = config.decode(raw)
@@ -263,15 +261,16 @@ M.run = function(req_fd, rsp_fd, raw)
 
   endpoint = make_endpoint(duplex, function(frame)
     return invoke(frame.method, frame.id, frame.args or {}, frame.argn or 0)
-  end)
+  end, {})
 
   make_yield = function(id)
+    local thread = coroutine.running()
     return function(...)
+      assert(coroutine.running() == thread, "yield called from a different coroutine")
       local argn, args = select("#", ...), { ... }
       endpoint.send { kind = Kind.YIELD, id = id, n = argn, values = args }
-      local f = async.future()
-      iter_resumers[id] = f.resolve
-      return f.await()
+      iter_resumers[id] = thread
+      return coroutine.yield()
     end
   end
 
@@ -288,10 +287,10 @@ M.run = function(req_fd, rsp_fd, raw)
 
   resume_iter = function(value)
     return function(frame)
-      local r = iter_resumers[frame.id]
+      local thread = iter_resumers[frame.id]
       iter_resumers[frame.id] = nil
-      if r then
-        r(value)
+      if thread then
+        coroutine.resume(thread, value)
       end
     end
   end

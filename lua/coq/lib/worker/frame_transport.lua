@@ -56,14 +56,23 @@ end
 
 M.writer = function(pipe)
   return function(body)
-    pipe:write(proto.encode(body))
+    local thread = coroutine.running()
+    pipe:write(proto.encode(body), function(err)
+      coroutine.resume(thread, err)
+    end)
+
+    local err = coroutine.yield()
+    if err then
+      error(err, 0)
+    end
   end
 end
 
-M.spawn_worker = function(entry_module, remote, encoded)
-  vim.uv.new_thread(function(mod, read_fd, write_fd, bytes)
-    require(mod).run(read_fd, write_fd, vim.mpack.decode(bytes))
-  end, entry_module, remote.read_fd, remote.write_fd, encoded)
+M.spawn_worker = function(fn, ...)
+  local dumped = string.dump(fn)
+  vim.uv.new_thread(function(d, ...)
+    load(d)(...)
+  end, dumped, ...)
 end
 
 return M
