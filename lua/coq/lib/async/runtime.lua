@@ -18,10 +18,6 @@ M.current = function()
   return threads[thread] or M.ROOT
 end
 
-M.cancelled = function()
-  return M.current().cancelled
-end
-
 M.future = function()
   local done = false
   local thread, values
@@ -93,9 +89,14 @@ M.thunk = function(fn)
   end
 end
 
-M.sleep = function(milliseconds)
-  local h = M.current()
-  if h.cancelled then
+M.sleep = function(milliseconds, h)
+  if h == nil then
+    h = M.current()
+  elseif h == false then
+    h = nil
+  end
+
+  if h and h.cancelled then
     return
   end
 
@@ -110,7 +111,6 @@ M.sleep = function(milliseconds)
   end)()
 
   return lib.scope(function(defer)
-    defer(h.on_cancel(f.resolve))
     defer(function()
       if not watcher:is_closing() then
         watcher:stop()
@@ -119,7 +119,7 @@ M.sleep = function(milliseconds)
     end)
 
     watcher:start(unpack(wargv))
-    return f.await()
+    return f.await(h)
   end)
 end
 

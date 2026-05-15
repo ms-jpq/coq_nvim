@@ -3,6 +3,7 @@ local config = require "coq.lib.worker.config_proto"
 local errs = require "coq.lib.errs"
 local handle = require "coq.lib.async.handle"
 local inflight = require "coq.lib.worker.inflight"
+local lib = require "coq.lib"
 local mpmc = require "coq.lib.channels.mpmc"
 local nursery = require "coq.lib.async.nursery"
 local runtime = require "coq.lib.async.runtime"
@@ -92,14 +93,17 @@ local make_endpoint = function(duplex, invoker)
 
   endpoint.request_oneshot = function(message)
     local session = open(message)
-    local frame = session.next()
-    if frame == nil then
-      return
-    end
-    if frame.ok then
-      return unpack(frame.values, 1, frame.n_values)
-    end
-    error(frame.values[1] or errs.UNKNOWN, 3)
+    return lib.scope(function(defer)
+      defer(runtime.current().on_cancel(session.close))
+      local frame = session.next()
+      if frame == nil then
+        return
+      end
+      if frame.ok then
+        return unpack(frame.values, 1, frame.n_values)
+      end
+      error(frame.values[1] or errs.UNKNOWN, 3)
+    end)
   end
 
   endpoint.request_stream = function(message)

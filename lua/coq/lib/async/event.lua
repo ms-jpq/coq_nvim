@@ -26,17 +26,19 @@ M.new = function()
     end
   end
 
-  event.wait = function()
+  event.wait = function(h)
     if is_set then
-      return
+      return true
     end
 
     local f = runtime.future()
     local key = waiters.push(f)
-    f.await(runtime.current())
-    if runtime.cancelled() then
+    f.await(h)
+    if h and h.cancelled then
       waiters.remove(key)
+      return false
     end
+    return true
   end
 
   return event

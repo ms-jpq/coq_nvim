@@ -470,6 +470,7 @@ T.describe("worker", function(test)
   test("ambient cancel mid-call sends STOP to worker", function()
     local async = require "coq.lib.async"
     local handle = require "coq.lib.async.handle"
+    local runtime = require "coq.lib.async.runtime"
     local h = handle.new()
     local w = worker.spawn {
       init = function()
@@ -490,6 +491,7 @@ T.describe("worker", function(test)
     async.scope(h, function(n)
       n.spawn(function()
         local iter = w.waiter()
+        runtime.current().on_cancel(iter.close)
         iter()
       end)
       h.cancel()
@@ -504,6 +506,7 @@ T.describe("worker", function(test)
   test("ambient cancel propagates through worker.main", function()
     local async = require "coq.lib.async"
     local handle = require "coq.lib.async.handle"
+    local runtime = require "coq.lib.async.runtime"
     local h = handle.new()
     local w = worker.spawn {
       init = function()
@@ -527,6 +530,7 @@ T.describe("worker", function(test)
     async.scope(h, function(n)
       n.spawn(function()
         local iter = w.waiter()
+        runtime.current().on_cancel(iter.close)
         iter()
       end)
       h.cancel()

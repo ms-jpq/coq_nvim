@@ -1,6 +1,7 @@
 local T = require "coq.lib.test"
 local async = require "coq.lib.async"
 local handle = require "coq.lib.async.handle"
+local runtime = require "coq.lib.async.runtime"
 
 T.describe("event", function(test)
   test("wait returns immediately when already set", function()
@@ -61,12 +62,29 @@ T.describe("event", function(test)
     T.eq(e.is_set(), false)
   end)
 
-  test("wait returns when ambient cancelled", function()
+  test("wait returns when explicit handle cancelled", function()
     local h = handle.new()
     local woke = false
     async.scope(h, function(n)
       n.spawn(function()
         local e = async.event()
+        e.wait(runtime.current())
+        woke = true
+      end)
+      async.sleep(5)
+      h.cancel()
+    end)
+
+    T.eq(woke, true)
+  end)
+
+  test("wait without handle ignores ambient cancel", function()
+    local h = handle.new()
+    local woke = false
+    async.scope(h, function(n)
+      n.spawn(function()
+        local e = async.event()
+        n.handle.on_cancel(e.set)
         e.wait()
         woke = true
       end)
