@@ -8,11 +8,21 @@ M.unpack = function(pkt)
   return unpack(pkt, 1, pkt.n)
 end
 
-M.bind_close = function(h, close_fn)
-  if not h then
-    return function() end
+M.closable = function(h, on_close)
+  local state = { closed = false }
+  local unwatch = function() end
+  state.close = function()
+    if state.closed then
+      return
+    end
+    state.closed = true
+    unwatch()
+    on_close()
   end
-  return h.on_cancel(close_fn)
+  if h then
+    unwatch = h.on_cancel(state.close)
+  end
+  return state
 end
 
 return M

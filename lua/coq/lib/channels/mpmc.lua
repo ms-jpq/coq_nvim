@@ -10,7 +10,6 @@ M.new = function(capacity, h)
   local queue = {}
   local pull_waiters = sparse.new()
   local push_waiters = sparse.new()
-  local closed = false
 
   local notify = function(waiters)
     local f = waiters.shift()
@@ -25,16 +24,7 @@ M.new = function(capacity, h)
     f.await()
   end
 
-  local chan = {}
-  local unwatch = function() end
-
-  chan.close = function()
-    if closed then
-      return
-    end
-    closed = true
-    unwatch()
-
+  local state = util.closable(h, function()
     local push_snap, pull_snap = push_waiters, pull_waiters
     push_waiters, pull_waiters = sparse.new(), sparse.new()
 
@@ -44,16 +34,17 @@ M.new = function(capacity, h)
     for _, f in push_snap.iter() do
       f.resolve()
     end
-  end
+  end)
 
-  unwatch = util.bind_close(h, chan.close)
+  local chan = {}
+  chan.close = state.close
 
   chan.push = function(...)
-    while not closed and #queue >= capacity do
+    while not state.closed and #queue >= capacity do
       wait(push_waiters)
     end
 
-    if closed then
+    if state.closed then
       return false
     end
 
@@ -63,7 +54,7 @@ M.new = function(capacity, h)
   end
 
   chan.pull = function()
-    while not closed and #queue == 0 do
+    while not state.closed and #queue == 0 do
       wait(pull_waiters)
     end
 

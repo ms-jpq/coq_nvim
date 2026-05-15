@@ -6,13 +6,12 @@ local M = {}
 
 M.new = function(h)
   local subscribers = sparse.new()
-  local closed = false
 
-  local close_sub = function(sub)
-    if sub.closed then
+  local dismiss = function(sub)
+    if sub.gone then
       return
     end
-    sub.closed = true
+    sub.gone = true
 
     local f = sub.waiter
     sub.waiter = nil
@@ -21,27 +20,19 @@ M.new = function(h)
     end
   end
 
-  local chan = {}
-  local unwatch = function() end
-
-  chan.close = function()
-    if closed then
-      return
-    end
-    closed = true
-    unwatch()
-
+  local state = util.closable(h, function()
     local snapshot = subscribers
     subscribers = sparse.new()
     for _, sub in snapshot.iter() do
-      close_sub(sub)
+      dismiss(sub)
     end
-  end
+  end)
 
-  unwatch = util.bind_close(h, chan.close)
+  local chan = {}
+  chan.close = state.close
 
   chan.replace = function(...)
-    if closed then
+    if state.closed then
       return false
     end
     local pkt = util.pack(...)
@@ -59,21 +50,21 @@ M.new = function(h)
   end
 
   chan.subscribe = function()
-    local sub = { pending = nil, waiter = nil, closed = closed }
+    local sub = { pending = nil, waiter = nil, gone = state.closed }
     local key
-    if not closed then
+    if not state.closed then
       key = subscribers.push(sub)
     end
 
     local it = {}
     it.close = function()
-      if sub.closed then
+      if sub.gone then
         return
       end
       if key then
         subscribers.remove(key)
       end
-      close_sub(sub)
+      dismiss(sub)
     end
 
     local next = function()
@@ -81,7 +72,7 @@ M.new = function(h)
       if sub.pending ~= nil then
         pkt = sub.pending
         sub.pending = nil
-      elseif sub.closed then
+      elseif sub.gone then
         return nil
       else
         local f = async.future()
