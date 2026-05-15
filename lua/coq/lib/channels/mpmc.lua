@@ -1,4 +1,5 @@
 local runtime = require "coq.lib.async.runtime"
+local sparse = require "coq.lib.sparse_table"
 
 local M = {}
 
@@ -6,12 +7,12 @@ M.new = function(capacity)
   capacity = capacity or math.huge
 
   local queue = {}
-  local pull_waiters = {}
-  local push_waiters = {}
+  local pull_waiters = sparse.new()
+  local push_waiters = sparse.new()
   local closed = false
 
   local notify = function(waiters)
-    local f = table.remove(waiters, 1)
+    local f = waiters.take_first()
     if f then
       f.resolve()
     end
@@ -19,16 +20,11 @@ M.new = function(capacity)
 
   local wait = function(waiters)
     local f = runtime.future()
-    table.insert(waiters, f)
+    local key = waiters.push(f)
     f.await(runtime.current())
 
     if runtime.cancelled() then
-      for i, w in pairs(waiters) do
-        if w == f then
-          table.remove(waiters, i)
-          break
-        end
-      end
+      waiters.remove(key)
     end
   end
 
@@ -66,11 +62,12 @@ M.new = function(capacity)
     closed = true
 
     local pull_snap, push_snap = pull_waiters, push_waiters
-    pull_waiters, push_waiters = {}, {}
-    for _, f in pairs(pull_snap) do
+    pull_waiters = sparse.new()
+    push_waiters = sparse.new()
+    for _, f in pull_snap.iter() do
       f.resolve()
     end
-    for _, f in pairs(push_snap) do
+    for _, f in push_snap.iter() do
       f.resolve()
     end
   end
