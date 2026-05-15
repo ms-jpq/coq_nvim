@@ -4,8 +4,8 @@ M.pack = function(...)
   return { n = select("#", ...), ... }
 end
 
-M.unpack = function(pkt)
-  return unpack(pkt, 1, pkt.n)
+M.unpack = function(packet)
+  return unpack(packet, 1, packet.n)
 end
 
 M.closable = function(h, on_close)

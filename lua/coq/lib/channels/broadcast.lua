@@ -1,4 +1,4 @@
-local async = require "coq.lib.async"
+local runtime = require "coq.lib.async.runtime"
 local sparse = require "coq.lib.sparse_table"
 local util = require "coq.lib.channels.util"
 
@@ -35,15 +35,15 @@ M.new = function(h)
     if state.closed then
       return false
     end
-    local pkt = util.pack(...)
+    local packet = util.pack(...)
     for _, sub in subscribers.iter() do
       local f = sub.waiter
       sub.waiter = nil
 
       if f then
-        f.resolve(pkt)
+        f.resolve(packet)
       else
-        sub.pending = pkt
+        sub.pending = packet
       end
     end
     return true
@@ -68,21 +68,21 @@ M.new = function(h)
     end
 
     local next = function()
-      local pkt
+      local packet
       if sub.pending ~= nil then
-        pkt = sub.pending
+        packet = sub.pending
         sub.pending = nil
       elseif sub.gone then
         return nil
       else
-        local f = async.future()
+        local f = runtime.future()
         sub.waiter = f
-        pkt = f.await()
-        if pkt == nil then
+        packet = f.await()
+        if packet == nil then
           return nil
         end
       end
-      return util.unpack(pkt)
+      return util.unpack(packet)
     end
 
     return setmetatable(it, { __call = next })
