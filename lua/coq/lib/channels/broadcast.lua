@@ -1,14 +1,19 @@
 local async = require "coq.lib.async"
+local sparse = require "coq.lib.sparse_table"
 
 local M = {}
 
-M.new = function()
-  local subscribers = {}
+M.new = function(h)
+  local subscribers = sparse.new()
+  local closed = false
 
   local chan = {}
 
   chan.replace = function(item)
-    for _, sub in pairs(subscribers) do
+    if closed then
+      return
+    end
+    for _, sub in subscribers.iter() do
       local f = sub.waiter
       sub.waiter = nil
 
@@ -20,9 +25,43 @@ M.new = function()
     end
   end
 
-  chan.subscribe = function(h)
+  local unwatch_h
+  chan.close = function()
+    if closed then
+      return
+    end
+    closed = true
+
+    if unwatch_h then
+      unwatch_h()
+    end
+
+    local snapshot = subscribers
+    subscribers = sparse.new()
+    for _, sub in snapshot.iter() do
+      if not sub.closed then
+        sub.closed = true
+        local f = sub.waiter
+        sub.waiter = nil
+        if f then
+          f.resolve(nil)
+        end
+      end
+    end
+  end
+
+  chan.subscribe = function()
+    if closed then
+      local it = { close = function() end }
+      return setmetatable(it, {
+        __call = function()
+          return nil
+        end,
+      })
+    end
+
     local sub = { pending = nil, waiter = nil, closed = false }
-    table.insert(subscribers, sub)
+    local key = subscribers.push(sub)
 
     local it = {}
     it.close = function()
@@ -31,22 +70,13 @@ M.new = function()
       end
       sub.closed = true
 
-      for i, s in ipairs(subscribers) do
-        if s == sub then
-          table.remove(subscribers, i)
-          break
-        end
-      end
+      subscribers.remove(key)
 
       local f = sub.waiter
       sub.waiter = nil
       if f then
         f.resolve(nil)
       end
-    end
-
-    if h then
-      h.on_cancel(it.close)
     end
 
     local next = function()
@@ -62,10 +92,14 @@ M.new = function()
 
       local f = async.future()
       sub.waiter = f
-      return f.await(h)
+      return f.await()
     end
 
     return setmetatable(it, { __call = next })
+  end
+
+  if h then
+    unwatch_h = h.on_cancel(chan.close)
   end
 
   return chan

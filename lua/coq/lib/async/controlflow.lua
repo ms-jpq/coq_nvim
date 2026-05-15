@@ -39,11 +39,10 @@ M.race = function(fns)
 end
 
 M.merge = function(iters)
-  local chan = mpmc.new()
   local n = nursery.new()
+  local chan = mpmc.new(1, n.handle)
   local active = #iters
 
-  n.handle.on_cancel(chan.close)
   if active == 0 then
     n.handle.cancel()
   end
@@ -63,7 +62,9 @@ M.merge = function(iters)
     end)
   end
 
-  return setmetatable({ close = n.handle.cancel }, { __call = chan.pull })
+  return setmetatable({ close = n.handle.cancel }, {
+    __call = chan.pull,
+  })
 end
 
 return M

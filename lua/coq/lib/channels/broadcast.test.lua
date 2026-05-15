@@ -95,9 +95,9 @@ T.describe("broadcast", function(test)
     T.eq(exited, true)
   end)
 
-  test("subscribe handle cancel terminates iteration", function()
-    local chan = broadcast.new()
+  test("chan-level handle cancel terminates iteration", function()
     local h = handle.new()
+    local chan = broadcast.new(h)
     local seen = {}
     async.scope(function(n)
       n.spawn(function()
@@ -109,7 +109,7 @@ T.describe("broadcast", function(test)
         chan.replace "spot"
       end)
       n.spawn(function()
-        for dog in chan.subscribe(h) do
+        for dog in chan.subscribe() do
           table.insert(seen, dog)
         end
       end)
@@ -118,14 +118,14 @@ T.describe("broadcast", function(test)
     T.eq(seen, { "lil" })
   end)
 
-  test("subscribe with already-cancelled handle yields nothing", function()
-    local chan = broadcast.new()
+  test("new with already-cancelled handle yields a closed channel", function()
     local h = handle.new()
     h.cancel()
+    local chan = broadcast.new(h)
     local seen = {}
     async.scope(function(n)
       n.spawn(function()
-        for dog in chan.subscribe(h) do
+        for dog in chan.subscribe() do
           table.insert(seen, dog)
         end
       end)
@@ -133,6 +133,49 @@ T.describe("broadcast", function(test)
     end)
 
     T.eq(seen, {})
+  end)
+
+  test("replace after close is silent", function()
+    local chan = broadcast.new()
+    local sub = chan.subscribe()
+    chan.close()
+    chan.replace "lil"
+
+    T.eq(sub(), nil)
+  end)
+
+  test("subscribe after close returns a closed iter", function()
+    local chan = broadcast.new()
+    chan.close()
+    local sub = chan.subscribe()
+
+    T.eq(sub(), nil)
+  end)
+
+  test("replace is safe when puller closes mid-iteration", function()
+    local chan = broadcast.new()
+    local seen_a, seen_b = {}, {}
+    async.scope(function(n)
+      local iter_a = chan.subscribe()
+      local iter_b = chan.subscribe()
+      n.spawn(function()
+        for dog in iter_a do
+          table.insert(seen_a, dog)
+          iter_a.close()
+        end
+      end)
+      n.spawn(function()
+        for dog in iter_b do
+          table.insert(seen_b, dog)
+          iter_b.close()
+        end
+      end)
+      async.sleep(2)
+      chan.replace "lil"
+    end)
+
+    T.eq(seen_a, { "lil" })
+    T.eq(seen_b, { "lil" })
   end)
 
   test("late subscriber misses prior pushes", function()

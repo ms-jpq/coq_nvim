@@ -122,21 +122,6 @@ T.describe("mpmc", function(test)
     T.eq(seen, { "lil", "spot", "fido" })
   end)
 
-  test("pull returns nil when ambient cancelled mid-wait", function()
-    local h = handle.new()
-    local got
-    async.scope(h, function(n)
-      n.spawn(function()
-        local chan = mpmc.new()
-        got = chan.pull()
-      end)
-      async.sleep(2)
-      h.cancel()
-    end)
-
-    T.eq(got, nil)
-  end)
-
   test("bounded push blocks until pull frees a slot", function()
     local chan = mpmc.new(2)
     local progress = {}
@@ -195,6 +180,29 @@ T.describe("mpmc", function(test)
       T.eq(#pushed, 3)
       chan.pull()
     end)
+  end)
+
+  test("chan-level handle cancel wakes blocked pull with nil", function()
+    local h = handle.new()
+    local chan = mpmc.new(nil, h)
+    local got = "sentinel"
+    async.scope(function(n)
+      n.spawn(function()
+        got = chan.pull()
+      end)
+      async.sleep(2)
+      h.cancel()
+    end)
+
+    T.eq(got, nil)
+  end)
+
+  test("chan-level handle cancel closes the channel", function()
+    local h = handle.new()
+    local chan = mpmc.new(nil, h)
+    h.cancel()
+
+    T.eq(chan.push "lil", false)
   end)
 
   test("callable via for-loop", function()

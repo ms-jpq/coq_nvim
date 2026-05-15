@@ -16,7 +16,7 @@ M.new = function()
     map[key] = nil
   end
 
-  sparse.take_first = function()
+  sparse.shift = function()
     for k = 1, count do
       local v = map[k]
       if v ~= nil then

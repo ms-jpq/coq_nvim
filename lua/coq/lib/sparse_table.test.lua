@@ -17,7 +17,7 @@ T.describe("sparse_table", function(test)
     T.eq(out, { "lil", "fido", "spot" })
   end)
 
-  test("remove leaves a hole that iter and take_first skip", function()
+  test("remove leaves a hole that iter and shift skip", function()
     local s = sparse.new()
     s.push "lil"
     local k = s.push "fido"
@@ -36,8 +36,8 @@ T.describe("sparse_table", function(test)
     end
     T.eq(reverse, { "spot", "lil" })
 
-    T.eq(s.take_first(), "lil")
-    T.eq(s.take_first(), "spot")
-    T.eq(s.take_first(), nil)
+    T.eq(s.shift(), "lil")
+    T.eq(s.shift(), "spot")
+    T.eq(s.shift(), nil)
   end)
 end)
