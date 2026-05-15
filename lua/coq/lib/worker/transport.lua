@@ -45,37 +45,21 @@ end
 -- Must be consumed from inside a coroutine (e.g. via `async.thunk`).
 M.frames = function(pipe)
   local decode = proto.decoder()
-  local pending = {}
-  local eof = false
-  local waiter = nil
-
-  local wake = function()
-    local f = waiter
-
-    waiter = nil
-    if f then
-      f.resolve()
-    end
-  end
+  local thread = coroutine.running()
 
   pipe:read_start(function(err, data)
     if err or not data then
       pipe:close()
-      eof = true
+      coroutine.resume(thread, nil)
     else
       for frame in decode(data) do
-        table.insert(pending, frame)
+        coroutine.resume(thread, frame)
       end
     end
-    wake()
   end)
 
   return function()
-    while #pending == 0 and not eof do
-      waiter = async.future()
-      waiter.await()
-    end
-    return table.remove(pending, 1)
+    return coroutine.yield()
   end
 end
 
