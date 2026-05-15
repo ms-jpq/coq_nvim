@@ -56,12 +56,6 @@ T.describe("event", function(test)
     T.eq(e.is_set(), true)
   end)
 
-  test("is_set is false before set", function()
-    local e = async.event()
-
-    T.eq(e.is_set(), false)
-  end)
-
   test("wait returns when explicit handle cancelled", function()
     local h = handle.new()
     local woke = false

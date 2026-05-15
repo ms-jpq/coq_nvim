@@ -40,20 +40,22 @@ M.new = function(h)
 
   unwatch = handle.bind_close(h, chan.close)
 
-  chan.replace = function(item)
+  chan.replace = function(...)
     if closed then
-      return
+      return false
     end
+    local pkt = { n = select("#", ...), ... }
     for _, sub in subscribers.iter() do
       local f = sub.waiter
       sub.waiter = nil
 
       if f then
-        f.resolve(item)
+        f.resolve(pkt)
       else
-        sub.pending = item
+        sub.pending = pkt
       end
     end
+    return true
   end
 
   chan.subscribe = function()
@@ -75,19 +77,21 @@ M.new = function(h)
     end
 
     local next = function()
+      local pkt
       if sub.pending ~= nil then
-        local v = sub.pending
+        pkt = sub.pending
         sub.pending = nil
-        return v
-      end
-
-      if sub.closed then
+      elseif sub.closed then
         return nil
+      else
+        local f = async.future()
+        sub.waiter = f
+        pkt = f.await()
+        if pkt == nil then
+          return nil
+        end
       end
-
-      local f = async.future()
-      sub.waiter = f
-      return f.await()
+      return unpack(pkt, 1, pkt.n)
     end
 
     return setmetatable(it, { __call = next })

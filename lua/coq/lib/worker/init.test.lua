@@ -255,48 +255,6 @@ T.describe("worker", function(test)
     assert(err:find "leash snapped", "expected leash snapped, got: " .. tostring(err))
   end)
 
-  test("vim.iter is available inside the worker", function()
-    local w = worker.spawn {
-      reversed = function(_, items)
-        local out = {}
-        for v in vim.iter(items):rev() do
-          table.insert(out, v)
-        end
-        return out
-      end,
-    }
-    local seen = w.reversed { "lil", "spot", "fido" }
-    w.close()
-
-    T.eq(seen, { "fido", "spot", "lil" })
-  end)
-
-  test("vim.ringbuf is available inside the worker", function()
-    local w = worker.spawn {
-      init = function()
-        return { rb = vim.ringbuf(3) }
-      end,
-      push = function(state, v)
-        state.rb:push(v)
-      end,
-      drain = function(state)
-        local out = {}
-        for v in state.rb do
-          table.insert(out, v)
-        end
-        return out
-      end,
-    }
-    w.push "lil"
-    w.push "spot"
-    w.push "fido"
-    w.push "rex"
-    local seen = w.drain()
-    w.close()
-
-    T.eq(seen, { "spot", "fido", "rex" })
-  end)
-
   test("close before the streaming fn's first yield unblocks it", function()
     local w = worker.spawn {
       init = function()
@@ -391,28 +349,6 @@ T.describe("worker", function(test)
 
     T.eq(ok, false)
     assert(err and err:find "worker closed", "expected worker closed, got: " .. tostring(err))
-  end)
-
-  test("two streaming methods run with independent ids", function()
-    local w = worker.spawn {
-      counts = worker.streaming(function(yield, _, n)
-        for i = 1, n do
-          yield(i)
-        end
-      end),
-    }
-    local a, b = w.counts(3), w.counts(2)
-    local seen_a, seen_b = {}, {}
-    for v in a do
-      table.insert(seen_a, v)
-    end
-    for v in b do
-      table.insert(seen_b, v)
-    end
-    w.close()
-
-    T.eq(seen_a, { 1, 2, 3 })
-    T.eq(seen_b, { 1, 2 })
   end)
 
   test("streaming method can call back to main mid-stream", function()

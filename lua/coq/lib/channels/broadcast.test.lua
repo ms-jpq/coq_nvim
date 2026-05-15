@@ -222,4 +222,29 @@ T.describe("broadcast", function(test)
 
     T.eq(sub(), nil)
   end)
+
+  test("replace returns true on success and false on closed", function()
+    local chan = broadcast.new()
+    T.eq(chan.replace "lil", true)
+    chan.close()
+    T.eq(chan.replace "spot", false)
+  end)
+
+  test("replace forwards multiple values to a subscriber", function()
+    local chan = broadcast.new()
+    local sub = chan.subscribe()
+    chan.replace("lil", "spot", "fido")
+
+    local a, b, c = sub()
+    T.eq({ a, b, c }, { "lil", "spot", "fido" })
+  end)
+
+  test("replace forwards multiple values via pending", function()
+    local chan = broadcast.new()
+    local sub = chan.subscribe()
+    chan.replace("lil", "spot", "fido")
+    -- pending state; no waiter yet
+    local a, b, c = sub()
+    T.eq({ a, b, c }, { "lil", "spot", "fido" })
+  end)
 end)
