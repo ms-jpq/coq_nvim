@@ -75,6 +75,40 @@ T.describe("worker", function(test)
     T.eq(r, "still alive")
   end)
 
+  test("oneshot error reports user call site, not worker internals", function()
+    local w = worker.spawn {
+      bork = function()
+        error "lil went missing"
+      end,
+    }
+    local ok, err = pcall(w.bork)
+    w.close()
+
+    T.eq(ok, false)
+    assert(err:find "lil went missing", "expected message, got: " .. tostring(err))
+    assert(err:find "init.test.lua", "error should point at user file, got: " .. tostring(err))
+    assert(not err:find "worker/init.lua", "error must not point inside worker, got: " .. tostring(err))
+  end)
+
+  test("streaming error reports user iteration site, not worker internals", function()
+    local w = worker.spawn {
+      bork = worker.streaming(function(yield, _)
+        yield "lil"
+        error "leash snapped"
+      end),
+    }
+    local ok, err = pcall(function()
+      for _ in w.bork() do
+      end
+    end)
+    w.close()
+
+    T.eq(ok, false)
+    assert(err:find "leash snapped", "expected message, got: " .. tostring(err))
+    assert(err:find "init.test.lua", "error should point at user file, got: " .. tostring(err))
+    assert(not err:find "worker/init.lua", "error must not point inside worker, got: " .. tostring(err))
+  end)
+
   test("method can yield via async from state", function()
     local w = worker.spawn {
       init = function()
@@ -84,7 +118,7 @@ T.describe("worker", function(test)
         }
       end,
       delayed_train = function(state)
-        state.async.sleep(20)
+        state.async.sleep(5)
         state.tricks = state.tricks + 1
       end,
       count = function(state)
@@ -99,7 +133,7 @@ T.describe("worker", function(test)
     w.close()
 
     T.eq(n, 1)
-    assert(elapsed_ms >= 15, ("expected ~20ms, got %.1fms"):format(elapsed_ms))
+    assert(elapsed_ms >= 3, ("expected ~5ms, got %.1fms"):format(elapsed_ms))
   end)
 
   test("method can call back to main via worker.main", function()
