@@ -211,37 +211,37 @@ M.spawn = function(definition)
     end
   end
 
-  local n = async.nursery()
-  n.spawn(function()
-    for frame in transport.reader(duplex.reader) do
-      n.spawn(function()
-        endpoint.handlers[frame.kind](frame)
-      end)
-    end
-    endpoint.drain {
-      kind = Kind.YIELD,
-      ok = false,
-      n_values = 1,
-      values = { "worker died" },
-    }
-  end)
-
   do
-    local proxy = {
-      close = function()
-        if not closed then
-          closed = true
-          duplex.close()
-        end
-
-        n.join()
-      end,
-    }
+    local proxy = {}
 
     for name, decl in pairs(definition) do
       if name ~= "init" then
         proxy[name] = config.is_streaming(decl) and bind_stream(name) or bind_oneshot(name)
       end
+    end
+
+    local n = async.nursery()
+    n.spawn(function()
+      for frame in transport.reader(duplex.reader) do
+        n.spawn(function()
+          endpoint.handlers[frame.kind](frame)
+        end)
+      end
+      endpoint.drain {
+        kind = Kind.YIELD,
+        ok = false,
+        n_values = 1,
+        values = { "worker died" },
+      }
+    end)
+
+    proxy.close = function()
+      if not closed then
+        closed = true
+        duplex.close()
+      end
+
+      n.join()
     end
 
     return proxy
