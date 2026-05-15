@@ -6,7 +6,6 @@ local transport = require "coq.lib.worker.frame_transport"
 
 local Kind = {
   REQUEST = "request",
-  RESPONSE = "response",
   YIELD = "yield",
   NEXT = "next",
   STOP = "stop",
@@ -28,7 +27,7 @@ local unwrap = function(err, ...)
   return ...
 end
 
--- A RESPONSE-shaped frame as (err, value1, value2, ...). `err` is nil on
+-- A terminal-YIELD frame as (err, value1, value2, ...). `err` is nil on
 -- success. Pairs with `pack` on the other end.
 local frame_to_result = function(frame)
   if frame.ok then
@@ -49,31 +48,33 @@ local is_streaming = function(decl)
 end
 
 -- Symmetric RPC endpoint. Each side holds one of these — same shape, same
--- wire conventions. Streaming outbound (`iter_call`) is included so both sides
--- share the YIELD wire convention; worker-side `iter_call` just goes unused
--- today. Side-specific inbound kinds (NEXT/STOP on worker) are layered onto
--- `base_handlers` by the caller via `vim.tbl_extend`.
-local make_endpoint = function(duplex, invoker, opts)
-  local enter = opts.enter
+-- wire conventions. Outbound (`request` / `iter_call`) and the matching
+-- inbound responder (`yield` + NEXT/STOP wake-ups) both live here; main
+-- never calls `yield`, worker never calls `iter_call` today, but the
+-- wire-level handling stays in one place.
+local make_endpoint = function(duplex, invoker)
+  local enter = not vim.is_thread() and vim.schedule or nil
+  local endpoint = {}
 
-  local flights = inflight.new()
+  endpoint.flights = inflight.new()
+  local iter_resumers = {}
 
   local write = transport.writer(duplex.writer)
   local respond = function(id, ok, n, vals)
-    write { kind = Kind.RESPONSE, id = id, ok = ok, n = n, values = vals }
+    write { kind = Kind.YIELD, id = id, ok = ok, n = n, values = vals }
   end
 
-  -- A request session: open, then read frames via `next` until terminal
-  -- RESPONSE (which auto-releases the slot), or end early via `close`
-  -- (sends K.STOP). Awaits use the current async handle so EOF / scope
-  -- cancellation unblocks them; a cancelled `next` returns nil.
+  -- A request session: open, then read frames via `next` until a terminal
+  -- YIELD (one with `ok` set, which auto-releases the slot), or end early
+  -- via `close` (sends K.STOP). Awaits use the current async handle so
+  -- EOF / scope cancellation unblocks them; a cancelled `next` returns nil.
   --
   -- One-shot RPC is just one `next` call; iteration is many.
   local open_session = function(body)
     local handle = async.current()
     local f = async.future()
     local id, release
-    id, release = flights.reserve(function(frame)
+    id, release = endpoint.flights.reserve(function(frame)
       f.resolve(frame)
     end)
     body.kind, body.id = Kind.REQUEST, id
@@ -95,7 +96,7 @@ local make_endpoint = function(duplex, invoker, opts)
       end
 
       local frame = f.await(handle)
-      if frame == nil or frame.kind ~= Kind.YIELD then
+      if frame == nil or frame.ok ~= nil then
         done = true
         release()
       end
@@ -114,10 +115,10 @@ local make_endpoint = function(duplex, invoker, opts)
     return session
   end
 
-  -- One-shot RPC: take the session's first (and only) frame as a RESPONSE,
-  -- and return it as `(err, values...)`. A cancelled await returns the
-  -- generic error.
-  local request = function(body)
+  -- One-shot RPC: take the session's first (and only) frame as the terminal
+  -- yield, and return it as `(err, values...)`. A cancelled await returns
+  -- the generic error.
+  endpoint.request = function(body)
     local frame = open_session(body).next()
     if frame == nil then
       return errs.UNKNOWN
@@ -125,34 +126,59 @@ local make_endpoint = function(duplex, invoker, opts)
     return frame_to_result(frame)
   end
 
-  -- Streaming RPC: expose the session as a for-loop iterator. YIELD frames
-  -- unpack to values; terminal RESPONSE returns nil (or errors).
-  local iter_call = function(method, args, argn)
+  -- Streaming RPC: expose the session as a for-loop iterator. Intermediate
+  -- YIELDs (no `ok`) unpack to values; terminal YIELDs (`ok` set) return
+  -- nil or error.
+  endpoint.iter_call = function(method, args, argn)
     local session = open_session { method = method, args = args, argn = argn }
     local it = { close = session.close }
-    return setmetatable(it, {
-      __call = function()
-        local frame = session.next()
-        if not frame then
-          return nil
-        end
-        if frame.kind == Kind.YIELD then
-          return unpack(frame.values, 1, frame.n)
-        end
-        if not frame.ok then
-          error(frame.values[1] or errs.UNKNOWN, 2)
-        end
+    local next = function()
+      local frame = session.next()
+      if not frame then
         return nil
-      end,
-    })
+      end
+      if frame.ok == nil then
+        return unpack(frame.values, 1, frame.n)
+      end
+      if not frame.ok then
+        error(frame.values[1] or errs.UNKNOWN, 2)
+      end
+      return nil
+    end
+
+    return setmetatable(it, { __call = next })
+  end
+
+  -- Streaming-response yield: write a YIELD frame and park until the
+  -- consumer wakes us with NEXT (continue → true) or STOP (terminate →
+  -- false). Paired with `iter_call` on the other side.
+  endpoint.yield = function(id, ...)
+    local handle = async.current()
+    local argn, args = select("#", ...), { ... }
+    write { kind = Kind.YIELD, id = id, n = argn, values = args }
+    local f = async.future()
+    iter_resumers[id] = f
+    return f.await(handle)
+  end
+
+  local resume_iter = function(value)
+    return function(frame)
+      local f = iter_resumers[frame.id]
+      iter_resumers[frame.id] = nil
+      if f then
+        f.resolve(value)
+      end
+    end
   end
 
   -- The REQUEST handler runs inside a nursery-spawned coroutine. On main, it
   -- yields once via `vim.schedule` to escape libuv fast-event context before
-  -- running user code. On worker, `enter` is nil and we run immediately.
-  local base_handlers = {
-    [Kind.RESPONSE] = flights.resolve,
-    [Kind.YIELD] = flights.resolve,
+  -- running user code. On a worker thread, `enter` is nil and we run
+  -- immediately.
+  endpoint.handlers = {
+    [Kind.YIELD] = endpoint.flights.resolve,
+    [Kind.NEXT] = resume_iter(true),
+    [Kind.STOP] = resume_iter(false),
     [Kind.REQUEST] = function(frame)
       if enter then
         local f = async.future()
@@ -163,26 +189,7 @@ local make_endpoint = function(duplex, invoker, opts)
     end,
   }
 
-  return {
-    duplex = duplex,
-    send = write,
-    respond = respond,
-    flights = flights,
-    request = request,
-    iter_call = iter_call,
-    base_handlers = base_handlers,
-  }
-end
-
--- Main-side dispatch: load the dumped fn from a reverse-RPC request and pcall
--- it. Mirrors the worker-side `invoke` shape — returns (ok, n, vals) ready
--- for `respond`.
-local invoke_main = function(fn_dump, args, argn)
-  local fn, err = load(fn_dump)
-  if not fn then
-    return pack(false, err or errs.UNKNOWN)
-  end
-  return pack(pcall(fn, unpack(args, 1, argn)))
+  return endpoint
 end
 
 -- Main-side: spawn a worker. Returns a proxy table with the worker's methods
@@ -192,18 +199,23 @@ M.spawn = function(definition)
   local closed = false
 
   local endpoint = make_endpoint(duplex, function(frame)
-    return invoke_main(frame.fn_dump, frame.args or {}, frame.argn or 0)
-  end, { enter = vim.schedule })
+    local fn, err = load(frame.fn_dump)
+    if not fn then
+      return pack(false, err or errs.UNKNOWN)
+    end
+    return pack(pcall(fn, unpack(frame.args or {}, 1, frame.argn or 0)))
+  end)
 
   local exited = async.future()
+
   coroutine.resume(coroutine.create(function()
-    async.scope(function(n)
+    async.scope(function(n, defer)
+      defer(n.handle.cancel)
       for frame in transport.reader(duplex.reader) do
         n.spawn(function()
-          endpoint.base_handlers[frame.kind](frame)
+          endpoint.handlers[frame.kind](frame)
         end)
       end
-      n.handle.cancel()
     end)
     endpoint.flights.drain "worker died"
     exited.resolve()
@@ -258,53 +270,23 @@ end
 M.run = function(req_fd, rsp_fd, raw)
   local duplex = transport.open_duplex(req_fd, rsp_fd)
   local state, methods = config.decode(raw)
-  local iter_resumers = {}
 
   local endpoint
-  local make_yield, invoke, resume_iter
-
   endpoint = make_endpoint(duplex, function(frame)
-    return invoke(frame.method, frame.id, frame.args or {}, frame.argn or 0)
-  end, {})
-
-  make_yield = function(id)
-    return function(...)
-      local argn, args = select("#", ...), { ... }
-      endpoint.send { kind = Kind.YIELD, id = id, n = argn, values = args }
-      local f = async.future()
-      iter_resumers[id] = f
-      return f.await(async.current())
-    end
-  end
-
-  invoke = function(name, id, args, argn)
-    local m = methods[name]
+    local m = methods[frame.method]
     if not m then
-      return pack(false, "unknown method: " .. tostring(name))
+      return pack(false, "unknown method: " .. tostring(frame.method))
     end
+    local args, argn = frame.args or {}, frame.argn or 0
     if m.mode == MODE.STREAM then
-      return pack(pcall(m.fn, make_yield(id), state, unpack(args, 1, argn)))
+      local yield = function(...)
+        return endpoint.yield(frame.id, ...)
+      end
+      return pack(pcall(m.fn, yield, state, unpack(args, 1, argn)))
     end
     return pack(pcall(m.fn, state, unpack(args, 1, argn)))
-  end
+  end)
 
-  resume_iter = function(value)
-    return function(frame)
-      local f = iter_resumers[frame.id]
-      iter_resumers[frame.id] = nil
-      if f then
-        f.resolve(value)
-      end
-    end
-  end
-
-  local handlers = vim.tbl_extend("error", endpoint.base_handlers, {
-    [Kind.NEXT] = resume_iter(true),
-    [Kind.STOP] = resume_iter(false),
-  })
-
-  -- Exposed on the worker's module so user methods running here can call
-  -- back to the main process: `require("coq.lib.worker").main(fn, ...)`.
   M.main = function(fn, ...)
     return unwrap(endpoint.request {
       fn_dump = string.dump(fn),
@@ -320,7 +302,7 @@ M.run = function(req_fd, rsp_fd, raw)
 
       for frame in transport.reader(duplex.reader) do
         n.spawn(function()
-          handlers[frame.kind](frame)
+          endpoint.handlers[frame.kind](frame)
         end)
       end
     end)
