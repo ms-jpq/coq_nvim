@@ -70,6 +70,14 @@ T.describe("mpmc", function(test)
     T.eq(chan.pull(), nil)
   end)
 
+  test("push returns true on success and false on closed", function()
+    local chan = mpmc.new()
+
+    T.eq(chan.push "lil", true)
+    chan.close()
+    T.eq(chan.push "spot", false)
+  end)
+
   test("close wakes a blocked puller", function()
     local chan = mpmc.new()
     local got

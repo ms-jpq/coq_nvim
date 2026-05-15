@@ -36,10 +36,11 @@ M.new = function(capacity)
     end
 
     if closed or runtime.cancelled() then
-      return
+      return false
     end
     table.insert(queue, { n = select("#", ...), ... })
     notify(pull_waiters)
+    return true
   end
 
   chan.pull = function()

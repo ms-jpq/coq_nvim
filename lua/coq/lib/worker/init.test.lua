@@ -308,6 +308,34 @@ T.describe("worker", function(test)
     assert(err and err:find "yield", "expected yield error, got: " .. tostring(err))
   end)
 
+  test("yield with nil arg raises", function()
+    local w = worker.spawn {
+      bork = worker.streaming(function(yield, _)
+        yield "lil"
+        yield(nil)
+      end),
+    }
+    local ok, err = pcall(function()
+      for _ in w.bork() do
+      end
+    end)
+    w.close()
+
+    T.eq(ok, false)
+    assert(err and err:find "nil value", "expected nil value error, got: " .. tostring(err))
+  end)
+
+  test("spawn rejects a method named 'close'", function()
+    local ok, err = pcall(worker.spawn, {
+      close = function()
+        return "bark"
+      end,
+    })
+
+    T.eq(ok, false)
+    assert(err and err:find "'close' is reserved", "expected reserved-name error, got: " .. tostring(err))
+  end)
+
   test("proxy close is idempotent", function()
     local w = worker.spawn {
       ping = function()
