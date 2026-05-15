@@ -11,10 +11,6 @@ M.new = function(parent)
   local pending = setmetatable({}, { __mode = "k" })
   local waiters = {}
 
-  nursery.close = function()
-    nursery.closed = true
-  end
-
   nursery.spawn = function(fn)
     assert(not nursery.closed, "spawn: nursery is closed")
 
@@ -51,6 +47,8 @@ M.new = function(parent)
       f.await(runtime.current())
     end
 
+    nursery.closed = true
+    nursery.handle.cancel()
     errs.raise(nursery.errors)
   end
 
@@ -65,9 +63,6 @@ M.scope = function(parent, body)
 
   local nursery = M.new(parent)
   return lib.scope(function(defer)
-    defer(nursery.close)
-    defer(nursery.handle.cancel)
-
     local rets = {}
     nursery.spawn(function()
       rets = { body(nursery, defer) }

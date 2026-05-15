@@ -88,9 +88,9 @@ T.describe("nursery", function(test)
     assert(err:find "child went missing")
   end)
 
-  test("spawn after close raises", function()
+  test("spawn after join raises", function()
     local n = async.nursery()
-    n.close()
+    n.join()
 
     local ok, err = pcall(n.spawn, function() end)
     T.eq(ok, false)

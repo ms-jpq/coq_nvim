@@ -291,7 +291,6 @@ M.run = function(req_fd, rsp_fd, bytes)
   async.thunk(function()
     async.scope(function(n, defer)
       defer(duplex.close)
-      defer(n.handle.cancel)
 
       for frame in transport.reader(duplex.reader) do
         endpoint.dispatch(n, frame)
