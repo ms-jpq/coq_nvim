@@ -58,7 +58,7 @@ M.merge = function(iters)
 
       active = active - 1
       if active == 0 then
-        chan.close()
+        n.handle.cancel()
       end
     end)
   end
