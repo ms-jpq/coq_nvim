@@ -6,13 +6,13 @@ T.describe("worker", function(test)
   test("state persists across method calls", function()
     local w = worker.spawn {
       init = function()
-        return { tricks = 0 }
+        _G.tricks = 0
       end,
-      train = function(state)
-        state.tricks = state.tricks + 1
+      train = function()
+        _G.tricks = _G.tricks + 1
       end,
-      count = function(state)
-        return state.tricks
+      count = function()
+        return _G.tricks
       end,
     }
     w.train()
@@ -27,13 +27,13 @@ T.describe("worker", function(test)
   test("method args pass through", function()
     local w = worker.spawn {
       init = function()
-        return { name = "lil" }
+        _G.name = "lil"
       end,
-      rename = function(state, new_name)
-        state.name = new_name
+      rename = function(new_name)
+        _G.name = new_name
       end,
-      greet = function(state, greeting)
-        return greeting .. ", " .. state.name
+      greet = function(greeting)
+        return greeting .. ", " .. _G.name
       end,
     }
     w.rename "spot"
@@ -45,7 +45,7 @@ T.describe("worker", function(test)
 
   test("multi-return from method", function()
     local w = worker.spawn {
-      pack = function(_)
+      pack = function()
         return "lil", 7, true
       end,
     }
@@ -92,7 +92,7 @@ T.describe("worker", function(test)
 
   test("streaming error reports user iteration site, not worker internals", function()
     local w = worker.spawn {
-      bork = worker.streaming(function(yield, _)
+      bork = worker.streaming(function(yield)
         yield "lil"
         error "leash snapped"
       end),
@@ -109,20 +109,18 @@ T.describe("worker", function(test)
     assert(not err:find "worker/init.lua", "error must not point inside worker, got: " .. tostring(err))
   end)
 
-  test("method can yield via async from state", function()
+  test("method can yield via async", function()
     local w = worker.spawn {
       init = function()
-        return {
-          async = require "coq.lib.async",
-          tricks = 0,
-        }
+        _G.async = require "coq.lib.async"
+        _G.tricks = 0
       end,
-      delayed_train = function(state)
-        state.async.sleep(5)
-        state.tricks = state.tricks + 1
+      delayed_train = function()
+        _G.async.sleep(5)
+        _G.tricks = _G.tricks + 1
       end,
-      count = function(state)
-        return state.tricks
+      count = function()
+        return _G.tricks
       end,
     }
 
@@ -154,7 +152,7 @@ T.describe("worker", function(test)
 
   test("worker.main forwards args", function()
     local w = worker.spawn {
-      add = function(_, a, b)
+      add = function(a, b)
         local worker = require "coq.lib.worker"
         return worker.main(function(x, y)
           return x + y
@@ -203,7 +201,7 @@ T.describe("worker", function(test)
 
   test("streaming method yields values to a for loop", function()
     local w = worker.spawn {
-      dogs = worker.streaming(function(yield, _)
+      dogs = worker.streaming(function(yield)
         yield "lil"
         yield "spot"
         yield "fido"
@@ -220,7 +218,7 @@ T.describe("worker", function(test)
 
   test("streaming method forwards args", function()
     local w = worker.spawn {
-      counted = worker.streaming(function(yield, _, n)
+      counted = worker.streaming(function(yield, n)
         for i = 1, n do
           yield(i)
         end
@@ -237,7 +235,7 @@ T.describe("worker", function(test)
 
   test("streaming method propagates errors", function()
     local w = worker.spawn {
-      bork = worker.streaming(function(yield, _)
+      bork = worker.streaming(function(yield)
         yield "lil"
         error "leash snapped"
       end),
@@ -258,21 +256,19 @@ T.describe("worker", function(test)
   test("close before the streaming fn's first yield unblocks it", function()
     local w = worker.spawn {
       init = function()
-        return {
-          done = require("coq.lib.async.event").new(),
-          closed_cleanly = false,
-        }
+        _G.done = require("coq.lib.async.event").new()
+        _G.closed_cleanly = false
       end,
-      delayed = worker.streaming(function(yield, state)
+      delayed = worker.streaming(function(yield)
         local cont = yield "lil"
         if not cont then
-          state.closed_cleanly = true
+          _G.closed_cleanly = true
         end
-        state.done.set()
+        _G.done.set()
       end),
-      wait_done = function(state)
-        state.done.wait()
-        return state.closed_cleanly
+      wait_done = function()
+        _G.done.wait()
+        return _G.closed_cleanly
       end,
     }
 
@@ -286,7 +282,7 @@ T.describe("worker", function(test)
 
   test("yield with no values raises", function()
     local w = worker.spawn {
-      bork = worker.streaming(function(yield, _)
+      bork = worker.streaming(function(yield)
         yield()
       end),
     }
@@ -302,7 +298,7 @@ T.describe("worker", function(test)
 
   test("yield with nil arg raises", function()
     local w = worker.spawn {
-      bork = worker.streaming(function(yield, _)
+      bork = worker.streaming(function(yield)
         yield "lil"
         yield(nil)
       end),
@@ -353,7 +349,7 @@ T.describe("worker", function(test)
 
   test("streaming method can call back to main mid-stream", function()
     local w = worker.spawn {
-      drip = worker.streaming(function(yield, _)
+      drip = worker.streaming(function(yield)
         local worker = require "coq.lib.worker"
         for _, name in pairs { "lil", "spot", "fido" } do
           local upper = worker.main(function(x)
@@ -375,22 +371,20 @@ T.describe("worker", function(test)
   test("close mid-stream is sticky for subsequent yields", function()
     local w = worker.spawn {
       init = function()
-        return {
-          done = require("coq.lib.async.event").new(),
-          closed_cleanly = false,
-        }
+        _G.done = require("coq.lib.async.event").new()
+        _G.closed_cleanly = false
       end,
-      slow = worker.streaming(function(yield, state)
+      slow = worker.streaming(function(yield)
         yield "lil"
         local cont = yield "spot"
         if not cont then
-          state.closed_cleanly = true
+          _G.closed_cleanly = true
         end
-        state.done.set()
+        _G.done.set()
       end),
-      wait_done = function(state)
-        state.done.wait()
-        return state.closed_cleanly
+      wait_done = function()
+        _G.done.wait()
+        return _G.closed_cleanly
       end,
     }
 
@@ -409,16 +403,16 @@ T.describe("worker", function(test)
     local h = handle.new()
     local w = worker.spawn {
       init = function()
-        return { got_stop = require("coq.lib.async.event").new() }
+        _G.got_stop = require("coq.lib.async.event").new()
       end,
-      waiter = worker.streaming(function(yield, state)
+      waiter = worker.streaming(function(yield)
         local cont = yield "lil"
         if not cont then
-          state.got_stop.set()
+          _G.got_stop.set()
         end
       end),
-      wait_got_stop = function(state)
-        state.got_stop.wait()
+      wait_got_stop = function()
+        _G.got_stop.wait()
         return true
       end,
     }
@@ -443,15 +437,15 @@ T.describe("worker", function(test)
     local h = handle.new()
     local w = worker.spawn {
       init = function()
-        return { got_stop = require("coq.lib.async.event").new() }
+        _G.got_stop = require("coq.lib.async.event").new()
       end,
-      forever = worker.streaming(function(yield, state)
+      forever = worker.streaming(function(yield)
         while yield "tick" do
         end
-        state.got_stop.set()
+        _G.got_stop.set()
       end),
-      wait_got_stop = function(state)
-        state.got_stop.wait()
+      wait_got_stop = function()
+        _G.got_stop.wait()
         return true
       end,
     }
@@ -476,19 +470,19 @@ T.describe("worker", function(test)
     local h = handle.new()
     local w = worker.spawn {
       init = function()
-        return { got_cancel = require("coq.lib.async.event").new() }
+        _G.got_cancel = require("coq.lib.async.event").new()
       end,
-      waiter = worker.streaming(function(yield, state)
+      waiter = worker.streaming(function(yield)
         local r = require("coq.lib.worker").main(function()
           require("coq.lib.async").sleep(10000)
           return "should not reach"
         end)
         if r == nil then
-          state.got_cancel.set()
+          _G.got_cancel.set()
         end
       end),
-      wait_cancel = function(state)
-        state.got_cancel.wait()
+      wait_cancel = function()
+        _G.got_cancel.wait()
         return true
       end,
     }
@@ -510,7 +504,7 @@ T.describe("worker", function(test)
 
   test("scope + defer pairs cleanly with iter.close", function()
     local w = worker.spawn {
-      infinite = worker.streaming(function(yield, _)
+      infinite = worker.streaming(function(yield)
         local i = 0
         while true do
           i = i + 1
@@ -559,7 +553,7 @@ T.describe("worker", function(test)
   test("concurrent oneshot calls do not cross-talk", function()
     local async = require "coq.lib.async"
     local w = worker.spawn {
-      echo = function(_, delay_ms, label)
+      echo = function(delay_ms, label)
         local async = require "coq.lib.async"
         async.sleep(delay_ms)
         return label
@@ -581,7 +575,7 @@ T.describe("worker", function(test)
   test("two streaming iters from same method interleave independently", function()
     local async = require "coq.lib.async"
     local w = worker.spawn {
-      counted = worker.streaming(function(yield, _, n, prefix)
+      counted = worker.streaming(function(yield, n, prefix)
         for i = 1, n do
           yield(prefix .. i)
         end

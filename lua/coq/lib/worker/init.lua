@@ -271,7 +271,7 @@ end
 
 M.run = function(req_fd, rsp_fd, bytes)
   local duplex = transport.open_duplex(req_fd, rsp_fd)
-  local state, methods = config.decode(vim.mpack.decode(bytes))
+  local methods = config.decode(vim.mpack.decode(bytes))
 
   local endpoint = make_endpoint(duplex, function(frame, yield)
     local m = methods[frame.method]
@@ -280,9 +280,9 @@ M.run = function(req_fd, rsp_fd, bytes)
     end
     local args, n_args = frame.args or {}, frame.n_args or 0
     if m.streaming then
-      return response(frame.id, pcall(m.fn, yield, state, unpack(args, 1, n_args)))
+      return response(frame.id, pcall(m.fn, yield, unpack(args, 1, n_args)))
     end
-    return response(frame.id, pcall(m.fn, state, unpack(args, 1, n_args)))
+    return response(frame.id, pcall(m.fn, unpack(args, 1, n_args)))
   end)
 
   M.main = function(fn, ...)

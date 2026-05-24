@@ -31,12 +31,14 @@ M.encode = function(definition)
 end
 
 M.decode = function(raw)
-  local state = raw.init and load(raw.init)() or {}
+  if raw.init then
+    load(raw.init)()
+  end
   local methods = {}
   for name, m in pairs(raw.methods) do
     methods[name] = { streaming = m.streaming, fn = load(m.dump) }
   end
-  return state, methods
+  return methods
 end
 
 return M
