@@ -6,7 +6,7 @@ T.describe("handle", function(test)
   test("cancel fires registered watchers", function()
     local h = handle.new()
     local fired = false
-    h.on_cancel(function()
+    local _ = h.on_cancel(function()
       fired = true
     end)
     h.cancel()
@@ -17,7 +17,7 @@ T.describe("handle", function(test)
   test("cancel is idempotent", function()
     local h = handle.new()
     local count = 0
-    h.on_cancel(function()
+    local _ = h.on_cancel(function()
       count = count + 1
     end)
     h.cancel()
@@ -30,7 +30,7 @@ T.describe("handle", function(test)
     local h = handle.new()
     h.cancel()
     local fired = false
-    h.on_cancel(function()
+    local _ = h.on_cancel(function()
       fired = true
     end)
 
@@ -77,7 +77,7 @@ T.describe("handle", function(test)
     local child = handle.new(parent)
     child.cancel()
     local parent_fired = 0
-    parent.on_cancel(function()
+    local _ = parent.on_cancel(function()
       parent_fired = parent_fired + 1
     end)
     parent.cancel()
@@ -127,7 +127,7 @@ T.describe("handle", function(test)
   test("deadline fires watchers", function()
     local h = handle.new(nil, 5)
     local fired = false
-    h.on_cancel(function()
+    local _ = h.on_cancel(function()
       fired = true
     end)
     async.sleep(10)
@@ -165,9 +165,9 @@ T.describe("handle", function(test)
   test("on_cancel re-entry: watcher registers another watcher mid-fire", function()
     local h = handle.new()
     local fired = {}
-    h.on_cancel(function()
+    local _ = h.on_cancel(function()
       table.insert(fired, "outer")
-      h.on_cancel(function()
+      local _ = h.on_cancel(function()
         table.insert(fired, "inner")
       end)
     end)

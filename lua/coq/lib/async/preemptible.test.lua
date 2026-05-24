@@ -113,7 +113,7 @@ T.describe("preemptible", function(test)
     async.scope(h, function(n)
       n.spawn(function()
         local iter = async.preemptible(function()
-          runtime.current().on_cancel(function()
+          local _ = runtime.current().on_cancel(function()
             iter_cancelled = true
           end)
           async.sleep(100)

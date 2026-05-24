@@ -136,7 +136,7 @@ T.describe("merge", function(test)
       n.spawn(function()
         local m = async.merge {
           function()
-            runtime.current().on_cancel(function()
+            local _ = runtime.current().on_cancel(function()
               fired = true
             end)
             async.sleep(100)

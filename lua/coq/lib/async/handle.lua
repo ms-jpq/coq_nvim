@@ -43,6 +43,7 @@ M.new = function(parent, deadline_ms)
     end)
   end
 
+  ---@nodiscard
   handle.on_cancel = function(watcher)
     if handle.cancelled then
       fire(watcher)
