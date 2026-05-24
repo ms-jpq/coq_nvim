@@ -1,3 +1,4 @@
+local errs = require "coq.lib.errs"
 local mpmc = require "coq.lib.channels.mpmc"
 local nursery = require "coq.lib.async.nursery"
 local runtime = require "coq.lib.async.runtime"
@@ -62,7 +63,15 @@ M.merge = function(iters)
     end)
   end
 
-  return setmetatable({ close = n.handle.cancel }, { __call = chan.pull })
+  local pull = function()
+    local idx, value = chan.pull()
+    if idx == nil then
+      return errs.raise(n.errors)
+    end
+    return idx, value
+  end
+
+  return setmetatable({ close = n.handle.cancel }, { __call = pull })
 end
 
 return M

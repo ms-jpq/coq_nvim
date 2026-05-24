@@ -114,6 +114,22 @@ T.describe("merge", function(test)
     T.eq(m(), nil)
   end)
 
+  test("child iterator error surfaces at the pull site", function()
+    local ok, err = pcall(function()
+      for _ in
+        async.merge {
+          function()
+            error "leash snapped"
+          end,
+        }
+      do
+      end
+    end)
+
+    T.eq(ok, false)
+    assert(tostring(err):find "leash snapped", "expected leash snapped, got: " .. tostring(err))
+  end)
+
   test("close cancels in-flight producers", function()
     local fired = false
     async.scope(function(n)
