@@ -1,20 +1,15 @@
 local M = {}
 
-local next_id = (function()
-  local id = 0
-
-  return function()
-    id = id + 1
-    return id
-  end
-end)()
-
 M.new = function()
   local mapping = {}
+  local seq = 0
   local parker = {}
 
   parker.reserve = function(cb, id)
-    id = id or next_id()
+    if id == nil then
+      seq = seq + 1
+      id = seq
+    end
     mapping[id] = cb
     return id, function()
       mapping[id] = nil
