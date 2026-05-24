@@ -1,5 +1,4 @@
 local async = require "coq.lib.async"
-local config = require "coq.lib.worker.config_proto"
 local errs = require "coq.lib.errs"
 local handle = require "coq.lib.async.handle"
 local inflight = require "coq.lib.worker.inflight"
@@ -31,11 +30,17 @@ local response = function(id, ok, ...)
   }
 end
 
+local pack_call = function(fn, ...)
+  return {
+    fn_bytecode = string.dump(fn),
+    args = { ... },
+    n_args = select("#", ...),
+  }
+end
+
 local M = {}
 
-M.streaming = config.streaming
-
-local make_endpoint = function(duplex, invoker)
+local make_endpoint = function(duplex)
   local endpoint = {}
 
   local flights = inflight.new()
@@ -43,6 +48,18 @@ local make_endpoint = function(duplex, invoker)
   endpoint.drain = flights.drain
 
   local write = transport.writer(duplex.writer)
+
+  local invoke = function(frame, yield)
+    local fn, err = load(frame.fn_bytecode)
+    if not fn then
+      return response(frame.id, false, err or errs.UNKNOWN)
+    end
+    local args, n_args = frame.args or {}, frame.n_args or 0
+    if frame.streaming then
+      return response(frame.id, pcall(fn, yield, unpack(args, 1, n_args)))
+    end
+    return response(frame.id, pcall(fn, unpack(args, 1, n_args)))
+  end
 
   local open = function(message)
     local chan = mpmc.new(1)
@@ -58,14 +75,12 @@ local make_endpoint = function(duplex, invoker)
 
     local state = STATE.INITIAL
     local session = {}
-    local unwatch
+    local unwatch = function() end
 
     local cleanup = function()
       state = STATE.DONE
-      if unwatch then
-        unwatch()
-        unwatch = nil
-      end
+      unwatch()
+      unwatch = function() end
       release()
       chan.close()
     end
@@ -195,102 +210,73 @@ local make_endpoint = function(duplex, invoker)
       defer(req_handle.cancel)
       runtime.bind(coroutine.running(), req_handle)
       scheduled()
-      write(invoker(frame, yield_fn))
+      write(invoke(frame, yield_fn))
     end)
   end
 
   return endpoint
 end
 
-M.spawn = function(definition)
-  assert(definition.close == nil, "worker.spawn: 'close' is reserved by the proxy")
-
+M.spawn = function()
   local duplex, remote = transport.duplex_pair()
   local closed = false
 
-  local endpoint = make_endpoint(duplex, function(frame)
-    local fn, err = load(frame.fn_bytecode)
-    if not fn then
-      return response(frame.id, false, err or errs.UNKNOWN)
-    end
-    return response(frame.id, pcall(fn, unpack(frame.args or {}, 1, frame.n_args or 0)))
-  end)
+  local endpoint = make_endpoint(duplex)
 
   transport.spawn_worker(function(...)
     require("coq.lib.worker").run(...)
-  end, remote.read_fd, remote.write_fd, config.encode(definition))
+  end, remote.read_fd, remote.write_fd)
 
-  local bind = function(request, name)
-    return function(...)
-      if closed then
-        error("worker closed", 2)
-      end
-      return request {
-        method = name,
-        args = { ... },
-        n_args = select("#", ...),
-      }
+  local n = nursery.new()
+
+  local worker = {}
+
+  worker.queue = function(fn, ...)
+    if closed then
+      error("worker closed", 2)
     end
+    return endpoint.request_oneshot(pack_call(fn, ...))
   end
 
-  do
-    local proxy = {}
-
-    for name, decl in pairs(definition) do
-      if name ~= "init" then
-        local request = config.is_streaming(decl) and endpoint.request_stream or endpoint.request_oneshot
-        proxy[name] = bind(request, name)
-      end
+  worker.queue_stream = function(fn, ...)
+    if closed then
+      error("worker closed", 2)
     end
-
-    local n = nursery.new()
-    n.spawn(function()
-      for frame in transport.reader(duplex.reader) do
-        endpoint.dispatch(n, frame)
-      end
-      endpoint.drain {
-        kind = Kind.YIELD,
-        ok = false,
-        n_values = 1,
-        values = { "worker died" },
-      }
-    end)
-
-    proxy.close = function()
-      if not closed then
-        closed = true
-        duplex.close()
-      end
-
-      n.join()
-    end
-
-    return proxy
+    local message = pack_call(fn, ...)
+    message.streaming = true
+    return endpoint.request_stream(message)
   end
-end
 
-M.run = function(req_fd, rsp_fd, bytes)
-  local duplex = transport.open_duplex(req_fd, rsp_fd)
-  local methods = config.decode(vim.mpack.decode(bytes))
+  worker.close = function()
+    if not closed then
+      closed = true
+      duplex.close()
+    end
+    n.join()
+  end
 
-  local endpoint = make_endpoint(duplex, function(frame, yield)
-    local m = methods[frame.method]
-    if not m then
-      return response(frame.id, false, "unknown method: " .. tostring(frame.method))
+  n.spawn(function()
+    for frame in transport.reader(duplex.reader) do
+      endpoint.dispatch(n, frame)
     end
-    local args, n_args = frame.args or {}, frame.n_args or 0
-    if m.streaming then
-      return response(frame.id, pcall(m.fn, yield, unpack(args, 1, n_args)))
-    end
-    return response(frame.id, pcall(m.fn, unpack(args, 1, n_args)))
+    endpoint.drain {
+      kind = Kind.YIELD,
+      ok = false,
+      n_values = 1,
+      values = { "worker died" },
+    }
   end)
 
+  return worker
+end
+
+M.run = function(req_fd, rsp_fd)
+  local duplex = transport.open_duplex(req_fd, rsp_fd)
+
+  local endpoint = make_endpoint(duplex)
+
   M.main = function(fn, ...)
-    return endpoint.request_oneshot {
-      fn_bytecode = string.dump(fn),
-      args = { ... },
-      n_args = select("#", ...),
-    }
+    return endpoint.request_oneshot(pack_call(fn, ...))
   end
 
   async.thunk(function()
