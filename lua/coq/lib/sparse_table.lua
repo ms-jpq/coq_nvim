@@ -1,7 +1,7 @@
 local M = {}
 
 M.new = function()
-  local map, count = {}, 0
+  local map, count, head = {}, 0, 1
 
   local sparse = {}
 
@@ -17,10 +17,11 @@ M.new = function()
   end
 
   sparse.shift = function()
-    for k = 1, count do
-      local v = map[k]
+    while head <= count do
+      local v = map[head]
+      map[head] = nil
+      head = head + 1
       if v ~= nil then
-        map[k] = nil
         return v
       end
     end

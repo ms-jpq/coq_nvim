@@ -58,15 +58,17 @@ M.future = function()
       assert(thread == nil, "future: another coroutine is already awaiting")
       thread = current
 
-      lib.scope(function(defer)
-        if h then
+      if h then
+        lib.scope(function(defer)
           defer(h.on_cancel(function()
             finish(nil)
           end))
-        end
 
+          coroutine.yield()
+        end)
+      else
         coroutine.yield()
-      end)
+      end
     end
 
     return unpack(values or {})

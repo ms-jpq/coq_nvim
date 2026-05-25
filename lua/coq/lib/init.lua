@@ -8,8 +8,8 @@ M.scope = function(fn)
     table.insert(defers, defer)
   end) }
 
-  for defer in vim.iter(defers):rev() do
-    local ok, err = pcall(defer)
+  for i = #defers, 1, -1 do
+    local ok, err = pcall(defers[i])
     if not ok then
       vim.notify(err, vim.log.levels.ERROR)
     end
