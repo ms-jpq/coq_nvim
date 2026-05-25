@@ -14,12 +14,6 @@ local Kind = {
   STOP = "stop",
 }
 
-local STATE = {
-  INITIAL = "initial",
-  STREAMING = "streaming",
-  DONE = "done",
-}
-
 local response = function(id, ok, ...)
   return {
     kind = Kind.YIELD,
@@ -30,9 +24,20 @@ local response = function(id, ok, ...)
   }
 end
 
+local dump_cache = setmetatable({}, { __mode = "k" })
+
+local dump = function(fn)
+  local bytecode = dump_cache[fn]
+  if not bytecode then
+    bytecode = string.dump(fn)
+    dump_cache[fn] = bytecode
+  end
+  return bytecode
+end
+
 local pack_call = function(fn, ...)
   return {
-    fn_bytecode = string.dump(fn),
+    fn_bytecode = dump(fn),
     args = { ... },
     n_args = select("#", ...),
   }
@@ -40,26 +45,10 @@ end
 
 local M = {}
 
-local make_endpoint = function(duplex)
-  local endpoint = {}
-
+local requester = function(write)
+  local STATE = { INITIAL = "initial", STREAMING = "streaming", DONE = "done" }
   local flights = inflight.new()
-  local parked = inflight.new()
-  endpoint.drain = flights.drain
-
-  local write = transport.writer(duplex.writer)
-
-  local invoke = function(frame, yield)
-    local fn, err = load(frame.fn_bytecode)
-    if not fn then
-      return response(frame.id, false, err or errs.UNKNOWN)
-    end
-    local args, n_args = frame.args or {}, frame.n_args or 0
-    if frame.streaming then
-      return response(frame.id, pcall(fn, yield, unpack(args, 1, n_args)))
-    end
-    return response(frame.id, pcall(fn, unpack(args, 1, n_args)))
-  end
+  local requester = {}
 
   local open = function(message)
     local chan = mpmc.new(1)
@@ -119,7 +108,7 @@ local make_endpoint = function(duplex)
     return session
   end
 
-  endpoint.request_oneshot = function(message)
+  requester.request_oneshot = function(message)
     local session = open(message)
     local frame = session.next()
     if frame == nil then
@@ -131,7 +120,7 @@ local make_endpoint = function(duplex)
     error(frame.values[1] or errs.UNKNOWN, 3)
   end
 
-  endpoint.request_stream = function(message)
+  requester.request_stream = function(message)
     local session = open(message)
     local it = { close = session.close }
     local next = function()
@@ -151,10 +140,29 @@ local make_endpoint = function(duplex)
     return setmetatable(it, { __call = next })
   end
 
-  local to_tracker = function(tracker)
-    return function(frame)
-      tracker.resolve(frame.id, frame)
+  requester.resolve = function(frame)
+    flights.resolve(frame.id, frame)
+  end
+
+  requester.drain = flights.drain
+
+  return requester
+end
+
+local responder = function(write)
+  local parked = inflight.new()
+  local scheduled = vim.is_thread() and function() end or require("coq.lib.async.vim").scheduled
+
+  local invoke = function(frame, yield)
+    local fn, err = load(frame.fn_bytecode)
+    if not fn then
+      return response(frame.id, false, err or errs.UNKNOWN)
     end
+    local args, n_args = frame.args or {}, frame.n_args or 0
+    if frame.streaming then
+      return response(frame.id, pcall(fn, yield, unpack(args, 1, n_args)))
+    end
+    return response(frame.id, pcall(fn, unpack(args, 1, n_args)))
   end
 
   local make_yield = function(id, req_handle)
@@ -188,21 +196,9 @@ local make_endpoint = function(duplex)
     return yield_fn
   end
 
-  local scheduled = vim.is_thread() and function() end or require("coq.lib.async.vim").scheduled
-  local handlers = {
-    [Kind.YIELD] = to_tracker(flights),
-    [Kind.NEXT] = to_tracker(parked),
-    [Kind.STOP] = to_tracker(parked),
-  }
+  local responder = {}
 
-  endpoint.dispatch = function(n, frame)
-    if frame.kind ~= Kind.REQUEST then
-      n.spawn(function()
-        handlers[frame.kind](frame)
-      end)
-      return
-    end
-
+  responder.serve = function(n, frame)
     local req_handle = handle.new(runtime.current())
     local yield_fn = make_yield(frame.id, req_handle)
 
@@ -214,7 +210,63 @@ local make_endpoint = function(duplex)
     end)
   end
 
-  return endpoint
+  responder.resolve = function(frame)
+    parked.resolve(frame.id, frame)
+  end
+
+  return responder
+end
+
+local make_endpoint = function(duplex)
+  local write = transport.writer(duplex.writer)
+  local caller = requester(write)
+  local callee = responder(write)
+
+  local handlers = {
+    [Kind.YIELD] = caller.resolve,
+    [Kind.NEXT] = callee.resolve,
+    [Kind.STOP] = callee.resolve,
+  }
+
+  return {
+    request_oneshot = caller.request_oneshot,
+    request_stream = caller.request_stream,
+    drain = caller.drain,
+    dispatch = function(n, frame)
+      if frame.kind == Kind.REQUEST then
+        callee.serve(n, frame)
+        return
+      end
+
+      n.spawn(function()
+        handlers[frame.kind](frame)
+      end)
+    end,
+  }
+end
+
+if vim.is_thread() then
+  M.run = function(req_fd, rsp_fd)
+    local duplex = transport.open_duplex(req_fd, rsp_fd)
+
+    local endpoint = make_endpoint(duplex)
+
+    M.main = function(fn, ...)
+      return endpoint.request_oneshot(pack_call(fn, ...))
+    end
+
+    async.thunk(function()
+      async.scope(function(n, defer)
+        defer(duplex.close)
+
+        for frame in transport.reader(duplex.reader) do
+          endpoint.dispatch(n, frame)
+        end
+      end)
+    end)()
+
+    vim.uv.run()
+  end
 end
 
 M.spawn = function()
@@ -268,28 +320,6 @@ M.spawn = function()
   end)
 
   return worker
-end
-
-M.run = function(req_fd, rsp_fd)
-  local duplex = transport.open_duplex(req_fd, rsp_fd)
-
-  local endpoint = make_endpoint(duplex)
-
-  M.main = function(fn, ...)
-    return endpoint.request_oneshot(pack_call(fn, ...))
-  end
-
-  async.thunk(function()
-    async.scope(function(n, defer)
-      defer(duplex.close)
-
-      for frame in transport.reader(duplex.reader) do
-        endpoint.dispatch(n, frame)
-      end
-    end)
-  end)()
-
-  vim.uv.run()
 end
 
 return M

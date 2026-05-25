@@ -16,34 +16,31 @@ M.encode = function(body)
   ) .. payload
 end
 
-local decode = function(buf)
-  if #buf < HEADER_SIZE then
-    return nil, ""
-  end
-  local b1, b2, b3, b4 = buf:byte(1, HEADER_SIZE)
-  local n = b1 + b2 * BYTE + b3 * BYTE * BYTE + b4 * BYTE * BYTE * BYTE
-  if #buf < HEADER_SIZE + n then
-    return nil, ""
-  end
-
-  local decoded = vim.mpack.decode(buf:sub(HEADER_SIZE + 1, HEADER_SIZE + n))
-  return decoded, buf:sub(HEADER_SIZE + n + 1)
-end
-
 M.decoder = function()
-  local buf = ""
+  local buf, pos = "", 1
 
   return function(data)
+    if pos > 1 then
+      buf = buf:sub(pos)
+      pos = 1
+    end
     buf = buf .. data
 
     return function()
-      local frame, rest = decode(buf)
-      if not frame then
+      local avail = #buf - pos + 1
+      if avail < HEADER_SIZE then
         return nil
       end
 
-      buf = rest
-      return frame
+      local b1, b2, b3, b4 = buf:byte(pos, pos + HEADER_SIZE - 1)
+      local n = b1 + b2 * BYTE + b3 * BYTE * BYTE + b4 * BYTE * BYTE * BYTE
+      if avail < HEADER_SIZE + n then
+        return nil
+      end
+
+      local body = buf:sub(pos + HEADER_SIZE, pos + HEADER_SIZE + n - 1)
+      pos = pos + HEADER_SIZE + n
+      return vim.mpack.decode(body)
     end
   end
 end
