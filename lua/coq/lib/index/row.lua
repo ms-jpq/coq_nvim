@@ -11,7 +11,7 @@ M.new = function(spec)
     abbr = spec.abbr, -- primary display text
     abbr_hlgroup = spec.abbr_hlgroup, -- abbr highlight (e.g. DiagnosticDeprecated)
     kind = spec.kind, -- display text (the db normalizes LSP kind numbers)
-    kind_hlgroup = spec.kind_hlgroup, -- kind highlight (e.g. a color-swatch group)
+    kind_hlgroup = spec.kind_hlgroup, -- kind highlight; defaults from kind_hl
     menu = spec.menu, -- short secondary text (pum menu column)
     info = spec.info, -- long preview text; usually filled post-resolve
 
@@ -78,6 +78,33 @@ M.score = function(row, token)
   return score - hn * 0.01 -- tie-break toward tighter matches
 end
 
+local kind_hl = {
+  Class = "@type",
+  Constant = "@constant",
+  Constructor = "@constructor",
+  Enum = "@type",
+  EnumMember = "@constant",
+  Event = "@type",
+  Field = "@variable.member",
+  File = "Directory",
+  Folder = "Directory",
+  Function = "@function",
+  Interface = "@type",
+  Keyword = "@keyword",
+  Method = "@function.method",
+  Module = "@module",
+  Operator = "@operator",
+  Property = "@property",
+  Reference = "@string.special",
+  Snippet = "@string.special",
+  Struct = "@type",
+  Text = "@string",
+  TypeParameter = "@type.qualifier",
+  Unit = "@constant",
+  Value = "@constant",
+  Variable = "@variable",
+}
+
 M.to_item = function(row)
   return {
     dup = 1,
@@ -87,7 +114,7 @@ M.to_item = function(row)
     menu = row.menu,
     info = row.info,
     kind = row.kind,
-    kind_hlgroup = row.kind_hlgroup,
+    kind_hlgroup = row.kind_hlgroup or kind_hl[row.kind],
     user_data = row,
   }
 end
