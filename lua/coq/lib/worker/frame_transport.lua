@@ -1,6 +1,5 @@
 -- https://github.com/luvit/luv/blob/master/docs/docs.md
 
-local lib = require "coq.lib"
 local proto = require "coq.lib.worker.wire_proto"
 local runtime = require "coq.lib.async.runtime"
 
@@ -32,36 +31,34 @@ M.duplex_pair = function()
   return duplex, remote
 end
 
+local reader = function(pipe)
+  return function()
+    local f = runtime.future()
+    pipe:read_start(function(err, bytes)
+      pipe:read_stop()
+
+      if err or not bytes then
+        pipe:close()
+      end
+      f.resolve(err, bytes)
+    end)
+
+    local err, bytes = f.await()
+    if err then
+      error(err, 0)
+    end
+    return bytes
+  end
+end
+
 M.reader = function(pipe)
-  local decode = proto.decoder()
-  local iter = lib.noop
-  local closed_err
-  local closed = false
+  local decoder = proto.decoder()
+  local stream = reader(pipe)
 
   return runtime.stream(function()
-    while true do
-      local frame = iter()
-      if frame ~= nil then
+    for bytes in stream do
+      for frame in decoder(bytes) do
         coroutine.yield(frame)
-      elseif closed then
-        if closed_err then
-          error(closed_err, 0)
-        end
-        return
-      else
-        local f = runtime.future()
-        pipe:read_start(function(err, bytes)
-          pipe:read_stop()
-          if err or not bytes then
-            pipe:close()
-            closed_err = err
-            closed = true
-          else
-            iter = decode(bytes)
-          end
-          f.resolve()
-        end)
-        f.await()
       end
     end
   end)

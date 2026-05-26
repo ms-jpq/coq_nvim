@@ -96,13 +96,16 @@ M.drive = function(h, fn)
     error("bare yield outside a stream", 0)
   end
 
-  return step
+  step()
 end
 
 M.thunk = function(fn)
   return function(...)
     assert(coroutine.running() == nil, "thunk: must be called outside a coroutine")
-    M.drive(M.ROOT, fn)(...)
+    local args = { ... }
+    M.drive(M.ROOT, function()
+      return fn(unpack(args))
+    end)
   end
 end
 
@@ -155,7 +158,7 @@ M.preemptible = function(fn)
 
       M.drive(h, function()
         f.resolve(xpcall(fn, debug.traceback))
-      end)()
+      end)
 
       local ok, ret = f.await(h)
       if ok == nil then

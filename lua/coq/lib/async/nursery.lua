@@ -32,7 +32,7 @@ M.new = function(parent)
           f.resolve()
         end
       end
-    end)()
+    end)
   end
 
   nursery.join = function()
