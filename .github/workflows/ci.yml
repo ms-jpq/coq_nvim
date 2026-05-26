@@ -21,16 +21,16 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Setup Python
-        uses: actions/setup-python@v5
+      - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python_ver }}
 
       - run: |-
-          sudo -- apt install --yes -- universal-ctags
+          curl --disable --fail --location --no-progress-meter -- 'https://ms-jpq.github.io/deb/pubkey.asc' | sudo -- gpg --batch --dearmor --yes --output /etc/apt/trusted.gpg.d/ms-jpq.gpg
+          sudo -- apt update
+          sudo -- apt install --yes -- neovim universal-ctags
 
       - run: |-
           pip3 install -- codespell
