@@ -6,12 +6,12 @@ M.noop = function(...) end
 
 M.scope = function(fn)
   local defers = {}
-  local rets = { pcall(fn, function(defer)
+  local rets = { xpcall(fn, debug.traceback, function(defer)
     table.insert(defers, defer)
   end) }
 
   for i = #defers, 1, -1 do
-    local ok, err = pcall(defers[i])
+    local ok, err = xpcall(defers[i], debug.traceback)
     if not ok then
       vim.notify(err, vim.log.levels.ERROR)
     end
