@@ -1,56 +1,49 @@
+local async = require "coq.lib.async"
 local handle = require "coq.lib.async.handle"
-local mpmc = require "coq.lib.channels.mpmc"
-local runtime = require "coq.lib.async.runtime"
+local lib = require "coq.lib"
 
 local M = {}
 
+-- A completion source running in-process. Same shape as the threaded variant
+-- (`db.queue / db.search / db.close`), but matcher runs in a coroutine on the
+-- main thread, driven by the async runtime's stream primitive.
+--
+--   matcher(yield, ctx)    yield row tables via the supplied push fn
+--
+-- The same coroutine can interleave yields with async primitives (sleep,
+-- await, channel pull) -- the runtime's effect-tagged yields and the
+-- bare-yield stream emits are disambiguated by the driver.
+--
+-- State is caller-owned: matcher and any queued setup fns close over a local
+-- table that lives alongside this worker. (The threaded variant stashes state
+-- in the worker thread's _G instead.)
 M.new = function(matcher)
   local db = {}
 
-  db.close = function() end
+  db.close = lib.noop
 
   db.queue = function(fn, ...)
     return fn(...)
   end
 
   db.search = function(ctx)
-    local chan = mpmc.new(1)
     local h = handle.new()
 
-    local yield = function(row)
-      if not chan.push(row) then
-        error("closed", 0)
-      end
-    end
+    local pull = async.stream(function()
+      pcall(matcher, coroutine.yield, ctx)
+    end, h)
 
-    local thread = coroutine.create(function()
-      pcall(matcher, yield, ctx)
-      chan.close()
-    end)
-    runtime.bind(thread, h)
-    coroutine.resume(thread)
+    local it = { close = h.cancel }
 
-    local closed = false
-    local close = function()
-      if closed then
-        return
-      end
-      closed = true
-      h.cancel()
-      chan.close()
-    end
-
-    local it = { close = close }
-
-    local next = function()
-      local row = chan.pull()
-      if row == nil then
-        close()
-      end
-      return row
-    end
-
-    return setmetatable(it, { __call = next })
+    return setmetatable(it, {
+      __call = function()
+        local row = pull()
+        if row == nil then
+          h.cancel()
+        end
+        return row
+      end,
+    })
   end
 
   return db

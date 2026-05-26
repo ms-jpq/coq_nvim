@@ -17,10 +17,10 @@ M.current = function()
   return threads[thread] or M.ROOT
 end
 
-local AWAIT = {}
+local AWAIT_EFF = {}
 
 local is_await = function(x)
-  return type(x) == "table" and getmetatable(x) == AWAIT
+  return type(x) == "table" and getmetatable(x) == AWAIT_EFF
 end
 
 M.future = function()
@@ -54,7 +54,7 @@ M.future = function()
   end
 
   f.await = function(h)
-    return coroutine.yield(setmetatable({ f = f, h = h }, AWAIT))
+    return coroutine.yield(setmetatable({ f = f, h = h }, AWAIT_EFF))
   end
 
   return f
@@ -82,10 +82,7 @@ M.drive = function(co)
         unwatch()
         return step(...)
       end
-      -- once_ready and on_cancel both fire synchronously when the future is
-      -- already resolved or the handle is already cancelled. once_ready first
-      -- gives future-first precedence; the `not woke` guard skips the cancel
-      -- registration when the future already won.
+
       eff.f.once_ready(wake)
       if not woke and eff.h then
         unwatch = eff.h.on_cancel(wake)
@@ -103,7 +100,7 @@ M.thunk = function(fn)
   return function(...)
     assert(coroutine.running() == nil, "thunk: must be called outside a coroutine")
     local thread = coroutine.create(fn)
-    threads[thread] = M.ROOT
+    M.bind(thread, M.ROOT)
     M.drive(thread)(...)
   end
 end
@@ -176,17 +173,15 @@ end
 M.stream = function(producer, h)
   local co = coroutine.create(producer)
   if h then
-    threads[co] = h
+    M.bind(co, h)
   end
 
   local pull
   pull = function(...)
-    if h and h.cancelled then
+    if coroutine.status(co) == "dead" or (h and h.cancelled) then
       return nil
     end
-    if coroutine.status(co) == "dead" then
-      return nil
-    end
+
     local ok, eff = coroutine.resume(co, ...)
     if not ok then
       error(eff, 0)
@@ -194,6 +189,7 @@ M.stream = function(producer, h)
     if coroutine.status(co) == "dead" then
       return nil
     end
+
     if is_await(eff) then
       return pull(coroutine.yield(eff))
     end

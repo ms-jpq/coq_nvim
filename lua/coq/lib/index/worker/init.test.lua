@@ -22,7 +22,8 @@ T.describe("worker (regular)", function(test)
     local db = worker.new(function(_, ctx)
       got = ctx
     end)
-    db.search { cword = "gold" }
+    -- Stream is lazy under the trampoline relay: pull once to run the matcher.
+    db.search { cword = "gold" }()
     T.eq(got.cword, "gold")
   end)
 

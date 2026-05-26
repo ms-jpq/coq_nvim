@@ -154,60 +154,102 @@ local responder = function(write)
   local parked = inflight.new()
   local scheduled = vim.is_thread() and lib.noop or require("coq.lib.async.vim").scheduled
 
-  local invoke = function(frame, yield)
-    local fn, err = load(frame.fn_bytecode)
-    if not fn then
-      return response(frame.id, false, err or errs.UNKNOWN)
+  -- A yield fn for the user's streaming code. Packs all args into one table so
+  -- async.stream's single-value emit semantics preserve multi-value yields.
+  -- Returns the puller's resume value (true on NEXT, false on STOP/cancel).
+  -- Once the request handle is cancelled, future calls short-circuit to false
+  -- without sending a YIELD frame -- matches the old yield_fn semantics so
+  -- user code can branch on a `false` return for cleanup.
+  local make_user_yield = function()
+    return function(...)
+      local h = runtime.current()
+      if h.cancelled then
+        return false
+      end
+      local n = select("#", ...)
+      assert(n > 0, "yield: at least one value required")
+      for i = 1, n do
+        assert(select(i, ...) ~= nil, "yield: nil value at position " .. i)
+      end
+      return coroutine.yield { n = n, ... }
     end
-    local args, n_args = frame.args or {}, frame.n_args or 0
-    if frame.streaming then
-      return response(frame.id, pcall(fn, yield, unpack(args, 1, n_args)))
-    end
-    return response(frame.id, pcall(fn, unpack(args, 1, n_args)))
   end
 
-  local make_yield = function(id, req_handle)
-    local chan = mpmc.new()
+  local serve_oneshot = function(frame)
+    local fn, err = load(frame.fn_bytecode)
+    if not fn then
+      return write(response(frame.id, false, err or errs.UNKNOWN))
+    end
+    local args, n_args = frame.args or {}, frame.n_args or 0
+    write(response(frame.id, pcall(fn, unpack(args, 1, n_args))))
+  end
+
+  local serve_stream = function(frame, req_handle, defer)
+    local fn, err = load(frame.fn_bytecode)
+    if not fn then
+      return write(response(frame.id, false, err or errs.UNKNOWN))
+    end
+    local args, n_args = frame.args or {}, frame.n_args or 0
+
+    -- NEXT/STOP from the caller: STOP cancels, NEXT releases back-pressure.
+    -- On cancel we close next_chan so any in-flight pull returns rather than
+    -- parking forever.
+    local next_chan = mpmc.new()
     local _, release = parked.reserve(function(rsp)
       if rsp.kind == Kind.STOP then
         req_handle.cancel()
       else
-        chan.push(true)
+        next_chan.push(true)
       end
-    end, id)
+    end, frame.id)
+    defer(release)
+    req_handle.on_cancel(next_chan.close)
 
-    req_handle.on_cancel(function()
-      release()
-      chan.push(false)
-    end)
+    local user_yield = make_user_yield()
+    local stream_err
+    local pull = runtime.stream(function()
+      local ok, e = xpcall(function()
+        fn(user_yield, unpack(args, 1, n_args))
+      end, debug.traceback)
+      if not ok then
+        stream_err = e
+      end
+    end, req_handle)
 
-    local yield_fn = function(...)
-      if req_handle.cancelled then
-        return false
+    local packed = pull()
+    while packed ~= nil do
+      write { kind = Kind.YIELD, id = frame.id, n_values = packed.n, values = packed }
+      local cont = next_chan.pull()
+      if req_handle.cancelled or not cont then
+        -- Resume the producer once more with `false` so the user fn's next
+        -- yield call returns false (matches the old yield_fn cleanup signal).
+        pull(false)
+        break
       end
-      local n_values, values = select("#", ...), { ... }
-      assert(n_values > 0, "yield: at least one value required")
-      for i = 1, n_values do
-        assert(values[i] ~= nil, "yield: nil value at position " .. i)
-      end
-      write { kind = Kind.YIELD, id = id, n_values = n_values, values = values }
-      return chan.pull()
+      packed = pull(true)
     end
 
-    return yield_fn
+    if stream_err then
+      write(response(frame.id, false, stream_err))
+    else
+      write(response(frame.id, true))
+    end
   end
 
   local responder = {}
 
   responder.serve = function(n, frame)
     local req_handle = handle.new(runtime.current())
-    local yield_fn = make_yield(frame.id, req_handle)
 
     n.spawn(function(defer)
       defer(req_handle.cancel)
       runtime.bind(coroutine.running(), req_handle)
       scheduled()
-      write(invoke(frame, yield_fn))
+      if frame.streaming then
+        serve_stream(frame, req_handle, defer)
+      else
+        serve_oneshot(frame)
+      end
     end)
   end
 
