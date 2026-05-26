@@ -170,11 +170,6 @@ local responder = function(write)
     end
     local args, n_args = frame.args or {}, frame.n_args or 0
 
-    -- The user fn emits via bare `coroutine.yield(row)`; runtime.wrap
-    -- captures each emit and the puller forwards it to the wire. NEXT releases
-    -- back-pressure; STOP cancels req_handle (closing next_chan). The yield's
-    -- return value is whatever the puller passes on resume -- true on NEXT,
-    -- false on cancel -- letting user code branch for cleanup.
     local stream_err
     local stream = runtime.wrap(function()
       local ok, e = pcall(fn, unpack(args, 1, n_args))
@@ -183,9 +178,6 @@ local responder = function(write)
       end
     end, req_handle)
 
-    -- Forward rows to the wire, respecting NEXT/STOP backpressure. On stop or
-    -- cancel, drain remaining yields with `false` so user fn sees false on each
-    -- and can clean up; emitted values are discarded.
     local pump = function()
       local row = stream()
       while row ~= nil do
@@ -211,10 +203,6 @@ local responder = function(write)
   local responder = {}
 
   responder.serve = function(n, frame)
-    -- Reserve the NEXT/STOP parker SYNCHRONOUSLY so STOP frames arriving while
-    -- the spawn is queued don't get dropped. Oneshot still needs the parker so
-    -- a STOP from the caller (e.g., session.close on cancel) cancels the work
-    -- instead of letting it run to completion.
     local req_handle = handle.new(runtime.current())
     local next_chan = frame.streaming and mpmc.new() or nil
 
