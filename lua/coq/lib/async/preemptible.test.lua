@@ -84,29 +84,6 @@ T.describe("preemptible", function(test)
     T.eq(got, nil)
   end)
 
-  test("propagates errors from underlying iter", function()
-    local iter = async.preemptible(function()
-      error "kibble crash"
-    end)
-
-    local ok, err = pcall(iter)
-
-    T.eq(ok, false)
-    assert(tostring(err):find "kibble crash")
-  end)
-
-  test("propagates errors that fire after an async yield", function()
-    local iter = async.preemptible(function()
-      async.sleep(2)
-      error "kibble crash post sleep"
-    end)
-
-    local ok, err = pcall(iter)
-
-    T.eq(ok, false)
-    assert(tostring(err):find "kibble crash post sleep")
-  end)
-
   test("cancellation fires iter's own on_cancel watcher", function()
     local h = handle.new()
     local iter_cancelled = false

@@ -89,7 +89,7 @@ local trampoline = function(producer, h, on_await)
   return bounce
 end
 
-M.detach = function(h, fn)
+M.detach = function(h, fn, ...)
   return trampoline(fn, h, function(bounce, eff)
     local resumed = false
     local unwatch = lib.noop
@@ -106,7 +106,7 @@ M.detach = function(h, fn)
     if not resumed and eff.h then
       unwatch = eff.h.on_cancel(resume)
     end
-  end)()
+  end)(...)
 end
 
 M.wrap = function(producer, h)
@@ -118,10 +118,7 @@ end
 M.entry = function(fn)
   return function(...)
     assert(coroutine.running() == nil, "entry: must be called outside a coroutine")
-    local args = { ... }
-    M.detach(M.ROOT, function()
-      fn(unpack(args))
-    end)
+    M.detach(M.ROOT, fn, ...)
   end
 end
 
@@ -169,7 +166,7 @@ M.preemptible = function(fn)
 
     local f = M.future()
     M.detach(h, function()
-      f.resolve(xpcall(fn, debug.traceback))
+      f.resolve(pcall(fn))
     end)
 
     local go = function(ok, ...)

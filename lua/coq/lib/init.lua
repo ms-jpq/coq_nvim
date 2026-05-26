@@ -21,7 +21,7 @@ M.scope = function(fn)
     error((...), 0)
   end
 
-  return finish(xpcall(fn, debug.traceback, function(defer)
+  return finish(pcall(fn, function(defer)
     table.insert(defers, defer)
   end))
 end

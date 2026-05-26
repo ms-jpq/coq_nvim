@@ -164,20 +164,4 @@ T.describe("race", function(test)
     T.eq(sibling_cancelled, true)
     assert(tostring(err):find "child went missing")
   end)
-
-  test("sync child error propagates from race", function()
-    local ok, err = pcall(function()
-      async.race {
-        function()
-          error "boom"
-        end,
-        function()
-          return "never"
-        end,
-      }
-    end)
-
-    T.eq(ok, false)
-    assert(tostring(err):find "boom")
-  end)
 end)

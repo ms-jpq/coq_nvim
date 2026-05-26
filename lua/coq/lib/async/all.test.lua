@@ -37,18 +37,4 @@ T.describe("all", function(test)
 
     T.eq(out, { "woof", "bark" })
   end)
-
-  test("raises first child error", function()
-    local ok, err = pcall(async.all, {
-      function()
-        return "ok"
-      end,
-      function()
-        error "kibble crash"
-      end,
-    })
-
-    T.eq(ok, false)
-    assert(tostring(err):find "kibble crash")
-  end)
 end)

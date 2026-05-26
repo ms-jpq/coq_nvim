@@ -101,4 +101,34 @@ T.describe("errors", function(test)
     T.eq(ok, false)
     assert_clean(err, "lib scope boom")
   end)
+
+  test("async.all child error surfaces at caller, not in controlflow", function()
+    local ok, err = pcall(async.all, {
+      function()
+        return "ok"
+      end,
+      function()
+        error "all boom"
+      end,
+    })
+
+    T.eq(ok, false)
+    assert_clean(err, "all boom")
+  end)
+
+  test("async.race child error surfaces at caller, not in controlflow", function()
+    local ok, err = pcall(function()
+      async.race {
+        function()
+          error "race boom"
+        end,
+        function()
+          return "never"
+        end,
+      }
+    end)
+
+    T.eq(ok, false)
+    assert_clean(err, "race boom")
+  end)
 end)
