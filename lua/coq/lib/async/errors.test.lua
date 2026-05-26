@@ -131,4 +131,20 @@ T.describe("errors", function(test)
     T.eq(ok, false)
     assert_clean(err, "race boom")
   end)
+
+  test("async.merge child error surfaces at pull site, not in controlflow", function()
+    local ok, err = pcall(function()
+      for _ in
+        async.merge {
+          function()
+            error "merge boom"
+          end,
+        }
+      do
+      end
+    end)
+
+    T.eq(ok, false)
+    assert_clean(err, "merge boom")
+  end)
 end)

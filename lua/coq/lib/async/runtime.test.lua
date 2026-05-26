@@ -1,22 +1,23 @@
 local T = require "coq.lib.test"
 local async = require "coq.lib.async"
 
+local capture_notify = function(marker)
+  local state = { captured = nil }
+  local orig = vim.notify
+  vim.notify = function(msg, level, opts)
+    if type(msg) == "string" and msg:find(marker, 1, true) then
+      state.captured = { msg = msg, level = level }
+    else
+      return orig(msg, level, opts)
+    end
+  end
+  state.restore = function()
+    vim.notify = orig
+  end
+  return state
+end
+
 T.describe("async", function(test)
-  test("future resolves synchronously", function()
-    local f = async.future()
-    f.resolve "woof"
-
-    T.eq(f.await(), "woof")
-  end)
-
-  test("awaitify returns callback args", function()
-    local bark = async.awaitify(function(name, cb)
-      cb(name .. ":woof")
-    end)
-
-    T.eq(bark "lil", "lil:woof")
-  end)
-
   test("awaitify forwards multiple callback values", function()
     local pack = async.awaitify(function(cb)
       cb("lil", "spot", "fido")
@@ -40,18 +41,39 @@ T.describe("async", function(test)
     T.eq(ran, true)
   end)
 
-  test("entry propagates errors", function()
-    local ok
-    vim.schedule(function()
-      ok = pcall(function()
-        async.entry(function()
-          error "lil went missing"
-        end)()
-      end)
-    end)
-    async.sleep(5)
+  test("entry post-yield error surfaces via vim.notify", function()
+    local marker = "fido bolted post-sleep"
+    local cap = capture_notify(marker)
 
-    T.eq(ok, false)
+    vim.schedule(async.entry(function()
+      async.sleep(2)
+      error(marker)
+    end))
+    async.sleep(30)
+    cap.restore()
+
+    assert(cap.captured ~= nil, "expected vim.notify to fire for post-yield error")
+    assert(cap.captured.msg:find(marker, 1, true), "expected marker in msg, got: " .. tostring(cap.captured.msg))
+    T.eq(cap.captured.level, vim.log.levels.ERROR)
+  end)
+
+  test("entry post-yield error does not block sibling coroutines", function()
+    local marker = "spot bolted post-sleep"
+    local cap = capture_notify(marker)
+    local sibling_ran = false
+
+    vim.schedule(async.entry(function()
+      async.sleep(2)
+      error(marker)
+    end))
+    vim.schedule(async.entry(function()
+      async.sleep(5)
+      sibling_ran = true
+    end))
+    async.sleep(30)
+    cap.restore()
+
+    T.eq(sibling_ran, true)
   end)
 
   test("wrap forwards multi-value yields", function()

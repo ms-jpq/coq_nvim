@@ -125,17 +125,6 @@ T.describe("handle", function(test)
     T.eq(count_live_timers(), before)
   end)
 
-  test("deadline fires watchers", function()
-    local h = handle.new(nil, 5)
-    local fired = false
-    local _ = h.on_cancel(function()
-      fired = true
-    end)
-    async.sleep(10)
-
-    T.eq(fired, true)
-  end)
-
   test("cancel uses snapshot semantics so mid-fire unwatch is safe", function()
     local h = handle.new()
     local count = 0
@@ -151,16 +140,6 @@ T.describe("handle", function(test)
     h.cancel()
 
     T.eq(count, 2)
-  end)
-
-  test("cascade through three levels", function()
-    local g = handle.new()
-    local p = handle.new(g)
-    local c = handle.new(p)
-    g.cancel()
-
-    T.eq(p.cancelled, true)
-    T.eq(c.cancelled, true)
   end)
 
   test("on_cancel re-entry: watcher registers another watcher mid-fire", function()

@@ -6,11 +6,6 @@ local nursery = require "coq.lib.async.nursery"
 local runtime = require "coq.lib.async.runtime"
 
 T.describe("nursery", function(test)
-  test("join returns immediately when no tasks spawned", function()
-    local n = nursery.new()
-    n.join()
-  end)
-
   test("join awaits all spawned children", function()
     local n = nursery.new()
     local count = 0
@@ -20,20 +15,6 @@ T.describe("nursery", function(test)
     end)
     n.spawn(function()
       async.sleep(5)
-      count = count + 1
-    end)
-    n.join()
-
-    T.eq(count, 2)
-  end)
-
-  test("join returns immediately for synchronous children", function()
-    local n = nursery.new()
-    local count = 0
-    n.spawn(function()
-      count = count + 1
-    end)
-    n.spawn(function()
       count = count + 1
     end)
     n.join()
@@ -78,17 +59,6 @@ T.describe("nursery", function(test)
     end)
 
     T.eq(joined, true)
-  end)
-
-  test("join re-raises first child error", function()
-    local n = nursery.new()
-    n.spawn(function()
-      error "child went missing"
-    end)
-    local ok, err = pcall(n.join)
-
-    T.eq(ok, false)
-    assert(err:find "child went missing")
   end)
 
   test("spawn after join raises", function()

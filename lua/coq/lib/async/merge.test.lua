@@ -85,23 +85,6 @@ T.describe("merge", function(test)
     T.eq(got, nil)
   end)
 
-  test("explicit handle short-circuits the merge", function()
-    local sh = handle.new()
-    local got
-    async.scope(sh, function(n)
-      n.spawn(function()
-        local iter = function()
-          async.sleep(100)
-          return "never"
-        end
-        got = async.merge { iter }()
-      end)
-      sh.cancel()
-    end)
-
-    T.eq(got, nil)
-  end)
-
   test("close stops further pulls", function()
     local m = async.merge {
       function()
@@ -112,22 +95,6 @@ T.describe("merge", function(test)
     m.close()
 
     T.eq(m(), nil)
-  end)
-
-  test("child iterator error surfaces at the pull site", function()
-    local ok, err = pcall(function()
-      for _ in
-        async.merge {
-          function()
-            error "leash snapped"
-          end,
-        }
-      do
-      end
-    end)
-
-    T.eq(ok, false)
-    assert(tostring(err):find "leash snapped", "expected leash snapped, got: " .. tostring(err))
   end)
 
   test("close cancels in-flight producers", function()

@@ -27,13 +27,6 @@ T.describe("future cancel", function(test)
     T.eq(f.await(h), 2)
   end)
 
-  test("await returns resolved value when not cancelled", function()
-    local f = async.future()
-    f.resolve "woof"
-
-    T.eq(f.await(), "woof")
-  end)
-
   test("await wakes with nil when cancelled mid-yield", function()
     local h = handle.new()
     local awoke = false

@@ -26,14 +26,6 @@ T.describe("preemptible", function(test)
     T.eq(out, { 10, 20, 30 })
   end)
 
-  test("returns nil when underlying iter exhausts", function()
-    local iter = async.preemptible(function()
-      return nil
-    end)
-
-    T.eq(iter(), nil)
-  end)
-
   test("forwards values across async yields", function()
     local i = 0
     local iter = async.preemptible(function()

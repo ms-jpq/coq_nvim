@@ -89,6 +89,18 @@ local trampoline = function(producer, h, on_await)
   return bounce
 end
 
+local report = function(err)
+  local notify = function()
+    vim.notify(tostring(err), vim.log.levels.ERROR)
+  end
+
+  if vim.is_thread() then
+    vim.schedule(notify)
+  else
+    notify()
+  end
+end
+
 M.detach = function(h, fn, ...)
   return trampoline(fn, h, function(bounce, eff)
     local resumed = false
@@ -99,7 +111,10 @@ M.detach = function(h, fn, ...)
       end
       resumed = true
       unwatch()
-      bounce(...)
+      local ok, err = pcall(bounce, ...)
+      if not ok then
+        report(err)
+      end
     end
 
     eff.f.once_ready(resume)

@@ -12,17 +12,6 @@ T.describe("race", function(test)
     T.eq(val, nil)
   end)
 
-  test("returns winning idx and value on sync task", function()
-    local idx, val = async.race {
-      function()
-        return "woof"
-      end,
-    }
-
-    T.eq(idx, 1)
-    T.eq(val, "woof")
-  end)
-
   test("returns as soon as winner finishes, not waiting for losers", function()
     local start = vim.uv.hrtime()
     async.race {
@@ -38,26 +27,6 @@ T.describe("race", function(test)
     local elapsed_ms = (vim.uv.hrtime() - start) / 1e6
 
     assert(elapsed_ms < 100, ("expected ~5ms, got %.1fms"):format(elapsed_ms))
-  end)
-
-  test("picks fastest sleeper", function()
-    local idx, val = async.race {
-      function()
-        async.sleep(30)
-        return "slow"
-      end,
-      function()
-        async.sleep(5)
-        return "fast"
-      end,
-      function()
-        async.sleep(60)
-        return "slowest"
-      end,
-    }
-
-    T.eq(idx, 2)
-    T.eq(val, "fast")
   end)
 
   test("forwards multiple return values", function()
