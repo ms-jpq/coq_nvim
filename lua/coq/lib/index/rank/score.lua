@@ -3,34 +3,27 @@ local M = {}
 M.score = function(rows, prepared)
   local token = prepared.token
 
-  if token == "" then
-    local i = 0
-    return function()
-      i = i + 1
-      local row = rows[i]
-      if row == nil then
-        return nil
-      end
-      local prox = prepared.locality[row.filter] or 0
-      local rec = prepared.recency[row.filter] or 0
-      local bias = prepared.source_bias[row.source] or 1
-      return row, (3 * prox + rec) * bias, nil
-    end
-  end
-
-  local filters, seen = {}, {}
-  for _, row in ipairs(rows) do
-    if not seen[row.filter] then
-      seen[row.filter] = true
-      table.insert(filters, row.filter)
-    end
-  end
-
-  local matches, positions, scores = unpack(vim.fn.matchfuzzypos(filters, token))
-
   local by_filter = {}
-  for i, f in ipairs(matches) do
-    by_filter[f] = { fuzzy = scores[i], positions = positions[i] }
+  if token == "" then
+    for _, row in ipairs(rows) do
+      by_filter[row.filter] = { fuzzy = 0, positions = nil }
+    end
+  else
+    local seen = {}
+    local filters = vim
+      .iter(rows)
+      :map(function(row)
+        if seen[row.filter] then
+          return nil
+        end
+        seen[row.filter] = true
+        return row.filter
+      end)
+      :totable()
+    local matches, positions, scores = unpack(vim.fn.matchfuzzypos(filters, token))
+    for i, f in ipairs(matches) do
+      by_filter[f] = { fuzzy = scores[i], positions = positions[i] }
+    end
   end
 
   local i = 0
