@@ -180,22 +180,21 @@ M.stream = function(producer, h)
 
   local pull
   pull = function(...)
-    if coroutine.status(co) == "dead" then
-      return nil
-    end
+    local go = function(ok, ...)
+      if not ok then
+        error(debug.traceback(co, (...)), 0)
+      end
+      if coroutine.status(co) == "dead" then
+        return nil
+      end
 
-    local ok, eff = coroutine.resume(co, ...)
-    if not ok then
-      error(debug.traceback(co, eff), 0)
+      local eff = ...
+      if is_await(eff) then
+        return pull(coroutine.yield(eff))
+      end
+      return ...
     end
-    if coroutine.status(co) == "dead" then
-      return nil
-    end
-
-    if is_await(eff) then
-      return pull(coroutine.yield(eff))
-    end
-    return eff
+    return go(coroutine.resume(co, ...))
   end
 
   return pull

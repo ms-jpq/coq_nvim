@@ -54,6 +54,15 @@ T.describe("async", function(test)
     T.eq(ok, false)
   end)
 
+  test("stream forwards multi-value yields", function()
+    local pull = async.stream(function()
+      coroutine.yield("lil", "spot", "fido")
+    end)
+    local a, b, c = pull()
+
+    T.eq({ a, b, c }, { "lil", "spot", "fido" })
+  end)
+
   test("sleep yields for the requested duration", function()
     local start = vim.uv.hrtime()
 
