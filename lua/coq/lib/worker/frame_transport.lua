@@ -1,5 +1,6 @@
 -- https://github.com/luvit/luv/blob/master/docs/docs.md
 
+local lib = require "coq.lib"
 local proto = require "coq.lib.worker.wire_proto"
 local runtime = require "coq.lib.async.runtime"
 
@@ -33,42 +34,37 @@ end
 
 M.reader = function(pipe)
   local decode = proto.decoder()
-  local queue = {}
-  local waker
+  local iter = lib.noop
+  local closed_err
+  local closed = false
 
-  local notify = function()
-    if waker then
-      local w = waker
-      waker = nil
-      w.resolve()
-    end
-  end
-
-  pipe:read_start(function(err, bytes)
-    if err or not bytes then
-      pipe:close()
-      table.insert(queue, { nil, err })
-      notify()
-    else
-      for frame in decode(bytes) do
-        table.insert(queue, { frame, nil })
+  return runtime.stream(function()
+    while true do
+      local frame = iter()
+      if frame ~= nil then
+        coroutine.yield(frame)
+      elseif closed then
+        if closed_err then
+          error(closed_err, 0)
+        end
+        return
+      else
+        local f = runtime.future()
+        pipe:read_start(function(err, bytes)
+          pipe:read_stop()
+          if err or not bytes then
+            pipe:close()
+            closed_err = err
+            closed = true
+          else
+            iter = decode(bytes)
+          end
+          f.resolve()
+        end)
+        f.await()
       end
-      notify()
     end
   end)
-
-  return function()
-    while #queue == 0 do
-      local f = runtime.future()
-      waker = f
-      f.await()
-    end
-    local entry = table.remove(queue, 1)
-    if entry[2] then
-      error(entry[2], 0)
-    end
-    return entry[1]
-  end
 end
 
 M.writer = function(pipe)
