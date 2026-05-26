@@ -14,7 +14,7 @@ end
 M.new = function(parent, deadline_ms)
   local handle = { cancelled = false }
   local watchers = sparse.new()
-  local unwatch_from_parent = function() end
+  local unwatch_from_parent = lib.noop
   local timer
 
   handle.cancel = function()
@@ -47,7 +47,7 @@ M.new = function(parent, deadline_ms)
   handle.on_cancel = function(watcher)
     if handle.cancelled then
       fire(watcher)
-      return function() end
+      return lib.noop
     end
 
     local key = watchers.push(watcher)

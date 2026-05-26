@@ -1,3 +1,5 @@
+local lib = require "coq.lib"
+
 local M = {}
 
 M.new = function()
@@ -33,7 +35,7 @@ M.new = function()
     for i = 1, #key do
       node = node.children[key:sub(i, i)]
       if not node then
-        return function() end
+        return lib.noop
       end
     end
     return coroutine.wrap(function()

@@ -1,3 +1,5 @@
+local lib = require "coq.lib"
+
 local M = {}
 
 M.pack = function(...)
@@ -10,7 +12,7 @@ end
 
 M.closable = function(h, on_close)
   local state = { closed = false }
-  local unwatch = function() end
+  local unwatch = lib.noop
   state.close = function()
     if state.closed then
       return
