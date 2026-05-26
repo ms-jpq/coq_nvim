@@ -60,7 +60,7 @@ M.future = function()
   return f
 end
 
-local make_pull = function(producer, h, on_await)
+local trampoline = function(producer, h, on_await)
   local co = coroutine.create(producer)
   if h then
     M.bind(co, h)
@@ -77,7 +77,7 @@ local make_pull = function(producer, h, on_await)
 
     local eff = ...
     if is_await(eff) then
-      return on_await(eff, pull)
+      return on_await(pull, eff)
     end
     return ...
   end
@@ -90,8 +90,7 @@ local make_pull = function(producer, h, on_await)
 end
 
 M.drive = function(h, fn)
-  local pull
-  pull = make_pull(fn, h, function(eff)
+  return trampoline(fn, h, function(pull, eff)
     local woke = false
     local unwatch = lib.noop
     local wake = function(...)
@@ -107,9 +106,7 @@ M.drive = function(h, fn)
     if not woke and eff.h then
       unwatch = eff.h.on_cancel(wake)
     end
-  end)
-
-  pull()
+  end)()
 end
 
 M.thunk = function(fn)
@@ -188,7 +185,7 @@ M.preemptible = function(fn)
 end
 
 M.stream = function(producer, h)
-  return make_pull(producer, h, function(eff, pull)
+  return trampoline(producer, h, function(pull, eff)
     return pull(coroutine.yield(eff))
   end)
 end
