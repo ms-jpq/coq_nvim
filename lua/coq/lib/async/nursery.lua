@@ -14,7 +14,8 @@ M.new = function(parent)
   nursery.spawn = function(fn)
     assert(not nursery.closed, "spawn: nursery is closed")
 
-    local thread = coroutine.create(function()
+    runtime.drive(nursery.handle, function()
+      pending[coroutine.running()] = true
       runtime.sleep(0)
       local ok, err = xpcall(lib.scope, debug.traceback, fn)
       pending[coroutine.running()] = nil
@@ -31,11 +32,7 @@ M.new = function(parent)
           f.resolve()
         end
       end
-    end)
-
-    pending[thread] = true
-    runtime.bind(thread, nursery.handle)
-    runtime.drive(thread)()
+    end)()
   end
 
   nursery.join = function()

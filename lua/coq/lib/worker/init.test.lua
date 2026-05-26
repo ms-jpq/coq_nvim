@@ -76,8 +76,8 @@ T.describe("worker", function(test)
     local w = worker.spawn()
     local ok, err = pcall(function()
       for _ in
-        w.queue_stream(function(yield)
-          yield "lil"
+        w.queue_stream(function()
+          coroutine.yield "lil"
           error "leash snapped"
         end)
       do
@@ -159,10 +159,10 @@ T.describe("worker", function(test)
     local w = worker.spawn()
     local seen = {}
     for dog in
-      w.queue_stream(function(yield)
-        yield "lil"
-        yield "spot"
-        yield "fido"
+      w.queue_stream(function()
+        coroutine.yield "lil"
+        coroutine.yield "spot"
+        coroutine.yield "fido"
       end)
     do
       table.insert(seen, dog)
@@ -176,9 +176,9 @@ T.describe("worker", function(test)
     local w = worker.spawn()
     local seen = {}
     for v in
-      w.queue_stream(function(yield, n)
+      w.queue_stream(function(n)
         for i = 1, n do
-          yield(i)
+          coroutine.yield(i)
         end
       end, 4)
     do
@@ -194,8 +194,8 @@ T.describe("worker", function(test)
     local seen = {}
     local ok, err = pcall(function()
       for v in
-        w.queue_stream(function(yield)
-          yield "lil"
+        w.queue_stream(function()
+          coroutine.yield "lil"
           error "leash snapped"
         end)
       do
@@ -215,8 +215,8 @@ T.describe("worker", function(test)
       _G.done = require("coq.lib.async.event").new()
       _G.closed_cleanly = false
     end)
-    local iter = w.queue_stream(function(yield)
-      local cont = yield "lil"
+    local iter = w.queue_stream(function()
+      local cont = coroutine.yield "lil"
       if not cont then
         _G.closed_cleanly = true
       end
@@ -230,39 +230,6 @@ T.describe("worker", function(test)
     w.close()
 
     T.eq(ok, true)
-  end)
-
-  test("yield with no values raises", function()
-    local w = worker.spawn()
-    local ok, err = pcall(function()
-      for _ in
-        w.queue_stream(function(yield)
-          yield()
-        end)
-      do
-      end
-    end)
-    w.close()
-
-    T.eq(ok, false)
-    assert(err and err:find "yield", "expected yield error, got: " .. tostring(err))
-  end)
-
-  test("yield with nil arg raises", function()
-    local w = worker.spawn()
-    local ok, err = pcall(function()
-      for _ in
-        w.queue_stream(function(yield)
-          yield "lil"
-          yield(nil)
-        end)
-      do
-      end
-    end)
-    w.close()
-
-    T.eq(ok, false)
-    assert(err and err:find "nil value", "expected nil value error, got: " .. tostring(err))
   end)
 
   test("close is idempotent", function()
@@ -286,13 +253,13 @@ T.describe("worker", function(test)
     local w = worker.spawn()
     local seen = {}
     for v in
-      w.queue_stream(function(yield)
+      w.queue_stream(function()
         local worker = require "coq.lib.worker"
         for _, name in pairs { "lil", "spot", "fido" } do
           local upper = worker.main(function(x)
             return x:upper()
           end, name)
-          yield(upper)
+          coroutine.yield(upper)
         end
       end)
     do
@@ -309,9 +276,9 @@ T.describe("worker", function(test)
       _G.done = require("coq.lib.async.event").new()
       _G.closed_cleanly = false
     end)
-    local iter = w.queue_stream(function(yield)
-      yield "lil"
-      local cont = yield "spot"
+    local iter = w.queue_stream(function()
+      coroutine.yield "lil"
+      local cont = coroutine.yield "spot"
       if not cont then
         _G.closed_cleanly = true
       end
@@ -339,8 +306,8 @@ T.describe("worker", function(test)
 
     async.scope(h, function(n)
       n.spawn(function()
-        local iter = w.queue_stream(function(yield)
-          local cont = yield "lil"
+        local iter = w.queue_stream(function()
+          local cont = coroutine.yield "lil"
           if not cont then
             _G.got_stop.set()
           end
@@ -370,8 +337,8 @@ T.describe("worker", function(test)
 
     async.scope(h, function(n)
       n.spawn(function()
-        local _iter = w.queue_stream(function(yield)
-          while yield "tick" do
+        local _iter = w.queue_stream(function()
+          while coroutine.yield "tick" do
           end
           _G.got_stop.set()
         end)
@@ -400,7 +367,7 @@ T.describe("worker", function(test)
 
     async.scope(h, function(n)
       n.spawn(function()
-        local iter = w.queue_stream(function(yield)
+        local iter = w.queue_stream(function()
           local r = require("coq.lib.worker").main(function()
             require("coq.lib.async").sleep(10000)
             return "should not reach"
@@ -427,11 +394,11 @@ T.describe("worker", function(test)
   test("scope + defer pairs cleanly with iter.close", function()
     local w = worker.spawn()
     local seen = lib.scope(function(defer)
-      local iter = w.queue_stream(function(yield)
+      local iter = w.queue_stream(function()
         local i = 0
         while true do
           i = i + 1
-          if not yield(i) then
+          if not coroutine.yield(i) then
             return
           end
         end
@@ -463,8 +430,8 @@ T.describe("worker", function(test)
       _G.closed_cleanly = false
     end)
     local ok, err = pcall(lib.scope, function(defer)
-      local iter = w.queue_stream(function(yield)
-        local cont = yield "lil"
+      local iter = w.queue_stream(function()
+        local cont = coroutine.yield "lil"
         if not cont then
           _G.closed_cleanly = true
         end
@@ -526,9 +493,9 @@ T.describe("worker", function(test)
     async.scope(function(n)
       n.spawn(function()
         for v in
-          w.queue_stream(function(yield, count, prefix)
+          w.queue_stream(function(count, prefix)
             for i = 1, count do
-              yield(prefix .. i)
+              coroutine.yield(prefix .. i)
             end
           end, 3, "a")
         do
@@ -537,9 +504,9 @@ T.describe("worker", function(test)
       end)
       n.spawn(function()
         for v in
-          w.queue_stream(function(yield, count, prefix)
+          w.queue_stream(function(count, prefix)
             for i = 1, count do
-              yield(prefix .. i)
+              coroutine.yield(prefix .. i)
             end
           end, 3, "b")
         do

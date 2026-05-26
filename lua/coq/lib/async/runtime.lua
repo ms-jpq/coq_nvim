@@ -60,7 +60,10 @@ M.future = function()
   return f
 end
 
-M.drive = function(co)
+M.drive = function(h, fn)
+  local co = coroutine.create(fn)
+  M.bind(co, h)
+
   local step
   step = function(...)
     local ok, eff = coroutine.resume(co, ...)
@@ -99,9 +102,7 @@ end
 M.thunk = function(fn)
   return function(...)
     assert(coroutine.running() == nil, "thunk: must be called outside a coroutine")
-    local thread = coroutine.create(fn)
-    M.bind(thread, M.ROOT)
-    M.drive(thread)(...)
+    M.drive(M.ROOT, fn)(...)
   end
 end
 
@@ -148,15 +149,13 @@ M.preemptible = function(fn)
     end
 
     local f = M.future()
-    local thread = coroutine.create(function()
-      f.resolve(xpcall(fn, debug.traceback))
-    end)
 
     return lib.scope(function(defer)
       defer(h.on_cancel(f.resolve))
 
-      M.bind(thread, h)
-      M.drive(thread)()
+      M.drive(h, function()
+        f.resolve(xpcall(fn, debug.traceback))
+      end)()
 
       local ok, ret = f.await(h)
       if ok == nil then
@@ -184,7 +183,7 @@ M.stream = function(producer, h)
 
     local ok, eff = coroutine.resume(co, ...)
     if not ok then
-      error(eff, 0)
+      error(debug.traceback(co, eff), 0)
     end
     if coroutine.status(co) == "dead" then
       return nil

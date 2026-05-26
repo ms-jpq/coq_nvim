@@ -15,16 +15,6 @@ local Kind = {
   STOP = "stop",
 }
 
-local response = function(id, ok, ...)
-  return {
-    kind = Kind.YIELD,
-    id = id,
-    ok = ok,
-    n_values = select("#", ...),
-    values = { ... },
-  }
-end
-
 local dump_cache = setmetatable({}, { __mode = "k" })
 
 local dump = function(fn)
@@ -44,7 +34,15 @@ local pack_call = function(fn, ...)
   }
 end
 
-local M = {}
+local response = function(id, ok, ...)
+  return {
+    kind = Kind.YIELD,
+    id = id,
+    ok = ok,
+    n_values = select("#", ...),
+    values = { ... },
+  }
+end
 
 local requester = function(write)
   local STATE = { INITIAL = "initial", STREAMING = "streaming", DONE = "done" }
@@ -154,27 +152,6 @@ local responder = function(write)
   local parked = inflight.new()
   local scheduled = vim.is_thread() and lib.noop or require("coq.lib.async.vim").scheduled
 
-  -- A yield fn for the user's streaming code. Packs all args into one table so
-  -- async.stream's single-value emit semantics preserve multi-value yields.
-  -- Returns the puller's resume value (true on NEXT, false on STOP/cancel).
-  -- Once the request handle is cancelled, future calls short-circuit to false
-  -- without sending a YIELD frame -- matches the old yield_fn semantics so
-  -- user code can branch on a `false` return for cleanup.
-  local make_user_yield = function()
-    return function(...)
-      local h = runtime.current()
-      if h.cancelled then
-        return false
-      end
-      local n = select("#", ...)
-      assert(n > 0, "yield: at least one value required")
-      for i = 1, n do
-        assert(select(i, ...) ~= nil, "yield: nil value at position " .. i)
-      end
-      return coroutine.yield { n = n, ... }
-    end
-  end
-
   local serve_oneshot = function(frame)
     local fn, err = load(frame.fn_bytecode)
     if not fn then
@@ -184,49 +161,39 @@ local responder = function(write)
     write(response(frame.id, pcall(fn, unpack(args, 1, n_args))))
   end
 
-  local serve_stream = function(frame, req_handle, defer)
+  local serve_stream = function(frame, req_handle, next_chan)
     local fn, err = load(frame.fn_bytecode)
     if not fn then
       return write(response(frame.id, false, err or errs.UNKNOWN))
     end
     local args, n_args = frame.args or {}, frame.n_args or 0
 
-    -- NEXT/STOP from the caller: STOP cancels, NEXT releases back-pressure.
-    -- On cancel we close next_chan so any in-flight pull returns rather than
-    -- parking forever.
-    local next_chan = mpmc.new()
-    local _, release = parked.reserve(function(rsp)
-      if rsp.kind == Kind.STOP then
-        req_handle.cancel()
-      else
-        next_chan.push(true)
-      end
-    end, frame.id)
-    defer(release)
-    req_handle.on_cancel(next_chan.close)
-
-    local user_yield = make_user_yield()
+    -- The user fn emits via bare `coroutine.yield(row)`; runtime.stream
+    -- captures each emit and the puller forwards it to the wire. NEXT releases
+    -- back-pressure; STOP cancels req_handle (closing next_chan). The yield's
+    -- return value is whatever the puller passes on resume -- true on NEXT,
+    -- false on cancel -- letting user code branch for cleanup.
     local stream_err
     local pull = runtime.stream(function()
-      local ok, e = xpcall(function()
-        fn(user_yield, unpack(args, 1, n_args))
-      end, debug.traceback)
+      local ok, e = pcall(fn, unpack(args, 1, n_args))
       if not ok then
         stream_err = e
       end
     end, req_handle)
 
-    local packed = pull()
-    while packed ~= nil do
-      write { kind = Kind.YIELD, id = frame.id, n_values = packed.n, values = packed }
+    local row = pull()
+    while row ~= nil do
+      write { kind = Kind.YIELD, id = frame.id, n_values = 1, values = { row } }
       local cont = next_chan.pull()
       if req_handle.cancelled or not cont then
-        -- Resume the producer once more with `false` so the user fn's next
-        -- yield call returns false (matches the old yield_fn cleanup signal).
-        pull(false)
+        -- Drain the producer with `false` so each remaining `coroutine.yield`
+        -- in the user fn returns false (giving the user a cleanup signal). We
+        -- discard any emitted values -- the consumer has already stopped.
+        while pull(false) ~= nil do
+        end
         break
       end
-      packed = pull(true)
+      row = pull(true)
     end
 
     if stream_err then
@@ -241,16 +208,44 @@ local responder = function(write)
   responder.serve = function(n, frame)
     local req_handle = handle.new(runtime.current())
 
-    n.spawn(function(defer)
-      defer(req_handle.cancel)
-      runtime.bind(coroutine.running(), req_handle)
-      scheduled()
-      if frame.streaming then
-        serve_stream(frame, req_handle, defer)
-      else
+    if frame.streaming then
+      -- Reserve the NEXT/STOP parker SYNCHRONOUSLY so STOP frames arriving
+      -- while the spawn is queued don't get dropped.
+      local next_chan = mpmc.new()
+      local _, release = parked.reserve(function(rsp)
+        if rsp.kind == Kind.STOP then
+          req_handle.cancel()
+        else
+          next_chan.push(true)
+        end
+      end, frame.id)
+      req_handle.on_cancel(next_chan.close)
+
+      n.spawn(function(defer)
+        defer(req_handle.cancel)
+        defer(release)
+        runtime.bind(coroutine.running(), req_handle)
+        scheduled()
+        serve_stream(frame, req_handle, next_chan)
+      end)
+    else
+      -- Also reserve a parker for oneshot so STOP frames (e.g., from a cancelled
+      -- session.close on the caller side) cancel the spawned work instead of
+      -- leaving it to run to completion.
+      local _, release = parked.reserve(function(rsp)
+        if rsp.kind == Kind.STOP then
+          req_handle.cancel()
+        end
+      end, frame.id)
+
+      n.spawn(function(defer)
+        defer(req_handle.cancel)
+        defer(release)
+        runtime.bind(coroutine.running(), req_handle)
+        scheduled()
         serve_oneshot(frame)
-      end
-    end)
+      end)
+    end
   end
 
   responder.resolve = function(frame)
@@ -287,6 +282,8 @@ local make_endpoint = function(duplex)
     end,
   }
 end
+
+local M = {}
 
 if vim.is_thread() then
   M.run = function(req_fd, rsp_fd)

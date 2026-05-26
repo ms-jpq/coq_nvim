@@ -85,15 +85,19 @@ T.describe("producer (regular)", function(test)
     it.close() -- no error
   end)
 
-  test("matcher error does not propagate to the consumer", function()
+  test("matcher error propagates to the consumer", function()
     local db = producer.new(function()
       coroutine.yield "lil"
       error "boom"
     end)
     local seen = {}
-    for dog in db.search {} do
-      table.insert(seen, dog)
-    end
+    local ok, err = pcall(function()
+      for dog in db.search {} do
+        table.insert(seen, dog)
+      end
+    end)
+    T.eq(ok, false)
     T.eq(seen, { "lil" })
+    assert(err and tostring(err):find "boom", "expected error to contain 'boom', got: " .. tostring(err))
   end)
 end)
