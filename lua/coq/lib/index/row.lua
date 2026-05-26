@@ -108,6 +108,8 @@ local kind_hl = {
 M.to_item = function(row)
   return {
     dup = 1,
+    equal = 1,
+    empty = 1,
     word = row.snippet and row.abbr or row.word,
     abbr = row.abbr,
     abbr_hlgroup = row.abbr_hlgroup,
