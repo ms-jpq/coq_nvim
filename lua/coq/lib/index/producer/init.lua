@@ -16,7 +16,7 @@ M.new = function(matcher)
   db.search = function(ctx)
     local h = handle.new()
 
-    local stream = runtime.stream(function()
+    local stream = runtime.wrap(function()
       matcher(ctx)
     end, h)
 

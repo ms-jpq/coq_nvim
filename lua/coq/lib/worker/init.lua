@@ -170,13 +170,13 @@ local responder = function(write)
     end
     local args, n_args = frame.args or {}, frame.n_args or 0
 
-    -- The user fn emits via bare `coroutine.yield(row)`; runtime.stream
+    -- The user fn emits via bare `coroutine.yield(row)`; runtime.wrap
     -- captures each emit and the puller forwards it to the wire. NEXT releases
     -- back-pressure; STOP cancels req_handle (closing next_chan). The yield's
     -- return value is whatever the puller passes on resume -- true on NEXT,
     -- false on cancel -- letting user code branch for cleanup.
     local stream_err
-    local stream = runtime.stream(function()
+    local stream = runtime.wrap(function()
       local ok, e = pcall(fn, unpack(args, 1, n_args))
       if not ok then
         stream_err = e

@@ -109,7 +109,7 @@ M.detach = function(h, fn)
   end)()
 end
 
-M.stream = function(producer, h)
+M.wrap = function(producer, h)
   return trampoline(producer, h, function(bounce, eff)
     return bounce(coroutine.yield(eff))
   end)
@@ -168,25 +168,20 @@ M.preemptible = function(fn)
     end
 
     local f = M.future()
-
-    return lib.scope(function(defer)
-      defer(h.on_cancel(f.resolve))
-
-      M.detach(h, function()
-        f.resolve(xpcall(fn, debug.traceback))
-      end)
-
-      local go = function(ok, ...)
-        if ok == nil then
-          return nil
-        end
-        if not ok then
-          error((...), 0)
-        end
-        return ...
-      end
-      return go(f.await(h))
+    M.detach(h, function()
+      f.resolve(xpcall(fn, debug.traceback))
     end)
+
+    local go = function(ok, ...)
+      if not ok then
+        error((...), 0)
+      end
+      if h.cancelled then
+        return nil
+      end
+      return ...
+    end
+    return go(f.await())
   end
 end
 

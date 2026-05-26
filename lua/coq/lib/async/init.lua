@@ -13,10 +13,10 @@ M.preemptible = runtime.preemptible
 M.race = controlflow.race
 M.scope = nursery.scope
 M.sleep = runtime.sleep
-M.stream = runtime.stream
+M.wrap = runtime.wrap
 M.entry = runtime.entry
 
-M.wrap = function(fn)
+M.awaitify = function(fn)
   return function(...)
     local f = runtime.future()
     local argv = { ... }

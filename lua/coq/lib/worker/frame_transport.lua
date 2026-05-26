@@ -29,7 +29,7 @@ M.duplex_pair = function()
   return duplex, remote
 end
 
-local read_once = async.wrap(function(pipe, cb)
+local read_once = async.awaitify(function(pipe, cb)
   pipe:read_start(function(err, bytes)
     pipe:read_stop()
     if err or not bytes then
@@ -42,7 +42,7 @@ end)
 M.reader = function(pipe)
   local decoder = proto.decoder()
 
-  return runtime.stream(function()
+  return runtime.wrap(function()
     while true do
       local err, bytes = read_once(pipe)
       if err then
