@@ -1,12 +1,9 @@
-local runtime = require "coq.lib.async.runtime"
-
 local M = {}
 
 M.ctx = function()
   local ctx = {}
 
   do
-    ctx.handle = runtime.current()
     ctx.win = vim.api.nvim_get_current_win()
     ctx.buf = vim.api.nvim_win_get_buf(ctx.win)
     ctx.pos = vim.api.nvim_win_get_cursor(ctx.win)
