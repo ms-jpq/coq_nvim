@@ -160,14 +160,16 @@ M.preemptible = function(fn)
         f.resolve(xpcall(fn, debug.traceback))
       end)
 
-      local ok, ret = f.await(h)
-      if ok == nil then
-        return nil
+      local go = function(ok, ...)
+        if ok == nil then
+          return nil
+        end
+        if not ok then
+          error((...), 0)
+        end
+        return ...
       end
-      if not ok then
-        error(ret, 0)
-      end
-      return ret
+      return go(f.await(h))
     end)
   end
 end
@@ -179,21 +181,22 @@ M.stream = function(producer, h)
   end
 
   local pull
-  pull = function(...)
-    local go = function(ok, ...)
-      if not ok then
-        error(debug.traceback(co, (...)), 0)
-      end
-      if coroutine.status(co) == "dead" then
-        return nil
-      end
-
-      local eff = ...
-      if is_await(eff) then
-        return pull(coroutine.yield(eff))
-      end
-      return ...
+  local go = function(ok, ...)
+    if not ok then
+      error(debug.traceback(co, (...)), 0)
     end
+    if coroutine.status(co) == "dead" then
+      return nil
+    end
+
+    local eff = ...
+    if is_await(eff) then
+      return pull(coroutine.yield(eff))
+    end
+    return ...
+  end
+
+  pull = function(...)
     return go(coroutine.resume(co, ...))
   end
 

@@ -33,9 +33,11 @@ M.race = function(fns)
       end)
     end
 
-    local rets = { f.await(n.handle) }
-    n.handle.cancel()
-    return unpack(rets)
+    local finish = function(...)
+      n.handle.cancel()
+      return ...
+    end
+    return finish(f.await(n.handle))
   end)
 end
 
