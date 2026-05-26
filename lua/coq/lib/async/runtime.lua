@@ -66,8 +66,8 @@ local trampoline = function(producer, h, on_await)
     M.bind(co, h)
   end
 
-  local pull
-  local go = function(ok, ...)
+  local resume
+  local dispatch = function(ok, ...)
     if not ok then
       error(debug.traceback(co, (...)), 0)
     end
@@ -77,20 +77,20 @@ local trampoline = function(producer, h, on_await)
 
     local eff = ...
     if is_await(eff) then
-      return on_await(pull, eff)
+      return on_await(resume, eff)
     end
     return ...
   end
 
-  pull = function(...)
-    return go(coroutine.resume(co, ...))
+  resume = function(...)
+    return dispatch(coroutine.resume(co, ...))
   end
 
-  return pull
+  return resume
 end
 
 M.drive = function(h, fn)
-  return trampoline(fn, h, function(pull, eff)
+  return trampoline(fn, h, function(resume, eff)
     local woke = false
     local unwatch = lib.noop
     local wake = function(...)
@@ -99,7 +99,7 @@ M.drive = function(h, fn)
       end
       woke = true
       unwatch()
-      return pull(...)
+      resume(...)
     end
 
     eff.f.once_ready(wake)
@@ -185,8 +185,8 @@ M.preemptible = function(fn)
 end
 
 M.stream = function(producer, h)
-  return trampoline(producer, h, function(pull, eff)
-    return pull(coroutine.yield(eff))
+  return trampoline(producer, h, function(resume, eff)
+    return resume(coroutine.yield(eff))
   end)
 end
 
