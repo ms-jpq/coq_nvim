@@ -57,20 +57,19 @@ T.describe("score", function(test)
       recency = { golden_retriever = 1 },
       source_bias = { buffer = 2 },
     })
-    -- (0 + 3*2 + 1) * 2 = 14
-    T.eq(one("golden_retriever", p).score, 14)
+    T.eq(one("golden_retriever", p).score, (2 * score.WEIGHTS.prox + 1 * score.WEIGHTS.recen) * 2)
   end)
 
   test("proximity adds to the score", function()
     local plain = one("golden_retriever", prep "gold").score
     local boosted = one("golden_retriever", prep("gold", { locality = { golden_retriever = 1 } })).score
-    T.eq(boosted - plain, 3)
+    T.eq(boosted - plain, score.WEIGHTS.prox)
   end)
 
   test("recency adds to the score", function()
     local plain = one("golden_retriever", prep "gold").score
     local boosted = one("golden_retriever", prep("gold", { recency = { golden_retriever = 5 } })).score
-    T.eq(boosted - plain, 5)
+    T.eq(boosted - plain, 5 * score.WEIGHTS.recen)
   end)
 
   test("source bias multiplies the score", function()

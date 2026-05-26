@@ -1,6 +1,7 @@
 local M = {}
 
-local WEIGHTS = { prox = 3, recen = 1 }
+-- https://github.com/neovim/neovim/blob/master/src/nvim/fuzzy.c
+M.WEIGHTS = { prox = 100, recen = 50 }
 
 M.score = function(rows, prepared)
   local token = prepared.token
@@ -37,7 +38,7 @@ M.score = function(rows, prepared)
       local recen = prepared.recency[row.filter] or 0
       local bias = prepared.source_bias[row.source] or 1
 
-      return row, (hit.fuzzy + prox * WEIGHTS.prox + recen * WEIGHTS.recen) * bias, hit.positions
+      return row, (hit.fuzzy + prox * M.WEIGHTS.prox + recen * M.WEIGHTS.recen) * bias, hit.positions
     end)
 end
 
