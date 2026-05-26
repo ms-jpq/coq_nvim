@@ -54,17 +54,16 @@ M.run = function(seed)
   end
 
   do
-    local has_only = vim.iter(registry):any(function(t)
-      return t.only
-    end)
+    local kept, has_only = {}, false
+    for _, t in pairs(registry) do
+      if t.only then
+        has_only = true
+        table.insert(kept, t)
+      end
+    end
 
     if has_only then
-      registry = vim
-        .iter(registry)
-        :filter(function(t)
-          return t.only
-        end)
-        :totable()
+      registry = kept
       vim.notify(("⚑ only mode: %d tests"):format(#registry))
     end
 
@@ -111,9 +110,8 @@ M.run = function(seed)
   end
 
   do
-    local failed = 0
-    local passed = 0
-    for _, t in ipairs(registry) do
+    local failed, passed = 0, 0
+    for _, t in pairs(registry) do
       if t.timed_out then
         vim.notify("✗ " .. t.name .. "\n  timeout", vim.log.levels.ERROR)
         failed = failed + 1
@@ -131,14 +129,16 @@ M.run = function(seed)
       vim.notify(("✓ %d passed"):format(passed))
     end
 
-    local slowest = vim.iter(registry):totable()
-    table.sort(slowest, function(a, b)
+    table.sort(registry, function(a, b)
       return a.elapsed_ms > b.elapsed_ms
     end)
-    local n = math.min(#slowest, TOP_N)
-    vim.notify(("── slowest %d/%d tests ──"):format(n, #slowest))
-    for i = 1, n do
-      local t = slowest[i]
+    local n = math.min(#registry, TOP_N)
+    vim.notify(("── slowest %d/%d tests ──"):format(n, #registry))
+
+    for i, t in ipairs(registry) do
+      if i > n then
+        break
+      end
       vim.notify(("%7.1f ms  %s"):format(t.elapsed_ms, t.name))
     end
 
