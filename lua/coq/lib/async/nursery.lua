@@ -14,7 +14,7 @@ M.new = function(parent)
   nursery.spawn = function(fn)
     assert(not nursery.closed, "spawn: nursery is closed")
 
-    runtime.drive(nursery.handle, function()
+    runtime.detach(nursery.handle, function()
       pending[coroutine.running()] = true
       runtime.sleep(0)
       local ok, err = xpcall(lib.scope, debug.traceback, fn)

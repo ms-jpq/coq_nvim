@@ -14,7 +14,7 @@ M.race = controlflow.race
 M.scope = nursery.scope
 M.sleep = runtime.sleep
 M.stream = runtime.stream
-M.thunk = runtime.thunk
+M.entry = runtime.entry
 
 M.wrap = function(fn)
   return function(...)

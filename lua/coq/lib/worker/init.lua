@@ -290,7 +290,7 @@ if vim.is_thread() then
       return endpoint.request_oneshot(pack_call(fn, ...))
     end
 
-    async.thunk(function()
+    async.entry(function()
       async.scope(function(n, defer)
         defer(duplex.close)
 

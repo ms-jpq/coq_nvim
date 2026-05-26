@@ -26,9 +26,9 @@ T.describe("async", function(test)
     T.eq({ a, b, c }, { "lil", "spot", "fido" })
   end)
 
-  test("thunk defers execution", function()
+  test("entry defers execution", function()
     local ran = false
-    local later = async.thunk(function()
+    local later = async.entry(function()
       ran = true
     end)
 
@@ -40,11 +40,11 @@ T.describe("async", function(test)
     T.eq(ran, true)
   end)
 
-  test("thunk propagates errors", function()
+  test("entry propagates errors", function()
     local ok
     vim.schedule(function()
       ok = pcall(function()
-        async.thunk(function()
+        async.entry(function()
           error "lil went missing"
         end)()
       end)

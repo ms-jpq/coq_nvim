@@ -89,7 +89,7 @@ local trampoline = function(producer, h, on_await)
   return bounce
 end
 
-M.drive = function(h, fn)
+M.detach = function(h, fn)
   return trampoline(fn, h, function(bounce, eff)
     local resumed = false
     local unwatch = lib.noop
@@ -109,12 +109,18 @@ M.drive = function(h, fn)
   end)()
 end
 
-M.thunk = function(fn)
+M.stream = function(producer, h)
+  return trampoline(producer, h, function(bounce, eff)
+    return bounce(coroutine.yield(eff))
+  end)
+end
+
+M.entry = function(fn)
   return function(...)
-    assert(coroutine.running() == nil, "thunk: must be called outside a coroutine")
+    assert(coroutine.running() == nil, "entry: must be called outside a coroutine")
     local args = { ... }
-    M.drive(M.ROOT, function()
-      return fn(unpack(args))
+    M.detach(M.ROOT, function()
+      fn(unpack(args))
     end)
   end
 end
@@ -166,7 +172,7 @@ M.preemptible = function(fn)
     return lib.scope(function(defer)
       defer(h.on_cancel(f.resolve))
 
-      M.drive(h, function()
+      M.detach(h, function()
         f.resolve(xpcall(fn, debug.traceback))
       end)
 
@@ -182,12 +188,6 @@ M.preemptible = function(fn)
       return go(f.await(h))
     end)
   end
-end
-
-M.stream = function(producer, h)
-  return trampoline(producer, h, function(bounce, eff)
-    return bounce(coroutine.yield(eff))
-  end)
 end
 
 return M

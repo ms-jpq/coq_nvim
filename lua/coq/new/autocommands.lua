@@ -9,7 +9,7 @@ vim.api.nvim_create_autocmd({ "InsertCharPre" }, {
   callback = events.replace,
 })
 
-async.thunk(function()
+async.entry(function()
   lib.scope(function(defer)
     local iter = events.subscribe()
     defer(iter.close)

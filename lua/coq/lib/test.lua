@@ -80,7 +80,7 @@ M.run = function(seed)
       t.elapsed_ms = 0
       max_timeout = math.max(max_timeout, t.timeout)
 
-      async.thunk(function()
+      async.entry(function()
         local t_start = vim.uv.hrtime()
         local ok, e = xpcall(t.fn, debug.traceback)
         t.elapsed_ms = (vim.uv.hrtime() - t_start) / 1e6
