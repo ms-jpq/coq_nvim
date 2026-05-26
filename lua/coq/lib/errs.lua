@@ -5,11 +5,15 @@ M.UNKNOWN = "unknown error"
 M.group = function(es)
   return setmetatable({ errs = es }, {
     __tostring = function(self)
-      local parts = { ("error group (%d errors):"):format(#self.errs) }
-      for i, e in ipairs(self.errs) do
-        table.insert(parts, ("  [%d] %s"):format(i, tostring(e)))
-      end
-      return table.concat(parts, "\n")
+      local header = ("error group (%d errors):"):format(#self.errs)
+      local body = vim
+        .iter(self.errs)
+        :enumerate()
+        :map(function(i, e)
+          return ("  [%d] %s"):format(i, tostring(e))
+        end)
+        :totable()
+      return header .. "\n" .. table.concat(body, "\n")
     end,
   })
 end

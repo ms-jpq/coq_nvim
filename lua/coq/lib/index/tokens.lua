@@ -13,21 +13,16 @@ M.words = function(buf, lines)
   local matches = vim.api.nvim_buf_call(buf, function()
     return vim.fn.matchstrlist(lines, [[\k\+]])
   end)
-
-  local i = 0
-  return function()
-    i = i + 1
-    local m = matches[i]
-    return m and m.text
-  end
+  return vim.iter(matches):map(function(m)
+    return m.text
+  end)
 end
 
 M.locality = function(buf, lines)
-  local locality = {}
-  for word in M.words(buf, lines) do
-    locality[word] = (locality[word] or 0) + 1
-  end
-  return locality
+  return M.words(buf, lines):fold({}, function(acc, word)
+    acc[word] = (acc[word] or 0) + 1
+    return acc
+  end)
 end
 
 return M

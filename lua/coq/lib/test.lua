@@ -54,15 +54,14 @@ M.run = function(seed)
   end
 
   do
-    local kept, has_only = {}, false
-    for _, t in pairs(registry) do
-      if t.only then
-        has_only = true
-        table.insert(kept, t)
-      end
-    end
+    local kept = vim
+      .iter(registry)
+      :filter(function(t)
+        return t.only
+      end)
+      :totable()
 
-    if has_only then
+    if #kept > 0 then
       registry = kept
       vim.notify(("⚑ only mode: %d tests"):format(#registry))
     end
@@ -135,12 +134,9 @@ M.run = function(seed)
     local n = math.min(#registry, TOP_N)
     vim.notify(("── slowest %d/%d tests ──"):format(n, #registry))
 
-    for i, t in ipairs(registry) do
-      if i > n then
-        break
-      end
+    vim.iter(registry):take(n):each(function(t)
       vim.notify(("%7.1f ms  %s"):format(t.elapsed_ms, t.name))
-    end
+    end)
 
     if failed > 0 then
       vim.notify(("%d failed"):format(failed), vim.log.levels.ERROR)
