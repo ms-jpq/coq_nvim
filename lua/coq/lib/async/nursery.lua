@@ -17,7 +17,7 @@ M.new = function(parent)
     runtime.detach(nursery.handle, function()
       pending[coroutine.running()] = true
       runtime.sleep(0)
-      local ok, err = xpcall(lib.scope, debug.traceback, fn)
+      local ok, err = pcall(lib.scope, fn)
       pending[coroutine.running()] = nil
 
       if not ok then
