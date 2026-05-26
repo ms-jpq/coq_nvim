@@ -1,48 +1,44 @@
 local M = {}
 
+local WEIGHTS = { prox = 3, recen = 1 }
+
 M.score = function(rows, prepared)
   local token = prepared.token
 
-  local by_filter = {}
-  if token == "" then
-    for _, row in ipairs(rows) do
-      by_filter[row.filter] = { fuzzy = 0, positions = nil }
+  local by_filter = (function()
+    if token == "" then
+      return vim.iter(rows):fold({}, function(acc, row)
+        acc[row.filter] = { fuzzy = 0, positions = nil }
+        return acc
+      end)
     end
-  else
-    local seen = {}
+
     local filters = vim
       .iter(rows)
       :map(function(row)
-        if seen[row.filter] then
-          return nil
-        end
-        seen[row.filter] = true
         return row.filter
       end)
       :totable()
     local matches, positions, scores = unpack(vim.fn.matchfuzzypos(filters, token))
-    for i, f in ipairs(matches) do
-      by_filter[f] = { fuzzy = scores[i], positions = positions[i] }
-    end
-  end
+    return vim.iter(matches):enumerate():fold({}, function(acc, i, f)
+      acc[f] = { fuzzy = scores[i], positions = positions[i] }
+      return acc
+    end)
+  end)()
 
-  local i = 0
-  return function()
-    while true do
-      i = i + 1
-      local row = rows[i]
-      if row == nil then
-        return nil
-      end
+  return vim
+    .iter(rows)
+    :filter(function(row)
+      return by_filter[row.filter] ~= nil
+    end)
+    :map(function(row)
       local hit = by_filter[row.filter]
-      if hit then
-        local prox = prepared.locality[row.filter] or 0
-        local rec = prepared.recency[row.filter] or 0
-        local bias = prepared.source_bias[row.source] or 1
-        return row, (hit.fuzzy + 3 * prox + rec) * bias, hit.positions
-      end
-    end
-  end
+      local prox = prepared.locality[row.filter] or 0
+      local recen = prepared.recency[row.filter] or 0
+      local bias = prepared.source_bias[row.source] or 1
+
+      return row, (hit.fuzzy + prox * WEIGHTS.prox + recen * WEIGHTS.recen) * bias, hit.positions
+    end)
 end
 
 return M

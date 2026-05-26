@@ -26,14 +26,9 @@ M.new = function(k)
   end
 
   topk.iter = function()
-    local n, i = #items, 0
-    return function()
-      i = i + 1
-      if i > n then
-        return nil
-      end
-      return items[i].row
-    end
+    return vim.iter(items):map(function(entry)
+      return entry.row
+    end)
   end
 
   return topk
