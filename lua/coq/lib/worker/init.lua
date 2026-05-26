@@ -158,7 +158,7 @@ local responder = function(write)
       return write(response(frame.id, false, err or errs.UNKNOWN))
     end
     local args, n_args = frame.args or {}, frame.n_args or 0
-    write(response(frame.id, xpcall(fn, debug.traceback, unpack(args, 1, n_args))))
+    write(response(frame.id, pcall(fn, unpack(args, 1, n_args))))
   end
 
   local serve_stream = function(frame, req_handle, next_chan)
@@ -175,7 +175,7 @@ local responder = function(write)
     -- false on cancel -- letting user code branch for cleanup.
     local stream_err
     local pull = runtime.stream(function()
-      local ok, e = xpcall(fn, debug.traceback, unpack(args, 1, n_args))
+      local ok, e = pcall(fn, unpack(args, 1, n_args))
       if not ok then
         stream_err = e
       end

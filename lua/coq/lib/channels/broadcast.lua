@@ -28,8 +28,7 @@ M.new = function(h)
     end
   end)
 
-  local chan = {}
-  chan.close = state.close
+  local chan = { close = state.close }
 
   chan.replace = function(...)
     if state.closed then

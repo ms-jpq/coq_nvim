@@ -36,8 +36,7 @@ M.new = function(capacity, h)
     end
   end)
 
-  local chan = {}
-  chan.close = state.close
+  local chan = { close = state.close }
 
   chan.push = function(...)
     while not state.closed and #queue >= capacity do
