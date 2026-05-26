@@ -1,6 +1,7 @@
 local T = require "coq.lib.test"
 local async = require "coq.lib.async"
 local handle = require "coq.lib.async.handle"
+local lib = require "coq.lib"
 local nursery = require "coq.lib.async.nursery"
 local runtime = require "coq.lib.async.runtime"
 
@@ -94,7 +95,7 @@ T.describe("nursery", function(test)
     local n = nursery.new()
     n.join()
 
-    local ok, err = pcall(n.spawn, function() end)
+    local ok, err = pcall(n.spawn, lib.noop)
     T.eq(ok, false)
     assert(tostring(err):find "nursery is closed")
   end)

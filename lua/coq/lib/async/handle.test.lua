@@ -1,6 +1,7 @@
 local T = require "coq.lib.test"
 local async = require "coq.lib.async"
 local handle = require "coq.lib.async.handle"
+local lib = require "coq.lib"
 
 T.describe("handle", function(test)
   test("cancel fires registered watchers", function()
@@ -52,7 +53,7 @@ T.describe("handle", function(test)
   test("unwatch on a cancelled handle is a noop", function()
     local h = handle.new()
     h.cancel()
-    local unwatch = h.on_cancel(function() end)
+    local unwatch = h.on_cancel(lib.noop)
     unwatch()
   end)
 

@@ -1,6 +1,7 @@
 local T = require "coq.lib.test"
 local async = require "coq.lib.async"
 local handle = require "coq.lib.async.handle"
+local lib = require "coq.lib"
 local runtime = require "coq.lib.async.runtime"
 
 T.describe("race", function(test)
@@ -91,7 +92,7 @@ T.describe("race", function(test)
   test("sync task beats later async task", function()
     local async_ran = false
     local idx = async.race {
-      function() end,
+      lib.noop,
       function()
         async_ran = true
         async.sleep(5)

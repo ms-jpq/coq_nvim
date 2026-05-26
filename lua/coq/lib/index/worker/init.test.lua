@@ -1,5 +1,6 @@
 local T = require "coq.lib.test"
 local async = require "coq.lib.async"
+local lib = require "coq.lib"
 local worker = require "coq.lib.index.worker"
 
 T.describe("worker (regular)", function(test)
@@ -26,14 +27,14 @@ T.describe("worker (regular)", function(test)
   end)
 
   test("empty matcher returns nil on the first pull", function()
-    local db = worker.new(function() end)
+    local db = worker.new(lib.noop)
     local it = db.search {}
     T.eq(it(), nil)
   end)
 
   test("queue invokes the fn in-process with args", function()
     local state = { 0 }
-    local db = worker.new(function() end)
+    local db = worker.new(lib.noop)
     db.queue(function(s, n)
       s[1] = s[1] + n
     end, state, 5)

@@ -2,6 +2,7 @@ local async = require "coq.lib.async"
 local errs = require "coq.lib.errs"
 local handle = require "coq.lib.async.handle"
 local inflight = require "coq.lib.worker.inflight"
+local lib = require "coq.lib"
 local mpmc = require "coq.lib.channels.mpmc"
 local nursery = require "coq.lib.async.nursery"
 local runtime = require "coq.lib.async.runtime"
@@ -64,12 +65,12 @@ local requester = function(write)
 
     local state = STATE.INITIAL
     local session = {}
-    local unwatch = function() end
+    local unwatch = lib.noop
 
     local cleanup = function()
       state = STATE.DONE
       unwatch()
-      unwatch = function() end
+      unwatch = lib.noop
       release()
       chan.close()
     end
@@ -151,7 +152,7 @@ end
 
 local responder = function(write)
   local parked = inflight.new()
-  local scheduled = vim.is_thread() and function() end or require("coq.lib.async.vim").scheduled
+  local scheduled = vim.is_thread() and lib.noop or require("coq.lib.async.vim").scheduled
 
   local invoke = function(frame, yield)
     local fn, err = load(frame.fn_bytecode)
