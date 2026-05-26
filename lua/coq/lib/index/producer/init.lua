@@ -16,7 +16,7 @@ M.new = function(matcher)
   db.search = function(ctx)
     local h = handle.new()
 
-    local pull = runtime.stream(function()
+    local stream = runtime.stream(function()
       matcher(ctx)
     end, h)
 
@@ -26,7 +26,7 @@ M.new = function(matcher)
       if h.cancelled then
         return nil
       end
-      local row = pull()
+      local row = stream()
       if row == nil then
         h.cancel()
       end

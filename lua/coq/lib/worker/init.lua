@@ -45,7 +45,6 @@ local response = function(id, ok, ...)
 end
 
 local requester = function(write)
-  local STATE = { INITIAL = "initial", STREAMING = "streaming", DONE = "done" }
   local flights = inflight.new()
   local requester = {}
 
@@ -61,12 +60,13 @@ local requester = function(write)
       error(err, 0)
     end
 
-    local state = STATE.INITIAL
+    local done = false
+    local started = false
     local session = {}
     local unwatch = lib.noop
 
     local cleanup = function()
-      state = STATE.DONE
+      done = true
       unwatch()
       unwatch = lib.noop
       release()
@@ -74,28 +74,30 @@ local requester = function(write)
     end
 
     session.next = function()
-      if state == STATE.DONE then
+      if done then
         return nil
       end
 
-      if state == STATE.STREAMING then
+      if started then
         write { kind = Kind.NEXT, id = id }
       end
 
       local frame = chan.pull()
       if frame == nil then
         write { kind = Kind.STOP, id = id }
-      end
-      if frame == nil or frame.ok ~= nil then
         cleanup()
-      else
-        state = STATE.STREAMING
+        return nil
       end
+      if frame.ok ~= nil then
+        cleanup()
+        return frame
+      end
+      started = true
       return frame
     end
 
     session.close = function()
-      if state == STATE.DONE then
+      if done then
         return
       end
       write { kind = Kind.STOP, id = id }
@@ -174,27 +176,30 @@ local responder = function(write)
     -- return value is whatever the puller passes on resume -- true on NEXT,
     -- false on cancel -- letting user code branch for cleanup.
     local stream_err
-    local pull = runtime.stream(function()
+    local stream = runtime.stream(function()
       local ok, e = pcall(fn, unpack(args, 1, n_args))
       if not ok then
         stream_err = e
       end
     end, req_handle)
 
-    local row = pull()
-    while row ~= nil do
-      write { kind = Kind.YIELD, id = frame.id, n_values = 1, values = { row } }
-      local cont = next_chan.pull()
-      if req_handle.cancelled or not cont then
-        -- Drain the producer with `false` so each remaining `coroutine.yield`
-        -- in the user fn returns false (giving the user a cleanup signal). We
-        -- discard any emitted values -- the consumer has already stopped.
-        while pull(false) ~= nil do
+    -- Forward rows to the wire, respecting NEXT/STOP backpressure. On stop or
+    -- cancel, drain remaining yields with `false` so user fn sees false on each
+    -- and can clean up; emitted values are discarded.
+    local pump = function()
+      local row = stream()
+      while row ~= nil do
+        write { kind = Kind.YIELD, id = frame.id, n_values = 1, values = { row } }
+        local cont = next_chan.pull()
+        if req_handle.cancelled or not cont then
+          while stream(false) ~= nil do
+          end
+          return
         end
-        break
+        row = stream(true)
       end
-      row = pull(true)
     end
+    pump()
 
     if stream_err then
       write(response(frame.id, false, stream_err))
@@ -206,46 +211,36 @@ local responder = function(write)
   local responder = {}
 
   responder.serve = function(n, frame)
+    -- Reserve the NEXT/STOP parker SYNCHRONOUSLY so STOP frames arriving while
+    -- the spawn is queued don't get dropped. Oneshot still needs the parker so
+    -- a STOP from the caller (e.g., session.close on cancel) cancels the work
+    -- instead of letting it run to completion.
     local req_handle = handle.new(runtime.current())
+    local next_chan = frame.streaming and mpmc.new() or nil
 
-    if frame.streaming then
-      -- Reserve the NEXT/STOP parker SYNCHRONOUSLY so STOP frames arriving
-      -- while the spawn is queued don't get dropped.
-      local next_chan = mpmc.new()
-      local _, release = parked.reserve(function(rsp)
-        if rsp.kind == Kind.STOP then
-          req_handle.cancel()
-        else
-          next_chan.push(true)
-        end
-      end, frame.id)
-      req_handle.on_cancel(next_chan.close)
-
-      n.spawn(function(defer)
-        defer(req_handle.cancel)
-        defer(release)
-        runtime.bind(coroutine.running(), req_handle)
-        scheduled()
-        serve_stream(frame, req_handle, next_chan)
-      end)
-    else
-      -- Also reserve a parker for oneshot so STOP frames (e.g., from a cancelled
-      -- session.close on the caller side) cancel the spawned work instead of
-      -- leaving it to run to completion.
-      local _, release = parked.reserve(function(rsp)
-        if rsp.kind == Kind.STOP then
-          req_handle.cancel()
-        end
-      end, frame.id)
-
-      n.spawn(function(defer)
-        defer(req_handle.cancel)
-        defer(release)
-        runtime.bind(coroutine.running(), req_handle)
-        scheduled()
-        serve_oneshot(frame)
-      end)
+    if next_chan then
+      local _ = req_handle.on_cancel(next_chan.close)
     end
+
+    local _, release = parked.reserve(function(rsp)
+      if rsp.kind == Kind.STOP then
+        req_handle.cancel()
+      elseif next_chan then
+        next_chan.push(true)
+      end
+    end, frame.id)
+
+    n.spawn(function(defer)
+      defer(req_handle.cancel)
+      defer(release)
+      runtime.bind(coroutine.running(), req_handle)
+      scheduled()
+      if next_chan then
+        serve_stream(frame, req_handle, next_chan)
+      else
+        serve_oneshot(frame)
+      end
+    end)
   end
 
   responder.resolve = function(frame)
