@@ -178,7 +178,7 @@ M.stream = function(producer, h)
 
   local pull
   pull = function(...)
-    if coroutine.status(co) == "dead" or (h and h.cancelled) then
+    if coroutine.status(co) == "dead" then
       return nil
     end
 
