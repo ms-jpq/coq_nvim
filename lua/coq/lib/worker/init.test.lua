@@ -456,6 +456,39 @@ T.describe("worker", function(test)
     T.eq(r, "pong")
   end)
 
+  test("scope + defer closes iter when scope body raises", function()
+    local w = worker.spawn()
+    w.queue(function()
+      _G.done = require("coq.lib.async.event").new()
+      _G.closed_cleanly = false
+    end)
+    local ok, err = pcall(lib.scope, function(defer)
+      local iter = w.queue_stream(function(yield)
+        local cont = yield "lil"
+        if not cont then
+          _G.closed_cleanly = true
+        end
+        _G.done.set()
+      end)
+      defer(iter.close)
+      iter()
+      error "leash slipped"
+    end)
+    local closed_cleanly = w.queue(function()
+      _G.done.wait()
+      return _G.closed_cleanly
+    end)
+    local r = w.queue(function()
+      return "pong"
+    end)
+    w.close()
+
+    T.eq(ok, false)
+    assert(err and err:find "leash slipped", "expected leash slipped, got: " .. tostring(err))
+    T.eq(closed_cleanly, true)
+    T.eq(r, "pong")
+  end)
+
   test("a streaming fn that never yields returns nil immediately", function()
     local w = worker.spawn()
     local iter = w.queue_stream(function()

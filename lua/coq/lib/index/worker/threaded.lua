@@ -5,7 +5,7 @@ local M = {}
 M.new = function(matcher)
   local w = worker.spawn()
 
-  local db = { queue = w.queue, close = w.close }
+  local db = { close = w.close, queue = w.queue }
 
   db.search = function(ctx)
     local stream = w.queue_stream(matcher, ctx)
