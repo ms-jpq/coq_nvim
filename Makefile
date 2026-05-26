@@ -63,8 +63,8 @@ endef
 lint: .venv/bin/mypy
 	'$<' -- .
 
-test: .venv/bin/mypy
-	.venv/bin/python3 -m tests
+test:
+	./test.lua
 
 build: .venv/bin/mypy
 	.venv/bin/python3 -m ci
