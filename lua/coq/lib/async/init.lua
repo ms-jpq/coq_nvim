@@ -13,6 +13,7 @@ M.preemptible = runtime.preemptible
 M.race = controlflow.race
 M.scope = nursery.scope
 M.sleep = runtime.sleep
+M.stream = runtime.stream
 M.thunk = runtime.thunk
 
 M.wrap = function(fn)

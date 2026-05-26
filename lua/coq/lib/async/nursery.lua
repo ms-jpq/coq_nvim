@@ -35,7 +35,7 @@ M.new = function(parent)
 
     pending[thread] = true
     runtime.bind(thread, nursery.handle)
-    coroutine.resume(thread)
+    runtime.drive(thread, {})()
   end
 
   nursery.join = function()
