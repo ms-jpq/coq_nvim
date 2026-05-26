@@ -60,43 +60,56 @@ M.future = function()
   return f
 end
 
-M.drive = function(h, fn)
-  local co = coroutine.create(fn)
-  M.bind(co, h)
-
-  local step
-  step = function(...)
-    local ok, eff = coroutine.resume(co, ...)
-    if not ok then
-      error(eff, 0)
-    end
-    if coroutine.status(co) == "dead" then
-      return
-    end
-
-    if is_await(eff) then
-      local woke = false
-      local unwatch = lib.noop
-      local wake = function(...)
-        if woke then
-          return
-        end
-        woke = true
-        unwatch()
-        return step(...)
-      end
-
-      eff.f.once_ready(wake)
-      if not woke and eff.h then
-        unwatch = eff.h.on_cancel(wake)
-      end
-      return
-    end
-
-    error("bare yield outside a stream", 0)
+local make_pull = function(producer, h, on_await)
+  local co = coroutine.create(producer)
+  if h then
+    M.bind(co, h)
   end
 
-  step()
+  local pull
+  local go = function(ok, ...)
+    if not ok then
+      error(debug.traceback(co, (...)), 0)
+    end
+    if coroutine.status(co) == "dead" then
+      return nil
+    end
+
+    local eff = ...
+    if is_await(eff) then
+      return on_await(eff, pull)
+    end
+    return ...
+  end
+
+  pull = function(...)
+    return go(coroutine.resume(co, ...))
+  end
+
+  return pull
+end
+
+M.drive = function(h, fn)
+  local pull
+  pull = make_pull(fn, h, function(eff)
+    local woke = false
+    local unwatch = lib.noop
+    local wake = function(...)
+      if woke then
+        return
+      end
+      woke = true
+      unwatch()
+      return pull(...)
+    end
+
+    eff.f.once_ready(wake)
+    if not woke and eff.h then
+      unwatch = eff.h.on_cancel(wake)
+    end
+  end)
+
+  pull()
 end
 
 M.thunk = function(fn)
@@ -175,32 +188,9 @@ M.preemptible = function(fn)
 end
 
 M.stream = function(producer, h)
-  local co = coroutine.create(producer)
-  if h then
-    M.bind(co, h)
-  end
-
-  local pull
-  local go = function(ok, ...)
-    if not ok then
-      error(debug.traceback(co, (...)), 0)
-    end
-    if coroutine.status(co) == "dead" then
-      return nil
-    end
-
-    local eff = ...
-    if is_await(eff) then
-      return pull(coroutine.yield(eff))
-    end
-    return ...
-  end
-
-  pull = function(...)
-    return go(coroutine.resume(co, ...))
-  end
-
-  return pull
+  return make_pull(producer, h, function(eff, pull)
+    return pull(coroutine.yield(eff))
+  end)
 end
 
 return M

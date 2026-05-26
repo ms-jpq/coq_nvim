@@ -28,7 +28,10 @@ jobs:
           python-version: ${{ matrix.python_ver }}
 
       - run: |-
-          curl --disable --fail --location --no-progress-meter -- 'https://ms-jpq.github.io/deb/pubkey.asc' | sudo -- gpg --batch --dearmor --yes --output /etc/apt/trusted.gpg.d/ms-jpq.gpg
+          curl --disable --fail --location --no-progress-meter -- 'https://raw.githubusercontent.com/ms-jpq/deb/refs/heads/deb/pubkey.asc' | sudo -- gpg --batch --dearmor --yes --output /etc/apt/trusted.gpg.d/ms-jpq.gpg
+          sudo -- tee -- /etc/apt/sources.list.d/ms-jpq.list <<-'EOF'
+          deb https://raw.githubusercontent.com/ms-jpq/deb/refs/heads/deb/ /
+          EOF
           sudo -- apt update
           sudo -- apt install --yes -- neovim universal-ctags
 
