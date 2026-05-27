@@ -3,28 +3,28 @@ local lib = require "coq.lib"
 
 local M = {}
 
----@type Handle
+---@type async.Handle
 M.ROOT = handle.new()
 
----@type table<thread, Handle>
+---@type table<thread, async.Handle>
 local threads = setmetatable({}, { __mode = "k" })
 
 ---@param thread thread
----@param h Handle
+---@param h async.Handle
 M.bind = function(thread, h)
   threads[thread] = h
 end
 
----@return Handle
+---@return async.Handle
 M.current = function()
   local thread = coroutine.running()
   assert(thread ~= nil, "current: must be called inside a coroutine")
   return threads[thread] or M.ROOT
 end
 
----@class Await
----@field f Future
----@field h? Handle
+---@class async.Await
+---@field f async.Future
+---@field h? async.Handle
 
 local AWAIT_EFF = {}
 
@@ -34,13 +34,13 @@ local is_await = function(x)
   return type(x) == "table" and getmetatable(x) == AWAIT_EFF
 end
 
----@class Future<T>
+---@class async.Future<T>
 ---@field resolve fun(...: T)
 ---@field once_ready fun(cb: fun(...: T))
----@field await fun(h?: Handle): T ...
+---@field await fun(h?: async.Handle): T ...
 
 ---@generic T
----@return Future<T>
+---@return async.Future<T>
 M.future = function()
   local done = false
   local vals = {}
@@ -79,8 +79,8 @@ M.future = function()
 end
 
 ---@param producer fun(...: any)
----@param h? Handle
----@param on_await fun(bounce: fun(...: any): any, eff: Await)
+---@param h? async.Handle
+---@param on_await fun(bounce: fun(...: any): any, eff: async.Await)
 ---@return fun(...: any): any
 local trampoline = function(producer, h, on_await)
   local co = coroutine.create(producer)
@@ -111,7 +111,7 @@ local trampoline = function(producer, h, on_await)
   return bounce
 end
 
----@param h Handle
+---@param h async.Handle
 ---@param fn fun(...)
 ---@param ... any
 M.detach = function(h, fn, ...)
@@ -139,7 +139,7 @@ end
 
 ---@generic F: fun(...)
 ---@param producer F
----@param h? Handle
+---@param h? async.Handle
 ---@return F
 M.wrap = function(producer, h)
   return trampoline(producer, h, function(bounce, eff)
@@ -158,7 +158,7 @@ M.entry = function(fn)
 end
 
 ---@param milliseconds integer
----@param h? Handle
+---@param h? async.Handle
 M.sleep = function(milliseconds, h)
   h = h or M.current()
   if h.cancelled then

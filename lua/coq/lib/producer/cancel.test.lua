@@ -30,7 +30,7 @@ local cancel_tests = function(name, factory)
       async.scope(function(n)
         n.spawn(function()
           local db = factory(lib.noop, function()
-            async.sleep(80)
+            require("coq.lib.async").sleep(80)
             coroutine.yield "never"
           end)
           local start = vim.uv.hrtime()

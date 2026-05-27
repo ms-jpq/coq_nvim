@@ -5,6 +5,8 @@ local BYTE = 256
 
 local M = {}
 
+---@param body table
+---@return string
 M.encode = function(body)
   local payload = vim.mpack.encode(body)
   local n = #payload
@@ -16,6 +18,7 @@ M.encode = function(body)
   ) .. payload
 end
 
+---@return fun(data: string): fun(): table?
 M.decoder = function()
   local buf, pos = "", 1
 

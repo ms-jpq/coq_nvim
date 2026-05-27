@@ -1,4 +1,4 @@
----@class SparseTable<T>
+---@class lib.SparseTable<T>
 ---@field push fun(value: T): integer
 ---@field remove fun(key: integer)
 ---@field shift fun(): T?
@@ -7,7 +7,7 @@
 local M = {}
 
 ---@generic T
----@return SparseTable<T>
+---@return lib.SparseTable<T>
 M.new = function()
   local map, count, head = {}, 0, 1
 

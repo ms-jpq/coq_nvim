@@ -3,7 +3,7 @@ local runtime = require "coq.lib.async.runtime"
 local sparse = require "coq.lib.sparse_table"
 local util = require "coq.lib.channels.util"
 
----@class MpmcChan<T>: Closable
+---@class channels.Mpmc<T>: lib.Closable
 ---@field push fun(...: T): boolean
 ---@field pull fun(): T ...
 ---@overload fun(): T ...
@@ -12,8 +12,8 @@ local M = {}
 
 ---@generic T
 ---@param capacity? integer
----@param h? Handle
----@return MpmcChan<T>
+---@param h? async.Handle
+---@return channels.Mpmc<T>
 M.new = function(capacity, h)
   capacity = math.max(1, capacity or math.huge)
 

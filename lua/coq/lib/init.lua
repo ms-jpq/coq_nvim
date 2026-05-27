@@ -1,4 +1,4 @@
----@class Closable
+---@class lib.Closable
 ---@field close fun()
 
 local M = {}

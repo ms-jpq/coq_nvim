@@ -56,13 +56,13 @@ M.race = function(fns)
   end)
 end
 
----@class MergeIter<T>: Closable
+---@class async.MergeIter<T>: lib.Closable
 ---@overload fun(): integer?, T?
 
 ---@generic T
 ---@param iters (fun(): T)[]
----@param h? Handle
----@return MergeIter<T>
+---@param h? async.Handle
+---@return async.MergeIter<T>
 M.merge = function(iters, h)
   local n = nursery.new(h)
   local chan = mpmc.new(1, n.handle)

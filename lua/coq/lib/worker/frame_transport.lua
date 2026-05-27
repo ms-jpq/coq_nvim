@@ -4,8 +4,19 @@ local async = require "coq.lib.async"
 local proto = require "coq.lib.worker.wire_proto"
 local runtime = require "coq.lib.async.runtime"
 
+---@class worker.Duplex: lib.Closable
+---@field reader uv.uv_pipe_t
+---@field writer uv.uv_pipe_t
+
+---@class worker.RemoteEnd
+---@field read_fd integer
+---@field write_fd integer
+
 local M = {}
 
+---@param read_fd integer
+---@param write_fd integer
+---@return worker.Duplex
 M.open_duplex = function(read_fd, write_fd)
   local duplex = {}
   duplex.reader, duplex.writer = vim.uv.new_pipe(), vim.uv.new_pipe()
@@ -20,10 +31,12 @@ M.open_duplex = function(read_fd, write_fd)
   return duplex
 end
 
+---@return worker.Duplex, worker.RemoteEnd
 M.duplex_pair = function()
   local inbound = vim.uv.pipe({ nonblock = true }, { nonblock = true })
   local outbound = vim.uv.pipe({ nonblock = true }, { nonblock = true })
 
+  assert(inbound and outbound)
   local duplex = M.open_duplex(inbound.read, outbound.write)
   local remote = { read_fd = outbound.read, write_fd = inbound.write }
   return duplex, remote
@@ -39,6 +52,8 @@ local read_once = async.awaitify(function(pipe, cb)
   end)
 end)
 
+---@param pipe uv.uv_pipe_t
+---@return fun(): table?
 M.reader = function(pipe)
   local decoder = proto.decoder()
 
@@ -58,6 +73,8 @@ M.reader = function(pipe)
   end)
 end
 
+---@param pipe uv.uv_pipe_t
+---@return fun(body: table)
 M.writer = function(pipe)
   return function(body)
     local f = runtime.future()
@@ -71,6 +88,8 @@ M.writer = function(pipe)
   end
 end
 
+---@param fn fun(...: any)
+---@param ... any
 M.spawn_worker = function(fn, ...)
   local dumped = string.dump(fn)
   vim.uv.new_thread(function(d, ...)

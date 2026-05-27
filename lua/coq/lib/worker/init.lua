@@ -253,12 +253,12 @@ local make_endpoint = function(duplex)
   }
 end
 
----@class WorkerStream: Closable
+---@class worker.WorkerStream: lib.Closable
 ---@overload fun(): any ...
 
----@class Worker: Closable
+---@class worker.Worker: lib.Closable
 ---@field queue fun(fn: function, ...: any): any ...
----@field queue_stream fun(fn: function, ...: any): WorkerStream
+---@field queue_stream fun(fn: function, ...: any): worker.WorkerStream
 
 local M = {}
 
@@ -285,7 +285,7 @@ if vim.is_thread() then
   end
 end
 
----@return Worker
+---@return worker.Worker
 M.spawn = function()
   local duplex, remote = transport.duplex_pair()
   local closed = false

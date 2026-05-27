@@ -1,4 +1,4 @@
----@class Queue<T>
+---@class lib.Queue<T>
 ---@field push fun(row: T)
 ---@field pop fun(): T?
 ---@field len fun(): integer
@@ -6,7 +6,7 @@
 local M = {}
 
 ---@generic T
----@return Queue<T>
+---@return lib.Queue<T>
 M.new = function()
   local data, head, tail = {}, 1, 0
 

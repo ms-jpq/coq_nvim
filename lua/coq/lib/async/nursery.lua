@@ -3,16 +3,16 @@ local handle = require "coq.lib.async.handle"
 local lib = require "coq.lib"
 local runtime = require "coq.lib.async.runtime"
 
----@class Nursery
----@field handle Handle
+---@class async.Nursery
+---@field handle async.Handle
 ---@field closed boolean
 ---@field spawn fun(fn: fun(defer: fun(cleanup: fun())))
 ---@field join fun()
 
 local M = {}
 
----@param parent? Handle
----@return Nursery
+---@param parent? async.Handle
+---@return async.Nursery
 M.new = function(parent)
   parent = parent or runtime.current()
   local errors = {}
@@ -63,8 +63,8 @@ M.new = function(parent)
 end
 
 ---@generic T
----@param body fun(nursery: Nursery, defer: fun(cleanup: fun())): T ...
----@param h? Handle
+---@param body fun(nursery: async.Nursery, defer: fun(cleanup: fun())): T ...
+---@param h? async.Handle
 ---@return T ...
 M.scope = function(body, h)
   local nursery = M.new(h)

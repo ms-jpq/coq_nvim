@@ -5,8 +5,8 @@ local runtime = require "coq.lib.async.runtime"
 
 local M = {}
 
----@param producers Producer[]
----@return Producer
+---@param producers producer.Producer[]
+---@return producer.Producer
 M.new = function(producers)
   local search_handle, idle_handle = handle.new(), handle.new()
   do

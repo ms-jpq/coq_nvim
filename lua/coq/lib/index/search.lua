@@ -1,4 +1,4 @@
----@class SearchContext
+---@class index.SearchContext
 ---@field win integer
 ---@field buf integer
 ---@field pos [integer, integer]
@@ -20,7 +20,7 @@
 
 local M = {}
 
----@return SearchContext
+---@return index.SearchContext
 M.ctx = function()
   local ctx = {}
 
@@ -71,7 +71,7 @@ M.ctx = function()
   return ctx
 end
 
----@param db Producer
+---@param db producer.Producer
 M.search = function(db)
   return db.search(M.ctx())
 end

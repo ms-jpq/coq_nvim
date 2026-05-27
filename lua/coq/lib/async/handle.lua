@@ -1,16 +1,16 @@
 local lib = require "coq.lib"
 local sparse = require "coq.lib.sparse_table"
 
----@class Handle
+---@class async.Handle
 ---@field cancelled boolean
 ---@field cancel fun()
 ---@field on_cancel fun(watcher: fun()): fun()
 
 local M = {}
 
----@param parent? Handle
+---@param parent? async.Handle
 ---@param deadline_ms? integer
----@return Handle
+---@return async.Handle
 M.new = function(parent, deadline_ms)
   local handle = { cancelled = false }
   local watchers = sparse.new()

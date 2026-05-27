@@ -1,14 +1,14 @@
 local async = require "coq.lib.async"
 local tbl = require "coq.lib.tbl"
 
----@class TestSpecTable
+---@class lib.TestSpecTable
 ---@field [1] string
 ---@field timeout? integer
 ---@field only? boolean
 
----@alias TestSpec string | TestSpecTable
+---@alias lib.TestSpec string | lib.TestSpecTable
 
----@class TestEntry
+---@class lib.TestEntry
 ---@field name string
 ---@field timeout integer
 ---@field only boolean
@@ -26,8 +26,8 @@ local VERBOSE = os.getenv "TEST_VERBOSE" ~= nil
 
 local registry = {}
 
----@param spec TestSpec
----@return TestSpecTable
+---@param spec lib.TestSpec
+---@return lib.TestSpecTable
 local normalize = function(spec)
   if type(spec) == "string" then
     spec = { spec }
@@ -36,9 +36,9 @@ local normalize = function(spec)
 end
 
 ---@param prefix? string
----@param spec TestSpec
+---@param spec lib.TestSpec
 ---@param fn fun()
----@param group? TestSpecTable
+---@param group? lib.TestSpecTable
 local register = function(prefix, spec, fn, group)
   spec = normalize(spec)
   ---@cast spec -string
@@ -53,8 +53,8 @@ local register = function(prefix, spec, fn, group)
   })
 end
 
----@param spec TestSpec
----@param body fun(test: fun(spec: TestSpec, fn: fun()))
+---@param spec lib.TestSpec
+---@param body fun(test: fun(spec: lib.TestSpec, fn: fun()))
 M.describe = function(spec, body)
   spec = normalize(spec)
   ---@cast spec -string
@@ -63,7 +63,7 @@ M.describe = function(spec, body)
   end)
 end
 
----@param spec TestSpec
+---@param spec lib.TestSpec
 ---@param fn fun()
 M.test = function(spec, fn)
   register(nil, spec, fn)

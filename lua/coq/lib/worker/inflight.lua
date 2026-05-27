@@ -1,5 +1,11 @@
+---@class worker.Inflight
+---@field reserve fun(cb: fun(message: any), id?: integer): integer, fun()
+---@field resolve fun(id: integer, message: any)
+---@field drain fun(message: any)
+
 local M = {}
 
+---@return worker.Inflight
 M.new = function()
   local mapping = {}
   local seq = 0
