@@ -72,6 +72,12 @@ M.new = function(producers)
     end)
   end
 
+  sup.bind = function(event)
+    for _, p in pairs(producers) do
+      p.bind(event)
+    end
+  end
+
   sup.close = function()
     search_handle.cancel()
     idle_handle.cancel()
