@@ -1,6 +1,23 @@
 local async = require "coq.lib.async"
 local tbl = require "coq.lib.tbl"
 
+---@class TestSpecTable
+---@field [1] string
+---@field timeout? integer
+---@field only? boolean
+
+---@alias TestSpec string | TestSpecTable
+
+---@class TestEntry
+---@field name string
+---@field timeout integer
+---@field only boolean
+---@field fn fun()
+---@field done? boolean
+---@field err? string
+---@field timed_out? boolean
+---@field elapsed_ms? number
+
 local M = {}
 
 local DEFAULT_TIMEOUT = tonumber(os.getenv "TEST_TIMEOUT") or 1000
@@ -9,6 +26,8 @@ local VERBOSE = os.getenv "TEST_VERBOSE" ~= nil
 
 local registry = {}
 
+---@param spec TestSpec
+---@return TestSpecTable
 local normalize = function(spec)
   if type(spec) == "string" then
     spec = { spec }
@@ -16,8 +35,13 @@ local normalize = function(spec)
   return spec
 end
 
+---@param prefix? string
+---@param spec TestSpec
+---@param fn fun()
+---@param group? TestSpecTable
 local register = function(prefix, spec, fn, group)
   spec = normalize(spec)
+  ---@cast spec -string
   group = group or {}
   local name = prefix and (prefix .. " :: " .. spec[1]) or spec[1]
 
@@ -29,13 +53,18 @@ local register = function(prefix, spec, fn, group)
   })
 end
 
+---@param spec TestSpec
+---@param body fun(test: fun(spec: TestSpec, fn: fun()))
 M.describe = function(spec, body)
   spec = normalize(spec)
+  ---@cast spec -string
   body(function(test_spec, fn)
     register(spec[1], test_spec, fn, spec)
   end)
 end
 
+---@param spec TestSpec
+---@param fn fun()
 M.test = function(spec, fn)
   register(nil, spec, fn)
 end
@@ -46,6 +75,7 @@ M.eq = function(a, b)
   end
 end
 
+---@param seed? integer
 M.run = function(seed)
   do
     seed = seed or vim.uv.hrtime()
