@@ -78,16 +78,15 @@ T.describe("supervisor", function(test)
 
   test("new search cancels in-flight idle", function()
     local idle_elapsed_ms
-    local sup = supervisor.new {
-      producer.new(function()
-        local start = vim.uv.hrtime()
-        async.sleep(100)
-        idle_elapsed_ms = (vim.uv.hrtime() - start) / 1e6
-      end, function()
-        coroutine.yield "lil"
-      end),
-    }
-    sup.notify(true)
+    local p = producer.new(function()
+      local start = vim.uv.hrtime()
+      async.sleep(100)
+      idle_elapsed_ms = (vim.uv.hrtime() - start) / 1e6
+    end, function()
+      coroutine.yield "lil"
+    end)
+    local sup = supervisor.new { p }
+    p.notify(true)
     sup.idle {}
     async.sleep(5)
     for _ in sup.search {} do
@@ -124,17 +123,16 @@ T.describe("supervisor", function(test)
 
   test("idle runs once search has ended", function()
     local idle_ran = false
-    local sup = supervisor.new {
-      producer.new(function()
-        idle_ran = true
-      end, function()
-        coroutine.yield "lil"
-      end),
-    }
+    local p = producer.new(function()
+      idle_ran = true
+    end, function()
+      coroutine.yield "lil"
+    end)
+    local sup = supervisor.new { p }
     for _ in sup.search {} do
       lib.noop()
     end
-    sup.notify(true)
+    p.notify(true)
     sup.idle {}
     async.sleep(10)
     sup.close()

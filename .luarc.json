@@ -6,6 +6,7 @@
     "not-yieldable": "Any"
   },
   "Lua.diagnostics.workspaceEvent": "OnChange",
+  "Lua.runtime.path": ["lua/?.lua", "lua/?/init.lua"],
   "Lua.runtime.pathStrict": true,
   "Lua.runtime.version": "LuaJIT",
   "Lua.type.castNumberToInteger": false,
