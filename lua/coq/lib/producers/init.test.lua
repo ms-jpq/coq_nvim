@@ -34,18 +34,6 @@ T.describe("producer (regular)", function(test)
     T.eq(it(), nil)
   end)
 
-  test("queue invokes the fn in-process with args", function()
-    local state = { 0 }
-    local db = producer.new(lib.noop, lib.noop)
-    db.queue(function(s, n)
-      s[1] = s[1] + n
-    end, state, 5)
-    db.queue(function(s, n)
-      s[1] = s[1] + n
-    end, state, 3)
-    T.eq(state[1], 8)
-  end)
-
   test("matcher composes with async primitives between yields", function()
     local db = producer.new(lib.noop, function()
       coroutine.yield "lil"

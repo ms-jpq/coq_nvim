@@ -87,7 +87,7 @@ T.describe("supervisor", function(test)
         coroutine.yield "lil"
       end),
     }
-    sup.bind(true)
+    sup.notify(true)
     sup.idle {}
     async.sleep(5)
     for _ in sup.search {} do
@@ -134,6 +134,7 @@ T.describe("supervisor", function(test)
     for _ in sup.search {} do
       lib.noop()
     end
+    sup.notify(true)
     sup.idle {}
     async.sleep(10)
     sup.close()

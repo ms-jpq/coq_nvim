@@ -18,6 +18,39 @@ M.new = function(producers)
 
   local sup = {}
 
+  sup.close = function()
+    search_handle.cancel()
+    idle_handle.cancel()
+    pcall(current_close)
+    current_close = lib.noop
+    for _, p in ipairs(producers) do
+      p.close()
+    end
+  end
+
+  sup.notify = function(event)
+    for _, p in ipairs(producers) do
+      p.notify(event)
+    end
+  end
+
+  sup.idle = function(ctx)
+    if not search_handle.cancelled then
+      return
+    end
+    idle_handle.cancel()
+    idle_handle = handle.new()
+    runtime.detach(idle_handle, function()
+      async.scope(function(n)
+        for _, p in ipairs(producers) do
+          n.spawn(function()
+            p.idle(ctx)
+          end)
+        end
+      end)
+    end)
+  end
+
   sup.search = function(ctx)
     pcall(current_close)
 
@@ -42,50 +75,6 @@ M.new = function(producers)
     end, search_handle)
 
     return setmetatable({ close = search_handle.cancel }, { __call = stream })
-  end
-
-  sup.idle = function(ctx)
-    if not search_handle.cancelled then
-      return
-    end
-    idle_handle.cancel()
-    idle_handle = handle.new()
-    runtime.detach(idle_handle, function()
-      async.scope(function(n)
-        for _, p in ipairs(producers) do
-          n.spawn(function()
-            p.idle(ctx)
-          end)
-        end
-      end)
-    end)
-  end
-
-  sup.queue = function(fn, ...)
-    local args, n_args = { ... }, select("#", ...)
-    async.scope(function(n)
-      for _, p in ipairs(producers) do
-        n.spawn(function()
-          p.queue(fn, unpack(args, 1, n_args))
-        end)
-      end
-    end)
-  end
-
-  sup.bind = function(event)
-    for _, p in pairs(producers) do
-      p.bind(event)
-    end
-  end
-
-  sup.close = function()
-    search_handle.cancel()
-    idle_handle.cancel()
-    pcall(current_close)
-    current_close = lib.noop
-    for _, p in ipairs(producers) do
-      p.close()
-    end
   end
 
   return sup

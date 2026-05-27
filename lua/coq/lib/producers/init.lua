@@ -1,23 +1,44 @@
 local handle = require "coq.lib.async.handle"
-local lib = require "coq.lib"
+local queue = require "coq.lib.queue"
 local runtime = require "coq.lib.async.runtime"
 
----@class producers.Producer
----@field search fun(ctx: index.SearchContext): table
+---@class producers.Producer: lib.Closable
+---@field notify fun(event: any)
 ---@field idle fun(ctx: index.SearchContext)
----@field close fun()
----@field queue function
+---@field search fun(ctx: index.SearchContext): table
 
----@alias producers.NewProducer fun(idle: fun(ctx: index.SearchContext), matcher: fun(ctx: index.SearchContext)): producers.Producer
+---@alias producers.IdleFn fun(events: any[], ctx: index.SearchContext)
+---@alias producers.MatcherFn fun(ctx: index.SearchContext)
+---@alias producers.NewProducer fun(idle: producers.IdleFn, matcher: producers.MatcherFn): producers.Producer
 
 local M = {}
 
 ---@type producers.NewProducer
 M.new = function(idle, matcher)
-  local db = { close = lib.noop, idle = idle }
+  local events = queue.new()
+  local closed = false
 
-  db.queue = function(fn, ...)
-    return fn(...)
+  local db = {}
+
+  db.close = function()
+    closed = true
+  end
+
+  db.notify = function(event)
+    if closed then
+      return
+    end
+    events.push(event)
+  end
+
+  db.idle = function(ctx)
+    local batch = {}
+    for e in events.pop do
+      table.insert(batch, e)
+    end
+    if #batch > 0 then
+      idle(batch, ctx)
+    end
   end
 
   db.search = function(ctx)
