@@ -1,5 +1,7 @@
 local M = {}
 
+---@generic T
+---@param t T[]
 M.shuffle = function(t)
   for i = #t, 2, -1 do
     local j = math.random(i)

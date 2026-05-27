@@ -1,7 +1,12 @@
+---@class ErrorGroup
+---@field errs any[]
+
 local M = {}
 
 M.UNKNOWN = "unknown error"
 
+---@param es any[]
+---@return ErrorGroup
 M.group = function(es)
   return setmetatable({ errs = es }, {
     __tostring = function(self)
@@ -18,6 +23,7 @@ M.group = function(es)
   })
 end
 
+---@param es any[]
 M.raise = function(es)
   if #es == 0 then
     return

@@ -1,5 +1,13 @@
+---@class SparseTable<T>
+---@field push fun(value: T): integer
+---@field remove fun(key: integer)
+---@field shift fun(): T?
+---@field iter fun(rev?: boolean): fun(): integer?, T?
+
 local M = {}
 
+---@generic T
+---@return SparseTable<T>
 M.new = function()
   local map, count, head = {}, 0, 1
 
