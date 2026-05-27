@@ -1,7 +1,7 @@
 local T = require "coq.lib.test"
 local async = require "coq.lib.async"
 local lib = require "coq.lib"
-local producer = require "coq.lib.index.producer"
+local producer = require "coq.lib.producer"
 
 T.describe("producer (regular)", function(test)
   test("matcher yields rows that stream through the iterator", function()

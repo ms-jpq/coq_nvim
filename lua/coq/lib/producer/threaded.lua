@@ -2,10 +2,17 @@ local worker = require "coq.lib.worker"
 
 local M = {}
 
-M.new = function(matcher)
+---@return Producer
+M.new = function(matcher, idle)
   local w = worker.spawn()
 
   local db = { close = w.close, queue = w.queue }
+
+  if idle then
+    db.idle = function(ctx)
+      return w.queue(idle, ctx)
+    end
+  end
 
   db.search = function(ctx)
     local stream = w.queue_stream(matcher, ctx)

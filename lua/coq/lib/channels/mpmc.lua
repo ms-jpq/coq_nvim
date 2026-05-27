@@ -1,3 +1,4 @@
+local queue = require "coq.lib.queue"
 local runtime = require "coq.lib.async.runtime"
 local sparse = require "coq.lib.sparse_table"
 local util = require "coq.lib.channels.util"
@@ -7,7 +8,7 @@ local M = {}
 M.new = function(capacity, h)
   capacity = math.max(1, capacity or math.huge)
 
-  local queue = {}
+  local que = queue.new()
   local pull_waiters = sparse.new()
   local push_waiters = sparse.new()
 
@@ -39,7 +40,7 @@ M.new = function(capacity, h)
   local chan = { close = state.close }
 
   chan.push = function(...)
-    while not state.closed and #queue >= capacity do
+    while not state.closed and que.len() >= capacity do
       wait(push_waiters)
     end
 
@@ -47,21 +48,21 @@ M.new = function(capacity, h)
       return false
     end
 
-    table.insert(queue, util.pack(...))
+    que.push(util.pack(...))
     notify(pull_waiters)
     return true
   end
 
   chan.pull = function()
-    while not state.closed and #queue == 0 do
+    while not state.closed and que.len() == 0 do
       wait(pull_waiters)
     end
 
-    if #queue == 0 then
+    if que.len() == 0 then
       return nil
     end
 
-    local packet = table.remove(queue, 1)
+    local packet = que.pop()
     notify(push_waiters)
     return util.unpack(packet)
   end

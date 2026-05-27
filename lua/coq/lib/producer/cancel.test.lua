@@ -1,8 +1,8 @@
 local T = require "coq.lib.test"
 local async = require "coq.lib.async"
 local handle = require "coq.lib.async.handle"
-local producer = require "coq.lib.index.producer"
-local threaded = require "coq.lib.index.producer.threaded"
+local producer = require "coq.lib.producer"
+local threaded = require "coq.lib.producer.threaded"
 
 local cancel_tests = function(name, factory)
   T.describe("producer " .. name .. " :: cancel", function(test)
