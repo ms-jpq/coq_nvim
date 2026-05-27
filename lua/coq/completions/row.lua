@@ -1,8 +1,8 @@
----@class index.RowMeta
+---@class completions.RowMeta
 ---@field filter? string
 ---@field snippet? string
 
----@class index.Row
+---@class completions.Row
 ---@field word string
 ---@field abbr? string
 ---@field abbr_hlgroup? string
@@ -10,7 +10,7 @@
 ---@field info? string
 ---@field kind? string
 ---@field kind_hlgroup? string
----@field meta index.RowMeta
+---@field meta completions.RowMeta
 
 local M = {}
 
@@ -41,7 +41,7 @@ local kind_hl = {
   Variable = "@variable",
 }
 
----@param row index.Row
+---@param row completions.Row
 ---@return table
 M.to_item = function(row)
   return {

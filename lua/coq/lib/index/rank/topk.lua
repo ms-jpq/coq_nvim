@@ -1,6 +1,6 @@
 ---@class index.TopK
----@field push fun(row: index.Row, score: number)
----@field iter fun(): lib.Iterator<index.Row>
+---@field push fun(row: completions.Row, score: number)
+---@field iter fun(): lib.Iterator<completions.Row>
 
 local M = {}
 

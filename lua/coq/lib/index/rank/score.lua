@@ -1,11 +1,11 @@
----@alias index.Scored [index.Row, number, integer[]?]
+---@alias index.Scored [completions.Row, number, integer[]?]
 
 local M = {}
 
 -- https://github.com/neovim/neovim/blob/master/src/nvim/fuzzy.c
 M.WEIGHTS = { prox = 100, recen = 50 }
 
----@param rows index.Row[]
+---@param rows completions.Row[]
 ---@param prepared index.Prepared
 ---@return lib.Iterator<index.Scored>
 M.score = function(rows, prepared)
