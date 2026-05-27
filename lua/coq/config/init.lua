@@ -1,4 +1,4 @@
-local defaults = require "coq.new.config.defaults"
+local defaults = require "coq.config.defaults"
 
 ---@class config.GhostText
 ---@field enabled boolean

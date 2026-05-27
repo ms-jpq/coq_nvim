@@ -3,7 +3,7 @@ local threaded = require "coq.lib.producers.threaded"
 local tokens = require "coq.lib.index.tokens"
 
 local matcher = function(ctx)
-  local state = require "coq.new.producers.buffer.state"
+  local state = require "coq.producers.buffer.state"
   for _, words in pairs(state.bufs) do
     for word in pairs(words) do
       if word ~= ctx.cword then
@@ -14,7 +14,7 @@ local matcher = function(ctx)
 end
 
 local idle = function(events)
-  local state = require "coq.new.producers.buffer.state"
+  local state = require "coq.producers.buffer.state"
   for _, ev in ipairs(events) do
     if ev.kind == "remove" then
       state.bufs[ev.buf] = nil
