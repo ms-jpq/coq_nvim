@@ -24,7 +24,8 @@ M.group = function(es)
   })
 end
 
----@param es any[]
+---@generic T
+---@param es T[]
 M.raise = function(es)
   if #es == 0 then
     return

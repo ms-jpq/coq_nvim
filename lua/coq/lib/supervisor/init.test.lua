@@ -7,11 +7,11 @@ local supervisor = require "coq.lib.supervisor"
 T.describe("supervisor", function(test)
   test("merges rows from all producers", function()
     local sup = supervisor.new {
-      producer.new(function()
+      producer.new(lib.noop, function()
         coroutine.yield "lil"
         coroutine.yield "spot"
       end),
-      producer.new(function()
+      producer.new(lib.noop, function()
         coroutine.yield "fido"
       end),
     }
@@ -28,7 +28,7 @@ T.describe("supervisor", function(test)
   test("new search waits for previous pump to exit", function()
     local order = {}
     local sup = supervisor.new {
-      producer.new(function()
+      producer.new(lib.noop, function()
         async.sleep(50)
         table.insert(order, "matcher_done")
       end),
@@ -50,7 +50,7 @@ T.describe("supervisor", function(test)
 
   test("previous iterator returns nil after new search starts", function()
     local sup = supervisor.new {
-      producer.new(function()
+      producer.new(lib.noop, function()
         coroutine.yield "lil"
         async.sleep(50)
         coroutine.yield "never"
@@ -79,11 +79,11 @@ T.describe("supervisor", function(test)
     local idle_elapsed_ms
     local sup = supervisor.new {
       producer.new(function()
-        coroutine.yield "lil"
-      end, function()
         local start = vim.uv.hrtime()
         async.sleep(100)
         idle_elapsed_ms = (vim.uv.hrtime() - start) / 1e6
+      end, function()
+        coroutine.yield "lil"
       end),
     }
     sup.idle {}
@@ -104,10 +104,10 @@ T.describe("supervisor", function(test)
     local idle_ran = false
     local sup = supervisor.new {
       producer.new(function()
+        idle_ran = true
+      end, function()
         coroutine.yield "lil"
         async.sleep(50)
-      end, function()
-        idle_ran = true
       end),
     }
     local iter = sup.search {}
@@ -124,9 +124,9 @@ T.describe("supervisor", function(test)
     local idle_ran = false
     local sup = supervisor.new {
       producer.new(function()
-        coroutine.yield "lil"
-      end, function()
         idle_ran = true
+      end, function()
+        coroutine.yield "lil"
       end),
     }
     for _ in sup.search {} do
@@ -163,7 +163,7 @@ T.describe("supervisor", function(test)
 
   test("producer error kills the merged stream", function()
     local sup = supervisor.new {
-      producer.new(function()
+      producer.new(lib.noop, function()
         coroutine.yield "lil"
         error "boom"
       end),
@@ -181,16 +181,16 @@ T.describe("supervisor", function(test)
 
   test("supervisor satisfies the Producer shape (nestable)", function()
     local inner = supervisor.new {
-      producer.new(function()
+      producer.new(lib.noop, function()
         coroutine.yield "lil"
       end),
-      producer.new(function()
+      producer.new(lib.noop, function()
         coroutine.yield "spot"
       end),
     }
     local outer = supervisor.new {
       inner,
-      producer.new(function()
+      producer.new(lib.noop, function()
         coroutine.yield "fido"
       end),
     }

@@ -11,7 +11,7 @@ local runtime = require "coq.lib.async.runtime"
 local M = {}
 
 ---@return Producer
-M.new = function(matcher, idle)
+M.new = function(idle, matcher)
   local db = { close = lib.noop, idle = idle }
 
   db.queue = function(fn, ...)

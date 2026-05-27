@@ -1,6 +1,7 @@
 local T = require "coq.lib.test"
 local async = require "coq.lib.async"
 local handle = require "coq.lib.async.handle"
+local lib = require "coq.lib"
 local producer = require "coq.lib.producer"
 local threaded = require "coq.lib.producer.threaded"
 
@@ -12,7 +13,7 @@ local cancel_tests = function(name, factory)
       local got = "unset"
       async.scope(function(n)
         n.spawn(function()
-          local db = factory(function()
+          local db = factory(lib.noop, function()
             coroutine.yield "lil"
           end)
           got = db.search {}()
@@ -27,7 +28,7 @@ local cancel_tests = function(name, factory)
       local elapsed_ms
       async.scope(function(n)
         n.spawn(function()
-          local db = factory(function()
+          local db = factory(lib.noop, function()
             async.sleep(80)
             coroutine.yield "never"
           end)
