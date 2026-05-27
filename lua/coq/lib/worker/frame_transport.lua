@@ -43,6 +43,7 @@ M.duplex_pair = function()
   return duplex, remote
 end
 
+---@type fun(pipe: uv.uv_pipe_t): string?, string?
 local read_once = async.awaitify(function(pipe, cb)
   pipe:read_start(function(err, bytes)
     pipe:read_stop()

@@ -71,6 +71,8 @@ M.test = function(spec, fn)
   register(nil, spec, fn)
 end
 
+---@param a any
+---@param b any
 M.eq = function(a, b)
   if not vim.deep_equal(a, b) then
     error(("eq failed:\n  lhs = %s\n  rhs = %s"):format(vim.inspect(a), vim.inspect(b)), 2)

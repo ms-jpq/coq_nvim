@@ -103,6 +103,9 @@ M.merge = function(iters, h)
   return setmetatable({ close = close }, { __call = next })
 end
 
+---@generic A, T
+---@param fn fun(...: A, cb: fun(...: T))
+---@return fun(...: A): T ...
 M.awaitify = function(fn)
   return function(...)
     local f = runtime.future()

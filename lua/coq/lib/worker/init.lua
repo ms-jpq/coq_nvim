@@ -15,8 +15,11 @@ local Kind = {
   STOP = "stop",
 }
 
+---@type table<function, string>
 local dump_cache = setmetatable({}, { __mode = "k" })
 
+---@param fn function
+---@return string
 local dump = function(fn)
   local bytecode = dump_cache[fn]
   if not bytecode then
@@ -26,6 +29,9 @@ local dump = function(fn)
   return bytecode
 end
 
+---@param fn function
+---@param ... any
+---@return table
 local pack_request = function(fn, ...)
   return {
     fn_bytecode = dump(fn),
@@ -34,6 +40,10 @@ local pack_request = function(fn, ...)
   }
 end
 
+---@param id integer?
+---@param ok boolean
+---@param ... any
+---@return table
 local make_response = function(id, ok, ...)
   return {
     kind = Kind.YIELD,
@@ -44,6 +54,13 @@ local make_response = function(id, ok, ...)
   }
 end
 
+---@class worker.Session: lib.Closable
+---@field next fun(): table?
+
+---@param parked worker.Inflight
+---@param write fun(body: table)
+---@param message table
+---@return worker.Session
 local open = function(parked, write, message)
   local chan = mpmc.new(1)
   local id, release = parked.reserve(chan.push)
@@ -107,9 +124,18 @@ local open = function(parked, write, message)
 
   unwatch = runtime.current().on_cancel(session.close)
 
+  ---@cast session worker.Session
   return session
 end
 
+---@class worker.Requester
+---@field drain fun(message: any)
+---@field request_oneshot fun(message: table): any ...
+---@field request_stream fun(message: table): worker.WorkerStream
+---@field resolve fun(frame: table)
+
+---@param write fun(body: table)
+---@return worker.Requester
 local make_requester = function(write)
   local parked = inflight.new()
 
@@ -142,9 +168,16 @@ local make_requester = function(write)
     parked.resolve(frame.id, frame)
   end
 
+  ---@cast requester worker.Requester
   return requester
 end
 
+---@class worker.Responder
+---@field serve fun(n: async.Nursery, frame: table)
+---@field resolve fun(frame: table)
+
+---@param write fun(body: table)
+---@return worker.Responder
 local make_responder = function(write)
   local parked = inflight.new()
 
@@ -220,9 +253,17 @@ local make_responder = function(write)
     parked.resolve(frame.id, frame)
   end
 
+  ---@cast responder worker.Responder
   return responder
 end
 
+---@class worker.Endpoint
+---@field request_oneshot fun(message: table): any ...
+---@field request_stream fun(message: table): worker.WorkerStream
+---@field serve fun(n: async.Nursery, dead_message: string)
+
+---@param duplex worker.Duplex
+---@return worker.Endpoint
 local make_endpoint = function(duplex)
   local write = transport.writer(duplex.writer)
   local requester = make_requester(write)

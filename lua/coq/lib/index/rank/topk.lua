@@ -4,6 +4,8 @@
 
 local M = {}
 
+---@param x { score: number }
+---@return number
 local by_neg_score = function(x)
   return -x.score
 end

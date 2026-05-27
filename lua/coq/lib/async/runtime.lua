@@ -161,6 +161,7 @@ end
 
 ---@param milliseconds integer
 ---@param h? async.Handle
+---@return nil
 M.sleep = function(milliseconds, h)
   h = h or M.current()
   if h.cancelled then

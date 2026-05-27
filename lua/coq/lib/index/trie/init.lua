@@ -1,10 +1,19 @@
 local lib = require "coq.lib"
 
+---@class lib.Trie<T>
+---@field insert fun(key: string, value: T)
+---@field get fun(key: string): T?
+---@field prefix fun(key: string): fun(): string?, T?
+
 local M = {}
 
+---@generic T
+---@return lib.Trie<T>
 M.new = function()
   local root = { children = {} }
 
+  ---@param key string
+  ---@param value any
   local insert = function(key, value)
     local node = root
     for i = 1, #key do
@@ -19,6 +28,8 @@ M.new = function()
     node.value = value
   end
 
+  ---@param key string
+  ---@return any
   local get = function(key)
     local node = root
     for i = 1, #key do
@@ -30,6 +41,8 @@ M.new = function()
     return node.value
   end
 
+  ---@param key string
+  ---@return fun(): string?, any
   local prefix = function(key)
     local node = root
     for i = 1, #key do
