@@ -94,23 +94,6 @@ T.describe("sleep cancel", function(test)
     assert(elapsed_ms and elapsed_ms < 60, ("expected ~10ms, got %s"):format(tostring(elapsed_ms)))
   end)
 
-  test("uncancellable sleep ignores ambient cancel", function()
-    local h = handle.new()
-    local elapsed_ms
-
-    async.scope(h, function(n)
-      n.spawn(function()
-        local start = vim.uv.hrtime()
-        async.sleep(10, false)
-        elapsed_ms = (vim.uv.hrtime() - start) / 1e6
-      end)
-      async.sleep(2)
-      h.cancel()
-    end)
-
-    assert(elapsed_ms and elapsed_ms >= 8, ("expected ~10ms, got %s"):format(tostring(elapsed_ms)))
-  end)
-
   test("does not leak watchers on the passed handle", function()
     local n = nursery.new()
     local h = n.handle

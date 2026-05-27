@@ -138,13 +138,8 @@ M.entry = function(fn)
 end
 
 M.sleep = function(milliseconds, h)
-  if h == nil then
-    h = M.current()
-  elseif h == false then
-    h = nil
-  end
-
-  if h and h.cancelled then
+  h = h or M.current()
+  if h.cancelled then
     return
   end
 
