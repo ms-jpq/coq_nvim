@@ -3,7 +3,7 @@ local queue = require "coq.lib.queue"
 local runtime = require "coq.lib.async.runtime"
 
 ---@class producers.SearchIter: lib.Closable
----@overload fun(): completions.Row?
+---@overload fun(): completions.Item?
 
 ---@class producers.Producer: lib.Closable
 ---@field notify fun(event: any)
@@ -57,11 +57,11 @@ M.new = function(idle, matcher)
       if h.cancelled then
         return nil
       end
-      local row = stream()
-      if row == nil then
+      local item = stream()
+      if item == nil then
         h.cancel()
       end
-      return row
+      return item
     end
 
     return setmetatable(it, { __call = next })

@@ -54,18 +54,18 @@ M.new = function(producers)
 
     local iters = {}
     for idx, p in ipairs(producers) do
-      local row_iter
+      local iter
       iters[idx] = function()
-        row_iter = row_iter or p.search(ctx)
-        return row_iter()
+        iter = iter or p.search(ctx)
+        return iter()
       end
     end
 
     local next = runtime.wrap(function()
       return lib.scope(function(defer)
         defer(runtime.current().cancel)
-        for _, row in async.merge(iters) do
-          coroutine.yield(row)
+        for _, item in async.merge(iters) do
+          coroutine.yield(item)
         end
       end)
     end, search_handle)

@@ -1,6 +1,6 @@
 ---@class index.TopK
----@field push fun(row: completions.Row, score: number)
----@field iter fun(): lib.Iterator<completions.Row>
+---@field push fun(item: completions.Item, score: number)
+---@field iter fun(): lib.Iterator<completions.Item>
 
 local M = {}
 
@@ -18,12 +18,12 @@ M.new = function(k)
 
   local topk = {}
 
-  topk.push = function(row, score)
+  topk.push = function(item, score)
     if #items >= k and score <= items[#items].score then
       return
     end
 
-    local entry = { score = score, row = row }
+    local entry = { score = score, item = item }
     local i = vim.list.bisect(items, entry, { key = by_neg_score, bound = "upper" })
 
     table.insert(items, i, entry)
@@ -35,7 +35,7 @@ M.new = function(k)
 
   topk.iter = function()
     return vim.iter(items):map(function(entry)
-      return entry.row
+      return entry.item
     end)
   end
 

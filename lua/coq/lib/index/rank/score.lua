@@ -1,28 +1,28 @@
----@alias index.Scored [completions.Row, number, integer[]?]
+---@alias index.Scored [completions.Item, number, integer[]?]
 
 local M = {}
 
 -- https://github.com/neovim/neovim/blob/master/src/nvim/fuzzy.c
 M.WEIGHTS = { prox = 100, recen = 50 }
 
----@param rows completions.Row[]
+---@param items completions.Item[]
 ---@param prepared index.Prepared
 ---@return lib.Iterator<index.Scored>
-M.score = function(rows, prepared)
+M.score = function(items, prepared)
   local token = prepared.token
 
   local by_filter = (function()
     if token == "" then
-      return vim.iter(rows):fold({}, function(acc, row)
-        acc[row.filter] = { fuzzy = 0, positions = nil }
+      return vim.iter(items):fold({}, function(acc, item)
+        acc[item.filter] = { fuzzy = 0, positions = nil }
         return acc
       end)
     end
 
     local filters = vim
-      .iter(rows)
-      :map(function(row)
-        return row.filter
+      .iter(items)
+      :map(function(item)
+        return item.filter
       end)
       :totable()
     local matches, positions, scores = unpack(vim.fn.matchfuzzypos(filters, token))
@@ -33,17 +33,17 @@ M.score = function(rows, prepared)
   end)()
 
   return vim
-    .iter(rows)
-    :filter(function(row)
-      return by_filter[row.filter] ~= nil
+    .iter(items)
+    :filter(function(item)
+      return by_filter[item.filter] ~= nil
     end)
-    :map(function(row)
-      local hit = by_filter[row.filter]
-      local prox = prepared.locality[row.filter] or 0
-      local recen = prepared.recency[row.filter] or 0
-      local bias = prepared.source_bias[row.source] or 1
+    :map(function(item)
+      local hit = by_filter[item.filter]
+      local prox = prepared.locality[item.filter] or 0
+      local recen = prepared.recency[item.filter] or 0
+      local bias = prepared.source_bias[item.source] or 1
 
-      return row, (hit.fuzzy + prox * M.WEIGHTS.prox + recen * M.WEIGHTS.recen) * bias, hit.positions
+      return item, (hit.fuzzy + prox * M.WEIGHTS.prox + recen * M.WEIGHTS.recen) * bias, hit.positions
     end) --[[@as lib.Iterator<index.Scored>]]
 end
 

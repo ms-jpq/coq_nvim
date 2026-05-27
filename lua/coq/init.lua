@@ -2,9 +2,14 @@ if not os.getenv "COQ_V2" then
   return require "coq.legacy.coq"
 end
 
+local async = require "coq.lib.async"
 local config = require "coq.config"
+local insertion = require "coq.completions.insertion"
+local nursery = require "coq.lib.async.nursery"
 local nvim_options = require "coq.nvim_options"
+local preview = require "coq.completions.preview"
 local supervisor = require "coq.lib.producers.supervisor"
+local trigger = require "coq.completions.trigger"
 
 local M = {}
 
@@ -13,6 +18,15 @@ M.setup = function(opts)
   local settings = config.merged(opts)
   nvim_options.apply(settings)
   local sup = supervisor.new {}
+
+  async.entry(function()
+    nursery.scope(function(n)
+      trigger.bind(n, sup)
+      preview.bind(n, settings)
+      insertion.bind(n)
+    end)
+  end)()
+
   return { settings = settings, supervisor = sup }
 end
 

@@ -1,5 +1,5 @@
 ---@class lib.Queue<T>
----@field push fun(row: T)
+---@field push fun(item: T)
 ---@field pop fun(): T?
 ---@field len fun(): integer
 
@@ -12,19 +12,19 @@ M.new = function()
 
   local q = {}
 
-  q.push = function(row)
+  q.push = function(item)
     tail = tail + 1
-    data[tail] = row
+    data[tail] = item
   end
 
   q.pop = function()
     if head > tail then
       return nil
     end
-    local row = data[head]
+    local item = data[head]
     data[head] = nil
     head = head + 1
-    return row
+    return item
   end
 
   q.len = function()

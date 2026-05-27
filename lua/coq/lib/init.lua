@@ -3,6 +3,9 @@
 
 ---@alias lib.Iterator<T> fun(): T?
 
+---@class lib.Iterable<T>
+---@field iter fun(): lib.Iterator<T>
+
 local M = {}
 
 M.group = [[coq]]

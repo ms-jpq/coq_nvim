@@ -62,6 +62,19 @@ local recommended_keymaps = function(keymap)
 end
 
 ---@param keymap config.KeyMapping
+local jump_to_mark = function(keymap)
+  if not keymap.jump_to_mark then
+    return
+  end
+  vim.keymap.set({ "i", "s" }, keymap.jump_to_mark, function()
+    if vim.snippet.active { direction = 1 } then
+      return [[<cmd>lua vim.snippet.jump(1)<cr>]]
+    end
+    return keymap.jump_to_mark
+  end, { noremap = true, expr = true })
+end
+
+---@param keymap config.KeyMapping
 local manual_complete = function(keymap)
   if not keymap.manual_complete then
     return
@@ -87,6 +100,7 @@ M.apply = function(settings)
   shortmess(settings.display.pum)
   recommended_keymaps(settings.keymap)
   manual_complete(settings.keymap)
+  jump_to_mark(settings.keymap)
 end
 
 return M

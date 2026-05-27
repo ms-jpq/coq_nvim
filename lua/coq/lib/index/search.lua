@@ -72,10 +72,4 @@ M.ctx = function()
   return ctx
 end
 
----@param db producers.Producer
----@return producers.SearchIter
-M.search = function(db)
-  return db.search(M.ctx())
-end
-
 return M
