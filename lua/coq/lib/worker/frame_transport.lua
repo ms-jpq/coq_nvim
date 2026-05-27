@@ -92,7 +92,7 @@ end
 ---@param ... any
 M.spawn_worker = function(fn, ...)
   local dumped = string.dump(fn)
-  vim.uv.new_thread(function(d, ...)
+  vim.uv.new_thread({}, function(d, ...)
     load(d)(...)
   end, dumped, ...)
 end

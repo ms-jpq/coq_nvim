@@ -109,5 +109,5 @@ fmt: $(VAR)/bin/stylua
 
 lualint: $(VAR)/opt/lua-language-server/bin/lua-language-server | $(VAR)
 	mkdir -v -p -- '$(VAR)/luals'
-	'$<' --check '$(CURDIR)' --configpath '$(CURDIR)/.luarc.json' --logpath '$(VAR)/luals' --checklevel Warning
+	'$<' --check '.' --configpath '.luarc.json' --logpath '$(VAR)/luals' --checklevel Warning
 

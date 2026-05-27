@@ -55,7 +55,7 @@ M.new = function(parent, deadline_ms)
   end
 
   if deadline_ms then
-    timer = vim.uv.new_timer()
+    timer = assert(vim.uv.new_timer())
     timer:start(deadline_ms, 0, handle.cancel)
   end
 

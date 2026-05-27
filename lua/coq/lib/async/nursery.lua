@@ -63,9 +63,9 @@ M.new = function(parent)
 end
 
 ---@generic T
----@param body fun(nursery: async.Nursery, defer: fun(cleanup: fun())): T ...
+---@param body fun(nursery: async.Nursery, defer: fun(cleanup: fun())): T?
 ---@param h? async.Handle
----@return T ...
+---@return T?
 M.scope = function(body, h)
   local nursery = M.new(h)
 
