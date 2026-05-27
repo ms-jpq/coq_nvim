@@ -169,20 +169,19 @@ local make_responder = function(write)
       return
     end
 
-    local stream = runtime.wrap(function()
-      fn(unpack(args, 1, n_args))
-    end, req_handle)
+    local stream = runtime.wrap(fn, req_handle)
 
     local consume = function()
-      for row in stream do
+      local row = stream(unpack(args, 1, n_args))
+      while row ~= nil do
         write { kind = Kind.YIELD, id = frame.id, n_values = 1, values = { row } }
-
         if req_handle.cancelled or not next_chan.pull() then
           for _ in stream do
             lib.noop()
           end
           break
         end
+        row = stream(true)
       end
     end
 

@@ -97,6 +97,36 @@ T.describe("merge", function(test)
     T.eq(m(), nil)
   end)
 
+  test("close raises errors from a failed iter", function()
+    local m = async.merge {
+      function()
+        async.sleep(2)
+        error("bad dog", 0)
+      end,
+    }
+
+    async.sleep(5)
+    local ok, err = pcall(m.close)
+    T.eq(ok, false)
+    T.eq(err, "bad dog")
+  end)
+
+  test("pull raises errors from a failed iter", function()
+    local m = async.merge {
+      function()
+        async.sleep(2)
+        error("bad dog", 0)
+      end,
+    }
+
+    local ok, err = pcall(function()
+      for _ in m do
+      end
+    end)
+    T.eq(ok, false)
+    T.eq(err, "bad dog")
+  end)
+
   test("close cancels in-flight producers", function()
     local fired = false
     async.scope(function(n)
