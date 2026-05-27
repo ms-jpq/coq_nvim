@@ -212,7 +212,7 @@ T.describe("worker", function(test)
   test("close before the streaming fn's first yield unblocks it", function()
     local w = worker.spawn()
     w.queue(function()
-      _G.done = require("coq.lib.async.event").new()
+      _G.done = require("coq.lib.async").future()
       _G.closed_cleanly = false
     end)
     local iter = w.queue_stream(function()
@@ -220,11 +220,11 @@ T.describe("worker", function(test)
       if not cont then
         _G.closed_cleanly = true
       end
-      _G.done.set()
+      _G.done.resolve()
     end)
     iter.close()
     local ok = w.queue(function()
-      _G.done.wait()
+      _G.done.await()
       return _G.closed_cleanly
     end)
     w.close()
@@ -273,7 +273,7 @@ T.describe("worker", function(test)
   test("close mid-stream is sticky for subsequent yields", function()
     local w = worker.spawn()
     w.queue(function()
-      _G.done = require("coq.lib.async.event").new()
+      _G.done = require("coq.lib.async").future()
       _G.closed_cleanly = false
     end)
     local iter = w.queue_stream(function()
@@ -282,12 +282,12 @@ T.describe("worker", function(test)
       if not cont then
         _G.closed_cleanly = true
       end
-      _G.done.set()
+      _G.done.resolve()
     end)
     iter()
     iter.close()
     local ok = w.queue(function()
-      _G.done.wait()
+      _G.done.await()
       return _G.closed_cleanly
     end)
     w.close()
@@ -301,7 +301,7 @@ T.describe("worker", function(test)
     local h = handle.new()
     local w = worker.spawn()
     w.queue(function()
-      _G.got_stop = require("coq.lib.async.event").new()
+      _G.got_stop = require("coq.lib.async").future()
     end)
 
     async.scope(h, function(n)
@@ -309,7 +309,7 @@ T.describe("worker", function(test)
         local iter = w.queue_stream(function()
           local cont = coroutine.yield "lil"
           if not cont then
-            _G.got_stop.set()
+            _G.got_stop.resolve()
           end
         end)
         iter()
@@ -318,7 +318,7 @@ T.describe("worker", function(test)
     end)
 
     local ok = w.queue(function()
-      _G.got_stop.wait()
+      _G.got_stop.await()
       return true
     end)
     w.close()
@@ -332,7 +332,7 @@ T.describe("worker", function(test)
     local h = handle.new()
     local w = worker.spawn()
     w.queue(function()
-      _G.got_stop = require("coq.lib.async.event").new()
+      _G.got_stop = require("coq.lib.async").future()
     end)
 
     async.scope(h, function(n)
@@ -340,14 +340,14 @@ T.describe("worker", function(test)
         local _iter = w.queue_stream(function()
           while coroutine.yield "tick" do
           end
-          _G.got_stop.set()
+          _G.got_stop.resolve()
         end)
       end)
       h.cancel()
     end)
 
     local ok = w.queue(function()
-      _G.got_stop.wait()
+      _G.got_stop.await()
       return true
     end)
     w.close()
@@ -362,7 +362,7 @@ T.describe("worker", function(test)
     local h = handle.new()
     local w = worker.spawn()
     w.queue(function()
-      _G.got_cancel = require("coq.lib.async.event").new()
+      _G.got_cancel = require("coq.lib.async").future()
     end)
 
     async.scope(h, function(n)
@@ -373,7 +373,7 @@ T.describe("worker", function(test)
             return "should not reach"
           end)
           if r == nil then
-            _G.got_cancel.set()
+            _G.got_cancel.resolve()
           end
         end)
         local _ = runtime.current().on_cancel(iter.close)
@@ -383,7 +383,7 @@ T.describe("worker", function(test)
     end)
 
     local ok = w.queue(function()
-      _G.got_cancel.wait()
+      _G.got_cancel.await()
       return true
     end)
     w.close()
@@ -426,7 +426,7 @@ T.describe("worker", function(test)
   test("scope + defer closes iter when scope body raises", function()
     local w = worker.spawn()
     w.queue(function()
-      _G.done = require("coq.lib.async.event").new()
+      _G.done = require("coq.lib.async").future()
       _G.closed_cleanly = false
     end)
     local ok, err = pcall(lib.scope, function(defer)
@@ -435,14 +435,14 @@ T.describe("worker", function(test)
         if not cont then
           _G.closed_cleanly = true
         end
-        _G.done.set()
+        _G.done.resolve()
       end)
       defer(iter.close)
       iter()
       error "leash slipped"
     end)
     local closed_cleanly = w.queue(function()
-      _G.done.wait()
+      _G.done.await()
       return _G.closed_cleanly
     end)
     local r = w.queue(function()

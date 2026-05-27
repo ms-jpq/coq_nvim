@@ -1,12 +1,10 @@
 local controlflow = require "coq.lib.async.controlflow"
-local event = require "coq.lib.async.event"
 local nursery = require "coq.lib.async.nursery"
 local runtime = require "coq.lib.async.runtime"
 
 local M = {}
 
 M.all = controlflow.all
-M.event = event.new
 M.future = runtime.future
 M.merge = controlflow.merge
 M.preemptible = runtime.preemptible
