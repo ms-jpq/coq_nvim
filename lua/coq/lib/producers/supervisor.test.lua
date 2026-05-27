@@ -2,8 +2,8 @@
 local T = require "coq.lib.test"
 local async = require "coq.lib.async"
 local lib = require "coq.lib"
-local producer = require "coq.lib.producer"
-local supervisor = require "coq.lib.supervisor"
+local producer = require "coq.lib.producers"
+local supervisor = require "coq.lib.producers.supervisor"
 
 T.describe("supervisor", function(test)
   test("merges rows from all producers", function()

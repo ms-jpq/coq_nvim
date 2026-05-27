@@ -71,7 +71,7 @@ M.ctx = function()
   return ctx
 end
 
----@param db producer.Producer
+---@param db producers.Producer
 M.search = function(db)
   return db.search(M.ctx())
 end

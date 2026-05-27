@@ -2,17 +2,17 @@ local handle = require "coq.lib.async.handle"
 local lib = require "coq.lib"
 local runtime = require "coq.lib.async.runtime"
 
----@class producer.Producer
+---@class producers.Producer
 ---@field search fun(ctx: index.SearchContext): table
 ---@field idle fun(ctx: index.SearchContext)
 ---@field close fun()
 ---@field queue function
 
----@alias producer.NewProducer fun(idle: fun(ctx: index.SearchContext), matcher: fun(ctx: index.SearchContext)): producer.Producer
+---@alias producers.NewProducer fun(idle: fun(ctx: index.SearchContext), matcher: fun(ctx: index.SearchContext)): producers.Producer
 
 local M = {}
 
----@type producer.NewProducer
+---@type producers.NewProducer
 M.new = function(idle, matcher)
   local db = { close = lib.noop, idle = idle }
 
