@@ -2,8 +2,18 @@ local runtime = require "coq.lib.async.runtime"
 local sparse = require "coq.lib.sparse_table"
 local util = require "coq.lib.channels.util"
 
+---@class BroadcastSub<T>: Closable
+---@overload fun(): T ...
+
+---@class BroadcastChan<T>: Closable
+---@field replace fun(...: T): boolean
+---@field subscribe fun(): BroadcastSub<T>
+
 local M = {}
 
+---@generic T
+---@param h? Handle
+---@return BroadcastChan<T>
 M.new = function(h)
   local subscribers = sparse.new()
 
@@ -81,6 +91,7 @@ M.new = function(h)
           return nil
         end
       end
+      ---@cast packet Packet
       return util.unpack(packet)
     end
 

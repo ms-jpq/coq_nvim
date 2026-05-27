@@ -3,22 +3,33 @@ local lib = require "coq.lib"
 
 local M = {}
 
+---@type Handle
 M.ROOT = handle.new()
 
+---@type table<thread, Handle>
 local threads = setmetatable({}, { __mode = "k" })
 
+---@param thread thread
+---@param h Handle
 M.bind = function(thread, h)
   threads[thread] = h
 end
 
+---@return Handle
 M.current = function()
   local thread = coroutine.running()
   assert(thread ~= nil, "current: must be called inside a coroutine")
   return threads[thread] or M.ROOT
 end
 
+---@class Await
+---@field f Future
+---@field h? Handle
+
 local AWAIT_EFF = {}
 
+---@param x any
+---@return boolean
 local is_await = function(x)
   return type(x) == "table" and getmetatable(x) == AWAIT_EFF
 end
@@ -26,7 +37,7 @@ end
 ---@class Future<T>
 ---@field resolve fun(...: T)
 ---@field once_ready fun(cb: fun(...: T))
----@field await fun(h?: table): T ...
+---@field await fun(h?: Handle): T ...
 
 ---@generic T
 ---@return Future<T>
@@ -67,6 +78,10 @@ M.future = function()
   return f
 end
 
+---@param producer fun(...: any)
+---@param h? Handle
+---@param on_await fun(bounce: fun(...: any): any, eff: Await)
+---@return fun(...: any): any
 local trampoline = function(producer, h, on_await)
   local co = coroutine.create(producer)
   if h then
@@ -96,6 +111,9 @@ local trampoline = function(producer, h, on_await)
   return bounce
 end
 
+---@param h Handle
+---@param fn fun(...)
+---@param ... any
 M.detach = function(h, fn, ...)
   return trampoline(fn, h, function(bounce, eff)
     local resumed = false
@@ -119,12 +137,19 @@ M.detach = function(h, fn, ...)
   end)(...)
 end
 
+---@generic F: fun(...)
+---@param producer F
+---@param h? Handle
+---@return F
 M.wrap = function(producer, h)
   return trampoline(producer, h, function(bounce, eff)
     return bounce(coroutine.yield(eff))
   end)
 end
 
+---@generic F: fun(...)
+---@param fn F
+---@return F
 M.entry = function(fn)
   return function(...)
     assert(coroutine.running() == nil, "entry: must be called outside a coroutine")
@@ -132,6 +157,8 @@ M.entry = function(fn)
   end
 end
 
+---@param milliseconds integer
+---@param h? Handle
 M.sleep = function(milliseconds, h)
   h = h or M.current()
   if h.cancelled then
@@ -161,6 +188,9 @@ M.sleep = function(milliseconds, h)
   end)
 end
 
+---@generic T
+---@param fn fun(): T?
+---@return fun(): T?
 M.preemptible = function(fn)
   local h
   return function()

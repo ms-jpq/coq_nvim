@@ -1,3 +1,6 @@
+---@class Closable
+---@field close fun()
+
 local M = {}
 
 M.group = [[coq]]

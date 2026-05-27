@@ -11,6 +11,11 @@ M.sleep = runtime.sleep
 M.wrap = runtime.wrap
 M.entry = runtime.entry
 
+---@overload fun<A, B>(fns: [(fun(): A), (fun(): B)]): [A, B]
+---@overload fun<A, B, C>(fns: [(fun(): A), (fun(): B), (fun(): C)]): [A, B, C]
+---@overload fun<A, B, C, D>(fns: [(fun(): A), (fun(): B), (fun(): C), (fun(): D)]): [A, B, C, D]
+---@param fns (fun(): any)[]
+---@return any[]
 M.all = function(fns)
   local results = {}
   nursery.scope(function(n)
@@ -19,10 +24,14 @@ M.all = function(fns)
         results[idx] = fn()
       end)
     end
+    return nil
   end)
   return results
 end
 
+---@generic T
+---@param fns (fun(): T)[]
+---@return integer?, T?
 M.race = function(fns)
   if #fns == 0 then
     return
@@ -47,6 +56,13 @@ M.race = function(fns)
   end)
 end
 
+---@class MergeIter<T>: Closable
+---@overload fun(): integer?, T?
+
+---@generic T
+---@param iters (fun(): T)[]
+---@param h? Handle
+---@return MergeIter<T>
 M.merge = function(iters, h)
   local n = nursery.new(h)
   local chan = mpmc.new(1, n.handle)

@@ -3,8 +3,17 @@ local runtime = require "coq.lib.async.runtime"
 local sparse = require "coq.lib.sparse_table"
 local util = require "coq.lib.channels.util"
 
+---@class MpmcChan<T>: Closable
+---@field push fun(...: T): boolean
+---@field pull fun(): T ...
+---@overload fun(): T ...
+
 local M = {}
 
+---@generic T
+---@param capacity? integer
+---@param h? Handle
+---@return MpmcChan<T>
 M.new = function(capacity, h)
   capacity = math.max(1, capacity or math.huge)
 
@@ -63,6 +72,7 @@ M.new = function(capacity, h)
     end
 
     local packet = que.pop()
+    ---@cast packet -nil
     notify(push_waiters)
     return util.unpack(packet)
   end
