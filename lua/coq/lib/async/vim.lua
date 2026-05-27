@@ -10,11 +10,16 @@ M.system = async.awaitify(vim.system)
 
 M.fn = {
   ---@type fun(cmd: string|string[], opts?: table): integer
-  jobstart = async.awaitify(function(cmd, opts, on_exit)
-    opts = opts or {}
-    opts.on_exit = on_exit
-    vim.fn.jobstart(cmd, opts)
-  end),
+  jobstart = async.awaitify(
+    ---@param cmd string|string[]
+    ---@param opts table?
+    ---@param on_exit fun(job_id: integer, code: integer, event: string)
+    function(cmd, opts, on_exit)
+      opts = opts or {}
+      opts.on_exit = on_exit
+      vim.fn.jobstart(cmd, opts)
+    end
+  ),
 }
 
 M.ui = {

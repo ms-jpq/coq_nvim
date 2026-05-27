@@ -2,10 +2,13 @@ local handle = require "coq.lib.async.handle"
 local queue = require "coq.lib.queue"
 local runtime = require "coq.lib.async.runtime"
 
+---@class producers.SearchIter: lib.Closable
+---@overload fun(): completions.Row?
+
 ---@class producers.Producer: lib.Closable
 ---@field notify fun(event: any)
 ---@field idle fun(ctx: index.SearchContext)
----@field search fun(ctx: index.SearchContext): table
+---@field search fun(ctx: index.SearchContext): producers.SearchIter
 
 ---@alias producers.IdleFn fun(events: any[], ctx: index.SearchContext)
 ---@alias producers.MatcherFn fun(ctx: index.SearchContext)

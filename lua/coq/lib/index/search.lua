@@ -73,7 +73,7 @@ M.ctx = function()
 end
 
 ---@param db producers.Producer
----@return lib.Iterator<completions.Row>
+---@return producers.SearchIter
 M.search = function(db)
   return db.search(M.ctx())
 end
