@@ -1,7 +1,7 @@
 ---@class SearchContext
 ---@field win integer
 ---@field buf integer
----@field pos integer[]
+---@field pos [integer, integer]
 ---@field filetype string
 ---@field filename string
 ---@field cword string

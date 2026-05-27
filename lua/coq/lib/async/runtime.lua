@@ -23,6 +23,13 @@ local is_await = function(x)
   return type(x) == "table" and getmetatable(x) == AWAIT_EFF
 end
 
+---@class Future<T>
+---@field resolve fun(...: T)
+---@field once_ready fun(cb: fun(...: T))
+---@field await fun(h?: table): T ...
+
+---@generic T
+---@return Future<T>
 M.future = function()
   local done = false
   local vals = {}
