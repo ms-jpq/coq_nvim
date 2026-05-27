@@ -1,5 +1,6 @@
 local async = require "coq.lib.async"
 local handle = require "coq.lib.async.handle"
+local lib = require "coq.lib"
 local runtime = require "coq.lib.async.runtime"
 
 local M = {}
@@ -7,19 +8,19 @@ local M = {}
 ---@param producers Producer[]
 ---@return Producer
 M.new = function(producers)
-  local search_handle = handle.new()
-  search_handle.cancel()
-  local idle_handle = handle.new()
-  idle_handle.cancel()
+  local search_handle, idle_handle = handle.new(), handle.new()
+  do
+    search_handle.cancel()
+    idle_handle.cancel()
+  end
 
-  local current_close
+  local current_close = lib.noop
 
   local sup = {}
 
   sup.search = function(ctx)
-    if current_close then
-      pcall(current_close)
-    end
+    pcall(current_close)
+
     idle_handle.cancel()
     search_handle = handle.new()
 
@@ -57,23 +58,30 @@ M.new = function(producers)
     runtime.detach(idle_handle, function()
       async.scope(function(n)
         for _, p in ipairs(producers) do
-          if p.idle then
-            n.spawn(function()
-              p.idle(ctx)
-            end)
-          end
+          n.spawn(function()
+            p.idle(ctx)
+          end)
         end
       end)
+    end)
+  end
+
+  sup.queue = function(fn, ...)
+    local args, n_args = { ... }, select("#", ...)
+    async.scope(function(n)
+      for _, p in ipairs(producers) do
+        n.spawn(function()
+          p.queue(fn, unpack(args, 1, n_args))
+        end)
+      end
     end)
   end
 
   sup.close = function()
     search_handle.cancel()
     idle_handle.cancel()
-    if current_close then
-      pcall(current_close)
-      current_close = nil
-    end
+    pcall(current_close)
+    current_close = lib.noop
     for _, p in ipairs(producers) do
       p.close()
     end

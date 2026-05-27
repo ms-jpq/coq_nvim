@@ -4,22 +4,18 @@ local runtime = require "coq.lib.async.runtime"
 
 ---@class Producer
 ---@field search fun(ctx: any): table
----@field idle? fun(ctx: any)
+---@field idle fun(ctx: any)
 ---@field close fun()
----@field queue? function
+---@field queue function
 
 local M = {}
 
 ---@return Producer
 M.new = function(matcher, idle)
-  local db = { close = lib.noop }
+  local db = { close = lib.noop, idle = idle }
 
   db.queue = function(fn, ...)
     return fn(...)
-  end
-
-  if idle then
-    db.idle = idle
   end
 
   db.search = function(ctx)

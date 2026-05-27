@@ -1,12 +1,13 @@
----@class ErrorGroup
----@field errs any[]
+---@class ErrorGroup<T>
+---@field errs T[]
 
 local M = {}
 
 M.UNKNOWN = "unknown error"
 
----@param es any[]
----@return ErrorGroup
+---@generic T
+---@param es T[]
+---@return ErrorGroup<T>
 M.group = function(es)
   return setmetatable({ errs = es }, {
     __tostring = function(self)

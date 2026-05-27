@@ -8,8 +8,8 @@ M.new = function(matcher, idle)
 
   local db = { close = w.close, queue = w.queue }
 
-  if idle then
-    db.idle = function(ctx)
+  db.idle = function(ctx)
+    if idle then
       return w.queue(idle, ctx)
     end
   end
