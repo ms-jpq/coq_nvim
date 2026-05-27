@@ -37,6 +37,7 @@ M.new = function()
     end
   end
 
+  ---@cast parker worker.Inflight
   return parker
 end
 

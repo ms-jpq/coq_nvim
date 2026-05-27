@@ -64,6 +64,7 @@ M.new = function(idle, matcher)
     return setmetatable(it, { __call = next })
   end
 
+  ---@cast db producers.Producer
   return db
 end
 

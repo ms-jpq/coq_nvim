@@ -63,6 +63,7 @@ M.new = function(parent, deadline_ms)
     unwatch_from_parent = parent.on_cancel(handle.cancel)
   end
 
+  ---@cast handle async.Handle
   return handle
 end
 

@@ -28,6 +28,7 @@ M.open_duplex = function(read_fd, write_fd)
       duplex.writer:close()
     end)
   end
+  ---@cast duplex worker.Duplex
   return duplex
 end
 

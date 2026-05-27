@@ -328,6 +328,7 @@ M.spawn = function()
     endpoint.serve(n, "worker died")
   end)
 
+  ---@cast worker worker.Worker
   return worker
 end
 

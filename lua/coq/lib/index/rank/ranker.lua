@@ -33,6 +33,7 @@ M.new = function(source_bias)
     }
   end
 
+  ---@cast ranker index.Ranker
   return ranker
 end
 

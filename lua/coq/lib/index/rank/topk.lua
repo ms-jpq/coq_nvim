@@ -37,6 +37,7 @@ M.new = function(k)
     end)
   end
 
+  ---@cast topk index.TopK
   return topk
 end
 

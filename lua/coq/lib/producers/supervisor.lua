@@ -40,7 +40,10 @@ M.new = function(producers)
     local n = nursery.new(idle_handle)
     for _, p in pairs(producers) do
       n.spawn(function()
-        p.idle(ctx)
+        local ok, err = pcall(p.idle, ctx)
+        if not ok then
+          lib.report(err)
+        end
       end)
     end
   end

@@ -59,6 +59,7 @@ M.new = function(parent)
     errs.raise(errors)
   end
 
+  ---@cast nursery async.Nursery
   return nursery
 end
 

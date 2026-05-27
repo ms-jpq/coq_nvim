@@ -37,6 +37,7 @@ M.new = function(idle, matcher)
     return w.queue_stream(matcher, ctx)
   end
 
+  ---@cast db producers.Producer
   return db
 end
 

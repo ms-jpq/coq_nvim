@@ -68,6 +68,7 @@ M.ctx = function()
     ctx.utf32_col = vim.str_utfindex(ctx.line_before, "utf-32")
   end
 
+  ---@cast ctx index.SearchContext
   return ctx
 end
 
