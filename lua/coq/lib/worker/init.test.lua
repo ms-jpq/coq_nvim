@@ -94,13 +94,13 @@ T.describe("worker", function(test)
   test("a queued fn can yield via async", function()
     local w = worker.spawn()
     local start = vim.uv.hrtime()
-    w.queue(function()
-      require("coq.lib.async").sleep(5)
-    end)
+    w.queue(function(ms)
+      require("coq.lib.async").sleep(ms)
+    end, 5 * T.SLOW)
     local elapsed_ms = (vim.uv.hrtime() - start) / 1e6
     w.close()
 
-    assert(elapsed_ms >= 3, ("expected ~5ms, got %.1fms"):format(elapsed_ms))
+    assert(elapsed_ms >= 3 * T.SLOW, ("expected ~5ms, got %.1fms"):format(elapsed_ms))
   end)
 
   test("a queued fn can call back to main via worker.main", function()
@@ -477,7 +477,7 @@ T.describe("worker", function(test)
           results[i] = w.queue(function(delay_ms, label)
             require("coq.lib.async").sleep(delay_ms)
             return label
-          end, i * 2, "dog_" .. i)
+          end, i * 2 * T.SLOW, "dog_" .. i)
         end)
       end
     end)

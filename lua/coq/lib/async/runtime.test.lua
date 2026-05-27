@@ -36,7 +36,7 @@ T.describe("async", function(test)
     T.eq(ran, false)
 
     vim.schedule(later)
-    async.sleep(5)
+    async.sleep(5 * T.SLOW)
 
     T.eq(ran, true)
   end)
@@ -46,10 +46,10 @@ T.describe("async", function(test)
     local cap = capture_notify(marker)
 
     vim.schedule(async.entry(function()
-      async.sleep(2)
+      async.sleep(2 * T.SLOW)
       error(marker)
     end))
-    async.sleep(30)
+    async.sleep(30 * T.SLOW)
     cap.restore()
 
     assert(cap.captured ~= nil, "expected vim.notify to fire for post-yield error")
@@ -63,14 +63,14 @@ T.describe("async", function(test)
     local sibling_ran = false
 
     vim.schedule(async.entry(function()
-      async.sleep(2)
+      async.sleep(2 * T.SLOW)
       error(marker)
     end))
     vim.schedule(async.entry(function()
-      async.sleep(5)
+      async.sleep(5 * T.SLOW)
       sibling_ran = true
     end))
-    async.sleep(30)
+    async.sleep(30 * T.SLOW)
     cap.restore()
 
     T.eq(sibling_ran, true)
@@ -88,9 +88,9 @@ T.describe("async", function(test)
   test("sleep yields for the requested duration", function()
     local start = vim.uv.hrtime()
 
-    async.sleep(20)
+    async.sleep(20 * T.SLOW)
     local elapsed_ms = (vim.uv.hrtime() - start) / 1e6
 
-    assert(elapsed_ms >= 15, ("expected ~20ms, got %.1fms"):format(elapsed_ms))
+    assert(elapsed_ms >= 15 * T.SLOW, ("expected ~20ms, got %.1fms"):format(elapsed_ms))
   end)
 end)

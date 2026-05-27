@@ -34,7 +34,7 @@ T.describe("broadcast", function(test)
 
     async.scope(function(n)
       n.spawn(function()
-        async.sleep(5)
+        async.sleep(5 * T.SLOW)
         chan.replace "spot"
       end)
       got = sub()
@@ -58,11 +58,11 @@ T.describe("broadcast", function(test)
     local seen = {}
     async.scope(function(n)
       n.spawn(function()
-        async.sleep(2)
+        async.sleep(2 * T.SLOW)
         chan.replace "lil"
-        async.sleep(2)
+        async.sleep(2 * T.SLOW)
         chan.replace "spot"
-        async.sleep(2)
+        async.sleep(2 * T.SLOW)
         chan.replace "fido"
       end)
       n.spawn(function()
@@ -101,11 +101,11 @@ T.describe("broadcast", function(test)
     local seen = {}
     async.scope(function(n)
       n.spawn(function()
-        async.sleep(2)
+        async.sleep(2 * T.SLOW)
         chan.replace "lil"
-        async.sleep(2)
+        async.sleep(2 * T.SLOW)
         h.cancel()
-        async.sleep(2)
+        async.sleep(2 * T.SLOW)
         chan.replace "spot"
       end)
       n.spawn(function()
@@ -170,7 +170,7 @@ T.describe("broadcast", function(test)
           iter_b.close()
         end
       end)
-      async.sleep(2)
+      async.sleep(2 * T.SLOW)
       chan.replace "lil"
     end)
 
@@ -184,7 +184,7 @@ T.describe("broadcast", function(test)
     local sub = chan.subscribe()
     async.scope(function(n)
       n.spawn(function()
-        async.sleep(2)
+        async.sleep(2 * T.SLOW)
         chan.replace "spot"
       end)
       T.eq(sub(), "spot")

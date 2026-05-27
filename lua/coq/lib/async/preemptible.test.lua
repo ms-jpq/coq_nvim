@@ -33,7 +33,7 @@ T.describe("preemptible", function(test)
       if i > 2 then
         return nil
       end
-      async.sleep(2)
+      async.sleep(2 * T.SLOW)
       return "fido" .. i
     end)
 
@@ -48,12 +48,12 @@ T.describe("preemptible", function(test)
     async.scope(function(n)
       n.spawn(function()
         local iter = async.preemptible(function()
-          async.sleep(100)
+          async.sleep(100 * T.SLOW)
           return "never"
         end)
         got = iter()
       end)
-      async.sleep(5)
+      async.sleep(5 * T.SLOW)
       h.cancel()
     end, h)
 
@@ -85,12 +85,12 @@ T.describe("preemptible", function(test)
           local _ = runtime.current().on_cancel(function()
             iter_cancelled = true
           end)
-          async.sleep(100)
+          async.sleep(100 * T.SLOW)
           return "never"
         end)
         iter()
       end)
-      async.sleep(5)
+      async.sleep(5 * T.SLOW)
       h.cancel()
     end, h)
 

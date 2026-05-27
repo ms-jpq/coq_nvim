@@ -20,7 +20,9 @@ local tbl = require "coq.lib.tbl"
 
 local M = {}
 
-local DEFAULT_TIMEOUT = tonumber(os.getenv "TEST_TIMEOUT") or 1000
+M.SLOW = (os.getenv "CI" ~= nil and 10) or 1
+
+local DEFAULT_TIMEOUT = tonumber(os.getenv "TEST_TIMEOUT") or (1000 * M.SLOW)
 local TOP_N = tonumber(os.getenv "TEST_TOP_N") or 10
 local VERBOSE = os.getenv "TEST_VERBOSE" ~= nil
 

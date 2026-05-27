@@ -37,9 +37,9 @@ T.describe("producer (regular)", function(test)
   test("matcher composes with async primitives between yields", function()
     local db = producer.new(lib.noop, function()
       coroutine.yield "lil"
-      async.sleep(5)
+      async.sleep(5 * T.SLOW)
       coroutine.yield "spot"
-      async.sleep(5)
+      async.sleep(5 * T.SLOW)
       coroutine.yield "fido"
     end)
     local seen = {}

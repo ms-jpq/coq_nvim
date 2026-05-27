@@ -16,17 +16,17 @@ T.describe("race", function(test)
     local start = vim.uv.hrtime()
     async.race {
       function()
-        async.sleep(5)
+        async.sleep(5 * T.SLOW)
         return "fast"
       end,
       function()
-        async.sleep(200)
+        async.sleep(200 * T.SLOW)
         return "slow"
       end,
     }
     local elapsed_ms = (vim.uv.hrtime() - start) / 1e6
 
-    assert(elapsed_ms < 100, ("expected ~5ms, got %.1fms"):format(elapsed_ms))
+    assert(elapsed_ms < 100 * T.SLOW, ("expected ~5ms, got %.1fms"):format(elapsed_ms))
   end)
 
   test("forwards multiple return values", function()
@@ -47,7 +47,7 @@ T.describe("race", function(test)
         return "winner"
       end,
       function()
-        async.sleep(5)
+        async.sleep(5 * T.SLOW)
         late_ran = true
         return "loser"
       end,
@@ -64,7 +64,7 @@ T.describe("race", function(test)
       lib.noop,
       function()
         async_ran = true
-        async.sleep(5)
+        async.sleep(5 * T.SLOW)
       end,
     }
 
@@ -82,7 +82,7 @@ T.describe("race", function(test)
         local _ = runtime.current().on_cancel(function()
           loser_cancelled = true
         end)
-        async.sleep(50)
+        async.sleep(50 * T.SLOW)
       end,
     }
 
@@ -100,7 +100,7 @@ T.describe("race", function(test)
             local _ = runtime.current().on_cancel(function()
               cancelled = true
             end)
-            async.sleep(50)
+            async.sleep(50 * T.SLOW)
           end,
         }
       end)
@@ -119,11 +119,11 @@ T.describe("race", function(test)
           local _ = runtime.current().on_cancel(function()
             sibling_cancelled = true
           end)
-          async.sleep(100)
+          async.sleep(100 * T.SLOW)
           return "sibling"
         end,
         function()
-          async.sleep(5)
+          async.sleep(5 * T.SLOW)
           error "child went missing"
         end,
       }

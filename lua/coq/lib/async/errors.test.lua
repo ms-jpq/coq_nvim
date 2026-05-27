@@ -38,7 +38,7 @@ T.describe("errors", function(test)
         end)()
       end)
     end)
-    async.sleep(5)
+    async.sleep(5 * T.SLOW)
 
     T.eq(ok, false)
     assert_clean(err, "entry boom")
@@ -57,7 +57,7 @@ T.describe("errors", function(test)
 
   test("async.preemptible post-await error surfaces at caller, not in runtime", function()
     local iter = async.preemptible(function()
-      async.sleep(2)
+      async.sleep(2 * T.SLOW)
       error "preemptible post-sleep boom"
     end)
 

@@ -87,19 +87,19 @@ T.describe("handle", function(test)
   end)
 
   test("deadline cancels handle after the elapsed time", function()
-    local h = handle.new(nil, 5)
+    local h = handle.new(nil, 5 * T.SLOW)
 
     T.eq(h.cancelled, false)
 
-    async.sleep(10)
+    async.sleep(10 * T.SLOW)
 
     T.eq(h.cancelled, true)
   end)
 
   test("early cancel disarms the deadline timer", function()
-    local h = handle.new(nil, 5)
+    local h = handle.new(nil, 5 * T.SLOW)
     h.cancel()
-    async.sleep(10)
+    async.sleep(10 * T.SLOW)
 
     T.eq(h.cancelled, true)
   end)
@@ -119,7 +119,7 @@ T.describe("handle", function(test)
     parent.cancel()
 
     local before = count_live_timers()
-    local h = handle.new(parent, 5)
+    local h = handle.new(parent, 5 * T.SLOW)
 
     T.eq(h.cancelled, true)
     T.eq(count_live_timers(), before)

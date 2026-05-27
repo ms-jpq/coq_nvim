@@ -26,7 +26,7 @@ T.describe("merge", function(test)
       if i > 3 then
         return nil
       end
-      async.sleep(2)
+      async.sleep(2 * T.SLOW)
       return i * 10
     end
 
@@ -42,9 +42,9 @@ T.describe("merge", function(test)
     local out = {}
     for _, v in
       async.merge {
-        delayed("a", 2),
-        delayed("c", 6),
-        delayed("b", 4),
+        delayed("a", 2 * T.SLOW),
+        delayed("c", 6 * T.SLOW),
+        delayed("b", 4 * T.SLOW),
       }
     do
       table.insert(out, v)
@@ -57,9 +57,9 @@ T.describe("merge", function(test)
     local out = {}
     for idx, v in
       async.merge {
-        delayed("a", 2),
-        delayed("c", 6),
-        delayed("b", 4),
+        delayed("a", 2 * T.SLOW),
+        delayed("c", 6 * T.SLOW),
+        delayed("b", 4 * T.SLOW),
       }
     do
       table.insert(out, { idx, v })
@@ -74,7 +74,7 @@ T.describe("merge", function(test)
     async.scope(function(n)
       n.spawn(function()
         local iter = function()
-          async.sleep(100)
+          async.sleep(100 * T.SLOW)
           return "never"
         end
         got = async.merge { iter }()
@@ -88,7 +88,7 @@ T.describe("merge", function(test)
   test("close stops further pulls", function()
     local m = async.merge {
       function()
-        async.sleep(100)
+        async.sleep(100 * T.SLOW)
         return "never"
       end,
     }
@@ -100,12 +100,12 @@ T.describe("merge", function(test)
   test("close raises errors from a failed iter", function()
     local m = async.merge {
       function()
-        async.sleep(2)
+        async.sleep(2 * T.SLOW)
         error("bad dog", 0)
       end,
     }
 
-    async.sleep(5)
+    async.sleep(5 * T.SLOW)
     local ok, err = pcall(m.close)
     T.eq(ok, false)
     T.eq(err, "bad dog")
@@ -114,7 +114,7 @@ T.describe("merge", function(test)
   test("pull raises errors from a failed iter", function()
     local m = async.merge {
       function()
-        async.sleep(2)
+        async.sleep(2 * T.SLOW)
         error("bad dog", 0)
       end,
     }
@@ -136,11 +136,11 @@ T.describe("merge", function(test)
             local _ = runtime.current().on_cancel(function()
               fired = true
             end)
-            async.sleep(100)
+            async.sleep(100 * T.SLOW)
             return "never"
           end,
         }
-        async.sleep(5)
+        async.sleep(5 * T.SLOW)
         m.close()
       end)
     end)

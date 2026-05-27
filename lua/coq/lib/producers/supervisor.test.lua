@@ -30,7 +30,7 @@ T.describe("supervisor", function(test)
     local order = {}
     local sup = supervisor.new {
       producer.new(lib.noop, function()
-        async.sleep(50)
+        async.sleep(50 * T.SLOW)
         table.insert(order, "matcher_done")
       end),
     }
@@ -40,7 +40,7 @@ T.describe("supervisor", function(test)
           lib.noop()
         end
       end)
-      async.sleep(5)
+      async.sleep(5 * T.SLOW)
       sup.search({}).close()
       table.insert(order, "second_search_returned")
     end)
@@ -53,7 +53,7 @@ T.describe("supervisor", function(test)
     local sup = supervisor.new {
       producer.new(lib.noop, function()
         coroutine.yield "lil"
-        async.sleep(50)
+        async.sleep(50 * T.SLOW)
         coroutine.yield "never"
       end),
     }
@@ -65,7 +65,7 @@ T.describe("supervisor", function(test)
         T.eq(row1, "lil")
         first_after = first()
       end)
-      async.sleep(5)
+      async.sleep(5 * T.SLOW)
       local second = sup.search {}
       second_first = second()
       second.close()
@@ -80,7 +80,7 @@ T.describe("supervisor", function(test)
     local idle_elapsed_ms
     local p = producer.new(function()
       local start = vim.uv.hrtime()
-      async.sleep(100)
+      async.sleep(100 * T.SLOW)
       idle_elapsed_ms = (vim.uv.hrtime() - start) / 1e6
     end, function()
       coroutine.yield "lil"
@@ -88,15 +88,15 @@ T.describe("supervisor", function(test)
     local sup = supervisor.new { p }
     p.notify(true)
     sup.idle {}
-    async.sleep(5)
+    async.sleep(5 * T.SLOW)
     for _ in sup.search {} do
       lib.noop()
     end
-    async.sleep(20)
+    async.sleep(20 * T.SLOW)
     sup.close()
 
     assert(
-      idle_elapsed_ms and idle_elapsed_ms < 50,
+      idle_elapsed_ms and idle_elapsed_ms < 50 * T.SLOW,
       "idle should have been cancelled, elapsed: " .. tostring(idle_elapsed_ms)
     )
   end)
@@ -108,13 +108,13 @@ T.describe("supervisor", function(test)
         idle_ran = true
       end, function()
         coroutine.yield "lil"
-        async.sleep(50)
+        async.sleep(50 * T.SLOW)
       end),
     }
     local iter = sup.search {}
     iter()
     sup.idle {}
-    async.sleep(10)
+    async.sleep(10 * T.SLOW)
     iter.close()
     sup.close()
 
@@ -134,7 +134,7 @@ T.describe("supervisor", function(test)
     end
     p.notify(true)
     sup.idle {}
-    async.sleep(10)
+    async.sleep(10 * T.SLOW)
     sup.close()
 
     T.eq(idle_ran, true)

@@ -10,11 +10,11 @@ T.describe("nursery", function(test)
     local n = nursery.new()
     local count = 0
     n.spawn(function()
-      async.sleep(2)
+      async.sleep(2 * T.SLOW)
       count = count + 1
     end)
     n.spawn(function()
-      async.sleep(5)
+      async.sleep(5 * T.SLOW)
       count = count + 1
     end)
     n.join()
@@ -29,12 +29,12 @@ T.describe("nursery", function(test)
       n.spawn(function()
         local inner = nursery.new()
         inner.spawn(function()
-          async.sleep(200)
+          async.sleep(200 * T.SLOW)
         end)
         inner.join()
         joined = true
       end)
-      async.sleep(5)
+      async.sleep(5 * T.SLOW)
       outer.cancel()
     end, outer)
 
@@ -54,7 +54,7 @@ T.describe("nursery", function(test)
         inner.join()
         joined = true
       end)
-      async.sleep(5)
+      async.sleep(5 * T.SLOW)
       outer.cancel()
     end, outer)
 
@@ -109,7 +109,7 @@ T.describe("nursery", function(test)
       error "first"
     end)
     n.spawn(function()
-      async.sleep(50)
+      async.sleep(50 * T.SLOW)
       error "second"
     end)
 
@@ -126,11 +126,11 @@ T.describe("scope", function(test)
     local count = 0
     async.scope(function(n)
       n.spawn(function()
-        async.sleep(2)
+        async.sleep(2 * T.SLOW)
         count = count + 1
       end)
       n.spawn(function()
-        async.sleep(5)
+        async.sleep(5 * T.SLOW)
         count = count + 1
       end)
     end)
@@ -146,7 +146,7 @@ T.describe("scope", function(test)
           local _ = runtime.current().on_cancel(function()
             cancelled = true
           end)
-          async.sleep(100)
+          async.sleep(100 * T.SLOW)
         end)
         error "body went sideways"
       end)
@@ -165,10 +165,10 @@ T.describe("scope", function(test)
           local _ = runtime.current().on_cancel(function()
             sibling_cancelled = true
           end)
-          async.sleep(100)
+          async.sleep(100 * T.SLOW)
         end)
         n.spawn(function()
-          async.sleep(5)
+          async.sleep(5 * T.SLOW)
           error "child went missing"
         end)
       end)
