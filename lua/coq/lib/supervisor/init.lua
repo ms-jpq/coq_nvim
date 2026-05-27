@@ -23,6 +23,7 @@ M.new = function(producers)
 
     idle_handle.cancel()
     search_handle = handle.new()
+    current_close = search_handle.cancel
 
     local iters = {}
     for idx, p in ipairs(producers) do
@@ -32,21 +33,15 @@ M.new = function(producers)
         return row_iter()
       end
     end
-    local merged = async.merge(iters, search_handle)
-    current_close = merged.close
 
-    local close = function()
-      merged.close()
-      search_handle.cancel()
-    end
-    local next = function()
-      local _, row = merged()
-      if row == nil then
-        search_handle.cancel()
+    local stream = runtime.wrap(function()
+      for _, row in async.merge(iters) do
+        coroutine.yield(row)
       end
-      return row
-    end
-    return setmetatable({ close = close }, { __call = next })
+      runtime.current().cancel()
+    end, search_handle)
+
+    return setmetatable({ close = search_handle.cancel }, { __call = stream })
   end
 
   sup.idle = function(ctx)

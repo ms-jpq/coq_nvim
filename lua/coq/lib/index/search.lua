@@ -1,5 +1,26 @@
+---@class SearchContext
+---@field win integer
+---@field buf integer
+---@field pos integer[]
+---@field filetype string
+---@field filename string
+---@field cword string
+---@field cexpr string
+---@field tabstop integer
+---@field expandtab boolean
+---@field iskeyword string
+---@field linesep string
+---@field comment [string, string]
+---@field line_count integer
+---@field line string
+---@field line_before string
+---@field line_after string
+---@field utf16_col integer
+---@field utf32_col integer
+
 local M = {}
 
+---@return SearchContext
 M.ctx = function()
   local ctx = {}
 
@@ -50,6 +71,7 @@ M.ctx = function()
   return ctx
 end
 
+---@param db Producer
 M.search = function(db)
   return db.search(M.ctx())
 end

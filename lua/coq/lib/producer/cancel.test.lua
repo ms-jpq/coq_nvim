@@ -1,3 +1,4 @@
+---@diagnostic disable: missing-fields
 local T = require "coq.lib.test"
 local async = require "coq.lib.async"
 local handle = require "coq.lib.async.handle"

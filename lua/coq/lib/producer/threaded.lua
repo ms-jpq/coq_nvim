@@ -2,7 +2,7 @@ local worker = require "coq.lib.worker"
 
 local M = {}
 
----@return Producer
+---@type NewProducer
 M.new = function(idle, matcher)
   local w = worker.spawn()
 
