@@ -7,20 +7,13 @@ M.noop = function(...) end
 
 ---@param err any
 M.report = function(err)
-  local notify = function()
+  vim.schedule(function()
     vim.notify(tostring(err), vim.log.levels.ERROR)
-  end
-
-  if vim.is_thread() then
-    vim.schedule(notify)
-  else
-    notify()
-  end
+  end)
 end
 
----@generic T
----@param fn fun(defer: fun(cleanup: fun())): T
----@return T
+---@param fn fun(defer: fun(cleanup: fun())): ...any
+---@return ...any
 M.scope = function(fn)
   local defers = {}
 

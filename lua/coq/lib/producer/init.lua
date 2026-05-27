@@ -12,9 +12,7 @@ local M = {}
 
 ---@return Producer
 M.new = function(matcher, idle)
-  local db = {}
-
-  db.close = lib.noop
+  local db = { close = lib.noop }
 
   db.queue = function(fn, ...)
     return fn(...)

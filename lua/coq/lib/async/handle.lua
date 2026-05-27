@@ -3,14 +3,6 @@ local sparse = require "coq.lib.sparse_table"
 
 local M = {}
 
-local fire = function(watcher)
-  if type(watcher) == "function" then
-    watcher()
-  else
-    watcher.cancel()
-  end
-end
-
 M.new = function(parent, deadline_ms)
   local handle = { cancelled = false }
   local watchers = sparse.new()
@@ -36,9 +28,7 @@ M.new = function(parent, deadline_ms)
       watchers = sparse.new()
 
       for _, w in snapshot.iter(true) do
-        defer(function()
-          fire(w)
-        end)
+        defer(w)
       end
     end)
   end
@@ -46,7 +36,7 @@ M.new = function(parent, deadline_ms)
   ---@nodiscard
   handle.on_cancel = function(watcher)
     if handle.cancelled then
-      fire(watcher)
+      watcher()
       return lib.noop
     end
 
@@ -62,7 +52,7 @@ M.new = function(parent, deadline_ms)
   end
 
   if parent then
-    unwatch_from_parent = parent.on_cancel(handle)
+    unwatch_from_parent = parent.on_cancel(handle.cancel)
   end
 
   return handle

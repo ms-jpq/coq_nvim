@@ -52,13 +52,9 @@ M.new = function(parent)
   return nursery
 end
 
-M.scope = function(parent, body)
-  if body == nil then
-    body = parent
-    parent = nil
-  end
+M.scope = function(body, h)
+  local nursery = M.new(h)
 
-  local nursery = M.new(parent)
   return lib.scope(function(defer)
     local rets = {}
     nursery.spawn(function()

@@ -93,7 +93,7 @@ T.describe("race", function(test)
     local outer = handle.new()
     local cancelled = false
     local idx
-    async.scope(outer, function(n)
+    async.scope(function(n)
       n.spawn(function()
         idx = async.race {
           function()
@@ -105,7 +105,7 @@ T.describe("race", function(test)
         }
       end)
       outer.cancel()
-    end)
+    end, outer)
 
     T.eq(cancelled, true)
     T.eq(idx, nil)
