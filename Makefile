@@ -60,9 +60,6 @@ endef
 	'$<' -m pip install --requirement requirements.txt -- tomli
 	'$<' <<< '$(PYDEPS)'
 
-lint: .venv/bin/mypy
-	'$<' -- .
-
 test:
 	./test.lua
 
@@ -77,5 +74,40 @@ $(VAR)/bin/stylua: | $(VAR)/bin
 	$(CURL) -- "$$URI" | bsdtar --extract --file - --directory '$|'
 	chmod +x '$@'
 
+$(VAR)/opt/lua-language-server/bin/lua-language-server: | $(VAR)
+	case "$$OSTYPE" in
+	darwin*)
+		LUALS_OS=darwin
+		;;
+	linux*)
+		LUALS_OS=linux
+		;;
+	*)
+		set -v
+		exit 2
+		;;
+	esac
+	case "$$HOSTTYPE" in
+	arm64|aarch64)
+		LUALS_ARCH=arm64
+		;;
+	x86_64)
+		LUALS_ARCH=x64
+		;;
+	*)
+		set -v
+		exit 2
+		;;
+	esac
+	V_LUALS="$$($(CURL) -- 'https://api.github.com/repos/LuaLS/lua-language-server/releases/latest' | jq --raw-output --exit-status -- '.tag_name')"
+	URI="https://github.com/LuaLS/lua-language-server/releases/download/$$V_LUALS/lua-language-server-$$V_LUALS-$$LUALS_OS-$$LUALS_ARCH.tar.gz"
+	mkdir -v -p -- '$(VAR)/opt/lua-language-server'
+	$(CURL) -- "$$URI" | tar --extract --gzip --file - --directory '$(VAR)/opt/lua-language-server'
+
 fmt: $(VAR)/bin/stylua
 	git ls-files --deduplicate --stage -- '*.lua' | awk -- '$$1 !~ /^120000/ { print $$4 }' | tr -- '\n' '\0' | xargs -r -0 -n 1 -P 0 -- '$<' --
+
+lualint: $(VAR)/opt/lua-language-server/bin/lua-language-server | $(VAR)
+	mkdir -v -p -- '$(VAR)/luals'
+	'$<' --check '$(CURDIR)' --configpath '$(CURDIR)/.luarc.json' --logpath '$(VAR)/luals' --checklevel Warning
+
