@@ -3,13 +3,23 @@ local handle = require "coq.lib.async.handle"
 local lib = require "coq.lib"
 local runtime = require "coq.lib.async.runtime"
 
+---@class Nursery
+---@field handle Handle
+---@field closed boolean
+---@field spawn fun(fn: fun(defer: fun(cleanup: fun())))
+---@field join fun()
+
 local M = {}
 
+---@param parent? Handle
+---@return Nursery
 M.new = function(parent)
   parent = parent or runtime.current()
-  local nursery = { handle = handle.new(parent), errors = {}, closed = false }
+  local errors = {}
   local pending = setmetatable({}, { __mode = "k" })
   local waiters = {}
+
+  local nursery = { handle = handle.new(parent), closed = false }
 
   nursery.spawn = function(fn)
     assert(not nursery.closed, "spawn: nursery is closed")
@@ -21,7 +31,7 @@ M.new = function(parent)
       pending[coroutine.running()] = nil
 
       if not ok then
-        table.insert(nursery.errors, err)
+        table.insert(errors, err)
         nursery.handle.cancel()
       end
 
@@ -46,12 +56,16 @@ M.new = function(parent)
 
     nursery.closed = true
     nursery.handle.cancel()
-    errs.raise(nursery.errors)
+    errs.raise(errors)
   end
 
   return nursery
 end
 
+---@generic T
+---@param body fun(nursery: Nursery, defer: fun(cleanup: fun())): T ...
+---@param h? Handle
+---@return T ...
 M.scope = function(body, h)
   local nursery = M.new(h)
 
