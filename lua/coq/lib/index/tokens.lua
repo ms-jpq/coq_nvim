@@ -1,5 +1,7 @@
 local M = {}
 
+---@param ctx index.SearchContext
+---@return string[]
 M.surround = function(ctx)
   local half = math.floor(vim.api.nvim_win_get_height(ctx.win) / 2)
   local row = ctx.pos[1] - 1
@@ -9,6 +11,9 @@ M.surround = function(ctx)
   return vim.api.nvim_buf_get_lines(ctx.buf, lo, hi, true)
 end
 
+---@param buf integer
+---@param lines string[]
+---@return Iter<string>
 M.words = function(buf, lines)
   local matches = vim.api.nvim_buf_call(buf, function()
     return vim.fn.matchstrlist(lines, [[\k\+]])
@@ -18,6 +23,9 @@ M.words = function(buf, lines)
   end)
 end
 
+---@param buf integer
+---@param lines string[]
+---@return table<string, integer>
 M.locality = function(buf, lines)
   return M.words(buf, lines):fold({}, function(acc, word)
     acc[word] = (acc[word] or 0) + 1

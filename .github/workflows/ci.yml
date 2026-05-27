@@ -32,6 +32,8 @@ jobs:
           sudo -- tee -- /etc/apt/sources.list.d/ms-jpq.list <<-'EOF'
           deb https://raw.githubusercontent.com/ms-jpq/deb/refs/heads/deb/ /
           EOF
+
+      - run: |-
           sudo -- apt update
           sudo -- apt install --yes -- neovim universal-ctags
 

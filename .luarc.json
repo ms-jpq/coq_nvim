@@ -1,10 +1,12 @@
 {
   "$schema": "https://raw.githubusercontent.com/sumneko/vscode-lua/master/setting/schema.json",
   "Lua.runtime.version": "LuaJIT",
+  "Lua.type.castNumberToInteger": false,
+  "Lua.type.inferParamType": true,
   "Lua.workspace.checkThirdParty": false,
+  "Lua.workspace.ignoreDir": ["*.test.lua", "var"],
   "Lua.workspace.library": [
     "/usr/share/nvim/runtime/lua",
     "/opt/homebrew/share/nvim/runtime/lua"
-  ],
-  "Lua.workspace.ignoreDir": ["*.test.lua"]
+  ]
 }

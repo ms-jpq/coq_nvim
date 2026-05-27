@@ -1,3 +1,17 @@
+---@class index.RowMeta
+---@field filter? string
+---@field snippet? string
+
+---@class index.Row
+---@field word string
+---@field abbr? string
+---@field abbr_hlgroup? string
+---@field menu? string
+---@field info? string
+---@field kind? string
+---@field kind_hlgroup? string
+---@field meta index.RowMeta
+
 local M = {}
 
 local kind_hl = {
@@ -27,12 +41,14 @@ local kind_hl = {
   Variable = "@variable",
 }
 
+---@param row index.Row
+---@return table
 M.to_item = function(row)
   return {
     dup = 1,
     equal = 1,
     empty = 1,
-    word = row.snippet and row.abbr or row.word,
+    word = row.meta.snippet and row.abbr or row.word,
     abbr = row.abbr,
     abbr_hlgroup = row.abbr_hlgroup,
     menu = row.menu,

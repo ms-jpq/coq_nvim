@@ -1,9 +1,15 @@
+---@class index.TopK
+---@field push fun(row: index.Row, score: number)
+---@field iter fun(): lib.Iterator<index.Row>
+
 local M = {}
 
 local by_neg_score = function(x)
   return -x.score
 end
 
+---@param k integer
+---@return index.TopK
 M.new = function(k)
   assert(k > 0)
   local items = {}

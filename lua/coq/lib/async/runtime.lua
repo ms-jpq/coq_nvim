@@ -78,10 +78,12 @@ M.future = function()
   return f
 end
 
+---@alias async.Bounce fun(...: any): any
+
 ---@param producer fun(...: any)
 ---@param h? async.Handle
----@param on_await fun(bounce: fun(...: any): any, eff: async.Await)
----@return fun(...: any): any
+---@param on_await fun(bounce: async.Bounce, eff: async.Await)
+---@return async.Bounce
 local trampoline = function(producer, h, on_await)
   local co = coroutine.create(producer)
   if h then

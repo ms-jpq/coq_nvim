@@ -1,8 +1,13 @@
+---@alias index.Scored [index.Row, number, integer[]?]
+
 local M = {}
 
 -- https://github.com/neovim/neovim/blob/master/src/nvim/fuzzy.c
 M.WEIGHTS = { prox = 100, recen = 50 }
 
+---@param rows index.Row[]
+---@param prepared index.Prepared
+---@return lib.Iterator<index.Scored>
 M.score = function(rows, prepared)
   local token = prepared.token
 
@@ -39,7 +44,7 @@ M.score = function(rows, prepared)
       local bias = prepared.source_bias[row.source] or 1
 
       return row, (hit.fuzzy + prox * M.WEIGHTS.prox + recen * M.WEIGHTS.recen) * bias, hit.positions
-    end)
+    end) --[[@as lib.Iterator<index.Scored>]]
 end
 
 return M
