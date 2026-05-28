@@ -7,16 +7,17 @@ local resolve = require "coq.completions.resolve"
 ---@param i completions.Item
 local apply = function(i)
   local meta = i.meta
+  local lsp = meta.lsp
   local buf = vim.api.nvim_get_current_buf()
 
-  if not (meta.additional_text_edits and #meta.additional_text_edits > 0) then
+  if not (lsp and lsp.additional_text_edits and #lsp.additional_text_edits > 0) then
     local before = vim.b[buf].changedtick
     local extra = resolve.resolve(i)
     if vim.b[buf].changedtick ~= before then
       return
     end
     if extra then
-      meta = vim.tbl_extend("force", meta, extra)
+      lsp = vim.tbl_extend("force", lsp or {}, extra)
     end
   end
 
@@ -26,16 +27,16 @@ local apply = function(i)
     vim.api.nvim_buf_set_text(0, row - 1, col - #inserted, row - 1, col, { "" })
   end
 
-  if meta.additional_text_edits then
-    vim.lsp.util.apply_text_edits(meta.additional_text_edits, 0, meta.position_encoding or "utf-16")
+  if lsp and lsp.additional_text_edits then
+    vim.lsp.util.apply_text_edits(lsp.additional_text_edits, 0, lsp.position_encoding or "utf-16")
   end
 
   if meta.snippet then
     vim.snippet.expand(meta.snippet)
   end
 
-  if meta.command then
-    resolve.exec_command(meta)
+  if lsp and lsp.command then
+    resolve.exec_command(lsp)
   end
 end
 

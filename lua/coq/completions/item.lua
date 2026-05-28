@@ -1,11 +1,14 @@
----@class completions.ItemMeta
----@field filter? string
----@field snippet? string
+---@class completions.ItemLspMeta
+---@field client_id? integer
+---@field item? lsp.CompletionItem
 ---@field additional_text_edits? lsp.TextEdit[]
 ---@field position_encoding? string
 ---@field command? lsp.Command
----@field client_id? integer
----@field lsp_item? lsp.CompletionItem
+
+---@class completions.ItemMeta
+---@field filter? string
+---@field snippet? string
+---@field lsp? completions.ItemLspMeta
 
 ---@class completions.Item: vim.v.completed_item
 ---@field meta completions.ItemMeta

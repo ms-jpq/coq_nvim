@@ -3,14 +3,14 @@ local runtime = require "coq.lib.async.runtime"
 local M = {}
 
 ---@param item completions.Item
----@return completions.ItemMeta?
+---@return completions.ItemLspMeta?
 M.resolve = function(item)
-  local meta = item.meta
-  if not (meta.client_id and meta.lsp_item) then
+  local lsp = item.meta.lsp
+  if not (lsp and lsp.client_id and lsp.item) then
     return nil
   end
 
-  local client = vim.lsp.get_client_by_id(meta.client_id)
+  local client = vim.lsp.get_client_by_id(lsp.client_id)
   if not client then
     return nil
   end
@@ -19,7 +19,7 @@ M.resolve = function(item)
   end
 
   local f = runtime.future()
-  client:request("completionItem/resolve", meta.lsp_item, function(_, result)
+  client:request("completionItem/resolve", lsp.item, function(_, result)
     f.resolve(result)
   end, vim.api.nvim_get_current_buf())
 
@@ -30,22 +30,22 @@ M.resolve = function(item)
 
   return {
     additional_text_edits = resolved.additionalTextEdits,
-    command = resolved.command or meta.command,
+    command = resolved.command or lsp.command,
   }
 end
 
----@param meta completions.ItemMeta
-M.exec_command = function(meta)
-  if not (meta.command and meta.client_id) then
+---@param lsp completions.ItemLspMeta
+M.exec_command = function(lsp)
+  if not (lsp.command and lsp.client_id) then
     return
   end
 
-  local client = vim.lsp.get_client_by_id(meta.client_id)
+  local client = vim.lsp.get_client_by_id(lsp.client_id)
   if not client then
     return
   end
 
-  client:exec_cmd(meta.command, { bufnr = vim.api.nvim_get_current_buf() })
+  client:exec_cmd(lsp.command, { bufnr = vim.api.nvim_get_current_buf() })
 end
 
 return M
