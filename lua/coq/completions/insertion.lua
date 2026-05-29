@@ -4,6 +4,7 @@ local item = require "coq.completions.item"
 local lib = require "coq.lib"
 local resolve = require "coq.completions.resolve"
 
+local DEFAULT_ENCODING = "utf-16"
 local TAIL_RE = vim.regex [[\V\k\+\$]]
 local HEAD_RE = vim.regex [[\V\k\+]]
 
@@ -25,13 +26,13 @@ local word_range = function(ctx, i, lsp)
   local after_cursor = string.sub(line, col + 1)
 
   local del_start, del_end = unpack(vim.api.nvim_buf_call(ctx.buf, function()
-    local p = TAIL_RE:match_str(before_inserted) or original_col
-    local s, e = HEAD_RE:match_str(after_cursor)
-    return { p, col + ((s == 0) and e or 0) }
+    local preceding = TAIL_RE:match_str(before_inserted) or original_col
+    local start, end_ = HEAD_RE:match_str(after_cursor)
+    return { preceding, col + ((start == 0) and end_ or 0) }
   end))
 
   if range and range.start.line == row - 1 then
-    del_start = vim.str_byteindex(line, lsp.position_encoding, range.start.character)
+    del_start = vim.str_byteindex(line, lsp.position_encoding or DEFAULT_ENCODING, range.start.character)
   end
 
   local replacement = (function()
@@ -63,6 +64,7 @@ local apply = function(ctx, i)
     end
     if extra then
       lsp = vim.tbl_extend("force", lsp, extra)
+      ---@cast lsp completions.ItemLspMeta
     end
   end
 
@@ -70,7 +72,7 @@ local apply = function(ctx, i)
   vim.api.nvim_buf_set_text(ctx.buf, row - 1, del_start, row - 1, del_end, { replacement })
 
   if lsp.additional_text_edits then
-    vim.lsp.util.apply_text_edits(lsp.additional_text_edits, ctx.buf, lsp.position_encoding)
+    vim.lsp.util.apply_text_edits(lsp.additional_text_edits, ctx.buf, lsp.position_encoding or DEFAULT_ENCODING)
   end
   if meta.snippet then
     vim.snippet.expand(meta.snippet)
