@@ -56,7 +56,7 @@ end
 
 local M = {}
 
----@param ctx ctx.base
+---@param ctx ctx.full
 ---@param iter producers.SearchIter
 M.complete = function(ctx, iter)
   local items = {}
@@ -65,11 +65,7 @@ M.complete = function(ctx, iter)
     table.insert(items, item.to_nvim(i))
   end
 
-  local row, col = unpack(ctx.pos)
-  local line = unpack(vim.api.nvim_buf_get_lines(ctx.buf, row - 1, row, true))
-  local before = string.sub(line, 1, col)
-  local start = string.find(before, "[%w_]+$") or (#before + 1)
-
+  local start = #ctx.line_before + 1
   vim.fn.complete(start, items)
 end
 
@@ -77,7 +73,7 @@ end
 M.bind = function(n)
   local events = broadcast.new()
 
-  vim.api.nvim_create_autocmd("CompleteDone", {
+  vim.api.nvim_create_autocmd({ "CompleteDone" }, {
     group = lib.group,
     callback = function()
       events.replace(vim.v.completed_item, context.base())
