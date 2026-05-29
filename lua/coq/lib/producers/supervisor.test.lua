@@ -180,6 +180,132 @@ T.describe("supervisor", function(test)
     assert(err and tostring(err):find "boom", "expected 'boom', got: " .. tostring(err))
   end)
 
+  test("close is idempotent", function()
+    local closes = {}
+    local make = function(name)
+      return {
+        search = function()
+          return setmetatable({ close = lib.noop }, {
+            __call = function()
+              return nil
+            end,
+          })
+        end,
+        close = function()
+          closes[name] = (closes[name] or 0) + 1
+        end,
+      }
+    end
+    local sup = supervisor.new { make "a", make "b" }
+    sup.close()
+    sup.close()
+
+    T.eq(closes, { a = 1, b = 1 })
+  end)
+
+  test("search after close returns a dead iter", function()
+    local sup = supervisor.new {
+      producer.new(lib.noop, function()
+        coroutine.yield "lil"
+      end),
+    }
+    sup.close()
+    local iter = sup.search {}
+
+    T.eq(iter(), nil)
+    iter.close()
+  end)
+
+  test("idle after close is a no-op", function()
+    local idle_ran = false
+    local p = producer.new(function()
+      idle_ran = true
+    end, lib.noop)
+    local sup = supervisor.new { p }
+    p.notify(true)
+    sup.close()
+    sup.idle {}
+    async.sleep(10 * T.SLOW)
+
+    T.eq(idle_ran, false)
+  end)
+
+  test("new idle cancels prior idle", function()
+    local first_elapsed_ms
+    local idle_calls = 0
+    local p = producer.new(function()
+      idle_calls = idle_calls + 1
+      if idle_calls == 1 then
+        local start = vim.uv.hrtime()
+        async.sleep(100 * T.SLOW)
+        first_elapsed_ms = (vim.uv.hrtime() - start) / 1e6
+      end
+    end, lib.noop)
+    local sup = supervisor.new { p }
+
+    p.notify(true)
+    sup.idle {}
+    async.sleep(5 * T.SLOW)
+    p.notify(true)
+    sup.idle {}
+    async.sleep(20 * T.SLOW)
+    sup.close()
+
+    assert(
+      first_elapsed_ms and first_elapsed_ms < 50 * T.SLOW,
+      "first idle should have been cancelled, elapsed: " .. tostring(first_elapsed_ms)
+    )
+  end)
+
+  test("close while search in-flight makes the iter return nil", function()
+    local sup = supervisor.new {
+      producer.new(lib.noop, function()
+        coroutine.yield "lil"
+        async.sleep(100 * T.SLOW)
+        coroutine.yield "never"
+      end),
+    }
+    local first, after
+    async.scope(function(n)
+      local iter = sup.search {}
+      n.spawn(function()
+        first = iter()
+        after = iter()
+      end)
+      async.sleep(5 * T.SLOW)
+      sup.close()
+    end)
+
+    T.eq(first, "lil")
+    T.eq(after, nil)
+  end)
+
+  test("iter.close from a sibling coroutine cancels the matcher", function()
+    local matcher_done = false
+    local sup = supervisor.new {
+      producer.new(lib.noop, function()
+        coroutine.yield "lil"
+        async.sleep(100 * T.SLOW)
+        matcher_done = true
+      end),
+    }
+    local first, after
+    async.scope(function(n)
+      local iter = sup.search {}
+      n.spawn(function()
+        first = iter()
+        after = iter()
+      end)
+      async.sleep(5 * T.SLOW)
+      iter.close()
+    end)
+    sup.close()
+
+    T.eq(first, "lil")
+    T.eq(after, nil)
+    T.eq(matcher_done, true)
+  end)
+
   test("supervisor satisfies the Producer shape (nestable)", function()
     local inner = supervisor.new {
       producer.new(lib.noop, function()

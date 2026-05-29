@@ -1,6 +1,7 @@
 local handle = require "coq.lib.async.handle"
 local queue = require "coq.lib.queue"
 local runtime = require "coq.lib.async.runtime"
+local util = require "coq.lib.producers.util"
 
 ---@class producers.SearchIter: lib.Closable
 ---@overload fun(): completions.Item?
@@ -45,6 +46,9 @@ M.new = function(idle, matcher)
   end
 
   db.search = function(ctx)
+    if closed then
+      return util.dead_iter
+    end
     local h = handle.new(runtime.current())
 
     local stream = runtime.wrap(function()

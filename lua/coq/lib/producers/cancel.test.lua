@@ -24,6 +24,28 @@ local cancel_tests = function(name, factory)
       T.eq(got, nil)
     end)
 
+    test("close is idempotent", function()
+      local db = factory(lib.noop, function()
+        coroutine.yield "lil"
+      end)
+      db.close()
+      db.close()
+    end)
+
+    test("search after close returns nil immediately", function()
+      local got = "unset"
+      async.scope(function(n)
+        n.spawn(function()
+          local db = factory(lib.noop, function()
+            coroutine.yield "lil"
+          end)
+          db.close()
+          got = db.search { slow = T.SLOW }()
+        end)
+      end)
+      T.eq(got, nil)
+    end)
+
     test("ambient cancel wakes a sleeping matcher", function()
       local h = handle.new()
       local elapsed_ms

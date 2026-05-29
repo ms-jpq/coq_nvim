@@ -1,4 +1,5 @@
 local queue = require "coq.lib.queue"
+local util = require "coq.lib.producers.util"
 local worker = require "coq.lib.worker"
 
 local M = {}
@@ -12,6 +13,9 @@ M.new = function(idle, matcher)
   local db = { queue = w.queue }
 
   db.close = function()
+    if closed then
+      return
+    end
     closed = true
     w.close()
   end
@@ -24,6 +28,9 @@ M.new = function(idle, matcher)
   end
 
   db.idle = function(ctx)
+    if closed then
+      return
+    end
     local batch = {}
     for event in event_bus.pop do
       table.insert(batch, event)
@@ -34,6 +41,9 @@ M.new = function(idle, matcher)
   end
 
   db.search = function(ctx)
+    if closed then
+      return util.dead_iter
+    end
     return w.queue_stream(matcher, ctx)
   end
 

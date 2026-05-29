@@ -3,6 +3,7 @@ local handle = require "coq.lib.async.handle"
 local lib = require "coq.lib"
 local nursery = require "coq.lib.async.nursery"
 local runtime = require "coq.lib.async.runtime"
+local util = require "coq.lib.producers.util"
 
 local M = {}
 
@@ -10,6 +11,7 @@ local M = {}
 ---@return producers.Producer
 M.new = function(producers)
   local search_handle, idle_handle = handle.new(), handle.new()
+  local closed = false
 
   local interrupt = function()
     search_handle.cancel()
@@ -20,6 +22,10 @@ M.new = function(producers)
   local sup = {}
 
   sup.close = function()
+    if closed then
+      return
+    end
+    closed = true
     interrupt()
     for _, p in ipairs(producers) do
       p.close()
@@ -31,7 +37,7 @@ M.new = function(producers)
   end
 
   sup.idle = function(ctx)
-    if not search_handle.cancelled then
+    if closed or not search_handle.cancelled then
       return
     end
     idle_handle.cancel()
@@ -49,6 +55,9 @@ M.new = function(producers)
   end
 
   sup.search = function(ctx)
+    if closed then
+      return util.dead_iter
+    end
     interrupt()
     search_handle = handle.new()
 
