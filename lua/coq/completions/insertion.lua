@@ -4,10 +4,55 @@ local item = require "coq.completions.item"
 local lib = require "coq.lib"
 local resolve = require "coq.completions.resolve"
 
+local TAIL_RE = vim.regex [[\V\k\+\$]]
+local HEAD_RE = vim.regex [[\V\k\+]]
+
+---@param ctx ctx.base
+---@param i completions.Item
+---@param lsp completions.ItemLspMeta
+---@return integer del_start
+---@return integer del_end
+---@return string replacement
+local word_range = function(ctx, i, lsp)
+  local row, col = unpack(ctx.pos)
+  local text_edit = lsp.item and lsp.item.textEdit
+  local range = text_edit and (text_edit.range or text_edit.replace)
+  local inserted = (i.meta.snippet and i.abbr) or i.word or ""
+  local line = unpack(vim.api.nvim_buf_get_lines(ctx.buf, row - 1, row, true))
+
+  local original_col = col - #inserted
+  local before_inserted = string.sub(line, 1, original_col)
+  local after_cursor = string.sub(line, col + 1)
+
+  local del_start, del_end = unpack(vim.api.nvim_buf_call(ctx.buf, function()
+    local p = TAIL_RE:match_str(before_inserted) or original_col
+    local s, e = HEAD_RE:match_str(after_cursor)
+    return { p, col + ((s == 0) and e or 0) }
+  end))
+
+  if range and range.start.line == row - 1 then
+    del_start = vim.str_byteindex(line, lsp.position_encoding, range.start.character)
+  end
+
+  local replacement = (function()
+    if i.meta.snippet then
+      return ""
+    elseif range then
+      ---@cast text_edit -nil
+      return text_edit.newText or ""
+    else
+      return inserted
+    end
+  end)()
+
+  return del_start, del_end, replacement
+end
+
 -- https://github.com/neovim/neovim/blob/master/runtime/lua/vim/lsp/completion.lua
 ---@param ctx ctx.base
 ---@param i completions.Item
 local apply = function(ctx, i)
+  local row = unpack(ctx.pos)
   local meta = i.meta
   local lsp = meta.lsp or {}
 
@@ -16,39 +61,20 @@ local apply = function(ctx, i)
     if not context.still_valid(ctx) then
       return
     end
-
     if extra then
       lsp = vim.tbl_extend("force", lsp, extra)
     end
   end
 
-  local text_edit = lsp.item and lsp.item.textEdit
-  local range = text_edit and (text_edit.range or text_edit.replace)
-  local encoding = lsp.position_encoding or "utf-16"
-  local row, col = unpack(ctx.pos)
+  local del_start, del_end, replacement = word_range(ctx, i, lsp)
+  vim.api.nvim_buf_set_text(ctx.buf, row - 1, del_start, row - 1, del_end, { replacement })
 
-  if range then
-    ---@cast text_edit -nil
-    local line = unpack(vim.api.nvim_buf_get_lines(ctx.buf, row - 1, row, true))
-    local character = vim.str_utfindex(line, encoding, col)
-
-    vim.lsp.util.apply_text_edits({
-      {
-        range = { start = range.start, ["end"] = { line = row - 1, character = character } },
-        newText = meta.snippet and "" or (text_edit.newText or ""),
-      },
-    }, ctx.buf, encoding)
-  elseif meta.snippet then
-    local inserted = i.abbr or i.word
-    vim.api.nvim_buf_set_text(ctx.buf, row - 1, col - #inserted, row - 1, col, { "" })
+  if lsp.additional_text_edits then
+    vim.lsp.util.apply_text_edits(lsp.additional_text_edits, ctx.buf, lsp.position_encoding)
   end
-
-  vim.lsp.util.apply_text_edits(lsp.additional_text_edits or {}, ctx.buf, encoding)
-
   if meta.snippet then
     vim.snippet.expand(meta.snippet)
   end
-
   if lsp.command then
     resolve.exec_command(ctx, lsp)
   end
