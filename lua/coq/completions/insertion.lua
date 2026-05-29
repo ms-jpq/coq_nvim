@@ -13,7 +13,7 @@ local apply = function(ctx, i)
 
   if #(lsp.additional_text_edits or {}) == 0 then
     local extra = resolve.resolve(ctx, i)
-    if not context.valid(ctx) then
+    if not context.still_valid(ctx) then
       return
     end
 
@@ -29,8 +29,9 @@ local apply = function(ctx, i)
 
   if range then
     ---@cast text_edit -nil
-    local line = vim.api.nvim_buf_get_lines(ctx.buf, row - 1, row, false)[1] or ""
+    local line = unpack(vim.api.nvim_buf_get_lines(ctx.buf, row - 1, row, true))
     local character = vim.str_utfindex(line, encoding, col)
+
     vim.lsp.util.apply_text_edits({
       {
         range = { start = range.start, ["end"] = { line = row - 1, character = character } },
@@ -42,9 +43,7 @@ local apply = function(ctx, i)
     vim.api.nvim_buf_set_text(ctx.buf, row - 1, col - #inserted, row - 1, col, { "" })
   end
 
-  if lsp.additional_text_edits then
-    vim.lsp.util.apply_text_edits(lsp.additional_text_edits, ctx.buf, encoding)
-  end
+  vim.lsp.util.apply_text_edits(lsp.additional_text_edits or {}, ctx.buf, encoding)
 
   if meta.snippet then
     vim.snippet.expand(meta.snippet)
@@ -67,9 +66,10 @@ M.complete = function(ctx, iter)
   end
 
   local row, col = unpack(ctx.pos)
-  local line = vim.api.nvim_buf_get_lines(ctx.buf, row - 1, row, false)[1] or ""
+  local line = unpack(vim.api.nvim_buf_get_lines(ctx.buf, row - 1, row, true))
   local before = string.sub(line, 1, col)
   local start = string.find(before, "[%w_]+$") or (#before + 1)
+
   vim.fn.complete(start, items)
 end
 
