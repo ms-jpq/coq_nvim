@@ -7,35 +7,49 @@ local resolve = require "coq.completions.resolve"
 ---@param i completions.Item
 local apply = function(i)
   local meta = i.meta
-  local lsp = meta.lsp
   local buf = vim.api.nvim_get_current_buf()
+  local lsp = meta.lsp or {}
 
-  if not (lsp and lsp.additional_text_edits and #lsp.additional_text_edits > 0) then
-    local before = vim.b[buf].changedtick
+  if #(lsp.additional_text_edits or {}) == 0 then
+    local tick = vim.b[buf].changedtick
     local extra = resolve.resolve(i)
-    if vim.b[buf].changedtick ~= before then
+    if not vim.api.nvim_buf_is_valid(buf) or vim.b[buf].changedtick ~= tick then
       return
     end
+
     if extra then
-      lsp = vim.tbl_extend("force", lsp or {}, extra)
+      lsp = vim.tbl_extend("force", lsp, extra)
     end
   end
 
-  if meta.snippet then
-    local row, col = unpack(vim.api.nvim_win_get_cursor(0))
+  local text_edit = lsp.item and lsp.item.textEdit
+  local range = text_edit and (text_edit.range or text_edit.replace)
+  local encoding = lsp.position_encoding or "utf-16"
+  local row, col = unpack(vim.api.nvim_win_get_cursor(0))
+
+  if range then
+    ---@cast text_edit -nil
+    local character = vim.str_utfindex(vim.api.nvim_get_current_line(), encoding, col)
+    vim.lsp.util.apply_text_edits({
+      {
+        range = { start = range.start, ["end"] = { line = row - 1, character = character } },
+        newText = meta.snippet and "" or (text_edit.newText or ""),
+      },
+    }, 0, encoding)
+  elseif meta.snippet then
     local inserted = i.abbr or i.word
     vim.api.nvim_buf_set_text(0, row - 1, col - #inserted, row - 1, col, { "" })
   end
 
-  if lsp and lsp.additional_text_edits then
-    vim.lsp.util.apply_text_edits(lsp.additional_text_edits, 0, lsp.position_encoding or "utf-16")
+  if lsp.additional_text_edits then
+    vim.lsp.util.apply_text_edits(lsp.additional_text_edits, 0, encoding)
   end
 
   if meta.snippet then
     vim.snippet.expand(meta.snippet)
   end
 
-  if lsp and lsp.command then
+  if lsp.command then
     resolve.exec_command(lsp)
   end
 end
