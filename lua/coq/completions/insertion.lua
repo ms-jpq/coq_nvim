@@ -18,22 +18,22 @@ local word_range = function(ctx, i, lsp)
   local row, col = unpack(ctx.pos)
   local text_edit = lsp.item and lsp.item.textEdit
   local range = text_edit and (text_edit.range or text_edit.replace)
-  local inserted = (i.meta.snippet and i.abbr) or i.word or ""
   local line = unpack(vim.api.nvim_buf_get_lines(ctx.buf, row - 1, row, true))
 
+  local inserted = (i.meta.snippet and i.abbr) or i.word or ""
   local original_col = col - #inserted
-  local before_inserted = string.sub(line, 1, original_col)
-  local after_cursor = string.sub(line, col + 1)
 
   local del_start, del_end = unpack(vim.api.nvim_buf_call(ctx.buf, function()
+    local before_inserted = string.sub(line, 1, original_col)
+    local after_cursor = string.sub(line, col + 1)
     local preceding = TAIL_RE:match_str(before_inserted) or original_col
     local start, end_ = HEAD_RE:match_str(after_cursor)
+
+    if range and range.start.line == row - 1 then
+      preceding = vim.str_byteindex(line, lsp.position_encoding or DEFAULT_ENCODING, range.start.character)
+    end
     return { preceding, col + ((start == 0) and end_ or 0) }
   end))
-
-  if range and range.start.line == row - 1 then
-    del_start = vim.str_byteindex(line, lsp.position_encoding or DEFAULT_ENCODING, range.start.character)
-  end
 
   local replacement = (function()
     if i.meta.snippet then
