@@ -8,7 +8,7 @@ local tokens = require "coq.lib.index.tokens"
 
 ---@class index.Ranker
 ---@field inserted fun(filter: string)
----@field prepare fun(ctx: index.SearchContext): index.Prepared
+---@field prepare fun(ctx: ctx.full): index.Prepared
 
 local M = {}
 

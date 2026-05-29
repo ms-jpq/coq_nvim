@@ -1,4 +1,5 @@
 local broadcast = require "coq.lib.channels.broadcast"
+local context = require "coq.lib.context"
 local lib = require "coq.lib"
 
 ---@class completions.preview.ChangedEvent
@@ -17,9 +18,10 @@ local clear = function(buf)
   vim.api.nvim_buf_clear_namespace(buf, NS, 0, -1)
 end
 
+---@param ctx ctx.base
 ---@param ghost config.GhostText
 ---@param i completions.Item
-local show_ghost = function(ghost, i)
+local show_ghost = function(ctx, ghost, i)
   if not ghost.enabled then
     return
   end
@@ -28,11 +30,10 @@ local show_ghost = function(ghost, i)
     return
   end
 
-  local buf = vim.api.nvim_get_current_buf()
-  local row, col = unpack(vim.api.nvim_win_get_cursor(0))
+  local row, col = unpack(ctx.pos)
   local inline = ghost.context[1] .. text .. ghost.context[2]
 
-  vim.api.nvim_buf_set_extmark(buf, NS, row - 1, col, {
+  vim.api.nvim_buf_set_extmark(ctx.buf, NS, row - 1, col, {
     virt_text = { { inline, ghost.highlight_group } },
     virt_text_pos = "overlay",
     hl_mode = "combine",
@@ -53,14 +54,14 @@ M.bind = function(n, settings)
   vim.api.nvim_create_autocmd("CompleteChanged", {
     group = lib.group,
     callback = function()
-      events.replace { kind = "changed", item = vim.v.event.completed_item }
+      events.replace({ kind = "changed", item = vim.v.event.completed_item }, context.base())
     end,
   })
 
   vim.api.nvim_create_autocmd({ "CompleteDone", "InsertLeave" }, {
     group = lib.group,
     callback = function()
-      events.replace { kind = "clear" }
+      events.replace({ kind = "clear" }, context.base())
     end,
   })
 
@@ -68,15 +69,15 @@ M.bind = function(n, settings)
     local iter = events.subscribe()
     defer(iter.close)
 
-    for ev in iter do
-      local buf = vim.api.nvim_get_current_buf()
-      clear(buf)
+    for ev, ctx in iter do
+      ---@cast ctx ctx.base
+      clear(ctx.buf)
 
       if ev.kind == "changed" and ev.item and next(ev.item) then
         ---@type completions.Item?
         local item = ev.item.user_data
         if type(item) == "table" and item.word then
-          show_ghost(settings.display.ghost_text, item)
+          show_ghost(ctx, settings.display.ghost_text, item)
           show_doc(item)
         end
       end

@@ -8,11 +8,11 @@ local util = require "coq.lib.producers.util"
 
 ---@class producers.Producer: lib.Closable
 ---@field notify fun(event: any)
----@field idle fun(ctx: index.SearchContext)
----@field search fun(ctx: index.SearchContext): producers.SearchIter
+---@field idle fun(ctx: ctx.full)
+---@field search fun(ctx: ctx.full): producers.SearchIter
 
----@alias producers.IdleFn fun(events: any[], ctx: index.SearchContext)
----@alias producers.MatcherFn fun(ctx: index.SearchContext)
+---@alias producers.IdleFn fun(events: any[], ctx: ctx.full)
+---@alias producers.MatcherFn fun(ctx: ctx.full)
 ---@alias producers.NewProducer fun(idle: producers.IdleFn, matcher: producers.MatcherFn): producers.Producer
 
 local M = {}

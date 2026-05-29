@@ -1,7 +1,10 @@
----@class index.SearchContext
+---@class ctx.base
 ---@field win integer
 ---@field buf integer
 ---@field pos [integer, integer]
+---@field changedtick integer
+
+---@class ctx.full: ctx.base
 ---@field filetype string
 ---@field filename string
 ---@field cword string
@@ -20,16 +23,30 @@
 
 local M = {}
 
----@return index.SearchContext
-M.ctx = function()
+---@param ctx ctx.base
+---@return boolean
+M.still_valid = function(ctx)
+  return vim.api.nvim_buf_is_valid(ctx.buf) and vim.b[ctx.buf].changedtick == ctx.changedtick
+end
+
+---@return ctx.base
+M.base = function()
   local ctx = {}
 
-  do
-    ctx.win = vim.api.nvim_get_current_win()
-    ctx.buf = vim.api.nvim_win_get_buf(ctx.win)
-    ctx.pos = vim.api.nvim_win_get_cursor(ctx.win)
-  end
+  ctx.win = vim.api.nvim_get_current_win()
+  ctx.buf = vim.api.nvim_win_get_buf(ctx.win)
+  ctx.pos = vim.api.nvim_win_get_cursor(ctx.win)
+  ctx.changedtick = vim.b[ctx.buf].changedtick
 
+  ---@cast ctx ctx.base
+  return ctx
+end
+
+---@param base? ctx.base
+---@return ctx.full
+M.full = function(base)
+  local ctx = base or M.base()
+  ---@cast ctx ctx.full
   local bo = vim.bo[ctx.buf]
 
   do
@@ -68,7 +85,6 @@ M.ctx = function()
     ctx.utf32_col = vim.str_utfindex(ctx.line_before, "utf-32")
   end
 
-  ---@cast ctx index.SearchContext
   return ctx
 end
 

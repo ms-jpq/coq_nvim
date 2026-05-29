@@ -2,9 +2,10 @@ local runtime = require "coq.lib.async.runtime"
 
 local M = {}
 
+---@param ctx ctx.base
 ---@param item completions.Item
 ---@return completions.ItemLspMeta?
-M.resolve = function(item)
+M.resolve = function(ctx, item)
   local lsp = item.meta.lsp
   if not (lsp and lsp.client_id and lsp.item) then
     return nil
@@ -21,7 +22,7 @@ M.resolve = function(item)
   local f = runtime.future()
   client:request("completionItem/resolve", lsp.item, function(_, result)
     f.resolve(result)
-  end, vim.api.nvim_get_current_buf())
+  end, ctx.buf)
 
   local resolved = f.await(runtime.current())
   if not resolved then
@@ -34,8 +35,9 @@ M.resolve = function(item)
   }
 end
 
+---@param ctx ctx.base
 ---@param lsp completions.ItemLspMeta
-M.exec_command = function(lsp)
+M.exec_command = function(ctx, lsp)
   if not (lsp.command and lsp.client_id) then
     return
   end
@@ -45,7 +47,7 @@ M.exec_command = function(lsp)
     return
   end
 
-  client:exec_cmd(lsp.command, { bufnr = vim.api.nvim_get_current_buf() })
+  client:exec_cmd(lsp.command, { bufnr = ctx.buf })
 end
 
 return M

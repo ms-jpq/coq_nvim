@@ -1,7 +1,7 @@
 local broadcast = require "coq.lib.channels.broadcast"
+local context = require "coq.lib.context"
 local insertion = require "coq.completions.insertion"
 local lib = require "coq.lib"
-local search = require "coq.lib.index.search"
 
 local M = {}
 
@@ -21,7 +21,8 @@ M.bind = function(n, sup)
 
     for _ in iter do
       n.spawn(function()
-        insertion.complete(sup.search(search.ctx()))
+        local ctx = context.full()
+        insertion.complete(ctx, sup.search(ctx))
       end)
     end
   end)

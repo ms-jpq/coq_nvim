@@ -1,6 +1,6 @@
 local M = {}
 
----@param ctx index.SearchContext
+---@param ctx ctx.full
 ---@return string[]
 M.surround = function(ctx)
   local half = math.floor(vim.api.nvim_win_get_height(ctx.win) / 2)
