@@ -3,6 +3,8 @@ local context = require "coq.lib.context"
 local item = require "coq.completions.item"
 local lib = require "coq.lib"
 local resolve = require "coq.completions.resolve"
+local score = require "coq.lib.index.rank.score"
+local topk_m = require "coq.lib.index.rank.topk"
 
 local DEFAULT_ENCODING = "utf-16"
 
@@ -56,6 +58,7 @@ end
 -- https://github.com/neovim/neovim/blob/master/runtime/lua/vim/lsp/completion.lua
 ---@param ctx ctx.base
 ---@param i completions.Item
+---@return true?
 local apply = function(ctx, i)
   local meta = i.meta
   local lsp = meta.lsp or {}
@@ -85,21 +88,36 @@ local apply = function(ctx, i)
   if lsp.command then
     resolve.exec_command(ctx, lsp)
   end
+
+  return true
 end
 
 local M = {}
 
 ---@param ctx ctx.full
+---@param settings config.Settings
+---@param ranker index.Ranker
 ---@param iter index.SearchIter
----@param icons config.Icons
-M.complete = function(ctx, iter, icons)
-  local items = {}
+M.complete = function(ctx, settings, ranker, iter)
+  local prepared = ranker.prepare(ctx)
+
+  local scorables = {}
   for i in iter do
     ---@cast i completions.Item
-    table.insert(items, item.to_nvim(icons, i))
+    table.insert(scorables, { filter = i.meta.filter or i.word or "", source = "", item = i })
   end
 
-  if vim.api.nvim_get_mode().mode:sub(1, 1) ~= "i" then
+  local topk = topk_m.new(settings.match.max_results)
+  for s, sc, _ in score.score(scorables, prepared) do
+    topk.push(s --[[@as {item: completions.Item}]].item, sc)
+  end
+
+  local items = {}
+  for i in topk.iter() do
+    table.insert(items, item.to_nvim(settings.display.icons, i))
+  end
+
+  if string.sub(vim.api.nvim_get_mode().mode, 1, 1) ~= "i" then
     return
   end
 
@@ -108,7 +126,8 @@ M.complete = function(ctx, iter, icons)
 end
 
 ---@param n async.Nursery
-M.bind = function(n)
+---@param ranker index.Ranker
+M.bind = function(n, ranker)
   local events = broadcast.new()
 
   vim.api.nvim_create_autocmd({ "CompleteDone" }, {
@@ -126,9 +145,14 @@ M.bind = function(n)
       ---@cast completed vim.v.completed_item
       local user_data = completed.user_data
       if type(user_data) == "table" then
-        local ctx = context.base()
         ---@cast user_data completions.Item
-        apply(ctx, user_data)
+
+        local ctx = context.base()
+        local filter = user_data.meta.filter or user_data.word
+
+        if apply(ctx, user_data) and filter then
+          ranker.inserted(filter)
+        end
       end
     end
   end)
