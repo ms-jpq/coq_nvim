@@ -29,6 +29,7 @@ local idle = function(settings, events)
     if ev.kind == "update" then
       local kw = tokens.parse_iskeyword(ev.iskeyword)
       local lines = vim.iter(ev.lines) --[[@as fun(): string?]]
+
       for word in tokens.words(kw, lines) do
         index.insert { buf = buf, word = word, filetype = ev.filetype }
       end

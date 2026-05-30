@@ -3,11 +3,11 @@ local T = require "coq.lib.test"
 local trie = require "coq.lib.index.trie"
 
 local spec = {
-  insert_key = function(i)
-    return i.word
+  insert_key = function(item)
+    return item.word
   end,
-  query_key = function(c)
-    return c.prefix
+  query_key = function(ctx)
+    return ctx.prefix
   end,
 }
 

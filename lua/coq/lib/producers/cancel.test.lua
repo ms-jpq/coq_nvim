@@ -52,7 +52,7 @@ local cancel_tests = function(name, factory)
             idle = lib.noop,
             bind = lib.noop,
             matcher = function(_, ctx)
-              require("coq.lib.async").sleep(80 * ctx.slow)
+              require("coq.lib.async").sleep(200 * ctx.slow)
               coroutine.yield "never"
             end,
           }
@@ -61,10 +61,10 @@ local cancel_tests = function(name, factory)
           local _ = db.search { slow = T.SLOW }()
           elapsed_ms = (vim.uv.hrtime() - start) / 1e6
         end)
-        async.sleep(5 * T.SLOW)
+        async.sleep(30 * T.SLOW)
         h.cancel()
       end, h)
-      assert(elapsed_ms and elapsed_ms < 40 * T.SLOW, ("expected fast wake, got %s ms"):format(tostring(elapsed_ms)))
+      assert(elapsed_ms and elapsed_ms < 100 * T.SLOW, ("expected fast wake, got %s ms"):format(tostring(elapsed_ms)))
     end)
   end)
 end

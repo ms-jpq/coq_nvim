@@ -30,6 +30,7 @@ T.describe("errors", function(test)
   end)
 
   test("async.entry error surfaces at caller, not in runtime", function()
+    local done = async.future()
     local ok, err
     vim.schedule(function()
       ok, err = pcall(function()
@@ -37,8 +38,9 @@ T.describe("errors", function(test)
           error "entry boom"
         end)()
       end)
+      done.resolve()
     end)
-    async.sleep(5 * T.SLOW)
+    done.await()
 
     T.eq(ok, false)
     assert_clean(err, "entry boom")

@@ -170,11 +170,11 @@ end
 T.describe("index.indexed", function(test)
   test("search routes by query_key to a single child", function()
     local idx = search.indexed {
-      insert_key = function(i)
-        return i.filetype
+      insert_key = function(item)
+        return item.filetype
       end,
-      query_key = function(c)
-        return c.filetype
+      query_key = function(ctx)
+        return ctx.filetype
       end,
       child = leaf,
     }
@@ -188,11 +188,11 @@ T.describe("index.indexed", function(test)
 
   test("query_key returning nil fans out across all children", function()
     local idx = search.indexed {
-      insert_key = function(i)
-        return i.filetype
+      insert_key = function(item)
+        return item.filetype
       end,
-      query_key = function(c)
-        return c.filetype
+      query_key = function(ctx)
+        return ctx.filetype
       end,
       child = leaf,
     }
@@ -205,11 +205,11 @@ T.describe("index.indexed", function(test)
 
   test("search with a key that has no child yields nothing", function()
     local idx = search.indexed {
-      insert_key = function(i)
-        return i.filetype
+      insert_key = function(item)
+        return item.filetype
       end,
-      query_key = function(c)
-        return c.filetype
+      query_key = function(ctx)
+        return ctx.filetype
       end,
       child = leaf,
     }
@@ -225,11 +225,11 @@ T.describe("index.indexed", function(test)
       return leaf()
     end
     local idx = search.indexed {
-      insert_key = function(i)
-        return i.filetype
+      insert_key = function(item)
+        return item.filetype
       end,
-      query_key = function(c)
-        return c.filetype
+      query_key = function(ctx)
+        return ctx.filetype
       end,
       child = counted_leaf,
     }
@@ -242,11 +242,11 @@ T.describe("index.indexed", function(test)
 
   test("prune with non-nil query_key only touches the matching child", function()
     local idx = search.indexed {
-      insert_key = function(i)
-        return i.filetype
+      insert_key = function(item)
+        return item.filetype
       end,
-      query_key = function(c)
-        return c.filetype
+      query_key = function(ctx)
+        return ctx.filetype
       end,
       child = leaf,
     }
@@ -261,11 +261,11 @@ T.describe("index.indexed", function(test)
 
   test("prune with nil query_key fans out across all children", function()
     local idx = search.indexed {
-      insert_key = function(i)
-        return i.filetype
+      insert_key = function(item)
+        return item.filetype
       end,
-      query_key = function(c)
-        return c.filetype
+      query_key = function(ctx)
+        return ctx.filetype
       end,
       child = leaf,
     }
@@ -282,21 +282,21 @@ T.describe("index.indexed", function(test)
   test("two layers route filetype then prefix", function()
     local inner_layer = function()
       return search.indexed {
-        insert_key = function(i)
-          return string.sub(i.word, 1, 2)
+        insert_key = function(item)
+          return string.sub(item.word, 1, 2)
         end,
-        query_key = function(c)
-          return c.prefix and string.sub(c.prefix, 1, 2) or nil
+        query_key = function(ctx)
+          return ctx.prefix and string.sub(ctx.prefix, 1, 2) or nil
         end,
         child = leaf,
       }
     end
     local idx = search.indexed {
-      insert_key = function(i)
-        return i.filetype
+      insert_key = function(item)
+        return item.filetype
       end,
-      query_key = function(c)
-        return c.filetype
+      query_key = function(ctx)
+        return ctx.filetype
       end,
       child = inner_layer,
     }
@@ -312,11 +312,11 @@ T.describe("index.indexed", function(test)
 
   test("empty index yields nothing", function()
     local idx = search.indexed {
-      insert_key = function(i)
-        return i.filetype
+      insert_key = function(item)
+        return item.filetype
       end,
-      query_key = function(c)
-        return c.filetype
+      query_key = function(ctx)
+        return ctx.filetype
       end,
       child = leaf,
     }

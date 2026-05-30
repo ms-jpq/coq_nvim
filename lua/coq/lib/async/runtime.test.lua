@@ -1,18 +1,28 @@
 local T = require "coq.lib.test"
 local async = require "coq.lib.async"
 
-local capture_notify = function(marker)
-  local state = { captured = nil }
-  local orig = vim.notify
-  vim.notify = function(msg, level, opts)
-    if type(msg) == "string" and msg:find(marker, 1, true) then
-      state.captured = { msg = msg, level = level }
-    else
-      return orig(msg, level, opts)
+local CAPTURES = {}
+local ORIG_NOTIFY = vim.notify
+vim.notify = function(msg, level, opts)
+  if type(msg) == "string" then
+    for marker, state in pairs(CAPTURES) do
+      if msg:find(marker, 1, true) then
+        state.captured = { msg = msg, level = level }
+        if state.done then
+          state.done.resolve()
+        end
+        return
+      end
     end
   end
+  return ORIG_NOTIFY(msg, level, opts)
+end
+
+local capture_notify = function(marker)
+  local state = { captured = nil, done = async.future() }
+  CAPTURES[marker] = state
   state.restore = function()
-    vim.notify = orig
+    CAPTURES[marker] = nil
   end
   return state
 end
@@ -28,15 +38,17 @@ T.describe("async", function(test)
   end)
 
   test("entry defers execution", function()
+    local done = async.future()
     local ran = false
     local later = async.entry(function()
       ran = true
+      done.resolve()
     end)
 
     T.eq(ran, false)
 
     vim.schedule(later)
-    async.sleep(5 * T.SLOW)
+    done.await()
 
     T.eq(ran, true)
   end)
@@ -49,7 +61,7 @@ T.describe("async", function(test)
       async.sleep(2 * T.SLOW)
       error(marker)
     end))
-    async.sleep(30 * T.SLOW)
+    cap.done.await()
     cap.restore()
 
     assert(cap.captured ~= nil, "expected vim.notify to fire for post-yield error")
@@ -61,6 +73,7 @@ T.describe("async", function(test)
     local marker = "spot bolted post-sleep"
     local cap = capture_notify(marker)
     local sibling_ran = false
+    local sibling_done = async.future()
 
     vim.schedule(async.entry(function()
       async.sleep(2 * T.SLOW)
@@ -69,8 +82,9 @@ T.describe("async", function(test)
     vim.schedule(async.entry(function()
       async.sleep(5 * T.SLOW)
       sibling_ran = true
+      sibling_done.resolve()
     end))
-    async.sleep(30 * T.SLOW)
+    sibling_done.await()
     cap.restore()
 
     T.eq(sibling_ran, true)
