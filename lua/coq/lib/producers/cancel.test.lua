@@ -3,6 +3,7 @@ local T = require "coq.lib.test"
 local async = require "coq.lib.async"
 local handle = require "coq.lib.async.handle"
 local lib = require "coq.lib"
+local nursery = require "coq.lib.async.nursery"
 local producer = require "coq.lib.producers"
 local threaded = require "coq.lib.producers.threaded"
 
@@ -17,31 +18,33 @@ local cancel_tests = function(name, factory)
           local db = factory(lib.noop, function()
             coroutine.yield "lil"
           end)
+          db.bind(n)
           got = db.search {}()
-          db.close()
         end)
       end, h)
       T.eq(got, nil)
     end)
 
-    test("close is idempotent", function()
+    test("bind cancellation is idempotent", function()
+      local n = nursery.new(handle.new())
       local db = factory(lib.noop, function()
         coroutine.yield "lil"
       end)
-      db.close()
-      db.close()
+      db.bind(n)
+      n.handle.cancel()
+      n.handle.cancel() -- no error
     end)
 
     test("search after close returns nil immediately", function()
       local got = "unset"
-      async.scope(function(n)
-        n.spawn(function()
-          local db = factory(lib.noop, function()
-            coroutine.yield "lil"
-          end)
-          db.close()
-          got = db.search { slow = T.SLOW }()
+      async.scope(function(_)
+        local n = nursery.new(handle.new())
+        local db = factory(lib.noop, function()
+          coroutine.yield "lil"
         end)
+        db.bind(n)
+        n.handle.cancel()
+        got = db.search { slow = T.SLOW }()
       end)
       T.eq(got, nil)
     end)
@@ -55,10 +58,10 @@ local cancel_tests = function(name, factory)
             require("coq.lib.async").sleep(80 * ctx.slow)
             coroutine.yield "never"
           end)
+          db.bind(n)
           local start = vim.uv.hrtime()
           local _ = db.search { slow = T.SLOW }()
           elapsed_ms = (vim.uv.hrtime() - start) / 1e6
-          db.close()
         end)
         async.sleep(5 * T.SLOW)
         h.cancel()

@@ -1,4 +1,4 @@
-local runtime = require "coq.lib.async.runtime"
+local async = require "coq.lib.async"
 local sparse = require "coq.lib.sparse_table"
 local util = require "coq.lib.channels.util"
 
@@ -84,7 +84,7 @@ M.new = function(h)
       elseif sub.gone then
         return nil
       else
-        local f = runtime.future()
+        local f = async.future()
         sub.waiter = f
         packet = f.await()
         if packet == nil then

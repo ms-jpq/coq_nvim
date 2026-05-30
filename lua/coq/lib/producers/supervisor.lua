@@ -18,16 +18,16 @@ M.new = function(producers)
   end
   interrupt()
 
-  local _ = ph.on_cancel(function()
-    interrupt()
-    for _, p in ipairs(producers) do
-      p.close()
-    end
-  end)
+  local _ = ph.on_cancel(interrupt)
 
   local sup = {}
 
-  sup.close = ph.cancel
+  sup.bind = function(n)
+    local _ = n.handle.on_cancel(ph.cancel)
+    for _, p in pairs(producers) do
+      p.bind(n)
+    end
+  end
 
   sup.notify = function(_)
     assert(false)
@@ -58,16 +58,14 @@ M.new = function(producers)
     interrupt()
     search_handle = handle.new()
 
-    local iters = {}
-    for idx, p in ipairs(producers) do
-      local iter
-      iters[idx] = function()
-        iter = iter or p.search(ctx)
-        return iter()
-      end
-    end
-
     return search.iter(search_handle, function()
+      local iters = vim
+        .iter(producers)
+        :map(function(p)
+          return p.search(ctx)
+        end)
+        :totable()
+
       for _, item in async.merge(iters) do
         coroutine.yield(item)
       end

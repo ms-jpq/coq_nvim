@@ -13,7 +13,12 @@ M.new = function(idle, matcher)
 
   local _ = ph.on_cancel(w.close)
 
-  local db = { close = ph.cancel, queue = w.queue }
+  local db = {
+    queue = w.queue,
+    bind = function(n)
+      local _ = n.handle.on_cancel(ph.cancel)
+    end,
+  }
 
   db.notify = function(event)
     if ph.cancelled then

@@ -1,6 +1,6 @@
+local async = require "coq.lib.async"
 local handle = require "coq.lib.async.handle"
 local lib = require "coq.lib"
-local runtime = require "coq.lib.async.runtime"
 
 ---@class index.SearchIter: lib.Closable
 ---@overload fun(): completions.Item?
@@ -33,7 +33,7 @@ M.empty = {
 ---@param fn fun()
 ---@return index.SearchIter
 M.iter = function(h, fn)
-  local bounce = runtime.wrap(fn, h)
+  local bounce = async.wrap(fn, h)
 
   local next = function()
     if h.cancelled then
@@ -60,7 +60,7 @@ M.indexed = function(spec)
   local children = {}
 
   local fanout = function(ctx)
-    local h = handle.new(runtime.current())
+    local h = handle.new(async.current())
     return M.iter(h, function()
       for _, child in pairs(children) do
         lib.scope(function(defer)

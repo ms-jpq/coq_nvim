@@ -86,7 +86,7 @@ local open = function(parked, write, message)
     chan.close()
   end
 
-  local frames = runtime.wrap(function()
+  local frames = async.wrap(function()
     while true do
       local frame = chan.pull()
       if frame == nil then
@@ -122,7 +122,7 @@ local open = function(parked, write, message)
     cleanup()
   end
 
-  unwatch = runtime.current().on_cancel(session.close)
+  unwatch = async.current().on_cancel(session.close)
 
   ---@cast session worker.Session
   return session
@@ -202,7 +202,7 @@ local make_responder = function(write)
       return
     end
 
-    local stream = runtime.wrap(fn, req_handle)
+    local stream = async.wrap(fn, req_handle)
 
     local consume = function()
       local item = stream(unpack(args, 1, n_args))
@@ -225,7 +225,7 @@ local make_responder = function(write)
   local scheduled = vim.is_thread() and lib.noop or require("coq.lib.async.vim").scheduled
 
   responder.serve = function(n, frame)
-    local req_handle = handle.new(runtime.current())
+    local req_handle = handle.new(async.current())
     local next_chan = frame.streaming and mpmc.new() or nil
 
     if next_chan then

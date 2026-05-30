@@ -1,4 +1,4 @@
-local runtime = require "coq.lib.async.runtime"
+local async = require "coq.lib.async"
 
 local M = {}
 
@@ -19,12 +19,12 @@ M.resolve = function(ctx, item)
     return nil
   end
 
-  local f = runtime.future()
+  local f = async.future()
   client:request("completionItem/resolve", lsp.item, function(_, result)
     f.resolve(result)
   end, ctx.buf)
 
-  local resolved = f.await(runtime.current())
+  local resolved = f.await(async.current())
   if not resolved then
     return nil
   end

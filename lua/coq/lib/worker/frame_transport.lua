@@ -2,7 +2,6 @@
 
 local async = require "coq.lib.async"
 local proto = require "coq.lib.worker.wire_proto"
-local runtime = require "coq.lib.async.runtime"
 
 ---@class worker.Duplex: lib.Closable
 ---@field reader uv.uv_pipe_t
@@ -59,7 +58,7 @@ end)
 M.reader = function(pipe)
   local decoder = proto.decoder()
 
-  return runtime.wrap(function()
+  return async.wrap(function()
     while true do
       local err, bytes = read_once(pipe)
       if err then
@@ -79,7 +78,7 @@ end
 ---@return fun(body: table)
 M.writer = function(pipe)
   return function(body)
-    local f = runtime.future()
+    local f = async.future()
     pipe:write(proto.encode(body), function(err)
       f.resolve(err)
     end)

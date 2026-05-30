@@ -13,14 +13,28 @@ local trigger = require "coq.completions.trigger"
 
 local M = {}
 
+---@param settings config.Settings
+---@return fun(): producers.Producer?
+local producers = function(settings)
+  return coroutine.wrap(function()
+    local clients = settings.clients
+
+    if clients.buffers.enabled then
+      coroutine.yield(require "coq.producers.buffer")
+    end
+  end)
+end
+
 ---@param opts? table
 M.setup = function(opts)
   local settings = config.merged(opts)
   nvim_options.apply(settings)
-  local sup = supervisor.new {}
+  local p = vim.iter(producers(settings)):totable()
+  local sup = supervisor.new(p)
 
   async.entry(function()
     nursery.scope(function(n)
+      sup.bind(n)
       trigger.bind(n, sup)
       preview.bind(n, settings)
       insertion.bind(n)
