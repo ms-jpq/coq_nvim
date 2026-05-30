@@ -11,28 +11,34 @@ local HEAD_RE = vim.regex [[\V\k\+]]
 ---@param ctx ctx.base
 ---@param i completions.Item
 ---@param lsp completions.ItemLspMeta
----@return integer del_start
----@return integer del_end
+---@return integer start_row
+---@return integer start_col
+---@return integer end_row
+---@return integer end_col
 ---@return string replacement
 local word_range = function(ctx, i, lsp)
   local row, col = unpack(ctx.pos)
+  local end_row = row - 1
   local text_edit = lsp.item and lsp.item.textEdit
   local range = text_edit and (text_edit.range or text_edit.replace)
-  local line = unpack(vim.api.nvim_buf_get_lines(ctx.buf, row - 1, row, true))
+  local line = unpack(vim.api.nvim_buf_get_lines(ctx.buf, end_row, row, true))
 
   local inserted = (i.meta.snippet and i.abbr) or i.word or ""
-  local original_col = col - #inserted
+  local original_col = math.max(0, col - #inserted)
+  local before_inserted = string.sub(line, 1, original_col)
+  local after_cursor = string.sub(line, col + 1)
 
-  local del_start, del_end = unpack(vim.api.nvim_buf_call(ctx.buf, function()
-    local before_inserted = string.sub(line, 1, original_col)
-    local after_cursor = string.sub(line, col + 1)
+  local start_row = (range and range.start.line) or end_row
+  local start_line = (start_row == end_row) and line
+    or (vim.api.nvim_buf_get_lines(ctx.buf, start_row, start_row + 1, false)[1] or "")
+
+  local start_col, end_col = unpack(vim.api.nvim_buf_call(ctx.buf, function()
+    local s, e = HEAD_RE:match_str(after_cursor)
     local preceding = TAIL_RE:match_str(before_inserted) or original_col
-    local start, end_ = HEAD_RE:match_str(after_cursor)
-
-    if range and range.start.line == row - 1 then
-      preceding = vim.str_byteindex(line, lsp.position_encoding or DEFAULT_ENCODING, range.start.character)
+    if range then
+      preceding = vim.str_byteindex(start_line, lsp.position_encoding or DEFAULT_ENCODING, range.start.character)
     end
-    return { preceding, col + ((start == 0) and end_ or 0) }
+    return { preceding, col + ((s == 0) and e or 0) }
   end))
 
   local replacement = (function()
@@ -46,30 +52,31 @@ local word_range = function(ctx, i, lsp)
     end
   end)()
 
-  return del_start, del_end, replacement
+  return start_row, start_col, end_row, end_col, replacement
 end
 
 -- https://github.com/neovim/neovim/blob/master/runtime/lua/vim/lsp/completion.lua
 ---@param ctx ctx.base
 ---@param i completions.Item
 local apply = function(ctx, i)
-  local row = unpack(ctx.pos)
   local meta = i.meta
   local lsp = meta.lsp or {}
 
   if #(lsp.additional_text_edits or {}) == 0 then
-    local extra = resolve.resolve(ctx, i)
+    local resolved = resolve.resolve(ctx, i) or {}
     if not context.still_valid(ctx) then
       return
     end
-    if extra then
-      lsp = vim.tbl_extend("force", lsp, extra)
-      ---@cast lsp completions.ItemLspMeta
-    end
+
+    lsp = vim.tbl_extend("force", lsp, resolved)
+    ---@cast lsp completions.ItemLspMeta
   end
 
-  local del_start, del_end, replacement = word_range(ctx, i, lsp)
-  vim.api.nvim_buf_set_text(ctx.buf, row - 1, del_start, row - 1, del_end, { replacement })
+  do
+    local start_row, start_col, end_row, end_col, replacement = word_range(ctx, i, lsp)
+    local lines = vim.split(string.gsub(replacement, "\r\n?", "\n"), "\n", { plain = true })
+    vim.api.nvim_buf_set_text(ctx.buf, start_row, start_col, end_row, end_col, lines)
+  end
 
   if lsp.additional_text_edits then
     vim.lsp.util.apply_text_edits(lsp.additional_text_edits, ctx.buf, lsp.position_encoding or DEFAULT_ENCODING)
@@ -104,7 +111,7 @@ M.bind = function(n)
   vim.api.nvim_create_autocmd({ "CompleteDone" }, {
     group = lib.group,
     callback = function()
-      events.replace(vim.v.completed_item, context.base())
+      events.replace(vim.v.completed_item)
     end,
   })
 
@@ -112,11 +119,11 @@ M.bind = function(n)
     local iter = events.subscribe()
     defer(iter.close)
 
-    for completed, ctx in iter do
+    for completed in iter do
       ---@cast completed vim.v.completed_item
-      ---@cast ctx ctx.base
       local user_data = completed.user_data
       if type(user_data) == "table" then
+        local ctx = context.base()
         ---@cast user_data completions.Item
         apply(ctx, user_data)
       end
