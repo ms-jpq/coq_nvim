@@ -1,3 +1,4 @@
+local handle = require "coq.lib.async.handle"
 local lib = require "coq.lib"
 local queue = require "coq.lib.queue"
 local worker = require "coq.lib.worker"
@@ -8,27 +9,21 @@ local M = {}
 M.new = function(idle, matcher)
   local w = worker.spawn()
   local event_bus = queue.new()
-  local closed = false
+  local ph = handle.new()
 
-  local db = { queue = w.queue }
+  local _ = ph.on_cancel(w.close)
 
-  db.close = function()
-    if closed then
-      return
-    end
-    closed = true
-    w.close()
-  end
+  local db = { close = ph.cancel, queue = w.queue }
 
   db.notify = function(event)
-    if closed then
+    if ph.cancelled then
       return
     end
     event_bus.push(event)
   end
 
   db.idle = function(ctx)
-    if closed then
+    if ph.cancelled then
       return
     end
     local batch = {}
@@ -41,7 +36,7 @@ M.new = function(idle, matcher)
   end
 
   db.search = function(ctx)
-    if closed then
+    if ph.cancelled then
       return lib.dead_iter
     end
     return w.queue_stream(matcher, ctx)

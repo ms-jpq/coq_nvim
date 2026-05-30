@@ -17,16 +17,12 @@ local M = {}
 ---@type producers.NewProducer
 M.new = function(idle, matcher)
   local events = queue.new()
-  local closed = false
+  local ph = handle.new()
 
-  local db = {}
-
-  db.close = function()
-    closed = true
-  end
+  local db = { close = ph.cancel }
 
   db.notify = function(event)
-    if closed then
+    if ph.cancelled then
       return
     end
     events.push(event)
@@ -43,7 +39,7 @@ M.new = function(idle, matcher)
   end
 
   db.search = function(ctx)
-    if closed then
+    if ph.cancelled then
       return lib.dead_iter
     end
     local h = handle.new(runtime.current())

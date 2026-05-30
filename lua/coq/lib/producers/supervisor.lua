@@ -10,7 +10,7 @@ local M = {}
 ---@return producers.Producer
 M.new = function(producers)
   local search_handle, idle_handle = handle.new(), handle.new()
-  local closed = false
+  local ph = handle.new()
 
   local interrupt = function()
     search_handle.cancel()
@@ -18,25 +18,23 @@ M.new = function(producers)
   end
   interrupt()
 
-  local sup = {}
-
-  sup.close = function()
-    if closed then
-      return
-    end
-    closed = true
+  local _ = ph.on_cancel(function()
     interrupt()
     for _, p in ipairs(producers) do
       p.close()
     end
-  end
+  end)
+
+  local sup = {}
+
+  sup.close = ph.cancel
 
   sup.notify = function(_)
     assert(false)
   end
 
   sup.idle = function(ctx)
-    if closed or not search_handle.cancelled then
+    if ph.cancelled or not search_handle.cancelled then
       return
     end
     idle_handle.cancel()
@@ -54,7 +52,7 @@ M.new = function(producers)
   end
 
   sup.search = function(ctx)
-    if closed then
+    if ph.cancelled then
       return lib.dead_iter
     end
     interrupt()

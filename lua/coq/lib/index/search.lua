@@ -33,37 +33,24 @@ M.empty = {
 ---@param fn fun()
 ---@return index.SearchIter
 M.iter = function(h, fn)
-  local closed = false
   local bounce = runtime.wrap(fn, h)
 
-  local it = {
-    close = function()
-      if closed then
-        return
-      end
-      closed = true
-      h.cancel()
-    end,
-  }
-
-  local _ = h.on_cancel(it.close)
-
   local next = function()
-    if closed then
+    if h.cancelled then
       return nil
     end
     local ok, val = pcall(bounce)
     if not ok then
-      it.close()
+      h.cancel()
       error(val, 0)
     end
     if val == nil then
-      it.close()
+      h.cancel()
     end
     return val
   end
 
-  return setmetatable(it, { __call = next })
+  return setmetatable({ close = h.cancel }, { __call = next })
 end
 
 ---@generic T
@@ -76,13 +63,14 @@ M.indexed = function(spec)
     local h = handle.new(runtime.current())
     return M.iter(h, function()
       for _, child in pairs(children) do
-        local iter = child.search(ctx)
-        local unwatch = h.on_cancel(iter.close)
-        for item in iter do
-          coroutine.yield(item)
-        end
-        unwatch()
-        iter.close()
+        lib.scope(function(defer)
+          local iter = child.search(ctx)
+          defer(iter.close)
+          defer(h.on_cancel(iter.close))
+          for item in iter do
+            coroutine.yield(item)
+          end
+        end)
       end
     end)
   end
