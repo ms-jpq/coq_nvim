@@ -1,5 +1,5 @@
 local T = require "coq.lib.test"
-local async_vim = require "coq.lib.async.vim"
+local atools = require "coq.lib.atools"
 local tokens = require "coq.lib.index.tokens"
 
 local CORPUS = {
@@ -105,7 +105,7 @@ T.test("tokens.parity across all filetypes", function()
   local failures = {}
 
   for _, ft in pairs(enumerate_filetypes()) do
-    async_vim.scheduled()
+    atools.scheduled()
     local iskeyword, expected = probe(ft)
     local kw = tokens.parse_iskeyword(iskeyword)
     local actual = vim.iter(tokens.words(kw, vim.iter(CORPUS) --[[@as fun(): string?]])):totable()

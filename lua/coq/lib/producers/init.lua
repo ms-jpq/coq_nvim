@@ -1,4 +1,3 @@
-local broadcast = require "coq.lib.channels.broadcast"
 local handle = require "coq.lib.async.handle"
 local runtime = require "coq.lib.async.runtime"
 local search = require "coq.lib.index"
@@ -33,26 +32,15 @@ M.new = function(spec)
   local db = {}
 
   db.bind = function(n)
-    local events = broadcast.new(n.handle)
-
-    n.spawn(function(defer)
-      local sub = events.subscribe()
-      defer(sub.close)
-
-      for ev in sub do
-        location[key(ev)] = ev
-      end
+    spec.bind(n, function(ev)
+      location[key(ev)] = ev
     end)
-    spec.bind(n, events.replace)
   end
 
   db.idle = function(ctx)
     local batch = location
     location = {}
-
-    if next(batch) ~= nil then
-      spec.idle(batch, ctx)
-    end
+    spec.idle(batch, ctx)
   end
 
   db.search = function(ctx)

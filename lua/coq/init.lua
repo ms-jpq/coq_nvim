@@ -4,6 +4,8 @@ end
 
 local async = require "coq.lib.async"
 local config = require "coq.config"
+local events_m = require "coq.completions.events"
+local idle = require "coq.completions.idle"
 local insertion = require "coq.completions.insertion"
 local lib = require "coq.lib"
 local nursery = require "coq.lib.async.nursery"
@@ -71,13 +73,15 @@ M.setup = function(opts)
   local p = vim.iter(async.wrap(producers(settings))):totable()
   local sup = supervisor.new(p)
   local ranker = ranker_m.new()
+  local events = events_m.new()
 
   async.entry(function()
     nursery.scope(function(n)
       sup.bind(n)
-      trigger.bind(n, settings, ranker, sup)
-      preview.bind(n, settings)
-      insertion.bind(n, ranker)
+      trigger.bind(n, settings, ranker, sup, events.trigger)
+      preview.bind(n, settings, events.pum)
+      insertion.bind(n, ranker, events.done)
+      idle.bind(n, sup, events.idle)
     end)
   end)()
 

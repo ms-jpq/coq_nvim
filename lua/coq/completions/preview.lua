@@ -1,18 +1,8 @@
 local async = require "coq.lib.async"
-local async_vim = require "coq.lib.async.vim"
-local broadcast = require "coq.lib.channels.broadcast"
+local atools = require "coq.lib.atools"
 local context = require "coq.lib.context"
 local lib = require "coq.lib"
 local resolve = require "coq.completions.resolve"
-
----@class completions.preview.ChangedEvent
----@field kind "changed"
----@field item vim.v.completed_item
-
----@class completions.preview.ClearEvent
----@field kind "clear"
-
----@alias completions.preview.Event completions.preview.ChangedEvent | completions.preview.ClearEvent
 
 local NS = vim.api.nvim_create_namespace "coq.preview"
 
@@ -97,7 +87,7 @@ local show_doc = function(ctx, preview_cfg, i)
   preview_win = win
 end
 
----@param ev completions.preview.Event
+---@param ev completions.PumEvent
 ---@return completions.Item?
 local item_of = function(ev)
   if ev.kind ~= "changed" then
@@ -134,24 +124,8 @@ local M = {}
 
 ---@param n async.Nursery
 ---@param settings config.Settings
-M.bind = function(n, settings)
-  ---@type channels.Broadcast<completions.preview.Event>
-  local events = broadcast.new()
-
-  vim.api.nvim_create_autocmd("CompleteChanged", {
-    group = lib.group,
-    callback = function()
-      events.replace { kind = "changed", item = vim.v.event.completed_item }
-    end,
-  })
-
-  vim.api.nvim_create_autocmd({ "CompleteDone", "InsertLeave" }, {
-    group = lib.group,
-    callback = function()
-      events.replace { kind = "clear" }
-    end,
-  })
-
+---@param pum channels.Broadcast<completions.PumEvent>
+M.bind = function(n, settings, pum)
   if settings.keymap.bigger_preview then
     local esc = vim.keycode "<c-e>"
     vim.keymap.set({ "i" }, settings.keymap.bigger_preview, function()
@@ -161,7 +135,7 @@ M.bind = function(n, settings)
       local buf = vim.api.nvim_win_get_buf(preview_win)
 
       n.spawn(function()
-        async_vim.scheduled()
+        atools.scheduled()
         close_preview()
         promote(buf)
       end)
@@ -170,7 +144,7 @@ M.bind = function(n, settings)
   end
 
   n.spawn(function(defer)
-    local iter = events.subscribe()
+    local iter = pum.subscribe()
     defer(iter.close)
 
     for ev in iter do

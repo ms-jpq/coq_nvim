@@ -1,4 +1,3 @@
-local mpmc = require "coq.lib.channels.mpmc"
 local threaded = require "coq.lib.producers.threaded"
 
 local POLL_MS = 5000
@@ -10,23 +9,6 @@ local matcher = function(ctx)
   end
 end
 
-local idle = function(events)
-  local index = require "coq.producers.tmux.index"
-
-  for _, ev in ipairs(events) do
-    if ev.kind == "remove" then
-      index.prune { pane = ev.pane }
-    elseif ev.kind == "update" then
-      index.prune { pane = ev.pane }
-      for _, word in ipairs(ev.words) do
-        index.insert { word = word, pane = ev.pane }
-      end
-    end
-  end
-end
-
----@param text string
----@return string[]
 local tokenize = function(text)
   local seen, words = {}, {}
   for word in string.gmatch(text, "[%w_]+") do
@@ -36,6 +18,18 @@ local tokenize = function(text)
     end
   end
   return words
+end
+
+local idle = function(events)
+  local index = require "coq.producers.tmux.index"
+  for pane, ev in pairs(events) do
+    index.prune { pane = pane }
+    if ev.kind == "update" then
+      for _, word in ipairs(tokenize(ev.text)) do
+        index.insert { word = word, pane = pane }
+      end
+    end
+  end
 end
 
 local SEP = "\30"
@@ -73,6 +67,9 @@ local M = {}
 M.new = function(opts)
   local _ = opts
   return threaded.new {
+    key = function(ev)
+      return ev.pane
+    end,
     idle = idle,
     matcher = matcher,
     bind = function(n, push)
@@ -80,14 +77,13 @@ M.new = function(opts)
         return
       end
       local current = vim.env.TMUX_PANE
-      local chan = mpmc.new(nil, n.handle)
 
       local poll = function()
         list_panes(function(panes)
           for _, pane in ipairs(panes) do
             if pane.id ~= current then
               capture_pane(pane.id, function(text)
-                chan.push { pane = pane.id, text = text }
+                push { kind = "update", pane = pane.id, text = text }
               end)
             end
           end
@@ -104,12 +100,6 @@ M.new = function(opts)
         if not timer:is_closing() then
           timer:stop()
           timer:close()
-        end
-      end)
-
-      n.spawn(function()
-        for item in chan do
-          push { kind = "update", pane = item.pane, words = tokenize(item.text) }
         end
       end)
     end,

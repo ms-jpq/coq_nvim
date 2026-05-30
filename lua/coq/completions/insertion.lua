@@ -1,4 +1,3 @@
-local broadcast = require "coq.lib.channels.broadcast"
 local context = require "coq.lib.context"
 local item = require "coq.completions.item"
 local lib = require "coq.lib"
@@ -124,18 +123,10 @@ end
 
 ---@param n async.Nursery
 ---@param ranker index.Ranker
-M.bind = function(n, ranker)
-  local events = broadcast.new()
-
-  vim.api.nvim_create_autocmd({ "CompleteDone" }, {
-    group = lib.group,
-    callback = function()
-      events.replace(vim.v.completed_item)
-    end,
-  })
-
+---@param done channels.Broadcast<vim.v.completed_item>
+M.bind = function(n, ranker, done)
   n.spawn(function(defer)
-    local iter = events.subscribe()
+    local iter = done.subscribe()
     defer(iter.close)
 
     for completed in iter do

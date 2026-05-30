@@ -69,6 +69,7 @@ M.words = function(kw, lines)
         while i <= n and kw[string.byte(line, i)] do
           i = i + 1
         end
+
         if i > start then
           coroutine.yield(string.sub(line, start, i - 1))
         else

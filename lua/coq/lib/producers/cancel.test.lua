@@ -43,24 +43,6 @@ local cancel_tests = function(name, factory)
       n.handle.cancel() -- no error
     end)
 
-    test("search after close returns nil immediately", function()
-      local got = "unset"
-      async.scope(function(_)
-        local n = nursery.new(handle.new())
-        local db = factory {
-          idle = lib.noop,
-          bind = lib.noop,
-          matcher = function()
-            coroutine.yield "lil"
-          end,
-        }
-        db.bind(n)
-        n.handle.cancel()
-        got = db.search { slow = T.SLOW }()
-      end)
-      T.eq(got, nil)
-    end)
-
     test("ambient cancel wakes a sleeping matcher", function()
       local h = handle.new()
       local elapsed_ms

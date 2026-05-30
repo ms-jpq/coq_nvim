@@ -222,7 +222,7 @@ local make_responder = function(write)
   end
 
   local responder = {}
-  local scheduled = vim.is_thread() and lib.noop or require("coq.lib.async.vim").scheduled
+  local scheduled = vim.is_thread() and lib.noop or require("coq.lib.atools").scheduled
 
   responder.serve = function(n, frame)
     local req_handle = handle.new(runtime.current())
