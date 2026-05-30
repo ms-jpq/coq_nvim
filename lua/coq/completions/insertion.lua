@@ -64,7 +64,7 @@ local apply = function(ctx, i)
   local lsp = meta.lsp or {}
 
   if #(lsp.additional_text_edits or {}) == 0 then
-    resolve.resolve(ctx, i)
+    resolve.enrich(ctx, i)
     if not context.still_valid(ctx) then
       return
     end

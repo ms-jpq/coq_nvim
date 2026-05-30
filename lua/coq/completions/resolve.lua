@@ -6,7 +6,7 @@ local M = {}
 ---@param ctx ctx.base
 ---@param item completions.Item
 ---@return true?
-M.resolve = function(ctx, item)
+M.enrich = function(ctx, item)
   local lsp = item.meta.lsp
   if not (lsp and lsp.client_id and lsp.item) then
     return nil
