@@ -2,7 +2,7 @@ local async = require "coq.lib.async"
 local handle = require "coq.lib.async.handle"
 local lib = require "coq.lib"
 local nursery = require "coq.lib.async.nursery"
-local runtime = require "coq.lib.async.runtime"
+local search = require "coq.lib.index.search"
 
 local M = {}
 
@@ -69,16 +69,11 @@ M.new = function(producers)
       end
     end
 
-    local next = runtime.wrap(function()
-      return lib.scope(function(defer)
-        defer(runtime.current().cancel)
-        for _, item in async.merge(iters) do
-          coroutine.yield(item)
-        end
-      end)
-    end, search_handle)
-
-    return setmetatable({ close = search_handle.cancel }, { __call = next })
+    return search.iter(search_handle, function()
+      for _, item in async.merge(iters) do
+        coroutine.yield(item)
+      end
+    end)
   end
 
   ---@cast sup producers.Producer

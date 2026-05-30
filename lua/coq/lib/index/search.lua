@@ -1,3 +1,4 @@
+local handle = require "coq.lib.async.handle"
 local lib = require "coq.lib"
 local runtime = require "coq.lib.async.runtime"
 
@@ -28,13 +29,12 @@ M.empty = {
   end,
 }
 
+---@param h async.Handle
 ---@param fn fun()
----@param close? fun()
 ---@return index.SearchIter
-M.iter = function(fn, close)
-  close = close or lib.noop
+M.iter = function(h, fn)
   local closed = false
-  local bounce = runtime.wrap(fn)
+  local bounce = runtime.wrap(fn, h)
 
   local it = {
     close = function()
@@ -42,27 +42,28 @@ M.iter = function(fn, close)
         return
       end
       closed = true
-      close()
+      h.cancel()
     end,
   }
 
-  return setmetatable(it, {
-    __call = function()
-      if closed then
-        return nil
-      end
-      local ok, val = pcall(bounce)
-      if not ok then
-        lib.report(val)
-        it.close()
-        return nil
-      end
-      if val == nil then
-        it.close()
-      end
-      return val
-    end,
-  })
+  local _ = h.on_cancel(it.close)
+
+  local next = function()
+    if closed then
+      return nil
+    end
+    local ok, val = pcall(bounce)
+    if not ok then
+      it.close()
+      error(val, 0)
+    end
+    if val == nil then
+      it.close()
+    end
+    return val
+  end
+
+  return setmetatable(it, { __call = next })
 end
 
 ---@generic T
@@ -72,67 +73,66 @@ M.indexed = function(spec)
   local children = {}
 
   local fanout = function(ctx)
-    local current
-    return M.iter(function()
+    local h = handle.new(runtime.current())
+    return M.iter(h, function()
       for _, child in pairs(children) do
-        current = child.search(ctx)
-        for item in current do
+        local iter = child.search(ctx)
+        local unwatch = h.on_cancel(iter.close)
+        for item in iter do
           coroutine.yield(item)
         end
-        current.close()
-        current = nil
-      end
-    end, function()
-      if current then
-        current.close()
+        unwatch()
+        iter.close()
       end
     end)
   end
 
-  return {
-    close = function()
+  local index = {}
+
+  index.close = function()
+    for _, c in pairs(children) do
+      c.close()
+    end
+    children = {}
+  end
+
+  index.prune = function(ctx)
+    local k = spec.key_ctx(ctx)
+    if k == nil then
       for _, c in pairs(children) do
-        c.close()
+        c.prune(ctx)
       end
-      children = {}
-    end,
-
-    insert = function(item)
-      local k = spec.key_item(item)
+    else
       local c = children[k]
-      if not c then
-        c = spec.child()
-        children[k] = c
+      if c then
+        c.prune(ctx)
       end
-      c.insert(item)
-    end,
+    end
+  end
 
-    prune = function(ctx)
-      local k = spec.key_ctx(ctx)
-      if k == nil then
-        for _, c in pairs(children) do
-          c.prune(ctx)
-        end
-      else
-        local c = children[k]
-        if c then
-          c.prune(ctx)
-        end
-      end
-    end,
+  index.insert = function(item)
+    local k = spec.key_item(item)
+    local c = children[k]
+    if not c then
+      c = spec.child()
+      children[k] = c
+    end
+    c.insert(item)
+  end
 
-    search = function(ctx)
-      local k = spec.key_ctx(ctx)
-      if k == nil then
-        return fanout(ctx)
-      end
-      local c = children[k]
-      if not c then
-        return lib.dead_iter
-      end
-      return c.search(ctx)
-    end,
-  }
+  index.search = function(ctx)
+    local k = spec.key_ctx(ctx)
+    if k == nil then
+      return fanout(ctx)
+    end
+    local c = children[k]
+    if not c then
+      return lib.dead_iter
+    end
+    return c.search(ctx)
+  end
+
+  return index
 end
 
 return M

@@ -2,8 +2,7 @@ local handle = require "coq.lib.async.handle"
 local lib = require "coq.lib"
 local queue = require "coq.lib.queue"
 local runtime = require "coq.lib.async.runtime"
-
-require "coq.lib.index.search"
+local search = require "coq.lib.index.search"
 
 ---@class producers.Producer: index.Searchable
 ---@field notify fun(event: any)
@@ -48,25 +47,9 @@ M.new = function(idle, matcher)
       return lib.dead_iter
     end
     local h = handle.new(runtime.current())
-
-    local stream = runtime.wrap(function()
+    return search.iter(h, function()
       matcher(ctx)
-    end, h)
-
-    local it = { close = h.cancel }
-
-    local next = function()
-      if h.cancelled then
-        return nil
-      end
-      local item = stream()
-      if item == nil then
-        h.cancel()
-      end
-      return item
-    end
-
-    return setmetatable(it, { __call = next })
+    end)
   end
 
   ---@cast db producers.Producer
