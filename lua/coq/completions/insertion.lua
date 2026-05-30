@@ -90,7 +90,7 @@ end
 local M = {}
 
 ---@param ctx ctx.full
----@param iter producers.SearchIter
+---@param iter index.SearchIter
 M.complete = function(ctx, iter)
   local items = {}
   for i in iter do

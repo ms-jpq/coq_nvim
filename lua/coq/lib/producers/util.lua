@@ -1,8 +1,9 @@
 local lib = require "coq.lib"
+require "coq.lib.index.search"
 
 local M = {}
 
----@type producers.SearchIter
+---@type index.SearchIter
 M.dead_iter = setmetatable({ close = lib.noop }, {
   __call = function()
     return nil

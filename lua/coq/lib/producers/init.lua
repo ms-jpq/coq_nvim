@@ -3,13 +3,11 @@ local queue = require "coq.lib.queue"
 local runtime = require "coq.lib.async.runtime"
 local util = require "coq.lib.producers.util"
 
----@class producers.SearchIter: lib.Closable
----@overload fun(): completions.Item?
+require "coq.lib.index.search"
 
----@class producers.Producer: lib.Closable
+---@class producers.Producer: index.Searcher
 ---@field notify fun(event: any)
 ---@field idle fun(ctx: ctx.full)
----@field search fun(ctx: ctx.full): producers.SearchIter
 
 ---@alias producers.IdleFn fun(events: any[], ctx: ctx.full)
 ---@alias producers.MatcherFn fun(ctx: ctx.full)
