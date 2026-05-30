@@ -6,21 +6,40 @@ local search = require "coq.lib.index"
 
 local M = {}
 
+---@param max integer
+---@param iter index.SearchIter
+---@return index.SearchIter
+local capped = function(max, iter)
+  local n = 0
+  local next = function()
+    if n >= max then
+      iter.close()
+      return nil
+    end
+    local v = iter()
+    if v == nil then
+      return nil
+    end
+    n = n + 1
+    return v
+  end
+  return setmetatable({ close = iter.close }, { __call = next })
+end
+
 ---@param producers producers.Producer[]
 ---@return producers.Producer
 M.new = function(producers)
-  local search_handle, idle_handle = handle.new(), handle.new()
   local ph = handle.new()
+  local search_handle, idle_handle = handle.new(), handle.new()
 
   local interrupt = function()
     search_handle.cancel()
     idle_handle.cancel()
   end
   interrupt()
-
   local _ = ph.on_cancel(interrupt)
 
-  local sup = {}
+  local sup = { max_pulls = math.huge }
 
   sup.bind = function(n)
     local _ = n.handle.on_cancel(ph.cancel)
@@ -58,7 +77,7 @@ M.new = function(producers)
       local iters = vim
         .iter(producers)
         :map(function(p)
-          return p.search(ctx)
+          return capped(p.max_pulls, p.search(ctx))
         end)
         :totable()
 

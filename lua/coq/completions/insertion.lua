@@ -100,7 +100,12 @@ M.complete = function(ctx, settings, ranker, iter)
   local scorables = {}
   for i in iter do
     ---@cast i completions.Item
-    table.insert(scorables, { filter = i.meta.filter or i.word or "", source = "", item = i })
+    table.insert(scorables, {
+      filter = i.meta.filter or i.word or "",
+      source = i.meta.source or "",
+      always_on_top = i.meta.always_on_top or false,
+      item = i,
+    })
   end
 
   local topk = topk_m.new(settings.match.max_results)

@@ -11,6 +11,7 @@ M.new = function(spec)
     settings = spec.settings,
     key = spec.key,
     bind = spec.bind,
+    max_pulls = spec.max_pulls,
     idle = function(settings, events, ctx)
       w.queue(spec.idle, settings, events, ctx)
     end,

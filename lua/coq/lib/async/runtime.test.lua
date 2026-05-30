@@ -85,6 +85,7 @@ T.describe("async", function(test)
       sibling_done.resolve()
     end))
     sibling_done.await()
+    cap.done.await()
     cap.restore()
 
     T.eq(sibling_ran, true)

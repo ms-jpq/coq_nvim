@@ -1,9 +1,17 @@
 local search = require "coq.lib.index"
 local trie = require "coq.lib.index.trie"
 
+---@class tmux.PaneMeta
+---@field session_name string
+---@field window_index string
+---@field window_name string
+---@field pane_index string
+---@field pane_title string
+
 ---@class tmux.Item
 ---@field word string
 ---@field pane string
+---@field meta tmux.PaneMeta
 
 ---@class tmux.Ctx
 ---@field pane? string

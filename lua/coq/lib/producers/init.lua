@@ -5,6 +5,7 @@ local search = require "coq.lib.index"
 ---@class producers.Producer: index.Searchable<ctx.full>
 ---@field idle fun(ctx: ctx.full)
 ---@field bind fun(n: async.Nursery)
+---@field max_pulls integer
 
 ---@alias producers.KeyFn fun(ev: any): any
 ---@alias producers.IdleFn fun(settings: config.Settings, events: table<any, any>, ctx: ctx.full)
@@ -18,6 +19,7 @@ local search = require "coq.lib.index"
 ---@field idle producers.IdleFn
 ---@field matcher producers.MatcherFn
 ---@field bind producers.OnBind
+---@field max_pulls? integer
 
 ---@alias producers.NewProducer fun(spec: producers.Spec): producers.Producer
 
@@ -30,7 +32,7 @@ M.new = function(spec)
   end
   local location = {}
 
-  local db = {}
+  local db = { max_pulls = spec.max_pulls or math.huge }
 
   db.bind = function(n)
     spec.bind(n, function(ev)

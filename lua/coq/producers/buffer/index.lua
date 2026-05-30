@@ -5,6 +5,7 @@ local trie = require "coq.lib.index.trie"
 ---@field word string
 ---@field buf integer
 ---@field filetype string
+---@field filename string
 
 ---@class buffer.Ctx
 ---@field buf? integer

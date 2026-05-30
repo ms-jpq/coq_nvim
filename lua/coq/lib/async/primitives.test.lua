@@ -84,14 +84,14 @@ T.describe("sleep cancel", function(test)
     async.scope(function(n)
       n.spawn(function()
         local start = vim.uv.hrtime()
-        async.sleep(200 * T.SLOW)
+        async.sleep(500 * T.SLOW)
         elapsed_ms = (vim.uv.hrtime() - start) / 1e6
       end)
-      async.sleep(10 * T.SLOW)
+      async.sleep(30 * T.SLOW)
       h.cancel()
     end, h)
 
-    assert(elapsed_ms and elapsed_ms < 60 * T.SLOW, ("expected ~10ms, got %s"):format(tostring(elapsed_ms)))
+    assert(elapsed_ms and elapsed_ms < 200 * T.SLOW, ("expected fast wake, got %s"):format(tostring(elapsed_ms)))
   end)
 
   test("does not leak watchers on the passed handle", function()

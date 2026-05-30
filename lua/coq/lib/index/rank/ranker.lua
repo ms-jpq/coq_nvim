@@ -12,12 +12,17 @@ local tokens = require "coq.lib.index.tokens"
 
 local M = {}
 
----@param source_bias? table<string, number>
+---@param clients config.Clients
 ---@return index.Ranker
-M.new = function(source_bias)
-  local recency = {}
-  source_bias = source_bias or {}
+M.new = function(clients)
+  local source_bias = {}
+  for _, client in pairs(clients) do
+    if client.enabled and client.short_name then
+      source_bias[client.short_name] = 1 + (client.weight_adjust or 0)
+    end
+  end
 
+  local recency = {}
   local ranker = {}
 
   ranker.inserted = function(filter)

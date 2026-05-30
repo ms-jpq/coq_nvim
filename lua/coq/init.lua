@@ -16,14 +16,14 @@ local trigger = require "coq.completions.trigger"
 
 local M = {}
 
+---@param cfg? table
+---@return table?
+M.lsp_ensure_capabilities = function(cfg)
+  return cfg
+end
+
 do
   local unimplemented = function(name)
-    ---@param cfg? table
-    ---@return table?
-    M.lsp_ensure_capabilities = function(cfg)
-      return cfg
-    end
-
     return function()
       vim.notify(string.format("coq.%s is not yet implemented in v2", name), vim.log.levels.WARN)
     end
@@ -71,7 +71,8 @@ M.setup = function(opts)
   nvim_options.apply(settings)
   local p = vim.iter(async.wrap(producers(settings))):totable()
   local sup = supervisor.new(p)
-  local ranker = ranker_m.new()
+
+  local ranker = ranker_m.new(settings.clients)
   local events = events_m.new()
 
   async.entry(function()
@@ -91,4 +92,8 @@ if (vim.g.coq_settings or {}).auto_start then
   M.setup()
 end
 
-return M
+return setmetatable(M, {
+  __call = function()
+    return M
+  end,
+})

@@ -8,6 +8,8 @@
 ---@class completions.ItemMeta
 ---@field filter? string
 ---@field snippet? string
+---@field source? string
+---@field always_on_top? boolean
 ---@field lsp? completions.ItemLspMeta
 
 ---@class completions.Item: vim.v.completed_item

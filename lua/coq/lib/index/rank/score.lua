@@ -4,6 +4,7 @@ local M = {}
 
 -- https://github.com/neovim/neovim/blob/master/src/nvim/fuzzy.c
 M.WEIGHTS = { prox = 100, recen = 50 }
+M.ALWAYS_TOP = 1e9
 
 ---@param items completions.Item[]
 ---@param prepared index.Prepared
@@ -42,8 +43,10 @@ M.score = function(items, prepared)
       local prox = prepared.locality[item.filter] or 0
       local recen = prepared.recency[item.filter] or 0
       local bias = prepared.source_bias[item.source] or 1
+      local tier = item.always_on_top and M.ALWAYS_TOP or 0
 
-      return item, (hit.fuzzy + prox * M.WEIGHTS.prox + recen * M.WEIGHTS.recen) * bias, hit.positions
+      local score = (hit.fuzzy + prox * M.WEIGHTS.prox + recen * M.WEIGHTS.recen) * bias + tier
+      return item, score, hit.positions
     end) --[[@as lib.Iterator<index.Scored>]]
 end
 

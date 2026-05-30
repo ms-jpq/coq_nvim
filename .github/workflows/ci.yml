@@ -47,13 +47,13 @@ jobs:
       - uses: actions/setup-python@v5
 
       - run: |-
-          brew install -- neovim universal-ctags
+          brew install -- make neovim universal-ctags
 
       - run: |-
           python3 -m coq deps
 
       - run: |-
-          make lint
+          gmake lint
 
       - run: |-
-          make test
+          gmake test
