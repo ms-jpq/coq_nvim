@@ -11,7 +11,7 @@
 
 local M = {}
 
-M.group = [[coq]]
+M.group = vim.api.nvim_create_augroup and vim.api.nvim_create_augroup("coq", { clear = true })
 
 ---@param ... any
 M.noop = function(...) end

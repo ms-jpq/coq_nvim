@@ -84,8 +84,6 @@ M.setup = function(opts)
       idle.bind(n, sup, events.idle)
     end)
   end)()
-
-  return { settings = settings, supervisor = sup }
 end
 
 if (vim.g.coq_settings or {}).auto_start then
