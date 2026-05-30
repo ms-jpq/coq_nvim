@@ -97,8 +97,6 @@ local show_doc = function(ctx, preview_cfg, i)
   preview_win = win
 end
 
----Extracts the completion item from a CompleteChanged event, or nil if the
----event isn't a usable "changed" event with a populated item.
 ---@param ev completions.preview.Event
 ---@return completions.Item?
 local item_of = function(ev)
@@ -109,17 +107,24 @@ local item_of = function(ev)
   return type(item) == "table" and item.word and item or nil
 end
 
----@param ft string
----@param lines string[]
-local promote = function(ft, lines)
+---@param buf integer
+local promote = function(buf)
+  local ft = vim.bo[buf].filetype
+  local lines = vim.api.nvim_buf_get_lines(buf, 0, -1, true)
+
   vim.cmd "silent! pedit COQ-preview"
   vim.cmd "wincmd P"
-  vim.bo.buftype = "nofile"
-  vim.bo.bufhidden = "wipe"
-  vim.bo.swapfile = false
-  vim.api.nvim_buf_set_lines(0, 0, -1, false, lines)
+
+  local new_buf = vim.api.nvim_get_current_buf()
+  do
+    vim.bo[new_buf].buftype = "nofile"
+    vim.bo[new_buf].bufhidden = "wipe"
+    vim.bo[new_buf].swapfile = false
+  end
+
+  vim.api.nvim_buf_set_lines(new_buf, 0, -1, false, lines)
   if ft ~= "" then
-    vim.bo.filetype = ft
+    vim.bo[new_buf].filetype = ft
   end
   vim.cmd "wincmd p"
 end
@@ -135,14 +140,14 @@ M.bind = function(n, settings)
   vim.api.nvim_create_autocmd("CompleteChanged", {
     group = lib.group,
     callback = function()
-      events.replace({ kind = "changed", item = vim.v.event.completed_item }, context.base())
+      events.replace { kind = "changed", item = vim.v.event.completed_item }
     end,
   })
 
   vim.api.nvim_create_autocmd({ "CompleteDone", "InsertLeave" }, {
     group = lib.group,
     callback = function()
-      events.replace({ kind = "clear" }, context.base())
+      events.replace { kind = "clear" }
     end,
   })
 
@@ -153,13 +158,11 @@ M.bind = function(n, settings)
         return settings.keymap.bigger_preview
       end
       local buf = vim.api.nvim_win_get_buf(preview_win)
-      local lines = vim.api.nvim_buf_get_lines(buf, 0, -1, true)
-      local ft = vim.bo[buf].filetype
-      close_preview()
 
       n.spawn(function()
         async_vim.scheduled()
-        promote(ft, lines)
+        close_preview()
+        promote(buf)
       end)
       return esc
     end, { expr = true, noremap = true })
@@ -169,8 +172,8 @@ M.bind = function(n, settings)
     local iter = events.subscribe()
     defer(iter.close)
 
-    for ev, ctx in iter do
-      ---@cast ctx ctx.base
+    for ev in iter do
+      local ctx = context.base()
       clear(ctx.buf)
       local item = item_of(ev)
 
