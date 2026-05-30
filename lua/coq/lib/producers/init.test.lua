@@ -5,23 +5,6 @@ local lib = require "coq.lib"
 local producer = require "coq.lib.producers"
 
 T.describe("producer (regular)", function(test)
-  test("matcher yields rows that stream through the iterator", function()
-    local db = producer.new {
-      idle = lib.noop,
-      bind = lib.noop,
-      matcher = function()
-        coroutine.yield "lil"
-        coroutine.yield "spot"
-        coroutine.yield "fido"
-      end,
-    }
-    local seen = {}
-    for dog in db.search {} do
-      table.insert(seen, dog)
-    end
-    T.eq(seen, { "lil", "spot", "fido" })
-  end)
-
   test("ctx reaches the matcher unchanged", function()
     local got
     local db = producer.new {

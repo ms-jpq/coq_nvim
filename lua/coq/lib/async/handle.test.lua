@@ -4,38 +4,20 @@ local handle = require "coq.lib.async.handle"
 local lib = require "coq.lib"
 
 T.describe("handle", function(test)
-  test("cancel fires registered watchers", function()
+  test("watcher fires once whether registered before or after cancel", function()
     local h = handle.new()
-    local fired = false
+    local before, after = 0, 0
     local _ = h.on_cancel(function()
-      fired = true
-    end)
-    h.cancel()
-
-    T.eq(fired, true)
-  end)
-
-  test("cancel is idempotent", function()
-    local h = handle.new()
-    local count = 0
-    local _ = h.on_cancel(function()
-      count = count + 1
+      before = before + 1
     end)
     h.cancel()
     h.cancel()
-
-    T.eq(count, 1)
-  end)
-
-  test("watch on a cancelled handle fires immediately", function()
-    local h = handle.new()
-    h.cancel()
-    local fired = false
     local _ = h.on_cancel(function()
-      fired = true
+      after = after + 1
     end)
 
-    T.eq(fired, true)
+    T.eq(before, 1)
+    T.eq(after, 1)
   end)
 
   test("unwatch removes a function watcher before cancel", function()

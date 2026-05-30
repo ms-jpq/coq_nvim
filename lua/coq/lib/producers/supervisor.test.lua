@@ -12,26 +12,50 @@ local detached = function()
   return nursery.new(handle.new())
 end
 
+---@param matcher producers.MatcherFn
+---@return producers.Producer
+local matcher_only = function(matcher)
+  return producer.new { idle = lib.noop, bind = lib.noop, matcher = matcher }
+end
+
+---@param ... any
+---@return producers.Producer
+local yields = function(...)
+  local items = { ... }
+  return matcher_only(function()
+    for _, v in ipairs(items) do
+      coroutine.yield(v)
+    end
+  end)
+end
+
+---@param fields { idle?: producers.IdleFn, matcher?: producers.MatcherFn }
+---@return producers.Producer, fun(ev: any)
+local pushable = function(fields)
+  local push
+  local p = producer.new {
+    idle = fields.idle or lib.noop,
+    matcher = fields.matcher or lib.noop,
+    bind = function(_, p_push)
+      push = p_push
+    end,
+  }
+  return p, function(ev)
+    push(ev)
+  end
+end
+
+---@param iter index.SearchIter
+local drain = function(iter)
+  for _ in iter do
+    lib.noop()
+  end
+end
+
 T.describe("supervisor", function(test)
   test("merges rows from all producers", function()
     local n = detached()
-    local sup = supervisor.new {
-      producer.new {
-        idle = lib.noop,
-        bind = lib.noop,
-        matcher = function()
-          coroutine.yield "lil"
-          coroutine.yield "spot"
-        end,
-      },
-      producer.new {
-        idle = lib.noop,
-        bind = lib.noop,
-        matcher = function()
-          coroutine.yield "fido"
-        end,
-      },
-    }
+    local sup = supervisor.new { yields("lil", "spot"), yields "fido" }
     sup.bind(n)
     local seen = {}
     for row in sup.search {} do
@@ -48,21 +72,15 @@ T.describe("supervisor", function(test)
     local matcher_started = async.future()
     async.scope(function(n)
       local sup = supervisor.new {
-        producer.new {
-          idle = lib.noop,
-          bind = lib.noop,
-          matcher = function()
-            matcher_started.resolve()
-            async.sleep(50 * T.SLOW)
-            table.insert(order, "matcher_done")
-          end,
-        },
+        matcher_only(function()
+          matcher_started.resolve()
+          async.sleep(50 * T.SLOW)
+          table.insert(order, "matcher_done")
+        end),
       }
       sup.bind(n)
       n.spawn(function()
-        for _ in sup.search {} do
-          lib.noop()
-        end
+        drain(sup.search {})
       end)
       matcher_started.await()
       async.sleep(0)
@@ -77,15 +95,11 @@ T.describe("supervisor", function(test)
     local first_after, second_first
     async.scope(function(n)
       local sup = supervisor.new {
-        producer.new {
-          idle = lib.noop,
-          bind = lib.noop,
-          matcher = function()
-            coroutine.yield "lil"
-            async.sleep(50 * T.SLOW)
-            coroutine.yield "never"
-          end,
-        },
+        matcher_only(function()
+          coroutine.yield "lil"
+          async.sleep(50 * T.SLOW)
+          coroutine.yield "never"
+        end),
       }
       sup.bind(n)
       local first = sup.search {}
@@ -110,8 +124,7 @@ T.describe("supervisor", function(test)
     local idle_started = async.future()
     local idle_finished = async.future()
     async.scope(function(n)
-      local push
-      local p = producer.new {
+      local p, push = pushable {
         idle = function()
           idle_started.resolve()
           local start = vim.uv.hrtime()
@@ -121,18 +134,13 @@ T.describe("supervisor", function(test)
         matcher = function()
           coroutine.yield "lil"
         end,
-        bind = function(_, p_push)
-          push = p_push
-        end,
       }
       local sup = supervisor.new { p }
       sup.bind(n)
       push(true)
       sup.idle {}
       idle_started.await()
-      for _ in sup.search {} do
-        lib.noop()
-      end
+      drain(sup.search {})
     end)
 
     local idle_elapsed_ms = idle_finished.await()
@@ -170,68 +178,34 @@ T.describe("supervisor", function(test)
   test("idle runs once search has ended", function()
     local idle_ran = async.future()
     async.scope(function(n)
-      local push
-      local p = producer.new {
+      local p, push = pushable {
         idle = function()
           idle_ran.resolve()
         end,
         matcher = function()
           coroutine.yield "lil"
         end,
-        bind = function(_, p_push)
-          push = p_push
-        end,
       }
       local sup = supervisor.new { p }
       sup.bind(n)
-      for _ in sup.search {} do
-        lib.noop()
-      end
+      drain(sup.search {})
       push(true)
       sup.idle {}
       idle_ran.await()
     end)
   end)
 
-  test("bind cascades to each producer once", function()
-    local cleanups = {}
-    local make = function(name)
-      return {
-        search = function()
-          return lib.dead_iter
-        end,
-        bind = function(n)
-          local _ = n.handle.on_cancel(function()
-            cleanups[name] = (cleanups[name] or 0) + 1
-          end)
-        end,
-      }
-    end
-    local n = detached()
-    local sup = supervisor.new { make "a", make "b" }
-    sup.bind(n)
-    n.handle.cancel()
-
-    T.eq(cleanups, { a = 1, b = 1 })
-  end)
-
   test("producer error kills the merged stream", function()
     local n = detached()
     local sup = supervisor.new {
-      producer.new {
-        idle = lib.noop,
-        bind = lib.noop,
-        matcher = function()
-          coroutine.yield "lil"
-          error "boom"
-        end,
-      },
+      matcher_only(function()
+        coroutine.yield "lil"
+        error "boom"
+      end),
     }
     sup.bind(n)
     local ok, err = pcall(function()
-      for _ in sup.search {} do
-        lib.noop()
-      end
+      drain(sup.search {})
     end)
     n.handle.cancel()
 
@@ -239,13 +213,12 @@ T.describe("supervisor", function(test)
     assert(err and tostring(err):find "boom", "expected 'boom', got: " .. tostring(err))
   end)
 
-  test("nursery cancel is idempotent across producer cascade", function()
+  test("bind cascades to each producer once, even on repeat cancel", function()
     local cleanups = {}
-    local make = function(name)
-      return {
-        search = function()
-          return lib.dead_iter
-        end,
+    local trace = function(name)
+      return producer.new {
+        idle = lib.noop,
+        matcher = lib.noop,
         bind = function(n)
           local _ = n.handle.on_cancel(function()
             cleanups[name] = (cleanups[name] or 0) + 1
@@ -254,7 +227,7 @@ T.describe("supervisor", function(test)
       }
     end
     local n = detached()
-    local sup = supervisor.new { make "a", make "b" }
+    local sup = supervisor.new { trace "a", trace "b" }
     sup.bind(n)
     n.handle.cancel()
     n.handle.cancel()
@@ -264,15 +237,7 @@ T.describe("supervisor", function(test)
 
   test("search after close returns a dead iter", function()
     local n = detached()
-    local sup = supervisor.new {
-      producer.new {
-        idle = lib.noop,
-        bind = lib.noop,
-        matcher = function()
-          coroutine.yield "lil"
-        end,
-      },
-    }
+    local sup = supervisor.new { yields "lil" }
     sup.bind(n)
     n.handle.cancel()
     local iter = sup.search {}
@@ -285,14 +250,9 @@ T.describe("supervisor", function(test)
     local idle_ran = false
     async.scope(function(_)
       local n = detached()
-      local push
-      local p = producer.new {
+      local p, push = pushable {
         idle = function()
           idle_ran = true
-        end,
-        matcher = lib.noop,
-        bind = function(_, p_push)
-          push = p_push
         end,
       }
       local sup = supervisor.new { p }
@@ -311,8 +271,7 @@ T.describe("supervisor", function(test)
     local second_idle_done = async.future()
     local idle_calls = 0
     async.scope(function(n)
-      local push
-      local p = producer.new {
+      local p, push = pushable {
         idle = function()
           idle_calls = idle_calls + 1
           if idle_calls == 1 then
@@ -323,10 +282,6 @@ T.describe("supervisor", function(test)
           else
             second_idle_done.resolve()
           end
-        end,
-        matcher = lib.noop,
-        bind = function(_, p_push)
-          push = p_push
         end,
       }
       local sup = supervisor.new { p }
@@ -352,15 +307,11 @@ T.describe("supervisor", function(test)
     async.scope(function(_)
       local n = detached()
       local sup = supervisor.new {
-        producer.new {
-          idle = lib.noop,
-          bind = lib.noop,
-          matcher = function()
-            coroutine.yield "lil"
-            async.sleep(100 * T.SLOW)
-            coroutine.yield "never"
-          end,
-        },
+        matcher_only(function()
+          coroutine.yield "lil"
+          async.sleep(100 * T.SLOW)
+          coroutine.yield "never"
+        end),
       }
       sup.bind(n)
       async.scope(function(inner)
@@ -382,20 +333,16 @@ T.describe("supervisor", function(test)
 
   test("iter.close from a sibling coroutine cancels the matcher", function()
     local matcher_done = async.future()
-    local first, after
     local matcher_sleeping = async.future()
+    local first, after
     async.scope(function(n)
       local sup = supervisor.new {
-        producer.new {
-          idle = lib.noop,
-          bind = lib.noop,
-          matcher = function()
-            coroutine.yield "lil"
-            matcher_sleeping.resolve()
-            async.sleep(100 * T.SLOW)
-            matcher_done.resolve(true)
-          end,
-        },
+        matcher_only(function()
+          coroutine.yield "lil"
+          matcher_sleeping.resolve()
+          async.sleep(100 * T.SLOW)
+          matcher_done.resolve(true)
+        end),
       }
       sup.bind(n)
       async.scope(function(inner)
@@ -416,32 +363,8 @@ T.describe("supervisor", function(test)
 
   test("supervisor satisfies the Producer shape (nestable)", function()
     local n = detached()
-    local inner = supervisor.new {
-      producer.new {
-        idle = lib.noop,
-        bind = lib.noop,
-        matcher = function()
-          coroutine.yield "lil"
-        end,
-      },
-      producer.new {
-        idle = lib.noop,
-        bind = lib.noop,
-        matcher = function()
-          coroutine.yield "spot"
-        end,
-      },
-    }
-    local outer = supervisor.new {
-      inner,
-      producer.new {
-        idle = lib.noop,
-        bind = lib.noop,
-        matcher = function()
-          coroutine.yield "fido"
-        end,
-      },
-    }
+    local inner = supervisor.new { yields "lil", yields "spot" }
+    local outer = supervisor.new { inner, yields "fido" }
     outer.bind(n)
     local seen = {}
     for row in outer.search {} do

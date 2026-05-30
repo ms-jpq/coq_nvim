@@ -9,22 +9,14 @@ T.describe("broadcast", function(test)
     chan.replace "lil"
   end)
 
-  test("subscriber receives a pushed item", function()
+  test("replace fans out to every subscriber", function()
     local chan = broadcast.new()
-    local sub = chan.subscribe()
+    local subs = { chan.subscribe(), chan.subscribe(), chan.subscribe() }
     chan.replace "lil"
 
-    T.eq(sub(), "lil")
-  end)
-
-  test("multiple subscribers each receive the pushed item", function()
-    local chan = broadcast.new()
-    local a = chan.subscribe()
-    local b = chan.subscribe()
-    chan.replace "lil"
-
-    T.eq(a(), "lil")
-    T.eq(b(), "lil")
+    for _, sub in ipairs(subs) do
+      T.eq(sub(), "lil")
+    end
   end)
 
   test("pull awaits a future push", function()
@@ -201,19 +193,6 @@ T.describe("broadcast", function(test)
     T.eq(sub(), nil)
   end)
 
-  test("replace fans out to many subscribers in one pass", function()
-    local chan = broadcast.new()
-    local subs = {}
-    for i = 1, 5 do
-      subs[i] = chan.subscribe()
-    end
-    chan.replace "lil"
-
-    for i = 1, 5 do
-      T.eq(subs[i](), "lil")
-    end
-  end)
-
   test("iter.close before first replace cleans up without waking anything", function()
     local chan = broadcast.new()
     local sub = chan.subscribe()
@@ -235,15 +214,6 @@ T.describe("broadcast", function(test)
     local sub = chan.subscribe()
     chan.replace("lil", "spot", "fido")
 
-    local a, b, c = sub()
-    T.eq({ a, b, c }, { "lil", "spot", "fido" })
-  end)
-
-  test("replace forwards multiple values via pending", function()
-    local chan = broadcast.new()
-    local sub = chan.subscribe()
-    chan.replace("lil", "spot", "fido")
-    -- pending state; no waiter yet
     local a, b, c = sub()
     T.eq({ a, b, c }, { "lil", "spot", "fido" })
   end)

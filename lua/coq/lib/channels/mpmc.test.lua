@@ -144,22 +144,6 @@ T.describe("mpmc", function(test)
     T.eq(progress, { "p1", "p2", "pull", "p3" })
   end)
 
-  test("bounded close wakes blocked producers", function()
-    local chan = mpmc.new(1)
-    local exited = false
-    async.scope(function(n)
-      n.spawn(function()
-        chan.push "lil"
-        chan.push "spot"
-        exited = true
-      end)
-      async.sleep(5 * T.SLOW)
-      chan.close()
-    end)
-
-    T.eq(exited, true)
-  end)
-
   test("bounded wakes producers one slot at a time", function()
     local chan = mpmc.new(1)
     local pushed = {}

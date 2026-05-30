@@ -1,5 +1,5 @@
 if not os.getenv "COQ_V2" then
-  return require "coq.legacy.coq"
+  return require "coq.legacy"
 end
 
 local async = require "coq.lib.async"

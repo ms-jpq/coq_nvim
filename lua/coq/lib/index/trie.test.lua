@@ -21,13 +21,6 @@ local collect = function(iter)
 end
 
 T.describe("trie", function(test)
-  test("search with exact key yields the item inserted at that key", function()
-    local t = trie.new(spec)
-    t.insert { word = "lil", kind = "dog" }
-
-    T.eq(collect(t.search { prefix = "lil" }), { "lil" })
-  end)
-
   test("search yields every item whose key starts with the prefix", function()
     local t = trie.new(spec)
     t.insert { word = "lil" }

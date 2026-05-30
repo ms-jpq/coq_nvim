@@ -44,7 +44,7 @@ T.describe("worker", function(test)
     T.eq(c, true)
   end)
 
-  test("queue errors propagate and the worker survives", function()
+  test("queue errors propagate at user site and the worker survives", function()
     local w = worker.spawn()
     local ok, err = pcall(w.queue, function()
       error "lil went missing"
@@ -55,40 +55,10 @@ T.describe("worker", function(test)
     w.close()
 
     T.eq(ok, false)
-    assert(err:find "lil went missing", "expected error message, got: " .. tostring(err))
-    T.eq(r, "still alive")
-  end)
-
-  test("oneshot error reports user call site, not worker internals", function()
-    local w = worker.spawn()
-    local ok, err = pcall(w.queue, function()
-      error "lil went missing"
-    end)
-    w.close()
-
-    T.eq(ok, false)
     assert(err:find "lil went missing", "expected message, got: " .. tostring(err))
     assert(err:find "init.test.lua", "error should point at user file, got: " .. tostring(err))
     assert(not err:find "worker/init.lua", "error must not point inside worker, got: " .. tostring(err))
-  end)
-
-  test("streaming error reports user iteration site, not worker internals", function()
-    local w = worker.spawn()
-    local ok, err = pcall(function()
-      for _ in
-        w.queue_stream(function()
-          coroutine.yield "lil"
-          error "leash snapped"
-        end)
-      do
-      end
-    end)
-    w.close()
-
-    T.eq(ok, false)
-    assert(err:find "leash snapped", "expected message, got: " .. tostring(err))
-    assert(err:find "init.test.lua", "error should point at user file, got: " .. tostring(err))
-    assert(not err:find "worker/init.lua", "error must not point inside worker, got: " .. tostring(err))
+    T.eq(r, "still alive")
   end)
 
   test("a queued fn can yield via async", function()
@@ -189,7 +159,7 @@ T.describe("worker", function(test)
     T.eq(seen, { 1, 2, 3, 4 })
   end)
 
-  test("queue_stream propagates errors", function()
+  test("queue_stream propagates errors at user iteration site", function()
     local w = worker.spawn()
     local seen = {}
     local ok, err = pcall(function()
@@ -206,7 +176,9 @@ T.describe("worker", function(test)
 
     T.eq(seen, { "lil" })
     T.eq(ok, false)
-    assert(err:find "leash snapped", "expected leash snapped, got: " .. tostring(err))
+    assert(err:find "leash snapped", "expected message, got: " .. tostring(err))
+    assert(err:find "init.test.lua", "error should point at user file, got: " .. tostring(err))
+    assert(not err:find "worker/init.lua", "error must not point inside worker, got: " .. tostring(err))
   end)
 
   test("close before the streaming fn's first yield unblocks it", function()

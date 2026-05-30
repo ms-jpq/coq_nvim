@@ -15,51 +15,45 @@ local PANE_FIELDS = {
 }
 local PANE_FMT = table.concat(PANE_FIELDS, SEP)
 
----@param opts config.TmuxClient
----@param meta tmux.PaneMeta
----@return string
-local doc = function(opts, meta)
-  local parts = {}
-  if opts.all_sessions then
-    table.insert(parts, "S: " .. meta.session_name .. opts.parent_scope)
-  end
-  table.insert(parts, "W: #" .. meta.window_index .. opts.path_sep .. meta.window_name .. opts.parent_scope)
-  table.insert(parts, "P: #" .. meta.pane_index .. opts.path_sep .. meta.pane_title)
-  return table.concat(parts, "\n")
-end
-
----@param settings config.Settings
-local matcher = function(settings, ctx)
-  local opts = settings.clients.tmux
-  local sc = settings.display.pum.source_context
-  local menu = sc[1] .. opts.short_name .. sc[2]
-  local index = require "coq.producers.tmux.index"
-  for item in
-    index.search(ctx) --[[@as fun(): tmux.Item?]]
-  do
-    if item.word ~= ctx.cword then
-      coroutine.yield {
-        word = item.word,
-        menu = menu,
-        info = item.meta ~= nil and doc(opts, item.meta) or nil,
-        meta = {
-          filter = item.word,
-          source = opts.short_name,
-          always_on_top = opts.always_on_top,
-        },
-      }
-    end
-  end
-end
-
 ---@class tmux.Pane
 ---@field id string
 ---@field meta tmux.PaneMeta
 
+---@class tmux.State
+---@field iskeyword? string
+
+local list_panes, pane_words, doc, matcher
+
+---@param settings config.Settings
+local idle = function(settings, events)
+  local state = require("coq.producers.tmux").state
+
+  for _, ev in pairs(events) do
+    if ev.kind == "iskeyword" then
+      state.iskeyword = ev.iskeyword
+    end
+  end
+
+  local env = vim.uv.os_environ()
+  if env.TMUX == nil or state.iskeyword == nil then
+    return
+  end
+
+  local kw = tokens.parse_iskeyword(state.iskeyword)
+  local index = require "coq.producers.tmux.index"
+
+  for pane in list_panes(settings, env.TMUX_PANE) do
+    index.prune { pane = pane.id }
+    for word in pane_words(kw, pane.id) do
+      index.insert { pane = pane.id, word = word, meta = pane.meta }
+    end
+  end
+end
+
 ---@param settings config.Settings
 ---@param exclude string?
 ---@return lib.Iterator<tmux.Pane>
-local list_panes = function(settings, exclude)
+list_panes = function(settings, exclude)
   return async.wrap(function()
     local scope_arg = settings.clients.tmux.all_sessions and "-a" or "-s"
     local proc = atools.spawn { "tmux", "list-panes", scope_arg, "-F", PANE_FMT }
@@ -90,7 +84,7 @@ end
 ---@param kw table<integer, true>
 ---@param pane string
 ---@return lib.Iterator<string>
-local pane_words = function(kw, pane)
+pane_words = function(kw, pane)
   return async.wrap(function()
     local proc = atools.spawn { "tmux", "capture-pane", "-p", "-J", "-t", pane }
     if proc == nil or proc.code ~= 0 then
@@ -103,34 +97,42 @@ local pane_words = function(kw, pane)
   end)
 end
 
+---@param opts config.TmuxClient
+---@param meta tmux.PaneMeta
+---@return string
+doc = function(opts, meta)
+  local parts = {}
+  if opts.all_sessions then
+    table.insert(parts, "S: " .. meta.session_name .. opts.parent_scope)
+  end
+  table.insert(parts, "W: #" .. meta.window_index .. opts.path_sep .. meta.window_name .. opts.parent_scope)
+  table.insert(parts, "P: #" .. meta.pane_index .. opts.path_sep .. meta.pane_title)
+  return table.concat(parts, "\n")
+end
+
 ---@param settings config.Settings
-local idle = function(settings, events)
-  local state = require("coq.producers.tmux").state
-
-  for _, ev in pairs(events) do
-    if ev.kind == "iskeyword" then
-      state.iskeyword = ev.iskeyword
-    end
-  end
-
-  local env = vim.uv.os_environ()
-  if env.TMUX == nil or state.iskeyword == nil then
-    return
-  end
-
-  local kw = tokens.parse_iskeyword(state.iskeyword)
+matcher = function(settings, ctx)
+  local opts = settings.clients.tmux
+  local sc = settings.display.pum.source_context
+  local menu = sc[1] .. opts.short_name .. sc[2]
   local index = require "coq.producers.tmux.index"
-
-  for pane in list_panes(settings, env.TMUX_PANE) do
-    index.prune { pane = pane.id }
-    for word in pane_words(kw, pane.id) do
-      index.insert { pane = pane.id, word = word, meta = pane.meta }
+  for item in
+    index.search(ctx) --[[@as fun(): tmux.Item?]]
+  do
+    if item.word ~= ctx.cword then
+      coroutine.yield {
+        word = item.word,
+        menu = menu,
+        info = item.meta ~= nil and doc(opts, item.meta) or nil,
+        meta = {
+          filter = item.word,
+          source = opts.short_name,
+          always_on_top = opts.always_on_top,
+        },
+      }
     end
   end
 end
-
----@class tmux.State
----@field iskeyword? string
 
 local M = {
   ---@type tmux.State
