@@ -22,35 +22,28 @@ M.spawn = function(argv, opts)
   opts = opts or {}
 
   return async.scope(function(n, defer)
-    local stdin_pipe = opts.stdin ~= nil and vim.uv.new_pipe(false) or nil
-    local stdout_pipe = vim.uv.new_pipe(false)
-    local stderr_pipe = vim.uv.new_pipe(false)
+    local stdin_pipe = opts.stdin ~= nil and vim.uv.new_pipe() or nil
+    local stdout_pipe, stderr_pipe = vim.uv.new_pipe(), vim.uv.new_pipe()
+    assert(stdout_pipe)
+    assert(stderr_pipe)
 
-    if stdout_pipe == nil or stderr_pipe == nil then
-      return nil
-    end
-
-    defer(function()
-      for _, p in pairs { stdin_pipe, stdout_pipe, stderr_pipe } do
+    for _, p in pairs { stdout_pipe, stderr_pipe, stdin_pipe } do
+      defer(function()
         if not p:is_closing() then
           p:close()
         end
-      end
-    end)
+      end)
+    end
 
-    local exit_f, stdout_f, stderr_f = async.future(), async.future(), async.future()
+    local exit_f, stdout_f, stderr_f, stdin_f = async.future(), async.future(), async.future(), async.future()
 
-    local handle
-    handle = vim.uv.spawn(argv[1], {
+    local handle = vim.uv.spawn(argv[1], {
       args = { unpack(argv, 2) },
       stdio = { stdin_pipe, stdout_pipe, stderr_pipe },
     }, function(code, signal)
       exit_f.resolve(code, signal)
     end)
-
-    if handle == nil then
-      return nil
-    end
+    assert(handle)
 
     defer(function()
       if not handle:is_closing() then
@@ -58,16 +51,31 @@ M.spawn = function(argv, opts)
       end
     end)
 
-    local _ = n.handle.on_cancel(function()
+    defer(n.handle.on_cancel(function()
       if not handle:is_closing() then
         handle:kill "sigterm"
       end
-    end)
+    end))
+
+    if stdin_pipe ~= nil then
+      stdin_pipe:write(opts.stdin, function(write_err)
+        if write_err ~= nil then
+          stdin_f.resolve(write_err)
+        else
+          stdin_pipe:shutdown(stdin_f.resolve)
+        end
+      end)
+    else
+      stdin_f.resolve()
+    end
 
     local read = function(pipe, f)
       local chunks = {}
-      pipe:read_start(function(_, data)
-        if data == nil then
+      pipe:read_start(function(err, data)
+        if err ~= nil then
+          pipe:read_stop()
+          f.resolve(nil, err)
+        elseif data == nil then
           pipe:read_stop()
           f.resolve(table.concat(chunks))
         else
@@ -78,15 +86,26 @@ M.spawn = function(argv, opts)
     read(stdout_pipe, stdout_f)
     read(stderr_pipe, stderr_f)
 
-    if stdin_pipe ~= nil then
-      stdin_pipe:write(opts.stdin)
-      stdin_pipe:shutdown()
+    local h = runtime.current()
+    local check = function(f)
+      return function()
+        local value, err = f.await(h)
+        if err ~= nil then
+          error(err, 0)
+        end
+        return value
+      end
     end
 
-    local h = runtime.current()
-    local code, signal = exit_f.await(h)
-    local stdout = stdout_f.await(h)
-    local stderr = stderr_f.await(h)
+    local _, exit, stdout, stderr = unpack(async.all {
+      check(stdin_f),
+      function()
+        return { exit_f.await(h) }
+      end,
+      check(stdout_f),
+      check(stderr_f),
+    })
+    local code, signal = unpack(exit)
 
     return {
       code = code,
