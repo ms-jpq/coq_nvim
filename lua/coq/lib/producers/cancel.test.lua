@@ -51,7 +51,7 @@ local cancel_tests = function(name, factory)
           local db = factory {
             idle = lib.noop,
             bind = lib.noop,
-            matcher = function(ctx)
+            matcher = function(_, ctx)
               require("coq.lib.async").sleep(80 * ctx.slow)
               coroutine.yield "never"
             end,

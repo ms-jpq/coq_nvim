@@ -1,9 +1,9 @@
 local handle = require "coq.lib.async.handle"
 local search = require "coq.lib.index"
 
----@class index.TrieSpec<T>
+---@class index.TrieSpec<C, T>
 ---@field key_item fun(item: T): string
----@field key_ctx fun(ctx: ctx.full): string?
+---@field key_ctx fun(ctx: C): string?
 
 local M = {}
 
@@ -16,9 +16,9 @@ local chars = function(s)
   return string.gmatch(s, ".")
 end
 
----@generic T
----@param spec index.TrieSpec<T>
----@return index.Searcher<T>
+---@generic C, T
+---@param spec index.TrieSpec<C, T>
+---@return index.Searcher<C, T>
 M.new = function(spec)
   local root = node_new()
 

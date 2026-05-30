@@ -6,21 +6,21 @@ local runtime = require "coq.lib.async.runtime"
 ---@class index.SearchIter: lib.Closable
 ---@overload fun(): completions.Item?
 
----@class index.Searchable: lib.Closable
----@field search fun(ctx: ctx.full): index.SearchIter
+---@class index.Searchable<C>: lib.Closable
+---@field search fun(ctx: C): index.SearchIter
 
----@class index.Searcher<T>: index.Searchable
+---@class index.Searcher<C, T>: index.Searchable<C>
 ---@field insert fun(item: T)
----@field prune fun(ctx: ctx.full)
+---@field prune fun(ctx: C)
 
----@class index.IndexedSpec<T>
+---@class index.IndexedSpec<C, T>
 ---@field key_item fun(item: T): any
----@field key_ctx fun(ctx: ctx.full): any?
----@field child fun(): index.Searcher<T>
+---@field key_ctx fun(ctx: C): any?
+---@field child fun(): index.Searcher<C, T>
 
 local M = {}
 
----@type index.Searcher<any>
+---@type index.Searcher<any, any>
 M.empty = {
   close = lib.noop,
   insert = lib.noop,
@@ -55,9 +55,9 @@ M.iter = function(h, fn)
   return setmetatable({ close = h.cancel }, { __call = next })
 end
 
----@generic T
----@param spec index.IndexedSpec<T>
----@return index.Searcher<T>
+---@generic C, T
+---@param spec index.IndexedSpec<C, T>
+---@return index.Searcher<C, T>
 M.indexed = function(spec)
   local children = {}
 

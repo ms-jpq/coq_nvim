@@ -27,7 +27,7 @@ T.describe("producer (regular)", function(test)
     local db = producer.new {
       idle = lib.noop,
       bind = lib.noop,
-      matcher = function(ctx)
+      matcher = function(_, ctx)
         got = ctx
       end,
     }

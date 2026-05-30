@@ -94,7 +94,6 @@ local defaults = require "coq.config.defaults"
 
 ---@class config.BuffersClient: config.BaseClient
 ---@field always_on_top boolean
----@field match_syms boolean
 ---@field same_filetype boolean
 ---@field parent_scope string
 
@@ -114,7 +113,6 @@ local defaults = require "coq.config.defaults"
 
 ---@class config.RegistersClient: config.BaseClient
 ---@field always_on_top boolean
----@field match_syms boolean
 ---@field lines string[]
 ---@field max_yank_size integer
 ---@field register_scope string
@@ -139,7 +137,6 @@ local defaults = require "coq.config.defaults"
 ---@class config.TmuxClient: config.BaseClient
 ---@field always_on_top boolean
 ---@field all_sessions boolean
----@field match_syms boolean
 ---@field parent_scope string
 ---@field path_sep string
 

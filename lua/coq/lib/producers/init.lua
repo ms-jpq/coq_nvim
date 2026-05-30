@@ -2,17 +2,18 @@ local handle = require "coq.lib.async.handle"
 local runtime = require "coq.lib.async.runtime"
 local search = require "coq.lib.index"
 
----@class producers.Producer: index.Searchable
+---@class producers.Producer: index.Searchable<ctx.full>
 ---@field idle fun(ctx: ctx.full)
 ---@field bind fun(n: async.Nursery)
 
 ---@alias producers.KeyFn fun(ev: any): any
----@alias producers.IdleFn fun(events: table<any, any>, ctx: ctx.full)
----@alias producers.MatcherFn fun(ctx: ctx.full)
+---@alias producers.IdleFn fun(settings: config.Settings, events: table<any, any>, ctx: ctx.full)
+---@alias producers.MatcherFn fun(settings: config.Settings, ctx: ctx.full)
 ---@alias producers.Push fun(ev: any)
 ---@alias producers.OnBind fun(n: async.Nursery, push: producers.Push)
 
 ---@class producers.Spec
+---@field settings config.Settings
 ---@field key? producers.KeyFn
 ---@field idle producers.IdleFn
 ---@field matcher producers.MatcherFn
@@ -40,13 +41,13 @@ M.new = function(spec)
   db.idle = function(ctx)
     local batch = location
     location = {}
-    spec.idle(batch, ctx)
+    spec.idle(spec.settings, batch, ctx)
   end
 
   db.search = function(ctx)
     local h = handle.new(runtime.current())
     return search.iter(h, function()
-      spec.matcher(ctx)
+      spec.matcher(spec.settings, ctx)
     end)
   end
 
