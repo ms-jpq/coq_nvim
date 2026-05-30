@@ -31,7 +31,7 @@ local recommended_keymaps = function(keymap)
   local expr = { noremap = true, expr = true }
 
   for _, key in pairs { "<esc>", "<c-c>", "<bs>", "<c-w>", "<c-u>" } do
-    vim.keymap.set("i", key, function()
+    vim.keymap.set({ "i" }, key, function()
       return (vim.fn.pumvisible() == 1 and CE or "") .. key
     end, expr)
   end
@@ -80,7 +80,7 @@ local manual_complete = function(keymap)
     return
   end
 
-  vim.keymap.set("i", keymap.manual_complete, function()
+  vim.keymap.set({ "i" }, keymap.manual_complete, function()
     if vim.fn.pumvisible() ~= 0 then
       return [[<c-e><c-x><c-u>]]
     end

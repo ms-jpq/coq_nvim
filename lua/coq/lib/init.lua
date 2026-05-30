@@ -30,6 +30,13 @@ M.report = function(err)
   end)
 end
 
+---@param s string
+---@return fun(): string?
+M.splitlines = function(s)
+  local normalized = string.gsub(s, "\r\n?", "\n")
+  return vim.gsplit(normalized, "\n", { plain = true })
+end
+
 ---@param fn fun(defer: fun(cleanup: fun())): ...any
 ---@return ...any
 M.scope = function(fn)

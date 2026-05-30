@@ -1,6 +1,9 @@
+local async = require "coq.lib.async"
+local async_vim = require "coq.lib.async.vim"
 local broadcast = require "coq.lib.channels.broadcast"
 local context = require "coq.lib.context"
 local lib = require "coq.lib"
+local resolve = require "coq.completions.resolve"
 
 ---@class completions.preview.ChangedEvent
 ---@field kind "changed"
@@ -13,18 +16,25 @@ local lib = require "coq.lib"
 
 local NS = vim.api.nvim_create_namespace "coq.preview"
 
+local preview_win = nil
+
+local close_preview = function()
+  if preview_win and vim.api.nvim_win_is_valid(preview_win) then
+    vim.api.nvim_win_close(preview_win, true)
+  end
+  preview_win = nil
+end
+
 ---@param buf integer
 local clear = function(buf)
   vim.api.nvim_buf_clear_namespace(buf, NS, 0, -1)
+  close_preview()
 end
 
 ---@param ctx ctx.base
 ---@param ghost config.GhostText
 ---@param i completions.Item
 local show_ghost = function(ctx, ghost, i)
-  if not ghost.enabled then
-    return
-  end
   local text = i.meta.snippet and i.abbr or i.word
   if not text or text == "" then
     return
@@ -40,8 +50,79 @@ local show_ghost = function(ctx, ghost, i)
   })
 end
 
+---@param lsp_item lsp.CompletionItem
+---@return string[]
+local md_lines = function(lsp_item)
+  return vim
+    .iter(async.wrap(function()
+      if lsp_item.detail and lsp_item.detail ~= "" then
+        for line in lib.splitlines(lsp_item.detail) do
+          coroutine.yield(line)
+        end
+      end
+
+      if lsp_item.documentation then
+        for _, line in ipairs(vim.lsp.util.convert_input_to_markdown_lines(lsp_item.documentation)) do
+          coroutine.yield(line)
+        end
+      end
+    end))
+    :totable()
+end
+
+---@param ctx ctx.base
+---@param preview_cfg config.PreviewDisplay
 ---@param i completions.Item
-local show_doc = function(i) end
+local show_doc = function(ctx, preview_cfg, i)
+  local lsp_item = i.meta.lsp and i.meta.lsp.item
+  if not lsp_item then
+    return
+  end
+
+  if not lsp_item.documentation and not lsp_item.detail then
+    resolve.enrich(ctx, i)
+  end
+
+  local lines = md_lines(lsp_item)
+  if #lines == 0 then
+    return
+  end
+
+  local _, win = vim.lsp.util.open_floating_preview(lines, "markdown", {
+    border = preview_cfg.border,
+    focusable = false,
+    max_width = preview_cfg.x_max_len,
+    close_events = {},
+  })
+  preview_win = win
+end
+
+---Extracts the completion item from a CompleteChanged event, or nil if the
+---event isn't a usable "changed" event with a populated item.
+---@param ev completions.preview.Event
+---@return completions.Item?
+local item_of = function(ev)
+  if ev.kind ~= "changed" then
+    return nil
+  end
+  local item = ev.item and ev.item.user_data
+  return type(item) == "table" and item.word and item or nil
+end
+
+---@param ft string
+---@param lines string[]
+local promote = function(ft, lines)
+  vim.cmd "silent! pedit COQ-preview"
+  vim.cmd "wincmd P"
+  vim.bo.buftype = "nofile"
+  vim.bo.bufhidden = "wipe"
+  vim.bo.swapfile = false
+  vim.api.nvim_buf_set_lines(0, 0, -1, false, lines)
+  if ft ~= "" then
+    vim.bo.filetype = ft
+  end
+  vim.cmd "wincmd p"
+end
 
 local M = {}
 
@@ -65,6 +146,25 @@ M.bind = function(n, settings)
     end,
   })
 
+  if settings.keymap.bigger_preview then
+    local esc = vim.keycode "<c-e>"
+    vim.keymap.set({ "i" }, settings.keymap.bigger_preview, function()
+      if not (preview_win and vim.api.nvim_win_is_valid(preview_win)) then
+        return settings.keymap.bigger_preview
+      end
+      local buf = vim.api.nvim_win_get_buf(preview_win)
+      local lines = vim.api.nvim_buf_get_lines(buf, 0, -1, true)
+      local ft = vim.bo[buf].filetype
+      close_preview()
+
+      n.spawn(function()
+        async_vim.scheduled()
+        promote(ft, lines)
+      end)
+      return esc
+    end, { expr = true, noremap = true })
+  end
+
   n.spawn(function(defer)
     local iter = events.subscribe()
     defer(iter.close)
@@ -72,13 +172,14 @@ M.bind = function(n, settings)
     for ev, ctx in iter do
       ---@cast ctx ctx.base
       clear(ctx.buf)
+      local item = item_of(ev)
 
-      if ev.kind == "changed" and ev.item and next(ev.item) then
-        ---@type completions.Item?
-        local item = ev.item.user_data
-        if type(item) == "table" and item.word then
+      if item then
+        if settings.display.ghost_text.enabled then
           show_ghost(ctx, settings.display.ghost_text, item)
-          show_doc(item)
+        end
+        if settings.display.preview.enabled then
+          show_doc(ctx, settings.display.preview, item)
         end
       end
     end

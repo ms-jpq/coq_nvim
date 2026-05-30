@@ -72,7 +72,7 @@ local apply = function(ctx, i)
 
   do
     local start_row, start_col, end_row, end_col, replacement = word_range(ctx, i, lsp)
-    local lines = vim.split(string.gsub(replacement, "\r\n?", "\n"), "\n", { plain = true })
+    local lines = vim.iter(lib.splitlines(replacement)):totable()
     vim.api.nvim_buf_set_text(ctx.buf, start_row, start_col, end_row, end_col, lines)
   end
 
