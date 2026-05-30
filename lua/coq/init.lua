@@ -9,6 +9,7 @@ local lib = require "coq.lib"
 local nursery = require "coq.lib.async.nursery"
 local nvim_options = require "coq.nvim_options"
 local preview = require "coq.completions.preview"
+local ranker_m = require "coq.lib.index.rank.ranker"
 local supervisor = require "coq.lib.producers.supervisor"
 local trigger = require "coq.completions.trigger"
 
@@ -66,13 +67,14 @@ M.setup = function(opts)
   nvim_options.apply(settings)
   local p = vim.iter(async.wrap(producers(settings))):totable()
   local sup = supervisor.new(p)
+  local ranker = ranker_m.new()
 
   async.entry(function()
     nursery.scope(function(n)
       sup.bind(n)
-      trigger.bind(n, settings, sup)
+      trigger.bind(n, settings, ranker, sup)
       preview.bind(n, settings)
-      insertion.bind(n)
+      insertion.bind(n, ranker)
     end)
   end)()
 

@@ -7,8 +7,9 @@ local M = {}
 
 ---@param n async.Nursery
 ---@param settings config.Settings
+---@param ranker index.Ranker
 ---@param sup producers.Producer
-M.bind = function(n, settings, sup)
+M.bind = function(n, settings, ranker, sup)
   local events = broadcast.new()
 
   vim.api.nvim_create_autocmd({ "InsertCharPre" }, {
@@ -23,7 +24,7 @@ M.bind = function(n, settings, sup)
     for _ in iter do
       n.spawn(function()
         local ctx = context.full()
-        insertion.complete(ctx, sup.search(ctx), settings.display.icons)
+        insertion.complete(ctx, settings, ranker, sup.search(ctx))
       end)
     end
   end)
