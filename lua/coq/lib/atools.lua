@@ -22,51 +22,53 @@ M.spawn = function(argv, opts)
   opts = opts or {}
 
   return async.scope(function(n, defer)
-    local stdin_pipe = opts.stdin ~= nil and vim.uv.new_pipe() or nil
-    local stdout_pipe, stderr_pipe = vim.uv.new_pipe(), vim.uv.new_pipe()
-    assert(stdout_pipe)
-    assert(stderr_pipe)
+    local stdin_pipe = opts.stdin ~= nil and assert(vim.uv.new_pipe()) or nil
+    local stdout_pipe = assert(vim.uv.new_pipe())
+    local stderr_pipe = assert(vim.uv.new_pipe())
 
+    local close = function(h)
+      if not h:is_closing() then
+        h:close()
+      end
+    end
     for _, p in pairs { stdout_pipe, stderr_pipe, stdin_pipe } do
       defer(function()
-        if not p:is_closing() then
-          p:close()
-        end
+        close(p)
       end)
     end
 
-    local exit_f, stdout_f, stderr_f, stdin_f = async.future(), async.future(), async.future(), async.future()
+    local stdin_f, exit_f, stdout_f, stderr_f = async.future(), async.future(), async.future(), async.future()
 
-    local handle = vim.uv.spawn(argv[1], {
-      args = { unpack(argv, 2) },
+    local handle = assert(vim.uv.spawn(argv[1], {
+      args = vim.list_slice(argv, 2),
       stdio = { stdin_pipe, stdout_pipe, stderr_pipe },
     }, function(code, signal)
-      exit_f.resolve(code, signal)
-    end)
-    assert(handle)
+      exit_f.resolve(true, { code = code, signal = signal })
+    end))
 
     defer(function()
-      if not handle:is_closing() then
-        handle:close()
-      end
+      close(handle)
     end)
-
     defer(n.handle.on_cancel(function()
       if not handle:is_closing() then
         handle:kill "sigterm"
       end
     end))
 
+    local stdin_done = function(err)
+      stdin_f.resolve(err == nil, err)
+    end
+
     if stdin_pipe ~= nil then
-      stdin_pipe:write(opts.stdin, function(write_err)
-        if write_err ~= nil then
-          stdin_f.resolve(write_err)
+      stdin_pipe:write(opts.stdin, function(err)
+        if err ~= nil then
+          stdin_done(err)
         else
-          stdin_pipe:shutdown(stdin_f.resolve)
+          stdin_pipe:shutdown(stdin_done)
         end
       end)
     else
-      stdin_f.resolve()
+      stdin_done()
     end
 
     local read = function(pipe, f)
@@ -74,10 +76,10 @@ M.spawn = function(argv, opts)
       pipe:read_start(function(err, data)
         if err ~= nil then
           pipe:read_stop()
-          f.resolve(nil, err)
+          f.resolve(false, err)
         elseif data == nil then
           pipe:read_stop()
-          f.resolve(table.concat(chunks))
+          f.resolve(true, table.concat(chunks))
         else
           table.insert(chunks, data)
         end
@@ -87,32 +89,25 @@ M.spawn = function(argv, opts)
     read(stderr_pipe, stderr_f)
 
     local h = runtime.current()
-    local check = function(f)
+    local await = function(f)
       return function()
-        local value, err = f.await(h)
-        if err ~= nil then
-          error(err, 0)
+        local ok, value = f.await(h)
+        if not ok then
+          error(value, 0)
         end
         return value
       end
     end
 
-    local _, exit, stdout, stderr = unpack(async.all {
-      check(stdin_f),
-      function()
-        return { exit_f.await(h) }
-      end,
-      check(stdout_f),
-      check(stderr_f),
+    local _, proc, stdout, stderr = unpack(async.all {
+      await(stdin_f),
+      await(exit_f),
+      await(stdout_f),
+      await(stderr_f),
     })
-    local code, signal = unpack(exit)
-
-    return {
-      code = code,
-      signal = signal,
-      stdout = stdout,
-      stderr = stderr,
-    }
+    proc.stdout = stdout
+    proc.stderr = stderr
+    return proc
   end)
 end
 
