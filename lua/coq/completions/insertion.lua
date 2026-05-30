@@ -64,13 +64,10 @@ local apply = function(ctx, i)
   local lsp = meta.lsp or {}
 
   if #(lsp.additional_text_edits or {}) == 0 then
-    local resolved = resolve.resolve(ctx, i) or {}
+    resolve.resolve(ctx, i)
     if not context.still_valid(ctx) then
       return
     end
-
-    lsp = vim.tbl_extend("force", lsp, resolved)
-    ---@cast lsp completions.ItemLspMeta
   end
 
   do

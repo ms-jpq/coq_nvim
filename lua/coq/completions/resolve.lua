@@ -5,7 +5,7 @@ local M = {}
 
 ---@param ctx ctx.base
 ---@param item completions.Item
----@return completions.ItemLspMeta?
+---@return true?
 M.resolve = function(ctx, item)
   local lsp = item.meta.lsp
   if not (lsp and lsp.client_id and lsp.item) then
@@ -30,10 +30,12 @@ M.resolve = function(ctx, item)
     return nil
   end
 
-  return {
-    additional_text_edits = resolved.additionalTextEdits,
-    command = resolved.command or lsp.command,
-  }
+  for k, v in pairs(resolved) do
+    lsp.item[k] = v
+  end
+  lsp.additional_text_edits = resolved.additionalTextEdits or lsp.additional_text_edits
+  lsp.command = resolved.command or lsp.command
+  return true
 end
 
 ---@param ctx ctx.base
