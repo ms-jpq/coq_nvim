@@ -8,7 +8,7 @@ local search = require "coq.lib.index"
 local M = {}
 
 local node_new = function()
-  return { children = {}, items = {} }
+  return { children = {}, item = nil }
 end
 
 ---@param s string
@@ -44,8 +44,8 @@ M.new = function(spec)
   end
 
   local function dfs_yield(node)
-    for _, item in ipairs(node.items) do
-      coroutine.yield(item)
+    if node.item ~= nil then
+      coroutine.yield(node.item)
     end
     for _, child in pairs(node.children) do
       dfs_yield(child)
@@ -59,7 +59,7 @@ M.new = function(spec)
   end
 
   trie.insert = function(item)
-    table.insert(descend_create(spec.key_item(item)).items, item)
+    descend_create(spec.key_item(item)).item = item
   end
 
   trie.prune = function(ctx)

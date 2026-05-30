@@ -61,7 +61,7 @@ T.describe("trie", function(test)
     T.eq(collect(t.search { prefix = "spot" }), {})
   end)
 
-  test("multiple items at the same key all yield", function()
+  test("insert with the same key overwrites the previous item", function()
     local t = trie.new(spec)
     t.insert { word = "lil", buf = 1 }
     t.insert { word = "lil", buf = 2 }
@@ -70,8 +70,7 @@ T.describe("trie", function(test)
     for item in t.search { prefix = "lil" } do
       table.insert(seen, item.buf)
     end
-    table.sort(seen)
-    T.eq(seen, { 1, 2 })
+    T.eq(seen, { 2 })
   end)
 
   test("prune removes every item under the prefix", function()
