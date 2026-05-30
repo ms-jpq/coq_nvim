@@ -7,10 +7,20 @@ local tokens = require "coq.lib.index.tokens"
 local SEP = "\30"
 local PANE_FMT = "#{pane_id}" .. SEP .. "#{pane_active}"
 
-local matcher = function(ctx)
+---@param settings config.Settings
+local matcher = function(settings, ctx)
+  local opts = settings.clients.tmux
   local index = require "coq.producers.tmux.index"
   for item in index.search(ctx) do
-    coroutine.yield { word = item.word, meta = { filter = item.word } }
+    if item.word ~= ctx.cword then
+      coroutine.yield {
+        word = item.word,
+        meta = {
+          filter = item.word,
+          source = opts.short_name,
+        },
+      }
+    end
   end
 end
 
@@ -47,8 +57,10 @@ local pane_words = function(kw, pane)
   end)
 end
 
-local idle = function(events)
-  local state = require "coq.producers.tmux.state"
+---@param settings config.Settings
+local idle = function(settings, events)
+  local _ = settings
+  local state = require("coq.producers.tmux").state
 
   for _, ev in pairs(events) do
     if ev.kind == "iskeyword" then
@@ -72,13 +84,19 @@ local idle = function(events)
   end
 end
 
-local M = {}
+---@class tmux.State
+---@field iskeyword? string
 
----@param opts config.TmuxClient
+local M = {
+  ---@type tmux.State
+  state = {},
+}
+
+---@param settings config.Settings
 ---@return producers.Producer
-M.new = function(opts)
-  local _ = opts
+M.new = function(settings)
   return threaded.new {
+    settings = settings,
     key = function(ev)
       return ev.kind
     end,

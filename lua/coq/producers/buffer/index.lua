@@ -1,4 +1,3 @@
-local handle = require "coq.lib.async.handle"
 local search = require "coq.lib.index"
 local trie = require "coq.lib.index.trie"
 
@@ -7,7 +6,12 @@ local trie = require "coq.lib.index.trie"
 ---@field buf integer
 ---@field filetype string
 
----@return index.Searcher<buffer.Item>
+---@class buffer.Ctx
+---@field buf? integer
+---@field filetype? string
+---@field line_before? string
+
+---@return index.Searcher<buffer.Ctx, buffer.Item>
 local word_trie = function()
   return trie.new {
     key_item = function(i)
@@ -22,58 +26,20 @@ local word_trie = function()
   }
 end
 
----@return index.Searcher<buffer.Item>
+---@return index.Searcher<buffer.Ctx, buffer.Item>
 local buf_layer = function()
-  local bufs = {}
-  return {
-    close = function()
-      for _, t in pairs(bufs) do
-        t.close()
-      end
-      bufs = {}
+  return search.indexed {
+    key_item = function(i)
+      return i.buf
     end,
-    insert = function(item)
-      local t = bufs[item.buf]
-      if t == nil then
-        t = word_trie()
-        bufs[item.buf] = t
-      end
-      t.insert(item)
+    key_ctx = function(c)
+      return c.buf
     end,
-    prune = function(ctx)
-      if ctx.buf ~= nil then
-        local t = bufs[ctx.buf]
-        if t then
-          t.close()
-          bufs[ctx.buf] = nil
-        end
-      else
-        for _, t in pairs(bufs) do
-          t.close()
-        end
-        bufs = {}
-      end
-    end,
-    search = function(ctx)
-      local snapshot = bufs
-      local cword = ctx.cword
-      local h = handle.new()
-      return search.iter(h, function()
-        for _, t in pairs(snapshot) do
-          for item in t.search(ctx) do
-            if item.word ~= cword then
-              coroutine.yield(item)
-            end
-          end
-        end
-      end)
-    end,
+    child = word_trie,
   }
 end
 
-local M = {}
-
-local instance = search.indexed {
+return search.indexed {
   key_item = function(i)
     return i.filetype
   end,
@@ -82,10 +48,3 @@ local instance = search.indexed {
   end,
   child = buf_layer,
 }
-
-M.search = instance.search
-M.insert = instance.insert
-M.prune = instance.prune
-M.close = instance.close
-
-return M

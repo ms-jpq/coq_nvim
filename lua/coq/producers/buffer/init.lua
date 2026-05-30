@@ -2,14 +2,26 @@ local lib = require "coq.lib"
 local threaded = require "coq.lib.producers.threaded"
 local tokens = require "coq.lib.index.tokens"
 
-local matcher = function(ctx)
+---@param settings config.Settings
+local matcher = function(settings, ctx)
+  local opts = settings.clients.buffers
   local index = require "coq.producers.buffer.index"
   for item in index.search(ctx) do
-    coroutine.yield { word = item.word, meta = { filter = item.word } }
+    if item.word ~= ctx.cword then
+      coroutine.yield {
+        word = item.word,
+        meta = {
+          filter = item.word,
+          source = opts.short_name,
+        },
+      }
+    end
   end
 end
 
-local idle = function(events)
+---@param settings config.Settings
+local idle = function(settings, events)
+  local _ = settings
   local index = require "coq.producers.buffer.index"
   for buf, ev in pairs(events) do
     index.prune { buf = buf }
@@ -36,11 +48,11 @@ local kinds = {
 
 local M = {}
 
----@param opts config.BuffersClient
+---@param settings config.Settings
 ---@return producers.Producer
-M.new = function(opts)
-  local _ = opts
+M.new = function(settings)
   return threaded.new {
+    settings = settings,
     key = function(ev)
       return ev.buf
     end,
