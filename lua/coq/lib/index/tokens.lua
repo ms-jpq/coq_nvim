@@ -2,17 +2,6 @@ local async = require "coq.lib.async"
 
 local M = {}
 
----@param ctx ctx.full
----@return string[]
-M.surround = function(ctx)
-  local half = math.floor(vim.api.nvim_win_get_height(ctx.win) / 2)
-  local row = ctx.pos[1] - 1
-  local lo = math.max(0, row - half)
-  local hi = math.min(ctx.line_count, row + half + 1)
-
-  return vim.api.nvim_buf_get_lines(ctx.buf, lo, hi, true)
-end
-
 ---@param s string
 ---@return integer
 local decode = function(s)
@@ -88,6 +77,17 @@ M.words = function(kw, lines)
       end
     end
   end)
+end
+
+---@param ctx ctx.full
+---@return string[]
+M.surround = function(ctx)
+  local half = math.floor(vim.api.nvim_win_get_height(ctx.win) / 2)
+  local row = ctx.pos[1] - 1
+  local lo = math.max(0, row - half)
+  local hi = math.min(ctx.line_count, row + half + 1)
+
+  return vim.api.nvim_buf_get_lines(ctx.buf, lo, hi, true)
 end
 
 ---@param kw table<integer, true>

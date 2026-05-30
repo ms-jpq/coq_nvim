@@ -27,7 +27,10 @@ M.new = function(source_bias)
   ranker.prepare = function(ctx)
     return {
       token = ctx.cword,
-      locality = tokens.locality(ctx.buf, tokens.surround(ctx)),
+      locality = tokens.locality(
+        tokens.parse_iskeyword(ctx.iskeyword),
+        vim.iter(tokens.surround(ctx)) --[[@as fun(): string?]]
+      ),
       recency = recency,
       source_bias = source_bias,
     }
