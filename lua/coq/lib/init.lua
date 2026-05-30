@@ -6,12 +6,22 @@
 ---@class lib.Iterable<T>
 ---@field iter fun(): lib.Iterator<T>
 
+---@class lib.ClosableIter<T>: lib.Closable
+---@overload fun(): T?
+
 local M = {}
 
 M.group = [[coq]]
 
 ---@param ... any
 M.noop = function(...) end
+
+---@type lib.ClosableIter<any>
+M.dead_iter = setmetatable({ close = M.noop }, {
+  __call = function()
+    return nil
+  end,
+})
 
 ---@param err any
 M.report = function(err)

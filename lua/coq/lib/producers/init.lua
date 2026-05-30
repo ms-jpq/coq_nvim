@@ -1,11 +1,11 @@
 local handle = require "coq.lib.async.handle"
+local lib = require "coq.lib"
 local queue = require "coq.lib.queue"
 local runtime = require "coq.lib.async.runtime"
-local util = require "coq.lib.producers.util"
 
 require "coq.lib.index.search"
 
----@class producers.Producer: index.Searcher
+---@class producers.Producer: index.Searchable
 ---@field notify fun(event: any)
 ---@field idle fun(ctx: ctx.full)
 
@@ -45,7 +45,7 @@ M.new = function(idle, matcher)
 
   db.search = function(ctx)
     if closed then
-      return util.dead_iter
+      return lib.dead_iter
     end
     local h = handle.new(runtime.current())
 

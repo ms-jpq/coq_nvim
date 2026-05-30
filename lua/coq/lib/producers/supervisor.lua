@@ -3,7 +3,6 @@ local handle = require "coq.lib.async.handle"
 local lib = require "coq.lib"
 local nursery = require "coq.lib.async.nursery"
 local runtime = require "coq.lib.async.runtime"
-local util = require "coq.lib.producers.util"
 
 local M = {}
 
@@ -56,7 +55,7 @@ M.new = function(producers)
 
   sup.search = function(ctx)
     if closed then
-      return util.dead_iter
+      return lib.dead_iter
     end
     interrupt()
     search_handle = handle.new()

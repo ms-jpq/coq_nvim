@@ -1,5 +1,5 @@
+local lib = require "coq.lib"
 local queue = require "coq.lib.queue"
-local util = require "coq.lib.producers.util"
 local worker = require "coq.lib.worker"
 
 local M = {}
@@ -42,7 +42,7 @@ M.new = function(idle, matcher)
 
   db.search = function(ctx)
     if closed then
-      return util.dead_iter
+      return lib.dead_iter
     end
     return w.queue_stream(matcher, ctx)
   end
