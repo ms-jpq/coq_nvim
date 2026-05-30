@@ -1,13 +1,14 @@
-local async = require "coq.lib.async"
 local handle = require "coq.lib.async.handle"
 local lib = require "coq.lib"
 local queue = require "coq.lib.queue"
-local search = require "coq.lib.index.search"
+local runtime = require "coq.lib.async.runtime"
+local search = require "coq.lib.index"
+
+---@alias producers.Push fun(event: any)
 
 ---@class producers.Producer: index.Searchable
----@field notify fun(event: any)
 ---@field idle fun(ctx: ctx.full)
----@field bind fun(n: async.Nursery)
+---@field bind fun(n: async.Nursery, on_push?: fun(push: producers.Push))
 
 ---@alias producers.IdleFn fun(events: any[], ctx: ctx.full)
 ---@alias producers.MatcherFn fun(ctx: ctx.full)
@@ -19,19 +20,27 @@ local M = {}
 M.new = function(idle, matcher)
   local events = queue.new()
   local ph = handle.new()
+  local bound = false
 
-  local db = {
-    bind = function(n)
-      local _ = n.handle.on_cancel(ph.cancel)
-    end,
-  }
-
-  db.notify = function(event)
+  local push = function(event)
     if ph.cancelled then
       return
     end
     events.push(event)
   end
+
+  local db = {
+    bind = function(n, on_push)
+      local _ = n.handle.on_cancel(ph.cancel)
+      if bound then
+        return
+      end
+      bound = true
+      if on_push then
+        on_push(push)
+      end
+    end,
+  }
 
   db.idle = function(ctx)
     local batch = {}
@@ -47,7 +56,7 @@ M.new = function(idle, matcher)
     if ph.cancelled then
       return lib.dead_iter
     end
-    local h = handle.new(async.current())
+    local h = handle.new(runtime.current())
     return search.iter(h, function()
       matcher(ctx)
     end)

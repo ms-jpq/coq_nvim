@@ -10,21 +10,26 @@ M.new = function(idle, matcher)
   local w = worker.spawn()
   local event_bus = queue.new()
   local ph = handle.new()
+  local bound = false
 
-  local _ = ph.on_cancel(w.close)
-
-  local db = {
-    queue = w.queue,
-    bind = function(n)
-      local _ = n.handle.on_cancel(ph.cancel)
-    end,
-  }
-
-  db.notify = function(event)
+  local push = function(event)
     if ph.cancelled then
       return
     end
     event_bus.push(event)
+  end
+
+  local db = { queue = w.queue }
+
+  db.bind = function(n, on_push)
+    local _ = n.handle.on_cancel(ph.cancel)
+    if bound then
+      return
+    end
+    bound = true
+    if on_push then
+      on_push(push)
+    end
   end
 
   db.idle = function(ctx)

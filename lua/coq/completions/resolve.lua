@@ -1,4 +1,5 @@
 local async = require "coq.lib.async"
+local runtime = require "coq.lib.async.runtime"
 
 local M = {}
 
@@ -24,7 +25,7 @@ M.resolve = function(ctx, item)
     f.resolve(result)
   end, ctx.buf)
 
-  local resolved = f.await(async.current())
+  local resolved = f.await(runtime.current())
   if not resolved then
     return nil
   end

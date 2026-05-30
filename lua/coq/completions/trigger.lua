@@ -6,8 +6,9 @@ local lib = require "coq.lib"
 local M = {}
 
 ---@param n async.Nursery
+---@param settings config.Settings
 ---@param sup producers.Producer
-M.bind = function(n, sup)
+M.bind = function(n, settings, sup)
   local events = broadcast.new()
 
   vim.api.nvim_create_autocmd({ "InsertCharPre" }, {
@@ -22,7 +23,7 @@ M.bind = function(n, sup)
     for _ in iter do
       n.spawn(function()
         local ctx = context.full()
-        insertion.complete(ctx, sup.search(ctx))
+        insertion.complete(ctx, sup.search(ctx), settings.display.icons)
       end)
     end
   end)

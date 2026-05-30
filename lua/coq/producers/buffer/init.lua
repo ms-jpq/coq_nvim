@@ -24,10 +24,6 @@ local idle = function(events)
   end
 end
 
-local M = threaded.new(idle, matcher)
-
-local enqueue = M.notify
-
 local update_kinds = {
   BufEnter = true,
   BufRead = true,
@@ -41,33 +37,39 @@ local remove_kinds = {
   BufWipeout = true,
 }
 
-M.notify = function(args)
-  local buf = args.buf
-  if remove_kinds[args.event] then
-    enqueue { kind = "remove", buf = buf }
-    return
-  end
+local M = threaded.new(idle, matcher)
 
-  if update_kinds[args.event] then
-    if not vim.api.nvim_buf_is_loaded(buf) then
-      return
+local inner_bind = M.bind
+
+M.bind = function(n)
+  inner_bind(n, function(push)
+    local on_event = function(args)
+      local buf = args.buf
+      if remove_kinds[args.event] then
+        push { kind = "remove", buf = buf }
+        return
+      end
+
+      if update_kinds[args.event] then
+        if not vim.api.nvim_buf_is_loaded(buf) then
+          return
+        end
+        local lines = vim.api.nvim_buf_get_lines(buf, 0, -1, true)
+        local words = tokens.locality(buf, lines)
+        push { kind = "update", buf = buf, words = words }
+      end
     end
-    local lines = vim.api.nvim_buf_get_lines(buf, 0, -1, true)
-    local words = tokens.locality(buf, lines)
-    enqueue { kind = "update", buf = buf, words = words }
-  end
-end
 
-if not vim.is_thread() then
-  vim.api.nvim_create_autocmd(vim.tbl_keys(update_kinds), {
-    group = lib.group,
-    callback = M.notify,
-  })
+    vim.api.nvim_create_autocmd(vim.tbl_keys(update_kinds), {
+      group = lib.group,
+      callback = on_event,
+    })
 
-  vim.api.nvim_create_autocmd(vim.tbl_keys(remove_kinds), {
-    group = lib.group,
-    callback = M.notify,
-  })
+    vim.api.nvim_create_autocmd(vim.tbl_keys(remove_kinds), {
+      group = lib.group,
+      callback = on_event,
+    })
+  end)
 end
 
 return M

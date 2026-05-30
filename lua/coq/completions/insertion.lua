@@ -91,11 +91,12 @@ local M = {}
 
 ---@param ctx ctx.full
 ---@param iter index.SearchIter
-M.complete = function(ctx, iter)
+---@param icons config.Icons
+M.complete = function(ctx, iter, icons)
   local items = {}
   for i in iter do
     ---@cast i completions.Item
-    table.insert(items, item.to_nvim(i))
+    table.insert(items, item.to_nvim(icons, i))
   end
 
   if vim.api.nvim_get_mode().mode:sub(1, 1) ~= "i" then

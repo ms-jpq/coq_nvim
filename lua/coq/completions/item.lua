@@ -42,9 +42,28 @@ local kind_hl = {
   Variable = "@variable",
 }
 
+-- https://github.com/ms-jpq/coq_nvim/blob/coq/coq/server/icons.py
+---@param icons config.Icons
+---@param kind string
+---@return string
+local iconify = function(icons, kind)
+  if kind == "" or icons.mode == "none" then
+    return kind
+  end
+  local glyph = icons.mappings[icons.aliases[kind] or kind]
+  if not glyph then
+    return kind
+  end
+  if icons.mode == "short" then
+    return glyph .. string.rep(" ", math.max(0, icons.spacing - 1))
+  end
+  return glyph .. string.rep(" ", math.max(1, icons.spacing)) .. kind
+end
+
+---@param icons config.Icons
 ---@param item completions.Item
 ---@return vim.v.completed_item
-M.to_nvim = function(item)
+M.to_nvim = function(icons, item)
   return {
     dup = 1,
     equal = 1,
@@ -54,7 +73,7 @@ M.to_nvim = function(item)
     abbr_hlgroup = item.abbr_hlgroup,
     menu = item.menu,
     info = item.info,
-    kind = item.kind,
+    kind = iconify(icons, item.kind),
     kind_hlgroup = item.kind_hlgroup or kind_hl[item.kind],
     user_data = item,
   }

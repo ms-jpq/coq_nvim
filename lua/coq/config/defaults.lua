@@ -64,6 +64,7 @@ local M = {
       always_wait = false,
       enabled = true,
       short_name = "SP",
+      user_path = nil,
       warn = { "missing", "outdated" },
       weight_adjust = 0.1,
     },
@@ -216,11 +217,13 @@ local M = {
 
   keymap = {
     bigger_preview = "<c-k>",
+    eval_snips = nil,
     jump_to_mark = "<c-h>",
     manual_complete = "<c-space>",
     manual_complete_insertion_only = false,
     pre_select = false,
     recommended = true,
+    ["repeat"] = nil,
   },
 
   limits = {

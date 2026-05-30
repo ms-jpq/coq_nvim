@@ -95,9 +95,13 @@ T.describe("supervisor", function(test)
       end, function()
         coroutine.yield "lil"
       end)
+      local push
+      p.bind(n, function(p_push)
+        push = p_push
+      end)
       local sup = supervisor.new { p }
       sup.bind(n)
-      p.notify(true)
+      push(true)
       sup.idle {}
       async.sleep(5 * T.SLOW)
       for _ in sup.search {} do
@@ -142,12 +146,16 @@ T.describe("supervisor", function(test)
       end, function()
         coroutine.yield "lil"
       end)
+      local push
+      p.bind(n, function(p_push)
+        push = p_push
+      end)
       local sup = supervisor.new { p }
       sup.bind(n)
       for _ in sup.search {} do
         lib.noop()
       end
-      p.notify(true)
+      push(true)
       sup.idle {}
       async.sleep(10 * T.SLOW)
     end)
@@ -242,9 +250,13 @@ T.describe("supervisor", function(test)
       local p = producer.new(function()
         idle_ran = true
       end, lib.noop)
+      local push
+      p.bind(n, function(p_push)
+        push = p_push
+      end)
       local sup = supervisor.new { p }
       sup.bind(n)
-      p.notify(true)
+      push(true)
       n.handle.cancel()
       sup.idle {}
       async.sleep(10 * T.SLOW)
@@ -265,13 +277,17 @@ T.describe("supervisor", function(test)
           first_elapsed_ms = (vim.uv.hrtime() - start) / 1e6
         end
       end, lib.noop)
+      local push
+      p.bind(n, function(p_push)
+        push = p_push
+      end)
       local sup = supervisor.new { p }
       sup.bind(n)
 
-      p.notify(true)
+      push(true)
       sup.idle {}
       async.sleep(5 * T.SLOW)
-      p.notify(true)
+      push(true)
       sup.idle {}
       async.sleep(20 * T.SLOW)
     end)

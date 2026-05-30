@@ -2,7 +2,7 @@ local async = require "coq.lib.async"
 local handle = require "coq.lib.async.handle"
 local lib = require "coq.lib"
 local nursery = require "coq.lib.async.nursery"
-local search = require "coq.lib.index.search"
+local search = require "coq.lib.index"
 
 local M = {}
 
@@ -27,10 +27,6 @@ M.new = function(producers)
     for _, p in pairs(producers) do
       p.bind(n)
     end
-  end
-
-  sup.notify = function(_)
-    assert(false)
   end
 
   sup.idle = function(ctx)

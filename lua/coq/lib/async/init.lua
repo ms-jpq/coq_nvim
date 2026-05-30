@@ -4,7 +4,6 @@ local runtime = require "coq.lib.async.runtime"
 
 local M = {}
 
-M.current = runtime.current
 M.future = runtime.future
 M.preemptible = runtime.preemptible
 M.scope = nursery.scope
