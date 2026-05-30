@@ -103,6 +103,7 @@ local item_of = function(ev)
   if ev.kind ~= "changed" then
     return nil
   end
+
   local item = ev.item and ev.item.user_data
   return type(item) == "table" and item.word and item or nil
 end
