@@ -8,24 +8,12 @@ on:
 
 jobs:
   mypy:
-    strategy:
-      matrix:
-        python_ver:
-          - "3.9"
-          - "3.10"
-          - "3.11"
-          - "3.12"
-          - "3.13"
-          - "3.14"
-          - "3"
     runs-on: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v4
 
       - uses: actions/setup-python@v5
-        with:
-          python-version: ${{ matrix.python_ver }}
 
       - run: |-
           curl --disable --fail --location --no-progress-meter -- 'https://raw.githubusercontent.com/ms-jpq/deb/refs/heads/deb/pubkey.asc' | sudo -- gpg --batch --dearmor --yes --output /etc/apt/trusted.gpg.d/ms-jpq.gpg
@@ -46,6 +34,26 @@ jobs:
 
       - run: |-
           python3 -m coq deps
+
+      - run: |-
+          make test
+
+  macos:
+    runs-on: macos-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+
+      - run: |-
+          brew install -- neovim universal-ctags
+
+      - run: |-
+          python3 -m coq deps
+
+      - run: |-
+          make lint
 
       - run: |-
           make test

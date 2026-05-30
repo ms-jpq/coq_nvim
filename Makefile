@@ -107,7 +107,7 @@ $(VAR)/opt/lua-language-server/bin/lua-language-server: | $(VAR)
 fmt: $(VAR)/bin/stylua
 	git ls-files --deduplicate --stage -- '*.lua' | awk -- '$$1 !~ /^120000/ { print $$4 }' | tr -- '\n' '\0' | xargs -r -0 -n 1 -P 0 -- '$<' --
 
-lualint: $(VAR)/opt/lua-language-server/bin/lua-language-server | $(VAR)
+lint: $(VAR)/opt/lua-language-server/bin/lua-language-server | $(VAR)
 	mkdir -v -p -- '$(VAR)/luals'
 	'$<' --check '.' --configpath '.luarc.json' --logpath '$(VAR)/luals' --checklevel Warning
 
