@@ -1,3 +1,4 @@
+local async = require "coq.lib.async"
 local atools = require "coq.lib.atools"
 local lib = require "coq.lib"
 local threaded = require "coq.lib.producers.threaded"
@@ -13,44 +14,60 @@ local matcher = function(ctx)
   end
 end
 
+---@param exclude string?
+---@return lib.Iterator<string>
+local list_panes = function(exclude)
+  return async.wrap(function()
+    local proc = atools.spawn { "tmux", "list-panes", "-s", "-F", PANE_FMT }
+    if proc == nil or proc.code ~= 0 then
+      return
+    end
+    for line in string.gmatch(proc.stdout, "[^\n]+") do
+      local id = string.match(line, "^(.-)" .. SEP)
+      if id ~= nil and id ~= exclude then
+        coroutine.yield(id)
+      end
+    end
+  end)
+end
+
+---@param kw table<integer, true>
+---@param pane string
+---@return lib.Iterator<string>
+local pane_words = function(kw, pane)
+  return async.wrap(function()
+    local proc = atools.spawn { "tmux", "capture-pane", "-p", "-J", "-t", pane }
+    if proc == nil or proc.code ~= 0 then
+      return
+    end
+    local lines = vim.iter(vim.split(proc.stdout, "\n", { plain = true })) --[[@as fun(): string?]]
+    for word, _ in pairs(tokens.locality(kw, lines)) do
+      coroutine.yield(word)
+    end
+  end)
+end
+
 local idle = function(events)
   local state = require "coq.producers.tmux.state"
+
   for _, ev in pairs(events) do
     if ev.kind == "iskeyword" then
       state.iskeyword = ev.iskeyword
-    elseif ev.kind == "tmux" then
-      state.tmux = ev.tmux
-      state.tmux_pane = ev.tmux_pane
     end
   end
 
-  if state.tmux == nil or state.iskeyword == nil then
+  local env = vim.uv.os_environ()
+  if env.TMUX == nil or state.iskeyword == nil then
     return
-  end
-
-  local list_result = atools.spawn { "tmux", "list-panes", "-s", "-F", PANE_FMT }
-  if list_result == nil or list_result.code ~= 0 then
-    return
-  end
-
-  local panes = {}
-  for line in string.gmatch(list_result.stdout, "[^\n]+") do
-    local id = string.match(line, "^(.-)" .. SEP)
-    if id ~= nil and id ~= state.tmux_pane then
-      table.insert(panes, id)
-    end
   end
 
   local kw = tokens.parse_iskeyword(state.iskeyword)
   local index = require "coq.producers.tmux.index"
-  for _, pane in ipairs(panes) do
+
+  for pane in list_panes(env.TMUX_PANE) do
     index.prune { pane = pane }
-    local capture = atools.spawn { "tmux", "capture-pane", "-p", "-J", "-t", pane }
-    if capture ~= nil and capture.code == 0 then
-      local lines = vim.iter(vim.split(capture.stdout, "\n", { plain = true })) --[[@as fun(): string?]]
-      for word, _ in pairs(tokens.locality(kw, lines)) do
-        index.insert { word = word, pane = pane }
-      end
+    for word in pane_words(kw, pane) do
+      index.insert { pane = pane, word = word }
     end
   end
 end
@@ -68,8 +85,6 @@ M.new = function(opts)
     idle = idle,
     matcher = matcher,
     bind = function(_, push)
-      push { kind = "tmux", tmux = vim.env.TMUX, tmux_pane = vim.env.TMUX_PANE }
-
       vim.api.nvim_create_autocmd({ "BufEnter" }, {
         group = lib.group,
         callback = function(args)
