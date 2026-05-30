@@ -6,7 +6,7 @@ local runtime = require "coq.lib.async.runtime"
 ---@class index.SearchIter: lib.Closable
 ---@overload fun(): completions.Item?
 
----@class index.Searchable<C>: lib.Closable
+---@class index.Searchable<C>
 ---@field search fun(ctx: C): index.SearchIter
 
 ---@class index.Searcher<C, T>: index.Searchable<C>
@@ -14,15 +14,14 @@ local runtime = require "coq.lib.async.runtime"
 ---@field prune fun(ctx: C)
 
 ---@class index.IndexedSpec<C, T>
----@field key_item fun(item: T): any
----@field key_ctx fun(ctx: C): any?
+---@field insert_key fun(item: T): any
+---@field query_key fun(ctx: C): any?
 ---@field child fun(): index.Searcher<C, T>
 
 local M = {}
 
 ---@type index.Searcher<any, any>
 M.empty = {
-  close = lib.noop,
   insert = lib.noop,
   prune = lib.noop,
   search = function()
@@ -79,15 +78,8 @@ M.indexed = function(spec)
 
   local index = {}
 
-  index.close = function()
-    for _, c in pairs(children) do
-      c.close()
-    end
-    children = {}
-  end
-
   index.prune = function(ctx)
-    local k = spec.key_ctx(ctx)
+    local k = spec.query_key(ctx)
     if k == nil then
       for _, c in pairs(children) do
         c.prune(ctx)
@@ -101,7 +93,7 @@ M.indexed = function(spec)
   end
 
   index.insert = function(item)
-    local k = spec.key_item(item)
+    local k = spec.insert_key(item)
     local c = children[k]
     if not c then
       c = spec.child()
@@ -111,7 +103,7 @@ M.indexed = function(spec)
   end
 
   index.search = function(ctx)
-    local k = spec.key_ctx(ctx)
+    local k = spec.query_key(ctx)
     if k == nil then
       return fanout(ctx)
     end

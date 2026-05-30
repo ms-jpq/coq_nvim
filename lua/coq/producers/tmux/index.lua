@@ -12,24 +12,24 @@ local trie = require "coq.lib.index.trie"
 ---@return index.Searcher<tmux.Ctx, tmux.Item>
 local word_trie = function()
   return trie.new {
-    key_item = function(i)
-      return i.word
+    insert_key = function(item)
+      return item.word
     end,
-    key_ctx = function(c)
-      if c.line_before == nil then
+    query_key = function(ctx)
+      if ctx.line_before == nil then
         return nil
       end
-      return string.match(c.line_before, "[%w_]+$")
+      return string.match(ctx.line_before, "[%w_]+$")
     end,
   }
 end
 
 return search.indexed {
-  key_item = function(i)
-    return i.pane
+  insert_key = function(item)
+    return item.pane
   end,
-  key_ctx = function(c)
-    return c.pane
+  query_key = function(ctx)
+    return ctx.pane
   end,
   child = word_trie,
 }

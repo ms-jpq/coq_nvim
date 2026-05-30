@@ -3,10 +3,10 @@ local T = require "coq.lib.test"
 local trie = require "coq.lib.index.trie"
 
 local spec = {
-  key_item = function(i)
+  insert_key = function(i)
     return i.word
   end,
-  key_ctx = function(c)
+  query_key = function(c)
     return c.prefix
   end,
 }
@@ -100,15 +100,6 @@ T.describe("trie", function(test)
     t.insert { word = "spot" }
 
     t.prune {}
-
-    T.eq(collect(t.search {}), {})
-  end)
-
-  test("close wipes the trie", function()
-    local t = trie.new(spec)
-    t.insert { word = "lil" }
-    t.insert { word = "spot" }
-    t.close()
 
     T.eq(collect(t.search {}), {})
   end)

@@ -168,12 +168,12 @@ local collect = function(iter)
 end
 
 T.describe("index.indexed", function(test)
-  test("search routes by key_ctx to a single child", function()
+  test("search routes by query_key to a single child", function()
     local idx = search.indexed {
-      key_item = function(i)
+      insert_key = function(i)
         return i.filetype
       end,
-      key_ctx = function(c)
+      query_key = function(c)
         return c.filetype
       end,
       child = leaf,
@@ -186,12 +186,12 @@ T.describe("index.indexed", function(test)
     T.eq(collect(idx.search { filetype = "python" }), { "spot" })
   end)
 
-  test("key_ctx returning nil fans out across all children", function()
+  test("query_key returning nil fans out across all children", function()
     local idx = search.indexed {
-      key_item = function(i)
+      insert_key = function(i)
         return i.filetype
       end,
-      key_ctx = function(c)
+      query_key = function(c)
         return c.filetype
       end,
       child = leaf,
@@ -205,10 +205,10 @@ T.describe("index.indexed", function(test)
 
   test("search with a key that has no child yields nothing", function()
     local idx = search.indexed {
-      key_item = function(i)
+      insert_key = function(i)
         return i.filetype
       end,
-      key_ctx = function(c)
+      query_key = function(c)
         return c.filetype
       end,
       child = leaf,
@@ -225,10 +225,10 @@ T.describe("index.indexed", function(test)
       return leaf()
     end
     local idx = search.indexed {
-      key_item = function(i)
+      insert_key = function(i)
         return i.filetype
       end,
-      key_ctx = function(c)
+      query_key = function(c)
         return c.filetype
       end,
       child = counted_leaf,
@@ -240,12 +240,12 @@ T.describe("index.indexed", function(test)
     T.eq(created, 2)
   end)
 
-  test("prune with non-nil key_ctx only touches the matching child", function()
+  test("prune with non-nil query_key only touches the matching child", function()
     local idx = search.indexed {
-      key_item = function(i)
+      insert_key = function(i)
         return i.filetype
       end,
-      key_ctx = function(c)
+      query_key = function(c)
         return c.filetype
       end,
       child = leaf,
@@ -259,12 +259,12 @@ T.describe("index.indexed", function(test)
     T.eq(collect(idx.search { filetype = "python" }), { "spot" })
   end)
 
-  test("prune with nil key_ctx fans out across all children", function()
+  test("prune with nil query_key fans out across all children", function()
     local idx = search.indexed {
-      key_item = function(i)
+      insert_key = function(i)
         return i.filetype
       end,
-      key_ctx = function(c)
+      query_key = function(c)
         return c.filetype
       end,
       child = leaf,
@@ -279,50 +279,23 @@ T.describe("index.indexed", function(test)
     T.eq(collect(idx.search { filetype = "python" }), {})
   end)
 
-  test("close cascades to every child", function()
-    local closed = 0
-    local tracking_leaf = function()
-      local lf = leaf()
-      local inner_close = lf.close
-      lf.close = function()
-        closed = closed + 1
-        inner_close()
-      end
-      return lf
-    end
-    local idx = search.indexed {
-      key_item = function(i)
-        return i.kind
-      end,
-      key_ctx = function(c)
-        return c.kind
-      end,
-      child = tracking_leaf,
-    }
-    idx.insert { word = "lil", kind = "a" }
-    idx.insert { word = "spot", kind = "b" }
-    idx.close()
-
-    T.eq(closed, 2)
-  end)
-
   test("two layers route filetype then prefix", function()
     local inner_layer = function()
       return search.indexed {
-        key_item = function(i)
+        insert_key = function(i)
           return string.sub(i.word, 1, 2)
         end,
-        key_ctx = function(c)
+        query_key = function(c)
           return c.prefix and string.sub(c.prefix, 1, 2) or nil
         end,
         child = leaf,
       }
     end
     local idx = search.indexed {
-      key_item = function(i)
+      insert_key = function(i)
         return i.filetype
       end,
-      key_ctx = function(c)
+      query_key = function(c)
         return c.filetype
       end,
       child = inner_layer,
@@ -339,10 +312,10 @@ T.describe("index.indexed", function(test)
 
   test("empty index yields nothing", function()
     local idx = search.indexed {
-      key_item = function(i)
+      insert_key = function(i)
         return i.filetype
       end,
-      key_ctx = function(c)
+      query_key = function(c)
         return c.filetype
       end,
       child = leaf,
@@ -354,7 +327,7 @@ T.describe("index.indexed", function(test)
 end)
 
 T.describe("index.empty", function(test)
-  test("search yields nothing; insert/prune/close are no-ops", function()
+  test("search yields nothing; insert/prune are no-ops", function()
     local got = {}
     for item in search.empty.search {} do
       table.insert(got, item)
@@ -364,6 +337,5 @@ T.describe("index.empty", function(test)
     -- these should not error
     search.empty.insert { word = "lil" }
     search.empty.prune {}
-    search.empty.close()
   end)
 end)

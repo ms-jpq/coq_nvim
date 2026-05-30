@@ -14,14 +14,14 @@ local trie = require "coq.lib.index.trie"
 ---@return index.Searcher<buffer.Ctx, buffer.Item>
 local word_trie = function()
   return trie.new {
-    key_item = function(i)
-      return i.word
+    insert_key = function(item)
+      return item.word
     end,
-    key_ctx = function(c)
-      if c.line_before == nil then
+    query_key = function(ctx)
+      if ctx.line_before == nil then
         return nil
       end
-      return string.match(c.line_before, "[%w_]+$")
+      return string.match(ctx.line_before, "[%w_]+$")
     end,
   }
 end
@@ -29,22 +29,22 @@ end
 ---@return index.Searcher<buffer.Ctx, buffer.Item>
 local buf_layer = function()
   return search.indexed {
-    key_item = function(i)
-      return i.buf
+    insert_key = function(item)
+      return item.buf
     end,
-    key_ctx = function(c)
-      return c.buf
+    query_key = function(ctx)
+      return ctx.buf
     end,
     child = word_trie,
   }
 end
 
 return search.indexed {
-  key_item = function(i)
-    return i.filetype
+  insert_key = function(item)
+    return item.filetype
   end,
-  key_ctx = function(c)
-    return c.filetype
+  query_key = function(ctx)
+    return ctx.filetype
   end,
   child = buf_layer,
 }

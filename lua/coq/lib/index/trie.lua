@@ -2,8 +2,8 @@ local handle = require "coq.lib.async.handle"
 local search = require "coq.lib.index"
 
 ---@class index.TrieSpec<C, T>
----@field key_item fun(item: T): string
----@field key_ctx fun(ctx: C): string?
+---@field insert_key fun(item: T): string
+---@field query_key fun(ctx: C): string?
 
 local M = {}
 
@@ -54,16 +54,12 @@ M.new = function(spec)
 
   local trie = {}
 
-  trie.close = function()
-    root = node_new()
-  end
-
   trie.insert = function(item)
-    descend_create(spec.key_item(item)).item = item
+    descend_create(spec.insert_key(item)).item = item
   end
 
   trie.prune = function(ctx)
-    local key = spec.key_ctx(ctx)
+    local key = spec.query_key(ctx)
     if key == nil or key == "" then
       root = node_new()
       return
@@ -76,7 +72,7 @@ M.new = function(spec)
 
   trie.search = function(ctx)
     local node = (function()
-      local key = spec.key_ctx(ctx)
+      local key = spec.query_key(ctx)
       if key == nil or key == "" then
         return root
       end
