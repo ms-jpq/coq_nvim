@@ -22,38 +22,26 @@ local PANE_FMT = table.concat(PANE_FIELDS, SEP)
 ---@class tmux.State
 ---@field iskeyword? string
 
-local list_panes, pane_words, doc, matcher
+local M = {
+  ---@type tmux.State
+  state = {},
+}
 
----@param settings config.Settings
-local idle = function(settings, events)
-  local state = require("coq.producers.tmux").state
-
-  for _, ev in pairs(events) do
-    if ev.kind == "iskeyword" then
-      state.iskeyword = ev.iskeyword
-    end
-  end
-
-  local env = vim.uv.os_environ()
-  if env.TMUX == nil or state.iskeyword == nil then
-    return
-  end
-
-  local kw = tokens.parse_iskeyword(state.iskeyword)
-  local index = require "coq.producers.tmux.index"
-
-  for pane in list_panes(settings, env.TMUX_PANE) do
-    index.prune { pane = pane.id }
-    for word in pane_words(kw, pane.id) do
-      index.insert { pane = pane.id, word = word, meta = pane.meta }
-    end
-  end
+---@param _ async.Nursery
+---@param push producers.Push
+local bind = function(_, push)
+  vim.api.nvim_create_autocmd({ "BufEnter" }, {
+    group = lib.group,
+    callback = function(args)
+      push { kind = "iskeyword", iskeyword = vim.bo[args.buf].iskeyword }
+    end,
+  })
 end
 
 ---@param settings config.Settings
 ---@param exclude string?
 ---@return lib.Iterator<tmux.Pane>
-list_panes = function(settings, exclude)
+local list_panes = function(settings, exclude)
   return async.wrap(function()
     local scope_arg = settings.clients.tmux.all_sessions and "-a" or "-s"
     local proc = atools.spawn { "tmux", "list-panes", scope_arg, "-F", PANE_FMT }
@@ -84,7 +72,7 @@ end
 ---@param kw table<integer, true>
 ---@param pane string
 ---@return lib.Iterator<string>
-pane_words = function(kw, pane)
+local pane_words = function(kw, pane)
   return async.wrap(function()
     local proc = atools.spawn { "tmux", "capture-pane", "-p", "-J", "-t", pane }
     if proc == nil or proc.code ~= 0 then
@@ -97,10 +85,36 @@ pane_words = function(kw, pane)
   end)
 end
 
+---@param settings config.Settings
+M.idle = function(settings, events)
+  local state = require("coq.producers.tmux").state
+
+  for _, ev in pairs(events) do
+    if ev.kind == "iskeyword" then
+      state.iskeyword = ev.iskeyword
+    end
+  end
+
+  local env = vim.uv.os_environ()
+  if env.TMUX == nil or state.iskeyword == nil then
+    return
+  end
+
+  local kw = tokens.parse_iskeyword(state.iskeyword)
+  local index = require "coq.producers.tmux.index"
+
+  for pane in list_panes(settings, env.TMUX_PANE) do
+    index.prune { pane = pane.id }
+    for word in pane_words(kw, pane.id) do
+      index.insert { pane = pane.id, word = word, meta = pane.meta }
+    end
+  end
+end
+
 ---@param opts config.TmuxClient
 ---@param meta tmux.PaneMeta
 ---@return string
-doc = function(opts, meta)
+local doc = function(opts, meta)
   local parts = {}
   if opts.all_sessions then
     table.insert(parts, "S: " .. meta.session_name .. opts.parent_scope)
@@ -111,7 +125,7 @@ doc = function(opts, meta)
 end
 
 ---@param settings config.Settings
-matcher = function(settings, ctx)
+M.matcher = function(settings, ctx)
   local opts = settings.clients.tmux
   local sc = settings.display.pum.source_context
   local menu = sc[1] .. opts.short_name .. sc[2]
@@ -134,11 +148,6 @@ matcher = function(settings, ctx)
   end
 end
 
-local M = {
-  ---@type tmux.State
-  state = {},
-}
-
 ---@param settings config.Settings
 ---@return producers.Producer
 M.new = function(settings)
@@ -148,15 +157,12 @@ M.new = function(settings)
     key = function(ev)
       return ev.kind
     end,
-    idle = idle,
-    matcher = matcher,
-    bind = function(_, push)
-      vim.api.nvim_create_autocmd({ "BufEnter" }, {
-        group = lib.group,
-        callback = function(args)
-          push { kind = "iskeyword", iskeyword = vim.bo[args.buf].iskeyword }
-        end,
-      })
+    bind = bind,
+    idle = function(...)
+      require("coq.producers.tmux").idle(...)
+    end,
+    matcher = function(...)
+      require("coq.producers.tmux").matcher(...)
     end,
   }
 end

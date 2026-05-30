@@ -4,6 +4,7 @@ end
 
 local async = require "coq.lib.async"
 local config = require "coq.config"
+local context = require "coq.lib.context"
 local events_m = require "coq.completions.events"
 local idle = require "coq.completions.idle"
 local insertion = require "coq.completions.insertion"

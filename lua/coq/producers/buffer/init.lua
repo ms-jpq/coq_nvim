@@ -9,10 +9,62 @@ local tokens = require "coq.lib.index.tokens"
 ---@field filename string
 ---@field iskeyword string
 
-local buffer_info, doc, matcher
+local M = {}
+
+local kinds = {
+  BufEnter = "update",
+  BufRead = "update",
+  BufWinEnter = "update",
+  TextChanged = "update",
+  TextChangedI = "update",
+  BufDelete = "remove",
+  BufWipeout = "remove",
+}
+
+---@param _ async.Nursery
+---@param push producers.Push
+local bind = function(_, push)
+  vim.api.nvim_create_autocmd(vim.tbl_keys(kinds), {
+    group = lib.group,
+    callback = function(args)
+      push { kind = kinds[args.event], buf = args.buf }
+    end,
+  })
+end
+
+---@param bufs integer[]
+---@return worker.WorkerStream
+local buffer_info = function(bufs)
+  local worker = require "coq.lib.worker"
+
+  return worker.main_stream(function(buffers)
+    for _, buf in ipairs(buffers) do
+      if vim.api.nvim_buf_is_loaded(buf) then
+        local count = vim.api.nvim_buf_line_count(buf)
+        local row, height = (function()
+          local win = vim.fn.bufwinid(buf)
+          if win == -1 then
+            return 0, count
+          end
+          return vim.api.nvim_win_get_cursor(win)[1] - 1, vim.api.nvim_win_get_height(win)
+        end)()
+        local lo = math.max(0, row - height)
+        local hi = math.min(count, row + height + 1)
+
+        coroutine.yield {
+          buf = buf,
+          lines = vim.api.nvim_buf_get_lines(buf, lo, hi, true),
+          filetype = vim.bo[buf].filetype,
+          filename = vim.api.nvim_buf_get_name(buf),
+          iskeyword = vim.bo[buf].iskeyword,
+        }
+      end
+    end
+  end, bufs)
+end
 
 ---@param settings config.Settings
-local idle = function(settings, events)
+M.idle = function(settings, events)
   local _ = settings
   local index = require "coq.producers.buffer.index"
 
@@ -42,42 +94,11 @@ local idle = function(settings, events)
   end
 end
 
----@param bufs integer[]
----@return worker.WorkerStream
-buffer_info = function(bufs)
-  local worker = require "coq.lib.worker"
-
-  return worker.main_stream(function(buffers)
-    for _, buf in ipairs(buffers) do
-      if vim.api.nvim_buf_is_loaded(buf) then
-        local count = vim.api.nvim_buf_line_count(buf)
-        local row, height = (function()
-          local win = vim.fn.bufwinid(buf)
-          if win == -1 then
-            return 0, count
-          end
-          return vim.api.nvim_win_get_cursor(win)[1] - 1, vim.api.nvim_win_get_height(win)
-        end)()
-        local lo = math.max(0, row - height)
-        local hi = math.min(count, row + height + 1)
-
-        coroutine.yield {
-          buf = buf,
-          lines = vim.api.nvim_buf_get_lines(buf, lo, hi, true),
-          filetype = vim.bo[buf].filetype,
-          filename = vim.api.nvim_buf_get_name(buf),
-          iskeyword = vim.bo[buf].iskeyword,
-        }
-      end
-    end
-  end, bufs)
-end
-
 ---@param opts config.BuffersClient
 ---@param item buffer.Item
 ---@param current_filetype string
 ---@return string
-doc = function(opts, item, current_filetype)
+local doc = function(opts, item, current_filetype)
   local parts = {}
   if item.filetype ~= "" and item.filetype ~= current_filetype then
     table.insert(parts, item.filetype .. opts.parent_scope)
@@ -89,7 +110,7 @@ doc = function(opts, item, current_filetype)
 end
 
 ---@param settings config.Settings
-matcher = function(settings, ctx)
+M.matcher = function(settings, ctx)
   local opts = settings.clients.buffers
   local sc = settings.display.pum.source_context
   local menu = sc[1] .. opts.short_name .. sc[2]
@@ -117,18 +138,6 @@ matcher = function(settings, ctx)
   end
 end
 
-local kinds = {
-  BufEnter = "update",
-  BufRead = "update",
-  BufWinEnter = "update",
-  TextChanged = "update",
-  TextChangedI = "update",
-  BufDelete = "remove",
-  BufWipeout = "remove",
-}
-
-local M = {}
-
 ---@param settings config.Settings
 ---@return producers.Producer
 M.new = function(settings)
@@ -138,15 +147,12 @@ M.new = function(settings)
     key = function(ev)
       return ev.buf
     end,
-    idle = idle,
-    matcher = matcher,
-    bind = function(_, push)
-      vim.api.nvim_create_autocmd(vim.tbl_keys(kinds), {
-        group = lib.group,
-        callback = function(args)
-          push { kind = kinds[args.event], buf = args.buf }
-        end,
-      })
+    bind = bind,
+    idle = function(...)
+      require("coq.producers.buffer").idle(...)
+    end,
+    matcher = function(...)
+      require("coq.producers.buffer").matcher(...)
     end,
   }
 end
