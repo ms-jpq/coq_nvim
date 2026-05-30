@@ -18,6 +18,7 @@ T.describe("supervisor", function(test)
     local sup = supervisor.new {
       producer.new {
         idle = lib.noop,
+        bind = lib.noop,
         matcher = function()
           coroutine.yield "lil"
           coroutine.yield "spot"
@@ -25,6 +26,7 @@ T.describe("supervisor", function(test)
       },
       producer.new {
         idle = lib.noop,
+        bind = lib.noop,
         matcher = function()
           coroutine.yield "fido"
         end,
@@ -47,6 +49,7 @@ T.describe("supervisor", function(test)
       local sup = supervisor.new {
         producer.new {
           idle = lib.noop,
+          bind = lib.noop,
           matcher = function()
             async.sleep(50 * T.SLOW)
             table.insert(order, "matcher_done")
@@ -73,6 +76,7 @@ T.describe("supervisor", function(test)
       local sup = supervisor.new {
         producer.new {
           idle = lib.noop,
+          bind = lib.noop,
           matcher = function()
             coroutine.yield "lil"
             async.sleep(50 * T.SLOW)
@@ -139,6 +143,7 @@ T.describe("supervisor", function(test)
           idle = function()
             idle_ran = true
           end,
+          bind = lib.noop,
           matcher = function()
             coroutine.yield "lil"
             async.sleep(50 * T.SLOW)
@@ -211,6 +216,7 @@ T.describe("supervisor", function(test)
     local sup = supervisor.new {
       producer.new {
         idle = lib.noop,
+        bind = lib.noop,
         matcher = function()
           coroutine.yield "lil"
           error "boom"
@@ -257,6 +263,7 @@ T.describe("supervisor", function(test)
     local sup = supervisor.new {
       producer.new {
         idle = lib.noop,
+        bind = lib.noop,
         matcher = function()
           coroutine.yield "lil"
         end,
@@ -338,6 +345,7 @@ T.describe("supervisor", function(test)
       local sup = supervisor.new {
         producer.new {
           idle = lib.noop,
+          bind = lib.noop,
           matcher = function()
             coroutine.yield "lil"
             async.sleep(100 * T.SLOW)
@@ -368,6 +376,7 @@ T.describe("supervisor", function(test)
       local sup = supervisor.new {
         producer.new {
           idle = lib.noop,
+          bind = lib.noop,
           matcher = function()
             coroutine.yield "lil"
             async.sleep(100 * T.SLOW)
@@ -397,12 +406,14 @@ T.describe("supervisor", function(test)
     local inner = supervisor.new {
       producer.new {
         idle = lib.noop,
+        bind = lib.noop,
         matcher = function()
           coroutine.yield "lil"
         end,
       },
       producer.new {
         idle = lib.noop,
+        bind = lib.noop,
         matcher = function()
           coroutine.yield "spot"
         end,
@@ -412,6 +423,7 @@ T.describe("supervisor", function(test)
       inner,
       producer.new {
         idle = lib.noop,
+        bind = lib.noop,
         matcher = function()
           coroutine.yield "fido"
         end,

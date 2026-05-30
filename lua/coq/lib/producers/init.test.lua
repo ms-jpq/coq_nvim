@@ -8,6 +8,7 @@ T.describe("producer (regular)", function(test)
   test("matcher yields rows that stream through the iterator", function()
     local db = producer.new {
       idle = lib.noop,
+      bind = lib.noop,
       matcher = function()
         coroutine.yield "lil"
         coroutine.yield "spot"
@@ -25,6 +26,7 @@ T.describe("producer (regular)", function(test)
     local got
     local db = producer.new {
       idle = lib.noop,
+      bind = lib.noop,
       matcher = function(ctx)
         got = ctx
       end,
@@ -35,7 +37,7 @@ T.describe("producer (regular)", function(test)
   end)
 
   test("empty matcher returns nil on the first pull", function()
-    local db = producer.new { idle = lib.noop, matcher = lib.noop }
+    local db = producer.new { idle = lib.noop, bind = lib.noop, matcher = lib.noop }
     local it = db.search {}
     T.eq(it(), nil)
   end)
@@ -43,6 +45,7 @@ T.describe("producer (regular)", function(test)
   test("matcher composes with async primitives between yields", function()
     local db = producer.new {
       idle = lib.noop,
+      bind = lib.noop,
       matcher = function()
         coroutine.yield "lil"
         async.sleep(5 * T.SLOW)
@@ -63,6 +66,7 @@ T.describe("producer (regular)", function(test)
     -- the matcher's next push fails after close, ending the coroutine.
     local db = producer.new {
       idle = lib.noop,
+      bind = lib.noop,
       matcher = function()
         while true do
           coroutine.yield "row"
@@ -80,6 +84,7 @@ T.describe("producer (regular)", function(test)
   test("close is idempotent", function()
     local db = producer.new {
       idle = lib.noop,
+      bind = lib.noop,
       matcher = function()
         coroutine.yield "lil"
       end,
@@ -92,6 +97,7 @@ T.describe("producer (regular)", function(test)
   test("matcher error propagates to the consumer", function()
     local db = producer.new {
       idle = lib.noop,
+      bind = lib.noop,
       matcher = function()
         coroutine.yield "lil"
         error "boom"

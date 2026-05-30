@@ -17,6 +17,7 @@ local cancel_tests = function(name, factory)
         n.spawn(function()
           local db = factory {
             idle = lib.noop,
+            bind = lib.noop,
             matcher = function()
               coroutine.yield "lil"
             end,
@@ -32,6 +33,7 @@ local cancel_tests = function(name, factory)
       local n = nursery.new(handle.new())
       local db = factory {
         idle = lib.noop,
+        bind = lib.noop,
         matcher = function()
           coroutine.yield "lil"
         end,
@@ -47,6 +49,7 @@ local cancel_tests = function(name, factory)
         local n = nursery.new(handle.new())
         local db = factory {
           idle = lib.noop,
+          bind = lib.noop,
           matcher = function()
             coroutine.yield "lil"
           end,
@@ -65,6 +68,7 @@ local cancel_tests = function(name, factory)
         n.spawn(function()
           local db = factory {
             idle = lib.noop,
+            bind = lib.noop,
             matcher = function(ctx)
               require("coq.lib.async").sleep(80 * ctx.slow)
               coroutine.yield "never"

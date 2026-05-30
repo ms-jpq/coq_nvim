@@ -1,62 +1,29 @@
-local handle = require "coq.lib.async.handle"
 local lib = require "coq.lib"
-local queue = require "coq.lib.queue"
+local producer = require "coq.lib.producers"
 local worker = require "coq.lib.worker"
 
 local M = {}
 
 ---@type producers.NewProducer
 M.new = function(spec)
-  local idle = spec.idle
-  local matcher = spec.matcher
-  local on_bind = spec.bind
   local w = worker.spawn()
-  local event_bus = queue.new()
-  local ph = handle.new()
-  local bound = false
+  return producer.new {
+    key = spec.key,
+    bind = spec.bind,
+    idle = function(events, ctx)
+      w.queue(spec.idle, events, ctx)
+    end,
+    matcher = function(ctx)
+      lib.scope(function(defer)
+        local stream = w.queue_stream(spec.matcher, ctx)
+        defer(stream.close)
 
-  local push = function(event)
-    if ph.cancelled then
-      return
-    end
-    event_bus.push(event)
-  end
-
-  local db = { queue = w.queue }
-
-  db.bind = function(n)
-    local _ = n.handle.on_cancel(ph.cancel)
-    if bound then
-      return
-    end
-    bound = true
-    if on_bind then
-      on_bind(n, push)
-    end
-  end
-
-  db.idle = function(ctx)
-    if ph.cancelled then
-      return
-    end
-    local batch = {}
-    for event in event_bus.pop do
-      table.insert(batch, event)
-    end
-    if #batch > 0 then
-      w.queue(idle, batch, ctx)
-    end
-  end
-
-  db.search = function(ctx)
-    if ph.cancelled then
-      return lib.dead_iter
-    end
-    return w.queue_stream(matcher, ctx)
-  end
-
-  ---@cast db producers.Producer
-  return db
+        for item in stream do
+          coroutine.yield(item)
+        end
+      end)
+    end,
+  }
 end
 
 return M
