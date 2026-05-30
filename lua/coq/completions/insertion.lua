@@ -5,8 +5,6 @@ local lib = require "coq.lib"
 local resolve = require "coq.completions.resolve"
 
 local DEFAULT_ENCODING = "utf-16"
-local TAIL_RE = vim.regex [[\V\k\+\$]]
-local HEAD_RE = vim.regex [[\V\k\+]]
 
 ---@param ctx ctx.base
 ---@param i completions.Item
@@ -28,16 +26,16 @@ local word_range = function(ctx, i, lsp)
   local before_inserted = string.sub(line, 1, original_col)
   local after_cursor = string.sub(line, col + 1)
 
-  local start_row = (range and range.start.line) or end_row
+  local start_row = math.max(0, math.min(end_row, (range and range.start.line) or end_row))
   local start_line = (start_row == end_row) and line
-    or (vim.api.nvim_buf_get_lines(ctx.buf, start_row, start_row + 1, false)[1] or "")
+    or vim.api.nvim_buf_get_lines(ctx.buf, start_row, start_row + 1, true)[1]
 
   local start_col, end_col = unpack(vim.api.nvim_buf_call(ctx.buf, function()
-    local s, e = HEAD_RE:match_str(after_cursor)
-    local preceding = TAIL_RE:match_str(before_inserted) or original_col
-    if range then
-      preceding = vim.str_byteindex(start_line, lsp.position_encoding or DEFAULT_ENCODING, range.start.character)
-    end
+    local s, e = vim.regex([[\V\k\+]]):match_str(after_cursor)
+    local preceding = range
+        and vim.str_byteindex(start_line, lsp.position_encoding or DEFAULT_ENCODING, range.start.character)
+      or (vim.regex([[\V\k\+\$]]):match_str(before_inserted) or original_col)
+
     return { preceding, col + ((s == 0) and e or 0) }
   end))
 
@@ -98,6 +96,10 @@ M.complete = function(ctx, iter)
   for i in iter do
     ---@cast i completions.Item
     table.insert(items, item.to_nvim(i))
+  end
+
+  if vim.api.nvim_get_mode().mode:sub(1, 1) ~= "i" then
+    return
   end
 
   local start = #ctx.line_before + 1
