@@ -8,16 +8,26 @@ local search = require "coq.lib.index"
 
 ---@class producers.Producer: index.Searchable
 ---@field idle fun(ctx: ctx.full)
----@field bind fun(n: async.Nursery, on_push?: fun(push: producers.Push))
+---@field bind fun(n: async.Nursery)
 
 ---@alias producers.IdleFn fun(events: any[], ctx: ctx.full)
 ---@alias producers.MatcherFn fun(ctx: ctx.full)
----@alias producers.NewProducer fun(idle: producers.IdleFn, matcher: producers.MatcherFn): producers.Producer
+---@alias producers.OnBind fun(n: async.Nursery, push: producers.Push)
+
+---@class producers.Spec
+---@field idle producers.IdleFn
+---@field matcher producers.MatcherFn
+---@field bind? producers.OnBind
+
+---@alias producers.NewProducer fun(spec: producers.Spec): producers.Producer
 
 local M = {}
 
 ---@type producers.NewProducer
-M.new = function(idle, matcher)
+M.new = function(spec)
+  local idle = spec.idle
+  local matcher = spec.matcher
+  local on_bind = spec.bind
   local events = queue.new()
   local ph = handle.new()
   local bound = false
@@ -30,14 +40,14 @@ M.new = function(idle, matcher)
   end
 
   local db = {
-    bind = function(n, on_push)
+    bind = function(n)
       local _ = n.handle.on_cancel(ph.cancel)
       if bound then
         return
       end
       bound = true
-      if on_push then
-        on_push(push)
+      if on_bind then
+        on_bind(n, push)
       end
     end,
   }

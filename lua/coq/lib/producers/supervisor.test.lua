@@ -16,13 +16,19 @@ T.describe("supervisor", function(test)
   test("merges rows from all producers", function()
     local n = detached()
     local sup = supervisor.new {
-      producer.new(lib.noop, function()
-        coroutine.yield "lil"
-        coroutine.yield "spot"
-      end),
-      producer.new(lib.noop, function()
-        coroutine.yield "fido"
-      end),
+      producer.new {
+        idle = lib.noop,
+        matcher = function()
+          coroutine.yield "lil"
+          coroutine.yield "spot"
+        end,
+      },
+      producer.new {
+        idle = lib.noop,
+        matcher = function()
+          coroutine.yield "fido"
+        end,
+      },
     }
     sup.bind(n)
     local seen = {}
@@ -39,10 +45,13 @@ T.describe("supervisor", function(test)
     local order = {}
     async.scope(function(n)
       local sup = supervisor.new {
-        producer.new(lib.noop, function()
-          async.sleep(50 * T.SLOW)
-          table.insert(order, "matcher_done")
-        end),
+        producer.new {
+          idle = lib.noop,
+          matcher = function()
+            async.sleep(50 * T.SLOW)
+            table.insert(order, "matcher_done")
+          end,
+        },
       }
       sup.bind(n)
       n.spawn(function()
@@ -62,11 +71,14 @@ T.describe("supervisor", function(test)
     local first_after, second_first
     async.scope(function(n)
       local sup = supervisor.new {
-        producer.new(lib.noop, function()
-          coroutine.yield "lil"
-          async.sleep(50 * T.SLOW)
-          coroutine.yield "never"
-        end),
+        producer.new {
+          idle = lib.noop,
+          matcher = function()
+            coroutine.yield "lil"
+            async.sleep(50 * T.SLOW)
+            coroutine.yield "never"
+          end,
+        },
       }
       sup.bind(n)
       local first = sup.search {}
@@ -88,17 +100,20 @@ T.describe("supervisor", function(test)
   test("new search cancels in-flight idle", function()
     local idle_elapsed_ms
     async.scope(function(n)
-      local p = producer.new(function()
-        local start = vim.uv.hrtime()
-        async.sleep(100 * T.SLOW)
-        idle_elapsed_ms = (vim.uv.hrtime() - start) / 1e6
-      end, function()
-        coroutine.yield "lil"
-      end)
       local push
-      p.bind(n, function(p_push)
-        push = p_push
-      end)
+      local p = producer.new {
+        idle = function()
+          local start = vim.uv.hrtime()
+          async.sleep(100 * T.SLOW)
+          idle_elapsed_ms = (vim.uv.hrtime() - start) / 1e6
+        end,
+        matcher = function()
+          coroutine.yield "lil"
+        end,
+        bind = function(_, p_push)
+          push = p_push
+        end,
+      }
       local sup = supervisor.new { p }
       sup.bind(n)
       push(true)
@@ -120,12 +135,15 @@ T.describe("supervisor", function(test)
     local idle_ran = false
     async.scope(function(n)
       local sup = supervisor.new {
-        producer.new(function()
-          idle_ran = true
-        end, function()
-          coroutine.yield "lil"
-          async.sleep(50 * T.SLOW)
-        end),
+        producer.new {
+          idle = function()
+            idle_ran = true
+          end,
+          matcher = function()
+            coroutine.yield "lil"
+            async.sleep(50 * T.SLOW)
+          end,
+        },
       }
       sup.bind(n)
       local iter = sup.search {}
@@ -141,15 +159,18 @@ T.describe("supervisor", function(test)
   test("idle runs once search has ended", function()
     local idle_ran = false
     async.scope(function(n)
-      local p = producer.new(function()
-        idle_ran = true
-      end, function()
-        coroutine.yield "lil"
-      end)
       local push
-      p.bind(n, function(p_push)
-        push = p_push
-      end)
+      local p = producer.new {
+        idle = function()
+          idle_ran = true
+        end,
+        matcher = function()
+          coroutine.yield "lil"
+        end,
+        bind = function(_, p_push)
+          push = p_push
+        end,
+      }
       local sup = supervisor.new { p }
       sup.bind(n)
       for _ in sup.search {} do
@@ -188,10 +209,13 @@ T.describe("supervisor", function(test)
   test("producer error kills the merged stream", function()
     local n = detached()
     local sup = supervisor.new {
-      producer.new(lib.noop, function()
-        coroutine.yield "lil"
-        error "boom"
-      end),
+      producer.new {
+        idle = lib.noop,
+        matcher = function()
+          coroutine.yield "lil"
+          error "boom"
+        end,
+      },
     }
     sup.bind(n)
     local ok, err = pcall(function()
@@ -231,9 +255,12 @@ T.describe("supervisor", function(test)
   test("search after close returns a dead iter", function()
     local n = detached()
     local sup = supervisor.new {
-      producer.new(lib.noop, function()
-        coroutine.yield "lil"
-      end),
+      producer.new {
+        idle = lib.noop,
+        matcher = function()
+          coroutine.yield "lil"
+        end,
+      },
     }
     sup.bind(n)
     n.handle.cancel()
@@ -247,13 +274,16 @@ T.describe("supervisor", function(test)
     local idle_ran = false
     async.scope(function(_)
       local n = detached()
-      local p = producer.new(function()
-        idle_ran = true
-      end, lib.noop)
       local push
-      p.bind(n, function(p_push)
-        push = p_push
-      end)
+      local p = producer.new {
+        idle = function()
+          idle_ran = true
+        end,
+        matcher = lib.noop,
+        bind = function(_, p_push)
+          push = p_push
+        end,
+      }
       local sup = supervisor.new { p }
       sup.bind(n)
       push(true)
@@ -269,18 +299,21 @@ T.describe("supervisor", function(test)
     local first_elapsed_ms
     local idle_calls = 0
     async.scope(function(n)
-      local p = producer.new(function()
-        idle_calls = idle_calls + 1
-        if idle_calls == 1 then
-          local start = vim.uv.hrtime()
-          async.sleep(100 * T.SLOW)
-          first_elapsed_ms = (vim.uv.hrtime() - start) / 1e6
-        end
-      end, lib.noop)
       local push
-      p.bind(n, function(p_push)
-        push = p_push
-      end)
+      local p = producer.new {
+        idle = function()
+          idle_calls = idle_calls + 1
+          if idle_calls == 1 then
+            local start = vim.uv.hrtime()
+            async.sleep(100 * T.SLOW)
+            first_elapsed_ms = (vim.uv.hrtime() - start) / 1e6
+          end
+        end,
+        matcher = lib.noop,
+        bind = function(_, p_push)
+          push = p_push
+        end,
+      }
       local sup = supervisor.new { p }
       sup.bind(n)
 
@@ -303,11 +336,14 @@ T.describe("supervisor", function(test)
     async.scope(function(_)
       local n = detached()
       local sup = supervisor.new {
-        producer.new(lib.noop, function()
-          coroutine.yield "lil"
-          async.sleep(100 * T.SLOW)
-          coroutine.yield "never"
-        end),
+        producer.new {
+          idle = lib.noop,
+          matcher = function()
+            coroutine.yield "lil"
+            async.sleep(100 * T.SLOW)
+            coroutine.yield "never"
+          end,
+        },
       }
       sup.bind(n)
       async.scope(function(inner)
@@ -330,11 +366,14 @@ T.describe("supervisor", function(test)
     local first, after
     async.scope(function(n)
       local sup = supervisor.new {
-        producer.new(lib.noop, function()
-          coroutine.yield "lil"
-          async.sleep(100 * T.SLOW)
-          matcher_done = true
-        end),
+        producer.new {
+          idle = lib.noop,
+          matcher = function()
+            coroutine.yield "lil"
+            async.sleep(100 * T.SLOW)
+            matcher_done = true
+          end,
+        },
       }
       sup.bind(n)
       async.scope(function(inner)
@@ -356,18 +395,27 @@ T.describe("supervisor", function(test)
   test("supervisor satisfies the Producer shape (nestable)", function()
     local n = detached()
     local inner = supervisor.new {
-      producer.new(lib.noop, function()
-        coroutine.yield "lil"
-      end),
-      producer.new(lib.noop, function()
-        coroutine.yield "spot"
-      end),
+      producer.new {
+        idle = lib.noop,
+        matcher = function()
+          coroutine.yield "lil"
+        end,
+      },
+      producer.new {
+        idle = lib.noop,
+        matcher = function()
+          coroutine.yield "spot"
+        end,
+      },
     }
     local outer = supervisor.new {
       inner,
-      producer.new(lib.noop, function()
-        coroutine.yield "fido"
-      end),
+      producer.new {
+        idle = lib.noop,
+        matcher = function()
+          coroutine.yield "fido"
+        end,
+      },
     }
     outer.bind(n)
     local seen = {}

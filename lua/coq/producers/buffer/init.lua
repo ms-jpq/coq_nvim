@@ -1,4 +1,5 @@
 local lib = require "coq.lib"
+local mpmc = require "coq.lib.channels.mpmc"
 local threaded = require "coq.lib.producers.threaded"
 local tokens = require "coq.lib.index.tokens"
 
@@ -36,40 +37,48 @@ local remove_kinds = {
   BufWipeout = true,
 }
 
-local M = threaded.new(idle, matcher)
+local M = {}
 
-local inner_bind = M.bind
+---@param opts config.BuffersClient
+---@return producers.Producer
+M.new = function(opts)
+  local _ = opts
+  return threaded.new {
+    idle = idle,
+    matcher = matcher,
+    bind = function(n, push)
+      local chan = mpmc.new(nil, n.handle)
 
-M.bind = function(n)
-  inner_bind(n, function(push)
-    local on_event = function(args)
-      local buf = args.buf
-      if remove_kinds[args.event] then
-        push { kind = "remove", buf = buf }
-        return
+      local on_event = function(args)
+        chan.push(args)
       end
 
-      if update_kinds[args.event] then
-        if not vim.api.nvim_buf_is_loaded(buf) then
-          return
+      vim.api.nvim_create_autocmd(vim.tbl_keys(update_kinds), {
+        group = lib.group,
+        callback = on_event,
+      })
+
+      vim.api.nvim_create_autocmd(vim.tbl_keys(remove_kinds), {
+        group = lib.group,
+        callback = on_event,
+      })
+
+      n.spawn(function()
+        for args in chan do
+          local buf = args.buf
+
+          if remove_kinds[args.event] then
+            push { kind = "remove", buf = buf }
+          elseif update_kinds[args.event] and vim.api.nvim_buf_is_loaded(buf) then
+            local lines = vim.api.nvim_buf_get_lines(buf, 0, -1, true)
+            local words = tokens.locality(buf, lines)
+            local filetype = vim.bo[buf].filetype
+            push { kind = "update", buf = buf, words = words, filetype = filetype }
+          end
         end
-        local lines = vim.api.nvim_buf_get_lines(buf, 0, -1, true)
-        local words = tokens.locality(buf, lines)
-        local filetype = vim.bo[buf].filetype
-        push { kind = "update", buf = buf, words = words, filetype = filetype }
-      end
-    end
-
-    vim.api.nvim_create_autocmd(vim.tbl_keys(update_kinds), {
-      group = lib.group,
-      callback = on_event,
-    })
-
-    vim.api.nvim_create_autocmd(vim.tbl_keys(remove_kinds), {
-      group = lib.group,
-      callback = on_event,
-    })
-  end)
+      end)
+    end,
+  }
 end
 
 return M

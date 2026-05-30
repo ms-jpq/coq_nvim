@@ -15,9 +15,12 @@ local cancel_tests = function(name, factory)
       local got = "unset"
       async.scope(function(n)
         n.spawn(function()
-          local db = factory(lib.noop, function()
-            coroutine.yield "lil"
-          end)
+          local db = factory {
+            idle = lib.noop,
+            matcher = function()
+              coroutine.yield "lil"
+            end,
+          }
           db.bind(n)
           got = db.search {}()
         end)
@@ -27,9 +30,12 @@ local cancel_tests = function(name, factory)
 
     test("bind cancellation is idempotent", function()
       local n = nursery.new(handle.new())
-      local db = factory(lib.noop, function()
-        coroutine.yield "lil"
-      end)
+      local db = factory {
+        idle = lib.noop,
+        matcher = function()
+          coroutine.yield "lil"
+        end,
+      }
       db.bind(n)
       n.handle.cancel()
       n.handle.cancel() -- no error
@@ -39,9 +45,12 @@ local cancel_tests = function(name, factory)
       local got = "unset"
       async.scope(function(_)
         local n = nursery.new(handle.new())
-        local db = factory(lib.noop, function()
-          coroutine.yield "lil"
-        end)
+        local db = factory {
+          idle = lib.noop,
+          matcher = function()
+            coroutine.yield "lil"
+          end,
+        }
         db.bind(n)
         n.handle.cancel()
         got = db.search { slow = T.SLOW }()
@@ -54,10 +63,13 @@ local cancel_tests = function(name, factory)
       local elapsed_ms
       async.scope(function(n)
         n.spawn(function()
-          local db = factory(lib.noop, function(ctx)
-            require("coq.lib.async").sleep(80 * ctx.slow)
-            coroutine.yield "never"
-          end)
+          local db = factory {
+            idle = lib.noop,
+            matcher = function(ctx)
+              require("coq.lib.async").sleep(80 * ctx.slow)
+              coroutine.yield "never"
+            end,
+          }
           db.bind(n)
           local start = vim.uv.hrtime()
           local _ = db.search { slow = T.SLOW }()

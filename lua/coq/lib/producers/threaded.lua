@@ -6,7 +6,10 @@ local worker = require "coq.lib.worker"
 local M = {}
 
 ---@type producers.NewProducer
-M.new = function(idle, matcher)
+M.new = function(spec)
+  local idle = spec.idle
+  local matcher = spec.matcher
+  local on_bind = spec.bind
   local w = worker.spawn()
   local event_bus = queue.new()
   local ph = handle.new()
@@ -21,14 +24,14 @@ M.new = function(idle, matcher)
 
   local db = { queue = w.queue }
 
-  db.bind = function(n, on_push)
+  db.bind = function(n)
     local _ = n.handle.on_cancel(ph.cancel)
     if bound then
       return
     end
     bound = true
-    if on_push then
-      on_push(push)
+    if on_bind then
+      on_bind(n, push)
     end
   end
 
