@@ -30,10 +30,10 @@ T.describe("proto", function(test)
     local frame = proto.encode { kind = "x", id = 1 }
     local decode = proto.decoder()
 
-    local first = drain(decode, frame:sub(1, #frame - 3))
+    local first = drain(decode, string.sub(frame, 1, #frame - 3))
     T.eq(first, {})
 
-    local rest = drain(decode, frame:sub(#frame - 2))
+    local rest = drain(decode, string.sub(frame, #frame - 2))
     T.eq(#rest, 1)
     T.eq(rest[1].kind, "x")
   end)
@@ -42,10 +42,10 @@ T.describe("proto", function(test)
     local frame = proto.encode { kind = "x", id = 1 }
     local decode = proto.decoder()
 
-    local first = drain(decode, frame:sub(1, 4))
+    local first = drain(decode, string.sub(frame, 1, 4))
     T.eq(first, {})
 
-    local rest = drain(decode, frame:sub(5))
+    local rest = drain(decode, string.sub(frame, 5))
     T.eq(#rest, 1)
   end)
 

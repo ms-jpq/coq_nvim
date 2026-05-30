@@ -60,7 +60,7 @@ M.full = function(base)
   end
 
   do
-    local lhs, rhs = bo.commentstring:match "(.*)%%s(.*)"
+    local lhs, rhs = string.match(bo.commentstring, "(.*)%%s(.*)")
     local fileformat = bo.fileformat
 
     ctx.tabstop = bo.tabstop
@@ -76,8 +76,8 @@ M.full = function(base)
 
     ctx.line_count = vim.api.nvim_buf_line_count(ctx.buf)
     ctx.line = vim.api.nvim_get_current_line()
-    ctx.line_before = ctx.line:sub(1, col)
-    ctx.line_after = ctx.line:sub(col + 1)
+    ctx.line_before = string.sub(ctx.line, 1, col)
+    ctx.line_after = string.sub(ctx.line, col + 1)
   end
 
   do

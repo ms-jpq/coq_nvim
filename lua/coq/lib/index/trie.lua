@@ -1,71 +1,97 @@
-local lib = require "coq.lib"
+local handle = require "coq.lib.async.handle"
+local search = require "coq.lib.index"
 
----@class lib.Trie<T>
----@field insert fun(key: string, value: T)
----@field get fun(key: string): T?
----@field prefix fun(key: string): fun(): string?, T?
+---@class index.TrieSpec<T>
+---@field key_item fun(item: T): string
+---@field key_ctx fun(ctx: ctx.full): string?
 
 local M = {}
 
+local node_new = function()
+  return { children = {}, items = {} }
+end
+
+---@param s string
+local chars = function(s)
+  return string.gmatch(s, ".")
+end
+
 ---@generic T
----@return lib.Trie<T>
-M.new = function()
-  local root = { children = {} }
+---@param spec index.TrieSpec<T>
+---@return index.Searcher<T>
+M.new = function(spec)
+  local root = node_new()
 
   ---@param key string
-  ---@param value any
-  local insert = function(key, value)
+  local descend = function(key)
     local node = root
-    for i = 1, #key do
-      local c = key:sub(i, i)
-      local child = node.children[c]
-      if not child then
-        child = { children = {} }
-        node.children[c] = child
-      end
-      node = child
-    end
-    node.value = value
-  end
-
-  ---@param key string
-  ---@return any
-  local get = function(key)
-    local node = root
-    for i = 1, #key do
-      node = node.children[key:sub(i, i)]
-      if not node then
+    for c in chars(key) do
+      node = node.children[c]
+      if node == nil then
         return nil
       end
     end
-    return node.value
+    return node
   end
 
-  ---@param key string
-  ---@return fun(): string?, any
-  local prefix = function(key)
+  local descend_create = function(key)
     local node = root
-    for i = 1, #key do
-      node = node.children[key:sub(i, i)]
-      if not node then
-        return lib.noop
-      end
+    for c in chars(key) do
+      node.children[c] = node.children[c] or node_new()
+      node = node.children[c]
     end
-    return coroutine.wrap(function()
-      local walk
-      walk = function(n, k)
-        if n.value ~= nil then
-          coroutine.yield(k, n.value)
-        end
-        for c, child in pairs(n.children) do
-          walk(child, k .. c)
-        end
+    return node
+  end
+
+  local function dfs_yield(node)
+    for _, item in ipairs(node.items) do
+      coroutine.yield(item)
+    end
+    for _, child in pairs(node.children) do
+      dfs_yield(child)
+    end
+  end
+
+  local trie = {}
+
+  trie.close = function()
+    root = node_new()
+  end
+
+  trie.insert = function(item)
+    table.insert(descend_create(spec.key_item(item)).items, item)
+  end
+
+  trie.prune = function(ctx)
+    local key = spec.key_ctx(ctx)
+    if key == nil or key == "" then
+      root = node_new()
+      return
+    end
+    local parent = descend(string.sub(key, 1, -2))
+    if parent then
+      parent.children[string.sub(key, -1)] = nil
+    end
+  end
+
+  trie.search = function(ctx)
+    local node = (function()
+      local key = spec.key_ctx(ctx)
+      if key == nil or key == "" then
+        return root
       end
-      walk(node, key)
+      return descend(key)
+    end)()
+
+    local h = handle.new()
+    return search.iter(h, function()
+      if node ~= nil then
+        dfs_yield(node)
+      end
     end)
   end
 
-  return { insert = insert, get = get, prefix = prefix }
+  return trie
 end
 
 return M

@@ -310,10 +310,10 @@ T.describe("index.indexed", function(test)
     local inner_layer = function()
       return search.indexed {
         key_item = function(i)
-          return i.word:sub(1, 2)
+          return string.sub(i.word, 1, 2)
         end,
         key_ctx = function(c)
-          return c.prefix and c.prefix:sub(1, 2) or nil
+          return c.prefix and string.sub(c.prefix, 1, 2) or nil
         end,
         child = leaf,
       }

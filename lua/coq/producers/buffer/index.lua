@@ -47,14 +47,14 @@ end
 local prefix_layer = function()
   return search.indexed {
     key_item = function(i)
-      return i.word:sub(1, 2)
+      return string.sub(i.word, 1, 2)
     end,
     key_ctx = function(c)
       if c.line_before == nil then
         return nil
       end
-      local last = c.line_before:match "[%w_]+$"
-      return last and #last >= 2 and last:sub(1, 2) or nil
+      local last = string.match(c.line_before, "[%w_]+$")
+      return last and #last >= 2 and string.sub(last, 1, 2) or nil
     end,
     child = leaf,
   }

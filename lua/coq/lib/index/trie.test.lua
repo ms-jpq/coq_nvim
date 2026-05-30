@@ -1,106 +1,127 @@
+---@diagnostic disable: missing-fields
 local T = require "coq.lib.test"
 local trie = require "coq.lib.index.trie"
 
+local spec = {
+  key_item = function(i)
+    return i.word
+  end,
+  key_ctx = function(c)
+    return c.prefix
+  end,
+}
+
 local collect = function(iter)
   local out = {}
-  for k, v in iter do
-    out[k] = v
+  for item in iter do
+    table.insert(out, item.word)
   end
+  table.sort(out)
   return out
 end
 
 T.describe("trie", function(test)
-  test("insert then get round-trips", function()
-    local t = trie.new()
-    t.insert("lil", "good")
+  test("search with exact key yields the item inserted at that key", function()
+    local t = trie.new(spec)
+    t.insert { word = "lil", kind = "dog" }
 
-    T.eq(t.get "lil", "good")
+    T.eq(collect(t.search { prefix = "lil" }), { "lil" })
   end)
 
-  test("get on missing key returns nil", function()
-    local t = trie.new()
-    t.insert("lil", "good")
+  test("search yields every item whose key starts with the prefix", function()
+    local t = trie.new(spec)
+    t.insert { word = "lil" }
+    t.insert { word = "lilx" }
+    t.insert { word = "liy" }
+    t.insert { word = "spot" }
 
-    T.eq(t.get "spot", nil)
+    T.eq(collect(t.search { prefix = "li" }), { "lil", "lilx", "liy" })
   end)
 
-  test("get on internal node without value returns nil", function()
-    local t = trie.new()
-    t.insert("lil", "good")
+  test("search includes the prefix key itself when it has an item", function()
+    local t = trie.new(spec)
+    t.insert { word = "lil" }
+    t.insert { word = "lilx" }
 
-    T.eq(t.get "re", nil)
+    T.eq(collect(t.search { prefix = "lil" }), { "lil", "lilx" })
   end)
 
-  test("get on extension past a terminal returns nil", function()
-    local t = trie.new()
-    t.insert("lil", "good")
+  test("search on nil prefix yields every item", function()
+    local t = trie.new(spec)
+    t.insert { word = "lil" }
+    t.insert { word = "spot" }
 
-    T.eq(t.get "lilx", nil)
+    T.eq(collect(t.search {}), { "lil", "spot" })
   end)
 
-  test("insert overwrites previous value", function()
-    local t = trie.new()
-    t.insert("lil", "good")
-    t.insert("lil", "bad")
+  test("search on absent prefix yields nothing", function()
+    local t = trie.new(spec)
+    t.insert { word = "lil" }
 
-    T.eq(t.get "lil", "bad")
+    T.eq(collect(t.search { prefix = "spot" }), {})
   end)
 
-  test("stores keys where one is a prefix of another", function()
-    local t = trie.new()
-    t.insert("lil", "dog")
-    t.insert("lilx", "puppy")
+  test("multiple items at the same key all yield", function()
+    local t = trie.new(spec)
+    t.insert { word = "lil", buf = 1 }
+    t.insert { word = "lil", buf = 2 }
 
-    T.eq(t.get "lil", "dog")
-    T.eq(t.get "lilx", "puppy")
+    local seen = {}
+    for item in t.search { prefix = "lil" } do
+      table.insert(seen, item.buf)
+    end
+    table.sort(seen)
+    T.eq(seen, { 1, 2 })
   end)
 
-  test("prefix yields all entries under the prefix", function()
-    local t = trie.new()
-    t.insert("lil", 1)
-    t.insert("lilx", 2)
-    t.insert("liy", 3)
-    t.insert("spot", 4)
+  test("prune removes every item under the prefix", function()
+    local t = trie.new(spec)
+    t.insert { word = "lil" }
+    t.insert { word = "lilx" }
+    t.insert { word = "liy" }
+    t.insert { word = "spot" }
 
-    T.eq(collect(t.prefix "li"), { lil = 1, lilx = 2, liy = 3 })
+    t.prune { prefix = "li" }
+
+    T.eq(collect(t.search {}), { "spot" })
   end)
 
-  test("prefix yields the prefix key itself if it has a value", function()
-    local t = trie.new()
-    t.insert("lil", 1)
-    t.insert("lilx", 2)
+  test("prune on absent prefix is a no-op", function()
+    local t = trie.new(spec)
+    t.insert { word = "lil" }
 
-    T.eq(collect(t.prefix "lil"), { lil = 1, lilx = 2 })
+    t.prune { prefix = "spot" }
+
+    T.eq(collect(t.search {}), { "lil" })
   end)
 
-  test("prefix on empty string yields all entries", function()
-    local t = trie.new()
-    t.insert("lil", 1)
-    t.insert("spot", 2)
+  test("prune with nil key wipes the trie", function()
+    local t = trie.new(spec)
+    t.insert { word = "lil" }
+    t.insert { word = "spot" }
 
-    T.eq(collect(t.prefix ""), { lil = 1, spot = 2 })
+    t.prune {}
+
+    T.eq(collect(t.search {}), {})
   end)
 
-  test("prefix on absent prefix yields nothing", function()
-    local t = trie.new()
-    t.insert("lil", 1)
+  test("close wipes the trie", function()
+    local t = trie.new(spec)
+    t.insert { word = "lil" }
+    t.insert { word = "spot" }
+    t.close()
 
-    T.eq(collect(t.prefix "spot"), {})
-  end)
-
-  test("prefix on empty trie yields nothing", function()
-    local t = trie.new()
-
-    T.eq(collect(t.prefix ""), {})
+    T.eq(collect(t.search {}), {})
   end)
 
   test("instances are independent", function()
-    local a = trie.new()
-    local b = trie.new()
-    a.insert("lil", "a")
-    b.insert("lil", "b")
+    local a, b = trie.new(spec), trie.new(spec)
+    a.insert { word = "lil", which = "a" }
+    b.insert { word = "lil", which = "b" }
 
-    T.eq(a.get "lil", "a")
-    T.eq(b.get "lil", "b")
+    local from_a = a.search { prefix = "lil" }()
+    local from_b = b.search { prefix = "lil" }()
+    T.eq(from_a.which, "a")
+    T.eq(from_b.which, "b")
   end)
 end)

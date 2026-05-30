@@ -24,7 +24,7 @@ do
     end
 
     return function()
-      vim.notify(("coq.%s is not yet implemented in v2"):format(name), vim.log.levels.WARN)
+      vim.notify(string.format("coq.%s is not yet implemented in v2", name), vim.log.levels.WARN)
     end
   end
 
@@ -55,6 +55,11 @@ local producers = function(settings)
 
     if clients.buffers.enabled then
       local client = require "coq.producers.buffer"
+      coroutine.yield(client)
+    end
+
+    if clients.tmux.enabled then
+      local client = require "coq.producers.tmux"
       coroutine.yield(client)
     end
   end)
