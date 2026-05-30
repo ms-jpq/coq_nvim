@@ -315,6 +315,12 @@ if vim.is_thread() then
       return endpoint.request_oneshot(pack_request(fn, ...))
     end
 
+    M.main_stream = function(fn, ...)
+      local message = pack_request(fn, ...)
+      message.streaming = true
+      return endpoint.request_stream(message)
+    end
+
     async.entry(function()
       async.scope(function(n, defer)
         defer(duplex.close)

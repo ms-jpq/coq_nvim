@@ -486,6 +486,84 @@ T.describe("worker", function(test)
     T.eq(results, { "dog_1", "dog_2", "dog_3", "dog_4", "dog_5" })
   end)
 
+  test("worker.main_stream yields values from main to the worker", function()
+    local w = worker.spawn()
+    local seen = w.queue(function()
+      local out = {}
+      for v in
+        require("coq.lib.worker").main_stream(function()
+          coroutine.yield "lil"
+          coroutine.yield "spot"
+          coroutine.yield "fido"
+        end)
+      do
+        table.insert(out, v)
+      end
+      return out
+    end)
+    w.close()
+
+    T.eq(seen, { "lil", "spot", "fido" })
+  end)
+
+  test("worker.main_stream can call vim.fn (main-only API) and stream results", function()
+    local expected_cwd = vim.fn.getcwd()
+    local expected_runtime = vim.api.nvim_get_runtime_file("lua/coq/lib/worker/init.lua", false)[1]
+    local w = worker.spawn()
+    local seen = w.queue(function()
+      local out = {}
+      for v in
+        require("coq.lib.worker").main_stream(function()
+          coroutine.yield(vim.fn.getcwd())
+          coroutine.yield(vim.api.nvim_get_runtime_file("lua/coq/lib/worker/init.lua", false)[1])
+        end)
+      do
+        table.insert(out, v)
+      end
+      return out
+    end)
+    w.close()
+
+    T.eq(seen, { expected_cwd, expected_runtime })
+  end)
+
+  test("worker.main_stream forwards args", function()
+    local w = worker.spawn()
+    local seen = w.queue(function(count, prefix)
+      local out = {}
+      for v in
+        require("coq.lib.worker").main_stream(function(n, p)
+          for i = 1, n do
+            coroutine.yield(p .. i)
+          end
+        end, count, prefix)
+      do
+        table.insert(out, v)
+      end
+      return out
+    end, 3, "dog_")
+    w.close()
+
+    T.eq(seen, { "dog_1", "dog_2", "dog_3" })
+  end)
+
+  test("worker.main_stream propagates errors from main", function()
+    local w = worker.spawn()
+    local ok, err = pcall(w.queue, function()
+      for _ in
+        require("coq.lib.worker").main_stream(function()
+          coroutine.yield "lil"
+          error "leash snapped on main"
+        end)
+      do
+      end
+    end)
+    w.close()
+
+    T.eq(ok, false)
+    assert(err and err:find "leash snapped on main", "expected error, got: " .. tostring(err))
+  end)
+
   test("two streams interleave independently", function()
     local async = require "coq.lib.async"
     local w = worker.spawn()

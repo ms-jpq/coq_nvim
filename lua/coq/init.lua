@@ -8,7 +8,6 @@ local events_m = require "coq.completions.events"
 local idle = require "coq.completions.idle"
 local insertion = require "coq.completions.insertion"
 local lib = require "coq.lib"
-local nursery = require "coq.lib.async.nursery"
 local nvim_options = require "coq.nvim_options"
 local preview = require "coq.completions.preview"
 local ranker_m = require "coq.lib.index.rank.ranker"
@@ -76,7 +75,7 @@ M.setup = function(opts)
   local events = events_m.new()
 
   async.entry(function()
-    nursery.scope(function(n)
+    async.scope(function(n)
       sup.bind(n)
       trigger.bind(n, settings, ranker, sup, events.trigger)
       preview.bind(n, settings, events.pum)

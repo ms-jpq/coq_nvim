@@ -22,7 +22,7 @@ local list_panes = function(exclude)
     if proc == nil or proc.code ~= 0 then
       return
     end
-    for line in string.gmatch(proc.stdout, "[^\n]+") do
+    for line in vim.gsplit(proc.stdout, "\n", { plain = true }) do
       local id = string.match(line, "^(.-)" .. SEP)
       if id ~= nil and id ~= exclude then
         coroutine.yield(id)
@@ -41,7 +41,7 @@ local pane_words = function(kw, pane)
       return
     end
     local lines = vim.iter(vim.split(proc.stdout, "\n", { plain = true })) --[[@as fun(): string?]]
-    for word, _ in pairs(tokens.locality(kw, lines)) do
+    for word in tokens.words(kw, lines) do
       coroutine.yield(word)
     end
   end)
