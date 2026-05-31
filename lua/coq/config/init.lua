@@ -10,6 +10,7 @@ local defaults = require "coq.config.defaults"
 ---@field spacing integer
 ---@field aliases table<string, string>
 ---@field mappings table<string, string>
+---@field hl_groups table<string, string>
 
 ---@class config.PreviewPositions
 ---@field north? integer

@@ -17,55 +17,36 @@
 
 local M = {}
 
-local kind_hl = {
-  Class = "@type",
-  Constant = "@constant",
-  Constructor = "@constructor",
-  Enum = "@type",
-  EnumMember = "@constant",
-  Event = "@type",
-  Field = "@variable.member",
-  File = "Directory",
-  Folder = "Directory",
-  Function = "@function",
-  Interface = "@type",
-  Keyword = "@keyword",
-  Method = "@function.method",
-  Module = "@module",
-  Operator = "@operator",
-  Property = "@property",
-  Reference = "@string.special",
-  Snippet = "@string.special",
-  Struct = "@type",
-  Text = "@string",
-  TypeParameter = "@type.qualifier",
-  Unit = "@constant",
-  Value = "@constant",
-  Variable = "@variable",
-}
-
 -- https://github.com/ms-jpq/coq_nvim/blob/coq/coq/server/icons.py
 ---@param icons config.Icons
 ---@param kind string
----@return string
+---@return string display
+---@return string? hl_group
 local iconify = function(icons, kind)
   if kind == "" or icons.mode == "none" then
-    return kind
+    return kind, icons.hl_groups[kind]
   end
-  local glyph = icons.mappings[icons.aliases[kind] or kind]
+
+  local resolved = icons.aliases[kind] or kind
+  local glyph, hl = icons.mappings[resolved], icons.hl_groups[resolved]
+
   if not glyph then
-    return kind
+    return kind, hl
   end
+
   if icons.mode == "short" then
-    return glyph .. string.rep(" ", math.max(0, icons.spacing - 1))
+    return glyph, hl
   end
-  return glyph .. string.rep(" ", math.max(1, icons.spacing)) .. kind
+
+  return glyph .. string.rep(" ", math.max(1, icons.spacing)) .. kind, hl
 end
 
 ---@param icons config.Icons
 ---@param item completions.Item
 ---@return vim.v.completed_item
 M.to_nvim = function(icons, item)
+  local kind, hl = iconify(icons, item.kind)
+
   return {
     dup = 1,
     equal = 1,
@@ -75,8 +56,8 @@ M.to_nvim = function(icons, item)
     abbr_hlgroup = item.abbr_hlgroup,
     menu = item.menu,
     info = item.info,
-    kind = iconify(icons, item.kind),
-    kind_hlgroup = item.kind_hlgroup or kind_hl[item.kind],
+    kind = kind,
+    kind_hlgroup = item.kind_hlgroup or hl,
     user_data = item,
   }
 end

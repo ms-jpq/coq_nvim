@@ -36,6 +36,8 @@ local bind = function(_, push)
       push { kind = "iskeyword", iskeyword = vim.bo[args.buf].iskeyword }
     end,
   })
+
+  push { kind = "iskeyword", iskeyword = vim.bo.iskeyword }
 end
 
 ---@param settings config.Settings
@@ -136,6 +138,7 @@ M.matcher = function(settings, ctx)
     if item.word ~= ctx.cword then
       coroutine.yield {
         word = item.word,
+        kind = "Text",
         menu = menu,
         info = item.meta ~= nil and doc(opts, item.meta) or nil,
         meta = {

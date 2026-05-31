@@ -32,6 +32,12 @@ local bind = function(_, push)
       push { kind = kinds[args.event], args = args }
     end,
   })
+
+  for _, buf in pairs(vim.api.nvim_list_bufs()) do
+    if vim.bo[buf].buflisted then
+      push { kind = "update", args = { buf = buf } }
+    end
+  end
 end
 
 ---@param buf integer
@@ -125,6 +131,7 @@ M.matcher = function(settings, ctx)
     if item.word ~= ctx.cword then
       coroutine.yield {
         word = item.word,
+        kind = "Text",
         menu = menu,
         info = doc(opts, item, ctx.filetype),
         meta = {
