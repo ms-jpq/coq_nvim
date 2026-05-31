@@ -20,6 +20,7 @@ local strip_prefix = function(prefix, path)
   if string.sub(path, 1, #with_sep) == with_sep then
     return string.sub(path, #with_sep + 1)
   end
+
   return nil
 end
 

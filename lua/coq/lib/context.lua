@@ -8,6 +8,7 @@ local tokens = require "coq.lib.index.tokens"
 ---@field changedtick integer
 
 ---@class ctx.full: ctx.base
+---@field cwd string
 ---@field filetype string
 ---@field filename string
 ---@field cword string
@@ -57,6 +58,7 @@ M.full = function(base)
   local bo = vim.bo[ctx.buf]
 
   do
+    ctx.cwd = vim.fn.getcwd()
     ctx.filetype = bo.filetype
     ctx.filename = vim.api.nvim_buf_get_name(ctx.buf)
   end

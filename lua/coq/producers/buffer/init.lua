@@ -98,16 +98,17 @@ M.buffer_info = function(buf, prev_tick)
 end
 
 ---@param opts config.BuffersClient
+---@param ctx ctx.full
 ---@param item buffer.Item
----@param current_filetype string
 ---@return string
-local doc = function(opts, item, current_filetype)
+local doc = function(opts, ctx, item)
+  local fs = require "coq.lib.fs"
   local parts = {}
-  if item.filetype ~= "" and item.filetype ~= current_filetype then
+  if not opts.same_filetype and item.filetype ~= "" then
     table.insert(parts, item.filetype .. opts.parent_scope)
   end
   if item.filename ~= "" then
-    table.insert(parts, item.filename)
+    table.insert(parts, fs.fmt_path(ctx.cwd, item.filename, ctx.filename))
   end
   return table.concat(parts, "\n")
 end
@@ -167,7 +168,7 @@ M.matcher = function(settings, ctx)
         word = item.word,
         kind = "Text",
         menu = menu,
-        info = doc(opts, item, ctx.filetype),
+        info = doc(opts, ctx, item),
         meta = {
           filter = item.word,
           source = opts.short_name,
