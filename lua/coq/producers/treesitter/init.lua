@@ -96,33 +96,57 @@ local capture_to_icon = function(kind)
   return string.upper(string.sub(head, 1, 1)) .. string.sub(head, 2)
 end
 
+---@param clhs string
+---@param crhs string
+---@param kind string
+---@param text string
+local section_iter = function(clhs, crhs, kind, text)
+  return async.wrap(function()
+    coroutine.yield(clhs .. kind)
+
+    local pending = nil
+    for line in vim.gsplit(text, "\n", { plain = true }) do
+      if pending ~= nil then
+        coroutine.yield(pending)
+      end
+      pending = line
+    end
+
+    if pending ~= nil then
+      coroutine.yield(pending .. crhs)
+    end
+  end)
+end
+
 ---@param opts config.TSClient
 ---@param ctx ctx.full
 ---@param item treesitter.Item
----@return string
-local doc = function(opts, ctx, item)
-  local parts = {}
+---@return lib.Iterator<string>
+local doc_iter = function(opts, ctx, item)
+  return async.wrap(function()
+    local clhs, crhs = ctx.comment[1], ctx.comment[2]
 
-  local pos = fs.fmt_path(ctx.cwd, item.filename, ctx.filename)
-  local r_lo, r_hi = item.range[1], item.range[2]
-  local range_str = ":" .. r_lo .. (r_hi ~= r_lo and ("-" .. r_hi) or "")
-  table.insert(parts, pos .. range_str)
+    local pos = fs.fmt_path(ctx.cwd, item.filename, ctx.filename)
+    local r_lo, r_hi = item.range[1], item.range[2]
+    local range_str = ":" .. r_lo .. (r_hi ~= r_lo and ("-" .. r_hi) or "")
+    coroutine.yield(clhs .. pos .. range_str .. opts.path_sep .. crhs)
 
-  if item.grandparent then
-    table.insert(parts, item.grandparent.kind)
-    table.insert(parts, item.grandparent.text)
-  end
+    if item.grandparent then
+      for line in section_iter(clhs, crhs, item.grandparent.kind, item.grandparent.text) do
+        coroutine.yield(line)
+      end
+    end
 
-  if item.grandparent and item.parent then
-    table.insert(parts, opts.path_sep)
-  end
+    if item.grandparent and item.parent then
+      coroutine.yield(clhs .. opts.path_sep .. crhs)
+    end
 
-  if item.parent then
-    table.insert(parts, item.parent.kind)
-    table.insert(parts, item.parent.text)
-  end
-
-  return table.concat(parts, "\n")
+    if item.parent then
+      for line in section_iter(clhs, crhs, item.parent.kind, item.parent.text) do
+        coroutine.yield(line)
+      end
+    end
+  end)
 end
 
 ---@param settings config.Settings
@@ -140,15 +164,16 @@ M.matcher = function(settings, ctx)
 
   for item in items do
     if item.text ~= ctx.cword then
+      local lines = vim.iter(doc_iter(opts, ctx, item)):totable()
       coroutine.yield {
         word = item.text,
         kind = capture_to_icon(item.kind),
         menu = menu,
-        info = doc(opts, ctx, item),
         meta = {
           filter = item.text,
           source = opts.short_name,
           always_on_top = opts.always_on_top,
+          doc = { lines = lines, filetype = ctx.filetype },
         },
       }
     end

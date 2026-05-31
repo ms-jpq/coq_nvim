@@ -2,6 +2,7 @@ local async = require "coq.lib.async"
 local atools = require "coq.lib.atools"
 local context = require "coq.lib.context"
 local lib = require "coq.lib"
+local paths_util = require "coq.producers.paths.util"
 local resolve = require "coq.completions.resolve"
 
 local NS = vim.api.nvim_create_namespace "coq.preview"
@@ -64,35 +65,55 @@ local md_lines = function(lsp_item)
     :totable()
 end
 
----@param ctx ctx.base
 ---@param preview_cfg config.PreviewDisplay
----@param i completions.Item
-local show_doc = function(ctx, preview_cfg, i)
-  if not preview_cfg.enabled then
-    return
-  end
-
-  local lsp_item = i.meta.lsp and i.meta.lsp.item
-  if not lsp_item then
-    return
-  end
-
-  if not lsp_item.documentation and not lsp_item.detail then
-    resolve.enrich(ctx, i)
-  end
-
-  local lines = md_lines(lsp_item)
+---@param lines string[]
+---@param filetype string
+local show_ts_doc = function(preview_cfg, lines, filetype)
   if #lines == 0 then
     return
   end
 
-  local _, win = vim.lsp.util.open_floating_preview(lines, "markdown", {
+  atools.scheduled()
+  local _, win = vim.lsp.util.open_floating_preview(lines, filetype, {
     border = preview_cfg.border,
     focusable = false,
     max_width = preview_cfg.x_max_len,
     close_events = {},
   })
   preview_win = win
+end
+
+---@param ctx ctx.base
+---@param settings config.Settings
+---@param item completions.Item
+local show_doc = function(ctx, settings, item)
+  local preview_cfg = settings.display.preview
+  if not preview_cfg.enabled then
+    return
+  end
+  local meta = item.meta
+
+  if meta.doc then
+    return show_ts_doc(preview_cfg, meta.doc.lines, meta.doc.filetype)
+  end
+
+  if meta.path then
+    local lines = vim
+      .iter(paths_util.path_preview({
+        max_lines = settings.clients.paths.preview_lines,
+        ellipsis = settings.display.pum.ellipsis,
+      }, vim.fn.getcwd(), meta.path))
+      :totable()
+    return show_ts_doc(preview_cfg, lines, "")
+  end
+
+  local lsp_item = meta.lsp and meta.lsp.item
+  if lsp_item then
+    if not lsp_item.documentation and not lsp_item.detail then
+      resolve.enrich(ctx, item)
+    end
+    return show_ts_doc(preview_cfg, md_lines(lsp_item), "markdown")
+  end
 end
 
 ---@param ev completions.PumEvent
@@ -164,7 +185,7 @@ M.bind = function(n, settings, pum)
 
         if item then
           show_ghost(ctx, settings.display.ghost_text, item)
-          show_doc(ctx, settings.display.preview, item)
+          show_doc(ctx, settings, item)
         end
       end)
     end

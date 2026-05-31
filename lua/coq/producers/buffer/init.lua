@@ -68,16 +68,16 @@ end
 ---@param opts config.BuffersClient
 ---@param ctx ctx.full
 ---@param item buffer.Item
----@return string
-local doc = function(opts, ctx, item)
-  local parts = {}
-  if not opts.same_filetype and item.filetype ~= "" then
-    table.insert(parts, item.filetype .. opts.parent_scope)
-  end
-  if item.filename ~= "" then
-    table.insert(parts, fs.fmt_path(ctx.cwd, item.filename, ctx.filename))
-  end
-  return table.concat(parts, "\n")
+---@return lib.Iterator<string>
+local doc_iter = function(opts, ctx, item)
+  return async.wrap(function()
+    if not opts.same_filetype and item.filetype ~= "" then
+      coroutine.yield(item.filetype .. opts.parent_scope)
+    end
+    if item.filename ~= "" then
+      coroutine.yield(fs.fmt_path(ctx.cwd, item.filename, ctx.filename))
+    end
+  end)
 end
 
 ---@param buf integer
@@ -133,15 +133,16 @@ M.matcher = function(settings, ctx)
 
   for item in items do
     if item.word ~= ctx.cword then
+      local lines = vim.iter(doc_iter(opts, ctx, item)):totable()
       coroutine.yield {
         word = item.word,
         kind = "Text",
         menu = menu,
-        info = doc(opts, ctx, item),
         meta = {
           filter = item.word,
           source = opts.short_name,
           always_on_top = opts.always_on_top,
+          doc = #lines > 0 and { lines = lines, filetype = "" } or nil,
         },
       }
     end

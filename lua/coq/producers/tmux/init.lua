@@ -150,15 +150,15 @@ end
 
 ---@param opts config.TmuxClient
 ---@param meta tmux.PaneMeta
----@return string
-local doc = function(opts, meta)
-  local parts = {}
-  if opts.all_sessions then
-    table.insert(parts, "S: " .. meta.session_name .. opts.parent_scope)
-  end
-  table.insert(parts, "W: #" .. meta.window_index .. opts.path_sep .. meta.window_name .. opts.parent_scope)
-  table.insert(parts, "P: #" .. meta.pane_index .. opts.path_sep .. meta.pane_title)
-  return table.concat(parts, "\n")
+---@return lib.Iterator<string>
+local doc_iter = function(opts, meta)
+  return async.wrap(function()
+    if opts.all_sessions then
+      coroutine.yield("S: " .. meta.session_name .. opts.parent_scope)
+    end
+    coroutine.yield("W: #" .. meta.window_index .. opts.path_sep .. meta.window_name .. opts.parent_scope)
+    coroutine.yield("P: #" .. meta.pane_index .. opts.path_sep .. meta.pane_title)
+  end)
 end
 
 ---@param settings config.Settings
@@ -172,15 +172,16 @@ M.matcher = function(settings, ctx)
   end)
   for item in items do
     if item.word ~= ctx.cword then
+      local lines = vim.iter(doc_iter(opts, item.meta)):totable()
       coroutine.yield {
         word = item.word,
         kind = "Text",
         menu = menu,
-        info = item.meta ~= nil and doc(opts, item.meta) or nil,
         meta = {
           filter = item.word,
           source = opts.short_name,
           always_on_top = opts.always_on_top,
+          doc = #lines > 0 and { lines = lines, filetype = "" } or nil,
         },
       }
     end

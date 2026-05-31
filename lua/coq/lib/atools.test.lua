@@ -99,3 +99,66 @@ T.describe("atools.file_lines", function(test)
     T.eq(lines, {})
   end)
 end)
+
+T.describe("atools.scandir", function(test)
+  local mkdir = function(p)
+    vim.fn.mkdir(p, "p")
+  end
+
+  local touch = function(p)
+    assert(io.open(p, "w")):close()
+  end
+
+  local tmpdir = function()
+    local p = vim.fn.tempname()
+    mkdir(p)
+    return p
+  end
+
+  test("yields each entry with name and kind", function()
+    local dir = tmpdir()
+    touch(dir .. "/spot.txt")
+    mkdir(dir .. "/fido")
+
+    local seen = {}
+    async.scope(function()
+      local _, iter = atools.scandir(dir)
+      for name, kind in iter do
+        seen[name] = kind
+      end
+    end)
+
+    T.eq(seen["spot.txt"], "file")
+    T.eq(seen["fido"], "directory")
+  end)
+
+  test("missing path returns err and dead iter", function()
+    local err, count
+    async.scope(function()
+      local e, iter = atools.scandir "/no/such/path/4242"
+      err = e
+      count = 0
+      for _ in iter do
+        count = count + 1
+      end
+    end)
+    assert(err and #err > 0, "expected non-empty err string")
+    T.eq(count, 0)
+  end)
+
+  test("iter exhausts naturally", function()
+    local dir = tmpdir()
+    for i = 1, 3 do
+      touch(dir .. "/p" .. i .. ".txt")
+    end
+
+    local count = 0
+    async.scope(function()
+      local _, iter = atools.scandir(dir)
+      for _ in iter do
+        count = count + 1
+      end
+    end)
+    T.eq(count, 3)
+  end)
+end)

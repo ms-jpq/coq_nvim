@@ -126,9 +126,24 @@ M.fs = {
   fstat = async.awaitify(vim.uv.fs_fstat),
   ---@type fun(path: string): string?, { type: string, size: integer }?
   stat = async.awaitify(vim.uv.fs_stat),
-  ---@type fun(path: string): string?, uv.uv_fs_t?
-  scandir = async.awaitify(vim.uv.fs_scandir),
 }
+
+---@type fun(path: string): string?, uv.uv_fs_t?
+local fs_scandir = async.awaitify(vim.uv.fs_scandir)
+
+---@param path string
+---@return string?
+---@return fun(): string?, string?
+M.scandir = function(path)
+  local err, handle = fs_scandir(path)
+  if err ~= nil or handle == nil then
+    return err, lib.dead_iter
+  end
+
+  return nil, function()
+    return vim.uv.fs_scandir_next(handle)
+  end
+end
 
 ---@param path string
 ---@return fun(): string?
