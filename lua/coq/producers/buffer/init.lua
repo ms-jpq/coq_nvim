@@ -84,13 +84,14 @@ M.idle = function(settings, events)
   local index = require "coq.producers.buffer.index"
 
   for buf, ev in pairs(events) do
-    index.prune { buf = buf }
-
-    if ev.kind == "update" then
+    if ev.kind == "remove" then
+      index.prune { buf = buf }
+    elseif ev.kind == "update" then
       local info = worker.main(function(b)
         return require("coq.producers.buffer").buffer_info(b)
       end, buf)
       if info then
+        index.prune { buf = buf }
         local kw = tokens.parse_iskeyword(info.iskeyword)
         local lines = vim.iter(info.lines) --[[@as fun(): string?]]
 

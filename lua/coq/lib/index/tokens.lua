@@ -1,4 +1,5 @@
 local async = require "coq.lib.async"
+local atools = require "coq.lib.atools"
 
 local M = {}
 
@@ -80,9 +81,21 @@ M.words = function(kw, lines)
   end)
 end
 
+---@param kw table<integer, true>
+---@param line string
+---@return integer
+M.trailing_word_start = function(kw, line)
+  local i = #line
+  while i > 0 and kw[string.byte(line, i)] do
+    i = i - 1
+  end
+  return i + 1
+end
+
 ---@param ctx ctx.full
 ---@return string[]
 M.surround = function(ctx)
+  atools.scheduled()
   local half = math.floor(vim.api.nvim_win_get_height(ctx.win) / 2)
   local row = ctx.pos[1] - 1
   local lo = math.max(0, row - half)

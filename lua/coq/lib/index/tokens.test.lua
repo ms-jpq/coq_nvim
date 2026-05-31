@@ -116,3 +116,31 @@ T.test("tokens.parity across all filetypes", function()
 
   T.eq(failures, {})
 end)
+
+T.describe("tokens.trailing_word_start", function(test)
+  local kw = tokens.parse_iskeyword "@,48-57,_"
+
+  test("empty line returns 1", function()
+    T.eq(tokens.trailing_word_start(kw, ""), 1)
+  end)
+
+  test("trailing word: start at the first keyword byte", function()
+    T.eq(tokens.trailing_word_start(kw, "hello"), 1)
+    T.eq(tokens.trailing_word_start(kw, "foo bar"), 5)
+    T.eq(tokens.trailing_word_start(kw, "obj.method"), 5)
+  end)
+
+  test("non-keyword tail returns column past the line", function()
+    T.eq(tokens.trailing_word_start(kw, "hello "), 7)
+    T.eq(tokens.trailing_word_start(kw, "foo."), 5)
+  end)
+
+  test("respects iskeyword: hyphen excluded by default", function()
+    T.eq(tokens.trailing_word_start(kw, "kebab-case"), 7)
+  end)
+
+  test("respects iskeyword: hyphen included when configured", function()
+    local with_dash = tokens.parse_iskeyword "@,48-57,_,-"
+    T.eq(tokens.trailing_word_start(with_dash, "kebab-case"), 1)
+  end)
+end)

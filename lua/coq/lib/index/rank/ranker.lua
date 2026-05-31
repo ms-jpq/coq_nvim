@@ -1,3 +1,4 @@
+local atools = require "coq.lib.atools"
 local tokens = require "coq.lib.index.tokens"
 
 ---@class index.Prepared
@@ -30,6 +31,7 @@ M.new = function(clients)
   end
 
   ranker.prepare = function(ctx)
+    atools.scheduled()
     return {
       token = ctx.cword,
       locality = tokens.locality(

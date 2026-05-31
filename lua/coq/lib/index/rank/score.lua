@@ -1,3 +1,5 @@
+local atools = require "coq.lib.atools"
+
 ---@alias index.Scored [completions.Item, number, integer[]?]
 
 local M = {}
@@ -26,6 +28,8 @@ M.score = function(items, prepared)
         return item.filter
       end)
       :totable()
+
+    atools.scheduled()
     local matches, positions, scores = unpack(vim.fn.matchfuzzypos(filters, token))
     return vim.iter(matches):enumerate():fold({}, function(acc, i, f)
       acc[f] = { fuzzy = scores[i], positions = positions[i] }

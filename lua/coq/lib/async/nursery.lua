@@ -31,6 +31,7 @@ M.new = function(parent)
       pending[coroutine.running()] = nil
 
       if not ok then
+        lib.report(err)
         table.insert(errors, err)
         nursery.handle.cancel()
       end
