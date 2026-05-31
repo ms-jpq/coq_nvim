@@ -3,8 +3,8 @@ if not os.getenv "COQ_V2" then
 end
 
 local async = require "coq.lib.async"
+local atools = require "coq.lib.atools"
 local config = require "coq.config"
-local context = require "coq.lib.context"
 local events_m = require "coq.completions.events"
 local idle = require "coq.completions.idle"
 local insertion = require "coq.completions.insertion"
@@ -52,7 +52,7 @@ end
 ---@param settings config.Settings
 ---@return fun(): producers.Producer?
 local producers = function(settings)
-  return coroutine.wrap(function()
+  return async.wrap(function()
     local clients = settings.clients
 
     if clients.buffers.enabled then
@@ -67,17 +67,20 @@ end
 
 ---@param opts? table
 M.setup = function(opts)
-  local merged = vim.tbl_deep_extend("force", vim.g.coq_settings or {}, opts or {})
-  local settings = config.merged(merged)
-  nvim_options.apply(settings)
-  local p = vim.iter(async.wrap(producers(settings))):totable()
-  local sup = supervisor.new(p)
-
-  local ranker = ranker_m.new(settings.clients)
-  local events = events_m.new()
-
   async.entry(function()
     async.scope(function(n)
+      local merged = vim.tbl_deep_extend("force", vim.g.coq_settings or {}, opts or {})
+      local settings = config.merged(merged)
+
+      atools.scheduled()
+      nvim_options.apply(settings)
+
+      local p = vim.iter(producers(settings)):totable()
+      local sup = supervisor.new(p)
+
+      local ranker = ranker_m.new(settings.clients)
+      local events = events_m.new()
+
       sup.bind(n)
       trigger.bind(n, settings, ranker, sup, events.trigger)
       preview.bind(n, settings, events.pum)

@@ -128,7 +128,7 @@ M.fn = {
 M.ui = {
   ---@generic T
   ---@type fun(items: T[], opts: table): T?, integer?
-  select = async.awaitify(vim.ui.select),
+  select = vim.ui and async.awaitify(vim.ui.select),
 }
 
 return M

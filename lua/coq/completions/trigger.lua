@@ -16,7 +16,8 @@ M.bind = function(n, settings, ranker, sup, trigger)
     for _ in iter do
       n.spawn(function()
         local ctx = context.full()
-        insertion.complete(ctx, settings, ranker, sup.search(ctx))
+        local searched = sup.search(ctx)
+        insertion.complete(ctx, settings, ranker, searched)
       end)
     end
   end)

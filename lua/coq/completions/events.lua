@@ -30,7 +30,9 @@ M.new = function()
 
   vim.api.nvim_create_autocmd({ "InsertCharPre" }, {
     group = lib.group,
-    callback = events.trigger.replace,
+    callback = function(args)
+      events.trigger.replace(args)
+    end,
   })
 
   vim.api.nvim_create_autocmd({ "CompleteChanged" }, {
@@ -57,7 +59,9 @@ M.new = function()
 
   vim.api.nvim_create_autocmd({ "CursorHold", "CursorHoldI" }, {
     group = lib.group,
-    callback = events.idle.replace,
+    callback = function(args)
+      events.idle.replace(args)
+    end,
   })
 
   return events
