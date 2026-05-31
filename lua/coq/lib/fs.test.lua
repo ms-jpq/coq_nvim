@@ -28,4 +28,17 @@ T.describe("fs.fmt_path", function(test)
     -- $HOME should be left literal; without expansion it can't match HOME-prefix.
     T.eq(fs.fmt_path("/home/lil/work", "$HOME/spot.txt"), "$HOME/spot.txt")
   end)
+
+  test("windows: normalizes backslash inputs to forward slash", function()
+    T.eq(fs.fmt_path([[C:\Users\Lil\work]], [[C:\Users\Lil\work\spot.txt]], nil, true), "./spot.txt")
+    T.eq(fs.fmt_path([[C:\Users\Lil\work]], [[C:\Users\Lil\work\sub\fido.lua]], nil, true), "./sub/fido.lua")
+  end)
+
+  test("windows: mixed separators normalize before prefix match", function()
+    T.eq(fs.fmt_path([[C:/Users/Lil/work]], [[C:\Users\Lil\work\spot.txt]], nil, true), "./spot.txt")
+  end)
+
+  test("windows: absolute when outside cwd and HOME", function()
+    T.eq(fs.fmt_path([[C:\Users\Lil\work]], [[D:\elsewhere\fido.txt]], nil, true), "D:/elsewhere/fido.txt")
+  end)
 end)

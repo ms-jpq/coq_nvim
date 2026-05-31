@@ -1,6 +1,6 @@
----@class index.TopK
----@field push fun(item: completions.Item, score: number)
----@field iter fun(): lib.Iterator<completions.Item>
+---@class index.TopK<T>
+---@field push fun(item: T, score: number)
+---@field iter fun(): lib.Iterator<T>
 
 local M = {}
 
@@ -10,8 +10,9 @@ local by_neg_score = function(x)
   return -x.score
 end
 
+---@generic T
 ---@param k integer
----@return index.TopK
+---@return index.TopK<T>
 M.new = function(k)
   assert(k > 0)
   local items = {}

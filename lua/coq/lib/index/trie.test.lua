@@ -1,4 +1,3 @@
----@diagnostic disable: missing-fields, undefined-field, need-check-nil
 local T = require "coq.lib.test"
 local trie = require "coq.lib.index.trie"
 

@@ -106,6 +106,9 @@ M.spawn = function(argv, opts)
       await(stdout_f),
       await(stderr_f),
     })
+    if not proc then
+      return nil
+    end
     proc.stdout = stdout
     proc.stderr = stderr
     return proc

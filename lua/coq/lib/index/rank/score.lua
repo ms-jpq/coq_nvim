@@ -1,6 +1,11 @@
 local atools = require "coq.lib.atools"
 
----@alias index.Scored [completions.Item, number, integer[]?]
+---@class index.Scorable
+---@field filter string
+---@field source string
+---@field always_on_top? boolean
+
+---@alias index.Scored [index.Scorable, number, integer[]?]
 
 local M = {}
 
@@ -8,7 +13,7 @@ local M = {}
 M.WEIGHTS = { prox = 100, recen = 50 }
 M.ALWAYS_TOP = 1e9
 
----@param items completions.Item[]
+---@param items index.Scorable[]
 ---@param prepared index.Prepared
 ---@return lib.Iterator<index.Scored>
 M.compute = function(items, prepared)

@@ -2,7 +2,7 @@ local T = require "coq.lib.test"
 local score = require "coq.lib.index.rank.score"
 
 local mk = function(filter, source)
-  return { filter = filter, source = source or "buffer" } --[[@as completions.Item]]
+  return { filter = filter, source = source or "buffer" }
 end
 
 local prep = function(token, overrides)

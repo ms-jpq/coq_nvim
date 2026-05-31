@@ -1,8 +1,7 @@
 local M = {}
 
 local SEP = "/"
-local NORM = { expand_env = false }
-local HOME = vim.fs.normalize(vim.uv.os_homedir() or "", NORM)
+local HOME = vim.uv.os_homedir() or ""
 
 ---@param prefix string
 ---@param path string
@@ -27,11 +26,15 @@ end
 ---@param cwd string
 ---@param path string
 ---@param current? string
+---@param windows? boolean
 ---@return string
-M.fmt_path = function(cwd, path, current)
-  cwd = vim.fs.normalize(cwd, NORM)
-  path = vim.fs.normalize(path, NORM)
-  current = current and vim.fs.normalize(current, NORM) or nil
+M.fmt_path = function(cwd, path, current, windows)
+  local opts = { expand_env = false, win = windows }
+
+  cwd = vim.fs.normalize(cwd, opts)
+  path = vim.fs.normalize(path, opts)
+  current = current and vim.fs.normalize(current, opts) or nil
+  local home = vim.fs.normalize(HOME, opts)
 
   if current and path == current then
     return "."
@@ -42,7 +45,7 @@ M.fmt_path = function(cwd, path, current)
     return rel == "" and "." or ("." .. SEP .. rel)
   end
 
-  rel = strip_prefix(HOME, path)
+  rel = strip_prefix(home, path)
   if rel ~= nil then
     return rel == "" and "~" or ("~" .. SEP .. rel)
   end

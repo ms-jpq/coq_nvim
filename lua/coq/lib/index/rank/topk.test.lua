@@ -1,5 +1,3 @@
--- the heap is item-agnostic; tests push bare strings where completions.Item is expected.
----@diagnostic disable: param-type-mismatch
 local T = require "coq.lib.test"
 local topk = require "coq.lib.index.rank.topk"
 
