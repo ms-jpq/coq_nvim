@@ -1,3 +1,4 @@
+local atools = require "coq.lib.atools"
 local context = require "coq.lib.context"
 local insertion = require "coq.completions.insertion"
 
@@ -15,6 +16,7 @@ M.bind = function(n, settings, ranker, sup, trigger)
 
     for _ in iter do
       n.spawn(function()
+        atools.scheduled()
         local ctx = context.full()
         local searched = sup.search(ctx)
         insertion.complete(ctx, settings, ranker, searched)

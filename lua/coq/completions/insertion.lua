@@ -1,3 +1,4 @@
+local atools = require "coq.lib.atools"
 local context = require "coq.lib.context"
 local item = require "coq.completions.item"
 local lib = require "coq.lib"
@@ -118,6 +119,7 @@ M.complete = function(ctx, settings, ranker, iter)
     table.insert(items, item.to_nvim(settings.display.icons, i))
   end
 
+  atools.scheduled()
   if string.sub(vim.api.nvim_get_mode().mode, 1, 1) ~= "i" then
     return
   end
