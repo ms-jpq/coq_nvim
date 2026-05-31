@@ -55,15 +55,15 @@ end
 ---@return string[]
 local buffer_lines = function(buf)
   local count = vim.api.nvim_buf_line_count(buf)
-  local row, height = (function()
-    local win = vim.fn.bufwinid(buf)
-    if win == -1 then
-      return 0, count
-    end
+  local win = vim.fn.bufwinid(buf)
 
-    local row = unpack(vim.api.nvim_win_get_cursor(win))
-    return row - 1, vim.api.nvim_win_get_height(win)
-  end)()
+  local row, height
+  if win == -1 then
+    row, height = 0, count
+  else
+    row = unpack(vim.api.nvim_win_get_cursor(win)) - 1
+    height = vim.api.nvim_win_get_height(win)
+  end
 
   local lo, hi = math.max(0, row - height), math.min(count, row + height + 1)
   return vim.api.nvim_buf_get_lines(buf, lo, hi, true)
@@ -116,6 +116,33 @@ local doc = function(opts, ctx, item)
   return table.concat(parts, "\n")
 end
 
+---@param buf integer
+---@param state buffer.State
+---@param index index.Searcher<buffer.Ctx, buffer.Item>
+local update_buf = function(buf, state, index)
+  local info = worker.main(function(...)
+    return require("coq.producers.buffer").buffer_info(...)
+  end, buf, state.last_tick[buf])
+  if not info then
+    return
+  end
+
+  state.last_tick[buf] = info.tick
+  index.prune { buf = buf }
+
+  local kw = tokens.parse_iskeyword(info.iskeyword)
+  local lines = info.lines and vim.iter(info.lines) --[[@as lib.Iterator<string>]] or atools.file_lines(info.filename)
+
+  for word in tokens.words(kw, lines) do
+    index.insert {
+      buf = buf,
+      word = word,
+      filetype = info.filetype,
+      filename = info.filename,
+    }
+  end
+end
+
 ---@param settings config.Settings
 M.idle = function(settings, events)
   local _ = settings
@@ -124,32 +151,11 @@ M.idle = function(settings, events)
 
   for buf, ev in pairs(events) do
     async.sleep(0)
-
     if ev.kind == "remove" then
       index.prune { buf = buf }
       state.last_tick[buf] = nil
     elseif ev.kind == "update" then
-      local info = worker.main(function(...)
-        return require("coq.producers.buffer").buffer_info(...)
-      end, buf, state.last_tick[buf])
-
-      if info then
-        state.last_tick[info.buf] = info.tick
-        index.prune { buf = info.buf }
-
-        local kw = tokens.parse_iskeyword(info.iskeyword)
-        local lines = info.lines and vim.iter(info.lines) --[[@as lib.Iterator<string>]]
-          or atools.file_lines(info.filename)
-
-        for word in tokens.words(kw, lines) do
-          index.insert {
-            buf = info.buf,
-            word = word,
-            filetype = info.filetype,
-            filename = info.filename,
-          }
-        end
-      end
+      update_buf(buf, state, index)
     end
   end
 end

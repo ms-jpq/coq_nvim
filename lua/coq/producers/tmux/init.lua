@@ -106,24 +106,16 @@ M.idle = function(settings, events)
   local kw = tokens.parse_iskeyword(state.iskeyword)
   local index = require "coq.producers.tmux.index"
 
-  local live = {}
-  for pane in list_panes(settings, env.TMUX_PANE) do
-    live[pane.id] = pane
-  end
-
   for id in pairs(state.panes) do
-    if not live[id] then
-      index.prune { pane = id }
-    end
-  end
-
-  state.panes = {}
-  for id, pane in pairs(live) do
     index.prune { pane = id }
-    for word in pane_words(kw, id) do
-      index.insert { pane = id, word = word, meta = pane.meta }
+  end
+  state.panes = {}
+
+  for pane in list_panes(settings, env.TMUX_PANE) do
+    for word in pane_words(kw, pane.id) do
+      index.insert { pane = pane.id, word = word, meta = pane.meta }
     end
-    state.panes[id] = true
+    state.panes[pane.id] = true
   end
 end
 
