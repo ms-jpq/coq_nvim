@@ -41,6 +41,24 @@ local bind = function(_, push)
 end
 
 ---@param buf integer
+---@return string[]
+local buffer_lines = function(buf)
+  local count = vim.api.nvim_buf_line_count(buf)
+  local row, height = (function()
+    local win = vim.fn.bufwinid(buf)
+    if win == -1 then
+      return 0, count
+    end
+
+    local row = unpack(vim.api.nvim_win_get_cursor(win))
+    return row - 1, vim.api.nvim_win_get_height(win)
+  end)()
+
+  local lo, hi = math.max(0, row - height), math.min(count, row + height + 1)
+  return vim.api.nvim_buf_get_lines(buf, lo, hi, true)
+end
+
+---@param buf integer
 ---@return buffer.BufInfo?
 M.buffer_info = function(buf)
   atools.scheduled()
@@ -49,23 +67,12 @@ M.buffer_info = function(buf)
     return nil
   end
 
-  local count = vim.api.nvim_buf_line_count(buf)
-  local row, height = (function()
-    local win = vim.fn.bufwinid(buf)
-    if win == -1 then
-      return 0, count
-    end
-    return vim.api.nvim_win_get_cursor(win)[1] - 1, vim.api.nvim_win_get_height(win)
-  end)()
-  local lo = math.max(0, row - height)
-  local hi = math.min(count, row + height + 1)
-
   return {
     buf = buf,
-    lines = vim.api.nvim_buf_get_lines(buf, lo, hi, true),
     filetype = vim.bo[buf].filetype,
     filename = vim.api.nvim_buf_get_name(buf),
     iskeyword = vim.bo[buf].iskeyword,
+    lines = buffer_lines(buf),
   }
 end
 
@@ -96,6 +103,7 @@ M.idle = function(settings, events)
       local info = worker.main(function(b)
         return require("coq.producers.buffer").buffer_info(b)
       end, buf)
+
       if info then
         index.prune { buf = buf }
         local kw = tokens.parse_iskeyword(info.iskeyword)
