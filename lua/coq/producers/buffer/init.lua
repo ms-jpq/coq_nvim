@@ -1,6 +1,7 @@
 local lib = require "coq.lib"
 local threaded = require "coq.lib.producers.threaded"
 local tokens = require "coq.lib.index.tokens"
+local worker = require "coq.lib.worker"
 
 ---@class buffer.BufInfo
 ---@field buf integer
@@ -27,71 +28,41 @@ local bind = function(_, push)
   vim.api.nvim_create_autocmd(vim.tbl_keys(kinds), {
     group = lib.group,
     callback = function(args)
-      push { kind = kinds[args.event], buf = args.buf }
+      push { kind = kinds[args.event], args = args }
     end,
   })
 end
 
----@param bufs integer[]
----@return worker.WorkerStream
-local buffer_info = function(bufs)
-  local worker = require "coq.lib.worker"
+---@param buf integer
+---@return buffer.BufInfo?
+local buffer_info = function(buf)
+  return worker.main(function(b)
+    local atools = require "coq.lib.atools"
+    atools.scheduled()
 
-  return worker.main_stream(function(buffers)
-    for _, buf in ipairs(buffers) do
-      if vim.api.nvim_buf_is_loaded(buf) then
-        local count = vim.api.nvim_buf_line_count(buf)
-        local row, height = (function()
-          local win = vim.fn.bufwinid(buf)
-          if win == -1 then
-            return 0, count
-          end
-          return vim.api.nvim_win_get_cursor(win)[1] - 1, vim.api.nvim_win_get_height(win)
-        end)()
-        local lo = math.max(0, row - height)
-        local hi = math.min(count, row + height + 1)
+    if not vim.api.nvim_buf_is_valid(b) or not vim.api.nvim_buf_is_loaded(b) then
+      return nil
+    end
 
-        coroutine.yield {
-          buf = buf,
-          lines = vim.api.nvim_buf_get_lines(buf, lo, hi, true),
-          filetype = vim.bo[buf].filetype,
-          filename = vim.api.nvim_buf_get_name(buf),
-          iskeyword = vim.bo[buf].iskeyword,
-        }
+    local count = vim.api.nvim_buf_line_count(b)
+    local row, height = (function()
+      local win = vim.fn.bufwinid(b)
+      if win == -1 then
+        return 0, count
       end
-    end
-  end, bufs)
-end
+      return vim.api.nvim_win_get_cursor(win)[1] - 1, vim.api.nvim_win_get_height(win)
+    end)()
+    local lo = math.max(0, row - height)
+    local hi = math.min(count, row + height + 1)
 
----@param settings config.Settings
-M.idle = function(settings, events)
-  local _ = settings
-  local index = require "coq.producers.buffer.index"
-
-  local to_fetch = {}
-  for buf, ev in pairs(events) do
-    index.prune { buf = buf }
-    if ev.kind == "update" then
-      table.insert(to_fetch, buf)
-    end
-  end
-
-  if #to_fetch == 0 then
-    return
-  end
-
-  for info in buffer_info(to_fetch) do
-    local kw = tokens.parse_iskeyword(info.iskeyword)
-    local lines = vim.iter(info.lines) --[[@as fun(): string?]]
-    for word in tokens.words(kw, lines) do
-      index.insert {
-        buf = info.buf,
-        word = word,
-        filetype = info.filetype,
-        filename = info.filename,
-      }
-    end
-  end
+    return {
+      buf = b,
+      lines = vim.api.nvim_buf_get_lines(b, lo, hi, true),
+      filetype = vim.bo[b].filetype,
+      filename = vim.api.nvim_buf_get_name(b),
+      iskeyword = vim.bo[b].iskeyword,
+    }
+  end, buf)
 end
 
 ---@param opts config.BuffersClient
@@ -107,6 +78,33 @@ local doc = function(opts, item, current_filetype)
     table.insert(parts, item.filename)
   end
   return table.concat(parts, "\n")
+end
+
+---@param settings config.Settings
+M.idle = function(settings, events)
+  local _ = settings
+  local index = require "coq.producers.buffer.index"
+
+  for buf, ev in pairs(events) do
+    index.prune { buf = buf }
+
+    if ev.kind == "update" then
+      local info = buffer_info(buf)
+      if info then
+        local kw = tokens.parse_iskeyword(info.iskeyword)
+        local lines = vim.iter(info.lines) --[[@as fun(): string?]]
+
+        for word in tokens.words(kw, lines) do
+          index.insert {
+            buf = info.buf,
+            word = word,
+            filetype = info.filetype,
+            filename = info.filename,
+          }
+        end
+      end
+    end
+  end
 end
 
 ---@param settings config.Settings
@@ -145,7 +143,7 @@ M.new = function(settings)
     settings = settings,
     max_pulls = settings.clients.buffers.max_pulls,
     key = function(ev)
-      return ev.buf
+      return ev.args.buf
     end,
     bind = bind,
     idle = function(...)
