@@ -10,8 +10,11 @@ M.bind = function(n, sup, idle)
     local iter = idle.subscribe()
     defer(iter.close)
 
+    idle.replace {}
     for _ in iter do
-      sup.idle(context.full())
+      n.spawn(function()
+        sup.idle(context.full())
+      end)
     end
   end)
 end

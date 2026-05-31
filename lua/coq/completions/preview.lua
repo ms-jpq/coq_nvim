@@ -147,6 +147,7 @@ M.bind = function(n, settings, pum)
         close_preview()
         promote(buf)
       end)
+
       return esc
     end, { expr = true, noremap = true })
   end
@@ -156,14 +157,16 @@ M.bind = function(n, settings, pum)
     defer(iter.close)
 
     for ev in iter do
-      local ctx = context.base()
-      clear(ctx.buf)
-      local item = item_of(ev)
+      n.spawn(function()
+        local ctx = context.base()
+        clear(ctx.buf)
+        local item = item_of(ev)
 
-      if item then
-        show_ghost(ctx, settings.display.ghost_text, item)
-        show_doc(ctx, settings.display.preview, item)
-      end
+        if item then
+          show_ghost(ctx, settings.display.ghost_text, item)
+          show_doc(ctx, settings.display.preview, item)
+        end
+      end)
     end
   end)
 end

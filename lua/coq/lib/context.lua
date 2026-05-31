@@ -1,3 +1,5 @@
+local atools = require "coq.lib.atools"
+
 ---@class ctx.base
 ---@field win integer
 ---@field buf integer
@@ -31,6 +33,8 @@ end
 
 ---@return ctx.base
 M.base = function()
+  atools.scheduled()
+
   local ctx = {}
 
   ctx.win = vim.api.nvim_get_current_win()

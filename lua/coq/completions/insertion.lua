@@ -144,12 +144,14 @@ M.bind = function(n, ranker, done)
       if type(user_data) == "table" then
         ---@cast user_data completions.Item
 
-        local ctx = context.base()
-        local filter = user_data.meta.filter or user_data.word
+        n.spawn(function()
+          local ctx = context.base()
+          local filter = user_data.meta.filter or user_data.word
 
-        if apply(ctx, user_data) and filter then
-          ranker.inserted(filter)
-        end
+          if apply(ctx, user_data) and filter then
+            ranker.inserted(filter)
+          end
+        end)
       end
     end
   end)
