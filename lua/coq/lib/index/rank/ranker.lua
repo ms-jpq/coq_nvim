@@ -34,10 +34,7 @@ M.new = function(clients)
     atools.scheduled()
     return {
       token = ctx.cword,
-      locality = tokens.locality(
-        tokens.parse_iskeyword(ctx.iskeyword),
-        vim.iter(tokens.surround(ctx)) --[[@as fun(): string?]]
-      ),
+      locality = tokens.locality(ctx.kw, vim.iter(tokens.surround(ctx)) --[[@as fun(): string?]]),
       recency = recency,
       source_bias = source_bias,
     }

@@ -83,13 +83,13 @@ end
 
 ---@param kw table<integer, true>
 ---@param line string
----@return integer
-M.trailing_word_start = function(kw, line)
+---@return string
+M.trailing_keyword_before = function(kw, line)
   local i = #line
   while i > 0 and kw[string.byte(line, i)] do
     i = i - 1
   end
-  return i + 1
+  return string.sub(line, i + 1)
 end
 
 ---@param ctx ctx.full

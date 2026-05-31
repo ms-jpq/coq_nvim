@@ -115,7 +115,7 @@ M.matcher = function(settings, ctx)
   local menu = sc[1] .. opts.short_name .. sc[2]
   local index = require "coq.producers.buffer.index"
   local search_ctx = {
-    line_before = ctx.line_before,
+    keyword_before = ctx.keyword_before,
     filetype = opts.same_filetype and ctx.filetype or nil,
   }
 

@@ -4,7 +4,6 @@ local item = require "coq.completions.item"
 local lib = require "coq.lib"
 local resolve = require "coq.completions.resolve"
 local score = require "coq.lib.index.rank.score"
-local tokens = require "coq.lib.index.tokens"
 local topk_m = require "coq.lib.index.rank.topk"
 
 local DEFAULT_ENCODING = "utf-16"
@@ -125,8 +124,7 @@ M.complete = function(ctx, settings, ranker, iter)
     return
   end
 
-  local kw = tokens.parse_iskeyword(ctx.iskeyword)
-  local start = tokens.trailing_word_start(kw, ctx.line_before)
+  local start = #ctx.line_before - #ctx.keyword_before + 1
   vim.fn.complete(start, items)
 end
 

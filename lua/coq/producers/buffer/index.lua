@@ -10,7 +10,7 @@ local trie = require "coq.lib.index.trie"
 ---@class buffer.Ctx
 ---@field buf? integer
 ---@field filetype? string
----@field line_before? string
+---@field keyword_before? string
 
 ---@return index.Searcher<buffer.Ctx, buffer.Item>
 local word_trie = function()
@@ -19,10 +19,10 @@ local word_trie = function()
       return item.word
     end,
     query_key = function(ctx)
-      if ctx.line_before == nil then
+      if ctx.keyword_before == nil or ctx.keyword_before == "" then
         return nil
       end
-      return string.match(ctx.line_before, "[%w_]+$")
+      return ctx.keyword_before
     end,
   }
 end

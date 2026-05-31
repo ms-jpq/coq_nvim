@@ -23,10 +23,10 @@ T.describe("buffer.index", function(test)
     index.insert { word = "spot", buf = 2, filetype = "lua", filename = "" }
     index.insert { word = "labrador", buf = 3, filetype = "python", filename = "" }
 
-    T.eq(words(index.search { filetype = "lua", buf = 1, line_before = "la" }), { "labrador" })
-    T.eq(words(index.search { filetype = "lua", buf = 1, line_before = "li" }), { "lily" })
-    T.eq(words(index.search { filetype = "lua", buf = 2, line_before = "sp" }), { "spot" })
-    T.eq(words(index.search { filetype = "python", buf = 3, line_before = "la" }), { "labrador" })
+    T.eq(words(index.search { filetype = "lua", buf = 1, keyword_before = "la" }), { "labrador" })
+    T.eq(words(index.search { filetype = "lua", buf = 1, keyword_before = "li" }), { "lily" })
+    T.eq(words(index.search { filetype = "lua", buf = 2, keyword_before = "sp" }), { "spot" })
+    T.eq(words(index.search { filetype = "python", buf = 3, keyword_before = "la" }), { "labrador" })
   end)
 
   test("nil filetype fans out across filetypes", function()
@@ -34,7 +34,7 @@ T.describe("buffer.index", function(test)
     index.insert { word = "labrador", buf = 1, filetype = "lua", filename = "" }
     index.insert { word = "labradoodle", buf = 2, filetype = "python", filename = "" }
 
-    T.eq(words(index.search { line_before = "lab" }), { "labradoodle", "labrador" })
+    T.eq(words(index.search { keyword_before = "lab" }), { "labradoodle", "labrador" })
   end)
 
   test("nil buf fans out across bufs within a filetype", function()
@@ -43,24 +43,16 @@ T.describe("buffer.index", function(test)
     index.insert { word = "lily", buf = 2, filetype = "lua", filename = "" }
     index.insert { word = "spot", buf = 3, filetype = "python", filename = "" }
 
-    T.eq(words(index.search { filetype = "lua", line_before = "l" }), { "labrador", "lily" })
+    T.eq(words(index.search { filetype = "lua", keyword_before = "l" }), { "labrador", "lily" })
   end)
 
-  test("nil line_before fans across every word", function()
+  test("nil keyword_before fans across every word", function()
     index.prune {}
     index.insert { word = "labrador", buf = 1, filetype = "lua", filename = "" }
     index.insert { word = "lily", buf = 1, filetype = "lua", filename = "" }
     index.insert { word = "spot", buf = 1, filetype = "lua", filename = "" }
 
     T.eq(words(index.search { filetype = "lua", buf = 1 }), { "labrador", "lily", "spot" })
-  end)
-
-  test("line_before extracts the trailing word for the prefix", function()
-    index.prune {}
-    index.insert { word = "labrador", buf = 1, filetype = "lua", filename = "" }
-
-    T.eq(words(index.search { filetype = "lua", buf = 1, line_before = "hello la" }), { "labrador" })
-    T.eq(words(index.search { filetype = "lua", buf = 1, line_before = "no_match xy" }), {})
   end)
 
   test("prune by buf removes only that buf within a filetype", function()
@@ -80,7 +72,7 @@ T.describe("buffer.index", function(test)
 
     local seen = {}
     for item in
-      index.search { filetype = "lua", buf = 1, line_before = "lab" } --[[@as fun(): buffer.Item?]]
+      index.search { filetype = "lua", buf = 1, keyword_before = "lab" } --[[@as fun(): buffer.Item?]]
     do
       table.insert(seen, item.filename)
     end
