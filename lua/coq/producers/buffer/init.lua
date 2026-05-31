@@ -1,9 +1,11 @@
 local async = require "coq.lib.async"
 local atools = require "coq.lib.atools"
+local context = require "coq.lib.context"
 local fs = require "coq.producers.fs"
-local lib = require "coq.lib"
+local index = require "coq.producers.buffer.index"
 local threaded = require "coq.lib.producers.threaded"
 local tokens = require "coq.lib.index.tokens"
+local util = require "coq.producers.util"
 local worker = require "coq.lib.worker"
 
 ---@class buffer.BufInfo
@@ -24,48 +26,10 @@ local M = {
   state = { last_tick = {} },
 }
 
-local kinds = {
-  BufEnter = "update",
-  BufRead = "update",
-  BufWinEnter = "update",
-  TextChanged = "update",
-  TextChangedI = "update",
-  BufDelete = "remove",
-  BufWipeout = "remove",
-}
-
----@param _ async.Nursery
----@param push producers.Push
-local bind = function(_, push)
-  vim.api.nvim_create_autocmd(vim.tbl_keys(kinds), {
-    group = lib.group,
-    callback = function(args)
-      push { kind = kinds[args.event], args = args }
-    end,
-  })
-
-  for _, buf in pairs(vim.api.nvim_list_bufs()) do
-    if vim.bo[buf].buflisted then
-      push { kind = "update", args = { buf = buf } }
-    end
-  end
-end
-
 ---@param buf integer
 ---@return string[]
 local buffer_lines = function(buf)
-  local count = vim.api.nvim_buf_line_count(buf)
-  local win = vim.fn.bufwinid(buf)
-
-  local row, height
-  if win == -1 then
-    row, height = 0, count
-  else
-    row = unpack(vim.api.nvim_win_get_cursor(win)) - 1
-    height = vim.api.nvim_win_get_height(win)
-  end
-
-  local lo, hi = math.max(0, row - height), math.min(count, row + height + 1)
+  local lo, hi = context.window_around_cursor(buf)
   return vim.api.nvim_buf_get_lines(buf, lo, hi, true)
 end
 
@@ -117,17 +81,15 @@ local doc = function(opts, ctx, item)
 end
 
 ---@param buf integer
----@param state buffer.State
----@param index index.Searcher<buffer.Ctx, buffer.Item>
-local update_buf = function(buf, state, index)
+local update_buf = function(buf)
   local info = worker.main(function(...)
     return require("coq.producers.buffer").buffer_info(...)
-  end, buf, state.last_tick[buf])
+  end, buf, M.state.last_tick[buf])
   if not info then
     return
   end
 
-  state.last_tick[buf] = info.tick
+  M.state.last_tick[buf] = info.tick
   index.prune { buf = buf }
 
   local kw = tokens.parse_iskeyword(info.iskeyword)
@@ -143,19 +105,14 @@ local update_buf = function(buf, state, index)
   end
 end
 
----@param settings config.Settings
-M.idle = function(settings, events)
-  local _ = settings
-  local state = require("coq.producers.buffer").state
-  local index = require "coq.producers.buffer.index"
-
+M.idle = function(_, events)
   for buf, ev in pairs(events) do
     async.sleep(0)
     if ev.kind == "remove" then
       index.prune { buf = buf }
-      state.last_tick[buf] = nil
+      M.state.last_tick[buf] = nil
     elseif ev.kind == "update" then
-      update_buf(buf, state, index)
+      update_buf(buf)
     end
   end
 end
@@ -165,8 +122,6 @@ M.matcher = function(settings, ctx)
   local opts = settings.clients.buffers
   local sc = settings.display.pum.source_context
   local menu = sc[1] .. opts.short_name .. sc[2]
-  local index = require "coq.producers.buffer.index"
-  local util = require "coq.producers.util"
   local search_ctx = {
     keyword_before = ctx.keyword_before,
     filetype = opts.same_filetype and ctx.filetype or nil,
@@ -199,10 +154,8 @@ M.new = function(settings)
   return threaded.new {
     settings = settings,
     max_pulls = settings.clients.buffers.max_pulls,
-    key = function(ev)
-      return ev.args.buf
-    end,
-    bind = bind,
+    key = util.buffer_key,
+    bind = util.buffer_bind,
     idle = function(...)
       require("coq.producers.buffer").idle(...)
     end,

@@ -110,12 +110,13 @@ M.complete = function(ctx, settings, ranker, iter)
   end
 
   local best = {}
-  for s, sc, _ in score.compute(scorables, prepared) do
-    local it = s --[[@as {item: completions.Item}]].item
-    local k = item.dedup_key(it)
-    local cur = best[k]
+  for scorable, sc in score.compute(scorables, prepared) do
+    local it = scorable --[[@as {item: completions.Item}]].item
+    local key = item.dedup_key(it)
+    local cur = best[key]
+
     if not cur or sc > cur.score then
-      best[k] = { item = it, score = sc }
+      best[key] = { item = it, score = sc }
     end
   end
 

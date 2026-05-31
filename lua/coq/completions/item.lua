@@ -10,6 +10,7 @@
 ---@field snippet? string
 ---@field source? string
 ---@field always_on_top? boolean
+---@field path? string
 ---@field lsp? completions.ItemLspMeta
 
 ---@class completions.Item: vim.v.completed_item

@@ -20,8 +20,8 @@ end
 
 local collect = function(iter)
   local out = {}
-  for row, s, pos in iter do
-    table.insert(out, { row = row, score = s, positions = pos })
+  for row, s in iter do
+    table.insert(out, { row = row, score = s })
   end
   return out
 end
@@ -40,15 +40,9 @@ T.describe("score", function(test)
     assert(s and s.score > 0, "expected positive number, got " .. vim.inspect(s))
   end)
 
-  test("matching survivor carries positions from matchfuzzypos", function()
-    local s = one("golden_retriever", prep "gold")
-    T.eq(s.positions, { 0, 1, 2, 3 })
-  end)
-
-  test("empty token passes every row with fuzzy = 0 and nil positions", function()
+  test("empty token passes every row with fuzzy = 0", function()
     local s = one("golden_retriever", prep "")
     T.eq(s.score, 0)
-    T.eq(s.positions, nil)
   end)
 
   test("empty token still applies proximity / recency / bias", function()
@@ -101,7 +95,6 @@ T.describe("score", function(test)
     local out = collect(score.compute(rows, prep "gold"))
     T.eq(#out, 2)
     T.eq(out[1].score, out[2].score)
-    T.eq(out[1].positions, out[2].positions)
   end)
 
   test("non-matchers are excluded, matchers retained", function()

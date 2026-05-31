@@ -1,8 +1,10 @@
 local async = require "coq.lib.async"
 local atools = require "coq.lib.atools"
+local index = require "coq.producers.tmux.index"
 local lib = require "coq.lib"
 local threaded = require "coq.lib.producers.threaded"
 local tokens = require "coq.lib.index.tokens"
+local util = require "coq.producers.util"
 
 local SEP = "\30"
 local PANE_FIELDS = {
@@ -88,13 +90,11 @@ local pane_capture = function(pane)
   return proc.stdout
 end
 
----@param state tmux.State
 ---@param kw table<integer, true>
----@param index index.Searcher<tmux.Ctx, tmux.Item>
 ---@param pane tmux.Pane
 ---@param text string
-local reindex_pane = function(state, kw, index, pane, text)
-  if state.cache[pane.id] == text then
+local reindex_pane = function(kw, pane, text)
+  if M.state.cache[pane.id] == text then
     return
   end
   async.sleep(0)
@@ -103,26 +103,23 @@ local reindex_pane = function(state, kw, index, pane, text)
   for word in tokens.words(kw, vim.gsplit(text, "\n", { plain = true })) do
     index.insert { pane = pane.id, word = word, meta = pane.meta }
   end
-  state.cache[pane.id] = text
+  M.state.cache[pane.id] = text
 end
 
 ---@param settings config.Settings
 M.idle = function(settings, events)
-  local state = require("coq.producers.tmux").state
-  local index = require "coq.producers.tmux.index"
-
   for _, ev in pairs(events) do
     if ev.kind == "iskeyword" then
-      state.iskeyword = ev.iskeyword
+      M.state.iskeyword = ev.iskeyword
     end
   end
 
   local env = vim.uv.os_environ()
-  if env.TMUX == nil or state.iskeyword == nil then
+  if env.TMUX == nil or M.state.iskeyword == nil then
     return
   end
 
-  local kw = tokens.parse_iskeyword(state.iskeyword)
+  local kw = tokens.parse_iskeyword(M.state.iskeyword)
 
   local panes, live = {}, {}
   for pane in list_panes(settings, env.TMUX_PANE) do
@@ -130,10 +127,10 @@ M.idle = function(settings, events)
     live[pane.id] = true
   end
 
-  for id in pairs(state.cache) do
+  for id in pairs(M.state.cache) do
     if not live[id] then
       index.prune { pane = id }
-      state.cache[id] = nil
+      M.state.cache[id] = nil
     end
   end
 
@@ -146,7 +143,7 @@ M.idle = function(settings, events)
   for i, pane in pairs(panes) do
     local text = captures[i]
     if text ~= nil then
-      reindex_pane(state, kw, index, pane, text)
+      reindex_pane(kw, pane, text)
     end
   end
 end
@@ -169,8 +166,6 @@ M.matcher = function(settings, ctx)
   local opts = settings.clients.tmux
   local sc = settings.display.pum.source_context
   local menu = sc[1] .. opts.short_name .. sc[2]
-  local index = require "coq.producers.tmux.index"
-  local util = require "coq.producers.util"
 
   local items = util.dedup(index.search(ctx) --[[@as lib.Iterator<tmux.Item>]], function(it)
     return it.word

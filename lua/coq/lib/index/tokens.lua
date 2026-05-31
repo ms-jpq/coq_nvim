@@ -1,5 +1,6 @@
 local async = require "coq.lib.async"
 local atools = require "coq.lib.atools"
+local context = require "coq.lib.context"
 local runtime = require "coq.lib.async.runtime"
 
 local YIELD_BYTES = 6969
@@ -110,11 +111,7 @@ end
 ---@return string[]
 M.surround = function(ctx)
   atools.scheduled()
-  local half = math.floor(vim.api.nvim_win_get_height(ctx.win) / 2)
-  local row = ctx.pos[1] - 1
-  local lo = math.max(0, row - half)
-  local hi = math.min(ctx.line_count, row + half + 1)
-
+  local lo, hi = context.window_around_cursor(ctx.buf)
   return vim.api.nvim_buf_get_lines(ctx.buf, lo, hi, true)
 end
 

@@ -59,8 +59,16 @@ local producers = function(settings)
       coroutine.yield(require("coq.producers.buffer").new(settings))
     end
 
+    if clients.paths.enabled then
+      coroutine.yield(require("coq.producers.paths").new(settings))
+    end
+
     if clients.tmux.enabled then
       coroutine.yield(require("coq.producers.tmux").new(settings))
+    end
+
+    if clients.tree_sitter.enabled then
+      coroutine.yield(require("coq.producers.treesitter").new(settings))
     end
   end)
 end

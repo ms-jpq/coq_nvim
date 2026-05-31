@@ -5,7 +5,7 @@ local atools = require "coq.lib.atools"
 ---@field source string
 ---@field always_on_top? boolean
 
----@alias index.Scored [index.Scorable, number, integer[]?]
+---@alias index.Scored [index.Scorable, number]
 
 local M = {}
 
@@ -54,7 +54,7 @@ M.compute = function(items, prepared)
       local tier = item.always_on_top and M.ALWAYS_TOP or 0
 
       local score = (hit.fuzzy + prox * M.WEIGHTS.prox + recen * M.WEIGHTS.recen) * bias + tier
-      return item, score, hit.positions
+      return item, score
     end) --[[@as lib.Iterator<index.Scored>]]
 end
 
