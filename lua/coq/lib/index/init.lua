@@ -3,13 +3,13 @@ local handle = require "coq.lib.async.handle"
 local lib = require "coq.lib"
 local runtime = require "coq.lib.async.runtime"
 
----@class index.SearchIter: lib.Closable
----@overload fun(): completions.Item?
+---@class index.SearchIter<T>: lib.Closable
+---@overload fun(): T?
 
----@class index.Searchable<C>
----@field search fun(ctx: C): index.SearchIter
+---@class index.Searchable<C, T>
+---@field search fun(ctx: C): index.SearchIter<T>
 
----@class index.Searcher<C, T>: index.Searchable<C>
+---@class index.Searcher<C, T>: index.Searchable<C, T>
 ---@field insert fun(item: T)
 ---@field prune fun(ctx: C)
 
@@ -29,9 +29,10 @@ M.empty = {
   end,
 }
 
+---@generic T
 ---@param h async.Handle
 ---@param fn fun()
----@return index.SearchIter
+---@return index.SearchIter<T>
 M.iter = function(h, fn)
   local bounce = async.wrap(fn, h)
 

@@ -1,3 +1,5 @@
+-- race accepts fns that return zero or many values; the typed `fun(): T` shape flags both.
+---@diagnostic disable: missing-return, redundant-return-value
 local T = require "coq.lib.test"
 local async = require "coq.lib.async"
 local handle = require "coq.lib.async.handle"

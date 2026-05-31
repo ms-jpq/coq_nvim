@@ -175,7 +175,7 @@ local M = {}
 ---@param opts? table
 ---@return config.Settings
 M.merged = function(opts)
-  return vim.tbl_deep_extend("force", vim.deepcopy(defaults), opts or {})
+  return vim.tbl_deep_extend("force", vim.deepcopy(defaults), opts or {}) --[[@as config.Settings]]
 end
 
 return M

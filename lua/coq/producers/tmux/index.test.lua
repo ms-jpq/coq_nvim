@@ -1,4 +1,3 @@
----@diagnostic disable: missing-fields
 local T = require "coq.lib.test"
 local index = require "coq.producers.tmux.index"
 

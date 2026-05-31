@@ -154,7 +154,7 @@ T.describe("scope", function(test)
 
     T.eq(ok, false)
     T.eq(cancelled, true)
-    assert(err:find "body went sideways")
+    assert(tostring(err):find "body went sideways")
   end)
 
   test("cancels and re-raises on child error", function()
@@ -176,6 +176,6 @@ T.describe("scope", function(test)
 
     T.eq(ok, false)
     T.eq(sibling_cancelled, true)
-    assert(err:find "child went missing")
+    assert(tostring(err):find "child went missing")
   end)
 end)

@@ -1,4 +1,3 @@
----@diagnostic disable: missing-fields
 local T = require "coq.lib.test"
 local async = require "coq.lib.async"
 local handle = require "coq.lib.async.handle"
@@ -68,7 +67,9 @@ T.describe("index.iter", function(test)
     end)
     T.eq(iter(), "lil")
 
-    local ok, err = pcall(iter)
+    local ok, err = pcall(function()
+      return iter()
+    end)
     T.eq(ok, false)
     assert(err and tostring(err):find "boom", "expected 'boom', got: " .. tostring(err))
     T.eq(h.cancelled, true)

@@ -14,7 +14,7 @@
   "Lua.type.inferParamType": true,
   "Lua.type.inferTableSize": 1000,
   "Lua.workspace.checkThirdParty": false,
-  "Lua.workspace.ignoreDir": ["*.test.lua", "var", "lua/coq/legacy"],
+  "Lua.workspace.ignoreDir": [".exp", "var", "lua/coq/legacy"],
   "Lua.workspace.library": [
     "/usr/share/nvim/runtime/lua",
     "/opt/homebrew/share/nvim/runtime/lua"

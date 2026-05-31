@@ -176,9 +176,10 @@ T.describe("worker", function(test)
 
     T.eq(seen, { "lil" })
     T.eq(ok, false)
-    assert(err:find "leash snapped", "expected message, got: " .. tostring(err))
-    assert(err:find "init.test.lua", "error should point at user file, got: " .. tostring(err))
-    assert(not err:find "worker/init.lua", "error must not point inside worker, got: " .. tostring(err))
+    local emsg = tostring(err)
+    assert(emsg:find "leash snapped", "expected message, got: " .. emsg)
+    assert(emsg:find "init.test.lua", "error should point at user file, got: " .. emsg)
+    assert(not emsg:find "worker/init.lua", "error must not point inside worker, got: " .. emsg)
   end)
 
   test("close before the streaming fn's first yield unblocks it", function()

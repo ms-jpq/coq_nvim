@@ -2,7 +2,7 @@ local handle = require "coq.lib.async.handle"
 local runtime = require "coq.lib.async.runtime"
 local search = require "coq.lib.index"
 
----@class producers.Producer: index.Searchable<ctx.full>
+---@class producers.Producer: index.Searchable<ctx.full, completions.Item>
 ---@field idle fun(ctx: ctx.full)
 ---@field bind fun(n: async.Nursery)
 ---@field max_pulls integer

@@ -13,6 +13,8 @@ local worker = require "coq.lib.worker"
 ---@field filename string
 ---@field iskeyword string
 
+local MAX_BYTES = 1024 * 1024
+
 ---@type table<integer, integer>
 local last_tick = {}
 
@@ -75,6 +77,13 @@ M.buffer_info = function(buf, prev_tick)
 
   local tick = vim.b[buf].changedtick
   if tick == prev_tick then
+    return nil
+  end
+
+  local bytes = vim.api.nvim_buf_call(buf, function()
+    return vim.fn.wordcount().bytes
+  end)
+  if bytes > MAX_BYTES then
     return nil
   end
 

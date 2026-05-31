@@ -1,8 +1,13 @@
 local T = require "coq.lib.test"
 local async = require "coq.lib.async"
 
+---@class runtime.test.Capture
+---@field msg string
+---@field level integer
+
 local CAPTURES = {}
 local ORIG_NOTIFY = vim.notify
+---@diagnostic disable-next-line: duplicate-set-field
 vim.notify = function(msg, level, opts)
   if type(msg) == "string" then
     for marker, state in pairs(CAPTURES) do
@@ -19,7 +24,11 @@ vim.notify = function(msg, level, opts)
 end
 
 local capture_notify = function(marker)
-  local state = { captured = nil, done = async.future() }
+  local state = {
+    ---@type runtime.test.Capture?
+    captured = nil,
+    done = async.future(),
+  }
   CAPTURES[marker] = state
   state.restore = function()
     CAPTURES[marker] = nil
