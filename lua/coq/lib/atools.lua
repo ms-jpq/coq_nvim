@@ -124,6 +124,10 @@ M.fs = {
   read = async.awaitify(vim.uv.fs_read),
   ---@type fun(fd: integer): string?, { size: integer }?
   fstat = async.awaitify(vim.uv.fs_fstat),
+  ---@type fun(path: string): string?, { type: string, size: integer }?
+  stat = async.awaitify(vim.uv.fs_stat),
+  ---@type fun(path: string): string?, uv.uv_fs_t?
+  scandir = async.awaitify(vim.uv.fs_scandir),
 }
 
 ---@param path string

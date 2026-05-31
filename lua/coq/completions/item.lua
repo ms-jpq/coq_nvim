@@ -5,11 +5,16 @@
 ---@field position_encoding? string
 ---@field command? lsp.Command
 
+---@class completions.ItemDoc
+---@field lines string[]
+---@field filetype string
+
 ---@class completions.ItemMeta
 ---@field filter? string
 ---@field snippet? string
 ---@field source? string
 ---@field always_on_top? boolean
+---@field doc? completions.ItemDoc
 ---@field path? string
 ---@field lsp? completions.ItemLspMeta
 
