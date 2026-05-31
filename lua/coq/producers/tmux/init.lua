@@ -21,10 +21,11 @@ local PANE_FMT = table.concat(PANE_FIELDS, SEP)
 
 ---@class tmux.State
 ---@field iskeyword? string
+---@field panes table<string, true>
 
 local M = {
   ---@type tmux.State
-  state = {},
+  state = { panes = {} },
 }
 
 ---@param _ async.Nursery
@@ -105,11 +106,24 @@ M.idle = function(settings, events)
   local kw = tokens.parse_iskeyword(state.iskeyword)
   local index = require "coq.producers.tmux.index"
 
+  local live = {}
   for pane in list_panes(settings, env.TMUX_PANE) do
-    index.prune { pane = pane.id }
-    for word in pane_words(kw, pane.id) do
-      index.insert { pane = pane.id, word = word, meta = pane.meta }
+    live[pane.id] = pane
+  end
+
+  for id in pairs(state.panes) do
+    if not live[id] then
+      index.prune { pane = id }
     end
+  end
+
+  state.panes = {}
+  for id, pane in pairs(live) do
+    index.prune { pane = id }
+    for word in pane_words(kw, id) do
+      index.insert { pane = id, word = word, meta = pane.meta }
+    end
+    state.panes[id] = true
   end
 end
 
