@@ -11,11 +11,11 @@ M.ALWAYS_TOP = 1e9
 ---@param items completions.Item[]
 ---@param prepared index.Prepared
 ---@return lib.Iterator<index.Scored>
-M.score = function(items, prepared)
-  local token = prepared.token
+M.compute = function(items, prepared)
+  atools.scheduled()
 
   local by_filter = (function()
-    if token == "" then
+    if prepared.token == "" then
       return vim.iter(items):fold({}, function(acc, item)
         acc[item.filter] = { fuzzy = 0, positions = nil }
         return acc
@@ -29,8 +29,7 @@ M.score = function(items, prepared)
       end)
       :totable()
 
-    atools.scheduled()
-    local matches, positions, scores = unpack(vim.fn.matchfuzzypos(filters, token))
+    local matches, positions, scores = unpack(vim.fn.matchfuzzypos(filters, prepared.token))
     return vim.iter(matches):enumerate():fold({}, function(acc, i, f)
       acc[f] = { fuzzy = scores[i], positions = positions[i] }
       return acc

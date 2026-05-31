@@ -37,3 +37,65 @@ T.describe("atools.spawn", function(test)
     assert(elapsed_ms and elapsed_ms < 100 * T.SLOW, "expected fast kill, got " .. tostring(elapsed_ms) .. " ms")
   end)
 end)
+
+---@param contents string
+---@return string path
+local write_tmp = function(contents)
+  local path = vim.fn.tempname()
+  local f = assert(io.open(path, "w"))
+  f:write(contents)
+  f:close()
+  return path
+end
+
+---@param iter fun(): string?
+---@return string[]
+local drain = function(iter)
+  local out = {}
+  for line in iter do
+    table.insert(out, line)
+  end
+  return out
+end
+
+T.describe("atools.file_lines", function(test)
+  test("yields each line of the file", function()
+    local path = write_tmp "lil\nspot\nfido"
+    local lines
+    async.scope(function()
+      lines = drain(atools.file_lines(path))
+    end)
+
+    T.eq(lines, { "lil", "spot", "fido" })
+  end)
+
+  test("empty file yields a single empty string", function()
+    local path = write_tmp ""
+    local lines
+    async.scope(function()
+      lines = drain(atools.file_lines(path))
+    end)
+
+    T.eq(lines, { "" })
+  end)
+
+  test("trailing newline yields an empty final line", function()
+    local path = write_tmp "lil\nspot\n"
+    local lines
+    async.scope(function()
+      lines = drain(atools.file_lines(path))
+    end)
+
+    T.eq(lines, { "lil", "spot", "" })
+  end)
+
+  test("missing file returns a dead iterator", function()
+    local path = vim.fn.tempname() .. "/does-not-exist"
+    local lines
+    async.scope(function()
+      lines = drain(atools.file_lines(path))
+    end)
+
+    T.eq(lines, {})
+  end)
+end)

@@ -1,3 +1,4 @@
+local async = require "coq.lib.async"
 local atools = require "coq.lib.atools"
 local lib = require "coq.lib"
 local threaded = require "coq.lib.producers.threaded"
@@ -6,10 +7,14 @@ local worker = require "coq.lib.worker"
 
 ---@class buffer.BufInfo
 ---@field buf integer
----@field lines string[]
+---@field tick integer
+---@field lines? string[]
 ---@field filetype string
 ---@field filename string
 ---@field iskeyword string
+
+---@type table<integer, integer>
+local last_tick = {}
 
 local M = {}
 
@@ -59,20 +64,27 @@ local buffer_lines = function(buf)
 end
 
 ---@param buf integer
+---@param prev_tick? integer
 ---@return buffer.BufInfo?
-M.buffer_info = function(buf)
+M.buffer_info = function(buf, prev_tick)
   atools.scheduled()
 
   if not vim.api.nvim_buf_is_valid(buf) or not vim.api.nvim_buf_is_loaded(buf) then
     return nil
   end
 
+  local tick = vim.b[buf].changedtick
+  if tick == prev_tick then
+    return nil
+  end
+
   return {
     buf = buf,
+    tick = tick,
     filetype = vim.bo[buf].filetype,
     filename = vim.api.nvim_buf_get_name(buf),
     iskeyword = vim.bo[buf].iskeyword,
-    lines = buffer_lines(buf),
+    lines = vim.bo[buf].modified and buffer_lines(buf) or nil,
   }
 end
 
@@ -97,17 +109,22 @@ M.idle = function(settings, events)
   local index = require "coq.producers.buffer.index"
 
   for buf, ev in pairs(events) do
+    async.sleep(0)
+
     if ev.kind == "remove" then
       index.prune { buf = buf }
+      last_tick[buf] = nil
     elseif ev.kind == "update" then
-      local info = worker.main(function(b)
-        return require("coq.producers.buffer").buffer_info(b)
-      end, buf)
+      local info = worker.main(function(...)
+        return require("coq.producers.buffer").buffer_info(...)
+      end, buf, last_tick[buf])
 
       if info then
-        index.prune { buf = buf }
+        last_tick[info.buf] = info.tick
+        index.prune { buf = info.buf }
+
         local kw = tokens.parse_iskeyword(info.iskeyword)
-        local lines = vim.iter(info.lines) --[[@as fun(): string?]]
+        local lines = info.lines and vim.iter(info.lines) --[[@as fun(): string?]] or atools.file_lines(info.filename)
 
         for word in tokens.words(kw, lines) do
           index.insert {

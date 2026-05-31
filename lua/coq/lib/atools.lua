@@ -1,4 +1,5 @@
 local async = require "coq.lib.async"
+local lib = require "coq.lib"
 local runtime = require "coq.lib.async.runtime"
 
 local M = {}
@@ -108,6 +109,40 @@ M.spawn = function(argv, opts)
     proc.stdout = stdout
     proc.stderr = stderr
     return proc
+  end)
+end
+
+M.fs = {
+  ---@type fun(path: string, flags: string|integer, mode: integer): string?, integer?
+  open = async.awaitify(vim.uv.fs_open),
+  ---@type fun(fd: integer): string?
+  close = async.awaitify(vim.uv.fs_close),
+  ---@type fun(fd: integer, size: integer, offset: integer): string?, string?
+  read = async.awaitify(vim.uv.fs_read),
+  ---@type fun(fd: integer): string?, { size: integer }?
+  fstat = async.awaitify(vim.uv.fs_fstat),
+}
+
+---@param path string
+---@return fun(): string?
+M.file_lines = function(path)
+  return lib.scope(function(defer)
+    local e1, fd = M.fs.open(path, "r", 438)
+    if e1 or not fd then
+      return lib.noop
+    end
+
+    defer(function()
+      M.fs.close(fd)
+    end)
+
+    local e2, stat = M.fs.fstat(fd)
+    if e2 or not stat then
+      return lib.noop
+    end
+
+    local _, data = M.fs.read(fd, stat.size, 0)
+    return vim.gsplit(data or "", "\n", { plain = true })
   end)
 end
 

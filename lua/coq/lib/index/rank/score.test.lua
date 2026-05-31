@@ -27,12 +27,12 @@ local collect = function(iter)
 end
 
 local one = function(filter, p)
-  return collect(score.score({ mk(filter) }, p))[1]
+  return collect(score.compute({ mk(filter) }, p))[1]
 end
 
 T.describe("score", function(test)
   test("non-matching filter is dropped from the output", function()
-    T.eq(collect(score.score({ mk "golden_retriever" }, prep "xyz")), {})
+    T.eq(collect(score.compute({ mk "golden_retriever" }, prep "xyz")), {})
   end)
 
   test("matching filter survives with a positive score", function()
@@ -80,7 +80,7 @@ T.describe("score", function(test)
 
   test("default source bias is 1 (neutral) when source absent from table", function()
     local missing =
-      collect(score.score({ mk("golden_retriever", "lsp") }, prep("gold", { source_bias = { buffer = 2 } })))[1].score
+      collect(score.compute({ mk("golden_retriever", "lsp") }, prep("gold", { source_bias = { buffer = 2 } })))[1].score
     local plain = one("golden_retriever", prep "gold").score
     T.eq(missing, plain)
   end)
@@ -88,7 +88,7 @@ T.describe("score", function(test)
   test("survivors come back in input order", function()
     -- "ld" matches golden_retriever and labrador; poodle has no l-then-d
     local rows = { mk "golden_retriever", mk "poodle", mk "labrador" }
-    local out = collect(score.score(rows, prep "ld"))
+    local out = collect(score.compute(rows, prep "ld"))
     local filters = {}
     for _, s in ipairs(out) do
       table.insert(filters, s.row.filter)
@@ -98,7 +98,7 @@ T.describe("score", function(test)
 
   test("rows sharing a filter both receive the same fuzzy score", function()
     local rows = { mk("golden_retriever", "buffer"), mk("golden_retriever", "lsp") }
-    local out = collect(score.score(rows, prep "gold"))
+    local out = collect(score.compute(rows, prep "gold"))
     T.eq(#out, 2)
     T.eq(out[1].score, out[2].score)
     T.eq(out[1].positions, out[2].positions)
@@ -106,7 +106,7 @@ T.describe("score", function(test)
 
   test("non-matchers are excluded, matchers retained", function()
     local rows = { mk "golden_retriever", mk "xyzzy", mk "labrador" }
-    local out = collect(score.score(rows, prep "lab"))
+    local out = collect(score.compute(rows, prep "lab"))
     T.eq(#out, 1)
     T.eq(out[1].row.filter, "labrador")
   end)

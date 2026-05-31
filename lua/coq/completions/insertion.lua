@@ -110,7 +110,7 @@ M.complete = function(ctx, settings, ranker, iter)
   end
 
   local topk = topk_m.new(settings.match.max_results)
-  for s, sc, _ in score.score(scorables, prepared) do
+  for s, sc, _ in score.compute(scorables, prepared) do
     topk.push(s --[[@as {item: completions.Item}]].item, sc)
   end
 
