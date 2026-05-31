@@ -17,6 +17,32 @@
 
 local M = {}
 
+---@param item completions.Item
+---@return string
+M.dedup_key = function(item)
+  local meta = item.meta
+  if meta.snippet then
+    return "snip\0" .. meta.snippet
+  end
+  local edit = meta.lsp and meta.lsp.item and meta.lsp.item.textEdit
+
+  if edit then
+    local range = edit.range or edit.replace
+    if range then
+      return string.format(
+        "r\0%d:%d-%d:%d\0%s",
+        range.start.line,
+        range.start.character,
+        range["end"].line,
+        range["end"].character,
+        edit.newText or ""
+      )
+    end
+  end
+
+  return "txt\0" .. (item.word or "")
+end
+
 -- https://github.com/ms-jpq/coq_nvim/blob/coq/coq/server/icons.py
 ---@param icons config.Icons
 ---@param kind string

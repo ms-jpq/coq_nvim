@@ -109,9 +109,19 @@ M.complete = function(ctx, settings, ranker, iter)
     })
   end
 
-  local topk = topk_m.new(settings.match.max_results)
+  local best = {}
   for s, sc, _ in score.compute(scorables, prepared) do
-    topk.push(s --[[@as {item: completions.Item}]].item, sc)
+    local it = s --[[@as {item: completions.Item}]].item
+    local k = item.dedup_key(it)
+    local cur = best[k]
+    if not cur or sc > cur.score then
+      best[k] = { item = it, score = sc }
+    end
+  end
+
+  local topk = topk_m.new(settings.match.max_results)
+  for _, e in pairs(best) do
+    topk.push(e.item, e.score)
   end
 
   local items = {}

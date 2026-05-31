@@ -21,11 +21,11 @@ local PANE_FMT = table.concat(PANE_FIELDS, SEP)
 
 ---@class tmux.State
 ---@field iskeyword? string
----@field panes table<string, true>
+---@field cache table<string, string>
 
 local M = {
   ---@type tmux.State
-  state = { panes = {} },
+  state = { cache = {} },
 }
 
 ---@param _ async.Nursery
@@ -35,6 +35,12 @@ local bind = function(_, push)
     group = lib.group,
     callback = function(args)
       push { kind = "iskeyword", iskeyword = vim.bo[args.buf].iskeyword }
+    end,
+  })
+  vim.api.nvim_create_autocmd({ "FocusGained" }, {
+    group = lib.group,
+    callback = function()
+      push { kind = "focus" }
     end,
   })
 
@@ -72,25 +78,38 @@ local list_panes = function(settings, exclude)
   end)
 end
 
----@param kw table<integer, true>
 ---@param pane string
----@return lib.Iterator<string>
-local pane_words = function(kw, pane)
-  return async.wrap(function()
-    local proc = atools.spawn { "tmux", "capture-pane", "-p", "-J", "-t", pane }
-    if proc == nil or proc.code ~= 0 then
-      return
-    end
-    local lines = vim.iter(vim.split(proc.stdout, "\n", { plain = true })) --[[@as lib.Iterator<string>]]
-    for word in tokens.words(kw, lines) do
-      coroutine.yield(word)
-    end
-  end)
+---@return string?
+local pane_capture = function(pane)
+  local proc = atools.spawn { "tmux", "capture-pane", "-p", "-J", "-t", pane }
+  if proc == nil or proc.code ~= 0 then
+    return nil
+  end
+  return proc.stdout
+end
+
+---@param state tmux.State
+---@param kw table<integer, true>
+---@param index index.Searcher<tmux.Ctx, tmux.Item>
+---@param pane tmux.Pane
+---@param text string
+local reindex_pane = function(state, kw, index, pane, text)
+  if state.cache[pane.id] == text then
+    return
+  end
+  async.sleep(0)
+
+  index.prune { pane = pane.id }
+  for word in tokens.words(kw, vim.gsplit(text, "\n", { plain = true })) do
+    index.insert { pane = pane.id, word = word, meta = pane.meta }
+  end
+  state.cache[pane.id] = text
 end
 
 ---@param settings config.Settings
 M.idle = function(settings, events)
   local state = require("coq.producers.tmux").state
+  local index = require "coq.producers.tmux.index"
 
   for _, ev in pairs(events) do
     if ev.kind == "iskeyword" then
@@ -104,18 +123,31 @@ M.idle = function(settings, events)
   end
 
   local kw = tokens.parse_iskeyword(state.iskeyword)
-  local index = require "coq.producers.tmux.index"
 
-  for id in pairs(state.panes) do
-    index.prune { pane = id }
-  end
-  state.panes = {}
-
+  local panes, live = {}, {}
   for pane in list_panes(settings, env.TMUX_PANE) do
-    for word in pane_words(kw, pane.id) do
-      index.insert { pane = pane.id, word = word, meta = pane.meta }
+    table.insert(panes, pane)
+    live[pane.id] = true
+  end
+
+  for id in pairs(state.cache) do
+    if not live[id] then
+      index.prune { pane = id }
+      state.cache[id] = nil
     end
-    state.panes[pane.id] = true
+  end
+
+  local captures = async.all(vim.tbl_map(function(pane)
+    return function()
+      return pane_capture(pane.id)
+    end
+  end, panes))
+
+  for i, pane in pairs(panes) do
+    local text = captures[i]
+    if text ~= nil then
+      reindex_pane(state, kw, index, pane, text)
+    end
   end
 end
 
