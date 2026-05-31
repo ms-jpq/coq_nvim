@@ -2,30 +2,30 @@ local handle = require "coq.lib.async.handle"
 local runtime = require "coq.lib.async.runtime"
 local search = require "coq.lib.index"
 
----@class producers.Producer: index.Searchable<ctx.full, completions.Item>
----@field idle fun(ctx: ctx.full)
+---@class producers.Producer<C>: index.Searchable<C, completions.Item>
+---@field idle fun(ctx: C)
 ---@field bind fun(n: async.Nursery)
 ---@field max_pulls integer
 
 ---@alias producers.KeyFn fun(ev: any): any
----@alias producers.IdleFn fun(settings: config.Settings, events: table<any, any>, ctx: ctx.full)
----@alias producers.MatcherFn fun(settings: config.Settings, ctx: ctx.full)
+---@alias producers.IdleFn<C> fun(settings: config.Settings?, events: table<any, any>, ctx: C)
+---@alias producers.MatcherFn<C> fun(settings: config.Settings?, ctx: C)
 ---@alias producers.Push fun(ev: any)
 ---@alias producers.OnBind fun(n: async.Nursery, push: producers.Push)
 
----@class producers.Spec
----@field settings config.Settings
+---@class producers.Spec<C>
+---@field settings? config.Settings
 ---@field key? producers.KeyFn
----@field idle producers.IdleFn
----@field matcher producers.MatcherFn
+---@field idle producers.IdleFn<C>
+---@field matcher producers.MatcherFn<C>
 ---@field bind producers.OnBind
 ---@field max_pulls? integer
 
----@alias producers.NewProducer fun(spec: producers.Spec): producers.Producer
-
 local M = {}
 
----@type producers.NewProducer
+---@generic C
+---@param spec producers.Spec<C>
+---@return producers.Producer<C>
 M.new = function(spec)
   local key = spec.key or function(ev)
     return ev

@@ -3,7 +3,7 @@ local context = require "coq.lib.context"
 local M = {}
 
 ---@param n async.Nursery
----@param sup producers.Producer
+---@param sup producers.Producer<ctx.full>
 ---@param idle channels.Broadcast<nil>
 M.bind = function(n, sup, idle)
   n.spawn(function(defer)

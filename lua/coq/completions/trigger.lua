@@ -7,7 +7,7 @@ local M = {}
 ---@param n async.Nursery
 ---@param settings config.Settings
 ---@param ranker index.Ranker
----@param sup producers.Producer
+---@param sup producers.Producer<ctx.full>
 ---@param trigger channels.Broadcast<nil>
 M.bind = function(n, settings, ranker, sup, trigger)
   n.spawn(function(defer)

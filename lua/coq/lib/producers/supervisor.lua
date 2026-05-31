@@ -26,8 +26,9 @@ local capped = function(max, iter)
   return setmetatable({ close = iter.close }, { __call = next })
 end
 
----@param producers producers.Producer[]
----@return producers.Producer
+---@generic C
+---@param producers producers.Producer<C>[]
+---@return producers.Producer<C>
 M.new = function(producers)
   local ph = handle.new()
   local search_handle, idle_handle = handle.new(), handle.new()

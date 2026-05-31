@@ -50,7 +50,7 @@ do
 end
 
 ---@param settings config.Settings
----@return fun(): producers.Producer?
+---@return fun(): producers.Producer<ctx.full>?
 local producers = function(settings)
   return async.wrap(function()
     local clients = settings.clients

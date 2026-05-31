@@ -152,7 +152,7 @@ M.matcher = function(settings, ctx)
 end
 
 ---@param settings config.Settings
----@return producers.Producer
+---@return producers.Producer<ctx.full>
 M.new = function(settings)
   return threaded.new {
     settings = settings,

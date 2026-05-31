@@ -4,7 +4,9 @@ local worker = require "coq.lib.worker"
 
 local M = {}
 
----@type producers.NewProducer
+---@generic C
+---@param spec producers.Spec<C>
+---@return producers.Producer<C>
 M.new = function(spec)
   local w = worker.spawn()
   return producer.new {
