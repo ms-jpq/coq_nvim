@@ -1,3 +1,4 @@
+local atools = require "coq.lib.atools"
 local lib = require "coq.lib"
 local threaded = require "coq.lib.producers.threaded"
 local tokens = require "coq.lib.index.tokens"
@@ -35,34 +36,31 @@ end
 
 ---@param buf integer
 ---@return buffer.BufInfo?
-local buffer_info = function(buf)
-  return worker.main(function(b)
-    local atools = require "coq.lib.atools"
-    atools.scheduled()
+M.buffer_info = function(buf)
+  atools.scheduled()
 
-    if not vim.api.nvim_buf_is_valid(b) or not vim.api.nvim_buf_is_loaded(b) then
-      return nil
+  if not vim.api.nvim_buf_is_valid(buf) or not vim.api.nvim_buf_is_loaded(buf) then
+    return nil
+  end
+
+  local count = vim.api.nvim_buf_line_count(buf)
+  local row, height = (function()
+    local win = vim.fn.bufwinid(buf)
+    if win == -1 then
+      return 0, count
     end
+    return vim.api.nvim_win_get_cursor(win)[1] - 1, vim.api.nvim_win_get_height(win)
+  end)()
+  local lo = math.max(0, row - height)
+  local hi = math.min(count, row + height + 1)
 
-    local count = vim.api.nvim_buf_line_count(b)
-    local row, height = (function()
-      local win = vim.fn.bufwinid(b)
-      if win == -1 then
-        return 0, count
-      end
-      return vim.api.nvim_win_get_cursor(win)[1] - 1, vim.api.nvim_win_get_height(win)
-    end)()
-    local lo = math.max(0, row - height)
-    local hi = math.min(count, row + height + 1)
-
-    return {
-      buf = b,
-      lines = vim.api.nvim_buf_get_lines(b, lo, hi, true),
-      filetype = vim.bo[b].filetype,
-      filename = vim.api.nvim_buf_get_name(b),
-      iskeyword = vim.bo[b].iskeyword,
-    }
-  end, buf)
+  return {
+    buf = buf,
+    lines = vim.api.nvim_buf_get_lines(buf, lo, hi, true),
+    filetype = vim.bo[buf].filetype,
+    filename = vim.api.nvim_buf_get_name(buf),
+    iskeyword = vim.bo[buf].iskeyword,
+  }
 end
 
 ---@param opts config.BuffersClient
@@ -89,7 +87,9 @@ M.idle = function(settings, events)
     index.prune { buf = buf }
 
     if ev.kind == "update" then
-      local info = buffer_info(buf)
+      local info = worker.main(function(b)
+        return require("coq.producers.buffer").buffer_info(b)
+      end, buf)
       if info then
         local kw = tokens.parse_iskeyword(info.iskeyword)
         local lines = vim.iter(info.lines) --[[@as fun(): string?]]
