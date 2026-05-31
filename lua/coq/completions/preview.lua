@@ -25,6 +25,10 @@ end
 ---@param ghost config.GhostText
 ---@param i completions.Item
 local show_ghost = function(ctx, ghost, i)
+  if not ghost.enabled then
+    return
+  end
+
   local text = i.meta.snippet and i.abbr or i.word
   if not text or text == "" then
     return
@@ -64,6 +68,10 @@ end
 ---@param preview_cfg config.PreviewDisplay
 ---@param i completions.Item
 local show_doc = function(ctx, preview_cfg, i)
+  if not preview_cfg.enabled then
+    return
+  end
+
   local lsp_item = i.meta.lsp and i.meta.lsp.item
   if not lsp_item then
     return
@@ -153,12 +161,8 @@ M.bind = function(n, settings, pum)
       local item = item_of(ev)
 
       if item then
-        if settings.display.ghost_text.enabled then
-          show_ghost(ctx, settings.display.ghost_text, item)
-        end
-        if settings.display.preview.enabled then
-          show_doc(ctx, settings.display.preview, item)
-        end
+        show_ghost(ctx, settings.display.ghost_text, item)
+        show_doc(ctx, settings.display.preview, item)
       end
     end
   end)
