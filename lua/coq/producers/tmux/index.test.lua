@@ -6,7 +6,7 @@ local index = require "coq.producers.tmux.index"
 local words = function(iter)
   local out = {}
   for item in
-    iter --[[@as fun(): tmux.Item?]]
+    iter --[[@as lib.Iterator<tmux.Item>]]
   do
     table.insert(out, item.word)
   end
@@ -74,7 +74,7 @@ T.describe("tmux.index", function(test)
 
     local seen = {}
     for item in
-      index.search { pane = "p1", keyword_before = "lab" } --[[@as fun(): tmux.Item?]]
+      index.search { pane = "p1", keyword_before = "lab" } --[[@as lib.Iterator<tmux.Item>]]
     do
       table.insert(seen, item.meta.session_name)
     end

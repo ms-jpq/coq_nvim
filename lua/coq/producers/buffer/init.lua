@@ -1,5 +1,6 @@
 local async = require "coq.lib.async"
 local atools = require "coq.lib.atools"
+local fs = require "coq.producers.fs"
 local lib = require "coq.lib"
 local threaded = require "coq.lib.producers.threaded"
 local tokens = require "coq.lib.index.tokens"
@@ -105,7 +106,6 @@ end
 ---@param item buffer.Item
 ---@return string
 local doc = function(opts, ctx, item)
-  local fs = require "coq.lib.fs"
   local parts = {}
   if not opts.same_filetype and item.filetype ~= "" then
     table.insert(parts, item.filetype .. opts.parent_scope)
@@ -138,7 +138,8 @@ M.idle = function(settings, events)
         index.prune { buf = info.buf }
 
         local kw = tokens.parse_iskeyword(info.iskeyword)
-        local lines = info.lines and vim.iter(info.lines) --[[@as fun(): string?]] or atools.file_lines(info.filename)
+        local lines = info.lines and vim.iter(info.lines) --[[@as lib.Iterator<string>]]
+          or atools.file_lines(info.filename)
 
         for word in tokens.words(kw, lines) do
           index.insert {
@@ -159,14 +160,17 @@ M.matcher = function(settings, ctx)
   local sc = settings.display.pum.source_context
   local menu = sc[1] .. opts.short_name .. sc[2]
   local index = require "coq.producers.buffer.index"
+  local util = require "coq.producers.util"
   local search_ctx = {
     keyword_before = ctx.keyword_before,
     filetype = opts.same_filetype and ctx.filetype or nil,
   }
 
-  for item in
-    index.search(search_ctx) --[[@as fun(): buffer.Item?]]
-  do
+  local items = util.dedup(index.search(search_ctx) --[[@as lib.Iterator<buffer.Item>]], function(it)
+    return it.word
+  end)
+
+  for item in items do
     if item.word ~= ctx.cword then
       coroutine.yield {
         word = item.word,

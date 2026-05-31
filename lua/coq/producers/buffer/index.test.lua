@@ -6,7 +6,7 @@ local index = require "coq.producers.buffer.index"
 local words = function(iter)
   local out = {}
   for item in
-    iter --[[@as fun(): buffer.Item?]]
+    iter --[[@as lib.Iterator<buffer.Item>]]
   do
     table.insert(out, item.word)
   end
@@ -71,7 +71,7 @@ T.describe("buffer.index", function(test)
 
     local seen = {}
     for item in
-      index.search { filetype = "lua", buf = 1, keyword_before = "lab" } --[[@as fun(): buffer.Item?]]
+      index.search { filetype = "lua", buf = 1, keyword_before = "lab" } --[[@as lib.Iterator<buffer.Item>]]
     do
       table.insert(seen, item.filename)
     end

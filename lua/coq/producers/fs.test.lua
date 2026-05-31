@@ -1,5 +1,5 @@
 local T = require "coq.lib.test"
-local fs = require "coq.lib.fs"
+local fs = require "coq.producers.fs"
 
 T.describe("fs.fmt_path", function(test)
   test("returns '.' when path equals current", function()

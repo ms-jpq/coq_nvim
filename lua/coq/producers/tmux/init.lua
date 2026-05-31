@@ -81,7 +81,7 @@ local pane_words = function(kw, pane)
     if proc == nil or proc.code ~= 0 then
       return
     end
-    local lines = vim.iter(vim.split(proc.stdout, "\n", { plain = true })) --[[@as fun(): string?]]
+    local lines = vim.iter(vim.split(proc.stdout, "\n", { plain = true })) --[[@as lib.Iterator<string>]]
     for word in tokens.words(kw, lines) do
       coroutine.yield(word)
     end
@@ -146,9 +146,12 @@ M.matcher = function(settings, ctx)
   local sc = settings.display.pum.source_context
   local menu = sc[1] .. opts.short_name .. sc[2]
   local index = require "coq.producers.tmux.index"
-  for item in
-    index.search(ctx) --[[@as fun(): tmux.Item?]]
-  do
+  local util = require "coq.producers.util"
+
+  local items = util.dedup(index.search(ctx) --[[@as lib.Iterator<tmux.Item>]], function(it)
+    return it.word
+  end)
+  for item in items do
     if item.word ~= ctx.cword then
       coroutine.yield {
         word = item.word,

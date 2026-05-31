@@ -108,7 +108,7 @@ T.test("tokens.parity across all filetypes", function()
     atools.scheduled()
     local iskeyword, expected = probe(ft)
     local kw = tokens.parse_iskeyword(iskeyword)
-    local actual = vim.iter(tokens.words(kw, vim.iter(CORPUS) --[[@as fun(): string?]])):totable()
+    local actual = vim.iter(tokens.words(kw, vim.iter(CORPUS) --[[@as lib.Iterator<string>]])):totable()
     if not vim.deep_equal(actual, expected) then
       table.insert(failures, { ft = ft, iskeyword = iskeyword, expected = expected, actual = actual })
     end
