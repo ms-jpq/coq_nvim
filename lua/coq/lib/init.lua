@@ -13,6 +13,8 @@ local M = {}
 
 M.group = vim.api.nvim_create_augroup and vim.api.nvim_create_augroup("coq", { clear = true })
 
+M.is_windows = vim.uv.os_uname().sysname == "Windows_NT"
+
 ---@param ... any
 M.noop = function(...) end
 

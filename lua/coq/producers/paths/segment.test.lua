@@ -1,4 +1,5 @@
 local T = require "coq.lib.test"
+local lib = require "coq.lib"
 local segment = require "coq.producers.paths.segment"
 
 T.describe("paths.segment.p_lhs", function(test)
@@ -56,16 +57,23 @@ T.describe("paths.segment.split_keep", function(test)
   end)
 end)
 
+---@param seps table<string, true>
+---@param line string
+---@return paths.Cut[]
+local cuts_of = function(seps, line)
+  return vim.iter(segment.iter_cuts(seps, line)):totable()
+end
+
 T.describe("paths.segment.iter_cuts", function(test)
   test("yields one cut per split boundary", function()
-    local cuts = segment.iter_cuts({ ["/"] = true }, "foo/bar")
+    local cuts = cuts_of({ ["/"] = true }, "foo/bar")
     T.eq(#cuts, 1)
     T.eq(cuts[1].segment, "foo")
     T.eq(cuts[1].s0, "/bar")
   end)
 
   test("applies p_lhs to the lhs to canonicalize the prefix", function()
-    local cuts = segment.iter_cuts({ ["/"] = true }, "./foo/bar")
+    local cuts = cuts_of({ ["/"] = true }, "./foo/bar")
     T.eq(#cuts, 2)
     T.eq(cuts[1].segment, ".")
     T.eq(cuts[1].s0, "./foo/bar")
@@ -74,16 +82,22 @@ T.describe("paths.segment.iter_cuts", function(test)
   end)
 
   test("preserves leading absolute paths via empty lhs", function()
-    local cuts = segment.iter_cuts({ ["/"] = true }, "/etc/spot")
+    local cuts = cuts_of({ ["/"] = true }, "/etc/spot")
     T.eq(#cuts, 2)
     T.eq(cuts[1].segment, "")
     T.eq(cuts[1].s0, "/etc/spot")
+  end)
+
+  test("segment_start is the byte col where the cut's lhs begins", function()
+    local cuts = cuts_of({ ["/"] = true }, "./fido/spot")
+    T.eq(cuts[1].segment_start, 0)
+    T.eq(cuts[2].segment_start, 1)
   end)
 end)
 
 T.describe("paths.segment.p_sep", function(test)
   test("returns '/' on unix-like", function()
-    if segment.is_windows then
+    if lib.is_windows then
       return
     end
     T.eq(segment.p_sep "foo/bar", "/")

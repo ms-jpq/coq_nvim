@@ -3,10 +3,6 @@ local async = require "coq.lib.async"
 local config = require "coq.config"
 local paths = require "coq.producers.paths"
 
-local mkdir = function(path)
-  vim.fn.mkdir(path, "p")
-end
-
 local touch = function(path)
   local f = assert(io.open(path, "w"))
   f:close()
@@ -15,7 +11,7 @@ end
 ---@return string
 local tmpdir = function()
   local p = vim.fn.tempname()
-  mkdir(p)
+  vim.fn.mkdir(p)
   return p
 end
 
@@ -87,8 +83,8 @@ T.describe("paths.matcher", function(test)
   test("./ lists the cwd as files and folders", function()
     local dir = tmpdir()
     touch(dir .. "/spot.txt")
-    mkdir(dir .. "/fido")
-    mkdir(dir .. "/rex")
+    vim.fn.mkdir(dir .. "/fido")
+    vim.fn.mkdir(dir .. "/rex")
 
     local settings = settings_with()
     local ctx = ctx_of { cwd = dir, line_before = "./", line = "./" }
@@ -100,7 +96,7 @@ T.describe("paths.matcher", function(test)
   test("kind is Folder for dirs, File for files", function()
     local dir = tmpdir()
     touch(dir .. "/spot.txt")
-    mkdir(dir .. "/fido")
+    vim.fn.mkdir(dir .. "/fido")
 
     local settings = settings_with()
     local ctx = ctx_of { cwd = dir, line_before = "./", line = "./" }
@@ -151,7 +147,7 @@ T.describe("paths.matcher", function(test)
   end)
 
   test("~ expands to home", function()
-    local home = vim.uv.os_homedir()
+    local home = assert(vim.uv.os_homedir())
     local settings = settings_with()
     local ctx = ctx_of { cwd = "/", line_before = "~/", line = "~/" }
 
@@ -201,5 +197,30 @@ T.describe("paths.matcher", function(test)
 
     local items = run_matcher(settings, ctx)
     T.eq(words_of(items), { "spot.txt" })
+  end)
+
+  test("emits lsp textEdit spanning the segment, not just the keyword", function()
+    local dir = tmpdir()
+    touch(dir .. "/spot.txt")
+
+    local settings = settings_with()
+    local ctx = ctx_of {
+      cwd = dir,
+      pos = { 1, 4 },
+      line_before = "./sp",
+      line = "./sp",
+      utf16_col = 4,
+    }
+
+    local items = run_matcher(settings, ctx)
+    T.eq(#items, 1)
+
+    local lsp = items[1].meta.lsp
+    T.eq(lsp.position_encoding, "utf-8")
+    local edit = lsp.item.textEdit
+    T.eq(edit.range.start.line, 0)
+    T.eq(edit.range.start.character, 0)
+    T.eq(edit.range["end"].character, 4)
+    T.eq(edit.newText, "./spot.txt")
   end)
 end)
