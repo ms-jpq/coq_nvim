@@ -30,7 +30,7 @@ M.all = function(fns)
 end
 
 ---@generic T
----@param fns (fun(): T)[]
+---@param fns (fun(): T?)[]
 ---@return integer?, T?
 M.race = function(fns)
   if #fns == 0 then

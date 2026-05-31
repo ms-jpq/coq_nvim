@@ -13,12 +13,15 @@ local worker = require "coq.lib.worker"
 ---@field filename string
 ---@field iskeyword string
 
+---@class buffer.State
+---@field last_tick table<integer, integer>
+
 local MAX_BYTES = 1024 * 1024
 
----@type table<integer, integer>
-local last_tick = {}
-
-local M = {}
+local M = {
+  ---@type buffer.State
+  state = { last_tick = {} },
+}
 
 local kinds = {
   BufEnter = "update",
@@ -116,6 +119,7 @@ end
 ---@param settings config.Settings
 M.idle = function(settings, events)
   local _ = settings
+  local state = require("coq.producers.buffer").state
   local index = require "coq.producers.buffer.index"
 
   for buf, ev in pairs(events) do
@@ -123,14 +127,14 @@ M.idle = function(settings, events)
 
     if ev.kind == "remove" then
       index.prune { buf = buf }
-      last_tick[buf] = nil
+      state.last_tick[buf] = nil
     elseif ev.kind == "update" then
       local info = worker.main(function(...)
         return require("coq.producers.buffer").buffer_info(...)
-      end, buf, last_tick[buf])
+      end, buf, state.last_tick[buf])
 
       if info then
-        last_tick[info.buf] = info.tick
+        state.last_tick[info.buf] = info.tick
         index.prune { buf = info.buf }
 
         local kw = tokens.parse_iskeyword(info.iskeyword)

@@ -1,5 +1,3 @@
--- race accepts fns that return zero or many values; the typed `fun(): T` shape flags both.
----@diagnostic disable: missing-return, redundant-return-value
 local T = require "coq.lib.test"
 local async = require "coq.lib.async"
 local handle = require "coq.lib.async.handle"
@@ -34,6 +32,8 @@ T.describe("race", function(test)
   test("forwards multiple return values", function()
     local idx, a, b, c = async.race {
       function()
+        -- race forwards all of a winner's values; the single-T return type can't express it.
+        ---@diagnostic disable-next-line: redundant-return-value
         return "lil", "fido", "spot"
       end,
     }
