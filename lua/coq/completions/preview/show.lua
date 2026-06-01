@@ -1,74 +1,10 @@
 local async = require "coq.lib.async"
 local atools = require "coq.lib.atools"
-local context = require "coq.lib.context"
 local lib = require "coq.lib"
 local lsp_util = require "coq.producers.lsp.util"
 local paths_util = require "coq.producers.paths.util"
 
-local NS = vim.api.nvim_create_namespace "coq.preview"
-
 local preview_win = nil
-
-local close_preview = function()
-  if preview_win and vim.api.nvim_win_is_valid(preview_win) then
-    vim.api.nvim_win_close(preview_win, true)
-  end
-  preview_win = nil
-end
-
----@param buf integer
-local clear = function(buf)
-  vim.api.nvim_buf_clear_namespace(buf, NS, 0, -1)
-  close_preview()
-end
-
----@param i completions.Item
----@return string
-local insertion_text = function(i)
-  if i.meta.snippet then
-    return i.meta.snippet
-  end
-  local lsp_item = i.meta.lsp and i.meta.lsp.item
-  if lsp_item and lsp_item.textEdit and lsp_item.textEdit.newText then
-    return lsp_item.textEdit.newText
-  end
-  return i.word or ""
-end
-
----@param ctx ctx.base
----@param ghost config.GhostText
----@param i completions.Item
-local show_ghost = function(ctx, ghost, i)
-  if not ghost.enabled then
-    return
-  end
-
-  local text = insertion_text(i)
-  if text == "" then
-    return
-  end
-
-  local row, col = unpack(ctx.pos)
-  local lhs, rhs = unpack(ghost.context)
-
-  local lines = vim.split(text, "\n", { plain = true })
-  local first = lhs .. lines[1] .. (#lines == 1 and rhs or "")
-  local rest = vim
-    .iter(async.wrap(function()
-      for k = 2, #lines do
-        local content = lines[k] .. (k == #lines and rhs or "")
-        coroutine.yield { { content, ghost.highlight_group } }
-      end
-    end))
-    :totable()
-
-  vim.api.nvim_buf_set_extmark(ctx.buf, NS, row - 1, col, {
-    virt_text = { { first, ghost.highlight_group } },
-    virt_text_pos = "overlay",
-    virt_lines = #rest > 0 and rest or nil,
-    hl_mode = "combine",
-  })
-end
 
 ---@param lsp_item lsp.CompletionItem
 ---@return string[]
@@ -244,39 +180,25 @@ local resolve_doc = function(ctx, settings, item)
   return nil, ""
 end
 
----@param ctx ctx.base
----@param settings config.Settings
----@param ev completions.PumChangedEvent
----@param item completions.Item
-local show_doc = function(ctx, settings, ev, item)
-  if not settings.display.preview.enabled then
-    return
+local M = {}
+
+M.close = function()
+  if preview_win and vim.api.nvim_win_is_valid(preview_win) then
+    vim.api.nvim_win_close(preview_win, true)
   end
-  local lines, filetype = resolve_doc(ctx, settings, item)
-  if lines then
-    show_ts_doc(settings.display.preview, ev, lines, filetype)
-  end
+  preview_win = nil
 end
 
----@param ev completions.PumEvent
----@return completions.PumChangedEvent?
----@return completions.Item?
-local item_of = function(ev)
-  if ev.kind ~= "changed" then
-    return nil, nil
+---@return integer?
+M.active_buf = function()
+  if not (preview_win and vim.api.nvim_win_is_valid(preview_win)) then
+    return nil
   end
-  ---@cast ev completions.PumChangedEvent
-
-  local item = ev.completed_item and ev.completed_item.user_data
-  if type(item) ~= "table" or not item.word then
-    return nil, nil
-  end
-  ---@cast item completions.Item
-  return ev, item
+  return vim.api.nvim_win_get_buf(preview_win)
 end
 
 ---@param buf integer
-local promote = function(buf)
+M.promote = function(buf)
   local ft = vim.bo[buf].filetype
   local lines = vim.api.nvim_buf_get_lines(buf, 0, -1, true)
 
@@ -297,48 +219,18 @@ local promote = function(buf)
   vim.cmd "wincmd p"
 end
 
-local M = {}
-
----@param n async.Nursery
+---@param ctx ctx.base
 ---@param settings config.Settings
----@param pum channels.Broadcast<completions.PumEvent>
-M.bind = function(n, settings, pum)
-  if settings.keymap.bigger_preview then
-    local esc = vim.keycode "<c-e>"
-    vim.keymap.set({ "i" }, settings.keymap.bigger_preview, function()
-      if not (preview_win and vim.api.nvim_win_is_valid(preview_win)) then
-        return settings.keymap.bigger_preview
-      end
-      local buf = vim.api.nvim_win_get_buf(preview_win)
-
-      n.spawn(function()
-        atools.scheduled()
-        close_preview()
-        promote(buf)
-      end)
-
-      return esc
-    end, { expr = true, noremap = true })
+---@param ev completions.PumChangedEvent
+---@param item completions.Item
+M.show = function(ctx, settings, ev, item)
+  if not settings.display.preview.enabled then
+    return
   end
-
-  n.spawn(function(defer)
-    local iter = pum.subscribe()
-    defer(iter.close)
-
-    for ev in iter do
-      n.spawn(function()
-        local ctx = context.base()
-        clear(ctx.buf)
-        local changed_ev, item = item_of(ev)
-        if item then
-          show_ghost(ctx, settings.display.ghost_text, item)
-          if changed_ev then
-            show_doc(ctx, settings, changed_ev, item)
-          end
-        end
-      end)
-    end
-  end)
+  local lines, filetype = resolve_doc(ctx, settings, item)
+  if lines then
+    show_ts_doc(settings.display.preview, ev, lines, filetype)
+  end
 end
 
 return M
