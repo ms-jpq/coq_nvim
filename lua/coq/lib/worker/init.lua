@@ -14,6 +14,8 @@ local Kind = {
   STOP = "stop",
 }
 
+local DONE = {}
+
 ---@type table<function, string>
 local dump_cache = setmetatable({}, { __mode = "k" })
 
@@ -171,54 +173,33 @@ end
 local make_responder = function(write)
   local parked = inflight.new()
 
-  local load_func = function(frame)
-    local args, n_args = frame.args or {}, frame.n_args or 0
-    local fn, err = load(frame.fn_bytecode)
-    if not fn then
-      write(make_response(frame.id, false, err or errs.UNKNOWN))
-      return nil, args, n_args
-    end
-    return fn, args, n_args
-  end
-
   local dispatch = function(frame, req_handle, next_chan)
-    local fn, args, n_args = load_func(frame)
-    if not fn then
-      return
-    end
+    local args, n_args = frame.args or {}, frame.n_args or 0
 
-    if not next_chan then
-      write(make_response(frame.id, pcall(fn, unpack(args, 1, n_args))))
-      return
-    end
-
-    local stream = async.wrap(fn)
+    local stream = async.wrap(function(...)
+      local fn = assert(load(frame.fn_bytecode))
+      return coroutine.yield(DONE, make_response(frame.id, pcall(fn, ...)))
+    end)
 
     local consume = function()
-      local function loop()
-        local item = stream(unpack(args, 1, n_args))
-        while item ~= nil do
-          write { kind = Kind.YIELD, id = frame.id, n_values = 1, values = { item } }
-          if req_handle.cancelled or not next_chan.pull() then
-            return
-          end
-          item = stream(true)
+      local item, terminal = stream(unpack(args, 1, n_args))
+      while item ~= DONE do
+        write { kind = Kind.YIELD, id = frame.id, n_values = 1, values = { item } }
+        if req_handle.cancelled or not next_chan.pull() then
+          return make_response(frame.id, true)
         end
+        item, terminal = stream(true)
       end
-
-      local ok, err = pcall(loop)
-      pcall(function()
-        for _ in stream do
-          lib.noop()
-        end
-      end)
-
-      if not ok then
-        error(err, 0)
-      end
+      return terminal
     end
 
-    write(make_response(frame.id, pcall(consume)))
+    local ok, terminal = pcall(consume)
+    pcall(function()
+      for _ in stream do
+        lib.noop()
+      end
+    end)
+    write(ok and terminal or make_response(frame.id, false, terminal))
   end
 
   local scheduled = vim.is_thread() and lib.noop or require("coq.lib.atools").scheduled
@@ -226,16 +207,13 @@ local make_responder = function(write)
 
   responder.serve = function(n, frame)
     local req_handle = handle.new(runtime.current())
-    local next_chan = frame.streaming and mpmc.new() or nil
-
-    if next_chan then
-      local _ = req_handle.on_cancel(next_chan.close)
-    end
+    local next_chan = mpmc.new()
+    local _ = req_handle.on_cancel(next_chan.close)
 
     local _, release = parked.reserve(function(rsp)
       if rsp.kind == Kind.STOP then
         req_handle.cancel()
-      elseif next_chan then
+      else
         next_chan.push(true)
       end
     end, frame.id)
@@ -271,21 +249,16 @@ local make_endpoint = function(duplex)
 
   local serve = function(n, dead_message)
     for frame in transport.reader(duplex.reader) do
-      local kind = frame.kind
-      if kind == Kind.YIELD then
+      if frame.kind == Kind.YIELD then
         n.spawn(function()
           requester.resolve(frame)
         end)
-      elseif kind == Kind.STOP then
-        n.spawn(function()
-          responder.resolve(frame)
-        end)
-      elseif responder.has(frame.id) then
-        n.spawn(function()
-          responder.resolve(frame)
-        end)
-      else
+      elseif frame.kind == Kind.RESUME and not responder.has(frame.id) then
         responder.serve(n, frame)
+      else
+        n.spawn(function()
+          responder.resolve(frame)
+        end)
       end
     end
     requester.drain(make_response(nil, false, dead_message))
@@ -320,9 +293,7 @@ if vim.is_thread() then
     end
 
     M.main_stream = function(fn, ...)
-      local message = pack_request(fn, ...)
-      message.streaming = true
-      return endpoint.request_stream(message)
+      return endpoint.request_stream(pack_request(fn, ...))
     end
 
     async.entry(function()
@@ -362,9 +333,7 @@ M.spawn = function()
     if closed then
       error("worker closed", 2)
     end
-    local message = pack_request(fn, ...)
-    message.streaming = true
-    return endpoint.request_stream(message)
+    return endpoint.request_stream(pack_request(fn, ...))
   end
 
   worker.close = function()

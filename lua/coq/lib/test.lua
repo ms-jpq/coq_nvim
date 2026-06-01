@@ -161,7 +161,9 @@ M.run = function(seed)
 
     if not VERBOSE then
       vim.notify(("✓ %d passed"):format(passed))
-      vim.notify(("✗ %d failed"):format(failed), vim.log.levels.ERROR)
+      if failed > 0 then
+        vim.notify(("✗ %d failed"):format(failed), vim.log.levels.ERROR)
+      end
     end
 
     table.sort(registry, function(a, b)
