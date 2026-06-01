@@ -69,28 +69,41 @@ local pick_position = function(preview_cfg, ev, lines)
   ---@type { rank: integer, idx: integer, pos: preview.Pos }[]
   local cs = {}
 
-  local n_h = lib.clamp(1, top - 1, cap_h)
-  if p.north and (top - 1 - n_h - b_h) > 1 then
-    cs[#cs + 1] =
-      { rank = p.north, idx = 1, pos = { row = top - 1 - n_h - b_h, col = left - 1, height = n_h, width = ns_w } }
+  local GAP = 1
+
+  local n_h = lib.clamp(1, top - 1 - GAP, cap_h)
+  if p.north and (top - 1 - GAP - n_h - b_h) > 1 then
+    cs[#cs + 1] = {
+      rank = p.north,
+      idx = 1,
+      pos = { row = top - 1 - GAP - n_h - b_h, col = left - 1, height = n_h, width = ns_w },
+    }
   end
 
-  local s_h = lib.clamp(1, scr_h - btm, cap_h)
-  if p.south and (btm + s_h) < scr_h - 1 then
-    cs[#cs + 1] = { rank = p.south, idx = 2, pos = { row = btm, col = left - 1, height = s_h, width = ns_w } }
+  local s_h = lib.clamp(1, scr_h - btm - GAP, cap_h)
+  if p.south and (btm + GAP + s_h) < scr_h - 1 then
+    cs[#cs + 1] = { rank = p.south, idx = 2, pos = { row = btm + GAP, col = left - 1, height = s_h, width = ns_w } }
   end
 
   if p.west then
-    local w_w = lib.clamp(1, left - 2, cap_w)
-    cs[#cs + 1] =
-      { rank = p.west, idx = 3, pos = { row = top, col = left - 2 - w_w - b_w, height = we_h, width = w_w } }
+    local w_w = lib.clamp(1, left - 2 - GAP, cap_w)
+    cs[#cs + 1] = {
+      rank = p.west,
+      idx = 3,
+      pos = { row = top, col = left - 2 - GAP - w_w - b_w, height = we_h, width = w_w },
+    }
   end
 
   if p.east then
     cs[#cs + 1] = {
       rank = p.east,
       idx = 4,
-      pos = { row = top, col = right + 1, height = we_h, width = lib.clamp(1, scr_w - right - 2, cap_w) },
+      pos = {
+        row = top,
+        col = right + 1 + GAP,
+        height = we_h,
+        width = lib.clamp(1, scr_w - right - 1 - GAP, cap_w),
+      },
     }
   end
 
