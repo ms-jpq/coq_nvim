@@ -1,24 +1,18 @@
 local async = require "coq.lib.async"
 local atools = require "coq.lib.atools"
+local buf_tracker = require "coq.lib.producers.buf_tracker"
 local fs = require "coq.producers.fs"
 local index = require "coq.producers.treesitter.index"
 local threaded = require "coq.lib.producers.threaded"
 local util = require "coq.producers.util"
 local worker = require "coq.lib.worker"
 
----@class treesitter.BufMeta
+---@class treesitter.BufMeta : buf_tracker.Meta
 ---@field buf integer
----@field tick integer
 ---@field filetype string
 ---@field filename string
 
----@class treesitter.State
----@field last_tick table<integer, integer>
-
-local M = {
-  ---@type treesitter.State
-  state = { last_tick = {} },
-}
+local M = {}
 
 ---@param buf integer
 ---@param prev_tick? integer
@@ -42,49 +36,36 @@ M.buffer_meta = function(buf, prev_tick)
   }
 end
 
----@param buf integer
-local update_buf = function(buf)
-  local meta = worker.main(function(...)
-    return require("coq.producers.treesitter").buffer_meta(...)
-  end, buf, M.state.last_tick[buf])
-
-  if not meta then
-    return
-  end
-
-  M.state.last_tick[meta.buf] = meta.tick
-  index.prune { buf = meta.buf }
-
-  for payload in
-    worker.main_stream(function(...)
-      return require("coq.producers.treesitter.request").query(...)
-    end, meta.buf) --[[@as lib.Iterator<treesitter.Payload>]]
-  do
-    index.insert {
-      buf = meta.buf,
-      filetype = meta.filetype,
-      filename = meta.filename,
-      text = payload.text,
-      kind = payload.kind,
-      range = payload.range,
-      parent = payload.parent,
-      grandparent = payload.grandparent,
-    }
-  end
-end
-
-M.idle = function(_, events)
-  for buf, ev in pairs(events) do
-    async.sleep(0)
-
-    if ev.kind == "remove" then
-      index.prune { buf = buf }
-      M.state.last_tick[buf] = nil
-    elseif ev.kind == "update" then
-      update_buf(buf)
+local tracker = buf_tracker.new {
+  fetch = function(buf, prev_tick)
+    return worker.main(function(...)
+      return require("coq.producers.treesitter").buffer_meta(...)
+    end, buf, prev_tick)
+  end,
+  reindex = function(meta)
+    for payload in
+      worker.main_stream(function(...)
+        return require("coq.producers.treesitter.request").query(...)
+      end, meta.buf) --[[@as lib.Iterator<treesitter.Payload>]]
+    do
+      index.insert {
+        buf = meta.buf,
+        filetype = meta.filetype,
+        filename = meta.filename,
+        text = payload.text,
+        kind = payload.kind,
+        range = payload.range,
+        parent = payload.parent,
+        grandparent = payload.grandparent,
+      }
     end
-  end
-end
+  end,
+  prune = function(buf)
+    index.prune { buf = buf }
+  end,
+}
+
+M.idle = tracker.idle
 
 ---@param kind string
 ---@return string

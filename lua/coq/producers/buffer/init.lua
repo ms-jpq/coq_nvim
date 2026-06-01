@@ -1,5 +1,6 @@
 local async = require "coq.lib.async"
 local atools = require "coq.lib.atools"
+local buf_tracker = require "coq.lib.producers.buf_tracker"
 local context = require "coq.lib.context"
 local fs = require "coq.producers.fs"
 local index = require "coq.producers.buffer.index"
@@ -8,23 +9,16 @@ local tokens = require "coq.lib.index.tokens"
 local util = require "coq.producers.util"
 local worker = require "coq.lib.worker"
 
----@class buffer.BufInfo
+---@class buffer.BufInfo : buf_tracker.Meta
 ---@field buf integer
----@field tick integer
 ---@field lines? string[]
 ---@field filetype string
 ---@field filename string
 ---@field iskeyword string
 
----@class buffer.State
----@field last_tick table<integer, integer>
-
 local MAX_BYTES = 1024 * 1024
 
-local M = {
-  ---@type buffer.State
-  state = { last_tick = {} },
-}
+local M = {}
 
 ---@param buf integer
 ---@return string[]
@@ -80,42 +74,30 @@ local doc_iter = function(opts, ctx, item)
   end)
 end
 
----@param buf integer
-local update_buf = function(buf)
-  local info = worker.main(function(...)
-    return require("coq.producers.buffer").buffer_info(...)
-  end, buf, M.state.last_tick[buf])
-  if not info then
-    return
-  end
-
-  M.state.last_tick[buf] = info.tick
-  index.prune { buf = buf }
-
-  local kw = tokens.parse_iskeyword(info.iskeyword)
-  local lines = info.lines and vim.iter(info.lines) --[[@as lib.Iterator<string>]] or atools.file_lines(info.filename)
-
-  for word in tokens.words(kw, lines) do
-    index.insert {
-      buf = buf,
-      word = word,
-      filetype = info.filetype,
-      filename = info.filename,
-    }
-  end
-end
-
-M.idle = function(_, events)
-  for buf, ev in pairs(events) do
-    async.sleep(0)
-    if ev.kind == "remove" then
-      index.prune { buf = buf }
-      M.state.last_tick[buf] = nil
-    elseif ev.kind == "update" then
-      update_buf(buf)
+local tracker = buf_tracker.new {
+  fetch = function(buf, prev_tick)
+    return worker.main(function(...)
+      return require("coq.producers.buffer").buffer_info(...)
+    end, buf, prev_tick)
+  end,
+  reindex = function(info)
+    local kw = tokens.parse_iskeyword(info.iskeyword)
+    local lines = info.lines and vim.iter(info.lines) --[[@as lib.Iterator<string>]] or atools.file_lines(info.filename)
+    for word in tokens.words(kw, lines) do
+      index.insert {
+        buf = info.buf,
+        word = word,
+        filetype = info.filetype,
+        filename = info.filename,
+      }
     end
-  end
-end
+  end,
+  prune = function(buf)
+    index.prune { buf = buf }
+  end,
+}
+
+M.idle = tracker.idle
 
 ---@param settings config.Settings
 M.matcher = function(settings, ctx)
