@@ -149,7 +149,7 @@ M.run = function(seed)
         vim.notify("✗ " .. t.name .. "\n  timeout", vim.log.levels.ERROR)
         failed = failed + 1
       elseif t.err then
-        vim.notify("✗ " .. t.name .. "\n" .. t.err, vim.log.levels.ERROR)
+        vim.notify("✗ " .. t.name .. "\n" .. tostring(t.err), vim.log.levels.ERROR)
         failed = failed + 1
       else
         passed = passed + 1
@@ -158,8 +158,10 @@ M.run = function(seed)
         end
       end
     end
+
     if not VERBOSE then
       vim.notify(("✓ %d passed"):format(passed))
+      vim.notify(("✗ %d failed"):format(failed), vim.log.levels.ERROR)
     end
 
     table.sort(registry, function(a, b)
@@ -173,7 +175,6 @@ M.run = function(seed)
     end)
 
     if failed > 0 then
-      vim.notify(("%d failed"):format(failed), vim.log.levels.ERROR)
       os.exit(1)
     end
   end
