@@ -1,11 +1,155 @@
 local async = require "coq.lib.async"
 local lib = require "coq.lib"
-local segment = require "coq.producers.paths.segment"
 local threaded = require "coq.lib.producers.threaded"
 
 local M = {}
 
 local FS_SEPS = lib.is_windows and { ["/"] = true, ["\\"] = true } or { ["/"] = true }
+
+---@param lhs string
+---@return string
+local p_lhs = function(lhs)
+  if string.sub(lhs, -2) == ".." then
+    return ".."
+  end
+  if string.sub(lhs, -1) == "." then
+    return "."
+  end
+  if string.sub(lhs, -1) == "~" then
+    return "~"
+  end
+
+  if lib.is_windows then
+    local drive = string.match(lhs, "(%a):$")
+    if drive then
+      return drive .. ":"
+    end
+    local winvar = string.match(lhs, "%%([%w_]+)%%$")
+    if winvar then
+      return "%" .. winvar .. "%"
+    end
+  end
+
+  local bracevar = string.match(lhs, "%${([%w_]+)}$")
+  if bracevar then
+    return "${" .. bracevar .. "}"
+  end
+
+  local var = string.match(lhs, "%$([%w_]+)$")
+  if var and os.getenv(var) then
+    return "$" .. var
+  end
+
+  return ""
+end
+
+---@param seps table<string, true>
+---@param line string
+---@return string[]
+local separate = function(seps, line)
+  local out = { line }
+  for sep in pairs(seps) do
+    local next_out = {}
+    for _, seg in ipairs(out) do
+      local acc = {}
+      for i = 1, #seg do
+        local c = string.sub(seg, i, i)
+        if c == sep then
+          table.insert(next_out, table.concat(acc))
+          acc = {}
+        end
+        table.insert(acc, c)
+      end
+      if #acc > 0 then
+        table.insert(next_out, table.concat(acc))
+      end
+    end
+    out = next_out
+  end
+  return out
+end
+
+---@class paths.Cut
+---@field segment string
+---@field s0 string
+---@field segment_start integer
+
+---@param seps table<string, true>
+---@param line string
+---@return lib.Iterator<paths.Cut>
+local iter_cuts = function(seps, line)
+  return async.wrap(function()
+    local parts = separate(seps, line)
+    local seg_start = 0
+    for idx = 2, #parts do
+      local segment = parts[idx - 1]
+      local rhs_parts = {}
+      for j = idx, #parts do
+        table.insert(rhs_parts, parts[j])
+      end
+      coroutine.yield {
+        segment = segment,
+        s0 = p_lhs(segment) .. table.concat(rhs_parts),
+        segment_start = seg_start,
+      }
+      seg_start = seg_start + #segment
+    end
+  end)
+end
+
+---@param line_pre string
+---@return string
+local p_sep = function(line_pre)
+  if not lib.is_windows then
+    return "/"
+  end
+  local _, last_fwd = string.find(line_pre, ".*/")
+  local _, last_back = string.find(line_pre, ".*\\")
+  return ((last_back or 0) > (last_fwd or 0)) and "\\" or "/"
+end
+
+---@param s string
+---@param sep string
+---@return string lft
+---@return string sep
+---@return string rhs
+local rpartition = function(s, sep)
+  local last = 0
+  local i = 1
+  while true do
+    local pos = string.find(s, sep, i, true)
+    if not pos then
+      break
+    end
+    last = pos
+    i = pos + 1
+  end
+  if last == 0 then
+    return "", "", s
+  end
+  return string.sub(s, 1, last - 1), sep, string.sub(s, last + 1)
+end
+
+---@param p string
+---@return string
+local expanduser = function(p)
+  if string.sub(p, 1, 2) == "~/" or p == "~" or string.sub(p, 1, 2) == "~\\" then
+    local home = vim.uv.os_homedir() or ""
+    return home .. string.sub(p, 2)
+  end
+  return p
+end
+
+---@param p string
+---@return string
+local expandvars = function(p)
+  local braced = string.gsub(p, "%${([%w_]+)}", function(v)
+    return os.getenv(v) or ("${" .. v .. "}")
+  end)
+  return (string.gsub(braced, "%$([%w_]+)", function(v)
+    return os.getenv(v) or ("$" .. v)
+  end))
+end
 
 ---@param p string
 ---@return boolean
@@ -104,91 +248,83 @@ end
 local variants_of = function(s0)
   return async.wrap(function()
     coroutine.yield(s0)
-    local with_user = segment.expanduser(s0)
+    local with_user = expanduser(s0)
     if with_user ~= s0 then
       coroutine.yield(with_user)
     end
-    local with_vars = segment.expandvars(with_user)
+    local with_vars = expandvars(with_user)
     if with_vars ~= with_user then
       coroutine.yield(with_vars)
     end
   end)
 end
 
----@param settings config.Settings
-M.matcher = function(settings, ctx)
-  local opts = settings.clients.paths
-  local sc = settings.display.pum.source_context
-  local menu = sc[1] .. opts.short_name .. sc[2]
-  local local_sep = segment.p_sep(ctx.line_before)
-  local cursor_row = ctx.pos[1] - 1
+---@class paths.MatchCtx
+---@field opts config.PathsClient
+---@field menu string
+---@field local_sep string
+---@field cursor_row integer
+---@field cursor_col integer
+---@field line_before string
+---@field seen table<string, true>
 
-  local seps = resolve_seps(opts)
-  local line = ctx.line_before .. ctx.line_after
-  local seen = {}
+---@param mc paths.MatchCtx
+---@param dir string
+---@param name string
+---@param rhs string
+---@param segment_start integer
+local emit = function(mc, dir, name, rhs, segment_start)
+  local full = vim.fs.joinpath(dir, name)
+  local dir_q = is_dir(full)
+  local trailing = dir_q and mc.local_sep or ""
+  local word = name .. trailing
+  if mc.seen[word] then
+    return
+  end
+  mc.seen[word] = true
 
-  ---@param dir string
-  ---@param name string
-  ---@param rhs string
-  ---@param segment_start integer
-  local emit = function(dir, name, rhs, segment_start)
-    local full = vim.fs.joinpath(dir, name)
-    local dir_q = is_dir(full)
-    local trailing = dir_q and local_sep or ""
-    local word = name .. trailing
-    if seen[word] then
-      return
-    end
-    seen[word] = true
-
-    local typed_prefix = string.sub(ctx.line_before, segment_start + 1, #ctx.line_before - #rhs)
-    local new_text = typed_prefix .. name .. trailing
-
-    coroutine.yield {
-      word = word,
-      kind = dir_q and "Folder" or "File",
-      menu = menu,
-      meta = {
-        filter = word,
-        source = opts.short_name,
-        always_on_top = opts.always_on_top,
-        path = full,
-        lsp = {
-          position_encoding = "utf-8",
-          item = {
-            textEdit = {
-              range = {
-                start = { line = cursor_row, character = segment_start },
-                ["end"] = { line = cursor_row, character = #ctx.line_before },
-              },
-              newText = new_text,
+  local typed_prefix = string.sub(mc.line_before, segment_start + 1, mc.cursor_col - #rhs)
+  coroutine.yield {
+    word = word,
+    kind = dir_q and "Folder" or "File",
+    menu = mc.menu,
+    meta = {
+      filter = name,
+      source = mc.opts.short_name,
+      always_on_top = mc.opts.always_on_top,
+      path = full,
+      lsp = {
+        position_encoding = "utf-8",
+        item = {
+          textEdit = {
+            range = {
+              start = { line = mc.cursor_row, character = segment_start },
+              ["end"] = { line = mc.cursor_row, character = mc.cursor_col },
             },
+            newText = typed_prefix .. name .. trailing,
           },
         },
       },
-    }
+    },
+  }
+end
+
+---@param mc paths.MatchCtx
+---@param s0 string
+---@param base string
+---@param segment_start integer
+---@return boolean yielded
+local try_s0 = function(mc, s0, base, segment_start)
+  if s0 == "" or is_only_seps(s0) then
+    return false
   end
 
-  ---@param s0 string
-  ---@param base string
-  ---@param segment_start integer
-  ---@return boolean yielded
-  local try_s0 = function(s0, base, segment_start)
-    if s0 == "" or is_only_seps(s0) then
-      return false
-    end
-
-    local entire = resolve_path(s0, base)
-    if is_dir(entire) then
-      local hit = false
-      for name in scandir(entire) do
-        emit(entire, name, "", segment_start)
-        hit = true
-      end
-      return hit
-    end
-
-    local lft, sep, rhs = segment.rpartition(s0, local_sep)
+  local dir, rhs
+  local entire = resolve_path(s0, base)
+  if is_dir(entire) then
+    dir, rhs = entire, ""
+  else
+    local lft, sep, partial = rpartition(s0, mc.local_sep)
     if sep == "" then
       return false
     end
@@ -196,24 +332,44 @@ M.matcher = function(settings, ctx)
     if not is_dir(left) then
       return false
     end
-
-    local hit = false
-    for name in scandir(left) do
-      if name_matches(rhs, name) then
-        emit(left, name, rhs, segment_start)
-        hit = true
-      end
-    end
-    return hit
+    dir, rhs = left, partial
   end
 
+  local hit = false
+  for name in scandir(dir) do
+    if name_matches(rhs, name) then
+      emit(mc, dir, name, rhs, segment_start)
+      hit = true
+    end
+  end
+  return hit
+end
+
+---@param settings config.Settings
+M.matcher = function(settings, ctx)
+  local opts = settings.clients.paths
+  local sc = settings.display.pum.source_context
+  ---@type paths.MatchCtx
+  local mc = {
+    opts = opts,
+    menu = sc[1] .. opts.short_name .. sc[2],
+    local_sep = p_sep(ctx.line_before),
+    cursor_row = ctx.pos[1] - 1,
+    cursor_col = #ctx.line_before,
+    line_before = ctx.line_before,
+    seen = {},
+  }
+
+  local seps = resolve_seps(opts)
+  local line = ctx.line_before .. ctx.line_after
+
   for base in collect_bases(opts.resolution, ctx) do
-    for cut in segment.iter_cuts(seps, line) do
-      if cut.segment_start >= #ctx.line_before then
+    for cut in iter_cuts(seps, line) do
+      if cut.segment_start >= mc.cursor_col then
         break
       end
       for v in variants_of(cut.s0) do
-        if try_s0(v, base, cut.segment_start) then
+        if try_s0(mc, v, base, cut.segment_start) then
           goto next_base
         end
       end
@@ -235,5 +391,15 @@ M.new = function(settings)
     end,
   }
 end
+
+M._internal = {
+  p_lhs = p_lhs,
+  separate = separate,
+  iter_cuts = iter_cuts,
+  p_sep = p_sep,
+  rpartition = rpartition,
+  expanduser = expanduser,
+  expandvars = expandvars,
+}
 
 return M

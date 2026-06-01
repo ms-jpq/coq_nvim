@@ -1,7 +1,10 @@
 local T = require "coq.lib.test"
 local async = require "coq.lib.async"
 local config = require "coq.config"
+local lib = require "coq.lib"
 local paths = require "coq.producers.paths"
+
+local internal = paths._internal
 
 local touch = function(path)
   local f = assert(io.open(path, "w"))
@@ -222,5 +225,136 @@ T.describe("paths.matcher", function(test)
     T.eq(edit.range.start.character, 0)
     T.eq(edit.range["end"].character, 4)
     T.eq(edit.newText, "./spot.txt")
+  end)
+end)
+
+T.describe("paths.p_lhs", function(test)
+  test("returns '.' when lhs ends with curdir", function()
+    T.eq(internal.p_lhs ".", ".")
+    T.eq(internal.p_lhs "foo/.", ".")
+  end)
+
+  test("returns '..' when lhs ends with pardir (preferred over '.')", function()
+    T.eq(internal.p_lhs "..", "..")
+    T.eq(internal.p_lhs "foo/..", "..")
+  end)
+
+  test("returns '~' when lhs ends with tilde", function()
+    T.eq(internal.p_lhs "~", "~")
+    T.eq(internal.p_lhs "cd ~", "~")
+  end)
+
+  test("returns '' when lhs has no special prefix", function()
+    T.eq(internal.p_lhs "", "")
+    T.eq(internal.p_lhs "foo", "")
+    T.eq(internal.p_lhs "/foo", "")
+  end)
+
+  test("captures $VAR when env is set", function()
+    vim.uv.os_setenv("COQ_TEST_PATHS", "/spot")
+    T.eq(internal.p_lhs "$COQ_TEST_PATHS", "$COQ_TEST_PATHS")
+    T.eq(internal.p_lhs "cd $COQ_TEST_PATHS", "$COQ_TEST_PATHS")
+    vim.uv.os_unsetenv "COQ_TEST_PATHS"
+  end)
+
+  test("ignores $VAR when env is unset", function()
+    vim.uv.os_unsetenv "COQ_TEST_UNSET"
+    T.eq(internal.p_lhs "$COQ_TEST_UNSET", "")
+  end)
+
+  test("captures ${VAR}", function()
+    T.eq(internal.p_lhs "${HOME}", "${HOME}")
+    T.eq(internal.p_lhs "cd ${PATH}", "${PATH}")
+  end)
+end)
+
+---@param seps table<string, true>
+---@param line string
+---@return paths.Cut[]
+local cuts_of = function(seps, line)
+  return vim.iter(internal.iter_cuts(seps, line)):totable()
+end
+
+T.describe("paths.iter_cuts", function(test)
+  test("yields one cut per split boundary", function()
+    local cuts = cuts_of({ ["/"] = true }, "foo/bar")
+    T.eq(#cuts, 1)
+    T.eq(cuts[1].segment, "foo")
+    T.eq(cuts[1].s0, "/bar")
+  end)
+
+  test("applies p_lhs to the lhs to canonicalize the prefix", function()
+    local cuts = cuts_of({ ["/"] = true }, "./foo/bar")
+    T.eq(#cuts, 2)
+    T.eq(cuts[1].segment, ".")
+    T.eq(cuts[1].s0, "./foo/bar")
+    T.eq(cuts[2].segment, "/foo")
+    T.eq(cuts[2].s0, "/bar")
+  end)
+
+  test("preserves leading absolute paths via empty lhs", function()
+    local cuts = cuts_of({ ["/"] = true }, "/etc/spot")
+    T.eq(#cuts, 2)
+    T.eq(cuts[1].segment, "")
+    T.eq(cuts[1].s0, "/etc/spot")
+  end)
+
+  test("segment_start is the byte col where the cut's lhs begins", function()
+    local cuts = cuts_of({ ["/"] = true }, "./fido/spot")
+    T.eq(cuts[1].segment_start, 0)
+    T.eq(cuts[2].segment_start, 1)
+  end)
+end)
+
+T.describe("paths.p_sep", function(test)
+  test("returns '/' on unix-like", function()
+    if lib.is_windows then
+      return
+    end
+    T.eq(internal.p_sep "foo/bar", "/")
+    T.eq(internal.p_sep "foo\\bar", "/")
+  end)
+end)
+
+T.describe("paths.rpartition", function(test)
+  test("splits at the last sep", function()
+    local l, s, r = internal.rpartition("foo/bar/baz", "/")
+    T.eq(l, "foo/bar")
+    T.eq(s, "/")
+    T.eq(r, "baz")
+  end)
+
+  test("returns ('', '', s) when no sep", function()
+    local l, s, r = internal.rpartition("spot", "/")
+    T.eq(l, "")
+    T.eq(s, "")
+    T.eq(r, "spot")
+  end)
+end)
+
+T.describe("paths.expanduser", function(test)
+  test("expands leading ~/ to $HOME", function()
+    local home = assert(vim.uv.os_homedir())
+    T.eq(internal.expanduser "~/spot", home .. "/spot")
+    T.eq(internal.expanduser "~", home)
+  end)
+
+  test("leaves non-tilde paths untouched", function()
+    T.eq(internal.expanduser "/etc", "/etc")
+    T.eq(internal.expanduser "foo~bar", "foo~bar")
+  end)
+end)
+
+T.describe("paths.expandvars", function(test)
+  test("expands $VAR and ${VAR} from env", function()
+    vim.uv.os_setenv("COQ_TEST_DOG", "fido")
+    T.eq(internal.expandvars "/$COQ_TEST_DOG/spot", "/fido/spot")
+    T.eq(internal.expandvars "${COQ_TEST_DOG}/spot", "fido/spot")
+    vim.uv.os_unsetenv "COQ_TEST_DOG"
+  end)
+
+  test("leaves unset vars literal", function()
+    vim.uv.os_unsetenv "COQ_TEST_GHOST"
+    T.eq(internal.expandvars "$COQ_TEST_GHOST/spot", "$COQ_TEST_GHOST/spot")
   end)
 end)
