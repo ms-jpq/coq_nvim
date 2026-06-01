@@ -271,24 +271,27 @@ T.describe("worker", function(test)
   test("ambient cancel mid-call sends STOP to worker", function()
     local async = require "coq.lib.async"
     local handle = require "coq.lib.async.handle"
+    local nursery = require "coq.lib.async.nursery"
+    local runtime = require "coq.lib.async.runtime"
     local h = handle.new()
     local w = worker.spawn()
     w.queue(function()
       _G.got_stop = require("coq.lib.async").future()
     end)
 
-    async.scope(function(n)
-      n.spawn(function()
-        local iter = w.queue_stream(function()
-          local cont = coroutine.yield "lil"
-          if not cont then
-            _G.got_stop.resolve()
-          end
-        end)
-        iter()
+    local n = nursery.new()
+    local _ = h.on_cancel(n.handle.cancel)
+    n.spawn(function()
+      local iter = w.queue_stream(function()
+        local cont = coroutine.yield "lil"
+        if not cont then
+          _G.got_stop.resolve()
+        end
       end)
-      h.cancel()
-    end, h)
+      iter()
+    end)
+    h.cancel()
+    n.join()
 
     local ok = w.queue(function()
       _G.got_stop.await()
@@ -302,22 +305,25 @@ T.describe("worker", function(test)
   test("uniterated stream is cleaned up on ambient cancel", function()
     local async = require "coq.lib.async"
     local handle = require "coq.lib.async.handle"
+    local nursery = require "coq.lib.async.nursery"
+    local runtime = require "coq.lib.async.runtime"
     local h = handle.new()
     local w = worker.spawn()
     w.queue(function()
       _G.got_stop = require("coq.lib.async").future()
     end)
 
-    async.scope(function(n)
-      n.spawn(function()
-        local _iter = w.queue_stream(function()
-          while coroutine.yield "tick" do
-          end
-          _G.got_stop.resolve()
-        end)
+    local n = nursery.new()
+    local _ = h.on_cancel(n.handle.cancel)
+    n.spawn(function()
+      local _iter = w.queue_stream(function()
+        while coroutine.yield "tick" do
+        end
+        _G.got_stop.resolve()
       end)
-      h.cancel()
-    end, h)
+    end)
+    h.cancel()
+    n.join()
 
     local ok = w.queue(function()
       _G.got_stop.await()
@@ -338,22 +344,27 @@ T.describe("worker", function(test)
       _G.got_cancel = require("coq.lib.async").future()
     end)
 
-    async.scope(function(n)
-      n.spawn(function()
-        local iter = w.queue_stream(function()
-          local r = require("coq.lib.worker").main(function()
+    local nursery = require "coq.lib.async.nursery"
+    local n = nursery.new()
+    local _ = h.on_cancel(n.handle.cancel)
+    n.spawn(function()
+      local iter = w.queue_stream(function()
+        local cancel = require "coq.lib.async.cancel"
+        local ok, err = pcall(function()
+          require("coq.lib.worker").main(function()
             require("coq.lib.async").sleep(10000)
             return "should not reach"
           end)
-          if r == nil then
-            _G.got_cancel.resolve()
-          end
         end)
-        local _ = runtime.current().on_cancel(iter.close)
-        iter()
+        if not ok and cancel.is(err) then
+          _G.got_cancel.resolve()
+        end
       end)
-      h.cancel()
-    end, h)
+      local _ = runtime.current().on_cancel(iter.close)
+      iter()
+    end)
+    h.cancel()
+    n.join()
 
     local ok = w.queue(function()
       _G.got_cancel.await()

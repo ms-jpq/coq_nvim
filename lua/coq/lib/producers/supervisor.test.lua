@@ -8,7 +8,9 @@ local supervisor = require "coq.lib.producers.supervisor"
 
 ---@return async.Nursery
 local detached = function()
-  return nursery.new(handle.new())
+  local n = nursery.new()
+  local _ = handle.new().on_cancel(n.handle.cancel)
+  return n
 end
 
 ---@param matcher producers.MatcherFn
@@ -66,15 +68,15 @@ T.describe("supervisor", function(test)
     T.eq(seen, { "fido", "lil", "spot" })
   end)
 
-  test("new search waits for previous pump to exit", function()
-    local order = {}
+  test("new search cancels previous pump", function()
     local matcher_started = async.future()
+    local matcher_finished = false
     async.scope(function(n)
       local sup = supervisor.new {
         matcher_only(function()
           matcher_started.resolve()
           async.sleep(50 * T.SLOW)
-          table.insert(order, "matcher_done")
+          matcher_finished = true
         end),
       }
       sup.bind(n)
@@ -84,10 +86,9 @@ T.describe("supervisor", function(test)
       matcher_started.await()
       async.sleep(0)
       sup.search({}).close()
-      table.insert(order, "second_search_returned")
     end)
 
-    T.eq(order, { "matcher_done", "second_search_returned" })
+    T.eq(matcher_finished, false)
   end)
 
   test("previous iterator returns nil after new search starts", function()
@@ -127,7 +128,7 @@ T.describe("supervisor", function(test)
         idle = function()
           idle_started.resolve()
           local start = vim.uv.hrtime()
-          async.sleep(100 * T.SLOW)
+          pcall(async.sleep, 100 * T.SLOW)
           idle_finished.resolve((vim.uv.hrtime() - start) / 1e6)
         end,
         matcher = function()
@@ -276,7 +277,7 @@ T.describe("supervisor", function(test)
           if idle_calls == 1 then
             first_idle_started.resolve()
             local start = vim.uv.hrtime()
-            async.sleep(100 * T.SLOW)
+            pcall(async.sleep, 100 * T.SLOW)
             first_idle_finished.resolve((vim.uv.hrtime() - start) / 1e6)
           else
             second_idle_done.resolve()
@@ -331,16 +332,16 @@ T.describe("supervisor", function(test)
   end)
 
   test("iter.close from a sibling coroutine cancels the matcher", function()
-    local matcher_done = async.future()
+    local matcher_cancelled = async.future()
     local matcher_sleeping = async.future()
-    local first, after
+    local first
     async.scope(function(n)
       local sup = supervisor.new {
         matcher_only(function()
           coroutine.yield "lil"
           matcher_sleeping.resolve()
-          async.sleep(100 * T.SLOW)
-          matcher_done.resolve(true)
+          local ok = pcall(async.sleep, 100 * T.SLOW)
+          matcher_cancelled.resolve(not ok)
         end),
       }
       sup.bind(n)
@@ -348,16 +349,15 @@ T.describe("supervisor", function(test)
         local iter = sup.search {}
         inner.spawn(function()
           first = iter()
-          after = iter()
+          pcall(iter)
         end)
         matcher_sleeping.await()
         iter.close()
-        matcher_done.await()
+        matcher_cancelled.await()
       end)
     end)
 
     T.eq(first, "lil")
-    T.eq(after, nil)
   end)
 
   test("supervisor satisfies the Producer shape (nestable)", function()

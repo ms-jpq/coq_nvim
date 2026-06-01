@@ -6,17 +6,15 @@ local runtime = require "coq.lib.async.runtime"
 local M = {}
 
 M.future = runtime.future
-M.preemptible = runtime.preemptible
 M.sleep = runtime.sleep
 M.wrap = runtime.wrap
 M.entry = runtime.entry
 
 ---@generic T
 ---@param body fun(nursery: async.Nursery, defer: fun(cleanup: fun())): T?
----@param h? async.Handle
----@return T?
-M.scope = function(body, h)
-  local n = nursery.new(h)
+---@return T
+M.scope = function(body)
+  local n = nursery.new()
   return lib.scope(function(defer)
     local rets = {}
     n.spawn(function()
@@ -40,7 +38,6 @@ M.all = function(fns)
         results[idx] = fn()
       end)
     end
-    return nil
   end)
   return results
 end
@@ -68,20 +65,20 @@ M.race = function(fns)
       n.handle.cancel()
       return ...
     end
-    return finish(f.await(n.handle))
+    return finish(f.await())
   end)
 end
 
 ---@class async.MergeIter<T>: lib.Closable
----@overload fun(): integer?, T?
+---@overload fun(): integer, T
 
 ---@generic T
 ---@param iters (fun(): T)[]
----@param h? async.Handle
 ---@return async.MergeIter<T>
-M.merge = function(iters, h)
-  local n = nursery.new(h)
-  local chan = mpmc.new(1, n.handle)
+M.merge = function(iters)
+  local n = nursery.new()
+  local chan = mpmc.new(1)
+  local _ = n.handle.on_cancel(chan.close)
   local active = #iters
 
   if active == 0 then
@@ -89,10 +86,8 @@ M.merge = function(iters, h)
   end
 
   for idx, iter in pairs(iters) do
-    local p_iter = runtime.preemptible(iter)
-
     n.spawn(function()
-      for v in p_iter do
+      for v in iter do
         chan.push(idx, v)
       end
 
@@ -128,7 +123,7 @@ M.awaitify = function(fn)
     table.insert(argv, f.resolve)
 
     fn(unpack(argv))
-    return f.await(runtime.current())
+    return f.await()
   end
 end
 

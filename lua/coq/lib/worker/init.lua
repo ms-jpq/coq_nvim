@@ -99,7 +99,7 @@ local open = function(parked, write, message)
       end
       write { kind = Kind.NEXT, id = id }
     end
-  end)
+  end, runtime.current())
 
   local session = {}
 
@@ -205,16 +205,26 @@ local make_responder = function(write)
     local stream = async.wrap(fn, req_handle)
 
     local consume = function()
-      local item = stream(unpack(args, 1, n_args))
-      while item ~= nil do
-        write { kind = Kind.YIELD, id = frame.id, n_values = 1, values = { item } }
-        if req_handle.cancelled or not next_chan.pull() then
-          for _ in stream do
-            lib.noop()
+      local function loop()
+        local item = stream(unpack(args, 1, n_args))
+        while item ~= nil do
+          write { kind = Kind.YIELD, id = frame.id, n_values = 1, values = { item } }
+          if req_handle.cancelled or not next_chan.pull() then
+            return
           end
-          break
+          item = stream(true)
         end
-        item = stream(true)
+      end
+
+      local ok, err = pcall(loop)
+      pcall(function()
+        for _ in stream do
+          lib.noop()
+        end
+      end)
+
+      if not ok then
+        error(err, 0)
       end
     end
 

@@ -45,7 +45,7 @@ M.iter = function(h, fn)
       h.cancel()
       error(val, 0)
     end
-    if h.cancelled or val == nil then
+    if val == nil then
       h.cancel()
       return nil
     end

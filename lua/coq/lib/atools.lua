@@ -1,6 +1,5 @@
 local async = require "coq.lib.async"
 local lib = require "coq.lib"
-local runtime = require "coq.lib.async.runtime"
 
 local M = {}
 
@@ -89,10 +88,9 @@ M.spawn = function(argv, opts)
     read(stdout_pipe, stdout_f)
     read(stderr_pipe, stderr_f)
 
-    local h = runtime.current()
     local await = function(f)
       return function()
-        local ok, value = f.await(h)
+        local ok, value = f.await()
         if not ok then
           error(value, 0)
         end

@@ -1,6 +1,5 @@
 local atools = require "coq.lib.atools"
 local context = require "coq.lib.context"
-local runtime = require "coq.lib.async.runtime"
 
 local M = {}
 
@@ -13,8 +12,6 @@ local M = {}
 
 ---@param buf integer
 M.query = function(buf)
-  local h = runtime.current()
-
   if not vim.api.nvim_buf_is_valid(buf) or not vim.api.nvim_buf_is_loaded(buf) then
     return
   end
@@ -39,15 +36,7 @@ M.query = function(buf)
   end
 
   for _, tree in pairs(parser:parse() or {}) do
-    if h.cancelled then
-      return
-    end
-
     for capture_id, node in query:iter_captures(tree:root(), buf, lo, hi) do
-      if h.cancelled then
-        return
-      end
-
       local kind = query.captures[capture_id]
       if kind ~= "comment" and not node:missing() and not node:has_error() then
         local r_lo, _, r_hi, _ = node:range()

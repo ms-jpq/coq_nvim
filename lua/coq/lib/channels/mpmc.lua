@@ -12,9 +12,8 @@ local M = {}
 
 ---@generic T
 ---@param capacity? integer
----@param h? async.Handle
 ---@return channels.Mpmc<T>
-M.new = function(capacity, h)
+M.new = function(capacity)
   capacity = math.max(1, capacity or math.huge)
 
   local que = queue.new()
@@ -34,7 +33,7 @@ M.new = function(capacity, h)
     f.await()
   end
 
-  local state = util.closable(h, function()
+  local state = util.closable(function()
     local push_snap, pull_snap = push_waiters, pull_waiters
     push_waiters, pull_waiters = sparse.new(), sparse.new()
 

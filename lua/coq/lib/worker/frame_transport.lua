@@ -82,7 +82,7 @@ M.writer = function(pipe)
     pipe:write(proto.encode(body), function(err)
       f.resolve(err)
     end)
-    local err = f.await()
+    local err = f.await { cancel = false }
     if err then
       error(err, 0)
     end

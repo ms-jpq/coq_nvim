@@ -12,9 +12,8 @@ local util = require "coq.lib.channels.util"
 local M = {}
 
 ---@generic T
----@param h? async.Handle
 ---@return channels.Broadcast<T>
-M.new = function(h)
+M.new = function()
   local subscribers = sparse.new()
 
   local dismiss = function(sub)
@@ -30,7 +29,7 @@ M.new = function(h)
     end
   end
 
-  local state = util.closable(h, function()
+  local state = util.closable(function()
     local snapshot = subscribers
     subscribers = sparse.new()
     for _, sub in snapshot.iter() do

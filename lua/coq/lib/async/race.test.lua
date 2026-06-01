@@ -1,5 +1,6 @@
 local T = require "coq.lib.test"
 local async = require "coq.lib.async"
+local cancel = require "coq.lib.async.cancel"
 local handle = require "coq.lib.async.handle"
 local lib = require "coq.lib"
 local runtime = require "coq.lib.async.runtime"
@@ -42,22 +43,21 @@ T.describe("race", function(test)
     T.eq({ a, b, c }, { "lil", "fido", "spot" })
   end)
 
-  test("ignores losers that finish later", function()
-    local late_ran = false
+  test("losers are cancelled when a winner emerges", function()
+    local late_cancelled = false
     local idx, val = async.race {
       function()
         return "winner"
       end,
       function()
-        async.sleep(5 * T.SLOW)
-        late_ran = true
-        return "loser"
+        local ok = pcall(async.sleep, 5 * T.SLOW)
+        late_cancelled = not ok
       end,
     }
 
     T.eq(idx, 1)
     T.eq(val, "winner")
-    T.eq(late_ran, true)
+    T.eq(late_cancelled, true)
   end)
 
   test("sync task beats later async task", function()
@@ -91,26 +91,24 @@ T.describe("race", function(test)
     T.eq(loser_cancelled, true)
   end)
 
-  test("external cancel bails race with nil idx", function()
+  test("external cancel makes race throw cancel", function()
+    local nursery = require "coq.lib.async.nursery"
     local outer = handle.new()
-    local cancelled = false
-    local idx
-    async.scope(function(n)
-      n.spawn(function()
-        idx = async.race {
-          function()
-            local _ = runtime.current().on_cancel(function()
-              cancelled = true
-            end)
-            async.sleep(50 * T.SLOW)
-          end,
-        }
-      end)
-      outer.cancel()
-    end, outer)
+    local race_ok, race_err
+    local n = nursery.new()
+    local _ = outer.on_cancel(n.handle.cancel)
+    n.spawn(function()
+      race_ok, race_err = pcall(async.race, {
+        function()
+          async.sleep(50 * T.SLOW)
+        end,
+      })
+    end)
+    outer.cancel()
+    n.join()
 
-    T.eq(cancelled, true)
-    T.eq(idx, nil)
+    T.eq(race_ok, false)
+    T.eq(cancel.is(race_err), true)
   end)
 
   test("child error propagates and cancels siblings", function()

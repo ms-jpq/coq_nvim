@@ -1,60 +1,73 @@
 local T = require "coq.lib.test"
 local async = require "coq.lib.async"
+local cancel = require "coq.lib.async.cancel"
 local handle = require "coq.lib.async.handle"
 local nursery = require "coq.lib.async.nursery"
-local runtime = require "coq.lib.async.runtime"
 
 T.describe("future cancel", function(test)
-  test("await returns nil when ambient handle already cancelled", function()
+  test("await throws cancel when ambient handle already cancelled", function()
     local h = handle.new()
     h.cancel()
 
-    async.scope(function(n)
-      n.spawn(function()
-        local f = async.future()
-
-        T.eq(f.await(runtime.current()), nil)
-      end)
-    end, h)
+    local n = nursery.new()
+    local _ = h.on_cancel(n.handle.cancel)
+    n.spawn(function()
+      local f = async.future()
+      local ok, err = pcall(f.await)
+      T.eq(ok, false)
+      T.eq(cancel.is(err), true)
+    end)
+    n.join()
   end)
 
-  test("await returns resolved value even when explicit handle cancelled", function()
+  test("await throws cancel even when future also resolved", function()
     local h = handle.new()
     h.cancel()
     local f = async.future()
     f.resolve(2)
 
-    T.eq(f.await(h), 2)
+    local ok, err
+    local n = nursery.new()
+    local _ = h.on_cancel(n.handle.cancel)
+    n.spawn(function()
+      ok, err = pcall(f.await)
+    end)
+    n.join()
+    T.eq(ok, false)
+    T.eq(cancel.is(err), true)
   end)
 
-  test("await wakes with nil when cancelled mid-yield", function()
+  test("await wakes by throwing cancel when cancelled mid-yield", function()
     local h = handle.new()
     local awoke = false
-    local got
-    async.scope(function(n)
-      n.spawn(function()
-        local f = async.future()
-        got = f.await(runtime.current())
-        awoke = true
-      end)
-      h.cancel()
-    end, h)
+    local ok, err
+    local n = nursery.new()
+    local _ = h.on_cancel(n.handle.cancel)
+    n.spawn(function()
+      local f = async.future()
+      ok, err = pcall(f.await)
+      awoke = true
+    end)
+    h.cancel()
+    n.join()
 
     T.eq(awoke, true)
-    T.eq(got, nil)
+    T.eq(ok, false)
+    T.eq(cancel.is(err), true)
   end)
 
   test("resolve after cancel is silent", function()
     local h = handle.new()
     local resolve
-    async.scope(function(n)
-      n.spawn(function()
-        local f = async.future()
-        resolve = f.resolve
-        f.await(runtime.current())
-      end)
-      h.cancel()
-    end, h)
+    local n = nursery.new()
+    local _ = h.on_cancel(n.handle.cancel)
+    n.spawn(function()
+      local f = async.future()
+      resolve = f.resolve
+      pcall(f.await)
+    end)
+    h.cancel()
+    n.join()
     local ok = pcall(resolve, "late")
 
     T.eq(ok, true)
@@ -66,32 +79,39 @@ T.describe("sleep cancel", function(test)
     local h = handle.new()
     h.cancel()
 
-    async.scope(function(n)
-      n.spawn(function()
-        local start = vim.uv.hrtime()
-        async.sleep(100 * T.SLOW)
-        local elapsed_ms = (vim.uv.hrtime() - start) / 1e6
+    local n = nursery.new()
+    local _ = h.on_cancel(n.handle.cancel)
+    n.spawn(function()
+      local start = vim.uv.hrtime()
+      pcall(async.sleep, 100 * T.SLOW)
+      local elapsed_ms = (vim.uv.hrtime() - start) / 1e6
 
-        assert(elapsed_ms < 20 * T.SLOW, ("expected immediate, got %.1fms"):format(elapsed_ms))
-      end)
-    end, h)
+      assert(elapsed_ms < 20 * T.SLOW, ("expected immediate, got %.1fms"):format(elapsed_ms))
+    end)
+    n.join()
   end)
 
-  test("returns early when cancelled mid-sleep", function()
+  test("throws cancel when cancelled mid-sleep", function()
     local h = handle.new()
     local elapsed_ms
+    local ok, err
 
-    async.scope(function(n)
-      n.spawn(function()
-        local start = vim.uv.hrtime()
-        async.sleep(500 * T.SLOW)
-        elapsed_ms = (vim.uv.hrtime() - start) / 1e6
-      end)
+    local n = nursery.new()
+    local _ = h.on_cancel(n.handle.cancel)
+    n.spawn(function()
+      local start = vim.uv.hrtime()
+      ok, err = pcall(async.sleep, 500 * T.SLOW)
+      elapsed_ms = (vim.uv.hrtime() - start) / 1e6
+    end)
+    n.spawn(function()
       async.sleep(30 * T.SLOW)
       h.cancel()
-    end, h)
+    end)
+    n.join()
 
     assert(elapsed_ms and elapsed_ms < 200 * T.SLOW, ("expected fast wake, got %s"):format(tostring(elapsed_ms)))
+    T.eq(ok, false)
+    T.eq(cancel.is(err), true)
   end)
 
   test("does not leak watchers on the passed handle", function()

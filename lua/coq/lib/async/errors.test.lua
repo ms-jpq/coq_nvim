@@ -46,29 +46,6 @@ T.describe("errors", function(test)
     assert_clean(err, "entry boom")
   end)
 
-  test("async.preemptible error surfaces at caller, not in runtime", function()
-    local iter = async.preemptible(function()
-      error "preemptible boom"
-    end)
-
-    local ok, err = pcall(iter)
-
-    T.eq(ok, false)
-    assert_clean(err, "preemptible boom")
-  end)
-
-  test("async.preemptible post-await error surfaces at caller, not in runtime", function()
-    local iter = async.preemptible(function()
-      async.sleep(2 * T.SLOW)
-      error "preemptible post-sleep boom"
-    end)
-
-    local ok, err = pcall(iter)
-
-    T.eq(ok, false)
-    assert_clean(err, "preemptible post-sleep boom")
-  end)
-
   test("async.scope body error surfaces at caller, not in nursery", function()
     local ok, err = pcall(function()
       async.scope(function()

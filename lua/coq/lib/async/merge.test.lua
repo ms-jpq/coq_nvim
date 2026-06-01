@@ -69,18 +69,19 @@ T.describe("merge", function(test)
   end)
 
   test("returns nil when ambient handle cancelled mid-merge", function()
+    local nursery = require "coq.lib.async.nursery"
     local h = handle.new()
     local got
-    async.scope(function(n)
-      n.spawn(function()
-        local iter = function()
-          async.sleep(100 * T.SLOW)
-          return "never"
-        end
-        got = async.merge { iter }()
-      end)
-      h.cancel()
-    end, h)
+    local n = nursery.new(); local _ = h.on_cancel(n.handle.cancel)
+    n.spawn(function()
+      local iter = function()
+        async.sleep(100 * T.SLOW)
+        return "never"
+      end
+      got = async.merge { iter }()
+    end)
+    h.cancel()
+    n.join()
 
     T.eq(got, nil)
   end)
@@ -105,7 +106,7 @@ T.describe("merge", function(test)
       end,
     }
 
-    async.sleep(5 * T.SLOW)
+    async.sleep(50 * T.SLOW)
     local ok, err = pcall(m.close)
     T.eq(ok, false)
     T.eq(err, "bad dog")

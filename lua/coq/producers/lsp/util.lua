@@ -12,7 +12,6 @@ local M = {}
 ---@return any result
 M.request = function(client, method, params, buf)
   return lib.scope(function(defer)
-    local h = runtime.current()
     local f = async.future()
     local ok, req_id = client:request(method, params, function(err, result)
       f.resolve(err, result)
@@ -21,11 +20,11 @@ M.request = function(client, method, params, buf)
     if not ok or not req_id then
       return nil, nil
     end
-    defer(h.on_cancel(function()
+    defer(runtime.current().on_cancel(function()
       client:cancel_request(req_id)
     end))
 
-    return f.await(h)
+    return f.await()
   end)
 end
 

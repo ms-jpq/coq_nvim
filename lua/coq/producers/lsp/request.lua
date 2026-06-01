@@ -1,6 +1,5 @@
 local async = require "coq.lib.async"
 local lib = require "coq.lib"
-local runtime = require "coq.lib.async.runtime"
 local util = require "coq.producers.lsp.util"
 
 ---@class lsp.RequestItem
@@ -54,8 +53,6 @@ end
 ---@return lib.Iterator<lsp.CompletionItem>
 local query_one = function(client, ctx, td_params)
   return async.wrap(function()
-    local h = runtime.current()
-
     lib.scope(function(defer)
       local token = "coq.lsp." .. client.id .. "." .. next_token_id()
       local kinds = vim.lsp.protocol.CompletionTriggerKind
@@ -92,9 +89,6 @@ local query_one = function(client, ctx, td_params)
       local err, result = util.request(client, "textDocument/completion", params, ctx.buf)
 
       for _, item in pairs(partial) do
-        if h.cancelled then
-          return
-        end
         coroutine.yield(item)
       end
 
@@ -104,9 +98,6 @@ local query_one = function(client, ctx, td_params)
           vim.b[ctx.buf][incomplete_var] = incomplete or nil
         end
         for _, item in pairs(items_of(result)) do
-          if h.cancelled then
-            return
-          end
           coroutine.yield(item)
         end
       end

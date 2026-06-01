@@ -1,5 +1,6 @@
 local T = require "coq.lib.test"
 local async = require "coq.lib.async"
+local cancel = require "coq.lib.async.cancel"
 local handle = require "coq.lib.async.handle"
 local lib = require "coq.lib"
 local nursery = require "coq.lib.async.nursery"
@@ -22,43 +23,49 @@ T.describe("nursery", function(test)
     T.eq(count, 2)
   end)
 
-  test("join wakes when ambient cancelled mid-join", function()
+  test("join throws cancel when ambient cancelled mid-join", function()
     local outer = handle.new()
-    local joined = false
-    async.scope(function(n)
-      n.spawn(function()
-        local inner = nursery.new()
-        inner.spawn(function()
-          async.sleep(200 * T.SLOW)
-        end)
-        inner.join()
-        joined = true
+    local join_ok, join_err
+    local n = nursery.new()
+    local _ = outer.on_cancel(n.handle.cancel)
+    n.spawn(function()
+      local inner = nursery.new()
+      inner.spawn(function()
+        async.sleep(200 * T.SLOW)
       end)
+      join_ok, join_err = pcall(inner.join)
+    end)
+    n.spawn(function()
       async.sleep(5 * T.SLOW)
       outer.cancel()
-    end, outer)
+    end)
+    n.join()
 
-    T.eq(joined, true)
+    T.eq(join_ok, false)
+    T.eq(cancel.is(join_err), true)
   end)
 
-  test("join bails on joiner cancel even when child hangs", function()
+  test("join throws cancel on joiner cancel even when child hangs", function()
     local outer = handle.new()
-    local joined = false
-    async.scope(function(n)
-      n.spawn(function()
-        local inner = nursery.new()
-        inner.spawn(function()
-          local f = async.future()
-          f.await()
-        end)
-        inner.join()
-        joined = true
+    local join_ok, join_err
+    local n = nursery.new()
+    local _ = outer.on_cancel(n.handle.cancel)
+    n.spawn(function()
+      local inner = nursery.new()
+      inner.spawn(function()
+        local f = async.future()
+        f.await()
       end)
+      join_ok, join_err = pcall(inner.join)
+    end)
+    n.spawn(function()
       async.sleep(5 * T.SLOW)
       outer.cancel()
-    end, outer)
+    end)
+    n.join()
 
-    T.eq(joined, true)
+    T.eq(join_ok, false)
+    T.eq(cancel.is(join_err), true)
   end)
 
   test("spawn after join raises", function()
@@ -109,7 +116,7 @@ T.describe("nursery", function(test)
       error "first"
     end)
     n.spawn(function()
-      async.sleep(50 * T.SLOW)
+      pcall(async.sleep, 50 * T.SLOW)
       error "second"
     end)
 

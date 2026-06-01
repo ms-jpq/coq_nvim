@@ -27,8 +27,9 @@ M.dead_iter = setmetatable({ close = M.noop }, {
 
 ---@param err any
 M.report = function(err)
+  local e = tostring(err)
   vim.schedule(function()
-    vim.notify(tostring(err), vim.log.levels.ERROR)
+    vim.notify(e, vim.log.levels.ERROR)
   end)
 end
 
@@ -48,7 +49,7 @@ M.scope = function(fn)
     for i = #defers, 1, -1 do
       local d_ok, d_err = xpcall(defers[i], debug.traceback)
       if not d_ok then
-        vim.notify(d_err, vim.log.levels.ERROR)
+        M.report(d_err)
       end
     end
 

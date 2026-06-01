@@ -1,7 +1,6 @@
 local async = require "coq.lib.async"
 local atools = require "coq.lib.atools"
 local context = require "coq.lib.context"
-local runtime = require "coq.lib.async.runtime"
 
 local YIELD_BYTES = 6969
 
@@ -85,10 +84,6 @@ M.words = function(kw, lines)
 
       elapsed = elapsed + n
       if elapsed >= YIELD_BYTES then
-        if runtime.current().cancelled then
-          return
-        end
-
         elapsed = 0
         async.sleep(0)
       end

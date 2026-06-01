@@ -12,24 +12,26 @@ local cancel_tests = function(name, factory)
       local h = handle.new()
       h.cancel()
       local got = "unset"
-      async.scope(function(n)
-        n.spawn(function()
-          local db = factory {
-            idle = lib.noop,
-            bind = lib.noop,
-            matcher = function()
-              coroutine.yield "lil"
-            end,
-          }
-          db.bind(n)
-          got = db.search {}()
-        end)
-      end, h)
+      local n = nursery.new()
+      local _ = h.on_cancel(n.handle.cancel)
+      n.spawn(function()
+        local db = factory {
+          idle = lib.noop,
+          bind = lib.noop,
+          matcher = function()
+            coroutine.yield "lil"
+          end,
+        }
+        db.bind(n)
+        got = db.search {}()
+      end)
+      n.join()
       T.eq(got, nil)
     end)
 
     test("bind cancellation is idempotent", function()
-      local n = nursery.new(handle.new())
+      local n = nursery.new()
+      local _ = handle.new().on_cancel(n.handle.cancel)
       local db = factory {
         idle = lib.noop,
         bind = lib.noop,
@@ -45,24 +47,27 @@ local cancel_tests = function(name, factory)
     test("ambient cancel wakes a sleeping matcher", function()
       local h = handle.new()
       local elapsed_ms
-      async.scope(function(n)
-        n.spawn(function()
-          local db = factory {
-            idle = lib.noop,
-            bind = lib.noop,
-            matcher = function(_, ctx)
-              require("coq.lib.async").sleep(200 * ctx.slow)
-              coroutine.yield "never"
-            end,
-          }
-          db.bind(n)
-          local start = vim.uv.hrtime()
-          local _ = db.search { slow = T.SLOW }()
-          elapsed_ms = (vim.uv.hrtime() - start) / 1e6
-        end)
+      local n = nursery.new()
+      local _ = h.on_cancel(n.handle.cancel)
+      n.spawn(function()
+        local db = factory {
+          idle = lib.noop,
+          bind = lib.noop,
+          matcher = function(_, ctx)
+            require("coq.lib.async").sleep(200 * ctx.slow)
+            coroutine.yield "never"
+          end,
+        }
+        db.bind(n)
+        local start = vim.uv.hrtime()
+        pcall(db.search { slow = T.SLOW })
+        elapsed_ms = (vim.uv.hrtime() - start) / 1e6
+      end)
+      n.spawn(function()
         async.sleep(30 * T.SLOW)
         h.cancel()
-      end, h)
+      end)
+      n.join()
       assert(elapsed_ms and elapsed_ms < 100 * T.SLOW, ("expected fast wake, got %s ms"):format(tostring(elapsed_ms)))
     end)
   end)

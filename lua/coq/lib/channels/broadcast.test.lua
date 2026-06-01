@@ -1,7 +1,6 @@
 local T = require "coq.lib.test"
 local async = require "coq.lib.async"
 local broadcast = require "coq.lib.channels.broadcast"
-local handle = require "coq.lib.async.handle"
 
 T.describe("broadcast", function(test)
   test("push without subscribers is a noop", function()
@@ -85,46 +84,6 @@ T.describe("broadcast", function(test)
     end)
 
     T.eq(exited, true)
-  end)
-
-  test("chan-level handle cancel terminates iteration", function()
-    local h = handle.new()
-    local chan = broadcast.new(h)
-    local seen = {}
-    async.scope(function(n)
-      n.spawn(function()
-        async.sleep(2 * T.SLOW)
-        chan.replace "lil"
-        async.sleep(2 * T.SLOW)
-        h.cancel()
-        async.sleep(2 * T.SLOW)
-        chan.replace "spot"
-      end)
-      n.spawn(function()
-        for dog in chan.subscribe() do
-          table.insert(seen, dog)
-        end
-      end)
-    end)
-
-    T.eq(seen, { "lil" })
-  end)
-
-  test("new with already-cancelled handle yields a closed channel", function()
-    local h = handle.new()
-    h.cancel()
-    local chan = broadcast.new(h)
-    local seen = {}
-    async.scope(function(n)
-      n.spawn(function()
-        for dog in chan.subscribe() do
-          table.insert(seen, dog)
-        end
-      end)
-      chan.replace "lil"
-    end)
-
-    T.eq(seen, {})
   end)
 
   test("replace after close is silent", function()

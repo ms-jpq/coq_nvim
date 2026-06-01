@@ -1,6 +1,5 @@
 local T = require "coq.lib.test"
 local async = require "coq.lib.async"
-local handle = require "coq.lib.async.handle"
 local mpmc = require "coq.lib.channels.mpmc"
 
 T.describe("mpmc", function(test)
@@ -166,29 +165,6 @@ T.describe("mpmc", function(test)
     end)
   end)
 
-  test("chan-level handle cancel wakes blocked pull with nil", function()
-    local h = handle.new()
-    local chan = mpmc.new(nil, h)
-    local got = "sentinel"
-    async.scope(function(n)
-      n.spawn(function()
-        got = chan.pull()
-      end)
-      async.sleep(2 * T.SLOW)
-      h.cancel()
-    end)
-
-    T.eq(got, nil)
-  end)
-
-  test("chan-level handle cancel closes the channel", function()
-    local h = handle.new()
-    local chan = mpmc.new(nil, h)
-    h.cancel()
-
-    T.eq(chan.push "lil", false)
-  end)
-
   test("callable via for-loop", function()
     local chan = mpmc.new()
     local seen = {}
@@ -243,14 +219,5 @@ T.describe("mpmc", function(test)
     end)
 
     T.eq(results, { a = false, b = false })
-  end)
-
-  test("chan-level handle pre-cancelled at construction starts closed", function()
-    local h = handle.new()
-    h.cancel()
-    local chan = mpmc.new(nil, h)
-
-    T.eq(chan.pull(), nil)
-    T.eq(chan.push "lil", false)
   end)
 end)

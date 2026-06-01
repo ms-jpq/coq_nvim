@@ -1,3 +1,4 @@
+local cancel = require "coq.lib.async.cancel"
 local handle = require "coq.lib.async.handle"
 local lib = require "coq.lib"
 
@@ -34,10 +35,13 @@ local is_await = function(x)
   return type(x) == "table" and getmetatable(x) == AWAIT_EFF
 end
 
+---@class async.AwaitOpts
+---@field cancel? boolean
+
 ---@class async.Future<T>
 ---@field resolve fun(...: T)
 ---@field once_ready fun(cb: fun(...: T))
----@field await fun(h?: async.Handle): T ...
+---@field await fun(opts?: async.AwaitOpts): T ...
 
 ---@generic T
 ---@return async.Future<T>
@@ -71,8 +75,19 @@ M.future = function()
     end
   end
 
-  f.await = function(h)
-    return coroutine.yield(setmetatable({ f = f, h = h }, AWAIT_EFF))
+  f.await = function(opts)
+    if opts and opts.cancel == false then
+      return coroutine.yield(setmetatable({ f = f }, AWAIT_EFF))
+    end
+    local h = M.current()
+    if h.cancelled then
+      error(cancel.new(), 0)
+    end
+    local ret = { coroutine.yield(setmetatable({ f = f, h = h }, AWAIT_EFF)) }
+    if h.cancelled then
+      error(cancel.new(), 0)
+    end
+    return unpack(ret)
   end
 
   return f
@@ -93,7 +108,11 @@ local trampoline = function(producer, h, on_await)
   local bounce
   local dispatch = function(ok, ...)
     if not ok then
-      error(debug.traceback(co, (...)), 0)
+      local err = ...
+      if cancel.is(err) then
+        error(err, 0)
+      end
+      error(debug.traceback(co, err), 0)
     end
     if coroutine.status(co) == "dead" then
       return nil
@@ -127,7 +146,7 @@ M.detach = function(h, fn, ...)
       resumed = true
       unwatch()
       local ok, err = pcall(bounce, ...)
-      if not ok then
+      if not ok and not cancel.is(err) then
         lib.report(err)
       end
     end
@@ -160,14 +179,7 @@ M.entry = function(fn)
 end
 
 ---@param milliseconds integer
----@param h? async.Handle
----@return nil
-M.sleep = function(milliseconds, h)
-  h = h or M.current()
-  if h.cancelled then
-    return
-  end
-
+M.sleep = function(milliseconds)
   local f = M.future()
   local watcher, wargv = (function()
     if milliseconds < 0 then
@@ -187,37 +199,8 @@ M.sleep = function(milliseconds, h)
     end)
 
     watcher:start(unpack(wargv))
-    return f.await(h)
+    return f.await()
   end)
-end
-
----@generic T
----@param fn fun(): T?
----@return fun(): T?
-M.preemptible = function(fn)
-  local h
-  return function()
-    h = h or handle.new(M.current())
-    if h.cancelled then
-      return nil
-    end
-
-    local f = M.future()
-    M.detach(h, function()
-      f.resolve(pcall(fn))
-    end)
-
-    local go = function(ok, ...)
-      if not ok then
-        error((...), 0)
-      end
-      if h.cancelled then
-        return nil
-      end
-      return ...
-    end
-    return go(f.await())
-  end
 end
 
 return M
