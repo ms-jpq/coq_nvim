@@ -68,6 +68,63 @@ T.describe("supervisor", function(test)
     T.eq(seen, { "fido", "lil", "spot" })
   end)
 
+  test("new search cancels in-flight idle", function()
+    local idle_started = async.future()
+    local idle_finished = async.future()
+    async.scope(function(n)
+      local p, push = pushable {
+        idle = function()
+          idle_started.resolve()
+          local start = vim.uv.hrtime()
+          pcall(async.sleep, 100 * T.SLOW)
+          idle_finished.resolve((vim.uv.hrtime() - start) / 1e6)
+        end,
+        matcher = function()
+          coroutine.yield "lil"
+        end,
+      }
+      local sup = supervisor.new { p }
+      sup.bind(n)
+      push(true)
+      n.spawn(function()
+        sup.idle {}
+      end)
+      idle_started.await()
+      drain(sup.search {})
+    end)
+
+    local idle_elapsed_ms = idle_finished.await()
+    assert(
+      idle_elapsed_ms and idle_elapsed_ms < 50 * T.SLOW,
+      "idle should have been cancelled, elapsed: " .. tostring(idle_elapsed_ms)
+    )
+  end)
+
+  test("idle is no-op while search is active", function()
+    local idle_ran = false
+    async.scope(function(n)
+      local sup = supervisor.new {
+        producer.new {
+          idle = function()
+            idle_ran = true
+          end,
+          bind = lib.noop,
+          matcher = function()
+            coroutine.yield "lil"
+            async.sleep(50 * T.SLOW)
+          end,
+        },
+      }
+      sup.bind(n)
+      local iter = sup.search {}
+      iter()
+      sup.idle {}
+      iter.close()
+    end)
+
+    T.eq(idle_ran, false)
+  end)
+
   test("idle runs once search has ended", function()
     local idle_ran = async.future()
     async.scope(function(n)

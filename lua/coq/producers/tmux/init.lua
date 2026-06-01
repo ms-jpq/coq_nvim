@@ -21,14 +21,7 @@ local PANE_FMT = table.concat(PANE_FIELDS, SEP)
 ---@field id string
 ---@field meta tmux.PaneMeta
 
----@class tmux.State
----@field iskeyword? string
----@field cache table<string, string>
-
-local M = {
-  ---@type tmux.State
-  state = { cache = {} },
-}
+local M = {}
 
 ---@param _ async.Nursery
 ---@param push producers.Push
@@ -90,60 +83,66 @@ local pane_capture = function(pane)
   return proc.stdout
 end
 
----@param kw table<integer, true>
----@param pane tmux.Pane
----@param text string
-local reindex_pane = function(kw, pane, text)
-  if M.state.cache[pane.id] == text then
-    return
-  end
-  async.sleep(0)
+do
+  local cache = {}
+  ---@type string?
+  local iskeyword
 
-  index.prune { pane = pane.id }
-  for word in tokens.words(kw, vim.gsplit(text, "\n", { plain = true })) do
-    index.insert { pane = pane.id, word = word, meta = pane.meta }
-  end
-  M.state.cache[pane.id] = text
-end
-
----@param settings config.Settings
-M.idle = function(settings, events)
-  for _, ev in pairs(events) do
-    if ev.kind == "iskeyword" then
-      M.state.iskeyword = ev.iskeyword
+  ---@param kw table<integer, true>
+  ---@param pane tmux.Pane
+  ---@param text string
+  local reindex_pane = function(kw, pane, text)
+    if cache[pane.id] == text then
+      return
     end
-  end
+    async.sleep(0)
 
-  local env = vim.uv.os_environ()
-  if env.TMUX == nil or M.state.iskeyword == nil then
-    return
-  end
-
-  local kw = tokens.parse_iskeyword(M.state.iskeyword)
-
-  local panes, live = {}, {}
-  for pane in list_panes(settings, env.TMUX_PANE) do
-    table.insert(panes, pane)
-    live[pane.id] = true
-  end
-
-  for id in pairs(M.state.cache) do
-    if not live[id] then
-      index.prune { pane = id }
-      M.state.cache[id] = nil
+    index.prune { pane = pane.id }
+    for word in tokens.words(kw, vim.gsplit(text, "\n", { plain = true })) do
+      index.insert { pane = pane.id, word = word, meta = pane.meta }
     end
+    cache[pane.id] = text
   end
 
-  local captures = async.all(vim.tbl_map(function(pane)
-    return function()
-      return pane_capture(pane.id)
+  ---@param settings config.Settings
+  M.idle = function(settings, events)
+    for _, ev in pairs(events) do
+      if ev.kind == "iskeyword" then
+        iskeyword = ev.iskeyword
+      end
     end
-  end, panes))
 
-  for i, pane in pairs(panes) do
-    local text = captures[i]
-    if text ~= nil then
-      reindex_pane(kw, pane, text)
+    local env = vim.uv.os_environ()
+    if env.TMUX == nil or iskeyword == nil then
+      return
+    end
+
+    local kw = tokens.parse_iskeyword(iskeyword)
+
+    local panes, live = {}, {}
+    for pane in list_panes(settings, env.TMUX_PANE) do
+      table.insert(panes, pane)
+      live[pane.id] = true
+    end
+
+    for id in pairs(cache) do
+      if not live[id] then
+        index.prune { pane = id }
+        cache[id] = nil
+      end
+    end
+
+    local captures = async.all(vim.tbl_map(function(pane)
+      return function()
+        return pane_capture(pane.id)
+      end
+    end, panes))
+
+    for i, pane in pairs(panes) do
+      local text = captures[i]
+      if text ~= nil then
+        reindex_pane(kw, pane, text)
+      end
     end
   end
 end

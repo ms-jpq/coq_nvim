@@ -1,4 +1,5 @@
 local async = require "coq.lib.async"
+local runtime = require "coq.lib.async.runtime"
 
 local M = {}
 
@@ -28,6 +29,10 @@ end
 ---@param producers producers.Producer<C>[]
 ---@return producers.Supervisor<C>
 M.new = function(producers)
+  ---@type async.Handle?
+  local idle_handle = nil
+  local searching = false
+
   local sup = { max_pulls = math.huge }
 
   sup.bind = function(n)
@@ -37,30 +42,52 @@ M.new = function(producers)
   end
 
   sup.idle = function(ctx)
-    async.all(vim
+    if searching then
+      return
+    end
+    idle_handle = runtime.current()
+
+    local idles = vim
       .iter(producers)
       :map(function(p)
         return function()
           p.idle(ctx)
         end
       end)
-      :totable())
+      :totable()
+
+    async.all(idles)
   end
 
   sup.search = function(ctx)
+    if idle_handle then
+      idle_handle.cancel()
+    end
+
     local iters = vim
       .iter(producers)
       :map(function(p)
         return capped(p.max_pulls, p.search(ctx))
       end)
       :totable()
+
     local m = async.merge(iters)
-    return setmetatable({ close = m.close }, {
-      __call = function()
-        local _, value = m()
-        return value
-      end,
-    })
+    searching = true
+
+    local close = function()
+      searching = false
+      m.close()
+    end
+
+    local next = function()
+      local _, value = m()
+      if value == nil then
+        searching = false
+      end
+      return value
+    end
+
+    return setmetatable({ close = close }, { __call = next })
   end
 
   ---@cast sup producers.Supervisor
