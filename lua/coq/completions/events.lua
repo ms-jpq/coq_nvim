@@ -1,9 +1,14 @@
 local broadcast = require "coq.lib.channels.broadcast"
 local lib = require "coq.lib"
 
----@class completions.PumChangedEvent
+---@class completions.PumChangedEvent : vim.v.event
 ---@field kind "changed"
----@field item vim.v.completed_item
+---@field completed_item vim.v.completed_item
+---@field row integer
+---@field col integer
+---@field height integer
+---@field width integer
+---@field scrollbar boolean
 
 ---@class completions.PumClearEvent
 ---@field kind "clear"
@@ -38,7 +43,8 @@ M.new = function()
   vim.api.nvim_create_autocmd({ "CompleteChanged" }, {
     group = lib.group,
     callback = function()
-      events.pum.replace { kind = "changed", item = vim.v.event.completed_item }
+      local ev = vim.tbl_extend("force", { kind = "changed" }, vim.v.event) --[[@as completions.PumChangedEvent]]
+      events.pum.replace(ev)
     end,
   })
 

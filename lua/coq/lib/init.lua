@@ -18,6 +18,14 @@ M.is_windows = vim.uv.os_uname().sysname == "Windows_NT"
 ---@param ... any
 M.noop = function(...) end
 
+---@param lo integer
+---@param x integer
+---@param hi integer
+---@return integer
+M.clamp = function(lo, x, hi)
+  return math.max(lo, math.min(x, hi))
+end
+
 ---@type lib.ClosableIter<any>
 M.dead_iter = setmetatable({ close = M.noop }, {
   __call = function()

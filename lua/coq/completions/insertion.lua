@@ -28,7 +28,7 @@ local word_range = function(ctx, i, lsp)
   local before_inserted = string.sub(line, 1, original_col)
   local after_cursor = string.sub(line, col + 1)
 
-  local start_row = math.max(0, math.min(end_row, (range and range.start.line) or end_row))
+  local start_row = lib.clamp(0, (range and range.start.line) or end_row, end_row)
   local start_line = (start_row == end_row) and line
     or vim.api.nvim_buf_get_lines(ctx.buf, start_row, start_row + 1, true)[1]
 
