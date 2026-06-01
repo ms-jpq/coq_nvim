@@ -1,4 +1,5 @@
 local async = require "coq.lib.async"
+local atools = require "coq.lib.atools"
 local errs = require "coq.lib.errs"
 local handle = require "coq.lib.async.handle"
 local inflight = require "coq.lib.worker.inflight"
@@ -165,8 +166,6 @@ end
 
 ---@class worker.Responder
 ---@field serve fun(n: async.Nursery, frame: table)
----@field resolve fun(frame: table)
----@field has fun(id: integer): boolean
 
 ---@param write fun(body: table)
 ---@return worker.Responder
@@ -202,10 +201,19 @@ local make_responder = function(write)
     write(ok and terminal or make_response(frame.id, false, terminal))
   end
 
-  local scheduled = vim.is_thread() and lib.noop or require("coq.lib.atools").scheduled
-  local responder = { has = parked.has }
+  local scheduled = vim.is_thread() and lib.noop or atools.scheduled
 
-  responder.serve = function(n, frame)
+  local serve = function(n, frame)
+    if parked.has(frame.id) then
+      n.spawn(function()
+        parked.resolve(frame.id, frame)
+      end)
+      return
+    end
+    if frame.kind ~= Kind.RESUME then
+      return
+    end
+
     local req_handle = handle.new(runtime.current())
     local next_chan = mpmc.new()
     local _ = req_handle.on_cancel(next_chan.close)
@@ -227,12 +235,7 @@ local make_responder = function(write)
     end)
   end
 
-  responder.resolve = function(frame)
-    parked.resolve(frame.id, frame)
-  end
-
-  ---@cast responder worker.Responder
-  return responder
+  return { serve = serve }
 end
 
 ---@class worker.Endpoint
@@ -253,12 +256,8 @@ local make_endpoint = function(duplex)
         n.spawn(function()
           requester.resolve(frame)
         end)
-      elseif frame.kind == Kind.RESUME and not responder.has(frame.id) then
-        responder.serve(n, frame)
       else
-        n.spawn(function()
-          responder.resolve(frame)
-        end)
+        responder.serve(n, frame)
       end
     end
     requester.drain(make_response(nil, false, dead_message))

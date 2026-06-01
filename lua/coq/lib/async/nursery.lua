@@ -40,14 +40,16 @@ M.new = function()
 
   nursery.spawn = function(fn)
     assert(not nursery.closed, "spawn: nursery is closed")
-    assert(not h.cancelled, "spawn: nursery is cancelled")
     local child = handle.new(h)
 
     runtime.detach(child, function()
       local thread = coroutine.running()
       pending[thread] = true
 
-      local ok, err = pcall(lib.scope, fn)
+      local ok, err = pcall(lib.scope, function(defer)
+        runtime.sleep(0)
+        return fn(defer)
+      end)
       pending[thread] = nil
 
       if not ok and not cancel.is(err) then

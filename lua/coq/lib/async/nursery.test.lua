@@ -156,6 +156,7 @@ T.describe("scope", function(test)
           end)
           async.sleep(100 * T.SLOW)
         end)
+        async.sleep(0)
         error "body went sideways"
       end)
     end)

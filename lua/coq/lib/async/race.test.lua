@@ -2,7 +2,7 @@ local T = require "coq.lib.test"
 local async = require "coq.lib.async"
 local cancel = require "coq.lib.async.cancel"
 local handle = require "coq.lib.async.handle"
-local lib = require "coq.lib"
+local nursery = require "coq.lib.async.nursery"
 local runtime = require "coq.lib.async.runtime"
 
 T.describe("race", function(test)
@@ -47,10 +47,11 @@ T.describe("race", function(test)
     local late_cancelled = false
     local idx, val = async.race {
       function()
+        async.sleep(1 * T.SLOW)
         return "winner"
       end,
       function()
-        local ok = pcall(async.sleep, 5 * T.SLOW)
+        local ok = pcall(async.sleep, 50 * T.SLOW)
         late_cancelled = not ok
       end,
     }
@@ -60,24 +61,11 @@ T.describe("race", function(test)
     T.eq(late_cancelled, true)
   end)
 
-  test("sync task beats later async task", function()
-    local async_ran = false
-    local idx = async.race {
-      lib.noop,
-      function()
-        async_ran = true
-        async.sleep(5 * T.SLOW)
-      end,
-    }
-
-    T.eq(idx, 1)
-    T.eq(async_ran, true)
-  end)
-
   test("loser sees cancellation when a winner emerges", function()
     local loser_cancelled = false
     async.race {
       function()
+        async.sleep(1 * T.SLOW)
         return "winner"
       end,
       function()
@@ -92,7 +80,6 @@ T.describe("race", function(test)
   end)
 
   test("external cancel makes race throw cancel", function()
-    local nursery = require "coq.lib.async.nursery"
     local outer = handle.new()
     local race_ok, race_err
     local n = nursery.new()
@@ -104,6 +91,7 @@ T.describe("race", function(test)
         end,
       })
     end)
+    async.sleep(0)
     outer.cancel()
     n.join()
 

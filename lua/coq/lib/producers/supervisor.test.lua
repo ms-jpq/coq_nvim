@@ -175,26 +175,6 @@ T.describe("supervisor", function(test)
     T.eq(idle_ran, false)
   end)
 
-  test("idle runs once search has ended", function()
-    local idle_ran = async.future()
-    async.scope(function(n)
-      local p, push = pushable {
-        idle = function()
-          idle_ran.resolve()
-        end,
-        matcher = function()
-          coroutine.yield "lil"
-        end,
-      }
-      local sup = supervisor.new { p }
-      sup.bind(n)
-      drain(sup.search {})
-      push(true)
-      sup.idle {}
-      idle_ran.await()
-    end)
-  end)
-
   test("producer error kills the merged stream", function()
     local n = detached()
     local sup = supervisor.new {

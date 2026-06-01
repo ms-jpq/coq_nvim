@@ -48,6 +48,7 @@ T.describe("future cancel", function(test)
       ok, err = pcall(f.await)
       awoke = true
     end)
+    async.sleep(0)
     h.cancel()
     n.join()
 
@@ -66,6 +67,7 @@ T.describe("future cancel", function(test)
       resolve = f.resolve
       pcall(f.await)
     end)
+    async.sleep(0)
     h.cancel()
     n.join()
     local ok = pcall(resolve, "late")
