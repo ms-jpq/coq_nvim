@@ -5,8 +5,9 @@ local lib = require "coq.lib"
 local runtime = require "coq.lib.async.runtime"
 
 ---@class async.Nursery
----@field handle async.Handle
 ---@field closed boolean
+---@field cancel fun()
+---@field on_cancel fun(watcher: fun()): fun()
 ---@field spawn fun(fn: fun(defer: fun(cleanup: fun()))): async.Handle
 ---@field join fun()
 
@@ -18,7 +19,12 @@ M.new = function()
   local pending = setmetatable({}, { __mode = "k" })
   local waiters = {}
 
-  local nursery = { handle = handle.new(runtime.current()), closed = false }
+  local h = handle.new(runtime.current())
+  local nursery = {
+    closed = false,
+    cancel = h.cancel,
+    on_cancel = h.on_cancel,
+  }
 
   nursery.join = function()
     if next(pending) ~= nil then
@@ -28,15 +34,16 @@ M.new = function()
     end
 
     nursery.closed = true
-    nursery.handle.cancel()
+    h.cancel()
     errs.raise(errors)
   end
 
   nursery.spawn = function(fn)
     assert(not nursery.closed, "spawn: nursery is closed")
-    local h = handle.new(nursery.handle)
+    assert(not h.cancelled, "spawn: nursery is cancelled")
+    local child = handle.new(h)
 
-    runtime.detach(h, function()
+    runtime.detach(child, function()
       local thread = coroutine.running()
       pending[thread] = true
 
@@ -45,7 +52,7 @@ M.new = function()
 
       if not ok and not cancel.is(err) then
         table.insert(errors, err)
-        nursery.handle.cancel()
+        h.cancel()
       end
 
       if next(pending) == nil then
@@ -57,7 +64,7 @@ M.new = function()
       end
     end)
 
-    return h
+    return child
   end
 
   ---@cast nursery async.Nursery

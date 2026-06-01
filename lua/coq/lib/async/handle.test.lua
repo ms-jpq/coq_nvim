@@ -1,5 +1,4 @@
 local T = require "coq.lib.test"
-local async = require "coq.lib.async"
 local handle = require "coq.lib.async.handle"
 local lib = require "coq.lib"
 
@@ -66,45 +65,6 @@ T.describe("handle", function(test)
     parent.cancel()
 
     T.eq(parent_fired, 1)
-  end)
-
-  test("deadline cancels handle after the elapsed time", function()
-    local h = handle.new(nil, 5 * T.SLOW)
-
-    T.eq(h.cancelled, false)
-
-    async.sleep(10 * T.SLOW)
-
-    T.eq(h.cancelled, true)
-  end)
-
-  test("early cancel disarms the deadline timer", function()
-    local h = handle.new(nil, 5 * T.SLOW)
-    h.cancel()
-    async.sleep(10 * T.SLOW)
-
-    T.eq(h.cancelled, true)
-  end)
-
-  test("deadline timer is disarmed when parent already cancelled at construction", function()
-    local count_live_timers = function()
-      local n = 0
-      vim.uv.walk(function(uv_handle)
-        if uv_handle:get_type() == "timer" and not uv_handle:is_closing() then
-          n = n + 1
-        end
-      end)
-      return n
-    end
-
-    local parent = handle.new()
-    parent.cancel()
-
-    local before = count_live_timers()
-    local h = handle.new(parent, 5 * T.SLOW)
-
-    T.eq(h.cancelled, true)
-    T.eq(count_live_timers(), before)
   end)
 
   test("cancel uses snapshot semantics so mid-fire unwatch is safe", function()

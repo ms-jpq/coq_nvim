@@ -3,15 +3,15 @@ local async = require "coq.lib.async"
 local cancel = require "coq.lib.async.cancel"
 local handle = require "coq.lib.async.handle"
 local nursery = require "coq.lib.async.nursery"
+local runtime = require "coq.lib.async.runtime"
 
 T.describe("future cancel", function(test)
   test("await throws cancel when ambient handle already cancelled", function()
     local h = handle.new()
-    h.cancel()
-
     local n = nursery.new()
-    local _ = h.on_cancel(n.handle.cancel)
+    local _ = h.on_cancel(n.cancel)
     n.spawn(function()
+      h.cancel()
       local f = async.future()
       local ok, err = pcall(f.await)
       T.eq(ok, false)
@@ -21,15 +21,15 @@ T.describe("future cancel", function(test)
   end)
 
   test("await throws cancel even when future also resolved", function()
-    local h = handle.new()
-    h.cancel()
     local f = async.future()
     f.resolve(2)
 
     local ok, err
+    local h = handle.new()
     local n = nursery.new()
-    local _ = h.on_cancel(n.handle.cancel)
+    local _ = h.on_cancel(n.cancel)
     n.spawn(function()
+      h.cancel()
       ok, err = pcall(f.await)
     end)
     n.join()
@@ -42,7 +42,7 @@ T.describe("future cancel", function(test)
     local awoke = false
     local ok, err
     local n = nursery.new()
-    local _ = h.on_cancel(n.handle.cancel)
+    local _ = h.on_cancel(n.cancel)
     n.spawn(function()
       local f = async.future()
       ok, err = pcall(f.await)
@@ -60,7 +60,7 @@ T.describe("future cancel", function(test)
     local h = handle.new()
     local resolve
     local n = nursery.new()
-    local _ = h.on_cancel(n.handle.cancel)
+    local _ = h.on_cancel(n.cancel)
     n.spawn(function()
       local f = async.future()
       resolve = f.resolve
@@ -77,11 +77,10 @@ end)
 T.describe("sleep cancel", function(test)
   test("returns immediately when handle already cancelled", function()
     local h = handle.new()
-    h.cancel()
-
     local n = nursery.new()
-    local _ = h.on_cancel(n.handle.cancel)
+    local _ = h.on_cancel(n.cancel)
     n.spawn(function()
+      h.cancel()
       local start = vim.uv.hrtime()
       pcall(async.sleep, 100 * T.SLOW)
       local elapsed_ms = (vim.uv.hrtime() - start) / 1e6
@@ -97,7 +96,7 @@ T.describe("sleep cancel", function(test)
     local ok, err
 
     local n = nursery.new()
-    local _ = h.on_cancel(n.handle.cancel)
+    local _ = h.on_cancel(n.cancel)
     n.spawn(function()
       local start = vim.uv.hrtime()
       ok, err = pcall(async.sleep, 500 * T.SLOW)
@@ -114,10 +113,8 @@ T.describe("sleep cancel", function(test)
     T.eq(cancel.is(err), true)
   end)
 
-  test("does not leak watchers on the passed handle", function()
-    local n = nursery.new()
-    local h = n.handle
-
+  test("does not leak watchers on the ambient handle", function()
+    local h = handle.new()
     local live = {}
     local orig_on_cancel = h.on_cancel
     h.on_cancel = function(fn)
@@ -129,12 +126,14 @@ T.describe("sleep cancel", function(test)
       end
     end
 
-    n.spawn(function()
+    local done = async.future()
+    runtime.detach(h, function()
       for _ = 1, 5 do
         async.sleep(1 * T.SLOW)
       end
+      done.resolve()
     end)
-    n.join()
+    done.await()
 
     T.eq(next(live), nil)
   end)

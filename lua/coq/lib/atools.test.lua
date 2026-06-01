@@ -32,7 +32,7 @@ T.describe("atools.spawn", function(test)
         elapsed_ms = (vim.uv.hrtime() - start) / 1e6
       end)
       async.sleep(5 * T.SLOW)
-      n.handle.cancel()
+      n.cancel()
     end)
     assert(elapsed_ms and elapsed_ms < 100 * T.SLOW, "expected fast kill, got " .. tostring(elapsed_ms) .. " ms")
   end)

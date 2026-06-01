@@ -51,6 +51,9 @@ M.query = function(buf)
           grandparent = grandparent and node_info(grandparent) or nil,
         }
         atools.scheduled()
+        if not vim.api.nvim_buf_is_valid(buf) then
+          return
+        end
       end
     end
   end

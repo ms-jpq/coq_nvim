@@ -1,18 +1,18 @@
 local async = require "coq.lib.async"
-local handle = require "coq.lib.async.handle"
+local cancel = require "coq.lib.async.cancel"
 local lib = require "coq.lib"
-local search = require "coq.lib.index"
+local mpmc = require "coq.lib.channels.mpmc"
 
 local M = {}
 
+---@generic T
 ---@param max integer
----@param iter index.SearchIter
----@return index.SearchIter
+---@param iter lib.Iterator<T>
+---@return lib.Iterator<T>
 local capped = function(max, iter)
   local n = 0
-  local next = function()
+  return function()
     if n >= max then
-      iter.close()
       return nil
     end
     local v = iter()
@@ -22,17 +22,18 @@ local capped = function(max, iter)
     n = n + 1
     return v
   end
-  return setmetatable({ close = iter.close }, { __call = next })
 end
 
 ---@generic C
 ---@param producers producers.Producer<C>[]
 ---@return producers.Producer<C>
 M.new = function(producers)
-  local ph = handle.new()
-  local search_handle = handle.new()
+  local dead = false
   ---@type async.Handle[]
   local idle_handles = {}
+  ---@type async.Handle?
+  local search_h
+  local searching = false
 
   local revoke_idles = function()
     for _, h in pairs(idle_handles) do
@@ -42,11 +43,11 @@ M.new = function(producers)
   end
 
   local interrupt = function()
-    search_handle.cancel()
+    if search_h then
+      search_h.cancel()
+    end
     revoke_idles()
   end
-  interrupt()
-  local _ = ph.on_cancel(interrupt)
 
   ---@type async.Nursery
   local bound_n
@@ -55,14 +56,17 @@ M.new = function(producers)
 
   sup.bind = function(n)
     bound_n = n
-    local _ = n.handle.on_cancel(ph.cancel)
+    local _ = n.on_cancel(function()
+      dead = true
+      interrupt()
+    end)
     for _, p in pairs(producers) do
       p.bind(n)
     end
   end
 
   sup.idle = function(ctx)
-    if ph.cancelled or not search_handle.cancelled then
+    if dead or searching then
       return
     end
     revoke_idles()
@@ -76,25 +80,48 @@ M.new = function(producers)
   end
 
   sup.search = function(ctx)
-    if ph.cancelled then
-      return lib.dead_iter
+    if dead then
+      return lib.noop
     end
     interrupt()
-    search_handle = handle.new()
 
-    return search.iter(search_handle, function()
-      local iters = vim
-        .iter(producers)
-        :map(function(p)
-          return capped(p.max_pulls, p.search(ctx))
-        end)
-        :totable()
+    local chan = mpmc.new()
+    local err_holder = { err = nil }
+    searching = true
+    search_h = bound_n.spawn(function(defer)
+      defer(function()
+        searching = false
+      end)
+      defer(chan.close)
 
-      local iter = async.merge(iters)
-      for _, item in iter do
-        coroutine.yield(item)
+      local ok, e = pcall(function()
+        local iters = vim
+          .iter(producers)
+          :map(function(p)
+            return capped(p.max_pulls, p.search(ctx))
+          end)
+          :totable()
+
+        for _, item in async.merge(iters) do
+          if not chan.push(item) then
+            return
+          end
+        end
+      end)
+      if not ok and not cancel.is(e) then
+        err_holder.err = e
       end
     end)
+
+    local pull = function()
+      local v = chan.pull()
+      if v == nil and err_holder.err then
+        error(err_holder.err, 0)
+      end
+      return v
+    end
+
+    return setmetatable({ close = search_h.cancel }, { __call = pull })
   end
 
   ---@cast sup producers.Producer

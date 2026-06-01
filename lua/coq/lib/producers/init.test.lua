@@ -43,39 +43,6 @@ T.describe("producer (regular)", function(test)
     T.eq(seen, { "lil", "spot", "fido" })
   end)
 
-  test("iterator close stops the matcher; subsequent pulls drain then return nil", function()
-    -- The channel has capacity 1, so one row may already be buffered at close;
-    -- the matcher's next push fails after close, ending the coroutine.
-    local db = producer.new {
-      idle = lib.noop,
-      bind = lib.noop,
-      matcher = function()
-        while true do
-          coroutine.yield "row"
-        end
-      end,
-    }
-    local it = db.search {}
-    T.eq(it(), "row")
-    it.close()
-    while it() ~= nil do
-    end
-    T.eq(it(), nil)
-  end)
-
-  test("close is idempotent", function()
-    local db = producer.new {
-      idle = lib.noop,
-      bind = lib.noop,
-      matcher = function()
-        coroutine.yield "lil"
-      end,
-    }
-    local it = db.search {}
-    it.close()
-    it.close() -- no error
-  end)
-
   test("matcher error propagates to the consumer", function()
     local db = producer.new {
       idle = lib.noop,

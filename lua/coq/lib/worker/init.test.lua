@@ -280,7 +280,7 @@ T.describe("worker", function(test)
     end)
 
     local n = nursery.new()
-    local _ = h.on_cancel(n.handle.cancel)
+    local _ = h.on_cancel(n.cancel)
     n.spawn(function()
       local iter = w.queue_stream(function()
         local cont = coroutine.yield "lil"
@@ -314,7 +314,7 @@ T.describe("worker", function(test)
     end)
 
     local n = nursery.new()
-    local _ = h.on_cancel(n.handle.cancel)
+    local _ = h.on_cancel(n.cancel)
     n.spawn(function()
       local _iter = w.queue_stream(function()
         while coroutine.yield "tick" do
@@ -346,7 +346,7 @@ T.describe("worker", function(test)
 
     local nursery = require "coq.lib.async.nursery"
     local n = nursery.new()
-    local _ = h.on_cancel(n.handle.cancel)
+    local _ = h.on_cancel(n.cancel)
     n.spawn(function()
       local iter = w.queue_stream(function()
         local cancel = require "coq.lib.async.cancel"

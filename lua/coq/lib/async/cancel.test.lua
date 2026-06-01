@@ -24,7 +24,7 @@ T.describe("cancel by throw", function(test)
   test("nursery does not record cancel in its error list", function()
     local n = nursery.new()
     n.spawn(function()
-      n.handle.cancel()
+      n.cancel()
       async.sleep(50 * T.SLOW)
     end)
 

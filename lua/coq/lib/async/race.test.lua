@@ -96,7 +96,7 @@ T.describe("race", function(test)
     local outer = handle.new()
     local race_ok, race_err
     local n = nursery.new()
-    local _ = outer.on_cancel(n.handle.cancel)
+    local _ = outer.on_cancel(n.cancel)
     n.spawn(function()
       race_ok, race_err = pcall(async.race, {
         function()

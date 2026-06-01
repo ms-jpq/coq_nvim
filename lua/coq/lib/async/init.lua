@@ -3,12 +3,27 @@ local mpmc = require "coq.lib.channels.mpmc"
 local nursery = require "coq.lib.async.nursery"
 local runtime = require "coq.lib.async.runtime"
 
-local M = {}
+local M = {
+  future = runtime.future,
+  sleep = runtime.sleep,
+}
 
-M.future = runtime.future
-M.sleep = runtime.sleep
-M.wrap = runtime.wrap
-M.entry = runtime.entry
+---@generic F: fun(...)
+---@param producer F
+---@return F
+M.wrap = function(producer)
+  return runtime.wrap(producer, runtime.current())
+end
+
+---@generic F: fun(...)
+---@param fn F
+---@return F
+M.entry = function(fn)
+  return function(...)
+    assert(coroutine.running() == nil, "entry: must be called outside a coroutine")
+    runtime.detach(runtime.ROOT, fn, ...)
+  end
+end
 
 ---@generic T
 ---@param body fun(nursery: async.Nursery, defer: fun(cleanup: fun())): T?
@@ -53,7 +68,7 @@ M.race = function(fns)
   local f = runtime.future()
 
   return M.scope(function(n, defer)
-    defer(n.handle.on_cancel(f.resolve))
+    defer(n.on_cancel(f.resolve))
 
     for idx, fn in pairs(fns) do
       n.spawn(function()
@@ -62,7 +77,7 @@ M.race = function(fns)
     end
 
     local finish = function(...)
-      n.handle.cancel()
+      n.cancel()
       return ...
     end
     return finish(f.await())
@@ -78,11 +93,11 @@ end
 M.merge = function(iters)
   local n = nursery.new()
   local chan = mpmc.new(1)
-  local _ = n.handle.on_cancel(chan.close)
+  local _ = n.on_cancel(chan.close)
   local active = #iters
 
   if active == 0 then
-    n.handle.cancel()
+    n.cancel()
   end
 
   for idx, iter in pairs(iters) do
@@ -93,13 +108,13 @@ M.merge = function(iters)
 
       active = active - 1
       if active == 0 then
-        n.handle.cancel()
+        n.cancel()
       end
     end)
   end
 
   local close = function()
-    n.handle.cancel()
+    n.cancel()
     n.join()
   end
 

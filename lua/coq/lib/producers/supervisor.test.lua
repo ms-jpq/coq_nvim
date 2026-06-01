@@ -9,7 +9,7 @@ local supervisor = require "coq.lib.producers.supervisor"
 ---@return async.Nursery
 local detached = function()
   local n = nursery.new()
-  local _ = handle.new().on_cancel(n.handle.cancel)
+  local _ = handle.new().on_cancel(n.cancel)
   return n
 end
 
@@ -46,7 +46,7 @@ local pushable = function(fields)
   end
 end
 
----@param iter index.SearchIter
+---@param iter lib.Iterator<any>
 local drain = function(iter)
   for _ in iter do
     lib.noop()
@@ -62,7 +62,7 @@ T.describe("supervisor", function(test)
     for row in sup.search {} do
       table.insert(seen, row)
     end
-    n.handle.cancel()
+    n.cancel()
 
     table.sort(seen)
     T.eq(seen, { "fido", "lil", "spot" })
@@ -207,7 +207,7 @@ T.describe("supervisor", function(test)
     local ok, err = pcall(function()
       drain(sup.search {})
     end)
-    n.handle.cancel()
+    n.cancel()
 
     T.eq(ok, false)
     assert(err and tostring(err):find "boom", "expected 'boom', got: " .. tostring(err))
@@ -220,7 +220,7 @@ T.describe("supervisor", function(test)
         idle = lib.noop,
         matcher = lib.noop,
         bind = function(n)
-          local _ = n.handle.on_cancel(function()
+          local _ = n.on_cancel(function()
             cleanups[name] = (cleanups[name] or 0) + 1
           end)
         end,
@@ -229,8 +229,8 @@ T.describe("supervisor", function(test)
     local n = detached()
     local sup = supervisor.new { trace "a", trace "b" }
     sup.bind(n)
-    n.handle.cancel()
-    n.handle.cancel()
+    n.cancel()
+    n.cancel()
 
     T.eq(cleanups, { a = 1, b = 1 })
   end)
@@ -239,11 +239,10 @@ T.describe("supervisor", function(test)
     local n = detached()
     local sup = supervisor.new { yields "lil" }
     sup.bind(n)
-    n.handle.cancel()
+    n.cancel()
     local iter = sup.search {}
 
     T.eq(iter(), nil)
-    iter.close()
   end)
 
   test("idle after close is a no-op", function()
@@ -258,7 +257,7 @@ T.describe("supervisor", function(test)
       local sup = supervisor.new { p }
       sup.bind(n)
       push(true)
-      n.handle.cancel()
+      n.cancel()
       sup.idle {}
     end)
 
@@ -323,7 +322,7 @@ T.describe("supervisor", function(test)
           after = iter()
         end)
         first_done.await()
-        n.handle.cancel()
+        n.cancel()
       end)
     end)
 
@@ -369,7 +368,7 @@ T.describe("supervisor", function(test)
     for row in outer.search {} do
       table.insert(seen, row)
     end
-    n.handle.cancel()
+    n.cancel()
 
     table.sort(seen)
     T.eq(seen, { "fido", "lil", "spot" })

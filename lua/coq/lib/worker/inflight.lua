@@ -1,6 +1,7 @@
 ---@class worker.Inflight
 ---@field reserve fun(cb: fun(message: any), id?: integer): integer, fun()
 ---@field resolve fun(id: integer, message: any)
+---@field has fun(id: integer): boolean
 ---@field drain fun(message: any)
 
 local M = {}
@@ -27,6 +28,10 @@ M.new = function()
     if cb then
       cb(message)
     end
+  end
+
+  parker.has = function(id)
+    return mapping[id] ~= nil
   end
 
   parker.drain = function(message)

@@ -1,129 +1,6 @@
 local T = require "coq.lib.test"
 local async = require "coq.lib.async"
-local handle = require "coq.lib.async.handle"
 local search = require "coq.lib.index"
-
-T.describe("index.iter", function(test)
-  test("yields values from the body in order", function()
-    local h = handle.new()
-    local iter = search.iter(h, function()
-      coroutine.yield "lil"
-      coroutine.yield "spot"
-      coroutine.yield "fido"
-    end)
-
-    T.eq(iter(), "lil")
-    T.eq(iter(), "spot")
-    T.eq(iter(), "fido")
-    T.eq(iter(), nil)
-  end)
-
-  test("exhaustion cancels the handle", function()
-    local h = handle.new()
-    local iter = search.iter(h, function()
-      coroutine.yield "lil"
-    end)
-    iter()
-    iter()
-
-    T.eq(h.cancelled, true)
-  end)
-
-  test("close cancels the handle and stops further pulls", function()
-    local pulls = 0
-    local h = handle.new()
-    local iter = search.iter(h, function()
-      while true do
-        pulls = pulls + 1
-        coroutine.yield "row"
-      end
-    end)
-
-    T.eq(iter(), "row")
-    iter.close()
-    T.eq(h.cancelled, true)
-    T.eq(iter(), nil)
-    T.eq(pulls, 1)
-  end)
-
-  test("external handle cancel closes the iter", function()
-    local h = handle.new()
-    local iter = search.iter(h, function()
-      while true do
-        coroutine.yield "row"
-      end
-    end)
-    T.eq(iter(), "row")
-    h.cancel()
-
-    T.eq(iter(), nil)
-  end)
-
-  test("body error propagates and closes the iter", function()
-    local h = handle.new()
-    local iter = search.iter(h, function()
-      coroutine.yield "lil"
-      error "boom"
-    end)
-    T.eq(iter(), "lil")
-
-    local ok, err = pcall(function()
-      return iter()
-    end)
-    T.eq(ok, false)
-    assert(err and tostring(err):find "boom", "expected 'boom', got: " .. tostring(err))
-    T.eq(h.cancelled, true)
-  end)
-
-  test("body can await between yields", function()
-    local out = {}
-    async.scope(function(n)
-      n.spawn(function()
-        local h = handle.new()
-        local iter = search.iter(h, function()
-          coroutine.yield "lil"
-          async.sleep(2 * T.SLOW)
-          coroutine.yield "spot"
-        end)
-        for v in iter do
-          table.insert(out, v)
-        end
-      end)
-    end)
-
-    T.eq(out, { "lil", "spot" })
-  end)
-
-  test("cancellation while body awaits drops the in-flight value", function()
-    local first, after
-    async.scope(function(n)
-      local h = handle.new()
-      local iter = search.iter(h, function()
-        coroutine.yield "lil"
-        async.sleep(100 * T.SLOW)
-        coroutine.yield "never"
-      end)
-      n.spawn(function()
-        first = iter()
-        after = iter()
-      end)
-      async.sleep(5 * T.SLOW)
-      h.cancel()
-    end)
-
-    T.eq(first, "lil")
-    T.eq(after, nil)
-  end)
-
-  test("close is idempotent", function()
-    local h = handle.new()
-    local iter = search.iter(h, function()
-      coroutine.yield "lil"
-    end)
-    iter.close()
-    iter.close() -- no error
-  end)
-end)
 
 ---@return index.Searcher<table>
 local leaf = function()
@@ -149,8 +26,7 @@ local leaf = function()
     end,
     search = function(_)
       local snapshot = items
-      local h = handle.new()
-      return search.iter(h, function()
+      return async.wrap(function()
         for _, item in ipairs(snapshot) do
           coroutine.yield(item)
         end

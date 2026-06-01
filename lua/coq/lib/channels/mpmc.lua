@@ -1,6 +1,5 @@
 local queue = require "coq.lib.queue"
 local runtime = require "coq.lib.async.runtime"
-local sparse = require "coq.lib.sparse_table"
 local util = require "coq.lib.channels.util"
 
 ---@class channels.Mpmc<T>: lib.Closable
@@ -17,11 +16,11 @@ M.new = function(capacity)
   capacity = math.max(1, capacity or math.huge)
 
   local que = queue.new()
-  local pull_waiters = sparse.new()
-  local push_waiters = sparse.new()
+  local pull_waiters = queue.new()
+  local push_waiters = queue.new()
 
   local notify = function(waiters)
-    local f = waiters.shift()
+    local f = waiters.pop()
     if f then
       f.resolve()
     end
@@ -33,16 +32,19 @@ M.new = function(capacity)
     f.await()
   end
 
-  local state = util.closable(function()
-    local push_snap, pull_snap = push_waiters, pull_waiters
-    push_waiters, pull_waiters = sparse.new(), sparse.new()
+  local drain = function(waiters)
+    while true do
+      local f = waiters.pop()
+      if not f then
+        return
+      end
+      f.resolve()
+    end
+  end
 
-    for _, f in pull_snap.iter() do
-      f.resolve()
-    end
-    for _, f in push_snap.iter() do
-      f.resolve()
-    end
+  local state = util.closable(function()
+    drain(pull_waiters)
+    drain(push_waiters)
   end)
 
   local chan = { close = state.close }

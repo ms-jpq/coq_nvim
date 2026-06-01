@@ -6,9 +6,6 @@
 ---@class lib.Iterable<T>
 ---@field iter fun(): lib.Iterator<T>
 
----@class lib.ClosableIter<T>: lib.Closable
----@overload fun(): T?
-
 local M = {}
 
 M.group = vim.api.nvim_create_augroup and vim.api.nvim_create_augroup("coq", { clear = true })
@@ -25,13 +22,6 @@ M.noop = function(...) end
 M.clamp = function(lo, x, hi)
   return math.max(lo, math.min(x, hi))
 end
-
----@type lib.ClosableIter<any>
-M.dead_iter = setmetatable({ close = M.noop }, {
-  __call = function()
-    return nil
-  end,
-})
 
 ---@param err any
 M.report = function(err)

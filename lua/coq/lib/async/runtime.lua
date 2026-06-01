@@ -96,14 +96,12 @@ end
 ---@alias async.Bounce fun(...: any): any
 
 ---@param producer fun(...: any)
----@param h? async.Handle
+---@param h async.Handle
 ---@param on_await fun(bounce: async.Bounce, eff: async.Await)
 ---@return async.Bounce
 local trampoline = function(producer, h, on_await)
   local co = coroutine.create(producer)
-  if h then
-    M.bind(co, h)
-  end
+  M.bind(co, h)
 
   local bounce
   local dispatch = function(ok, ...)
@@ -160,22 +158,12 @@ end
 
 ---@generic F: fun(...)
 ---@param producer F
----@param h? async.Handle
+---@param h async.Handle
 ---@return F
 M.wrap = function(producer, h)
   return trampoline(producer, h, function(bounce, eff)
     return bounce(coroutine.yield(eff))
   end)
-end
-
----@generic F: fun(...)
----@param fn F
----@return F
-M.entry = function(fn)
-  return function(...)
-    assert(coroutine.running() == nil, "entry: must be called outside a coroutine")
-    M.detach(M.ROOT, fn, ...)
-  end
 end
 
 ---@param milliseconds integer

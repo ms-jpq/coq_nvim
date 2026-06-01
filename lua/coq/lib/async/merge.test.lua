@@ -72,7 +72,7 @@ T.describe("merge", function(test)
     local nursery = require "coq.lib.async.nursery"
     local h = handle.new()
     local got
-    local n = nursery.new(); local _ = h.on_cancel(n.handle.cancel)
+    local n = nursery.new(); local _ = h.on_cancel(n.cancel)
     n.spawn(function()
       local iter = function()
         async.sleep(100 * T.SLOW)

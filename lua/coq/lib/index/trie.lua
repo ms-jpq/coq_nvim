@@ -1,5 +1,4 @@
-local handle = require "coq.lib.async.handle"
-local search = require "coq.lib.index"
+local async = require "coq.lib.async"
 
 ---@class index.TrieSpec<C, T>
 ---@field insert_key fun(item: T): string
@@ -79,8 +78,7 @@ M.new = function(spec)
       return descend(key)
     end)()
 
-    local h = handle.new()
-    return search.iter(h, function()
+    return async.wrap(function()
       if node ~= nil then
         dfs_yield(node)
       end

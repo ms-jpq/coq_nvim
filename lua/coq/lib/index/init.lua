@@ -1,13 +1,8 @@
 local async = require "coq.lib.async"
-local handle = require "coq.lib.async.handle"
 local lib = require "coq.lib"
-local runtime = require "coq.lib.async.runtime"
-
----@class index.SearchIter<T>: lib.Closable
----@overload fun(): T?
 
 ---@class index.Searchable<C, T>
----@field search fun(ctx: C): index.SearchIter<T>
+---@field search fun(ctx: C): lib.Iterator<T>
 
 ---@class index.Searcher<C, T>: index.Searchable<C, T>
 ---@field insert fun(item: T)
@@ -25,35 +20,9 @@ M.empty = {
   insert = lib.noop,
   prune = lib.noop,
   search = function()
-    return lib.dead_iter
+    return lib.noop
   end,
 }
-
----@generic T
----@param h async.Handle
----@param fn fun()
----@return index.SearchIter<T>
-M.iter = function(h, fn)
-  local bounce = async.wrap(fn, h)
-
-  local next = function()
-    if h.cancelled then
-      return nil
-    end
-    local ok, val = pcall(bounce)
-    if not ok then
-      h.cancel()
-      error(val, 0)
-    end
-    if val == nil then
-      h.cancel()
-      return nil
-    end
-    return val
-  end
-
-  return setmetatable({ close = h.cancel }, { __call = next })
-end
 
 ---@generic C, T
 ---@param spec index.IndexedSpec<C, T>
@@ -62,17 +31,11 @@ M.indexed = function(spec)
   local children = {}
 
   local fanout = function(ctx)
-    local h = handle.new(runtime.current())
-    return M.iter(h, function()
+    return async.wrap(function()
       for _, child in pairs(children) do
-        lib.scope(function(defer)
-          local iter = child.search(ctx)
-          defer(iter.close)
-          defer(h.on_cancel(iter.close))
-          for item in iter do
-            coroutine.yield(item)
-          end
-        end)
+        for item in child.search(ctx) do
+          coroutine.yield(item)
+        end
       end
     end)
   end
@@ -110,7 +73,7 @@ M.indexed = function(spec)
     end
     local c = children[k]
     if not c then
-      return lib.dead_iter
+      return lib.noop
     end
     return c.search(ctx)
   end

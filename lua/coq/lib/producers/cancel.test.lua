@@ -8,30 +8,9 @@ local threaded = require "coq.lib.producers.threaded"
 
 local cancel_tests = function(name, factory)
   T.describe("producer " .. name .. " :: cancel", function(test)
-    test("ambient cancelled before pull returns nil", function()
-      local h = handle.new()
-      h.cancel()
-      local got = "unset"
-      local n = nursery.new()
-      local _ = h.on_cancel(n.handle.cancel)
-      n.spawn(function()
-        local db = factory {
-          idle = lib.noop,
-          bind = lib.noop,
-          matcher = function()
-            coroutine.yield "lil"
-          end,
-        }
-        db.bind(n)
-        got = db.search {}()
-      end)
-      n.join()
-      T.eq(got, nil)
-    end)
-
     test("bind cancellation is idempotent", function()
       local n = nursery.new()
-      local _ = handle.new().on_cancel(n.handle.cancel)
+      local _ = handle.new().on_cancel(n.cancel)
       local db = factory {
         idle = lib.noop,
         bind = lib.noop,
@@ -40,15 +19,15 @@ local cancel_tests = function(name, factory)
         end,
       }
       db.bind(n)
-      n.handle.cancel()
-      n.handle.cancel() -- no error
+      n.cancel()
+      n.cancel() -- no error
     end)
 
     test("ambient cancel wakes a sleeping matcher", function()
       local h = handle.new()
       local elapsed_ms
       local n = nursery.new()
-      local _ = h.on_cancel(n.handle.cancel)
+      local _ = h.on_cancel(n.cancel)
       n.spawn(function()
         local db = factory {
           idle = lib.noop,

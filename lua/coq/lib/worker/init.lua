@@ -9,9 +9,8 @@ local runtime = require "coq.lib.async.runtime"
 local transport = require "coq.lib.worker.frame_transport"
 
 local Kind = {
-  REQUEST = "request",
+  RESUME = "resume",
   YIELD = "yield",
-  NEXT = "next",
   STOP = "stop",
 }
 
@@ -65,7 +64,7 @@ local open = function(parked, write, message)
   local chan = mpmc.new(1)
   local id, release = parked.reserve(chan.push)
 
-  message.kind, message.id = Kind.REQUEST, id
+  message.kind, message.id = Kind.RESUME, id
   local ok, err = xpcall(write, debug.traceback, message)
   if not ok then
     release()
@@ -74,6 +73,7 @@ local open = function(parked, write, message)
   end
 
   local closed = false
+  local primed = true
   local unwatch = lib.noop
 
   local cleanup = function()
@@ -86,28 +86,17 @@ local open = function(parked, write, message)
     chan.close()
   end
 
-  local frames = async.wrap(function()
-    while true do
-      local frame = chan.pull()
-      if frame == nil then
-        write { kind = Kind.STOP, id = id }
-        return
-      end
-      coroutine.yield(frame)
-      if frame.ok ~= nil then
-        return
-      end
-      write { kind = Kind.NEXT, id = id }
-    end
-  end, runtime.current())
-
   local session = {}
 
   session.next = function()
     if closed then
       return nil
     end
-    local frame = frames()
+    if not primed then
+      write { kind = Kind.RESUME, id = id }
+    end
+    primed = false
+    local frame = chan.pull()
     if frame == nil or frame.ok ~= nil then
       cleanup()
     end
@@ -175,6 +164,7 @@ end
 ---@class worker.Responder
 ---@field serve fun(n: async.Nursery, frame: table)
 ---@field resolve fun(frame: table)
+---@field has fun(id: integer): boolean
 
 ---@param write fun(body: table)
 ---@return worker.Responder
@@ -202,7 +192,7 @@ local make_responder = function(write)
       return
     end
 
-    local stream = async.wrap(fn, req_handle)
+    local stream = async.wrap(fn)
 
     local consume = function()
       local function loop()
@@ -231,8 +221,8 @@ local make_responder = function(write)
     write(make_response(frame.id, pcall(consume)))
   end
 
-  local responder = {}
   local scheduled = vim.is_thread() and lib.noop or require("coq.lib.atools").scheduled
+  local responder = { has = parked.has }
 
   responder.serve = function(n, frame)
     local req_handle = handle.new(runtime.current())
@@ -282,16 +272,20 @@ local make_endpoint = function(duplex)
   local serve = function(n, dead_message)
     for frame in transport.reader(duplex.reader) do
       local kind = frame.kind
-      if kind == Kind.REQUEST then
-        responder.serve(n, frame)
-      elseif kind == Kind.YIELD then
+      if kind == Kind.YIELD then
         n.spawn(function()
           requester.resolve(frame)
         end)
-      else
+      elseif kind == Kind.STOP then
         n.spawn(function()
           responder.resolve(frame)
         end)
+      elseif responder.has(frame.id) then
+        n.spawn(function()
+          responder.resolve(frame)
+        end)
+      else
+        responder.serve(n, frame)
       end
     end
     requester.drain(make_response(nil, false, dead_message))

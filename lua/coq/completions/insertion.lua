@@ -94,7 +94,7 @@ local M = {}
 ---@param ctx ctx.full
 ---@param settings config.Settings
 ---@param ranker index.Ranker
----@param iter index.SearchIter
+---@param iter lib.Iterator<any>
 M.complete = function(ctx, settings, ranker, iter)
   local prepared = ranker.prepare(ctx)
 

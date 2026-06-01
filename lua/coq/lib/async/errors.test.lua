@@ -99,9 +99,11 @@ T.describe("errors", function(test)
     local ok, err = pcall(function()
       async.race {
         function()
+          async.sleep(-1)
           error "race boom"
         end,
         function()
+          async.sleep(50 * T.SLOW)
           return "never"
         end,
       }

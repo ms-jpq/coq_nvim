@@ -49,7 +49,7 @@ M.spawn = function(argv, opts)
     defer(function()
       close(handle)
     end)
-    defer(n.handle.on_cancel(function()
+    defer(n.on_cancel(function()
       if not handle:is_closing() then
         handle:kill "sigterm"
       end
@@ -135,7 +135,7 @@ local fs_scandir = async.awaitify(vim.uv.fs_scandir)
 M.scandir = function(path)
   local err, handle = fs_scandir(path)
   if err ~= nil or handle == nil then
-    return err, lib.dead_iter
+    return err, lib.noop
   end
 
   return nil, function()

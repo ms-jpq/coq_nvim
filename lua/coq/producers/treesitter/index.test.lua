@@ -1,7 +1,7 @@
 local T = require "coq.lib.test"
 local index = require "coq.producers.treesitter.index"
 
----@param iter index.SearchIter
+---@param iter lib.Iterator<any>
 ---@return string[]
 local texts = function(iter)
   local out = {}

@@ -9,13 +9,11 @@ local sparse = require "coq.lib.sparse_table"
 local M = {}
 
 ---@param parent? async.Handle
----@param deadline_ms? integer
 ---@return async.Handle
-M.new = function(parent, deadline_ms)
+M.new = function(parent)
   local handle = { cancelled = false }
   local watchers = sparse.new()
-  local unwatch_from_parent = lib.noop
-  local timer
+  local unwatch = lib.noop
 
   handle.cancel = function()
     if handle.cancelled then
@@ -24,13 +22,7 @@ M.new = function(parent, deadline_ms)
     handle.cancelled = true
 
     lib.scope(function(defer)
-      defer(function()
-        if timer and not timer:is_closing() then
-          timer:stop()
-          timer:close()
-        end
-      end)
-      defer(unwatch_from_parent)
+      defer(unwatch)
 
       local snapshot = watchers
       watchers = sparse.new()
@@ -54,13 +46,8 @@ M.new = function(parent, deadline_ms)
     end
   end
 
-  if deadline_ms then
-    timer = assert(vim.uv.new_timer())
-    timer:start(deadline_ms, 0, handle.cancel)
-  end
-
   if parent then
-    unwatch_from_parent = parent.on_cancel(handle.cancel)
+    unwatch = parent.on_cancel(handle.cancel)
   end
 
   ---@cast handle async.Handle

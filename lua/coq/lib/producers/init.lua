@@ -1,6 +1,4 @@
-local handle = require "coq.lib.async.handle"
-local runtime = require "coq.lib.async.runtime"
-local search = require "coq.lib.index"
+local async = require "coq.lib.async"
 
 ---@class producers.Producer<C>: index.Searchable<C, completions.Item>
 ---@field idle fun(ctx: C)
@@ -47,8 +45,7 @@ M.new = function(spec)
   end
 
   db.search = function(ctx)
-    local h = handle.new(runtime.current())
-    return search.iter(h, function()
+    return async.wrap(function()
       spec.matcher(spec.settings, ctx)
     end)
   end
