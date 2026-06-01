@@ -8,6 +8,7 @@ local mpmc = require "coq.lib.channels.mpmc"
 local nursery = require "coq.lib.async.nursery"
 local runtime = require "coq.lib.async.runtime"
 local transport = require "coq.lib.worker.frame_transport"
+local util = require "coq.lib.channels.util"
 
 local Kind = {
   RESUME = "resume",
@@ -34,7 +35,7 @@ end
 ---@param fn function
 ---@param ... any
 ---@return table
-local pack_request = function(fn, ...)
+local build_request = function(fn, ...)
   return {
     fn_bytecode = dump(fn),
     args = { ... },
@@ -43,56 +44,59 @@ local pack_request = function(fn, ...)
 end
 
 ---@param id integer?
----@param ok boolean
+---@param status boolean?
 ---@param ... any
 ---@return table
-local make_response = function(id, ok, ...)
+local build_response = function(id, status, ...)
   return {
     kind = Kind.YIELD,
     id = id,
-    ok = ok,
+    status = status,
     n_values = select("#", ...),
     values = { ... },
   }
 end
 
----@class worker.Session: lib.Closable
+---@class worker.Call: lib.Closable
 ---@field next fun(): table?
 
 ---@param parked worker.Inflight
 ---@param write fun(body: table)
 ---@param message table
----@return worker.Session
+---@return worker.Call
 local open = function(parked, write, message)
   local chan = mpmc.new(1)
   local id, release = parked.reserve(chan.push)
 
-  message.kind, message.id = Kind.RESUME, id
-  local ok, err = xpcall(write, debug.traceback, message)
-  if not ok then
-    release()
-    chan.close()
-    error(err, 0)
-  end
-
-  local closed = false
   local primed = true
   local unwatch = lib.noop
-
-  local cleanup = function()
-    if closed then
-      return
-    end
-    closed = true
+  local state = util.closable(function()
     unwatch()
     release()
     chan.close()
+  end)
+
+  message.kind, message.id = Kind.RESUME, id
+  local ok, err = xpcall(write, debug.traceback, message)
+  if not ok then
+    state.close()
+    error(err, 0)
   end
 
-  local session = {}
+  local call = {}
 
-  session.next = function()
-    if closed then
+  call.close = function()
+    if state.closed then
+      return
+    end
+    write { kind = Kind.STOP, id = id }
+    state.close()
+  end
+
+  unwatch = runtime.current().on_cancel(call.close)
+
+  call.next = function()
+    if state.closed then
       return nil
     end
     if not primed then
@@ -100,24 +104,14 @@ local open = function(parked, write, message)
     end
     primed = false
     local frame = chan.pull()
-    if frame == nil or frame.ok ~= nil then
-      cleanup()
+    if frame == nil or frame.status ~= nil then
+      state.close()
     end
     return frame
   end
 
-  session.close = function()
-    if closed then
-      return
-    end
-    write { kind = Kind.STOP, id = id }
-    cleanup()
-  end
-
-  unwatch = runtime.current().on_cancel(session.close)
-
-  ---@cast session worker.Session
-  return session
+  ---@cast call worker.Call
+  return call
 end
 
 ---@class worker.Requester
@@ -135,7 +129,7 @@ local make_requester = function(write)
     if frame == nil then
       return
     end
-    if frame.ok == false then
+    if frame.status == false then
       error(frame.values[1] or errs.UNKNOWN, level + 1)
     end
     return unpack(frame.values, 1, frame.n_values)
@@ -144,16 +138,16 @@ local make_requester = function(write)
   local requester = { drain = parked.drain }
 
   requester.request_oneshot = function(message)
-    local session = open(parked, write, message)
-    return interpret_frame(session.next(), 3)
+    local call = open(parked, write, message)
+    return interpret_frame(call.next(), 3)
   end
 
   requester.request_stream = function(message)
-    local session = open(parked, write, message)
+    local call = open(parked, write, message)
     local next = function()
-      return interpret_frame(session.next(), 2)
+      return interpret_frame(call.next(), 2)
     end
-    return setmetatable({ close = session.close }, { __call = next })
+    return setmetatable({ close = call.close }, { __call = next })
   end
 
   requester.resolve = function(frame)
@@ -177,15 +171,15 @@ local make_responder = function(write)
 
     local stream = async.wrap(function(...)
       local fn = assert(load(frame.fn_bytecode))
-      return coroutine.yield(DONE, make_response(frame.id, pcall(fn, ...)))
+      return coroutine.yield(DONE, build_response(frame.id, pcall(fn, ...)))
     end)
 
     local consume = function()
       local item, terminal = stream(unpack(args, 1, n_args))
       while item ~= DONE do
-        write { kind = Kind.YIELD, id = frame.id, n_values = 1, values = { item } }
+        write(build_response(frame.id, nil, item))
         if req_handle.cancelled or not next_chan.pull() then
-          return make_response(frame.id, true)
+          return build_response(frame.id, true)
         end
         item, terminal = stream(true)
       end
@@ -198,7 +192,7 @@ local make_responder = function(write)
         lib.noop()
       end
     end)
-    write(ok and terminal or make_response(frame.id, false, terminal))
+    write(ok and terminal or build_response(frame.id, false, terminal))
   end
 
   local scheduled = vim.is_thread() and lib.noop or atools.scheduled
@@ -260,7 +254,7 @@ local make_endpoint = function(duplex)
         responder.serve(n, frame)
       end
     end
-    requester.drain(make_response(nil, false, dead_message))
+    requester.drain(build_response(nil, false, dead_message))
   end
 
   return {
@@ -288,11 +282,11 @@ if vim.is_thread() then
     local endpoint = make_endpoint(duplex)
 
     M.main = function(fn, ...)
-      return endpoint.request_oneshot(pack_request(fn, ...))
+      return endpoint.request_oneshot(build_request(fn, ...))
     end
 
     M.main_stream = function(fn, ...)
-      return endpoint.request_stream(pack_request(fn, ...))
+      return endpoint.request_stream(build_request(fn, ...))
     end
 
     async.entry(function()
@@ -309,7 +303,7 @@ end
 ---@return worker.Worker
 M.spawn = function()
   local duplex, remote = transport.duplex_pair()
-  local closed = false
+  local state = util.closable(duplex.close)
 
   local endpoint = make_endpoint(duplex)
 
@@ -322,24 +316,21 @@ M.spawn = function()
   local worker = {}
 
   worker.queue = function(fn, ...)
-    if closed then
+    if state.closed then
       error("worker closed", 2)
     end
-    return endpoint.request_oneshot(pack_request(fn, ...))
+    return endpoint.request_oneshot(build_request(fn, ...))
   end
 
   worker.queue_stream = function(fn, ...)
-    if closed then
+    if state.closed then
       error("worker closed", 2)
     end
-    return endpoint.request_stream(pack_request(fn, ...))
+    return endpoint.request_stream(build_request(fn, ...))
   end
 
   worker.close = function()
-    if not closed then
-      closed = true
-      duplex.close()
-    end
+    state.close()
     n.join()
   end
 

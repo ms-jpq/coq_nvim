@@ -1,4 +1,5 @@
 local async = require "coq.lib.async"
+local atools = require "coq.lib.atools"
 local lib = require "coq.lib"
 local util = require "coq.producers.lsp.util"
 
@@ -53,6 +54,7 @@ end
 ---@return lib.Iterator<lsp.CompletionItem>
 local query_one = function(client, ctx, td_params)
   return async.wrap(function()
+    atools.scheduled()
     lib.scope(function(defer)
       local token = "coq.lsp." .. client.id .. "." .. next_token_id()
       local kinds = vim.lsp.protocol.CompletionTriggerKind
@@ -109,6 +111,7 @@ end
 ---@return lib.Iterator<lsp.RequestItem>
 M.query = function(ctx)
   return async.wrap(function()
+    atools.scheduled()
     if not vim.api.nvim_buf_is_valid(ctx.buf) or not vim.api.nvim_buf_is_loaded(ctx.buf) then
       return
     end

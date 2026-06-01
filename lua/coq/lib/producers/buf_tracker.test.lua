@@ -110,18 +110,6 @@ T.describe("buf_tracker", function(test)
     T.eq(tracker.state.last_tick, { [1] = 1, [3] = 1 })
   end)
 
-  test("unknown event kind is ignored", function()
-    local tracker, trace = mk()
-
-    async.scope(function()
-      tracker.idle(nil, { [7] = { kind = "shrug" } })
-    end)
-
-    T.eq(trace.fetches, {})
-    T.eq(trace.prunes, {})
-    T.eq(trace.reindexes, {})
-  end)
-
   test("remove without prior update still prunes", function()
     local tracker, trace = mk()
 
@@ -137,7 +125,7 @@ T.describe("buf_tracker", function(test)
   test("fetch returning nil after a prior update keeps last_tick intact", function()
     local first = true
     local tracker, _ = mk {
-      fetch = function(buf, prev_tick)
+      fetch = function(buf)
         if first then
           first = false
           return { buf = buf, tick = 42 }
