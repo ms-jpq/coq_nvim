@@ -5,6 +5,10 @@ local async = require "coq.lib.async"
 ---@field bind fun(n: async.Nursery)
 ---@field max_pulls integer
 
+---A cancellable search result: call to pull the next item, close to cancel.
+---@class producers.SearchIter: lib.Closable
+---@overload fun(): completions.Item?
+
 ---@alias producers.KeyFn fun(ev: any): any
 ---@alias producers.IdleFn<C> fun(settings: config.Settings?, events: table<any, any>, ctx: C)
 ---@alias producers.MatcherFn<C> fun(settings: config.Settings?, ctx: C)

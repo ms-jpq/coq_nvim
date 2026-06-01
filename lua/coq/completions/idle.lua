@@ -1,3 +1,4 @@
+local async = require "coq.lib.async"
 local context = require "coq.lib.context"
 
 local M = {}
@@ -11,8 +12,14 @@ M.bind = function(n, sup, idle)
     defer(iter.close)
 
     idle.replace {}
+    ---@type async.Handle?
+    local prev = nil
     for _ in iter do
-      n.spawn(function()
+      if prev then
+        prev.cancel()
+      end
+      prev = n.spawn(function()
+        async.sleep(-1)
         sup.idle(context.full())
       end)
     end

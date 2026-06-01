@@ -1,4 +1,5 @@
 local async = require "coq.lib.async"
+local atools = require "coq.lib.atools"
 local lib = require "coq.lib"
 local threaded = require "coq.lib.producers.threaded"
 
@@ -187,20 +188,18 @@ end
 ---@param path string
 ---@return boolean
 local is_dir = function(path)
-  local st = vim.uv.fs_stat(path)
-  return (st and st.type == "directory") or false
+  local err, st = atools.fs.stat(path)
+  return (not err and st and st.type == "directory") or false
 end
 
 ---@param dir string
 ---@return fun(): string?, string?
 local scandir = function(dir)
-  local fd = vim.uv.fs_scandir(dir)
-  return function()
-    if not fd then
-      return nil
-    end
-    return vim.uv.fs_scandir_next(fd)
+  local err, iter = atools.scandir(dir)
+  if err then
+    return lib.noop
   end
+  return iter
 end
 
 ---@param rhs string

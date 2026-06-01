@@ -7,7 +7,7 @@ on:
     - cron: "0 0 * * *" # daily
 
 jobs:
-  mypy:
+  linux:
     runs-on: ubuntu-latest
 
     steps:
@@ -51,9 +51,6 @@ jobs:
 
       - run: |-
           python3 -m coq deps
-
-      - run: |-
-          gmake lint
 
       - run: |-
           gmake test

@@ -17,12 +17,15 @@ M.request = function(client, method, params, buf)
       f.resolve(err, result)
     end, buf)
 
-    if not ok or not req_id then
+    if not ok then
       return nil, nil
     end
-    defer(runtime.current().on_cancel(function()
-      client:cancel_request(req_id)
-    end))
+
+    if req_id then
+      defer(runtime.current().on_cancel(function()
+        client:cancel_request(req_id)
+      end))
+    end
 
     return f.await()
   end)

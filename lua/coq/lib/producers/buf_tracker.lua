@@ -23,32 +23,32 @@ local M = {}
 ---@param spec buf_tracker.Spec<M>
 ---@return buf_tracker.Tracker
 M.new = function(spec)
-  ---@type buf_tracker.State
-  local state = { last_tick = {} }
+  local tracker = {
+    ---@type buf_tracker.State
+    state = { last_tick = {} },
+  }
 
-  local update = function(buf)
-    local meta = spec.fetch(buf, state.last_tick[buf])
-    if meta == nil then
-      return
-    end
-    state.last_tick[buf] = meta.tick
-    spec.prune(buf)
-    spec.reindex(meta)
-  end
-
-  local idle = function(_, events)
+  tracker.idle = function(_, events)
     for buf, ev in pairs(events) do
       async.sleep(0)
       if ev.kind == "remove" then
         spec.prune(buf)
-        state.last_tick[buf] = nil
+        tracker.state.last_tick[buf] = nil
       elseif ev.kind == "update" then
-        update(buf)
+        local prev = tracker.state.last_tick[buf]
+        local meta = spec.fetch(buf, prev)
+
+        if meta ~= nil and tracker.state.last_tick[buf] == prev then
+          tracker.state.last_tick[buf] = meta.tick
+          spec.prune(buf)
+          spec.reindex(meta)
+        end
       end
     end
   end
 
-  return { idle = idle, state = state }
+  ---@cast tracker buf_tracker.Tracker
+  return tracker
 end
 
 return M

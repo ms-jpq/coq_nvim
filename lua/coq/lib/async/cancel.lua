@@ -19,7 +19,7 @@ M.is = function(x)
   return type(x) == "table" and getmetatable(x) == CANCEL_EFF
 end
 
----@param fn fun(...): any
+---@param fn fun(...): ...
 ---@param ... any
 ---@return boolean ok, any ...
 M.pcall = function(fn, ...)
@@ -32,7 +32,7 @@ M.pcall = function(fn, ...)
   return go(pcall(fn, ...))
 end
 
----@param fn fun(...): any
+---@param fn fun(...): ...
 ---@param handler fun(err: any): any
 ---@param ... any
 ---@return boolean ok, any ...

@@ -122,6 +122,29 @@ T.describe("buf_tracker", function(test)
     T.eq(tracker.state.last_tick, {})
   end)
 
+  test("concurrent updates with same prev_tick: only first prunes/reindexes", function()
+    local tracker, trace = mk {
+      fetch = function(buf, _)
+        async.sleep(0)
+        return { buf = buf, tick = 1, payload = "labrador" }
+      end,
+    }
+
+    async.scope(function(n)
+      n.spawn(function()
+        tracker.idle(nil, { [7] = { kind = "update" } })
+      end)
+      n.spawn(function()
+        tracker.idle(nil, { [7] = { kind = "update" } })
+      end)
+    end)
+
+    T.eq(#trace.fetches, 2)
+    T.eq(#trace.prunes, 1)
+    T.eq(#trace.reindexes, 1)
+    T.eq(tracker.state.last_tick, { [7] = 1 })
+  end)
+
   test("fetch returning nil after a prior update keeps last_tick intact", function()
     local first = true
     local tracker, _ = mk {

@@ -101,8 +101,8 @@ T.describe("trie", function(test)
     a.insert { word = "lil", which = "a" }
     b.insert { word = "lil", which = "b" }
 
-    local from_a = a.search { prefix = "lil" }()
-    local from_b = b.search { prefix = "lil" }()
+    local from_a = assert(a.search { prefix = "lil" }())
+    local from_b = assert(b.search { prefix = "lil" }())
     T.eq(from_a.which, "a")
     T.eq(from_b.which, "b")
   end)

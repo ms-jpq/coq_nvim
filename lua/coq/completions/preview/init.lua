@@ -104,8 +104,13 @@ M.bind = function(n, settings, pum)
     local iter = pum.subscribe()
     defer(iter.close)
 
+    ---@type async.Handle?
+    local prev = nil
     for ev in iter do
-      n.spawn(function()
+      if prev then
+        prev.cancel()
+      end
+      prev = n.spawn(function()
         local ctx = context.base()
         clear(ctx.buf)
         local changed_ev, item = item_of(ev)

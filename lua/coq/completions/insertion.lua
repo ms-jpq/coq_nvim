@@ -79,9 +79,14 @@ local apply = function(ctx, i)
   if lsp.additional_text_edits then
     vim.lsp.util.apply_text_edits(lsp.additional_text_edits, ctx.buf, lsp.position_encoding or DEFAULT_ENCODING)
   end
+
   if meta.snippet then
-    vim.snippet.expand(meta.snippet)
+    local ok, err = pcall(vim.snippet.expand, meta.snippet)
+    if not ok then
+      lib.report(err)
+    end
   end
+
   if lsp.command then
     lsp_util.exec_command(ctx, lsp)
   end
@@ -131,7 +136,7 @@ M.complete = function(ctx, settings, ranker, iter)
   end
 
   atools.scheduled()
-  if string.sub(vim.api.nvim_get_mode().mode, 1, 1) ~= "i" then
+  if not context.still_valid(ctx) or string.sub(vim.api.nvim_get_mode().mode, 1, 1) ~= "i" then
     return
   end
 

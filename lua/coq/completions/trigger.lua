@@ -14,8 +14,13 @@ M.bind = function(n, settings, ranker, sup, trigger)
     local iter = trigger.subscribe()
     defer(iter.close)
 
+    ---@type async.Handle?
+    local prev = nil
     for _ in iter do
-      n.spawn(function()
+      if prev then
+        prev.cancel()
+      end
+      prev = n.spawn(function()
         atools.scheduled()
         local ctx = context.full()
         local searched = sup.search(ctx)
