@@ -2,8 +2,8 @@ local async = require "coq.lib.async"
 local atools = require "coq.lib.atools"
 local context = require "coq.lib.context"
 local lib = require "coq.lib"
+local lsp_util = require "coq.producers.lsp.util"
 local paths_util = require "coq.producers.paths.util"
-local resolve = require "coq.completions.resolve"
 
 local NS = vim.api.nvim_create_namespace "coq.preview"
 
@@ -110,7 +110,7 @@ local show_doc = function(ctx, settings, item)
   local lsp_item = meta.lsp and meta.lsp.item
   if lsp_item then
     if not lsp_item.documentation and not lsp_item.detail then
-      resolve.enrich(ctx, item)
+      lsp_util.enrich(ctx, item)
     end
     return show_ts_doc(preview_cfg, md_lines(lsp_item), "markdown")
   end

@@ -2,7 +2,7 @@ local atools = require "coq.lib.atools"
 local context = require "coq.lib.context"
 local item = require "coq.completions.item"
 local lib = require "coq.lib"
-local resolve = require "coq.completions.resolve"
+local lsp_util = require "coq.producers.lsp.util"
 local score = require "coq.lib.index.rank.score"
 local topk_m = require "coq.lib.index.rank.topk"
 
@@ -64,7 +64,7 @@ local apply = function(ctx, i)
   local lsp = meta.lsp or {}
 
   if #(lsp.additional_text_edits or {}) == 0 then
-    resolve.enrich(ctx, i)
+    lsp_util.enrich(ctx, i)
     if not context.still_valid(ctx) then
       return
     end
@@ -83,7 +83,7 @@ local apply = function(ctx, i)
     vim.snippet.expand(meta.snippet)
   end
   if lsp.command then
-    resolve.exec_command(ctx, lsp)
+    lsp_util.exec_command(ctx, lsp)
   end
 
   return true

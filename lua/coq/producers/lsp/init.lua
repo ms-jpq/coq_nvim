@@ -1,7 +1,7 @@
+local async = require "coq.lib.async"
 local lib = require "coq.lib"
+local producer = require "coq.lib.producers"
 local request = require "coq.producers.lsp.request"
-local threaded = require "coq.lib.producers.threaded"
-local worker = require "coq.lib.worker"
 
 local M = {}
 
@@ -11,12 +11,8 @@ M.matcher = function(settings, ctx)
   local sc = settings.display.pum.source_context
   local menu = sc[1] .. opts.short_name .. sc[2]
 
-  local row = ctx.pos[1] - 1
-  local col = ctx.pos[2]
-
-  for entry in
-    worker.main_stream(request.query, ctx.buf, row, col) --[[@as lib.Iterator<lsp.RequestItem>]]
-  do
+  for entry in request.query(ctx)
+ do
     local item = entry.item
     local label = item.label or ""
     local insert_text = item.insertText or label
@@ -48,13 +44,13 @@ end
 ---@param settings config.Settings
 ---@return producers.Producer<ctx.full>
 M.new = function(settings)
-  return threaded.new {
+  return producer.new {
     settings = settings,
     max_pulls = settings.clients.lsp.max_pulls,
     bind = lib.noop,
     idle = lib.noop,
     matcher = function(...)
-      require("coq.producers.lsp").matcher(...)
+      M.matcher(...)
     end,
   }
 end

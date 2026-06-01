@@ -59,6 +59,10 @@ local producers = function(settings)
       coroutine.yield(require("coq.producers.buffer").new(settings))
     end
 
+    if clients.lsp.enabled then
+      coroutine.yield(require("coq.producers.lsp").new(settings))
+    end
+
     if clients.paths.enabled then
       coroutine.yield(require("coq.producers.paths").new(settings))
     end
