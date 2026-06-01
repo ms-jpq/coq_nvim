@@ -52,7 +52,7 @@ end
 ---@param ctx ctx.full
 ---@param td_params lsp.TextDocumentIdentifier
 ---@return lib.Iterator<lsp.CompletionItem>
-M.query_one = function(client, ctx, td_params)
+local query_one = function(client, ctx, td_params)
   return async.wrap(function()
     local h = runtime.current()
 
@@ -129,7 +129,7 @@ M.query = function(ctx)
 
     local td_params = vim.lsp.util.make_text_document_params(ctx.buf)
     local iters = vim.tbl_map(function(client)
-      return M.query_one(client, ctx, td_params)
+      return query_one(client, ctx, td_params)
     end, clients)
 
     for idx, item in async.merge(iters) do

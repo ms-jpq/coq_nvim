@@ -31,6 +31,7 @@ M.new = function(parent)
       pending[coroutine.running()] = nil
 
       if not ok then
+        lib.report(err)
         table.insert(errors, err)
         nursery.handle.cancel()
       end
@@ -61,23 +62,6 @@ M.new = function(parent)
 
   ---@cast nursery async.Nursery
   return nursery
-end
-
----@generic T
----@param body fun(nursery: async.Nursery, defer: fun(cleanup: fun())): T?
----@param h? async.Handle
----@return T?
-M.scope = function(body, h)
-  local nursery = M.new(h)
-
-  return lib.scope(function(defer)
-    local rets = {}
-    nursery.spawn(function()
-      rets = { body(nursery, defer) }
-    end)
-    nursery.join()
-    return unpack(rets)
-  end)
 end
 
 return M

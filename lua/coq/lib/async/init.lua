@@ -1,3 +1,4 @@
+local lib = require "coq.lib"
 local mpmc = require "coq.lib.channels.mpmc"
 local nursery = require "coq.lib.async.nursery"
 local runtime = require "coq.lib.async.runtime"
@@ -6,10 +7,25 @@ local M = {}
 
 M.future = runtime.future
 M.preemptible = runtime.preemptible
-M.scope = nursery.scope
 M.sleep = runtime.sleep
 M.wrap = runtime.wrap
 M.entry = runtime.entry
+
+---@generic T
+---@param body fun(nursery: async.Nursery, defer: fun(cleanup: fun())): T?
+---@param h? async.Handle
+---@return T?
+M.scope = function(body, h)
+  local n = nursery.new(h)
+  return lib.scope(function(defer)
+    local rets = {}
+    n.spawn(function()
+      rets = { body(n, defer) }
+    end)
+    n.join()
+    return unpack(rets)
+  end)
+end
 
 ---@overload fun<A, B>(fns: [(fun(): A), (fun(): B)]): [A, B]
 ---@overload fun<A, B, C>(fns: [(fun(): A), (fun(): B), (fun(): C)]): [A, B, C]
@@ -18,7 +34,7 @@ M.entry = runtime.entry
 ---@return any[]
 M.all = function(fns)
   local results = {}
-  nursery.scope(function(n)
+  M.scope(function(n)
     for idx, fn in pairs(fns) do
       n.spawn(function()
         results[idx] = fn()
@@ -39,7 +55,7 @@ M.race = function(fns)
 
   local f = runtime.future()
 
-  return nursery.scope(function(n, defer)
+  return M.scope(function(n, defer)
     defer(n.handle.on_cancel(f.resolve))
 
     for idx, fn in pairs(fns) do
