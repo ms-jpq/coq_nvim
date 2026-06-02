@@ -1,6 +1,3 @@
-local async = require "coq.lib.async"
-local runtime = require "coq.lib.async.runtime"
-local sparse = require "coq.lib.sparse_table"
 local util = require "coq.lib.channels.util"
 
 ---@class channels.BroadcastSub<T>: lib.Closable
@@ -15,29 +12,11 @@ local M = {}
 ---@generic T
 ---@return channels.Broadcast<T>
 M.new = function()
-  local subscribers = sparse.new()
   local current = nil
+  local version = 0
+  local changed = util.cond()
 
-  local dismiss = function(sub)
-    if sub.gone then
-      return
-    end
-    sub.gone = true
-
-    local f = sub.waiter
-    sub.waiter = nil
-    if f then
-      f.resolve(nil)
-    end
-  end
-
-  local state = util.closable(function()
-    local snapshot = subscribers
-    subscribers = sparse.new()
-    for _, sub in snapshot.iter() do
-      dismiss(sub)
-    end
-  end)
+  local state = util.closable(changed.wake)
 
   local chan = { close = state.close }
 
@@ -45,62 +24,37 @@ M.new = function()
     if state.closed then
       return false
     end
-    local packet = util.pack(...)
-    current = packet
-    for _, sub in subscribers.iter() do
-      local f = sub.waiter
-      sub.waiter = nil
-
-      if f then
-        f.resolve(packet)
-      else
-        sub.pending = packet
-      end
-    end
+    current = util.pack(...)
+    version = version + 1
+    changed.wake()
     return true
   end
 
   chan.subscribe = function()
-    local sub = { pending = state.closed and nil or current, waiter = nil, gone = state.closed }
-    local key
-    if not state.closed then
-      key = subscribers.push(sub)
-    end
+    local seen = 0
+    local closed = false
 
     local it = {}
     it.close = function()
-      if sub.gone then
-        return
-      end
-      if key then
-        subscribers.remove(key)
-      end
-      dismiss(sub)
+      closed = true
+      changed.wake()
     end
 
     local next = function()
-      local packet
-      if sub.pending ~= nil then
-        packet = sub.pending
-        sub.pending = nil
-      elseif sub.gone then
-        return nil
-      else
-        local f = async.future()
-        sub.waiter = f
-        local unwatch = runtime.current().on_cancel(it.close)
-        local ok, res = pcall(f.await)
-        unwatch()
-        if not ok then
-          error(res, 0)
-        end
-        packet = res
-        if packet == nil then
+      while true do
+        if closed then
           return nil
         end
+        if version ~= seen then
+          seen = version
+          ---@cast current -nil
+          return util.unpack(current)
+        end
+        if state.closed then
+          return nil
+        end
+        changed.wait()
       end
-      ---@cast packet channels.Packet
-      return util.unpack(packet)
     end
 
     return setmetatable(it, { __call = next })

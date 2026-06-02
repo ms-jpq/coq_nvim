@@ -196,20 +196,21 @@ T.describe("broadcast", function(test)
     T.eq(got, "fido")
   end)
 
-  test("cancelling an awaiting subscriber drops it", function()
+  test("a cancelled await does not disturb other subscribers", function()
     local chan = broadcast.new()
-    local sub = chan.subscribe()
+    local live = chan.subscribe()
     async.scope(function(n)
+      local doomed = chan.subscribe()
       local a = n.spawn(function()
-        sub()
+        doomed()
       end)
       async.sleep(3 * T.SLOW)
       a.cancel()
     end)
 
-    -- sub was dropped on cancel: a later replace can't target the dead waiter,
-    -- and the sub reports gone (nil) rather than leaking / eating the packet.
+    -- the wake-all model has no per-waiter object to corrupt: a live subscriber
+    -- still receives the next value after another's await was cancelled.
     chan.replace "spot"
-    T.eq(sub(), nil)
+    T.eq(live(), "spot")
   end)
 end)

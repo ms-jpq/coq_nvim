@@ -1,3 +1,5 @@
+local runtime = require "coq.lib.async.runtime"
+
 ---@class channels.Packet
 ---@field n integer
 ---@field [integer] any
@@ -5,7 +7,34 @@
 ---@class channels.ClosableState: lib.Closable
 ---@field closed boolean
 
+---@class channels.Cond
+---@field wait fun()
+---@field wake fun()
+
 local M = {}
+
+---@return channels.Cond
+M.cond = function()
+  local waiters = {}
+  local cond = {}
+
+  cond.wait = function()
+    local f = runtime.future()
+    table.insert(waiters, f)
+    f.await()
+  end
+
+  cond.wake = function()
+    local ws = waiters
+    waiters = {}
+    for _, f in pairs(ws) do
+      f.resolve()
+    end
+  end
+
+  ---@cast cond channels.Cond
+  return cond
+end
 
 ---@param ... any
 ---@return channels.Packet
