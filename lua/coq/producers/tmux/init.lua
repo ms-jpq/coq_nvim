@@ -1,6 +1,6 @@
 local async = require "coq.lib.async"
 local atools = require "coq.lib.atools"
-local index = require "coq.producers.tmux.index"
+local index_m = require "coq.producers.tmux.index"
 local producer = require "coq.lib.producers"
 local tokens = require "coq.lib.index.tokens"
 local util = require "coq.producers.util"
@@ -18,6 +18,8 @@ local PANE_FMT = table.concat({
 ---@class tmux.Pane
 ---@field id string
 ---@field meta tmux.PaneMeta
+
+local index = util.once(index_m.new)
 
 local M = {}
 
@@ -65,18 +67,19 @@ end
 do
   local cache = {}
 
+  ---@param settings config.Settings
   ---@param kw table<integer, true>
   ---@param pane tmux.Pane
   ---@param text string
-  local reindex_pane = function(kw, pane, text)
+  local reindex_pane = function(settings, kw, pane, text)
     if cache[pane.id] == text then
       return
     end
     async.sleep(0)
 
-    index.prune { pane = pane.id }
+    index(settings).prune { pane = pane.id }
     for word in tokens.words(kw, vim.gsplit(text, "\n", { plain = true })) do
-      index.insert { pane = pane.id, word = word, meta = pane.meta }
+      index(settings).insert { pane = pane.id, word = word, meta = pane.meta }
     end
     cache[pane.id] = text
   end
@@ -99,7 +102,7 @@ do
 
     for id in pairs(cache) do
       if not live[id] then
-        index.prune { pane = id }
+        index(settings).prune { pane = id }
         cache[id] = nil
       end
     end
@@ -112,7 +115,7 @@ do
 
     for _, c in pairs(captures) do
       if c.text ~= nil then
-        reindex_pane(kw, c.pane, c.text)
+        reindex_pane(settings, kw, c.pane, c.text)
       end
     end
   end
@@ -137,7 +140,7 @@ M.matcher = function(settings, ctx)
   local sc = settings.display.pum.source_context
   local menu = sc[1] .. opts.short_name .. sc[2]
 
-  local raw = index.search(ctx) --[[@as lib.Iterator<tmux.Item>]]
+  local raw = index(settings).search(ctx) --[[@as lib.Iterator<tmux.Item>]]
   local shaped = util.shape(settings, raw)
 
   for item in shaped do

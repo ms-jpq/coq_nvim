@@ -20,40 +20,48 @@ local trie = require "coq.lib.index.trie"
 ---@field filetype? string
 ---@field keyword_before? string
 
----@return index.Searcher<treesitter.Ctx, treesitter.Item>
-local text_trie = function()
-  return trie.new {
-    insert_key = function(item)
-      return item.word
-    end,
-    query_key = function(ctx)
-      if ctx.keyword_before == "" then
-        return nil
-      end
-      return ctx.keyword_before
-    end,
-  }
-end
+local M = {}
 
+---@param _ config.Settings
 ---@return index.Searcher<treesitter.Ctx, treesitter.Item>
-local buf_layer = function()
+M.new = function(_)
+  ---@return index.Searcher<treesitter.Ctx, treesitter.Item>
+  local text_trie = function()
+    return trie.new {
+      insert_key = function(item)
+        return item.word
+      end,
+      query_key = function(ctx)
+        if ctx.keyword_before == "" then
+          return nil
+        end
+        return ctx.keyword_before
+      end,
+    }
+  end
+
+  ---@return index.Searcher<treesitter.Ctx, treesitter.Item>
+  local buf_layer = function()
+    return search.indexed {
+      insert_key = function(item)
+        return item.buf
+      end,
+      query_key = function(ctx)
+        return ctx.buf
+      end,
+      child = text_trie,
+    }
+  end
+
   return search.indexed {
     insert_key = function(item)
-      return item.buf
+      return item.filetype
     end,
     query_key = function(ctx)
-      return ctx.buf
+      return ctx.filetype
     end,
-    child = text_trie,
+    child = buf_layer,
   }
 end
 
-return search.indexed {
-  insert_key = function(item)
-    return item.filetype
-  end,
-  query_key = function(ctx)
-    return ctx.filetype
-  end,
-  child = buf_layer,
-}
+return M

@@ -1,6 +1,9 @@
 local T = require "coq.lib.test"
 local async = require "coq.lib.async"
 local buf_tracker = require "coq.lib.producers.buf_tracker"
+local config = require "coq.config"
+
+local SETTINGS = config.merged()
 
 ---@class trace.Spec
 ---@field fetches { buf: integer, prev_tick?: integer }[]
@@ -16,21 +19,24 @@ local mk = function(overrides)
     return { buf = buf, tick = (prev_tick or 0) + 1, payload = "labrador" }
   end
 
+  local settings_seen = {}
   local tracker = buf_tracker.new {
     fetch = function(buf, prev_tick)
       table.insert(fetches, { buf = buf, prev_tick = prev_tick })
       return (overrides.fetch or default_fetch)(buf, prev_tick)
     end,
-    reindex = function(metas)
+    reindex = function(settings, metas)
+      table.insert(settings_seen, settings)
       for _, meta in pairs(metas) do
         table.insert(reindexes, meta)
       end
     end,
-    prune = function(buf)
+    prune = function(settings, buf)
+      table.insert(settings_seen, settings)
       table.insert(prunes, buf)
     end,
   }
-  return tracker, { fetches = fetches, prunes = prunes, reindexes = reindexes }
+  return tracker, { fetches = fetches, prunes = prunes, reindexes = reindexes, settings_seen = settings_seen }
 end
 
 ---@param updated integer[]?
@@ -57,13 +63,14 @@ T.describe("buf_tracker", function(test)
     local tracker, trace = mk()
 
     async.scope(function()
-      tracker(idle_ctx { 7 })
+      tracker(SETTINGS, idle_ctx { 7 })
     end)
 
     T.eq(trace.fetches, { { buf = 7, prev_tick = nil } })
     T.eq(trace.prunes, { 7 })
     T.eq(#trace.reindexes, 1)
     T.eq(trace.reindexes[1].buf, 7)
+    T.eq(trace.settings_seen, { SETTINGS, SETTINGS })
   end)
 
   test("update with unchanged tick (fetch returns nil) is a no-op", function()
@@ -74,7 +81,7 @@ T.describe("buf_tracker", function(test)
     }
 
     async.scope(function()
-      tracker(idle_ctx { 7 })
+      tracker(SETTINGS, idle_ctx { 7 })
     end)
 
     T.eq(#trace.fetches, 1)
@@ -86,8 +93,8 @@ T.describe("buf_tracker", function(test)
     local tracker, trace = mk()
 
     async.scope(function()
-      tracker(idle_ctx({ 7 }, nil))
-      tracker(idle_ctx(nil, { 7 }))
+      tracker(SETTINGS, idle_ctx({ 7 }, nil))
+      tracker(SETTINGS, idle_ctx(nil, { 7 }))
     end)
 
     T.eq(trace.prunes, { 7, 7 })
@@ -97,8 +104,8 @@ T.describe("buf_tracker", function(test)
     local tracker, trace = mk()
 
     async.scope(function()
-      tracker(idle_ctx { 7 })
-      tracker(idle_ctx { 7 })
+      tracker(SETTINGS, idle_ctx { 7 })
+      tracker(SETTINGS, idle_ctx { 7 })
     end)
 
     T.eq(trace.fetches, {
@@ -111,7 +118,7 @@ T.describe("buf_tracker", function(test)
     local tracker, trace = mk()
 
     async.scope(function()
-      tracker(idle_ctx({ 1, 3 }, { 2 }))
+      tracker(SETTINGS, idle_ctx({ 1, 3 }, { 2 }))
     end)
 
     local seen_bufs = {}
@@ -126,7 +133,7 @@ T.describe("buf_tracker", function(test)
     local tracker, trace = mk()
 
     async.scope(function()
-      tracker(idle_ctx(nil, { 99 }))
+      tracker(SETTINGS, idle_ctx(nil, { 99 }))
     end)
 
     T.eq(trace.prunes, { 99 })
@@ -143,10 +150,10 @@ T.describe("buf_tracker", function(test)
 
     async.scope(function(n)
       n.spawn(function()
-        tracker(idle_ctx { 7 })
+        tracker(SETTINGS, idle_ctx { 7 })
       end)
       n.spawn(function()
-        tracker(idle_ctx { 7 })
+        tracker(SETTINGS, idle_ctx { 7 })
       end)
     end)
 

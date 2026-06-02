@@ -2,6 +2,19 @@ local itertools = require "coq.lib.itertools"
 
 local M = {}
 
+---@generic A, R
+---@param fn fun(arg: A): R
+---@return fun(arg?: A): R
+M.once = function(fn)
+  local cached
+  return function(arg)
+    if cached == nil then
+      cached = fn(arg)
+    end
+    return cached
+  end
+end
+
 ---@param item { word: string? }
 ---@return string?
 local word_of = function(item)

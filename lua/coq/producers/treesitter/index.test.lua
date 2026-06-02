@@ -1,5 +1,8 @@
 local T = require "coq.lib.test"
-local index = require "coq.producers.treesitter.index"
+local config = require "coq.config"
+local index_m = require "coq.producers.treesitter.index"
+
+local settings = config.merged()
 
 ---@param iter lib.Iterator<any>
 ---@return string[]
@@ -29,7 +32,7 @@ end
 
 T.describe("treesitter.index", function(test)
   test("search routes by filetype, buf, and prefix", function()
-    index.prune {}
+    local index = index_m.new(settings)
     index.insert(mk { word = "labrador", buf = 1, filetype = "lua" })
     index.insert(mk { word = "lily", buf = 1, filetype = "lua" })
     index.insert(mk { word = "spot", buf = 2, filetype = "lua" })
@@ -41,7 +44,7 @@ T.describe("treesitter.index", function(test)
   end)
 
   test("nil buf fans out across bufs within a filetype", function()
-    index.prune {}
+    local index = index_m.new(settings)
     index.insert(mk { word = "labrador", buf = 1, filetype = "lua" })
     index.insert(mk { word = "lily", buf = 2, filetype = "lua" })
 
@@ -49,7 +52,7 @@ T.describe("treesitter.index", function(test)
   end)
 
   test("prune by buf removes only that buf", function()
-    index.prune {}
+    local index = index_m.new(settings)
     index.insert(mk { word = "labrador", buf = 1, filetype = "lua" })
     index.insert(mk { word = "lily", buf = 2, filetype = "lua" })
 
@@ -59,14 +62,12 @@ T.describe("treesitter.index", function(test)
   end)
 
   test("inserting same text into the same buf overwrites", function()
-    index.prune {}
+    local index = index_m.new(settings)
     index.insert(mk { word = "labrador", buf = 1, filetype = "lua", kind = "variable" })
     index.insert(mk { word = "labrador", buf = 1, filetype = "lua", kind = "function" })
 
     local seen = {}
-    for item in
-      index.search { filetype = "lua", buf = 1, keyword_before = "lab" } --[[@as lib.Iterator<treesitter.Item>]]
-    do
+    for item in index.search { filetype = "lua", buf = 1, keyword_before = "lab" } do
       table.insert(seen, item.kind)
     end
     T.eq(seen, { "function" })

@@ -2,7 +2,7 @@ local async = require "coq.lib.async"
 local atools = require "coq.lib.atools"
 local buf_tracker = require "coq.lib.producers.buf_tracker"
 local fs = require "coq.producers.fs"
-local index = require "coq.producers.treesitter.index"
+local index_m = require "coq.producers.treesitter.index"
 local producer = require "coq.lib.producers"
 local util = require "coq.producers.util"
 local worker = require "coq.lib.worker"
@@ -11,6 +11,8 @@ local worker = require "coq.lib.worker"
 ---@field buf integer
 ---@field filetype string
 ---@field filename string
+
+local index = util.once(index_m.new)
 
 local M = {}
 
@@ -42,7 +44,7 @@ local tracker = buf_tracker.new {
       return require("coq.producers.treesitter").buffer_meta(...)
     end, buf, prev_tick)
   end,
-  reindex = function(metas)
+  reindex = function(settings, metas)
     for _, meta in pairs(metas) do
       async.sleep(0)
       for payload in
@@ -50,7 +52,7 @@ local tracker = buf_tracker.new {
           return require("coq.producers.treesitter.request").query(...)
         end, meta.buf) --[[@as lib.Iterator<treesitter.Payload>]]
       do
-        index.insert {
+        index(settings).insert {
           buf = meta.buf,
           filetype = meta.filetype,
           filename = meta.filename,
@@ -63,15 +65,15 @@ local tracker = buf_tracker.new {
       end
     end
   end,
-  prune = function(buf)
-    index.prune { buf = buf }
+  prune = function(settings, buf)
+    index(settings).prune { buf = buf }
   end,
 }
 
----@param _ config.Settings
+---@param settings config.Settings
 ---@param idle_ctx idle.Ctx
-M.idle = function(_, idle_ctx)
-  tracker(idle_ctx)
+M.idle = function(settings, idle_ctx)
+  tracker(settings, idle_ctx)
 end
 
 ---@param kind string
@@ -143,7 +145,7 @@ M.matcher = function(settings, ctx)
   local sc = settings.display.pum.source_context
   local menu = sc[1] .. opts.short_name .. sc[2]
 
-  local raw = index.search { filetype = ctx.filetype, keyword_before = ctx.keyword_before } --[[@as lib.Iterator<treesitter.Item>]]
+  local raw = index(settings).search { filetype = ctx.filetype, keyword_before = ctx.keyword_before }
   local shaped = util.shape(settings, raw)
 
   for item in shaped do

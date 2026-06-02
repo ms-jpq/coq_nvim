@@ -17,27 +17,35 @@ local trie = require "coq.lib.index.trie"
 ---@field pane? string
 ---@field keyword_before? string
 
+local M = {}
+
+---@param _ config.Settings
 ---@return index.Searcher<tmux.Ctx, tmux.Item>
-local word_trie = function()
-  return trie.new {
+M.new = function(_)
+  ---@return index.Searcher<tmux.Ctx, tmux.Item>
+  local word_trie = function()
+    return trie.new {
+      insert_key = function(item)
+        return item.word
+      end,
+      query_key = function(ctx)
+        if ctx.keyword_before == nil or ctx.keyword_before == "" then
+          return nil
+        end
+        return ctx.keyword_before
+      end,
+    }
+  end
+
+  return search.indexed {
     insert_key = function(item)
-      return item.word
+      return item.pane
     end,
     query_key = function(ctx)
-      if ctx.keyword_before == nil or ctx.keyword_before == "" then
-        return nil
-      end
-      return ctx.keyword_before
+      return ctx.pane
     end,
+    child = word_trie,
   }
 end
 
-return search.indexed {
-  insert_key = function(item)
-    return item.pane
-  end,
-  query_key = function(ctx)
-    return ctx.pane
-  end,
-  child = word_trie,
-}
+return M

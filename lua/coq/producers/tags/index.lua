@@ -8,27 +8,35 @@ local trie = require "coq.lib.index.trie"
 ---@field buf? integer
 ---@field keyword_before? string
 
+local M = {}
+
+---@param _ config.Settings
 ---@return index.Searcher<tags.Ctx, tags.Item>
-local name_trie = function()
-  return trie.new {
+M.new = function(_)
+  ---@return index.Searcher<tags.Ctx, tags.Item>
+  local name_trie = function()
+    return trie.new {
+      insert_key = function(item)
+        return item.name
+      end,
+      query_key = function(ctx)
+        if ctx.keyword_before == nil or ctx.keyword_before == "" then
+          return nil
+        end
+        return ctx.keyword_before
+      end,
+    }
+  end
+
+  return search.indexed {
     insert_key = function(item)
-      return item.name
+      return item.buf
     end,
     query_key = function(ctx)
-      if ctx.keyword_before == nil or ctx.keyword_before == "" then
-        return nil
-      end
-      return ctx.keyword_before
+      return ctx.buf
     end,
+    child = name_trie,
   }
 end
 
-return search.indexed {
-  insert_key = function(item)
-    return item.buf
-  end,
-  query_key = function(ctx)
-    return ctx.buf
-  end,
-  child = name_trie,
-}
+return M

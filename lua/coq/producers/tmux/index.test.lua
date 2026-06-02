@@ -1,5 +1,8 @@
 local T = require "coq.lib.test"
-local index = require "coq.producers.tmux.index"
+local config = require "coq.config"
+local index_m = require "coq.producers.tmux.index"
+
+local settings = config.merged()
 
 ---@param iter lib.Iterator<any>
 ---@return string[]
@@ -29,7 +32,7 @@ end
 
 T.describe("tmux.index", function(test)
   test("search routes by pane and prefix", function()
-    index.prune {}
+    local index = index_m.new(settings)
     index.insert { word = "labrador", pane = "p1", meta = mk_meta() }
     index.insert { word = "lily", pane = "p1", meta = mk_meta() }
     index.insert { word = "spot", pane = "p2", meta = mk_meta() }
@@ -40,7 +43,7 @@ T.describe("tmux.index", function(test)
   end)
 
   test("nil pane fans out across panes", function()
-    index.prune {}
+    local index = index_m.new(settings)
     index.insert { word = "labrador", pane = "p1", meta = mk_meta() }
     index.insert { word = "labradoodle", pane = "p2", meta = mk_meta() }
 
@@ -48,7 +51,7 @@ T.describe("tmux.index", function(test)
   end)
 
   test("nil keyword_before fans across every word in the pane", function()
-    index.prune {}
+    local index = index_m.new(settings)
     index.insert { word = "labrador", pane = "p1", meta = mk_meta() }
     index.insert { word = "lily", pane = "p1", meta = mk_meta() }
 
@@ -56,7 +59,7 @@ T.describe("tmux.index", function(test)
   end)
 
   test("prune by pane removes only that pane", function()
-    index.prune {}
+    local index = index_m.new(settings)
     index.insert { word = "labrador", pane = "p1", meta = mk_meta() }
     index.insert { word = "spot", pane = "p2", meta = mk_meta() }
 
@@ -66,16 +69,14 @@ T.describe("tmux.index", function(test)
   end)
 
   test("inserting same word into the same pane overwrites", function()
-    index.prune {}
+    local index = index_m.new(settings)
     local first = mk_meta { session_name = "a", window_index = "", window_name = "", pane_index = "", pane_title = "" }
     local second = mk_meta { session_name = "b", window_index = "", window_name = "", pane_index = "", pane_title = "" }
     index.insert { word = "labrador", pane = "p1", meta = first }
     index.insert { word = "labrador", pane = "p1", meta = second }
 
     local seen = {}
-    for item in
-      index.search { pane = "p1", keyword_before = "lab" } --[[@as lib.Iterator<tmux.Item>]]
-    do
+    for item in index.search { pane = "p1", keyword_before = "lab" } do
       table.insert(seen, item.meta.session_name)
     end
     T.eq(seen, { "b" })

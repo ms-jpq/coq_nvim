@@ -1,5 +1,8 @@
 local T = require "coq.lib.test"
-local index = require "coq.producers.buffer.index"
+local config = require "coq.config"
+local index_m = require "coq.producers.buffer.index"
+
+local settings = config.merged()
 
 ---@param iter lib.Iterator<any>
 ---@return string[]
@@ -16,7 +19,7 @@ end
 
 T.describe("buffer.index", function(test)
   test("search routes by filetype, buf, and prefix", function()
-    index.prune {}
+    local index = index_m.new(settings)
     index.insert { word = "labrador", buf = 1, filetype = "lua", filename = "" }
     index.insert { word = "lily", buf = 1, filetype = "lua", filename = "" }
     index.insert { word = "spot", buf = 2, filetype = "lua", filename = "" }
@@ -29,7 +32,7 @@ T.describe("buffer.index", function(test)
   end)
 
   test("nil filetype fans out across filetypes", function()
-    index.prune {}
+    local index = index_m.new(settings)
     index.insert { word = "labrador", buf = 1, filetype = "lua", filename = "" }
     index.insert { word = "labradoodle", buf = 2, filetype = "python", filename = "" }
 
@@ -37,7 +40,7 @@ T.describe("buffer.index", function(test)
   end)
 
   test("nil buf fans out across bufs within a filetype", function()
-    index.prune {}
+    local index = index_m.new(settings)
     index.insert { word = "labrador", buf = 1, filetype = "lua", filename = "" }
     index.insert { word = "lily", buf = 2, filetype = "lua", filename = "" }
     index.insert { word = "spot", buf = 3, filetype = "python", filename = "" }
@@ -46,7 +49,7 @@ T.describe("buffer.index", function(test)
   end)
 
   test("nil keyword_before fans across every word", function()
-    index.prune {}
+    local index = index_m.new(settings)
     index.insert { word = "labrador", buf = 1, filetype = "lua", filename = "" }
     index.insert { word = "lily", buf = 1, filetype = "lua", filename = "" }
     index.insert { word = "spot", buf = 1, filetype = "lua", filename = "" }
@@ -55,7 +58,7 @@ T.describe("buffer.index", function(test)
   end)
 
   test("prune by buf removes only that buf within a filetype", function()
-    index.prune {}
+    local index = index_m.new(settings)
     index.insert { word = "labrador", buf = 1, filetype = "lua", filename = "" }
     index.insert { word = "lily", buf = 2, filetype = "lua", filename = "" }
 
@@ -65,14 +68,12 @@ T.describe("buffer.index", function(test)
   end)
 
   test("inserting same word into the same buf overwrites", function()
-    index.prune {}
+    local index = index_m.new(settings)
     index.insert { word = "labrador", buf = 1, filetype = "lua", filename = "old.lua" }
     index.insert { word = "labrador", buf = 1, filetype = "lua", filename = "new.lua" }
 
     local seen = {}
-    for item in
-      index.search { filetype = "lua", buf = 1, keyword_before = "lab" } --[[@as lib.Iterator<buffer.Item>]]
-    do
+    for item in index.search { filetype = "lua", buf = 1, keyword_before = "lab" } do
       table.insert(seen, item.filename)
     end
     T.eq(seen, { "new.lua" })

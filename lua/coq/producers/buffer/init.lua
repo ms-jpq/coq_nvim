@@ -3,7 +3,7 @@ local atools = require "coq.lib.atools"
 local buf_tracker = require "coq.lib.producers.buf_tracker"
 local context = require "coq.lib.context"
 local fs = require "coq.producers.fs"
-local index = require "coq.producers.buffer.index"
+local index_m = require "coq.producers.buffer.index"
 local producer = require "coq.lib.producers"
 local tokens = require "coq.lib.index.tokens"
 local util = require "coq.producers.util"
@@ -17,6 +17,8 @@ local worker = require "coq.lib.worker"
 ---@field iskeyword string
 
 local MAX_BYTES = 1024 * 1024
+
+local index = util.once(index_m.new)
 
 local M = {}
 
@@ -80,14 +82,14 @@ local tracker = buf_tracker.new {
       return require("coq.producers.buffer").buffer_info(...)
     end, buf, prev_tick)
   end,
-  reindex = function(infos)
+  reindex = function(settings, infos)
     for _, info in pairs(infos) do
       async.sleep(0)
       local kw = tokens.parse_iskeyword(info.iskeyword)
       local lines = info.lines and vim.iter(info.lines) --[[@as lib.Iterator<string>]]
         or atools.file_lines(info.filename)
       for word in tokens.words(kw, lines) do
-        index.insert {
+        index(settings).insert {
           buf = info.buf,
           word = word,
           filetype = info.filetype,
@@ -96,15 +98,15 @@ local tracker = buf_tracker.new {
       end
     end
   end,
-  prune = function(buf)
-    index.prune { buf = buf }
+  prune = function(settings, buf)
+    index(settings).prune { buf = buf }
   end,
 }
 
----@param _ config.Settings
+---@param settings config.Settings
 ---@param idle_ctx idle.Ctx
-M.idle = function(_, idle_ctx)
-  tracker(idle_ctx)
+M.idle = function(settings, idle_ctx)
+  tracker(settings, idle_ctx)
 end
 
 ---@param settings config.Settings
@@ -117,7 +119,7 @@ M.matcher = function(settings, ctx)
     filetype = opts.same_filetype and ctx.filetype or nil,
   }
 
-  local raw = index.search(search_ctx) --[[@as lib.Iterator<buffer.Item>]]
+  local raw = index(settings).search(search_ctx)
   local shaped = util.shape(settings, raw)
 
   for item in shaped do

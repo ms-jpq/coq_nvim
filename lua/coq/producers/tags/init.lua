@@ -1,13 +1,16 @@
 local async = require "coq.lib.async"
 local buf_tracker = require "coq.lib.producers.buf_tracker"
 local fs = require "coq.producers.fs"
-local index = require "coq.producers.tags.index"
+local index_m = require "coq.producers.tags.index"
 local parse = require "coq.producers.tags.parse"
 local producer = require "coq.lib.producers"
 local run = require "coq.producers.tags.run"
+local util = require "coq.producers.util"
 local worker = require "coq.lib.worker"
 
 local MAX_BYTES = 1024 * 1024
+
+local index = util.once(index_m.new)
 
 local M = {}
 
@@ -43,7 +46,7 @@ local tracker = buf_tracker.new {
       return require("coq.producers.tags").buffer_info(...)
     end, buf, prev_mtime)
   end,
-  reindex = function(infos)
+  reindex = function(settings, infos)
     local paths = vim.tbl_map(function(i)
       return i.path
     end, infos)
@@ -63,19 +66,19 @@ local tracker = buf_tracker.new {
       if buf then
         ---@diagnostic disable-next-line: inject-field
         tag.buf = buf
-        index.insert(tag)
+        index(settings).insert(tag --[[@as tags.Item]])
       end
     end
   end,
-  prune = function(buf)
-    index.prune { buf = buf }
+  prune = function(settings, buf)
+    index(settings).prune { buf = buf }
   end,
 }
 
----@param _ config.Settings
+---@param settings config.Settings
 ---@param idle_ctx idle.Ctx
-M.idle = function(_, idle_ctx)
-  tracker(idle_ctx)
+M.idle = function(settings, idle_ctx)
+  tracker(settings, idle_ctx)
 end
 
 ---@param opts config.TagsClient
@@ -117,9 +120,7 @@ M.matcher = function(settings, ctx)
   local sc = settings.display.pum.source_context
   local menu = sc[1] .. opts.short_name .. sc[2]
 
-  for tag in
-    index.search { keyword_before = ctx.keyword_before } --[[@as lib.Iterator<tags.Item>]]
-  do
+  for tag in index(settings).search { keyword_before = ctx.keyword_before } do
     if tag.name ~= ctx.cword then
       local lines = vim.iter(doc_iter(opts, ctx, tag)):totable()
       coroutine.yield {

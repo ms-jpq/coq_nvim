@@ -133,16 +133,20 @@ M.query = function(ignored, ctx)
       return query_one(client, ctx, td_params)
     end, clients)
 
-    for idx, item in async.merge(iters) do
-      local client = clients[idx]
-      coroutine.yield {
-        client_id = client.id,
-        client_name = client.name,
-        offset_encoding = client.offset_encoding,
-        kind = vim.lsp.protocol.CompletionItemKind[item.kind] or "",
-        item = item,
-      }
-    end
+    lib.scope(function(defer)
+      local merged = async.merge(iters)
+      defer(merged.close)
+      for idx, item in merged do
+        local client = clients[idx]
+        coroutine.yield {
+          client_id = client.id,
+          client_name = client.name,
+          offset_encoding = client.offset_encoding,
+          kind = vim.lsp.protocol.CompletionItemKind[item.kind] or "",
+          item = item,
+        }
+      end
+    end)
   end)
 end
 
