@@ -107,10 +107,10 @@ local doc_iter = function(opts, ctx, tag)
     end
 
     if tag.signature then
-      coroutine.yield(tag.name .. tag.signature)
+      coroutine.yield(tag.word .. tag.signature)
     end
 
-    coroutine.yield(tag.pattern or tag.name)
+    coroutine.yield(tag.pattern or tag.word)
   end)
 end
 
@@ -120,15 +120,18 @@ M.matcher = function(settings, ctx)
   local sc = settings.display.pum.source_context
   local menu = sc[1] .. opts.short_name .. sc[2]
 
-  for tag in index(settings).search { keyword_before = ctx.keyword_before } do
-    if tag.name ~= ctx.cword then
+  local raw = index(settings).search { keyword_before = ctx.keyword_before }
+  local shaped = util.shape(settings, raw)
+
+  for tag in shaped do
+    if tag.word ~= ctx.cword then
       local lines = vim.iter(doc_iter(opts, ctx, tag)):totable()
       coroutine.yield {
-        word = tag.name,
+        word = tag.word,
         kind = "Text",
         menu = menu,
         meta = {
-          filter = tag.name,
+          filter = tag.word,
           source = opts.short_name,
           always_on_top = opts.always_on_top,
           doc = #lines > 0 and { lines = lines, filetype = ctx.filetype } or nil,

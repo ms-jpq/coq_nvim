@@ -2,7 +2,7 @@ local async = require "coq.lib.async"
 local lib = require "coq.lib"
 
 ---@class tags.Tag
----@field name string
+---@field word string
 ---@field path string
 ---@field line integer
 ---@field kind string
@@ -51,7 +51,7 @@ M.parse = function(jsonl)
         local ok, obj = pcall(vim.json.decode, line)
         if ok and type(obj) == "table" and obj._type == "tag" and obj.name and obj.path then
           coroutine.yield {
-            name = obj.name,
+            word = obj.name,
             path = obj.path,
             line = obj.line or 0,
             kind = obj.kind or "",

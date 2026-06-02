@@ -4,11 +4,12 @@ local async = require "coq.lib.async"
 ---@field insert_key fun(item: T): string
 ---@field query_key fun(ctx: C): string?
 ---@field prefix number
+---@field child fun(): index.Searcher<C, T>
 
 local M = {}
 
 local new_node = function()
-  return { children = {}, items = {} }
+  return { children = {} }
 end
 
 ---@param s string
@@ -53,12 +54,14 @@ M.new = function(spec)
     return node
   end
 
-  local function dfs_yield(node)
-    for _, item in pairs(node.items) do
-      coroutine.yield(item)
+  local function dfs_yield(node, ctx)
+    if node.child then
+      for item in node.child.search(ctx) do
+        coroutine.yield(item)
+      end
     end
-    for _, child in pairs(node.children) do
-      dfs_yield(child)
+    for _, child_node in pairs(node.children) do
+      dfs_yield(child_node, ctx)
     end
   end
 
@@ -66,7 +69,9 @@ M.new = function(spec)
 
   trie.insert = function(item)
     local key = spec.insert_key(item)
-    descend_create(key).items[key] = item
+    local node = descend_create(key)
+    node.child = node.child or spec.child()
+    node.child.insert(item)
   end
 
   trie.prune = function(ctx)
@@ -93,7 +98,7 @@ M.new = function(spec)
 
     return async.wrap(function()
       if node ~= nil then
-        dfs_yield(node)
+        dfs_yield(node, ctx)
       end
     end)
   end

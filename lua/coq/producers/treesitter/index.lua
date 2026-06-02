@@ -1,3 +1,4 @@
+local fuzzy = require "coq.lib.index.fuzzy"
 local search = require "coq.lib.index"
 local trie = require "coq.lib.index.trie"
 
@@ -40,6 +41,13 @@ M.new = function(settings)
         return ctx.keyword_before
       end,
       prefix = prefix,
+      child = function()
+        return fuzzy.new {
+          insert_key = function(item)
+            return item.word
+          end,
+        }
+      end,
     }
   end
 

@@ -15,7 +15,7 @@ T.describe("tags.parse", function(test)
     local tags = vim.iter(parse.parse(raw)):totable()
 
     T.eq(#tags, 1)
-    T.eq(tags[1].name, "lil")
+    T.eq(tags[1].word, "lil")
     T.eq(tags[1].path, "/dogs/lil.py")
     T.eq(tags[1].line, 10)
     T.eq(tags[1].kind, "function")
@@ -32,7 +32,7 @@ T.describe("tags.parse", function(test)
     local tags = vim.iter(parse.parse(raw)):totable()
 
     T.eq(#tags, 1)
-    T.eq(tags[1].name, "spot")
+    T.eq(tags[1].word, "spot")
   end)
 
   test("survives a malformed json line", function()
@@ -43,7 +43,7 @@ T.describe("tags.parse", function(test)
     local tags = vim.iter(parse.parse(raw)):totable()
 
     T.eq(#tags, 1)
-    T.eq(tags[1].name, "fido")
+    T.eq(tags[1].word, "fido")
   end)
 
   test("forwards optional scope and signature fields", function()

@@ -140,7 +140,7 @@ M.matcher = function(settings, ctx)
   local sc = settings.display.pum.source_context
   local menu = sc[1] .. opts.short_name .. sc[2]
 
-  local raw = index(settings).search(ctx) --[[@as lib.Iterator<tmux.Item>]]
+  local raw = index(settings).search { keyword_before = ctx.keyword_before }
   local shaped = util.shape(settings, raw)
 
   for item in shaped do

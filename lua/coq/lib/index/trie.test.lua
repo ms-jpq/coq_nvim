@@ -1,4 +1,5 @@
 local T = require "coq.lib.test"
+local fuzzy = require "coq.lib.index.fuzzy"
 local trie = require "coq.lib.index.trie"
 
 local spec = {
@@ -9,6 +10,13 @@ local spec = {
     return ctx.prefix
   end,
   prefix = math.huge,
+  child = function()
+    return fuzzy.new {
+      insert_key = function(item)
+        return item.word
+      end,
+    }
+  end,
 }
 
 local collect = function(iter)
