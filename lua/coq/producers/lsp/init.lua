@@ -1,6 +1,7 @@
 local async = require "coq.lib.async"
 local lib = require "coq.lib"
 local request = require "coq.producers.lsp.request"
+local set = require "coq.lib.set"
 
 local M = {}
 
@@ -11,7 +12,10 @@ local matcher = function(settings, ctx)
     local sc = settings.display.pum.source_context
     local menu = sc[1] .. opts.short_name .. sc[2]
 
-    for entry in request.query(ctx) do
+    local ignored = set.new(opts.ignored_servers)
+    local pinned = set.new(opts.always_on_top)
+
+    for entry in request.query(ignored, ctx) do
       local item = entry.item
       local label = item.label or ""
       local insert_text = item.insertText or label
@@ -27,7 +31,7 @@ local matcher = function(settings, ctx)
           filter = filter,
           snippet = is_snippet and insert_text or nil,
           source = opts.short_name,
-          always_on_top = false,
+          always_on_top = pinned[entry.client_name] == true,
           lsp = {
             client_id = entry.client_id,
             item = item,

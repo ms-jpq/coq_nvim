@@ -111,16 +111,19 @@ local query_one = function(client, ctx, td_params)
   end)
 end
 
+---@param ignored lib.Set<string>
 ---@param ctx ctx.full
 ---@return lib.Iterator<lsp.RequestItem>
-M.query = function(ctx)
+M.query = function(ignored, ctx)
   return async.wrap(function()
     atools.scheduled()
     if not vim.api.nvim_buf_is_valid(ctx.buf) or not vim.api.nvim_buf_is_loaded(ctx.buf) then
       return
     end
 
-    local clients = vim.lsp.get_clients { bufnr = ctx.buf, method = "textDocument/completion" }
+    local clients = vim.tbl_filter(function(c)
+      return not ignored[c.name]
+    end, vim.lsp.get_clients { bufnr = ctx.buf, method = "textDocument/completion" })
     if #clients == 0 then
       return
     end
