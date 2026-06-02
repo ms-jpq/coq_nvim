@@ -5,8 +5,6 @@ local atools = require "coq.lib.atools"
 ---@field source string
 ---@field always_on_top? boolean
 
----@alias index.Scored [index.Scorable, number]
-
 local M = {}
 
 -- https://github.com/neovim/neovim/blob/master/src/nvim/fuzzy.c
@@ -15,7 +13,7 @@ M.ALWAYS_TOP = 1e9
 
 ---@param items index.Scorable[]
 ---@param prepared index.Prepared
----@return lib.Iterator<index.Scored>
+---@return fun(): index.Scorable?, number?
 M.compute = function(items, prepared)
   atools.scheduled()
 
@@ -55,7 +53,7 @@ M.compute = function(items, prepared)
 
       local score = (hit.fuzzy + prox * M.WEIGHTS.prox + recen * M.WEIGHTS.recen) * bias + tier
       return item, score
-    end) --[[@as lib.Iterator<index.Scored>]]
+    end) --[[@as fun(): index.Scorable?, number?]]
 end
 
 return M

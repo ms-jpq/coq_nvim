@@ -88,7 +88,7 @@ M.idle = function(settings, idle_ctx)
   tracker(settings, idle_ctx)
 end
 
----@param opts config.CTagsClient
+---@param opts config.CtagsClient
 ---@param ctx ctx.full
 ---@param tag ctags.Item
 ---@return lib.Iterator<string>

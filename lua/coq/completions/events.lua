@@ -119,23 +119,6 @@ end
 ---@param n async.Nursery
 ---@param chan channels.Broadcast<T>
 ---@param handler fun(ev: T)
-M.subscribe = function(n, chan, handler)
-  local safe = lib.with_reporting(handler)
-  n.spawn(function(defer)
-    local iter = chan.subscribe()
-    defer(iter.close)
-    for ev in iter do
-      n.spawn(function()
-        safe(ev)
-      end)
-    end
-  end)
-end
-
----@generic T
----@param n async.Nursery
----@param chan channels.Broadcast<T>
----@param handler fun(ev: T)
 M.subscribe_latest = function(n, chan, handler)
   local safe = lib.with_reporting(handler)
   n.spawn(function(defer)

@@ -1,5 +1,4 @@
 local atools = require "coq.lib.atools"
-local lru = require "coq.lib.lru"
 local tokens = require "coq.lib.index.tokens"
 
 local RECENCY_CAP = 888
@@ -26,7 +25,7 @@ M.new = function(clients)
     end
   end
 
-  local recency = lru.new(RECENCY_CAP)
+  local recency = {}
   local ranker = {}
 
   ranker.inserted = function(filter)

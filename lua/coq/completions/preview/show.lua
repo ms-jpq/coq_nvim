@@ -1,7 +1,7 @@
 local async = require "coq.lib.async"
 local atools = require "coq.lib.atools"
 local lib = require "coq.lib"
-local paths_util = require "coq.producers.paths.util"
+local paths_preview = require "coq.producers.paths.preview"
 local txt = require "coq.lib.text"
 
 local PREVIEW_VAR = "__coq_preview__"
@@ -193,7 +193,7 @@ local resolve_doc = function(ctx, settings, resolver, item)
 
   if meta.path then
     return vim
-      .iter(paths_util.path_preview({
+      .iter(paths_preview.lines({
         max_lines = settings.clients.paths.preview_lines,
         ellipsis = settings.display.pum.ellipsis,
       }, vim.fn.getcwd(), meta.path))

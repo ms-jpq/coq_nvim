@@ -39,6 +39,7 @@ M.new = function(producers)
       :totable()
 
     async.all(idles)
+    idle_handle = nil
   end
 
   sup.search = function(settings, ctx)
@@ -54,23 +55,27 @@ M.new = function(producers)
       :totable()
 
     local m = async.merge(iters)
+    local timed = deadline.new(math.floor(settings.limits.completion_auto_timeout * 1000), function()
+      local _, v = m()
+      return v
+    end)
+
     searching = true
+    local _ = runtime.current().on_cancel(function()
+      searching = false
+    end)
 
     local close = function()
       searching = false
       m.close()
     end
 
-    local timeout_ms = math.floor(settings.limits.completion_auto_timeout * 1000)
-    local timed = deadline.new(timeout_ms, function()
-      local _, v = m()
-      return v
-    end)
-
     local next = function()
       for v in timed do
         return v
       end
+      -- drained or timed out; on timeout the producers may still be live, so
+      -- close off the consumer's path to avoid blocking on merge's join.
       searching = false
       if bound then
         bound.spawn(m.close)

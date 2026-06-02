@@ -112,7 +112,7 @@ local defaults = require "coq.config.defaults"
 ---@field user_path? string
 ---@field warn string[]
 
----@class config.CTagsClient: config.BaseClient
+---@class config.CtagsClient: config.BaseClient
 ---@field always_on_top boolean
 ---@field parent_scope string
 ---@field path_sep string
@@ -136,7 +136,7 @@ local defaults = require "coq.config.defaults"
 ---@field paths config.PathsClient
 ---@field registers config.RegistersClient
 ---@field snippets config.SnippetClient
----@field tags config.CTagsClient
+---@field tags config.CtagsClient
 ---@field third_party config.ThirdPartyClient
 ---@field tmux config.TmuxClient
 ---@field tree_sitter config.TSClient

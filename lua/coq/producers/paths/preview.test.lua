@@ -1,6 +1,6 @@
 local T = require "coq.lib.test"
 local async = require "coq.lib.async"
-local util = require "coq.producers.paths.util"
+local preview = require "coq.producers.paths.preview"
 
 local mkdir = function(path)
   vim.fn.mkdir(path, "p")
@@ -28,12 +28,12 @@ end
 local collect = function(opts, cwd, path)
   local out
   async.scope(function()
-    out = vim.iter(util.path_preview(opts, cwd, path)):totable()
+    out = vim.iter(preview.lines(opts, cwd, path)):totable()
   end)
   return out or {}
 end
 
-T.describe("paths.util.path_preview", function(test)
+T.describe("paths.preview.lines", function(test)
   test("nonexistent path yields a stat error line", function()
     local lines = collect({ max_lines = 10 }, nil, "/no/such/path/4242")
     T.eq(#lines, 1)

@@ -88,8 +88,15 @@ local producers = function(clients)
   end)
 end
 
+local started = false
+
 ---@param opts? table
 M.setup = function(opts)
+  if started then
+    return
+  end
+  started = true
+
   async.entry(function()
     async.scope(function(n)
       local merged = vim.tbl_deep_extend("force", vim.g.coq_settings or {}, opts or {})

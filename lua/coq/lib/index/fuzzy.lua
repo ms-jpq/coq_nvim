@@ -18,6 +18,7 @@ M.new = function(spec)
 
   fuzzy.prune = function(_)
     items = {}
+    return true
   end
 
   fuzzy.search = function(_)

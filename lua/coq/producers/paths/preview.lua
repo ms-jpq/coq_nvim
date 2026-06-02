@@ -112,7 +112,7 @@ end
 ---@param cwd? string
 ---@param path string
 ---@return lib.Iterator<string>
-M.path_preview = function(opts, cwd, path)
+M.lines = function(opts, cwd, path)
   return async.wrap(function()
     local err, st = atools.fs.stat(path)
     if err or st == nil then

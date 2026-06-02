@@ -212,7 +212,7 @@ end
 ---@return lib.Iterator<string>
 local collect_bases = function(resolution, ctx)
   return async.wrap(function()
-    for _, r in ipairs(resolution) do
+    for _, r in pairs(resolution) do
       if r == "cwd" then
         coroutine.yield(ctx.cwd)
       elseif r == "file" and ctx.filename ~= "" then

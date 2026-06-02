@@ -74,17 +74,20 @@ M.new = function(spec)
     node.child.insert(item)
   end
 
+  ---@return boolean
   trie.prune = function(ctx)
     local key = spec.query_key(ctx)
     if key == nil or key == "" then
       root = new_node()
-      return
+      return true
     end
+
     local bucket = string.sub(key, 1, math.min(prefix, #key) --[[@as integer]])
     local parent = descend(string.sub(bucket, 1, -2))
     if parent then
       parent.children[string.sub(bucket, -1)] = nil
     end
+    return root.child == nil and next(root.children) == nil
   end
 
   trie.search = function(ctx)

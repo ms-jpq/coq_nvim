@@ -6,7 +6,7 @@ local lib = require "coq.lib"
 
 ---@class index.Searcher<C, T>: index.Searchable<C, T>
 ---@field insert fun(item: T)
----@field prune fun(ctx: C)
+---@field prune fun(ctx: C): boolean
 
 ---@class index.IndexedSpec<C, T>
 ---@field insert_key fun(item: T): any
@@ -18,7 +18,9 @@ local M = {}
 ---@type index.Searcher<any, any>
 M.empty = {
   insert = lib.noop,
-  prune = lib.noop,
+  prune = function()
+    return true
+  end,
   search = function()
     return lib.noop
   end,
@@ -45,15 +47,18 @@ M.indexed = function(spec)
   index.prune = function(ctx)
     local k = spec.query_key(ctx)
     if k == nil then
-      for _, c in pairs(children) do
-        c.prune(ctx)
+      for ck, c in pairs(children) do
+        if c.prune(ctx) then
+          children[ck] = nil
+        end
       end
     else
       local c = children[k]
-      if c then
-        c.prune(ctx)
+      if c and c.prune(ctx) then
+        children[k] = nil
       end
     end
+    return next(children) == nil
   end
 
   index.insert = function(item)

@@ -246,4 +246,36 @@ T.describe("supervisor", function(test)
     table.sort(seen)
     T.eq(seen, { "fido", "lil", "spot" })
   end)
+
+  test("a search cancelled mid-flight lets idle run again", function()
+    local idle_ran = false
+    async.scope(function(n)
+      local p = producer {
+        idle = function()
+          idle_ran = true
+        end,
+        matcher = function()
+          coroutine.yield "lil"
+          async.sleep(100 * T.SLOW)
+        end,
+      }
+      local sup = supervisor.new { p }
+      sup.bind(n)
+
+      -- mimic subscribe_latest: consume a search, then cancel the consuming
+      -- coroutine mid-flight WITHOUT calling iter.close().
+      local searcher = n.spawn(function()
+        for _ in sup.search(SETTINGS, {}) do
+          lib.noop()
+        end
+      end)
+      async.sleep(5 * T.SLOW)
+      searcher.cancel()
+      async.sleep(5 * T.SLOW)
+
+      sup.idle(SETTINGS, {})
+    end)
+
+    assert(idle_ran, "idle must run after a cancelled search (searching must not latch)")
+  end)
 end)
