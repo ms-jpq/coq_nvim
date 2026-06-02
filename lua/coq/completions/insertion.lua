@@ -6,6 +6,7 @@ local lib = require "coq.lib"
 local lsp_util = require "coq.producers.lsp.util"
 local score = require "coq.lib.index.rank.score"
 local topk_m = require "coq.lib.index.rank.topk"
+local txt = require "coq.lib.text"
 
 local DEFAULT_ENCODING = "utf-16"
 
@@ -73,7 +74,7 @@ local apply = function(ctx, i)
 
   do
     local start_row, start_col, end_row, end_col, replacement = word_range(ctx, i, lsp)
-    local lines = vim.iter(lib.splitlines(replacement)):totable()
+    local lines = vim.iter(txt.splitlines(replacement)):totable()
     vim.api.nvim_buf_set_text(ctx.buf, start_row, start_col, end_row, end_col, lines)
   end
 

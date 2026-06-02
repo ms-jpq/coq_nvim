@@ -3,6 +3,7 @@ local atools = require "coq.lib.atools"
 local index_m = require "coq.producers.tmux.index"
 local producer = require "coq.lib.producers"
 local tokens = require "coq.lib.index.tokens"
+local txt = require "coq.lib.text"
 local util = require "coq.producers.util"
 
 local SEP = "\30"
@@ -33,7 +34,7 @@ local list_panes = function(settings, exclude)
     if proc == nil or proc.code ~= 0 then
       return
     end
-    for line in vim.gsplit(proc.stdout, "\n", { plain = true }) do
+    for line in txt.splitlines(proc.stdout) do
       if line ~= "" then
         local parts = vim.split(line, SEP, { plain = true })
         local id = parts[1]
@@ -78,7 +79,7 @@ do
     async.sleep(0)
 
     index(settings).prune { pane = pane.id }
-    for word in tokens.words(kw, vim.gsplit(text, "\n", { plain = true })) do
+    for word in tokens.words(kw, txt.splitlines(text)) do
       index(settings).insert { pane = pane.id, word = word, meta = pane.meta }
     end
     cache[pane.id] = text
@@ -141,23 +142,21 @@ M.matcher = function(settings, ctx)
   local menu = sc[1] .. opts.short_name .. sc[2]
 
   local raw = index(settings).search { keyword_before = ctx.keyword_before }
-  local shaped = util.shape(settings, raw)
+  local shaped = util.shape(settings, ctx, raw)
 
   for item in shaped do
-    if item.word ~= ctx.cword then
-      local lines = vim.iter(doc_iter(opts, item.meta)):totable()
-      coroutine.yield {
-        word = item.word,
-        kind = "Text",
-        menu = menu,
-        meta = {
-          filter = item.word,
-          source = opts.short_name,
-          always_on_top = opts.always_on_top,
-          doc = #lines > 0 and { lines = lines, filetype = "" } or nil,
-        },
-      }
-    end
+    local lines = vim.iter(doc_iter(opts, item.meta)):totable()
+    coroutine.yield {
+      word = item.word,
+      kind = "Text",
+      menu = menu,
+      meta = {
+        filter = item.word,
+        source = opts.short_name,
+        always_on_top = opts.always_on_top,
+        doc = #lines > 0 and { lines = lines, filetype = "" } or nil,
+      },
+    }
   end
 end
 

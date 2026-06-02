@@ -1,5 +1,5 @@
 local async = require "coq.lib.async"
-local lib = require "coq.lib"
+local txt = require "coq.lib.text"
 
 ---@class tags.Tag
 ---@field word string
@@ -46,7 +46,7 @@ end
 ---@return lib.Iterator<tags.Tag>
 M.parse = function(jsonl)
   return async.wrap(function()
-    for line in lib.splitlines(jsonl) do
+    for line in txt.splitlines(jsonl) do
       if line ~= "" then
         local ok, obj = pcall(vim.json.decode, line)
         if ok and type(obj) == "table" and obj._type == "tag" and obj.name and obj.path then

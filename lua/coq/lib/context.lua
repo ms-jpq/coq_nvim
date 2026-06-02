@@ -10,21 +10,12 @@ local atools = require "coq.lib.atools"
 ---@field cwd string
 ---@field filetype string
 ---@field filename string
----@field cword string
----@field cexpr string
----@field tabstop integer
----@field expandtab boolean
----@field iskeyword string
 ---@field kw table<integer, true>
----@field linesep string
 ---@field comment [string, string]
----@field line_count integer
 ---@field line string
 ---@field line_before string
 ---@field line_after string
 ---@field keyword_before string
----@field utf16_col integer
----@field utf32_col integer
 
 local M = {}
 
@@ -85,37 +76,19 @@ M.full = function(base)
   end
 
   do
-    ctx.cword = vim.fn.expand "<cword>"
-    ctx.cexpr = vim.fn.expand "<cexpr>"
-  end
-
-  do
     local lhs, rhs = string.match(bo.commentstring, "(.*)%%s(.*)")
-    local fileformat = bo.fileformat
-
-    ctx.tabstop = bo.tabstop
-    ctx.expandtab = bo.expandtab
-    ctx.iskeyword = bo.iskeyword
-    ctx.kw = tokens.parse_iskeyword(ctx.iskeyword)
-
-    ctx.linesep = ({ unix = "\n", dos = "\r\n", mac = "\r" })[fileformat]
+    ctx.kw = tokens.parse_iskeyword(bo.iskeyword)
     ctx.comment = { lhs or "", rhs or "" }
   end
 
   do
     local _, col = unpack(ctx.pos)
 
-    ctx.line_count = vim.api.nvim_buf_line_count(ctx.buf)
     ctx.line = vim.api.nvim_get_current_line()
     ctx.line_before = string.sub(ctx.line, 1, col)
     ctx.line_after = string.sub(ctx.line, col + 1)
 
     ctx.keyword_before = tokens.trailing_keyword_before(ctx.kw, ctx.line_before)
-  end
-
-  do
-    ctx.utf16_col = vim.str_utfindex(ctx.line_before, "utf-16")
-    ctx.utf32_col = vim.str_utfindex(ctx.line_before, "utf-32")
   end
 
   return ctx

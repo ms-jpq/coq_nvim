@@ -10,12 +10,11 @@ M.take = function(max, iter)
     if n >= max then
       return nil
     end
-    local v = iter()
-    if v == nil then
-      return nil
+    for v in iter do
+      n = n + 1
+      return v
     end
-    n = n + 1
-    return v
+    return nil
   end
 end
 

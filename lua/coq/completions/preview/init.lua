@@ -4,6 +4,7 @@ local context = require "coq.lib.context"
 local events = require "coq.completions.events"
 local lib = require "coq.lib"
 local show = require "coq.completions.preview.show"
+local txt = require "coq.lib.text"
 
 local NS = vim.api.nvim_create_namespace "coq.preview"
 
@@ -42,7 +43,7 @@ local show_ghost = function(ctx, ghost, i)
   local row, col = unpack(ctx.pos)
   local lhs, rhs = unpack(ghost.context)
 
-  local lines = vim.split(text, "\n", { plain = true })
+  local lines = vim.iter(txt.splitlines(text)):totable()
   local first = lhs .. lines[1] .. (#lines == 1 and rhs or "")
   local rest = vim
     .iter(async.wrap(function()

@@ -36,7 +36,7 @@ M.new = function(clients)
   ranker.prepare = function(ctx)
     atools.scheduled()
     return {
-      token = ctx.cword,
+      token = ctx.keyword_before,
       locality = tokens.locality(ctx.kw, vim.iter(tokens.surround(ctx)) --[[@as lib.Iterator<string>]]),
       recency = recency,
       source_bias = source_bias,

@@ -1,5 +1,6 @@
 local async = require "coq.lib.async"
 local lib = require "coq.lib"
+local txt = require "coq.lib.text"
 
 local M = {}
 
@@ -162,7 +163,7 @@ M.file_lines = function(path)
     end
 
     local _, data = M.fs.read(fd, stat.size, 0)
-    return vim.gsplit(data or "", "\n", { plain = true })
+    return txt.splitlines(data or "")
   end)
 end
 

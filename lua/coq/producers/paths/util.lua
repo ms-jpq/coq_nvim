@@ -2,6 +2,7 @@ local async = require "coq.lib.async"
 local atools = require "coq.lib.atools"
 local fs = require "coq.producers.fs"
 local lib = require "coq.lib"
+local txt = require "coq.lib.text"
 
 local MAX_FILE_BYTES = 65536
 
@@ -22,7 +23,7 @@ end
 ---@return string[]
 local file_lines = function(data, max_lines)
   local lines = {}
-  for line in vim.gsplit(data, "\n", { plain = true }) do
+  for line in txt.splitlines(data) do
     table.insert(lines, (string.gsub(line, "%s+$", "")))
     if #lines >= max_lines + 1 then
       break

@@ -23,10 +23,20 @@ end
 
 ---@generic T : { word: string? }
 ---@param settings config.Settings
+---@param ctx ctx.full
 ---@param iter lib.Iterator<T>
 ---@return lib.Iterator<T>
-M.shape = function(settings, iter)
-  return itertools.take(settings.match.max_results, itertools.uniq_by(word_of, iter))
+M.shape = function(settings, ctx, iter)
+  local kw = ctx.keyword_before
+  local filtered = function()
+    for v in iter do
+      if v.word ~= kw then
+        return v
+      end
+    end
+    return nil
+  end
+  return itertools.take(settings.match.max_results, itertools.uniq_by(word_of, filtered))
 end
 
 return M

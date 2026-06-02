@@ -115,24 +115,22 @@ M.matcher = function(settings, ctx)
   }
 
   local raw = index(settings).search(search_ctx)
-  local shaped = util.shape(settings, raw)
+  local shaped = util.shape(settings, ctx, raw)
 
   for item in shaped do
-    if item.word ~= ctx.cword then
-      local lines = vim.iter(doc_iter(opts, ctx, item)):totable()
+    local lines = vim.iter(doc_iter(opts, ctx, item)):totable()
 
-      coroutine.yield {
-        word = item.word,
-        kind = "Text",
-        menu = menu,
-        meta = {
-          filter = item.word,
-          source = opts.short_name,
-          always_on_top = opts.always_on_top,
-          doc = #lines > 0 and { lines = lines, filetype = "" } or nil,
-        },
-      }
-    end
+    coroutine.yield {
+      word = item.word,
+      kind = "Text",
+      menu = menu,
+      meta = {
+        filter = item.word,
+        source = opts.short_name,
+        always_on_top = opts.always_on_top,
+        doc = #lines > 0 and { lines = lines, filetype = "" } or nil,
+      },
+    }
   end
 end
 

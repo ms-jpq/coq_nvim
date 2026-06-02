@@ -32,7 +32,7 @@ M.new = function(settings)
       child = function()
         return fuzzy.new {
           insert_key = function(item)
-            return item.name
+            return item.word
           end,
         }
       end,

@@ -4,6 +4,7 @@ local buf_tracker = require "coq.lib.producers.buf_tracker"
 local fs = require "coq.producers.fs"
 local index_m = require "coq.producers.treesitter.index"
 local producer = require "coq.lib.producers"
+local txt = require "coq.lib.text"
 local util = require "coq.producers.util"
 local worker = require "coq.lib.worker"
 
@@ -52,16 +53,18 @@ local tracker = buf_tracker.new {
           return require("coq.producers.treesitter.request").query(...)
         end, meta.buf) --[[@as lib.Iterator<treesitter.Payload>]]
       do
-        index(settings).insert {
-          buf = meta.buf,
-          filetype = meta.filetype,
-          filename = meta.filename,
-          word = payload.text,
-          kind = payload.kind,
-          range = payload.range,
-          parent = payload.parent,
-          grandparent = payload.grandparent,
-        }
+        if type(payload.text) == "string" and payload.text ~= "" then
+          index(settings).insert {
+            buf = meta.buf,
+            filetype = meta.filetype,
+            filename = meta.filename,
+            word = payload.text,
+            kind = payload.kind,
+            range = payload.range,
+            parent = payload.parent,
+            grandparent = payload.grandparent,
+          }
+        end
       end
     end
   end,
@@ -95,7 +98,7 @@ local section_iter = function(clhs, crhs, kind, text)
     coroutine.yield(clhs .. kind)
 
     local pending = nil
-    for line in vim.gsplit(text, "\n", { plain = true }) do
+    for line in txt.splitlines(text) do
       if pending ~= nil then
         coroutine.yield(pending)
       end
@@ -146,23 +149,21 @@ M.matcher = function(settings, ctx)
   local menu = sc[1] .. opts.short_name .. sc[2]
 
   local raw = index(settings).search { filetype = ctx.filetype, keyword_before = ctx.keyword_before }
-  local shaped = util.shape(settings, raw)
+  local shaped = util.shape(settings, ctx, raw)
 
   for item in shaped do
-    if item.word ~= ctx.cword then
-      local lines = vim.iter(doc_iter(opts, ctx, item)):totable()
-      coroutine.yield {
-        word = item.word,
-        kind = capture_to_icon(item.kind),
-        menu = menu,
-        meta = {
-          filter = item.word,
-          source = opts.short_name,
-          always_on_top = opts.always_on_top,
-          doc = { lines = lines, filetype = ctx.filetype },
-        },
-      }
-    end
+    local lines = vim.iter(doc_iter(opts, ctx, item)):totable()
+    coroutine.yield {
+      word = item.word,
+      kind = capture_to_icon(item.kind),
+      menu = menu,
+      meta = {
+        filter = item.word,
+        source = opts.short_name,
+        always_on_top = opts.always_on_top,
+        doc = { lines = lines, filetype = ctx.filetype },
+      },
+    }
   end
 end
 

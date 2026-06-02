@@ -3,6 +3,7 @@ local atools = require "coq.lib.atools"
 local lib = require "coq.lib"
 local lsp_util = require "coq.producers.lsp.util"
 local paths_util = require "coq.producers.paths.util"
+local txt = require "coq.lib.text"
 
 local PREVIEW_VAR = "__coq_preview__"
 
@@ -12,7 +13,7 @@ local md_lines = function(lsp_item)
   return vim
     .iter(async.wrap(function()
       if lsp_item.detail and lsp_item.detail ~= "" then
-        for line in lib.splitlines(lsp_item.detail) do
+        for line in txt.splitlines(lsp_item.detail) do
           coroutine.yield(line)
         end
       end

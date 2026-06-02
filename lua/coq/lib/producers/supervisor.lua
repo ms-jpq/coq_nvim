@@ -61,11 +61,11 @@ M.new = function(producers)
     end
 
     local next = function()
-      local _, value = m()
-      if value == nil then
-        searching = false
+      for _, value in m do
+        return value
       end
-      return value
+      searching = false
+      return nil
     end
 
     return setmetatable({ close = close }, { __call = next })
