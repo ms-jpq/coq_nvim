@@ -123,7 +123,7 @@ M.fs = {
   read = async.awaitify(vim.uv.fs_read),
   ---@type fun(fd: integer): string?, { size: integer }?
   fstat = async.awaitify(vim.uv.fs_fstat),
-  ---@type fun(path: string): string?, { type: string, size: integer }?
+  ---@type fun(path: string): string?, { type: string, size: integer, mtime: { sec: integer, nsec: integer } }?
   stat = async.awaitify(vim.uv.fs_stat),
 }
 

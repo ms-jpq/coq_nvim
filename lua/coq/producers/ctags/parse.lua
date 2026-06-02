@@ -1,7 +1,7 @@
 local async = require "coq.lib.async"
 local txt = require "coq.lib.text"
 
----@class tags.Tag
+---@class ctags.Tag
 ---@field word string
 ---@field filename string
 ---@field line integer
@@ -43,7 +43,7 @@ local unescape = function(pattern)
 end
 
 ---@param jsonl string
----@return lib.Iterator<tags.Tag>
+---@return lib.Iterator<ctags.Tag>
 M.parse = function(jsonl)
   return async.wrap(function()
     for line in txt.splitlines(jsonl) do

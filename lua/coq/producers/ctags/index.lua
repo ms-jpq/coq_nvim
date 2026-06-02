@@ -1,9 +1,9 @@
 local search = require "coq.lib.index"
 local util = require "coq.producers.util"
 
----@class tags.Item: tags.Tag
+---@class ctags.Item: ctags.Tag
 
----@class tags.Ctx
+---@class ctags.Ctx
 ---@field filetype? string
 ---@field filename? string
 ---@field keyword_before? string
@@ -11,11 +11,11 @@ local util = require "coq.producers.util"
 local M = {}
 
 ---@param settings config.Settings
----@return index.Searcher<tags.Ctx, tags.Item>
+---@return index.Searcher<ctags.Ctx, ctags.Item>
 M.new = function(settings)
   local word_trie = util.word_search(settings)
 
-  ---@return index.Searcher<tags.Ctx, tags.Item>
+  ---@return index.Searcher<ctags.Ctx, ctags.Item>
   local file_layer = function()
     return search.indexed {
       insert_key = function(item)

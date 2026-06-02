@@ -1,10 +1,11 @@
 local async = require "coq.lib.async"
+local atools = require "coq.lib.atools"
 local buf_tracker = require "coq.lib.producers.buf_tracker"
 local fs = require "coq.producers.fs"
-local index_m = require "coq.producers.tags.index"
-local parse = require "coq.producers.tags.parse"
+local index_m = require "coq.producers.ctags.index"
+local parse = require "coq.producers.ctags.parse"
 local producer = require "coq.lib.producers"
-local run = require "coq.producers.tags.run"
+local run = require "coq.producers.ctags.run"
 local util = require "coq.producers.util"
 local worker = require "coq.lib.worker"
 
@@ -12,13 +13,13 @@ local index = util.once(index_m.new)
 
 local M = {}
 
----@class tags.Info: buf_tracker.Meta
+---@class ctags.Info: buf_tracker.Meta
 ---@field buf integer
 ---@field filename string
 
 ---@param buf integer
 ---@param prev_mtime? integer
----@return tags.Info?
+---@return ctags.Info?
 M.buffer_info = function(buf, prev_mtime)
   if not vim.api.nvim_buf_is_valid(buf) then
     return nil
@@ -27,8 +28,8 @@ M.buffer_info = function(buf, prev_mtime)
   if filename == "" then
     return nil
   end
-  local st = vim.uv.fs_stat(filename)
-  if not st then
+  local err, st = atools.fs.stat(filename)
+  if err or not st then
     return nil
   end
   local mtime = st.mtime.sec or 0
@@ -44,7 +45,7 @@ local filenames_by_buf = {}
 local tracker = buf_tracker.new {
   fetch = function(buf, prev_mtime)
     return worker.main(function(...)
-      return require("coq.producers.tags").buffer_info(...)
+      return require("coq.producers.ctags").buffer_info(...)
     end, buf, prev_mtime)
   end,
   reindex = function(settings, infos)
@@ -64,7 +65,7 @@ local tracker = buf_tracker.new {
     for tag in parse.parse(raw) do
       async.sleep(0)
       if known[tag.filename] then
-        index(settings).insert(tag --[[@as tags.Item]])
+        index(settings).insert(tag --[[@as ctags.Item]])
       end
     end
 
@@ -87,9 +88,9 @@ M.idle = function(settings, idle_ctx)
   tracker(settings, idle_ctx)
 end
 
----@param opts config.TagsClient
+---@param opts config.CTagsClient
 ---@param ctx ctx.full
----@param tag tags.Item
+---@param tag ctags.Item
 ---@return lib.Iterator<string>
 local doc_iter = function(opts, ctx, tag)
   return async.wrap(function()
@@ -142,10 +143,10 @@ end
 M.new = function()
   return producer.threaded {
     idle = function(...)
-      require("coq.producers.tags").idle(...)
+      require("coq.producers.ctags").idle(...)
     end,
     matcher = function(...)
-      require("coq.producers.tags").matcher(...)
+      require("coq.producers.ctags").matcher(...)
     end,
   }
 end

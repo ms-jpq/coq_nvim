@@ -1,5 +1,5 @@
 local T = require "coq.lib.test"
-local parse = require "coq.producers.tags.parse"
+local parse = require "coq.producers.ctags.parse"
 
 T.describe("tags.parse", function(test)
   test("yields a single tag from one json line", function()
