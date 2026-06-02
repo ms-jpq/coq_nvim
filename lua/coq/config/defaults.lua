@@ -108,7 +108,6 @@ local M = {
       enabled = true,
       path_sep = " ⇊",
       short_name = "TS",
-      slow_threshold = 0.168,
       weight_adjust = 0.1,
     },
   },
@@ -246,10 +245,6 @@ local M = {
   limits = {
     completion_auto_timeout = 0.166,
     completion_manual_timeout = 1.966,
-
-    download_retries = 6,
-    download_timeout = 66.0,
-
     idle_timeout = 1.88,
   },
 

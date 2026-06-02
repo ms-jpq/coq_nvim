@@ -78,8 +78,6 @@ local defaults = require "coq.config.defaults"
 ---@field idle_timeout number
 ---@field completion_auto_timeout number
 ---@field completion_manual_timeout number
----@field download_retries integer
----@field download_timeout number
 
 ---@class config.BaseClient
 ---@field always_wait boolean
@@ -138,7 +136,6 @@ local defaults = require "coq.config.defaults"
 ---@class config.TSClient: config.BaseClient
 ---@field always_on_top boolean
 ---@field path_sep string
----@field slow_threshold number
 
 ---@class config.Clients
 ---@field buffers config.BuffersClient
@@ -155,7 +152,6 @@ local defaults = require "coq.config.defaults"
 
 ---@class config.Settings
 ---@field auto_start boolean|"shut-up"
----@field xdg boolean
 ---@field limits config.Limits
 ---@field display config.Display
 ---@field match config.MatchOptions

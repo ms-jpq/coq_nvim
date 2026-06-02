@@ -11,7 +11,7 @@ local lsp_item = function(tag)
 end
 
 T.describe("resolver", function(test)
-  test("caches resolved results by item identity", function()
+  test("caches resolved results by dedup_key", function()
     local calls = 0
     async.scope(function(n)
       local r = resolver_m.new(n, function(_, item)
@@ -23,6 +23,24 @@ T.describe("resolver", function(test)
       local b = r.resolve(CTX, item)
       T.eq(a, item.meta.lsp)
       T.eq(b, item.meta.lsp)
+    end)
+    T.eq(calls, 1)
+  end)
+
+  -- nvim deep-copies item.user_data through VimL, so highlight and commit see
+  -- DISTINCT tables with identical content. The cache must key on content.
+  test("shares cache across distinct tables of equal content", function()
+    local calls = 0
+    async.scope(function(n)
+      local r = resolver_m.new(n, function(_, item)
+        calls = calls + 1
+        return item.meta.lsp
+      end)
+      local highlight_copy = lsp_item "fido"
+      local commit_copy = lsp_item "fido"
+      assert(highlight_copy ~= commit_copy, "fixture must use distinct tables")
+      r.resolve(CTX, highlight_copy)
+      r.resolve(CTX, commit_copy)
     end)
     T.eq(calls, 1)
   end)
