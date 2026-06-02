@@ -15,7 +15,7 @@ local promise = function()
       done, vals = true, { ... }
       local ws = waiters
       waiters = {}
-      for _, w in ipairs(ws) do
+      for _, w in pairs(ws) do
         w.resolve(unpack(vals))
       end
     end,
