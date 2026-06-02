@@ -3,10 +3,10 @@ local txt = require "coq.lib.text"
 
 ---@class tags.Tag
 ---@field word string
----@field path string
+---@field filename string
 ---@field line integer
 ---@field kind string
----@field language string
+---@field filetype string
 ---@field scope? string
 ---@field scopeKind? string
 ---@field typeref? string
@@ -53,10 +53,10 @@ M.parse = function(jsonl)
         if ok and type(obj) == "table" and obj._type == "tag" and obj.name and obj.path then
           coroutine.yield {
             word = obj.name,
-            path = obj.path,
+            filename = obj.path,
             line = obj.line or 0,
             kind = obj.kind or "",
-            language = (obj.language or ""):lower(),
+            filetype = (obj.language or ""):lower(),
             scope = obj.scope,
             scopeKind = obj.scopeKind,
             typeref = obj.typeref,

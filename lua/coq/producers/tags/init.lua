@@ -14,7 +14,7 @@ local M = {}
 
 ---@class tags.Info: buf_tracker.Meta
 ---@field buf integer
----@field path string
+---@field filename string
 
 ---@param buf integer
 ---@param prev_mtime? integer
@@ -23,11 +23,11 @@ M.buffer_info = function(buf, prev_mtime)
   if not vim.api.nvim_buf_is_valid(buf) then
     return nil
   end
-  local path = vim.api.nvim_buf_get_name(buf)
-  if path == "" then
+  local filename = vim.api.nvim_buf_get_name(buf)
+  if filename == "" then
     return nil
   end
-  local st = vim.uv.fs_stat(path)
+  local st = vim.uv.fs_stat(filename)
   if not st then
     return nil
   end
@@ -35,8 +35,11 @@ M.buffer_info = function(buf, prev_mtime)
   if prev_mtime and mtime <= prev_mtime then
     return nil
   end
-  return { buf = buf, tick = mtime, path = path }
+  return { buf = buf, tick = mtime, filename = filename }
 end
+
+---@type table<integer, string>
+local filenames_by_buf = {}
 
 local tracker = buf_tracker.new {
   fetch = function(buf, prev_mtime)
@@ -45,31 +48,36 @@ local tracker = buf_tracker.new {
     end, buf, prev_mtime)
   end,
   reindex = function(settings, infos)
-    local paths = vim.tbl_map(function(i)
-      return i.path
+    local filenames = vim.tbl_map(function(i)
+      return i.filename
     end, infos)
-    local raw = run.run("ctags", paths)
+    local raw = run.run("ctags", filenames)
     if raw == nil then
       return
     end
 
-    local buf_by_path = {}
+    local known = {}
     for _, i in pairs(infos) do
-      buf_by_path[i.path] = i.buf
+      known[i.filename] = true
     end
 
     for tag in parse.parse(raw) do
       async.sleep(0)
-      local buf = buf_by_path[tag.path]
-      if buf then
-        ---@diagnostic disable-next-line: inject-field
-        tag.buf = buf
+      if known[tag.filename] then
         index(settings).insert(tag --[[@as tags.Item]])
       end
     end
+
+    for _, i in pairs(infos) do
+      filenames_by_buf[i.buf] = i.filename
+    end
   end,
   prune = function(settings, buf)
-    index(settings).prune { buf = buf }
+    local filename = filenames_by_buf[buf]
+    if filename then
+      index(settings).prune { filename = filename }
+      filenames_by_buf[buf] = nil
+    end
   end,
 }
 
@@ -85,7 +93,7 @@ end
 ---@return lib.Iterator<string>
 local doc_iter = function(opts, ctx, tag)
   return async.wrap(function()
-    coroutine.yield(fs.fmt_path(ctx.cwd, tag.path, ctx.filename) .. ":" .. tag.line)
+    coroutine.yield(fs.fmt_path(ctx.cwd, tag.filename, ctx.filename) .. ":" .. tag.line)
 
     if tag.scopeKind and tag.scope then
       coroutine.yield(tag.scopeKind .. opts.path_sep .. tag.scope .. opts.parent_scope)
@@ -116,7 +124,7 @@ end
 M.matcher = function(settings, ctx)
   local opts = settings.clients.tags
 
-  local raw = index(settings).search { keyword_before = ctx.keyword_before }
+  local raw = index(settings).search { filetype = ctx.filetype, keyword_before = ctx.keyword_before }
   local shaped = util.shape(settings, ctx, raw)
 
   for tag in shaped do

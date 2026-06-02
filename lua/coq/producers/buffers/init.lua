@@ -107,12 +107,11 @@ end
 ---@param settings config.Settings
 M.matcher = function(settings, ctx)
   local opts = settings.clients.buffers
-  local search_ctx = {
-    keyword_before = ctx.keyword_before,
-    filetype = opts.same_filetype and ctx.filetype or nil,
-  }
 
-  local raw = index(settings).search(search_ctx)
+  local raw = index(settings).search {
+    filetype = opts.same_filetype and ctx.filetype or nil,
+    keyword_before = ctx.keyword_before,
+  }
   local shaped = util.shape(settings, ctx, raw)
 
   for item in shaped do

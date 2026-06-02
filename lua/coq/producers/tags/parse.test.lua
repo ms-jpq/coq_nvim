@@ -16,10 +16,10 @@ T.describe("tags.parse", function(test)
 
     T.eq(#tags, 1)
     T.eq(tags[1].word, "lil")
-    T.eq(tags[1].path, "/dogs/lil.py")
+    T.eq(tags[1].filename, "/dogs/lil.py")
     T.eq(tags[1].line, 10)
     T.eq(tags[1].kind, "function")
-    T.eq(tags[1].language, "python")
+    T.eq(tags[1].filetype, "python")
     T.eq(tags[1].pattern, "def lil():")
   end)
 

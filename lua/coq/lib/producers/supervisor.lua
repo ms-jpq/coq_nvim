@@ -10,11 +10,14 @@ local M = {}
 M.new = function(producers)
   ---@type async.Handle?
   local idle_handle = nil
+  ---@type async.Nursery?
+  local bound = nil
   local searching = false
 
   local sup = {}
 
   sup.bind = function(n)
+    bound = n
     for _, p in pairs(producers) do
       p.bind(n)
     end
@@ -58,22 +61,21 @@ M.new = function(producers)
       m.close()
     end
 
-    local pull = function()
-      for _, v in m do
-        return v
-      end
-      return nil
-    end
-
     local timeout_ms = math.floor(settings.limits.completion_auto_timeout * 1000)
-    local timed = deadline.new(timeout_ms, pull)
+    local timed = deadline.new(timeout_ms, function()
+      local _, v = m()
+      return v
+    end)
 
     local next = function()
-      local v = timed()
-      if v == nil then
-        runtime.detach(runtime.ROOT, close)
+      for v in timed do
+        return v
       end
-      return v
+      searching = false
+      if bound then
+        bound.spawn(m.close)
+      end
+      return nil
     end
 
     return setmetatable({ close = close }, { __call = next })
