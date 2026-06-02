@@ -286,9 +286,9 @@ T.describe("worker", function(test)
 
   test("ambient cancel mid-call sends STOP to worker", function()
     local async = require "coq.lib.async"
-    local handle = require "coq.lib.async.handle"
-    local nursery = require "coq.lib.async.nursery"
-    local runtime = require "coq.lib.async.runtime"
+    local handle = require "coq.lib.async._handle"
+    local nursery = require "coq.lib.async._nursery"
+    local runtime = require "coq.lib.async._runtime"
     local h = handle.new()
     local w = worker.spawn()
     w.queue(function()
@@ -321,9 +321,9 @@ T.describe("worker", function(test)
 
   test("uniterated stream is cleaned up on ambient cancel", function()
     local async = require "coq.lib.async"
-    local handle = require "coq.lib.async.handle"
-    local nursery = require "coq.lib.async.nursery"
-    local runtime = require "coq.lib.async.runtime"
+    local handle = require "coq.lib.async._handle"
+    local nursery = require "coq.lib.async._nursery"
+    local runtime = require "coq.lib.async._runtime"
     local h = handle.new()
     local w = worker.spawn()
     w.queue(function()
@@ -354,15 +354,15 @@ T.describe("worker", function(test)
 
   test("ambient cancel propagates through worker.main", function()
     local async = require "coq.lib.async"
-    local handle = require "coq.lib.async.handle"
-    local runtime = require "coq.lib.async.runtime"
+    local handle = require "coq.lib.async._handle"
+    local runtime = require "coq.lib.async._runtime"
     local h = handle.new()
     local w = worker.spawn()
     w.queue(function()
       _G.got_cancel = require("coq.lib.async").future()
     end)
 
-    local nursery = require "coq.lib.async.nursery"
+    local nursery = require "coq.lib.async._nursery"
     local n = nursery.new()
     local _ = h.on_cancel(n.cancel)
     n.spawn(function()

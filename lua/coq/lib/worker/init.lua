@@ -2,12 +2,12 @@ local async = require "coq.lib.async"
 local atools = require "coq.lib.atools"
 local cancel = require "coq.lib.async.cancel"
 local errs = require "coq.lib.errs"
-local handle = require "coq.lib.async.handle"
+local handle = require "coq.lib.async._handle"
 local inflight = require "coq.lib.worker.inflight"
 local lib = require "coq.lib"
 local mpmc = require "coq.lib.channels.mpmc"
-local nursery = require "coq.lib.async.nursery"
-local runtime = require "coq.lib.async.runtime"
+local nursery = require "coq.lib.async._nursery"
+local runtime = require "coq.lib.async._runtime"
 local transport = require "coq.lib.worker.frame_transport"
 local util = require "coq.lib.channels.util"
 
@@ -172,6 +172,14 @@ end
 
 local scheduled = vim.is_thread() and lib.noop or atools.scheduled
 
+local protect = vim.is_thread()
+    and function(fn)
+      return function(...)
+        cancel.pcall(fn, ...)
+      end
+    end
+  or errs.with_reporting
+
 ---@class worker.Responder
 ---@field serve fun(n: async.Nursery, frame: table)
 
@@ -226,7 +234,7 @@ local make_responder = function(write)
 
   local serve = function(n, frame)
     if parked.has(frame.id) then
-      n.spawn(errs.with_reporting(function()
+      n.spawn(protect(function()
         parked.resolve(frame.id, frame)
       end))
       return
@@ -247,7 +255,7 @@ local make_responder = function(write)
       end
     end, frame.id)
 
-    n.spawn(errs.with_reporting(function(defer)
+    n.spawn(protect(function(defer)
       defer(req_handle.cancel)
       defer(release)
       runtime.bind(coroutine.running(), req_handle)
@@ -276,7 +284,7 @@ local make_endpoint = function(duplex)
   endpoint.serve = function(n, dead_message)
     for frame in transport.reader(duplex.reader) do
       if frame.kind == Kind.YIELD then
-        n.spawn(errs.with_reporting(function()
+        n.spawn(protect(function()
           requester.resolve(frame)
         end))
       else

@@ -5,24 +5,20 @@ local cancel = require "coq.lib.async.cancel"
 
 local M = {}
 
-local thread_sink = nil
+local thread_sink = function() end
 
 ---@param fn fun(message: string)
 M.set_thread_sink = function(fn)
   thread_sink = fn
 end
 
----@param err any
-M.report = function(err)
-  if vim.is_thread() then
-    if thread_sink then
-      pcall(thread_sink, tostring(err))
-    end
-  else
-    vim.schedule(function()
-      vim.notify(err, vim.log.levels.ERROR)
-    end)
-  end
+---@type fun(err: any)
+M.report = vim.is_thread() and function(err)
+  pcall(thread_sink, tostring(err))
+end or function(err)
+  vim.schedule(function()
+    vim.notify(err, vim.log.levels.ERROR)
+  end)
 end
 
 ---@generic F: fun(...)

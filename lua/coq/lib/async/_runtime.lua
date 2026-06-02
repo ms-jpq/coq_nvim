@@ -1,6 +1,6 @@
 local cancel = require "coq.lib.async.cancel"
 local errs = require "coq.lib.errs"
-local handle = require "coq.lib.async.handle"
+local handle = require "coq.lib.async._handle"
 local lib = require "coq.lib"
 
 local M = {}
@@ -134,7 +134,7 @@ end
 ---@param h async.Handle
 ---@param fn fun(...)
 ---@param ... any
-M.detach = function(h, fn, ...)
+M._detach = function(h, fn, ...)
   return trampoline(fn, h, function(bounce, eff)
     local resumed = false
     local unwatch = lib.noop

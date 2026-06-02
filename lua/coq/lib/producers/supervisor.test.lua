@@ -1,9 +1,9 @@
 local T = require "coq.lib.test"
 local async = require "coq.lib.async"
 local config = require "coq.config"
-local handle = require "coq.lib.async.handle"
+local handle = require "coq.lib.async._handle"
 local lib = require "coq.lib"
-local nursery = require "coq.lib.async.nursery"
+local nursery = require "coq.lib.async._nursery"
 local supervisor = require "coq.lib.producers.supervisor"
 
 ---@return async.Nursery

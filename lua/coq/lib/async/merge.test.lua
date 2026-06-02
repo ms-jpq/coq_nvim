@@ -1,7 +1,7 @@
 local T = require "coq.lib.test"
 local async = require "coq.lib.async"
-local handle = require "coq.lib.async.handle"
-local runtime = require "coq.lib.async.runtime"
+local handle = require "coq.lib.async._handle"
+local runtime = require "coq.lib.async._runtime"
 
 local delayed = function(value, delay)
   local sent = false
@@ -69,7 +69,7 @@ T.describe("merge", function(test)
   end)
 
   test("returns nil when ambient handle cancelled mid-merge", function()
-    local nursery = require "coq.lib.async.nursery"
+    local nursery = require "coq.lib.async._nursery"
     local h = handle.new()
     local got
     local n = nursery.new(); local _ = h.on_cancel(n.cancel)

@@ -1,7 +1,7 @@
 local T = require "coq.lib.test"
 local async = require "coq.lib.async"
 local cancel = require "coq.lib.async.cancel"
-local nursery = require "coq.lib.async.nursery"
+local nursery = require "coq.lib.async._nursery"
 
 T.describe("cancel sentinel", function(test)
   test("is identifies cancel errors", function()

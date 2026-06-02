@@ -1,9 +1,10 @@
 local lib = require "coq.lib"
 local mpmc = require "coq.lib.channels.mpmc"
-local nursery = require "coq.lib.async.nursery"
-local runtime = require "coq.lib.async.runtime"
+local nursery = require "coq.lib.async._nursery"
+local runtime = require "coq.lib.async._runtime"
 
 local M = {
+  current = runtime.current,
   future = runtime.future,
   sleep = runtime.sleep,
   wrap = runtime.wrap,
@@ -15,7 +16,7 @@ local M = {
 M.entry = function(fn)
   return function(...)
     assert(coroutine.running() == nil, "entry: must be called outside a coroutine")
-    runtime.detach(runtime.ROOT, fn, ...)
+    runtime._detach(runtime.ROOT, fn, ...)
   end
 end
 

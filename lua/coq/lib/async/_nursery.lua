@@ -1,8 +1,8 @@
 local cancel = require "coq.lib.async.cancel"
 local errs = require "coq.lib.errs"
-local handle = require "coq.lib.async.handle"
+local handle = require "coq.lib.async._handle"
 local lib = require "coq.lib"
-local runtime = require "coq.lib.async.runtime"
+local runtime = require "coq.lib.async._runtime"
 
 ---@class async.Nursery
 ---@field closed boolean
@@ -42,7 +42,7 @@ M.new = function()
     assert(not nursery.closed, "spawn: nursery is closed")
     local child = handle.new(h)
 
-    runtime.detach(child, function()
+    runtime._detach(child, function()
       local thread = coroutine.running()
       pending[thread] = true
 

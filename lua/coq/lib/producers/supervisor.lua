@@ -1,6 +1,5 @@
 local async = require "coq.lib.async"
 local deadline = require "coq.lib.async.deadline"
-local runtime = require "coq.lib.async.runtime"
 
 local M = {}
 
@@ -27,7 +26,7 @@ M.new = function(producers)
     if searching then
       return
     end
-    idle_handle = runtime.current()
+    idle_handle = async.current()
 
     local idles = vim
       .iter(producers)
@@ -61,7 +60,7 @@ M.new = function(producers)
     end)
 
     searching = true
-    local _ = runtime.current().on_cancel(function()
+    local _ = async.current().on_cancel(function()
       searching = false
     end)
 

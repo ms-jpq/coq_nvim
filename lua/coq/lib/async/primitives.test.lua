@@ -1,9 +1,9 @@
 local T = require "coq.lib.test"
 local async = require "coq.lib.async"
 local cancel = require "coq.lib.async.cancel"
-local handle = require "coq.lib.async.handle"
-local nursery = require "coq.lib.async.nursery"
-local runtime = require "coq.lib.async.runtime"
+local handle = require "coq.lib.async._handle"
+local nursery = require "coq.lib.async._nursery"
+local runtime = require "coq.lib.async._runtime"
 
 T.describe("future cancel", function(test)
   test("await throws cancel when ambient handle already cancelled", function()
@@ -129,7 +129,7 @@ T.describe("sleep cancel", function(test)
     end
 
     local done = async.future()
-    runtime.detach(h, function()
+    runtime._detach(h, function()
       for _ = 1, 5 do
         async.sleep(1 * T.SLOW)
       end

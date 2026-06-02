@@ -1,5 +1,5 @@
 local T = require "coq.lib.test"
-local handle = require "coq.lib.async.handle"
+local handle = require "coq.lib.async._handle"
 local lib = require "coq.lib"
 
 T.describe("handle", function(test)

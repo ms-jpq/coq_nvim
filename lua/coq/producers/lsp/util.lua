@@ -1,6 +1,5 @@
 local async = require "coq.lib.async"
 local lib = require "coq.lib"
-local runtime = require "coq.lib.async.runtime"
 
 local M = {}
 
@@ -22,7 +21,7 @@ M.request = function(client, method, params, buf)
     end
 
     if req_id then
-      defer(runtime.current().on_cancel(function()
+      defer(async.current().on_cancel(function()
         vim.schedule(function()
           client:cancel_request(req_id)
         end)

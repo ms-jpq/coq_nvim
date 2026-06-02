@@ -1,4 +1,4 @@
-local runtime = require "coq.lib.async.runtime"
+local runtime = require "coq.lib.async._runtime"
 
 ---@class channels.Packet
 ---@field n integer
