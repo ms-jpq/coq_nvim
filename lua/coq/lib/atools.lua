@@ -127,6 +127,13 @@ M.fs = {
   stat = async.awaitify(vim.uv.fs_stat),
 }
 
+---@param path string
+---@return boolean
+M.is_dir = function(path)
+  local err, st = M.fs.stat(path)
+  return (not err and st and st.type == "directory") or false
+end
+
 ---@type fun(path: string): string?, uv.uv_fs_t?
 local fs_scandir = async.awaitify(vim.uv.fs_scandir)
 

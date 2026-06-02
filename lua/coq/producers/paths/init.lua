@@ -8,13 +8,6 @@ local util = require "coq.producers.util"
 
 local M = {}
 
----@param path string
----@return boolean
-local is_dir = function(path)
-  local err, st = atools.fs.stat(path)
-  return (not err and st and st.type == "directory") or false
-end
-
 ---@param partial string
 ---@param name string
 ---@return boolean
@@ -60,6 +53,7 @@ end
 ---@field cand paths.parse.Candidate
 ---@field dir string
 ---@field name string
+---@field full string
 
 ---@param settings config.Settings
 ---@param ctx ctx.full
@@ -76,21 +70,21 @@ local matches = function(settings, ctx)
     for cand in parse.candidates(ctx.line_before, opts) do
       local found = false
       for dir in cand_dirs(bases, cand) do
-        if is_dir(dir) then
+        if atools.is_dir(dir) then
           found = true
           local _, iter = atools.scandir(dir)
           for name in iter do
             if name_matches(cand.partial, name) then
-              coroutine.yield { cand = cand, dir = dir, name = name }
+              coroutine.yield { cand = cand, dir = dir, name = name, full = vim.fs.joinpath(dir, name) }
             end
           end
         end
       end
+
       if found then
-        goto done
+        return
       end
     end
-    ::done::
   end)
 end
 
@@ -106,15 +100,14 @@ M.matcher = function(settings, ctx)
   local line = row - 1
 
   for m in itertools.uniq_by(match_key, matches(settings, ctx)) do
-    local full = vim.fs.joinpath(m.dir, m.name)
-    local dir_q = is_dir(full)
+    local dir_q = atools.is_dir(m.full)
     local word = m.name .. (dir_q and m.cand.local_sep or "")
 
     coroutine.yield(util.item(settings, settings.clients.paths, {
       word = word,
       kind = dir_q and "Folder" or "File",
       filter = m.name,
-      path = full,
+      path = m.full,
       lsp = {
         position_encoding = "utf-8",
         item = {
