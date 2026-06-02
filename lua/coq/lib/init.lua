@@ -33,9 +33,8 @@ end
 
 ---@param err any
 M.report = function(err)
-  local e = tostring(err)
   vim.schedule(function()
-    vim.notify(e, vim.log.levels.ERROR)
+    vim.notify(err, vim.log.levels.ERROR)
   end)
 end
 

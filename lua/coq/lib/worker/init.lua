@@ -19,6 +19,12 @@ local Kind = {
 
 local DONE = {}
 
+local raise_if_cancelled = function()
+  if runtime.current().cancelled then
+    error(cancel.new(), 0)
+  end
+end
+
 ---@type table<function, string>
 local dump_cache = lib.weak()
 
@@ -97,22 +103,37 @@ local open = function(parked, write, message)
   unwatch = runtime.current().on_cancel(call.close)
 
   call.next = function()
-    if state.closed then
-      return nil
+    local frame = nil
+    if not state.closed then
+      if not primed then
+        write { kind = Kind.RESUME, id = id }
+      end
+      primed = false
+      frame = chan.pull()
+      if frame == nil or frame.status ~= nil then
+        state.close()
+      end
     end
-    if not primed then
-      write { kind = Kind.RESUME, id = id }
-    end
-    primed = false
-    local frame = chan.pull()
-    if frame == nil or frame.status ~= nil then
-      state.close()
-    end
+
+    raise_if_cancelled()
     return frame
   end
 
   ---@cast call worker.Call
   return call
+end
+
+---@param frame { status: boolean?, values: any[], n_values: integer }?
+---@param level integer
+---@return any ...
+local interpret_frame = function(frame, level)
+  if frame == nil then
+    return
+  end
+  if frame.status == false then
+    error(frame.values[1] or errs.UNKNOWN, level + 1)
+  end
+  return unpack(frame.values, 1, frame.n_values)
 end
 
 ---@class worker.Requester
@@ -125,16 +146,6 @@ end
 ---@return worker.Requester
 local make_requester = function(write)
   local parked = inflight.new()
-
-  local interpret_frame = function(frame, level)
-    if frame == nil then
-      return
-    end
-    if frame.status == false then
-      error(frame.values[1] or errs.UNKNOWN, level + 1)
-    end
-    return unpack(frame.values, 1, frame.n_values)
-  end
 
   local requester = { drain = parked.drain }
 
@@ -159,47 +170,59 @@ local make_requester = function(write)
   return requester
 end
 
+local scheduled = vim.is_thread() and lib.noop or atools.scheduled
+
 ---@class worker.Responder
 ---@field serve fun(n: async.Nursery, frame: table)
 
 ---@param write fun(body: table)
 ---@return worker.Responder
 local make_responder = function(write)
-  local parked = inflight.new()
-
-  local dispatch = function(frame, req_handle, next_chan)
+  local dispatch = function(req_handle, chan, frame)
+    local fn = assert(load(frame.fn_bytecode))
     local args, n_args = frame.args or {}, frame.n_args or 0
 
-    local stream = async.wrap(function(...)
-      local fn = assert(load(frame.fn_bytecode))
+    local iter = async.wrap(function(...)
       return coroutine.yield(DONE, build_response(frame.id, pcall(fn, ...)))
     end)
 
-    local consume = function()
-      local item, terminal = stream(unpack(args, 1, n_args))
-      while item ~= DONE do
-        write(build_response(frame.id, nil, item))
-        if req_handle.cancelled or not next_chan.pull() then
-          return build_response(frame.id, true)
-        end
-        item, terminal = stream(true)
-      end
-      return terminal
+    local resume = function(...)
+      local packed = util.pack(iter(...))
+      local done = packed[1] == DONE
+      return done, done and packed[2] or packed
     end
 
-    local ok, terminal = pcall(consume)
-    pcall(function()
-      for _ in stream do
+    local pump = function()
+      local done, packed = resume(unpack(args, 1, n_args))
+      while not done do
+        write(build_response(frame.id, nil, util.unpack(packed)))
+        local more = not req_handle.cancelled and chan.pull()
+        if not more then
+          return build_response(frame.id, true)
+        end
+        done, packed = resume(true)
+      end
+      return packed
+    end
+
+    local ok, terminal = pcall(pump)
+    local drained, err = pcall(function()
+      for _ in iter do
         lib.noop()
       end
     end)
+    if not drained and not cancel.is(err) then
+      lib.report(err)
+    end
+
     if not ok and cancel.is(terminal) then
       ok, terminal = true, build_response(frame.id, true)
     end
+
     write(ok and terminal or build_response(frame.id, false, terminal))
   end
 
-  local scheduled = vim.is_thread() and lib.noop or atools.scheduled
+  local parked = inflight.new()
 
   local serve = function(n, frame)
     if parked.has(frame.id) then
@@ -213,14 +236,14 @@ local make_responder = function(write)
     end
 
     local req_handle = handle.new(runtime.current())
-    local next_chan = mpmc.new()
-    local _ = req_handle.on_cancel(next_chan.close)
+    local chan = mpmc.new(1)
+    local _ = req_handle.on_cancel(chan.close)
 
     local _, release = parked.reserve(function(rsp)
       if rsp.kind == Kind.STOP then
         req_handle.cancel()
       else
-        next_chan.push(true)
+        chan.push(true)
       end
     end, frame.id)
 
@@ -229,7 +252,7 @@ local make_responder = function(write)
       defer(release)
       runtime.bind(coroutine.running(), req_handle)
       scheduled()
-      dispatch(frame, req_handle, next_chan)
+      dispatch(req_handle, chan, frame)
     end))
   end
 
@@ -248,7 +271,9 @@ local make_endpoint = function(duplex)
   local requester = make_requester(write)
   local responder = make_responder(write)
 
-  local serve = function(n, dead_message)
+  local endpoint = { request_oneshot = requester.request_oneshot, request_stream = requester.request_stream }
+
+  endpoint.serve = function(n, dead_message)
     for frame in transport.reader(duplex.reader) do
       if frame.kind == Kind.YIELD then
         n.spawn(lib.with_reporting(function()
@@ -261,11 +286,8 @@ local make_endpoint = function(duplex)
     requester.drain(build_response(nil, false, dead_message))
   end
 
-  return {
-    request_oneshot = requester.request_oneshot,
-    request_stream = requester.request_stream,
-    serve = serve,
-  }
+  ---@cast endpoint worker.Endpoint
+  return endpoint
 end
 
 ---@class worker.WorkerStream: lib.Closable

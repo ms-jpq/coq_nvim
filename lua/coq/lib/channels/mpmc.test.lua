@@ -4,14 +4,14 @@ local mpmc = require "coq.lib.channels.mpmc"
 
 T.describe("mpmc", function(test)
   test("push then pull returns the value", function()
-    local chan = mpmc.new()
+    local chan = mpmc.new(1)
     chan.push "lil"
 
     T.eq(chan.pull(), "lil")
   end)
 
   test("pulls in FIFO order", function()
-    local chan = mpmc.new()
+    local chan = mpmc.new(3)
     chan.push "lil"
     chan.push "spot"
     chan.push "fido"
@@ -22,7 +22,7 @@ T.describe("mpmc", function(test)
   end)
 
   test("pull blocks until push happens", function()
-    local chan = mpmc.new()
+    local chan = mpmc.new(1)
     local got
     async.scope(function(n)
       n.spawn(function()
@@ -36,7 +36,7 @@ T.describe("mpmc", function(test)
   end)
 
   test("push and pull forward multiple values", function()
-    local chan = mpmc.new()
+    local chan = mpmc.new(1)
     chan.push("lil", "spot", "fido")
     local a, b, c = chan.pull()
 
@@ -44,14 +44,14 @@ T.describe("mpmc", function(test)
   end)
 
   test("close on empty makes pull return nil", function()
-    local chan = mpmc.new()
+    local chan = mpmc.new(1)
     chan.close()
 
     T.eq(chan.pull(), nil)
   end)
 
   test("close drains queued items before nil", function()
-    local chan = mpmc.new()
+    local chan = mpmc.new(2)
     chan.push "lil"
     chan.push "spot"
     chan.close()
@@ -62,7 +62,7 @@ T.describe("mpmc", function(test)
   end)
 
   test("push after close is silently dropped", function()
-    local chan = mpmc.new()
+    local chan = mpmc.new(1)
     chan.close()
     chan.push "lil"
 
@@ -70,7 +70,7 @@ T.describe("mpmc", function(test)
   end)
 
   test("push returns true on success and false on closed", function()
-    local chan = mpmc.new()
+    local chan = mpmc.new(1)
 
     T.eq(chan.push "lil", true)
     chan.close()
@@ -78,7 +78,7 @@ T.describe("mpmc", function(test)
   end)
 
   test("close wakes a blocked puller", function()
-    local chan = mpmc.new()
+    local chan = mpmc.new(1)
     local got
     async.scope(function(n)
       n.spawn(function()
@@ -92,7 +92,7 @@ T.describe("mpmc", function(test)
   end)
 
   test("multiple producers push from coroutines", function()
-    local chan = mpmc.new()
+    local chan = mpmc.new(1)
     local seen = {}
     async.scope(function(n)
       n.spawn(function()
@@ -166,7 +166,7 @@ T.describe("mpmc", function(test)
   end)
 
   test("callable via for-loop", function()
-    local chan = mpmc.new()
+    local chan = mpmc.new(1)
     local seen = {}
     async.scope(function(n)
       n.spawn(function()
@@ -186,7 +186,7 @@ T.describe("mpmc", function(test)
   end)
 
   test("push synchronously hands off to a waiting puller", function()
-    local chan = mpmc.new()
+    local chan = mpmc.new(1)
     local order = {}
     async.scope(function(n)
       n.spawn(function()
@@ -222,7 +222,7 @@ T.describe("mpmc", function(test)
   end)
 
   test("a cancelled puller does not swallow a later push", function()
-    local chan = mpmc.new()
+    local chan = mpmc.new(1)
     local got = "none"
     async.scope(function(n)
       local a = n.spawn(function()

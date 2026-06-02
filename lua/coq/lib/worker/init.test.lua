@@ -142,6 +142,22 @@ T.describe("worker", function(test)
     T.eq(seen, { "lil", "spot", "fido" })
   end)
 
+  test("queue_stream yields multiple values per item", function()
+    local w = worker.spawn()
+    local seen = {}
+    for name, age in
+      w.queue_stream(function()
+        coroutine.yield("spot", 3)
+        coroutine.yield("fido", 7)
+      end)
+    do
+      table.insert(seen, { name, age })
+    end
+    w.close()
+
+    T.eq(seen, { { "spot", 3 }, { "fido", 7 } })
+  end)
+
   test("queue_stream forwards args", function()
     local w = worker.spawn()
     local seen = {}

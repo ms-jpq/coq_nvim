@@ -9,11 +9,9 @@ local util = require "coq.lib.channels.util"
 local M = {}
 
 ---@generic T
----@param capacity? integer
+---@param capacity integer
 ---@return channels.Mpmc<T>
 M.new = function(capacity)
-  capacity = math.max(1, capacity or math.huge)
-
   local que = queue.new()
   local readable = util.cond()
   local writable = util.cond()
