@@ -10,11 +10,7 @@ local producer = require "coq.lib.producers"
 local regular = function(spec)
   return {
     max_pulls = spec.max_pulls or math.huge --[[@as integer]],
-    bind = function(n)
-      if spec.bind then
-        spec.bind(n)
-      end
-    end,
+    bind = lib.noop,
     idle = lib.noop,
     search = function(ctx)
       return async.wrap(function()
@@ -32,7 +28,6 @@ local cancel_tests = function(name, factory)
       local db = factory {
         max_pulls = math.huge --[[@as integer]],
         idle = lib.noop,
-        bind = lib.noop,
         matcher = function()
           coroutine.yield "lil"
         end,

@@ -6,7 +6,6 @@ local fs = require "coq.producers.fs"
 local index = require "coq.producers.buffer.index"
 local producer = require "coq.lib.producers"
 local tokens = require "coq.lib.index.tokens"
-local util = require "coq.producers.util"
 local worker = require "coq.lib.worker"
 
 ---@class buffer.BufInfo : buf_tracker.Meta
@@ -80,16 +79,20 @@ local tracker = buf_tracker.new {
       return require("coq.producers.buffer").buffer_info(...)
     end, buf, prev_tick)
   end,
-  reindex = function(info)
-    local kw = tokens.parse_iskeyword(info.iskeyword)
-    local lines = info.lines and vim.iter(info.lines) --[[@as lib.Iterator<string>]] or atools.file_lines(info.filename)
-    for word in tokens.words(kw, lines) do
-      index.insert {
-        buf = info.buf,
-        word = word,
-        filetype = info.filetype,
-        filename = info.filename,
-      }
+  reindex = function(infos)
+    for _, info in pairs(infos) do
+      async.sleep(0)
+      local kw = tokens.parse_iskeyword(info.iskeyword)
+      local lines = info.lines and vim.iter(info.lines) --[[@as lib.Iterator<string>]]
+        or atools.file_lines(info.filename)
+      for word in tokens.words(kw, lines) do
+        index.insert {
+          buf = info.buf,
+          word = word,
+          filetype = info.filetype,
+          filename = info.filename,
+        }
+      end
     end
   end,
   prune = function(buf)
@@ -97,7 +100,11 @@ local tracker = buf_tracker.new {
   end,
 }
 
-M.idle = tracker.idle
+---@param _ config.Settings
+---@param idle_ctx idle.Ctx
+M.idle = function(_, idle_ctx)
+  tracker(idle_ctx)
+end
 
 ---@param settings config.Settings
 M.matcher = function(settings, ctx)
@@ -135,10 +142,6 @@ M.new = function(settings)
   return producer.threaded {
     settings = settings,
     max_pulls = settings.clients.buffers.max_pulls or math.huge,
-    bind = function(n)
-      util.buffer_bind(n, tracker.push)
-    end,
-    drain = tracker.drain,
     idle = function(...)
       require("coq.producers.buffer").idle(...)
     end,

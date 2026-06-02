@@ -2,9 +2,10 @@ local search = require "coq.lib.index"
 local trie = require "coq.lib.index.trie"
 
 ---@class tags.Item: tags.Tag
+---@field buf integer
 
 ---@class tags.Ctx
----@field language? string
+---@field buf? integer
 ---@field keyword_before? string
 
 ---@return index.Searcher<tags.Ctx, tags.Item>
@@ -24,10 +25,10 @@ end
 
 return search.indexed {
   insert_key = function(item)
-    return item.language
+    return item.buf
   end,
   query_key = function(ctx)
-    return ctx.language
+    return ctx.buf
   end,
   child = name_trie,
 }

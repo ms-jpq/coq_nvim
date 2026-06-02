@@ -4,7 +4,6 @@ local buf_tracker = require "coq.lib.producers.buf_tracker"
 local fs = require "coq.producers.fs"
 local index = require "coq.producers.treesitter.index"
 local producer = require "coq.lib.producers"
-local util = require "coq.producers.util"
 local worker = require "coq.lib.worker"
 
 ---@class treesitter.BufMeta : buf_tracker.Meta
@@ -42,22 +41,25 @@ local tracker = buf_tracker.new {
       return require("coq.producers.treesitter").buffer_meta(...)
     end, buf, prev_tick)
   end,
-  reindex = function(meta)
-    for payload in
-      worker.main_stream(function(...)
-        return require("coq.producers.treesitter.request").query(...)
-      end, meta.buf) --[[@as lib.Iterator<treesitter.Payload>]]
-    do
-      index.insert {
-        buf = meta.buf,
-        filetype = meta.filetype,
-        filename = meta.filename,
-        text = payload.text,
-        kind = payload.kind,
-        range = payload.range,
-        parent = payload.parent,
-        grandparent = payload.grandparent,
-      }
+  reindex = function(metas)
+    for _, meta in pairs(metas) do
+      async.sleep(0)
+      for payload in
+        worker.main_stream(function(...)
+          return require("coq.producers.treesitter.request").query(...)
+        end, meta.buf) --[[@as lib.Iterator<treesitter.Payload>]]
+      do
+        index.insert {
+          buf = meta.buf,
+          filetype = meta.filetype,
+          filename = meta.filename,
+          text = payload.text,
+          kind = payload.kind,
+          range = payload.range,
+          parent = payload.parent,
+          grandparent = payload.grandparent,
+        }
+      end
     end
   end,
   prune = function(buf)
@@ -65,7 +67,11 @@ local tracker = buf_tracker.new {
   end,
 }
 
-M.idle = tracker.idle
+---@param _ config.Settings
+---@param idle_ctx idle.Ctx
+M.idle = function(_, idle_ctx)
+  tracker(idle_ctx)
+end
 
 ---@param kind string
 ---@return string
@@ -162,10 +168,6 @@ M.new = function(settings)
   return producer.threaded {
     settings = settings,
     max_pulls = settings.clients.tree_sitter.max_pulls or math.huge,
-    bind = function(n)
-      util.buffer_bind(n, tracker.push)
-    end,
-    drain = tracker.drain,
     idle = function(...)
       require("coq.producers.treesitter").idle(...)
     end,

@@ -10,17 +10,13 @@ local worker = require "coq.lib.worker"
 ---@class producers.SearchIter: lib.Closable
 ---@overload fun(): completions.Item?
 
----@alias producers.IdleFn<C> fun(settings: config.Settings?, events: table<any, any>, ctx: C)
+---@alias producers.IdleFn<C> fun(settings: config.Settings?, idle_ctx: C)
 ---@alias producers.MatcherFn<C> fun(settings: config.Settings?, ctx: C)
----@alias producers.OnBind fun(n: async.Nursery)
----@alias producers.DrainFn fun(): table<any, any>
 
 ---@class producers.Spec<C>
 ---@field settings? config.Settings
 ---@field idle producers.IdleFn<C>
 ---@field matcher producers.MatcherFn<C>
----@field bind producers.OnBind
----@field drain? producers.DrainFn
 ---@field max_pulls integer
 
 local M = {}
@@ -33,10 +29,9 @@ M.threaded = function(spec)
 
   return {
     max_pulls = spec.max_pulls,
-    bind = spec.bind,
-    idle = function(ctx)
-      local batch = spec.drain and spec.drain() or {}
-      w.queue(spec.idle, spec.settings, batch, ctx)
+    bind = lib.noop,
+    idle = function(idle_ctx)
+      w.queue(spec.idle, spec.settings, idle_ctx)
     end,
     search = function(ctx)
       return async.wrap(function()

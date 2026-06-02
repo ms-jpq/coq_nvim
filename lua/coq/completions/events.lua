@@ -15,22 +15,44 @@ local lib = require "coq.lib"
 
 ---@alias completions.PumEvent completions.PumChangedEvent | completions.PumClearEvent
 
+---@class completions.BufDiff
+---@field updated table<integer, true>
+---@field removed table<integer, true>
+
 ---@class completions.Events
 ---@field trigger channels.Broadcast<nil>
 ---@field pum channels.Broadcast<completions.PumEvent>
 ---@field done channels.Broadcast<vim.v.completed_item>
 ---@field idle channels.Broadcast<nil>
+---@field drain_bufs fun(): completions.BufDiff
+
+local BUF_KINDS = {
+  BufEnter = "update",
+  BufRead = "update",
+  BufWinEnter = "update",
+  TextChanged = "update",
+  TextChangedI = "update",
+  BufDelete = "remove",
+  BufWipeout = "remove",
+}
 
 local M = {}
 
 ---@return completions.Events
 M.new = function()
+  local bufs = { updated = {}, removed = {} }
+
   ---@type completions.Events
   local events = {
     trigger = broadcast.new(),
     pum = broadcast.new(),
     done = broadcast.new(),
     idle = broadcast.new(),
+    drain_bufs = function()
+      local p = bufs
+      bufs = { updated = {}, removed = {} }
+      return p
+    end,
   }
 
   vim.api.nvim_create_autocmd({ "InsertCharPre" }, {
@@ -69,6 +91,26 @@ M.new = function()
       events.idle.replace(args)
     end,
   })
+
+  vim.api.nvim_create_autocmd(vim.tbl_keys(BUF_KINDS), {
+    group = lib.group,
+    callback = function(args)
+      local kind = BUF_KINDS[args.event]
+      if kind == "remove" then
+        bufs.updated[args.buf] = nil
+        bufs.removed[args.buf] = true
+      else
+        bufs.removed[args.buf] = nil
+        bufs.updated[args.buf] = true
+      end
+    end,
+  })
+
+  for _, buf in pairs(vim.api.nvim_list_bufs()) do
+    if vim.bo[buf].buflisted then
+      bufs.updated[buf] = true
+    end
+  end
 
   return events
 end

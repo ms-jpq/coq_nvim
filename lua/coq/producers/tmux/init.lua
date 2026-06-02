@@ -1,7 +1,6 @@
 local async = require "coq.lib.async"
 local atools = require "coq.lib.atools"
 local index = require "coq.producers.tmux.index"
-local lib = require "coq.lib"
 local producer = require "coq.lib.producers"
 local tokens = require "coq.lib.index.tokens"
 
@@ -82,15 +81,14 @@ do
   end
 
   ---@param settings config.Settings
-  ---@param _ table
-  ---@param ctx ctx.full
-  M.idle = function(settings, _, ctx)
+  ---@param idle_ctx idle.Ctx
+  M.idle = function(settings, idle_ctx)
     local env = vim.uv.os_environ()
     if env.TMUX == nil then
       return
     end
 
-    local kw = ctx.kw
+    local kw = idle_ctx.ctx.kw
 
     local panes, live = {}, {}
     for pane in list_panes(settings, env.TMUX_PANE) do
@@ -164,7 +162,6 @@ M.new = function(settings)
   return producer.threaded {
     settings = settings,
     max_pulls = settings.clients.tmux.max_pulls or math.huge,
-    bind = lib.noop,
     idle = function(...)
       require("coq.producers.tmux").idle(...)
     end,

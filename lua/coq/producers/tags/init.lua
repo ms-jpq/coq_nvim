@@ -1,50 +1,81 @@
 local async = require "coq.lib.async"
+local buf_tracker = require "coq.lib.producers.buf_tracker"
 local fs = require "coq.producers.fs"
 local index = require "coq.producers.tags.index"
 local parse = require "coq.producers.tags.parse"
 local producer = require "coq.lib.producers"
 local run = require "coq.producers.tags.run"
-local util = require "coq.producers.util"
+local worker = require "coq.lib.worker"
 
 local MAX_BYTES = 1024 * 1024
 
 local M = {}
 
-local mtimes = {}
+---@class tags.Info: buf_tracker.Meta
+---@field buf integer
+---@field path string
 
----@param _ config.Settings
----@param events table<string, 'update' | 'remove'>
-M.idle = function(_, events)
-  local stale = {}
+---@param buf integer
+---@param prev_mtime? integer
+---@return tags.Info?
+M.buffer_info = function(buf, prev_mtime)
+  if not vim.api.nvim_buf_is_valid(buf) then
+    return nil
+  end
+  local path = vim.api.nvim_buf_get_name(buf)
+  if path == "" then
+    return nil
+  end
+  local st = vim.uv.fs_stat(path)
+  if not st or st.size > MAX_BYTES then
+    return nil
+  end
+  local mtime = st.mtime.sec or 0
+  if prev_mtime and mtime <= prev_mtime then
+    return nil
+  end
+  return { buf = buf, tick = mtime, path = path }
+end
 
-  for path, kind in pairs(events) do
-    async.sleep(0)
-    if kind == "remove" then
-      index.prune { path = path }
-      mtimes[path] = nil
-    else
-      local st = vim.uv.fs_stat(path)
-      if st and st.size <= MAX_BYTES and (st.mtime.sec or 0) > (mtimes[path] or 0) then
-        index.prune { path = path }
-        mtimes[path] = st.mtime.sec or 0
-        table.insert(stale, path)
+local tracker = buf_tracker.new {
+  fetch = function(buf, prev_mtime)
+    return worker.main(function(...)
+      return require("coq.producers.tags").buffer_info(...)
+    end, buf, prev_mtime)
+  end,
+  reindex = function(infos)
+    local paths = vim.tbl_map(function(i)
+      return i.path
+    end, infos)
+    local raw = run.run("ctags", paths)
+    if raw == nil then
+      return
+    end
+
+    local buf_by_path = {}
+    for _, i in pairs(infos) do
+      buf_by_path[i.path] = i.buf
+    end
+
+    for tag in parse.parse(raw) do
+      async.sleep(0)
+      local buf = buf_by_path[tag.path]
+      if buf then
+        ---@diagnostic disable-next-line: inject-field
+        tag.buf = buf
+        index.insert(tag)
       end
     end
-  end
+  end,
+  prune = function(buf)
+    index.prune { buf = buf }
+  end,
+}
 
-  if #stale == 0 then
-    return
-  end
-
-  local raw = run.run("ctags", stale)
-  if raw == nil then
-    return
-  end
-
-  for tag in parse.parse(raw) do
-    async.sleep(0)
-    index.insert(tag)
-  end
+---@param _ config.Settings
+---@param idle_ctx idle.Ctx
+M.idle = function(_, idle_ctx)
+  tracker(idle_ctx)
 end
 
 ---@param opts config.TagsClient
@@ -86,13 +117,8 @@ M.matcher = function(settings, ctx)
   local sc = settings.display.pum.source_context
   local menu = sc[1] .. opts.short_name .. sc[2]
 
-  local search_ctx = {
-    language = ctx.filetype,
-    keyword_before = ctx.keyword_before,
-  }
-
   for tag in
-    index.search(search_ctx) --[[@as lib.Iterator<tags.Item>]]
+    index.search { keyword_before = ctx.keyword_before } --[[@as lib.Iterator<tags.Item>]]
   do
     if tag.name ~= ctx.cword then
       local lines = vim.iter(doc_iter(opts, ctx, tag)):totable()
@@ -114,39 +140,9 @@ end
 ---@param settings config.Settings
 ---@return producers.Producer<ctx.full>
 M.new = function(settings)
-  local pending = {}
-  local path_by_buf = {}
-
   return producer.threaded {
     settings = settings,
     max_pulls = settings.clients.tags.max_pulls or math.huge,
-    bind = function(n)
-      util.buffer_bind(n, function(buf, kind)
-        local path
-        if kind == "update" then
-          if not vim.api.nvim_buf_is_valid(buf) then
-            return
-          end
-          path = vim.api.nvim_buf_get_name(buf)
-          if path == "" then
-            return
-          end
-          path_by_buf[buf] = path
-        else
-          path = path_by_buf[buf]
-          if path == nil then
-            return
-          end
-          path_by_buf[buf] = nil
-        end
-        pending[path] = kind
-      end)
-    end,
-    drain = function()
-      local p = pending
-      pending = {}
-      return p
-    end,
     idle = function(...)
       require("coq.producers.tags").idle(...)
     end,
