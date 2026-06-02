@@ -1,4 +1,5 @@
 local async = require "coq.lib.async"
+local runtime = require "coq.lib.async.runtime"
 local sparse = require "coq.lib.sparse_table"
 local util = require "coq.lib.channels.util"
 
@@ -15,6 +16,7 @@ local M = {}
 ---@return channels.Broadcast<T>
 M.new = function()
   local subscribers = sparse.new()
+  local current = nil
 
   local dismiss = function(sub)
     if sub.gone then
@@ -44,6 +46,7 @@ M.new = function()
       return false
     end
     local packet = util.pack(...)
+    current = packet
     for _, sub in subscribers.iter() do
       local f = sub.waiter
       sub.waiter = nil
@@ -58,7 +61,7 @@ M.new = function()
   end
 
   chan.subscribe = function()
-    local sub = { pending = nil, waiter = nil, gone = state.closed }
+    local sub = { pending = state.closed and nil or current, waiter = nil, gone = state.closed }
     local key
     if not state.closed then
       key = subscribers.push(sub)
@@ -85,7 +88,13 @@ M.new = function()
       else
         local f = async.future()
         sub.waiter = f
-        packet = f.await()
+        local unwatch = runtime.current().on_cancel(it.close)
+        local ok, res = pcall(f.await)
+        unwatch()
+        if not ok then
+          error(res, 0)
+        end
+        packet = res
         if packet == nil then
           return nil
         end

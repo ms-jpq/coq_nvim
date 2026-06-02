@@ -220,4 +220,23 @@ T.describe("mpmc", function(test)
 
     T.eq(results, { a = false, b = false })
   end)
+
+  test("a cancelled puller does not swallow a later push", function()
+    local chan = mpmc.new()
+    local got = "none"
+    async.scope(function(n)
+      local a = n.spawn(function()
+        chan.pull()
+      end)
+      n.spawn(function()
+        got = chan.pull()
+      end)
+      async.sleep(3 * T.SLOW)
+      a.cancel()
+      async.sleep(3 * T.SLOW)
+      chan.push "spot"
+    end)
+
+    T.eq(got, "spot")
+  end)
 end)

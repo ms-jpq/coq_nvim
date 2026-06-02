@@ -129,19 +129,6 @@ T.describe("broadcast", function(test)
     T.eq(seen_b, { "lil" })
   end)
 
-  test("late subscriber misses prior pushes", function()
-    local chan = broadcast.new()
-    chan.replace "lil"
-    local sub = chan.subscribe()
-    async.scope(function(n)
-      n.spawn(function()
-        async.sleep(2 * T.SLOW)
-        chan.replace "spot"
-      end)
-      T.eq(sub(), "spot")
-    end)
-  end)
-
   test("close drains pending value before nil", function()
     local chan = broadcast.new()
     local sub = chan.subscribe()
@@ -175,5 +162,54 @@ T.describe("broadcast", function(test)
 
     local a, b, c = sub()
     T.eq({ a, b, c }, { "lil", "spot", "fido" })
+  end)
+
+  test("a late subscriber is seeded with the latest replaced value", function()
+    local chan = broadcast.new()
+    chan.replace "lil"
+    local sub = chan.subscribe()
+
+    T.eq(sub(), "lil")
+  end)
+
+  test("only the latest value is retained for late subscribers", function()
+    local chan = broadcast.new()
+    chan.replace "lil"
+    chan.replace "spot"
+    local sub = chan.subscribe()
+
+    T.eq(sub(), "spot")
+  end)
+
+  test("a subscriber on an untouched channel has nothing pending", function()
+    local chan = broadcast.new()
+    local sub = chan.subscribe()
+    local got = "unset"
+    async.scope(function(n)
+      n.spawn(function()
+        async.sleep(2 * T.SLOW)
+        chan.replace "fido"
+      end)
+      got = sub()
+    end)
+
+    T.eq(got, "fido")
+  end)
+
+  test("cancelling an awaiting subscriber drops it", function()
+    local chan = broadcast.new()
+    local sub = chan.subscribe()
+    async.scope(function(n)
+      local a = n.spawn(function()
+        sub()
+      end)
+      async.sleep(3 * T.SLOW)
+      a.cancel()
+    end)
+
+    -- sub was dropped on cancel: a later replace can't target the dead waiter,
+    -- and the sub reports gone (nil) rather than leaking / eating the packet.
+    chan.replace "spot"
+    T.eq(sub(), nil)
   end)
 end)

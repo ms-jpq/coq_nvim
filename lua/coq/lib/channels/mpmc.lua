@@ -20,25 +20,38 @@ M.new = function(capacity)
   local push_waiters = queue.new()
 
   local notify = function(waiters)
-    local f = waiters.pop()
-    if f then
-      f.resolve()
+    while true do
+      local entry = waiters.pop()
+      if not entry then
+        return
+      end
+      if not entry.dead then
+        entry.f.resolve()
+        return
+      end
     end
   end
 
   local wait = function(waiters)
-    local f = runtime.future()
-    waiters.push(f)
-    f.await()
+    local entry = { f = runtime.future() }
+    waiters.push(entry)
+    local unwatch = runtime.current().on_cancel(function()
+      entry.dead = true
+    end)
+    local ok, err = pcall(entry.f.await)
+    unwatch()
+    if not ok then
+      error(err, 0)
+    end
   end
 
   local drain = function(waiters)
     while true do
-      local f = waiters.pop()
-      if not f then
+      local entry = waiters.pop()
+      if not entry then
         return
       end
-      f.resolve()
+      entry.f.resolve()
     end
   end
 
