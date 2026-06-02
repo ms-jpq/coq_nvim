@@ -37,7 +37,6 @@ end
 ---@param settings config.Settings
 M.matcher = function(settings, ctx)
   local opts = settings.clients.snippets
-  local menu = util.menu(settings, opts)
 
   local raw = index(settings).search { filetype = ctx.filetype, keyword_before = ctx.keyword_before }
   local shaped = util.shape(settings, ctx, raw)
@@ -47,11 +46,10 @@ M.matcher = function(settings, ctx)
   do
     local label = (item.label and item.label ~= "") and item.label or item.word
     local lines = vim.iter(doc_lines(item)):totable()
-    coroutine.yield(util.item(opts, {
+    coroutine.yield(util.item(settings, opts, {
       word = item.word,
       abbr = label,
       kind = "Snippet",
-      menu = menu,
       filter = item.word,
       snippet = item.body,
       doc = #lines > 0 and { lines = lines, filetype = ctx.filetype } or nil,

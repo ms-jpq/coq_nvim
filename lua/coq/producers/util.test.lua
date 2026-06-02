@@ -97,7 +97,9 @@ T.describe("producers.util.shape", function(test)
   end)
 end)
 
-T.describe("producers.util.menu", function(test)
+T.describe("producers.util.item", function(test)
+  local opts = { short_name = "BF", always_on_top = true }
+
   ---@param brackets string[]
   ---@return config.Settings
   local with = function(brackets)
@@ -106,19 +108,15 @@ T.describe("producers.util.menu", function(test)
   end
 
   test("wraps short_name in the configured brackets", function()
-    T.eq(util.menu(with { "「", "」" }, { short_name = "BF" }), "「BF」")
+    T.eq(util.item(with { "「", "」" }, opts, { word = "rex", kind = "Text" }).menu, "「BF」")
   end)
 
   test("threads empty brackets through unchanged", function()
-    T.eq(util.menu(with { "", "" }, { short_name = "TS" }), "TS")
+    T.eq(util.item(with { "", "" }, { short_name = "TS" }, { word = "rex", kind = "Text" }).menu, "TS")
   end)
-end)
 
-T.describe("producers.util.item", function(test)
-  local opts = { short_name = "BF", always_on_top = true }
-
-  test("packs the seven canonical fields", function()
-    local item = util.item(opts, { word = "rex", kind = "Text", menu = "「BF」", filter = "rex" })
+  test("packs the canonical fields", function()
+    local item = util.item(with { "「", "」" }, opts, { word = "rex", kind = "Text", filter = "rex" })
     T.eq(item.word, "rex")
     T.eq(item.kind, "Text")
     T.eq(item.menu, "「BF」")
@@ -130,17 +128,17 @@ T.describe("producers.util.item", function(test)
   end)
 
   test("every call mints a fresh uid", function()
-    local a = util.item(opts, { word = "spot", kind = "Text", menu = "」" })
-    local b = util.item(opts, { word = "spot", kind = "Text", menu = "」" })
+    local s = with { "", "" }
+    local a = util.item(s, opts, { word = "spot", kind = "Text" })
+    local b = util.item(s, opts, { word = "spot", kind = "Text" })
     T.eq(a.meta["uid"] ~= b.meta["uid"], true)
   end)
 
   test("forwards doc and snippet when present", function()
     local doc = { lines = { "good dog" }, filetype = "markdown" }
-    local item = util.item(opts, {
+    local item = util.item(with { "", "" }, opts, {
       word = "fido",
       kind = "Snippet",
-      menu = "」",
       doc = doc,
       snippet = "fido()$0",
     })
@@ -149,10 +147,62 @@ T.describe("producers.util.item", function(test)
   end)
 
   test("optional fields stay nil when omitted", function()
-    local item = util.item({ short_name = "TX" }, { word = "lab", kind = "Text", menu = "」" })
+    local item = util.item(with { "", "" }, { short_name = "TX" }, { word = "lab", kind = "Text" })
     T.eq(item.meta.always_on_top, nil)
     T.eq(item.meta.filter, nil)
     T.eq(item.meta.doc, nil)
     T.eq(item.meta.snippet, nil)
+  end)
+end)
+
+T.describe("producers.util.word_search", function(test)
+  local ws_settings = function(exact)
+    ---@diagnostic disable-next-line: missing-fields
+    return { match = { exact_matches = exact or 2 } } --[[@as config.Settings]]
+  end
+
+  local seed = function(words)
+    local s = util.word_search(ws_settings())()
+    for _, w in pairs(words) do
+      s.insert { word = w }
+    end
+    return s
+  end
+
+  ---@param iter lib.Iterator<table>
+  local words = function(iter)
+    local out = {}
+    for v in iter do
+      table.insert(out, v.word)
+    end
+    table.sort(out)
+    return out
+  end
+
+  test("prefix matches the keyword", function()
+    local s = seed { "labrador", "labradoodle", "lily", "rex" }
+    T.eq(words(s.search { keyword_before = "lab" }), { "labradoodle", "labrador" })
+  end)
+
+  test("empty keyword yields everything (search.prune semantics)", function()
+    local s = seed { "spot", "fido" }
+    T.eq(words(s.search { keyword_before = "" }), { "fido", "spot" })
+  end)
+
+  test("nil keyword also yields everything — prune path uses this", function()
+    local s = seed { "spot", "fido" }
+    T.eq(words(s.search { keyword_before = nil }), { "fido", "spot" })
+  end)
+
+  test("below exact_matches threshold falls back to fuzzy child", function()
+    local s = seed { "labrador" }
+    -- "la" is 2 chars (= prefix); "l" is below, should still match via fuzzy
+    T.eq(words(s.search { keyword_before = "l" }), { "labrador" })
+  end)
+
+  test("prune by word removes a single entry", function()
+    local s = seed { "spot", "fido" }
+    s.prune { keyword_before = "spot" }
+    T.eq(words(s.search { keyword_before = "" }), { "fido" })
   end)
 end)

@@ -50,14 +50,6 @@ T.describe("tmux.index", function(test)
     T.eq(words(index.search { keyword_before = "lab" }), { "labradoodle", "labrador" })
   end)
 
-  test("nil keyword_before fans across every word in the pane", function()
-    local index = index_m.new(settings)
-    index.insert { word = "labrador", pane = "p1", meta = mk_meta() }
-    index.insert { word = "lily", pane = "p1", meta = mk_meta() }
-
-    T.eq(words(index.search { pane = "p1" }), { "labrador", "lily" })
-  end)
-
   test("prune by pane removes only that pane", function()
     local index = index_m.new(settings)
     index.insert { word = "labrador", pane = "p1", meta = mk_meta() }

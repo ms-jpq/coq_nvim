@@ -20,17 +20,6 @@ local M = {
       weight_adjust = 0.75,
     },
 
-    lsp_inline = {
-      always_on_top = {},
-      always_wait = false,
-      enabled = true,
-      ignored_servers = {},
-      live_pulling = false,
-      resolve_timeout = 0.06,
-      short_name = "IL",
-      weight_adjust = 1,
-    },
-
     paths = {
       always_on_top = false,
       always_wait = false,
@@ -78,15 +67,6 @@ local M = {
       always_wait = false,
       enabled = true,
       short_name = "3P",
-      weight_adjust = 0,
-    },
-
-    third_party_inline = {
-      always_on_top = {},
-      always_wait = false,
-      enabled = true,
-      live_pulling = true,
-      short_name = "3L",
       weight_adjust = 0,
     },
 

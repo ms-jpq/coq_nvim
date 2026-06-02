@@ -1,6 +1,34 @@
+local fuzzy = require "coq.lib.index.fuzzy"
 local itertools = require "coq.lib.itertools"
+local trie = require "coq.lib.index.trie"
 
 local M = {}
+
+---@param item { word: string }
+---@return string
+local word_key = function(item)
+  return item.word
+end
+
+---@generic Ctx : { keyword_before?: string }
+---@generic Item : { word: string }
+---@param settings config.Settings
+---@return fun(): index.Searcher<Ctx, Item>
+M.word_search = function(settings)
+  local prefix = settings.match.exact_matches
+  return function()
+    return trie.new {
+      insert_key = word_key,
+      query_key = function(ctx)
+        return (ctx.keyword_before == nil or ctx.keyword_before == "") and nil or ctx.keyword_before
+      end,
+      prefix = prefix,
+      child = function()
+        return fuzzy.new { insert_key = word_key }
+      end,
+    }
+  end
+end
 
 ---@generic A, R
 ---@param fn fun(arg: A): R
@@ -47,32 +75,25 @@ M.shape = function(settings, ctx, iter)
   return itertools.take(settings.match.max_results, itertools.uniq_by(word_of, filtered))
 end
 
----@param settings config.Settings
----@param opts { short_name: string }
----@return string
-M.menu = function(settings, opts)
-  local lhs, rhs = unpack(settings.display.pum.source_context)
-  return lhs .. opts.short_name .. rhs
-end
-
 ---@class producers.ItemSpec
 ---@field word string
 ---@field abbr? string
 ---@field kind string
----@field menu string
 ---@field filter? string
 ---@field doc? completions.ItemDoc
 ---@field snippet? string
 
+---@param settings config.Settings
 ---@param opts { short_name: string, always_on_top: boolean? }
 ---@param spec producers.ItemSpec
 ---@return completions.Item
-M.item = function(opts, spec)
+M.item = function(settings, opts, spec)
+  local lhs, rhs = unpack(settings.display.pum.source_context)
   return {
     word = spec.word,
     abbr = spec.abbr,
     kind = spec.kind,
-    menu = spec.menu,
+    menu = lhs .. opts.short_name .. rhs,
     meta = {
       uid = M.uid(),
       filter = spec.filter,

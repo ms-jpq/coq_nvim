@@ -95,9 +95,6 @@ local defaults = require "coq.config.defaults"
 ---@field resolve_timeout number
 ---@field ignored_servers string[]
 
----@class config.LSPInlineClient: config.LSPClient
----@field live_pulling boolean
-
 ---@class config.PathsClient: config.BaseClient
 ---@field always_on_top boolean
 ---@field resolution string[]
@@ -123,9 +120,6 @@ local defaults = require "coq.config.defaults"
 ---@class config.ThirdPartyClient: config.BaseClient
 ---@field always_on_top? string[]
 
----@class config.ThirdPartyInlineClient: config.ThirdPartyClient
----@field live_pulling boolean
-
 ---@class config.TmuxClient: config.BaseClient
 ---@field always_on_top boolean
 ---@field all_sessions boolean
@@ -139,13 +133,11 @@ local defaults = require "coq.config.defaults"
 ---@class config.Clients
 ---@field buffers config.BuffersClient
 ---@field lsp config.LSPClient
----@field lsp_inline config.LSPInlineClient
 ---@field paths config.PathsClient
 ---@field registers config.RegistersClient
 ---@field snippets config.SnippetClient
 ---@field tags config.TagsClient
 ---@field third_party config.ThirdPartyClient
----@field third_party_inline config.ThirdPartyInlineClient
 ---@field tmux config.TmuxClient
 ---@field tree_sitter config.TSClient
 

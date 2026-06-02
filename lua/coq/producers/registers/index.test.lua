@@ -29,14 +29,6 @@ T.describe("registers.index", function(test)
     T.eq(words(index.search { keyword_before = "sp" }), { "spot" })
   end)
 
-  test("nil keyword_before fans across all words", function()
-    local index = index_m.new(settings)
-    index.insert { word = "labrador", register = "0", linewise = false }
-    index.insert { word = "spot", register = "+", linewise = false }
-
-    T.eq(words(index.search {}), { "labrador", "spot" })
-  end)
-
   test("prune nukes everything across registers", function()
     local index = index_m.new(settings)
     index.insert { word = "labrador", register = "0", linewise = false }

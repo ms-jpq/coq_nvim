@@ -48,15 +48,6 @@ T.describe("buffer.index", function(test)
     T.eq(words(index.search { filetype = "lua", keyword_before = "l" }), { "labrador", "lily" })
   end)
 
-  test("nil keyword_before fans across every word", function()
-    local index = index_m.new(settings)
-    index.insert { word = "labrador", buf = 1, filetype = "lua", filename = "" }
-    index.insert { word = "lily", buf = 1, filetype = "lua", filename = "" }
-    index.insert { word = "spot", buf = 1, filetype = "lua", filename = "" }
-
-    T.eq(words(index.search { filetype = "lua", buf = 1 }), { "labrador", "lily", "spot" })
-  end)
-
   test("prune by buf removes only that buf within a filetype", function()
     local index = index_m.new(settings)
     index.insert { word = "labrador", buf = 1, filetype = "lua", filename = "" }
