@@ -58,11 +58,18 @@ end
 M.raise = function(es)
   if #es == 0 then
     return
-  elseif #es == 1 then
-    error(es[1], 0)
-  else
-    error(M.group(es), 0)
   end
+
+  if #es == 1 then
+    error(es[1], 0)
+  end
+
+  for _, e in ipairs(es) do
+    if not cancel.is(e) then
+      error(M.group(es), 0)
+    end
+  end
+  error(es[1], 0)
 end
 
 return M

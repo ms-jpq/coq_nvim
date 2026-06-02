@@ -89,10 +89,7 @@ local apply = function(settings, ctx, resolver, i)
   end
 
   if meta.snippet then
-    local ok, err = pcall(vim.snippet.expand, meta.snippet)
-    if not ok then
-      errs.report(err)
-    end
+    errs.with_reporting(vim.snippet.expand)(meta.snippet)
   end
 
   if lsp.item and lsp.item.command then

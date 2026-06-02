@@ -37,17 +37,20 @@ M.scope = function(fn)
   local defers = {}
 
   local finish = function(ok, ...)
+    local errors = {}
+    if not ok then
+      table.insert(errors, (...))
+    end
+
     for i = #defers, 1, -1 do
       local d_ok, d_err = xpcall(defers[i], debug.traceback)
       if not d_ok then
-        errs.report(d_err)
+        table.insert(errors, d_err)
       end
     end
 
-    if ok then
-      return ...
-    end
-    error((...), 0)
+    errs.raise(errors)
+    return ...
   end
 
   return finish(pcall(fn, function(defer)

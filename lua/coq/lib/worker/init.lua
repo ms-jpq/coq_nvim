@@ -179,10 +179,10 @@ local scheduled = vim.is_thread() and lib.noop or atools.scheduled
 ---@return worker.Responder
 local make_responder = function(write)
   local dispatch = function(req_handle, chan, frame)
-    local fn = assert(load(frame.fn_bytecode))
     local args, n_args = frame.args or {}, frame.n_args or 0
 
     local iter = async.wrap(function(...)
+      local fn = assert(load(frame.fn_bytecode))
       return coroutine.yield(DONE, build_response(frame.id, pcall(fn, ...)))
     end)
 

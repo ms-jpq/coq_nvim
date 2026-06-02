@@ -140,3 +140,43 @@ T.describe("sleep cancel", function(test)
     T.eq(next(live), nil)
   end)
 end)
+
+T.describe("defer async", function(test)
+  test("a future can be awaited inside a defer", function()
+    local f = async.future()
+    local got
+    local n = nursery.new()
+    n.spawn(function(defer)
+      defer(function()
+        got = f.await()
+      end)
+    end)
+    n.spawn(function()
+      async.sleep(0)
+      f.resolve "spot"
+    end)
+    n.join()
+
+    T.eq(got, "spot")
+  end)
+
+  test("an async.wrap can be iterated inside a defer", function()
+    local seen = {}
+    local n = nursery.new()
+    n.spawn(function(defer)
+      defer(function()
+        local iter = async.wrap(function()
+          coroutine.yield "spot"
+          async.sleep(0)
+          coroutine.yield "fido"
+        end)
+        for v in iter do
+          table.insert(seen, v)
+        end
+      end)
+    end)
+    n.join()
+
+    T.eq(seen, { "spot", "fido" })
+  end)
+end)
