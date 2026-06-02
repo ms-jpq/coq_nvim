@@ -4,7 +4,7 @@ local lib = require "coq.lib"
 local lsp_util = require "coq.producers.lsp.util"
 local paths_util = require "coq.producers.paths.util"
 
-local preview_win = nil
+local PREVIEW_VAR = "__coq_preview__"
 
 ---@param lsp_item lsp.CompletionItem
 ---@return string[]
@@ -132,7 +132,7 @@ end
 ---@param ev completions.PumChangedEvent
 ---@param lines string[]
 ---@param filetype string
-local show_ts_doc = function(preview_cfg, ev, lines, filetype)
+local show = function(preview_cfg, ev, lines, filetype)
   if #lines == 0 then
     return
   end
@@ -160,7 +160,7 @@ local show_ts_doc = function(preview_cfg, ev, lines, filetype)
     border = preview_cfg.border,
   })
 
-  preview_win = win
+  vim.w[win][PREVIEW_VAR] = true
 end
 
 ---@param ctx ctx.base
@@ -199,18 +199,21 @@ end
 local M = {}
 
 M.close = function()
-  if preview_win and vim.api.nvim_win_is_valid(preview_win) then
-    vim.api.nvim_win_close(preview_win, true)
+  for _, win in pairs(vim.api.nvim_list_wins()) do
+    if vim.w[win][PREVIEW_VAR] then
+      vim.api.nvim_win_close(win, true)
+    end
   end
-  preview_win = nil
 end
 
 ---@return integer?
 M.active_buf = function()
-  if not (preview_win and vim.api.nvim_win_is_valid(preview_win)) then
-    return nil
+  for _, win in pairs(vim.api.nvim_list_wins()) do
+    if vim.w[win][PREVIEW_VAR] then
+      return vim.api.nvim_win_get_buf(win)
+    end
   end
-  return vim.api.nvim_win_get_buf(preview_win)
+  return nil
 end
 
 ---@param buf integer
@@ -245,7 +248,7 @@ M.show = function(ctx, settings, ev, item)
   end
   local lines, filetype = resolve_doc(ctx, settings, item)
   if lines then
-    show_ts_doc(settings.display.preview, ev, lines, filetype)
+    show(settings.display.preview, ev, lines, filetype)
   end
 end
 
