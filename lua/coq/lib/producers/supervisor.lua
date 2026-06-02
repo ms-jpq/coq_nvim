@@ -1,4 +1,5 @@
 local async = require "coq.lib.async"
+local deadline = require "coq.lib.async.deadline"
 local runtime = require "coq.lib.async.runtime"
 
 local M = {}
@@ -57,12 +58,22 @@ M.new = function(producers)
       m.close()
     end
 
-    local next = function()
+    local pull = function()
       for _, v in m do
         return v
       end
-      searching = false
       return nil
+    end
+
+    local timeout_ms = math.floor(settings.limits.completion_auto_timeout * 1000)
+    local timed = deadline.new(timeout_ms, pull)
+
+    local next = function()
+      local v = timed()
+      if v == nil then
+        runtime.detach(runtime.ROOT, close)
+      end
+      return v
     end
 
     return setmetatable({ close = close }, { __call = next })
