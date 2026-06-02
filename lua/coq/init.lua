@@ -50,42 +50,40 @@ do
   end
 end
 
----@param settings config.Settings
+---@param clients config.Clients
 ---@return fun(): producers.Producer<ctx.full>?
-local producers = function(settings)
+local producers = function(clients)
   return async.wrap(function()
-    local clients = settings.clients
-
     if clients.buffers.enabled then
-      coroutine.yield(require("coq.producers.buffers").new(settings))
+      coroutine.yield(require("coq.producers.buffers").new())
     end
 
     if clients.registers.enabled then
-      coroutine.yield(require("coq.producers.registers").new(settings))
+      coroutine.yield(require("coq.producers.registers").new())
     end
 
     if clients.tmux.enabled then
-      coroutine.yield(require("coq.producers.tmux").new(settings))
+      coroutine.yield(require("coq.producers.tmux").new())
     end
 
     if clients.paths.enabled then
-      coroutine.yield(require("coq.producers.paths").new(settings))
+      coroutine.yield(require("coq.producers.paths").new())
     end
 
     if clients.tree_sitter.enabled then
-      coroutine.yield(require("coq.producers.treesitter").new(settings))
+      coroutine.yield(require("coq.producers.treesitter").new())
     end
 
     if clients.lsp.enabled then
-      coroutine.yield(require("coq.producers.lsp").new(settings))
+      coroutine.yield(require("coq.producers.lsp").new())
     end
 
     if clients.tags.enabled then
-      coroutine.yield(require("coq.producers.tags").new(settings))
+      coroutine.yield(require("coq.producers.tags").new())
     end
 
     if clients.snippets.enabled then
-      coroutine.yield(require("coq.producers.snippets").new(settings))
+      coroutine.yield(require("coq.producers.snippets").new())
     end
   end)
 end
@@ -100,7 +98,7 @@ M.setup = function(opts)
       atools.scheduled()
       nvim_options.apply(settings)
 
-      local p = vim.iter(producers(settings)):totable()
+      local p = vim.iter(producers(settings.clients)):totable()
       local sup = supervisor.new(p)
 
       local ranker = ranker_m.new(settings.clients)

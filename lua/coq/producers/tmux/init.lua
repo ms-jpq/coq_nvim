@@ -153,11 +153,9 @@ M.matcher = function(settings, ctx)
   end
 end
 
----@param settings config.Settings
 ---@return producers.Producer<ctx.full>
-M.new = function(settings)
+M.new = function()
   return producer.threaded {
-    settings = settings,
     idle = function(...)
       require("coq.producers.tmux").idle(...)
     end,

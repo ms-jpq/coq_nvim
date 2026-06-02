@@ -20,7 +20,7 @@ end
 ---@param settings config.Settings
 ---@param ranker index.Ranker
 ---@param resolver completions.Resolver
----@param sup producers.Supervisor<ctx.full>
+---@param sup producers.Producer<ctx.full>
 ---@param trigger channels.Broadcast<nil>
 M.bind = function(n, settings, ranker, resolver, sup, trigger)
   events.subscribe_latest(n, trigger, function()
@@ -30,9 +30,7 @@ M.bind = function(n, settings, ranker, resolver, sup, trigger)
     end
 
     resolver.reset()
-    local timeout_ms = math.floor(settings.limits.completion_auto_timeout * 1000)
-    local searched = sup.search(ctx, timeout_ms)
-    insertion.complete(ctx, settings, ranker, searched)
+    insertion.complete(ctx, settings, ranker, sup.search(settings, ctx))
   end)
 end
 

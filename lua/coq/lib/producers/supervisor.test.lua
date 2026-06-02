@@ -1,5 +1,6 @@
 local T = require "coq.lib.test"
 local async = require "coq.lib.async"
+local config = require "coq.config"
 local handle = require "coq.lib.async.handle"
 local lib = require "coq.lib"
 local nursery = require "coq.lib.async.nursery"
@@ -12,18 +13,25 @@ local detached = function()
   return n
 end
 
+local SETTINGS = config.merged()
+
 ---@param spec { idle?: fun(ctx), bind?: fun(n: async.Nursery), matcher?: fun(_, ctx) }
 ---@return producers.Producer
 local producer = function(spec)
   return {
     bind = spec.bind or lib.noop,
-    idle = spec.idle or lib.noop,
-    search = function(ctx)
-      return async.wrap(function()
+    idle = function(_, ctx)
+      if spec.idle then
+        spec.idle(ctx)
+      end
+    end,
+    search = function(_, ctx)
+      local iter = async.wrap(function()
         if spec.matcher then
           spec.matcher(nil, ctx)
         end
       end)
+      return setmetatable({ close = lib.noop }, { __call = iter })
     end,
   }
 end
@@ -72,7 +80,7 @@ T.describe("supervisor", function(test)
     local sup = supervisor.new { yields("lil", "spot"), yields "fido" }
     sup.bind(n)
     local seen = {}
-    for row in sup.search {} do
+    for row in sup.search(SETTINGS, {}) do
       table.insert(seen, row)
     end
     n.cancel()
@@ -100,10 +108,10 @@ T.describe("supervisor", function(test)
       sup.bind(n)
       push(true)
       n.spawn(function()
-        sup.idle {}
+        sup.idle(SETTINGS, {})
       end)
       idle_started.await()
-      drain(sup.search {})
+      drain(sup.search(SETTINGS, {}))
     end)
 
     local idle_elapsed_ms = idle_finished.await()
@@ -128,9 +136,9 @@ T.describe("supervisor", function(test)
         },
       }
       sup.bind(n)
-      local iter = sup.search {}
+      local iter = sup.search(SETTINGS, {})
       iter()
-      sup.idle {}
+      sup.idle(SETTINGS, {})
       iter.close()
     end)
 
@@ -151,8 +159,8 @@ T.describe("supervisor", function(test)
       local sup = supervisor.new { p }
       sup.bind(n)
       push(true)
-      drain(sup.search {})
-      sup.idle {}
+      drain(sup.search(SETTINGS, {}))
+      sup.idle(SETTINGS, {})
       idle_ran.await()
     end)
   end)
@@ -167,7 +175,7 @@ T.describe("supervisor", function(test)
     }
     sup.bind(n)
     local ok, err = pcall(function()
-      drain(sup.search {})
+      drain(sup.search(SETTINGS, {}))
     end)
     n.cancel()
 
@@ -210,7 +218,7 @@ T.describe("supervisor", function(test)
       }
       sup.bind(n)
       async.scope(function(inner)
-        local iter = sup.search {}
+        local iter = sup.search(SETTINGS, {})
         inner.spawn(function()
           first = iter()
           pcall(iter --[[@as fun()]])
@@ -230,52 +238,12 @@ T.describe("supervisor", function(test)
     local outer = supervisor.new { inner, yields "fido" }
     outer.bind(n)
     local seen = {}
-    for row in outer.search {} do
+    for row in outer.search(SETTINGS, {}) do
       table.insert(seen, row)
     end
     n.cancel()
 
     table.sort(seen)
     T.eq(seen, { "fido", "lil", "spot" })
-  end)
-
-  test("timeout cuts the iterator short, partial results survive", function()
-    local fast = matcher_only(function()
-      coroutine.yield "spot"
-      coroutine.yield "fido"
-    end)
-    local slow = matcher_only(function()
-      async.sleep(500 * T.SLOW)
-      coroutine.yield "labrador"
-    end)
-
-    local n = detached()
-    local sup = supervisor.new { fast, slow }
-    sup.bind(n)
-
-    local seen = {}
-    local start = vim.uv.hrtime()
-    for row in sup.search({}, 20 * T.SLOW) do
-      table.insert(seen, row)
-    end
-    local elapsed_ms = (vim.uv.hrtime() - start) / 1e6
-    n.cancel()
-
-    table.sort(seen)
-    T.eq(seen, { "fido", "spot" })
-    assert(elapsed_ms < 200 * T.SLOW, ("expected ~20ms, got %.1fms"):format(elapsed_ms))
-  end)
-
-  test("timeout = 0 means no deadline (existing behavior)", function()
-    local n = detached()
-    local sup = supervisor.new { yields("spot", "fido") }
-    sup.bind(n)
-    local seen = {}
-    for row in sup.search({}, 0) do
-      table.insert(seen, row)
-    end
-    n.cancel()
-    table.sort(seen)
-    T.eq(seen, { "fido", "spot" })
   end)
 end)

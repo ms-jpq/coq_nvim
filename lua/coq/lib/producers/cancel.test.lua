@@ -1,9 +1,12 @@
 local T = require "coq.lib.test"
 local async = require "coq.lib.async"
+local config = require "coq.config"
 local handle = require "coq.lib.async.handle"
 local lib = require "coq.lib"
 local nursery = require "coq.lib.async.nursery"
 local producer = require "coq.lib.producers"
+
+local SETTINGS = config.merged()
 
 ---@param spec producers.Spec
 ---@return producers.Producer
@@ -11,10 +14,11 @@ local regular = function(spec)
   return {
     bind = lib.noop,
     idle = lib.noop,
-    search = function(ctx)
-      return async.wrap(function()
-        spec.matcher(spec.settings, ctx)
+    search = function(settings, ctx)
+      local iter = async.wrap(function()
+        spec.matcher(settings, ctx)
       end)
+      return setmetatable({ close = lib.noop }, { __call = iter })
     end,
   }
 end
@@ -42,9 +46,7 @@ local cancel_tests = function(name, factory)
       local _ = h.on_cancel(n.cancel)
       n.spawn(function()
         local db = factory {
-          max_pulls = math.huge --[[@as integer]],
           idle = lib.noop,
-          bind = lib.noop,
           matcher = function(_, ctx)
             require("coq.lib.async").sleep(200 * ctx.slow)
             coroutine.yield "never"
@@ -52,7 +54,7 @@ local cancel_tests = function(name, factory)
         }
         db.bind(n)
         local start = vim.uv.hrtime()
-        pcall(db.search { slow = T.SLOW })
+        pcall(db.search(SETTINGS, { slow = T.SLOW }) --[[@as fun()]])
         elapsed_ms = (vim.uv.hrtime() - start) / 1e6
       end)
       n.spawn(function()

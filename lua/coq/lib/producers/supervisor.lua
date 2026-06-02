@@ -1,15 +1,11 @@
 local async = require "coq.lib.async"
-local deadline = require "coq.lib.async.deadline"
 local runtime = require "coq.lib.async.runtime"
 
 local M = {}
 
----@class producers.Supervisor<C>: producers.Producer<C>
----@field search fun(ctx: C, timeout_ms?: integer): producers.SearchIter
-
 ---@generic C
 ---@param producers producers.Producer<C>[]
----@return producers.Supervisor<C>
+---@return producers.Producer<C>
 M.new = function(producers)
   ---@type async.Handle?
   local idle_handle = nil
@@ -23,7 +19,7 @@ M.new = function(producers)
     end
   end
 
-  sup.idle = function(ctx)
+  sup.idle = function(settings, ctx)
     if searching then
       return
     end
@@ -33,7 +29,7 @@ M.new = function(producers)
       .iter(producers)
       :map(function(p)
         return function()
-          p.idle(ctx)
+          p.idle(settings, ctx)
         end
       end)
       :totable()
@@ -41,7 +37,7 @@ M.new = function(producers)
     async.all(idles)
   end
 
-  sup.search = function(ctx, timeout_ms)
+  sup.search = function(settings, ctx)
     if idle_handle then
       idle_handle.cancel()
     end
@@ -49,18 +45,12 @@ M.new = function(producers)
     local iters = vim
       .iter(producers)
       :map(function(p)
-        return p.search(ctx)
+        return p.search(settings, ctx)
       end)
       :totable()
 
     local m = async.merge(iters)
     searching = true
-
-    local pull = function()
-      local _, v = m()
-      return v
-    end
-    local guarded = deadline.new(timeout_ms, pull)
 
     local close = function()
       searching = false
@@ -68,18 +58,17 @@ M.new = function(producers)
     end
 
     local next = function()
-      local v = guarded()
-      if v == nil then
-        searching = false
-        runtime.detach(runtime.ROOT, m.close)
+      for _, v in m do
+        return v
       end
-      return v
+      searching = false
+      return nil
     end
 
     return setmetatable({ close = close }, { __call = next })
   end
 
-  ---@cast sup producers.Supervisor
+  ---@cast sup producers.Producer
   return sup
 end
 

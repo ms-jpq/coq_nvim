@@ -45,14 +45,14 @@ local matcher = function(settings, ctx)
   end)
 end
 
----@param settings config.Settings
 ---@return producers.Producer<ctx.full>
-M.new = function(settings)
+M.new = function()
   return {
     bind = lib.noop,
     idle = lib.noop,
-    search = function(ctx)
-      return matcher(settings, ctx)
+    search = function(settings, ctx)
+      local iter = matcher(settings, ctx)
+      return setmetatable({ close = lib.noop }, { __call = iter })
     end,
   }
 end
