@@ -160,20 +160,26 @@ T.describe("paths.matcher", function(test)
   end)
 
   test("~ expands to home", function()
-    local home = assert(vim.uv.os_homedir())
+    -- Point HOME at a controlled dir; listing the live home is racy (it churns
+    -- between the matcher's scandir and the assertion).
+    local dir = tmpdir()
+    touch(dir .. "/spot.txt")
+    vim.fn.mkdir(dir .. "/fido")
+
+    local prev = vim.uv.os_homedir()
+    vim.uv.os_setenv("HOME", dir)
+
     local settings = settings_with()
     local ctx = ctx_of { cwd = "/", line_before = "~/", line = "~/" }
-
     local items = run_matcher(settings, ctx)
-    local home_listing = {}
-    for name in vim.fs.dir(home) do
-      home_listing[name] = true
+
+    if prev then
+      vim.uv.os_setenv("HOME", prev)
+    else
+      vim.uv.os_unsetenv "HOME"
     end
 
-    for _, it in ipairs(items) do
-      local bare = string.gsub(it.word, "/$", "")
-      T.eq(home_listing[bare] or false, true)
-    end
+    T.eq(words_of(items), { "fido/", "spot.txt" })
   end)
 
   test("$VAR expands when set", function()
