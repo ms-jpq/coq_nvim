@@ -17,28 +17,28 @@ local is_path_shape = function(is_windows, token)
   if token == "" then
     return false
   end
-  if string.find(token, "/", 1, true) then
-    return true
+
+  for sep in pairs(default_seps(is_windows)) do
+    if string.find(token, sep, 1, true) then
+      return true
+    end
   end
-  if is_windows and string.find(token, "\\", 1, true) then
-    return true
-  end
+
   local c1 = string.sub(token, 1, 1)
-  if c1 == "~" or c1 == "/" or c1 == "$" then
+  if c1 == "~" or c1 == "$" then
     return true
   end
+
   if is_windows then
-    if c1 == "\\" or c1 == "%" then
+    if c1 == "%" then
       return true
     end
     if string.match(token, DRIVE_PAT) then
       return true
     end
   end
-  if token == "." or token == ".." then
-    return true
-  end
-  return false
+
+  return token == "." or token == ".."
 end
 
 ---@param is_windows boolean
