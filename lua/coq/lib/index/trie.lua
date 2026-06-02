@@ -14,7 +14,7 @@ end
 
 ---@param s string
 local chars = function(s)
-  return string.gmatch(s, ".")
+  return string.gmatch(string.lower(s), ".")
 end
 
 ---@generic C, T
