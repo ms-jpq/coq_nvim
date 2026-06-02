@@ -145,26 +145,20 @@ end
 ---@param settings config.Settings
 M.matcher = function(settings, ctx)
   local opts = settings.clients.tree_sitter
-  local sc = settings.display.pum.source_context
-  local menu = sc[1] .. opts.short_name .. sc[2]
+  local menu = util.menu(settings, opts)
 
   local raw = index(settings).search { filetype = ctx.filetype, keyword_before = ctx.keyword_before }
   local shaped = util.shape(settings, ctx, raw)
 
   for item in shaped do
     local lines = vim.iter(doc_iter(opts, ctx, item)):totable()
-    coroutine.yield {
+    coroutine.yield(util.item(opts, {
       word = item.word,
       kind = capture_to_icon(item.kind),
       menu = menu,
-      meta = {
-        uid = util.uid(),
-        filter = item.word,
-        source = opts.short_name,
-        always_on_top = opts.always_on_top,
-        doc = { lines = lines, filetype = ctx.filetype },
-      },
-    }
+      filter = item.word,
+      doc = { lines = lines, filetype = ctx.filetype },
+    }))
   end
 end
 

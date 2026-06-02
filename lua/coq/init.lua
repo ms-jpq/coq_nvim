@@ -83,6 +83,10 @@ local producers = function(settings)
     if clients.tags.enabled then
       coroutine.yield(require("coq.producers.tags").new(settings))
     end
+
+    if clients.snippets.enabled then
+      coroutine.yield(require("coq.producers.snippets").new(settings))
+    end
   end)
 end
 

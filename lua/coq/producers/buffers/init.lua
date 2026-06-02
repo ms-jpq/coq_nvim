@@ -107,8 +107,7 @@ end
 ---@param settings config.Settings
 M.matcher = function(settings, ctx)
   local opts = settings.clients.buffers
-  local sc = settings.display.pum.source_context
-  local menu = sc[1] .. opts.short_name .. sc[2]
+  local menu = util.menu(settings, opts)
   local search_ctx = {
     keyword_before = ctx.keyword_before,
     filetype = opts.same_filetype and ctx.filetype or nil,
@@ -120,18 +119,13 @@ M.matcher = function(settings, ctx)
   for item in shaped do
     local lines = vim.iter(doc_iter(opts, ctx, item)):totable()
 
-    coroutine.yield {
+    coroutine.yield(util.item(opts, {
       word = item.word,
       kind = "Text",
       menu = menu,
-      meta = {
-        uid = util.uid(),
-        filter = item.word,
-        source = opts.short_name,
-        always_on_top = opts.always_on_top,
-        doc = #lines > 0 and { lines = lines, filetype = "" } or nil,
-      },
-    }
+      filter = item.word,
+      doc = #lines > 0 and { lines = lines, filetype = "" } or nil,
+    }))
   end
 end
 

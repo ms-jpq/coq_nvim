@@ -115,26 +115,20 @@ end
 ---@param settings config.Settings
 M.matcher = function(settings, ctx)
   local opts = settings.clients.tags
-  local sc = settings.display.pum.source_context
-  local menu = sc[1] .. opts.short_name .. sc[2]
+  local menu = util.menu(settings, opts)
 
   local raw = index(settings).search { keyword_before = ctx.keyword_before }
   local shaped = util.shape(settings, ctx, raw)
 
   for tag in shaped do
     local lines = vim.iter(doc_iter(opts, ctx, tag)):totable()
-    coroutine.yield {
+    coroutine.yield(util.item(opts, {
       word = tag.word,
       kind = "Text",
       menu = menu,
-      meta = {
-        uid = util.uid(),
-        filter = tag.word,
-        source = opts.short_name,
-        always_on_top = opts.always_on_top,
-        doc = #lines > 0 and { lines = lines, filetype = ctx.filetype } or nil,
-      },
-    }
+      filter = tag.word,
+      doc = #lines > 0 and { lines = lines, filetype = ctx.filetype } or nil,
+    }))
   end
 end
 

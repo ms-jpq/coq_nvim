@@ -96,3 +96,63 @@ T.describe("producers.util.shape", function(test)
     )
   end)
 end)
+
+T.describe("producers.util.menu", function(test)
+  ---@param brackets string[]
+  ---@return config.Settings
+  local with = function(brackets)
+    ---@diagnostic disable-next-line: missing-fields
+    return { display = { pum = { source_context = brackets } } } --[[@as config.Settings]]
+  end
+
+  test("wraps short_name in the configured brackets", function()
+    T.eq(util.menu(with { "「", "」" }, { short_name = "BF" }), "「BF」")
+  end)
+
+  test("threads empty brackets through unchanged", function()
+    T.eq(util.menu(with { "", "" }, { short_name = "TS" }), "TS")
+  end)
+end)
+
+T.describe("producers.util.item", function(test)
+  local opts = { short_name = "BF", always_on_top = true }
+
+  test("packs the seven canonical fields", function()
+    local item = util.item(opts, { word = "rex", kind = "Text", menu = "「BF」", filter = "rex" })
+    T.eq(item.word, "rex")
+    T.eq(item.kind, "Text")
+    T.eq(item.menu, "「BF」")
+    T.eq(item.meta.filter, "rex")
+    T.eq(item.meta.source, "BF")
+    T.eq(item.meta.always_on_top, true)
+    T.eq(type(item.meta["uid"]), "string")
+    T.eq(#item.meta["uid"], 16)
+  end)
+
+  test("every call mints a fresh uid", function()
+    local a = util.item(opts, { word = "spot", kind = "Text", menu = "」" })
+    local b = util.item(opts, { word = "spot", kind = "Text", menu = "」" })
+    T.eq(a.meta["uid"] ~= b.meta["uid"], true)
+  end)
+
+  test("forwards doc and snippet when present", function()
+    local doc = { lines = { "good dog" }, filetype = "markdown" }
+    local item = util.item(opts, {
+      word = "fido",
+      kind = "Snippet",
+      menu = "」",
+      doc = doc,
+      snippet = "fido()$0",
+    })
+    T.eq(item.meta.doc, doc)
+    T.eq(item.meta.snippet, "fido()$0")
+  end)
+
+  test("optional fields stay nil when omitted", function()
+    local item = util.item({ short_name = "TX" }, { word = "lab", kind = "Text", menu = "」" })
+    T.eq(item.meta.always_on_top, nil)
+    T.eq(item.meta.filter, nil)
+    T.eq(item.meta.doc, nil)
+    T.eq(item.meta.snippet, nil)
+  end)
+end)

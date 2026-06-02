@@ -105,8 +105,7 @@ end
 ---@param settings config.Settings
 M.matcher = function(settings, ctx)
   local opts = settings.clients.registers
-  local sc = settings.display.pum.source_context
-  local menu = sc[1] .. opts.short_name .. sc[2]
+  local menu = util.menu(settings, opts)
 
   local raw = index(settings).search { keyword_before = ctx.keyword_before }
   local shaped = util.shape(settings, ctx, raw)
@@ -116,19 +115,14 @@ M.matcher = function(settings, ctx)
   do
     local doc_line = opts.short_name .. opts.register_scope .. item.register
 
-    coroutine.yield {
+    coroutine.yield(util.item(opts, {
       word = item.word,
       kind = "Text",
       menu = menu,
-      meta = {
-        uid = util.uid(),
-        filter = item.word,
-        source = opts.short_name,
-        always_on_top = opts.always_on_top,
-        snippet = item.linewise and item.line or nil,
-        doc = { lines = { doc_line }, filetype = "" },
-      },
-    }
+      filter = item.word,
+      snippet = item.linewise and item.line or nil,
+      doc = { lines = { doc_line }, filetype = "" },
+    }))
   end
 end
 
