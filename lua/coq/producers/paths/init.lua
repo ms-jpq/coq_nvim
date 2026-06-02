@@ -70,10 +70,9 @@ local matches = function(settings, ctx)
     for cand in parse.candidates(ctx.line_before, opts) do
       local found = false
       for dir in cand_dirs(bases, cand) do
-        if atools.is_dir(dir) then
+        if atools.fs.is_dir(dir) then
           found = true
-          local _, iter = atools.scandir(dir)
-          for name in iter do
+          for name in atools.fs.scandir(dir) do
             if name_matches(cand.partial, name) then
               coroutine.yield { cand = cand, dir = dir, name = name, full = vim.fs.joinpath(dir, name) }
             end
@@ -100,7 +99,7 @@ M.matcher = function(settings, ctx)
   local line = row - 1
 
   for m in itertools.uniq_by(match_key, matches(settings, ctx)) do
-    local dir_q = atools.is_dir(m.full)
+    local dir_q = atools.fs.is_dir(m.full)
     local word = m.name .. (dir_q and m.cand.local_sep or "")
 
     coroutine.yield(util.item(settings, settings.clients.paths, {

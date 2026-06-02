@@ -51,14 +51,8 @@ end
 ---@param cwd? string
 ---@param path string
 local dir_preview = function(opts, cwd, path)
-  local err, scan = atools.scandir(path)
-  if err then
-    coroutine.yield("(scandir: " .. err .. ")")
-    return
-  end
-
   local entries = {}
-  for name, kind in scan do
+  for name, kind in atools.fs.scandir(path) do
     local full = vim.fs.joinpath(path, name)
     local rendered = cwd and fs.fmt_path(cwd, full) or name
     table.insert(entries, rendered .. (kind == "directory" and "/" or ""))

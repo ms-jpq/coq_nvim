@@ -82,7 +82,7 @@ local tracker = buf_tracker.new {
       async.sleep(0)
       local kw = tokens.parse_iskeyword(info.iskeyword)
       local lines = info.lines and vim.iter(info.lines) --[[@as lib.Iterator<string>]]
-        or atools.file_lines(info.filename)
+        or atools.fs.lines(info.filename)
       for word in tokens.words(kw, lines) do
         index(settings).insert {
           buf = info.buf,

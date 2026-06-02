@@ -323,13 +323,17 @@ if vim.is_thread() then
       return endpoint.request_stream(build_request(fn, ...))
     end
 
-    async.entry(function()
+    local main = function()
       async.scope(function(n, defer)
         defer(duplex.close)
         endpoint.serve(n, "host died")
       end)
-    end)()
+    end
 
+    async.entry(function()
+      pcall(main)
+      vim.uv.stop()
+    end)()
     vim.uv.run()
   end
 end

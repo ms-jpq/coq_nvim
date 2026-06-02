@@ -58,12 +58,12 @@ local drain = function(iter)
   return out
 end
 
-T.describe("atools.file_lines", function(test)
+T.describe("atools.fs.lines", function(test)
   test("yields each line of the file", function()
     local path = write_tmp "lil\nspot\nfido"
     local lines
     async.scope(function()
-      lines = drain(atools.file_lines(path))
+      lines = drain(atools.fs.lines(path))
     end)
 
     T.eq(lines, { "lil", "spot", "fido" })
@@ -73,7 +73,7 @@ T.describe("atools.file_lines", function(test)
     local path = write_tmp ""
     local lines
     async.scope(function()
-      lines = drain(atools.file_lines(path))
+      lines = drain(atools.fs.lines(path))
     end)
 
     T.eq(lines, { "" })
@@ -83,7 +83,7 @@ T.describe("atools.file_lines", function(test)
     local path = write_tmp "lil\nspot\n"
     local lines
     async.scope(function()
-      lines = drain(atools.file_lines(path))
+      lines = drain(atools.fs.lines(path))
     end)
 
     T.eq(lines, { "lil", "spot", "" })
@@ -93,14 +93,14 @@ T.describe("atools.file_lines", function(test)
     local path = vim.fn.tempname() .. "/does-not-exist"
     local lines
     async.scope(function()
-      lines = drain(atools.file_lines(path))
+      lines = drain(atools.fs.lines(path))
     end)
 
     T.eq(lines, {})
   end)
 end)
 
-T.describe("atools.scandir", function(test)
+T.describe("atools.fs.scandir", function(test)
   local mkdir = function(p)
     vim.fn.mkdir(p, "p")
   end
@@ -122,8 +122,7 @@ T.describe("atools.scandir", function(test)
 
     local seen = {}
     async.scope(function()
-      local _, iter = atools.scandir(dir)
-      for name, kind in iter do
+      for name, kind in atools.fs.scandir(dir) do
         seen[name] = kind
       end
     end)
@@ -132,17 +131,14 @@ T.describe("atools.scandir", function(test)
     T.eq(seen["fido"], "directory")
   end)
 
-  test("missing path returns err and dead iter", function()
-    local err, count
+  test("missing path yields nothing", function()
+    local count
     async.scope(function()
-      local e, iter = atools.scandir "/no/such/path/4242"
-      err = e
       count = 0
-      for _ in iter do
+      for _ in atools.fs.scandir "/no/such/path/4242" do
         count = count + 1
       end
     end)
-    assert(err and #err > 0, "expected non-empty err string")
     T.eq(count, 0)
   end)
 
@@ -154,8 +150,7 @@ T.describe("atools.scandir", function(test)
 
     local count = 0
     async.scope(function()
-      local _, iter = atools.scandir(dir)
-      for _ in iter do
+      for _ in atools.fs.scandir(dir) do
         count = count + 1
       end
     end)

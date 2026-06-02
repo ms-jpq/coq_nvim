@@ -1,6 +1,5 @@
 local async = require "coq.lib.async"
 local lib = require "coq.lib"
-local txt = require "coq.lib.text"
 
 local M = {}
 
@@ -115,78 +114,130 @@ M.spawn = function(argv, opts)
 end
 
 M.fs = {
-  ---@type fun(path: string, flags: string|integer, mode: integer): string?, integer?
+  ---@type fun(path: string, flags: string|integer, mode: integer): uv.error_name?, integer?
   open = async.awaitify(vim.uv.fs_open),
-  ---@type fun(fd: integer): string?
+  ---@type fun(fd: integer): uv.error_name?
   close = async.awaitify(vim.uv.fs_close),
-  ---@type fun(fd: integer, size: integer, offset: integer): string?, string?
+  ---@type fun(fd: integer, size: integer, offset: integer): uv.error_name?, string?
   read = async.awaitify(vim.uv.fs_read),
-  ---@type fun(fd: integer): string?, { size: integer }?
+  ---@type fun(fd: integer): uv.error_name?, uv.fs_stat.result?
   fstat = async.awaitify(vim.uv.fs_fstat),
-  ---@type fun(path: string): string?, { type: string, size: integer, mtime: { sec: integer, nsec: integer } }?
+  ---@type fun(path: string): uv.error_name?, uv.fs_stat.result?
   stat = async.awaitify(vim.uv.fs_stat),
 }
 
 ---@param path string
 ---@return boolean
-M.is_dir = function(path)
+M.fs.is_dir = function(path)
   local err, st = M.fs.stat(path)
   return (not err and st and st.type == "directory") or false
 end
 
----@type fun(path: string): string?, uv.uv_fs_t?
-local fs_scandir = async.awaitify(vim.uv.fs_scandir)
-
 ---@param path string
----@return string?
----@return fun(): string?, string?
-M.scandir = function(path)
-  local err, handle = fs_scandir(path)
-  if err ~= nil or handle == nil then
-    return err, lib.noop
-  end
-
-  return nil, function()
-    return vim.uv.fs_scandir_next(handle)
-  end
+---@return uv.error_name? err
+---@return uv.luv_dir_t? dir
+local fs_opendir = function(path)
+  local f = async.future()
+  vim.uv.fs_opendir(path, function(err, dir)
+    f.resolve(err, dir)
+  end, 64)
+  return f.await()
 end
 
+---@type fun(dir: uv.luv_dir_t): uv.error_name?, { name: string, type: string }[]?
+local fs_readdir = async.awaitify(vim.uv.fs_readdir)
+
+---@type fun(dir: uv.luv_dir_t): uv.error_name?, boolean?
+local fs_closedir = async.awaitify(vim.uv.fs_closedir)
+
 ---@param path string
----@return fun(): string?
-M.file_lines = function(path)
-  return lib.scope(function(defer)
-    local e1, fd = M.fs.open(path, "r", 438)
-    if e1 or not fd then
-      return lib.noop
+---@return fun(): string?, string?
+M.fs.scandir = function(path)
+  return async.wrap(function()
+    local err, dir = fs_opendir(path)
+    if err ~= nil or dir == nil then
+      return
     end
 
-    defer(function()
-      M.fs.close(fd)
+    lib.scope(function(defer)
+      defer(function()
+        fs_closedir(dir)
+      end)
+
+      while true do
+        local e, entries = fs_readdir(dir)
+        if e ~= nil or entries == nil or #entries == 0 then
+          return
+        end
+        for _, entry in ipairs(entries) do
+          coroutine.yield(entry.name, entry.type)
+        end
+      end
     end)
-
-    local e2, stat = M.fs.fstat(fd)
-    if e2 or not stat then
-      return lib.noop
-    end
-
-    local _, data = M.fs.read(fd, stat.size, 0)
-    return txt.splitlines(data or "")
   end)
 end
 
-M.fn = {
-  ---@type fun(cmd: string|string[], opts?: table): integer
-  jobstart = async.awaitify(
-    ---@param cmd string|string[]
-    ---@param opts table?
-    ---@param on_exit fun(job_id: integer, code: integer, event: string)
-    function(cmd, opts, on_exit)
-      opts = opts or {}
-      opts.on_exit = on_exit
-      vim.fn.jobstart(cmd, opts)
-    end
-  ),
-}
+local LINE_CHUNK = 8192
+local LF, CR = 10, 13
+
+---@param path string
+---@return fun(): string?
+M.fs.lines = function(path)
+  return async.wrap(function()
+    lib.scope(function(defer)
+      local e1, fd = M.fs.open(path, "r", 438)
+      if e1 ~= nil or fd == nil then
+        return
+      end
+      defer(function()
+        M.fs.close(fd)
+      end)
+
+      local offset = 0
+      local buf = ""
+      local pos = 1
+
+      local emit = function(final)
+        local n = #buf
+        local i = pos
+        while i <= n do
+          local b = string.byte(buf, i)
+          if b == LF then
+            coroutine.yield(string.sub(buf, pos, i - 1))
+            i = i + 1
+            pos = i
+          elseif b == CR then
+            if i == n and not final then
+              break
+            end
+            local skip = (i < n and string.byte(buf, i + 1) == LF) and 2 or 1
+            coroutine.yield(string.sub(buf, pos, i - 1))
+            i = i + skip
+            pos = i
+          else
+            i = i + 1
+          end
+        end
+        if pos > 1 then
+          buf = string.sub(buf, pos)
+          pos = 1
+        end
+      end
+
+      while true do
+        local e2, data = M.fs.read(fd, LINE_CHUNK, offset)
+        if e2 ~= nil or data == nil or #data == 0 then
+          emit(true)
+          coroutine.yield(string.sub(buf, pos))
+          return
+        end
+        offset = offset + #data
+        buf = buf .. data
+        emit(false)
+      end
+    end)
+  end)
+end
 
 M.ui = {
   ---@generic T
