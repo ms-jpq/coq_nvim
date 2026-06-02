@@ -133,14 +133,13 @@ do
 
     local captures = async.all(vim.tbl_map(function(pane)
       return function()
-        return pane_capture(pane.id)
+        return { pane = pane, text = pane_capture(pane.id) }
       end
     end, panes))
 
-    for i, pane in pairs(panes) do
-      local text = captures[i]
-      if text ~= nil then
-        reindex_pane(kw, pane, text)
+    for _, c in pairs(captures) do
+      if c.text ~= nil then
+        reindex_pane(kw, c.pane, c.text)
       end
     end
   end
