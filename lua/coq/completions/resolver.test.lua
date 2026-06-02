@@ -1,0 +1,87 @@
+local T = require "coq.lib.test"
+local async = require "coq.lib.async"
+local resolver_m = require "coq.completions.resolver"
+
+---@type ctx.base
+local CTX = { win = 0, buf = 0, pos = { 0, 0 }, changedtick = 0 }
+
+---@return completions.Item
+local lsp_item = function(tag)
+  return { word = tag, meta = { lsp = { tag = tag } } } --[[@as completions.Item]]
+end
+
+T.describe("resolver", function(test)
+  test("caches resolved results by item identity", function()
+    local calls = 0
+    async.scope(function(n)
+      local r = resolver_m.new(n, function(_, item)
+        calls = calls + 1
+        return item.meta.lsp
+      end)
+      local item = lsp_item "fido"
+      local a = r.resolve(CTX, item)
+      local b = r.resolve(CTX, item)
+      T.eq(a, item.meta.lsp)
+      T.eq(b, item.meta.lsp)
+    end)
+    T.eq(calls, 1)
+  end)
+
+  test("dedups concurrent in-flight requests", function()
+    local calls = 0
+    local got = {}
+    async.scope(function(n)
+      local gate = async.future()
+      local started = async.future()
+      local r = resolver_m.new(n, function(_, item)
+        calls = calls + 1
+        started.resolve()
+        gate.await()
+        return item.meta.lsp
+      end)
+      local item = lsp_item "spot"
+
+      n.spawn(function()
+        got.a = r.resolve(CTX, item)
+      end)
+      n.spawn(function()
+        got.b = r.resolve(CTX, item)
+      end)
+
+      started.await()
+      gate.resolve()
+    end)
+
+    T.eq(calls, 1)
+    assert(got.a ~= nil and got.a == got.b, "both awaiters should share the resolved value")
+  end)
+
+  test("reset clears state and re-fetches", function()
+    local calls = 0
+    async.scope(function(n)
+      local r = resolver_m.new(n, function(_, item)
+        calls = calls + 1
+        return item.meta.lsp
+      end)
+      local item = lsp_item "lil"
+      r.resolve(CTX, item)
+      r.reset()
+      r.resolve(CTX, item)
+    end)
+    T.eq(calls, 2)
+  end)
+
+  test("caches a nil result without re-fetching", function()
+    local calls = 0
+    async.scope(function(n)
+      local r = resolver_m.new(n, function()
+        calls = calls + 1
+        return nil
+      end)
+      local item = { word = "rex", meta = {} } --[[@as completions.Item]]
+      T.eq(r.resolve(CTX, item), nil)
+      T.eq(r.resolve(CTX, item), nil)
+    end)
+    T.eq(calls, 1)
+  end)
+end)

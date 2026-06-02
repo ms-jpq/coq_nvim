@@ -35,9 +35,7 @@ local matcher = function(settings, ctx)
           lsp = {
             client_id = entry.client_id,
             item = item,
-            additional_text_edits = item.additionalTextEdits,
             position_encoding = entry.offset_encoding,
-            command = item.command,
           },
         },
       }

@@ -12,6 +12,7 @@ local lib = require "coq.lib"
 local nvim_options = require "coq.nvim_options"
 local preview = require "coq.completions.preview"
 local ranker_m = require "coq.lib.index.rank.ranker"
+local resolver_m = require "coq.completions.resolver"
 local supervisor = require "coq.lib.producers.supervisor"
 local trigger = require "coq.completions.trigger"
 
@@ -100,11 +101,12 @@ M.setup = function(opts)
 
       local ranker = ranker_m.new(settings.clients)
       local events = events_m.new()
+      local resolver = resolver_m.new(n)
 
       sup.bind(n)
-      trigger.bind(n, settings, ranker, sup, events.trigger)
-      preview.bind(n, settings, events.pum)
-      insertion.bind(n, ranker, events.done)
+      trigger.bind(n, settings, ranker, resolver, sup, events.trigger)
+      preview.bind(n, settings, resolver, events.pum)
+      insertion.bind(n, resolver, ranker, events.done)
       idle.bind(n, settings, sup, events)
     end)
   end)()

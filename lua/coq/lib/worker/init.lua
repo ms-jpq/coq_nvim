@@ -20,7 +20,7 @@ local Kind = {
 local DONE = {}
 
 ---@type table<function, string>
-local dump_cache = setmetatable({}, { __mode = "k" })
+local dump_cache = lib.weak()
 
 ---@param fn function
 ---@return string

@@ -1,9 +1,7 @@
 ---@class completions.ItemLspMeta
 ---@field client_id? integer
 ---@field item? lsp.CompletionItem
----@field additional_text_edits? lsp.TextEdit[]
 ---@field position_encoding? string
----@field command? lsp.Command
 
 ---@class completions.ItemDoc
 ---@field lines string[]

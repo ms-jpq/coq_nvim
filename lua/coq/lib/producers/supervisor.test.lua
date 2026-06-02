@@ -238,4 +238,44 @@ T.describe("supervisor", function(test)
     table.sort(seen)
     T.eq(seen, { "fido", "lil", "spot" })
   end)
+
+  test("timeout cuts the iterator short, partial results survive", function()
+    local fast = matcher_only(function()
+      coroutine.yield "spot"
+      coroutine.yield "fido"
+    end)
+    local slow = matcher_only(function()
+      async.sleep(500 * T.SLOW)
+      coroutine.yield "labrador"
+    end)
+
+    local n = detached()
+    local sup = supervisor.new { fast, slow }
+    sup.bind(n)
+
+    local seen = {}
+    local start = vim.uv.hrtime()
+    for row in sup.search({}, 20 * T.SLOW) do
+      table.insert(seen, row)
+    end
+    local elapsed_ms = (vim.uv.hrtime() - start) / 1e6
+    n.cancel()
+
+    table.sort(seen)
+    T.eq(seen, { "fido", "spot" })
+    assert(elapsed_ms < 200 * T.SLOW, ("expected ~20ms, got %.1fms"):format(elapsed_ms))
+  end)
+
+  test("timeout = 0 means no deadline (existing behavior)", function()
+    local n = detached()
+    local sup = supervisor.new { yields("spot", "fido") }
+    sup.bind(n)
+    local seen = {}
+    for row in sup.search({}, 0) do
+      table.insert(seen, row)
+    end
+    n.cancel()
+    table.sort(seen)
+    T.eq(seen, { "fido", "spot" })
+  end)
 end)

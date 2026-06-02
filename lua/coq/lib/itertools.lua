@@ -1,4 +1,25 @@
+local async = require "coq.lib.async"
+
 local M = {}
+
+---@generic T
+---@param every integer
+---@param iter lib.Iterator<T>
+---@return lib.Iterator<T>
+M.cooperative = function(every, iter)
+  local pulled = 0
+  return function()
+    for v in iter do
+      pulled = pulled + 1
+      if pulled >= every then
+        pulled = 0
+        async.sleep(0)
+      end
+      return v
+    end
+    return nil
+  end
+end
 
 ---@generic T
 ---@param max integer

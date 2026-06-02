@@ -1,10 +1,11 @@
 local async = require "coq.lib.async"
+local deadline = require "coq.lib.async.deadline"
 local runtime = require "coq.lib.async.runtime"
 
 local M = {}
 
 ---@class producers.Supervisor<C>: producers.Producer<C>
----@field search fun(ctx: C): producers.SearchIter
+---@field search fun(ctx: C, timeout_ms?: integer): producers.SearchIter
 
 ---@generic C
 ---@param producers producers.Producer<C>[]
@@ -40,7 +41,7 @@ M.new = function(producers)
     async.all(idles)
   end
 
-  sup.search = function(ctx)
+  sup.search = function(ctx, timeout_ms)
     if idle_handle then
       idle_handle.cancel()
     end
@@ -55,17 +56,24 @@ M.new = function(producers)
     local m = async.merge(iters)
     searching = true
 
+    local pull = function()
+      local _, v = m()
+      return v
+    end
+    local guarded = deadline.new(timeout_ms, pull)
+
     local close = function()
       searching = false
       m.close()
     end
 
     local next = function()
-      for _, value in m do
-        return value
+      local v = guarded()
+      if v == nil then
+        searching = false
+        runtime.detach(runtime.ROOT, m.close)
       end
-      searching = false
-      return nil
+      return v
     end
 
     return setmetatable({ close = close }, { __call = next })

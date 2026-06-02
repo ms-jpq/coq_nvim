@@ -16,7 +16,7 @@ local M = {}
 ---@return async.Nursery
 M.new = function()
   local errors = {}
-  local pending = setmetatable({}, { __mode = "k" })
+  local pending = lib.weak()
   local waiters = {}
 
   local h = handle.new(runtime.current())

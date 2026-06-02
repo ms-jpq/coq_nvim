@@ -59,17 +59,20 @@ end
 
 -- https://github.com/neovim/neovim/blob/master/runtime/lua/vim/lsp/completion.lua
 ---@param ctx ctx.base
+---@param resolver completions.Resolver
 ---@param i completions.Item
 ---@return true?
-local apply = function(ctx, i)
+local apply = function(ctx, resolver, i)
   local meta = i.meta
   local lsp = meta.lsp or {}
 
-  if #(lsp.additional_text_edits or {}) == 0 then
-    lsp_util.enrich(ctx, i)
+  local edits = lsp.item and lsp.item.additionalTextEdits
+  if #(edits or {}) == 0 then
+    lsp = resolver.resolve(ctx, i) or lsp
     if not context.still_valid(ctx) then
       return
     end
+    edits = lsp.item and lsp.item.additionalTextEdits
   end
 
   do
@@ -78,8 +81,8 @@ local apply = function(ctx, i)
     vim.api.nvim_buf_set_text(ctx.buf, start_row, start_col, end_row, end_col, lines)
   end
 
-  if lsp.additional_text_edits then
-    vim.lsp.util.apply_text_edits(lsp.additional_text_edits, ctx.buf, lsp.position_encoding or DEFAULT_ENCODING)
+  if edits then
+    vim.lsp.util.apply_text_edits(edits, ctx.buf, lsp.position_encoding or DEFAULT_ENCODING)
   end
 
   if meta.snippet then
@@ -89,7 +92,7 @@ local apply = function(ctx, i)
     end
   end
 
-  if lsp.command then
+  if lsp.item and lsp.item.command then
     lsp_util.exec_command(ctx, lsp)
   end
 
@@ -101,7 +104,7 @@ local M = {}
 ---@param ctx ctx.full
 ---@param settings config.Settings
 ---@param ranker index.Ranker
----@param iter lib.Iterator<any>
+---@param iter producers.SearchIter
 M.complete = function(ctx, settings, ranker, iter)
   local prepared = ranker.prepare(ctx)
 
@@ -136,9 +139,10 @@ M.complete = function(ctx, settings, ranker, iter)
 end
 
 ---@param n async.Nursery
+---@param resolver completions.Resolver
 ---@param ranker index.Ranker
 ---@param done channels.Broadcast<vim.v.completed_item>
-M.bind = function(n, ranker, done)
+M.bind = function(n, resolver, ranker, done)
   events.subscribe_latest(n, done, function(completed)
     local user_data = completed.user_data
     if type(user_data) ~= "table" then
@@ -148,7 +152,7 @@ M.bind = function(n, ranker, done)
     ---@cast user_data completions.Item
     local ctx = context.base()
     local filter = user_data.meta.filter or user_data.word
-    if apply(ctx, user_data) and filter then
+    if apply(ctx, resolver, user_data) and filter then
       ranker.inserted(filter)
     end
   end)

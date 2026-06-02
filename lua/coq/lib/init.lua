@@ -25,6 +25,12 @@ M.clamp = function(lo, x, hi)
   return math.max(lo, math.min(x, hi))
 end
 
+---@generic K, V
+---@return table<K, V>
+M.weak = function()
+  return setmetatable({}, { __mode = "k" })
+end
+
 ---@param err any
 M.report = function(err)
   local e = tostring(err)

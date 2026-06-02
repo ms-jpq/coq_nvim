@@ -48,6 +48,7 @@ M.parse = function(jsonl)
   return async.wrap(function()
     for line in txt.splitlines(jsonl) do
       if line ~= "" then
+        async.sleep(0)
         local ok, obj = pcall(vim.json.decode, line)
         if ok and type(obj) == "table" and obj._type == "tag" and obj.name and obj.path then
           coroutine.yield {

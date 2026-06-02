@@ -35,6 +35,18 @@ T.describe("tags.parse", function(test)
     T.eq(tags[1].word, "spot")
   end)
 
+  test("drops tag entries missing required name or path", function()
+    local raw = table.concat({
+      vim.json.encode { _type = "tag", path = "/dogs/no-name.py", line = 1 },
+      vim.json.encode { _type = "tag", name = "no-path", line = 1 },
+      vim.json.encode { _type = "tag", name = "fido", path = "/dogs/fido.py", line = 5 },
+    }, "\n")
+    local tags = vim.iter(parse.parse(raw)):totable()
+
+    T.eq(#tags, 1)
+    T.eq(tags[1].word, "fido")
+  end)
+
   test("survives a malformed json line", function()
     local raw = table.concat({
       "{not json}",

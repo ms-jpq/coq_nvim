@@ -78,6 +78,22 @@ M.race = function(fns)
   end)
 end
 
+---@generic T
+---@param timeout integer milliseconds
+---@param fn fun(): T?
+---@return T?
+M.wait = function(timeout, fn)
+  local idx, value = M.race {
+    fn,
+    function()
+      runtime.sleep(timeout)
+    end,
+  }
+  if idx == 1 then
+    return value
+  end
+end
+
 ---@class async.MergeIter<T>: lib.Closable
 ---@overload fun(): integer, T
 

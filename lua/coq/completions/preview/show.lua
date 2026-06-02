@@ -1,7 +1,6 @@
 local async = require "coq.lib.async"
 local atools = require "coq.lib.atools"
 local lib = require "coq.lib"
-local lsp_util = require "coq.producers.lsp.util"
 local paths_util = require "coq.producers.paths.util"
 local txt = require "coq.lib.text"
 
@@ -166,10 +165,11 @@ end
 
 ---@param ctx ctx.base
 ---@param settings config.Settings
+---@param resolver completions.Resolver
 ---@param item completions.Item
 ---@return string[]? lines
 ---@return string filetype
-local resolve_doc = function(ctx, settings, item)
+local resolve_doc = function(ctx, settings, resolver, item)
   local meta = item.meta
 
   if meta.doc then
@@ -186,12 +186,15 @@ local resolve_doc = function(ctx, settings, item)
       ""
   end
 
-  local lsp_item = meta.lsp and meta.lsp.item
-  if lsp_item then
-    if not lsp_item.documentation and not lsp_item.detail then
-      lsp_util.enrich(ctx, item)
+  if meta.lsp then
+    local lsp_item = meta.lsp.item
+    if lsp_item and not lsp_item.documentation and not lsp_item.detail then
+      local lsp = resolver.resolve(ctx, item)
+      lsp_item = lsp and lsp.item
     end
-    return md_lines(lsp_item), "markdown"
+    if lsp_item then
+      return md_lines(lsp_item), "markdown"
+    end
   end
 
   return nil, ""
@@ -241,13 +244,14 @@ end
 
 ---@param ctx ctx.base
 ---@param settings config.Settings
+---@param resolver completions.Resolver
 ---@param ev completions.PumChangedEvent
 ---@param item completions.Item
-M.show = function(ctx, settings, ev, item)
+M.show = function(ctx, settings, resolver, ev, item)
   if not settings.display.preview.enabled then
     return
   end
-  local lines, filetype = resolve_doc(ctx, settings, item)
+  local lines, filetype = resolve_doc(ctx, settings, resolver, item)
   if lines then
     show(settings.display.preview, ev, lines, filetype)
   end

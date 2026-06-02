@@ -1,4 +1,5 @@
 local T = require "coq.lib.test"
+local async = require "coq.lib.async"
 local itertools = require "coq.lib.itertools"
 
 ---@param t any[]
@@ -123,5 +124,28 @@ T.describe("itertools.uniq_by", function(test)
   test("composes with take", function()
     local out = drain(itertools.take(2, itertools.uniq_by(id, from { "spot", "spot", "fido", "rex", "fido" })))
     T.eq(out, { "spot", "fido" })
+  end)
+end)
+
+T.describe("itertools.cooperative", function(test)
+  test("forwards every value verbatim", function()
+    async.scope(function()
+      T.eq(drain(itertools.cooperative(2, from { "spot", "fido", "rex" })), { "spot", "fido", "rex" })
+    end)
+  end)
+
+  test("terminates cleanly when source is exhausted", function()
+    async.scope(function()
+      local iter = itertools.cooperative(3, from { "spot" })
+      T.eq(iter(), "spot")
+      T.eq(iter(), nil)
+      T.eq(iter(), nil)
+    end)
+  end)
+
+  test("does not stall on an empty source", function()
+    async.scope(function()
+      T.eq(drain(itertools.cooperative(5, from {})), {})
+    end)
   end)
 end)

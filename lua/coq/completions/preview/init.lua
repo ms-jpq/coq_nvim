@@ -83,8 +83,9 @@ local M = {}
 
 ---@param n async.Nursery
 ---@param settings config.Settings
+---@param resolver completions.Resolver
 ---@param pum channels.Broadcast<completions.PumEvent>
-M.bind = function(n, settings, pum)
+M.bind = function(n, settings, resolver, pum)
   if settings.keymap.bigger_preview then
     local esc = vim.keycode "<c-e>"
     vim.keymap.set({ "i" }, settings.keymap.bigger_preview, function()
@@ -110,7 +111,7 @@ M.bind = function(n, settings, pum)
     if item then
       show_ghost(ctx, settings.display.ghost_text, item)
       if changed_ev then
-        show.show(ctx, settings, changed_ev, item)
+        show.show(ctx, settings, resolver, changed_ev, item)
       end
     end
   end)

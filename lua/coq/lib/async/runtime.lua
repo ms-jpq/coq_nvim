@@ -8,7 +8,7 @@ local M = {}
 M.ROOT = handle.new()
 
 ---@type table<thread, async.Handle>
-local threads = setmetatable({}, { __mode = "k" })
+local threads = lib.weak()
 
 ---@param thread thread
 ---@param h async.Handle

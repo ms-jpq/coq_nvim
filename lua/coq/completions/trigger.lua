@@ -1,4 +1,3 @@
-local atools = require "coq.lib.atools"
 local context = require "coq.lib.context"
 local events = require "coq.completions.events"
 local insertion = require "coq.completions.insertion"
@@ -20,16 +19,19 @@ end
 ---@param n async.Nursery
 ---@param settings config.Settings
 ---@param ranker index.Ranker
----@param sup producers.Producer<ctx.full>
+---@param resolver completions.Resolver
+---@param sup producers.Supervisor<ctx.full>
 ---@param trigger channels.Broadcast<nil>
-M.bind = function(n, settings, ranker, sup, trigger)
+M.bind = function(n, settings, ranker, resolver, sup, trigger)
   events.subscribe_latest(n, trigger, function()
     local ctx = context.full()
     if should_skip(settings.completion.skip_after, ctx.line_before) then
       return
     end
 
-    local searched = sup.search(ctx)
+    resolver.reset()
+    local timeout_ms = math.floor(settings.limits.completion_auto_timeout * 1000)
+    local searched = sup.search(ctx, timeout_ms)
     insertion.complete(ctx, settings, ranker, searched)
   end)
 end
