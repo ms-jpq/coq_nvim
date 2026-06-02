@@ -4,7 +4,25 @@ local handle = require "coq.lib.async.handle"
 local lib = require "coq.lib"
 local nursery = require "coq.lib.async.nursery"
 local producer = require "coq.lib.producers"
-local threaded = require "coq.lib.producers.threaded"
+
+---@param spec producers.Spec
+---@return producers.Producer
+local regular = function(spec)
+  return {
+    max_pulls = spec.max_pulls or math.huge,
+    bind = function(n)
+      if spec.bind then
+        spec.bind(n, lib.noop)
+      end
+    end,
+    idle = lib.noop,
+    search = function(ctx)
+      return async.wrap(function()
+        spec.matcher(spec.settings, ctx)
+      end)
+    end,
+  }
+end
 
 local cancel_tests = function(name, factory)
   T.describe("producer " .. name .. " :: cancel", function(test)
@@ -52,5 +70,5 @@ local cancel_tests = function(name, factory)
   end)
 end
 
-cancel_tests("regular", producer.new)
-cancel_tests("threaded", threaded.new)
+cancel_tests("regular", regular)
+cancel_tests("threaded", producer.new)

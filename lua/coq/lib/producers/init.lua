@@ -1,11 +1,12 @@
 local async = require "coq.lib.async"
+local lib = require "coq.lib"
+local worker = require "coq.lib.worker"
 
 ---@class producers.Producer<C>: index.Searchable<C, completions.Item>
 ---@field idle fun(ctx: C)
 ---@field bind fun(n: async.Nursery)
 ---@field max_pulls integer
 
----A cancellable search result: call to pull the next item, close to cancel.
 ---@class producers.SearchIter: lib.Closable
 ---@overload fun(): completions.Item?
 
@@ -18,9 +19,9 @@ local async = require "coq.lib.async"
 ---@class producers.Spec<C>
 ---@field settings? config.Settings
 ---@field key? producers.KeyFn
----@field idle producers.IdleFn<C>
+---@field idle? producers.IdleFn<C>
 ---@field matcher producers.MatcherFn<C>
----@field bind producers.OnBind
+---@field bind? producers.OnBind
 ---@field max_pulls? integer
 
 local M = {}
@@ -29,33 +30,43 @@ local M = {}
 ---@param spec producers.Spec<C>
 ---@return producers.Producer<C>
 M.new = function(spec)
-  local key = spec.key or function(ev)
-    return ev
-  end
-  local location = {}
+  local w = worker.spawn()
+  local key = spec.key
+  local location = key and {}
 
-  local db = { max_pulls = spec.max_pulls or math.huge }
-
-  db.bind = function(n)
-    spec.bind(n, function(ev)
-      location[key(ev)] = ev
-    end)
-  end
-
-  db.idle = function(ctx)
-    local batch = location
-    location = {}
-    spec.idle(spec.settings, batch, ctx)
-  end
-
-  db.search = function(ctx)
-    return async.wrap(function()
-      spec.matcher(spec.settings, ctx)
-    end)
-  end
-
-  ---@cast db producers.Producer
-  return db
+  return {
+    max_pulls = spec.max_pulls or math.huge,
+    bind = function(n)
+      if spec.bind then
+        spec.bind(n, function(ev)
+          if location then
+            location[key(ev)] = ev
+          end
+        end)
+      end
+    end,
+    idle = function(ctx)
+      if not spec.idle then
+        return
+      end
+      local batch = location or {}
+      if location then
+        location = {}
+      end
+      w.queue(spec.idle, spec.settings, batch, ctx)
+    end,
+    search = function(ctx)
+      return async.wrap(function()
+        lib.scope(function(defer)
+          local stream = w.queue_stream(spec.matcher, spec.settings, ctx)
+          defer(stream.close)
+          for item in stream do
+            coroutine.yield(item)
+          end
+        end)
+      end)
+    end,
+  }
 end
 
 return M

@@ -1,7 +1,7 @@
 local async = require "coq.lib.async"
 local atools = require "coq.lib.atools"
 local lib = require "coq.lib"
-local threaded = require "coq.lib.producers.threaded"
+local producer = require "coq.lib.producers"
 
 local M = {}
 
@@ -355,11 +355,9 @@ end
 ---@param settings config.Settings
 ---@return producers.Producer<ctx.full>
 M.new = function(settings)
-  return threaded.new {
+  return producer.new {
     settings = settings,
     max_pulls = settings.clients.paths.max_pulls,
-    bind = lib.noop,
-    idle = lib.noop,
     matcher = function(...)
       require("coq.producers.paths").matcher(...)
     end,

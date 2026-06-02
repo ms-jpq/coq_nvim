@@ -1,6 +1,7 @@
 local async = require "coq.lib.async"
 local atools = require "coq.lib.atools"
 local context = require "coq.lib.context"
+local events = require "coq.completions.events"
 local show = require "coq.completions.preview.show"
 
 local NS = vim.api.nvim_create_namespace "coq.preview"
@@ -100,27 +101,15 @@ M.bind = function(n, settings, pum)
     end, { expr = true, noremap = true })
   end
 
-  n.spawn(function(defer)
-    local iter = pum.subscribe()
-    defer(iter.close)
-
-    ---@type async.Handle?
-    local prev = nil
-    for ev in iter do
-      if prev then
-        prev.cancel()
+  events.subscribe_latest(n, pum, function(ev)
+    local ctx = context.base()
+    clear(ctx.buf)
+    local changed_ev, item = item_of(ev)
+    if item then
+      show_ghost(ctx, settings.display.ghost_text, item)
+      if changed_ev then
+        show.show(ctx, settings, changed_ev, item)
       end
-      prev = n.spawn(function()
-        local ctx = context.base()
-        clear(ctx.buf)
-        local changed_ev, item = item_of(ev)
-        if item then
-          show_ghost(ctx, settings.display.ghost_text, item)
-          if changed_ev then
-            show.show(ctx, settings, changed_ev, item)
-          end
-        end
-      end)
     end
   end)
 end

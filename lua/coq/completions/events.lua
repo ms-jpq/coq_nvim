@@ -73,4 +73,40 @@ M.new = function()
   return events
 end
 
+---@generic T
+---@param n async.Nursery
+---@param chan channels.Broadcast<T>
+---@param handler fun(ev: T)
+M.subscribe = function(n, chan, handler)
+  n.spawn(function(defer)
+    local iter = chan.subscribe()
+    defer(iter.close)
+    for ev in iter do
+      n.spawn(function()
+        handler(ev)
+      end)
+    end
+  end)
+end
+
+---@generic T
+---@param n async.Nursery
+---@param chan channels.Broadcast<T>
+---@param handler fun(ev: T)
+M.subscribe_latest = function(n, chan, handler)
+  n.spawn(function(defer)
+    local iter = chan.subscribe()
+    defer(iter.close)
+    local prev
+    for ev in iter do
+      if prev then
+        prev.cancel()
+      end
+      prev = n.spawn(function()
+        handler(ev)
+      end)
+    end
+  end)
+end
+
 return M

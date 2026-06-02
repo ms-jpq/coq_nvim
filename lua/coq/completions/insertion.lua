@@ -1,5 +1,6 @@
 local atools = require "coq.lib.atools"
 local context = require "coq.lib.context"
+local events = require "coq.completions.events"
 local item = require "coq.completions.item"
 local lib = require "coq.lib"
 local lsp_util = require "coq.producers.lsp.util"
@@ -137,25 +138,17 @@ end
 ---@param ranker index.Ranker
 ---@param done channels.Broadcast<vim.v.completed_item>
 M.bind = function(n, ranker, done)
-  n.spawn(function(defer)
-    local iter = done.subscribe()
-    defer(iter.close)
+  events.subscribe_latest(n, done, function(completed)
+    local user_data = completed.user_data
+    if type(user_data) ~= "table" then
+      return
+    end
 
-    for completed in iter do
-      ---@cast completed vim.v.completed_item
-      local user_data = completed.user_data
-      if type(user_data) == "table" then
-        ---@cast user_data completions.Item
-
-        n.spawn(function()
-          local ctx = context.base()
-          local filter = user_data.meta.filter or user_data.word
-
-          if apply(ctx, user_data) and filter then
-            ranker.inserted(filter)
-          end
-        end)
-      end
+    ---@cast user_data completions.Item
+    local ctx = context.base()
+    local filter = user_data.meta.filter or user_data.word
+    if apply(ctx, user_data) and filter then
+      ranker.inserted(filter)
     end
   end)
 end

@@ -3,7 +3,7 @@ local atools = require "coq.lib.atools"
 local buf_tracker = require "coq.lib.producers.buf_tracker"
 local fs = require "coq.producers.fs"
 local index = require "coq.producers.treesitter.index"
-local threaded = require "coq.lib.producers.threaded"
+local producer = require "coq.lib.producers"
 local util = require "coq.producers.util"
 local worker = require "coq.lib.worker"
 
@@ -159,7 +159,7 @@ end
 ---@param settings config.Settings
 ---@return producers.Producer<ctx.full>
 M.new = function(settings)
-  return threaded.new {
+  return producer.new {
     settings = settings,
     max_pulls = settings.clients.tree_sitter.max_pulls,
     key = util.buffer_key,

@@ -2,7 +2,7 @@ local async = require "coq.lib.async"
 local atools = require "coq.lib.atools"
 local index = require "coq.producers.tmux.index"
 local lib = require "coq.lib"
-local threaded = require "coq.lib.producers.threaded"
+local producer = require "coq.lib.producers"
 local tokens = require "coq.lib.index.tokens"
 
 local SEP = "\30"
@@ -188,7 +188,7 @@ end
 ---@param settings config.Settings
 ---@return producers.Producer<ctx.full>
 M.new = function(settings)
-  return threaded.new {
+  return producer.new {
     settings = settings,
     max_pulls = settings.clients.tmux.max_pulls,
     key = function(ev)

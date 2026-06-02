@@ -4,7 +4,7 @@ local buf_tracker = require "coq.lib.producers.buf_tracker"
 local context = require "coq.lib.context"
 local fs = require "coq.producers.fs"
 local index = require "coq.producers.buffer.index"
-local threaded = require "coq.lib.producers.threaded"
+local producer = require "coq.lib.producers"
 local tokens = require "coq.lib.index.tokens"
 local util = require "coq.producers.util"
 local worker = require "coq.lib.worker"
@@ -132,7 +132,7 @@ end
 ---@param settings config.Settings
 ---@return producers.Producer<ctx.full>
 M.new = function(settings)
-  return threaded.new {
+  return producer.new {
     settings = settings,
     max_pulls = settings.clients.buffers.max_pulls,
     key = util.buffer_key,

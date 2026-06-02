@@ -1,6 +1,5 @@
 local async = require "coq.lib.async"
 local lib = require "coq.lib"
-local producer = require "coq.lib.producers"
 local request = require "coq.producers.lsp.request"
 
 local M = {}
@@ -11,8 +10,7 @@ M.matcher = function(settings, ctx)
   local sc = settings.display.pum.source_context
   local menu = sc[1] .. opts.short_name .. sc[2]
 
-  for entry in request.query(ctx)
- do
+  for entry in request.query(ctx) do
     local item = entry.item
     local label = item.label or ""
     local insert_text = item.insertText or label
@@ -44,13 +42,14 @@ end
 ---@param settings config.Settings
 ---@return producers.Producer<ctx.full>
 M.new = function(settings)
-  return producer.new {
-    settings = settings,
-    max_pulls = settings.clients.lsp.max_pulls,
+  return {
+    max_pulls = settings.clients.lsp.max_pulls or math.huge,
     bind = lib.noop,
     idle = lib.noop,
-    matcher = function(...)
-      M.matcher(...)
+    search = function(ctx)
+      return async.wrap(function()
+        M.matcher(settings, ctx)
+      end)
     end,
   }
 end

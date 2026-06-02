@@ -1,5 +1,6 @@
 local atools = require "coq.lib.atools"
 local context = require "coq.lib.context"
+local events = require "coq.completions.events"
 local insertion = require "coq.completions.insertion"
 
 local M = {}
@@ -10,23 +11,11 @@ local M = {}
 ---@param sup producers.Producer<ctx.full>
 ---@param trigger channels.Broadcast<nil>
 M.bind = function(n, settings, ranker, sup, trigger)
-  n.spawn(function(defer)
-    local iter = trigger.subscribe()
-    defer(iter.close)
-
-    ---@type async.Handle?
-    local prev = nil
-    for _ in iter do
-      if prev then
-        prev.cancel()
-      end
-      prev = n.spawn(function()
-        atools.scheduled()
-        local ctx = context.full()
-        local searched = sup.search(ctx)
-        insertion.complete(ctx, settings, ranker, searched)
-      end)
-    end
+  events.subscribe_latest(n, trigger, function()
+    atools.scheduled()
+    local ctx = context.full()
+    local searched = sup.search(ctx)
+    insertion.complete(ctx, settings, ranker, searched)
   end)
 end
 

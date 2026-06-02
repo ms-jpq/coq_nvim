@@ -3,7 +3,6 @@ local async = require "coq.lib.async"
 local handle = require "coq.lib.async.handle"
 local lib = require "coq.lib"
 local nursery = require "coq.lib.async.nursery"
-local producer = require "coq.lib.producers"
 local supervisor = require "coq.lib.producers.supervisor"
 
 ---@return async.Nursery
@@ -13,10 +12,27 @@ local detached = function()
   return n
 end
 
----@param matcher producers.MatcherFn
+---@param spec { idle?: fun(ctx), bind?: fun(n: async.Nursery), matcher?: fun(_, ctx) }
+---@return producers.Producer
+local producer = function(spec)
+  return {
+    max_pulls = math.huge,
+    bind = spec.bind or lib.noop,
+    idle = spec.idle or lib.noop,
+    search = function(ctx)
+      return async.wrap(function()
+        if spec.matcher then
+          spec.matcher(nil, ctx)
+        end
+      end)
+    end,
+  }
+end
+
+---@param matcher fun()
 ---@return producers.Producer
 local matcher_only = function(matcher)
-  return producer.new { idle = lib.noop, bind = lib.noop, matcher = matcher }
+  return producer { matcher = matcher }
 end
 
 ---@param ... any
@@ -30,19 +46,20 @@ local yields = function(...)
   end)
 end
 
----@param fields { idle?: producers.IdleFn, matcher?: producers.MatcherFn }
+---@param fields { idle?: fun(ctx), matcher?: fun() }
 ---@return producers.Producer, fun(ev: any)
 local pushable = function(fields)
-  local push
-  local p = producer.new {
-    idle = fields.idle or lib.noop,
-    matcher = fields.matcher or lib.noop,
-    bind = function(_, p_push)
-      push = p_push
+  local pending = {}
+  local p = producer {
+    idle = function(ctx)
+      if fields.idle then
+        fields.idle(nil, pending, ctx)
+      end
     end,
+    matcher = fields.matcher,
   }
   return p, function(ev)
-    push(ev)
+    pending[ev] = ev
   end
 end
 
@@ -104,11 +121,10 @@ T.describe("supervisor", function(test)
     local idle_ran = false
     async.scope(function(n)
       local sup = supervisor.new {
-        producer.new {
+        producer {
           idle = function()
             idle_ran = true
           end,
-          bind = lib.noop,
           matcher = function()
             coroutine.yield "lil"
             async.sleep(50 * T.SLOW)
@@ -166,9 +182,7 @@ T.describe("supervisor", function(test)
   test("bind cascades to each producer once, even on repeat cancel", function()
     local cleanups = {}
     local trace = function(name)
-      return producer.new {
-        idle = lib.noop,
-        matcher = lib.noop,
+      return producer {
         bind = function(n)
           local _ = n.on_cancel(function()
             cleanups[name] = (cleanups[name] or 0) + 1

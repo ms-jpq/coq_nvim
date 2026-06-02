@@ -1,5 +1,6 @@
 local async = require "coq.lib.async"
 local atools = require "coq.lib.atools"
+local cancel = require "coq.lib.async.cancel"
 local errs = require "coq.lib.errs"
 local handle = require "coq.lib.async.handle"
 local inflight = require "coq.lib.worker.inflight"
@@ -192,6 +193,9 @@ local make_responder = function(write)
         lib.noop()
       end
     end)
+    if not ok and cancel.is(terminal) then
+      ok, terminal = true, build_response(frame.id, true)
+    end
     write(ok and terminal or build_response(frame.id, false, terminal))
   end
 
