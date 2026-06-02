@@ -331,30 +331,3 @@ T.describe("paths.rpartition", function(test)
     T.eq(r, "spot")
   end)
 end)
-
-T.describe("paths.expanduser", function(test)
-  test("expands leading ~/ to $HOME", function()
-    local home = assert(vim.uv.os_homedir())
-    T.eq(internal.expanduser "~/spot", home .. "/spot")
-    T.eq(internal.expanduser "~", home)
-  end)
-
-  test("leaves non-tilde paths untouched", function()
-    T.eq(internal.expanduser "/etc", "/etc")
-    T.eq(internal.expanduser "foo~bar", "foo~bar")
-  end)
-end)
-
-T.describe("paths.expandvars", function(test)
-  test("expands $VAR and ${VAR} from env", function()
-    vim.uv.os_setenv("COQ_TEST_DOG", "fido")
-    T.eq(internal.expandvars "/$COQ_TEST_DOG/spot", "/fido/spot")
-    T.eq(internal.expandvars "${COQ_TEST_DOG}/spot", "fido/spot")
-    vim.uv.os_unsetenv "COQ_TEST_DOG"
-  end)
-
-  test("leaves unset vars literal", function()
-    vim.uv.os_unsetenv "COQ_TEST_GHOST"
-    T.eq(internal.expandvars "$COQ_TEST_GHOST/spot", "$COQ_TEST_GHOST/spot")
-  end)
-end)

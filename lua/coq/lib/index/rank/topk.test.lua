@@ -45,6 +45,30 @@ T.describe("topk", function(test)
     T.eq(vim.iter(h.iter()):totable(), { "labrador", "poodle", "boxer" })
   end)
 
+  test("key_fn collapses duplicates, keeping the higher score", function()
+    local h = topk.new(3, function(s)
+      return s
+    end)
+    h.push("labrador", 3)
+    h.push("poodle", 5)
+    h.push("labrador", 7)
+    h.push("poodle", 1)
+
+    T.eq(vim.iter(h.iter()):totable(), { "labrador", "poodle" })
+  end)
+
+  test("key_fn preserves first-seen seq on score upgrade", function()
+    local h = topk.new(3, function(s)
+      return s
+    end)
+    h.push("labrador", 5)
+    h.push("poodle", 5)
+    h.push("labrador", 5) -- same score, no change
+    h.push("poodle", 9) -- upgraded, keeps seq=2
+
+    T.eq(vim.iter(h.iter()):totable(), { "poodle", "labrador" })
+  end)
+
   test("k = 1 keeps only the single best", function()
     local h = topk.new(1)
     h.push("labrador", 3)

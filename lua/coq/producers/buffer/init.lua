@@ -109,11 +109,9 @@ M.matcher = function(settings, ctx)
     filetype = opts.same_filetype and ctx.filetype or nil,
   }
 
-  local items = util.dedup(index.search(search_ctx) --[[@as lib.Iterator<buffer.Item>]], function(it)
-    return it.word
-  end)
-
-  for item in items do
+  for item in
+    index.search(search_ctx) --[[@as lib.Iterator<buffer.Item>]]
+  do
     if item.word ~= ctx.cword then
       local lines = vim.iter(doc_iter(opts, ctx, item)):totable()
       coroutine.yield {

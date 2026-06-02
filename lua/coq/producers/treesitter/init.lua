@@ -136,14 +136,9 @@ M.matcher = function(settings, ctx)
   local sc = settings.display.pum.source_context
   local menu = sc[1] .. opts.short_name .. sc[2]
 
-  local items = util.dedup(
-    index.search { filetype = ctx.filetype, keyword_before = ctx.keyword_before } --[[@as lib.Iterator<treesitter.Item>]],
-    function(it)
-      return it.text
-    end
-  )
-
-  for item in items do
+  for item in
+    index.search { filetype = ctx.filetype, keyword_before = ctx.keyword_before } --[[@as lib.Iterator<treesitter.Item>]]
+  do
     if item.text ~= ctx.cword then
       local lines = vim.iter(doc_iter(opts, ctx, item)):totable()
       coroutine.yield {

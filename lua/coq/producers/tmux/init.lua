@@ -4,7 +4,6 @@ local index = require "coq.producers.tmux.index"
 local lib = require "coq.lib"
 local threaded = require "coq.lib.producers.threaded"
 local tokens = require "coq.lib.index.tokens"
-local util = require "coq.producers.util"
 
 local SEP = "\30"
 local PANE_FIELDS = {
@@ -166,10 +165,9 @@ M.matcher = function(settings, ctx)
   local sc = settings.display.pum.source_context
   local menu = sc[1] .. opts.short_name .. sc[2]
 
-  local items = util.dedup(index.search(ctx) --[[@as lib.Iterator<tmux.Item>]], function(it)
-    return it.word
-  end)
-  for item in items do
+  for item in
+    index.search(ctx) --[[@as lib.Iterator<tmux.Item>]]
+  do
     if item.word ~= ctx.cword then
       local lines = vim.iter(doc_iter(opts, item.meta)):totable()
       coroutine.yield {

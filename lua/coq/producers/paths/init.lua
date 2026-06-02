@@ -132,27 +132,6 @@ local rpartition = function(s, sep)
 end
 
 ---@param p string
----@return string
-local expanduser = function(p)
-  if string.sub(p, 1, 2) == "~/" or p == "~" or string.sub(p, 1, 2) == "~\\" then
-    local home = vim.uv.os_homedir() or ""
-    return home .. string.sub(p, 2)
-  end
-  return p
-end
-
----@param p string
----@return string
-local expandvars = function(p)
-  local braced = string.gsub(p, "%${([%w_]+)}", function(v)
-    return os.getenv(v) or ("${" .. v .. "}")
-  end)
-  return (string.gsub(braced, "%$([%w_]+)", function(v)
-    return os.getenv(v) or ("$" .. v)
-  end))
-end
-
----@param p string
 ---@return boolean
 local is_absolute = function(p)
   if string.sub(p, 1, 1) == "/" then
@@ -247,13 +226,9 @@ end
 local variants_of = function(s0)
   return async.wrap(function()
     coroutine.yield(s0)
-    local with_user = expanduser(s0)
-    if with_user ~= s0 then
-      coroutine.yield(with_user)
-    end
-    local with_vars = expandvars(with_user)
-    if with_vars ~= with_user then
-      coroutine.yield(with_vars)
+    local normalized = vim.fs.normalize(s0)
+    if normalized ~= s0 then
+      coroutine.yield(normalized)
     end
   end)
 end
@@ -397,8 +372,6 @@ M._internal = {
   iter_cuts = iter_cuts,
   p_sep = p_sep,
   rpartition = rpartition,
-  expanduser = expanduser,
-  expandvars = expandvars,
 }
 
 return M
