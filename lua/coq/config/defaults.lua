@@ -262,7 +262,6 @@ local M = {
     download_timeout = 66.0,
 
     idle_timeout = 1.88,
-    tokenization_limit = 999,
   },
 
   match = {

@@ -35,6 +35,7 @@ end
 
 ---@param updated integer[]?
 ---@param removed integer[]?
+---@return idle.Ctx
 local idle_ctx = function(updated, removed)
   local u, r = {}, {}
   for _, b in pairs(updated or {}) do
@@ -44,9 +45,11 @@ local idle_ctx = function(updated, removed)
     r[b] = true
   end
   return {
+    ---@diagnostic disable-next-line: missing-fields
+    ctx = {},
     updated = u,
     removed = r,
-  }
+  } --[[@as idle.Ctx]]
 end
 
 T.describe("buf_tracker", function(test)

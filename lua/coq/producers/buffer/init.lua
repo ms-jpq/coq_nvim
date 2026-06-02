@@ -121,6 +121,7 @@ M.matcher = function(settings, ctx)
   do
     if item.word ~= ctx.cword then
       local lines = vim.iter(doc_iter(opts, ctx, item)):totable()
+
       coroutine.yield {
         word = item.word,
         kind = "Text",

@@ -2,8 +2,6 @@ local async = require "coq.lib.async"
 local atools = require "coq.lib.atools"
 local context = require "coq.lib.context"
 
-local YIELD_BYTES = 6969
-
 local M = {}
 
 ---@param s string
@@ -66,7 +64,6 @@ end
 ---@return fun(): string?
 M.words = function(kw, lines)
   return async.wrap(function()
-    local elapsed = 0
     for line in lines do
       local i, n = 1, #line
       while i <= n do
@@ -80,12 +77,6 @@ M.words = function(kw, lines)
         else
           i = i + 1
         end
-      end
-
-      elapsed = elapsed + n
-      if elapsed >= YIELD_BYTES then
-        elapsed = 0
-        async.sleep(0)
       end
     end
   end)

@@ -12,19 +12,19 @@ local M = {}
 
 ---@generic M : buf_tracker.Meta
 ---@param spec buf_tracker.Spec<M>
----@return fun(diff: { updated: table<integer, true>, removed: table<integer, true> })
+---@return fun(idle_ctx: idle.Ctx)
 M.new = function(spec)
   local last_tick = {}
 
-  return function(diff)
-    for buf in pairs(diff.removed) do
+  return function(idle_ctx)
+    for buf in pairs(idle_ctx.removed) do
       async.sleep(0)
       spec.prune(buf)
       last_tick[buf] = nil
     end
 
     local fresh = {}
-    for buf in pairs(diff.updated) do
+    for buf in pairs(idle_ctx.updated) do
       async.sleep(0)
       local prev = last_tick[buf]
       local meta = spec.fetch(buf, prev)

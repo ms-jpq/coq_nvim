@@ -3,25 +3,6 @@ local runtime = require "coq.lib.async.runtime"
 
 local M = {}
 
----@generic T
----@param max integer
----@param iter lib.Iterator<T>
----@return lib.Iterator<T>
-local capped = function(max, iter)
-  local n = 0
-  return function()
-    if n >= max then
-      return nil
-    end
-    local v = iter()
-    if v == nil then
-      return nil
-    end
-    n = n + 1
-    return v
-  end
-end
-
 ---@class producers.Supervisor<C>: producers.Producer<C>
 ---@field search fun(ctx: C): producers.SearchIter
 
@@ -67,7 +48,7 @@ M.new = function(producers)
     local iters = vim
       .iter(producers)
       :map(function(p)
-        return capped(p.max_pulls, p.search(ctx))
+        return p.search(ctx)
       end)
       :totable()
 

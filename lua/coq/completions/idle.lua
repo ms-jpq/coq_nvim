@@ -10,12 +10,13 @@ local events_m = require "coq.completions.events"
 local M = {}
 
 ---@param n async.Nursery
+---@param settings config.Settings
 ---@param sup producers.Supervisor<idle.Ctx>
 ---@param events completions.Events
-M.bind = function(n, sup, events)
+M.bind = function(n, settings, sup, events)
   events.idle.replace {}
   events_m.subscribe_latest(n, events.idle, function()
-    async.sleep(-1)
+    async.sleep(math.floor(settings.limits.idle_timeout * 1000))
 
     local diff = events.drain_bufs()
     sup.idle {

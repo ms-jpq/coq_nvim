@@ -75,7 +75,6 @@ local defaults = require "coq.config.defaults"
 ---@field manual_complete_insertion_only boolean
 
 ---@class config.Limits
----@field tokenization_limit integer
 ---@field idle_timeout number
 ---@field completion_auto_timeout number
 ---@field completion_manual_timeout number
