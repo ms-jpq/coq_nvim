@@ -136,6 +136,25 @@ T.describe("trie", function(test)
     T.eq(collect(t.search {}), {})
   end)
 
+  test("key bucketing is case insensitive in both directions", function()
+    local t = trie.new(vim.tbl_extend("force", spec, { prefix = 2 }))
+    t.insert { word = "Labrador" } -- upper-cased word, lower-cased query
+    t.insert { word = "poodle" } -- lower-cased word, upper-cased query
+
+    T.eq(collect(t.search { prefix = "la" }), { "Labrador" })
+    T.eq(collect(t.search { prefix = "PO" }), { "poodle" })
+  end)
+
+  test("prune matches the bucket regardless of query case", function()
+    local t = trie.new(vim.tbl_extend("force", spec, { prefix = 2 }))
+    t.insert { word = "labrador" }
+    t.insert { word = "spot" }
+
+    t.prune { prefix = "LA" }
+
+    T.eq(collect(t.search {}), { "spot" })
+  end)
+
   test("instances are independent", function()
     local a, b = trie.new(spec), trie.new(spec)
     a.insert { word = "lil", which = "a" }

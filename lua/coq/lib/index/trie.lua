@@ -12,9 +12,15 @@ local new_node = function()
   return { children = {} }
 end
 
+---@param s string?
+---@return string?
+local norm = function(s)
+  return s and string.lower(s)
+end
+
 ---@param s string
 local chars = function(s)
-  return string.gmatch(string.lower(s), ".")
+  return string.gmatch(s, ".")
 end
 
 ---@generic C, T
@@ -54,6 +60,10 @@ M.new = function(spec)
     return node
   end
 
+  local query_key = function(ctx)
+    return norm(spec.query_key(ctx))
+  end
+
   local function dfs_yield(node, ctx)
     if node.child then
       for item in node.child.search(ctx) do
@@ -68,7 +78,7 @@ M.new = function(spec)
   local trie = {}
 
   trie.insert = function(item)
-    local key = spec.insert_key(item)
+    local key = norm(spec.insert_key(item)) --[[@as string]]
     local node = descend_create(key)
     node.child = node.child or spec.child()
     node.child.insert(item)
@@ -76,7 +86,7 @@ M.new = function(spec)
 
   ---@return boolean
   trie.prune = function(ctx)
-    local key = spec.query_key(ctx)
+    local key = query_key(ctx)
     if key == nil or key == "" then
       root = new_node()
       return true
@@ -92,7 +102,7 @@ M.new = function(spec)
 
   trie.search = function(ctx)
     local node = (function()
-      local key = spec.query_key(ctx)
+      local key = query_key(ctx)
       if key == nil or key == "" then
         return root
       end
