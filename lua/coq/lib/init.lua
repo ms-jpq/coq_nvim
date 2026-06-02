@@ -1,4 +1,4 @@
-local cancel = require "coq.lib.async.cancel"
+local errs = require "coq.lib.errs"
 
 ---@class lib.Closable
 ---@field close fun()
@@ -31,24 +31,8 @@ M.weak = function()
   return setmetatable({}, { __mode = "k" })
 end
 
----@param err any
-M.report = function(err)
-  vim.schedule(function()
-    vim.notify(err, vim.log.levels.ERROR)
-  end)
-end
-
----@generic F: fun(...)
----@param fn F
----@return F
-M.with_reporting = function(fn)
-  return function(...)
-    cancel.xpcall(fn, M.report, ...)
-  end
-end
-
----@param fn fun(defer: fun(cleanup: fun())): ...any
----@return ...any
+---@param fn fun(defer: fun(cleanup: fun())): ...
+---@return ...
 M.scope = function(fn)
   local defers = {}
 
@@ -56,7 +40,7 @@ M.scope = function(fn)
     for i = #defers, 1, -1 do
       local d_ok, d_err = xpcall(defers[i], debug.traceback)
       if not d_ok then
-        M.report(d_err)
+        errs.report(d_err)
       end
     end
 

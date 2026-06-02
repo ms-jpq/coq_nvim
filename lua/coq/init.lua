@@ -10,6 +10,14 @@ local idle = require "coq.completions.idle"
 local insertion = require "coq.completions.insertion"
 local lib = require "coq.lib"
 local nvim_options = require "coq.nvim_options"
+local p_buffers = require "coq.producers.buffers"
+local p_ctags = require "coq.producers.ctags"
+local p_lsp = require "coq.producers.lsp"
+local p_paths = require "coq.producers.paths"
+local p_registers = require "coq.producers.registers"
+local p_snippets = require "coq.producers.snippets"
+local p_tmux = require "coq.producers.tmux"
+local p_treesitter = require "coq.producers.treesitter"
 local preview = require "coq.completions.preview"
 local ranker_m = require "coq.lib.index.rank.ranker"
 local resolver_m = require "coq.completions.resolver"
@@ -55,35 +63,35 @@ end
 local producers = function(clients)
   return async.wrap(function()
     if clients.buffers.enabled then
-      coroutine.yield(require("coq.producers.buffers").new())
+      coroutine.yield(p_buffers.new())
     end
 
     if clients.registers.enabled then
-      coroutine.yield(require("coq.producers.registers").new())
+      coroutine.yield(p_registers.new())
     end
 
     if clients.tmux.enabled then
-      coroutine.yield(require("coq.producers.tmux").new())
+      coroutine.yield(p_tmux.new())
     end
 
     if clients.paths.enabled then
-      coroutine.yield(require("coq.producers.paths").new())
+      coroutine.yield(p_paths.new())
     end
 
     if clients.tree_sitter.enabled then
-      coroutine.yield(require("coq.producers.treesitter").new())
+      coroutine.yield(p_treesitter.new())
     end
 
     if clients.lsp.enabled then
-      coroutine.yield(require("coq.producers.lsp").new())
+      coroutine.yield(p_lsp.new())
     end
 
     if clients.tags.enabled then
-      coroutine.yield(require("coq.producers.ctags").new())
+      coroutine.yield(p_ctags.new())
     end
 
     if clients.snippets.enabled then
-      coroutine.yield(require("coq.producers.snippets").new())
+      coroutine.yield(p_snippets.new())
     end
   end)
 end

@@ -1,5 +1,6 @@
 local atools = require "coq.lib.atools"
 local context = require "coq.lib.context"
+local errs = require "coq.lib.errs"
 local events = require "coq.completions.events"
 local item = require "coq.completions.item"
 local lib = require "coq.lib"
@@ -90,7 +91,7 @@ local apply = function(settings, ctx, resolver, i)
   if meta.snippet then
     local ok, err = pcall(vim.snippet.expand, meta.snippet)
     if not ok then
-      lib.report(err)
+      errs.report(err)
     end
   end
 

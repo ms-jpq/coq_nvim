@@ -1,9 +1,38 @@
+local cancel = require "coq.lib.async.cancel"
+
 ---@class lib.ErrorGroup<T>
 ---@field errs T[]
 
 local M = {}
 
-M.UNKNOWN = "unknown error"
+local thread_sink = nil
+
+---@param fn fun(message: string)
+M.set_thread_sink = function(fn)
+  thread_sink = fn
+end
+
+---@param err any
+M.report = function(err)
+  if vim.is_thread() then
+    if thread_sink then
+      pcall(thread_sink, tostring(err))
+    end
+  else
+    vim.schedule(function()
+      vim.notify(err, vim.log.levels.ERROR)
+    end)
+  end
+end
+
+---@generic F: fun(...)
+---@param fn F
+---@return F
+M.with_reporting = function(fn)
+  return function(...)
+    cancel.xpcall(fn, M.report, ...)
+  end
+end
 
 ---@generic T
 ---@param es T[]

@@ -1,4 +1,5 @@
 local broadcast = require "coq.lib.channels.broadcast"
+local errs = require "coq.lib.errs"
 local lib = require "coq.lib"
 
 ---@class completions.PumChangedEvent : vim.v.event
@@ -120,7 +121,7 @@ end
 ---@param chan channels.Broadcast<T>
 ---@param handler fun(ev: T)
 M.subscribe_latest = function(n, chan, handler)
-  local safe = lib.with_reporting(handler)
+  local safe = errs.with_reporting(handler)
   n.spawn(function(defer)
     local iter = chan.subscribe()
     defer(iter.close)

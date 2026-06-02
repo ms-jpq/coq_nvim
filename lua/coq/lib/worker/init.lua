@@ -131,7 +131,7 @@ local interpret_frame = function(frame, level)
     return
   end
   if frame.status == false then
-    error(frame.values[1] or errs.UNKNOWN, level + 1)
+    error(frame.values[1], level + 1)
   end
   return unpack(frame.values, 1, frame.n_values)
 end
@@ -212,7 +212,7 @@ local make_responder = function(write)
       end
     end)
     if not drained and not cancel.is(err) then
-      lib.report(err)
+      errs.report(err)
     end
 
     if not ok and cancel.is(terminal) then
@@ -226,7 +226,7 @@ local make_responder = function(write)
 
   local serve = function(n, frame)
     if parked.has(frame.id) then
-      n.spawn(lib.with_reporting(function()
+      n.spawn(errs.with_reporting(function()
         parked.resolve(frame.id, frame)
       end))
       return
@@ -247,7 +247,7 @@ local make_responder = function(write)
       end
     end, frame.id)
 
-    n.spawn(lib.with_reporting(function(defer)
+    n.spawn(errs.with_reporting(function(defer)
       defer(req_handle.cancel)
       defer(release)
       runtime.bind(coroutine.running(), req_handle)
@@ -276,7 +276,7 @@ local make_endpoint = function(duplex)
   endpoint.serve = function(n, dead_message)
     for frame in transport.reader(duplex.reader) do
       if frame.kind == Kind.YIELD then
-        n.spawn(lib.with_reporting(function()
+        n.spawn(errs.with_reporting(function()
           requester.resolve(frame)
         end))
       else
@@ -360,7 +360,7 @@ M.spawn = function()
     n.join()
   end
 
-  n.spawn(lib.with_reporting(function()
+  n.spawn(errs.with_reporting(function()
     endpoint.serve(n, "worker died")
   end))
 

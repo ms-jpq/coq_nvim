@@ -1,8 +1,8 @@
 local async = require "coq.lib.async"
 local atools = require "coq.lib.atools"
 local context = require "coq.lib.context"
+local errs = require "coq.lib.errs"
 local events = require "coq.completions.events"
-local lib = require "coq.lib"
 local show = require "coq.completions.preview.show"
 local txt = require "coq.lib.text"
 
@@ -94,7 +94,7 @@ M.bind = function(n, settings, resolver, pum)
         return settings.keymap.bigger_preview
       end
 
-      n.spawn(lib.with_reporting(function()
+      n.spawn(errs.with_reporting(function()
         atools.scheduled()
         show.close()
         show.promote(buf)

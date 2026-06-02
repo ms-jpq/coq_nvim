@@ -1,4 +1,5 @@
 local cancel = require "coq.lib.async.cancel"
+local errs = require "coq.lib.errs"
 local handle = require "coq.lib.async.handle"
 local lib = require "coq.lib"
 
@@ -145,7 +146,7 @@ M.detach = function(h, fn, ...)
       unwatch()
       local ok, err = pcall(bounce, ...)
       if not ok and not cancel.is(err) then
-        lib.report(err)
+        errs.report(err)
       end
     end
 
