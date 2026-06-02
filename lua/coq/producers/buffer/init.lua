@@ -6,6 +6,7 @@ local fs = require "coq.producers.fs"
 local index = require "coq.producers.buffer.index"
 local producer = require "coq.lib.producers"
 local tokens = require "coq.lib.index.tokens"
+local util = require "coq.producers.util"
 local worker = require "coq.lib.worker"
 
 ---@class buffer.BufInfo : buf_tracker.Meta
@@ -116,9 +117,10 @@ M.matcher = function(settings, ctx)
     filetype = opts.same_filetype and ctx.filetype or nil,
   }
 
-  for item in
-    index.search(search_ctx) --[[@as lib.Iterator<buffer.Item>]]
-  do
+  local raw = index.search(search_ctx) --[[@as lib.Iterator<buffer.Item>]]
+  local shaped = util.shape(settings, raw)
+
+  for item in shaped do
     if item.word ~= ctx.cword then
       local lines = vim.iter(doc_iter(opts, ctx, item)):totable()
 

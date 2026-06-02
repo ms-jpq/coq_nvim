@@ -9,7 +9,7 @@ local trie = require "coq.lib.index.trie"
 ---@field buf integer
 ---@field filetype string
 ---@field filename string
----@field text string
+---@field word string
 ---@field kind string
 ---@field range integer[]
 ---@field parent? treesitter.Node
@@ -24,7 +24,7 @@ local trie = require "coq.lib.index.trie"
 local text_trie = function()
   return trie.new {
     insert_key = function(item)
-      return item.text
+      return item.word
     end,
     query_key = function(ctx)
       if ctx.keyword_before == "" then

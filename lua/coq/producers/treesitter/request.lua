@@ -16,6 +16,8 @@ M.query = function(buf)
     return
   end
 
+  local tick = vim.b[buf].changedtick
+
   local lo, hi = context.window_around_cursor(buf)
 
   local ok, parser = pcall(vim.treesitter.get_parser, buf)
@@ -50,8 +52,9 @@ M.query = function(buf)
           parent = parent and node_info(parent) or nil,
           grandparent = grandparent and node_info(grandparent) or nil,
         }
+
         atools.scheduled()
-        if not vim.api.nvim_buf_is_valid(buf) then
+        if not vim.api.nvim_buf_is_valid(buf) or vim.b[buf].changedtick ~= tick then
           return
         end
       end

@@ -9,7 +9,6 @@ local producer = require "coq.lib.producers"
 ---@return producers.Producer
 local regular = function(spec)
   return {
-    max_pulls = spec.max_pulls or math.huge --[[@as integer]],
     bind = lib.noop,
     idle = lib.noop,
     search = function(ctx)
@@ -26,7 +25,6 @@ local cancel_tests = function(name, factory)
       local n = nursery.new()
       local _ = handle.new().on_cancel(n.cancel)
       local db = factory {
-        max_pulls = math.huge --[[@as integer]],
         idle = lib.noop,
         matcher = function()
           coroutine.yield "lil"

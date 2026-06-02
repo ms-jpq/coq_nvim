@@ -16,7 +16,6 @@ end
 ---@return producers.Producer
 local producer = function(spec)
   return {
-    max_pulls = math.huge --[[@as integer]],
     bind = spec.bind or lib.noop,
     idle = spec.idle or lib.noop,
     search = function(ctx)

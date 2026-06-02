@@ -4,6 +4,7 @@ local buf_tracker = require "coq.lib.producers.buf_tracker"
 local fs = require "coq.producers.fs"
 local index = require "coq.producers.treesitter.index"
 local producer = require "coq.lib.producers"
+local util = require "coq.producers.util"
 local worker = require "coq.lib.worker"
 
 ---@class treesitter.BufMeta : buf_tracker.Meta
@@ -53,7 +54,7 @@ local tracker = buf_tracker.new {
           buf = meta.buf,
           filetype = meta.filetype,
           filename = meta.filename,
-          text = payload.text,
+          word = payload.text,
           kind = payload.kind,
           range = payload.range,
           parent = payload.parent,
@@ -142,17 +143,18 @@ M.matcher = function(settings, ctx)
   local sc = settings.display.pum.source_context
   local menu = sc[1] .. opts.short_name .. sc[2]
 
-  for item in
-    index.search { filetype = ctx.filetype, keyword_before = ctx.keyword_before } --[[@as lib.Iterator<treesitter.Item>]]
-  do
-    if item.text ~= ctx.cword then
+  local raw = index.search { filetype = ctx.filetype, keyword_before = ctx.keyword_before } --[[@as lib.Iterator<treesitter.Item>]]
+  local shaped = util.shape(settings, raw)
+
+  for item in shaped do
+    if item.word ~= ctx.cword then
       local lines = vim.iter(doc_iter(opts, ctx, item)):totable()
       coroutine.yield {
-        word = item.text,
+        word = item.word,
         kind = capture_to_icon(item.kind),
         menu = menu,
         meta = {
-          filter = item.text,
+          filter = item.word,
           source = opts.short_name,
           always_on_top = opts.always_on_top,
           doc = { lines = lines, filetype = ctx.filetype },

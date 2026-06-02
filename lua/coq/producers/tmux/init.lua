@@ -3,6 +3,7 @@ local atools = require "coq.lib.atools"
 local index = require "coq.producers.tmux.index"
 local producer = require "coq.lib.producers"
 local tokens = require "coq.lib.index.tokens"
+local util = require "coq.producers.util"
 
 local SEP = "\30"
 local PANE_FMT = table.concat({
@@ -136,9 +137,10 @@ M.matcher = function(settings, ctx)
   local sc = settings.display.pum.source_context
   local menu = sc[1] .. opts.short_name .. sc[2]
 
-  for item in
-    index.search(ctx) --[[@as lib.Iterator<tmux.Item>]]
-  do
+  local raw = index.search(ctx) --[[@as lib.Iterator<tmux.Item>]]
+  local shaped = util.shape(settings, raw)
+
+  for item in shaped do
     if item.word ~= ctx.cword then
       local lines = vim.iter(doc_iter(opts, item.meta)):totable()
       coroutine.yield {
