@@ -35,9 +35,6 @@ local defaults = require "coq.config.defaults"
 ---@field kind_context [string, string]
 ---@field source_context [string, string]
 
----@class config.Statusline
----@field helo boolean
-
 ---@class config.Display
 ---@field ghost_text config.GhostText
 ---@field pum config.PumDisplay
@@ -46,7 +43,6 @@ local defaults = require "coq.config.defaults"
 ---@field time_fmt string
 ---@field mark_highlight_group string
 ---@field mark_applied_notify boolean
----@field statusline config.Statusline
 
 ---@class config.MatchOptions
 ---@field max_results integer

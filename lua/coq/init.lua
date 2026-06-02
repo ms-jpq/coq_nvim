@@ -74,6 +74,10 @@ local producers = function(settings)
     if clients.lsp.enabled then
       coroutine.yield(require("coq.producers.lsp").new(settings))
     end
+
+    if clients.tags.enabled then
+      coroutine.yield(require("coq.producers.tags").new(settings))
+    end
   end)
 end
 
