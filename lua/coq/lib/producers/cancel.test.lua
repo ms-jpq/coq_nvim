@@ -12,7 +12,7 @@ local regular = function(spec)
     max_pulls = spec.max_pulls or math.huge --[[@as integer]],
     bind = function(n)
       if spec.bind then
-        spec.bind(n, lib.noop)
+        spec.bind(n)
       end
     end,
     idle = lib.noop,
@@ -30,6 +30,7 @@ local cancel_tests = function(name, factory)
       local n = nursery.new()
       local _ = handle.new().on_cancel(n.cancel)
       local db = factory {
+        max_pulls = math.huge --[[@as integer]],
         idle = lib.noop,
         bind = lib.noop,
         matcher = function()
@@ -48,6 +49,7 @@ local cancel_tests = function(name, factory)
       local _ = h.on_cancel(n.cancel)
       n.spawn(function()
         local db = factory {
+          max_pulls = math.huge --[[@as integer]],
           idle = lib.noop,
           bind = lib.noop,
           matcher = function(_, ctx)

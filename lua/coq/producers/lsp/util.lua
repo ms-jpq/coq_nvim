@@ -23,7 +23,9 @@ M.request = function(client, method, params, buf)
 
     if req_id then
       defer(runtime.current().on_cancel(function()
-        client:cancel_request(req_id)
+        vim.schedule(function()
+          client:cancel_request(req_id)
+        end)
       end))
     end
 
