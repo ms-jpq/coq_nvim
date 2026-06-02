@@ -11,7 +11,7 @@ local util = require "coq.producers.util"
 ---@field filename string
 ---@field word string
 ---@field kind string
----@field range integer[]
+---@field range [integer, integer]
 ---@field parent? treesitter.Node
 ---@field grandparent? treesitter.Node
 

@@ -60,25 +60,35 @@ M.parse_iskeyword = function(iskeyword)
 end
 
 ---@param kw table<integer, true>
----@param lines fun(): string?
----@return fun(): string?
-M.words = function(kw, lines)
+---@param text lib.Iterator<string>
+---@return lib.Iterator<string>
+M.keywords = function(kw, text)
   return async.wrap(function()
-    for line in lines do
-      local i, n = 1, #line
+    local acc = {}
+    local flush = function()
+      if next(acc) then
+        coroutine.yield(table.concat(acc))
+        acc = {}
+      end
+    end
+
+    for chunk in text do
+      local i, n = 1, #chunk
       while i <= n do
         local start = i
-        while i <= n and kw[string.byte(line, i)] do
+        while i <= n and kw[string.byte(chunk, i)] do
           i = i + 1
         end
-
         if i > start then
-          coroutine.yield(string.sub(line, start, i - 1))
-        else
+          table.insert(acc, string.sub(chunk, start, i - 1))
+        end
+        if i <= n then
+          flush()
           i = i + 1
         end
       end
     end
+    flush()
   end)
 end
 
@@ -102,11 +112,11 @@ M.surround = function(ctx)
 end
 
 ---@param kw table<integer, true>
----@param lines fun(): string?
+---@param text lib.Iterator<string>
 ---@return table<string, integer>
-M.locality = function(kw, lines)
+M.locality = function(kw, text)
   local acc = {}
-  for word in M.words(kw, lines) do
+  for word in M.keywords(kw, text) do
     acc[word] = (acc[word] or 0) + 1
   end
   return acc

@@ -117,10 +117,10 @@ end
 ---@return lib.Iterator<string>
 local doc_iter = function(opts, ctx, item)
   return async.wrap(function()
-    local clhs, crhs = ctx.comment[1], ctx.comment[2]
+    local clhs, crhs = unpack(ctx.comment)
+    local r_lo, r_hi = unpack(item.range)
 
     local pos = fs.fmt_path(ctx.cwd, item.filename, ctx.filename)
-    local r_lo, r_hi = item.range[1], item.range[2]
     local range_str = ":" .. r_lo .. (r_hi ~= r_lo and ("-" .. r_hi) or "")
     coroutine.yield(clhs .. pos .. range_str .. opts.path_sep .. crhs)
 

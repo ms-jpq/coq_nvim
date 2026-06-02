@@ -79,7 +79,7 @@ do
     async.sleep(0)
 
     index(settings).prune { pane = pane.id }
-    for word in tokens.words(kw, txt.splitlines(text)) do
+    for word in tokens.keywords(kw, vim.iter { text } --[[@as lib.Iterator<string>]]) do
       index(settings).insert { pane = pane.id, word = word, meta = pane.meta }
     end
     cache[pane.id] = text

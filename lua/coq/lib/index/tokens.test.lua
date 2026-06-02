@@ -1,5 +1,6 @@
 local T = require "coq.lib.test"
 local atools = require "coq.lib.atools"
+local itertools = require "coq.lib.itertools"
 local tokens = require "coq.lib.index.tokens"
 
 local CORPUS = {
@@ -108,7 +109,8 @@ T.test("tokens.parity across all filetypes", function()
     atools.scheduled()
     local iskeyword, expected = probe(ft)
     local kw = tokens.parse_iskeyword(iskeyword)
-    local actual = vim.iter(tokens.words(kw, vim.iter(CORPUS) --[[@as lib.Iterator<string>]])):totable()
+    local lines = vim.iter(CORPUS) --[[@as lib.Iterator<string>]]
+    local actual = vim.iter(tokens.keywords(kw, itertools.intersperse("\n", lines))):totable()
     if not vim.deep_equal(actual, expected) then
       table.insert(failures, { ft = ft, iskeyword = iskeyword, expected = expected, actual = actual })
     end

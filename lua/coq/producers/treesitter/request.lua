@@ -6,7 +6,7 @@ local M = {}
 ---@class treesitter.Payload
 ---@field text string
 ---@field kind string
----@field range integer[]
+---@field range [integer, integer]
 ---@field parent? treesitter.Node
 ---@field grandparent? treesitter.Node
 

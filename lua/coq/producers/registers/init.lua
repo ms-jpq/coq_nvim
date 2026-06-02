@@ -73,7 +73,7 @@ M.idle = function(settings, _)
     local text = entry.text
     if type(text) == "string" and text ~= "" then
       if word_set[entry.register] then
-        for word in tokens.words(BASIC_KW, txt.splitlines(text)) do
+        for word in tokens.keywords(BASIC_KW, vim.iter { text } --[[@as lib.Iterator<string>]]) do
           index(settings).insert {
             word = word,
             register = entry.register,
@@ -86,7 +86,7 @@ M.idle = function(settings, _)
         for line in txt.splitlines(text) do
           local stripped = (string.gsub(line, "^%s+", ""))
           if stripped ~= "" then
-            local head = tokens.words(BASIC_KW, vim.iter { stripped } --[[@as lib.Iterator<string>]])()
+            local head = tokens.keywords(BASIC_KW, vim.iter { stripped } --[[@as lib.Iterator<string>]])()
             if head ~= nil then
               index(settings).insert {
                 word = head,

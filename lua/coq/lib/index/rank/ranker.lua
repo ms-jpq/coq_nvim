@@ -1,7 +1,6 @@
 local atools = require "coq.lib.atools"
+local itertools = require "coq.lib.itertools"
 local tokens = require "coq.lib.index.tokens"
-
-local RECENCY_CAP = 888
 
 ---@class index.Prepared
 ---@field token string
@@ -36,7 +35,10 @@ M.new = function(clients)
     atools.scheduled()
     return {
       token = ctx.keyword_before,
-      locality = tokens.locality(ctx.kw, vim.iter(tokens.surround(ctx)) --[[@as lib.Iterator<string>]]),
+      locality = tokens.locality(
+        ctx.kw,
+        itertools.intersperse(ctx.linesep, vim.iter(tokens.surround(ctx)) --[[@as lib.Iterator<string>]])
+      ),
       recency = recency,
       source_bias = source_bias,
     }

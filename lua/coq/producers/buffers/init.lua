@@ -4,6 +4,7 @@ local buf_tracker = require "coq.lib.producers.buf_tracker"
 local context = require "coq.lib.context"
 local fs = require "coq.producers.fs"
 local index_m = require "coq.producers.buffers.index"
+local itertools = require "coq.lib.itertools"
 local producer = require "coq.lib.producers"
 local tokens = require "coq.lib.index.tokens"
 local util = require "coq.producers.util"
@@ -83,7 +84,7 @@ local tracker = buf_tracker.new {
       local kw = tokens.parse_iskeyword(info.iskeyword)
       local lines = info.lines and vim.iter(info.lines) --[[@as lib.Iterator<string>]]
         or atools.fs.lines(info.filename)
-      for word in tokens.words(kw, lines) do
+      for word in tokens.keywords(kw, itertools.intersperse("\n", lines)) do
         index(settings).insert {
           buf = info.buf,
           word = word,

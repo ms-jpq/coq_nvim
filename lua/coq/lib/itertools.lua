@@ -40,6 +40,26 @@ M.take = function(max, iter)
 end
 
 ---@generic T
+---@param sep T
+---@param iter lib.Iterator<T>
+---@return lib.Iterator<T>
+M.intersperse = function(sep, iter)
+  local idx, peek = 0, iter()
+  return function()
+    idx = idx + 1
+    if peek == nil then
+      return nil
+    end
+    if idx % 2 == 0 then
+      return sep
+    end
+    local v = peek
+    peek = iter()
+    return v
+  end
+end
+
+---@generic T
 ---@param key_fn fun(item: T): any
 ---@param iter lib.Iterator<T>
 ---@return lib.Iterator<T>

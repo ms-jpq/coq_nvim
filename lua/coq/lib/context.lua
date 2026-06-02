@@ -10,6 +10,7 @@ local atools = require "coq.lib.atools"
 ---@field cwd string
 ---@field filetype string
 ---@field filename string
+---@field linesep string
 ---@field kw table<integer, true>
 ---@field comment [string, string]
 ---@field line string
@@ -73,6 +74,7 @@ M.full = function(base)
     ctx.cwd = vim.fn.getcwd()
     ctx.filetype = bo.filetype
     ctx.filename = vim.api.nvim_buf_get_name(ctx.buf)
+    ctx.linesep = bo.fileformat == "dos" and "\r\n" or bo.fileformat == "mac" and "\r" or "\n"
   end
 
   do
