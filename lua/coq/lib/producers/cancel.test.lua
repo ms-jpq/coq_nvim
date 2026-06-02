@@ -9,7 +9,7 @@ local producer = require "coq.lib.producers"
 ---@return producers.Producer
 local regular = function(spec)
   return {
-    max_pulls = spec.max_pulls or math.huge,
+    max_pulls = spec.max_pulls or math.huge --[[@as integer]],
     bind = function(n)
       if spec.bind then
         spec.bind(n, lib.noop)
@@ -71,4 +71,4 @@ local cancel_tests = function(name, factory)
 end
 
 cancel_tests("regular", regular)
-cancel_tests("threaded", producer.new)
+cancel_tests("threaded", producer.threaded)

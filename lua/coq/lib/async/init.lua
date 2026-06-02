@@ -6,14 +6,8 @@ local runtime = require "coq.lib.async.runtime"
 local M = {
   future = runtime.future,
   sleep = runtime.sleep,
+  wrap = runtime.wrap,
 }
-
----@generic F: fun(...)
----@param producer F
----@return F
-M.wrap = function(producer)
-  return runtime.wrap(producer, runtime.current())
-end
 
 ---@generic F: fun(...)
 ---@param fn F

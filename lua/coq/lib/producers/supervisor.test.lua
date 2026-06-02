@@ -16,7 +16,7 @@ end
 ---@return producers.Producer
 local producer = function(spec)
   return {
-    max_pulls = math.huge,
+    max_pulls = math.huge --[[@as integer]],
     bind = spec.bind or lib.noop,
     idle = spec.idle or lib.noop,
     search = function(ctx)
@@ -49,18 +49,15 @@ end
 ---@param fields { idle?: fun(ctx), matcher?: fun() }
 ---@return producers.Producer, fun(ev: any)
 local pushable = function(fields)
-  local pending = {}
   local p = producer {
     idle = function(ctx)
       if fields.idle then
-        fields.idle(nil, pending, ctx)
+        fields.idle(ctx)
       end
     end,
     matcher = fields.matcher,
   }
-  return p, function(ev)
-    pending[ev] = ev
-  end
+  return p, lib.noop
 end
 
 ---@param iter producers.SearchIter

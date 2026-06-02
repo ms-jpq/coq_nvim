@@ -19,36 +19,31 @@ local worker = require "coq.lib.worker"
 ---@class producers.Spec<C>
 ---@field settings? config.Settings
 ---@field key? producers.KeyFn
----@field idle? producers.IdleFn<C>
+---@field idle producers.IdleFn<C>
 ---@field matcher producers.MatcherFn<C>
----@field bind? producers.OnBind
----@field max_pulls? integer
+---@field bind producers.OnBind
+---@field max_pulls integer
 
 local M = {}
 
 ---@generic C
 ---@param spec producers.Spec<C>
 ---@return producers.Producer<C>
-M.new = function(spec)
+M.threaded = function(spec)
   local w = worker.spawn()
   local key = spec.key
   local location = key and {}
 
   return {
-    max_pulls = spec.max_pulls or math.huge,
+    max_pulls = spec.max_pulls,
     bind = function(n)
-      if spec.bind then
-        spec.bind(n, function(ev)
-          if location then
-            location[key(ev)] = ev
-          end
-        end)
-      end
+      spec.bind(n, function(ev)
+        if location and key then
+          location[key(ev)] = ev
+        end
+      end)
     end,
     idle = function(ctx)
-      if not spec.idle then
-        return
-      end
       local batch = location or {}
       if location then
         location = {}

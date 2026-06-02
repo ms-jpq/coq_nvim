@@ -355,9 +355,11 @@ end
 ---@param settings config.Settings
 ---@return producers.Producer<ctx.full>
 M.new = function(settings)
-  return producer.new {
+  return producer.threaded {
     settings = settings,
-    max_pulls = settings.clients.paths.max_pulls,
+    max_pulls = settings.clients.paths.max_pulls or math.huge,
+    bind = lib.noop,
+    idle = lib.noop,
     matcher = function(...)
       require("coq.producers.paths").matcher(...)
     end,

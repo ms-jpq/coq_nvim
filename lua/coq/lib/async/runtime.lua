@@ -158,10 +158,9 @@ end
 
 ---@generic F: fun(...)
 ---@param producer F
----@param h async.Handle
 ---@return F
-M.wrap = function(producer, h)
-  return trampoline(producer, h, function(bounce, eff)
+M.wrap = function(producer)
+  return trampoline(producer, M.current(), function(bounce, eff)
     return bounce(coroutine.yield(eff))
   end)
 end

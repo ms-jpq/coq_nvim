@@ -132,9 +132,9 @@ end
 ---@param settings config.Settings
 ---@return producers.Producer<ctx.full>
 M.new = function(settings)
-  return producer.new {
+  return producer.threaded {
     settings = settings,
-    max_pulls = settings.clients.buffers.max_pulls,
+    max_pulls = settings.clients.buffers.max_pulls or math.huge,
     key = util.buffer_key,
     bind = util.buffer_bind,
     idle = function(...)
