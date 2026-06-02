@@ -1,5 +1,4 @@
 local async = require "coq.lib.async"
-local lib = require "coq.lib"
 
 local DRIVE_PAT = "^%a:[/\\]"
 
@@ -136,37 +135,39 @@ local find_starts = function(is_windows, line_before)
 end
 
 ---@class paths.parse.Candidate
----@field directory string
----@field partial   string
----@field absolute  boolean
----@field start     integer
+---@field resolved_directory string
+---@field literal_directory  string
+---@field local_sep          string
+---@field partial            string
+---@field absolute           boolean
+---@field start              integer
 
 ---@class paths.parse.Opts
----@field is_windows? boolean
----@field env?        table<string, string>
----@field home?       string
+---@field is_windows boolean
+---@field env        table<string, string>
+---@field home       string
 
 ---@param line_before string
----@param opts? paths.parse.Opts
+---@param opts paths.parse.Opts
 ---@return lib.Iterator<paths.parse.Candidate>
 M.candidates = function(line_before, opts)
-  opts = opts or {}
   local is_windows = opts.is_windows
-  if is_windows == nil then
-    is_windows = lib.is_windows
-  end
-  local env = opts.env or vim.uv.os_environ()
-  local home = opts.home or vim.uv.os_homedir() or ""
+  local env = opts.env
+  local home = opts.home
 
   return async.wrap(function()
     for pos, token in find_starts(is_windows, line_before) do
       local expanded = expand_head(is_windows, home, env, token)
-      local dir, partial = split_at_last_sep(is_windows, expanded)
-      if dir then
+      local resolved, partial = split_at_last_sep(is_windows, expanded)
+
+      if resolved then
+        local literal = string.sub(token, 1, #token - #partial)
         coroutine.yield {
-          directory = dir,
+          resolved_directory = resolved,
+          literal_directory = literal,
+          local_sep = string.sub(literal, -1),
           partial = partial,
-          absolute = is_absolute(is_windows, dir),
+          absolute = is_absolute(is_windows, resolved),
           start = pos - 1,
         }
       end

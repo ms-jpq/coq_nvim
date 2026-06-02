@@ -82,6 +82,8 @@ end
 ---@field filter? string
 ---@field doc? completions.ItemDoc
 ---@field snippet? string
+---@field path? string
+---@field lsp? completions.ItemLspMeta
 
 ---@param settings config.Settings
 ---@param opts { short_name: string, always_on_top: boolean? }
@@ -101,6 +103,8 @@ M.item = function(settings, opts, spec)
       always_on_top = opts.always_on_top,
       doc = spec.doc,
       snippet = spec.snippet,
+      path = spec.path,
+      lsp = spec.lsp,
     },
   }
 end

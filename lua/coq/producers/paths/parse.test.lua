@@ -230,7 +230,7 @@ T.describe("paths.parse.candidates", function(test)
   local strip = function(iter)
     local out = {}
     for c in iter do
-      table.insert(out, { start = c.start, dir = c.directory, partial = c.partial, abs = c.absolute })
+      table.insert(out, { start = c.start, dir = c.resolved_directory, partial = c.partial, abs = c.absolute })
     end
     return out
   end
