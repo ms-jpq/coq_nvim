@@ -1,3 +1,5 @@
+local cancel = require "coq.lib.async.cancel"
+
 ---@class lib.Closable
 ---@field close fun()
 
@@ -29,6 +31,15 @@ M.report = function(err)
   vim.schedule(function()
     vim.notify(e, vim.log.levels.ERROR)
   end)
+end
+
+---@generic F: fun(...)
+---@param fn F
+---@return F
+M.with_reporting = function(fn)
+  return function(...)
+    cancel.xpcall(fn, M.report, ...)
+  end
 end
 
 ---@param s string

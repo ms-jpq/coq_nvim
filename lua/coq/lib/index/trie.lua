@@ -3,7 +3,7 @@ local async = require "coq.lib.async"
 ---@class index.TrieSpec<C, T>
 ---@field insert_key fun(item: T): string
 ---@field query_key fun(ctx: C): string?
----@field prefix? number
+---@field prefix number
 
 local M = {}
 
@@ -20,7 +20,7 @@ end
 ---@param spec index.TrieSpec<C, T>
 ---@return index.Searcher<C, T>
 M.new = function(spec)
-  local prefix = spec.prefix or math.huge
+  local prefix = spec.prefix
   local root = new_node()
 
   ---@param key string

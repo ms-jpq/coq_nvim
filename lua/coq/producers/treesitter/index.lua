@@ -22,9 +22,11 @@ local trie = require "coq.lib.index.trie"
 
 local M = {}
 
----@param _ config.Settings
+---@param settings config.Settings
 ---@return index.Searcher<treesitter.Ctx, treesitter.Item>
-M.new = function(_)
+M.new = function(settings)
+  local prefix = settings.match.exact_matches
+
   ---@return index.Searcher<treesitter.Ctx, treesitter.Item>
   local text_trie = function()
     return trie.new {
@@ -37,6 +39,7 @@ M.new = function(_)
         end
         return ctx.keyword_before
       end,
+      prefix = prefix,
     }
   end
 

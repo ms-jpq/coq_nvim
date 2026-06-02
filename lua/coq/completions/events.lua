@@ -120,12 +120,13 @@ end
 ---@param chan channels.Broadcast<T>
 ---@param handler fun(ev: T)
 M.subscribe = function(n, chan, handler)
+  local safe = lib.with_reporting(handler)
   n.spawn(function(defer)
     local iter = chan.subscribe()
     defer(iter.close)
     for ev in iter do
       n.spawn(function()
-        handler(ev)
+        safe(ev)
       end)
     end
   end)
@@ -136,6 +137,7 @@ end
 ---@param chan channels.Broadcast<T>
 ---@param handler fun(ev: T)
 M.subscribe_latest = function(n, chan, handler)
+  local safe = lib.with_reporting(handler)
   n.spawn(function(defer)
     local iter = chan.subscribe()
     defer(iter.close)
@@ -145,7 +147,7 @@ M.subscribe_latest = function(n, chan, handler)
         prev.cancel()
       end
       prev = n.spawn(function()
-        handler(ev)
+        safe(ev)
       end)
     end
   end)

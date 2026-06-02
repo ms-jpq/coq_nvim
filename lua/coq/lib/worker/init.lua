@@ -203,9 +203,9 @@ local make_responder = function(write)
 
   local serve = function(n, frame)
     if parked.has(frame.id) then
-      n.spawn(function()
+      n.spawn(lib.with_reporting(function()
         parked.resolve(frame.id, frame)
-      end)
+      end))
       return
     end
     if frame.kind ~= Kind.RESUME then
@@ -224,13 +224,13 @@ local make_responder = function(write)
       end
     end, frame.id)
 
-    n.spawn(function(defer)
+    n.spawn(lib.with_reporting(function(defer)
       defer(req_handle.cancel)
       defer(release)
       runtime.bind(coroutine.running(), req_handle)
       scheduled()
       dispatch(frame, req_handle, next_chan)
-    end)
+    end))
   end
 
   return { serve = serve }
@@ -251,9 +251,9 @@ local make_endpoint = function(duplex)
   local serve = function(n, dead_message)
     for frame in transport.reader(duplex.reader) do
       if frame.kind == Kind.YIELD then
-        n.spawn(function()
+        n.spawn(lib.with_reporting(function()
           requester.resolve(frame)
-        end)
+        end))
       else
         responder.serve(n, frame)
       end
@@ -338,9 +338,9 @@ M.spawn = function()
     n.join()
   end
 
-  n.spawn(function()
+  n.spawn(lib.with_reporting(function()
     endpoint.serve(n, "worker died")
-  end)
+  end))
 
   ---@cast worker worker.Worker
   return worker

@@ -2,6 +2,7 @@ local async = require "coq.lib.async"
 local atools = require "coq.lib.atools"
 local context = require "coq.lib.context"
 local events = require "coq.completions.events"
+local lib = require "coq.lib"
 local show = require "coq.completions.preview.show"
 
 local NS = vim.api.nvim_create_namespace "coq.preview"
@@ -91,11 +92,11 @@ M.bind = function(n, settings, pum)
         return settings.keymap.bigger_preview
       end
 
-      n.spawn(function()
+      n.spawn(lib.with_reporting(function()
         atools.scheduled()
         show.close()
         show.promote(buf)
-      end)
+      end))
 
       return esc
     end, { expr = true, noremap = true })

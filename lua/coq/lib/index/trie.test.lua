@@ -8,6 +8,7 @@ local spec = {
   query_key = function(ctx)
     return ctx.prefix
   end,
+  prefix = math.huge,
 }
 
 local collect = function(iter)
