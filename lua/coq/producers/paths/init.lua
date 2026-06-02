@@ -357,7 +357,6 @@ end
 M.new = function(settings)
   return producer.threaded {
     settings = settings,
-    max_pulls = settings.clients.paths.max_pulls or math.huge,
     bind = lib.noop,
     idle = lib.noop,
     matcher = function(...)

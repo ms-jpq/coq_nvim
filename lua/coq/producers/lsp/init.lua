@@ -49,7 +49,6 @@ end
 ---@return producers.Producer<ctx.full>
 M.new = function(settings)
   return {
-    max_pulls = settings.clients.lsp.max_pulls or math.huge,
     bind = lib.noop,
     idle = lib.noop,
     search = function(ctx)

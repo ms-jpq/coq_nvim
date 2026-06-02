@@ -142,7 +142,6 @@ end
 M.new = function(settings)
   return producer.threaded {
     settings = settings,
-    max_pulls = settings.clients.tags.max_pulls or math.huge,
     idle = function(...)
       require("coq.producers.tags").idle(...)
     end,

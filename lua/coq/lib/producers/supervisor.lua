@@ -14,7 +14,7 @@ M.new = function(producers)
   local idle_handle = nil
   local searching = false
 
-  local sup = { max_pulls = math.huge }
+  local sup = {}
 
   sup.bind = function(n)
     for _, p in pairs(producers) do

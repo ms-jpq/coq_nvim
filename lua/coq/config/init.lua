@@ -84,7 +84,6 @@ local defaults = require "coq.config.defaults"
 ---@class config.BaseClient
 ---@field always_wait boolean
 ---@field enabled boolean
----@field max_pulls? integer
 ---@field short_name string
 ---@field weight_adjust number
 
