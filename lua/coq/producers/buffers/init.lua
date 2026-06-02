@@ -3,7 +3,7 @@ local atools = require "coq.lib.atools"
 local buf_tracker = require "coq.lib.producers.buf_tracker"
 local context = require "coq.lib.context"
 local fs = require "coq.producers.fs"
-local index_m = require "coq.producers.buffer.index"
+local index_m = require "coq.producers.buffers.index"
 local producer = require "coq.lib.producers"
 local tokens = require "coq.lib.index.tokens"
 local util = require "coq.producers.util"
@@ -74,7 +74,7 @@ end
 local tracker = buf_tracker.new {
   fetch = function(buf, prev_tick)
     return worker.main(function(...)
-      return require("coq.producers.buffer").buffer_info(...)
+      return require("coq.producers.buffers").buffer_info(...)
     end, buf, prev_tick)
   end,
   reindex = function(settings, infos)
@@ -142,10 +142,10 @@ M.new = function(settings)
   return producer.threaded {
     settings = settings,
     idle = function(...)
-      require("coq.producers.buffer").idle(...)
+      require("coq.producers.buffers").idle(...)
     end,
     matcher = function(...)
-      require("coq.producers.buffer").matcher(...)
+      require("coq.producers.buffers").matcher(...)
     end,
   }
 end

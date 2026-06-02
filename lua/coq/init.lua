@@ -56,7 +56,11 @@ local producers = function(settings)
     local clients = settings.clients
 
     if clients.buffers.enabled then
-      coroutine.yield(require("coq.producers.buffer").new(settings))
+      coroutine.yield(require("coq.producers.buffers").new(settings))
+    end
+
+    if clients.registers.enabled then
+      coroutine.yield(require("coq.producers.registers").new(settings))
     end
 
     if clients.tmux.enabled then
