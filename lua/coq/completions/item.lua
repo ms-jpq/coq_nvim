@@ -8,6 +8,7 @@
 ---@field filetype string
 
 ---@class completions.ItemMeta
+---@field uid string
 ---@field filter? string
 ---@field snippet? string
 ---@field source? string

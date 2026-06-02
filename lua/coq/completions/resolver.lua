@@ -1,10 +1,9 @@
 local async = require "coq.lib.async"
-local lib = require "coq.lib"
 local lsp_util = require "coq.producers.lsp.util"
 
 ---@class completions.Resolver
 ---@field reset fun()
----@field resolve fun(ctx: ctx.base, item: completions.Item): completions.ItemLspMeta?
+---@field resolve fun(ctx: ctx.base, item: completions.Item, timeout_ms?: integer): completions.ItemLspMeta?
 
 local promise = function()
   local done, vals, waiters = false, {}, {}
@@ -49,30 +48,34 @@ local M = {}
 ---@return completions.Resolver
 M.new = function(n, fetch)
   fetch = fetch or lsp_fetch
-  local cache, inflight = lib.weak(), lib.weak()
+  local cache, inflight = {}, {}
 
   local resolver = {}
 
   resolver.reset = function()
-    cache, inflight = lib.weak(), lib.weak()
+    cache, inflight = {}, {}
   end
 
-  resolver.resolve = function(ctx, item)
-    local hit = cache[item]
+  resolver.resolve = function(ctx, item, timeout_ms)
+    local key = item.meta.uid
+    local hit = cache[key]
     if hit then
       return hit[1]
     end
 
-    local p = inflight[item]
+    local p = inflight[key]
     if not p then
       p = promise()
-      inflight[item] = p
+      inflight[key] = p
       n.spawn(function()
         local ok, v = pcall(fetch, ctx, item)
         local result = ok and v or item.meta.lsp
-        cache[item] = { result }
+        cache[key] = { result }
         p.resolve(result)
       end)
+    end
+    if timeout_ms and timeout_ms > 0 then
+      return async.wait(timeout_ms, p.await) or item.meta.lsp
     end
     return p.await()
   end

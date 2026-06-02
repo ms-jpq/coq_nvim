@@ -125,6 +125,7 @@ M.matcher = function(settings, ctx)
       kind = "Text",
       menu = menu,
       meta = {
+        uid = util.uid(),
         filter = item.word,
         source = opts.short_name,
         always_on_top = opts.always_on_top,

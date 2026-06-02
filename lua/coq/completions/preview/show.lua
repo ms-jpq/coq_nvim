@@ -163,6 +163,20 @@ local show = function(preview_cfg, ev, lines, filetype)
   vim.w[win][PREVIEW_VAR] = true
 end
 
+---@param item completions.Item
+---@return string?
+local multiline_insert = function(item)
+  local meta = item.meta
+  local text = meta.snippet
+    or (meta.lsp and meta.lsp.item and meta.lsp.item.textEdit and meta.lsp.item.textEdit.newText)
+    or item.word
+
+  if text and txt.is_multiline(text) then
+    return text
+  end
+  return nil
+end
+
 ---@param ctx ctx.base
 ---@param settings config.Settings
 ---@param resolver completions.Resolver
@@ -172,8 +186,9 @@ end
 local resolve_doc = function(ctx, settings, resolver, item)
   local meta = item.meta
 
-  if meta.doc then
-    return meta.doc.lines, meta.doc.filetype
+  local doc_lines = meta.doc and meta.doc.lines or nil
+  if doc_lines and #doc_lines > 0 then
+    return doc_lines, meta.doc.filetype
   end
 
   if meta.path then
@@ -189,12 +204,21 @@ local resolve_doc = function(ctx, settings, resolver, item)
   if meta.lsp then
     local lsp_item = meta.lsp.item
     if lsp_item and not lsp_item.documentation and not lsp_item.detail then
-      local lsp = resolver.resolve(ctx, item)
+      local timeout_ms = math.floor(settings.display.preview.resolve_timeout * 1000)
+      local lsp = resolver.resolve(ctx, item, timeout_ms)
       lsp_item = lsp and lsp.item
     end
     if lsp_item then
-      return md_lines(lsp_item), "markdown"
+      local md = md_lines(lsp_item)
+      if #md > 0 then
+        return md, "markdown"
+      end
     end
+  end
+
+  local multi = multiline_insert(item)
+  if multi then
+    return vim.iter(txt.splitlines(multi)):totable(), vim.bo[ctx.buf].filetype
   end
 
   return nil, ""

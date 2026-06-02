@@ -107,7 +107,6 @@ local defaults = require "coq.config.defaults"
 ---@class config.RegistersClient: config.BaseClient
 ---@field always_on_top boolean
 ---@field lines string[]
----@field max_yank_size integer
 ---@field register_scope string
 ---@field words string[]
 

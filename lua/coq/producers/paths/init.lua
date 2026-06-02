@@ -2,6 +2,7 @@ local async = require "coq.lib.async"
 local atools = require "coq.lib.atools"
 local lib = require "coq.lib"
 local producer = require "coq.lib.producers"
+local util = require "coq.producers.util"
 
 local M = {}
 
@@ -263,6 +264,7 @@ local emit = function(mc, dir, name, rhs, segment_start)
     kind = dir_q and "Folder" or "File",
     menu = mc.menu,
     meta = {
+      uid = util.uid(),
       filter = name,
       source = mc.opts.short_name,
       always_on_top = mc.opts.always_on_top,

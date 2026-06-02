@@ -15,6 +15,7 @@ local M = {}
 ---@param events completions.Events
 M.bind = function(n, settings, sup, events)
   events.idle.replace {}
+
   events_m.subscribe_latest(n, events.idle, function()
     async.sleep(math.floor(settings.limits.idle_timeout * 1000))
 

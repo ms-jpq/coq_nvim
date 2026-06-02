@@ -8,8 +8,6 @@ local run = require "coq.producers.tags.run"
 local util = require "coq.producers.util"
 local worker = require "coq.lib.worker"
 
-local MAX_BYTES = 1024 * 1024
-
 local index = util.once(index_m.new)
 
 local M = {}
@@ -30,7 +28,7 @@ M.buffer_info = function(buf, prev_mtime)
     return nil
   end
   local st = vim.uv.fs_stat(path)
-  if not st or st.size > MAX_BYTES then
+  if not st then
     return nil
   end
   local mtime = st.mtime.sec or 0
@@ -130,6 +128,7 @@ M.matcher = function(settings, ctx)
       kind = "Text",
       menu = menu,
       meta = {
+        uid = util.uid(),
         filter = tag.word,
         source = opts.short_name,
         always_on_top = opts.always_on_top,

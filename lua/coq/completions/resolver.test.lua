@@ -7,11 +7,11 @@ local CTX = { win = 0, buf = 0, pos = { 0, 0 }, changedtick = 0 }
 
 ---@return completions.Item
 local lsp_item = function(tag)
-  return { word = tag, meta = { lsp = { tag = tag } } } --[[@as completions.Item]]
+  return { word = tag, meta = { uid = tag, lsp = { tag = tag } } } --[[@as completions.Item]]
 end
 
 T.describe("resolver", function(test)
-  test("caches resolved results by dedup_key", function()
+  test("caches resolved results by uid", function()
     local calls = 0
     async.scope(function(n)
       local r = resolver_m.new(n, function(_, item)
@@ -96,7 +96,7 @@ T.describe("resolver", function(test)
         calls = calls + 1
         return nil
       end)
-      local item = { word = "rex", meta = {} } --[[@as completions.Item]]
+      local item = { word = "rex", meta = { uid = "rex" } } --[[@as completions.Item]]
       T.eq(r.resolve(CTX, item), nil)
       T.eq(r.resolve(CTX, item), nil)
     end)

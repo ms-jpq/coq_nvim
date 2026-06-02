@@ -15,6 +15,14 @@ M.once = function(fn)
   end
 end
 
+---@return string
+M.uid = function()
+  local bytes = assert(vim.uv.random(8))
+  return (string.gsub(bytes, ".", function(c)
+    return string.format("%02x", string.byte(c))
+  end))
+end
+
 ---@param item { word: string? }
 ---@return string?
 local word_of = function(item)

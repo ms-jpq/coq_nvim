@@ -2,6 +2,7 @@ local async = require "coq.lib.async"
 local lib = require "coq.lib"
 local request = require "coq.producers.lsp.request"
 local set = require "coq.lib.set"
+local util = require "coq.producers.util"
 
 local M = {}
 
@@ -28,6 +29,7 @@ local matcher = function(settings, ctx)
         kind = entry.kind,
         menu = menu,
         meta = {
+          uid = util.uid(),
           filter = filter,
           snippet = is_snippet and insert_text or nil,
           source = opts.short_name,

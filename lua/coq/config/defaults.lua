@@ -47,7 +47,6 @@ local M = {
       always_wait = false,
       enabled = true,
       lines = {},
-      max_yank_size = 8888,
       register_scope = " ⇉ ",
       short_name = "RS",
       weight_adjust = 0,
