@@ -218,6 +218,7 @@ local resolve_doc = function(ctx, settings, resolver, item)
 
   local multi = multiline_insert(item)
   if multi then
+    atools.scheduled()
     return vim.iter(txt.splitlines(multi)):totable(), vim.bo[ctx.buf].filetype
   end
 

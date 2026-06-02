@@ -28,6 +28,7 @@ T.describe("errs.raise", function(test)
   test("several errors raise a group holding all of them", function()
     local ok, err = pcall(errs.raise, { "spot", "fido" })
     T.eq(ok, false)
+    ---@cast err lib.ErrorGroup<string>
     T.eq(err.errs, { "spot", "fido" })
   end)
 
@@ -43,6 +44,7 @@ T.describe("errs.raise", function(test)
     local ok, err = pcall(errs.raise, { cancel.new(), "real" })
     T.eq(ok, false)
     T.eq(cancel.is(err), false)
+    ---@cast err lib.ErrorGroup<any>
     T.eq(#err.errs, 2)
   end)
 end)
