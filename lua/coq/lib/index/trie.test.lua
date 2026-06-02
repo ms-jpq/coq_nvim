@@ -30,6 +30,37 @@ T.describe("trie", function(test)
     T.eq(collect(t.search { prefix = "li" }), { "lil", "lilx", "liy" })
   end)
 
+  test("buckets by the first two chars: a longer prefix yields the whole bucket", function()
+    local t = trie.new(vim.tbl_extend("force", spec, { prefix = 2 }))
+    t.insert { word = "labrador" }
+    t.insert { word = "lazy" } -- same "la" bucket, diverges at char 3
+    t.insert { word = "lily" } -- "li" bucket
+
+    -- a query past two chars does not narrow within the bucket (fuzzy)
+    T.eq(collect(t.search { prefix = "labr" }), { "labrador", "lazy" })
+    T.eq(collect(t.search { prefix = "la" }), { "labrador", "lazy" })
+    -- a single char fans across every two-char bucket beneath it
+    T.eq(collect(t.search { prefix = "l" }), { "labrador", "lazy", "lily" })
+  end)
+
+  test("prefix length is configurable at construction", function()
+    local one = trie.new(vim.tbl_extend("force", spec, { prefix = 1 }))
+    one.insert { word = "labrador" }
+    one.insert { word = "lily" }
+    one.insert { word = "spot" }
+
+    -- prefix = 1: a single "l" bucket holds both l-words
+    T.eq(collect(one.search { prefix = "lab" }), { "labrador", "lily" })
+    T.eq(collect(one.search { prefix = "s" }), { "spot" })
+
+    local three = trie.new(vim.tbl_extend("force", spec, { prefix = 3 }))
+    three.insert { word = "labrador" }
+    three.insert { word = "label" } -- shares "lab"
+    three.insert { word = "lazy" } -- "laz", a distinct bucket at depth 3
+
+    T.eq(collect(three.search { prefix = "labrador" }), { "label", "labrador" })
+  end)
+
   test("search includes the prefix key itself when it has an item", function()
     local t = trie.new(spec)
     t.insert { word = "lil" }

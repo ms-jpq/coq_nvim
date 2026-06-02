@@ -3,11 +3,12 @@ local async = require "coq.lib.async"
 ---@class index.TrieSpec<C, T>
 ---@field insert_key fun(item: T): string
 ---@field query_key fun(ctx: C): string?
+---@field prefix? number
 
 local M = {}
 
-local node_new = function()
-  return { children = {}, item = nil }
+local new_node = function()
+  return { children = {}, items = {} }
 end
 
 ---@param s string
@@ -19,32 +20,42 @@ end
 ---@param spec index.TrieSpec<C, T>
 ---@return index.Searcher<C, T>
 M.new = function(spec)
-  local root = node_new()
+  local prefix = spec.prefix or math.huge
+  local root = new_node()
 
   ---@param key string
   local descend = function(key)
-    local node = root
+    local node, depth = root, 0
     for c in chars(key) do
+      if depth >= prefix then
+        break
+      end
       node = node.children[c]
       if node == nil then
         return nil
       end
+      depth = depth + 1
     end
     return node
   end
 
+  ---@param key string
   local descend_create = function(key)
-    local node = root
+    local node, depth = root, 0
     for c in chars(key) do
-      node.children[c] = node.children[c] or node_new()
+      if depth >= prefix then
+        break
+      end
+      node.children[c] = node.children[c] or new_node()
       node = node.children[c]
+      depth = depth + 1
     end
     return node
   end
 
   local function dfs_yield(node)
-    if node.item ~= nil then
-      coroutine.yield(node.item)
+    for _, item in pairs(node.items) do
+      coroutine.yield(item)
     end
     for _, child in pairs(node.children) do
       dfs_yield(child)
@@ -54,18 +65,20 @@ M.new = function(spec)
   local trie = {}
 
   trie.insert = function(item)
-    descend_create(spec.insert_key(item)).item = item
+    local key = spec.insert_key(item)
+    descend_create(key).items[key] = item
   end
 
   trie.prune = function(ctx)
     local key = spec.query_key(ctx)
     if key == nil or key == "" then
-      root = node_new()
+      root = new_node()
       return
     end
-    local parent = descend(string.sub(key, 1, -2))
+    local bucket = string.sub(key, 1, math.min(prefix, #key) --[[@as integer]])
+    local parent = descend(string.sub(bucket, 1, -2))
     if parent then
-      parent.children[string.sub(key, -1)] = nil
+      parent.children[string.sub(bucket, -1)] = nil
     end
   end
 
