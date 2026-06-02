@@ -162,8 +162,10 @@ M.new = function(settings)
   return producer.threaded {
     settings = settings,
     max_pulls = settings.clients.tree_sitter.max_pulls or math.huge,
-    key = util.buffer_key,
-    bind = util.buffer_bind,
+    bind = function(n)
+      util.buffer_bind(n, tracker.push)
+    end,
+    drain = tracker.drain,
     idle = function(...)
       require("coq.producers.treesitter").idle(...)
     end,

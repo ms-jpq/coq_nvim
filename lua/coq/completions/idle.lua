@@ -11,7 +11,9 @@ M.bind = function(n, sup, idle)
   idle.replace {}
   events.subscribe_latest(n, idle, function()
     async.sleep(-1)
-    sup.idle(context.full())
+
+    local ctx = context.full()
+    sup.idle(ctx)
   end)
 end
 

@@ -10,18 +10,17 @@ local worker = require "coq.lib.worker"
 ---@class producers.SearchIter: lib.Closable
 ---@overload fun(): completions.Item?
 
----@alias producers.KeyFn fun(ev: any): any
 ---@alias producers.IdleFn<C> fun(settings: config.Settings?, events: table<any, any>, ctx: C)
 ---@alias producers.MatcherFn<C> fun(settings: config.Settings?, ctx: C)
----@alias producers.Push fun(ev: any)
----@alias producers.OnBind fun(n: async.Nursery, push: producers.Push)
+---@alias producers.OnBind fun(n: async.Nursery)
+---@alias producers.DrainFn fun(): table<any, any>
 
 ---@class producers.Spec<C>
 ---@field settings? config.Settings
----@field key? producers.KeyFn
 ---@field idle producers.IdleFn<C>
 ---@field matcher producers.MatcherFn<C>
 ---@field bind producers.OnBind
+---@field drain? producers.DrainFn
 ---@field max_pulls integer
 
 local M = {}
@@ -31,23 +30,12 @@ local M = {}
 ---@return producers.Producer<C>
 M.threaded = function(spec)
   local w = worker.spawn()
-  local key = spec.key
-  local location = key and {}
 
   return {
     max_pulls = spec.max_pulls,
-    bind = function(n)
-      spec.bind(n, function(ev)
-        if location and key then
-          location[key(ev)] = ev
-        end
-      end)
-    end,
+    bind = spec.bind,
     idle = function(ctx)
-      local batch = location or {}
-      if location then
-        location = {}
-      end
+      local batch = spec.drain and spec.drain() or {}
       w.queue(spec.idle, spec.settings, batch, ctx)
     end,
     search = function(ctx)

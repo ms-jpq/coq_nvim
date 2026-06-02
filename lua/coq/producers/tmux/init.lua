@@ -6,40 +6,20 @@ local producer = require "coq.lib.producers"
 local tokens = require "coq.lib.index.tokens"
 
 local SEP = "\30"
-local PANE_FIELDS = {
+local PANE_FMT = table.concat({
   "#{pane_id}",
   "#{session_name}",
   "#{window_index}",
   "#{window_name}",
   "#{pane_index}",
   "#{pane_title}",
-}
-local PANE_FMT = table.concat(PANE_FIELDS, SEP)
+}, SEP)
 
 ---@class tmux.Pane
 ---@field id string
 ---@field meta tmux.PaneMeta
 
 local M = {}
-
----@param _ async.Nursery
----@param push producers.Push
-local bind = function(_, push)
-  vim.api.nvim_create_autocmd({ "BufEnter" }, {
-    group = lib.group,
-    callback = function(args)
-      push { kind = "iskeyword", iskeyword = vim.bo[args.buf].iskeyword }
-    end,
-  })
-  vim.api.nvim_create_autocmd({ "FocusGained" }, {
-    group = lib.group,
-    callback = function()
-      push { kind = "focus" }
-    end,
-  })
-
-  push { kind = "iskeyword", iskeyword = vim.bo.iskeyword }
-end
 
 ---@param settings config.Settings
 ---@param exclude string?
@@ -84,8 +64,6 @@ end
 
 do
   local cache = {}
-  ---@type string?
-  local iskeyword
 
   ---@param kw table<integer, true>
   ---@param pane tmux.Pane
@@ -104,19 +82,15 @@ do
   end
 
   ---@param settings config.Settings
-  M.idle = function(settings, events)
-    for _, ev in pairs(events) do
-      if ev.kind == "iskeyword" then
-        iskeyword = ev.iskeyword
-      end
-    end
-
+  ---@param _ table
+  ---@param ctx ctx.full
+  M.idle = function(settings, _, ctx)
     local env = vim.uv.os_environ()
-    if env.TMUX == nil or iskeyword == nil then
+    if env.TMUX == nil then
       return
     end
 
-    local kw = tokens.parse_iskeyword(iskeyword)
+    local kw = ctx.kw
 
     local panes, live = {}, {}
     for pane in list_panes(settings, env.TMUX_PANE) do
@@ -190,10 +164,7 @@ M.new = function(settings)
   return producer.threaded {
     settings = settings,
     max_pulls = settings.clients.tmux.max_pulls or math.huge,
-    key = function(ev)
-      return ev.kind
-    end,
-    bind = bind,
+    bind = lib.noop,
     idle = function(...)
       require("coq.producers.tmux").idle(...)
     end,

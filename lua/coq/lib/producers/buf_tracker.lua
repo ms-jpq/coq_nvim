@@ -14,6 +14,8 @@ local async = require "coq.lib.async"
 ---@field last_tick table<integer, integer>
 
 ---@class buf_tracker.Tracker
+---@field push fun(buf: integer, kind: 'update' | 'remove')
+---@field drain fun(): table<integer, buf_tracker.Event>
 ---@field idle fun(_: any, events: table<integer, buf_tracker.Event>)
 ---@field state buf_tracker.State
 
@@ -27,6 +29,18 @@ M.new = function(spec)
     ---@type buf_tracker.State
     state = { last_tick = {} },
   }
+
+  local pending = {}
+
+  tracker.push = function(buf, kind)
+    pending[buf] = { kind = kind }
+  end
+
+  tracker.drain = function()
+    local p = pending
+    pending = {}
+    return p
+  end
 
   tracker.idle = function(_, events)
     for buf, ev in pairs(events) do
