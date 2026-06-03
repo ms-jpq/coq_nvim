@@ -40,9 +40,6 @@ local defaults = require "coq.config.defaults"
 ---@field pum config.PumDisplay
 ---@field preview config.PreviewDisplay
 ---@field icons config.Icons
----@field time_fmt string
----@field mark_highlight_group string
----@field mark_applied_notify boolean
 
 ---@class config.MatchOptions
 ---@field max_results integer

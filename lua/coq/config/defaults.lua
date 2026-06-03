@@ -180,9 +180,6 @@ local M = {
       spacing = 1,
     },
 
-    mark_highlight_group = "Pmenu",
-    mark_applied_notify = true,
-
     preview = {
       border = "rounded",
       enabled = true,
@@ -206,8 +203,6 @@ local M = {
       y_max_len = 16,
       y_ratio = 0.3,
     },
-
-    time_fmt = "%Y-%m-%d %H:%M",
   },
 
   keymap = {

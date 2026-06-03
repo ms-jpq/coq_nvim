@@ -28,15 +28,16 @@ local trigger = require "coq.completions.trigger"
 local COMPLETEFUNC = "__coq_completefunc__"
 
 local M = {
-  Now = lib.noop,
-  deps = lib.noop,
+  Now = commands.Now,
+  deps = commands.deps,
   Stats = commands.Stats,
   Snips = commands.Snips,
   Help = commands.Help,
 }
 
----@param cfg? table
----@return table?
+---@generic T
+---@param cfg? T
+---@return T?
 M.lsp_ensure_capabilities = function(cfg)
   return cfg
 end
@@ -90,8 +91,6 @@ M.setup = function(opts)
 
   async.entry(function()
     async.scope(function(n)
-      commands.register()
-
       local merged = vim.tbl_deep_extend("force", vim.g.coq_settings or {}, opts or {})
       local settings = config.merged(merged)
 
@@ -110,6 +109,7 @@ M.setup = function(opts)
       preview.bind(n, settings, resolver, events.pum)
       insertion.bind(n, settings, resolver, ranker, events.done)
       idle.bind(n, settings, sup, events)
+      commands.bind()
 
       _G[COMPLETEFUNC] = function(findstart, _)
         if findstart == 1 then
