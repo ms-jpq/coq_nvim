@@ -105,7 +105,7 @@ M.setup = function(opts)
       local resolver = resolver_m.new(n)
 
       sup.bind(n)
-      trigger.bind(n, settings, ranker, resolver, sup, events.trigger)
+      trigger.bind(n, settings, ranker, resolver, sup, events)
       preview.bind(n, settings, resolver, events.pum)
       insertion.bind(n, settings, resolver, ranker, events.done, events.trigger)
       idle.bind(n, settings, sup, events)

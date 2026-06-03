@@ -1,25 +1,27 @@
+local set = require "coq.lib.set"
+
 local DRIVE_PAT = "^%a:[/\\]"
 
 local M = {}
 
 ---@param is_windows boolean
 ---@param path_seps string[]
----@return table<string, true>
+---@return lib.Set<string>
 local os_seps = function(is_windows, path_seps)
-  local seps = is_windows and { ["/"] = true, ["\\"] = true } or { ["/"] = true }
+  local seps = set.new(is_windows and { "/", "\\" } or { "/" })
 
   local filtered = {}
   for _, s in pairs(path_seps) do
     if seps[s] then
-      filtered[s] = true
+      table.insert(filtered, s)
     end
   end
 
-  return next(filtered) and filtered or seps
+  return #filtered > 0 and set.new(filtered) or seps
 end
 
 ---@param is_windows boolean
----@param separators table<string, true>
+---@param separators lib.Set<string>
 ---@return lib.Iterator<string>
 local patterns = function(is_windows, separators)
   local heads = function()
@@ -79,7 +81,7 @@ end
 ---@param home string
 ---@param env table<string, string>
 ---@param token string
----@param separators table<string, true>
+---@param separators lib.Set<string>
 ---@return string
 local expand_head = function(is_windows, home, env, token, separators)
   local c1 = string.sub(token, 1, 1)
@@ -94,7 +96,7 @@ local expand_head = function(is_windows, home, env, token, separators)
 end
 
 ---@param is_windows boolean
----@param separators table<string, true>
+---@param separators lib.Set<string>
 ---@param path string
 ---@return boolean
 local is_absolute = function(is_windows, separators, path)
@@ -105,7 +107,7 @@ local is_absolute = function(is_windows, separators, path)
   return is_windows and string.match(path, DRIVE_PAT) ~= nil
 end
 
----@param separators table<string, true>
+---@param separators lib.Set<string>
 ---@param path string
 ---@return string? dir
 ---@return string rhs
@@ -119,7 +121,7 @@ local split_at_last_sep = function(separators, path)
 end
 
 ---@param is_windows boolean
----@param separators table<string, true>
+---@param separators lib.Set<string>
 ---@param line_before string
 ---@return fun(): integer?, string?
 local find_starts = function(is_windows, separators, line_before)

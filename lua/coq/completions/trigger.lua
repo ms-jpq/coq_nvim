@@ -1,5 +1,5 @@
 local context = require "coq.lib.context"
-local events = require "coq.completions.events"
+local events_m = require "coq.completions.events"
 local insertion = require "coq.completions.insertion"
 local lib = require "coq.lib"
 
@@ -12,6 +12,10 @@ local M = {}
 local should_skip = function(settings, ctx, prev)
   if ctx.manual then
     return false
+  end
+
+  if not settings.completion.always then
+    return true
   end
 
   if prev.buf == ctx.buf and prev.tick == ctx.changedtick then
@@ -32,16 +36,27 @@ end
 ---@param ranker index.Ranker
 ---@param resolver completions.Resolver
 ---@param sup producers.Producer<ctx.full>
----@param trigger channels.Broadcast<completions.TriggerEvent>
-M.bind = function(n, settings, ranker, resolver, sup, trigger)
+---@param events completions.Events
+M.bind = function(n, settings, ranker, resolver, sup, events)
   local prev = { buf = -1, tick = -1 }
+  local sticky = false
 
-  events.subscribe_latest(n, trigger, function(ev)
-    local ctx = context.full { manual = ev.manual }
+  events_m.subscribe_latest(n, events.leave, function()
+    sticky = false
+  end)
+
+  events_m.subscribe_latest(n, events.trigger, function(ev)
+    local manual = ev.manual or sticky
+    local ctx = context.full { manual = manual }
+
     if should_skip(settings, ctx, prev) then
       return
     end
     prev = { buf = ctx.buf, tick = ctx.changedtick }
+
+    if ev.manual and settings.completion.sticky_manual then
+      sticky = true
+    end
 
     resolver.reset()
     lib.scope(function(defer)

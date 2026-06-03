@@ -28,6 +28,7 @@ local lib = require "coq.lib"
 ---@field pum channels.Broadcast<completions.PumEvent>
 ---@field done channels.Broadcast<vim.v.completed_item>
 ---@field idle channels.Broadcast<nil>
+---@field leave channels.Broadcast<nil>
 ---@field drain_bufs fun(): completions.BufDiff
 
 local BUF_KINDS = {
@@ -52,6 +53,7 @@ M.new = function()
     pum = broadcast.new(),
     done = broadcast.new(),
     idle = broadcast.new(),
+    leave = broadcast.new(),
     drain_bufs = function()
       local p = bufs
       bufs = { updated = {}, removed = {} }
@@ -86,6 +88,7 @@ M.new = function()
     group = lib.group,
     callback = function()
       events.pum.replace { kind = "clear" }
+      events.leave.replace()
     end,
   })
 
