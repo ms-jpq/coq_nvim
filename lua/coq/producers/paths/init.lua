@@ -8,16 +8,6 @@ local util = require "coq.producers.util"
 
 local M = {}
 
----@param partial string
----@param name string
----@return boolean
-local name_matches = function(partial, name)
-  if partial == "" then
-    return true
-  end
-  return string.sub(string.lower(name), 1, #partial) == string.lower(partial)
-end
-
 ---@param path string
 ---@param type string
 ---@return string
@@ -66,6 +56,7 @@ end
 ---@field name string
 ---@field type string
 ---@field full string
+---@field fuzzy integer
 
 ---@param settings config.Settings
 ---@param ctx ctx.full
@@ -90,7 +81,8 @@ local matches = function(settings, ctx)
             defer(close)
 
             for name, type in iter do
-              if name_matches(cand.partial, name) then
+              local fuzzy = cand.partial == "" and 0 or match.score(cand.partial, name)
+              if cand.partial == "" or fuzzy > 0 then
                 local full = vim.fs.joinpath(dir, name)
                 coroutine.yield {
                   cand = cand,
@@ -98,6 +90,7 @@ local matches = function(settings, ctx)
                   name = name,
                   type = resolve_type(full, type),
                   full = full,
+                  fuzzy = fuzzy,
                 }
               end
             end
@@ -132,7 +125,7 @@ M.matcher = function(settings, ctx)
       word = word,
       kind = dir_q and "Folder" or "File",
       filter = filter,
-      fuzzy = match.score(m.cand.partial, filter),
+      fuzzy = m.fuzzy,
       path = m.full,
       lsp = {
         position_encoding = "utf-8",

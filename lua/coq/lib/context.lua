@@ -1,15 +1,16 @@
 local atools = require "coq.lib.atools"
+local lib = require "coq.lib"
 
 ---@class ctx.base
 ---@field win integer
 ---@field buf integer
 ---@field pos [integer, integer]
 ---@field changedtick integer
+---@field filetype string
 
 ---@class ctx.full: ctx.base
 ---@field manual boolean
 ---@field cwd string
----@field filetype string
 ---@field filename string
 ---@field linesep string
 ---@field kw table<integer, true>
@@ -59,6 +60,7 @@ M.base = function()
   ctx.buf = vim.api.nvim_win_get_buf(ctx.win)
   ctx.pos = vim.api.nvim_win_get_cursor(ctx.win)
   ctx.changedtick = vim.b[ctx.buf].changedtick
+  ctx.filetype = vim.bo[ctx.buf].filetype
 
   ---@cast ctx ctx.base
   return ctx
@@ -78,8 +80,7 @@ M.full = function(opts)
   local bo = vim.bo[ctx.buf]
 
   do
-    ctx.cwd = vim.fn.getcwd()
-    ctx.filetype = bo.filetype
+    ctx.cwd = lib.getcwd()
     ctx.filename = vim.api.nvim_buf_get_name(ctx.buf)
     ctx.linesep = bo.fileformat == "dos" and "\r\n" or bo.fileformat == "mac" and "\r" or "\n"
   end

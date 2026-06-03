@@ -137,14 +137,15 @@ end
 
 ---@param settings config.Settings
 M.matcher = function(settings, ctx)
-  local opts = settings.clients.tmux
+  if util.skip_empty(ctx) then
+    return
+  end
 
   local raw = index_of(settings).search { keyword_before = ctx.keyword_before }
-  local shaped = util.shape(settings, ctx, raw)
 
-  for hit in shaped do
-    local lines = vim.iter(doc_iter(opts, hit.item.meta)):totable()
-    coroutine.yield(util.item(settings, opts, {
+  for hit in util.shape(settings, ctx, raw) do
+    local lines = vim.iter(doc_iter(settings.clients.tmux, hit.item.meta)):totable()
+    coroutine.yield(util.item(settings, settings.clients.tmux, {
       word = hit.item.word,
       kind = "Text",
       filter = hit.item.word,

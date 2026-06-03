@@ -151,14 +151,15 @@ end
 
 ---@param settings config.Settings
 M.matcher = function(settings, ctx)
-  local opts = settings.clients.tree_sitter
+  if util.skip_empty(ctx) then
+    return
+  end
 
   local raw = index_of(settings).search { filetype = ctx.filetype, keyword_before = ctx.keyword_before }
-  local shaped = util.shape(settings, ctx, raw)
 
-  for hit in shaped do
-    local lines = vim.iter(doc_iter(opts, ctx, hit.item)):totable()
-    coroutine.yield(util.item(settings, opts, {
+  for hit in util.shape(settings, ctx, raw) do
+    local lines = vim.iter(doc_iter(settings.clients.tree_sitter, ctx, hit.item)):totable()
+    coroutine.yield(util.item(settings, settings.clients.tree_sitter, {
       word = hit.item.word,
       kind = capture_to_icon(hit.item.kind),
       filter = hit.item.word,

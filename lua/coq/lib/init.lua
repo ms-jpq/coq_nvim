@@ -29,6 +29,12 @@ M.weak = function()
   return setmetatable({}, { __mode = "k" })
 end
 
+---@return string
+M.getcwd = function()
+  local ok, cwd = pcall(vim.fn.getcwd)
+  return ok and cwd or ""
+end
+
 ---@param fn fun(defer: fun(cleanup: fun())): ...
 ---@return ...
 M.scope = function(fn)

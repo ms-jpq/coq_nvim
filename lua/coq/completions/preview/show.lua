@@ -166,9 +166,7 @@ end
 ---@return string?
 local multiline_insert = function(item)
   local meta = item.meta
-  local text = meta.snippet
-    or (meta.lsp and meta.lsp.item and meta.lsp.item.textEdit and meta.lsp.item.textEdit.newText)
-    or item.word
+  local text = (meta.lsp and meta.lsp.item and meta.lsp.item.textEdit and meta.lsp.item.textEdit.newText) or item.word
 
   if text and txt.is_multiline(text) then
     return text
@@ -195,7 +193,7 @@ local resolve_doc = function(ctx, settings, resolver, item)
       .iter(paths_preview.lines({
         max_lines = settings.clients.paths.preview_lines,
         ellipsis = settings.display.pum.ellipsis,
-      }, vim.fn.getcwd(), meta.path))
+      }, lib.getcwd(), meta.path))
       :totable(),
       ""
   end
@@ -215,10 +213,13 @@ local resolve_doc = function(ctx, settings, resolver, item)
     end
   end
 
+  if meta.snippet then
+    return vim.iter(txt.splitlines(meta.snippet)):totable(), ctx.filetype
+  end
+
   local multi = multiline_insert(item)
   if multi then
-    atools.scheduled()
-    return vim.iter(txt.splitlines(multi)):totable(), vim.bo[ctx.buf].filetype
+    return vim.iter(txt.splitlines(multi)):totable(), ctx.filetype
   end
 
   return nil, ""
@@ -275,6 +276,7 @@ M.show = function(ctx, settings, resolver, ev, item)
   if not settings.display.preview.enabled then
     return
   end
+
   local lines, filetype = resolve_doc(ctx, settings, resolver, item)
   if lines then
     show(settings.display.preview, ev, lines, filetype)

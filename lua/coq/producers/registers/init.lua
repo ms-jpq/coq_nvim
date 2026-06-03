@@ -104,15 +104,18 @@ end
 
 ---@param settings config.Settings
 M.matcher = function(settings, ctx)
-  local opts = settings.clients.registers
+  if util.skip_empty(ctx) then
+    return
+  end
 
   local raw = index_of(settings).search { keyword_before = ctx.keyword_before }
-  local shaped = util.shape(settings, ctx, raw)
 
-  for hit in shaped do
-    local doc_line = opts.short_name .. opts.register_scope .. hit.item.register
+  for hit in util.shape(settings, ctx, raw) do
+    local doc_line = settings.clients.registers.short_name
+      .. settings.clients.registers.register_scope
+      .. hit.item.register
 
-    coroutine.yield(util.item(settings, opts, {
+    coroutine.yield(util.item(settings, settings.clients.registers, {
       word = hit.item.word,
       kind = "Text",
       filter = hit.item.word,

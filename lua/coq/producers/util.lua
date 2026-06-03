@@ -4,6 +4,12 @@ local trie = require "coq.lib.index.trie"
 
 local M = {}
 
+---@param ctx ctx.full
+---@return boolean
+M.skip_empty = function(ctx)
+  return ctx.keyword_before == "" and not ctx.manual
+end
+
 ---@param buf integer
 ---@return boolean
 M.is_live = function(buf)

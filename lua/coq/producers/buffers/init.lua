@@ -121,18 +121,19 @@ end
 
 ---@param settings config.Settings
 M.matcher = function(settings, ctx)
-  local opts = settings.clients.buffers
+  if util.skip_empty(ctx) then
+    return
+  end
 
   local raw = index_of(settings).search {
-    filetype = opts.same_filetype and ctx.filetype or nil,
+    filetype = settings.clients.buffers.same_filetype and ctx.filetype or nil,
     keyword_before = ctx.keyword_before,
   }
-  local shaped = util.shape(settings, ctx, raw)
 
-  for hit in shaped do
-    local lines = vim.iter(doc_iter(opts, ctx, hit.item)):totable()
+  for hit in util.shape(settings, ctx, raw) do
+    local lines = vim.iter(doc_iter(settings.clients.buffers, ctx, hit.item)):totable()
 
-    coroutine.yield(util.item(settings, opts, {
+    coroutine.yield(util.item(settings, settings.clients.buffers, {
       word = hit.item.word,
       kind = "Text",
       filter = hit.item.word,
