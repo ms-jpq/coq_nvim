@@ -32,7 +32,7 @@ M.buffer_info = function(buf, prev_mtime)
   if err or not st then
     return nil
   end
-  local mtime = st.mtime.sec or 0
+  local mtime = (st.mtime.sec or 0) * 1000000000 + (st.mtime.nsec or 0)
   if prev_mtime and mtime <= prev_mtime then
     return nil
   end
