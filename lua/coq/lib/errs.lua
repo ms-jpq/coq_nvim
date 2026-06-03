@@ -17,7 +17,7 @@ M.report = vim.is_thread() and function(err)
   pcall(thread_sink, tostring(err))
 end or function(err)
   vim.schedule(function()
-    vim.notify(err, vim.log.levels.ERROR)
+    vim.notify(tostring(err), vim.log.levels.ERROR)
   end)
 end
 
