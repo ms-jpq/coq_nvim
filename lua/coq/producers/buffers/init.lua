@@ -4,6 +4,7 @@ local buf_tracker = require "coq.lib.producers.buf_tracker"
 local context = require "coq.lib.context"
 local fs = require "coq.producers.fs"
 local index_m = require "coq.producers.buffers.index"
+local lib = require "coq.lib"
 local producer = require "coq.lib.producers"
 local tokens = require "coq.lib.index.tokens"
 local util = require "coq.producers.util"
@@ -80,18 +81,29 @@ local tracker = buf_tracker.new {
   reindex = function(settings, infos)
     for _, info in pairs(infos) do
       async.sleep(0)
-
       local kw = tokens.parse_iskeyword(info.iskeyword)
-      local text = info.lines and vim.iter { table.concat(info.lines, "\n") } --[[@as lib.Iterator<string>]]
-        or atools.fs.scanfile(info.filename)
-      for word in tokens.keywords(kw, text) do
-        index(settings).insert {
-          buf = info.buf,
-          word = word,
-          filetype = info.filetype,
-          filename = info.filename,
-        }
-      end
+
+      lib.scope(function(defer)
+        local text = (function()
+          if info.lines then
+            return vim.iter { table.concat(info.lines, "\n") }
+          end
+          local iter = atools.fs.scanfile(info.filename)
+          defer(iter.close)
+          return iter
+        end)()
+
+        for word in
+          tokens.keywords(kw, text --[[@as lib.Iterator<string>]])
+        do
+          index(settings).insert {
+            buf = info.buf,
+            word = word,
+            filetype = info.filetype,
+            filename = info.filename,
+          }
+        end
+      end)
     end
   end,
   prune = function(settings, buf)

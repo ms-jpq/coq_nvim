@@ -2,6 +2,7 @@ local async = require "coq.lib.async"
 local atools = require "coq.lib.atools"
 local fs = require "coq.producers.fs"
 local itertools = require "coq.lib.itertools"
+local lib = require "coq.lib"
 local txt = require "coq.lib.text"
 
 local MAX_BYTES = 1024 * 1024
@@ -36,11 +37,15 @@ end
 ---@param path string
 local dir_preview = function(opts, cwd, path)
   local entries = {}
-  for name, kind in atools.fs.scandir(path) do
-    local full = vim.fs.joinpath(path, name)
-    local rendered = cwd and fs.fmt_path(cwd, full) or name
-    table.insert(entries, rendered .. (kind == "directory" and "/" or ""))
-  end
+  lib.scope(function(defer)
+    local iter = atools.fs.scandir(path)
+    defer(iter.close)
+    for name, kind in iter do
+      local full = vim.fs.joinpath(path, name)
+      local rendered = cwd and fs.fmt_path(cwd, full) or name
+      table.insert(entries, rendered .. (kind == "directory" and "/" or ""))
+    end
+  end)
   table.sort(entries)
 
   yield_capped(opts, vim.iter(entries) --[[@as lib.Iterator<string>]])
@@ -49,13 +54,16 @@ end
 ---@param opts paths.IterOpts
 ---@param path string
 local file_preview = function(opts, path)
-  local seen = 0
-  local capped = itertools.take_while(function(chunk)
-    seen = seen + #chunk
-    return seen <= MAX_BYTES
-  end, atools.fs.scanfile(path))
-
-  local text = table.concat(vim.iter(capped):totable())
+  local text = lib.scope(function(defer)
+    local iter = atools.fs.scanfile(path)
+    defer(iter.close)
+    local seen = 0
+    local capped = itertools.take_while(function(chunk)
+      seen = seen + #chunk
+      return seen <= MAX_BYTES
+    end, iter --[[@as lib.Iterator<string>]])
+    return table.concat(vim.iter(capped):totable())
+  end)
 
   if text == "" then
     coroutine.yield "(empty)"

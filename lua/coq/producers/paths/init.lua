@@ -71,11 +71,16 @@ local matches = function(settings, ctx)
       for dir in cand_dirs(bases, cand) do
         if atools.fs.is_dir(dir) then
           found = true
-          for name in atools.fs.scandir(dir) do
-            if name_matches(cand.partial, name) then
-              coroutine.yield { cand = cand, dir = dir, name = name, full = vim.fs.joinpath(dir, name) }
+          lib.scope(function(defer)
+            local iter = atools.fs.scandir(dir)
+            defer(iter.close)
+
+            for name in iter do
+              if name_matches(cand.partial, name) then
+                coroutine.yield { cand = cand, dir = dir, name = name, full = vim.fs.joinpath(dir, name) }
+              end
             end
-          end
+          end)
         end
       end
 

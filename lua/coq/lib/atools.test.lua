@@ -63,7 +63,7 @@ T.describe("atools.fs.scanfile", function(test)
     local path = write_tmp "lil\nspot\nfido"
     local chunks
     async.scope(function()
-      chunks = drain(atools.fs.scanfile(path))
+      chunks = drain(atools.fs.scanfile(path) --[[@as fun(): string?]])
     end)
 
     T.eq(table.concat(chunks), "lil\nspot\nfido")
@@ -73,7 +73,7 @@ T.describe("atools.fs.scanfile", function(test)
     local path = write_tmp ""
     local chunks
     async.scope(function()
-      chunks = drain(atools.fs.scanfile(path))
+      chunks = drain(atools.fs.scanfile(path) --[[@as fun(): string?]])
     end)
 
     T.eq(chunks, {})
@@ -83,7 +83,7 @@ T.describe("atools.fs.scanfile", function(test)
     local path = vim.fn.tempname() .. "/does-not-exist"
     local chunks
     async.scope(function()
-      chunks = drain(atools.fs.scanfile(path))
+      chunks = drain(atools.fs.scanfile(path) --[[@as fun(): string?]])
     end)
 
     T.eq(chunks, {})
