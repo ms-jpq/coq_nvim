@@ -20,8 +20,11 @@ local lib = require "coq.lib"
 ---@field updated table<integer, true>
 ---@field removed table<integer, true>
 
+---@class completions.TriggerEvent
+---@field manual boolean
+
 ---@class completions.Events
----@field trigger channels.Broadcast<nil>
+---@field trigger channels.Broadcast<completions.TriggerEvent>
 ---@field pum channels.Broadcast<completions.PumEvent>
 ---@field done channels.Broadcast<vim.v.completed_item>
 ---@field idle channels.Broadcast<nil>
@@ -58,8 +61,8 @@ M.new = function()
 
   vim.api.nvim_create_autocmd({ "InsertCharPre" }, {
     group = lib.group,
-    callback = function(args)
-      events.trigger.replace(args)
+    callback = function()
+      events.trigger.replace { manual = false }
     end,
   })
 

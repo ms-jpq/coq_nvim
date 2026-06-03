@@ -5,7 +5,7 @@ local events = require "coq.completions.events"
 local item = require "coq.completions.item"
 local lib = require "coq.lib"
 local lsp_util = require "coq.producers.lsp.util"
-local score = require "coq.lib.index.rank.score"
+local ranker_m = require "coq.lib.index.rank.ranker"
 local topk_m = require "coq.lib.index.rank.topk"
 local txt = require "coq.lib.text"
 
@@ -108,20 +108,9 @@ local M = {}
 M.complete = function(ctx, settings, ranker, iter)
   local prepared = ranker.prepare(ctx)
 
-  local scorables = {}
-  for i in iter do
-    ---@cast i completions.Item
-    table.insert(scorables, {
-      filter = i.meta.filter or i.word or "",
-      source = i.meta.source or "",
-      always_on_top = i.meta.always_on_top or false,
-      item = i,
-    })
-  end
-
   local topk = topk_m.new(settings.match.max_results, item.dedup_key)
-  for scorable, sc in score.compute(scorables, prepared) do
-    topk.push(scorable --[[@as {item: completions.Item}]].item, sc)
+  for i in iter do
+    topk.push(i, ranker_m.score(prepared, i))
   end
 
   local items = {}

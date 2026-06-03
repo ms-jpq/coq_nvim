@@ -23,7 +23,12 @@ M.word_search = function(settings)
       end,
       prefix = prefix,
       child = function()
-        return fuzzy.new { insert_key = word_key }
+        return fuzzy.new {
+          insert_key = word_key,
+          query_key = function(ctx)
+            return ctx.keyword_before
+          end,
+        }
       end,
     }
   end

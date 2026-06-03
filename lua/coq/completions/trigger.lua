@@ -22,11 +22,11 @@ end
 ---@param ranker index.Ranker
 ---@param resolver completions.Resolver
 ---@param sup producers.Producer<ctx.full>
----@param trigger channels.Broadcast<nil>
+---@param trigger channels.Broadcast<completions.TriggerEvent>
 M.bind = function(n, settings, ranker, resolver, sup, trigger)
-  events.subscribe_latest(n, trigger, function()
-    local ctx = context.full()
-    if should_skip(settings.completion.skip_after, ctx.line_before) then
+  events.subscribe_latest(n, trigger, function(ev)
+    local ctx = context.full { manual = ev.manual }
+    if not ctx.manual and should_skip(settings.completion.skip_after, ctx.line_before) then
       return
     end
 

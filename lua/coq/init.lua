@@ -24,6 +24,8 @@ local resolver_m = require "coq.completions.resolver"
 local supervisor = require "coq.lib.producers.supervisor"
 local trigger = require "coq.completions.trigger"
 
+local COMPLETEFUNC = "__coq_completefunc__"
+
 local M = {}
 
 ---@param cfg? table
@@ -125,6 +127,15 @@ M.setup = function(opts)
       preview.bind(n, settings, resolver, events.pum)
       insertion.bind(n, settings, resolver, ranker, events.done)
       idle.bind(n, settings, sup, events)
+
+      _G[COMPLETEFUNC] = function(findstart, _)
+        if findstart == 1 then
+          events.trigger.replace { manual = true }
+          return -1
+        end
+        return {}
+      end
+      vim.o.completefunc = "v:lua." .. COMPLETEFUNC
     end)
   end)()
 end

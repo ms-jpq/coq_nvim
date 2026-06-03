@@ -1,5 +1,6 @@
 local closable = require "coq.lib.closable"
 local lib = require "coq.lib"
+local match = require "coq.lib.index.rank.match"
 local request = require "coq.producers.lsp.request"
 local set = require "coq.lib.set"
 local util = require "coq.producers.util"
@@ -38,7 +39,7 @@ M.new = function()
             meta = {
               uid = util.uid(),
               filter = filter,
-              fuzzy = 0,
+              fuzzy = match.score(ctx.keyword_before, filter),
               snippet = is_snippet and insert_text or nil,
               source = opts.short_name,
               always_on_top = pinned[entry.client_name] == true,

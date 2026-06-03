@@ -1,6 +1,7 @@
 local async = require "coq.lib.async"
 local atools = require "coq.lib.atools"
 local lib = require "coq.lib"
+local match = require "coq.lib.index.rank.match"
 local parse = require "coq.producers.paths.parse"
 local producer = require "coq.lib.producers"
 local util = require "coq.producers.util"
@@ -112,12 +113,13 @@ M.matcher = function(settings, ctx)
   for m in vim.iter(matches(settings, ctx)):unique(match_key) do
     local dir_q = m.type == "directory"
     local word = m.name .. (dir_q and m.cand.local_sep or "")
+    local filter = m.name
 
     coroutine.yield(util.item(settings, settings.clients.paths, {
       word = word,
       kind = dir_q and "Folder" or "File",
-      filter = m.name,
-      fuzzy = 0,
+      filter = filter,
+      fuzzy = match.score(m.cand.partial, filter),
       path = m.full,
       lsp = {
         position_encoding = "utf-8",

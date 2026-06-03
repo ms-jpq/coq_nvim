@@ -16,6 +16,9 @@ local spec = {
       insert_key = function(item)
         return item.word
       end,
+      query_key = function(ctx)
+        return ctx.prefix
+      end,
     }
   end,
 }

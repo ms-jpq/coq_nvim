@@ -40,10 +40,11 @@ M.new = function(producers)
   end
 
   sup.search = function(settings, ctx)
+    local timeout = ctx.manual and settings.limits.completion_manual_timeout or settings.limits.completion_auto_timeout
+
     if idle_handle then
       idle_handle.cancel()
     end
-
     searching = true
     local _ = async.current().on_cancel(function()
       searching = false
@@ -58,7 +59,8 @@ M.new = function(producers)
       end
 
       local close, iter = async.merge(iters)
-      local timed = deadline.new(math.floor(settings.limits.completion_auto_timeout * 1000), function()
+
+      local timed = deadline.new(math.floor(timeout * 1000), function()
         local _, v = iter()
         return v
       end)

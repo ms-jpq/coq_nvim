@@ -1,7 +1,9 @@
 local async = require "coq.lib.async"
+local match = require "coq.lib.index.rank.match"
 
----@class index.FuzzySpec<T>
----@field insert_key fun(item: T): any
+---@class index.FuzzySpec<C, T>
+---@field insert_key fun(item: T): string
+---@field query_key fun(ctx: C): string?
 
 local M = {}
 
@@ -21,10 +23,11 @@ M.new = function(spec)
     return true
   end
 
-  fuzzy.search = function(_)
+  fuzzy.search = function(ctx)
     return async.wrap(function()
-      for _, item in pairs(items) do
-        coroutine.yield { item = item, fuzzy = 0 }
+      local token = spec.query_key(ctx) or ""
+      for key, item in pairs(items) do
+        coroutine.yield { item = item, fuzzy = match.score(token, key) }
       end
     end)
   end

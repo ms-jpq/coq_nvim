@@ -7,6 +7,7 @@ local atools = require "coq.lib.atools"
 ---@field changedtick integer
 
 ---@class ctx.full: ctx.base
+---@field manual boolean
 ---@field cwd string
 ---@field filetype string
 ---@field filename string
@@ -61,13 +62,17 @@ M.base = function()
   return ctx
 end
 
----@param base? ctx.base
+---@class ctx.FullOpts
+---@field manual? boolean
+
+---@param opts? ctx.FullOpts
 ---@return ctx.full
-M.full = function(base)
+M.full = function(opts)
   local tokens = require "coq.lib.index.tokens"
 
-  local ctx = base or M.base()
+  local ctx = M.base()
   ---@cast ctx ctx.full
+  ctx.manual = (opts and opts.manual) or false
   local bo = vim.bo[ctx.buf]
 
   do

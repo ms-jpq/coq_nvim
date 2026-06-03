@@ -14,6 +14,23 @@ local tokens = require "coq.lib.index.tokens"
 
 local M = {}
 
+-- https://github.com/neovim/neovim/blob/master/src/nvim/fuzzy.c
+M.WEIGHTS = { prox = 100, recen = 50 }
+M.ALWAYS_TOP = 1e9
+
+---@param prepared index.Prepared
+---@param item completions.Item
+---@return number
+M.score = function(prepared, item)
+  local meta = item.meta
+  local prox = prepared.locality[meta.filter] or 0
+  local recen = prepared.recency[meta.filter] or 0
+  local bias = prepared.source_bias[meta.source] or 1
+  local tier = meta.always_on_top and M.ALWAYS_TOP or 0
+
+  return (meta.fuzzy + prox * M.WEIGHTS.prox + recen * M.WEIGHTS.recen) * bias + tier
+end
+
 ---@param clients config.Clients
 ---@return index.Ranker
 M.new = function(clients)
