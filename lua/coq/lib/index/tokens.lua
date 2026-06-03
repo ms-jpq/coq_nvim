@@ -103,6 +103,17 @@ M.trailing_keyword_before = function(kw, line)
   return string.sub(line, i + 1)
 end
 
+---@param kw table<integer, true>
+---@param line string
+---@return string
+M.leading_keyword = function(kw, line)
+  local i = 0
+  while i < #line and kw[string.byte(line, i + 1)] do
+    i = i + 1
+  end
+  return string.sub(line, 1, i)
+end
+
 ---@param ctx ctx.full
 ---@return string[]
 M.surround = function(ctx)

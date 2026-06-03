@@ -18,6 +18,7 @@ local atools = require "coq.lib.atools"
 ---@field line_before string
 ---@field line_after string
 ---@field keyword_before string
+---@field keyword_before_has_upper boolean
 
 local M = {}
 
@@ -97,6 +98,7 @@ M.full = function(opts)
     ctx.line_after = string.sub(ctx.line, col + 1)
 
     ctx.keyword_before = tokens.trailing_keyword_before(ctx.kw, ctx.line_before)
+    ctx.keyword_before_has_upper = string.find(ctx.keyword_before, "%u") ~= nil
   end
 
   return ctx
