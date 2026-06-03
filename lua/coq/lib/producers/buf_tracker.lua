@@ -16,7 +16,6 @@ M.new = function(spec)
 
     for buf in pairs(idle_ctx.removed) do
       stale[buf] = state[buf]
-      state[buf] = nil
     end
 
     for buf in pairs(idle_ctx.updated) do
@@ -24,13 +23,19 @@ M.new = function(spec)
 
       if compared ~= nil then
         stale[buf] = state[buf]
-        state[buf] = compared
         computed[buf] = compared
       end
     end
 
     spec.prune(idle_ctx, stale)
     spec.index(idle_ctx, computed)
+
+    for buf in pairs(idle_ctx.removed) do
+      state[buf] = nil
+    end
+    for buf, compared in pairs(computed) do
+      state[buf] = compared
+    end
   end
 end
 

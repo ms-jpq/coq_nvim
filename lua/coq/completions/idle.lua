@@ -17,16 +17,29 @@ local M = {}
 M.bind = function(n, settings, sup, events)
   events.idle.replace {}
 
+  local carry = { updated = {}, removed = {} }
+
   events_m.subscribe_latest(n, events.idle, function()
     async.sleep(math.floor(settings.limits.idle_timeout * 1000))
 
     local diff = events.drain_bufs()
+    for buf in pairs(diff.removed) do
+      carry.updated[buf] = nil
+      carry.removed[buf] = true
+    end
+    for buf in pairs(diff.updated) do
+      carry.removed[buf] = nil
+      carry.updated[buf] = true
+    end
+
     sup.idle(settings, {
       ctx = context.full(),
       cache_dir = vim.fs.joinpath(vim.fn.stdpath "cache", "coq"),
-      updated = diff.updated,
-      removed = diff.removed,
+      updated = carry.updated,
+      removed = carry.removed,
     })
+
+    carry = { updated = {}, removed = {} }
   end)
 end
 
