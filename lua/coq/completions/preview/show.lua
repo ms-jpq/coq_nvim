@@ -47,7 +47,7 @@ end
 ---@return preview.Pos?
 local pick_position = function(preview_cfg, ev, lines)
   local scr_w, scr_h = vim.o.columns, vim.o.lines
-  local pum_n = ev.row - 1
+  local pum_n = ev.row
   local pum_s = pum_n + ev.height - 1
   local pum_w = ev.col
   local pum_e = ev.col + ev.width + (ev.scrollbar and 1 or 0) - 1
