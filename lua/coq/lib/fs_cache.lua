@@ -37,7 +37,7 @@ end
 
 ---@param s string
 ---@return any
-local decode = function(s)
+M.decode = function(s)
   local ok, value = pcall(function()
     return vim.json.decode(s, { luanil = { object = true, array = true } })
   end)
@@ -89,7 +89,7 @@ M.new = function(spec)
       if valid then
         local raw = read_all(path)
         if raw then
-          local cached = decode(raw)
+          local cached = M.decode(raw)
           if cached ~= nil then
             return cached
           end

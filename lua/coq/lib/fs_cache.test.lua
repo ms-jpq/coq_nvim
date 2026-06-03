@@ -45,7 +45,7 @@ end)
 
 T.describe("fs_cache.new", function(test)
   test("first fetch invokes compute and caches the result", function()
-    local computes, result = 0, nil
+    local computes = 0
     local store = fs_cache.new {
       fs_root = tmpdir(),
       compute = function(key)
@@ -54,13 +54,15 @@ T.describe("fs_cache.new", function(test)
       end,
     }
 
+    ---@type { key: string, payload: string }?
+    local result
     async.scope(function()
       result = store.fetch("dogs", 0)
     end)
 
     T.eq(computes, 1)
-    T.eq(result.key, "dogs")
-    T.eq(result.payload, "labrador")
+    T.eq(result and result.key, "dogs")
+    T.eq(result and result.payload, "labrador")
   end)
 
   test("second fetch with stale mtime hits the cache", function()
@@ -96,7 +98,7 @@ T.describe("fs_cache.new", function(test)
     local r1, r2
     async.scope(function()
       r1 = store.fetch("dogs", 0)
-      r2 = store.fetch("dogs", math.huge)
+      r2 = store.fetch("dogs", 2 ^ 62)
     end)
 
     T.eq(computes, 2)

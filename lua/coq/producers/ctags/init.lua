@@ -66,7 +66,7 @@ local tracker_of = util.once(function(settings)
       for _, m in pairs(metas) do
         async.sleep(0)
         for _, tag in pairs(store.fetch(m.filename, m.mtime)) do
-          index_of(settings).insert(tag)
+          index_of(settings).insert(tag --[[@as ctags.Item]])
         end
       end
     end,
