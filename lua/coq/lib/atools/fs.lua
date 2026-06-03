@@ -1,5 +1,9 @@
 local async = require "coq.lib.async"
 local closable = require "coq.lib.closable"
+local lib = require "coq.lib"
+
+local MODE_RW = tonumber("0644", 8)
+local MODE_DIR = tonumber("0755", 8)
 
 ---@type fun(path: string): uv.error_name?, uv.luv_dir_t?
 local fs_opendir = async.awaitify(vim.uv.fs_opendir)
@@ -14,6 +18,8 @@ local fs_open = async.awaitify(vim.uv.fs_open)
 local fs_close = async.awaitify(vim.uv.fs_close)
 ---@type fun(fd: integer, size: integer, offset: integer): uv.error_name?, string?
 local fs_read = async.awaitify(vim.uv.fs_read)
+---@type fun(fd: integer, data: string, offset: integer): uv.error_name?, integer?
+local fs_write = async.awaitify(vim.uv.fs_write)
 ---@type fun(fd: integer): uv.error_name?, uv.fs_stat.result?
 local fs_fstat = async.awaitify(vim.uv.fs_fstat)
 ---@type fun(path: string, mode: integer): uv.error_name?, boolean?
@@ -40,7 +46,7 @@ M.mkdirp = function(path)
     return p_err
   end
 
-  local m_err = fs_mkdir(path, 493)
+  local m_err = fs_mkdir(path, MODE_DIR)
   if m_err == "EEXIST" then
     return nil
   end
@@ -80,11 +86,27 @@ M.scandir = function(path)
 end
 
 ---@param path string
+---@param data string
+---@return uv.error_name?
+M.writefile = function(path, data)
+  return lib.scope(function(defer)
+    local e1, fd = fs_open(path, "w", MODE_RW)
+    if e1 or not fd then
+      return e1 or "EINVAL"
+    end
+    defer(function()
+      fs_close(fd)
+    end)
+    return fs_write(fd, data, -1)
+  end)
+end
+
+---@param path string
 ---@return fun() close
 ---@return lib.Iterator<string> iter
 M.scanfile = function(path)
   return closable.iter(function(defer)
-    local e1, fd = fs_open(path, "r", 438)
+    local e1, fd = fs_open(path, "r", 0)
     if e1 ~= nil or fd == nil then
       return
     end
