@@ -89,8 +89,8 @@ local pick_position = function(preview_cfg, ev, lines)
     }
   end
 
-  local w_w = lib.clamp(1, pum_w - 1 - 2 * b_w, cap_w)
-  local w_col = pum_w - 1 - w_w - 2 * b_w
+  local w_w = lib.clamp(1, pum_w - 1 - 2 * b_w - b_w, cap_w)
+  local w_col = pum_w - 1 - w_w - 2 * b_w - b_w
   if p.west and w_col >= 0 then
     cs[#cs + 1] = {
       rank = p.west,
