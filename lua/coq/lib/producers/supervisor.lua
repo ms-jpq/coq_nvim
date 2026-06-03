@@ -1,4 +1,5 @@
 local async = require "coq.lib.async"
+local closable = require "coq.lib.closable"
 local deadline = require "coq.lib.async.deadline"
 
 local M = {}
@@ -9,14 +10,11 @@ local M = {}
 M.new = function(producers)
   ---@type async.Handle?
   local idle_handle = nil
-  ---@type async.Nursery?
-  local bound = nil
   local searching = false
 
   local sup = {}
 
   sup.bind = function(n)
-    bound = n
     for _, p in pairs(producers) do
       p.bind(n)
     end
@@ -46,43 +44,34 @@ M.new = function(producers)
       idle_handle.cancel()
     end
 
-    local iters = vim
-      .iter(producers)
-      :map(function(p)
-        return p.search(settings, ctx)
-      end)
-      :totable()
-
-    local m = async.merge(iters)
-    local timed = deadline.new(math.floor(settings.limits.completion_auto_timeout * 1000), function()
-      local _, v = m()
-      return v
-    end)
-
     searching = true
     local _ = async.current().on_cancel(function()
       searching = false
     end)
 
-    local close = function()
-      searching = false
-      m.close()
-    end
+    return closable.iter(function(defer)
+      local iters = {}
+      for _, p in pairs(producers) do
+        local c, i = p.search(settings, ctx)
+        defer(c)
+        table.insert(iters, i)
+      end
 
-    local next = function()
-      for v in timed do
+      local close, iter = async.merge(iters)
+      local timed = deadline.new(math.floor(settings.limits.completion_auto_timeout * 1000), function()
+        local _, v = iter()
         return v
-      end
-      -- drained or timed out; on timeout the producers may still be live, so
-      -- close off the consumer's path to avoid blocking on merge's join.
-      searching = false
-      if bound then
-        bound.spawn(m.close)
-      end
-      return nil
-    end
+      end)
 
-    return setmetatable({ close = close }, { __call = next })
+      defer(close)
+      defer(function()
+        searching = false
+      end)
+
+      for v in timed do
+        coroutine.yield(v)
+      end
+    end)
   end
 
   ---@cast sup producers.Producer

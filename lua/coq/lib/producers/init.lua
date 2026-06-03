@@ -1,14 +1,11 @@
-local async = require "coq.lib.async"
+local closable = require "coq.lib.closable"
 local lib = require "coq.lib"
 local worker = require "coq.lib.worker"
-
----@class producers.SearchIter: lib.Closable
----@overload fun(): completions.Item?
 
 ---@class producers.Producer<C>
 ---@field idle fun(settings: config.Settings, ctx: C)
 ---@field bind fun(n: async.Nursery)
----@field search fun(settings: config.Settings, ctx: C): producers.SearchIter
+---@field search fun(settings: config.Settings, ctx: C): fun(), lib.Iterator<completions.Item>
 
 ---@alias producers.IdleFn<C> fun(settings: config.Settings?, idle_ctx: C)
 ---@alias producers.MatcherFn<C> fun(settings: config.Settings?, ctx: C)
@@ -31,17 +28,13 @@ M.threaded = function(spec)
       w.queue(spec.idle, settings, idle_ctx)
     end,
     search = function(settings, ctx)
-      local iter = async.wrap(function()
-        lib.scope(function(defer)
-          local stream = w.queue_stream(spec.matcher, settings, ctx)
-          defer(stream.close)
-          for item in stream do
-            coroutine.yield(item)
-          end
-        end)
+      return closable.iter(function(defer)
+        local close, stream = w.queue_stream(spec.matcher, settings, ctx)
+        defer(close)
+        for item in stream do
+          coroutine.yield(item)
+        end
       end)
-
-      return setmetatable({ close = lib.noop }, { __call = iter })
     end,
   }
 end

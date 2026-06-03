@@ -40,9 +40,7 @@ M.matcher = function(settings, ctx)
   local raw = index(settings).search { filetype = ctx.filetype, keyword_before = ctx.keyword_before }
   local shaped = util.shape(settings, ctx, raw)
 
-  for item in
-    shaped --[[@as lib.Iterator<snippets.Item>]]
-  do
+  for item in shaped do
     local label = (item.label and item.label ~= "") and item.label or item.word
     local lines = vim.iter(doc_lines(item)):totable()
     coroutine.yield(util.item(settings, opts, {

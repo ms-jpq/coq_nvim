@@ -63,7 +63,9 @@ T.describe("atools.fs.scanfile", function(test)
     local path = write_tmp "lil\nspot\nfido"
     local chunks
     async.scope(function()
-      chunks = drain(atools.fs.scanfile(path) --[[@as fun(): string?]])
+      local close, iter = atools.fs.scanfile(path)
+      chunks = drain(iter)
+      close()
     end)
 
     T.eq(table.concat(chunks), "lil\nspot\nfido")
@@ -73,7 +75,9 @@ T.describe("atools.fs.scanfile", function(test)
     local path = write_tmp ""
     local chunks
     async.scope(function()
-      chunks = drain(atools.fs.scanfile(path) --[[@as fun(): string?]])
+      local close, iter = atools.fs.scanfile(path)
+      chunks = drain(iter)
+      close()
     end)
 
     T.eq(chunks, {})
@@ -83,7 +87,9 @@ T.describe("atools.fs.scanfile", function(test)
     local path = vim.fn.tempname() .. "/does-not-exist"
     local chunks
     async.scope(function()
-      chunks = drain(atools.fs.scanfile(path) --[[@as fun(): string?]])
+      local close, iter = atools.fs.scanfile(path)
+      chunks = drain(iter)
+      close()
     end)
 
     T.eq(chunks, {})
@@ -112,9 +118,11 @@ T.describe("atools.fs.scandir", function(test)
 
     local seen = {}
     async.scope(function()
-      for name, kind in atools.fs.scandir(dir) do
+      local close, iter = atools.fs.scandir(dir)
+      for name, kind in iter do
         seen[name] = kind
       end
+      close()
     end)
 
     T.eq(seen["spot.txt"], "file")
@@ -125,9 +133,11 @@ T.describe("atools.fs.scandir", function(test)
     local count
     async.scope(function()
       count = 0
-      for _ in atools.fs.scandir "/no/such/path/4242" do
+      local close, iter = atools.fs.scandir "/no/such/path/4242"
+      for _ in iter do
         count = count + 1
       end
+      close()
     end)
     T.eq(count, 0)
   end)
@@ -140,9 +150,11 @@ T.describe("atools.fs.scandir", function(test)
 
     local count = 0
     async.scope(function()
-      for _ in atools.fs.scandir(dir) do
+      local close, iter = atools.fs.scandir(dir)
+      for _ in iter do
         count = count + 1
       end
+      close()
     end)
     T.eq(count, 3)
   end)

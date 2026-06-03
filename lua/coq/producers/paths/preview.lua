@@ -38,8 +38,8 @@ end
 local dir_preview = function(opts, cwd, path)
   local entries = {}
   lib.scope(function(defer)
-    local iter = atools.fs.scandir(path)
-    defer(iter.close)
+    local close, iter = atools.fs.scandir(path)
+    defer(close)
     for name, kind in iter do
       local full = vim.fs.joinpath(path, name)
       local rendered = cwd and fs.fmt_path(cwd, full) or name
@@ -55,13 +55,13 @@ end
 ---@param path string
 local file_preview = function(opts, path)
   local text = lib.scope(function(defer)
-    local iter = atools.fs.scanfile(path)
-    defer(iter.close)
+    local close, iter = atools.fs.scanfile(path)
+    defer(close)
     local seen = 0
     local capped = itertools.take_while(function(chunk)
       seen = seen + #chunk
       return seen <= MAX_BYTES
-    end, iter --[[@as lib.Iterator<string>]])
+    end, iter)
     return table.concat(vim.iter(capped):totable())
   end)
 

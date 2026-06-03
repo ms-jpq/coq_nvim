@@ -128,13 +128,12 @@ T.describe("worker", function(test)
   test("queue_stream yields values to a for loop", function()
     local w = worker.spawn()
     local seen = {}
-    for dog in
-      w.queue_stream(function()
-        coroutine.yield "lil"
-        coroutine.yield "spot"
-        coroutine.yield "fido"
-      end)
-    do
+    local _, stream = w.queue_stream(function()
+      coroutine.yield "lil"
+      coroutine.yield "spot"
+      coroutine.yield "fido"
+    end)
+    for dog in stream do
       table.insert(seen, dog)
     end
     w.close()
@@ -145,12 +144,11 @@ T.describe("worker", function(test)
   test("queue_stream yields multiple values per item", function()
     local w = worker.spawn()
     local seen = {}
-    for name, age in
-      w.queue_stream(function()
-        coroutine.yield("spot", 3)
-        coroutine.yield("fido", 7)
-      end)
-    do
+    local _, stream = w.queue_stream(function()
+      coroutine.yield("spot", 3)
+      coroutine.yield("fido", 7)
+    end)
+    for name, age in stream do
       table.insert(seen, { name, age })
     end
     w.close()
@@ -161,13 +159,12 @@ T.describe("worker", function(test)
   test("queue_stream forwards args", function()
     local w = worker.spawn()
     local seen = {}
-    for v in
-      w.queue_stream(function(n)
-        for i = 1, n do
-          coroutine.yield(i)
-        end
-      end, 4)
-    do
+    local _, stream = w.queue_stream(function(n)
+      for i = 1, n do
+        coroutine.yield(i)
+      end
+    end, 4)
+    for v in stream do
       table.insert(seen, v)
     end
     w.close()
@@ -179,12 +176,11 @@ T.describe("worker", function(test)
     local w = worker.spawn()
     local seen = {}
     local ok, err = pcall(function()
-      for v in
-        w.queue_stream(function()
-          coroutine.yield "lil"
-          error "leash snapped"
-        end)
-      do
+      local _, stream = w.queue_stream(function()
+        coroutine.yield "lil"
+        error "leash snapped"
+      end)
+      for v in stream do
         table.insert(seen, v)
       end
     end)
@@ -204,14 +200,14 @@ T.describe("worker", function(test)
       _G.done = require("coq.lib.async").future()
       _G.closed_cleanly = false
     end)
-    local iter = w.queue_stream(function()
+    local close, _iter = w.queue_stream(function()
       local cont = coroutine.yield "lil"
       if not cont then
         _G.closed_cleanly = true
       end
       _G.done.resolve()
     end)
-    iter.close()
+    close()
     local ok = w.queue(function()
       _G.done.await()
       return _G.closed_cleanly
@@ -241,17 +237,16 @@ T.describe("worker", function(test)
   test("queue_stream can call back to main mid-stream", function()
     local w = worker.spawn()
     local seen = {}
-    for v in
-      w.queue_stream(function()
-        local worker = require "coq.lib.worker"
-        for _, name in pairs { "lil", "spot", "fido" } do
-          local upper = worker.main(function(x)
-            return x:upper()
-          end, name)
-          coroutine.yield(upper)
-        end
-      end)
-    do
+    local _, stream = w.queue_stream(function()
+      local worker = require "coq.lib.worker"
+      for _, name in pairs { "lil", "spot", "fido" } do
+        local upper = worker.main(function(x)
+          return x:upper()
+        end, name)
+        coroutine.yield(upper)
+      end
+    end)
+    for v in stream do
       table.insert(seen, v)
     end
     w.close()
@@ -265,7 +260,7 @@ T.describe("worker", function(test)
       _G.done = require("coq.lib.async").future()
       _G.closed_cleanly = false
     end)
-    local iter = w.queue_stream(function()
+    local close, iter = w.queue_stream(function()
       coroutine.yield "lil"
       local cont = coroutine.yield "spot"
       if not cont then
@@ -274,7 +269,7 @@ T.describe("worker", function(test)
       _G.done.resolve()
     end)
     iter()
-    iter.close()
+    close()
     local ok = w.queue(function()
       _G.done.await()
       return _G.closed_cleanly
@@ -298,7 +293,7 @@ T.describe("worker", function(test)
     local n = nursery.new()
     local _ = h.on_cancel(n.cancel)
     n.spawn(function()
-      local iter = w.queue_stream(function()
+      local _, iter = w.queue_stream(function()
         local cont = coroutine.yield "lil"
         if not cont then
           _G.got_stop.resolve()
@@ -333,7 +328,7 @@ T.describe("worker", function(test)
     local n = nursery.new()
     local _ = h.on_cancel(n.cancel)
     n.spawn(function()
-      local _iter = w.queue_stream(function()
+      local _close, _iter = w.queue_stream(function()
         while coroutine.yield "tick" do
         end
         _G.got_stop.resolve()
@@ -366,7 +361,7 @@ T.describe("worker", function(test)
     local n = nursery.new()
     local _ = h.on_cancel(n.cancel)
     n.spawn(function()
-      local iter = w.queue_stream(function()
+      local close, iter = w.queue_stream(function()
         local cancel = require "coq.lib.async.cancel"
         local ok, err = pcall(function()
           require("coq.lib.worker").main(function()
@@ -378,7 +373,7 @@ T.describe("worker", function(test)
           _G.got_cancel.resolve()
         end
       end)
-      local _ = runtime.current().on_cancel(iter.close)
+      local _ = runtime.current().on_cancel(close)
       iter()
     end)
     async.sleep(0)
@@ -397,7 +392,7 @@ T.describe("worker", function(test)
   test("scope + defer pairs cleanly with iter.close", function()
     local w = worker.spawn()
     local seen = lib.scope(function(defer)
-      local iter = w.queue_stream(function()
+      local close, iter = w.queue_stream(function()
         local i = 0
         while true do
           i = i + 1
@@ -406,7 +401,7 @@ T.describe("worker", function(test)
           end
         end
       end)
-      defer(iter.close)
+      defer(close)
 
       local out = {}
       for v in iter do
@@ -433,14 +428,14 @@ T.describe("worker", function(test)
       _G.closed_cleanly = false
     end)
     local ok, err = pcall(lib.scope, function(defer)
-      local iter = w.queue_stream(function()
+      local close, iter = w.queue_stream(function()
         local cont = coroutine.yield "lil"
         if not cont then
           _G.closed_cleanly = true
         end
         _G.done.resolve()
       end)
-      defer(iter.close)
+      defer(close)
       iter()
       error "leash slipped"
     end)
@@ -461,7 +456,7 @@ T.describe("worker", function(test)
 
   test("a streaming fn that never yields returns nil immediately", function()
     local w = worker.spawn()
-    local iter = w.queue_stream(function()
+    local _, iter = w.queue_stream(function()
       -- never calls yield
     end)
     local first = iter()
@@ -493,13 +488,12 @@ T.describe("worker", function(test)
     local w = worker.spawn()
     local seen = w.queue(function()
       local out = {}
-      for v in
-        require("coq.lib.worker").main_stream(function()
-          coroutine.yield "lil"
-          coroutine.yield "spot"
-          coroutine.yield "fido"
-        end)
-      do
+      local _, stream = require("coq.lib.worker").main_stream(function()
+        coroutine.yield "lil"
+        coroutine.yield "spot"
+        coroutine.yield "fido"
+      end)
+      for v in stream do
         table.insert(out, v)
       end
       return out
@@ -515,12 +509,11 @@ T.describe("worker", function(test)
     local w = worker.spawn()
     local seen = w.queue(function()
       local out = {}
-      for v in
-        require("coq.lib.worker").main_stream(function()
-          coroutine.yield(vim.fn.getcwd())
-          coroutine.yield(vim.api.nvim_get_runtime_file("lua/coq/lib/worker/init.lua", false)[1])
-        end)
-      do
+      local _, stream = require("coq.lib.worker").main_stream(function()
+        coroutine.yield(vim.fn.getcwd())
+        coroutine.yield(vim.api.nvim_get_runtime_file("lua/coq/lib/worker/init.lua", false)[1])
+      end)
+      for v in stream do
         table.insert(out, v)
       end
       return out
@@ -534,13 +527,12 @@ T.describe("worker", function(test)
     local w = worker.spawn()
     local seen = w.queue(function(count, prefix)
       local out = {}
-      for v in
-        require("coq.lib.worker").main_stream(function(n, p)
-          for i = 1, n do
-            coroutine.yield(p .. i)
-          end
-        end, count, prefix)
-      do
+      local _, stream = require("coq.lib.worker").main_stream(function(n, p)
+        for i = 1, n do
+          coroutine.yield(p .. i)
+        end
+      end, count, prefix)
+      for v in stream do
         table.insert(out, v)
       end
       return out
@@ -553,12 +545,11 @@ T.describe("worker", function(test)
   test("worker.main_stream propagates errors from main", function()
     local w = worker.spawn()
     local ok, err = pcall(w.queue, function()
-      for _ in
-        require("coq.lib.worker").main_stream(function()
-          coroutine.yield "lil"
-          error "leash snapped on main"
-        end)
-      do
+      local _, stream = require("coq.lib.worker").main_stream(function()
+        coroutine.yield "lil"
+        error "leash snapped on main"
+      end)
+      for _ in stream do
       end
     end)
     w.close()
@@ -573,24 +564,22 @@ T.describe("worker", function(test)
     local seen_a, seen_b = {}, {}
     async.scope(function(n)
       n.spawn(function()
-        for v in
-          w.queue_stream(function(count, prefix)
-            for i = 1, count do
-              coroutine.yield(prefix .. i)
-            end
-          end, 3, "a")
-        do
+        local _, stream = w.queue_stream(function(count, prefix)
+          for i = 1, count do
+            coroutine.yield(prefix .. i)
+          end
+        end, 3, "a")
+        for v in stream do
           table.insert(seen_a, v)
         end
       end)
       n.spawn(function()
-        for v in
-          w.queue_stream(function(count, prefix)
-            for i = 1, count do
-              coroutine.yield(prefix .. i)
-            end
-          end, 3, "b")
-        do
+        local _, stream = w.queue_stream(function(count, prefix)
+          for i = 1, count do
+            coroutine.yield(prefix .. i)
+          end
+        end, 3, "b")
+        for v in stream do
           table.insert(seen_b, v)
         end
       end)

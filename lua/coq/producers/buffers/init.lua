@@ -88,8 +88,8 @@ local tracker = buf_tracker.new {
           if info.lines then
             return vim.iter { table.concat(info.lines, "\n") }
           end
-          local iter = atools.fs.scanfile(info.filename)
-          defer(iter.close)
+          local close, iter = atools.fs.scanfile(info.filename)
+          defer(close)
           return iter
         end)()
 

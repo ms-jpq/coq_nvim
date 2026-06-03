@@ -72,8 +72,8 @@ local matches = function(settings, ctx)
         if atools.fs.is_dir(dir) then
           found = true
           lib.scope(function(defer)
-            local iter = atools.fs.scandir(dir)
-            defer(iter.close)
+            local close, iter = atools.fs.scandir(dir)
+            defer(close)
 
             for name in iter do
               if name_matches(cand.partial, name) then

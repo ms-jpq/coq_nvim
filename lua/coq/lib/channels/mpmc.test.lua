@@ -170,7 +170,7 @@ T.describe("mpmc", function(test)
     local seen = {}
     async.scope(function(n)
       n.spawn(function()
-        for v in chan do
+        for v in chan.pull do
           table.insert(seen, v)
         end
       end)

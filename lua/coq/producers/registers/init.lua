@@ -109,9 +109,7 @@ M.matcher = function(settings, ctx)
   local raw = index(settings).search { keyword_before = ctx.keyword_before }
   local shaped = util.shape(settings, ctx, raw)
 
-  for item in
-    shaped --[[@as lib.Iterator<registers.Item>]]
-  do
+  for item in shaped do
     local doc_line = opts.short_name .. opts.register_scope .. item.register
 
     coroutine.yield(util.item(settings, opts, {

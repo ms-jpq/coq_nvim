@@ -4,13 +4,11 @@ local index_m = require "coq.producers.registers.index"
 
 local settings = config.merged()
 
----@param iter lib.Iterator<any>
+---@param iter lib.Iterator<registers.Item>
 ---@return string[]
 local words = function(iter)
   local out = {}
-  for item in
-    iter --[[@as lib.Iterator<registers.Item>]]
-  do
+  for item in iter do
     table.insert(out, item.word)
   end
   table.sort(out)

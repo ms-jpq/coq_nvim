@@ -1,11 +1,9 @@
+local closable = require "coq.lib.closable"
 local util = require "coq.lib.channels.util"
-
----@class channels.BroadcastSub<T>: lib.Closable
----@overload fun(): T ...
 
 ---@class channels.Broadcast<T>: lib.Closable
 ---@field replace fun(...: T): boolean
----@field subscribe fun(): channels.BroadcastSub<T>
+---@field subscribe fun(): fun(), fun(): T ...
 
 local M = {}
 
@@ -16,7 +14,7 @@ M.new = function()
   local version = 0
   local changed = util.cond()
 
-  local state = util.closable(changed.wake)
+  local state = closable.new(changed.wake)
 
   local chan = { close = state.close }
 
@@ -32,17 +30,11 @@ M.new = function()
 
   chan.subscribe = function()
     local seen = 0
-    local closed = false
+    local sub = closable.new(changed.wake)
 
-    local it = {}
-    it.close = function()
-      closed = true
-      changed.wake()
-    end
-
-    local next = function()
+    local iter = function()
       while true do
-        if closed then
+        if sub.closed then
           return nil
         end
         if version ~= seen then
@@ -57,7 +49,7 @@ M.new = function()
       end
     end
 
-    return setmetatable(it, { __call = next })
+    return sub.close, iter
   end
 
   return chan

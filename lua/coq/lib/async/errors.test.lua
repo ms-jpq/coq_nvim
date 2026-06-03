@@ -115,13 +115,12 @@ T.describe("errors", function(test)
 
   test("async.merge child error surfaces at pull site, not in controlflow", function()
     local ok, err = pcall(function()
-      for _ in
-        async.merge {
-          function()
-            error "merge boom"
-          end,
-        }
-      do
+      local _, m = async.merge {
+        function()
+          error "merge boom"
+        end,
+      }
+      for _ in m do
       end
     end)
 

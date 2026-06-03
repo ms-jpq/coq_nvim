@@ -31,7 +31,7 @@ local producer = function(spec)
           spec.matcher(nil, ctx)
         end
       end)
-      return setmetatable({ close = lib.noop }, { __call = iter })
+      return lib.noop, iter
     end,
   }
 end
@@ -67,11 +67,13 @@ local pushable = function(fields)
   return p, lib.noop
 end
 
----@param iter producers.SearchIter
-local drain = function(iter)
+---@param close fun()
+---@param iter lib.Iterator<any>
+local drain = function(close, iter)
   for _ in iter do
     lib.noop()
   end
+  close()
 end
 
 T.describe("supervisor", function(test)
@@ -80,9 +82,11 @@ T.describe("supervisor", function(test)
     local sup = supervisor.new { yields("lil", "spot"), yields "fido" }
     sup.bind(n)
     local seen = {}
-    for row in sup.search(SETTINGS, {}) do
+    local close, iter = sup.search(SETTINGS, {})
+    for row in iter do
       table.insert(seen, row)
     end
+    close()
     n.cancel()
 
     table.sort(seen)
@@ -136,10 +140,10 @@ T.describe("supervisor", function(test)
         },
       }
       sup.bind(n)
-      local iter = sup.search(SETTINGS, {})
+      local close, iter = sup.search(SETTINGS, {})
       iter()
       sup.idle(SETTINGS, {})
-      iter.close()
+      close()
     end)
 
     T.eq(idle_ran, false)
@@ -218,13 +222,13 @@ T.describe("supervisor", function(test)
       }
       sup.bind(n)
       async.scope(function(inner)
-        local iter = sup.search(SETTINGS, {})
+        local close, iter = sup.search(SETTINGS, {})
         inner.spawn(function()
           first = iter()
-          pcall(iter --[[@as fun()]])
+          pcall(iter)
         end)
         matcher_sleeping.await()
-        iter.close()
+        close()
         matcher_cancelled.await()
       end)
     end)
@@ -238,9 +242,11 @@ T.describe("supervisor", function(test)
     local outer = supervisor.new { inner, yields "fido" }
     outer.bind(n)
     local seen = {}
-    for row in outer.search(SETTINGS, {}) do
+    local close, iter = outer.search(SETTINGS, {})
+    for row in iter do
       table.insert(seen, row)
     end
+    close()
     n.cancel()
 
     table.sort(seen)
@@ -265,7 +271,8 @@ T.describe("supervisor", function(test)
       -- mimic subscribe_latest: consume a search, then cancel the consuming
       -- coroutine mid-flight WITHOUT calling iter.close().
       local searcher = n.spawn(function()
-        for _ in sup.search(SETTINGS, {}) do
+        local _, iter = sup.search(SETTINGS, {})
+        for _ in iter do
           lib.noop()
         end
       end)

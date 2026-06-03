@@ -54,7 +54,8 @@ local cancel_tests = function(name, factory)
         }
         db.bind(n)
         local start = vim.uv.hrtime()
-        pcall(db.search(SETTINGS, { slow = T.SLOW }) --[[@as fun()]])
+        local _close, iter = db.search(SETTINGS, { slow = T.SLOW })
+        pcall(iter)
         elapsed_ms = (vim.uv.hrtime() - start) / 1e6
       end)
       n.spawn(function()

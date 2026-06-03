@@ -104,7 +104,7 @@ local M = {}
 ---@param ctx ctx.full
 ---@param settings config.Settings
 ---@param ranker index.Ranker
----@param iter producers.SearchIter
+---@param iter lib.Iterator<completions.Item>
 M.complete = function(ctx, settings, ranker, iter)
   local prepared = ranker.prepare(ctx)
 

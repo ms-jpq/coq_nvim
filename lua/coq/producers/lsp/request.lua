@@ -1,6 +1,6 @@
 local async = require "coq.lib.async"
 local atools = require "coq.lib.atools"
-local lib = require "coq.lib"
+local closable = require "coq.lib.closable"
 local util = require "coq.producers.lsp.util"
 
 ---@class lsp.RequestItem
@@ -51,71 +51,71 @@ end
 ---@param client vim.lsp.Client
 ---@param ctx ctx.full
 ---@param td_params lsp.TextDocumentIdentifier
----@return lib.Iterator<lsp.CompletionItem>
+---@return fun() close
+---@return lib.Iterator<lsp.CompletionItem> iter
 local query_one = function(client, ctx, td_params)
-  return async.wrap(function()
+  return closable.iter(function(defer)
     atools.scheduled()
-    lib.scope(function(defer)
-      local token = "coq.lsp." .. client.id .. "." .. next_token_id()
-      local kinds = vim.lsp.protocol.CompletionTriggerKind
-      local incomplete_var = INCOMPLETE_VAR_PREFIX .. client.id
-      local trigger_kind = vim.b[ctx.buf][incomplete_var] and kinds.TriggerForIncompleteCompletions or kinds.Invoked
+    local token = "coq.lsp." .. client.id .. "." .. next_token_id()
+    local kinds = vim.lsp.protocol.CompletionTriggerKind
+    local incomplete_var = INCOMPLETE_VAR_PREFIX .. client.id
+    local trigger_kind = vim.b[ctx.buf][incomplete_var] and kinds.TriggerForIncompleteCompletions or kinds.Invoked
 
-      local row, col = unpack(ctx.pos)
-      local params = {
-        position = {
-          line = row - 1,
-          character = encode_col(ctx.line, col, client.offset_encoding),
-        },
-        textDocument = td_params,
-        context = { triggerKind = trigger_kind },
-        partialResultToken = token,
-      } --[[@as lsp.CompletionParams]]
+    local row, col = unpack(ctx.pos)
+    local params = {
+      position = {
+        line = row - 1,
+        character = encode_col(ctx.line, col, client.offset_encoding),
+      },
+      textDocument = td_params,
+      context = { triggerKind = trigger_kind },
+      partialResultToken = token,
+    } --[[@as lsp.CompletionParams]]
 
-      ---@type lsp.CompletionItem[]
-      local partial = {}
-      local autocmd_id = vim.api.nvim_create_autocmd("LspProgress", {
-        callback = function(args)
-          if
-            args.data
-            and args.data.client_id == client.id
-            and args.data.params
-            and args.data.params.token == token
-          then
-            for _, item in ipairs(items_of(args.data.params.value)) do
-              table.insert(partial, item)
-            end
+    ---@type lsp.CompletionItem[]
+    local partial = {}
+    local autocmd_id = vim.api.nvim_create_autocmd("LspProgress", {
+      callback = function(args)
+        if
+          args.data
+          and args.data.client_id == client.id
+          and args.data.params
+          and args.data.params.token == token
+        then
+          for _, item in ipairs(items_of(args.data.params.value)) do
+            table.insert(partial, item)
           end
-        end,
-      })
-      defer(function()
-        pcall(vim.api.nvim_del_autocmd, autocmd_id)
-      end)
+        end
+      end,
+    })
+    defer(function()
+      pcall(vim.api.nvim_del_autocmd, autocmd_id)
+    end)
 
-      local err, result = util.request(client, "textDocument/completion", params, ctx.buf)
+    local err, result = util.request(client, "textDocument/completion", params, ctx.buf)
 
-      for _, item in pairs(partial) do
+    for _, item in pairs(partial) do
+      coroutine.yield(item)
+    end
+
+    if not err and result then
+      local incomplete = type(result) == "table" and result.isIncomplete == true
+      if vim.api.nvim_buf_is_valid(ctx.buf) then
+        vim.b[ctx.buf][incomplete_var] = incomplete or nil
+      end
+      for _, item in pairs(items_of(result)) do
         coroutine.yield(item)
       end
-
-      if not err and result then
-        local incomplete = type(result) == "table" and result.isIncomplete == true
-        if vim.api.nvim_buf_is_valid(ctx.buf) then
-          vim.b[ctx.buf][incomplete_var] = incomplete or nil
-        end
-        for _, item in pairs(items_of(result)) do
-          coroutine.yield(item)
-        end
-      end
-    end)
+    end
   end)
 end
 
 ---@param ignored lib.Set<string>
 ---@param ctx ctx.full
----@return lib.Iterator<lsp.RequestItem>
+---@return fun() close
+---@return lib.Iterator<lsp.RequestItem> iter
 M.query = function(ignored, ctx)
-  return async.wrap(function()
+  return closable.iter(function(defer)
     atools.scheduled()
     if not vim.api.nvim_buf_is_valid(ctx.buf) or not vim.api.nvim_buf_is_loaded(ctx.buf) then
       return
@@ -129,24 +129,26 @@ M.query = function(ignored, ctx)
     end
 
     local td_params = vim.lsp.util.make_text_document_params(ctx.buf)
-    local iters = vim.tbl_map(function(client)
-      return query_one(client, ctx, td_params)
-    end, clients)
+    local iters = {}
+    for _, client in pairs(clients) do
+      local c, i = query_one(client, ctx, td_params)
+      defer(c)
+      table.insert(iters, i)
+    end
 
-    lib.scope(function(defer)
-      local merged = async.merge(iters)
-      defer(merged.close)
-      for idx, item in merged do
-        local client = clients[idx]
-        coroutine.yield {
-          client_id = client.id,
-          client_name = client.name,
-          offset_encoding = client.offset_encoding,
-          kind = vim.lsp.protocol.CompletionItemKind[item.kind] or "",
-          item = item,
-        }
-      end
-    end)
+    local close, merged = async.merge(iters)
+    defer(close)
+
+    for idx, item in merged do
+      local client = clients[idx]
+      coroutine.yield {
+        client_id = client.id,
+        client_name = client.name,
+        offset_encoding = client.offset_encoding,
+        kind = vim.lsp.protocol.CompletionItemKind[item.kind] or "",
+        item = item,
+      }
+    end
   end)
 end
 

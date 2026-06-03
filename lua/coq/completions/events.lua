@@ -124,8 +124,8 @@ M.subscribe_latest = function(n, chan, handler)
   local safe = errs.with_reporting(handler)
 
   n.spawn(function(defer)
-    local iter = chan.subscribe()
-    defer(iter.close)
+    local close, iter = chan.subscribe()
+    defer(close)
     local prev
     for ev in iter do
       if prev then

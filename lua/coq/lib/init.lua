@@ -1,8 +1,5 @@
 local errs = require "coq.lib.errs"
 
----@class lib.Closable
----@field close fun()
-
 ---@alias lib.Iterator<T> fun(): T?
 
 ---@class lib.Iterable<T>

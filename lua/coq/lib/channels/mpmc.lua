@@ -1,10 +1,10 @@
+local closable = require "coq.lib.closable"
 local queue = require "coq.lib.queue"
 local util = require "coq.lib.channels.util"
 
 ---@class channels.Mpmc<T>: lib.Closable
 ---@field push fun(...: T): boolean
 ---@field pull fun(): T ...
----@overload fun(): T ...
 
 local M = {}
 
@@ -16,7 +16,7 @@ M.new = function(capacity)
   local readable = util.cond()
   local writable = util.cond()
 
-  local state = util.closable(function()
+  local state = closable.new(function()
     readable.wake()
     writable.wake()
   end)
@@ -50,7 +50,7 @@ M.new = function(capacity)
     return util.unpack(packet)
   end
 
-  return setmetatable(chan, { __call = chan.pull })
+  return chan
 end
 
 return M

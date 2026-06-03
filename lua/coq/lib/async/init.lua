@@ -1,3 +1,4 @@
+local closable = require "coq.lib.closable"
 local lib = require "coq.lib"
 local mpmc = require "coq.lib.channels.mpmc"
 local nursery = require "coq.lib.async._nursery"
@@ -95,12 +96,10 @@ M.wait = function(timeout, fn)
   end
 end
 
----@class async.MergeIter<T>: lib.Closable
----@overload fun(): integer, T
-
 ---@generic T
 ---@param iters (fun(): T)[]
----@return async.MergeIter<T>
+---@return fun() close
+---@return fun(): integer, T iter
 M.merge = function(iters)
   local n = nursery.new()
   local chan = mpmc.new(1)
@@ -124,20 +123,20 @@ M.merge = function(iters)
     end)
   end
 
-  local close = function()
+  local state = closable.new(function()
     n.cancel()
     n.join()
-  end
+  end)
 
-  local next = function()
+  local iter = function()
     local idx, value = chan.pull()
     if idx == nil then
-      return close()
+      return state.close()
     end
     return idx, value
   end
 
-  return setmetatable({ close = close }, { __call = next })
+  return state.close, iter
 end
 
 ---@param fn function

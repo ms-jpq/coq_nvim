@@ -1,6 +1,7 @@
 local async = require "coq.lib.async"
 local atools = require "coq.lib.atools"
 local cancel = require "coq.lib.async.cancel"
+local closable = require "coq.lib.closable"
 local errs = require "coq.lib.errs"
 local handle = require "coq.lib.async._handle"
 local inflight = require "coq.lib.worker.inflight"
@@ -77,7 +78,7 @@ local open = function(parked, write, message)
 
   local primed = true
   local unwatch = lib.noop
-  local state = util.closable(function()
+  local state = closable.new(function()
     unwatch()
     release()
     chan.close()
@@ -139,7 +140,7 @@ end
 ---@class worker.Requester
 ---@field drain fun(message: any)
 ---@field request_oneshot fun(message: table): any ...
----@field request_stream fun(message: table): worker.WorkerStream
+---@field request_stream fun(message: table): fun(), fun(): any ...
 ---@field resolve fun(frame: table)
 
 ---@param write fun(body: table)
@@ -159,7 +160,7 @@ local make_requester = function(write)
     local next = function()
       return interpret_frame(call.next(), 2)
     end
-    return setmetatable({ close = call.close }, { __call = next })
+    return call.close, next
   end
 
   requester.resolve = function(frame)
@@ -269,7 +270,7 @@ end
 
 ---@class worker.Endpoint
 ---@field request_oneshot fun(message: table): any ...
----@field request_stream fun(message: table): worker.WorkerStream
+---@field request_stream fun(message: table): fun(), fun(): any ...
 ---@field serve fun(n: async.Nursery, dead_message: string)
 
 ---@param duplex worker.Duplex
@@ -298,12 +299,9 @@ local make_endpoint = function(duplex)
   return endpoint
 end
 
----@class worker.WorkerStream: lib.Closable
----@overload fun(): any ...
-
 ---@class worker.Worker: lib.Closable
 ---@field queue fun(fn: function, ...: any): any ...
----@field queue_stream fun(fn: function, ...: any): worker.WorkerStream
+---@field queue_stream fun(fn: function, ...: any): fun(), fun(): any ...
 
 local M = {}
 
@@ -341,7 +339,7 @@ end
 ---@return worker.Worker
 M.spawn = function()
   local duplex, remote = transport.duplex_pair()
-  local state = util.closable(duplex.close)
+  local state = closable.new(duplex.close)
 
   local endpoint = make_endpoint(duplex)
 

@@ -1,6 +1,7 @@
 local context = require "coq.lib.context"
 local events = require "coq.completions.events"
 local insertion = require "coq.completions.insertion"
+local lib = require "coq.lib"
 
 local M = {}
 
@@ -30,7 +31,11 @@ M.bind = function(n, settings, ranker, resolver, sup, trigger)
     end
 
     resolver.reset()
-    insertion.complete(ctx, settings, ranker, sup.search(settings, ctx))
+    lib.scope(function(defer)
+      local close, iter = sup.search(settings, ctx)
+      defer(close)
+      insertion.complete(ctx, settings, ranker, iter)
+    end)
   end)
 end
 

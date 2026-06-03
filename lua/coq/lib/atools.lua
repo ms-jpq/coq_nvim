@@ -1,5 +1,5 @@
 local async = require "coq.lib.async"
-local lib = require "coq.lib"
+local closable = require "coq.lib.closable"
 
 local M = {}
 
@@ -141,105 +141,57 @@ M.fs.is_dir = function(path)
   return (not err and st and st.type == "directory") or false
 end
 
----@class atools.fs.Scan : lib.Closable
----@overload fun(): string?, string?
-
 ---@param path string
----@return atools.fs.Scan
+---@return fun() close
+---@return fun(): string?, string? iter
 M.fs.scandir = function(path)
-  local dir, closed = nil, false
-  local close = function()
-    if closed then
+  return closable.iter(function(defer)
+    local err, dir = fs_opendir(path)
+    if err ~= nil or dir == nil then
       return
     end
-    closed = true
-    if dir ~= nil then
+    defer(function()
       fs_closedir(dir)
-      dir = nil
-    end
-  end
-
-  local inner = async.wrap(function()
-    local err, d = fs_opendir(path)
-    if err ~= nil or d == nil then
-      return
-    end
-    dir = d
-
-    lib.scope(function(defer)
-      defer(close)
-      while not closed do
-        local e, entries = fs_readdir(dir)
-        if e ~= nil or entries == nil or #entries == 0 then
-          return
-        end
-        for _, entry in ipairs(entries) do
-          coroutine.yield(entry.name, entry.type)
-        end
-      end
     end)
-  end)
 
-  local iter = function()
-    if closed then
-      return nil
+    while true do
+      local e, entries = fs_readdir(dir)
+      if e ~= nil or entries == nil or #entries == 0 then
+        return
+      end
+      for _, entry in ipairs(entries) do
+        coroutine.yield(entry.name, entry.type)
+      end
     end
-    return inner()
-  end
-
-  return setmetatable({ close = close }, { __call = iter })
+  end)
 end
 
----@class atools.fs.ScanFile : lib.Closable
----@overload fun(): string?
-
 ---@param path string
----@return atools.fs.ScanFile
+---@return fun() close
+---@return lib.Iterator<string> iter
 M.fs.scanfile = function(path)
-  local fd, closed = nil, false
-  local close = function()
-    if closed then
+  return closable.iter(function(defer)
+    local e1, fd = fs_open(path, "r", 438)
+    if e1 ~= nil or fd == nil then
       return
     end
-    closed = true
-    if fd ~= nil then
+    defer(function()
       fs_close(fd)
-      fd = nil
-    end
-  end
-
-  local inner = async.wrap(function()
-    lib.scope(function(defer)
-      local e1, f = fs_open(path, "r", 438)
-      if e1 ~= nil or f == nil then
-        return
-      end
-      fd = f
-      defer(close)
-
-      local e2, st = fs_fstat(fd)
-      if e2 ~= nil or st == nil then
-        return
-      end
-
-      while not closed do
-        local e3, data = fs_read(fd, st.blksize, -1)
-        if e3 ~= nil or data == nil or #data == 0 then
-          return
-        end
-        coroutine.yield(data)
-      end
     end)
-  end)
 
-  local iter = function()
-    if closed then
-      return nil
+    local e2, st = fs_fstat(fd)
+    if e2 ~= nil or st == nil then
+      return
     end
-    return inner()
-  end
 
-  return setmetatable({ close = close }, { __call = iter })
+    while true do
+      local e3, data = fs_read(fd, st.blksize, -1)
+      if e3 ~= nil or data == nil or #data == 0 then
+        return
+      end
+      coroutine.yield(data)
+    end
+  end)
 end
 
 M.ui = {

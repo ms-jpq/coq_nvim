@@ -63,13 +63,16 @@ end
 ---@return lib.Iterator<T>
 M.shape = function(settings, ctx, iter)
   local kw = ctx.keyword_before
-  return vim
+  local shaped = vim
     .iter(iter)
     :filter(function(v)
       return v.word ~= kw
     end)
     :unique(word_of)
-    :take(settings.match.max_results) --[[@as lib.Iterator<any>]]
+    :take(settings.match.max_results)
+  return function()
+    return shaped:next()
+  end
 end
 
 ---@class producers.ItemSpec
