@@ -4,12 +4,12 @@ local index_m = require "coq.producers.tmux.index"
 
 local settings = config.merged()
 
----@param iter lib.Iterator<tmux.Item>
+---@param iter fun(): index.Hit<tmux.Item>?
 ---@return string[]
 local words = function(iter)
   local out = {}
-  for item in iter do
-    table.insert(out, item.word)
+  for hit in iter do
+    table.insert(out, hit.item.word)
   end
   table.sort(out)
   return out
@@ -66,8 +66,8 @@ T.describe("tmux.index", function(test)
     index.insert { word = "labrador", pane = "p1", meta = second }
 
     local seen = {}
-    for item in index.search { pane = "p1", keyword_before = "lab" } do
-      table.insert(seen, item.meta.session_name)
+    for hit in index.search { pane = "p1", keyword_before = "lab" } do
+      table.insert(seen, hit.item.meta.session_name)
     end
     T.eq(seen, { "b" })
   end)

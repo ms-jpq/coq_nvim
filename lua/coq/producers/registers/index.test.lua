@@ -4,12 +4,12 @@ local index_m = require "coq.producers.registers.index"
 
 local settings = config.merged()
 
----@param iter lib.Iterator<registers.Item>
+---@param iter fun(): index.Hit<registers.Item>?
 ---@return string[]
 local words = function(iter)
   local out = {}
-  for item in iter do
-    table.insert(out, item.word)
+  for hit in iter do
+    table.insert(out, hit.item.word)
   end
   table.sort(out)
   return out
@@ -42,8 +42,8 @@ T.describe("registers.index", function(test)
     index.insert { word = "spot", register = "0", linewise = true, line = "spot is a good dog" }
 
     local out = {}
-    for item in index.search { keyword_before = "sp" } do
-      table.insert(out, item.line)
+    for hit in index.search { keyword_before = "sp" } do
+      table.insert(out, hit.item.line)
     end
     T.eq(out, { "spot is a good dog" })
   end)

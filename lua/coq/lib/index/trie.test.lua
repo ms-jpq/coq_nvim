@@ -2,6 +2,7 @@ local T = require "coq.lib.test"
 local fuzzy = require "coq.lib.index.fuzzy"
 local trie = require "coq.lib.index.trie"
 
+---@type index.TrieSpec<{ prefix: string? }, any>
 local spec = {
   insert_key = function(item)
     return item.word
@@ -19,10 +20,11 @@ local spec = {
   end,
 }
 
+---@param iter fun(): index.Hit<any>?
 local collect = function(iter)
   local out = {}
-  for item in iter do
-    table.insert(out, item.word)
+  for hit in iter do
+    table.insert(out, hit.item.word)
   end
   table.sort(out)
   return out
@@ -99,8 +101,8 @@ T.describe("trie", function(test)
     t.insert { word = "lil", buf = 2 }
 
     local seen = {}
-    for item in t.search { prefix = "lil" } do
-      table.insert(seen, item.buf)
+    for hit in t.search { prefix = "lil" } do
+      table.insert(seen, hit.item.buf)
     end
     T.eq(seen, { 2 })
   end)
@@ -162,7 +164,7 @@ T.describe("trie", function(test)
 
     local from_a = assert(a.search { prefix = "lil" }())
     local from_b = assert(b.search { prefix = "lil" }())
-    T.eq(from_a.which, "a")
-    T.eq(from_b.which, "b")
+    T.eq(from_a.item.which, "a")
+    T.eq(from_b.item.which, "b")
   end)
 end)

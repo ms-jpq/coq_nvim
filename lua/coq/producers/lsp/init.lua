@@ -14,8 +14,8 @@ M.new = function()
     search = function(settings, ctx)
       return closable.iter(function(defer)
         local opts = settings.clients.lsp
-        local sc = settings.display.pum.source_context
-        local menu = sc[1] .. opts.short_name .. sc[2]
+        local lhs, rhs = unpack(settings.display.pum.source_context)
+        local menu = lhs .. opts.short_name .. rhs
 
         local ignored = set.new(opts.ignored_servers)
         local pinned = set.new(opts.always_on_top)
@@ -38,6 +38,7 @@ M.new = function()
             meta = {
               uid = util.uid(),
               filter = filter,
+              fuzzy = 0,
               snippet = is_snippet and insert_text or nil,
               source = opts.short_name,
               always_on_top = pinned[entry.client_name] == true,

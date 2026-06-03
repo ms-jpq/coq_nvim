@@ -117,6 +117,7 @@ M.matcher = function(settings, ctx)
       word = word,
       kind = dir_q and "Folder" or "File",
       filter = m.name,
+      fuzzy = 0,
       path = m.full,
       lsp = {
         position_encoding = "utf-8",

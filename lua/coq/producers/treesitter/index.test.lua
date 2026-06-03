@@ -4,12 +4,12 @@ local index_m = require "coq.producers.treesitter.index"
 
 local settings = config.merged()
 
----@param iter lib.Iterator<treesitter.Item>
+---@param iter fun(): index.Hit<treesitter.Item>?
 ---@return string[]
 local words = function(iter)
   local out = {}
-  for item in iter do
-    table.insert(out, item.word)
+  for hit in iter do
+    table.insert(out, hit.item.word)
   end
   table.sort(out)
   return out
@@ -65,8 +65,8 @@ T.describe("treesitter.index", function(test)
     index.insert(mk { word = "labrador", buf = 1, filetype = "lua", kind = "function" })
 
     local seen = {}
-    for item in index.search { filetype = "lua", buf = 1, keyword_before = "lab" } do
-      table.insert(seen, item.kind)
+    for hit in index.search { filetype = "lua", buf = 1, keyword_before = "lab" } do
+      table.insert(seen, hit.item.kind)
     end
     T.eq(seen, { "function" })
   end)

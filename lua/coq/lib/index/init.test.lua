@@ -29,17 +29,18 @@ local leaf = function()
       local snapshot = items
       return async.wrap(function()
         for _, item in ipairs(snapshot) do
-          coroutine.yield(item)
+          coroutine.yield { item = item, fuzzy = 0 }
         end
       end)
     end,
   }
 end
 
+---@param iter fun(): index.Hit<any>?
 local collect = function(iter)
   local out = {}
-  for item in iter do
-    table.insert(out, item.word)
+  for hit in iter do
+    table.insert(out, hit.item.word)
   end
   table.sort(out)
   return out

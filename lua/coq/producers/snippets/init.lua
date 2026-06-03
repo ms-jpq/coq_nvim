@@ -40,15 +40,16 @@ M.matcher = function(settings, ctx)
   local raw = index(settings).search { filetype = ctx.filetype, keyword_before = ctx.keyword_before }
   local shaped = util.shape(settings, ctx, raw)
 
-  for item in shaped do
-    local label = (item.label and item.label ~= "") and item.label or item.word
-    local lines = vim.iter(doc_lines(item)):totable()
+  for hit in shaped do
+    local label = (hit.item.label and hit.item.label ~= "") and hit.item.label or hit.item.word
+    local lines = vim.iter(doc_lines(hit.item)):totable()
     coroutine.yield(util.item(settings, opts, {
-      word = item.word,
+      word = hit.item.word,
       abbr = label,
       kind = "Snippet",
-      filter = item.word,
-      snippet = item.body,
+      filter = hit.item.word,
+      fuzzy = hit.fuzzy,
+      snippet = hit.item.body,
       doc = #lines > 0 and { lines = lines, filetype = ctx.filetype } or nil,
     }))
   end

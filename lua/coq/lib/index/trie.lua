@@ -66,8 +66,8 @@ M.new = function(spec)
 
   local function dfs_yield(node, ctx)
     if node.child then
-      for item in node.child.search(ctx) do
-        coroutine.yield(item)
+      for hit in node.child.search(ctx) do
+        coroutine.yield(hit)
       end
     end
     for _, child_node in pairs(node.children) do

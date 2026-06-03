@@ -7,7 +7,7 @@ local CTX = { win = 0, buf = 0, pos = { 0, 0 }, changedtick = 0 }
 
 ---@return completions.Item
 local lsp_item = function(tag)
-  return { word = tag, meta = { uid = tag, lsp = { tag = tag } } } --[[@as completions.Item]]
+  return { word = tag, meta = { uid = tag, source = "LSP", filter = tag, fuzzy = 0, lsp = { tag = tag } } } --[[@as completions.Item]]
 end
 
 T.describe("resolver", function(test)
@@ -96,7 +96,7 @@ T.describe("resolver", function(test)
         calls = calls + 1
         return nil
       end)
-      local item = { word = "rex", meta = { uid = "rex" } } --[[@as completions.Item]]
+      local item = { word = "rex", meta = { uid = "rex", source = "BF", filter = "rex", fuzzy = 0 } } --[[@as completions.Item]]
       T.eq(r.resolve(CTX, item), nil)
       T.eq(r.resolve(CTX, item), nil)
     end)

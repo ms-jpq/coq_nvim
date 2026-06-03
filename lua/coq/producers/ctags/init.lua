@@ -128,12 +128,13 @@ M.matcher = function(settings, ctx)
   local raw = index(settings).search { filetype = ctx.filetype, keyword_before = ctx.keyword_before }
   local shaped = util.shape(settings, ctx, raw)
 
-  for tag in shaped do
-    local lines = vim.iter(doc_iter(opts, ctx, tag)):totable()
+  for hit in shaped do
+    local lines = vim.iter(doc_iter(opts, ctx, hit.item)):totable()
     coroutine.yield(util.item(settings, opts, {
-      word = tag.word,
+      word = hit.item.word,
       kind = "Text",
-      filter = tag.word,
+      filter = hit.item.word,
+      fuzzy = hit.fuzzy,
       doc = #lines > 0 and { lines = lines, filetype = ctx.filetype } or nil,
     }))
   end

@@ -1,8 +1,12 @@
 local async = require "coq.lib.async"
 local lib = require "coq.lib"
 
+---@class index.Hit<T>
+---@field item T
+---@field fuzzy number
+
 ---@class index.Searchable<C, T>
----@field search fun(ctx: C): lib.Iterator<T>
+---@field search fun(ctx: C): fun(): index.Hit<T>?
 
 ---@class index.Searcher<C, T>: index.Searchable<C, T>
 ---@field insert fun(item: T)
@@ -35,8 +39,8 @@ M.indexed = function(spec)
   local fanout = function(ctx)
     return async.wrap(function()
       for _, child in pairs(children) do
-        for item in child.search(ctx) do
-          coroutine.yield(item)
+        for hit in child.search(ctx) do
+          coroutine.yield(hit)
         end
       end
     end)

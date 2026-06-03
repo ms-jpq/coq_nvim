@@ -4,12 +4,12 @@ local index_m = require "coq.producers.buffers.index"
 
 local settings = config.merged()
 
----@param iter lib.Iterator<buffer.Item>
+---@param iter fun(): index.Hit<buffer.Item>?
 ---@return string[]
 local words = function(iter)
   local out = {}
-  for item in iter do
-    table.insert(out, item.word)
+  for hit in iter do
+    table.insert(out, hit.item.word)
   end
   table.sort(out)
   return out
@@ -62,8 +62,8 @@ T.describe("buffer.index", function(test)
     index.insert { word = "labrador", buf = 1, filetype = "lua", filename = "new.lua" }
 
     local seen = {}
-    for item in index.search { filetype = "lua", buf = 1, keyword_before = "lab" } do
-      table.insert(seen, item.filename)
+    for hit in index.search { filetype = "lua", buf = 1, keyword_before = "lab" } do
+      table.insert(seen, hit.item.filename)
     end
     T.eq(seen, { "new.lua" })
   end)

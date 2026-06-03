@@ -2,12 +2,16 @@ local T = require "coq.lib.test"
 local util = require "coq.producers.util"
 
 ---@param items table[]
----@return lib.Iterator<table>
+---@return fun(): index.Hit<any>?
 local from = function(items)
   local i = 0
   return function()
     i = i + 1
-    return items[i]
+    local item = items[i]
+    if item == nil then
+      return nil
+    end
+    return { item = item, fuzzy = 0 }
   end
 end
 
@@ -37,8 +41,8 @@ T.describe("producers.util.shape", function(test)
       util.shape(settings(2), ctx(), from { { word = "spot" }, { word = "spot" }, { word = "fido" }, { word = "rex" } })
     )
     T.eq(#out, 2)
-    T.eq(out[1].word, "spot")
-    T.eq(out[2].word, "fido")
+    T.eq(out[1].item.word, "spot")
+    T.eq(out[2].item.word, "fido")
   end)
 
   test("dedup runs before take — duplicates don't burn budget", function()
@@ -51,7 +55,7 @@ T.describe("producers.util.shape", function(test)
     )
     T.eq(
       vim.tbl_map(function(i)
-        return i.word
+        return i.item.word
       end, out),
       { "spot", "fido", "rex" }
     )
@@ -82,7 +86,7 @@ T.describe("producers.util.shape", function(test)
       }
     ))
     T.eq(#out, 1)
-    T.eq(out[1].breed, "labrador")
+    T.eq(out[1].item.breed, "labrador")
   end)
 
   test("drops items whose word equals the current keyword_before", function()
@@ -90,7 +94,7 @@ T.describe("producers.util.shape", function(test)
       drain(util.shape(settings(5), ctx "lab", from { { word = "lab" }, { word = "labrador" }, { word = "lily" } }))
     T.eq(
       vim.tbl_map(function(i)
-        return i.word
+        return i.item.word
       end, out),
       { "labrador", "lily" }
     )
@@ -108,15 +112,18 @@ T.describe("producers.util.item", function(test)
   end
 
   test("wraps short_name in the configured brackets", function()
-    T.eq(util.item(with { "「", "」" }, opts, { word = "rex", kind = "Text" }).menu, "「BF」")
+    T.eq(util.item(with { "「", "」" }, opts, { word = "rex", kind = "Text", filter = "rex", fuzzy = 0 }).menu, "「BF」")
   end)
 
   test("threads empty brackets through unchanged", function()
-    T.eq(util.item(with { "", "" }, { short_name = "TS" }, { word = "rex", kind = "Text" }).menu, "TS")
+    T.eq(
+      util.item(with { "", "" }, { short_name = "TS" }, { word = "rex", kind = "Text", filter = "rex", fuzzy = 0 }).menu,
+      "TS"
+    )
   end)
 
   test("packs the canonical fields", function()
-    local item = util.item(with { "「", "」" }, opts, { word = "rex", kind = "Text", filter = "rex" })
+    local item = util.item(with { "「", "」" }, opts, { word = "rex", kind = "Text", filter = "rex", fuzzy = 0 })
     T.eq(item.word, "rex")
     T.eq(item.kind, "Text")
     T.eq(item.menu, "「BF」")
@@ -129,8 +136,8 @@ T.describe("producers.util.item", function(test)
 
   test("every call mints a fresh uid", function()
     local s = with { "", "" }
-    local a = util.item(s, opts, { word = "spot", kind = "Text" })
-    local b = util.item(s, opts, { word = "spot", kind = "Text" })
+    local a = util.item(s, opts, { word = "spot", kind = "Text", filter = "spot", fuzzy = 0 })
+    local b = util.item(s, opts, { word = "spot", kind = "Text", filter = "spot", fuzzy = 0 })
     T.eq(a.meta["uid"] ~= b.meta["uid"], true)
   end)
 
@@ -139,6 +146,8 @@ T.describe("producers.util.item", function(test)
     local item = util.item(with { "", "" }, opts, {
       word = "fido",
       kind = "Snippet",
+      filter = "fido",
+      fuzzy = 0,
       doc = doc,
       snippet = "fido()$0",
     })
@@ -147,9 +156,8 @@ T.describe("producers.util.item", function(test)
   end)
 
   test("optional fields stay nil when omitted", function()
-    local item = util.item(with { "", "" }, { short_name = "TX" }, { word = "lab", kind = "Text" })
+    local item = util.item(with { "", "" }, { short_name = "TX" }, { word = "lab", kind = "Text", filter = "lab", fuzzy = 0 })
     T.eq(item.meta.always_on_top, nil)
-    T.eq(item.meta.filter, nil)
     T.eq(item.meta.doc, nil)
     T.eq(item.meta.snippet, nil)
   end)
@@ -173,7 +181,7 @@ T.describe("producers.util.word_search", function(test)
   local words = function(iter)
     local out = {}
     for v in iter do
-      table.insert(out, v.word)
+      table.insert(out, v.item.word)
     end
     table.sort(out)
     return out

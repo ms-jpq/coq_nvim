@@ -50,23 +50,23 @@ M.uid = function()
   end))
 end
 
----@param item { word: string? }
+---@param hit index.Hit<any>
 ---@return string?
-local word_of = function(item)
-  return item.word
+local word_of = function(hit)
+  return hit.item.word
 end
 
----@generic T : { word: string? }
+---@generic T : fun() index.Hit<any>
 ---@param settings config.Settings
 ---@param ctx ctx.full
----@param iter lib.Iterator<T>
----@return lib.Iterator<T>
+---@param iter T
+---@return T
 M.shape = function(settings, ctx, iter)
   local kw = ctx.keyword_before
   local shaped = vim
     .iter(iter)
-    :filter(function(v)
-      return v.word ~= kw
+    :filter(function(hit)
+      return hit.item.word ~= kw
     end)
     :unique(word_of)
     :take(settings.match.max_results)
@@ -79,7 +79,8 @@ end
 ---@field word string
 ---@field abbr? string
 ---@field kind string
----@field filter? string
+---@field filter string
+---@field fuzzy number
 ---@field doc? completions.ItemDoc
 ---@field snippet? string
 ---@field path? string
@@ -99,6 +100,7 @@ M.item = function(settings, opts, spec)
     meta = {
       uid = M.uid(),
       filter = spec.filter,
+      fuzzy = spec.fuzzy,
       source = opts.short_name,
       always_on_top = opts.always_on_top,
       doc = spec.doc,

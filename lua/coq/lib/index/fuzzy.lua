@@ -24,7 +24,7 @@ M.new = function(spec)
   fuzzy.search = function(_)
     return async.wrap(function()
       for _, item in pairs(items) do
-        coroutine.yield(item)
+        coroutine.yield { item = item, fuzzy = 0 }
       end
     end)
   end

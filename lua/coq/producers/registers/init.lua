@@ -109,14 +109,15 @@ M.matcher = function(settings, ctx)
   local raw = index(settings).search { keyword_before = ctx.keyword_before }
   local shaped = util.shape(settings, ctx, raw)
 
-  for item in shaped do
-    local doc_line = opts.short_name .. opts.register_scope .. item.register
+  for hit in shaped do
+    local doc_line = opts.short_name .. opts.register_scope .. hit.item.register
 
     coroutine.yield(util.item(settings, opts, {
-      word = item.word,
+      word = hit.item.word,
       kind = "Text",
-      filter = item.word,
-      snippet = item.linewise and item.line or nil,
+      filter = hit.item.word,
+      fuzzy = hit.fuzzy,
+      snippet = hit.item.linewise and hit.item.line or nil,
       doc = { lines = { doc_line }, filetype = "" },
     }))
   end

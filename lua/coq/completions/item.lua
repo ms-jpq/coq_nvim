@@ -9,10 +9,11 @@
 
 ---@class completions.ItemMeta
 ---@field uid string
----@field filter? string
----@field snippet? string
----@field source? string
+---@field source string
+---@field filter string
+---@field fuzzy number
 ---@field always_on_top? boolean
+---@field snippet? string
 ---@field doc? completions.ItemDoc
 ---@field path? string
 ---@field lsp? completions.ItemLspMeta

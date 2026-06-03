@@ -46,6 +46,22 @@ T.describe("worker", function(test)
     T.eq(c, true)
   end)
 
+  test("queue errors after an await propagate at user site (not worker frames)", function()
+    local w = worker.spawn()
+    local ok, err = pcall(w.queue, function()
+      require("coq.lib.async").sleep(0)
+      error "lil ran off after a nap"
+    end)
+    w.close()
+
+    T.eq(ok, false)
+    ---@cast err string
+    assert(err:find "lil ran off after a nap", "expected message, got: " .. tostring(err))
+    assert(err:find "init.test.lua", "error should point at user file, got: " .. tostring(err))
+    assert(not err:find "_runtime.lua", "error must not point inside runtime, got: " .. tostring(err))
+    assert(not err:find "worker/init.lua", "error must not point inside worker, got: " .. tostring(err))
+  end)
+
   test("queue errors propagate at user site and the worker survives", function()
     local w = worker.spawn()
     local ok, err = pcall(w.queue, function()
