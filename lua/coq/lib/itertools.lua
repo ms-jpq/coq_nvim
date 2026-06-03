@@ -62,4 +62,22 @@ M.intersperse = function(sep, iter)
   end
 end
 
+---@generic T
+---@param ... lib.Iterator<T>
+---@return lib.Iterator<T>
+M.chain = function(...)
+  local iters = { ... }
+  local i = 1
+  return function()
+    while i <= #iters do
+      local v = iters[i]()
+      if v ~= nil then
+        return v
+      end
+      i = i + 1
+    end
+    return nil
+  end
+end
+
 return M

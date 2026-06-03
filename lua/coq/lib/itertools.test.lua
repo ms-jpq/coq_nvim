@@ -104,6 +104,35 @@ T.describe("itertools.intersperse", function(test)
   end)
 end)
 
+T.describe("itertools.chain", function(test)
+  test("yields from each iterator in order", function()
+    T.eq(drain(itertools.chain(from { "spot", "fido" }, from { "rex" })), { "spot", "fido", "rex" })
+  end)
+
+  test("skips an empty iterator in the middle", function()
+    T.eq(
+      drain(itertools.chain(from { "spot" }, from {}, from { "fido", "rex" })),
+      { "spot", "fido", "rex" }
+    )
+  end)
+
+  test("all empty yields nothing", function()
+    T.eq(drain(itertools.chain(from {}, from {}, from {})), {})
+  end)
+
+  test("no iterators yields nothing", function()
+    T.eq(drain(itertools.chain()), {})
+  end)
+
+  test("returns nil on every call after exhaustion", function()
+    local iter = itertools.chain(from { "spot" }, from { "fido" })
+    T.eq(iter(), "spot")
+    T.eq(iter(), "fido")
+    T.eq(iter(), nil)
+    T.eq(iter(), nil)
+  end)
+end)
+
 T.describe("itertools.cooperative", function(test)
   test("forwards every value verbatim", function()
     async.scope(function()
