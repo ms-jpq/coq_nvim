@@ -45,13 +45,15 @@ M.query = function(buf)
         local parent = node:parent()
         local grandparent = parent and parent:parent() or nil
 
-        coroutine.yield {
+        if not coroutine.yield {
           text = vim.treesitter.get_node_text(node, buf),
           kind = kind,
           range = { r_lo, r_hi },
           parent = parent and node_info(parent) or nil,
           grandparent = grandparent and node_info(grandparent) or nil,
-        }
+        } then
+          return
+        end
 
         atools.scheduled()
         if not vim.api.nvim_buf_is_valid(buf) or vim.b[buf].changedtick ~= tick then

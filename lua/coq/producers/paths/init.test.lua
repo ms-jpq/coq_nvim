@@ -57,11 +57,16 @@ end
 local run_matcher = function(settings, ctx)
   local items = {}
   async.scope(function()
-    for item in
-      async.wrap(function()
-        paths.matcher(settings, ctx)
-      end)
-    do
+    -- drive like the worker pump: resume with `true` so the matcher's
+    -- early-return-on-falsy guard keeps streaming.
+    local emit = async.wrap(function(...)
+      paths.matcher(settings, ctx)
+    end)
+    while true do
+      local item = emit(true)
+      if item == nil then
+        break
+      end
       table.insert(items, item)
     end
   end)

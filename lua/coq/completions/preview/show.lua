@@ -205,6 +205,7 @@ local resolve_doc = function(ctx, settings, resolver, item)
       local lsp = resolver.resolve(ctx, item, timeout_ms)
       lsp_item = lsp and lsp.item
     end
+
     if lsp_item then
       local md = md_lines(lsp_item)
       if #md > 0 then

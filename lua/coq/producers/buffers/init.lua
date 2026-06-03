@@ -133,13 +133,15 @@ M.matcher = function(settings, ctx)
   for hit in util.shape(settings, ctx, raw) do
     local lines = vim.iter(doc_iter(settings.clients.buffers, ctx, hit.item)):totable()
 
-    coroutine.yield(util.item(settings, settings.clients.buffers, {
+    if not coroutine.yield(util.item(settings, settings.clients.buffers, {
       word = hit.item.word,
       kind = "Text",
       filter = hit.item.word,
       fuzzy = hit.fuzzy,
       doc = #lines > 0 and { lines = lines, filetype = "" } or nil,
-    }))
+    })) then
+      return
+    end
   end
 end
 

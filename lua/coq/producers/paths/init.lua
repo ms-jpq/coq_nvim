@@ -121,7 +121,7 @@ M.matcher = function(settings, ctx)
     local word = m.name .. (dir_q and m.cand.local_sep or "")
     local filter = m.name
 
-    coroutine.yield(util.item(settings, settings.clients.paths, {
+    if not coroutine.yield(util.item(settings, settings.clients.paths, {
       word = word,
       kind = dir_q and "Folder" or "File",
       filter = filter,
@@ -140,7 +140,9 @@ M.matcher = function(settings, ctx)
           },
         },
       },
-    }))
+    })) then
+      return
+    end
   end
 end
 

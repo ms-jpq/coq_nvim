@@ -115,14 +115,16 @@ M.matcher = function(settings, ctx)
       .. settings.clients.registers.register_scope
       .. hit.item.register
 
-    coroutine.yield(util.item(settings, settings.clients.registers, {
+    if not coroutine.yield(util.item(settings, settings.clients.registers, {
       word = hit.item.word,
       kind = "Text",
       filter = hit.item.word,
       fuzzy = hit.fuzzy,
       snippet = hit.item.linewise and hit.item.line or nil,
       doc = { lines = { doc_line }, filetype = "" },
-    }))
+    })) then
+      return
+    end
   end
 end
 

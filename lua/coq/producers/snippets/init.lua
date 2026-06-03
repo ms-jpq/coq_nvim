@@ -1,25 +1,46 @@
+local async = require "coq.lib.async"
+local fs_cache = require "coq.lib.fs_cache"
 local index_m = require "coq.producers.snippets.index"
 local producer = require "coq.lib.producers"
 local txt = require "coq.lib.text"
 local util = require "coq.producers.util"
+local worker = require "coq.lib.worker"
 
 local index_of = util.once(index_m.new)
 
+---@type fun(idle_ctx: idle.Ctx): fs_cache.Store<snippets.Item[]>
+local cache_of = util.once(function(idle_ctx)
+  return fs_cache.new {
+    fs_root = vim.fs.joinpath(idle_ctx.cache_dir, "snippets"),
+    compute = function(filetype)
+      return require("coq.producers.snippets.loader").parse(filetype)
+    end,
+  }
+end)
+
 local M = {}
 
----@param _ config.Settings
----@param _idle_ctx idle.Ctx
-M.idle = function(_, _idle_ctx)
-  -- TODO: load snippet bundles from disk and populate `index(settings)`.
-  -- v1 used a per-source mtime-tracked SQLite cache. Stub for now.
-  --
-  -- index(settings).insert {
-  --   word = ...,
-  --   body = ...,
-  --   filetype = ...,
-  --   label = ...,
-  --   doc = ...,
-  -- }
+---@param settings config.Settings
+---@param idle_ctx idle.Ctx
+M.idle = function(settings, idle_ctx)
+  local store = cache_of(idle_ctx)
+
+  local by_ft = worker.main(function()
+    return require("coq.producers.snippets.loader").sources_by_filetype()
+  end)
+
+  for ft, sources in pairs(by_ft) do
+    async.sleep(0)
+    local max_mtime = 0
+    for _, src in pairs(sources) do
+      if src.mtime > max_mtime then
+        max_mtime = src.mtime
+      end
+    end
+    for _, snip in pairs(store.fetch(ft, max_mtime)) do
+      index_of(settings).insert(snip)
+    end
+  end
 end
 
 ---@param item snippets.Item
@@ -44,15 +65,20 @@ M.matcher = function(settings, ctx)
   for hit in util.shape(settings, ctx, raw) do
     local label = (hit.item.label and hit.item.label ~= "") and hit.item.label or hit.item.word
     local lines = vim.iter(doc_lines(hit.item)):totable()
-    coroutine.yield(util.item(settings, settings.clients.snippets, {
-      word = hit.item.word,
-      abbr = label,
-      kind = "Snippet",
-      filter = hit.item.word,
-      fuzzy = hit.fuzzy,
-      snippet = hit.item.body,
-      doc = #lines > 0 and { lines = lines, filetype = ctx.filetype } or nil,
-    }))
+
+    if
+      not coroutine.yield(util.item(settings, settings.clients.snippets, {
+        word = hit.item.word,
+        abbr = label,
+        kind = "Snippet",
+        filter = hit.item.word,
+        fuzzy = hit.fuzzy,
+        snippet = hit.item.body,
+        doc = #lines > 0 and { lines = lines, filetype = ctx.filetype } or nil,
+      }))
+    then
+      return
+    end
   end
 end
 
