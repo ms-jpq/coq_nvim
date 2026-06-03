@@ -1,5 +1,4 @@
 local fuzzy = require "coq.lib.index.fuzzy"
-local itertools = require "coq.lib.itertools"
 local trie = require "coq.lib.index.trie"
 
 local M = {}
@@ -63,16 +62,14 @@ end
 ---@param iter lib.Iterator<T>
 ---@return lib.Iterator<T>
 M.shape = function(settings, ctx, iter)
-  local filtered = function()
-    for v in iter do
-      if v.word ~= ctx.keyword_before then
-        return v
-      end
-    end
-    return nil
-  end
-
-  return itertools.take(settings.match.max_results, itertools.uniq_by(word_of, filtered))
+  local kw = ctx.keyword_before
+  return vim
+    .iter(iter)
+    :filter(function(v)
+      return v.word ~= kw
+    end)
+    :unique(word_of)
+    :take(settings.match.max_results) --[[@as lib.Iterator<any>]]
 end
 
 ---@class producers.ItemSpec

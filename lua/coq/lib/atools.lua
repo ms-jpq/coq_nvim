@@ -195,13 +195,11 @@ M.fs.scanfile = function(path)
         return
       end
 
-      local offset = 0
       while true do
-        local e3, data = M.fs.read(fd, st.blksize, offset)
+        local e3, data = M.fs.read(fd, st.blksize, -1)
         if e3 ~= nil or data == nil or #data == 0 then
           return
         end
-        offset = offset + #data
         coroutine.yield(data)
       end
     end)

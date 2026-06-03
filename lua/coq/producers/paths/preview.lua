@@ -1,10 +1,10 @@
 local async = require "coq.lib.async"
 local atools = require "coq.lib.atools"
 local fs = require "coq.producers.fs"
-local lib = require "coq.lib"
+local itertools = require "coq.lib.itertools"
 local txt = require "coq.lib.text"
 
-local MAX_FILE_BYTES = 65536
+local MAX_BYTES = 1024 * 1024
 
 local M = {}
 
@@ -18,32 +18,16 @@ local is_binary = function(data)
   return string.find(data, "\0", 1, true) ~= nil
 end
 
----@param data string
----@param max_lines integer
----@return string[]
-local file_lines = function(data, max_lines)
-  local lines = {}
-  for line in txt.splitlines(data) do
-    table.insert(lines, (string.gsub(line, "%s+$", "")))
-    if #lines >= max_lines + 1 then
-      break
-    end
-  end
-  return lines
-end
-
 ---@param opts paths.IterOpts
----@param entries string[]
+---@param entries lib.Iterator<string>
 local yield_capped = function(opts, entries)
-  local total = #entries
-  local limit = math.min(total, opts.max_lines)
-
-  for i = 1, limit do
-    if i == opts.max_lines and total > opts.max_lines then
+  local capped = vim.iter(entries):take(opts.max_lines + 1):enumerate()
+  for i, v in capped do
+    if i == opts.max_lines and capped:peek() ~= nil then
       coroutine.yield(opts.ellipsis or "...")
-    else
-      coroutine.yield(entries[i])
+      return
     end
+    coroutine.yield(v)
   end
 end
 
@@ -59,47 +43,36 @@ local dir_preview = function(opts, cwd, path)
   end
   table.sort(entries)
 
-  yield_capped(opts, entries)
+  yield_capped(opts, vim.iter(entries) --[[@as lib.Iterator<string>]])
 end
 
 ---@param opts paths.IterOpts
 ---@param path string
 local file_preview = function(opts, path)
-  lib.scope(function(defer)
-    local e_open, fd = atools.fs.open(path, "r", 438)
-    if e_open or fd == nil then
-      coroutine.yield("(open: " .. (e_open or "no fd") .. ")")
-      return
-    end
+  local seen = 0
+  local capped = itertools.take_while(function(chunk)
+    seen = seen + #chunk
+    return seen <= MAX_BYTES
+  end, atools.fs.scanfile(path))
 
-    defer(function()
-      atools.fs.close(fd)
-    end)
+  local text = table.concat(vim.iter(capped):totable())
 
-    local e_stat, fst = atools.fs.fstat(fd)
-    if e_stat or fst == nil then
-      coroutine.yield("(fstat: " .. (e_stat or "no stat") .. ")")
-      return
-    end
+  if text == "" then
+    coroutine.yield "(empty)"
+    return
+  end
 
-    if fst.size == 0 then
-      coroutine.yield "(empty)"
-      return
-    end
+  if is_binary(text) then
+    coroutine.yield "(binary)"
+    return
+  end
 
-    local e_read, data = atools.fs.read(fd, math.min(fst.size, MAX_FILE_BYTES), 0)
-    if e_read or data == nil then
-      coroutine.yield("(read: " .. (e_read or "no data") .. ")")
-      return
-    end
-
-    if is_binary(data) then
-      coroutine.yield "(binary)"
-      return
-    end
-
-    yield_capped(opts, file_lines(data, opts.max_lines))
-  end)
+  yield_capped(
+    opts,
+    vim.iter(txt.splitlines(text)):map(function(line)
+      return (string.gsub(line, "%s+$", ""))
+    end) --[[@as lib.Iterator<string>]]
+  )
 end
 
 ---@param opts paths.IterOpts

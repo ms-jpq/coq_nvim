@@ -1,6 +1,5 @@
 local async = require "coq.lib.async"
 local atools = require "coq.lib.atools"
-local itertools = require "coq.lib.itertools"
 local lib = require "coq.lib"
 local parse = require "coq.producers.paths.parse"
 local producer = require "coq.lib.producers"
@@ -98,7 +97,7 @@ M.matcher = function(settings, ctx)
   local row, col = unpack(ctx.pos)
   local line = row - 1
 
-  for m in itertools.uniq_by(match_key, matches(settings, ctx)) do
+  for m in vim.iter(matches(settings, ctx)):unique(match_key) do
     local dir_q = atools.fs.is_dir(m.full)
     local word = m.name .. (dir_q and m.cand.local_sep or "")
 
