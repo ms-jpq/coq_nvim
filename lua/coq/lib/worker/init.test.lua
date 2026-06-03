@@ -194,27 +194,23 @@ T.describe("worker", function(test)
     assert(not emsg:find "worker/init.lua", "error must not point inside worker, got: " .. emsg)
   end)
 
-  test("close before the streaming fn's first yield unblocks it", function()
+  test("close before any iter is a no-op (lazy): fn never runs", function()
     local w = worker.spawn()
     w.queue(function()
-      _G.done = require("coq.lib.async").future()
-      _G.closed_cleanly = false
+      _G.ran = false
     end)
     local close, _iter = w.queue_stream(function()
-      local cont = coroutine.yield "lil"
-      if not cont then
-        _G.closed_cleanly = true
-      end
-      _G.done.resolve()
+      _G.ran = true
+      coroutine.yield "lil"
     end)
     close()
-    local ok = w.queue(function()
-      _G.done.await()
-      return _G.closed_cleanly
-    end)
+    local ran = w.queue(function(slow)
+      require("coq.lib.async").sleep(slow)
+      return _G.ran
+    end, T.SLOW)
     w.close()
 
-    T.eq(ok, true)
+    T.eq(ran, false)
   end)
 
   test("close is idempotent", function()
@@ -314,37 +310,35 @@ T.describe("worker", function(test)
     T.eq(ok, true)
   end)
 
-  test("uniterated stream is cleaned up on ambient cancel", function()
+  test("uniterated stream + ambient cancel: fn never started (lazy)", function()
     local async = require "coq.lib.async"
     local handle = require "coq.lib.async._handle"
     local nursery = require "coq.lib.async._nursery"
-    local runtime = require "coq.lib.async._runtime"
     local h = handle.new()
     local w = worker.spawn()
     w.queue(function()
-      _G.got_stop = require("coq.lib.async").future()
+      _G.ran = false
     end)
 
     local n = nursery.new()
     local _ = h.on_cancel(n.cancel)
     n.spawn(function()
       local _close, _iter = w.queue_stream(function()
+        _G.ran = true
         while coroutine.yield "tick" do
         end
-        _G.got_stop.resolve()
       end)
     end)
     async.sleep(0)
     h.cancel()
     n.join()
 
-    local ok = w.queue(function()
-      _G.got_stop.await()
-      return true
+    local ran = w.queue(function()
+      return _G.ran
     end)
     w.close()
 
-    T.eq(ok, true)
+    T.eq(ran, false)
   end)
 
   test("ambient cancel propagates through worker.main", function()

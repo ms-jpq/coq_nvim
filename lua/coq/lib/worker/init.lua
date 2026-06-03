@@ -20,12 +20,6 @@ local Kind = {
 
 local DONE = {}
 
-local raise_if_cancelled = function()
-  if runtime.current().cancelled then
-    error(cancel.new(), 0)
-  end
-end
-
 ---@type table<function, string>
 local dump_cache = lib.weak()
 
@@ -65,63 +59,48 @@ local build_response = function(id, status, ...)
   }
 end
 
----@class worker.Call: lib.Closable
----@field next fun(): table?
-
 ---@param parked worker.Inflight
 ---@param write fun(body: table)
 ---@param message table
----@return worker.Call
+---@return fun() close
+---@return fun(): table? iter
 local open = function(parked, write, message)
-  local chan = mpmc.new(1)
-  local id, release = parked.reserve(chan.push)
+  local close, iter = closable.iter(function(defer)
+    local chan = mpmc.new(1)
+    local id, release = parked.reserve(chan.push)
+    defer(release)
+    defer(chan.close)
 
-  local primed = true
-  local unwatch = lib.noop
-  local state = closable.new(function()
-    unwatch()
-    release()
-    chan.close()
+    local terminated = false
+    defer(function()
+      if not terminated then
+        write { kind = Kind.STOP, id = id }
+      end
+    end)
+
+    message.kind, message.id = Kind.RESUME, id
+    write(message)
+
+    while true do
+      local frame = chan.pull()
+      if frame == nil then
+        return
+      end
+      if frame.status ~= nil then
+        terminated = true
+        coroutine.yield(frame)
+        return
+      end
+      coroutine.yield(frame)
+      write { kind = Kind.RESUME, id = id }
+    end
   end)
 
-  message.kind, message.id = Kind.RESUME, id
-  local ok, err = xpcall(write, debug.traceback, message)
-  if not ok then
-    state.close()
-    error(err, 0)
-  end
-
-  local call = {}
-
-  call.close = function()
-    if state.closed then
-      return
-    end
-    write { kind = Kind.STOP, id = id }
-    state.close()
-  end
-
-  unwatch = runtime.current().on_cancel(call.close)
-
-  call.next = function()
-    local frame = nil
-    if not state.closed then
-      if not primed then
-        write { kind = Kind.RESUME, id = id }
-      end
-      primed = false
-      frame = chan.pull()
-      if frame == nil or frame.status ~= nil then
-        state.close()
-      end
-    end
-
-    raise_if_cancelled()
-    return frame
-  end
-
-  ---@cast call worker.Call
-  return call
+  local unwatch = runtime.current().on_cancel(close)
+  return function()
+    unwatch()
+    close()
+  end, iter
 end
 
 ---@param frame { status: boolean?, values: any[], n_values: integer }?
@@ -151,16 +130,20 @@ local make_requester = function(write)
   local requester = { drain = parked.drain }
 
   requester.request_oneshot = function(message)
-    local call = open(parked, write, message)
-    return interpret_frame(call.next(), 3)
+    local close, iter = open(parked, write, message)
+    local ok, frame = pcall(iter)
+    close()
+    if not ok then
+      error(frame, 0)
+    end
+    return interpret_frame(frame, 3)
   end
 
   requester.request_stream = function(message)
-    local call = open(parked, write, message)
-    local next = function()
-      return interpret_frame(call.next(), 2)
+    local close, iter = open(parked, write, message)
+    return close, function()
+      return interpret_frame(iter(), 2)
     end
-    return call.close, next
   end
 
   requester.resolve = function(frame)
