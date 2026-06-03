@@ -35,6 +35,71 @@ local ctx = function(keyword_before)
   return { keyword_before = keyword_before or "" } --[[@as ctx.full]]
 end
 
+T.describe("producers.util.batched", function(test)
+  -- drive util.batched as a generator, collecting the item[] it yields
+  local collect = function(count)
+    local batches = {}
+    for batch in coroutine.wrap(function()
+      util.batched(function(yield)
+        for i = 1, count do
+          if not yield(i) then
+            return
+          end
+        end
+      end)
+    end) do
+      table.insert(batches, batch)
+    end
+    return batches
+  end
+
+  local N = util.BATCH * 2 + 3 -- two full batches and a smaller remainder
+
+  test("flattening the batches recovers every item in order", function()
+    local flat = {}
+    for _, b in ipairs(collect(N)) do
+      for _, v in ipairs(b) do
+        table.insert(flat, v)
+      end
+    end
+    local expected = {}
+    for i = 1, N do
+      expected[i] = i
+    end
+    T.eq(flat, expected)
+  end)
+
+  test("groups into full batches with a smaller remainder", function()
+    local batches = collect(N)
+    T.eq(#batches, 3)
+    T.eq(#batches[1], util.BATCH)
+    T.eq(#batches[2], util.BATCH)
+    T.eq(#batches[3], 3)
+  end)
+
+  test("emitting nothing yields no batch", function()
+    T.eq(collect(0), {})
+  end)
+
+  test("a stop signal halts the body after the in-flight batch", function()
+    local reached = 0
+    local gen = coroutine.wrap(function()
+      util.batched(function(yield)
+        for i = 1, 1e6 do
+          reached = i
+          if not yield(i) then
+            return
+          end
+        end
+      end)
+    end)
+    local first = gen() -- pull one batch
+    local after = gen(false) -- consumer asks to stop
+    T.eq(reached, #first) -- body did not run past the flushed batch
+    T.eq(after, nil) -- no further batches
+  end)
+end)
+
 T.describe("producers.util.shape", function(test)
   test("dedups by word then caps", function()
     local out = drain(

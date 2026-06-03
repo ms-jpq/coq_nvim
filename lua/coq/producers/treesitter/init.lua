@@ -157,20 +157,21 @@ M.matcher = function(settings, ctx)
 
   local raw = index_of(settings).search { filetype = ctx.filetype, keyword_before = ctx.keyword_before }
 
-  for hit in util.shape(settings, ctx, raw) do
-    local lines = vim.iter(doc_iter(settings.clients.tree_sitter, ctx, hit.item)):totable()
-    if
-      not coroutine.yield(util.item(settings, settings.clients.tree_sitter, {
+  util.batched(function(yield)
+    for hit in util.shape(settings, ctx, raw) do
+      local lines = vim.iter(doc_iter(settings.clients.tree_sitter, ctx, hit.item)):totable()
+      local item = util.item(settings, settings.clients.tree_sitter, {
         word = hit.item.word,
         kind = capture_to_icon(hit.item.kind),
         filter = hit.item.word,
         fuzzy = hit.fuzzy,
         doc = { lines = lines, filetype = ctx.filetype },
-      }))
-    then
-      return
+      })
+      if not yield(item) then
+        return
+      end
     end
-  end
+  end)
 end
 
 ---@return producers.Producer<ctx.full>

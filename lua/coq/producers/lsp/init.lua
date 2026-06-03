@@ -24,33 +24,35 @@ M.new = function()
         local close, query = request.query(ignored, ctx)
         defer(close)
 
-        for entry in query do
-          local item = entry.item
-          local label = item.label or ""
-          local insert_text = item.insertText or label
-          local is_snippet = item.insertTextFormat == 2
-          local filter = item.filterText or label
+        util.batched(function(yield)
+          for entry in query do
+            local item = entry.item
+            local label = item.label or ""
+            local insert_text = item.insertText or label
+            local is_snippet = item.insertTextFormat == 2
+            local filter = item.filterText or label
 
-          coroutine.yield {
-            word = is_snippet and label or insert_text,
-            abbr = label,
-            kind = entry.kind,
-            menu = menu,
-            meta = {
-              uid = util.uid(),
-              filter = filter,
-              fuzzy = match.score(ctx.keyword_before, filter),
-              snippet = is_snippet and insert_text or nil,
-              source = opts.short_name,
-              always_on_top = pinned[entry.client_name] == true,
-              lsp = {
-                client_id = entry.client_id,
-                item = item,
-                position_encoding = entry.offset_encoding,
+            yield {
+              word = is_snippet and label or insert_text,
+              abbr = label,
+              kind = entry.kind,
+              menu = menu,
+              meta = {
+                uid = util.uid(),
+                filter = filter,
+                fuzzy = match.score(ctx.keyword_before, filter),
+                snippet = is_snippet and insert_text or nil,
+                source = opts.short_name,
+                always_on_top = pinned[entry.client_name] == true,
+                lsp = {
+                  client_id = entry.client_id,
+                  item = item,
+                  position_encoding = entry.offset_encoding,
+                },
               },
-            },
-          }
-        end
+            }
+          end
+        end)
       end)
     end,
   }

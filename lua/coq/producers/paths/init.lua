@@ -119,13 +119,13 @@ M.matcher = function(settings, ctx)
     local close, iter = matches(settings, ctx)
     defer(close)
 
-    for m in vim.iter(iter):unique(match_key) do
-      local dir_q = m.type == "directory"
-      local word = m.name .. (dir_q and m.cand.local_sep or "")
-      local filter = m.name
+    util.batched(function(yield)
+      for m in vim.iter(iter):unique(match_key) do
+        local dir_q = m.type == "directory"
+        local word = m.name .. (dir_q and m.cand.local_sep or "")
+        local filter = m.name
 
-      if
-        not coroutine.yield(util.item(settings, settings.clients.paths, {
+        local item = util.item(settings, settings.clients.paths, {
           word = word,
           kind = dir_q and "Folder" or "File",
           filter = filter,
@@ -144,11 +144,12 @@ M.matcher = function(settings, ctx)
               },
             },
           },
-        }))
-      then
-        return
+        })
+        if not yield(item) then
+          return
+        end
       end
-    end
+    end)
   end)
 end
 

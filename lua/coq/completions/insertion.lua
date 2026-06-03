@@ -168,13 +168,15 @@ end
 ---@param ctx ctx.full
 ---@param settings config.Settings
 ---@param ranker index.Ranker
----@param iter lib.Iterator<completions.Item>
+---@param iter lib.Iterator<completions.Item[]>
 M.complete = function(ctx, settings, ranker, iter)
   local prepared = ranker.prepare(ctx)
 
   local topk = topk_m.new(settings.match.max_results, item.dedup_key)
-  for i in iter do
-    topk.push(i, ranker_m.score(prepared, i))
+  for batch in iter do
+    for _, i in ipairs(batch) do
+      topk.push(i, ranker_m.score(prepared, i))
+    end
   end
 
   local items = {}

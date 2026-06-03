@@ -5,7 +5,7 @@ local worker = require "coq.lib.worker"
 ---@class producers.Producer<C>
 ---@field idle fun(settings: config.Settings, ctx: C)
 ---@field bind fun(n: async.Nursery)
----@field search fun(settings: config.Settings, ctx: C): fun(), lib.Iterator<completions.Item>
+---@field search fun(settings: config.Settings, ctx: C): fun(), lib.Iterator<completions.Item[]>
 
 ---@alias producers.IdleFn<C> fun(settings: config.Settings?, idle_ctx: C)
 ---@alias producers.MatcherFn<C> fun(settings: config.Settings?, ctx: C)
@@ -31,8 +31,8 @@ M.threaded = function(spec)
       return closable.iter(function(defer)
         local close, stream = w.queue_stream(spec.matcher, settings, ctx)
         defer(close)
-        for item in stream do
-          coroutine.yield(item)
+        for batch in stream do
+          coroutine.yield(batch)
         end
       end)
     end,

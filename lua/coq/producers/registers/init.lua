@@ -112,24 +112,25 @@ M.matcher = function(settings, ctx)
 
   local raw = index_of(settings).search { keyword_before = ctx.keyword_before }
 
-  for hit in util.shape(settings, ctx, raw) do
-    local doc_line = settings.clients.registers.short_name
-      .. settings.clients.registers.register_scope
-      .. hit.item.register
+  util.batched(function(yield)
+    for hit in util.shape(settings, ctx, raw) do
+      local doc_line = settings.clients.registers.short_name
+        .. settings.clients.registers.register_scope
+        .. hit.item.register
 
-    if
-      not coroutine.yield(util.item(settings, settings.clients.registers, {
+      local item = util.item(settings, settings.clients.registers, {
         word = hit.item.word,
         kind = "Text",
         filter = hit.item.word,
         fuzzy = hit.fuzzy,
         snippet = hit.item.linewise and hit.item.line or nil,
         doc = { lines = { doc_line }, filetype = "" },
-      }))
-    then
-      return
+      })
+      if not yield(item) then
+        return
+      end
     end
-  end
+  end)
 end
 
 ---@return producers.Producer<ctx.full>

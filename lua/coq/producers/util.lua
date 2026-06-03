@@ -4,6 +4,30 @@ local trie = require "coq.lib.index.trie"
 
 local M = {}
 
+M.BATCH = 420
+
+---@generic T
+---@param body fun(yield: fun(item: T): boolean)
+M.batched = function(body)
+  local batch = {}
+  local flush = function()
+    if #batch == 0 then
+      return true
+    end
+    local more = coroutine.yield(batch)
+    batch = {}
+    return more ~= false
+  end
+  body(function(item)
+    batch[#batch + 1] = item
+    if #batch >= M.BATCH then
+      return flush()
+    end
+    return true
+  end)
+  flush()
+end
+
 ---@param ctx ctx.full
 ---@return boolean
 M.skip_empty = function(ctx)

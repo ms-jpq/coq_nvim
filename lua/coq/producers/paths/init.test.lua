@@ -58,16 +58,18 @@ local run_matcher = function(settings, ctx)
   local items = {}
   async.scope(function()
     -- drive like the worker pump: resume with `true` so the matcher's
-    -- early-return-on-falsy guard keeps streaming.
-    local emit = async.wrap(function(...)
+    -- early-return-on-falsy guard keeps streaming. each pull is an item[] batch.
+    local pull = async.wrap(function(...)
       paths.matcher(settings, ctx)
     end)
     while true do
-      local item = emit(true)
-      if item == nil then
+      local batch = pull(true)
+      if batch == nil then
         break
       end
-      table.insert(items, item)
+      for _, item in ipairs(batch) do
+        table.insert(items, item)
+      end
     end
   end)
   return items

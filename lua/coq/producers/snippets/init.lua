@@ -65,12 +65,12 @@ M.matcher = function(settings, ctx)
 
   local raw = index_of(settings).search { filetype = ctx.filetype, keyword_before = ctx.keyword_before }
 
-  for hit in util.shape(settings, ctx, raw) do
-    local label = (hit.item.label and hit.item.label ~= "") and hit.item.label or hit.item.word
-    local lines = vim.iter(doc_lines(hit.item)):totable()
+  util.batched(function(yield)
+    for hit in util.shape(settings, ctx, raw) do
+      local label = (hit.item.label and hit.item.label ~= "") and hit.item.label or hit.item.word
+      local lines = vim.iter(doc_lines(hit.item)):totable()
 
-    if
-      not coroutine.yield(util.item(settings, settings.clients.snippets, {
+      local item = util.item(settings, settings.clients.snippets, {
         word = hit.item.word,
         abbr = label,
         kind = "Snippet",
@@ -78,11 +78,12 @@ M.matcher = function(settings, ctx)
         fuzzy = hit.fuzzy,
         snippet = hit.item.body,
         doc = #lines > 0 and { lines = lines, filetype = ctx.filetype } or nil,
-      }))
-    then
-      return
+      })
+      if not yield(item) then
+        return
+      end
     end
-  end
+  end)
 end
 
 ---@return producers.Producer<ctx.full>
