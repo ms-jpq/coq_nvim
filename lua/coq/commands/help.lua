@@ -48,7 +48,7 @@ M.run = function(fargs)
   end
 
   local lines = vim.fn.readfile(path)
-  float.show { lines = lines, filetype = "markdown" }
+  float.show { ns = "coq_help", lines = lines, filetype = "markdown" }
 end
 
 ---@return string[]

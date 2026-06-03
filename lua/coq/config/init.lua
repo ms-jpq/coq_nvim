@@ -77,7 +77,6 @@ local defaults = require "coq.config.defaults"
 ---@field completion_manual_timeout number
 
 ---@class config.BaseClient
----@field always_wait boolean
 ---@field enabled boolean
 ---@field short_name string
 ---@field weight_adjust number

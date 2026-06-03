@@ -1,4 +1,4 @@
-if not os.getenv "COQ_V2" then
+if not vim.g.coq_v2 or vim.fn.has "nvim-0.12" == 0 then
   return require "coq.legacy"
 end
 

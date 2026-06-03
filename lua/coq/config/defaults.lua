@@ -2,7 +2,6 @@ local M = {
   clients = {
     buffers = {
       always_on_top = false,
-      always_wait = false,
       enabled = true,
       parent_scope = " ⇊",
       same_filetype = false,
@@ -12,7 +11,6 @@ local M = {
 
     lsp = {
       always_on_top = nil,
-      always_wait = false,
       enabled = true,
       ignored_servers = {},
       resolve_timeout = 0.09,
@@ -22,7 +20,6 @@ local M = {
 
     paths = {
       always_on_top = false,
-      always_wait = false,
       enabled = true,
       path_seps = {},
       preview_lines = 6,
@@ -33,7 +30,6 @@ local M = {
 
     registers = {
       always_on_top = false,
-      always_wait = false,
       enabled = true,
       lines = {},
       register_scope = " ⇉ ",
@@ -44,7 +40,6 @@ local M = {
 
     snippets = {
       always_on_top = false,
-      always_wait = false,
       enabled = true,
       short_name = "SP",
       user_path = nil,
@@ -54,7 +49,6 @@ local M = {
 
     tags = {
       always_on_top = false,
-      always_wait = false,
       enabled = true,
       parent_scope = " ⇊",
       path_sep = " ⇉ ",
@@ -64,7 +58,6 @@ local M = {
 
     third_party = {
       always_on_top = nil,
-      always_wait = false,
       enabled = true,
       short_name = "3P",
       weight_adjust = 0,
@@ -73,7 +66,6 @@ local M = {
     tmux = {
       all_sessions = true,
       always_on_top = false,
-      always_wait = false,
       enabled = true,
       parent_scope = " ⇊",
       path_sep = " ⇉ ",
@@ -83,7 +75,6 @@ local M = {
 
     tree_sitter = {
       always_on_top = false,
-      always_wait = false,
       enabled = true,
       path_sep = " ⇊",
       short_name = "TS",
