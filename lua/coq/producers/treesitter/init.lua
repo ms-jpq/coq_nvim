@@ -9,7 +9,7 @@ local txt = require "coq.lib.text"
 local util = require "coq.producers.util"
 local worker = require "coq.lib.worker"
 
----@class treesitter.BufMeta : buf_tracker.Meta
+---@class treesitter.Meta : buf_tracker.Meta
 ---@field buf integer
 ---@field filetype string
 ---@field filename string
@@ -20,7 +20,7 @@ local M = {}
 
 ---@param buf integer
 ---@param prev_tick? integer
----@return treesitter.BufMeta?
+---@return treesitter.Meta?
 M.buffer_meta = function(buf, prev_tick)
   atools.scheduled()
   if not vim.api.nvim_buf_is_valid(buf) or not vim.api.nvim_buf_is_loaded(buf) then

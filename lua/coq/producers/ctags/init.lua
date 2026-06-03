@@ -25,14 +25,14 @@ end
 
 local M = {}
 
----@class ctags.Info: buf_tracker.Meta
+---@class ctags.Meta: buf_tracker.Meta
 ---@field buf integer
 ---@field filename string
 
 ---@param buf integer
 ---@param prev_mtime? integer
----@return ctags.Info?
-M.buffer_info = function(buf, prev_mtime)
+---@return ctags.Meta?
+M.buffer_meta = function(buf, prev_mtime)
   if not vim.api.nvim_buf_is_valid(buf) then
     return nil
   end
@@ -57,11 +57,11 @@ local filenames_by_buf = {}
 local tracker = buf_tracker.new {
   fetch = function(buf, prev_mtime)
     return worker.main(function(...)
-      return require("coq.producers.ctags").buffer_info(...)
+      return require("coq.producers.ctags").buffer_meta(...)
     end, buf, prev_mtime)
   end,
-  reindex = function(settings, infos)
-    for _, i in pairs(infos) do
+  reindex = function(settings, metas)
+    for _, meta in pairs(metas) do
     end
   end,
   prune = lib.noop,

@@ -10,7 +10,7 @@ local tokens = require "coq.lib.index.tokens"
 local util = require "coq.producers.util"
 local worker = require "coq.lib.worker"
 
----@class buffer.BufInfo : buf_tracker.Meta
+---@class buffer.Meta : buf_tracker.Meta
 ---@field buf integer
 ---@field lines? string[]
 ---@field filetype string
@@ -32,8 +32,8 @@ end
 
 ---@param buf integer
 ---@param prev_tick? integer
----@return buffer.BufInfo?
-M.buffer_info = function(buf, prev_tick)
+---@return buffer.Meta?
+M.buffer_meta = function(buf, prev_tick)
   atools.scheduled()
 
   if not vim.api.nvim_buf_is_valid(buf) or not vim.api.nvim_buf_is_loaded(buf) then
@@ -75,20 +75,20 @@ end
 local tracker = buf_tracker.new {
   fetch = function(buf, prev_tick)
     return worker.main(function(...)
-      return require("coq.producers.buffers").buffer_info(...)
+      return require("coq.producers.buffers").buffer_meta(...)
     end, buf, prev_tick)
   end,
-  reindex = function(settings, infos)
-    for _, info in pairs(infos) do
+  reindex = function(settings, metas)
+    for _, meta in pairs(metas) do
       async.sleep(0)
-      local kw = tokens.parse_iskeyword(info.iskeyword)
+      local kw = tokens.parse_iskeyword(meta.iskeyword)
 
       lib.scope(function(defer)
         local text = (function()
-          if info.lines then
-            return vim.iter { table.concat(info.lines, "\n") }
+          if meta.lines then
+            return vim.iter { table.concat(meta.lines, "\n") }
           end
-          local close, iter = atools.fs.scanfile(info.filename)
+          local close, iter = atools.fs.scanfile(meta.filename)
           defer(close)
           return iter
         end)()
@@ -97,10 +97,10 @@ local tracker = buf_tracker.new {
           tokens.keywords(kw, text --[[@as lib.Iterator<string>]])
         do
           index(settings).insert {
-            buf = info.buf,
+            buf = meta.buf,
             word = word,
-            filetype = info.filetype,
-            filename = info.filename,
+            filetype = meta.filetype,
+            filename = meta.filename,
           }
         end
       end)
