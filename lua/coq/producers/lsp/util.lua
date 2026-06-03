@@ -1,4 +1,5 @@
 local async = require "coq.lib.async"
+local atools = require "coq.lib.atools"
 local lib = require "coq.lib"
 
 local M = {}
@@ -11,6 +12,7 @@ local M = {}
 ---@return any result
 M.request = function(client, method, params, buf)
   return lib.scope(function(defer)
+    atools.scheduled()
     local f = async.future()
     local ok, req_id = client:request(method, params, function(err, result)
       f.resolve(err, result)
@@ -75,6 +77,7 @@ M.exec_command = function(ctx, lsp)
     return
   end
 
+  atools.scheduled()
   local client = vim.lsp.get_client_by_id(lsp.client_id)
   if not client then
     return
