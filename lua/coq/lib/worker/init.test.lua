@@ -34,9 +34,11 @@ T.describe("worker", function(test)
 
   test("multi-return from a queued fn", function()
     local w = worker.spawn()
-    local a, b, c = w.queue(function()
+    local fn = function()
       return "lil", 7, true
-    end)
+    end
+    ---@cast fn fun(): any, any, any
+    local a, b, c = w.queue(fn)
     w.close()
 
     T.eq(a, "lil")
@@ -55,6 +57,7 @@ T.describe("worker", function(test)
     w.close()
 
     T.eq(ok, false)
+    ---@cast err string
     assert(err:find "lil went missing", "expected message, got: " .. tostring(err))
     assert(err:find "init.test.lua", "error should point at user file, got: " .. tostring(err))
     assert(not err:find "worker/init.lua", "error must not point inside worker, got: " .. tostring(err))
@@ -108,6 +111,7 @@ T.describe("worker", function(test)
     w.close()
 
     T.eq(ok, false)
+    ---@cast err string
     assert(err:find "lil went missing", "expected main error, got: " .. tostring(err))
   end)
 

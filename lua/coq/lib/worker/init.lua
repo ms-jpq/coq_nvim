@@ -96,7 +96,7 @@ local open = function(parked, write, message)
     end
   end)
 
-  local unwatch = runtime.current().on_cancel(close)
+  local unwatch = async.current().on_cancel(close)
   return function()
     unwatch()
     close()
@@ -227,7 +227,7 @@ local make_responder = function(write)
       return
     end
 
-    local req_handle = handle.new(runtime.current())
+    local req_handle = handle.new(async.current())
     local chan = mpmc.new(1)
     local _ = req_handle.on_cancel(chan.close)
 
@@ -283,9 +283,14 @@ local make_endpoint = function(duplex)
 end
 
 ---@class worker.Worker: lib.Closable
----@field queue fun(fn: function, ...: any): any ...
----@field queue_stream fun(fn: function, ...: any): fun(), fun(): any ...
+---@field queue fun<T>(fn: (fun(...): T?), ...: any): T
+---@field queue_stream fun<T>(fn: (fun(...): T?), ...: any): (fun(), lib.Iterator<T>)
 
+---@class worker.Module
+---@field main fun<T>(fn: (fun(...): T?), ...: any): T
+---@field main_stream fun<T>(fn: (fun(...): T?), ...: any): (fun(), lib.Iterator<T>)
+---@field run fun(req_fd: integer, rsp_fd: integer)
+---@field spawn fun(): worker.Worker
 local M = {}
 
 if vim.is_thread() then
