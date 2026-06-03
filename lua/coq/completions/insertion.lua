@@ -132,7 +132,8 @@ end
 ---@param resolver completions.Resolver
 ---@param ranker index.Ranker
 ---@param done channels.Broadcast<vim.v.completed_item>
-M.bind = function(n, settings, resolver, ranker, done)
+---@param trigger channels.Broadcast<completions.TriggerEvent>
+M.bind = function(n, settings, resolver, ranker, done, trigger)
   events.subscribe_latest(n, done, function(completed)
     local user_data = completed.user_data
     if type(user_data) ~= "table" then
@@ -144,6 +145,9 @@ M.bind = function(n, settings, resolver, ranker, done)
     local filter = user_data.meta.filter or user_data.word
     if apply(settings, ctx, resolver, user_data) and filter then
       ranker.inserted(filter)
+      if user_data.meta.path and user_data.kind == "Folder" then
+        trigger.replace { manual = false }
+      end
     end
   end)
 end

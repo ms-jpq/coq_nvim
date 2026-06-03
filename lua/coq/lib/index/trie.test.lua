@@ -19,6 +19,7 @@ local spec = {
       query_key = function(ctx)
         return ctx.prefix
       end,
+      cutoff = 0, -- exercise the trie, not the fuzzy filter
     }
   end,
 }

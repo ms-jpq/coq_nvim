@@ -129,7 +129,7 @@ M.subscribe_latest = function(n, chan, handler)
   n.spawn(function(defer)
     local close, iter = chan.subscribe()
     defer(close)
-    local prev
+    local prev = nil
     for ev in iter do
       if prev then
         prev.cancel()

@@ -18,6 +18,17 @@ local name_matches = function(partial, name)
   return string.sub(string.lower(name), 1, #partial) == string.lower(partial)
 end
 
+---@param path string
+---@param type string
+---@return string
+local resolve_type = function(path, type)
+  if type ~= "link" then
+    return type
+  end
+  local _, st = atools.fs.stat(path)
+  return (st and st.type) or type
+end
+
 ---@param resolution string[]
 ---@param ctx ctx.full
 ---@return lib.Iterator<string>
@@ -80,12 +91,13 @@ local matches = function(settings, ctx)
 
             for name, type in iter do
               if name_matches(cand.partial, name) then
+                local full = vim.fs.joinpath(dir, name)
                 coroutine.yield {
                   cand = cand,
                   dir = dir,
                   name = name,
-                  type = type,
-                  full = vim.fs.joinpath(dir, name),
+                  type = resolve_type(full, type),
+                  full = full,
                 }
               end
             end

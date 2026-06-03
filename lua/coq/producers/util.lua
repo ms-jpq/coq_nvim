@@ -24,6 +24,7 @@ M.word_search = function(settings)
       prefix = prefix,
       child = function()
         return fuzzy.new {
+          cutoff = settings.match.fuzzy_cutoff,
           insert_key = word_key,
           query_key = function(ctx)
             return ctx.keyword_before

@@ -5,15 +5,25 @@ local lib = require "coq.lib"
 
 local M = {}
 
----@param skip_after string[]
----@param line_before string
+---@param settings config.Settings
+---@param ctx ctx.full
+---@param prev { buf: integer, tick: integer }
 ---@return boolean
-local should_skip = function(skip_after, line_before)
-  for _, suffix in pairs(skip_after) do
-    if suffix ~= "" and string.sub(line_before, -#suffix) == suffix then
+local should_skip = function(settings, ctx, prev)
+  if ctx.manual then
+    return false
+  end
+
+  if prev.buf == ctx.buf and prev.tick == ctx.changedtick then
+    return true
+  end
+
+  for _, suffix in pairs(settings.completion.skip_after) do
+    if suffix ~= "" and string.sub(ctx.line_before, -#suffix) == suffix then
       return true
     end
   end
+
   return false
 end
 
@@ -24,11 +34,14 @@ end
 ---@param sup producers.Producer<ctx.full>
 ---@param trigger channels.Broadcast<completions.TriggerEvent>
 M.bind = function(n, settings, ranker, resolver, sup, trigger)
+  local prev = { buf = -1, tick = -1 }
+
   events.subscribe_latest(n, trigger, function(ev)
     local ctx = context.full { manual = ev.manual }
-    if not ctx.manual and should_skip(settings.completion.skip_after, ctx.line_before) then
+    if should_skip(settings, ctx, prev) then
       return
     end
+    prev = { buf = ctx.buf, tick = ctx.changedtick }
 
     resolver.reset()
     lib.scope(function(defer)

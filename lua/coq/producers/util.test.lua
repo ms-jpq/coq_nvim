@@ -166,7 +166,7 @@ end)
 T.describe("producers.util.word_search", function(test)
   local ws_settings = function(exact)
     ---@diagnostic disable-next-line: missing-fields
-    return { match = { exact_matches = exact or 2 } } --[[@as config.Settings]]
+    return { match = { exact_matches = exact or 2, fuzzy_cutoff = 0 } } --[[@as config.Settings]]
   end
 
   local seed = function(words)

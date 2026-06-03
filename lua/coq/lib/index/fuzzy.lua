@@ -4,6 +4,7 @@ local match = require "coq.lib.index.rank.match"
 ---@class index.FuzzySpec<C, T>
 ---@field insert_key fun(item: T): string
 ---@field query_key fun(ctx: C): string?
+---@field cutoff number
 
 local M = {}
 
@@ -27,7 +28,10 @@ M.new = function(spec)
     return async.wrap(function()
       local token = spec.query_key(ctx) or ""
       for key, item in pairs(items) do
-        coroutine.yield { item = item, fuzzy = match.score(token, key) }
+        local score = match.score(token, key)
+        if token == "" or score >= spec.cutoff then
+          coroutine.yield { item = item, fuzzy = score }
+        end
       end
     end)
   end
