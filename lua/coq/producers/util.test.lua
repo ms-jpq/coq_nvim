@@ -112,7 +112,10 @@ T.describe("producers.util.item", function(test)
   end
 
   test("wraps short_name in the configured brackets", function()
-    T.eq(util.item(with { "「", "」" }, opts, { word = "rex", kind = "Text", filter = "rex", fuzzy = 0 }).menu, "「BF」")
+    T.eq(
+      util.item(with { "「", "」" }, opts, { word = "rex", kind = "Text", filter = "rex", fuzzy = 0 }).menu,
+      "「BF」"
+    )
   end)
 
   test("threads empty brackets through unchanged", function()
@@ -156,7 +159,11 @@ T.describe("producers.util.item", function(test)
   end)
 
   test("optional fields stay nil when omitted", function()
-    local item = util.item(with { "", "" }, { short_name = "TX" }, { word = "lab", kind = "Text", filter = "lab", fuzzy = 0 })
+    local item = util.item(
+      with { "", "" },
+      { short_name = "TX" },
+      { word = "lab", kind = "Text", filter = "lab", fuzzy = 0 }
+    )
     T.eq(item.meta.always_on_top, nil)
     T.eq(item.meta.doc, nil)
     T.eq(item.meta.snippet, nil)

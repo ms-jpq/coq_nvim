@@ -45,13 +45,15 @@ M.query = function(buf)
         local parent = node:parent()
         local grandparent = parent and parent:parent() or nil
 
-        if not coroutine.yield {
-          text = vim.treesitter.get_node_text(node, buf),
-          kind = kind,
-          range = { r_lo, r_hi },
-          parent = parent and node_info(parent) or nil,
-          grandparent = grandparent and node_info(grandparent) or nil,
-        } then
+        if
+          not coroutine.yield {
+            text = vim.treesitter.get_node_text(node, buf),
+            kind = kind,
+            range = { r_lo, r_hi },
+            parent = parent and node_info(parent) or nil,
+            grandparent = grandparent and node_info(grandparent) or nil,
+          }
+        then
           return
         end
 

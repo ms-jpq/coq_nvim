@@ -54,7 +54,10 @@ T.describe("rank.score", function(test)
   end)
 
   test("always_on_top adds the ALWAYS_TOP tier last (after bias)", function()
-    T.eq(ranker.score(prep { source_bias = { BF = 2 } }, fido { fuzzy = 1, always_on_top = true }), 2 + ranker.ALWAYS_TOP)
+    T.eq(
+      ranker.score(prep { source_bias = { BF = 2 } }, fido { fuzzy = 1, always_on_top = true }),
+      2 + ranker.ALWAYS_TOP
+    )
   end)
 
   test("combines (fuzzy + prox + recen) * bias + tier", function()

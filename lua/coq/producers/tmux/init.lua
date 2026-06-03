@@ -79,7 +79,9 @@ do
     async.sleep(0)
 
     index_of(settings).prune { pane = pane.id }
-    for word in tokens.keywords(kw, vim.iter { text } --[[@as lib.Iterator<string>]]) do
+    for word in
+      tokens.keywords(kw, vim.iter { text } --[[@as lib.Iterator<string>]])
+    do
       index_of(settings).insert { pane = pane.id, word = word, meta = pane.meta }
     end
     cache[pane.id] = text
@@ -145,13 +147,15 @@ M.matcher = function(settings, ctx)
 
   for hit in util.shape(settings, ctx, raw) do
     local lines = vim.iter(doc_iter(settings.clients.tmux, hit.item.meta)):totable()
-    if not coroutine.yield(util.item(settings, settings.clients.tmux, {
-      word = hit.item.word,
-      kind = "Text",
-      filter = hit.item.word,
-      fuzzy = hit.fuzzy,
-      doc = #lines > 0 and { lines = lines, filetype = "" } or nil,
-    })) then
+    if
+      not coroutine.yield(util.item(settings, settings.clients.tmux, {
+        word = hit.item.word,
+        kind = "Text",
+        filter = hit.item.word,
+        fuzzy = hit.fuzzy,
+        doc = #lines > 0 and { lines = lines, filetype = "" } or nil,
+      }))
+    then
       return
     end
   end

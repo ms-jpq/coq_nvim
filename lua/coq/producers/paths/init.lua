@@ -121,26 +121,28 @@ M.matcher = function(settings, ctx)
     local word = m.name .. (dir_q and m.cand.local_sep or "")
     local filter = m.name
 
-    if not coroutine.yield(util.item(settings, settings.clients.paths, {
-      word = word,
-      kind = dir_q and "Folder" or "File",
-      filter = filter,
-      fuzzy = m.fuzzy,
-      path = m.full,
-      lsp = {
-        position_encoding = "utf-8",
-        item = {
-          label = word,
-          textEdit = {
-            range = {
-              start = { line = line, character = m.cand.start },
-              ["end"] = { line = line, character = col },
+    if
+      not coroutine.yield(util.item(settings, settings.clients.paths, {
+        word = word,
+        kind = dir_q and "Folder" or "File",
+        filter = filter,
+        fuzzy = m.fuzzy,
+        path = m.full,
+        lsp = {
+          position_encoding = "utf-8",
+          item = {
+            label = word,
+            textEdit = {
+              range = {
+                start = { line = line, character = m.cand.start },
+                ["end"] = { line = line, character = col },
+              },
+              newText = m.cand.literal_directory .. word,
             },
-            newText = m.cand.literal_directory .. word,
           },
         },
-      },
-    })) then
+      }))
+    then
       return
     end
   end

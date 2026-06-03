@@ -73,7 +73,9 @@ M.idle = function(settings, _)
     local text = entry.text
     if type(text) == "string" and text ~= "" then
       if word_set[entry.register] then
-        for word in tokens.keywords(BASIC_KW, vim.iter { text } --[[@as lib.Iterator<string>]]) do
+        for word in
+          tokens.keywords(BASIC_KW, vim.iter { text } --[[@as lib.Iterator<string>]])
+        do
           index_of(settings).insert {
             word = word,
             register = entry.register,
@@ -115,14 +117,16 @@ M.matcher = function(settings, ctx)
       .. settings.clients.registers.register_scope
       .. hit.item.register
 
-    if not coroutine.yield(util.item(settings, settings.clients.registers, {
-      word = hit.item.word,
-      kind = "Text",
-      filter = hit.item.word,
-      fuzzy = hit.fuzzy,
-      snippet = hit.item.linewise and hit.item.line or nil,
-      doc = { lines = { doc_line }, filetype = "" },
-    })) then
+    if
+      not coroutine.yield(util.item(settings, settings.clients.registers, {
+        word = hit.item.word,
+        kind = "Text",
+        filter = hit.item.word,
+        fuzzy = hit.fuzzy,
+        snippet = hit.item.linewise and hit.item.line or nil,
+        doc = { lines = { doc_line }, filetype = "" },
+      }))
+    then
       return
     end
   end

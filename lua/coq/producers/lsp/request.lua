@@ -76,12 +76,7 @@ local query_one = function(client, ctx, td_params)
     local partial = {}
     local autocmd_id = vim.api.nvim_create_autocmd("LspProgress", {
       callback = function(args)
-        if
-          args.data
-          and args.data.client_id == client.id
-          and args.data.params
-          and args.data.params.token == token
-        then
+        if args.data and args.data.client_id == client.id and args.data.params and args.data.params.token == token then
           for _, item in ipairs(items_of(args.data.params.value)) do
             table.insert(partial, item)
           end

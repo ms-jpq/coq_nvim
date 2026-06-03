@@ -8,7 +8,7 @@ T.describe("errs.group", function(test)
     T.eq(g.errs, { "spot", "fido" })
 
     local rendered = tostring(g)
-    assert(rendered:find("error group %(2 errors%)"), "expected header, got: " .. rendered)
+    assert(rendered:find "error group %(2 errors%)", "expected header, got: " .. rendered)
     assert(rendered:find "spot" and rendered:find "fido", "expected entries, got: " .. rendered)
   end)
 end)

@@ -32,7 +32,14 @@ local apply = function(opts)
   local lsp = opts.lsp or {}
 
   local edit = insertion._word_range(ctx, item, lsp)
-  vim.api.nvim_buf_set_text(buf, edit.start_row, edit.start_col, edit.end_row, edit.end_col, vim.split(edit.text, "\n", { plain = true }))
+  vim.api.nvim_buf_set_text(
+    buf,
+    edit.start_row,
+    edit.start_col,
+    edit.end_row,
+    edit.end_col,
+    vim.split(edit.text, "\n", { plain = true })
+  )
   local out = table.concat(vim.api.nvim_buf_get_lines(buf, 0, -1, true), "\n")
   vim.api.nvim_buf_delete(buf, { force = true })
 
@@ -170,12 +177,14 @@ end
 
 T.describe("insertion.span", function(test)
   test("InsertReplaceEdit span ends at replace[end], measured in encoded units", function()
-    local span = insertion._span("utf-8", edit_ctx { col = 2, after_cursor = "XYZ", start_line = "abXYZ" }, replace_edit(2, 4))
+    local span =
+      insertion._span("utf-8", edit_ctx { col = 2, after_cursor = "XYZ", start_line = "abXYZ" }, replace_edit(2, 4))
     T.eq(span, { start_row = 0, start_col = 0, end_row = 0, end_col = 4 })
   end)
 
   test("pure insert (replace[end] == cursor) deletes nothing past the cursor", function()
-    local span = insertion._span("utf-8", edit_ctx { col = 2, after_cursor = "XYZ", start_line = "abXYZ" }, replace_edit(2, 2))
+    local span =
+      insertion._span("utf-8", edit_ctx { col = 2, after_cursor = "XYZ", start_line = "abXYZ" }, replace_edit(2, 2))
     T.eq(span.end_col, 2)
   end)
 

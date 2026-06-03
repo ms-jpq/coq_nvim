@@ -1,8 +1,8 @@
 local async = require "coq.lib.async"
 local atools = require "coq.lib.atools"
-local path_fmt = require "coq.producers.path_fmt"
 local itertools = require "coq.lib.itertools"
 local lib = require "coq.lib"
+local path_fmt = require "coq.producers.path_fmt"
 local txt = require "coq.lib.text"
 
 local MAX_BYTES = 1024 * 1024
