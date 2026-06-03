@@ -4,6 +4,7 @@ end
 
 local async = require "coq.lib.async"
 local atools = require "coq.lib.atools"
+local commands = require "coq.commands"
 local config = require "coq.config"
 local events_m = require "coq.completions.events"
 local idle = require "coq.completions.idle"
@@ -26,38 +27,18 @@ local trigger = require "coq.completions.trigger"
 
 local COMPLETEFUNC = "__coq_completefunc__"
 
-local M = {}
+local M = {
+  Now = lib.noop,
+  deps = lib.noop,
+  Stats = commands.Stats,
+  Snips = commands.Snips,
+  Help = commands.Help,
+}
 
 ---@param cfg? table
 ---@return table?
 M.lsp_ensure_capabilities = function(cfg)
   return cfg
-end
-
-do
-  local unimplemented = function(name)
-    return function()
-      vim.notify(string.format("coq.%s is not yet implemented in v2", name), vim.log.levels.WARN)
-    end
-  end
-
-  M.Now = lib.noop
-  M.deps = unimplemented "deps"
-  M.Stats = unimplemented "Stats"
-  M.Snips = unimplemented "Snips"
-  M.Help = unimplemented "Help"
-
-  local cmds = {
-    COQnow = M.Now,
-    COQdeps = M.deps,
-    COQstats = M.Stats,
-    COQsnips = M.Snips,
-    COQhelp = M.Help,
-  }
-
-  for name, fn in pairs(cmds) do
-    vim.api.nvim_create_user_command(name, fn, { nargs = "*" })
-  end
 end
 
 ---@param clients config.Clients
@@ -109,6 +90,8 @@ M.setup = function(opts)
 
   async.entry(function()
     async.scope(function(n)
+      commands.register()
+
       local merged = vim.tbl_deep_extend("force", vim.g.coq_settings or {}, opts or {})
       local settings = config.merged(merged)
 
