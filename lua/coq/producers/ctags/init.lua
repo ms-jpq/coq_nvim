@@ -2,7 +2,6 @@ local async = require "coq.lib.async"
 local buf_tracker = require "coq.lib.producers.buf_tracker"
 local fs_cache = require "coq.lib.fs_cache"
 local index_m = require "coq.producers.ctags.index"
-local lib = require "coq.lib"
 local parse = require "coq.producers.ctags.parse"
 local path_fmt = require "coq.producers.path_fmt"
 local producer = require "coq.lib.producers"
@@ -10,11 +9,23 @@ local run = require "coq.producers.ctags.run"
 local util = require "coq.producers.util"
 local worker = require "coq.lib.worker"
 
-local index = util.once(index_m.new)
+local index_of = util.once(index_m.new)
+
+---@type fun(idle_ctx: idle.Ctx): fs_cache.Store<ctags.Tag[]>
+local cache_of = util.once(function(idle_ctx)
+  return fs_cache.new {
+    fs_root = vim.fs.joinpath(idle_ctx.cache_dir, "tags"),
+    compute = function(filename)
+      local out = run.run("ctags", { filename })
+      if not out then
+        return {}
+      end
+      return vim.iter(parse.parse(out)):totable()
+    end,
+  }
+end)
 
 local M = {}
-
-local cache = fs_cache.new {}
 
 ---@class ctags.Meta
 ---@field mtime integer
@@ -42,35 +53,37 @@ M.buffer_meta = function(buf, previous)
   return { mtime = mtime, filename = filename }
 end
 
-local tracker = buf_tracker.new {
-  compare = function(buf, previous)
-    return worker.main(function(...)
-      return require("coq.producers.ctags").buffer_meta(...)
-    end, buf, previous)
-  end,
-  index = function(settings, idle_ctx, metas)
-    lib.scope(function(defer)
-      local fetches = vim.iter(pairs(metas)):map(function(m)
-        return cache.fetch(m.filename, m.mtime)
-      end)
-      local close, iter = async.merge(fetches)
-      defer(close)
-      for data in iter do
-        lib.noop()
+---@type fun(settings: config.Settings): fun(idle_ctx: idle.Ctx)
+local tracker_of = util.once(function(settings)
+  return buf_tracker.new {
+    compare = function(buf, previous)
+      return worker.main(function(...)
+        return require("coq.producers.ctags").buffer_meta(...)
+      end, buf, previous)
+    end,
+    index = function(idle_ctx, metas)
+      local store = cache_of(idle_ctx)
+      for _, m in pairs(metas) do
+        async.sleep(0)
+        for _, tag in pairs(store.fetch(m.filename, m.mtime)) do
+          index_of(settings).insert(tag)
+        end
       end
-    end)
-  end,
-  prune = function(_, idle_ctx, stale)
-    for _, meta in pairs(stale) do
-      cache.prune(meta.filename)
-    end
-  end,
-}
+    end,
+    prune = function(idle_ctx, stale)
+      local store = cache_of(idle_ctx)
+      for _, meta in pairs(stale) do
+        store.prune(meta.filename)
+        index_of(settings).prune { filename = meta.filename }
+      end
+    end,
+  }
+end)
 
 ---@param settings config.Settings
 ---@param idle_ctx idle.Ctx
 M.idle = function(settings, idle_ctx)
-  tracker(settings, idle_ctx)
+  tracker_of(settings)(idle_ctx)
 end
 
 ---@param opts config.CtagsClient
@@ -110,7 +123,7 @@ end
 M.matcher = function(settings, ctx)
   local opts = settings.clients.tags
 
-  local raw = index(settings).search { filetype = ctx.filetype, keyword_before = ctx.keyword_before }
+  local raw = index_of(settings).search { filetype = ctx.filetype, keyword_before = ctx.keyword_before }
   local shaped = util.shape(settings, ctx, raw)
 
   for hit in shaped do

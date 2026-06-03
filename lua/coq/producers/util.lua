@@ -47,7 +47,7 @@ end
 ---@param fn fun(arg: A): R
 ---@return fun(arg?: A): R
 M.once = function(fn)
-  local cached
+  local cached = nil
   return function(arg)
     if cached == nil then
       cached = fn(arg)

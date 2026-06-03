@@ -25,7 +25,7 @@ local BASIC_KW = (function()
   return kw
 end)()
 
-local index = util.once(index_m.new)
+local index_of = util.once(index_m.new)
 
 local M = {}
 
@@ -66,7 +66,7 @@ M.idle = function(settings, _)
     end
   end, names))
 
-  index(settings).prune {}
+  index_of(settings).prune {}
 
   for _, entry in pairs(fetched) do
     async.sleep(0)
@@ -74,7 +74,7 @@ M.idle = function(settings, _)
     if type(text) == "string" and text ~= "" then
       if word_set[entry.register] then
         for word in tokens.keywords(BASIC_KW, vim.iter { text } --[[@as lib.Iterator<string>]]) do
-          index(settings).insert {
+          index_of(settings).insert {
             word = word,
             register = entry.register,
             linewise = false,
@@ -88,7 +88,7 @@ M.idle = function(settings, _)
           if stripped ~= "" then
             local head = tokens.keywords(BASIC_KW, vim.iter { stripped } --[[@as lib.Iterator<string>]])()
             if head ~= nil then
-              index(settings).insert {
+              index_of(settings).insert {
                 word = head,
                 register = entry.register,
                 linewise = true,
@@ -106,7 +106,7 @@ end
 M.matcher = function(settings, ctx)
   local opts = settings.clients.registers
 
-  local raw = index(settings).search { keyword_before = ctx.keyword_before }
+  local raw = index_of(settings).search { keyword_before = ctx.keyword_before }
   local shaped = util.shape(settings, ctx, raw)
 
   for hit in shaped do

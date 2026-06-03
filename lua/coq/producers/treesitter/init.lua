@@ -13,7 +13,7 @@ local worker = require "coq.lib.worker"
 ---@field filetype string
 ---@field filename string
 
-local index = util.once(index_m.new)
+local index_of = util.once(index_m.new)
 
 local M = {}
 
@@ -37,50 +37,53 @@ M.buffer_meta = function(buf, previous)
   }
 end
 
-local tracker = buf_tracker.new {
-  compare = function(buf, previous)
-    return worker.main(function(...)
-      return require("coq.producers.treesitter").buffer_meta(...)
-    end, buf, previous)
-  end,
-  index = function(settings, _, metas)
-    for buf, meta in pairs(metas) do
-      async.sleep(0)
-      lib.scope(function(defer)
-        local close, stream = worker.main_stream(function(...)
-          return require("coq.producers.treesitter.request").query(...)
-        end, buf)
-        defer(close)
-        for payload in
-          stream --[[@as lib.Iterator<treesitter.Payload>]]
-        do
-          if type(payload.text) == "string" and payload.text ~= "" then
-            index(settings).insert {
-              buf = buf,
-              filetype = meta.filetype,
-              filename = meta.filename,
-              word = payload.text,
-              kind = payload.kind,
-              range = payload.range,
-              parent = payload.parent,
-              grandparent = payload.grandparent,
-            }
+---@type fun(settings: config.Settings): fun(idle_ctx: idle.Ctx)
+local tracker_of = util.once(function(settings)
+  return buf_tracker.new {
+    compare = function(buf, previous)
+      return worker.main(function(...)
+        return require("coq.producers.treesitter").buffer_meta(...)
+      end, buf, previous)
+    end,
+    index = function(_, metas)
+      for buf, meta in pairs(metas) do
+        async.sleep(0)
+        lib.scope(function(defer)
+          local close, stream = worker.main_stream(function(...)
+            return require("coq.producers.treesitter.request").query(...)
+          end, buf)
+          defer(close)
+          for payload in
+            stream --[[@as lib.Iterator<treesitter.Payload>]]
+          do
+            if type(payload.text) == "string" and payload.text ~= "" then
+              index_of(settings).insert {
+                buf = buf,
+                filetype = meta.filetype,
+                filename = meta.filename,
+                word = payload.text,
+                kind = payload.kind,
+                range = payload.range,
+                parent = payload.parent,
+                grandparent = payload.grandparent,
+              }
+            end
           end
-        end
-      end)
-    end
-  end,
-  prune = function(settings, _, stale)
-    for buf in pairs(stale) do
-      index(settings).prune { buf = buf }
-    end
-  end,
-}
+        end)
+      end
+    end,
+    prune = function(_, stale)
+      for buf in pairs(stale) do
+        index_of(settings).prune { buf = buf }
+      end
+    end,
+  }
+end)
 
 ---@param settings config.Settings
 ---@param idle_ctx idle.Ctx
 M.idle = function(settings, idle_ctx)
-  tracker(settings, idle_ctx)
+  tracker_of(settings)(idle_ctx)
 end
 
 ---@param kind string
@@ -150,7 +153,7 @@ end
 M.matcher = function(settings, ctx)
   local opts = settings.clients.tree_sitter
 
-  local raw = index(settings).search { filetype = ctx.filetype, keyword_before = ctx.keyword_before }
+  local raw = index_of(settings).search { filetype = ctx.filetype, keyword_before = ctx.keyword_before }
   local shaped = util.shape(settings, ctx, raw)
 
   for hit in shaped do

@@ -19,7 +19,7 @@ local worker = require "coq.lib.worker"
 
 local MAX_BYTES = 1024 * 1024
 
-local index = util.once(index_m.new)
+local index_of = util.once(index_m.new)
 
 local M = {}
 
@@ -54,51 +54,54 @@ M.buffer_meta = function(buf, previous)
   }
 end
 
-local tracker = buf_tracker.new {
-  compare = function(buf, previous)
-    return worker.main(function(...)
-      return require("coq.producers.buffers").buffer_meta(...)
-    end, buf, previous)
-  end,
-  index = function(settings, _, metas)
-    for buf, meta in pairs(metas) do
-      async.sleep(0)
-      local kw = tokens.parse_iskeyword(meta.iskeyword)
+---@type fun(settings: config.Settings): fun(idle_ctx: idle.Ctx)
+local tracker_of = util.once(function(settings)
+  return buf_tracker.new {
+    compare = function(buf, previous)
+      return worker.main(function(...)
+        return require("coq.producers.buffers").buffer_meta(...)
+      end, buf, previous)
+    end,
+    index = function(_, metas)
+      for buf, meta in pairs(metas) do
+        async.sleep(0)
+        local kw = tokens.parse_iskeyword(meta.iskeyword)
 
-      lib.scope(function(defer)
-        local text = (function()
-          if meta.lines then
-            return vim.iter { table.concat(meta.lines, "\n") }
+        lib.scope(function(defer)
+          local text = (function()
+            if meta.lines then
+              return vim.iter { table.concat(meta.lines, "\n") }
+            end
+            local close, iter = atools.fs.scanfile(meta.filename)
+            defer(close)
+            return iter
+          end)()
+
+          for word in
+            tokens.keywords(kw, text --[[@as lib.Iterator<string>]])
+          do
+            index_of(settings).insert {
+              buf = buf,
+              word = word,
+              filetype = meta.filetype,
+              filename = meta.filename,
+            }
           end
-          local close, iter = atools.fs.scanfile(meta.filename)
-          defer(close)
-          return iter
-        end)()
-
-        for word in
-          tokens.keywords(kw, text --[[@as lib.Iterator<string>]])
-        do
-          index(settings).insert {
-            buf = buf,
-            word = word,
-            filetype = meta.filetype,
-            filename = meta.filename,
-          }
-        end
-      end)
-    end
-  end,
-  prune = function(settings, _, stale)
-    for buf in pairs(stale) do
-      index(settings).prune { buf = buf }
-    end
-  end,
-}
+        end)
+      end
+    end,
+    prune = function(_, stale)
+      for buf in pairs(stale) do
+        index_of(settings).prune { buf = buf }
+      end
+    end,
+  }
+end)
 
 ---@param settings config.Settings
 ---@param idle_ctx idle.Ctx
 M.idle = function(settings, idle_ctx)
-  tracker(settings, idle_ctx)
+  tracker_of(settings)(idle_ctx)
 end
 
 ---@param opts config.BuffersClient
@@ -120,7 +123,7 @@ end
 M.matcher = function(settings, ctx)
   local opts = settings.clients.buffers
 
-  local raw = index(settings).search {
+  local raw = index_of(settings).search {
     filetype = opts.same_filetype and ctx.filetype or nil,
     keyword_before = ctx.keyword_before,
   }

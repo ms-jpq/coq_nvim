@@ -26,14 +26,14 @@ local mk = function(overrides)
       table.insert(fetches, { buf = buf, prev_tick = previous and previous.tick })
       return (overrides.compare or default_compare)(buf, previous)
     end,
-    index = function(settings, _idle_ctx, metas)
-      table.insert(settings_seen, settings)
+    index = function(_, metas)
+      table.insert(settings_seen, SETTINGS)
       for _, meta in pairs(metas) do
         table.insert(reindexes, meta)
       end
     end,
-    prune = function(settings, _idle_ctx, stale)
-      table.insert(settings_seen, settings)
+    prune = function(_, stale)
+      table.insert(settings_seen, SETTINGS)
       for buf, meta in pairs(stale) do
         table.insert(prunes, { buf = buf, meta = meta })
       end
@@ -67,7 +67,7 @@ T.describe("buf_tracker", function(test)
     local tracker, trace = mk()
 
     async.scope(function()
-      tracker(SETTINGS, idle_ctx { 7 })
+      tracker(idle_ctx { 7 })
     end)
 
     T.eq(trace.fetches, { { buf = 7, prev_tick = nil } })
@@ -85,7 +85,7 @@ T.describe("buf_tracker", function(test)
     }
 
     async.scope(function()
-      tracker(SETTINGS, idle_ctx { 7 })
+      tracker(idle_ctx { 7 })
     end)
 
     T.eq(#trace.fetches, 1)
@@ -97,8 +97,8 @@ T.describe("buf_tracker", function(test)
     local tracker, trace = mk()
 
     async.scope(function()
-      tracker(SETTINGS, idle_ctx({ 7 }, nil))
-      tracker(SETTINGS, idle_ctx(nil, { 7 }))
+      tracker(idle_ctx({ 7 }, nil))
+      tracker(idle_ctx(nil, { 7 }))
     end)
 
     T.eq(#trace.prunes, 1)
@@ -111,8 +111,8 @@ T.describe("buf_tracker", function(test)
     local tracker, trace = mk()
 
     async.scope(function()
-      tracker(SETTINGS, idle_ctx { 7 })
-      tracker(SETTINGS, idle_ctx { 7 })
+      tracker(idle_ctx { 7 })
+      tracker(idle_ctx { 7 })
     end)
 
     T.eq(trace.fetches, {
@@ -127,7 +127,7 @@ T.describe("buf_tracker", function(test)
     local tracker, trace = mk()
 
     async.scope(function()
-      tracker(SETTINGS, idle_ctx({ 1, 3 }, { 2 }))
+      tracker(idle_ctx({ 1, 3 }, { 2 }))
     end)
 
     local seen_bufs = {}
@@ -142,7 +142,7 @@ T.describe("buf_tracker", function(test)
     local tracker, trace = mk()
 
     async.scope(function()
-      tracker(SETTINGS, idle_ctx(nil, { 99 }))
+      tracker(idle_ctx(nil, { 99 }))
     end)
 
     T.eq(trace.prunes, {})

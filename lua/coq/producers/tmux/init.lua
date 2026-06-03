@@ -20,7 +20,7 @@ local PANE_FMT = table.concat({
 ---@field id string
 ---@field meta tmux.PaneMeta
 
-local index = util.once(index_m.new)
+local index_of = util.once(index_m.new)
 
 local M = {}
 
@@ -78,9 +78,9 @@ do
     end
     async.sleep(0)
 
-    index(settings).prune { pane = pane.id }
+    index_of(settings).prune { pane = pane.id }
     for word in tokens.keywords(kw, vim.iter { text } --[[@as lib.Iterator<string>]]) do
-      index(settings).insert { pane = pane.id, word = word, meta = pane.meta }
+      index_of(settings).insert { pane = pane.id, word = word, meta = pane.meta }
     end
     cache[pane.id] = text
   end
@@ -103,7 +103,7 @@ do
 
     for id in pairs(cache) do
       if not live[id] then
-        index(settings).prune { pane = id }
+        index_of(settings).prune { pane = id }
         cache[id] = nil
       end
     end
@@ -139,7 +139,7 @@ end
 M.matcher = function(settings, ctx)
   local opts = settings.clients.tmux
 
-  local raw = index(settings).search { keyword_before = ctx.keyword_before }
+  local raw = index_of(settings).search { keyword_before = ctx.keyword_before }
   local shaped = util.shape(settings, ctx, raw)
 
   for hit in shaped do

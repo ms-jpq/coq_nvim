@@ -1,17 +1,17 @@
 ---@class buf_tracker.Spec<S>
 ---@field compare fun(buf: integer, previous?: S): S?
----@field prune fun(settings: config.Settings, idle_ctx: idle.Ctx, stale: table<integer, S?>)
----@field index fun(settings: config.Settings, idle_ctx: idle.Ctx, computed: table<integer, S>)
+---@field prune fun(idle_ctx: idle.Ctx, stale: table<integer, S?>)
+---@field index fun(idle_ctx: idle.Ctx, computed: table<integer, S>)
 
 local M = {}
 
 ---@generic S
 ---@param spec buf_tracker.Spec<S>
----@return fun(settings: config.Settings, idle_ctx: idle.Ctx)
+---@return fun(idle_ctx: idle.Ctx)
 M.new = function(spec)
   local state = {}
 
-  return function(settings, idle_ctx)
+  return function(idle_ctx)
     local stale, computed = {}, {}
 
     for buf in pairs(idle_ctx.removed) do
@@ -29,8 +29,8 @@ M.new = function(spec)
       end
     end
 
-    spec.prune(settings, idle_ctx, stale)
-    spec.index(settings, idle_ctx, computed)
+    spec.prune(idle_ctx, stale)
+    spec.index(idle_ctx, computed)
   end
 end
 

@@ -3,7 +3,7 @@ local producer = require "coq.lib.producers"
 local txt = require "coq.lib.text"
 local util = require "coq.producers.util"
 
-local index = util.once(index_m.new)
+local index_of = util.once(index_m.new)
 
 local M = {}
 
@@ -37,7 +37,7 @@ end
 M.matcher = function(settings, ctx)
   local opts = settings.clients.snippets
 
-  local raw = index(settings).search { filetype = ctx.filetype, keyword_before = ctx.keyword_before }
+  local raw = index_of(settings).search { filetype = ctx.filetype, keyword_before = ctx.keyword_before }
   local shaped = util.shape(settings, ctx, raw)
 
   for hit in shaped do
