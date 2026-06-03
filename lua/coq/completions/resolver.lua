@@ -27,38 +27,47 @@ local M = {}
 ---@return completions.Resolver
 M.new = function(n, fetch)
   fetch = fetch or lsp_fetch
-  local cache = {}
+
+  ---@return fun(ctx: ctx.base, item: completions.Item, timeout_ms?: integer): completions.ItemLspMeta?
+  local instance = function()
+    local cache = {}
+    return function(ctx, item, timeout_ms)
+      local key = item.meta.uid
+      local f = cache[key]
+
+      if not f then
+        f = async.future()
+        cache[key] = f
+
+        n.spawn(function()
+          local ok, v = pcall(fetch, ctx, item)
+          if not ok then
+            cache[key] = nil
+            if not cancel.is(v) then
+              errs.report(v)
+            end
+          end
+          f.resolve(ok and v or item.meta.lsp)
+        end)
+      end
+
+      if timeout_ms and timeout_ms > 0 then
+        return async.wait(timeout_ms, f.await) or item.meta.lsp
+      end
+      return f.await()
+    end
+  end
+
+  local impl = instance()
 
   local resolver = {}
 
   resolver.reset = function()
-    cache = {}
+    impl = instance()
   end
 
   resolver.resolve = function(ctx, item, timeout_ms)
-    local key = item.meta.uid
-    local f = cache[key]
-
-    if not f then
-      f = async.future()
-      cache[key] = f
-
-      n.spawn(function()
-        local ok, v = pcall(fetch, ctx, item)
-        if not ok then
-          cache[key] = nil
-          if not cancel.is(v) then
-            errs.report(v)
-          end
-        end
-        f.resolve(ok and v or item.meta.lsp)
-      end)
-    end
-
-    if timeout_ms and timeout_ms > 0 then
-      return async.wait(timeout_ms, f.await) or item.meta.lsp
-    end
-    return f.await()
+    return impl(ctx, item, timeout_ms)
   end
 
   ---@cast resolver completions.Resolver

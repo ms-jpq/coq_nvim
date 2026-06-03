@@ -1,5 +1,6 @@
 local T = require "coq.lib.test"
 local async = require "coq.lib.async"
+local cancel = require "coq.lib.async.cancel"
 local resolver_m = require "coq.completions.resolver"
 
 ---@type ctx.base
@@ -84,6 +85,46 @@ T.describe("resolver", function(test)
       local item = lsp_item "lil"
       r.resolve(CTX, item)
       r.reset()
+      r.resolve(CTX, item)
+    end)
+    T.eq(calls, 2)
+  end)
+
+  -- reset() starts a new cycle with its own cache. A previous cycle's in-flight
+  -- fetch that fails/cancels AFTER the reset must clean up against its OWN
+  -- (discarded) cache, never the new cycle's live one.
+  test("a stale cycle's failed fetch does not evict the new cycle's entry", function()
+    local calls = 0
+    async.scope(function(n)
+      local started = async.future()
+      local release = async.future()
+      local hold = true
+      local r = resolver_m.new(n, function(_, item)
+        calls = calls + 1
+        if hold then
+          hold = false
+          started.resolve()
+          release.await()
+          error(cancel.new(), 0) -- cycle-1 fetch cancels in-flight
+        end
+        return item.meta.lsp
+      end)
+      local item = lsp_item "fido"
+
+      -- cycle 1: kick off a fetch and leave it parked in-flight
+      n.spawn(function()
+        r.resolve(CTX, item)
+      end)
+      started.await()
+
+      -- new cycle; its fetch succeeds and caches under the same uid
+      r.reset()
+      r.resolve(CTX, item)
+
+      -- now let cycle-1's fetch unwind; its cleanup must not touch cycle 2
+      release.resolve()
+
+      -- cycle 2's entry survives → no third fetch
       r.resolve(CTX, item)
     end)
     T.eq(calls, 2)
