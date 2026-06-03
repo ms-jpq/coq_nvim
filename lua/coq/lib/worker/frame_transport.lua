@@ -17,8 +17,10 @@ local M = {}
 ---@param write_fd integer
 ---@return worker.Duplex
 M.open_duplex = function(read_fd, write_fd)
-  local duplex = {}
-  duplex.reader, duplex.writer = vim.uv.new_pipe(), vim.uv.new_pipe()
+  ---@diagnostic disable-next-line: missing-fields
+  local duplex = {} ---@type worker.Duplex
+
+  duplex.reader, duplex.writer = assert(vim.uv.new_pipe()), assert(vim.uv.new_pipe())
   duplex.reader:open(read_fd)
   duplex.writer:open(write_fd)
 
@@ -27,7 +29,7 @@ M.open_duplex = function(read_fd, write_fd)
       duplex.writer:close()
     end)
   end
-  ---@cast duplex worker.Duplex
+
   return duplex
 end
 

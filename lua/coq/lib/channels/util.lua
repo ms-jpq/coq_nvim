@@ -13,7 +13,8 @@ local M = {}
 ---@return channels.Cond
 M.cond = function()
   local waiters = {}
-  local cond = {}
+  ---@diagnostic disable-next-line: missing-fields
+  local cond = {} ---@type channels.Cond
 
   cond.wait = function()
     local f = runtime.future()
@@ -29,7 +30,6 @@ M.cond = function()
     end
   end
 
-  ---@cast cond channels.Cond
   return cond
 end
 

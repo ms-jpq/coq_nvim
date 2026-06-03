@@ -1,6 +1,7 @@
 local async = require "coq.lib.async"
 local fs_cache = require "coq.lib.fs_cache"
 local index_m = require "coq.producers.snippets.index"
+local loader_m = require "coq.producers.snippets.loader"
 local producer = require "coq.lib.producers"
 local txt = require "coq.lib.text"
 local util = require "coq.producers.util"
@@ -8,26 +9,24 @@ local worker = require "coq.lib.worker"
 
 local index_of = util.once(index_m.new)
 
----@type fun(idle_ctx: idle.Ctx): fs_cache.Store<snippets.Item[]>
-local cache_of = util.once(function(idle_ctx)
-  return fs_cache.new {
-    fs_root = vim.fs.joinpath(idle_ctx.cache_dir, "snippets"),
-    compute = function(filetype)
-      return require("coq.producers.snippets.loader").parse(filetype)
-    end,
-  }
-end)
+---@type fun(settings: config.Settings): snippets.Loader
+local loader_of = util.once(loader_m.new)
 
 local M = {}
 
 ---@param settings config.Settings
 ---@param idle_ctx idle.Ctx
 M.idle = function(settings, idle_ctx)
-  local store = cache_of(idle_ctx)
+  local store = fs_cache.new {
+    fs_root = vim.fs.joinpath(idle_ctx.cache_dir, "snippets"),
+    compute = function(filetype)
+      return loader_of(settings).parse(filetype)
+    end,
+  }
 
-  local by_ft = worker.main(function()
-    return require("coq.producers.snippets.loader").sources_by_filetype()
-  end)
+  local by_ft = worker.main(function(s)
+    return require("coq.producers.snippets").loader_of_main(s).sources_by_filetype()
+  end, settings)
 
   for ft, sources in pairs(by_ft) do
     async.sleep(0)
@@ -42,6 +41,10 @@ M.idle = function(settings, idle_ctx)
     end
   end
 end
+
+---Main-thread entry-point: each Lua state has its own require cache, so
+---calling this from `worker.main` lets the main side memoize independently.
+M.loader_of_main = loader_of
 
 ---@param item snippets.Item
 ---@return lib.Iterator<string>

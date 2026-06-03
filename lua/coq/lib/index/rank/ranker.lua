@@ -42,7 +42,8 @@ M.new = function(clients)
   end
 
   local recency = {}
-  local ranker = {}
+  ---@diagnostic disable-next-line: missing-fields
+  local ranker = {} ---@type index.Ranker
 
   ranker.inserted = function(filter)
     recency[filter] = (recency[filter] or 0) + 1
@@ -61,7 +62,6 @@ M.new = function(clients)
     }
   end
 
-  ---@cast ranker index.Ranker
   return ranker
 end
 

@@ -10,7 +10,8 @@ local M = {}
 M.new = function()
   local mapping = {}
   local seq = 0
-  local parker = {}
+  ---@diagnostic disable-next-line: missing-fields
+  local parker = {} ---@type worker.Inflight
 
   parker.reserve = function(cb, id)
     if id == nil then
@@ -42,7 +43,6 @@ M.new = function()
     end
   end
 
-  ---@cast parker worker.Inflight
   return parker
 end
 

@@ -12,7 +12,8 @@ M.new = function(producers)
   local idle_handle = nil
   local searching = false
 
-  local sup = {}
+  ---@diagnostic disable-next-line: missing-fields
+  local sup = {} ---@type producers.Producer
 
   sup.bind = function(n)
     for _, p in pairs(producers) do
@@ -76,7 +77,6 @@ M.new = function(producers)
     end)
   end
 
-  ---@cast sup producers.Producer
   return sup
 end
 

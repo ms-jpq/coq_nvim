@@ -1,5 +1,5 @@
-local async = require "coq.lib.async"
 local atools = require "coq.lib.atools"
+local closable = require "coq.lib.closable"
 local lib = require "coq.lib"
 local match = require "coq.lib.index.rank.match"
 local parse = require "coq.producers.paths.parse"
@@ -60,9 +60,10 @@ end
 
 ---@param settings config.Settings
 ---@param ctx ctx.full
----@return lib.Iterator<paths.Match>
+---@return fun() close
+---@return lib.Iterator<paths.Match> iter
 local matches = function(settings, ctx)
-  return async.wrap(function()
+  return closable.iter(function(defer)
     local bases = vim.iter(collect_bases(settings.clients.paths.resolution, ctx)):totable()
     local opts = {
       is_windows = lib.is_windows,
@@ -76,25 +77,23 @@ local matches = function(settings, ctx)
       for dir in cand_dirs(bases, cand) do
         if atools.fs.is_dir(dir) then
           found = true
-          lib.scope(function(defer)
-            local close, iter = atools.fs.scandir(dir)
-            defer(close)
+          local close, iter = atools.fs.scandir(dir)
+          defer(close)
 
-            for name, type in iter do
-              local fuzzy = cand.partial == "" and 0 or match.score(cand.partial, name)
-              if cand.partial == "" or fuzzy > 0 then
-                local full = vim.fs.joinpath(dir, name)
-                coroutine.yield {
-                  cand = cand,
-                  dir = dir,
-                  name = name,
-                  type = resolve_type(full, type),
-                  full = full,
-                  fuzzy = fuzzy,
-                }
-              end
+          for name, type in iter do
+            local fuzzy = cand.partial == "" and 0 or match.score(cand.partial, name)
+            if cand.partial == "" or fuzzy > 0 then
+              local full = vim.fs.joinpath(dir, name)
+              coroutine.yield {
+                cand = cand,
+                dir = dir,
+                name = name,
+                type = resolve_type(full, type),
+                full = full,
+                fuzzy = fuzzy,
+              }
             end
-          end)
+          end
         end
       end
 
@@ -116,36 +115,41 @@ M.matcher = function(settings, ctx)
   local row, col = unpack(ctx.pos)
   local line = row - 1
 
-  for m in vim.iter(matches(settings, ctx)):unique(match_key) do
-    local dir_q = m.type == "directory"
-    local word = m.name .. (dir_q and m.cand.local_sep or "")
-    local filter = m.name
+  lib.scope(function(defer)
+    local close, iter = matches(settings, ctx)
+    defer(close)
 
-    if
-      not coroutine.yield(util.item(settings, settings.clients.paths, {
-        word = word,
-        kind = dir_q and "Folder" or "File",
-        filter = filter,
-        fuzzy = m.fuzzy,
-        path = m.full,
-        lsp = {
-          position_encoding = "utf-8",
-          item = {
-            label = word,
-            textEdit = {
-              range = {
-                start = { line = line, character = m.cand.start },
-                ["end"] = { line = line, character = col },
+    for m in vim.iter(iter):unique(match_key) do
+      local dir_q = m.type == "directory"
+      local word = m.name .. (dir_q and m.cand.local_sep or "")
+      local filter = m.name
+
+      if
+        not coroutine.yield(util.item(settings, settings.clients.paths, {
+          word = word,
+          kind = dir_q and "Folder" or "File",
+          filter = filter,
+          fuzzy = m.fuzzy,
+          path = m.full,
+          lsp = {
+            position_encoding = "utf-8",
+            item = {
+              label = word,
+              textEdit = {
+                range = {
+                  start = { line = line, character = m.cand.start },
+                  ["end"] = { line = line, character = col },
+                },
+                newText = m.cand.literal_directory .. word,
               },
-              newText = m.cand.literal_directory .. word,
             },
           },
-        },
-      }))
-    then
-      return
+        }))
+      then
+        return
+      end
     end
-  end
+  end)
 end
 
 ---@return producers.Producer<ctx.full>

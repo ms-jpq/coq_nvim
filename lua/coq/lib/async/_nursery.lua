@@ -20,11 +20,12 @@ M.new = function()
   local waiters = {}
 
   local h = handle.new(runtime.current())
-  local nursery = {
-    closed = false,
-    cancel = h.cancel,
-    on_cancel = h.on_cancel,
-  }
+  ---@diagnostic disable-next-line: missing-fields
+  local nursery = {} ---@type async.Nursery
+
+  nursery.closed = false
+  nursery.cancel = h.cancel
+  nursery.on_cancel = h.on_cancel
 
   nursery.join = function()
     if next(pending) ~= nil then
@@ -69,7 +70,6 @@ M.new = function()
     return child
   end
 
-  ---@cast nursery async.Nursery
   return nursery
 end
 

@@ -60,7 +60,8 @@ M.new = function(n, fetch)
 
   local impl = instance()
 
-  local resolver = {}
+  ---@diagnostic disable-next-line: missing-fields
+  local resolver = {} ---@type completions.Resolver
 
   resolver.reset = function()
     impl = instance()
@@ -70,7 +71,6 @@ M.new = function(n, fetch)
     return impl(ctx, item, timeout_ms)
   end
 
-  ---@cast resolver completions.Resolver
   return resolver
 end
 

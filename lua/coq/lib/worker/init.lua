@@ -127,7 +127,10 @@ end
 local make_requester = function(write)
   local parked = inflight.new()
 
-  local requester = { drain = parked.drain }
+  ---@diagnostic disable-next-line: missing-fields
+  local requester = {} ---@type worker.Requester
+
+  requester.drain = parked.drain
 
   requester.request_oneshot = function(message)
     local close, iter = open(parked, write, message)
@@ -150,7 +153,6 @@ local make_requester = function(write)
     parked.resolve(frame.id, frame)
   end
 
-  ---@cast requester worker.Requester
   return requester
 end
 
@@ -263,7 +265,11 @@ local make_endpoint = function(duplex)
   local requester = make_requester(write)
   local responder = make_responder(write)
 
-  local endpoint = { request_oneshot = requester.request_oneshot, request_stream = requester.request_stream }
+  ---@diagnostic disable-next-line: missing-fields
+  local endpoint = {} ---@type worker.Endpoint
+
+  endpoint.request_oneshot = requester.request_oneshot
+  endpoint.request_stream = requester.request_stream
 
   endpoint.serve = function(n, dead_message)
     for frame in transport.reader(duplex.reader) do
@@ -278,7 +284,6 @@ local make_endpoint = function(duplex)
     requester.drain(build_response(nil, false, dead_message))
   end
 
-  ---@cast endpoint worker.Endpoint
   return endpoint
 end
 
@@ -337,7 +342,8 @@ M.spawn = function()
 
   local n = nursery.new()
 
-  local worker = {}
+  ---@diagnostic disable-next-line: missing-fields
+  local worker = {} ---@type worker.Worker
 
   worker.queue = function(fn, ...)
     if state.closed then

@@ -11,7 +11,10 @@ local M = {}
 ---@param parent? async.Handle
 ---@return async.Handle
 M.new = function(parent)
-  local handle = { cancelled = false }
+  ---@diagnostic disable-next-line: missing-fields
+  local handle = {} ---@type async.Handle
+
+  handle.cancelled = false
   local watchers = sparse.new()
   local unwatch = lib.noop
 
@@ -50,7 +53,6 @@ M.new = function(parent)
     unwatch = parent.on_cancel(handle.cancel)
   end
 
-  ---@cast handle async.Handle
   return handle
 end
 
