@@ -9,7 +9,7 @@ local M = {}
 ---@param ctx ctx.full
 ---@param prev { buf: integer, tick: integer }
 ---@return boolean
-local should_skip = function(settings, ctx, prev)
+M._should_skip = function(settings, ctx, prev)
   if ctx.manual then
     return false
   end
@@ -49,7 +49,7 @@ M.bind = function(n, settings, ranker, resolver, sup, events)
     local manual = ev.manual or sticky
     local ctx = context.full { manual = manual }
 
-    if should_skip(settings, ctx, prev) then
+    if M._should_skip(settings, ctx, prev) then
       return
     end
     prev = { buf = ctx.buf, tick = ctx.changedtick }

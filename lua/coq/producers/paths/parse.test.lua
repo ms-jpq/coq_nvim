@@ -1,180 +1,180 @@
 local T = require "coq.lib.test"
 local parse = require "coq.producers.paths.parse"
 
-local i = parse._internal
+local i = parse
 
 local ENV = { HOME = "/home/dogs", DOG_DIR = "/var/dogs", USERPROFILE = [[C:\Users\dogs]] }
 local HOME = ENV.HOME
 local UNIX, WIN = false, true
-local SU, SW = i.seps(UNIX, {}), i.seps(WIN, {})
+local SU, SW = i._seps(UNIX, {}), i._seps(WIN, {})
 
 T.describe("paths.parse.seps", function(test)
   test("unix default is just /", function()
-    T.eq(i.seps(UNIX, {}), { ["/"] = true })
+    T.eq(i._seps(UNIX, {}), { ["/"] = true })
   end)
 
   test("windows default is / and backslash", function()
-    T.eq(i.seps(WIN, {}), { ["/"] = true, ["\\"] = true })
+    T.eq(i._seps(WIN, {}), { ["/"] = true, ["\\"] = true })
   end)
 
   test("whitelist keeps only listed OS seps", function()
-    T.eq(i.seps(WIN, { "/" }), { ["/"] = true })
+    T.eq(i._seps(WIN, { "/" }), { ["/"] = true })
   end)
 
   test("empty whitelist falls back to all OS seps", function()
-    T.eq(i.seps(WIN, {}), { ["/"] = true, ["\\"] = true })
+    T.eq(i._seps(WIN, {}), { ["/"] = true, ["\\"] = true })
   end)
 
   test("no overlap falls back to all OS seps", function()
     -- backslash is not a unix sep, so the filter is empty -> fall back to /
-    T.eq(i.seps(UNIX, { "\\" }), { ["/"] = true })
+    T.eq(i._seps(UNIX, { "\\" }), { ["/"] = true })
   end)
 
   test("non-sep characters are ignored, not added", function()
-    T.eq(i.seps(UNIX, { ":", "|" }), { ["/"] = true })
+    T.eq(i._seps(UNIX, { ":", "|" }), { ["/"] = true })
   end)
 end)
 
 T.describe("paths.parse.expand_env", function(test)
   test("$VAR expands when defined", function()
-    T.eq(i.expand_env(UNIX, ENV, "$DOG_DIR/golden"), "/var/dogs/golden")
+    T.eq(i._expand_env(UNIX, ENV, "$DOG_DIR/golden"), "/var/dogs/golden")
   end)
 
   test("$VAR unchanged when undefined", function()
-    T.eq(i.expand_env(UNIX, ENV, "$UNKNOWN/foo"), "$UNKNOWN/foo")
+    T.eq(i._expand_env(UNIX, ENV, "$UNKNOWN/foo"), "$UNKNOWN/foo")
   end)
 
   test("${VAR} expands when defined", function()
-    T.eq(i.expand_env(UNIX, ENV, "${DOG_DIR}/labrador"), "/var/dogs/labrador")
+    T.eq(i._expand_env(UNIX, ENV, "${DOG_DIR}/labrador"), "/var/dogs/labrador")
   end)
 
   test("no head, returns token unchanged", function()
-    T.eq(i.expand_env(UNIX, ENV, "kennel/spot"), "kennel/spot")
+    T.eq(i._expand_env(UNIX, ENV, "kennel/spot"), "kennel/spot")
   end)
 
   test("on windows, %VAR% expands", function()
-    T.eq(i.expand_env(WIN, ENV, "%USERPROFILE%/Dogs"), [[C:\Users\dogs/Dogs]])
+    T.eq(i._expand_env(WIN, ENV, "%USERPROFILE%/Dogs"), [[C:\Users\dogs/Dogs]])
   end)
 
   test("on unix, %VAR% does not expand", function()
-    T.eq(i.expand_env(UNIX, ENV, "%USERPROFILE%/Dogs"), "%USERPROFILE%/Dogs")
+    T.eq(i._expand_env(UNIX, ENV, "%USERPROFILE%/Dogs"), "%USERPROFILE%/Dogs")
   end)
 
   test("does NOT touch ~ (that's expand_head's job)", function()
-    T.eq(i.expand_env(UNIX, ENV, "~/Dogs"), "~/Dogs")
+    T.eq(i._expand_env(UNIX, ENV, "~/Dogs"), "~/Dogs")
   end)
 end)
 
 T.describe("paths.parse.expand_head", function(test)
   test("~/ expands to HOME", function()
-    T.eq(i.expand_head(UNIX, HOME, ENV, "~/Documents", SU), "/home/dogs/Documents")
+    T.eq(i._expand_head(UNIX, HOME, ENV, "~/Documents", SU), "/home/dogs/Documents")
   end)
 
   test("bare ~ expands to HOME", function()
-    T.eq(i.expand_head(UNIX, HOME, ENV, "~", SU), "/home/dogs")
+    T.eq(i._expand_head(UNIX, HOME, ENV, "~", SU), "/home/dogs")
   end)
 
   test("~user does not expand (no per-user resolution)", function()
-    T.eq(i.expand_head(UNIX, HOME, ENV, "~labrador/Documents", SU), "~labrador/Documents")
+    T.eq(i._expand_head(UNIX, HOME, ENV, "~labrador/Documents", SU), "~labrador/Documents")
   end)
 
   test("$VAR expands when defined", function()
-    T.eq(i.expand_head(UNIX, HOME, ENV, "$DOG_DIR/golden", SU), "/var/dogs/golden")
+    T.eq(i._expand_head(UNIX, HOME, ENV, "$DOG_DIR/golden", SU), "/var/dogs/golden")
   end)
 
   test("$VAR leaves token unchanged when undefined", function()
-    T.eq(i.expand_head(UNIX, HOME, ENV, "$UNKNOWN/foo", SU), "$UNKNOWN/foo")
+    T.eq(i._expand_head(UNIX, HOME, ENV, "$UNKNOWN/foo", SU), "$UNKNOWN/foo")
   end)
 
   test("${VAR} expands when defined", function()
-    T.eq(i.expand_head(UNIX, HOME, ENV, "${DOG_DIR}/labrador", SU), "/var/dogs/labrador")
+    T.eq(i._expand_head(UNIX, HOME, ENV, "${DOG_DIR}/labrador", SU), "/var/dogs/labrador")
   end)
 
   test("no head, returns token unchanged", function()
-    T.eq(i.expand_head(UNIX, HOME, ENV, "kennel/spot", SU), "kennel/spot")
+    T.eq(i._expand_head(UNIX, HOME, ENV, "kennel/spot", SU), "kennel/spot")
   end)
 
   test("on windows, ~\\... expands to HOME with backslash", function()
-    T.eq(i.expand_head(WIN, [[C:\Users\dogs]], ENV, [[~\Documents]], SW), [[C:\Users\dogs\Documents]])
+    T.eq(i._expand_head(WIN, [[C:\Users\dogs]], ENV, [[~\Documents]], SW), [[C:\Users\dogs\Documents]])
   end)
 
   test("on windows, %VAR% expands", function()
-    T.eq(i.expand_head(WIN, HOME, ENV, "%USERPROFILE%/Dogs", SW), [[C:\Users\dogs/Dogs]])
+    T.eq(i._expand_head(WIN, HOME, ENV, "%USERPROFILE%/Dogs", SW), [[C:\Users\dogs/Dogs]])
   end)
 
   test("on unix, %VAR% does not expand", function()
-    T.eq(i.expand_head(UNIX, HOME, ENV, "%USERPROFILE%/Dogs", SU), "%USERPROFILE%/Dogs")
+    T.eq(i._expand_head(UNIX, HOME, ENV, "%USERPROFILE%/Dogs", SU), "%USERPROFILE%/Dogs")
   end)
 end)
 
 T.describe("paths.parse.is_absolute", function(test)
   test("/ is absolute", function()
-    T.eq(i.is_absolute(UNIX, SU, "/var/dogs"), true)
+    T.eq(i._is_absolute(UNIX, SU, "/var/dogs"), true)
   end)
 
   test("relative is not", function()
-    T.eq(i.is_absolute(UNIX, SU, "dogs/spot"), false)
+    T.eq(i._is_absolute(UNIX, SU, "dogs/spot"), false)
   end)
 
   test("empty is not", function()
-    T.eq(i.is_absolute(UNIX, SU, ""), false)
+    T.eq(i._is_absolute(UNIX, SU, ""), false)
   end)
 
   test("on windows, backslash root is absolute", function()
-    T.eq(i.is_absolute(WIN, SW, [[\dogs]]), true)
+    T.eq(i._is_absolute(WIN, SW, [[\dogs]]), true)
   end)
 
   test("on windows, drive letter with backslash is absolute", function()
-    T.eq(i.is_absolute(WIN, SW, [[C:\dogs]]), true)
+    T.eq(i._is_absolute(WIN, SW, [[C:\dogs]]), true)
   end)
 
   test("on windows, drive letter with forward slash is absolute", function()
-    T.eq(i.is_absolute(WIN, SW, "C:/dogs"), true)
+    T.eq(i._is_absolute(WIN, SW, "C:/dogs"), true)
   end)
 
   test("on windows, drive-relative (no sep) is NOT absolute", function()
-    T.eq(i.is_absolute(WIN, SW, "C:dogs"), false)
+    T.eq(i._is_absolute(WIN, SW, "C:dogs"), false)
   end)
 
   test("on windows, bare drive letter is NOT absolute", function()
-    T.eq(i.is_absolute(WIN, SW, "C:"), false)
+    T.eq(i._is_absolute(WIN, SW, "C:"), false)
   end)
 
   test("on windows, url-like scheme is NOT absolute", function()
-    T.eq(i.is_absolute(WIN, SW, "https://dogs.example"), false)
+    T.eq(i._is_absolute(WIN, SW, "https://dogs.example"), false)
   end)
 
   test("on unix, backslash root is not absolute", function()
-    T.eq(i.is_absolute(UNIX, SU, [[\dogs]]), false)
+    T.eq(i._is_absolute(UNIX, SU, [[\dogs]]), false)
   end)
 end)
 
 T.describe("paths.parse.split_at_last_sep", function(test)
   test("splits at last /, dir keeps trailing sep", function()
-    local dir, rhs = i.split_at_last_sep(SU, "/var/dogs/lab")
+    local dir, rhs = i._split_at_last_sep(SU, "/var/dogs/lab")
     T.eq(dir, "/var/dogs/")
     T.eq(rhs, "lab")
   end)
 
   test("trailing / yields empty rhs", function()
-    local dir, rhs = i.split_at_last_sep(SU, "/var/dogs/")
+    local dir, rhs = i._split_at_last_sep(SU, "/var/dogs/")
     T.eq(dir, "/var/dogs/")
     T.eq(rhs, "")
   end)
 
   test("no separator returns nil dir", function()
-    local dir = i.split_at_last_sep(SU, "labrador")
+    local dir = i._split_at_last_sep(SU, "labrador")
     T.eq(dir, nil)
   end)
 
   test("on windows, both / and \\ count as separators", function()
-    local dir, rhs = i.split_at_last_sep(SW, [[C:\Dogs/lab]])
+    local dir, rhs = i._split_at_last_sep(SW, [[C:\Dogs/lab]])
     T.eq(dir, [[C:\Dogs/]])
     T.eq(rhs, "lab")
   end)
 
   test("on unix, backslash is not a separator (stays in dir)", function()
-    local dir, rhs = i.split_at_last_sep(SU, [[/some\path/file]])
+    local dir, rhs = i._split_at_last_sep(SU, [[/some\path/file]])
     T.eq(dir, [[/some\path/]])
     T.eq(rhs, "file")
   end)
@@ -182,7 +182,7 @@ end)
 
 T.describe("paths.parse.patterns", function(test)
   test("unix list does not include backslash- or windows-only shapes", function()
-    for p in i.patterns(UNIX, SU) do
+    for p in i._patterns(UNIX, SU) do
       assert(not string.find(p, "\\", 1, true), "pattern should not include backslash: " .. p)
       assert(not string.find(p, "%%", 1, true), "pattern should not include literal %%: " .. p)
       assert(not string.find(p, "%a:", 1, true), "pattern should not include drive letter: " .. p)
@@ -191,7 +191,7 @@ T.describe("paths.parse.patterns", function(test)
 
   test("windows yields head patterns for every separator (no exhausted iterator)", function()
     local by_sep = { ["/"] = 0, ["\\"] = 0 }
-    for p in i.patterns(WIN, SW) do
+    for p in i._patterns(WIN, SW) do
       local tail = string.sub(p, -1)
       if by_sep[tail] ~= nil then
         by_sep[tail] = by_sep[tail] + 1
@@ -209,7 +209,7 @@ T.describe("paths.parse.find_starts", function(test)
   ---@return table[]
   local collect = function(is_win, line)
     local out = {}
-    for pos, token in i.find_starts(is_win, i.seps(is_win, {}), line) do
+    for pos, token in i._find_starts(is_win, i._seps(is_win, {}), line) do
       table.insert(out, { pos, token })
     end
     return out
