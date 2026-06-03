@@ -1,13 +1,13 @@
 local async = require "coq.lib.async"
+local itertools = require "coq.lib.itertools"
+
+---@alias snippets.Kind "bundle" | "neosnippet" | "lsp"
 
 ---@class snippets.Source
+---@field kind snippets.Kind
 ---@field path string
 ---@field mtime integer
 ---@field filetypes string[]
-
----@class snippets.SubLoader
----@field sources fun(): snippets.Source[]
----@field load fun(source: snippets.Source): snippets.Item[]
 
 ---@class snippets.Loader
 ---@field sources fun(): lib.Iterator<snippets.Source>
@@ -15,89 +15,76 @@ local async = require "coq.lib.async"
 ---@field parse fun(filetype: string): snippets.Item[]
 
 ---@param _settings config.Settings
----@return snippets.SubLoader
-local bundle = function(_settings)
-  return {
-    sources = function()
-      return {}
-    end,
-    load = function(_)
-      return {}
-    end,
-  }
+---@return lib.Iterator<snippets.Source>
+local bundle_sources = function(_settings)
+  return async.wrap(function() end)
 end
 
 ---@param _settings config.Settings
----@return snippets.SubLoader
-local neosnippet = function(_settings)
-  return {
-    sources = function()
-      return {}
-    end,
-    load = function(_)
-      return {}
-    end,
-  }
+---@return lib.Iterator<snippets.Source>
+local neosnippet_sources = function(_settings)
+  return async.wrap(function() end)
 end
 
 ---@param _settings config.Settings
----@return snippets.SubLoader
-local lsp = function(_settings)
-  return {
-    sources = function()
-      return {}
-    end,
-    load = function(_)
-      return {}
-    end,
-  }
+---@return lib.Iterator<snippets.Source>
+local lsp_sources = function(_settings)
+  return async.wrap(function() end)
 end
+
+---@param _src snippets.Source
+---@return snippets.Item[]
+local bundle_parse = function(_src)
+  return {}
+end
+
+---@param _src snippets.Source
+---@return snippets.Item[]
+local neosnippet_parse = function(_src)
+  return {}
+end
+
+---@param _src snippets.Source
+---@return snippets.Item[]
+local lsp_parse = function(_src)
+  return {}
+end
+
+---@type table<snippets.Kind, fun(src: snippets.Source): snippets.Item[]>
+local PARSERS = {
+  bundle = bundle_parse,
+  neosnippet = neosnippet_parse,
+  lsp = lsp_parse,
+}
 
 local M = {}
 
 ---@param settings config.Settings
 ---@return snippets.Loader
 M.new = function(settings)
-  local subs = { bundle(settings), neosnippet(settings), lsp(settings) }
-
-  ---@return lib.Iterator<snippets.SubLoader, snippets.Source>
-  local enumerate = function()
-    return async.wrap(function()
-      for _, sub in pairs(subs) do
-        for _, src in pairs(sub.sources()) do
-          coroutine.yield(sub, src)
-        end
-      end
-    end)
-  end
-
   ---@diagnostic disable-next-line: missing-fields
   local loader = {} ---@type snippets.Loader
 
   loader.sources = function()
-    return async.wrap(function()
-      for _, src in enumerate() do
-        coroutine.yield(src)
-      end
-    end)
+    return itertools.chain(bundle_sources(settings), neosnippet_sources(settings), lsp_sources(settings))
   end
 
   loader.sources_by_filetype = function()
-    local out = {}
-    for _, src in enumerate() do
+    local acc = {}
+    for src in loader.sources() do
       for _, ft in pairs(src.filetypes) do
-        out[ft] = out[ft] or {}
-        table.insert(out[ft], src)
+        acc[ft] = acc[ft] or {}
+        table.insert(acc[ft], src)
       end
     end
-    return out
+    return acc
   end
 
   loader.parse = function(filetype)
     local out = {}
-    for sub, src in enumerate() do
+    for src in loader.sources() do
       if vim.tbl_contains(src.filetypes, filetype) then
-        for _, item in pairs(sub.load(src)) do
+        for _, item in pairs(PARSERS[src.kind](src)) do
           if item.filetype == filetype then
             table.insert(out, item)
           end
