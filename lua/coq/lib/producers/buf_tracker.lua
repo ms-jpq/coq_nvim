@@ -1,7 +1,7 @@
 ---@class buf_tracker.Spec<S>
 ---@field compare fun(buf: integer, previous?: S): S?
----@field prune fun(settings: config.Settings, bufs: integer[])
----@field index fun(settings: config.Settings, computed: S[])
+---@field prune fun(settings: config.Settings, idle_ctx: idle.Ctx, stale: table<integer, S?>)
+---@field index fun(settings: config.Settings, idle_ctx: idle.Ctx, computed: table<integer, S>)
 
 local M = {}
 
@@ -15,7 +15,7 @@ M.new = function(spec)
     local stale, computed = {}, {}
 
     for buf in pairs(idle_ctx.removed) do
-      table.insert(stale, buf)
+      stale[buf] = state[buf]
       state[buf] = nil
     end
 
@@ -23,18 +23,14 @@ M.new = function(spec)
       local compared = spec.compare(buf, state[buf])
 
       if compared ~= nil then
+        stale[buf] = state[buf]
         state[buf] = compared
-        table.insert(stale, buf)
-        table.insert(computed, compared)
+        computed[buf] = compared
       end
     end
 
-    if #stale > 0 then
-      spec.prune(settings, stale)
-    end
-    if #computed > 0 then
-      spec.index(settings, computed)
-    end
+    spec.prune(settings, idle_ctx, stale)
+    spec.index(settings, idle_ctx, computed)
   end
 end
 

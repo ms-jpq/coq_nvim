@@ -9,7 +9,6 @@ local util = require "coq.producers.util"
 local worker = require "coq.lib.worker"
 
 ---@class treesitter.Meta
----@field buf integer
 ---@field tick integer
 ---@field filetype string
 ---@field filename string
@@ -32,7 +31,6 @@ M.buffer_meta = function(buf, previous)
   end
 
   return {
-    buf = buf,
     tick = tick,
     filetype = vim.bo[buf].filetype,
     filename = vim.api.nvim_buf_get_name(buf),
@@ -45,20 +43,20 @@ local tracker = buf_tracker.new {
       return require("coq.producers.treesitter").buffer_meta(...)
     end, buf, previous)
   end,
-  index = function(settings, metas)
-    for _, meta in pairs(metas) do
+  index = function(settings, _, metas)
+    for buf, meta in pairs(metas) do
       async.sleep(0)
       lib.scope(function(defer)
         local close, stream = worker.main_stream(function(...)
           return require("coq.producers.treesitter.request").query(...)
-        end, meta.buf)
+        end, buf)
         defer(close)
         for payload in
           stream --[[@as lib.Iterator<treesitter.Payload>]]
         do
           if type(payload.text) == "string" and payload.text ~= "" then
             index(settings).insert {
-              buf = meta.buf,
+              buf = buf,
               filetype = meta.filetype,
               filename = meta.filename,
               word = payload.text,
@@ -72,8 +70,8 @@ local tracker = buf_tracker.new {
       end)
     end
   end,
-  prune = function(settings, bufs)
-    for _, buf in pairs(bufs) do
+  prune = function(settings, _, stale)
+    for buf in pairs(stale) do
       index(settings).prune { buf = buf }
     end
   end,

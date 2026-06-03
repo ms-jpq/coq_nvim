@@ -33,6 +33,9 @@ M.stat = async.awaitify(vim.uv.fs_stat)
 ---@type fun(old_path: string, new_path: string): uv.error_name?, boolean?
 M.rename = async.awaitify(vim.uv.fs_rename)
 
+---@type fun(path: string): uv.error_name?, boolean?
+M.unlink = async.awaitify(vim.uv.fs_unlink)
+
 ---@param path string
 ---@return uv.error_name?
 M.mkdirp = function(path)

@@ -4,6 +4,7 @@ local events_m = require "coq.completions.events"
 
 ---@class idle.Ctx
 ---@field ctx ctx.full
+---@field cache_dir string
 ---@field updated table<integer, true>
 ---@field removed table<integer, true>
 
@@ -22,6 +23,7 @@ M.bind = function(n, settings, sup, events)
     local diff = events.drain_bufs()
     sup.idle(settings, {
       ctx = context.full(),
+      cache_dir = vim.fs.joinpath(vim.fn.stdpath "cache", "coq"),
       updated = diff.updated,
       removed = diff.removed,
     })

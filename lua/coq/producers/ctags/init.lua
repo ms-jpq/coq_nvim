@@ -1,5 +1,4 @@
 local async = require "coq.lib.async"
-local atools = require "coq.lib.atools"
 local buf_tracker = require "coq.lib.producers.buf_tracker"
 local fs_cache = require "coq.lib.fs_cache"
 local index_m = require "coq.producers.ctags.index"
@@ -13,21 +12,12 @@ local worker = require "coq.lib.worker"
 
 local index = util.once(index_m.new)
 
----@return string
-local data_dir = function()
-  local xdg = os.getenv "XDG_DATA_HOME"
-  if xdg and xdg ~= "" then
-    return vim.fs.joinpath(xdg, "nvim", "coq_v2")
-  end
-  local home = vim.uv.os_homedir() or "."
-  return vim.fs.joinpath(home, ".local", "share", "nvim", "coq_v2")
-end
-
 local M = {}
 
+local cache = fs_cache.new {}
+
 ---@class ctags.Meta
----@field buf integer
----@field tick integer
+---@field mtime integer
 ---@field filename string
 
 ---@param buf integer
@@ -41,15 +31,15 @@ M.buffer_meta = function(buf, previous)
   if filename == "" then
     return nil
   end
-  local err, st = atools.fs.stat(filename)
-  if err or not st then
+  local mtime = fs_cache.mtime_ns(filename)
+  if not mtime then
     return nil
   end
-  local mtime = (st.mtime.sec or 0) * 1000000000 + (st.mtime.nsec or 0)
-  if previous and mtime <= previous.tick then
+
+  if previous and mtime <= previous.mtime then
     return nil
   end
-  return { buf = buf, tick = mtime, filename = filename }
+  return { mtime = mtime, filename = filename }
 end
 
 local tracker = buf_tracker.new {
@@ -58,11 +48,23 @@ local tracker = buf_tracker.new {
       return require("coq.producers.ctags").buffer_meta(...)
     end, buf, previous)
   end,
-  index = function(settings, metas)
-    for _, meta in pairs(metas) do
+  index = function(settings, idle_ctx, metas)
+    lib.scope(function(defer)
+      local fetches = vim.iter(pairs(metas)):map(function(m)
+        return cache.fetch(m.filename, m.mtime)
+      end)
+      local close, iter = async.merge(fetches)
+      defer(close)
+      for data in iter do
+        lib.noop()
+      end
+    end)
+  end,
+  prune = function(_, idle_ctx, stale)
+    for _, meta in pairs(stale) do
+      cache.prune(meta.filename)
     end
   end,
-  prune = lib.noop,
 }
 
 ---@param settings config.Settings

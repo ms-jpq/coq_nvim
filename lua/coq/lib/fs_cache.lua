@@ -9,6 +9,17 @@ local M = {}
 
 ---@class fs_cache.Store<V>
 ---@field fetch fun(key: string, mtime: integer): V
+---@field prune fun(key: string)
+
+---@param path string
+---@return integer?
+M.mtime_ns = function(path)
+  local err, st = atools.fs.stat(path)
+  if err or not st then
+    return nil
+  end
+  return st.mtime.sec * 1000000000 + st.mtime.nsec
+end
 
 ---@param key string
 ---@return string
@@ -65,12 +76,15 @@ end
 ---@param spec fs_cache.Spec<V>
 ---@return fs_cache.Store<V>
 M.new = function(spec)
+  local path_of = function(key)
+    return vim.fs.joinpath(spec.fs_root, safe_name(key) .. ".json")
+  end
+
   return {
     fetch = function(key, mtime)
-      local base = safe_name(key) .. ".json"
-      local path = vim.fs.joinpath(spec.fs_root, base)
-      local err, st = atools.fs.stat(path)
-      local valid = not err and st and (st.mtime.sec * 1000000000 + st.mtime.nsec) >= mtime
+      local path = path_of(key)
+      local cached_mtime = M.mtime_ns(path)
+      local valid = cached_mtime and cached_mtime >= mtime
 
       if valid then
         local raw = read_all(path)
@@ -85,6 +99,9 @@ M.new = function(spec)
       local value = spec.compute(key)
       write_atomic(path, encode(value))
       return value
+    end,
+    prune = function(key)
+      atools.fs.unlink(path_of(key))
     end,
   }
 end

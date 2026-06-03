@@ -11,7 +11,6 @@ local util = require "coq.producers.util"
 local worker = require "coq.lib.worker"
 
 ---@class buffer.Meta
----@field buf integer
 ---@field tick integer
 ---@field lines? string[]
 ---@field filetype string
@@ -45,7 +44,6 @@ M.buffer_meta = function(buf, previous)
   end
 
   return {
-    buf = buf,
     tick = tick,
     filetype = vim.bo[buf].filetype,
     filename = vim.api.nvim_buf_get_name(buf),
@@ -62,8 +60,8 @@ local tracker = buf_tracker.new {
       return require("coq.producers.buffers").buffer_meta(...)
     end, buf, previous)
   end,
-  index = function(settings, metas)
-    for _, meta in pairs(metas) do
+  index = function(settings, _, metas)
+    for buf, meta in pairs(metas) do
       async.sleep(0)
       local kw = tokens.parse_iskeyword(meta.iskeyword)
 
@@ -81,7 +79,7 @@ local tracker = buf_tracker.new {
           tokens.keywords(kw, text --[[@as lib.Iterator<string>]])
         do
           index(settings).insert {
-            buf = meta.buf,
+            buf = buf,
             word = word,
             filetype = meta.filetype,
             filename = meta.filename,
@@ -90,8 +88,8 @@ local tracker = buf_tracker.new {
       end)
     end
   end,
-  prune = function(settings, bufs)
-    for _, buf in pairs(bufs) do
+  prune = function(settings, _, stale)
+    for buf in pairs(stale) do
       index(settings).prune { buf = buf }
     end
   end,

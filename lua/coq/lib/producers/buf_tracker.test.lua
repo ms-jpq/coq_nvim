@@ -26,16 +26,16 @@ local mk = function(overrides)
       table.insert(fetches, { buf = buf, prev_tick = previous and previous.tick })
       return (overrides.compare or default_compare)(buf, previous)
     end,
-    index = function(settings, metas)
+    index = function(settings, _idle_ctx, metas)
       table.insert(settings_seen, settings)
       for _, meta in pairs(metas) do
         table.insert(reindexes, meta)
       end
     end,
-    prune = function(settings, bufs)
+    prune = function(settings, _idle_ctx, stale)
       table.insert(settings_seen, settings)
-      for _, buf in pairs(bufs) do
-        table.insert(prunes, buf)
+      for buf, meta in pairs(stale) do
+        table.insert(prunes, { buf = buf, meta = meta })
       end
     end,
   }
@@ -56,13 +56,14 @@ local idle_ctx = function(updated, removed)
   return {
     ---@diagnostic disable-next-line: missing-fields
     ctx = {},
+    cache_dir = "/tmp",
     updated = u,
     removed = r,
   } --[[@as idle.Ctx]]
 end
 
 T.describe("buf_tracker", function(test)
-  test("update prunes, reindexes once for each new buf", function()
+  test("first-time update reindexes, does not prune (no prior state)", function()
     local tracker, trace = mk()
 
     async.scope(function()
@@ -70,7 +71,7 @@ T.describe("buf_tracker", function(test)
     end)
 
     T.eq(trace.fetches, { { buf = 7, prev_tick = nil } })
-    T.eq(trace.prunes, { 7 })
+    T.eq(trace.prunes, {})
     T.eq(#trace.reindexes, 1)
     T.eq(trace.reindexes[1].buf, 7)
     T.eq(trace.settings_seen, { SETTINGS, SETTINGS })
@@ -92,7 +93,7 @@ T.describe("buf_tracker", function(test)
     T.eq(trace.reindexes, {})
   end)
 
-  test("remove prunes", function()
+  test("remove after prior update prunes with the prior meta", function()
     local tracker, trace = mk()
 
     async.scope(function()
@@ -100,10 +101,13 @@ T.describe("buf_tracker", function(test)
       tracker(SETTINGS, idle_ctx(nil, { 7 }))
     end)
 
-    T.eq(trace.prunes, { 7, 7 })
+    T.eq(#trace.prunes, 1)
+    T.eq(trace.prunes[1].buf, 7)
+    T.eq(trace.prunes[1].meta.buf, 7)
+    T.eq(trace.prunes[1].meta.tick, 1)
   end)
 
-  test("second update forwards prior tick as prev_tick", function()
+  test("second update prunes prior meta and forwards prior tick", function()
     local tracker, trace = mk()
 
     async.scope(function()
@@ -115,6 +119,8 @@ T.describe("buf_tracker", function(test)
       { buf = 7, prev_tick = nil },
       { buf = 7, prev_tick = 1 },
     })
+    T.eq(#trace.prunes, 1)
+    T.eq(trace.prunes[1].meta.tick, 1)
   end)
 
   test("mixed batch handles each buf independently", function()
@@ -129,17 +135,17 @@ T.describe("buf_tracker", function(test)
       seen_bufs[f.buf] = true
     end
     T.eq(seen_bufs, { [1] = true, [3] = true })
-    T.eq(trace.prunes[#trace.prunes - 1] ~= nil and trace.prunes[#trace.prunes] ~= nil, true)
+    T.eq(trace.prunes, {})
   end)
 
-  test("remove without prior update still prunes", function()
+  test("remove without prior update is a no-op", function()
     local tracker, trace = mk()
 
     async.scope(function()
       tracker(SETTINGS, idle_ctx(nil, { 99 }))
     end)
 
-    T.eq(trace.prunes, { 99 })
+    T.eq(trace.prunes, {})
     T.eq(trace.reindexes, {})
   end)
 end)
