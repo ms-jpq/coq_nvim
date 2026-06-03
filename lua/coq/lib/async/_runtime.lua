@@ -49,7 +49,7 @@ end
 M.future = function()
   local done = false
   local vals = {}
-  local cb = nil
+  local cbs = {}
 
   local f = {}
 
@@ -60,9 +60,9 @@ M.future = function()
     done = true
 
     vals = { ... }
-    if cb then
-      local c = cb
-      cb = nil
+    local snapshot = cbs
+    cbs = {}
+    for _, c in ipairs(snapshot) do
       c(unpack(vals))
     end
   end
@@ -71,8 +71,7 @@ M.future = function()
     if done then
       c(unpack(vals))
     else
-      assert(cb == nil, "future: a watcher is already registered")
-      cb = c
+      table.insert(cbs, c)
     end
   end
 
