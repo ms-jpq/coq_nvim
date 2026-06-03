@@ -55,20 +55,21 @@ M.spawn = function(argv, opts)
       end
     end))
 
-    local stdin_done = function(err)
-      stdin_f.resolve(err == nil, err)
-    end
-
-    if stdin_pipe ~= nil then
-      stdin_pipe:write(opts.stdin, function(err)
-        if err ~= nil then
-          stdin_done(err)
-        else
-          stdin_pipe:shutdown(stdin_done)
-        end
-      end)
-    else
-      stdin_done()
+    do
+      local stdin_done = function(err)
+        stdin_f.resolve(err == nil, err)
+      end
+      if stdin_pipe ~= nil then
+        stdin_pipe:write(opts.stdin, function(err)
+          if err ~= nil then
+            stdin_done(err)
+          else
+            stdin_pipe:shutdown(stdin_done)
+          end
+        end)
+      else
+        stdin_done()
+      end
     end
 
     local read = function(pipe, f)

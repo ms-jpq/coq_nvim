@@ -47,9 +47,10 @@ end
 ---@return preview.Pos?
 local pick_position = function(preview_cfg, ev, lines)
   local scr_w, scr_h = vim.o.columns, vim.o.lines
-  local top, btm = ev.row, ev.row + ev.height + 1
-  local left = ev.col
-  local right = ev.col + ev.width + (ev.scrollbar and 1 or 0)
+  local pum_n = ev.row - 1
+  local pum_s = pum_n + ev.height - 1
+  local pum_w = ev.col
+  local pum_e = ev.col + ev.width + (ev.scrollbar and 1 or 0) - 1
 
   local max_w, cap_h = 0, 0
   for _, line in ipairs(lines) do
@@ -61,51 +62,50 @@ local pick_position = function(preview_cfg, ev, lines)
   cap_h = math.max(1, cap_h)
 
   local b_w, b_h = border_w_h(preview_cfg.border)
-  local ns_w = lib.clamp(1, scr_w - left, cap_w)
-  local we_h = lib.clamp(1, scr_h - top - 2, cap_h)
+  local ns_w = lib.clamp(1, scr_w - pum_w - 2 * b_w, cap_w)
+  local we_h = lib.clamp(1, scr_h - pum_n - 1 - 2 * b_h, cap_h)
   local p = preview_cfg.positions
 
   ---@type { rank: integer, idx: integer, pos: preview.Pos }[]
   local cs = {}
 
-  local n_h = lib.clamp(1, top - 1, cap_h)
-  local n_row = top - 1 - n_h - b_h
-  if p.north and n_row > 1 then
+  local n_h = lib.clamp(1, pum_n - 1 - 2 * b_h, cap_h)
+  local n_row = pum_n - 1 - n_h - 2 * b_h
+  if p.north and n_row >= 0 then
     cs[#cs + 1] = {
       rank = p.north,
       idx = 1,
-      pos = { row = n_row, col = left - 1, height = n_h, width = ns_w },
+      pos = { row = n_row, col = pum_w - 1, height = n_h, width = ns_w },
     }
   end
 
-  local s_h = lib.clamp(1, scr_h - btm, cap_h)
-  if p.south and (btm + s_h) < scr_h - 1 then
+  local s_row = pum_s + 2
+  local s_h = lib.clamp(1, scr_h - 1 - s_row - 2 * b_h, cap_h)
+  if p.south and s_row + s_h - 1 + 2 * b_h <= scr_h - 1 then
     cs[#cs + 1] = {
       rank = p.south,
       idx = 2,
-      pos = { row = btm, col = left - 1, height = s_h, width = ns_w },
+      pos = { row = s_row, col = pum_w - 1, height = s_h, width = ns_w },
     }
   end
 
-  if p.west then
-    local w_w = lib.clamp(1, left - 2, cap_w)
+  local w_w = lib.clamp(1, pum_w - 1 - 2 * b_w, cap_w)
+  local w_col = pum_w - 1 - w_w - 2 * b_w
+  if p.west and w_col >= 0 then
     cs[#cs + 1] = {
       rank = p.west,
       idx = 3,
-      pos = { row = top, col = left - 2 - w_w - b_w, height = we_h, width = w_w },
+      pos = { row = pum_n, col = w_col, height = we_h, width = w_w },
     }
   end
 
-  if p.east then
+  local e_col = pum_e + 2
+  local e_w = lib.clamp(1, scr_w - e_col - 2 * b_w, cap_w)
+  if p.east and e_col + e_w - 1 + 2 * b_w <= scr_w - 1 then
     cs[#cs + 1] = {
       rank = p.east,
       idx = 4,
-      pos = {
-        row = top,
-        col = right + 1,
-        height = we_h,
-        width = lib.clamp(1, scr_w - right - 2, cap_w),
-      },
+      pos = { row = pum_n, col = e_col, height = we_h, width = e_w },
     }
   end
 
