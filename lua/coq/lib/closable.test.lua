@@ -110,3 +110,39 @@ T.describe("closable.iter unwind order", function(test)
     T.eq(runs, {})
   end)
 end)
+
+T.describe("closable.iter cross-coroutine cancel", function(test)
+  -- The iter is created in one coroutine and consumed in another (async.merge's
+  -- per-producer task shape). Cancelling ONLY the consumer's subtree must still
+  -- unwind the parked producer and run its defers — not deadlock the join.
+  test("a consumer-side cancel unwinds the parked producer and runs its defers", function()
+    local nursery = require "coq.lib.async._nursery"
+    local started = async.future()
+    local defer_ran, joined = false, false
+
+    async.scope(function()
+      local _close, iter = closable.iter(function(defer)
+        defer(function()
+          defer_ran = true
+        end)
+        started.resolve()
+        async.future().await() -- never resolves; only a cancel ends this
+      end)
+
+      local n = nursery.new()
+      n.spawn(function()
+        iter() -- consumed by a DIFFERENT coroutine than the creator
+      end)
+      started.await() -- producer is now running under the consumer's handle
+
+      n.cancel() -- cancel only the consumer subtree (creator is untouched)
+      async.wait(200, function()
+        n.join()
+        joined = true
+      end)
+    end)
+
+    assert(joined, "join hung: parked producer not woken by the consumer's cancel")
+    assert(defer_ran, "cleanup leaked: producer defers did not run on cancel")
+  end)
+end)

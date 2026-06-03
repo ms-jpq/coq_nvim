@@ -95,13 +95,13 @@ end
 
 ---@alias async.Bounce fun(...: any): any
 
+---@param rebind boolean
 ---@param producer fun(...: any)
----@param h async.Handle
 ---@param on_await fun(bounce: async.Bounce, eff: async.Await)
----@return async.Bounce
-local trampoline = function(producer, h, on_await)
+---@return async.Bounce bounce
+---@return thread co
+local trampoline = function(rebind, producer, on_await)
   local co = coroutine.create(producer)
-  M.bind(co, h)
 
   local bounce
   local dispatch = function(ok, ...)
@@ -124,17 +124,20 @@ local trampoline = function(producer, h, on_await)
   end
 
   bounce = function(...)
+    if rebind then
+      M.bind(co, M.current())
+    end
     return dispatch(coroutine.resume(co, ...))
   end
 
-  return bounce
+  return bounce, co
 end
 
 ---@param h async.Handle
 ---@param fn fun(...)
 ---@param ... any
 M._detach = function(h, fn, ...)
-  return trampoline(fn, h, function(bounce, eff)
+  local bounce, co = trampoline(false, fn, function(bounce, eff)
     local resumed = false
     local unwatch = lib.noop
     local resume = function(...)
@@ -153,16 +156,20 @@ M._detach = function(h, fn, ...)
     if not resumed and eff.h then
       unwatch = eff.h.on_cancel(resume)
     end
-  end)(...)
+  end)
+
+  M.bind(co, h)
+  return bounce(...)
 end
 
 ---@generic F: fun(...)
 ---@param producer F
 ---@return F
 M.wrap = function(producer)
-  return trampoline(producer, M.current(), function(bounce, eff)
+  local bounce = trampoline(true, producer, function(bounce, eff)
     return bounce(coroutine.yield(eff))
   end)
+  return bounce
 end
 
 ---@param milliseconds integer
