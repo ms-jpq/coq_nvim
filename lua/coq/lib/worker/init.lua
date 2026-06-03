@@ -20,26 +20,12 @@ local Kind = {
 
 local DONE = {}
 
----@type table<function, string>
-local dump_cache = lib.weak()
-
----@param fn function
----@return string
-local dump = function(fn)
-  local bytecode = dump_cache[fn]
-  if not bytecode then
-    bytecode = string.dump(fn)
-    dump_cache[fn] = bytecode
-  end
-  return bytecode
-end
-
 ---@param fn function
 ---@param ... any
 ---@return table
 local build_request = function(fn, ...)
   return {
-    fn_bytecode = dump(fn),
+    fn_bytecode = string.dump(fn),
     args = { ... },
     n_args = select("#", ...),
   }

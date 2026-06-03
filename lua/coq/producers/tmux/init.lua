@@ -76,6 +76,7 @@ do
     if cache[pane.id] == text then
       return
     end
+    cache[pane.id] = nil
     async.sleep(0)
 
     index_of(settings).prune { pane = pane.id }

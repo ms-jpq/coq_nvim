@@ -96,7 +96,7 @@ M.new = function(spec)
         end
       end
 
-      local value = spec.compute(key)
+      local value = assert(spec.compute(key), "fs_cache: compute must not return nil")
       write_atomic(path, encode(value))
       return value
     end,
