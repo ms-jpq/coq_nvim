@@ -1,3 +1,4 @@
+local cancel = require "coq.lib.async.cancel"
 local errs = require "coq.lib.errs"
 
 ---@alias lib.Iterator<T> fun(): T?
@@ -40,7 +41,9 @@ M.scope = function(fn)
     end
 
     for i = #defers, 1, -1 do
-      local d_ok, d_err = xpcall(defers[i], debug.traceback)
+      local d_ok, d_err = xpcall(defers[i], function(e)
+        return cancel.is(e) and e or debug.traceback(e)
+      end)
       if not d_ok then
         table.insert(errors, d_err)
       end
