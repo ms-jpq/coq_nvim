@@ -113,15 +113,23 @@ M.spawn = function(argv, opts)
   end)
 end
 
+---@type fun(path: string): uv.error_name?, uv.luv_dir_t?
+local fs_opendir = async.awaitify(vim.uv.fs_opendir)
+---@type fun(dir: uv.luv_dir_t): uv.error_name?, boolean?
+local fs_closedir = async.awaitify(vim.uv.fs_closedir)
+---@type fun(dir: uv.luv_dir_t): uv.error_name?, { name: string, type: string }[]?
+local fs_readdir = async.awaitify(vim.uv.fs_readdir)
+
+---@type fun(path: string, flags: string|integer, mode: integer): uv.error_name?, integer?
+local fs_open = async.awaitify(vim.uv.fs_open)
+---@type fun(fd: integer): uv.error_name?
+local fs_close = async.awaitify(vim.uv.fs_close)
+---@type fun(fd: integer, size: integer, offset: integer): uv.error_name?, string?
+local fs_read = async.awaitify(vim.uv.fs_read)
+---@type fun(fd: integer): uv.error_name?, uv.fs_stat.result?
+local fs_fstat = async.awaitify(vim.uv.fs_fstat)
+
 M.fs = {
-  ---@type fun(path: string, flags: string|integer, mode: integer): uv.error_name?, integer?
-  open = async.awaitify(vim.uv.fs_open),
-  ---@type fun(fd: integer): uv.error_name?
-  close = async.awaitify(vim.uv.fs_close),
-  ---@type fun(fd: integer, size: integer, offset: integer): uv.error_name?, string?
-  read = async.awaitify(vim.uv.fs_read),
-  ---@type fun(fd: integer): uv.error_name?, uv.fs_stat.result?
-  fstat = async.awaitify(vim.uv.fs_fstat),
   ---@type fun(path: string): uv.error_name?, uv.fs_stat.result?
   stat = async.awaitify(vim.uv.fs_stat),
 }
@@ -132,23 +140,6 @@ M.fs.is_dir = function(path)
   local err, st = M.fs.stat(path)
   return (not err and st and st.type == "directory") or false
 end
-
----@param path string
----@return uv.error_name? err
----@return uv.luv_dir_t? dir
-local fs_opendir = function(path)
-  local f = async.future()
-  vim.uv.fs_opendir(path, function(err, dir)
-    f.resolve(err, dir)
-  end, 64)
-  return f.await()
-end
-
----@type fun(dir: uv.luv_dir_t): uv.error_name?, { name: string, type: string }[]?
-local fs_readdir = async.awaitify(vim.uv.fs_readdir)
-
----@type fun(dir: uv.luv_dir_t): uv.error_name?, boolean?
-local fs_closedir = async.awaitify(vim.uv.fs_closedir)
 
 ---@param path string
 ---@return fun(): string?, string?
@@ -182,21 +173,21 @@ end
 M.fs.scanfile = function(path)
   return async.wrap(function()
     lib.scope(function(defer)
-      local e1, fd = M.fs.open(path, "r", 438)
+      local e1, fd = fs_open(path, "r", 438)
       if e1 ~= nil or fd == nil then
         return
       end
       defer(function()
-        M.fs.close(fd)
+        fs_close(fd)
       end)
 
-      local e2, st = M.fs.fstat(fd)
+      local e2, st = fs_fstat(fd)
       if e2 ~= nil or st == nil then
         return
       end
 
       while true do
-        local e3, data = M.fs.read(fd, st.blksize, -1)
+        local e3, data = fs_read(fd, st.blksize, -1)
         if e3 ~= nil or data == nil or #data == 0 then
           return
         end
