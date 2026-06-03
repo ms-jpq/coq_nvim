@@ -66,6 +66,7 @@ local matches = function(settings, ctx)
       is_windows = lib.is_windows,
       env = vim.uv.os_environ(),
       home = vim.uv.os_homedir() or "",
+      path_seps = settings.clients.paths.path_seps or {},
     }
 
     for cand in parse.candidates(ctx.line_before, opts) do
