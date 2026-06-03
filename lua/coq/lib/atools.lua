@@ -159,7 +159,7 @@ M.fs.scandir = function(path)
       if e ~= nil or entries == nil or #entries == 0 then
         return
       end
-      for _, entry in ipairs(entries) do
+      for _, entry in pairs(entries) do
         coroutine.yield(entry.name, entry.type)
       end
     end

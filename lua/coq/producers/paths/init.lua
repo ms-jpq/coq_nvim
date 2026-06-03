@@ -52,6 +52,7 @@ end
 ---@field cand paths.parse.Candidate
 ---@field dir string
 ---@field name string
+---@field type string
 ---@field full string
 
 ---@param settings config.Settings
@@ -75,9 +76,15 @@ local matches = function(settings, ctx)
             local close, iter = atools.fs.scandir(dir)
             defer(close)
 
-            for name in iter do
+            for name, type in iter do
               if name_matches(cand.partial, name) then
-                coroutine.yield { cand = cand, dir = dir, name = name, full = vim.fs.joinpath(dir, name) }
+                coroutine.yield {
+                  cand = cand,
+                  dir = dir,
+                  name = name,
+                  type = type,
+                  full = vim.fs.joinpath(dir, name),
+                }
               end
             end
           end)
@@ -103,7 +110,7 @@ M.matcher = function(settings, ctx)
   local line = row - 1
 
   for m in vim.iter(matches(settings, ctx)):unique(match_key) do
-    local dir_q = atools.fs.is_dir(m.full)
+    local dir_q = m.type == "directory"
     local word = m.name .. (dir_q and m.cand.local_sep or "")
 
     coroutine.yield(util.item(settings, settings.clients.paths, {
