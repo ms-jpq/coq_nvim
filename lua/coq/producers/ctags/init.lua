@@ -1,15 +1,27 @@
 local async = require "coq.lib.async"
 local atools = require "coq.lib.atools"
 local buf_tracker = require "coq.lib.producers.buf_tracker"
-local path_fmt = require "coq.producers.path_fmt"
+local fs_cache = require "coq.lib.fs_cache"
 local index_m = require "coq.producers.ctags.index"
+local lib = require "coq.lib"
 local parse = require "coq.producers.ctags.parse"
+local path_fmt = require "coq.producers.path_fmt"
 local producer = require "coq.lib.producers"
 local run = require "coq.producers.ctags.run"
 local util = require "coq.producers.util"
 local worker = require "coq.lib.worker"
 
 local index = util.once(index_m.new)
+
+---@return string
+local data_dir = function()
+  local xdg = os.getenv "XDG_DATA_HOME"
+  if xdg and xdg ~= "" then
+    return vim.fs.joinpath(xdg, "nvim", "coq_v2")
+  end
+  local home = vim.uv.os_homedir() or "."
+  return vim.fs.joinpath(home, ".local", "share", "nvim", "coq_v2")
+end
 
 local M = {}
 
@@ -49,37 +61,10 @@ local tracker = buf_tracker.new {
     end, buf, prev_mtime)
   end,
   reindex = function(settings, infos)
-    local filenames = vim.tbl_map(function(i)
-      return i.filename
-    end, infos)
-    local raw = run.run("ctags", filenames)
-    if raw == nil then
-      return
-    end
-
-    local known = {}
     for _, i in pairs(infos) do
-      known[i.filename] = true
-    end
-
-    for tag in parse.parse(raw) do
-      async.sleep(0)
-      if known[tag.filename] then
-        index(settings).insert(tag --[[@as ctags.Item]])
-      end
-    end
-
-    for _, i in pairs(infos) do
-      filenames_by_buf[i.buf] = i.filename
     end
   end,
-  prune = function(settings, buf)
-    local filename = filenames_by_buf[buf]
-    if filename then
-      index(settings).prune { filename = filename }
-      filenames_by_buf[buf] = nil
-    end
-  end,
+  prune = lib.noop,
 }
 
 ---@param settings config.Settings
