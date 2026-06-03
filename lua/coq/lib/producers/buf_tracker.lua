@@ -1,17 +1,12 @@
-local async = require "coq.lib.async"
-
----@class buf_tracker.Meta
----@field tick integer
-
----@class buf_tracker.Spec<M>
----@field compare fun(buf: integer, previous?: M): M?
+---@class buf_tracker.Spec<S>
+---@field compare fun(buf: integer, previous?: S): S?
 ---@field prune fun(settings: config.Settings, bufs: integer[])
----@field index fun(settings: config.Settings, compared: M[])
+---@field index fun(settings: config.Settings, computed: S[])
 
 local M = {}
 
----@generic M : buf_tracker.Meta
----@param spec buf_tracker.Spec<M>
+---@generic S
+---@param spec buf_tracker.Spec<S>
 ---@return fun(settings: config.Settings, idle_ctx: idle.Ctx)
 M.new = function(spec)
   local state = {}

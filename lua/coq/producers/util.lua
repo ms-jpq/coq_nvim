@@ -1,7 +1,15 @@
+local atools = require "coq.lib.atools"
 local fuzzy = require "coq.lib.index.fuzzy"
 local trie = require "coq.lib.index.trie"
 
 local M = {}
+
+---@param buf integer
+---@return boolean
+M.is_live = function(buf)
+  atools.scheduled()
+  return vim.api.nvim_buf_is_valid(buf) and vim.api.nvim_buf_is_loaded(buf)
+end
 
 ---@param item { word: string }
 ---@return string

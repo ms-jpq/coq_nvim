@@ -1,1 +1,3 @@
+*.py
+*.sql
 *.test.lua

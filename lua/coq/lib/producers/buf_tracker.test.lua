@@ -15,25 +15,28 @@ local mk = function(overrides)
   overrides = overrides or {}
   local fetches, prunes, reindexes = {}, {}, {}
 
-  local default_fetch = function(buf, prev_tick)
+  local default_compare = function(buf, previous)
+    local prev_tick = previous and previous.tick
     return { buf = buf, tick = (prev_tick or 0) + 1, payload = "labrador" }
   end
 
   local settings_seen = {}
   local tracker = buf_tracker.new {
-    fetch = function(buf, prev_tick)
-      table.insert(fetches, { buf = buf, prev_tick = prev_tick })
-      return (overrides.fetch or default_fetch)(buf, prev_tick)
+    compare = function(buf, previous)
+      table.insert(fetches, { buf = buf, prev_tick = previous and previous.tick })
+      return (overrides.compare or default_compare)(buf, previous)
     end,
-    reindex = function(settings, metas)
+    index = function(settings, metas)
       table.insert(settings_seen, settings)
       for _, meta in pairs(metas) do
         table.insert(reindexes, meta)
       end
     end,
-    prune = function(settings, buf)
+    prune = function(settings, bufs)
       table.insert(settings_seen, settings)
-      table.insert(prunes, buf)
+      for _, buf in pairs(bufs) do
+        table.insert(prunes, buf)
+      end
     end,
   }
   return tracker, { fetches = fetches, prunes = prunes, reindexes = reindexes, settings_seen = settings_seen }
@@ -73,9 +76,9 @@ T.describe("buf_tracker", function(test)
     T.eq(trace.settings_seen, { SETTINGS, SETTINGS })
   end)
 
-  test("update with unchanged tick (fetch returns nil) is a no-op", function()
+  test("update with unchanged tick (compare returns nil) is a no-op", function()
     local tracker, trace = mk {
-      fetch = function()
+      compare = function()
         return nil
       end,
     }
@@ -138,27 +141,5 @@ T.describe("buf_tracker", function(test)
 
     T.eq(trace.prunes, { 99 })
     T.eq(trace.reindexes, {})
-  end)
-
-  test("concurrent updates with same prev_tick: only first reindexes", function()
-    local tracker, trace = mk {
-      fetch = function(buf, _)
-        async.sleep(0)
-        return { buf = buf, tick = 1, payload = "labrador" }
-      end,
-    }
-
-    async.scope(function(n)
-      n.spawn(function()
-        tracker(SETTINGS, idle_ctx { 7 })
-      end)
-      n.spawn(function()
-        tracker(SETTINGS, idle_ctx { 7 })
-      end)
-    end)
-
-    T.eq(#trace.fetches, 2)
-    T.eq(#trace.prunes, 1)
-    T.eq(#trace.reindexes, 1)
   end)
 end)

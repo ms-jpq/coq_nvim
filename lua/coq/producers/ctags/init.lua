@@ -25,15 +25,16 @@ end
 
 local M = {}
 
----@class ctags.Meta: buf_tracker.Meta
+---@class ctags.Meta
 ---@field buf integer
+---@field tick integer
 ---@field filename string
 
 ---@param buf integer
----@param prev_mtime? integer
+---@param previous? ctags.Meta
 ---@return ctags.Meta?
-M.buffer_meta = function(buf, prev_mtime)
-  if not vim.api.nvim_buf_is_valid(buf) then
+M.buffer_meta = function(buf, previous)
+  if not util.is_live(buf) then
     return nil
   end
   local filename = vim.api.nvim_buf_get_name(buf)
@@ -45,20 +46,17 @@ M.buffer_meta = function(buf, prev_mtime)
     return nil
   end
   local mtime = (st.mtime.sec or 0) * 1000000000 + (st.mtime.nsec or 0)
-  if prev_mtime and mtime <= prev_mtime then
+  if previous and mtime <= previous.tick then
     return nil
   end
   return { buf = buf, tick = mtime, filename = filename }
 end
 
----@type table<integer, string>
-local filenames_by_buf = {}
-
 local tracker = buf_tracker.new {
   compare = function(buf, previous)
     return worker.main(function(...)
       return require("coq.producers.ctags").buffer_meta(...)
-    end, buf, previous and previous.tick)
+    end, buf, previous)
   end,
   index = function(settings, metas)
     for _, meta in pairs(metas) do

@@ -10,8 +10,9 @@ local tokens = require "coq.lib.index.tokens"
 local util = require "coq.producers.util"
 local worker = require "coq.lib.worker"
 
----@class buffer.Meta : buf_tracker.Meta
+---@class buffer.Meta
 ---@field buf integer
+---@field tick integer
 ---@field lines? string[]
 ---@field filetype string
 ---@field filename string
@@ -31,16 +32,15 @@ local buffer_lines = function(buf)
 end
 
 ---@param buf integer
----@param prev_tick? integer
+---@param previous? buffer.Meta
 ---@return buffer.Meta?
-M.buffer_meta = function(buf, prev_tick)
-  atools.scheduled()
-  if not vim.api.nvim_buf_is_valid(buf) or not vim.api.nvim_buf_is_loaded(buf) then
+M.buffer_meta = function(buf, previous)
+  if not util.is_live(buf) then
     return nil
   end
 
   local tick = vim.b[buf].changedtick
-  if tick == prev_tick then
+  if previous and tick == previous.tick then
     return nil
   end
 
@@ -60,7 +60,7 @@ local tracker = buf_tracker.new {
   compare = function(buf, previous)
     return worker.main(function(...)
       return require("coq.producers.buffers").buffer_meta(...)
-    end, buf, previous and previous.tick)
+    end, buf, previous)
   end,
   index = function(settings, metas)
     for _, meta in pairs(metas) do

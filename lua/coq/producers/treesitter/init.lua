@@ -1,5 +1,4 @@
 local async = require "coq.lib.async"
-local atools = require "coq.lib.atools"
 local buf_tracker = require "coq.lib.producers.buf_tracker"
 local index_m = require "coq.producers.treesitter.index"
 local lib = require "coq.lib"
@@ -9,8 +8,9 @@ local txt = require "coq.lib.text"
 local util = require "coq.producers.util"
 local worker = require "coq.lib.worker"
 
----@class treesitter.Meta : buf_tracker.Meta
+---@class treesitter.Meta
 ---@field buf integer
+---@field tick integer
 ---@field filetype string
 ---@field filename string
 
@@ -19,16 +19,15 @@ local index = util.once(index_m.new)
 local M = {}
 
 ---@param buf integer
----@param prev_tick? integer
+---@param previous? treesitter.Meta
 ---@return treesitter.Meta?
-M.buffer_meta = function(buf, prev_tick)
-  atools.scheduled()
-  if not vim.api.nvim_buf_is_valid(buf) or not vim.api.nvim_buf_is_loaded(buf) then
+M.buffer_meta = function(buf, previous)
+  if not util.is_live(buf) then
     return nil
   end
 
   local tick = vim.b[buf].changedtick
-  if tick == prev_tick then
+  if previous and tick == previous.tick then
     return nil
   end
 
@@ -44,7 +43,7 @@ local tracker = buf_tracker.new {
   compare = function(buf, previous)
     return worker.main(function(...)
       return require("coq.producers.treesitter").buffer_meta(...)
-    end, buf, previous and previous.tick)
+    end, buf, previous)
   end,
   index = function(settings, metas)
     for _, meta in pairs(metas) do
