@@ -7,7 +7,7 @@ local M = {}
 ---@param is_windows boolean
 ---@param path_seps string[]
 ---@return lib.Set<string>
-local os_seps = function(is_windows, path_seps)
+M._seps = function(is_windows, path_seps)
   local seps = set.new(is_windows and { "/", "\\" } or { "/" })
 
   local filtered = {}
@@ -23,7 +23,7 @@ end
 ---@param is_windows boolean
 ---@param separators lib.Set<string>
 ---@return lib.Iterator<string>
-local patterns = function(is_windows, separators)
+M._patterns = function(is_windows, separators)
   local heads = function()
     return coroutine.wrap(function()
       coroutine.yield "%.%."
@@ -56,7 +56,7 @@ end
 ---@param env table<string, string>
 ---@param token string
 ---@return string
-local expand_env = function(is_windows, env, token)
+M._expand_env = function(is_windows, env, token)
   local braced, b_rest = string.match(token, "^%${([%w_]+)}(.*)")
   if braced and env[braced] then
     return env[braced] .. b_rest
@@ -83,7 +83,7 @@ end
 ---@param token string
 ---@param separators lib.Set<string>
 ---@return string
-local expand_head = function(is_windows, home, env, token, separators)
+M._expand_head = function(is_windows, home, env, token, separators)
   local c1 = string.sub(token, 1, 1)
   if c1 == "~" then
     local rest = string.sub(token, 2)
@@ -92,14 +92,14 @@ local expand_head = function(is_windows, home, env, token, separators)
       return home .. rest
     end
   end
-  return expand_env(is_windows, env, token)
+  return M._expand_env(is_windows, env, token)
 end
 
 ---@param is_windows boolean
 ---@param separators lib.Set<string>
 ---@param path string
 ---@return boolean
-local is_absolute = function(is_windows, separators, path)
+M._is_absolute = function(is_windows, separators, path)
   local c1 = string.sub(path, 1, 1)
   if separators[c1] then
     return true
@@ -111,7 +111,7 @@ end
 ---@param path string
 ---@return string? dir
 ---@return string rhs
-local split_at_last_sep = function(separators, path)
+M._split_at_last_sep = function(separators, path)
   for i = #path, 1, -1 do
     if separators[string.sub(path, i, i)] then
       return string.sub(path, 1, i), string.sub(path, i + 1)
@@ -124,10 +124,10 @@ end
 ---@param separators lib.Set<string>
 ---@param line_before string
 ---@return fun(): integer?, string?
-local find_starts = function(is_windows, separators, line_before)
+M._find_starts = function(is_windows, separators, line_before)
   return coroutine.wrap(function()
     local seen, positions = {}, {}
-    for pat in patterns(is_windows, separators) do
+    for pat in M._patterns(is_windows, separators) do
       local init = 1
       while init <= #line_before do
         local s, _, pos = string.find(line_before, pat, init)
@@ -170,12 +170,12 @@ M.candidates = function(line_before, opts)
   local is_windows = opts.is_windows
   local env = opts.env
   local home = opts.home
-  local separators = os_seps(is_windows, opts.path_seps)
+  local separators = M._seps(is_windows, opts.path_seps)
 
   return coroutine.wrap(function()
-    for pos, token in find_starts(is_windows, separators, line_before) do
-      local expanded = expand_head(is_windows, home, env, token, separators)
-      local resolved, partial = split_at_last_sep(separators, expanded)
+    for pos, token in M._find_starts(is_windows, separators, line_before) do
+      local expanded = M._expand_head(is_windows, home, env, token, separators)
+      local resolved, partial = M._split_at_last_sep(separators, expanded)
 
       if resolved then
         local literal = string.sub(token, 1, #token - #partial)
@@ -184,22 +184,12 @@ M.candidates = function(line_before, opts)
           literal_directory = literal,
           local_sep = string.sub(literal, -1),
           partial = partial,
-          absolute = is_absolute(is_windows, separators, resolved),
+          absolute = M._is_absolute(is_windows, separators, resolved),
           start = pos - 1,
         }
       end
     end
   end)
 end
-
-M._internal = {
-  seps = os_seps,
-  patterns = patterns,
-  find_starts = find_starts,
-  expand_env = expand_env,
-  expand_head = expand_head,
-  is_absolute = is_absolute,
-  split_at_last_sep = split_at_last_sep,
-}
 
 return M

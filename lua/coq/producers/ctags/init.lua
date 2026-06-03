@@ -1,7 +1,7 @@
 local async = require "coq.lib.async"
 local atools = require "coq.lib.atools"
 local buf_tracker = require "coq.lib.producers.buf_tracker"
-local fs = require "coq.producers.fs"
+local path_fmt = require "coq.producers.path_fmt"
 local index_m = require "coq.producers.ctags.index"
 local parse = require "coq.producers.ctags.parse"
 local producer = require "coq.lib.producers"
@@ -94,7 +94,7 @@ end
 ---@return lib.Iterator<string>
 local doc_iter = function(opts, ctx, tag)
   return coroutine.wrap(function()
-    coroutine.yield(fs.fmt_path(ctx.cwd, tag.filename, ctx.filename) .. ":" .. tag.line)
+    coroutine.yield(path_fmt.fmt(ctx.cwd, tag.filename, ctx.filename) .. ":" .. tag.line)
 
     if tag.scopeKind and tag.scope then
       coroutine.yield(tag.scopeKind .. opts.path_sep .. tag.scope .. opts.parent_scope)

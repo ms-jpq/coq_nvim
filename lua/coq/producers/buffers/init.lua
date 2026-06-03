@@ -2,7 +2,7 @@ local async = require "coq.lib.async"
 local atools = require "coq.lib.atools"
 local buf_tracker = require "coq.lib.producers.buf_tracker"
 local context = require "coq.lib.context"
-local fs = require "coq.producers.fs"
+local path_fmt = require "coq.producers.path_fmt"
 local index_m = require "coq.producers.buffers.index"
 local lib = require "coq.lib"
 local producer = require "coq.lib.producers"
@@ -67,7 +67,7 @@ local doc_iter = function(opts, ctx, item)
       coroutine.yield(item.filetype .. opts.parent_scope)
     end
     if item.filename ~= "" then
-      coroutine.yield(fs.fmt_path(ctx.cwd, item.filename, ctx.filename))
+      coroutine.yield(path_fmt.fmt(ctx.cwd, item.filename, ctx.filename))
     end
   end)
 end

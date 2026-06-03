@@ -1,6 +1,6 @@
 local async = require "coq.lib.async"
 local atools = require "coq.lib.atools"
-local fs = require "coq.producers.fs"
+local path_fmt = require "coq.producers.path_fmt"
 local itertools = require "coq.lib.itertools"
 local lib = require "coq.lib"
 local txt = require "coq.lib.text"
@@ -42,7 +42,7 @@ local dir_preview = function(opts, cwd, path)
     defer(close)
     for name, kind in iter do
       local full = vim.fs.joinpath(path, name)
-      local rendered = cwd and fs.fmt_path(cwd, full) or name
+      local rendered = cwd and path_fmt.fmt(cwd, full) or name
       table.insert(entries, rendered .. (kind == "directory" and "/" or ""))
     end
   end)

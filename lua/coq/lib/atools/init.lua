@@ -1,7 +1,8 @@
 local async = require "coq.lib.async"
-local closable = require "coq.lib.closable"
 
 local M = {}
+
+M.fs = require "coq.lib.atools.fs"
 
 ---@type fun()
 M.scheduled = async.awaitify(vim.schedule)
@@ -111,87 +112,6 @@ M.spawn = function(argv, opts)
     proc.stdout = stdout
     proc.stderr = stderr
     return proc
-  end)
-end
-
----@type fun(path: string): uv.error_name?, uv.luv_dir_t?
-local fs_opendir = async.awaitify(vim.uv.fs_opendir)
----@type fun(dir: uv.luv_dir_t): uv.error_name?, boolean?
-local fs_closedir = async.awaitify(vim.uv.fs_closedir)
----@type fun(dir: uv.luv_dir_t): uv.error_name?, { name: string, type: string }[]?
-local fs_readdir = async.awaitify(vim.uv.fs_readdir)
-
----@type fun(path: string, flags: string|integer, mode: integer): uv.error_name?, integer?
-local fs_open = async.awaitify(vim.uv.fs_open)
----@type fun(fd: integer): uv.error_name?
-local fs_close = async.awaitify(vim.uv.fs_close)
----@type fun(fd: integer, size: integer, offset: integer): uv.error_name?, string?
-local fs_read = async.awaitify(vim.uv.fs_read)
----@type fun(fd: integer): uv.error_name?, uv.fs_stat.result?
-local fs_fstat = async.awaitify(vim.uv.fs_fstat)
-
-M.fs = {
-  ---@type fun(path: string): uv.error_name?, uv.fs_stat.result?
-  stat = async.awaitify(vim.uv.fs_stat),
-}
-
----@param path string
----@return boolean
-M.fs.is_dir = function(path)
-  local err, st = M.fs.stat(path)
-  return (not err and st and st.type == "directory") or false
-end
-
----@param path string
----@return fun() close
----@return fun(): string?, string? iter
-M.fs.scandir = function(path)
-  return closable.iter(function(defer)
-    local err, dir = fs_opendir(path)
-    if err ~= nil or dir == nil then
-      return
-    end
-    defer(function()
-      fs_closedir(dir)
-    end)
-
-    while true do
-      local e, entries = fs_readdir(dir)
-      if e ~= nil or entries == nil or #entries == 0 then
-        return
-      end
-      for _, entry in pairs(entries) do
-        coroutine.yield(entry.name, entry.type)
-      end
-    end
-  end)
-end
-
----@param path string
----@return fun() close
----@return lib.Iterator<string> iter
-M.fs.scanfile = function(path)
-  return closable.iter(function(defer)
-    local e1, fd = fs_open(path, "r", 438)
-    if e1 ~= nil or fd == nil then
-      return
-    end
-    defer(function()
-      fs_close(fd)
-    end)
-
-    local e2, st = fs_fstat(fd)
-    if e2 ~= nil or st == nil then
-      return
-    end
-
-    while true do
-      local e3, data = fs_read(fd, st.blksize, -1)
-      if e3 ~= nil or data == nil or #data == 0 then
-        return
-      end
-      coroutine.yield(data)
-    end
   end)
 end
 

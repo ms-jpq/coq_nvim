@@ -1,7 +1,7 @@
 local async = require "coq.lib.async"
 local atools = require "coq.lib.atools"
 local buf_tracker = require "coq.lib.producers.buf_tracker"
-local fs = require "coq.producers.fs"
+local path_fmt = require "coq.producers.path_fmt"
 local index_m = require "coq.producers.treesitter.index"
 local lib = require "coq.lib"
 local producer = require "coq.lib.producers"
@@ -123,7 +123,7 @@ local doc_iter = function(opts, ctx, item)
     local clhs, crhs = unpack(ctx.comment)
     local r_lo, r_hi = unpack(item.range)
 
-    local pos = fs.fmt_path(ctx.cwd, item.filename, ctx.filename)
+    local pos = path_fmt.fmt(ctx.cwd, item.filename, ctx.filename)
     local range_str = ":" .. r_lo .. (r_hi ~= r_lo and ("-" .. r_hi) or "")
     coroutine.yield(clhs .. pos .. range_str .. opts.path_sep .. crhs)
 
