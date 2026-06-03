@@ -1,9 +1,9 @@
 local async = require "coq.lib.async"
 local atools = require "coq.lib.atools"
 local buf_tracker = require "coq.lib.producers.buf_tracker"
-local path_fmt = require "coq.producers.path_fmt"
 local index_m = require "coq.producers.treesitter.index"
 local lib = require "coq.lib"
+local path_fmt = require "coq.producers.path_fmt"
 local producer = require "coq.lib.producers"
 local txt = require "coq.lib.text"
 local util = require "coq.producers.util"
@@ -41,12 +41,12 @@ M.buffer_meta = function(buf, prev_tick)
 end
 
 local tracker = buf_tracker.new {
-  fetch = function(buf, prev_tick)
+  compare = function(buf, previous)
     return worker.main(function(...)
       return require("coq.producers.treesitter").buffer_meta(...)
-    end, buf, prev_tick)
+    end, buf, previous and previous.tick)
   end,
-  reindex = function(settings, metas)
+  index = function(settings, metas)
     for _, meta in pairs(metas) do
       async.sleep(0)
       lib.scope(function(defer)
@@ -54,7 +54,9 @@ local tracker = buf_tracker.new {
           return require("coq.producers.treesitter.request").query(...)
         end, meta.buf)
         defer(close)
-        for payload in stream --[[@as lib.Iterator<treesitter.Payload>]] do
+        for payload in
+          stream --[[@as lib.Iterator<treesitter.Payload>]]
+        do
           if type(payload.text) == "string" and payload.text ~= "" then
             index(settings).insert {
               buf = meta.buf,
@@ -71,8 +73,10 @@ local tracker = buf_tracker.new {
       end)
     end
   end,
-  prune = function(settings, buf)
-    index(settings).prune { buf = buf }
+  prune = function(settings, bufs)
+    for _, buf in pairs(bufs) do
+      index(settings).prune { buf = buf }
+    end
   end,
 }
 

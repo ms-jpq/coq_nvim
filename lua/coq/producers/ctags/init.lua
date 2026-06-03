@@ -55,12 +55,12 @@ end
 local filenames_by_buf = {}
 
 local tracker = buf_tracker.new {
-  fetch = function(buf, prev_mtime)
+  compare = function(buf, previous)
     return worker.main(function(...)
       return require("coq.producers.ctags").buffer_meta(...)
-    end, buf, prev_mtime)
+    end, buf, previous and previous.tick)
   end,
-  reindex = function(settings, metas)
+  index = function(settings, metas)
     for _, meta in pairs(metas) do
     end
   end,

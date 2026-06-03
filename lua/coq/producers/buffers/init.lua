@@ -2,9 +2,9 @@ local async = require "coq.lib.async"
 local atools = require "coq.lib.atools"
 local buf_tracker = require "coq.lib.producers.buf_tracker"
 local context = require "coq.lib.context"
-local path_fmt = require "coq.producers.path_fmt"
 local index_m = require "coq.producers.buffers.index"
 local lib = require "coq.lib"
+local path_fmt = require "coq.producers.path_fmt"
 local producer = require "coq.lib.producers"
 local tokens = require "coq.lib.index.tokens"
 local util = require "coq.producers.util"
@@ -35,7 +35,6 @@ end
 ---@return buffer.Meta?
 M.buffer_meta = function(buf, prev_tick)
   atools.scheduled()
-
   if not vim.api.nvim_buf_is_valid(buf) or not vim.api.nvim_buf_is_loaded(buf) then
     return nil
   end
@@ -57,28 +56,13 @@ M.buffer_meta = function(buf, prev_tick)
   }
 end
 
----@param opts config.BuffersClient
----@param ctx ctx.full
----@param item buffer.Item
----@return lib.Iterator<string>
-local doc_iter = function(opts, ctx, item)
-  return coroutine.wrap(function()
-    if not opts.same_filetype and item.filetype ~= "" then
-      coroutine.yield(item.filetype .. opts.parent_scope)
-    end
-    if item.filename ~= "" then
-      coroutine.yield(path_fmt.fmt(ctx.cwd, item.filename, ctx.filename))
-    end
-  end)
-end
-
 local tracker = buf_tracker.new {
-  fetch = function(buf, prev_tick)
+  compare = function(buf, previous)
     return worker.main(function(...)
       return require("coq.producers.buffers").buffer_meta(...)
-    end, buf, prev_tick)
+    end, buf, previous and previous.tick)
   end,
-  reindex = function(settings, metas)
+  index = function(settings, metas)
     for _, meta in pairs(metas) do
       async.sleep(0)
       local kw = tokens.parse_iskeyword(meta.iskeyword)
@@ -106,8 +90,10 @@ local tracker = buf_tracker.new {
       end)
     end
   end,
-  prune = function(settings, buf)
-    index(settings).prune { buf = buf }
+  prune = function(settings, bufs)
+    for _, buf in pairs(bufs) do
+      index(settings).prune { buf = buf }
+    end
   end,
 }
 
@@ -115,6 +101,21 @@ local tracker = buf_tracker.new {
 ---@param idle_ctx idle.Ctx
 M.idle = function(settings, idle_ctx)
   tracker(settings, idle_ctx)
+end
+
+---@param opts config.BuffersClient
+---@param ctx ctx.full
+---@param item buffer.Item
+---@return lib.Iterator<string>
+local doc_iter = function(opts, ctx, item)
+  return coroutine.wrap(function()
+    if not opts.same_filetype and item.filetype ~= "" then
+      coroutine.yield(item.filetype .. opts.parent_scope)
+    end
+    if item.filename ~= "" then
+      coroutine.yield(path_fmt.fmt(ctx.cwd, item.filename, ctx.filename))
+    end
+  end)
 end
 
 ---@param settings config.Settings
