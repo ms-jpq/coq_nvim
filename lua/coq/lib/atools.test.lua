@@ -58,45 +58,35 @@ local drain = function(iter)
   return out
 end
 
-T.describe("atools.fs.lines", function(test)
-  test("yields each line of the file", function()
+T.describe("atools.fs.scanfile", function(test)
+  test("concatenated chunks reproduce file contents", function()
     local path = write_tmp "lil\nspot\nfido"
-    local lines
+    local chunks
     async.scope(function()
-      lines = drain(atools.fs.lines(path))
+      chunks = drain(atools.fs.scanfile(path))
     end)
 
-    T.eq(lines, { "lil", "spot", "fido" })
+    T.eq(table.concat(chunks), "lil\nspot\nfido")
   end)
 
-  test("empty file yields a single empty string", function()
+  test("empty file yields nothing", function()
     local path = write_tmp ""
-    local lines
+    local chunks
     async.scope(function()
-      lines = drain(atools.fs.lines(path))
+      chunks = drain(atools.fs.scanfile(path))
     end)
 
-    T.eq(lines, { "" })
+    T.eq(chunks, {})
   end)
 
-  test("trailing newline yields an empty final line", function()
-    local path = write_tmp "lil\nspot\n"
-    local lines
-    async.scope(function()
-      lines = drain(atools.fs.lines(path))
-    end)
-
-    T.eq(lines, { "lil", "spot", "" })
-  end)
-
-  test("missing file returns a dead iterator", function()
+  test("missing file yields nothing", function()
     local path = vim.fn.tempname() .. "/does-not-exist"
-    local lines
+    local chunks
     async.scope(function()
-      lines = drain(atools.fs.lines(path))
+      chunks = drain(atools.fs.scanfile(path))
     end)
 
-    T.eq(lines, {})
+    T.eq(chunks, {})
   end)
 end)
 

@@ -22,7 +22,7 @@ end
 ---@param ctx ctx.full
 ---@return lib.Iterator<string>
 local collect_bases = function(resolution, ctx)
-  return async.wrap(function()
+  return coroutine.wrap(function()
     for _, r in pairs(resolution) do
       if r == "cwd" then
         coroutine.yield(ctx.cwd)
@@ -37,7 +37,7 @@ end
 ---@param cand paths.parse.Candidate
 ---@return lib.Iterator<string>
 local cand_dirs = function(bases, cand)
-  return async.wrap(function()
+  return coroutine.wrap(function()
     if cand.absolute then
       coroutine.yield(cand.resolved_directory)
       return

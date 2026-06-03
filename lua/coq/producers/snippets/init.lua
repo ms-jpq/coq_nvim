@@ -1,4 +1,3 @@
-local async = require "coq.lib.async"
 local index_m = require "coq.producers.snippets.index"
 local producer = require "coq.lib.producers"
 local txt = require "coq.lib.text"
@@ -26,7 +25,7 @@ end
 ---@param item snippets.Item
 ---@return lib.Iterator<string>
 local doc_lines = function(item)
-  return async.wrap(function()
+  return coroutine.wrap(function()
     local source = (item.doc and item.doc ~= "") and item.doc or item.body
     for line in txt.splitlines(source) do
       coroutine.yield(line)

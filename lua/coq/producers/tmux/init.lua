@@ -126,7 +126,7 @@ end
 ---@param meta tmux.PaneMeta
 ---@return lib.Iterator<string>
 local doc_iter = function(opts, meta)
-  return async.wrap(function()
+  return coroutine.wrap(function()
     if opts.all_sessions then
       coroutine.yield("S: " .. meta.session_name .. opts.parent_scope)
     end

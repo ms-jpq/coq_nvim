@@ -93,7 +93,7 @@ end
 ---@param tag ctags.Item
 ---@return lib.Iterator<string>
 local doc_iter = function(opts, ctx, tag)
-  return async.wrap(function()
+  return coroutine.wrap(function()
     coroutine.yield(fs.fmt_path(ctx.cwd, tag.filename, ctx.filename) .. ":" .. tag.line)
 
     if tag.scopeKind and tag.scope then

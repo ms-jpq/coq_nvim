@@ -1,5 +1,3 @@
-local async = require "coq.lib.async"
-
 local DRIVE_PAT = "^%a:[/\\]"
 
 local M = {}
@@ -13,7 +11,7 @@ end
 ---@param is_windows boolean
 ---@return lib.Iterator<string>
 local patterns = function(is_windows)
-  local pats = async.wrap(function()
+  local pats = coroutine.wrap(function()
     coroutine.yield "%.%."
     coroutine.yield "%."
     coroutine.yield "~"
@@ -30,7 +28,7 @@ local patterns = function(is_windows)
     coroutine.yield ""
   end)
 
-  return async.wrap(function()
+  return coroutine.wrap(function()
     for sep in pairs(seps(is_windows)) do
       for pattern in pats do
         coroutine.yield("()" .. pattern .. sep)
@@ -110,7 +108,7 @@ end
 ---@param line_before string
 ---@return fun(): integer?, string?
 local find_starts = function(is_windows, line_before)
-  return async.wrap(function()
+  return coroutine.wrap(function()
     local seen, positions = {}, {}
     for pat in patterns(is_windows) do
       local init = 1
@@ -155,7 +153,7 @@ M.candidates = function(line_before, opts)
   local env = opts.env
   local home = opts.home
 
-  return async.wrap(function()
+  return coroutine.wrap(function()
     for pos, token in find_starts(is_windows, line_before) do
       local expanded = expand_head(is_windows, home, env, token)
       local resolved, partial = split_at_last_sep(is_windows, expanded)

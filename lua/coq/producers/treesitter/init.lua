@@ -94,7 +94,7 @@ end
 ---@param kind string
 ---@param text string
 local section_iter = function(clhs, crhs, kind, text)
-  return async.wrap(function()
+  return coroutine.wrap(function()
     coroutine.yield(clhs .. kind)
 
     local pending = nil
@@ -116,7 +116,7 @@ end
 ---@param item treesitter.Item
 ---@return lib.Iterator<string>
 local doc_iter = function(opts, ctx, item)
-  return async.wrap(function()
+  return coroutine.wrap(function()
     local clhs, crhs = unpack(ctx.comment)
     local r_lo, r_hi = unpack(item.range)
 

@@ -177,12 +177,9 @@ M.fs.scandir = function(path)
   end)
 end
 
-local LINE_CHUNK = 8192
-local LF, CR = 10, 13
-
 ---@param path string
----@return fun(): string?
-M.fs.lines = function(path)
+---@return lib.Iterator<string>
+M.fs.scanfile = function(path)
   return async.wrap(function()
     lib.scope(function(defer)
       local e1, fd = M.fs.open(path, "r", 438)
@@ -193,47 +190,19 @@ M.fs.lines = function(path)
         M.fs.close(fd)
       end)
 
-      local offset = 0
-      local buf = ""
-      local pos = 1
-
-      local emit = function(final)
-        local n = #buf
-        local i = pos
-        while i <= n do
-          local b = string.byte(buf, i)
-          if b == LF then
-            coroutine.yield(string.sub(buf, pos, i - 1))
-            i = i + 1
-            pos = i
-          elseif b == CR then
-            if i == n and not final then
-              break
-            end
-            local skip = (i < n and string.byte(buf, i + 1) == LF) and 2 or 1
-            coroutine.yield(string.sub(buf, pos, i - 1))
-            i = i + skip
-            pos = i
-          else
-            i = i + 1
-          end
-        end
-        if pos > 1 then
-          buf = string.sub(buf, pos)
-          pos = 1
-        end
+      local e2, st = M.fs.fstat(fd)
+      if e2 ~= nil or st == nil then
+        return
       end
 
+      local offset = 0
       while true do
-        local e2, data = M.fs.read(fd, LINE_CHUNK, offset)
-        if e2 ~= nil or data == nil or #data == 0 then
-          emit(true)
-          coroutine.yield(string.sub(buf, pos))
+        local e3, data = M.fs.read(fd, st.blksize, offset)
+        if e3 ~= nil or data == nil or #data == 0 then
           return
         end
         offset = offset + #data
-        buf = buf .. data
-        emit(false)
+        coroutine.yield(data)
       end
     end)
   end)

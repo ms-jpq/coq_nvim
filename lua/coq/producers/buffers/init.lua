@@ -4,7 +4,6 @@ local buf_tracker = require "coq.lib.producers.buf_tracker"
 local context = require "coq.lib.context"
 local fs = require "coq.producers.fs"
 local index_m = require "coq.producers.buffers.index"
-local itertools = require "coq.lib.itertools"
 local producer = require "coq.lib.producers"
 local tokens = require "coq.lib.index.tokens"
 local util = require "coq.producers.util"
@@ -62,7 +61,7 @@ end
 ---@param item buffer.Item
 ---@return lib.Iterator<string>
 local doc_iter = function(opts, ctx, item)
-  return async.wrap(function()
+  return coroutine.wrap(function()
     if not opts.same_filetype and item.filetype ~= "" then
       coroutine.yield(item.filetype .. opts.parent_scope)
     end
@@ -81,10 +80,11 @@ local tracker = buf_tracker.new {
   reindex = function(settings, infos)
     for _, info in pairs(infos) do
       async.sleep(0)
+
       local kw = tokens.parse_iskeyword(info.iskeyword)
-      local lines = info.lines and vim.iter(info.lines) --[[@as lib.Iterator<string>]]
-        or atools.fs.lines(info.filename)
-      for word in tokens.keywords(kw, itertools.intersperse("\n", lines)) do
+      local text = info.lines and vim.iter { table.concat(info.lines, "\n") } --[[@as lib.Iterator<string>]]
+        or atools.fs.scanfile(info.filename)
+      for word in tokens.keywords(kw, text) do
         index(settings).insert {
           buf = info.buf,
           word = word,

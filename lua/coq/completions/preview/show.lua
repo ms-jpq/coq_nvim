@@ -1,4 +1,3 @@
-local async = require "coq.lib.async"
 local atools = require "coq.lib.atools"
 local lib = require "coq.lib"
 local paths_preview = require "coq.producers.paths.preview"
@@ -10,7 +9,7 @@ local PREVIEW_VAR = "__coq_preview__"
 ---@return string[]
 local md_lines = function(lsp_item)
   return vim
-    .iter(async.wrap(function()
+    .iter(coroutine.wrap(function()
       if lsp_item.detail and lsp_item.detail ~= "" then
         for line in txt.splitlines(lsp_item.detail) do
           coroutine.yield(line)

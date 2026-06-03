@@ -1,4 +1,3 @@
-local async = require "coq.lib.async"
 local atools = require "coq.lib.atools"
 local context = require "coq.lib.context"
 local errs = require "coq.lib.errs"
@@ -46,7 +45,7 @@ local show_ghost = function(ctx, ghost, i)
   local lines = vim.iter(txt.splitlines(text)):totable()
   local first = lhs .. lines[1] .. (#lines == 1 and rhs or "")
   local rest = vim
-    .iter(async.wrap(function()
+    .iter(coroutine.wrap(function()
       for k = 2, #lines do
         local content = lines[k] .. (k == #lines and rhs or "")
         coroutine.yield { { content, ghost.highlight_group } }
