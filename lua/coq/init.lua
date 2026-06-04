@@ -17,6 +17,7 @@ local p_paths = require "coq.producers.paths"
 local p_registers = require "coq.producers.registers"
 local p_snippets = require "coq.producers.snippets"
 local p_tags = require "coq.producers.tags"
+local p_third_party = require "coq.producers.third_party"
 local p_tmux = require "coq.producers.tmux"
 local p_tree_sitter = require "coq.producers.tree_sitter"
 local preview = require "coq.completions.preview"
@@ -75,6 +76,10 @@ local producers = function(clients)
 
     if clients.snippets.enabled then
       coroutine.yield(p_snippets.new())
+    end
+
+    if clients.third_party.enabled then
+      coroutine.yield(p_third_party.new())
     end
   end)
 end
