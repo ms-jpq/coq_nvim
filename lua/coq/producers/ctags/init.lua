@@ -61,20 +61,22 @@ local tracker_of = util.once(function(settings)
         return require("coq.producers.ctags").buffer_meta(...)
       end, buf, previous)
     end,
-    index = function(idle_ctx, metas)
+    reindex = function(idle_ctx, stale, metas)
       local store = cache_of(idle_ctx)
-      for _, m in pairs(metas) do
-        async.sleep(0)
-        for _, tag in pairs(store.fetch(m.filename, m.mtime)) do
-          index_of(settings).insert(tag --[[@as ctags.Item]])
+      for buf, meta in pairs(stale) do
+        if metas[buf] == nil then
+          store.prune(meta.filename)
+          index_of(settings).prune { filename = meta.filename }
         end
       end
-    end,
-    prune = function(idle_ctx, stale)
-      local store = cache_of(idle_ctx)
-      for _, meta in pairs(stale) do
-        store.prune(meta.filename)
-        index_of(settings).prune { filename = meta.filename }
+      for _, m in pairs(metas) do
+        local tags = store.fetch(m.filename, m.mtime)
+        async.sleep(0)
+
+        index_of(settings).prune { filename = m.filename }
+        for _, tag in pairs(tags) do
+          index_of(settings).insert(tag --[[@as ctags.Item]])
+        end
       end
     end,
   }

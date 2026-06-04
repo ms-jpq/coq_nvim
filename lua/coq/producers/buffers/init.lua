@@ -62,12 +62,15 @@ local tracker_of = util.once(function(settings)
         return require("coq.producers.buffers").buffer_meta(...)
       end, buf, previous)
     end,
-    index = function(_, metas)
+    reindex = function(_, stale, metas)
+      for buf in pairs(stale) do
+        if metas[buf] == nil then
+          index_of(settings).prune { buf = buf }
+        end
+      end
       for buf, meta in pairs(metas) do
-        async.sleep(0)
         local kw = tokens.parse_iskeyword(meta.iskeyword)
-
-        lib.scope(function(defer)
+        local words = lib.scope(function(defer)
           local text = (function()
             if meta.lines then
               return vim.iter { table.concat(meta.lines, "\n") }
@@ -76,23 +79,19 @@ local tracker_of = util.once(function(settings)
             defer(close)
             return iter
           end)()
-
-          for word in
-            tokens.keywords(kw, text --[[@as lib.Iterator<string>]])
-          do
-            index_of(settings).insert {
-              buf = buf,
-              word = word,
-              filetype = meta.filetype,
-              filename = meta.filename,
-            }
-          end
+          return vim.iter(tokens.keywords(kw, text --[[@as lib.Iterator<string>]])):totable()
         end)
-      end
-    end,
-    prune = function(_, stale)
-      for buf in pairs(stale) do
+        async.sleep(0)
+
         index_of(settings).prune { buf = buf }
+        for _, word in pairs(words) do
+          index_of(settings).insert {
+            buf = buf,
+            word = word,
+            filetype = meta.filetype,
+            filename = meta.filename,
+          }
+        end
       end
     end,
   }

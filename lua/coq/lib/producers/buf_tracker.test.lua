@@ -26,16 +26,13 @@ local mk = function(overrides)
       table.insert(fetches, { buf = buf, prev_tick = previous and previous.tick })
       return (overrides.compare or default_compare)(buf, previous)
     end,
-    index = function(_, metas)
-      table.insert(settings_seen, SETTINGS)
-      for _, meta in pairs(metas) do
-        table.insert(reindexes, meta)
-      end
-    end,
-    prune = function(_, stale)
+    reindex = function(_, stale, metas)
       table.insert(settings_seen, SETTINGS)
       for buf, meta in pairs(stale) do
         table.insert(prunes, { buf = buf, meta = meta })
+      end
+      for _, meta in pairs(metas) do
+        table.insert(reindexes, meta)
       end
     end,
   }
@@ -75,7 +72,7 @@ T.describe("buf_tracker", function(test)
     T.eq(trace.prunes, {})
     T.eq(#trace.reindexes, 1)
     T.eq(trace.reindexes[1].buf, 7)
-    T.eq(trace.settings_seen, { SETTINGS, SETTINGS })
+    T.eq(trace.settings_seen, { SETTINGS })
   end)
 
   test("update with unchanged tick (compare returns nil) is a no-op", function()
@@ -159,8 +156,7 @@ T.describe("buf_tracker", function(test)
         table.insert(prev_ticks, previous and previous.tick or 0)
         return { tick = (previous and previous.tick or 0) + 1 }
       end,
-      prune = function() end,
-      index = function(_, computed)
+      reindex = function(_, _, computed)
         if fail and next(computed) then
           fail = false
           error "index cancelled"

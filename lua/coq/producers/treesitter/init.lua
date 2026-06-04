@@ -45,36 +45,37 @@ local tracker_of = util.once(function(settings)
         return require("coq.producers.treesitter").buffer_meta(...)
       end, buf, previous)
     end,
-    index = function(_, metas)
+    reindex = function(_, stale, metas)
+      for buf in pairs(stale) do
+        if metas[buf] == nil then
+          index_of(settings).prune { buf = buf }
+        end
+      end
       for buf, meta in pairs(metas) do
-        async.sleep(0)
-        lib.scope(function(defer)
+        local payloads = lib.scope(function(defer)
           local close, stream = worker.main_stream(function(...)
             return require("coq.producers.treesitter.request").query(...)
           end, buf)
           defer(close)
-          for payload in
-            stream --[[@as lib.Iterator<treesitter.Payload>]]
-          do
-            if type(payload.text) == "string" and payload.text ~= "" then
-              index_of(settings).insert {
-                buf = buf,
-                filetype = meta.filetype,
-                filename = meta.filename,
-                word = payload.text,
-                kind = payload.kind,
-                range = payload.range,
-                parent = payload.parent,
-                grandparent = payload.grandparent,
-              }
-            end
-          end
+          return vim.iter(stream --[[@as lib.Iterator<treesitter.Payload>]]):totable()
         end)
-      end
-    end,
-    prune = function(_, stale)
-      for buf in pairs(stale) do
+        async.sleep(0)
+
         index_of(settings).prune { buf = buf }
+        for _, payload in pairs(payloads) do
+          if type(payload.text) == "string" and payload.text ~= "" then
+            index_of(settings).insert {
+              buf = buf,
+              filetype = meta.filetype,
+              filename = meta.filename,
+              word = payload.text,
+              kind = payload.kind,
+              range = payload.range,
+              parent = payload.parent,
+              grandparent = payload.grandparent,
+            }
+          end
+        end
       end
     end,
   }

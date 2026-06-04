@@ -1,7 +1,6 @@
 ---@class buf_tracker.Spec<S>
 ---@field compare fun(buf: integer, previous?: S): S?
----@field prune fun(idle_ctx: idle.Ctx, stale: table<integer, S?>)
----@field index fun(idle_ctx: idle.Ctx, computed: table<integer, S>)
+---@field reindex fun(idle_ctx: idle.Ctx, stale: table<integer, S?>, computed: table<integer, S>)
 
 local M = {}
 
@@ -27,8 +26,7 @@ M.new = function(spec)
       end
     end
 
-    spec.prune(idle_ctx, stale)
-    spec.index(idle_ctx, computed)
+    spec.reindex(idle_ctx, stale, computed)
 
     for buf in pairs(idle_ctx.removed) do
       state[buf] = nil
