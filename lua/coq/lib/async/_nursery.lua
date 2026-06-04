@@ -34,16 +34,16 @@ M.new = function()
         h.cancel()
       end)
 
-      errs.raise(errors)
+      errs.check_raise(errors)
 
       if next(pending) ~= nil then
         local f = runtime.future()
         table.insert(waiters, f)
         f.await()
-        runtime.check_cancellation()
+        runtime.check_cancel()
       end
 
-      errs.raise(errors)
+      errs.check_raise(errors)
     end)
   end
 

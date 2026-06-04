@@ -51,7 +51,7 @@ end
 
 ---@generic T
 ---@param es T[]
-M.raise = function(es)
+M.check_raise = function(es)
   if #es == 0 then
     return
   end

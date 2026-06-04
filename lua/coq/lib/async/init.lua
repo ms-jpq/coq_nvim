@@ -6,7 +6,7 @@ local runtime = require "coq.lib.async._runtime"
 
 local M = {
   current = runtime.current,
-  check_cancellation = runtime.check_cancellation,
+  check_cancellation = runtime.check_cancel,
   future = runtime.future,
   sleep = runtime.sleep,
   wrap = runtime.wrap,
@@ -78,7 +78,7 @@ M.race = function(fns)
       return ...
     end
     local ret = { f.await() }
-    runtime.check_cancellation()
+    runtime.check_cancel()
     return finish(unpack(ret))
   end)
 end

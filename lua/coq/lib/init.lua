@@ -55,7 +55,7 @@ M.scope = function(fn)
       end
     end
 
-    errs.raise(errors)
+    errs.check_raise(errors)
     return ...
   end
 

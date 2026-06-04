@@ -24,7 +24,7 @@ M.current = function()
   return threads[thread] or M.ROOT
 end
 
-M.check_cancellation = function()
+M.check_cancel = function()
   if M.current().cancelled then
     error(cancel.new(), 0)
   end
@@ -83,7 +83,7 @@ M.future = function()
     if opts and opts.cancel == false then
       return coroutine.yield(setmetatable({ f = f }, AWAIT_EFF))
     end
-    M.check_cancellation()
+    M.check_cancel()
     local h = M.current()
     local ret = { coroutine.yield(setmetatable({ f = f, h = h }, AWAIT_EFF)) }
 
