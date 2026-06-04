@@ -56,7 +56,7 @@ M.bundle = function(src)
         local matches = type(snip.matches) == "table" and snip.matches or {}
         local doc = type(snip.doc) == "string" and snip.doc ~= "" and snip.doc or nil
         local label = type(snip.label) == "string" and snip.label ~= "" and snip.label or nil
-        for _, word in pairs(matches) do
+        for word in pairs(matches) do
           coroutine.yield {
             word = word,
             body = snip.content or "",

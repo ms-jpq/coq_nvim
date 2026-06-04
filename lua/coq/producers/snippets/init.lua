@@ -15,7 +15,18 @@ local cache_of = util.once(function(idle_ctx, loader)
   }
 end)
 
+---@param srcs snippets.Source[]
+---@return string
+local fingerprint = function(srcs)
+  local parts = vim.iter(srcs):map(function(s)
+    return s.path .. ":" .. s.mtime
+  end):totable()
+  table.sort(parts)
+  return table.concat(parts, "|")
+end
+
 local seen_filetypes = {}
+local seen_fp_by_ft = {}
 
 local M = {}
 
@@ -26,9 +37,17 @@ M.idle = function(settings, idle_ctx)
   local store = cache_of(idle_ctx, loader)
 
   local current = {}
+  local current_fp = {}
   local by_ft = {}
   for ft, srcs in pairs(loader.sources()) do
     current[ft] = true
+    local fp = fingerprint(srcs)
+    current_fp[ft] = fp
+
+    if seen_fp_by_ft[ft] and seen_fp_by_ft[ft] ~= fp then
+      store.prune(ft)
+    end
+
     local max_mtime = vim.iter(srcs):fold(0, function(acc, s)
       return math.max(acc, s.mtime)
     end)
@@ -54,6 +73,7 @@ M.idle = function(settings, idle_ctx)
   end
 
   seen_filetypes = current
+  seen_fp_by_ft = current_fp
 end
 
 ---@param item snippets.Item
