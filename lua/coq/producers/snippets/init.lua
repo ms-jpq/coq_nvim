@@ -16,6 +16,8 @@ local cache_of = util.once(function(idle_ctx, loader)
   }
 end)
 
+local seen_filetypes = {}
+
 local M = {}
 
 ---@param settings config.Settings
@@ -24,21 +26,35 @@ M.idle = function(settings, idle_ctx)
   local loader = loader_m.new(settings, idle_ctx.rtps)
   local store = cache_of(idle_ctx, loader)
 
+  local current = {}
   local by_ft = {}
   for ft, srcs in pairs(loader.sources()) do
+    current[ft] = true
     local max_mtime = vim.iter(srcs):fold(0, function(acc, s)
       return math.max(acc, s.mtime)
     end)
     by_ft[ft] = store.fetch(ft, max_mtime)
   end
 
+  for ft in pairs(seen_filetypes) do
+    if not current[ft] then
+      async.sleep(0)
+      index_of(settings).prune { filetype = ft }
+      store.prune(ft)
+    end
+  end
+
   for ft, snips in pairs(by_ft) do
     async.sleep(0)
     index_of(settings).prune { filetype = ft }
-    for _, snip in pairs(snips) do
-      index_of(settings).insert(snip)
+    if snips then
+      for _, snip in pairs(snips) do
+        index_of(settings).insert(snip)
+      end
     end
   end
+
+  seen_filetypes = current
 end
 
 ---@param item snippets.Item
