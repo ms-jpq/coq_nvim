@@ -29,8 +29,8 @@ local mk = function(overrides)
     reindex = function(_, changes)
       table.insert(settings_seen, SETTINGS)
       for buf, change in pairs(changes) do
-        local deleted, prev, curr = unpack(change, 1, 3)
-        if deleted or prev ~= nil then
+        local _, prev, curr = unpack(change, 1, 3)
+        if prev ~= nil then
           table.insert(prunes, { buf = buf, meta = prev })
         end
         if curr ~= nil then

@@ -62,37 +62,39 @@ local tracker_of = util.once(function(settings)
         return require("coq.producers.buffers").buffer_meta(...)
       end, buf, previous)
     end,
-    reindex = function(_, stale, metas)
-      for buf in pairs(stale) do
-        if metas[buf] == nil then
-          index_of(settings).prune { buf = buf }
-        end
-      end
-      for buf, meta in pairs(metas) do
-        local kw = tokens.parse_iskeyword(meta.iskeyword)
-        local words = lib.scope(function(defer)
-          local text = (function()
-            if meta.lines then
-              return vim.iter { table.concat(meta.lines, "\n") }
-            end
-            local close, iter = atools.fs.scanfile(meta.filename)
-            defer(close)
-            return iter
-          end)()
-          return vim.iter(tokens.keywords(kw, text --[[@as lib.Iterator<string>]])):totable()
+    reindex = function(_, changes)
+      lib.scope(function(defer)
+        local close, stream = buf_tracker.merged(changes, function(_, curr)
+          local kw = tokens.parse_iskeyword(curr.iskeyword)
+          return lib.scope(function(d)
+            local text = (function()
+              if curr.lines then
+                return vim.iter { table.concat(curr.lines, "\n") }
+              end
+              local c, iter = atools.fs.scanfile(curr.filename)
+              d(c)
+              return iter
+            end)()
+            return vim.iter(tokens.keywords(kw, text --[[@as lib.Iterator<string>]])):totable()
+          end)
         end)
-        async.sleep(0)
+        defer(close)
 
-        index_of(settings).prune { buf = buf }
-        for _, word in pairs(words) do
-          index_of(settings).insert {
-            buf = buf,
-            word = word,
-            filetype = meta.filetype,
-            filename = meta.filename,
-          }
+        for _, entry in stream do
+          async.sleep(0)
+          index_of(settings).prune { buf = entry.buf }
+          if entry.data then
+            for _, word in pairs(entry.data) do
+              index_of(settings).insert {
+                buf = entry.buf,
+                word = word,
+                filetype = entry.curr.filetype,
+                filename = entry.curr.filename,
+              }
+            end
+          end
         end
-      end
+      end)
     end,
   }
 end)

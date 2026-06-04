@@ -45,38 +45,40 @@ local tracker_of = util.once(function(settings)
         return require("coq.producers.treesitter").buffer_meta(...)
       end, buf, previous)
     end,
-    reindex = function(_, stale, metas)
-      for buf in pairs(stale) do
-        if metas[buf] == nil then
-          index_of(settings).prune { buf = buf }
-        end
-      end
-      for buf, meta in pairs(metas) do
-        local payloads = lib.scope(function(defer)
-          local close, stream = worker.main_stream(function(...)
-            return require("coq.producers.treesitter.request").query(...)
-          end, buf)
-          defer(close)
-          return vim.iter(stream --[[@as lib.Iterator<treesitter.Payload>]]):totable()
+    reindex = function(_, changes)
+      lib.scope(function(defer)
+        local close, stream = buf_tracker.merged(changes, function(buf, _)
+          return lib.scope(function(d)
+            local c, s = worker.main_stream(function(...)
+              return require("coq.producers.treesitter.request").query(...)
+            end, buf)
+            d(c)
+            return vim.iter(s --[[@as lib.Iterator<treesitter.Payload>]]):totable()
+          end)
         end)
-        async.sleep(0)
+        defer(close)
 
-        index_of(settings).prune { buf = buf }
-        for _, payload in pairs(payloads) do
-          if type(payload.text) == "string" and payload.text ~= "" then
-            index_of(settings).insert {
-              buf = buf,
-              filetype = meta.filetype,
-              filename = meta.filename,
-              word = payload.text,
-              kind = payload.kind,
-              range = payload.range,
-              parent = payload.parent,
-              grandparent = payload.grandparent,
-            }
+        for _, entry in stream do
+          async.sleep(0)
+          index_of(settings).prune { buf = entry.buf }
+          if entry.data then
+            for _, payload in pairs(entry.data) do
+              if type(payload.text) == "string" and payload.text ~= "" then
+                index_of(settings).insert {
+                  buf = entry.buf,
+                  filetype = entry.curr.filetype,
+                  filename = entry.curr.filename,
+                  word = payload.text,
+                  kind = payload.kind,
+                  range = payload.range,
+                  parent = payload.parent,
+                  grandparent = payload.grandparent,
+                }
+              end
+            end
           end
         end
-      end
+      end)
     end,
   }
 end)

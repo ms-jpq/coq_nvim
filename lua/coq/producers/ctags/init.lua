@@ -2,6 +2,7 @@ local async = require "coq.lib.async"
 local buf_tracker = require "coq.lib.producers.buf_tracker"
 local fs_cache = require "coq.lib.fs_cache"
 local index_m = require "coq.producers.ctags.index"
+local lib = require "coq.lib"
 local parse = require "coq.producers.ctags.parse"
 local path_fmt = require "coq.producers.path_fmt"
 local producer = require "coq.lib.producers"
@@ -61,22 +62,30 @@ local tracker_of = util.once(function(settings)
         return require("coq.producers.ctags").buffer_meta(...)
       end, buf, previous)
     end,
-    reindex = function(idle_ctx, stale, metas)
+    reindex = function(idle_ctx, changes)
       local store = cache_of(idle_ctx)
-      for buf, meta in pairs(stale) do
-        if metas[buf] == nil then
-          store.prune(meta.filename)
-          index_of(settings).prune { filename = meta.filename }
-        end
-      end
-      for _, m in pairs(metas) do
-        local tags = store.fetch(m.filename, m.mtime)
+      lib.scope(function(defer)
+        local close, stream = buf_tracker.merged(changes, function(_, curr)
+          return store.fetch(curr.filename, curr.mtime)
+        end)
+        defer(close)
 
-        index_of(settings).prune { filename = m.filename }
-        for _, tag in pairs(tags) do
-          index_of(settings).insert(tag --[[@as ctags.Item]])
+        for _, entry in stream do
+          async.sleep(0)
+          local target = (entry.curr and entry.curr.filename) or (entry.prev and entry.prev.filename)
+          if target then
+            if entry.deleted then
+              store.prune(target)
+            end
+            index_of(settings).prune { filename = target }
+            if entry.data then
+              for _, tag in pairs(entry.data) do
+                index_of(settings).insert(tag --[[@as ctags.Item]])
+              end
+            end
+          end
         end
-      end
+      end)
     end,
   }
 end)
