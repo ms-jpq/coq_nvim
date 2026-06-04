@@ -9,7 +9,7 @@ local util = require "coq.lib.channels.util"
 local M = {}
 
 ---@generic T
----@param capacity integer
+---@param capacity number
 ---@return channels.Mpmc<T>
 M.new = function(capacity)
   local que = queue.new()

@@ -1,6 +1,7 @@
 local T = require "coq.lib.test"
 local async = require "coq.lib.async"
 local handle = require "coq.lib.async._handle"
+local mpmc = require "coq.lib.channels.mpmc"
 local runtime = require "coq.lib.async._runtime"
 
 local delayed = function(value, delay)
@@ -148,5 +149,77 @@ T.describe("merge", function(test)
     end)
 
     T.eq(fired, true)
+  end)
+
+  test("accepts a channel pull as an iter", function()
+    local chan = mpmc.new(math.huge)
+    chan.push "spot"
+    chan.push "fido"
+    chan.close()
+
+    local out = {}
+    local _, m = async.merge { chan.pull }
+    for _, v in m do
+      table.insert(out, v)
+    end
+
+    T.eq(out, { "spot", "fido" })
+  end)
+
+  test("merges two channels, interleaved by push order", function()
+    local a, b = mpmc.new(math.huge), mpmc.new(math.huge)
+
+    async.scope(function(n)
+      n.spawn(function()
+        a.push "spot"
+        async.sleep(2 * T.SLOW)
+        b.push "fido"
+        async.sleep(2 * T.SLOW)
+        a.push "rex"
+        a.close()
+        b.close()
+      end)
+
+      n.spawn(function()
+        local out = {}
+        local _, m = async.merge { a.pull, b.pull }
+        for idx, v in m do
+          table.insert(out, { idx, v })
+        end
+        T.eq(out, { { 1, "spot" }, { 2, "fido" }, { 1, "rex" } })
+      end)
+    end)
+  end)
+
+  test("mixes async.wrap iters and channel pulls", function()
+    local chan = mpmc.new(math.huge)
+    chan.push "spot"
+    chan.close()
+
+    local wrapped = async.wrap(function()
+      coroutine.yield "fido"
+    end)
+
+    local out = {}
+    local _, m = async.merge { chan.pull, wrapped }
+    for _, v in m do
+      table.insert(out, v)
+    end
+    table.sort(out)
+
+    T.eq(out, { "fido", "spot" })
+  end)
+
+  test("close unblocks a channel pull waiting on data", function()
+    local chan = mpmc.new(math.huge)
+
+    async.scope(function(n)
+      n.spawn(function()
+        local close, m = async.merge { chan.pull }
+        async.sleep(2 * T.SLOW)
+        close()
+        T.eq(m(), nil)
+      end)
+    end)
   end)
 end)

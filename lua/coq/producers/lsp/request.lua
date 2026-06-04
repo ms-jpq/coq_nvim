@@ -2,6 +2,7 @@ local async = require "coq.lib.async"
 local atools = require "coq.lib.atools"
 local closable = require "coq.lib.closable"
 local lsp_util = require "coq.producers.lsp.util"
+local mpmc = require "coq.lib.channels.mpmc"
 local util = require "coq.producers.util"
 
 ---@class lsp.RequestItem
@@ -53,8 +54,8 @@ end
 ---@param ctx ctx.full
 ---@param td_params lsp.TextDocumentIdentifier
 ---@return fun() close
----@return lib.Iterator<lsp.CompletionItem> iter
-local query_one = function(client, ctx, td_params)
+---@return lib.Iterator<lsp.CompletionItem[]> iter
+local query_1 = function(client, ctx, td_params)
   return closable.iter(function(defer)
     atools.scheduled()
     local token = "coq.lsp." .. client.id .. "." .. next_token_id()
@@ -73,35 +74,41 @@ local query_one = function(client, ctx, td_params)
       partialResultToken = token,
     } --[[@as lsp.CompletionParams]]
 
-    ---@type lsp.CompletionItem[]
-    local partial = {}
+    ---@type channels.Mpmc<lsp.CompletionItem[]>
+    local chan = mpmc.new(math.huge)
+    defer(chan.close)
+
     local autocmd_id = vim.api.nvim_create_autocmd("LspProgress", {
       callback = function(args)
-        if args.data and args.data.client_id == client.id and args.data.params and args.data.params.token == token then
-          for _, item in ipairs(items_of(args.data.params.value)) do
-            table.insert(partial, item)
-          end
+        if args.data.client_id == client.id and args.data.params.token == token then
+          local batch = items_of(args.data.params.value)
+          chan.push(batch)
         end
       end,
     })
     defer(function()
-      pcall(vim.api.nvim_del_autocmd, autocmd_id)
+      vim.api.nvim_del_autocmd(autocmd_id)
     end)
 
-    local err, result = lsp_util.request(client, "textDocument/completion", params, ctx.buf)
+    local final = async.wrap(function()
+      local err, result = lsp_util.request(client, "textDocument/completion", params, ctx.buf)
+      chan.close()
 
-    for _, item in pairs(partial) do
-      coroutine.yield(item)
-    end
+      if not err and result then
+        local incomplete = type(result) == "table" and result.isIncomplete == true
+        if vim.api.nvim_buf_is_valid(ctx.buf) then
+          vim.b[ctx.buf][incomplete_var] = incomplete or nil
+        end
+        local batch = items_of(result)
+        coroutine.yield(batch)
+      end
+    end)
 
-    if not err and result then
-      local incomplete = type(result) == "table" and result.isIncomplete == true
-      if vim.api.nvim_buf_is_valid(ctx.buf) then
-        vim.b[ctx.buf][incomplete_var] = incomplete or nil
-      end
-      for _, item in pairs(items_of(result)) do
-        coroutine.yield(item)
-      end
+    local close, merged = async.merge { chan.pull, final }
+    defer(close)
+
+    for _, batch in merged do
+      coroutine.yield(batch)
     end
   end)
 end
@@ -128,23 +135,24 @@ M.query = function(ignored, ctx)
       .iter(clients)
       :map(function(client)
         return async.wrap(function()
-          local close, items = query_one(client, ctx, td_params)
+          local close, batches = query_1(client, ctx, td_params)
           defer(close)
 
-          local batch = vim
-            .iter(items)
-            :map(function(item)
-              return {
-                client_id = client.id,
-                client_name = client.name,
-                offset_encoding = client.offset_encoding,
-                kind = vim.lsp.protocol.CompletionItemKind[item.kind] or "",
-                item = item,
-              }
-            end)
-            :totable()
-          if #batch > 0 then
-            coroutine.yield(batch)
+          for batch in batches do
+            local acc = vim
+              .iter(batch)
+              :map(function(item)
+                return {
+                  client_id = client.id,
+                  client_name = client.name,
+                  offset_encoding = client.offset_encoding,
+                  kind = vim.lsp.protocol.CompletionItemKind[item.kind] or "",
+                  item = item,
+                }
+              end)
+              :totable()
+
+            coroutine.yield(acc)
           end
         end)
       end)

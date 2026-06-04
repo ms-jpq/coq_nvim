@@ -67,11 +67,7 @@ local open = function(parked, write, message)
     message.kind, message.id = Kind.RESUME, id
     write(message)
 
-    while true do
-      local frame = chan.pull()
-      if frame == nil then
-        return
-      end
+    for frame in chan.pull do
       if frame.status ~= nil then
         terminated = true
         coroutine.yield(frame)
