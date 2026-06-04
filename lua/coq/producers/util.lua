@@ -96,14 +96,15 @@ end
 ---@param path string
 ---@return fun(): producers.Producer<ctx.full>
 M.threaded_module = function(path)
+  local mk = function(method)
+    local src = string.format("return function(...) return require(%q).%s(...) end", path, method)
+    return assert(load(src))()
+  end
+
   return function()
     return producer.threaded {
-      idle = function(...)
-        require(path).idle(...)
-      end,
-      matcher = function(...)
-        require(path).matcher(...)
-      end,
+      idle = mk "idle",
+      matcher = mk "matcher",
     }
   end
 end

@@ -149,14 +149,18 @@ local M = {}
 ---@return lib.Iterator<snippets.Source> iter
 M.list = function(settings, rtps)
   return closable.iter(function(defer)
-    local dirs = vim.iter(user_dirs(settings, rtps)):totable()
-    for _, mk in pairs { bundle, neosnippet, lsp } do
-      local close, iter = mk(dirs)
+    local user = vim.iter(user_dirs(settings, rtps)):totable()
+
+    local emit = function(close, iter)
       defer(close)
       for src in iter do
         coroutine.yield(src)
       end
     end
+
+    emit(bundle(rtps))
+    emit(neosnippet(user))
+    emit(lsp(user))
   end)
 end
 

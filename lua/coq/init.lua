@@ -121,9 +121,7 @@ M.setup = function(opts)
   end)()
 end
 
-if (vim.g.coq_settings or {}).auto_start then
-  M.setup()
-end
+M.setup {}
 
 return setmetatable(M, {
   __call = function()
