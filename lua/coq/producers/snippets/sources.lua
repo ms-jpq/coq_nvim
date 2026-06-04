@@ -1,6 +1,7 @@
 local async = require "coq.lib.async"
 local atools = require "coq.lib.atools"
 local fs_cache = require "coq.lib.fs_cache"
+local itertools = require "coq.lib.itertools"
 
 ---@alias snippets.Kind "bundle" | "neosnippet" | "lsp"
 
@@ -15,23 +16,26 @@ local NEOSNIPPET_EXTS = { snip = true, snippets = true }
 local LSP_EXTS = { json = true }
 
 ---@param settings config.Settings
----@return string[]
-local user_dirs = function(settings)
-  local dirs = {}
-  local user_path = settings.clients.snippets.user_path
-  if user_path and user_path ~= "" then
-    local expanded = vim.fs.normalize(user_path)
-    if atools.fs.readable(expanded) then
-      table.insert(dirs, expanded)
+---@param rtps string[]
+---@return lib.Iterator<string>
+local user_dirs = function(settings, rtps)
+  return async.wrap(function()
+    local user_path = settings.clients.snippets.user_path
+
+    if user_path and user_path ~= "" then
+      local expanded = vim.fs.normalize(user_path)
+      if atools.fs.readable(expanded) then
+        coroutine.yield(expanded)
+      end
     end
-  end
-  for _, rtp in pairs(vim.api.nvim_list_runtime_paths()) do
-    local cand = vim.fs.joinpath(rtp, "coq-user-snippets")
-    if atools.fs.readable(cand) then
-      table.insert(dirs, cand)
+
+    for _, rtp in pairs(rtps) do
+      local cand = vim.fs.joinpath(rtp, "coq-user-snippets")
+      if atools.fs.readable(cand) then
+        coroutine.yield(cand)
+      end
     end
-  end
-  return dirs
+  end)
 end
 
 ---@param dir string
@@ -56,30 +60,15 @@ local stem_of = function(path)
   return (vim.fs.basename(path):gsub("%.[^.]+$", ""))
 end
 
----@param path string
----@return string?
-local read_file = function(path)
-  local close, chunks = atools.fs.scanfile(path)
-  local out = vim.iter(chunks):totable()
-  close()
-  if #out == 0 then
-    return nil
-  end
-  return table.concat(out)
-end
-
-local M = {}
-
----@param _settings config.Settings
+---@param dirs string[]
 ---@return lib.Iterator<snippets.Source>
-M.bundle = function(_settings)
+local bundle = function(dirs)
   return async.wrap(function()
-    for _, rtp in pairs(vim.api.nvim_list_runtime_paths()) do
-      async.sleep(0)
-      local path = vim.fs.joinpath(rtp, BUNDLE_NAME)
+    for _, dir in pairs(dirs) do
+      local path = vim.fs.joinpath(dir, BUNDLE_NAME)
       local mtime = fs_cache.mtime_ns(path)
       if mtime then
-        local body = read_file(path)
+        local body = atools.fs.slurp(path)
         local ok, json = pcall(vim.json.decode, body or "")
         if ok and type(json) == "table" and type(json.snippets) == "table" then
           local ft_set = {}
@@ -102,13 +91,12 @@ M.bundle = function(_settings)
   end)
 end
 
----@param settings config.Settings
+---@param dirs string[]
 ---@return lib.Iterator<snippets.Source>
-M.neosnippet = function(settings)
+local neosnippet = function(dirs)
   return async.wrap(function()
-    for _, dir in pairs(user_dirs(settings)) do
+    for _, dir in pairs(dirs) do
       for path in walk_files(dir, NEOSNIPPET_EXTS) do
-        async.sleep(0)
         local mtime = fs_cache.mtime_ns(path)
         if mtime then
           coroutine.yield {
@@ -123,13 +111,12 @@ M.neosnippet = function(settings)
   end)
 end
 
----@param settings config.Settings
+---@param dirs string[]
 ---@return lib.Iterator<snippets.Source>
-M.lsp = function(settings)
+local lsp = function(dirs)
   return async.wrap(function()
-    for _, dir in pairs(user_dirs(settings)) do
+    for _, dir in pairs(dirs) do
       for path in walk_files(dir, LSP_EXTS) do
-        async.sleep(0)
         local mtime = fs_cache.mtime_ns(path)
         if mtime then
           coroutine.yield {
@@ -142,6 +129,16 @@ M.lsp = function(settings)
       end
     end
   end)
+end
+
+local M = {}
+
+---@param settings config.Settings
+---@param rtps string[]
+---@return lib.Iterator<snippets.Source>
+M.list = function(settings, rtps)
+  local dirs = vim.iter(user_dirs(settings, rtps)):totable()
+  return itertools.chain(bundle(dirs), neosnippet(dirs), lsp(dirs))
 end
 
 return M

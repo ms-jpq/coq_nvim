@@ -1,5 +1,4 @@
 local atools = require "coq.lib.atools"
-local lib = require "coq.lib"
 
 local M = {}
 
@@ -47,16 +46,6 @@ M.decode = function(s)
   return value
 end
 
----@param path string
----@return string?
-local read_all = function(path)
-  return lib.scope(function(defer)
-    local close, iter = atools.fs.scanfile(path)
-    defer(close)
-    local chunks = vim.iter(iter):totable()
-    return #chunks > 0 and table.concat(chunks) or nil
-  end)
-end
 
 ---@param path string
 ---@param data string
@@ -66,7 +55,7 @@ local write_atomic = function(path, data)
     return false
   end
   local tmp = path .. ".tmp"
-  if atools.fs.writefile(tmp, data) then
+  if atools.fs.spit(tmp, data) then
     return false
   end
   return atools.fs.rename(tmp, path) == nil
@@ -87,7 +76,7 @@ M.new = function(spec)
       local valid = cached_mtime and cached_mtime >= mtime
 
       if valid then
-        local raw = read_all(path)
+        local raw = atools.fs.slurp(path)
         if raw then
           local cached = M.decode(raw)
           if cached ~= nil then

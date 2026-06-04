@@ -76,14 +76,14 @@ M.word_search = function(settings)
   end
 end
 
----@generic A, R
----@param fn fun(arg: A): R
----@return fun(arg?: A): R
+---@generic R
+---@param fn fun(...): R
+---@return fun(...): R
 M.once = function(fn)
   local cached = nil
-  return function(arg)
+  return function(...)
     if cached == nil then
-      cached = fn(arg)
+      cached = fn(...)
     end
     return cached
   end

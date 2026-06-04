@@ -57,6 +57,7 @@ local idle_ctx = function(updated, removed)
     ---@diagnostic disable-next-line: missing-fields
     ctx = {},
     cache_dir = "/tmp",
+    rtps = {},
     updated = u,
     removed = r,
   } --[[@as idle.Ctx]]

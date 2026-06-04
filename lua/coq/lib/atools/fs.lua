@@ -135,9 +135,20 @@ M.scandir = function(path)
 end
 
 ---@param path string
+---@return string?
+M.slurp = function(path)
+  return lib.scope(function(defer)
+    local close, iter = M.scanfile(path)
+    defer(close)
+    local chunks = vim.iter(iter):totable()
+    return #chunks > 0 and table.concat(chunks) or nil
+  end)
+end
+
+---@param path string
 ---@param data string
 ---@return uv.error_name?
-M.writefile = function(path, data)
+M.spit = function(path, data)
   return lib.scope(function(defer)
     local e1, fd = fs_open(path, "w", MODE_RW)
     if e1 or not fd then
