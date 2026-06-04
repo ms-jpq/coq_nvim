@@ -2,11 +2,11 @@ local async = require "coq.lib.async"
 local buf_tracker = require "coq.lib.producers.buf_tracker"
 local buffers = require "coq.lib.buffers"
 local fs_cache = require "coq.lib.fs_cache"
-local index_m = require "coq.producers.ctags.index"
+local index_m = require "coq.producers.tags.index"
 local lib = require "coq.lib"
-local parse = require "coq.producers.ctags.parse"
+local parse = require "coq.producers.tags.parse"
 local path_fmt = require "coq.producers.path_fmt"
-local run = require "coq.producers.ctags.run"
+local run = require "coq.producers.tags.run"
 local util = require "coq.producers.util"
 local worker = require "coq.lib.worker"
 
@@ -59,7 +59,7 @@ local tracker_of = util.once(function(settings)
   return buf_tracker.new {
     compare = function(buf, previous)
       return worker.main(function(...)
-        return require("coq.producers.ctags").buffer_meta(...)
+        return require("coq.producers.tags").buffer_meta(...)
       end, buf, previous)
     end,
     reindex = function(idle_ctx, changes)
@@ -155,6 +155,6 @@ M.matcher = util.batched(function(settings, ctx)
   end
 end)
 
-M.new = util.threaded_module "ctags"
+M.new = util.threaded_module "tags"
 
 return M

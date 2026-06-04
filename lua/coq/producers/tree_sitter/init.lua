@@ -1,7 +1,7 @@
 local async = require "coq.lib.async"
 local buf_tracker = require "coq.lib.producers.buf_tracker"
 local buffers = require "coq.lib.buffers"
-local index_m = require "coq.producers.treesitter.index"
+local index_m = require "coq.producers.tree_sitter.index"
 local lib = require "coq.lib"
 local path_fmt = require "coq.producers.path_fmt"
 local txt = require "coq.lib.text"
@@ -42,7 +42,7 @@ local tracker_of = util.once(function(settings)
   return buf_tracker.new {
     compare = function(buf, previous)
       return worker.main(function(...)
-        return require("coq.producers.treesitter").buffer_meta(...)
+        return require("coq.producers.tree_sitter").buffer_meta(...)
       end, buf, previous)
     end,
     reindex = function(_, changes)
@@ -50,7 +50,7 @@ local tracker_of = util.once(function(settings)
         local close, stream = buf_tracker.merged(changes, function(buf, _)
           return lib.scope(function(d)
             local c, s = worker.main_stream(function(...)
-              return require("coq.producers.treesitter.request").query(...)
+              return require("coq.producers.tree_sitter.request").query(...)
             end, buf)
             d(c)
             return vim.iter(s --[[@as lib.Iterator<treesitter.Payload>]]):totable()
@@ -173,6 +173,6 @@ M.matcher = util.batched(function(settings, ctx)
   end
 end)
 
-M.new = util.threaded_module "treesitter"
+M.new = util.threaded_module "tree_sitter"
 
 return M

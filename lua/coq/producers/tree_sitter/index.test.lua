@@ -1,6 +1,6 @@
 local T = require "coq.lib.test"
 local config = require "coq.config"
-local index_m = require "coq.producers.treesitter.index"
+local index_m = require "coq.producers.tree_sitter.index"
 
 local settings = config.merged()
 

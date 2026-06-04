@@ -12,13 +12,13 @@ local insertion = require "coq.completions.insertion"
 local instrument = require "coq.lib.producers.instrument"
 local nvim_options = require "coq.nvim_options"
 local p_buffers = require "coq.producers.buffers"
-local p_ctags = require "coq.producers.ctags"
+local p_tags = require "coq.producers.tags"
 local p_lsp = require "coq.producers.lsp"
 local p_paths = require "coq.producers.paths"
 local p_registers = require "coq.producers.registers"
 local p_snippets = require "coq.producers.snippets"
 local p_tmux = require "coq.producers.tmux"
-local p_treesitter = require "coq.producers.treesitter"
+local p_tree_sitter = require "coq.producers.tree_sitter"
 local preview = require "coq.completions.preview"
 local resolver_m = require "coq.completions.resolver"
 local statsd_m = require "coq.lib.index.rank.statsd"
@@ -62,7 +62,7 @@ local producers = function(clients)
     end
 
     if clients.tree_sitter.enabled then
-      coroutine.yield(p_treesitter.new())
+      coroutine.yield(p_tree_sitter.new())
     end
 
     if clients.lsp.enabled then
@@ -70,7 +70,7 @@ local producers = function(clients)
     end
 
     if clients.tags.enabled then
-      coroutine.yield(p_ctags.new())
+      coroutine.yield(p_tags.new())
     end
 
     if clients.snippets.enabled then

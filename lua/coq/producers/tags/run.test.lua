@@ -1,7 +1,7 @@
 local T = require "coq.lib.test"
 local async = require "coq.lib.async"
-local parse = require "coq.producers.ctags.parse"
-local run = require "coq.producers.ctags.run"
+local parse = require "coq.producers.tags.parse"
+local run = require "coq.producers.tags.run"
 
 ---@param contents string
 ---@param suffix string
