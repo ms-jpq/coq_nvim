@@ -1,3 +1,4 @@
+local async = require "coq.lib.async"
 local fs_cache = require "coq.lib.fs_cache"
 local index_m = require "coq.producers.snippets.index"
 local loader_m = require "coq.producers.snippets.loader"
@@ -23,12 +24,18 @@ M.idle = function(settings, idle_ctx)
   local loader = loader_m.new(settings, idle_ctx.rtps)
   local store = cache_of(idle_ctx, loader)
 
+  local by_ft = {}
   for ft, srcs in pairs(loader.sources()) do
     local max_mtime = vim.iter(srcs):fold(0, function(acc, s)
       return math.max(acc, s.mtime)
     end)
+    by_ft[ft] = store.fetch(ft, max_mtime)
+  end
 
-    for _, snip in pairs(store.fetch(ft, max_mtime)) do
+  for ft, snips in pairs(by_ft) do
+    async.sleep(0)
+    index_of(settings).prune { filetype = ft }
+    for _, snip in pairs(snips) do
       index_of(settings).insert(snip)
     end
   end

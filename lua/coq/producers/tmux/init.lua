@@ -1,10 +1,13 @@
 local async = require "coq.lib.async"
 local atools = require "coq.lib.atools"
 local index_m = require "coq.producers.tmux.index"
+local lib = require "coq.lib"
 local producer = require "coq.lib.producers"
 local tokens = require "coq.lib.index.tokens"
 local txt = require "coq.lib.text"
 local util = require "coq.producers.util"
+
+local TMUX_PANE = vim.uv.os_environ().TMUX_PANE
 
 local SEP = "\30"
 local PANE_FMT = table.concat({
@@ -65,63 +68,78 @@ local pane_capture = function(pane)
   return proc.stdout
 end
 
+---@class tmux.Work
+---@field id string
+---@field pane tmux.Pane
+---@field text string?
+
+---@param settings config.Settings
+---@param cache table<string, string>
+---@return table<string, true> removed
+---@return (fun(): tmux.Work?)[] iters
+local diff_panes = function(settings, cache)
+  local live = {}
+  for pane in list_panes(settings, TMUX_PANE) do
+    live[pane.id] = pane
+  end
+
+  local removed = {}
+  for id in pairs(cache) do
+    if not live[id] then
+      removed[id] = true
+    end
+  end
+
+  local iters = {}
+  for id, pane in pairs(live) do
+    table.insert(
+      iters,
+      async.wrap(function()
+        coroutine.yield { id = id, pane = pane, text = pane_capture(id) }
+      end)
+    )
+  end
+
+  return removed, iters
+end
+
 do
   local cache = {}
 
   ---@param settings config.Settings
-  ---@param kw table<integer, true>
-  ---@param pane tmux.Pane
-  ---@param text string
-  local reindex_pane = function(settings, kw, pane, text)
-    if cache[pane.id] == text then
-      return
-    end
-    cache[pane.id] = nil
-    async.sleep(0)
-
-    index_of(settings).prune { pane = pane.id }
-    for word in
-      tokens.keywords(kw, vim.iter { text } --[[@as lib.Iterator<string>]])
-    do
-      index_of(settings).insert { pane = pane.id, word = word, meta = pane.meta }
-    end
-    cache[pane.id] = text
-  end
-
-  ---@param settings config.Settings
   ---@param idle_ctx idle.Ctx
   M.idle = function(settings, idle_ctx)
-    local env = vim.uv.os_environ()
-    if env.TMUX == nil then
+    if TMUX_PANE == nil then
       return
     end
 
-    local kw = idle_ctx.ctx.kw
+    local removed, iters = diff_panes(settings, cache)
 
-    local panes, live = {}, {}
-    for pane in list_panes(settings, env.TMUX_PANE) do
-      table.insert(panes, pane)
-      live[pane.id] = true
-    end
+    lib.scope(function(defer)
+      local close, stream = async.merge(iters)
+      defer(close)
 
-    for id in pairs(cache) do
-      if not live[id] then
+      for id in pairs(removed) do
+        async.sleep(0)
         index_of(settings).prune { pane = id }
         cache[id] = nil
       end
-    end
 
-    local captures = async.all(vim.tbl_map(function(pane)
-      return function()
-        return { pane = pane, text = pane_capture(pane.id) }
+      for _, entry in stream do
+        async.sleep(0)
+        if entry.text ~= nil and entry.text ~= cache[entry.id] then
+          index_of(settings).prune { pane = entry.id }
+          if entry.text ~= "" then
+            for word in
+              tokens.keywords(idle_ctx.ctx.kw, vim.iter { entry.text } --[[@as lib.Iterator<string>]])
+            do
+              index_of(settings).insert { pane = entry.id, word = word, meta = entry.pane.meta }
+            end
+          end
+          cache[entry.id] = entry.text
+        end
       end
-    end, panes))
-
-    for _, c in pairs(captures) do
-      if c.text ~= nil then
-        reindex_pane(settings, kw, c.pane, c.text)
-      end
-    end
+    end)
   end
 end
 
