@@ -1,15 +1,18 @@
--- Tiered fuzzy match: prefix → camelCase initialism → Smith-Waterman.
--- Designed for code-identifier autocompletion. See .exp/README.md for
--- the tournament and the rationale behind each tier.
+-- Tiered fuzzy match: byte-exact → smart-case prefix → camelCase initialism
+-- → Smith-Waterman. See .exp/README.md for tournament and rationale.
 --
 -- Tier table:
---   T_EXACT   2^30   needle == haystack under smart-case
---   T_PREFIX  2^28   smart-case prefix; sub-rank: length asc, case mismatch · n
---   T_CAMEL   2^24   needle == prefix of initialism(haystack); sub-rank length asc, mismatch -1
---   T_FUZZY   0      fzf v2 Smith-Waterman; sub-rank length asc · 0.001
+--   T_EXACT   2^30   needle == haystack (byte-exact)
+--   T_PREFIX  2^28   smart-case prefix; sub-rank length asc, mismatch · n
+--   T_CAMEL   2^24   needle == prefix of initialism(haystack); length asc, mismatch −1
+--   T_FUZZY   0      fzf v2 Smith-Waterman; length tiebreak · 0.001
 --
 -- Smart-case is per-char: uppercase needle char requires uppercase haystack
 -- char; lowercase needle char is case-folded.
+--
+-- File layout: helpers → stages → pipeline. Each stage shares the boundary
+-- signature `(needle, haystack) -> score | nil` so the pipeline reduces to
+-- "first non-nil wins".
 
 local M = {}
 
@@ -19,18 +22,77 @@ local T_CAMEL = 2 ^ 24
 
 local LEN_CAP = 1024
 
--- fzf v2 constants (integer u16)
-local SCORE_MATCH = 16
-local SCORE_GAP_START = -3
-local SCORE_GAP_EXTENSION = -1
-local BONUS_BOUNDARY = 8
-local BONUS_NON_WORD = 8
-local BONUS_CAMEL_123 = 7
-local BONUS_CONSECUTIVE = 4
-local BONUS_FIRST_CHAR_MULT = 2
-local BONUS_BOUNDARY_WHITE = 10
-local BONUS_BOUNDARY_DELIM = 9
+-- ============================================================================
+-- Helpers
+-- ============================================================================
 
+local function is_upper(b)
+  return b >= 65 and b <= 90
+end
+
+local function is_lower(b)
+  return b >= 97 and b <= 122
+end
+
+local function to_lower(b)
+  return is_upper(b) and b + 32 or b
+end
+
+-- Per-character smart-case predicate. The driver of the case rule:
+-- lowercase needle accepts any case; uppercase needle requires exact case.
+local function smart_eq(nb, hb)
+  if is_upper(nb) then
+    return nb == hb
+  end
+  return to_lower(nb) == to_lower(hb)
+end
+
+local function smart_starts_with(hay, ned)
+  if #ned > #hay then
+    return false
+  end
+  for i = 1, #ned do
+    if not smart_eq(string.byte(ned, i), string.byte(hay, i)) then
+      return false
+    end
+  end
+  return true
+end
+
+local function smart_string_eq(a, b)
+  if #a ~= #b then
+    return false
+  end
+  for i = 1, #a do
+    if not smart_eq(string.byte(a, i), string.byte(b, i)) then
+      return false
+    end
+  end
+  return true
+end
+
+-- camelCase / snake_case initials of a string.
+-- "AnimGraphNode"        -> "AGN"
+-- "anim_graph_node"      -> "agn"
+-- "BatchAgnSelector"     -> "BAS"
+local function initials(s)
+  local out = {}
+  local prev = 32 -- start of string treated as whitespace
+  for i = 1, #s do
+    local b = string.byte(s, i)
+    local prev_lower = is_lower(prev) or (prev >= 48 and prev <= 57)
+    local prev_word = prev_lower or is_upper(prev)
+    if is_upper(b) and is_lower(prev) then
+      table.insert(out, b)
+    elseif not prev_word and (is_upper(b) or is_lower(b) or (b >= 48 and b <= 57)) then
+      table.insert(out, b)
+    end
+    prev = b
+  end
+  return string.char((table.unpack or unpack)(out))
+end
+
+-- fzf v2 character classes
 local CLASS_WHITE = 1
 local CLASS_NONWORD = 2
 local CLASS_DELIM = 3
@@ -64,6 +126,18 @@ local function classify(b)
   return CLASS_NONWORD
 end
 
+-- fzf v2 integer u16 weights
+local SCORE_MATCH = 16
+local SCORE_GAP_START = -3
+local SCORE_GAP_EXTENSION = -1
+local BONUS_BOUNDARY = 8
+local BONUS_NON_WORD = 8
+local BONUS_CAMEL_123 = 7
+local BONUS_CONSECUTIVE = 4
+local BONUS_FIRST_CHAR_MULT = 2
+local BONUS_BOUNDARY_WHITE = 10
+local BONUS_BOUNDARY_DELIM = 9
+
 local function bonus_for(prev, curr)
   if curr == CLASS_LOWER or curr == CLASS_LETTER or curr == CLASS_UPPER or curr == CLASS_NUMBER then
     if prev == CLASS_WHITE then
@@ -91,35 +165,16 @@ local function bonus_for(prev, curr)
   return 0
 end
 
-local function is_upper(b)
-  return b >= 65 and b <= 90
-end
-
-local function is_lower(b)
-  return b >= 97 and b <= 122
-end
-
-local function to_lower(b)
-  return is_upper(b) and b + 32 or b
-end
-
+---fzf v2 Smith-Waterman DP. Returns the maximum alignment score or nil
+---when no subsequence match exists.
 ---@param needle string
 ---@param haystack string
 ---@return integer?
 local function fzf_score(needle, haystack)
   local n, m = #needle, #haystack
-  if n == 0 or n > m then
-    return nil
-  end
 
-  -- per-char smart-case
   local function nmatch(i, j)
-    local nb = string.byte(needle, i)
-    local hb = string.byte(haystack, j)
-    if is_upper(nb) then
-      return nb == hb
-    end
-    return to_lower(nb) == to_lower(hb)
+    return smart_eq(string.byte(needle, i), string.byte(haystack, j))
   end
 
   -- subsequence pre-check
@@ -151,9 +206,8 @@ local function fzf_score(needle, haystack)
     return hclass[j]
   end
 
-  -- DP with two matrices.
-  local H = {}
-  local C = {}
+  -- DP with two matrices: H (best score) and C (consecutive-run length).
+  local H, C = {}, {}
   for i = 0, n do
     H[i] = {}
     C[i] = {}
@@ -225,97 +279,109 @@ local function fzf_score(needle, haystack)
   return best
 end
 
-local function smart_eq(nb, hb)
-  if is_upper(nb) then
-    return nb == hb
-  end
-  return to_lower(nb) == to_lower(hb)
+---Pipeline-level gate. Rejects empty needles, oversized needles, and
+---haystacks beyond the length cap before any stage runs.
+---@param needle string
+---@param haystack string
+---@return boolean
+local function validate(needle, haystack)
+  local n, m = #needle, #haystack
+  return n > 0 and n <= m and m <= LEN_CAP
 end
 
-local function smart_string_eq(a, b)
-  if #a ~= #b then
-    return false
-  end
-  for i = 1, #a do
-    if not smart_eq(string.byte(a, i), string.byte(b, i)) then
-      return false
-    end
-  end
-  return true
-end
+-- ============================================================================
+-- Stages
+--
+-- Each stage: (needle, haystack) -> score | nil.
+-- `nil` means "this stage does not match"; a non-nil score is final for
+-- that stage. The pipeline returns the first non-nil.
+-- ============================================================================
 
-local function smart_starts_with(hay, ned)
-  if #ned > #hay then
-    return false
+---@param needle string
+---@param haystack string
+---@return number?
+local function try_exact(needle, haystack)
+  if needle == haystack then
+    return T_EXACT
   end
-  for i = 1, #ned do
-    if not smart_eq(string.byte(ned, i), string.byte(hay, i)) then
-      return false
-    end
-  end
-  return true
-end
-
----@param s string
----@return string
-local function initials(s)
-  local out = {}
-  local prev = 32
-  for i = 1, #s do
-    local b = string.byte(s, i)
-    local prev_lower = is_lower(prev) or (prev >= 48 and prev <= 57)
-    local prev_word = prev_lower or is_upper(prev)
-    if is_upper(b) and is_lower(prev) then
-      table.insert(out, b)
-    elseif not prev_word and (is_upper(b) or is_lower(b) or (b >= 48 and b <= 57)) then
-      table.insert(out, b)
-    end
-    prev = b
-  end
-  return string.char((table.unpack or unpack)(out))
+  return nil
 end
 
 ---@param needle string
 ---@param haystack string
 ---@return number?
-M.score = function(needle, haystack)
-  local n, m = #needle, #haystack
-  if n == 0 or n > m or m > LEN_CAP then
+local function try_prefix(needle, haystack)
+  if not smart_starts_with(haystack, needle) then
     return nil
   end
-
-  if needle == haystack then
-    return T_EXACT
-  end
-
-  if smart_starts_with(haystack, needle) then
-    local mismatches = 0
-    for i = 1, n do
-      if string.byte(needle, i) ~= string.byte(haystack, i) then
-        mismatches = mismatches + 1
-      end
+  local n, m = #needle, #haystack
+  local mismatches = 0
+  for i = 1, n do
+    if string.byte(needle, i) ~= string.byte(haystack, i) then
+      mismatches = mismatches + 1
     end
-    local full_bonus = (n == m) and LEN_CAP or 0
-    return T_PREFIX + full_bonus + (LEN_CAP - m) - n * mismatches
   end
+  local full_bonus = (n == m) and LEN_CAP or 0
+  return T_PREFIX + full_bonus + (LEN_CAP - m) - n * mismatches
+end
 
-  local inits = initials(haystack)
-  local inits_pref = string.sub(inits, 1, n)
-  if smart_string_eq(needle, inits_pref) then
-    local mismatches = 0
-    for i = 1, n do
-      if string.byte(needle, i) ~= string.byte(inits_pref, i) then
-        mismatches = mismatches + 1
-      end
+---@param needle string
+---@param haystack string
+---@return number?
+local function try_camel(needle, haystack)
+  local n, m = #needle, #haystack
+  local inits_pref = string.sub(initials(haystack), 1, n)
+  if not smart_string_eq(needle, inits_pref) then
+    return nil
+  end
+  local mismatches = 0
+  for i = 1, n do
+    if string.byte(needle, i) ~= string.byte(inits_pref, i) then
+      mismatches = mismatches + 1
     end
-    return T_CAMEL + (LEN_CAP - m) - mismatches
   end
+  return T_CAMEL + (LEN_CAP - m) - mismatches
+end
 
+---@param needle string
+---@param haystack string
+---@return number?
+local function try_fuzzy(needle, haystack)
   local f = fzf_score(needle, haystack)
   if f == nil then
     return nil
   end
-  return f + (LEN_CAP - m) * 0.001
+  return f + (LEN_CAP - #haystack) * 0.001
 end
+
+-- ============================================================================
+-- Pipeline
+-- ============================================================================
+
+local STAGES = { try_exact, try_prefix, try_camel, try_fuzzy }
+
+---@param needle string
+---@param haystack string
+---@return number?
+M.score = function(needle, haystack)
+  if not validate(needle, haystack) then
+    return nil
+  end
+  for _, stage in pairs(STAGES) do
+    local s = stage(needle, haystack)
+    if s ~= nil then
+      return s
+    end
+  end
+  return nil
+end
+
+---Stages exposed for direct testing. Callers should still use `M.score`.
+M._stages = {
+  exact = try_exact,
+  prefix = try_prefix,
+  camel = try_camel,
+  fuzzy = try_fuzzy,
+}
 
 return M

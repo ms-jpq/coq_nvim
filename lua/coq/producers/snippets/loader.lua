@@ -1,61 +1,11 @@
-local async = require "coq.lib.async"
 local itertools = require "coq.lib.itertools"
-
----@alias snippets.Kind "bundle" | "neosnippet" | "lsp"
-
----@class snippets.Source
----@field kind snippets.Kind
----@field path string
----@field mtime integer
----@field filetypes string[]
+local parsers = require "coq.producers.snippets.parsers"
+local sources = require "coq.producers.snippets.sources"
 
 ---@class snippets.Loader
 ---@field sources fun(): lib.Iterator<snippets.Source>
 ---@field sources_by_filetype fun(): table<string, snippets.Source[]>
 ---@field parse fun(filetype: string): snippets.Item[]
-
----@param _settings config.Settings
----@return lib.Iterator<snippets.Source>
-local bundle_sources = function(_settings)
-  return async.wrap(function() end)
-end
-
----@param _settings config.Settings
----@return lib.Iterator<snippets.Source>
-local neosnippet_sources = function(_settings)
-  return async.wrap(function() end)
-end
-
----@param _settings config.Settings
----@return lib.Iterator<snippets.Source>
-local lsp_sources = function(_settings)
-  return async.wrap(function() end)
-end
-
----@param _src snippets.Source
----@return snippets.Item[]
-local bundle_parse = function(_src)
-  return {}
-end
-
----@param _src snippets.Source
----@return snippets.Item[]
-local neosnippet_parse = function(_src)
-  return {}
-end
-
----@param _src snippets.Source
----@return snippets.Item[]
-local lsp_parse = function(_src)
-  return {}
-end
-
----@type table<snippets.Kind, fun(src: snippets.Source): snippets.Item[]>
-local PARSERS = {
-  bundle = bundle_parse,
-  neosnippet = neosnippet_parse,
-  lsp = lsp_parse,
-}
 
 local M = {}
 
@@ -66,7 +16,7 @@ M.new = function(settings)
   local loader = {} ---@type snippets.Loader
 
   loader.sources = function()
-    return itertools.chain(bundle_sources(settings), neosnippet_sources(settings), lsp_sources(settings))
+    return itertools.chain(sources.bundle(settings), sources.neosnippet(settings), sources.lsp(settings))
   end
 
   loader.sources_by_filetype = function()
@@ -84,7 +34,7 @@ M.new = function(settings)
     local out = {}
     for src in loader.sources() do
       if vim.tbl_contains(src.filetypes, filetype) then
-        for _, item in pairs(PARSERS[src.kind](src)) do
+        for _, item in pairs(parsers.by_kind[src.kind](src)) do
           if item.filetype == filetype then
             table.insert(out, item)
           end

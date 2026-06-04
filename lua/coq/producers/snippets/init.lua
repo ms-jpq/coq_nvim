@@ -19,29 +19,29 @@ M.loader_of_main = loader_of
 ---@param settings config.Settings
 ---@param idle_ctx idle.Ctx
 M.idle = function(settings, idle_ctx)
-  local store = fs_cache.new {
-    fs_root = vim.fs.joinpath(idle_ctx.cache_dir, "snippets"),
-    compute = function(filetype)
-      return loader_of(settings).parse(filetype)
-    end,
-  }
-
-  local by_ft = worker.main(function(s)
-    return require("coq.producers.snippets").loader_of_main(s).sources_by_filetype()
-  end, settings)
-
-  for ft, sources in pairs(by_ft) do
-    async.sleep(0)
-    local max_mtime = 0
-    for _, src in pairs(sources) do
-      if src.mtime > max_mtime then
-        max_mtime = src.mtime
-      end
-    end
-    for _, snip in pairs(store.fetch(ft, max_mtime)) do
-      index_of(settings).insert(snip)
-    end
-  end
+  -- local store = fs_cache.new {
+  --   fs_root = vim.fs.joinpath(idle_ctx.cache_dir, "snippets"),
+  --   compute = function(filetype)
+  --     return loader_of(settings).parse(filetype)
+  --   end,
+  -- }
+  --
+  -- local by_ft = worker.main(function(s)
+  --   return require("coq.producers.snippets").loader_of_main(s).sources_by_filetype()
+  -- end, settings)
+  --
+  -- for ft, sources in pairs(by_ft) do
+  --   async.sleep(0)
+  --   local max_mtime = 0
+  --   for _, src in pairs(sources) do
+  --     if src.mtime > max_mtime then
+  --       max_mtime = src.mtime
+  --     end
+  --   end
+  --   for _, snip in pairs(store.fetch(ft, max_mtime)) do
+  --     index_of(settings).insert(snip)
+  --   end
+  -- end
 end
 
 ---@param item snippets.Item

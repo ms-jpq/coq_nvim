@@ -204,3 +204,100 @@ T.describe("rank.hybrid", function(test)
     assert(fuzzy_high > 0)
   end)
 end)
+
+-- Stage-level tests. Each stage is a pure transform with the same
+-- signature `(needle, haystack) -> number?`. Probe them in isolation,
+-- bypassing the pipeline's first-non-nil cascade.
+T.describe("rank.hybrid._stages", function(test)
+  local stages = hybrid._stages
+
+  -- exact ----------------------------------------------------------------
+
+  test("exact: byte-equal returns T_EXACT", function()
+    T.eq(stages.exact("dog", "dog"), 2 ^ 30)
+  end)
+
+  test("exact: case-fold-equal returns nil (byte-exact only)", function()
+    T.eq(stages.exact("dog", "Dog"), nil)
+  end)
+
+  test("exact: any other input returns nil", function()
+    T.eq(stages.exact("dog", "doggo"), nil)
+    T.eq(stages.exact("dog", "labrador"), nil)
+  end)
+
+  -- prefix ---------------------------------------------------------------
+
+  test("prefix: smart-case prefix returns a positive score", function()
+    assert(stages.prefix("lab", "labrador") ~= nil)
+    assert(stages.prefix("lab", "Labrador") ~= nil)
+  end)
+
+  test("prefix: does NOT short-circuit on exact equality", function()
+    -- The pipeline routes exact via try_exact first; the stage itself
+    -- still treats exact as a valid prefix and returns a score.
+    local got = stages.prefix("dog", "dog")
+    assert(got ~= nil, "prefix should accept exact as a valid prefix")
+    assert(got < 2 ^ 30, "prefix score should sit below T_EXACT")
+  end)
+
+  test("prefix: non-prefix returns nil", function()
+    T.eq(stages.prefix("lab", "global_lab"), nil)
+    T.eq(stages.prefix("lab", "x"), nil)
+  end)
+
+  test("prefix: smart-case rejection returns nil", function()
+    T.eq(stages.prefix("Lab", "labrador"), nil)
+  end)
+
+  -- camel ----------------------------------------------------------------
+
+  test("camel: matching initialism returns a positive score", function()
+    assert(stages.camel("agn", "AnimGraphNode") ~= nil)
+    assert(stages.camel("agn", "anim_graph_node") ~= nil)
+  end)
+
+  test("camel: non-initialism returns nil", function()
+    T.eq(stages.camel("agn", "BatchAgnSelector"), nil)
+    T.eq(stages.camel("xyz", "AnimGraphNode"), nil)
+  end)
+
+  test("camel: shorter haystack wins on tiebreak", function()
+    local short = assert(stages.camel("agn", "AnimGraphNode"))
+    local long = assert(stages.camel("agn", "AnimationGraphNode"))
+    assert(short > long, "shorter initialism candidate should outscore longer")
+  end)
+
+  -- fuzzy ----------------------------------------------------------------
+
+  test("fuzzy: subsequence match returns a positive score", function()
+    local got = stages.fuzzy("lbr", "labrador")
+    assert(got ~= nil and got > 0)
+  end)
+
+  test("fuzzy: non-subsequence returns nil", function()
+    T.eq(stages.fuzzy("xyz", "labrador"), nil)
+  end)
+
+  test("fuzzy: smart-case rejection propagates as nil", function()
+    T.eq(stages.fuzzy("Lab", "labrador"), nil)
+  end)
+
+  -- pipeline ordering ----------------------------------------------------
+
+  test("score: returns try_exact result when byte-equal", function()
+    T.eq(hybrid.score("dog", "dog"), stages.exact("dog", "dog"))
+  end)
+
+  test("score: returns try_prefix result when smart-case prefix matches", function()
+    T.eq(hybrid.score("lab", "labrador"), stages.prefix("lab", "labrador"))
+  end)
+
+  test("score: returns try_camel result for initialism non-prefix", function()
+    T.eq(hybrid.score("agn", "AnimGraphNode"), stages.camel("agn", "AnimGraphNode"))
+  end)
+
+  test("score: returns try_fuzzy result for plain subsequence", function()
+    T.eq(hybrid.score("lbr", "labrador"), stages.fuzzy("lbr", "labrador"))
+  end)
+end)
