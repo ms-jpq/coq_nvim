@@ -5,6 +5,13 @@ local lib = require "coq.lib"
 local MODE_RW = tonumber("0644", 8)
 local MODE_DIR = tonumber("0755", 8)
 
+local R_OWNER = tonumber("400", 8)
+local R_GROUP = tonumber("040", 8)
+local R_OTHER = tonumber("004", 8)
+
+local UID = vim.uv.getuid and vim.uv.getuid() or -1
+local GID = vim.uv.getgid and vim.uv.getgid() or -1
+
 ---@type fun(path: string): uv.error_name?, uv.luv_dir_t?
 local fs_opendir = async.awaitify(vim.uv.fs_opendir)
 ---@type fun(dir: uv.luv_dir_t): uv.error_name?, boolean?
@@ -25,10 +32,30 @@ local fs_fstat = async.awaitify(vim.uv.fs_fstat)
 ---@type fun(path: string, mode: integer): uv.error_name?, boolean?
 local fs_mkdir = async.awaitify(vim.uv.fs_mkdir)
 
+---@type fun(path: string): uv.error_name?, uv.fs_stat.result?
+local fs_stat = async.awaitify(vim.uv.fs_stat)
+
 local M = {}
 
----@type fun(path: string): uv.error_name?, uv.fs_stat.result?
-M.stat = async.awaitify(vim.uv.fs_stat)
+---@param path string
+---@return uv.error_name? err
+---@return uv.fs_stat.result? st
+---@return boolean readable
+M.stat = function(path)
+  local err, st = fs_stat(path)
+  if err or not st then
+    return err, st, false
+  end
+  local mask = (st.uid == UID and R_OWNER) or (st.gid == GID and R_GROUP) or R_OTHER
+  return nil, st, bit.band(st.mode, mask) ~= 0
+end
+
+---@param path string
+---@return boolean
+M.readable = function(path)
+  local _, _, readable = M.stat(path)
+  return readable
+end
 
 ---@type fun(old_path: string, new_path: string): uv.error_name?, boolean?
 M.rename = async.awaitify(vim.uv.fs_rename)
@@ -61,6 +88,25 @@ end
 M.is_dir = function(path)
   local err, st = M.stat(path)
   return (not err and st and st.type == "directory") or false
+end
+
+---@param dir string
+---@return fun(): string?, string?
+M.walk = function(dir)
+  return async.wrap(function()
+    local function recurse(d)
+      local _, entries = M.scandir(d)
+      for name, kind in entries do
+        local path = vim.fs.joinpath(d, name)
+        if kind == "directory" then
+          recurse(path)
+        else
+          coroutine.yield(path, kind)
+        end
+      end
+    end
+    recurse(dir)
+  end)
 end
 
 ---@param path string

@@ -1,4 +1,5 @@
 local async = require "coq.lib.async"
+local atools = require "coq.lib.atools"
 local fs_cache = require "coq.lib.fs_cache"
 
 ---@alias snippets.Kind "bundle" | "neosnippet" | "lsp"
@@ -19,14 +20,14 @@ local user_dirs = function(settings)
   local dirs = {}
   local user_path = settings.clients.snippets.user_path
   if user_path and user_path ~= "" then
-    local expanded = vim.fn.expand(user_path)
-    if vim.uv.fs_stat(expanded) then
+    local expanded = vim.fs.normalize(user_path)
+    if atools.fs.readable(expanded) then
       table.insert(dirs, expanded)
     end
   end
   for _, rtp in pairs(vim.api.nvim_list_runtime_paths()) do
     local cand = vim.fs.joinpath(rtp, "coq-user-snippets")
-    if vim.uv.fs_stat(cand) then
+    if atools.fs.readable(cand) then
       table.insert(dirs, cand)
     end
   end
@@ -37,12 +38,12 @@ end
 ---@param exts table<string, true>
 ---@return lib.Iterator<string>
 local walk_files = function(dir, exts)
-  return coroutine.wrap(function()
-    for entry, kind in vim.fs.dir(dir, { depth = 64 }) do
+  return async.wrap(function()
+    for path, kind in atools.fs.walk(dir) do
       if kind == "file" then
-        local ext = string.match(entry, "%.([^.]+)$")
+        local ext = string.match(path, "%.([^.]+)$")
         if ext and exts[ext] then
-          coroutine.yield(vim.fs.joinpath(dir, entry))
+          coroutine.yield(path)
         end
       end
     end
@@ -58,13 +59,13 @@ end
 ---@param path string
 ---@return string?
 local read_file = function(path)
-  local fd = io.open(path, "r")
-  if not fd then
+  local close, chunks = atools.fs.scanfile(path)
+  local out = vim.iter(chunks):totable()
+  close()
+  if #out == 0 then
     return nil
   end
-  local body = fd:read "*a"
-  fd:close()
-  return body
+  return table.concat(out)
 end
 
 local M = {}
