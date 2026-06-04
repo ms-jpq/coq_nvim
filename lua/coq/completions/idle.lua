@@ -20,8 +20,12 @@ M.bind = function(n, settings, sup, events)
 
   local carry = { updated = {}, removed = {} }
 
+  local primed = false
   events_m.subscribe_latest(n, events.idle, function()
-    async.sleep(math.floor(settings.limits.idle_timeout * 1000))
+    if primed then
+      async.sleep(math.floor(settings.limits.idle_timeout * 1000))
+    end
+    primed = true
 
     local diff = events.drain_bufs()
     for buf in pairs(diff.removed) do

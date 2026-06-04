@@ -23,11 +23,9 @@ M.request = function(client, method, params, buf)
     end
 
     if req_id then
-      defer(async.current().on_cancel(function()
-        vim.schedule(function()
-          client:cancel_request(req_id)
-        end)
-      end))
+      defer(async.current().on_cancel(vim.schedule_wrap(function()
+        client:cancel_request(req_id)
+      end)))
     end
 
     return f.await()
