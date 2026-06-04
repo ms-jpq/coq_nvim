@@ -1,3 +1,4 @@
+local async = require "coq.lib.async"
 local atools = require "coq.lib.atools"
 local closable = require "coq.lib.closable"
 local lib = require "coq.lib"
@@ -8,17 +9,6 @@ local util = require "coq.producers.util"
 local SOURCE = "paths"
 
 local M = {}
-
----@param path string
----@param type string
----@return string
-local resolve_type = function(path, type)
-  if type ~= "link" then
-    return type
-  end
-  local _, st = atools.fs.stat(path)
-  return (st and st.type) or type
-end
 
 ---@param resolution string[]
 ---@param ctx ctx.full
@@ -51,6 +41,24 @@ local cand_dirs = function(bases, cand)
   end)
 end
 
+---@generic T: { full: string, type: string }
+---@param entries T[]
+---@return fun() close
+---@return fun(): integer, T iter
+local resolve_link_types = function(entries)
+  local iters = vim.tbl_map(function(e)
+    return async.wrap(function()
+      if e.type ~= "link" then
+        coroutine.yield(e)
+        return
+      end
+      local _, st = atools.fs.stat(e.full)
+      coroutine.yield(vim.tbl_extend("force", e, { type = (st and st.type) or e.type }))
+    end)
+  end, entries)
+  return async.merge(iters)
+end
+
 ---@class paths.Match
 ---@field cand paths.parse.Candidate
 ---@field dir string
@@ -58,6 +66,38 @@ end
 ---@field type string
 ---@field full string
 ---@field fuzzy integer
+
+---@param dir string
+---@param cand paths.parse.Candidate
+---@return lib.Iterator<paths.Match>
+local scan_dir = function(dir, cand)
+  return async.wrap(function()
+    lib.scope(function(defer)
+      local close, iter = atools.fs.scandir(dir)
+      defer(close)
+      local entries = {}
+      for name, type in iter do
+        local fuzzy = cand.partial == "" and 0 or match.score(cand.partial, name)
+        if cand.partial == "" or fuzzy > 0 then
+          table.insert(entries, {
+            cand = cand,
+            dir = dir,
+            name = name,
+            type = type,
+            full = vim.fs.joinpath(dir, name),
+            fuzzy = fuzzy,
+          })
+        end
+      end
+
+      local rclose, riter = resolve_link_types(entries)
+      defer(rclose)
+      for _, e in riter do
+        coroutine.yield(e)
+      end
+    end)
+  end)
+end
 
 ---@param settings config.Settings
 ---@param ctx ctx.full
@@ -74,31 +114,19 @@ local matches = function(settings, ctx)
     }
 
     for cand in parse.candidates(ctx.line_before, opts) do
-      local found = false
+      local iters = {}
       for dir in cand_dirs(bases, cand) do
         if atools.fs.is_dir(dir) then
-          found = true
-          local close, iter = atools.fs.scandir(dir)
-          defer(close)
-
-          for name, type in iter do
-            local fuzzy = cand.partial == "" and 0 or match.score(cand.partial, name)
-            if cand.partial == "" or fuzzy > 0 then
-              local full = vim.fs.joinpath(dir, name)
-              coroutine.yield {
-                cand = cand,
-                dir = dir,
-                name = name,
-                type = resolve_type(full, type),
-                full = full,
-                fuzzy = fuzzy,
-              }
-            end
-          end
+          table.insert(iters, scan_dir(dir, cand))
         end
       end
 
-      if found then
+      if #iters > 0 then
+        local close, iter = async.merge(iters)
+        defer(close)
+        for _, e in iter do
+          coroutine.yield(e)
+        end
         return
       end
     end

@@ -22,12 +22,13 @@ end
 ---@param opts paths.IterOpts
 ---@param entries lib.Iterator<string>
 local yield_capped = function(opts, entries)
-  local capped = vim.iter(entries):take(opts.max_lines + 1):enumerate()
-  for i, v in capped do
-    if i == opts.max_lines and capped:peek() ~= nil then
+  local count = 0
+  for v in entries do
+    if count >= opts.max_lines then
       coroutine.yield(opts.ellipsis or "...")
       return
     end
+    count = count + 1
     coroutine.yield(v)
   end
 end

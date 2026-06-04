@@ -57,15 +57,14 @@ T.describe("paths.preview.lines", function(test)
     T.eq(collect({ max_lines = 10 }, dir, dir), { "./fido/", "./spot.txt" })
   end)
 
-  test("directory emits ellipsis on truncation", function()
+  test("directory emits ellipsis after max_lines entries on truncation", function()
     local dir = tmpdir()
     for i = 1, 5 do
       touch(dir .. "/p" .. i .. ".txt")
     end
 
     local lines = collect({ max_lines = 3, ellipsis = "…" }, nil, dir)
-    T.eq(#lines, 3)
-    T.eq(lines[3], "…")
+    T.eq(lines, { "p1.txt", "p2.txt", "p3.txt", "…" })
   end)
 
   test("directory at exact max_lines emits all entries, no ellipsis", function()
@@ -92,7 +91,7 @@ T.describe("paths.preview.lines", function(test)
     touch(path, "labrador\nlily\nspot\nfido\nrex")
 
     local lines = collect({ max_lines = 3, ellipsis = "…" }, nil, path)
-    T.eq(lines, { "labrador", "lily", "…" })
+    T.eq(lines, { "labrador", "lily", "spot", "…" })
   end)
 
   test("empty file yields (empty) marker", function()

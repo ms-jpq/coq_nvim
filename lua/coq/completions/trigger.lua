@@ -5,9 +5,16 @@ local lib = require "coq.lib"
 
 local M = {}
 
+---@param ctx ctx.base
+---@return string
+M._dedup_key = function(ctx)
+  local row, col = unpack(ctx.pos)
+  return string.format("%d:%d:%d:%d", ctx.buf, ctx.changedtick, row, col)
+end
+
 ---@param settings config.Settings
 ---@param ctx ctx.full
----@param prev { buf: integer, tick: integer }
+---@param prev string
 ---@return boolean
 M._should_skip = function(settings, ctx, prev)
   if ctx.manual then
@@ -18,7 +25,7 @@ M._should_skip = function(settings, ctx, prev)
     return true
   end
 
-  if prev.buf == ctx.buf and prev.tick == ctx.changedtick then
+  if M._dedup_key(ctx) == prev then
     return true
   end
 
@@ -38,7 +45,7 @@ end
 ---@param sup producers.Producer<ctx.full>
 ---@param events completions.Events
 M.bind = function(n, settings, statsd, resolver, sup, events)
-  local prev = { buf = -1, tick = -1 }
+  local prev = ""
   local sticky = false
 
   events_m.subscribe_latest(n, events.leave, function()
@@ -52,7 +59,7 @@ M.bind = function(n, settings, statsd, resolver, sup, events)
     if M._should_skip(settings, ctx, prev) then
       return
     end
-    prev = { buf = ctx.buf, tick = ctx.changedtick }
+    prev = M._dedup_key(ctx)
 
     if ev.manual and settings.completion.sticky_manual then
       sticky = true

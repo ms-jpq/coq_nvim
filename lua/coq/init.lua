@@ -78,9 +78,9 @@ local producers = function(clients)
       coroutine.yield(p_snippets.new())
     end
 
-    if clients.third_party.enabled then
-      coroutine.yield(p_third_party.new())
-    end
+    -- if clients.third_party.enabled then
+    --   coroutine.yield(p_third_party.new())
+    -- end
   end)
 end
 

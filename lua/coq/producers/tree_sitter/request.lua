@@ -36,7 +36,12 @@ M.query = function(buf)
     }
   end
 
-  for _, tree in pairs(parser:parse() or {}) do
+  local trees = parser:parse() or {}
+  if not buffers.is_live(buf) or vim.b[buf].changedtick ~= tick then
+    return
+  end
+
+  for _, tree in pairs(trees) do
     for capture_id, node in query:iter_captures(tree:root(), buf, lo, hi) do
       local kind = query.captures[capture_id]
       if kind ~= "comment" and not node:missing() and not node:has_error() then

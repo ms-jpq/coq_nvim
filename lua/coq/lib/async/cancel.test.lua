@@ -68,6 +68,21 @@ T.describe("check_cancellation", function(test)
     T.eq(ok, true)
     T.eq(err, nil)
   end)
+
+  test("sibling tasks keep running when one throws the sentinel", function()
+    local n = nursery.new()
+    local sibling_finished = false
+    n.spawn(function()
+      async.current().cancel()
+      async.check_cancellation()
+    end)
+    n.spawn(function()
+      async.sleep(0)
+      sibling_finished = true
+    end)
+    n.join()
+    T.eq(sibling_finished, true)
+  end)
 end)
 
 T.describe("cancel.pcall", function(test)
