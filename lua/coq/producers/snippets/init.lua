@@ -1,4 +1,3 @@
-local async = require "coq.lib.async"
 local fs_cache = require "coq.lib.fs_cache"
 local index_m = require "coq.producers.snippets.index"
 local loader_m = require "coq.producers.snippets.loader"
@@ -38,12 +37,8 @@ end
 ---@param item snippets.Item
 ---@return lib.Iterator<string>
 local doc_lines = function(item)
-  return coroutine.wrap(function()
-    local source = (item.doc and item.doc ~= "") and item.doc or item.body
-    for line in txt.splitlines(source) do
-      coroutine.yield(line)
-    end
-  end)
+  local source = (item.doc and item.doc ~= "") and item.doc or item.body
+  return txt.splitlines(source)
 end
 
 ---@param settings config.Settings

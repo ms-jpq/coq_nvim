@@ -29,7 +29,7 @@ M.new = function(settings, rtps)
     local out = {}
     for src in sources.list(settings, rtps) do
       if vim.tbl_contains(src.filetypes, filetype) then
-        for _, item in pairs(parsers.by_kind[src.kind](src)) do
+        for item in parsers.by_kind[src.kind](src) do
           if item.filetype == filetype then
             table.insert(out, item)
           end

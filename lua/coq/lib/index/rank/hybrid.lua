@@ -167,11 +167,10 @@ end
 
 ---fzf v2 Smith-Waterman DP. Returns the maximum alignment score or nil
 ---when no subsequence match exists.
----@param needle string
----@param haystack string
+---@param probe hybrid.Probe
 ---@return integer?
-local function fzf_score(needle, haystack)
-  local n, m = #needle, #haystack
+local function fzf_score(probe)
+  local needle, haystack, n, m = probe.needle, probe.haystack, probe.n, probe.m
 
   local function nmatch(i, j)
     return smart_eq(string.byte(needle, i), string.byte(haystack, j))
@@ -279,42 +278,51 @@ local function fzf_score(needle, haystack)
   return best
 end
 
----Pipeline-level gate. Rejects empty needles, oversized needles, and
----haystacks beyond the length cap before any stage runs.
+---A needle-haystack pair that has passed length validation. Each stage
+---can rely on `n > 0`, `n <= m`, `m <= LEN_CAP` without re-checking.
+---@class hybrid.Probe
+---@field needle string
+---@field haystack string
+---@field n integer
+---@field m integer
+
+---@alias hybrid.Stage fun(probe: hybrid.Probe): number?
+
+---Construct a Probe from raw inputs. Returns nil for empty / oversize.
+---Acts as the pipeline's gate — invalid inputs never reach any stage.
 ---@param needle string
 ---@param haystack string
----@return boolean
-local function validate(needle, haystack)
+---@return hybrid.Probe?
+local function probe_of(needle, haystack)
   local n, m = #needle, #haystack
-  return n > 0 and n <= m and m <= LEN_CAP
+  if n == 0 or n > m or m > LEN_CAP then
+    return nil
+  end
+  return { needle = needle, haystack = haystack, n = n, m = m }
 end
 
 -- ============================================================================
 -- Stages
 --
--- Each stage: (needle, haystack) -> score | nil.
+-- Each stage: hybrid.Stage = (probe) -> score | nil.
 -- `nil` means "this stage does not match"; a non-nil score is final for
 -- that stage. The pipeline returns the first non-nil.
 -- ============================================================================
 
----@param needle string
----@param haystack string
----@return number?
-local function try_exact(needle, haystack)
-  if needle == haystack then
+---@type hybrid.Stage
+local function try_exact(probe)
+  if probe.needle == probe.haystack then
     return T_EXACT
   end
   return nil
 end
 
----@param needle string
----@param haystack string
----@return number?
-local function try_prefix(needle, haystack)
+---@type hybrid.Stage
+local function try_prefix(probe)
+  local needle, haystack, n, m = probe.needle, probe.haystack, probe.n, probe.m
   if not smart_starts_with(haystack, needle) then
     return nil
   end
-  local n, m = #needle, #haystack
   local mismatches = 0
   for i = 1, n do
     if string.byte(needle, i) ~= string.byte(haystack, i) then
@@ -325,12 +333,10 @@ local function try_prefix(needle, haystack)
   return T_PREFIX + full_bonus + (LEN_CAP - m) - n * mismatches
 end
 
----@param needle string
----@param haystack string
----@return number?
-local function try_camel(needle, haystack)
-  local n, m = #needle, #haystack
-  local inits_pref = string.sub(initials(haystack), 1, n)
+---@type hybrid.Stage
+local function try_camel(probe)
+  local needle, n, m = probe.needle, probe.n, probe.m
+  local inits_pref = string.sub(initials(probe.haystack), 1, n)
   if not smart_string_eq(needle, inits_pref) then
     return nil
   end
@@ -343,32 +349,32 @@ local function try_camel(needle, haystack)
   return T_CAMEL + (LEN_CAP - m) - mismatches
 end
 
----@param needle string
----@param haystack string
----@return number?
-local function try_fuzzy(needle, haystack)
-  local f = fzf_score(needle, haystack)
+---@type hybrid.Stage
+local function try_fuzzy(probe)
+  local f = fzf_score(probe)
   if f == nil then
     return nil
   end
-  return f + (LEN_CAP - #haystack) * 0.001
+  return f + (LEN_CAP - probe.m) * 0.001
 end
 
 -- ============================================================================
 -- Pipeline
 -- ============================================================================
 
+---@type hybrid.Stage[]
 local STAGES = { try_exact, try_prefix, try_camel, try_fuzzy }
 
 ---@param needle string
 ---@param haystack string
 ---@return number?
 M.score = function(needle, haystack)
-  if not validate(needle, haystack) then
+  local probe = probe_of(needle, haystack)
+  if probe == nil then
     return nil
   end
-  for _, stage in pairs(STAGES) do
-    local s = stage(needle, haystack)
+  for i = 1, #STAGES do
+    local s = STAGES[i](probe)
     if s ~= nil then
       return s
     end
@@ -376,12 +382,23 @@ M.score = function(needle, haystack)
   return nil
 end
 
+---Wrap a stage so it accepts raw `(needle, haystack)` instead of a Probe.
+---Used by the test surface — callers still go through `M.score`.
+---@param stage hybrid.Stage
+---@return fun(needle: string, haystack: string): number?
+local function via_probe(stage)
+  return function(needle, haystack)
+    local probe = probe_of(needle, haystack)
+    return probe and stage(probe) or nil
+  end
+end
+
 ---Stages exposed for direct testing. Callers should still use `M.score`.
 M._stages = {
-  exact = try_exact,
-  prefix = try_prefix,
-  camel = try_camel,
-  fuzzy = try_fuzzy,
+  exact = via_probe(try_exact),
+  prefix = via_probe(try_prefix),
+  camel = via_probe(try_camel),
+  fuzzy = via_probe(try_fuzzy),
 }
 
 return M
