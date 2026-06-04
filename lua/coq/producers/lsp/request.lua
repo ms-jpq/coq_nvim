@@ -14,8 +14,6 @@ local util = require "coq.producers.util"
 
 local M = {}
 
-local INCOMPLETE_VAR_PREFIX = "__coq_lsp_incomplete_"
-
 ---@type fun(): integer
 local next_token_id = (function()
   local n = 0
@@ -49,7 +47,7 @@ local kinds = vim.lsp.protocol.CompletionTriggerKind
 ---@param buf integer
 ---@return lsp.CompletionTracker
 local completion_tracker = function(client, buf)
-  local incomplete_var = INCOMPLETE_VAR_PREFIX .. client.id
+  local incomplete_var = "__coq_lsp_incomplete_" .. client.id
   local incomplete = false
 
   ---@diagnostic disable-next-line: missing-fields
