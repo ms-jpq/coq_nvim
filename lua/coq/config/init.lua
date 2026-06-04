@@ -27,12 +27,7 @@ local defaults = require "coq.config.defaults"
 
 ---@class config.PumDisplay
 ---@field fast_close boolean
----@field y_ratio number
----@field y_max_len integer
----@field x_max_len integer
----@field x_truncate_len integer
 ---@field ellipsis string
----@field kind_context [string, string]
 ---@field source_context [string, string]
 
 ---@class config.Display
@@ -43,22 +38,16 @@ local defaults = require "coq.config.defaults"
 
 ---@class config.MatchOptions
 ---@field max_results integer
----@field look_ahead integer
 ---@field exact_matches integer
 ---@field fuzzy_cutoff number
 
 ---@class config.Weights
----@field prefix_matches number
----@field edit_distance number
 ---@field recency number
 ---@field proximity number
 
 ---@class config.CompleteOptions
 ---@field always boolean
 ---@field sticky_manual boolean
----@field smart boolean
----@field replace_prefix_threshold integer
----@field replace_suffix_threshold integer
 ---@field skip_after string[]
 
 ---@class config.KeyMapping
@@ -138,7 +127,6 @@ local defaults = require "coq.config.defaults"
 ---@field tree_sitter config.TSClient
 
 ---@class config.Settings
----@field auto_start boolean|"shut-up"
 ---@field limits config.Limits
 ---@field display config.Display
 ---@field match config.MatchOptions

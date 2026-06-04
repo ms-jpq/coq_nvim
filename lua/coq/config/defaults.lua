@@ -85,10 +85,7 @@ local M = {
   completion = {
     always = true,
     sticky_manual = true,
-    replace_prefix_threshold = 3,
-    replace_suffix_threshold = 2,
     skip_after = {},
-    smart = true,
   },
 
   display = {
@@ -187,12 +184,7 @@ local M = {
     pum = {
       ellipsis = "…",
       fast_close = false,
-      kind_context = { " [", "]" },
       source_context = { "「", "」" },
-      x_max_len = 66,
-      x_truncate_len = 12,
-      y_max_len = 16,
-      y_ratio = 0.3,
     },
   },
 
@@ -216,13 +208,10 @@ local M = {
   match = {
     exact_matches = 2,
     fuzzy_cutoff = 0.6,
-    look_ahead = 2,
     max_results = 33,
   },
 
   weights = {
-    edit_distance = 1.5,
-    prefix_matches = 2.0,
     proximity = 0.5,
     recency = 1.0,
   },

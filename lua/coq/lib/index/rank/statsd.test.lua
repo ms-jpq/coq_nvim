@@ -16,10 +16,12 @@ local item = function(meta)
   } --[[@as completions.Item]]
 end
 
+local WEIGHTS = { proximity = 1.0, recency = 0.5 }
+
 ---@param overrides? table
 ---@return index.Prepared
 local prep = function(overrides)
-  local p = { token = "", locality = {}, recency = {}, source_bias = {} }
+  local p = { token = "", locality = {}, recency = {}, source_bias = {}, weights = WEIGHTS }
   for k, v in pairs(overrides or {}) do
     p[k] = v
   end
@@ -33,7 +35,7 @@ end
 ---@return index.Statsd
 local fresh = function()
   ---@diagnostic disable-next-line: missing-fields
-  return statsd.new {}
+  return statsd.new { clients = {}, weights = WEIGHTS }
 end
 
 T.describe("rank.score", function(test)
@@ -41,14 +43,19 @@ T.describe("rank.score", function(test)
     T.eq(statsd.score(prep(), fido { fuzzy = 7 }), 7)
   end)
 
-  test("proximity adds prox * WEIGHTS.prox", function()
+  test("proximity multiplies the locality count by weights.proximity * WEIGHT_SCALE", function()
     local base = statsd.score(prep(), fido())
     local boosted = statsd.score(prep { locality = { fido = 2 } }, fido())
-    T.eq(boosted - base, 2 * statsd.WEIGHTS.prox)
+    T.eq(boosted - base, 2 * WEIGHTS.proximity * statsd.WEIGHT_SCALE)
   end)
 
-  test("recency adds recen * WEIGHTS.recen", function()
-    T.eq(statsd.score(prep { recency = { fido = 3 } }, fido()), 3 * statsd.WEIGHTS.recen)
+  test("recency multiplies the recency count by weights.recency * WEIGHT_SCALE", function()
+    T.eq(statsd.score(prep { recency = { fido = 3 } }, fido()), 3 * WEIGHTS.recency * statsd.WEIGHT_SCALE)
+  end)
+
+  test("custom weights override the multipliers", function()
+    local p = prep { locality = { fido = 1 }, recency = { fido = 1 }, weights = { proximity = 3, recency = 5 } }
+    T.eq(statsd.score(p, fido()), (3 + 5) * statsd.WEIGHT_SCALE)
   end)
 
   test("source bias multiplies the score", function()
@@ -68,7 +75,7 @@ T.describe("rank.score", function(test)
 
   test("combines (fuzzy + prox + recen) * bias + tier", function()
     local p = prep { locality = { fido = 2 }, recency = { fido = 1 }, source_bias = { BF = 2 } }
-    local expected = (3 + 2 * statsd.WEIGHTS.prox + 1 * statsd.WEIGHTS.recen) * 2 + statsd.ALWAYS_TOP
+    local expected = (3 + (2 * WEIGHTS.proximity + 1 * WEIGHTS.recency) * statsd.WEIGHT_SCALE) * 2 + statsd.ALWAYS_TOP
     T.eq(statsd.score(p, fido { fuzzy = 3, always_on_top = true }), expected)
   end)
 end)

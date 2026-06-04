@@ -7,6 +7,7 @@ local tokens = require "coq.lib.index.tokens"
 ---@field locality table<string, integer>
 ---@field recency table<string, integer>
 ---@field source_bias table<string, number>
+---@field weights config.Weights
 
 ---@class statsd.Recording
 ---@field tally fun(count: integer)
@@ -37,9 +38,8 @@ local tokens = require "coq.lib.index.tokens"
 
 local M = {}
 
--- https://github.com/neovim/neovim/blob/master/src/nvim/fuzzy.c
-M.WEIGHTS = { prox = 100, recen = 50 }
 M.ALWAYS_TOP = 1e9
+M.WEIGHT_SCALE = 100
 
 local SAMPLE_CAP = 200
 
@@ -52,8 +52,9 @@ M.score = function(prepared, item)
   local recen = prepared.recency[meta.filter] or 0
   local bias = prepared.source_bias[meta.source] or 1
   local tier = meta.always_on_top and M.ALWAYS_TOP or 0
+  local w = prepared.weights
 
-  return (meta.fuzzy + prox * M.WEIGHTS.prox + recen * M.WEIGHTS.recen) * bias + tier
+  return (meta.fuzzy + prox * w.proximity * M.WEIGHT_SCALE + recen * w.recency * M.WEIGHT_SCALE) * bias + tier
 end
 
 ---@class statsd.Bucket
@@ -122,11 +123,11 @@ local summarize = function(bucket)
   }
 end
 
----@param clients config.Clients
+---@param settings config.Settings
 ---@return index.Statsd
-M.new = function(clients)
+M.new = function(settings)
   local source_bias = {}
-  for name, client in pairs(clients) do
+  for name, client in pairs(settings.clients) do
     source_bias[name] = 1 + (client.weight_adjust or 0)
   end
 
@@ -158,6 +159,7 @@ M.new = function(clients)
       ),
       recency = recency,
       source_bias = source_bias,
+      weights = settings.weights,
     }
   end
 

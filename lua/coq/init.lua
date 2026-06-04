@@ -96,7 +96,7 @@ M.setup = function(opts)
       atools.scheduled()
       nvim_options.apply(settings)
 
-      local statsd = statsd_m.new(settings.clients)
+      local statsd = statsd_m.new(settings)
 
       local p = vim
         .iter(producers(settings.clients))
