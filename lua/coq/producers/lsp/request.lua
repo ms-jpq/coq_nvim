@@ -38,16 +38,43 @@ local encode_col = function(line, col, offset_encoding)
   return col
 end
 
----@param value lsp.CompletionList|lsp.CompletionItem[]|nil
----@return lsp.CompletionItem[]
-local items_of = function(value)
-  if type(value) ~= "table" then
-    return {}
+local kinds = vim.lsp.protocol.CompletionTriggerKind
+
+---@class lsp.CompletionTracker
+---@field trigger_kind integer
+---@field parse_items fun(value: lsp.CompletionList|lsp.CompletionItem[]|nil): lsp.CompletionItem[]
+---@field commit fun()
+
+---@param client vim.lsp.Client
+---@param buf integer
+---@return lsp.CompletionTracker
+local completion_tracker = function(client, buf)
+  local incomplete_var = INCOMPLETE_VAR_PREFIX .. client.id
+  local incomplete = false
+
+  ---@diagnostic disable-next-line: missing-fields
+  local tracker = {} ---@type lsp.CompletionTracker
+
+  tracker.trigger_kind = vim.b[buf][incomplete_var] and kinds.TriggerForIncompleteCompletions or kinds.Invoked
+
+  tracker.parse_items = function(value)
+    if type(value) ~= "table" then
+      return {}
+    end
+    incomplete = incomplete or value.isIncomplete == true
+    if value.items ~= nil then
+      return value.items
+    end
+    return value --[[@as lsp.CompletionItem[] ]]
   end
-  if value.items then
-    return value.items --[[@as lsp.CompletionItem[] ]]
+
+  tracker.commit = function()
+    if vim.api.nvim_buf_is_valid(buf) then
+      vim.b[buf][incomplete_var] = incomplete or nil
+    end
   end
-  return value --[[@as lsp.CompletionItem[] ]]
+
+  return tracker
 end
 
 ---@param client vim.lsp.Client
@@ -58,19 +85,16 @@ end
 local query_1 = function(client, ctx, td_params)
   return closable.iter(function(defer)
     atools.scheduled()
-    local token = "coq.lsp." .. client.id .. "." .. next_token_id()
-    local kinds = vim.lsp.protocol.CompletionTriggerKind
-    local incomplete_var = INCOMPLETE_VAR_PREFIX .. client.id
-    local trigger_kind = vim.b[ctx.buf][incomplete_var] and kinds.TriggerForIncompleteCompletions or kinds.Invoked
 
+    local token = "coq.lsp." .. client.id .. "." .. next_token_id()
+    local tracker = completion_tracker(client, ctx.buf)
+    defer(tracker.commit)
     local row, col = unpack(ctx.pos)
+
     local params = {
-      position = {
-        line = row - 1,
-        character = encode_col(ctx.line, col, client.offset_encoding),
-      },
+      position = { line = row - 1, character = encode_col(ctx.line, col, client.offset_encoding) },
       textDocument = td_params,
-      context = { triggerKind = trigger_kind },
+      context = { triggerKind = tracker.trigger_kind },
       partialResultToken = token,
     } --[[@as lsp.CompletionParams]]
 
@@ -78,11 +102,13 @@ local query_1 = function(client, ctx, td_params)
     local chan = mpmc.new(math.huge)
     defer(chan.close)
 
+    -- https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#partialResults
+    local group = vim.api.nvim_create_augroup("coq.lsp.progress." .. client.name, { clear = true })
     local autocmd_id = vim.api.nvim_create_autocmd("LspProgress", {
+      group = group,
       callback = function(args)
         if args.data.client_id == client.id and args.data.params.token == token then
-          local batch = items_of(args.data.params.value)
-          chan.push(batch)
+          chan.push(tracker.parse_items(args.data.params.value))
         end
       end,
     })
@@ -93,15 +119,10 @@ local query_1 = function(client, ctx, td_params)
     local final = async.wrap(function()
       local err, result = lsp_util.request(client, "textDocument/completion", params, ctx.buf)
       chan.close()
-
-      if not err and result then
-        local incomplete = type(result) == "table" and result.isIncomplete == true
-        if vim.api.nvim_buf_is_valid(ctx.buf) then
-          vim.b[ctx.buf][incomplete_var] = incomplete or nil
-        end
-        local batch = items_of(result)
-        coroutine.yield(batch)
+      if err or not result then
+        return
       end
+      coroutine.yield(tracker.parse_items(result))
     end)
 
     local close, merged = async.merge { chan.pull, final }
