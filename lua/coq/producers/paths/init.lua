@@ -111,7 +111,7 @@ local match_key = function(m)
 end
 
 ---@param settings config.Settings
-M.matcher = function(settings, ctx)
+M.matcher = util.batched(function(settings, ctx)
   local row, col = unpack(ctx.pos)
   local line = row - 1
 
@@ -119,39 +119,35 @@ M.matcher = function(settings, ctx)
     local close, iter = matches(settings, ctx)
     defer(close)
 
-    util.batched(function(yield)
-      for m in vim.iter(iter):unique(match_key) do
-        local dir_q = m.type == "directory"
-        local word = m.name .. (dir_q and m.cand.local_sep or "")
-        local filter = m.name
+    for m in vim.iter(iter):unique(match_key) do
+      local dir_q = m.type == "directory"
+      local word = m.name .. (dir_q and m.cand.local_sep or "")
+      local filter = m.name
 
-        local item = util.item(settings, settings.clients.paths, {
-          word = word,
-          kind = dir_q and "Folder" or "File",
-          filter = filter,
-          fuzzy = m.fuzzy,
-          path = m.full,
-          lsp = {
-            position_encoding = "utf-8",
-            item = {
-              label = word,
-              textEdit = {
-                range = {
-                  start = { line = line, character = m.cand.start },
-                  ["end"] = { line = line, character = col },
-                },
-                newText = m.cand.literal_directory .. word,
+      local item = util.item(settings, settings.clients.paths, {
+        word = word,
+        kind = dir_q and "Folder" or "File",
+        filter = filter,
+        fuzzy = m.fuzzy,
+        path = m.full,
+        lsp = {
+          position_encoding = "utf-8",
+          item = {
+            label = word,
+            textEdit = {
+              range = {
+                start = { line = line, character = m.cand.start },
+                ["end"] = { line = line, character = col },
               },
+              newText = m.cand.literal_directory .. word,
             },
           },
-        })
-        if not yield(item) then
-          return
-        end
-      end
-    end)
+        },
+      })
+      coroutine.yield(item)
+    end
   end)
-end
+end)
 
 ---@return producers.Producer<ctx.full>
 M.new = function()

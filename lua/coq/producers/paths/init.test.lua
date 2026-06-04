@@ -57,8 +57,7 @@ end
 local run_matcher = function(settings, ctx)
   local items = {}
   async.scope(function()
-    -- drive like the worker pump: resume with `true` so the matcher's
-    -- early-return-on-falsy guard keeps streaming. each pull is an item[] batch.
+    -- paths.matcher is util.batched(...), so each pull is an item[] batch.
     local pull = async.wrap(function(...)
       paths.matcher(settings, ctx)
     end)

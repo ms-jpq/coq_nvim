@@ -40,13 +40,11 @@ T.describe("producers.util.batched", function(test)
   local collect = function(count)
     local batches = {}
     for batch in coroutine.wrap(function()
-      util.batched(function(yield)
+      util.batched(function()
         for i = 1, count do
-          if not yield(i) then
-            return
-          end
+          coroutine.yield(i)
         end
-      end)
+      end)()
     end) do
       table.insert(batches, batch)
     end
@@ -79,24 +77,6 @@ T.describe("producers.util.batched", function(test)
 
   test("emitting nothing yields no batch", function()
     T.eq(collect(0), {})
-  end)
-
-  test("a stop signal halts the body after the in-flight batch", function()
-    local reached = 0
-    local gen = coroutine.wrap(function()
-      util.batched(function(yield)
-        for i = 1, 1e6 do
-          reached = i
-          if not yield(i) then
-            return
-          end
-        end
-      end)
-    end)
-    local first = gen() -- pull one batch
-    local after = gen(false) -- consumer asks to stop
-    T.eq(reached, #first) -- body did not run past the flushed batch
-    T.eq(after, nil) -- no further batches
   end)
 end)
 

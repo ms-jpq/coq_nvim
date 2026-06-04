@@ -139,29 +139,25 @@ local doc_iter = function(opts, meta)
 end
 
 ---@param settings config.Settings
-M.matcher = function(settings, ctx)
+M.matcher = util.batched(function(settings, ctx)
   if util.skip_empty(ctx) then
     return
   end
 
   local raw = index_of(settings).search { keyword_before = ctx.keyword_before }
 
-  util.batched(function(yield)
-    for hit in util.shape(settings, ctx, raw) do
-      local lines = vim.iter(doc_iter(settings.clients.tmux, hit.item.meta)):totable()
-      local item = util.item(settings, settings.clients.tmux, {
-        word = hit.item.word,
-        kind = "Text",
-        filter = hit.item.word,
-        fuzzy = hit.fuzzy,
-        doc = #lines > 0 and { lines = lines, filetype = "" } or nil,
-      })
-      if not yield(item) then
-        return
-      end
-    end
-  end)
-end
+  for hit in util.shape(settings, ctx, raw) do
+    local lines = vim.iter(doc_iter(settings.clients.tmux, hit.item.meta)):totable()
+    local item = util.item(settings, settings.clients.tmux, {
+      word = hit.item.word,
+      kind = "Text",
+      filter = hit.item.word,
+      fuzzy = hit.fuzzy,
+      doc = #lines > 0 and { lines = lines, filetype = "" } or nil,
+    })
+    coroutine.yield(item)
+  end
+end)
 
 ---@return producers.Producer<ctx.full>
 M.new = function()

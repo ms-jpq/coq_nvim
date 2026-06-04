@@ -105,33 +105,29 @@ M.idle = function(settings, _)
 end
 
 ---@param settings config.Settings
-M.matcher = function(settings, ctx)
+M.matcher = util.batched(function(settings, ctx)
   if util.skip_empty(ctx) then
     return
   end
 
   local raw = index_of(settings).search { keyword_before = ctx.keyword_before }
 
-  util.batched(function(yield)
-    for hit in util.shape(settings, ctx, raw) do
-      local doc_line = settings.clients.registers.short_name
-        .. settings.clients.registers.register_scope
-        .. hit.item.register
+  for hit in util.shape(settings, ctx, raw) do
+    local doc_line = settings.clients.registers.short_name
+      .. settings.clients.registers.register_scope
+      .. hit.item.register
 
-      local item = util.item(settings, settings.clients.registers, {
-        word = hit.item.word,
-        kind = "Text",
-        filter = hit.item.word,
-        fuzzy = hit.fuzzy,
-        snippet = hit.item.linewise and hit.item.line or nil,
-        doc = { lines = { doc_line }, filetype = "" },
-      })
-      if not yield(item) then
-        return
-      end
-    end
-  end)
-end
+    local item = util.item(settings, settings.clients.registers, {
+      word = hit.item.word,
+      kind = "Text",
+      filter = hit.item.word,
+      fuzzy = hit.fuzzy,
+      snippet = hit.item.linewise and hit.item.line or nil,
+      doc = { lines = { doc_line }, filetype = "" },
+    })
+    coroutine.yield(item)
+  end
+end)
 
 ---@return producers.Producer<ctx.full>
 M.new = function()

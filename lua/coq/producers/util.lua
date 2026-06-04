@@ -1,3 +1,4 @@
+local async = require "coq.lib.async"
 local atools = require "coq.lib.atools"
 local fuzzy = require "coq.lib.index.fuzzy"
 local trie = require "coq.lib.index.trie"
@@ -6,26 +7,30 @@ local M = {}
 
 M.BATCH = 420
 
----@generic T
----@param body fun(yield: fun(item: T): boolean)
-M.batched = function(body)
-  local batch = {}
-  local flush = function()
-    if #batch == 0 then
-      return true
+---@param fn function
+---@return function batched
+M.batched = function(fn)
+  return function(...)
+    local argv = { ... }
+    local iter = async.wrap(function()
+      fn(unpack(argv))
+    end)
+    local batch = {}
+    while true do
+      local item = iter()
+      if item == nil then
+        break
+      end
+      batch[#batch + 1] = item
+      if #batch >= M.BATCH then
+        coroutine.yield(batch)
+        batch = {}
+      end
     end
-    local more = coroutine.yield(batch)
-    batch = {}
-    return more ~= false
+    if #batch > 0 then
+      coroutine.yield(batch)
+    end
   end
-  body(function(item)
-    batch[#batch + 1] = item
-    if #batch >= M.BATCH then
-      return flush()
-    end
-    return true
-  end)
-  flush()
 end
 
 ---@param ctx ctx.full

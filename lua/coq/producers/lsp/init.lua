@@ -24,7 +24,7 @@ M.new = function()
         local close, query = request.query(ignored, ctx)
         defer(close)
 
-        util.batched(function(yield)
+        util.batched(function()
           for entry in query do
             local item = entry.item
             local label = item.label or ""
@@ -32,7 +32,7 @@ M.new = function()
             local is_snippet = item.insertTextFormat == 2
             local filter = item.filterText or label
 
-            yield {
+            coroutine.yield {
               word = is_snippet and label or insert_text,
               abbr = label,
               kind = entry.kind,
@@ -52,7 +52,7 @@ M.new = function()
               },
             }
           end
-        end)
+        end)()
       end)
     end,
   }
