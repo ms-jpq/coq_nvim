@@ -133,6 +133,6 @@ M.matcher = util.batched(function(settings, ctx)
   end
 end)
 
-M.new = util.threaded_module("coq.producers.buffers", "buffers")
+M.new = util.threaded_module "buffers"
 
 return M

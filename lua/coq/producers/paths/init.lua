@@ -150,6 +150,6 @@ end)
 
 M.idle = lib.noop
 
-M.new = util.threaded_module("coq.producers.paths", "paths")
+M.new = util.threaded_module "paths"
 
 return M

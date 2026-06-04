@@ -1,5 +1,6 @@
 local atools = require "coq.lib.atools"
 local help = require "coq.commands.help"
+local stats = require "coq.commands.stats"
 
 local M = {}
 
@@ -15,10 +16,10 @@ end
 
 M.Now = unimplemented "Now"
 M.deps = unimplemented "deps"
-M.Stats = unimplemented "Stats"
 M.Snips = unimplemented "Snips"
 
-M.bind = function()
+---@param statsd index.Statsd
+M.bind = function(statsd)
   atools.scheduled()
 
   vim.api.nvim_create_user_command("COQhelp", function(opts)
@@ -43,9 +44,9 @@ M.bind = function()
     M.deps()
   end, { nargs = 0 })
 
-  vim.api.nvim_create_user_command("COQstats", function(opts)
-    M.Stats(unpack(opts.fargs))
-  end, { nargs = "*" })
+  vim.api.nvim_create_user_command("COQstats", function()
+    stats.show(statsd)
+  end, { nargs = 0 })
 
   vim.api.nvim_create_user_command("COQsnips", function(opts)
     M.Snips(unpack(opts.fargs))

@@ -208,9 +208,8 @@ M.bind = function(n, settings, resolver, statsd, done, trigger)
 
     ---@cast user_data completions.Item
     local ctx = context.full()
-    local filter = user_data.meta.filter or user_data.word
-    if apply(settings, ctx, resolver, user_data) and filter then
-      statsd.inserted(filter)
+    if apply(settings, ctx, resolver, user_data) then
+      statsd.inserted(user_data)
       if user_data.meta.path and user_data.kind == "Folder" then
         trigger.replace { manual = false }
       end

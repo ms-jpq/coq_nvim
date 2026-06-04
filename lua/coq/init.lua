@@ -9,6 +9,7 @@ local config = require "coq.config"
 local events_m = require "coq.completions.events"
 local idle = require "coq.completions.idle"
 local insertion = require "coq.completions.insertion"
+local instrument = require "coq.lib.producers.instrument"
 local nvim_options = require "coq.nvim_options"
 local p_buffers = require "coq.producers.buffers"
 local p_ctags = require "coq.producers.ctags"
@@ -29,7 +30,6 @@ local COMPLETEFUNC = "__coq_completefunc__"
 local M = {
   Now = commands.Now,
   deps = commands.deps,
-  Stats = commands.Stats,
   Snips = commands.Snips,
   Help = commands.Help,
 }
@@ -96,10 +96,16 @@ M.setup = function(opts)
       atools.scheduled()
       nvim_options.apply(settings)
 
-      local p = vim.iter(producers(settings.clients)):totable()
+      local statsd = statsd_m.new(settings.clients)
+
+      local p = vim
+        .iter(producers(settings.clients))
+        :map(function(prod)
+          return instrument.wrap(statsd, prod)
+        end)
+        :totable()
       local sup = supervisor.new(p)
 
-      local statsd = statsd_m.new(settings.clients)
       local events = events_m.new()
       local resolver = resolver_m.new(n)
 
@@ -107,7 +113,7 @@ M.setup = function(opts)
       preview.bind(n, settings, resolver, events.pum)
       insertion.bind(n, settings, resolver, statsd, events.done, events.trigger)
       idle.bind(n, settings, sup, events)
-      commands.bind()
+      commands.bind(statsd)
 
       _G[COMPLETEFUNC] = function(findstart, _)
         if findstart == 1 then

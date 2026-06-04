@@ -19,6 +19,7 @@ local SETTINGS = config.merged()
 ---@return producers.Producer
 local producer = function(spec)
   return {
+    source = "mock",
     idle = function(_, ctx)
       if spec.idle then
         spec.idle(ctx)

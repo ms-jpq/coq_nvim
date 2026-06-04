@@ -50,6 +50,15 @@ M.lstrip = function(s)
   return (string.gsub(s, "^%s+", ""))
 end
 
+---Right-pad `text` with spaces until it is at least `width` columns wide.
+---No-op when `#text >= width`.
+---@param text string
+---@param width integer
+---@return string
+M.pad_right = function(text, width)
+  return width > #text and text .. string.rep(" ", width - #text) or text
+end
+
 ---@param s string
 ---@return string
 M.rstrip = function(s)

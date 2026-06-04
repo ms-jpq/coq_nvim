@@ -12,6 +12,7 @@ local SETTINGS = config.merged()
 ---@return producers.Producer
 local regular = function(spec)
   return {
+    source = "mock",
     idle = lib.noop,
     search = function(settings, ctx)
       local iter = async.wrap(function()
@@ -31,6 +32,7 @@ local cancel_tests = function(name, factory)
       local _ = h.on_cancel(n.cancel)
       n.spawn(function()
         local db = factory {
+          source = "mock",
           idle = lib.noop,
           matcher = function(_, ctx)
             require("coq.lib.async").sleep(200 * ctx.slow)
@@ -38,7 +40,7 @@ local cancel_tests = function(name, factory)
           end,
         }
         local start = vim.uv.hrtime()
-        local _close, iter = db.search(SETTINGS, { slow = T.SLOW })
+        local _, iter = db.search(SETTINGS, { slow = T.SLOW })
         pcall(iter)
         elapsed_ms = (vim.uv.hrtime() - start) / 1e6
       end)

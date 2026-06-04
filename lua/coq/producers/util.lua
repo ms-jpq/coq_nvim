@@ -157,10 +157,10 @@ M.batched = function(fn)
   end
 end
 
----@param path string
----@param source string
+---@param name string
 ---@return fun(): producers.Producer<ctx.full>
-M.threaded_module = function(path, source)
+M.threaded_module = function(name)
+  local path = "coq.producers." .. name
   local mk = function(method)
     local src = string.format("return function(...) return require(%q).%s(...) end", path, method)
     return assert(load(src))()
@@ -168,7 +168,7 @@ M.threaded_module = function(path, source)
 
   return function()
     return producer.threaded {
-      source = source,
+      source = name,
       idle = mk "idle",
       matcher = mk "matcher",
     }

@@ -175,6 +175,6 @@ M.matcher = util.batched(function(settings, ctx)
   end
 end)
 
-M.new = util.threaded_module("coq.producers.tmux", "tmux")
+M.new = util.threaded_module "tmux"
 
 return M

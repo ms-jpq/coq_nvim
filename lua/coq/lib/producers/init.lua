@@ -2,6 +2,7 @@ local closable = require "coq.lib.closable"
 local worker = require "coq.lib.worker"
 
 ---@class producers.Producer<C>
+---@field source string
 ---@field idle fun(settings: config.Settings, ctx: C)
 ---@field search fun(settings: config.Settings, ctx: C): fun(), lib.Iterator<completions.Item[]>
 
@@ -9,6 +10,7 @@ local worker = require "coq.lib.worker"
 ---@alias producers.MatcherFn<C> fun(settings: config.Settings?, ctx: C)
 
 ---@class producers.Spec<C>
+---@field source string
 ---@field idle producers.IdleFn<C>
 ---@field matcher producers.MatcherFn<C>
 
@@ -21,6 +23,7 @@ M.threaded = function(spec)
   local w = worker.spawn()
 
   return {
+    source = spec.source,
     idle = function(settings, idle_ctx)
       w.queue(spec.idle, settings, idle_ctx)
     end,
