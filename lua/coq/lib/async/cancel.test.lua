@@ -34,6 +34,42 @@ T.describe("cancel by throw", function(test)
   end)
 end)
 
+T.describe("check_cancellation", function(test)
+  test("is a noop when the current handle is not cancelled", function()
+    local n = nursery.new()
+    local reached = false
+    n.spawn(function()
+      async.check_cancellation()
+      reached = true
+    end)
+    n.join()
+    T.eq(reached, true)
+  end)
+
+  test("throws a cancel sentinel when the current handle is cancelled", function()
+    local n = nursery.new()
+    local outcome = nil
+    n.spawn(function()
+      n.cancel()
+      local ok, err = pcall(async.check_cancellation)
+      outcome = { ok = ok, is_cancel = cancel.is(err) }
+    end)
+    n.join()
+    T.eq(outcome, { ok = false, is_cancel = true })
+  end)
+
+  test("nursery does not record the thrown sentinel as an error", function()
+    local n = nursery.new()
+    n.spawn(function()
+      n.cancel()
+      async.check_cancellation()
+    end)
+    local ok, err = pcall(n.join)
+    T.eq(ok, true)
+    T.eq(err, nil)
+  end)
+end)
+
 T.describe("cancel.pcall", function(test)
   test("passes cancel through as if not caught", function()
     local ok, err = pcall(function()

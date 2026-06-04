@@ -24,6 +24,12 @@ M.current = function()
   return threads[thread] or M.ROOT
 end
 
+M.check_cancellation = function()
+  if M.current().cancelled then
+    error(cancel.new(), 0)
+  end
+end
+
 ---@class async.Await
 ---@field f async.Future
 ---@field h? async.Handle
@@ -47,19 +53,17 @@ end
 ---@generic T
 ---@return async.Future<T>
 M.future = function()
-  local done = false
-  local vals = {}
+  local vals = nil
   local cbs = {}
 
   local f = {}
 
   f.resolve = function(...)
-    if done then
+    if vals ~= nil then
       return
     end
-    done = true
-
     vals = { ... }
+
     local snapshot = cbs
     cbs = {}
     for _, c in ipairs(snapshot) do
@@ -68,7 +72,7 @@ M.future = function()
   end
 
   f.once_ready = function(c)
-    if done then
+    if vals ~= nil then
       c(unpack(vals))
     else
       table.insert(cbs, c)
@@ -79,12 +83,11 @@ M.future = function()
     if opts and opts.cancel == false then
       return coroutine.yield(setmetatable({ f = f }, AWAIT_EFF))
     end
+    M.check_cancellation()
     local h = M.current()
-    if h.cancelled then
-      error(cancel.new(), 0)
-    end
     local ret = { coroutine.yield(setmetatable({ f = f, h = h }, AWAIT_EFF)) }
-    if h.cancelled then
+
+    if h.cancelled and vals == nil then
       error(cancel.new(), 0)
     end
     return unpack(ret)

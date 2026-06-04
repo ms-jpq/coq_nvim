@@ -121,13 +121,16 @@ local make_requester = function(write)
     if not ok then
       error(frame, 0)
     end
+    async.check_cancellation()
     return interpret_frame(frame, 3)
   end
 
   requester.request_stream = function(message)
     local close, iter = open(parked, write, message)
     return close, function()
-      return interpret_frame(iter(), 2)
+      local frame = iter()
+      async.check_cancellation()
+      return interpret_frame(frame, 2)
     end
   end
 
