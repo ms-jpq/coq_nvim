@@ -172,13 +172,18 @@ T.describe("producers.util.item", function(test)
 
   test("threads empty brackets through unchanged", function()
     T.eq(
-      util.item(with({ "", "" }, { short_name = "TS" }), "fake", { word = "rex", kind = "Text", filter = "rex", fuzzy = 0 }).menu,
+      util.item(
+        with({ "", "" }, { short_name = "TS" }),
+        "fake",
+        { word = "rex", kind = "Text", filter = "rex", fuzzy = 0 }
+      ).menu,
       "TS"
     )
   end)
 
   test("meta.source is the source identifier, not the short_name", function()
-    local item = util.item(with({ "「", "」" }, FAKE), "fake", { word = "rex", kind = "Text", filter = "rex", fuzzy = 0 })
+    local item =
+      util.item(with({ "「", "」" }, FAKE), "fake", { word = "rex", kind = "Text", filter = "rex", fuzzy = 0 })
     T.eq(item.word, "rex")
     T.eq(item.kind, "Text")
     T.eq(item.menu, "「BF」")
