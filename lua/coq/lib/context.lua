@@ -30,26 +30,6 @@ M.still_valid = function(ctx)
   return vim.api.nvim_buf_is_valid(ctx.buf) and vim.b[ctx.buf].changedtick == ctx.changedtick
 end
 
----@param buf integer
----@return integer lo
----@return integer hi
-M.window_around_cursor = function(buf)
-  local count = vim.api.nvim_buf_line_count(buf)
-  local win = vim.fn.bufwinid(buf)
-  local row = win == -1 and 0 or (unpack(vim.api.nvim_win_get_cursor(win)) - 1)
-  local height = vim.o.lines
-
-  local lo, hi = row - height, row + height + 1
-  if lo < 0 then
-    hi = hi - lo
-  end
-  if hi > count then
-    lo = lo - (hi - count)
-  end
-
-  return math.max(0, lo), math.min(count, hi)
-end
-
 ---@return ctx.base
 M.base = function()
   atools.scheduled()

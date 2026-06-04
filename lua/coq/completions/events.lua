@@ -1,7 +1,7 @@
 local broadcast = require "coq.lib.channels.broadcast"
+local buffers = require "coq.lib.buffers"
 local errs = require "coq.lib.errs"
 local lib = require "coq.lib"
-local util = require "coq.producers.util"
 
 ---@class completions.PumChangedEvent : vim.v.event
 ---@field kind "changed"
@@ -75,7 +75,7 @@ M.new = function()
   vim.api.nvim_create_autocmd({ "InsertEnter" }, {
     group = lib.group,
     callback = function(args)
-      vim.b[args.buf][COQ_LAST_SIZE] = util.buf_size(args.buf)
+      vim.b[args.buf][COQ_LAST_SIZE] = buffers.buf_size(args.buf)
     end,
   })
 
@@ -83,7 +83,7 @@ M.new = function()
     group = lib.group,
     callback = function(args)
       local prev = vim.b[args.buf][COQ_LAST_SIZE]
-      local now = util.buf_size(args.buf)
+      local now = buffers.buf_size(args.buf)
       vim.b[args.buf][COQ_LAST_SIZE] = now
       if prev ~= nil and now < prev then
         events.trigger.replace { manual = false }

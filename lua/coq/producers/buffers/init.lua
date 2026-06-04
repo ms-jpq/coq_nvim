@@ -1,7 +1,7 @@
 local async = require "coq.lib.async"
 local atools = require "coq.lib.atools"
 local buf_tracker = require "coq.lib.producers.buf_tracker"
-local context = require "coq.lib.context"
+local buffers = require "coq.lib.buffers"
 local index_m = require "coq.producers.buffers.index"
 local lib = require "coq.lib"
 local path_fmt = require "coq.producers.path_fmt"
@@ -24,17 +24,10 @@ local index_of = util.once(index_m.new)
 local M = {}
 
 ---@param buf integer
----@return string[]
-local buffer_lines = function(buf)
-  local lo, hi = context.window_around_cursor(buf)
-  return vim.api.nvim_buf_get_lines(buf, lo, hi, true)
-end
-
----@param buf integer
 ---@param previous? buffer.Meta
 ---@return buffer.Meta?
 M.buffer_meta = function(buf, previous)
-  if not util.is_live(buf) then
+  if not buffers.is_live(buf) then
     return nil
   end
 
@@ -48,7 +41,7 @@ M.buffer_meta = function(buf, previous)
     filetype = vim.bo[buf].filetype,
     filename = vim.api.nvim_buf_get_name(buf),
     iskeyword = vim.bo[buf].iskeyword,
-    lines = (vim.bo[buf].modified and util.buf_size(buf) <= MAX_BYTES) and buffer_lines(buf) or nil,
+    lines = (vim.bo[buf].modified and buffers.buf_size(buf) <= MAX_BYTES) and buffers.lines_around_cursor(buf) or nil,
   }
 end
 

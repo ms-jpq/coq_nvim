@@ -1,5 +1,4 @@
-local context = require "coq.lib.context"
-local util = require "coq.producers.util"
+local buffers = require "coq.lib.buffers"
 
 local M = {}
 
@@ -12,13 +11,13 @@ local M = {}
 
 ---@param buf integer
 M.query = function(buf)
-  if not util.is_live(buf) then
+  if not buffers.is_live(buf) then
     return
   end
 
   local tick = vim.b[buf].changedtick
 
-  local lo, hi = context.window_around_cursor(buf)
+  local lo, hi = buffers.window_around_cursor(buf)
 
   local ok, parser = pcall(vim.treesitter.get_parser, buf)
   if not ok or not parser then
@@ -57,7 +56,7 @@ M.query = function(buf)
           return
         end
 
-        if not util.is_live(buf) or vim.b[buf].changedtick ~= tick then
+        if not buffers.is_live(buf) or vim.b[buf].changedtick ~= tick then
           return
         end
       end

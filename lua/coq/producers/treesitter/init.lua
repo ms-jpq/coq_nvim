@@ -1,5 +1,6 @@
 local async = require "coq.lib.async"
 local buf_tracker = require "coq.lib.producers.buf_tracker"
+local buffers = require "coq.lib.buffers"
 local index_m = require "coq.producers.treesitter.index"
 local lib = require "coq.lib"
 local path_fmt = require "coq.producers.path_fmt"
@@ -21,7 +22,7 @@ local M = {}
 ---@param previous? treesitter.Meta
 ---@return treesitter.Meta?
 M.buffer_meta = function(buf, previous)
-  if not util.is_live(buf) then
+  if not buffers.is_live(buf) then
     return nil
   end
 

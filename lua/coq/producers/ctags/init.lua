@@ -1,5 +1,6 @@
 local async = require "coq.lib.async"
 local buf_tracker = require "coq.lib.producers.buf_tracker"
+local buffers = require "coq.lib.buffers"
 local fs_cache = require "coq.lib.fs_cache"
 local index_m = require "coq.producers.ctags.index"
 local lib = require "coq.lib"
@@ -36,7 +37,7 @@ local M = {}
 ---@param previous? ctags.Meta
 ---@return ctags.Meta?
 M.buffer_meta = function(buf, previous)
-  if not util.is_live(buf) then
+  if not buffers.is_live(buf) then
     return nil
   end
   local filename = vim.api.nvim_buf_get_name(buf)

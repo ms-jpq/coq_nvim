@@ -1,6 +1,6 @@
 local async = require "coq.lib.async"
 local atools = require "coq.lib.atools"
-local context = require "coq.lib.context"
+local buffers = require "coq.lib.buffers"
 
 local M = {}
 
@@ -118,8 +118,7 @@ end
 ---@return string[]
 M.surround = function(ctx)
   atools.scheduled()
-  local lo, hi = context.window_around_cursor(ctx.buf)
-  return vim.api.nvim_buf_get_lines(ctx.buf, lo, hi, true)
+  return buffers.lines_around_cursor(ctx.buf)
 end
 
 ---@param kw table<integer, true>

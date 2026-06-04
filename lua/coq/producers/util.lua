@@ -1,5 +1,4 @@
 local async = require "coq.lib.async"
-local atools = require "coq.lib.atools"
 local fuzzy = require "coq.lib.index.fuzzy"
 local trie = require "coq.lib.index.trie"
 
@@ -35,19 +34,6 @@ end
 ---@return boolean
 M.skip_empty = function(ctx)
   return ctx.keyword_before == "" and not ctx.manual
-end
-
----@param buf integer
----@return boolean
-M.is_live = function(buf)
-  atools.scheduled()
-  return vim.api.nvim_buf_is_valid(buf) and vim.api.nvim_buf_is_loaded(buf)
-end
-
----@param buf integer
----@return integer
-M.buf_size = function(buf)
-  return vim.api.nvim_buf_get_offset(buf, vim.api.nvim_buf_line_count(buf))
 end
 
 ---@param item { word: string }
