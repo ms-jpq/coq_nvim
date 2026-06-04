@@ -110,6 +110,39 @@ T.describe("nursery", function(test)
     assert(err:find "lil went missing")
   end)
 
+  test("join surfaces spawn errors even when joiner is cancelled mid-await", function()
+    local outer = handle.new()
+    local n = nursery.new()
+    local join_ok, join_err
+
+    async.scope(function(test_n)
+      test_n.spawn(function()
+        runtime.bind(coroutine.running(), outer)
+
+        -- spot errors at t=20*SLOW, populating n.errors=["spot ran off"]
+        -- and triggering n.h.cancel.
+        n.spawn(function()
+          async.sleep(20 * T.SLOW)
+          error "spot ran off"
+        end)
+
+        -- cancel=false keeps block parked past n.h.cancel cascading, so
+        -- pending stays non-empty when the joiner enters n.join.
+        n.spawn(function()
+          local block = async.future()
+          block.await { cancel = false }
+        end)
+
+        async.sleep(40 * T.SLOW)
+        outer.cancel()
+        join_ok, join_err = pcall(n.join)
+      end)
+    end)
+
+    T.eq(join_ok, false)
+    assert(tostring(join_err):find "spot ran off", "expected spot ran off, got: " .. tostring(join_err))
+  end)
+
   test("join raises error group when multiple children error", function()
     local n = nursery.new()
     n.spawn(function()

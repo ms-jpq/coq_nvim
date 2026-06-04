@@ -34,14 +34,17 @@ M.new = function()
         h.cancel()
       end)
 
+      errs.raise(errors)
+
       if next(pending) ~= nil then
         local f = runtime.future()
         table.insert(waiters, f)
         f.await()
         runtime.check_cancellation()
       end
+
+      errs.raise(errors)
     end)
-    errs.raise(errors)
   end
 
   nursery.spawn = function(fn)
