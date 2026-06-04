@@ -83,6 +83,26 @@ T.describe("check_cancellation", function(test)
     n.join()
     T.eq(sibling_finished, true)
   end)
+
+  test("join still cancels its handle when its await throws", function()
+    local outer = nursery.new()
+    local child_cancel_fired = false
+
+    outer.spawn(function()
+      local inner = nursery.new()
+      inner.on_cancel(function()
+        child_cancel_fired = true
+      end)
+      inner.spawn(function()
+        async.sleep(100 * T.SLOW)
+      end)
+      async.current().cancel()
+      inner.join()
+    end)
+
+    outer.join()
+    T.eq(child_cancel_fired, true)
+  end)
 end)
 
 T.describe("cancel.pcall", function(test)

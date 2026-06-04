@@ -83,7 +83,7 @@ M.new = function()
     end,
   })
 
-  vim.api.nvim_create_autocmd({ "InsertEnter" }, {
+  vim.api.nvim_create_autocmd({ "InsertEnter", "BufEnter", "TextChanged" }, {
     group = lib.group,
     callback = function(args)
       if not is_completable(args.buf) then

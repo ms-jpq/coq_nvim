@@ -34,7 +34,6 @@ M.new = function()
       f.await()
       runtime.check_cancellation()
     end
-
     nursery.closed = true
     h.cancel()
     errs.raise(errors)

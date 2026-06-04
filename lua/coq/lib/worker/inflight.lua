@@ -18,9 +18,12 @@ M.new = function()
       seq = seq + 1
       id = seq
     end
-    mapping[id] = cb
+    assert(mapping[id] == nil, "inflight: id collision " .. tostring(id))
+
+    local m = mapping
+    m[id] = cb
     return id, function()
-      mapping[id] = nil
+      m[id] = nil
     end
   end
 
