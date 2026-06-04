@@ -46,7 +46,6 @@ M.decode = function(s)
   return value
 end
 
-
 ---@param path string
 ---@param data string
 ---@return boolean
