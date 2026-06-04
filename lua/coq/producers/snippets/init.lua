@@ -14,6 +14,8 @@ local loader_of = util.once(loader_m.new)
 
 local M = {}
 
+M.loader_of_main = loader_of
+
 ---@param settings config.Settings
 ---@param idle_ctx idle.Ctx
 M.idle = function(settings, idle_ctx)
@@ -41,10 +43,6 @@ M.idle = function(settings, idle_ctx)
     end
   end
 end
-
----Main-thread entry-point: each Lua state has its own require cache, so
----calling this from `worker.main` lets the main side memoize independently.
-M.loader_of_main = loader_of
 
 ---@param item snippets.Item
 ---@return lib.Iterator<string>

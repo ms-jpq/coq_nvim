@@ -63,7 +63,7 @@ local completion_tracker = function(client, buf)
     if value.items ~= nil then
       return value.items
     end
-    return value --[[@as lsp.CompletionItem[] ]]
+    return value
   end
 
   tracker.commit = function()
@@ -94,7 +94,7 @@ local query_1 = function(client, ctx, td_params)
       textDocument = td_params,
       context = { triggerKind = tracker.trigger_kind },
       partialResultToken = token,
-    } --[[@as lsp.CompletionParams]]
+    }
 
     ---@type channels.Mpmc<lsp.CompletionItem[]>
     local chan = mpmc.new(math.huge)
