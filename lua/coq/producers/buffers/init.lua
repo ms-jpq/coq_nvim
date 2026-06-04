@@ -48,9 +48,7 @@ M.buffer_meta = function(buf, previous)
     filetype = vim.bo[buf].filetype,
     filename = vim.api.nvim_buf_get_name(buf),
     iskeyword = vim.bo[buf].iskeyword,
-    lines = (vim.bo[buf].modified and vim.api.nvim_buf_call(buf, function()
-      return vim.fn.wordcount().bytes
-    end) <= MAX_BYTES) and buffer_lines(buf) or nil,
+    lines = (vim.bo[buf].modified and util.buf_size(buf) <= MAX_BYTES) and buffer_lines(buf) or nil,
   }
 end
 

@@ -44,6 +44,12 @@ M.is_live = function(buf)
   return vim.api.nvim_buf_is_valid(buf) and vim.api.nvim_buf_is_loaded(buf)
 end
 
+---@param buf integer
+---@return integer
+M.buf_size = function(buf)
+  return vim.api.nvim_buf_get_offset(buf, vim.api.nvim_buf_line_count(buf))
+end
+
 ---@param item { word: string }
 ---@return string
 local word_key = function(item)
