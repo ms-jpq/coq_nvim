@@ -5,32 +5,6 @@ local trie = require "coq.lib.index.trie"
 
 local M = {}
 
-M.BATCH = 420
-
----@param fn function
----@return function batched
-M.batched = function(fn)
-  return function(...)
-    local argv = { ... }
-    local batch = {}
-    for item in
-      async.wrap(function()
-        fn(unpack(argv))
-      end)
-    do
-      table.insert(batch, item)
-      if #batch >= M.BATCH then
-        coroutine.yield(batch)
-        batch = {}
-        async.sleep(0)
-      end
-    end
-    if #batch > 0 then
-      coroutine.yield(batch)
-    end
-  end
-end
-
 ---@param ctx ctx.full
 ---@return boolean
 M.skip_empty = function(ctx)
@@ -93,53 +67,12 @@ M.doc = function(filetype, iter)
   return { lines = lines, filetype = filetype }
 end
 
----@param path string
----@return fun(): producers.Producer<ctx.full>
-M.threaded_module = function(path)
-  local mk = function(method)
-    local src = string.format("return function(...) return require(%q).%s(...) end", path, method)
-    return assert(load(src))()
-  end
-
-  return function()
-    return producer.threaded {
-      idle = mk "idle",
-      matcher = mk "matcher",
-    }
-  end
-end
-
 ---@return string
 M.uid = function()
   local bytes = assert(vim.uv.random(8))
   return (string.gsub(bytes, ".", function(c)
     return string.format("%02x", string.byte(c))
   end))
-end
-
----@param hit index.Hit<any>
----@return string?
-local word_of = function(hit)
-  return hit.item.word
-end
-
----@generic T : fun() index.Hit<any>
----@param settings config.Settings
----@param ctx ctx.full
----@param iter T
----@return T
-M.shape = function(settings, ctx, iter)
-  local kw = ctx.keyword_before
-  local shaped = vim
-    .iter(iter)
-    :filter(function(hit)
-      return hit.item.word ~= kw
-    end)
-    :unique(word_of)
-    :take(settings.match.max_results)
-  return function()
-    return shaped:next()
-  end
 end
 
 ---@class producers.ItemSpec
@@ -176,6 +109,68 @@ M.item = function(settings, opts, spec)
       lsp = spec.lsp,
     },
   }
+end
+
+---@generic T : fun() index.Hit<any>
+---@param settings config.Settings
+---@param ctx ctx.full
+---@param iter T
+---@return T
+M.shape = function(settings, ctx, iter)
+  local kw = ctx.keyword_before
+  local shaped = vim
+    .iter(iter)
+    :filter(function(hit)
+      return hit.item.word ~= kw
+    end)
+    :unique(function(hit)
+      return hit.item.word
+    end)
+    :take(settings.match.max_results)
+  return function()
+    return shaped:next()
+  end
+end
+
+M.BATCH = 420
+---@param fn function
+---@return function batched
+M.batched = function(fn)
+  return function(...)
+    local argv = { ... }
+    local batch = {}
+    for item in
+      async.wrap(function()
+        fn(unpack(argv))
+      end)
+    do
+      table.insert(batch, item)
+      if #batch >= M.BATCH then
+        coroutine.yield(batch)
+        batch = {}
+        async.sleep(0)
+      end
+    end
+    if #batch > 0 then
+      coroutine.yield(batch)
+    end
+  end
+end
+
+---@param path string
+---@return fun(): producers.Producer<ctx.full>
+M.threaded_module = function(path)
+  local mk = function(method)
+    local src = string.format("return function(...) return require(%q).%s(...) end", path, method)
+    return assert(load(src))()
+  end
+
+  return function()
+    return producer.threaded {
+      idle = mk "idle",
+      matcher = mk "matcher",
+    }
+  end
 end
 
 return M

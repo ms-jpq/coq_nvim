@@ -75,12 +75,7 @@ local file_preview = function(opts, path)
     return
   end
 
-  yield_capped(
-    opts,
-    vim.iter(txt.splitlines(text)):map(function(line)
-      return (string.gsub(line, "%s+$", ""))
-    end) --[[@as lib.Iterator<string>]]
-  )
+  yield_capped(opts, vim.iter(txt.splitlines(text)):map(txt.rstrip) --[[@as lib.Iterator<string>]])
 end
 
 ---@param opts paths.IterOpts

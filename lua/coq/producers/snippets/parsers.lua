@@ -2,12 +2,6 @@ local async = require "coq.lib.async"
 local atools = require "coq.lib.atools"
 local txt = require "coq.lib.text"
 
----@param s string
----@return string
-local strip = function(s)
-  return (s:gsub("^%s+", ""):gsub("%s+$", ""))
-end
-
 ---@param value string|string[]|nil
 ---@return string
 local join_body = function(value)
@@ -28,10 +22,10 @@ local prefix_set = function(prefix, content)
     return { content }
   end
   if type(prefix) == "string" then
-    return { strip(prefix) }
+    return { vim.trim(prefix) }
   end
   if type(prefix) == "table" then
-    return vim.iter(prefix):map(strip):totable()
+    return vim.iter(prefix):map(vim.trim):totable()
   end
   return {}
 end
@@ -86,8 +80,8 @@ M.lsp = function(src)
     local filetype = src.filetypes[1] or ""
     for label, unit in pairs(json) do
       if type(unit) == "table" then
-        local content = strip(join_body(unit.body))
-        local doc = strip(join_body(unit.description))
+        local content = vim.trim(join_body(unit.body))
+        local doc = vim.trim(join_body(unit.description))
 
         for _, word in pairs(prefix_set(unit.prefix, content)) do
           coroutine.yield {
@@ -103,6 +97,71 @@ M.lsp = function(src)
   end)
 end
 
+local SNIPPET_START = "snippet"
+local ALIAS_START = "alias"
+local LABEL_START = "abbr"
+local EXTENDS_START = "extends"
+local INCLUDES_START = "include"
+local COMMENT_START = "#"
+local IGNORED_STARTS = { "delete", "options", "regexp", "source" }
+local LEGAL_STARTS = { SNIPPET_START, ALIAS_START, LABEL_START, EXTENDS_START }
+
+---@param line string
+---@return string name
+---@return string label
+local parse_snippet_header = function(line)
+  local rest = vim.trim(string.sub(line, #SNIPPET_START + 1))
+  local sp = string.find(rest, " ", 1, true)
+
+  local name, label = "", ""
+  if sp == nil then
+    name, label = rest, ""
+  else
+    name = string.sub(rest, 1, sp - 1)
+    label = string.sub(rest, sp + 1)
+  end
+  if string.sub(label, 1, 1) == '"' then
+    local after = string.sub(label, 2)
+    local _, count = string.gsub(after, '"', '"')
+    if count == 1 then
+      local close = string.find(after, '"', 1, true)
+      label = string.sub(after, 1, close - 1)
+    end
+  end
+  return name, label
+end
+
+---@param start string
+---@return string?
+local suggest = function(start)
+  local best, best_score = nil, 0
+  for _, legal in pairs(LEGAL_STARTS) do
+    local score = 0
+    for i = 1, math.min(#start, #legal) do
+      if string.lower(string.sub(start, i, i)) == string.lower(string.sub(legal, i, i)) then
+        score = score + 1
+      else
+        break
+      end
+    end
+    if score > best_score then
+      best, best_score = legal, score
+    end
+  end
+  return best_score >= 2 and best or nil
+end
+
+---@param path string
+---@param lineno integer
+---@param line string
+---@param reason string
+local raise_err = function(path, lineno, line, reason)
+  error(
+    string.format("Cannot load:\n  path:   %s\n  lineno: %d\n  line:   %s\n  reason: %s", path, lineno, line, reason),
+    0
+  )
+end
+
 ---@param src snippets.Source
 ---@return lib.Iterator<snippets.Item>
 M.neosnippet = function(src)
@@ -113,60 +172,69 @@ M.neosnippet = function(src)
     end
     local filetype = src.filetypes[1] or ""
 
-    local name, label = "", ""
-    local aliases, lines = {}, {}
+    local items = {}
+    local current_name = ""
+    local current_label = ""
+    local current_aliases = {}
+    local current_lines = {}
 
-    local flush = function()
-      if name == "" then
+    local push = function()
+      if current_name == "" then
         return
       end
-      local content = strip(table.concat(lines, "\n"))
-      local lbl = label ~= "" and label or nil
-      for _, m in pairs(aliases) do
-        coroutine.yield {
-          word = m,
-          body = content,
-          filetype = filetype,
-          label = lbl,
-        }
+      local content = vim.trim(txt.dedent(table.concat(current_lines, "\n")))
+      local seen = {}
+      for _, m in pairs(current_aliases) do
+        if m ~= "" and not seen[m] then
+          seen[m] = true
+          table.insert(items, {
+            word = m,
+            body = content,
+            filetype = filetype,
+            label = current_label ~= "" and current_label or nil,
+          })
+        end
       end
-      name, label = "", ""
-      aliases, lines = {}, {}
     end
 
-    for line in txt.splitlines(body) do
-      line = (line:gsub("%s+$", ""))
-      if line == "" or line:match "^%s*$" then
-        if name ~= "" then
-          table.insert(lines, "")
+    local lineno = 0
+    for raw in txt.splitlines(body) do
+      lineno = lineno + 1
+      local line = txt.rstrip(raw)
+
+      if vim.startswith(line, COMMENT_START) or txt.has_any_prefix(IGNORED_STARTS, line) then
+        -- skip
+      elseif line == "" then
+        table.insert(current_lines, "")
+      elseif vim.startswith(line, EXTENDS_START) or vim.startswith(line, INCLUDES_START) then
+        -- classified (matches v1); filetype inheritance not yet modelled in v2
+      elseif vim.startswith(line, SNIPPET_START) then
+        push()
+        current_name, current_label = parse_snippet_header(line)
+        current_aliases = { current_name }
+        current_lines = {}
+      elseif vim.startswith(line, ALIAS_START) then
+        table.insert(current_aliases, vim.trim(string.sub(line, #ALIAS_START + 1)))
+      elseif vim.startswith(line, LABEL_START) then
+        current_label = vim.trim(string.sub(line, #LABEL_START + 1))
+      elseif string.match(line, "^%s") then
+        if current_name ~= "" then
+          table.insert(current_lines, line)
+        else
+          raise_err(src.path, lineno, line, "Expected snippet name")
         end
-      elseif line:match "^#" then
-        -- comment
-      elseif line:match "^delete" or line:match "^options" or line:match "^regexp" or line:match "^source" then
-        -- ignored directives
-      elseif line:match "^extends" or line:match "^include" then
-        -- filetype-extension; not modelled in v2 Source.filetypes yet
-      elseif line:match "^snippet%s" then
-        flush()
-        local rest = strip(line:sub(#"snippet" + 1))
-        local n, lbl = rest:match "^(%S+)%s*(.*)$"
-        if lbl and lbl:sub(1, 1) == '"' and lbl:sub(-1) == '"' and #lbl >= 2 then
-          lbl = lbl:sub(2, -2)
-        end
-        name = n or ""
-        label = lbl or ""
-        if name ~= "" then
-          table.insert(aliases, name)
-        end
-      elseif line:match "^alias%s" then
-        table.insert(aliases, strip(line:sub(#"alias" + 1)))
-      elseif line:match "^abbr%s" then
-        label = strip(line:sub(#"abbr" + 1))
-      elseif line:match "^%s" then
-        table.insert(lines, line)
+      else
+        local start = string.match(line, "^(%S+)") or line
+        local hint = suggest(start)
+        local addendum = hint and (" :: did you mean -- " .. hint) or ""
+        raise_err(src.path, lineno, line, "Unexpected line start" .. addendum)
       end
     end
-    flush()
+    push()
+
+    for _, item in pairs(items) do
+      coroutine.yield(item)
+    end
   end)
 end
 

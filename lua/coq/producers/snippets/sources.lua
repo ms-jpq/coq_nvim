@@ -2,6 +2,7 @@ local async = require "coq.lib.async"
 local atools = require "coq.lib.atools"
 local closable = require "coq.lib.closable"
 local fs_cache = require "coq.lib.fs_cache"
+local txt = require "coq.lib.text"
 
 ---@alias snippets.Kind "bundle" | "neosnippet" | "lsp"
 
@@ -57,12 +58,6 @@ local walk_files = function(dir, exts)
   end)
 end
 
----@param path string
----@return string
-local stem_of = function(path)
-  return (vim.fs.basename(path):gsub("%.[^.]+$", ""))
-end
-
 ---@param dirs string[]
 ---@return fun() close
 ---@return lib.Iterator<snippets.Source> iter
@@ -110,7 +105,7 @@ local neosnippet = function(dirs)
             kind = "neosnippet",
             path = path,
             mtime = mtime,
-            filetypes = { stem_of(path) },
+            filetypes = { txt.stem(path) },
           }
         end
       end
@@ -133,7 +128,7 @@ local lsp = function(dirs)
             kind = "lsp",
             path = path,
             mtime = mtime,
-            filetypes = { stem_of(path) },
+            filetypes = { txt.stem(path) },
           }
         end
       end

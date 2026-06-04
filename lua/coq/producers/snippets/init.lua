@@ -1,6 +1,7 @@
 local async = require "coq.lib.async"
 local fs_cache = require "coq.lib.fs_cache"
 local index_m = require "coq.producers.snippets.index"
+local lib = require "coq.lib"
 local loader_m = require "coq.producers.snippets.loader"
 local txt = require "coq.lib.text"
 local util = require "coq.producers.util"
@@ -11,16 +12,25 @@ local index_of = util.once(index_m.new)
 local cache_of = util.once(function(idle_ctx, loader)
   return fs_cache.new {
     fs_root = vim.fs.joinpath(idle_ctx.cache_dir, "snippets"),
-    compute = loader.parse,
+    compute = function(filetype)
+      return lib.scope(function(defer)
+        local close, iter = loader.parse(filetype)
+        defer(close)
+        return vim.iter(iter):totable()
+      end)
+    end,
   }
 end)
 
 ---@param srcs snippets.Source[]
 ---@return string
 local fingerprint = function(srcs)
-  local parts = vim.iter(srcs):map(function(s)
-    return s.path .. ":" .. s.mtime
-  end):totable()
+  local parts = vim
+    .iter(srcs)
+    :map(function(s)
+      return s.path .. ":" .. s.mtime
+    end)
+    :totable()
   table.sort(parts)
   return table.concat(parts, "|")
 end

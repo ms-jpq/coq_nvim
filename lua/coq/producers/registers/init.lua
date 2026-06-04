@@ -65,7 +65,7 @@ end
 local line_items = function(register, text)
   return async.wrap(function()
     for line in txt.splitlines(text) do
-      local stripped = (string.gsub(line, "^%s+", ""))
+      local stripped = txt.lstrip(line)
       if stripped ~= "" then
         local head = tokens.keywords(BASIC_KW, vim.iter { stripped } --[[@as lib.Iterator<string>]])()
         if head ~= nil then
