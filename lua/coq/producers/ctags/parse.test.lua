@@ -81,3 +81,46 @@ T.describe("tags.parse", function(test)
     T.eq(tag.typeref, "typename:str")
   end)
 end)
+
+T.describe("tags.parse._unescape", function(test)
+  test("strips the leading and trailing slash delimiters", function()
+    T.eq(parse._unescape "/def lil():/", "def lil():")
+  end)
+
+  test("strips a leading ^ anchor", function()
+    T.eq(parse._unescape "/^def lil():/", "def lil():")
+  end)
+
+  test("strips a trailing $ anchor", function()
+    T.eq(parse._unescape "/def lil():$/", "def lil():")
+  end)
+
+  test("strips both ^ and $ anchors", function()
+    T.eq(parse._unescape "/^def lil():$/", "def lil():")
+  end)
+
+  test("trims interior whitespace around the body", function()
+    T.eq(parse._unescape "/^   def spot():   $/", "def spot():")
+  end)
+
+  test("unescapes backslash-escaped slashes", function()
+    T.eq(parse._unescape [[/a\/b\/c/]], "a/b/c")
+  end)
+
+  test("unescapes backslash-escaped backslashes", function()
+    T.eq(parse._unescape [[/a\\b/]], [[a\b]])
+  end)
+
+  test("drops backslash escapes for unrecognized chars", function()
+    T.eq(parse._unescape [[/a\nb/]], "ab")
+  end)
+
+  test("preserves regex metacharacters that are not anchors", function()
+    T.eq(parse._unescape "/def fido(.*):/", "def fido(.*):")
+  end)
+
+  test("empty pattern body returns empty", function()
+    T.eq(parse._unescape "//", "")
+    T.eq(parse._unescape "/^$/", "")
+  end)
+end)

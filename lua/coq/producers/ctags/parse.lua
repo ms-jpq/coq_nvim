@@ -19,7 +19,7 @@ local M = {}
 
 ---@param pattern string
 ---@return string
-local unescape = function(pattern)
+M._unescape = function(pattern)
   local inner = string.sub(pattern, 2, -2)
   inner = string.gsub(inner, "^%^", "")
   inner = string.gsub(inner, "%$$", "")
@@ -64,7 +64,7 @@ M.parse = function(jsonl)
             typeref = obj.typeref,
             access = obj.access,
             signature = obj.signature,
-            pattern = obj.pattern and unescape(obj.pattern) or nil,
+            pattern = obj.pattern and M._unescape(obj.pattern) or nil,
           }
         end
       end
