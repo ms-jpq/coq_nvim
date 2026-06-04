@@ -2,7 +2,6 @@ local async = require "coq.lib.async"
 local fs_cache = require "coq.lib.fs_cache"
 local index_m = require "coq.producers.snippets.index"
 local loader_m = require "coq.producers.snippets.loader"
-local producer = require "coq.lib.producers"
 local txt = require "coq.lib.text"
 local util = require "coq.producers.util"
 
@@ -74,8 +73,6 @@ M.matcher = util.batched(function(settings, ctx)
 
   for hit in util.shape(settings, ctx, raw) do
     local label = (hit.item.label and hit.item.label ~= "") and hit.item.label or hit.item.word
-    local lines = vim.iter(doc_lines(hit.item)):totable()
-
     local item = util.item(settings, settings.clients.snippets, {
       word = hit.item.word,
       abbr = label,
@@ -83,22 +80,12 @@ M.matcher = util.batched(function(settings, ctx)
       filter = hit.item.word,
       fuzzy = hit.fuzzy,
       snippet = hit.item.body,
-      doc = #lines > 0 and { lines = lines, filetype = ctx.filetype } or nil,
+      doc = util.doc(ctx.filetype, doc_lines(hit.item)),
     })
     coroutine.yield(item)
   end
 end)
 
----@return producers.Producer<ctx.full>
-M.new = function()
-  return producer.threaded {
-    idle = function(...)
-      require("coq.producers.snippets").idle(...)
-    end,
-    matcher = function(...)
-      require("coq.producers.snippets").matcher(...)
-    end,
-  }
-end
+M.new = util.threaded_module "coq.producers.snippets"
 
 return M

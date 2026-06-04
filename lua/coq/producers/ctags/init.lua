@@ -6,7 +6,6 @@ local index_m = require "coq.producers.ctags.index"
 local lib = require "coq.lib"
 local parse = require "coq.producers.ctags.parse"
 local path_fmt = require "coq.producers.path_fmt"
-local producer = require "coq.lib.producers"
 local run = require "coq.producers.ctags.run"
 local util = require "coq.producers.util"
 local worker = require "coq.lib.worker"
@@ -145,28 +144,17 @@ M.matcher = util.batched(function(settings, ctx)
   local raw = index_of(settings).search { filetype = ctx.filetype, keyword_before = ctx.keyword_before }
 
   for hit in util.shape(settings, ctx, raw) do
-    local lines = vim.iter(doc_iter(settings.clients.tags, ctx, hit.item)):totable()
     local item = util.item(settings, settings.clients.tags, {
       word = hit.item.word,
       kind = "Text",
       filter = hit.item.word,
       fuzzy = hit.fuzzy,
-      doc = #lines > 0 and { lines = lines, filetype = ctx.filetype } or nil,
+      doc = util.doc(ctx.filetype, doc_iter(settings.clients.tags, ctx, hit.item)),
     })
     coroutine.yield(item)
   end
 end)
 
----@return producers.Producer<ctx.full>
-M.new = function()
-  return producer.threaded {
-    idle = function(...)
-      require("coq.producers.ctags").idle(...)
-    end,
-    matcher = function(...)
-      require("coq.producers.ctags").matcher(...)
-    end,
-  }
-end
+M.new = util.threaded_module "coq.producers.ctags"
 
 return M

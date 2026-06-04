@@ -2,7 +2,6 @@ local async = require "coq.lib.async"
 local atools = require "coq.lib.atools"
 local index_m = require "coq.producers.tmux.index"
 local lib = require "coq.lib"
-local producer = require "coq.lib.producers"
 local tokens = require "coq.lib.index.tokens"
 local txt = require "coq.lib.text"
 local util = require "coq.producers.util"
@@ -165,28 +164,17 @@ M.matcher = util.batched(function(settings, ctx)
   local raw = index_of(settings).search { keyword_before = ctx.keyword_before }
 
   for hit in util.shape(settings, ctx, raw) do
-    local lines = vim.iter(doc_iter(settings.clients.tmux, hit.item.meta)):totable()
     local item = util.item(settings, settings.clients.tmux, {
       word = hit.item.word,
       kind = "Text",
       filter = hit.item.word,
       fuzzy = hit.fuzzy,
-      doc = #lines > 0 and { lines = lines, filetype = "" } or nil,
+      doc = util.doc("", doc_iter(settings.clients.tmux, hit.item.meta)),
     })
     coroutine.yield(item)
   end
 end)
 
----@return producers.Producer<ctx.full>
-M.new = function()
-  return producer.threaded {
-    idle = function(...)
-      require("coq.producers.tmux").idle(...)
-    end,
-    matcher = function(...)
-      require("coq.producers.tmux").matcher(...)
-    end,
-  }
-end
+M.new = util.threaded_module "coq.producers.tmux"
 
 return M

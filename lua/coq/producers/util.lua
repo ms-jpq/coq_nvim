@@ -1,5 +1,6 @@
 local async = require "coq.lib.async"
 local fuzzy = require "coq.lib.index.fuzzy"
+local producer = require "coq.lib.producers"
 local trie = require "coq.lib.index.trie"
 
 local M = {}
@@ -78,6 +79,32 @@ M.once = function(fn)
       cached = fn(...)
     end
     return cached
+  end
+end
+
+---@param filetype string
+---@param iter lib.Iterator<string>
+---@return completions.ItemDoc?
+M.doc = function(filetype, iter)
+  local lines = vim.iter(iter):totable()
+  if #lines == 0 then
+    return nil
+  end
+  return { lines = lines, filetype = filetype }
+end
+
+---@param path string
+---@return fun(): producers.Producer<ctx.full>
+M.threaded_module = function(path)
+  return function()
+    return producer.threaded {
+      idle = function(...)
+        require(path).idle(...)
+      end,
+      matcher = function(...)
+        require(path).matcher(...)
+      end,
+    }
   end
 end
 

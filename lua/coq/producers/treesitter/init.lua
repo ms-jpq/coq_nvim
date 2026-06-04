@@ -4,7 +4,6 @@ local buffers = require "coq.lib.buffers"
 local index_m = require "coq.producers.treesitter.index"
 local lib = require "coq.lib"
 local path_fmt = require "coq.producers.path_fmt"
-local producer = require "coq.lib.producers"
 local txt = require "coq.lib.text"
 local util = require "coq.producers.util"
 local worker = require "coq.lib.worker"
@@ -174,16 +173,6 @@ M.matcher = util.batched(function(settings, ctx)
   end
 end)
 
----@return producers.Producer<ctx.full>
-M.new = function()
-  return producer.threaded {
-    idle = function(...)
-      require("coq.producers.treesitter").idle(...)
-    end,
-    matcher = function(...)
-      require("coq.producers.treesitter").matcher(...)
-    end,
-  }
-end
+M.new = util.threaded_module "coq.producers.treesitter"
 
 return M

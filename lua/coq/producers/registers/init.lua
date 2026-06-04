@@ -1,7 +1,6 @@
 local async = require "coq.lib.async"
 local atools = require "coq.lib.atools"
 local index_m = require "coq.producers.registers.index"
-local producer = require "coq.lib.producers"
 local set = require "coq.lib.set"
 local tokens = require "coq.lib.index.tokens"
 local txt = require "coq.lib.text"
@@ -158,16 +157,6 @@ M.matcher = util.batched(function(settings, ctx)
   end
 end)
 
----@return producers.Producer<ctx.full>
-M.new = function()
-  return producer.threaded {
-    idle = function(...)
-      require("coq.producers.registers").idle(...)
-    end,
-    matcher = function(...)
-      require("coq.producers.registers").matcher(...)
-    end,
-  }
-end
+M.new = util.threaded_module "coq.producers.registers"
 
 return M

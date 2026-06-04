@@ -5,7 +5,6 @@ local buffers = require "coq.lib.buffers"
 local index_m = require "coq.producers.buffers.index"
 local lib = require "coq.lib"
 local path_fmt = require "coq.producers.path_fmt"
-local producer = require "coq.lib.producers"
 local tokens = require "coq.lib.index.tokens"
 local util = require "coq.producers.util"
 local worker = require "coq.lib.worker"
@@ -123,29 +122,17 @@ M.matcher = util.batched(function(settings, ctx)
   }
 
   for hit in util.shape(settings, ctx, raw) do
-    local lines = vim.iter(doc_iter(settings.clients.buffers, ctx, hit.item)):totable()
-
     local item = util.item(settings, settings.clients.buffers, {
       word = hit.item.word,
       kind = "Text",
       filter = hit.item.word,
       fuzzy = hit.fuzzy,
-      doc = #lines > 0 and { lines = lines, filetype = "" } or nil,
+      doc = util.doc("", doc_iter(settings.clients.buffers, ctx, hit.item)),
     })
     coroutine.yield(item)
   end
 end)
 
----@return producers.Producer<ctx.full>
-M.new = function()
-  return producer.threaded {
-    idle = function(...)
-      require("coq.producers.buffers").idle(...)
-    end,
-    matcher = function(...)
-      require("coq.producers.buffers").matcher(...)
-    end,
-  }
-end
+M.new = util.threaded_module "coq.producers.buffers"
 
 return M

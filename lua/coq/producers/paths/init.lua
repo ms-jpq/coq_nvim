@@ -3,7 +3,6 @@ local closable = require "coq.lib.closable"
 local lib = require "coq.lib"
 local match = require "coq.lib.index.rank.match"
 local parse = require "coq.producers.paths.parse"
-local producer = require "coq.lib.producers"
 local util = require "coq.producers.util"
 
 local M = {}
@@ -149,14 +148,8 @@ M.matcher = util.batched(function(settings, ctx)
   end)
 end)
 
----@return producers.Producer<ctx.full>
-M.new = function()
-  return producer.threaded {
-    idle = lib.noop,
-    matcher = function(...)
-      require("coq.producers.paths").matcher(...)
-    end,
-  }
-end
+M.idle = lib.noop
+
+M.new = util.threaded_module "coq.producers.paths"
 
 return M
