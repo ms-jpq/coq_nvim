@@ -7,6 +7,8 @@ local txt = require "coq.lib.text"
 local util = require "coq.producers.util"
 local worker = require "coq.lib.worker"
 
+local SOURCE = "registers"
+
 ---@type table<integer, true>
 local BASIC_KW = (function()
   local kw = {}
@@ -145,7 +147,7 @@ M.matcher = util.batched(function(settings, ctx)
       .. settings.clients.registers.register_scope
       .. hit.item.register
 
-    local item = util.item(settings, settings.clients.registers, {
+    local item = util.item(settings, SOURCE, {
       word = hit.item.word,
       kind = "Text",
       filter = hit.item.word,
@@ -157,6 +159,6 @@ M.matcher = util.batched(function(settings, ctx)
   end
 end)
 
-M.new = util.threaded_module "registers"
+M.new = util.threaded_module(SOURCE)
 
 return M

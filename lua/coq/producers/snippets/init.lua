@@ -6,6 +6,8 @@ local loader_m = require "coq.producers.snippets.loader"
 local txt = require "coq.lib.text"
 local util = require "coq.producers.util"
 
+local SOURCE = "snippets"
+
 local index_of = util.once(index_m.new)
 
 ---@type fun(idle_ctx: idle.Ctx, loader: snippets.Loader): fs_cache.Store<snippets.Item[]>
@@ -103,7 +105,7 @@ M.matcher = util.batched(function(settings, ctx)
 
   for hit in util.shape(settings, ctx, raw) do
     local label = (hit.item.label and hit.item.label ~= "") and hit.item.label or hit.item.word
-    local item = util.item(settings, settings.clients.snippets, {
+    local item = util.item(settings, SOURCE, {
       word = hit.item.word,
       abbr = label,
       kind = "Snippet",
@@ -116,6 +118,6 @@ M.matcher = util.batched(function(settings, ctx)
   end
 end)
 
-M.new = util.threaded_module "snippets"
+M.new = util.threaded_module(SOURCE)
 
 return M

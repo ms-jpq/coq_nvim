@@ -5,12 +5,14 @@ local request = require "coq.producers.lsp.request"
 local set = require "coq.lib.set"
 local util = require "coq.producers.util"
 
+local SOURCE = "lsp"
+
 local M = {}
 
 ---@return producers.Producer<ctx.full>
 M.new = function()
   return {
-    source = "lsp",
+    source = SOURCE,
     idle = lib.noop,
     search = function(settings, ctx)
       return closable.iter(function(defer)
@@ -44,7 +46,7 @@ M.new = function()
                   filter = filter,
                   fuzzy = match.score(ctx.keyword_before, filter),
                   snippet = is_snippet and insert_text or nil,
-                  source = opts.short_name,
+                  source = SOURCE,
                   always_on_top = pinned[entry.client_name] == true,
                   lsp = {
                     client_id = entry.client_id,

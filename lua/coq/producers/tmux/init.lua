@@ -6,6 +6,8 @@ local tokens = require "coq.lib.index.tokens"
 local txt = require "coq.lib.text"
 local util = require "coq.producers.util"
 
+local SOURCE = "tmux"
+
 local TMUX_PANE = vim.uv.os_environ().TMUX_PANE
 
 local SEP = "\30"
@@ -164,7 +166,7 @@ M.matcher = util.batched(function(settings, ctx)
   local raw = index_of(settings).search { keyword_before = ctx.keyword_before }
 
   for hit in util.shape(settings, ctx, raw) do
-    local item = util.item(settings, settings.clients.tmux, {
+    local item = util.item(settings, SOURCE, {
       word = hit.item.word,
       kind = "Text",
       filter = hit.item.word,
@@ -175,6 +177,6 @@ M.matcher = util.batched(function(settings, ctx)
   end
 end)
 
-M.new = util.threaded_module "tmux"
+M.new = util.threaded_module(SOURCE)
 
 return M

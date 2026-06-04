@@ -143,9 +143,8 @@ M.new = function(clients)
   local statsd = {} ---@type index.Statsd
 
   statsd.inserted = function(item)
-    local meta = item.meta
-    recency[meta.filter] = (recency[meta.filter] or 0) + 1
-    local bucket = bucket_of(meta.source)
+    recency[item.meta.filter] = (recency[item.meta.filter] or 0) + 1
+    local bucket = bucket_of(item.meta.source)
     bucket.inserted = bucket.inserted + 1
   end
 

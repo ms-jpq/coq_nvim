@@ -151,51 +151,54 @@ T.describe("producers.util.shape", function(test)
 end)
 
 T.describe("producers.util.item", function(test)
-  local opts = { short_name = "BF", always_on_top = true }
-
+  ---Build a partial config.Settings carrying just brackets + one client opts.
   ---@param brackets string[]
+  ---@param client_opts table
   ---@return config.Settings
-  local with = function(brackets)
+  local with = function(brackets, client_opts)
     ---@diagnostic disable-next-line: missing-fields
-    return { display = { pum = { source_context = brackets } } } --[[@as config.Settings]]
+    local s = { display = { pum = { source_context = brackets } }, clients = { fake = client_opts } }
+    return s --[[@as config.Settings]]
   end
+
+  local FAKE = { short_name = "BF", always_on_top = true }
 
   test("wraps short_name in the configured brackets", function()
     T.eq(
-      util.item(with { "「", "」" }, opts, { word = "rex", kind = "Text", filter = "rex", fuzzy = 0 }).menu,
+      util.item(with({ "「", "」" }, FAKE), "fake", { word = "rex", kind = "Text", filter = "rex", fuzzy = 0 }).menu,
       "「BF」"
     )
   end)
 
   test("threads empty brackets through unchanged", function()
     T.eq(
-      util.item(with { "", "" }, { short_name = "TS" }, { word = "rex", kind = "Text", filter = "rex", fuzzy = 0 }).menu,
+      util.item(with({ "", "" }, { short_name = "TS" }), "fake", { word = "rex", kind = "Text", filter = "rex", fuzzy = 0 }).menu,
       "TS"
     )
   end)
 
-  test("packs the canonical fields", function()
-    local item = util.item(with { "「", "」" }, opts, { word = "rex", kind = "Text", filter = "rex", fuzzy = 0 })
+  test("meta.source is the source identifier, not the short_name", function()
+    local item = util.item(with({ "「", "」" }, FAKE), "fake", { word = "rex", kind = "Text", filter = "rex", fuzzy = 0 })
     T.eq(item.word, "rex")
     T.eq(item.kind, "Text")
     T.eq(item.menu, "「BF」")
     T.eq(item.meta.filter, "rex")
-    T.eq(item.meta.source, "BF")
+    T.eq(item.meta.source, "fake")
     T.eq(item.meta.always_on_top, true)
     T.eq(type(item.meta["uid"]), "string")
     T.eq(#item.meta["uid"], 16)
   end)
 
   test("every call mints a fresh uid", function()
-    local s = with { "", "" }
-    local a = util.item(s, opts, { word = "spot", kind = "Text", filter = "spot", fuzzy = 0 })
-    local b = util.item(s, opts, { word = "spot", kind = "Text", filter = "spot", fuzzy = 0 })
+    local s = with({ "", "" }, FAKE)
+    local a = util.item(s, "fake", { word = "spot", kind = "Text", filter = "spot", fuzzy = 0 })
+    local b = util.item(s, "fake", { word = "spot", kind = "Text", filter = "spot", fuzzy = 0 })
     T.eq(a.meta["uid"] ~= b.meta["uid"], true)
   end)
 
   test("forwards doc and snippet when present", function()
     local doc = { lines = { "good dog" }, filetype = "markdown" }
-    local item = util.item(with { "", "" }, opts, {
+    local item = util.item(with({ "", "" }, FAKE), "fake", {
       word = "fido",
       kind = "Snippet",
       filter = "fido",
@@ -209,8 +212,8 @@ T.describe("producers.util.item", function(test)
 
   test("optional fields stay nil when omitted", function()
     local item = util.item(
-      with { "", "" },
-      { short_name = "TX" },
+      with({ "", "" }, { short_name = "TX" }),
+      "fake",
       { word = "lab", kind = "Text", filter = "lab", fuzzy = 0 }
     )
     T.eq(item.meta.always_on_top, nil)

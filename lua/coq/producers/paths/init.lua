@@ -5,6 +5,8 @@ local match = require "coq.lib.index.rank.match"
 local parse = require "coq.producers.paths.parse"
 local util = require "coq.producers.util"
 
+local SOURCE = "paths"
+
 local M = {}
 
 ---@param path string
@@ -123,7 +125,7 @@ M.matcher = util.batched(function(settings, ctx)
       local word = m.name .. (dir_q and m.cand.local_sep or "")
       local filter = m.name
 
-      local item = util.item(settings, settings.clients.paths, {
+      local item = util.item(settings, SOURCE, {
         word = word,
         kind = dir_q and "Folder" or "File",
         filter = filter,
@@ -150,6 +152,6 @@ end)
 
 M.idle = lib.noop
 
-M.new = util.threaded_module "paths"
+M.new = util.threaded_module(SOURCE)
 
 return M

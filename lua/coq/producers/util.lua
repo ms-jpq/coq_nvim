@@ -87,10 +87,11 @@ end
 ---@field lsp? completions.ItemLspMeta
 
 ---@param settings config.Settings
----@param opts { short_name: string, always_on_top: boolean? }
+---@param source string
 ---@param spec producers.ItemSpec
 ---@return completions.Item
-M.item = function(settings, opts, spec)
+M.item = function(settings, source, spec)
+  local opts = settings.clients[source]
   local lhs, rhs = unpack(settings.display.pum.source_context)
   return {
     word = spec.word,
@@ -101,7 +102,7 @@ M.item = function(settings, opts, spec)
       uid = M.uid(),
       filter = spec.filter,
       fuzzy = spec.fuzzy,
-      source = opts.short_name,
+      source = source,
       always_on_top = opts.always_on_top,
       doc = spec.doc,
       snippet = spec.snippet,
