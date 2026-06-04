@@ -1,6 +1,7 @@
 local async = require "coq.lib.async"
 local atools = require "coq.lib.atools"
 local closable = require "coq.lib.closable"
+local errs = require "coq.lib.errs"
 local fs_cache = require "coq.lib.fs_cache"
 local txt = require "coq.lib.text"
 
@@ -16,24 +17,45 @@ local BUNDLE_NAME = "coq+snippets+v2.json"
 local NEOSNIPPET_EXTS = { snip = true, snippets = true }
 local LSP_EXTS = { json = true }
 
----@param settings config.Settings
----@param rtps string[]
----@return lib.Iterator<string>
-local user_dirs = function(settings, rtps)
-  return async.wrap(function()
-    local user_path = settings.clients.snippets.user_path
+---@param p string
+---@return boolean
+local is_absolute = function(p)
+  return vim.startswith(p, "/") or string.match(p, "^%a:") ~= nil
+end
 
-    if user_path and user_path ~= "" then
-      local expanded = vim.fs.normalize(user_path)
-      if atools.fs.readable(expanded) then
-        coroutine.yield(expanded)
+---@param settings config.Settings
+---@param idle_ctx idle.Ctx
+---@return lib.Iterator<string>
+local user_dirs = function(settings, idle_ctx)
+  return async.wrap(function()
+    local seen = {}
+    local emit = function(path)
+      local err, st = atools.fs.stat(path)
+      if err or not st then
+        return
+      end
+      local key = st.dev .. ":" .. st.ino
+      if not seen[key] then
+        seen[key] = true
+        coroutine.yield(path)
       end
     end
 
-    for _, rtp in pairs(rtps) do
+    local user_path = settings.clients.snippets.user_path
+    if user_path and user_path ~= "" then
+      local expanded = vim.fs.normalize(user_path)
+      if not is_absolute(expanded) and idle_ctx.config_dir ~= "" then
+        expanded = vim.fs.joinpath(idle_ctx.config_dir, expanded)
+      end
+      if atools.fs.readable(expanded) then
+        emit(expanded)
+      end
+    end
+
+    for _, rtp in pairs(idle_ctx.rtps) do
       local cand = vim.fs.joinpath(rtp, "coq-user-snippets")
       if atools.fs.readable(cand) then
-        coroutine.yield(cand)
+        emit(cand)
       end
     end
   end)
@@ -47,12 +69,10 @@ local walk_files = function(dir, exts)
   return closable.iter(function(defer)
     local close, iter = atools.fs.walk(dir)
     defer(close)
-    for path, kind in iter do
-      if kind == "file" then
-        local ext = string.match(path, "%.([^.]+)$")
-        if ext and exts[ext] then
-          coroutine.yield(path)
-        end
+    for path in iter do
+      local ext = string.match(path, "%.([^.]+)$")
+      if ext and exts[ext] then
+        coroutine.yield(path)
       end
     end
   end)
@@ -69,7 +89,9 @@ local bundle = function(dirs)
       if mtime then
         local body = atools.fs.slurp(path)
         local ok, json = pcall(vim.json.decode, body or "")
-        if ok and type(json) == "table" and type(json.snippets) == "table" then
+        if not ok then
+          errs.report("snippets: bundle " .. path .. " is malformed: " .. tostring(json))
+        elseif type(json) == "table" and type(json.snippets) == "table" then
           local ft_set = {}
           for _, snip in pairs(json.snippets) do
             if type(snip) == "table" and type(snip.filetype) == "string" then
@@ -139,12 +161,12 @@ end
 local M = {}
 
 ---@param settings config.Settings
----@param rtps string[]
+---@param idle_ctx idle.Ctx
 ---@return fun() close
 ---@return lib.Iterator<snippets.Source> iter
-M.list = function(settings, rtps)
+M.list = function(settings, idle_ctx)
   return closable.iter(function(defer)
-    local user = vim.iter(user_dirs(settings, rtps)):totable()
+    local user = vim.iter(user_dirs(settings, idle_ctx)):totable()
 
     local emit = function(close, iter)
       defer(close)
@@ -153,7 +175,7 @@ M.list = function(settings, rtps)
       end
     end
 
-    emit(bundle(rtps))
+    emit(bundle(idle_ctx.rtps))
     emit(neosnippet(user))
     emit(lsp(user))
   end)

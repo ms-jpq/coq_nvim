@@ -10,16 +10,16 @@ local sources = require "coq.producers.snippets.sources"
 local M = {}
 
 ---@param settings config.Settings
----@param rtps string[]
+---@param idle_ctx idle.Ctx
 ---@return snippets.Loader
-M.new = function(settings, rtps)
+M.new = function(settings, idle_ctx)
   ---@diagnostic disable-next-line: missing-fields
   local loader = {} ---@type snippets.Loader
 
   loader.sources = function()
     local acc = {}
     lib.scope(function(defer)
-      local close, iter = sources.list(settings, rtps)
+      local close, iter = sources.list(settings, idle_ctx)
       defer(close)
       for src in iter do
         for _, ft in pairs(src.filetypes) do
@@ -33,7 +33,7 @@ M.new = function(settings, rtps)
 
   loader.parse = function(filetype)
     return closable.iter(function(defer)
-      local close, iter = sources.list(settings, rtps)
+      local close, iter = sources.list(settings, idle_ctx)
       defer(close)
       for src in iter do
         if vim.tbl_contains(src.filetypes, filetype) then

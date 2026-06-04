@@ -173,6 +173,6 @@ M.matcher = util.batched(function(settings, ctx)
   end
 end)
 
-M.new = util.threaded_module "coq.producers.treesitter"
+M.new = util.threaded_module("coq.producers.treesitter", "treesitter")
 
 return M

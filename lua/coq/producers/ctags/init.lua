@@ -155,6 +155,6 @@ M.matcher = util.batched(function(settings, ctx)
   end
 end)
 
-M.new = util.threaded_module "coq.producers.ctags"
+M.new = util.threaded_module("coq.producers.ctags", "ctags")
 
 return M

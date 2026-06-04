@@ -157,6 +157,6 @@ M.matcher = util.batched(function(settings, ctx)
   end
 end)
 
-M.new = util.threaded_module "coq.producers.registers"
+M.new = util.threaded_module("coq.producers.registers", "registers")
 
 return M

@@ -9,7 +9,7 @@ SHELL := bash
 .ONESHELL:
 .SHELLFLAGS := --norc --noprofile -Eeuo pipefail -O dotglob -O nullglob -O extglob -O failglob -O globstar -c
 
-.DEFAULT_GOAL := help
+.DEFAULT_GOAL := all
 
 VAR := .vars
 CURL := curl --fail --location --remove-on-error --create-dirs --no-progress-meter
@@ -17,7 +17,7 @@ CURL := curl --fail --location --remove-on-error --create-dirs --no-progress-met
 OS := $(shell uname -s | tr '[:upper:]' '[:lower:]' | sed -e 's/darwin/macos/')
 ARCH := $(shell uname -m | sed -e 's/arm64/aarch64/')
 
-.PHONY: clean clobber lint test build fmt ci
+.PHONY: all clean clobber lint test build fmt ci
 
 clean:
 	shopt -u failglob
@@ -59,9 +59,6 @@ endef
 .venv/bin/mypy: .venv/bin/python3
 	'$<' -m pip install --requirement requirements.txt -- tomli
 	'$<' <<< '$(PYDEPS)'
-
-test:
-	./test.lua
 
 build: .venv/bin/mypy
 	.venv/bin/python3 -m ci
@@ -111,3 +108,7 @@ lint: $(VAR)/opt/lua-language-server/bin/lua-language-server | $(VAR)
 	mkdir -v -p -- '$(VAR)/luals'
 	'$<' --check '.' --configpath '.luarc.json' --logpath '$(VAR)/luals' --checklevel Warning
 
+test:
+	./test.lua
+
+all: lint test

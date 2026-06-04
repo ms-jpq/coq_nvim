@@ -43,7 +43,7 @@ local M = {}
 ---@param settings config.Settings
 ---@param idle_ctx idle.Ctx
 M.idle = function(settings, idle_ctx)
-  local loader = loader_m.new(settings, idle_ctx.rtps)
+  local loader = loader_m.new(settings, idle_ctx)
   local store = cache_of(idle_ctx, loader)
 
   local current = {}
@@ -116,6 +116,6 @@ M.matcher = util.batched(function(settings, ctx)
   end
 end)
 
-M.new = util.threaded_module "coq.producers.snippets"
+M.new = util.threaded_module("coq.producers.snippets", "snippets")
 
 return M

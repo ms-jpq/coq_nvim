@@ -4,6 +4,7 @@ local events_m = require "coq.completions.events"
 
 ---@class idle.Ctx
 ---@field ctx ctx.full
+---@field config_dir string
 ---@field cache_dir string
 ---@field rtps string[]
 ---@field updated table<integer, true>
@@ -20,6 +21,8 @@ M.bind = function(n, settings, sup, events)
 
   local carry = { updated = {}, removed = {} }
   local rtps = vim.api.nvim_list_runtime_paths()
+  local config_dir = vim.fn.stdpath "config"
+  local cache_dir = vim.fs.joinpath(vim.fn.stdpath "cache", "coq")
 
   local primed = false
   events_m.subscribe_latest(n, events.idle, function()
@@ -40,7 +43,8 @@ M.bind = function(n, settings, sup, events)
 
     sup.idle(settings, {
       ctx = context.full(),
-      cache_dir = vim.fs.joinpath(vim.fn.stdpath "cache", "coq"),
+      config_dir = config_dir,
+      cache_dir = cache_dir,
       rtps = rtps,
       updated = carry.updated,
       removed = carry.removed,
