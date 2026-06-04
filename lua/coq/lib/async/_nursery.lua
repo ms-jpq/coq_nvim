@@ -28,14 +28,19 @@ M.new = function()
   nursery.on_cancel = h.on_cancel
 
   nursery.join = function()
-    if next(pending) ~= nil then
-      local f = runtime.future()
-      table.insert(waiters, f)
-      f.await()
-      runtime.check_cancellation()
-    end
-    nursery.closed = true
-    h.cancel()
+    lib.scope(function(defer)
+      defer(function()
+        nursery.closed = true
+        h.cancel()
+      end)
+
+      if next(pending) ~= nil then
+        local f = runtime.future()
+        table.insert(waiters, f)
+        f.await()
+        runtime.check_cancellation()
+      end
+    end)
     errs.raise(errors)
   end
 

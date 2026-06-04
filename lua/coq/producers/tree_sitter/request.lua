@@ -15,8 +15,6 @@ M.query = function(buf)
     return
   end
 
-  local tick = vim.b[buf].changedtick
-
   local lo, hi = buffers.window_around_cursor(buf)
 
   local ok, parser = pcall(vim.treesitter.get_parser, buf)
@@ -37,7 +35,8 @@ M.query = function(buf)
   end
 
   local trees = parser:parse() or {}
-  if not buffers.is_live(buf) or vim.b[buf].changedtick ~= tick then
+  local tick = vim.b[buf].changedtick
+  if not buffers.is_live(buf) then
     return
   end
 

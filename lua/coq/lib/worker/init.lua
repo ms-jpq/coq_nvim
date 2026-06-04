@@ -127,11 +127,12 @@ local make_requester = function(write)
 
   requester.request_stream = function(message)
     local close, iter = open(parked, write, message)
-    return close, function()
-      local frame = iter()
-      async.check_cancellation()
-      return interpret_frame(frame, 2)
-    end
+    return close,
+      function()
+        local frame = iter()
+        async.check_cancellation()
+        return interpret_frame(frame, 2)
+      end
   end
 
   requester.resolve = function(frame)
