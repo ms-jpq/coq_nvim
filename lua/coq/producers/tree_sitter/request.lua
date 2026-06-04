@@ -36,7 +36,7 @@ M.query = function(buf)
 
   local trees = parser:parse() or {}
   local tick = vim.b[buf].changedtick
-  if not buffers.is_live(buf) then
+  if not buffers.is_live(buf) or vim.b[buf].changedtick ~= tick then
     return
   end
 
