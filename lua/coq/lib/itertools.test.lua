@@ -110,10 +110,7 @@ T.describe("itertools.chain", function(test)
   end)
 
   test("skips an empty iterator in the middle", function()
-    T.eq(
-      drain(itertools.chain(from { "spot" }, from {}, from { "fido", "rex" })),
-      { "spot", "fido", "rex" }
-    )
+    T.eq(drain(itertools.chain(from { "spot" }, from {}, from { "fido", "rex" })), { "spot", "fido", "rex" })
   end)
 
   test("all empty yields nothing", function()

@@ -24,35 +24,42 @@ M.new = function()
         local close, query = request.query(ignored, ctx)
         defer(close)
 
-        util.batched(function()
-          for entry in query do
-            local item = entry.item
-            local label = item.label or ""
-            local insert_text = item.insertText or label
-            local is_snippet = item.insertTextFormat == 2
-            local filter = item.filterText or label
+        for batch in query do
+          local acc = vim
+            .iter(batch)
+            :map(function(entry)
+              local item = entry.item
+              local label = item.label or ""
+              local insert_text = item.insertText or label
+              local is_snippet = item.insertTextFormat == 2
+              local filter = item.filterText or label
 
-            coroutine.yield {
-              word = is_snippet and label or insert_text,
-              abbr = label,
-              kind = entry.kind,
-              menu = menu,
-              meta = {
-                uid = util.uid(),
-                filter = filter,
-                fuzzy = match.score(ctx.keyword_before, filter),
-                snippet = is_snippet and insert_text or nil,
-                source = opts.short_name,
-                always_on_top = pinned[entry.client_name] == true,
-                lsp = {
-                  client_id = entry.client_id,
-                  item = item,
-                  position_encoding = entry.offset_encoding,
+              return {
+                word = is_snippet and label or insert_text,
+                abbr = label,
+                kind = entry.kind,
+                menu = menu,
+                meta = {
+                  uid = util.uid(),
+                  filter = filter,
+                  fuzzy = match.score(ctx.keyword_before, filter),
+                  snippet = is_snippet and insert_text or nil,
+                  source = opts.short_name,
+                  always_on_top = pinned[entry.client_name] == true,
+                  lsp = {
+                    client_id = entry.client_id,
+                    item = item,
+                    position_encoding = entry.offset_encoding,
+                  },
                 },
-              },
-            }
+              }
+            end)
+            :totable()
+
+          if #acc > 0 then
+            coroutine.yield(acc)
           end
-        end)()
+        end
       end)
     end,
   }

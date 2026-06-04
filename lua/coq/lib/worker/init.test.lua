@@ -295,6 +295,68 @@ T.describe("worker", function(test)
     T.eq(ok, true)
   end)
 
+  -- closing mid-stream leaves the producer parked at a yield with its defers
+  -- unrun; the responder must drain it to completion so scoped cleanup fires.
+  test("closing a bounded stream early drains it so lib.scope defers run", function()
+    local w = worker.spawn()
+    w.queue(function()
+      _G.done = require("coq.lib.async").future()
+      _G.cleaned = false
+    end)
+    local close, iter = w.queue_stream(function()
+      local lib = require "coq.lib"
+      lib.scope(function(defer)
+        defer(function()
+          _G.cleaned = true
+          _G.done.resolve()
+        end)
+        for _ = 1, 5 do
+          coroutine.yield "dog"
+        end
+      end)
+    end)
+    iter() -- pull 1 of 5, then abandon
+    close()
+    local cleaned = w.queue(function()
+      _G.done.await()
+      return _G.cleaned
+    end)
+    w.close()
+
+    T.eq(cleaned, true)
+  end)
+
+  -- a producer parked in an await unwinds via cancel when the stream closes;
+  -- the defer must still run (this is the paths/scandir cleanup shape).
+  test("closing a stream parked in an await runs lib.scope defers via cancel", function()
+    local w = worker.spawn()
+    w.queue(function()
+      _G.done = require("coq.lib.async").future()
+      _G.cleaned = false
+    end)
+    local close, iter = w.queue_stream(function()
+      local async = require "coq.lib.async"
+      local lib = require "coq.lib"
+      lib.scope(function(defer)
+        defer(function()
+          _G.cleaned = true
+          _G.done.resolve()
+        end)
+        coroutine.yield "dog"
+        async.sleep(60 * 1000) -- park; close() cancels and unwinds this
+      end)
+    end)
+    iter()
+    close()
+    local cleaned = w.queue(function()
+      _G.done.await()
+      return _G.cleaned
+    end)
+    w.close()
+
+    T.eq(cleaned, true)
+  end)
+
   test("ambient cancel mid-call sends STOP to worker", function()
     local async = require "coq.lib.async"
     local handle = require "coq.lib.async._handle"

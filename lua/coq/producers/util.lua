@@ -12,19 +12,17 @@ M.BATCH = 420
 M.batched = function(fn)
   return function(...)
     local argv = { ... }
-    local iter = async.wrap(function()
-      fn(unpack(argv))
-    end)
     local batch = {}
-    while true do
-      local item = iter()
-      if item == nil then
-        break
-      end
-      batch[#batch + 1] = item
+    for item in
+      async.wrap(function()
+        fn(unpack(argv))
+      end)
+    do
+      table.insert(batch, item)
       if #batch >= M.BATCH then
         coroutine.yield(batch)
         batch = {}
+        async.sleep(0)
       end
     end
     if #batch > 0 then

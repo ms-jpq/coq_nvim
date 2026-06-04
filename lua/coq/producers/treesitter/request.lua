@@ -1,5 +1,5 @@
-local atools = require "coq.lib.atools"
 local context = require "coq.lib.context"
+local util = require "coq.producers.util"
 
 local M = {}
 
@@ -12,7 +12,7 @@ local M = {}
 
 ---@param buf integer
 M.query = function(buf)
-  if not vim.api.nvim_buf_is_valid(buf) or not vim.api.nvim_buf_is_loaded(buf) then
+  if not util.is_live(buf) then
     return
   end
 
@@ -57,8 +57,7 @@ M.query = function(buf)
           return
         end
 
-        atools.scheduled()
-        if not vim.api.nvim_buf_is_valid(buf) or vim.b[buf].changedtick ~= tick then
+        if not util.is_live(buf) or vim.b[buf].changedtick ~= tick then
           return
         end
       end

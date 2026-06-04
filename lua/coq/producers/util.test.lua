@@ -1,4 +1,5 @@
 local T = require "coq.lib.test"
+local async = require "coq.lib.async"
 local util = require "coq.producers.util"
 
 ---@param items table[]
@@ -36,18 +37,21 @@ local ctx = function(keyword_before)
 end
 
 T.describe("producers.util.batched", function(test)
-  -- drive util.batched as a generator, collecting the item[] it yields
+  -- drive util.batched through the async runtime (it awaits internally), the way
+  -- the worker pump does, collecting the item[] it yields
   local collect = function(count)
     local batches = {}
-    for batch in coroutine.wrap(function()
-      util.batched(function()
-        for i = 1, count do
-          coroutine.yield(i)
-        end
-      end)()
-    end) do
-      table.insert(batches, batch)
-    end
+    async.scope(function()
+      for batch in
+        async.wrap(util.batched(function()
+          for i = 1, count do
+            coroutine.yield(i)
+          end
+        end))
+      do
+        table.insert(batches, batch)
+      end
+    end)
     return batches
   end
 

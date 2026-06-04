@@ -1,7 +1,8 @@
 local async = require "coq.lib.async"
 local atools = require "coq.lib.atools"
 local closable = require "coq.lib.closable"
-local util = require "coq.producers.lsp.util"
+local lsp_util = require "coq.producers.lsp.util"
+local util = require "coq.producers.util"
 
 ---@class lsp.RequestItem
 ---@field client_id integer
@@ -87,7 +88,7 @@ local query_one = function(client, ctx, td_params)
       pcall(vim.api.nvim_del_autocmd, autocmd_id)
     end)
 
-    local err, result = util.request(client, "textDocument/completion", params, ctx.buf)
+    local err, result = lsp_util.request(client, "textDocument/completion", params, ctx.buf)
 
     for _, item in pairs(partial) do
       coroutine.yield(item)
@@ -108,11 +109,10 @@ end
 ---@param ignored lib.Set<string>
 ---@param ctx ctx.full
 ---@return fun() close
----@return lib.Iterator<lsp.RequestItem> iter
+---@return lib.Iterator<lsp.RequestItem[]> iter
 M.query = function(ignored, ctx)
   return closable.iter(function(defer)
-    atools.scheduled()
-    if not vim.api.nvim_buf_is_valid(ctx.buf) or not vim.api.nvim_buf_is_loaded(ctx.buf) then
+    if not util.is_live(ctx.buf) then
       return
     end
 
@@ -124,25 +124,37 @@ M.query = function(ignored, ctx)
     end
 
     local td_params = vim.lsp.util.make_text_document_params(ctx.buf)
-    local iters = {}
-    for _, client in pairs(clients) do
-      local c, i = query_one(client, ctx, td_params)
-      defer(c)
-      table.insert(iters, i)
-    end
+    local batchers = vim
+      .iter(clients)
+      :map(function(client)
+        return async.wrap(function()
+          local close, items = query_one(client, ctx, td_params)
+          defer(close)
 
-    local close, merged = async.merge(iters)
+          local batch = vim
+            .iter(items)
+            :map(function(item)
+              return {
+                client_id = client.id,
+                client_name = client.name,
+                offset_encoding = client.offset_encoding,
+                kind = vim.lsp.protocol.CompletionItemKind[item.kind] or "",
+                item = item,
+              }
+            end)
+            :totable()
+          if #batch > 0 then
+            coroutine.yield(batch)
+          end
+        end)
+      end)
+      :totable()
+
+    local close, merged = async.merge(batchers)
     defer(close)
 
-    for idx, item in merged do
-      local client = clients[idx]
-      coroutine.yield {
-        client_id = client.id,
-        client_name = client.name,
-        offset_encoding = client.offset_encoding,
-        kind = vim.lsp.protocol.CompletionItemKind[item.kind] or "",
-        item = item,
-      }
+    for _, batch in merged do
+      coroutine.yield(batch)
     end
   end)
 end
