@@ -67,6 +67,7 @@ local completion_tracker = function(client, buf)
   end
 
   tracker.commit = function()
+    atools.scheduled()
     if vim.api.nvim_buf_is_valid(buf) then
       vim.b[buf][incomplete_var] = incomplete or nil
     end
