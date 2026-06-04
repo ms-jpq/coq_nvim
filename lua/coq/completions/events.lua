@@ -45,6 +45,13 @@ local BUF_KINDS = {
 
 local COQ_LAST_SIZE = "__coq_last_size__"
 
+---@param buf integer
+---@return boolean
+local is_completable = function(buf)
+  local bo = vim.bo[buf]
+  return bo.modifiable and bo.buftype ~= "prompt"
+end
+
 local M = {}
 
 ---@return completions.Events
@@ -67,7 +74,11 @@ M.new = function()
 
   vim.api.nvim_create_autocmd({ "InsertCharPre" }, {
     group = lib.group,
-    callback = function()
+    callback = function(args)
+      if not is_completable(args.buf) then
+        return
+      end
+
       events.trigger.replace { manual = false }
     end,
   })
@@ -75,6 +86,10 @@ M.new = function()
   vim.api.nvim_create_autocmd({ "InsertEnter" }, {
     group = lib.group,
     callback = function(args)
+      if not is_completable(args.buf) then
+        return
+      end
+
       vim.b[args.buf][COQ_LAST_SIZE] = buffers.buf_size(args.buf)
     end,
   })
@@ -82,6 +97,10 @@ M.new = function()
   vim.api.nvim_create_autocmd({ "TextChangedI" }, {
     group = lib.group,
     callback = function(args)
+      if not is_completable(args.buf) then
+        return
+      end
+
       local prev = vim.b[args.buf][COQ_LAST_SIZE]
       local now = buffers.buf_size(args.buf)
       vim.b[args.buf][COQ_LAST_SIZE] = now
