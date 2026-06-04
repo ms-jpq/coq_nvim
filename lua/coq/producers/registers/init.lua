@@ -43,6 +43,45 @@ M.getreg = function(name)
   return text
 end
 
+---@param register string
+---@param text string
+---@return lib.Iterator<registers.Item>
+local word_items = function(register, text)
+  return async.wrap(function()
+    for word in
+      tokens.keywords(BASIC_KW, vim.iter { text } --[[@as lib.Iterator<string>]])
+    do
+      coroutine.yield {
+        word = word,
+        register = register,
+        linewise = false,
+      }
+    end
+  end)
+end
+
+---@param register string
+---@param text string
+---@return lib.Iterator<registers.Item>
+local line_items = function(register, text)
+  return async.wrap(function()
+    for line in txt.splitlines(text) do
+      local stripped = (string.gsub(line, "^%s+", ""))
+      if stripped ~= "" then
+        local head = tokens.keywords(BASIC_KW, vim.iter { stripped } --[[@as lib.Iterator<string>]])()
+        if head ~= nil then
+          coroutine.yield {
+            word = head,
+            register = register,
+            linewise = true,
+            line = stripped,
+          }
+        end
+      end
+    end
+  end)
+end
+
 ---@param settings config.Settings
 ---@param _ idle.Ctx
 M.idle = function(settings, _)
@@ -66,40 +105,30 @@ M.idle = function(settings, _)
     end
   end, names))
 
-  index_of(settings).prune {}
-
+  local by_register = {}
   for _, entry in pairs(fetched) do
-    async.sleep(0)
     local text = entry.text
     if type(text) == "string" and text ~= "" then
+      local bucket = {}
+      by_register[entry.register] = bucket
       if word_set[entry.register] then
-        for word in
-          tokens.keywords(BASIC_KW, vim.iter { text } --[[@as lib.Iterator<string>]])
-        do
-          index_of(settings).insert {
-            word = word,
-            register = entry.register,
-            linewise = false,
-          }
+        for item in word_items(entry.register, text) do
+          table.insert(bucket, item)
         end
       end
-
       if line_set[entry.register] then
-        for line in txt.splitlines(text) do
-          local stripped = (string.gsub(line, "^%s+", ""))
-          if stripped ~= "" then
-            local head = tokens.keywords(BASIC_KW, vim.iter { stripped } --[[@as lib.Iterator<string>]])()
-            if head ~= nil then
-              index_of(settings).insert {
-                word = head,
-                register = entry.register,
-                linewise = true,
-                line = stripped,
-              }
-            end
-          end
+        for item in line_items(entry.register, text) do
+          table.insert(bucket, item)
         end
       end
+    end
+  end
+
+  for _, name in pairs(names) do
+    async.sleep(0)
+    index_of(settings).prune { register = name }
+    for _, item in pairs(by_register[name] or {}) do
+      index_of(settings).insert(item)
     end
   end
 end

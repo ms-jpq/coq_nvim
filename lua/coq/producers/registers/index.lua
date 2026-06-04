@@ -8,6 +8,7 @@ local util = require "coq.producers.util"
 ---@field line? string
 
 ---@class registers.Ctx
+---@field register? string
 ---@field keyword_before? string
 
 local M = {}
@@ -19,8 +20,8 @@ M.new = function(settings)
     insert_key = function(item)
       return item.register
     end,
-    query_key = function(_)
-      return nil
+    query_key = function(ctx)
+      return ctx.register
     end,
     child = util.word_search(settings),
   }

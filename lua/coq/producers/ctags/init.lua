@@ -71,7 +71,6 @@ local tracker_of = util.once(function(settings)
       end
       for _, m in pairs(metas) do
         local tags = store.fetch(m.filename, m.mtime)
-        async.sleep(0)
 
         index_of(settings).prune { filename = m.filename }
         for _, tag in pairs(tags) do

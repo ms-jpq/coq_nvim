@@ -26,13 +26,16 @@ local mk = function(overrides)
       table.insert(fetches, { buf = buf, prev_tick = previous and previous.tick })
       return (overrides.compare or default_compare)(buf, previous)
     end,
-    reindex = function(_, stale, metas)
+    reindex = function(_, changes)
       table.insert(settings_seen, SETTINGS)
-      for buf, meta in pairs(stale) do
-        table.insert(prunes, { buf = buf, meta = meta })
-      end
-      for _, meta in pairs(metas) do
-        table.insert(reindexes, meta)
+      for buf, change in pairs(changes) do
+        local deleted, prev, curr = unpack(change, 1, 3)
+        if deleted or prev ~= nil then
+          table.insert(prunes, { buf = buf, meta = prev })
+        end
+        if curr ~= nil then
+          table.insert(reindexes, curr)
+        end
       end
     end,
   }
@@ -156,8 +159,15 @@ T.describe("buf_tracker", function(test)
         table.insert(prev_ticks, previous and previous.tick or 0)
         return { tick = (previous and previous.tick or 0) + 1 }
       end,
-      reindex = function(_, _, computed)
-        if fail and next(computed) then
+      reindex = function(_, changes)
+        local has_curr = false
+        for _, change in pairs(changes) do
+          if change[3] ~= nil then
+            has_curr = true
+            break
+          end
+        end
+        if fail and has_curr then
           fail = false
           error "index cancelled"
         end
