@@ -33,11 +33,11 @@ end
 
 ---@param n async.Nursery
 ---@param settings config.Settings
----@param ranker index.Ranker
+---@param statsd index.Statsd
 ---@param resolver completions.Resolver
 ---@param sup producers.Producer<ctx.full>
 ---@param events completions.Events
-M.bind = function(n, settings, ranker, resolver, sup, events)
+M.bind = function(n, settings, statsd, resolver, sup, events)
   local prev = { buf = -1, tick = -1 }
   local sticky = false
 
@@ -62,7 +62,7 @@ M.bind = function(n, settings, ranker, resolver, sup, events)
     lib.scope(function(defer)
       local close, iter = sup.search(settings, ctx)
       defer(close)
-      insertion.complete(ctx, settings, ranker, iter)
+      insertion.complete(ctx, settings, statsd, iter)
     end)
   end)
 end

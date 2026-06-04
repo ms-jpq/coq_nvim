@@ -5,7 +5,7 @@ local events = require "coq.completions.events"
 local item = require "coq.completions.item"
 local lib = require "coq.lib"
 local lsp_util = require "coq.producers.lsp.util"
-local ranker_m = require "coq.lib.index.rank.ranker"
+local statsd_m = require "coq.lib.index.rank.statsd"
 local tokens = require "coq.lib.index.tokens"
 local topk_m = require "coq.lib.index.rank.topk"
 local txt = require "coq.lib.text"
@@ -167,15 +167,15 @@ end
 
 ---@param ctx ctx.full
 ---@param settings config.Settings
----@param ranker index.Ranker
+---@param statsd index.Statsd
 ---@param iter lib.Iterator<completions.Item[]>
-M.complete = function(ctx, settings, ranker, iter)
-  local prepared = ranker.prepare(ctx)
+M.complete = function(ctx, settings, statsd, iter)
+  local prepared = statsd.prepare(ctx)
 
   local topk = topk_m.new(settings.match.max_results, item.dedup_key)
   for batch in iter do
     for _, i in ipairs(batch) do
-      topk.push(i, ranker_m.score(prepared, i))
+      topk.push(i, statsd_m.score(prepared, i))
     end
   end
 
@@ -196,10 +196,10 @@ end
 ---@param n async.Nursery
 ---@param settings config.Settings
 ---@param resolver completions.Resolver
----@param ranker index.Ranker
+---@param statsd index.Statsd
 ---@param done channels.Broadcast<vim.v.completed_item>
 ---@param trigger channels.Broadcast<completions.TriggerEvent>
-M.bind = function(n, settings, resolver, ranker, done, trigger)
+M.bind = function(n, settings, resolver, statsd, done, trigger)
   events.subscribe_latest(n, done, function(completed)
     local user_data = completed.user_data
     if type(user_data) ~= "table" then
@@ -210,7 +210,7 @@ M.bind = function(n, settings, resolver, ranker, done, trigger)
     local ctx = context.full()
     local filter = user_data.meta.filter or user_data.word
     if apply(settings, ctx, resolver, user_data) and filter then
-      ranker.inserted(filter)
+      statsd.inserted(filter)
       if user_data.meta.path and user_data.kind == "Folder" then
         trigger.replace { manual = false }
       end

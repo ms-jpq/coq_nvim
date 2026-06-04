@@ -19,7 +19,7 @@ local p_snippets = require "coq.producers.snippets"
 local p_tmux = require "coq.producers.tmux"
 local p_treesitter = require "coq.producers.treesitter"
 local preview = require "coq.completions.preview"
-local ranker_m = require "coq.lib.index.rank.ranker"
+local statsd_m = require "coq.lib.index.rank.statsd"
 local resolver_m = require "coq.completions.resolver"
 local supervisor = require "coq.lib.producers.supervisor"
 local trigger = require "coq.completions.trigger"
@@ -99,13 +99,13 @@ M.setup = function(opts)
       local p = vim.iter(producers(settings.clients)):totable()
       local sup = supervisor.new(p)
 
-      local ranker = ranker_m.new(settings.clients)
+      local statsd = statsd_m.new(settings.clients)
       local events = events_m.new()
       local resolver = resolver_m.new(n)
 
-      trigger.bind(n, settings, ranker, resolver, sup, events)
+      trigger.bind(n, settings, statsd, resolver, sup, events)
       preview.bind(n, settings, resolver, events.pum)
-      insertion.bind(n, settings, resolver, ranker, events.done, events.trigger)
+      insertion.bind(n, settings, resolver, statsd, events.done, events.trigger)
       idle.bind(n, settings, sup, events)
       commands.bind()
 

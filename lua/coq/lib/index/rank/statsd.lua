@@ -8,7 +8,7 @@ local tokens = require "coq.lib.index.tokens"
 ---@field recency table<string, integer>
 ---@field source_bias table<string, number>
 
----@class index.Ranker
+---@class index.Statsd
 ---@field inserted fun(filter: string)
 ---@field prepare fun(ctx: ctx.full): index.Prepared
 
@@ -32,7 +32,7 @@ M.score = function(prepared, item)
 end
 
 ---@param clients config.Clients
----@return index.Ranker
+---@return index.Statsd
 M.new = function(clients)
   local source_bias = {}
   for _, client in pairs(clients) do
@@ -43,13 +43,13 @@ M.new = function(clients)
 
   local recency = {}
   ---@diagnostic disable-next-line: missing-fields
-  local ranker = {} ---@type index.Ranker
+  local statsd = {} ---@type index.Statsd
 
-  ranker.inserted = function(filter)
+  statsd.inserted = function(filter)
     recency[filter] = (recency[filter] or 0) + 1
   end
 
-  ranker.prepare = function(ctx)
+  statsd.prepare = function(ctx)
     atools.scheduled()
     return {
       token = ctx.keyword_before,
@@ -62,7 +62,7 @@ M.new = function(clients)
     }
   end
 
-  return ranker
+  return statsd
 end
 
 return M

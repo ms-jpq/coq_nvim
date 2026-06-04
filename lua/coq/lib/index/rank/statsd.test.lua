@@ -1,5 +1,5 @@
 local T = require "coq.lib.test"
-local ranker = require "coq.lib.index.rank.ranker"
+local statsd = require "coq.lib.index.rank.statsd"
 
 ---@param meta { filter: string, source: string, fuzzy: integer, always_on_top: boolean? }
 ---@return completions.Item
@@ -32,37 +32,37 @@ end
 
 T.describe("rank.score", function(test)
   test("with no signals the score is the fuzzy score", function()
-    T.eq(ranker.score(prep(), fido { fuzzy = 7 }), 7)
+    T.eq(statsd.score(prep(), fido { fuzzy = 7 }), 7)
   end)
 
   test("proximity adds prox * WEIGHTS.prox", function()
-    local base = ranker.score(prep(), fido())
-    local boosted = ranker.score(prep { locality = { fido = 2 } }, fido())
-    T.eq(boosted - base, 2 * ranker.WEIGHTS.prox)
+    local base = statsd.score(prep(), fido())
+    local boosted = statsd.score(prep { locality = { fido = 2 } }, fido())
+    T.eq(boosted - base, 2 * statsd.WEIGHTS.prox)
   end)
 
   test("recency adds recen * WEIGHTS.recen", function()
-    T.eq(ranker.score(prep { recency = { fido = 3 } }, fido()), 3 * ranker.WEIGHTS.recen)
+    T.eq(statsd.score(prep { recency = { fido = 3 } }, fido()), 3 * statsd.WEIGHTS.recen)
   end)
 
   test("source bias multiplies the score", function()
-    T.eq(ranker.score(prep { source_bias = { BF = 2 } }, fido { fuzzy = 5 }), 10)
+    T.eq(statsd.score(prep { source_bias = { BF = 2 } }, fido { fuzzy = 5 }), 10)
   end)
 
   test("source bias defaults to 1 when the source is absent", function()
-    T.eq(ranker.score(prep { source_bias = { other = 9 } }, fido { fuzzy = 5 }), 5)
+    T.eq(statsd.score(prep { source_bias = { other = 9 } }, fido { fuzzy = 5 }), 5)
   end)
 
   test("always_on_top adds the ALWAYS_TOP tier last (after bias)", function()
     T.eq(
-      ranker.score(prep { source_bias = { BF = 2 } }, fido { fuzzy = 1, always_on_top = true }),
-      2 + ranker.ALWAYS_TOP
+      statsd.score(prep { source_bias = { BF = 2 } }, fido { fuzzy = 1, always_on_top = true }),
+      2 + statsd.ALWAYS_TOP
     )
   end)
 
   test("combines (fuzzy + prox + recen) * bias + tier", function()
     local p = prep { locality = { fido = 2 }, recency = { fido = 1 }, source_bias = { BF = 2 } }
-    local expected = (3 + 2 * ranker.WEIGHTS.prox + 1 * ranker.WEIGHTS.recen) * 2 + ranker.ALWAYS_TOP
-    T.eq(ranker.score(p, fido { fuzzy = 3, always_on_top = true }), expected)
+    local expected = (3 + 2 * statsd.WEIGHTS.prox + 1 * statsd.WEIGHTS.recen) * 2 + statsd.ALWAYS_TOP
+    T.eq(statsd.score(p, fido { fuzzy = 3, always_on_top = true }), expected)
   end)
 end)
