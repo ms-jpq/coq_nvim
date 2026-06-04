@@ -19,7 +19,7 @@ local cache_of = util.once(function(idle_ctx)
     compute = function(filename)
       local out = run.run("ctags", { filename })
       if not out then
-        return {}
+        return nil
       end
       return vim.iter(parse.parse(out)):totable()
     end,
@@ -48,7 +48,7 @@ M.buffer_meta = function(buf, previous)
     return nil
   end
 
-  if previous and mtime <= previous.mtime then
+  if previous and mtime <= previous.mtime and filename == previous.filename then
     return nil
   end
   return { mtime = mtime, filename = filename }
@@ -72,12 +72,18 @@ local tracker_of = util.once(function(settings)
 
         for _, entry in stream do
           async.sleep(0)
-          local target = (entry.curr and entry.curr.filename) or (entry.prev and entry.prev.filename)
-          if target then
-            if entry.deleted then
-              store.prune(target)
-            end
-            index_of(settings).prune { filename = target }
+          local prev_name = entry.prev and entry.prev.filename
+          local curr_name = entry.curr and entry.curr.filename
+
+          if entry.deleted and prev_name then
+            -- store.prune(prev_name)
+            index_of(settings).prune { filename = prev_name }
+          elseif prev_name and prev_name ~= curr_name then
+            index_of(settings).prune { filename = prev_name }
+          end
+
+          if curr_name then
+            index_of(settings).prune { filename = curr_name }
             if entry.data then
               for _, tag in pairs(entry.data) do
                 index_of(settings).insert(tag --[[@as ctags.Item]])

@@ -10,7 +10,6 @@ local M = {}
 ---@return producers.Producer<ctx.full>
 M.new = function()
   return {
-    bind = lib.noop,
     idle = lib.noop,
     search = function(settings, ctx)
       return closable.iter(function(defer)

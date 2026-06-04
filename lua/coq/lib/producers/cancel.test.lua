@@ -12,7 +12,6 @@ local SETTINGS = config.merged()
 ---@return producers.Producer
 local regular = function(spec)
   return {
-    bind = lib.noop,
     idle = lib.noop,
     search = function(settings, ctx)
       local iter = async.wrap(function()
@@ -25,20 +24,6 @@ end
 
 local cancel_tests = function(name, factory)
   T.describe("producer " .. name .. " :: cancel", function(test)
-    test("bind cancellation is idempotent", function()
-      local n = nursery.new()
-      local _ = handle.new().on_cancel(n.cancel)
-      local db = factory {
-        idle = lib.noop,
-        matcher = function()
-          coroutine.yield "lil"
-        end,
-      }
-      db.bind(n)
-      n.cancel()
-      n.cancel() -- no error
-    end)
-
     test("ambient cancel wakes a sleeping matcher", function()
       local h = handle.new()
       local elapsed_ms
@@ -52,7 +37,6 @@ local cancel_tests = function(name, factory)
             coroutine.yield "never"
           end,
         }
-        db.bind(n)
         local start = vim.uv.hrtime()
         local _close, iter = db.search(SETTINGS, { slow = T.SLOW })
         pcall(iter)

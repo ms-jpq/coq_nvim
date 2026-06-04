@@ -1,3 +1,4 @@
+local lib = require "coq.lib"
 local parsers = require "coq.producers.snippets.parsers"
 local sources = require "coq.producers.snippets.sources"
 
@@ -16,26 +17,34 @@ M.new = function(settings, rtps)
 
   loader.sources = function()
     local acc = {}
-    for src in sources.list(settings, rtps) do
-      for _, ft in pairs(src.filetypes) do
-        acc[ft] = acc[ft] or {}
-        table.insert(acc[ft], src)
+    lib.scope(function(defer)
+      local close, iter = sources.list(settings, rtps)
+      defer(close)
+      for src in iter do
+        for _, ft in pairs(src.filetypes) do
+          acc[ft] = acc[ft] or {}
+          table.insert(acc[ft], src)
+        end
       end
-    end
+    end)
     return acc
   end
 
   loader.parse = function(filetype)
     local out = {}
-    for src in sources.list(settings, rtps) do
-      if vim.tbl_contains(src.filetypes, filetype) then
-        for item in parsers.by_kind[src.kind](src) do
-          if item.filetype == filetype then
-            table.insert(out, item)
+    lib.scope(function(defer)
+      local close, iter = sources.list(settings, rtps)
+      defer(close)
+      for src in iter do
+        if vim.tbl_contains(src.filetypes, filetype) then
+          for item in parsers.by_kind[src.kind](src) do
+            if item.filetype == filetype then
+              table.insert(out, item)
+            end
           end
         end
       end
-    end
+    end)
     return out
   end
 

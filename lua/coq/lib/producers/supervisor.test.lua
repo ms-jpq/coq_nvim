@@ -15,11 +15,10 @@ end
 
 local SETTINGS = config.merged()
 
----@param spec { idle?: fun(ctx), bind?: fun(n: async.Nursery), matcher?: fun(_, ctx) }
+---@param spec { idle?: fun(ctx), matcher?: fun(_, ctx) }
 ---@return producers.Producer
 local producer = function(spec)
   return {
-    bind = spec.bind or lib.noop,
     idle = function(_, ctx)
       if spec.idle then
         spec.idle(ctx)
@@ -80,7 +79,6 @@ T.describe("supervisor", function(test)
   test("merges rows from all producers", function()
     local n = detached()
     local sup = supervisor.new { yields("lil", "spot"), yields "fido" }
-    sup.bind(n)
     local seen = {}
     local close, iter = sup.search(SETTINGS, {})
     for row in iter do
@@ -109,7 +107,6 @@ T.describe("supervisor", function(test)
         end,
       }
       local sup = supervisor.new { p }
-      sup.bind(n)
       push(true)
       n.spawn(function()
         sup.idle(SETTINGS, {})
@@ -139,7 +136,6 @@ T.describe("supervisor", function(test)
           end,
         },
       }
-      sup.bind(n)
       local close, iter = sup.search(SETTINGS, {})
       iter()
       sup.idle(SETTINGS, {})
@@ -161,7 +157,6 @@ T.describe("supervisor", function(test)
         end,
       }
       local sup = supervisor.new { p }
-      sup.bind(n)
       push(true)
       drain(sup.search(SETTINGS, {}))
       sup.idle(SETTINGS, {})
@@ -177,7 +172,6 @@ T.describe("supervisor", function(test)
         error "boom"
       end),
     }
-    sup.bind(n)
     local ok, err = pcall(function()
       drain(sup.search(SETTINGS, {}))
     end)
@@ -185,26 +179,6 @@ T.describe("supervisor", function(test)
 
     T.eq(ok, false)
     assert(err and tostring(err):find "boom", "expected 'boom', got: " .. tostring(err))
-  end)
-
-  test("bind cascades to each producer once, even on repeat cancel", function()
-    local cleanups = {}
-    local trace = function(name)
-      return producer {
-        bind = function(n)
-          local _ = n.on_cancel(function()
-            cleanups[name] = (cleanups[name] or 0) + 1
-          end)
-        end,
-      }
-    end
-    local n = detached()
-    local sup = supervisor.new { trace "a", trace "b" }
-    sup.bind(n)
-    n.cancel()
-    n.cancel()
-
-    T.eq(cleanups, { a = 1, b = 1 })
   end)
 
   test("iter.close from a sibling coroutine cancels the matcher", function()
@@ -220,7 +194,6 @@ T.describe("supervisor", function(test)
           matcher_cancelled.resolve(not ok)
         end),
       }
-      sup.bind(n)
       async.scope(function(inner)
         local close, iter = sup.search(SETTINGS, {})
         inner.spawn(function()
@@ -240,7 +213,6 @@ T.describe("supervisor", function(test)
     local n = detached()
     local inner = supervisor.new { yields "lil", yields "spot" }
     local outer = supervisor.new { inner, yields "fido" }
-    outer.bind(n)
     local seen = {}
     local close, iter = outer.search(SETTINGS, {})
     for row in iter do
@@ -266,7 +238,6 @@ T.describe("supervisor", function(test)
         end,
       }
       local sup = supervisor.new { p }
-      sup.bind(n)
 
       -- mimic subscribe_latest: consume a search, then cancel the consuming
       -- coroutine mid-flight WITHOUT calling iter.close().

@@ -1,7 +1,7 @@
 local async = require "coq.lib.async"
 local atools = require "coq.lib.atools"
+local closable = require "coq.lib.closable"
 local fs_cache = require "coq.lib.fs_cache"
-local itertools = require "coq.lib.itertools"
 
 ---@alias snippets.Kind "bundle" | "neosnippet" | "lsp"
 
@@ -40,10 +40,13 @@ end
 
 ---@param dir string
 ---@param exts table<string, true>
----@return lib.Iterator<string>
+---@return fun() close
+---@return lib.Iterator<string> iter
 local walk_files = function(dir, exts)
-  return async.wrap(function()
-    for path, kind in atools.fs.walk(dir) do
+  return closable.iter(function(defer)
+    local close, iter = atools.fs.walk(dir)
+    defer(close)
+    for path, kind in iter do
       if kind == "file" then
         local ext = string.match(path, "%.([^.]+)$")
         if ext and exts[ext] then
@@ -61,9 +64,10 @@ local stem_of = function(path)
 end
 
 ---@param dirs string[]
----@return lib.Iterator<snippets.Source>
+---@return fun() close
+---@return lib.Iterator<snippets.Source> iter
 local bundle = function(dirs)
-  return async.wrap(function()
+  return closable.iter(function()
     for _, dir in pairs(dirs) do
       local path = vim.fs.joinpath(dir, BUNDLE_NAME)
       local mtime = fs_cache.mtime_ns(path)
@@ -92,11 +96,14 @@ local bundle = function(dirs)
 end
 
 ---@param dirs string[]
----@return lib.Iterator<snippets.Source>
+---@return fun() close
+---@return lib.Iterator<snippets.Source> iter
 local neosnippet = function(dirs)
-  return async.wrap(function()
+  return closable.iter(function(defer)
     for _, dir in pairs(dirs) do
-      for path in walk_files(dir, NEOSNIPPET_EXTS) do
+      local close, iter = walk_files(dir, NEOSNIPPET_EXTS)
+      defer(close)
+      for path in iter do
         local mtime = fs_cache.mtime_ns(path)
         if mtime then
           coroutine.yield {
@@ -112,11 +119,14 @@ local neosnippet = function(dirs)
 end
 
 ---@param dirs string[]
----@return lib.Iterator<snippets.Source>
+---@return fun() close
+---@return lib.Iterator<snippets.Source> iter
 local lsp = function(dirs)
-  return async.wrap(function()
+  return closable.iter(function(defer)
     for _, dir in pairs(dirs) do
-      for path in walk_files(dir, LSP_EXTS) do
+      local close, iter = walk_files(dir, LSP_EXTS)
+      defer(close)
+      for path in iter do
         local mtime = fs_cache.mtime_ns(path)
         if mtime then
           coroutine.yield {
@@ -135,10 +145,19 @@ local M = {}
 
 ---@param settings config.Settings
 ---@param rtps string[]
----@return lib.Iterator<snippets.Source>
+---@return fun() close
+---@return lib.Iterator<snippets.Source> iter
 M.list = function(settings, rtps)
-  local dirs = vim.iter(user_dirs(settings, rtps)):totable()
-  return itertools.chain(bundle(dirs), neosnippet(dirs), lsp(dirs))
+  return closable.iter(function(defer)
+    local dirs = vim.iter(user_dirs(settings, rtps)):totable()
+    for _, mk in pairs { bundle, neosnippet, lsp } do
+      local close, iter = mk(dirs)
+      defer(close)
+      for src in iter do
+        coroutine.yield(src)
+      end
+    end
+  end)
 end
 
 return M

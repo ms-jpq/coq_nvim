@@ -40,12 +40,21 @@ T.describe("errs.raise", function(test)
     T.eq(err, first)
   end)
 
-  test("a real error among cancellations still raises a group", function()
+  test("a single real error among cancellations is raised alone", function()
     local ok, err = pcall(errs.raise, { cancel.new(), "real" })
+    T.eq(ok, false)
+    T.eq(cancel.is(err), false)
+    T.eq(err, "real")
+  end)
+
+  test("multiple real errors among cancellations group only the real ones", function()
+    local ok, err = pcall(errs.raise, { cancel.new(), "real1", cancel.new(), "real2" })
     T.eq(ok, false)
     T.eq(cancel.is(err), false)
     ---@cast err lib.ErrorGroup<any>
     T.eq(#err.errs, 2)
+    T.eq(err.errs[1], "real1")
+    T.eq(err.errs[2], "real2")
   end)
 end)
 

@@ -152,7 +152,6 @@ end)
 ---@return producers.Producer<ctx.full>
 M.new = function()
   return producer.threaded {
-    bind = lib.noop,
     idle = lib.noop,
     matcher = function(...)
       require("coq.producers.paths").matcher(...)

@@ -1,13 +1,14 @@
 local atools = require "coq.lib.atools"
+local errs = require "coq.lib.errs"
 
 local M = {}
 
 ---@class fs_cache.Spec<V>
 ---@field fs_root string
----@field compute fun(key: string): V
+---@field compute fun(key: string): V?
 
 ---@class fs_cache.Store<V>
----@field fetch fun(key: string, mtime: integer): V
+---@field fetch fun(key: string, mtime: integer): V?
 ---@field prune fun(key: string)
 
 ---@param path string
@@ -48,16 +49,18 @@ end
 
 ---@param path string
 ---@param data string
----@return boolean
+---@return uv.error_name?
 local write_atomic = function(path, data)
-  if atools.fs.mkdirp(vim.fs.dirname(path)) then
-    return false
+  local m_err = atools.fs.mkdirp(vim.fs.dirname(path))
+  if m_err then
+    return m_err
   end
   local tmp = path .. ".tmp"
-  if atools.fs.spit(tmp, data) then
-    return false
+  local s_err = atools.fs.spit(tmp, data)
+  if s_err then
+    return s_err
   end
-  return atools.fs.rename(tmp, path) == nil
+  return atools.fs.rename(tmp, path)
 end
 
 ---@generic V
@@ -84,8 +87,14 @@ M.new = function(spec)
         end
       end
 
-      local value = assert(spec.compute(key), "fs_cache: compute must not return nil")
-      write_atomic(path, encode(value))
+      local value = spec.compute(key)
+      if value == nil then
+        return nil
+      end
+      local w_err = write_atomic(path, encode(value))
+      if w_err then
+        errs.report("fs_cache: write " .. path .. " failed: " .. tostring(w_err))
+      end
       return value
     end,
     prune = function(key)

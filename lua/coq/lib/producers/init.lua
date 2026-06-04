@@ -1,10 +1,8 @@
 local closable = require "coq.lib.closable"
-local lib = require "coq.lib"
 local worker = require "coq.lib.worker"
 
 ---@class producers.Producer<C>
 ---@field idle fun(settings: config.Settings, ctx: C)
----@field bind fun(n: async.Nursery)
 ---@field search fun(settings: config.Settings, ctx: C): fun(), lib.Iterator<completions.Item[]>
 
 ---@alias producers.IdleFn<C> fun(settings: config.Settings?, idle_ctx: C)
@@ -23,7 +21,6 @@ M.threaded = function(spec)
   local w = worker.spawn()
 
   return {
-    bind = lib.noop,
     idle = function(settings, idle_ctx)
       w.queue(spec.idle, settings, idle_ctx)
     end,

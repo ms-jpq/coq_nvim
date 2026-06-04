@@ -110,9 +110,10 @@ local query_1 = function(client, ctx, td_params)
         end
       end,
     })
-    defer(vim.schedule_wrap(function()
+    defer(function()
+      atools.scheduled()
       vim.api.nvim_del_autocmd(autocmd_id)
-    end))
+    end)
 
     local final = async.wrap(function()
       local err, result = lsp_util.request(client, "textDocument/completion", params, ctx.buf)

@@ -1,6 +1,8 @@
 local T = require "coq.lib.test"
+local async = require "coq.lib.async"
 local handle = require "coq.lib.async._handle"
 local lib = require "coq.lib"
+local runtime = require "coq.lib.async._runtime"
 
 T.describe("handle", function(test)
   test("watcher fires once whether registered before or after cancel", function()
@@ -96,5 +98,50 @@ T.describe("handle", function(test)
     h.cancel()
 
     T.eq(fired, { "outer", "inner" })
+  end)
+
+  -- Watchers are invoked synchronously by cancel(). A watcher must not await:
+  -- it can only kick off detached, fire-and-forget async work.
+  test("cancel stays synchronous when a watcher spawns detached async work", function()
+    local h = handle.new()
+    local f = async.future()
+    local order = {}
+
+    local _ = h.on_cancel(function()
+      runtime._detach(runtime.ROOT, function()
+        async.sleep(-1)
+        table.insert(order, "async-work")
+        f.resolve()
+      end)
+    end)
+
+    h.cancel()
+    table.insert(order, "after-cancel")
+    f.await()
+
+    T.eq(order, { "after-cancel", "async-work" })
+  end)
+
+  -- Awaiting directly inside a watcher only "works" when cancel() happens to be
+  -- driven from a coroutine, and even then it is a trap: the await suspends
+  -- cancel() itself, stalling every watcher queued behind it until it resolves.
+  -- From a synchronous caller it errors outright (yield outside a coroutine).
+  test("awaiting directly in a watcher suspends cancel and delays siblings", function()
+    local h = handle.new()
+    local order = {}
+
+    local _ = h.on_cancel(function()
+      table.insert(order, "w1:before-await")
+      async.sleep(-1)
+      table.insert(order, "w1:after-await")
+    end)
+    local _ = h.on_cancel(function()
+      table.insert(order, "w2")
+    end)
+
+    h.cancel()
+    table.insert(order, "cancel:returned")
+
+    T.eq(order, { "w1:before-await", "w1:after-await", "w2", "cancel:returned" })
   end)
 end)

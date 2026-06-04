@@ -19,6 +19,7 @@ M.bind = function(n, settings, sup, events)
   events.idle.replace {}
 
   local carry = { updated = {}, removed = {} }
+  local rtps = vim.api.nvim_list_runtime_paths()
 
   local primed = false
   events_m.subscribe_latest(n, events.idle, function()
@@ -40,7 +41,7 @@ M.bind = function(n, settings, sup, events)
     sup.idle(settings, {
       ctx = context.full(),
       cache_dir = vim.fs.joinpath(vim.fn.stdpath "cache", "coq"),
-      rtps = vim.api.nvim_list_runtime_paths(),
+      rtps = rtps,
       updated = carry.updated,
       removed = carry.removed,
     })

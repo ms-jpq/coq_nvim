@@ -91,11 +91,14 @@ M.is_dir = function(path)
 end
 
 ---@param dir string
----@return fun(): string?, string?
+---@return fun() close
+---@return fun(): string?, string? iter
 M.walk = function(dir)
-  return async.wrap(function()
+  return closable.iter(function(defer)
     local function recurse(d)
-      local _, entries = M.scandir(d)
+      local close, entries = M.scandir(d)
+      defer(close)
+
       for name, kind in entries do
         local path = vim.fs.joinpath(d, name)
         if kind == "directory" then

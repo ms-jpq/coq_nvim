@@ -56,16 +56,17 @@ M.raise = function(es)
     return
   end
 
-  if #es == 1 then
-    error(es[1], 0)
-  end
+  local non_cancel = vim.tbl_filter(function(e)
+    return not cancel.is(e)
+  end, es)
 
-  for _, e in ipairs(es) do
-    if not cancel.is(e) then
-      error(M.group(es), 0)
-    end
+  if #non_cancel == 0 then
+    error(es[1], 0)
+  elseif #non_cancel == 1 then
+    error(non_cancel[1], 0)
+  else
+    error(M.group(non_cancel), 0)
   end
-  error(es[1], 0)
 end
 
 return M

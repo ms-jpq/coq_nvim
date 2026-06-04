@@ -35,6 +35,7 @@ local BUF_KINDS = {
   BufEnter = "update",
   BufRead = "update",
   BufWinEnter = "update",
+  BufFilePost = "update",
   TextChanged = "update",
   TextChangedI = "update",
   BufDelete = "remove",

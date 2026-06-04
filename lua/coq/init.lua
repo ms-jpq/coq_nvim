@@ -103,7 +103,6 @@ M.setup = function(opts)
       local events = events_m.new()
       local resolver = resolver_m.new(n)
 
-      sup.bind(n)
       trigger.bind(n, settings, ranker, resolver, sup, events)
       preview.bind(n, settings, resolver, events.pum)
       insertion.bind(n, settings, resolver, ranker, events.done, events.trigger)

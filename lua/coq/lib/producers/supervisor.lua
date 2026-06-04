@@ -15,12 +15,6 @@ M.new = function(producers)
   ---@diagnostic disable-next-line: missing-fields
   local sup = {} ---@type producers.Producer
 
-  sup.bind = function(n)
-    for _, p in pairs(producers) do
-      p.bind(n)
-    end
-  end
-
   sup.idle = function(settings, ctx)
     if searching then
       return
