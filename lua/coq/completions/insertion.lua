@@ -8,7 +8,6 @@ local lsp_util = require "coq.producers.lsp.util"
 local statsd_m = require "coq.lib.index.rank.statsd"
 local tokens = require "coq.lib.index.tokens"
 local topk_m = require "coq.lib.index.rank.topk"
-local txt = require "coq.lib.text"
 
 local DEFAULT_ENCODING = "utf-16"
 
@@ -146,12 +145,33 @@ local apply = function(settings, ctx, resolver, i)
 
   do
     local edit = M._word_range(ctx, i, lsp)
-    local lines = vim.iter(txt.splitlines(edit.text)):totable()
-    vim.api.nvim_buf_set_text(ctx.buf, edit.start_row, edit.start_col, edit.end_row, edit.end_col, lines)
-  end
+    local enc = lsp.position_encoding or DEFAULT_ENCODING
+    local start_line = vim.api.nvim_buf_get_lines(ctx.buf, edit.start_row, edit.start_row + 1, true)[1] or ""
+    local end_line = edit.end_row == edit.start_row and start_line
+      or (vim.api.nvim_buf_get_lines(ctx.buf, edit.end_row, edit.end_row + 1, true)[1] or "")
 
-  if edits then
-    vim.lsp.util.apply_text_edits(edits, ctx.buf, lsp.position_encoding or DEFAULT_ENCODING)
+    local all_edits = vim
+      .iter(coroutine.wrap(function()
+        coroutine.yield {
+          range = {
+            start = {
+              line = edit.start_row,
+              character = vim.str_utfindex(start_line, enc, edit.start_col, true),
+            },
+            ["end"] = {
+              line = edit.end_row,
+              character = vim.str_utfindex(end_line, enc, edit.end_col, true),
+            },
+          },
+          newText = edit.text,
+        }
+        for _, e in pairs(edits or {}) do
+          coroutine.yield(e)
+        end
+      end))
+      :totable()
+
+    vim.lsp.util.apply_text_edits(all_edits, ctx.buf, enc)
   end
 
   if meta.snippet then
