@@ -63,6 +63,21 @@ M.intersperse = function(sep, iter)
 end
 
 ---@generic T
+---@param key fun(x: T): any?
+---@return fun(x: T): boolean
+M.uniq_by = function(key)
+  local seen = {}
+  return function(x)
+    local k = key(x)
+    if k == nil or seen[k] then
+      return false
+    end
+    seen[k] = true
+    return true
+  end
+end
+
+---@generic T
 ---@param ... lib.Iterator<T>
 ---@return lib.Iterator<T>
 M.chain = function(...)

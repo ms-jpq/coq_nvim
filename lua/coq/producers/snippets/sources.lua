@@ -3,6 +3,7 @@ local atools = require "coq.lib.atools"
 local closable = require "coq.lib.closable"
 local errs = require "coq.lib.errs"
 local fs_cache = require "coq.lib.fs_cache"
+local itertools = require "coq.lib.itertools"
 local path = require "coq.lib.path"
 
 ---@alias snippets.Kind "bundle" | "neosnippet" | "lsp"
@@ -21,36 +22,29 @@ local LSP_EXTS = { json = true }
 ---@param idle_ctx idle.Ctx
 ---@return lib.Iterator<string>
 local user_dirs = function(settings, idle_ctx)
-  return async.wrap(function()
-    local seen = {}
-    local emit = function(file)
-      local err, st = atools.fs.stat(file)
-      if err or not st then
-        return
-      end
-
-      local key = st.dev .. ":" .. st.ino
-      if not seen[key] then
-        seen[key] = true
-        coroutine.yield(file)
+  local candidates = async.wrap(function()
+    for _, rtp in pairs(idle_ctx.rtps) do
+      local cand = vim.fs.joinpath(rtp, "coq-user-snippets")
+      if atools.fs.readable(cand) then
+        coroutine.yield(cand)
       end
     end
 
     local user_path = settings.clients.snippets.user_path
-    if user_path and user_path ~= "" then
-      local expanded = path.join(idle_ctx.config_dir, vim.fs.normalize(user_path))
-      if atools.fs.readable(expanded) then
-        emit(expanded)
-      end
+    if not user_path or user_path == "" then
+      return
     end
 
-    for _, rtp in pairs(idle_ctx.rtps) do
-      local cand = vim.fs.joinpath(rtp, "coq-user-snippets")
-      if atools.fs.readable(cand) then
-        emit(cand)
-      end
+    local expanded = path.join(idle_ctx.config_dir, vim.fs.normalize(user_path))
+    if atools.fs.readable(expanded) then
+      coroutine.yield(expanded)
     end
   end)
+
+  return vim.iter(candidates):filter(itertools.uniq_by(function(file)
+    local err, st = atools.fs.stat(file)
+    return st and not err and (st.dev .. ":" .. st.ino) or nil
+  end)) --[[@as lib.Iterator<string>]]
 end
 
 ---@param dir string
@@ -61,6 +55,7 @@ local walk_files = function(dir, exts)
   return closable.iter(function(defer)
     local close, iter = atools.fs.walk(dir)
     defer(close)
+
     for file in iter do
       local ext = string.match(file, "%.([^.]+)$")
       if ext and exts[ext] then
@@ -135,6 +130,7 @@ local lsp = function(dirs)
     for _, dir in pairs(dirs) do
       local close, iter = walk_files(dir, LSP_EXTS)
       defer(close)
+
       for file in iter do
         local mtime = fs_cache.mtime_ns(file)
         if mtime then
@@ -160,16 +156,16 @@ M.list = function(settings, idle_ctx)
   return closable.iter(function(defer)
     local user = vim.iter(user_dirs(settings, idle_ctx)):totable()
 
-    local emit = function(close, iter)
+    local yieldfrom = function(close, iter)
       defer(close)
       for src in iter do
         coroutine.yield(src)
       end
     end
 
-    emit(bundle(idle_ctx.rtps))
-    emit(neosnippet(user))
-    emit(lsp(user))
+    yieldfrom(bundle(idle_ctx.rtps))
+    yieldfrom(neosnippet(user))
+    yieldfrom(lsp(user))
   end)
 end
 
