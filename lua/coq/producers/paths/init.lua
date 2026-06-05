@@ -2,6 +2,7 @@ local async = require "coq.lib.async"
 local atools = require "coq.lib.atools"
 local closable = require "coq.lib.closable"
 local lib = require "coq.lib"
+local lib_path = require "coq.lib.path"
 local match = require "coq.lib.index.rank.match"
 local parse = require "coq.producers.paths.parse"
 local tokens = require "coq.lib.index.tokens"
@@ -115,7 +116,7 @@ local matches = function(settings, ctx)
     local cand = parse.candidate(ctx.line_before, {
       is_windows = lib.is_windows,
       env = vim.uv.os_environ(),
-      home = vim.uv.os_homedir() or "",
+      home = lib_path.HOME,
       isfname = tokens.parse_charset(ctx.isfname),
     })
     if not cand then

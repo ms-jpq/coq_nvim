@@ -1,5 +1,6 @@
 local T = require "coq.lib.test"
 local parse = require "coq.producers.paths.parse"
+local path = require "coq.lib.path"
 local tokens = require "coq.lib.index.tokens"
 
 local i = parse
@@ -7,22 +8,12 @@ local i = parse
 local ENV = { HOME = "/home/dogs", DOG_DIR = "/var/dogs", USERPROFILE = [[C:\Users\dogs]] }
 local HOME = ENV.HOME
 local UNIX, WIN = false, true
-local SU, SW = i._seps(UNIX), i._seps(WIN)
+local SU, SW = path.seps(UNIX), path.seps(WIN)
 
 -- vim default isfname, simplified to cover the chars we use in these tests.
 -- @ = alpha, plus separators and the punctuation we exercise.
 local UNIX_ISFNAME = tokens.parse_charset "@,48-57,/,.,-,_,+,~,$,@-@,{,}"
 local WIN_ISFNAME = tokens.parse_charset "@,48-57,/,\\,.,-,_,+,~,$,@-@,{,},:,%,(,)"
-
-T.describe("paths.parse.seps", function(test)
-  test("unix default is just /", function()
-    T.eq(i._seps(UNIX), { ["/"] = true })
-  end)
-
-  test("windows default is / and backslash", function()
-    T.eq(i._seps(WIN), { ["/"] = true, ["\\"] = true })
-  end)
-end)
 
 T.describe("paths.parse.expand_env", function(test)
   test("$VAR expands when defined", function()
@@ -77,65 +68,6 @@ T.describe("paths.parse.expand_head", function(test)
 
   test("on windows, ~\\... expands to HOME with backslash", function()
     T.eq(i._expand_head(WIN, [[C:\Users\dogs]], ENV, [[~\Documents]], SW), [[C:\Users\dogs\Documents]])
-  end)
-end)
-
-T.describe("paths.parse.is_absolute", function(test)
-  test("/ is absolute", function()
-    T.eq(i._is_absolute(UNIX, SU, "/var/dogs"), true)
-  end)
-
-  test("relative is not", function()
-    T.eq(i._is_absolute(UNIX, SU, "dogs/spot"), false)
-  end)
-
-  test("empty is not", function()
-    T.eq(i._is_absolute(UNIX, SU, ""), false)
-  end)
-
-  test("on windows, backslash root is absolute", function()
-    T.eq(i._is_absolute(WIN, SW, [[\dogs]]), true)
-  end)
-
-  test("on windows, drive letter with backslash is absolute", function()
-    T.eq(i._is_absolute(WIN, SW, [[C:\dogs]]), true)
-  end)
-
-  test("on windows, drive letter with forward slash is absolute", function()
-    T.eq(i._is_absolute(WIN, SW, "C:/dogs"), true)
-  end)
-
-  test("on windows, drive-relative (no sep) is NOT absolute", function()
-    T.eq(i._is_absolute(WIN, SW, "C:dogs"), false)
-  end)
-
-  test("on unix, backslash root is not absolute", function()
-    T.eq(i._is_absolute(UNIX, SU, [[\dogs]]), false)
-  end)
-end)
-
-T.describe("paths.parse.split_at_last_sep", function(test)
-  test("splits at last /, dir keeps trailing sep", function()
-    local dir, rhs = i._split_at_last_sep(SU, "/var/dogs/lab")
-    T.eq(dir, "/var/dogs/")
-    T.eq(rhs, "lab")
-  end)
-
-  test("trailing / yields empty rhs", function()
-    local dir, rhs = i._split_at_last_sep(SU, "/var/dogs/")
-    T.eq(dir, "/var/dogs/")
-    T.eq(rhs, "")
-  end)
-
-  test("no separator returns nil dir", function()
-    local dir = i._split_at_last_sep(SU, "labrador")
-    T.eq(dir, nil)
-  end)
-
-  test("on windows, both / and \\ count as separators", function()
-    local dir, rhs = i._split_at_last_sep(SW, [[C:\Dogs/lab]])
-    T.eq(dir, [[C:\Dogs/]])
-    T.eq(rhs, "lab")
   end)
 end)
 

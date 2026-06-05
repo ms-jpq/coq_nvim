@@ -1,8 +1,7 @@
 local lib = require "coq.lib"
+local lib_path = require "coq.lib.path"
 
 local M = {}
-
-local HOME = vim.uv.os_homedir() or ""
 
 ---@param is_windows boolean
 ---@param prefix string
@@ -52,7 +51,7 @@ M.fmt = function(cwd, path, current, is_windows)
   cwd = norm(cwd)
   path = norm(path)
   current = current and norm(current) or nil
-  local home = norm(HOME)
+  local home = norm(lib_path.HOME)
 
   if current and path == current then
     return "."

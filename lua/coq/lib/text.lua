@@ -65,12 +65,6 @@ M.rstrip = function(s)
   return (string.gsub(s, "%s+$", ""))
 end
 
----@param path string
----@return string
-M.stem = function(path)
-  return (string.gsub(vim.fs.basename(path), "%.[^.]+$", ""))
-end
-
 ---@param prefixes string[]
 ---@param line string
 ---@return boolean

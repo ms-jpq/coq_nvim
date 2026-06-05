@@ -1,6 +1,7 @@
 local T = require "coq.lib.test"
 local async = require "coq.lib.async"
 local config = require "coq.config"
+local lib_path = require "coq.lib.path"
 local paths = require "coq.producers.paths"
 
 local touch = function(path)
@@ -173,18 +174,14 @@ T.describe("paths.matcher", function(test)
     touch(dir .. "/spot.txt")
     vim.fn.mkdir(dir .. "/fido")
 
-    local prev = vim.uv.os_homedir()
-    vim.uv.os_setenv("HOME", dir)
+    local prev = lib_path.HOME
+    lib_path.HOME = dir
 
     local settings = settings_with()
     local ctx = ctx_of { cwd = "/", line_before = "~/", line = "~/" }
     local items = run_matcher(settings, ctx)
 
-    if prev then
-      vim.uv.os_setenv("HOME", prev)
-    else
-      vim.uv.os_unsetenv "HOME"
-    end
+    lib_path.HOME = prev
 
     T.eq(words_of(items), { "fido/", "spot.txt" })
   end)

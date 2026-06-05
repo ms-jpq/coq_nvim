@@ -1,15 +1,7 @@
-local set = require "coq.lib.set"
+local path = require "coq.lib.path"
 local tokens = require "coq.lib.index.tokens"
 
-local DRIVE_PAT = "^%a:[/\\]"
-
 local M = {}
-
----@param is_windows boolean
----@return lib.Set<string>
-M._seps = function(is_windows)
-  return set.new(is_windows and { "/", "\\" } or { "/" })
-end
 
 ---@param is_windows boolean
 ---@param env table<string, string>
@@ -54,31 +46,6 @@ M._expand_head = function(is_windows, home, env, token, separators)
   return M._expand_env(is_windows, env, token)
 end
 
----@param is_windows boolean
----@param separators lib.Set<string>
----@param path string
----@return boolean
-M._is_absolute = function(is_windows, separators, path)
-  local c1 = string.sub(path, 1, 1)
-  if separators[c1] then
-    return true
-  end
-  return is_windows and string.match(path, DRIVE_PAT) ~= nil
-end
-
----@param separators lib.Set<string>
----@param path string
----@return string? dir
----@return string rhs
-M._split_at_last_sep = function(separators, path)
-  for i = #path, 1, -1 do
-    if separators[string.sub(path, i, i)] then
-      return string.sub(path, 1, i), string.sub(path, i + 1)
-    end
-  end
-  return nil, ""
-end
-
 ---@class paths.parse.Candidate
 ---@field resolved_directory string
 ---@field literal_directory  string
@@ -97,14 +64,14 @@ end
 ---@param opts paths.parse.Opts
 ---@return paths.parse.Candidate?
 M.candidate = function(line_before, opts)
-  local separators = M._seps(opts.is_windows)
+  local separators = path.seps(opts.is_windows)
   local token = tokens.trailing_keyword_before(opts.isfname, line_before)
   if token == "" then
     return nil
   end
 
   local expanded = M._expand_head(opts.is_windows, opts.home, opts.env, token, separators)
-  local resolved, partial = M._split_at_last_sep(separators, expanded)
+  local resolved, partial = path.split_at_last_sep(separators, expanded)
   if not resolved then
     return nil
   end
@@ -115,7 +82,7 @@ M.candidate = function(line_before, opts)
     literal_directory = literal,
     local_sep = string.sub(literal, -1),
     partial = partial,
-    absolute = M._is_absolute(opts.is_windows, separators, resolved),
+    absolute = path.is_absolute(opts.is_windows, resolved),
     start = #line_before - #token,
   }
 end
