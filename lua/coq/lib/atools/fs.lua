@@ -15,16 +15,12 @@ local GID = vim.uv.getgid and vim.uv.getgid() or -1
 ---@type fun(path: string): uv.error_name?, uv.luv_dir_t?
 local fs_opendir = async.awaitify(vim.uv.fs_opendir)
 ---@type fun(dir: uv.luv_dir_t): uv.error_name?, boolean?
-local fs_closedir = async.awaitify(vim.uv.fs_closedir)
+local fs_closedir = async.awaitify(vim.uv.fs_closedir, { cancel = false })
 
 ---@type fun(path: string, flags: string|integer, mode: integer): uv.error_name?, integer?
 local fs_open = async.awaitify(vim.uv.fs_open)
 ---@type fun(fd: integer): uv.error_name?
-local fs_close = async.awaitify(vim.uv.fs_close)
----@type fun(fd: integer, size: integer, offset: integer): uv.error_name?, string?
-local fs_read = async.awaitify(vim.uv.fs_read)
----@type fun(fd: integer, data: string, offset: integer): uv.error_name?, integer?
-local fs_write = async.awaitify(vim.uv.fs_write)
+local fs_close = async.awaitify(vim.uv.fs_close, { cancel = false })
 ---@type fun(fd: integer): uv.error_name?, uv.fs_stat.result?
 local fs_fstat = async.awaitify(vim.uv.fs_fstat)
 ---@type fun(path: string, mode: integer): uv.error_name?, boolean?
@@ -32,6 +28,34 @@ local fs_mkdir = async.awaitify(vim.uv.fs_mkdir)
 
 ---@type fun(path: string): uv.error_name?, uv.fs_stat.result?
 local fs_stat = async.awaitify(vim.uv.fs_stat)
+
+---@param fn function
+---@return function call
+---@return fun() drain
+local drainable = function(fn)
+  ---@type async.Future?
+  local pending = nil
+
+  local call = function(...)
+    pending = async.future()
+    local argv = { ... }
+    table.insert(argv, pending.resolve)
+
+    fn(unpack(argv))
+
+    local rets = { pending.await() }
+    pending = nil
+    return unpack(rets)
+  end
+
+  local drain = function()
+    if pending then
+      pending.await { cancel = false }
+    end
+  end
+
+  return call, drain
+end
 
 local M = {}
 
@@ -120,21 +144,14 @@ M.scandir = function(path)
       return
     end
 
-    ---@type async.Future<uv.error_name?, { name: string, type: string }[]?>?
-    local pending = nil
-
     defer(function()
-      if pending then
-        pending.await { cancel = false }
-      end
       fs_closedir(dir)
     end)
+    local readdir, drain = drainable(vim.uv.fs_readdir)
+    defer(drain)
 
     while true do
-      pending = async.future()
-      vim.uv.fs_readdir(dir, pending.resolve)
-      local e, entries = pending.await()
-      pending = nil
+      local e, entries = readdir(dir)
       if e ~= nil or entries == nil or #entries == 0 then
         return
       end
@@ -165,10 +182,15 @@ M.spit = function(path, data)
     if e1 or not fd then
       return e1 or "EINVAL"
     end
+
     defer(function()
       fs_close(fd)
     end)
-    return fs_write(fd, data, -1)
+
+    local write, drain = drainable(vim.uv.fs_write)
+    defer(drain)
+
+    return write(fd, data, -1)
   end)
 end
 
@@ -181,9 +203,13 @@ M.scanfile = function(path)
     if e1 ~= nil or fd == nil then
       return
     end
+
     defer(function()
       fs_close(fd)
     end)
+
+    local read, drain = drainable(vim.uv.fs_read)
+    defer(drain)
 
     local e2, st = fs_fstat(fd)
     if e2 ~= nil or st == nil then
@@ -191,8 +217,8 @@ M.scanfile = function(path)
     end
 
     while true do
-      local e3, data = fs_read(fd, st.blksize, -1)
-      if e3 ~= nil or data == nil or #data == 0 then
+      local e, data = read(fd, st.blksize, -1)
+      if e ~= nil or data == nil or #data == 0 then
         return
       end
       coroutine.yield(data)

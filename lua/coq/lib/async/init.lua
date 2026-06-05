@@ -143,15 +143,16 @@ M.merge = function(iters)
 end
 
 ---@param fn function
+---@param opts? async.AwaitOpts
 ---@return function
-M.awaitify = function(fn)
+M.awaitify = function(fn, opts)
   return function(...)
     local f = runtime.future()
     local argv = { ... }
     table.insert(argv, f.resolve)
 
     fn(unpack(argv))
-    return f.await()
+    return f.await(opts)
   end
 end
 
