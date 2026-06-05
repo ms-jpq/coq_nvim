@@ -1,7 +1,6 @@
 local async = require "coq.lib.async"
 local atools = require "coq.lib.atools"
 local closable = require "coq.lib.closable"
-local errs = require "coq.lib.errs"
 local fs_cache = require "coq.lib.fs_cache"
 local itertools = require "coq.lib.itertools"
 local path = require "coq.lib.path"
@@ -15,7 +14,7 @@ local path = require "coq.lib.path"
 ---@field filetypes string[]
 
 local BUNDLE_NAME = "coq+snippets+v2.json"
-local NEOSNIPPET_EXTS = { snip = true }
+local NEOSNIPPET_EXT = ".snip"
 
 ---@param settings config.Settings
 ---@param idle_ctx idle.Ctx
@@ -46,24 +45,6 @@ local user_dirs = function(settings, idle_ctx)
   end)) --[[@as lib.Iterator<string>]]
 end
 
----@param dir string
----@param exts table<string, true>
----@return fun() close
----@return lib.Iterator<string> iter
-local walk_files = function(dir, exts)
-  return closable.iter(function(defer)
-    local close, iter = atools.fs.walk(dir)
-    defer(close)
-
-    for file in iter do
-      local ext = string.match(file, "%.([^.]+)$")
-      if ext and exts[ext] then
-        coroutine.yield(file)
-      end
-    end
-  end)
-end
-
 ---@param dirs string[]
 ---@return fun() close
 ---@return lib.Iterator<snippets.Source> iter
@@ -75,22 +56,20 @@ local bundle = function(dirs)
       if mtime then
         local body = atools.fs.slurp(file)
         local ok, json = pcall(vim.json.decode, body or "")
-        if not ok then
-          errs.report("snippets: bundle " .. file .. " is malformed: " .. tostring(json))
-        elseif type(json) == "table" and type(json.snippets) == "table" then
+
+        if ok and type(json) == "table" and type(json.snippets) == "table" then
           local ft_set = {}
           for _, snip in pairs(json.snippets) do
             if type(snip) == "table" and type(snip.filetype) == "string" then
               ft_set[snip.filetype] = true
             end
           end
-          local fts = vim.tbl_keys(ft_set)
-          table.sort(fts)
+
           coroutine.yield {
             kind = "bundle",
             path = file,
             mtime = mtime,
-            filetypes = fts,
+            filetypes = vim.tbl_keys(ft_set),
           }
         end
       end
@@ -104,17 +83,21 @@ end
 local neosnippet = function(dirs)
   return closable.iter(function(defer)
     for _, dir in pairs(dirs) do
-      local close, iter = walk_files(dir, NEOSNIPPET_EXTS)
+      local close, iter = atools.fs.walk(dir)
       defer(close)
+
       for file in iter do
-        local mtime = fs_cache.mtime_ns(file)
-        if mtime then
-          coroutine.yield {
-            kind = "neosnippet",
-            path = file,
-            mtime = mtime,
-            filetypes = { path.stem(file) },
-          }
+        if vim.endswith(file, NEOSNIPPET_EXT) then
+          local mtime = fs_cache.mtime_ns(file)
+
+          if mtime then
+            coroutine.yield {
+              kind = "neosnippet",
+              path = file,
+              mtime = mtime,
+              filetypes = { path.stem(file) },
+            }
+          end
         end
       end
     end
