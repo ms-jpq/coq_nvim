@@ -183,7 +183,6 @@ local M = {
 
     pum = {
       ellipsis = "…",
-      fast_close = false,
       source_context = { "「", "」" },
     },
   },

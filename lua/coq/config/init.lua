@@ -26,7 +26,6 @@ local defaults = require "coq.config.defaults"
 ---@field resolve_timeout number
 
 ---@class config.PumDisplay
----@field fast_close boolean
 ---@field ellipsis string
 ---@field source_context [string, string]
 

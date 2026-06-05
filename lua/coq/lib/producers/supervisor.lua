@@ -1,6 +1,7 @@
 local async = require "coq.lib.async"
 local closable = require "coq.lib.closable"
 local deadline = require "coq.lib.async.deadline"
+local lib = require "coq.lib"
 
 local M = {}
 
@@ -19,19 +20,23 @@ M.new = function(producers)
     if searching then
       return
     end
-    idle_handle = async.current()
-
-    local idles = vim
-      .iter(producers)
-      :map(function(p)
-        return function()
-          p.idle(settings, ctx)
-        end
+    lib.scope(function(defer)
+      idle_handle = async.current()
+      defer(function()
+        idle_handle = nil
       end)
-      :totable()
 
-    async.all(idles)
-    idle_handle = nil
+      local idles = vim
+        .iter(producers)
+        :map(function(p)
+          return function()
+            p.idle(settings, ctx)
+          end
+        end)
+        :totable()
+
+      async.all(idles)
+    end)
   end
 
   sup.search = function(settings, ctx)

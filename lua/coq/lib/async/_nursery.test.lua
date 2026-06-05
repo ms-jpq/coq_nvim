@@ -119,10 +119,10 @@ T.describe("nursery", function(test)
       test_n.spawn(function()
         runtime.bind(coroutine.running(), outer)
 
-        -- spot errors at t=20*SLOW, populating n.errors=["spot ran off"]
+        -- spot errors at t=5*SLOW, populating n.errors=["spot ran off"]
         -- and triggering n.h.cancel.
         n.spawn(function()
-          async.sleep(20 * T.SLOW)
+          async.sleep(5 * T.SLOW)
           error "spot ran off"
         end)
 
@@ -133,7 +133,7 @@ T.describe("nursery", function(test)
           block.await { cancel = false }
         end)
 
-        async.sleep(40 * T.SLOW)
+        async.sleep(50 * T.SLOW)
         outer.cancel()
         join_ok, join_err = pcall(n.join)
       end)

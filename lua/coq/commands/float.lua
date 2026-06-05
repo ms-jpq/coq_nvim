@@ -1,5 +1,18 @@
 local M = {}
 
+---@param ns string
+local close = function(ns)
+  local stale = {}
+  for _, win in pairs(vim.api.nvim_list_wins()) do
+    if vim.w[win][ns] then
+      table.insert(stale, win)
+    end
+  end
+  for _, win in pairs(stale) do
+    vim.api.nvim_win_close(win, true)
+  end
+end
+
 ---@param border string?
 ---@return integer
 ---@return integer
@@ -29,11 +42,7 @@ M.show = function(opts)
   local relsize = opts.relsize or 0.95
   local border = opts.border or "rounded"
 
-  for _, win in pairs(vim.api.nvim_list_wins()) do
-    if vim.w[win][opts.ns] then
-      vim.api.nvim_win_close(win, true)
-    end
-  end
+  close(opts.ns)
 
   local buf = vim.api.nvim_create_buf(false, true)
   vim.bo[buf].bufhidden = "wipe"
@@ -58,7 +67,6 @@ M.show = function(opts)
     col = math.floor((t_w - width) / 2),
     border = border,
     focusable = true,
-    noautocmd = true,
   })
   vim.api.nvim_set_option_value("winhighlight", "Normal:Floating", { win = win })
   vim.w[win][opts.ns] = true

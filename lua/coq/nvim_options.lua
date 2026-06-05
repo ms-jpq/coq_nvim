@@ -16,13 +16,6 @@ local completeopt = function(keymap)
   vim.opt.completeopt:append(copt)
 end
 
----@param pum config.PumDisplay
-local shortmess = function(pum)
-  if pum.fast_close then
-    vim.opt.shortmess:append "c"
-  end
-end
-
 ---@param keymap config.KeyMapping
 local recommended_keymaps = function(keymap)
   if not keymap.recommended then
@@ -97,7 +90,6 @@ local M = {}
 ---@param settings config.Settings
 M.apply = function(settings)
   completeopt(settings.keymap)
-  shortmess(settings.display.pum)
   recommended_keymaps(settings.keymap)
   manual_complete(settings.keymap)
   jump_to_mark(settings.keymap)
