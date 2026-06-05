@@ -4,7 +4,7 @@ local cancel = require "coq.lib.async.cancel"
 local resolver_m = require "coq.completions.resolver"
 
 ---@type ctx.base
-local CTX = { win = 0, buf = 0, pos = { 0, 0 }, changedtick = 0, filetype = "" }
+local CTX = { win = 0, buf = 0, pos = { 0, 0 }, line = "", changedtick = 0, filetype = "" }
 
 ---@return completions.Item
 local lsp_item = function(tag)

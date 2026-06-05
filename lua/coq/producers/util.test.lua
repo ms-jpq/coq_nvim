@@ -81,7 +81,6 @@ T.describe("producers.util.batched", function(test)
     T.eq(#batches[2], util.BATCH)
     T.eq(#batches[3], 3)
   end)
-
 end)
 
 T.describe("producers.util.shape", function(test)
