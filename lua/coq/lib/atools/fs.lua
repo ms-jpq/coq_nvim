@@ -16,8 +16,6 @@ local GID = vim.uv.getgid and vim.uv.getgid() or -1
 local fs_opendir = async.awaitify(vim.uv.fs_opendir)
 ---@type fun(dir: uv.luv_dir_t): uv.error_name?, boolean?
 local fs_closedir = async.awaitify(vim.uv.fs_closedir)
----@type fun(dir: uv.luv_dir_t): uv.error_name?, { name: string, type: string }[]?
-local fs_readdir = async.awaitify(vim.uv.fs_readdir)
 
 ---@type fun(path: string, flags: string|integer, mode: integer): uv.error_name?, integer?
 local fs_open = async.awaitify(vim.uv.fs_open)
@@ -121,12 +119,22 @@ M.scandir = function(path)
     if err ~= nil or dir == nil then
       return
     end
+
+    ---@type async.Future<uv.error_name?, { name: string, type: string }[]?>?
+    local pending = nil
+
     defer(function()
+      if pending then
+        pending.await { cancel = false }
+      end
       fs_closedir(dir)
     end)
 
     while true do
-      local e, entries = fs_readdir(dir)
+      pending = async.future()
+      vim.uv.fs_readdir(dir, pending.resolve)
+      local e, entries = pending.await()
+      pending = nil
       if e ~= nil or entries == nil or #entries == 0 then
         return
       end
