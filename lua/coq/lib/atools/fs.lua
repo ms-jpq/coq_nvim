@@ -65,11 +65,11 @@ local M = {}
 ---@return boolean readable
 M.stat = function(path)
   local err, st = fs_stat(path)
-  if err or not st or not st.mode then
+  if err or not st then
     return err, st, false
   end
   local mask = (st.uid == UID and R_OWNER) or (st.gid == GID and R_GROUP) or R_OTHER
-  return nil, st, bit.band(st.mode, mask) ~= 0
+  return nil, st, bit.band(st.mode or 0, mask) ~= 0
 end
 
 ---@param path string
