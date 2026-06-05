@@ -36,7 +36,7 @@ end
 ---@param p string
 ---@return string
 M.stem = function(p)
-  return (string.gsub(vim.fs.basename(p), "%.[^.]+$", ""))
+  return (string.gsub(vim.fs.basename(p), "(.)%.[^.]+$", "%1"))
 end
 
 ---@param seps lib.Set<string>

@@ -1,10 +1,15 @@
 local async = require "coq.lib.async"
+local extends_m = require "coq.producers.snippets.extends"
 local fs_cache = require "coq.lib.fs_cache"
 local index_m = require "coq.producers.snippets.index"
+local itertools = require "coq.lib.itertools"
 local lib = require "coq.lib"
 local loader_m = require "coq.producers.snippets.loader"
+local set = require "coq.lib.set"
 local txt = require "coq.lib.text"
 local util = require "coq.producers.util"
+
+local EXTENDS_DEPTH = 9
 
 local SOURCE = "snippets"
 
@@ -40,6 +45,9 @@ end
 local seen_filetypes = {}
 local seen_fp_by_ft = {}
 
+---@type snippets.Extends
+local closure_of = {}
+
 local M = {}
 
 ---@param settings config.Settings
@@ -48,7 +56,7 @@ M.idle = function(settings, idle_ctx)
   local loader = loader_m.new(settings, idle_ctx)
   local store = cache_of(idle_ctx, loader)
 
-  local current = {}
+  local current = set.new {}
   local current_fp = {}
   local by_ft = {}
   for ft, srcs in pairs(loader.sources()) do
@@ -86,12 +94,13 @@ M.idle = function(settings, idle_ctx)
 
   seen_filetypes = current
   seen_fp_by_ft = current_fp
+  closure_of = extends_m.denormalize(EXTENDS_DEPTH, loader.extends())
 end
 
 ---@param item snippets.Item
 ---@return lib.Iterator<string>
 local doc_lines = function(item)
-  local source = (item.doc and item.doc ~= "") and item.doc or item.body
+  local source = item.doc ~= "" and item.doc or item.body
   return txt.splitlines(source)
 end
 
@@ -101,7 +110,16 @@ M.matcher = util.batched(function(settings, ctx)
     return
   end
 
-  local raw = index_of(settings).search { filetype = ctx.filetype, keyword_before = ctx.keyword_before }
+  local idx = index_of(settings)
+  local fts = closure_of[ctx.filetype] or { [ctx.filetype] = true }
+  local raws = {
+    idx.search { filetype = "*", keyword_before = ctx.keyword_before },
+    idx.search { filetype = "_", keyword_before = ctx.keyword_before },
+  }
+  for ft in pairs(fts) do
+    table.insert(raws, idx.search { filetype = ft, keyword_before = ctx.keyword_before })
+  end
+  local raw = itertools.chain(unpack(raws)) --[[@as fun(): index.Hit<snippets.Item>?]]
 
   for hit in util.shape(settings, ctx, raw) do
     local label = (hit.item.label and hit.item.label ~= "") and hit.item.label or hit.item.word
