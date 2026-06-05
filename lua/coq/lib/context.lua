@@ -4,7 +4,8 @@ local lib = require "coq.lib"
 ---@class ctx.base
 ---@field win integer
 ---@field buf integer
----@field pos [integer, integer]
+---@field pos [integer, integer, integer, integer]
+---@field line string
 ---@field changedtick integer
 ---@field filetype string
 
@@ -17,7 +18,6 @@ local lib = require "coq.lib"
 ---@field isfname string
 ---@field wildignore string
 ---@field comment [string, string]
----@field line string
 ---@field line_before string
 ---@field line_after string
 ---@field keyword_before string
@@ -40,7 +40,14 @@ M.base = function()
 
   ctx.win = vim.api.nvim_get_current_win()
   ctx.buf = vim.api.nvim_win_get_buf(ctx.win)
-  ctx.pos = vim.api.nvim_win_get_cursor(ctx.win)
+  local row, col = unpack(vim.api.nvim_win_get_cursor(ctx.win))
+  ctx.line = vim.api.nvim_get_current_line()
+  ctx.pos = {
+    row,
+    col,
+    vim.str_utfindex(ctx.line, "utf-16", col, false),
+    vim.str_utfindex(ctx.line, "utf-32", col, false),
+  }
   ctx.changedtick = vim.b[ctx.buf].changedtick
   ctx.filetype = vim.bo[ctx.buf].filetype
 
@@ -78,7 +85,6 @@ M.full = function(opts)
   do
     local _, col = unpack(ctx.pos)
 
-    ctx.line = vim.api.nvim_get_current_line()
     ctx.line_before = string.sub(ctx.line, 1, col)
     ctx.line_after = string.sub(ctx.line, col + 1)
 

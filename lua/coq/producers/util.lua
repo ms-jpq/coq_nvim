@@ -147,11 +147,14 @@ M.batched = function(fn)
     do
       table.insert(batch, item)
       if #batch >= M.BATCH then
-        coroutine.yield(batch)
+        if not coroutine.yield(batch) then
+          return
+        end
         batch = {}
         async.sleep(0)
       end
     end
+
     coroutine.yield(batch)
   end
 end

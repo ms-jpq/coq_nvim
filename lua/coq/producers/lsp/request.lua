@@ -23,17 +23,17 @@ local next_token_id = (function()
   end
 end)()
 
----@param line string
----@param col integer
+---@param pos [integer, integer, integer, integer]
 ---@param offset_encoding string
 ---@return integer
-local encode_col = function(line, col, offset_encoding)
+local col_for = function(pos, offset_encoding)
+  local _, b, u16, u32 = unpack(pos)
   if offset_encoding == "utf-16" then
-    return vim.str_utfindex(line, "utf-16", col, true)
+    return u16
   elseif offset_encoding == "utf-32" then
-    return vim.str_utfindex(line, "utf-32", col, true)
+    return u32
   end
-  return col
+  return b
 end
 
 local kinds = vim.lsp.protocol.CompletionTriggerKind
@@ -88,10 +88,10 @@ local query_1 = function(client, ctx, td_params)
     local token = "coq.lsp." .. client.id .. "." .. next_token_id()
     local tracker = completion_tracker(client, ctx.buf)
     defer(tracker.commit)
-    local row, col = unpack(ctx.pos)
+    local row = ctx.pos[1]
 
     local params = {
-      position = { line = row - 1, character = encode_col(ctx.line, col, client.offset_encoding) },
+      position = { line = row - 1, character = col_for(ctx.pos, client.offset_encoding) },
       textDocument = td_params,
       context = { triggerKind = tracker.trigger_kind },
       partialResultToken = token,

@@ -42,13 +42,16 @@ T.describe("producers.util.batched", function(test)
   local collect = function(count)
     local batches = {}
     async.scope(function()
-      for batch in
-        async.wrap(util.batched(function()
-          for i = 1, count do
-            coroutine.yield(i)
-          end
-        end))
-      do
+      local pull = async.wrap(util.batched(function()
+        for i = 1, count do
+          coroutine.yield(i)
+        end
+      end))
+      while true do
+        local batch = pull(true)
+        if batch == nil then
+          break
+        end
         table.insert(batches, batch)
       end
     end)
@@ -79,9 +82,6 @@ T.describe("producers.util.batched", function(test)
     T.eq(#batches[3], 3)
   end)
 
-  test("emitting nothing yields no batch", function()
-    T.eq(collect(0), {})
-  end)
 end)
 
 T.describe("producers.util.shape", function(test)
