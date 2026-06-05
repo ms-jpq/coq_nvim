@@ -1,5 +1,5 @@
 local T = require "coq.lib.test"
-local insertion = require "coq.completions.insertion"
+local inserted = require "coq.completions.inserted"
 local tokens = require "coq.lib.index.tokens"
 
 -- `word_range` runs AFTER `complete()` has already inserted the chosen word, so
@@ -31,7 +31,7 @@ local apply = function(opts)
   }
   local lsp = opts.lsp or {}
 
-  local edit = insertion._word_range(ctx, item, lsp)
+  local edit = inserted._word_range(ctx, item, lsp)
   vim.api.nvim_buf_set_text(
     buf,
     edit.start_row,
@@ -64,7 +64,7 @@ local insert_replace = function(enc, newText, s, insert_end, replace_end)
   }
 end
 
-T.describe("insertion.word_range", function(test)
+T.describe("inserted.word_range", function(test)
   test("InsertReplaceEdit deletes exactly the replace span past the cursor", function()
     -- post-insert line "abXYZ", cursor after "ab" (col 2), suffix "XYZ".
     -- replace["end"]=4 → 2 units past the cursor → delete "XY" only, keep "Z".
@@ -175,21 +175,21 @@ local replace_edit = function(insert_end, replace_end)
   }
 end
 
-T.describe("insertion.span", function(test)
+T.describe("inserted.span", function(test)
   test("InsertReplaceEdit span ends at replace[end], measured in encoded units", function()
     local span =
-      insertion._span("utf-8", edit_ctx { col = 2, after_cursor = "XYZ", start_line = "abXYZ" }, replace_edit(2, 4))
+      inserted._span("utf-8", edit_ctx { col = 2, after_cursor = "XYZ", start_line = "abXYZ" }, replace_edit(2, 4))
     T.eq(span, { start_row = 0, start_col = 0, end_row = 0, end_col = 4 })
   end)
 
   test("pure insert (replace[end] == cursor) deletes nothing past the cursor", function()
     local span =
-      insertion._span("utf-8", edit_ctx { col = 2, after_cursor = "XYZ", start_line = "abXYZ" }, replace_edit(2, 2))
+      inserted._span("utf-8", edit_ctx { col = 2, after_cursor = "XYZ", start_line = "abXYZ" }, replace_edit(2, 2))
     T.eq(span.end_col, 2)
   end)
 
   test("no textEdit falls back to the keyword runs flanking the cursor", function()
-    local span = insertion._span("utf-8", edit_ctx { col = 2, kw_before_col = 0, kw_after_len = 3 }, nil)
+    local span = inserted._span("utf-8", edit_ctx { col = 2, kw_before_col = 0, kw_after_len = 3 }, nil)
     T.eq(span, { start_row = 0, start_col = 0, end_row = 0, end_col = 5 })
   end)
 end)
