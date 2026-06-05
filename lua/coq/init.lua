@@ -116,7 +116,7 @@ M.setup = function(opts)
 
       trigger.bind(n, settings, statsd, resolver, sup, events)
       preview.bind(n, settings, resolver, events.pum)
-      insertion.bind(n, settings, resolver, statsd, events.done, events.trigger)
+      insertion.bind(n, settings, resolver, statsd, events.done)
       idle.bind(n, settings, sup, events)
       commands.bind(statsd)
 

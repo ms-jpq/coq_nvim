@@ -218,8 +218,7 @@ end
 ---@param resolver completions.Resolver
 ---@param statsd index.Statsd
 ---@param done channels.Broadcast<vim.v.completed_item>
----@param trigger channels.Broadcast<completions.TriggerEvent>
-M.bind = function(n, settings, resolver, statsd, done, trigger)
+M.bind = function(n, settings, resolver, statsd, done)
   events.subscribe_latest(n, done, function(completed)
     local user_data = completed.user_data
     if type(user_data) ~= "table" then
@@ -230,9 +229,6 @@ M.bind = function(n, settings, resolver, statsd, done, trigger)
     local ctx = context.full()
     if apply(settings, ctx, resolver, user_data) then
       statsd.inserted(user_data)
-      if user_data.meta.path and user_data.kind == "Folder" then
-        trigger.replace { manual = false }
-      end
     end
   end)
 end
