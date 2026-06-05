@@ -2,39 +2,17 @@ local async = require "coq.lib.async"
 local atools = require "coq.lib.atools"
 local txt = require "coq.lib.text"
 
-local M = {}
-
----@param src snippets.Source
----@return lib.Iterator<snippets.Item>
-M.bundle = function(src)
-  return async.wrap(function()
-    local body = atools.fs.slurp(src.path)
-    if body == nil then
-      return
-    end
-    local ok, json = pcall(vim.json.decode, body)
-    if not ok or type(json) ~= "table" or type(json.snippets) ~= "table" then
-      return
-    end
-
-    for _, snip in pairs(json.snippets) do
-      if type(snip) == "table" and type(snip.filetype) == "string" then
-        local matches = type(snip.matches) == "table" and snip.matches or {}
-        local doc = type(snip.doc) == "string" and snip.doc ~= "" and snip.doc or nil
-        local label = type(snip.label) == "string" and snip.label ~= "" and snip.label or nil
-        for word in pairs(matches) do
-          coroutine.yield {
-            word = word,
-            body = snip.content or "",
-            filetype = snip.filetype,
-            label = label,
-            doc = doc,
-          }
-        end
-      end
-    end
-  end)
-end
+-- Neosnippet (.snip) format — line-oriented:
+--
+--   snippet <name> [label]
+--   alias   <other-trigger>
+--   abbr    <label>
+--   <TAB>   <body line>
+--   ...
+--
+-- Comments start with `#`. `extends`/`include` are recognised but not yet
+-- modelled (filetype inheritance is a v1→v2 parity gap, see memory).
+-- `delete`/`options`/`regexp`/`source` lines are ignored, matching v1.
 
 local SNIPPET_START = "snippet"
 local ALIAS_START = "alias"
@@ -101,9 +79,11 @@ local raise_err = function(path, lineno, line, reason)
   )
 end
 
+local M = {}
+
 ---@param src snippets.Source
 ---@return lib.Iterator<snippets.Item>
-M.neosnippet = function(src)
+M.parse = function(src)
   return async.wrap(function()
     local body = atools.fs.slurp(src.path)
     if body == nil then
@@ -176,11 +156,5 @@ M.neosnippet = function(src)
     end
   end)
 end
-
----@type table<snippets.Kind, fun(src: snippets.Source): lib.Iterator<snippets.Item>>
-M.by_kind = {
-  bundle = M.bundle,
-  neosnippet = M.neosnippet,
-}
 
 return M

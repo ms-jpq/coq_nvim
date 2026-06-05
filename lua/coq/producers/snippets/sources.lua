@@ -11,7 +11,6 @@ local path = require "coq.lib.path"
 ---@field kind snippets.Kind
 ---@field path string
 ---@field mtime integer
----@field filetypes string[]
 
 local BUNDLE_NAME = "coq+snippets+v2.json"
 local NEOSNIPPET_EXT = ".snip"
@@ -54,24 +53,11 @@ local bundle = function(dirs)
       local file = vim.fs.joinpath(dir, BUNDLE_NAME)
       local mtime = fs_cache.mtime_ns(file)
       if mtime then
-        local body = atools.fs.slurp(file)
-        local ok, json = pcall(vim.json.decode, body or "")
-
-        if ok and type(json) == "table" and type(json.snippets) == "table" then
-          local ft_set = {}
-          for _, snip in pairs(json.snippets) do
-            if type(snip) == "table" and type(snip.filetype) == "string" then
-              ft_set[snip.filetype] = true
-            end
-          end
-
-          coroutine.yield {
-            kind = "bundle",
-            path = file,
-            mtime = mtime,
-            filetypes = vim.tbl_keys(ft_set),
-          }
-        end
+        coroutine.yield {
+          kind = "bundle",
+          path = file,
+          mtime = mtime,
+        }
       end
     end
   end)
@@ -95,7 +81,6 @@ local neosnippet = function(dirs)
               kind = "neosnippet",
               path = file,
               mtime = mtime,
-              filetypes = { path.stem(file) },
             }
           end
         end

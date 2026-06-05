@@ -36,7 +36,7 @@ local drainable = function(fn)
   ---@type async.Future?
   local pending = nil
 
-  local call = function(...)
+  local invoke = function(...)
     pending = async.future()
     local argv = { ... }
     table.insert(argv, pending.resolve)
@@ -54,7 +54,7 @@ local drainable = function(fn)
     end
   end
 
-  return call, drain
+  return invoke, drain
 end
 
 local M = {}
@@ -152,9 +152,10 @@ M.scandir = function(path)
 
     while true do
       local e, entries = readdir(dir)
-      if e ~= nil or entries == nil or #entries == 0 then
+      if e ~= nil or entries == nil then
         return
       end
+
       for _, entry in pairs(entries) do
         coroutine.yield(entry.name, entry.type)
       end
@@ -168,6 +169,7 @@ M.slurp = function(path)
   return lib.scope(function(defer)
     local close, iter = M.scanfile(path)
     defer(close)
+
     local chunks = vim.iter(iter):totable()
     return #chunks > 0 and table.concat(chunks) or nil
   end)
