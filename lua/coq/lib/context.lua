@@ -13,7 +13,8 @@ local lib = require "coq.lib"
 ---@field cwd string
 ---@field filename string
 ---@field linesep string
----@field kw table<integer, true>
+---@field iskeyword lib.Set<integer>
+---@field isfname lib.Set<integer>
 ---@field comment [string, string]
 ---@field line string
 ---@field line_before string
@@ -67,7 +68,8 @@ M.full = function(opts)
 
   do
     local lhs, rhs = string.match(bo.commentstring, "(.*)%%s(.*)")
-    ctx.kw = tokens.parse_iskeyword(bo.iskeyword)
+    ctx.iskeyword = tokens.parse_charset(bo.iskeyword)
+    ctx.isfname = tokens.parse_charset(vim.o.isfname)
     ctx.comment = { lhs or "", rhs or "" }
   end
 
@@ -78,7 +80,7 @@ M.full = function(opts)
     ctx.line_before = string.sub(ctx.line, 1, col)
     ctx.line_after = string.sub(ctx.line, col + 1)
 
-    ctx.keyword_before = tokens.trailing_keyword_before(ctx.kw, ctx.line_before)
+    ctx.keyword_before = tokens.trailing_keyword_before(ctx.iskeyword, ctx.line_before)
     ctx.keyword_before_has_upper = string.find(ctx.keyword_before, "%u") ~= nil
   end
 

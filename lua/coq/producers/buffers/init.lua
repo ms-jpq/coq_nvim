@@ -56,7 +56,7 @@ local tracker_of = util.once(function(settings)
     reindex = function(_, changes)
       lib.scope(function(defer)
         local close, stream = buf_tracker.merged(changes, function(_, curr)
-          local kw = tokens.parse_iskeyword(curr.iskeyword)
+          local kw = tokens.parse_charset(curr.iskeyword)
           return lib.scope(function(d)
             local text = (function()
               if curr.lines then

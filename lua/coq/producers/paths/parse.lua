@@ -1,55 +1,14 @@
 local set = require "coq.lib.set"
+local tokens = require "coq.lib.index.tokens"
 
 local DRIVE_PAT = "^%a:[/\\]"
 
 local M = {}
 
 ---@param is_windows boolean
----@param path_seps string[]
 ---@return lib.Set<string>
-M._seps = function(is_windows, path_seps)
-  local seps = set.new(is_windows and { "/", "\\" } or { "/" })
-
-  local filtered = {}
-  for _, s in pairs(path_seps) do
-    if seps[s] then
-      table.insert(filtered, s)
-    end
-  end
-
-  return #filtered > 0 and set.new(filtered) or seps
-end
-
----@param is_windows boolean
----@param separators lib.Set<string>
----@return lib.Iterator<string>
-M._patterns = function(is_windows, separators)
-  local heads = function()
-    return coroutine.wrap(function()
-      coroutine.yield "%.%."
-      coroutine.yield "%."
-      coroutine.yield "~"
-
-      if is_windows then
-        coroutine.yield "%a:"
-        coroutine.yield "%%[%w_]+%%"
-      end
-
-      coroutine.yield "%$[%w_]+"
-      coroutine.yield "%${[%w_]+}"
-      coroutine.yield "@[%w%.%-_+]+"
-
-      coroutine.yield ""
-    end)
-  end
-
-  return coroutine.wrap(function()
-    for sep in pairs(separators) do
-      for pattern in heads() do
-        coroutine.yield("()" .. pattern .. sep)
-      end
-    end
-  end)
+M._seps = function(is_windows)
+  return set.new(is_windows and { "/", "\\" } or { "/" })
 end
 
 ---@param is_windows boolean
@@ -120,35 +79,6 @@ M._split_at_last_sep = function(separators, path)
   return nil, ""
 end
 
----@param is_windows boolean
----@param separators lib.Set<string>
----@param line_before string
----@return fun(): integer?, string?
-M._find_starts = function(is_windows, separators, line_before)
-  return coroutine.wrap(function()
-    local seen, positions = {}, {}
-    for pat in M._patterns(is_windows, separators) do
-      local init = 1
-      while init <= #line_before do
-        local s, _, pos = string.find(line_before, pat, init)
-        if not s then
-          break
-        end
-        if not seen[pos] then
-          seen[pos] = true
-          table.insert(positions, pos)
-        end
-        init = s + 1
-      end
-    end
-    table.sort(positions)
-
-    for _, p in ipairs(positions) do
-      coroutine.yield(p, string.sub(line_before, p))
-    end
-  end)
-end
-
 ---@class paths.parse.Candidate
 ---@field resolved_directory string
 ---@field literal_directory  string
@@ -161,35 +91,33 @@ end
 ---@field is_windows boolean
 ---@field env        table<string, string>
 ---@field home       string
----@field path_seps  string[]
+---@field isfname    lib.Set<integer>
 
 ---@param line_before string
 ---@param opts paths.parse.Opts
----@return lib.Iterator<paths.parse.Candidate>
-M.candidates = function(line_before, opts)
-  local is_windows = opts.is_windows
-  local env = opts.env
-  local home = opts.home
-  local separators = M._seps(is_windows, opts.path_seps)
+---@return paths.parse.Candidate?
+M.candidate = function(line_before, opts)
+  local separators = M._seps(opts.is_windows)
+  local token = tokens.trailing_keyword_before(opts.isfname, line_before)
+  if token == "" then
+    return nil
+  end
 
-  return coroutine.wrap(function()
-    for pos, token in M._find_starts(is_windows, separators, line_before) do
-      local expanded = M._expand_head(is_windows, home, env, token, separators)
-      local resolved, partial = M._split_at_last_sep(separators, expanded)
+  local expanded = M._expand_head(opts.is_windows, opts.home, opts.env, token, separators)
+  local resolved, partial = M._split_at_last_sep(separators, expanded)
+  if not resolved then
+    return nil
+  end
 
-      if resolved then
-        local literal = string.sub(token, 1, #token - #partial)
-        coroutine.yield {
-          resolved_directory = resolved,
-          literal_directory = literal,
-          local_sep = string.sub(literal, -1),
-          partial = partial,
-          absolute = M._is_absolute(is_windows, separators, resolved),
-          start = pos - 1,
-        }
-      end
-    end
-  end)
+  local literal = string.sub(token, 1, #token - #partial)
+  return {
+    resolved_directory = resolved,
+    literal_directory = literal,
+    local_sep = string.sub(literal, -1),
+    partial = partial,
+    absolute = M._is_absolute(opts.is_windows, separators, resolved),
+    start = #line_before - #token,
+  }
 end
 
 return M

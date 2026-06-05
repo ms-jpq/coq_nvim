@@ -132,7 +132,7 @@ do
           index_of(settings).prune { pane = entry.id }
           if entry.text ~= "" then
             for word in
-              tokens.keywords(idle_ctx.ctx.kw, vim.iter { entry.text } --[[@as lib.Iterator<string>]])
+              tokens.keywords(idle_ctx.ctx.iskeyword, vim.iter { entry.text } --[[@as lib.Iterator<string>]])
             do
               index_of(settings).insert { pane = entry.id, word = word, meta = entry.pane.meta }
             end

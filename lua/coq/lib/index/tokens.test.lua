@@ -108,7 +108,7 @@ T.test("tokens.parity across all filetypes", function()
   for _, ft in pairs(enumerate_filetypes()) do
     atools.scheduled()
     local iskeyword, expected = probe(ft)
-    local kw = tokens.parse_iskeyword(iskeyword)
+    local kw = tokens.parse_charset(iskeyword)
     local lines = vim.iter(CORPUS) --[[@as lib.Iterator<string>]]
     local actual = vim.iter(tokens.keywords(kw, itertools.intersperse("\n", lines))):totable()
     if not vim.deep_equal(actual, expected) then
@@ -120,7 +120,7 @@ T.test("tokens.parity across all filetypes", function()
 end)
 
 T.describe("tokens.trailing_keyword_before", function(test)
-  local kw = tokens.parse_iskeyword "@,48-57,_"
+  local kw = tokens.parse_charset "@,48-57,_"
 
   test("empty line returns empty", function()
     T.eq(tokens.trailing_keyword_before(kw, ""), "")
@@ -142,7 +142,7 @@ T.describe("tokens.trailing_keyword_before", function(test)
   end)
 
   test("respects iskeyword: hyphen included when configured", function()
-    local with_dash = tokens.parse_iskeyword "@,48-57,_,-"
+    local with_dash = tokens.parse_charset "@,48-57,_,-"
     T.eq(tokens.trailing_keyword_before(with_dash, "kebab-case"), "kebab-case")
   end)
 end)

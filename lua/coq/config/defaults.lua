@@ -21,7 +21,6 @@ local M = {
     paths = {
       always_on_top = false,
       enabled = true,
-      path_seps = {},
       preview_lines = 6,
       resolution = { "cwd", "file" },
       short_name = "FS",

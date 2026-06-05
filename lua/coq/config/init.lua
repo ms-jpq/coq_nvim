@@ -83,7 +83,6 @@ local defaults = require "coq.config.defaults"
 ---@field always_on_top boolean
 ---@field resolution string[]
 ---@field preview_lines integer
----@field path_seps string[]
 
 ---@class config.RegistersClient: config.BaseClient
 ---@field always_on_top boolean

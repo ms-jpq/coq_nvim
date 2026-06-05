@@ -105,30 +105,31 @@ end
 ---@return lib.Iterator<paths.Match> iter
 local matches = function(settings, ctx)
   return closable.iter(function(defer)
-    local bases = vim.iter(collect_bases(settings.clients.paths.resolution, ctx)):totable()
-    local opts = {
+    local cand = parse.candidate(ctx.line_before, {
       is_windows = lib.is_windows,
       env = vim.uv.os_environ(),
       home = vim.uv.os_homedir() or "",
-      path_seps = settings.clients.paths.path_seps or {},
-    }
+      isfname = ctx.isfname,
+    })
+    if not cand then
+      return
+    end
 
-    for cand in parse.candidates(ctx.line_before, opts) do
-      local iters = {}
-      for dir in cand_dirs(bases, cand) do
-        if atools.fs.is_dir(dir) then
-          table.insert(iters, scan_dir(dir, cand))
-        end
+    local bases = vim.iter(collect_bases(settings.clients.paths.resolution, ctx)):totable()
+    local iters = {}
+    for dir in cand_dirs(bases, cand) do
+      if atools.fs.is_dir(dir) then
+        table.insert(iters, scan_dir(dir, cand))
       end
+    end
+    if #iters == 0 then
+      return
+    end
 
-      if #iters > 0 then
-        local close, iter = async.merge(iters)
-        defer(close)
-        for _, e in iter do
-          coroutine.yield(e)
-        end
-        return
-      end
+    local close, iter = async.merge(iters)
+    defer(close)
+    for _, e in iter do
+      coroutine.yield(e)
     end
   end)
 end

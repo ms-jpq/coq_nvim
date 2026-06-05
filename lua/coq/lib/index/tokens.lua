@@ -40,12 +40,12 @@ local ranges_of = function(entry)
   return { { b, b } }
 end
 
----@param iskeyword string
----@return table<integer, true>
-M.parse_iskeyword = function(iskeyword)
+---@param spec string
+---@return lib.Set<integer>
+M.parse_charset = function(spec)
   local kw = {}
 
-  for entry in vim.gsplit(iskeyword, ",", { plain = true }) do
+  for entry in vim.gsplit(spec, ",", { plain = true }) do
     local exclude = string.sub(entry, 1, 1) == "^" and #entry > 1
 
     for _, range in pairs(ranges_of(exclude and string.sub(entry, 2) or entry)) do
@@ -59,7 +59,7 @@ M.parse_iskeyword = function(iskeyword)
   return kw
 end
 
----@param kw table<integer, true>
+---@param kw lib.Set<integer>
 ---@param text lib.Iterator<string>
 ---@return lib.Iterator<string>
 M.keywords = function(kw, text)
@@ -92,7 +92,7 @@ M.keywords = function(kw, text)
   end)
 end
 
----@param kw table<integer, true>
+---@param kw lib.Set<integer>
 ---@param line string
 ---@return string
 M.trailing_keyword_before = function(kw, line)
@@ -103,7 +103,7 @@ M.trailing_keyword_before = function(kw, line)
   return string.sub(line, i + 1)
 end
 
----@param kw table<integer, true>
+---@param kw lib.Set<integer>
 ---@param line string
 ---@return string
 M.leading_keyword = function(kw, line)
@@ -121,7 +121,7 @@ M.surround = function(ctx)
   return buffers.lines_around_cursor(ctx.buf)
 end
 
----@param kw table<integer, true>
+---@param kw lib.Set<integer>
 ---@param text lib.Iterator<string>
 ---@return table<string, integer>
 M.locality = function(kw, text)

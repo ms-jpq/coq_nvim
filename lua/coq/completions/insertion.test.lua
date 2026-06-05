@@ -14,7 +14,7 @@ local apply = function(opts)
   local buf = vim.api.nvim_create_buf(false, true)
   vim.api.nvim_buf_set_lines(buf, 0, -1, true, vim.split(opts.line, "\n", { plain = true }))
 
-  -- only buf/pos/kw are read; a full ctx.full is intentionally not built
+  -- only buf/pos/iskeyword are read; a full ctx.full is intentionally not built
   ---@type ctx.full
   ---@diagnostic disable-next-line: missing-fields
   local ctx = {
@@ -22,7 +22,7 @@ local apply = function(opts)
     buf = buf,
     pos = { 1, opts.col },
     changedtick = 0,
-    kw = tokens.parse_iskeyword(vim.bo[buf].iskeyword),
+    iskeyword = tokens.parse_charset(vim.bo[buf].iskeyword),
   }
   local item = {
     word = opts.word,
