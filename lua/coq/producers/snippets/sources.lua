@@ -6,7 +6,7 @@ local fs_cache = require "coq.lib.fs_cache"
 local itertools = require "coq.lib.itertools"
 local path = require "coq.lib.path"
 
----@alias snippets.Kind "bundle" | "neosnippet" | "lsp"
+---@alias snippets.Kind "bundle" | "neosnippet"
 
 ---@class snippets.Source
 ---@field kind snippets.Kind
@@ -15,8 +15,7 @@ local path = require "coq.lib.path"
 ---@field filetypes string[]
 
 local BUNDLE_NAME = "coq+snippets+v2.json"
-local NEOSNIPPET_EXTS = { snip = true, snippets = true }
-local LSP_EXTS = { json = true }
+local NEOSNIPPET_EXTS = { snip = true }
 
 ---@param settings config.Settings
 ---@param idle_ctx idle.Ctx
@@ -122,30 +121,6 @@ local neosnippet = function(dirs)
   end)
 end
 
----@param dirs string[]
----@return fun() close
----@return lib.Iterator<snippets.Source> iter
-local lsp = function(dirs)
-  return closable.iter(function(defer)
-    for _, dir in pairs(dirs) do
-      local close, iter = walk_files(dir, LSP_EXTS)
-      defer(close)
-
-      for file in iter do
-        local mtime = fs_cache.mtime_ns(file)
-        if mtime then
-          coroutine.yield {
-            kind = "lsp",
-            path = file,
-            mtime = mtime,
-            filetypes = { path.stem(file) },
-          }
-        end
-      end
-    end
-  end)
-end
-
 local M = {}
 
 ---@param settings config.Settings
@@ -165,7 +140,6 @@ M.list = function(settings, idle_ctx)
 
     yieldfrom(bundle(idle_ctx.rtps))
     yieldfrom(neosnippet(user))
-    yieldfrom(lsp(user))
   end)
 end
 

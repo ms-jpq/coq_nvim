@@ -2,34 +2,6 @@ local async = require "coq.lib.async"
 local atools = require "coq.lib.atools"
 local txt = require "coq.lib.text"
 
----@param value string|string[]|nil
----@return string
-local join_body = function(value)
-  if type(value) == "string" then
-    return value
-  end
-  if type(value) == "table" then
-    return table.concat(value, "\n")
-  end
-  return ""
-end
-
----@param prefix string|string[]|nil
----@param content string
----@return string[]
-local prefix_set = function(prefix, content)
-  if prefix == nil then
-    return { content }
-  end
-  if type(prefix) == "string" then
-    return { vim.trim(prefix) }
-  end
-  if type(prefix) == "table" then
-    return vim.iter(prefix):map(vim.trim):totable()
-  end
-  return {}
-end
-
 local M = {}
 
 ---@param src snippets.Source
@@ -57,39 +29,6 @@ M.bundle = function(src)
             filetype = snip.filetype,
             label = label,
             doc = doc,
-          }
-        end
-      end
-    end
-  end)
-end
-
----@param src snippets.Source
----@return lib.Iterator<snippets.Item>
-M.lsp = function(src)
-  return async.wrap(function()
-    local body = atools.fs.slurp(src.path)
-    if body == nil then
-      return
-    end
-    local ok, json = pcall(vim.json.decode, body)
-    if not ok or type(json) ~= "table" then
-      return
-    end
-
-    local filetype = src.filetypes[1] or ""
-    for label, unit in pairs(json) do
-      if type(unit) == "table" then
-        local content = vim.trim(join_body(unit.body))
-        local doc = vim.trim(join_body(unit.description))
-
-        for _, word in pairs(prefix_set(unit.prefix, content)) do
-          coroutine.yield {
-            word = word,
-            body = content,
-            filetype = filetype,
-            label = label,
-            doc = doc ~= "" and doc or nil,
           }
         end
       end
@@ -242,7 +181,6 @@ end
 M.by_kind = {
   bundle = M.bundle,
   neosnippet = M.neosnippet,
-  lsp = M.lsp,
 }
 
 return M
