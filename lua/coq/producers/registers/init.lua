@@ -155,7 +155,9 @@ M.matcher = util.batched(function(settings, ctx)
       snippet = hit.item.linewise and hit.item.line or nil,
       doc = { lines = { doc_line }, filetype = "" },
     })
-    coroutine.yield(item)
+    if not coroutine.yield(item) then
+      return
+    end
   end
 end)
 

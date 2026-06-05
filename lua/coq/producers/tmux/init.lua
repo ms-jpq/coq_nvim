@@ -173,7 +173,9 @@ M.matcher = util.batched(function(settings, ctx)
       fuzzy = hit.fuzzy,
       doc = util.doc("", doc_iter(settings.clients.tmux, hit.item.meta)),
     })
-    coroutine.yield(item)
+    if not coroutine.yield(item) then
+      return
+    end
   end
 end)
 

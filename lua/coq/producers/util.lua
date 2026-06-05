@@ -139,22 +139,28 @@ M.BATCH = 420
 M.batched = function(fn)
   return function(...)
     local argv = { ... }
-    local batch = {}
-    for item in
-      async.wrap(function()
-        fn(unpack(argv))
-      end)
-    do
+    ---@diagnostic disable-next-line: unused-vararg
+    local iter = async.wrap(function(...)
+      fn(unpack(argv))
+    end)
+
+    local batch, more = {}, true
+    while true do
+      local item = iter(more)
+      if item == nil then
+        break
+      end
       table.insert(batch, item)
       if #batch >= M.BATCH then
-        if not coroutine.yield(batch) then
+        more = coroutine.yield(batch)
+        if not more then
+          iter(false)
           return
         end
         batch = {}
         async.sleep(0)
       end
     end
-
     coroutine.yield(batch)
   end
 end

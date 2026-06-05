@@ -178,7 +178,9 @@ M.matcher = util.batched(function(settings, ctx)
           },
         },
       })
-      coroutine.yield(item)
+      if not coroutine.yield(item) then
+        return
+      end
     end
   end)
 end)

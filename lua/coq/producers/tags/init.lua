@@ -153,7 +153,9 @@ M.matcher = util.batched(function(settings, ctx)
       fuzzy = hit.fuzzy,
       doc = util.doc(ctx.filetype, doc_iter(settings.clients.tags, ctx, hit.item)),
     })
-    coroutine.yield(item)
+    if not coroutine.yield(item) then
+      return
+    end
   end
 end)
 

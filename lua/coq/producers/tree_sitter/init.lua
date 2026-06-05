@@ -171,7 +171,9 @@ M.matcher = util.batched(function(settings, ctx)
       fuzzy = hit.fuzzy,
       doc = { lines = lines, filetype = ctx.filetype },
     })
-    coroutine.yield(item)
+    if not coroutine.yield(item) then
+      return
+    end
   end
 end)
 

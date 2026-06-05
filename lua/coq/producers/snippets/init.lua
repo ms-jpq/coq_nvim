@@ -114,7 +114,9 @@ M.matcher = util.batched(function(settings, ctx)
       snippet = hit.item.body,
       doc = util.doc(ctx.filetype, doc_lines(hit.item)),
     })
-    coroutine.yield(item)
+    if not coroutine.yield(item) then
+      return
+    end
   end
 end)
 
