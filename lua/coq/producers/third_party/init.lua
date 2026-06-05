@@ -1,4 +1,5 @@
 local async = require "coq.lib.async"
+local atools = require "coq.lib.atools"
 local cancel = require "coq.lib.async.cancel"
 local closable = require "coq.lib.closable"
 local errs = require "coq.lib.errs"
@@ -72,8 +73,9 @@ end
 ---@param arg third_party.Args
 ---@return fun() close
 ---@return lib.Iterator<completions.Item[]> iter
-local query_one = function(settings, ctx, entry, arg)
+local query_1 = function(settings, ctx, entry, arg)
   return closable.iter(function(_)
+    atools.scheduled()
     local ok, result = cancel.pcall(async.awaitify(entry.fn), arg)
     if not ok then
       errs.report(result)
@@ -119,7 +121,7 @@ M.new = function()
         local iters = {}
         for _, entry in pairs(sources) do
           if type(entry) == "table" and type(entry.fn) == "function" then
-            local c, i = query_one(settings, ctx, entry, arg)
+            local c, i = query_1(settings, ctx, entry, arg)
             defer(c)
             table.insert(iters, i)
           end

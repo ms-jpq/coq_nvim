@@ -16,6 +16,13 @@ local STARTS = {
 local IGNORED_STARTS = { "delete", "options", "regexp", "source" }
 local LEGAL_STARTS = vim.tbl_values(STARTS)
 
+---@param line string
+---@param prefix string
+---@return string
+local lstrip = function(line, prefix)
+  return vim.trim(string.sub(line, #prefix + 1))
+end
+
 local CUTOFF = 2 ^ 24
 
 ---@param start string
@@ -46,14 +53,12 @@ local format_err = function(file, lineno, line, reason)
   )
 end
 
----@param line string
+---@param header string
 ---@return string name
 ---@return string label
-local parse_header = function(line)
-  local rest = vim.trim(string.sub(line, #STARTS.SNIPPET + 1))
-
-  local name, label = string.match(rest, "^(%S+) (.*)$")
-  name, label = name or rest, label or ""
+local parse_header = function(header)
+  local name, label = string.match(header, "^(%S+) (.*)$")
+  name, label = name or header, label or ""
 
   if string.sub(label, 1, 1) == '"' and select(2, string.gsub(label, '"', '"')) == 2 then
     label = string.match(label, '"([^"]*)"') or label
@@ -71,7 +76,7 @@ local M = {}
 M.parse = function(src, text)
   local filetype = path.stem(src.path)
   local items = {}
-  local parents = set.new {}
+  local extending = set.new {}
 
   local current_name = ""
   local current_label = ""
@@ -106,37 +111,41 @@ M.parse = function(src, text)
 
     if vim.startswith(line, STARTS.COMMENT) or txt.startswith(IGNORED_STARTS, line) then
     elseif line == "" then
-      table.insert(current_lines, "")
+      table.insert(current_lines, line)
+      --
     elseif vim.startswith(line, STARTS.EXTENDS) then
-      local fts = string.sub(line, #STARTS.EXTENDS + 1)
-      for ft in vim.gsplit(fts, ",", { plain = true }) do
+      for ft in vim.gsplit(lstrip(line, STARTS.EXTENDS), ",", { plain = true }) do
         local trimmed = vim.trim(ft)
         if trimmed ~= "" then
-          parents[trimmed] = true
+          extending[trimmed] = true
         end
       end
+      --
     elseif vim.startswith(line, STARTS.INCLUDES) then
-      local p = vim.trim(string.sub(line, #STARTS.INCLUDES + 1))
-      local stem = path.stem(p)
+      local stem = path.stem(lstrip(line, STARTS.INCLUDES))
       if stem ~= "" then
-        parents[stem] = true
+        extending[stem] = true
       end
+      --
     elseif vim.startswith(line, STARTS.SNIPPET) then
       push()
-      current_name, current_label = parse_header(line)
+      current_name, current_label = parse_header(lstrip(line, STARTS.SNIPPET))
       current_aliases = { current_name }
       current_lines = {}
+      --
     elseif vim.startswith(line, STARTS.ALIAS) then
-      table.insert(current_aliases, vim.trim(string.sub(line, #STARTS.ALIAS + 1)))
+      table.insert(current_aliases, lstrip(line, STARTS.ALIAS))
+      --
     elseif vim.startswith(line, STARTS.LABEL) then
-      current_label = vim.trim(string.sub(line, #STARTS.LABEL + 1))
+      current_label = lstrip(line, STARTS.LABEL)
+      --
     elseif string.match(line, "^%s") then
-      if current_name ~= "" then
-        table.insert(current_lines, line)
-      else
+      if current_name == "" then
         err = format_err(src.path, lineno, line, "Expected snippet name")
         break
       end
+      table.insert(current_lines, line)
+      --
     else
       local start = string.match(line, "^(%S+)") or line
       local hint = did_you_mean(start)
@@ -150,7 +159,7 @@ M.parse = function(src, text)
     push()
   end
 
-  local extends = next(parents) and { [filetype] = parents } or {}
+  local extends = next(extending) and { [filetype] = extending } or {}
   return err, extends, parsers_util.sourced(src, { filetype }, items)
 end
 
