@@ -1,9 +1,10 @@
 local atools = require "coq.lib.atools"
+local float = require "coq.lib.float"
 local lib = require "coq.lib"
 local paths_preview = require "coq.producers.paths.preview"
 local txt = require "coq.lib.text"
 
-local PREVIEW_VAR = "__coq_preview__"
+local PREVIEW_NS = "coq_preview"
 
 ---@param lsp_item lsp.CompletionItem
 ---@return string[]
@@ -142,24 +143,18 @@ local show = function(preview_cfg, ev, lines, filetype)
     return
   end
 
-  local _, win = vim.lsp.util.open_floating_preview(lines, filetype, {
-    border = preview_cfg.border,
-    focusable = false,
-    max_width = preview_cfg.x_max_len,
-    close_events = {},
-  })
-
-  vim.api.nvim_win_set_config(win, {
-    relative = "editor",
-    anchor = "NW",
+  float.open {
+    ns = PREVIEW_NS,
+    lines = lines,
+    filetype = filetype,
     row = pos.row,
     col = pos.col,
     width = pos.width,
     height = pos.height,
     border = preview_cfg.border,
-  })
-
-  vim.w[win][PREVIEW_VAR] = true
+    focusable = false,
+    conceal = true,
+  }
 end
 
 ---@param item completions.Item
@@ -229,21 +224,13 @@ end
 local M = {}
 
 M.close = function()
-  for _, win in pairs(vim.api.nvim_list_wins()) do
-    if vim.w[win][PREVIEW_VAR] then
-      vim.api.nvim_win_close(win, true)
-    end
-  end
+  float.close(PREVIEW_NS)
 end
 
 ---@return integer?
 M.active_buf = function()
-  for _, win in pairs(vim.api.nvim_list_wins()) do
-    if vim.w[win][PREVIEW_VAR] then
-      return vim.api.nvim_win_get_buf(win)
-    end
-  end
-  return nil
+  local win = float.list(PREVIEW_NS)[1]
+  return win and vim.api.nvim_win_get_buf(win) or nil
 end
 
 ---@param buf integer

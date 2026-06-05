@@ -1,17 +1,6 @@
-local M = {}
+local float = require "coq.lib.float"
 
----@param ns string
-local close = function(ns)
-  local stale = {}
-  for _, win in pairs(vim.api.nvim_list_wins()) do
-    if vim.w[win][ns] then
-      table.insert(stale, win)
-    end
-  end
-  for _, win in pairs(stale) do
-    vim.api.nvim_win_close(win, true)
-  end
-end
+local M = {}
 
 ---@param border string?
 ---@return integer
@@ -42,35 +31,25 @@ M.show = function(opts)
   local relsize = opts.relsize or 0.95
   local border = opts.border or "rounded"
 
-  close(opts.ns)
-
-  local buf = vim.api.nvim_create_buf(false, true)
-  vim.bo[buf].bufhidden = "wipe"
-  vim.bo[buf].buftype = "nofile"
-  vim.bo[buf].swapfile = false
-  vim.bo[buf].filetype = opts.filetype
-  vim.api.nvim_buf_set_lines(buf, 0, -1, false, opts.lines)
-  vim.bo[buf].modifiable = false
+  float.close(opts.ns)
 
   local b_w, b_h = border_wh(border)
   local t_w, t_h = vim.o.columns, vim.o.lines
   local width = math.floor((t_w - margin) * relsize) - b_w
   local height = math.floor((t_h - margin) * relsize) - b_h
 
-  local win = vim.api.nvim_open_win(buf, true, {
-    relative = "editor",
-    anchor = "NW",
-    style = "minimal",
-    width = width,
-    height = height,
+  local win, buf = float.open {
+    ns = opts.ns,
+    lines = opts.lines,
+    filetype = opts.filetype,
     row = math.floor((t_h - height) / 2),
     col = math.floor((t_w - width) / 2),
+    width = width,
+    height = height,
     border = border,
-    focusable = true,
-  })
-  vim.api.nvim_set_option_value("winhighlight", "Normal:Floating", { win = win })
-  vim.w[win][opts.ns] = true
-  vim.b[buf][opts.ns] = true
+    enter = true,
+    winhighlight = "Normal:Floating",
+  }
 
   vim.keymap.set({ "n" }, "q", [[<cmd>wincmd c<cr>]], { buffer = buf, noremap = true })
 
