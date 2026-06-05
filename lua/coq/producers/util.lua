@@ -152,9 +152,7 @@ M.batched = function(fn)
         async.sleep(0)
       end
     end
-    if #batch > 0 then
-      coroutine.yield(batch)
-    end
+    coroutine.yield(batch)
   end
 end
 

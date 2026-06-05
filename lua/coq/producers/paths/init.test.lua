@@ -38,6 +38,7 @@ local ctx_of = function(ctx_overrides)
     expandtab = true,
     iskeyword = require("coq.lib.index.tokens").parse_charset "@,48-57,_,192-255",
     isfname = "@,48-57,/,.,-,_,+,~,$,@-@,{,}",
+    wildignore = "",
     linesep = "\n",
     comment = { "", "" },
     line_count = 1,
@@ -239,5 +240,17 @@ T.describe("paths.matcher", function(test)
     T.eq(edit.range.start.character, 0)
     T.eq(edit.range["end"].character, 4)
     T.eq(edit.newText, "./spot.txt")
+  end)
+
+  test("wildignore filters matching entries end-to-end", function()
+    local dir = tmpdir()
+    touch(dir .. "/spot.txt")
+    touch(dir .. "/rex.o")
+
+    local settings = settings_with()
+    local ctx = ctx_of { cwd = dir, line_before = "./", line = "./", wildignore = "*.o" }
+
+    local items = run_matcher(settings, ctx)
+    T.eq(words_of(items), { "spot.txt" })
   end)
 end)

@@ -81,9 +81,7 @@ local query_one = function(settings, ctx, entry)
         return item_of(settings, ctx, raw)
       end)
       :totable()
-    if #batch > 0 then
-      coroutine.yield(batch)
-    end
+    coroutine.yield(batch)
   end)
 end
 

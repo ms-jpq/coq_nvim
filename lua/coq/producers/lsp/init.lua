@@ -58,9 +58,7 @@ M.new = function()
             end)
             :totable()
 
-          if #acc > 0 then
-            coroutine.yield(acc)
-          end
+          coroutine.yield(acc)
         end
       end)
     end,
