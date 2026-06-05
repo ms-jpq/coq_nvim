@@ -66,6 +66,7 @@ local tracker_of = util.once(function(settings)
     end,
     reindex = function(idle_ctx, changes)
       local store = cache_of(idle_ctx)
+
       lib.scope(function(defer)
         local close, stream = buf_tracker.merged(changes, function(_, curr)
           return store.fetch(curr.filename, curr.mtime)

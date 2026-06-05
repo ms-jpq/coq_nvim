@@ -3,7 +3,6 @@ local bundled = require "coq.producers.snippets.loaders.bundled"
 local neosnippet = require "coq.producers.snippets.loaders.neosnippet"
 
 ---@class snippets.Sourced: snippets.Source
----@field filetypes string[]
 ---@field snippets snippets.Item[]
 
 local by_kind = {
@@ -15,7 +14,7 @@ local M = {}
 
 ---@param src snippets.Source
 ---@return string? err
----@return snippets.Extends extends
+---@return string[] parents
 ---@return snippets.Sourced sourced
 M.parse = function(src)
   local text = atools.fs.slurp(src.path) or ""

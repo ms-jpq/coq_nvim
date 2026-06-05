@@ -1,5 +1,4 @@
 local atools = require "coq.lib.atools"
-local errs = require "coq.lib.errs"
 
 local M = {}
 
@@ -91,10 +90,7 @@ M.new = function(spec)
       if value == nil then
         return nil
       end
-      local w_err = write_atomic(path, encode(value))
-      if w_err then
-        errs.report("fs_cache: write " .. path .. " failed: " .. tostring(w_err))
-      end
+      local _ = write_atomic(path, encode(value))
       return value
     end,
     prune = function(key)

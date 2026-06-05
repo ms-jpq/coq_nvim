@@ -16,131 +16,98 @@ local SOURCE = "snippets"
 
 local index_of = util.once(index_m.new)
 
----@param src snippets.Source
----@return snippets.Extends extends
----@return snippets.Sourced sourced
-local parse_src = function(src)
-  local err, extends, sourced = loaders.parse(src)
-  if err then
-    errs.report(err)
-  end
-  return extends, sourced
-end
+---@class snippets.Cached
+---@field extends string[]
+---@field items snippets.Item[]
 
----@type fun(settings: config.Settings, idle_ctx: idle.Ctx): fs_cache.Store<snippets.Item[]>
+---@type fun(settings: config.Settings, idle_ctx: idle.Ctx): fs_cache.Store<snippets.Cached>
 local cache_of = util.once(function(settings, idle_ctx)
   return fs_cache.new {
     fs_root = vim.fs.joinpath(idle_ctx.cache_dir, "snippets"),
     compute = function(filetype)
       return lib.scope(function(defer)
-        local close, iter = sources.list(settings, idle_ctx)
+        local close, iter = sources.list(settings, idle_ctx, filetype)
         defer(close)
+
+        local errors = {}
+        local extends = set.new {}
         local items = {}
         for src in iter do
-          local _, sourced = parse_src(src)
-          if vim.tbl_contains(sourced.filetypes, filetype) then
-            for _, item in pairs(sourced.snippets) do
-              if item.filetype == filetype then
-                table.insert(items, item)
-              end
-            end
+          local err, fts, sourced = loaders.parse(src)
+          if err then
+            table.insert(errors, err)
+          end
+          for _, extending in pairs(fts) do
+            extends[extending] = true
+          end
+          for _, item in pairs(sourced.snippets) do
+            table.insert(items, item)
           end
         end
-        return items
+
+        errs.check_raise(errors)
+        return { extends = vim.tbl_keys(extends), items = items }
       end)
     end,
   }
 end)
 
----@param settings config.Settings
----@param idle_ctx idle.Ctx
----@return table<string, snippets.Source[]> sources_by_ft
----@return snippets.Extends[] extends_all
-local walk = function(settings, idle_ctx)
-  local by_ft = {}
-  ---@type snippets.Extends[]
-  local all = {}
-  lib.scope(function(defer)
-    local close, iter = sources.list(settings, idle_ctx)
-    defer(close)
-    for src in iter do
-      local extends, sourced = parse_src(src)
-      table.insert(all, extends)
-      for _, ft in pairs(sourced.filetypes) do
-        by_ft[ft] = by_ft[ft] or {}
-        table.insert(by_ft[ft], src)
-      end
-    end
-  end)
-  return by_ft, all
-end
-
----@param srcs snippets.Source[]
----@return string
-local fingerprint = function(srcs)
-  local parts = vim
-    .iter(srcs)
-    :map(function(s)
-      return s.path .. ":" .. s.mtime
-    end)
-    :totable()
-  table.sort(parts)
-  return table.concat(parts, "|")
-end
-
-local seen_filetypes = {}
-local seen_fp_by_ft = {}
-
 ---@type snippets.Extends
 local closure_of = {}
+
+---@param settings config.Settings
+---@param idle_ctx idle.Ctx
+---@param target string
+---@return snippets.Cached
+local fetch_ft = function(settings, idle_ctx, target)
+  return lib.scope(function(defer)
+    local close, iter = sources.list(settings, idle_ctx, target)
+    defer(close)
+
+    local store = cache_of(settings, idle_ctx)
+    local max_mtime = vim.iter(iter):fold(0, function(a, s)
+      return math.max(a, s.mtime)
+    end)
+    return store.fetch(target, max_mtime) or { extends = {}, items = {} }
+  end)
+end
 
 local M = {}
 
 ---@param settings config.Settings
 ---@param idle_ctx idle.Ctx
 M.idle = function(settings, idle_ctx)
-  local store = cache_of(settings, idle_ctx)
-  local sources_by_ft, extends_all = walk(settings, idle_ctx)
+  local idx = index_of(settings)
+  local ft = string.lower(idle_ctx.ctx.filetype)
 
-  local current = set.new {}
-  local current_fp = {}
-  local by_ft = {}
-  for ft, srcs in pairs(sources_by_ft) do
-    current[ft] = true
-    local fp = fingerprint(srcs)
-    current_fp[ft] = fp
+  local pending = { ft, "*", "_" }
+  local loaded = set.new {}
+  ---@type snippets.Extends[]
+  local all_extends = {}
 
-    if seen_fp_by_ft[ft] and seen_fp_by_ft[ft] ~= fp then
-      store.prune(ft)
-    end
-
-    local max_mtime = vim.iter(srcs):fold(0, function(acc, s)
-      return math.max(acc, s.mtime)
-    end)
-    by_ft[ft] = store.fetch(ft, max_mtime)
-  end
-
-  for ft in pairs(seen_filetypes) do
-    if not current[ft] then
-      async.sleep(0)
-      index_of(settings).prune { filetype = ft }
-      store.prune(ft)
-    end
-  end
-
-  for ft, snips in pairs(by_ft) do
-    async.sleep(0)
-    index_of(settings).prune { filetype = ft }
-    if snips then
-      for _, snip in pairs(snips) do
-        index_of(settings).insert(snip)
+  while #pending > 0 do
+    local next_pending = {}
+    for _, target in pairs(pending) do
+      if not loaded[target] then
+        loaded[target] = true
+        async.sleep(0)
+        local cached = fetch_ft(settings, idle_ctx, target)
+        idx.prune { filetype = target }
+        for _, item in pairs(cached.items) do
+          idx.insert(item)
+        end
+        table.insert(all_extends, { [target] = set.new(cached.extends) })
+        for _, parent in pairs(cached.extends) do
+          if not loaded[parent] then
+            table.insert(next_pending, parent)
+          end
+        end
       end
     end
+    pending = next_pending
   end
 
-  seen_filetypes = current
-  seen_fp_by_ft = current_fp
-  closure_of = extends_m.denormalize(EXTENDS_DEPTH, extends_all)
+  closure_of = extends_m.denormalize(EXTENDS_DEPTH, all_extends)
 end
 
 ---@param item snippets.Item

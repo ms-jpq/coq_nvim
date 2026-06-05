@@ -11,6 +11,7 @@ local path = require "coq.lib.path"
 ---@field kind snippets.Kind
 ---@field path string
 ---@field mtime integer
+---@field filetype string
 
 local BUNDLE_NAME = "coq+snippets+v2.json"
 local NEOSNIPPET_EXT = ".snip"
@@ -44,10 +45,11 @@ local user_dirs = function(settings, idle_ctx)
   end)) --[[@as lib.Iterator<string>]]
 end
 
+---@param filetype string
 ---@param dirs string[]
 ---@return fun() close
 ---@return lib.Iterator<snippets.Source> iter
-local bundle = function(dirs)
+local bundle = function(filetype, dirs)
   return closable.iter(function()
     for _, dir in pairs(dirs) do
       local file = vim.fs.joinpath(dir, BUNDLE_NAME)
@@ -57,23 +59,26 @@ local bundle = function(dirs)
           kind = "bundle",
           path = file,
           mtime = mtime,
+          filetype = filetype,
         }
       end
     end
   end)
 end
 
+---@param filetype string
 ---@param dirs string[]
 ---@return fun() close
 ---@return lib.Iterator<snippets.Source> iter
-local neosnippet = function(dirs)
+local neosnippet = function(filetype, dirs)
+  local target = filetype .. NEOSNIPPET_EXT
   return closable.iter(function(defer)
     for _, dir in pairs(dirs) do
       local close, iter = atools.fs.walk(dir)
       defer(close)
 
       for file in iter do
-        if vim.endswith(file, NEOSNIPPET_EXT) then
+        if vim.fs.basename(file) == target then
           local mtime = fs_cache.mtime_ns(file)
 
           if mtime then
@@ -81,6 +86,7 @@ local neosnippet = function(dirs)
               kind = "neosnippet",
               path = file,
               mtime = mtime,
+              filetype = filetype,
             }
           end
         end
@@ -93,10 +99,12 @@ local M = {}
 
 ---@param settings config.Settings
 ---@param idle_ctx idle.Ctx
+---@param filetype string
 ---@return fun() close
 ---@return lib.Iterator<snippets.Source> iter
-M.list = function(settings, idle_ctx)
+M.list = function(settings, idle_ctx, filetype)
   return closable.iter(function(defer)
+    local ft = string.lower(filetype)
     local user = vim.iter(user_dirs(settings, idle_ctx)):totable()
 
     local yieldfrom = function(close, iter)
@@ -106,8 +114,8 @@ M.list = function(settings, idle_ctx)
       end
     end
 
-    yieldfrom(bundle(idle_ctx.rtps))
-    yieldfrom(neosnippet(user))
+    yieldfrom(bundle(ft, idle_ctx.rtps))
+    yieldfrom(neosnippet(ft, user))
   end)
 end
 

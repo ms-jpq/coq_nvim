@@ -1,5 +1,5 @@
-local match = require "coq.lib.index.rank.match"
 local loaders_util = require "coq.producers.snippets.loaders.util"
+local match = require "coq.lib.index.rank.match"
 local path = require "coq.lib.path"
 local set = require "coq.lib.set"
 local txt = require "coq.lib.text"
@@ -71,10 +71,9 @@ local M = {}
 ---@param src snippets.Source
 ---@param text string
 ---@return string? err
----@return snippets.Extends extends
+---@return string[] parents
 ---@return snippets.Sourced sourced
 M.parse = function(src, text)
-  local filetype = path.stem(src.path)
   local items = {}
   local extending = set.new {}
 
@@ -95,7 +94,7 @@ M.parse = function(src, text)
         table.insert(items, {
           word = m,
           body = vim.trim(table.concat(txt.dedent(current_lines), "\n")),
-          filetype = filetype,
+          filetype = src.filetype,
           grammar = "lsp",
           label = current_label,
           doc = "",
@@ -115,14 +114,14 @@ M.parse = function(src, text)
       --
     elseif vim.startswith(line, STARTS.EXTENDS) then
       for ft in vim.gsplit(lstrip(line, STARTS.EXTENDS), ",", { plain = true }) do
-        local trimmed = vim.trim(ft)
+        local trimmed = string.lower(vim.trim(ft))
         if trimmed ~= "" then
           extending[trimmed] = true
         end
       end
       --
     elseif vim.startswith(line, STARTS.INCLUDES) then
-      local stem = path.stem(lstrip(line, STARTS.INCLUDES))
+      local stem = string.lower(path.stem(lstrip(line, STARTS.INCLUDES)))
       if stem ~= "" then
         extending[stem] = true
       end
@@ -155,12 +154,11 @@ M.parse = function(src, text)
     end
   end
 
-  if err == nil then
+  if not err then
     push()
   end
 
-  local extends = next(extending) and { [filetype] = extending } or {}
-  return err, extends, loaders_util.sourced(src, { filetype }, items)
+  return err, vim.tbl_keys(extending), loaders_util.sourced(src, items)
 end
 
 return M
