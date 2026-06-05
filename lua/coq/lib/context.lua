@@ -14,7 +14,7 @@ local lib = require "coq.lib"
 ---@field filename string
 ---@field linesep string
 ---@field iskeyword lib.Set<integer>
----@field isfname lib.Set<integer>
+---@field isfname string
 ---@field comment [string, string]
 ---@field line string
 ---@field line_before string
@@ -69,7 +69,7 @@ M.full = function(opts)
   do
     local lhs, rhs = string.match(bo.commentstring, "(.*)%%s(.*)")
     ctx.iskeyword = tokens.parse_charset(bo.iskeyword)
-    ctx.isfname = tokens.parse_charset(vim.o.isfname)
+    ctx.isfname = vim.o.isfname
     ctx.comment = { lhs or "", rhs or "" }
   end
 

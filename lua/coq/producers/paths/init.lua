@@ -4,6 +4,7 @@ local closable = require "coq.lib.closable"
 local lib = require "coq.lib"
 local match = require "coq.lib.index.rank.match"
 local parse = require "coq.producers.paths.parse"
+local tokens = require "coq.lib.index.tokens"
 local util = require "coq.producers.util"
 
 local SOURCE = "paths"
@@ -109,7 +110,7 @@ local matches = function(settings, ctx)
       is_windows = lib.is_windows,
       env = vim.uv.os_environ(),
       home = vim.uv.os_homedir() or "",
-      isfname = ctx.isfname,
+      isfname = tokens.parse_charset(ctx.isfname),
     })
     if not cand then
       return
@@ -152,12 +153,11 @@ M.matcher = util.batched(function(settings, ctx)
     for m in vim.iter(iter):unique(match_key) do
       local dir_q = m.type == "directory"
       local word = m.name .. (dir_q and m.cand.local_sep or "")
-      local filter = m.name
 
       local item = util.item(settings, SOURCE, {
         word = word,
         kind = dir_q and "Folder" or "File",
-        filter = filter,
+        filter = m.name,
         fuzzy = m.fuzzy,
         path = m.full,
         lsp = {
