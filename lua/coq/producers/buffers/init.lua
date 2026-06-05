@@ -3,6 +3,7 @@ local atools = require "coq.lib.atools"
 local buf_tracker = require "coq.lib.producers.buf_tracker"
 local buffers = require "coq.lib.buffers"
 local index_m = require "coq.producers.buffers.index"
+local itertools = require "coq.lib.itertools"
 local lib = require "coq.lib"
 local path_fmt = require "coq.producers.path_fmt"
 local tokens = require "coq.lib.index.tokens"
@@ -60,7 +61,7 @@ local tracker_of = util.once(function(settings)
           return lib.scope(function(d)
             local text = (function()
               if curr.lines then
-                return vim.iter { table.concat(curr.lines, "\n") }
+                return itertools.intersperse("\n", vim.iter(curr.lines) --[[@as lib.Iterator<string>]])
               end
               local c, iter = atools.fs.scanfile(curr.filename)
               d(c)

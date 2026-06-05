@@ -2,6 +2,7 @@ local async = require "coq.lib.async"
 local atools = require "coq.lib.atools"
 local index_m = require "coq.producers.tmux.index"
 local lib = require "coq.lib"
+local set = require "coq.lib.set"
 local tokens = require "coq.lib.index.tokens"
 local txt = require "coq.lib.text"
 local util = require "coq.producers.util"
@@ -84,7 +85,7 @@ local diff_panes = function(settings, cache)
     live[pane.id] = pane
   end
 
-  local removed = {}
+  local removed = set.new()
   for id in pairs(cache) do
     if not live[id] then
       removed[id] = true

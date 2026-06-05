@@ -1,6 +1,7 @@
 local async = require "coq.lib.async"
 local context = require "coq.lib.context"
 local events_m = require "coq.completions.events"
+local set = require "coq.lib.set"
 
 ---@class idle.Ctx
 ---@field ctx ctx.full
@@ -19,7 +20,7 @@ local M = {}
 M.bind = function(n, settings, sup, events)
   events.idle.replace {}
 
-  local carry = { updated = {}, removed = {} }
+  local carry = { updated = set.new(), removed = set.new() }
   local rtps = vim.api.nvim_list_runtime_paths()
   local config_dir = vim.fn.stdpath "config"
   local cache_dir = vim.fs.joinpath(vim.fn.stdpath "cache", "coq")
@@ -50,7 +51,7 @@ M.bind = function(n, settings, sup, events)
       removed = carry.removed,
     })
 
-    carry = { updated = {}, removed = {} }
+    carry = { updated = set.new(), removed = set.new() }
   end)
 end
 

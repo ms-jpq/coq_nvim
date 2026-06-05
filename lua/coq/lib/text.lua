@@ -77,12 +77,11 @@ M.has_any_prefix = function(prefixes, line)
   return false
 end
 
----@param body string
----@return string
-M.dedent = function(body)
-  local lines = vim.split(body, "\n", { plain = true })
-
+---@param lines string[]
+---@return string[]
+M.dedent = function(lines)
   local prefix = nil
+
   for _, line in pairs(lines) do
     if string.match(line, "%S") then
       local leading = string.match(line, "^[ \t]*")
@@ -95,6 +94,7 @@ M.dedent = function(body)
         end
         prefix = string.sub(prefix, 1, n)
       end
+
       if prefix == "" then
         break
       end
@@ -102,15 +102,14 @@ M.dedent = function(body)
   end
 
   if prefix == nil or prefix == "" then
-    return body
+    return lines
   end
 
+  local out = {}
   for i, line in ipairs(lines) do
-    if vim.startswith(line, prefix) then
-      lines[i] = string.sub(line, #prefix + 1)
-    end
+    out[i] = vim.startswith(line, prefix) and string.sub(line, #prefix + 1) or line
   end
-  return table.concat(lines, "\n")
+  return out
 end
 
 return M

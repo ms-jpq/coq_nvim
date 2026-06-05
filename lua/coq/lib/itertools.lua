@@ -1,4 +1,5 @@
 local async = require "coq.lib.async"
+local set = require "coq.lib.set"
 
 local M = {}
 
@@ -66,7 +67,7 @@ end
 ---@param key fun(x: T): any?
 ---@return fun(x: T): boolean
 M.uniq_by = function(key)
-  local seen = {}
+  local seen = set.new()
   return function(x)
     local k = key(x)
     if k == nil or seen[k] then

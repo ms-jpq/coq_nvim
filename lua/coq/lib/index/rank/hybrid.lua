@@ -1,3 +1,5 @@
+local set = require "coq.lib.set"
+
 -- Tiered fuzzy match: byte-exact → smart-case prefix → camelCase initialism
 -- → Smith-Waterman. See .exp/README.md for tournament and rationale.
 --
@@ -19,6 +21,7 @@ local M = {}
 local T_EXACT = 2 ^ 30
 local T_PREFIX = 2 ^ 28
 local T_CAMEL = 2 ^ 24
+
 
 local LEN_CAP = 1024
 
@@ -101,8 +104,8 @@ local CLASS_UPPER = 5
 local CLASS_LETTER = 6
 local CLASS_NUMBER = 7
 
-local DELIMITERS = { [47] = true, [44] = true, [58] = true, [59] = true, [124] = true }
-local WHITES = { [32] = true, [9] = true, [10] = true, [13] = true }
+local DELIMITERS = set.new { 47, 44, 58, 59, 124 } -- / , : ; |
+local WHITES = set.new { 32, 9, 10, 13 } -- space, tab, \n, \r
 
 local function classify(b)
   if WHITES[b] then
