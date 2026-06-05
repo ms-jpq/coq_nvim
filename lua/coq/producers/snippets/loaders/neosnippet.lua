@@ -1,5 +1,5 @@
 local match = require "coq.lib.index.rank.match"
-local parsers_util = require "coq.producers.snippets.parsers.util"
+local loaders_util = require "coq.producers.snippets.loaders.util"
 local path = require "coq.lib.path"
 local set = require "coq.lib.set"
 local txt = require "coq.lib.text"
@@ -160,7 +160,7 @@ M.parse = function(src, text)
   end
 
   local extends = next(extending) and { [filetype] = extending } or {}
-  return err, extends, parsers_util.sourced(src, { filetype }, items)
+  return err, extends, loaders_util.sourced(src, { filetype }, items)
 end
 
 return M

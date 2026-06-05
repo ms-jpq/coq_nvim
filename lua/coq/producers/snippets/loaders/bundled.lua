@@ -1,4 +1,4 @@
-local parsers_util = require "coq.producers.snippets.parsers.util"
+local loaders_util = require "coq.producers.snippets.loaders.util"
 local set = require "coq.lib.set"
 
 ---@class snippets.Bundle
@@ -36,7 +36,7 @@ M.parse = function(src, text)
   if not json then
     return "snippets: bundle " .. src.path .. " is malformed or missing `snippets`",
       {},
-      parsers_util.sourced(src, {}, {})
+      loaders_util.sourced(src, {}, {})
   end
 
   local ft_set = set.new {}
@@ -67,7 +67,7 @@ M.parse = function(src, text)
     :totable()
 
   local extends = type(json.exts) == "table" and json.exts or {}
-  return nil, extends, parsers_util.sourced(src, vim.tbl_keys(ft_set), items)
+  return nil, extends, loaders_util.sourced(src, vim.tbl_keys(ft_set), items)
 end
 
 return M
