@@ -65,7 +65,7 @@ local M = {}
 ---@return boolean readable
 M.stat = function(path)
   local err, st = fs_stat(path)
-  if err or not st then
+  if err or not st or not st.mode then
     return err, st, false
   end
   local mask = (st.uid == UID and R_OWNER) or (st.gid == GID and R_GROUP) or R_OTHER

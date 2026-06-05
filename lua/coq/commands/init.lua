@@ -1,5 +1,9 @@
+local async = require "coq.lib.async"
 local atools = require "coq.lib.atools"
+local context = require "coq.lib.context"
 local help = require "coq.commands.help"
+local lib = require "coq.lib"
+local sources = require "coq.producers.snippets.sources"
 local stats = require "coq.commands.stats"
 
 local M = {}
@@ -16,10 +20,11 @@ end
 
 M.Now = unimplemented "Now"
 M.deps = unimplemented "deps"
-M.Snips = unimplemented "Snips"
 
+---@param settings config.Settings
 ---@param statsd index.Statsd
-M.bind = function(statsd)
+---@param events completions.Events
+M.bind = function(settings, statsd, events)
   atools.scheduled()
 
   vim.api.nvim_create_user_command("COQhelp", function(opts)
@@ -48,9 +53,36 @@ M.bind = function(statsd)
     stats.show(statsd)
   end, { nargs = 0 })
 
-  vim.api.nvim_create_user_command("COQsnips", function(opts)
-    M.Snips(unpack(opts.fargs))
-  end, { nargs = "*" })
+  local eval_snips = async.entry(function()
+    atools.scheduled()
+    ---@type idle.Ctx
+    local idle_ctx = {
+      ctx = context.full(),
+      config_dir = vim.fn.stdpath "config",
+      cache_dir = vim.fs.joinpath(vim.fn.stdpath "cache", "coq"),
+      rtps = vim.api.nvim_list_runtime_paths(),
+      updated = {},
+      removed = {},
+    }
+
+    local lines = lib.scope(function(defer)
+      local close, iter = sources.list(settings, idle_ctx, vim.bo.filetype)
+      defer(close)
+      return vim
+        .iter(iter)
+        :map(function(src)
+          return "~> " .. src.path
+        end)
+        :totable()
+    end)
+
+    atools.scheduled()
+    vim.notify(table.concat(lines, "\n"), vim.log.levels.INFO)
+    events.idle.replace { synthetic = true }
+  end)
+
+  vim.api.nvim_create_user_command("COQsnips", eval_snips, { nargs = 0 })
+  vim.api.nvim_create_user_command("COQeval", eval_snips, { nargs = 0 })
 end
 
 return M

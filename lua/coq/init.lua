@@ -118,7 +118,7 @@ M.setup = function(opts)
       preview.bind(n, settings, resolver, events.pum)
       insertion.bind(n, settings, resolver, statsd, events.done)
       idle.bind(n, settings, sup, events)
-      commands.bind(statsd)
+      commands.bind(settings, statsd, events)
 
       _G[COMPLETEFUNC] = function(findstart, _)
         if findstart == 1 then

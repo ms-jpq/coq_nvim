@@ -22,6 +22,8 @@ end
 
 local M = {}
 
+M.IMPLICIT = { "*", "_" }
+
 ---@param depth integer
 ---@param es snippets.Extends[]
 ---@return snippets.Extends

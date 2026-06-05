@@ -68,7 +68,8 @@ local fetch_ft = function(settings, idle_ctx, target)
     local max_mtime = vim.iter(iter):fold(0, function(a, s)
       return math.max(a, s.mtime)
     end)
-    return store.fetch(target, max_mtime) or { extends = {}, items = {} }
+    local cached = store.fetch(target, max_mtime) or { extends = {}, items = {} }
+    return { extends = cached.extends, items = cached.items }
   end)
 end
 
@@ -80,34 +81,35 @@ M.idle = function(settings, idle_ctx)
   local idx = index_of(settings)
   local ft = string.lower(idle_ctx.ctx.filetype)
 
-  local pending = { ft, "*", "_" }
   local loaded = set.new {}
   ---@type snippets.Extends[]
   local all_extends = {}
 
+  local pending = vim.list_extend({ ft }, extends_m.IMPLICIT)
   while #pending > 0 do
-    local next_pending = {}
-    for _, target in pairs(pending) do
-      if not loaded[target] then
+    local target = table.remove(pending)
+    if not loaded[target] then
+      local cached = fetch_ft(settings, idle_ctx, target)
+
+      do
         loaded[target] = true
-        async.sleep(0)
-        local cached = fetch_ft(settings, idle_ctx, target)
-        idx.prune { filetype = target }
-        for _, item in pairs(cached.items) do
-          idx.insert(item)
-        end
         table.insert(all_extends, { [target] = set.new(cached.extends) })
         for _, parent in pairs(cached.extends) do
-          if not loaded[parent] then
-            table.insert(next_pending, parent)
-          end
+          table.insert(pending, parent)
         end
       end
+
+      async.sleep(0)
+      idx.prune { filetype = target }
+      for _, item in pairs(cached.items) do
+        idx.insert(item)
+      end
     end
-    pending = next_pending
   end
 
-  closure_of = extends_m.denormalize(EXTENDS_DEPTH, all_extends)
+  for target, parents in pairs(extends_m.denormalize(EXTENDS_DEPTH, all_extends)) do
+    closure_of[target] = parents
+  end
 end
 
 ---@param item snippets.Item
@@ -123,10 +125,12 @@ M.matcher = util.batched(function(settings, ctx)
     return
   end
 
+  local filetype = string.lower(ctx.filetype)
   local idx = index_of(settings)
+
   local raw = async.wrap(function()
-    local fts = set.new { "*", "_" }
-    for ft in pairs(closure_of[ctx.filetype] or set.new { ctx.filetype }) do
+    local fts = set.new(extends_m.IMPLICIT)
+    for ft in pairs(closure_of[filetype] or set.new { filetype }) do
       fts[ft] = true
     end
     for ft in pairs(fts) do

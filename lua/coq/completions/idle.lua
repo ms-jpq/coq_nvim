@@ -18,19 +18,17 @@ local M = {}
 ---@param sup producers.Producer<idle.Ctx>
 ---@param events completions.Events
 M.bind = function(n, settings, sup, events)
-  events.idle.replace {}
+  events.idle.replace { synthetic = true }
 
   local carry = { updated = set.new {}, removed = set.new {} }
   local rtps = vim.api.nvim_list_runtime_paths()
   local config_dir = vim.fn.stdpath "config"
   local cache_dir = vim.fs.joinpath(vim.fn.stdpath "cache", "coq")
 
-  local primed = false
-  events_m.subscribe_latest(n, events.idle, function()
-    if primed then
+  events_m.subscribe_latest(n, events.idle, function(ev)
+    if not ev.synthetic then
       async.sleep(math.floor(settings.limits.idle_timeout * 1000))
     end
-    primed = true
 
     local diff = events.drain_bufs()
     for buf in pairs(diff.removed) do

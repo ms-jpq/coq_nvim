@@ -24,11 +24,14 @@ local lib = require "coq.lib"
 ---@class completions.TriggerEvent
 ---@field manual boolean
 
+---@class completions.IdleEvent
+---@field synthetic boolean
+
 ---@class completions.Events
 ---@field trigger channels.Broadcast<completions.TriggerEvent>
 ---@field pum channels.Broadcast<completions.PumEvent>
 ---@field done channels.Broadcast<vim.v.completed_item>
----@field idle channels.Broadcast<nil>
+---@field idle channels.Broadcast<completions.IdleEvent>
 ---@field leave channels.Broadcast<nil>
 ---@field drain_bufs fun(): completions.BufDiff
 
@@ -136,8 +139,8 @@ M.new = function()
 
   vim.api.nvim_create_autocmd({ "CursorHold", "CursorHoldI" }, {
     group = lib.group,
-    callback = function(args)
-      events.idle.replace(args)
+    callback = function()
+      events.idle.replace { synthetic = false }
     end,
   })
 
