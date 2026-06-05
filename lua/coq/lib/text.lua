@@ -68,7 +68,7 @@ end
 ---@param prefixes string[]
 ---@param line string
 ---@return boolean
-M.has_any_prefix = function(prefixes, line)
+M.startswith = function(prefixes, line)
   for _, p in pairs(prefixes) do
     if vim.startswith(line, p) then
       return true

@@ -20,7 +20,7 @@ local M = {}
 M.bind = function(n, settings, sup, events)
   events.idle.replace {}
 
-  local carry = { updated = set.new(), removed = set.new() }
+  local carry = { updated = set.new {}, removed = set.new {} }
   local rtps = vim.api.nvim_list_runtime_paths()
   local config_dir = vim.fn.stdpath "config"
   local cache_dir = vim.fs.joinpath(vim.fn.stdpath "cache", "coq")
@@ -51,7 +51,7 @@ M.bind = function(n, settings, sup, events)
       removed = carry.removed,
     })
 
-    carry = { updated = set.new(), removed = set.new() }
+    carry = { updated = set.new {}, removed = set.new {} }
   end)
 end
 

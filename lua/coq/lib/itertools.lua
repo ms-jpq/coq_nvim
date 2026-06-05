@@ -67,7 +67,7 @@ end
 ---@param key fun(x: T): any?
 ---@return fun(x: T): boolean
 M.uniq_by = function(key)
-  local seen = set.new()
+  local seen = set.new {}
   return function(x)
     local k = key(x)
     if k == nil or seen[k] then

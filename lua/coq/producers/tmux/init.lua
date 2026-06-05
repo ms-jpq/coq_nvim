@@ -85,7 +85,7 @@ local diff_panes = function(settings, cache)
     live[pane.id] = pane
   end
 
-  local removed = set.new()
+  local removed = set.new {}
   for id in pairs(cache) do
     if not live[id] then
       removed[id] = true

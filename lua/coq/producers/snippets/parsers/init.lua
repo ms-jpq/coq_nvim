@@ -1,3 +1,4 @@
+local atools = require "coq.lib.atools"
 local bundled = require "coq.producers.snippets.parsers.bundled"
 local neosnippet = require "coq.producers.snippets.parsers.neosnippet"
 
@@ -5,22 +6,20 @@ local neosnippet = require "coq.producers.snippets.parsers.neosnippet"
 ---@field filetypes string[]
 ---@field snippets snippets.Item[]
 
----@class snippets.Parser
----@field parse fun(src: snippets.Source): snippets.Extends, snippets.Sourced
-
 local by_kind = {
   bundle = bundled,
   neosnippet = neosnippet,
 }
 
----@diagnostic disable-next-line: missing-fields
-local M = {} ---@type snippets.Parser
+local M = {}
 
 ---@param src snippets.Source
+---@return string? err
 ---@return snippets.Extends extends
 ---@return snippets.Sourced sourced
 M.parse = function(src)
-  return by_kind[src.kind].parse(src)
+  local text = atools.fs.slurp(src.path) or ""
+  return by_kind[src.kind].parse(src, text)
 end
 
 return M
