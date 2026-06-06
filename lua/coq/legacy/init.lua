@@ -20,7 +20,7 @@ local POLLING_RATE = 10
 local cwd = (function()
   local source = debug.getinfo(2, "S").source
   local file = string.match(source, "^@(.*)")
-  return vim.fn.fnamemodify(file, ":p:h:h")
+  return vim.fn.fnamemodify(file, ":p:h:h:h:h")
 end)()
 
 local job_id = nil
@@ -213,9 +213,9 @@ if settings.auto_start then
   coq.Now(unpack(args))
 end
 
-require "coq.lsp-request"
-require "coq.ts-request"
-require "coq.completion"
+require "coq.legacy.lsp-request"
+require "coq.legacy.ts-request"
+require "coq.legacy.completion"
 
 return setmetatable(coq, {
   __call = function()

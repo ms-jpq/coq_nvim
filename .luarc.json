@@ -1,0 +1,22 @@
+{
+  "$schema": "https://raw.githubusercontent.com/sumneko/vscode-lua/master/setting/schema.json",
+  "Lua.diagnostics.disable": ["await-in-sync"],
+  "Lua.diagnostics.neededFileStatus": {
+    "global-element": "Any",
+    "not-yieldable": "Any"
+  },
+  "Lua.diagnostics.workspaceEvent": "OnChange",
+  "Lua.runtime.path": ["lua/?.lua", "lua/?/init.lua"],
+  "Lua.runtime.pathStrict": true,
+  "Lua.runtime.version": "LuaJIT",
+  "Lua.type.castNumberToInteger": false,
+  "Lua.type.checkTableShape": true,
+  "Lua.type.inferParamType": true,
+  "Lua.type.inferTableSize": 1000,
+  "Lua.workspace.checkThirdParty": false,
+  "Lua.workspace.ignoreDir": [".exp", "var", "lua/coq/legacy"],
+  "Lua.workspace.library": [
+    "/usr/share/nvim/runtime/lua",
+    "/opt/homebrew/share/nvim/runtime/lua"
+  ]
+}

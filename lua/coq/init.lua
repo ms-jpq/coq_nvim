@@ -1,0 +1,141 @@
+if not vim.g.coq_v2 or vim.fn.has "nvim-0.12" == 0 then
+  return require "coq.legacy"
+end
+
+local async = require "coq.lib.async"
+local atools = require "coq.lib.atools"
+local commands = require "coq.commands"
+local config = require "coq.config"
+local events_m = require "coq.completions.events"
+local idle = require "coq.completions.idle"
+local insertion = require "coq.completions.insertion"
+local instrument = require "coq.lib.producers.instrument"
+local nvim_options = require "coq.nvim_options"
+local p_buffers = require "coq.producers.buffers"
+local p_lsp = require "coq.producers.lsp"
+local p_paths = require "coq.producers.paths"
+local p_registers = require "coq.producers.registers"
+local p_snippets = require "coq.producers.snippets"
+local p_tags = require "coq.producers.tags"
+local p_third_party = require "coq.producers.third_party"
+local p_tmux = require "coq.producers.tmux"
+local p_tree_sitter = require "coq.producers.tree_sitter"
+local preview = require "coq.completions.preview"
+local resolver_m = require "coq.completions.resolver"
+local statsd_m = require "coq.lib.index.rank.statsd"
+local supervisor = require "coq.lib.producers.supervisor"
+local trigger = require "coq.completions.trigger"
+
+local COMPLETEFUNC = "__coq_completefunc__"
+
+local M = {
+  Now = commands.Now,
+  deps = commands.deps,
+  Snips = commands.Snips,
+  Help = commands.Help,
+}
+
+---@generic T
+---@param cfg? T
+---@return T?
+M.lsp_ensure_capabilities = function(cfg)
+  return cfg
+end
+
+---@param clients config.Clients
+---@return fun(): producers.Producer<ctx.full>?
+local producers = function(clients)
+  return async.wrap(function()
+    if clients.buffers.enabled then
+      coroutine.yield(p_buffers.new())
+    end
+
+    if clients.registers.enabled then
+      coroutine.yield(p_registers.new())
+    end
+
+    if clients.tmux.enabled then
+      coroutine.yield(p_tmux.new())
+    end
+
+    if clients.paths.enabled then
+      coroutine.yield(p_paths.new())
+    end
+
+    if clients.tree_sitter.enabled then
+      coroutine.yield(p_tree_sitter.new())
+    end
+
+    if clients.lsp.enabled then
+      coroutine.yield(p_lsp.new())
+    end
+
+    if clients.tags.enabled then
+      coroutine.yield(p_tags.new())
+    end
+
+    if clients.snippets.enabled then
+      coroutine.yield(p_snippets.new())
+    end
+
+    if clients.third_party.enabled then
+      coroutine.yield(p_third_party.new())
+    end
+  end)
+end
+
+local started = false
+
+---@param opts? table
+M.setup = function(opts)
+  if started then
+    return
+  end
+  started = true
+
+  async.entry(function()
+    async.scope(function(n)
+      local merged = vim.tbl_deep_extend("force", vim.g.coq_settings or {}, opts or {})
+      local settings = config.merged(merged)
+
+      atools.scheduled()
+      nvim_options.apply(settings)
+
+      local statsd = statsd_m.new(settings)
+
+      local p = vim
+        .iter(producers(settings.clients))
+        :map(function(prod)
+          return instrument.wrap(statsd, prod)
+        end)
+        :totable()
+      local sup = supervisor.new(p)
+
+      local events = events_m.new()
+      local resolver = resolver_m.new(n)
+
+      trigger.bind(n, settings, statsd, resolver, sup, events)
+      preview.bind(n, settings, resolver, events.pum)
+      insertion.bind(n, settings, resolver, statsd, events.done)
+      idle.bind(n, settings, sup, events)
+      commands.bind(settings, statsd, events)
+
+      _G[COMPLETEFUNC] = function(findstart, _)
+        if findstart == 1 then
+          events.trigger.replace { manual = true }
+          return -1
+        end
+        return {}
+      end
+      vim.o.completefunc = "v:lua." .. COMPLETEFUNC
+    end)
+  end)()
+end
+
+M.setup {}
+
+return setmetatable(M, {
+  __call = function()
+    return M
+  end,
+})

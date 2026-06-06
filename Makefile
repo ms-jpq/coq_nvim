@@ -9,15 +9,26 @@ SHELL := bash
 .ONESHELL:
 .SHELLFLAGS := --norc --noprofile -Eeuo pipefail -O dotglob -O nullglob -O extglob -O failglob -O globstar -c
 
-.DEFAULT_GOAL := help
+.DEFAULT_GOAL := all
 
-.PHONY: clean clobber lint test build fmt ci
+VAR := .vars
+CURL := curl --fail --location --remove-on-error --create-dirs --no-progress-meter
+
+OS := $(shell uname -s | tr '[:upper:]' '[:lower:]' | sed -e 's/darwin/macos/')
+ARCH := $(shell uname -m | sed -e 's/arm64/aarch64/')
+
+.PHONY: all clean clobber lint test build fmt ci
 
 clean:
+	shopt -u failglob
 	rm -v -rf -- .mypy_cache/ .venv/
 
 clobber: clean
-	rm -v -rf -- .vars/
+	shopt -u failglob
+	rm -v -rf -- '$(VAR)'
+
+$(VAR) $(VAR)/bin:
+	mkdir -v -p -- '$@'
 
 .venv/bin/python3:
 	python3 -m venv -- .venv
@@ -49,18 +60,55 @@ endef
 	'$<' -m pip install --requirement requirements.txt -- tomli
 	'$<' <<< '$(PYDEPS)'
 
-lint: .venv/bin/mypy
-	'$<' -- .
-
-test: .venv/bin/mypy
-	.venv/bin/python3 -m tests
-
 build: .venv/bin/mypy
 	.venv/bin/python3 -m ci
 
-fmt: .venv/bin/mypy
-	.venv/bin/isort --profile=black --gitignore -- .
-	.venv/bin/black -- .
-
 ci: .venv/bin/mypy
 	.venv/bin/python3 -m coq.ci
+
+$(VAR)/bin/stylua: | $(VAR)/bin
+	URI='https://github.com/JohnnyMorganz/StyLua/releases/latest/download/stylua-$(OS)-$(ARCH).zip'
+	$(CURL) -- "$$URI" | bsdtar --extract --file - --directory '$|'
+	chmod +x '$@'
+
+$(VAR)/opt/lua-language-server/bin/lua-language-server: | $(VAR)
+	case "$$OSTYPE" in
+	darwin*)
+		LUALS_OS=darwin
+		;;
+	linux*)
+		LUALS_OS=linux
+		;;
+	*)
+		set -v
+		exit 2
+		;;
+	esac
+	case "$$HOSTTYPE" in
+	arm64|aarch64)
+		LUALS_ARCH=arm64
+		;;
+	x86_64)
+		LUALS_ARCH=x64
+		;;
+	*)
+		set -v
+		exit 2
+		;;
+	esac
+	V_LUALS="$$($(CURL) -- 'https://api.github.com/repos/LuaLS/lua-language-server/releases/latest' | jq --raw-output --exit-status -- '.tag_name')"
+	URI="https://github.com/LuaLS/lua-language-server/releases/download/$$V_LUALS/lua-language-server-$$V_LUALS-$$LUALS_OS-$$LUALS_ARCH.tar.gz"
+	mkdir -v -p -- '$(VAR)/opt/lua-language-server'
+	$(CURL) -- "$$URI" | tar --extract --gzip --file - --directory '$(VAR)/opt/lua-language-server'
+
+fmt: $(VAR)/bin/stylua
+	git ls-files --deduplicate --stage -- '*.lua' | awk -- '$$1 !~ /^120000/ { print $$4 }' | tr -- '\n' '\0' | xargs -r -0 -n 1 -P 0 -- '$<' --
+
+lint: $(VAR)/opt/lua-language-server/bin/lua-language-server | $(VAR)
+	mkdir -v -p -- '$(VAR)/luals'
+	'$<' --check '.' --configpath '.luarc.json' --logpath '$(VAR)/luals' --checklevel Warning
+
+test:
+	./test.lua
+
+all: lint test
