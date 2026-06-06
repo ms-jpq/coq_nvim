@@ -75,10 +75,11 @@ local bundle = function(filetype, dirs)
 end
 
 ---@param filetype? string
+---@param skip? string
 ---@param dirs string[]
 ---@return fun() close
 ---@return lib.Iterator<snippets.Source> iter
-local neosnippet = function(filetype, dirs)
+local neosnippet = function(filetype, skip, dirs)
   return closable.iter(function(defer)
     for _, dir in pairs(dirs) do
       local close, iter = atools.fs.walk(dir)
@@ -86,7 +87,7 @@ local neosnippet = function(filetype, dirs)
 
       for file in iter do
         local file_ft = neosnippet_ft(file)
-        if file_ft and (filetype == nil or file_ft == filetype) then
+        if file_ft and (filetype == nil or file_ft == filetype) and file ~= skip then
           local mtime = fs_cache.mtime_ns(file)
 
           if mtime then
@@ -121,9 +122,10 @@ end
 ---@param settings config.Settings
 ---@param idle_ctx idle.Ctx
 ---@param filetype? string
+---@param skip? string
 ---@return fun() close
 ---@return lib.Iterator<snippets.Source> iter
-M.list = function(settings, idle_ctx, filetype)
+M.list = function(settings, idle_ctx, filetype, skip)
   return closable.iter(function(defer)
     local ft = filetype and string.lower(filetype) or nil
     local user = vim.iter(user_dirs(settings, idle_ctx)):totable()
@@ -135,7 +137,7 @@ M.list = function(settings, idle_ctx, filetype)
     end
 
     yieldfrom(bundle(ft, idle_ctx.rtps))
-    yieldfrom(neosnippet(ft, user))
+    yieldfrom(neosnippet(ft, skip, user))
   end)
 end
 

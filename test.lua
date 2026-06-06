@@ -15,7 +15,7 @@ vim.opt.runtimepath:prepend(vim.fn.getcwd())
 local T = require "coq.lib.test"
 
 for _, f in ipairs(vim.fn.globpath("lua", "**/*.test.lua", false, true)) do
-  vim.cmd("source " .. vim.fn.fnameescape(f))
+  vim.cmd.source(vim.fn.fnameescape(f))
 end
 
 T.run(tonumber(os.getenv "TEST_SEED") --[[@as integer?]])

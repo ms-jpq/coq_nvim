@@ -26,7 +26,7 @@ local cache_of = util.once(function(settings, idle_ctx)
     fs_root = vim.fs.joinpath(idle_ctx.cache_dir, "snippets"),
     compute = function(filetype)
       return lib.scope(function(defer)
-        local close, iter = sources.list(settings, idle_ctx, filetype)
+        local close, iter = sources.list(settings, idle_ctx, filetype, idle_ctx.ctx.filename)
         defer(close)
 
         local errors = {}
@@ -61,7 +61,7 @@ local closure_of = {}
 ---@return snippets.Cached
 local fetch_ft = function(settings, idle_ctx, target)
   return lib.scope(function(defer)
-    local close, iter = sources.list(settings, idle_ctx, target)
+    local close, iter = sources.list(settings, idle_ctx, target, idle_ctx.ctx.filename)
     defer(close)
 
     local store = cache_of(settings, idle_ctx)
