@@ -1,4 +1,5 @@
 local set = require "coq.lib.set"
+local tokens = require "coq.lib.index.tokens"
 
 -- Tiered fuzzy match: byte-exact → smart-case prefix → camelCase initialism
 -- → Smith-Waterman. See .exp/README.md for tournament and rationale.
@@ -115,10 +116,9 @@ local CLASS_LETTER = 6
 local CLASS_NUMBER = 7
 
 local DELIMITERS = set.new { string.byte "/", string.byte ",", string.byte ":", string.byte ";", string.byte "|" }
-local WHITES = set.new { string.byte " ", string.byte "\t", string.byte "\n", string.byte "\r" }
 
 local function classify(b)
-  if WHITES[b] then
+  if tokens.WHITES[b] then
     return CLASS_WHITE
   end
   if DELIMITERS[b] then

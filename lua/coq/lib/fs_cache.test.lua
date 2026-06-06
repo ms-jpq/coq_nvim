@@ -77,12 +77,34 @@ T.describe({ "fs_cache.new" }, function(test)
 
     local r1, r2
     async.scope(function()
-      r1 = store.fetch("dogs", 0)
-      r2 = store.fetch("dogs", 0)
+      r1 = store.fetch("dogs", 1)
+      r2 = store.fetch("dogs", 1)
     end)
 
     T.eq(computes, 1)
     T.eq(r1, r2)
+  end)
+
+  test({ "fetch with mtime <= 0 busts the cache" }, function()
+    -- Caller signals "no live sources backing this key" by passing mtime=0.
+    -- The store must recompute so a deleted source doesn't keep returning
+    -- the prior cached value.
+    local computes = 0
+    local store = fs_cache.new {
+      fs_root = tmpdir(),
+      compute = function()
+        computes = computes + 1
+        return { payload = "fido", n = computes }
+      end,
+    }
+
+    async.scope(function()
+      store.fetch("dogs", 1)
+      store.fetch("dogs", 0)
+      store.fetch("dogs", -1)
+    end)
+
+    T.eq(computes, 3)
   end)
 
   test({ "fetch with newer mtime recomputes" }, function()
@@ -136,8 +158,8 @@ T.describe({ "fs_cache.new" }, function(test)
 
     local r1, r2
     async.scope(function()
-      r1 = store.fetch("/home/dogs/lil.txt", 0)
-      r2 = store.fetch("/home/dogs/lil.txt", 0)
+      r1 = store.fetch("/home/dogs/lil.txt", 1)
+      r2 = store.fetch("/home/dogs/lil.txt", 1)
     end)
 
     T.eq(computes, 1)

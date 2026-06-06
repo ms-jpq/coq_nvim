@@ -5,7 +5,7 @@ local set = require "coq.lib.set"
 
 local M = {}
 
-M.whitespace = set.new { string.byte " ", string.byte "\t", string.byte "\n", string.byte "\r" }
+M.WHITES = set.new { string.byte " ", string.byte "\t", string.byte "\n", string.byte "\r" }
 
 ---@param s string
 ---@return integer
@@ -22,11 +22,15 @@ local ranges_of = function(entry)
   end
 
   if entry == "@" then
-    return { { 65, 90 }, { 97, 122 }, { 128, 255 } }
+    return {
+      { string.byte "A", string.byte "Z" },
+      { string.byte "a", string.byte "z" },
+      { 128, 255 },
+    }
   end
 
   if entry == "@-@" then
-    return { { 64, 64 } }
+    return { { string.byte "@", string.byte "@" } }
   end
 
   local lo, hi = string.match(entry, "^(.-)%-(.+)$")
@@ -62,70 +66,67 @@ M.parse_charset = function(spec)
   return kw
 end
 
----Yields each maximal keyword run, plus `<symbol_run><keyword_run>` when a
----non-whitespace non-keyword run immediately precedes a keyword run.
----Bare symbol runs (no following keyword) emit nothing.
----
----Example: tokenizing "bar @foo" yields "bar", "foo", "@foo".
 ---@param kw lib.Set<integer>
 ---@param text lib.Iterator<string>
 ---@return lib.Iterator<string>
 M.keywords = function(kw, text)
   return async.wrap(function()
-    local kw_acc = {}
-    local sym_acc = {}
-    local last_sym = nil
+    ---@param b integer
+    ---@return "kw" | "sym" | "ws"
+    local classify = function(b)
+      if kw[b] then
+        return "kw"
+      elseif M.WHITES[b] then
+        return "ws"
+      else
+        return "sym"
+      end
+    end
 
-    local flush_kw = function()
-      if next(kw_acc) then
-        local s = table.concat(kw_acc)
-        kw_acc = {}
-        coroutine.yield(s)
-        if last_sym then
-          coroutine.yield(last_sym .. s)
+    local pending_sym = nil
+
+    ---@param kind "kw" | "sym" | "ws"
+    ---@param run string
+    local yield = function(kind, run)
+      if kind == "kw" then
+        coroutine.yield(run)
+        if pending_sym then
+          coroutine.yield(pending_sym .. run)
         end
-        last_sym = nil
+        pending_sym = nil
+      elseif kind == "sym" then
+        pending_sym = run
+      else
+        pending_sym = nil
       end
     end
 
-    local commit_sym = function()
-      if next(sym_acc) then
-        last_sym = table.concat(sym_acc)
-        sym_acc = {}
-      end
-    end
+    local acc_kind, acc = nil, {}
 
     for chunk in text do
       local i, n = 1, #chunk
       while i <= n do
-        local b = string.byte(chunk, i)
-        if kw[b] then
-          commit_sym()
-          local start = i
-          while i <= n and kw[string.byte(chunk, i)] do
-            i = i + 1
-          end
-          table.insert(kw_acc, string.sub(chunk, start, i - 1))
-        elseif M.whitespace[b] then
-          flush_kw()
-          sym_acc = {}
-          last_sym = nil
+        local kind = classify(string.byte(chunk, i))
+        local start = i
+        while i <= n and classify(string.byte(chunk, i)) == kind do
           i = i + 1
+        end
+        local piece = string.sub(chunk, start, i - 1)
+
+        if kind == acc_kind then
+          table.insert(acc, piece)
         else
-          flush_kw()
-          local start = i
-          while i <= n do
-            local b2 = string.byte(chunk, i)
-            if kw[b2] or M.whitespace[b2] then
-              break
-            end
-            i = i + 1
+          if acc_kind then
+            yield(acc_kind, table.concat(acc))
           end
-          table.insert(sym_acc, string.sub(chunk, start, i - 1))
+          acc_kind, acc = kind, { piece }
         end
       end
     end
-    flush_kw()
+
+    if acc_kind then
+      yield(acc_kind, table.concat(acc))
+    end
   end)
 end
 
@@ -147,7 +148,7 @@ M.trailing_symbol_before = function(kw, line)
   local i = #line
   while i > 0 do
     local b = string.byte(line, i)
-    if kw[b] or M.whitespace[b] then
+    if kw[b] or M.WHITES[b] then
       break
     end
     i = i - 1

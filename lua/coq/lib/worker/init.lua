@@ -20,6 +20,17 @@ local Kind = {
 
 local DONE = {}
 
+---@class worker.Worker: lib.Closable
+---@field queue fun<T>(fn: (fun(...): T?), ...: any): T
+---@field queue_stream fun<T>(fn: (fun(...): T?), ...: any): (fun(), lib.Iterator<T>)
+
+---@class worker.Module
+---@field main fun<T>(fn: (fun(...): T?), ...: any): T
+---@field main_stream fun<T>(fn: (fun(...): T?), ...: any): (fun(), lib.Iterator<T>)
+---@field run fun(req_fd: integer, rsp_fd: integer)
+---@field spawn fun(): worker.Worker
+local M = {}
+
 ---@param fn function
 ---@param ... any
 ---@return table
@@ -155,53 +166,57 @@ local protect = vim.is_thread()
 ---@class worker.Responder
 ---@field serve fun(n: async.Nursery, frame: table)
 
+---@param req_handle async.Handle
+---@param chan channels.Mpmc<true>
+---@param frame { fn_bytecode: string, args?: any[], n_args?: integer, id: integer? }
+---@param write fun(body: table)
+M._dispatch = function(req_handle, chan, frame, write)
+  local args, n_args = frame.args or {}, frame.n_args or 0
+
+  local iter = async.wrap(function(...)
+    local fn = assert(load(frame.fn_bytecode))
+    return coroutine.yield(DONE, build_response(frame.id, pcall(fn, ...)))
+  end)
+
+  local resume = function(...)
+    local packed = util.pack(iter(...))
+    local done = packed[1] == DONE
+    return done, done and packed[2] or packed
+  end
+
+  local pump = function()
+    local done, packed = resume(unpack(args, 1, n_args))
+    while not done do
+      write(build_response(frame.id, nil, util.unpack(packed)))
+      local more = not req_handle.cancelled and chan.pull()
+      if not more then
+        return build_response(frame.id, true)
+      end
+      done, packed = resume(true)
+    end
+    return packed
+  end
+
+  local ok, terminal = pcall(pump)
+  local drained, err = pcall(function()
+    for _ in iter do
+      lib.noop()
+    end
+  end)
+  if not drained and not cancel.is(err) then
+    errs.report(err)
+  end
+
+  if not ok and cancel.is(terminal) then
+    ok, terminal = true, build_response(frame.id, true)
+  end
+
+  write(ok and terminal or build_response(frame.id, false, terminal))
+end
+
 ---@param write fun(body: table)
 ---@return worker.Responder
 local make_responder = function(write)
-  local dispatch = function(req_handle, chan, frame)
-    local args, n_args = frame.args or {}, frame.n_args or 0
-
-    local iter = async.wrap(function(...)
-      local fn = assert(load(frame.fn_bytecode))
-      return coroutine.yield(DONE, build_response(frame.id, pcall(fn, ...)))
-    end)
-
-    local resume = function(...)
-      local packed = util.pack(iter(...))
-      local done = packed[1] == DONE
-      return done, done and packed[2] or packed
-    end
-
-    local pump = function()
-      local done, packed = resume(unpack(args, 1, n_args))
-      while not done do
-        write(build_response(frame.id, nil, util.unpack(packed)))
-        local more = not req_handle.cancelled and chan.pull()
-        if not more then
-          return build_response(frame.id, true)
-        end
-        done, packed = resume(true)
-      end
-      return packed
-    end
-
-    local ok, terminal = pcall(pump)
-    local drained, err = pcall(function()
-      for _ in iter do
-        lib.noop()
-      end
-    end)
-    if not drained and not cancel.is(err) then
-      errs.report(err)
-    end
-
-    if not ok and cancel.is(terminal) then
-      ok, terminal = true, build_response(frame.id, true)
-    end
-
-    write(ok and terminal or build_response(frame.id, false, terminal))
-  end
-
   local parked = inflight.new()
 
   local serve = function(n, frame)
@@ -232,7 +247,7 @@ local make_responder = function(write)
       defer(release)
       runtime.bind(coroutine.running(), req_handle)
       scheduled()
-      dispatch(req_handle, chan, frame)
+      M._dispatch(req_handle, chan, frame, write)
     end))
   end
 
@@ -272,17 +287,6 @@ local make_endpoint = function(duplex)
 
   return endpoint
 end
-
----@class worker.Worker: lib.Closable
----@field queue fun<T>(fn: (fun(...): T?), ...: any): T
----@field queue_stream fun<T>(fn: (fun(...): T?), ...: any): (fun(), lib.Iterator<T>)
-
----@class worker.Module
----@field main fun<T>(fn: (fun(...): T?), ...: any): T
----@field main_stream fun<T>(fn: (fun(...): T?), ...: any): (fun(), lib.Iterator<T>)
----@field run fun(req_fd: integer, rsp_fd: integer)
----@field spawn fun(): worker.Worker
-local M = {}
 
 if vim.is_thread() then
   ---@param req_fd integer

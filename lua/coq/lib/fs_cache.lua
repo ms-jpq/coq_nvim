@@ -74,7 +74,7 @@ M.new = function(spec)
     fetch = function(key, mtime)
       local path = path_of(key)
       local cached_mtime = M.mtime_ns(path)
-      local valid = cached_mtime and cached_mtime >= mtime
+      local valid = mtime > 0 and cached_mtime and cached_mtime >= mtime
 
       if valid then
         local raw = atools.fs.slurp(path)
