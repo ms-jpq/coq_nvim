@@ -35,7 +35,6 @@ local ctx_of = function(overrides)
     filename = "",
     linesep = "\n",
     iskeyword = {},
-    isfname = "",
     wildignore = "",
     comment = { "", "" },
     keyword_before = "",

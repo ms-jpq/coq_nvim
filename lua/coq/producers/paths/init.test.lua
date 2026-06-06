@@ -38,7 +38,6 @@ local ctx_of = function(ctx_overrides)
     tabstop = 2,
     expandtab = true,
     iskeyword = require("coq.lib.index.tokens").parse_charset "@,48-57,_,192-255",
-    isfname = "@,48-57,/,.,-,_,+,~,$,@-@,{,}",
     wildignore = "",
     linesep = "\n",
     comment = { "", "" },
@@ -183,6 +182,45 @@ T.describe({ "paths.matcher" }, function(test)
     lib_path.HOME = prev
 
     T.eq(words_of(items), { "fido/", "spot.txt" })
+  end)
+
+  test({ "@<path>/ resolves against cwd, not the file's dir" }, function()
+    -- claude-style: `@lua/init.lua` should always anchor to cwd even when the
+    -- file-base resolution is enabled and would otherwise compete.
+    local dir = tmpdir()
+    touch(dir .. "/spot.txt")
+    local fake_file = "/elsewhere/current.lua"
+
+    local settings = settings_with { clients = { paths = { resolution = { "cwd", "file" } } } }
+    local ctx = ctx_of { cwd = dir, filename = fake_file, line_before = "@", line = "@" }
+    -- need a sep for the head pattern to fire
+    ctx.line_before = "@/"
+    ctx.line = "@/"
+
+    local items = run_matcher(settings, ctx)
+    T.eq(words_of(items), { "spot.txt" })
+  end)
+
+  test({ "@<path>/ literal_directory keeps the @ in the textEdit" }, function()
+    local dir = tmpdir()
+    vim.fn.mkdir(dir .. "/lua")
+    touch(dir .. "/lua/spot.txt")
+
+    local settings = settings_with()
+    local ctx = ctx_of {
+      cwd = dir,
+      pos = { 1, 5 },
+      line_before = "@lua/",
+      line = "@lua/",
+      utf16_col = 5,
+    }
+
+    local items = run_matcher(settings, ctx)
+    T.eq(#items, 1)
+    local edit = items[1].meta.lsp.item.textEdit
+    T.eq(edit.range.start.character, 0)
+    T.eq(edit.range["end"].character, 5)
+    T.eq(edit.newText, "@lua/spot.txt")
   end)
 
   test({ "$VAR expands when set" }, function()

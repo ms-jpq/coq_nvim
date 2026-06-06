@@ -116,10 +116,7 @@ M._fallback_span = function(iskeyword, e_ctx, word)
       txt.prefix_overlap(e_ctx.before_inserted, word)
     )
   local end_col = e_ctx.col
-    + math.max(
-      #tokens.leading_keyword(iskeyword, e_ctx.after_cursor),
-      txt.suffix_overlap(e_ctx.after_cursor, word)
-    )
+    + math.max(#tokens.leading_keyword(iskeyword, e_ctx.after_cursor), txt.suffix_overlap(e_ctx.after_cursor, word))
 
   return {
     start_row = e_ctx.cursor_row,
