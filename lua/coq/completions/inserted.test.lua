@@ -168,55 +168,15 @@ local edit_ctx = function(o)
   } --[[@as completions.EditCtx]]
 end
 
----@param insert_end integer
----@param replace_end integer
-local replace_edit = function(insert_end, replace_end)
-  return {
-    newText = "",
-    insert = { start = { line = 0, character = 0 }, ["end"] = { line = 0, character = insert_end } },
-    replace = { start = { line = 0, character = 0 }, ["end"] = { line = 0, character = replace_end } },
-  }
-end
-
-T.describe({ "inserted.span" }, function(test)
-  test({ "InsertReplaceEdit span ends at replace[end], measured in encoded units" }, function()
-    local span = inserted._span(
+T.describe({ "inserted.fallback_span" }, function(test)
+  -- `_fallback_span` runs when no LSP range was resolved: pure keyword/overlap
+  -- math from EditCtx.
+  -- The range-honoring branch lives at the callsite in `_main_edit` and is
+  -- exercised by the scenario tests below.
+  test({ "fallback uses the keyword runs flanking the cursor" }, function()
+    local span = inserted._fallback_span(
       DEFAULT_ISKEYWORD,
-      "utf-8",
-      edit_ctx {
-        col = 2,
-        after_cursor = "XYZ",
-        start_line = "abXYZ",
-        span = { start_row = 0, start_col = 0, end_row = 0, end_col = 4 },
-      },
-      replace_edit(2, 4),
-      "ab"
-    )
-    T.eq(span, { start_row = 0, start_col = 0, end_row = 0, end_col = 4 })
-  end)
-
-  test({ "pure insert (replace[end] == cursor) deletes nothing past the cursor" }, function()
-    local span = inserted._span(
-      DEFAULT_ISKEYWORD,
-      "utf-8",
-      edit_ctx {
-        col = 2,
-        after_cursor = "XYZ",
-        start_line = "abXYZ",
-        span = { start_row = 0, start_col = 0, end_row = 0, end_col = 2 },
-      },
-      replace_edit(2, 2),
-      "ab"
-    )
-    T.eq(span.end_col, 2)
-  end)
-
-  test({ "no textEdit falls back to the keyword runs flanking the cursor" }, function()
-    local span = inserted._span(
-      DEFAULT_ISKEYWORD,
-      "utf-8",
       edit_ctx { col = 2, before_inserted = "", after_cursor = "XYZ" },
-      nil,
       "anything"
     )
     -- after_cursor "XYZ" is all keyword chars; leading_keyword consumes all 3.

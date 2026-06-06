@@ -55,10 +55,9 @@ end
 
 ---@param filetype? string
 ---@param dirs string[]
----@return fun() close
----@return lib.Iterator<snippets.Source> iter
+---@return lib.Iterator<snippets.Source>
 local bundle = function(filetype, dirs)
-  return closable.iter(function()
+  return async.wrap(function()
     for _, dir in pairs(dirs) do
       local file = vim.fs.joinpath(dir, BUNDLE_NAME)
       local mtime = fs_cache.mtime_ns(file)
@@ -129,15 +128,16 @@ M.list = function(settings, idle_ctx, filetype, skip)
   return closable.iter(function(defer)
     local ft = filetype and string.lower(filetype) or nil
     local user = vim.iter(user_dirs(settings, idle_ctx)):totable()
-    local yieldfrom = function(close, iter)
-      defer(close)
-      for src in iter do
-        coroutine.yield(src)
-      end
+
+    for src in bundle(ft, idle_ctx.rtps) do
+      coroutine.yield(src)
     end
 
-    yieldfrom(bundle(ft, idle_ctx.rtps))
-    yieldfrom(neosnippet(ft, skip, user))
+    local close, iter = neosnippet(ft, skip, user)
+    defer(close)
+    for src in iter do
+      coroutine.yield(src)
+    end
   end)
 end
 

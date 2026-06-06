@@ -71,10 +71,9 @@ end
 ---@param ctx ctx.full
 ---@param entry third_party.Source
 ---@param arg third_party.Args
----@return fun() close
----@return lib.Iterator<completions.Item[]> iter
+---@return lib.Iterator<completions.Item[]>
 local query_1 = function(settings, ctx, entry, arg)
-  return closable.iter(function(_)
+  return async.wrap(function()
     atools.scheduled()
     local ok, result = cancel.pcall(async.awaitify(entry.fn), arg)
     if not ok then
@@ -121,9 +120,7 @@ M.new = function()
         local iters = {}
         for _, entry in pairs(sources) do
           if type(entry) == "table" and type(entry.fn) == "function" then
-            local c, i = query_1(settings, ctx, entry, arg)
-            defer(c)
-            table.insert(iters, i)
+            table.insert(iters, query_1(settings, ctx, entry, arg))
           end
         end
 

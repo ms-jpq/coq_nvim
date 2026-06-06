@@ -44,14 +44,46 @@ end
 ---@field after_cursor string
 ---@field start_line string
 ---@field end_line string
----@field span completions.Span
+---@field span? completions.Span
+
+---@param buf integer
+---@param enc string
+---@param cursor_row integer
+---@param cursor_line string
+---@param range? lsp.Range
+---@return string? start_line
+---@return string? end_line
+---@return completions.Span? span
+local resolve_range = function(buf, enc, cursor_row, cursor_line, range)
+  if not range then
+    return
+  end
+  local s, e = range.start, range["end"]
+  local line_count = vim.api.nvim_buf_line_count(buf)
+  if not (s.line >= 0 and s.line <= cursor_row and e and e.line >= s.line and e.line < line_count) then
+    return
+  end
+
+  local read = function(r)
+    return (r == cursor_row) and cursor_line or (vim.api.nvim_buf_get_lines(buf, r, r + 1, true)[1] or "")
+  end
+  local start_line = read(s.line)
+  local end_line = (e.line == s.line) and start_line or read(e.line)
+
+  local ok_s, start_col = pcall(vim.str_byteindex, start_line, enc, s.character, true)
+  local ok_e, end_col = pcall(vim.str_byteindex, end_line, enc, e.character, true)
+  if not (ok_s and ok_e) then
+    return
+  end
+
+  return start_line, end_line, { start_row = s.line, start_col = start_col, end_row = e.line, end_col = end_col }
+end
 
 ---@param ctx ctx.full
 ---@param i completions.Item
 ---@param enc string
 ---@param range? lsp.Range
 ---@return completions.EditCtx
----@return boolean range_ok
 local edit_ctx = function(ctx, i, enc, range)
   local row, col = unpack(ctx.pos)
   local cursor_row = row - 1
@@ -60,81 +92,41 @@ local edit_ctx = function(ctx, i, enc, range)
   local inserted = (i.meta.snippet and i.abbr) or i.word or ""
   local original_col = math.max(0, col - #inserted)
 
-  local e_ctx = {
+  local start_line, end_line, span = resolve_range(ctx.buf, enc, cursor_row, line, range)
+
+  return {
     cursor_row = cursor_row,
     col = col,
     before_inserted = string.sub(line, 1, original_col),
     after_cursor = string.sub(line, col + 1),
-    start_line = line,
-    end_line = line,
-    span = { start_row = cursor_row, start_col = col, end_row = cursor_row, end_col = col },
+    start_line = start_line or line,
+    end_line = end_line or line,
+    span = span,
   }
-
-  if not range then
-    return e_ctx, false
-  end
-
-  local line_count = vim.api.nvim_buf_line_count(ctx.buf)
-  local s, e = range.start, range["end"]
-  if not (s.line >= 0 and s.line <= cursor_row and e and e.line >= s.line and e.line < line_count) then
-    return e_ctx, false
-  end
-
-  local read = function(r)
-    return (r == cursor_row) and line or (vim.api.nvim_buf_get_lines(ctx.buf, r, r + 1, true)[1] or "")
-  end
-  local start_line = read(s.line)
-  local end_line = (e.line == s.line) and start_line or read(e.line)
-
-  local ok_s, start_col = pcall(vim.str_byteindex, start_line, enc, s.character, true)
-  local ok_e, end_col = pcall(vim.str_byteindex, end_line, enc, e.character, true)
-  if not (ok_s and ok_e) then
-    return e_ctx, false
-  end
-
-  e_ctx.start_line = start_line
-  e_ctx.end_line = end_line
-  e_ctx.span = { start_row = s.line, start_col = start_col, end_row = e.line, end_col = end_col }
-  return e_ctx, true
 end
 
 ---@param iskeyword lib.Set<integer>
----@param enc string
 ---@param e_ctx completions.EditCtx
----@param text_edit? lsp.TextEdit | lsp.InsertReplaceEdit
 ---@param word string
 ---@return completions.Span
-M._span = function(iskeyword, enc, e_ctx, text_edit, word)
-  local range = text_edit and (text_edit.range or text_edit.replace)
-  local insert_end = text_edit and text_edit.insert and text_edit.insert["end"]
-  local range_end = range and range["end"]
-
-  local start_col = (range and e_ctx.span.start_col)
-    or (
-      #e_ctx.before_inserted
-      - math.max(
-        #tokens.trailing_keyword_before(iskeyword, e_ctx.before_inserted),
-        txt.prefix_overlap(e_ctx.before_inserted, word)
-      )
+M._fallback_span = function(iskeyword, e_ctx, word)
+  local start_col = #e_ctx.before_inserted
+    - math.max(
+      #tokens.trailing_keyword_before(iskeyword, e_ctx.before_inserted),
+      txt.prefix_overlap(e_ctx.before_inserted, word)
+    )
+  local end_col = e_ctx.col
+    + math.max(
+      #tokens.leading_keyword(iskeyword, e_ctx.after_cursor),
+      txt.suffix_overlap(e_ctx.after_cursor, word)
     )
 
-  local end_row, end_col = (function()
-    if range_end and range_end.line ~= e_ctx.cursor_row then
-      return e_ctx.span.end_row, e_ctx.span.end_col
-    end
-
-    if insert_end and range_end and insert_end.line == e_ctx.cursor_row then
-      local after_units = vim.str_utfindex(e_ctx.after_cursor, enc, #e_ctx.after_cursor, true)
-      local units = math.max(0, math.min(after_units, range_end.character - insert_end.character))
-      return e_ctx.cursor_row, e_ctx.col + vim.str_byteindex(e_ctx.after_cursor, enc, units, true)
-    end
-
-    local end_col = e_ctx.col
-      + math.max(#tokens.leading_keyword(iskeyword, e_ctx.after_cursor), txt.suffix_overlap(e_ctx.after_cursor, word))
-    return e_ctx.cursor_row, end_col
-  end)()
-
-  return { start_row = e_ctx.span.start_row, start_col = start_col, end_row = end_row, end_col = end_col }
+  return {
+    start_row = e_ctx.cursor_row,
+    start_col = start_col,
+    end_row = e_ctx.cursor_row,
+    end_col = end_col,
+  }
 end
 
 ---@param i completions.Item
@@ -152,31 +144,6 @@ M._replacement = function(i, range, text_edit)
   return i.word or ""
 end
 
----@param enc string
----@param span completions.Span
----@param buf integer
----@param text string
----@return lsp.TextEdit
-local span_to_text_edit = function(enc, span, buf, text)
-  local start_line = vim.api.nvim_buf_get_lines(buf, span.start_row, span.start_row + 1, true)[1] or ""
-  local end_line = span.end_row == span.start_row and start_line
-    or (vim.api.nvim_buf_get_lines(buf, span.end_row, span.end_row + 1, true)[1] or "")
-
-  return {
-    range = {
-      start = {
-        line = span.start_row,
-        character = vim.str_utfindex(start_line, enc, span.start_col, true),
-      },
-      ["end"] = {
-        line = span.end_row,
-        character = vim.str_utfindex(end_line, enc, span.end_col, true),
-      },
-    },
-    newText = text,
-  }
-end
-
 ---@param ctx ctx.full
 ---@param i completions.Item
 ---@param lsp completions.ItemLspMeta
@@ -186,16 +153,28 @@ M._main_edit = function(ctx, i, lsp)
   local text_edit = lsp.item and lsp.item.textEdit
   local range = text_edit and (text_edit.range or text_edit.replace)
 
-  local e_ctx, range_ok = edit_ctx(ctx, i, enc, range)
-  if not range_ok then
+  local e_ctx = edit_ctx(ctx, i, enc, range)
+  if not e_ctx.span then
     text_edit, range = nil, nil
   end
 
   local replace_text = M._replacement(i, range, text_edit)
   local match_text = (i.meta.snippet and (i.word or "")) or replace_text
-  local span = M._span(ctx.iskeyword, enc, e_ctx, text_edit, match_text)
+  local span = e_ctx.span or M._fallback_span(ctx.iskeyword, e_ctx, match_text)
 
-  return span_to_text_edit(enc, span, ctx.buf, replace_text)
+  return {
+    range = {
+      start = {
+        line = span.start_row,
+        character = vim.str_utfindex(e_ctx.start_line, enc, span.start_col, true),
+      },
+      ["end"] = {
+        line = span.end_row,
+        character = vim.str_utfindex(e_ctx.end_line, enc, span.end_col, true),
+      },
+    },
+    newText = replace_text,
+  }
 end
 
 ---@param ctx ctx.full
