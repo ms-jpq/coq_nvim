@@ -1,8 +1,8 @@
 local T = require "coq.lib.test"
 local async = require "coq.lib.async"
 
-T.describe("wait", function(test)
-  test("returns fn's result when fn finishes first", function()
+T.describe({ "wait" }, function(test)
+  test({ "returns fn's result when fn finishes first" }, function()
     local result = async.wait(200 * T.SLOW, function()
       async.sleep(5 * T.SLOW)
       return "labrador"
@@ -10,7 +10,7 @@ T.describe("wait", function(test)
     T.eq(result, "labrador")
   end)
 
-  test("returns nil when timeout fires first", function()
+  test({ "returns nil when timeout fires first" }, function()
     local result = async.wait(5 * T.SLOW, function()
       async.sleep(200 * T.SLOW)
       return "labrador"
@@ -18,7 +18,7 @@ T.describe("wait", function(test)
     T.eq(result, nil)
   end)
 
-  test("does not wait beyond fn's completion when fn wins", function()
+  test({ "does not wait beyond fn's completion when fn wins" }, function()
     local start = vim.uv.hrtime()
     async.wait(200 * T.SLOW, function()
       async.sleep(5 * T.SLOW)
@@ -28,7 +28,7 @@ T.describe("wait", function(test)
     assert(elapsed_ms < 100 * T.SLOW, ("expected ~5ms, got %.1fms"):format(elapsed_ms))
   end)
 
-  test("does not wait beyond timeout when fn loses", function()
+  test({ "does not wait beyond timeout when fn loses" }, function()
     local start = vim.uv.hrtime()
     async.wait(10 * T.SLOW, function()
       async.sleep(500 * T.SLOW)
@@ -37,7 +37,7 @@ T.describe("wait", function(test)
     assert(elapsed_ms < 200 * T.SLOW, ("expected ~10ms, got %.1fms"):format(elapsed_ms))
   end)
 
-  test("forwards fn's nil return when fn finishes first", function()
+  test({ "forwards fn's nil return when fn finishes first" }, function()
     local result = async.wait(200 * T.SLOW, function()
       async.sleep(5 * T.SLOW)
       return nil

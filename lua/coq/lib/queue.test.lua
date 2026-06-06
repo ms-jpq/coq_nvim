@@ -1,8 +1,8 @@
 local T = require "coq.lib.test"
 local queue = require "coq.lib.queue"
 
-T.describe("queue", function(test)
-  test("pops in FIFO order", function()
+T.describe({ "queue" }, function(test)
+  test({ "pops in FIFO order" }, function()
     local q = queue.new()
     q.push "lil"
     q.push "spot"
@@ -13,7 +13,7 @@ T.describe("queue", function(test)
     T.eq(q.pop(), "fido")
   end)
 
-  test("len tracks push and pop", function()
+  test({ "len tracks push and pop" }, function()
     local q = queue.new()
     T.eq(q.len(), 0)
     q.push "lil"
@@ -25,7 +25,7 @@ T.describe("queue", function(test)
     T.eq(q.len(), 0)
   end)
 
-  test("pop on drained queue returns nil and len stays zero", function()
+  test({ "pop on drained queue returns nil and len stays zero" }, function()
     local q = queue.new()
     q.push "lil"
     q.pop()
@@ -34,7 +34,7 @@ T.describe("queue", function(test)
     T.eq(q.len(), 0)
   end)
 
-  test("push after drain resumes FIFO", function()
+  test({ "push after drain resumes FIFO" }, function()
     local q = queue.new()
     q.push "lil"
     q.pop()

@@ -17,8 +17,8 @@ local assert_clean = function(err, expected_msg)
   end
 end
 
-T.describe("errors", function(test)
-  test("async.wrap error surfaces at caller, not in runtime", function()
+T.describe({ "errors" }, function(test)
+  test({ "async.wrap error surfaces at caller, not in runtime" }, function()
     local pull = async.wrap(function()
       error "wrap boom"
     end)
@@ -29,7 +29,7 @@ T.describe("errors", function(test)
     assert_clean(err, "wrap boom")
   end)
 
-  test("async.entry error surfaces at caller, not in runtime", function()
+  test({ "async.entry error surfaces at caller, not in runtime" }, function()
     local done = async.future()
     local ok, err
     vim.schedule(function()
@@ -46,7 +46,7 @@ T.describe("errors", function(test)
     assert_clean(err, "entry boom")
   end)
 
-  test("async.scope body error surfaces at caller, not in nursery", function()
+  test({ "async.scope body error surfaces at caller, not in nursery" }, function()
     local ok, err = pcall(function()
       async.scope(function()
         error "scope body boom"
@@ -57,7 +57,7 @@ T.describe("errors", function(test)
     assert_clean(err, "scope body boom")
   end)
 
-  test("n.spawn error surfaces at scope caller, not in nursery", function()
+  test({ "n.spawn error surfaces at scope caller, not in nursery" }, function()
     local ok, err = pcall(function()
       async.scope(function(n)
         n.spawn(function()
@@ -70,7 +70,7 @@ T.describe("errors", function(test)
     assert_clean(err, "spawn boom")
   end)
 
-  test("lib.scope body error surfaces at caller, not in lib", function()
+  test({ "lib.scope body error surfaces at caller, not in lib" }, function()
     local ok, err = pcall(function()
       lib.scope(function()
         error "lib scope boom"
@@ -81,7 +81,7 @@ T.describe("errors", function(test)
     assert_clean(err, "lib scope boom")
   end)
 
-  test("async.all child error surfaces at caller, not in controlflow", function()
+  test({ "async.all child error surfaces at caller, not in controlflow" }, function()
     local ok, err = pcall(async.all, {
       function()
         return "ok"
@@ -95,7 +95,7 @@ T.describe("errors", function(test)
     assert_clean(err, "all boom")
   end)
 
-  test("async.race child error surfaces at caller, not in controlflow", function()
+  test({ "async.race child error surfaces at caller, not in controlflow" }, function()
     local ok, err = pcall(function()
       async.race {
         function()
@@ -113,7 +113,7 @@ T.describe("errors", function(test)
     assert_clean(err, "race boom")
   end)
 
-  test("async.merge child error surfaces at pull site, not in controlflow", function()
+  test({ "async.merge child error surfaces at pull site, not in controlflow" }, function()
     local ok, err = pcall(function()
       local _, m = async.merge {
         function()

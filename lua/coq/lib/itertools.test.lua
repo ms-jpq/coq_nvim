@@ -22,8 +22,8 @@ local drain = function(iter)
   return out
 end
 
-T.describe("itertools.take_while", function(test)
-  test("yields while predicate holds, stops at first false", function()
+T.describe({ "itertools.take_while" }, function(test)
+  test({ "yields while predicate holds, stops at first false" }, function()
     T.eq(
       drain(itertools.take_while(function(s)
         return #s < 5
@@ -32,7 +32,7 @@ T.describe("itertools.take_while", function(test)
     )
   end)
 
-  test("predicate-false on first item yields nothing", function()
+  test({ "predicate-false on first item yields nothing" }, function()
     T.eq(
       drain(itertools.take_while(function()
         return false
@@ -41,7 +41,7 @@ T.describe("itertools.take_while", function(test)
     )
   end)
 
-  test("yields everything when predicate always holds", function()
+  test({ "yields everything when predicate always holds" }, function()
     T.eq(
       drain(itertools.take_while(function()
         return true
@@ -50,7 +50,7 @@ T.describe("itertools.take_while", function(test)
     )
   end)
 
-  test("empty source yields nothing", function()
+  test({ "empty source yields nothing" }, function()
     T.eq(
       drain(itertools.take_while(function()
         return true
@@ -59,7 +59,7 @@ T.describe("itertools.take_while", function(test)
     )
   end)
 
-  test("does not pull past the rejected item", function()
+  test({ "does not pull past the rejected item" }, function()
     local pulled = 0
     local src = function()
       pulled = pulled + 1
@@ -71,7 +71,7 @@ T.describe("itertools.take_while", function(test)
     T.eq(pulled, 3)
   end)
 
-  test("returns nil on every call after rejection", function()
+  test({ "returns nil on every call after rejection" }, function()
     local iter = itertools.take_while(function(n)
       return n < 2
     end, from { 1, 2, 3 })
@@ -81,20 +81,20 @@ T.describe("itertools.take_while", function(test)
   end)
 end)
 
-T.describe("itertools.intersperse", function(test)
-  test("places sep between every pair of items", function()
+T.describe({ "itertools.intersperse" }, function(test)
+  test({ "places sep between every pair of items" }, function()
     T.eq(drain(itertools.intersperse("/", from { "spot", "fido", "rex" })), { "spot", "/", "fido", "/", "rex" })
   end)
 
-  test("no sep when source has a single item", function()
+  test({ "no sep when source has a single item" }, function()
     T.eq(drain(itertools.intersperse("/", from { "spot" })), { "spot" })
   end)
 
-  test("empty source yields nothing", function()
+  test({ "empty source yields nothing" }, function()
     T.eq(drain(itertools.intersperse("/", from {})), {})
   end)
 
-  test("returns nil on every call after exhaustion", function()
+  test({ "returns nil on every call after exhaustion" }, function()
     local iter = itertools.intersperse("/", from { "spot", "fido" })
     T.eq(iter(), "spot")
     T.eq(iter(), "/")
@@ -104,24 +104,24 @@ T.describe("itertools.intersperse", function(test)
   end)
 end)
 
-T.describe("itertools.chain", function(test)
-  test("yields from each iterator in order", function()
+T.describe({ "itertools.chain" }, function(test)
+  test({ "yields from each iterator in order" }, function()
     T.eq(drain(itertools.chain(from { "spot", "fido" }, from { "rex" })), { "spot", "fido", "rex" })
   end)
 
-  test("skips an empty iterator in the middle", function()
+  test({ "skips an empty iterator in the middle" }, function()
     T.eq(drain(itertools.chain(from { "spot" }, from {}, from { "fido", "rex" })), { "spot", "fido", "rex" })
   end)
 
-  test("all empty yields nothing", function()
+  test({ "all empty yields nothing" }, function()
     T.eq(drain(itertools.chain(from {}, from {}, from {})), {})
   end)
 
-  test("no iterators yields nothing", function()
+  test({ "no iterators yields nothing" }, function()
     T.eq(drain(itertools.chain()), {})
   end)
 
-  test("returns nil on every call after exhaustion", function()
+  test({ "returns nil on every call after exhaustion" }, function()
     local iter = itertools.chain(from { "spot" }, from { "fido" })
     T.eq(iter(), "spot")
     T.eq(iter(), "fido")
@@ -130,14 +130,14 @@ T.describe("itertools.chain", function(test)
   end)
 end)
 
-T.describe("itertools.cooperative", function(test)
-  test("forwards every value verbatim", function()
+T.describe({ "itertools.cooperative" }, function(test)
+  test({ "forwards every value verbatim" }, function()
     async.scope(function()
       T.eq(drain(itertools.cooperative(2, from { "spot", "fido", "rex" })), { "spot", "fido", "rex" })
     end)
   end)
 
-  test("terminates cleanly when source is exhausted", function()
+  test({ "terminates cleanly when source is exhausted" }, function()
     async.scope(function()
       local iter = itertools.cooperative(3, from { "spot" })
       T.eq(iter(), "spot")
@@ -146,7 +146,7 @@ T.describe("itertools.cooperative", function(test)
     end)
   end)
 
-  test("does not stall on an empty source", function()
+  test({ "does not stall on an empty source" }, function()
     async.scope(function()
       T.eq(drain(itertools.cooperative(5, from {})), {})
     end)

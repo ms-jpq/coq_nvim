@@ -6,8 +6,8 @@ local lib = require "coq.lib"
 local nursery = require "coq.lib.async._nursery"
 local runtime = require "coq.lib.async._runtime"
 
-T.describe("nursery", function(test)
-  test("join awaits all spawned children", function()
+T.describe({ "nursery" }, function(test)
+  test({ "join awaits all spawned children" }, function()
     local n = nursery.new()
     local count = 0
     n.spawn(function()
@@ -23,7 +23,7 @@ T.describe("nursery", function(test)
     T.eq(count, 2)
   end)
 
-  test("join throws cancel when ambient cancelled mid-join", function()
+  test({ "join throws cancel when ambient cancelled mid-join" }, function()
     local outer = handle.new()
     local join_ok, join_err
     local n = nursery.new()
@@ -45,7 +45,7 @@ T.describe("nursery", function(test)
     T.eq(cancel.is(join_err), true)
   end)
 
-  test("join throws cancel on joiner cancel even when child hangs", function()
+  test({ "join throws cancel on joiner cancel even when child hangs" }, function()
     local outer = handle.new()
     local join_ok, join_err
     local n = nursery.new()
@@ -68,7 +68,7 @@ T.describe("nursery", function(test)
     T.eq(cancel.is(join_err), true)
   end)
 
-  test("spawn after join raises", function()
+  test({ "spawn after join raises" }, function()
     local n = nursery.new()
     n.join()
 
@@ -77,7 +77,7 @@ T.describe("nursery", function(test)
     assert(tostring(err):find "nursery is closed")
   end)
 
-  test("spawn fires defers in reverse order on normal exit", function()
+  test({ "spawn fires defers in reverse order on normal exit" }, function()
     local n = nursery.new()
     local order = {}
     n.spawn(function(defer)
@@ -94,7 +94,7 @@ T.describe("nursery", function(test)
     T.eq(order, { "body", "second registered", "first registered" })
   end)
 
-  test("spawn fires defers even when body errors", function()
+  test({ "spawn fires defers even when body errors" }, function()
     local n = nursery.new()
     local fired = false
     n.spawn(function(defer)
@@ -110,7 +110,7 @@ T.describe("nursery", function(test)
     assert(err:find "lil went missing")
   end)
 
-  test("join surfaces spawn errors even when joiner is cancelled mid-await", function()
+  test({ "join surfaces spawn errors even when joiner is cancelled mid-await" }, function()
     local outer = handle.new()
     local n = nursery.new()
     local join_ok, join_err
@@ -143,7 +143,7 @@ T.describe("nursery", function(test)
     assert(tostring(join_err):find "spot ran off", "expected spot ran off, got: " .. tostring(join_err))
   end)
 
-  test("join raises error group when multiple children error", function()
+  test({ "join raises error group when multiple children error" }, function()
     local n = nursery.new()
     n.spawn(function()
       async.sleep(-1)
@@ -162,8 +162,8 @@ T.describe("nursery", function(test)
   end)
 end)
 
-T.describe("scope", function(test)
-  test("joins spawned tasks before returning", function()
+T.describe({ "scope" }, function(test)
+  test({ "joins spawned tasks before returning" }, function()
     local count = 0
     async.scope(function(n)
       n.spawn(function()
@@ -179,7 +179,7 @@ T.describe("scope", function(test)
     T.eq(count, 2)
   end)
 
-  test("cancels and re-raises on body error", function()
+  test({ "cancels and re-raises on body error" }, function()
     local cancelled = false
     local ok, err = pcall(function()
       async.scope(function(n)
@@ -199,7 +199,7 @@ T.describe("scope", function(test)
     assert(tostring(err):find "body went sideways")
   end)
 
-  test("cancels and re-raises on child error", function()
+  test({ "cancels and re-raises on child error" }, function()
     local sibling_cancelled = false
     local ok, err = pcall(function()
       async.scope(function(n)

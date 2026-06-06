@@ -1,12 +1,10 @@
 local async = require "coq.lib.async"
 local tbl = require "coq.lib.tbl"
 
----@class lib.TestSpecTable
+---@class lib.TestSpec
 ---@field [1] string
 ---@field timeout? integer
 ---@field only? boolean
-
----@alias lib.TestSpec string | lib.TestSpecTable
 
 ---@class lib.TestEntry
 ---@field name string
@@ -28,22 +26,12 @@ local VERBOSE = os.getenv "TEST_VERBOSE" ~= nil
 
 local registry = {}
 
----@param spec lib.TestSpec
----@return lib.TestSpecTable
-local normalize = function(spec)
-  if type(spec) == "string" then
-    spec = { spec }
-  end
-  return spec
-end
-
 ---@param prefix? string
 ---@param spec lib.TestSpec
 ---@param fn fun()
----@param group? lib.TestSpecTable
+---@param group? lib.TestSpec
 local register = function(prefix, spec, fn, group)
-  spec = normalize(spec)
-  ---@cast spec -string
+  assert(type(spec) == "table", 'test spec must be a table like { "name" }')
   group = group or {}
   local name = prefix and (prefix .. " :: " .. spec[1]) or spec[1]
 
@@ -58,8 +46,7 @@ end
 ---@param spec lib.TestSpec
 ---@param body fun(test: fun(spec: lib.TestSpec, fn: fun()))
 M.describe = function(spec, body)
-  spec = normalize(spec)
-  ---@cast spec -string
+  assert(type(spec) == "table", 'describe spec must be a table like { "name" }')
   body(function(test_spec, fn)
     register(spec[1], test_spec, fn, spec)
   end)

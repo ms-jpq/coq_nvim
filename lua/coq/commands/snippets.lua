@@ -83,7 +83,10 @@ M.bind = function(settings, events)
     elseif action == "edit" then
       edit(settings, rest or "")
     else
-      vim.notify(string.format("COQsnips: unknown subcommand %q (expected %s)", action, table.concat(M.SUBCMDS, "/")), vim.log.levels.ERROR)
+      vim.notify(
+        string.format("COQsnips: unknown subcommand %q (expected %s)", action, table.concat(M.SUBCMDS, "/")),
+        vim.log.levels.ERROR
+      )
     end
   end)
 end

@@ -64,8 +64,8 @@ local insert_replace = function(enc, newText, s, insert_end, replace_end)
   }
 end
 
-T.describe("inserted.word_range", function(test)
-  test("InsertReplaceEdit deletes exactly the replace span past the cursor", function()
+T.describe({ "inserted.word_range" }, function(test)
+  test({ "InsertReplaceEdit deletes exactly the replace span past the cursor" }, function()
     -- post-insert line "abXYZ", cursor after "ab" (col 2), suffix "XYZ".
     -- replace["end"]=4 → 2 units past the cursor → delete "XY" only, keep "Z".
     -- (the keyword heuristic would have swallowed all of "XYZ".)
@@ -80,7 +80,7 @@ T.describe("inserted.word_range", function(test)
     T.eq(out, "abZ")
   end)
 
-  test("replace span to end of identifier matches the keyword heuristic", function()
+  test({ "replace span to end of identifier matches the keyword heuristic" }, function()
     -- replace["end"]=5 → 3 units → the whole "XYZ" suffix.
     local out = apply {
       line = "abXYZ",
@@ -91,7 +91,7 @@ T.describe("inserted.word_range", function(test)
     T.eq(out, "ab")
   end)
 
-  test("pure insert (replace end at cursor) deletes nothing past the cursor", function()
+  test({ "pure insert (replace end at cursor) deletes nothing past the cursor" }, function()
     local out, span = apply {
       line = "abXYZ",
       col = 2,
@@ -102,7 +102,7 @@ T.describe("inserted.word_range", function(test)
     T.eq(out, "abXYZ")
   end)
 
-  test("replace span counts encoded units, not bytes (utf-16)", function()
+  test({ "replace span counts encoded units, not bytes (utf-16)" }, function()
     -- suffix "café" — 5 bytes, 4 utf-16 units. replace["end"]=5 → 3 units past
     -- the cursor → delete "caf", keep the multibyte "é".
     local out = apply {
@@ -114,7 +114,7 @@ T.describe("inserted.word_range", function(test)
     T.eq(out, "abé")
   end)
 
-  test("plain textEdit (no insert anchor) falls back to the keyword under cursor", function()
+  test({ "plain textEdit (no insert anchor) falls back to the keyword under cursor" }, function()
     -- only a `range`, no `insert`/`replace`: cannot map past the cursor, so the
     -- trailing keyword run "XYZ" is replaced wholesale.
     local out, span = apply {
@@ -135,14 +135,14 @@ T.describe("inserted.word_range", function(test)
     T.eq(out, "ab")
   end)
 
-  test("no textEdit replaces the keyword under the cursor with the word", function()
+  test({ "no textEdit replaces the keyword under the cursor with the word" }, function()
     -- typed "fi", completed to "fido", cursor after "fido"; suffix "do" is part
     -- of the same keyword and gets absorbed.
     local out = apply { line = "fidodo", col = 4, word = "fido" }
     T.eq(out, "fido")
   end)
 
-  test("snippet item clears the word range and inserts nothing", function()
+  test({ "snippet item clears the word range and inserts nothing" }, function()
     local out, _, repl = apply { line = "fido", col = 4, abbr = "fido", snippet = "fido($0)" }
     T.eq(repl, "")
     T.eq(out, "")
@@ -175,20 +175,20 @@ local replace_edit = function(insert_end, replace_end)
   }
 end
 
-T.describe("inserted.span", function(test)
-  test("InsertReplaceEdit span ends at replace[end], measured in encoded units", function()
+T.describe({ "inserted.span" }, function(test)
+  test({ "InsertReplaceEdit span ends at replace[end], measured in encoded units" }, function()
     local span =
       inserted._span("utf-8", edit_ctx { col = 2, after_cursor = "XYZ", start_line = "abXYZ" }, replace_edit(2, 4))
     T.eq(span, { start_row = 0, start_col = 0, end_row = 0, end_col = 4 })
   end)
 
-  test("pure insert (replace[end] == cursor) deletes nothing past the cursor", function()
+  test({ "pure insert (replace[end] == cursor) deletes nothing past the cursor" }, function()
     local span =
       inserted._span("utf-8", edit_ctx { col = 2, after_cursor = "XYZ", start_line = "abXYZ" }, replace_edit(2, 2))
     T.eq(span.end_col, 2)
   end)
 
-  test("no textEdit falls back to the keyword runs flanking the cursor", function()
+  test({ "no textEdit falls back to the keyword runs flanking the cursor" }, function()
     local span = inserted._span("utf-8", edit_ctx { col = 2, kw_before_col = 0, kw_after_len = 3 }, nil)
     T.eq(span, { start_row = 0, start_col = 0, end_row = 0, end_col = 5 })
   end)

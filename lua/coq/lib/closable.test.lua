@@ -3,8 +3,8 @@ local async = require "coq.lib.async"
 local closable = require "coq.lib.closable"
 local lib = require "coq.lib"
 
-T.describe("closable.iter unwind order", function(test)
-  test("defers run LIFO on natural body exit, matching lib.scope", function()
+T.describe({ "closable.iter unwind order" }, function(test)
+  test({ "defers run LIFO on natural body exit, matching lib.scope" }, function()
     local closable_order = {}
     async.scope(function()
       local close, iter = closable.iter(function(defer)
@@ -42,7 +42,7 @@ T.describe("closable.iter unwind order", function(test)
     T.eq(closable_order, scope_order)
   end)
 
-  test("defers run LIFO on external close, matching lib.scope", function()
+  test({ "defers run LIFO on external close, matching lib.scope" }, function()
     local closable_order = {}
     async.scope(function()
       local close, _iter = closable.iter(function(defer)
@@ -78,7 +78,7 @@ T.describe("closable.iter unwind order", function(test)
     T.eq(closable_order, scope_order)
   end)
 
-  test("close is idempotent — defers run once even if called twice", function()
+  test({ "close is idempotent — defers run once even if called twice" }, function()
     local runs = {}
     async.scope(function()
       local close, _iter = closable.iter(function(defer)
@@ -95,7 +95,7 @@ T.describe("closable.iter unwind order", function(test)
     T.eq(runs, { "x" })
   end)
 
-  test("close before any pull runs no defers (producer never entered)", function()
+  test({ "close before any pull runs no defers (producer never entered)" }, function()
     local runs = {}
     async.scope(function()
       local close, _iter = closable.iter(function(defer)
@@ -111,11 +111,11 @@ T.describe("closable.iter unwind order", function(test)
   end)
 end)
 
-T.describe("closable.iter cross-coroutine cancel", function(test)
+T.describe({ "closable.iter cross-coroutine cancel" }, function(test)
   -- The iter is created in one coroutine and consumed in another (async.merge's
   -- per-producer task shape). Cancelling ONLY the consumer's subtree must still
   -- unwind the parked producer and run its defers — not deadlock the join.
-  test("a consumer-side cancel unwinds the parked producer and runs its defers", function()
+  test({ "a consumer-side cancel unwinds the parked producer and runs its defers" }, function()
     local nursery = require "coq.lib.async._nursery"
     local started = async.future()
     local defer_ran, joined = false, false

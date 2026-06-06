@@ -24,8 +24,8 @@ local regular = function(spec)
 end
 
 local cancel_tests = function(name, factory)
-  T.describe("producer " .. name .. " :: cancel", function(test)
-    test("ambient cancel wakes a sleeping matcher", function()
+  T.describe({ "producer " .. name .. " :: cancel" }, function(test)
+    test({ "ambient cancel wakes a sleeping matcher" }, function()
       local h = handle.new()
       local elapsed_ms
       local n = nursery.new()

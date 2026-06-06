@@ -135,16 +135,36 @@ local defaults = require "coq.config.defaults"
 
 local M = {}
 
----@param opts? table
-M.normalize = function(opts)
+M.normalize = function(x)
+  if type(x) ~= "table" then
+    return x
+  end
+
   local acc = {}
-  return opts
+  for key, val in pairs(x) do
+    local tmp = M.normalize(val)
+    if type(key) ~= "string" then
+      acc[key] = tmp
+    else
+      for i, k in vim.iter(vim.split(key, ".", { plain = true })):enumerate():rev() do
+        if i ~= 1 then
+          tmp = { [k] = tmp }
+        else
+          acc[k] = type(acc[k]) == "table" and vim.tbl_deep_extend("force", acc[k], tmp) or tmp
+        end
+      end
+    end
+  end
+
+  return acc
 end
 
 ---@param opts? table
 ---@return config.Settings
 M.merged = function(opts)
-  return vim.tbl_deep_extend("force", vim.deepcopy(defaults), opts or {}) --[[@as config.Settings]]
+  local lhs = vim.deepcopy(defaults)
+  local rhs = M.normalize(opts or {})
+  return vim.tbl_deep_extend("force", lhs, rhs) --[[@as config.Settings]]
 end
 
 return M

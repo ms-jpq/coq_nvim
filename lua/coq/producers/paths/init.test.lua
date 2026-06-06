@@ -87,8 +87,8 @@ local words_of = function(items)
   return out
 end
 
-T.describe("paths.matcher", function(test)
-  test("./ lists the cwd as files and folders", function()
+T.describe({ "paths.matcher" }, function(test)
+  test({ "./ lists the cwd as files and folders" }, function()
     local dir = tmpdir()
     touch(dir .. "/spot.txt")
     vim.fn.mkdir(dir .. "/fido")
@@ -101,7 +101,7 @@ T.describe("paths.matcher", function(test)
     T.eq(words_of(items), { "fido/", "rex/", "spot.txt" })
   end)
 
-  test("kind is Folder for dirs, File for files", function()
+  test({ "kind is Folder for dirs, File for files" }, function()
     local dir = tmpdir()
     touch(dir .. "/spot.txt")
     vim.fn.mkdir(dir .. "/fido")
@@ -118,7 +118,7 @@ T.describe("paths.matcher", function(test)
     T.eq(kinds["fido/"], "Folder")
   end)
 
-  test("prefix-filters entries within a directory", function()
+  test({ "prefix-filters entries within a directory" }, function()
     local dir = tmpdir()
     touch(dir .. "/spot.txt")
     touch(dir .. "/scout.txt")
@@ -131,7 +131,7 @@ T.describe("paths.matcher", function(test)
     T.eq(words_of(items), { "spot.txt" })
   end)
 
-  test("prefix match is case-insensitive", function()
+  test({ "prefix match is case-insensitive" }, function()
     local dir = tmpdir()
     touch(dir .. "/Spot.txt")
     touch(dir .. "/Fido.txt")
@@ -143,7 +143,7 @@ T.describe("paths.matcher", function(test)
     T.eq(words_of(items), { "Spot.txt" })
   end)
 
-  test("a non-matching prefix in an existing dir yields nothing, not root", function()
+  test({ "a non-matching prefix in an existing dir yields nothing, not root" }, function()
     -- "b" matches nothing in dir. The parser also emits a bare "/" candidate
     -- (start 1); without the existing-dir guard the matcher would fall through
     -- to it and list root entries like "bin/". The guard commits to dir.
@@ -156,7 +156,7 @@ T.describe("paths.matcher", function(test)
     T.eq(words_of(run_matcher(settings, ctx)), {})
   end)
 
-  test("absolute path lists from /", function()
+  test({ "absolute path lists from /" }, function()
     local dir = tmpdir()
     touch(dir .. "/spot.txt")
 
@@ -167,7 +167,7 @@ T.describe("paths.matcher", function(test)
     T.eq(words_of(items), { "spot.txt" })
   end)
 
-  test("~ expands to home", function()
+  test({ "~ expands to home" }, function()
     -- Point HOME at a controlled dir; listing the live home is racy (it churns
     -- between the matcher's scandir and the assertion).
     local dir = tmpdir()
@@ -186,7 +186,7 @@ T.describe("paths.matcher", function(test)
     T.eq(words_of(items), { "fido/", "spot.txt" })
   end)
 
-  test("$VAR expands when set", function()
+  test({ "$VAR expands when set" }, function()
     local dir = tmpdir()
     touch(dir .. "/spot.txt")
     vim.uv.os_setenv("COQ_TEST_PATHS_DIR", dir)
@@ -200,7 +200,7 @@ T.describe("paths.matcher", function(test)
     vim.uv.os_unsetenv "COQ_TEST_PATHS_DIR"
   end)
 
-  test("file-base resolves to the directory of the current file", function()
+  test({ "file-base resolves to the directory of the current file" }, function()
     local dir = tmpdir()
     touch(dir .. "/spot.txt")
     touch(dir .. "/fido.txt")
@@ -214,7 +214,7 @@ T.describe("paths.matcher", function(test)
     T.eq(words_of(items), { "spot.txt" })
   end)
 
-  test("emits lsp textEdit spanning the segment, not just the keyword", function()
+  test({ "emits lsp textEdit spanning the segment, not just the keyword" }, function()
     local dir = tmpdir()
     touch(dir .. "/spot.txt")
 
@@ -239,7 +239,7 @@ T.describe("paths.matcher", function(test)
     T.eq(edit.newText, "./spot.txt")
   end)
 
-  test("wildignore filters matching entries end-to-end", function()
+  test({ "wildignore filters matching entries end-to-end" }, function()
     local dir = tmpdir()
     touch(dir .. "/spot.txt")
     touch(dir .. "/rex.o")

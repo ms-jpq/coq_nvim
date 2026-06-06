@@ -1,66 +1,66 @@
 local T = require "coq.lib.test"
 local wildignore = require "coq.producers.paths.wildignore"
 
-T.describe("wildignore.glob_to_lua", function(test)
-  test("* matches any sequence", function()
+T.describe({ "wildignore.glob_to_lua" }, function(test)
+  test({ "* matches any sequence" }, function()
     T.eq(wildignore.glob_to_lua "*.o", "^.*%.o$")
   end)
 
-  test("? matches a single char", function()
+  test({ "? matches a single char" }, function()
     T.eq(wildignore.glob_to_lua "?.lua", "^.%.lua$")
   end)
 
-  test("escapes regex metacharacters", function()
+  test({ "escapes regex metacharacters" }, function()
     T.eq(wildignore.glob_to_lua "(x).+", "^%(x%)%.%+$")
   end)
 
-  test("anchors both ends", function()
+  test({ "anchors both ends" }, function()
     local p = wildignore.glob_to_lua "fido"
     T.eq(p, "^fido$")
   end)
 end)
 
-T.describe("wildignore.compile", function(test)
-  test("empty string yields no patterns", function()
+T.describe({ "wildignore.compile" }, function(test)
+  test({ "empty string yields no patterns" }, function()
     T.eq(wildignore.compile "", {})
   end)
 
-  test("comma-splits entries", function()
+  test({ "comma-splits entries" }, function()
     T.eq(wildignore.compile "*.o,*.tmp", { "^.*%.o$", "^.*%.tmp$" })
   end)
 
-  test("skips empty entries from trailing commas", function()
+  test({ "skips empty entries from trailing commas" }, function()
     T.eq(wildignore.compile "*.o,,*.tmp", { "^.*%.o$", "^.*%.tmp$" })
   end)
 end)
 
-T.describe("wildignore.is_ignored", function(test)
+T.describe({ "wildignore.is_ignored" }, function(test)
   local pats = wildignore.compile "*.o,*/node_modules/*"
 
-  test("matches basename pattern (*.o vs fido.o)", function()
+  test({ "matches basename pattern (*.o vs fido.o)" }, function()
     T.eq(wildignore.is_ignored(pats, "fido.o", "/var/dogs/fido.o"), true)
   end)
 
-  test("matches full-path pattern (*/node_modules/*)", function()
+  test({ "matches full-path pattern (*/node_modules/*)" }, function()
     T.eq(wildignore.is_ignored(pats, "react.js", "/var/dogs/node_modules/react.js"), true)
   end)
 
-  test("does not match plain filename when pattern requires structure", function()
+  test({ "does not match plain filename when pattern requires structure" }, function()
     T.eq(wildignore.is_ignored(pats, "fido.txt", "/var/dogs/fido.txt"), false)
   end)
 
-  test("empty pattern list never matches", function()
+  test({ "empty pattern list never matches" }, function()
     T.eq(wildignore.is_ignored({}, "fido.o", "/var/dogs/fido.o"), false)
   end)
 
-  test("? wildcard is single-character", function()
+  test({ "? wildcard is single-character" }, function()
     local single = wildignore.compile "?.o"
     T.eq(wildignore.is_ignored(single, "a.o", "/a.o"), true)
     T.eq(wildignore.is_ignored(single, "ab.o", "/ab.o"), false)
   end)
 end)
 
-T.describe("wildignore vs vim.fn.glob2regpat parity", function(test)
+T.describe({ "wildignore vs vim.fn.glob2regpat parity" }, function(test)
   ---@param glob string
   ---@param name string
   ---@param full string
@@ -105,7 +105,7 @@ T.describe("wildignore vs vim.fn.glob2regpat parity", function(test)
 
   for _, case in ipairs(CASES) do
     local glob, name, full = case[1], case[2], case[3]
-    test(string.format("%q vs name=%q full=%q", glob, name, full), function()
+    test({ string.format("%q vs name=%q full=%q", glob, name, full) }, function()
       T.eq(our_matches(glob, name, full), vim_matches(glob, name, full))
     end)
   end

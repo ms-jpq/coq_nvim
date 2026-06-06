@@ -15,8 +15,8 @@ local words = function(iter)
   return out
 end
 
-T.describe("buffer.index", function(test)
-  test("search routes by filetype, buf, and prefix", function()
+T.describe({ "buffer.index" }, function(test)
+  test({ "search routes by filetype, buf, and prefix" }, function()
     local index = index_m.new(settings)
     index.insert { word = "labrador", buf = 1, filetype = "lua", filename = "" }
     index.insert { word = "lily", buf = 1, filetype = "lua", filename = "" }
@@ -29,7 +29,7 @@ T.describe("buffer.index", function(test)
     T.eq(words(index.search { filetype = "python", buf = 3, keyword_before = "la" }), { "labrador" })
   end)
 
-  test("nil filetype fans out across filetypes", function()
+  test({ "nil filetype fans out across filetypes" }, function()
     local index = index_m.new(settings)
     index.insert { word = "labrador", buf = 1, filetype = "lua", filename = "" }
     index.insert { word = "labradoodle", buf = 2, filetype = "python", filename = "" }
@@ -37,7 +37,7 @@ T.describe("buffer.index", function(test)
     T.eq(words(index.search { keyword_before = "lab" }), { "labradoodle", "labrador" })
   end)
 
-  test("nil buf fans out across bufs within a filetype", function()
+  test({ "nil buf fans out across bufs within a filetype" }, function()
     local index = index_m.new(settings)
     index.insert { word = "labrador", buf = 1, filetype = "lua", filename = "" }
     index.insert { word = "lily", buf = 2, filetype = "lua", filename = "" }
@@ -46,7 +46,7 @@ T.describe("buffer.index", function(test)
     T.eq(words(index.search { filetype = "lua", keyword_before = "l" }), { "labrador", "lily" })
   end)
 
-  test("prune by buf removes only that buf within a filetype", function()
+  test({ "prune by buf removes only that buf within a filetype" }, function()
     local index = index_m.new(settings)
     index.insert { word = "labrador", buf = 1, filetype = "lua", filename = "" }
     index.insert { word = "lily", buf = 2, filetype = "lua", filename = "" }
@@ -56,7 +56,7 @@ T.describe("buffer.index", function(test)
     T.eq(words(index.search { filetype = "lua" }), { "lily" })
   end)
 
-  test("inserting same word into the same buf overwrites", function()
+  test({ "inserting same word into the same buf overwrites" }, function()
     local index = index_m.new(settings)
     index.insert { word = "labrador", buf = 1, filetype = "lua", filename = "old.lua" }
     index.insert { word = "labrador", buf = 1, filetype = "lua", filename = "new.lua" }

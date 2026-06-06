@@ -19,8 +19,8 @@ local delayed = function(value, delay)
   end
 end
 
-T.describe("merge", function(test)
-  test("of one iter yields values until exhausted", function()
+T.describe({ "merge" }, function(test)
+  test({ "of one iter yields values until exhausted" }, function()
     local i = 0
     local iter = function()
       i = i + 1
@@ -40,7 +40,7 @@ T.describe("merge", function(test)
     T.eq(out, { 10, 20, 30 })
   end)
 
-  test("returns each iter's value in completion order", function()
+  test({ "returns each iter's value in completion order" }, function()
     local out = {}
     local _, m = async.merge {
       delayed("a", 2 * T.SLOW),
@@ -54,7 +54,7 @@ T.describe("merge", function(test)
     T.eq(out, { "a", "b", "c" })
   end)
 
-  test("returns the original iter index alongside the value", function()
+  test({ "returns the original iter index alongside the value" }, function()
     local out = {}
     local _, m = async.merge {
       delayed("a", 2 * T.SLOW),
@@ -68,7 +68,7 @@ T.describe("merge", function(test)
     T.eq(out, { { 1, "a" }, { 3, "b" }, { 2, "c" } })
   end)
 
-  test("returns nil when ambient handle cancelled mid-merge", function()
+  test({ "returns nil when ambient handle cancelled mid-merge" }, function()
     local nursery = require "coq.lib.async._nursery"
     local h = handle.new()
     local got
@@ -88,7 +88,7 @@ T.describe("merge", function(test)
     T.eq(got, nil)
   end)
 
-  test("close stops further pulls", function()
+  test({ "close stops further pulls" }, function()
     local close, m = async.merge {
       function()
         async.sleep(100 * T.SLOW)
@@ -100,7 +100,7 @@ T.describe("merge", function(test)
     T.eq(m(), nil)
   end)
 
-  test("close raises errors from a failed iter", function()
+  test({ "close raises errors from a failed iter" }, function()
     local close, _ = async.merge {
       function()
         async.sleep(2 * T.SLOW)
@@ -114,7 +114,7 @@ T.describe("merge", function(test)
     T.eq(err, "bad dog")
   end)
 
-  test("pull raises errors from a failed iter", function()
+  test({ "pull raises errors from a failed iter" }, function()
     local _, m = async.merge {
       function()
         async.sleep(2 * T.SLOW)
@@ -130,7 +130,7 @@ T.describe("merge", function(test)
     T.eq(err, "bad dog")
   end)
 
-  test("close cancels in-flight producers", function()
+  test({ "close cancels in-flight producers" }, function()
     local fired = false
     async.scope(function(n)
       n.spawn(function()
@@ -151,7 +151,7 @@ T.describe("merge", function(test)
     T.eq(fired, true)
   end)
 
-  test("accepts a channel pull as an iter", function()
+  test({ "accepts a channel pull as an iter" }, function()
     local chan = mpmc.new(math.huge)
     chan.push "spot"
     chan.push "fido"
@@ -166,7 +166,7 @@ T.describe("merge", function(test)
     T.eq(out, { "spot", "fido" })
   end)
 
-  test("merges two channels, interleaved by push order", function()
+  test({ "merges two channels, interleaved by push order" }, function()
     local a, b = mpmc.new(math.huge), mpmc.new(math.huge)
 
     async.scope(function(n)
@@ -191,7 +191,7 @@ T.describe("merge", function(test)
     end)
   end)
 
-  test("mixes async.wrap iters and channel pulls", function()
+  test({ "mixes async.wrap iters and channel pulls" }, function()
     local chan = mpmc.new(math.huge)
     chan.push "spot"
     chan.close()
@@ -210,7 +210,7 @@ T.describe("merge", function(test)
     T.eq(out, { "fido", "spot" })
   end)
 
-  test("close unblocks a channel pull waiting on data", function()
+  test({ "close unblocks a channel pull waiting on data" }, function()
     local chan = mpmc.new(math.huge)
 
     async.scope(function(n)

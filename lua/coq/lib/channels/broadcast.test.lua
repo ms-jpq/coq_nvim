@@ -2,13 +2,13 @@ local T = require "coq.lib.test"
 local async = require "coq.lib.async"
 local broadcast = require "coq.lib.channels.broadcast"
 
-T.describe("broadcast", function(test)
-  test("push without subscribers is a noop", function()
+T.describe({ "broadcast" }, function(test)
+  test({ "push without subscribers is a noop" }, function()
     local chan = broadcast.new()
     chan.replace "lil"
   end)
 
-  test("replace fans out to every subscriber", function()
+  test({ "replace fans out to every subscriber" }, function()
     local chan = broadcast.new()
     local _, s1 = chan.subscribe()
     local _, s2 = chan.subscribe()
@@ -20,7 +20,7 @@ T.describe("broadcast", function(test)
     T.eq(s3(), "lil")
   end)
 
-  test("pull awaits a future push", function()
+  test({ "pull awaits a future push" }, function()
     local chan = broadcast.new()
     local _, sub = chan.subscribe()
     local got
@@ -36,7 +36,7 @@ T.describe("broadcast", function(test)
     T.eq(got, "spot")
   end)
 
-  test("latest push wins when subscriber is slow", function()
+  test({ "latest push wins when subscriber is slow" }, function()
     local chan = broadcast.new()
     local _, sub = chan.subscribe()
     chan.replace "lil"
@@ -46,7 +46,7 @@ T.describe("broadcast", function(test)
     T.eq(sub(), "fido")
   end)
 
-  test("subscribers iterate via for loop", function()
+  test({ "subscribers iterate via for loop" }, function()
     local chan = broadcast.new()
     local seen = {}
     async.scope(function(n)
@@ -72,7 +72,7 @@ T.describe("broadcast", function(test)
     T.eq(seen, { "lil", "spot", "fido" })
   end)
 
-  test("iter.close terminates iteration", function()
+  test({ "iter.close terminates iteration" }, function()
     local chan = broadcast.new()
     local close, iter = chan.subscribe()
     local exited = false
@@ -88,7 +88,7 @@ T.describe("broadcast", function(test)
     T.eq(exited, true)
   end)
 
-  test("replace after close is silent", function()
+  test({ "replace after close is silent" }, function()
     local chan = broadcast.new()
     local _, sub = chan.subscribe()
     chan.close()
@@ -97,7 +97,7 @@ T.describe("broadcast", function(test)
     T.eq(sub(), nil)
   end)
 
-  test("subscribe after close returns a closed iter", function()
+  test({ "subscribe after close returns a closed iter" }, function()
     local chan = broadcast.new()
     chan.close()
     local _, sub = chan.subscribe()
@@ -105,7 +105,7 @@ T.describe("broadcast", function(test)
     T.eq(sub(), nil)
   end)
 
-  test("replace is safe when puller closes mid-iteration", function()
+  test({ "replace is safe when puller closes mid-iteration" }, function()
     local chan = broadcast.new()
     local seen_a, seen_b = {}, {}
     async.scope(function(n)
@@ -131,7 +131,7 @@ T.describe("broadcast", function(test)
     T.eq(seen_b, { "lil" })
   end)
 
-  test("close drains pending value before nil", function()
+  test({ "close drains pending value before nil" }, function()
     local chan = broadcast.new()
     local _, sub = chan.subscribe()
     chan.replace "lil"
@@ -141,7 +141,7 @@ T.describe("broadcast", function(test)
     T.eq(sub(), nil)
   end)
 
-  test("iter.close before first replace cleans up without waking anything", function()
+  test({ "iter.close before first replace cleans up without waking anything" }, function()
     local chan = broadcast.new()
     local close, sub = chan.subscribe()
     close()
@@ -150,14 +150,14 @@ T.describe("broadcast", function(test)
     T.eq(sub(), nil)
   end)
 
-  test("replace returns true on success and false on closed", function()
+  test({ "replace returns true on success and false on closed" }, function()
     local chan = broadcast.new()
     T.eq(chan.replace "lil", true)
     chan.close()
     T.eq(chan.replace "spot", false)
   end)
 
-  test("replace forwards multiple values to a subscriber", function()
+  test({ "replace forwards multiple values to a subscriber" }, function()
     local chan = broadcast.new()
     local _, sub = chan.subscribe()
     chan.replace("lil", "spot", "fido")
@@ -166,7 +166,7 @@ T.describe("broadcast", function(test)
     T.eq({ a, b, c }, { "lil", "spot", "fido" })
   end)
 
-  test("a late subscriber is seeded with the latest replaced value", function()
+  test({ "a late subscriber is seeded with the latest replaced value" }, function()
     local chan = broadcast.new()
     chan.replace "lil"
     local _, sub = chan.subscribe()
@@ -174,7 +174,7 @@ T.describe("broadcast", function(test)
     T.eq(sub(), "lil")
   end)
 
-  test("only the latest value is retained for late subscribers", function()
+  test({ "only the latest value is retained for late subscribers" }, function()
     local chan = broadcast.new()
     chan.replace "lil"
     chan.replace "spot"
@@ -183,7 +183,7 @@ T.describe("broadcast", function(test)
     T.eq(sub(), "spot")
   end)
 
-  test("a subscriber on an untouched channel has nothing pending", function()
+  test({ "a subscriber on an untouched channel has nothing pending" }, function()
     local chan = broadcast.new()
     local _, sub = chan.subscribe()
     local got = "unset"
@@ -198,7 +198,7 @@ T.describe("broadcast", function(test)
     T.eq(got, "fido")
   end)
 
-  test("a cancelled await does not disturb other subscribers", function()
+  test({ "a cancelled await does not disturb other subscribers" }, function()
     local chan = broadcast.new()
     local _, live = chan.subscribe()
     async.scope(function(n)

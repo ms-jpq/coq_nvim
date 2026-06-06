@@ -2,15 +2,15 @@ local T = require "coq.lib.test"
 local async = require "coq.lib.async"
 local mpmc = require "coq.lib.channels.mpmc"
 
-T.describe("mpmc", function(test)
-  test("push then pull returns the value", function()
+T.describe({ "mpmc" }, function(test)
+  test({ "push then pull returns the value" }, function()
     local chan = mpmc.new(1)
     chan.push "lil"
 
     T.eq(chan.pull(), "lil")
   end)
 
-  test("pulls in FIFO order", function()
+  test({ "pulls in FIFO order" }, function()
     local chan = mpmc.new(3)
     chan.push "lil"
     chan.push "spot"
@@ -21,7 +21,7 @@ T.describe("mpmc", function(test)
     T.eq(chan.pull(), "fido")
   end)
 
-  test("pull blocks until push happens", function()
+  test({ "pull blocks until push happens" }, function()
     local chan = mpmc.new(1)
     local got
     async.scope(function(n)
@@ -35,7 +35,7 @@ T.describe("mpmc", function(test)
     T.eq(got, "spot")
   end)
 
-  test("push and pull forward multiple values", function()
+  test({ "push and pull forward multiple values" }, function()
     local chan = mpmc.new(1)
     chan.push("lil", "spot", "fido")
     local a, b, c = chan.pull()
@@ -43,14 +43,14 @@ T.describe("mpmc", function(test)
     T.eq({ a, b, c }, { "lil", "spot", "fido" })
   end)
 
-  test("close on empty makes pull return nil", function()
+  test({ "close on empty makes pull return nil" }, function()
     local chan = mpmc.new(1)
     chan.close()
 
     T.eq(chan.pull(), nil)
   end)
 
-  test("close drains queued items before nil", function()
+  test({ "close drains queued items before nil" }, function()
     local chan = mpmc.new(2)
     chan.push "lil"
     chan.push "spot"
@@ -61,7 +61,7 @@ T.describe("mpmc", function(test)
     T.eq(chan.pull(), nil)
   end)
 
-  test("push after close is silently dropped", function()
+  test({ "push after close is silently dropped" }, function()
     local chan = mpmc.new(1)
     chan.close()
     chan.push "lil"
@@ -69,7 +69,7 @@ T.describe("mpmc", function(test)
     T.eq(chan.pull(), nil)
   end)
 
-  test("push returns true on success and false on closed", function()
+  test({ "push returns true on success and false on closed" }, function()
     local chan = mpmc.new(1)
 
     T.eq(chan.push "lil", true)
@@ -77,7 +77,7 @@ T.describe("mpmc", function(test)
     T.eq(chan.push "spot", false)
   end)
 
-  test("close wakes a blocked puller", function()
+  test({ "close wakes a blocked puller" }, function()
     local chan = mpmc.new(1)
     local got
     async.scope(function(n)
@@ -91,7 +91,7 @@ T.describe("mpmc", function(test)
     T.eq(got, nil)
   end)
 
-  test("multiple producers push from coroutines", function()
+  test({ "multiple producers push from coroutines" }, function()
     local chan = mpmc.new(1)
     local seen = {}
     async.scope(function(n)
@@ -121,7 +121,7 @@ T.describe("mpmc", function(test)
     T.eq(seen, { "lil", "spot", "fido" })
   end)
 
-  test("bounded push blocks until pull frees a slot", function()
+  test({ "bounded push blocks until pull frees a slot" }, function()
     local chan = mpmc.new(2)
     local progress = {}
     async.scope(function(n)
@@ -143,7 +143,7 @@ T.describe("mpmc", function(test)
     T.eq(progress, { "p1", "p2", "pull", "p3" })
   end)
 
-  test("bounded wakes producers one slot at a time", function()
+  test({ "bounded wakes producers one slot at a time" }, function()
     local chan = mpmc.new(1)
     local pushed = {}
     async.scope(function(n)
@@ -165,7 +165,7 @@ T.describe("mpmc", function(test)
     end)
   end)
 
-  test("callable via for-loop", function()
+  test({ "callable via for-loop" }, function()
     local chan = mpmc.new(1)
     local seen = {}
     async.scope(function(n)
@@ -185,7 +185,7 @@ T.describe("mpmc", function(test)
     T.eq(seen, { "lil", "spot", "fido" })
   end)
 
-  test("push synchronously hands off to a waiting puller", function()
+  test({ "push synchronously hands off to a waiting puller" }, function()
     local chan = mpmc.new(1)
     local order = {}
     async.scope(function(n)
@@ -203,7 +203,7 @@ T.describe("mpmc", function(test)
     T.eq(order, { "pull_start", "push_start", "pull_done", "push_done" })
   end)
 
-  test("bounded close wakes all blocked pushers", function()
+  test({ "bounded close wakes all blocked pushers" }, function()
     local chan = mpmc.new(1)
     local results = {}
     async.scope(function(n)
@@ -221,7 +221,7 @@ T.describe("mpmc", function(test)
     T.eq(results, { a = false, b = false })
   end)
 
-  test("a cancelled puller does not swallow a later push", function()
+  test({ "a cancelled puller does not swallow a later push" }, function()
     local chan = mpmc.new(1)
     local got = "none"
     async.scope(function(n)

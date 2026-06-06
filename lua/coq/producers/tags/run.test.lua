@@ -14,8 +14,8 @@ local write_tmp = function(contents, suffix)
   return path
 end
 
-T.describe("tags.run :: end-to-end with real ctags", function(test)
-  test("shells to ctags, parses tags from a python source", function()
+T.describe({ "tags.run :: end-to-end with real ctags" }, function(test)
+  test({ "shells to ctags, parses tags from a python source" }, function()
     if vim.fn.executable "ctags" == 0 then
       return
     end
@@ -58,7 +58,7 @@ T.describe("tags.run :: end-to-end with real ctags", function(test)
     T.eq(by_name.bark.scopeKind, "class")
   end)
 
-  test("empty path list yields nil without spawning", function()
+  test({ "empty path list yields nil without spawning" }, function()
     local raw
     async.scope(function()
       raw = run.run("ctags", {})

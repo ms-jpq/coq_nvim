@@ -1,8 +1,8 @@
 local T = require "coq.lib.test"
 local sparse = require "coq.lib.sparse_table"
 
-T.describe("sparse_table", function(test)
-  test("push returns monotonic keys and iter yields in insertion order", function()
+T.describe({ "sparse_table" }, function(test)
+  test({ "push returns monotonic keys and iter yields in insertion order" }, function()
     local s = sparse.new()
     local k1 = s.push "lil"
     local k2 = s.push "fido"
@@ -17,7 +17,7 @@ T.describe("sparse_table", function(test)
     T.eq(out, { "lil", "fido", "spot" })
   end)
 
-  test("remove leaves a hole that iter and shift skip", function()
+  test({ "remove leaves a hole that iter and shift skip" }, function()
     local s = sparse.new()
     s.push "lil"
     local k = s.push "fido"

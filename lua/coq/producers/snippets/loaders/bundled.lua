@@ -49,7 +49,11 @@ M.parse = function(src, text)
   local items = vim
     .iter(coroutine.wrap(function()
       for _, snip in pairs(json.snippets) do
-        if type(snip) == "table" and type(snip.filetype) == "string" and string.lower(snip.filetype) == src.filetype then
+        if
+          type(snip) == "table"
+          and type(snip.filetype) == "string"
+          and string.lower(snip.filetype) == src.filetype
+        then
           local matches = type(snip.matches) == "table" and snip.matches or {}
           local content = type(snip.content) == "string" and snip.content or ""
           local label = type(snip.label) == "string" and snip.label or ""

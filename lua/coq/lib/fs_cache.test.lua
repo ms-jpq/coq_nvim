@@ -21,8 +21,8 @@ local write = function(dir, name, data)
   return path
 end
 
-T.describe("fs_cache.mtime_ns", function(test)
-  test("returns ns mtime for an existing file", function()
+T.describe({ "fs_cache.mtime_ns" }, function(test)
+  test({ "returns ns mtime for an existing file" }, function()
     local dir = tmpdir()
     local path = write(dir, "labrador", "fido")
     local got
@@ -33,7 +33,7 @@ T.describe("fs_cache.mtime_ns", function(test)
     assert(got > 0)
   end)
 
-  test("returns nil for a missing file", function()
+  test({ "returns nil for a missing file" }, function()
     local path = vim.fn.tempname() .. "/nope"
     local got
     async.scope(function()
@@ -43,8 +43,8 @@ T.describe("fs_cache.mtime_ns", function(test)
   end)
 end)
 
-T.describe("fs_cache.new", function(test)
-  test("first fetch invokes compute and caches the result", function()
+T.describe({ "fs_cache.new" }, function(test)
+  test({ "first fetch invokes compute and caches the result" }, function()
     local computes = 0
     local store = fs_cache.new {
       fs_root = tmpdir(),
@@ -65,7 +65,7 @@ T.describe("fs_cache.new", function(test)
     T.eq(result and result.payload, "labrador")
   end)
 
-  test("second fetch with stale mtime hits the cache", function()
+  test({ "second fetch with stale mtime hits the cache" }, function()
     local computes = 0
     local store = fs_cache.new {
       fs_root = tmpdir(),
@@ -85,7 +85,7 @@ T.describe("fs_cache.new", function(test)
     T.eq(r1, r2)
   end)
 
-  test("fetch with newer mtime recomputes", function()
+  test({ "fetch with newer mtime recomputes" }, function()
     local computes = 0
     local store = fs_cache.new {
       fs_root = tmpdir(),
@@ -106,7 +106,7 @@ T.describe("fs_cache.new", function(test)
     T.eq(r2.n, 2)
   end)
 
-  test("distinct keys do not collide on disk", function()
+  test({ "distinct keys do not collide on disk" }, function()
     local store = fs_cache.new {
       fs_root = tmpdir(),
       compute = function(key)
@@ -124,7 +124,7 @@ T.describe("fs_cache.new", function(test)
     T.eq(b.who, "spot")
   end)
 
-  test("keys with path-unsafe characters round-trip", function()
+  test({ "keys with path-unsafe characters round-trip" }, function()
     local computes = 0
     local store = fs_cache.new {
       fs_root = tmpdir(),
@@ -144,7 +144,7 @@ T.describe("fs_cache.new", function(test)
     T.eq(r1, r2)
   end)
 
-  test("prune removes the cache file, next fetch recomputes", function()
+  test({ "prune removes the cache file, next fetch recomputes" }, function()
     local computes = 0
     local store = fs_cache.new {
       fs_root = tmpdir(),
@@ -163,7 +163,7 @@ T.describe("fs_cache.new", function(test)
     T.eq(computes, 2)
   end)
 
-  test("prune on a missing key is a no-op", function()
+  test({ "prune on a missing key is a no-op" }, function()
     local store = fs_cache.new {
       fs_root = tmpdir(),
       compute = function()

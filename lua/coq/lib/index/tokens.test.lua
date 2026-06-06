@@ -102,7 +102,7 @@ local probe = function(ft)
   return iskeyword, expected
 end
 
-T.test("tokens.parity across all filetypes", function()
+T.test({ "tokens.parity across all filetypes" }, function()
   local failures = {}
 
   for _, ft in pairs(enumerate_filetypes()) do
@@ -119,29 +119,29 @@ T.test("tokens.parity across all filetypes", function()
   T.eq(failures, {})
 end)
 
-T.describe("tokens.trailing_keyword_before", function(test)
+T.describe({ "tokens.trailing_keyword_before" }, function(test)
   local kw = tokens.parse_charset "@,48-57,_"
 
-  test("empty line returns empty", function()
+  test({ "empty line returns empty" }, function()
     T.eq(tokens.trailing_keyword_before(kw, ""), "")
   end)
 
-  test("returns the trailing keyword substring", function()
+  test({ "returns the trailing keyword substring" }, function()
     T.eq(tokens.trailing_keyword_before(kw, "hello"), "hello")
     T.eq(tokens.trailing_keyword_before(kw, "foo bar"), "bar")
     T.eq(tokens.trailing_keyword_before(kw, "obj.method"), "method")
   end)
 
-  test("non-keyword tail returns empty", function()
+  test({ "non-keyword tail returns empty" }, function()
     T.eq(tokens.trailing_keyword_before(kw, "hello "), "")
     T.eq(tokens.trailing_keyword_before(kw, "foo."), "")
   end)
 
-  test("respects iskeyword: hyphen excluded by default", function()
+  test({ "respects iskeyword: hyphen excluded by default" }, function()
     T.eq(tokens.trailing_keyword_before(kw, "kebab-case"), "case")
   end)
 
-  test("respects iskeyword: hyphen included when configured", function()
+  test({ "respects iskeyword: hyphen included when configured" }, function()
     local with_dash = tokens.parse_charset "@,48-57,_,-"
     T.eq(tokens.trailing_keyword_before(with_dash, "kebab-case"), "kebab-case")
   end)

@@ -1,8 +1,8 @@
 local T = require "coq.lib.test"
 local parse = require "coq.producers.tags.parse"
 
-T.describe("tags.parse", function(test)
-  test("yields a single tag from one json line", function()
+T.describe({ "tags.parse" }, function(test)
+  test({ "yields a single tag from one json line" }, function()
     local raw = vim.json.encode {
       _type = "tag",
       name = "lil",
@@ -23,7 +23,7 @@ T.describe("tags.parse", function(test)
     T.eq(tags[1].pattern, "def lil():")
   end)
 
-  test("ignores non-tag entries and blank lines", function()
+  test({ "ignores non-tag entries and blank lines" }, function()
     local raw = table.concat({
       vim.json.encode { _type = "ptag", name = "TAG_FILE_SORTED" },
       "",
@@ -35,7 +35,7 @@ T.describe("tags.parse", function(test)
     T.eq(tags[1].word, "spot")
   end)
 
-  test("drops tag entries missing required name or path", function()
+  test({ "drops tag entries missing required name or path" }, function()
     local raw = table.concat({
       vim.json.encode { _type = "tag", path = "/dogs/no-name.py", line = 1 },
       vim.json.encode { _type = "tag", name = "no-path", line = 1 },
@@ -47,7 +47,7 @@ T.describe("tags.parse", function(test)
     T.eq(tags[1].word, "fido")
   end)
 
-  test("survives a malformed json line", function()
+  test({ "survives a malformed json line" }, function()
     local raw = table.concat({
       "{not json}",
       vim.json.encode { _type = "tag", name = "fido", path = "/dogs/fido.py", line = 5 },
@@ -58,7 +58,7 @@ T.describe("tags.parse", function(test)
     T.eq(tags[1].word, "fido")
   end)
 
-  test("forwards optional scope and signature fields", function()
+  test({ "forwards optional scope and signature fields" }, function()
     local raw = vim.json.encode {
       _type = "tag",
       name = "bark",
@@ -82,44 +82,44 @@ T.describe("tags.parse", function(test)
   end)
 end)
 
-T.describe("tags.parse._unescape", function(test)
-  test("strips the leading and trailing slash delimiters", function()
+T.describe({ "tags.parse._unescape" }, function(test)
+  test({ "strips the leading and trailing slash delimiters" }, function()
     T.eq(parse._unescape "/def lil():/", "def lil():")
   end)
 
-  test("strips a leading ^ anchor", function()
+  test({ "strips a leading ^ anchor" }, function()
     T.eq(parse._unescape "/^def lil():/", "def lil():")
   end)
 
-  test("strips a trailing $ anchor", function()
+  test({ "strips a trailing $ anchor" }, function()
     T.eq(parse._unescape "/def lil():$/", "def lil():")
   end)
 
-  test("strips both ^ and $ anchors", function()
+  test({ "strips both ^ and $ anchors" }, function()
     T.eq(parse._unescape "/^def lil():$/", "def lil():")
   end)
 
-  test("trims interior whitespace around the body", function()
+  test({ "trims interior whitespace around the body" }, function()
     T.eq(parse._unescape "/^   def spot():   $/", "def spot():")
   end)
 
-  test("unescapes backslash-escaped slashes", function()
+  test({ "unescapes backslash-escaped slashes" }, function()
     T.eq(parse._unescape [[/a\/b\/c/]], "a/b/c")
   end)
 
-  test("unescapes backslash-escaped backslashes", function()
+  test({ "unescapes backslash-escaped backslashes" }, function()
     T.eq(parse._unescape [[/a\\b/]], [[a\b]])
   end)
 
-  test("drops backslash escapes for unrecognized chars", function()
+  test({ "drops backslash escapes for unrecognized chars" }, function()
     T.eq(parse._unescape [[/a\nb/]], "ab")
   end)
 
-  test("preserves regex metacharacters that are not anchors", function()
+  test({ "preserves regex metacharacters that are not anchors" }, function()
     T.eq(parse._unescape "/def fido(.*):/", "def fido(.*):")
   end)
 
-  test("empty pattern body returns empty", function()
+  test({ "empty pattern body returns empty" }, function()
     T.eq(parse._unescape "//", "")
     T.eq(parse._unescape "/^$/", "")
   end)

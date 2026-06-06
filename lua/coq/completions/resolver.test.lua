@@ -11,8 +11,8 @@ local lsp_item = function(tag)
   return { word = tag, meta = { uid = tag, source = "LSP", filter = tag, fuzzy = 0, lsp = { tag = tag } } } --[[@as completions.Item]]
 end
 
-T.describe("resolver", function(test)
-  test("caches resolved results by uid", function()
+T.describe({ "resolver" }, function(test)
+  test({ "caches resolved results by uid" }, function()
     local calls = 0
     async.scope(function(n)
       local r = resolver_m.new(n, function(_, item)
@@ -30,7 +30,7 @@ T.describe("resolver", function(test)
 
   -- nvim deep-copies item.user_data through VimL, so highlight and commit see
   -- DISTINCT tables with identical content. The cache must key on content.
-  test("shares cache across distinct tables of equal content", function()
+  test({ "shares cache across distinct tables of equal content" }, function()
     local calls = 0
     async.scope(function(n)
       local r = resolver_m.new(n, function(_, item)
@@ -46,7 +46,7 @@ T.describe("resolver", function(test)
     T.eq(calls, 1)
   end)
 
-  test("dedups concurrent in-flight requests", function()
+  test({ "dedups concurrent in-flight requests" }, function()
     local calls = 0
     local got = {}
     async.scope(function(n)
@@ -75,7 +75,7 @@ T.describe("resolver", function(test)
     assert(got.a ~= nil and got.a == got.b, "both awaiters should share the resolved value")
   end)
 
-  test("reset clears state and re-fetches", function()
+  test({ "reset clears state and re-fetches" }, function()
     local calls = 0
     async.scope(function(n)
       local r = resolver_m.new(n, function(_, item)
@@ -93,7 +93,7 @@ T.describe("resolver", function(test)
   -- reset() starts a new cycle with its own cache. A previous cycle's in-flight
   -- fetch that fails/cancels AFTER the reset must clean up against its OWN
   -- (discarded) cache, never the new cycle's live one.
-  test("a stale cycle's failed fetch does not evict the new cycle's entry", function()
+  test({ "a stale cycle's failed fetch does not evict the new cycle's entry" }, function()
     local calls = 0
     async.scope(function(n)
       local started = async.future()
@@ -130,7 +130,7 @@ T.describe("resolver", function(test)
     T.eq(calls, 2)
   end)
 
-  test("caches a nil result without re-fetching", function()
+  test({ "caches a nil result without re-fetching" }, function()
     local calls = 0
     async.scope(function(n)
       local r = resolver_m.new(n, function()

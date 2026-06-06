@@ -2,8 +2,8 @@ local T = require "coq.lib.test"
 local lib = require "coq.lib"
 local worker = require "coq.lib.worker"
 
-T.describe("worker", function(test)
-  test("globals persist across queues on the same worker", function()
+T.describe({ "worker" }, function(test)
+  test({ "globals persist across queues on the same worker" }, function()
     local w = worker.spawn()
     w.queue(function()
       _G.tricks = 0
@@ -22,7 +22,7 @@ T.describe("worker", function(test)
     T.eq(n, 2)
   end)
 
-  test("queue forwards args", function()
+  test({ "queue forwards args" }, function()
     local w = worker.spawn()
     local g = w.queue(function(greeting, name)
       return greeting .. ", " .. name
@@ -32,7 +32,7 @@ T.describe("worker", function(test)
     T.eq(g, "hi, spot")
   end)
 
-  test("multi-return from a queued fn", function()
+  test({ "multi-return from a queued fn" }, function()
     local w = worker.spawn()
     local fn = function()
       return "lil", 7, true
@@ -46,7 +46,7 @@ T.describe("worker", function(test)
     T.eq(c, true)
   end)
 
-  test("queue errors after an await propagate at user site (not worker frames)", function()
+  test({ "queue errors after an await propagate at user site (not worker frames)" }, function()
     local w = worker.spawn()
     local ok, err = pcall(w.queue, function()
       require("coq.lib.async").sleep(0)
@@ -62,7 +62,7 @@ T.describe("worker", function(test)
     assert(not err:find "worker/init.lua", "error must not point inside worker, got: " .. tostring(err))
   end)
 
-  test("queue errors propagate at user site and the worker survives", function()
+  test({ "queue errors propagate at user site and the worker survives" }, function()
     local w = worker.spawn()
     local ok, err = pcall(w.queue, function()
       error "lil went missing"
@@ -80,7 +80,7 @@ T.describe("worker", function(test)
     T.eq(r, "still alive")
   end)
 
-  test("a queued fn can yield via async", function()
+  test({ "a queued fn can yield via async" }, function()
     local w = worker.spawn()
     local start = vim.uv.hrtime()
     w.queue(function(ms)
@@ -92,7 +92,7 @@ T.describe("worker", function(test)
     assert(elapsed_ms >= 3 * T.SLOW, ("expected ~5ms, got %.1fms"):format(elapsed_ms))
   end)
 
-  test("a queued fn can call back to main via worker.main", function()
+  test({ "a queued fn can call back to main via worker.main" }, function()
     local expected = vim.fn.getcwd()
     local w = worker.spawn()
     local cwd_from_worker = w.queue(function()
@@ -105,7 +105,7 @@ T.describe("worker", function(test)
     T.eq(cwd_from_worker, expected)
   end)
 
-  test("worker.main forwards args", function()
+  test({ "worker.main forwards args" }, function()
     local w = worker.spawn()
     local r = w.queue(function(a, b)
       return require("coq.lib.worker").main(function(x, y)
@@ -117,7 +117,7 @@ T.describe("worker", function(test)
     T.eq(r, 7)
   end)
 
-  test("worker.main propagates errors from main", function()
+  test({ "worker.main propagates errors from main" }, function()
     local w = worker.spawn()
     local ok, err = pcall(w.queue, function()
       return require("coq.lib.worker").main(function()
@@ -131,7 +131,7 @@ T.describe("worker", function(test)
     assert(err:find "lil went missing", "expected main error, got: " .. tostring(err))
   end)
 
-  test("worker.main fn can yield via async", function()
+  test({ "worker.main fn can yield via async" }, function()
     local expected = vim.fn.getcwd()
     local w = worker.spawn()
     local r = w.queue(function()
@@ -145,7 +145,7 @@ T.describe("worker", function(test)
     T.eq(r, expected)
   end)
 
-  test("queue_stream yields values to a for loop", function()
+  test({ "queue_stream yields values to a for loop" }, function()
     local w = worker.spawn()
     local seen = {}
     local _, stream = w.queue_stream(function()
@@ -161,7 +161,7 @@ T.describe("worker", function(test)
     T.eq(seen, { "lil", "spot", "fido" })
   end)
 
-  test("queue_stream yields multiple values per item", function()
+  test({ "queue_stream yields multiple values per item" }, function()
     local w = worker.spawn()
     local seen = {}
     local _, stream = w.queue_stream(function()
@@ -176,7 +176,7 @@ T.describe("worker", function(test)
     T.eq(seen, { { "spot", 3 }, { "fido", 7 } })
   end)
 
-  test("queue_stream forwards args", function()
+  test({ "queue_stream forwards args" }, function()
     local w = worker.spawn()
     local seen = {}
     local _, stream = w.queue_stream(function(n)
@@ -192,7 +192,7 @@ T.describe("worker", function(test)
     T.eq(seen, { 1, 2, 3, 4 })
   end)
 
-  test("queue_stream propagates errors at user iteration site", function()
+  test({ "queue_stream propagates errors at user iteration site" }, function()
     local w = worker.spawn()
     local seen = {}
     local ok, err = pcall(function()
@@ -214,7 +214,7 @@ T.describe("worker", function(test)
     assert(not emsg:find "worker/init.lua", "error must not point inside worker, got: " .. emsg)
   end)
 
-  test("close before any iter is a no-op (lazy): fn never runs", function()
+  test({ "close before any iter is a no-op (lazy): fn never runs" }, function()
     local w = worker.spawn()
     w.queue(function()
       _G.ran = false
@@ -233,13 +233,13 @@ T.describe("worker", function(test)
     T.eq(ran, false)
   end)
 
-  test("close is idempotent", function()
+  test({ "close is idempotent" }, function()
     local w = worker.spawn()
     w.close()
     w.close()
   end)
 
-  test("queue after close raises", function()
+  test({ "queue after close raises" }, function()
     local w = worker.spawn()
     w.close()
     local ok, err = pcall(w.queue, function()
@@ -250,7 +250,7 @@ T.describe("worker", function(test)
     assert(err and err:find "worker closed", "expected worker closed, got: " .. tostring(err))
   end)
 
-  test("queue_stream can call back to main mid-stream", function()
+  test({ "queue_stream can call back to main mid-stream" }, function()
     local w = worker.spawn()
     local seen = {}
     local _, stream = w.queue_stream(function()
@@ -270,7 +270,7 @@ T.describe("worker", function(test)
     T.eq(seen, { "LIL", "SPOT", "FIDO" })
   end)
 
-  test("close mid-stream is sticky for subsequent yields", function()
+  test({ "close mid-stream is sticky for subsequent yields" }, function()
     local w = worker.spawn()
     w.queue(function()
       _G.done = require("coq.lib.async").future()
@@ -297,7 +297,7 @@ T.describe("worker", function(test)
 
   -- closing mid-stream leaves the producer parked at a yield with its defers
   -- unrun; the responder must drain it to completion so scoped cleanup fires.
-  test("closing a bounded stream early drains it so lib.scope defers run", function()
+  test({ "closing a bounded stream early drains it so lib.scope defers run" }, function()
     local w = worker.spawn()
     w.queue(function()
       _G.done = require("coq.lib.async").future()
@@ -328,7 +328,7 @@ T.describe("worker", function(test)
 
   -- a producer parked in an await unwinds via cancel when the stream closes;
   -- the defer must still run (this is the paths/scandir cleanup shape).
-  test("closing a stream parked in an await runs lib.scope defers via cancel", function()
+  test({ "closing a stream parked in an await runs lib.scope defers via cancel" }, function()
     local w = worker.spawn()
     w.queue(function()
       _G.done = require("coq.lib.async").future()
@@ -357,7 +357,7 @@ T.describe("worker", function(test)
     T.eq(cleaned, true)
   end)
 
-  test("ambient cancel mid-call sends STOP to worker", function()
+  test({ "ambient cancel mid-call sends STOP to worker" }, function()
     local async = require "coq.lib.async"
     local handle = require "coq.lib.async._handle"
     local nursery = require "coq.lib.async._nursery"
@@ -392,7 +392,7 @@ T.describe("worker", function(test)
     T.eq(ok, true)
   end)
 
-  test("uniterated stream + ambient cancel: fn never started (lazy)", function()
+  test({ "uniterated stream + ambient cancel: fn never started (lazy)" }, function()
     local async = require "coq.lib.async"
     local handle = require "coq.lib.async._handle"
     local nursery = require "coq.lib.async._nursery"
@@ -423,7 +423,7 @@ T.describe("worker", function(test)
     T.eq(ran, false)
   end)
 
-  test("ambient cancel propagates through worker.main", function()
+  test({ "ambient cancel propagates through worker.main" }, function()
     local async = require "coq.lib.async"
     local handle = require "coq.lib.async._handle"
     local runtime = require "coq.lib.async._runtime"
@@ -465,7 +465,7 @@ T.describe("worker", function(test)
     T.eq(ok, true)
   end)
 
-  test("scope + defer pairs cleanly with iter.close", function()
+  test({ "scope + defer pairs cleanly with iter.close" }, function()
     local w = worker.spawn()
     local seen = lib.scope(function(defer)
       local close, iter = w.queue_stream(function()
@@ -497,7 +497,7 @@ T.describe("worker", function(test)
     T.eq(r, "pong")
   end)
 
-  test("scope + defer closes iter when scope body raises", function()
+  test({ "scope + defer closes iter when scope body raises" }, function()
     local w = worker.spawn()
     w.queue(function()
       _G.done = require("coq.lib.async").future()
@@ -530,7 +530,7 @@ T.describe("worker", function(test)
     T.eq(r, "pong")
   end)
 
-  test("a streaming fn that never yields returns nil immediately", function()
+  test({ "a streaming fn that never yields returns nil immediately" }, function()
     local w = worker.spawn()
     local _, iter = w.queue_stream(function()
       -- never calls yield
@@ -541,7 +541,7 @@ T.describe("worker", function(test)
     T.eq(first, nil)
   end)
 
-  test("concurrent queues do not cross-talk", function()
+  test({ "concurrent queues do not cross-talk" }, function()
     local async = require "coq.lib.async"
     local w = worker.spawn()
     local results = {}
@@ -560,7 +560,7 @@ T.describe("worker", function(test)
     T.eq(results, { "dog_1", "dog_2", "dog_3", "dog_4", "dog_5" })
   end)
 
-  test("worker.main_stream yields values from main to the worker", function()
+  test({ "worker.main_stream yields values from main to the worker" }, function()
     local w = worker.spawn()
     local seen = w.queue(function()
       local out = {}
@@ -579,7 +579,7 @@ T.describe("worker", function(test)
     T.eq(seen, { "lil", "spot", "fido" })
   end)
 
-  test("worker.main_stream can call vim.fn (main-only API) and stream results", function()
+  test({ "worker.main_stream can call vim.fn (main-only API) and stream results" }, function()
     local expected_cwd = vim.fn.getcwd()
     local expected_runtime = vim.api.nvim_get_runtime_file("lua/coq/lib/worker/init.lua", false)[1]
     local w = worker.spawn()
@@ -599,7 +599,7 @@ T.describe("worker", function(test)
     T.eq(seen, { expected_cwd, expected_runtime })
   end)
 
-  test("worker.main_stream forwards args", function()
+  test({ "worker.main_stream forwards args" }, function()
     local w = worker.spawn()
     local seen = w.queue(function(count, prefix)
       local out = {}
@@ -618,7 +618,7 @@ T.describe("worker", function(test)
     T.eq(seen, { "dog_1", "dog_2", "dog_3" })
   end)
 
-  test("worker.main_stream propagates errors from main", function()
+  test({ "worker.main_stream propagates errors from main" }, function()
     local w = worker.spawn()
     local ok, err = pcall(w.queue, function()
       local _, stream = require("coq.lib.worker").main_stream(function()
@@ -634,7 +634,7 @@ T.describe("worker", function(test)
     assert(err and err:find "leash snapped on main", "expected error, got: " .. tostring(err))
   end)
 
-  test("two streams interleave independently", function()
+  test({ "two streams interleave independently" }, function()
     local async = require "coq.lib.async"
     local w = worker.spawn()
     local seen_a, seen_b = {}, {}

@@ -76,8 +76,8 @@ local drain = function(close, iter)
   close()
 end
 
-T.describe("supervisor", function(test)
-  test("merges rows from all producers", function()
+T.describe({ "supervisor" }, function(test)
+  test({ "merges rows from all producers" }, function()
     local n = detached()
     local sup = supervisor.new { yields("lil", "spot"), yields "fido" }
     local seen = {}
@@ -92,7 +92,7 @@ T.describe("supervisor", function(test)
     T.eq(seen, { "fido", "lil", "spot" })
   end)
 
-  test("new search cancels in-flight idle", function()
+  test({ "new search cancels in-flight idle" }, function()
     local idle_started = async.future()
     local idle_finished = async.future()
     async.scope(function(n)
@@ -123,7 +123,7 @@ T.describe("supervisor", function(test)
     )
   end)
 
-  test("idle is no-op while search is active", function()
+  test({ "idle is no-op while search is active" }, function()
     local idle_ran = false
     async.scope(function(n)
       local sup = supervisor.new {
@@ -146,7 +146,7 @@ T.describe("supervisor", function(test)
     T.eq(idle_ran, false)
   end)
 
-  test("idle runs once search has ended", function()
+  test({ "idle runs once search has ended" }, function()
     local idle_ran = async.future()
     async.scope(function(n)
       local p, push = pushable {
@@ -165,7 +165,7 @@ T.describe("supervisor", function(test)
     end)
   end)
 
-  test("producer error kills the merged stream", function()
+  test({ "producer error kills the merged stream" }, function()
     local n = detached()
     local sup = supervisor.new {
       matcher_only(function()
@@ -182,7 +182,7 @@ T.describe("supervisor", function(test)
     assert(err and tostring(err):find "boom", "expected 'boom', got: " .. tostring(err))
   end)
 
-  test("iter.close from a sibling coroutine cancels the matcher", function()
+  test({ "iter.close from a sibling coroutine cancels the matcher" }, function()
     local matcher_cancelled = async.future()
     local matcher_sleeping = async.future()
     local first
@@ -210,7 +210,7 @@ T.describe("supervisor", function(test)
     T.eq(first, "lil")
   end)
 
-  test("supervisor satisfies the Producer shape (nestable)", function()
+  test({ "supervisor satisfies the Producer shape (nestable)" }, function()
     local n = detached()
     local inner = supervisor.new { yields "lil", yields "spot" }
     local outer = supervisor.new { inner, yields "fido" }
@@ -226,7 +226,7 @@ T.describe("supervisor", function(test)
     T.eq(seen, { "fido", "lil", "spot" })
   end)
 
-  test("a search cancelled mid-flight lets idle run again", function()
+  test({ "a search cancelled mid-flight lets idle run again" }, function()
     local idle_ran = false
     async.scope(function(n)
       local p = producer {

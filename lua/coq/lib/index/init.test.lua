@@ -46,8 +46,8 @@ local collect = function(iter)
   return out
 end
 
-T.describe("index.indexed", function(test)
-  test("search routes by query_key to a single child", function()
+T.describe({ "index.indexed" }, function(test)
+  test({ "search routes by query_key to a single child" }, function()
     local idx = search.indexed {
       insert_key = function(item)
         return item.filetype
@@ -65,7 +65,7 @@ T.describe("index.indexed", function(test)
     T.eq(collect(idx.search { filetype = "python" }), { "spot" })
   end)
 
-  test("query_key returning nil fans out across all children", function()
+  test({ "query_key returning nil fans out across all children" }, function()
     local idx = search.indexed {
       insert_key = function(item)
         return item.filetype
@@ -82,7 +82,7 @@ T.describe("index.indexed", function(test)
     T.eq(collect(idx.search {}), { "fido", "lil", "spot" })
   end)
 
-  test("search with a key that has no child yields nothing", function()
+  test({ "search with a key that has no child yields nothing" }, function()
     local idx = search.indexed {
       insert_key = function(item)
         return item.filetype
@@ -97,7 +97,7 @@ T.describe("index.indexed", function(test)
     T.eq(collect(idx.search { filetype = "rust" }), {})
   end)
 
-  test("insert lazily creates child buckets", function()
+  test({ "insert lazily creates child buckets" }, function()
     local created = 0
     local counted_leaf = function()
       created = created + 1
@@ -119,7 +119,7 @@ T.describe("index.indexed", function(test)
     T.eq(created, 2)
   end)
 
-  test("prune with non-nil query_key only touches the matching child", function()
+  test({ "prune with non-nil query_key only touches the matching child" }, function()
     local idx = search.indexed {
       insert_key = function(item)
         return item.filetype
@@ -138,7 +138,7 @@ T.describe("index.indexed", function(test)
     T.eq(collect(idx.search { filetype = "python" }), { "spot" })
   end)
 
-  test("prune with nil query_key fans out across all children", function()
+  test({ "prune with nil query_key fans out across all children" }, function()
     local idx = search.indexed {
       insert_key = function(item)
         return item.filetype
@@ -158,7 +158,7 @@ T.describe("index.indexed", function(test)
     T.eq(collect(idx.search { filetype = "python" }), {})
   end)
 
-  test("prune reports emptiness and drops drained children", function()
+  test({ "prune reports emptiness and drops drained children" }, function()
     local idx = search.indexed {
       insert_key = function(item)
         return item.filetype
@@ -178,7 +178,7 @@ T.describe("index.indexed", function(test)
     T.eq(idx.prune { buf = 2 }, true)
   end)
 
-  test("two layers route filetype then prefix", function()
+  test({ "two layers route filetype then prefix" }, function()
     local inner_layer = function()
       return search.indexed {
         insert_key = function(item)
@@ -209,7 +209,7 @@ T.describe("index.indexed", function(test)
     T.eq(collect(idx.search { filetype = "python", prefix = "fi" }), { "filter" })
   end)
 
-  test("empty index yields nothing", function()
+  test({ "empty index yields nothing" }, function()
     local idx = search.indexed {
       insert_key = function(item)
         return item.filetype
@@ -225,8 +225,8 @@ T.describe("index.indexed", function(test)
   end)
 end)
 
-T.describe("index.empty", function(test)
-  test("search yields nothing; insert/prune are no-ops", function()
+T.describe({ "index.empty" }, function(test)
+  test({ "search yields nothing; insert/prune are no-ops" }, function()
     local got = {}
     for item in search.empty.search {} do
       table.insert(got, item)

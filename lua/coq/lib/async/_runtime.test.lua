@@ -36,8 +36,8 @@ local capture_notify = function(marker)
   return state
 end
 
-T.describe("async", function(test)
-  test("awaitify forwards multiple callback values", function()
+T.describe({ "async" }, function(test)
+  test({ "awaitify forwards multiple callback values" }, function()
     local pack = async.awaitify(function(cb)
       cb("lil", "spot", "fido")
     end)
@@ -46,7 +46,7 @@ T.describe("async", function(test)
     T.eq({ a, b, c }, { "lil", "spot", "fido" })
   end)
 
-  test("entry defers execution", function()
+  test({ "entry defers execution" }, function()
     local done = async.future()
     local ran = false
     local later = async.entry(function()
@@ -62,7 +62,7 @@ T.describe("async", function(test)
     T.eq(ran, true)
   end)
 
-  test("entry post-yield error surfaces via vim.notify", function()
+  test({ "entry post-yield error surfaces via vim.notify" }, function()
     local marker = "fido bolted post-sleep"
     local cap = capture_notify(marker)
 
@@ -78,7 +78,7 @@ T.describe("async", function(test)
     T.eq(cap.captured.level, vim.log.levels.ERROR)
   end)
 
-  test("entry post-yield error does not block sibling coroutines", function()
+  test({ "entry post-yield error does not block sibling coroutines" }, function()
     local marker = "spot bolted post-sleep"
     local cap = capture_notify(marker)
     local sibling_ran = false
@@ -100,7 +100,7 @@ T.describe("async", function(test)
     T.eq(sibling_ran, true)
   end)
 
-  test("wrap forwards multi-value yields", function()
+  test({ "wrap forwards multi-value yields" }, function()
     local pull = async.wrap(function()
       coroutine.yield("lil", "spot", "fido")
     end)
@@ -109,7 +109,7 @@ T.describe("async", function(test)
     T.eq({ a, b, c }, { "lil", "spot", "fido" })
   end)
 
-  test("sleep yields for the requested duration", function()
+  test({ "sleep yields for the requested duration" }, function()
     local start = vim.uv.hrtime()
 
     async.sleep(20 * T.SLOW)
