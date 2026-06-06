@@ -55,8 +55,9 @@ M.bind = function(settings, statsd, events)
 
   local snips = function()
     atools.scheduled()
-    local cwd = vim.fn.getcwd()
+    local cwd = lib.getcwd()
     local current = vim.api.nvim_buf_get_name(0)
+
     ---@diagnostic disable-next-line: missing-fields
     local idle_ctx = { ---@type idle.Ctx
       cache_dir = vim.fs.joinpath(vim.fn.stdpath "cache", "coq"),

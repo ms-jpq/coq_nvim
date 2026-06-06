@@ -6,6 +6,7 @@ local set = require "coq.lib.set"
 ---@field snippets snippets.BundleEntry[]
 
 ---@class snippets.BundleEntry
+---@field filetype string
 ---@field grammar "lit"|"lsp"|"snu"
 ---@field content string
 ---@field matches lib.Set<string>
@@ -30,7 +31,6 @@ local M = {}
 ---@return string[] parents
 ---@return snippets.Sourced sourced
 M.parse = function(src, text)
-  local filetype = src.filetype
   local json = decode(text)
 
   if not json then
@@ -49,7 +49,7 @@ M.parse = function(src, text)
   local items = vim
     .iter(coroutine.wrap(function()
       for _, snip in pairs(json.snippets) do
-        if type(snip) == "table" then
+        if type(snip) == "table" and type(snip.filetype) == "string" and string.lower(snip.filetype) == src.filetype then
           local matches = type(snip.matches) == "table" and snip.matches or {}
           local content = type(snip.content) == "string" and snip.content or ""
           local label = type(snip.label) == "string" and snip.label or ""
@@ -60,7 +60,7 @@ M.parse = function(src, text)
             coroutine.yield {
               word = word,
               body = content,
-              filetype = filetype,
+              filetype = src.filetype,
               grammar = grammar,
               label = label,
               doc = doc,
