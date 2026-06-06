@@ -110,13 +110,71 @@ T.test({ "tokens.parity across all filetypes" }, function()
     local iskeyword, expected = probe(ft)
     local kw = tokens.parse_charset(iskeyword)
     local lines = vim.iter(CORPUS) --[[@as lib.Iterator<string>]]
-    local actual = vim.iter(tokens.keywords(kw, itertools.intersperse("\n", lines))):totable()
+    -- M.keywords also yields `<symbol><keyword>` forms; filter to pure-keyword
+    -- runs for parity against vim's `\k+`.
+    local actual = vim
+      .iter(tokens.keywords(kw, itertools.intersperse("\n", lines)))
+      :filter(function(w)
+        return kw[string.byte(w, 1)] ~= nil
+      end)
+      :totable()
     if not vim.deep_equal(actual, expected) then
       table.insert(failures, { ft = ft, iskeyword = iskeyword, expected = expected, actual = actual })
     end
   end
 
   T.eq(failures, {})
+end)
+
+T.describe({ "tokens.keywords with symbol prefixes" }, function(test)
+  local kw = tokens.parse_charset "@,48-57,_"
+
+  ---@param text string
+  ---@return string[]
+  local toks = function(text)
+    return vim.iter(tokens.keywords(kw, vim.iter { text } --[[@as lib.Iterator<string>]])):totable()
+  end
+
+  test({ "plain keyword yields just itself" }, function()
+    T.eq(toks "foo", { "foo" })
+  end)
+
+  test({ "adjacent symbol prefix yields plain and prefixed form" }, function()
+    T.eq(toks "@foo", { "foo", "@foo" })
+    T.eq(toks "->bar", { "bar", "->bar" })
+  end)
+
+  test({ "multi-char symbol run forms the full prefix" }, function()
+    T.eq(toks "@@foo", { "foo", "@@foo" })
+    T.eq(toks "-->bar", { "bar", "-->bar" })
+  end)
+
+  test({ "whitespace between symbol and keyword drops the prefix" }, function()
+    T.eq(toks "@ foo", { "foo" })
+    T.eq(toks "@\tfoo", { "foo" })
+  end)
+
+  test({ "bare symbol run emits nothing" }, function()
+    T.eq(toks "->", {})
+    T.eq(toks "@@@", {})
+  end)
+
+  test({ "keyword followed by symbol does not get suffix" }, function()
+    T.eq(toks "foo->", { "foo" })
+  end)
+
+  test({ "keyword-symbol-keyword: prefix attaches only to the trailing keyword" }, function()
+    T.eq(toks "foo->bar", { "foo", "bar", "->bar" })
+  end)
+
+  test({ "whitespace-separated keywords are independent" }, function()
+    T.eq(toks "bar @foo", { "bar", "foo", "@foo" })
+  end)
+
+  test({ "input split across chunks preserves correctness" }, function()
+    local result = vim.iter(tokens.keywords(kw, vim.iter { "@", "foo" } --[[@as lib.Iterator<string>]])):totable()
+    T.eq(result, { "foo", "@foo" })
+  end)
 end)
 
 T.describe({ "tokens.trailing_keyword_before" }, function(test)

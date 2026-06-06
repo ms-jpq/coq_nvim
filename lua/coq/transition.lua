@@ -14,7 +14,11 @@ end
 ---@param path string
 ---@param hint? string
 local removed_option = function(path, hint)
-  warn(path .. " has been removed in v2." .. (hint and " " .. hint or " The field is ignored — delete it from your coq_settings."))
+  warn(
+    path
+      .. " has been removed in v2."
+      .. (hint and " " .. hint or " The field is ignored — delete it from your coq_settings.")
+  )
 end
 
 ---@param name string
@@ -44,7 +48,7 @@ end
 ---Each entry: { dotted-path, optional alternative/hint }.
 ---@type [string, string?][]
 local REMOVED_OPTIONS = {
-  { "auto_start", "v2 starts automatically whenever `vim.g.coq_v2 = true`." },
+  { "auto_start" },
   { "xdg" },
   { "completion.smart" },
   { "completion.replace_prefix_threshold" },
@@ -55,8 +59,11 @@ local REMOVED_OPTIONS = {
   { "limits.tokenization_limit" },
   { "limits.download_retries" },
   { "limits.download_timeout" },
-  { "display.statusline", "build your own via `vim.o.statusline` — v2 ships no statusline integration." },
-  { "display.mark_highlight_group", "use `vim.api.nvim_set_hl(0, 'SnippetTabstop', ...)` — v2 uses neovim's built-in `vim.snippet`." },
+  { "display.statusline" },
+  {
+    "display.mark_highlight_group",
+    "use `vim.api.nvim_set_hl(0, 'SnippetTabstop', ...)` — v2 uses neovim's built-in `vim.snippet`.",
+  },
   { "display.mark_applied_notify" },
   { "display.time_fmt" },
   { "display.pum.fast_close" },
@@ -89,10 +96,12 @@ local CLIENT_SPECIFIC_REMOVED = {
   snippets = { "warn" },
 }
 
+---Look up a dotted path inside a nested table. Returns nil if any segment is
+---absent or if a non-table is reached mid-walk.
 ---@param tbl table
 ---@param path string
 ---@return any
-local path_get = function(tbl, path)
+M.path_get = function(tbl, path)
   local node = tbl
   for k in vim.gsplit(path, ".", { plain = true }) do
     if type(node) ~= "table" then
@@ -103,41 +112,62 @@ local path_get = function(tbl, path)
   return node
 end
 
+---@class transition.Finding
+---@field kind "option"|"client"
+---@field path string                       -- dotted path (option) or client name (client)
+---@field hint? string
+
+---Pure audit: diff user opts against the removed-surface catalog. Returns
+---findings without firing any warnings. M.audit consumes this to drive notify.
 ---@param opts? table
-M.audit = function(opts)
+---@return transition.Finding[]
+M.audit_findings = function(opts)
+  local findings = {}
   if type(opts) ~= "table" then
-    return
+    return findings
   end
 
   for _, entry in pairs(REMOVED_OPTIONS) do
     local path, hint = entry[1], entry[2]
-    if path_get(opts, path) ~= nil then
-      removed_option(path, hint)
+    if M.path_get(opts, path) ~= nil then
+      table.insert(findings, { kind = "option", path = path, hint = hint })
     end
   end
 
   for _, entry in pairs(REMOVED_CLIENTS) do
     local name, hint = entry[1], entry[2]
-    if path_get(opts, "clients." .. name) ~= nil then
-      removed_client(name, hint)
+    if M.path_get(opts, "clients." .. name) ~= nil then
+      table.insert(findings, { kind = "client", path = name, hint = hint })
     end
   end
 
-  local clients = opts.clients
-  if type(clients) == "table" then
-    for name, client_opts in pairs(clients) do
+  if type(opts.clients) == "table" then
+    for name, client_opts in pairs(opts.clients) do
       if type(client_opts) == "table" then
         for _, knob in pairs(PER_CLIENT_REMOVED) do
           if client_opts[knob] ~= nil then
-            removed_option("clients." .. name .. "." .. knob)
+            table.insert(findings, { kind = "option", path = "clients." .. name .. "." .. knob })
           end
         end
         for _, knob in pairs(CLIENT_SPECIFIC_REMOVED[name] or {}) do
           if client_opts[knob] ~= nil then
-            removed_option("clients." .. name .. "." .. knob)
+            table.insert(findings, { kind = "option", path = "clients." .. name .. "." .. knob })
           end
         end
       end
+    end
+  end
+
+  return findings
+end
+
+---@param opts? table
+M.audit = function(opts)
+  for _, f in pairs(M.audit_findings(opts)) do
+    if f.kind == "option" then
+      removed_option(f.path, f.hint)
+    else
+      removed_client(f.path, f.hint)
     end
   end
 end

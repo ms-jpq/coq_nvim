@@ -17,26 +17,33 @@ local word_key = function(item)
   return item.word
 end
 
----@generic Ctx : { keyword_before?: string }
+---@generic Ctx : { keyword_before?: string, symbol_before?: string }
 ---@generic Item : { word: string }
 ---@param settings config.Settings
 ---@return fun(): index.Searcher<Ctx, Item>
 M.word_search = function(settings)
-  local prefix = settings.match.exact_matches
+  ---@param ctx { keyword_before?: string, symbol_before?: string }
+  ---@return string?
+  local query_of = function(ctx)
+    if ctx.keyword_before and ctx.keyword_before ~= "" then
+      return ctx.keyword_before
+    end
+    if ctx.symbol_before and ctx.symbol_before ~= "" then
+      return ctx.symbol_before
+    end
+    return nil
+  end
+
   return function()
     return trie.new {
       insert_key = word_key,
-      query_key = function(ctx)
-        return (ctx.keyword_before == nil or ctx.keyword_before == "") and nil or ctx.keyword_before
-      end,
-      prefix = prefix,
+      query_key = query_of,
+      prefix = settings.match.exact_matches,
       child = function()
         return fuzzy.new {
           cutoff = settings.match.fuzzy_cutoff,
           insert_key = word_key,
-          query_key = function(ctx)
-            return ctx.keyword_before
-          end,
+          query_key = query_of,
         }
       end,
     }

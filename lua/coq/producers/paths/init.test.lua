@@ -45,7 +45,6 @@ local ctx_of = function(ctx_overrides)
     line_count = 1,
     line = "",
     line_before = "",
-    line_after = "",
     keyword_before = "",
     utf16_col = 0,
     utf32_col = 0,

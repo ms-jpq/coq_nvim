@@ -133,7 +133,7 @@ local query_1 = function(client, ctx, td_params)
     })
     defer(function()
       atools.scheduled()
-      vim.api.nvim_del_autocmd(autocmd_id)
+      pcall(vim.api.nvim_del_autocmd, autocmd_id)
     end)
 
     local final = async.wrap(function()

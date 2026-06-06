@@ -19,7 +19,6 @@ local lib = require "coq.lib"
 ---@field wildignore string
 ---@field comment [string, string]
 ---@field line_before string
----@field line_after string
 ---@field keyword_before string
 ---@field keyword_before_has_upper boolean
 ---@field symbol_before string
@@ -87,7 +86,6 @@ M.full = function(opts)
     local _, col = unpack(ctx.pos)
 
     ctx.line_before = string.sub(ctx.line, 1, col)
-    ctx.line_after = string.sub(ctx.line, col + 1)
 
     ctx.keyword_before = tokens.trailing_keyword_before(ctx.iskeyword, ctx.line_before)
     ctx.keyword_before_has_upper = string.find(ctx.keyword_before, "%u") ~= nil
