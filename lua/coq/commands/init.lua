@@ -3,12 +3,15 @@ local help = require "coq.commands.help"
 local lib = require "coq.lib"
 local snippets = require "coq.commands.snippets"
 local stats = require "coq.commands.stats"
+local transition = require "coq.transition"
 
 local M = {}
 
 M.Help = function(...)
   help.run { ... }
 end
+
+M.deps = transition.deps_noop
 
 local snips_impl = lib.noop
 local stats_impl = lib.noop
@@ -33,7 +36,7 @@ M.bind = function(settings, statsd, events)
   snips_impl = snippets.bind(settings, events)
 
   vim.api.nvim_create_user_command("COQnow", lib.noop, { nargs = "*" })
-  vim.api.nvim_create_user_command("COQdeps", lib.noop, { nargs = 0 })
+  vim.api.nvim_create_user_command("COQdeps", M.deps, { nargs = 0 })
 
   vim.api.nvim_create_user_command("COQstats", function()
     M.Stats()

@@ -4,7 +4,7 @@ local lib = require "coq.lib"
 local paths_preview = require "coq.producers.paths.preview"
 local txt = require "coq.lib.text"
 
-local PREVIEW_NS = "coq_preview"
+local PREVIEW_NS = "coq.preview"
 
 ---@param lsp_item lsp.CompletionItem
 ---@return string[]

@@ -2,6 +2,7 @@ local atools = require "coq.lib.atools"
 local context = require "coq.lib.context"
 local errs = require "coq.lib.errs"
 local events = require "coq.completions.events"
+local nvim_options = require "coq.nvim_options"
 local show = require "coq.completions.preview.show"
 local txt = require "coq.lib.text"
 
@@ -86,7 +87,6 @@ local M = {}
 ---@param pum channels.Broadcast<completions.PumEvent>
 M.bind = function(n, settings, resolver, pum)
   if settings.keymap.bigger_preview then
-    local esc = vim.keycode "<c-e>"
     vim.keymap.set({ "i" }, settings.keymap.bigger_preview, function()
       local buf = show.active_buf()
       if not buf then
@@ -99,7 +99,7 @@ M.bind = function(n, settings, resolver, pum)
         show.promote(buf)
       end))
 
-      return esc
+      return nvim_options.CE
     end, { expr = true, noremap = true })
   end
 

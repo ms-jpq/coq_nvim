@@ -1,7 +1,7 @@
 local float = require "coq.commands.float"
 local txt = require "coq.lib.text"
 
-local NS = "COQstats"
+local NS = "coq.stats"
 
 local M = {}
 

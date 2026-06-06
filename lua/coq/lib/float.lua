@@ -1,6 +1,6 @@
 local M = {}
 
-M.NS = "__coq_float__"
+M.NS = "coq.float"
 
 ---@param ns string?
 ---@return integer[]

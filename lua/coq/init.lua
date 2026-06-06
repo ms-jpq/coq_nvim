@@ -25,12 +25,11 @@ local preview = require "coq.completions.preview"
 local resolver_m = require "coq.completions.resolver"
 local statsd_m = require "coq.lib.index.rank.statsd"
 local supervisor = require "coq.lib.producers.supervisor"
+local transition = require "coq.transition"
 local trigger = require "coq.completions.trigger"
 
-local COMPLETEFUNC = "__coq_completefunc__"
-
 local M = {
-  deps = lib.noop,
+  deps = commands.deps,
   Help = commands.Help,
   Now = lib.noop,
   Snips = commands.Snips,
@@ -41,6 +40,7 @@ local M = {
 ---@param cfg? T
 ---@return T?
 M.lsp_ensure_capabilities = function(cfg)
+  transition.lsp_ensure_capabilities_noop()
   return cfg
 end
 
@@ -101,7 +101,6 @@ M.setup = function(opts)
       local settings = config.merged(merged)
 
       atools.scheduled()
-      nvim_options.apply(settings)
 
       local statsd = statsd_m.new(settings)
 
@@ -116,20 +115,13 @@ M.setup = function(opts)
       local events = events_m.new()
       local resolver = resolver_m.new(n)
 
+      nvim_options.apply(settings, events)
+
       trigger.bind(n, settings, statsd, resolver, sup, events)
       preview.bind(n, settings, resolver, events.pum)
       insertion.bind(n, settings, resolver, statsd, events.done)
       idle.bind(n, settings, sup, events)
       commands.bind(settings, statsd, events)
-
-      _G[COMPLETEFUNC] = function(findstart, _)
-        if findstart == 1 then
-          events.trigger.replace { manual = true }
-          return -1
-        end
-        return {}
-      end
-      vim.o.completefunc = "v:lua." .. COMPLETEFUNC
     end)
   end)()
 end

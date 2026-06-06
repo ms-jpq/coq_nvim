@@ -136,6 +136,12 @@ local defaults = require "coq.config.defaults"
 local M = {}
 
 ---@param opts? table
+M.normalize = function(opts)
+  local acc = {}
+  return opts
+end
+
+---@param opts? table
 ---@return config.Settings
 M.merged = function(opts)
   return vim.tbl_deep_extend("force", vim.deepcopy(defaults), opts or {}) --[[@as config.Settings]]
