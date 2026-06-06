@@ -4,6 +4,7 @@ local buffers = require "coq.lib.buffers"
 local fs_cache = require "coq.lib.fs_cache"
 
 local index_m = require "coq.producers.tags.index"
+local lib = require "coq.lib"
 local parse = require "coq.producers.tags.parse"
 local path_fmt = require "coq.producers.path_fmt"
 local run = require "coq.producers.tags.run"
@@ -67,28 +68,46 @@ local tracker_of = util.once(function(settings)
     reindex = function(idle_ctx, changes)
       local store = cache_of(idle_ctx)
 
+      local iters = {}
       for _, change in pairs(changes) do
-        async.sleep(0)
-        local deleted, prev, curr = unpack(change)
-        local prev_name = prev and prev.filename
-        local curr_name = curr and curr.filename
-
-        if deleted and prev_name then
-          index_of(settings).prune { filename = prev_name }
-        elseif prev_name and prev_name ~= curr_name then
-          index_of(settings).prune { filename = prev_name }
+        local iter = function()
+          local deleted, prev, curr = unpack(change)
+          coroutine.yield {
+            deleted = deleted,
+            prev = prev,
+            curr = curr,
+            data = curr ~= nil and store.fetch(curr.filename, curr.mtime) or nil,
+          }
         end
+        table.insert(iters, async.wrap(iter))
+      end
 
-        if curr_name then
-          index_of(settings).prune { filename = curr_name }
-          for i, tag in ipairs(store.fetch(curr.filename, curr.mtime) or {}) do
-            index_of(settings).insert(tag --[[@as ctags.Item]])
-            if i % util.BATCH == 0 then
-              async.sleep(0)
+      lib.scope(function(defer)
+        local close, stream = async.merge(iters)
+        defer(close)
+
+        for _, entry in stream do
+          async.sleep(0)
+          local prev_name = entry.prev and entry.prev.filename
+          local curr_name = entry.curr and entry.curr.filename
+
+          if entry.deleted and prev_name then
+            index_of(settings).prune { filename = prev_name }
+          elseif prev_name and prev_name ~= curr_name then
+            index_of(settings).prune { filename = prev_name }
+          end
+
+          if curr_name then
+            index_of(settings).prune { filename = curr_name }
+            for i, tag in ipairs(entry.data or {}) do
+              index_of(settings).insert(tag --[[@as ctags.Item]])
+              if i % util.BATCH == 0 then
+                async.sleep(0)
+              end
             end
           end
         end
-      end
+      end)
     end,
   }
 end)

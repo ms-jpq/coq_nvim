@@ -248,6 +248,63 @@ T.describe({ "paths.parse.candidates" }, function(test)
     T.eq(cand.anchor, parse.ANCHOR.cwd)
   end)
 
+  test({ "bare @ at BOL — frontier fires (Lua treats BOL as \\0)" }, function()
+    local cs = strip(parse.candidates("@", opts))
+    T.eq(#cs, 1)
+    T.eq(cs[1].start, 0)
+    T.eq(cs[1].dir, "")
+    T.eq(cs[1].partial, "")
+    T.eq(cs[1].anchor, parse.ANCHOR.cwd)
+  end)
+
+  test({ "bare @<partial> at BOL fires with partial captured" }, function()
+    local cs = strip(parse.candidates("@ftplugin", opts))
+    T.eq(#cs, 1)
+    T.eq(cs[1].start, 0)
+    T.eq(cs[1].dir, "")
+    T.eq(cs[1].partial, "ftplugin")
+    T.eq(cs[1].anchor, parse.ANCHOR.cwd)
+  end)
+
+  test({ "bare @<partial> after whitespace fires; before BOL@ at pos 0" }, function()
+    -- "  @foo" — fires at the @ (pos 2 in 0-indexed terms = start=2)
+    local cs = strip(parse.candidates("  @foo", opts))
+    local hit = nil
+    for _, c in pairs(cs) do
+      if c.anchor == parse.ANCHOR.cwd and c.partial == "foo" then
+        hit = c
+      end
+    end
+    assert(hit, "expected a cwd-anchored candidate with partial=foo")
+    T.eq(hit.start, 2)
+  end)
+
+  test({ "mid-word @ (name@domain) — no bare-@ candidate" }, function()
+    local cs = strip(parse.candidates("name@domain", opts))
+    -- no head pattern matches (no sep), no bare-@ either (prev=`e` is a word char)
+    T.eq(#cs, 0)
+  end)
+
+  test({ "underscore-glued @ (_@foo) — no bare-@ candidate" }, function()
+    -- underscore is treated as a word boundary inhibitor (same as %w)
+    local cs = strip(parse.candidates("_@foo", opts))
+    T.eq(#cs, 0)
+  end)
+
+  test({ "bare @<partial> — local_sep is the OS default, NOT @" }, function()
+    -- regression: literal ends with "@", so naively using sub(literal, -1) gave
+    -- local_sep="@", which the matcher would append to dir match names
+    -- ("ftdetect@" instead of "ftdetect/").
+    local cand = nil
+    for c in parse.candidates("@ft", opts) do
+      cand = c
+      break
+    end
+    assert(cand, "expected a candidate")
+    T.eq(cand.literal_directory, "@")
+    T.eq(cand.local_sep, "/")
+  end)
+
   test({ "on windows, backslash path yields a candidate" }, function()
     local win_opts = { is_windows = WIN, env = ENV, home = HOME }
     local cs = strip(parse.candidates([[C:\Dogs\lab]], win_opts))

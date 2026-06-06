@@ -38,7 +38,7 @@ M._patterns = function(is_windows, separators)
       end
     end
 
-    coroutine.yield "()%f[%S]@[%w%.%-_+]*$"
+    coroutine.yield "()%f[@%w_]@[%w%.%-_+]*$"
   end)
 end
 
@@ -74,15 +74,15 @@ end
 ---@param separators lib.Set<string>
 ---@return string
 M._expand_head = function(is_windows, home, env, token, separators)
-  local c1 = string.sub(token, 1, 1)
-  if c1 == "~" then
+  local c_1 = string.sub(token, 1, 1)
+  if c_1 == "~" then
     local rest = string.sub(token, 2)
     local after_tilde = string.sub(rest, 1, 1)
     if rest == "" or separators[after_tilde] then
       return home .. rest
     end
   end
-  if c1 == "@" then
+  if c_1 == "@" then
     return string.sub(token, 2)
   end
   return M._expand_env(is_windows, env, token)
@@ -147,6 +147,7 @@ M.candidates = function(line_before, opts)
 
       if resolved ~= "" or is_at then
         local literal = string.sub(token, 1, #token - #partial)
+        local c_n = string.sub(literal, -1)
         local anchor = (is_at and M.ANCHOR.cwd)
           or (path.is_absolute(opts.is_windows, resolved) and M.ANCHOR.abs)
           or M.ANCHOR.both
@@ -154,7 +155,7 @@ M.candidates = function(line_before, opts)
         coroutine.yield {
           resolved_directory = resolved,
           literal_directory = literal,
-          local_sep = literal == "" and sep_fallback or string.sub(literal, -1),
+          local_sep = separators[c_n] and c_n or sep_fallback,
           partial = partial,
           anchor = anchor,
           start = pos - 1,
