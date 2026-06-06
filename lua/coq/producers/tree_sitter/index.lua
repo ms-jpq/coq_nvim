@@ -18,7 +18,7 @@ local util = require "coq.producers.util"
 ---@class treesitter.Ctx
 ---@field buf? integer
 ---@field filetype? string
----@field keyword_before? string
+---@field match_before? string
 
 local M = {}
 

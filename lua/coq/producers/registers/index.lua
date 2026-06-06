@@ -9,7 +9,7 @@ local util = require "coq.producers.util"
 
 ---@class registers.Ctx
 ---@field register? string
----@field keyword_before? string
+---@field match_before? string
 
 local M = {}
 

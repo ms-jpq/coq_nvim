@@ -125,7 +125,7 @@ M.matcher = util.batched(function(settings, ctx)
       fts[ft] = true
     end
     for ft in pairs(fts) do
-      for hit in idx.search { filetype = ft, keyword_before = ctx.keyword_before } do
+      for hit in idx.search { filetype = ft, match_before = ctx.match_before } do
         coroutine.yield(hit)
       end
     end

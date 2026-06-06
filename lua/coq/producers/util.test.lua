@@ -31,9 +31,9 @@ local settings = function(max)
   return { match = { max_results = max } } --[[@as config.Settings]]
 end
 
-local ctx = function(keyword_before)
+local ctx = function(prefix)
   ---@diagnostic disable-next-line: missing-fields
-  return { keyword_before = keyword_before or "" } --[[@as ctx.full]]
+  return { keyword_before = prefix or "", match_before = prefix or "" } --[[@as ctx.full]]
 end
 
 T.describe({ "producers.util.batched" }, function(test)
@@ -252,28 +252,28 @@ T.describe({ "producers.util.word_search" }, function(test)
 
   test({ "prefix matches the keyword" }, function()
     local s = seed { "labrador", "labradoodle", "lily", "rex" }
-    T.eq(words(s.search { keyword_before = "lab" }), { "labradoodle", "labrador" })
+    T.eq(words(s.search { match_before = "lab" }), { "labradoodle", "labrador" })
   end)
 
   test({ "empty keyword yields everything (search.prune semantics)" }, function()
     local s = seed { "spot", "fido" }
-    T.eq(words(s.search { keyword_before = "" }), { "fido", "spot" })
+    T.eq(words(s.search { match_before = "" }), { "fido", "spot" })
   end)
 
   test({ "nil keyword also yields everything — prune path uses this" }, function()
     local s = seed { "spot", "fido" }
-    T.eq(words(s.search { keyword_before = nil }), { "fido", "spot" })
+    T.eq(words(s.search { match_before = nil }), { "fido", "spot" })
   end)
 
   test({ "below exact_matches threshold falls back to fuzzy child" }, function()
     local s = seed { "labrador" }
     -- "la" is 2 chars (= prefix); "l" is below, should still match via fuzzy
-    T.eq(words(s.search { keyword_before = "l" }), { "labrador" })
+    T.eq(words(s.search { match_before = "l" }), { "labrador" })
   end)
 
   test({ "prune by word removes a single entry" }, function()
     local s = seed { "spot", "fido" }
-    s.prune { keyword_before = "spot" }
-    T.eq(words(s.search { keyword_before = "" }), { "fido" })
+    s.prune { match_before = "spot" }
+    T.eq(words(s.search { match_before = "" }), { "fido" })
   end)
 end)

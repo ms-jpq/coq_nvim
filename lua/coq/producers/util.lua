@@ -8,7 +8,7 @@ local M = {}
 ---@param ctx ctx.full
 ---@return boolean
 M.skip_empty = function(ctx)
-  return ctx.keyword_before == "" and not ctx.manual
+  return ctx.match_before == "" and not ctx.manual
 end
 
 ---@param item { word: string }
@@ -17,19 +17,16 @@ local word_key = function(item)
   return item.word
 end
 
----@generic Ctx : { keyword_before?: string, symbol_before?: string }
+---@generic Ctx : { match_before?: string }
 ---@generic Item : { word: string }
 ---@param settings config.Settings
 ---@return fun(): index.Searcher<Ctx, Item>
 M.word_search = function(settings)
-  ---@param ctx { keyword_before?: string, symbol_before?: string }
+  ---@param ctx { match_before?: string }
   ---@return string?
   local query_of = function(ctx)
-    if ctx.keyword_before and ctx.keyword_before ~= "" then
-      return ctx.keyword_before
-    end
-    if ctx.symbol_before and ctx.symbol_before ~= "" then
-      return ctx.symbol_before
+    if ctx.match_before and ctx.match_before ~= "" then
+      return ctx.match_before
     end
     return nil
   end

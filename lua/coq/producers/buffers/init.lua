@@ -120,7 +120,7 @@ M.matcher = util.batched(function(settings, ctx)
 
   local raw = index_of(settings).search {
     filetype = settings.clients.buffers.same_filetype and ctx.filetype or nil,
-    keyword_before = ctx.keyword_before,
+    match_before = ctx.match_before,
   }
 
   for hit in util.shape(settings, ctx, raw) do

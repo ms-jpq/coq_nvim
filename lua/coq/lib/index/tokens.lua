@@ -144,6 +144,17 @@ end
 ---@param kw lib.Set<integer>
 ---@param line string
 ---@return string
+M.match_prefix = function(kw, line)
+  local k = M.trailing_keyword_before(kw, line)
+  if k ~= "" then
+    return k
+  end
+  return M.trailing_symbol_before(kw, line)
+end
+
+---@param kw lib.Set<integer>
+---@param line string
+---@return string
 M.trailing_symbol_before = function(kw, line)
   local i = #line
   while i > 0 do

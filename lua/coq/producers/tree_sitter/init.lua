@@ -160,7 +160,7 @@ M.matcher = util.batched(function(settings, ctx)
     return
   end
 
-  local raw = index_of(settings).search { filetype = ctx.filetype, keyword_before = ctx.keyword_before }
+  local raw = index_of(settings).search { filetype = ctx.filetype, match_before = ctx.match_before }
 
   for hit in util.shape(settings, ctx, raw) do
     local lines = vim.iter(doc_iter(settings.clients.tree_sitter, ctx, hit.item)):totable()

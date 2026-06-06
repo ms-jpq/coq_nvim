@@ -2,6 +2,7 @@ local async = require "coq.lib.async"
 local cancel = require "coq.lib.async.cancel"
 local closable = require "coq.lib.closable"
 local errs = require "coq.lib.errs"
+local lib = require "coq.lib"
 local lsp_util = require "coq.producers.lsp.util"
 
 ---@class completions.Resolver
@@ -29,7 +30,7 @@ end
 ---@return resolver.Instance
 local new = function(n, fetch)
   local cache = {}
-  local handles = {}
+  local handles = lib.weak({}, "v")
 
   local state = closable.new(function()
     for _, h in pairs(handles) do

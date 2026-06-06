@@ -22,9 +22,9 @@ T.describe({ "registers.index" }, function(test)
     index.insert { word = "lily", register = "0", linewise = false }
     index.insert { word = "spot", register = "+", linewise = false }
 
-    T.eq(words(index.search { keyword_before = "la" }), { "labrador" })
-    T.eq(words(index.search { keyword_before = "l" }), { "labrador", "lily" })
-    T.eq(words(index.search { keyword_before = "sp" }), { "spot" })
+    T.eq(words(index.search { match_before = "la" }), { "labrador" })
+    T.eq(words(index.search { match_before = "l" }), { "labrador", "lily" })
+    T.eq(words(index.search { match_before = "sp" }), { "spot" })
   end)
 
   test({ "prune nukes everything across registers" }, function()
@@ -42,7 +42,7 @@ T.describe({ "registers.index" }, function(test)
     index.insert { word = "spot", register = "0", linewise = true, line = "spot is a good dog" }
 
     local out = {}
-    for hit in index.search { keyword_before = "sp" } do
+    for hit in index.search { match_before = "sp" } do
       table.insert(out, hit.item.line)
     end
     T.eq(out, { "spot is a good dog" })

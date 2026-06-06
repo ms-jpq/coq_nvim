@@ -31,19 +31,20 @@ local apply = function(opts)
   }
   local lsp = opts.lsp or {}
 
-  local edit = inserted._word_range(ctx, item, lsp)
-  vim.api.nvim_buf_set_text(
-    buf,
-    edit.start_row,
-    edit.start_col,
-    edit.end_row,
-    edit.end_col,
-    vim.split(edit.text, "\n", { plain = true })
-  )
+  local edit = inserted._main_edit(ctx, item, lsp)
+  local enc = lsp.position_encoding or "utf-16"
+  vim.lsp.util.apply_text_edits({ edit }, buf, enc)
   local out = table.concat(vim.api.nvim_buf_get_lines(buf, 0, -1, true), "\n")
   vim.api.nvim_buf_delete(buf, { force = true })
 
-  return out, { edit.start_row, edit.start_col, edit.end_row, edit.end_col }, edit.text
+  return out,
+    {
+      edit.range.start.line,
+      edit.range.start.character,
+      edit.range["end"].line,
+      edit.range["end"].character,
+    },
+    edit.newText
 end
 
 ---@param enc string
@@ -151,13 +152,14 @@ end)
 
 -- `_span` is pure: hand-built EditCtx, no buffer. These pin the column math the
 -- buffer-level tests above exercise end-to-end.
+local DEFAULT_ISKEYWORD = tokens.parse_charset "@,48-57,_,192-255"
+
 local edit_ctx = function(o)
   return {
     cursor_row = 0,
     col = o.col or 2,
+    before_inserted = o.before_inserted or "",
     after_cursor = o.after_cursor or "",
-    kw_before_col = o.kw_before_col or 0,
-    kw_after_len = o.kw_after_len or 0,
     start_row = 0,
     start_line = o.start_line or "",
     end_row = o.end_row or 0,
@@ -177,19 +179,36 @@ end
 
 T.describe({ "inserted.span" }, function(test)
   test({ "InsertReplaceEdit span ends at replace[end], measured in encoded units" }, function()
-    local span =
-      inserted._span("utf-8", edit_ctx { col = 2, after_cursor = "XYZ", start_line = "abXYZ" }, replace_edit(2, 4))
+    local span = inserted._span(
+      DEFAULT_ISKEYWORD,
+      "utf-8",
+      edit_ctx { col = 2, after_cursor = "XYZ", start_line = "abXYZ" },
+      replace_edit(2, 4),
+      "ab"
+    )
     T.eq(span, { start_row = 0, start_col = 0, end_row = 0, end_col = 4 })
   end)
 
   test({ "pure insert (replace[end] == cursor) deletes nothing past the cursor" }, function()
-    local span =
-      inserted._span("utf-8", edit_ctx { col = 2, after_cursor = "XYZ", start_line = "abXYZ" }, replace_edit(2, 2))
+    local span = inserted._span(
+      DEFAULT_ISKEYWORD,
+      "utf-8",
+      edit_ctx { col = 2, after_cursor = "XYZ", start_line = "abXYZ" },
+      replace_edit(2, 2),
+      "ab"
+    )
     T.eq(span.end_col, 2)
   end)
 
   test({ "no textEdit falls back to the keyword runs flanking the cursor" }, function()
-    local span = inserted._span("utf-8", edit_ctx { col = 2, kw_before_col = 0, kw_after_len = 3 }, nil)
+    local span = inserted._span(
+      DEFAULT_ISKEYWORD,
+      "utf-8",
+      edit_ctx { col = 2, before_inserted = "", after_cursor = "XYZ" },
+      nil,
+      "anything"
+    )
+    -- after_cursor "XYZ" is all keyword chars; leading_keyword consumes all 3.
     T.eq(span, { start_row = 0, start_col = 0, end_row = 0, end_col = 5 })
   end)
 end)
@@ -220,6 +239,256 @@ end
 local lines_of = function(buf)
   return vim.api.nvim_buf_get_lines(buf, 0, -1, true)
 end
+
+-- =============================================================================
+-- Scenario-driven span tests.
+--
+-- Format: scenario(before, word, after, opts?) → final-buffer-string.
+--
+-- Pre-test state: the buffer holds `before .. word .. after` as if vim had
+-- just inserted `word` at the cursor; cursor sits between `word` and `after`.
+-- The test runs the full pipeline (`_main_edit` → `apply_text_edits`) and
+-- returns the resulting buffer content. Each test asserts what the final
+-- buffer should be after our edit logic re-shapes the span around `word`.
+-- =============================================================================
+
+---@param before string
+---@param word string
+---@param after string
+---@param opts? { lsp?: table, abbr?: string, snippet?: string }
+---@return string
+local scenario = function(before, word, after, opts)
+  opts = opts or {}
+  local buf = vim.api.nvim_create_buf(false, true)
+  local content = before .. word .. after
+  vim.api.nvim_buf_set_lines(buf, 0, -1, true, vim.split(content, "\n", { plain = true }))
+
+  local cursor_text = before .. word
+  local cursor_lines = vim.split(cursor_text, "\n", { plain = true })
+  local row = #cursor_lines
+  local col = #cursor_lines[#cursor_lines]
+
+  ---@type ctx.full
+  ---@diagnostic disable-next-line: missing-fields
+  local ctx = {
+    win = 0,
+    buf = buf,
+    pos = { row, col },
+    changedtick = 0,
+    iskeyword = tokens.parse_charset(vim.bo[buf].iskeyword),
+  }
+  local item = {
+    word = word,
+    abbr = opts.abbr,
+    meta = { uid = "x", source = "LSP", filter = word, fuzzy = 0, snippet = opts.snippet },
+  }
+  local lsp = opts.lsp or {}
+
+  local edit = inserted._main_edit(ctx, item, lsp)
+  local enc = lsp.position_encoding or "utf-16"
+  vim.lsp.util.apply_text_edits({ edit }, buf, enc)
+  local out = table.concat(vim.api.nvim_buf_get_lines(buf, 0, -1, true), "\n")
+  vim.api.nvim_buf_delete(buf, { force = true })
+  return out
+end
+
+T.describe({ "inserted span :: |before| |word| |after|" }, function(test)
+  -- ---------------------------------------------------------------------------
+  -- Keyword / fuzzy: classic "complete the identifier"
+  -- ---------------------------------------------------------------------------
+
+  test({ "keyword complete, full identifier: '' fido 'do' → fido" }, function()
+    -- user typed `fi`, picked `fido` from mid-`fido` in buffer; trailing `do`
+    -- is the rest of the keyword and gets consumed via either rule.
+    T.eq(scenario("", "fido", "do"), "fido")
+  end)
+
+  test({ "fuzzy cross-replace: '' cat 'do' → cat" }, function()
+    -- user had `fix|do`, picked `cat` (zero byte-overlap). Trailing `do` is
+    -- still consumed because it's the rest of the identifier — keyword rule
+    -- carries this case, overlap rule doesn't.
+    T.eq(scenario("", "cat", "do"), "cat")
+  end)
+
+  test({ "fuzzy cross-replace with long suffix: '' find_user 'extra' → find_user" }, function()
+    T.eq(scenario("", "find_user", "extra"), "find_user")
+  end)
+
+  test({ "no trailing identifier: '' fido '' → fido" }, function()
+    T.eq(scenario("", "fido", ""), "fido")
+  end)
+
+  test({ "trailing non-identifier: '' fido ' rest' → fido rest" }, function()
+    T.eq(scenario("", "fido", " rest"), "fido rest")
+  end)
+
+  -- ---------------------------------------------------------------------------
+  -- Symbol prefix completions (the @param family)
+  -- ---------------------------------------------------------------------------
+
+  test({ "symbol overlap left: '((@' @param '' → ((@param" }, function()
+    -- byte-overlap on the left consumes the typed `@`; `((` survives because
+    -- `(` doesn't prefix-match the word.
+    T.eq(scenario("((@", "@param", ""), "((@param")
+  end)
+
+  test({ "symbol overlap right: '@' @param '@param' → @param" }, function()
+    -- the canonical @|@param case: leading `@` consumed left, the duplicate
+    -- `@param` past the cursor consumed right via suffix overlap.
+    T.eq(scenario("@", "@param", "@param"), "@param")
+  end)
+
+  test({ "inert symbols protected: '((' @param '' → ((@param" }, function()
+    -- `(` doesn't match any prefix of `@param`. No left consumption.
+    T.eq(scenario("((", "@param", ""), "((@param")
+  end)
+
+  test({ "inert symbols both sides: '((' @param '))' → ((@param))" }, function()
+    -- closing parens past the cursor: `)` doesn't suffix-match the word; the
+    -- keyword run also stops at `)`. No consumption either side.
+    T.eq(scenario("((", "@param", "))"), "((@param))")
+  end)
+
+  test({ "after-cursor symbol after keyword: '' cat '@thing' → cat@thing" }, function()
+    -- after_cursor starts with non-keyword `@`, so leading_keyword stops at 0;
+    -- suffix_overlap(cat, @thing) is also 0. Nothing consumed.
+    T.eq(scenario("", "cat", "@thing"), "cat@thing")
+  end)
+
+  -- ---------------------------------------------------------------------------
+  -- Identical / overlapping word with surrounding text
+  -- ---------------------------------------------------------------------------
+
+  test({ "longer rightward keyword overlaps: '' param 'param_x' → param" }, function()
+    -- the after_cursor `param_x` is one identifier (7 keyword chars).
+    -- Keyword rule consumes all 7; result is just the inserted `param`.
+    T.eq(scenario("", "param", "param_x"), "param")
+  end)
+
+  test({ "identical word repeats both sides: 'fido' fido 'fido' → fidofidofido stays" }, function()
+    -- before_inserted "fido" and after_cursor "fido" both fully overlap with
+    -- the word. Left: prefix_overlap("fido","fido")=4, trailing_kw=4 → max=4.
+    -- start_col=0. Right: leading_kw("fido")=4, suffix_overlap=4 → max=4.
+    -- Span 0..(end). Result: single fido.
+    T.eq(scenario("fido", "fido", "fido"), "fido")
+  end)
+
+  -- ---------------------------------------------------------------------------
+  -- Empty edge cases
+  -- ---------------------------------------------------------------------------
+
+  test({ "empty word: '' '' '' → ''" }, function()
+    T.eq(scenario("", "", ""), "")
+  end)
+
+  test({ "empty word with after text: '' '' 'tail' → tail (no consumption)" }, function()
+    -- word is empty so no overlap; leading_kw on `tail` is 4 → end_col extends
+    -- by 4, but the inserted text is empty, so span 0..4 replaces `tail` with
+    -- "". Result: empty.
+    T.eq(scenario("", "", "tail"), "")
+  end)
+
+  -- ---------------------------------------------------------------------------
+  -- Pure insert (no surrounding identifier)
+  -- ---------------------------------------------------------------------------
+
+  test({ "pure insert at end: 'prefix ' fido '' → prefix fido" }, function()
+    T.eq(scenario("prefix ", "fido", ""), "prefix fido")
+  end)
+
+  test({ "pure insert with non-keyword before: 'foo ' bar '' → foo bar" }, function()
+    -- before_inserted ends in space (whitespace, neither keyword nor symbol);
+    -- trailing_kw=0, prefix_overlap=0. No left consumption.
+    T.eq(scenario("foo ", "bar", ""), "foo bar")
+  end)
+
+  -- ---------------------------------------------------------------------------
+  -- Inside brackets / closing-punctuation preservation
+  -- ---------------------------------------------------------------------------
+
+  test({ "user's case: '((' @param@ '))' → ((@param@))" }, function()
+    -- canonical "complete inside parens, keep the closers" case. The trailing
+    -- `))` is symbol but doesn't suffix-match the word; leading_keyword stops
+    -- at `)`. Nothing past the cursor is consumed.
+    T.eq(scenario("((", "@param@", "))"), "((@param@))")
+  end)
+
+  test({ "trailing close-bracket survives keyword completion: '(' fido ')' → (fido)" }, function()
+    T.eq(scenario("(", "fido", ")"), "(fido)")
+  end)
+
+  test({ "fuzzy inside parens consumes mid-keyword 'x': '(' fido 'x)' → (fido)" }, function()
+    -- user had `(fi|x)`, picked `fido`. `x` is the rest of the identifier,
+    -- consumed via leading_keyword. The `)` survives — non-keyword + no
+    -- suffix overlap with `fido`.
+    T.eq(scenario("(", "fido", "x)"), "(fido)")
+  end)
+
+  test({ "leading symbol overlap + trailing closers: '((' @param '@param))' → ((@param))" }, function()
+    -- before_inserted has `((` (inert symbols), after_cursor starts with the
+    -- duplicate `@param` then closers. Suffix_overlap eats `@param`; closers
+    -- stay.
+    T.eq(scenario("((", "@param", "@param))"), "((@param))")
+  end)
+
+  test({ "leading word overlap + trailing closers: '((@param' @param '))' → ((@param))" }, function()
+    -- before_inserted ends in `@param`; prefix_overlap eats it. trailing_kw
+    -- alone would only eat `param`, not `@`. Closers untouched on the right.
+    T.eq(scenario("((@param", "@param", "))"), "((@param))")
+  end)
+
+  -- ---------------------------------------------------------------------------
+  -- Multi-line buffer (single-line edits don't reach across rows)
+  -- ---------------------------------------------------------------------------
+
+  test({ "cursor at end of line, next line preserved: 'foo ' bar '\\nbaz' → 'foo bar\\nbaz'" }, function()
+    T.eq(scenario("foo ", "bar", "\nbaz"), "foo bar\nbaz")
+  end)
+
+  test({ "trailing identifier on cursor row, next line preserved: '' fido 'do\\nbaz' → 'fido\\nbaz'" }, function()
+    -- `do` after cursor is consumed (rest of the identifier on this row);
+    -- `\nbaz` on the next row stays untouched.
+    T.eq(scenario("", "fido", "do\nbaz"), "fido\nbaz")
+  end)
+
+  test({ "prior row preserved when completing on later row: 'line1\\n' fido '' → 'line1\\nfido'" }, function()
+    T.eq(scenario("line1\n", "fido", ""), "line1\nfido")
+  end)
+
+  -- ---------------------------------------------------------------------------
+  -- Defensive: out-of-bounds LSP ranges fall back to the heuristic instead of
+  -- crashing or producing a garbage byte column.
+  -- ---------------------------------------------------------------------------
+
+  test({ "lsp range past buffer end: silently ignored, fallback runs" }, function()
+    -- Buffer has 1 line. Server claims to replace through line 99 — we drop
+    -- the bad text_edit and use the keyword/overlap fallback. The keyword run
+    -- on after_cursor `do` consumes 2.
+    local lsp = {
+      position_encoding = "utf-8",
+      item = {
+        textEdit = {
+          newText = "ignored",
+          range = { start = { line = 0, character = 0 }, ["end"] = { line = 99, character = 0 } },
+        },
+      },
+    }
+    T.eq(scenario("", "cat", "do", { lsp = lsp }), "cat")
+  end)
+
+  test({ "lsp range starts past cursor row: silently ignored" }, function()
+    local lsp = {
+      position_encoding = "utf-8",
+      item = {
+        textEdit = {
+          newText = "ignored",
+          range = { start = { line = 5, character = 0 }, ["end"] = { line = 5, character = 0 } },
+        },
+      },
+    }
+    T.eq(scenario("", "fido", "", { lsp = lsp }), "fido")
+  end)
+end)
 
 T.describe({ "inserted._apply_edits" }, function(test)
   test({ "plain word: replaces the trailing keyword span with item.word" }, function()

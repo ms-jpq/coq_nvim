@@ -23,10 +23,10 @@ T.describe({ "buffer.index" }, function(test)
     index.insert { word = "spot", buf = 2, filetype = "lua", filename = "" }
     index.insert { word = "labrador", buf = 3, filetype = "python", filename = "" }
 
-    T.eq(words(index.search { filetype = "lua", buf = 1, keyword_before = "la" }), { "labrador" })
-    T.eq(words(index.search { filetype = "lua", buf = 1, keyword_before = "li" }), { "lily" })
-    T.eq(words(index.search { filetype = "lua", buf = 2, keyword_before = "sp" }), { "spot" })
-    T.eq(words(index.search { filetype = "python", buf = 3, keyword_before = "la" }), { "labrador" })
+    T.eq(words(index.search { filetype = "lua", buf = 1, match_before = "la" }), { "labrador" })
+    T.eq(words(index.search { filetype = "lua", buf = 1, match_before = "li" }), { "lily" })
+    T.eq(words(index.search { filetype = "lua", buf = 2, match_before = "sp" }), { "spot" })
+    T.eq(words(index.search { filetype = "python", buf = 3, match_before = "la" }), { "labrador" })
   end)
 
   test({ "nil filetype fans out across filetypes" }, function()
@@ -34,7 +34,7 @@ T.describe({ "buffer.index" }, function(test)
     index.insert { word = "labrador", buf = 1, filetype = "lua", filename = "" }
     index.insert { word = "labradoodle", buf = 2, filetype = "python", filename = "" }
 
-    T.eq(words(index.search { keyword_before = "lab" }), { "labradoodle", "labrador" })
+    T.eq(words(index.search { match_before = "lab" }), { "labradoodle", "labrador" })
   end)
 
   test({ "nil buf fans out across bufs within a filetype" }, function()
@@ -43,7 +43,7 @@ T.describe({ "buffer.index" }, function(test)
     index.insert { word = "lily", buf = 2, filetype = "lua", filename = "" }
     index.insert { word = "spot", buf = 3, filetype = "python", filename = "" }
 
-    T.eq(words(index.search { filetype = "lua", keyword_before = "l" }), { "labrador", "lily" })
+    T.eq(words(index.search { filetype = "lua", match_before = "l" }), { "labrador", "lily" })
   end)
 
   test({ "prune by buf removes only that buf within a filetype" }, function()
@@ -62,7 +62,7 @@ T.describe({ "buffer.index" }, function(test)
     index.insert { word = "labrador", buf = 1, filetype = "lua", filename = "new.lua" }
 
     local seen = {}
-    for hit in index.search { filetype = "lua", buf = 1, keyword_before = "lab" } do
+    for hit in index.search { filetype = "lua", buf = 1, match_before = "lab" } do
       table.insert(seen, hit.item.filename)
     end
     T.eq(seen, { "new.lua" })
