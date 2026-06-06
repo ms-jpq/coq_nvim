@@ -1,6 +1,10 @@
 local float = require "coq.commands.float"
 
-local TOPICS = {
+local URI_BASE = "https://github.com/ms-jpq/coq_nvim/tree/coq/docs/"
+
+local M = {}
+
+M.TOPICS = {
   index = "README",
   config = "CONF",
   keybind = "KEYBIND",
@@ -15,10 +19,6 @@ local TOPICS = {
   custom_sources = "CUSTOM_SOURCES",
 }
 
-local URI_BASE = "https://github.com/ms-jpq/coq_nvim/tree/coq/docs/"
-
-local M = {}
-
 ---@param fargs string[]
 M.run = function(fargs)
   local topic = "index"
@@ -26,7 +26,7 @@ M.run = function(fargs)
   for _, a in pairs(fargs) do
     if a == "-w" or a == "--web" then
       web = true
-    elseif TOPICS[a] then
+    elseif M.TOPICS[a] then
       topic = a
     else
       vim.notify("COQhelp: unknown arg '" .. a .. "'", vim.log.levels.ERROR)
@@ -34,7 +34,7 @@ M.run = function(fargs)
     end
   end
 
-  local name = TOPICS[topic] .. ".md"
+  local name = M.TOPICS[topic] .. ".md"
   if web then
     vim.ui.open(URI_BASE .. name)
     return
@@ -49,11 +49,6 @@ M.run = function(fargs)
 
   local lines = vim.fn.readfile(path)
   float.show { ns = "coq.help", lines = lines, filetype = "markdown" }
-end
-
----@return string[]
-M.complete = function()
-  return vim.tbl_keys(TOPICS)
 end
 
 return M

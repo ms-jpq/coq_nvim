@@ -25,9 +25,8 @@ M._patterns = function(is_windows, separators)
 
       coroutine.yield "%$[%w_]+"
       coroutine.yield "%${[%w_]+}"
-      coroutine.yield "@[%w%.%-_+]+"
-      coroutine.yield "@"
 
+      coroutine.yield "@"
       coroutine.yield ""
     end)
   end

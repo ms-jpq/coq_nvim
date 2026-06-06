@@ -48,7 +48,7 @@ M.bind = function(settings, statsd, events)
     nargs = "*",
     complete = function(arglead)
       return vim
-        .iter(help.complete())
+        .iter(vim.tbl_keys(help.TOPICS))
         :filter(function(t)
           return vim.startswith(t, arglead)
         end)
