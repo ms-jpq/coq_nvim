@@ -306,7 +306,7 @@ local function fzf_score(probe)
   if not is_subsequence(probe) then
     return nil
   end
-  local hclass = classify_haystack(probe.haystack, probe.m)
+  local hclass = probe.hclass or classify_haystack(probe.haystack, probe.m)
   return dp_score(probe, hclass)
 end
 
@@ -317,20 +317,48 @@ end
 ---@field haystack string
 ---@field n integer
 ---@field m integer
+---@field initials_str? string
+---@field hclass? integer[]
+
+---@class hybrid.Precomputed
+---@field initials_str string
+---@field hclass integer[]
 
 ---@alias hybrid.Stage fun(probe: hybrid.Probe): number?
+
+---Precompute the haystack-only inputs (initials, fzf class array) once per
+---haystack. Callers that score the same haystack many times — e.g. a fuzzy
+---bucket scored against many needles — store this alongside the item and
+---pass it back into `score` to skip the per-call rebuild.
+---@param haystack string
+---@return hybrid.Precomputed?
+M.precompute = function(haystack)
+  local m = #haystack
+  if m == 0 or m > LEN_CAP then
+    return nil
+  end
+  return { initials_str = initials(haystack), hclass = classify_haystack(haystack, m) }
+end
 
 ---Construct a Probe from raw inputs. Returns nil for empty / oversize.
 ---Acts as the pipeline's gate — invalid inputs never reach any stage.
 ---@param needle string
 ---@param haystack string
+---@param precomputed? hybrid.Precomputed
 ---@return hybrid.Probe?
-local function probe_of(needle, haystack)
+local function probe_of(needle, haystack, precomputed)
   local n, m = #needle, #haystack
   if n == 0 or n > m or m > LEN_CAP then
     return nil
   end
-  return { needle = needle, haystack = haystack, n = n, m = m }
+  return {
+    needle = needle,
+    haystack = haystack,
+    n = n,
+    m = m,
+    initials_str = precomputed and precomputed.initials_str,
+    hclass = precomputed and precomputed.hclass,
+  }
 end
 
 -- ============================================================================
@@ -368,7 +396,8 @@ end
 ---@type hybrid.Stage
 local function try_camel(probe)
   local needle, n, m = probe.needle, probe.n, probe.m
-  local inits_pref = string.sub(initials(probe.haystack), 1, n)
+  local inits = probe.initials_str or initials(probe.haystack)
+  local inits_pref = string.sub(inits, 1, n)
   if not smart_string_eq(needle, inits_pref) then
     return nil
   end
@@ -404,9 +433,10 @@ local STAGES = { try_exact, try_prefix, try_camel, try_fuzzy }
 
 ---@param needle string
 ---@param haystack string
+---@param precomputed? hybrid.Precomputed
 ---@return number?
-M.score = function(needle, haystack)
-  local probe = probe_of(needle, haystack)
+M.score = function(needle, haystack, precomputed)
+  local probe = probe_of(needle, haystack, precomputed)
   if probe == nil then
     return nil
   end

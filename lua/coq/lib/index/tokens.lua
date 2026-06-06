@@ -47,23 +47,32 @@ local ranges_of = function(entry)
   return { { b, b } }
 end
 
----@param spec string
----@return lib.Set<integer>
-M.parse_charset = function(spec)
-  local kw = {}
+do
+  local charset_cache = {}
 
-  for entry in vim.gsplit(spec, ",", { plain = true }) do
-    local exclude = string.sub(entry, 1, 1) == "^" and #entry > 1
+  ---@param spec string
+  ---@return lib.Set<integer>
+  M.parse_charset = function(spec)
+    local hit = charset_cache[spec]
+    if hit then
+      return hit
+    end
 
-    for _, range in pairs(ranges_of(exclude and string.sub(entry, 2) or entry)) do
-      local lo, hi = unpack(range)
-      for b = math.max(0, lo), math.min(255, hi) do
-        kw[b] = not exclude or nil
+    local kw = {}
+    for entry in vim.gsplit(spec, ",", { plain = true }) do
+      local exclude = string.sub(entry, 1, 1) == "^" and #entry > 1
+
+      for _, range in pairs(ranges_of(exclude and string.sub(entry, 2) or entry)) do
+        local lo, hi = unpack(range)
+        for b = math.max(0, lo), math.min(255, hi) do
+          kw[b] = not exclude or nil
+        end
       end
     end
-  end
 
-  return kw
+    charset_cache[spec] = kw
+    return kw
+  end
 end
 
 ---@param kw lib.Set<integer>

@@ -25,6 +25,8 @@ end
 ---@param ctx_overrides table
 ---@return ctx.full
 local ctx_of = function(ctx_overrides)
+  local tokens = require "coq.lib.index.tokens"
+  local iskeyword = tokens.parse_charset "@,48-57,_,192-255"
   local base = {
     win = 0,
     buf = 0,
@@ -37,7 +39,7 @@ local ctx_of = function(ctx_overrides)
     cexpr = "",
     tabstop = 2,
     expandtab = true,
-    iskeyword = require("coq.lib.index.tokens").parse_charset "@,48-57,_,192-255",
+    iskeyword = iskeyword,
     wildignore = "",
     linesep = "\n",
     comment = { "", "" },
@@ -48,7 +50,12 @@ local ctx_of = function(ctx_overrides)
     utf16_col = 0,
     utf32_col = 0,
   }
-  return vim.tbl_deep_extend("force", base, ctx_overrides) --[[@as ctx.full]]
+  local merged = vim.tbl_deep_extend("force", base, ctx_overrides)
+  -- derive keyword_before from line_before unless explicitly overridden
+  if ctx_overrides.keyword_before == nil then
+    merged.keyword_before = tokens.trailing_keyword_before(iskeyword, merged.line_before)
+  end
+  return merged --[[@as ctx.full]]
 end
 
 ---@param settings config.Settings
@@ -219,7 +226,8 @@ T.describe({ "paths.matcher" }, function(test)
     T.eq(#items, 1)
     local edit = items[1].meta.lsp.item.textEdit
     T.eq(edit.range.start.character, 0)
-    T.eq(edit.range["end"].character, 5)
+    -- range.end covers the post-PUM cursor: pre-PUM col 5 + #word 8 - #kw 0 = 13.
+    T.eq(edit.range["end"].character, 13)
     T.eq(edit.newText, "@lua/spot.txt")
   end)
 
@@ -272,7 +280,8 @@ T.describe({ "paths.matcher" }, function(test)
     local edit = lsp.item.textEdit
     T.eq(edit.range.start.line, 0)
     T.eq(edit.range.start.character, 0)
-    T.eq(edit.range["end"].character, 4)
+    -- range.end covers the post-PUM cursor: pre-PUM col 4 + #word 8 - #kw 2 = 10.
+    T.eq(edit.range["end"].character, 10)
     T.eq(edit.newText, "./spot.txt")
   end)
 

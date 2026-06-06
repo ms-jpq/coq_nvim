@@ -132,10 +132,14 @@ do
         if entry.text ~= nil and entry.text ~= cache[entry.id] then
           index_of(settings).prune { pane = entry.id }
           if entry.text ~= "" then
-            for word in
+            local words =
               tokens.keywords(idle_ctx.ctx.iskeyword, vim.iter { entry.text } --[[@as lib.Iterator<string>]])
-            do
+
+            for i, word in vim.iter(words):enumerate() do
               index_of(settings).insert { pane = entry.id, word = word, meta = entry.pane.meta }
+              if i % util.BATCH == 0 then
+                async.sleep(0)
+              end
             end
           end
           cache[entry.id] = entry.text

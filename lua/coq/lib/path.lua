@@ -41,7 +41,7 @@ end
 
 ---@param seps lib.Set<string>
 ---@param p string
----@return string? dir
+---@return string dir
 ---@return string rhs
 M.split_at_last_sep = function(seps, p)
   for i = #p, 1, -1 do
@@ -49,7 +49,7 @@ M.split_at_last_sep = function(seps, p)
       return string.sub(p, 1, i), string.sub(p, i + 1)
     end
   end
-  return nil, ""
+  return "", p
 end
 
 return M

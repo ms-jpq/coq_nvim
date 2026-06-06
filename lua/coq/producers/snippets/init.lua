@@ -93,8 +93,11 @@ M.idle = function(settings, idle_ctx)
 
     async.sleep(0)
     idx.prune { filetype = target }
-    for _, item in pairs(cached.items) do
+    for i, item in ipairs(cached.items) do
       idx.insert(item)
+      if i % util.BATCH == 0 then
+        async.sleep(0)
+      end
     end
   end
 

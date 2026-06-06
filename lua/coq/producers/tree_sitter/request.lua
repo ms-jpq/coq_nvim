@@ -44,24 +44,27 @@ M.query = function(buf)
     for capture_id, node in query:iter_captures(tree:root(), buf, lo, hi) do
       local kind = query.captures[capture_id]
       if kind ~= "comment" and not node:missing() and not node:has_error() then
-        local r_lo, _, r_hi, _ = node:range()
-        local parent = node:parent()
-        local grandparent = parent and parent:parent() or nil
+        local text = vim.treesitter.get_node_text(node, buf)
 
-        if
-          not coroutine.yield {
-            text = vim.treesitter.get_node_text(node, buf),
+        if type(text) == "string" and text ~= "" then
+          local r_lo, _, r_hi, _ = node:range()
+          local parent = node:parent()
+          local grandparent = parent and parent:parent() or nil
+          local payload = {
+            text = text,
             kind = kind,
             range = { r_lo, r_hi },
             parent = parent and node_info(parent) or nil,
             grandparent = grandparent and node_info(grandparent) or nil,
           }
-        then
-          return
-        end
 
-        if not buffers.is_live(buf) or vim.b[buf].changedtick ~= tick then
-          return
+          if not coroutine.yield(payload) then
+            return
+          end
+
+          if not buffers.is_live(buf) or vim.b[buf].changedtick ~= tick then
+            return
+          end
         end
       end
     end

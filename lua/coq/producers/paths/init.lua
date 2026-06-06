@@ -161,6 +161,7 @@ M.matcher = util.batched(function(settings, ctx)
     for m in vim.iter(iter):unique(match_key) do
       local dir_q = m.type == "directory"
       local word = m.name .. (dir_q and m.cand.local_sep or "")
+      local end_col = col + #word - #ctx.keyword_before
 
       local item = util.item(settings, SOURCE, {
         word = word,
@@ -175,7 +176,7 @@ M.matcher = util.batched(function(settings, ctx)
             textEdit = {
               range = {
                 start = { line = line, character = m.cand.start },
-                ["end"] = { line = line, character = col },
+                ["end"] = { line = line, character = end_col },
               },
               newText = m.cand.literal_directory .. word,
             },

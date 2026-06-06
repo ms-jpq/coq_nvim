@@ -61,9 +61,10 @@ T.describe({ "path.split_at_last_sep" }, function(test)
     T.eq(rhs, "")
   end)
 
-  test({ "no separator returns nil dir" }, function()
-    local dir = path.split_at_last_sep(SU, "labrador")
-    T.eq(dir, nil)
+  test({ "no separator returns empty dir, whole input as rhs" }, function()
+    local dir, rhs = path.split_at_last_sep(SU, "labrador")
+    T.eq(dir, "")
+    T.eq(rhs, "labrador")
   end)
 
   test({ "on windows, both / and \\ count as separators" }, function()

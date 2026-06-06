@@ -55,11 +55,14 @@ local tracker_of = util.once(function(settings)
       end, buf, previous)
     end,
     reindex = function(_, changes)
-      lib.scope(function(defer)
-        local close, stream = buf_tracker.merged(changes, function(_, curr)
-          local kw = tokens.parse_charset(curr.iskeyword)
-          return lib.scope(function(d)
-            local text = (function()
+      for buf, change in pairs(changes) do
+        async.sleep(0)
+        local _, _, curr = unpack(change)
+
+        index_of(settings).prune { buf = buf }
+        if curr ~= nil then
+          lib.scope(function(d)
+            local words = (function()
               if curr.lines then
                 return itertools.intersperse("\n", vim.iter(curr.lines) --[[@as lib.Iterator<string>]])
               end
@@ -67,26 +70,22 @@ local tracker_of = util.once(function(settings)
               d(c)
               return iter
             end)()
-            return vim.iter(tokens.keywords(kw, text --[[@as lib.Iterator<string>]])):totable()
-          end)
-        end)
-        defer(close)
 
-        for _, entry in stream do
-          async.sleep(0)
-          index_of(settings).prune { buf = entry.buf }
-          if entry.data then
-            for _, word in pairs(entry.data) do
+            local kw = tokens.parse_charset(curr.iskeyword)
+            for i, word in vim.iter(tokens.keywords(kw, words)):enumerate() do
               index_of(settings).insert {
-                buf = entry.buf,
+                buf = buf,
                 word = word,
-                filetype = entry.curr.filetype,
-                filename = entry.curr.filename,
+                filetype = curr.filetype,
+                filename = curr.filename,
               }
+              if i % util.BATCH == 0 then
+                async.sleep(0)
+              end
             end
-          end
+          end)
         end
-      end)
+      end
     end,
   }
 end)

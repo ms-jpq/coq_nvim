@@ -18,11 +18,6 @@ local norm = function(s)
   return s and string.lower(s)
 end
 
----@param s string
-local chars = function(s)
-  return string.gmatch(s, ".")
-end
-
 ---@generic C, T
 ---@param spec index.TrieSpec<C, T>
 ---@return index.Searcher<C, T>
@@ -32,30 +27,25 @@ M.new = function(spec)
 
   ---@param key string
   local descend = function(key)
-    local node, depth = root, 0
-    for c in chars(key) do
-      if depth >= prefix then
-        break
-      end
-      node = node.children[c]
+    local node = root
+    local stop = math.min(prefix, #key)
+    for i = 1, stop do
+      node = node.children[string.sub(key, i, i)]
       if node == nil then
         return nil
       end
-      depth = depth + 1
     end
     return node
   end
 
   ---@param key string
   local descend_create = function(key)
-    local node, depth = root, 0
-    for c in chars(key) do
-      if depth >= prefix then
-        break
-      end
+    local node = root
+    local stop = math.min(prefix, #key)
+    for i = 1, stop do
+      local c = string.sub(key, i, i)
       node.children[c] = node.children[c] or new_node()
       node = node.children[c]
-      depth = depth + 1
     end
     return node
   end

@@ -26,7 +26,7 @@ M._patterns = function(is_windows, separators)
       coroutine.yield "%$[%w_]+"
       coroutine.yield "%${[%w_]+}"
 
-      coroutine.yield "@"
+      coroutine.yield "@[%w%.%-_+]*"
       coroutine.yield ""
     end)
   end
@@ -37,6 +37,8 @@ M._patterns = function(is_windows, separators)
         coroutine.yield("()" .. pattern .. sep)
       end
     end
+
+    coroutine.yield "()%f[%S]@[%w%.%-_+]*$"
   end)
 end
 
@@ -135,22 +137,24 @@ end
 ---@return lib.Iterator<paths.parse.Candidate>
 M.candidates = function(line_before, opts)
   local separators = path.seps(opts.is_windows)
+  local sep_fallback = opts.is_windows and "\\" or "/"
 
   return coroutine.wrap(function()
     for pos, token in M._find_starts(opts.is_windows, separators, line_before) do
       local expanded = M._expand_head(opts.is_windows, opts.home, opts.env, token, separators)
       local resolved, partial = path.split_at_last_sep(separators, expanded)
+      local is_at = string.sub(token, 1, 1) == "@"
 
-      if resolved then
+      if resolved ~= "" or is_at then
         local literal = string.sub(token, 1, #token - #partial)
-        local anchor = (string.sub(token, 1, 1) == "@" and M.ANCHOR.cwd)
+        local anchor = (is_at and M.ANCHOR.cwd)
           or (path.is_absolute(opts.is_windows, resolved) and M.ANCHOR.abs)
           or M.ANCHOR.both
 
         coroutine.yield {
           resolved_directory = resolved,
           literal_directory = literal,
-          local_sep = string.sub(literal, -1),
+          local_sep = literal == "" and sep_fallback or string.sub(literal, -1),
           partial = partial,
           anchor = anchor,
           start = pos - 1,
