@@ -2,6 +2,7 @@ local context = require "coq.lib.context"
 local errs = require "coq.lib.errs"
 local lsp_util = require "coq.producers.lsp.util"
 local tokens = require "coq.lib.index.tokens"
+local txt = require "coq.lib.text"
 
 local DEFAULT_ENCODING = "utf-16"
 
@@ -30,34 +31,28 @@ M._resolve = function(settings, ctx, resolver, i)
   return lsp, edits
 end
 
+---@class completions.Span
+---@field start_row integer
+---@field start_col integer
+---@field end_row integer
+---@field end_col integer
+
 ---@class completions.EditCtx
 ---@field cursor_row integer
 ---@field col integer
 ---@field before_inserted string
 ---@field after_cursor string
----@field start_row integer
 ---@field start_line string
----@field end_row integer
 ---@field end_line string
-
----@param ctx ctx.full
----@param range? lsp.Range
----@return boolean
-local range_in_bounds = function(ctx, range)
-  if not range then
-    return false
-  end
-  local cursor_row = ctx.pos[1] - 1
-  local line_count = vim.api.nvim_buf_line_count(ctx.buf)
-  local s, e = range.start, range["end"]
-  return s.line >= 0 and s.line <= cursor_row and e and e.line >= s.line and e.line < line_count
-end
+---@field span completions.Span
 
 ---@param ctx ctx.full
 ---@param i completions.Item
+---@param enc string
 ---@param range? lsp.Range
 ---@return completions.EditCtx
-local edit_ctx = function(ctx, i, range)
+---@return boolean range_ok
+local edit_ctx = function(ctx, i, enc, range)
   local row, col = unpack(ctx.pos)
   local cursor_row = row - 1
   local line = unpack(vim.api.nvim_buf_get_lines(ctx.buf, cursor_row, row, true))
@@ -65,55 +60,42 @@ local edit_ctx = function(ctx, i, range)
   local inserted = (i.meta.snippet and i.abbr) or i.word or ""
   local original_col = math.max(0, col - #inserted)
 
-  local read_line = function(r)
-    return (r == cursor_row) and line or (vim.api.nvim_buf_get_lines(ctx.buf, r, r + 1, true)[1] or "")
-  end
-
-  local start_row = (range and range.start.line) or cursor_row
-  local end_row = (range and range["end"] and range["end"].line) or cursor_row
-
-  return {
+  local e_ctx = {
     cursor_row = cursor_row,
     col = col,
     before_inserted = string.sub(line, 1, original_col),
     after_cursor = string.sub(line, col + 1),
-    start_row = start_row,
-    start_line = read_line(start_row),
-    end_row = end_row,
-    end_line = read_line(end_row),
+    start_line = line,
+    end_line = line,
+    span = { start_row = cursor_row, start_col = col, end_row = cursor_row, end_col = col },
   }
-end
 
----@class completions.Span
----@field start_row integer
----@field start_col integer
----@field end_row integer
----@field end_col integer
-
----@param haystack string
----@param needle string
----@return integer
-local prefix_overlap = function(haystack, needle)
-  local cap = math.min(#haystack, #needle)
-  for n = cap, 1, -1 do
-    if string.sub(needle, 1, n) == string.sub(haystack, #haystack - n + 1) then
-      return n
-    end
+  if not range then
+    return e_ctx, false
   end
-  return 0
-end
 
----@param haystack string
----@param needle string
----@return integer
-local suffix_overlap = function(haystack, needle)
-  local cap = math.min(#haystack, #needle)
-  for n = cap, 1, -1 do
-    if string.sub(needle, #needle - n + 1) == string.sub(haystack, 1, n) then
-      return n
-    end
+  local line_count = vim.api.nvim_buf_line_count(ctx.buf)
+  local s, e = range.start, range["end"]
+  if not (s.line >= 0 and s.line <= cursor_row and e and e.line >= s.line and e.line < line_count) then
+    return e_ctx, false
   end
-  return 0
+
+  local read = function(r)
+    return (r == cursor_row) and line or (vim.api.nvim_buf_get_lines(ctx.buf, r, r + 1, true)[1] or "")
+  end
+  local start_line = read(s.line)
+  local end_line = (e.line == s.line) and start_line or read(e.line)
+
+  local ok_s, start_col = pcall(vim.str_byteindex, start_line, enc, s.character, true)
+  local ok_e, end_col = pcall(vim.str_byteindex, end_line, enc, e.character, true)
+  if not (ok_s and ok_e) then
+    return e_ctx, false
+  end
+
+  e_ctx.start_line = start_line
+  e_ctx.end_line = end_line
+  e_ctx.span = { start_row = s.line, start_col = start_col, end_row = e.line, end_col = end_col }
+  return e_ctx, true
 end
 
 ---@param iskeyword lib.Set<integer>
@@ -127,30 +109,32 @@ M._span = function(iskeyword, enc, e_ctx, text_edit, word)
   local insert_end = text_edit and text_edit.insert and text_edit.insert["end"]
   local range_end = range and range["end"]
 
-  local start_col = (range and vim.str_byteindex(e_ctx.start_line, enc, range.start.character, false))
+  local start_col = (range and e_ctx.span.start_col)
     or (
       #e_ctx.before_inserted
       - math.max(
         #tokens.trailing_keyword_before(iskeyword, e_ctx.before_inserted),
-        prefix_overlap(e_ctx.before_inserted, word)
+        txt.prefix_overlap(e_ctx.before_inserted, word)
       )
     )
 
   local end_row, end_col = (function()
+    if range_end and range_end.line ~= e_ctx.cursor_row then
+      return e_ctx.span.end_row, e_ctx.span.end_col
+    end
+
     if insert_end and range_end and insert_end.line == e_ctx.cursor_row then
-      if range_end.line == e_ctx.cursor_row then
-        local units = math.max(0, range_end.character - insert_end.character)
-        return e_ctx.cursor_row, e_ctx.col + vim.str_byteindex(e_ctx.after_cursor, enc, units, false)
-      end
-      return e_ctx.end_row, vim.str_byteindex(e_ctx.end_line, enc, range_end.character, false)
+      local after_units = vim.str_utfindex(e_ctx.after_cursor, enc, #e_ctx.after_cursor, true)
+      local units = math.max(0, math.min(after_units, range_end.character - insert_end.character))
+      return e_ctx.cursor_row, e_ctx.col + vim.str_byteindex(e_ctx.after_cursor, enc, units, true)
     end
 
     local end_col = e_ctx.col
-      + math.max(#tokens.leading_keyword(iskeyword, e_ctx.after_cursor), suffix_overlap(e_ctx.after_cursor, word))
+      + math.max(#tokens.leading_keyword(iskeyword, e_ctx.after_cursor), txt.suffix_overlap(e_ctx.after_cursor, word))
     return e_ctx.cursor_row, end_col
   end)()
 
-  return { start_row = e_ctx.start_row, start_col = start_col, end_row = end_row, end_col = end_col }
+  return { start_row = e_ctx.span.start_row, start_col = start_col, end_row = end_row, end_col = end_col }
 end
 
 ---@param i completions.Item
@@ -202,15 +186,16 @@ M._main_edit = function(ctx, i, lsp)
   local text_edit = lsp.item and lsp.item.textEdit
   local range = text_edit and (text_edit.range or text_edit.replace)
 
-  if range and not range_in_bounds(ctx, range) then
+  local e_ctx, range_ok = edit_ctx(ctx, i, enc, range)
+  if not range_ok then
     text_edit, range = nil, nil
   end
 
-  local e_ctx = edit_ctx(ctx, i, range)
-  local text = M._replacement(i, range, text_edit)
-  local span = M._span(ctx.iskeyword, enc, e_ctx, text_edit, text)
+  local replace_text = M._replacement(i, range, text_edit)
+  local match_text = (i.meta.snippet and (i.word or "")) or replace_text
+  local span = M._span(ctx.iskeyword, enc, e_ctx, text_edit, match_text)
 
-  return span_to_text_edit(enc, span, ctx.buf, text)
+  return span_to_text_edit(enc, span, ctx.buf, replace_text)
 end
 
 ---@param ctx ctx.full

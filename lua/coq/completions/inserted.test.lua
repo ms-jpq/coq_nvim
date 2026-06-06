@@ -155,15 +155,16 @@ end)
 local DEFAULT_ISKEYWORD = tokens.parse_charset "@,48-57,_,192-255"
 
 local edit_ctx = function(o)
+  local col = o.col or 2
+  local end_row = o.end_row or 0
   return {
     cursor_row = 0,
-    col = o.col or 2,
+    col = col,
     before_inserted = o.before_inserted or "",
     after_cursor = o.after_cursor or "",
-    start_row = 0,
     start_line = o.start_line or "",
-    end_row = o.end_row or 0,
     end_line = o.end_line or "",
+    span = o.span or { start_row = 0, start_col = col, end_row = end_row, end_col = col },
   } --[[@as completions.EditCtx]]
 end
 
@@ -182,7 +183,12 @@ T.describe({ "inserted.span" }, function(test)
     local span = inserted._span(
       DEFAULT_ISKEYWORD,
       "utf-8",
-      edit_ctx { col = 2, after_cursor = "XYZ", start_line = "abXYZ" },
+      edit_ctx {
+        col = 2,
+        after_cursor = "XYZ",
+        start_line = "abXYZ",
+        span = { start_row = 0, start_col = 0, end_row = 0, end_col = 4 },
+      },
       replace_edit(2, 4),
       "ab"
     )
@@ -193,7 +199,12 @@ T.describe({ "inserted.span" }, function(test)
     local span = inserted._span(
       DEFAULT_ISKEYWORD,
       "utf-8",
-      edit_ctx { col = 2, after_cursor = "XYZ", start_line = "abXYZ" },
+      edit_ctx {
+        col = 2,
+        after_cursor = "XYZ",
+        start_line = "abXYZ",
+        span = { start_row = 0, start_col = 0, end_row = 0, end_col = 2 },
+      },
       replace_edit(2, 2),
       "ab"
     )
@@ -487,6 +498,72 @@ T.describe({ "inserted span :: |before| |word| |after|" }, function(test)
       },
     }
     T.eq(scenario("", "fido", "", { lsp = lsp }), "fido")
+  end)
+
+  test({ "lsp range with char past line end: dropped before strict raises" }, function()
+    -- the row is valid but range.end.character is far past the line; without
+    -- the bounds check, strict str_byteindex would raise. fallback runs.
+    local lsp = {
+      position_encoding = "utf-8",
+      item = {
+        textEdit = {
+          newText = "ignored",
+          range = { start = { line = 0, character = 0 }, ["end"] = { line = 0, character = 999 } },
+        },
+      },
+    }
+    T.eq(scenario("", "cat", "do", { lsp = lsp }), "cat")
+  end)
+
+  -- ---------------------------------------------------------------------------
+  -- Snippet triggers: replacement is empty (snippet body expands separately),
+  -- but the span still needs to wipe the trigger entirely — including a
+  -- leading symbol that sits OUTSIDE the keyword PUM start.
+  -- ---------------------------------------------------------------------------
+
+  test({ "snippet keyword trigger: '' for '' → '' (whole trigger consumed)" }, function()
+    T.eq(scenario("", "for", "", { snippet = "for ($1) {$0}" }), "")
+  end)
+
+  test({ "snippet keyword trigger eats trailing keyword: '' for 'do' → ''" }, function()
+    -- fuzzy `fo|do` → snippet `for`: trailing `do` is the rest of the identifier
+    -- under the cursor, consumed via leading_keyword rule. Same as non-snippet.
+    T.eq(scenario("", "for", "do", { snippet = "for ($1) {$0}" }), "")
+  end)
+
+  test({ "snippet @-prefix trigger: '@' @for '' → '' (leading @ also consumed)" }, function()
+    -- regression for Bug 5: pre-PUM `@f|`, PUM start backs up keyword `f` only,
+    -- vim leaves `@@for` in buffer. Without match_text=i.word the leading `@`
+    -- survives and the snippet expands to `@@for(...)`.
+    T.eq(scenario("@", "@for", "", { snippet = "@for ($0)" }), "")
+  end)
+
+  test({ "snippet @-prefix trigger with trailing closers: '(@' @for ')' → '()'" }, function()
+    -- `(` doesn't prefix-match `@for`, stays. `)` is non-keyword, no suffix
+    -- overlap, stays. Span wipes only `@@for`.
+    T.eq(scenario("(@", "@for", ")", { snippet = "@for ($0)" }), "()")
+  end)
+
+  test({ "snippet trigger with no leading: identical to non-snippet span shape" }, function()
+    -- sanity: snippet doesn't perturb the bare keyword case.
+    T.eq(scenario("prefix ", "for", "", { snippet = "for ($1) {$0}" }), "prefix ")
+  end)
+
+  test({ "InsertReplaceEdit with range_end past line end: units clamped" }, function()
+    -- both insert.end and range.end on cursor row, but range_end.character
+    -- overshoots after_cursor's encoded length. site-3 clamp keeps strict
+    -- str_byteindex from raising; the clamp consumes the whole after_cursor.
+    local lsp = {
+      position_encoding = "utf-8",
+      item = {
+        textEdit = {
+          newText = "cat",
+          insert = { start = { line = 0, character = 0 }, ["end"] = { line = 0, character = 3 } },
+          replace = { start = { line = 0, character = 0 }, ["end"] = { line = 0, character = 999 } },
+        },
+      },
+    }
+    T.eq(scenario("", "cat", "do", { lsp = lsp }), "cat")
   end)
 end)
 
