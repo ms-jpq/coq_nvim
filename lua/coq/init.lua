@@ -40,7 +40,7 @@ local M = {
 ---@param cfg? T
 ---@return T?
 M.lsp_ensure_capabilities = function(cfg)
-  transition.lsp_ensure_capabilities_noop()
+  transition.lsp_ensure_capabilities()
   return cfg
 end
 
@@ -99,6 +99,7 @@ M.setup = function(opts)
     async.scope(function(n)
       local merged = vim.tbl_deep_extend("force", vim.g.coq_settings or {}, opts or {})
       local settings = config.merged(merged)
+      transition.audit(merged)
 
       atools.scheduled()
 

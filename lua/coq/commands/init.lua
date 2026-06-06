@@ -11,7 +11,7 @@ M.Help = function(...)
   help.run { ... }
 end
 
-M.deps = transition.deps_noop
+M.deps = transition.deps
 
 local snips_impl = lib.noop
 local stats_impl = lib.noop
