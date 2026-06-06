@@ -10,6 +10,7 @@ local events_m = require "coq.completions.events"
 local idle = require "coq.completions.idle"
 local insertion = require "coq.completions.insertion"
 local instrument = require "coq.lib.producers.instrument"
+local lib = require "coq.lib"
 local nvim_options = require "coq.nvim_options"
 local p_buffers = require "coq.producers.buffers"
 local p_lsp = require "coq.producers.lsp"
@@ -29,10 +30,11 @@ local trigger = require "coq.completions.trigger"
 local COMPLETEFUNC = "__coq_completefunc__"
 
 local M = {
-  Now = commands.Now,
-  deps = commands.deps,
-  Snips = commands.Snips,
+  deps = lib.noop,
   Help = commands.Help,
+  Now = lib.noop,
+  Snips = commands.Snips,
+  Stats = commands.Stats,
 }
 
 ---@generic T

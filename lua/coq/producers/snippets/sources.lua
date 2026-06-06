@@ -14,6 +14,7 @@ local path = require "coq.lib.path"
 ---@field filetype string
 
 local BUNDLE_NAME = "coq+snippets+v2.json"
+local USER_DIR = "coq-user-snippets"
 
 ---@param file string
 ---@return string?
@@ -33,7 +34,7 @@ end
 local user_dirs = function(settings, idle_ctx)
   local candidates = async.wrap(function()
     for _, rtp in pairs(idle_ctx.rtps) do
-      local cand = vim.fs.joinpath(rtp, "coq-user-snippets")
+      local cand = vim.fs.joinpath(rtp, USER_DIR)
       coroutine.yield(cand)
     end
 
@@ -103,6 +104,19 @@ local neosnippet = function(filetype, dirs)
 end
 
 local M = {}
+
+---@param settings config.Settings
+---@param idle_ctx idle.Ctx
+---@return string
+M.write_dir = function(settings, idle_ctx)
+  local user_path = settings.clients.snippets.user_path
+  if user_path and user_path ~= "" then
+    return path.join(idle_ctx.config_dir, vim.fs.normalize(user_path))
+  end
+
+  local rtp = unpack(idle_ctx.rtps)
+  return vim.fs.joinpath(rtp, USER_DIR)
+end
 
 ---@param settings config.Settings
 ---@param idle_ctx idle.Ctx
