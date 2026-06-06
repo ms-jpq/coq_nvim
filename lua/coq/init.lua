@@ -25,6 +25,7 @@ local preview = require "coq.completions.preview"
 local resolver_m = require "coq.completions.resolver"
 local statsd_m = require "coq.lib.index.rank.statsd"
 local supervisor = require "coq.lib.producers.supervisor"
+local timelord_m = require "coq.completions.timelord"
 local toggle = require "coq.lib.producers.toggle"
 local transition = require "coq.transition"
 local trigger = require "coq.completions.trigger"
@@ -105,17 +106,18 @@ M.setup = function(opts)
       atools.scheduled()
 
       local statsd = statsd_m.new(settings)
+      local lord = timelord_m.new()
 
-      local p = vim
+      local ps = vim
         .iter(producers(settings.clients))
         :map(function(prod)
-          return toggle.wrap(instrument.wrap(statsd, prod))
+          return timelord_m.wrap(lord, toggle.wrap(instrument.wrap(statsd, prod)))
         end)
         :totable()
-      local sup = supervisor.new(p)
+      local sup = supervisor.new(ps)
 
       local events = events_m.new()
-      local resolver = resolver_m.new(n)
+      local resolver = resolver_m.new(n, lord)
 
       nvim_options.apply(settings, events)
 

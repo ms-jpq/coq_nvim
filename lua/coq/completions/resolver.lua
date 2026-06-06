@@ -26,9 +26,10 @@ end
 ---@field resolve fun(ctx: ctx.base, item: completions.Item, timeout_ms?: integer): completions.ItemLspMeta?
 
 ---@param n async.Nursery
+---@param lord completions.TimeLord
 ---@param fetch fun(ctx: ctx.base, item: completions.Item): completions.ItemLspMeta?
 ---@return resolver.Instance
-local new = function(n, fetch)
+local new = function(n, lord, fetch)
   local cache = {}
   local handles = lib.weak({}, "v")
 
@@ -60,7 +61,8 @@ local new = function(n, fetch)
     end
 
     if timeout_ms and timeout_ms > 0 then
-      return async.wait(timeout_ms, f.await) or item.meta.lsp
+      return lord.guard("resolve:" .. (item.meta.lsp and item.meta.lsp.server_name or ""), timeout_ms, f.await)
+        or item.meta.lsp
     end
     return f.await()
   end
@@ -76,19 +78,20 @@ end
 local M = {}
 
 ---@param n async.Nursery
+---@param lord completions.TimeLord
 ---@param fetch? fun(ctx: ctx.base, item: completions.Item): completions.ItemLspMeta?
 ---@return completions.Resolver
-M.new = function(n, fetch)
+M.new = function(n, lord, fetch)
   fetch = fetch or lsp_fetch
 
-  local instance = new(n, fetch)
+  local instance = new(n, lord, fetch)
 
   ---@diagnostic disable-next-line: missing-fields
   local resolver = {} ---@type completions.Resolver
 
   resolver.reset = function()
     instance.close()
-    instance = new(n, fetch)
+    instance = new(n, lord, fetch)
   end
 
   resolver.resolve = function(ctx, item, timeout_ms)

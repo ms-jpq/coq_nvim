@@ -2,6 +2,9 @@ local T = require "coq.lib.test"
 local async = require "coq.lib.async"
 local cancel = require "coq.lib.async.cancel"
 local resolver_m = require "coq.completions.resolver"
+local timelord_m = require "coq.completions.timelord"
+
+local LORD = timelord_m.new()
 
 ---@type ctx.base
 local CTX = { win = 0, buf = 0, pos = { 0, 0 }, line = "", changedtick = 0, filetype = "" }
@@ -15,7 +18,7 @@ T.describe({ "resolver" }, function(test)
   test({ "caches resolved results by uid" }, function()
     local calls = 0
     async.scope(function(n)
-      local r = resolver_m.new(n, function(_, item)
+      local r = resolver_m.new(n, LORD, function(_, item)
         calls = calls + 1
         return item.meta.lsp
       end)
@@ -33,7 +36,7 @@ T.describe({ "resolver" }, function(test)
   test({ "shares cache across distinct tables of equal content" }, function()
     local calls = 0
     async.scope(function(n)
-      local r = resolver_m.new(n, function(_, item)
+      local r = resolver_m.new(n, LORD, function(_, item)
         calls = calls + 1
         return item.meta.lsp
       end)
@@ -52,7 +55,7 @@ T.describe({ "resolver" }, function(test)
     async.scope(function(n)
       local gate = async.future()
       local started = async.future()
-      local r = resolver_m.new(n, function(_, item)
+      local r = resolver_m.new(n, LORD, function(_, item)
         calls = calls + 1
         started.resolve()
         gate.await()
@@ -78,7 +81,7 @@ T.describe({ "resolver" }, function(test)
   test({ "reset clears state and re-fetches" }, function()
     local calls = 0
     async.scope(function(n)
-      local r = resolver_m.new(n, function(_, item)
+      local r = resolver_m.new(n, LORD, function(_, item)
         calls = calls + 1
         return item.meta.lsp
       end)
@@ -99,7 +102,7 @@ T.describe({ "resolver" }, function(test)
       local started = async.future()
       local release = async.future()
       local hold = true
-      local r = resolver_m.new(n, function(_, item)
+      local r = resolver_m.new(n, LORD, function(_, item)
         calls = calls + 1
         if hold then
           hold = false
@@ -133,7 +136,7 @@ T.describe({ "resolver" }, function(test)
   test({ "caches a nil result without re-fetching" }, function()
     local calls = 0
     async.scope(function(n)
-      local r = resolver_m.new(n, function()
+      local r = resolver_m.new(n, LORD, function()
         calls = calls + 1
         return nil
       end)

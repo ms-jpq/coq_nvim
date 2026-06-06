@@ -1,7 +1,7 @@
 ---@class lib.Queue<T>
+---@field len fun(): integer
 ---@field push fun(item: T)
 ---@field pop fun(): T?
----@field len fun(): integer
 
 local M = {}
 
@@ -11,6 +11,10 @@ M.new = function()
   local data, head, tail = {}, 1, 0
 
   local q = {}
+
+  q.len = function()
+    return tail - head + 1
+  end
 
   q.push = function(item)
     tail = tail + 1
@@ -25,10 +29,6 @@ M.new = function()
     data[head] = nil
     head = head + 1
     return item
-  end
-
-  q.len = function()
-    return tail - head + 1
   end
 
   return q

@@ -1,6 +1,5 @@
 local async = require "coq.lib.async"
 local closable = require "coq.lib.closable"
-local deadline = require "coq.lib.async.deadline"
 local lib = require "coq.lib"
 
 local M = {}
@@ -40,8 +39,6 @@ M.new = function(producers)
   end
 
   sup.search = function(settings, ctx)
-    local timeout = ctx.manual and settings.limits.completion_manual_timeout or settings.limits.completion_auto_timeout
-
     if idle_handle then
       idle_handle.cancel()
     end
@@ -59,18 +56,12 @@ M.new = function(producers)
       end
 
       local close, iter = async.merge(iters)
-
-      local timed = deadline.new(math.floor(timeout * 1000), function()
-        local _, v = iter()
-        return v
-      end)
-
       defer(close)
       defer(function()
         searching = false
       end)
 
-      for v in timed do
+      for _, v in iter do
         coroutine.yield(v)
       end
     end)

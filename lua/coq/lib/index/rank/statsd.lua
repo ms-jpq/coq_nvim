@@ -1,4 +1,5 @@
 local atools = require "coq.lib.atools"
+local default_dict = require "coq.lib.default_dict"
 local itertools = require "coq.lib.itertools"
 local tokens = require "coq.lib.index.tokens"
 
@@ -131,22 +132,20 @@ M.new = function(settings)
     source_bias[name] = 1 + (client.weight_adjust or 0)
   end
 
-  ---@type table<string, statsd.Bucket>
-  local buckets = {}
-  local bucket_of = function(source)
-    buckets[source] = buckets[source] or new_bucket()
-    return buckets[source]
-  end
+  ---@type lib.DefaultDict<string, statsd.Bucket>
+  local buckets = default_dict.new(new_bucket)
 
-  local recency = {}
+  ---@type lib.DefaultDict<string, integer>
+  local recency = default_dict.new(function()
+    return 0
+  end)
 
   ---@diagnostic disable-next-line: missing-fields
   local statsd = {} ---@type index.Statsd
 
   statsd.inserted = function(item)
-    recency[item.meta.filter] = (recency[item.meta.filter] or 0) + 1
-    local bucket = bucket_of(item.meta.source)
-    bucket.inserted = bucket.inserted + 1
+    recency[item.meta.filter] = recency[item.meta.filter] + 1
+    buckets[item.meta.source].inserted = buckets[item.meta.source].inserted + 1
   end
 
   statsd.prepare = function(ctx)
@@ -176,7 +175,7 @@ M.new = function(settings)
 
     recorder.done = function(interrupted)
       local duration = (vim.uv.hrtime() - t0) / 1e9
-      push_sample(bucket_of(source), {
+      push_sample(buckets[source], {
         duration = duration,
         items = items,
         interrupted = interrupted,

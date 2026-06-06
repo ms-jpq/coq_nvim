@@ -115,10 +115,7 @@ end
 ---@param complete? fun(arglead: string, cmdline: string): string[]
 local register_deprecated = function(old_name, new_form, impl, complete)
   vim.api.nvim_create_user_command(old_name, function(opts)
-    vim.notify(
-      ":" .. old_name .. " is deprecated; use :COQ " .. new_form,
-      vim.log.levels.WARN
-    )
+    vim.notify(":" .. old_name .. " is deprecated; use :COQ " .. new_form, vim.log.levels.WARN)
     impl(opts)
   end, {
     nargs = "*",
